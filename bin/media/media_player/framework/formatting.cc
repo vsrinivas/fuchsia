@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <iomanip>
 #include <iostream>
 
 #include "garnet/bin/media/media_player/framework/formatting.h"
@@ -17,34 +18,67 @@ std::ostream& begl(std::ostream& os) {
   for (long i = 0; i < os.iword(ostream_indent_index()); i++) {
     os << "    ";
   }
+
   return os;
+}
+
+std::ostream& newl(std::ostream& os) {
+  return os << "\n" << begl;
+}
+
+// Prints an ns value in 0.124,456,789 format.
+std::ostream& operator<<(std::ostream& os, AsNs value) {
+  if (value.value_ == media::kUnspecifiedTime) {
+    return os << "<unspecified>";
+  }
+
+  if (value.value_ == 0) {
+    return os << "0";
+  }
+
+  int64_t s = std::abs(value.value_);
+  int64_t ns = s % 1000;
+  s /= 1000;
+  int64_t us = s % 1000;
+  s /= 1000;
+  int64_t ms = s % 1000;
+  s /= 1000;
+
+  if (value.value_ < 0) {
+    os << "-";
+  }
+
+  return os << s << "." << std::setw(3) << std::setfill('0') << ms << ","
+            << std::setw(3) << std::setfill('0') << us << "," << std::setw(3)
+            << std::setfill('0') << ns;
 }
 
 std::ostream& operator<<(std::ostream& os, Result value) {
   switch (value) {
     case Result::kOk:
-      return os << "kOk";
+      return os << "ok";
     case Result::kUnknownError:
-      return os << "kUnknownError";
+      return os << "unknown error";
     case Result::kInternalError:
-      return os << "kInternalError";
+      return os << "internal Error";
     case Result::kUnsupportedOperation:
-      return os << "kUnsupportedOperation";
+      return os << "unsupported operation";
     case Result::kInvalidArgument:
-      return os << "kInvalidArgument";
+      return os << "invalid argument";
     case Result::kNotFound:
-      return os << "kNotFound";
+      return os << "not found";
     case Result::kPeerClosed:
-      return os << "kPeerClosed";
+      return os << "peer closed";
     case Result::kCancelled:
-      return os << "kCancelled";
+      return os << "cancelled";
   }
+
   return os;
 }
 
 std::ostream& operator<<(std::ostream& os, const PacketPtr& value) {
   if (!value) {
-    return os << "<nullptr>";
+    return os << "<null>";
   }
 
   os << "&" << std::hex << uint64_t(value.get()) << std::dec;
@@ -56,150 +90,75 @@ std::ostream& operator<<(std::ostream& os, const PacketPtr& value) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const std::unique_ptr<StreamType>& value) {
-  if (!value) {
-    return os << "<nullptr>\n";
-  }
-
-  return os << *value;
-}
-
 std::ostream& operator<<(std::ostream& os, const StreamType& value) {
-  os << "\n";
-
   os << indent;
-  os << begl << "Medium medium(): " << value.medium() << "\n";
-  os << begl << "std::string encoding: " << value.encoding() << "\n";
-  os << begl << "Bytes encoding_parameters: " << value.encoding_parameters()
-     << "\n";
+  os << newl << "medium:               " << value.medium();
+  os << newl << "encoding:             " << value.encoding();
+  os << newl << "encoding parameters:  " << value.encoding_parameters();
+
   switch (value.medium()) {
     case StreamType::Medium::kAudio:
-      os << begl
-         << "SampleFormat sample_format: " << value.audio()->sample_format()
-         << "\n";
-      os << begl << "uint32_t channels: " << value.audio()->channels() << "\n";
-      os << begl
-         << "uint32_t frames_per_second: " << value.audio()->frames_per_second()
-         << "\n";
+      os << newl << "sample format:        " << value.audio()->sample_format();
+      os << newl << "channels:             " << value.audio()->channels();
+      os << newl
+         << "frames per second:    " << value.audio()->frames_per_second();
       break;
     case StreamType::Medium::kVideo:
-      os << begl << "VideoProfile profile: " << value.video()->profile()
-         << "\n";
-      os << begl
-         << "PixelFormat pixel_format: " << value.video()->pixel_format()
-         << "\n";
-      os << begl << "ColorSpace color_space: " << value.video()->color_space()
-         << "\n";
-      os << begl << "uint32_t width: " << value.video()->width() << "\n";
-      os << begl << "uint32_t height: " << value.video()->height() << "\n";
-      os << begl << "uint32_t coded_width: " << value.video()->coded_width()
-         << "\n";
-      os << begl << "uint32_t coded_height: " << value.video()->coded_height()
-         << "\n";
-      os << begl << "uint32_t pixel_aspect_ratio_width: "
-         << value.video()->pixel_aspect_ratio_width() << "\n";
-      os << begl << "uint32_t pixel_aspect_ratio_height: "
-         << value.video()->pixel_aspect_ratio_height() << "\n";
-      os << begl << "std::vector<uint32_t> line_stride: "
-         << AsInlineVector<uint32_t>(value.video()->line_stride()) << "\n";
-      os << begl << "std::vector<uint32_t> plane_offset: "
-         << AsInlineVector<uint32_t>(value.video()->plane_offset()) << "\n";
+      os << newl << "profile:              " << value.video()->profile();
+      os << newl << "pixel format:         " << value.video()->pixel_format();
+      os << newl << "color space:          " << value.video()->color_space();
+      os << newl << "size:                 " << value.video()->width() << "x"
+         << value.video()->height();
+      os << newl << "coded size:           " << value.video()->coded_width()
+         << "x" << value.video()->coded_height();
+      os << newl << "pixel aspect ratio:   "
+         << value.video()->pixel_aspect_ratio_width() << "x"
+         << value.video()->pixel_aspect_ratio_height();
+      os << newl << "line stride:          "
+         << AsInlineVector<uint32_t>(value.video()->line_stride());
+      os << newl << "plane offsets:        "
+         << AsInlineVector<uint32_t>(value.video()->plane_offset());
       break;
     default:
       break;
   }
 
   return os << outdent;
-}
-
-std::ostream& operator<<(std::ostream& os,
-                         const std::unique_ptr<StreamTypeSet>& value) {
-  if (!value) {
-    return os << "<nullptr>\n";
-  }
-
-  return os << *value;
 }
 
 std::ostream& operator<<(std::ostream& os, const StreamTypeSet& value) {
-  os << "\n";
-
   os << indent;
-  os << begl << "Medium medium(): " << value.medium() << "\n";
-  os << begl << "std::vector<std::string>& encodings(): " << value.encodings()
-     << "\n";
+  os << newl << "medium:            " << value.medium();
+  os << newl << "encodings:         " << value.encodings();
   switch (value.medium()) {
     case StreamType::Medium::kAudio:
-      os << begl
-         << "SampleFormat sample_format: " << value.audio()->sample_format()
-         << "\n";
-      os << begl << "Range<uint32_t> channels: " << value.audio()->channels()
-         << "\n";
-      os << begl << "Range<uint32_t> frames_per_second: "
-         << value.audio()->frames_per_second() << "\n";
+      os << newl << "sample format:     " << value.audio()->sample_format();
+      os << newl << "channels:          " << value.audio()->channels();
+      os << newl << "frames per second: " << value.audio()->frames_per_second();
       break;
     case StreamType::Medium::kVideo:
-      os << begl << "Range<uint32_t> width: " << value.video()->width() << "\n";
-      os << begl << "Range<uint32_t> height: " << value.video()->height()
-         << "\n";
+      os << newl << "width:             " << value.video()->width();
+      os << newl << "height:            " << value.video()->height();
       break;
     default:
       break;
   }
 
   return os << outdent;
-}
-
-std::ostream& operator<<(
-    std::ostream& os,
-    const std::unique_ptr<std::vector<std::unique_ptr<StreamType>>>& value) {
-  if (!value) {
-    return os << "<nullptr>\n";
-  } else if (value->size() == 0) {
-    return os << "<empty>\n";
-  } else {
-    os << "\n";
-  }
-
-  int index = 0;
-  for (const std::unique_ptr<StreamType>& element : *value) {
-    os << "[" << index++ << "]: " << element;
-  }
-
-  return os;
-}
-
-std::ostream& operator<<(
-    std::ostream& os,
-    const std::unique_ptr<std::vector<std::unique_ptr<StreamTypeSet>>>& value) {
-  if (!value) {
-    return os << "<nullptr>\n";
-  } else if (value->size() == 0) {
-    return os << "<empty>\n";
-  } else {
-    os << "\n";
-  }
-
-  int index = 0;
-  for (const std::unique_ptr<StreamTypeSet>& element : *value) {
-    os << "[" << index++ << "]: " << element;
-  }
-
-  return os;
 }
 
 std::ostream& operator<<(std::ostream& os, StreamType::Medium value) {
   switch (value) {
     case StreamType::Medium::kAudio:
-      return os << "kAudio";
+      return os << "audio";
     case StreamType::Medium::kVideo:
-      return os << "kVideo";
+      return os << "video";
     case StreamType::Medium::kText:
-      return os << "kText";
+      return os << "text";
     case StreamType::Medium::kSubpicture:
-      return os << "kSubpicture";
+      return os << "subpicture";
   }
+
   return os;
 }
 
@@ -207,18 +166,19 @@ std::ostream& operator<<(std::ostream& os,
                          AudioStreamType::SampleFormat value) {
   switch (value) {
     case AudioStreamType::SampleFormat::kNone:
-      return os << "kNone";
+      return os << "none";
     case AudioStreamType::SampleFormat::kAny:
-      return os << "kAny";
+      return os << "any";
     case AudioStreamType::SampleFormat::kUnsigned8:
-      return os << "kUnsigned8";
+      return os << "unsigned 8";
     case AudioStreamType::SampleFormat::kSigned16:
-      return os << "kSigned16";
+      return os << "signed 16";
     case AudioStreamType::SampleFormat::kSigned24In32:
-      return os << "kSigned24In32";
+      return os << "signed 24 in 32";
     case AudioStreamType::SampleFormat::kFloat:
-      return os << "kFloat";
+      return os << "float";
   }
+
   return os;
 }
 
@@ -226,96 +186,94 @@ std::ostream& operator<<(std::ostream& os,
                          VideoStreamType::VideoProfile value) {
   switch (value) {
     case VideoStreamType::VideoProfile::kUnknown:
-      return os << "kUnknown";
+      return os << "unknown";
     case VideoStreamType::VideoProfile::kNotApplicable:
-      return os << "kNotApplicable";
+      return os << "not applicable";
     case VideoStreamType::VideoProfile::kH264Baseline:
-      return os << "kH264Baseline";
+      return os << "h264 baseline";
     case VideoStreamType::VideoProfile::kH264Main:
-      return os << "kH264Main";
+      return os << "h264 main";
     case VideoStreamType::VideoProfile::kH264Extended:
-      return os << "kH264Extended";
+      return os << "h264 extended";
     case VideoStreamType::VideoProfile::kH264High:
-      return os << "kH264High";
+      return os << "h264 high";
     case VideoStreamType::VideoProfile::kH264High10:
-      return os << "kH264High10";
+      return os << "h264 high 10";
     case VideoStreamType::VideoProfile::kH264High422:
-      return os << "kH264High422";
+      return os << "h264 high 422";
     case VideoStreamType::VideoProfile::kH264High444Predictive:
-      return os << "kH264High444Predictive";
+      return os << "h264 high 444 predictive";
     case VideoStreamType::VideoProfile::kH264ScalableBaseline:
-      return os << "kH264ScalableBaseline";
+      return os << "h264 scalable baseline";
     case VideoStreamType::VideoProfile::kH264ScalableHigh:
-      return os << "kH264ScalableHigh";
+      return os << "h264 scalable high";
     case VideoStreamType::VideoProfile::kH264StereoHigh:
-      return os << "kH264StereoHigh";
+      return os << "h264 stereo high";
     case VideoStreamType::VideoProfile::kH264MultiviewHigh:
-      return os << "kH264MultiviewHigh";
+      return os << "h264 multiview high";
   }
+
   return os;
 }
 
 std::ostream& operator<<(std::ostream& os, VideoStreamType::PixelFormat value) {
   switch (value) {
     case VideoStreamType::PixelFormat::kUnknown:
-      return os << "kUnknown";
+      return os << "unknown";
     case VideoStreamType::PixelFormat::kI420:
-      return os << "kI420";
+      return os << "i420";
     case VideoStreamType::PixelFormat::kYv12:
-      return os << "kYv12";
+      return os << "yv12";
     case VideoStreamType::PixelFormat::kYv16:
-      return os << "kYv16";
+      return os << "yv16";
     case VideoStreamType::PixelFormat::kYv12A:
-      return os << "kYv12A";
+      return os << "yv12a";
     case VideoStreamType::PixelFormat::kYv24:
-      return os << "kYv24";
+      return os << "yv24";
     case VideoStreamType::PixelFormat::kNv12:
-      return os << "kNv12";
+      return os << "nv12";
     case VideoStreamType::PixelFormat::kNv21:
-      return os << "kNv21";
+      return os << "nv21";
     case VideoStreamType::PixelFormat::kUyvy:
-      return os << "kUyvy";
+      return os << "uyvy";
     case VideoStreamType::PixelFormat::kYuy2:
-      return os << "kYuy2";
+      return os << "yuy2";
     case VideoStreamType::PixelFormat::kArgb:
-      return os << "kArgb";
+      return os << "argb";
     case VideoStreamType::PixelFormat::kXrgb:
-      return os << "kXrgb";
+      return os << "xrgb";
     case VideoStreamType::PixelFormat::kRgb24:
-      return os << "kRgb24";
+      return os << "rgb24";
     case VideoStreamType::PixelFormat::kRgb32:
-      return os << "kRgb24";
+      return os << "rgb32";
     case VideoStreamType::PixelFormat::kMjpeg:
-      return os << "kRgb24";
+      return os << "mjpeg";
     case VideoStreamType::PixelFormat::kMt21:
-      return os << "kRgb24";
+      return os << "mt21";
   }
+
   return os;
 }
 
 std::ostream& operator<<(std::ostream& os, VideoStreamType::ColorSpace value) {
   switch (value) {
     case VideoStreamType::ColorSpace::kUnknown:
-      return os << "kUnknown";
+      return os << "unknown";
     case VideoStreamType::ColorSpace::kNotApplicable:
-      return os << "kNotApplicable";
+      return os << "not applicable";
     case VideoStreamType::ColorSpace::kJpeg:
-      return os << "kJpeg";
+      return os << "jpeg";
     case VideoStreamType::ColorSpace::kHdRec709:
-      return os << "kHdRec709";
+      return os << "hd rec 709";
     case VideoStreamType::ColorSpace::kSdRec601:
-      return os << "kSdRec601";
+      return os << "sd rec 601";
   }
+
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const std::unique_ptr<Bytes>& value) {
-  if (value == nullptr) {
-    return os << "<nullptr>";
-  } else {
-    return os << value->size() << " bytes";
-  }
+std::ostream& operator<<(std::ostream& os, const Bytes& value) {
+  return os << value.size() << " bytes";
 }
 
 std::ostream& operator<<(std::ostream& os, media::TimelineRate value) {
@@ -323,47 +281,18 @@ std::ostream& operator<<(std::ostream& os, media::TimelineRate value) {
 }
 
 std::ostream& operator<<(std::ostream& os, media::TimelineFunction value) {
-  static constexpr int64_t kNsPerSecond = 1000000000;
-
-  if (value.subject_time() == media::kUnspecifiedTime) {
-    os << "<unspecified>";
-  } else {
-    os << value.subject_time() / kNsPerSecond << "."
-       << value.subject_time() % kNsPerSecond;
-  }
-
-  os << "::";
-
-  if (value.reference_time() == media::kUnspecifiedTime) {
-    os << "<unspecified>";
-  } else {
-    os << value.reference_time() / kNsPerSecond << "."
-       << value.reference_time() % kNsPerSecond;
-  }
-
-  os << "@";
-
-  return os << value.rate();
-}
-
-std::ostream& operator<<(std::ostream& os, Range<bool> value) {
-  if (value.min) {
-    return os << "true";
-  } else if (value.max) {
-    return os << "false..true";
-  } else {
-    return os << "false";
-  }
+  return os << AsNs(value.subject_time())
+            << "::" << AsNs(value.reference_time()) << "@" << value.rate();
 }
 
 std::ostream& operator<<(std::ostream& os, Demand value) {
   switch (value) {
     case Demand::kNegative:
-      return os << "kNegative";
+      return os << "negative";
     case Demand::kNeutral:
-      return os << "kNeutral";
+      return os << "=neutral";
     case Demand::kPositive:
-      return os << "kPositive";
+      return os << "positive";
   }
   return os;
 }
