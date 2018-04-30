@@ -4,6 +4,7 @@
 
 #include "garnet/bin/debug_agent/process_info.h"
 
+#include <elf.h>
 #include <link.h>
 #include <lib/zx/thread.h>
 #include <zircon/syscalls.h>
@@ -15,6 +16,8 @@
 namespace debug_agent {
 
 namespace {
+
+constexpr size_t kMaxBuildIDSize = 64;
 
 debug_ipc::ThreadRecord::State ThreadStateToEnum(uint32_t state) {
   struct Mapping {
@@ -66,6 +69,95 @@ zx_status_t ReadNullTerminatedString(const zx::process& process,
     vaddr += kBlockSize;
   }
   return ZX_OK;
+}
+
+std::string GetBuildID(const zx::process& process, uint64_t base) {
+  zx_vaddr_t vaddr = base;
+  uint8_t tmp[4];
+
+  size_t buf_size = kMaxBuildIDSize * 2 + 1;
+  char buf[buf_size];
+
+  size_t num_read = 0;
+  zx_status_t status = process.read_memory(vaddr, tmp, 4, &num_read);
+  if (status != ZX_OK)
+    return std::string();
+  if (memcmp(tmp, ELFMAG, SELFMAG))
+    return std::string();
+
+  Elf64_Off phoff;
+  Elf64_Half num;
+  status = process.read_memory(vaddr + offsetof(Elf64_Ehdr, e_phoff), &phoff,
+                               sizeof(phoff), &num_read);
+  if (status != ZX_OK)
+    return std::string();
+  status = process.read_memory(vaddr + offsetof(Elf64_Ehdr, e_phnum), &num,
+                               sizeof(num), &num_read);
+  if (status != ZX_OK)
+    return std::string();
+
+  for (Elf64_Half n = 0; n < num; n++) {
+    zx_vaddr_t phaddr = vaddr + phoff + (n * sizeof(Elf64_Phdr));
+    Elf64_Word type;
+    status = process.read_memory(phaddr + offsetof(Elf64_Phdr, p_type), &type,
+                                 sizeof(type), &num_read);
+    if (status != ZX_OK)
+      return std::string();
+    if (type != PT_NOTE)
+      continue;
+
+    Elf64_Off off;
+    Elf64_Xword size;
+    status = process.read_memory(phaddr + offsetof(Elf64_Phdr, p_offset), &off,
+                                 sizeof(off), &num_read);
+    if (status != ZX_OK)
+      return std::string();
+    status = process.read_memory(phaddr + offsetof(Elf64_Phdr, p_filesz), &size,
+                                 sizeof(size), &num_read);
+    if (status != ZX_OK)
+      return std::string();
+
+    constexpr size_t kGnuSignatureSize = 4;
+    const char kGnuSignature[kGnuSignatureSize] = "GNU";
+
+    struct {
+      Elf32_Nhdr hdr;
+      char name[sizeof("GNU")];
+    } hdr;
+
+    while (size > sizeof(hdr)) {
+      status = process.read_memory(vaddr + off, &hdr, sizeof(hdr), &num_read);
+      if (status != ZX_OK)
+        return std::string();
+      size_t header_size = sizeof(Elf32_Nhdr) + ((hdr.hdr.n_namesz + 3) & -4);
+      size_t payload_size = (hdr.hdr.n_descsz + 3) & -4;
+      off += header_size;
+      size -= header_size;
+      zx_vaddr_t payload_vaddr = vaddr + off;
+      off += payload_size;
+      size -= payload_size;
+      if (hdr.hdr.n_type != NT_GNU_BUILD_ID ||
+          hdr.hdr.n_namesz != kGnuSignatureSize ||
+          memcmp(hdr.name, kGnuSignature, kGnuSignatureSize) != 0) {
+        continue;
+      }
+      if (hdr.hdr.n_descsz > kMaxBuildIDSize) {
+        return std::string();  // Too large.
+      } else {
+        uint8_t buildid[kMaxBuildIDSize];
+        status = process.read_memory(payload_vaddr, buildid, hdr.hdr.n_descsz,
+                                     &num_read);
+        if (status != ZX_OK)
+          return std::string();
+        for (uint32_t i = 0; i < hdr.hdr.n_descsz; ++i) {
+          snprintf(&buf[i * 2], 3, "%02x", buildid[i]);
+        }
+      }
+      return std::string(buf);
+    }
+  }
+
+  return std::string();
 }
 
 }  // namespace
@@ -145,6 +237,8 @@ zx_status_t GetModulesForProcess(const zx::process& process,
 
     if (ReadNullTerminatedString(process, str_addr, &module.name) != ZX_OK)
       break;
+
+    module.build_id = GetBuildID(process, module.base);
 
     modules->push_back(std::move(module));
     lmap = next;

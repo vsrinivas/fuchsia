@@ -8,7 +8,7 @@
 
 namespace debug_ipc {
 
-constexpr uint32_t kProtocolVersion = 1;
+constexpr uint32_t kProtocolVersion = 2;
 
 enum class Arch {
   kUnknown = 0,

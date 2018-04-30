@@ -86,7 +86,7 @@ struct BreakpointSettings {
 struct Module {
   std::string name;
   uint64_t base = 0;  // Load address of this file.
-  // Will need more things here like build_id.
+  std::string build_id;
 };
 
 struct StackFrame {

@@ -70,6 +70,7 @@ source_set("tests") {
 
   deps = [
     ":client",
+    "symbols:tests",
     "//third_party/googletest:gtest",
   ]
 }

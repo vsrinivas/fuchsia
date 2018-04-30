@@ -60,7 +60,11 @@ bool Deserialize(MessageReader* reader, MemoryBlock* block) {
 bool Deserialize(MessageReader* reader, Module* module) {
   if (!reader->ReadString(&module->name))
     return false;
-  return reader->ReadUint64(&module->base);
+  if (!reader->ReadUint64(&module->base))
+    return false;
+  if (!reader->ReadString(&module->build_id))
+    return false;
+  return true;
 };
 
 bool Deserialize(MessageReader* reader, StackFrame* frame) {
