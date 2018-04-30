@@ -13,8 +13,8 @@ use futures::{Future, FutureExt, Never, Stream, StreamExt, future};
 use futures::channel::mpsc::channel;
 use futures::future::Either::{Left, Right};
 use futures::future::FutureResult;
-use gatt::{Characteristic as FidlCharacteristic, ClientMarker, ClientProxy, RemoteServiceMarker,
-           RemoteServiceProxy, ServiceInfo};
+use gatt::{Characteristic as FidlCharacteristic, ClientMarker, ClientProxy, RemoteServiceEvent,
+           RemoteServiceMarker, RemoteServiceProxy, ServiceInfo};
 
 use parking_lot::RwLock;
 use std::io::{self, Read, Write};
@@ -155,6 +155,28 @@ fn discover_characteristics(client: GattClientPtr) -> impl Future<Item = (), Err
                 Ok(())
             }
             None => {
+                let event_stream = client2
+                    .read()
+                    .active_proxy
+                    .as_ref()
+                    .unwrap()
+                    .take_event_stream();
+                async::spawn(
+                    event_stream
+                        .for_each(move |evt| {
+                            match evt {
+                                RemoteServiceEvent::OnCharacteristicValueUpdated { id, value } => {
+                                    println!("(id = {}) value updated: {:X?}", id, value);
+                                }
+                            };
+                            future::ok(())
+                        })
+                        .and_then(|_| Ok(()))
+                        .recover(|e| {
+                            eprintln!("Failed to listen for RemoteService events {:?}", e)
+                        }),
+                );
+
                 client2.write().on_discover_characteristics(chrcs);
                 Ok(())
             }
@@ -225,6 +247,8 @@ fn do_help() -> FutureResult<(), Error> {
     println!("    connect <index>            Connect to a service");
     println!("    read-chr <id>              Read a characteristic");
     println!("    write-chr <id> <value>     Write to a characteristic");
+    println!("    enable-notify <id>         Enable characteristic notifications");
+    println!("    disable-notify <id>        Disable characteristic notifications");
     println!("    exit                       Quit and disconnect the peripheral");
 
     future::ok(())
@@ -282,7 +306,7 @@ fn do_connect(args: Vec<&str>, client: GattClientPtr) -> impl Future<Item = (), 
         Some(s) => s.info.id,
     };
 
-    // Initilize the remote service proxy.
+    // Initialize the remote service proxy.
     match create_remote_service_pair() {
         Err(_) => {
             println!("Failed to connect to remote service");
@@ -353,6 +377,100 @@ fn do_write_chr(args: Vec<&str>, client: GattClientPtr) -> impl Future<Item = ()
     }
 }
 
+fn do_enable_notify(args: Vec<&str>, client: GattClientPtr)
+    -> impl Future<Item = (), Error = Error> {
+    if args.len() != 1 {
+        println!("usage: enable-notify <id>");
+        return left_ok!();
+    }
+
+    if client.read().active_proxy.is_none() {
+        println!("no service connected");
+        return left_ok!();
+    }
+
+    let id: u64 = match args[0].parse() {
+        Err(_) => {
+            println!("invalid id: {}", args[0]);
+            return left_ok!();
+        }
+        Ok(i) => i,
+    };
+
+    Right(
+        client
+            .read()
+            .active_proxy
+            .as_ref()
+            .unwrap()
+            .notify_characteristic(id, true)
+            .map_err(|_| {
+                println!("Failed to send message");
+                BluetoothError::new().into()
+            })
+            .and_then(move |status| match status.error {
+                Some(e) => {
+                    println!(
+                        "Failed to enable notifications: {}",
+                        BluetoothFidlError::new(*e)
+                    );
+                    Ok(())
+                }
+                None => {
+                    println!("(id = {}]) done", id);
+                    Ok(())
+                }
+            }),
+    )
+}
+
+fn do_disable_notify(args: Vec<&str>, client: GattClientPtr)
+    -> impl Future<Item = (), Error = Error> {
+    if args.len() != 1 {
+        println!("usage: disable-notify <id>");
+        return left_ok!();
+    }
+
+    if client.read().active_proxy.is_none() {
+        println!("no service connected");
+        return left_ok!();
+    }
+
+    let id: u64 = match args[0].parse() {
+        Err(_) => {
+            println!("invalid id: {}", args[0]);
+            return left_ok!();
+        }
+        Ok(i) => i,
+    };
+
+    Right(
+        client
+            .read()
+            .active_proxy
+            .as_ref()
+            .unwrap()
+            .notify_characteristic(id, false)
+            .map_err(|_| {
+                println!("Failed to send message");
+                BluetoothError::new().into()
+            })
+            .and_then(move |status| match status.error {
+                Some(e) => {
+                    println!(
+                        "Failed to disable notifications: {}",
+                        BluetoothFidlError::new(*e)
+                    );
+                    Ok(())
+                }
+                None => {
+                    println!("(id = {}]) done", id);
+                    Ok(())
+                }
+            }),
+    )
+}
+
 // Helper macro for boxing and casting the impl Future results of command handlers below. This is
 // because the handlers potentially return different concrete types which can't be returned in the
 // same Either branch.
@@ -375,6 +493,8 @@ fn handle_cmd(line: String, client: GattClientPtr) -> impl Future<Item = (), Err
         Some("connect") => right_cmd!(do_connect(args, client)),
         Some("read-chr") => right_cmd!(do_read_chr(args, client)),
         Some("write-chr") => right_cmd!(do_write_chr(args, client)),
+        Some("enable-notify") => right_cmd!(do_enable_notify(args, client)),
+        Some("disable-notify") => right_cmd!(do_disable_notify(args, client)),
         Some(cmd) => {
             eprintln!("Unknown command: {}", cmd);
             left_ok!()

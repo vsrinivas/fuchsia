@@ -49,7 +49,7 @@ impl CentralState {
 }
 
 pub fn make_central_delegate(state: CentralStatePtr, channel: async::Channel)
-    -> impl Future<Item = (), Error = Never> {
+    -> impl Future<Item = (), Error = Never> + Send {
     CentralDelegateImpl {
         state: state,
         on_open: |_, _| future::ok(()),
