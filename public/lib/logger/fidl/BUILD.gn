@@ -6,6 +6,9 @@ import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
   name = "logger"
+
+  sdk_candidate = true
+
   sources = [
     "logger.fidl",
   ]
