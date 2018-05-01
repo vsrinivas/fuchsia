@@ -116,6 +116,9 @@ class Player {
     return source_segment_ ? source_segment_->source_node() : NodeRef();
   }
 
+  // Generates an introspection report.
+  void Dump(std::ostream& os) const;
+
  private:
   static constexpr int64_t kMinimumLeadTime = media::Timeline::ns_from_ms(30);
 

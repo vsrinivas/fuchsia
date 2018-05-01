@@ -4,6 +4,9 @@
 
 #include "garnet/bin/media/media_player/media_player_impl.h"
 
+#include <sstream>
+
+#include <fs/pseudo-file.h>
 #include <fuchsia/cpp/media.h>
 #include <fuchsia/cpp/media_player.h>
 #include <lib/async/default.h>
@@ -25,6 +28,11 @@
 #include "lib/media/timeline/timeline.h"
 
 namespace media_player {
+namespace {
+
+static const char* kDumpEntry = "dump";
+
+}  // namespace
 
 // static
 std::unique_ptr<MediaPlayerImpl> MediaPlayerImpl::Create(
@@ -45,6 +53,16 @@ MediaPlayerImpl::MediaPlayerImpl(
   FXL_DCHECK(request);
   FXL_DCHECK(application_context_);
   FXL_DCHECK(quit_callback_);
+
+  application_context_->outgoing().debug_dir()->AddEntry(
+      kDumpEntry,
+      fbl::AdoptRef(new fs::BufferedPseudoFile([this](fbl::String* out) {
+        std::ostringstream os;
+        player_.Dump(os << std::boolalpha);
+        os << "\n";
+        *out = os.str();
+        return ZX_OK;
+      })));
 
   AddBinding(std::move(request));
 

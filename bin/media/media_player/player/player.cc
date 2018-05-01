@@ -379,4 +379,8 @@ void Player::ConnectAndPrepareStream(Stream* stream) {
       });
 }
 
+void Player::Dump(std::ostream& os) const {
+  source_node().GetGenericNode()->Dump(os, source_node());
+}
+
 }  // namespace media_player

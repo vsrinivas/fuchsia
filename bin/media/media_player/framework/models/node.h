@@ -10,6 +10,7 @@
 #include "garnet/bin/media/media_player/framework/models/stage.h"
 #include "garnet/bin/media/media_player/framework/packet.h"
 #include "garnet/bin/media/media_player/framework/payload_allocator.h"
+#include "garnet/bin/media/media_player/framework/refs.h"
 #include "lib/fxl/functional/closure.h"
 
 namespace media_player {
@@ -18,21 +19,24 @@ class GenericNode {
  public:
   virtual ~GenericNode() {}
 
+  // Sets the generic stage. This method is generally only called by the graph.
   void SetGenericStage(Stage* generic_stage) { generic_stage_ = generic_stage; }
 
+  // Gets the generic stage. This method is generally only called by the graph.
   Stage* generic_stage() { return generic_stage_; }
 
-  virtual const char* label() const { return "<not labelled>"; }
+  // Returns a diagnostic label for the node.
+  virtual const char* label() const;
+
+  // Generates a report for the node.
+  virtual void Dump(std::ostream& os, NodeRef ref) const;
 
  protected:
   // Posts a task to run as soon as possible. A task posted with this method is
   // run exclusive of any other such tasks.
-  void PostTask(const fxl::Closure& task) {
-    Stage* generic_stage = generic_stage_;
-    if (generic_stage) {
-      generic_stage->PostTask(task);
-    }
-  }
+  void PostTask(const fxl::Closure& task);
+
+  void DumpDownstreamNodes(std::ostream& os, NodeRef ref) const;
 
  private:
   std::atomic<Stage*> generic_stage_;

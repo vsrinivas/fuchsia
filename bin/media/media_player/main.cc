@@ -4,9 +4,9 @@
 
 #include <string>
 
+#include <fs/pseudo-file.h>
 #include <fuchsia/cpp/media.h>
 #include <fuchsia/cpp/media_player.h>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <trace-provider/provider.h>
@@ -53,15 +53,15 @@ int main(int argc, const char** argv) {
 
   if (transient) {
     std::unique_ptr<media_player::MediaPlayerImpl> player;
-    application_context->outgoing()
-        .AddPublicService<media_player::MediaPlayer>(
-            [application_context = application_context.get(), &player,
-             &loop](fidl::InterfaceRequest<media_player::MediaPlayer> request) {
-              player = media_player::MediaPlayerImpl::Create(
-                  std::move(request), application_context, [&loop]() {
-                    async::PostTask(loop.async(), [&loop]() { loop.Quit(); });
-                  });
-            });
+    application_context->outgoing().AddPublicService<media_player::MediaPlayer>(
+        [application_context = application_context.get(), &player,
+         &loop](fidl::InterfaceRequest<media_player::MediaPlayer> request) {
+          player = media_player::MediaPlayerImpl::Create(
+              std::move(request), application_context, [&loop]() {
+                async::PostTask(loop.async(), [&loop]() { loop.Quit(); });
+              });
+        });
+
     loop.Run();
   } else {
     component::ApplicationLauncherPtr launcher;
