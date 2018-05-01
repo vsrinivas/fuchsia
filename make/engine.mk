@@ -713,10 +713,18 @@ ifneq ($(HOST_USE_CLANG),)
 # dependency) rather than the host library. The only exception is the
 # case when we are cross-compiling the host tools in which case we use
 # the C++ library from the sysroot.
-# TODO: This can be removed once the Clang toolchain ships with a
-# cross-compiled C++ runtime.
+# TODO(TC-78): This can be removed once the Clang
+# toolchain ships with a cross-compiled C++ runtime.
 ifeq ($(HOST_TARGET),)
-ifneq ($(HOST_PLATFORM),darwin)
+ifeq ($(HOST_PLATFORM),linux)
+ifeq ($(HOST_ARCH),x86_64)
+HOST_SYSROOT ?= $(SYSROOT_linux-amd64_PATH)
+else ifeq ($(HOST_ARCH),aarch64)
+HOST_SYSROOT ?= $(SYSROOT_linux-arm64_PATH)
+endif
+# TODO(TC-77): Using explicit sysroot currently overrides location of C++
+# runtime so we need to explicitly add it here.
+HOST_LDFLAGS += -Lprebuilt/downloads/clang/lib
 # The implicitly linked static libc++.a depends on these.
 HOST_LDFLAGS += -ldl -lpthread
 endif
@@ -729,12 +737,10 @@ HOST_ASMFLAGS :=
 
 ifneq ($(HOST_TARGET),)
 HOST_COMPILEFLAGS += --target=$(HOST_TARGET)
-ifeq ($(call TOBOOL,$(HOST_USE_SYSROOT)),true)
 ifeq ($(HOST_TARGET),x86_64-linux-gnu)
 HOST_SYSROOT ?= $(SYSROOT_linux-amd64_PATH)
 else ifeq ($(HOST_TARGET),aarch64-linux-gnu)
 HOST_SYSROOT ?= $(SYSROOT_linux-arm64_PATH)
-endif
 endif
 endif
 
