@@ -4,9 +4,9 @@
 
 #include <wlan/mlme/ap/ap_mlme.h>
 
+#include <fbl/ref_ptr.h>
 #include <wlan/common/logging.h>
 #include <wlan/protocol/mac.h>
-#include <fbl/ref_ptr.h>
 
 namespace wlan {
 
@@ -14,9 +14,7 @@ ApMlme::ApMlme(DeviceInterface* device) : device_(device) {}
 
 ApMlme::~ApMlme() {
     // Ensure the BSS is correctly stopped and terminated when destroying the MLME.
-    if (bss_ != nullptr && bss_->IsStarted()) {
-        bss_->Stop();
-    }
+    if (bss_ != nullptr && bss_->IsStarted()) { bss_->Stop(); }
 }
 
 zx_status_t ApMlme::Init() {
@@ -45,7 +43,7 @@ zx_status_t ApMlme::HandleMlmeStartReq(const wlan_mlme::StartRequest& req) {
 
     // Only one BSS can be started at a time.
     if (bss_ != nullptr) {
-        errorf("received MLME-START.request with an already running BSS on device: %s\n",
+        debugf("BSS %s already running but received MLME-START.request\n",
                device_->GetState()->address().ToString().c_str());
         return ZX_OK;
     }
