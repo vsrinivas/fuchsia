@@ -141,20 +141,33 @@ bool test_memfs_close_during_access() {
 
     // Access files within the filesystem.
     DIR* d = fdopendir(fd);
-
+    ASSERT_NONNULL(d);
     thrd_t worker;
-    ASSERT_EQ(thrd_create(&worker, [](void* arg) {
-        DIR* d = (DIR*) arg;
-        int fd = openat(dirfd(d), "foo", O_CREAT | O_RDWR);
-        struct stat st;
-        while (fstat(fd, &st) == 0) {}
-        close(fd);
-        return 0;
-    }, d), thrd_success);
 
-    // Give the background thread a little time to try accessing
-    // the filesystem.
-    usleep(1000);
+    struct thread_args {
+        DIR* d;
+        completion_t spinning{};
+    } args {
+        .d = d,
+    };
+
+    ASSERT_EQ(thrd_create(&worker, [](void* arg) {
+        thread_args* args = reinterpret_cast<thread_args*>(arg);
+        DIR* d = args->d;
+        int fd = openat(dirfd(d), "foo", O_CREAT | O_RDWR);
+        while (true) {
+            if (close(fd)) {
+                return errno == EPIPE ? 0 : -1;
+            }
+
+            if ((fd = openat(dirfd(d), "foo", O_RDWR)) < 0) {
+                return errno == EPIPE ? 0 : -1;
+            }
+            completion_signal(&args->spinning);
+        }
+    }, &args), thrd_success);
+
+    ASSERT_EQ(completion_wait(&args.spinning, ZX_SEC(3)), ZX_OK);
 
     completion_t unmounted;
     memfs_free_filesystem(vfs, &unmounted);
@@ -162,6 +175,7 @@ bool test_memfs_close_during_access() {
 
     int result;
     ASSERT_EQ(thrd_join(worker, &result), thrd_success);
+    ASSERT_EQ(result, 0);
 
     // Now that the filesystem has terminated, we should be
     // unable to access it.

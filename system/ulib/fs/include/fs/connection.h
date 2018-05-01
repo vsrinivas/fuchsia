@@ -52,7 +52,7 @@ public:
 
     void SignalTeardown() {
         if (channel_) {
-            channel_.signal(0, kLocalTeardownSignal);
+            ZX_ASSERT(channel_.signal(0, kLocalTeardownSignal) == ZX_OK);
         }
     }
 

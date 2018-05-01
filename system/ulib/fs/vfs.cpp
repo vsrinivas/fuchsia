@@ -437,6 +437,10 @@ void Vfs::Shutdown(ShutdownCallback closure) {
     closure(ZX_ERR_NOT_SUPPORTED);
 }
 
+bool Vfs::IsTerminating() const {
+    return false;
+}
+
 void Vfs::RegisterConnection(fbl::unique_ptr<Connection> connection) {
     // The connection will be destroyed by |UnregisterConnection()|.
     __UNUSED auto ptr = connection.release();

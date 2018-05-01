@@ -163,7 +163,7 @@ void Connection::HandleSignals(async_t* async, async::WaitBase* wait, zx_status_
     ZX_DEBUG_ASSERT(is_open());
 
     if (status == ZX_OK) {
-        if (signal->observed & kLocalTeardownSignal) {
+        if (vfs_->IsTerminating()) {
             // Short-circuit locally destroyed connections, rather than servicing
             // requests on their behalf. This prevents new requests from being
             // opened while filesystems are torn down.

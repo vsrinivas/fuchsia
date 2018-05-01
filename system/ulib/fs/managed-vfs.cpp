@@ -75,4 +75,8 @@ void ManagedVfs::UnregisterConnection(Connection* connection) {
     CheckForShutdownComplete();
 }
 
+bool ManagedVfs::IsTerminating() const {
+    return is_shutting_down_;
+}
+
 } // namespace fs

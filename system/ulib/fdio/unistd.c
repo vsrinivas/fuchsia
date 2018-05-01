@@ -782,7 +782,7 @@ int fdio_stat(fdio_t* io, struct stat* s) {
     vnattr_t attr;
     int r = io->ops->misc(io, ZXRIO_STAT, 0, sizeof(attr), &attr, 0);
     if (r < 0) {
-        return ZX_ERR_BAD_HANDLE;
+        return r;
     }
     if (r < (int)sizeof(attr)) {
         return ZX_ERR_IO;

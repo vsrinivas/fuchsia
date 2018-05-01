@@ -133,6 +133,12 @@ public:
     using ShutdownCallback = fbl::Function<void(zx_status_t status)>;
     virtual void Shutdown(ShutdownCallback closure);
 
+    // Identifies if the filesystem is in the process of terminating.
+    // May be checked by active connections, which, upon reading new
+    // port packets, should ignore them and close immediately.
+    virtual bool IsTerminating() const;
+
+
     void TokenDiscard(zx::event ios_token) __TA_EXCLUDES(vfs_lock_);
     zx_status_t VnodeToToken(fbl::RefPtr<Vnode> vn, zx::event* ios_token,
                              zx::event* out) __TA_EXCLUDES(vfs_lock_);

@@ -54,6 +54,7 @@ private:
 
     void RegisterConnection(fbl::unique_ptr<Connection> connection) final;
     void UnregisterConnection(Connection* connection) final;
+    bool IsTerminating() const final;
 
     fbl::DoublyLinkedList<fbl::unique_ptr<Connection>> connections_;
 
