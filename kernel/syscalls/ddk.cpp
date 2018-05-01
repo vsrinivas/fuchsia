@@ -260,16 +260,24 @@ zx_status_t sys_mmap_device_io(zx_handle_t hrsrc, uint32_t io_addr, uint32_t len
 }
 #endif
 
-uint64_t sys_acpi_uefi_rsdp(zx_handle_t hrsrc) {
+zx_status_t sys_pc_firmware_tables(zx_handle_t hrsrc, user_out_ptr<zx_paddr_t> acpi_rsdp,
+                                   user_out_ptr<zx_paddr_t> smbios) {
     // TODO(ZX-971): finer grained validation
     zx_status_t status;
     if ((status = validate_resource(hrsrc, ZX_RSRC_KIND_ROOT)) < 0) {
         return status;
     }
 #if ARCH_X86
-    return bootloader.acpi_rsdp;
+    if ((status = acpi_rsdp.copy_to_user(bootloader.acpi_rsdp)) != ZX_OK) {
+        return status;
+    }
+    if ((status = smbios.copy_to_user(bootloader.smbios)) != ZX_OK) {
+        return status;
+    }
+
+    return ZX_OK;
 #endif
-    return 0;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t sys_bti_create(zx_handle_t iommu, uint32_t options, uint64_t bti_id,

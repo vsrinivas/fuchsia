@@ -206,14 +206,14 @@ ACPI_STATUS AcpiOsTerminate() {
  * @return The physical address of the RSDP
  */
 ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer() {
-    ACPI_PHYSICAL_ADDRESS TableAddress = 0;
-    ACPI_STATUS status = AcpiFindRootPointer(&TableAddress);
-
-    uint32_t uefi_rsdp = (uint32_t)zx_acpi_uefi_rsdp(root_resource_handle);
-    if (uefi_rsdp != 0) {
-        return uefi_rsdp;
+    zx_paddr_t acpi_rsdp, smbios;
+    zx_status_t zx_status = zx_pc_firmware_tables(root_resource_handle, &acpi_rsdp, &smbios);
+    if (zx_status == ZX_OK && acpi_rsdp != 0) {
+        return acpi_rsdp;
     }
 
+    ACPI_PHYSICAL_ADDRESS TableAddress = 0;
+    ACPI_STATUS status = AcpiFindRootPointer(&TableAddress);
     if (status != AE_OK) {
         return 0;
     }

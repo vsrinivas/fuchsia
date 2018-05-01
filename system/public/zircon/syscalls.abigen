@@ -695,9 +695,9 @@ syscall pci_add_subtract_io_range
 
 # DDK Syscalls: ACPI Glue
 
-syscall acpi_uefi_rsdp
+syscall pc_firmware_tables
     (handle: zx_handle_t)
-    returns (uint64_t);
+    returns (zx_status_t, acpi_rsdp: zx_paddr_t, smbios: zx_paddr_t);
 
 # DDK Syscalls: SMC Calls
 
