@@ -6,6 +6,7 @@
 #define PERIDOT_BIN_CONTEXT_ENGINE_DEBUG_H_
 
 #include <fuchsia/cpp/modular.h>
+
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "peridot/bin/context_engine/index.h"
 #include "peridot/lib/util/wait_until_idle.h"
@@ -33,10 +34,7 @@ class ContextDebugImpl : public ContextDebug {
                            const SubscriptionDebugInfo& debug_info);
   void OnSubscriptionRemoved(const Id& id);
 
-  // Forwards to |IdleWaiter::RegisterOngoingActivity|
-  util::IdleWaiter::ActivityToken RegisterOngoingActivity();
-  // Forwards to |IdleWaiter::FinishIdleCheck|
-  bool FinishIdleCheck();
+  util::IdleWaiter* GetIdleWaiter();
 
  private:
   // |ContextDebug|

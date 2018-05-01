@@ -61,12 +61,8 @@ void ContextDebugImpl::OnSubscriptionRemoved(const Id& id) {
   DispatchOneSubscription(std::move(update));
 }
 
-util::IdleWaiter::ActivityToken ContextDebugImpl::RegisterOngoingActivity() {
-  return wait_until_idle_.RegisterOngoingActivity();
-}
-
-bool ContextDebugImpl::FinishIdleCheck() {
-  return wait_until_idle_.FinishIdleCheck();
+util::IdleWaiter* ContextDebugImpl::GetIdleWaiter() {
+  return &wait_until_idle_;
 }
 
 void ContextDebugImpl::Watch(

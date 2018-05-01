@@ -73,12 +73,8 @@ void SuggestionDebugImpl::OnNextUpdate(
   }
 }
 
-util::IdleWaiter::ActivityToken SuggestionDebugImpl::RegisterOngoingActivity() {
-  return wait_until_idle_.RegisterOngoingActivity();
-}
-
-bool SuggestionDebugImpl::FinishIdleCheck() {
-  return wait_until_idle_.FinishIdleCheck();
+util::IdleWaiter* SuggestionDebugImpl::GetIdleWaiter() {
+  return &wait_until_idle_;
 }
 
 void SuggestionDebugImpl::WatchAskProposals(

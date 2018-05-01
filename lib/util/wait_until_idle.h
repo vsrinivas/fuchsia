@@ -18,8 +18,7 @@ namespace util {
 // have completed. This function is typically exposed on a service's debug FIDL
 // interface and used for test synchronization.
 //
-// This class is bound to a message loop on construction. If there is no loop on
-// the stack at that time, the |WaitUntilIdle| function will fail. Unbound
+// This class is bound to a message loop using SetMessageLoop(). Unbound
 // instances of this class may exist in unit tests.
 class IdleWaiter final {
  public:
@@ -36,6 +35,9 @@ class IdleWaiter final {
 
   IdleWaiter();
   ~IdleWaiter();
+
+  void SetMessageLoop(fsl::MessageLoop* message_loop);
+  fsl::MessageLoop* message_loop() const { return message_loop_; }
 
   // Registers an ongoing activity which prevents this app from being
   // considered idle. When the last copy of |ActivityToken| is destroyed, the
@@ -73,7 +75,7 @@ class IdleWaiter final {
   // |FinishIdleCheck| for more information.
   void PostIdleCheck();
 
-  fsl::MessageLoop* const message_loop_;
+  fsl::MessageLoop* message_loop_{};
   std::vector<fxl::Closure> callbacks_;
 
   Activity* activity_ = nullptr;
@@ -85,15 +87,19 @@ class IdleWaiter final {
 // Convenience invocation of a debug FIDL interface's |WaitUntilIdle() => ()|
 // function. This wrapper includes the necessary logic to run the message loop
 // while waiting and drain any coincident messages afterwards.
+// Convenience invocation of a debug FIDL interface's |WaitUntilIdle() => ()|
+// function. This wrapper includes the necessary logic to run the message loop
+// while waiting and drain any coincident messages afterwards.
 template <class Interface>
-void WaitUntilIdle(Interface* debug_interface) {
+void WaitUntilIdle(Interface* debug_interface,
+                   fsl::MessageLoop* message_loop) {
   // We can't just use a synchronous ptr because those don't run the message
   // loop while they wait.
   debug_interface->WaitUntilIdle(
-      [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
-  fsl::MessageLoop::GetCurrent()->Run();
+      [message_loop] { message_loop->PostQuitTask(); });
+  message_loop->Run();
   // Finish processing any remaining messages.
-  fsl::MessageLoop::GetCurrent()->RunUntilIdle();
+  message_loop->RunUntilIdle();
 }
 
 }  // namespace util

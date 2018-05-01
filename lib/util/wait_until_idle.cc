@@ -18,10 +18,14 @@ IdleWaiter::Activity::~Activity() {
   }
 }
 
-IdleWaiter::IdleWaiter()
-    : message_loop_(fsl::MessageLoop::GetCurrent()), weak_ptr_factory_(this) {}
+IdleWaiter::IdleWaiter() : weak_ptr_factory_(this) {}
 
 IdleWaiter::~IdleWaiter() = default;
+
+void IdleWaiter::SetMessageLoop(fsl::MessageLoop *message_loop) {
+  FXL_DCHECK(!message_loop_);
+  message_loop_ = message_loop;
+}
 
 IdleWaiter::ActivityToken IdleWaiter::RegisterOngoingActivity() {
   FXL_DCHECK(message_loop_ == fsl::MessageLoop::GetCurrent());
@@ -50,6 +54,7 @@ void IdleWaiter::PostIdleCheck() {
 
 bool IdleWaiter::FinishIdleCheck() {
   if (idle_check_pending_) {
+    FXL_DCHECK(message_loop_ == fsl::MessageLoop::GetCurrent());
     message_loop_->RunUntilIdle();
     if (!activity_) {
       for (const auto& callback : callbacks_) {

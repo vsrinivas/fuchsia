@@ -268,7 +268,7 @@ class SuggestionEngineTest : public ContextEngineTestBase {
 
   void WaitUntilIdle() {
     ContextEngineTestBase::WaitUntilIdle();
-    util::WaitUntilIdle(suggestion_debug_.get());
+    util::WaitUntilIdle(suggestion_debug_.get(), &message_loop_);
   }
 
  private:

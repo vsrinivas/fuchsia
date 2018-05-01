@@ -33,7 +33,7 @@ QueryProcessor::QueryProcessor(SuggestionEngineImpl* engine,
       dirty_(false),
       has_media_response_(false),
       request_ended_(false),
-      activity_(engine->debug()->RegisterOngoingActivity()),
+      activity_(engine->debug()->GetIdleWaiter()->RegisterOngoingActivity()),
       weak_ptr_factory_(this) {
   if (engine_->query_handlers_.empty()) {
     EndRequest();

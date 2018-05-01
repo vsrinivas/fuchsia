@@ -300,7 +300,7 @@ void SuggestionEngineImpl::PerformActions(fidl::VectorPtr<Action> actions,
 
 void SuggestionEngineImpl::PerformCreateStoryAction(const Action& action,
                                                     uint32_t story_color) {
-  auto activity = debug_->RegisterOngoingActivity();
+  auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
   const auto& create_story = action.create_story();
 
   if (!story_provider_) {
@@ -368,7 +368,7 @@ void SuggestionEngineImpl::PerformAddModuleAction(const Action& action) {
 void SuggestionEngineImpl::PerformCustomAction(Action* action,
                                                const std::string& source_url,
                                                uint32_t story_color) {
-  auto activity = debug_->RegisterOngoingActivity();
+  auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
   auto custom_action = action->custom_action().Bind();
   custom_action->Execute(fxl::MakeCopyable(
       [this, activity, custom_action = std::move(custom_action), source_url,
@@ -396,7 +396,7 @@ void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {
   if (!audio_server_)
     return;
 
-  auto activity = debug_->RegisterOngoingActivity();
+  auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
 
   media_renderer_.Unbind();
 
@@ -443,7 +443,7 @@ void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {
 void SuggestionEngineImpl::HandleMediaUpdates(
     uint64_t version,
     media::MediaTimelineControlPointStatusPtr status) {
-  auto activity = debug_->RegisterOngoingActivity();
+  auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
 
   if (status && status->end_of_stream) {
     for (auto& listener : speech_listeners_.ptrs()) {
@@ -480,6 +480,7 @@ int main(int argc, const char** argv) {
   auto suggestion_engine =
       std::make_unique<modular::SuggestionEngineImpl>(app_context.get());
   fxl::WeakPtr<modular::SuggestionDebugImpl> debug = suggestion_engine->debug();
+  debug->GetIdleWaiter()->SetMessageLoop(&loop);
   modular::AppDriver<modular::SuggestionEngineImpl> driver(
       app_context->outgoing_services(), std::move(suggestion_engine),
       [&loop] { loop.QuitNow(); });
@@ -488,7 +489,7 @@ int main(int argc, const char** argv) {
   // perform its test.
   do {
     loop.Run();
-  } while (debug && debug->FinishIdleCheck());
+  } while (debug && debug->GetIdleWaiter()->FinishIdleCheck());
 
   return 0;
 }

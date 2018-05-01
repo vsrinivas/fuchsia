@@ -50,6 +50,7 @@ int main(int argc, const char** argv) {
   auto context_engine_app =
       std::make_unique<modular::ContextEngineApp>(app_context.get());
   fxl::WeakPtr<modular::ContextDebugImpl> debug = context_engine_app->debug();
+  debug->GetIdleWaiter()->SetMessageLoop(&loop);
 
   modular::AppDriver<modular::ContextEngineApp> driver(
       app_context->outgoing_services(), std::move(context_engine_app),
@@ -59,7 +60,7 @@ int main(int argc, const char** argv) {
   // perform its test.
   do {
     loop.Run();
-  } while (debug && debug->FinishIdleCheck());
+  } while (debug && debug->GetIdleWaiter()->FinishIdleCheck());
 
   return 0;
 }

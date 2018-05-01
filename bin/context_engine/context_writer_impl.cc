@@ -125,7 +125,8 @@ void ContextWriterImpl::DestroyContextValueWriter(ContextValueWriterImpl* ptr) {
 
 void ContextWriterImpl::WriteEntityTopic(fidl::StringPtr topic,
                                          fidl::StringPtr value) {
-  auto activity = repository_->debug()->RegisterOngoingActivity();
+  auto activity =
+      repository_->debug()->GetIdleWaiter()->RegisterOngoingActivity();
 
   if (!value) {
     // Remove this value.
@@ -166,7 +167,8 @@ void ContextWriterImpl::WriteEntityTopic(fidl::StringPtr topic,
 void ContextWriterImpl::GetEntityTypesFromEntityReference(
     const fidl::StringPtr& reference,
     std::function<void(const fidl::VectorPtr<fidl::StringPtr>&)> done) {
-  auto activity = repository_->debug()->RegisterOngoingActivity();
+  auto activity =
+      repository_->debug()->GetIdleWaiter()->RegisterOngoingActivity();
 
   // TODO(thatguy): This function could be re-used in multiple places. Move it
   // somewhere other places can reach it.
@@ -228,7 +230,8 @@ void ContextValueWriterImpl::CreateChildValue(
 
 void ContextValueWriterImpl::Set(fidl::StringPtr content,
                                  ContextMetadataPtr metadata) {
-  auto activity = writer_->repository()->debug()->RegisterOngoingActivity();
+  auto activity =
+    writer_->repository()->debug()->GetIdleWaiter()->RegisterOngoingActivity();
 
   auto done_getting_types =
       [weak_this = weak_factory_.GetWeakPtr(), activity, content,

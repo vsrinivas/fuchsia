@@ -30,10 +30,7 @@ class SuggestionDebugImpl : public SuggestionDebug {
   void OnInterrupt(const SuggestionPrototype* interrupt_suggestion);
   void OnNextUpdate(const RankedSuggestionsList* suggestions);
 
-  // Forwards to |IdleWaiter::RegisterOngoingActivity|
-  util::IdleWaiter::ActivityToken RegisterOngoingActivity();
-  // Forwards to |IdleWaiter::FinishIdleCheck|
-  bool FinishIdleCheck();
+  util::IdleWaiter* GetIdleWaiter();
 
  private:
   // |SuggestionDebug|
