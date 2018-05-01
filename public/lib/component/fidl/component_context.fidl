@@ -4,33 +4,29 @@
 
 library modular;
 
-struct TypeToDataEntry {
-  string type;
-  string data;
-};
-
-// Provided to all components in their respective intialization methods by the
-// framework. For example, a Module gets it in Module::Initialize() and an Agent
-// gets it in Agent::Initialize().
+// Provided to all component instances in their respective initialization
+// information by the framework. For example, a Module gets it from its
+// ModuleContext and an Agent gets it from its AgentContext.
 [Discoverable]
 interface ComponentContext {
-  // Gets the Ledger associated with this component. This ledger instance
-  // is unique to this component under this user.
+  // Gets the Ledger associated with this component. This ledger instance is
+  // unique to this component (nb. not the component instance) under this user.
   1: GetLedger(request<ledger.Ledger> @request) -> (ledger.Status @status);
 
   // Used to start a new agent in the user scope and connect to it.
   2: ConnectToAgent(string url, request<component.ServiceProvider> incoming_services,
                    request<AgentController> controller);
 
-  // Used to create / delete a message queue or retrieve an existing queue
-  // identified by |name|. |name| has to be unique only within the scope of the
-  // calling component instance.
+  // Used to create or delete a message queue or retrieve an existing queue
+  // identified by |name|. |name| is local to the calling component instance.
   3: ObtainMessageQueue(string name, request<MessageQueue> queue);
   4: DeleteMessageQueue(string name);
 
   // Gets a MessageSender service that can be used to send a message to a queue
   // identified by |queue_token|. Token for a MessageQueue is obtained from its
-  // GetToken() method and the token is unique within the scope of the user.
+  // GetToken() method. The token is unique within the scope of the user, i.e.
+  // it can be used by other component instances than the one that created the
+  // message queue.
   5: GetMessageSender(string queue_token, request<MessageSender> sender);
 
   // Gets the EntityResolver service, which can be used to resolve an entity
@@ -39,6 +35,7 @@ interface ComponentContext {
 
   // Creates a new entity from |type_to_data| such that duplicate types are
   // overriden by subsequent entries.
+  //
   // This is a useful way to represent small immutable entities without having
   // to provide the entity using an Agent. The types and data together must be
   // within 16KB in size.
@@ -46,9 +43,16 @@ interface ComponentContext {
       -> (string? entity_reference);
 
   // Gets the package name of this component.
+  //
   // TODO(vardhan): MI4-939. This information should likely be exposed by a
   // lower level (component-level, or application level). This information is
   // most meant for a component to identify itself automatically when publishing
   // metrics.
   8: GetPackageName() -> (string package_name);
+};
+
+// Used by ComponentContext.CreateEntityWithData().
+struct TypeToDataEntry {
+  string type;
+  string data;
 };
