@@ -91,7 +91,7 @@ inline bool PointSamplerImpl<DChCount, SType, SChCount>::Mix(
       ScaleType != ScalerType::MUTED || DoAccumulate == true,
       "Mixing muted streams without accumulation is explicitly unsupported");
 
-  // Although the number of source frames is expressed in fixed-point 20.12
+  // Although the number of source frames is expressed in fixed-point 19.13
   // format, the actual number of frames must always be an integer.
   FXL_DCHECK((frac_src_frames & kPtsFractionalMask) == 0);
   // Interpolation offset is int32, so even though frac_src_frames is a uint32,
@@ -205,7 +205,7 @@ inline bool NxNPointSamplerImpl<SType>::Mix(int32_t* dst,
       ScaleType != ScalerType::MUTED || DoAccumulate == true,
       "Mixing muted streams without accumulation is explicitly unsupported");
 
-  // Although the number of source frames is expressed in fixed-point 20.12
+  // Although the number of source frames is expressed in fixed-point 19.13
   // format, the actual number of frames must always be an integer.
   FXL_DCHECK((frac_src_frames & kPtsFractionalMask) == 0);
   // Interpolation offset is int32, so even though frac_src_frames is a uint32,

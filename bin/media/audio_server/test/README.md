@@ -141,7 +141,7 @@ fractional bits, we can improve our SRC quality.
 to 12 fixed-point fractional bits. This means that if our destination sample
 rate is 48000, the incoming sample rate can only be faithfully rendered down to
 a precision of ~ 12 Hz increments. By changing how we advance through the source
-buffer (instead of using a single 32-bit fixed-point "20.12" step_size), we can
+buffer (instead of using a single 32-bit fixed-point "19.13" step_size), we can
 increase our accuracy and decrease any distortion resulting from the lack of
 complete precision.
 

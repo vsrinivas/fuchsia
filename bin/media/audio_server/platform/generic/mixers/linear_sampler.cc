@@ -44,10 +44,11 @@ class LinearSamplerImpl : public LinearSampler {
                   Gain::AScale amplitude_scale);
 
   static inline int32_t Interpolate(int32_t A, int32_t B, uint32_t alpha) {
-    // Called very frequently: optimized to 3 add, 1 mult, 2 shift, 1 compare.
-    A = (A << kPtsFractionalBits) + (B - A) * static_cast<int32_t>(alpha);
-    A += (A >= 0 ? kPtsRoundingVal : kPtsRoundingVal - 1);
-    return A >> kPtsFractionalBits;
+    // Called very frequently: optimized to cast, mult, compare, 2 shift, 3 add.
+    int64_t val = (static_cast<int64_t>(A) << kPtsFractionalBits) +
+                  (B - A) * static_cast<int32_t>(alpha);
+    val += (val >= 0 ? kPtsRoundingVal : kPtsRoundingVal - 1);
+    return val >> kPtsFractionalBits;
   }
 
   int32_t filter_data_[2 * DChCount];
@@ -91,10 +92,11 @@ class NxNLinearSamplerImpl : public LinearSampler {
 
   static inline int32_t Interpolate(int32_t A, int32_t B, uint32_t alpha) {
     // TODO(mpuryear): MTWN-75 minimize LinearSamplerImpl code duplication.
-    // Called very frequently: optimized to 3 add, 1 mult, 2 shift, 1 compare.
-    A = (A << kPtsFractionalBits) + (B - A) * static_cast<int32_t>(alpha);
-    A += (A >= 0 ? kPtsRoundingVal : kPtsRoundingVal - 1);
-    return A >> kPtsFractionalBits;
+    // Called very frequently: optimized to cast, mult, compare, 2 shift, 3 add.
+    int64_t val = (static_cast<int64_t>(A) << kPtsFractionalBits) +
+                  (B - A) * static_cast<int32_t>(alpha);
+    val += (val >= 0 ? kPtsRoundingVal : kPtsRoundingVal - 1);
+    return val >> kPtsFractionalBits;
   }
 
   size_t chan_count_;
@@ -118,7 +120,7 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
       ScaleType != ScalerType::MUTED || DoAccumulate == true,
       "Mixing muted streams without accumulation is explicitly unsupported");
 
-  // Although the number of source frames is expressed in fixed-point 20.12
+  // Although the number of source frames is expressed in fixed-point 19.13
   // format, the actual number of frames must always be an integer.
   FXL_DCHECK((frac_src_frames & kPtsFractionalMask) == 0);
   FXL_DCHECK(frac_src_frames >= FRAC_ONE);
@@ -304,7 +306,7 @@ inline bool NxNLinearSamplerImpl<SType>::Mix(int32_t* dst,
       ScaleType != ScalerType::MUTED || DoAccumulate == true,
       "Mixing muted streams without accumulation is explicitly unsupported");
 
-  // Although the number of source frames is expressed in fixed-point 20.12
+  // Although the number of source frames is expressed in fixed-point 19.13
   // format, the actual number of frames must always be an integer.
   FXL_DCHECK((frac_src_frames & kPtsFractionalMask) == 0);
   FXL_DCHECK(frac_src_frames >= FRAC_ONE);

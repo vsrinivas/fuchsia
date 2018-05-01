@@ -17,7 +17,7 @@ using Resampler = media::audio::Mixer::Resampler;
 //
 // Sync/timing correctness, to the sample level
 // Verify correct FROM and TO locations, and quantity. frac_src_frames &
-// src_offset are specified in fractional values (fixed 20.12 format).
+// src_offset are specified in fractional values (fixed 19.13 format).
 //
 // When doing direct bit-for-bit comparisons in these tests, we must factor in
 // the left-shift biasing that is done while converting input data into the
