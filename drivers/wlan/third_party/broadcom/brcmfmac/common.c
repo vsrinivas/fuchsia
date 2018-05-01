@@ -68,7 +68,7 @@ static int brcmf_feature_disable;
 module_param_named(feature_disable, brcmf_feature_disable, int, 0);
 MODULE_PARM_DESC(feature_disable, "Disable features");
 
-static char brcmf_firmware_path[BRCMF_FW_ALTPATH_LEN];
+static char brcmf_firmware_path[BRCMF_FW_ALTPATH_LEN] = "brcmfmac/";
 module_param_string(alternative_fw_path, brcmf_firmware_path, BRCMF_FW_ALTPATH_LEN, S_IRUSR);
 MODULE_PARM_DESC(alternative_fw_path, "Alternative firmware path");
 
@@ -500,7 +500,7 @@ static struct platform_driver brcmf_pd = {
     }
 };
 
-static zx_status_t brcmfmac_module_init(void) {
+zx_status_t brcmfmac_module_init(zx_device_t* device) {
     zx_status_t err;
 
     /* Initialize debug system first */
@@ -516,7 +516,7 @@ static zx_status_t brcmfmac_module_init(void) {
     brcmf_mp_attach();
 
     /* Continue the initialization by registering the different busses */
-    err = brcmf_core_init(NULL);
+    err = brcmf_core_init(device);
     if (err != ZX_OK) {
         brcmf_debugfs_exit();
         if (brcmfmac_pdata) {

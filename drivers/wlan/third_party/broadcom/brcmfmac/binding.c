@@ -24,12 +24,7 @@
 
 zx_status_t brcmfmac_bind(void* ctx, zx_device_t* device) {
     zxlogf(INFO, "brcmfmac: Bind was called!!\n");
-    // TODO(cphoenix): There's some stuff in brcmfmac_module_init() that's being skipped.
-    // - Set up debugfs
-    // - Compute firmware file name
-    // - Initialize "platform driver" stuff (device tree / hardwired device?)
-    // - Maybe other stuff I haven't analyzed closely enough.
-    brcmf_core_init(device);
+    brcmfmac_module_init(device);
     return ZX_ERR_NOT_SUPPORTED;
 }
 
