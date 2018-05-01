@@ -23,8 +23,8 @@ TEST(Recap, FreqResp) {
 
   uint32_t num_freqs;
   if (FrequencySet::UseFullFrequencySet) {
-    printf("                88.2k->48k");
-    printf("               44.1k->48k                24k->48k");
+    printf("                88.2k->48k               44.1k->48k");
+    printf("                24k->48k                Micro-SRC");
     num_freqs = FrequencySet::kReferenceFreqs.size();
   } else {
     num_freqs = FrequencySet::kSummaryIdxs.size();
@@ -69,6 +69,13 @@ TEST(Recap, FreqResp) {
           -std::numeric_limits<double>::infinity()) {
         printf("   %9.6lf  (%9.6lf)", AudioResult::FreqRespPointUp2[freq],
                AudioResult::kPrevFreqRespPointUp2[freq]);
+      } else {
+        printf("                         ");
+      }
+      if (AudioResult::kPrevFreqRespPointMicro[freq] !=
+          -std::numeric_limits<double>::infinity()) {
+        printf("   %9.6lf  (%9.6lf)", AudioResult::FreqRespPointMicro[freq],
+               AudioResult::kPrevFreqRespPointMicro[freq]);
       }
     }
   }
@@ -79,7 +86,7 @@ TEST(Recap, FreqResp) {
   }
   printf("                88.2k->48k               44.1k->48k");
   if (FrequencySet::UseFullFrequencySet) {
-    printf("                24k->48k");
+    printf("                24k->48k                Micro-SRC");
   }
   for (uint32_t idx = 0; idx < num_freqs; ++idx) {
     uint32_t freq = FrequencySet::UseFullFrequencySet
@@ -123,9 +130,19 @@ TEST(Recap, FreqResp) {
           -std::numeric_limits<double>::infinity()) {
         printf("   %9.6lf  (%9.6lf)", AudioResult::FreqRespLinearUp2[freq],
                AudioResult::kPrevFreqRespLinearUp2[freq]);
+      } else {
+        printf("                         ");
+      }
+      if (AudioResult::kPrevFreqRespLinearMicro[freq] !=
+          -std::numeric_limits<double>::infinity()) {
+        printf("   %9.6lf  (%9.6lf)", AudioResult::FreqRespLinearMicro[freq],
+               AudioResult::kPrevFreqRespLinearMicro[freq]);
+      } else {
+        printf("                         ");
       }
     }
   }
+
   printf("\n\n");
 }
 
@@ -138,8 +155,8 @@ TEST(Recap, SINAD) {
 
   uint32_t num_freqs;
   if (FrequencySet::UseFullFrequencySet) {
-    printf("          88.2k->48k");
-    printf("         44.1k->48k          24k->48k");
+    printf("          88.2k->48k         44.1k->48k ");
+    printf("         24k->48k           Micro-SRC");
     num_freqs = FrequencySet::kReferenceFreqs.size();
   } else {
     num_freqs = FrequencySet::kSummaryIdxs.size();
@@ -184,6 +201,14 @@ TEST(Recap, SINAD) {
           -std::numeric_limits<double>::infinity()) {
         printf("    %6.2lf  (%5.2lf)", AudioResult::SinadPointUp2[freq],
                AudioResult::kPrevSinadPointUp2[freq]);
+      } else {
+        printf("                   ");
+      }
+
+      if (AudioResult::kPrevSinadPointMicro[freq] !=
+          -std::numeric_limits<double>::infinity()) {
+        printf("    %6.2lf  (%5.2lf)", AudioResult::SinadPointMicro[freq],
+               AudioResult::kPrevSinadPointMicro[freq]);
       }
     }
   }
@@ -194,7 +219,7 @@ TEST(Recap, SINAD) {
   }
   printf("         88.2k->48k         44.1k->48k");
   if (FrequencySet::UseFullFrequencySet) {
-    printf("          24k->48k");
+    printf("          24k->48k           Micro-SRC");
   }
   for (uint32_t idx = 0; idx < num_freqs; ++idx) {
     uint32_t freq = FrequencySet::UseFullFrequencySet
@@ -239,6 +264,14 @@ TEST(Recap, SINAD) {
           -std::numeric_limits<double>::infinity()) {
         printf("    %6.2lf  (%5.2lf)", AudioResult::SinadLinearUp2[freq],
                AudioResult::kPrevSinadLinearUp2[freq]);
+      } else {
+        printf("                   ");
+      }
+
+      if (AudioResult::kPrevSinadLinearMicro[freq] !=
+          -std::numeric_limits<double>::infinity()) {
+        printf("    %6.2lf  (%5.2lf)", AudioResult::SinadLinearMicro[freq],
+               AudioResult::kPrevSinadLinearMicro[freq]);
       }
     }
   }

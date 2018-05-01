@@ -326,7 +326,7 @@ void TestUnitySampleRatio(Resampler sampler_type,
                        sinad_results);
 }
 
-// For the given resampler, target 96000->48000 downsampling. We articulate this
+// For the given resampler, target a 2:1 downsampling ratio. We articulate this
 // by specifying a source buffer twice the length of the destination buffer.
 void TestDownSampleRatio1(Resampler sampler_type,
                           double* freq_resp_results,
@@ -334,7 +334,8 @@ void TestDownSampleRatio1(Resampler sampler_type,
   MixerPtr mixer =
       SelectMixer(AudioSampleFormat::FLOAT, 1, 96000, 1, 48000, sampler_type);
 
-  MeasureFreqRespSinad(std::move(mixer), kFreqTestBufSize << 1,
+  MeasureFreqRespSinad(std::move(mixer),
+                       round(kFreqTestBufSize * 96000.0 / 48000.0),
                        freq_resp_results, sinad_results);
 }
 
@@ -372,7 +373,20 @@ void TestUpSampleRatio2(Resampler sampler_type,
   MixerPtr mixer =
       SelectMixer(AudioSampleFormat::FLOAT, 1, 24000, 1, 48000, sampler_type);
 
-  MeasureFreqRespSinad(std::move(mixer), kFreqTestBufSize >> 1,
+  MeasureFreqRespSinad(std::move(mixer),
+                       round(kFreqTestBufSize * 24000.0 / 48000.0),
+                       freq_resp_results, sinad_results);
+}
+
+// For the given resampler, target micro-sampling -- with a 47999:48000 ratio.
+void TestMicroSampleRatio(Resampler sampler_type,
+                          double* freq_resp_results,
+                          double* sinad_results) {
+  MixerPtr mixer =
+      SelectMixer(AudioSampleFormat::FLOAT, 1, 47999, 1, 48000, sampler_type);
+
+  MeasureFreqRespSinad(std::move(mixer),
+                       round(kFreqTestBufSize * 47999.0 / 48000.0),
                        freq_resp_results, sinad_results);
 }
 
@@ -476,6 +490,26 @@ TEST(Sinad, Point_UpSamp2) {
                        AudioResult::kPrevSinadPointUp2.data());
 }
 
+// Measure Freq Response for Point sampler with minimum rate change.
+TEST(FrequencyResponse, Point_MicroSRC) {
+  TestMicroSampleRatio(Resampler::SampleAndHold,
+                       AudioResult::FreqRespPointMicro.data(),
+                       AudioResult::SinadPointMicro.data());
+
+  EvaluateFreqRespResults(AudioResult::FreqRespPointMicro.data(),
+                          AudioResult::kPrevFreqRespPointMicro.data());
+}
+
+// Measure SINAD for Point sampler with minimum rate change.
+TEST(Sinad, Point_MicroSRC) {
+  TestMicroSampleRatio(Resampler::SampleAndHold,
+                       AudioResult::FreqRespPointMicro.data(),
+                       AudioResult::SinadPointMicro.data());
+
+  EvaluateSinadResults(AudioResult::SinadPointMicro.data(),
+                       AudioResult::kPrevSinadPointMicro.data());
+}
+
 // Measure Freq Response for Point sampler, no rate conversion.
 TEST(FrequencyResponse, Linear_Unity) {
   TestUnitySampleRatio(Resampler::LinearInterpolation,
@@ -574,6 +608,26 @@ TEST(Sinad, Linear_UpSamp2) {
 
   EvaluateSinadResults(AudioResult::SinadLinearUp2.data(),
                        AudioResult::kPrevSinadLinearUp2.data());
+}
+
+// Measure Freq Response for Linear sampler with minimum rate change.
+TEST(FrequencyResponse, Linear_MicroSRC) {
+  TestMicroSampleRatio(Resampler::LinearInterpolation,
+                       AudioResult::FreqRespLinearMicro.data(),
+                       AudioResult::SinadLinearMicro.data());
+
+  EvaluateFreqRespResults(AudioResult::FreqRespLinearMicro.data(),
+                          AudioResult::kPrevFreqRespLinearMicro.data());
+}
+
+// Measure SINAD for Linear sampler with minimum rate change.
+TEST(Sinad, Linear_MicroSRC) {
+  TestMicroSampleRatio(Resampler::LinearInterpolation,
+                       AudioResult::FreqRespLinearMicro.data(),
+                       AudioResult::SinadLinearMicro.data());
+
+  EvaluateSinadResults(AudioResult::SinadLinearMicro.data(),
+                       AudioResult::kPrevSinadLinearMicro.data());
 }
 
 }  // namespace test

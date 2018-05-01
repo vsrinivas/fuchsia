@@ -266,40 +266,45 @@ TEST(Resampling, Position_Fractional_Linear) {
 
 // Test LinearSampler interpolation accuracy, given fractional position.
 // Inputs trigger various +/- values that should be rounded each direction.
-void TestInterpolation(uint32_t frac_step_size) {
+void TestInterpolation(uint32_t source_frames_per_second,
+                       uint32_t dest_frames_per_second) {
   bool mix_result;
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::FLOAT, 1, 48000, 1, 48000,
-                               Resampler::LinearInterpolation);
+  MixerPtr mixer =
+      SelectMixer(AudioSampleFormat::FLOAT, 1, source_frames_per_second, 1,
+                  dest_frames_per_second, Resampler::LinearInterpolation);
+
+  // These values should lead to [-1,1,0,0] in the accumulator.
+  float source[] = {-1.0f / (1 << (kAudioPipelineWidth - 1)),
+                    1.0f / (1 << (kAudioPipelineWidth - 1)), 0.0f, 0.0f};
+  uint32_t frac_step_size =
+      (static_cast<uint64_t>(source_frames_per_second) << kPtsFractionalBits) /
+      dest_frames_per_second;
 
   //
   // Base check: interpolated value is zero.
   // Zero case. src offset 0.5, should mix 50/50
   int32_t frac_src_offset = 1 << (kPtsFractionalBits - 1);  // 0.5
-  int32_t frac_start_src_offset = frac_src_offset;
+  int32_t expected_src_offset = frac_src_offset + frac_step_size;
   uint32_t dst_offset = 0;
-  // These values should lead to [-1,1] in the accumulator.
-  float source[] = {-1.0f / (1 << (kAudioPipelineWidth - 1)),
-                    1.0f / (1 << (kAudioPipelineWidth - 1))};
   int32_t accum_result = 0xCAFE;  // value will be overwritten
   int32_t expected = 0;
 
   mix_result =
-      mixer->Mix(&accum_result, 1, &dst_offset, source, 2 << kPtsFractionalBits,
+      mixer->Mix(&accum_result, 1, &dst_offset, source,
+                 (fbl::count_of(source)) << kPtsFractionalBits,
                  &frac_src_offset, frac_step_size, Gain::kUnityScale, false);
 
   // Less than one frame of the source buffer remains, and we cached the final
   // sample, so mix_result should be TRUE.
-  EXPECT_TRUE(mix_result);
   EXPECT_EQ(1u, dst_offset);
-  EXPECT_EQ(frac_start_src_offset + static_cast<int32_t>(frac_step_size),
-            frac_src_offset);
+  EXPECT_EQ(expected_src_offset, frac_src_offset);
   EXPECT_EQ(expected, accum_result);
 
   //
   // Check: interpolated result is negative and should round out (down).
   // src offset of 0.25 should lead us to mix the two src samples 75/25
   frac_src_offset = 1 << (kPtsFractionalBits - 2);  // 0.25
-  frac_start_src_offset = frac_src_offset;
+  expected_src_offset = frac_src_offset + frac_step_size;
   dst_offset = 0;
   accum_result = 0xCAFE;  // Value will be overwritten.
   expected = -1;          // result of -0.5 correctly rounds out, to -1
@@ -309,15 +314,14 @@ void TestInterpolation(uint32_t frac_step_size) {
                  &frac_src_offset, frac_step_size, Gain::kUnityScale, false);
 
   EXPECT_EQ(1u, dst_offset);
-  EXPECT_EQ(frac_start_src_offset + static_cast<int32_t>(frac_step_size),
-            frac_src_offset);
+  EXPECT_EQ(expected_src_offset, frac_src_offset);
   EXPECT_EQ(expected, accum_result);
 
   //
   // Check: interpolated result is positive and should round out (up).
   // src offset of 0.75 should lead us to mix the two src samples 25/75
   frac_src_offset = 3 << (kPtsFractionalBits - 2);  // 0.75
-  frac_start_src_offset = frac_src_offset;
+  expected_src_offset = frac_src_offset + frac_step_size;
   dst_offset = 0;
   accum_result = 0xCAFE;  // Value will be overwritten.
   expected = 1;           // result 0.5 rounds "out" to 1
@@ -327,15 +331,14 @@ void TestInterpolation(uint32_t frac_step_size) {
                  &frac_src_offset, frac_step_size, Gain::kUnityScale, false);
 
   EXPECT_EQ(1u, dst_offset);
-  EXPECT_EQ(frac_start_src_offset + static_cast<int32_t>(frac_step_size),
-            frac_src_offset);
+  EXPECT_EQ(expected_src_offset, frac_src_offset);
   EXPECT_EQ(expected, accum_result);
 
   //
   // Check: interpolated result is positive and should round in (down).
   // src offset of 0.749755859375 (0xBFF) should mix just less than 25/75.
   frac_src_offset = (3 << (kPtsFractionalBits - 2)) - 1;
-  frac_start_src_offset = frac_src_offset;
+  expected_src_offset = frac_src_offset + frac_step_size;
   dst_offset = 0;
   accum_result = 0xCAFE;  // Value will be overwritten.
   expected = 0;           // result 0.49999 "rounds in", to 0.
@@ -345,15 +348,14 @@ void TestInterpolation(uint32_t frac_step_size) {
                  &frac_src_offset, frac_step_size, Gain::kUnityScale, false);
 
   EXPECT_EQ(1u, dst_offset);
-  EXPECT_EQ(frac_start_src_offset + static_cast<int32_t>(frac_step_size),
-            frac_src_offset);
+  EXPECT_EQ(expected_src_offset, frac_src_offset);
   EXPECT_EQ(expected, accum_result);
 
   //
   // Check: interpolated result is negative and should round in (up).
   // src offset of 0.250244140625 (0x401) should mix just less than 75/25.
   frac_src_offset = (1 << (kPtsFractionalBits - 2)) + 1;
-  frac_start_src_offset = frac_src_offset;
+  expected_src_offset = frac_src_offset + frac_step_size;
   dst_offset = 0;
   accum_result = 0xCAFE;  // Value will be overwritten.
   expected = 0;           // result −0.49999 "rounds in", to 0.
@@ -362,23 +364,51 @@ void TestInterpolation(uint32_t frac_step_size) {
       mixer->Mix(&accum_result, 1, &dst_offset, source, 2 << kPtsFractionalBits,
                  &frac_src_offset, frac_step_size, Gain::kUnityScale, false);
 
-  EXPECT_EQ(frac_start_src_offset + static_cast<int32_t>(frac_step_size),
-            frac_src_offset);
+  EXPECT_EQ(1u, dst_offset);
+  EXPECT_EQ(expected_src_offset, frac_src_offset);
   EXPECT_EQ(expected, accum_result);
 }
 
-// Test varies the fractional starting offsets, still with step_size ONE.
+// This test varies the fractional starting offsets, still with rate ratio ONE.
 TEST(Resampling, Interpolation_Values) {
-  TestInterpolation(Mixer::FRAC_ONE);
+  TestInterpolation(48000, 48000);
 }
 
-// Same as above, while varying step_size. Interp results should not change:
-// it depends on frac_src_pos, not the frac_step_size into/out of that pos.
-// dst_offset andfrac_src_offset should continue to advance accurately
-TEST(Resampling, Interpolation_Rates) {
-  TestInterpolation(Mixer::FRAC_ONE - 0x37);
+// Various checks similar to above, while varying rate ratio. Interp results
+// should not change: they depend only on frac_src_pos, not the rate ratio.
+// dst_offset and frac_src_offset should continue to advance accurately.
+//
+// Ratios related to the very-common 147:160 conversion.
+TEST(Resampling, Interpolation_Rate_441_48) {
+  TestInterpolation(88200, 48000);
+  TestInterpolation(44100, 48000);
+}
 
-  TestInterpolation(Mixer::FRAC_ONE + 0x737);
+// Ratios related to the very-common 160:147 conversion.
+TEST(Resampling, Interpolation_Rate_48_441) {
+  TestInterpolation(48000, 44100);
+  TestInterpolation(48000, 88200);
+}
+
+// Power-of-3 rate ratio 1:3 is guaranteed to have fractional rate error, since
+// 1/3 cannot be perfectly represented by a single binary value.
+TEST(Resampling, Interpolation_Rate_16_48) {
+  TestInterpolation(16000, 48000);
+}
+
+// Rate change by the smallest-possible increment will be used as micro-SRC, to
+// synchronize multiple physically-distinct output devices. This rate ratio also
+// has the maximum fractional error when converting to the standard 48000 rate.
+TEST(Resampling, Interpolation_Rate_MicroSRC) {
+  TestInterpolation(47999, 48000);
+}
+
+// This rate ratio, when translated into a step_size based on 4096 subframes,
+// equates to 3568.999909, generating a maximal fractional value [0.999909].
+// Because the callers of Mix() [standard_output_base and audio_capturer_impl]
+// truncate, a maximal fractional value represents maximal fractional error.
+TEST(Resampling, Interpolation_Rate_Max_Error) {
+  TestInterpolation(38426, 44100);
 }
 
 //

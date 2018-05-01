@@ -57,7 +57,7 @@ static constexpr uint32_t kFreqTestBufSize = 65536;
 // In our audio fidelity tests (noise floor, frequency response, SINAD, dynamic
 // range, plus others in the future), we compare current measurements to
 // previous results. For any set of inputs, our results are always exactly the
-// same -- but we should note that (as currently implementated), configuration
+// same -- but we should note that (as currently implemented), configuration
 // changes (such as adjustments to the below const) affect frequency response
 // and SINAD results in ways that differ by frequency. Doubling the resampling
 // packet size, as an example, may improve frequency response at 25 Hz but
@@ -66,7 +66,7 @@ static constexpr uint32_t kFreqTestBufSize = 65536;
 // values of [256, 512, 1024, 2048, 4096, 8192, 16384, 32768].
 //
 // Again, once MTWN-49 is fixed, changing this const should NOT affect results.
-static constexpr uint32_t kResamplerTestNumPackets = 256;
+static constexpr uint32_t kResamplerTestNumPackets = 64;
 
 class FrequencySet {
  public:

@@ -84,17 +84,14 @@ class AudioResult {
   // Interpolate
   //
   // Compared to 1:1 accuracy (kLevelToleranceSourceFloat), LinearSampler boosts
-  // low-frequencies during any significant up-sampling (e.g. 1:2). This
-  // tolerance represents how far above 0.0 dB is acceptable.
+  // low-frequencies during any significant up-sampling (e.g. 1:2).
+  // kPrevLevelToleranceInterpolation is how far above 0dB we allow.
   //
-  // This threshold changed as a result of adjusting our resampler tests to call
-  // Mixer objects in the same way that their primary callers in audio_server
-  // do. For reference, previous value is (for the time being only) included in
+  // This threshold changed as a result of adding a micro-SRC test to our set.
+  // For reference, previous value is (for the time being only) included in
   // nearby comment. The commented value will be removed soon, in upcoming CL.
-  // low-frequencies slightly during significant up-sampling (e.g. 1:2), shown
-  // in greater tolerance for interpolation (kPrevLevelToleranceInterpolation).
-  static constexpr double kPrevLevelToleranceInterpolation = 62.192595e-6;
-  //                Prior to change in resampler tests, was: 38.069078e-6
+  static constexpr double kPrevLevelToleranceInterpolation = 1.0933640e-03;
+  //         Prior to addition of micro-SRC test, value was: 6.2192595e-05
 
   // What is our received level (in dBFS), when sending sinusoids through our
   // mixers at certain resampling ratios. PointSampler and LinearSampler are
@@ -118,6 +115,8 @@ class AudioResult {
       FreqRespPointDown2;
   static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespPointUp1;
   static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespPointUp2;
+  static std::array<double, FrequencySet::kNumReferenceFreqs>
+      FreqRespPointMicro;
 
   static std::array<double, FrequencySet::kNumReferenceFreqs>
       FreqRespLinearUnity;
@@ -127,6 +126,8 @@ class AudioResult {
       FreqRespLinearDown2;
   static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespLinearUp1;
   static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespLinearUp2;
+  static std::array<double, FrequencySet::kNumReferenceFreqs>
+      FreqRespLinearMicro;
 
   // Val-being-checked (in dBFS) must be greater than or equal to this value.
   // It also cannot be more than kPrevLevelToleranceInterpolation above 0.0db.
@@ -152,6 +153,8 @@ class AudioResult {
       kPrevFreqRespPointUp1;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevFreqRespPointUp2;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs>
+      kPrevFreqRespPointMicro;
 
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevFreqRespLinearUnity;
@@ -163,6 +166,8 @@ class AudioResult {
       kPrevFreqRespLinearUp1;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevFreqRespLinearUp2;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs>
+      kPrevFreqRespLinearMicro;
 
   //
   // Signal-to-Noise-And-Distortion (SINAD)
@@ -180,12 +185,14 @@ class AudioResult {
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointDown2;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointUp1;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointUp2;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointMicro;
 
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearUnity;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearDown1;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearDown2;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearUp1;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearUp2;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearMicro;
 
   // For SINAD, measured value must exceed or equal the below cached value.
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
@@ -198,6 +205,8 @@ class AudioResult {
       kPrevSinadPointUp1;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevSinadPointUp2;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs>
+      kPrevSinadPointMicro;
 
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevSinadLinearUnity;
@@ -209,6 +218,8 @@ class AudioResult {
       kPrevSinadLinearUp1;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevSinadLinearUp2;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs>
+      kPrevSinadLinearMicro;
 
   //
   //
@@ -316,6 +327,9 @@ class AudioResult {
 /*
     AudioResult journal - updated upon each CL that affects these measurements
 
+    2018-05-01  Added new rate ratio for micro-SRC testing: 47999:48000. Also
+                increased our mix job size to 20 ms (see 04-23 below), to better
+                show the effects of accumulated fractional position errors.
     2018-04-30  Converted internal accumulator pipeline to 18-bit fixed-point
                 rather than 16-bit. This will improve noise-floor and other
                 measurements by up to 12 dB, in cases where quality is not gated
