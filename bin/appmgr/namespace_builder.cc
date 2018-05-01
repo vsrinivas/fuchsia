@@ -69,14 +69,6 @@ void NamespaceBuilder::AddSandbox(
     } else if (feature == "root-ssl-certificates" || feature == "shell") {
       // "shell" implies "root-ssl-certificates"
       PushDirectoryFromPathAs("/pkgfs/packages/root_ssl_certificates/0/data", "/config/ssl");
-      if (feature == "root-ssl-certificates") {
-        // This is a temporary hack to make BoringSSL work until we update it to use the new
-        // path in /config/ssl. Since the old path is in /system, but the "shell" feature also
-        // mounts into /system, we will break things if we run this for the "shell" feature.
-
-        // TODO(joshlf): Remove this mount once BoringSSL is updated to use the new path in /config/ssl
-        PushDirectoryFromPathAs("/pkgfs/packages/root_ssl_certificates/0/data", "/system/data/boringssl");
-      }
 
       if (feature == "shell") {
         // TODO(abarth): These permissions should depend on the envionment
