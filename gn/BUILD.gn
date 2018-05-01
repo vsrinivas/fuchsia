@@ -24,6 +24,9 @@ supporting_templates = [
   "//build/zircon/sysroot.mako",
 ]
 
+# The following script generates GN build files for Zircon objects. It is placed
+# before everything else so that //zircon targets are available in due time.
+# See //build/zircon/README.md for more details.
 exec_script("//build/zircon/create_gn_rules.py",
             [
               "--out",
