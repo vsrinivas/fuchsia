@@ -11,8 +11,6 @@
 #define S905D2_GPIO_INTERRUPT_BASE      0xffd00000
 #define S905D2_GPIO_INTERRUPT_LENGTH    0x10000
 
-// Note: The datasheet shows different IRQ no.s for
-// the following. These one's are from the <Google Home>/kernel/s905d2 branch
 #define S905D2_GPIO_IRQ_0    96
 #define S905D2_GPIO_IRQ_1    97
 #define S905D2_GPIO_IRQ_2    98
