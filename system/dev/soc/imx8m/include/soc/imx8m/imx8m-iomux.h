@@ -143,6 +143,13 @@ typedef uint64_t iomux_cfg_struct;
             MAKE_PIN_CFG(mux_mode, 0, 0, 0, 0, 0, 0, 0, 0, 0, \
                 mux_ctl_off, 0x000ULL, 0x000ULL)
 
+#define MAKE_PIN_CFG_USDHC_CLK(mux_mode, mux_ctl_off, pad_ctl_off) \
+             MAKE_PIN_CFG(mux_mode, 0, DSR_40_OHM, SRE_SLOW, 0, 0, 1, 0, 0, 0, \
+                 mux_ctl_off, pad_ctl_off, 0x000ULL)
+
+#define MAKE_PIN_CFG_USDHC(mux_mode, mux_ctl_off, pad_ctl_off) \
+             MAKE_PIN_CFG(mux_mode, 0, DSR_40_OHM, SRE_SLOW, 0, 1, 1, 0, 0, 0, \
+                 mux_ctl_off, pad_ctl_off, 0x000ULL)
 
 /* IMX8M IOMUX Register Offsets */
 #define SW_MUX_CTL_PAD_GPIO1_IO00               0x0028ULL

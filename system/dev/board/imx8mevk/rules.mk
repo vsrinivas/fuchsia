@@ -13,6 +13,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/imx8mevk-gpio.c \
     $(LOCAL_DIR)/imx8mevk-gpu.c \
     $(LOCAL_DIR)/imx8mevk-usb.c \
+    $(LOCAL_DIR)/imx8mevk-sdhci.c \
 
 
 MODULE_STATIC_LIBS := \
