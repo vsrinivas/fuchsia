@@ -55,6 +55,12 @@ enum class SystemRegister : uint16_t {
     TCR_EL1         = 0b11010000 << 8 /* op */ | 0b00100000 /* cr */,
     TTBR0_EL1       = 0b11000000 << 8 /* op */ | 0b00100000 /* cr */,
     TTBR1_EL1       = 0b11001000 << 8 /* op */ | 0b00100000 /* cr */,
+
+    // Debug Registers, trapped by MDCR_EL2.TDOSA = 1
+    OSLAR_EL1       = 0b10100000 << 8 /* op */ | 0b00010000 /* cr */,
+    OSLSR_EL1       = 0b10100000 << 8 /* op */ | 0b00010001 /* cr */,
+    OSDLR_EL1       = 0b10100000 << 8 /* op */ | 0b00010011 /* cr */,
+    DBGPRCR_EL1     = 0b10100000 << 8 /* op */ | 0b00010100 /* cr */,
 };
 
 // System instruction that caused a VM exit.

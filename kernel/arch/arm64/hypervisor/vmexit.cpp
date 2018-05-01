@@ -188,6 +188,16 @@ static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestS
         return SET_SYSREG(ttbr0_el1);
     case SystemRegister::TTBR1_EL1:
         return SET_SYSREG(ttbr1_el1);
+    case SystemRegister::OSLAR_EL1:
+    case SystemRegister::OSLSR_EL1:
+    case SystemRegister::OSDLR_EL1:
+    case SystemRegister::DBGPRCR_EL1:
+        next_pc(guest_state);
+        // These registers are RAZ/WI. Their state is dictated by the host.
+        if (si.read) {
+            guest_state->x[si.xt] = 0;
+        }
+        return ZX_OK;
     }
 
     dprintf(CRITICAL, "Unhandled system register %#x\n", static_cast<uint16_t>(si.sysreg));
