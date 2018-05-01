@@ -286,8 +286,6 @@ void AgentContextImpl::DeleteTask(fidl::StringPtr task_id) {
   agent_runner_->DeleteTask(url_, task_id);
 }
 
-void AgentContextImpl::Done() {}
-
 void AgentContextImpl::MaybeStopAgent() {
   new StopCall(&operation_queue_, false /* is agent runner terminating? */,
                this, [this](bool stopped) {

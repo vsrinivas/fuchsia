@@ -80,8 +80,6 @@ class AgentContextImpl : AgentContext, AgentController {
   // |AgentContext|
   void DeleteTask(fidl::StringPtr task_id) override;
   // |AgentContext|
-  void Done() override;
-  // |AgentContext|
   void GetIntelligenceServices(
       fidl::InterfaceRequest<IntelligenceServices> request) override;
   // |AgentContext|

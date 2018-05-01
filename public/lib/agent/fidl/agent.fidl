@@ -11,12 +11,9 @@ library modular;
 // receive a signal for when it should stop. An agent may be stopped for the
 // following reasons:
 //
-// (1) |ComponentContext.Done()| is called by this Agent indicating that it has
-//     completed its work.
+// (1) All |AgentController| connections associated with this agent are closed.
 //
-// (2) All AgentControllers associated with this agent are closed.
-//
-// (3) The system wants to optimize for resources.
+// (2) The system wants to optimize for resources.
 //
 // Once the framework delivers a |Lifecycle.Terminate()|, the agent application
 // may exit itself, or is killed by framework after a timeout.

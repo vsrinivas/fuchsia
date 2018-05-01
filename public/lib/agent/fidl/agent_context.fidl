@@ -29,10 +29,6 @@ interface AgentContext {
 
   // No new runs of this task will be scheduled.
   6: DeleteTask(string task_id);
-
-  // Declares that this agent is done, and wants to be torn down. Agent::Stop()
-  // will be called as a result of this.
-  7: Done();
 };
 
 // Used to describe a task to the framework.
