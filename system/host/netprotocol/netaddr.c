@@ -24,6 +24,7 @@ static struct sockaddr_in6 addr;
 static bool found = false;
 static char found_device_nodename[MAX_NODENAME_LENGTH];
 static bool fuchsia_address = false;
+static bool local_address = false;
 static const char* appname;
 
 static bool on_device(device_info_t* device, void* cookie) {
@@ -48,10 +49,12 @@ static void usage(void) {
     fprintf(stderr, "usage: %s [options] [hostname]\n", appname);
     netboot_usage(false);
     fprintf(stderr, "    --fuchsia         Use fuchsia link local addresses.\n");
+    fprintf(stderr, "    --local           Print local address that routes to remote.\n");
 }
 
 static struct option netaddr_opts[] = {
     {"fuchsia", no_argument, NULL, 'f'},
+    {"local",   no_argument, NULL, 'l'},
     {NULL,      0,           NULL, 0},
 };
 
@@ -59,6 +62,9 @@ static bool netaddr_opt_callback(int ch, int argc, char * const *argv) {
     switch (ch) {
         case 'f':
             fuchsia_address = true;
+            break;
+        case 'l':
+            local_address = true;
             break;
         default:
             return false;
@@ -90,6 +96,26 @@ int main(int argc, char** argv) {
     if (netboot_discover(NB_SERVER_PORT, NULL, on_device, NULL) || !found) {
         fprintf(stderr, "Failed to discover %s\n", hostname?hostname:"");
         return 1;
+    }
+
+    if (local_address) {
+        // Bind an ephemeral UDP socket to the Fuchsia target address, then inspect
+        // the local address it bound to (poor mans portable "lookup route").
+        int s;
+        if ((s = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
+            fprintf(stderr, "error: cannot create socket: %s\n", strerror(errno));
+            return -1;
+        }
+        if (connect(s, &addr, sizeof(addr)) < 0) {
+            fprintf(stderr, "error: cannot \"connect\" socket: %s\n", strerror(errno));
+            return -1;
+        }
+        socklen_t addrlen = sizeof(struct sockaddr_in6);
+        if (getsockname(s, &addr, &addrlen) < 0) {
+            fprintf(stderr, "error: %s\n", strerror(errno));
+            return -1;
+        }
+        shutdown(s, SHUT_RDWR);
     }
 
     if (fuchsia_address) {
