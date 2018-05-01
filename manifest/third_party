@@ -241,6 +241,11 @@
              remote="https://fuchsia.googlesource.com/third_party/spirv-tools"
              gerrithost="https://fuchsia-review.googlesource.com"
              revision="3020104ff25a0f661e7818bd49fbf5f23e0b0e98"/>
+    <project name = "third_party/syzkaller"
+             path="third_party/syzkaller"
+             remote="https://fuchsia.googlesource.com/third_party/syzkaller"
+             gerrithost="https://fuchsia-review.googlesource.com"
+             revision="b88872ba0e2ae9243628945e3ea2a3ae89a92bf7"/>
     <project name="third_party/openssh-portable"
              path="third_party/openssh-portable"
              remote="https://fuchsia.googlesource.com/third_party/openssh-portable"

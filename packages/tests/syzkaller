@@ -1,0 +1,8 @@
+{
+    "imports": [
+        "garnet/packages/dev"
+    ],
+    "packages": {
+        "syzkaller": "//garnet/testing/syzkaller"
+    }
+}

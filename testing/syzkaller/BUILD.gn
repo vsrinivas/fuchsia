@@ -1,0 +1,64 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/package.gni")
+
+syzkaller_go_deps = [
+  {
+    source = "//third_party/syzkaller"
+    package = "github.com/google/syzkaller"
+  },
+]
+
+go_binary("syz-stress") {
+  gopackage = "github.com/google/syzkaller/tools/syz-stress"
+  go_dependencies = syzkaller_go_deps
+}
+
+go_binary("syz-fuzzer") {
+  gopackage = "github.com/google/syzkaller/syz-fuzzer"
+  go_dependencies = syzkaller_go_deps
+}
+
+go_binary("syz-execprog") {
+  gopackage = "github.com/google/syzkaller/tools/syz-execprog"
+  go_dependencies = syzkaller_go_deps
+}
+
+executable("syz-executor") {
+  sources = [
+    "//third_party/syzkaller/executor/executor_fuchsia.cc",
+  ]
+  deps = [
+    "//zircon/public/lib/launchpad",
+  ]
+  libs = [ "zircon" ]
+}
+
+package("syzkaller") {
+  fuchsia_image = true
+
+  deps = [
+    ":syz-execprog",
+    ":syz-executor",
+    ":syz-fuzzer",
+    ":syz-stress",
+  ]
+
+  binaries = [
+    {
+      name = "syz-executor"
+    },
+    {
+      name = "syz-execprog"
+    },
+    {
+      name = "syz-fuzzer"
+    },
+    {
+      name = "syz-stress"
+    },
+  ]
+}

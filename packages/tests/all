@@ -41,6 +41,7 @@
         "garnet/packages/tests/scenic",
         "garnet/packages/tests/svc",
         "garnet/packages/tests/syslog",
+	"garnet/packages/tests/syzkaller",
         "garnet/packages/tests/tracing",
         "garnet/packages/tests/url",
         "garnet/packages/tests/vulkan",
