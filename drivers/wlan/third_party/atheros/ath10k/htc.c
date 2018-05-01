@@ -415,7 +415,6 @@ void ath10k_htc_rx_completion_handler(struct ath10k* ar, struct ath10k_msg_buf* 
 out:
     ath10k_msg_buf_free(msg_buf);
 }
-EXPORT_SYMBOL(ath10k_htc_rx_completion_handler);
 
 static void ath10k_htc_control_rx_complete(struct ath10k* ar, struct ath10k_msg_buf* msg_buf) {
     struct ath10k_htc* htc = &ar->htc;
