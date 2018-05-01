@@ -24,5 +24,17 @@
              path="third_party/snappy"
              remote="https://fuchsia.googlesource.com/third_party/snappy"
              gerrithost="https://fuchsia-review.googlesource.com"/>
+    <project name="peridot/cloud/third_party/golibs/github.com/xeipuuv/gojsonschema"
+             path="peridot/cloud/third_party/golibs/github.com/xeipuuv/gojsonschema"
+             remote="https://fuchsia.googlesource.com/third_party/github.com/xeipuuv/gojsonschema"
+             gerrithost="https://fuchsia-review.googlesource.com"/>
+    <project name="peridot/cloud/third_party/golibs/github.com/xeipuuv/gojsonreference"
+             path="peridot/cloud/third_party/golibs/github.com/xeipuuv/gojsonreference"
+             remote="https://fuchsia.googlesource.com/third_party/github.com/xeipuuv/gojsonreference"
+             gerrithost="https://fuchsia-review.googlesource.com"/>
+    <project name="peridot/cloud/third_party/golibs/github.com/xeipuuv/gojsonpointer"
+             path="peridot/cloud/third_party/golibs/github.com/xeipuuv/gojsonpointer"
+             remote="https://fuchsia.googlesource.com/third_party/github.com/xeipuuv/gojsonpointer"
+             gerrithost="https://fuchsia-review.googlesource.com"/>
   </projects>
 </manifest>
