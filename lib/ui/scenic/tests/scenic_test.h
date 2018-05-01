@@ -41,7 +41,7 @@ class ScenicTest : public ::testing::Test,
                    std::string error_string) override;
 
   // |EventReporter|
-  void SendEvents(::fidl::VectorPtr<ui::Event> events) override;
+  void EnqueueEvent(ui::Event event) override;
 
   // Verify that the last reported error is as expected.  If no error is
   // expected, use nullptr as |expected_error_string|.

@@ -30,12 +30,12 @@ SessionHandlerForTest::SessionHandlerForTest(CommandDispatcherContext context,
                      session_id,
                      event_reporter,
                      error_reporter),
-      enqueue_count_(0),
+      command_count_(0),
       present_count_(0) {}
 
-void SessionHandlerForTest::Enqueue(::fidl::VectorPtr<ui::Command> commands) {
-  SessionHandler::Enqueue(std::move(commands));
-  ++enqueue_count_;
+void SessionHandlerForTest::DispatchCommand(ui::Command command) {
+  SessionHandler::DispatchCommand(std::move(command));
+  ++command_count_;
 }
 
 void SessionHandlerForTest::Present(uint64_t presentation_time,
@@ -75,8 +75,7 @@ EngineForTest::EngineForTest(DisplayManager* display_manager,
     : Engine(display_manager,
              std::move(r),
              std::make_unique<SessionManagerForTest>(),
-             escher) {
-}
+             escher) {}
 
 }  // namespace test
 }  // namespace gfx

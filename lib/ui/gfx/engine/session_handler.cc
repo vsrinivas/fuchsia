@@ -20,26 +20,15 @@ SessionHandler::SessionHandler(CommandDispatcherContext dispatcher_context,
       session_manager_(engine->session_manager()),
       event_reporter_(event_reporter),
       error_reporter_(error_reporter),
-      session_(::fxl::MakeRefCounted<scenic::gfx::Session>(
-          session_id,
-          engine,
-          static_cast<EventReporter*>(this),
-          error_reporter)) {
+      session_(::fxl::MakeRefCounted<scenic::gfx::Session>(session_id,
+                                                           engine,
+                                                           event_reporter,
+                                                           error_reporter)) {
   FXL_DCHECK(engine);
 }
 
 SessionHandler::~SessionHandler() {
   TearDown();
-}
-
-void SessionHandler::SendEvents(::fidl::VectorPtr<ui::Event> events) {
-  event_reporter_->SendEvents(std::move(events));
-}
-
-void SessionHandler::Enqueue(::fidl::VectorPtr<ui::Command> commands) {
-  for (auto& command : commands.take()) {
-    buffered_commands_.push_back(std::move(command.gfx()));
-  }
 }
 
 void SessionHandler::Present(uint64_t presentation_time,
@@ -51,6 +40,7 @@ void SessionHandler::Present(uint64_t presentation_time,
           std::move(acquire_fences), std::move(release_fences), callback)) {
     BeginTearDown();
   }
+  buffered_commands_.clear();
 }
 
 void SessionHandler::HitTest(uint32_t node_id,
@@ -69,10 +59,9 @@ void SessionHandler::HitTestDeviceRay(
                              callback);
 }
 
-bool SessionHandler::ApplyCommand(const ui::Command& command) {
-  // TODO(MZ-469): Implement once we push session management into Mozart.
-  FXL_CHECK(false);
-  return false;
+void SessionHandler::DispatchCommand(ui::Command command) {
+  FXL_DCHECK(command.Which() == ui::Command::Tag::kGfx);
+  buffered_commands_.emplace_back(std::move(command.gfx()));
 }
 
 void SessionHandler::BeginTearDown() {

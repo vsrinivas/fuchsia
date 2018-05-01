@@ -6,7 +6,9 @@
 #define GARNET_LIB_UI_SCENIC_SESSION_H_
 
 #include <array>
+#include <functional>
 #include <memory>
+#include <string>
 
 #include <fuchsia/cpp/gfx.h>
 #include "garnet/lib/ui/scenic/event_reporter.h"
@@ -37,8 +39,6 @@ class Session final : public ui::Session,
       std::array<std::unique_ptr<CommandDispatcher>,
                  System::TypeId::kMaxSystems> dispatchers);
 
-  bool ApplyCommand(const ui::Command& command);
-
   // |ui::Session|
   void Enqueue(::fidl::VectorPtr<ui::Command> cmds) override;
 
@@ -62,7 +62,8 @@ class Session final : public ui::Session,
                         HitTestCallback callback) override;
 
   // |EventReporter|
-  void SendEvents(::fidl::VectorPtr<ui::Event> events) override;
+  // Enqueues the event and manages scheduling of call to FlushEvents().
+  void EnqueueEvent(ui::Event event) override;
 
   // |ErrorReporter|
   // Customize behavior of ErrorReporter::ReportError().
@@ -73,13 +74,35 @@ class Session final : public ui::Session,
 
   ErrorReporter* error_reporter() { return this; }
 
+  // For tests.  See FlushEvents() below.
+  void set_event_callback(std::function<void(ui::Event)> callback) {
+    event_callback_ = callback;
+  }
+
+  // For tests.  Called by ReportError().
+  void set_error_callback(std::function<void(std::string)> callback) {
+    error_callback_ = callback;
+  }
+
  private:
+  // Flush any/all events that were enqueued via EnqueueEvent(), sending them
+  // to |listener_|.  If |listener_| is null but |event_callback_| isn't, then
+  // invoke the callback for each event.
+  void FlushEvents();
+
   Scenic* const scenic_;
   const SessionId id_;
   ::fidl::InterfacePtr<ui::SessionListener> listener_;
 
   std::array<std::unique_ptr<CommandDispatcher>, System::TypeId::kMaxSystems>
       dispatchers_;
+
+  // Holds events from EnqueueEvent() until they are flushed by FlushEvents().
+  fidl::VectorPtr<ui::Event> buffered_events_;
+
+  // Callbacks for testing.
+  std::function<void(ui::Event)> event_callback_;
+  std::function<void(std::string)> error_callback_;
 
   fxl::WeakPtrFactory<Session> weak_factory_;
 

@@ -26,9 +26,6 @@ SketchyCommandDispatcher::SketchyCommandDispatcher(
 
 SketchyCommandDispatcher::~SketchyCommandDispatcher() = default;
 
-bool SketchyCommandDispatcher::ApplyCommand(const ui::Command& command) {
-  FXL_CHECK(false) << "not implemented";
-  return false;
-}
+void SketchyCommandDispatcher::DispatchCommand(ui::Command command) {}
 
 }  // namespace scenic

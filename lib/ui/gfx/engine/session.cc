@@ -1299,7 +1299,7 @@ bool Session::ScheduleUpdate(uint64_t presentation_time,
     // zero acquire fences).
 
     acquire_fence_set->WaitReadyAsync(
-        [weak = weak_factory_.GetWeakPtr(), presentation_time] {
+        [ weak = weak_factory_.GetWeakPtr(), presentation_time ] {
           if (weak)
             weak->engine_->session_manager()->ScheduleUpdateForSession(
                 weak->engine_, presentation_time, SessionPtr(weak.get()));
@@ -1393,22 +1393,10 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
 }
 
 void Session::EnqueueEvent(::gfx::Event event) {
-  if (is_valid()) {
-    if (buffered_events_->empty()) {
-      async::PostTask(async_get_default(), [weak = weak_factory_.GetWeakPtr()] {
-        if (weak)
-          weak->FlushEvents();
-      });
-    }
+  if (is_valid() && event_reporter_) {
     ui::Event scenic_event;
     scenic_event.set_gfx(std::move(event));
-    buffered_events_.push_back(std::move(scenic_event));
-  }
-}
-
-void Session::FlushEvents() {
-  if (!buffered_events_->empty() && event_reporter_) {
-    event_reporter_->SendEvents(std::move(buffered_events_));
+    event_reporter_->EnqueueEvent(std::move(scenic_event));
   }
 }
 

@@ -75,8 +75,8 @@ TEST_F(GfxSystemTest, DISABLED_ReleaseFences) {
 
     session->Enqueue(std::move(commands));
   }
-  RUN_MESSAGE_LOOP_UNTIL(handler->enqueue_count() == 1);
-  EXPECT_EQ(1u, handler->enqueue_count());
+  RUN_MESSAGE_LOOP_UNTIL(handler->command_count() == 2);
+  EXPECT_EQ(2u, handler->command_count());
   // Create release fences
   ::fidl::VectorPtr<zx::event> release_fences = CreateEventArray(2);
   zx::event release_fence1 = CopyEvent(release_fences->at(0));
@@ -120,8 +120,8 @@ TEST_F(GfxSystemTest, DISABLED_AcquireAndReleaseFences) {
 
     session->Enqueue(std::move(commands));
   }
-  RUN_MESSAGE_LOOP_UNTIL(handler->enqueue_count() == 1);
-  EXPECT_EQ(1u, handler->enqueue_count());
+  RUN_MESSAGE_LOOP_UNTIL(handler->command_count() == 2);
+  EXPECT_EQ(2u, handler->command_count());
   // Create acquire and release fences
   zx::event acquire_fence;
   ASSERT_EQ(ZX_OK, zx::event::create(0, &acquire_fence));

@@ -25,7 +25,9 @@ class SceneManagerImpl;
 // operations from Enqueue() before passing them all to |session_| when
 // Commit() is called.  Eventually, this class may do more work if performance
 // profiling suggests to.
-class SessionHandler : public TempSessionDelegate, public EventReporter {
+//
+// TODO(SCN-709): Unify SessionHandler and Session.
+class SessionHandler : public TempSessionDelegate {
  public:
   SessionHandler(CommandDispatcherContext context,
                  Engine* engine,
@@ -36,27 +38,26 @@ class SessionHandler : public TempSessionDelegate, public EventReporter {
 
   scenic::gfx::Session* session() const { return session_.get(); }
 
-  // Flushes enqueued session events to the session listener as a batch.
-  void SendEvents(::fidl::VectorPtr<ui::Event> events) override;
-
  protected:
-  // |ui::Session|
-  void Enqueue(::fidl::VectorPtr<ui::Command> commands) override;
+  // |ui::Session / scenic::TempSessionDelegate|
   void Present(uint64_t presentation_time,
                ::fidl::VectorPtr<zx::event> acquire_fences,
                ::fidl::VectorPtr<zx::event> release_fences,
                ui::Session::PresentCallback callback) override;
 
+  // |ui::Session / scenic::TempSessionDelegate|
   void HitTest(uint32_t node_id,
                ::gfx::vec3 ray_origin,
                ::gfx::vec3 ray_direction,
                ui::Session::HitTestCallback callback) override;
 
+  // |ui::Session / scenic::TempSessionDelegate|
   void HitTestDeviceRay(::gfx::vec3 ray_origin,
                         ::gfx::vec3 ray_direction,
                         ui::Session::HitTestCallback callback) override;
 
-  bool ApplyCommand(const ui::Command& command) override;
+  // |scenic::CommandDispatcher|
+  void DispatchCommand(ui::Command command) override;
 
  private:
   friend class SessionManager;
@@ -75,6 +76,8 @@ class SessionHandler : public TempSessionDelegate, public EventReporter {
   ErrorReporter* const error_reporter_;
   scenic::gfx::SessionPtr session_;
 
+  // TODO(SCN-710): We reallocate this everytime we std::move it into
+  // ScheduleUpdate().  The bug has some ideas about how to do better.
   std::vector<::gfx::Command> buffered_commands_;
 };
 

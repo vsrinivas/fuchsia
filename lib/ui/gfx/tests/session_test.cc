@@ -53,10 +53,8 @@ void SessionTest::ReportError(fxl::LogSeverity severity,
   reported_errors_.push_back(error_string);
 }
 
-void SessionTest::SendEvents(::fidl::VectorPtr<ui::Event> events) {
-  for (size_t i = 0; i < events->size(); ++i) {
-    events_.push_back(std::move(events->at(i)));
-  }
+void SessionTest::EnqueueEvent(ui::Event event) {
+  events_.push_back(std::move(event));
 }
 
 fxl::RefPtr<fxl::TaskRunner> SessionThreadedTest::TaskRunner() const {

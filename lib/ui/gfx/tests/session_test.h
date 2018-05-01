@@ -35,7 +35,7 @@ class SessionTest : public ::testing::Test,
                    std::string error_string) override;
 
   // |EventReporter|
-  void SendEvents(::fidl::VectorPtr<ui::Event> events) override;
+  void EnqueueEvent(ui::Event event) override;
 
   // Apply the specified Command, and verify that it succeeds.
   bool Apply(::gfx::Command command) {

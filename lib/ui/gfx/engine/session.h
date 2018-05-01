@@ -90,8 +90,8 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   bool ApplyScheduledUpdates(uint64_t presentation_time,
                              uint64_t presentation_interval);
 
-  // Add an event to our queue, which will be scheduled to be flushed and sent
-  // to the event reporter later.
+  // Convenience.  Wraps a ::gfx::Event in a ui::Event, then forwards it to
+  // the EventReporter.
   void EnqueueEvent(::gfx::Event event);
 
   // Called by SessionHandler::HitTest().
@@ -259,8 +259,6 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
     return AssertValueIsOfType(value, tags.data(), N);
   }
 
-  void FlushEvents();
-
   friend class Resource;
   void IncrementResourceCount() { ++resource_count_; }
   void DecrementResourceCount() { --resource_count_; }
@@ -292,7 +290,6 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
     }
   };
   std::priority_queue<ImagePipeUpdate> scheduled_image_pipe_updates_;
-  ::fidl::VectorPtr<ui::Event> buffered_events_;
 
   const SessionId id_;
   Engine* const engine_;

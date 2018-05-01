@@ -6,4 +6,5 @@ library ui;
 
 union Event {
   gfx.Event gfx;
+  Command unhandled;
 };

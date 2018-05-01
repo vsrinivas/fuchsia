@@ -29,7 +29,8 @@ class DummyCommandDispatcher : public CommandDispatcher {
   explicit DummyCommandDispatcher(CommandDispatcherContext context);
   ~DummyCommandDispatcher() override;
 
-  bool ApplyCommand(const ui::Command& command) override;
+  // |CommandDispatcher|
+  void DispatchCommand(const ui::Command command) override;
 };
 
 }  // namespace test

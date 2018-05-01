@@ -27,9 +27,6 @@ ViewCommandDispatcher::ViewCommandDispatcher(
 
 ViewCommandDispatcher::~ViewCommandDispatcher() = default;
 
-bool ViewCommandDispatcher::ApplyCommand(const ui::Command& command) {
-  FXL_CHECK(false) << "not implemented";
-  return false;
-}
+void ViewCommandDispatcher::DispatchCommand(ui::Command command) {}
 
 }  // namespace scenic

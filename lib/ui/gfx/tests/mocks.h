@@ -33,20 +33,23 @@ class SessionHandlerForTest : public SessionHandler {
                         EventReporter* event_reporter,
                         ErrorReporter* error_reporter);
 
-  // ::gfx::Session interface methods.
-  void Enqueue(::fidl::VectorPtr<ui::Command> commands) override;
+  // |scenic::CommandDispatcher|
+  void DispatchCommand(ui::Command command) override;
+
+  // |ui::Session / scenic::TempSessionDelegate|
   void Present(uint64_t presentation_time,
                ::fidl::VectorPtr<zx::event> acquire_fences,
                ::fidl::VectorPtr<zx::event> release_fences,
                ui::Session::PresentCallback callback) override;
 
-  // Return the number of Enqueue()/Present()/Connect() messages that have
-  // been processed.
-  uint32_t enqueue_count() const { return enqueue_count_; }
+  // Return the number of commands that have been enqueued.
+  uint32_t command_count() const { return command_count_; }
+
+  // Return the number of times that Present() has been called.
   uint32_t present_count() const { return present_count_; }
 
  private:
-  std::atomic<uint32_t> enqueue_count_;
+  std::atomic<uint32_t> command_count_;
   std::atomic<uint32_t> present_count_;
 };
 

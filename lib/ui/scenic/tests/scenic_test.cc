@@ -48,10 +48,8 @@ void ScenicTest::ReportError(fxl::LogSeverity severity,
   reported_errors_.push_back(error_string);
 }
 
-void ScenicTest::SendEvents(::fidl::VectorPtr<ui::Event> events) {
-  for (size_t i = 0; i < events->size(); ++i) {
-    events_.push_back(std::move(events->at(i)));
-  }
+void ScenicTest::EnqueueEvent(ui::Event event) {
+  events_.push_back(std::move(event));
 }
 
 }  // namespace test

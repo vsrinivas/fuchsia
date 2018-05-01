@@ -12,8 +12,9 @@ namespace scenic {
 // Interface for a class that submits events to the SessionListener.
 class EventReporter {
  public:
-  // Flushes enqueued session events to the session listener as a batch.
-  virtual void SendEvents(::fidl::VectorPtr<ui::Event> buffered_events) = 0;
+  // Add an event to our queue, which will be scheduled to be flushed and sent
+  // to the event reporter later.
+  virtual void EnqueueEvent(ui::Event event) = 0;
 };
 
 }  // namespace scenic

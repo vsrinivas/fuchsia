@@ -34,7 +34,7 @@ class CommandDispatcher {
   explicit CommandDispatcher(CommandDispatcherContext context);
   virtual ~CommandDispatcher();
 
-  virtual bool ApplyCommand(const ui::Command& command) = 0;
+  virtual void DispatchCommand(ui::Command command) = 0;
 
   CommandDispatcherContext* context() { return &context_; }
 
@@ -43,12 +43,11 @@ class CommandDispatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(CommandDispatcher);
 };
 
-// TODO(MZ-421): Remove this once view manager is another Scenic system.
+// TODO(SCN-421): Remove this once view manager is another Scenic system.
 class TempSessionDelegate : public CommandDispatcher {
  public:
   explicit TempSessionDelegate(CommandDispatcherContext context);
 
-  virtual void Enqueue(::fidl::VectorPtr<ui::Command> ops) = 0;
   virtual void Present(uint64_t presentation_time,
                        ::fidl::VectorPtr<zx::event> acquire_fences,
                        ::fidl::VectorPtr<zx::event> release_fences,

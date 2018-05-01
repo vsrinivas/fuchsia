@@ -32,7 +32,8 @@ class SketchyCommandDispatcher : public CommandDispatcher {
                            gfx::GfxSystem* scenic);
   ~SketchyCommandDispatcher() override;
 
-  bool ApplyCommand(const ui::Command& command) override;
+  // |CommandDispatcher|
+  void DispatchCommand(const ui::Command command) override;
 
  private:
   gfx::GfxSystem* const gfx_system_;
