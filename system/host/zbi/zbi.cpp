@@ -390,6 +390,8 @@ private:
 #undef LZ4F_CALL
 };
 
+const size_t Compressor::kMinBufferSize;
+
 class FileContents {
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(FileContents);
