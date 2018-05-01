@@ -7,7 +7,6 @@
 #include "garnet/bin/zxdb/client/arch_info.h"
 #include "garnet/bin/zxdb/client/disassembler.h"
 #include "garnet/bin/zxdb/client/memory_dump.h"
-#include "garnet/bin/zxdb/client/output_buffer.h"
 #include "garnet/public/lib/fxl/arraysize.h"
 #include "gtest/gtest.h"
 
@@ -23,22 +22,29 @@ TEST(Disassembler, X64Individual) {
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   Disassembler::Options opts;
-  OutputBuffer out;
+  std::vector<std::string> out;
 
   // "int3".
   const uint8_t int3_data[1] = {0xCC};
   size_t consumed = d.DisassembleOne(int3_data, arraysize(int3_data),
                                      0x1234567890, opts, &out);
   EXPECT_EQ(1u, consumed);
-  EXPECT_EQ("\tint3\n", out.AsString());
+  ASSERT_EQ(3u, out.size());
+  EXPECT_EQ("int3", out[0]);
+  EXPECT_EQ("", out[1]);  // Params.
+  EXPECT_EQ("", out[2]);  // Comment.
 
-  // "mov edi, 0x28e5e0"
+  // "mov edi, 0x28e5e0" with bytes and address.
   const uint8_t mov_data[5] = {0xbf, 0xe0, 0xe5, 0x28, 0x00};
-  out = OutputBuffer();
+  out.clear();
+  opts.emit_addresses = true;
+  opts.emit_bytes = true;
   consumed =
       d.DisassembleOne(mov_data, arraysize(mov_data), 0x1234, opts, &out);
   EXPECT_EQ(5u, consumed);
-  EXPECT_EQ("\tmov\tedi, 0x28e5e0\n", out.AsString());
+  EXPECT_EQ(std::vector<std::string>(
+                {"0x1234", "bf e0 e5 28 00", "mov", "edi, 0x28e5e0", ""}),
+            out);
 }
 
 TEST(Disassembler, X64Undecodable) {
@@ -51,7 +57,7 @@ TEST(Disassembler, X64Undecodable) {
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   Disassembler::Options opts;
-  OutputBuffer out;
+  std::vector<std::string> out;
 
   // This instruction is "mov edi, 0x28e5e0". Cutting this shorter will give
   // undecodable instructions.
@@ -62,14 +68,17 @@ TEST(Disassembler, X64Undecodable) {
   size_t consumed =
       d.DisassembleOne(mov_data, arraysize(mov_data) - 1, 0x1234, opts, &out);
   EXPECT_EQ(0u, consumed);
-  EXPECT_EQ("", out.AsString());
+  EXPECT_TRUE(out.empty());
 
   // Emit undecodable. On X64 this will consume one byte.
   opts.emit_undecodable = true;
+  out.clear();
   consumed =
       d.DisassembleOne(mov_data, arraysize(mov_data) - 1, 0x1234, opts, &out);
   EXPECT_EQ(1u, consumed);
-  EXPECT_EQ("\t.byte\t0xbf\t# Invalid instruction.\n", out.AsString());
+  EXPECT_EQ(
+      std::vector<std::string>({".byte", "0xbf", "# Invalid instruction."}),
+      out);
 }
 
 TEST(Disassembler, X64Many) {
@@ -82,7 +91,7 @@ TEST(Disassembler, X64Many) {
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   Disassembler::Options opts;
-  OutputBuffer out;
+  std::vector<std::vector<std::string>> out;
 
   const uint8_t data[] = {
       0xbf, 0xe0, 0xe5, 0x28, 0x00,  // mov edi, 0x28e5e0
@@ -91,55 +100,56 @@ TEST(Disassembler, X64Many) {
   };
 
   // Full block.
-  size_t count = 0;
-  size_t consumed = d.DisassembleMany(data, arraysize(data), 0x123456780, opts,
-                                      0, &out, &count);
+  size_t consumed =
+      d.DisassembleMany(data, arraysize(data), 0x123456780, opts, 0, &out);
   EXPECT_EQ(arraysize(data), consumed);
-  EXPECT_EQ(3u, count);
-  EXPECT_EQ(
-      "\tmov\tedi, 0x28e5e0\n"
-      "\tmov\trsi, rbx\n"
-      "\tlea\trdi, [rsp + 0xc]\n",
-      out.AsString());
+  ASSERT_EQ(3u, out.size());
+  EXPECT_EQ(std::vector<std::string>({"mov", "edi, 0x28e5e0", ""}), out[0]);
+  EXPECT_EQ(std::vector<std::string>({"mov", "rsi, rbx", ""}), out[1]);
+  EXPECT_EQ(std::vector<std::string>({"lea", "rdi, [rsp + 0xc]", ""}), out[2]);
 
   // Limit the number of instructions.
-  out = OutputBuffer();
-  consumed = d.DisassembleMany(data, arraysize(data), 0x123456780, opts, 2,
-                               &out, &count);
+  out.clear();
+  consumed =
+      d.DisassembleMany(data, arraysize(data), 0x123456780, opts, 2, &out);
   EXPECT_EQ(8u, consumed);
-  EXPECT_EQ(2u, count);
-  EXPECT_EQ(
-      "\tmov\tedi, 0x28e5e0\n"
-      "\tmov\trsi, rbx\n",
-      out.AsString());
+  ASSERT_EQ(2u, out.size());
+  EXPECT_EQ(std::vector<std::string>({"mov", "edi, 0x28e5e0", ""}), out[0]);
+  EXPECT_EQ(std::vector<std::string>({"mov", "rsi, rbx", ""}), out[1]);
 
   // Have 3 bytes off the end.
   opts.emit_undecodable = false;  // Should be overridden.
-  out = OutputBuffer();
-  consumed = d.DisassembleMany(data, arraysize(data) - 3, 0x123456780, opts, 0,
-                               &out, &count);
+  out.clear();
+  consumed =
+      d.DisassembleMany(data, arraysize(data) - 3, 0x123456780, opts, 0, &out);
   EXPECT_EQ(arraysize(data) - 3, consumed);
-  EXPECT_EQ(4u, count);
+  ASSERT_EQ(4u, out.size());
+  EXPECT_EQ(std::vector<std::string>({"mov", "edi, 0x28e5e0", ""}), out[0]);
+  EXPECT_EQ(std::vector<std::string>({"mov", "rsi, rbx", ""}), out[1]);
   EXPECT_EQ(
-      "\tmov\tedi, 0x28e5e0\n"
-      "\tmov\trsi, rbx\n"
-      "\t.byte\t0x48\t# Invalid instruction.\n"
-      "\t.byte\t0x8d\t# Invalid instruction.\n",
-      out.AsString());
+      std::vector<std::string>({".byte", "0x48", "# Invalid instruction."}),
+      out[2]);
+  EXPECT_EQ(
+      std::vector<std::string>({".byte", "0x8d", "# Invalid instruction."}),
+      out[3]);
 
   // Add addresses and bytes.
   opts.emit_addresses = true;
   opts.emit_bytes = true;
-  out = OutputBuffer();
-  consumed = d.DisassembleMany(data, arraysize(data), 0x123456780, opts, 0,
-                               &out, &count);
+  out.clear();
+  consumed =
+      d.DisassembleMany(data, arraysize(data), 0x123456780, opts, 0, &out);
   EXPECT_EQ(arraysize(data), consumed);
-  EXPECT_EQ(3u, count);
-  EXPECT_EQ(
-      "\t0x0000000123456780\tbf e0 e5 28 00\tmov\tedi, 0x28e5e0\n"
-      "\t0x0000000123456785\t48 89 de\tmov\trsi, rbx\n"
-      "\t0x0000000123456788\t48 8d 7c 24 0c\tlea\trdi, [rsp + 0xc]\n",
-      out.AsString());
+  ASSERT_EQ(3u, out.size());
+  EXPECT_EQ(std::vector<std::string>(
+                {"0x123456780", "bf e0 e5 28 00", "mov", "edi, 0x28e5e0", ""}),
+            out[0]);
+  EXPECT_EQ(std::vector<std::string>(
+                {"0x123456785", "48 89 de", "mov", "rsi, rbx", ""}),
+            out[1]);
+  EXPECT_EQ(std::vector<std::string>({"0x123456788", "48 8d 7c 24 0c", "lea",
+                                      "rdi, [rsp + 0xc]", ""}),
+            out[2]);
 }
 
 TEST(Disassembler, Dump) {
@@ -153,7 +163,7 @@ TEST(Disassembler, Dump) {
 
   Disassembler::Options opts;
   opts.emit_addresses = true;
-  OutputBuffer out;
+  std::vector<std::vector<std::string>> out;
 
   // Make a little memory block with valid instructions in it.
   debug_ipc::MemoryBlock block_with_data;
@@ -175,25 +185,29 @@ TEST(Disassembler, Dump) {
   vect[1].address = vect[0].address + vect[0].size;
 
   MemoryDump dump(std::move(vect));
-  size_t count = 0;
-  size_t consumed = d.DisassembleDump(dump, opts, 5, &out, &count);
+  size_t consumed = d.DisassembleDump(dump, opts, 5, &out);
   EXPECT_EQ(21u, consumed);
-  EXPECT_EQ(5u, count);
+  ASSERT_EQ(5u, out.size());
   EXPECT_EQ(
-      "\t0x0000000123456780\tmov\tedi, 0x28e5e0\n"
-      "\t0x0000000123456785\tmov\trsi, rbx\n"
-      "\t0x0000000123456788\tlea\trdi, [rsp + 0xc]\n"
-      "\t0x000000012345678d\tmov\tedi, 0x28e5e0\n"
-      "\t0x0000000123456792\tmov\trsi, rbx\n",
-      out.AsString());
+      std::vector<std::string>({"0x123456780", "mov", "edi, 0x28e5e0", ""}),
+      out[0]);
+  EXPECT_EQ(std::vector<std::string>({"0x123456785", "mov", "rsi, rbx", ""}),
+            out[1]);
+  EXPECT_EQ(
+      std::vector<std::string>({"0x123456788", "lea", "rdi, [rsp + 0xc]", ""}),
+      out[2]);
+  EXPECT_EQ(
+      std::vector<std::string>({"0x12345678d", "mov", "edi, 0x28e5e0", ""}),
+      out[3]);
+  EXPECT_EQ(std::vector<std::string>({"0x123456792", "mov", "rsi, rbx", ""}),
+            out[4]);
 
   // Empty dump (with one block but 0 size).
-  out = OutputBuffer();
+  out.clear();
   dump = MemoryDump(std::vector<debug_ipc::MemoryBlock>());
-  consumed = d.DisassembleDump(dump, opts, 0, &out, &count);
+  consumed = d.DisassembleDump(dump, opts, 0, &out);
   EXPECT_EQ(0u, consumed);
-  EXPECT_EQ(0u, count);
-  EXPECT_EQ("", out.AsString());
+  EXPECT_EQ(0u, out.size());
 
   // Test a memory dump that's completely invalid.
   debug_ipc::MemoryBlock invalid_block;
@@ -201,12 +215,14 @@ TEST(Disassembler, Dump) {
   invalid_block.valid = false;
   invalid_block.size = 16;
 
-  out = OutputBuffer();
+  out.clear();
   dump = MemoryDump(std::vector<debug_ipc::MemoryBlock>{invalid_block});
-  consumed = d.DisassembleDump(dump, opts, 0, &out, &count);
+  consumed = d.DisassembleDump(dump, opts, 0, &out);
   EXPECT_EQ(invalid_block.size, consumed);
-  EXPECT_EQ(1u, count);
-  EXPECT_EQ("\t0x0000000123456780\t??\t# Invalid memory.\n", out.AsString());
+  ASSERT_EQ(1u, out.size());
+  EXPECT_EQ(std::vector<std::string>(
+                {"0x123456780", "??", "", "# Invalid memory @ 0x123456780"}),
+            out[0]);
 
   // Test two valid memory blocks with a sandwich of invalid in-between.
   vect.clear();
@@ -218,20 +234,33 @@ TEST(Disassembler, Dump) {
   vect[2].address = vect[1].address + vect[1].size;
   size_t total_bytes = vect[2].address + vect[2].size - vect[0].address;
 
-  out = OutputBuffer();
+  out.clear();
   dump = MemoryDump(std::move(vect));
-  consumed = d.DisassembleDump(dump, opts, 0, &out, &count);
+  consumed = d.DisassembleDump(dump, opts, 0, &out);
   EXPECT_EQ(total_bytes, consumed);
-  EXPECT_EQ(7u, count);
+  ASSERT_EQ(7u, out.size());
   EXPECT_EQ(
-      "\t0x0000000123456780\tmov\tedi, 0x28e5e0\n"
-      "\t0x0000000123456785\tmov\trsi, rbx\n"
-      "\t0x0000000123456788\tlea\trdi, [rsp + 0xc]\n"
-      "\t0x000000012345678d - 0x000000012345679c\t??\t# Invalid memory.\n"
-      "\t0x000000012345679d\tmov\tedi, 0x28e5e0\n"
-      "\t0x00000001234567a2\tmov\trsi, rbx\n"
-      "\t0x00000001234567a5\tlea\trdi, [rsp + 0xc]\n",
-      out.AsString());
+      std::vector<std::string>({"0x123456780", "mov", "edi, 0x28e5e0", ""}),
+      out[0]);
+  EXPECT_EQ(std::vector<std::string>({"0x123456785", "mov", "rsi, rbx", ""}),
+            out[1]);
+  EXPECT_EQ(
+      std::vector<std::string>({"0x123456788", "lea", "rdi, [rsp + 0xc]", ""}),
+      out[2]);
+
+  EXPECT_EQ(std::vector<std::string>(
+                {"0x12345678d", "??", "",
+                 "# Invalid memory @ 0x12345678d - 0x12345679c"}),
+            out[3]);
+
+  EXPECT_EQ(
+      std::vector<std::string>({"0x12345679d", "mov", "edi, 0x28e5e0", ""}),
+      out[4]);
+  EXPECT_EQ(std::vector<std::string>({"0x1234567a2", "mov", "rsi, rbx", ""}),
+            out[5]);
+  EXPECT_EQ(
+      std::vector<std::string>({"0x1234567a5", "lea", "rdi, [rsp + 0xc]", ""}),
+      out[6]);
 }
 
 TEST(Disassembler, Arm64Many) {
@@ -243,41 +272,49 @@ TEST(Disassembler, Arm64Many) {
   err = d.Init(&arch);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
-  OutputBuffer out;
+  std::vector<std::vector<std::string>> out;
 
   const uint8_t data[] = {
-    0xf3, 0x0f, 0x1e, 0xf8,  // str x19, [sp, #-0x20]!
-    0xfd, 0x7b, 0x01, 0xa9,  // stp x29, x30, [sp, #0x10]
-    0xfd, 0x43, 0x00, 0x91   // add x29, sp, #16
+      0xf3, 0x0f, 0x1e, 0xf8,  // str x19, [sp, #-0x20]!
+      0xfd, 0x7b, 0x01, 0xa9,  // stp x29, x30, [sp, #0x10]
+      0xfd, 0x43, 0x00, 0x91   // add x29, sp, #16
   };
 
   Disassembler::Options opts;
   opts.emit_addresses = true;
   opts.emit_bytes = true;
-  out = OutputBuffer();
-  size_t count = 0;
-  size_t consumed = d.DisassembleMany(data, arraysize(data), 0x123456780, opts, 0,
-                               &out, &count);
+  size_t consumed =
+      d.DisassembleMany(data, arraysize(data), 0x123456780, opts, 0, &out);
   EXPECT_EQ(arraysize(data), consumed);
-  EXPECT_EQ(3u, count);
-  EXPECT_EQ(
-      "\t0x0000000123456780\tf3 0f 1e f8\tstr\tx19, [sp, #-0x20]!\n"
-      "\t0x0000000123456784\tfd 7b 01 a9\tstp\tx29, x30, [sp, #0x10]\n"
-      "\t0x0000000123456788\tfd 43 00 91\tadd\tx29, sp, #0x10\t// =0x10\n",
-      out.AsString());
+  ASSERT_EQ(3u, out.size());
+  EXPECT_EQ(std::vector<std::string>({"0x123456780", "f3 0f 1e f8", "str",
+                                      "x19, [sp, #-0x20]!", ""}),
+            out[0]);
+  EXPECT_EQ(std::vector<std::string>({"0x123456784", "fd 7b 01 a9", "stp",
+                                      "x29, x30, [sp, #0x10]", ""}),
+            out[1]);
+  // LLVM emits a comment "=0x10" here which isn't very helpful. If this
+  // changes in a future LLVM update, it's fine.
+  EXPECT_EQ(std::vector<std::string>({"0x123456788", "fd 43 00 91", "add",
+                                      "x29, sp, #0x10", "// =0x10"}),
+            out[2]);
 
   // Test an instruction off the end.
-  out = OutputBuffer();
-  consumed = d.DisassembleMany(data, arraysize(data) - 1, 0x123456780, opts, 0,
-                               &out, &count);
+  out.clear();
+  consumed =
+      d.DisassembleMany(data, arraysize(data) - 1, 0x123456780, opts, 0, &out);
   EXPECT_EQ(arraysize(data) - 1, consumed);
-  EXPECT_EQ(3u, count);
+  ASSERT_EQ(3u, out.size());
+  EXPECT_EQ(std::vector<std::string>({"0x123456780", "f3 0f 1e f8", "str",
+                                      "x19, [sp, #-0x20]!", ""}),
+            out[0]);
+  EXPECT_EQ(std::vector<std::string>({"0x123456784", "fd 7b 01 a9", "stp",
+                                      "x29, x30, [sp, #0x10]", ""}),
+            out[1]);
   EXPECT_EQ(
-      "\t0x0000000123456780\tf3 0f 1e f8\tstr\tx19, [sp, #-0x20]!\n"
-      "\t0x0000000123456784\tfd 7b 01 a9\tstp\tx29, x30, [sp, #0x10]\n"
-      "\t0x0000000123456788\tfd 43 00\t.byte\t0xfd 0x43 0x00\t// Invalid instruction.\n",
-      out.AsString());
+      std::vector<std::string>({"0x123456788", "fd 43 00", ".byte",
+                                "0xfd 0x43 0x00", "// Invalid instruction."}),
+      out[2]);
 }
-
 
 }  // namespace zxdb

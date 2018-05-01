@@ -5,8 +5,8 @@
 #include "garnet/bin/zxdb/console/command_utils.h"
 
 #include "garnet/bin/zxdb/client/err.h"
-#include "garnet/bin/zxdb/client/output_buffer.h"
 #include "garnet/bin/zxdb/console/command.h"
+#include "garnet/bin/zxdb/console/output_buffer.h"
 #include "gtest/gtest.h"
 
 namespace zxdb {
@@ -143,10 +143,10 @@ TEST(CommandUtils, FormatColumns) {
   FormatColumns({ColSpec(), ColSpec()}, rows, &out);
   EXPECT_EQ("0     Hello, world\n12345 Hello\n", out.AsString());
 
-  // Right align.
+  // Right align with padding.
   out = OutputBuffer();
-  FormatColumns({ColSpec(Align::kRight), ColSpec(Align::kRight)}, rows, &out);
-  EXPECT_EQ("    0 Hello, world\n12345        Hello\n", out.AsString());
+  FormatColumns({ColSpec(Align::kRight), ColSpec(Align::kRight, 0, std::string(), 2)}, rows, &out);
+  EXPECT_EQ("    0   Hello, world\n12345          Hello\n", out.AsString());
 
   // Max width + heading.
   out = OutputBuffer();

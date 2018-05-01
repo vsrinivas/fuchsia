@@ -12,7 +12,6 @@
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/memory_dump.h"
-#include "garnet/bin/zxdb/client/output_buffer.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/system.h"
@@ -21,6 +20,7 @@
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/memory_format.h"
+#include "garnet/bin/zxdb/console/output_buffer.h"
 
 namespace zxdb {
 
@@ -128,9 +128,31 @@ void CompleteDisassemble(const Err& err,
     return;
   }
 
+  std::vector<std::vector<std::string>> rows;
+  disassembler.DisassembleDump(dump, options, num_instr, &rows);
+
+  std::vector<ColSpec> spec;
+  if (options.emit_addresses) {
+    spec.emplace_back(Align::kRight);
+    spec.back().syntax = Syntax::kComment;
+  }
+  if (options.emit_bytes) {
+    // Max out the bytes @ 17 cols (holds 6 bytes) to keep it from pushing
+    // things too far over in the common case.
+    spec.emplace_back(Align::kLeft, 17, std::string(), 1);
+    spec.back().syntax = Syntax::kComment;
+  }
+
+  spec.emplace_back(Align::kLeft, 0, std::string(), 1);  // Instructions.
+  spec.emplace_back(Align::kLeft, 0, std::string(), 1);  // Params.
+  spec.emplace_back(Align::kLeft);  // Comments.
+  spec.back().syntax = Syntax::kComment;
+
+  // Left column (whatever it is) gets 2 spaces padding for indentation.
+  spec[0].pad_left = 2;
+
   OutputBuffer out;
-  size_t instr_count = 0;
-  disassembler.DisassembleDump(dump, options, num_instr, &out, &instr_count);
+  FormatColumns(spec, rows, &out);
   console->Output(std::move(out));
 }
 

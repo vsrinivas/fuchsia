@@ -4,12 +4,12 @@
 
 #include "garnet/bin/zxdb/console/verbs.h"
 
-#include "garnet/bin/zxdb/client/output_buffer.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/console_context.h"
+#include "garnet/bin/zxdb/console/output_buffer.h"
 
 namespace zxdb {
 

@@ -9,6 +9,7 @@
 
 #include "garnet/bin/zxdb/client/breakpoint.h"
 #include "garnet/bin/zxdb/client/target.h"
+#include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/lib/debug_ipc/records.h"
 
@@ -18,7 +19,6 @@ class Command;
 class ConsoleContext;
 class Err;
 class Frame;
-class OutputBuffer;
 class Thread;
 
 // Ensures the target is currently running (it has a current Process associated
@@ -95,13 +95,22 @@ struct ColSpec {
 
   // Extra padding to the left of this column.
   int pad_left = 0;
+
+  Syntax syntax = Syntax::kNormal;
 };
 
 // Formats the given rows in the output as a series of horizontally aligned (if
 // possible) columns. The number of columns in the spec vector and in each row
 // must match.
-void FormatColumns(std::initializer_list<ColSpec> spec,
+void FormatColumns(const std::vector<ColSpec>& spec,
                    const std::vector<std::vector<std::string>>& rows,
                    OutputBuffer* out);
+
+// Helper function to save some typing for static column specs.
+inline void FormatColumns(std::initializer_list<ColSpec> spec,
+                          const std::vector<std::vector<std::string>>& rows,
+                          OutputBuffer* out) {
+  return FormatColumns(std::vector<ColSpec>(spec), rows, out);
+}
 
 }  // namespace zxdb

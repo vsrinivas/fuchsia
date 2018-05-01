@@ -9,12 +9,12 @@
 
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/bin/zxdb/client/err.h"
-#include "garnet/bin/zxdb/client/output_buffer.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_parser.h"
+#include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

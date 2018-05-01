@@ -10,12 +10,12 @@
 
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/frame.h"
-#include "garnet/bin/zxdb/client/output_buffer.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/console_context.h"
+#include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
@@ -25,34 +25,44 @@ namespace {
 
 // Appends the given string to the output, padding with spaces to the width
 // as necessary.
-void AppendPadded(const std::string& str, int width, Align align,
-                  bool is_last_col, std::string* out) {
+void AppendPadded(const std::string& str,
+                  int width,
+                  Align align,
+                  Syntax syntax,
+                  bool is_last_col,
+                  OutputBuffer* out) {
+  std::string text;
+
   int pad = std::max(0, width - static_cast<int>(str.size()));
   if (align == Align::kRight)
-    out->append(pad, ' ');
+    text.append(pad, ' ');
 
-  out->append(str);
+  text.append(str);
 
   // Padding on the right. Don't add for the last col.
   if (!is_last_col && align == Align::kLeft)
-    out->append(pad, ' ');
+    text.append(pad, ' ');
 
   // Separator after columns for all but the last.
   if (!is_last_col)
-    out->push_back(' ');
+    text.push_back(' ');
+
+  out->Append(syntax, std::move(text));
 }
 
 }  // namespace
 
-Err AssertRunningTarget(ConsoleContext* context, const char* command_name,
+Err AssertRunningTarget(ConsoleContext* context,
+                        const char* command_name,
                         Target* target) {
   Target::State state = target->GetState();
   if (state == Target::State::kRunning)
     return Err();
-  return Err(ErrType::kInput, fxl::StringPrintf(
-      "%s requires a running process but process %d is %s.",
-      command_name, context->IdForTarget(target),
-      TargetStateToString(state).c_str()));
+  return Err(
+      ErrType::kInput,
+      fxl::StringPrintf("%s requires a running process but process %d is %s.",
+                        command_name, context->IdForTarget(target),
+                        TargetStateToString(state).c_str()));
 }
 
 Err StringToUint64(const std::string& s, uint64_t* out) {
@@ -77,23 +87,28 @@ Err StringToUint64(const std::string& s, uint64_t* out) {
   return Err();
 }
 
-Err ReadUint64Arg(const Command& cmd, size_t arg_index,
-                  const char* param_desc, uint64_t* out) {
+Err ReadUint64Arg(const Command& cmd,
+                  size_t arg_index,
+                  const char* param_desc,
+                  uint64_t* out) {
   if (cmd.args().size() <= arg_index) {
-    return Err(ErrType::kInput, fxl::StringPrintf(
-        "Not enough arguments when reading the %s.", param_desc));
+    return Err(ErrType::kInput,
+               fxl::StringPrintf("Not enough arguments when reading the %s.",
+                                 param_desc));
   }
   Err result = StringToUint64(cmd.args()[arg_index], out);
   if (result.has_error()) {
-    return Err(ErrType::kInput, fxl::StringPrintf(
-        "Invalid number \"%s\" when reading the %s.",
-        cmd.args()[arg_index].c_str(), param_desc));
+    return Err(ErrType::kInput,
+               fxl::StringPrintf("Invalid number \"%s\" when reading the %s.",
+                                 cmd.args()[arg_index].c_str(), param_desc));
   }
   return Err();
 }
 
-Err ParseHostPort(const std::string& in_host, const std::string& in_port,
-                  std::string* out_host, uint16_t* out_port) {
+Err ParseHostPort(const std::string& in_host,
+                  const std::string& in_port,
+                  std::string* out_host,
+                  uint16_t* out_port) {
   if (in_host.empty())
     return Err(ErrType::kInput, "No host component specified.");
   if (in_port.empty())
@@ -118,7 +133,8 @@ Err ParseHostPort(const std::string& in_host, const std::string& in_port,
 }
 
 Err ParseHostPort(const std::string& input,
-                  std::string* out_host, uint16_t* out_port) {
+                  std::string* out_host,
+                  uint16_t* out_port) {
   // Separate based on the last colon.
   size_t colon = input.rfind(':');
   if (colon == std::string::npos)
@@ -148,11 +164,9 @@ std::string TargetStateToString(Target::State state) {
     Target::State state;
     const char* string;
   };
-  static const Mapping mappings[] = {
-    { Target::State::kNone, "Not running" },
-    { Target::State::kStarting, "Starting" },
-    { Target::State::kRunning, "Running" }
-  };
+  static const Mapping mappings[] = {{Target::State::kNone, "Not running"},
+                                     {Target::State::kStarting, "Starting"},
+                                     {Target::State::kRunning, "Running"}};
 
   for (const Mapping& mapping : mappings) {
     if (mapping.state == state)
@@ -168,13 +182,12 @@ std::string ThreadStateToString(debug_ipc::ThreadRecord::State state) {
     const char* string;
   };
   static const Mapping mappings[] = {
-    { debug_ipc::ThreadRecord::State::kNew, "New" },
-    { debug_ipc::ThreadRecord::State::kRunning, "Running" },
-    { debug_ipc::ThreadRecord::State::kSuspended, "Suspended" },
-    { debug_ipc::ThreadRecord::State::kBlocked, "Blocked" },
-    { debug_ipc::ThreadRecord::State::kDying, "Dying" },
-    { debug_ipc::ThreadRecord::State::kDead, "Dead" }
-  };
+      {debug_ipc::ThreadRecord::State::kNew, "New"},
+      {debug_ipc::ThreadRecord::State::kRunning, "Running"},
+      {debug_ipc::ThreadRecord::State::kSuspended, "Suspended"},
+      {debug_ipc::ThreadRecord::State::kBlocked, "Blocked"},
+      {debug_ipc::ThreadRecord::State::kDying, "Dying"},
+      {debug_ipc::ThreadRecord::State::kDead, "Dead"}};
 
   for (const Mapping& mapping : mappings) {
     if (mapping.state == state)
@@ -210,11 +223,9 @@ std::string BreakpointStopToString(debug_ipc::Stop stop) {
     debug_ipc::Stop stop;
     const char* string;
   };
-  static const Mapping mappings[] = {
-    { debug_ipc::Stop::kAll, "All" },
-    { debug_ipc::Stop::kProcess, "Process" },
-    { debug_ipc::Stop::kThread, "Thread" }
-  };
+  static const Mapping mappings[] = {{debug_ipc::Stop::kAll, "All"},
+                                     {debug_ipc::Stop::kProcess, "Process"},
+                                     {debug_ipc::Stop::kThread, "Thread"}};
 
   for (const Mapping& mapping : mappings) {
     if (mapping.stop == stop)
@@ -230,20 +241,19 @@ std::string ExceptionTypeToString(debug_ipc::NotifyException::Type type) {
     const char* string;
   };
   static const Mapping mappings[] = {
-    { debug_ipc::NotifyException::Type::kGeneral, "General" },
-    { debug_ipc::NotifyException::Type::kHardware, "Hardware" },
-    { debug_ipc::NotifyException::Type::kSoftware, "Software" }
-  };
+      {debug_ipc::NotifyException::Type::kGeneral, "General"},
+      {debug_ipc::NotifyException::Type::kHardware, "Hardware"},
+      {debug_ipc::NotifyException::Type::kSoftware, "Software"}};
   for (const Mapping& mapping : mappings) {
     if (mapping.type == type)
       return mapping.string;
   }
   FXL_NOTREACHED();
   return std::string();
-
 }
 
-std::string DescribeTarget(const ConsoleContext* context, const Target* target,
+std::string DescribeTarget(const ConsoleContext* context,
+                           const Target* target,
                            bool columns) {
   int id = context->IdForTarget(target);
   std::string state = TargetStateToString(target->GetState());
@@ -252,8 +262,7 @@ std::string DescribeTarget(const ConsoleContext* context, const Target* target,
   // concat'd even when not present and things look nice.
   std::string koid_str;
   if (target->GetState() == Target::State::kRunning) {
-    koid_str = fxl::StringPrintf(columns ? "%" PRIu64 " "
-                                         : "koid=%" PRIu64 " ",
+    koid_str = fxl::StringPrintf(columns ? "%" PRIu64 " " : "koid=%" PRIu64 " ",
                                  target->GetProcess()->GetKoid());
   }
 
@@ -262,8 +271,8 @@ std::string DescribeTarget(const ConsoleContext* context, const Target* target,
     format_string = "%3d %11s %8s";
   else
     format_string = "Process %d %s %s";
-  std::string result = fxl::StringPrintf(format_string, id, state.c_str(),
-                                         koid_str.c_str());
+  std::string result =
+      fxl::StringPrintf(format_string, id, state.c_str(), koid_str.c_str());
 
   // When running, use the object name if any.
   std::string name;
@@ -283,7 +292,8 @@ std::string DescribeTarget(const ConsoleContext* context, const Target* target,
   return result;
 }
 
-std::string DescribeThread(const ConsoleContext* context, const Thread* thread,
+std::string DescribeThread(const ConsoleContext* context,
+                           const Thread* thread,
                            bool columns) {
   std::string state = ThreadStateToString(thread->GetState());
 
@@ -317,16 +327,15 @@ std::string DescribeBreakpoint(const ConsoleContext* context,
   std::string stop = BreakpointStopToString(breakpoint->GetStopMode());
   const char* enabled = breakpoint->IsEnabled() ? "Enabled" : "Disabled";
 
-  std::string location = fxl::StringPrintf(
-      "0x%" PRIx64, breakpoint->GetAddressLocation());
+  std::string location =
+      fxl::StringPrintf("0x%" PRIx64, breakpoint->GetAddressLocation());
 
-  return fxl::StringPrintf(format_string,
-                           context->IdForBreakpoint(breakpoint),
+  return fxl::StringPrintf(format_string, context->IdForBreakpoint(breakpoint),
                            scope.c_str(), enabled, stop.c_str(),
                            breakpoint->GetHitCount(), location.c_str());
 }
 
-void FormatColumns(std::initializer_list<ColSpec> spec,
+void FormatColumns(const std::vector<ColSpec>& spec,
                    const std::vector<std::vector<std::string>>& rows,
                    OutputBuffer* out) {
   std::vector<int> max;  // Max width of each column.
@@ -347,33 +356,34 @@ void FormatColumns(std::initializer_list<ColSpec> spec,
 
   // Apply the max widths.
   for (size_t i = 0; i < spec.size(); i++) {
-    int max_width = spec.begin()[i].max_width;
+    int max_width = spec[i].max_width;
     if (max_width > 0 && max_width < max[i])
       max[i] = max_width;
   }
 
   // Print heading.
   if (has_head) {
-    std::string head;
     for (size_t i = 0; i < max.size(); i++) {
-      const ColSpec& col = spec.begin()[i];
-      head.append(col.pad_left, ' ');
-      AppendPadded(col.head, max[i], col.align, i == max.size() - 1, &head);
+      const ColSpec& col = spec[i];
+      if (col.pad_left)
+        out->Append(Syntax::kNormal, std::string(col.pad_left, ' '));
+      AppendPadded(col.head, max[i], col.align, Syntax::kHeading,
+                   i == max.size() - 1, out);
     }
-    head.push_back('\n');
-    out->Append(Syntax::kHeading, std::move(head));
+    out->Append("\n");
   }
 
   // Print rows.
   for (const auto& row : rows) {
     std::string text;
     for (size_t i = 0; i < row.size(); i++) {
-      const ColSpec& col = spec.begin()[i];
-      text.append(col.pad_left, ' ');
-      AppendPadded(row[i], max[i], col.align, i == max.size() - 1, &text);
+      const ColSpec& col = spec[i];
+      if (col.pad_left)
+        out->Append(Syntax::kNormal, std::string(col.pad_left, ' '));
+      AppendPadded(row[i], max[i], col.align, col.syntax, i == max.size() - 1,
+                   out);
     }
-    text.push_back('\n');
-    out->Append(Syntax::kNormal, std::move(text));
+    out->Append("\n");
   }
 }
 

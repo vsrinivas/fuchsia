@@ -21,7 +21,6 @@ namespace zxdb {
 
 class ArchInfo;
 class MemoryDump;
-class OutputBuffer;
 
 // Disassembles a block of data.
 class Disassembler {
@@ -51,29 +50,36 @@ class Disassembler {
   // agent is disconnected, you will not want to store Disassembler objects.
   Err Init(const ArchInfo* arch);
 
-  // Disassembles one machine instruction, appending the string (with a
-  // newline) to the output buffer. The number of bytes consumed will be
-  // returned.
+  // Disassembles one machine instruction, setting the required information
+  // the to columns of the output vector. The output buffer will have
+  // columns for instruction, parameters, and comments. If addresses and bytes
+  // are requested, those will be prepended.
+  //
+  // The number of bytes consumed will be returned.
   //
   // Be sure the input buffer always has enough data for any instruction.
   size_t DisassembleOne(const uint8_t* data,
                         size_t data_len,
                         uint64_t address,
                         const Options& options,
-                        OutputBuffer* out) const;
+                        std::vector<std::string>* out) const;
 
   // Disassembles the block, either until there is no more data, or
   // |max_instructions| have been decoded. If max_instructions is 0 it will
   // always decode the whole block.
   //
-  // The number of instructions decoded will be put into *instruction_count.
+  // *Appends* the instructions to the output vector. The max_instructions
+  // applies to the total size of the output (so counts what may have already
+  // been there).
+  //
+  // The output will be one vector of columns per line. See DisassembleOne for
+  // row format.
   size_t DisassembleMany(const uint8_t* data,
                          size_t data_len,
                          uint64_t start_address,
                          const Options& options,
                          size_t max_instructions,
-                         OutputBuffer* out,
-                         size_t* instruction_count) const;
+                         std::vector<std::vector<std::string>>* out) const;
 
   // Like DisassembleMany() but uses a MemoryDump object. The dump will start
   // at the beginning of the memory dump. This function understands the
@@ -86,8 +92,7 @@ class Disassembler {
   size_t DisassembleDump(const MemoryDump& dump,
                          const Options& options,
                          size_t max_instructions,
-                         OutputBuffer* out,
-                         size_t* instruction_count) const;
+                         std::vector<std::vector<std::string>>* out) const;
 
  private:
   const ArchInfo* arch_ = nullptr;

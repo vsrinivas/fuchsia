@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/client/output_buffer.h"
+#include "garnet/bin/zxdb/console/output_buffer.h"
 
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/public/lib/fxl/strings/split_string.h"

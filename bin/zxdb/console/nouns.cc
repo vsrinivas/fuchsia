@@ -7,16 +7,16 @@
 #include <algorithm>
 #include <utility>
 
-#include "garnet/bin/zxdb/console/command.h"
-#include "garnet/bin/zxdb/console/command_utils.h"
-#include "garnet/bin/zxdb/console/console.h"
-#include "garnet/bin/zxdb/console/console_context.h"
 #include "garnet/bin/zxdb/client/err.h"
-#include "garnet/bin/zxdb/client/output_buffer.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/system.h"
 #include "garnet/bin/zxdb/client/thread.h"
+#include "garnet/bin/zxdb/console/command.h"
+#include "garnet/bin/zxdb/console/command_utils.h"
+#include "garnet/bin/zxdb/console/console.h"
+#include "garnet/bin/zxdb/console/console_context.h"
+#include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
