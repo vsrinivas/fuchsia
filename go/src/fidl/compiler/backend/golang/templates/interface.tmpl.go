@@ -93,8 +93,8 @@ type {{ .Name }} interface {
 	)
 	{{- if .Response -}}
 	{{- if len .Response.Members }} (
-	{{- range .Response.Members }}{{ .PrivateName }} {{ .Type }}, {{ end -}}
-		err_ error)
+	{{- range .Response.Members }}{{ .Type }}, {{ end -}}
+		error)
 	{{- else }} error{{ end -}}
 	{{- else }} error{{ end }}
 	{{- end }}
