@@ -7,7 +7,6 @@
 
 #include <memory>
 
-#include "garnet/lib/ui/scenic/clock.h"
 #include "garnet/lib/ui/scenic/scenic.h"
 
 namespace scenic {
@@ -17,7 +16,6 @@ class App {
   explicit App(component::ApplicationContext* app_context);
 
  private:
-  Clock clock_;
   std::unique_ptr<Scenic> scenic_;
   fidl::BindingSet<Scenic> bindings_;
 };

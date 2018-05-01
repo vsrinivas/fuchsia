@@ -15,17 +15,14 @@ void ScenicTest::SetUp() {
   if (app_context_ == nullptr) {
     app_context_ = component::ApplicationContext::CreateFromStartupInfo();
   }
-  clock_task_runner_ = ClockTaskRunner::New(0);
-  scenic_ = std::make_unique<Scenic>(app_context_.get(),
-                                     clock_task_runner_.get(),
-                                     clock_task_runner_.get());
+  scenic_ = std::make_unique<Scenic>(app_context_.get());
   InitializeScenic(scenic_.get());
 }
 
 void ScenicTest::TearDown() {
   reported_errors_.clear();
+  events_.clear();
   scenic_.reset();
-  clock_task_runner_ = nullptr;
 }
 
 void ScenicTest::InitializeScenic(Scenic* scenic) {}

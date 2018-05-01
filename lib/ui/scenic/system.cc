@@ -8,26 +8,16 @@
 
 namespace scenic {
 
-SystemContext::SystemContext(component::ApplicationContext* app_context,
-                             fxl::TaskRunner* task_runner,
-                             Clock* clock)
-    : app_context_(app_context), task_runner_(task_runner), clock_(clock) {
+SystemContext::SystemContext(component::ApplicationContext* app_context)
+    : app_context_(app_context) {
   FXL_DCHECK(app_context_);
-  FXL_DCHECK(task_runner_);
-  FXL_DCHECK(clock_);
 }
 
 SystemContext::SystemContext(SystemContext&& context)
-    : SystemContext(context.app_context_,
-                    context.task_runner_,
-                    context.clock_) {
+    : SystemContext(context.app_context_) {
   auto& other_app_context =
       const_cast<component::ApplicationContext*&>(context.app_context_);
-  auto& other_task_runner = const_cast<fxl::TaskRunner*&>(context.task_runner_);
-  auto& other_clock = const_cast<Clock*&>(context.clock_);
   other_app_context = nullptr;
-  other_task_runner = nullptr;
-  other_clock = nullptr;
 }
 
 System::System(SystemContext context, bool initialized_after_construction)

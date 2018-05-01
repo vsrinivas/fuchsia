@@ -29,19 +29,13 @@ class Session;
 // exposing the system's host (typically a Scenic, except for testing).
 class SystemContext final {
  public:
-  explicit SystemContext(component::ApplicationContext* app_context,
-                         fxl::TaskRunner* task_runner,
-                         Clock* clock);
+  explicit SystemContext(component::ApplicationContext* app_context);
   SystemContext(SystemContext&& context);
 
   component::ApplicationContext* app_context() const { return app_context_; }
-  fxl::TaskRunner* task_runner() const { return task_runner_; }
-  Clock* clock() const { return clock_; }
 
  private:
   component::ApplicationContext* const app_context_;
-  fxl::TaskRunner* const task_runner_;
-  Clock* const clock_;
 };
 
 // Systems are a composable way to add functionality to Scenic. A System creates
@@ -75,8 +69,6 @@ class System {
       CommandDispatcherContext context) = 0;
 
   SystemContext* context() { return &context_; }
-  fxl::TaskRunner* task_runner() { return context_.task_runner(); }
-  Clock* clock() { return context_.clock(); }
 
   bool initialized() { return initialized_; };
 

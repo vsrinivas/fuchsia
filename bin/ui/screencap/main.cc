@@ -6,7 +6,6 @@
 #include <memory>
 
 #include "garnet/lib/ui/gfx/gfx_system.h"
-#include "garnet/lib/ui/scenic/clock.h"
 #include "garnet/lib/ui/scenic/scenic.h"
 #include "garnet/lib/ui/scenic/system.h"
 #include "lib/app/cpp/application_context.h"

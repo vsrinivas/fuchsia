@@ -4,8 +4,6 @@
 
 source_set("scenic") {
   sources = [
-    "clock.cc",
-    "clock.h",
     "command_dispatcher.cc",
     "command_dispatcher.h",
     "event_reporter.h",

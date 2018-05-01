@@ -5,8 +5,9 @@
 #ifndef GARNET_LIB_UI_SCENIC_TESTS_SCENIC_TEST_H_
 #define GARNET_LIB_UI_SCENIC_TESTS_SCENIC_TEST_H_
 
+#include <lib/async-testutils/test_loop.h>
+
 #include "garnet/lib/ui/scenic/scenic.h"
-#include "garnet/lib/ui/scenic/tests/clock_task_runner.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "gtest/gtest.h"
 #include "lib/app/cpp/application_context.h"
@@ -27,9 +28,6 @@ class ScenicTest : public ::gtest::TestWithMessageLoop,
 
   // ::testing::Test virtual method.
   void TearDown() override;
-
-  // Allow tests to advance time and run tasks.
-  void Tick(zx_time_t delta_nanos) { clock_task_runner_->Tick(delta_nanos); }
 
   Scenic* scenic() { return scenic_.get(); }
 
@@ -55,7 +53,6 @@ class ScenicTest : public ::gtest::TestWithMessageLoop,
   }
 
   static std::unique_ptr<component::ApplicationContext> app_context_;
-  fxl::RefPtr<ClockTaskRunner> clock_task_runner_;
   std::unique_ptr<Scenic> scenic_;
   std::vector<std::string> reported_errors_;
   std::vector<ui::Event> events_;

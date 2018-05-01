@@ -13,8 +13,6 @@ group("tests") {
 source_set("testing_deps") {
   testonly = true
   sources = [
-    "clock_task_runner.cc",
-    "clock_task_runner.h",
     "scenic_test.cc",
     "scenic_test.h",
   ]
@@ -31,7 +29,6 @@ executable("unittests") {
   output_name = "scenic_unittests"
   testonly = true
   sources = [
-    "clock_task_runner_unittest.cc",
     "scenic_unittest.cc",
   ]
   deps = [

@@ -9,13 +9,9 @@
 
 namespace scenic {
 
-Scenic::Scenic(component::ApplicationContext* app_context,
-               fxl::TaskRunner* task_runner,
-               Clock* clock)
-    : app_context_(app_context), task_runner_(task_runner), clock_(clock) {
+Scenic::Scenic(component::ApplicationContext* app_context)
+    : app_context_(app_context) {
   FXL_DCHECK(app_context_);
-  FXL_DCHECK(task_runner_);
-  FXL_DCHECK(clock_);
 
   app_context->outgoing().AddPublicService<ui::Scenic>(
       [this](fidl::InterfaceRequest<ui::Scenic> request) {
@@ -55,12 +51,12 @@ void Scenic::CreateSession(
   if (uninitialized_systems_.empty()) {
     CreateSessionImmediately(std::move(session_request), std::move(listener));
   } else {
-    run_after_all_systems_initialized_.push_back(
-        fxl::MakeCopyable([this, session_request = std::move(session_request),
-                           listener = std::move(listener)]() mutable {
-          CreateSessionImmediately(std::move(session_request),
-                                   std::move(listener));
-        }));
+    run_after_all_systems_initialized_.push_back(fxl::MakeCopyable([
+      this, session_request = std::move(session_request),
+      listener = std::move(listener)
+    ]() mutable {
+      CreateSessionImmediately(std::move(session_request), std::move(listener));
+    }));
   }
 }
 

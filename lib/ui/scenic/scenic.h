@@ -23,9 +23,7 @@ class Clock;
 //   - provide a host environment for Services
 class Scenic : public ui::Scenic {
  public:
-  Scenic(component::ApplicationContext* app_context,
-         fxl::TaskRunner* task_runner,
-         Clock* clock);
+  explicit Scenic(component::ApplicationContext* app_context);
   ~Scenic();
 
   // Create and register a new system of the specified type.  At most one System
@@ -42,15 +40,11 @@ class Scenic : public ui::Scenic {
       ::fidl::InterfaceHandle<ui::SessionListener> listener) override;
 
   component::ApplicationContext* app_context() const { return app_context_; }
-  fxl::TaskRunner* task_runner() const { return task_runner_; }
-  Clock* clock() const { return clock_; }
 
   size_t num_sessions() { return session_bindings_.size(); }
 
  private:
   component::ApplicationContext* const app_context_;
-  fxl::TaskRunner* const task_runner_;
-  Clock* clock_;
 
   fidl::BindingSet<ui::Session, std::unique_ptr<Session>> session_bindings_;
   fidl::BindingSet<ui::Scenic> scenic_bindings_;
@@ -91,8 +85,7 @@ SystemT* Scenic::RegisterSystem(Args... args) {
   FXL_DCHECK(systems_[SystemT::kTypeId] == nullptr)
       << "System of type: " << SystemT::kTypeId << "was already registered.";
 
-  SystemT* system =
-      new SystemT(SystemContext(app_context_, task_runner_, clock_), args...);
+  SystemT* system = new SystemT(SystemContext(app_context_), args...);
   systems_[SystemT::kTypeId] = std::unique_ptr<System>(system);
 
   // Listen for System to be initialized if it isn't already.
