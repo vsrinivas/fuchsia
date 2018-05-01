@@ -102,6 +102,8 @@ static bool alloc_checker_new() {
 static bool alloc_checker_new_fails() {
     BEGIN_TEST;
 
+// When we're in "extreme debug mode" the heap will panic on allocation failure.
+#if LK_DEBUGLEVEL <= 2
     // malloc(size_t_max) should fail but currently does not (see
     // ZX-1760), so use large_size instead, because malloc(large_size)
     // does fail.
@@ -113,6 +115,7 @@ static bool alloc_checker_new_fails() {
     fbl::AllocChecker ac;
     EXPECT_EQ(new (&ac) StructWithCtor[large_size], nullptr, "");
     EXPECT_EQ(ac.check(), false, "");
+#endif
 
     END_TEST;
 }
