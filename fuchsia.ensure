@@ -11,6 +11,9 @@ infra/tools/luci/vpython/${platform} git_revision:4fdf96945cb39cddf6e37f11c07acb
 # LUCI editor
 infra/tools/luci/led/${platform} git_revision:4fdf96945cb39cddf6e37f11c07acb9877557408
 
+# LogDog CLI client
+infra/tools/luci/logdog/logdog/${platform} git_revision:cf9d281c2ff478928ff11dfa4995d09a97046990
+
 # Ninja
 infra/ninja/${platform} version:1.8.2
 
