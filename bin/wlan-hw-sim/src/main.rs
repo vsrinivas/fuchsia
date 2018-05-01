@@ -14,7 +14,7 @@ extern crate futures;
 
 use std::sync::{Arc, Mutex};
 use futures::prelude::*;
-use wlantap_client::{Wlantap, WlantapListener};
+use wlantap_client::Wlantap;
 use zx::prelude::*;
 
 mod mac_frames;
@@ -81,20 +81,6 @@ impl State {
     }
 }
 
-struct Listener {
-    state: Arc<Mutex<State>>,
-}
-
-impl WlantapListener for Listener {
-    fn set_channel(&mut self, _proxy: &fidl_wlantap::WlantapPhyProxy,
-                   wlanmac_id: u16, channel: fidl_wlan_device::Channel) {
-        let mut state = self.state.lock().unwrap();
-        state.current_channel = channel;
-        println!("setting channel to {:?}", state.current_channel);
-    }
-}
-
-
 const CHANNEL: u8 = 6;
 const BSS_ID: [u8; 6] = [ 0x62, 0x73, 0x73, 0x62, 0x73, 0x73 ];
 
@@ -149,8 +135,23 @@ fn main() -> Result<(), failure::Error> {
     let mut exec = async::Executor::new()?;
     let wlantap = Wlantap::open()?;
     let state = Arc::new(Mutex::new(State::new()));
-    let listener = Listener{ state: state.clone() };
-    let (proxy, server) = wlantap.create_phy(create_wlantap_config(), listener)?;
+    let proxy = wlantap.create_phy(create_wlantap_config())?;
+    let event_listener = {
+        let state = state.clone();
+        proxy.take_event_stream().for_each(move |event| {
+            match event {
+                fidl_wlantap::WlantapPhyEvent::SetChannel{ args } => {
+                    let mut state = state.lock().unwrap();
+                    state.current_channel = args.chan;
+                    println!("setting channel to {:?}", state.current_channel);
+                },
+                _ => {}
+            }
+            Ok(())
+        })
+        .map(|_| ())
+        .recover(|e| eprintln!("error running wlantap event listener: {:?}", e))
+    };
     let beacon_timer = async::Interval::new(102_400_000.nanos())?
         .for_each(move |_| {
             let state = &mut *state.lock().map_err(|e| {
@@ -165,9 +166,6 @@ fn main() -> Result<(), failure::Error> {
         })
         .map(|_| ())
         .recover::<Never, _>(|e| eprintln!("error running beacon timer: {:?}", e));
-    exec.run_singlethreaded(
-        server
-            .recover(|e| eprintln!("error running wlantap event server: {:?}", e))
-            .join(beacon_timer));
+    exec.run_singlethreaded(event_listener.join(beacon_timer));
     Ok(())
 }

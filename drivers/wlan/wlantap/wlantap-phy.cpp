@@ -8,6 +8,8 @@
 #include <array>
 #include <ddk/debug.h>
 #include <fuchsia/cpp/wlan_device.h>
+#include <fuchsia/c/wlan_device.h>
+#include <fuchsia/c/wlantap.h>
 #include <wlan/async/dispatcher.h>
 #include <wlan/protocol/ioctl.h>
 #include <wlan/protocol/phy.h>
@@ -58,7 +60,7 @@ template<typename T, size_t N>
 };
 
 struct EventSender {
-    EventSender(zx::channel channel) : encoder_(0), channel_(std::move(channel)) { }
+    EventSender(const zx::channel& channel) : encoder_(0), channel_(channel) { }
 
     void SendTxEvent(uint16_t wlanmac_id, wlan_tx_packet_t* pkt) {
         tx_args_.wlanmac_id = wlanmac_id;
@@ -115,13 +117,12 @@ struct EventSender {
     }
 
 private:
-    // Must be in sync with wlantap.fidl
     enum class EventOrdinal : uint32_t {
-        Tx = 3,
-        SetChannel = 4,
-        ConfigureBss = 5,
+        Tx = wlantap_WlantapPhyTxOrdinal,
+        SetChannel = wlantap_WlantapPhySetChannelOrdinal,
+        ConfigureBss = wlantap_WlantapPhyConfigureBssOrdinal,
         // TODO: ConfigureBeacon
-        SetKey = 7
+        SetKey = wlantap_WlantapPhySetKeyOrdinal
     };
 
     template<typename T>
@@ -143,7 +144,7 @@ private:
     }
 
     fidl::Encoder encoder_;
-    zx::channel channel_;
+    const zx::channel& channel_;
     // Messages that require memory allocation
     ::wlantap::TxArgs tx_args_;
     ::wlantap::SetKeyArgs set_key_args_;
@@ -197,13 +198,12 @@ constexpr size_t kMaxMacDevices = 4;
 
 struct WlantapPhy : wlan_device::Phy, ::wlantap::WlantapPhy, WlantapMac::Listener {
     WlantapPhy(zx_device_t* device, zx::channel user_channel,
-               zx::channel events_channel,
                std::unique_ptr<::wlantap::WlantapPhyConfig> phy_config,
                async_t* loop)
       : phy_config_(std::move(phy_config)),
         phy_dispatcher_(loop),
         user_channel_binding_(this, std::move(user_channel), loop),
-        event_sender_(std::move(events_channel))
+        event_sender_(user_channel_binding_.channel())
     {
         user_channel_binding_.set_error_handler([this] {
             // Remove the device if the client closed the channel
@@ -367,10 +367,9 @@ struct WlantapPhy : wlan_device::Phy, ::wlantap::WlantapPhy, WlantapMac::Listene
 } // namespace
 
 zx_status_t CreatePhy(zx_device_t* wlantapctl, zx::channel user_channel,
-                      zx::channel event_channel,
                       std::unique_ptr<::wlantap::WlantapPhyConfig> config, async_t* loop) {
-    auto phy = std::make_unique<WlantapPhy>(wlantapctl, std::move(user_channel),
-                                            std::move(event_channel), std::move(config), loop);
+    auto phy = std::make_unique<WlantapPhy>(wlantapctl, std::move(user_channel), std::move(config),
+                                            loop);
     static zx_protocol_device_t device_ops = {
         .version = DEVICE_OPS_VERSION,
         .unbind = &WlantapPhy::DdkUnbind,
