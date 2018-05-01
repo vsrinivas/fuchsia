@@ -20,6 +20,10 @@ static const pbus_mmio_t gpio_mmios[] = {
         .base = 0xff800000,
         .length = PAGE_SIZE,
     },
+    {
+        .base = 0xffd00000,
+        .length = 0x10000,
+    },
 };
 
 static const pbus_irq_t gpio_irqs[] = {
