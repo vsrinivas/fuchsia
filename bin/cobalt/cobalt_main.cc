@@ -618,6 +618,7 @@ CobaltApp::CobaltApp(async_t* async,
           ShippingManager::SendRetryerParams(kInitialRpcDeadline,
                                              kDeadlinePerSendAttempt),
           &send_retryer_),
+      timer_manager_(async),
       controller_impl_(new CobaltControllerImpl(async, &shipping_manager_)) {
   shipping_manager_.Start();
 

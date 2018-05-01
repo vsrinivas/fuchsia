@@ -15,6 +15,7 @@
 #include <unordered_map>
 
 #include <fuchsia/cpp/cobalt.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fxl/logging.h>
 #include <lib/zx/time.h>
 
@@ -37,6 +38,8 @@ struct TimerVal {
   int64_t end_timestamp;
   // The time at which the timer is expired.
   zx::time expiry_time;
+  // Task which will delete the timer once it is expired.
+  async::TaskClosure expiry_task;
   // The name of the timer field/part if it is a multipart obervation.
   std::string part_name;
   // The remaining fields of a multipart obervation.
@@ -55,8 +58,9 @@ struct TimerVal {
 // as a TimerVal.
 class TimerManager {
  public:
-  // Constructs a TimerManager Object
-  TimerManager();
+  // Constructs a TimerManager Object. Uses the given async dispatcher to
+  // schedule tasks which delete timer data once it has expired.
+  TimerManager(async_t* async);
 
   ~TimerManager();
 
@@ -110,10 +114,29 @@ class TimerManager {
     clock_ = clock;
   }
 
+  // Schedules a task which will delete the timer entries associated with
+  // timer_id when it expires.
+  // timeout_s : the timer timer_id will be deleted after timeout_s seconds.
+  // timer_val_ptr : the task will be stored in the given object until it is
+  //                 executed or cancelled. Deleting the TimerVal will cancel
+  //                 the task.
+  void ScheduleExpiryTask(const std::string& timer_id, uint32_t timeout_s,
+                          std::unique_ptr<TimerVal>* timer_val_ptr);
+
+  // Copies the data found in the iterator entry to the TimerVal pointer
+  // provided. It then deletes the data associated with it from the map, which
+  // includes cancelling the pending expiry task.
+  void MoveTimerToTimerVal(
+      std::unordered_map<std::string, std::unique_ptr<TimerVal>>::iterator*
+          timer_val_iter,
+      std::unique_ptr<TimerVal>* timer_val_ptr);
+
   // Map from timer_id to the TimerVal values associated with it.
   std::unordered_map<std::string, std::unique_ptr<TimerVal>> timer_values_;
   // The clock is abstracted so that friend tests can set a non-system clock.
   std::shared_ptr<wlan::Clock> clock_;
+  // Async dispatcher used for deleting expired timer entries.
+  async_t* const async_;  // not owned.
 };
 
 }  // namespace cobalt

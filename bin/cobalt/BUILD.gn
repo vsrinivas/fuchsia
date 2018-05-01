@@ -144,6 +144,8 @@ executable("cobalt_garnet_unittests") {
 
   deps = [
     "//garnet/lib/wlan/mlme:mlme",
+    "//garnet/lib/gtest",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/cobalt/fidl:fidl",
   ]

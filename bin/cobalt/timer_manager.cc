@@ -26,7 +26,10 @@ void TimerVal::AddEnd(int64_t timestamp, const std::string& part_name,
   this->observation = std::move(observation);
 }
 
-TimerManager::TimerManager() : clock_(new SystemClock()) {}
+TimerManager::TimerManager(async_t* async)
+    : clock_(new SystemClock()),
+      async_(async) {}
+
 TimerManager::~TimerManager() {}
 
 bool TimerManager::isReady(const std::unique_ptr<TimerVal>& timer_val_ptr) {
@@ -34,7 +37,8 @@ bool TimerManager::isReady(const std::unique_ptr<TimerVal>& timer_val_ptr) {
     return false;
   }
   FXL_DCHECK(timer_val_ptr->start_timestamp > 0 &&
-             timer_val_ptr->end_timestamp > 0);
+             timer_val_ptr->end_timestamp > 0)
+      << "Incomplete timer was returned.";
   return true;
 }
 
@@ -73,7 +77,7 @@ Status TimerManager::GetTimerValWithStart(
     auto& timer = timer_values_[timer_id];
     timer.reset(new TimerVal());
     timer->AddStart(metric_id, encoding_id, timestamp);
-    timer->expiry_time = clock_->Now() + zx::sec(timeout_s);
+    ScheduleExpiryTask(timer_id, timeout_s, &timer);
     return Status::OK;
   }
 
@@ -85,9 +89,7 @@ Status TimerManager::GetTimerValWithStart(
 
   // Return TimerVal with start_timestamp and end_timestamp.
   timer_val_iter->second->AddStart(metric_id, encoding_id, timestamp);
-  *timer_val_ptr = std::move(timer_val_iter->second);
-  timer_values_.erase(timer_val_iter);
-
+  MoveTimerToTimerVal(&timer_val_iter, timer_val_ptr);
   return Status::OK;
 }
 
@@ -114,7 +116,7 @@ Status TimerManager::GetTimerValWithEnd(
     auto& timer = timer_values_[timer_id];
     timer.reset(new TimerVal());
     timer->end_timestamp = timestamp;
-    timer->expiry_time = clock_->Now() + zx::sec(timeout_s);
+    ScheduleExpiryTask(timer_id, timeout_s, &timer);
     return Status::OK;
   }
 
@@ -126,9 +128,7 @@ Status TimerManager::GetTimerValWithEnd(
 
   // Return TimerVal with start_timestamp and end_timestamp.
   timer_val_iter->second->end_timestamp = timestamp;
-  *timer_val_ptr = std::move(timer_val_iter->second);
-  timer_values_.erase(timer_val_iter);
-
+  MoveTimerToTimerVal(&timer_val_iter, timer_val_ptr);
   return Status::OK;
 }
 
@@ -156,7 +156,7 @@ Status TimerManager::GetTimerValWithEnd(
     auto& timer = timer_values_[timer_id];
     timer.reset(new TimerVal());
     timer->AddEnd(timestamp, part_name, std::move(observation));
-    timer->expiry_time = clock_->Now() + zx::sec(timeout_s);
+    ScheduleExpiryTask(timer_id, timeout_s, &timer);
     return Status::OK;
   }
 
@@ -168,9 +168,40 @@ Status TimerManager::GetTimerValWithEnd(
 
   // Return TimerVal with start_timestamp and end_timestamp.
   timer_val_iter->second->AddEnd(timestamp, part_name, std::move(observation));
-  *timer_val_ptr = std::move(timer_val_iter->second);
-  timer_values_.erase(timer_val_iter);
-
+  MoveTimerToTimerVal(&timer_val_iter, timer_val_ptr);
   return Status::OK;
+}
+
+void TimerManager::MoveTimerToTimerVal(
+    std::unordered_map<std::string, std::unique_ptr<TimerVal>>::iterator*
+        timer_val_iter,
+    std::unique_ptr<TimerVal>* timer_val_ptr) {
+  zx_status_t status = (*timer_val_iter)->second->expiry_task.Cancel();
+  if (status != ZX_OK & status != ZX_ERR_BAD_STATE) {
+    FXL_DLOG(ERROR) << "Failed to cancel task: status = " << status;
+  }
+
+  *timer_val_ptr = std::move((*timer_val_iter)->second);
+  timer_values_.erase(*timer_val_iter);
+}
+
+void TimerManager::ScheduleExpiryTask(
+    const std::string& timer_id, uint32_t timeout_s,
+    std::unique_ptr<TimerVal>* timer_val_ptr) {
+  (*timer_val_ptr)->expiry_time = clock_->Now() + zx::sec(timeout_s);
+
+  (*timer_val_ptr)
+      ->expiry_task.set_handler(
+          [this, timer_id, me = &((*timer_val_ptr)->expiry_task)] {
+            auto timer_val_iter = timer_values_.find(timer_id);
+            FXL_DCHECK(&(timer_val_iter->second->expiry_task) == me);
+            timer_values_.erase(timer_val_iter);
+          });
+
+  zx_status_t status =
+      (*timer_val_ptr)->expiry_task.PostDelayed(async_, zx::sec(timeout_s));
+  if (status != ZX_OK & status != ZX_ERR_BAD_STATE) {
+    FXL_DLOG(ERROR) << "Failed to post task: status = " << status;
+  }
 }
 }  // namespace cobalt

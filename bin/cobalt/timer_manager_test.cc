@@ -4,6 +4,7 @@
 
 #include "garnet/bin/cobalt/timer_manager.h"
 
+#include "garnet/lib/gtest/test_with_loop.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace cobalt {
@@ -15,14 +16,19 @@ const uint64_t kStartTimestamp = 10;
 const uint64_t kEndTimestamp = 20;
 const std::string kTimerId = "test_timer";
 
-class TimerManagerTests : public ::testing::Test {
+class TimerManagerTests : public ::gtest::TestWithLoop {
  protected:
   void SetUp() override {
-    timer_manager_.reset(new TimerManager());
-
+    timer_manager_.reset(new TimerManager(dispatcher()));
     test_clock_.reset(new wlan::TestClock());
-    test_clock_->Set(zx::time(ZX_SEC(1)));
+
     timer_manager_->SetClockForTesting(test_clock_);
+    SetTimeSec(1);
+  }
+
+  void SetTimeSec(uint32_t time_s) {
+    test_clock_->Set(zx::time(ZX_SEC(time_s)));
+    AdvanceTimeTo(zx::time(ZX_SEC(time_s)));
   }
 
   std::unique_ptr<TimerManager> timer_manager_;
@@ -123,7 +129,7 @@ TEST_F(TimerManagerTests, NewStartTimerAfterExpiredStartTimer) {
   EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(TimerManager::isReady(timer_val_ptr));
 
-  test_clock_->Set(zx::time(ZX_SEC(10)));  // Previous Start expires at time 2s.
+  SetTimeSec(10);  // Previous Start expires at time 2s.
 
   status = timer_manager_->GetTimerValWithStart(kMetricId, kEncodingId,
                                                 kTimerId, kStartTimestamp,
@@ -141,7 +147,7 @@ TEST_F(TimerManagerTests, NewEndTimerAfterExpiredEndTimer) {
   EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(TimerManager::isReady(timer_val_ptr));
 
-  test_clock_->Set(zx::time(ZX_SEC(10)));  // Previous Start expires at time 2s.
+  SetTimeSec(10);  // Previous Start expires at time 2s.
 
   status = timer_manager_->GetTimerValWithEnd(kTimerId, kEndTimestamp,
                                               kTimeoutSec, &timer_val_ptr);
@@ -158,13 +164,132 @@ TEST_F(TimerManagerTests, ExpireStartThenGetValidTimer) {
   EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(TimerManager::isReady(timer_val_ptr));
 
-  test_clock_->Set(zx::time(ZX_SEC(10)));  // Previous Start expires at time 2s.
+  SetTimeSec(10);  // Previous Start expires at time 2s.
 
   status = timer_manager_->GetTimerValWithStart(kMetricId, kEncodingId,
                                                 kTimerId, kStartTimestamp,
                                                 kTimeoutSec, &timer_val_ptr);
   EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(TimerManager::isReady(timer_val_ptr));
+
+  status = timer_manager_->GetTimerValWithEnd(kTimerId, kEndTimestamp,
+                                              kTimeoutSec, &timer_val_ptr);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_TRUE(TimerManager::isReady(timer_val_ptr));
+}
+
+TEST_F(TimerManagerTests, ExpireStartAddEnd) {
+  std::unique_ptr<TimerVal> timer_val_ptr;
+
+  auto status = timer_manager_->GetTimerValWithStart(
+      kMetricId, kEncodingId, kTimerId, kStartTimestamp, kTimeoutSec,
+      &timer_val_ptr);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_FALSE(TimerManager::isReady(timer_val_ptr));
+
+  EXPECT_TRUE(RunLoopFor(zx::sec(10)));  // expiry task executed.
+  SetTimeSec(10);
+
+  status = timer_manager_->GetTimerValWithEnd(kTimerId, kEndTimestamp,
+                                              kTimeoutSec, &timer_val_ptr);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_FALSE(TimerManager::isReady(timer_val_ptr));
+
+  status = timer_manager_->GetTimerValWithStart(kMetricId, kEncodingId,
+                                                kTimerId, kStartTimestamp,
+                                                kTimeoutSec, &timer_val_ptr);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_TRUE(TimerManager::isReady(timer_val_ptr));
+}
+
+TEST_F(TimerManagerTests, ExpireStartAddStart) {
+  std::unique_ptr<TimerVal> timer_val_ptr;
+
+  auto status = timer_manager_->GetTimerValWithStart(
+      kMetricId, kEncodingId, kTimerId, kStartTimestamp, kTimeoutSec,
+      &timer_val_ptr);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_FALSE(TimerManager::isReady(timer_val_ptr));
+
+  EXPECT_TRUE(RunLoopFor(zx::sec(10)));  // expiry task executed.
+  SetTimeSec(10);
+
+  status = timer_manager_->GetTimerValWithStart(kMetricId, kEncodingId,
+                                                kTimerId, kStartTimestamp,
+                                                kTimeoutSec, &timer_val_ptr);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_FALSE(TimerManager::isReady(timer_val_ptr));
+
+  status = timer_manager_->GetTimerValWithEnd(kTimerId, kEndTimestamp,
+                                              kTimeoutSec, &timer_val_ptr);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_TRUE(TimerManager::isReady(timer_val_ptr));
+}
+
+TEST_F(TimerManagerTests, RetrutnValidTimerCancelExpirationTask) {
+  std::unique_ptr<TimerVal> timer_val_ptr;
+
+  auto status = timer_manager_->GetTimerValWithStart(
+      kMetricId, kEncodingId, kTimerId, kStartTimestamp, 2 * kTimeoutSec,
+      &timer_val_ptr);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_FALSE(TimerManager::isReady(timer_val_ptr));
+
+  SetTimeSec(2);  // Previous Start expires at time 3s.
+
+  status = timer_manager_->GetTimerValWithEnd(kTimerId, kEndTimestamp,
+                                              kTimeoutSec, &timer_val_ptr);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_TRUE(TimerManager::isReady(timer_val_ptr));
+
+  EXPECT_FALSE(RunLoopFor(zx::sec(10)));  // expiry task did not execute.
+}
+
+TEST_F(TimerManagerTests, TwoStartTimersFirstExpiryIsCancelled) {
+  std::unique_ptr<TimerVal> timer_val_ptr;
+
+  auto status = timer_manager_->GetTimerValWithStart(
+      kMetricId, kEncodingId, kTimerId, kStartTimestamp, 2 * kTimeoutSec,
+      &timer_val_ptr);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_FALSE(TimerManager::isReady(timer_val_ptr));
+
+  SetTimeSec(2);  // Previous Start expires at time 3s.
+
+  status = timer_manager_->GetTimerValWithStart(kMetricId, kEncodingId,
+                                                kTimerId, kStartTimestamp,
+                                                kTimeoutSec, &timer_val_ptr);
+  EXPECT_EQ(Status::FAILED_PRECONDITION, status);
+
+  EXPECT_FALSE(RunLoopFor(zx::sec(10)));  // expiry task did not execute.
+}
+
+TEST_F(TimerManagerTests, GetTimerValMakeSureExpiryIsCancelled) {
+  std::unique_ptr<TimerVal> timer_val_ptr;
+
+  auto status = timer_manager_->GetTimerValWithStart(
+      kMetricId, kEncodingId, kTimerId, kStartTimestamp, 2 * kTimeoutSec,
+      &timer_val_ptr);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_FALSE(TimerManager::isReady(timer_val_ptr));
+
+  SetTimeSec(2);  // Previous Start expires at time 3s.
+
+  status = timer_manager_->GetTimerValWithEnd(kTimerId, kEndTimestamp,
+                                              kTimeoutSec, &timer_val_ptr);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_TRUE(TimerManager::isReady(timer_val_ptr));
+
+  EXPECT_FALSE(RunLoopFor(zx::sec(10)));  // expiry task did not execute.
+  SetTimeSec(12);
+
+  status = timer_manager_->GetTimerValWithStart(
+      kMetricId, kEncodingId, kTimerId, kStartTimestamp, 2 * kTimeoutSec,
+      &timer_val_ptr);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_FALSE(TimerManager::isReady(timer_val_ptr));
+
+  SetTimeSec(13);  // Previous Start expires at time 14s.
 
   status = timer_manager_->GetTimerValWithEnd(kTimerId, kEndTimestamp,
                                               kTimeoutSec, &timer_val_ptr);
