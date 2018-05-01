@@ -14,6 +14,9 @@ MODULE_SRCS += \
 
 MODULE_NAME := runtests
 
+MODULE_STATIC_LIBS := \
+    system/ulib/zx
+
 MODULE_LIBS := \
     system/ulib/fdio \
     system/ulib/launchpad \

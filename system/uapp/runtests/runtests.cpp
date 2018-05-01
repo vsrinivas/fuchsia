@@ -3,27 +3,27 @@
 // found in the LICENSE file.
 
 #include <assert.h>
-#include <dirent.h>
 #include <errno.h>
+#include <dirent.h>
 #include <fcntl.h>
 #include <glob.h>
 #include <inttypes.h>
-#include <launchpad/launchpad.h>
 #include <libgen.h>
 #include <limits.h>
-#include <zircon/listnode.h>
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/object.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <time.h>
 #include <unistd.h>
 
+#include <launchpad/launchpad.h>
+#include <lib/zx/time.h>
 #include <unittest/unittest.h>
+#include <zircon/listnode.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
 
 // The name of the file containing stdout and stderr of each test.
 static const char kOutputFileName[] = "stdout-and-stderr.txt";
@@ -45,10 +45,8 @@ typedef struct test {
     char name[0];
 } test_t;
 
-typedef uint64_t nsecs_t;
-
-static nsecs_t now(void) {
-    return zx_clock_get(ZX_CLOCK_MONOTONIC);
+static zx::time now(void) {
+    return zx::clock::get(ZX_CLOCK_MONOTONIC);
 }
 
 // Creates a new test_t and appends it to the linked list |tests|.
@@ -538,7 +536,7 @@ int main(int argc, char** argv) {
     const char** test_globs = nullptr;
     const char* output_dir = nullptr;
 
-    nsecs_t start_time = now();
+    zx::time start_time = now();
 
     int i = 1;
     while (i < argc) {
@@ -773,8 +771,8 @@ int main(int argc, char** argv) {
     }
 
     // TODO(ZX-2051): Include total duration in summary.json.
-    nsecs_t end_time = now();
-    uint64_t time_taken_ms = (end_time - start_time) / 1000000;
+    zx::time end_time = now();
+    uint64_t time_taken_ms = (end_time - start_time).to_msecs();
 
     // Print this last, since some infra recipes will shut down the fuchsia
     // environment once it appears.
