@@ -12,6 +12,7 @@
 #include <zircon/device/bt-hci.h>
 #include <zircon/listnode.h>
 #include <zircon/status.h>
+#include <zircon/syscalls/port.h>
 
 #include <assert.h>
 #include <stdio.h>
@@ -51,6 +52,9 @@ typedef struct {
     zx_handle_t cmd_channel;
     zx_handle_t acl_channel;
     zx_handle_t snoop_channel;
+
+    // Port to queue PEER_CLOSED signals on
+    zx_handle_t snoop_watch;
 
     // Signaled when a channel opens or closes
     zx_handle_t channels_changed_evt;
@@ -496,7 +500,34 @@ static zx_status_t hci_open_acl_data_channel(void* ctx, zx_handle_t* out_channel
 
 static zx_status_t hci_open_snoop_channel(void* ctx, zx_handle_t* out_channel) {
     hci_t* hci = ctx;
-    return hci_open_channel(hci, &hci->snoop_channel, out_channel);
+
+    if (hci->snoop_watch == ZX_HANDLE_INVALID) {
+        zx_status_t status = zx_port_create(0, &hci->snoop_watch);
+        if (status != ZX_OK) {
+            printf(
+                "bt-transport-usb: failed to create a port to watch snoop channel: "
+                "%s\n",
+                zx_status_get_string(status));
+            return status;
+        }
+    }
+
+    zx_port_packet_t packet;
+    zx_status_t status = zx_port_wait(hci->snoop_watch, 0, &packet, 1);
+    if (status == ZX_ERR_TIMED_OUT) {
+        printf("bt-transport-usb: timed out: %s\n",
+               zx_status_get_string(status));
+    } else if (packet.signal.observed & ZX_CHANNEL_PEER_CLOSED) {
+        hci->snoop_channel = ZX_HANDLE_INVALID;
+    }
+
+    zx_status_t ret = hci_open_channel(hci, &hci->snoop_channel, out_channel);
+    if (ret == ZX_OK) {
+        zx_signals_t sigs = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+        zx_object_wait_async(hci->snoop_channel, hci->snoop_watch, 0, sigs,
+                             ZX_WAIT_ASYNC_REPEATING);
+    }
+    return ret;
 }
 
 static bt_hci_protocol_ops_t hci_protocol_ops = {
