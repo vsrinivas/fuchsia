@@ -38,10 +38,19 @@ class RemoteClient : public RemoteClientInterface {
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
     zx_status_t HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFrame>& frame,
                                   const wlan_rx_info_t& rxinfo) override;
+    zx_status_t HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaRequestFrame>& rx_frame,
+                                        const wlan_rx_info_t& rxinfo) override;
+    zx_status_t HandleAddBaResponseFrame(const ImmutableMgmtFrame<AddBaResponseFrame>& rx_frame,
+                                         const wlan_rx_info& rxinfo) override;
 
     zx_status_t SendAuthentication(status_code::StatusCode result);
     zx_status_t SendAssociationResponse(aid_t aid, status_code::StatusCode result);
     zx_status_t SendDeauthentication(reason_code::ReasonCode reason_code);
+    zx_status_t SendAddBaRequest();
+    zx_status_t SendAddBaResponse(const ImmutableMgmtFrame<AddBaRequestFrame>& rx_frame);
+
+    uint8_t GetTid();
+    uint8_t GetTid(const ImmutableBaseFrame<EthernetII>& frame);
 
     // Enqueues an ethernet frame which can be sent at a later point in time.
     zx_status_t EnqueueEthernetFrame(const ImmutableBaseFrame<EthernetII>& frame);
@@ -210,6 +219,10 @@ class AssociatedState : public BaseState {
                                   const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleMlmeEapolReq(const wlan_mlme::EapolRequest& req) override;
     zx_status_t HandleMlmeSetKeysReq(const wlan_mlme::SetKeysRequest& req) override;
+    zx_status_t HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaRequestFrame>& frame,
+                                        const wlan_rx_info_t& rxinfo) override;
+    zx_status_t HandleAddBaResponseFrame(const ImmutableMgmtFrame<AddBaResponseFrame>& frame,
+                                         const wlan_rx_info& rxinfo) override;
 
     inline const char* name() const override { return kName; }
 
