@@ -6,8 +6,6 @@ This document describes the standard layout of a Fuchsia SDK.
 $root/
     tools/                         # host tools
     pkg/                           # arch-independent package contents
-        system/                    # libc, libzircon, and friends
-            include/
         foo/
             include/               # headers
             docs/                  # documentation
@@ -19,15 +17,23 @@ $root/
             meta/
     arch                           # target-independent prebuilts
         x64/
+            sysroot/
+                include/
+                lib/
+                dist/
+                debug/
             lib/
-                libzircon.so
                 libfoo.so          # ABI only, to link against
             dist/
                 libfoo.so          # to include in Fuchsia packages
             debug/
-                libzircon.so
                 libfoo.so          # unstripped versions
         arm64/
+            sysroot/
+                include/
+                lib/
+                dist/
+                debug/
             lib/
             dist/
             debug/
