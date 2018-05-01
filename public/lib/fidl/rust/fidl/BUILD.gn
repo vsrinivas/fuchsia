@@ -3,10 +3,25 @@
 # found in the LICENSE file.
 
 import("//build/rust/rust_library.gni")
+import("//build/rust/rustc_library.gni")
 
 rust_library("fidl") {
   deps = [
   ]
 
   with_unit_tests = true
+}
+
+rustc_library("fidl-rustc") {
+  name = "fidl"
+  with_unit_tests = true
+  deps = [
+    "//garnet/public/rust/crates/fuchsia-async:fuchsia-async-rustc",
+    "//garnet/public/rust/crates/fuchsia-zircon:fuchsia-zircon-rustc",
+    "//third_party/rust-crates/rustc_deps:byteorder",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
+    "//third_party/rust-crates/rustc_deps:slab",
+  ]
 }

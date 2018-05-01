@@ -3,6 +3,14 @@
 # found in the LICENSE file.
 
 import("//build/rust/rust_library.gni")
+import("//build/rust/rustc_library.gni")
 
 rust_library("mxruntime-sys") {
+}
+
+rustc_library("mxruntime-sys-rustc") {
+  name = "mxruntime_sys"
+  deps = [
+    "//garnet/public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys/:fuchsia-zircon-sys-rustc",
+  ]
 }

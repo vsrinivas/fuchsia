@@ -3,10 +3,27 @@
 # found in the LICENSE file.
 
 import("//build/rust/rust_library.gni")
+import("//build/rust/rustc_library.gni")
 
 rust_library("fuchsia-syslog") {
   with_unit_tests = true
   deps = [
+    "//zircon/public/lib/syslog",
+  ]
+}
+
+rustc_library("fuchsia-syslog-rustc") {
+  name = "fuchsia_syslog"
+  version = "0.1.0"
+  with_unit_tests = true
+  deps = [
+    "//garnet/public/rust/crates/fuchsia-zircon:fuchsia-zircon-rustc",
+    "//garnet/public/rust/crates/mxruntime:mxruntime-rustc",
+    "//third_party/rust-crates/rustc_deps:lazy_static",
+    "//third_party/rust-crates/rustc_deps:log",
+    "//third_party/rust-crates/rustc_deps:tempdir",
+  ]
+  non_rust_deps = [
     "//zircon/public/lib/syslog",
   ]
 }

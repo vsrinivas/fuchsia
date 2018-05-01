@@ -3,7 +3,19 @@
 # found in the LICENSE file.
 
 import("//build/rust/rust_library.gni")
+import("//build/rust/rustc_library.gni")
 
 rust_library("fdio") {
   with_unit_tests = true
+}
+
+rustc_library("fdio-rustc") {
+  name = "fdio"
+  with_unit_tests = true
+  version = "0.2.0"
+  deps = [
+    "//garnet/public/rust/crates/fuchsia-zircon:fuchsia-zircon-rustc",
+    "//garnet/public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys:fuchsia-zircon-sys-rustc",
+    "//third_party/rust-crates/rustc_deps:bytes"
+  ]
 }

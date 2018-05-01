@@ -10,23 +10,31 @@ package("rust-crates-tests") {
 
   deps = [
     "fdio",
+    "fdio:fdio-rustc",
     "fuchsia-async",
+    "fuchsia-async:fuchsia-async-rustc",
     "fuchsia-syslog",
+    "fuchsia-syslog:fuchsia-syslog-rustc",
     "fuchsia-vfs",
     "fuchsia-vfs/fuchsia-vfs-watcher",
     "fuchsia-zircon",
     "fuchsia-zircon:fuchsia-zircon-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/lib/fidl/rust/fidl:fidl-rustc",
   ]
 
   tests = [
     { name = "fdio-lib-unit-test" },
+    { name = "fdio_lib_test_rustc" },
     { name = "fidl-lib-unit-test" },
+    { name = "fidl_lib_test_rustc" },
     { name = "fuchsia_async-lib-unit-test" },
+    { name = "fuchsia_async_lib_test_rustc" },
     { name = "fuchsia_vfs-lib-unit-test" },
     { name = "fuchsia_vfs_watcher-lib-unit-test" },
     { name = "fuchsia_zircon-lib-unit-test" },
     { name = "fuchsia_zircon_lib_test_rustc" },
     { name = "fuchsia_syslog-lib-unit-test" },
+    { name = "fuchsia_syslog_lib_test_rustc" },
   ]
 }
