@@ -4,10 +4,9 @@
 
 library modular;
 
-// UserRunner creates an instance of this service and passes it to the UserShell
-// so it can operate on stories for the user. It is also passed to other
-// services that monitor or manipulate stories, specifically the maxwell
-// services.
+// UserRunner passes a connection to this service to the UserShell so it can
+// operate on stories for the user. It is also passed to other services that
+// monitor or manipulate stories, specifically the maxwell services.
 //
 // Closing a |StoryProvider| connection has no effect on the state of the
 // framework.
@@ -67,14 +66,16 @@ interface StoryProvider {
   // only in developer mode and is mainly useful for testing. Note right now
   // there is only developer mode, i.e. this is always available.
   12: GetLinkPeer(string story_id, vector<string>? module_path, string link_name,
-              request<Link> @request);
+                  request<Link> @request);
 };
 
 // This interface is implemented by clients of StoryProvider.
 //
 // OnChange() is called when:
+//
 //  * a new watcher is registered; one OnChange() for each known story on the
 //    CURRENT device is sent.
+//
 //  * a change to StoryInfo or StoryState is applied on the CURRENT device.
 //
 // The source of the change to StoryInfo could have been from ANY device,
