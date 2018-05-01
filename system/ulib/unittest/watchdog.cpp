@@ -7,11 +7,11 @@
 #include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <pthread.h>
 #include <string.h>
 #include <time.h>
 
-#include <fbl/limits.h>
 #include <unittest/unittest.h>
 
 constexpr int WATCHDOG_ERRCODE = 5;
@@ -33,7 +33,7 @@ constexpr uint64_t NANOSECONDS_PER_SECOND = 1000 * 1000 * 1000;
 constexpr int WATCHDOG_TICK_SECONDS = 1;
 
 // Value stored in |active_timeout_seconds| to indicate test is not running.
-constexpr int WATCHDOG_TIMEOUT_NOT_RUNNING = fbl::numeric_limits<int>::max();
+constexpr int WATCHDOG_TIMEOUT_NOT_RUNNING = INT_MAX;
 
 // This can be overridden by the user by setting env var WATCHDOG_ENV_NAME.
 static int timeout_seconds = WATCHDOG_DEFAULT_TIMEOUT_SECONDS;

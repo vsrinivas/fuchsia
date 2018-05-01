@@ -25,9 +25,6 @@ MODULE_STATIC_LIBS := \
 	system/ulib/pretty \
 	system/ulib/zx \
 
-MODULE_COMPILEFLAGS := \
-    -Isystem/ulib/fbl/include
-
 MODULE_PACKAGE := src
 
 include make/module.mk
@@ -42,8 +39,5 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/watchdog.cpp \
 
 MODULE_HOST_LIBS := system/ulib/pretty
-
-MODULE_COMPILEFLAGS := \
-    -Isystem/ulib/fbl/include
 
 include make/module.mk
