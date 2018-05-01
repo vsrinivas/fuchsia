@@ -1,16 +1,8 @@
 # FIDL tutorial
 
-***WARNING: work in progress. Some content is out of date or entirely broken.***
-
-TODO(FIDL-61):
-
-* Update for FIDL 2.
-* Update to reflect Application->Component rename.
-* Run through and validate.
-
 _Audience: Beginning FIDL developers._
 
-_Prerequisites: At least intermediate skills in C++ or Dart._
+_Prerequisites: At least beginner skills in C++ or Dart._
 
 _Maintained by: jimbe@google.com, shayba@google.com_
 
@@ -96,13 +88,13 @@ When you [build the tree](#getting-and-building-the-fidl-source-code), the FIDL 
 ./out/debug-x64/fidling/gen/garnet/examples/fidl2/services/echo2.fidl.rs
 ```
 
-## Echo server in C++
+## `Echo` server in C++
 
 Let's take a look at the server implementation in C++:
 
 [garnet/examples/fidl/echo2_server_cpp/echo2_server.cc](https://fuchsia.googlesource.com/garnet/+/master/examples/fidl/echo2_server_cpp/echo2_server.cc)
 
-This file implements the main function, and an implementation of the Echo interface.
+This file implements the main function, and an implementation of the `Echo` interface.
 
 To understand how the code works, here's a summary of what happens in the server to execute an IPC call.
 
@@ -135,7 +127,7 @@ Here are the #include files used in the server implementation:
 #include "lib/app/cpp/application_context.h"
 ```
 
-- `echo2.h` contains the generated C++ definition of our Echo FIDL interface.
+- `echo2.h` contains the generated C++ definition of our `Echo` FIDL interface.
 - `application_context.h` is used by `EchoServerApp` to expose service implementations.
 
 ### main
@@ -163,13 +155,13 @@ The function calls `AddPublicService` once for each service it makes available t
 
 If you read the code carefully, you'll see that the parameter to `AddPublicService` is actually a lambda function that captures `this`. This means that the lambda function won't be executed until a channel tries to bind to the interface, at which point the object is bound to the channel and will receive calls from other applications. Note that these calls have thread-affinity, so calls will only be made from the same thread.
 
-The function passed to `AddPublicService` can be implemented in different ways. The default implementation `EchoServerApp` uses the same object for all channels. That's a good choice for the Echo interface because the implementation is stateless. Other, more complex interfaces could create a different object for each channel or perhaps re-use the objects in some sort of a caching scheme.
+The function passed to `AddPublicService` can be implemented in different ways. The default implementation `EchoServerApp` uses the same object for all channels. That's a good choice for the `Echo` interface because the implementation is stateless. Other, more complex interfaces could create a different object for each channel or perhaps re-use the objects in some sort of a caching scheme.
 
 Connections are always point to point. There are no multicast connections.
 
-### The EchoString function
+### The `EchoString()` function
 
-Finally we reach the end of our server discussion. When the message loop receives a message in the channel to call the `EchoString()` function in the Echo interface, it will be directed to the implementation below:
+Finally we reach the end of our server discussion. When the message loop receives a message in the channel to call the `EchoString()` function in the `Echo` interface, it will be directed to the implementation below:
 
 ```cpp
 void EchoString(fidl::StringPtr value, EchoStringCallback callback) override {
@@ -188,7 +180,7 @@ Here's what's interesting about this code:
 
 Any call to an interface in FIDL is asynchronous. This is a big shift if you are used to a procedural world where function calls return after the work is complete. Because it's async, there's no guarantee that the call will ever actually happen, so your callback may never be called. The remote FIDL application might close, crash, be busy, or many other problems beyond your control.
 
-## Echo client in C++
+## `Echo` client in C++
 
 The structure of the client is the same as the server, with a `main` function and an `async::Loop`. The difference is that the client immediately kicks off work once everything is initialized. In contrast, the server does no work until a connection is accepted.
 
@@ -233,7 +225,7 @@ int main(int argc, const char** argv) {
 
 ### Start
 
-`Start()` is responsible for connecting to the remote Echo service.
+`Start()` is responsible for connecting to the remote `Echo` service.
 
 ```cpp
 void Start(std::string server_url, std::string msg) {
@@ -247,7 +239,7 @@ void Start(std::string server_url, std::string msg) {
 }
 ```
 
-First, `Start()` calls `CreateApplication()` to load `echo_server`. Then, it calls `ConnectToService()` to bind to the server's Echo interface. The exact mechanism is somewhat hidden, but the particular interface is automatically inferred from the type of `EchoPtr`, which is a typedef for `fidl::InterfacePtr<Echo>`.
+First, `Start()` calls `CreateApplication()` to load `echo_server`. Then, it calls `ConnectToService()` to bind to the server's `Echo` interface. The exact mechanism is somewhat hidden, but the particular interface is automatically inferred from the type of `EchoPtr`, which is a typedef for `fidl::InterfacePtr<Echo>`.
 
 The second parameter to `ConnectToService()` is actually a URL. The protocol `"fidl"` is a shortcut to load the given shared library module from the same directory. Do not include the trailing `".fidl"` extension when using the `"FIDL"` protocol in the url passed to `ConnectToService()`. Protocols other than FIDL may be handled by a content handler, depending on the FIDL shebang declaration in the file.
 
@@ -265,33 +257,24 @@ $ /pkgfs/packages/echo2_client_cpp/0/bin/echo2_client_cpp
 
 You do not need to specifically run the server because the call to `CreateApplication()` in the client will automatically demand-load the server.
 
-## Echo server in Dart
-
-**Status: Dart section needs to be updated for FIDL 2 (Last reviewed Jan 23, 2017)**
+## `Echo` server in Dart
 
 The echo server implementation in Dart can be found at:
 [topaz/examples/fidl/echo_server_dart/lib/main.dart](https://fuchsia.googlesource.com/topaz/+/master/examples/fidl/echo_server_dart/lib/main.dart)
 
-This file implements the `main()` function, the EchoApplication class, and the EchoImpl class:
+This file implements the `main()` function and the `EchoImpl` class:
 
-- The `main()` function is executed when the application is loaded.
-- The `EchoApplication` class registers the availability of the service with incoming connections from FIDL.
+- The `main()` function is executed when the application is loaded. `main()` registers the availability of the service with incoming connections from FIDL.
 - `EchoImpl` processes requests on the `Echo` interface. A new object is created for each channel.
 
 To understand how the code works, here's a summary of what happens in the server to execute an IPC call. We will dig into what each of these lines means, so it's not necessary to understand all of this before you move on.
 
-1. **Startup.** The FIDL Shell loads the Dart "content handler", which starts the VM, loads `echo_server.mojo` and calls `main()`.
-1. **Startup.** `main()` creates an `EchoApplication` object and returns. However, the application doesn't exit because the root base class of `EchoApplication` called `listen()` in the `fromHandle()` named constructor. This means that the Dart isolate will continue running listening for connections.
-1. **Registration.** The mojo package receives a request to connect from an `echo_client` application, so calls `acceptConnection()` in `EchoApplication`.
-1. **Registration.** `acceptConnection()` must tell the `ServiceProvider` what services/interfaces are supported, so calls `connection.provideService(Echo.serviceName, _createService)`. Note that `_createService` isn't actually called at this point. It's a factory function that is called as necessary by the mojo package to create `EchoImpl` objects to process IPC function calls.
-1. **Service Request.** The mojo package receives a request to bind to a new channel, so calls the `_createService()` function passed in the previous step.
-1. **Service Request.** `_createService()` constructs a new `EchoImpl` that's bound to the channel (endpoint).
-1. **API Request.** The mojo package receives a call to `echoString()` from the channel and dispatches it to `echoString()` in the `EchoImpl` object created in the last step.
-1. **API Request.** `echoString()` calls the given `respond()` function to return the response.
-
-### Dart class diagram
-
-![Dart class diagram](dart_class_diagram.png)
+1. **Startup.** The FIDL Shell loads the Dart runner, which starts the VM, loads `main.dart`, and calls `main()`.
+1. **Registration** `main()` registers `EchoImpl` to bind itself to incoming requests on the `Echo` interface. `main()` returns, but the program doesn't exit, because an [event loop](https://webdev.dartlang.org/articles/performance/event-loop) to handle incoming requests is running.
+1. **Service request.** The `Echo` server package receives a request to bind `Echo` service to a new channel, so it calls the `bind()` function passed in the previous step.
+1. **Service request.** `bind()` uses the `EchoImpl` instance.
+1. **API request.** The `Echo` server package receives a call to `echoString()` from the channel and dispatches it to `echoString()` in the `EchoImpl` object instance bound in the last step.
+1. **API request.** `echoString()` calls the given `callback()` function to return the response.
 
 Now let's go through the details of how this works.
 
@@ -305,10 +288,9 @@ import 'package:fuchsia.fidl.echo2/echo2.dart';
 import 'package:lib.app.dart/app.dart';
 ```
 
-- `dart:async` is required to define the Future class.
-- `mojo/application.dart` defines the Application and ServiceProvider classes.
-- `mojo/core.dart` defines the core FIDL functionality for Dart, such as `fidlHandle` and `fidlMessagePipeEndpoint`.
-- `fidl/mojo/examples/echo.fidl.dart` is generated from the `echo.fidl` file. It defines the abstract interface, the proxy and the stub for the Echo interface.
+- `fidl.dart` exposes the FIDL runtime library for Dart. Our program needs it for `InterfaceRequest`.
+- `app.dart` is required for `ApplicationContext`, which is where we register our service.
+- `echo2.dart` contains bindings for the `Echo` interface.This file is generated from the interface defined in `echo2.fidl`.
 
 ### main()
 
@@ -318,86 +300,33 @@ Everything starts with main():
 void main(List<String> args) {
   _context = new ApplicationContext.fromStartupInfo();
   _echo = new _EchoImpl();
-  _context.outgoingServices.addServiceForName<Echo>(_echo.bind, 'echo2.Echo');
+  _context.outgoingServices.addServiceForName<Echo>(_echo.bind, Echo.$serviceName);
 }
 ```
 
-`main()` is called by the Dart VM when your service is loaded, similar to `main()` in a C or C++ application. `handleToken` is a handle that expects to be bound to a `fidlHandle` and passed to your application's [Application](https://github.com/domokit/mojo/blob/master/mojo/public/dart/mojo/lib/src/application.dart) implementation. After the `Application` object is constructed, `OnInitialize()` will be called on your `Application` subclass, just like C++.
-
-Most FIDL Dart `main()` functions look very similar. They bind `handleToken` to a `fidlHandle`, create their `Application` object using the `fromHandle()` constructor, and return, which causes the system to start processing incoming connections.
+`main()` is called by the Dart VM when your service is loaded, similar to `main()` in a C or C++ application. It binds an instance of `EchoImpl`, our implementation of the `Echo` interface, to the name of the `Echo` service.
 
 Eventually, another FIDL application will attempt to connect to our application.
 
-### The `acceptConnection` function
+### The `bind()` function
 
 Before going further, a quick review from the [FIDL Architecture](#fidl-architecture) section. A connection is defined as the _first_ channel with another application. Strictly speaking, the connection is complete when both applications have bound their `ServiceProvider` to that first channel. Any additional channels are not "connections." The function names will make more sense if you keep this in mind.
 
 Here's what it looks like:
 
 ```dart
-void acceptConnection(String requestorUrl, String resolvedUrl,
-        ApplicationConnection connection) {
-    connection.provideService(Echo.serviceName, _createService);
+void bind(InterfaceRequest<Echo> request) {
+  _binding.bind(this, request);
 }
 ```
 
-The `acceptConnection` function is called when the first channel is received from another application. This function calls `provideService()` once for each service it makes available to the other application (remember that each service exposes a single interface). The information is cached by `ServiceProvider` and used to create objects to be the endpoints for additional incoming channels.
+The `bind()` function is called when the first channel is received from another application. This function binds once for each service it makes available to the other application (remember that each service exposes a single interface). The information is cached in a data structure owned by the FIDL runtime, and used to create objects to be the endpoints for additional incoming channels.
 
-#### Tip for C++ developers
+Unlike C++, Dart only has a [single thread](https://webdev.dartlang.org/articles/performance/event-loop#darts-single-thread-of-execution) per isolate, so there's no possible confusion over which thread owns a channel.
 
-C++ developers new to Dart should note that the reference to `_createService` works differently than you might expect. It looks similar to a C++ pointer to member function, but it's not. It's actually a closure bound to the parent's `this` object, which is an `Echo2Application` object. In other words, it's really a shorthand for something like this:
+#### Is there really only one thread?
 
-```dart
-connection.provideService(Echo.serviceName, (endpoint) {
-    this._createService(endpoint));
-}
-```
-
----
-
-Finally, unlike C++, Dart only has a single thread per VM, so there's no possible confusion over which thread owns a channel.
-
-#### Advanced FAQ - is there really only one thread?
-
-Both yes and no. There's only one thread in your application's VM, but the handle watcher Isolate (where the code calls `fidlWaitMany` has its own, separate thread so that application Isolates don't have to block. Application Isolates can also spawn new Isolates, which will run on different threads.
-
----
-
-### Creating the service
-
-Moving along, imagine that ServiceProvider responds to a request for a new channel. The channel needs to be bound to an object that implements the appropriate interface. That's the second parameter to the provideService() function. Here is how it's implemented in this example:
-
-```dart
-EchoImpl _createService(fidlMessagePipeEndpoint endpoint) {
-  if (_closing) {
-    endpoint.close();
-    return null;
-  }
-  var echoService = new EchoImpl(this, endpoint);
-  _echoServices.add(echoService);
-  return echoService;
-}
-```
-
-`_createService()` first makes sure that the service isn't in the middle of shutting down. This is necessary because the `_errorHandler()` function is async and uses `await`, which means that other requests can be received while `close()` is waiting. Checking the `_closing` variable prevents a race condition.
-
-Otherwise, `_createService()` constructs a new `EchoImpl` object and passes the `endpoint`, which contains the handle to the channel. The `EchoImpl` object is now bound to the channel and will receive calls from the client application.
-
-`_createService()` also adds the `EchoImpl` object to the `_echoServices` collection of known clients. This collection is used if there is an error in the service so that all client connections can be closed.
-
-### Cleanup
-
-In C++, a `mojo::Binding` object coordinates the work of taking requests from the channel and dispatching them to the bound Impl object. In Dart, the `EchoStub` class is responsible for this work (`EchoStub` inherits from `EchoInterface`, which inherits from `fidlInterface<Echo`>).
-
-However, the bindings layer does not know how you are structuring the relationship between channels and Impl objects, so you need to implement the cleanup logic. Dart has no destructors, so the technique is different than the `mojo::StrongBinding` class found in the C++ library.
-
-The `EchoImpl` constructor says:
-
-```dart
-_echo.ctrl.onError = _errorHandler;
-```
-
-This causes _errorHandler() to be called when there is an error on the channel. In particular, a channel being closed is considered an error, so when an errors happens, our implementation of _errorHandler calls _application.removeService(this) to remove this object from the collection of active service connections.
+Both yes and no. There's only one thread in your application's VM, but the handle watcher isolate has its own, separate thread so that application isolates don't have to block. Application isolates can also spawn new isolates, which will run on different threads.
 
 ### The `echoString` function
 
@@ -410,12 +339,12 @@ void echoString(String value, void callback(String response)) {
 }
 ```
 
-## Echo client in Dart
+## `Echo` client in Dart
 
-The echo server implementation in Dart can be found at:
-[https://github.com/domokit/mojo/blob/master/examples/dart/echo_client/lib/main.dart](https://github.com/domokit/mojo/blob/master/examples/dart/echo_client/lib/main.dart)
+The echo client implementation in Dart can be found at:
+[topaz/examples/fidl/echo_client_dart/lib/main.dart](https://fuchsia.googlesource.com/topaz/+/master/examples/fidl/echo_client_dart/lib/main.dart)
 
-The structure of the client is the same as the server, with a `main()` function and a class derived from `Application`. The difference is that the client immediately kicks off work when FIDL calls the `initialize()` function in your `Application` object. In contrast, the server does no work until a connection is accepted.
+Our simple client does everything in `main()`.
 
 ***
 **Note:** an application can be a client, a service, or both, or many. The distinction in this example between Client and Server is purely for demonstration purposes.
@@ -423,62 +352,48 @@ The structure of the client is the same as the server, with a `main()` function 
 
 Here is the summary of how the client makes a connection to the echo service.
 
-1. **Startup.** The FIDL Shell loads the Dart "content handler", which starts the Dart VM, loads `dart_echo_client.mojo` and calls `main()`.
-1. **Startup.** `main()` creates an `EchoClientApplication` object and returns. The FIDL Client Library calls the `initialize()` method, which, despite its name, is where the client does the real work.
-1. **Connect.** In `initialize()`, the client calls `connectToService(String url, bindings.fidlInterface interface)` with the url to the application and with the proxy object. On return, the proxy object is initialized and connected to the channel. However, the remote end of the channel is not connected yet. That happens in the next step.
-1. **Connect.** The FIDL shell loads the server application, which connects the `ServiceProvider` interface to the remote end of the channel.
-1. **Execute.** `initialize()` calls `_echo.echoString(...)` and specifies an anonymous function to handle the return value. The call to `echoString()` returns immediately because FIDL calls are async.
-1. **Execute.** The FIDL run loop is idle, waiting for messages from channels.
-1. **Execute.** Eventually, the server returns the result on the channel, which the mojo package passes to our anonymous function, which prints the result.
-1. **Shutdown.** The `whenComplete()` block of the Completer closes all handles.
-1. **Shutdown.** The server calls `Quit()`, which closes the channel.
+1. **Startup.** The FIDL Shell loads the Dart runner, which starts the VM, loads `main.dart`, and calls `main()`.
+1. **Connect.** The destination server is specified, and we request for it to be started if it wasn't already.
+1. **Bind.** We bind `EchoProxy`, a generated proxy class, to the remote `Echo` service.
+1. **Invoke.** We invoke `echoString` with a value, and set a callback to handle the response.
+1. **Wait.** `main()` returns, but the FIDL run loop is still waiting for messages from the remote channel.
+1. **Handle result.** The result arrives, and our callback is executed, printing the response.
 1. **Shutdown.** `dart_echo_client` exits.
 
 ### main()
 
-The `main()` function in the client is almost identical to the server.
+The `main()` function in the client contains all the client code.
 
 ```dart
-main(List args, Object handleToken) {
-  fidlHandle appHandle = new fidlHandle(handleToken);
-  new EchoClientApplication.fromHandle(appHandle);
-}
-```
+void main(List<String> args) {
+  String server = 'echo_server_dart';
+  if (args.length >= 2 && args[0] == '--server') {
+    server = args[1];
+  }
 
-Again, remember that everything in FIDL is async. The call to `new EchoClientApplication.fromHandle()` returns immediately and then `main()` returns. The FIDL client library keeps its own pointer to the application object, which prevents the application from exiting.
+  _context = new ApplicationContext.fromStartupInfo();
+  final Services services = new Services();
+  final ApplicationLaunchInfo launchInfo = new ApplicationLaunchInfo(
+      url: server, directoryRequest: services.request());
+  _context.launcher.createApplication(launchInfo, null);
 
-### EchoClientApplication
+  _echo = new EchoProxy();
+  _echo.ctrl.bind(services.connectToServiceByName<Echo>(Echo.$serviceName));
 
-FIDL calls the `initialize()` function of your `Application` object once setup is complete.
-
-```dart
-@override
-void initialize(List<String> arguments, String url) {
-  // See README.md for how to specify an alternate server on the cmd line.
-  final server = (arguments.length > 0) ? arguments[1] : "dart_echo_server";
-  connectToService(url.replaceAll("dart_echo_client", server), _echo);
-
-  var c = new Completer();
-  _echo.echoString("hello world", (String response) {
-    print("${response}");
-    c.complete(null);
+  _echo.echoString('hello', (String response) {
+    print('***** Response: $response');
   });
-  c.future.whenComplete(_closeHandles);
 }
 ```
 
-The `initialize()` method receives two parameters, `arguments` and `url`. The `arguments` parameter contains the `args-for` parameters from the `mojo_shell` command as described in the `README.md` file. The `url` parameter contains the URL used to start the `dart_echo_client`. To start the server, the code replaces `"dart_echo_client"` with `"dart_echo_server"`, then calls connectToService() to load dart_echo_server and bind to its `Echo` service. The desired interface is defined by the `_echo` object.
-
-Next the client calls `echoString()` on the newly-bound `_echo` proxy object. FIDL interface calls are asynchronous, so `echoString()` immediately returns and `initialize()` returns. After the call to `echoString()` in the server returns, the anonymous function will be called to print the result. Notice that a `Completer` is used to close the handles and clean up once the anonymous function finishes.
-
-Once all of the handles are closed, the application will automatically exit after the anonymous function returns.
+Again, remember that everything in FIDL is async. The call to `_echo.echoString()` returns immediately and then `main()` returns. The FIDL client library keeps its own pointer to the application object, which prevents the application from exiting. Once the response arrives, all of the handles are closed, and the application will terminate after the callback returns.
 
 ### Run the sample
 
 You can run the Hello World example like this:
 
 ```
-$ out/Debug/mojo_shell mojo:echo_client
+$ run echo_client_dart
 ```
 
-You do not need to specifically run the server because the call to `connectToService()` in the client will automatically demand-load the server.
+You do not need to specifically run the server because the call to `connectToServiceByName()` in the client will automatically demand-load the server.
