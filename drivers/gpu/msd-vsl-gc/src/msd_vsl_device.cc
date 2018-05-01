@@ -34,6 +34,29 @@ bool MsdVslDevice::Init(void* device_handle)
     device_id_ = registers::ChipId::Get().ReadFrom(register_io_.get()).chip_id().get();
     DLOG("Detected vsl chip id 0x%x", device_id_);
 
+    if (device_id_ != 0x7000)
+        return DRETF(false, "Unspported gpu model 0x%x\n", device_id_);
+
+    gpu_features_ = std::make_unique<GpuFeatures>(register_io_.get());
+    DLOG("gpu features: 0x%x minor features 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n",
+         gpu_features_->features().reg_value(), gpu_features_->minor_features(0),
+         gpu_features_->minor_features(1), gpu_features_->minor_features(2),
+         gpu_features_->minor_features(3), gpu_features_->minor_features(4),
+         gpu_features_->minor_features(5));
+    DLOG("stream count %u register_max %u thread_count %u vertex_cache_size %u shader_core_count "
+         "%u pixel_pipes %u vertex_output_buffer_size %u\n",
+         gpu_features_->stream_count(), gpu_features_->register_max(),
+         gpu_features_->thread_count(), gpu_features_->vertex_cache_size(),
+         gpu_features_->shader_core_count(), gpu_features_->pixel_pipes(),
+         gpu_features_->vertex_output_buffer_size());
+    DLOG("instruction count %u buffer_size %u num_constants %u varyings_count %u\n",
+         gpu_features_->instruction_count(), gpu_features_->buffer_size(),
+         gpu_features_->num_constants(), gpu_features_->varyings_count());
+
+    if (!gpu_features_->features().pipe_3d().get())
+        return DRETF(false, "Gpu has no 3d pipe: features 0x%x\n",
+                     gpu_features_->features().reg_value());
+
     return true;
 }
 

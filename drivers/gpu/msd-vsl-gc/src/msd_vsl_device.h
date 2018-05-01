@@ -5,6 +5,7 @@
 #ifndef MSD_VSL_DEVICE_H
 #define MSD_VSL_DEVICE_H
 
+#include "gpu_features.h"
 #include "magma_util/macros.h"
 #include "magma_util/register_io.h"
 #include "msd.h"
@@ -28,6 +29,7 @@ private:
 
     std::unique_ptr<magma::PlatformDevice> platform_device_;
     std::unique_ptr<magma::RegisterIo> register_io_;
+    std::unique_ptr<GpuFeatures> gpu_features_;
     uint32_t device_id_ = 0;
 };
 
