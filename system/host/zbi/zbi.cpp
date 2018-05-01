@@ -6,6 +6,7 @@
 #include <array>
 #include <cassert>
 #include <cerrno>
+#include <climits>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -189,7 +190,7 @@ public:
     }
 
 private:
-    using IovecArray = std::array<iovec, UIO_MAXIOV>;
+    using IovecArray = std::array<iovec, IOV_MAX>;
     IovecArray iov_;
     IovecArray::iterator write_pos_ = iov_.begin();
     // iov_[n].iov_base might point into these buffers.  They're just
@@ -358,8 +359,8 @@ private:
     LZ4F_compressionContext_t ctx_;
     LZ4F_preferences_t prefs_{};
     uint32_t header_pos_ = 0;
-    // UIO_MAXIOV buffers might be live at once.
-    static constexpr const size_t kMinBufferSize = (128 << 20) / UIO_MAXIOV;
+    // IOV_MAX buffers might be live at once.
+    static constexpr const size_t kMinBufferSize = (128 << 20) / IOV_MAX;
 
     Buffer GetBuffer(size_t max_size) {
         if (unused_buffer_.size >= max_size) {
