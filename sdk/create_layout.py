@@ -32,9 +32,9 @@ class CppBuilder(Builder):
             print('Atom type "%s" not handled, skipping %s.' % (type, atom.id))
 
 
-    def install_cpp_prebuilt_atom(self, atom, check_arch=True):
+    def install_cpp_prebuilt_atom(self, atom):
         '''Installs a prebuilt atom from the "cpp" domain.'''
-        if check_arch and atom.tags['arch'] != 'target':
+        if atom.tags['arch'] != 'target':
             print('Only libraries compiled for a target are supported, '
                   'skipping %s.' % atom.id)
             return
@@ -74,7 +74,13 @@ class CppBuilder(Builder):
 
 
     def install_cpp_sysroot_atom(self, atom):
-        self.install_cpp_prebuilt_atom(atom, check_arch=False)
+        '''Installs a sysroot atom from the "cpp" domain.'''
+        base =  os.path.join(self.output, 'arch', self.metadata.target_arch,
+                             'sysroot')
+        for file in atom.files:
+            dest = os.path.join(base, file.destination)
+            self.make_dir(dest)
+            shutil.copy2(file.source, dest)
 
 
     def install_exe_atom(self, atom):
