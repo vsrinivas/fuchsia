@@ -15,17 +15,9 @@ void xhci_print_trb(xhci_transfer_ring_t* ring, xhci_trb_t* trb) {
     zxlogf(LSPEW, "trb[%03d] %p: %08X %08X %08X %08X\n", index, (void *)paddr, ptr[0], ptr[1], ptr[2], ptr[3]);
 }
 
-zx_status_t xhci_transfer_state_init(xhci_transfer_state_t* state, usb_request_t* req,
-                                     uint8_t ep_type, uint16_t ep_max_packet_size) {
+void xhci_transfer_state_init(xhci_transfer_state_t* state, usb_request_t* req,
+                              uint8_t ep_type, uint16_t ep_max_packet_size) {
     memset(state, 0, sizeof(*state));
-
-    if (req->header.length > 0) {
-        zx_status_t status = usb_request_physmap(req);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "%s: usb_request_physmap failed: %d\n", __FUNCTION__, status);
-            return status;
-        }
-    }
 
     // compute number of packets needed for this transaction
     if (req->header.length > 0) {
@@ -53,7 +45,6 @@ zx_status_t xhci_transfer_state_init(xhci_transfer_state_t* state, usb_request_t
 
     // send zero length packet if send_zlp is set and transfer is a multiple of max packet size
     state->needs_zlp = req->header.send_zlp && (req->header.length % ep_max_packet_size) == 0;
-    return ZX_OK;
 }
 
 zx_status_t xhci_queue_data_trbs(xhci_transfer_ring_t* ring, xhci_transfer_state_t* state,

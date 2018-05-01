@@ -169,11 +169,16 @@ static zx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_slot_t* slot, u
         return ZX_ERR_BAD_STATE;
     }
 
-    xhci_transfer_state_t* state = ep->transfer_state;
-    zx_status_t status = xhci_transfer_state_init(state, req, ep->ep_type, ep->max_packet_size);
-    if (status != ZX_OK) {
-        return status;
+    if (req->header.length > 0) {
+        zx_status_t status = usb_request_physmap(req);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: usb_request_physmap failed: %d\n", __FUNCTION__, status);
+            return status;
+        }
     }
+
+    xhci_transfer_state_t* state = ep->transfer_state;
+    xhci_transfer_state_init(state, req, ep->ep_type, ep->max_packet_size);
 
     size_t length = req->header.length;
     uint32_t interrupter_target = 0;

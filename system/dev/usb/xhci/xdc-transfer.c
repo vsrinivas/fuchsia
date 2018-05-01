@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/debug.h>
+
 #include "xdc.h"
 #include "xdc-transfer.h"
 
@@ -36,34 +38,25 @@ static zx_status_t xdc_schedule_transfer_locked(xdc_t* xdc, xdc_endpoint_t* ep,
 
 // Schedules any queued requests on the endpoint's transfer ring, until we fill our
 // transfer ring or have no more requests.
-// Any invalid requests will not be queued, and will be added to the invalid_reqs list.
-static void xdc_process_transactions_locked(xdc_t* xdc, xdc_endpoint_t* ep,
-                                             list_node_t* invalid_reqs) __TA_REQUIRES(ep->lock) {
+static void xdc_process_transactions_locked(xdc_t* xdc, xdc_endpoint_t* ep)
+                                            __TA_REQUIRES(ep->lock) {
     while (1) {
         if (xhci_transfer_ring_free_trbs(&ep->transfer_ring) == 0) {
             // No available TRBs - need to wait for some to complete.
             return;
         }
 
-        while (!ep->current_req) {
+        if (!ep->current_req) {
             // Start the next transaction in the queue.
             usb_request_t* req = list_remove_head_type(&ep->queued_reqs, usb_request_t, node);
             if (!req) {
                 // No requests waiting.
                 return;
             }
-            zx_status_t status = xhci_transfer_state_init(&ep->transfer_state,
-                                                          req,
-                                                          USB_ENDPOINT_BULK,
-                                                          EP_CTX_MAX_PACKET_SIZE);
-            if (status == ZX_OK) {
-                list_add_tail(&ep->pending_reqs, &req->node);
-                ep->current_req = req;
-            } else {
-                req->response.status = status;
-                req->response.actual = 0;
-                list_add_tail(invalid_reqs, &req->node);
-            }
+            xhci_transfer_state_init(&ep->transfer_state, req,
+                                     USB_ENDPOINT_BULK, EP_CTX_MAX_PACKET_SIZE);
+            list_add_tail(&ep->pending_reqs, &req->node);
+            ep->current_req = req;
         }
 
         usb_request_t* req = ep->current_req;
@@ -95,24 +88,27 @@ zx_status_t xdc_queue_transfer(xdc_t* xdc, usb_request_t* req, bool in) {
     }
     mtx_unlock(&xdc->configured_mutex);
 
+    if (req->header.length > 0) {
+        zx_status_t status = usb_request_physmap(req);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: usb_request_physmap failed: %d\n", __FUNCTION__, status);
+            // Call the complete callback outside of the lock.
+            mtx_unlock(&ep->lock);
+            usb_request_complete(req, status, 0);
+            return ZX_OK;
+        }
+    }
+
     list_add_tail(&ep->queued_reqs, &req->node);
 
     // We can still queue requests for later while the endpoint is halted,
     // but before scheduling the TRBs we should wait until the halt is
     // cleared by DbC and we've cleaned up the transfer ring.
-    if (ep->state != XDC_EP_STATE_RUNNING) {
-        mtx_unlock(&ep->lock);
-        return ZX_OK;
+    if (ep->state == XDC_EP_STATE_RUNNING) {
+        xdc_process_transactions_locked(xdc, ep);
     }
-
-    list_node_t invalid_reqs = LIST_INITIAL_VALUE(invalid_reqs);
-    xdc_process_transactions_locked(xdc, ep, &invalid_reqs);
 
     mtx_unlock(&ep->lock);
 
-    // Call complete callbacks for any invalid requests out of the lock.
-    while ((req = list_remove_head_type(&invalid_reqs, usb_request_t, node)) != NULL) {
-        usb_request_complete(req, req->response.status, req->response.actual);
-    }
     return ZX_OK;
 }
