@@ -3,7 +3,23 @@
 # found in the LICENSE file.
 
 import("//build/rust/rust_library.gni")
+import("//build/rust/rustc_library.gni")
 import("//build/package.gni")
 
 rust_library("fuchsia-app") {
+}
+
+rustc_library("fuchsia-app-rustc") {
+  name = "fuchsia_app"
+  version = "0.1.0"
+  deps = [
+    "//garnet/public/lib/app/fidl:fidl-rustc",
+    "//garnet/public/lib/fidl/rust/fidl:fidl-rustc",
+    "//garnet/public/rust/crates/fdio:fdio-rustc",
+    "//garnet/public/rust/crates/fuchsia-async:fuchsia-async-rustc",
+    "//garnet/public/rust/crates/fuchsia-zircon:fuchsia-zircon-rustc",
+    "//garnet/public/rust/crates/mxruntime:mxruntime-rustc",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures",
+  ]
 }
