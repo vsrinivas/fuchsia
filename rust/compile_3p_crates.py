@@ -59,6 +59,13 @@ def main():
     parser.add_argument("--clang_prefix",
                         help="Path to the clang prefix",
                         required=True)
+    # TODO(cramertj) make these args required when the third_party/rust-crates change lands
+    parser.add_argument("--sysroot",
+                        help="Path to the sysroot",
+                        required=False)
+    parser.add_argument("--shared-libs-root",
+                        help="Path to the location of shared libraries",
+                        required=False)
     parser.add_argument
     args = parser.parse_args()
 
@@ -70,25 +77,35 @@ def main():
     env["CARGO_TARGET_LINKER"] = clang_c_compiler
     env["CARGO_TARGET_X86_64_APPLE_DARWIN_LINKER"] = clang_c_compiler
     env["CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER"] = clang_c_compiler
-    clang_c_compiler = args.clang_prefix + '/clang'
-    env["CARGO_TARGET_LINKER"] = clang_c_compiler
-    env["CARGO_TARGET_X86_64_APPLE_DARWIN_LINKER"] = clang_c_compiler
-    env["CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER"] = clang_c_compiler
     env["CARGO_TARGET_%s_LINKER" % args.target.replace("-", "_").upper()] = clang_c_compiler
-    env["CARGO_TARGET_%s_RUSTFLAGS" % args.target.replace("-", "_").upper()] = "-Clink-arg=--target=" + args.target + " -Copt-level=" + args.opt_level
+    if args.sysroot and args.shared_libs_root:
+        env["CARGO_TARGET_%s_RUSTFLAGS" % args.target.replace("-", "_").upper()] = (
+            "-Clink-arg=--target=" + args.target +
+            " -Copt-level=" + args.opt_level +
+            " -Clink-arg=--sysroot=" + args.sysroot +
+            " -Lnative=" + args.shared_libs_root
+        )
+    else:
+        env["CARGO_TARGET_%s_RUSTFLAGS" % args.target.replace("-", "_").upper()] = (
+            "-Clink-arg=--target=" + args.target +
+            " -Copt-level=" + args.opt_level
+        )
     env["CARGO_TARGET_DIR"] = args.out_dir
     env["CARGO_BUILD_DEP_INFO_BASEDIR"] = args.out_dir
     env["RUSTC"] = args.rustc
     env["RUST_BACKTRACE"] = "1"
     env["CC"] = clang_c_compiler
-    env["CXX"] = args.clang_prefix + '/clang++'
-    env["AR"] = args.clang_prefix + '/llvm-ar'
-    env["RANLIB"] = args.clang_prefix + '/llvm-ranlib'
+    if args.sysroot and args.shared_libs_root:
+        env["CFLAGS"] = "--sysroot=%s -L %s" % (args.sysroot, args.shared_libs_root)
+    env["CXX"] = os.path.join(args.clang_prefix, "clang++")
+    env["AR"] = os.path.join(args.clang_prefix, "llvm-ar")
+    env["RANLIB"] = os.path.join(args.clang_prefix, "llvm-ranlib")
     env["PATH"] = "%s:%s" % (env["PATH"], args.cmake_dir)
 
     call_args = [
         args.cargo,
         "build",
+        "--color=always",
         "--target=%s" % args.target,
         "--frozen",
     ]
