@@ -302,12 +302,14 @@ zx_status_t ath10k_ce_send_nolock(struct ath10k_ce_pipe* ce_state,
     uint32_t desc_flags = 0;
     zx_status_t ret = ZX_OK;
 
-    if (nbytes > ce_state->src_sz_max)
+    if (nbytes > ce_state->src_sz_max) {
         ath10k_warn("%s: send more we can (nbytes: %d, max: %d)\n",
                     __func__, nbytes, ce_state->src_sz_max);
+    }
 
     if (unlikely(CE_RING_DELTA(nentries_mask,
                                write_index, sw_index - 1) <= 0)) {
+        ath10k_err("unable to send more CE entries\n");
         ret = ZX_ERR_NO_RESOURCES;
         goto exit;
     }
@@ -514,9 +516,10 @@ zx_status_t ath10k_ce_completed_recv_next_nolock(struct ath10k_ce_pipe* ce_state
     /* Return data from completed destination descriptor */
     *nbytesp = nbytes;
 
-    if (per_transfer_contextp)
+    if (per_transfer_contextp) {
         *per_transfer_contextp =
             dest_ring->per_transfer_context[sw_index];
+    }
 
     /* Copy engine 5 (HTT Rx) will reuse the same transfer context.
      * So update transfer context all CEs except CE5.

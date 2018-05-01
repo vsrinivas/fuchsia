@@ -140,9 +140,9 @@ void ath10k_debug_print_hwfw_info(struct ath10k* ar) {
 
     ath10k_trace("firmware ver %s api %d features %s crc32 %08x\n",
                  ar->hw->wiphy->fw_version,
-                ar->fw_api,
-                fw_features,
-                crc);
+                 ar->fw_api,
+                 fw_features,
+                 crc);
 }
 
 void ath10k_debug_print_board_info(struct ath10k* ar) {
