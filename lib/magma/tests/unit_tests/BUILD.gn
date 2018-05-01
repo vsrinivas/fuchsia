@@ -4,7 +4,7 @@
 
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
-executable("magma_sys_unit_tests") {
+executable("magma_unit_tests") {
   testonly = true
 
   sources = [
@@ -12,7 +12,7 @@ executable("magma_sys_unit_tests") {
   ]
 
   deps = [
-    ":magma_system_platform_tests",
+    ":magma_platform_tests",
     ":magma_system_tests",
     ":magma_util_tests",
     "//third_party/googletest:gtest",
@@ -59,7 +59,7 @@ source_set("magma_util_tests") {
   ]
 }
 
-source_set("magma_system_platform_tests") {
+source_set("magma_platform_tests") {
   testonly = true
   sources = [
     "test_platform_connection.cc",
@@ -81,7 +81,7 @@ source_set("magma_system_platform_tests") {
   ]
 }
 
-executable("magma_sys_display_unit_tests") {
+executable("magma_display_unit_tests") {
   testonly = true
 
   sources = [

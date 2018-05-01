@@ -8,11 +8,11 @@ group("integration") {
   testonly = true
 
   public_deps = [
-    ":magma_arm_integration_tests",
+    ":msd_arm_mali_integration_tests",
   ]
 }
 
-executable("magma_arm_integration_tests") {
+executable("msd_arm_mali_integration_tests") {
   testonly = true
 
   sources = [
