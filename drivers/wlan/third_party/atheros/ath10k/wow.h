@@ -19,15 +19,19 @@
 struct ath10k_wow {
     uint32_t max_num_patterns;
     completion_t wakeup_completed;
+#if 0 // NEEDS PORTING
     struct wiphy_wowlan_support wowlan_support;
+#endif // NEEDS PORTING
 };
 
 #ifdef CONFIG_PM
 
 int ath10k_wow_init(struct ath10k* ar);
+#if 0 // NEEDS PORTING
 int ath10k_wow_op_suspend(struct ieee80211_hw* hw,
                           struct cfg80211_wowlan* wowlan);
 int ath10k_wow_op_resume(struct ieee80211_hw* hw);
+#endif // NEEDS PORTING
 
 #else
 
