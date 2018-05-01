@@ -68,21 +68,8 @@ static int worker_thread(void* arg) {
         for (;;) {
             mtx_lock(&dev->lock);
             dead = dev->dead;
-            // Increment the count if the previous transaction completed.
-            if (txn != NULL) {
-                if (status == ZX_OK) {
-                    dev->txn_counts.successful++;
-                } else {
-                    dev->txn_counts.failed++;
-                }
-                // Put the ramdisk to sleep if we have reached the required # of transactions
-                if (dev->sa_txn_count != 0) {
-                    --dev->sa_txn_count;
-                    dev->asleep = (dev->sa_txn_count == 0);
-                }
-            }
-            // Grab the next transaction unless the device is saving them until it wakes
             asleep = dev->asleep;
+            // Grab the next transaction unless the device is saving them until it wakes
             if (!dead && asleep && (dev->flags & RAMDISK_FLAG_RESUME_ON_WAKE) != 0) {
                 txn = NULL;
             } else {
@@ -104,17 +91,29 @@ static int worker_thread(void* arg) {
         size_t len = txn->op.rw.length * dev->blk_size;
 
         if (len > MAX_TRANSFER_SIZE) {
-            txn->op.completion_cb(&txn->op, ZX_ERR_OUT_OF_RANGE);
-            continue;
-        }
-
-        if (asleep) {
+            status = ZX_ERR_OUT_OF_RANGE;
+        } else if (asleep) {
             status = ZX_ERR_UNAVAILABLE;
         } else if (txn->op.command == BLOCK_OP_READ) {
             status = zx_vmo_write(txn->op.rw.vmo, addr, txn->op.rw.offset_vmo, len);
         } else { // BLOCK_OP_WRITE
             status = zx_vmo_read(txn->op.rw.vmo, addr, txn->op.rw.offset_vmo, len);
         }
+
+        mtx_lock(&dev->lock);
+        // Increment the count based on the result of the last transaction.
+        if (status == ZX_OK) {
+            dev->txn_counts.successful++;
+        } else {
+            dev->txn_counts.failed++;
+        }
+        // Put the ramdisk to sleep if we have reached the required # of transactions.
+        if (dev->sa_txn_count != 0) {
+            --dev->sa_txn_count;
+            dev->asleep = (dev->sa_txn_count == 0);
+        }
+        mtx_unlock(&dev->lock);
+
         txn->op.completion_cb(&txn->op, status);
     }
 
