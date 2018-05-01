@@ -83,7 +83,7 @@ include make/module.mk
 
 MODULE := $(LOCAL_DIR).hostapp
 
-MODULE_TYPE := hostapp
+MODULE_TYPE := hosttest
 
 MODULE_NAME := fbl-test
 

@@ -21,8 +21,13 @@
 # MODULE_ASMFLAGS : ASMFLAGS local to this module
 # MODULE_SRCDEPS : extra dependencies that all of this module's files depend on
 # MODULE_EXTRA_OBJS : extra .o files that should be linked with the module
-# MODULE_TYPE : "userapp" for userspace executables, "userlib" for userspace library,
-#               "driver" for Zircon driver, "" for standard LK module
+# MODULE_TYPE : "userapp" for userspace executables
+#               "userlib" for userspace library,
+#               "driver" for Zircon driver
+#               "hostapp" for a host tool,
+#               "hosttest" for a host test,
+#               "hostlib" for a host library,
+#               "" for kernel,
 # MODULE_LIBS : shared libraries for a userapp or userlib to depend on
 # MODULE_STATIC_LIBS : static libraries for a userapp or userlib to depend on
 # MODULE_FIDL_LIBS : fidl libraries for a userapp or userlib to depend on the C bindings of
@@ -104,7 +109,7 @@ endif
 
 # Introduce local, libc and dependency include paths
 ifneq ($(MODULE_TYPE),)
-ifeq ($(MODULE_TYPE),$(filter $(MODULE_TYPE),hostapp hostlib))
+ifeq ($(MODULE_TYPE),$(filter $(MODULE_TYPE),hostapp hosttest hostlib))
 # host module
 MODULE_SRCDEPS += $(HOST_CONFIG_HEADER)
 MODULE_COMPILEFLAGS += -I$(LOCAL_DIR)/include
@@ -199,7 +204,7 @@ MODULE_GEN_HDR :=
 ifeq ($(MODULE_TYPE),)
 include make/compile.mk
 else
-ifeq ($(MODULE_TYPE),$(filter $(MODULE_TYPE),hostapp hostlib))
+ifeq ($(MODULE_TYPE),$(filter $(MODULE_TYPE),hostapp hosttest hostlib))
 include make/hcompile.mk
 else
 ifeq ($(MODULE_TYPE),efilib)
@@ -227,12 +232,12 @@ ALLSRCS += $(MODULE_SRCS)
 # track all the objects built
 ALLOBJS += $(MODULE_OBJS)
 
-ifeq (,$(filter $(MODULE_TYPE),hostapp hostlib))
+ifeq (,$(filter $(MODULE_TYPE),hostapp hosttest hostlib))
 ALL_TARGET_OBJS += $(MODULE_OBJS)
 endif
 
 # generate an input linker script for all kernel and user modules
-ifeq (,$(filter $(MODULE_TYPE),hostapp hostlib))
+ifeq (,$(filter $(MODULE_TYPE),hostapp hosttest hostlib))
 MODULE_OBJECT := $(MODULE_OUTNAME).mod.o
 $(MODULE_OBJECT): $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
 	@$(MKDIR)

@@ -6,7 +6,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := hostapp
+MODULE_TYPE := hosttest
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/main.cpp \
@@ -17,7 +17,7 @@ MODULE_SRCS += \
     system/host/fvm/format/minfs.cpp \
     system/host/fvm/format/blobfs.cpp \
 
-MODULE_NAME := fvm-host-test
+MODULE_NAME := fvm-test
 
 MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \

@@ -6,9 +6,9 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR).hostapp
 
-MODULE_TYPE := hostapp
+MODULE_TYPE := hosttest
 
-MODULE_NAME := fs-host-test
+MODULE_NAME := fs-test
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/main.cpp \
