@@ -4,6 +4,7 @@
 
 #include <lib/edid/edid.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 #include <zircon/assert.h>
 
@@ -93,6 +94,10 @@ bool Edid::Init(const uint8_t* bytes, uint16_t len, const char** err_msg) {
     }
     if (((base_edid_.num_extensions + 1) * kBlockSize) != len) {
         *err_msg = "Bad extension count";
+        return false;
+    }
+    if (!base_edid_.digital()) {
+        *err_msg = "Analog displays not supported";
         return false;
     }
     // TODO(stevensd): validate all of the extensions
@@ -189,15 +194,16 @@ bool Edid::GetPreferredTiming(timing_params_t* params) const {
         params->horizontal_addressable = base_edid_.preferred_timing.horizontal_addressable();
         params->horizontal_front_porch = base_edid_.preferred_timing.horizontal_front_porch();
         params->horizontal_sync_pulse = base_edid_.preferred_timing.horizontal_sync_pulse_width();
-        params->horizontal_back_porch = base_edid_.preferred_timing.horizontal_blanking()
-                - params->horizontal_sync_pulse - params->horizontal_front_porch;
+        params->horizontal_blanking = base_edid_.preferred_timing.horizontal_blanking();
 
         params->vertical_addressable = base_edid_.preferred_timing.vertical_addressable();
         params->vertical_front_porch = base_edid_.preferred_timing.vertical_front_porch();
         params->vertical_sync_pulse = base_edid_.preferred_timing.vertical_sync_pulse_width();
-        params->vertical_back_porch = base_edid_.preferred_timing.vertical_blanking()
-                - params->vertical_sync_pulse - params->vertical_front_porch;
+        params->vertical_blanking = base_edid_.preferred_timing.vertical_blanking();
 
+        if (base_edid_.preferred_timing.type() != TYPE_DIGITAL_SEPARATE) {
+            printf("edid: Ignoring bad timing type %d\n", base_edid_.preferred_timing.type());
+        }
         params->vertical_sync_polarity = base_edid_.preferred_timing.vsync_polarity();
         params->horizontal_sync_polarity = base_edid_.preferred_timing.hsync_polarity();
         params->interlaced = base_edid_.preferred_timing.interlaced();
@@ -246,7 +252,6 @@ bool Edid::GetPreferredTiming(timing_params_t* params) const {
         double h_period_est =
                 (1000000.0 - kMinVsyncPlusBpUs * v_rate) / (v_rate * (height + kMinPorch));
         uint32_t vsync_bp = round_div(kMinVsyncPlusBpUs, h_period_est);
-        uint32_t v_back_porch = vsync_bp - kVsyncRequired;
         uint32_t v_total_lines = height + vsync_bp + kMinPorch;
         double v_field_rate_est = 1000000.0 / (h_period_est * v_total_lines);
         double h_period = (1.0 * h_period_est * v_field_rate_est) / v_rate;
@@ -261,16 +266,22 @@ bool Edid::GetPreferredTiming(timing_params_t* params) const {
         params->horizontal_sync_pulse =
                 round_div(kHsyncPercent * total_pixels, 100 * kCellGran) * kCellGran;
         params->horizontal_front_porch = h_blank_pixels / 2 - params->horizontal_sync_pulse;
-        params->horizontal_back_porch =
-                params->horizontal_front_porch + params->horizontal_sync_pulse;
+        params->horizontal_blanking = h_blank_pixels;
         params->vertical_addressable = height;
         params->vertical_front_porch = kMinPorch;
         params->vertical_sync_pulse = kVsyncRequired;
-        params->vertical_back_porch = v_back_porch;
+        params->vertical_blanking = vsync_bp + kMinPorch;
 
+        // TODO(ZX-1413): Set these depending on if we use default/secondary GTF
         params->vertical_sync_polarity = 1;
         params->horizontal_sync_polarity= 0;
         params->interlaced = 0;
+    }
+
+    // If either of these are 0, then the timing value is definitely wrong
+    if (params->vertical_addressable == 0
+            || params->horizontal_addressable == 0) {
+        return false;
     }
 
     return true;

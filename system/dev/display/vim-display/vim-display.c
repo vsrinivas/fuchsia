@@ -160,9 +160,9 @@ static bool vim_check_configuration(void* ctx,
     mtx_lock(&display->display_lock);
     bool res = (display->display_attached
                && display_configs[0]->display_id == display->display_id
-               && display_configs[0]->h_active == display->width
+               && display_configs[0]->mode.h_addressable == display->width
                && display_configs[0]->image.width == display->width
-               && display_configs[0]->v_active == display->height
+               && display_configs[0]->mode.v_addressable == display->height
                && display_configs[0]->image.height == display->height);
     mtx_unlock(&display->display_lock);
     return res;

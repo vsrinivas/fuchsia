@@ -80,9 +80,14 @@ struct DetailedTimingDescriptor {
     uint8_t rest[5]; // Fields that we don't need to read yet.
     uint8_t features;
     DEF_SUBBIT(features, 7, interlaced);
+    DEF_SUBFIELD(features, 4, 3, type);
     DEF_SUBBIT(features, 2, vsync_polarity);
     DEF_SUBBIT(features, 1, hsync_polarity);
 };
+#define TYPE_ANALOG 0
+#define TYPE_ANALOG_BIPOLAR 1
+#define TYPE_DIGITAL_COMPOSITE 2
+#define TYPE_DIGITAL_SEPARATE 3
 
 static_assert(sizeof(DetailedTimingDescriptor) == 18, "Size check for EdidTimingDesc");
 
@@ -129,7 +134,10 @@ struct BaseEdid {
     uint8_t unused1[10];
     uint8_t edid_version;
     uint8_t edid_revision;
-    uint8_t various[18]; // Fields that we don't need to read yet.
+    uint8_t video_input_definition;
+    DEF_SUBBIT(video_input_definition, 7, digital);
+
+    uint8_t various[17]; // Fields that we don't need to read yet.
     StandardTimingDescriptor standard_timings[8];
     DetailedTimingDescriptor preferred_timing;
     uint8_t rest[kBlockSize - 0x36 - 18 - 2]; // Fields that we don't need to read yet.
@@ -260,12 +268,12 @@ typedef struct timing_params {
     uint32_t horizontal_addressable;
     uint32_t horizontal_front_porch;
     uint32_t horizontal_sync_pulse;
-    uint32_t horizontal_back_porch;
+    uint32_t horizontal_blanking;
 
     uint32_t vertical_addressable;
     uint32_t vertical_front_porch;
     uint32_t vertical_sync_pulse;
-    uint32_t vertical_back_porch;
+    uint32_t vertical_blanking;
 
     uint32_t vertical_sync_polarity;
     uint32_t horizontal_sync_polarity;

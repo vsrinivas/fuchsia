@@ -70,22 +70,25 @@ typedef struct display_controller_cb {
 #define MODE_FLAG_HSYNC_POSITIVE (1 << 1)
 #define MODE_FLAG_INTERLACED (1 << 2)
 
+// The video parameters which specify the display mode.
+typedef struct display_mode {
+    uint32_t pixel_clock_10khz;
+    uint32_t h_addressable;
+    uint32_t h_front_porch;
+    uint32_t h_sync_pulse;
+    uint32_t h_blanking;
+    uint32_t v_addressable;
+    uint32_t v_front_porch;
+    uint32_t v_sync_pulse;
+    uint32_t v_blanking;
+    uint32_t mode_flags; // A bitmask of MODE_FLAG_* values
+} display_mode_t;
+
 typedef struct display_config {
     // the display id to which the configuration applies
     uint64_t display_id;
 
-    // The video parameters which specify the display mode. The client guarantees that
-    // these values match some timing advertised by the display's EDID.
-    uint32_t pixel_clock_khz;
-    uint32_t h_active;
-    uint32_t h_sync_start;
-    uint32_t h_sync_end;
-    uint32_t h_total;
-    uint32_t v_active;
-    uint32_t v_sync_start;
-    uint32_t v_sync_end;
-    uint32_t v_total;
-    uint32_t mode_flags; // A bitmask of MODE_FLAG_* values
+    display_mode_t mode;
 
     image_t image;
 } display_config_t;

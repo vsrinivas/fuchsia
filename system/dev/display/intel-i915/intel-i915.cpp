@@ -178,8 +178,8 @@ void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
                     zx_set_framebuffer_vmo(get_root_resource(),
                                            new_device->framebuffer_vmo().get(),
                                            static_cast<uint32_t>(new_device->framebuffer_size()),
-                                           new_device->info().format, new_device->info().width,
-                                           new_device->info().height, new_device->info().stride);
+                                           new_device->format(), new_device->width(),
+                                           new_device->height(), new_device->stride());
                 }
             }
             zxlogf(SPEW, "Display unplugged\n");
@@ -595,8 +595,8 @@ zx_status_t Controller::AddDisplay(fbl::unique_ptr<DisplayDevice>&& display) {
         fbl::unique_ptr<DisplayDevice>& new_device = display_devices_[0];
         zx_set_framebuffer_vmo(get_root_resource(), new_device->framebuffer_vmo().get(),
                                static_cast<uint32_t>(new_device->framebuffer_size()),
-                               new_device->info().format, new_device->info().width,
-                               new_device->info().height, new_device->info().stride);
+                               new_device->format(), new_device->width(),
+                               new_device->height(), new_device->stride());
     }
 
     next_id_++;
@@ -692,7 +692,8 @@ bool Controller::CheckConfiguration(display_config_t** display_config, uint32_t 
         if (!FindDevice(config->display_id)) {
             return false;
         }
-        if (config->image.width != config->h_active || config->image.height != config->v_active
+        if (config->image.width != config->mode.h_addressable
+                || config->image.height != config->mode.v_addressable
                 || config->image.pixel_format != ZX_PIXEL_FORMAT_ARGB_8888) {
             return false;
         }

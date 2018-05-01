@@ -75,12 +75,40 @@ bool DisplayDevice::Init() {
     ddi_power_ = controller_->power()->GetDdiPowerWellRef(ddi_);
     pipe_power_ = controller_->power()->GetPipePowerWellRef(pipe_);
 
-    if (!QueryDevice(&edid_, &info_) || !DefaultModeset()) {
+    if (!QueryDevice(&edid_)) {
         return false;
     }
+
+    edid::timing_params_t preferred_timing;
+    if (!edid_.GetPreferredTiming(&preferred_timing)) {
+        return false;
+    }
+
+    info_.pixel_clock_10khz = preferred_timing.pixel_freq_10khz;
+    info_.h_addressable = preferred_timing.horizontal_addressable;
+    info_.h_front_porch = preferred_timing.horizontal_front_porch;
+    info_.h_sync_pulse = preferred_timing.horizontal_sync_pulse;
+    info_.h_blanking = preferred_timing.horizontal_blanking;
+    info_.v_addressable = preferred_timing.vertical_addressable;
+    info_.v_front_porch = preferred_timing.vertical_front_porch;
+    info_.v_sync_pulse = preferred_timing.vertical_sync_pulse;
+    info_.v_blanking = preferred_timing.vertical_blanking;
+    info_.mode_flags = (preferred_timing.vertical_sync_pulse ? MODE_FLAG_VSYNC_POSITIVE : 0)
+            | (preferred_timing.horizontal_sync_pulse ? MODE_FLAG_HSYNC_POSITIVE : 0)
+            | (preferred_timing.interlaced ? MODE_FLAG_INTERLACED : 0);
+
+    ResetPipe();
+    if (!ResetTrans() || !ResetDdi()) {
+        return false;
+    }
+
+    if (!DoModeset()) {
+        return false;
+    }
+
     inited_ = true;
 
-    framebuffer_size_ = info_.stride * info_.height * info_.pixelsize;
+    framebuffer_size_ = stride() * height() * ZX_PIXEL_FORMAT_BYTES(format());
     zx_status_t status = zx::vmo::create(framebuffer_size_, 0, &framebuffer_vmo_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "i915: Failed to allocate framebuffer (%d)\n", status);
@@ -135,7 +163,7 @@ bool DisplayDevice::Init() {
 
     image_type_ = IMAGE_TYPE_SIMPLE;
     auto plane_stride = pipe_regs.PlaneSurfaceStride().ReadFrom(controller_->mmio_space());
-    plane_stride.set_stride(image_type_, info_.stride, info_.format);
+    plane_stride.set_stride(image_type_, stride(), format());
     plane_stride.WriteTo(controller_->mmio_space());
 
     auto plane_surface = pipe_regs.PlaneSurface().ReadFrom(controller_->mmio_space());
@@ -147,7 +175,7 @@ bool DisplayDevice::Init() {
 }
 
 bool DisplayDevice::Resume() {
-    if (!DefaultModeset()) {
+    if (!DoModeset()) {
         return false;
     }
 
@@ -158,7 +186,7 @@ bool DisplayDevice::Resume() {
     registers::PipeRegs pipe_regs(pipe());
 
     auto plane_stride = pipe_regs.PlaneSurfaceStride().ReadFrom(controller_->mmio_space());
-    plane_stride.set_stride(image_type_, info_.stride, info_.format);
+    plane_stride.set_stride(image_type_, stride(), format());
     plane_stride.WriteTo(controller_->mmio_space());
 
     auto plane_surface = pipe_regs.PlaneSurface().ReadFrom(controller_->mmio_space());

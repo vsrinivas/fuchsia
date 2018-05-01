@@ -846,14 +846,13 @@ namespace i915 {
 DpDisplay::DpDisplay(Controller* controller, uint64_t id, registers::Ddi ddi, registers::Pipe pipe)
         : DisplayDevice(controller, id, ddi, select_trans(ddi, pipe), pipe) { }
 
-bool DpDisplay::QueryDevice(edid::Edid* edid, default_display_info* info) {
+bool DpDisplay::QueryDevice(edid::Edid* edid) {
     // For eDP displays, assume that the BIOS has enabled panel power, given
     // that we need to rely on it properly configuring panel power anyway. For
     // general DP displays, the default power state is D0, so we don't have to
     // worry about AUX failures because of power saving mode.
-    edid::timing_params_t timing;
     const char* edid_err = "Failed to find timing";
-    if (!edid->Init(this, &edid_err) || !edid->GetPreferredTiming(&timing)) {
+    if (!edid->Init(this, &edid_err)) {
         zxlogf(TRACE, "i915: dp edid init failed \"%s\"\n", edid_err);
         return false;
     }
@@ -948,24 +947,10 @@ bool DpDisplay::QueryDevice(edid::Edid* edid, default_display_info* info) {
         return false;
     }
 
-    // TODO(ZX-1416): Parameterized this
-    static constexpr uint32_t kPixelFormat = ZX_PIXEL_FORMAT_RGB_x888;
-    info->width = timing.horizontal_addressable;
-    info->height = timing.vertical_addressable;
-    info->format = kPixelFormat;
-    info->stride = registers::PlaneSurfaceStride::compute_pixel_stride(IMAGE_TYPE_SIMPLE,
-                                                                       info->width, info->format);
-    info->pixelsize = ZX_PIXEL_FORMAT_BYTES(info->format);
-
     return true;
 }
 
-bool DpDisplay::DefaultModeset() {
-    ResetPipe();
-    if (!ResetTrans() || !ResetDdi()) {
-        return false;
-    }
-
+bool DpDisplay::DoModeset() {
     bool is_edp = controller()->igd_opregion().IsEdp(ddi());
     if (is_edp) {
         auto panel_ctrl = registers::PanelPowerCtrl::Get().ReadFrom(mmio_space());
@@ -1121,15 +1106,15 @@ bool DpDisplay::DefaultModeset() {
     link_n_reg.WriteTo(mmio_space());
 
     // Configure the rest of the transcoder
-    uint32_t h_active = timing.horizontal_addressable - 1;
-    uint32_t h_sync_start = h_active + timing.horizontal_front_porch;
-    uint32_t h_sync_end = h_sync_start + timing.horizontal_sync_pulse;
-    uint32_t h_total = h_sync_end + timing.horizontal_back_porch;
+    uint32_t h_active = mode().h_addressable - 1;
+    uint32_t h_sync_start = h_active + mode().h_front_porch;
+    uint32_t h_sync_end = h_sync_start + mode().h_sync_pulse;
+    uint32_t h_total = h_active + mode().h_blanking;
 
-    uint32_t v_active = timing.vertical_addressable - 1;
-    uint32_t v_sync_start = v_active + timing.vertical_front_porch;
-    uint32_t v_sync_end = v_sync_start + timing.vertical_sync_pulse;
-    uint32_t v_total = v_sync_end + timing.vertical_back_porch;
+    uint32_t v_active = mode().v_addressable - 1;
+    uint32_t v_sync_start = v_active + mode().v_front_porch;
+    uint32_t v_sync_end = v_sync_start + mode().v_sync_pulse;
+    uint32_t v_total = v_active + mode().v_blanking;
 
     auto h_total_reg = trans_regs.HTotal().FromValue(0);
     h_total_reg.set_count_total(h_total);

@@ -21,14 +21,6 @@ namespace i915 {
 
 class Controller;
 
-typedef struct default_display_info {
-    uint32_t format;
-    uint32_t width;
-    uint32_t height;
-    uint32_t stride;
-    uint32_t pixelsize;
-} default_display_info_t;
-
 class DisplayDevice {
 public:
     DisplayDevice(Controller* device, uint64_t id,
@@ -48,26 +40,35 @@ public:
     uint64_t id() const { return id_; }
     const zx::vmo& framebuffer_vmo() const { return framebuffer_vmo_; }
     uint32_t framebuffer_size() const { return framebuffer_size_; }
-    const default_display_info_t& info() const { return info_; }
     registers::Ddi ddi() const { return ddi_; }
     registers::Pipe pipe() const { return pipe_; }
     registers::Trans trans() const { return trans_; }
     Controller* controller() { return controller_; }
     const edid::Edid& edid() { return edid_; }
 
+    uint32_t width() const { return info_.v_addressable; }
+    uint32_t height() const { return info_.h_addressable; }
+    uint32_t format() const { return ZX_PIXEL_FORMAT_ARGB_8888; }
+    uint32_t stride() const {
+        return registers::PlaneSurfaceStride::compute_pixel_stride(
+                IMAGE_TYPE_SIMPLE, width(), format());
+    }
+
 protected:
     // Queries the DisplayDevice to see if there is a supported display attached. If
     // there is, then returns true and populates |edid| and |info|.
-    virtual bool QueryDevice(edid::Edid* edid, default_display_info_t* info) = 0;
+    virtual bool QueryDevice(edid::Edid* edid) = 0;
     // Configures the hardware to display a framebuffer at the preferred resolution.
-    virtual bool DefaultModeset() = 0;
+    virtual bool DoModeset() = 0;
 
     hwreg::RegisterIo* mmio_space() const;
+    const display_mode_t& mode() const { return info_; }
+
+private:
     void ResetPipe();
     bool ResetTrans();
     bool ResetDdi();
 
-private:
     // Borrowed reference to Controller instance
     Controller* controller_;
 
@@ -85,7 +86,7 @@ private:
     fbl::unique_ptr<GttRegion> fb_gfx_addr_;
 
     bool inited_;
-    default_display_info_t info_;
+    display_mode_t info_;
     uint32_t image_type_;
     edid::Edid edid_;
     bool is_enabled_;

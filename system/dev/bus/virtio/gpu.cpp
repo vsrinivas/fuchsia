@@ -127,9 +127,9 @@ bool GpuDevice::virtio_gpu_check_configuration(void* ctx, display_config_t** dis
         return false;
     }
     return display_count == 0 || (display_configs[0]->display_id == kDisplayId
-            && display_configs[0]->h_active == gd->pmode_.r.width
+            && display_configs[0]->mode.h_addressable == gd->pmode_.r.width
             && display_configs[0]->image.width == gd->pmode_.r.width
-            && display_configs[0]->v_active == gd->pmode_.r.height
+            && display_configs[0]->mode.v_addressable == gd->pmode_.r.height
             && display_configs[0]->image.height == gd->pmode_.r.height);
 }
 
