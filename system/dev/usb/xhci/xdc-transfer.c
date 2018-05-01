@@ -7,6 +7,29 @@
 #include "xdc.h"
 #include "xdc-transfer.h"
 
+static void xdc_ring_doorbell(xdc_t* xdc, xdc_endpoint_t* ep) {
+    uint8_t doorbell_val = ep->direction == USB_DIR_IN ? DCDB_DB_EP_IN : DCDB_DB_EP_OUT;
+    XHCI_SET_BITS32(&xdc->debug_cap_regs->dcdb, DCDB_DB_START, DCDB_DB_BITS, doorbell_val);
+}
+
+// Stores the value of the Dequeue Pointer into out_dequeue.
+// Returns ZX_OK if successful, or ZX_ERR_BAD_STATE if the endpoint was not in the Stopped state.
+static zx_status_t xdc_get_dequeue_ptr_locked(xdc_t* xdc, xdc_endpoint_t* ep,
+                                              uint64_t* out_dequeue) __TA_REQUIRES(ep->lock) {
+    if (ep->state != XDC_EP_STATE_STOPPED) {
+        zxlogf(ERROR, "tried to read dequeue pointer of %s EP while not stopped, state is: %d\n",
+               ep->name, ep->state);
+        return ZX_ERR_BAD_STATE;
+    }
+    xdc_context_data_t* ctx = xdc->context_data;
+    xhci_endpoint_context_t* epc = ep->direction == USB_DIR_OUT ? &ctx->out_epc : &ctx->in_epc;
+
+    uint64_t dequeue_ptr_hi = XHCI_READ32(&epc->tr_dequeue_hi);
+    uint32_t dequeue_ptr_lo = XHCI_READ32(&epc->epc2) & EP_CTX_TR_DEQUEUE_LO_MASK;
+    *out_dequeue = (dequeue_ptr_hi << 32 | dequeue_ptr_lo);
+    return ZX_OK;
+}
+
 // Returns ZX_OK if the request was scheduled successfully, or ZX_ERR_SHOULD_WAIT
 // if we ran out of TRBs.
 static zx_status_t xdc_schedule_transfer_locked(xdc_t* xdc, xdc_endpoint_t* ep,
@@ -29,9 +52,7 @@ static zx_status_t xdc_schedule_transfer_locked(xdc_t* xdc, xdc_endpoint_t* ep,
     // If we get here, then we are ready to ring the doorbell.
     // Save the ring position so we can update the ring dequeue ptr once the transfer completes.
     req->context = (void *)ring->current;
-
-    uint8_t doorbell_val = ep->direction == USB_DIR_IN ? DCDB_DB_EP_IN : DCDB_DB_EP_OUT;
-    XHCI_SET_BITS32(&xdc->debug_cap_regs->dcdb, DCDB_DB_START, DCDB_DB_BITS, doorbell_val);
+    xdc_ring_doorbell(xdc, ep);
 
     return ZX_OK;
 }
@@ -110,5 +131,55 @@ zx_status_t xdc_queue_transfer(xdc_t* xdc, usb_request_t* req, bool in) {
 
     mtx_unlock(&ep->lock);
 
+    return ZX_OK;
+}
+
+zx_status_t xdc_restart_transfer_ring_locked(xdc_t* xdc, xdc_endpoint_t* ep) {
+    // Once the DbC clears the halt flag for the endpoint, the address stored in the
+    // TR Dequeue Pointer field is the next TRB to be executed (see XHCI Spec 7.6.4.3).
+    // There seems to be no guarantee which TRB this will point to.
+    //
+    // The easiest way to deal with this is to convert all scheduled TRBs to NO-OPs,
+    // and reschedule pending requests.
+
+    uint64_t dequeue_ptr;
+    zx_status_t status = xdc_get_dequeue_ptr_locked(xdc, ep, &dequeue_ptr);
+    if (status != ZX_OK) {
+        return status;
+    }
+    xhci_transfer_ring_t* ring = &ep->transfer_ring;
+    xhci_trb_t* trb = xhci_transfer_ring_phys_to_trb(ring, dequeue_ptr);
+    if (!trb) {
+        zxlogf(ERROR, "no valid TRB corresponding to dequeue_ptr: %lu\n", dequeue_ptr);
+        return ZX_ERR_BAD_STATE;
+    }
+
+    // Reset our copy of the dequeue pointer.
+    xhci_set_dequeue_ptr(ring, trb);
+
+    // Convert all pending TRBs on the transfer ring into NO-OPs TRBs.
+    // ring->current is just after our last queued TRB.
+    xhci_trb_t* last_trb = NULL;
+    while (trb != ring->current) {
+        xhci_set_transfer_noop_trb(trb);
+        last_trb = trb;
+        trb = xhci_get_next_trb(ring, trb);
+    }
+    if (last_trb) {
+        // Set IOC (Interrupt on Completion) on the last NO-OP TRB, so we know
+        // when we can overwrite them in the transfer ring.
+        uint32_t control = XHCI_READ32(&last_trb->control);
+        XHCI_WRITE32(&last_trb->control, control | XFER_TRB_IOC);
+    }
+    // Restart the transfer ring.
+    xdc_ring_doorbell(xdc, ep);
+    ep->state = XDC_EP_STATE_RUNNING;
+
+    // Requeue and reschedule the requests.
+    usb_request_t* req;
+    while ((req = list_remove_tail_type(&ep->pending_reqs, usb_request_t, node)) != NULL) {
+        list_add_head(&ep->queued_reqs, &req->node);
+    }
+    xdc_process_transactions_locked(xdc, ep);
     return ZX_OK;
 }
