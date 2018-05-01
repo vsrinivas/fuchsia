@@ -205,8 +205,8 @@ pub fn write_object<C: AsRef<zircon::Channel>>(
 
     let mut buf = bytes::BytesMut::with_capacity(ZXRIO_OBJECT_MINSIZE + extra.len());
 
-    buf.put_i32::<bytes::LittleEndian>(status.into_raw());
-    buf.put_u32::<bytes::LittleEndian>(type_);
+    buf.put_i32_le(status.into_raw());
+    buf.put_u32_le(type_);
 
     buf.put_slice(extra);
 

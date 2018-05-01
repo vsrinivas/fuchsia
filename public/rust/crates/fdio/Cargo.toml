@@ -9,4 +9,4 @@ repository = "https://fuchsia.googlesource.com/garnet/"
 [dependencies]
 fuchsia-zircon = "0.3"
 fuchsia-zircon-sys = "0.3"
-bytes = "0.4"
+bytes = "0.4.7"
