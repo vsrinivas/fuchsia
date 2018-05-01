@@ -23,6 +23,7 @@ enum {
     BTI_USB_XHCI,
     BTI_MALI,
     BTI_DISPLAY,
+    BTI_VIDEO,
     BTI_EMMC,
 };
 

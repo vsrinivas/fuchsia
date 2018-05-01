@@ -22,6 +22,9 @@
 #define S912_HDMITX_SEC_BASE            0xDA83A000
 #define S912_HDMITX_SEC_LENGTH          0x2000
 
+#define S912_AOBUS_BASE                 0xc8100000
+#define S912_AOBUS_LENGTH               0x100000
+
 #define S912_GPIO_BASE                  0xc8834400
 #define S912_GPIO_LENGTH                0x1C00
 #define S912_GPIO_A0_BASE               0xc8100000
@@ -51,17 +54,29 @@
 #define S912_UART_AO_B_BASE             0xc81004e0
 #define S912_UART_AO_B_LENGTH           0x18
 
+#define S912_DOS_BASE                   0xc8820000
+#define S912_DOS_LENGTH                 0x10000
+
 #define S912_HIU_MAILBOX_BASE           0xc883C400
 #define S912_HIU_MAILBOX_LENGTH         0x1000
 
 #define S912_MAILBOX_PAYLOAD_BASE       0xc8013000
 #define S912_MAILBOX_PAYLOAD_LENGTH     0x1000
+
+#define S912_FULL_CBUS_BASE              0xC1100000
+#define S912_FULL_CBUS_LENGTH            0x100000
+
 // IRQs
 #define S912_M_I2C_0_IRQ                53
+#define S912_DEMUX_IRQ                  55
 #define S912_UART_A_IRQ                 58
 #define S912_USBH_IRQ                   62
 #define S912_USBD_IRQ                   63
+#define S912_PARSER_IRQ                 64
 #define S912_M_I2C_3_IRQ                71
+#define S912_DOS_MBOX_0_IRQ             75
+#define S912_DOS_MBOX_1_IRQ             76
+#define S912_DOS_MBOX_2_IRQ             77
 #define S912_GPIO_IRQ_0                 96
 #define S912_GPIO_IRQ_1                 97
 #define S912_GPIO_IRQ_2                 98

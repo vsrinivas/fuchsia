@@ -114,6 +114,72 @@ static const pbus_dev_t led2472g_dev = {
   .i2c_channel_count = countof(led2472g_channels),
 };
 
+static pbus_mmio_t vim_video_mmios[] = {
+    {
+        .base =     S912_FULL_CBUS_BASE,
+        .length =   S912_FULL_CBUS_LENGTH,
+    },
+    {
+        .base =     S912_DOS_BASE,
+        .length =   S912_DOS_LENGTH,
+    },
+    {
+        .base =     S912_HIU_BASE,
+        .length =   S912_HIU_LENGTH,
+    },
+    {
+        .base =     S912_AOBUS_BASE,
+        .length =   S912_AOBUS_LENGTH,
+    },
+    {
+        .base =     S912_DMC_REG_BASE,
+        .length =   S912_DMC_REG_LENGTH,
+    },
+};
+
+static const pbus_bti_t vim_video_btis[] = {
+    {
+        .iommu_index = 0,
+        .bti_id = BTI_VIDEO,
+    },
+};
+
+static const pbus_irq_t vim_video_irqs[] = {
+    {
+        .irq = S912_DEMUX_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+    {
+        .irq = S912_PARSER_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+    {
+        .irq = S912_DOS_MBOX_0_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+    {
+        .irq = S912_DOS_MBOX_1_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+    {
+        .irq = S912_DOS_MBOX_2_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+};
+
+static const pbus_dev_t video_dev = {
+    .name = "video",
+    .vid = PDEV_VID_AMLOGIC,
+    .pid = PDEV_PID_AMLOGIC_S912,
+    .did = PDEV_DID_AMLOGIC_VIDEO,
+    .mmios = vim_video_mmios,
+    .mmio_count = countof(vim_video_mmios),
+    .btis = vim_video_btis,
+    .bti_count = countof(vim_video_btis),
+    .irqs = vim_video_irqs,
+    .irq_count = countof(vim_video_irqs),
+};
+
 static zx_status_t vim_limit_cpu_freq(vim_bus_t* bus) {
     scpi_protocol_t scpi;
     scpi_opp_t opps;
@@ -215,6 +281,11 @@ static int vim_start_thread(void* arg) {
     if ((status = pbus_device_add(&bus->pbus, &display_dev, 0)) != ZX_OK) {
         zxlogf(ERROR, "vim_start_thread could not add display_dev: %d\n", status);
         goto fail;
+    }
+
+    if ((status = pbus_device_add(&bus->pbus, &video_dev, 0)) != ZX_OK) {
+      zxlogf(ERROR, "vim_start_thread could not add video_dev: %d\n", status);
+      goto fail;
     }
 
     if ((status = pbus_device_add(&bus->pbus, &led2472g_dev, 0)) != ZX_OK) {
