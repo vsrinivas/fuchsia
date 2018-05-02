@@ -189,7 +189,7 @@ template("clang_toolchain") {
         rspfile_content = "{{inputs_newline}}"
         default_output_extension = ".dylib"
       } else {
-        command = "$ld -shared {{ldflags}} -o \"$unstripped_outfile\" -Wl,-soname=\"$outname\" @\"$rspfile\""
+        command = "$ld -shared {{ldflags}} -o \"$unstripped_outfile\" -Wl,--Map=\"$unstripped_outfile.map\" -Wl,-soname=\"$outname\" @\"$rspfile\""
         rspfile_content = "-Wl,--whole-archive {{inputs}} {{solibs}} -Wl,--no-whole-archive {{libs}}"
         default_output_extension = ".so"
       }
@@ -221,7 +221,7 @@ template("clang_toolchain") {
         rspfile_content = "{{inputs_newline}}"
         default_output_extension = ".dylib"
       } else {
-        command = "$ld -shared {{ldflags}} -o \"$unstripped_outfile\" -Wl,-soname=\"$outname\" @\"$rspfile\""
+        command = "$ld -shared {{ldflags}} -o \"$unstripped_outfile\" -Wl,--Map=\"$unstripped_outfile.map\" -Wl,-soname=\"$outname\" @\"$rspfile\""
         rspfile_content = "-Wl,--whole-archive {{inputs}} {{solibs}} -Wl,--no-whole-archive {{libs}}"
         default_output_extension = ".so"
       }
@@ -249,7 +249,7 @@ template("clang_toolchain") {
         command = "$ld {{ldflags}} -o \"$unstripped_outfile\" -Wl,-filelist,\"$rspfile\" {{solibs}} {{libs}}"
         rspfile_content = "{{inputs_newline}}"
       } else {
-        command = "$ld {{ldflags}} -o \"$unstripped_outfile\" -Wl,--start-group @\"$rspfile\" {{solibs}} -Wl,--end-group {{libs}}"
+        command = "$ld {{ldflags}} -o \"$unstripped_outfile\" -Wl,--Map=\"$unstripped_outfile.map\" -Wl,--start-group @\"$rspfile\" {{solibs}} -Wl,--end-group {{libs}}"
         rspfile_content = "{{inputs}}"
       }
       if (use_strip) {
