@@ -215,7 +215,7 @@ int main(int argc, const char** argv) {
   }
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   echo2::EchoClientApp app;
-  app.Start(server_url, msg);
+  app.Start(server_url);
   app.echo()->EchoString(msg, [](fidl::StringPtr value) {
     printf("***** Response: %s\n", value->data());
   });
@@ -228,7 +228,7 @@ int main(int argc, const char** argv) {
 `Start()` is responsible for connecting to the remote `Echo` service.
 
 ```cpp
-void Start(std::string server_url, std::string msg) {
+void Start(std::string server_url) {
   component::ApplicationLaunchInfo launch_info;
   launch_info.url = server_url;
   launch_info.directory_request = echo_provider_.NewRequest();
