@@ -25,6 +25,15 @@ zx_koid_t GetRelatedKoid(zx_handle_t handle) {
   return status == ZX_OK ? info.related_koid : ZX_KOID_INVALID;
 }
 
+std::pair<zx_koid_t, zx_koid_t> GetKoids(zx_handle_t handle) {
+  zx_info_handle_basic_t info;
+  zx_status_t status = zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info,
+                                          sizeof(info), nullptr, nullptr);
+  return std::pair<zx_koid_t, zx_koid_t>(
+      status == ZX_OK ? info.koid : ZX_KOID_INVALID,
+      status == ZX_OK ? info.related_koid : ZX_KOID_INVALID);
+}
+
 std::string GetObjectName(zx_handle_t handle) {
   char name[ZX_MAX_NAME_LEN];
   zx_status_t status =

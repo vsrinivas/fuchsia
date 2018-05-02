@@ -10,6 +10,7 @@
 #include <zircon/types.h>
 
 #include <string>
+#include <utility>
 
 #include "lib/fxl/fxl_export.h"
 
@@ -19,12 +20,36 @@ namespace fsl {
 // Returns |ZX_KOID_INVALID| if the handle is invalid.
 FXL_EXPORT zx_koid_t GetKoid(zx_handle_t handle);
 
-// Gets the kernel object id (koid) of the objected related to the object
+// Gets the kernel object id (koid) of the object related to the object
 // associated with the handle. For example, if the object associated with the
 // handle is a channel, this function returns the koid of the channel object at
-// the opposite end. Returns |ZX_KOID_INVALID| if the handle is invalid or
-// the object associated with the handle has no related object.
+// the opposite end.
+//
+// Returns |ZX_KOID_INVALID| if the handle is invalid or the object associated
+// with the handle has no related object.
+//
+// Note that closing all of the handles to the related object will not free it
+// immediately, as long as handles to its partner remain.  The return value will
+// still be a valid koid in this case.
 FXL_EXPORT zx_koid_t GetRelatedKoid(zx_handle_t handle);
+
+// Gets the kernel object ids (koids) of the object associated with the handle
+// and of the object related to the handle's object.
+//
+// For example, if the object associated with the handle is an eventpair, this
+// function returns the koids of each end.
+//
+// The return value is as if std::pair(GetKoid(), GetRelatedKoid()) was called.
+//
+// The first slot of the std::pair contains |ZX_KOID_INVALID| if the handle is
+// invalid.   The second slot of the std::pair contains |ZX_KOID_INVALID| if the
+// handle is invalid, or the object associated with the handle has no related
+// object.
+//
+// Note that closing all of the handles to the related object will not free it
+// immediately, as long as handles to its partner remain.  The second slot of
+// the std::pair will contain a valid koid in this case.
+FXL_EXPORT std::pair<zx_koid_t, zx_koid_t> GetKoids(zx_handle_t handle);
 
 // Gets the name of a kernel object.
 FXL_EXPORT std::string GetObjectName(zx_handle_t handle);

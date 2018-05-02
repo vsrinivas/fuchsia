@@ -50,11 +50,70 @@ TEST(ObjectInfo, GetRelatedKoidOfChannel) {
   EXPECT_EQ(GetKoid(channel1.get()), GetRelatedKoid(channel2.get()));
 }
 
+TEST(ObjectInfo, GetRelatedKoidOfChannelWithClosedEndpoint) {
+  zx::channel channel1;
+  zx_handle_t invalid_channel2_handle;
+  {
+    zx::channel channel2;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0u, &channel1, &channel2));
+    invalid_channel2_handle = channel2.get();
+  }
+
+  EXPECT_NE(ZX_KOID_INVALID, GetKoid(channel1.get()));
+  EXPECT_NE(ZX_KOID_INVALID, GetRelatedKoid(channel1.get()));
+  EXPECT_EQ(ZX_KOID_INVALID, GetKoid(invalid_channel2_handle));
+  EXPECT_EQ(ZX_KOID_INVALID, GetRelatedKoid(invalid_channel2_handle));
+}
+
 TEST(ObjectInfo, GetRelatedKoidOfEvent) {
   zx::event event1;
   ASSERT_EQ(ZX_OK, zx::event::create(0u, &event1));
   EXPECT_NE(ZX_KOID_INVALID, GetKoid(event1.get()));
   EXPECT_EQ(ZX_KOID_INVALID, GetRelatedKoid(event1.get()));
+}
+
+TEST(ObjectInfo, GetKoidsOfInvalidHandle) {
+  constexpr std::pair<zx_koid_t, zx_koid_t> invalid_koids(ZX_KOID_INVALID, ZX_KOID_INVALID);
+
+  EXPECT_EQ(invalid_koids, GetKoids(ZX_HANDLE_INVALID));
+}
+
+TEST(ObjectInfo, GetKoidsOfChannel) {
+  zx::channel channel1, channel2;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0u, &channel1, &channel2));
+
+  const std::pair<zx_koid_t, zx_koid_t> channel1_koids = GetKoids(channel1.get());
+  const std::pair<zx_koid_t, zx_koid_t> channel2_koids = GetKoids(channel2.get());
+  EXPECT_NE(ZX_KOID_INVALID, channel1_koids.first);
+  EXPECT_NE(ZX_KOID_INVALID, channel2_koids.first);
+  EXPECT_EQ(channel1_koids.first, channel2_koids.second);
+  EXPECT_EQ(channel1_koids.second, channel2_koids.first);
+}
+
+TEST(ObjectInfo, GetKoidsOfChannelWithClosedEndpoint) {
+  zx::channel channel1;
+  zx_handle_t invalid_channel2_handle;
+  {
+    zx::channel channel2;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0u, &channel1, &channel2));
+    invalid_channel2_handle = channel2.get();
+  }
+
+  const std::pair<zx_koid_t, zx_koid_t> channel1_koids = GetKoids(channel1.get());
+  const std::pair<zx_koid_t, zx_koid_t> channel2_koids = GetKoids(invalid_channel2_handle);
+  EXPECT_NE(ZX_KOID_INVALID, channel1_koids.first);
+  EXPECT_NE(ZX_KOID_INVALID, channel1_koids.second);
+  EXPECT_EQ(ZX_KOID_INVALID, channel2_koids.first);
+  EXPECT_EQ(ZX_KOID_INVALID, channel2_koids.second);
+}
+
+TEST(ObjectInfo, GetKoidsOfEvent) {
+  zx::event event;
+  ASSERT_EQ(ZX_OK, zx::event::create(0u, &event));
+
+  const std::pair<zx_koid_t, zx_koid_t> event_koids = GetKoids(event.get());
+  EXPECT_NE(ZX_KOID_INVALID, event_koids.first);
+  EXPECT_EQ(ZX_KOID_INVALID, event_koids.second);
 }
 
 TEST(ObjectInfo, GetNameOfInvalidHandle) {
