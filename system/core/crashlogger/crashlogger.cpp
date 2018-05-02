@@ -22,6 +22,7 @@
 #include <fdio/util.h>
 #include <inspector/inspector.h>
 #include <pretty/hexdump.h>
+#include <task-utils/walker.h>
 
 #include "dump-pt.h"
 
@@ -75,23 +76,6 @@ void do_print_zx_error(const char* file, int line, const char* what, zx_status_t
     do_print_zx_error(__FILE__, __LINE__, \
                       (what), static_cast<zx_status_t>(status)); \
   } while (0)
-
-// While this should never fail given a valid handle,
-// returns ZX_KOID_INVALID on failure.
-
-static zx_koid_t get_koid(zx_handle_t handle) {
-    zx_info_handle_basic_t info;
-    if (zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL) < 0) {
-        // This shouldn't ever happen, so don't just ignore it.
-        fprintf(stderr, "Eh? ZX_INFO_HANDLE_BASIC failed\n");
-        // OTOH we can't just fail, we have to be robust about reporting back
-        // to the kernel that we handled the exception.
-        // TODO: Provide ability to safely terminate at any point (e.g., for assert
-        // failures and such).
-        return ZX_KOID_INVALID;
-    }
-    return info.koid;
-}
 
 // Return true if the thread is to be resumed "successfully" (meaning the o/s
 // won't kill it, and thus the kill process).
@@ -166,7 +150,7 @@ bool write_general_regs(zx_handle_t thread, void* buf, size_t buf_size) {
     // The syscall takes a uint32_t.
     auto to_xfer = static_cast<uint32_t> (buf_size);
     auto status = zx_thread_write_state(thread, ZX_THREAD_STATE_GENERAL_REGS, buf, to_xfer);
-    if (status < 0) {
+    if (status != ZX_OK) {
         print_zx_error("unable to access general regs", status);
         return false;
     }
@@ -238,21 +222,45 @@ void resume_thread_from_exception(zx_handle_t thread,
     resume_thread(thread, false);
 }
 
+typedef struct {
+    uint64_t pid;
+    zx_handle_t process;
+} callback_ctx;
+
+static zx_status_t process_cb(void* c, int depth, zx_handle_t handle,
+                              zx_koid_t koid, zx_koid_t parent_koid) {
+    callback_ctx *ctx = static_cast<callback_ctx *>(c);
+    zx_status_t status = ZX_OK;
+    if (koid == ctx->pid) {
+        status = zx_handle_duplicate(handle, ZX_RIGHT_SAME_RIGHTS, &ctx->process);
+    }
+    return status;
+}
+
 void process_report(uint64_t pid, uint64_t tid, uint32_t type, bool use_libunwind) {
     if (!ZX_EXCP_IS_ARCH(type) && type != ZX_EXCP_POLICY_ERROR)
         return;
 
-    zx_handle_t process;
-    zx_status_t status = zx_object_get_child(ZX_HANDLE_INVALID, pid, ZX_RIGHT_SAME_RIGHTS, &process);
-    if (status < 0) {
-        printf("failed to get a handle to [%" PRIu64 "] : error %d\n", pid, status);
+    callback_ctx ctx = {
+        .pid = pid,
+        .process = ZX_HANDLE_INVALID,
+    };
+    zx_status_t status = walk_job_tree(subject, NULL, process_cb, NULL, &ctx);
+    if (status != ZX_OK) {
+        printf("failed to get a handle to [%" PRIu64 "] : error %d %s\n", pid,
+               status, zx_status_get_string(status));
         return;
     }
+    if (ctx.process == ZX_HANDLE_INVALID) {
+        printf("PID [%" PRIu64 "] not found\n", pid);
+        return;
+    }
+
     zx_handle_t thread;
-    status = zx_object_get_child(process, tid, ZX_RIGHT_SAME_RIGHTS, &thread);
-    if (status < 0) {
+    status = zx_object_get_child(ctx.process, tid, ZX_RIGHT_SAME_RIGHTS, &thread);
+    if (status != ZX_OK) {
         printf("failed to get a handle to [%" PRIu64 ".%" PRIu64 "] : error %d\n", pid, tid, status);
-        zx_handle_close(process);
+        zx_handle_close(ctx.process);
         return;
     }
 
@@ -264,9 +272,9 @@ void process_report(uint64_t pid, uint64_t tid, uint32_t type, bool use_libunwin
     zx_exception_report_t report;
     status = zx_object_get_info(thread, ZX_INFO_THREAD_EXCEPTION_REPORT,
                                 &report, sizeof(report), NULL, NULL);
-    if (status < 0) {
+    if (status != ZX_OK) {
         printf("failed to get exception report for [%" PRIu64 ".%" PRIu64 "] : error %d\n", pid, tid, status);
-        zx_handle_close(process);
+        zx_handle_close(ctx.process);
         zx_handle_close(thread);
         return;
     }
@@ -309,14 +317,14 @@ void process_report(uint64_t pid, uint64_t tid, uint32_t type, bool use_libunwin
         fatal = "";
 
     char process_name[ZX_MAX_NAME_LEN];
-    status = zx_object_get_property(process, ZX_PROP_NAME, process_name, sizeof(process_name));
-    if (status < 0) {
+    status = zx_object_get_property(ctx.process, ZX_PROP_NAME, process_name, sizeof(process_name));
+    if (status != ZX_OK) {
         strlcpy(process_name, "unknown", sizeof(process_name));
     }
 
     char thread_name[ZX_MAX_NAME_LEN];
     status = zx_object_get_property(thread, ZX_PROP_NAME, thread_name, sizeof(thread_name));
-    if (status < 0) {
+    if (status != ZX_OK) {
         strlcpy(thread_name, "unknown", sizeof(thread_name));
     }
 
@@ -339,14 +347,14 @@ void process_report(uint64_t pid, uint64_t tid, uint32_t type, bool use_libunwin
 #endif
 
     printf("bottom of user stack:\n");
-    dump_memory(process, sp, kMemoryDumpSize);
+    dump_memory(ctx.process, sp, kMemoryDumpSize);
 
     printf("arch: %s\n", arch);
 
     {
-        inspector_dsoinfo_t* dso_list = inspector_dso_fetch_list(process);
+        inspector_dsoinfo_t* dso_list = inspector_dso_fetch_list(ctx.process);
         inspector_dso_print_list(stdout, dso_list);
-        inspector_print_backtrace(stdout, process, thread, dso_list,
+        inspector_print_backtrace(stdout, ctx.process, thread, dso_list,
                                   pc, sp, fp, use_libunwind);
     }
 
@@ -360,7 +368,7 @@ void process_report(uint64_t pid, uint64_t tid, uint32_t type, bool use_libunwin
 
 Fail:
     if (verbosity_level >= 1)
-        printf("Done handling thread %" PRIu64 ".%" PRIu64 ".\n", get_koid(process), get_koid(thread));
+        printf("Done handling thread %" PRIu64 ".%" PRIu64 ".\n", ctx.pid, tid);
 
     // allow the thread (and then process) to die, unless the exception is
     // to just trigger a backtrace (if enabled)
@@ -369,7 +377,7 @@ Fail:
     crashed_thread_excp_type = 0u;
 
     zx_handle_close(thread);
-    zx_handle_close(process);
+    zx_handle_close(ctx.process);
 }
 
 zx_status_t bind_subject_exception_port(zx_handle_t eport) {
@@ -560,7 +568,7 @@ int main(int argc, char** argv) {
     // so that the crashlogger crash dumper doesn't get its own exceptions.
     status = zx_task_bind_exception_port(thread_self, self_dump_port,
                                            kSelfExceptionKey, 0);
-    if (status < 0) {
+    if (status != ZX_OK) {
         print_zx_error("unable to set self exception port", status);
         return 1;
     }
@@ -575,7 +583,7 @@ int main(int argc, char** argv) {
         }
 
         status = bind_subject_exception_port(ex_port);
-        if (status < 0) {
+        if (status != ZX_OK) {
             print_zx_error("unable to bind subject exception port", status);
             return 1;
         }

@@ -6,6 +6,7 @@
 #include <regex.h>
 #include <unistd.h>
 
+#include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <fbl/algorithm.h>
@@ -82,7 +83,8 @@ void handle_crash_arg(int argc, char** argv) {
 bool test_crash(const char* crash_arg) {
     const char* argv[] = { g_executable_filename, "--crash", crash_arg };
     launchpad_t* crasher_lp;
-    launchpad_create(ZX_HANDLE_INVALID, "crash-test", &crasher_lp);
+    zx_handle_t job = zx_job_default();
+    launchpad_create(job, "crash-test", &crasher_lp);
 
     // Make sure we bind an exception port to the process before we start
     // it running.
@@ -109,7 +111,7 @@ bool test_crash(const char* crash_arg) {
     launchpad_set_args(crashlogger_lp, static_cast<int>(fbl::count_of(crashlogger_argv)),
                        crashlogger_argv);
     zx_handle_t handles[] = { ZX_HANDLE_INVALID, exception_port };
-    zx_handle_duplicate(crasher_proc, ZX_RIGHT_SAME_RIGHTS, &handles[0]);
+    zx_handle_duplicate(job, ZX_RIGHT_SAME_RIGHTS, &handles[0]);
     uint32_t handle_types[] = { PA_HND(PA_USER0, 0), PA_HND(PA_USER0, 1) };
     launchpad_add_handles(crashlogger_lp, fbl::count_of(handles), handles,
                           handle_types);

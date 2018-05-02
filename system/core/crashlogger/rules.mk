@@ -20,7 +20,8 @@ MODULE_STATIC_LIBS := \
     system/ulib/zxcpp \
     system/ulib/fbl \
     system/ulib/pretty \
-    system/ulib/runtime
+    system/ulib/runtime \
+    system/ulib/task-utils
 
 MODULE_LIBS := \
     third_party/ulib/backtrace \
