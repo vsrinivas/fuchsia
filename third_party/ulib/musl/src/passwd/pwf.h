@@ -3,7 +3,6 @@
 #include <grp.h>
 #include <limits.h>
 #include <pwd.h>
-#include <shadow.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -15,4 +14,3 @@ int __getgrent_a(FILE* f, struct group* gr, char** line, size_t* size, char*** m
                  struct group** res);
 int __getgr_a(const char* name, gid_t gid, struct group* gr, char** buf, size_t* size, char*** mem,
               size_t* nmem, struct group** res);
-int __parsespent(char* s, struct spwd* sp);

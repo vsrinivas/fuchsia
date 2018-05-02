@@ -528,7 +528,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/network/serv.c \
     $(LOCAL_DIR)/src/passwd/fgetgrent.c \
     $(LOCAL_DIR)/src/passwd/fgetpwent.c \
-    $(LOCAL_DIR)/src/passwd/fgetspent.c \
     $(LOCAL_DIR)/src/passwd/getgr_a.c \
     $(LOCAL_DIR)/src/passwd/getgr_r.c \
     $(LOCAL_DIR)/src/passwd/getgrent.c \
@@ -538,14 +537,9 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/passwd/getpw_r.c \
     $(LOCAL_DIR)/src/passwd/getpwent.c \
     $(LOCAL_DIR)/src/passwd/getpwent_a.c \
-    $(LOCAL_DIR)/src/passwd/getspent.c \
-    $(LOCAL_DIR)/src/passwd/getspnam.c \
-    $(LOCAL_DIR)/src/passwd/getspnam_r.c \
-    $(LOCAL_DIR)/src/passwd/lckpwdf.c \
     $(LOCAL_DIR)/src/passwd/nscd_query.c \
     $(LOCAL_DIR)/src/passwd/putgrent.c \
     $(LOCAL_DIR)/src/passwd/putpwent.c \
-    $(LOCAL_DIR)/src/passwd/putspent.c \
     $(LOCAL_DIR)/src/prng/__rand48_step.c \
     $(LOCAL_DIR)/src/prng/__seed48.c \
     $(LOCAL_DIR)/src/prng/drand48.c \
