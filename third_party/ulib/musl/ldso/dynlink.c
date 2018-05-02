@@ -787,7 +787,14 @@ __NO_SAFESTACK static void log_mmap_element(struct dso* dso, const Phdr* ph) {
     _dl_log_write(buffer, p - buffer);
 }
 
+// No newline because it's immediately followed by a {{{module:...}}}.
+#define RESET_ELEMENT "{{{reset}}}"
+
 __NO_SAFESTACK static void log_dso(struct dso* dso) {
+    if (dso == head) {
+        // Write the reset element before the first thing listed.
+        _dl_log_write(RESET_ELEMENT, sizeof(RESET_ELEMENT) - 1);
+    }
     log_module_element(dso);
     if (dso->phdr) {
         for (unsigned int i = 0; i < dso->phnum; ++i) {
