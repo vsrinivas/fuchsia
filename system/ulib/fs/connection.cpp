@@ -70,8 +70,8 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent, zx::channel channel,
         // Remote handoff to a remote filesystem node.
         zxrio_msg_t msg;
 #ifdef ZXRIO_FIDL
-        DirectoryOpenRequest* request = reinterpret_cast<DirectoryOpenRequest*>(&msg);
-        memset(request, 0, sizeof(DirectoryOpenRequest));
+        ioDirectoryOpenRequest* request = reinterpret_cast<ioDirectoryOpenRequest*>(&msg);
+        memset(request, 0, sizeof(ioDirectoryOpenRequest));
         request->hdr.ordinal = ZXFIDL_OPEN;
         request->flags = flags;
         request->mode = mode;
@@ -80,7 +80,7 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent, zx::channel channel,
         request->object = FIDL_HANDLE_PRESENT;
         void* secondary =
                 reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(request) +
-                                        FIDL_ALIGN(sizeof(DirectoryOpenRequest)));
+                                        FIDL_ALIGN(sizeof(ioDirectoryOpenRequest)));
         memcpy(secondary, path.begin(), path.length());
 #else
         memset(&msg, 0, ZXRIO_HDR_SZ);
@@ -235,7 +235,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
     case ZXRIO_OPEN: {
         TRACE_DURATION("vfs", "ZXRIO_OPEN");
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        auto request = reinterpret_cast<DirectoryOpenRequest*>(msg);
+        auto request = reinterpret_cast<ioDirectoryOpenRequest*>(msg);
 
         uint32_t flags;
         uint32_t mode;
@@ -282,7 +282,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
     case ZXRIO_CLONE: {
         TRACE_DURATION("vfs", "ZXRIO_CLONE");
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        auto request = reinterpret_cast<ObjectCloneRequest*>(msg);
+        auto request = reinterpret_cast<ioObjectCloneRequest*>(msg);
 
         zx::channel channel;
         uint32_t flags;
@@ -320,11 +320,11 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
             return ZX_ERR_BAD_HANDLE;
         }
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        auto request = reinterpret_cast<FileReadRequest*>(msg);
-        auto response = reinterpret_cast<FileReadResponse*>(msg);
+        auto request = reinterpret_cast<ioFileReadRequest*>(msg);
+        auto response = reinterpret_cast<ioFileReadResponse*>(msg);
         void* data;
         if (fidl) {
-            data = (void*)((uintptr_t)response + FIDL_ALIGN(sizeof(FileReadResponse)));
+            data = (void*)((uintptr_t)response + FIDL_ALIGN(sizeof(ioFileReadResponse)));
             len = static_cast<uint32_t>(request->count);
         } else {
             data = msg->data;
@@ -351,12 +351,12 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
             return ZX_ERR_BAD_HANDLE;
         }
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        auto request = reinterpret_cast<FileReadAtRequest*>(msg);
-        auto response = reinterpret_cast<FileReadAtResponse*>(msg);
+        auto request = reinterpret_cast<ioFileReadAtRequest*>(msg);
+        auto response = reinterpret_cast<ioFileReadAtResponse*>(msg);
         void* data;
         uint64_t offset;
         if (fidl) {
-            data = (void*)((uintptr_t)response + FIDL_ALIGN(sizeof(FileReadAtResponse)));
+            data = (void*)((uintptr_t)response + FIDL_ALIGN(sizeof(ioFileReadAtResponse)));
             len = static_cast<uint32_t>(request->count);
             offset = request->offset;
         } else {
@@ -382,8 +382,8 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
     case ZXRIO_WRITE: {
         TRACE_DURATION("vfs", "ZXRIO_WRITE");
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        FileWriteRequest* request = reinterpret_cast<FileWriteRequest*>(msg);
-        FileWriteResponse* response = reinterpret_cast<FileWriteResponse*>(msg);
+        ioFileWriteRequest* request = reinterpret_cast<ioFileWriteRequest*>(msg);
+        ioFileWriteResponse* response = reinterpret_cast<ioFileWriteResponse*>(msg);
         void* data;
         if (fidl) {
             data = request->data.data;
@@ -422,8 +422,8 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
     case ZXRIO_WRITE_AT: {
         TRACE_DURATION("vfs", "ZXRIO_WRITE_AT");
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        FileWriteAtRequest* request = reinterpret_cast<FileWriteAtRequest*>(msg);
-        FileWriteAtResponse* response = reinterpret_cast<FileWriteAtResponse*>(msg);
+        ioFileWriteAtRequest* request = reinterpret_cast<ioFileWriteAtRequest*>(msg);
+        ioFileWriteAtResponse* response = reinterpret_cast<ioFileWriteAtResponse*>(msg);
         void* data;
         uint64_t offset;
         if (fidl) {
@@ -451,8 +451,8 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
     case ZXRIO_SEEK: {
         TRACE_DURATION("vfs", "ZXRIO_SEEK");
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        FileSeekRequest* request = reinterpret_cast<FileSeekRequest*>(msg);
-        FileSeekResponse* response = reinterpret_cast<FileSeekResponse*>(msg);
+        ioFileSeekRequest* request = reinterpret_cast<ioFileSeekRequest*>(msg);
+        ioFileSeekResponse* response = reinterpret_cast<ioFileSeekResponse*>(msg);
 
         static_assert(SEEK_SET == SeekOrigin_Start, "");
         static_assert(SEEK_CUR == SeekOrigin_Current, "");
@@ -529,7 +529,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
     case ZXRIO_STAT: {
         TRACE_DURATION("vfs", "ZXRIO_STAT");
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        auto response = reinterpret_cast<NodeGetAttrResponse*>(msg);
+        auto response = reinterpret_cast<ioNodeGetAttrResponse*>(msg);
 
         // TODO(smklein): Consider using "NodeAttributes" within
         // ulib/fs, rather than vnattr_t.
@@ -558,7 +558,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
     case ZXRIO_SETATTR: {
         TRACE_DURATION("vfs", "ZXRIO_SETATTR");
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        auto request = reinterpret_cast<NodeSetAttrRequest*>(msg);
+        auto request = reinterpret_cast<ioNodeSetAttrRequest*>(msg);
 
         // TODO(smklein): Prevent read-only files from setting attributes,
         // but allow attribute-setting on mutable directories.
@@ -580,13 +580,13 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
     }
     case ZXFIDL_GET_FLAGS: {
         TRACE_DURATION("vfs", "ZXFIDL_GET_FLAGS");
-        FileGetFlagsResponse* response = reinterpret_cast<FileGetFlagsResponse*>(msg);
+        ioFileGetFlagsResponse* response = reinterpret_cast<ioFileGetFlagsResponse*>(msg);
         response->flags = flags_ & (kStatusFlags | ZX_FS_RIGHTS | ZX_FS_FLAG_VNODE_REF_ONLY);
         return ZX_OK;
     }
     case ZXFIDL_SET_FLAGS: {
         TRACE_DURATION("vfs", "ZXFIDL_SET_FLAGS");
-        FileSetFlagsRequest* request = reinterpret_cast<FileSetFlagsRequest*>(msg);
+        ioFileSetFlagsRequest* request = reinterpret_cast<ioFileSetFlagsRequest*>(msg);
         flags_ = (flags_ & ~kStatusFlags) | (request->flags & kStatusFlags);
         return ZX_OK;
     }
@@ -620,12 +620,12 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         }
 
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        auto request = reinterpret_cast<DirectoryReadDirentsRequest*>(msg);
-        auto response = reinterpret_cast<DirectoryReadDirentsResponse*>(msg);
+        auto request = reinterpret_cast<ioDirectoryReadDirentsRequest*>(msg);
+        auto response = reinterpret_cast<ioDirectoryReadDirentsResponse*>(msg);
         uint32_t max_out;
         void* data;
         if (fidl) {
-            data = (void*)((uintptr_t)response + FIDL_ALIGN(sizeof(DirectoryReadDirentsResponse)));
+            data = (void*)((uintptr_t)response + FIDL_ALIGN(sizeof(ioDirectoryReadDirentsResponse)));
             max_out = static_cast<uint32_t>(request->max_out);
         } else {
             max_out = arg;
@@ -653,8 +653,8 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
     case ZXFIDL_IOCTL:
     case ZXRIO_IOCTL:
     case ZXRIO_IOCTL_1H: {
-        auto request = reinterpret_cast<NodeIoctlRequest*>(msg);
-        auto response = reinterpret_cast<NodeIoctlResponse*>(msg);
+        auto request = reinterpret_cast<ioNodeIoctlRequest*>(msg);
+        auto response = reinterpret_cast<ioNodeIoctlResponse*>(msg);
 
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
         uint32_t op;
@@ -664,7 +664,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         size_t inlen;
         void* out;
         size_t outlen;
-        void* secondary = (void*)((uintptr_t)(msg) + FIDL_ALIGN(sizeof(NodeIoctlResponse)));
+        void* secondary = (void*)((uintptr_t)(msg) + FIDL_ALIGN(sizeof(ioNodeIoctlResponse)));
         if (fidl) {
             op = request->opcode;
             handles = static_cast<zx_handle_t*>(request->handles.data);
@@ -821,7 +821,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         }
 
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        auto request = reinterpret_cast<FileTruncateRequest*>(msg);
+        auto request = reinterpret_cast<ioFileTruncateRequest*>(msg);
         uint64_t length;
         if (fidl) {
             length = request->length;
@@ -839,15 +839,15 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
                                "ZXRIO_RENAME" : "ZXRIO_LINK"));
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
 
-        // These static assertions must all validate before DirectoryRenameRequest
-        // and DirectoryLinkRequest can be used interchangeably
-        static_assert(sizeof(DirectoryRenameRequest) == sizeof(DirectoryLinkRequest), "");
-        static_assert(sizeof(DirectoryRenameResponse) == sizeof(DirectoryLinkResponse), "");
-        static_assert(offsetof(DirectoryRenameRequest, src) == offsetof(DirectoryLinkRequest, src), "");
-        static_assert(offsetof(DirectoryRenameRequest, dst_parent_token) ==
-                      offsetof(DirectoryLinkRequest, dst_parent_token), "");
-        static_assert(offsetof(DirectoryRenameRequest, dst) == offsetof(DirectoryLinkRequest, dst), "");
-        auto request = reinterpret_cast<DirectoryRenameRequest*>(msg);
+        // These static assertions must all validate before ioDirectoryRenameRequest
+        // and ioDirectoryLinkRequest can be used interchangeably
+        static_assert(sizeof(ioDirectoryRenameRequest) == sizeof(ioDirectoryLinkRequest), "");
+        static_assert(sizeof(ioDirectoryRenameResponse) == sizeof(ioDirectoryLinkResponse), "");
+        static_assert(offsetof(ioDirectoryRenameRequest, src) == offsetof(ioDirectoryLinkRequest, src), "");
+        static_assert(offsetof(ioDirectoryRenameRequest, dst_parent_token) ==
+                      offsetof(ioDirectoryLinkRequest, dst_parent_token), "");
+        static_assert(offsetof(ioDirectoryRenameRequest, dst) == offsetof(ioDirectoryLinkRequest, dst), "");
+        auto request = reinterpret_cast<ioDirectoryRenameRequest*>(msg);
 
         // Regardless of success or failure, we'll close the client-provided
         // vnode token handle.
@@ -904,8 +904,8 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         zx_handle_t* handle;
 
         if (fidl) {
-            auto request = reinterpret_cast<FileGetVmoRequest*>(msg);
-            auto response = reinterpret_cast<FileGetVmoResponse*>(msg);
+            auto request = reinterpret_cast<ioFileGetVmoRequest*>(msg);
+            auto response = reinterpret_cast<ioFileGetVmoResponse*>(msg);
             flags = request->flags;
             handle = &response->vmo;
         } else {
@@ -959,7 +959,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
     case ZXRIO_UNLINK: {
         TRACE_DURATION("vfs", "ZXRIO_UNLINK");
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        DirectoryUnlinkRequest* request = reinterpret_cast<DirectoryUnlinkRequest*>(msg);
+        ioDirectoryUnlinkRequest* request = reinterpret_cast<ioDirectoryUnlinkRequest*>(msg);
         char* data;
         uint32_t datalen;
         if (fidl) {

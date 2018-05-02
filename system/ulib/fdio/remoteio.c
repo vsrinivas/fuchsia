@@ -99,8 +99,8 @@ zx_status_t zxrio_handle_close(zxrio_cb_t cb, void* cookie) {
 
     // remote side was closed;
 #ifdef ZXRIO_FIDL
-    ObjectCloseRequest* request = (ObjectCloseRequest*) &msg;
-    memset(request, 0, sizeof(ObjectCloseRequest));
+    ioObjectCloseRequest* request = (ioObjectCloseRequest*) &msg;
+    memset(request, 0, sizeof(ioObjectCloseRequest));
     request->hdr.ordinal = ZXFIDL_CLOSE;
 #else
     msg.op = ZXRIO_CLOSE;
@@ -126,15 +126,15 @@ zx_status_t zxrio_txn_handoff(zx_handle_t srv, zx_handle_t reply, zxrio_msg_t* m
     uint32_t dsize;
     switch (msg->op) {
     case ZXFIDL_OPEN: {
-        DirectoryOpenRequest* request = (DirectoryOpenRequest*) msg;
+        ioDirectoryOpenRequest* request = (ioDirectoryOpenRequest*) msg;
         request->object = FIDL_HANDLE_PRESENT;
-        dsize = FIDL_ALIGN(sizeof(DirectoryOpenRequest)) + FIDL_ALIGN(request->path.size);
+        dsize = FIDL_ALIGN(sizeof(ioDirectoryOpenRequest)) + FIDL_ALIGN(request->path.size);
         break;
     }
     case ZXFIDL_CLONE: {
-        ObjectCloneRequest* request = (ObjectCloneRequest*) msg;
+        ioObjectCloneRequest* request = (ioObjectCloneRequest*) msg;
         request->object = FIDL_HANDLE_PRESENT;
-        dsize = sizeof(ObjectCloneRequest);
+        dsize = sizeof(ioObjectCloneRequest);
         break;
     }
     default:
@@ -808,14 +808,14 @@ zx_status_t zxrio_process_open_response(zx_handle_t h, zxrio_describe_t* info) {
         return r;
     }
 
-    // Confirm that the objects "zxrio_describe_t" and "ObjectOnOpenEvent"
+    // Confirm that the objects "zxrio_describe_t" and "ioObjectOnOpenEvent"
     // are aligned enough to be compatible.
     //
-    // This is somewhat complicated by the fact that the "ObjectOnOpenEvent"
+    // This is somewhat complicated by the fact that the "ioObjectOnOpenEvent"
     // object has an optional "ObjectInfo" secondary which exists immediately
     // following the struct.
     static_assert(__builtin_offsetof(zxrio_describe_t, extra) ==
-                  FIDL_ALIGN(sizeof(ObjectOnOpenEvent)),
+                  FIDL_ALIGN(sizeof(ioObjectOnOpenEvent)),
                   "RIO Description message doesn't align with FIDL response secondary");
     static_assert(sizeof(zxrio_object_info_t) == sizeof(ObjectInfo),
                   "RIO Object Info doesn't align with FIDL object info");

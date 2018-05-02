@@ -281,7 +281,7 @@ zx_status_t devhost_rio_handler(zxrio_msg_t* msg, void* cookie) {
     case ZXFIDL_OPEN:
     case ZXRIO_OPEN: {
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        DirectoryOpenRequest* request = (DirectoryOpenRequest*) msg;
+        ioDirectoryOpenRequest* request = (ioDirectoryOpenRequest*) msg;
         zx_handle_t h;
         char* name;
         uint32_t flags;
@@ -311,7 +311,7 @@ zx_status_t devhost_rio_handler(zxrio_msg_t* msg, void* cookie) {
     case ZXFIDL_CLONE:
     case ZXRIO_CLONE: {
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        ObjectCloneRequest* request = (ObjectCloneRequest*) msg;
+        ioObjectCloneRequest* request = (ioObjectCloneRequest*) msg;
         zx_handle_t h;
         uint32_t flags;
 
@@ -333,11 +333,11 @@ zx_status_t devhost_rio_handler(zxrio_msg_t* msg, void* cookie) {
             return ZX_ERR_ACCESS_DENIED;
         }
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        FileReadRequest* request = (FileReadRequest*) msg;
-        FileReadResponse* response = (FileReadResponse*) msg;
+        ioFileReadRequest* request = (ioFileReadRequest*) msg;
+        ioFileReadResponse* response = (ioFileReadResponse*) msg;
         void* data;
         if (fidl) {
-            data = (void*)((uintptr_t)(response) + FIDL_ALIGN(sizeof(FileReadResponse)));
+            data = (void*)((uintptr_t)(response) + FIDL_ALIGN(sizeof(ioFileReadResponse)));
             len = request->count;
         } else {
             data = msg->data;
@@ -362,12 +362,12 @@ zx_status_t devhost_rio_handler(zxrio_msg_t* msg, void* cookie) {
             return ZX_ERR_ACCESS_DENIED;
         }
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        FileReadAtRequest* request = (FileReadAtRequest*) msg;
-        FileReadAtResponse* response = (FileReadAtResponse*) msg;
+        ioFileReadAtRequest* request = (ioFileReadAtRequest*) msg;
+        ioFileReadAtResponse* response = (ioFileReadAtResponse*) msg;
         void* data;
         uint64_t offset;
         if (fidl) {
-            data = (void*)((uintptr_t)(response) + FIDL_ALIGN(sizeof(FileReadAtResponse)));
+            data = (void*)((uintptr_t)(response) + FIDL_ALIGN(sizeof(ioFileReadAtResponse)));
             len = request->count;
             offset = request->offset;
         } else {
@@ -391,8 +391,8 @@ zx_status_t devhost_rio_handler(zxrio_msg_t* msg, void* cookie) {
             return ZX_ERR_ACCESS_DENIED;
         }
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        FileWriteRequest* request = (FileWriteRequest*) msg;
-        FileWriteResponse* response = (FileWriteResponse*) msg;
+        ioFileWriteRequest* request = (ioFileWriteRequest*) msg;
+        ioFileWriteResponse* response = (ioFileWriteResponse*) msg;
         void* data;
         if (fidl) {
             data = request->data.data;
@@ -417,8 +417,8 @@ zx_status_t devhost_rio_handler(zxrio_msg_t* msg, void* cookie) {
             return ZX_ERR_ACCESS_DENIED;
         }
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        FileWriteAtRequest* request = (FileWriteAtRequest*) msg;
-        FileWriteAtResponse* response = (FileWriteAtResponse*) msg;
+        ioFileWriteAtRequest* request = (ioFileWriteAtRequest*) msg;
+        ioFileWriteAtResponse* response = (ioFileWriteAtResponse*) msg;
         void* data;
         uint64_t offset;
         if (fidl) {
@@ -442,8 +442,8 @@ zx_status_t devhost_rio_handler(zxrio_msg_t* msg, void* cookie) {
     case ZXFIDL_SEEK:
     case ZXRIO_SEEK: {
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        FileSeekRequest* request = (FileSeekRequest*) msg;
-        FileSeekResponse* response = (FileSeekResponse*) msg;
+        ioFileSeekRequest* request = (ioFileSeekRequest*) msg;
+        ioFileSeekResponse* response = (ioFileSeekResponse*) msg;
 
         static_assert(SEEK_SET == SeekOrigin_Start, "");
         static_assert(SEEK_CUR == SeekOrigin_Current, "");
@@ -519,7 +519,7 @@ zx_status_t devhost_rio_handler(zxrio_msg_t* msg, void* cookie) {
     case ZXFIDL_STAT:
     case ZXRIO_STAT: {
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        NodeGetAttrResponse* response = (NodeGetAttrResponse*) msg;
+        ioNodeGetAttrResponse* response = (ioNodeGetAttrResponse*) msg;
         if (fidl) {
             memset(&response->attributes, 0, sizeof(response->attributes));
             response->attributes.mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
@@ -541,8 +541,8 @@ zx_status_t devhost_rio_handler(zxrio_msg_t* msg, void* cookie) {
         return do_ioctl(dev, IOCTL_DEVICE_SYNC, NULL, 0, NULL, 0);
     }
     case ZXFIDL_IOCTL: {
-        NodeIoctlRequest* request = (NodeIoctlRequest*) msg;
-        NodeIoctlResponse* response = (NodeIoctlResponse*) msg;
+        ioNodeIoctlRequest* request = (ioNodeIoctlRequest*) msg;
+        ioNodeIoctlResponse* response = (ioNodeIoctlResponse*) msg;
 
         char in_buf[FDIO_IOCTL_MAX_INPUT];
         size_t hsize = request->handles.count * sizeof(zx_handle_t);
@@ -554,7 +554,7 @@ zx_status_t devhost_rio_handler(zxrio_msg_t* msg, void* cookie) {
         memcpy(in_buf, request->handles.data, hsize);
 
         uint32_t op = request->opcode;
-        void* secondary = (void*)((uintptr_t)(msg) + FIDL_ALIGN(sizeof(NodeIoctlResponse)));
+        void* secondary = (void*)((uintptr_t)(msg) + FIDL_ALIGN(sizeof(ioNodeIoctlResponse)));
         zx_status_t r = do_ioctl(dev, op, in_buf, request->in.count,
                                  secondary, request->max_out);
         if (r >= 0) {
