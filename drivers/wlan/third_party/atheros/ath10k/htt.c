@@ -15,9 +15,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <linux/slab.h>
-#include <linux/if_ether.h>
+#include <string.h>
 
+#include "linuxisms.h"
 #include "htt.h"
 #include "core.h"
 #include "debug.h"
@@ -141,10 +141,10 @@ static const enum htt_t2h_msg_type htt_10_4_t2h_msg_types[] = {
         HTT_T2H_MSG_TYPE_PEER_STATS,
 };
 
-int ath10k_htt_connect(struct ath10k_htt* htt) {
+zx_status_t ath10k_htt_connect(struct ath10k_htt* htt) {
     struct ath10k_htc_svc_conn_req conn_req;
     struct ath10k_htc_svc_conn_resp conn_resp;
-    int status;
+    zx_status_t status;
 
     memset(&conn_req, 0, sizeof(conn_req));
     memset(&conn_resp, 0, sizeof(conn_resp));
@@ -164,10 +164,10 @@ int ath10k_htt_connect(struct ath10k_htt* htt) {
 
     htt->eid = conn_resp.eid;
 
-    return 0;
+    return ZX_OK;
 }
 
-int ath10k_htt_init(struct ath10k* ar) {
+zx_status_t ath10k_htt_init(struct ath10k* ar) {
     struct ath10k_htt* htt = &ar->htt;
 
     htt->ar = ar;
@@ -203,15 +203,16 @@ int ath10k_htt_init(struct ath10k* ar) {
         break;
     case ATH10K_FW_HTT_OP_VERSION_MAX:
     case ATH10K_FW_HTT_OP_VERSION_UNSET:
+    default:
         WARN_ON(1);
-        return -EINVAL;
+        return ZX_ERR_OUT_OF_RANGE;
     }
-    return 0;
+    return ZX_OK;
 }
 
-#define HTT_TARGET_VERSION_TIMEOUTZ (ZX_SEC(3))
+#define HTT_TARGET_VERSION_TIMEOUT (ZX_SEC(3))
 
-static int ath10k_htt_verify_version(struct ath10k_htt* htt) {
+static zx_status_t ath10k_htt_verify_version(struct ath10k_htt* htt) {
     struct ath10k* ar = htt->ar;
 
     ath10k_dbg(ar, ATH10K_DBG_BOOT, "htt target version %d.%d\n",
@@ -221,27 +222,27 @@ static int ath10k_htt_verify_version(struct ath10k_htt* htt) {
             htt->target_version_major != 3) {
         ath10k_err("unsupported htt major version %d. supported versions are 2 and 3\n",
                    htt->target_version_major);
-        return -ENOTSUPP;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
-    return 0;
+    return ZX_OK;
 }
 
-int ath10k_htt_setup(struct ath10k_htt* htt) {
+zx_status_t ath10k_htt_setup(struct ath10k_htt* htt) {
     struct ath10k* ar = htt->ar;
-    int status;
+    zx_status_t status;
 
     htt->target_version_received = COMPLETION_INIT;
 
     status = ath10k_htt_h2t_ver_req_msg(htt);
-    if (status) {
+    if (status != ZX_OK) {
         return status;
     }
 
     if (completion_wait(&htt->target_version_received,
                         HTT_TARGET_VERSION_TIMEOUT) == ZX_ERR_TIMED_OUT) {
         ath10k_warn("htt version request timed out\n");
-        return -ETIMEDOUT;
+        return ZX_ERR_TIMED_OUT;
     }
 
     status = ath10k_htt_verify_version(htt);
@@ -252,25 +253,24 @@ int ath10k_htt_setup(struct ath10k_htt* htt) {
     }
 
     status = ath10k_htt_send_frag_desc_bank_cfg(htt);
-    if (status) {
+    if (status != ZX_OK) {
         return status;
     }
 
     status = ath10k_htt_send_rx_ring_cfg_ll(htt);
-    if (status) {
-        ath10k_warn("failed to setup rx ring: %d\n",
-                    status);
+    if (status != ZX_OK) {
+        ath10k_warn("failed to setup rx ring: %s\n", zx_status_get_string(status));
         return status;
     }
 
     status = ath10k_htt_h2t_aggr_cfg_msg(htt,
                                          htt->max_num_ampdu,
                                          htt->max_num_amsdu);
-    if (status) {
-        ath10k_warn("failed to setup amsdu/ampdu limit: %d\n",
-                    status);
+    if (status != ZX_OK) {
+        ath10k_warn("failed to setup amsdu/ampdu limit: %s\n",
+                    zx_status_get_string(status));
         return status;
     }
 
-    return 0;
+    return ZX_OK;
 }
