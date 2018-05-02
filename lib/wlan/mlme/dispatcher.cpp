@@ -46,10 +46,10 @@ Dispatcher::Dispatcher(DeviceInterface* device, fbl::unique_ptr<Mlme> mlme)
 Dispatcher::~Dispatcher() {}
 
 template <>
-zx_status_t Dispatcher::HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(const Packet* packet,
-                                                                        wlan_mlme::Method method);
+zx_status_t Dispatcher::HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(
+    fbl::unique_ptr<Packet> packet, wlan_mlme::Method method);
 
-zx_status_t Dispatcher::HandlePacket(const Packet* packet) {
+zx_status_t Dispatcher::HandlePacket(fbl::unique_ptr<Packet> packet) {
     debugfn();
 
     ZX_DEBUG_ASSERT(packet != nullptr);
@@ -69,10 +69,10 @@ zx_status_t Dispatcher::HandlePacket(const Packet* packet) {
     zx_status_t status = ZX_OK;
     switch (packet->peer()) {
     case Packet::Peer::kService:
-        status = HandleSvcPacket(packet);
+        status = HandleSvcPacket(fbl::move(packet));
         break;
     case Packet::Peer::kEthernet:
-        status = HandleEthPacket(packet);
+        status = HandleEthPacket(fbl::move(packet));
         break;
     case Packet::Peer::kWlan: {
         auto fc = packet->field<FrameControl>(0);
@@ -88,15 +88,15 @@ zx_status_t Dispatcher::HandlePacket(const Packet* packet) {
         switch (fc->type()) {
         case FrameType::kManagement:
             WLAN_STATS_INC(mgmt_frame.in);
-            status = HandleMgmtPacket(packet);
+            status = HandleMgmtPacket(fbl::move(packet));
             break;
         case FrameType::kControl:
             WLAN_STATS_INC(ctrl_frame.in);
-            status = HandleCtrlPacket(packet);
+            status = HandleCtrlPacket(fbl::move(packet));
             break;
         case FrameType::kData:
             WLAN_STATS_INC(data_frame.in);
-            status = HandleDataPacket(packet);
+            status = HandleDataPacket(fbl::move(packet));
             break;
         default:
             warnf("unknown MAC frame type %u\n", fc->type());
@@ -131,7 +131,7 @@ zx_status_t Dispatcher::HandlePortPacket(uint64_t key) {
     return ZX_OK;
 }
 
-zx_status_t Dispatcher::HandleCtrlPacket(const Packet* packet) {
+zx_status_t Dispatcher::HandleCtrlPacket(fbl::unique_ptr<Packet> packet) {
     debugfn();
 
     if (packet->len() < sizeof(FrameControl)) {
@@ -159,7 +159,7 @@ zx_status_t Dispatcher::HandleCtrlPacket(const Packet* packet) {
     }
 }
 
-zx_status_t Dispatcher::HandleDataPacket(const Packet* packet) {
+zx_status_t Dispatcher::HandleDataPacket(fbl::unique_ptr<Packet> packet) {
     debugfn();
 
     auto hdr = packet->field<DataFrameHeader>(0);
@@ -207,7 +207,7 @@ zx_status_t Dispatcher::HandleDataPacket(const Packet* packet) {
     return mlme_->HandleFrame(frame, *rxinfo);
 }
 
-zx_status_t Dispatcher::HandleMgmtPacket(const Packet* packet) {
+zx_status_t Dispatcher::HandleMgmtPacket(fbl::unique_ptr<Packet> packet) {
     debugfn();
 
     auto hdr = packet->field<MgmtFrameHeader>(0);
@@ -312,7 +312,7 @@ zx_status_t Dispatcher::HandleMgmtPacket(const Packet* packet) {
             errorf("action packet is not an action\n");
             return ZX_ERR_IO;
         }
-        HandleActionPacket(packet, hdr, action, rxinfo);
+        HandleActionPacket(fbl::move(packet), hdr, action, rxinfo);
     }
     default:
         if (!dst.IsBcast()) {
@@ -324,8 +324,8 @@ zx_status_t Dispatcher::HandleMgmtPacket(const Packet* packet) {
     return ZX_OK;
 }
 
-zx_status_t Dispatcher::HandleActionPacket(const Packet* packet, const MgmtFrameHeader* hdr,
-                                           const ActionFrame* action,
+zx_status_t Dispatcher::HandleActionPacket(fbl::unique_ptr<Packet> packet,
+                                           const MgmtFrameHeader* hdr, const ActionFrame* action,
                                            const wlan_rx_info_t* rxinfo) {
     if (action->category != action::Category::kBlockAck) {
         verbosef("Rxed Action frame with category %d. Not handled.\n", action->category);
@@ -373,7 +373,7 @@ zx_status_t Dispatcher::HandleActionPacket(const Packet* packet, const MgmtFrame
     return ZX_OK;
 }
 
-zx_status_t Dispatcher::HandleEthPacket(const Packet* packet) {
+zx_status_t Dispatcher::HandleEthPacket(fbl::unique_ptr<Packet> packet) {
     debugfn();
 
     auto hdr = packet->field<EthernetII>(0);
@@ -388,7 +388,7 @@ zx_status_t Dispatcher::HandleEthPacket(const Packet* packet) {
     return mlme_->HandleFrame(frame);
 }
 
-zx_status_t Dispatcher::HandleSvcPacket(const Packet* packet) {
+zx_status_t Dispatcher::HandleSvcPacket(fbl::unique_ptr<Packet> packet) {
     debugfn();
 
     const uint8_t* bytes = packet->data();
@@ -402,36 +402,36 @@ zx_status_t Dispatcher::HandleSvcPacket(const Packet* packet) {
     auto method = static_cast<wlan_mlme::Method>(hdr->ordinal);
 
     if (method == wlan_mlme::Method::DEVICE_QUERY_request) {
-        return HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(packet, method);
+        return HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(fbl::move(packet), method);
     }
 
     switch (method) {
     case wlan_mlme::Method::RESET_request:
         infof("resetting MLME\n");
-        HandleMlmeMethod<wlan_mlme::ResetRequest>(packet, method);
+        HandleMlmeMethod<wlan_mlme::ResetRequest>(fbl::move(packet), method);
         return ZX_OK;
     case wlan_mlme::Method::START_request:
-        return HandleMlmeMethod<wlan_mlme::StartRequest>(packet, method);
+        return HandleMlmeMethod<wlan_mlme::StartRequest>(fbl::move(packet), method);
     case wlan_mlme::Method::STOP_request:
-        return HandleMlmeMethod<wlan_mlme::StopRequest>(packet, method);
+        return HandleMlmeMethod<wlan_mlme::StopRequest>(fbl::move(packet), method);
     case wlan_mlme::Method::SCAN_request:
-        return HandleMlmeMethod<wlan_mlme::ScanRequest>(packet, method);
+        return HandleMlmeMethod<wlan_mlme::ScanRequest>(fbl::move(packet), method);
     case wlan_mlme::Method::JOIN_request:
-        return HandleMlmeMethod<wlan_mlme::JoinRequest>(packet, method);
+        return HandleMlmeMethod<wlan_mlme::JoinRequest>(fbl::move(packet), method);
     case wlan_mlme::Method::AUTHENTICATE_request:
-        return HandleMlmeMethod<wlan_mlme::AuthenticateRequest>(packet, method);
+        return HandleMlmeMethod<wlan_mlme::AuthenticateRequest>(fbl::move(packet), method);
     case wlan_mlme::Method::AUTHENTICATE_response:
-        return HandleMlmeMethod<wlan_mlme::AuthenticateResponse>(packet, method);
+        return HandleMlmeMethod<wlan_mlme::AuthenticateResponse>(fbl::move(packet), method);
     case wlan_mlme::Method::DEAUTHENTICATE_request:
-        return HandleMlmeMethod<wlan_mlme::DeauthenticateRequest>(packet, method);
+        return HandleMlmeMethod<wlan_mlme::DeauthenticateRequest>(fbl::move(packet), method);
     case wlan_mlme::Method::ASSOCIATE_request:
-        return HandleMlmeMethod<wlan_mlme::AssociateRequest>(packet, method);
+        return HandleMlmeMethod<wlan_mlme::AssociateRequest>(fbl::move(packet), method);
     case wlan_mlme::Method::ASSOCIATE_response:
-        return HandleMlmeMethod<wlan_mlme::AssociateResponse>(packet, method);
+        return HandleMlmeMethod<wlan_mlme::AssociateResponse>(fbl::move(packet), method);
     case wlan_mlme::Method::EAPOL_request:
-        return HandleMlmeMethod<wlan_mlme::EapolRequest>(packet, method);
+        return HandleMlmeMethod<wlan_mlme::EapolRequest>(fbl::move(packet), method);
     case wlan_mlme::Method::SETKEYS_request:
-        return HandleMlmeMethod<wlan_mlme::SetKeysRequest>(packet, method);
+        return HandleMlmeMethod<wlan_mlme::SetKeysRequest>(fbl::move(packet), method);
     default:
         warnf("unknown MLME method %u\n", hdr->ordinal);
         return ZX_ERR_NOT_SUPPORTED;
@@ -439,7 +439,7 @@ zx_status_t Dispatcher::HandleSvcPacket(const Packet* packet) {
 }
 
 template <typename Message>
-zx_status_t Dispatcher::HandleMlmeMethod(const Packet* packet, wlan_mlme::Method method) {
+zx_status_t Dispatcher::HandleMlmeMethod(fbl::unique_ptr<Packet> packet, wlan_mlme::Method method) {
     Message msg;
     auto status = DeserializeServiceMsg<Message>(*packet, method, &msg);
     if (status != ZX_OK) {
@@ -450,7 +450,7 @@ zx_status_t Dispatcher::HandleMlmeMethod(const Packet* packet, wlan_mlme::Method
 }
 
 template <>
-zx_status_t Dispatcher::HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(const Packet* unused_packet,
+zx_status_t Dispatcher::HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(fbl::unique_ptr<Packet> _,
                                                                         wlan_mlme::Method method) {
     debugfn();
     ZX_DEBUG_ASSERT(method == wlan_mlme::Method::DEVICE_QUERY_request);

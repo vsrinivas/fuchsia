@@ -53,7 +53,7 @@ class DispatcherTest : public ::testing::Test {
             cb(frame);
         });
         auto dispatcher = fbl::make_unique<Dispatcher>(&mock_dev_, fbl::move(mock_mlme));
-        dispatcher->HandlePacket(packet.get());
+        dispatcher->HandlePacket(fbl::move(packet));
         return handled;
     }
 

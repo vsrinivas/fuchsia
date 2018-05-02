@@ -21,6 +21,39 @@ namespace wlan {
 
 class Packet;
 
+template <typename Header, typename Body> struct ImmutableFrame {
+    ImmutableFrame(const Header* hdr, const Body* body, size_t body_len)
+        : hdr(hdr), body(body), body_len(body_len) {}
+
+    const Header* hdr;
+    const Body* body;
+    const size_t body_len;
+};
+
+template <typename Header, typename Body> struct Frame {
+    Frame(Header* hdr, Body* body, size_t body_len) : hdr(hdr), body(body), body_len(body_len) {}
+
+    Header* hdr;
+    Body* body;
+    size_t body_len;
+};
+
+using Payload = uint8_t;
+struct NilHeader {};
+
+// Frame which contains a known header but unknown payload.
+template <typename Header> using BaseFrame = Frame<Header, Payload>;
+template <typename Header> using ImmutableBaseFrame = ImmutableFrame<Header, Payload>;
+
+template <typename T> using MgmtFrame = Frame<MgmtFrameHeader, T>;
+template <typename T> using ImmutableMgmtFrame = ImmutableFrame<MgmtFrameHeader, T>;
+
+template <typename T> using CtrlFrame = BaseFrame<T>;
+template <typename T> using ImmutableCtrlFrame = ImmutableBaseFrame<T>;
+
+template <typename T> using DataFrame = Frame<DataFrameHeader, T>;
+template <typename T> using ImmutableDataFrame = ImmutableFrame<DataFrameHeader, T>;
+
 // TODO(hahnr): This isn't a great location for these definitions.
 using aid_t = size_t;
 static constexpr aid_t kGroupAdressedAid = 0;

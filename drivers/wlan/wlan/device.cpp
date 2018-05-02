@@ -505,7 +505,7 @@ void Device::MainLoop() {
                     packet = packet_queue_.Dequeue();
                     ZX_DEBUG_ASSERT(packet != nullptr);
                 }
-                zx_status_t status = dispatcher_->HandlePacket(packet.get());
+                zx_status_t status = dispatcher_->HandlePacket(fbl::move(packet));
                 if (status != ZX_OK) { errorf("could not handle packet err=%d\n", status); }
                 break;
             }
