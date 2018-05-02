@@ -34,7 +34,7 @@ use component::server::ServicesServer;
 use zx::{AsHandleRef, Signals, Socket, Status, Time};
 
 use xi_rpc::RpcLoop;
-use xi_core_lib::MainState;
+use xi_core_lib::XiCore;
 
 // TODO: this should be moved into fuchsia_zircon.
 pub struct BlockingSocket(Arc<Socket>);
@@ -69,7 +69,7 @@ impl io::Write for BlockingSocket {
 
 fn editor_main(sock: Socket) {
     eprintln!("editor_main");
-    let mut state = MainState::new();
+    let mut state = XiCore::new();
     let arc_sock = Arc::new(sock);
     let my_in = io::BufReader::new(BlockingSocket(arc_sock.clone()));
     let my_out = BlockingSocket(arc_sock);
