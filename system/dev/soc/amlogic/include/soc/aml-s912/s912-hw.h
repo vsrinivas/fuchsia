@@ -51,6 +51,11 @@
 #define S912_UART_AO_B_BASE             0xc81004e0
 #define S912_UART_AO_B_LENGTH           0x18
 
+#define S912_HIU_MAILBOX_BASE           0xc883C400
+#define S912_HIU_MAILBOX_LENGTH         0x1000
+
+#define S912_MAILBOX_PAYLOAD_BASE       0xc8013000
+#define S912_MAILBOX_PAYLOAD_LENGTH     0x1000
 // IRQs
 #define S912_M_I2C_0_IRQ                53
 #define S912_UART_A_IRQ                 58
@@ -71,6 +76,12 @@
 #define S912_UART_AO_B_IRQ              229
 #define S912_A0_GPIO_IRQ_0              232
 #define S912_A0_GPIO_IRQ_1              233
+#define S912_MBOX_IRQ_RECEIV0           240
+#define S912_MBOX_IRQ_RECEIV1           241
+#define S912_MBOX_IRQ_RECEIV2           242
+#define S912_MBOX_IRQ_SEND3             243
+#define S912_MBOX_IRQ_SEND4             244
+#define S912_MBOX_IRQ_SEND5             245
 #define S912_M_I2C_1_IRQ                246
 #define S912_M_I2C_2_IRQ                247
 
