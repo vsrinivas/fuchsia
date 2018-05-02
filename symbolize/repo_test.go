@@ -18,13 +18,30 @@ func hexEqual(a []byte, b string) bool {
 	return bytes.Equal(a, bBytes)
 }
 
+type gobugMockSource struct{}
+
+func (g *gobugMockSource) GetBinaries() ([]Binary, error) {
+	out := []Binary{
+		Binary{BuildID: "5bf6a28a259b95b4f20ffbcea0cbb149", Name: "testdata/gobug.elf"},
+		Binary{BuildID: "4FCB712AA6387724A9F465A3DEADBEEF", Name: "testdata/gobug.elf"},
+		Binary{BuildID: "DEADBEEFA6387724A9F465A32CD8C14B", Name: "testdata/gobug.elf"},
+	}
+	for _, bin := range out {
+		if err := VerifyBinary(bin.Name, bin.BuildID); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
+}
+
 func TestGoBug(t *testing.T) {
+	source := &gobugMockSource{}
 	data, err := os.Open("testdata/gobug.elf")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer data.Close()
-	buildids, err := elflib.GetBuildIDs("gobug.exe", data)
+	buildids, err := elflib.GetBuildIDs("testdata/gobug.elf", data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,15 +49,14 @@ func TestGoBug(t *testing.T) {
 		t.Error("expected", 3, "build ids but got", len(buildids))
 		return
 	}
-	expected := []string{
-		"5bf6a28a259b95b4f20ffbcea0cbb149",
-		"4FCB712AA6387724A9F465A3DEADBEEF",
-		"DEADBEEFA6387724A9F465A32CD8C14B",
-	}
 	// Test that we get exactly the build ids we expect
-	for i, expect := range expected {
-		if !hexEqual(buildids[i], expect) {
-			t.Error("expected", expect, "got", hex.EncodeToString(buildids[i]))
+	bins, err := source.GetBinaries()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, bin := range bins {
+		if !hexEqual(buildids[i], bin.BuildID) {
+			t.Error("expected", bin.BuildID, "got", hex.EncodeToString(buildids[i]))
 		}
 	}
 }

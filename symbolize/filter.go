@@ -87,11 +87,15 @@ func (s *Filter) FindInfoForAddress(vaddr uint64) (AddressInfo, error) {
 		return info, fmt.Errorf("could not find module for 0x%x", vaddr)
 	}
 	modRelAddr := vaddr - seg.vaddr + seg.modRelAddr
-	modPath, ok := s.repo.GetBuildObject(s.modules[seg.mod].build)
+	mod, ok := s.modules[seg.mod]
 	if !ok {
-		return info, fmt.Errorf("could not find module for build id %s", s.modules[seg.mod].build)
+		return info, fmt.Errorf("could not find module with module id %d", seg.mod)
 	}
-	result := <-s.symbolizer.FindSrcLoc(modPath, modRelAddr)
+	modPath, err := s.repo.GetBuildObject(mod.build)
+	if err != nil {
+		return info, fmt.Errorf("could not find module for build id %s: %v", s.modules[seg.mod].build, err)
+	}
+	result := <-s.symbolizer.FindSrcLoc(modPath, mod.build, modRelAddr)
 	if result.Err != nil {
 		return info, result.Err
 	}

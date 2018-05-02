@@ -29,7 +29,7 @@ func newMockSymbolizer(modules []mockModule) Symbolizer {
 	return &out
 }
 
-func (s *mockSymbolizer) FindSrcLoc(file string, modRelAddr uint64) <-chan LLVMSymbolizeResult {
+func (s *mockSymbolizer) FindSrcLoc(file, build string, modRelAddr uint64) <-chan LLVMSymbolizeResult {
 	out := make(chan LLVMSymbolizeResult, 1)
 	if mod, ok := s.modules[file]; ok {
 		if locs, ok := mod.addr2line[modRelAddr]; ok {

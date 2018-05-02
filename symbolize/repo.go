@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"fuchsia.googlesource.com/tools/elflib"
 )
@@ -88,24 +89,34 @@ func (i *IDsSource) GetBinaries() ([]Binary, error) {
 	return out, nil
 }
 
+type buildInfo struct {
+	filepath string
+	buildID  string
+}
+
 // SymbolizerRepo keeps track of build objects and source files used in those build objects.
 type SymbolizerRepo struct {
-	builds map[string]string
+	lock    sync.RWMutex
+	sources []Source
+	builds  map[string]*buildInfo
 }
 
 func (s *SymbolizerRepo) AddObject(build, filename string) {
-	s.builds[build] = filename
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.builds[build] = &buildInfo{
+		filepath: filename,
+		buildID:  build,
+	}
 }
 
 func NewRepo() *SymbolizerRepo {
 	return &SymbolizerRepo{
-		builds: make(map[string]string),
+		builds: make(map[string]*buildInfo),
 	}
 }
 
-// AddSource adds a source of binaries and all contained binaries.
-func (s *SymbolizerRepo) AddSource(source Source) error {
-	// TODO: Add source to list of sources so that it can be reloaded
+func (s *SymbolizerRepo) loadSource(source Source) error {
 	bins, err := source.GetBinaries()
 	if err != nil {
 		return err
@@ -117,9 +128,41 @@ func (s *SymbolizerRepo) AddSource(source Source) error {
 	return nil
 }
 
+// AddSource adds a source of binaries and all contained binaries.
+func (s *SymbolizerRepo) AddSource(source Source) error {
+	s.sources = append(s.sources, source)
+	return s.loadSource(source)
+}
+
+func (s *SymbolizerRepo) reloadSources() error {
+	for _, source := range s.sources {
+		if err := s.loadSource(source); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *SymbolizerRepo) readInfo(buildid string) (*buildInfo, bool) {
+	s.lock.RLock()
+	info, ok := s.builds[buildid]
+	s.lock.RUnlock()
+	return info, ok
+}
+
 // GetBuildObject lets you get the build object associated with a build id.
-func (s *SymbolizerRepo) GetBuildObject(buildid string) (string, bool) {
-	// TODO: reload all ids.txt if buildid was not found. This requires locking something.
-	file, ok := s.builds[buildid]
-	return file, ok
+func (s *SymbolizerRepo) GetBuildObject(buildid string) (string, error) {
+	// No defer is used here because we don't want to hold the read lock
+	// for very long.
+	info, ok := s.readInfo(buildid)
+	if !ok {
+		// If we don't recognize that build id, reload all sources.
+		s.reloadSources()
+		info, ok = s.readInfo(buildid)
+		if !ok {
+			// If we still don't know about that build, return an error.
+			return "", fmt.Errorf("unrecognized buildid %s", buildid)
+		}
+	}
+	return info.filepath, nil
 }

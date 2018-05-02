@@ -16,11 +16,12 @@ import (
 
 // Symbolizer is an interface to an object that maps addresses in a bianry to source locations
 type Symbolizer interface {
-	FindSrcLoc(file string, modRelAddr uint64) <-chan LLVMSymbolizeResult
+	FindSrcLoc(file, build string, modRelAddr uint64) <-chan LLVMSymbolizeResult
 }
 
 type llvmSymboArgs struct {
 	file       string
+	build      string
 	modRelAddr uint64
 	output     chan LLVMSymbolizeResult
 }
@@ -66,6 +67,11 @@ func (s *LLVMSymbolizer) handle(ctx context.Context) {
 				args.output <- LLVMSymbolizeResult{nil, fmt.Errorf("Attempt to request code location of unnamed file")}
 				continue
 			}
+			// Before sending a binary off to llvm-symbolizer, veryify the binary
+			if err := VerifyBinary(args.file, args.build); err != nil {
+				args.output <- LLVMSymbolizeResult{nil, err}
+				continue
+			}
 			fmt.Fprintf(s.stdin, "%s 0x%x\n", args.file, args.modRelAddr)
 			out := []SourceLocation{}
 			scanner := bufio.NewScanner(s.stdout)
@@ -106,10 +112,10 @@ func (s *LLVMSymbolizer) Start(ctx context.Context) error {
 	return nil
 }
 
-func (s *LLVMSymbolizer) FindSrcLoc(file string, modRelAddr uint64) <-chan LLVMSymbolizeResult {
+func (s *LLVMSymbolizer) FindSrcLoc(file, build string, modRelAddr uint64) <-chan LLVMSymbolizeResult {
 	// Buffer the return chanel so we don't block handle().
 	out := make(chan LLVMSymbolizeResult, 1)
-	args := llvmSymboArgs{file, modRelAddr, out}
+	args := llvmSymboArgs{file, build, modRelAddr, out}
 	s.input <- args
 	return out
 }
