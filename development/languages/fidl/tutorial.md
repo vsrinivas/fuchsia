@@ -565,3 +565,15 @@ $ run echo_client_dart
 You do not need to specifically run the server because the call to
 `connectToServiceByName()` in the client will automatically demand-load the
 server.
+
+## `Echo` across languages and runtimes
+As a final exercise, you can now mix & match `Echo` clients and servers as you
+see fit. Let's try having the Dart client call the C++ server.
+
+```sh
+$ run echo_client_dart --server echo2_server_cpp
+```
+
+The Dart client will start the C++ server and connect to it. `EchoString()`
+works across language boundaries, all that matters is that the ABI defined by
+FIDL is observed on both ends.
