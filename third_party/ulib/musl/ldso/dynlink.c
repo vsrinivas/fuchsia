@@ -2022,9 +2022,13 @@ __NO_SAFESTACK NO_ASAN static void early_init(void) {
 }
 
 static void set_global(struct dso* p, int global) {
-    if (p->global > 0)
+    if (p->global > 0) {
         // Short-circuit if it's already fully global.  Its deps will be too.
         return;
+    } else if (p->global == global) {
+        // This catches circular references as well as other redundant walks.
+        return;
+    }
     p->global = global;
     if (p->deps != NULL) {
         for (struct dso **dep = p->deps; *dep != NULL; ++dep) {
