@@ -26,7 +26,12 @@ runbench_exec "${OUT_DIR}/benchmark_example" \
     --spec-file=/system/data/benchmark_example/benchmark_example.tspec \
     --benchmark-results-file="${OUT_DIR}/benchmark_example"
 
-# Zircon benchmarks.
+# Performance tests implemented in the Zircon repo.
+runbench_exec "${OUT_DIR}/zircon.perf_test" \
+    /system/test/sys/perf-test -p --out="${OUT_DIR}/zircon.perf_test"
+
+# Performance tests implemented in the Garnet repo (the name
+# "zircon_benchmarks" is now misleading).
 runbench_exec "${OUT_DIR}/zircon_benchmarks" \
     /system/bin/zircon_benchmarks -p --out="${OUT_DIR}/zircon_benchmarks"
 
