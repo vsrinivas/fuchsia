@@ -55,6 +55,7 @@ func (p *PCElement) Accept(visitor NodeVisitor) {
 	visitor.VisitPc(p)
 }
 
+// TODO(jakehehrlich): Make this semantic rather than literal (e.g. keep track of color/bold information directly)
 // ColorGroup is an AST node representing a colored part of the markup
 type ColorGroup struct {
 	color    uint64

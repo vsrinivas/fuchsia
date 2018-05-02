@@ -11,14 +11,26 @@ import (
 
 // BasicPresenter is a presenter to output very basic uncolored output
 type BasicPresenter struct {
-	output io.Writer
+	enableColor   bool
+	lineUsedColor bool
+	output        io.Writer
 }
 
-func NewBasicPresenter(output io.Writer) *BasicPresenter {
-	return &BasicPresenter{output}
+func NewBasicPresenter(output io.Writer, enableColor bool) *BasicPresenter {
+	return &BasicPresenter{output: output, enableColor: enableColor}
 }
 
 func (b *BasicPresenter) WriteLine(res OutputLine) {
+	if b.enableColor {
+		// Reset color use at start of line.
+		b.lineUsedColor = false
+		// No matter way, reset color/bold at the end of a line
+		defer func() {
+			if b.lineUsedColor {
+				fmt.Fprintf(b.output, "\033[0m")
+			}
+		}()
+	}
 	fmt.Fprintf(b.output, "[%.3f] %d.%d> ", res.time, res.process, res.thread)
 	res.line.Accept(b)
 	fmt.Fprint(b.output, "\n")
@@ -45,7 +57,10 @@ func (b *BasicPresenter) VisitPc(node *PCElement) {
 }
 
 func (b *BasicPresenter) VisitColor(node *ColorGroup) {
-	// The basic presenter ignores color
+	if b.enableColor {
+		b.lineUsedColor = true
+		fmt.Fprintf(b.output, "\033[%dm", node.color)
+	}
 	for _, child := range node.children {
 		child.Accept(b)
 	}

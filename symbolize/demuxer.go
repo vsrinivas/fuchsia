@@ -11,8 +11,8 @@ import (
 )
 
 type remuxer struct {
-	seq    chan (<-chan OutputLine)
-	out    chan<- OutputLine
+	seq chan (<-chan OutputLine)
+	out chan<- OutputLine
 }
 
 func newRemuxer() *remuxer {

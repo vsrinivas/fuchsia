@@ -5,10 +5,37 @@
 package symbolize
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"strings"
+	"testing"
 )
+
+func TestColor(t *testing.T) {
+	// TODO(jakehehrlich): Change presenter so that redundent resets are not used when user input already contains them.
+	msg := "[0.0] 1234.5678> \033[1mThis is bold \033[31mThis is red and bold \033[37mThis is bold white\n" +
+		"[0.0] 1234.5678> This is just normal and has no trailing ANSI code\n" +
+		"[0.0] 1234.5678> \033[1m\033[31m this line tests adjacent state changes\n" +
+		"[0.0] 1234.5678> \033[1m\033[31m this line will eventully test non-redundent reset \033[1m\033\n"
+	symbo := newMockSymbolizer([]mockModule{})
+	repo := NewRepo()
+	demuxer := NewDemuxer(repo, symbo)
+	ctx := context.Background()
+	in := StartParsing(ctx, strings.NewReader(msg))
+	out := demuxer.Start(ctx, in)
+	buf := new(bytes.Buffer)
+	presenter := NewBasicPresenter(buf, true)
+	presenter.Start(out)
+	expected := "[0.000] 1234.5678> \033[1mThis is bold \033[31mThis is red and bold \033[37mThis is bold white\n\033[0m" +
+		"[0.000] 1234.5678> This is just normal and has no trailing ANSI code\n" +
+		"[0.000] 1234.5678> \033[1m\033[31m this line tests adjacent state changes\n\033[0m" +
+		"[0.000] 1234.5678> \033[1m\033[31m this line will eventully test non-redundent reset \033[1m\033\n\033[0m"
+	actual := buf.String()
+	if actual != expected {
+		t.Error("expected", expected, "got", actual)
+	}
+}
 
 func ExampleDemux() {
 	// mock the input and outputs of llvm-symbolizer
@@ -48,7 +75,7 @@ func ExampleDemux() {
 	// start the demuxer which will cause filters to send output lines to 'out'
 	out := demuxer.Start(ctx, in)
 
-	presenter := NewBasicPresenter(os.Stdout)
+	presenter := NewBasicPresenter(os.Stdout, false)
 	presenter.Start(out)
 
 	//Output:
