@@ -287,6 +287,9 @@ public:
         on_unmount_ = fbl::move(closure);
     }
 
+    // Initializes the WritebackBuffer.
+    zx_status_t InitializeWriteback();
+
     void Shutdown(fs::Vfs::ShutdownCallback closure) final;
     virtual ~Blobfs();
 
@@ -391,10 +394,12 @@ public:
     blobfs_info_t info_;
 
     zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, VnodeBlob* vnode) {
+        ZX_DEBUG_ASSERT(writeback_ != nullptr);
         return writeback_->GenerateWork(out, fbl::move(fbl::WrapRefPtr(vnode)));
     }
 
     void EnqueueWork(fbl::unique_ptr<WritebackWork> work) {
+        ZX_DEBUG_ASSERT(writeback_ != nullptr);
         writeback_->Enqueue(fbl::move(work));
     }
 

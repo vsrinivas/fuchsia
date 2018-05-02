@@ -679,8 +679,26 @@ void Blobfs::FreeNode(WriteTxn* txn, size_t node_index) {
     ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
+zx_status_t Blobfs::InitializeWriteback() {
+    zx_status_t status;
+    fbl::unique_ptr<MappedVmo> buffer;
+    constexpr size_t kWriteBufferSize = 64 * (1LU << 20);
+    static_assert(kWriteBufferSize % kBlobfsBlockSize == 0,
+                  "Buffer Size must be a multiple of the Blobfs Block Size");
+    if ((status = MappedVmo::Create(kWriteBufferSize, "blobfs-writeback",
+                                    &buffer)) != ZX_OK) {
+        return status;
+    }
+    if ((status = WritebackBuffer::Create(this, fbl::move(buffer), &writeback_)) != ZX_OK) {
+        return status;
+    }
+
+    return ZX_OK;
+}
+
 void Blobfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
     TRACE_DURATION("blobfs", "Blobfs::Unmount");
+    ZX_DEBUG_ASSERT_MSG(writeback_ != nullptr, "Shutdown requires writeback thread to sync");
 
     // 1) Shutdown all external connections to blobfs.
     ManagedVfs::Shutdown([this, cb = fbl::move(cb)] (zx_status_t status) mutable {
@@ -1170,21 +1188,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const blobfs_info_t* info,
     } else if ((status = fs->CreateFsId()) != ZX_OK) {
         fprintf(stderr, "blobfs: Failed to create fs_id: %d\n", status);
         return status;
-    }
-
-    fbl::unique_ptr<MappedVmo> buffer;
-    constexpr size_t kWriteBufferSize = 64 * (1LU << 20);
-    static_assert(kWriteBufferSize % kBlobfsBlockSize == 0,
-                  "Buffer Size must be a multiple of the Blobfs Block Size");
-    if ((status = MappedVmo::Create(kWriteBufferSize, "blobfs-writeback",
-                                    &buffer)) != ZX_OK) {
-        return status;
-    }
-    if ((status = WritebackBuffer::Create(fs.get(), fbl::move(buffer),
-                                          &fs->writeback_)) != ZX_OK) {
-        return status;
-    }
-    if ((status = fs->InitializeVnodes() != ZX_OK)) {
+    } else if ((status = fs->InitializeVnodes() != ZX_OK)) {
         fprintf(stderr, "blobfs: Failed to initialize Vnodes\n");
         return status;
     }
@@ -1329,6 +1333,10 @@ zx_status_t blobfs_mount(async_t* async, fbl::unique_fd blockfd,
     fbl::unique_ptr<Blobfs> fs;
 
     if ((status = blobfs_create(&fs, fbl::move(blockfd))) != ZX_OK) {
+        return status;
+    }
+
+    if ((status = fs->InitializeWriteback()) != ZX_OK) {
         return status;
     }
 
