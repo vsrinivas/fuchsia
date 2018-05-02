@@ -36,7 +36,7 @@ inline bool vfs_valid_name(fbl::StringPiece name) {
            name != "." && name != "..";
 }
 
-// The VFS interface declares a default abtract Vnode class with
+// The VFS interface declares a default abstract Vnode class with
 // common operations that may be overwritten.
 //
 // The ops are used for dispatch and the lifecycle of Vnodes are owned
