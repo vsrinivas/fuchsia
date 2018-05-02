@@ -34,8 +34,11 @@ public:
     zx_status_t Init(const char* name, size_t ob_size, size_t max_count);
     void* Alloc();
     void Free(void* addr);
+    bool in_range(uintptr_t addr) const {
+        return data_.InRange(addr);
+    }
     bool in_range(void* addr) const {
-        return data_.InRange(static_cast<char*>(addr));
+        return in_range(reinterpret_cast<uintptr_t>(addr));
     }
 
     void* start() const { return data_.start(); }
@@ -83,8 +86,12 @@ private:
 
         // Returns true if |addr| could have been returned by Pop and has
         // not been reclaimed by Push.
-        bool InRange(void* addr) const {
-            return (addr >= start_ && addr < top_);
+        bool InRange(uintptr_t addr) const {
+            return (addr >= reinterpret_cast<uintptr_t>(start_) &&
+                    addr < reinterpret_cast<uintptr_t>(top_));
+        }
+        bool InRange(const void* addr) const {
+            return InRange(reinterpret_cast<uintptr_t>(addr));
         }
 
         // The lowest address of the memory managed by this Pool.

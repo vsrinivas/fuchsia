@@ -197,12 +197,13 @@ void Handle::Delete() {
 }
 
 Handle* Handle::FromU32(uint32_t value) TA_NO_THREAD_SAFETY_ANALYSIS {
-    Handle* handle = IndexToHandle(value & kHandleIndexMask);
+    uintptr_t handle_addr = IndexToHandle(value & kHandleIndexMask);
     {
         AutoLock lock(&mutex_);
-        if (unlikely(!arena_.in_range(handle)))
+        if (unlikely(!arena_.in_range(handle_addr)))
             return nullptr;
     }
+    auto handle = reinterpret_cast<Handle*>(handle_addr);
     return likely(handle->base_value() == value) ? handle : nullptr;
 }
 

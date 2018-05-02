@@ -168,10 +168,10 @@ private:
     static fbl::Mutex mutex_;
     static fbl::Arena TA_GUARDED(mutex_) arena_;
 
-    // NOTE! This can return an invalid pointer.
-    // It must be checked against the arena bounds before being used.
-    static Handle* IndexToHandle(uint32_t index) TA_NO_THREAD_SAFETY_ANALYSIS {
-        return reinterpret_cast<Handle*>(arena_.start()) + index;
+    // NOTE! This can return an invalid address.  It must be checked
+    // against the arena bounds before being cast to a Handle*.
+    static uintptr_t IndexToHandle(uint32_t index) TA_NO_THREAD_SAFETY_ANALYSIS {
+        return reinterpret_cast<uintptr_t>(arena_.start()) + index * sizeof(Handle);
     }
 
     static uint32_t HandleToIndex(Handle* handle) TA_NO_THREAD_SAFETY_ANALYSIS {
