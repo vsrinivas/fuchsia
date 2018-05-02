@@ -20,3 +20,4 @@ interface ProposalPublisher {
   // produced by this component.
   2: Remove(string proposal_id);
 };
+

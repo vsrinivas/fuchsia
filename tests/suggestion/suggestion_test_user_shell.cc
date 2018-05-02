@@ -91,6 +91,9 @@ class TestApp : modular::StoryWatcher,
         modular::testing::GetStore()->Put("suggestion_proposal_received", "",
                                           [] {});
         received_suggestion_.Pass();
+        modular::Interaction interaction;
+        interaction.type = modular::InteractionType::SELECTED;
+        suggestion_provider_->NotifyInteraction(suggestion.uuid, interaction);
         break;
       }
     }

@@ -147,13 +147,28 @@ class SuggestionEngineImpl : public ContextListener,
 
   // TODO(andrewosh): Performing actions should be handled by a separate
   // interface that's passed to the SuggestionEngineImpl.
-  // |source_url| is the url of the source of the proposal containing the
-  // provided actions.
+  //
+  // |actions| are the actions to perform.
+  // |listener| is the listener to be notified when the actions have been
+  // performed.
+  // |proposal_id| is the id of the proposal that was the source of the actions.
+  // |source_url| is the url of the source of the proposal containing
+  // the provided actions.
   void PerformActions(fidl::VectorPtr<Action> actions,
+                      fidl::InterfaceHandle<ProposalListener> listener,
+                      const std::string& proposal_id,
                       const std::string& source_url,
                       uint32_t story_color);
 
-  void PerformCreateStoryAction(const Action& action, uint32_t story_color);
+  // Performs an action that creates a story.
+  //
+  // |proposal| is the proposal that initiated the action, and its listener will
+  // be notified with the created story id.
+  void PerformCreateStoryAction(
+      const Action& action,
+      fidl::InterfaceHandle<ProposalListener> listener,
+      const std::string& proposal_id,
+      uint32_t story_color);
 
   void PerformFocusStoryAction(const Action& action);
 

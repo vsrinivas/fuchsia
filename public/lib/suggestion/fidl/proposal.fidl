@@ -20,6 +20,24 @@ struct Proposal {
   float32 confidence = 0.0;
 
   SuggestionDisplay display;
+
+  // A listener interface that is notified when the proposal is accepted by
+  // the system.
+  //
+  // The listener is currently notified once when a proposal is accepted. Thus the
+  // |story_id| provided will be of the first create story action in |on_selected|,
+  // and subsequent create story actions will not notify the listener.
+  ProposalListener? listener;
+};
+
+// An interface that allows Proposal creators to be notified when a proposal
+// is accepted by the system.
+interface ProposalListener {
+  // Indicates that a proposal was accepted by the system.
+  //
+  // |proposal_id| The identifier of the accepted proposal.
+  // |story_id| The identifier of the created story, if a story was created.
+  1: OnProposalAccepted(string proposal_id, string? story_id);
 };
 
 union Action {
@@ -78,7 +96,6 @@ struct AddModule {
 interface CustomAction {
   1: Execute() -> (vector<Action?>? actions);
 };
-
 
 // Performs a query with the given text. Once the proposals from the query are
 // received, the first top-ranked proposal (not necessarily first proposal

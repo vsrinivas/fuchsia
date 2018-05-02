@@ -123,15 +123,17 @@ void SuggestionEngineImpl::NotifyInteraction(fidl::StringPtr suggestion_uuid,
     debug_->OnSuggestionSelected(suggestion->prototype);
 
     auto& proposal = suggestion->prototype->proposal;
+    auto proposal_id = proposal.id;
     if (interaction.type == InteractionType::SELECTED) {
       PerformActions(std::move(proposal.on_selected),
+                     std::move(proposal.listener), proposal.id,
                      suggestion->prototype->source_url, proposal.display.color);
     }
 
     if (suggestion_in_ask) {
       query_processor_.CleanUpPreviousQuery();
     } else {
-      RemoveNextProposal(suggestion->prototype->source_url, proposal.id);
+      RemoveNextProposal(suggestion->prototype->source_url, proposal_id);
     }
   } else {
     FXL_LOG(WARNING) << "Requested suggestion prototype not found. UUID: "
@@ -216,16 +218,20 @@ void SuggestionEngineImpl::RegisterRankingFeatures() {
   query_processor_.SetRanker(std::move(query_ranker));
 }
 
-void SuggestionEngineImpl::PerformActions(fidl::VectorPtr<Action> actions,
-                                          const std::string& source_url,
-                                          uint32_t story_color) {
+void SuggestionEngineImpl::PerformActions(
+    fidl::VectorPtr<Action> actions,
+    fidl::InterfaceHandle<ProposalListener> listener,
+    const std::string& proposal_id,
+    const std::string& source_url,
+    uint32_t story_color) {
   // TODO(rosswang): If we're asked to add multiple modules, we probably
   // want to add them to the same story. We can't do that yet, but we need
   // to receive a StoryController anyway (not optional atm.).
   for (auto& action : *actions) {
     switch (action.Which()) {
       case Action::Tag::kCreateStory: {
-        PerformCreateStoryAction(action, story_color);
+        PerformCreateStoryAction(action, std::move(listener), proposal_id,
+                                 story_color);
         break;
       }
       case Action::Tag::kFocusStory: {
@@ -248,12 +254,20 @@ void SuggestionEngineImpl::PerformActions(fidl::VectorPtr<Action> actions,
         FXL_LOG(WARNING) << "Unknown action tag " << (uint32_t)action.Which();
     }
   }
+
+  if (listener) {
+    auto proposal_listener = listener.Bind();
+    proposal_listener->OnProposalAccepted(proposal_id, nullptr /* story_id */);
+  }
 }
 
-void SuggestionEngineImpl::PerformCreateStoryAction(const Action& action,
-                                                    uint32_t story_color) {
+void SuggestionEngineImpl::PerformCreateStoryAction(
+    const Action& action,
+    fidl::InterfaceHandle<ProposalListener> listener,
+    const std::string& proposal_id,
+    uint32_t story_color) {
   auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
-  const auto& create_story = action.create_story();
+  auto& create_story = action.create_story();
 
   if (!story_provider_) {
     FXL_LOG(WARNING) << "Unable to add module; no story provider";
@@ -280,8 +294,10 @@ void SuggestionEngineImpl::PerformCreateStoryAction(const Action& action,
   }
 
   story_provider_->CreateStory(
-      nullptr, fxl::MakeCopyable([this, intent = std::move(intent), activity](
-                                     const fidl::StringPtr& story_id) mutable {
+      nullptr,
+      fxl::MakeCopyable([this, listener = std::move(listener), proposal_id,
+                         intent = std::move(intent),
+                         activity](const fidl::StringPtr& story_id) mutable {
         modular::StoryControllerPtr story_controller;
         story_provider_->GetController(story_id, story_controller.NewRequest());
         // TODO(thatguy): We give the first module the name "root". We'd like to
@@ -291,6 +307,11 @@ void SuggestionEngineImpl::PerformCreateStoryAction(const Action& action,
                                     "root" /* module name */, std::move(intent),
                                     nullptr /* surface relation */);
         focus_provider_ptr_->Request(story_id);
+
+        if (listener) {
+          auto proposal_listener = listener.Bind();
+          proposal_listener->OnProposalAccepted(proposal_id, story_id);
+        }
       }));
 }
 
@@ -331,7 +352,10 @@ void SuggestionEngineImpl::PerformCustomAction(Action* action,
             if (action)
               non_null_actions.push_back(std::move(*action));
           }
-          PerformActions(std::move(non_null_actions), source_url, story_color);
+          // Since there is no listener provided to PerformActions, it is fine
+          // to use an empty proposal id here.
+          PerformActions(std::move(non_null_actions), nullptr /* listener */,
+                         "", source_url, story_color);
         }
       }));
 }

@@ -25,7 +25,7 @@ constexpr char kProposalId[] =
     "file:///system/bin/modular_tests/suggestion_proposal_test#proposal";
 
 // Cf. README.md for what this test does and how.
-class SuggestionApp {
+class SuggestionApp : modular::ProposalListener {
  public:
   SuggestionApp(
       modular::ModuleHost* module_host,
@@ -62,12 +62,18 @@ class SuggestionApp {
           proposal.id = kProposalId;
           proposal.display = std::move(suggestion_display);
           proposal.on_selected.push_back(std::move(action));
+          proposal_listener_bindings_.AddBinding(
+              this, proposal.listener.NewRequest());
 
           proposal_publisher_->Propose(std::move(proposal));
 
           modular::testing::GetStore()->Get(
               "suggestion_proposal_received", [this](const fidl::StringPtr&) {
-                module_host_->module_context()->Done();
+                modular::testing::GetStore()->Get(
+                    "proposal_was_accepted", [this](const fidl::StringPtr&) {
+                      proposal_was_accepted_.Pass();
+                      module_host_->module_context()->Done();
+                    });
               });
         });
 
@@ -87,6 +93,12 @@ class SuggestionApp {
     modular::testing::Done(done);
   }
 
+  // |ProposalListener|
+  void OnProposalAccepted(fidl::StringPtr proposal_id,
+                          fidl::StringPtr story_id) override {
+    modular::testing::GetStore()->Put("proposal_was_accepted", "", [] {});
+  }
+
  private:
   modular::ModuleHost* const module_host_;
   modular::ModuleContextPtr module_context_;
@@ -94,9 +106,11 @@ class SuggestionApp {
 
   TestPoint initialized_{"Root module initialized"};
   TestPoint received_story_id_{"Root module received story id"};
+  TestPoint proposal_was_accepted_{"Proposal was accepted"};
   TestPoint stopped_{"Root module stopped"};
 
   fxl::WeakPtrFactory<SuggestionApp> weak_ptr_factory_;
+  fidl::BindingSet<modular::ProposalListener> proposal_listener_bindings_;
 };
 
 }  // namespace

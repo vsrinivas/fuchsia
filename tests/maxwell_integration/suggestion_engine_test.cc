@@ -80,7 +80,11 @@ class Proposinator {
                modular::AnnoyanceType annoyance = modular::AnnoyanceType::NONE,
                fidl::VectorPtr<modular::Action> actions =
                    fidl::VectorPtr<modular::Action>::New(0)) {
-    out_->Propose(CreateProposal(id, headline, std::move(actions), annoyance));
+    Propose(CreateProposal(id, headline, std::move(actions), annoyance));
+  }
+
+  void Propose(modular::Proposal proposal) {
+    out_->Propose(std::move(proposal));
   }
 
   void Remove(const std::string& id) { out_->Remove(id); }
@@ -190,7 +194,8 @@ class NProposals : public Proposinator, public modular::ContextListener {
   int n_ = 0;
 };
 
-class SuggestionEngineTest : public ContextEngineTestBase {
+class SuggestionEngineTest : public ContextEngineTestBase,
+                             modular::ProposalListener {
  public:
   SuggestionEngineTest() : story_provider_binding_(&story_provider_) {}
 
@@ -278,6 +283,21 @@ class SuggestionEngineTest : public ContextEngineTestBase {
     util::WaitUntilIdle(&suggestion_debug_, &message_loop_);
   }
 
+  void AddProposalListenerBinding(
+      fidl::InterfaceRequest<modular::ProposalListener> request) {
+    proposal_listener_bindings_.AddBinding(this, std::move(request));
+  }
+
+  // The id of the most recently accepted proposal.
+  std::string accepted_proposal_id_;
+
+  // The amount of proposals that have been accepted, as indicated by calls to
+  // |OnProposalAccepted|.
+  int accepted_proposal_count_ = 0;
+
+  // Whether or not a successful create story action has been observed.
+  bool created_story_action_;
+
  private:
   void Interact(const std::string& suggestion_id,
                 modular::InteractionType interaction_type) {
@@ -287,12 +307,23 @@ class SuggestionEngineTest : public ContextEngineTestBase {
                                             std::move(interaction));
   }
 
+  // |ProposalListener|
+  void OnProposalAccepted(fidl::StringPtr proposal_id,
+                          fidl::StringPtr story_id) override {
+    accepted_proposal_id_ = proposal_id;
+    if (story_id->length() > 0) {
+      created_story_action_ = true;
+    }
+    accepted_proposal_count_++;
+  }
+
   modular::SuggestionEnginePtr suggestion_engine_;
   modular::SuggestionDebugPtr suggestion_debug_;
   modular::SuggestionProviderPtr suggestion_provider_;
 
   StoryProviderMock story_provider_;
   fidl::Binding<modular::StoryProvider> story_provider_binding_;
+  fidl::BindingSet<modular::ProposalListener> proposal_listener_bindings_;
 };
 
 class AskTest : public virtual SuggestionEngineTest {
@@ -690,6 +721,85 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion) {
   WaitUntilIdle();
   EXPECT_EQ("foo://bar",
             story_provider()->story_controller().last_added_module());
+}
+
+TEST_F(SuggestionInteractionTest, AcceptSuggestionCallback) {
+  Proposinator p(suggestion_engine());
+  StartListening(10);
+
+  modular::CreateStory create_story;
+  create_story.module_id = "foo://bar";
+  modular::Action action;
+  action.set_create_story(std::move(create_story));
+  fidl::VectorPtr<modular::Action> actions;
+  actions.push_back(std::move(action));
+  auto proposal = CreateProposal("1", "1", std::move(actions),
+                                 modular::AnnoyanceType::NONE);
+  AddProposalListenerBinding(proposal.listener.NewRequest());
+  p.Propose(std::move(proposal));
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
+
+  auto suggestion_id = GetOnlySuggestion()->uuid;
+  AcceptSuggestion(suggestion_id);
+  WaitUntilIdle();
+
+  EXPECT_EQ(accepted_proposal_id_, "1");
+}
+
+TEST_F(SuggestionInteractionTest, AcceptSuggestionToCreateStory) {
+  Proposinator p(suggestion_engine());
+  StartListening(10);
+
+  modular::CreateStory create_story;
+  create_story.module_id = "foo://bar";
+
+  modular::Action action;
+  action.set_create_story(std::move(create_story));
+
+  fidl::VectorPtr<modular::Action> actions;
+  actions.push_back(std::move(action));
+  auto proposal = CreateProposal("1", "1", std::move(actions),
+                                 modular::AnnoyanceType::NONE);
+  AddProposalListenerBinding(proposal.listener.NewRequest());
+  p.Propose(std::move(proposal));
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
+
+  auto suggestion_id = GetOnlySuggestion()->uuid;
+  AcceptSuggestion(suggestion_id);
+  WaitUntilIdle();
+  EXPECT_TRUE(created_story_action_);
+}
+
+// Tests that accepting a suggestion that creates multiple stories only notifies
+// the proposal listener once.
+TEST_F(SuggestionInteractionTest, AcceptSuggestionToCreateMultipleStories) {
+  Proposinator p(suggestion_engine());
+  StartListening(10);
+
+  modular::CreateStory create_story;
+  create_story.module_id = "foo://bar";
+
+  modular::Action action;
+  action.set_create_story(std::move(create_story));
+  modular::Action action2;
+  action2.set_create_story(std::move(create_story));
+
+  fidl::VectorPtr<modular::Action> actions;
+  actions.push_back(std::move(action));
+  actions.push_back(std::move(action2));
+  auto proposal = CreateProposal("1", "1", std::move(actions),
+                                 modular::AnnoyanceType::NONE);
+  AddProposalListenerBinding(proposal.listener.NewRequest());
+  p.Propose(std::move(proposal));
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
+
+  auto suggestion_id = GetOnlySuggestion()->uuid;
+  AcceptSuggestion(suggestion_id);
+  WaitUntilIdle();
+  EXPECT_EQ(accepted_proposal_count_, 1);
 }
 
 TEST_F(SuggestionInteractionTest, AcceptSuggestion_CreateStoryIntent) {
