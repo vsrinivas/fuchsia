@@ -24,6 +24,10 @@ repository = "https://fuchsia.googlesource.com"
 
 [dependencies]
 %(deps)s
+
+%(bin_or_lib)s
+name = "%(crate_name)s"%(lib_crate_type)s
+path = "%(source_root)s"
 '''
 
 DEP_TEMPLATE = '%(crate_name)s = { version = "%(version)s", path = "%(path)s" }\n'
@@ -35,6 +39,9 @@ def main():
     parser = argparse.ArgumentParser("Writes a Cargo.toml for a Rust crate")
     parser.add_argument("--crate-name",
                         help="Name of the crate",
+                        required=True)
+    parser.add_argument("--source-root",
+                        help="Root lib.rs or main.rs for the crate",
                         required=True)
     parser.add_argument("--version",
                         help="Version of crate",
@@ -69,13 +76,13 @@ def main():
                 crate_data = third_party_json["crates"][crate]
                 deps += DEP_TEMPLATE % {
                     "crate_name": crate,
-                    "path": crate_data["src_path"],
+                    "path": crate_data["cargo_toml_dir"],
                     "version": crate_data["version"],
                 }
             else:
                 deps += DEP_TEMPLATE % {
                     "crate_name": dep_data["crate_name"],
-                    "path": dep_data["src_path"],
+                    "path": dep_data["cargo_toml_dir"],
                     "version": dep_data["version"],
                 }
 
@@ -85,6 +92,11 @@ def main():
             "version": args.version,
             "deps": deps,
             "year": cur_year(),
+            "bin_or_lib": "[[bin]]" if args.crate_type == "bin" else "[lib]",
+            "lib_crate_type": "" if args.crate_type == "bin" else (
+                '\ncrate_type = ["%s"]' % args.crate_type
+            ),
+            "source_root": args.source_root,
         })
 
 if __name__ == '__main__':

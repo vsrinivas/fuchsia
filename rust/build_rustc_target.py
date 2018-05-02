@@ -44,6 +44,9 @@ def main():
     parser.add_argument("--crate-root",
                         help="Path to source directory",
                         required=True)
+    parser.add_argument("--cargo-toml-dir",
+                        help="Path to directory in which a Cargo.toml for this target may be generated",
+                        required=True)
     parser.add_argument("--crate-type",
                         help="Type of crate to build",
                         required=True,
@@ -114,16 +117,11 @@ def main():
     env["PATH"] = "%s:%s" % (env["PATH"], args.cmake_dir)
     env["RUST_BACKTRACE"] = "1"
 
-    if args.crate_type == "bin":
-        file_path = os.path.join(args.crate_root, "src", "main.rs")
-    else:
-        file_path = os.path.join(args.crate_root, "src", "lib.rs")
-
     create_base_directory(args.output_file)
 
     call_args = [
         args.rustc,
-        file_path,
+        args.crate_root,
         "--crate-type=%s" % args.crate_type,
         "--crate-name=%s" % args.crate_name,
         "--target=%s" % args.target,
@@ -190,7 +188,7 @@ def main():
         file.write(json.dumps({
             "crate_name": args.crate_name,
             "third_party": False,
-            "src_path": args.crate_root,
+            "cargo_toml_dir": args.cargo_toml_dir,
             "lib_path": args.output_file,
             "version": args.version,
         }, sort_keys=True, indent=4, separators=(",", ": ")))

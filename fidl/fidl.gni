@@ -57,7 +57,13 @@ template("fidl") {
 
     # This case needs to be last
   } else if (is_fuchsia) {
+    import("//build/rust/fidl_rust_library.gni")
     import("//build/cpp/fidl_cpp.gni")
+
+    # TODO(cramertj): remove pending TC-81.
+    fidl_rust_library(target_name) {
+      forward_variables_from(invoker, "*")
+    }
 
     fidl_cpp(target_name) {
       forward_variables_from(invoker, "*")

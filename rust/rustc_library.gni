@@ -27,10 +27,11 @@ import("//build/rust/rustc_artifact.gni")
 #     Builds unit tests associated with the binary. This will create a
 #     `<name>-bin-unit-test` test file in the output directory.
 #
-#   source_dir (optional)
-#     Location of directory in which `${source_dir}/src/lib.rs` can be found.
-#     This defaults to the current directory, and should only be changed when
-#     absolutely necessary (such as in the case of generated code).
+#   source_root (optional)
+#     Location of the crate root (e.g. `src/main.rs` or `src/lib.rs`).
+#     This defaults to `./src/main.rs` for binaries and `./src/lib.rs` for libraries,
+#     and should only be changed when absolutely necessary
+#     (such as in the case of generated code).
 #
 #   output_name (optional)
 #     Name of the output file.
@@ -56,7 +57,7 @@ template("rustc_library") {
                              "non_rust_deps",
                              "with_unit_tests",
                              "output_name",
-                             "source_dir",
+                             "source_root",
                              "testonly",
                            ])
     type = "lib"

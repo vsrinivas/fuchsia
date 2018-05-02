@@ -135,8 +135,8 @@ def main():
             # go from e.g. target/debug/deps/libfoo.rlib to target/debug/deps
             deps_folders.add(os.path.dirname(lib_path))
         src_path = data["target"]["src_path"]
-        # go from foo/bar/src/main.rs to foo/bar
-        src_path = os.path.abspath(os.path.join(os.path.dirname(src_path), os.pardir))
+        # go from foo/bar/src/main.rs to foo/bar (where hopefully there is a Cargo.toml)
+        cargo_toml_dir = os.path.abspath(os.path.join(os.path.dirname(src_path), os.pardir))
         # parse "1.0.1" out of "foo 1.0.1 (....)"
         crate_id_parts = crate_id.split(" ")
         assert len(crate_id_parts) == 3, "crate_id was not three distinct elements: \"%s\"" % crate_id
@@ -144,7 +144,7 @@ def main():
         crate_id_to_info[crate_id] = {
             "crate_name": crate_name,
             "lib_path": lib_path,
-            "src_path": src_path,
+            "cargo_toml_dir": cargo_toml_dir,
             "version": version,
         }
 
