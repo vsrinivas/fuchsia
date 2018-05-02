@@ -530,6 +530,7 @@ static zx_status_t block_device_added(int dirfd, int event, const char* name, vo
 
         if (!blob_mounted) {
             mount_options_t options = default_mount_options;
+            options.enable_journal = true;
             zx_status_t status = mount(fd, "/fs" PATH_BLOB, DISK_FORMAT_BLOBFS,
                                        &options, launch_blobfs);
             if (status != ZX_OK) {

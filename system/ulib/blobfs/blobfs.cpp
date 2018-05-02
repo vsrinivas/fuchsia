@@ -55,16 +55,18 @@ zx_status_t CheckFvmConsistency(const Superblock* info, int block_fd) {
     }
     const size_t kBlocksPerSlice = info->slice_size / kBlobfsBlockSize;
 
-    size_t expected_count[3];
+    size_t expected_count[4];
     expected_count[0] = info->abm_slices;
     expected_count[1] = info->ino_slices;
-    expected_count[2] = info->dat_slices;
+    expected_count[2] = info->journal_slices;
+    expected_count[3] = info->dat_slices;
 
     query_request_t request;
-    request.count = 3;
+    request.count = 4;
     request.vslice_start[0] = kFVMBlockMapStart / kBlocksPerSlice;
     request.vslice_start[1] = kFVMNodeMapStart / kBlocksPerSlice;
-    request.vslice_start[2] = kFVMDataStart / kBlocksPerSlice;
+    request.vslice_start[2] = kFVMJournalStart / kBlocksPerSlice;
+    request.vslice_start[3] = kFVMDataStart / kBlocksPerSlice;
 
     query_response_t response;
     status = static_cast<zx_status_t>(ioctl_block_fvm_vslice_query(block_fd, &request, &response));
@@ -133,7 +135,7 @@ zx_status_t EnqueuePaginated(fbl::unique_ptr<WritebackWork>* work, Blobfs* blobf
             if (status != ZX_OK) {
                 return status;
             }
-            if ((status = blobfs->EnqueueWork(fbl::move(*work))) != ZX_OK) {
+            if ((status = blobfs->EnqueueWork(fbl::move(*work), EnqueueType::kData)) != ZX_OK) {
                 return status;
             }
             *work = fbl::move(tmp);
@@ -182,19 +184,26 @@ zx_status_t VnodeBlob::InitVmos() {
         return ZX_OK;
     }
 
-    // Reverts blob back to uninitialized state on error.
-    auto cleanup = fbl::MakeAutoCall([this]() { BlobCloseHandles(); });
-
-    zx_status_t status;
     uint64_t data_blocks = BlobDataBlocks(inode_);
     uint64_t merkle_blocks = MerkleTreeBlocks(inode_);
     uint64_t num_blocks = data_blocks + merkle_blocks;
+
+    if (num_blocks == 0) {
+        // No need to initialize VMO for null blob.
+        return ZX_OK;
+    }
+
+    // Reverts blob back to uninitialized state on error.
+    auto cleanup = fbl::MakeAutoCall([this]() { BlobCloseHandles(); });
+
     size_t vmo_size;
     if (mul_overflow(num_blocks, kBlobfsBlockSize, &vmo_size)) {
         FS_TRACE_ERROR("Multiplication overflow");
         return ZX_ERR_OUT_OF_RANGE;
     }
-    if ((status = fzl::MappedVmo::Create(vmo_size, "blob", &blob_)) != ZX_OK) {
+
+    zx_status_t status = fzl::MappedVmo::Create(vmo_size, "blob", &blob_);
+    if (status != ZX_OK) {
         FS_TRACE_ERROR("Failed to initialize vmo; error: %d\n", status);
         return status;
     }
@@ -445,13 +454,13 @@ zx_status_t VnodeBlob::WriteMetadata() {
 
     blobfs_->PersistNode(wb.get(), map_index_, inode_);
     wb->SetSyncComplete();
-    if ((status = blobfs_->EnqueueWork(fbl::move(wb))) != ZX_OK) {
+    if ((status = blobfs_->EnqueueWork(fbl::move(wb), EnqueueType::kJournal)) != ZX_OK) {
         return status;
     }
 
     // Drop the write info, since we no longer need it.
     write_info_.reset();
-    return ZX_OK;
+    return status;
 }
 
 zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actual) {
@@ -494,7 +503,9 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
             return status;
         }
 
-        auto cleanup = fbl::MakeAutoCall([&]() {
+        // In case the operation fails, forcibly reset the WritebackWork
+        // to avoid asserting that no write requests exist on destruction.
+        auto set_error = fbl::MakeAutoCall([&]() {
             if (wb != nullptr) {
                 wb->Reset(ZX_ERR_BAD_STATE);
             }
@@ -562,7 +573,7 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
         }
 
         // Enqueue the blob's final data work. Metadata must be enqueued separately.
-        if ((status = blobfs_->EnqueueWork(fbl::move(wb))) != ZX_OK) {
+        if ((status = blobfs_->EnqueueWork(fbl::move(wb), EnqueueType::kData)) != ZX_OK) {
             return status;
         }
 
@@ -574,7 +585,7 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
 
         blobfs_->UpdateClientWriteMetrics(to_write, merkle_size, ticker.End(),
                                           generation_time);
-        cleanup.cancel();
+        set_error.cancel();
         return ZX_OK;
     }
 
@@ -761,7 +772,6 @@ zx_status_t Blobfs::FindBlocks(size_t start, size_t num_blocks, size_t* blkno_ou
 
         start = out;
     }
-
     return ZX_OK;
 }
 
@@ -772,7 +782,8 @@ zx_status_t Blobfs::ReserveBlocks(size_t num_blocks, size_t* block_index_out) {
         size_t hint = block_map_.size() - fbl::min(num_blocks, block_map_.size());
         if (AddBlocks(num_blocks) != ZX_OK) {
             return ZX_ERR_NO_SPACE;
-        } else if ((status = FindBlocks(hint, num_blocks, block_index_out)) != ZX_OK) {
+        }
+        if ((status = FindBlocks(hint, num_blocks, block_index_out)) != ZX_OK) {
             return ZX_ERR_NO_SPACE;
         }
     }
@@ -924,13 +935,38 @@ void Blobfs::FreeNode(WritebackWork* wb, size_t node_index) {
 
 zx_status_t Blobfs::InitializeWriteback(const MountOptions& options) {
     if (options.readonly) {
-        // If blobfs should be readonly, do not start up the writeback thread.
+        // If blobfs should be readonly, do not start up any writeback threads.
         return ZX_OK;
     }
 
     // Initialize the WritebackQueue.
-    return WritebackQueue::Create(this, WriteBufferSize() / kBlobfsBlockSize,
-                                  &writeback_);
+    zx_status_t status = WritebackQueue::Create(this, WriteBufferSize() / kBlobfsBlockSize,
+                                                &writeback_);
+
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // Replay any lingering journal entries.
+    if ((status = journal_->Replay()) != ZX_OK) {
+        return status;
+    }
+
+    // TODO(ZX-2728): Don't load metadata until after journal replay.
+    // Re-load blobfs metadata from disk, since things may have changed.
+    if ((status = Reload()) != ZX_OK) {
+        return status;
+    }
+
+    if (options.journal) {
+        // Initialize the journal's writeback thread (if journaling is enabled).
+        // Wait until after replay has completed in order to avoid concurrency issues.
+        return journal_->InitWriteback();
+    }
+
+    // If journaling is disabled, delete the journal.
+    journal_.reset();
+    return ZX_OK;
 }
 
 size_t Blobfs::WritebackCapacity() const { return writeback_->GetCapacity(); }
@@ -1058,7 +1094,7 @@ zx_status_t Blobfs::PurgeBlob(VnodeBlob* vn) {
         FreeNode(wb.get(), node_index);
         FreeBlocks(wb.get(), nblocks, start_block);
         VnodeReleaseHard(vn);
-        return EnqueueWork(fbl::move(wb));
+        return EnqueueWork(fbl::move(wb), EnqueueType::kJournal);
     }
     default: {
         assert(false);
@@ -1246,7 +1282,7 @@ zx_status_t Blobfs::AddInodes() {
     WriteInfo(wb.get());
     wb.get()->Enqueue(node_map_->GetVmo(), inoblks_old, NodeMapStartBlock(info_) + inoblks_old,
                 inoblks - inoblks_old);
-    return EnqueueWork(fbl::move(wb));
+    return EnqueueWork(fbl::move(wb), EnqueueType::kJournal);
 }
 
 zx_status_t Blobfs::AddBlocks(size_t nblocks) {
@@ -1266,7 +1302,7 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks) {
     ZX_DEBUG_ASSERT(blocks64 <= fbl::numeric_limits<uint32_t>::max());
     uint32_t blocks = static_cast<uint32_t>(blocks64);
     uint32_t abmblks = (blocks + kBlobfsBlockBits - 1) / kBlobfsBlockBits;
-    uint64_t abmblks_old = (info_.block_count + kBlobfsBlockBits - 1) / kBlobfsBlockBits;
+    uint64_t abmblks_old = (info_.data_block_count + kBlobfsBlockBits - 1) / kBlobfsBlockBits;
     ZX_DEBUG_ASSERT(abmblks_old <= abmblks);
 
     if (abmblks > kBlocksPerSlice) {
@@ -1305,10 +1341,10 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks) {
 
     info_.vslice_count += request.length;
     info_.dat_slices += static_cast<uint32_t>(request.length);
-    info_.block_count = blocks;
+    info_.data_block_count = blocks;
 
     WriteInfo(wb.get());
-    return EnqueueWork(fbl::move(wb));
+    return EnqueueWork(fbl::move(wb), EnqueueType::kJournal);
 }
 
 void Blobfs::Sync(SyncCallback closure) {
@@ -1321,7 +1357,7 @@ void Blobfs::Sync(SyncCallback closure) {
 
     wb->SetSyncCallback(fbl::move(closure));
     // This may return an error, but it doesn't matter - the closure will be called anyway.
-    status = EnqueueWork(fbl::move(wb));
+    status = EnqueueWork(fbl::move(wb), EnqueueType::kJournal);
 }
 
 void Blobfs::UpdateAllocationMetrics(uint64_t size_data, const fs::Duration& duration) {
@@ -1392,6 +1428,9 @@ Blobfs::Blobfs(fbl::unique_fd fd, const Superblock* info)
 }
 
 Blobfs::~Blobfs() {
+    // The journal must be destroyed before the writeback buffer, since it may still need
+    // to enqueue more transactions for writeback.
+    journal_.reset();
     writeback_.reset();
 
     ZX_ASSERT(open_hash_.is_empty());
@@ -1438,7 +1477,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const MountOptions& options,
     if ((status = fs->block_map_.Reset(BlockMapBlocks(fs->info_) * kBlobfsBlockBits)) < 0) {
         fprintf(stderr, "blobfs: Could not reset block bitmap\n");
         return status;
-    } else if ((status = fs->block_map_.Shrink(fs->info_.block_count)) < 0) {
+    } else if ((status = fs->block_map_.Shrink(fs->info_.data_block_count)) < 0) {
         fprintf(stderr, "blobfs: Could not shrink block bitmap\n");
         return status;
     }
@@ -1473,12 +1512,19 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const MountOptions& options,
         return status;
     }
 
+    status = Journal::Create(fs.get(), JournalBlocks(fs->info_), JournalStartBlock(fs->info_),
+                             &fs->journal_);
+    if (status != ZX_OK) {
+        return status;
+    }
+
     *out = fbl::move(fs);
     return ZX_OK;
 }
 
 zx_status_t Blobfs::InitializeVnodes() {
     fbl::AutoLock lock(&hash_lock_);
+    closed_hash_.clear();
     for (size_t i = 0; i < info_.inode_count; ++i) {
         const Inode* inode = GetNode(i);
         if (inode->start_block >= kStartBlockMinimum) {
@@ -1518,6 +1564,71 @@ void Blobfs::VnodeReleaseSoft(VnodeBlob* raw_vn) {
     fbl::RefPtr<VnodeBlob> vn = fbl::internal::MakeRefPtrNoAdopt(raw_vn);
     ZX_ASSERT(open_hash_.erase(raw_vn->GetKey()) != nullptr);
     ZX_ASSERT(VnodeInsertClosedLocked(fbl::move(vn)) == ZX_OK);
+}
+
+zx_status_t Blobfs::Reload() {
+    TRACE_DURATION("blobfs", "Blobfs::Reload");
+
+    // Re-read the info block from disk.
+    zx_status_t status;
+    char block[kBlobfsBlockSize];
+    if ((status = readblk(Fd(), 0, block)) != ZX_OK) {
+        fprintf(stderr, "blobfs: could not read info block\n");
+        return status;
+    }
+
+    Superblock* info = reinterpret_cast<Superblock*>(&block[0]);
+    if ((status = CheckSuperblock(info, TotalBlocks(*info))) != ZX_OK) {
+        fprintf(stderr, "blobfs: Check info failure\n");
+        return status;
+    }
+
+    // Once it has been verified, overwrite the current info.
+    memcpy(&info_, info, sizeof(Superblock));
+
+    // If block map size has changed, reset the block map vmo.
+    if (info_.data_block_count != block_map_.size()) {
+        if ((status = block_map_.Reset(BlockMapBlocks(info_) * kBlobfsBlockBits)) != ZX_OK) {
+            fprintf(stderr, "blobfs: Could not reset block bitmap\n");
+            return status;
+        }
+
+        if ((status = block_map_.Shrink(info_.data_block_count)) != ZX_OK) {
+            fprintf(stderr, "blobfs: Could not shrink block bitmap\n");
+            return status;
+        }
+    }
+
+    // If node map size has changed, grow/shrink the node map accordingly.
+    size_t nodemap_size = kBlobfsInodeSize * info_.inode_count;
+    ZX_DEBUG_ASSERT(fbl::round_up(nodemap_size, kBlobfsBlockSize) == nodemap_size);
+    ZX_DEBUG_ASSERT(nodemap_size / kBlobfsBlockSize == NodeMapBlocks(info_));
+
+    if (nodemap_size > node_map_->GetSize()) {
+        if ((status = node_map_->Grow(nodemap_size)) != ZX_OK) {
+            fprintf(stderr, "blobfs: Failed to grow node map\n");
+            return status;
+        }
+    } else if (nodemap_size < node_map_->GetSize()) {
+        if ((status = node_map_->Shrink(nodemap_size)) != ZX_OK) {
+            fprintf(stderr, "blobfs: Failed to shrink node map\n");
+            return status;
+        }
+    }
+
+    // Load the bitmaps from disk.
+    if ((status = LoadBitmaps()) != ZX_OK) {
+        fprintf(stderr, "blobfs: Failed to load bitmaps: %d\n", status);
+        return status;
+    }
+
+    // Load the vnodes from disk.
+    if ((status = InitializeVnodes() != ZX_OK)) {
+        fprintf(stderr, "blobfs: Failed to initialize Vnodes\n");
+        return status;
+    }
+
+    return ZX_OK;
 }
 
 zx_status_t Blobfs::VnodeInsertClosedLocked(fbl::RefPtr<VnodeBlob> vn) {
@@ -1607,11 +1718,6 @@ zx_status_t Initialize(fbl::unique_fd blockfd, const MountOptions& options,
         return status;
     }
 
-    if ((status = CheckFvmConsistency(info, blockfd.get())) != ZX_OK) {
-        fprintf(stderr, "blobfs: FVM info check failed\n");
-        return status;
-    }
-
     if ((status = Blobfs::Create(fbl::move(blockfd), options, info, out)) != ZX_OK) {
         fprintf(stderr, "blobfs: mount failed; could not create blobfs\n");
         return status;
@@ -1629,7 +1735,15 @@ zx_status_t Mount(async_dispatcher_t* dispatcher, fbl::unique_fd blockfd,
         return status;
     }
 
+    // Attempt to initialize writeback and journal.
+    // The journal must be replayed before the FVM check, in case changes to slice counts have
+    // been written to the journal but not persisted to the super block.
     if ((status = fs->InitializeWriteback(options)) != ZX_OK) {
+        return status;
+    }
+
+    if ((status = CheckFvmConsistency(&fs->Info(), fs->Fd())) != ZX_OK) {
+        fprintf(stderr, "blobfs: FVM info check failed\n");
         return status;
     }
 
@@ -1658,18 +1772,33 @@ zx_status_t Blobfs::CreateWork(fbl::unique_ptr<WritebackWork>* out, VnodeBlob* v
         return ZX_ERR_BAD_STATE;
     }
 
-    out->reset(new WritebackWork(this, fbl::move(fbl::WrapRefPtr(vnode))));
+    out->reset(new WritebackWork(this, fbl::WrapRefPtr(vnode)));
     return ZX_OK;
 }
 
-zx_status_t Blobfs::EnqueueWork(fbl::unique_ptr<WritebackWork> work) {
-    if (writeback_ != nullptr) {
-        return writeback_->Enqueue(fbl::move(work));
+zx_status_t Blobfs::EnqueueWork(fbl::unique_ptr<WritebackWork> work, EnqueueType type) {
+    switch(type) {
+    case EnqueueType::kJournal:
+        if (journal_ != nullptr) {
+            // If journaling is enabled (both in general and for this WritebackWork),
+            // attempt to enqueue to the journal buffer.
+            return journal_->Enqueue(fbl::move(work));
+        }
+        // Even if our enqueue type is kJournal,
+        // fall through to the writeback queue if the journal doesn't exist.
+        __FALLTHROUGH;
+    case EnqueueType::kData:
+        if (writeback_ != nullptr) {
+            return writeback_->Enqueue(fbl::move(work));
+        }
+        // If writeback_ does not exist, we are in a readonly state.
+        // Fall through to the default case.
+        __FALLTHROUGH;
+    default:
+        // The file system is currently in a readonly state.
+        // Reset the work to ensure that any callbacks are completed.
+        work->Reset(ZX_ERR_BAD_STATE);
+        return ZX_ERR_BAD_STATE;
     }
-
-    // The file system is currently in a readonly state.
-    // Reset the work to ensure that any callbacks are completed.
-    work->Reset(ZX_ERR_BAD_STATE);
-    return ZX_ERR_BAD_STATE;
 }
 } // namespace blobfs

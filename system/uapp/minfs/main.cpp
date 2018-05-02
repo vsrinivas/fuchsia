@@ -119,13 +119,14 @@ int main(int argc, char** argv) {
         static struct option opts[] = {
             {"readonly", no_argument, nullptr, 'r'},
             {"metrics", no_argument, nullptr, 'm'},
+            {"journal", no_argument, nullptr, 'j'},
             {"verbose", no_argument, nullptr, 'v'},
             {"fvm_data_slices", required_argument, nullptr, 's'},
             {"help", no_argument, nullptr, 'h'},
             {nullptr, 0, nullptr, 0},
         };
         int opt_index;
-        int c = getopt_long(argc, argv, "rmvhs:", opts, &opt_index);
+        int c = getopt_long(argc, argv, "rmjvhs:", opts, &opt_index);
         if (c < 0) {
             break;
         }
@@ -136,6 +137,10 @@ int main(int argc, char** argv) {
         case 'm':
             options.metrics = true;
             break;
+        case 'j':
+            //TODO(planders): Enable journaling here once minfs supports it.
+            fprintf(stderr, "minfs: Journaling option not supported\n");
+            return usage();
         case 'v':
             options.verbose = true;
             break;

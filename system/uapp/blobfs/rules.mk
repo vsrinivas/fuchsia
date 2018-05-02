@@ -31,6 +31,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/trace-provider \
     system/ulib/zx \
     system/ulib/zxcpp \
+    third_party/ulib/cksum \
     third_party/ulib/lz4 \
     third_party/ulib/uboringssl \
 

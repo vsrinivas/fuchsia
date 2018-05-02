@@ -44,6 +44,7 @@ struct WriteRequest {
 
 enum class WritebackState {
     kInit,     // Initial state of a writeback queue.
+    kReady,    // Indicates the queue is ready to start running.
     kRunning,  // Indicates that the queue's async processor is currently running.
     kReadOnly, // State of a writeback queue which no longer allows writes.
 };
@@ -97,7 +98,6 @@ protected:
     zx_status_t Flush();
 
 private:
-    friend class WritebackBuffer;
     Blobfs* bs_;
     vmoid_t vmoid_;
     fbl::Vector<WriteRequest> requests_;
@@ -114,6 +114,7 @@ private:
 class WritebackWork : public WriteTxn,
                       public fbl::SinglyLinkedListable<fbl::unique_ptr<WritebackWork>> {
 public:
+    using ReadyCallback = fbl::Function<bool()>;
     using SyncCallback = fs::Vnode::SyncCallback;
 
     // Create a WritebackWork given a vnode (which may be null)
@@ -125,12 +126,23 @@ public:
     // after being created. Takes in the |reason| it is being reset.
     void Reset(zx_status_t reason);
 
-    // Adds a closure to the WritebackWork, such that it will be signalled
-    // when the WritebackWork is flushed to disk.
-    // If no closure is set, nothing will get signalled.
+    // Returns true if the WritebackWork is "ready" to be processed. This is always true unless a
+    // "ready callback" exists, in which case that callback determines the state of readiness. Once
+    // a positive response is received, the ready callback is destroyed - the WritebackWork will
+    // always be ready from this point forward.
+    bool IsReady();
+
+    // Adds a callback to the WritebackWork to be called before the WritebackWork is completed,
+    // to ensure that it's ready for writeback.
     //
-    // Only one sync closure may be set for each WritebackWork unit.
-    void SetSyncCallback(SyncCallback closure);
+    // Only one ready callback may be set for each WritebackWork unit.
+    void SetReadyCallback(ReadyCallback callback);
+
+    // Adds a callback to the WritebackWork, such that it will be signalled when the WritebackWork
+    // is flushed to disk. If no callback is set, nothing will get signalled.
+    //
+    // Only one sync callback may be set for each WritebackWork unit.
+    void SetSyncCallback(SyncCallback callback);
 
     // Tells work to remove sync flag once the txn has successfully completed.
     void SetSyncComplete();
@@ -140,11 +152,14 @@ public:
     zx_status_t Complete();
 
 private:
-    // If a sync callback exists, call it with |status| and delete it.
-    // Also delete any other existing callbacks.
-    void ResetCallbacks(zx_status_t status);
+    // If a sync callback exists, call it with |status|.
+    void InvokeSyncCallback(zx_status_t status);
 
-    // Optional callback.
+    // Delete any internal members that are no longer needed.
+    void ResetInternal();
+
+    // Optional callbacks.
+    ReadyCallback ready_cb_; // Call to check whether work is ready to be processed.
     SyncCallback sync_cb_; // Call after work has been completely flushed.
 
     bool sync_;
@@ -163,6 +178,12 @@ public:
     static zx_status_t Create(Blobfs* blobfs, const size_t blocks, const char* label,
                               fbl::unique_ptr<Buffer>* out);
 
+    // Adds a transaction to |txn| which reads all data into buffer
+    // starting from |disk_start| on disk.
+    void Load(fs::ReadTxn* txn, size_t disk_start) {
+        txn->Enqueue(vmoid_, 0, disk_start, capacity_);
+    }
+
     // Returns true if there is space available for |blocks| blocks within the buffer.
     bool IsSpaceAvailable(size_t blocks) const;
 
@@ -174,27 +195,44 @@ public:
     // safely guarantee that space exists within the buffer.
     void CopyTransaction(WriteTxn* txn);
 
+    // Adds a transaction to |work| with buffer offset |start| and length |length|,
+    // starting at block |disk_start| on disk.
+    void AddTransaction(size_t start, size_t disk_start, size_t length, WritebackWork* work);
+
     // Returns true if |txn| belongs to this buffer, and if so verifies
     // that it owns the next valid set of blocks within the buffer.
     bool VerifyTransaction(WriteTxn* txn) const;
 
-    // Free the first |blocks| blocks in the buffer.
+    // Given a transaction |txn|, verifies that all requests belong to this buffer
+    // and then sets the transaction's buffer accordingly (if it is not already set).
+    void ValidateTransaction(WriteTxn* txn);
+
+    // Frees the first |blocks| blocks in the buffer.
     void FreeSpace(size_t blocks);
+
+    // Frees all space within the buffer.
+    void FreeAllSpace() {
+        FreeSpace(length_);
+    }
 
     size_t start() const { return start_; }
     size_t length() const { return length_; }
     size_t capacity() const { return capacity_; }
 
+    // Reserves the next index in the buffer.
+    size_t ReserveIndex() {
+        return (start_ + length_++) % capacity_;
+    }
+
+    // Returns data starting at block |index| in the buffer.
+    void* MutableData(size_t index) {
+        ZX_DEBUG_ASSERT(index < capacity_);
+        return reinterpret_cast<char*>(vmo_->GetData()) + (index * kBlobfsBlockSize);
+    }
 private:
     Buffer(Blobfs* blobfs, fbl::unique_ptr<fzl::MappedVmo> vmo)
         : blobfs_(blobfs), vmo_(fbl::move(vmo)), start_(0), length_(0),
           capacity_(vmo_->GetSize() / kBlobfsBlockSize) {}
-
-    // Return data starting at block |index| in the buffer.
-    void* GetData(size_t index) {
-        ZX_DEBUG_ASSERT(index < capacity_);
-        return (void*)((uintptr_t)vmo_->GetData() + (uintptr_t)(index * kBlobfsBlockSize));
-    }
 
     Blobfs* blobfs_;
 

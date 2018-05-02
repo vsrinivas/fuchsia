@@ -101,13 +101,31 @@ zx_status_t WriteTxn::Flush() {
 
 void WritebackWork::Reset(zx_status_t reason) {
     WriteTxn::Reset();
-    ResetCallbacks(reason);
-    vn_ = nullptr;
+    InvokeSyncCallback(reason);
+    ResetInternal();
 }
 
-void WritebackWork::SetSyncCallback(SyncCallback closure) {
+bool WritebackWork::IsReady() {
+    if (ready_cb_) {
+        if (ready_cb_()) {
+            ready_cb_ = nullptr;
+            return true;
+        }
+
+        return false;
+    }
+
+    return true;
+}
+
+void WritebackWork::SetReadyCallback(ReadyCallback callback) {
+    ZX_DEBUG_ASSERT(!ready_cb_);
+    ready_cb_ = fbl::move(callback);
+}
+
+void WritebackWork::SetSyncCallback(SyncCallback callback) {
     ZX_DEBUG_ASSERT(!sync_cb_);
-    sync_cb_ = fbl::move(closure);
+    sync_cb_ = fbl::move(callback);
 }
 
 void WritebackWork::SetSyncComplete() {
@@ -123,19 +141,24 @@ zx_status_t WritebackWork::Complete() {
         vn_->CompleteSync();
     }
 
-    ResetCallbacks(status);
-    vn_ = nullptr;
+    InvokeSyncCallback(status);
+    ResetInternal();
     return status;
 }
 
 WritebackWork::WritebackWork(Blobfs* bs, fbl::RefPtr<VnodeBlob> vn) :
-    WriteTxn(bs), sync_cb_(nullptr), sync_(false), vn_(fbl::move(vn)) {}
+    WriteTxn(bs), ready_cb_(nullptr), sync_cb_(nullptr), sync_(false), vn_(fbl::move(vn)) {}
 
-void WritebackWork::ResetCallbacks(zx_status_t status) {
+void WritebackWork::InvokeSyncCallback(zx_status_t status) {
     if (sync_cb_) {
         sync_cb_(status);
-        sync_cb_ = nullptr;
     }
+}
+
+void WritebackWork::ResetInternal() {
+    sync_cb_ = nullptr;
+    ready_cb_ = nullptr;
+    vn_ = nullptr;
 }
 
 Buffer::~Buffer() {
@@ -206,7 +229,7 @@ void Buffer::CopyTransaction(WriteTxn* txn) {
         ZX_DEBUG_ASSERT(vmo != vmo_->GetVmo());
 
         // Write data from the vmo into the buffer.
-        void* ptr = GetData(buf_offset);
+        void* ptr = MutableData(buf_offset);
 
         zx_status_t status;
         ZX_DEBUG_ASSERT((start_ <= buf_offset) ?
@@ -232,7 +255,7 @@ void Buffer::CopyTransaction(WriteTxn* txn) {
             buf_len = vmo_len - buf_len;
             ZX_DEBUG_ASSERT(buf_len > 0);
 
-            ptr = GetData(0);
+            ptr = MutableData(0);
             ZX_DEBUG_ASSERT((start_ == 0) ? (start_ < buf_len) : (buf_len <= start_)); // Wraparound
             ZX_ASSERT(zx_vmo_read(vmo, ptr, vmo_offset * kBlobfsBlockSize,
                                   buf_len * kBlobfsBlockSize) == ZX_OK);
@@ -263,6 +286,14 @@ void Buffer::CopyTransaction(WriteTxn* txn) {
     txn->SetBuffer(vmoid_);
 }
 
+void Buffer::AddTransaction(size_t start, size_t disk_start, size_t length, WritebackWork* work) {
+    // Ensure the request fits within the buffer.
+    ZX_DEBUG_ASSERT(length > 0);
+    ZX_DEBUG_ASSERT(start + length <= capacity_);
+    ZX_DEBUG_ASSERT(work != nullptr);
+    work->Enqueue(vmo_->GetVmo(), start, disk_start, length);
+}
+
 bool Buffer::VerifyTransaction(WriteTxn* txn) const {
     if (txn->CheckBuffer(vmoid_)) {
         if (txn->BlkCount() > 0) {
@@ -276,6 +307,25 @@ bool Buffer::VerifyTransaction(WriteTxn* txn) const {
     }
 
     return false;
+}
+
+void Buffer::ValidateTransaction(WriteTxn* txn) {
+    if (txn->IsBuffered()) {
+        // If transaction is already buffered, make sure it belongs to this buffer.
+        ZX_DEBUG_ASSERT(txn->CheckBuffer(vmoid_));
+    } else {
+        fbl::Vector<WriteRequest>& reqs = txn->Requests();
+
+        for (size_t i = 0; i < reqs.size(); i++) {
+            // Verify that each request references this buffer VMO,
+            // and that the transaction fits within the buffer.
+            ZX_DEBUG_ASSERT(reqs[i].vmo == vmo_->GetVmo());
+            reqs[i].vmo = ZX_HANDLE_INVALID;
+        }
+
+        // Once each request has been verified, set the buffer.
+        txn->SetBuffer(vmoid_);
+    }
 }
 
 void Buffer::FreeSpace(size_t blocks) {
@@ -383,10 +433,16 @@ int WritebackQueue::WritebackThread(void* arg) {
     while (true) {
         bool error = b->IsReadOnly();
         while (!b->work_queue_.is_empty()) {
+            if (!error && !b->work_queue_.front().IsReady()) {
+                // If the work is not yet ready, break and wait until we receive another signal.
+                break;
+            }
+
             auto work = b->work_queue_.pop();
             TRACE_DURATION("blobfs", "WritebackQueue::WritebackThread", "work ptr", work.get());
 
-            size_t blk_count = 0;
+            bool our_buffer = b->buffer_->VerifyTransaction(work.get());
+            size_t blk_count = work->BlkCount();
 
             // Stay unlocked while processing a unit of work.
             b->lock_.Release();
@@ -398,8 +454,6 @@ int WritebackQueue::WritebackThread(void* arg) {
                 // If we should complete the work, make sure it has been buffered.
                 // (This is not necessary if we are currently in an error state).
                 ZX_DEBUG_ASSERT(work->IsBuffered());
-                ZX_DEBUG_ASSERT(b->buffer_->VerifyTransaction(work.get()));
-                blk_count = work->BlkCount();
                 zx_status_t status;
                 if ((status = work->Complete()) != ZX_OK) {
                     fprintf(stderr, "Work failed with status %d - "
@@ -417,8 +471,11 @@ int WritebackQueue::WritebackThread(void* arg) {
                 b->state_ = WritebackState::kReadOnly;
             }
 
-            // Update the buffer's start/len accordingly.
-            b->buffer_->FreeSpace(blk_count);
+            if (our_buffer) {
+                // If the last work we processed belonged to our buffer,
+                // update the buffer's start/len accordingly.
+                b->buffer_->FreeSpace(blk_count);
+            }
 
             // We may have opened up space (or entered a read only state),
             // so signal the producer queue.

@@ -12,7 +12,8 @@
 #include <blobfs/host.h>
 #endif
 
-//TODO(planders): Add more checks for fsck.
+// TODO(planders): Add more checks for fsck.
+// TODO(planders): Potentially check the state of the journal.
 namespace blobfs {
 
 void BlobfsChecker::TraverseInodeBitmap() {
@@ -46,7 +47,7 @@ void BlobfsChecker::TraverseInodeBitmap() {
 }
 
 void BlobfsChecker::TraverseBlockBitmap() {
-    for (uint64_t n = 0; n < blobfs_->info_.block_count; n++) {
+    for (uint64_t n = 0; n < blobfs_->info_.data_block_count; n++) {
         if (blobfs_->block_map_.Get(n, n + 1)) {
             alloc_blocks_++;
         }

@@ -31,7 +31,7 @@
 using digest::Digest;
 using digest::MerkleTree;
 
-#define EXTENT_COUNT 4
+constexpr uint32_t kExtentCount = 5;
 
 namespace blobfs {
 namespace {
@@ -181,7 +181,7 @@ zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd fd) {
     }
 
     fbl::AllocChecker ac;
-    fbl::Array<size_t> extent_lengths(new (&ac) size_t[EXTENT_COUNT], EXTENT_COUNT);
+    fbl::Array<size_t> extent_lengths(new (&ac) size_t[kExtentCount], kExtentCount);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -189,7 +189,8 @@ zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd fd) {
     extent_lengths[0] = BlockMapStartBlock(info_block.info) * kBlobfsBlockSize;
     extent_lengths[1] = BlockMapBlocks(info_block.info) * kBlobfsBlockSize;
     extent_lengths[2] = NodeMapBlocks(info_block.info) * kBlobfsBlockSize;
-    extent_lengths[3] = DataBlocks(info_block.info) * kBlobfsBlockSize;
+    extent_lengths[3] = JournalBlocks(info_block.info) * kBlobfsBlockSize;
+    extent_lengths[4] = DataBlocks(info_block.info) * kBlobfsBlockSize;
 
     if ((status = Blobfs::Create(fbl::move(fd), 0, info_block, extent_lengths, out)) != ZX_OK) {
         fprintf(stderr, "blobfs: mount failed; could not create blobfs\n");
@@ -205,7 +206,7 @@ zx_status_t blobfs_create_sparse(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd fd
         fprintf(stderr, "blobfs: Insufficient space allocated\n");
         return ZX_ERR_INVALID_ARGS;
     }
-    if (extent_vector.size() != EXTENT_COUNT) {
+    if (extent_vector.size() != kExtentCount) {
         fprintf(stderr, "blobfs: Incorrect number of extents\n");
         return ZX_ERR_INVALID_ARGS;
     }
@@ -231,7 +232,7 @@ zx_status_t blobfs_create_sparse(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd fd
     }
 
     fbl::AllocChecker ac;
-    fbl::Array<size_t> extent_lengths(new (&ac) size_t[EXTENT_COUNT], EXTENT_COUNT);
+    fbl::Array<size_t> extent_lengths(new (&ac) size_t[kExtentCount], kExtentCount);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -240,6 +241,7 @@ zx_status_t blobfs_create_sparse(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd fd
     extent_lengths[1] = extent_vector[1];
     extent_lengths[2] = extent_vector[2];
     extent_lengths[3] = extent_vector[3];
+    extent_lengths[4] = extent_vector[4];
 
     if ((status = Blobfs::Create(fbl::move(fd), start, info_block, extent_lengths, out)) != ZX_OK) {
         fprintf(stderr, "blobfs: mount failed; could not create blobfs\n");
@@ -310,7 +312,7 @@ Blobfs::Blobfs(fbl::unique_fd fd, off_t offset, const info_block_t& info_block,
                const fbl::Array<size_t>& extent_lengths)
     : blockfd_(fbl::move(fd)),
       dirty_(false), offset_(offset) {
-    ZX_ASSERT(extent_lengths.size() == EXTENT_COUNT);
+    ZX_ASSERT(extent_lengths.size() == kExtentCount);
     memcpy(&info_block_, info_block.block, kBlobfsBlockSize);
     cache_.bno = 0;
 
@@ -318,8 +320,10 @@ Blobfs::Blobfs(fbl::unique_fd fd, off_t offset, const info_block_t& info_block,
     block_map_block_count_ = extent_lengths[1] / kBlobfsBlockSize;
     node_map_start_block_ = block_map_start_block_ + block_map_block_count_;
     node_map_block_count_ = extent_lengths[2] / kBlobfsBlockSize;
-    data_start_block_ = node_map_start_block_ + node_map_block_count_;
-    data_block_count_ = extent_lengths[3] / kBlobfsBlockSize;
+    journal_start_block_ = node_map_start_block_ + node_map_block_count_;
+    journal_block_count_ = extent_lengths[3] / kBlobfsBlockSize;
+    data_start_block_ = journal_start_block_ + journal_block_count_;
+    data_block_count_ = extent_lengths[4] / kBlobfsBlockSize;
 }
 
 zx_status_t Blobfs::Create(fbl::unique_fd blockfd_, off_t offset, const info_block_t& info_block,
@@ -331,7 +335,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd blockfd_, off_t offset, const info_blo
         return status;
     }
 
-    ZX_ASSERT(extent_lengths.size() == EXTENT_COUNT);
+    ZX_ASSERT(extent_lengths.size() == kExtentCount);
 
     for (unsigned i = 0; i < 3; i++) {
         if (extent_lengths[i] % kBlobfsBlockSize) {
@@ -355,7 +359,7 @@ zx_status_t Blobfs::LoadBitmap() {
     zx_status_t status;
     if ((status = block_map_.Reset(block_map_block_count_ * kBlobfsBlockBits)) != ZX_OK) {
         return status;
-    } else if ((status = block_map_.Shrink(info_.block_count)) != ZX_OK) {
+    } else if ((status = block_map_.Shrink(info_.data_block_count)) != ZX_OK) {
         return status;
     }
     const void* bmstart = block_map_.StorageUnsafe()->GetData();
@@ -563,7 +567,6 @@ zx_status_t Blobfs::VerifyBlob(size_t node_index) {
 
     // Create data buffer.
     fbl::unique_ptr<uint8_t[]> data(new uint8_t[target_size]);
-
     if (inode.flags & kBlobFlagLZ4Compressed) {
         // Read in uncompressed merkle blocks.
         for (unsigned i = 0; i < merkle_blocks; i++) {

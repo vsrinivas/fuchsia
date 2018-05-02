@@ -83,6 +83,8 @@ typedef struct mount_options {
     // Create the mountpoint directory if it doesn't already exist.
     // Must be false if passed to "fmount".
     bool create_mountpoint;
+    // Enable journaling on the file system (if supported).
+    bool enable_journal;
 } mount_options_t;
 
 extern const mount_options_t default_mount_options;

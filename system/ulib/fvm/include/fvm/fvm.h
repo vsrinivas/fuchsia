@@ -141,6 +141,19 @@ constexpr size_t SliceStart(size_t total_size, size_t slice_size, size_t pslice)
     return SlicesStart(total_size, slice_size) + (pslice - 1) * slice_size;
 }
 
+constexpr size_t BlocksToSlices(size_t slice_size, size_t block_size, size_t block_count) {
+    if (slice_size == 0 || slice_size < block_size) {
+        return 0;
+    }
+
+    const size_t kBlocksPerSlice = slice_size / block_size;
+    return (block_count + kBlocksPerSlice - 1) / kBlocksPerSlice;
+}
+
+constexpr size_t SlicesToBlocks(size_t slice_size, size_t block_size, size_t slice_count) {
+    return slice_count * slice_size / block_size;
+}
+
 } // namespace fvm
 
 #endif //  __cplusplus

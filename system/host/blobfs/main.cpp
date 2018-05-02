@@ -189,8 +189,10 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
 
     blobfs::Superblock info;
     info.inode_count = blobfs::kBlobfsDefaultInodeCount;
-    info.block_count = data_blocks_;
-    *out = (data_blocks_ + blobfs::DataStartBlock(info)) * blobfs::kBlobfsBlockSize;
+
+    info.data_block_count = data_blocks_;
+    info.journal_block_count = blobfs::kDefaultJournalBlocks;
+    *out =  blobfs::TotalBlocks(info) * blobfs::kBlobfsBlockSize;
     return ZX_OK;
 }
 

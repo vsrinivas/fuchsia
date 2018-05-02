@@ -181,4 +181,7 @@ private:
         char fvm_blk_[blobfs::kBlobfsBlockSize];
         blobfs::Superblock fvm_info_;
     };
+
+    uint32_t BlocksToSlices(uint32_t block_count) const;
+    uint32_t SlicesToBlocks(uint32_t slice_count) const;
 };

@@ -35,6 +35,7 @@ int parse_args(int argc, char** argv, mount_options_t* options,
         static struct option opts[] = {
             {"readonly", no_argument, NULL, 'r'},
             {"metrics", no_argument, NULL, 'm'},
+            {"journal", no_argument, NULL, 'j'},
             {"verbose", no_argument, NULL, 'v'},
             {"help", no_argument, NULL, 'h'},
             {NULL, 0, NULL, 0},
@@ -50,6 +51,9 @@ int parse_args(int argc, char** argv, mount_options_t* options,
             break;
         case 'm':
             options->collect_metrics = true;
+            break;
+        case 'j':
+            options->enable_journal = true;
             break;
         case 'v':
             options->verbose_mount = true;

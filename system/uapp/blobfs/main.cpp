@@ -117,11 +117,12 @@ int ProcessArgs(int argc, char** argv, CommandFunction* func, blobfs::MountOptio
         static struct option opts[] = {
             {"readonly", no_argument, nullptr, 'r'},
             {"metrics", no_argument, nullptr, 'm'},
+            {"journal", no_argument, nullptr, 'j'},
             {"help", no_argument, nullptr, 'h'},
             {nullptr, 0, nullptr, 0},
         };
         int opt_index;
-        int c = getopt_long(argc, argv, "rmh", opts, &opt_index);
+        int c = getopt_long(argc, argv, "rmjh", opts, &opt_index);
         if (c < 0) {
             break;
         }
@@ -131,6 +132,9 @@ int ProcessArgs(int argc, char** argv, CommandFunction* func, blobfs::MountOptio
             break;
         case 'm':
             options->metrics = true;
+            break;
+        case 'j':
+            options->journal = true;
             break;
         case 'h':
         default:

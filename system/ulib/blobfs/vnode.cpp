@@ -191,7 +191,7 @@ zx_status_t VnodeBlob::QueryFilesystem(fuchsia_io_FilesystemInfo* info) {
     info->max_filename_size = Digest::kLength * 2;
     info->fs_type = VFS_TYPE_BLOBFS;
     info->fs_id = blobfs_->GetFsId();
-    info->total_bytes = blobfs_->info_.block_count * blobfs_->info_.block_size;
+    info->total_bytes = blobfs_->info_.data_block_count * blobfs_->info_.block_size;
     info->used_bytes = blobfs_->info_.alloc_block_count * blobfs_->info_.block_size;
     info->total_nodes = blobfs_->info_.inode_count;
     info->used_nodes = blobfs_->info_.alloc_inode_count;

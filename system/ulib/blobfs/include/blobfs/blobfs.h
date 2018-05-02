@@ -42,13 +42,16 @@
 #include <blobfs/format.h>
 #include <blobfs/lz4.h>
 #include <blobfs/metrics.h>
+#include <blobfs/journal.h>
 #include <blobfs/writeback.h>
 
 namespace blobfs {
 
 class Blobfs;
 class Compressor;
+class Journal;
 class VnodeBlob;
+class WritebackQueue;
 class WritebackWork;
 
 using digest::Digest;
@@ -73,6 +76,11 @@ constexpr BlobFlags kBlobStateMask        = 0x000000FF;
 constexpr BlobFlags kBlobFlagDeletable    = 0x00000100; // This node should be unlinked when closed
 constexpr BlobFlags kBlobFlagDirectory    = 0x00000200; // This node represents the root directory
 constexpr BlobFlags kBlobOtherMask        = 0x0000FF00;
+
+enum class EnqueueType {
+    kJournal,
+    kData,
+};
 
 // clang-format on
 
@@ -244,7 +252,7 @@ private:
     // InitVmos() must have already been called for this blob.
     zx_status_t Verify() const;
 
-    // Called by Blob once the last write has completed, updating the
+    // Called by the Vnode once the last write has completed, updating the
     // on-disk metadata.
     zx_status_t WriteMetadata();
 
@@ -327,6 +335,7 @@ enum class CachePolicy {
 struct MountOptions {
     bool readonly = false;
     bool metrics = false;
+    bool journal = false;
     CachePolicy cache_policy = CachePolicy::EvictImmediately;
 };
 
@@ -383,7 +392,8 @@ public:
         on_unmount_ = fbl::move(closure);
     }
 
-    // Initializes the WritebackQueue (if enabled in |options|),
+    // Initializes the WritebackQueue and Journal (if enabled in |options|),
+    // replaying any existing journal entries.
     zx_status_t InitializeWriteback(const MountOptions& options);
 
     // Returns the capacity of the writeback buffer in blocks.
@@ -476,8 +486,11 @@ public:
 
     zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, VnodeBlob* vnode);
 
-    // Enqueues |work| to the writeback queue. Returns an error if it is in a readonly state.
-    zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work) __WARN_UNUSED_RESULT;
+    // Enqueues |work| to the appropriate buffer. If |journal| is true and the journal is enabled,
+    // the transaction(s) will first be written to the journal. Otherwise, they will be sent
+    // straight to the writeback buffer.
+    zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work, EnqueueType type)
+        __WARN_UNUSED_RESULT;
 
     // Does a single pass of all blobs, creating uninitialized Vnode
     // objects for them all.
@@ -507,7 +520,12 @@ private:
     Blobfs(fbl::unique_fd fd, const Superblock* info);
     zx_status_t LoadBitmaps();
     fbl::unique_ptr<WritebackQueue> writeback_;
+    fbl::unique_ptr<Journal> journal_;
     Superblock info_;
+
+    // Reloads metadata from disk. Useful when metadata on disk
+    // may have changed due to journal playback.
+    zx_status_t Reload();
 
     // Inserts a Vnode into the |closed_hash_|, tears down
     // cache Vnode state, and leaks a reference to the Vnode

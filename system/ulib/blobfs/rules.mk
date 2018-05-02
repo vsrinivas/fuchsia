@@ -21,6 +21,7 @@ COMMON_SRCS := \
 MODULE_SRCS := \
     $(COMMON_SRCS) \
     $(LOCAL_DIR)/blobfs.cpp \
+    $(LOCAL_DIR)/journal.cpp \
     $(LOCAL_DIR)/metrics.cpp \
     $(LOCAL_DIR)/rpc.cpp \
     $(LOCAL_DIR)/vnode.cpp \
@@ -40,6 +41,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/trace \
     system/ulib/zx \
     system/ulib/zxcpp \
+    third_party/ulib/cksum \
     third_party/ulib/lz4 \
     third_party/ulib/uboringssl \
 
@@ -76,5 +78,6 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/fs/include \
     -Isystem/ulib/fdio/include \
     -Isystem/ulib/bitmap/include \
+    -Ithird_party/ulib/cksum/include \
 
 include make/module.mk

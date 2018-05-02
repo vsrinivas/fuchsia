@@ -190,10 +190,12 @@ private:
 
     size_t block_map_start_block_;
     size_t node_map_start_block_;
+    size_t journal_start_block_;
     size_t data_start_block_;
 
     size_t block_map_block_count_;
     size_t node_map_block_count_;
+    size_t journal_block_count_;
     size_t data_block_count_;
 
     union {

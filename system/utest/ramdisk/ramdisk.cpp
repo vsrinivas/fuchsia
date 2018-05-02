@@ -21,6 +21,9 @@
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <fbl/limits.h>
+#include <fbl/mutex.h>
+#include <fbl/auto_lock.h>
+
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fs-management/ramdisk.h>
