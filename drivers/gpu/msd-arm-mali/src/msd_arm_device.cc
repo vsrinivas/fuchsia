@@ -613,6 +613,9 @@ void MsdArmDevice::DumpRegisters(const GpuFeatures& features, magma::RegisterIo*
 
     dump_state->gpu_fault_status = registers::GpuFaultStatus::Get().ReadFrom(io).reg_value();
     dump_state->gpu_fault_address = registers::GpuFaultAddress::Get().ReadFrom(io).reg_value();
+    dump_state->gpu_status = registers::GpuStatus::Get().ReadFrom(io).reg_value();
+    dump_state->cycle_count = registers::CycleCount::Get().ReadFrom(io).reg_value();
+    dump_state->timestamp = registers::Timestamp::Get().ReadFrom(io).reg_value();
 
     for (size_t i = 0; i < features.job_slot_count; i++) {
         DumpState::JobSlotStatus status;
@@ -666,6 +669,9 @@ void MsdArmDevice::FormatDump(DumpState& dump_state, std::string& dump_string)
                        dump_state.total_time_ms, dump_state.active_time_ms);
     fxl::StringAppendf(&dump_string, "Gpu fault status 0x%x, address 0x%lx\n",
                        dump_state.gpu_fault_status, dump_state.gpu_fault_address);
+    fxl::StringAppendf(&dump_string, "Gpu status 0x%x\n", dump_state.gpu_status);
+    fxl::StringAppendf(&dump_string, "Gpu cycle count %ld, timestamp %ld\n", dump_state.cycle_count,
+                       dump_state.timestamp);
     for (size_t i = 0; i < dump_state.job_slot_status.size(); i++) {
         auto* status = &dump_state.job_slot_status[i];
         fxl::StringAppendf(&dump_string,
@@ -725,6 +731,15 @@ void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* regi
         scheduler_->JobCompleted(atom->slot(), kArmMaliResultAtomTerminated);
         return;
     }
+    if (atom->require_cycle_counter()) {
+        DASSERT(!atom->using_cycle_counter());
+        atom->set_using_cycle_counter();
+
+        if (++cycle_counter_refcount_ == 1) {
+            register_io_->Write32(registers::GpuCommand::kOffset,
+                                  registers::GpuCommand::kCmdCycleCountStart);
+        }
+    }
 
     registers::JobSlotRegisters slot(atom->slot());
     slot.HeadNext().FromValue(atom->gpu_address()).WriteTo(register_io);
@@ -750,6 +765,14 @@ void MsdArmDevice::AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result)
     TRACE_DURATION("magma", "AtomCompleted", "address", atom->gpu_address());
     DLOG("Completed job atom: 0x%lx\n", atom->gpu_address());
     address_manager_->AtomFinished(atom);
+    if (atom->using_cycle_counter()) {
+        DASSERT(atom->require_cycle_counter());
+
+        if (--cycle_counter_refcount_ == 0) {
+            register_io_->Write32(registers::GpuCommand::kOffset,
+                                  registers::GpuCommand::kCmdCycleCountStop);
+        }
+    }
     atom->set_result_code(result);
     auto connection = atom->connection().lock();
     if (connection)

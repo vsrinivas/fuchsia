@@ -63,6 +63,9 @@ public:
 
         uint32_t gpu_fault_status;
         uint64_t gpu_fault_address;
+        uint32_t gpu_status;
+        uint64_t cycle_count;
+        uint64_t timestamp;
 
         struct JobSlotStatus {
             uint32_t status;
@@ -120,6 +123,11 @@ private:
     {
         DASSERT(register_io_);
         return register_io_.get();
+    }
+
+    void set_register_io(std::unique_ptr<magma::RegisterIo> register_io)
+    {
+        register_io_ = std::move(register_io);
     }
 
     void Destroy();
@@ -182,6 +190,7 @@ private:
     std::unique_ptr<AddressManager> address_manager_;
     std::unique_ptr<JobScheduler> scheduler_;
     std::unique_ptr<magma::PlatformBusMapper> bus_mapper_;
+    uint64_t cycle_counter_refcount_ = 0;
 };
 
 #endif // MSD_ARM_DEVICE_H

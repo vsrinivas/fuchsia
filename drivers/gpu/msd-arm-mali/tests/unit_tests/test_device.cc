@@ -131,10 +131,12 @@ public:
 
     void MockExecuteAtom()
     {
-        auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
+        auto register_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
+        magma::RegisterIo* reg_io = register_io.get();
 
         std::unique_ptr<MsdArmDevice> device = MsdArmDevice::Create(GetTestDeviceHandle(), false);
         EXPECT_NE(device, nullptr);
+        device->set_register_io(std::move(register_io));
         auto connection = MsdArmConnection::Create(0, device.get());
         device->power_manager_->shader_ready_status_ = 0xfu;
 
@@ -147,20 +149,23 @@ public:
         EXPECT_EQ(0u, device->scheduler_->GetAtomListSize());
 
         MsdArmAtom atom(connection, 5, 0, 0, magma_arm_mali_user_data());
-        device->ExecuteAtomOnDevice(&atom, reg_io.get());
+        atom.set_require_cycle_counter();
+        device->ExecuteAtomOnDevice(&atom, reg_io);
+        EXPECT_EQ(registers::GpuCommand::kCmdCycleCountStart,
+                  reg_io->Read32(registers::GpuCommand::kOffset));
 
         constexpr uint32_t kJobSlot = 1;
         auto connection1 = MsdArmConnection::Create(0, device.get());
         MsdArmAtom atom1(connection1, 100, kJobSlot, 0, magma_arm_mali_user_data());
 
-        device->ExecuteAtomOnDevice(&atom1, reg_io.get());
+        device->ExecuteAtomOnDevice(&atom1, reg_io);
 
         registers::JobSlotRegisters regs(kJobSlot);
-        EXPECT_EQ(0xfu, regs.AffinityNext().ReadFrom(reg_io.get()).reg_value());
-        EXPECT_EQ(100u, regs.HeadNext().ReadFrom(reg_io.get()).reg_value());
+        EXPECT_EQ(0xfu, regs.AffinityNext().ReadFrom(reg_io).reg_value());
+        EXPECT_EQ(100u, regs.HeadNext().ReadFrom(reg_io).reg_value());
         constexpr uint32_t kCommandStart = registers::JobSlotCommand::kCommandStart;
-        EXPECT_EQ(kCommandStart, regs.CommandNext().ReadFrom(reg_io.get()).reg_value());
-        auto config_next = regs.ConfigNext().ReadFrom(reg_io.get());
+        EXPECT_EQ(kCommandStart, regs.CommandNext().ReadFrom(reg_io).reg_value());
+        auto config_next = regs.ConfigNext().ReadFrom(reg_io);
 
         // connection should get address slot 0, and connection1 should get
         // slot 1.
@@ -173,6 +178,12 @@ public:
         EXPECT_EQ(0u, config_next.enable_flush_reduction().get());
         EXPECT_EQ(0u, config_next.disable_descriptor_write_back().get());
         EXPECT_EQ(8u, config_next.thread_priority().get());
+
+        EXPECT_EQ(registers::GpuCommand::kCmdCycleCountStart,
+                  reg_io->Read32(registers::GpuCommand::kOffset));
+        device->AtomCompleted(&atom, kArmMaliResultSuccess);
+        EXPECT_EQ(registers::GpuCommand::kCmdCycleCountStop,
+                  reg_io->Read32(registers::GpuCommand::kOffset));
     }
 };
 

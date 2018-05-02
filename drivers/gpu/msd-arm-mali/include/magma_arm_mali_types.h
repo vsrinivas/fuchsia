@@ -24,6 +24,7 @@ enum AtomFlags {
     // Compute shaders also include vertex and geometry shaders.
     kAtomFlagRequireComputeShader = (1 << 1),
     kAtomFlagRequireTiler = (1 << 2),
+    kAtomFlagRequireCycleCounter = (1 << 3),
 
     // Atoms with this flag set are processed completely in the MSD and aren't
     // sent to hardware.

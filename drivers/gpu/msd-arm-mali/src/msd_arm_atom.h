@@ -35,6 +35,12 @@ public:
     uint32_t slot() const { return slot_; }
     uint8_t atom_number() const { return atom_number_; }
     const magma_arm_mali_user_data& user_data() const { return user_data_; }
+
+    void set_require_cycle_counter() { require_cycle_counter_ = true; }
+    void set_using_cycle_counter() { using_cycle_counter_ = true; }
+    bool require_cycle_counter() const { return require_cycle_counter_; }
+    bool using_cycle_counter() const { return using_cycle_counter_; }
+
     bool IsDependencyOnly() const { return !gpu_address_; }
 
     void set_dependencies(const DependencyList& dependencies);
@@ -76,6 +82,7 @@ private:
     const std::weak_ptr<MsdArmConnection> connection_;
     const uint64_t gpu_address_;
     const uint32_t slot_;
+    bool require_cycle_counter_ = false;
     DependencyList dependencies_;
     // Assigned by client.
     const uint8_t atom_number_;
@@ -86,6 +93,7 @@ private:
     std::shared_ptr<AddressSlotMapping> address_slot_mapping_;
     std::chrono::time_point<std::chrono::steady_clock> execution_start_time_;
     bool hard_stopped_ = false;
+    bool using_cycle_counter_ = false;
 };
 
 // Soft atoms don't actually execute in hardware.

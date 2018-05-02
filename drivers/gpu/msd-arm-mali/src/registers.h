@@ -79,20 +79,39 @@ public:
     static auto GetEnable() { return magma::RegisterAddr<CoherencyFeatures>(0x304); }
 };
 
+class GpuStatus : public magma::RegisterBase {
+public:
+    static auto Get() { return magma::RegisterAddr<GpuStatus>(0x34); }
+};
+
+// May return incorrect value on rollover.
+class CycleCount : public magma::RegisterPairBase {
+public:
+    static auto Get() { return magma::RegisterAddr<CycleCount>(0x90); }
+};
+
+// May return incorrect value on rollover.
+class Timestamp : public magma::RegisterPairBase {
+public:
+    static auto Get() { return magma::RegisterAddr<Timestamp>(0x98); }
+};
+
 class GpuCommand {
 public:
     static constexpr uint32_t kOffset = 0x30;
 
-    static constexpr uint32_t kCmdNop = 0;
-    static constexpr uint32_t kCmdSoftReset = 0x1;
-    static constexpr uint32_t kCmdHardReset = 0x2;
-    static constexpr uint32_t kCmdClearPerformanceCounters = 0x3;
-    static constexpr uint32_t kCmdSamplePerformanceCounters = 0x4;
-    static constexpr uint32_t kCmdCycleCountStop = 0x5;
-    static constexpr uint32_t kCmdCycleCountStart = 0x6;
-    static constexpr uint32_t kCmdCleanCaches = 0x7;
-    static constexpr uint32_t kCmdCleanAndInvalidateCaches = 0x8;
-    static constexpr uint32_t kCmdSetProtectedMode = 0x9;
+    enum {
+        kCmdNop = 0,
+        kCmdSoftReset = 0x1,
+        kCmdHardReset = 0x2,
+        kCmdClearPerformanceCounters = 0x3,
+        kCmdSamplePerformanceCounters = 0x4,
+        kCmdCycleCountStop = 0x5,
+        kCmdCycleCountStart = 0x6,
+        kCmdCleanCaches = 0x7,
+        kCmdCleanAndInvalidateCaches = 0x8,
+        kCmdSetProtectedMode = 0x9,
+    };
 };
 
 class GpuIrqFlags : public magma::RegisterBase {
