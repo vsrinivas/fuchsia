@@ -108,9 +108,13 @@ sanitizer_shadow_bounds_t __sanitizer_shadow_bounds(void) {
 
 #else
 
+static const char kBadDepsMessage[] =
+    "module compiled with -fsanitize=address loaded in process without it";
+
 // This should never be called in the unsanitized runtime.
 // But it's still part of the ABI.
 sanitizer_shadow_bounds_t __sanitizer_shadow_bounds(void) {
+    __sanitizer_log_write(kBadDepsMessage, sizeof(kBadDepsMessage) - 1);
     __builtin_trap();
 }
 
