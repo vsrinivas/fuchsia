@@ -114,7 +114,7 @@ EOF
 }
 
 download_package() {
-  local -r package="$1" version="$2" download_file="$3"
+  local -r package="$1" version="$2" download_file="$3" single_file="$4"
   local -r url="${URL_PREFIX}/${package}/${PLATFORM}/${version}"
   local -r download_file_with_dir="${DOWNLOAD_DIR}/${download_file}"
 
@@ -133,41 +133,46 @@ download_package() {
     return 1
   }
 
-  if [[ "$download_file" == *.zip ]]; then
+  echo "Unpacking $download_file"
+  if $single_file; then
+    # The archive contains .cipd* metadata files and a single real file
+    # whose name is the same as the basename of the package.
+    unzip -q -o -d "$DOWNLOAD_DIR" "$download_file_with_dir" \
+          "${package##*/}" || return
+  else
     local -r dir="${download_file_with_dir%.zip}"
     rm -rf -- "$dir"
-    echo "Unpacking $download_file"
     unzip -q -d "$dir" "$download_file_with_dir" || return
-  else
-    mv -f "${download_file_with_dir}" "$download_file_with_dir%.new" || return
   fi
 
   update_stamp "$package" "$version" "$download_file"
 }
 
 for_each_package() {
-  local package version download_file status=0
+  local package version download_file single_file status=0
   while read package version; do
     case "$package" in
     ''|\#*)
       continue
       ;;
     tools/*/${PLATFORM})
-      # These are standalone executables, not subdirectories.
+      # These are standalone executables contained in a .zip file.
       package="${package%/*}"
-      download_file="${package#tools/}.new"
+      download_file="${package#tools/}.zip"
+      single_file=true
       ;;
     */${PLATFORM})
       package="${package%/*}"
       # Subdirectories are packed in .zip files.
       download_file="${package}.zip"
+      single_file=false
       ;;
     *)
       # Skip lines for other platforms.
       continue
       ;;
     esac
-    "$@" "$package" "$version" "$download_file" || status=$?
+    "$@" "$package" "$version" "$download_file" $single_file || status=$?
   done
   return $status
 }
