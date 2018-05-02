@@ -33,6 +33,8 @@ source_set("gfx") {
     "engine/hit.h",
     "engine/hit_tester.cc",
     "engine/hit_tester.h",
+    "engine/object_linker.h",
+    "engine/object_linker.cc",
     "engine/resource_linker.cc",
     "engine/resource_linker.h",
     "engine/resource_map.cc",

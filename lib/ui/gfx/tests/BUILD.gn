@@ -52,6 +52,7 @@ executable("unittests") {
     "imagepipe_unittest.cc",
     "import_unittest.cc",
     "node_unittest.cc",
+    "object_linker_unittest.cc",
     "pose_buffer_unit_test.cc",
     "resource_linker_unittest.cc",
     "session_test.cc",
