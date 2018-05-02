@@ -167,6 +167,12 @@ void unittest_printf_critical(const char* format, ...)
 void unittest_set_output_function(test_output_func fun, void* arg);
 
 /*
+ * Function to restore output callback to
+ * default_printf.
+ */
+void unittest_restore_output_function(void);
+
+/*
  * Function to set the verbosity level. This affects
  * the output of unittest_printf().
  */

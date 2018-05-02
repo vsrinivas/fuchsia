@@ -39,11 +39,19 @@ public:
     // Unmounts and remounts the blobfs partition.
     bool Remount();
 
+    // Forcibly unmounts and remounts the blobfs partition, regardless of the current test state.
+    // This should *not* be used within any of the test functions, but only by external forces in
+    // verifying disk integrity even in the event of a failed test. If the partition is
+    // successfully remounted, the test is restored to a kRunning state.
+    bool ForceRemount();
+
     // Unmounts a blobfs, runs fsck, and removes the backing ramdisk device.
-    // |state| indicates the expected state before teardown begins.
-    // This value must be either kMinimal or kRunning.
-    // If |state| is kMinimal, the umount and fsck methods will be skipped.
-    bool Teardown(FsTestState state = FsTestState::kRunning);
+    // If the state_ is not kRunning, the umount and fsck methods will be skipped.
+    bool Teardown();
+
+    FsTestType GetType() const {
+        return type_;
+    }
 
     int GetFd() const {
         return open(ramdisk_path_, O_RDWR);
@@ -55,6 +63,10 @@ public:
 
     uint64_t GetBlockSize() const {
         return blk_size_;
+    }
+
+    uint64_t GetBlockCount() const {
+        return blk_count_;
     }
 
     // Returns the full device path of blobfs.
@@ -87,8 +99,10 @@ public:
     }
 
     // Sleeps or wakes the ramdisk underlying the blobfs partition, depending on its current state.
-    bool ToggleSleep();
+    bool ToggleSleep(uint64_t blk_count = 0);
 
+    // Returns the current total transaction block count from the underlying ramdisk.
+    bool GetRamdiskCount(uint64_t* blk_count) const;
 private:
     // Checks info of mounted blobfs.
     bool CheckInfo(const char* mount_path);

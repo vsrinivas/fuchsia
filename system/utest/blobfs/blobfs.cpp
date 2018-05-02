@@ -45,15 +45,136 @@ namespace {
 using digest::Digest;
 using digest::MerkleTree;
 
-#define RUN_TEST_FOR_ALL_TYPES(test_size, test_name) \
-    RUN_TEST_##test_size(test_name<FsTestType::kNormal>)  \
-    RUN_TEST_##test_size(test_name<FsTestType::kFvm>)
+// Indicates whether we should enable ramdisk failure tests for the current test run.
+static bool gEnableRamdiskFailure = false;
+
+// The maximum number of failure loops that should be tested. If set to 0, all of them will be run.
+static uint64_t gRamdiskFailureLoops = 0;
+
+// Information about the real disk which must be constructed at runtime, but which persists
+// between tests.
+static bool gUseRealDisk = false;
+struct real_disk_info {
+    uint64_t blk_size;
+    uint64_t blk_count;
+    char disk_path[PATH_MAX];
+} gRealDiskInfo;
+
+static bool gEnableOutput = true;
+
+static_assert(fbl::is_pod<real_disk_info>::value, "Global variables should contain exclusively POD"
+                                                  "data");
+
+#define RUN_TEST_WRAPPER(test_size, test_name, test_type) \
+    RUN_TEST_##test_size((TestWrapper<test_name, test_type>))
+
+#define RUN_TEST_NORMAL(test_size, test_name) \
+    RUN_TEST_WRAPPER(test_size, test_name, FsTestType::kNormal)
+
+#define RUN_TEST_FVM(test_size, test_name) \
+    RUN_TEST_WRAPPER(test_size, test_name, FsTestType::kFvm)
+
+#define RUN_TESTS(test_size, test_name) \
+    RUN_TEST_NORMAL(test_size, test_name) \
+    RUN_TEST_FVM(test_size, test_name)
+
+#define RUN_TESTS_SILENT(test_size, test_name) \
+    gEnableOutput = false; \
+    RUN_TESTS(test_size, test_name) \
+    gEnableOutput = true;
+
+// Defines a Blobfs test function which can be passed to the TestWrapper.
+typedef bool (*TestFunction)(BlobfsTest* blobfsTest);
+
+// Function which takes in print parameters and does nothing.
+static void silent_printf(const char* line, int len, void* arg) {}
+
+// A test wrapper which runs a Blobfs test. If the -f command line argument is used, the test will
+// then be run the specified number of additional times, purposely causing the underlying ramdisk
+// to fail at certain points.
+template <TestFunction TestFunc, FsTestType TestType>
+bool TestWrapper(void) {
+    BEGIN_TEST;
+
+    // Make sure that we are not testing ramdisk failures with a real disk.
+    ASSERT_FALSE(gUseRealDisk && gEnableRamdiskFailure);
+
+    BlobfsTest blobfsTest(TestType);
+    blobfsTest.SetStdio(gEnableOutput);
+    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
+
+    if (gEnableRamdiskFailure) {
+        // Sleep and re-wake the ramdisk to ensure that transaction counts have been reset.
+        ASSERT_TRUE(blobfsTest.ToggleSleep());
+        ASSERT_TRUE(blobfsTest.ToggleSleep());
+    }
+
+    // Run the test. This should pass.
+    ASSERT_TRUE(TestFunc(&blobfsTest));
+
+    // Get the total number of transactions required for this test.
+    uint64_t block_count = 0;
+    uint64_t interval = 1;
+    uint64_t total = 0;
+
+    if (gEnableRamdiskFailure) {
+        // Based on the number of total blocks written and the user provided count of tests,
+        // calculate the block interval to test with ramdisk failures.
+        ASSERT_TRUE(blobfsTest.GetRamdiskCount(&block_count));
+
+        if (gRamdiskFailureLoops && gRamdiskFailureLoops < block_count) {
+            interval = block_count / gRamdiskFailureLoops;
+        }
+    }
+
+    ASSERT_TRUE(blobfsTest.Teardown(), "Unmounting Blobfs");
+    blobfsTest.SetStdio(false);
+
+    // Run the test again, setting the ramdisk to fail after each |interval| blocks.
+    for (uint64_t i = 1; i <= block_count; i += interval) {
+        if (gRamdiskFailureLoops && total >= gRamdiskFailureLoops) {
+            break;
+        }
+
+        printf("Running ramdisk failure test %" PRIu64 " / %" PRIu64
+               " (block %" PRIu64 " / %" PRIu64 ")\n", total,
+               gRamdiskFailureLoops ? gRamdiskFailureLoops : block_count, i, block_count);
+
+        ASSERT_TRUE(blobfsTest.Reset());
+        ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
+        ASSERT_TRUE(blobfsTest.ToggleSleep(i));
+
+        // The following test run may fail, but since we don't care, silence any test output.
+        unittest_set_output_function(silent_printf, nullptr);
+
+        // We do not care whether the test itself fails or not - regardless, fsck should pass
+        // (even if the most recent file system state has not been preserved).
+        TestFunc(&blobfsTest);
+        current_test_info->all_ok = true;
+
+        ASSERT_TRUE(blobfsTest.ToggleSleep());
+
+        // Restore the default output function.
+        unittest_restore_output_function();
+
+        // Forcibly unmount and remount the blobfs partition. With journaling enabled, any
+        // inconsistencies should be resolved.
+        ASSERT_TRUE(blobfsTest.ForceRemount());
+
+        // The fsck check during Teardown should verify that journal replay was successful.
+        ASSERT_TRUE(blobfsTest.Teardown(), "Unmounting Blobfs");
+
+        total += 1;
+    }
+
+    END_TEST;
+}
 
 #define FVM_DRIVER_LIB "/boot/driver/fvm.so"
 #define STRLEN(s) sizeof(s) / sizeof((s)[0])
 
 // FVM slice size used for tests
-constexpr size_t kTestFvmSliceSize = 8 * (1 << 10); // 8kb
+constexpr size_t kTestFvmSliceSize = blobfs::kBlobfsBlockSize; // 8kb
 // Minimum blobfs size required by CreateUmountRemountLargeMultithreaded test
 constexpr size_t kBytesNormalMinimum = 5 * (1 << 20); // 5mb
 // Minimum blobfs size required by ResizePartition test
@@ -79,24 +200,12 @@ const fsck_options_t test_fsck_options = {
     .force = true,
 };
 
-// Information about the real disk which must be constructed at runtime, but which persists
-// between tests.
-static bool gUseRealDisk = false;
-struct real_disk_info {
-    uint64_t blk_size;
-    uint64_t blk_count;
-    char disk_path[PATH_MAX];
-} gRealDiskInfo;
-
-static_assert(fbl::is_pod<real_disk_info>::value, "Global variables should contain exclusively POD"
-                                                  "data");
-
 BlobfsTest::~BlobfsTest() {
     switch (state_) {
     case FsTestState::kMinimal:
     case FsTestState::kRunning:
     case FsTestState::kError:
-        EXPECT_EQ(Teardown(FsTestState::kMinimal), 0);
+        EXPECT_EQ(Teardown(), 0);
         break;
     default:
         break;
@@ -182,13 +291,25 @@ bool BlobfsTest::Remount() {
     END_HELPER;
 }
 
-bool BlobfsTest::Teardown(FsTestState state) {
+bool BlobfsTest::ForceRemount() {
+    BEGIN_HELPER;
+    // Attempt to unmount, but do not check the result.
+    // It is possible that the partition has already been unmounted.
+    umount(MOUNT_PATH);
+    ASSERT_TRUE(Mount());
+    // In the event of success, set state to kRunning, regardless of whether the state was kMinimal
+    // before. Since the partition is now mounted, we will need to umount/fsck on Teardown.
+    state_ = FsTestState::kRunning;
+    END_HELPER;
+}
+
+bool BlobfsTest::Teardown() {
     BEGIN_HELPER;
     ASSERT_NE(state_, FsTestState::kComplete);
     auto error = fbl::MakeAutoCall([this](){ state_ = FsTestState::kError; });
 
-    if (state != FsTestState::kMinimal) {
-        ASSERT_EQ(state, FsTestState::kRunning);
+    if (state_ == FsTestState::kRunning) {
+        ASSERT_EQ(state_, FsTestState::kRunning);
         ASSERT_TRUE(CheckInfo(MOUNT_PATH));
         ASSERT_EQ(umount(MOUNT_PATH), ZX_OK, "Failed to unmount filesystem");
         ASSERT_EQ(fsck(ramdisk_path_, DISK_FORMAT_BLOBFS, &test_fsck_options, launch_stdio_sync),
@@ -245,7 +366,7 @@ bool BlobfsTest::GetDevicePath(char* path, size_t len) const {
     END_HELPER;
 }
 
-bool BlobfsTest::ToggleSleep() {
+bool BlobfsTest::ToggleSleep(uint64_t blk_count) {
     BEGIN_HELPER;
 
     if (asleep_) {
@@ -256,15 +377,34 @@ bool BlobfsTest::ToggleSleep() {
             ASSERT_EQ(wake_ramdisk(fvm_path_), 0);
         }
     } else {
-        // If the ramdisk is active, put it to sleep.
+        // If the ramdisk is active, put it to sleep after the specified block count.
         if (type_ == FsTestType::kNormal) {
-            ASSERT_EQ(sleep_ramdisk(ramdisk_path_, 0), 0);
+            ASSERT_EQ(sleep_ramdisk(ramdisk_path_, blk_count), 0);
         } else {
-            ASSERT_EQ(sleep_ramdisk(fvm_path_, 0), 0);
+            ASSERT_EQ(sleep_ramdisk(fvm_path_, blk_count), 0);
         }
     }
 
     asleep_ = !asleep_;
+    END_HELPER;
+}
+
+bool BlobfsTest::GetRamdiskCount(uint64_t* blk_count) const {
+    BEGIN_HELPER;
+    ramdisk_blk_counts_t counts;
+
+    switch (type_) {
+    case FsTestType::kNormal:
+        ASSERT_EQ(get_ramdisk_blocks(ramdisk_path_, &counts), 0);
+        break;
+    case FsTestType::kFvm:
+        ASSERT_EQ(get_ramdisk_blocks(fvm_path_, &counts), 0);
+        break;
+    default:
+        ASSERT_TRUE(false);
+    }
+
+    *blk_count = counts.received;
     END_HELPER;
 }
 
@@ -491,11 +631,8 @@ bool QueryInfo(size_t expected_nodes, size_t expected_bytes) {
 }  // namespace
 
 // Actual tests:
-template <FsTestType TestType>
-static bool TestBasic(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
+static bool TestBasic(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     for (size_t i = 10; i < 16; i++) {
         fbl::unique_ptr<blob_info_t> info;
         ASSERT_TRUE(GenerateRandomBlob(1 << i, &info));
@@ -520,16 +657,11 @@ static bool TestBasic(void) {
 
         ASSERT_EQ(unlink(info->path), 0);
     }
-
-    ASSERT_TRUE(blobfsTest.Teardown(), "Mounting Blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool TestNullBlob(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
+static bool TestNullBlob(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     fbl::unique_ptr<blob_info_t> info;
     ASSERT_TRUE(GenerateRandomBlob(0, &info));
 
@@ -550,15 +682,11 @@ static bool TestNullBlob(void) {
     ASSERT_EQ(close(fd.release()), 0);
     ASSERT_EQ(unlink(info->path), 0, "Null Blob should be unlinkable");
 
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool TestCompressibleBlob(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
+static bool TestCompressibleBlob(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     for (size_t i = 10; i < 22; i++) {
         fbl::unique_ptr<blob_info_t> info;
 
@@ -592,7 +720,7 @@ static bool TestCompressibleBlob(void) {
         ASSERT_FALSE(fd, "Shouldn't be able to re-open blob as writable");
 
         // Force decompression by remounting, re-accessing blob.
-        ASSERT_TRUE(blobfsTest.Remount());
+        ASSERT_TRUE(blobfsTest->Remount());
         fd.reset(open(info->path, O_RDONLY));
         ASSERT_TRUE(fd, "Failed to-reopen blob");
         ASSERT_TRUE(VerifyContents(fd.get(), info->data.get(), info->size_data));
@@ -601,16 +729,11 @@ static bool TestCompressibleBlob(void) {
         ASSERT_EQ(unlink(info->path), 0);
     }
 
-    ASSERT_TRUE(blobfsTest.Teardown(), "Mounting Blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool TestMmap(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
-
+static bool TestMmap(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     for (size_t i = 10; i < 16; i++) {
         fbl::unique_ptr<blob_info_t> info;
         ASSERT_TRUE(GenerateRandomBlob(1 << i, &info));
@@ -629,16 +752,11 @@ static bool TestMmap(void) {
         ASSERT_EQ(close(fd.release()), 0);
         ASSERT_EQ(unlink(info->path), 0);
     }
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool TestMmapUseAfterClose(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
-
+static bool TestMmapUseAfterClose(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     for (size_t i = 10; i < 16; i++) {
         fbl::unique_ptr<blob_info_t> info;
         ASSERT_TRUE(GenerateRandomBlob(1 << i, &info));
@@ -673,16 +791,11 @@ static bool TestMmapUseAfterClose(void) {
 
         ASSERT_EQ(unlink(info->path), 0);
     }
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool TestReaddir(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
-
+static bool TestReaddir(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     constexpr size_t kMaxEntries = 50;
     constexpr size_t kBlobSize = 1 << 10;
 
@@ -694,6 +807,7 @@ static bool TestReaddir(void) {
     // Try to readdir on an empty directory
     DIR* dir = opendir(MOUNT_PATH);
     ASSERT_NONNULL(dir);
+    auto cleanup = fbl::MakeAutoCall([dir](){ closedir(dir); });
     ASSERT_NULL(readdir(dir), "Expected blobfs to start empty");
 
     // Fill a directory with entries
@@ -738,15 +852,12 @@ static bool TestReaddir(void) {
     ASSERT_EQ(entries_seen, kMaxEntries);
 
     ASSERT_NULL(readdir(dir), "Expected blobfs to end empty");
-
+    cleanup.cancel();
     ASSERT_EQ(closedir(dir), 0);
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-
-template <FsTestType TestType>
-static bool TestDiskTooSmall(void) {
+static bool TestDiskTooSmall(BlobfsTest* blobfsTest) {
     BEGIN_TEST;
 
     if (gUseRealDisk) {
@@ -755,7 +866,7 @@ static bool TestDiskTooSmall(void) {
     }
 
     uint64_t minimum_size = 0;
-    if (TestType == FsTestType::kFvm) {
+    if (blobfsTest->GetType() == FsTestType::kFvm) {
         size_t blocks_per_slice = kTestFvmSliceSize / blobfs::kBlobfsBlockSize;
 
         // Calculate slices required for data blocks based on minimum requirement and slice size.
@@ -784,35 +895,41 @@ static bool TestDiskTooSmall(void) {
                        blobfs::kBlobfsBlockSize;
     }
 
+    // Teardown the initial test configuration and reset the test state.
+    ASSERT_TRUE(blobfsTest->Teardown());
+    ASSERT_TRUE(blobfsTest->Reset());
+
     // Create disk with minimum possible size, make sure init passes.
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_GE(minimum_size, blobfsTest.GetBlockSize());
-    uint64_t disk_blocks = minimum_size / blobfsTest.GetBlockSize();
-    ASSERT_TRUE(blobfsTest.SetBlockCount(disk_blocks));
-    ASSERT_TRUE(blobfsTest.Init());
-    ASSERT_TRUE(blobfsTest.Teardown());
+    ASSERT_GE(minimum_size, blobfsTest->GetBlockSize());
+    uint64_t disk_blocks = minimum_size / blobfsTest->GetBlockSize();
+    ASSERT_TRUE(blobfsTest->SetBlockCount(disk_blocks));
+    ASSERT_TRUE(blobfsTest->Init());
+    ASSERT_TRUE(blobfsTest->Teardown());
 
     // Reset the disk size and test state.
-    ASSERT_TRUE(blobfsTest.Reset());
-    ASSERT_TRUE(blobfsTest.SetBlockCount(disk_blocks - 1));
+    ASSERT_TRUE(blobfsTest->Reset());
+    ASSERT_TRUE(blobfsTest->SetBlockCount(disk_blocks - 1));
 
     // Create disk with smaller than minimum size, make sure mkfs fails.
-    ASSERT_TRUE(blobfsTest.Init(FsTestState::kMinimal));
+    ASSERT_TRUE(blobfsTest->Init(FsTestState::kMinimal));
+
     char device_path[PATH_MAX];
-    ASSERT_TRUE(blobfsTest.GetDevicePath(device_path, PATH_MAX));
+    ASSERT_TRUE(blobfsTest->GetDevicePath(device_path, PATH_MAX));
     ASSERT_NE(mkfs(device_path, DISK_FORMAT_BLOBFS, launch_stdio_sync, &default_mkfs_options),
               ZX_OK);
-    ASSERT_TRUE(blobfsTest.Teardown(FsTestState::kMinimal));
+
+    // Reset the ramdisk counts so we don't attempt to run ramdisk failure tests. There isn't
+    // really a point with this test since we are testing blobfs creation, which doesn't generate
+    // any journal entries.
+    ASSERT_TRUE(blobfsTest->ToggleSleep());
+    ASSERT_TRUE(blobfsTest->ToggleSleep());
     END_TEST;
 }
 
-template <FsTestType TestType>
-static bool TestQueryInfo(void) {
-    BEGIN_TEST;
-    ASSERT_EQ(TestType, FsTestType::kFvm);
 
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
+static bool TestQueryInfo(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
+    ASSERT_EQ(blobfsTest->GetType(), FsTestType::kFvm);
 
     size_t total_bytes = 0;
     ASSERT_TRUE(QueryInfo(0, 0));
@@ -828,16 +945,11 @@ static bool TestQueryInfo(void) {
     }
 
     ASSERT_TRUE(QueryInfo(6, total_bytes));
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool UseAfterUnlink(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
-
+static bool UseAfterUnlink(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     for (size_t i = 0; i < 16; i++) {
         fbl::unique_ptr<blob_info_t> info;
         ASSERT_TRUE(GenerateRandomBlob(1 << i, &info));
@@ -855,17 +967,11 @@ static bool UseAfterUnlink(void) {
         ASSERT_EQ(close(fd.release()), 0);
         ASSERT_LT(open(info->path, O_RDONLY), 0, "Expected blob to be deleted");
     }
-
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool WriteAfterRead(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");;
-
+static bool WriteAfterRead(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     for (size_t i = 0; i < 16; i++) {
         fbl::unique_ptr<blob_info_t> info;
         ASSERT_TRUE(GenerateRandomBlob(1 << i, &info));
@@ -888,16 +994,11 @@ static bool WriteAfterRead(void) {
         ASSERT_EQ(close(fd.release()), 0);
         ASSERT_EQ(unlink(info->path), 0, "Failed to unlink");
     }
-
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-bool WriteAfterUnlink(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
+bool WriteAfterUnlink(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     fbl::unique_ptr<blob_info_t> info;
     size_t size = 1 << 20;
     ASSERT_TRUE(GenerateRandomBlob(size, &info));
@@ -907,21 +1008,15 @@ bool WriteAfterUnlink(void) {
     ASSERT_TRUE(fd, "Failed to create blob");
     ASSERT_EQ(ftruncate(fd.get(), size), 0);
     ASSERT_EQ(StreamAll(write, fd.get(), info->data.get(), size / 2), 0, "Failed to write Data");
-
     ASSERT_EQ(unlink(info->path), 0);
     ASSERT_EQ(StreamAll(write, fd.get(), info->data.get() + size / 2, size - (size / 2)), 0, "Failed to write Data");
     ASSERT_EQ(close(fd.release()), 0);
     ASSERT_LT(open(info->path, O_RDONLY), 0);
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting Blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool ReadTooLarge(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
-
+static bool ReadTooLarge(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     for (size_t i = 0; i < 16; i++) {
         fbl::unique_ptr<blob_info_t> info;
         ASSERT_TRUE(GenerateRandomBlob(1 << i, &info));
@@ -952,17 +1047,11 @@ static bool ReadTooLarge(void) {
         ASSERT_EQ(close(fd.release()), 0);
         ASSERT_EQ(unlink(info->path), 0, "Failed to unlink");
     }
-
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool BadAllocation(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
-
+static bool BadAllocation(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     ASSERT_LT(open(MOUNT_PATH "/00112233445566778899AABBCCDDEEFFGGHHIIJJKKLLMMNNOOPPQQRRSSTTUUVV",
                    O_CREAT | O_RDWR),
               0, "Only acceptable pathnames are hex");
@@ -976,7 +1065,7 @@ static bool BadAllocation(void) {
     ASSERT_TRUE(fd, "Failed to create blob");
     ASSERT_EQ(ftruncate(fd.get(), 0), -1, "Blob without data doesn't match null blob");
     // This is the size of the entire disk; we won't have room.
-    ASSERT_EQ(ftruncate(fd.get(), blobfsTest.GetDiskSize()), -1, "Huge blob");
+    ASSERT_EQ(ftruncate(fd.get(), blobfsTest->GetDiskSize()), -1, "Huge blob");
 
     // Okay, finally, a valid blob!
     ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0, "Failed to allocate blob");
@@ -995,18 +1084,11 @@ static bool BadAllocation(void) {
               "Failed to write data");
     ASSERT_EQ(close(fd.release()), 0);
     ASSERT_LT(open(info->path, O_RDWR), 0, "Cannot access partial blob");
-
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool CorruptedBlob(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    // This test is noisy, since blob corruption is logged loudly.
-    blobfsTest.SetStdio(false);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
+static bool CorruptedBlob(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
 
     fbl::unique_ptr<blob_info_t> info;
     for (size_t i = 1; i < 18; i++) {
@@ -1028,17 +1110,11 @@ static bool CorruptedBlob(void) {
         ASSERT_TRUE(MakeBlobCompromised(info.get()));
     }
 
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool CorruptedDigest(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    // This test is noisy, since blob corruption is logged loudly.
-    blobfsTest.SetStdio(false);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
+static bool CorruptedDigest(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
 
     fbl::unique_ptr<blob_info_t> info;
     for (size_t i = 1; i < 18; i++) {
@@ -1064,15 +1140,11 @@ static bool CorruptedDigest(void) {
         ASSERT_TRUE(MakeBlobCompromised(info.get()));
     }
 
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool EdgeAllocation(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
+static bool EdgeAllocation(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
 
     // Powers of two...
     for (size_t i = 1; i < 16; i++) {
@@ -1086,23 +1158,18 @@ static bool EdgeAllocation(void) {
             ASSERT_EQ(close(fd.release()), 0);
         }
     }
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool UmountWithOpenFile(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
-
+static bool UmountWithOpenFile(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     fbl::unique_ptr<blob_info_t> info;
     ASSERT_TRUE(GenerateRandomBlob(1 << 16, &info));
     fbl::unique_fd fd;
     ASSERT_TRUE(MakeBlob(info.get(), &fd));
 
     // Intentionally don't close the file descriptor: Unmount anyway.
-    ASSERT_TRUE(blobfsTest.Remount());
+    ASSERT_TRUE(blobfsTest->Remount());
     // Just closing our local handle; the connection should be disconnected.
     ASSERT_EQ(close(fd.release()), -1);
     ASSERT_EQ(errno, EPIPE);
@@ -1113,16 +1180,11 @@ static bool UmountWithOpenFile(void) {
     ASSERT_EQ(close(fd.release()), 0, "Could not close blob");
 
     ASSERT_EQ(unlink(info->path), 0);
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool UmountWithMappedFile(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
-
+static bool UmountWithMappedFile(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     fbl::unique_ptr<blob_info_t> info;
     ASSERT_TRUE(GenerateRandomBlob(1 << 16, &info));
     fbl::unique_fd fd;
@@ -1133,7 +1195,7 @@ static bool UmountWithMappedFile(void) {
     ASSERT_EQ(close(fd.release()), 0);
 
     // Intentionally don't unmap the file descriptor: Unmount anyway.
-    ASSERT_TRUE(blobfsTest.Remount());
+    ASSERT_TRUE(blobfsTest->Remount());
     // Just closing our local handle; the connection should be disconnected.
     ASSERT_EQ(munmap(addr, info->size_data), 0);
 
@@ -1143,16 +1205,11 @@ static bool UmountWithMappedFile(void) {
     ASSERT_EQ(close(fd.release()), 0, "Could not close blob");
 
     ASSERT_EQ(unlink(info->path), 0);
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool UmountWithOpenMappedFile(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
-
+static bool UmountWithOpenMappedFile(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     fbl::unique_ptr<blob_info_t> info;
     ASSERT_TRUE(GenerateRandomBlob(1 << 16, &info));
     fbl::unique_fd fd;
@@ -1162,7 +1219,7 @@ static bool UmountWithOpenMappedFile(void) {
     ASSERT_NONNULL(addr);
 
     // Intentionally don't close the file descriptor: Unmount anyway.
-    ASSERT_TRUE(blobfsTest.Remount());
+    ASSERT_TRUE(blobfsTest->Remount());
     // Just closing our local handle; the connection should be disconnected.
     ASSERT_EQ(munmap(addr, info->size_data), 0);
     ASSERT_EQ(close(fd.release()), -1);
@@ -1174,16 +1231,11 @@ static bool UmountWithOpenMappedFile(void) {
     ASSERT_EQ(close(fd.release()), 0, "Could not close blob");
 
     ASSERT_EQ(unlink(info->path), 0);
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool CreateUmountRemountSmall(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
-
+static bool CreateUmountRemountSmall(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     for (size_t i = 10; i < 16; i++) {
         fbl::unique_ptr<blob_info_t> info;
         ASSERT_TRUE(GenerateRandomBlob(1 << i, &info));
@@ -1193,7 +1245,7 @@ static bool CreateUmountRemountSmall(void) {
         // Close fd, unmount filesystem
         ASSERT_EQ(close(fd.release()), 0);
 
-        ASSERT_TRUE(blobfsTest.Remount(), "Could not re-mount blobfs");
+        ASSERT_TRUE(blobfsTest->Remount(), "Could not re-mount blobfs");
 
         fd.reset(open(info->path, O_RDONLY));
         ASSERT_TRUE(fd, "Failed to open blob");
@@ -1203,11 +1255,11 @@ static bool CreateUmountRemountSmall(void) {
         ASSERT_EQ(unlink(info->path), 0);
     }
 
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
 static bool check_not_readable(int fd) {
+    BEGIN_HELPER;
     struct pollfd fds;
     fds.fd = fd;
     fds.events = POLLIN;
@@ -1216,20 +1268,11 @@ static bool check_not_readable(int fd) {
     char buf[8];
     ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
     ASSERT_LT(read(fd, buf, 1), 0, "Blob should not be readable yet");
-    return true;
-}
-
-static bool wait_readable(int fd) {
-    struct pollfd fds;
-    fds.fd = fd;
-    fds.events = POLLIN;
-    ASSERT_EQ(poll(&fds, 1, 10000), 1, "Failed to wait for readable blob");
-    ASSERT_EQ(fds.revents, POLLIN);
-
-    return true;
+    END_HELPER;
 }
 
 static bool check_readable(int fd) {
+    BEGIN_HELPER;
     struct pollfd fds;
     fds.fd = fd;
     fds.events = POLLIN;
@@ -1239,16 +1282,12 @@ static bool check_readable(int fd) {
     char buf[8];
     ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
     ASSERT_EQ(read(fd, buf, sizeof(buf)), sizeof(buf));
-    return true;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool EarlyRead(void) {
+static bool EarlyRead(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     // Check that we cannot read from the Blob until it has been fully written
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
-
     fbl::unique_ptr<blob_info_t> info;
 
     ASSERT_TRUE(GenerateRandomBlob(1 << 17, &info));
@@ -1281,18 +1320,22 @@ static bool EarlyRead(void) {
     ASSERT_EQ(close(fd.release()), 0);
     ASSERT_EQ(close(fd2.release()), 0);
     ASSERT_EQ(unlink(info->path), 0);
-
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool WaitForRead(void) {
-    // Check that we cannot read from the Blob until it has been fully written
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
+static bool wait_readable(int fd) {
+    BEGIN_HELPER;
+    struct pollfd fds;
+    fds.fd = fd;
+    fds.events = POLLIN;
+    ASSERT_EQ(poll(&fds, 1, 10000), 1, "Failed to wait for readable blob");
+    ASSERT_EQ(fds.revents, POLLIN);
+    END_HELPER;
+}
 
+// Check that we cannot read from the Blob until it has been fully written
+static bool WaitForRead(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     fbl::unique_ptr<blob_info_t> info;
 
     ASSERT_TRUE(GenerateRandomBlob(1 << 17, &info));
@@ -1305,9 +1348,18 @@ static bool WaitForRead(void) {
     // Launch a background thread to wait for fd to become readable
     auto wait_until_readable = [](void* arg) {
         fbl::unique_fd fd(*static_cast<int*>(arg));
-        EXPECT_TRUE(wait_readable(fd.get()));
-        EXPECT_TRUE(check_readable(fd.get()));
-        EXPECT_EQ(close(fd.release()), 0);
+        if (!wait_readable(fd.get())) {
+            return -1;
+        }
+
+        if (!check_readable(fd.get())) {
+            return -1;
+        }
+
+        if (close(fd.release()) != 0) {
+            return -1;
+        }
+
         return 0;
     };
 
@@ -1333,18 +1385,12 @@ static bool WaitForRead(void) {
     ASSERT_TRUE(VerifyContents(fd.get(), info->data.get(), info->size_data));
     ASSERT_EQ(close(fd.release()), 0);
     ASSERT_EQ(unlink(info->path), 0);
-
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool WriteSeekIgnored(void) {
-    // Check that seeks during writing are ignored
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
-
+// Check that seeks during writing are ignored
+static bool WriteSeekIgnored(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     fbl::unique_ptr<blob_info_t> info;
     ASSERT_TRUE(GenerateRandomBlob(1 << 17, &info));
     fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
@@ -1364,25 +1410,20 @@ static bool WriteSeekIgnored(void) {
     ASSERT_TRUE(VerifyContents(fd.get(), info->data.get(), info->size_data));
     ASSERT_EQ(close(fd.release()), 0);
     ASSERT_EQ(unlink(info->path), 0);
-
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool UnlinkTiming(void) {
-    // Try unlinking at a variety of times
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
-
+// Try unlinking at a variety of times
+static bool UnlinkTiming(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     // Unlink, close fd, re-open fd as new file
     auto full_unlink_reopen = [](fbl::unique_fd& fd, const char* path) {
+        BEGIN_HELPER;
         ASSERT_EQ(unlink(path), 0);
         ASSERT_EQ(close(fd.release()), 0);
         fd.reset(open(path, O_CREAT | O_RDWR | O_EXCL));
         ASSERT_TRUE(fd, "Failed to recreate blob");
-        return true;
+        END_HELPER;
     };
 
     fbl::unique_ptr<blob_info_t> info;
@@ -1405,17 +1446,12 @@ static bool UnlinkTiming(void) {
     ASSERT_TRUE(full_unlink_reopen(fd, info->path));
     ASSERT_EQ(unlink(info->path), 0);
     ASSERT_EQ(close(fd.release()), 0);
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool InvalidOps(void) {
-    // Attempt using invalid operations
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
-
+// Attempt using invalid operations
+static bool InvalidOps(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     // First off, make a valid blob
     fbl::unique_ptr<blob_info_t> info;
     ASSERT_TRUE(GenerateRandomBlob(1 << 12, &info));
@@ -1435,18 +1471,12 @@ static bool InvalidOps(void) {
     ASSERT_TRUE(VerifyContents(fd.get(), info->data.get(), info->size_data));
     ASSERT_EQ(unlink(info->path), 0);
     ASSERT_EQ(close(fd.release()), 0);
-
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool RootDirectory(void) {
-    // Attempt operations on the root directory
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
-
+// Attempt operations on the root directory
+static bool RootDirectory(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     fbl::unique_fd dirfd(open(MOUNT_PATH "/.", O_RDONLY));
     ASSERT_TRUE(dirfd, "Cannot open root directory");
 
@@ -1463,16 +1493,11 @@ static bool RootDirectory(void) {
     // Should NOT be able to unlink root dir
     ASSERT_EQ(close(dirfd.release()), 0);
     ASSERT_LT(unlink(info->path), 0);
-
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-bool TestPartialWrite(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
+bool TestPartialWrite(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     fbl::unique_ptr<blob_info_t> info_complete;
     fbl::unique_ptr<blob_info_t> info_partial;
     size_t size = 1 << 20;
@@ -1492,20 +1517,16 @@ bool TestPartialWrite(void) {
 
     ASSERT_EQ(close(fd_complete.release()), 0);
     ASSERT_EQ(close(fd_partial.release()), 0);
-
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-bool TestPartialWriteSleepRamdisk(void) {
-    BEGIN_TEST;
+bool TestPartialWriteSleepRamdisk(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     if (gUseRealDisk) {
         fprintf(stderr, "Ramdisk required; skipping test\n");
         return true;
     }
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
+
     fbl::unique_ptr<blob_info_t> info_complete;
     fbl::unique_ptr<blob_info_t> info_partial;
     size_t size = 1 << 20;
@@ -1524,7 +1545,7 @@ bool TestPartialWriteSleepRamdisk(void) {
     ASSERT_TRUE(MakeBlob(info_complete.get(), &fd_complete));
 
     ASSERT_EQ(syncfs(fd_complete.get()), 0);
-    ASSERT_TRUE(blobfsTest.ToggleSleep());
+    ASSERT_TRUE(blobfsTest->ToggleSleep());
 
     ASSERT_EQ(close(fd_complete.release()), 0);
     ASSERT_EQ(close(fd_partial.release()), 0);
@@ -1533,16 +1554,14 @@ bool TestPartialWriteSleepRamdisk(void) {
     ASSERT_TRUE(fd_complete, "Failed to re-open blob");
 
     ASSERT_EQ(syncfs(fd_complete.get()), 0);
-    ASSERT_TRUE(blobfsTest.ToggleSleep());
+    ASSERT_TRUE(blobfsTest->ToggleSleep());
 
     ASSERT_TRUE(VerifyContents(fd_complete.get(), info_complete->data.get(), size));
 
     fd_partial.reset(open(info_partial->path, O_RDONLY));
     ASSERT_FALSE(fd_partial, "Should not be able to open invalid blob");
     ASSERT_EQ(close(fd_complete.release()), 0);
-
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting Blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
 enum TestState {
@@ -1708,11 +1727,8 @@ bool blob_reopen_helper(blob_list_t* bl) {
     return true;
 }
 
-template <FsTestType TestType>
-bool TestAlternateWrite(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
+bool TestAlternateWrite(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     size_t num_blobs = 1;
     size_t num_writes = 100;
     unsigned int seed = static_cast<unsigned int>(zx_ticks_get());
@@ -1748,15 +1764,11 @@ bool TestAlternateWrite(void) {
     for (auto& state : bl.list) {
         ASSERT_EQ(close(state.fd.release()), 0);
     }
-    ASSERT_TRUE(blobfsTest.Teardown(), "Unmounting Blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool TestHugeBlobRandom(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
+static bool TestHugeBlobRandom(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     fbl::unique_ptr<blob_info_t> info;
 
     // This blob is extremely large, and will remain large
@@ -1782,23 +1794,18 @@ static bool TestHugeBlobRandom(void) {
     ASSERT_FALSE(fd, "Shouldn't be able to re-open blob as writable");
 
     // Force decompression by remounting, re-accessing blob.
-    ASSERT_TRUE(blobfsTest.Remount());
+    ASSERT_TRUE(blobfsTest->Remount());
     fd.reset(open(info->path, O_RDONLY));
     ASSERT_TRUE(fd, "Failed to-reopen blob");
     ASSERT_TRUE(VerifyContents(fd.get(), info->data.get(), info->size_data));
     ASSERT_EQ(close(fd.release()), 0);
 
     ASSERT_EQ(unlink(info->path), 0);
-
-    ASSERT_TRUE(blobfsTest.Teardown(), "Mounting Blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool TestHugeBlobCompressible(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
+static bool TestHugeBlobCompressible(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     fbl::unique_ptr<blob_info_t> info;
 
     // This blob is extremely large, and will remain large
@@ -1828,24 +1835,18 @@ static bool TestHugeBlobCompressible(void) {
     ASSERT_FALSE(fd, "Shouldn't be able to re-open blob as writable");
 
     // Force decompression by remounting, re-accessing blob.
-    ASSERT_TRUE(blobfsTest.Remount());
+    ASSERT_TRUE(blobfsTest->Remount());
     fd.reset(open(info->path, O_RDONLY));
     ASSERT_TRUE(fd, "Failed to-reopen blob");
     ASSERT_TRUE(VerifyContents(fd.get(), info->data.get(), info->size_data));
     ASSERT_EQ(close(fd.release()), 0);
 
     ASSERT_EQ(unlink(info->path), 0);
-
-    ASSERT_TRUE(blobfsTest.Teardown(), "Mounting Blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool CreateUmountRemountLarge(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
-
+static bool CreateUmountRemountLarge(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     blob_list_t bl;
     // TODO(smklein): Here, and elsewhere in this file, remove this source
     // of randomness to make the unit test deterministic -- fuzzing should
@@ -1884,7 +1885,7 @@ static bool CreateUmountRemountLarge(void) {
     }
 
     // Unmount, remount
-    ASSERT_TRUE(blobfsTest.Remount(), "Could not re-mount blobfs");
+    ASSERT_TRUE(blobfsTest->Remount(), "Could not re-mount blobfs");
 
     for (auto& state : bl.list) {
         if (state.state == readable) {
@@ -1901,8 +1902,7 @@ static bool CreateUmountRemountLarge(void) {
         }
     }
 
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
 int unmount_remount_thread(void* arg) {
@@ -1938,12 +1938,8 @@ int unmount_remount_thread(void* arg) {
     return 0;
 }
 
-template <FsTestType TestType>
-static bool CreateUmountRemountLargeMultithreaded(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
-
+static bool CreateUmountRemountLargeMultithreaded(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     blob_list_t bl;
 
     size_t num_threads = 10;
@@ -1970,7 +1966,7 @@ static bool CreateUmountRemountLargeMultithreaded(void) {
     }
 
     // Unmount, remount
-    ASSERT_TRUE(blobfsTest.Remount(), "Could not re-mount blobfs");
+    ASSERT_TRUE(blobfsTest->Remount(), "Could not re-mount blobfs");
 
     for (auto& state : bl.list) {
         if (state.state == readable) {
@@ -1987,17 +1983,11 @@ static bool CreateUmountRemountLargeMultithreaded(void) {
         }
     }
 
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-
-template <FsTestType TestType>
-static bool NoSpace(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
-
+static bool NoSpace(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     fbl::unique_ptr<blob_info_t> last_info = nullptr;
 
     // Keep generating blobs until we run out of space
@@ -2030,16 +2020,11 @@ static bool NoSpace(void) {
         }
     }
 
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool QueryDevicePath(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
-
+static bool QueryDevicePath(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     fbl::unique_fd dirfd(open(MOUNT_PATH "/.", O_RDONLY | O_ADMIN));
     ASSERT_TRUE(dirfd, "Cannot open root directory");
 
@@ -2048,7 +2033,7 @@ static bool QueryDevicePath(void) {
     ASSERT_GT(path_len, 0, "Device path not found");
 
     char actual_path[PATH_MAX];
-    ASSERT_TRUE(blobfsTest.GetDevicePath(actual_path, PATH_MAX));
+    ASSERT_TRUE(blobfsTest->GetDevicePath(actual_path, PATH_MAX));
     ASSERT_EQ(strncmp(actual_path, device_path, path_len), 0, "Unexpected device path");
     ASSERT_EQ(close(dirfd.release()), 0);
 
@@ -2057,17 +2042,11 @@ static bool QueryDevicePath(void) {
     path_len = ioctl_vfs_get_device_path(dirfd.get(), device_path, sizeof(device_path));
     ASSERT_LT(path_len, 0);
     ASSERT_EQ(close(dirfd.release()), 0);
-
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool TestReadOnly(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
-
+static bool TestReadOnly(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     // Mount the filesystem as read-write.
     // We can create new blobs.
     fbl::unique_ptr<blob_info_t> info;
@@ -2077,8 +2056,8 @@ static bool TestReadOnly(void) {
     ASSERT_TRUE(VerifyContents(blob_fd.get(), info->data.get(), info->size_data));
     ASSERT_EQ(close(blob_fd.release()), 0);
 
-    blobfsTest.SetReadOnly(true);
-    ASSERT_TRUE(blobfsTest.Remount());
+    blobfsTest->SetReadOnly(true);
+    ASSERT_TRUE(blobfsTest->Remount());
 
     // We can read old blobs
     blob_fd.reset(open(info->path, O_RDONLY));
@@ -2089,18 +2068,13 @@ static bool TestReadOnly(void) {
     // We cannot create new blobs
     ASSERT_TRUE(GenerateRandomBlob(1 << 10, &info));
     ASSERT_LT(open(info->path, O_CREAT | O_RDWR), 0);
-
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
 // This tests growing both additional inodes and blocks
-template <FsTestType TestType>
-static bool ResizePartition(void) {
-    BEGIN_TEST;
-    ASSERT_EQ(TestType, FsTestType::kFvm);
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
+static bool ResizePartition(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
+    ASSERT_EQ(blobfsTest->GetType(), FsTestType::kFvm);
 
     // Create 1000 blobs. Test slices are small enough that this will require both inodes and
     // blocks to be added
@@ -2119,7 +2093,7 @@ static bool ResizePartition(void) {
 
     printf("Remounting blobfs\n");
     // Remount partition
-    ASSERT_TRUE(blobfsTest.Remount(), "Could not re-mount blobfs");
+    ASSERT_TRUE(blobfsTest->Remount(), "Could not re-mount blobfs");
 
     DIR* dir = opendir(MOUNT_PATH);
     ASSERT_NONNULL(dir);
@@ -2141,21 +2115,22 @@ static bool ResizePartition(void) {
     printf("Completing test\n");
     ASSERT_EQ(closedir(dir), 0);
     ASSERT_EQ(entries_deleted, 1000);
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
-template <FsTestType TestType>
-static bool CorruptAtMount(void) {
-    BEGIN_TEST;
-    ASSERT_EQ(TestType, FsTestType::kFvm);
+static bool CorruptAtMount(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
+    ASSERT_EQ(blobfsTest->GetType(), FsTestType::kFvm);
+    ASSERT_TRUE(blobfsTest->Teardown());
+    ASSERT_TRUE(blobfsTest->Reset());
+    ASSERT_TRUE(blobfsTest->Init(FsTestState::kMinimal), "Mounting Blobfs");
 
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
+    char device_path[PATH_MAX];
+    ASSERT_TRUE(blobfsTest->GetDevicePath(device_path, PATH_MAX));
+    ASSERT_EQ(mkfs(device_path, DISK_FORMAT_BLOBFS, launch_stdio_sync, &default_mkfs_options),
+              ZX_OK);
 
-    ASSERT_EQ(umount(MOUNT_PATH), ZX_OK, "Could not unmount blobfs");
-
-    fbl::unique_fd fd(blobfsTest.GetFd());
+    fbl::unique_fd fd(blobfsTest->GetFd());
     ASSERT_TRUE(fd, "Could not open ramdisk");
 
     // Manually shrink slice so FVM will differ from Blobfs.
@@ -2180,7 +2155,7 @@ static bool CorruptAtMount(void) {
     ASSERT_NE(mount(fd.release(), MOUNT_PATH, DISK_FORMAT_BLOBFS, &default_mount_options,
                     launch_stdio_async), ZX_OK);
 
-    fd.reset(blobfsTest.GetFd());
+    fd.reset(blobfsTest->GetFd());
     ASSERT_TRUE(fd, "Could not open ramdisk");
 
     // Manually grow slice count to twice what it was initially.
@@ -2199,7 +2174,7 @@ static bool CorruptAtMount(void) {
                     launch_stdio_async), ZX_OK);
 
     ASSERT_EQ(umount(MOUNT_PATH), ZX_OK);
-    fd.reset(blobfsTest.GetFd());
+    fd.reset(blobfsTest->GetFd());
     ASSERT_TRUE(fd, "Could not open ramdisk");
 
     // Verify that mount automatically removed extra slice.
@@ -2209,9 +2184,7 @@ static bool CorruptAtMount(void) {
     ASSERT_TRUE(query_response.vslice_range[0].allocated);
     ASSERT_EQ(query_response.vslice_range[0].count, 1);
 
-    // Clean up.
-    ASSERT_TRUE(blobfsTest.Teardown(FsTestState::kMinimal), "unmounting Blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
 typedef struct reopen_data {
@@ -2238,19 +2211,15 @@ int reopen_thread(void* arg) {
 // occur when the client is opening a new fd to the blob at the same time it is being destructed
 // after all writes to disk have completed.
 // This test works best if a sleep is added at the beginning of fbl_recycle in VnodeBlob.
-template <FsTestType TestType>
-static bool CreateWriteReopen(void) {
-    BEGIN_TEST;
-    BlobfsTest blobfsTest(TestType);
-    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
-
+static bool CreateWriteReopen(BlobfsTest* blobfsTest) {
+    BEGIN_HELPER;
     size_t num_ops = 10;
 
     fbl::unique_ptr<blob_info_t> anchor_info;
     ASSERT_TRUE(GenerateRandomBlob(1 << 10, &anchor_info));
 
     fbl::unique_ptr<blob_info_t> info;
-    ASSERT_TRUE(GenerateRandomBlob(10 *(1 << 20), &info));
+    ASSERT_TRUE(GenerateRandomBlob(10 * (1 << 20), &info));
     reopen_data_t dat;
     strcpy(dat.path, info->path);
 
@@ -2282,8 +2251,7 @@ static bool CreateWriteReopen(void) {
         ASSERT_EQ(unlink(anchor_info->path), 0);
     }
 
-    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting Blobfs");
-    END_TEST;
+    END_HELPER;
 }
 
 // Ensure Compressor returns an error if we try to compress more data than the buffer can hold.
@@ -2314,45 +2282,45 @@ static bool TestCompressorBufferTooSmall(void) {
 }
 
 BEGIN_TEST_CASE(blobfs_tests)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestBasic)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestNullBlob)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestCompressibleBlob)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestMmap)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestMmapUseAfterClose)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestReaddir)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestDiskTooSmall)
-RUN_TEST_MEDIUM(TestQueryInfo<FsTestType::kFvm>)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, UseAfterUnlink)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, WriteAfterRead)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, WriteAfterUnlink)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, ReadTooLarge)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, BadAllocation)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, CorruptedBlob)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, CorruptedDigest)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, EdgeAllocation)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, UmountWithOpenFile)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, UmountWithMappedFile)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, UmountWithOpenMappedFile)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, CreateUmountRemountSmall)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, EarlyRead)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, WaitForRead)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, WriteSeekIgnored)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, UnlinkTiming)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, InvalidOps)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, RootDirectory)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestPartialWrite)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestPartialWriteSleepRamdisk)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestAlternateWrite)
-RUN_TEST_FOR_ALL_TYPES(LARGE, TestHugeBlobRandom)
-RUN_TEST_FOR_ALL_TYPES(LARGE, TestHugeBlobCompressible)
-RUN_TEST_FOR_ALL_TYPES(LARGE, CreateUmountRemountLarge)
-RUN_TEST_FOR_ALL_TYPES(LARGE, CreateUmountRemountLargeMultithreaded)
-RUN_TEST_FOR_ALL_TYPES(LARGE, NoSpace)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, QueryDevicePath)
-RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestReadOnly)
-RUN_TEST_MEDIUM(ResizePartition<FsTestType::kFvm>)
-RUN_TEST_MEDIUM(CorruptAtMount<FsTestType::kFvm>)
-RUN_TEST_FOR_ALL_TYPES(LARGE, CreateWriteReopen)
+RUN_TESTS(MEDIUM, TestBasic)
+RUN_TESTS(MEDIUM, TestNullBlob)
+RUN_TESTS(MEDIUM, TestCompressibleBlob)
+RUN_TESTS(MEDIUM, TestMmap)
+RUN_TESTS(MEDIUM, TestMmapUseAfterClose)
+RUN_TESTS(MEDIUM, TestReaddir)
+RUN_TESTS(MEDIUM, TestDiskTooSmall)
+RUN_TEST_FVM(MEDIUM, TestQueryInfo)
+RUN_TESTS(MEDIUM, UseAfterUnlink)
+RUN_TESTS(MEDIUM, WriteAfterRead)
+RUN_TESTS(MEDIUM, WriteAfterUnlink)
+RUN_TESTS(MEDIUM, ReadTooLarge)
+RUN_TESTS(MEDIUM, BadAllocation)
+RUN_TESTS_SILENT(MEDIUM, CorruptedBlob)
+RUN_TESTS_SILENT(MEDIUM, CorruptedDigest)
+RUN_TESTS(MEDIUM, EdgeAllocation)
+RUN_TESTS(MEDIUM, UmountWithOpenFile)
+RUN_TESTS(MEDIUM, UmountWithMappedFile)
+RUN_TESTS(MEDIUM, UmountWithOpenMappedFile)
+RUN_TESTS(MEDIUM, CreateUmountRemountSmall)
+RUN_TESTS(MEDIUM, EarlyRead)
+RUN_TESTS(MEDIUM, WaitForRead)
+RUN_TESTS(MEDIUM, WriteSeekIgnored)
+RUN_TESTS(MEDIUM, UnlinkTiming)
+RUN_TESTS(MEDIUM, InvalidOps)
+RUN_TESTS(MEDIUM, RootDirectory)
+RUN_TESTS(MEDIUM, TestPartialWrite)
+RUN_TESTS(MEDIUM, TestPartialWriteSleepRamdisk)
+RUN_TESTS(MEDIUM, TestAlternateWrite)
+RUN_TESTS(LARGE, TestHugeBlobRandom)
+RUN_TESTS(LARGE, TestHugeBlobCompressible)
+RUN_TESTS(LARGE, CreateUmountRemountLarge)
+RUN_TESTS(LARGE, CreateUmountRemountLargeMultithreaded)
+RUN_TESTS(LARGE, NoSpace)
+RUN_TESTS(MEDIUM, QueryDevicePath)
+RUN_TESTS(MEDIUM, TestReadOnly)
+RUN_TEST_FVM(MEDIUM, ResizePartition)
+RUN_TEST_FVM(MEDIUM, CorruptAtMount)
+RUN_TESTS(LARGE, CreateWriteReopen)
 RUN_TEST(TestCompressorBufferTooSmall);
 END_TEST_CASE(blobfs_tests)
 
@@ -2360,6 +2328,14 @@ static void print_test_help(FILE* f) {
     fprintf(f,
             "  -d <blkdev>\n"
             "      Use block device <blkdev> instead of a ramdisk\n"
+            "  -f <count>\n"
+            "      For each test, run the test <count> additional times,\n"
+            "        intentionally causing the underlying device driver to\n"
+            "        'sleep' after a certain number of block writes.\n"
+            "      After each additional test, the blobfs partition will be\n"
+            "        remounted and checked for consistency via fsck.\n"
+            "      If <count> is 0, the maximum number of tests are run.\n"
+            "      This option is only valid when using a ramdisk.\n"
             "\n");
 }
 
@@ -2405,10 +2381,19 @@ int main(int argc, char** argv) {
                 return -1;
             }
             i += 2;
+        } else if (!strcmp(argv[i], "-f") && (i + 1 < argc)) {
+            gEnableRamdiskFailure = true;
+            gRamdiskFailureLoops = atoi(argv[i + 1]);
+            i += 2;
         } else {
             // Ignore options we don't recognize. See ulib/unittest/README.md.
             break;
         }
+    }
+
+    if (gUseRealDisk && gEnableRamdiskFailure) {
+        fprintf(stderr, "Error: Ramdisk failure not allowed for real disk\n");
+        return -1;
     }
 
     // Initialize tmpfs.

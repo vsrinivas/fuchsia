@@ -139,6 +139,11 @@ void unittest_set_output_function(test_output_func fun, void* arg) {
     out_func_arg = arg;
 }
 
+void unittest_restore_output_function() {
+    out_func = default_printf;
+    out_func_arg = nullptr;
+}
+
 int unittest_set_verbosity_level(int new_level) {
     int out = utest_verbosity_level;
     utest_verbosity_level = new_level;
