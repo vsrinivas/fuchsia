@@ -15,7 +15,6 @@ Fuchsia has adopted a [style guide](style.md) for its Fidl files.
 ### C
 
 - [Echo server example](https://fuchsia.googlesource.com/garnet/+/master/examples/fidl/echo2_server_c/)
-- [Echo client example](https://fuchsia.googlesource.com/garnet/+/master/examples/fidl/echo2_client_c/)
 
 ### C++
 
