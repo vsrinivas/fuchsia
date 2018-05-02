@@ -40,22 +40,20 @@ func TestColor(t *testing.T) {
 func ExampleDummyProcess() {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{
-		{"libc.so", map[uint64][]SourceLocation{
+		{"testdata/libc.elf", map[uint64][]SourceLocation{
 			0x429c0: {{NewOptStr("atan2.c"), 33, NewOptStr("atan2")}},
 		}},
 	})
 
 	// mock ids.txt
 	repo := NewRepo()
-	repo.AddObjects(map[string]string{
-		"be4c4336e20b734db97a58e0f083d0644461317c": "libc.so",
-	})
+	repo.AddSource(newMockSource())
 
 	// make a demuxer
 	demuxer := NewDemuxer(repo, symbo)
 
 	// define a little message that will need to be parsed
-	msg := "{{{module:1:libc.so:elf:be4c4336e20b734db97a58e0f083d0644461317c}}}\n" +
+	msg := "{{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +
 		"{{{mmap:0x12345000:849596:load:1:rx:0x0}}}\n" +
 		"{{{pc:0x123879c0}}}\n" +
 		"blarg[0.0] 0.0> This should be on it's own line\n"
@@ -70,7 +68,7 @@ func ExampleDummyProcess() {
 	presenter.Start(out)
 
 	//Output:
-	//{{{module:be4c4336e20b734db97a58e0f083d0644461317c:libc.so:1}}}
+	//{{{module:4fcb712aa6387724a9f465a32cd8c14b:libc.so:1}}}
 	//{{{mmap:0x12345000:0xcf6bc:load:1:rx:0x0}}}
 	//atan2 at atan2.c:33
 	//blarg
@@ -80,30 +78,27 @@ func ExampleDummyProcess() {
 func ExampleDemux() {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{
-		{"out/libc.so", map[uint64][]SourceLocation{
+		{"testdata/libc.elf", map[uint64][]SourceLocation{
 			0x429c0: {{NewOptStr("atan2.c"), 49, NewOptStr("atan2")}, {NewOptStr("math.h"), 51, NewOptStr("__DOUBLE_FLOAT")}},
 			0x43680: {{NewOptStr("pow.c"), 23, NewOptStr("pow")}},
 			0x44987: {{NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
 		}},
-		{"out/libcrypto.so", map[uint64][]SourceLocation{
+		{"testdata/libcrypto.elf", map[uint64][]SourceLocation{
 			0x81000: {{NewOptStr("rsa.c"), 101, NewOptStr("mod_exp")}},
 			0x82000: {{NewOptStr("aes.c"), 17, NewOptStr("gf256_mul")}},
 			0x83000: {{NewOptStr("aes.c"), 560, NewOptStr("gf256_div")}},
 		}},
 	})
 
-	// mock ids.txt
+	// mock ids.txt:q
 	repo := NewRepo()
-	repo.AddObjects(map[string]string{
-		"be4c4336e20b734db97a58e0f083d0644461317c": "out/libc.so",
-		"b4b6c520ccf0aa11ff71d8ded7d6a2bc03037aa1": "out/libcrypto.so",
-	})
+	repo.AddSource(newMockSource())
 
 	// make a demuxer
 	demuxer := NewDemuxer(repo, symbo)
 
 	// define a little message that will need to be parsed
-	msg := "[131.200] 1234.5678> {{{module:1:libc.so:elf:be4c4336e20b734db97a58e0f083d0644461317c}}}\n" +
+	msg := "[131.200] 1234.5678> {{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +
 		"[131.301] 1234.5678> {{{module:2:libcrypto.so:elf:b4b6c520ccf0aa11ff71d8ded7d6a2bc03037aa1}}}\n" +
 		"[131.402] 1234.5678> {{{mmap:0x12345000:0xcf6bc:load:1:rx:0x0}}}\n" +
 		"[131.503] 1234.5678> {{{mmap:0x23456000:0x83c80:load:2:rx:0x80000}}}\n" +
@@ -119,7 +114,7 @@ func ExampleDemux() {
 	presenter.Start(out)
 
 	//Output:
-	//[131.200] 01234.05678> {{{module:be4c4336e20b734db97a58e0f083d0644461317c:libc.so:1}}}
+	//[131.200] 01234.05678> {{{module:4fcb712aa6387724a9f465a32cd8c14b:libc.so:1}}}
 	//[131.301] 01234.05678> {{{module:b4b6c520ccf0aa11ff71d8ded7d6a2bc03037aa1:libcrypto.so:2}}}
 	//[131.402] 01234.05678> {{{mmap:0x12345000:0xcf6bc:load:1:rx:0x0}}}
 	//[131.503] 01234.05678> {{{mmap:0x23456000:0x83c80:load:2:rx:0x80000}}}
@@ -129,7 +124,7 @@ func ExampleDemux() {
 func ExampleBadAddr() {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{
-		{"out/libc.so", map[uint64][]SourceLocation{
+		{"testdata/libc.elf", map[uint64][]SourceLocation{
 			0x429c0: {{EmptyOptStr(), 0, NewOptStr("atan2")}, {NewOptStr("math.h"), 51, NewOptStr("__DOUBLE_FLOAT")}},
 			0x43680: {{NewOptStr("pow.c"), 67, EmptyOptStr()}},
 			0x44987: {{NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
@@ -138,16 +133,13 @@ func ExampleBadAddr() {
 
 	// mock ids.txt
 	repo := NewRepo()
-	repo.AddObjects(map[string]string{
-		"be4c4336e20b734db97a58e0f083d0644461317c": "out/libc.so",
-		"b4b6c520ccf0aa11ff71d8ded7d6a2bc03037aa1": "out/libcrypto.so",
-	})
+	repo.AddSource(newMockSource())
 
 	// make a demuxer
 	demuxer := NewDemuxer(repo, symbo)
 
 	// define a little message that will need to be parsed
-	msg := "[131.200] 1234.5678> {{{module:1:libc.so:elf:be4c4336e20b734db97a58e0f083d0644461317c}}}\n" +
+	msg := "[131.200] 1234.5678> {{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +
 		"[131.402] 1234.5678> {{{mmap:0x12345000:0xcf6bc:load:1:rx:0x0}}}\n" +
 		"[131.604] 1234.5678> {{{pc:0x123879ff}}}\n" +
 		"[131.605] 1234.5678> {{{pc:0x123879c0}}}\n" +
@@ -163,7 +155,7 @@ func ExampleBadAddr() {
 	presenter.Start(out)
 
 	//Output:
-	//[131.200] 01234.05678> {{{module:be4c4336e20b734db97a58e0f083d0644461317c:libc.so:1}}}
+	//[131.200] 01234.05678> {{{module:4fcb712aa6387724a9f465a32cd8c14b:libc.so:1}}}
 	//[131.402] 01234.05678> {{{mmap:0x12345000:0xcf6bc:load:1:rx:0x0}}}
 	//[131.604] 01234.05678> <libc.so>+0x429ff
 	//[131.605] 01234.05678> atan2 at <libc.so>+0x429c0

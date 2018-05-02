@@ -50,12 +50,12 @@ type symbolizerRepo struct {
 func ExampleBasic() {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{
-		{"out/libc.so", map[uint64][]SourceLocation{
+		{"testdata/libc.elf", map[uint64][]SourceLocation{
 			0x429c0: {{NewOptStr("atan2.c"), 49, NewOptStr("atan2")}, {NewOptStr("math.h"), 51, NewOptStr("__DOUBLE_FLOAT")}},
 			0x43680: {{NewOptStr("pow.c"), 23, NewOptStr("pow")}},
 			0x44987: {{NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
 		}},
-		{"out/libcrypto.so", map[uint64][]SourceLocation{
+		{"testdata/libcrypto.elf", map[uint64][]SourceLocation{
 			0x81000: {{NewOptStr("rsa.c"), 101, NewOptStr("mod_exp")}},
 			0x82000: {{NewOptStr("aes.c"), 17, NewOptStr("gf256_mul")}},
 			0x83000: {{NewOptStr("aes.c"), 560, NewOptStr("gf256_div")}},
@@ -63,17 +63,14 @@ func ExampleBasic() {
 	})
 	// mock ids.txt
 	repo := NewRepo()
-	repo.AddObjects(map[string]string{
-		"be4c4336e20b734db97a58e0f083d0644461317c": "out/libc.so",
-		"b4b6c520ccf0aa11ff71d8ded7d6a2bc03037aa1": "out/libcrypto.so",
-	})
+	repo.AddSource(newMockSource())
 
 	// make an actual filter using those two mock objects
 	filter := NewFilter(repo, symbo)
 
 	// parse some example lines
-	filter.AddModule(Module{"libc.so", "be4c4336e20b734db97a58e0f083d0644461317c", 1})
-	filter.AddModule(Module{"libcrypto.so", "b4b6c520ccf0aa11ff71d8ded7d6a2bc03037aa1", 2})
+	filter.AddModule(Module{"libc.elf", "4fcb712aa6387724a9f465a32cd8c14b", 1})
+	filter.AddModule(Module{"libcrypto.elf", "12ef5c50b3ed3599c07c02d4509311be", 2})
 	filter.AddSegment(Segment{1, 0x12345000, 849596, "rx", 0x0})
 	filter.AddSegment(Segment{2, 0x23456000, 539776, "rx", 0x80000})
 	line := ParseLine("\033[1m Error at {{{pc:0x123879c0}}}")
@@ -143,21 +140,22 @@ func TestBacktrace(t *testing.T) {
 
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{
-		{"out/libc.so", map[uint64][]SourceLocation{
+		{"testdata/libc.elf", map[uint64][]SourceLocation{
 			0x44987: {{NewOptStr("duff.h"), 64, NewOptStr("duffcopy")}, {NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
 		}},
 	})
 	// mock ids.txt
 	repo := NewRepo()
-	repo.AddObjects(map[string]string{
-		"be4c4336e20b734db97a58e0f083d0644461317c": "out/libc.so",
-	})
+	err := repo.AddSource(newMockSource())
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// make an actual filter using those two mock objects
 	filter := NewFilter(repo, symbo)
 
 	// add some context
-	filter.AddModule(Module{"libc.so", "be4c4336e20b734db97a58e0f083d0644461317c", 1})
+	filter.AddModule(Module{"libc.so", "4fcb712aa6387724a9f465a32cd8c14b", 1})
 	filter.AddSegment(Segment{1, 0x12345000, 849596, "rx", 0x0})
 	line.Accept(&FilterVisitor{filter, 1})
 
@@ -197,21 +195,23 @@ func TestReset(t *testing.T) {
 
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{
-		{"out/libc.so", map[uint64][]SourceLocation{
+		{"testdata/libc.elf", map[uint64][]SourceLocation{
 			0x44987: {{NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
 		}},
 	})
 	// mock ids.txt
 	repo := NewRepo()
-	repo.AddObjects(map[string]string{
-		"be4c4336e20b734db97a58e0f083d0644461317c": "out/libc.so",
-	})
+	err = repo.AddSource(newMockSource())
+
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// make an actual filter using those two mock objects
 	filter := NewFilter(repo, symbo)
 
 	// add some context
-	mod := Module{"libc.so", "be4c4336e20b734db97a58e0f083d0644461317c", 1}
+	mod := Module{"libc.so", "4fcb712aa6387724a9f465a32cd8c14b", 1}
 	filter.AddModule(mod)
 	seg := Segment{1, 0x12345000, 849596, "rx", 0x0}
 	filter.AddSegment(seg)

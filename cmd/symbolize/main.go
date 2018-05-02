@@ -35,7 +35,7 @@ func main() {
 
 	symbolizer := symbolize.NewLLVMSymbolizer(llvmSymboPath)
 	repo := symbolize.NewRepo()
-	err := repo.AddObjectsFromIdsFile(idsPath)
+	err := repo.AddSource(symbolize.NewIDsSource(idsPath))
 	if err != nil {
 		log.Fatal(err)
 	}
