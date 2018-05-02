@@ -25,9 +25,11 @@ class FfmpegDecoderBase : public Decoder {
   ~FfmpegDecoderBase() override;
 
   // Decoder implementation.
-  std::unique_ptr<StreamType> output_stream_type() override;
+  std::unique_ptr<StreamType> output_stream_type() const override;
 
   // Transform implementation.
+  void Dump(std::ostream& os, NodeRef ref) const override;
+
   void Flush() override;
 
   bool TransformPacket(const PacketPtr& input,

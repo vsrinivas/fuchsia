@@ -34,6 +34,8 @@ class FfmpegAudioDecoder : public FfmpegDecoderBase {
       const AVFrame& av_frame,
       const std::shared_ptr<PayloadAllocator>& allocator) override;
 
+  const char* label() const override;
+
  private:
   // Align sample buffers on 32-byte boundaries. This is the value that
   // Chromium uses and is supposed to work for all processor architectures.

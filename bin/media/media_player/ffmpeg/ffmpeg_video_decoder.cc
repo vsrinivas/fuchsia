@@ -159,4 +159,8 @@ PacketPtr FfmpegVideoDecoder::CreateOutputPacket(
   return packet;
 }
 
+const char* FfmpegVideoDecoder::label() const {
+  return "video decoder";
+}
+
 }  // namespace media_player

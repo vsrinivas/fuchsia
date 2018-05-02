@@ -12,7 +12,6 @@
 namespace media_player {
 
 // Decoder implementation employing and ffmpeg video decoder.
-// TODO(dalesat): Complete this.
 class FfmpegVideoDecoder : public FfmpegDecoderBase {
  public:
   static std::shared_ptr<Decoder> Create(AvCodecContextPtr av_codec_context);
@@ -32,6 +31,8 @@ class FfmpegVideoDecoder : public FfmpegDecoderBase {
   PacketPtr CreateOutputPacket(
       const AVFrame& av_frame,
       const std::shared_ptr<PayloadAllocator>& allocator) override;
+
+  const char* label() const override;
 
  private:
   FfmpegVideoFrameLayout frame_layout_;

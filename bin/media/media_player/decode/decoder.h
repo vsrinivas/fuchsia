@@ -23,7 +23,7 @@ class Decoder : public Transform {
   ~Decoder() override {}
 
   // Returns the type of the stream the decoder will produce.
-  virtual std::unique_ptr<StreamType> output_stream_type() = 0;
+  virtual std::unique_ptr<StreamType> output_stream_type() const = 0;
 };
 
 }  // namespace media_player

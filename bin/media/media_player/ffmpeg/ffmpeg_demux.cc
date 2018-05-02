@@ -16,6 +16,7 @@
 #include "garnet/bin/media/media_player/ffmpeg/av_io_context.h"
 #include "garnet/bin/media/media_player/ffmpeg/av_packet.h"
 #include "garnet/bin/media/media_player/ffmpeg/ffmpeg_demux.h"
+#include "garnet/bin/media/media_player/framework/formatting.h"
 #include "garnet/bin/media/media_player/util/incident.h"
 #include "garnet/bin/media/media_player/util/safe_clone.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -41,6 +42,10 @@ class FfmpegDemuxImpl : public FfmpegDemux {
   void Seek(int64_t position, SeekCallback callback) override;
 
   // MultistreamSource implementation.
+  const char* label() const override;
+
+  void Dump(std::ostream& os, NodeRef ref) const override;
+
   size_t stream_count() const override;
 
   void RequestPacket() override;
@@ -117,7 +122,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
   // Sets the problem values and sends status.
   void ReportProblem(const std::string& type, const std::string& details);
 
-  std::mutex mutex_;
+  mutable std::mutex mutex_;
   std::condition_variable condition_variable_ FXL_GUARDED_BY(mutex_);
   std::thread ffmpeg_thread_;
 
@@ -186,6 +191,27 @@ void FfmpegDemuxImpl::Seek(int64_t position, SeekCallback callback) {
   seek_position_ = position;
   seek_callback_ = callback;
   condition_variable_.notify_all();
+}
+
+const char* FfmpegDemuxImpl::label() const {
+  return "ffmpeg demux";
+}
+
+void FfmpegDemuxImpl::Dump(std::ostream& os, NodeRef ref) const {
+  os << label() << indent;
+  os << newl << "stream types per output:";
+
+  {
+    std::lock_guard<std::mutex> locker(mutex_);
+
+    for (auto& stream : streams_) {
+      os << newl << "[" << stream->index() << "] " << stream->stream_type();
+    }
+  }
+
+  os << newl << "outputs:";
+  DumpDownstreamNodes(os, ref);
+  os << outdent;
 }
 
 size_t FfmpegDemuxImpl::stream_count() const {

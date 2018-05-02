@@ -29,6 +29,8 @@ class FidlVideoRenderer
   ~FidlVideoRenderer() override;
 
   // VideoRendererInProc implementation.
+  const char* label() const override;
+
   void Flush(bool hold_frame) override;
 
   std::shared_ptr<PayloadAllocator> allocator() override;

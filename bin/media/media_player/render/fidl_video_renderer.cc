@@ -28,6 +28,10 @@ FidlVideoRenderer::FidlVideoRenderer() {
 
 FidlVideoRenderer::~FidlVideoRenderer() {}
 
+const char* FidlVideoRenderer::label() const {
+  return "video renderer";
+}
+
 void FidlVideoRenderer::Flush(bool hold_frame) {
   flushed_ = true;
 

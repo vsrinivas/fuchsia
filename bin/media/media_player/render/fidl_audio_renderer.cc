@@ -53,6 +53,10 @@ FidlAudioRenderer::FidlAudioRenderer(media::AudioRenderer2Ptr audio_renderer)
 
 FidlAudioRenderer::~FidlAudioRenderer() {}
 
+const char* FidlAudioRenderer::label() const {
+  return "audio renderer";
+}
+
 void FidlAudioRenderer::Flush(bool hold_frame_not_used) {
   flushed_ = true;
   last_supplied_pts_ = 0;

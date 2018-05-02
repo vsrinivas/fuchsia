@@ -27,6 +27,8 @@ class FidlAudioRenderer
   ~FidlAudioRenderer() override;
 
   // AudioRendererInProc implementation.
+  const char* label() const override;
+
   void Flush(bool hold_frame) override;
 
   std::shared_ptr<PayloadAllocator> allocator() override {
@@ -78,6 +80,8 @@ class FidlAudioRenderer
   uint32_t bytes_per_frame_;
   bool flushed_ = true;
   int64_t min_lead_time_ns_ = ZX_MSEC(100);
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(FidlAudioRenderer);
 };
 
 }  // namespace media_player

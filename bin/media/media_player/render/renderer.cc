@@ -6,6 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 
+#include "garnet/bin/media/media_player/framework/formatting.h"
 #include "lib/media/timeline/timeline.h"
 
 namespace media_player {
@@ -24,6 +25,13 @@ void Renderer::Provision(async_t* async, fxl::Closure update_callback) {
 void Renderer::Deprovision() {
   async_ = nullptr;
   update_callback_ = nullptr;
+}
+
+void Renderer::Dump(std::ostream& os, NodeRef ref) const {
+  os << label() << indent;
+  os << newl << "timeline:         " << current_timeline_function();
+  os << newl << "end of stream:    " << end_of_stream();
+  os << outdent;
 }
 
 void Renderer::SetProgramRange(uint64_t program,

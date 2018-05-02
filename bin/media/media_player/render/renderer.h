@@ -30,6 +30,9 @@ class Renderer : public Sink {
   // |Provision|.
   void Deprovision();
 
+  // Sink implementation.
+  void Dump(std::ostream& os, NodeRef ref) const override;
+
   // Returns the types of the streams the renderer is able
   // to consume.
   virtual const std::vector<std::unique_ptr<StreamTypeSet>>&
@@ -83,7 +86,7 @@ class Renderer : public Sink {
   void UpdateTimelineAt(int64_t reference_time);
 
   // Gets the current timeline function.
-  const media::TimelineFunction& current_timeline_function() {
+  const media::TimelineFunction& current_timeline_function() const {
     return current_timeline_function_;
   }
 

@@ -36,6 +36,8 @@ class GenericNode {
   // run exclusive of any other such tasks.
   void PostTask(const fxl::Closure& task);
 
+  // Dumps the nodes downstream of this node. |ref| is a reference to this node.
+  // TODO(dalesat): Handle fan-in, e.g. muxes.
   void DumpDownstreamNodes(std::ostream& os, NodeRef ref) const;
 
  private:

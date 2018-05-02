@@ -7,6 +7,7 @@
 #include <trace/event.h>
 
 #include "garnet/bin/media/media_player/ffmpeg/av_codec_context.h"
+#include "garnet/bin/media/media_player/framework/formatting.h"
 #include "lib/fxl/logging.h"
 
 namespace media_player {
@@ -22,7 +23,7 @@ FfmpegDecoderBase::FfmpegDecoderBase(AvCodecContextPtr av_codec_context)
 
 FfmpegDecoderBase::~FfmpegDecoderBase() {}
 
-std::unique_ptr<StreamType> FfmpegDecoderBase::output_stream_type() {
+std::unique_ptr<StreamType> FfmpegDecoderBase::output_stream_type() const {
   return AvCodecContext::GetStreamType(*av_codec_context_);
 }
 
@@ -168,6 +169,14 @@ FfmpegDecoderBase::DecoderPacket::~DecoderPacket() {
   owner_->PostTask([av_buffer_ref = av_buffer_ref_]() mutable {
     av_buffer_unref(&av_buffer_ref);
   });
+}
+
+void FfmpegDecoderBase::Dump(std::ostream& os, NodeRef ref) const {
+  os << label() << indent;
+  os << newl << "output stream type: " << output_stream_type();
+  os << newl << "output: ";
+  DumpDownstreamNodes(os, ref);
+  os << outdent;
 }
 
 }  // namespace media_player

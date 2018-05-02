@@ -32,7 +32,7 @@ class FakeDecoder : public Decoder {
     return true;
   }
 
-  std::unique_ptr<StreamType> output_stream_type() override {
+  std::unique_ptr<StreamType> output_stream_type() const override {
     FXL_DCHECK(output_stream_type_);
     return output_stream_type_->Clone();
   }
