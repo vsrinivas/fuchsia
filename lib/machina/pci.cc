@@ -184,7 +184,7 @@ zx_status_t PciBus::Connect(PciDevice* device) {
 
   zx_status_t status = device->SetupBarTraps(guest_);
   if (status == ZX_OK) {
-    FXL_LOG(INFO) << "PCI bus connected device " << slot << " to device ID "
+    FXL_LOG(INFO) << "PCI bus connected device " << slot << " to device ID 0x"
                   << std::hex << device->attrs_.device_id;
   }
   return status;
