@@ -47,7 +47,8 @@ zx_status_t BssClientMap::AssignAid(const common::MacAddr& addr, aid_t* out_aid)
     // Update the client's state and its AID.
     auto iter = clients_.find(addr);
     auto& client = iter->second;
-    // Do not assign a new AID to the client if the client has already one assigned.
+    // Do not assign a new AID to the client if the client has already one
+    // assigned.
     if (client.aid != kUnknownAid) {
         *out_aid = client.aid;
         return ZX_OK;
@@ -56,9 +57,7 @@ zx_status_t BssClientMap::AssignAid(const common::MacAddr& addr, aid_t* out_aid)
     // Retrieve next available AID. Return if all AIDs are already taken.
     aid_t available_aid;
     auto status = aid_bitmap_.Get(kMinClientAid, kMaxBssClients, &available_aid);
-    if (status != ZX_OK) {
-        return status;
-    }
+    if (status != ZX_OK) { return status; }
 
     status = aid_bitmap_.SetOne(available_aid);
     if (status != ZX_OK) { return status; }

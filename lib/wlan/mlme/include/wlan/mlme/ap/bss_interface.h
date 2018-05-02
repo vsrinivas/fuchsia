@@ -32,9 +32,7 @@ class PsCfg {
 
     uint8_t dtim_period() const { return dtim_period_; }
 
-    uint8_t dtim_count() const {
-        return dtim_count_;
-    }
+    uint8_t dtim_count() const { return dtim_count_; }
 
     TrafficIndicationMap* GetTim() { return &tim_; }
 
@@ -49,9 +47,7 @@ class PsCfg {
     }
 
     uint8_t LastDtimCount() {
-        if (dtim_count_ == dtim_period_ - 1) {
-            return 0;
-        }
+        if (dtim_count_ == dtim_period_ - 1) { return 0; }
         return dtim_count_ + 1;
     }
 
@@ -70,13 +66,16 @@ class BssInterface {
 
     // Starts the BSS. Beacons will be sent and incoming frames are processed.
     virtual void Start(const wlan_mlme::StartRequest& req) = 0;
-    // Stops the BSS. All incoming frames are dropped and Beacons are not sent anymore.
+    // Stops the BSS. All incoming frames are dropped and Beacons are not sent
+    // anymore.
     virtual void Stop() = 0;
 
-    // Assigns an AID to the given client. Returns an error if there is no AID available anymore.
+    // Assigns an AID to the given client. Returns an error if there is no AID
+    // available anymore.
     virtual zx_status_t AssignAid(const common::MacAddr& client, aid_t* out_aid) = 0;
-    // Releases the AID associated with the given client. The AID will be available afterwards and
-    // can get assigned to other, newly associated clients.
+    // Releases the AID associated with the given client. The AID will be
+    // available afterwards and can get assigned to other, newly associated
+    // clients.
     virtual zx_status_t ReleaseAid(const common::MacAddr& client) = 0;
 
     virtual seq_t NextSeq(const MgmtFrameHeader& hdr) = 0;

@@ -13,7 +13,8 @@ namespace wlan {
 ApMlme::ApMlme(DeviceInterface* device) : device_(device) {}
 
 ApMlme::~ApMlme() {
-    // Ensure the BSS is correctly stopped and terminated when destroying the MLME.
+    // Ensure the BSS is correctly stopped and terminated when destroying the
+    // MLME.
     if (bss_ != nullptr && bss_->IsStarted()) { bss_->Stop(); }
 }
 

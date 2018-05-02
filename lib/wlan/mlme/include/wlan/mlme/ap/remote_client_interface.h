@@ -8,8 +8,9 @@
 
 namespace wlan {
 
-// A minimum client definition representing a remote client. A client's specifics should be opaque
-// to its owner, for example a BSS. This minimalistic definition guarantees this constraint.
+// A minimum client definition representing a remote client. A client's
+// specifics should be opaque to its owner, for example a BSS. This minimalistic
+// definition guarantees this constraint.
 class RemoteClientInterface : public FrameHandler {
    public:
     virtual ~RemoteClientInterface() = default;

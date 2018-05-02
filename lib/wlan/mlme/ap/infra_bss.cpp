@@ -55,7 +55,8 @@ void InfraBss::Start(const wlan_mlme::StartRequest& req) {
     if (req.dtim_period == 0) {
         ps_cfg_.SetDtimPeriod(1);
         warnf(
-            "[infra-bss] [%s] received start request with reserved DTIM period of 0; falling back "
+            "[infra-bss] [%s] received start request with reserved DTIM period of "
+            "0; falling back "
             "to DTIM period of 1\n",
             bssid_.ToString().c_str());
     } else {
@@ -68,7 +69,8 @@ void InfraBss::Start(const wlan_mlme::StartRequest& req) {
     debugbss("    DTIM Period: %u\n", req.dtim_period);
     debugbss("    Channel: %u\n", req.channel);
 
-    // Keep track of start request which holds important configuration information.
+    // Keep track of start request which holds important configuration
+    // information.
     req.Clone(&start_req_);
 
     // Start sending Beacon frames.
@@ -99,9 +101,11 @@ zx_status_t InfraBss::HandleTimeout(const common::MacAddr& client_addr) {
 zx_status_t InfraBss::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
     bool to_bss = (bssid_ == hdr.addr1 && bssid_ == hdr.addr3);
 
-    // Special treatment for ProbeRequests which can be addressed towards broadcast address.
+    // Special treatment for ProbeRequests which can be addressed towards
+    // broadcast address.
     if (hdr.fc.subtype() == ManagementSubtype::kProbeRequest) {
-        // Drop all ProbeRequests which are neither targeted to this BSS nor to broadcast address.
+        // Drop all ProbeRequests which are neither targeted to this BSS nor to
+        // broadcast address.
         bool to_bcast = (common::kBcastMac == hdr.addr1 && common::kBcastMac == hdr.addr3);
         if (!to_bss && !to_bcast) { return ZX_ERR_STOP; }
 
@@ -174,9 +178,9 @@ zx_status_t InfraBss::HandleAuthentication(const ImmutableMgmtFrame<Authenticati
                                                  client_addr);
     clients_.Add(client_addr, fbl::move(client));
 
-    // Note: usually, HandleMgmtFrame(...) will forward incoming frames to the corresponding
-    // clients. However, Authentication frames will add new clients and hence, this frame must be
-    // forwarded manually to the newly added client.
+    // Note: usually, HandleMgmtFrame(...) will forward incoming frames to the
+    // corresponding clients. However, Authentication frames will add new clients
+    // and hence, this frame must be forwarded manually to the newly added client.
     ForwardCurrentFrameTo(clients_.GetClient(client_addr));
     return ZX_OK;
 }
@@ -216,8 +220,10 @@ void InfraBss::HandleClientBuChange(const common::MacAddr& client, size_t bu_cou
     auto aid = clients_.GetClientAid(client);
     ZX_DEBUG_ASSERT(aid != kUnknownAid);
     if (aid == kUnknownAid) {
-        errorf("[infra-bss] [%s] received traffic indication from client with unknown AID: %s\n",
-               bssid_.ToString().c_str(), client.ToString().c_str());
+        errorf(
+            "[infra-bss] [%s] received traffic indication from client with unknown "
+            "AID: %s\n",
+            bssid_.ToString().c_str(), client.ToString().c_str());
         return;
     }
 
@@ -267,8 +273,8 @@ zx_status_t InfraBss::CreateClientTimer(const common::MacAddr& client_addr,
 
 bool InfraBss::ShouldBufferFrame(const common::MacAddr& receiver_addr) const {
     // Buffer non-GCR-SP frames when at least one client is dozing.
-    // Note: Currently group addressed service transmission is not supported and thus, every group
-    // message should get buffered.
+    // Note: Currently group addressed service transmission is not supported and
+    // thus, every group message should get buffered.
     return receiver_addr.IsGroupAddr() && ps_cfg_.GetTim()->HasDozingClients();
 }
 
@@ -349,7 +355,8 @@ zx_status_t InfraBss::EthToDataFrame(const ImmutableBaseFrame<EthernetII>& frame
     hdr->sc.set_seq(NextSeq(*hdr));
 
     wlan_tx_info_t txinfo = {
-        // TODO(porce): Determine PHY and CBW based on the association negotiation.
+        // TODO(porce): Determine PHY and CBW based on the association
+        // negotiation.
         .tx_flags = 0x0,
         .valid_fields =
             WLAN_TX_INFO_VALID_PHY | WLAN_TX_INFO_VALID_CHAN_WIDTH | WLAN_TX_INFO_VALID_MCS,
@@ -364,8 +371,8 @@ zx_status_t InfraBss::EthToDataFrame(const ImmutableBaseFrame<EthernetII>& frame
         // TODO(porce): Use a separate sequence number space in that case
         if (hdr->addr3.IsUcast()) {
             // 40MHz direction does not matter here.
-            // Radio uses the operational channel setting. This indicates the bandwidth without
-            // direction.
+            // Radio uses the operational channel setting. This indicates the
+            // bandwidth without direction.
             txinfo.cbw = CBW40;
         }
     }

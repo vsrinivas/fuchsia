@@ -28,11 +28,11 @@ class TrafficIndicationMap {
     void Clear();
 
    private:
-    // N1 and N2 specify the start and end offsets of a range of AIDs which have buffered traffic.
-    // N1 is the largest even number such that AIDs from 1 to (N1 * 8) - 1 have no buffered traffic.
-    // N2 is the smallest number such that AIDs from (N2 + 1) * 8 to 2007 have no buffered traffic.
-    // These offsets are used to compute a Partial Virtual Bitmap.
-    // See IEEE 802.11-2016, 9.4.2.6.
+    // N1 and N2 specify the start and end offsets of a range of AIDs which have
+    // buffered traffic. N1 is the largest even number such that AIDs from 1 to
+    // (N1 * 8) - 1 have no buffered traffic. N2 is the smallest number such that
+    // AIDs from (N2 + 1) * 8 to 2007 have no buffered traffic. These offsets are
+    // used to compute a Partial Virtual Bitmap. See IEEE 802.11-2016, 9.4.2.6.
     size_t N1() const;
     size_t N2() const;
 

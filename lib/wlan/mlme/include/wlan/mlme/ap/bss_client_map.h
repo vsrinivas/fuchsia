@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/ap/remote_client_interface.h>
+#include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/macaddr_map.h>
 
 #include <bitmap/raw-bitmap.h>

@@ -22,7 +22,8 @@ namespace wlan {
 
 class ObjectId;
 
-// An infrastructure BSS which keeps track of its client and owned by the AP MLME.
+// An infrastructure BSS which keeps track of its client and owned by the AP
+// MLME.
 class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::Listener {
    public:
     InfraBss(DeviceInterface* device, fbl::unique_ptr<BeaconSender> bcn_sender,
@@ -63,7 +64,8 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     wlan_channel_t Chan() const override { return chan_; }
 
    private:
-    // Maximum number of group addressed packets buffered while at least one client is dozing.
+    // Maximum number of group addressed packets buffered while at least one
+    // client is dozing.
     // TODO(NET-687): Find good BU limit.
     static constexpr size_t kMaxGroupAddressedBu = 128;
 
@@ -93,11 +95,13 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     zx_time_t started_at_;
     BssClientMap clients_;
     Sequence seq_;
-    // Queue which holds buffered non-GCR-SP frames when at least one client is dozing.
+    // Queue which holds buffered non-GCR-SP frames when at least one client is
+    // dozing.
     PacketQueue bu_queue_;
     PsCfg ps_cfg_;
     wlan_channel_t chan_;
-    // MLME-START.request holds all information required to correctly configure and start a BSS.
+    // MLME-START.request holds all information required to correctly configure
+    // and start a BSS.
     wlan_mlme::StartRequest start_req_;
 };
 

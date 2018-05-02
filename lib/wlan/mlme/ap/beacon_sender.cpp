@@ -100,8 +100,8 @@ zx_status_t BeaconSender::UpdateBeacon(const PsCfg& ps_cfg) {
     ZX_DEBUG_ASSERT(IsStarted());
     if (!IsStarted()) { return ZX_ERR_BAD_STATE; }
 
-    // TODO(hahnr): Length of elements is not known at this time. Allocate enough bytes.
-    // This should be updated once there is a better size management.
+    // TODO(hahnr): Length of elements is not known at this time. Allocate enough
+    // bytes. This should be updated once there is a better size management.
     size_t body_payload_len = 256;
     fbl::unique_ptr<Packet> packet = nullptr;
     auto frame = BuildMgmtFrame<Beacon>(&packet, body_payload_len);
@@ -175,8 +175,8 @@ zx_status_t BeaconSender::SendProbeResponse(const ImmutableMgmtFrame<ProbeReques
     ZX_DEBUG_ASSERT(IsStarted());
     if (!IsStarted()) { return ZX_ERR_BAD_STATE; }
 
-    // TODO(hahnr): Length of elements is not known at this time. Allocate enough bytes.
-    // This should be updated once there is a better size management.
+    // TODO(hahnr): Length of elements is not known at this time. Allocate enough
+    // bytes. This should be updated once there is a better size management.
     size_t body_payload_len = 256;
     fbl::unique_ptr<Packet> packet = nullptr;
     auto frame = BuildMgmtFrame<ProbeResponse>(&packet, body_payload_len);

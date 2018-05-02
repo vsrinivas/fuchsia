@@ -23,8 +23,8 @@ DeauthenticatingState::DeauthenticatingState(RemoteClient* client) : BaseState(c
 
 void DeauthenticatingState::OnEnter() {
     debugfn();
-    // TODO(hahnr): This is somewhat gross. Revisit once new frame processing landed and the sate
-    // machine can make use of the new benefits.
+    // TODO(hahnr): This is somewhat gross. Revisit once new frame processing
+    // landed and the sate machine can make use of the new benefits.
     auto status = client_->ReportDeauthentication();
     if (status == ZX_OK) { MoveToState<DeauthenticatedState>(); }
 }
@@ -38,7 +38,8 @@ zx_status_t DeauthenticatedState::HandleAuthentication(
     debugfn();
     ZX_DEBUG_ASSERT(frame.hdr->addr2 == client_->addr());
 
-    // Move into Authenticating state which responds to incoming Authentication request.
+    // Move into Authenticating state which responds to incoming Authentication
+    // request.
     MoveToState<AuthenticatingState>(frame);
     return ZX_ERR_STOP;
 }
@@ -97,15 +98,15 @@ void AuthenticatedState::OnExit() {
 }
 
 void AuthenticatedState::HandleTimeout() {
-    if (client_->IsDeadlineExceeded(auth_timeout_)) {
-        MoveToState<DeauthenticatingState>();
-    }
+    if (client_->IsDeadlineExceeded(auth_timeout_)) { MoveToState<DeauthenticatingState>(); }
 }
 
 zx_status_t AuthenticatedState::HandleAuthentication(
     const ImmutableMgmtFrame<Authentication>& frame, const wlan_rx_info_t& rxinfo) {
-    debugbss("[client] [%s] received Authentication request while being authenticated\n",
-             client_->addr().ToString().c_str());
+    debugbss(
+        "[client] [%s] received Authentication request while being "
+        "authenticated\n",
+        client_->addr().ToString().c_str());
     MoveToState<AuthenticatingState>(frame);
     return ZX_ERR_STOP;
 }
@@ -124,7 +125,8 @@ zx_status_t AuthenticatedState::HandleAssociationRequest(
     client_->CancelTimer();
     auth_timeout_ = zx::time();
 
-    // Move into Associating state state which responds to incoming Association requests.
+    // Move into Associating state state which responds to incoming Association
+    // requests.
     MoveToState<AssociatingState>(frame);
     return ZX_ERR_STOP;
 }
@@ -175,8 +177,8 @@ zx_status_t AssociatedState::HandleAuthentication(const ImmutableMgmtFrame<Authe
                                                   const wlan_rx_info_t& rxinfo) {
     debugbss("[client] [%s] received Authentication request while being associated\n",
              client_->addr().ToString().c_str());
-    // Client believes it is not yet authenticated. Thus, there is no need to send an explicit
-    // Deauthentication.
+    // Client believes it is not yet authenticated. Thus, there is no need to send
+    // an explicit Deauthentication.
     req_deauth_ = false;
 
     MoveToState<AuthenticatingState>(frame);
@@ -189,8 +191,8 @@ zx_status_t AssociatedState::HandleAssociationRequest(
     ZX_DEBUG_ASSERT(frame.hdr->addr2 == client_->addr());
     debugbss("[client] [%s] received Assocation Request while being associated\n",
              client_->addr().ToString().c_str());
-    // Client believes it is not yet associated. Thus, there is no need to send an explicit
-    // Deauthentication.
+    // Client believes it is not yet associated. Thus, there is no need to send an
+    // explicit Deauthentication.
     req_deauth_ = false;
 
     MoveToState<AssociatingState>(frame);
@@ -207,8 +209,8 @@ void AssociatedState::OnEnter() {
     if (client_->bss()->IsRsn()) {
         debugbss("[client] [%s] requires RSNA\n", client_->addr().ToString().c_str());
 
-        // TODO(NET-789): Block port only if RSN requires 802.1X authentication. For now, only
-        // 802.1X authentications are supported.
+        // TODO(NET-789): Block port only if RSN requires 802.1X authentication. For
+        // now, only 802.1X authentications are supported.
         eapol_controlled_port_ = eapol::PortState::kBlocked;
     } else {
         eapol_controlled_port_ = eapol::PortState::kOpen;
@@ -217,7 +219,8 @@ void AssociatedState::OnEnter() {
 
 zx_status_t AssociatedState::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame) {
     if (dozing_) {
-        // Enqueue ethernet frame and postpone conversion to when the frame is sent to the client.
+        // Enqueue ethernet frame and postpone conversion to when the frame is sent
+        // to the client.
         auto status = client_->EnqueueEthernetFrame(frame);
         if (status == ZX_ERR_NO_RESOURCES) {
             debugps("[client] [%s] reached PS buffering limit; dropping frame\n",
@@ -228,7 +231,8 @@ zx_status_t AssociatedState::HandleEthFrame(const ImmutableBaseFrame<EthernetII>
         return status;
     }
 
-    // If the client is awake and not in power saving mode, convert and send frame immediately.
+    // If the client is awake and not in power saving mode, convert and send frame
+    // immediately.
     fbl::unique_ptr<Packet> out_frame;
     auto status = client_->bss()->EthToDataFrame(frame, &out_frame);
     if (status != ZX_OK) {
@@ -287,8 +291,10 @@ zx_status_t AssociatedState::HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFr
 
     zx_status_t status = client_->bss()->SendDataFrame(fbl::move(packet));
     if (status != ZX_OK) {
-        errorf("[client] [%s] could not send null data frame as PS-POLL response: %d\n",
-               client_->addr().ToString().c_str(), status);
+        errorf(
+            "[client] [%s] could not send null data frame as PS-POLL response: "
+            "%d\n",
+            client_->addr().ToString().c_str(), status);
         return status;
     }
 
@@ -299,10 +305,10 @@ void AssociatedState::OnExit() {
     client_->CancelTimer();
     inactive_timeout_ = zx::time();
 
-    // Ensure Deauthentication is sent to the client if itself didn't send such notification or such
-    // notification wasn't already sent due to inactivity of the client.
-    // This Deauthentication is usually issued when the BSS stopped and its associated clients
-    // need to get notified.
+    // Ensure Deauthentication is sent to the client if itself didn't send such
+    // notification or such notification wasn't already sent due to inactivity of
+    // the client. This Deauthentication is usually issued when the BSS stopped
+    // and its associated clients need to get notified.
     if (req_deauth_) {
         req_deauth_ = false;
         debugbss("[client] [%s] ending association; deauthenticating client\n",
@@ -335,8 +341,10 @@ zx_status_t AssociatedState::HandleDataFrame(const ImmutableDataFrame<LlcHeader>
     }
 
     if (frame.hdr->fc.to_ds() == 0 || frame.hdr->fc.from_ds() == 1) {
-        warnf("received unsupported data frame from %s with to_ds/from_ds combination: %u/%u\n",
-              frame.hdr->addr2.ToString().c_str(), frame.hdr->fc.to_ds(), frame.hdr->fc.from_ds());
+        warnf(
+            "received unsupported data frame from %s with to_ds/from_ds "
+            "combination: %u/%u\n",
+            frame.hdr->addr2.ToString().c_str(), frame.hdr->fc.to_ds(), frame.hdr->fc.from_ds());
         return ZX_OK;
     }
 
@@ -359,7 +367,8 @@ zx_status_t AssociatedState::HandleDataFrame(const ImmutableDataFrame<LlcHeader>
         return ZX_OK;
     }
 
-    // Block data frames if 802.1X authentication is required but didn't finish yet.
+    // Block data frames if 802.1X authentication is required but didn't finish
+    // yet.
     if (eapol_controlled_port_ != eapol::PortState::kOpen) { return ZX_OK; }
 
     const size_t eth_len = frame.body_len + sizeof(EthernetII);
@@ -405,12 +414,14 @@ void AssociatedState::HandleTimeout() {
     } else {
         active_ = false;
 
-        // The client timed-out, send Deauthentication. Ignore result, always leave associated
-        // state.
+        // The client timed-out, send Deauthentication. Ignore result, always leave
+        // associated state.
         req_deauth_ = false;
         client_->SendDeauthentication(reason_code::ReasonCode::kReasonInactivity);
-        debugbss("[client] [%s] client inactive for %lu seconds; deauthenticating client\n",
-                 client_->addr().ToString().c_str(), kInactivityTimeoutTu / 1000);
+        debugbss(
+            "[client] [%s] client inactive for %lu seconds; deauthenticating "
+            "client\n",
+            client_->addr().ToString().c_str(), kInactivityTimeoutTu / 1000);
         MoveToState<DeauthenticatedState>();
     }
 }
@@ -425,8 +436,8 @@ void AssociatedState::UpdatePowerSaveMode(const FrameControl& fc) {
             debugps("[client] [%s] client woke up\n", client_->addr().ToString().c_str());
 
             // Send all buffered frames when client woke up.
-            // TODO(hahnr): Once we implemented a smarter way of queuing packets, this code should
-            // be revisited.
+            // TODO(hahnr): Once we implemented a smarter way of queuing packets, this
+            // code should be revisited.
             while (client_->HasBufferedFrames()) {
                 auto status = SendNextBu();
                 if (status != ZX_OK) { return; }
@@ -482,8 +493,9 @@ zx_status_t AssociatedState::HandleMlmeSetKeysReq(const wlan_mlme::SetKeysReques
         switch (keyDesc.key_type) {
         case wlan_mlme::KeyType::PAIRWISE:
             // Once a pairwise key was exchange, RSNA was established.
-            // TODO(NET-790): This is a pretty simplified assumption and an RSNA should only be
-            // established once all required keys by the RSNE were exchanged.
+            // TODO(NET-790): This is a pretty simplified assumption and an RSNA
+            // should only be established once all required keys by the RSNE were
+            // exchanged.
             eapol_controlled_port_ = eapol::PortState::kOpen;
         default:
             break;
@@ -639,7 +651,8 @@ zx_status_t RemoteClient::SendAuthentication(status_code::StatusCode result) {
     auto auth = frame.body;
     auth->status_code = result;
     auth->auth_algorithm_number = AuthAlgorithm::kOpenSystem;
-    // TODO(hahnr): Evolve this to support other authentication algorithms and track seq number.
+    // TODO(hahnr): Evolve this to support other authentication algorithms and
+    // track seq number.
     auth->auth_txn_seq_number = 2;
 
     auto status = bss_->SendMgmtFrame(fbl::move(packet));
