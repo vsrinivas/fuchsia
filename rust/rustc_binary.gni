@@ -57,6 +57,7 @@ template("rustc_binary") {
                              "with_unit_tests",
                              "output_name",
                              "source_dir",
+                             "testonly",
                            ])
     type = "bin"
   }

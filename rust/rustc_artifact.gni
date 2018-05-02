@@ -102,21 +102,26 @@ template("rustc_artifact") {
   if (type == "bin") {
     prefix = ""
     extension = ""
+    root_file = "main.rs"
   } else if (type == "rlib") {
     prefix = "lib"
     extension = ".rlib"
+    root_file = "lib.rs"
   } else if (type == "staticlib") {
     prefix = "staticlib"
     extension = ".a"
+    root_file = "lib.rs"
   } else if (type == "proc-macro") {
     prefix = "macro"
     extension = ".so"
+    root_file = "lib.rs"
   }
 
   third_party_build = "//third_party/rust-crates/rustc_deps:build-third-party"
   third_party_deps_data = "${root_out_dir}/rust_third_party/deps_data.json"
   first_party_crate_root = "${root_out_dir}/rust_crates"
   output_file = "${first_party_crate_root}/${prefix}${name}${extension}"
+  output_depfile = "${first_party_crate_root}/${prefix}${name}.d"
   test_output_file = "${root_out_dir}/${name}_${invoker.type}_test_rustc"
 
   build_target_name = "${target_name}_build"
@@ -143,14 +148,15 @@ template("rustc_artifact") {
   action(build_target_name) {
     script = "//build/rust/build_rustc_target.py"
 
-    forward_variables_from(invoker, [ "deps" ])
+    forward_variables_from(invoker, [ "deps", "testonly" ])
     if (!defined(deps)) {
       deps = []
     }
     deps += [ third_party_build ]
     inputs = [
-      "./src",
+      "$source_dir/src/$root_file",
     ]
+    depfile = output_depfile
 
     if (defined(invoker.non_rust_deps)) {
       public_deps = invoker.non_rust_deps
@@ -164,6 +170,8 @@ template("rustc_artifact") {
       "--crate-type", type,
       "--crate-name", name,
       "--opt-level", opt_level,
+      "--depfile", rebase_path(output_depfile),
+      "--root-out-dir", rebase_path(root_out_dir),
       "--output-file", rebase_path(output_file),
       "--test-output-file", rebase_path(test_output_file),
       "--target", target_triple,
@@ -195,14 +203,17 @@ template("rustc_artifact") {
 
   cargo_toml_target_name = "${target_name}_cargo"
   group_deps += [ ":${cargo_toml_target_name}" ]
-  cargo_toml_dir = target_out_dir
+  cargo_toml_dir = "$target_out_dir/$target_name"
   action(cargo_toml_target_name) {
     script = "//build/rust/write_cargo_toml.py"
-    forward_variables_from(invoker, [ "deps" ])
+    forward_variables_from(invoker, [ "deps", "testonly" ])
     if (!defined(deps)) {
       deps = []
     }
     deps += [ third_party_build ]
+    if (defined(invoker.non_rust_deps)) {
+      public_deps = invoker.non_rust_deps
+    }
     args = [
       "--out-dir", rebase_path(cargo_toml_dir),
       "--crate-name", name,
@@ -216,6 +227,7 @@ template("rustc_artifact") {
   }
 
   group(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
     public_deps = group_deps
   }
 }
