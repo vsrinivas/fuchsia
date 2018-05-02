@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -67,6 +68,15 @@ func main() {
 	}
 	if *efiBootloader != "" {
 		dstSrc["EFI/BOOT/BOOTX64.EFI"] = *efiBootloader
+
+		tf, err := ioutil.TempFile("", "gsetup-boot")
+		if err != nil {
+			log.Fatal(err)
+		}
+		tf.WriteString("efi\\boot\\bootx64.efi")
+		tf.Close()
+		defer os.Remove(tf.Name())
+		dstSrc["EFI/Google/GSetup/Boot"] = tf.Name()
 	}
 	if *zedboot != "" {
 		dstSrc["zedboot.bin"] = *zedboot
@@ -176,7 +186,7 @@ func msCopyIn(root fs.Directory, src, dst string) {
 		}
 
 		var err error
-		_, d, _, err = d.Open(part, fs.OpenFlagRead|fs.OpenFlagWrite|fs.OpenFlagCreate|fs.OpenFlagDirectory)
+		_, d, _, err = d.Open(part, fs.OpenFlagRead|fs.OpenFlagCreate|fs.OpenFlagDirectory)
 		if err != nil {
 			log.Fatalf("open/create %s: %#v %s", part, err, err)
 		}

@@ -496,6 +496,15 @@ func main() {
 
 	root := fatfs.RootDirectory()
 
+	tf, err := ioutil.TempFile("", "gsetup-boot")
+	if err != nil {
+		log.Fatal(err)
+	}
+	tf.WriteString("efi\\boot\\bootx64.efi")
+	tf.Close()
+	defer os.Remove(tf.Name())
+
+	msCopyIn(root, tf.Name(), "EFI/Google/GSetup/Boot")
 	msCopyIn(root, *bootloader, "EFI/BOOT/bootx64.efi")
 	msCopyIn(root, *kernel, "zircon.bin")
 	msCopyIn(root, *ramdisk, "bootdata.bin")
@@ -589,7 +598,7 @@ func msCopyIn(root fs.Directory, src, dst string) {
 		}
 
 		var err error
-		_, d, _, err = d.Open(part, fs.OpenFlagRead|fs.OpenFlagWrite|fs.OpenFlagCreate|fs.OpenFlagDirectory)
+		_, d, _, err = d.Open(part, fs.OpenFlagRead|fs.OpenFlagCreate|fs.OpenFlagDirectory)
 		if err != nil {
 			log.Fatalf("open/create %s: %#v %s", part, err, err)
 		}

@@ -587,7 +587,7 @@ func createIncremental(parent node.DirectoryNode, name string, flags fs.OpenFlag
 	// File / Directory does not exist...
 	if !flags.Create() {
 		return nil, fs.ErrNotFound // If we aren't creating anything, we didn't find our file
-	} else if !flags.Write() {
+	} else if flags.File() && !flags.Write() {
 		return nil, fs.ErrPermission // Creating a file requires write permssions
 	} else if flags.File() == flags.Directory() {
 		return nil, fs.ErrInvalidArgs // We must know if we're creating a file or directory
