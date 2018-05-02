@@ -59,6 +59,9 @@ the following steps.
          gerrithost="https://fuchsia-review.googlesource.com"/>
 ```
 
+Once all that is done, navigate to `third_party/rust-crates` locally,
+run `git checkout <YOUR_NEW_REVISION_HERE>`, build Garnet to ensure that your
+change is working, then open a CL.
 
 Linking to a native library is not currently supported.
 
