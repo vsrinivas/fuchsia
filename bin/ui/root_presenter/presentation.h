@@ -144,9 +144,14 @@ class Presentation : private views_v1::ViewTreeListener,
                                                 bool print_errors);
 
   // |Presentation|
-  void CaptureKeyboardEvent(
+  void CaptureKeyboardEventHACK(
       input::KeyboardEvent event_to_capture,
-      fidl::InterfaceHandle<presentation::KeyboardCaptureListener> listener)
+      fidl::InterfaceHandle<presentation::KeyboardCaptureListenerHACK> listener)
+      override;
+
+  // |Presentation|
+  void CapturePointerEventsHACK(
+      fidl::InterfaceHandle<presentation::PointerCaptureListenerHACK> listener)
       override;
 
   // |Presentation|
@@ -254,9 +259,15 @@ class Presentation : private views_v1::ViewTreeListener,
   // event happens.
   struct KeyboardCaptureItem {
     input::KeyboardEvent event;
-    presentation::KeyboardCaptureListenerPtr listener;
+    presentation::KeyboardCaptureListenerHACKPtr listener;
   };
   std::vector<KeyboardCaptureItem> captured_keybindings_;
+
+  // A registry of listeners who want to be notified when pointer event happens.
+  struct PointerCaptureItem {
+    presentation::PointerCaptureListenerHACKPtr listener;
+  };
+  std::vector<PointerCaptureItem> captured_pointerbindings_;
 
   // Listener for changes in presentation mode.
   presentation::PresentationModeListenerPtr presentation_mode_listener_;

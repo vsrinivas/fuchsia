@@ -435,11 +435,11 @@ void Presentation::OnReport(uint32_t device_id,
   state->Update(std::move(input_report), size);
 }
 
-void Presentation::CaptureKeyboardEvent(
+void Presentation::CaptureKeyboardEventHACK(
     input::KeyboardEvent event_to_capture,
-    fidl::InterfaceHandle<presentation::KeyboardCaptureListener>
+    fidl::InterfaceHandle<presentation::KeyboardCaptureListenerHACK>
         listener_handle) {
-  presentation::KeyboardCaptureListenerPtr listener;
+  presentation::KeyboardCaptureListenerHACKPtr listener;
   listener.Bind(std::move(listener_handle));
   // Auto-remove listeners if the interface closes.
   listener.set_error_handler([this, listener = listener.get()] {
@@ -454,6 +454,26 @@ void Presentation::CaptureKeyboardEvent(
 
   captured_keybindings_.push_back(
       KeyboardCaptureItem{std::move(event_to_capture), std::move(listener)});
+}
+
+void Presentation::CapturePointerEventsHACK(
+  fidl::InterfaceHandle<presentation::PointerCaptureListenerHACK>
+      listener_handle) {
+  presentation::PointerCaptureListenerHACKPtr listener;
+  listener.Bind(std::move(listener_handle));
+  // Auto-remove listeners if the interface closes.
+  listener.set_error_handler([ this, listener = listener.get() ] {
+    captured_pointerbindings_.erase(
+        std::remove_if(captured_pointerbindings_.begin(),
+                       captured_pointerbindings_.end(),
+                       [listener](const PointerCaptureItem& item) -> bool {
+                         return item.listener.get() == listener;
+                       }),
+        captured_pointerbindings_.end());
+  });
+
+  captured_pointerbindings_.push_back(
+      PointerCaptureItem{std::move(listener)});
 }
 
 void Presentation::GetPresentationMode(GetPresentationModeCallback callback) {
@@ -524,6 +544,25 @@ void Presentation::OnEvent(input::InputEvent event) {
             invalidate = true;
           }
         }
+      }
+
+      for (size_t i = 0; i < captured_pointerbindings_.size(); i++) {
+        input::PointerEvent clone;
+        fidl::Clone(pointer, &clone);
+
+        // Adjust pointer origin with simulated screen offset.
+        clone.x -= (display_model_actual_.display_info().width_in_px -
+                      display_metrics_.width_in_px()) /
+                      2;
+        clone.y -= (display_model_actual_.display_info().height_in_px -
+                      display_metrics_.height_in_px()) /
+                      2;
+
+        // Scale by device pixel density.
+        clone.x *= display_metrics_.x_scale_in_pp_per_px();
+        clone.y *= display_metrics_.y_scale_in_pp_per_px();
+
+        captured_pointerbindings_[i].listener->OnPointerEvent(std::move(clone));
       }
 
     } else if (event.is_keyboard()) {
