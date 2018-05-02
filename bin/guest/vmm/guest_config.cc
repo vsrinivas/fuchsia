@@ -26,26 +26,27 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "\t--zircon=[kernel.bin]           Load a Zircon kernel from 'kernel.bin'\n";
   std::cerr << "\t--linux=[kernel.bin]            Load a Linux kernel from 'kernel.bin'\n";
   std::cerr << "\t--ramdisk=[ramdisk.bin]         Use file 'ramdisk.bin' as an initial RAM disk\n";
-  std::cerr << "\t--cpus=[cpus]                   Number of virtual CPUs the guest is allowed to use\n";
-  std::cerr << "\t--memory=[bytes]                Allocate 'bytes' of physical memory for the guest. The\n";
-  std::cerr << "\t                                suffixes 'k', 'M', and 'G' are accepted (currently x64 only)\n";
-  std::cerr << "\t--block=[block_spec]            Adds a block device with the given parameters\n";
-  std::cerr << "\t--block-wait                    Wait for block devices (specified by GUID) to become\n";
-  std::cerr << "\t                                available instead of failing.\n";
   std::cerr << "\t--cmdline=[cmdline]             Use string 'cmdline' as the kernel command line. This will\n";
   std::cerr << "\t                                overwrite any existing command line created using --cmdline\n";
   std::cerr << "\t                                or --cmdline-append.\n";
   std::cerr << "\t--cmdline-append=[cmdline]      Appends string 'cmdline' to the existing kernel command\n";
   std::cerr << "\t                                line\n";
-  std::cerr << "\t--display={scenic,framebuffer,  Configures the display backend to use for the guest. 'scenic'\n";
-  std::cerr << "\t           none}                (default) will render to a scenic view. 'framebuffer will draw\n";
-  std::cerr << "\t                                to a zircon framebuffer. 'none' disables graphical output.\n";
+  std::cerr << "\t--dtb_overlay=[overlay.dtb]     Load a DTB overlay for a Linux kernel\n";
+  std::cerr << "\t--block=[block_spec]            Adds a block device with the given parameters\n";
+  std::cerr << "\t--block-wait                    Wait for block devices (specified by GUID) to become\n";
+  std::cerr << "\t                                available instead of failing.\n";
+  std::cerr << "\t--cpus=[cpus]                   Number of virtual CPUs the guest is allowed to use\n";
+  std::cerr << "\t--memory=[bytes]                Allocate 'bytes' of physical memory for the guest. The\n";
+  std::cerr << "\t                                suffixes 'k', 'M', and 'G' are accepted\n";
   std::cerr << "\t--balloon-interval=[seconds]    Poll the virtio-balloon device every 'seconds' seconds\n";
   std::cerr << "\t                                and adjust the balloon size based on the amount of\n";
   std::cerr << "\t                                unused guest memory\n";
   std::cerr << "\t--balloon-threshold=[pages]     Number of unused pages to allow the guest to\n";
   std::cerr << "\t                                retain. Has no effect unless -m is also used\n";
   std::cerr << "\t--balloon-demand-page           Demand-page balloon deflate requests\n";
+  std::cerr << "\t--display={scenic,framebuffer,  Configures the display backend to use for the guest. 'scenic'\n";
+  std::cerr << "\t           none}                (default) will render to a scenic view. 'framebuffer will draw\n";
+  std::cerr << "\t                                to a zircon framebuffer. 'none' disables graphical output.\n";
 #if __aarch64__
   std::cerr << "\t--gic={2,3}                     Version 2 or 3\n";
 #endif
@@ -345,10 +346,11 @@ GuestConfigParser::GuestConfigParser(GuestConfig* cfg) : cfg_(cfg), opts_ {
       {"linux",
        save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::LINUX)},
       {"ramdisk", save_option(&cfg_->ramdisk_path_)},
-      {"block",
-       append_option<BlockSpec>(&cfg_->block_specs_, parse_block_spec)},
       {"cmdline", save_option(&cfg_->cmdline_)},
       {"cmdline-append", append_string(&cfg_->cmdline_, " ")},
+      {"dtb_overlay", save_option(&cfg_->dtb_overlay_path_)},
+      {"block",
+       append_option<BlockSpec>(&cfg_->block_specs_, parse_block_spec)},
       {"cpus", parse_number(&cfg_->num_cpus_)},
       {"memory", parse_mem_size(&cfg_->memory_)},
       {"balloon-demand-page", set_flag(&cfg_->balloon_demand_page_, true)},

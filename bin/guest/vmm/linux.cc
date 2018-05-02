@@ -45,6 +45,17 @@ static constexpr uint32_t kMzMagic = 0x644d5241;  // ARM\x64
 static constexpr char kDtbPath[] = "/pkg/data/board.dtb";
 static constexpr uintptr_t kDtbOffset = kRamdiskOffset - PAGE_SIZE;
 
+struct SetupData {
+  enum Type : uint32_t {
+    Dtb = 2,
+  };
+
+  uint64_t next;
+  Type type;
+  uint32_t len;
+  uint8_t data[0];
+} __PACKED;
+
 // clang-format off
 
 // For the Linux x86 boot protocol, see:
@@ -59,22 +70,26 @@ enum Bp8 : uintptr_t {
   SETUP_SECTS               = 0x01f1,   // Size of real mode kernel in sectors
   LOADER_TYPE               = 0x0210,   // Type of bootloader
   LOADFLAGS                 = 0x0211,   // Boot protocol flags
-  RELOCATABLE               = 0x0234,   // Is the kernel relocatable?
+  RELOCATABLE               = 0x0234,   // Whether the kernel relocatable
 };
 
 enum Bp16 : uintptr_t {
   BOOTFLAG                  = 0x01fe,   // Bootflag, should match BOOT_FLAG_MAGIC
   VERSION                   = 0x0206,   // Boot protocol version
-  XLOADFLAGS                = 0x0236,   // 64-bit and EFI load flags
+  XLOADFLAGS                = 0x0236,   // Extended boot protocol flags
 };
 
 enum Bp32 : uintptr_t {
-  SYSSIZE                   = 0x01f4,   // Size of protected-mode code + payload in 16-bytes
+  SYSSIZE                   = 0x01f4,   // Size of protected-mode code in units of 16 bytes
   HEADER                    = 0x0202,   // Header, should match HEADER_MAGIC
-  RAMDISK_IMAGE             = 0x0218,   // Ramdisk image address
-  RAMDISK_SIZE              = 0x021c,   // Ramdisk image size
+  RAMDISK_IMAGE             = 0x0218,   // RAM disk image address
+  RAMDISK_SIZE              = 0x021c,   // RAM disk image size
   COMMAND_LINE              = 0x0228,   // Pointer to command line args string
   KERNEL_ALIGN              = 0x0230,   // Kernel alignment
+};
+
+enum Bp64 : uintptr_t {
+  SETUP_DATA                = 0x0250,   // Physical address to linked list of SetupData
 };
 
 enum Lf : uint8_t {
@@ -98,6 +113,10 @@ static uint16_t& bp(const machina::PhysMem& phys_mem, Bp16 off) {
 
 static uint32_t& bp(const machina::PhysMem& phys_mem, Bp32 off) {
   return *phys_mem.as<uint32_t>(kKernelOffset + off);
+}
+
+static uint64_t& bp(const machina::PhysMem& phys_mem, Bp64 off) {
+  return *phys_mem.as<uint64_t>(kKernelOffset + off);
 }
 
 static bool is_boot_params(const machina::PhysMem& phys_mem) {
@@ -184,6 +203,7 @@ static zx_status_t read_boot_params(const machina::PhysMem& phys_mem,
 
 static zx_status_t write_boot_params(const machina::PhysMem& phys_mem,
                                      const std::string& cmdline,
+                                     const std::string& dtb_overlay_path,
                                      const size_t initrd_size) {
   // Set type of bootloader.
   bp(phys_mem, LOADER_TYPE) = kLoaderTypeUnspecified;
@@ -207,6 +227,26 @@ static zx_status_t write_boot_params(const machina::PhysMem& phys_mem,
   memcpy(phys_mem.as<void>(cmdline_off, cmdline_len), cmdline.c_str(),
          cmdline_len);
   bp(phys_mem, COMMAND_LINE) = cmdline_off;
+
+  // If specified, load a DTB overlay.
+  if (!dtb_overlay_path.empty()) {
+    fbl::unique_fd dtb_fd(open(dtb_overlay_path.c_str(), O_RDONLY));
+    if (!dtb_fd) {
+      FXL_LOG(ERROR) << "Failed to open DTB overlay " << dtb_overlay_path;
+      return ZX_ERR_IO;
+    }
+    size_t dtb_size;
+    zx_status_t status = read_fd(dtb_fd.get(), phys_mem,
+                                 kDtbOffset + sizeof(SetupData), &dtb_size);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to read DTB overlay " << dtb_overlay_path;
+      return status;
+    }
+    auto setup_data = phys_mem.as<SetupData>(kDtbOffset);
+    setup_data->type = SetupData::Dtb;
+    setup_data->len = dtb_size;
+    bp(phys_mem, SETUP_DATA) = kDtbOffset;
+  }
 
 #if __aarch64__
   return ZX_OK;
@@ -247,7 +287,7 @@ static zx_status_t load_device_tree(const int fd,
   size_t dtb_size;
   zx_status_t status = read_fd(fd, phys_mem, kDtbOffset, &dtb_size);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to load device tree";
+    FXL_LOG(ERROR) << "Failed to read device tree";
     return status;
   }
   if (kDtbOffset + dtb_size > kRamdiskOffset) {
@@ -366,7 +406,8 @@ zx_status_t setup_linux(const GuestConfig cfg,
     if (status != ZX_OK) {
       return status;
     }
-    status = write_boot_params(phys_mem, cmdline, initrd_size);
+    status = write_boot_params(phys_mem, cmdline, cfg.dtb_overlay_path(),
+                               initrd_size);
     if (status != ZX_OK) {
       return status;
     }
