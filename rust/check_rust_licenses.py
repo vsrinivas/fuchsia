@@ -33,8 +33,8 @@ def find_github_blob_path(path):
         die('don\'t know raw content path for ' + path)
     if s[-1] == '':
         del s[-1]
-    if s[-2] == 'tree':
-        del s[-2]
+    if len(s) >= 6 and s[5] == 'tree':
+        del s[5]
     else:
         s.append('master')
     return '/'.join(s)
