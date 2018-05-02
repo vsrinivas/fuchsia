@@ -67,7 +67,7 @@ class RemoteClient : public RemoteClientInterface {
     // TODO(hahnr): Evolve this to support multiple timeouts at the same time.
     zx_status_t StartTimer(zx::time deadline);
     zx_status_t CancelTimer();
-    zx::time CreateTimerDeadline(zx_duration_t tus);
+    zx::time CreateTimerDeadline(wlan_tu_t tus);
     bool IsDeadlineExceeded(zx::time deadline);
 
     DeviceInterface* device() { return device_; }
@@ -172,7 +172,7 @@ class AuthenticatedState : public BaseState {
     static constexpr const char* kName = "Authenticated";
 
     // TODO(hahnr): Use WLAN_MIN_TU once defined.
-    static constexpr zx_duration_t kAuthenticationTimeoutTu = ZX_MIN(30);
+    static constexpr wlan_tu_t kAuthenticationTimeoutTu = 1800000;  // ~30min
 
     zx::time auth_timeout_;
 };
@@ -230,7 +230,7 @@ class AssociatedState : public BaseState {
     static constexpr const char* kName = "Associated";
 
     // TODO(hahnr): Use WLAN_MIN_TU once defined.
-    static constexpr zx_duration_t kInactivityTimeoutTu = ZX_MIN(5);
+    static constexpr wlan_tu_t kInactivityTimeoutTu = 300000;  // ~5min
     zx_status_t SendNextBu();
     void UpdatePowerSaveMode(const FrameControl& fc);
 

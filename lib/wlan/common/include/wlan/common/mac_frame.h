@@ -17,7 +17,19 @@
 
 namespace wlan {
 
+// wlan_tu_t is an 802.11 Time Unit.
+typedef uint64_t wlan_tu_t;
+
+// One Time Unit is equal to 1024 microseconds.
 static constexpr zx::duration TimeUnit = zx::usec(1024);
+
+// Converts a WLAN TU to zx::duration.
+//
+// This is a template because it allows us to guard against some implicit conversion.  For example,
+// if this were a regular function accepting a wlan_tu_t, the following code would compile:
+//
+//     foo(WLAN_TU(-1));
+//
 template <typename T> static inline constexpr zx::duration WLAN_TU(T n) {
     static_assert(fbl::is_unsigned_integer<T>::value, "Time unit must be an unsigned integer");
     return TimeUnit * n;

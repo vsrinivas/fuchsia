@@ -52,10 +52,10 @@ struct ScanRequest {
     array<uint8>:6 bssid;
     string ssid;
     ScanTypes scan_type;
-    uint32 probe_delay;
+    uint32 probe_delay;  // in TimeUnits
     vector<uint8>? channel_list;
-    uint32 min_channel_time;
-    uint32 max_channel_time;
+    uint32 min_channel_time;  // in TimeUnits
+    uint32 max_channel_time;  // in TimeUnits
     // RequestInformation
     vector<string>? ssid_list;
     // ChannelUsage
@@ -73,7 +73,7 @@ struct BSSDescription {
     array<uint8>:6 bssid;
     string ssid;
     BSSTypes bss_type;
-    uint32 beacon_period;
+    uint32 beacon_period;  // in TimeUnits
     uint32 dtim_period;
     uint64 timestamp;
     uint64 local_time;

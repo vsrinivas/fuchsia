@@ -642,7 +642,7 @@ zx_status_t RemoteClient::CancelTimer() {
     return timer_->CancelTimer();
 }
 
-zx::time RemoteClient::CreateTimerDeadline(zx_duration_t tus) {
+zx::time RemoteClient::CreateTimerDeadline(wlan_tu_t tus) {
     return timer_->Now() + WLAN_TU(tus);
 }
 

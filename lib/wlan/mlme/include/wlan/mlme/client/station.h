@@ -121,7 +121,7 @@ class Station : public FrameHandler {
     zx_status_t SetPowerManagementMode(bool ps_mode);
     zx_status_t SendPsPoll();
 
-    zx::time deadline_after_bcn_period(zx_duration_t tus);
+    zx::time deadline_after_bcn_period(size_t bcn_count);
 
     bool IsHTReady() const;
     bool IsCbw40RxReady() const;

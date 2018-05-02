@@ -25,8 +25,8 @@ namespace wlan {
 
 // TODO(hahnr): Revisit frame construction to reduce boilerplate code.
 
-static constexpr zx_duration_t kAssocTimeoutTu = ZX_NSEC(20);
-static constexpr zx_duration_t kSignalReportTimeoutTu = ZX_NSEC(10);
+static constexpr size_t kAssocBcnCountTimeout = 20;
+static constexpr size_t kSignalReportBcnCountTimeout = 10;
 
 Station::Station(DeviceInterface* device, fbl::unique_ptr<Timer> timer)
     : device_(device), timer_(std::move(timer)) {
@@ -346,7 +346,7 @@ zx_status_t Station::HandleMlmeAssocReq(const wlan_mlme::AssociateRequest& req) 
     }
 
     // TODO(tkilbourn): get the assoc timeout from somewhere
-    assoc_timeout_ = deadline_after_bcn_period(kAssocTimeoutTu);
+    assoc_timeout_ = deadline_after_bcn_period(kAssocBcnCountTimeout);
     status = timer_->SetTimer(assoc_timeout_);
     if (status != ZX_OK) {
         errorf("could not set auth timer: %d\n", status);
@@ -509,7 +509,7 @@ zx_status_t Station::HandleAssociationResponse(const ImmutableMgmtFrame<Associat
     timer_->CancelTimer();
     service::SendAssocConfirm(device_, wlan_mlme::AssociateResultCodes::SUCCESS, aid_);
 
-    signal_report_timeout_ = deadline_after_bcn_period(kSignalReportTimeoutTu);
+    signal_report_timeout_ = deadline_after_bcn_period(kSignalReportBcnCountTimeout);
     timer_->SetTimer(signal_report_timeout_);
     avg_rssi_.reset();
     avg_rssi_.add(rxinfo.rssi);
@@ -875,7 +875,7 @@ zx_status_t Station::HandleTimeout() {
 
     if (signal_report_timeout_ > zx::time() && now > signal_report_timeout_ &&
         state_ == WlanState::kAssociated) {
-        signal_report_timeout_ = deadline_after_bcn_period(kSignalReportTimeoutTu);
+        signal_report_timeout_ = deadline_after_bcn_period(kSignalReportBcnCountTimeout);
         timer_->SetTimer(signal_report_timeout_);
         service::SendSignalReportIndication(device_, avg_rssi_.avg());
     }
@@ -1171,9 +1171,9 @@ zx_status_t Station::SendPsPoll() {
     return ZX_OK;
 }
 
-zx::time Station::deadline_after_bcn_period(zx_duration_t tus) {
+zx::time Station::deadline_after_bcn_period(size_t bcn_count) {
     ZX_DEBUG_ASSERT(bss_ != nullptr);
-    return timer_->Now() + WLAN_TU(bss_->beacon_period * tus);
+    return timer_->Now() + WLAN_TU(bss_->beacon_period * bcn_count);
 }
 
 bool Station::IsHTReady() const {
