@@ -166,13 +166,13 @@ zx_status_t PciBus::Connect(PciDevice* device) {
 
   // Initialize BAR registers.
   for (uint8_t bar_num = 0; bar_num < PCI_MAX_BARS; ++bar_num) {
-    PciBar* bar = &device->bar_[bar_num];
-
     // Skip unimplemented bars.
-    if (!device->is_bar_implemented(bar_num))
+    if (!device->is_bar_implemented(bar_num)) {
       break;
+    }
 
     device->bus_ = this;
+    PciBar* bar = &device->bar_[bar_num];
     bar->size = static_cast<uint16_t>(align(bar->size, PAGE_SIZE));
     bar->addr = mmio_base_;
     mmio_base_ += bar->size;
@@ -182,7 +182,12 @@ zx_status_t PciBus::Connect(PciDevice* device) {
   device->global_irq_ = kPciGlobalIrqAssigments[slot];
   device_[slot] = device;
 
-  return device->SetupBarTraps(guest_);
+  zx_status_t status = device->SetupBarTraps(guest_);
+  if (status == ZX_OK) {
+    FXL_LOG(INFO) << "PCI bus connected device " << slot << " to device ID "
+                  << std::hex << device->attrs_.device_id;
+  }
+  return status;
 }
 
 // PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.1: All PCI devices must

@@ -277,7 +277,6 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
       if (value.access_size != 1)
         return ZX_ERR_IO_DATA_INTEGRITY;
 
-
       {
         fbl::AutoLock lock(&device_->mutex_);
         device_->status_ = value.u8;
@@ -430,14 +429,16 @@ static constexpr uint32_t virtio_pci_class_code(uint16_t virtio_id) {
       return 0x05000000;
     case VIRTIO_ID_BLOCK:
       return 0x01800000;
+    case VIRTIO_ID_CONSOLE:
+      return 0x07020000;
     case VIRTIO_ID_GPU:
       return 0x03808000;
     case VIRTIO_ID_INPUT:
       return 0x09800000;
     case VIRTIO_ID_NET:
       return 0x02000000;
-    case VIRTIO_ID_CONSOLE:
-      return 0x07020000;
+    case VIRTIO_ID_VSOCK:
+      return 0x02800000;
   }
   return 0;
 }
