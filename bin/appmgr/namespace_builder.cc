@@ -104,6 +104,7 @@ void NamespaceBuilder::AddDeprecatedDefaultDirectories() {
   PushDirectoryFromPathIfNotPresent("/data");
   PushDirectoryFromPathIfNotPresent("/system");
   PushDirectoryFromPathIfNotPresent("/tmp");
+  PushDirectoryFromPathAs("/pkgfs/packages/root_ssl_certificates/0/data", "/config/ssl");
 }
 
 void NamespaceBuilder::PushDirectoryFromPath(std::string path) {
