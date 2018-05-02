@@ -24,11 +24,10 @@ case "${FUCHSIA_ARCH}" in
     GOARCH=amd64
     ;;
 esac
+GOROOT="${FUCHSIA_BUILD_DIR}/goroot"
 
-GOROOT="${FUCHSIA_BUILD_DIR}/tools/goroot"
 if [[ ! -d "${GOROOT}" ]]; then
-  echo >&2 "ERROR: You must build Go before running this command"
-  echo >&2 "Run \"fx build third_party/go:go_runtime\""
+  echo >&2 "ERROR: You must build the goroot before running this command"
   exit 1
 fi
 
