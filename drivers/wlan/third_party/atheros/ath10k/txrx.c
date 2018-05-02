@@ -72,7 +72,7 @@ int ath10k_txrx_tx_unref(struct ath10k_htt* htt,
     }
 
     mtx_lock(&htt->tx_lock);
-    msdu = idr_find(&htt->pending_tx, tx_done->msdu_id);
+    msdu = sa_get(htt->pending_tx, tx_done->msdu_id);
     if (!msdu) {
         ath10k_warn("received tx completion for invalid msdu_id: %d\n",
                     tx_done->msdu_id);

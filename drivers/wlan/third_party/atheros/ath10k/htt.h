@@ -21,7 +21,7 @@
 #include "htc.h"
 #include "hw.h"
 #include "rx_desc.h"
-#include "hw.h"
+#include "sparse_array.h"
 
 enum htt_dbg_stats_type {
     HTT_DBG_STATS_WAL_PDEV_TXRX = 1 << 0,
@@ -1668,7 +1668,7 @@ struct ath10k_htt {
     int max_num_pending_tx;
     int num_pending_tx;
     int num_pending_mgmt_tx;
-    struct idr pending_tx;
+    sparse_array_t pending_tx;
     wait_queue_head_t empty_tx_wq;
 
     /* FIFO for storing tx done status {ack, no-ack, discard} and msdu id */

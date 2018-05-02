@@ -205,18 +205,24 @@ void ath10k_htt_tx_mgmt_dec_pending(struct ath10k_htt* htt) {
     htt->num_pending_mgmt_tx--;
 }
 
-int ath10k_htt_tx_alloc_msdu_id(struct ath10k_htt* htt, struct sk_buff* skb) {
+zx_status_t ath10k_htt_tx_alloc_msdu_id(struct ath10k_htt* htt,
+                                        struct ath10k_msg_buf* buf,
+                                        ssize_t* id_ptr) {
     struct ath10k* ar = htt->ar;
-    int ret;
+    ssize_t id;
 
     ASSERT_MTX_HELD(&htt->tx_lock);
 
-    ret = idr_alloc(&htt->pending_tx, skb, 0,
-                    htt->max_num_pending_tx, GFP_ATOMIC);
+    id = sa_add(htt->pending_tx, buf);
 
-    ath10k_dbg(ar, ATH10K_DBG_HTT, "htt tx alloc msdu_id %d\n", ret);
+    ath10k_dbg(ar, ATH10K_DBG_HTT, "htt tx alloc msdu_id %d\n", id);
 
-    return ret;
+    if (id < 0) {
+        return ZX_ERR_NO_RESOURCES;
+    }
+
+    *id_ptr = id;
+    return ZX_OK;
 }
 
 void ath10k_htt_tx_free_msdu_id(struct ath10k_htt* htt, uint16_t msdu_id) {
@@ -226,7 +232,7 @@ void ath10k_htt_tx_free_msdu_id(struct ath10k_htt* htt, uint16_t msdu_id) {
 
     ath10k_dbg(ar, ATH10K_DBG_HTT, "htt tx free msdu_id %hu\n", msdu_id);
 
-    idr_remove(&htt->pending_tx, msdu_id);
+    sa_remove(htt->pending_tx, msdu_id);
 }
 
 static void ath10k_htt_tx_free_cont_txbuf(struct ath10k_htt* htt) {
@@ -402,7 +408,7 @@ int ath10k_htt_tx_start(struct ath10k_htt* htt) {
                htt->max_num_pending_tx);
 
     mtx_init(&htt->tx_lock, mtx_plain);
-    idr_init(&htt->pending_tx);
+    sa_init(&htt->pending_tx, htt->max_num_pending_tx);
 
     if (htt->tx_mem_allocated) {
         return 0;
@@ -410,15 +416,15 @@ int ath10k_htt_tx_start(struct ath10k_htt* htt) {
 
     ret = ath10k_htt_tx_alloc_buf(htt);
     if (ret) {
-        goto free_idr_pending_tx;
+        goto free_sa_pending_tx;
     }
 
     htt->tx_mem_allocated = true;
 
     return 0;
 
-free_idr_pending_tx:
-    idr_destroy(&htt->pending_tx);
+free_sa_pending_tx:
+    sa_free(htt->pending_tx);
 
     return ret;
 }
@@ -451,8 +457,8 @@ void ath10k_htt_tx_destroy(struct ath10k_htt* htt) {
 }
 
 void ath10k_htt_tx_stop(struct ath10k_htt* htt) {
-    idr_for_each(&htt->pending_tx, ath10k_htt_tx_clean_up_pending, htt->ar);
-    idr_destroy(&htt->pending_tx);
+    sa_for_each(htt->pending_tx, ath10k_htt_tx_clean_up_pending, htt->ar);
+    sa_free(htt->pending_tx);
 }
 
 void ath10k_htt_tx_free(struct ath10k_htt* htt) {

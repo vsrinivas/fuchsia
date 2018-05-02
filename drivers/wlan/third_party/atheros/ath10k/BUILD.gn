@@ -23,6 +23,8 @@ driver_module("ath10k_driver") {
     "hw.h",
     "pci.c",
     "pci.h",
+    "sparse_array.c",
+    "sparse_array.h",
     "wow.h",
   ]
 
