@@ -127,6 +127,8 @@ struct LargeStruct {
 static bool test_array_size_overflow_check() {
     BEGIN_TEST;
 
+// When we're in "extreme debug mode" the heap will panic on allocation failure.
+#if LK_DEBUGLEVEL <= 2
     size_t size_t_max = ~(size_t)0;
     size_t count = size_t_max / (sizeof(LargeStruct) / 0x10);
     fbl::AllocChecker ac;
@@ -145,6 +147,7 @@ static bool test_array_size_overflow_check() {
     // (again, depending on C++ version).
     EXPECT_EQ(new (&ac) LargeStruct[count], nullptr, "");
     EXPECT_EQ(ac.check(), false, "");
+#endif
 
     END_TEST;
 }
@@ -152,6 +155,8 @@ static bool test_array_size_overflow_check() {
 static bool test_negative_array_size() {
     BEGIN_TEST;
 
+// When we're in "extreme debug mode" the heap will panic on allocation failure.
+#if LK_DEBUGLEVEL <= 2
     fbl::AllocChecker ac;
 
     // Test passing a signed, negative array size.  This should fail
@@ -167,6 +172,7 @@ static bool test_negative_array_size() {
     int count = -1;
     EXPECT_EQ(new (&ac) char[count], nullptr, "");
     EXPECT_EQ(ac.check(), false, "");
+#endif
 
     END_TEST;
 }
