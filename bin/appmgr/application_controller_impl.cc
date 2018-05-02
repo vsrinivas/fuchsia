@@ -13,8 +13,8 @@
 #include <cinttypes>
 #include <utility>
 
-#include "garnet/bin/appmgr/application_namespace.h"
 #include "garnet/bin/appmgr/job_holder.h"
+#include "garnet/bin/appmgr/namespace.h"
 #include "lib/fsl/handles/object_info.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/closure.h"
@@ -23,15 +23,10 @@ namespace component {
 
 ApplicationControllerImpl::ApplicationControllerImpl(
     fidl::InterfaceRequest<ApplicationController> request,
-    JobHolder* job_holder,
-    std::unique_ptr<archive::FileSystem> fs,
-    zx::process process,
-    std::string url,
-    std::string label,
-    fxl::RefPtr<ApplicationNamespace> application_namespace,
-    ExportedDirType export_dir_type,
-    zx::channel exported_dir,
-    zx::channel client_request)
+    JobHolder* job_holder, std::unique_ptr<archive::FileSystem> fs,
+    zx::process process, std::string url, std::string label,
+    fxl::RefPtr<Namespace> ns, ExportedDirType export_dir_type,
+    zx::channel exported_dir, zx::channel client_request)
     : binding_(this),
       job_holder_(job_holder),
       fs_(std::move(fs)),
@@ -39,7 +34,7 @@ ApplicationControllerImpl::ApplicationControllerImpl(
       label_(std::move(label)),
       info_dir_(fbl::AdoptRef(new fs::PseudoDir())),
       exported_dir_(std::move(exported_dir)),
-      application_namespace_(std::move(application_namespace)),
+      ns_(std::move(ns)),
       wait_(this, process_.get(), ZX_TASK_TERMINATED) {
   zx_status_t status = wait_.Begin(async_get_default());
   FXL_DCHECK(status == ZX_OK);

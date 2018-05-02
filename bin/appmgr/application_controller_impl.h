@@ -9,9 +9,9 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/process.h>
 
-#include "garnet/bin/appmgr/application_namespace.h"
-#include "garnet/lib/farfs/file_system.h"
 #include <fuchsia/cpp/component.h>
+#include "garnet/bin/appmgr/namespace.h"
+#include "garnet/lib/farfs/file_system.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -37,15 +37,10 @@ class ApplicationControllerImpl : public ApplicationController {
  public:
   ApplicationControllerImpl(
       fidl::InterfaceRequest<ApplicationController> request,
-      JobHolder* job_holder,
-      std::unique_ptr<archive::FileSystem> fs,
-      zx::process process,
-      std::string url,
-      std::string label,
-      fxl::RefPtr<ApplicationNamespace> application_namespace,
-      ExportedDirType export_dir_type,
-      zx::channel exported_dir,
-      zx::channel client_request);
+      JobHolder* job_holder, std::unique_ptr<archive::FileSystem> fs,
+      zx::process process, std::string url, std::string label,
+      fxl::RefPtr<Namespace> ns, ExportedDirType export_dir_type,
+      zx::channel exported_dir, zx::channel client_request);
   ~ApplicationControllerImpl() override;
 
   const std::string& label() const { return label_; }
@@ -74,7 +69,7 @@ class ApplicationControllerImpl : public ApplicationController {
 
   zx::channel exported_dir_;
 
-  fxl::RefPtr<ApplicationNamespace> application_namespace_;
+  fxl::RefPtr<Namespace> ns_;
 
   async::WaitMethod<ApplicationControllerImpl,
                     &ApplicationControllerImpl::Handler> wait_;

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/appmgr/application_namespace.h"
+#include "garnet/bin/appmgr/namespace.h"
 
 #include <utility>
 
@@ -10,10 +10,8 @@
 
 namespace component {
 
-ApplicationNamespace::ApplicationNamespace(
-    fxl::RefPtr<ApplicationNamespace> parent,
-    JobHolder* job_holder,
-    ServiceListPtr service_list)
+Namespace::Namespace(fxl::RefPtr<Namespace> parent, JobHolder* job_holder,
+                     ServiceListPtr service_list)
     : parent_(parent), job_holder_(job_holder) {
   component::ServiceProviderPtr services_backend;
   if (parent_) {
@@ -43,14 +41,14 @@ ApplicationNamespace::ApplicationNamespace(
   }
 }
 
-ApplicationNamespace::~ApplicationNamespace() {}
+Namespace::~Namespace() {}
 
-void ApplicationNamespace::AddBinding(
+void Namespace::AddBinding(
     fidl::InterfaceRequest<ApplicationEnvironment> environment) {
   environment_bindings_.AddBinding(this, std::move(environment));
 }
 
-void ApplicationNamespace::CreateNestedEnvironment(
+void Namespace::CreateNestedEnvironment(
     zx::channel host_directory,
     fidl::InterfaceRequest<ApplicationEnvironment> environment,
     fidl::InterfaceRequest<ApplicationEnvironmentController> controller,
@@ -60,21 +58,20 @@ void ApplicationNamespace::CreateNestedEnvironment(
                                label);
 }
 
-void ApplicationNamespace::GetApplicationLauncher(
+void Namespace::GetApplicationLauncher(
     fidl::InterfaceRequest<ApplicationLauncher> launcher) {
   launcher_bindings_.AddBinding(this, std::move(launcher));
 }
 
-void ApplicationNamespace::GetServices(
-    fidl::InterfaceRequest<ServiceProvider> services) {
+void Namespace::GetServices(fidl::InterfaceRequest<ServiceProvider> services) {
   services_.AddBinding(std::move(services));
 }
 
-void ApplicationNamespace::GetDirectory(zx::channel directory_request) {
+void Namespace::GetDirectory(zx::channel directory_request) {
   services_.ServeDirectory(std::move(directory_request));
 }
 
-void ApplicationNamespace::CreateApplication(
+void Namespace::CreateApplication(
     ApplicationLaunchInfo launch_info,
     fidl::InterfaceRequest<ApplicationController> controller) {
   job_holder_->CreateApplication(std::move(launch_info), std::move(controller));

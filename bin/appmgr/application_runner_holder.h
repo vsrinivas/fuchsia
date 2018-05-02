@@ -7,10 +7,9 @@
 
 #include <lib/zx/vmo.h>
 
-#include "garnet/bin/appmgr/application_namespace.h"
+#include <fuchsia/cpp/component.h>
+#include "garnet/bin/appmgr/namespace.h"
 #include "garnet/lib/farfs/file_system.h"
-#include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/component.h>
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -25,10 +24,9 @@ class ApplicationRunnerHolder {
   ~ApplicationRunnerHolder();
 
   void StartApplication(
-      ApplicationPackage package,
-      ApplicationStartupInfo startup_info,
+      ApplicationPackage package, ApplicationStartupInfo startup_info,
       std::unique_ptr<archive::FileSystem> file_system,
-      fxl::RefPtr<ApplicationNamespace> application_namespace,
+      fxl::RefPtr<Namespace> ns,
       fidl::InterfaceRequest<ApplicationController> controller);
 
  private:
@@ -39,7 +37,7 @@ class ApplicationRunnerHolder {
   // TODO(abarth): We hold these objects for the lifetime of the runner, but we
   // should actuall drop them once their controller is done.
   std::vector<std::unique_ptr<archive::FileSystem>> file_systems_;
-  std::vector<fxl::RefPtr<ApplicationNamespace>> namespaces_;
+  std::vector<fxl::RefPtr<Namespace>> namespaces_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ApplicationRunnerHolder);
 };

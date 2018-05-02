@@ -16,8 +16,8 @@
 #include <fuchsia/cpp/component.h>
 #include "garnet/bin/appmgr/application_controller_impl.h"
 #include "garnet/bin/appmgr/application_environment_controller_impl.h"
-#include "garnet/bin/appmgr/application_namespace.h"
 #include "garnet/bin/appmgr/application_runner_holder.h"
+#include "garnet/bin/appmgr/namespace.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -72,15 +72,13 @@ class JobHolder {
   ApplicationRunnerHolder* GetOrCreateRunner(const std::string& runner);
 
   void CreateApplicationWithProcess(
-      ApplicationPackagePtr package,
-      ApplicationLaunchInfo launch_info,
+      ApplicationPackagePtr package, ApplicationLaunchInfo launch_info,
       fidl::InterfaceRequest<ApplicationController> controller,
-      fxl::RefPtr<ApplicationNamespace> application_namespace);
+      fxl::RefPtr<Namespace> ns);
   void CreateApplicationFromPackage(
-      ApplicationPackagePtr package,
-      ApplicationLaunchInfo launch_info,
+      ApplicationPackagePtr package, ApplicationLaunchInfo launch_info,
       fidl::InterfaceRequest<ApplicationController> controller,
-      fxl::RefPtr<ApplicationNamespace> application_namespace);
+      fxl::RefPtr<Namespace> ns);
 
   zx::channel OpenRootInfoDir();
 
@@ -91,7 +89,7 @@ class JobHolder {
   zx::job job_;
   zx::job job_for_child_;
 
-  fxl::RefPtr<ApplicationNamespace> default_namespace_;
+  fxl::RefPtr<Namespace> default_namespace_;
 
   // A pseudo-directory which describes the components within the scope of
   // this job.

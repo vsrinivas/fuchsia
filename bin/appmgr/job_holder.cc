@@ -188,12 +188,11 @@ ExportedDirChannels BindDirectory(ApplicationLaunchInfo* launch_info) {
 
 uint32_t JobHolder::next_numbered_label_ = 1u;
 
-JobHolder::JobHolder(JobHolder* parent,
-                     zx::channel host_directory,
+JobHolder::JobHolder(JobHolder* parent, zx::channel host_directory,
                      fidl::StringPtr label)
     : parent_(parent),
       default_namespace_(
-          fxl::MakeRefCounted<ApplicationNamespace>(nullptr, this, nullptr)),
+          fxl::MakeRefCounted<Namespace>(nullptr, this, nullptr)),
       info_dir_(fbl::AdoptRef(new fs::PseudoDir())),
       info_vfs_(async_get_default()) {
   // parent_ is null if this is the root application environment. if so, we
@@ -288,10 +287,9 @@ void JobHolder::CreateApplication(
       url, fxl::MakeCopyable([this, launch_info = std::move(launch_info),
                               controller = std::move(controller)](
                                  ApplicationPackagePtr package) mutable {
-        fxl::RefPtr<ApplicationNamespace> application_namespace =
-            default_namespace_;
+        fxl::RefPtr<Namespace> ns = default_namespace_;
         if (launch_info.additional_services) {
-          application_namespace = fxl::MakeRefCounted<ApplicationNamespace>(
+          ns = fxl::MakeRefCounted<Namespace>(
               default_namespace_, this,
               std::move(launch_info.additional_services));
         }
@@ -304,18 +302,18 @@ void JobHolder::CreateApplication(
               case LaunchType::kProcess:
                 CreateApplicationWithProcess(
                     std::move(package), std::move(launch_info),
-                    std::move(controller), std::move(application_namespace));
+                    std::move(controller), std::move(ns));
                 break;
               case LaunchType::kArchive:
                 CreateApplicationFromPackage(
                     std::move(package), std::move(launch_info),
-                    std::move(controller), std::move(application_namespace));
+                    std::move(controller), std::move(ns));
                 break;
             }
           } else if (package->directory) {
-            CreateApplicationFromPackage(
-                std::move(package), std::move(launch_info),
-                std::move(controller), std::move(application_namespace));
+            CreateApplicationFromPackage(std::move(package),
+                                         std::move(launch_info),
+                                         std::move(controller), std::move(ns));
           }
         }
       }));
@@ -351,11 +349,10 @@ void JobHolder::AddBinding(
 }
 
 void JobHolder::CreateApplicationWithProcess(
-    ApplicationPackagePtr package,
-    ApplicationLaunchInfo launch_info,
+    ApplicationPackagePtr package, ApplicationLaunchInfo launch_info,
     fidl::InterfaceRequest<ApplicationController> controller,
-    fxl::RefPtr<ApplicationNamespace> application_namespace) {
-  zx::channel svc = application_namespace->services().OpenAsDirectory();
+    fxl::RefPtr<Namespace> ns) {
+  zx::channel svc = ns->services().OpenAsDirectory();
   if (!svc)
     return;
 
@@ -385,7 +382,7 @@ void JobHolder::CreateApplicationWithProcess(
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(
         std::move(controller), this, nullptr, std::move(process), url,
-        GetLabelFromURL(url), std::move(application_namespace),
+        GetLabelFromURL(url), std::move(ns),
         ExportedDirType::kPublicDebugCtrlLayout,
         std::move(channels.exported_dir), std::move(channels.client_request));
     ApplicationControllerImpl* key = application.get();
@@ -395,11 +392,10 @@ void JobHolder::CreateApplicationWithProcess(
 }
 
 void JobHolder::CreateApplicationFromPackage(
-    ApplicationPackagePtr package,
-    ApplicationLaunchInfo launch_info,
+    ApplicationPackagePtr package, ApplicationLaunchInfo launch_info,
     fidl::InterfaceRequest<ApplicationController> controller,
-    fxl::RefPtr<ApplicationNamespace> application_namespace) {
-  zx::channel svc = application_namespace->services().OpenAsDirectory();
+    fxl::RefPtr<Namespace> ns) {
+  zx::channel svc = ns->services().OpenAsDirectory();
   if (!svc)
     return;
 
@@ -479,9 +475,8 @@ void JobHolder::CreateApplicationFromPackage(
     if (process) {
       auto application = std::make_unique<ApplicationControllerImpl>(
           std::move(controller), this, std::move(pkg_fs), std::move(process),
-          url, GetLabelFromURL(url), std::move(application_namespace),
-          exported_dir_layout, std::move(channels.exported_dir),
-          std::move(channels.client_request));
+          url, GetLabelFromURL(url), std::move(ns), exported_dir_layout,
+          std::move(channels.exported_dir), std::move(channels.client_request));
       ApplicationControllerImpl* key = application.get();
       info_dir_->AddEntry(application->label(), application->info_dir());
       applications_.emplace(key, std::move(application));
@@ -507,9 +502,9 @@ void JobHolder::CreateApplicationFromPackage(
                      << launch_info.url;
       return;
     }
-    runner->StartApplication(
-        std::move(inner_package), std::move(startup_info), std::move(pkg_fs),
-        std::move(application_namespace), std::move(controller));
+    runner->StartApplication(std::move(inner_package), std::move(startup_info),
+                             std::move(pkg_fs), std::move(ns),
+                             std::move(controller));
   }
 }
 
