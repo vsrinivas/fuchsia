@@ -112,6 +112,7 @@ static void* watchdog_thread_func(void* arg) {
         // We can time-out just as watchdog_terminate() is called, and
         // thus we can't make any assumptions based on |result|.
         assert(result == 0 || result == ETIMEDOUT);
+        (void)result; // Used only by the assertion.
 
         struct timespec now;
         clock_gettime(CLOCK_REALTIME, &now);
