@@ -26,6 +26,8 @@
 #include <lib/zx/vmo.h>
 #include <sync/completion.h>
 
+#include "txn-group.h"
+
 // Represents the mapping of "vmoid --> VMO"
 class IoBuffer : public fbl::WAVLTreeContainable<fbl::RefPtr<IoBuffer>>,
                  public fbl::RefCounted<IoBuffer> {
@@ -51,9 +53,6 @@ private:
     const vmoid_t vmoid_;
 };
 
-constexpr uint32_t kTxnFlagRespond = 0x00000001; // Should a reponse be sent when we hit ctr?
-
-class TransactionGroup;
 class BlockServer;
 
 typedef struct block_msg_extra block_msg_extra_t;
@@ -63,9 +62,10 @@ typedef struct block_msg block_msg_t;
 // C++ libraries while also using "block_op_t"s, which may require extra space.
 struct block_msg_extra {
     fbl::DoublyLinkedListNodeState<block_msg_t*> dll_node_state;
-    fbl::RefPtr<TransactionGroup> txn;
     fbl::RefPtr<IoBuffer> iobuf;
     BlockServer* server;
+    reqid_t reqid;
+    groupid_t group;
 };
 
 // A single unit of work transmitted to the underlying block layer.
@@ -141,49 +141,6 @@ private:
     block_msg_t* bop_;
 };
 
-// TODO(ZX-1586): Reduce the locking of TransactionGroup.
-class TransactionGroup : public fbl::RefCounted<TransactionGroup> {
-public:
-    TransactionGroup(zx_handle_t fifo, txnid_t txnid);
-    ~TransactionGroup();
-
-    // Verifies that the incoming txn does not break the Block IO fifo protocol.
-    // If it is successful, sets up the response_ with the registered cookie,
-    // and adds to the "ctr_" counter of number of Completions that must be
-    // received before the transaction is identified as successful.
-    zx_status_t Enqueue(bool do_respond) TA_EXCL(lock_);
-
-    // Add |n| to the number of completions we expect to receive before
-    // responding to this txn.
-    void CtrAdd(uint32_t n) TA_EXCL(lock_);
-
-    // |status| sets the response's error to a "sticky" value -- if this method
-    // is called twice, the response will be set to the first non |ZX_OK| value.
-    //
-    // |ready_to_send| identifies that once all txns in the group complete, a
-    // response should be transmitted to the client.
-    //
-    // If all txns in a group have already completed, transmits a respose
-    // immediately.
-    void SetResponse(zx_status_t status, bool ready_to_send) TA_EXCL(lock_);
-
-    // Called once the transaction has completed successfully.
-    // This function may respond on the fifo, resetting |response_|.
-    void Complete(zx_status_t status) TA_EXCL(lock_);
-private:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(TransactionGroup);
-
-    void SetResponseReadyLocked() TA_REQ(lock_);
-    void RespondLocked() TA_REQ(lock_);
-
-    const zx_handle_t fifo_;
-
-    fbl::Mutex lock_;
-    block_fifo_response_t response_ TA_GUARDED(lock_); // The response to be sent back to the client
-    uint32_t flags_ TA_GUARDED(lock_);
-    uint32_t ctr_ TA_GUARDED(lock_); // How many ops does the block device need to complete?
-};
-
 class BlockServer {
 public:
     // Creates a new BlockServer.
@@ -194,19 +151,29 @@ public:
     // Starts the BlockServer using the current thread
     zx_status_t Serve() TA_EXCL(server_lock_);
     zx_status_t AttachVmo(zx::vmo vmo, vmoid_t* out) TA_EXCL(server_lock_);
-    zx_status_t AllocateTxn(txnid_t* out) TA_EXCL(server_lock_);
-    void FreeTxn(txnid_t txnid) TA_EXCL(server_lock_);
 
     // Updates the total number of pending txns, possibly signals
     // the queue-draining thread to wake up if they are waiting
     // for all pending operations to complete.
+    //
+    // Should only be called for transactions which have been placed
+    // on (and removed from) in_queue_.
     void TxnEnd();
+
+    // Wrapper around "Completed Transaction", as a convenience
+    // both both one-shot and group-based transactions.
+    //
+    // (If appropriate) tells the client that their operation is done.
+    void TxnComplete(zx_status_t status, reqid_t reqid, groupid_t group);
 
     void ShutDown();
     ~BlockServer();
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(BlockServer);
     BlockServer(zx_device_t* dev, block_protocol_t* bp);
+
+    // Helper for processing a single message read from the FIFO.
+    void ProcessRequest(block_fifo_request_t* request);
 
     // Helper for the server to react to a signal that a barrier
     // operation has completed. Unsets the local "waiting for barrier"
@@ -238,10 +205,10 @@ private:
     BlockMsgQueue in_queue_;
     fbl::atomic<size_t> pending_count_;
     fbl::atomic<bool> barrier_in_progress_;
+    TransactionGroup groups_[MAX_TXN_GROUP_COUNT];
 
     fbl::Mutex server_lock_;
     fbl::WAVLTree<vmoid_t, fbl::RefPtr<IoBuffer>> tree_ TA_GUARDED(server_lock_);
-    fbl::RefPtr<TransactionGroup> txns_[MAX_TXN_COUNT] TA_GUARDED(server_lock_);
     vmoid_t last_id_ TA_GUARDED(server_lock_);
 };
 
@@ -269,9 +236,5 @@ zx_status_t blockserver_serve(BlockServer* bs);
 
 // Attach an IO buffer to the Block Server
 zx_status_t blockserver_attach_vmo(BlockServer* bs, zx_handle_t vmo, vmoid_t* out);
-
-// Allocate & Free a txn
-zx_status_t blockserver_allocate_txn(BlockServer* bs, txnid_t* out);
-void blockserver_free_txn(BlockServer* bs, txnid_t txnid);
 
 __END_CDECLS

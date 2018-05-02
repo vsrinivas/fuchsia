@@ -77,13 +77,8 @@ zx_status_t Bcache::Create(fbl::unique_ptr<Bcache>* out, fbl::unique_fd fd, uint
     } else if ((r = ioctl_block_get_fifos(bc->fd_.get(), &fifo)) < 0) {
         FS_TRACE_ERROR("minfs: Cannot acquire block device fifo: %" PRId64 "\n", r);
         return static_cast<zx_status_t>(r);
-    } else if (bc->TxnId() == TXNID_INVALID) {
-        FS_TRACE_ERROR("minfs: Cannot acquire block device txn\n");
-        zx_handle_close(fifo);
-        return ZX_ERR_NO_RESOURCES;
     } else if ((status = block_fifo_create_client(fifo, &bc->fifo_client_)) != ZX_OK) {
         FS_TRACE_ERROR("minfs: Cannot create block fifo client: %d\n", status);
-        bc->FreeTxnId();
         zx_handle_close(fifo);
         return status;
     }
@@ -119,7 +114,6 @@ Bcache::Bcache(fbl::unique_fd fd, uint32_t blockmax) :
 Bcache::~Bcache() {
 #ifdef __Fuchsia__
     if (fifo_client_ != nullptr) {
-        FreeTxnId();
         ioctl_block_fifo_close(fd_.get());
         block_fifo_release_client(fifo_client_);
     }

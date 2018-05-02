@@ -15,7 +15,9 @@ __BEGIN_CDECLS
 typedef struct fifo_client fifo_client_t;
 
 // Allocates a block fifo client. The client is thread-safe, as long
-// as each thread accessing the client uses a distinct txnid.
+// as each thread accessing the client uses a distinct reqid.
+//
+// Valid groups are in the range [0, MAX_TXN_GROUP_COUNT).
 zx_status_t block_fifo_create_client(zx_handle_t fifo, fifo_client_t** out);
 
 // Frees a block fifo client
@@ -29,7 +31,7 @@ void block_fifo_release_client(fifo_client_t* client);
 // Each of the requests should set the following:
 // FIELD                                    OPS
 // --------------------------------------   -----------------
-// txnid                                    All  (must be the same for all requests)
+// group                                    All  (must be the same for all requests)
 // vmoid                                    All
 // opcode (BLOCKIO_OP_MASK bits only)       All
 // length                                   read, write

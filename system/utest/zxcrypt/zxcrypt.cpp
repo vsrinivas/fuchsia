@@ -480,7 +480,7 @@ bool TestVmoStall(Volume::Version version, bool fvm) {
     ASSERT_TRUE(ac.check());
     for (size_t i = 0; i < num; ++i) {
         requests[i].opcode = (i % 2 == 0 ? BLOCKIO_WRITE : BLOCKIO_READ);
-        requests[i].length = blks_per_req;
+        requests[i].length = static_cast<uint32_t>(blks_per_req);
         requests[i].dev_offset = 0;
         requests[i].vmo_offset = 0;
     }

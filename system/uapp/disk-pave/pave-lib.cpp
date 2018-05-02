@@ -70,15 +70,10 @@ inline fvm::extent_descriptor_t* GetExtent(fvm::partition_descriptor_t* pd, size
 
 // Registers a FIFO
 zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, zx_handle_t vmo,
-                                txnid_t* txnid_out, vmoid_t* vmoid_out,
-                                fifo_client_t** client_out) {
+                                vmoid_t* vmoid_out, fifo_client_t** client_out) {
     zx::fifo fifo;
     if (ioctl_block_get_fifos(fd.get(), fifo.reset_and_get_address()) < 0) {
         ERROR("Couldn't attach fifo to partition\n");
-        return ZX_ERR_IO;
-    }
-    if (ioctl_block_alloc_txn(fd.get(), txnid_out) < 0) {
-        ERROR("Couldn't allocate transaction\n");
         return ZX_ERR_IO;
     }
     zx::vmo dup;
@@ -132,7 +127,12 @@ zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
                 return status;
             }
 
-            request->length = vmo_sz / block_size;
+            uint64_t length = vmo_sz / block_size;
+            if (length > UINT32_MAX) {
+                ERROR("Error writing partition: Too large\n");
+                return ZX_ERR_OUT_OF_RANGE;
+            }
+            request->length = static_cast<uint32_t>(length);
             request->vmo_offset = 0;
             request->dev_offset = offset / block_size;
 
@@ -153,7 +153,12 @@ zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
             memset(mvmo->GetData(), 0, vmo_cap);
         }
         while (bytes_left > 0) {
-            request->length = fbl::min(bytes_left, vmo_cap) / block_size;
+            uint64_t length = fbl::min(bytes_left, vmo_cap) / block_size;
+            if (length > UINT32_MAX) {
+                ERROR("Error writing trailing zeroes: Too large\n");
+                return ZX_ERR_OUT_OF_RANGE;
+            }
+            request->length = static_cast<uint32_t>(length);
             request->vmo_offset = 0;
             request->dev_offset = offset / block_size;
 
@@ -210,10 +215,9 @@ zx_status_t WriteVmoToBlock(fs::MappedVmo* mvmo, size_t vmo_size,
                             const fbl::unique_fd& partition_fd, const block_info_t& info) {
     ZX_ASSERT(vmo_size % info.block_size == 0);
 
-    txnid_t txnid;
     vmoid_t vmoid;
     fifo_client_t* client;
-    zx_status_t status = RegisterFastBlockIo(partition_fd, mvmo->GetVmo(), &txnid, &vmoid, &client);
+    zx_status_t status = RegisterFastBlockIo(partition_fd, mvmo->GetVmo(), &vmoid, &client);
     if (status != ZX_OK) {
         ERROR("Cannot register fast block I/O\n");
         return status;
@@ -221,11 +225,16 @@ zx_status_t WriteVmoToBlock(fs::MappedVmo* mvmo, size_t vmo_size,
     const auto closer = fbl::MakeAutoCall([&]() { block_fifo_release_client(client); });
 
     block_fifo_request_t request;
-    request.txnid = txnid;
+    request.group = 0;
     request.vmoid = vmoid;
     request.opcode = BLOCKIO_WRITE;
 
-    request.length = vmo_size / info.block_size;
+    uint64_t length = vmo_size / info.block_size;
+    if (length > UINT32_MAX) {
+        ERROR("Error writing partition data: Too large\n");
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+    request.length = static_cast<uint32_t>(length);
     request.vmo_offset = 0;
     request.dev_offset = 0;
 
@@ -601,12 +610,10 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
 
     // Now that all partitions are preallocated, begin streaming data to them.
     for (size_t p = 0; p < hdr->partition_count; p++) {
-        txnid_t txnid;
         vmoid_t vmoid;
         fifo_client_t* client;
         zx_status_t status = RegisterFastBlockIo(parts[p].new_part,
-                                                 mvmo->GetVmo(), &txnid,
-                                                 &vmoid, &client);
+                                                 mvmo->GetVmo(), &vmoid, &client);
         if (status != ZX_OK) {
             ERROR("Failed to register fast block IO\n");
             return status;
@@ -614,7 +621,7 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
         const auto closer = fbl::MakeAutoCall([&]() { block_fifo_release_client(client); });
 
         block_fifo_request_t request;
-        request.txnid = txnid;
+        request.group = 0;
         request.vmoid = vmoid;
         request.opcode = BLOCKIO_WRITE;
 

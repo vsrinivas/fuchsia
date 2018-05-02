@@ -62,7 +62,7 @@ typedef struct {
     int fd;
     zx_handle_t vmo;
     zx_handle_t fifo;
-    txnid_t txnid;
+    reqid_t reqid;
     vmoid_t vmoid;
     size_t bufsz;
     block_info_t info;
@@ -97,17 +97,6 @@ static zx_status_t blkdev_open(int fd, const char* dev, size_t bufsz, blkdev_t* 
         goto fail;
     }
 
-    for (unsigned n = 0; n < 128; n++) {
-        if (ioctl_block_alloc_txn(fd, &blk->txnid) != sizeof(txnid_t)) {
-            fprintf(stderr, "error: cannot allocate txn for '%s'\n", dev);
-            goto fail;
-        }
-        if (blk->txnid != n) {
-            fprintf(stderr, "error: unexpected txid %u\n", blk->txnid);
-            goto fail;
-        }
-    }
-
     zx_handle_t dup;
     if ((r = zx_handle_duplicate(blk->vmo, ZX_RIGHT_SAME_RIGHTS, &dup)) != ZX_OK) {
         fprintf(stderr, "error: cannot duplicate handle %d\n", r);
@@ -137,38 +126,7 @@ typedef struct {
     completion_t signal;
 } bio_random_args_t;
 
-static atomic_uint_fast64_t IDMAP0 = 0xFFFFFFFFFFFFFFFFULL;
-static atomic_uint_fast64_t IDMAP1 = 0xFFFFFFFFFFFFFFFFULL;
-
-static txnid_t GET(void) {
-    uint64_t n = __builtin_ffsll(atomic_load(&IDMAP0));
-    if (n > 0) {
-        n--;
-        atomic_fetch_and(&IDMAP0, ~(1ULL << n));
-        return n;
-    } else if ((n = __builtin_ffsll(atomic_load(&IDMAP1))) > 0) {
-        n--;
-        atomic_fetch_and(&IDMAP1, ~(1ULL << n));
-        return n + 64;
-    } else {
-        fprintf(stderr, "FATAL OUT OF IDS\n");
-        sleep(100);
-        exit(-1);
-    }
-}
-
-static void PUT(uint64_t n) {
-    if (n > 127) {
-        fprintf(stderr, "FATAL BAD ID %zu\n", n);
-        sleep(100);
-        exit(-1);
-    }
-    if (n > 63) {
-        atomic_fetch_or(&IDMAP1, 1ULL << (n - 64));
-    } else {
-        atomic_fetch_or(&IDMAP0, 1ULL << n);
-    }
-}
+static atomic_int_fast32_t next_reqid = 0;
 
 static int bio_random_thread(void* arg) {
     bio_random_args_t* a = arg;
@@ -192,9 +150,9 @@ static int bio_random_thread(void* arg) {
         }
 
         block_fifo_request_t req = {
-            .txnid = GET(),
+            .reqid = atomic_fetch_add(&next_reqid, 1),
             .vmoid = a->blk->vmoid,
-            .opcode = BLOCKIO_READ | BLOCKIO_TXN_END,
+            .opcode = BLOCKIO_READ,
             .length = xfer,
             .vmo_offset = off,
         };
@@ -216,7 +174,7 @@ static int bio_random_thread(void* arg) {
 
 #if 0
         fprintf(stderr, "IO tid=%u vid=%u op=%x len=%zu vof=%zu dof=%zu\n",
-                req.txnid, req.vmoid, req.opcode, req.length, req.vmo_offset, req.dev_offset);
+                req.reqid, req.vmoid, req.opcode, req.length, req.vmo_offset, req.dev_offset);
 #endif
         zx_status_t r = zx_fifo_write(fifo, sizeof(req), &req, 1, NULL);
         if (r == ZX_ERR_SHOULD_WAIT) {
@@ -272,7 +230,6 @@ static zx_status_t bio_random(bio_random_args_t* a, uint64_t* _total, zx_time_t*
                     resp.status, count);
             goto fail;
         }
-        PUT(resp.txnid);
         count--;
         if (atomic_fetch_sub(&a->pending, 1) == a->max_pending) {
             completion_signal(&a->signal);

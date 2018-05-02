@@ -101,7 +101,7 @@ public:
     // or |vmo_read|, respectively.  |off| and |len| are in blocks.
     zx_status_t block_fifo_txn(uint16_t opcode, uint64_t off, uint64_t len) {
         req_.opcode = opcode;
-        req_.length = len;
+        req_.length = static_cast<uint32_t>(len);
         req_.dev_offset = off;
         req_.vmo_offset = 0;
         return ::block_fifo_txn(client_, &req_, 1);
@@ -110,7 +110,7 @@ public:
     // Sends |num| requests over the block fifo to read or write blocks.
     zx_status_t block_fifo_txn(block_fifo_request_t* requests, size_t num) {
         for (size_t i = 0; i < num; ++i) {
-            requests[i].txnid = req_.txnid;
+            requests[i].group = req_.group;
             requests[i].vmoid = req_.vmoid;
         }
         return ::block_fifo_txn(client_, requests, num);
@@ -173,7 +173,7 @@ private:
     bool Connect();
 
     // Disconnects the block client from the block server.
-    bool Disconnect();
+    void Disconnect();
 
     // Thread body to wake up the underlying ramdisk.
     static int WakeThread(void* arg);

@@ -1057,13 +1057,13 @@ VnodeMinfs::~VnodeMinfs() {
     size_t request_count = 0;
     block_fifo_request_t request[2];
     if (vmo_.is_valid()) {
-        request[request_count].txnid = fs_->bc_->TxnId();
+        request[request_count].group = fs_->bc_->BlockGroupID();
         request[request_count].vmoid = vmoid_;
         request[request_count].opcode = BLOCKIO_CLOSE_VMO;
         request_count++;
     }
     if (vmo_indirect_ != nullptr) {
-        request[request_count].txnid = fs_->bc_->TxnId();
+        request[request_count].group = fs_->bc_->BlockGroupID();
         request[request_count].vmoid = vmoid_indirect_;
         request[request_count].opcode = BLOCKIO_CLOSE_VMO;
         request_count++;

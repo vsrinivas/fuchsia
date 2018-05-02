@@ -119,11 +119,7 @@ static zx_time_t iotime_fifo(char* dev, int is_read, int fd, size_t total, size_
         return ZX_TIME_INFINITE;
     }
 
-    txnid_t txnid;
-    if (ioctl_block_alloc_txn(fd, &txnid) != sizeof(txnid)) {
-        fprintf(stderr, "error: cannot allocate txn for '%s'\n", dev);
-        return ZX_TIME_INFINITE;
-    }
+    groupid_t group = 0;
 
     zx_handle_t dup;
     if ((r = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &dup)) != ZX_OK) {
@@ -148,7 +144,7 @@ static zx_time_t iotime_fifo(char* dev, int is_read, int fd, size_t total, size_
     while (n > 0) {
         size_t xfer = (n > bufsz) ? bufsz : n;
         block_fifo_request_t request = {
-            .txnid = txnid,
+            .group = group,
             .vmoid = vmoid,
             .opcode = is_read ? BLOCKIO_READ : BLOCKIO_WRITE,
             .length = xfer / info.block_size,

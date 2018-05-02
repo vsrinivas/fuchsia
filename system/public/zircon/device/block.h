@@ -31,12 +31,6 @@
 // Attach a VMO to the currently running FIFO server
 #define IOCTL_BLOCK_ATTACH_VMO \
     IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_BLOCK, 7)
-// Allocate a txn with the currently running FIFO server
-#define IOCTL_BLOCK_ALLOC_TXN \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 8)
-// Free a txn from the currently running FIFO server
-#define IOCTL_BLOCK_FREE_TXN \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 9)
 // Shut down the fifo server, waiting for it to be ready to be started again.
 // Only necessary to guarantee availibility to the next fifo server client;
 // otherwise, closing the client fifo is sufficient to shut down the server.
@@ -140,22 +134,6 @@ typedef uint16_t vmoid_t;
 // ssize_t ioctl_block_attach_vmo(int fd, zx_handle_t* in, vmoid_t* out_vmoid);
 IOCTL_WRAPPER_INOUT(ioctl_block_attach_vmo, IOCTL_BLOCK_ATTACH_VMO, zx_handle_t, vmoid_t);
 
-#define MAX_TXN_COUNT 256
-
-typedef uint16_t txnid_t;
-
-// Dummy TXNID value reserved for "invalid". Will never be allocated; can be
-// used as a local value for unallocated / freed ID.
-#define TXNID_INVALID 0xFFFF
-
-static_assert(TXNID_INVALID > MAX_TXN_COUNT, "Invalid Txn ID may be valid");
-
-// ssize_t ioctl_block_alloc_txn(int fd, txnid_t* out_txnid);
-IOCTL_WRAPPER_OUT(ioctl_block_alloc_txn, IOCTL_BLOCK_ALLOC_TXN, txnid_t);
-
-// ssize_t ioctl_block_free_txn(int fd, const size_t* in_txnid);
-IOCTL_WRAPPER_IN(ioctl_block_free_txn, IOCTL_BLOCK_FREE_TXN, txnid_t);
-
 // ssize_t ioctl_block_fifo_close(int fd);
 IOCTL_WRAPPER(ioctl_block_fifo_close, IOCTL_BLOCK_FIFO_CLOSE);
 
@@ -230,49 +208,65 @@ IOCTL_WRAPPER_INOUT(ioctl_block_get_stats, IOCTL_BLOCK_GET_STATS, bool, block_st
 
 // Multiple Block IO operations may be sent at once before a response is actually sent back.
 // Block IO ops may be sent concurrently to different vmoids, and they also may be sent
-// to different transactions at any point in time. Up to MAX_TXN_COUNT transactions may
-// be allocated at any point in time.
+// to different groups at any point in time.
 //
-// "Transactions" are allocated with the "alloc_txn" ioctl. Allocating a transaction allows
-// multiple message to be buffered at once on a single txn before receiving a response.
-// Once a txn has been allocated, it can be re-used many times. It is recommended that
-// transactions are allocated on a "per-thread" basis, and only freed on thread teardown.
+// MAX_TXN_GROUP_COUNT "groups" are pre-allocated lanes separated on the block
+// server.  Using a group allows multiple message to be buffered at once
+// on a single communication chanel before receiving a response.
 //
-// The protocol to communicate with a single txn is as follows:
-// 1) SEND [N - 1] messages with an allocated txnid for any value of 1 <= N.
-//    The BLOCKIO_TXN_END flag is not set for this step.
-// 2) SEND a final Nth message with the same txnid, but also the BLOCKIO_TXN_END flag.
+// Usage of groups is identified by BLOCKIO_GROUP_ITEM, and is optional.
+//
+// These groups may be referred to with a "groupid", in the range [0,
+// MAX_TXN_GROUP_COUNT).
+//
+// The protocol to communicate with a single group is as follows:
+// 1) SEND [N - 1] messages with an allocated groupid for any value of 1 <= N.
+//    The BLOCKIO_GROUP_ITEM flag is set for these messages.
+// 2) SEND a final Nth message with the same groupid.
+//    The BLOCKIO_GROUP_ITEM | BLOCKIO_GROUP_LAST flags are set for this
+//    message.
 // 3) RECEIVE a single response from the Block IO server after all N requests have completed.
 //    This response is sent once all operations either complete or a single operation fails.
-//    At this point, step (1) may begin again without reallocating the txn.
+//    At this point, step (1) may begin again for the same groupid.
 //
 // For BLOCKIO_READ and BLOCKIO_WRITE, N may be greater than 1.
 // Otherwise, N == 1 (skipping step (1) in the protocol above).
 //
 // Notes:
-// - txnids may operate on any number of vmoids at once.
-// - If additional requests are sent on the same txnid before step (3) has completed, then
-//   the additional request will not be processed. If BLOCKIO_TXN_END is set, an error will
+// - groupids may operate on any number of vmoids at once.
+// - If additional requests are sent on the same groupid before step (3) has completed, then
+//   the additional request will not be processed. If BLOCKIO_GROUP_LAST is set, an error will
 //   be returned. Otherwise, the request will be silently dropped.
-// - The only requests that receive responses are ones which have the BLOCKIO_TXN_END flag
-//   set. This is the case for both successful and erroneous requests. This property allows
-//   the Block IO server to send back a response on the FIFO without waiting.
+// - Messages within a group are not guaranteed to be processed in any order
+//   relative to each other.
+// - All requests receive responses, except for ones with BLOCKIO_GROUP_ITEM
+//   that do not have BLOCKIO_GROUP_LAST set.
 //
 // For example, the following is a valid sequence of transactions:
-//   -> (txnid = 1, vmoid = 1, OP = Write)
-//   -> (txnid = 1, vmoid = 2, OP = Write)
-//   -> (txnid = 2, vmoid = 3, OP = Write | Want Reply)
-//   <- Response sent to txnid = 2
-//   -> (txnid = 1, vmoid = 1, OP = Read | Want Reply)
-//   <- Response sent to txnid = 1
-//   -> (txnid = 3, vmoid = 1, OP = Write)
-//   -> (txnid = 3, vmoid = 1, OP = Read | Want Reply)
-//   <- Repsonse sent to txnid = 3
+//   -> (groupid = 1,          vmoid = 1, OP = Write | GroupItem,             reqid = 1)
+//   -> (groupid = 1,          vmoid = 2, OP = Write | GroupItem,             reqid = 2)
+//   -> (groupid = 2,          vmoid = 3, OP = Write | GroupItem | GroupLast, reqid = 0)
+//   <- Response sent to groupid = 2, reqid = 0
+//   -> (groupid = 1,          vmoid = 1, OP = Read | GroupItem | GroupLast,  reqid = 3)
+//   <- Response sent to groupid = 1, reqid = 3
+//   -> (groupid = 3,          vmoid = 1, OP = Write | GroupItem,             reqid = 4)
+//   -> (groupid = don't care, vmoid = 1, OP = Read, reqid = 5)
+//   <- Response sent to reqid = 5
+//   -> (groupid = 3,          vmoid = 1, OP = Read | GroupItem | GroupLast,  reqid = 6)
+//   <- Response sent to groupid = 3, reqid = 6
 //
 // Each transaction reads or writes up to 'length' blocks from the device, starting at 'dev_offset'
 // blocks, into the VMO associated with 'vmoid', starting at 'vmo_offset' blocks.  If the
 // transaction is out of range, for example if 'length' is too large or if 'dev_offset' is beyond
 // the end of the device, ZX_ERR_OUT_OF_RANGE is returned.
+
+#define MAX_TXN_GROUP_COUNT 8
+
+// The Request ID allowing callers to correspond requests with responses.
+// This field is entirely for client-side bookkeeping; there is no obligation
+// to make request IDs unique.
+typedef uint32_t reqid_t;
+typedef uint16_t groupid_t;
 
 // Reads from the Block device into the VMO
 #define BLOCKIO_READ           0x00000001
@@ -290,27 +284,31 @@ IOCTL_WRAPPER_INOUT(ioctl_block_get_stats, IOCTL_BLOCK_GET_STATS, bool, block_st
 #define BLOCKIO_BARRIER_BEFORE 0x00000100
 // Require that this operation must complete before additional operations begin.
 #define BLOCKIO_BARRIER_AFTER  0x00000200
-// Respond after request (and all previous) have completed
-#define BLOCKIO_TXN_END        0x00000400
+// Associate the following request with |group|.
+#define BLOCKIO_GROUP_ITEM     0x00000400
+// Only respond after this request (and all previous within group) have completed.
+// Only valid with BLOCKIO_GROUP_ITEM.
+#define BLOCKIO_GROUP_LAST     0x00000800
 #define BLOCKIO_FLAG_MASK      0x0000FF00
 
 typedef struct {
-    txnid_t txnid;
-    vmoid_t vmoid;
     uint32_t opcode;
-    uint64_t length;
+    reqid_t reqid; // Transmitted in the block_fifo_response_t.
+    groupid_t group; // Only used if opcode & BLOCKIO_GROUP_ITEM.
+    vmoid_t vmoid;
+    uint32_t length;
     uint64_t vmo_offset;
     uint64_t dev_offset;
 } block_fifo_request_t;
 
 typedef struct {
-    txnid_t txnid;
-    uint16_t reserved0;
     zx_status_t status;
+    reqid_t reqid;
+    groupid_t group; // Only valid if transmitted in request.
+    vmoid_t reserved0;
     uint32_t count; // The number of messages in the transaction completed by the block server.
-    uint32_t reserved1;
+    uint64_t reserved1;
     uint64_t reserved2;
-    uint64_t reserved3;
 } block_fifo_response_t;
 
 static_assert(sizeof(block_fifo_request_t) == sizeof(block_fifo_response_t),

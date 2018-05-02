@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <math.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,6 +30,7 @@ static int num_threads;
 static uint32_t start_block;
 static uint32_t block_count;
 static int fd;
+static atomic_int_fast32_t next_txid;
 
 static mtx_t lock;
 static uint32_t blocks_read;
@@ -55,7 +57,7 @@ static void generate_block_data(int blk_idx, void* buffer, size_t len) {
     }
 }
 
-static int fill_range(txnid_t* txnid, zx_handle_t vmoid, uint32_t start,
+static int fill_range(groupid_t group, zx_handle_t vmoid, uint32_t start,
                       uint32_t count, void* buf) {
     zx_status_t st;
     for (uint32_t blk_idx = start; blk_idx < count; blk_idx++) {
@@ -66,7 +68,7 @@ static int fill_range(txnid_t* txnid, zx_handle_t vmoid, uint32_t start,
 
         generate_block_data(blk_idx, buf, block_size);
         block_fifo_request_t request = {
-            .txnid = *txnid,
+            .group = group,
             .vmoid = vmoid,
             .opcode = BLOCKIO_WRITE,
             .length = len / info.block_size,
@@ -105,7 +107,7 @@ static int check_block_data(int blk_idx, void* buffer, int len) {
     return 0;
 }
 
-static zx_status_t check_range(txnid_t* txnid, zx_handle_t vmoid, uint32_t start,
+static zx_status_t check_range(groupid_t group, zx_handle_t vmoid, uint32_t start,
                                uint32_t count, void* buf) {
     zx_status_t st;
     for (uint32_t blk_idx = start; blk_idx < count; blk_idx++) {
@@ -115,7 +117,7 @@ static zx_status_t check_range(txnid_t* txnid, zx_handle_t vmoid, uint32_t start
         }
 
         block_fifo_request_t request = {
-            .txnid = *txnid,
+            .group = group,
             .vmoid = vmoid,
             .opcode = BLOCKIO_READ,
             .length = len / info.block_size,
@@ -133,7 +135,7 @@ static zx_status_t check_range(txnid_t* txnid, zx_handle_t vmoid, uint32_t start
     return 0;
 }
 
-static int init_txn_resources(zx_handle_t* vmo, vmoid_t* vmoid, txnid_t* txnid,  void** buf) {
+static int init_txn_resources(zx_handle_t* vmo, vmoid_t* vmoid, groupid_t* group,  void** buf) {
     if (zx_vmo_create(block_size, 0, vmo) != ZX_OK) {
         fprintf(stderr, "error: out of memory\n");
         return -1;
@@ -157,26 +159,24 @@ static int init_txn_resources(zx_handle_t* vmo, vmoid_t* vmoid, txnid_t* txnid, 
         return -1;
     }
 
-    if (ioctl_block_alloc_txn(fd, txnid) != sizeof(txnid_t)) {
-        fprintf(stderr, "error: cannot allocate txn for init\n");
-        return -1;
-    }
+    *group = atomic_fetch_add(&next_txid, 1);
+    assert(*group < MAX_TXN_GROUP_COUNT);
 
     return 0;
 }
 
-static void free_txn_resources(zx_handle_t* vmo, vmoid_t* vmoid, txnid_t* txnid, void** buf) {
-    ioctl_block_free_txn(fd, txnid);
-    zx_handle_close(*vmo);
+static void free_txn_resources(zx_handle_t vmo, void** buf) {
+    zx_handle_close(vmo);
+    zx_vmar_unmap(zx_vmar_root_self(), *(uintptr_t*) buf, block_size);
 }
 
 static int init_device(void) {
     zx_handle_t vmo;
     void* buf;
     vmoid_t vmoid;
-    txnid_t txnid;
+    groupid_t group;
 
-    if (init_txn_resources(&vmo, &vmoid, &txnid, &buf)) {
+    if (init_txn_resources(&vmo, &vmoid, &group, &buf)) {
         fprintf(stderr, "Failed to alloc resources to init device\n");
         return -1;
     }
@@ -184,23 +184,26 @@ static int init_device(void) {
     zx_status_t st;
     printf("writing test data to device...");
     fflush(stdout);
-    if ((st = fill_range(&txnid, vmoid, start_block, block_count, buf)) != ZX_OK) {
+    if ((st = fill_range(group, vmoid, start_block, block_count, buf)) != ZX_OK) {
         fprintf(stderr, "failed to write test data\n");
-        return -1;
+        goto fail;
     }
     printf("done\n");
 
     printf("verifying test data...");
     fflush(stdout);
-    if (check_range(&txnid, vmoid, start_block, block_count, buf)) {
+    if (check_range(group, vmoid, start_block, block_count, buf)) {
         fprintf(stderr, "failed to verify test data\n");
-        return -1;
+        goto fail;
     }
     printf("done\n");
 
-    free_txn_resources(&vmo, &vmoid, &txnid, &buf);
-
+    free_txn_resources(vmo, &buf);
     return 0;
+
+fail:
+    free_txn_resources(vmo, &buf);
+    return -1;
 }
 
 static void update_progress(uint32_t was_read) {
@@ -228,8 +231,11 @@ static int do_work(void* arg) {
     zx_handle_t vmo;
     void* buf;
     vmoid_t vmoid;
-    txnid_t txnid;
-    init_txn_resources(&vmo, &vmoid, &txnid, &buf);
+    groupid_t group;
+    if (init_txn_resources(&vmo, &vmoid, &group, &buf)) {
+        fprintf(stderr, "failed to initialize background thread\n");
+        return -1;
+    }
 
     rand32_t seed_gen = RAND32SEED(base_seed + (int) (uintptr_t) arg);
     for (int i = 0; i < 20; i++) {
@@ -248,9 +254,9 @@ static int do_work(void* arg) {
 
         int res;
         if (rand32(&work_gen) % 2) {
-            res = check_range(&txnid, vmoid, start_block + work_offset, to_read, buf);
+            res = check_range(group, vmoid, start_block + work_offset, to_read, buf);
         } else {
-            res = fill_range(&txnid, vmoid, start_block + work_offset, to_read, buf);
+            res = fill_range(group, vmoid, start_block + work_offset, to_read, buf);
         }
 
         mtx_lock(&lock);
@@ -263,7 +269,7 @@ static int do_work(void* arg) {
         mtx_unlock(&lock);
     }
 
-    free_txn_resources(&vmo, &vmoid, &txnid, &buf);
+    free_txn_resources(vmo, &buf);
     return 0;
 }
 
@@ -302,6 +308,7 @@ static int usage(void) {
 
 int iochk(int argc, char** argv) {
     const char* device = argv[argc - 1];
+    atomic_init(&next_txid, 0);
     fd = open(device, O_RDONLY);
     if (fd < 0) {
         fprintf(stderr, "error: cannot open '%s'\n", device);
@@ -417,6 +424,12 @@ int iochk(int argc, char** argv) {
     printf("starting worker threads...\n");
     mtx_init(&lock, mtx_plain);
     thrd_t thrds[num_threads];
+
+    if (num_threads > MAX_TXN_GROUP_COUNT) {
+        fprintf(stderr, "number of threads capped at %u\n", MAX_TXN_GROUP_COUNT);
+        num_threads = MAX_TXN_GROUP_COUNT;
+    }
+
     for (int i = 0; i < num_threads; i++) {
         if (thrd_create(thrds + i, do_work, (void*) (uintptr_t) i) != thrd_success) {
             fprintf(stderr, "error: thread creation failed\n");
@@ -434,15 +447,18 @@ int iochk(int argc, char** argv) {
         zx_handle_t vmo;
         void* buf;
         vmoid_t vmoid;
-        txnid_t txnid;
-        init_txn_resources(&vmo, &vmoid, &txnid, &buf);
-        if (check_range(&txnid, vmoid, start_block, block_count, buf)) {
+        groupid_t group;
+        if (init_txn_resources(&vmo, &vmoid, &group, &buf)) {
+            fprintf(stderr, "failed to initialize verification thread\n");
+            return -1;
+        }
+        if (check_range(group, vmoid, start_block, block_count, buf)) {
             fprintf(stderr, "failed to re-verify test data\n");
             iochk_failure = true;
         } else {
             printf("done\n");
         }
-        free_txn_resources(&vmo, &vmoid, &txnid, &buf);
+        free_txn_resources(vmo, &buf);
     }
 
     if (!iochk_failure) {

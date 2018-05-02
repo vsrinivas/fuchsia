@@ -1156,7 +1156,7 @@ zx_status_t Blobfs::AttachVmo(zx_handle_t vmo, vmoid_t* out) {
 
 zx_status_t Blobfs::DetachVmo(vmoid_t vmoid) {
     block_fifo_request_t request;
-    request.txnid = TxnId();
+    request.group = BlockGroupID();
     request.vmoid = vmoid;
     request.opcode = BLOCKIO_CLOSE_VMO;
     return Txn(&request, 1);
@@ -1362,7 +1362,6 @@ Blobfs::~Blobfs() {
     closed_hash_.clear();
 
     if (fifo_client_ != nullptr) {
-        FreeTxnId();
         ioctl_block_fifo_close(Fd());
         block_fifo_release_client(fifo_client_);
     }
@@ -1389,11 +1388,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const blobfs_info_t* info,
     } else if ((r = ioctl_block_get_fifos(fs->Fd(), &fifo)) < 0) {
         fprintf(stderr, "Failed to mount blobfs: Someone else is using the block device\n");
         return static_cast<zx_status_t>(r);
-    } else if (fs->TxnId() == TXNID_INVALID) {
-        zx_handle_close(fifo);
-        return static_cast<zx_status_t>(ZX_ERR_NO_RESOURCES);
     } else if ((status = block_fifo_create_client(fifo, &fs->fifo_client_)) != ZX_OK) {
-        fs->FreeTxnId();
         zx_handle_close(fifo);
         return status;
     }

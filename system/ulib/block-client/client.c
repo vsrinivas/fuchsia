@@ -67,7 +67,7 @@ typedef struct block_completion {
 
 typedef struct fifo_client {
     zx_handle_t fifo;
-    block_completion_t txns[MAX_TXN_COUNT];
+    block_completion_t groups[MAX_TXN_GROUP_COUNT];
 } fifo_client_t;
 
 zx_status_t block_fifo_create_client(zx_handle_t fifo, fifo_client_t** out) {
@@ -94,25 +94,25 @@ zx_status_t block_fifo_txn(fifo_client_t* client, block_fifo_request_t* requests
         return ZX_OK;
     }
 
-    txnid_t txnid = requests[0].txnid;
-    assert(txnid < MAX_TXN_COUNT);
-    completion_reset(&client->txns[txnid].completion);
-    client->txns[txnid].status = ZX_ERR_IO;
+    groupid_t group = requests[0].group;
+    assert(group < MAX_TXN_GROUP_COUNT);
+    completion_reset(&client->groups[group].completion);
+    client->groups[group].status = ZX_ERR_IO;
 
     zx_status_t status;
     for (size_t i = 0; i < count; i++) {
-        assert(requests[i].txnid == txnid);
-        requests[i].opcode = requests[i].opcode & BLOCKIO_OP_MASK;
+        assert(requests[i].group == group);
+        requests[i].opcode = (requests[i].opcode & BLOCKIO_OP_MASK) | BLOCKIO_GROUP_ITEM;
     }
 
     requests[0].opcode |= BLOCKIO_BARRIER_BEFORE;
-    requests[count - 1].opcode |= BLOCKIO_TXN_END | BLOCKIO_BARRIER_AFTER;
+    requests[count - 1].opcode |= BLOCKIO_GROUP_LAST | BLOCKIO_BARRIER_AFTER;
 
     if ((status = do_write(client->fifo, &requests[0], count)) != ZX_OK) {
         return status;
     }
 
-    // As expected by the protocol, when we send one "BLOCKIO_TXN_END" message, we
+    // As expected by the protocol, when we send one "BLOCKIO_GROUP_LAST" message, we
     // must read a reply message.
     block_fifo_response_t response;
     if ((status = do_read(client->fifo, &response)) != ZX_OK) {
@@ -120,12 +120,12 @@ zx_status_t block_fifo_txn(fifo_client_t* client, block_fifo_request_t* requests
     }
 
     // Wake up someone who is waiting (it might be ourselves)
-    txnid_t response_txnid = response.txnid;
-    client->txns[response_txnid].status = response.status;
-    completion_signal(&client->txns[response_txnid].completion);
+    groupid_t response_group = response.group;
+    client->groups[response_group].status = response.status;
+    completion_signal(&client->groups[response_group].completion);
 
-    // Wait for someone to signal us
-    completion_wait(&client->txns[txnid].completion, ZX_TIME_INFINITE);
+    // Wait for someone to signal us.
+    completion_wait(&client->groups[group].completion, ZX_TIME_INFINITE);
 
-    return client->txns[txnid].status;
+    return client->groups[group].status;
 }

@@ -92,28 +92,12 @@ public:
         return fs::fvm_reset_volume_slices(fd_.get());
     }
 
-    // Acquires a Thread-local TxnId that can be used for sending messages
+    // Acquires a Thread-local group that can be used for sending messages
     // over the block I/O FIFO.
-    txnid_t TxnId() const {
-        ZX_DEBUG_ASSERT(fd_);
-        thread_local txnid_t txnid_ = TXNID_INVALID;
-        if (txnid_ != TXNID_INVALID) {
-            return txnid_;
-        }
-        if (ioctl_block_alloc_txn(fd_.get(), &txnid_) < 0) {
-            return TXNID_INVALID;
-        }
-        return txnid_;
-    }
-
-    // Frees the TxnId allocated for the thread (if one was allocated).
-    // Must be called separately by all threads which access TxnId().
-    void FreeTxnId() {
-        txnid_t tid = TxnId();
-        if (tid == TXNID_INVALID) {
-            return;
-        }
-        ioctl_block_free_txn(fd_.get(), &tid);
+    groupid_t BlockGroupID() {
+        thread_local groupid_t group_ = next_group_.fetch_add(1);
+        ZX_ASSERT_MSG(group_ < MAX_TXN_GROUP_COUNT, "Too many threads accessing block device");
+        return group_;
     }
 
 #else
@@ -137,6 +121,7 @@ private:
 #ifdef __Fuchsia__
     fifo_client_t* fifo_client_{}; // Fast path to interact with block device
     block_info_t info_{};
+    fbl::atomic<groupid_t> next_group_ = {};
 #else
     off_t offset_{};
 #endif

@@ -159,51 +159,6 @@ done:
     return status;
 }
 
-static zx_status_t blkdev_alloc_txn(blkdev_t* bdev,
-                                const void* in_buf, size_t in_len,
-                                void* out_buf, size_t out_len, size_t* out_actual) {
-    if ((in_len != 0) || (out_len < sizeof(txnid_t))) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    zx_status_t status;
-    mtx_lock(&bdev->lock);
-    if (bdev->bs == NULL) {
-        status = ZX_ERR_BAD_STATE;
-        goto done;
-    }
-
-    if ((status = blockserver_allocate_txn(bdev->bs, out_buf)) != ZX_OK) {
-        goto done;
-    }
-    *out_actual = sizeof(vmoid_t);
-
-done:
-    mtx_unlock(&bdev->lock);
-    return status;
-}
-
-static zx_status_t blkdev_free_txn(blkdev_t* bdev, const void* in_buf,
-                                   size_t in_len) {
-    if (in_len != sizeof(txnid_t)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    zx_status_t status;
-    mtx_lock(&bdev->lock);
-    if (bdev->bs == NULL) {
-        status = ZX_ERR_BAD_STATE;
-        goto done;
-    }
-
-    txnid_t txnid = *(txnid_t*)in_buf;
-    blockserver_free_txn(bdev->bs, txnid);
-    status = ZX_OK;
-done:
-    mtx_unlock(&bdev->lock);
-    return status;
-}
-
 static zx_status_t blkdev_fifo_close_locked(blkdev_t* bdev) {
     if (bdev->bs != NULL) {
         blockserver_shutdown(bdev->bs);
@@ -227,10 +182,6 @@ static zx_status_t blkdev_ioctl(void* ctx, uint32_t op, const void* cmd,
         return blkdev_get_fifos(blkdev, reply, max);
     case IOCTL_BLOCK_ATTACH_VMO:
         return blkdev_attach_vmo(blkdev, cmd, cmdlen, reply, max, out_actual);
-    case IOCTL_BLOCK_ALLOC_TXN:
-        return blkdev_alloc_txn(blkdev, cmd, cmdlen, reply, max, out_actual);
-    case IOCTL_BLOCK_FREE_TXN:
-        return blkdev_free_txn(blkdev, cmd, cmdlen);
     case IOCTL_BLOCK_FIFO_CLOSE: {
         mtx_lock(&blkdev->lock);
         zx_status_t status = blkdev_fifo_close_locked(blkdev);

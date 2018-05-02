@@ -44,12 +44,16 @@ zx_status_t WriteTxn::Flush() {
     block_fifo_request_t blk_reqs[requests_.size()];
     const uint32_t kDiskBlocksPerBlobfsBlock = kBlobfsBlockSize / bs_->BlockSize();
     for (size_t i = 0; i < requests_.size(); i++) {
-        blk_reqs[i].txnid = bs_->TxnId();
+        blk_reqs[i].group = bs_->BlockGroupID();
         blk_reqs[i].vmoid = vmoid_;
         blk_reqs[i].opcode = BLOCKIO_WRITE;
         blk_reqs[i].vmo_offset = requests_[i].vmo_offset * kDiskBlocksPerBlobfsBlock;
         blk_reqs[i].dev_offset = requests_[i].dev_offset * kDiskBlocksPerBlobfsBlock;
-        blk_reqs[i].length = requests_[i].length * kDiskBlocksPerBlobfsBlock;
+        uint64_t length = requests_[i].length * kDiskBlocksPerBlobfsBlock;
+        // TODO(ZX-2253): Requests this long, although unlikely, should be
+        // handled more gracefully.
+        ZX_ASSERT_MSG(length < UINT32_MAX, "Request size too large");
+        blk_reqs[i].length = static_cast<uint32_t>(length);
     }
 
     // Actually send the operations to the underlying block device.
@@ -169,7 +173,7 @@ WritebackBuffer::~WritebackBuffer() {
 
     if (buffer_vmoid_ != VMOID_INVALID) {
         block_fifo_request_t request;
-        request.txnid = bs_->TxnId();
+        request.group = bs_->BlockGroupID();
         request.vmoid = buffer_vmoid_;
         request.opcode = BLOCKIO_CLOSE_VMO;
         bs_->Txn(&request, 1);
@@ -300,7 +304,6 @@ int WritebackBuffer::WritebackThread(void* arg) {
         // Before waiting, we should check if we're unmounting.
         if (b->unmounting_) {
             b->writeback_lock_.Release();
-            b->bs_->FreeTxnId();
             return 0;
         }
         cnd_wait(&b->consumer_cvar_, b->writeback_lock_.GetInternal());
