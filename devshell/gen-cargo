@@ -1,0 +1,64 @@
+#!/usr/bin/env python
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Generates symlinks to Rust Cargo.toml output files
+
+import argparse
+import os
+import sys
+
+ROOT_PATH = os.path.abspath(__file__ + "/../../..")
+CONFIG_PATH = os.path.join(ROOT_PATH, ".config")
+
+def main():
+    parser = argparse.ArgumentParser(
+            "Generate symlinks to Rust Cargo.toml output files")
+    parser.add_argument("--target",
+                        help="Name of the target to generate a symlink for",
+                        required=True)
+    parser.add_argument("--output",
+                        help="Path to Cargo.toml to generate",
+                        required=False)
+    parser.add_argument("--out-dir",
+                        help="Path to the Fuchsia output directory",
+                        required=False)
+    args = parser.parse_args()
+
+    if args.out_dir:
+        out_dir = args.out_dir
+    else:
+        out_dir = ""
+        with open(CONFIG_PATH, "r") as config:
+            for line in config.readlines():
+                if line.startswith("FUCHSIA_BUILD_DIR="):
+                    segments = line.split("=")
+                    assert(len(segments) == 2)
+                    out_dir = segments[1].strip().strip("'")
+        if out_dir == "":
+            print "Invalid fuchsia/.config: no FUCHSIA_BUILD_DIR entry found"
+
+    target_parts = args.target.split(":", 1)
+    if len(target_parts) == 1:
+        # Turn foo/bar into foo/bar/bar
+        path = os.path.join(args.target, os.path.basename(args.target))
+    elif len(target_parts) == 2:
+        # Turn foo/bar:baz into foo/bar/baz
+        path = args.target.replace(":", os.sep)
+    else:
+        print "Invalid target: explected at most one colon."
+        return 1
+
+    path = os.path.join(ROOT_PATH, out_dir, "gen", path, "Cargo.toml")
+
+    if args.output:
+        output = args.output
+    else:
+        output = os.path.join(ROOT_PATH, target_parts[0], "Cargo.toml")
+
+    os.symlink(path, output)
+
+if __name__ == '__main__':
+    sys.exit(main())
+
