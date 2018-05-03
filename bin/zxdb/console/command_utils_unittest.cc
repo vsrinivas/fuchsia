@@ -152,6 +152,11 @@ TEST(CommandUtils, FormatColumns) {
   out = OutputBuffer();
   FormatColumns({ColSpec(Align::kRight, 3, "One"), ColSpec(Align::kLeft, 3, "Two")}, rows, &out);
   EXPECT_EQ("One Two\n  0 Hello, world\n12345 Hello\n", out.AsString());
+
+  // Overflowing cells shouldn't force the whole column to max width.
+  out = OutputBuffer();
+  FormatColumns({ColSpec(Align::kRight, 1), ColSpec(Align::kLeft, 0)}, rows, &out);
+  EXPECT_EQ("0 Hello, world\n12345 Hello\n", out.AsString());
 }
 
 }  // namespace zxdb

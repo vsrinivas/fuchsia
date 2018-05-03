@@ -56,22 +56,21 @@ std::string ThreadStateToString(debug_ipc::ThreadRecord::State state);
 std::string BreakpointScopeToString(const ConsoleContext* context,
                                     const Breakpoint* breakpoint);
 std::string BreakpointStopToString(debug_ipc::Stop stop);
+const char* BreakpointEnabledToString(bool enabled);
 
 std::string ExceptionTypeToString(debug_ipc::NotifyException::Type type);
 
-// Returns a string describing the given thing in the given context. If
-// columns is set, there will be extra padding added so that multiple things
-// line up when printed vertically.
 std::string DescribeTarget(const ConsoleContext* context,
-                           const Target* target,
-                           bool columns);
-std::string DescribeThread(const ConsoleContext* context,
-                           const Thread* thread,
-                           bool columns);
+                           const Target* target);
+
+// Returns the process name of the given target, depending on the running
+// process or the current app name, as applicable.
+std::string DescribeTargetName(const Target* target);
+
+std::string DescribeThread(const ConsoleContext* context, const Thread* thread);
 std::string DescribeFrame(const Frame* frame, int id);
 std::string DescribeBreakpoint(const ConsoleContext* context,
-                               const Breakpoint* breakpoint,
-                               bool columns);
+                               const Breakpoint* breakpoint);
 
 enum class Align { kLeft, kRight };
 

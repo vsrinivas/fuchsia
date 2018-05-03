@@ -5,6 +5,7 @@
 #include "garnet/bin/zxdb/console/nouns.h"
 
 #include <algorithm>
+#include <inttypes.h>
 #include <utility>
 
 #include "garnet/bin/zxdb/client/err.h"
@@ -91,17 +92,29 @@ void ListThreads(ConsoleContext* context, Process* process) {
     id_threads.push_back(std::make_pair(context->IdForThread(thread), thread));
   std::sort(id_threads.begin(), id_threads.end());
 
-  OutputBuffer out;
+  std::vector<std::vector<std::string>> rows;
   for (const auto& pair : id_threads) {
+    rows.emplace_back();
+    std::vector<std::string>& row = rows.back();
+
     // "Current thread" marker.
     if (pair.first == active_thread_id)
-      out.Append(">");
+      row.push_back(">");
     else
-      out.Append(" ");
+      row.emplace_back();
 
-    out.Append(DescribeThread(context, pair.second, true));
-    out.Append("\n");
+    row.push_back(fxl::StringPrintf("%d", pair.first));
+    row.push_back(ThreadStateToString(pair.second->GetState()));
+    row.push_back(fxl::StringPrintf("%" PRIu64, pair.second->GetKoid()));
+    row.push_back(pair.second->GetName());
   }
+
+  OutputBuffer out;
+  FormatColumns({ColSpec(Align::kLeft),
+                 ColSpec(Align::kRight, 0, "#"),
+                 ColSpec(Align::kLeft, 0, "State"),
+                 ColSpec(Align::kRight, 0, "Koid"),
+                 ColSpec(Align::kLeft, 0, "Name")}, rows, &out);
   Console::get()->Output(std::move(out));
 }
 
@@ -142,7 +155,7 @@ bool HandleThread(ConsoleContext* context, const Command& cmd, Err* err) {
   context->SetActiveThreadForTarget(cmd.thread());
   // Setting the active thread also sets the active target.
   context->SetActiveTarget(cmd.target());
-  Console::get()->Output(DescribeThread(context, cmd.thread(), false));
+  Console::get()->Output(DescribeThread(context, cmd.thread()));
   return true;
 }
 
@@ -157,17 +170,38 @@ void ListProcesses(ConsoleContext* context) {
     id_targets.push_back(std::make_pair(context->IdForTarget(target), target));
   std::sort(id_targets.begin(), id_targets.end());
 
-  OutputBuffer out;
+  std::vector<std::vector<std::string>> rows;
   for (const auto& pair : id_targets) {
-    // "Current process" marker.
-    if (pair.first == active_target_id)
-      out.Append(">");
-    else
-      out.Append(" ");
+    rows.emplace_back();
+    std::vector<std::string>& row = rows.back();
 
-    out.Append(DescribeTarget(context, pair.second, true));
-    out.Append("\n");
+    // "Current process" marker (or nothing).
+    if (pair.first == active_target_id)
+      row.emplace_back(">");
+    else
+      row.emplace_back();
+
+    // ID.
+    row.push_back(fxl::StringPrintf("%d", pair.first));
+
+    // State and koid (if running).
+    row.push_back(TargetStateToString(pair.second->GetState()));
+    if (pair.second->GetState() == Target::State::kRunning) {
+      row.push_back(
+          fxl::StringPrintf("%" PRIu64, pair.second->GetProcess()->GetKoid()));
+    } else {
+      row.emplace_back();
+    }
+
+    row.push_back(DescribeTargetName(pair.second));
   }
+
+  OutputBuffer out;
+  FormatColumns({ColSpec(Align::kLeft),
+                 ColSpec(Align::kRight, 0, "#"),
+                 ColSpec(Align::kLeft, 0, "State"),
+                 ColSpec(Align::kRight, 0, "Koid"),
+                 ColSpec(Align::kLeft, 0, "Name")}, rows, &out);
   Console::get()->Output(std::move(out));
 }
 
@@ -188,7 +222,7 @@ bool HandleProcess(ConsoleContext* context, const Command& cmd, Err* err) {
   // command line (otherwise the command would have been rejected before here).
   FXL_DCHECK(cmd.target());
   context->SetActiveTarget(cmd.target());
-  Console::get()->Output(DescribeTarget(context, cmd.target(), false));
+  Console::get()->Output(DescribeTarget(context, cmd.target()));
   return true;
 }
 
@@ -207,17 +241,33 @@ void ListBreakpoints(ConsoleContext* context) {
     id_bp.push_back(std::make_pair(context->IdForBreakpoint(bp), bp));
   std::sort(id_bp.begin(), id_bp.end());
 
-  OutputBuffer out;
-  for (const auto& pair : id_bp) {
-    // "Current process" marker.
-    if (pair.first == active_breakpoint_id)
-      out.Append(">");
-    else
-      out.Append(" ");
+  std::vector<std::vector<std::string>> rows;
 
-    out.Append(DescribeBreakpoint(context, pair.second, true));
-    out.Append("\n");
+  for (const auto& pair : id_bp) {
+    rows.emplace_back();
+    std::vector<std::string>& row = rows.back();
+    const Breakpoint* bp = pair.second;
+
+    // "Current breakpoint" marker.
+    if (pair.first == active_breakpoint_id)
+      row.emplace_back(">");
+    else
+      row.emplace_back();
+
+    row.push_back(fxl::StringPrintf("%d", pair.first));
+    row.push_back(BreakpointScopeToString(context, bp));
+    row.push_back(BreakpointStopToString(bp->GetStopMode()));
+    row.push_back(BreakpointEnabledToString(bp->IsEnabled()));
+    row.push_back(fxl::StringPrintf("0x%" PRIx64, bp->GetAddressLocation()));
   }
+
+  OutputBuffer out;
+  FormatColumns({ColSpec(Align::kLeft),
+                 ColSpec(Align::kRight, 0, "#"),
+                 ColSpec(Align::kLeft, 0, "Scope"),
+                 ColSpec(Align::kLeft, 0, "Stop"),
+                 ColSpec(Align::kLeft, 0, "Enabled"),
+                 ColSpec(Align::kLeft, 0, "Location")}, rows, &out);
   Console::get()->Output(std::move(out));
 }
 
@@ -245,7 +295,7 @@ bool HandleBreakpoint(ConsoleContext* context, const Command& cmd, Err* err) {
   // command line (otherwise the command would have been rejected before here).
   FXL_DCHECK(cmd.breakpoint());
   context->SetActiveBreakpoint(cmd.breakpoint());
-  Console::get()->Output(DescribeBreakpoint(context, cmd.breakpoint(), false));
+  Console::get()->Output(DescribeBreakpoint(context, cmd.breakpoint()));
   return true;
 }
 

@@ -26,6 +26,12 @@ void DebugBreak() {
 void PrintHello() {
   const char msg[] = "Hello from zxdb_test_app!\n";
   zx_debug_write(msg, strlen(msg));
+
+  // This code is here to test disassembly of FP instructions.
+  volatile float a = 3.14159265358979;
+  volatile float b = 2.71828182845904;
+  volatile float c = a * b;
+  (void)c;  // Prevent unused variable warning.
 }
 
 int main(int arch, char* argv[]) {

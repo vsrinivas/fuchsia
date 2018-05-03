@@ -313,7 +313,7 @@ void ConsoleContext::DidDestroyProcess(Target* target, DestroyReason reason,
       msg += "Killed: ";
       break;
   }
-  msg += DescribeTarget(this, target, false);
+  msg += DescribeTarget(this, target);
 
   console->Output(msg);
 }
@@ -384,14 +384,14 @@ void ConsoleContext::OnThreadStopped(Thread* thread,
 
   // Only print out the process when there's more than one.
   if (id_to_target_.size() > 1) {
-    out.Append(DescribeTarget(this, target, false));
+    out.Append(DescribeTarget(this, target));
     out.Append("\n");
   }
 
   // Only print out the thread when there's more than one.
   TargetRecord* target_record = GetTargetRecord(target);
   if (target_record->id_to_thread.size() > 1) {
-    out.Append(DescribeThread(this, thread, false));
+    out.Append(DescribeThread(this, thread));
     out.Append("\n");
   }
 

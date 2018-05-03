@@ -144,7 +144,10 @@ void CompleteDisassemble(const Err& err,
   }
 
   spec.emplace_back(Align::kLeft, 0, std::string(), 1);  // Instructions.
-  spec.emplace_back(Align::kLeft, 0, std::string(), 1);  // Params.
+
+  // Params. Some can be very long so provide a max so the comments don't get
+  // pushed too far out.
+  spec.emplace_back(Align::kLeft, 10, std::string(), 1);
   spec.emplace_back(Align::kLeft);  // Comments.
   spec.back().syntax = Syntax::kComment;
 

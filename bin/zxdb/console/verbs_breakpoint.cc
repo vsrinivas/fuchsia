@@ -111,7 +111,7 @@ Err CreateOrEditBreakpoint(ConsoleContext* context,
     }
   });
 
-  Console::get()->Output(DescribeBreakpoint(context, breakpoint, false));
+  Console::get()->Output(DescribeBreakpoint(context, breakpoint));
   return err;
 }
 
@@ -240,7 +240,7 @@ Err DoClear(ConsoleContext* context, const Command& cmd) {
         "Use \"breakpoint <index> clear\" to specify one.\n");
   }
 
-  std::string desc = DescribeBreakpoint(context, cmd.breakpoint(), false);
+  std::string desc = DescribeBreakpoint(context, cmd.breakpoint());
   context->session()->system().DeleteBreakpoint(cmd.breakpoint());
   Console::get()->Output("Deleted " + desc);
   return Err();

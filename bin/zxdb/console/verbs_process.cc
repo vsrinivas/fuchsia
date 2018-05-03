@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <inttypes.h>
+#include <vector>
 
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/process.h"
@@ -58,7 +59,7 @@ void ProcessCommandCallback(const char* verb,
     }
     out.OutputErr(err);
   } else if (target) {
-    out.Append(DescribeTarget(&console->context(), target.get(), false));
+    out.Append(DescribeTarget(&console->context(), target.get()));
   }
 
   console->Output(std::move(out));
@@ -109,7 +110,7 @@ Err DoNew(ConsoleContext* context, const Command& cmd) {
   Target* new_target =
       context->session()->system().CreateNewTarget(cmd.target());
   context->SetActiveTarget(new_target);
-  Console::get()->Output(DescribeTarget(context, new_target, false));
+  Console::get()->Output(DescribeTarget(context, new_target));
   return Err();
 }
 

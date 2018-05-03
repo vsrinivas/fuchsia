@@ -235,6 +235,10 @@ std::string BreakpointStopToString(debug_ipc::Stop stop) {
   return std::string();
 }
 
+const char* BreakpointEnabledToString(bool enabled) {
+  return enabled ? "Enabled" : "Disabled";
+}
+
 std::string ExceptionTypeToString(debug_ipc::NotifyException::Type type) {
   struct Mapping {
     debug_ipc::NotifyException::Type type;
@@ -253,8 +257,7 @@ std::string ExceptionTypeToString(debug_ipc::NotifyException::Type type) {
 }
 
 std::string DescribeTarget(const ConsoleContext* context,
-                           const Target* target,
-                           bool columns) {
+                           const Target* target) {
   int id = context->IdForTarget(target);
   std::string state = TargetStateToString(target->GetState());
 
@@ -262,18 +265,17 @@ std::string DescribeTarget(const ConsoleContext* context,
   // concat'd even when not present and things look nice.
   std::string koid_str;
   if (target->GetState() == Target::State::kRunning) {
-    koid_str = fxl::StringPrintf(columns ? "%" PRIu64 " " : "koid=%" PRIu64 " ",
+    koid_str = fxl::StringPrintf("koid=%" PRIu64 " ",
                                  target->GetProcess()->GetKoid());
   }
 
-  const char* format_string;
-  if (columns)
-    format_string = "%3d %11s %8s";
-  else
-    format_string = "Process %d %s %s";
   std::string result =
-      fxl::StringPrintf(format_string, id, state.c_str(), koid_str.c_str());
+      fxl::StringPrintf("Process %d %s %s", id, state.c_str(), koid_str.c_str());
+  result += DescribeTargetName(target);
+  return result;
+}
 
+std::string DescribeTargetName(const Target* target) {
   // When running, use the object name if any.
   std::string name;
   if (target->GetState() == Target::State::kRunning)
@@ -282,29 +284,18 @@ std::string DescribeTarget(const ConsoleContext* context,
   // Otherwise fall back to the program name which is the first arg.
   if (name.empty()) {
     const std::vector<std::string>& args = target->GetArgs();
-    if (args.empty())
-      name += "<no name>";
-    else
+    if (!args.empty())
       name += args[0];
   }
-  result += name;
-
-  return result;
+  return name;
 }
 
 std::string DescribeThread(const ConsoleContext* context,
-                           const Thread* thread,
-                           bool columns) {
-  std::string state = ThreadStateToString(thread->GetState());
-
-  const char* format_string;
-  if (columns)
-    format_string = "%3d %9s %8" PRIu64 " %s";
-  else
-    format_string = "Thread %d %s koid=%" PRIu64 " %s";
-  return fxl::StringPrintf(format_string, context->IdForThread(thread),
-                           state.c_str(), thread->GetKoid(),
-                           thread->GetName().c_str());
+                           const Thread* thread) {
+  return fxl::StringPrintf("Thread %d %s koid=%" PRIu64 " %s",
+                           context->IdForThread(thread),
+                           ThreadStateToString(thread->GetState()).c_str(),
+                           thread->GetKoid(), thread->GetName().c_str());
 }
 
 // Unlike the other describe command, this takes an ID because normally
@@ -315,22 +306,15 @@ std::string DescribeFrame(const Frame* frame, int id) {
 }
 
 std::string DescribeBreakpoint(const ConsoleContext* context,
-                               const Breakpoint* breakpoint,
-                               bool columns) {
-  const char* format_string;
-  if (columns)
-    format_string = "%3d %10s %8s %7s %5d %s";
-  else
-    format_string = "Breakpoint %d on %s, %s, stop=%s, hit=%d, @ %s";
-
+                               const Breakpoint* breakpoint) {
   std::string scope = BreakpointScopeToString(context, breakpoint);
   std::string stop = BreakpointStopToString(breakpoint->GetStopMode());
-  const char* enabled = breakpoint->IsEnabled() ? "Enabled" : "Disabled";
-
+  const char* enabled = BreakpointEnabledToString(breakpoint->IsEnabled());
   std::string location =
       fxl::StringPrintf("0x%" PRIx64, breakpoint->GetAddressLocation());
 
-  return fxl::StringPrintf(format_string, context->IdForBreakpoint(breakpoint),
+  return fxl::StringPrintf("Breakpoint %d on %s, %s, stop=%s, hit=%d, @ %s",
+                           context->IdForBreakpoint(breakpoint),
                            scope.c_str(), enabled, stop.c_str(),
                            breakpoint->GetHitCount(), location.c_str());
 }
@@ -350,15 +334,12 @@ void FormatColumns(const std::vector<ColSpec>& spec,
   // Max widths of contents.
   for (const auto& row : rows) {
     FXL_DCHECK(row.size() == max.size()) << "Column spec size doesn't match.";
-    for (size_t i = 0; i < row.size(); i++)
-      max[i] = std::max(max[i], static_cast<int>(row[i].size()));
-  }
-
-  // Apply the max widths.
-  for (size_t i = 0; i < spec.size(); i++) {
-    int max_width = spec[i].max_width;
-    if (max_width > 0 && max_width < max[i])
-      max[i] = max_width;
+    for (size_t i = 0; i < row.size(); i++) {
+      // Only count the ones that don't overflow.
+      int cell_size = static_cast<int>(row[i].size());
+      if (spec[i].max_width == 0 || cell_size <= spec[i].max_width)
+        max[i] = std::max(max[i], cell_size);
+    }
   }
 
   // Print heading.

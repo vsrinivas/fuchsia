@@ -140,7 +140,7 @@ size_t Disassembler::DisassembleOne(const uint8_t* data,
 
   // Decode.
   llvm::MCInst inst;
-  size_t consumed = 0;
+  uint64_t consumed = 0;
   auto status = disasm_->getInstruction(inst, consumed,
                                         llvm::ArrayRef<uint8_t>(data, data_len),
                                         address, llvm::nulls(), llvm::nulls());
