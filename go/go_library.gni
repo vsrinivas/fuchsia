@@ -10,6 +10,14 @@
 #     Name of the Go package.
 #     Defaults to the target name.
 #
+#   name_file (optional)
+#     Path to a file containing the name of the Go package..
+#     This should be used when the package's name requires some computation in
+#     its own build target.
+#
+#     NOTE: Exactly one of `name` or `name_file` may be set, but not both.
+#           If neither is set, then the target name is used.
+#
 #   source_dir (optional)
 #     Path to the root of the sources for the package.
 #     Defaults to the current directory.
@@ -21,9 +29,15 @@
 #     List of labels for non-Go targets this library depends on.
 
 template("go_library") {
-  name = target_name
+  assert(!(defined(invoker.name) && defined(invoker.name_file)),
+         "Defining both name and name_file is not allowed")
   if (defined(invoker.name)) {
-    name = invoker.name
+    name_args = ["--name", invoker.name]
+  } else if (defined(invoker.name_file)) {
+    # Make name_file a system-absolute path and add it to args.
+    name_args = ["--name-file", rebase_path(invoker.name_file, "")]
+  } else {
+    name_args = ["--name", target_name]
   }
 
   source_dir = "."
@@ -58,9 +72,7 @@ template("go_library") {
 
     inputs = dependent_libraries
 
-    args = [
-             "--name",
-             invoker.name,
+    args = name_args + [
              "--source-dir",
              rebase_path(source_dir),
              "--output",

@@ -53,9 +53,11 @@ def get_libraries(dep_files, extra_library=None):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--name',
-                        help='Name of the current library',
-                        required=True)
+    name_group = parser.add_mutually_exclusive_group(required=True)
+    name_group.add_argument('--name',
+                            help='Name of the current library')
+    name_group.add_argument('--name-file',
+                            help='Path to a file containing the name of the current library')
     parser.add_argument('--source-dir',
                         help='Path to the library\'s source directory',
                         required=True)
@@ -66,8 +68,13 @@ def main():
                         help='Dependencies of the current library',
                         nargs='*')
     args = parser.parse_args()
+    if args.name:
+        name = args.name
+    elif args.name_file:
+        with open(args.name_file, 'r') as name_file:
+            name = name_file.read()
 
-    current_library = Library(args.name, args.source_dir, args.output)
+    current_library = Library(name, args.source_dir, args.output)
     result = get_libraries(args.deps, extra_library=current_library)
     with open(args.output, 'w') as output_file:
         json.dump(result, output_file, indent=2, sort_keys=True)
