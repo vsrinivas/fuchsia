@@ -8,8 +8,7 @@ package("bt-tools") {
   deprecated_system_image = true
 
   deps = [
-#    NET-867 re-enables this
-#    "bt-cli",
+    "bt-cli",
     "bt-fake-hci",
     "bt-hci-tool",
     "bt-intel-tool",
@@ -18,9 +17,10 @@ package("bt-tools") {
   ]
 
   binaries = [
- #   {
- #     name = "bt-cli"
- #   },
+    {
+      name = "bt_cli"
+      dest = "bt-cli"
+    },
     {
       name = "bt_fake_hci"
       dest = "bt-fake-hci"

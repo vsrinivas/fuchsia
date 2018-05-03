@@ -1,29 +1,46 @@
-# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("bt-cli") {
-  output_name = "bt-cli"
+import("//build/rust/rustc_binary.gni")
+import("//build/package.gni")
 
-  sources = [
-    "app.cc",
-    "app.h",
-    "commands.cc",
-    "commands.h",
-    "helpers.cc",
-    "helpers.h",
-    "logging.cc",
-    "logging.h",
-    "main.cc",
-  ]
+rustc_binary("bin") {
+  name = "bt_cli"
 
   deps = [
-    "//garnet/bin/bluetooth/tools/lib",
-    "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/bluetooth/fidl",
-    "//garnet/public/lib/fxl",
-    "//zircon/public/lib/async",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/linenoise",
+    "//garnet/lib/rust/crates/fuchsia-bluetooth",
+    "//garnet/public/lib/bluetooth/fidl:bluetooth-rustc",
+    "//garnet/public/lib/bluetooth/fidl:bluetooth_control-rustc",
+    "//garnet/public/lib/bluetooth/fidl:bluetooth_gatt-rustc",
+    "//garnet/public/lib/bluetooth/fidl:bluetooth_low_energy-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/crates/fuchsia-app",
+    "//garnet/public/rust/crates/fuchsia-async",
+    "//garnet/public/rust/crates/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures",
+    "//third_party/rust-crates/rustc_deps:log",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
+    "//third_party/rust-mirrors/rustyline",
+  ]
+}
+
+package("bt-cli") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "rust_crates/bt_cli"
+
+  meta = [
+    {
+      path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
+      dest = "legacy_flat_exported_dir"
+    },
+    {
+      path = rebase_path("meta/sandbox")
+      dest = "sandbox"
+    },
   ]
 }

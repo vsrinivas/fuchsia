@@ -1,0 +1,55 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library bluetooth_storage;
+
+
+struct Key {
+
+  bool auth;
+
+  array<uint8>:16 value;
+
+
+};
+
+
+struct LTK {
+
+  Key key;
+
+  uint8 key_size;
+
+  // TODO legacy stuff
+};
+
+struct LEData {
+  string address;
+
+  bool resolvable;
+
+  bool master;
+
+//   LEConnectionParamaters?
+
+  vector<string> gatt_services;
+
+  LTK? ltk;
+
+  Key? irk;
+
+  Key? csrk;
+};
+
+struct BondData {
+  string name;
+//BREDR
+  LEData? le;
+};
+
+interface Storage {
+  1: AddBondedDevice(string local_id, vector<BondData> bonds) -> (bluetooth.Status available);
+
+  1000: -> OnPai(string local_id);
+};

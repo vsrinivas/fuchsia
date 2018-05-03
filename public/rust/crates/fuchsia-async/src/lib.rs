@@ -31,3 +31,35 @@ mod executor;
 pub use executor::{Executor, EHandle, spawn};
 mod fifo;
 pub use fifo::{Fifo, FifoEntry};
+
+#[macro_export]
+macro_rules! many_futures {
+    ($future:ident, [$first:ident, $($subfuture:ident $(,)*)*]) => {
+
+        enum $future<$first, $($subfuture,)*> {
+            $first($first),
+            $(
+                $subfuture($subfuture),
+            )*
+        }
+
+        impl<$first, $($subfuture,)*> Future for $future<$first, $($subfuture,)*>
+        where
+            $first: Future,
+            $(
+                $subfuture: Future<Item = $first::Item, Error = $first::Error>,
+            )*
+        {
+            type Item = $first::Item;
+            type Error = $first::Error;
+            fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
+                match self {
+                    $future::$first(x) => x.poll(cx),
+                    $(
+                        $future::$subfuture(x) => x.poll(cx),
+                    )*
+                }
+            }
+        }
+    }
+}
