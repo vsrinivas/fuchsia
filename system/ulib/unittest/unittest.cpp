@@ -215,9 +215,9 @@ static void unittest_run_test(const char* name,
 }
 
 template <typename F>
-void run_with_watchdog(const char* name, F fn) {
+void run_with_watchdog(test_type_t test_type, const char* name, F fn) {
     if (watchdog_is_enabled()) {
-        watchdog_start(name);
+        watchdog_start(test_type, name);
         fn();
         watchdog_cancel();
     } else {
@@ -229,10 +229,14 @@ void unittest_run_named_test(const char* name, bool (*test)(), test_type_t test_
                              struct test_info** current_test_info, bool* all_success,
                              bool enable_crash_handler) {
     if (utest_test_type & test_type) {
-        run_with_watchdog(name, [&]() {
+        run_with_watchdog(test_type, name, [&]() {
             unittest_run_test(name, test, current_test_info, all_success, enable_crash_handler);
         });
     } else {
         unittest_printf_critical("    %-51s [IGNORED]\n", name);
     }
+}
+
+void unittest_cancel_timeout(void) {
+    watchdog_cancel();
 }

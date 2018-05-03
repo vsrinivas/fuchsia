@@ -52,6 +52,10 @@ bool test_directory_filename_max(void) {
 bool test_directory_large(void) {
     BEGIN_TEST;
 
+    // ZX-2107: This test is humongous: ~8000 seconds in non-kvm qemu on
+    // a fast desktop.
+    unittest_cancel_timeout();
+
     // Write a bunch of files to a directory
     const int num_files = 1024;
     for (int i = 0; i < num_files; i++) {

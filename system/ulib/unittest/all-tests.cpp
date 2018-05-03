@@ -121,11 +121,21 @@ static void print_help(const char* prog_name, FILE* f) {
             "        0x08 = performance\n"
             "      If unspecified then all tests are run.\n"
             "\n"
-            "  %s=<timeout-in-seconds>\n"
-            "      Specifies the watchdog timeout, in seconds.\n"
-            "      A value of zero disables the watchdog.\n"
-            "      If unspecified then the timeout is %d seconds.\n",
-            TEST_ENV_NAME, WATCHDOG_ENV_NAME, WATCHDOG_DEFAULT_TIMEOUT_SECONDS);
+            "  %s=<base-timeout-in-seconds>\n"
+            "      Specifies the base timeout which is the timeout of\n"
+            "      small tests. Other test types have a timeout that is a\n"
+            "      multiple of this amount. If unspecified the default base\n"
+            "      timeout is %d seconds.\n",
+            TEST_ENV_NAME, WATCHDOG_ENV_NAME,
+            DEFAULT_BASE_TIMEOUT_SECONDS);
+    fprintf(f,
+            "      A scaling factor is applied to the base timeout:\n"
+            "        Small       - x %d\n"
+            "        Medium      - x %d\n"
+            "        Large       - x %d\n"
+            "        Performance - x %d\n",
+            TEST_TIMEOUT_FACTOR_SMALL, TEST_TIMEOUT_FACTOR_MEDIUM,
+            TEST_TIMEOUT_FACTOR_LARGE, TEST_TIMEOUT_FACTOR_PERFORMANCE);
 }
 
 /*
@@ -189,7 +199,7 @@ bool unittest_run_all_tests(int argc, char** argv) {
             fprintf(stderr, "Error: bad watchdog timeout\n");
             return false;
         }
-        watchdog_set_timeout((int) timeout);
+        watchdog_set_base_timeout(static_cast<int>(timeout));
     }
 
     watchdog_initialize();

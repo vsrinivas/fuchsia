@@ -20,7 +20,7 @@ constexpr uint64_t NANOSECONDS_PER_SECOND = 1000 * 1000 * 1000;
 
 // The watchdog thread wakes up after this many seconds to check whether
 // a test has timed out. The lower the number this is the more accurate
-// the watchdog is with regard to |watchdog_timeout_seconds|. But there's
+// the watchdog is with regard to the specified timeout. But there's
 // no point in running too frequently. The wait mechanism we use is
 // interruptible, so this value can be high and there's no worries of waiting
 // for the watchdog to terminate. The watchdog works this way so that we
@@ -36,7 +36,7 @@ constexpr int WATCHDOG_TICK_SECONDS = 1;
 constexpr int WATCHDOG_TIMEOUT_NOT_RUNNING = INT_MAX;
 
 // This can be overridden by the user by setting env var WATCHDOG_ENV_NAME.
-static int timeout_seconds = WATCHDOG_DEFAULT_TIMEOUT_SECONDS;
+static int base_timeout_seconds = DEFAULT_BASE_TIMEOUT_SECONDS;
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -68,22 +68,48 @@ static uint64_t timespec_to_nanoseconds(const struct timespec* ts) {
 }
 
 /**
- * Set the timeout, in seconds.
+ * Set the base timeout.
  * |timeout| must be >= 0.
  * A value of zero disables the timeout.
  * The timeout must be set before calling watchdog_initialize(), and must
  * not be changed until after watchdog_terminate() is called.
  */
-void watchdog_set_timeout(int seconds) {
+void watchdog_set_base_timeout(int seconds) {
     assert(seconds >= 0);
-    timeout_seconds = seconds;
+    base_timeout_seconds = seconds;
+}
+
+static int test_timeout_for_type(test_type_t type) {
+    int factor;
+
+    switch (type) {
+    case TEST_SMALL:
+        factor = TEST_TIMEOUT_FACTOR_SMALL;
+        break;
+    case TEST_MEDIUM:
+        factor = TEST_TIMEOUT_FACTOR_MEDIUM;
+        break;
+    case TEST_LARGE:
+        factor = TEST_TIMEOUT_FACTOR_LARGE;
+        break;
+    case TEST_PERFORMANCE:
+        factor = TEST_TIMEOUT_FACTOR_PERFORMANCE;
+        break;
+    default:
+        __UNREACHABLE;
+    }
+
+    int64_t timeout = base_timeout_seconds * factor;
+    if (timeout > INT_MAX)
+        timeout = INT_MAX;
+    return static_cast<int>(timeout);
 }
 
 /**
  * Return true if watchdog support is enabled for this test run.
  */
 bool watchdog_is_enabled() {
-    return timeout_seconds > 0;
+    return base_timeout_seconds > 0;
 }
 
 static __NO_RETURN void watchdog_signal_timeout(const char* name) {
@@ -158,11 +184,11 @@ void watchdog_initialize() {
  * If the timer goes off the process terminates.
  * This must be called at the start of a test.
  */
-void watchdog_start(const char* name) {
+void watchdog_start(test_type_t type, const char* name) {
     if (watchdog_is_enabled()) {
         pthread_mutex_lock(&mutex);
         test_name = name;
-        active_timeout_seconds = timeout_seconds;
+        active_timeout_seconds = test_timeout_for_type(type);
         struct timespec now;
         clock_gettime(CLOCK_REALTIME, &now);
         test_start_time = timespec_to_nanoseconds(&now);

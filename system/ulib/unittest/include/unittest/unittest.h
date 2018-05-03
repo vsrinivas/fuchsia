@@ -279,7 +279,29 @@ int unittest_set_verbosity_level(int new_level);
  * Performance: Tests which are expected to pass, but which are measured
  * using other metrics (thresholds, statistical techniques) to identify
  * regressions.
-*/
+ */
+
+// TODO(INTK-312): Need to fine tune these. The current values are quite
+// conservative until the bots provide more appropriate values for bot
+// purposes.
+// TODO(ZX-2104): An alternative is to machine generate timeouts for each
+// test via training runs. Taking that on will require more research.
+#define DEFAULT_BASE_TIMEOUT_SECONDS 20
+
+// Timeout scale for each of the test classes, from the base timeout.
+#define TEST_TIMEOUT_FACTOR_SMALL       1
+// TODO(ZX-2103): fvm-test:TestSliceAccessNonContiguousPhysical is a medium
+// test that runs for 130 seconds. IWBN to make the medium timeout factor
+// smaller.
+#define TEST_TIMEOUT_FACTOR_MEDIUM      10
+// TODO(ZX-2107): Some large tests are really large.
+#define TEST_TIMEOUT_FACTOR_LARGE       100
+#define TEST_TIMEOUT_FACTOR_PERFORMANCE 100
+
+// Called by tests that for whatever reason want to disable their timeout.
+// An example is really long running tests (ZX-2107).
+void unittest_cancel_timeout(void);
+
 #define RUN_TEST_SMALL(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_SMALL, false)
 #define RUN_TEST_MEDIUM(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_MEDIUM, false)
 #define RUN_TEST_LARGE(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_LARGE, false)
