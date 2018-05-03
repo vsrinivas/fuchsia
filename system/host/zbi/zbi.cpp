@@ -800,6 +800,8 @@ public:
     void Stream(OutputStream* out) {
         assert(Aligned(out->WritePosition()));
         uint32_t wrote = compress_ ? StreamCompressed(out) : StreamRaw(out);
+        assert(out->WritePosition() % BOOTDATA_ALIGN(1) ==
+               wrote % BOOTDATA_ALIGN(1));
         uint32_t aligned = BOOTDATA_ALIGN(wrote);
         if (aligned > wrote) {
             static const uint8_t padding[BOOTDATA_ALIGN(1)]{};
@@ -841,7 +843,6 @@ public:
     static std::unique_ptr<Item> CreateFromFile(
         FileContents file, uint32_t type, bool compress, bool null_terminate) {
         size_t size = file.exact_size() + (null_terminate ? 1 : 0);
-        size = BOOTDATA_ALIGN(size);
         auto item = MakeItem(NewHeader(type, size), compress);
 
         // If we need some zeros, see if they're already right there
