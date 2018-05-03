@@ -4,18 +4,17 @@
 
 #include "peridot/bin/ledger/cloud_sync/impl/batch_upload.h"
 
-#include <lib/async/dispatcher.h>
-
 #include <functional>
 #include <map>
 #include <utility>
 
-#include "gtest/gtest.h"
+#include <lib/async/dispatcher.h>
+
 #include "lib/callback/capture.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/test_with_loop.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_cloud.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
@@ -163,10 +162,10 @@ class TestPageStorageFailingToMarkPieces : public TestPageStorage {
 };
 
 template <typename E>
-class BaseBatchUploadTest : public gtest::TestWithMessageLoop {
+class BaseBatchUploadTest : public gtest::TestWithLoop {
  public:
   BaseBatchUploadTest()
-      : encryption_service_(message_loop_.async()),
+      : encryption_service_(dispatcher()),
         page_cloud_(page_cloud_ptr_.NewRequest()) {}
   ~BaseBatchUploadTest() override {}
 
@@ -195,12 +194,12 @@ class BaseBatchUploadTest : public gtest::TestWithMessageLoop {
         storage, &encryption_service_, &page_cloud_ptr_, std::move(commits),
         [this] {
           done_calls_++;
-          message_loop_.PostQuitTask();
+          QuitLoop();
         },
         [this](BatchUpload::ErrorType error_type) {
           error_calls_++;
           last_error_type_ = error_type;
-          message_loop_.PostQuitTask();
+          QuitLoop();
         },
         max_concurrent_uploads);
   }
@@ -644,7 +643,7 @@ TEST_F(BatchUploadTest, DoNotUploadSyncedCommitsOnRetry) {
 
   // Mark commit as synced.
   storage::Status status;
-  storage_.MarkCommitSynced("id", callback::Capture(MakeQuitTask(), &status));
+  storage_.MarkCommitSynced("id", callback::Capture([this] { QuitLoop(); }, &status));
   RunLoopUntilIdle();
   EXPECT_EQ(storage::Status::OK, status);
   EXPECT_EQ(0u, storage_.unsynced_commits.size());
