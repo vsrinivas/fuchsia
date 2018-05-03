@@ -160,9 +160,13 @@ __BEGIN_CDECLS;
 #define MMC_STATUS_ERASE_RESET          (1 << 13)
 #define MMC_STATUS_CURRENT_STATE_MASK   (0xf << 9)
 #define MMC_STATUS_CURRENT_STATE(resp)  ((resp) & MMC_STATUS_CURRENT_STATE_MASK)
+/* eMMC4.5 Spec, Section 6.13, page 140: CURRENT_STATE Field:
+ * 0 = Idle 1 = Ready 2 = Ident 3 = Stby command. 4 = Tran 5 = Data
+ * 6 = Rcv 7 = Prg 8 = Dis 9 = Btst 10 = Slp 11–15 = reserved
+ */
 #define MMC_STATUS_CURRENT_STATE_TRAN   (0x4 << 9)
-#define MMC_STATUS_CURRENT_STATE_RECV   (0x5 << 9)
-#define MMC_STATUS_CURRENT_STATE_DATA   (0x6 << 9)
+#define MMC_STATUS_CURRENT_STATE_DATA   (0x5 << 9)
+#define MMC_STATUS_CURRENT_STATE_RECV   (0x6 << 9)
 #define MMC_STATUS_READY_FOR_DATA       (1 << 8)
 #define MMC_STATUS_SWITCH_ERR           (1 << 7)
 #define MMC_STATUS_EXCEPTION_EVENT      (1 << 6)
