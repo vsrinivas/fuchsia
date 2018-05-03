@@ -106,12 +106,12 @@ int main(int argc, char** argv) {
             fprintf(stderr, "error: cannot create socket: %s\n", strerror(errno));
             return -1;
         }
-        if (connect(s, &addr, sizeof(addr)) < 0) {
+        if (connect(s, (const struct sockaddr *)&addr, sizeof(addr)) < 0) {
             fprintf(stderr, "error: cannot \"connect\" socket: %s\n", strerror(errno));
             return -1;
         }
-        socklen_t addrlen = sizeof(struct sockaddr_in6);
-        if (getsockname(s, &addr, &addrlen) < 0) {
+        socklen_t addrlen = sizeof(addr);
+        if (getsockname(s, (struct sockaddr *)&addr, &addrlen) < 0) {
             fprintf(stderr, "error: %s\n", strerror(errno));
             return -1;
         }
