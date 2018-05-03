@@ -28,7 +28,8 @@ namespace {
 class ConflictResolverClientTest : public test::TestWithPageStorage {
  public:
   ConflictResolverClientTest()
-      : environment_(message_loop_.async()) {}
+      : environment_(
+            EnvironmentBuilder().SetAsync(message_loop_.async()).Build()) {}
   ~ConflictResolverClientTest() override {}
 
  protected:

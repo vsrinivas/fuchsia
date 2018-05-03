@@ -67,7 +67,8 @@ class RecordingTestStrategy : public MergeStrategy {
 class MergeResolverTest : public test::TestWithPageStorage {
  public:
   MergeResolverTest()
-      : environment_(message_loop_.async()) {}
+      : environment_(
+            EnvironmentBuilder().SetAsync(message_loop_.async()).Build()) {}
   ~MergeResolverTest() override {}
 
  protected:

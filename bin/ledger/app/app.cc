@@ -75,7 +75,8 @@ class App : public ledger_internal::LedgerController {
   ~App() override {}
 
   bool Start() {
-    environment_ = std::make_unique<Environment>(loop_.async());
+    environment_ = std::make_unique<Environment>(
+        EnvironmentBuilder().SetAsync(loop_.async()).Build());
     auto user_communicator_factory =
         std::make_unique<p2p_sync::UserCommunicatorFactory>(
             environment_.get(), application_context_.get());

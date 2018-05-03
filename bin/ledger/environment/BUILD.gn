@@ -11,6 +11,7 @@ source_set("environment") {
   ]
 
   public_deps = [
+    "//garnet/lib/backoff",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/coroutine",
   ]

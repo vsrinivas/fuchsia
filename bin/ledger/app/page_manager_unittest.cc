@@ -69,7 +69,8 @@ class FakePageSync : public sync_coordinator::PageSyncEmptyImpl {
 class PageManagerTest : public gtest::TestWithMessageLoop {
  public:
   PageManagerTest()
-      : environment_(message_loop_.async()) {}
+      : environment_(
+            EnvironmentBuilder().SetAsync(message_loop_.async()).Build()) {}
   ~PageManagerTest() override {}
 
  protected:

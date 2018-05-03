@@ -109,7 +109,8 @@ class FakeLedgerSync : public sync_coordinator::LedgerSync {
 class LedgerManagerTest : public gtest::TestWithMessageLoop {
  public:
   LedgerManagerTest()
-      : environment_(message_loop_.async()) {}
+      : environment_(
+            EnvironmentBuilder().SetAsync(message_loop_.async()).Build()) {}
 
   // gtest::TestWithMessageLoop:
   void SetUp() override {
@@ -129,7 +130,7 @@ class LedgerManagerTest : public gtest::TestWithMessageLoop {
   }
 
  protected:
-  ledger::Environment environment_;
+  Environment environment_;
   FakeLedgerStorage* storage_ptr;
   FakeLedgerSync* sync_ptr;
   std::unique_ptr<LedgerManager> ledger_manager_;

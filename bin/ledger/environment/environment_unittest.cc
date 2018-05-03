@@ -13,7 +13,7 @@ namespace {
 
 TEST(Environment, InitializationOfAsync) {
   async::Loop loop;
-  Environment env(loop.async());
+  Environment env = EnvironmentBuilder().SetAsync(loop.async()).Build();
 
   EXPECT_EQ(loop.async(), env.async());
 }

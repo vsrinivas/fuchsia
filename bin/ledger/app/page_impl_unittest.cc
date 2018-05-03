@@ -41,7 +41,9 @@ std::string ToString(const mem::BufferPtr& vmo) {
 
 class PageImplTest : public gtest::TestWithMessageLoop {
  public:
-  PageImplTest() : environment_(message_loop_.async()) {}
+  PageImplTest()
+      : environment_(
+            EnvironmentBuilder().SetAsync(message_loop_.async()).Build()) {}
   ~PageImplTest() override {}
 
  protected:

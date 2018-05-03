@@ -7,6 +7,7 @@
 
 #include <lib/async/dispatcher.h>
 
+#include "garnet/lib/backoff/backoff.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 
 namespace ledger {
@@ -14,8 +15,14 @@ namespace ledger {
 // Environment for the ledger application.
 class Environment {
  public:
-  explicit Environment(async_t* async);
+  using BackoffFactory = std::function<std::unique_ptr<backoff::Backoff>()>;
+  Environment(async_t* async,
+              std::unique_ptr<coroutine::CoroutineService> coroutine_service,
+              BackoffFactory backoff_factory);
+  Environment(Environment&& other);
   ~Environment();
+
+  Environment& operator=(Environment&& other);
 
   async_t* async() { return async_; }
 
@@ -23,11 +30,39 @@ class Environment {
     return coroutine_service_.get();
   }
 
- private:
-  async_t* const async_;
-  std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
+  std::unique_ptr<backoff::Backoff> MakeBackoff();
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(Environment);
+ private:
+  async_t* async_;
+  std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
+  BackoffFactory backoff_factory_;
+};
+
+// Builder for the environment.
+//
+// The |SetAsync| method must be called before the environment can be build.
+class EnvironmentBuilder {
+ public:
+  EnvironmentBuilder();
+  ~EnvironmentBuilder();
+
+  EnvironmentBuilder(const EnvironmentBuilder& other) = delete;
+  EnvironmentBuilder(EnvironmentBuilder&& other) = delete;
+  EnvironmentBuilder& operator=(const EnvironmentBuilder& other) = delete;
+  EnvironmentBuilder& operator=(EnvironmentBuilder&& other) = delete;
+
+  EnvironmentBuilder& SetAsync(async_t* async);
+  EnvironmentBuilder& SetCoroutineService(
+      std::unique_ptr<coroutine::CoroutineService> coroutine_service);
+  EnvironmentBuilder& SetBackoffFactory(
+      Environment::BackoffFactory backoff_factory);
+
+  Environment Build();
+
+ private:
+  async_t* async_;
+  std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
+  Environment::BackoffFactory backoff_factory_;
 };
 
 }  // namespace ledger
