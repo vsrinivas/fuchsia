@@ -20,6 +20,9 @@ infra/ninja/${platform} version:1.8.2
 # GN
 infra/tools/gn/${platform} gn_version:549249
 
+# Breakpad
+fuchsia/tools/breakpad/${os=linux}-${arch} git_revision:9eac2058b70615519b2c4d8c6bdbfca1bd079e39
+
 # godepfile
 fuchsia/tools/godepfile/${platform} git_revision:6922d7833617841e853a0be52a285f6cd07a0a10
 
