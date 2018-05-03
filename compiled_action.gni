@@ -16,6 +16,10 @@ import("//build/config/clang/clang.gni")
 #       this label should not include a toolchain (anything in parens). The
 #       host compile of this tool will be used.
 #
+#   tool_output_name (optional)
+#       [string] the `output_name` in the `executable()` for `tool`.
+#       This defaults to the `tool` target's name.
+#
 #   outputs (required)
 #       [list of files] Like the outputs of action (if using "compiled_action",
 #       this would be just the list of outputs), or action_foreach (if using
@@ -83,6 +87,7 @@ template("compiled_action") {
                              "inputs",
                              "outputs",
                              "testonly",
+                             "tool_output_name",
                              "visibility",
                            ])
     if (!defined(deps)) {
@@ -102,8 +107,11 @@ template("compiled_action") {
     # If that's not the case, we'll need another argument to the script to
     # specify this, since we can't know what the output name is (it might be in
     # another file not processed yet).
-    host_executable = get_label_info(host_tool, "root_out_dir") + "/" +
-                      get_label_info(host_tool, "name")
+    if (!defined(tool_output_name)) {
+      tool_output_name = get_label_info(host_tool, "name")
+    }
+    tool_output_dir = get_label_info(host_tool, "root_out_dir")
+    host_executable = "$tool_output_dir/$tool_output_name"
 
     # Add the executable itself as an input.
     inputs += [ host_executable ]
