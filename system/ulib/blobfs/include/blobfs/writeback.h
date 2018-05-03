@@ -65,10 +65,8 @@ public:
     // as a later point in time.
     void Enqueue(zx_handle_t vmo, uint64_t relative_block, uint64_t absolute_block,
                  uint64_t nblocks);
-    fbl::Vector<write_request_t>& Requests() { return requests_; }
 
-    // Activate the transaction.
-    zx_status_t Flush();
+    fbl::Vector<write_request_t>& Requests() { return requests_; }
 
     size_t BlkStart() const;
     size_t BlkCount() const;
@@ -82,6 +80,10 @@ public:
         assert(vmoid != VMOID_INVALID);
         vmoid_ = vmoid;
     }
+
+protected:
+    // Activate the transaction.
+    zx_status_t Flush();
 
 private:
     friend class WritebackBuffer;
@@ -97,7 +99,8 @@ private:
 //
 // Additionally, this class allows completions to be signalled when the transaction
 // has successfully completed.
-class WritebackWork : public fbl::SinglyLinkedListable<fbl::unique_ptr<WritebackWork>> {
+class WritebackWork : public WriteTxn,
+                      public fbl::SinglyLinkedListable<fbl::unique_ptr<WritebackWork>> {
 public:
     // Return the WritebackWork to the default state that it was in
     // after being created.
@@ -118,9 +121,6 @@ public:
     // Tells work to remove sync flag once the txn has successfully completed.
     void SetSyncComplete();
 
-    WriteTxn* txn() {
-        return &txn_;
-    }
 private:
     friend class WritebackBuffer;
     // Create a WritebackWork given a vnode (which may be null)
@@ -129,7 +129,6 @@ private:
 
     SyncCallback closure_; // Optional.
     bool sync_;
-    WriteTxn txn_;
     fbl::RefPtr<VnodeBlob> vn_;
 };
 

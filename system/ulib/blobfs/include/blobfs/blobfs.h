@@ -46,7 +46,6 @@ namespace blobfs {
 
 class Blobfs;
 class VnodeBlob;
-class WriteTxn;
 class WritebackWork;
 
 using ReadTxn = fs::ReadTxn<kBlobfsBlockSize, Blobfs>;
@@ -225,7 +224,7 @@ private:
     // InitVmos() must have already been called for this blob.
     zx_status_t Verify() const;
 
-    void WriteShared(WriteTxn* txn, size_t start, size_t len, uint64_t start_block);
+    void WriteShared(WritebackWork* wb, size_t start, size_t len, uint64_t start_block);
 
     // Called by Blob once the last write has completed, updating the
     // on-disk metadata.
@@ -470,10 +469,10 @@ private:
     zx_status_t ReserveBlocks(size_t nblocks, size_t* blkno_out);
 
     // Adds reserved blocks to allocated bitmap and writes the bitmap out to disk.
-    void PersistBlocks(WriteTxn* txn, size_t nblocks, size_t blkno);
+    void PersistBlocks(WritebackWork* wb, size_t nblocks, size_t blkno);
 
     // Frees blocks from the reserved/allocated maps and updates disk if necessary.
-    void FreeBlocks(WriteTxn* txn, size_t nblocks, size_t blkno);
+    void FreeBlocks(WritebackWork* wb, size_t nblocks, size_t blkno);
 
     // Finds an unallocated node between indices start (inclusive) and end (exclusive).
     // If it exists, sets |*node_index_out| to the first available value.
@@ -483,11 +482,11 @@ private:
     zx_status_t ReserveNode(size_t* node_index_out);
 
     // Writes node data to the inode table and updates disk.
-    void PersistNode(WriteTxn* txn, size_t node_index, const blobfs_inode_t& inode);
+    void PersistNode(WritebackWork* wb, size_t node_index, const blobfs_inode_t& inode);
 
     // Frees a node, from both the reserved map and the inode table. If the inode was allocated
     // in the inode table, write the deleted inode out to disk.
-    void FreeNode(WriteTxn* txn, size_t node_index);
+    void FreeNode(WritebackWork* wb, size_t node_index);
 
     // Returns a reference to the |index|th inode of the node map.
     // This should only be accessed on two occasions:
@@ -499,14 +498,14 @@ private:
     // Given a contiguous number of blocks after a starting block,
     // write out the bitmap to disk for the corresponding blocks.
     // Should only be called by PersistBlocks and FreeBlocks.
-    void WriteBitmap(WriteTxn* txn, uint64_t nblocks, uint64_t start_block);
+    void WriteBitmap(WritebackWork* wb, uint64_t nblocks, uint64_t start_block);
 
     // Given a node within the node map at an index, write it to disk.
     // Should only be called by AllocateNode and FreeNode.
-    void WriteNode(WriteTxn* txn, size_t map_index);
+    void WriteNode(WritebackWork* wb, size_t map_index);
 
     // Enqueues an update for allocated inode/block counts.
-    void WriteInfo(WriteTxn* txn);
+    void WriteInfo(WritebackWork* wb);
 
     // Creates an unique identifier for this instance. This is to be called only during
     // "construction".

@@ -83,10 +83,10 @@ size_t WriteTxn::BlkCount() const {
 }
 
 WritebackWork::WritebackWork(Blobfs* bs, fbl::RefPtr<VnodeBlob> vn) :
-    closure_(nullptr), sync_(false), txn_(bs), vn_(fbl::move(vn)) {}
+    WriteTxn(bs), closure_(nullptr), sync_(false), vn_(fbl::move(vn)) {}
 
 void WritebackWork::Reset() {
-    ZX_DEBUG_ASSERT(txn_.Requests().size() == 0);
+    ZX_DEBUG_ASSERT(Requests().is_empty());
     closure_ = nullptr;
     vn_ = nullptr;
 }
@@ -98,7 +98,7 @@ void WritebackWork::SetSyncComplete() {
 
 // Returns the number of blocks of the writeback buffer that have been consumed
 zx_status_t WritebackWork::Complete() {
-    zx_status_t status = txn_.Flush();
+    zx_status_t status = Flush();
 
     //TODO(planders): On flush failure, convert fs to read-only
     if (status == ZX_OK && sync_) {
@@ -260,13 +260,13 @@ void WritebackBuffer::CopyToBufferLocked(WriteTxn* txn) {
 void WritebackBuffer::Enqueue(fbl::unique_ptr<WritebackWork> work) {
     TRACE_DURATION("blobfs", "WritebackBuffer::Enqueue", "work ptr", work.get());
     fbl::AutoLock lock(&writeback_lock_);
-    size_t blocks = work->txn()->BlkCount();
+    size_t blocks = work->BlkCount();
     // TODO(planders): Similar to minfs, make sure that we either have a fallback mechanism for
     // operations which are too large to be fully contained by the buffer, or that the
     // worst-case operation will always fit within the buffer
     ZX_ASSERT_MSG(EnsureSpaceLocked(blocks) == ZX_OK,
                 "Requested txn (%zu blocks) larger than writeback buffer", blocks);
-    CopyToBufferLocked(work->txn());
+    CopyToBufferLocked(work.get());
     work_queue_.push(fbl::move(work));
     cnd_signal(&consumer_cvar_);
 }
@@ -280,10 +280,10 @@ int WritebackBuffer::WritebackThread(void* arg) {
             auto work = b->work_queue_.pop();
             TRACE_DURATION("blobfs", "WritebackBuffer::WritebackThread", "work ptr", work.get());
 
-            size_t blk_count = work->txn()->BlkCount();
+            size_t blk_count = work->BlkCount();
 
             if (blk_count > 0) {
-                ZX_ASSERT(work->txn()->BlkStart() == b->start_);
+                ZX_ASSERT(work->BlkStart() == b->start_);
                 ZX_ASSERT(blk_count <= b->len_);
             }
 

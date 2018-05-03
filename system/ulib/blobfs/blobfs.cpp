@@ -264,13 +264,13 @@ fail:
 
 // A helper function for dumping either the Merkle Tree or the actual blob data
 // to both (1) The containing VMO, and (2) disk.
-void VnodeBlob::WriteShared(WriteTxn* txn, size_t start, size_t len, uint64_t start_block) {
-    TRACE_DURATION("blobfs", "Blobfs::WriteShared", "txn", txn, "start", start, "len", len,
+void VnodeBlob::WriteShared(WritebackWork* wb, size_t start, size_t len, uint64_t start_block) {
+    TRACE_DURATION("blobfs", "Blobfs::WriteShared", "wb", wb, "start", start, "len", len,
                    "start_block", start_block);
     // Write as many 'entire blocks' as possible.
     uint64_t n = start / kBlobfsBlockSize;
     uint64_t n_end = (start + len + kBlobfsBlockSize - 1) / kBlobfsBlockSize;
-    txn->Enqueue(blob_->GetVmo(), n, n + start_block + DataStartBlock(blobfs_->info_), n_end - n);
+    wb->Enqueue(blob_->GetVmo(), n, n + start_block + DataStartBlock(blobfs_->info_), n_end - n);
 }
 
 void* VnodeBlob::GetData() const {
@@ -302,10 +302,10 @@ zx_status_t VnodeBlob::WriteMetadata(fbl::unique_ptr<WritebackWork> wb) {
 
     // Allocate and persist previously reserved blocks/node.
     if (inode_.blob_size) {
-        blobfs_->PersistBlocks(wb->txn(), inode_.num_blocks, inode_.start_block);
+        blobfs_->PersistBlocks(wb.get(), inode_.num_blocks, inode_.start_block);
     }
 
-    blobfs_->PersistNode(wb->txn(), map_index_, inode_);
+    blobfs_->PersistNode(wb.get(), map_index_, inode_);
     wb->SetSyncComplete();
     blobfs_->EnqueueWork(fbl::move(wb));
     return ZX_OK;
@@ -334,7 +334,7 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
             return status;
         }
 
-        WriteShared(wb->txn(), offset, len, inode_.start_block);
+        WriteShared(wb.get(), offset, len, inode_.start_block);
 
         *actual = to_write;
         bytes_written_ += to_write;
@@ -368,7 +368,7 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
                 return ZX_ERR_IO_DATA_INTEGRITY;
             }
 
-            WriteShared(wb->txn(), 0, merkle_size, inode_.start_block);
+            WriteShared(wb.get(), 0, merkle_size, inode_.start_block);
             generation_time = ticker.End();
         } else if ((status = Verify()) != ZX_OK) {
             // Small blobs may not have associated Merkle Trees, and will
@@ -579,7 +579,7 @@ zx_status_t Blobfs::ReserveBlocks(size_t num_blocks, size_t* block_index_out) {
     return ZX_OK;
 }
 
-void Blobfs::PersistBlocks(WriteTxn* txn, size_t num_blocks, size_t block_index) {
+void Blobfs::PersistBlocks(WritebackWork* wb, size_t num_blocks, size_t block_index) {
     TRACE_DURATION("blobfs", "Blobfs::PersistBlocks", "num_blocks", num_blocks);
 
     size_t blkno_out;
@@ -600,12 +600,12 @@ void Blobfs::PersistBlocks(WriteTxn* txn, size_t num_blocks, size_t block_index)
     ZX_DEBUG_ASSERT(status == ZX_OK);
 
     // Write out to disk.
-    WriteBitmap(txn, num_blocks, block_index);
-    WriteInfo(txn);
+    WriteBitmap(wb, num_blocks, block_index);
+    WriteInfo(wb);
 }
 
 // Frees blocks from reserved and allocated maps, updates disk in the latter case.
-void Blobfs::FreeBlocks(WriteTxn* txn, size_t num_blocks, size_t block_index) {
+void Blobfs::FreeBlocks(WritebackWork* wb, size_t num_blocks, size_t block_index) {
     TRACE_DURATION("blobfs", "Blobfs::FreeBlocks", "nblocks", num_blocks, "blkno", block_index);
 
     // Check if blocks were allocated on disk.
@@ -615,8 +615,8 @@ void Blobfs::FreeBlocks(WriteTxn* txn, size_t num_blocks, size_t block_index) {
         zx_status_t status = block_map_.Clear(block_index, block_index + num_blocks);
         ZX_DEBUG_ASSERT(status == ZX_OK);
         info_.alloc_block_count -= num_blocks;
-        WriteBitmap(txn, num_blocks, block_index);
-        WriteInfo(txn);
+        WriteBitmap(wb, num_blocks, block_index);
+        WriteInfo(wb);
     }
 
     zx_status_t status = reserved_blocks_.Clear(block_index, block_index + num_blocks);
@@ -659,7 +659,7 @@ zx_status_t Blobfs::ReserveNode(size_t* node_index_out) {
     return ZX_ERR_NO_SPACE;
 }
 
-void Blobfs::PersistNode(WriteTxn* txn, size_t node_index, const blobfs_inode_t& inode) {
+void Blobfs::PersistNode(WritebackWork* wb, size_t node_index, const blobfs_inode_t& inode) {
     TRACE_DURATION("blobfs", "Blobfs::AllocateNode");
 
     ZX_DEBUG_ASSERT(inode.start_block >= kStartBlockMinimum);
@@ -675,21 +675,21 @@ void Blobfs::PersistNode(WriteTxn* txn, size_t node_index, const blobfs_inode_t&
     zx_status_t status = reserved_nodes_.Clear(node_index, node_index + 1);
     ZX_DEBUG_ASSERT(status == ZX_OK);
 
-    WriteNode(txn, node_index);
-    WriteInfo(txn);
+    WriteNode(wb, node_index);
+    WriteInfo(wb);
 }
 
-void Blobfs::FreeNode(WriteTxn* txn, size_t node_index) {
+void Blobfs::FreeNode(WritebackWork* wb, size_t node_index) {
     TRACE_DURATION("blobfs", "Blobfs::FreeNode", "node_index", node_index);
     blobfs_inode_t* mapped_inode = GetNode(node_index);
 
     // Write to disk if node has been allocated within inode table
     if (mapped_inode->start_block >= kStartBlockMinimum) {
-        ZX_DEBUG_ASSERT(txn != nullptr);
+        ZX_DEBUG_ASSERT(wb != nullptr);
         *mapped_inode = {};
         info_.alloc_inode_count--;
-        WriteNode(txn, node_index);
-        WriteInfo(txn);
+        WriteNode(wb, node_index);
+        WriteInfo(wb);
     }
 
     zx_status_t status = reserved_nodes_.Clear(node_index, node_index + 1);
@@ -762,7 +762,7 @@ void Blobfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
     });
 }
 
-void Blobfs::WriteBitmap(WriteTxn* txn, uint64_t nblocks, uint64_t start_block) {
+void Blobfs::WriteBitmap(WritebackWork* wb, uint64_t nblocks, uint64_t start_block) {
     TRACE_DURATION("blobfs", "Blobfs::WriteBitmap", "nblocks", nblocks, "start_block",
                    start_block);
     uint64_t bbm_start_block = start_block / kBlobfsBlockBits;
@@ -771,14 +771,14 @@ void Blobfs::WriteBitmap(WriteTxn* txn, uint64_t nblocks, uint64_t start_block) 
                              kBlobfsBlockBits;
 
     // Write back the block allocation bitmap
-    txn->Enqueue(block_map_.StorageUnsafe()->GetVmo(), bbm_start_block,
-                 BlockMapStartBlock(info_) + bbm_start_block, bbm_end_block - bbm_start_block);
+    wb->Enqueue(block_map_.StorageUnsafe()->GetVmo(), bbm_start_block,
+                BlockMapStartBlock(info_) + bbm_start_block, bbm_end_block - bbm_start_block);
 }
 
-void Blobfs::WriteNode(WriteTxn* txn, size_t map_index) {
+void Blobfs::WriteNode(WritebackWork* wb, size_t map_index) {
     TRACE_DURATION("blobfs", "Blobfs::WriteNode", "map_index", map_index);
     uint64_t b = (map_index * sizeof(blobfs_inode_t)) / kBlobfsBlockSize;
-    txn->Enqueue(node_map_->GetVmo(), b, NodeMapStartBlock(info_) + b, 1);
+    wb->Enqueue(node_map_->GetVmo(), b, NodeMapStartBlock(info_) + b, 1);
 }
 
 zx_status_t Blobfs::NewBlob(const Digest& digest, fbl::RefPtr<VnodeBlob>* out) {
@@ -828,8 +828,8 @@ zx_status_t Blobfs::PurgeBlob(VnodeBlob* vn) {
             return status;
         }
 
-        FreeNode(wb->txn(), node_index);
-        FreeBlocks(wb->txn(), nblocks, start_block);
+        FreeNode(wb.get(), node_index);
+        FreeBlocks(wb.get(), nblocks, start_block);
         VnodeReleaseHard(vn);
         EnqueueWork(fbl::move(wb));
         return ZX_OK;
@@ -841,10 +841,10 @@ zx_status_t Blobfs::PurgeBlob(VnodeBlob* vn) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-void Blobfs::WriteInfo(WriteTxn* txn) {
+void Blobfs::WriteInfo(WritebackWork* wb) {
     void* infodata = info_vmo_->GetData();
     memcpy(infodata, &info_, sizeof(info_));
-    txn->Enqueue(info_vmo_->GetVmo(), 0, 0, 1);
+    wb->Enqueue(info_vmo_->GetVmo(), 0, 0, 1);
 }
 
 zx_status_t Blobfs::CreateFsId() {
@@ -1008,8 +1008,8 @@ zx_status_t Blobfs::AddInodes() {
         return status;
     }
 
-    WriteInfo(wb->txn());
-    wb->txn()->Enqueue(node_map_->GetVmo(), inoblks_old, NodeMapStartBlock(info_) + inoblks_old,
+    WriteInfo(wb.get());
+    wb.get()->Enqueue(node_map_->GetVmo(), inoblks_old, NodeMapStartBlock(info_) + inoblks_old,
                 inoblks - inoblks_old);
     EnqueueWork(fbl::move(wb));
     return ZX_OK;
@@ -1066,14 +1066,14 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks) {
         uint64_t vmo_offset = abmblks_old;
         uint64_t dev_offset = BlockMapStartBlock(info_) + abmblks_old;
         uint64_t length = abmblks - abmblks_old;
-        wb->txn()->Enqueue(block_map_.StorageUnsafe()->GetVmo(), vmo_offset, dev_offset, length);
+        wb.get()->Enqueue(block_map_.StorageUnsafe()->GetVmo(), vmo_offset, dev_offset, length);
     }
 
     info_.vslice_count += request.length;
     info_.dat_slices += static_cast<uint32_t>(request.length);
     info_.block_count = blocks;
 
-    WriteInfo(wb->txn());
+    WriteInfo(wb.get());
     EnqueueWork(fbl::move(wb));
     return ZX_OK;
 }
