@@ -8,7 +8,7 @@
 
 #include "garnet/lib/backoff/backoff.h"
 #include "garnet/lib/backoff/testing/test_backoff.h"
-#include "garnet/lib/gtest/test_with_message_loop.h"
+#include "garnet/lib/gtest/test_with_loop.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
@@ -27,14 +27,14 @@ class TestSyncStateWatcher : public SyncStateWatcher {
   void Notify(SyncStateContainer /*sync_state*/) override {}
 };
 
-class UserSyncImplTest : public gtest::TestWithMessageLoop {
+class UserSyncImplTest : public gtest::TestWithLoop {
  public:
   UserSyncImplTest()
       : environment_(ledger::EnvironmentBuilder()
-                         .SetAsync(message_loop_.async())
+                         .SetAsync(dispatcher())
                          .Build()),
         cloud_provider_(cloud_provider_ptr_.NewRequest()),
-        encryption_service_(message_loop_.async()) {
+        encryption_service_(dispatcher()) {
     UserConfig user_config;
     user_config.user_directory = tmp_dir.path();
     user_config.cloud_provider = std::move(cloud_provider_ptr_);
@@ -43,7 +43,7 @@ class UserSyncImplTest : public gtest::TestWithMessageLoop {
     backoff->SetOnGetNext([this] {
       // Make RunLoopUntilIdle() return once a backoff is requested, to avoid an
       // infinite loop.
-      message_loop_.PostQuitTask();
+      QuitLoop();
     });
 
     user_sync_ = std::make_unique<UserSyncImpl>(
