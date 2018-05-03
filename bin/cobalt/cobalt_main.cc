@@ -30,6 +30,7 @@
 #include "third_party/cobalt/encoder/encoder.h"
 #include "third_party/cobalt/encoder/project_context.h"
 #include "third_party/cobalt/encoder/send_retryer.h"
+#include "third_party/cobalt/encoder/shipping_dispatcher.h"
 #include "third_party/cobalt/encoder/shipping_manager.h"
 #include "third_party/cobalt/encoder/shuffler_client.h"
 #include "third_party/cobalt/util/pem_util.h"
@@ -41,6 +42,7 @@ using cobalt::CobaltController;
 using cobalt::CobaltEncoder;
 using cobalt::CobaltEncoderFactory;
 using cobalt::EncryptedMessage;
+using cobalt::ObservationMetadata;
 using cobalt::ObservationValue;
 using cobalt::Status;
 using cobalt::TimerManager;
@@ -49,7 +51,9 @@ using cobalt::Value;
 using cobalt::config::ClientConfig;
 using cobalt::encoder::ClientSecret;
 using cobalt::encoder::Encoder;
+using cobalt::encoder::LegacyShippingManager;
 using cobalt::encoder::ProjectContext;
+using cobalt::encoder::ShippingDispatcher;
 using cobalt::encoder::ShippingManager;
 using cobalt::encoder::ShufflerClient;
 using cobalt::encoder::SystemData;
@@ -130,11 +134,11 @@ std::string ReadPublicKeyPem(const std::string& pem_file_path) {
 
 class CobaltEncoderImpl : public CobaltEncoder {
  public:
-  // Does not take ownership of |timer_manager|, |shipping_manager| or
+  // Does not take ownership of |timer_manager|, |shipping_dispatcher| or
   // |system_data|.
   CobaltEncoderImpl(std::unique_ptr<ProjectContext> project_context,
                     ClientSecret client_secret,
-                    ShippingManager* shipping_manager,
+                    ShippingDispatcher* shipping_dispatcher,
                     const SystemData* system_data, TimerManager* timer_manager);
 
  private:
@@ -192,19 +196,19 @@ class CobaltEncoderImpl : public CobaltEncoder {
   void SendObservations(SendObservationsCallback callback) override;
 
   Encoder encoder_;
-  ShippingManager* shipping_manager_;  // not owned
-  TimerManager* timer_manager_;        // not owned
+  ShippingDispatcher* shipping_dispatcher_;  // not owned
+  TimerManager* timer_manager_;              // not owned
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltEncoderImpl);
 };
 
 CobaltEncoderImpl::CobaltEncoderImpl(
     std::unique_ptr<ProjectContext> project_context, ClientSecret client_secret,
-    ShippingManager* shipping_manager, const SystemData* system_data,
+    ShippingDispatcher* shipping_dispatcher, const SystemData* system_data,
     TimerManager* timer_manager)
     : encoder_(std::move(project_context), std::move(client_secret),
                system_data),
-      shipping_manager_(shipping_manager),
+      shipping_dispatcher_(shipping_dispatcher),
       timer_manager_(timer_manager) {}
 
 template <class CB>
@@ -223,7 +227,7 @@ void CobaltEncoderImpl::AddEncodedObservation(Encoder::Result* result,
       return;
   }
 
-  Status status = ToCobaltStatus(shipping_manager_->AddObservation(
+  Status status = ToCobaltStatus(shipping_dispatcher_->AddObservation(
       *(result->observation), std::move(result->metadata)));
   callback(status);
 }
@@ -440,8 +444,8 @@ void CobaltEncoderImpl::SendObservations(SendObservationsCallback callback) {
 ///////////////////////////////////////////////////////////
 class CobaltControllerImpl : public CobaltController {
  public:
-  // Does not take ownerhsip of |shipping_manager|.
-  CobaltControllerImpl(async_t* async, ShippingManager* shipping_manager);
+  // Does not take ownerhsip of |shipping_dispatcher|.
+  CobaltControllerImpl(async_t* async, ShippingDispatcher* shipping_dispatcher);
 
  private:
   void RequestSendSoon(RequestSendSoonCallback callback) override;
@@ -454,36 +458,36 @@ class CobaltControllerImpl : public CobaltController {
   void FailedSendAttempts(FailedSendAttemptsCallback callback) override;
 
   async_t* const async_;
-  ShippingManager* shipping_manager_;  // not owned
+  ShippingDispatcher* shipping_dispatcher_;  // not owned
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltControllerImpl);
 };
 
-CobaltControllerImpl::CobaltControllerImpl(async_t* async,
-                                           ShippingManager* shipping_manager)
-    : async_(async), shipping_manager_(shipping_manager) {}
+CobaltControllerImpl::CobaltControllerImpl(
+    async_t* async, ShippingDispatcher* shipping_dispatcher)
+    : async_(async), shipping_dispatcher_(shipping_dispatcher) {}
 
 void CobaltControllerImpl::RequestSendSoon(RequestSendSoonCallback callback) {
   // callback_adapter invokes |callback| on the main thread.
   std::function<void(bool)> callback_adapter = [this, callback](bool success) {
     async::PostTask(async_, [callback, success]() { callback(success); });
   };
-  shipping_manager_->RequestSendSoon(callback_adapter);
+  shipping_dispatcher_->RequestSendSoon(callback_adapter);
 }
 
 void CobaltControllerImpl::BlockUntilEmpty(uint32_t max_wait_seconds,
                                            BlockUntilEmptyCallback callback) {
-  shipping_manager_->WaitUntilIdle(std::chrono::seconds(max_wait_seconds));
+  shipping_dispatcher_->WaitUntilIdle(std::chrono::seconds(max_wait_seconds));
   callback();
 }
 
 void CobaltControllerImpl::NumSendAttempts(NumSendAttemptsCallback callback) {
-  callback(shipping_manager_->num_send_attempts());
+  callback(shipping_dispatcher_->NumSendAttempts());
 }
 
 void CobaltControllerImpl::FailedSendAttempts(
     FailedSendAttemptsCallback callback) {
-  callback(shipping_manager_->num_failed_attempts());
+  callback(shipping_dispatcher_->NumFailedAttempts());
 }
 
 ///////////////////////////////////////////////////////////
@@ -492,11 +496,11 @@ void CobaltControllerImpl::FailedSendAttempts(
 
 class CobaltEncoderFactoryImpl : public CobaltEncoderFactory {
  public:
-  // Does not take ownerhsip of |timer_manager|, |shipping_manager| or
+  // Does not take ownerhsip of |timer_manager|, |shipping_dispatcher| or
   // |system_data|.
   CobaltEncoderFactoryImpl(std::shared_ptr<ClientConfig> client_config,
                            ClientSecret client_secret,
-                           ShippingManager* shipping_manager,
+                           ShippingDispatcher* shipping_dispatcher,
                            const SystemData* system_data,
                            TimerManager* timer_manager);
 
@@ -508,20 +512,20 @@ class CobaltEncoderFactoryImpl : public CobaltEncoderFactory {
   ClientSecret client_secret_;
   fidl::BindingSet<CobaltEncoder, std::unique_ptr<CobaltEncoder>>
       cobalt_encoder_bindings_;
-  ShippingManager* shipping_manager_;  // not owned
-  const SystemData* system_data_;      // not owned
-  TimerManager* timer_manager_;        // not owned
+  ShippingDispatcher* shipping_dispatcher_;  // not owned
+  const SystemData* system_data_;            // not owned
+  TimerManager* timer_manager_;              // not owned
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltEncoderFactoryImpl);
 };
 
 CobaltEncoderFactoryImpl::CobaltEncoderFactoryImpl(
     std::shared_ptr<ClientConfig> client_config, ClientSecret client_secret,
-    ShippingManager* shipping_manager, const SystemData* system_data,
+    ShippingDispatcher* shipping_dispatcher, const SystemData* system_data,
     TimerManager* timer_manager)
     : client_config_(client_config),
       client_secret_(std::move(client_secret)),
-      shipping_manager_(shipping_manager),
+      shipping_dispatcher_(shipping_dispatcher),
       system_data_(system_data),
       timer_manager_(timer_manager) {}
 
@@ -530,9 +534,9 @@ void CobaltEncoderFactoryImpl::GetEncoder(
   std::unique_ptr<ProjectContext> project_context(
       new ProjectContext(kFuchsiaCustomerId, project_id, client_config_));
 
-  std::unique_ptr<CobaltEncoderImpl> cobalt_encoder_impl(
-      new CobaltEncoderImpl(std::move(project_context), client_secret_,
-                            shipping_manager_, system_data_, timer_manager_));
+  std::unique_ptr<CobaltEncoderImpl> cobalt_encoder_impl(new CobaltEncoderImpl(
+      std::move(project_context), client_secret_, shipping_dispatcher_,
+      system_data_, timer_manager_));
   cobalt_encoder_bindings_.AddBinding(std::move(cobalt_encoder_impl),
                                       std::move(request));
 }
@@ -555,7 +559,7 @@ class CobaltApp {
 
   ShufflerClient shuffler_client_;
   SendRetryer send_retryer_;
-  ShippingManager shipping_manager_;
+  ShippingDispatcher shipping_dispatcher_;
   TimerManager timer_manager_;
 
   std::shared_ptr<ClientConfig> client_config_;
@@ -576,22 +580,26 @@ CobaltApp::CobaltApp(async_t* async, std::chrono::seconds schedule_interval,
       context_(component::ApplicationContext::CreateFromStartupInfo()),
       shuffler_client_(kCloudShufflerUri, true),
       send_retryer_(&shuffler_client_),
-      shipping_manager_(
-          ShippingManager::SizeParams(cobalt::kMaxBytesPerObservation,
-                                      kMaxBytesPerEnvelope, kMaxBytesTotal,
-                                      kMinEnvelopeSendSize),
-          ShippingManager::ScheduleParams(schedule_interval, min_interval),
-          ShippingManager::EnvelopeMakerParams(
-              ReadPublicKeyPem(kAnalyzerPublicKeyPemPath),
-              EncryptedMessage::HYBRID_ECDH_V1,
-              ReadPublicKeyPem(kShufflerPublicKeyPemPath),
-              EncryptedMessage::HYBRID_ECDH_V1),
-          ShippingManager::SendRetryerParams(kInitialRpcDeadline,
-                                             kDeadlinePerSendAttempt),
-          &send_retryer_),
       timer_manager_(async),
-      controller_impl_(new CobaltControllerImpl(async, &shipping_manager_)) {
-  shipping_manager_.Start();
+      controller_impl_(new CobaltControllerImpl(async, &shipping_dispatcher_)) {
+  auto size_params = ShippingManager::SizeParams(
+      cobalt::kMaxBytesPerObservation, kMaxBytesPerEnvelope, kMaxBytesTotal,
+      kMinEnvelopeSendSize);
+  auto schedule_params =
+      ShippingManager::ScheduleParams(schedule_interval, min_interval);
+  auto envelope_maker_params = ShippingManager::EnvelopeMakerParams(
+      ReadPublicKeyPem(kAnalyzerPublicKeyPemPath),
+      EncryptedMessage::HYBRID_ECDH_V1,
+      ReadPublicKeyPem(kShufflerPublicKeyPemPath),
+      EncryptedMessage::HYBRID_ECDH_V1);
+  auto send_retryer_params = ShippingManager::SendRetryerParams(
+      kInitialRpcDeadline, kDeadlinePerSendAttempt);
+  shipping_dispatcher_.Register(
+      ObservationMetadata::LEGACY_BACKEND,
+      std::make_unique<LegacyShippingManager>(
+          size_params, schedule_params, envelope_maker_params,
+          send_retryer_params, &send_retryer_));
+  shipping_dispatcher_.Start();
 
   // Open the cobalt config file.
   std::ifstream config_file_stream;
@@ -613,7 +621,7 @@ CobaltApp::CobaltApp(async_t* async, std::chrono::seconds schedule_interval,
       << "Could not parse the Cobalt config file: " << kConfigBinProtoPath;
 
   factory_impl_.reset(new CobaltEncoderFactoryImpl(
-      client_config_, getClientSecret(), &shipping_manager_, &system_data_,
+      client_config_, getClientSecret(), &shipping_dispatcher_, &system_data_,
       &timer_manager_));
 
   context_->outgoing().AddPublicService<CobaltEncoderFactory>(
