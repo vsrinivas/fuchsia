@@ -227,7 +227,8 @@ zx_status_t VirtioQueue::Poll(virtio_queue_poll_fn_t handler,
   return ZX_OK;
 }
 
-zx_status_t VirtioQueue::PollAsync(async_t* async, async::Wait* wait,
+zx_status_t VirtioQueue::PollAsync(async_t* async,
+                                   async::Wait* wait,
                                    virtio_queue_poll_fn_t handler,
                                    void* ctx) {
   wait->set_object(event_.get());
@@ -240,12 +241,11 @@ zx_status_t VirtioQueue::PollAsync(async_t* async, async::Wait* wait,
   return wait->Begin(async);
 }
 
-void VirtioQueue::InvokeAsyncHandler(
-    async_t* async,
-    async::Wait* wait,
-    zx_status_t status,
-    virtio_queue_poll_fn_t handler,
-    void* ctx) {
+void VirtioQueue::InvokeAsyncHandler(async_t* async,
+                                     async::Wait* wait,
+                                     zx_status_t status,
+                                     virtio_queue_poll_fn_t handler,
+                                     void* ctx) {
   if (status != ZX_OK) {
     return;
   }
@@ -263,7 +263,7 @@ void VirtioQueue::InvokeAsyncHandler(
     }
   }
   if (status == ZX_OK || status == ZX_ERR_SHOULD_WAIT) {
-    wait->Begin(async); // ignore errors
+    wait->Begin(async);  // ignore errors
   }
 }
 

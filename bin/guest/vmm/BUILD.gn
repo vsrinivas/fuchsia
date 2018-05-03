@@ -8,12 +8,12 @@ source_set("lib") {
   visibility = [ ":*" ]
 
   sources = [
-    "kernel.cc",
-    "kernel.h",
     "guest_config.cc",
     "guest_config.h",
     "guest_view.cc",
     "guest_view.h",
+    "kernel.cc",
+    "kernel.h",
     "linux.cc",
     "linux.h",
     "zircon.cc",
@@ -26,9 +26,9 @@ source_set("lib") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/guest/fidl",
     "//garnet/public/lib/ui/view_framework:view_provider",
-    "//zircon/public/lib/trace-provider",
     "//third_party/rapidjson",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/trace-provider",
   ]
 
   defines = [ "_ALL_SOURCE=1" ]
@@ -59,7 +59,7 @@ package("vmm") {
     {
       path = rebase_path("//garnet/bin/guest/vmm/meta/sandbox")
       dest = "sandbox"
-    }
+    },
   ]
 
   if (target_cpu == "arm64") {

@@ -28,8 +28,8 @@ IoMapping::IoMapping(uint32_t kind,
 zx_status_t IoMapping::SetTrap(Guest* guest) {
   if (kind_ == ZX_GUEST_TRAP_BELL) {
     return async_trap_.SetTrap(guest->device_async(),
-                               zx::unowned_guest::wrap(guest->handle()),
-                               base_, size_);
+                               zx::unowned_guest::wrap(guest->handle()), base_,
+                               size_);
   } else {
     uintptr_t key = reinterpret_cast<uintptr_t>(this);
     return zx_guest_set_trap(guest->handle(), kind_, base_, size_,

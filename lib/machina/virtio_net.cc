@@ -4,12 +4,12 @@
 
 #include "garnet/lib/machina/virtio_net.h"
 
-#include <atomic>
 #include <fcntl.h>
 #include <string.h>
+#include <atomic>
 
-#include <trace/event.h>
 #include <trace-engine/types.h>
+#include <trace/event.h>
 #include <zircon/device/ethernet.h>
 #include <zx/fifo.h>
 
@@ -17,7 +17,9 @@
 
 namespace machina {
 
-VirtioNet::Stream::Stream(VirtioNet* device, async_t* async, VirtioQueue* queue,
+VirtioNet::Stream::Stream(VirtioNet* device,
+                          async_t* async,
+                          VirtioQueue* queue,
                           std::atomic<trace_async_id_t>* trace_flow_id)
     : device_(device),
       async_(async),
@@ -25,8 +27,7 @@ VirtioNet::Stream::Stream(VirtioNet* device, async_t* async, VirtioQueue* queue,
       trace_flow_id_(trace_flow_id),
       queue_wait_(async,
                   queue,
-                  fbl::BindMember(this, &VirtioNet::Stream::OnQueueReady)) {
-}
+                  fbl::BindMember(this, &VirtioNet::Stream::OnQueueReady)) {}
 
 zx_status_t VirtioNet::Stream::Start(zx_handle_t fifo,
                                      size_t fifo_max_entries,
@@ -134,11 +135,10 @@ zx_status_t VirtioNet::Stream::WaitOnFifoWritable() {
   return fifo_writable_wait_.Begin(async_);
 }
 
-void VirtioNet::Stream::OnFifoWritable(
-    async_t* async,
-    async::WaitBase* wait,
-    zx_status_t status,
-    const zx_packet_signal_t* signal) {
+void VirtioNet::Stream::OnFifoWritable(async_t* async,
+                                       async::WaitBase* wait,
+                                       zx_status_t status,
+                                       const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     FXL_LOG(INFO) << "Async wait failed on fifo writable: " << status;
     return;
@@ -179,11 +179,10 @@ zx_status_t VirtioNet::Stream::WaitOnFifoReadable() {
   return fifo_readable_wait_.Begin(async_);
 }
 
-void VirtioNet::Stream::OnFifoReadable(
-    async_t* async,
-    async::WaitBase* wait,
-    zx_status_t status,
-    const zx_packet_signal_t* signal) {
+void VirtioNet::Stream::OnFifoReadable(async_t* async,
+                                       async::WaitBase* wait,
+                                       zx_status_t status,
+                                       const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     FXL_LOG(INFO) << "Async wait failed on fifo readable: " << status;
     return;

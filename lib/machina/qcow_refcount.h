@@ -47,7 +47,6 @@ class QcowRefcount {
   // |count|.
   zx_status_t ReadRefcount(size_t index, uint64_t* count);
 
-
   // Writes the refcount for the physical cluster with the provided |index|. The
   // index is the cluster number, or in other words:
   //

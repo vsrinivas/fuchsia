@@ -16,7 +16,7 @@ namespace machina {
 
 // Provides an implementation of the |guest::GuestController| interface. This
 // exposes some guest services over FIDL.
-class GuestControllerImpl: public guest::GuestController {
+class GuestControllerImpl : public guest::GuestController {
  public:
   GuestControllerImpl(component::ApplicationContext* application_context,
                       const PhysMem& phys_mem);

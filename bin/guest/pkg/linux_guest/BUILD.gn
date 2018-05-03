@@ -55,8 +55,8 @@ action("kernel") {
 
 guest_package("linux_guest") {
   deps = [
-    ":sysroot($host_toolchain)",
     ":kernel($host_toolchain)",
+    ":sysroot($host_toolchain)",
   ]
 
   if (target_cpu == "arm64") {
@@ -71,9 +71,11 @@ guest_package("linux_guest") {
   ramdisk = "$host_out_dir/linux/initrd.img"
 
   disk_name = "filesystem.img"
-  resources = [ {
-        path = rebase_path("$host_out_dir/linux/disk.img")
-        dest = "${disk_name}"
-      } ]
+  resources = [
+    {
+      path = rebase_path("$host_out_dir/linux/disk.img")
+      dest = "${disk_name}"
+    },
+  ]
   block_devices = [ "/guest/data/${disk_name},ro,volatile" ]
 }

@@ -30,9 +30,8 @@ class VirtioQueueWaiter {
                    const zx_packet_signal_t* signal);
 
   fbl::Mutex mutex_;
-  async::WaitMethod<VirtioQueueWaiter,
-                    &VirtioQueueWaiter::WaitHandler> wait_
-                    __TA_GUARDED(mutex_) {this};
+  async::WaitMethod<VirtioQueueWaiter, &VirtioQueueWaiter::WaitHandler> wait_
+      __TA_GUARDED(mutex_){this};
   async_t* const async_;
   VirtioQueue* const queue_ __TA_GUARDED(mutex_);
   const Handler handler_;

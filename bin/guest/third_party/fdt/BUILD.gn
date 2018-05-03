@@ -9,18 +9,18 @@ config("fdt_config") {
 
 source_set("fdt") {
   sources = [
-    "fdt_addresses.c",
     "fdt.c",
-    "fdt_empty_tree.c",
     "fdt.h",
+    "fdt_addresses.c",
+    "fdt_empty_tree.c",
     "fdt_overlay.c",
     "fdt_ro.c",
     "fdt_rw.c",
     "fdt_strerror.c",
     "fdt_sw.c",
     "fdt_wip.c",
-    "libfdt_env.h",
     "libfdt.h",
+    "libfdt_env.h",
     "libfdt_internal.h",
   ]
   public_configs = [ ":fdt_config" ]

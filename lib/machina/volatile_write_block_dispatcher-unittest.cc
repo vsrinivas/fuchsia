@@ -43,10 +43,8 @@ class StaticDispatcher : public BlockDispatcher {
 
 fbl::unique_ptr<VolatileWriteBlockDispatcher> CreateDispatcher() {
   fbl::unique_ptr<BlockDispatcher> dispatcher;
-  zx_status_t status =
-    BlockDispatcher::CreateVolatileWrapper(
-                fbl::make_unique<StaticDispatcher>(kDispatcherSize, 0xab),
-                &dispatcher);
+  zx_status_t status = BlockDispatcher::CreateVolatileWrapper(
+      fbl::make_unique<StaticDispatcher>(kDispatcherSize, 0xab), &dispatcher);
   if (status != ZX_OK) {
     return nullptr;
   }

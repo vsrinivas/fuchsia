@@ -216,7 +216,8 @@ class VirtioQueue {
   // when one is available.
   //
   // TODO(PD-103): Use a c++ style function object here.
-  zx_status_t PollAsync(async_t* async, async::Wait* wait,
+  zx_status_t PollAsync(async_t* async,
+                        async::Wait* wait,
                         virtio_queue_poll_fn_t handler,
                         void* ctx);
 

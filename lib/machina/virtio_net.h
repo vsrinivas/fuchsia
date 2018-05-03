@@ -60,7 +60,9 @@ class VirtioNet : public VirtioDeviceBase<VIRTIO_ID_NET,
   // A single data stream (either RX or TX).
   class Stream {
    public:
-    Stream(VirtioNet* device, async_t* async, VirtioQueue* queue,
+    Stream(VirtioNet* device,
+           async_t* async,
+           VirtioQueue* queue,
            std::atomic<trace_async_id_t>* trace_flow_id);
     zx_status_t Start(zx_handle_t fifo, size_t fifo_num_entries, bool rx);
 
@@ -99,10 +101,10 @@ class VirtioNet : public VirtioDeviceBase<VIRTIO_ID_NET,
     size_t fifo_entries_write_index_ = 0;
 
     VirtioQueueWaiter queue_wait_;
-    async::WaitMethod<Stream, &Stream::OnFifoWritable>
-        fifo_writable_wait_{this};
-    async::WaitMethod<Stream, &Stream::OnFifoReadable>
-        fifo_readable_wait_{this};
+    async::WaitMethod<Stream, &Stream::OnFifoWritable> fifo_writable_wait_{
+        this};
+    async::WaitMethod<Stream, &Stream::OnFifoReadable> fifo_readable_wait_{
+        this};
   };
 
   Stream rx_stream_;

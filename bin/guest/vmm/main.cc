@@ -177,8 +177,7 @@ static zx_status_t setup_scenic_framebuffer(
   }
   fbl::unique_ptr<ScenicScanout> scenic_scanout;
   zx_status_t status = ScenicScanout::Create(application_context,
-                                             input_dispatcher,
-                                             &scenic_scanout);
+                                             input_dispatcher, &scenic_scanout);
   if (status != ZX_OK) {
     return status;
   }
@@ -222,8 +221,8 @@ int main(int argc, char** argv) {
   }
 
   // Instantiate the controller service.
-  machina::GuestControllerImpl guest_controller(
-      application_context.get(), guest.phys_mem());
+  machina::GuestControllerImpl guest_controller(application_context.get(),
+                                                guest.phys_mem());
 
 #if __x86_64__
   status = machina::create_page_table(guest.phys_mem());

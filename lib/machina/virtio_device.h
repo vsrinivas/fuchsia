@@ -50,7 +50,7 @@ class VirtioDevice {
   //
   // Devices can place logic here that depends on the set of negotiated
   // features with the driver.
-  virtual void OnDeviceReady() { }
+  virtual void OnDeviceReady() {}
 
   const PhysMem& phys_mem() { return phys_mem_; }
   uint16_t num_queues() const { return num_queues_; }
