@@ -286,7 +286,8 @@ zx_status_t sdmmc_probe_mmc(sdmmc_device_t* dev) {
         mmc_select_bus_width(dev);
 
         // Must perform tuning at HS200 first if HS400 is supported
-        if (mmc_supports_hs200(dev) && dev->bus_width != SDMMC_BUS_WIDTH_1) {
+        if (mmc_supports_hs200(dev) && dev->bus_width != SDMMC_BUS_WIDTH_1 &&
+                !(dev->host_info.prefs & SDMMC_HOST_PREFS_DISABLE_HS200)) {
             if ((st = mmc_switch_timing(dev, SDMMC_TIMING_HS200)) != ZX_OK) {
                 goto err;
             }
@@ -300,7 +301,8 @@ zx_status_t sdmmc_probe_mmc(sdmmc_device_t* dev) {
                 goto err;
             }
 
-            if (mmc_supports_hs400(dev) && dev->bus_width == SDMMC_BUS_WIDTH_8) {
+            if (mmc_supports_hs400(dev) && dev->bus_width == SDMMC_BUS_WIDTH_8 &&
+                    !(dev->host_info.prefs & SDMMC_HOST_PREFS_DISABLE_HS400)) {
                 if ((st = mmc_switch_timing(dev, SDMMC_TIMING_HS)) != ZX_OK) {
                     goto err;
                 }
