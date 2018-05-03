@@ -841,11 +841,11 @@ public:
     static std::unique_ptr<Item> CreateFromFile(
         FileContents file, uint32_t type, bool compress, bool null_terminate) {
         size_t size = file.exact_size() + (null_terminate ? 1 : 0);
+        size = BOOTDATA_ALIGN(size);
         auto item = MakeItem(NewHeader(type, size), compress);
 
         // If we need some zeros, see if they're already right there
         // in the last mapped page past the exact end of the file.
-        size = BOOTDATA_ALIGN(size);
         if (size <= file.mapped_size()) {
             // Use the padding that's already there.
             item->payload_.emplace_front(file.PageRoundedView(0, size));
@@ -1037,7 +1037,7 @@ private:
             out->Write(payload_.front());
             payload_.pop_front();
         } while (!payload_.empty());
-        return header_.length;
+        return sizeof(header_) + header_.length;
     }
 
     uint32_t StreamCompressed(OutputStream* out) {
