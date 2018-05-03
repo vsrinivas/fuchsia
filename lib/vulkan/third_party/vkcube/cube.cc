@@ -909,6 +909,8 @@ void demo_prepare_depth(struct demo* demo)
     assert(!err);
 }
 
+#include "magma.ppm.h"
+
 /* Load a ppm file into memory */
 bool loadTexture(const char* filename, uint8_t* rgba_data, VkSubresourceLayout* layout,
                  uint32_t* width, uint32_t* height)
@@ -918,7 +920,6 @@ bool loadTexture(const char* filename, uint8_t* rgba_data, VkSubresourceLayout* 
 //     const char* ppm = reinterpret_cast<const char*>(lunarg_ppm);
 //     const uint32_t len = lunarg_ppm_len;//sizeof(lunarg_ppm);
 
-#include "magma.ppm.h"
     constexpr bool kDataIsAscii = true;
     const char* ppm = magma_ppm;
     const uint32_t len = sizeof(magma_ppm);
