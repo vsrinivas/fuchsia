@@ -18,6 +18,7 @@
 #include "garnet/bin/appmgr/application_environment_controller_impl.h"
 #include "garnet/bin/appmgr/application_runner_holder.h"
 #include "garnet/bin/appmgr/namespace.h"
+#include "garnet/bin/appmgr/realm_hub_holder.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -35,8 +36,9 @@ class JobHolder {
 
   JobHolder* parent() const { return parent_; }
   const std::string& label() const { return label_; }
+  const std::string& koid() const { return koid_; }
 
-  const fbl::RefPtr<fs::PseudoDir>& info_dir() const { return info_dir_; }
+  const fbl::RefPtr<fs::PseudoDir>& hub_dir() const { return hub_.root_dir(); }
 
   void CreateNestedJob(
       zx::channel host_directory,
@@ -72,11 +74,13 @@ class JobHolder {
   ApplicationRunnerHolder* GetOrCreateRunner(const std::string& runner);
 
   void CreateApplicationWithProcess(
-      ApplicationPackagePtr package, ApplicationLaunchInfo launch_info,
+      ApplicationPackagePtr package,
+      ApplicationLaunchInfo launch_info,
       fidl::InterfaceRequest<ApplicationController> controller,
       fxl::RefPtr<Namespace> ns);
   void CreateApplicationFromPackage(
-      ApplicationPackagePtr package, ApplicationLaunchInfo launch_info,
+      ApplicationPackagePtr package,
+      ApplicationLaunchInfo launch_info,
       fidl::InterfaceRequest<ApplicationController> controller,
       fxl::RefPtr<Namespace> ns);
 
@@ -85,15 +89,14 @@ class JobHolder {
   JobHolder* const parent_;
   ApplicationLoaderPtr loader_;
   std::string label_;
+  std::string koid_;
 
   zx::job job_;
   zx::job job_for_child_;
 
   fxl::RefPtr<Namespace> default_namespace_;
 
-  // A pseudo-directory which describes the components within the scope of
-  // this job.
-  fbl::RefPtr<fs::PseudoDir> info_dir_;
+  RealmHubHolder hub_;
   fs::ManagedVfs info_vfs_;
 
   std::unordered_map<JobHolder*,

@@ -19,6 +19,7 @@
 
 #include "garnet/bin/appmgr/dynamic_library_loader.h"
 #include "garnet/bin/appmgr/namespace_builder.h"
+#include "garnet/bin/appmgr/realm_hub_holder.h"
 #include "garnet/bin/appmgr/runtime_metadata.h"
 #include "garnet/bin/appmgr/url_resolver.h"
 #include "garnet/lib/far/format.h"
@@ -188,12 +189,13 @@ ExportedDirChannels BindDirectory(ApplicationLaunchInfo* launch_info) {
 
 uint32_t JobHolder::next_numbered_label_ = 1u;
 
-JobHolder::JobHolder(JobHolder* parent, zx::channel host_directory,
+JobHolder::JobHolder(JobHolder* parent,
+                     zx::channel host_directory,
                      fidl::StringPtr label)
     : parent_(parent),
       default_namespace_(
           fxl::MakeRefCounted<Namespace>(nullptr, this, nullptr)),
-      info_dir_(fbl::AdoptRef(new fs::PseudoDir())),
+      hub_(fbl::AdoptRef(new fs::PseudoDir())),
       info_vfs_(async_get_default()) {
   // parent_ is null if this is the root application environment. if so, we
   // derive from the application manager's job.
@@ -208,6 +210,7 @@ JobHolder::JobHolder(JobHolder* parent, zx::channel host_directory,
   FXL_CHECK(zx::job::create(parent_job, 0u, &job_) == ZX_OK);
   FXL_CHECK(job_.duplicate(kChildJobRights, &job_for_child_) == ZX_OK);
 
+  koid_ = std::to_string(fsl::GetKoid(job_.get()));
   if (label->size() == 0)
     label_ = fxl::StringPrintf(kNumberedLabelFormat, next_numbered_label_++);
   else
@@ -237,7 +240,7 @@ zx::channel JobHolder::OpenRootInfoDir() {
     return zx::channel();
   }
 
-  if (info_vfs_.ServeDirectory(root_job_holder->info_dir(), std::move(h1)) !=
+  if (info_vfs_.ServeDirectory(root_job_holder->hub_dir(), std::move(h1)) !=
       ZX_OK) {
     return zx::channel();
   }
@@ -254,7 +257,10 @@ void JobHolder::CreateNestedJob(
       std::make_unique<JobHolder>(this, std::move(host_directory), label));
   JobHolder* child = controller->job_holder();
   child->AddBinding(std::move(environment));
-  info_dir_->AddEntry(child->label(), child->info_dir());
+
+  // update hub
+  hub_.AddRealm(child);
+
   children_.emplace(child, std::move(controller));
 
   JobHolder* root_job_holder = this;
@@ -326,7 +332,10 @@ std::unique_ptr<ApplicationEnvironmentControllerImpl> JobHolder::ExtractChild(
     return nullptr;
   }
   auto controller = std::move(it->second);
-  info_dir_->RemoveEntry(child->label());
+
+  // update hub
+  hub_.RemoveRealm(child);
+
   children_.erase(it);
   return controller;
 }
@@ -338,7 +347,10 @@ std::unique_ptr<ApplicationControllerImpl> JobHolder::ExtractApplication(
     return nullptr;
   }
   auto application = std::move(it->second);
-  info_dir_->RemoveEntry(application->label());
+
+  // update hub
+  hub_.RemoveComponent(application.get());
+
   applications_.erase(it);
   return application;
 }
@@ -349,7 +361,8 @@ void JobHolder::AddBinding(
 }
 
 void JobHolder::CreateApplicationWithProcess(
-    ApplicationPackagePtr package, ApplicationLaunchInfo launch_info,
+    ApplicationPackagePtr package,
+    ApplicationLaunchInfo launch_info,
     fidl::InterfaceRequest<ApplicationController> controller,
     fxl::RefPtr<Namespace> ns) {
   zx::channel svc = ns->services().OpenAsDirectory();
@@ -385,14 +398,16 @@ void JobHolder::CreateApplicationWithProcess(
         GetLabelFromURL(url), std::move(ns),
         ExportedDirType::kPublicDebugCtrlLayout,
         std::move(channels.exported_dir), std::move(channels.client_request));
+    // update hub
+    hub_.AddComponent(application.get());
     ApplicationControllerImpl* key = application.get();
-    info_dir_->AddEntry(application->label(), application->info_dir());
     applications_.emplace(key, std::move(application));
   }
 }
 
 void JobHolder::CreateApplicationFromPackage(
-    ApplicationPackagePtr package, ApplicationLaunchInfo launch_info,
+    ApplicationPackagePtr package,
+    ApplicationLaunchInfo launch_info,
     fidl::InterfaceRequest<ApplicationController> controller,
     fxl::RefPtr<Namespace> ns) {
   zx::channel svc = ns->services().OpenAsDirectory();
@@ -477,8 +492,9 @@ void JobHolder::CreateApplicationFromPackage(
           std::move(controller), this, std::move(pkg_fs), std::move(process),
           url, GetLabelFromURL(url), std::move(ns), exported_dir_layout,
           std::move(channels.exported_dir), std::move(channels.client_request));
+      // update hub
+      hub_.AddComponent(application.get());
       ApplicationControllerImpl* key = application.get();
-      info_dir_->AddEntry(application->label(), application->info_dir());
       applications_.emplace(key, std::move(application));
     }
   } else {

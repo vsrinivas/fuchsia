@@ -23,15 +23,21 @@ namespace component {
 
 ApplicationControllerImpl::ApplicationControllerImpl(
     fidl::InterfaceRequest<ApplicationController> request,
-    JobHolder* job_holder, std::unique_ptr<archive::FileSystem> fs,
-    zx::process process, std::string url, std::string label,
-    fxl::RefPtr<Namespace> ns, ExportedDirType export_dir_type,
-    zx::channel exported_dir, zx::channel client_request)
+    JobHolder* job_holder,
+    std::unique_ptr<archive::FileSystem> fs,
+    zx::process process,
+    std::string url,
+    std::string label,
+    fxl::RefPtr<Namespace> ns,
+    ExportedDirType export_dir_type,
+    zx::channel exported_dir,
+    zx::channel client_request)
     : binding_(this),
       job_holder_(job_holder),
       fs_(std::move(fs)),
       process_(std::move(process)),
       label_(std::move(label)),
+      koid_(std::to_string(fsl::GetKoid(process_.get()))),
       info_dir_(fbl::AdoptRef(new fs::PseudoDir())),
       exported_dir_(std::move(exported_dir)),
       ns_(std::move(ns)),
@@ -66,11 +72,10 @@ ApplicationControllerImpl::ApplicationControllerImpl(
     }
     fdio_service_connect_at(exported_dir_.get(), "debug",
                             debug_dir_server.release());
-    zx_koid_t process_koid = fsl::GetKoid(process_.get());
+    fbl::String process_koid = koid_;
     info_dir_->AddEntry("process", fbl::AdoptRef(new fs::UnbufferedPseudoFile(
                                        [process_koid](fbl::String* output) {
-                                         *output = fbl::StringPrintf(
-                                             "%" PRIu64, process_koid);
+                                         *output = process_koid;
                                          return ZX_OK;
                                        })));
     info_dir_->AddEntry(
@@ -125,11 +130,10 @@ void ApplicationControllerImpl::Wait(WaitCallback callback) {
 }
 
 // Called when process terminates, regardless of if Kill() was invoked.
-void ApplicationControllerImpl::Handler(
-    async_t* async,
-    async::WaitBase* wait,
-    zx_status_t status,
-    const zx_packet_signal* signal) {
+void ApplicationControllerImpl::Handler(async_t* async,
+                                        async::WaitBase* wait,
+                                        zx_status_t status,
+                                        const zx_packet_signal* signal) {
   FXL_DCHECK(status == ZX_OK);
   FXL_DCHECK(signal->observed == ZX_TASK_TERMINATED);
   if (!wait_callbacks_.empty()) {

@@ -37,13 +37,19 @@ class ApplicationControllerImpl : public ApplicationController {
  public:
   ApplicationControllerImpl(
       fidl::InterfaceRequest<ApplicationController> request,
-      JobHolder* job_holder, std::unique_ptr<archive::FileSystem> fs,
-      zx::process process, std::string url, std::string label,
-      fxl::RefPtr<Namespace> ns, ExportedDirType export_dir_type,
-      zx::channel exported_dir, zx::channel client_request);
+      JobHolder* job_holder,
+      std::unique_ptr<archive::FileSystem> fs,
+      zx::process process,
+      std::string url,
+      std::string label,
+      fxl::RefPtr<Namespace> ns,
+      ExportedDirType export_dir_type,
+      zx::channel exported_dir,
+      zx::channel client_request);
   ~ApplicationControllerImpl() override;
 
   const std::string& label() const { return label_; }
+  const std::string& koid() const { return koid_; }
   const fbl::RefPtr<fs::PseudoDir>& info_dir() const { return info_dir_; }
 
   // |ApplicationController| implementation:
@@ -64,6 +70,7 @@ class ApplicationControllerImpl : public ApplicationController {
   std::unique_ptr<archive::FileSystem> fs_;
   zx::process process_;
   std::string label_;
+  const std::string koid_;
   std::vector<WaitCallback> wait_callbacks_;
   fbl::RefPtr<fs::PseudoDir> info_dir_;
 
@@ -72,7 +79,8 @@ class ApplicationControllerImpl : public ApplicationController {
   fxl::RefPtr<Namespace> ns_;
 
   async::WaitMethod<ApplicationControllerImpl,
-                    &ApplicationControllerImpl::Handler> wait_;
+                    &ApplicationControllerImpl::Handler>
+      wait_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ApplicationControllerImpl);
 };

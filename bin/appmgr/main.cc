@@ -36,7 +36,7 @@ void PublishRootDir(component::JobHolder* root, fs::ManagedVfs* vfs) {
   auto svc = fbl::AdoptRef(new fs::Service([root](zx::channel channel) {
     return root->BindSvc(std::move(channel));
   }));
-  dir->AddEntry("hub", root->info_dir());
+  dir->AddEntry("hub", root->hub_dir());
   dir->AddEntry("svc", svc);
 
   vfs->ServeDirectory(dir, zx::channel(request));
