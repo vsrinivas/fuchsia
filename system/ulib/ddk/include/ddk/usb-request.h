@@ -65,6 +65,15 @@ typedef struct usb_request {
     // callback.
     usb_request_complete_cb complete_cb;
 
+    // Set by the requestor for opting out of the complete_cb()
+    // callback for successfully completed requests. The callback
+    // will still be invoked if an error is encountered.
+    // This is useful for isochronous requests, where the requestor
+    // may not care about most callbacks. They will still have to request
+    // callbacks at a regular interval to queue more data, and free or
+    // reuse previously silently completed requests.
+    bool cb_on_error_only;
+
     // Set by requestor for passing data to complete_cb callback
     // The saved_cookie field can be used to temporarily save the
     // original cookie.
