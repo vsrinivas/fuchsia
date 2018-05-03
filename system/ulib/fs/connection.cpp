@@ -891,7 +891,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
                               fbl::move(oldStr), fbl::move(newStr));
         }
         }
-        assert(false);
+        __builtin_trap();
     }
     case ZXFIDL_GET_VMO:
     case ZXRIO_MMAP: {

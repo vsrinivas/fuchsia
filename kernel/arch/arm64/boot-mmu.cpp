@@ -81,7 +81,7 @@ static inline zx_status_t _arm64_boot_map(pte_t* kernel_table0,
 
             kernel_table0[index0] = (pa & MMU_PTE_OUTPUT_ADDR_MASK) |
                                     MMU_PTE_L012_DESCRIPTOR_TABLE;
-            // fallthrough
+            __FALLTHROUGH;
         }
         case MMU_PTE_L012_DESCRIPTOR_TABLE:
             kernel_table1 = phys_to_virt(kernel_table0[index0] & MMU_PTE_OUTPUT_ADDR_MASK);
@@ -113,7 +113,7 @@ static inline zx_status_t _arm64_boot_map(pte_t* kernel_table0,
 
             kernel_table1[index1] = (pa & MMU_PTE_OUTPUT_ADDR_MASK) |
                                     MMU_PTE_L012_DESCRIPTOR_TABLE;
-            // fallthrough
+            __FALLTHROUGH;
         }
         case MMU_PTE_L012_DESCRIPTOR_TABLE:
             kernel_table2 = phys_to_virt(kernel_table1[index1] & MMU_PTE_OUTPUT_ADDR_MASK);
@@ -145,7 +145,7 @@ static inline zx_status_t _arm64_boot_map(pte_t* kernel_table0,
 
             kernel_table2[index2] = (pa & MMU_PTE_OUTPUT_ADDR_MASK) |
                                     MMU_PTE_L012_DESCRIPTOR_TABLE;
-            // fallthrough
+            __FALLTHROUGH;
         }
         case MMU_PTE_L012_DESCRIPTOR_TABLE:
             kernel_table3 = phys_to_virt(kernel_table2[index2] & MMU_PTE_OUTPUT_ADDR_MASK);

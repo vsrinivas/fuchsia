@@ -251,12 +251,16 @@ zx_status_t UsbAudioStreamInterface::BuildFormatMap() {
                     continue;
                 }
                 switch (fmt.bit_resolution()) {
-                case 20: range.sample_formats = (fmt.subframe_bytes() == 3)
-                                              ? AUDIO_SAMPLE_FORMAT_20BIT_PACKED
-                                              : AUDIO_SAMPLE_FORMAT_20BIT_IN32;
-                case 24: range.sample_formats = (fmt.subframe_bytes() == 3)
-                                              ? AUDIO_SAMPLE_FORMAT_24BIT_PACKED
-                                              : AUDIO_SAMPLE_FORMAT_24BIT_IN32;
+                case 20:
+                    range.sample_formats = ((fmt.subframe_bytes() == 3)
+                                            ? AUDIO_SAMPLE_FORMAT_20BIT_PACKED
+                                            : AUDIO_SAMPLE_FORMAT_20BIT_IN32);
+                    break;
+                case 24:
+                    range.sample_formats = ((fmt.subframe_bytes() == 3)
+                                            ? AUDIO_SAMPLE_FORMAT_24BIT_PACKED
+                                            : AUDIO_SAMPLE_FORMAT_24BIT_IN32);
+                    break;
                 }
             } break;
 

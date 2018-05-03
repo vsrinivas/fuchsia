@@ -347,7 +347,7 @@ zx_status_t VnodeMinfs::BlockOpDirect(WritebackWork* wb, DirectArgs* params) {
 
                 fs_->ValidateBno(bno);
             }
-            // fall through
+            __FALLTHROUGH;
             case READ: {
                 params->SetBno(i, bno);
                 break;

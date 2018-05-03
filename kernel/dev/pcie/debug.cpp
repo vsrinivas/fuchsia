@@ -566,12 +566,12 @@ int PcieDebugConsole::CmdLsPci(int argc, const cmd_args *argv, uint32_t flags) {
                     case 'e':
                         if (params.cfg_dump_amt < PCIE_EXTENDED_CONFIG_SIZE)
                             params.cfg_dump_amt = PCIE_EXTENDED_CONFIG_SIZE;
-                        // deliberate fall-thru
+                        __FALLTHROUGH;
 
                     case 'c':
                         if (params.cfg_dump_amt < PCIE_BASE_CONFIG_SIZE)
                             params.cfg_dump_amt = PCIE_BASE_CONFIG_SIZE;
-                        // deliberate fall-thru
+                        __FALLTHROUGH;
 
                     case 'l':
                         params.verbose = true;

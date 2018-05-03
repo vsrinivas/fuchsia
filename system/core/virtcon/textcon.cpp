@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <zircon/compiler.h>
 
 static inline void invalidate(textcon_t* tc, int x, int y, int w, int h) {
     tc->invalidate(tc->cookie, x, y, w, h);
@@ -479,7 +480,7 @@ static void putc_escape(textcon_t* tc, uint8_t c) {
         break;
     case 'E': // (NEL) Next Line
         tc->x = 0;
-        // Fall through
+        __FALLTHROUGH;
     case 'D': // (IND) Index
         tc->y++;
         if (tc->y >= tc->scroll_y1) {

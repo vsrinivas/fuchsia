@@ -160,7 +160,7 @@ zx_status_t inspector_dso_find_debug_file(inspector_dsoinfo_t* dso,
         case ZX_OK:
             ZX_DEBUG_ASSERT(dso->debug_file != nullptr);
             *out_debug_file = dso->debug_file;
-            // fall through
+            __FALLTHROUGH;
         default:
             debugf(2, "returning %d, already tried to find debug file for %s\n",
                    dso->debug_file_status, dso->name);

@@ -6,7 +6,9 @@ SHARED_SRCS := \
     $(LOCAL_DIR)/lz4hc.c \
     $(LOCAL_DIR)/xxhash.c
 
-SHARED_CFLAGS := -I$(LOCAL_DIR)/include/lz4 -O3 -DXXH_NAMESPACE=LZ4_
+SHARED_CFLAGS := \
+    -I$(LOCAL_DIR)/include/lz4 -O3 -DXXH_NAMESPACE=LZ4_ \
+    -Wno-implicit-fallthrough
 
 # userlib
 MODULE := $(LOCAL_DIR)

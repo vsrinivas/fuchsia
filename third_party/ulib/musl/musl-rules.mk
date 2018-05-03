@@ -31,6 +31,7 @@ LOCAL_CFLAGS := \
     -U_ALL_SOURCE \
     -Wno-sign-compare \
     -Werror=incompatible-pointer-types \
+    -Wno-implicit-fallthrough \
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 LOCAL_COMPILEFLAGS += -fno-stack-protector

@@ -643,7 +643,7 @@ static zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
             // Non-zero writes to EOI and ESR cause GP fault. See Volume 3 Section 10.12.1.2.
             return local_apic_state->interrupt_tracker.Interrupt(X86_INT_GP_FAULT, nullptr);
         }
-    // Fall through.
+        __FALLTHROUGH;
     case X2ApicMsr::TPR:
     case X2ApicMsr::SVR:
     case X2ApicMsr::LVT_MONITOR:
@@ -760,6 +760,7 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
         return handle_kvm_wrmsr(exit_info, vmcs, guest_state, local_apic_state, pvclock, gpas);
     default:
         dprintf(INFO, "Unhandled wrmsr %#lx\n", guest_state->rcx);
+        __FALLTHROUGH;
     // For these MSRs, we intentionally inject a general protection fault to
     // indicate to the guest that they are unsupported.
     case X86_MSR_IA32_SYSENTER_CS:

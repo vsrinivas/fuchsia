@@ -238,7 +238,7 @@ zx_status_t Device::DdkIoctl(uint32_t op, const void* in, size_t in_len, void* o
             mod.vslice_start[i] = original->vslice_start[i] + Volume::kReservedSlices;
         }
         in = &mod;
-        // fall-through
+        __FALLTHROUGH;
     }
 
     default:

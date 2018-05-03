@@ -128,6 +128,7 @@ int main(int argc, const char** argv) {
             }
         case 0:
             fprintf(stderr, "ping: Timed out after one second\n");
+            __FALLTHROUGH;
         default:
             r = -1;
         }

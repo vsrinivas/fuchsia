@@ -783,7 +783,7 @@ zx_status_t Blobfs::PurgeBlob(VnodeBlob* vn) {
     case kBlobStateReadable: {
         // A readable blob should only be purged if it has been unlinked
         ZX_ASSERT(vn->DeletionQueued());
-        // Fall-through
+        __FALLTHROUGH;
     }
     case kBlobStateDataWrite:
     case kBlobStateError: {

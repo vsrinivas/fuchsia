@@ -150,6 +150,7 @@ GLOBAL_COMPILEFLAGS += -nostdlibinc
 GLOBAL_COMPILEFLAGS += -no-canonical-prefixes
 GLOBAL_COMPILEFLAGS += -Wno-address-of-packed-member
 GLOBAL_COMPILEFLAGS += -Wthread-safety
+GLOBAL_COMPILEFLAGS += -Wimplicit-fallthrough
 else
 GLOBAL_COMPILEFLAGS += -Wno-nonnull-compare
 endif

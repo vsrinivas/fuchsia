@@ -65,6 +65,16 @@
 #define __THREAD __thread
 #define __offsetof(type, field) __builtin_offsetof(type, field)
 
+#if defined(__cplusplus) && __cplusplus >= 201703L
+#define __FALLTHROUGH [[fallthrough]]
+#elif defined(__cplusplus) && defined(__clang__)
+#define __FALLTHROUGH [[clang::fallthrough]]
+#elif __GNUC__ >= 7
+#define __FALLTHROUGH __attribute__((__fallthrough__))
+#else
+#define __FALLTHROUGH do {} while (0)
+#endif
+
 // Publicly exposed thread annotation macros. These have a long and ugly name to
 // minimize the chance of collision with consumers of Zircon's public headers.
 #define __TA_CAPABILITY(x) __THREAD_ANNOTATION(__capability__(x))

@@ -77,7 +77,7 @@ zx_status_t sys_socket_write(zx_handle_t handle, uint32_t options,
     case ZX_SOCKET_SHUTDOWN_READ | ZX_SOCKET_SHUTDOWN_WRITE:
         if (size == 0)
             return socket->Shutdown(options & ZX_SOCKET_SHUTDOWN_MASK);
-        // fallthrough
+        __FALLTHROUGH;
     default:
         return ZX_ERR_INVALID_ARGS;
     }

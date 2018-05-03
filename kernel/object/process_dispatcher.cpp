@@ -494,7 +494,7 @@ zx_status_t ProcessDispatcher::GetInfo(zx_info_process_t* info) {
     case State::DYING:
         info->return_code = retcode;
         info->exited = true;
-        /* fallthrough */
+        __FALLTHROUGH;
     case State::RUNNING:
         info->started = true;
         break;

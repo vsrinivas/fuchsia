@@ -721,15 +721,19 @@ static int64_t parse_size(char *s) {
     case 'p':
     case 'P':
       v *= 1024;
+      __FALLTHROUGH;
     case 't':
     case 'T':
       v *= 1024;
+      __FALLTHROUGH;
     case 'g':
     case 'G':
       v *= 1024;
+      __FALLTHROUGH;
     case 'm':
     case 'M':
       v *= 1024;
+      __FALLTHROUGH;
     case 'k':
     case 'K':
       v *= 1024;

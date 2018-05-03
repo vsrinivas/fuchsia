@@ -164,6 +164,7 @@ static zx_status_t vmofile_misc(fdio_t* io, uint32_t op, int64_t off, uint32_t m
             if (flags) {
                 *flags = 0;
             }
+            return ZX_OK;
         }
         case F_SETFL:
             return ZX_OK;

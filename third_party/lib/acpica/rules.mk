@@ -4,13 +4,24 @@ MODULE := $(LOCAL_DIR)
 
 KERNEL_INCLUDES += $(LOCAL_DIR)/source/include
 
-# Disable these two warnings to prevent ACPICA from cluttering the
-# build output
+# Disable warnings we won't fix in third-party code.
+MODULE_CFLAGS += -Wno-implicit-fallthrough
 ifeq ($(call TOBOOL,$(USE_CLANG)),false)
-MODULE_CFLAGS += -Wno-discarded-qualifiers -Wno-format-signedness
+MODULE_CFLAGS += \
+    -Wno-discarded-qualifiers \
+    -Wno-format-signedness
 else
-MODULE_CFLAGS += -Wno-incompatible-pointer-types-discards-qualifiers -Wno-null-pointer-arithmetic
+MODULE_CFLAGS += \
+    -Wno-incompatible-pointer-types-discards-qualifiers \
+    -Wno-null-pointer-arithmetic
+MODULE_CPPFLAGS += -Wno-atomic-alignment
 endif
+# We need to specify -fno-strict-aliasing, since ACPICA has a habit of
+# violating strict aliasing rules in some of its macros.  Rewriting this
+# code would increase the maintenance cost of bringing in the latest
+# upstream ACPICA, so instead we mitigate the problem with a compile-time
+# flag.  We take the more conservative approach of disabling
+# strict-aliasing-based optimizations, rather than disabling warnings.
 MODULE_CFLAGS += -fno-strict-aliasing
 
 MODULE_COMPILEFLAGS += -I$(LOCAL_DIR)/source/include/acpica

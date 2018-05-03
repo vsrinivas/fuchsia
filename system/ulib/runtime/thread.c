@@ -231,6 +231,7 @@ zx_status_t zxr_thread_detach(zxr_thread_t* thread) {
                     return ret;
                 }
                 // Fall-through to DONE case.
+                __FALLTHROUGH;
             }
             case DONE:
                 return ZX_ERR_BAD_STATE;
