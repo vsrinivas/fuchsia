@@ -20,12 +20,10 @@ PciInterruptDispatcher::~PciInterruptDispatcher() {
 }
 
 pcie_irq_handler_retval_t PciInterruptDispatcher::IrqThunk(const PcieDevice& dev,
-                                                           uint irq_id,
-                                                           void* ctx) {
+                                                           uint irq_id, void* ctx) {
     DEBUG_ASSERT(ctx);
-    PciInterruptDispatcher* thiz
-            = reinterpret_cast<PciInterruptDispatcher *>(ctx);
-    thiz->InterruptHandler(true);
+    auto thiz = reinterpret_cast<PciInterruptDispatcher*>(ctx);
+    thiz->InterruptHandler();
     return PCIE_IRQRET_MASK;
 }
 
@@ -45,16 +43,17 @@ zx_status_t PciInterruptDispatcher::Create(
 
     fbl::AllocChecker ac;
     // Attempt to allocate a new dispatcher wrapper.
-    auto interrupt_dispatcher = new (&ac) PciInterruptDispatcher(device, maskable);
+    auto interrupt_dispatcher = new (&ac) PciInterruptDispatcher(device, irq_id, maskable);
     fbl::RefPtr<Dispatcher> dispatcher = fbl::AdoptRef<Dispatcher>(interrupt_dispatcher);
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
     fbl::AutoLock lock(interrupt_dispatcher->get_lock());
 
+    interrupt_dispatcher->set_flags(INTERRUPT_UNMASK_PREWAIT);
+
     // Register the interrupt
-    zx_status_t status = interrupt_dispatcher->RegisterInterruptHandler_HelperLocked(irq_id,
-                                                                   INTERRUPT_UNMASK_PREWAIT);
+    zx_status_t status = interrupt_dispatcher->RegisterInterruptHandler();
     if (status != ZX_OK)
         return status;
 
@@ -69,22 +68,22 @@ zx_status_t PciInterruptDispatcher::Create(
     return ZX_OK;
 }
 
-void PciInterruptDispatcher::MaskInterrupt(uint32_t vector) {
+void PciInterruptDispatcher::MaskInterrupt() {
     if (maskable_)
-        device_->MaskIrq(vector);
+        device_->MaskIrq(vector_);
 }
 
-void PciInterruptDispatcher::UnmaskInterrupt(uint32_t vector) {
+void PciInterruptDispatcher::UnmaskInterrupt() {
     if (maskable_)
-        device_->UnmaskIrq(vector);
+        device_->UnmaskIrq(vector_);
 }
 
-zx_status_t PciInterruptDispatcher::RegisterInterruptHandler(uint32_t vector, void* data) {
-    return device_->RegisterIrqHandler(vector, IrqThunk, data);
+zx_status_t PciInterruptDispatcher::RegisterInterruptHandler() {
+    return device_->RegisterIrqHandler(vector_, IrqThunk, this);
 }
 
-void PciInterruptDispatcher::UnregisterInterruptHandler(uint32_t vector) {
-    device_->RegisterIrqHandler(vector, nullptr, nullptr);
+void PciInterruptDispatcher::UnregisterInterruptHandler() {
+    device_->RegisterIrqHandler(vector_, nullptr, nullptr);
 }
 
 #endif  // if WITH_DEV_PCIE

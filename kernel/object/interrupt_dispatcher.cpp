@@ -16,22 +16,6 @@ InterruptDispatcher::InterruptDispatcher()
     event_init(&event_, false, EVENT_FLAG_AUTOUNSIGNAL);
 }
 
-zx_status_t InterruptDispatcher::RegisterInterruptHandler_HelperLocked(uint32_t vector,
-                                                                       uint32_t flags) {
-    bool is_virtual = !!(flags & INTERRUPT_VIRTUAL);
-
-    flags_ = flags;
-    vector_ = static_cast<uint16_t>(vector);
-
-    if (!is_virtual) {
-        zx_status_t status = RegisterInterruptHandler(vector, this);
-        if (status != ZX_OK) {
-            return status;
-        }
-    }
-    return ZX_OK;
-}
-
 zx_status_t InterruptDispatcher::WaitForInterrupt(zx_time_t* out_timestamp) {
     while (true) {
         {
@@ -49,7 +33,7 @@ zx_status_t InterruptDispatcher::WaitForInterrupt(zx_time_t* out_timestamp) {
                 return event_unsignal(&event_);
             case InterruptState::NEEDACK:
                 if (flags_ & INTERRUPT_UNMASK_PREWAIT) {
-                    UnmaskInterrupt(vector_);
+                    UnmaskInterrupt();
                 }
                 break;
             case InterruptState::IDLE:
@@ -70,13 +54,13 @@ zx_status_t InterruptDispatcher::WaitForInterrupt(zx_time_t* out_timestamp) {
 bool InterruptDispatcher::SendPacketLocked(zx_time_t timestamp) {
     bool status = port_dispatcher_->QueueInterruptPacket(&port_packet_, timestamp);
     if (flags_ & INTERRUPT_MASK_POSTWAIT) {
-        MaskInterrupt(vector_);
+        MaskInterrupt();
     }
     timestamp_ = 0;
     return status;
 }
 
-zx_status_t InterruptDispatcher::UserSignal(zx_time_t timestamp) {
+zx_status_t InterruptDispatcher::Trigger(zx_time_t timestamp) {
 
     // TODO(braval): Currently @johngro's driver uses zx_interrupt_trigger
     // to wake up a thread waiting on a physical interrupt
@@ -111,8 +95,9 @@ zx_status_t InterruptDispatcher::UserSignal(zx_time_t timestamp) {
     return ZX_OK;
 }
 
-void InterruptDispatcher::InterruptHandler(bool pci) {
+void InterruptDispatcher::InterruptHandler() {
     AutoSpinLock guard(&spinlock_);
+
     // only record timestamp if this is the first IRQ since we started waiting
     if (!timestamp_) {
         timestamp_ = current_time();
@@ -120,10 +105,6 @@ void InterruptDispatcher::InterruptHandler(bool pci) {
     if (state_ == InterruptState::NEEDACK && port_dispatcher_) {
         return;
     }
-
-    if (!pci && (flags_ & INTERRUPT_MASK_POSTWAIT))
-        MaskInterrupt(vector_);
-
     if (port_dispatcher_) {
         SendPacketLocked(timestamp_);
         state_ = InterruptState::NEEDACK;
@@ -136,10 +117,9 @@ void InterruptDispatcher::InterruptHandler(bool pci) {
 zx_status_t InterruptDispatcher::Destroy() {
     AutoSpinLock guard(&spinlock_);
 
-    if (!(flags_ & INTERRUPT_VIRTUAL)) {
-        MaskInterrupt(vector_);
-        UnregisterInterruptHandler(vector_);
-    }
+    MaskInterrupt();
+    UnregisterInterruptHandler();
+
     if (port_dispatcher_) {
         bool packet_was_in_queue = port_dispatcher_->RemoveInterruptPacket(&port_packet_);
         if ((state_ == InterruptState::NEEDACK) &&
@@ -188,7 +168,7 @@ zx_status_t InterruptDispatcher::Ack() {
     }
     if (state_ == InterruptState::NEEDACK) {
         if (flags_ & INTERRUPT_UNMASK_PREWAIT) {
-            UnmaskInterrupt(vector_);
+            UnmaskInterrupt();
         }
         if (timestamp_) {
             if (!SendPacketLocked(timestamp_)) {

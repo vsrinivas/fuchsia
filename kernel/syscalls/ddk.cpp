@@ -26,6 +26,7 @@
 #include <object/handle.h>
 #include <object/interrupt_dispatcher.h>
 #include <object/interrupt_event_dispatcher.h>
+#include <object/virtual_interrupt_dispatcher.h>
 #include <object/iommu_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/resources.h>
@@ -445,7 +446,12 @@ zx_status_t sys_interrupt_create(zx_handle_t src_obj, uint32_t src_num,
 
     fbl::RefPtr<Dispatcher> dispatcher;
     zx_rights_t rights;
-    zx_status_t result = InterruptEventDispatcher::Create(&dispatcher, &rights, src_num, options);
+    zx_status_t result;
+    if (options & ZX_INTERRUPT_VIRTUAL) {
+        result = VirtualInterruptDispatcher::Create(&dispatcher, &rights, options);
+    } else {
+        result = InterruptEventDispatcher::Create(&dispatcher, &rights, src_num, options);
+    }
     if (result != ZX_OK)
         return result;
 
@@ -535,7 +541,7 @@ zx_status_t sys_interrupt_trigger(zx_handle_t handle,
     if (status != ZX_OK)
         return status;
 
-    return interrupt->UserSignal(timestamp);
+    return interrupt->Trigger(timestamp);
 }
 
 zx_status_t sys_smc_call(zx_handle_t rsrc_handle,
