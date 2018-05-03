@@ -9,9 +9,9 @@ import (
 	"os"
 
 	"app/context"
-	"fidl/bindings"
 
 	"syscall/zx"
+	"syscall/zx/fidl"
 
 	echo2 "fidl/fidl/examples/echo"
 )
@@ -36,7 +36,7 @@ func main() {
 		return err
 	})
 	c.Serve()
-	go bindings.Serve()
+	go fidl.Serve()
 
 	select {}
 }

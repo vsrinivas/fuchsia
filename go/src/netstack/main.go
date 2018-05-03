@@ -13,8 +13,9 @@ import (
 	"netstack/link/eth"
 	"netstack/watcher"
 
-	"fidl/bindings"
 	"fidl/fuchsia/devicesettings"
+
+	"syscall/zx/fidl"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/arp"
@@ -94,8 +95,8 @@ func main() {
 	// this allows two outstanding requests at a time.
 	// TODO(tkilbourn): revisit this and tune the number of serving threads.
 	ctx.Serve()
-	go bindings.Serve()
-	go bindings.Serve()
+	go fidl.Serve()
+	go fidl.Serve()
 
 	if *pprofServer {
 		go func() {

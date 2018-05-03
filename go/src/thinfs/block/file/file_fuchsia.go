@@ -29,8 +29,7 @@ func fallocate(fd uintptr, off, len int64) error {
 
 func ioctlDeviceGetTopoPath(fd uintptr) string {
 	m := syscall.FDIOForFD(int(fd))
-	path := make([]byte, 1024)
-	_, err := m.Ioctl(fdio.IoctlDeviceGetTopoPath, nil, path)
+	path, _, err := m.Ioctl(fdio.IoctlDeviceGetTopoPath, 1024, nil, nil)
 
 	if err == nil {
 		return string(path)

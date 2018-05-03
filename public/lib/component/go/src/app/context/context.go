@@ -27,7 +27,7 @@ type Context struct {
 	OutgoingService *svcns.Namespace
 	Launcher        *sys.LauncherInterface
 	appServices     zx.Handle
-	services        bindings.BindingSet
+	services        sys.ServiceProviderService
 }
 
 // TODO: define these in syscall/zx/mxruntime
@@ -75,7 +75,7 @@ func New(serviceRoot, directoryRequest, appServices zx.Handle) *Context {
 	c.ConnectToEnvService(r2)
 
 	if directoryRequest.IsValid() {
-		c.OutgoingService.ServeDirectory(directoryRequest)
+		c.OutgoingService.ServeDirectory(zx.Channel(directoryRequest))
 	}
 
 	return c
@@ -87,13 +87,9 @@ func (c *Context) GetConnector() *Connector {
 
 func (c *Context) Serve() {
 	if c.appServices.IsValid() {
-		stub := sys.ServiceProviderStub{Impl: c.OutgoingService}
-		c.services.Add(&stub, zx.Channel(c.appServices), nil)
-		go bindings.Serve()
+		c.services.Add(c.OutgoingService, zx.Channel(c.appServices), nil)
 	}
-	if c.OutgoingService.Dispatcher != nil {
-		go c.OutgoingService.Dispatcher.Serve()
-	}
+	go bindings.Serve()
 }
 
 func (c *Context) ConnectToEnvService(r bindings.ServiceRequest) {

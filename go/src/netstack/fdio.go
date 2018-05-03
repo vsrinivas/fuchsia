@@ -482,7 +482,7 @@ func (ios *iostate) loopControl(s *socketServer, cookie int64) {
 				return
 			}
 		default:
-			if err == fdio.ErrDisconnectNoCallback {
+			if err == zxsocket.ErrDisconnectNoCallback {
 				// We received OpClose.
 				synthesizeClose = false
 				return

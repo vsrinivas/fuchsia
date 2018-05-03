@@ -5,47 +5,34 @@
 package svcns
 
 import (
-	"fmt"
-
 	"svc/svcfs"
-
 	"syscall/zx"
-	"syscall/zx/fdio"
 )
 
 type Binder func(zx.Channel) error
 
 type Namespace struct {
-	binders    map[string]Binder
-	Dispatcher *fdio.Dispatcher
+	fs      svcfs.Namespace
+	binders map[string]Binder
 }
 
 func New() *Namespace {
-	return &Namespace{binders: make(map[string]Binder)}
+	ns := Namespace{binders: make(map[string]Binder)}
+	ns.fs.Provider = func(name string, c zx.Channel) {
+		ns.ConnectToService(name, c)
+	}
+	return &ns
 }
 
-func (sn *Namespace) ServeDirectory(h zx.Handle) error {
-	d, err := fdio.NewDispatcher(fdio.Handler)
-	if err != nil {
-		panic(fmt.Sprintf("context.New: %v", err))
-	}
-
-	n := &svcfs.Namespace{
-		Provider: func(name string, h zx.Handle) {
-			sn.ConnectToService(name, zx.Channel(h))
-		},
-		Dispatcher: d,
-	}
-
-	if err := n.Serve(h); err != nil {
-		h.Close()
+func (sn *Namespace) ServeDirectory(c zx.Channel) error {
+	if err := sn.fs.Serve(c); err != nil {
+		c.Close()
 		return err
 	}
-
-	sn.Dispatcher = d
 	return nil
 }
 
+// ConnectToService implements component.ServiceProvider for Namespace.
 func (sn *Namespace) ConnectToService(name string, h zx.Channel) error {
 	binder, ok := sn.binders[name]
 	if !ok {

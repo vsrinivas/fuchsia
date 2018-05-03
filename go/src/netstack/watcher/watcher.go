@@ -110,8 +110,8 @@ func ioctlVFSWatchDir(m fdio.FDIO) (h zx.Handle, err error) {
 	if err != nil {
 		return 0, errorString("IOCTL_VFS_WATCH_DIR: " + err.Error())
 	}
-	msg := fdio.VFSWatchDirRequest{H: zx.Handle(c1), Mask: fdio.VFSWatchMaskAdded, Options: 0}
-	_, err = m.Ioctl(fdio.IoctlVFSWatchDir, (*[unsafe.Sizeof(fdio.VFSWatchDirRequest{})]byte)(unsafe.Pointer(&msg))[:], nil)
+	msg := fdio.VFSWatchDirRequest{Mask: fdio.VFSWatchMaskAdded, Options: 0}
+	_, _, err = m.Ioctl(fdio.IoctlVFSWatchDir, 0, (*[unsafe.Sizeof(fdio.VFSWatchDirRequest{})]byte)(unsafe.Pointer(&msg))[:], []zx.Handle{zx.Handle(c1)})
 	if err != nil {
 		return 0, errorString("IOCTL_VFS_WATCH_DIR: " + err.Error())
 	}

@@ -11,11 +11,12 @@ import (
 
 	"syscall/zx"
 	"syscall/zx/fdio"
+	"syscall/zx/io"
 )
 
 // A Provider holds a zx.Channel that references a directory that contains services.
 type Provider struct {
-	directory zx.Channel
+	directory *io.DirectoryInterface
 }
 
 // NewProvider returns a new Provider object.
@@ -27,30 +28,29 @@ func NewProvider() *Provider {
 // in the Provider object. If another channel was already held in the Provider,
 // it will be closed.
 func (p *Provider) NewRequest() (zx.Channel, error) {
-	c0, c1, err := zx.NewChannel(0)
+	req, pxy, err := io.NewDirectoryInterfaceRequest()
 	if err != nil {
 		return zx.Channel(zx.HandleInvalid), err
 	}
-	if p.directory.Handle().IsValid() {
+	if p.directory != nil && p.directory.Handle().IsValid() {
 		p.directory.Close()
 	}
-	p.directory = c1
-	return c0, nil
+	p.directory = pxy
+	return (bindings.InterfaceRequest(req)).Channel, nil
 }
 
-// Bind stores a channel in the Provider. If another channel was already held in
+// Bind stores an io.DirectoryInterface in the Provider. If another channel was already held in
 // the Provider, it will be closed.
-func (p *Provider) Bind(dir *zx.Channel) {
-	if p.directory.Handle().IsValid() {
+func (p *Provider) Bind(dir *io.DirectoryInterface) {
+	if p.directory != nil && p.directory.Handle().IsValid() {
 		p.directory.Close()
 	}
-	p.directory = *dir
-	*dir = zx.Channel(zx.HandleInvalid)
+	p.directory = dir
 }
 
 // Close closes the channel held in the Provider object.
 func (p *Provider) Close() {
-	if p.directory.Handle().IsValid() {
+	if p.directory != nil && p.directory.Handle().IsValid() {
 		p.directory.Close()
 	}
 }

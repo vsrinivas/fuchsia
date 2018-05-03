@@ -16,7 +16,9 @@ import (
 	"fmt"
 	"log"
 	"sync"
+
 	"syscall/zx"
+	"syscall/zx/fidl"
 )
 
 const debug = false
@@ -192,8 +194,8 @@ func main() {
 		return err
 	})
 	// Create 2 goroutines to handle up to 2 blocking commands simultaneously
-	go bindings.Serve()
-	go bindings.Serve()
+	go fidl.Serve()
+	go fidl.Serve()
 	ctx.Serve()
 
 	ws.readConfigFile()

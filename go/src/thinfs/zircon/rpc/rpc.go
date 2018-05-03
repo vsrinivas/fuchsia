@@ -9,7 +9,6 @@ package rpc
 import (
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -19,21 +18,21 @@ import (
 
 	"syscall/zx"
 	"syscall/zx/fdio"
+	"syscall/zx/fidl"
+	"syscall/zx/io"
 )
 
-type directoryWrapper struct {
-	d       fs.Directory
-	dirents []fs.Dirent
-	reading bool
-	e       zx.Event
-}
+const (
+	statusFlags = uint32(syscall.FsFlagAppend)
+	rightFlags  = uint32(syscall.FsRightReadable | syscall.FsRightWritable | syscall.FsFlagPath)
+)
 
 type ThinVFS struct {
 	sync.Mutex
-	dispatcher *fdio.Dispatcher
-	fs         fs.FileSystem
-	files      map[int64]interface{}
-	nextCookie int64
+	DirectoryService io.DirectoryService
+	dirs             map[fidl.BindingKey]*directoryWrapper
+	FileService      io.FileService
+	fs               fs.FileSystem
 }
 
 type VFSQueryInfo struct {
@@ -46,67 +45,326 @@ type VFSQueryInfo struct {
 // NewServer creates a new ThinVFS server. Serve must be called to begin servicing the filesystem.
 func NewServer(filesys fs.FileSystem, h zx.Handle) (*ThinVFS, error) {
 	vfs := &ThinVFS{
-		files: make(map[int64]interface{}),
-		fs:    filesys,
+		dirs: make(map[fidl.BindingKey]*directoryWrapper),
+		fs:   filesys,
 	}
-	d, err := fdio.NewDispatcher(fdio.Handler)
-	if err != nil {
-		println("Failed to create dispatcher")
-		return vfs, err
-	}
-
-	var serverHandler fdio.ServerHandler = vfs.fdioServer
-	cookie := vfs.allocateCookie(&directoryWrapper{d: filesys.RootDirectory()})
-	if err := d.AddHandler(h, serverHandler, int64(cookie)); err != nil {
+	ireq := io.ObjectInterfaceRequest(fidl.InterfaceRequest{Channel: zx.Channel(h)})
+	if _, err := vfs.addDirectory(filesys.RootDirectory(), ireq); err != nil {
 		h.Close()
-		return vfs, err
+		return nil, err
 	}
-	vfs.dispatcher = d
-
-	// We're ready to serve
+	// Signal that we're ready to serve.
 	if err := h.SignalPeer(0, zx.SignalUser0); err != nil {
 		h.Close()
-		return vfs, err
+		return nil, err
 	}
-
 	return vfs, nil
 }
 
-// Serve begins dispatching rio requests. Serve blocks, so callers will normally want to run it in a new goroutine.
+// Serve begins dispatching fidl requests. Serve blocks, so callers will normally want to run it in a new goroutine.
 func (vfs *ThinVFS) Serve() {
-	vfs.dispatcher.Serve()
+	fidl.Serve()
 }
 
-// AddHandler uses the given handle and cookie as the primary mechanism to communicate with the VFS
-// object, and returns any additional handles required to interact with the object.  (at the moment,
-// no additional handles are supported).
-func (vfs *ThinVFS) AddHandler(h zx.Handle, obj interface{}) error {
-	var serverHandler fdio.ServerHandler = vfs.fdioServer
-	cookie := vfs.allocateCookie(obj)
-	if err := vfs.dispatcher.AddHandler(h, serverHandler, int64(cookie)); err != nil {
-		vfs.freeCookie(cookie)
-		return err
+func (vfs *ThinVFS) addDirectory(dir fs.Directory, object io.ObjectInterfaceRequest) (fidl.BindingKey, error) {
+	d := &directoryWrapper{vfs: vfs, dir: dir}
+
+	vfs.Lock()
+	defer vfs.Unlock()
+	tok, err := d.vfs.DirectoryService.Add(
+		d,
+		(fidl.InterfaceRequest(object)).Channel,
+		nil,
+	)
+	if err != nil {
+		return 0, err
+	}
+	d.token = tok
+	vfs.dirs[tok] = d
+	return tok, nil
+}
+
+func (vfs *ThinVFS) addFile(file fs.File, object io.ObjectInterfaceRequest) (fidl.BindingKey, error) {
+	f := &fileWrapper{vfs: vfs, file: file}
+
+	vfs.Lock()
+	defer vfs.Unlock()
+	tok, err := vfs.FileService.Add(
+		f,
+		(fidl.InterfaceRequest(object)).Channel,
+		nil,
+	)
+	if err != nil {
+		return 0, err
+	}
+	f.token = tok
+	return tok, nil
+}
+
+type directoryWrapper struct {
+	vfs     *ThinVFS
+	token   fidl.BindingKey
+	dir     fs.Directory
+	dirents []fs.Dirent
+	reading bool
+	e       zx.Event
+}
+
+func (d *directoryWrapper) Clone(flags uint32, object io.ObjectInterfaceRequest) error {
+	newDir, err := d.dir.Dup()
+	zxErr := errorToZx(err)
+	if zxErr == zx.ErrOk {
+		_, err := d.vfs.addDirectory(newDir, object)
+		if err != nil {
+			return err
+		}
+	}
+	// Only send an OnOpen message if OpenFlagDescribe is set.
+	if flags&io.KOpenFlagDescribe != 0 {
+		c := fidl.InterfaceRequest(object).Channel
+		pxy := io.ObjectEventProxy(fidl.Proxy{Channel: c})
+		info := &io.ObjectInfo{
+			ObjectInfoTag: io.ObjectInfoDirectory,
+		}
+		return pxy.OnOpen(zxErr, info)
+	}
+	return nil
+}
+
+func (d *directoryWrapper) Close() (zx.Status, error) {
+	err := d.dir.Close()
+
+	d.vfs.Lock()
+	defer d.vfs.Unlock()
+	if zx.Handle(d.e) != zx.HandleInvalid {
+		d.e.Handle().SetCookie(zx.ProcHandle, 0)
+	}
+	d.vfs.DirectoryService.Remove(d.token)
+	delete(d.vfs.dirs, d.token)
+
+	return errorToZx(err), nil
+}
+
+func (d *directoryWrapper) ListInterfaces() ([]string, error) {
+	return nil, nil
+}
+
+func (d *directoryWrapper) Bind(iface string) error {
+	return nil
+}
+
+func (d *directoryWrapper) Describe() (io.ObjectInfo, error) {
+	return io.ObjectInfo{
+		ObjectInfoTag: io.ObjectInfoDirectory,
+	}, nil
+}
+
+func (d *directoryWrapper) Sync() (zx.Status, error) {
+	return errorToZx(d.dir.Sync()), nil
+}
+
+func (d *directoryWrapper) GetAttr() (zx.Status, io.NodeAttributes, error) {
+	size, _, mtime, err := d.dir.Stat()
+	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
+		return zxErr, io.NodeAttributes{}, nil
+	}
+	return zx.ErrOk, io.NodeAttributes{
+		Mode:             syscall.S_IFDIR | 0755,
+		Id:               1,
+		ContentSize:      uint64(size),
+		StorageSize:      uint64(size),
+		LinkCount:        1,
+		CreationTime:     uint64(mtime.Unix()),
+		ModificationTime: uint64(mtime.Unix()),
+	}, nil
+}
+
+func (d *directoryWrapper) SetAttr(flags uint32, attr io.NodeAttributes) (zx.Status, error) {
+	t := time.Unix(0, int64(attr.ModificationTime))
+	return errorToZx(d.dir.Touch(t, t)), nil
+}
+
+func (d *directoryWrapper) Ioctl(opcode uint32, maxOut uint64, handles []zx.Handle, in []uint8) (zx.Status, []zx.Handle, []uint8, error) {
+	switch opcode {
+	case fdio.IoctlVFSGetTokenFS:
+		// Legacy compatibility. Just call into GetToken directly.
+		status, handle, err := d.GetToken()
+		return status, []zx.Handle{handle}, nil, err
+	case fdio.IoctlVFSUnmountFS:
+		// Shut down filesystem
+		err := d.vfs.fs.Close()
+		if err != nil {
+			fmt.Printf("error unmounting filesystem: %#v\n", err)
+		}
+		// While normally this would explode as the bindings will fail to
+		// send a response, we exit immediately after, so it's OK.
+		d.vfs.FileService.Close()
+		d.vfs.DirectoryService.Close()
+		os.Exit(0)
+	case fdio.IoctlVFSQueryFS:
+		totalBytes := uint64(d.vfs.fs.Size())
+		usedBytes := totalBytes - uint64(d.vfs.fs.FreeSize())
+
+		queryInfo := VFSQueryInfo{
+			TotalBytes: totalBytes,
+			UsedBytes:  usedBytes,
+			TotalNodes: 0,
+			UsedNodes:  0,
+		}
+
+		name := append([]byte(d.vfs.fs.Type()), 0)
+
+		const infoSize = uint32(unsafe.Sizeof(queryInfo))
+		totalSize := infoSize + uint32(len(name))
+		if uint64(totalSize) > maxOut {
+			return zx.ErrBufferTooSmall, nil, nil, nil
+		}
+
+		buf := make([]byte, totalSize)
+		copy(buf[0:], (*[infoSize]byte)(unsafe.Pointer(&queryInfo))[:])
+		copy(buf[infoSize:], name)
+
+		return zx.ErrOk, nil, buf, nil
+	case fdio.IoctlVFSGetDevicePath:
+		return zx.ErrOk, nil, []byte(d.vfs.fs.DevicePath()), nil
+	}
+	return zx.ErrNotSupported, nil, nil, nil
+}
+
+func (d *directoryWrapper) Open(inFlags, inMode uint32, path string, object io.ObjectInterfaceRequest) error {
+	flags := openFlagsFromFIDL(inFlags, inMode)
+	if flags.Path() {
+		flags &= fs.OpenFlagPath | fs.OpenFlagDirectory | fs.OpenFlagDescribe
+	}
+	fsFile, fsDir, fsRemote, err := d.dir.Open(path, flags)
+
+	// Handle the case of a remote, and just forward.
+	if fsRemote != nil {
+		fwd := ((*io.DirectoryInterface)(&fidl.Proxy{Channel: fsRemote.Channel}))
+		flags, mode := openFlagsToFIDL(fsRemote.Flags)
+		if inFlags&io.KOpenFlagDescribe != 0 {
+			flags |= io.KOpenFlagDescribe
+		}
+		return fwd.Open(flags, mode, fsRemote.Path, object)
+	}
+
+	// Handle the file and directory cases. They're mostly the same, except where noted.
+	zxErr := errorToZx(err)
+	if zxErr == zx.ErrOk {
+		var err error
+		if fsFile != nil {
+			_, err = d.vfs.addFile(fsFile, object)
+		} else {
+			_, err = d.vfs.addDirectory(fsDir, object)
+		}
+		if err != nil {
+			return err
+		}
+	} else {
+		// We got an error, so we want to make sure we close the channel.
+		// However, if we were asked to Describe, we might still want to notify
+		// about the status, so just close on exit.
+		c := fidl.InterfaceRequest(object).Channel
+		defer c.Close()
+	}
+
+	// Only send an OnOpen message if OpenFlagDescribe is set.
+	if inFlags&io.KOpenFlagDescribe != 0 {
+		var info *io.ObjectInfo
+		if fsFile != nil {
+			info = &io.ObjectInfo{
+				ObjectInfoTag: io.ObjectInfoFile,
+				File: io.FileObject{
+					Event: zx.Event(zx.HandleInvalid),
+				},
+			}
+		} else {
+			info = &io.ObjectInfo{
+				ObjectInfoTag: io.ObjectInfoDirectory,
+			}
+		}
+		c := fidl.InterfaceRequest(object).Channel
+		pxy := io.ObjectEventProxy(fidl.Proxy{Channel: c})
+		return pxy.OnOpen(zxErr, info)
 	}
 
 	return nil
 }
 
-func (dw *directoryWrapper) GetToken(cookie int64) (zx.Handle, error) {
-	if dw.e != 0 {
-		if e, err := dw.e.Duplicate(zx.RightSameRights); err != nil {
-			return 0, err
+func (d *directoryWrapper) Unlink(path string) (zx.Status, error) {
+	return errorToZx(d.dir.Unlink(path)), nil
+}
+
+func (d *directoryWrapper) ReadDirents(maxOut uint64) (zx.Status, []byte, error) {
+	if maxOut > io.KMaxBuf {
+		return zx.ErrInvalidArgs, nil, nil
+	}
+	if d.reading && len(d.dirents) == 0 {
+		d.reading = false
+		return zx.ErrOk, nil, nil
+	}
+	if !d.reading {
+		dirents, err := d.dir.Read()
+		if zxErr := errorToZx(err); zxErr != zx.ErrOk {
+			return zxErr, nil, nil
+		}
+		d.reading = true
+		d.dirents = dirents
+	}
+	bytes := make([]byte, maxOut)
+	var written int
+	var i int
+	for i = range d.dirents {
+		dirent := d.dirents[i]
+		sysDirent := syscall.Dirent{}
+		// Include the null character in the dirent name (BEFORE alignment)
+		name := append([]byte(dirent.GetName()), 0)
+		// The dirent size is rounded up to four bytes
+		align := func(a int) int {
+			return (a + 3) &^ 3
+		}
+		size := align(len(name)) + 8
+		sysDirent.Size = uint32(size)
+		sysDirent.Type = (fileTypeToFIDL(dirent.GetType()) >> 12) & 15
+		if uint64(written+size) > maxOut {
+			break
+		}
+		copy(bytes[written:], (*(*[8]byte)(unsafe.Pointer(&sysDirent)))[:])
+		copy(bytes[written+8:], name)
+		written += size
+	}
+	if i == len(d.dirents)-1 { // We finished reading the directory. Next readdir will be empty.
+		d.dirents = nil
+	} else { // Partial read
+		d.dirents = d.dirents[i:]
+	}
+	d.reading = true
+	return zx.ErrOk, bytes[:written], nil
+}
+
+func (d *directoryWrapper) Rewind() (zx.Status, error) {
+	d.reading = false
+	return zx.ErrOk, nil
+}
+
+func (d *directoryWrapper) GetToken() (zx.Status, zx.Handle, error) {
+	d.vfs.Lock()
+	defer d.vfs.Unlock()
+	if d.e != 0 {
+		if e, err := d.e.Duplicate(zx.RightSameRights); err != nil {
+			return errorToZx(err), zx.HandleInvalid, nil
 		} else {
-			return zx.Handle(e), nil
+			return zx.ErrOk, zx.Handle(e), nil
 		}
 	}
 
 	// Create a new event which may later be used to refer to this object
 	e0, err := zx.NewEvent(0)
 	if err != nil {
-		return 0, err
+		return errorToZx(err), zx.HandleInvalid, nil
 	}
 
-	dw.e = e0
+	d.e = e0
 
 	// One handle to the event returns to the client, one end is kept on the
 	// server (and is accessible within the cookie).
@@ -114,22 +372,191 @@ func (dw *directoryWrapper) GetToken(cookie int64) (zx.Handle, error) {
 	if e1, err = e0.Duplicate(zx.RightSameRights); err != nil {
 		goto fail_event_created
 	}
-	if err := e0.Handle().SetCookie(zx.ProcHandle, uint64(cookie)); err != nil {
+	if err := e0.Handle().SetCookie(zx.ProcHandle, uint64(d.token)); err != nil {
 		goto fail_event_duplicated
 	}
-	return zx.Handle(e1), nil
+	return zx.ErrOk, zx.Handle(e1), nil
 
 fail_event_duplicated:
 	e1.Close()
 fail_event_created:
 	e0.Close()
-	dw.e = 0
-	return 0, err
+	d.e = zx.Event(zx.HandleInvalid)
+	return errorToZx(err), zx.HandleInvalid, nil
+}
+
+func (d *directoryWrapper) Rename(src string, token zx.Handle, dst string) (zx.Status, error) {
+	if len(src) < 1 || len(dst) < 1 {
+		return zx.ErrInvalidArgs, nil
+	}
+	d.vfs.Lock()
+	defer d.vfs.Unlock()
+	cookie, err := token.GetCookie(zx.ProcHandle)
+	if err != nil {
+		return zx.ErrInvalidArgs, nil
+	}
+	dir, ok := d.vfs.dirs[fidl.BindingKey(cookie)]
+	if !ok {
+		return zx.ErrInvalidArgs, nil
+	}
+	return errorToZx(d.dir.Rename(dir.dir, src, dst)), nil
+}
+
+func (d *directoryWrapper) Link(src string, token zx.Handle, dst string) (zx.Status, error) {
+	return zx.ErrNotSupported, nil
+}
+
+type fileWrapper struct {
+	vfs   *ThinVFS
+	token fidl.BindingKey
+	file  fs.File
+}
+
+func (f *fileWrapper) Clone(flags uint32, object io.ObjectInterfaceRequest) error {
+	newFile, err := f.file.Dup()
+	zxErr := errorToZx(err)
+	if zxErr == zx.ErrOk {
+		_, err := f.vfs.addFile(newFile, object)
+		if err != nil {
+			return err
+		}
+	}
+	// Only send an OnOpen message if OpenFlagDescribe is set.
+	if flags&io.KOpenFlagDescribe != 0 {
+		c := fidl.InterfaceRequest(object).Channel
+		pxy := io.ObjectEventProxy(fidl.Proxy{Channel: c})
+		return pxy.OnOpen(zx.ErrOk, &io.ObjectInfo{
+			ObjectInfoTag: io.ObjectInfoFile,
+			File: io.FileObject{
+				Event: zx.Event(zx.HandleInvalid),
+			},
+		})
+	}
+	return nil
+}
+
+func (f *fileWrapper) Close() (zx.Status, error) {
+	err := f.file.Close()
+
+	f.vfs.Lock()
+	defer f.vfs.Unlock()
+	f.vfs.FileService.Remove(f.token)
+
+	return errorToZx(err), nil
+}
+
+func (f *fileWrapper) ListInterfaces() ([]string, error) {
+	return nil, nil
+}
+
+func (f *fileWrapper) Bind(iface string) error {
+	return nil
+}
+
+func (f *fileWrapper) Describe() (io.ObjectInfo, error) {
+	return io.ObjectInfo{
+		ObjectInfoTag: io.ObjectInfoFile,
+		File: io.FileObject{
+			Event: zx.Event(zx.HandleInvalid),
+		},
+	}, nil
+}
+
+func (f *fileWrapper) Sync() (zx.Status, error) {
+	return errorToZx(f.file.Sync()), nil
+}
+
+func (f *fileWrapper) GetAttr() (zx.Status, io.NodeAttributes, error) {
+	size, _, mtime, err := f.file.Stat()
+	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
+		return zxErr, io.NodeAttributes{}, nil
+	}
+	return zx.ErrOk, io.NodeAttributes{
+		Mode:             syscall.S_IFREG | 0644,
+		Id:               1,
+		ContentSize:      uint64(size),
+		StorageSize:      uint64(size),
+		LinkCount:        1,
+		CreationTime:     uint64(mtime.Unix()),
+		ModificationTime: uint64(mtime.Unix()),
+	}, nil
+}
+
+func (f *fileWrapper) SetAttr(flags uint32, attr io.NodeAttributes) (zx.Status, error) {
+	if f.file.GetOpenFlags().Path() {
+		return zx.ErrBadHandle, nil
+	}
+	t := time.Unix(0, int64(attr.ModificationTime))
+	return errorToZx(f.file.Touch(t, t)), nil
+}
+
+func (f *fileWrapper) Ioctl(opcode uint32, maxOut uint64, handles []zx.Handle, in []uint8) (zx.Status, []zx.Handle, []uint8, error) {
+	return zx.ErrNotSupported, nil, nil, nil
+}
+
+func (f *fileWrapper) Read(count uint64) (zx.Status, []uint8, error) {
+	buf := make([]byte, count)
+	r, err := f.file.Read(buf, 0, fs.WhenceFromCurrent)
+	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
+		return zxErr, nil, nil
+	}
+	return zx.ErrOk, buf[:r], nil
+}
+
+func (f *fileWrapper) ReadAt(count, offset uint64) (zx.Status, []uint8, error) {
+	buf := make([]byte, count)
+	r, err := f.file.Read(buf, int64(offset), fs.WhenceFromStart)
+	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
+		return zxErr, nil, nil
+	}
+	return zx.ErrOk, buf[:r], nil
+}
+
+func (f *fileWrapper) Write(data []uint8) (zx.Status, uint64, error) {
+	r, err := f.file.Write(data, 0, fs.WhenceFromCurrent)
+	return errorToZx(err), uint64(r), nil
+}
+
+func (f *fileWrapper) WriteAt(data []uint8, offset uint64) (zx.Status, uint64, error) {
+	r, err := f.file.Write(data, int64(offset), fs.WhenceFromStart)
+	return errorToZx(err), uint64(r), nil
+}
+
+func (f *fileWrapper) Seek(offset int64, start io.SeekOrigin) (zx.Status, uint64, error) {
+	r, err := f.file.Seek(offset, int(start))
+	return errorToZx(err), uint64(r), nil
+}
+
+func (f *fileWrapper) Truncate(length uint64) (zx.Status, error) {
+	return errorToZx(f.file.Truncate(length)), nil
+}
+
+func (f *fileWrapper) GetFlags() (zx.Status, uint32, error) {
+	oflags := uint32(f.file.GetOpenFlags())
+	return zx.ErrOk, oflags & (rightFlags | statusFlags), nil
+}
+
+func (f *fileWrapper) SetFlags(inFlags uint32) (zx.Status, error) {
+	flags := uint32(openFlagsFromFIDL(inFlags, 0))
+	uflags := (uint32(f.file.GetOpenFlags()) & ^statusFlags) | (flags & statusFlags)
+	return errorToZx(f.file.SetOpenFlags(fs.OpenFlags(uflags))), nil
+}
+
+func (f *fileWrapper) GetVmo(flags uint32) (zx.Status, zx.VMO, error) {
+	// This will fail catastrophically because the VMO cannot actually
+	// be invalid by the FIDL file.
+	return zx.ErrNotSupported, zx.VMO(zx.HandleInvalid), nil
+}
+
+func (f *fileWrapper) GetVmoAt(flags uint32, offset, length uint64) (zx.Status, zx.VMO, error) {
+	// This will fail catastrophically because the VMO cannot actually
+	// be invalid by the FIDL file.
+	return zx.ErrNotSupported, zx.VMO(zx.HandleInvalid), nil
 }
 
 // TODO(smklein): Calibrate thinfs flags with standard C library flags to make conversion smoother
 
-func errorToRIO(err error) zx.Status {
+func errorToZx(err error) zx.Status {
 	switch err {
 	case nil, fs.ErrEOF:
 		// ErrEOF can be translated directly to ErrOk. For operations which return with an error if
@@ -164,7 +591,7 @@ func errorToRIO(err error) zx.Status {
 	}
 }
 
-func fileTypeToRIO(t fs.FileType) uint32 {
+func fileTypeToFIDL(t fs.FileType) uint32 {
 	switch t {
 	case fs.FileTypeRegularFile:
 		return syscall.S_IFREG
@@ -177,7 +604,19 @@ func fileTypeToRIO(t fs.FileType) uint32 {
 
 const alignedFlags = uint32(syscall.FdioAlignedFlags | syscall.FsRightReadable | syscall.FsRightWritable)
 
-func openFlagsFromRIO(arg uint32, mode uint32) fs.OpenFlags {
+func openFlagsToFIDL(f fs.OpenFlags) (arg uint32, mode uint32) {
+	arg = uint32(f) & alignedFlags
+
+	if (f.Create() && !f.Directory()) || f.File() {
+		mode |= syscall.S_IFREG
+	}
+	if f.Directory() {
+		mode |= syscall.S_IFDIR
+	}
+	return
+}
+
+func openFlagsFromFIDL(arg uint32, mode uint32) fs.OpenFlags {
 	res := fs.OpenFlags(arg & alignedFlags)
 
 	// Additional open flags
@@ -199,475 +638,4 @@ func openFlagsFromRIO(arg uint32, mode uint32) fs.OpenFlags {
 	}
 
 	return res
-}
-
-func openFlagsToRIO(f fs.OpenFlags) (arg uint32, mode uint32) {
-	arg = uint32(f) & alignedFlags
-
-	if (f.Create() && !f.Directory()) || f.File() {
-		mode |= syscall.S_IFREG
-	}
-	if f.Directory() {
-		mode |= syscall.S_IFDIR
-	}
-	return
-}
-
-func describe(msg *fdio.Msg) bool {
-	return msg.Arg&syscall.FsFlagDescribe != 0
-}
-
-func indirectError(h zx.Handle, status zx.Status) {
-	ro := &fdio.RioDescription{
-		Status: status,
-	}
-	ro.SetOp(fdio.OpOnOpen)
-	ro.Write(h, 0)
-}
-
-func (vfs *ThinVFS) processOpFile(msg *fdio.Msg, f fs.File, cookie int64) zx.Status {
-	inputData := msg.Data[:msg.Datalen]
-	msg.Datalen = 0
-	switch msg.Op() {
-	case fdio.OpClone:
-		f2, err := f.Dup()
-		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
-			if describe(msg) {
-				indirectError(msg.Handle[0], mxErr)
-			}
-			return fdio.ErrIndirect.Status
-		}
-		if describe(msg) {
-			ro := &fdio.RioDescription{
-				Status: zx.ErrOk,
-			}
-			ro.Info.Tag = fdio.ProtocolFile
-			ro.SetOp(fdio.OpOnOpen)
-			ro.Write(msg.Handle[0], 0)
-		}
-		if err := vfs.AddHandler(msg.Handle[0], f2); err != nil {
-			f2.Close()
-		}
-		msg.Handle[0] = zx.HandleInvalid
-		return fdio.ErrIndirect.Status
-	case fdio.OpClose:
-		err := f.Close()
-		vfs.freeCookie(cookie)
-		return errorToRIO(err)
-	case fdio.OpRead:
-		r, err := f.Read(msg.Data[:msg.Arg], 0, fs.WhenceFromCurrent)
-		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
-			return mxErr
-		}
-		msg.Datalen = uint32(r)
-		return zx.Status(r)
-	case fdio.OpReadAt:
-		r, err := f.Read(msg.Data[:msg.Arg], msg.Off(), fs.WhenceFromStart)
-		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
-			return mxErr
-		}
-		msg.Datalen = uint32(r)
-		return zx.Status(r)
-	case fdio.OpWrite:
-		r, err := f.Write(inputData, 0, fs.WhenceFromCurrent)
-		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
-			return mxErr
-		}
-		return zx.Status(r)
-	case fdio.OpWriteAt:
-		r, err := f.Write(inputData, msg.Off(), fs.WhenceFromStart)
-		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
-			return mxErr
-		}
-		return zx.Status(r)
-	case fdio.OpSeek:
-		r, err := f.Seek(msg.Off(), int(msg.Arg))
-		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
-			return mxErr
-		}
-		msg.SetOff(r)
-		return zx.ErrOk
-	case fdio.OpStat:
-		size, _, mtime, err := f.Stat()
-		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
-			return mxErr
-		}
-		return statShared(msg, size, mtime, false)
-	case fdio.OpTruncate:
-		off := msg.Off()
-		if off < 0 {
-			return zx.ErrInvalidArgs
-		}
-		err := f.Truncate(uint64(off))
-		return errorToRIO(err)
-	case fdio.OpSync:
-		return errorToRIO(f.Sync())
-	case fdio.OpSetAttr:
-		if f.GetOpenFlags().Path() {
-			return zx.ErrBadHandle
-		}
-		atime, mtime := getTimeShared(msg)
-		return errorToRIO(f.Touch(atime, mtime))
-	case fdio.OpFcntl:
-		statusFlags := uint32(syscall.FsFlagAppend)
-		rightFlags := uint32(syscall.FsRightReadable | syscall.FsRightWritable | syscall.FsFlagPath)
-		switch uint32(msg.Arg) {
-		case fdio.OpFcntlCmdGetFL:
-			var cflags uint32
-			oflags := uint32(f.GetOpenFlags())
-			cflags = oflags & (rightFlags | statusFlags)
-			msg.SetFcntlFlags(cflags)
-			return zx.ErrOk
-		case fdio.OpFcntlCmdSetFL:
-			flags := uint32(openFlagsFromRIO(msg.FcntlFlags(), 0))
-			uflags := (uint32(f.GetOpenFlags()) & ^statusFlags) | (flags & statusFlags)
-			err := f.SetOpenFlags(fs.OpenFlags(uflags))
-			return errorToRIO(err)
-		default:
-			return zx.ErrNotSupported
-		}
-	default:
-		println("ThinFS FILE UNKNOWN OP: ", msg.Op())
-		return zx.ErrNotSupported
-	}
-	return zx.ErrNotSupported
-}
-
-func getTimeShared(msg *fdio.Msg) (time.Time, time.Time) {
-	var mtime time.Time
-	attr := *(*fdio.Vnattr)(unsafe.Pointer(&msg.Data[0]))
-	if (attr.Valid & fdio.AttrMtime) != 0 {
-		mtime = time.Unix(0, int64(attr.ModifyTime))
-	}
-	return time.Time{}, mtime
-}
-
-const pageSize = 4096
-
-func statShared(msg *fdio.Msg, size int64, mtime time.Time, dir bool) zx.Status {
-	r := fdio.Vnattr{}
-	if dir {
-		r.Mode = syscall.S_IFDIR
-	} else {
-		r.Mode = syscall.S_IFREG
-	}
-	r.Size = uint64(size)
-	// "Blksize" and "Blkcount" are a bit of a lie at the moment, but
-	// they should present realistic-looking values.
-	// TODO(smklein): Plumb actual values through from the underlying filesystem.
-	r.Blksize = pageSize
-	r.Blkcount = (r.Size + fdio.VnattrBlksize - 1) / fdio.VnattrBlksize
-	r.Nlink = 1
-	r.ModifyTime = uint64(mtime.UnixNano())
-	r.CreateTime = r.ModifyTime
-	*(*fdio.Vnattr)(unsafe.Pointer(&msg.Data[0])) = r
-	msg.Datalen = uint32(unsafe.Sizeof(r))
-	return zx.Status(msg.Datalen)
-}
-
-func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh zx.Handle, dw *directoryWrapper, cookie int64) zx.Status {
-	inputData := msg.Data[:msg.Datalen]
-	msg.Datalen = 0
-	dir := dw.d
-	switch msg.Op() {
-	case fdio.OpOpen:
-		if len(inputData) < 1 {
-			if describe(msg) {
-				indirectError(msg.Handle[0], zx.ErrInvalidArgs)
-			}
-			return fdio.ErrIndirect.Status
-		}
-		path := strings.TrimRight(string(inputData), "\x00")
-		flags := openFlagsFromRIO(uint32(msg.Arg), msg.Mode())
-		if flags.Path() {
-			flags &= fs.OpenFlagPath | fs.OpenFlagDirectory | fs.OpenFlagDescribe
-		}
-
-		f, d, r, err := dir.Open(path, flags)
-		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
-			if describe(msg) {
-				indirectError(msg.Handle[0], mxErr)
-			}
-			return fdio.ErrIndirect.Status
-		}
-
-		if r != nil {
-			copy(msg.Data[:], r.Path)
-			msg.Datalen = uint32(len(r.Path))
-			msg.Data[msg.Datalen] = 0
-			arg, mode := openFlagsToRIO(r.Flags)
-			if describe(msg) {
-				msg.Arg = syscall.FsFlagDescribe
-			}
-			msg.Arg |= int32(arg)
-			msg.SetMode(mode)
-			msg.WriteMsg(r.Channel)
-			return fdio.ErrIndirect.Status
-		}
-
-		var obj interface{}
-		if f != nil {
-			obj = f
-		} else {
-			obj = &directoryWrapper{d: d}
-		}
-
-		if describe(msg) {
-			ro := &fdio.RioDescription{
-				Status: zx.ErrOk,
-			}
-			if f != nil {
-				ro.Info.Tag = fdio.ProtocolFile
-			} else {
-				ro.Info.Tag = fdio.ProtocolDirectory
-			}
-			ro.SetOp(fdio.OpOnOpen)
-			ro.Write(msg.Handle[0], 0)
-		}
-		if err := vfs.AddHandler(msg.Handle[0], obj); err != nil {
-			println("Failed to create a handle")
-			if f != nil {
-				f.Close()
-			} else {
-				d.Close()
-			}
-		}
-		msg.Handle[0] = zx.HandleInvalid
-		return fdio.ErrIndirect.Status
-	case fdio.OpClone:
-		d2, err := dir.Dup()
-		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
-			if describe(msg) {
-				indirectError(msg.Handle[0], mxErr)
-			}
-			return fdio.ErrIndirect.Status
-		}
-		if describe(msg) {
-			ro := &fdio.RioDescription{
-				Status: zx.ErrOk,
-			}
-			ro.Info.Tag = fdio.ProtocolDirectory
-			ro.SetOp(fdio.OpOnOpen)
-			ro.Write(msg.Handle[0], 0)
-		}
-		if err := vfs.AddHandler(msg.Handle[0], &directoryWrapper{d: d2}); err != nil {
-			d2.Close()
-		}
-		msg.Handle[0] = zx.HandleInvalid
-		return fdio.ErrIndirect.Status
-	case fdio.OpClose:
-		err := dir.Close()
-		vfs.Lock()
-		if dw.e != 0 {
-			dw.e.Handle().SetCookie(zx.ProcHandle, 0)
-		}
-		vfs.Unlock()
-		vfs.freeCookie(cookie)
-		return errorToRIO(err)
-	case fdio.OpStat:
-		size, _, mtime, err := dir.Stat()
-		if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
-			return mxErr
-		}
-		return statShared(msg, size, mtime, true)
-	case fdio.OpReaddir:
-		maxlen := uint32(msg.Arg)
-		if maxlen > fdio.ChunkSize {
-			return zx.ErrInvalidArgs
-		}
-		if msg.Off() == 1 {
-			// TODO(smklein): 1 == ReaddirCmdReset; update the Go standard library to include this
-			// magic number.
-			dw.reading = false
-		}
-		if dw.reading && len(dw.dirents) == 0 {
-			// The final read of 'readdir' must return zero
-			dw.reading = false
-			return zx.Status(0)
-		}
-		if !dw.reading {
-			dirents, err := dir.Read()
-			if mxErr := errorToRIO(err); mxErr != zx.ErrOk {
-				return mxErr
-			}
-			dw.reading = true
-			dw.dirents = dirents
-		}
-		bytesWritten := uint32(0)
-		var i int
-		for i = range dw.dirents {
-			dirent := dw.dirents[i]
-			rioDirent := syscall.Dirent{}
-			// Include the null character in the dirent name (BEFORE alignment)
-			name := append([]byte(dirent.GetName()), 0)
-			// The dirent size is rounded up to four bytes
-			align := func(a int) int {
-				return (a + 3) &^ 3
-			}
-			rioDirent.Size = uint32(align(len(name))) + 8
-			rioDirent.Type = (fileTypeToRIO(dirent.GetType()) >> 12) & 15
-			if bytesWritten+rioDirent.Size > maxlen {
-				break
-			}
-			copy(msg.Data[bytesWritten:], (*(*[8]byte)(unsafe.Pointer(&rioDirent)))[:])
-			copy(msg.Data[bytesWritten+8:], name)
-			bytesWritten += rioDirent.Size
-		}
-		if i == len(dw.dirents)-1 { // We finished reading the directory. Next readdir will be empty.
-			dw.dirents = nil
-		} else { // Partial read
-			dw.dirents = dw.dirents[i:]
-		}
-		msg.Datalen = bytesWritten
-		dw.reading = true
-		return zx.Status(msg.Datalen)
-	case fdio.OpUnlink:
-		path := strings.TrimRight(string(inputData), "\x00")
-		err := dir.Unlink(path)
-		msg.Datalen = 0
-		return errorToRIO(err)
-	case fdio.OpRename:
-		if len(inputData) < 4 { // Src + null + dst + null
-			return zx.ErrInvalidArgs
-		}
-		paths := strings.Split(strings.TrimRight(string(inputData), "\x00"), "\x00")
-		if len(paths) != 2 {
-			return zx.ErrInvalidArgs
-		}
-
-		vfs.Lock()
-		defer vfs.Unlock()
-		cookie, err := msg.Handle[0].GetCookie(zx.ProcHandle)
-		if err != nil {
-			return zx.ErrInvalidArgs
-		}
-		obj := vfs.files[int64(cookie)]
-		switch obj := obj.(type) {
-		case *directoryWrapper:
-			return errorToRIO(dir.Rename(obj.d, paths[0], paths[1]))
-		default:
-			return zx.ErrInvalidArgs
-		}
-	case fdio.OpSync:
-		return errorToRIO(dir.Sync())
-	case fdio.OpIoctl:
-		switch msg.IoctlOp() {
-		case fdio.IoctlVFSGetTokenFS:
-			vfs.Lock()
-			defer vfs.Unlock()
-			h, err := dw.GetToken(cookie)
-			if err != nil {
-				return errorToRIO(err)
-			}
-			msg.Handle[0] = h
-			msg.Hcount = 1
-			return zx.ErrOk
-		case fdio.IoctlVFSUnmountFS:
-			// Shut down filesystem
-			err := vfs.fs.Close()
-			if err != nil {
-				fmt.Printf("error unmounting filesystem: %#v\n", err)
-			}
-			// Close reply handle, indicating that the unmounting process is complete
-			rh.Close()
-			os.Exit(0)
-		case fdio.IoctlVFSQueryFS:
-			maxlen := uint32(msg.Arg)
-			totalBytes := uint64(vfs.fs.Size())
-			usedBytes := totalBytes - uint64(vfs.fs.FreeSize())
-
-			queryInfo := VFSQueryInfo{
-				TotalBytes: totalBytes,
-				UsedBytes:  usedBytes,
-				TotalNodes: 0,
-				UsedNodes:  0,
-			}
-
-			name := append([]byte(vfs.fs.Type()), 0)
-
-			const infoSize = uint32(unsafe.Sizeof(queryInfo))
-			totalSize := infoSize + uint32(len(name))
-
-			if totalSize > maxlen {
-				return zx.ErrBufferTooSmall
-			}
-
-			copy(msg.Data[0:], (*[infoSize]byte)(unsafe.Pointer(&queryInfo))[:])
-			copy(msg.Data[infoSize:], name)
-			msg.Datalen = totalSize
-			return zx.Status(msg.Datalen)
-		case fdio.IoctlVFSGetDevicePath:
-			path := vfs.fs.DevicePath()
-			copy(msg.Data[0:], path)
-			msg.Datalen = uint32(len(path))
-			return zx.Status(msg.Datalen)
-		default:
-			return zx.ErrNotSupported
-		}
-	case fdio.OpSetAttr:
-		atime, mtime := getTimeShared(msg)
-		return errorToRIO(dir.Touch(atime, mtime))
-	default:
-		println("ThinFS DIR UNKNOWN OP: ", msg.Op())
-		return zx.ErrNotSupported
-	}
-	return zx.ErrNotSupported
-}
-
-func (vfs *ThinVFS) fdioServer(msg *fdio.Msg, rh zx.Handle, cookie int64) (status zx.Status) {
-	// Dispatching must take ownership of handles and explicitly set handles in msg
-	// to 0 in order to avoid them being closed after dispatching. This guard
-	// extensively prevents leaked handles from dispatching.
-	//
-	// Handles may still be returned (since the wrapper around fdioServer will
-	// transmit |msg| back to the client) but only when provided a successful
-	// return status.
-	defer func() {
-		if status < 0 {
-			msg.DiscardHandles()
-		}
-	}()
-
-	// Incoming number of handles must match message type
-	if msg.Hcount != msg.OpHandleCount() {
-		return zx.ErrIO
-	}
-
-	// Determine if the object we're acting on is a directory or a file
-	vfs.Lock()
-	obj := vfs.files[int64(cookie)]
-	vfs.Unlock()
-	if obj == nil && msg.Op() == fdio.OpClose {
-		// Removing object that has already been removed
-		return zx.ErrOk
-	}
-
-	switch obj := obj.(type) {
-	case fs.File:
-		return vfs.processOpFile(msg, obj, cookie)
-	case *directoryWrapper:
-		return vfs.processOpDirectory(msg, rh, obj, cookie)
-	default:
-		fmt.Printf("cookie %d resulted in unexpected type %T\n", cookie, obj)
-		return zx.ErrInternal
-	}
-}
-
-// Allocates a unique identifier which can be used to access information about a RIO object
-func (vfs *ThinVFS) allocateCookie(obj interface{}) int64 {
-	vfs.Lock()
-	defer vfs.Unlock()
-	for i := vfs.nextCookie; ; i++ {
-		if _, ok := vfs.files[i]; !ok {
-			vfs.files[i] = obj
-			vfs.nextCookie = i + 1
-			return i
-		}
-	}
-}
-
-func (vfs *ThinVFS) freeCookie(cookie int64) {
-	vfs.Lock()
-	defer vfs.Unlock()
-	delete(vfs.files, cookie)
 }

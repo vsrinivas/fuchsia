@@ -13,8 +13,6 @@ extern crate bytes;
 #[allow(non_snake_case)]
 pub mod fdio_sys;
 
-pub mod rio;
-
 use zircon::prelude::*;
 use zircon::sys as sys;
 

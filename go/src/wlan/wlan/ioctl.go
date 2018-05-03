@@ -17,7 +17,7 @@ const (
 
 func ioctlGetChannel(m fdio.FDIO) (ch zx.Handle, err error) {
 	num := fdio.IoctlNum(fdio.IoctlKindGetHandle, ioctlFamilyWLAN, ioctlOpGetChannel)
-	h, err := m.Ioctl(num, nil, nil)
+	_, h, err := m.Ioctl(num, zx.HandleSize, nil, nil)
 	if err != nil {
 		return ch, fmt.Errorf("IOCTL_WLAN_GET_CHANNEL: %v", err)
 	}

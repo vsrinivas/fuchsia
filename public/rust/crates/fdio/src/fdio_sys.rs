@@ -1488,8 +1488,6 @@ pub type watchdir_func_t = ::std::option::Option<
 
 #[link(name = "fdio")]
 extern "C" {
-    pub fn fdio_opname(op: u32) -> *const raw::c_char;
-
     pub fn zxrio_handler(
         h: zx_handle_t,
         cb: *mut raw::c_void,

@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"syscall"
 	"syscall/zx"
-	"syscall/zx/fdio"
 )
 
 // Manager wraps operations for reading and writing to blobfs, and will later
@@ -31,17 +30,15 @@ func New(root string) (*Manager, error) {
 		return nil, fmt.Errorf("pkgfs: blobfs: can't open %q: %s", root, err)
 	}
 	defer rootFDIO.Close()
-	rootIO, ok := rootFDIO.(*fdio.RemoteIO)
-	if !ok {
-		return nil, fmt.Errorf("pkgfs: blobfs: can't open blobfs root %q with remoteio protocol, got %#v", root, rootFDIO)
-	}
-	handles, err := rootIO.Clone()
+	rootIO, err := rootFDIO.Clone()
 	if err != nil {
 		return nil, fmt.Errorf("pkgfs: blobfs: can't clone blobfs root handle: %s", err)
 	}
+	handles := rootIO.Handles()
 	for _, h := range handles[1:] {
 		h.Close()
 	}
+	// The first handle is always a channel.
 	channel := zx.Channel(handles[0])
 
 	return &Manager{Root: root, channel: channel}, nil
