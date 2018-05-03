@@ -85,7 +85,10 @@
       "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=/system/test/modular_tests/link_data_test_user_shell --story_shell=dev_story_shell",
       "copy":{
         "/system/test/modular_tests":[
-          "link_data_test_user_shell"
+          "link_data_test_user_shell",
+          "link_data_test_module0",
+          "link_data_test_module1",
+          "link_data_test_module2"
         ]
       }
     },

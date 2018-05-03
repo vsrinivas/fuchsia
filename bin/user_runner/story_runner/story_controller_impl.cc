@@ -31,6 +31,7 @@
 #include "peridot/bin/user_runner/story_runner/module_context_impl.h"
 #include "peridot/bin/user_runner/story_runner/module_controller_impl.h"
 #include "peridot/bin/user_runner/story_runner/story_provider_impl.h"
+#include "peridot/lib/common/names.h"
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/clone.h"
@@ -42,7 +43,6 @@
 namespace modular {
 
 constexpr char kStoryScopeLabelPrefix[] = "story-";
-constexpr char kNullLinkName[] = "<unnamed_link>";
 
 namespace {
 
@@ -671,16 +671,13 @@ class StoryControllerImpl::InitializeChainCall : Operation<ChainDataPtr> {
         mapping->link_path.module_path.resize(0);
         // Create a new Link. ConnectLinkCall will either create a new Link, or
         // connect to an existing one.
+        //
         // TODO(thatguy): If the Link already exists (it shouldn't),
         // |create_link_info.initial_data| will be ignored.
         for (const auto& i : *module_path_) {
           mapping->link_path.module_path.push_back(i);
         }
-        if (key) {
-          mapping->link_path.link_name = key;
-        } else {
-          mapping->link_path.link_name = kNullLinkName;
-        }
+        mapping->link_path.link_name = key;
 
         // We create N ConnectLinkCall operations. We rely on the fact that
         // once all refcounted instances of |flow| are destroyed, the
@@ -1766,9 +1763,6 @@ LinkPathPtr StoryControllerImpl::GetLinkPathForChainKey(
   if (!link_path) {
     link_path = LinkPath::New();
     link_path->module_path = module_path.Clone();
-    if (!key) {
-      key = kNullLinkName;
-    }
     link_path->link_name = key;
   }
 

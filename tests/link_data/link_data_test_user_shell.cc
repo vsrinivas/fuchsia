@@ -9,155 +9,25 @@
 #include <fuchsia/cpp/views_v1_token.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "peridot/examples/counter_cpp/store.h"
+#include "peridot/lib/common/names.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/link_data/defs.h"
 
 namespace {
-
-constexpr char kUserShell[] =
-    "https://fuchsia.googlesource.com/modular/"
-    "services/user/user_shell.fidl#modular.UserShell";
-
-constexpr char kTestApp[] =
-    "https://fuchsia.googlesource.com/modular/"
-    "tests/link_data/test_link_data.cc#TestApp";
-
-bool IsRunning(const modular::StoryState state) {
-  switch (state) {
-    case modular::StoryState::STARTING:
-    case modular::StoryState::RUNNING:
-    case modular::StoryState::DONE:
-      return true;
-    case modular::StoryState::INITIAL:
-    case modular::StoryState::STOPPED:
-    case modular::StoryState::ERROR:
-      return false;
-  }
-}
-
-class Settings {
- public:
-  explicit Settings(const fxl::CommandLine& command_line) {
-    first_module = command_line.GetOptionValueWithDefault("first_module",
-                                                          "example_recipe");
-  }
-
-  std::string first_module;
-};
-
-// A simple link watcher implementation that after every 5 updates of a Link
-// invokes a "continue" callback. Used to push the test sequence forward after a
-// module in the test story was running for a bit.
-class LinkChangeCountWatcherImpl : modular::LinkWatcher {
- public:
-  LinkChangeCountWatcherImpl() : binding_(this) {}
-  ~LinkChangeCountWatcherImpl() override = default;
-
-  // Registers itself as watcher on the given link. Only one link at a time can
-  // be watched.
-  void Watch(modular::LinkPtr* const link) {
-    (*link)->Watch(binding_.NewBinding());
-  }
-
-  // Deregisters itself from the watched link.
-  void Reset() { binding_.Unbind(); }
-
-  // Sets the function where to continue after enough changes were observed on
-  // the link.
-  void Continue(std::function<void()> at) { continue_ = at; }
-
- private:
-  // |LinkWatcher|
-  void Notify(fidl::StringPtr json) override {
-    modular_example::Counter counter =
-        modular_example::Store::ParseCounterJson(json.get(), "test_link_data");
-
-    if (counter.is_valid() && counter.counter > last_continue_count_) {
-      if (counter.counter % 5 == 0) {
-        last_continue_count_ = counter.counter;
-        continue_();
-      }
-    }
-  }
-
-  int last_continue_count_{};
-  std::function<void()> continue_;
-  fidl::Binding<modular::LinkWatcher> binding_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(LinkChangeCountWatcherImpl);
-};
-
-// A simple story watcher implementation that invokes a "continue" callback when
-// it sees the watched story transition to DONE state. Used to push the test
-// sequence forward when the test story is done.
-class StoryStateWatcherImpl : modular::StoryWatcher {
- public:
-  StoryStateWatcherImpl() : binding_(this) {}
-  ~StoryStateWatcherImpl() override = default;
-
-  // Registers itself as a watcher on the given story. Only one story at a time
-  // can be watched.
-  void Watch(modular::StoryControllerPtr* const story_controller) {
-    (*story_controller)->Watch(binding_.NewBinding());
-  }
-
-  // Deregisters itself from the watched story.
-  void Reset() { binding_.Unbind(); }
-
-  // Sets the function where to continue when the story is observed to be at
-  // a particular state.
-  void Continue(modular::StoryState state, std::function<void()> at) {
-    auto state_index = static_cast<unsigned int>(state);
-    if (continue_.size() <= state_index) {
-      continue_.resize(state_index + 1);
-    }
-    continue_[state_index] = at;
-  }
-
- private:
-  // |StoryWatcher|
-  void OnStateChange(modular::StoryState state) override {
-    auto state_index = static_cast<unsigned int>(state);
-    // TODO(jimbe) Need to investigate why we are getting two notifications for
-    // each state transition.
-    FXL_LOG(INFO) << "OnStateChange: " << state_index;
-    if (continue_.size() > state_index && continue_[state_index]) {
-      continue_[state_index]();
-    }
-  }
-
-  // |StoryWatcher|
-  void OnModuleAdded(modular::ModuleData module_data) override {
-    FXL_LOG(INFO) << "OnModuleAdded: " << module_data.module_url;
-    if (!on_module_added_called_) {
-      on_module_added_.Pass();
-      on_module_added_called_ = true;
-    }
-  }
-
-  fidl::Binding<modular::StoryWatcher> binding_;
-  std::vector<std::function<void()>> continue_;
-  modular::testing::TestPoint on_module_added_{"OnModuleAdded"};
-  bool on_module_added_called_{};
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(StoryStateWatcherImpl);
-};
 
 // Cf. README.md for what this test does and how.
 class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
  public:
-  explicit TestApp(component::ApplicationContext* const application_context,
-                   Settings settings)
-      : ComponentBase(application_context), settings_(std::move(settings)) {
+  explicit TestApp(component::ApplicationContext* const application_context)
+      : ComponentBase(application_context) {
     TestInit(__FILE__);
   }
 
@@ -182,15 +52,10 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint story1_create_{"Story1 Create"};
 
   void TestStory1() {
-    const std::string& url = settings_.first_module;
-
-    modular::JsonDoc doc;
-    std::vector<std::string> segments{"example", url, "created-with-info"};
-    modular::CreatePointer(doc, segments.begin(), segments.end())
-        .Set(doc, true);
-
     story_provider_->CreateStoryWithInfo(
-        url, nullptr /* info_entra */, modular::JsonValueToString(doc),
+        kModule0Url,
+        nullptr /* extra_info */,
+        kRootJson0 /* root_json */,
         [this](const fidl::StringPtr& story_id) {
           story1_create_.Pass();
           TestStory1_GetController(story_id);
@@ -205,109 +70,141 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
         [this](modular::StoryInfo story_info, modular::StoryState state) {
           story1_get_controller_.Pass();
           story_info_ = std::move(story_info);
-          TestStory1_SetRootLink();
+          TestStory1_GetModule0Link();
         });
   }
 
-  // Totally tentative use of the root module link: Tell the root module under
-  // what user shell it's running.
-  void TestStory1_SetRootLink() {
-    fidl::VectorPtr<fidl::StringPtr> module_path(1);
-    module_path->at(0) = "root";
+  TestPoint story1_get_module0_link_{"Story1 Get Module0 link"};
+
+  void TestStory1_GetModule0Link() {
+    fidl::VectorPtr<fidl::StringPtr> module_path;
+    module_path.push_back(modular::kRootModuleName);
     story_controller_->GetLink(std::move(module_path), nullptr, root_link_.NewRequest());
-
-    fidl::VectorPtr<fidl::StringPtr> segments;
-    segments->emplace_back(kUserShell);
-    root_link_->Set(std::move(segments),
-                    modular::JsonValueToString(modular::JsonValue(kTestApp)));
-
-    TestStory1_Run(0);
+    root_link_->Get(nullptr, [this](fidl::StringPtr value) {
+        if (value == kRootJson0) {
+          story1_get_module0_link_.Pass();
+        } else {
+          FXL_LOG(ERROR) << "GOT LINK " << value << " EXPECTED " << kRootJson0;
+        }
+        TestStory1_SetModule0Link();
+      });
   }
 
-  TestPoint story1_run_{"Story1 Run"};
+  TestPoint story1_set_module0_link_{"Story1 Set Module0 link"};
 
-  void TestStory1_Run(const int round) {
-    if (!story_controller_) {
-      story_provider_->GetController(story_info_.id,
-                                     story_controller_.NewRequest());
-      fidl::VectorPtr<fidl::StringPtr> module_path(1);
-      module_path->at(0) = "root";
-      story_controller_->GetLink(std::move(module_path), nullptr, root_link_.NewRequest());
-    }
-
-    link_change_count_watcher_.Continue(
-        [this, round] { TestStory1_Cycle(round); });
-    link_change_count_watcher_.Watch(&root_link_);
-
-    story_state_watcher_.Continue(modular::StoryState::DONE, [this] {
-      story_controller_->Stop([this] {
-        TeardownStoryController();
-        story1_run_.Pass();
-
-        // When the story is done, the test is over.
-        async::PostTask(async_get_default(),
-                        [this] { user_shell_context_->Logout(); });
+  void TestStory1_SetModule0Link() {
+    root_link_->Set(nullptr, kRootJson1);
+    root_link_->Get(nullptr, [this](fidl::StringPtr value) {
+        if (value == kRootJson1) {
+          story1_set_module0_link_.Pass();
+        } else {
+          FXL_LOG(ERROR) << "GOT LINK " << value << " EXPECTED " << kRootJson1;
+        }
+        TestStory1_Run();
       });
-    });
-    story_state_watcher_.Watch(&story_controller_);
+  }
 
-    // Start and show the new story.
+  TestPoint story1_run_module0_link_{"Story1 Run: Module0 link"};
+
+  void TestStory1_Run() {
     views_v1_token::ViewOwnerPtr story_view;
     story_controller_->Start(story_view.NewRequest());
+
+    modular::testing::GetStore()->Get(
+        std::string("module0_link") + ":" + kRootJson1,
+        [this](fidl::StringPtr) {
+          story1_run_module0_link_.Pass();
+          TestStory1_Wait();
+        });
   }
 
-  TestPoint story1_cycle1_{"Story1 Cycle 1"};
-  TestPoint story1_cycle2_{"Story1 Cycle 2"};
+  void TestStory1_Wait() {
+    modular::testing::GetStore()->Get("module2_link", [this](fidl::StringPtr value) {
+        FXL_LOG(INFO) << "GET module2_link " << value;
+        rapidjson::Document doc;
+        doc.Parse(value);
+        if (!doc.IsObject() || !doc.HasMember(kCount) ||
+            !doc[kCount].IsInt() || doc[kCount].GetInt() < 100) {
+          TestStory1_Wait();
+          return;
+        }
 
-  // Every five counter increments, we dehydrate and rehydrate the story, until
-  // the story stops itself when it reaches 11 counter increments.
-  void TestStory1_Cycle(const int round) {
-    if (round == 0) {
-      story1_cycle1_.Pass();
-    } else if (round == 1) {
-      story1_cycle2_.Pass();
-      // We don't cycle anymore and wait for DONE state to be reached.
-      return;
-    }
-
-    // When the story stops, we start it again.
-    story_state_watcher_.Continue(modular::StoryState::STOPPED, [this, round] {
-      story_state_watcher_.Continue(modular::StoryState::STOPPED, nullptr);
-      story_provider_->GetStoryInfo(
-          story_info_.id, [this, round](modular::StoryInfoPtr story_info) {
-            FXL_CHECK(story_info);
-
-            // Can't use the StoryController here because we closed it
-            // in TeardownStoryController().
-            story_provider_->RunningStories(
-                [this, round](fidl::VectorPtr<fidl::StringPtr> story_ids) {
-                  auto n = count(story_ids->begin(), story_ids->end(),
-                                 story_info_.id);
-                  FXL_CHECK(n == 0);
-                  TestStory1_Run(round + 1);
-                });
-          });
-    });
-
-    story_controller_->GetInfo([this, round](modular::StoryInfo story_info,
-                                             modular::StoryState state) {
-      FXL_CHECK(IsRunning(state));
-
-      story_controller_->Stop([this, round] { TeardownStoryController(); });
-    });
+        TestStory1_Stop();
+      });
   }
 
-  void TeardownStoryController() {
-    story_state_watcher_.Reset();
-    link_change_count_watcher_.Reset();
-    story_controller_.Unbind();
-    root_link_.Unbind();
+  TestPoint story1_stop_{"Story1 Stop"};
+
+  void TestStory1_Stop() {
+    story_controller_->Stop([this] {
+        story1_stop_.Pass();
+        TestStory1_GetActiveModules();
+      });
   }
 
-  const Settings settings_;
+  TestPoint story1_get_active_modules_{"Story1 GetActiveModules()"};
 
-  StoryStateWatcherImpl story_state_watcher_;
-  LinkChangeCountWatcherImpl link_change_count_watcher_;
+  void TestStory1_GetActiveModules() {
+    story_controller_->GetActiveModules(
+        nullptr, [this](fidl::VectorPtr<modular::ModuleData> modules) {
+          if (modules->size() == 0) {
+            story1_get_active_modules_.Pass();
+          } else {
+            FXL_LOG(ERROR) << "ACTIVE MODULES " << modules->size()
+                           << " EXPECTED " << 0;
+          }
+          TestStory1_GetActiveLinks();
+        });
+  }
+
+  TestPoint story1_get_active_links_{"Story1 GetActiveLinks()"};
+
+  void TestStory1_GetActiveLinks() {
+    story_controller_->GetActiveLinks(
+        nullptr, [this](fidl::VectorPtr<modular::LinkPath> links) {
+          if (links->size() == 0) {
+            story1_get_active_links_.Pass();
+          } else {
+            FXL_LOG(ERROR) << "ACTIVE LINKS " << links->size()
+                           << " EXPECTED " << 0;
+          }
+          TestStory2_Run();
+        });
+  }
+
+  TestPoint story2_run_{"Story2 Run"};
+
+  void TestStory2_Run() {
+    story2_run_.Pass();
+
+    views_v1_token::ViewOwnerPtr story_view;
+    story_controller_->Start(story_view.NewRequest());
+
+    TestStory2_Wait();
+  }
+
+  void TestStory2_Wait() {
+    modular::testing::GetStore()->Get("module2_link", [this](fidl::StringPtr value) {
+        rapidjson::Document doc;
+        doc.Parse(value);
+        if (!doc.IsObject() || !doc.HasMember(kCount) ||
+            !doc[kCount].IsInt() || doc[kCount].GetInt() < 200) {
+          TestStory2_Wait();
+          return;
+        }
+
+        TestStory2_Delete();
+      });
+  }
+
+  TestPoint story2_stop_{"Story2 Stop"};
+
+  void TestStory2_Delete() {
+    story_provider_->DeleteStory(story_info_.id, [this] {
+        story2_stop_.Pass();
+        user_shell_context_->Logout();
+      });
+  }
 
   modular::UserShellContextPtr user_shell_context_;
   modular::StoryProviderPtr story_provider_;
@@ -321,8 +218,6 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 }  // namespace
 
 int main(int argc, const char** argv) {
-  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  Settings settings(command_line);
-  modular::testing::ComponentMain<TestApp, Settings>(std::move(settings));
+  modular::testing::ComponentMain<TestApp>();
   return 0;
 }

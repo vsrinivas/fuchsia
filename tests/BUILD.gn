@@ -143,6 +143,18 @@ package("modular_tests") {
       dest = "modular_tests/link_data_test_user_shell"
     },
     {
+      name = "link_data_test_module0"
+      dest = "modular_tests/link_data_test_module0"
+    },
+    {
+      name = "link_data_test_module1"
+      dest = "modular_tests/link_data_test_module1"
+    },
+    {
+      name = "link_data_test_module2"
+      dest = "modular_tests/link_data_test_module2"
+    },
+    {
       name = "link_passing_test_module1"
       dest = "modular_tests/link_passing_test_module1"
     },

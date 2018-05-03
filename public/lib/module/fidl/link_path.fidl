@@ -11,6 +11,7 @@ struct LinkPath {
   // The module_path of the Module instance this link was created under.
   vector<string> module_path;
 
-  // Name of the link itself.
-  string link_name;
+  // Name of the link itself. It may be null, since null is a valid name of a
+  // Link.
+  string? link_name;
 };

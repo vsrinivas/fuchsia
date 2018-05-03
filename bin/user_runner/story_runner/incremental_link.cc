@@ -34,6 +34,10 @@ std::string MakeSequencedLinkKey(const LinkPath& link_path,
   return MakeLinkKey(link_path) + kSeparator + sequence_key;
 }
 
+std::string MakeSequencedLinkKeyPrefix(const LinkPath& link_path) {
+  return MakeLinkKey(link_path) + kSeparator;
+}
+
 }  // namespace
 
 // Reload needs to run if:
@@ -187,9 +191,12 @@ class LinkImpl::IncrementalChangeCall : Operation<> {
 void LinkImpl::ReloadCall::Run() {
   FlowToken flow{this};
   new ReadAllDataCall<modular_private::LinkChange>(
-      &operation_queue_, impl_->page(), MakeLinkKey(impl_->link_path_),
+      &operation_queue_, impl_->page(),
+      MakeSequencedLinkKeyPrefix(impl_->link_path_),
       XdrLinkChange,
       [this, flow](fidl::VectorPtr<modular_private::LinkChange> changes) {
+        // TODO(mesch): Initial link data must be applied even when there
+        // already are data present in the link.
         if (changes->empty()) {
           if (impl_->create_link_info_ &&
               !impl_->create_link_info_->initial_data.is_null() &&

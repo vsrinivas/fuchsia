@@ -42,9 +42,6 @@ class ModuleControllerImpl;
 class ModuleContextImpl;
 class StoryProviderImpl;
 
-constexpr char kRootLink[] = "root";
-constexpr char kRootModuleName[] = "root";
-
 // The story runner, which holds all the links and runs all the modules as well
 // as the story shell. It also implements the StoryController service to give
 // clients control over the story.

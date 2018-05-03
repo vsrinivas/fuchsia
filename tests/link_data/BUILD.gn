@@ -7,6 +7,15 @@ group("link_data") {
 
   public_deps = [
     ":link_data_test_user_shell",
+    ":link_data_test_module0",
+    ":link_data_test_module1",
+    ":link_data_test_module2",
+  ]
+}
+
+source_set("defs") {
+  sources = [
+    "defs.h",
   ]
 }
 
@@ -17,16 +26,65 @@ executable("link_data_test_user_shell") {
     "link_data_test_user_shell.cc",
   ]
   deps = [
+    ":defs",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/test_runner/fidl",
     "//garnet/public/lib/ui/views/fidl:v1",
-    "//peridot/examples/counter_cpp:store",
+    "//peridot/lib/common:names",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib:fidl_private",
+  ]
+}
+
+executable("link_data_test_module0") {
+  sources = [
+    "link_data_test_module0.cc",
+  ]
+
+  deps = [
+    ":defs",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/ui/views/fidl:v1",
+    "//peridot/lib/rapidjson",
+    "//peridot/lib/testing",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib/app_driver/cpp:module_driver",
+  ]
+}
+
+executable("link_data_test_module1") {
+  sources = [
+    "link_data_test_module1.cc",
+  ]
+
+  deps = [
+    ":defs",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/ui/views/fidl:v1",
+    "//peridot/lib/rapidjson",
+    "//peridot/lib/testing",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib/app_driver/cpp:module_driver",
+  ]
+}
+
+executable("link_data_test_module2") {
+  sources = [
+    "link_data_test_module2.cc",
+  ]
+
+  deps = [
+    ":defs",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/ui/views/fidl:v1",
+    "//peridot/lib/rapidjson",
+    "//peridot/lib/testing",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib/app_driver/cpp:module_driver",
   ]
 }
