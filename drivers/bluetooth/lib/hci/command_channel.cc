@@ -9,6 +9,7 @@
 #include <lib/async/default.h>
 #include <zircon/status.h>
 
+#include "garnet/drivers/bluetooth/lib/common/run_or_post.h"
 #include "garnet/drivers/bluetooth/lib/common/run_task_sync.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/logging.h"
@@ -181,7 +182,7 @@ void CommandChannel::ShutDownInternal() {
     event_code_handlers_.clear();
     subevent_code_handlers_.clear();
     pending_transactions_.clear();
-    expiring_event_handler_ids_.clear();
+    async_cmd_handlers_.clear();
   }
 }
 
@@ -192,7 +193,7 @@ CommandChannel::TransactionId CommandChannel::SendCommand(
     const EventCode complete_event_code) {
   if (!is_initialized_) {
     FXL_VLOG(1)
-        << "hci: CommandChannel: Cannot send commands while uninitialized";
+        << "hci: CommandChannel: can't send commands while uninitialized";
     return 0u;
   }
 
@@ -208,9 +209,9 @@ CommandChannel::TransactionId CommandChannel::SendCommand(
     // Cannot send an asynchronous command if there's an external event handler
     // registered for the completion event.
     if (it != event_code_handlers_.end() &&
-        expiring_event_handler_ids_.count(it->second) == 0) {
+        async_cmd_handlers_.count(complete_event_code) == 0) {
       FXL_VLOG(1)
-          << "hci: CommandChannel: Event handler already handling this event.";
+          << "hci: CommandChannel: event handler already handling this event";
       return 0u;
     }
   }
@@ -251,15 +252,17 @@ CommandChannel::EventHandlerId CommandChannel::AddEventHandler(
   }
 
   std::lock_guard<std::mutex> lock(event_handler_mutex_);
-  if (event_code_handlers_.find(event_code) != event_code_handlers_.end()) {
-    FXL_LOG(ERROR) << "hci: event handler already registered for event code: "
+  auto it = async_cmd_handlers_.find(event_code);
+  if (it != async_cmd_handlers_.end()) {
+    FXL_LOG(ERROR) << "hci: async event handler " << it->second
+                   << " already registered for event code: "
                    << fxl::StringPrintf("0x%02x", event_code);
     return 0u;
   }
 
   auto id = NewEventHandler(event_code, false /* is_le_meta */,
                             std::move(event_callback), dispatcher);
-  event_code_handlers_[event_code] = id;
+  event_code_handlers_.emplace(event_code, id);
   return id;
 }
 
@@ -269,17 +272,9 @@ CommandChannel::EventHandlerId CommandChannel::AddLEMetaEventHandler(
     async_t* dispatcher) {
   std::lock_guard<std::mutex> lock(event_handler_mutex_);
 
-  if (subevent_code_handlers_.find(subevent_code) !=
-      subevent_code_handlers_.end()) {
-    FXL_LOG(ERROR)
-        << "hci: event handler already registered for LE Meta subevent code: "
-        << fxl::StringPrintf("0x%02x", subevent_code);
-    return 0u;
-  }
-
   auto id = NewEventHandler(subevent_code, true /* is_le_meta */,
                             std::move(event_callback), dispatcher);
-  subevent_code_handlers_[subevent_code] = id;
+  subevent_code_handlers_.emplace(subevent_code, id);
   return id;
 }
 
@@ -287,22 +282,32 @@ void CommandChannel::RemoveEventHandler(EventHandlerId id) {
   std::lock_guard<std::mutex> lock(event_handler_mutex_);
 
   // Internal handler ids can't be removed.
-  if (expiring_event_handler_ids_.count(id))
+  auto it = std::find_if(async_cmd_handlers_.begin(), async_cmd_handlers_.end(),
+                         [id](auto&& p) { return p.second == id; });
+  if (it != async_cmd_handlers_.end()) {
     return;
+  }
 
   RemoveEventHandlerInternal(id);
 }
 
 void CommandChannel::RemoveEventHandlerInternal(EventHandlerId id) {
   auto iter = event_handler_id_map_.find(id);
-  if (iter == event_handler_id_map_.end())
+  if (iter == event_handler_id_map_.end()) {
     return;
+  }
 
   if (iter->second.event_code != 0) {
-    if (iter->second.is_le_meta_subevent) {
-      subevent_code_handlers_.erase(iter->second.event_code);
-    } else {
-      event_code_handlers_.erase(iter->second.event_code);
+    auto* event_handlers = iter->second.is_le_meta_subevent
+                               ? &subevent_code_handlers_
+                               : &event_code_handlers_;
+
+    auto range = event_handlers->equal_range(iter->second.event_code);
+    for (auto it = range.first; it != range.second; ++it) {
+      if (it->second == id) {
+        event_handlers->erase(it);
+        break;
+      }
     }
   }
   event_handler_id_map_.erase(iter);
@@ -385,6 +390,8 @@ void CommandChannel::MaybeAddTransactionHandler(TransactionData* data) {
   // We already have a handler for this transaction, or another transaction
   // is already waiting and it will be queued.
   if (event_code_handlers_.count(data->complete_event_code())) {
+    FXL_VLOG(3) << "hci: CommandChannel: async command " << data->id()
+                << ": a handler already exists.";
     return;
   }
 
@@ -393,8 +400,10 @@ void CommandChannel::MaybeAddTransactionHandler(TransactionData* data) {
                             data->MakeCallback(), data->dispatcher());
   FXL_DCHECK(id != 0u);
   data->set_handler_id(id);
-  expiring_event_handler_ids_.insert(id);
-  event_code_handlers_[data->complete_event_code()] = id;
+  async_cmd_handlers_[data->complete_event_code()] = id;
+  event_code_handlers_.emplace(data->complete_event_code(), id);
+  FXL_VLOG(3) << "hci: CommandChannel: async command " << data->id()
+              << " assigned handler " << id;
 }
 
 CommandChannel::EventHandlerId CommandChannel::NewEventHandler(
@@ -414,6 +423,8 @@ CommandChannel::EventHandlerId CommandChannel::NewEventHandler(
   data.dispatcher = dispatcher;
   data.is_le_meta_subevent = is_le_meta;
 
+  FXL_VLOG(3) << "hci: CommandChannel: adding event handler " << id
+              << " for event code " << fxl::StringPrintf("0x%02x", event_code);
   FXL_DCHECK(event_handler_id_map_.find(id) == event_handler_id_map_.end());
   event_handler_id_map_[id] = std::move(data);
 
@@ -477,58 +488,77 @@ void CommandChannel::UpdateTransaction(std::unique_ptr<EventPacket> event) {
   // If an asyncronous command failed, then remove it's event handler.
   if (async_failed) {
     RemoveEventHandlerInternal(pending->handler_id());
-    expiring_event_handler_ids_.erase(pending->handler_id());
+    async_cmd_handlers_.erase(pending->complete_event_code());
   }
 }
 
 void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
   EventCode event_code;
-  const std::unordered_map<EventCode, EventHandlerId>* event_handlers;
-
-  if (event->event_code() == kLEMetaEventCode) {
-    event_code = event->view().payload<LEMetaEventParams>().subevent_code;
-    event_handlers = &subevent_code_handlers_;
-  } else {
-    event_code = event->event_code();
-    event_handlers = &event_code_handlers_;
-  }
-
-  auto iter = event_handlers->find(event_code);
-  if (iter == event_handlers->end()) {
-    FXL_VLOG(1) << "hci: CommandChannel: Event " << event_code
-                << " received with no handler";
-    return;
-  }
-
-  EventCallback callback;
-  async_t* dispatcher;
+  const std::unordered_multimap<EventCode, EventHandlerId>* event_handlers;
+  std::vector<std::pair<EventCallback, async_t*>> pending_callbacks;
 
   {
     std::lock_guard<std::mutex> lock(event_handler_mutex_);
-    auto handler_iter = event_handler_id_map_.find(iter->second);
-    FXL_DCHECK(handler_iter != event_handler_id_map_.end());
 
-    auto& handler = handler_iter->second;
-    FXL_DCHECK(handler.event_code == event_code);
+    if (event->event_code() == kLEMetaEventCode) {
+      event_code = event->view().payload<LEMetaEventParams>().subevent_code;
+      event_handlers = &subevent_code_handlers_;
+    } else {
+      event_code = event->event_code();
+      event_handlers = &event_code_handlers_;
+    }
 
-    callback = handler.event_callback.share();
-    dispatcher = handler.dispatcher;
+    auto range = event_handlers->equal_range(event_code);
+    if (range.first == event_handlers->end()) {
+      FXL_VLOG(1) << "hci: CommandChannel: Event "
+                  << fxl::StringPrintf("0x%02x", event_code)
+                  << " received with no handler";
+      return;
+    }
 
-    auto expired_it = expiring_event_handler_ids_.find(iter->second);
-    if (expired_it != expiring_event_handler_ids_.end()) {
-      RemoveEventHandlerInternal(iter->second);
-      expiring_event_handler_ids_.erase(expired_it);
+    auto iter = range.first;
+    while (iter != range.second) {
+      EventCallback callback;
+      async_t* dispatcher;
+      EventHandlerId event_id = iter->second;
+      FXL_VLOG(5) << "hci: CommandChannel: notifying handler (id " << event_id
+                  << ") for event code "
+                  << fxl::StringPrintf("0x%02x", event_code);
+      auto handler_iter = event_handler_id_map_.find(event_id);
+      FXL_DCHECK(handler_iter != event_handler_id_map_.end());
+
+      auto& handler = handler_iter->second;
+      FXL_DCHECK(handler.event_code == event_code);
+
+      callback = handler.event_callback.share();
+      dispatcher = handler.dispatcher;
+
+      ++iter;  // Advance so we don't point to an invalid iterator.
+      auto expired_it = async_cmd_handlers_.find(event_code);
+      if (expired_it != async_cmd_handlers_.end()) {
+        RemoveEventHandlerInternal(event_id);
+        async_cmd_handlers_.erase(expired_it);
+      }
+      pending_callbacks.emplace_back(std::move(callback), dispatcher);
     }
   }
+  // Process queue so callbacks can't add a handler if another queued command
+  // finishes on the same event.
+  TrySendQueuedCommands();
 
-  if (thread_checker_.IsCreationThreadCurrent()) {
-    callback(*event);
-    return;
+  auto it = pending_callbacks.begin();
+  for (; it != pending_callbacks.end() - 1; ++it) {
+    auto event_copy = EventPacket::New(event->view().payload_size());
+    common::MutableBufferView buf = event_copy->mutable_view()->mutable_data();
+    event->view().data().Copy(&buf);
+    common::RunOrPost(
+        [ev = std::move(event_copy), cb = std::move(it->first)]() { cb(*ev); },
+        it->second);
   }
-
-  // Post the event on the requested dispatcher.
-  async::PostTask(dispatcher,
-      [event = std::move(event), callback = std::move(callback)]() mutable { callback(*event); });
+  // Don't copy for the last callback.
+  common::RunOrPost(
+      [ev = std::move(event), cb = std::move(it->first)]() { cb(*ev); },
+      it->second);
 }
 
 void CommandChannel::OnChannelReady(
@@ -597,10 +627,10 @@ void CommandChannel::OnChannelReady(
     if (packet->event_code() == kCommandStatusEventCode ||
         packet->event_code() == kCommandCompleteEventCode) {
       UpdateTransaction(std::move(packet));
+      TrySendQueuedCommands();
     } else {
       NotifyEventHandler(std::move(packet));
     }
-    TrySendQueuedCommands();
   }
 
   status = wait->Begin(async);

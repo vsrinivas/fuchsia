@@ -133,15 +133,16 @@ class CommandChannel final {
   // Returns an ID if the handler was successfully registered. Returns
   // zero in case of an error.
   //
-  // Only one handler can be registered for a given |event_code| at a time. If a
-  // handler was previously registered for the given |event_code|, this method
-  // returns zero.
+  // Multiple handlers can be registered for a given |event_code| at a time.
+  // All handlers that are registered will be called with a reference to the
+  // event.
   //
   // If an asynchronous command is queued which completes on |event_code|, this
-  // method returns zero. It is good practice to avoid using asynchrous commands
-  // and event handlers for the same event code.  In most cases, registering a
-  // long-lived event handler and ending transactions on CommandStatus is
-  // recommended.
+  // method returns zero. It is good practice to avoid using asynchronous
+  // commands and event handlers for the same event code.  SendCommand allows
+  // for queueing multiple asynchronous commands with the same callback.
+  // Alternately a long-lived event handler can be registered with Commands
+  // completing on CommandStatus.
   //
   // If |dispatcher| corresponds to the I/O thread's dispatcher, then the
   // callback will be executed as soon as the event is received from the command
@@ -292,14 +293,6 @@ class CommandChannel final {
   // EventHandlerId counter.
   std::atomic_size_t next_event_handler_id_ __TA_GUARDED(event_handler_mutex_);
 
-  // Event handlers that are automatically removed after being called.
-  //
-  // These are currently only used internally for asynchronous commands to
-  // end transacions and deliver these events to callbacks.
-  // These can not be detected or removed using RemoveEventHandler.
-  std::unordered_set<EventHandlerId> expiring_event_handler_ids_
-      __TA_GUARDED(event_handler_mutex_);
-
   // Used to assert that certain public functions are only called on the
   // creation thread.
   fxl::ThreadChecker thread_checker_;
@@ -347,14 +340,24 @@ class CommandChannel final {
   std::unordered_map<EventHandlerId, EventHandlerData> event_handler_id_map_
       __TA_GUARDED(event_handler_mutex_);
 
-  // Mapping from event code to the event handler that was registered to handle
-  // that event code.
-  std::unordered_map<EventCode, EventHandlerId> event_code_handlers_
+  // Mapping from event code to the event handlers that were registered to
+  // handle that event code.
+  std::unordered_multimap<EventCode, EventHandlerId> event_code_handlers_
       __TA_GUARDED(event_handler_mutex_);
 
-  // Mapping from LE Meta Event Subevent code to the event handler that was
+  // Mapping from LE Meta Event Subevent code to the event handlers that were
   // registered to handle that event code.
-  std::unordered_map<EventCode, EventHandlerId> subevent_code_handlers_
+  std::unordered_multimap<EventCode, EventHandlerId> subevent_code_handlers_
+      __TA_GUARDED(event_handler_mutex_);
+
+  // Mapping from event code to the event handler for async command completion.
+  // These are automatically removed after being called once.
+  // Any event codes in this map are also in event_code_handlers_ and
+  // the event handler id here must be the only one for this event code.
+  //
+  // The event ids in this map can not be detected or removed using
+  // RemoveEventHandler (but can by RemoveEventHandlerInternal).
+  std::unordered_map<EventCode, EventHandlerId> async_cmd_handlers_
       __TA_GUARDED(event_handler_mutex_);
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CommandChannel);

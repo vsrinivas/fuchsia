@@ -486,7 +486,7 @@ TEST_F(HCI_CommandChannelTest, AsynchronousCommands) {
 
   EXPECT_EQ(3u, cb_count);
 
-  // Should not be able to regisrer an event handler now, we're still waiting on
+  // Should not be able to register an event handler now, we're still waiting on
   // the asynchronous command.
   auto event_id0 = cmd_channel()->AddEventHandler(
       kTestEventCode0, [](const auto&) {}, dispatcher());
@@ -577,6 +577,7 @@ TEST_F(HCI_CommandChannelTest, AsyncQueueWhenBlocked) {
   ASSERT_NE(0u, id);
   ASSERT_EQ(0u, transaction_count);
 
+  // This returns invalid because an async command is registered.
   auto invalid_id = cmd_channel()->AddEventHandler(
       kTestEventCode0, [](const auto&) {}, dispatcher());
 
@@ -614,25 +615,32 @@ TEST_F(HCI_CommandChannelTest, EventHandlerBasic) {
   };
 
   int event_count1 = 0;
-  auto event_cb1 = [&event_count1, kTestEventCode1,
+  auto event_cb1 = [&event_count1, kTestEventCode0,
                     this](const EventPacket& event) {
     event_count1++;
-    EXPECT_EQ(kTestEventCode1, event.event_code());
+    EXPECT_EQ(kTestEventCode0, event.event_code());
   };
 
+  int event_count2 = 0;
+  auto event_cb2 = [&event_count2, kTestEventCode1,
+                    this](const EventPacket& event) {
+    event_count2++;
+    EXPECT_EQ(kTestEventCode1, event.event_code());
+  };
   auto id0 = cmd_channel()->AddEventHandler(kTestEventCode0, event_cb0,
                                             dispatcher());
   EXPECT_NE(0u, id0);
 
-  // Cannot register a handler for the same event code more than once.
-  auto id1 = cmd_channel()->AddEventHandler(kTestEventCode0, event_cb1,
-                                            dispatcher());
-  EXPECT_EQ(0u, id1);
+  // Can register a handler for the same event code more than once.
+  auto id1 =
+      cmd_channel()->AddEventHandler(kTestEventCode0, event_cb1, dispatcher());
+  EXPECT_NE(0u, id1);
+  EXPECT_NE(id0, id1);
 
   // Add a handler for a different event code.
-  id1 = cmd_channel()->AddEventHandler(kTestEventCode1, event_cb1,
-                                       dispatcher());
-  EXPECT_NE(0u, id1);
+  auto id2 =
+      cmd_channel()->AddEventHandler(kTestEventCode1, event_cb2, dispatcher());
+  EXPECT_NE(0u, id2);
 
   auto reset = CommandPacket::New(kReset);
   auto transaction_id = cmd_channel()->SendCommand(
@@ -656,10 +664,12 @@ TEST_F(HCI_CommandChannelTest, EventHandlerBasic) {
   RunUntilIdle();
 
   EXPECT_EQ(3, event_count0);
-  EXPECT_EQ(2, event_count1);
+  EXPECT_EQ(3, event_count1);
+  EXPECT_EQ(2, event_count2);
 
   event_count0 = 0;
   event_count1 = 0;
+  event_count2 = 0;
 
   // Remove the first event handler.
   cmd_channel()->RemoveEventHandler(id0);
@@ -676,7 +686,27 @@ TEST_F(HCI_CommandChannelTest, EventHandlerBasic) {
   RunUntilIdle();
 
   EXPECT_EQ(0, event_count0);
-  EXPECT_EQ(2, event_count1);
+  EXPECT_EQ(7, event_count1);
+  EXPECT_EQ(2, event_count2);
+
+  event_count0 = 0;
+  event_count1 = 0;
+  event_count2 = 0;
+
+  // Remove the second event handler.
+  cmd_channel()->RemoveEventHandler(id1);
+  test_device()->SendCommandChannelPacket(event0);
+  test_device()->SendCommandChannelPacket(event0);
+  test_device()->SendCommandChannelPacket(event1);
+  test_device()->SendCommandChannelPacket(event0);
+  test_device()->SendCommandChannelPacket(event1);
+  test_device()->SendCommandChannelPacket(event1);
+
+  RunUntilIdle();
+
+  EXPECT_EQ(0, event_count0);
+  EXPECT_EQ(0, event_count1);
+  EXPECT_EQ(3, event_count2);
 }
 
 // Tests:
@@ -766,32 +796,33 @@ TEST_F(HCI_CommandChannelTest, LEMetaEventHandler) {
       kTestSubeventCode0, event_cb0, dispatcher());
   EXPECT_NE(0u, id0);
 
-  // Cannot register a handler for the same event code more than once.
+  // Can register a handler for the same event code more than once.
   auto id1 = cmd_channel()->AddLEMetaEventHandler(
       kTestSubeventCode0, event_cb0, dispatcher());
-  EXPECT_EQ(0u, id1);
-
-  // Add a handle for a different event code.
-  id1 = cmd_channel()->AddLEMetaEventHandler(kTestSubeventCode1, event_cb1,
-                                             dispatcher());
   EXPECT_NE(0u, id1);
+  EXPECT_NE(id0, id1);
+
+  // Add a handler for a different event code.
+  auto id2 = cmd_channel()->AddLEMetaEventHandler(kTestSubeventCode1, event_cb1,
+                                                  dispatcher());
+  EXPECT_NE(0u, id2);
 
   test_device()->StartCmdChannel(test_cmd_chan());
   test_device()->StartAclChannel(test_acl_chan());
 
   test_device()->SendCommandChannelPacket(le_meta_event_bytes0);
   RunUntilIdle();
-  EXPECT_EQ(1, event_count0);
+  EXPECT_EQ(2, event_count0);
   EXPECT_EQ(0, event_count1);
 
   test_device()->SendCommandChannelPacket(le_meta_event_bytes0);
   RunUntilIdle();
-  EXPECT_EQ(2, event_count0);
+  EXPECT_EQ(4, event_count0);
   EXPECT_EQ(0, event_count1);
 
   test_device()->SendCommandChannelPacket(le_meta_event_bytes1);
   RunUntilIdle();
-  EXPECT_EQ(2, event_count0);
+  EXPECT_EQ(4, event_count0);
   EXPECT_EQ(1, event_count1);
 
   // Remove the first event handler.
@@ -799,7 +830,7 @@ TEST_F(HCI_CommandChannelTest, LEMetaEventHandler) {
   test_device()->SendCommandChannelPacket(le_meta_event_bytes0);
   test_device()->SendCommandChannelPacket(le_meta_event_bytes1);
   RunUntilIdle();
-  EXPECT_EQ(2, event_count0);
+  EXPECT_EQ(5, event_count0);
   EXPECT_EQ(2, event_count1);
 }
 

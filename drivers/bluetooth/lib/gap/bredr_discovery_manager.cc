@@ -145,10 +145,11 @@ void BrEdrDiscoveryManager::MaybeStartInquiry() {
         FXL_DCHECK(event.event_code() == hci::kInquiryCompleteEventCode);
 
         if (!status) {
-          FXL_VLOG(1) << "gap: inquiry command failed";
+          FXL_VLOG(1) << "gap: inquiry complete failure: " << status.ToString();
           return;
         }
 
+        FXL_VLOG(1) << "gap: BrEdrDiscoveryManager: inquiry complete, restart";
         // We've stopped scanning because we timed out.
         self->MaybeStartInquiry();
       },
