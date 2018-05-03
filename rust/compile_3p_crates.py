@@ -125,6 +125,8 @@ def main():
     deps_folders = set()
     for line in stdout.splitlines():
         data = json.loads(line)
+        if "filenames" not in data:
+            continue
         crate_id = data["package_id"]
         assert len(data["filenames"]) == 1
         lib_path = data["filenames"][0]
