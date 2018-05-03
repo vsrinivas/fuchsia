@@ -28,7 +28,6 @@ zx_status_t decode_message(fidl::Message* msg) {
     zx_status_t res;
     const fidl_type_t* table = nullptr;
     switch (msg->ordinal()) {
-    SELECT_TABLE_CASE(display_ControllerSetControllerCallback);
     SELECT_TABLE_CASE(display_ControllerImportVmoImage);
     SELECT_TABLE_CASE(display_ControllerReleaseImage);
     SELECT_TABLE_CASE(display_ControllerImportEvent);
@@ -64,7 +63,7 @@ void Client::HandleControllerApi(async_t* async, async::WaitBase* self,
         return;
     } else if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
         zxlogf(TRACE, "Client closed\n");
-        Reset();
+        TearDown();
         return;
     }
 
@@ -91,7 +90,6 @@ void Client::HandleControllerApi(async_t* async, async::WaitBase* self,
     const fidl_type_t* out_type = nullptr;
 
     switch (msg.ordinal()) {
-    HANDLE_REQUEST_CASE(SetControllerCallback);
     HANDLE_REQUEST_CASE(ImportVmoImage);
     HANDLE_REQUEST_CASE(ReleaseImage);
     HANDLE_REQUEST_CASE(ImportEvent);
@@ -122,33 +120,7 @@ void Client::HandleControllerApi(async_t* async, async::WaitBase* self,
         ZX_DEBUG_ASSERT_MSG(resp.Validate(out_type, &err_msg) == ZX_OK,
                             "Error validating fidl response \"%s\"\n", err_msg);
         if ((status = resp.Write(server_handle_.get(), 0)) != ZX_OK) {
-            zxlogf(INFO, "Error writing response message %d\n", status);
-        }
-    }
-}
-
-void Client::HandleSetControllerCallback(const display_ControllerSetControllerCallbackRequest* req,
-                                         fidl::Builder* resp_builder,
-                                         const fidl_type_t** resp_table) {
-    callback_handle_.reset(req->callback);
-
-    // Send notifications for the currently connected displays
-    int32_t added[configs_.size()];
-    auto iter = configs_.begin();
-    for (unsigned i = 0; i < configs_.size(); i++, iter++) {
-        added[i] = iter->id;
-    }
-    NotifyDisplaysChanged(added, static_cast<uint32_t>(configs_.size()), nullptr, 0);
-
-    if (is_owner_) {
-        display_ControllerCallbackOnClientOwnershipChangeRequest msg;
-        msg.hdr.txid = next_txn_++;
-        msg.hdr.ordinal = display_ControllerCallbackOnClientOwnershipChangeOrdinal;
-        msg.has_ownership = true;
-
-        zx_status_t status = callback_handle_.write(0, &msg, sizeof(msg), nullptr, 0);
-        if (status != ZX_OK) {
-            zxlogf(INFO, "Error writing ownership message message %d\n", status);
+            zxlogf(ERROR, "Error writing response message %d\n", status);
         }
     }
 }
@@ -254,7 +226,7 @@ void Client::HandleImportEvent(const display_ControllerImportEventRequest* req,
 
     if (!success) {
         zxlogf(ERROR, "Failed to import event#%d (%d)\n", req->id, status);
-        Reset();
+        TearDown();
     }
 }
 
@@ -451,45 +423,72 @@ void Client::ApplyConfig() {
     }
 }
 
-void Client::NotifyDisplaysChanged(const int32_t* displays_added, uint32_t added_count,
-                                   const int32_t* displays_removed, uint32_t removed_count) {
+void Client::SetOwnership(bool is_owner) {
+    ZX_DEBUG_ASSERT(controller_->current_thread_is_loop());
+
+    is_owner_ = is_owner;
+    config_applied_ = false;
+
+    display_ControllerClientOwnershipChangeEvent msg;
+    msg.hdr.ordinal = display_ControllerClientOwnershipChangeOrdinal;
+    msg.has_ownership = is_owner;
+
+    zx_status_t status = server_handle_.write(0, &msg, sizeof(msg), nullptr, 0);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "Error writing remove message %d\n", status);
+    }
+
+    ApplyConfig();
+
+}
+
+void Client::OnDisplaysChanged(fbl::unique_ptr<DisplayConfig>* displays_added,
+                               uint32_t added_count,
+                               int32_t* displays_removed, uint32_t removed_count) {
     ZX_DEBUG_ASSERT(controller_->current_thread_is_loop());
 
     uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
     fidl::Builder builder(bytes, ZX_CHANNEL_MAX_MSG_BYTES);
-    auto req = builder.New<display_ControllerCallbackOnDisplaysChangedRequest>();
+    auto req = builder.New<display_ControllerDisplaysChangedEvent>();
     zx_status_t status;
-    req->hdr.txid = next_txn_++;
-    req->hdr.ordinal = display_ControllerCallbackOnDisplaysChangedOrdinal;
+    req->hdr.ordinal = display_ControllerDisplaysChangedOrdinal;
     req->added.count = added_count;
     req->added.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
     req->removed.count = removed_count;
     req->removed.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
 
+    display_Info* coded_configs = nullptr;
     if (added_count > 0) {
-        auto coded_configs = builder.NewArray<display_Info>(added_count);
-        for (unsigned i = 0; i < added_count; i++) {
-            auto config = configs_.find(displays_added[i]);
+        coded_configs = builder.NewArray<display_Info>(added_count);
+    }
 
-            coded_configs[i].id = config->id;
-            coded_configs[i].modes.count = 1;
-            coded_configs[i].modes.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
-            coded_configs[i].pixel_format.count = config->pixel_format_count;
-            coded_configs[i].pixel_format.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+    for (unsigned i = 0; i < removed_count; i++) {
+        configs_.erase(displays_removed[i]);
+    }
 
-            auto mode = builder.NewArray<display_Mode>(1);
-            mode->horizontal_resolution = config->current.h_active;
-            mode->vertical_resolution = config->current.v_active;
-            uint64_t total_pxls = config->current.h_total * config->current.v_total;
-            uint64_t pixel_clock_hz_e2 = config->current.pixel_clock_khz * 1000 * 100;
-            mode->refresh_rate_e2 =
-                    static_cast<uint32_t>((pixel_clock_hz_e2 + total_pxls - 1) / total_pxls);
+    for (unsigned i = 0; i < added_count; i++) {
+        int32_t id = displays_added[i]->id;
+        configs_.insert(fbl::move(displays_added[i]));
+        auto config = configs_.find(id);
 
-            static_assert(sizeof(zx_pixel_format_t) == sizeof(int32_t), "Bad pixel format size");
-            auto pixel_format = builder.NewArray<int32_t>(config->pixel_format_count);
-            memcpy(pixel_format, config->pixel_formats.get(),
-                   config->pixel_format_count * sizeof(int32_t));
-        }
+        coded_configs[i].id = config->id;
+        coded_configs[i].modes.count = 1;
+        coded_configs[i].modes.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+        coded_configs[i].pixel_format.count = config->pixel_format_count;
+        coded_configs[i].pixel_format.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+
+        auto mode = builder.NewArray<display_Mode>(1);
+        mode->horizontal_resolution = config->current.h_active;
+        mode->vertical_resolution = config->current.v_active;
+        uint64_t total_pxls = config->current.h_total * config->current.v_total;
+        uint64_t pixel_clock_hz_e2 = config->current.pixel_clock_khz * 1000 * 100;
+        mode->refresh_rate_e2 =
+                static_cast<uint32_t>((pixel_clock_hz_e2 + total_pxls - 1) / total_pxls);
+
+        static_assert(sizeof(zx_pixel_format_t) == sizeof(int32_t), "Bad pixel format size");
+        auto pixel_format = builder.NewArray<int32_t>(config->pixel_format_count);
+        memcpy(pixel_format, config->pixel_formats.get(),
+               config->pixel_format_count * sizeof(int32_t));
     }
 
     if (removed_count > 0) {
@@ -500,74 +499,12 @@ void Client::NotifyDisplaysChanged(const int32_t* displays_added, uint32_t added
     fidl::Message msg(builder.Finalize(), fidl::HandlePart());
     const char* err;
     ZX_DEBUG_ASSERT_MSG(
-            msg.Validate(&display_ControllerCallbackOnDisplaysChangedRequestTable, &err) == ZX_OK,
+            msg.Validate(&display_ControllerDisplaysChangedEventTable, &err) == ZX_OK,
             "Failed to validate \"%s\"", err);
 
-    if ((status = msg.Write(callback_handle_.get(), 0)) != ZX_OK) {
-        zxlogf(INFO, "Error writing remove message %d\n", status);
+    if ((status = msg.Write(server_handle_.get(), 0)) != ZX_OK) {
+        zxlogf(ERROR, "Error writing remove message %d\n", status);
     }
-}
-
-void Client::SetOwnership(bool is_owner) {
-    ZX_DEBUG_ASSERT(controller_->current_thread_is_loop());
-
-    is_owner_ = is_owner;
-    config_applied_ = false;
-
-    if (callback_handle_) {
-        display_ControllerCallbackOnClientOwnershipChangeRequest msg;
-        msg.hdr.txid = next_txn_++;
-        msg.hdr.ordinal = display_ControllerCallbackOnClientOwnershipChangeOrdinal;
-        msg.has_ownership = is_owner;
-
-        zx_status_t status = callback_handle_.write(0, &msg, sizeof(msg), nullptr, 0);
-        if (status != ZX_OK) {
-            zxlogf(INFO, "Error writing remove message %d\n", status);
-        }
-    }
-
-    ApplyConfig();
-
-}
-
-void Client::OnDisplaysChanged(fbl::unique_ptr<DisplayConfig>* displays_added,
-                               uint32_t added_count,
-                               int32_t* displays_removed, uint32_t removed_count) {
-    for (unsigned i = 0; i < removed_count; i++) {
-        configs_.erase(displays_removed[i]);
-    }
-
-    int32_t added_display_ids[added_count];
-    for (unsigned i = 0; i < added_count; i++) {
-        added_display_ids[i] = displays_added[0]->id;
-        configs_.insert(fbl::move(displays_added[i]));
-    }
-
-    if (callback_handle_) {
-        NotifyDisplaysChanged(added_display_ids, added_count, displays_removed, removed_count);
-    }
-}
-
-zx_status_t Client::InitApiConnection(zx::handle* client_handle) {
-    zx_status_t status;
-    if ((status = zx_channel_create(0, server_handle_.reset_and_get_address(),
-                                    client_handle->reset_and_get_address())) != ZX_OK) {
-        zxlogf(ERROR, "Failed to create channels %d\n", status);
-        return status;
-    }
-
-    api_wait_.set_object(server_handle_.get());
-    api_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-    if ((status = api_wait_.Begin(controller_->loop().async())) != ZX_OK) {
-        // Clear the object, since that's used to detect whether or not api_wait_ is inited.
-        api_wait_.set_object(ZX_HANDLE_INVALID);
-        zxlogf(ERROR, "Failed to start waiting %d\n", status);
-        return status;
-    }
-
-    mtx_init(&fence_mtx_, mtx_plain);
-
-    return ZX_OK;
 }
 
 fbl::RefPtr<FenceReference> Client::GetFence(int32_t id) {
@@ -595,7 +532,7 @@ void Client::OnRefForFenceDead(Fence* fence) {
     }
 }
 
-void Client::Reset() {
+void Client::TearDown() {
     ZX_DEBUG_ASSERT(controller_->loop().GetState() == ASYNC_LOOP_SHUTDOWN
             || controller_->current_thread_is_loop());
     pending_config_valid_ = false;
@@ -605,7 +542,6 @@ void Client::Reset() {
         api_wait_.set_object(ZX_HANDLE_INVALID);
     }
     server_handle_.reset();
-    callback_handle_.reset();
 
     // Use a temporary list to prevent double locking when resetting
     fbl::SinglyLinkedList<fbl::RefPtr<Fence>> fences;
@@ -647,6 +583,28 @@ void Client::Reset() {
     proxy_->OnClientDead();
 }
 
+zx_status_t Client::Init(zx::channel* client_handle) {
+    zx_status_t status;
+    if ((status = zx_channel_create(0, server_handle_.reset_and_get_address(),
+                                    client_handle->reset_and_get_address())) != ZX_OK) {
+        zxlogf(ERROR, "Failed to create channels %d\n", status);
+        return status;
+    }
+
+    api_wait_.set_object(server_handle_.get());
+    api_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
+    if ((status = api_wait_.Begin(controller_->loop().async())) != ZX_OK) {
+        // Clear the object, since that's used to detect whether or not api_wait_ is inited.
+        api_wait_.set_object(ZX_HANDLE_INVALID);
+        zxlogf(ERROR, "Failed to start waiting %d\n", status);
+        return status;
+    }
+
+    mtx_init(&fence_mtx_, mtx_plain);
+
+    return ZX_OK;
+}
+
 Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc)
         : controller_(controller), proxy_(proxy), is_vc_(is_vc) { }
 
@@ -658,7 +616,7 @@ void ClientProxy::SetOwnership(bool is_owner) {
     auto task = new async::Task();
     task->set_handler([client_handler = &handler_, is_owner]
                        (async_t* async, async::Task* task, zx_status_t status) {
-            if (status == ZX_OK) {
+            if (status == ZX_OK && client_handler->IsValid()) {
                 client_handler->SetOwnership(is_owner);
             }
 
@@ -743,7 +701,7 @@ zx_status_t ClientProxy::OnDisplaysChanged(const DisplayInfo** displays_added,
                        added_ptr = added.release(), removed_ptr = removed.release(),
                        added_idx, removed_count]
                        (async_t* async, async::Task* task, zx_status_t status) {
-            if (status == ZX_OK) {
+            if (status == ZX_OK && client_handler->IsValid()) {
                 client_handler->OnDisplaysChanged(added_ptr, added_idx,
                                                   removed_ptr, removed_count);
             }
@@ -756,22 +714,12 @@ zx_status_t ClientProxy::OnDisplaysChanged(const DisplayInfo** displays_added,
 }
 
 void ClientProxy::OnClientDead() {
-    fbl::AutoLock lock(&bind_lock_);
-    bound_ = false;
+    controller_->OnClientDead(this);
 }
 
 void ClientProxy::Close() {
-    {
-        fbl::AutoLock lock(&bind_lock_);
-        closed_ = true;
-
-        if (!bound_) {
-            return;
-        }
-    }
-
     if (controller_->current_thread_is_loop()) {
-        handler_.Reset();
+        handler_.TearDown();
     } else {
         mtx_t mtx;
         mtx_init(&mtx, mtx_plain);
@@ -786,7 +734,7 @@ void ClientProxy::Close() {
                            (async_t* async, async::Task* task, zx_status_t status) {
                 mtx_lock(mtx_ptr);
 
-                client_handler->Reset();
+                client_handler->TearDown();
 
                 *done_ptr = true;
                 cnd_signal(cnd_ptr);
@@ -798,7 +746,7 @@ void ClientProxy::Close() {
             // Tasks only fail to post if the looper is dead. That shouldn't actually
             // happen, but if it does then it's safe to call Reset on this thread anyway.
             delete task;
-            handler_.Reset();
+            handler_.TearDown();
         } else {
             while (!done) {
                 cnd_wait(&cnd, &mtx);
@@ -816,23 +764,11 @@ zx_status_t ClientProxy::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len
             return ZX_ERR_INVALID_ARGS;
         }
 
-        fbl::AutoLock lock(&bind_lock_);
-        if (closed_) {
-            return ZX_ERR_PEER_CLOSED;
-        }
-
-        if (bound_) {
+        if (client_handle_.get() == ZX_HANDLE_INVALID) {
             return ZX_ERR_ALREADY_BOUND;
         }
 
-        zx::handle client_handle;
-        zx_status_t status = handler_.InitApiConnection(&client_handle);
-        if (status != ZX_OK) {
-            return status;
-        }
-
-        bound_ = true;
-        *reinterpret_cast<zx_handle_t*>(out_buf) = client_handle.release();
+        *reinterpret_cast<zx_handle_t*>(out_buf) = client_handle_.release();
         *actual = sizeof(zx_handle_t);
         return ZX_OK;
     }
@@ -842,7 +778,6 @@ zx_status_t ClientProxy::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len
 }
 
 zx_status_t ClientProxy::DdkClose(uint32_t flags) {
-    controller_->OnClientClosed(this);
     Close();
     return ZX_OK;
 }
@@ -851,14 +786,14 @@ void ClientProxy::DdkRelease() {
     delete this;
 }
 
-ClientProxy::ClientProxy(Controller* controller, bool is_vc)
-        : ClientParent(controller->zxdev()),
-          controller_(controller), is_vc_(is_vc), handler_(controller_, this, is_vc_) {
-    mtx_init(&bind_lock_, mtx_plain);
+zx_status_t ClientProxy::Init() {
+    return handler_.Init(&client_handle_);
 }
 
-ClientProxy::~ClientProxy() {
-    ZX_DEBUG_ASSERT(!bound_);
-}
+ClientProxy::ClientProxy(Controller* controller, bool is_vc)
+        : ClientParent(controller->zxdev()),
+          controller_(controller), is_vc_(is_vc), handler_(controller_, this, is_vc_) {}
+
+ClientProxy::~ClientProxy() { }
 
 } // namespace display

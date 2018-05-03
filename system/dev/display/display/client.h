@@ -56,8 +56,7 @@ class Client : private FenceCallback {
 public:
     Client(Controller* controller, ClientProxy* proxy, bool is_vc);
     ~Client();
-
-    zx_status_t InitApiConnection(zx::handle* client_handle);
+    zx_status_t Init(zx::channel* client_handle);
 
     void OnDisplaysChanged(fbl::unique_ptr<DisplayConfig>* displays_added,
                            uint32_t added_count,
@@ -68,12 +67,10 @@ public:
     void OnFenceFired(FenceReference* fence) override;
     void OnRefForFenceDead(Fence* fence) override;
 
-    // Resets state associated with the remote client. Note that this does not fully reset
-    // the class, as the Client instance can get re-inited with InitApiConnection.
-    void Reset();
+    void TearDown();
+
+    bool IsValid() { return server_handle_.get() != ZX_HANDLE_INVALID; }
 private:
-    void HandleSetControllerCallback(const display_ControllerSetControllerCallbackRequest* req,
-                                     fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleImportVmoImage(const display_ControllerImportVmoImageRequest* req,
                               fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleReleaseImage(const display_ControllerReleaseImageRequest* req,
@@ -103,8 +100,6 @@ private:
     bool is_vc_;
 
     zx::channel server_handle_;
-    zx::channel callback_handle_;
-    int32_t next_txn_ = 0x0;
     int32_t next_image_id_ = 0x0;
 
     Image::Map images_;
@@ -136,6 +131,7 @@ class ClientProxy : public ClientParent {
 public:
     ClientProxy(Controller* controller, bool is_vc);
     ~ClientProxy();
+    zx_status_t Init();
 
     zx_status_t DdkClose(uint32_t flags);
     zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
@@ -153,12 +149,7 @@ private:
     bool is_vc_;
     Client handler_;
 
-    // Various state for tracking the connection to the client.
-    // TODO(stevensd): Simplify this when ioctls are replaced with direct FIDL apis and
-    // when FIDL supports events so the two channels are merged.
-    mtx_t bind_lock_;
-    bool bound_ __TA_GUARDED(bind_lock_) = false;
-    bool closed_ __TA_GUARDED(bind_lock_) = false;
+    zx::channel client_handle_;
 };
 
 } // namespace display

@@ -50,20 +50,6 @@ struct ImageConfig {
 };
 const uint32 typeSimple = 0;
 
-// TODO(stevensd): Merge this interface with the Controller interface when
-// fidl supports events.
-interface ControllerCallback {
-  // Event fired when displays are added or removed. This event will be fired
-  // when the callback is registered if there are any connected displays.
-  1: OnDisplaysChanged(vector<Info> added, vector<int32> removed);
-
-  // Event fired when the client gains or loses ownership of the displays.
-  //
-  // New clients should assume they do not have ownership of the display
-  // until this event informs them otherwise.
-  2: OnClientOwnershipChange(bool has_ownership);
-};
-
 // Interface for accessing the display hardware.
 //
 // The driver supports two simultaneous clients - a primary client and a virtcon
@@ -71,7 +57,9 @@ interface ControllerCallback {
 // while the virtcon client is obtained by opening a 'virtcon' child of the
 // device.
 interface Controller {
-  1: SetControllerCallback(handle<channel> callback);
+  // Event fired when displays are added or removed. This event will be fired
+  // when the callback is registered if there are any connected displays.
+  1: -> DisplaysChanged(vector<Info> added, vector<int32> removed);
 
   // Imports a VMO backed image. If tiling is not typeSimple, it is up to
   // the driver and client to agree on its meaning through some mechanism
@@ -137,11 +125,17 @@ interface Controller {
   // will silently fail if called from the primary client.
   9: SetOwnership(bool active);
 
+  // Event fired when the client gains or loses ownership of the displays.
+  //
+  // New clients should assume they do not have ownership of the display
+  // until this event informs them otherwise.
+  10: -> ClientOwnershipChange(bool has_ownership);
+
   // Computes the stride (in pixels) necessary for a linear image with the
   // given width and pixel format. Returns 0 on error.
-  10: ComputeLinearImageStride(uint32 width, int32 pixel_format) -> (uint32 stride);
+  11: ComputeLinearImageStride(uint32 width, int32 pixel_format) -> (uint32 stride);
 
   // Allocates a VMO of the requested size which can be used for images.
   // TODO: move this into a seperate video buffer management system.
-  11: AllocateVmo(uint64 size) -> (status res, handle<vmo>? vmo);
+  12: AllocateVmo(uint64 size) -> (status res, handle<vmo>? vmo);
 };

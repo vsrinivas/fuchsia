@@ -177,7 +177,7 @@ void Controller::HandleClientOwnershipChanges() {
     }
 }
 
-void Controller::OnClientClosed(ClientProxy* client) {
+void Controller::OnClientDead(ClientProxy* client) {
     fbl::AutoLock lock(&mtx_);
     if (client == vc_client_) {
         vc_client_ = nullptr;
@@ -208,17 +208,25 @@ zx_status_t Controller::DdkOpenAt(zx_device_t** dev_out, const char* path, uint3
         return ZX_ERR_NO_MEMORY;
     }
 
+    zx_status_t status = client->Init();
+    if (status != ZX_OK) {
+        zxlogf(TRACE, "Failed to init client %d\n", status);
+        return status;
+    }
+
     // Add all existing displays to the client
-    for (const DisplayInfo& display : displays_) {
-        const DisplayInfo* info = &display;
-        zx_status_t status = client->OnDisplaysChanged(&info, 1, nullptr, 0);
-        if (status != ZX_OK) {
+    if (displays_.size() > 0) {
+        const DisplayInfo* current_displays[displays_.size()];
+        int idx = 0;
+        for (const DisplayInfo& display : displays_) {
+            current_displays[idx++] = &display;
+        }
+        if ((status = client->OnDisplaysChanged(current_displays, idx, nullptr, 0)) != ZX_OK) {
             zxlogf(TRACE, "Failed to init client %d\n", status);
             return status;
         }
     }
 
-    zx_status_t status;
     if ((status = client->DdkAdd(is_vc ? "dc-vc" : "dc", DEVICE_ADD_INSTANCE)) != ZX_OK) {
         zxlogf(TRACE, "Failed to add client %d\n", status);
         return status;

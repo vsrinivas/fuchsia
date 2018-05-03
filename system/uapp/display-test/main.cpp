@@ -50,7 +50,6 @@ typedef struct image {
 #define SIGNAL_EVENT 2
 
 static bool bind_display() {
-    zx_status_t status;
     printf("Opening controller\n");
     int vfd = open("/dev/class/display-controller/000", O_RDWR);
     if (vfd < 0) {
@@ -64,26 +63,10 @@ static bool bind_display() {
         return false;
     }
 
-    printf("Setting callback\n");
-    zx_handle_t dc_cb, dc_cb_prime;
-    if (zx_channel_create(0, &dc_cb, &dc_cb_prime) != ZX_OK) {
-        printf("Failed to create display controller callback channel\n");
-        return false;
-    }
-
-    display_ControllerSetControllerCallbackRequest set_cb_msg;
-    set_cb_msg.hdr.ordinal = display_ControllerSetControllerCallbackOrdinal;
-    set_cb_msg.callback = FIDL_HANDLE_PRESENT;
-    if ((status = zx_channel_write(dc_handle, 0, &set_cb_msg,
-                                   sizeof(set_cb_msg), &dc_cb_prime, 1)) != ZX_OK) {
-        printf("Failed to set callback %d\n", status);
-        return false;
-    }
-
     printf("Wating for display\n");
     zx_handle_t observed;
     uint32_t signals = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-    if (zx_object_wait_one(dc_cb, signals, ZX_TIME_INFINITE, &observed) != ZX_OK) {
+    if (zx_object_wait_one(dc_handle, signals, ZX_TIME_INFINITE, &observed) != ZX_OK) {
         printf("Wait failed\n");
         return false;
     }
@@ -95,18 +78,18 @@ static bool bind_display() {
     printf("Querying display\n");
     uint8_t byte_buffer[ZX_CHANNEL_MAX_MSG_BYTES];
     fidl::Message msg(fidl::BytePart(byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES), fidl::HandlePart());
-    if (msg.Read(dc_cb, 0) != ZX_OK) {
+    if (msg.Read(dc_handle, 0) != ZX_OK) {
         printf("Read failed\n");
         return false;
     }
 
     const char* err_msg;
-    if (msg.Decode(&display_ControllerCallbackOnDisplaysChangedRequestTable, &err_msg) != ZX_OK) {
+    if (msg.Decode(&display_ControllerDisplaysChangedEventTable, &err_msg) != ZX_OK) {
         printf("Fidl decode error %s\n", err_msg);
         return false;
     }
 
-    auto changes = reinterpret_cast<display_ControllerCallbackOnDisplaysChangedRequest*>(
+    auto changes = reinterpret_cast<display_ControllerDisplaysChangedEvent*>(
             msg.bytes().data());
     auto display = reinterpret_cast<display_Info*>(changes->added.data);
     auto mode = reinterpret_cast<display_Mode*>(display->modes.data);

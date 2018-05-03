@@ -52,7 +52,7 @@ public:
     void OnDisplaysChanged(int32_t* displays_added, uint32_t added_count,
                            int32_t* displays_removed, uint32_t removed_count);
     void OnDisplayVsync(int32_t display_id, void* handles);
-    void OnClientClosed(ClientProxy* client);
+    void OnClientDead(ClientProxy* client);
     void SetVcOwner(bool vc_is_owner);
     void ShowActiveDisplay();
 
