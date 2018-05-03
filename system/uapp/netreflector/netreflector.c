@@ -62,12 +62,11 @@ void flip_src_dst(void* packet) {
 }
 
 void send_pending_tx(zx_handle_t tx_fifo) {
-    uint32_t n;
     zx_status_t status;
     while (pending_tx != NULL) {
         eth_fifo_entry_t* e = pending_tx->e;
         e->cookie = pending_tx;
-        if ((status = zx_fifo_write_old(tx_fifo, e, sizeof(eth_fifo_entry_t), &n)) != ZX_OK) {
+        if ((status = zx_fifo_write(tx_fifo, sizeof(*e), e, 1, NULL)) != ZX_OK) {
             fprintf(stderr, "netreflector: error reflecting packet %d\n", status);
             return;
         }
@@ -134,9 +133,8 @@ void rx_complete(char* iobuf, zx_handle_t rx_fifo, eth_fifo_entry_t* e) {
 queue:
     e->length = BUFSIZE;
     e->flags = 0;
-    uint32_t actual;
     zx_status_t status;
-    if ((status = zx_fifo_write_old(rx_fifo, e, sizeof(*e), &actual)) != ZX_OK) {
+    if ((status = zx_fifo_write(rx_fifo, sizeof(*e), e, 1, NULL)) != ZX_OK) {
         fprintf(stderr, "netreflector: failed to queue rx packet: %d\n", status);
     }
 }
@@ -144,7 +142,7 @@ queue:
 void handle(char* iobuf, eth_fifos_t* fifos) {
     zx_port_packet_t packet;
     zx_status_t status;
-    uint32_t n;
+    size_t n;
     eth_fifo_entry_t entries[BUFS];
     for (;;) {
         status = zx_port_wait(port, ZX_TIME_INFINITE, &packet, 1);
@@ -161,7 +159,7 @@ void handle(char* iobuf, eth_fifos_t* fifos) {
         if (packet.signal.observed & ZX_FIFO_READABLE) {
             uint8_t fifo_id = (uint8_t)packet.key;
             zx_handle_t fifo = (fifo_id == RX_FIFO ? fifos->rx_fifo : fifos->tx_fifo);
-            if ((status = zx_fifo_read_old(fifo, entries, sizeof(entries), &n)) != ZX_OK) {
+            if ((status = zx_fifo_read(fifo, sizeof(entries[0]), entries, countof(entries), &n)) != ZX_OK) {
                 fprintf(stderr, "netreflector: error reading fifo %d\n", status);
                 continue;
             }
@@ -169,12 +167,12 @@ void handle(char* iobuf, eth_fifos_t* fifos) {
             eth_fifo_entry_t* e = entries;
             switch (fifo_id) {
             case TX_FIFO:
-                for (uint32_t i = 0; i < n; i++, e++) {
+                for (size_t i = 0; i < n; i++, e++) {
                     tx_complete(e);
                 }
                 break;
             case RX_FIFO:
-                for (uint32_t i = 0; i < n; i++, e++) {
+                for (size_t i = 0; i < n; i++, e++) {
                     rx_complete(iobuf, fifos->rx_fifo, e);
                 }
                 break;
@@ -233,8 +231,7 @@ int main(int argc, char** argv) {
         eth_fifo_entry_t entry = {
             .offset = n * BUFSIZE, .length = BUFSIZE, .flags = 0, .cookie = NULL,
         };
-        uint32_t actual;
-        if ((status = zx_fifo_write_old(fifos.rx_fifo, &entry, sizeof(entry), &actual)) < 0) {
+        if ((status = zx_fifo_write(fifos.rx_fifo, sizeof(entry), &entry, 1, NULL)) < 0) {
             fprintf(stderr, "netreflector: failed to queue rx packet: %d\n", status);
             return -1;
         }

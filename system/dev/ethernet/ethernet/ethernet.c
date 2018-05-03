@@ -280,10 +280,11 @@ static ssize_t eth_config_multicast_locked(ethdev_t* edev, eth_multicast_config_
 
 static void eth_handle_rx(ethdev_t* edev, const void* data, size_t len, uint32_t extra) {
     zx_status_t status;
-    uint32_t count;
+    size_t count;
 
     if (edev->rx_entry_count == 0) {
-        status = zx_fifo_read_old(edev->rx_fifo, edev->rx_entries, sizeof(edev->rx_entries), &count);
+        status = zx_fifo_read(edev->rx_fifo, sizeof(edev->rx_entries[0]), edev->rx_entries,
+                              countof(edev->rx_entries), &count);
         if (status != ZX_OK) {
             if (status == ZX_ERR_SHOULD_WAIT) {
                 if ((edev->fail_rx_read++ % FAIL_REPORT_RATE) == 0) {
@@ -314,7 +315,7 @@ static void eth_handle_rx(ethdev_t* edev, const void* data, size_t len, uint32_t
         e->flags = ETH_FIFO_RX_OK | extra;
     }
 
-    if ((status = zx_fifo_write_old(edev->rx_fifo, e, sizeof(*e), &count)) < 0) {
+    if ((status = zx_fifo_write(edev->rx_fifo, sizeof(*e), e, 1, NULL)) < 0) {
         if (status == ZX_ERR_SHOULD_WAIT) {
             if ((edev->fail_rx_write++ % FAIL_REPORT_RATE) == 0) {
                 zxlogf(ERROR, "eth [%s]: no rx_fifo space available (%u times)\n",
@@ -342,17 +343,17 @@ static void eth0_status(void* cookie, uint32_t status) {
     mtx_unlock(&edev0->lock);
 }
 
-static int tx_fifo_write(ethdev_t* edev, eth_fifo_entry_t* entries, uint32_t count) {
+static int tx_fifo_write(ethdev_t* edev, eth_fifo_entry_t* entries, size_t count) {
     zx_status_t status;
-    uint32_t actual;
+    size_t actual;
     // Writing should never fail, or fail to write all entries
-    status = zx_fifo_write_old(edev->tx_fifo, entries, sizeof(eth_fifo_entry_t) * count, &actual);
+    status = zx_fifo_write(edev->tx_fifo, sizeof(eth_fifo_entry_t), entries, count, &actual);
     if (status < 0) {
         zxlogf(ERROR, "eth [%s]: tx_fifo write failed %d\n", edev->name, status);
         return -1;
     }
     if (actual != count) {
-        zxlogf(ERROR, "eth [%s]: tx_fifo: only wrote %u of %u!\n", edev->name, actual, count);
+        zxlogf(ERROR, "eth [%s]: tx_fifo: only wrote %zu of %zu!\n", edev->name, actual, count);
         return -1;
     }
     return 0;
@@ -516,10 +517,11 @@ static int eth_tx_thread(void* arg) {
     ethdev_t* edev = (ethdev_t*)arg;
     eth_fifo_entry_t entries[FIFO_DEPTH / 2];
     zx_status_t status;
-    uint32_t count;
+    size_t count;
 
     for (;;) {
-        if ((status = zx_fifo_read_old(edev->tx_fifo, entries, sizeof(entries), &count)) < 0) {
+        if ((status = zx_fifo_read(edev->tx_fifo, sizeof(entries[0]), entries,
+                                   countof(entries), &count)) < 0) {
             if (status == ZX_ERR_SHOULD_WAIT) {
                 zx_signals_t observed;
                 if ((status = zx_object_wait_one(edev->tx_fifo,

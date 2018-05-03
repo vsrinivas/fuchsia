@@ -145,9 +145,7 @@ void TransactionGroup::SetResponseReadyLocked() {
 }
 
 void TransactionGroup::RespondLocked() {
-    uint32_t actual;
-    zx_status_t status = zx_fifo_write_old(fifo_, &response_,
-                                           sizeof(block_fifo_response_t), &actual);
+    zx_status_t status = zx_fifo_write(fifo_, sizeof(response_), &response_, 1, nullptr);
     if (status != ZX_OK) {
         fprintf(stderr, "Block Server I/O error: Could not write response\n");
     }

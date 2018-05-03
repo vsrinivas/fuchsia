@@ -283,9 +283,9 @@ void handle_rx(zx_handle_t rx_fifo, char* iobuf, unsigned count, netdump_options
     }
 
     for (;;) {
-        uint32_t n;
+        size_t n;
         zx_status_t status;
-        if ((status = zx_fifo_read_old(rx_fifo, entries, sizeof(entries), &n)) < 0) {
+        if ((status = zx_fifo_read(rx_fifo, sizeof(entries[0]), entries, countof(entries), &n)) < 0) {
             if (status == ZX_ERR_SHOULD_WAIT) {
                 zx_object_wait_one(rx_fifo, ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
                 continue;
@@ -295,7 +295,7 @@ void handle_rx(zx_handle_t rx_fifo, char* iobuf, unsigned count, netdump_options
         }
 
         eth_fifo_entry_t* e = entries;
-        for (uint32_t i = 0; i < n; i++, e++) {
+        for (size_t i = 0; i < n; i++, e++) {
             if (e->flags & ETH_FIFO_RX_OK) {
                 if (options->raw) {
                     printf("---\n");
@@ -316,8 +316,7 @@ void handle_rx(zx_handle_t rx_fifo, char* iobuf, unsigned count, netdump_options
 
             e->length = BUFSIZE;
             e->flags = 0;
-            uint32_t actual;
-            if ((status = zx_fifo_write_old(rx_fifo, e, sizeof(*e), &actual)) < 0) {
+            if ((status = zx_fifo_write(rx_fifo, sizeof(*e), e, 1, NULL)) < 0) {
                 fprintf(stderr, "netdump: failed to queue rx packet: %d\n", status);
                 break;
             }
@@ -463,8 +462,7 @@ int main(int argc, const char** argv) {
             .flags = 0,
             .cookie = NULL,
         };
-        uint32_t actual;
-        if ((status = zx_fifo_write_old(fifos.rx_fifo, &entry, sizeof(entry), &actual)) < 0) {
+        if ((status = zx_fifo_write(fifos.rx_fifo, sizeof(entry), &entry, 1, NULL)) < 0) {
             fprintf(stderr, "netdump: failed to queue rx packet: %d\n", status);
             return -1;
         }
