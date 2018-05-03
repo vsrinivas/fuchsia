@@ -253,12 +253,12 @@ mod tests {
             panic!("test fail {:?}", e);
         }));
 
-        let tries = 100;
+        let tries = 10;
         for _ in 0..tries {
             if calltimes.load(Ordering::Relaxed) == 1 {
                 break;
             }
-            let timeout = async::Timer::<()>::new(10.millis().after_now()).unwrap();
+            let timeout = async::Timer::<()>::new(100.millis().after_now());
             executor.run(timeout, 2).unwrap();
         }
         assert_eq!(1, calltimes.load(Ordering::Relaxed));
@@ -270,7 +270,7 @@ mod tests {
             if calltimes.load(Ordering::Relaxed) == 2 {
                 break;
             }
-            let timeout = async::Timer::<()>::new(10.millis().after_now()).unwrap();
+            let timeout = async::Timer::<()>::new(100.millis().after_now());
             executor.run(timeout, 2).unwrap();
         }
         assert_eq!(2, calltimes.load(Ordering::Relaxed));

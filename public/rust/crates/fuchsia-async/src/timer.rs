@@ -14,10 +14,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use futures::{Future, Stream, Poll, Async, Never};
 use futures::task::{self, AtomicWaker};
 
-use executor::{EHandle, ReceiverRegistration, PacketReceiver};
+use executor::EHandle;
 
 use zx;
-use zx::prelude::*;
 
 /// A trait which allows futures to be easily wrapped in a timeout.
 pub trait TimeoutExt: Future + Sized {
@@ -28,7 +27,7 @@ pub trait TimeoutExt: Future + Sized {
         where OT: FnOnce() -> Result<Self::Item, Self::Error>
     {
         Ok(OnTimeout {
-            timer: Timer::new(time)?,
+            timer: Timer::new(time),
             future: self,
             on_timeout: Some(on_timeout),
         })
@@ -64,74 +63,36 @@ impl<F: Future, OT> Future for OnTimeout<F, OT>
     }
 }
 
-/// The packet reciever for timers.
-#[derive(Debug)]
-struct TimerReceiver {
-    task: AtomicWaker,
-    did_fire: AtomicBool,
-}
-
-impl PacketReceiver for TimerReceiver {
-    fn receive_packet(&self, packet: zx::Packet) {
-        if let zx::PacketContents::SignalRep(signals) = packet.contents() {
-            if signals.observed().contains(zx::Signals::TIMER_SIGNALED) {
-                self.did_fire.store(true, Ordering::SeqCst);
-                self.task.wake();
-            }
-        }
-    }
-}
-
 /// An asynchronous timer.
 #[derive(Debug)]
 #[must_use = "futures do nothing unless polled"]
 pub struct Timer<E> {
-    timer: zx::Timer,
-    timer_receiver: ReceiverRegistration<TimerReceiver>,
-    _marker: PhantomData<E>
+    waker_and_bool: Arc<(AtomicWaker, AtomicBool)>,
+    error_marker: PhantomData<E>,
 }
 
 impl<E> Timer<E> {
     /// Create a new timer scheduled to fire at `time`.
-    pub fn new(time: zx::Time) -> Result<Self, zx::Status> {
-        let ehandle = EHandle::local();
-        let timer_receiver = ehandle.register_receiver(
-            Arc::new(TimerReceiver {
-                task: AtomicWaker::new(),
-                did_fire: AtomicBool::new(false),
-            })
-        );
-
-        let timer = zx::Timer::create(zx::ClockId::Monotonic)?;
-
-        timer.wait_async_handle(
-            ehandle.port(),
-            timer_receiver.key(),
-            zx::Signals::TIMER_SIGNALED,
-            zx::WaitAsyncOpts::Repeating,
-        )?;
-
-        timer.set(time, 0.nanos())?;
-
-        Ok(Timer {
-            timer,
-            timer_receiver,
-            _marker: PhantomData,
-        })
+    pub fn new(time: zx::Time) -> Self {
+        let waker_and_bool = Arc::new((AtomicWaker::new(), AtomicBool::new(false)));
+        EHandle::local().register_timer(time, waker_and_bool.clone());
+        Timer { waker_and_bool, error_marker: PhantomData }
     }
 
     /// Reset the `Timer` to a fire at a new time.
-    pub fn reset(&mut self, time: zx::Time) -> Result<(), zx::Status> {
-        self.timer_receiver.receiver().did_fire.store(false, Ordering::SeqCst);
-        self.timer.set(time, 0.nanos())
+    /// The `Timer` must have already fired since last being reset.
+    pub fn reset(&mut self, time: zx::Time) {
+        assert!(self.did_fire());
+        self.waker_and_bool.1.store(false, Ordering::SeqCst);
+        EHandle::local().register_timer(time, self.waker_and_bool.clone())
     }
 
     fn did_fire(&self) -> bool {
-        self.timer_receiver.receiver().did_fire.load(Ordering::SeqCst)
+        self.waker_and_bool.1.load(Ordering::SeqCst)
     }
 
     fn register_task(&self, cx: &mut task::Context) {
-        self.timer_receiver.receiver().task.register(cx.waker());
+        self.waker_and_bool.0.register(cx.waker());
     }
 }
 
@@ -152,48 +113,73 @@ impl<E> Future for Timer<E> {
 /// This is a stream of events resolving at a rate of once-per interval.
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
-pub struct Interval {
-    timer: Timer<zx::Status>,
+pub struct Interval<E> {
+    timer: Timer<Never>,
     next: zx::Time,
     duration: zx::Duration,
+    error_marker: PhantomData<E>,
 }
 
-impl Interval {
+impl<E> Interval<E> {
     /// Create a new `Interval` which yields every `duration`.
-    pub fn new(duration: zx::Duration) -> Result<Self, zx::Status> {
+    pub fn new(duration: zx::Duration) -> Self {
         let next = duration.after_now();
-        Ok(Interval {
-            timer: Timer::new(next)?,
+        Interval {
+            timer: Timer::new(next),
             next,
             duration,
-        })
-    }
-
-    /// Reset the `Interval` to a fire at a new rate.
-    pub fn reset(&mut self, duration: zx::Duration) -> Result<(), zx::Status> {
-        self.duration = duration;
-        let new_next = duration.after_now();
-        self.next = new_next;
-        self.timer.reset(new_next)
+            error_marker: PhantomData,
+        }
     }
 }
 
-impl Stream for Interval {
+impl<E> Stream for Interval<E> {
     type Item = ();
-    type Error = zx::Status;
+    type Error = E;
     fn poll_next(&mut self, cx: &mut task::Context) -> Poll<Option<()>, Self::Error> {
         match self.timer.poll(cx) {
             Ok(Async::Ready(())) => {
                 self.timer.register_task(cx);
                 self.next += self.duration;
-                self.timer.reset(self.next)?;
+                self.timer.reset(self.next);
                 Ok(Async::Ready(Some(())))
             }
             Ok(Async::Pending) => {
                 self.timer.register_task(cx);
                 Ok(Async::Pending)
             }
-            Err(e) => Err(e),
+            Err(never) => match never {},
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use {Executor, Timer};
+    use futures::prelude::*;
+    use futures::future::Either;
+    use zx::prelude::*;
+
+    #[test]
+    fn shorter_fires_first() {
+        let mut exec = Executor::new().unwrap();
+        let shorter = Timer::<Never>::new(100.millis().after_now());
+        let longer = Timer::<Never>::new(1.second().after_now());
+        match exec.run_singlethreaded(shorter.select(longer)).unwrap() {
+            Either::Left(_) => {},
+            Either::Right(_) => panic!("wrong timer fired"),
+        }
+    }
+
+    #[test]
+    fn shorter_fires_first_multithreaded() {
+        let mut exec = Executor::new().unwrap();
+        let shorter = Timer::<Never>::new(100.millis().after_now());
+        let longer = Timer::<Never>::new(1.second().after_now());
+        match exec.run(shorter.select(longer), 4).unwrap() {
+            Either::Left(_) => {},
+            Either::Right(_) => panic!("wrong timer fired"),
         }
     }
 }

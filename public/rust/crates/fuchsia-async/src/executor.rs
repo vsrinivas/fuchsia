@@ -5,15 +5,17 @@
 use crossbeam::sync::SegQueue;
 use futures::{Async, Future, FutureExt, Never, task};
 use futures::executor::{Executor as FutureExecutor, SpawnError};
+use futures::task::AtomicWaker;
 use parking_lot::{Mutex, Condvar};
 use slab::Slab;
 use zx;
 
 use atomic_future::AtomicFuture;
 
+use std::{cmp, fmt, mem};
 use std::cell::RefCell;
-use std::fmt;
 use std::sync::Arc;
+use std::collections::BinaryHeap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::{usize, u64};
@@ -93,9 +95,20 @@ impl fmt::Debug for Executor {
     }
 }
 
+type TimerHeap = BinaryHeap<TimeWaker>;
+
 thread_local!(
-    static EXECUTOR: RefCell<Option<Arc<Inner>>> = RefCell::new(None)
+    static EXECUTOR: RefCell<Option<(Arc<Inner>, TimerHeap)>> = RefCell::new(None)
 );
+
+fn with_local_timer_heap<F, R>(f: F) -> R
+    where F: FnOnce(&mut TimerHeap) -> R
+{
+    EXECUTOR.with(|e| {
+        (f)(&mut e.borrow_mut().as_mut().expect(
+            "can't get timer heap before fuchsia_async::Executor is initialized").1)
+    })
+}
 
 impl Executor {
     /// Creates a new executor.
@@ -110,7 +123,7 @@ impl Executor {
             })
         };
 
-        executor.ehandle().set_local();
+        executor.ehandle().set_local(TimerHeap::new());
 
         Ok(executor)
     }
@@ -153,25 +166,38 @@ impl Executor {
             }
             res = Ok(Async::Pending);
 
-            let packet = match self.inner.port.wait(zx::Time::INFINITE) {
-                Ok(packet) => packet,
-                Err(status) => {
-                    panic!("Error calling port wait: {:?}", status);
-                }
-            };
 
-            match packet.key() {
-                EMPTY_WAKEUP_ID => {
-                    res = main_future.poll(cx);
-                }
-                TASK_READY_WAKEUP_ID => {
-                    // TODO: loop but don't starve
-                    if let Some(task) = self.inner.ready_tasks.try_pop() {
-                        task.future.try_poll(&task.clone().into(), executor_two);
+            let packet = with_local_timer_heap(|timer_heap| {
+                let deadline = timer_heap.peek().map(|x| x.time).unwrap_or(zx::Time::INFINITE);
+                match self.inner.port.wait(deadline) {
+                    Ok(packet) => {
+                        Some(packet)
+                    },
+                    Err(zx::Status::TIMED_OUT) => {
+                        let time_waker = timer_heap.pop().unwrap();
+                        time_waker.wake();
+                        None
+                    }
+                    Err(status) => {
+                        panic!("Error calling port wait: {:?}", status);
                     }
                 }
-                receiver_key => {
-                    self.inner.deliver_packet(receiver_key as usize, packet);
+            });
+
+            if let Some(packet) = packet {
+                match packet.key() {
+                    EMPTY_WAKEUP_ID => {
+                        res = main_future.poll(cx);
+                    }
+                    TASK_READY_WAKEUP_ID => {
+                        // TODO: loop but don't starve
+                        if let Some(task) = self.inner.ready_tasks.try_pop() {
+                            task.future.try_poll(&task.clone().into(), executor_two);
+                        }
+                    }
+                    receiver_key => {
+                        self.inner.deliver_packet(receiver_key as usize, packet);
+                    }
                 }
             }
         }
@@ -196,9 +222,12 @@ impl Executor {
             Ok(())
         })));
 
-        // Start worker threads
+        // Start worker threads, handing off timers from the current thread.
         self.inner.done.store(false, Ordering::SeqCst);
-        self.create_worker_threads(num_threads);
+        with_local_timer_heap(|timer_heap| {
+            let timer_heap = mem::replace(timer_heap, TimerHeap::new());
+            self.create_worker_threads(num_threads, Some(timer_heap));
+        });
 
         // Wait until the signal the future has completed.
         let (lock, cvar) = &*pair;
@@ -216,10 +245,11 @@ impl Executor {
     }
 
     /// Add `num_workers` worker threads to the executor's thread pool.
-    fn create_worker_threads(&self, num_workers: usize) {
+    /// `timers`: timers from the "master" thread which would otherwise be lost.
+    fn create_worker_threads(&self, num_workers: usize, mut timers: Option<TimerHeap>) {
         let mut threads = self.inner.threads.lock();
         for _ in 0..num_workers {
-            threads.push(self.new_worker());
+            threads.push(self.new_worker(timers.take()));
         }
     }
 
@@ -237,41 +267,47 @@ impl Executor {
         }
     }
 
-    fn new_worker(&self) -> thread::JoinHandle<()> {
+    fn new_worker(&self, timers: Option<TimerHeap>) -> thread::JoinHandle<()> {
         let inner = self.inner.clone();
-        thread::spawn(move || Self::worker_lifecycle(inner))
+        thread::spawn(move || Self::worker_lifecycle(inner, timers))
     }
 
-    fn worker_lifecycle(inner: Arc<Inner>) {
+    fn worker_lifecycle(inner: Arc<Inner>, timers: Option<TimerHeap>) {
         let mut executor: EHandle = EHandle { inner: inner.clone() };
-        executor.clone().set_local();
+        executor.clone().set_local(timers.unwrap_or(TimerHeap::new()));
         loop {
             if inner.done.load(Ordering::SeqCst) {
                 EHandle::rm_local();
                 return;
             }
 
-            let packet = match inner.port.wait(zx::Time::INFINITE) {
-                Ok(packet) => packet,
-                Err(status) => {
-                    // TODO: logging, awaken main thread, signal error somehow.
-                    // Maybe retry on a timeout?
-                    eprintln!("Error calling port wait: {:?}", status);
-                    EHandle::rm_local();
-                    return;
-                }
-            };
-
-            match packet.key() {
-                EMPTY_WAKEUP_ID => {}
-                TASK_READY_WAKEUP_ID => {
-                    // TODO: loop but don't starve
-                    if let Some(task) = inner.ready_tasks.try_pop() {
-                        task.future.try_poll(&task.clone().into(), &mut executor);
+            let packet = with_local_timer_heap(|timer_heap| {
+                let deadline = timer_heap.peek().map(|x| x.time).unwrap_or(zx::Time::INFINITE);
+                match inner.port.wait(deadline) {
+                    Ok(packet) => Some(packet),
+                    Err(zx::Status::TIMED_OUT) => {
+                        let time_waker = timer_heap.pop().unwrap();
+                        time_waker.wake();
+                        None
+                    }
+                    Err(status) => {
+                        panic!("Error calling port wait: {:?}", status);
                     }
                 }
-                receiver_key => {
-                    inner.deliver_packet(receiver_key as usize, packet);
+            });
+
+            if let Some(packet) = packet {
+                match packet.key() {
+                    EMPTY_WAKEUP_ID => {}
+                    TASK_READY_WAKEUP_ID => {
+                        // TODO: loop but don't starve
+                        if let Some(task) = inner.ready_tasks.try_pop() {
+                            task.future.try_poll(&task.clone().into(), &mut executor);
+                        }
+                    }
+                    receiver_key => {
+                        inner.deliver_packet(receiver_key as usize, packet);
+                    }
                 }
             }
         }
@@ -329,15 +365,19 @@ impl<'a> FutureExecutor for &'a EHandle {
 impl EHandle {
     /// Returns the thread-local executor.
     pub fn local() -> Self {
-        let inner = EXECUTOR.with(|e| e.borrow().clone())
+        let inner = EXECUTOR.with(|e| e.borrow().as_ref().map(|x| x.0.clone()))
             .expect("Fuchsia Executor must be created first");
 
         EHandle { inner }
     }
 
-    fn set_local(self) {
+    fn set_local(self, timers: TimerHeap) {
         let inner = self.inner.clone();
-        EXECUTOR.with(|e| *e.borrow_mut() = Some(inner));
+        EXECUTOR.with(|e| {
+            let mut e = e.borrow_mut();
+            assert!(e.is_none());
+            *e = Some((inner, timers));
+        });
     }
 
     fn rm_local() {
@@ -374,6 +414,16 @@ impl EHandle {
                 "Missing receiver to deregister");
         }
     }
+
+    pub(crate) fn register_timer(
+        &self,
+        time: zx::Time,
+        waker_and_bool: Arc<(AtomicWaker, AtomicBool)>
+    ) {
+        with_local_timer_heap(|timer_heap| {
+            timer_heap.push(TimeWaker { time, waker_and_bool })
+        })
+    }
 }
 
 struct Inner {
@@ -382,6 +432,40 @@ struct Inner {
     threads: Mutex<Vec<thread::JoinHandle<()>>>,
     receivers: Mutex<Slab<Arc<PacketReceiver>>>,
     ready_tasks: SegQueue<Arc<Task>>,
+}
+
+struct TimeWaker {
+    time: zx::Time,
+    waker_and_bool: Arc<(AtomicWaker, AtomicBool)>,
+}
+
+impl TimeWaker {
+    fn wake(&self) {
+        self.waker_and_bool.1.store(true, Ordering::SeqCst);
+        self.waker_and_bool.0.wake();
+    }
+}
+
+impl Ord for TimeWaker {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        self.time.cmp(&other.time).reverse() // Reverse to get min-heap rather than max
+    }
+}
+
+impl PartialOrd for TimeWaker {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Eq for TimeWaker {}
+
+// N.B.: two TimerWakers can be equal even if they don't have the same
+// waker_and_bool. This is fine since BinaryHeap doesn't deduplicate.
+impl PartialEq for TimeWaker {
+    fn eq(&self, other: &Self) -> bool {
+        self.time == other.time
+    }
 }
 
 impl Inner {

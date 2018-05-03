@@ -188,25 +188,18 @@ fn process_watch_event(
     if powerbuffer.power_type == power::POWER_TYPE_BATTERY {
         *battery_device_found = true;
         let bsh = bsh.clone();
-        match async::Interval::new(zx::Duration::from_seconds(SLEEP_TIME)) {
-            Ok(timer) => {
-                let f = timer
-                    .for_each(move |_| {
-                        let mut bsh = bsh.lock();
-                        if let Err(e) = bsh.update_status(&file) {
-                            fx_log_err!("{}", e);
-                        }
-                        Ok(())
-                    })
-                    .map(|_| ());
-                async::spawn(f.recover(|e| {
-                    fx_log_err!("Timer failed {:?}", e);
-                }));
-            }
-            Err(e) => {
-                fx_log_err!("Timer failed {:?}", e);
-            }
-        }
+        let timer = async::Interval::new(zx::Duration::from_seconds(SLEEP_TIME));
+        let f = timer
+            .for_each(move |_| {
+                let mut bsh = bsh.lock();
+                if let Err(e) = bsh.update_status(&file) {
+                    fx_log_err!("{}", e);
+                }
+                Ok(())
+            })
+            .map(|_| ());
+
+        async::spawn(f);
     } else {
         *adapter_device_found = true;
     }

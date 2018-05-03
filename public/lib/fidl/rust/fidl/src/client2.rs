@@ -503,7 +503,7 @@ mod tests {
             300.millis().after_now(),
             || panic!("did not receive message in time!")).unwrap();
 
-        let sender = async::Timer::new(100.millis().after_now()).unwrap().map(|()|{
+        let sender = async::Timer::new(100.millis().after_now()).map(|()|{
             client.send(&mut 55u8, 42).unwrap();
         });
 

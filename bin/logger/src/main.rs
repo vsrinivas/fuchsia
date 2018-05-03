@@ -573,7 +573,7 @@ mod tests {
             if done.load(Ordering::Relaxed) || (test_dump_logs && closed.load(Ordering::Relaxed)) {
                 break;
             }
-            let timeout = async::Timer::<()>::new(10.millis().after_now()).unwrap();
+            let timeout = async::Timer::<()>::new(100.millis().after_now());
             executor.run(timeout, 2).unwrap();
         }
 
@@ -623,13 +623,13 @@ mod tests {
             sin.write(to_u8_slice(&mut p)).unwrap();
         }
         println!("DEBUG: {}: write returned", test_name);
-        let tries = 100;
+        let tries = 10;
 
         for _ in 0..tries {
             if done.load(Ordering::Relaxed) {
                 break;
             }
-            let timeout = async::Timer::<()>::new(10.millis().after_now()).unwrap();
+            let timeout = async::Timer::<()>::new(100.millis().after_now());
             println!("DEBUG: {}: wait on executor", test_name);
             executor.run(timeout, 2).unwrap();
             println!("DEBUG: {}: executor returned", test_name);

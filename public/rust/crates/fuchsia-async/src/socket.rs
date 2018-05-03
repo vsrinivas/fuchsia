@@ -172,7 +172,7 @@ mod tests {
                             || panic!("timeout")).unwrap();
 
         // Sends a message after the timeout has passed
-        let sender = Timer::new(100.millis().after_now()).unwrap()
+        let sender = Timer::new(100.millis().after_now())
                         .and_then(|()| tx.write_all(bytes))
                         .map(|_tx| ());
 

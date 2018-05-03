@@ -238,7 +238,7 @@ mod tests {
                         1000.millis().after_now(),
                         || panic!("timeout")).unwrap();
 
-        let sender = Timer::new(100.millis().after_now()).unwrap().map(|()| {
+        let sender = Timer::new(100.millis().after_now()).map(|()| {
             let mut handles = Vec::new();
             tx.write(bytes, &mut handles).unwrap();
         });
@@ -260,14 +260,14 @@ mod tests {
             assert_eq!(1, buf.bytes().len());
             assert_eq!(count, buf.bytes()[0]);
             count += 1;
-            Timer::new(100.millis().after_now()).unwrap()
+            Timer::new(100.millis().after_now())
                 .map(move |()| (chan, buf))
         });
 
         // add a timeout to receiver to stop the server eventually
         let receiver = receiver.on_timeout(400.millis().after_now(), || Ok(())).unwrap();
 
-        let sender = Timer::new(100.millis().after_now()).unwrap().map(|()|{
+        let sender = Timer::new(100.millis().after_now()).map(|()|{
             let mut handles = Vec::new();
             tx.write(&[0], &mut handles).unwrap();
             tx.write(&[1], &mut handles).unwrap();
@@ -326,7 +326,7 @@ mod tests {
         // add a timeout to receiver to stop the server eventually
         let receiver = receiver.on_timeout(500.millis().after_now(), || Ok(())).unwrap();
 
-        let sender = Timer::new(100.millis().after_now()).unwrap().map(|()|{
+        let sender = Timer::new(100.millis().after_now()).map(|()|{
             let mut handles = Vec::new();
             tx.write(&[0], &mut handles).unwrap();
             tx.write(&[1], &mut handles).unwrap();
