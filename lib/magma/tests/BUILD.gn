@@ -11,7 +11,7 @@ package("magma-test-build-only") {
 
   deps = []
 
-  if (have_libvulkan) {
+  if (have_libvulkan || use_vulkan_loader_for_tests) {
     deps += [ ":tests" ]
     if (build_intel_gen) {
       deps += [
@@ -113,7 +113,7 @@ package("magma-test") {
   }
 
   # Tests that depend on libvulkan existing.
-  if (have_libvulkan) {
+  if (have_libvulkan || use_vulkan_loader_for_tests) {
     deps += [ ":tests" ]
 
     tests += [
@@ -206,7 +206,7 @@ if (build_intel_gen) {
   }
 }
 
-if (have_libvulkan) {
+if (have_libvulkan || use_vulkan_loader_for_tests) {
   group("tests") {
     testonly = true
 
