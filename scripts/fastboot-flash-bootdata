@@ -47,13 +47,13 @@ if [[ -z "${BOARD}" ]]; then
     HELP
 fi
 
-MKBOOTFS="${BUILD_DIR}/tools/mkbootfs"
+ZBI="${BUILD_DIR}/tools/zbi"
 BOOTDATA_BIN="${BUILD_DIR}/${BOARD}-combo-bootdata.bin"
 CMDLINE_FILE="${BUILD_DIR}/${BOARD}-cmdline.txt"
 OUT_IMAGE="${BUILD_DIR}/${BOARD}-boot.img"
 
 echo ${CMDLINE} > ${CMDLINE_FILE}
-${MKBOOTFS} ${BOOTDATA_BIN} -C ${CMDLINE_FILE} -o ${OUT_IMAGE}
+${ZBI} -o ${OUT_IMAGE} ${BOOTDATA_BIN} -C ${CMDLINE_FILE}
 
 fastboot flash "${BOOT_PART}" "${OUT_IMAGE}"
 fastboot reboot
