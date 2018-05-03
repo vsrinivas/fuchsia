@@ -10,41 +10,24 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
+#include <fdio/util.h>
+#include <fs/managed-vfs.h>
+#include <lib/async/default.h>
 #include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
 namespace sysmgr {
-namespace {
-
-// We explicitly launch netstack because netstack registers itself as
-// |/dev/socket|, which needs to happen eagerly, instead of being discovered
-// via |/svc/net.Netstack|, which can happen asynchronously.
-void LaunchNetstack(component::ServiceProvider* provider) {
-  zx::channel h1, h2;
-  zx::channel::create(0, &h1, &h2);
-  provider->ConnectToService("net.Netstack", std::move(h1));
-}
-
-// We explicitly launch wlanstack because we want it to start scanning if
-// SSID is configured.
-// TODO: Remove this hard-coded logic once we have a more sophisticated
-// system service manager that can do this sort of thing using config files.
-void LaunchWlanstack(component::ServiceProvider* provider) {
-  zx::channel h1, h2;
-  zx::channel::create(0, &h1, &h2);
-  provider->ConnectToService("wlan_service.Wlan", std::move(h1));
-}
-
-}  // namespace
 
 constexpr char kDefaultLabel[] = "sys";
 constexpr char kConfigDir[] = "/system/data/sysmgr/";
 
 App::App()
     : application_context_(
-          component::ApplicationContext::CreateFromStartupInfo()) {
+          component::ApplicationContext::CreateFromStartupInfo()),
+      vfs_(async_get_default()),
+      svc_root_(fbl::AdoptRef(new fs::PseudoDir())) {
   FXL_DCHECK(application_context_);
 
   Config config;
@@ -75,8 +58,8 @@ App::App()
 
   // Set up environment for the programs we will run.
   application_context_->environment()->CreateNestedEnvironment(
-      service_provider_bridge_.OpenAsDirectory(), env_.NewRequest(),
-      env_controller_.NewRequest(), kDefaultLabel);
+      OpenAsDirectory(), env_.NewRequest(), env_controller_.NewRequest(),
+      kDefaultLabel);
   env_->GetApplicationLauncher(env_launcher_.NewRequest());
 
   // Register services.
@@ -95,19 +78,53 @@ App::App()
 
   // TODO(abarth): Remove this hard-coded mention of netstack once netstack is
   // fully converted to using service namespaces.
-  LaunchNetstack(&service_provider_bridge_);
-  LaunchWlanstack(&service_provider_bridge_);
+  LaunchNetstack();
+  LaunchWlanstack();
 }
 
 App::~App() {}
 
+zx::channel App::OpenAsDirectory() {
+  zx::channel h1, h2;
+  if (zx::channel::create(0, &h1, &h2) != ZX_OK)
+    return zx::channel();
+  if (vfs_.ServeDirectory(svc_root_, std::move(h1)) != ZX_OK)
+    return zx::channel();
+  return h2;
+}
+
+void App::ConnectToService(const std::string& service_name,
+                           zx::channel channel) {
+  fbl::RefPtr<fs::Vnode> child;
+  svc_root_->Lookup(&child, service_name);
+  vfs_.ServeDirectory(child, std::move(channel));
+}
+
+// We explicitly launch netstack because netstack registers itself as
+// |/dev/socket|, which needs to happen eagerly, instead of being discovered
+// via |/svc/net.Netstack|, which can happen asynchronously.
+void App::LaunchNetstack() {
+  zx::channel h1, h2;
+  zx::channel::create(0, &h1, &h2);
+  ConnectToService("net.Netstack", std::move(h1));
+}
+
+// We explicitly launch wlanstack because we want it to start scanning if
+// SSID is configured.
+// TODO: Remove this hard-coded logic once we have a more sophisticated
+// system service manager that can do this sort of thing using config files.
+void App::LaunchWlanstack() {
+  zx::channel h1, h2;
+  zx::channel::create(0, &h1, &h2);
+  ConnectToService("wlan_service.Wlan", std::move(h1));
+}
+
 void App::RegisterSingleton(std::string service_name,
                             component::ApplicationLaunchInfoPtr launch_info) {
-  service_provider_bridge_.AddServiceForName(
-      fxl::MakeCopyable([this, service_name,
-                         launch_info = std::move(launch_info),
-                         controller = component::ApplicationControllerPtr()](
-                            zx::channel client_handle) mutable {
+  auto child = fbl::AdoptRef(
+      new fs::Service([this, service_name, launch_info = std::move(launch_info),
+                       controller = component::ApplicationControllerPtr()](
+                          zx::channel client_handle) mutable {
         FXL_VLOG(2) << "Servicing singleton service request for "
                     << service_name;
         auto it = services_.find(launch_info->url);
@@ -133,8 +150,9 @@ void App::RegisterSingleton(std::string service_name,
         }
 
         it->second.ConnectToService(std::move(client_handle), service_name);
-      }),
-      service_name);
+        return ZX_OK;
+      }));
+  svc_root_->AddEntry(service_name, std::move(child));
 }
 
 void App::RegisterAppLoaders(Config::ServiceMap app_loaders) {
@@ -142,10 +160,13 @@ void App::RegisterAppLoaders(Config::ServiceMap app_loaders) {
       std::move(app_loaders), env_launcher_.get(),
       application_context_->ConnectToEnvironmentService<component::Loader>());
 
-  service_provider_bridge_.AddService<component::Loader>(
-      [this](fidl::InterfaceRequest<component::Loader> request) {
-        app_loader_bindings_.AddBinding(app_loader_.get(), std::move(request));
-      });
+  auto child = fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+    app_loader_bindings_.AddBinding(
+        app_loader_.get(),
+        fidl::InterfaceRequest<component::Loader>(std::move(channel)));
+    return ZX_OK;
+  }));
+  svc_root_->AddEntry(component::Loader::Name_, std::move(child));
 }
 
 void App::LaunchApplication(component::ApplicationLaunchInfo launch_info) {

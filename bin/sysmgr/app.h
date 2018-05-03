@@ -9,12 +9,12 @@
 #include <memory>
 #include <vector>
 
+#include <fs/managed-vfs.h>
 #include <fuchsia/cpp/component.h>
 #include "garnet/bin/sysmgr/delegating_loader.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/svc/cpp/service_namespace.h"
-#include "lib/svc/cpp/service_provider_bridge.h"
 #include "lib/svc/cpp/services.h"
 
 namespace sysmgr {
@@ -31,6 +31,11 @@ class App {
   ~App();
 
  private:
+  zx::channel OpenAsDirectory();
+  void ConnectToService(const std::string& service_name, zx::channel channel);
+  void LaunchNetstack();
+  void LaunchWlanstack();
+
   void RegisterSingleton(std::string service_name,
                          component::ApplicationLaunchInfoPtr launch_info);
   void RegisterDefaultServiceConnector();
@@ -45,8 +50,10 @@ class App {
   // Nested environment within which the apps started by sysmgr will run.
   component::ApplicationEnvironmentPtr env_;
   component::ApplicationEnvironmentControllerPtr env_controller_;
-  component::ServiceProviderBridge service_provider_bridge_;
   component::ApplicationLauncherPtr env_launcher_;
+
+  fs::ManagedVfs vfs_;
+  fbl::RefPtr<fs::PseudoDir> svc_root_;
 
   std::unique_ptr<DelegatingLoader> app_loader_;
   fidl::BindingSet<component::Loader> app_loader_bindings_;
