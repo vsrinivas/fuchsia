@@ -18,6 +18,7 @@ source_set("render") {
     ":video_converter",
     "//garnet/bin/media/media_player/fidl",
     "//garnet/bin/media/media_player/framework",
+    "//garnet/bin/media/media_player/metrics",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/media/timeline",

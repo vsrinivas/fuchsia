@@ -7,6 +7,7 @@
 
 #include <fuchsia/cpp/media.h>
 
+#include "garnet/bin/media/media_player/metrics/packet_timing_tracker.h"
 #include "garnet/bin/media/media_player/render/audio_renderer.h"
 #include "lib/media/transport/fifo_allocator.h"
 #include "lib/media/transport/mapped_shared_buffer.h"
@@ -28,6 +29,8 @@ class FidlAudioRenderer
 
   // AudioRendererInProc implementation.
   const char* label() const override;
+
+  void Dump(std::ostream& os, NodeRef ref) const override;
 
   void Flush(bool hold_frame) override;
 
@@ -80,6 +83,9 @@ class FidlAudioRenderer
   uint32_t bytes_per_frame_;
   bool flushed_ = true;
   int64_t min_lead_time_ns_ = ZX_MSEC(100);
+
+  PacketTimingTracker arrivals_;
+  PacketTimingTracker departures_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FidlAudioRenderer);
 };

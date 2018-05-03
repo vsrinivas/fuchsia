@@ -20,7 +20,10 @@ std::shared_ptr<FidlAudioRenderer> FidlAudioRenderer::Create(
 }
 
 FidlAudioRenderer::FidlAudioRenderer(media::AudioRenderer2Ptr audio_renderer)
-    : audio_renderer_(std::move(audio_renderer)), allocator_(0) {
+    : audio_renderer_(std::move(audio_renderer)),
+      allocator_(0),
+      arrivals_(true),
+      departures_(false) {
   FXL_DCHECK(audio_renderer_);
 
   audio_renderer_->GetMinLeadTime([this](int64_t min_lead_time_nsec) {
@@ -57,6 +60,18 @@ const char* FidlAudioRenderer::label() const {
   return "audio renderer";
 }
 
+void FidlAudioRenderer::Dump(std::ostream& os, NodeRef ref) const {
+  Renderer::Dump(os, ref);
+
+  if (arrivals_.count() != 0) {
+    os << newl << "packet arrivals: " << indent << arrivals_ << outdent;
+  }
+
+  if (departures_.count() != 0) {
+    os << newl << "packet departures: " << indent << departures_ << outdent;
+  }
+}
+
 void FidlAudioRenderer::Flush(bool hold_frame_not_used) {
   flushed_ = true;
   last_supplied_pts_ = 0;
@@ -68,20 +83,26 @@ Demand FidlAudioRenderer::SupplyPacket(PacketPtr packet) {
   FXL_DCHECK(packet);
   FXL_DCHECK(bytes_per_frame_ != 0);
 
-  UpdateTimeline(media::Timeline::local_now());
+  int64_t now = media::Timeline::local_now();
+  UpdateTimeline(now);
 
+  int64_t start_pts_ns = packet->GetPts(media::TimelineRate::NsPerSecond);
   int64_t start_pts = packet->GetPts(pts_rate_);
   int64_t end_pts = start_pts + packet->size() / bytes_per_frame_;
+
   if (flushed_ || end_pts < from_ns(min_pts(0)) ||
       start_pts > from_ns(max_pts(0))) {
     // Discard this packet.
     return current_demand();
   }
 
+  arrivals_.AddSample(now, current_timeline_function()(now), start_pts_ns,
+                      Progressing());
+
   last_supplied_pts_ = end_pts;
 
   if (packet->end_of_stream()) {
-    SetEndOfStreamPts(packet->GetPts(media::TimelineRate::NsPerSecond));
+    SetEndOfStreamPts(start_pts_ns);
 
     if (prime_callback_) {
       // We won't get any more packets, so we're as primed as we're going to
@@ -101,8 +122,14 @@ Demand FidlAudioRenderer::SupplyPacket(PacketPtr packet) {
     audioPacket.payload_size = packet->size();
 
     audio_renderer_->SendPacket(audioPacket, [this, packet]() {
-      UpdateTimeline(media::Timeline::local_now());
+      int64_t now = media::Timeline::local_now();
+
+      UpdateTimeline(now);
       stage()->SetDemand(current_demand());
+
+      departures_.AddSample(now, current_timeline_function()(now),
+                            packet->GetPts(media::TimelineRate::NsPerSecond),
+                            Progressing());
     });
   }
 

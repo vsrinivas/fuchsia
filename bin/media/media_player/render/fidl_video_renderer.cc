@@ -9,6 +9,7 @@
 #include <trace/event.h>
 
 #include "garnet/bin/media/media_player/fidl/fidl_type_conversions.h"
+#include "garnet/bin/media/media_player/framework/formatting.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
 
@@ -19,7 +20,7 @@ std::shared_ptr<FidlVideoRenderer> FidlVideoRenderer::Create() {
   return std::make_shared<FidlVideoRenderer>();
 }
 
-FidlVideoRenderer::FidlVideoRenderer() {
+FidlVideoRenderer::FidlVideoRenderer() : arrivals_(true), draws_(true) {
   supported_stream_types_.push_back(VideoStreamTypeSet::Create(
       {StreamType::kVideoEncodingUncompressed},
       Range<uint32_t>(0, std::numeric_limits<uint32_t>::max()),
@@ -30,6 +31,26 @@ FidlVideoRenderer::~FidlVideoRenderer() {}
 
 const char* FidlVideoRenderer::label() const {
   return "video renderer";
+}
+
+void FidlVideoRenderer::Dump(std::ostream& os, NodeRef ref) const {
+  Renderer::Dump(os, ref);
+
+  if (arrivals_.count() != 0) {
+    os << newl << "video packet arrivals: " << indent << arrivals_ << outdent;
+  }
+
+  if (scenic_lead_.count() != 0) {
+    os << newl << "packet availabiliy on draw: " << indent << draws_ << outdent;
+    os << newl << "scenic lead times:";
+    os << newl << "    minimum           " << AsNs(scenic_lead_.min());
+    os << newl << "    average           " << AsNs(scenic_lead_.average());
+    os << newl << "    maximum           " << AsNs(scenic_lead_.max());
+  }
+
+  if (frame_rate_.progress_interval_count()) {
+    os << newl << "scenic frame rate: " << indent << frame_rate_ << outdent;
+  }
 }
 
 void FidlVideoRenderer::Flush(bool hold_frame) {
@@ -86,10 +107,14 @@ Demand FidlVideoRenderer::SupplyPacket(PacketPtr packet) {
 
   packet_queue_.push(std::move(packet));
 
-  AdvanceReferenceTime(media::Timeline::local_now());
+  int64_t now = media::Timeline::local_now();
+  AdvanceReferenceTime(now);
 
-  // If this is the first packet to arrive, invalidate the views so the first
-  // frame can be displayed.
+  arrivals_.AddSample(now, current_timeline_function()(now), packet_pts_ns,
+                      Progressing());
+
+  // If this is the first packet to arrive, invalidate the views so the
+  // first frame can be displayed.
   if (packet_queue_was_empty) {
     InvalidateViews();
   }
@@ -216,6 +241,17 @@ void FidlVideoRenderer::InvalidateViews() {
 
 void FidlVideoRenderer::OnSceneInvalidated(int64_t reference_time) {
   AdvanceReferenceTime(reference_time);
+
+  // Update trackers.
+  int64_t now = media::Timeline::local_now();
+  draws_.AddSample(
+      now, current_timeline_function()(now),
+      packet_queue_.empty()
+          ? Packet::kUnknownPts
+          : packet_queue_.front()->GetPts(media::TimelineRate::NsPerSecond),
+      Progressing());
+  scenic_lead_.AddSample(reference_time - now);
+  frame_rate_.AddSample(now, Progressing());
 
   if (need_more_packets()) {
     stage()->SetDemand(Demand::kPositive);

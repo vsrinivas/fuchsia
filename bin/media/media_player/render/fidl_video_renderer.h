@@ -10,6 +10,9 @@
 
 #include <fuchsia/cpp/media.h>
 
+#include "garnet/bin/media/media_player/metrics/packet_timing_tracker.h"
+#include "garnet/bin/media/media_player/metrics/rate_tracker.h"
+#include "garnet/bin/media/media_player/metrics/value_tracker.h"
 #include "garnet/bin/media/media_player/render/video_converter.h"
 #include "garnet/bin/media/media_player/render/video_renderer.h"
 #include "lib/ui/scenic/client/host_image_cycler.h"
@@ -30,6 +33,8 @@ class FidlVideoRenderer
 
   // VideoRendererInProc implementation.
   const char* label() const override;
+
+  void Dump(std::ostream& os, NodeRef ref) const override;
 
   void Flush(bool hold_frame) override;
 
@@ -119,6 +124,11 @@ class FidlVideoRenderer
   std::unordered_map<View*, std::unique_ptr<View>> views_;
   fxl::Closure prime_callback_;
   fxl::Closure geometry_update_callback_;
+
+  PacketTimingTracker arrivals_;
+  PacketTimingTracker draws_;
+  RateTracker frame_rate_;
+  ValueTracker<int64_t> scenic_lead_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FidlVideoRenderer);
 };
