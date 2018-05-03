@@ -17,6 +17,8 @@ import 'package:test/src/runner/engine.dart';
 import 'package:test/src/runner/plugin/environment.dart';
 import 'package:test/src/runner/reporter/expanded.dart';
 
+typedef void MainFunction();
+
 /// Use `package:test` internals to run test functions.
 ///
 /// `package:test` doesn't offer a public API for running tests. This calls
@@ -25,7 +27,7 @@ import 'package:test/src/runner/reporter/expanded.dart';
 /// See: https://github.com/dart-lang/test/issues/48
 ///      https://github.com/dart-lang/test/issues/12
 ///      https://github.com/dart-lang/test/issues/99
-Future<bool> runFuchsiaTests(List<Function> mainFunctions) async {
+Future<bool> runFuchsiaTests(List<MainFunction> mainFunctions) async {
   final Declarer declarer = new Declarer();
 
   // TODO: use a nested declarer for each main?

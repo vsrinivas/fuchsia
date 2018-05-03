@@ -47,7 +47,7 @@ def main():
 
     outfile.write('''
     Future<int> main(List<String> args) async {
-      await runFuchsiaTests(<Function>[
+      await runFuchsiaTests(<MainFunction>[
     ''')
 
     for i in range(len(test_files)):
