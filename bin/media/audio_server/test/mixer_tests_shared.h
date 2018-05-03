@@ -25,10 +25,8 @@ inline double GainScaleToDb(Gain::AScale gain_scale) {
 }
 
 // Find a suitable mixer for the provided format, channels and frame rates.
-MixerPtr SelectMixer(AudioSampleFormat src_format,
-                     uint32_t src_channels,
-                     uint32_t src_frame_rate,
-                     uint32_t dst_channels,
+MixerPtr SelectMixer(AudioSampleFormat src_format, uint32_t src_channels,
+                     uint32_t src_frame_rate, uint32_t dst_channels,
                      uint32_t dst_frame_rate,
                      Mixer::Resampler resampler = Mixer::Resampler::Default);
 
@@ -53,11 +51,8 @@ void NormalizeInt24ToPipelineBitwidth(int32_t* source, uint32_t source_len);
 
 // Use supplied mixer to mix (w/out rate conversion) from source to accumulator.
 // TODO(mpuryear): refactor this so that tests just call mixer->Mix directly.
-void DoMix(MixerPtr mixer,
-           const void* src_buf,
-           int32_t* accum_buf,
-           bool accumulate,
-           int32_t num_frames,
+void DoMix(MixerPtr mixer, const void* src_buf, int32_t* accum_buf,
+           bool accumulate, int32_t num_frames,
            Gain::AScale mix_scale = Gain::kUnityScale);
 
 }  // namespace test

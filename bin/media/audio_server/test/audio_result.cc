@@ -381,9 +381,6 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
 //
 // Scale
 //
-double AudioResult::GainToleranceMultiplier = 1.0;
-constexpr double AudioResult::kPrevGainToleranceMultiplier;
-
 uint32_t AudioResult::ScaleEpsilon = 0x0FFFFFFF;
 constexpr uint32_t AudioResult::kPrevScaleEpsilon;
 

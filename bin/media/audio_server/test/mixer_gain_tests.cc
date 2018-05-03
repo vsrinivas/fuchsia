@@ -24,18 +24,19 @@ using Resampler = media::audio::Mixer::Resampler;
 //
 // Test the internally-used inline func that converts fixed-point gain to dB.
 TEST(Gain, GainScaleToDb) {
-  EXPECT_EQ(GainScaleToDb(Gain::kUnityScale), 0.0);
-  EXPECT_EQ(GainScaleToDb(Gain::kUnityScale * 10), 20.0);
+  // Unity scale is 0.0dB (no change).
+  EXPECT_EQ(GainScaleToDb(Gain::kUnityScale), 0.0f);
 
-  EXPECT_GE(GainScaleToDb(Gain::kUnityScale / 100),
-            -40.0 * AudioResult::kPrevGainToleranceMultiplier);
-  EXPECT_LE(GainScaleToDb(Gain::kUnityScale / 100),
-            -40.0 / AudioResult::kPrevGainToleranceMultiplier);
+  // 10x scale-up in amplitude (by definition) is exactly +20.0dB.
+  EXPECT_EQ(GainScaleToDb(Gain::kUnityScale * 10), 20.0f);
 
-  EXPECT_GE(GainScaleToDb(Gain::kUnityScale >> 1),
-            -6.0206 * AudioResult::kPrevGainToleranceMultiplier);
-  EXPECT_LE(GainScaleToDb(Gain::kUnityScale >> 1),
-            -6.0206 / AudioResult::kPrevGainToleranceMultiplier);
+  float gain_db = GainScaleToDb(Gain::kUnityScale / 100);
+  // 1/100x scale-down in amplitude (by definition) is exactly -40.0dB.
+  EXPECT_EQ(gain_db, -40.0f);
+
+  gain_db = GainScaleToDb(Gain::kUnityScale >> 1);
+  // 1/2x scale-down in amplitude (by calculation) is -6.02059991327962...dB.
+  EXPECT_EQ(gain_db, -6.020600f);  // that val, precise to float32 limitations.
 }
 
 // Do renderer and output gains correctly combine to produce unity scaling?

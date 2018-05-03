@@ -17,8 +17,7 @@ constexpr double kFullScaleFloatInputAmplitude = 1.0f;
 constexpr double kFullScaleAccumAmplitude = 1 << (kAudioPipelineWidth - 1);
 // Ideal dynamic range measurement is exactly equal to the reduction in gain.
 // Ideal accompanying noise is ideal noise floor, minus the reduction in gain.
-void MeasureSummaryDynamicRange(Gain::AScale scale,
-                                double* level_db,
+void MeasureSummaryDynamicRange(Gain::AScale scale, double* level_db,
                                 double* sinad_db) {
   MixerPtr mixer = SelectMixer(AudioSampleFormat::FLOAT, 1, 48000, 1, 48000,
                                Resampler::SampleAndHold);
@@ -56,8 +55,7 @@ TEST(DynamicRange, Epsilon) {
 
   MeasureSummaryDynamicRange(Gain::kUnityScale, &unity_level_db,
                              &unity_sinad_db);
-  EXPECT_GE(unity_level_db, 0.0 - AudioResult::kPrevLevelToleranceSourceFloat);
-  EXPECT_LE(unity_level_db, 0.0 + AudioResult::kPrevLevelToleranceSourceFloat);
+  EXPECT_NEAR(unity_level_db, 0.0, AudioResult::kPrevLevelToleranceSourceFloat);
   EXPECT_GE(unity_sinad_db, AudioResult::kPrevFloorSourceFloat);
   AudioResult::LevelToleranceSourceFloat =
       fmax(AudioResult::LevelToleranceSourceFloat, abs(unity_level_db));
@@ -77,12 +75,8 @@ TEST(DynamicRange, Epsilon) {
   MeasureSummaryDynamicRange(AudioResult::kPrevScaleEpsilon,
                              &AudioResult::LevelEpsilonDown,
                              &AudioResult::SinadEpsilonDown);
-  EXPECT_GE(
-      AudioResult::LevelEpsilonDown,
-      AudioResult::kPrevLevelEpsilonDown - AudioResult::kPrevDynRangeTolerance);
-  EXPECT_LE(
-      AudioResult::LevelEpsilonDown,
-      AudioResult::kPrevLevelEpsilonDown + AudioResult::kPrevDynRangeTolerance);
+  EXPECT_NEAR(AudioResult::LevelEpsilonDown, AudioResult::kPrevLevelEpsilonDown,
+              AudioResult::kPrevDynRangeTolerance);
   AudioResult::DynRangeTolerance = fmax(
       AudioResult::DynRangeTolerance,
       abs(AudioResult::LevelEpsilonDown - AudioResult::kPrevLevelEpsilonDown));
@@ -101,10 +95,8 @@ TEST(DynamicRange, 60Down) {
   MeasureSummaryDynamicRange(scale, &AudioResult::Level60Down,
                              &AudioResult::Sinad60Down);
 
-  EXPECT_GE(AudioResult::Level60Down,
-            -60.0 - AudioResult::kPrevDynRangeTolerance);
-  EXPECT_LE(AudioResult::Level60Down,
-            -60.0 + AudioResult::kPrevDynRangeTolerance);
+  EXPECT_NEAR(AudioResult::Level60Down, -60.0,
+              AudioResult::kPrevDynRangeTolerance);
   AudioResult::DynRangeTolerance = fmax(AudioResult::DynRangeTolerance,
                                         abs(AudioResult::Level60Down + 60.0));
 
@@ -157,8 +149,7 @@ TEST(DynamicRange, MonoToStereo) {
   level_left_db = ValToDb(magn_left_signal / kFullScaleAccumAmplitude);
   sinad_left_db = ValToDb(magn_left_signal / magn_left_other);
 
-  EXPECT_GE(level_left_db, 0 - AudioResult::kPrevLevelToleranceSourceFloat);
-  EXPECT_LE(level_left_db, 0 + AudioResult::kPrevLevelToleranceSourceFloat);
+  EXPECT_NEAR(level_left_db, 0.0, AudioResult::kPrevLevelToleranceSourceFloat);
   AudioResult::LevelToleranceSourceFloat =
       fmax(AudioResult::LevelToleranceSourceFloat, abs(level_left_db));
 
@@ -209,12 +200,8 @@ TEST(DynamicRange, StereoToMono) {
 
   // We added identical signals, so accuracy should be high. However, noise
   // floor is doubled as well, so we expect 6dB reduction in sinad.
-  EXPECT_GE(AudioResult::LevelStereoMono,
-            AudioResult::kPrevLevelStereoMono -
-                AudioResult::kPrevLevelToleranceStereoMono);
-  EXPECT_LE(AudioResult::LevelStereoMono,
-            AudioResult::kPrevLevelStereoMono +
-                AudioResult::kPrevLevelToleranceStereoMono);
+  EXPECT_NEAR(AudioResult::LevelStereoMono, AudioResult::kPrevLevelStereoMono,
+              AudioResult::kPrevLevelToleranceStereoMono);
   AudioResult::LevelToleranceStereoMono = fmax(
       AudioResult::LevelToleranceStereoMono,
       abs(AudioResult::LevelStereoMono - AudioResult::kPrevLevelStereoMono));
@@ -299,8 +286,8 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
 TEST(DynamicRange, Mix_8) {
   MeasureMixFloor<uint8_t>(&AudioResult::LevelMix8, &AudioResult::FloorMix8);
 
-  EXPECT_GE(AudioResult::LevelMix8, 0.0 - AudioResult::kPrevLevelToleranceMix8);
-  EXPECT_LE(AudioResult::LevelMix8, 0.0 + AudioResult::kPrevLevelToleranceMix8);
+  EXPECT_NEAR(AudioResult::LevelMix8, 0.0,
+              AudioResult::kPrevLevelToleranceMix8);
   AudioResult::LevelToleranceMix8 =
       fmax(AudioResult::LevelToleranceMix8, abs(AudioResult::LevelMix8));
 
@@ -314,8 +301,8 @@ TEST(DynamicRange, Mix_8) {
 TEST(DynamicRange, Mix_16) {
   MeasureMixFloor<int16_t>(&AudioResult::LevelMix16, &AudioResult::FloorMix16);
 
-  EXPECT_GE(AudioResult::LevelMix16, -AudioResult::kPrevLevelToleranceMix16);
-  EXPECT_LE(AudioResult::LevelMix16, AudioResult::kPrevLevelToleranceMix16);
+  EXPECT_NEAR(AudioResult::LevelMix16, 0.0,
+              AudioResult::kPrevLevelToleranceMix16);
   AudioResult::LevelToleranceMix16 =
       fmax(AudioResult::LevelToleranceMix16, abs(AudioResult::LevelMix16));
 
@@ -329,10 +316,8 @@ TEST(DynamicRange, Mix_Float) {
   MeasureMixFloor<float>(&AudioResult::LevelMixFloat,
                          &AudioResult::FloorMixFloat);
 
-  EXPECT_GE(AudioResult::LevelMixFloat,
-            -AudioResult::kPrevLevelToleranceMixFloat);
-  EXPECT_LE(AudioResult::LevelMixFloat,
-            AudioResult::kPrevLevelToleranceMixFloat);
+  EXPECT_NEAR(AudioResult::LevelMixFloat, 0.0,
+              AudioResult::kPrevLevelToleranceMixFloat);
   AudioResult::LevelToleranceMixFloat = fmax(
       AudioResult::LevelToleranceMixFloat, abs(AudioResult::LevelMixFloat));
 

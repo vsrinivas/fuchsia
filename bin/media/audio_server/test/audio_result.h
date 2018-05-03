@@ -225,11 +225,6 @@ class AudioResult {
   //
   // Scale
   //
-  // Purely when calculating gain (in dB) from gain_scale (fixed-point int),
-  // derived values must be within this multiplier (above or below) of target.
-  static double GainToleranceMultiplier;
-  static constexpr double kPrevGainToleranceMultiplier = 1.000001;
-
   // The nearest-unity scale at which we observe effects on signals.
   static uint32_t ScaleEpsilon;
   static constexpr uint32_t kPrevScaleEpsilon =

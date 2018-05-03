@@ -83,10 +83,8 @@ TEST(NoiseFloor, Source_8) {
   AudioResult::LevelSource8 =
       MeasureSourceNoiseFloor<uint8_t>(&AudioResult::FloorSource8);
 
-  EXPECT_GE(AudioResult::LevelSource8,
-            0.0 - AudioResult::kPrevLevelToleranceSource8);
-  EXPECT_LE(AudioResult::LevelSource8,
-            0.0 + AudioResult::kPrevLevelToleranceSource8);
+  EXPECT_NEAR(AudioResult::LevelSource8, 0.0,
+              AudioResult::kPrevLevelToleranceSource8);
   AudioResult::LevelToleranceSource8 =
       fmax(AudioResult::LevelToleranceSource8, abs(AudioResult::LevelSource8));
 
@@ -98,10 +96,8 @@ TEST(NoiseFloor, Source_16) {
   AudioResult::LevelSource16 =
       MeasureSourceNoiseFloor<int16_t>(&AudioResult::FloorSource16);
 
-  EXPECT_GE(AudioResult::LevelSource16,
-            0.0 - AudioResult::kPrevLevelToleranceSource16);
-  EXPECT_LE(AudioResult::LevelSource16,
-            0.0 + AudioResult::kPrevLevelToleranceSource16);
+  EXPECT_NEAR(AudioResult::LevelSource16, 0.0,
+              AudioResult::kPrevLevelToleranceSource16);
   AudioResult::LevelToleranceSource16 = fmax(
       AudioResult::LevelToleranceSource16, abs(AudioResult::LevelSource16));
 
@@ -113,10 +109,8 @@ TEST(NoiseFloor, Source_Float) {
   AudioResult::LevelSourceFloat =
       MeasureSourceNoiseFloor<float>(&AudioResult::FloorSourceFloat);
 
-  EXPECT_GE(AudioResult::LevelSourceFloat,
-            0.0 - AudioResult::kPrevLevelToleranceSourceFloat);
-  EXPECT_LE(AudioResult::LevelSourceFloat,
-            0.0 + AudioResult::kPrevLevelToleranceSourceFloat);
+  EXPECT_NEAR(AudioResult::LevelSourceFloat, 0.0,
+              AudioResult::kPrevLevelToleranceSourceFloat);
   AudioResult::LevelToleranceSourceFloat =
       fmax(AudioResult::LevelToleranceSourceFloat,
            abs(AudioResult::LevelSourceFloat));
@@ -181,10 +175,8 @@ TEST(NoiseFloor, Output_8) {
   AudioResult::LevelOutput8 =
       MeasureOutputNoiseFloor<uint8_t>(&AudioResult::FloorOutput8);
 
-  EXPECT_GE(AudioResult::LevelOutput8,
-            0.0 - AudioResult::kPrevLevelToleranceOutput8);
-  EXPECT_LE(AudioResult::LevelOutput8,
-            0.0 + AudioResult::kPrevLevelToleranceOutput8);
+  EXPECT_NEAR(AudioResult::LevelOutput8, 0.0,
+              AudioResult::kPrevLevelToleranceOutput8);
   AudioResult::LevelToleranceOutput8 =
       fmax(AudioResult::LevelToleranceOutput8, abs(AudioResult::LevelOutput8));
 
@@ -196,10 +188,8 @@ TEST(NoiseFloor, Output_16) {
   AudioResult::LevelOutput16 =
       MeasureOutputNoiseFloor<int16_t>(&AudioResult::FloorOutput16);
 
-  EXPECT_GE(AudioResult::LevelOutput16,
-            0.0 - AudioResult::kPrevLevelToleranceOutput16);
-  EXPECT_LE(AudioResult::LevelOutput16,
-            0.0 + AudioResult::kPrevLevelToleranceOutput16);
+  EXPECT_NEAR(AudioResult::LevelOutput16, 0.0,
+              AudioResult::kPrevLevelToleranceOutput16);
   AudioResult::LevelToleranceOutput16 = fmax(
       AudioResult::LevelToleranceOutput16, abs(AudioResult::LevelOutput16));
 
@@ -211,10 +201,8 @@ TEST(NoiseFloor, Output_Float) {
   AudioResult::LevelOutputFloat =
       MeasureOutputNoiseFloor<float>(&AudioResult::FloorOutputFloat);
 
-  EXPECT_GE(AudioResult::LevelOutputFloat,
-            0.0 - AudioResult::kPrevLevelToleranceOutputFloat);
-  EXPECT_LE(AudioResult::LevelOutputFloat,
-            0.0 + AudioResult::kPrevLevelToleranceOutputFloat);
+  EXPECT_NEAR(AudioResult::LevelOutputFloat, 0.0,
+              AudioResult::kPrevLevelToleranceOutputFloat);
   AudioResult::LevelToleranceOutputFloat =
       fmax(AudioResult::LevelToleranceOutputFloat,
            abs(AudioResult::LevelOutputFloat));
@@ -225,10 +213,8 @@ TEST(NoiseFloor, Output_Float) {
 // Ideal frequency response measurement is 0.00 dB across the audible spectrum
 // Ideal SINAD is at least 6 dB per signal-bit (>96 dB, if 16-bit resolution).
 // If UseFullFrequencySet is false, we test at only three summary frequencies.
-void MeasureFreqRespSinad(MixerPtr mixer,
-                          uint32_t src_buf_size,
-                          double* level_db,
-                          double* sinad_db) {
+void MeasureFreqRespSinad(MixerPtr mixer, uint32_t src_buf_size,
+                          double* level_db, double* sinad_db) {
   if (!std::isnan(level_db[0])) {
     // This run already has frequency response and SINAD test results for this
     // sampler and resampling ratio; don't waste time and cycles rerunning it.
@@ -346,8 +332,7 @@ void EvaluateSinadResults(double* sinad_results, const double* sinad_limits) {
 
 // For the given resampler, measure frequency response and sinad at unity (no
 // SRC). We articulate this with source buffer length equal to dest length.
-void TestUnitySampleRatio(Resampler sampler_type,
-                          double* freq_resp_results,
+void TestUnitySampleRatio(Resampler sampler_type, double* freq_resp_results,
                           double* sinad_results) {
   MixerPtr mixer =
       SelectMixer(AudioSampleFormat::FLOAT, 1, 48000, 1, 48000, sampler_type);
@@ -358,8 +343,7 @@ void TestUnitySampleRatio(Resampler sampler_type,
 
 // For the given resampler, target a 2:1 downsampling ratio. We articulate this
 // by specifying a source buffer twice the length of the destination buffer.
-void TestDownSampleRatio1(Resampler sampler_type,
-                          double* freq_resp_results,
+void TestDownSampleRatio1(Resampler sampler_type, double* freq_resp_results,
                           double* sinad_results) {
   MixerPtr mixer =
       SelectMixer(AudioSampleFormat::FLOAT, 1, 96000, 1, 48000, sampler_type);
@@ -371,8 +355,7 @@ void TestDownSampleRatio1(Resampler sampler_type,
 
 // For the given resampler, target 88200->48000 downsampling. We articulate this
 // by specifying a source buffer longer than destination buffer by that ratio.
-void TestDownSampleRatio2(Resampler sampler_type,
-                          double* freq_resp_results,
+void TestDownSampleRatio2(Resampler sampler_type, double* freq_resp_results,
                           double* sinad_results) {
   MixerPtr mixer =
       SelectMixer(AudioSampleFormat::FLOAT, 1, 88200, 1, 48000, sampler_type);
@@ -384,8 +367,7 @@ void TestDownSampleRatio2(Resampler sampler_type,
 
 // For the given resampler, target 44100->48000 upsampling. We articulate this
 // by specifying a source buffer shorter than destination buffer by that ratio.
-void TestUpSampleRatio1(Resampler sampler_type,
-                        double* freq_resp_results,
+void TestUpSampleRatio1(Resampler sampler_type, double* freq_resp_results,
                         double* sinad_results) {
   MixerPtr mixer =
       SelectMixer(AudioSampleFormat::FLOAT, 1, 44100, 1, 48000, sampler_type);
@@ -397,8 +379,7 @@ void TestUpSampleRatio1(Resampler sampler_type,
 
 // For the given resampler, target the 1:2 upsampling ratio. We articulate this
 // by specifying a source buffer at half the length of the destination buffer.
-void TestUpSampleRatio2(Resampler sampler_type,
-                        double* freq_resp_results,
+void TestUpSampleRatio2(Resampler sampler_type, double* freq_resp_results,
                         double* sinad_results) {
   MixerPtr mixer =
       SelectMixer(AudioSampleFormat::FLOAT, 1, 24000, 1, 48000, sampler_type);
@@ -409,8 +390,7 @@ void TestUpSampleRatio2(Resampler sampler_type,
 }
 
 // For the given resampler, target micro-sampling -- with a 47999:48000 ratio.
-void TestMicroSampleRatio(Resampler sampler_type,
-                          double* freq_resp_results,
+void TestMicroSampleRatio(Resampler sampler_type, double* freq_resp_results,
                           double* sinad_results) {
   MixerPtr mixer =
       SelectMixer(AudioSampleFormat::FLOAT, 1, 47999, 1, 48000, sampler_type);
