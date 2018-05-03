@@ -49,6 +49,8 @@ class PageCommunicatorImpl : public PageCommunicator {
   void CreateWatchStop(flatbuffers::FlatBufferBuilder* buffer);
 
   std::set<std::string, convert::StringViewComparator> interested_devices_;
+  // List of devices we know are not interested in this page.
+  std::set<std::string, convert::StringViewComparator> not_interested_devices_;
   fxl::Closure on_delete_;
   bool started_ = false;
   bool in_destructor_ = false;

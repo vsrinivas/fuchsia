@@ -73,6 +73,10 @@ void PageCommunicatorImpl::OnDeviceChange(
     if (it != interested_devices_.end()) {
       interested_devices_.erase(it);
     }
+    const auto& it2 = not_interested_devices_.find(remote_device);
+    if (it2 != not_interested_devices_.end()) {
+      not_interested_devices_.erase(it2);
+    }
     return;
   }
 
@@ -88,6 +92,15 @@ void PageCommunicatorImpl::OnNewRequest(fxl::StringView source,
     case RequestMessage_WatchStartRequest: {
       if (interested_devices_.find(source) == interested_devices_.end()) {
         interested_devices_.insert(source.ToString());
+      }
+      auto it = not_interested_devices_.find(source);
+      if (it != not_interested_devices_.end()) {
+        // The device used to be ininterested, but now wants updates. Let's
+        // contact it again.
+        not_interested_devices_.erase(it);
+        flatbuffers::FlatBufferBuilder buffer;
+        CreateWatchStart(&buffer);
+        mesh_->Send(source, convert::ExtendedStringView(buffer));
       }
       break;
     }
@@ -108,9 +121,16 @@ void PageCommunicatorImpl::OnNewRequest(fxl::StringView source,
   }
 }
 
-void PageCommunicatorImpl::OnNewResponse(fxl::StringView /*source*/,
-                                         const Response* /*message*/) {
+void PageCommunicatorImpl::OnNewResponse(fxl::StringView source,
+                                         const Response* message) {
   FXL_DCHECK(!in_destructor_);
+  if (message->status() != ResponseStatus_OK) {
+    // The namespace or page was unknown on the other side. We can probably do
+    // something smart with this information (for instance, stop sending
+    // requests over), but we just ignore it for now.
+    not_interested_devices_.emplace(source.ToString());
+    return;
+  }
   FXL_NOTIMPLEMENTED();
 }
 

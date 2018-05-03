@@ -202,5 +202,66 @@ TEST_F(UserCommunicatorImplTest, ThreeHosts_TwoPages) {
       testing::UnorderedElementsAre("host1"));
 }
 
+// This test adds some delay (ie. runs the loop until idle) between the time a
+// device becomes visible and the time the page we are interested in becomes
+// active. This ensure we correctly connect pages that become active after the
+// device is connected.
+TEST_F(UserCommunicatorImplTest, ThreeHosts_WaitBeforePageIsActive) {
+  std::unique_ptr<UserCommunicator> user_communicator1 =
+      GetUserCommunicator("host1");
+  user_communicator1->Start();
+  RunLoopUntilIdle();
+  std::unique_ptr<LedgerCommunicator> ledger1 =
+      user_communicator1->GetLedgerCommunicator("app");
+  FakePageStorage storage1("page");
+  std::unique_ptr<PageCommunicator> page1 =
+      ledger1->GetPageCommunicator(&storage1, &storage1);
+  page1->Start();
+  RunLoopUntilIdle();
+
+  std::unique_ptr<UserCommunicator> user_communicator2 =
+      GetUserCommunicator("host2");
+  user_communicator2->Start();
+  RunLoopUntilIdle();
+  std::unique_ptr<LedgerCommunicator> ledger2 =
+      user_communicator2->GetLedgerCommunicator("app");
+  FakePageStorage storage2("page");
+  std::unique_ptr<PageCommunicator> page2 =
+      ledger2->GetPageCommunicator(&storage2, &storage2);
+  page2->Start();
+  RunLoopUntilIdle();
+
+  EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page1),
+              testing::UnorderedElementsAre("host2"));
+  EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page2),
+              testing::UnorderedElementsAre("host1"));
+
+  std::unique_ptr<UserCommunicator> user_communicator3 =
+      GetUserCommunicator("host3");
+  user_communicator3->Start();
+  RunLoopUntilIdle();
+  std::unique_ptr<LedgerCommunicator> ledger3 =
+      user_communicator3->GetLedgerCommunicator("app");
+  FakePageStorage storage3("page");
+  std::unique_ptr<PageCommunicator> page3 =
+      ledger3->GetPageCommunicator(&storage3, &storage3);
+  page3->Start();
+  RunLoopUntilIdle();
+
+  EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page1),
+              testing::UnorderedElementsAre("host2", "host3"));
+  EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page2),
+              testing::UnorderedElementsAre("host1", "host3"));
+  EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page3),
+              testing::UnorderedElementsAre("host1", "host2"));
+
+  page2.reset();
+  RunLoopUntilIdle();
+  EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page1),
+              testing::UnorderedElementsAre("host3"));
+  EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page3),
+              testing::UnorderedElementsAre("host1"));
+}
+
 }  // namespace
 }  // namespace p2p_sync
