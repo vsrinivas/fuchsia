@@ -277,16 +277,16 @@ bool Edid::GetPreferredTiming(timing_params_t* params) const {
 }
 
 void Edid::Print(void (*print_fn)(const char* str)) const {
-    uint8_t bytes[kBlockSize];
     char str_buf[128];
     print_fn("Raw edid:\n");
-    for (unsigned i = 0; i < len_; i++) {
+    for (auto i = 0; i < edid_length(); i++) {
         constexpr int kBytesPerLine = 16;
         char *b = str_buf;
         if (i % kBytesPerLine == 0) {
             b += sprintf(b, "%04x: ", i);
         }
-        sprintf(b, "%02x%s", bytes[i], i % kBytesPerLine == kBytesPerLine - 1? "\n" : " ");
+        sprintf(b, "%02x%s", edid_bytes()[i],
+                i % kBytesPerLine == kBytesPerLine - 1 ? "\n" : " ");
         print_fn(str_buf);
     }
 }
