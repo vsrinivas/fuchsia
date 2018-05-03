@@ -593,7 +593,6 @@ int main(int argc, char** argv) {
                 return 1;
             }
             watchdog_timeout_seconds = (int) timeout;
-            i++;
         } else if (argv[i][0] != '-') {
             // Treat the rest of the argv array as a list of directory globs.
             num_test_globs = argc - i;
