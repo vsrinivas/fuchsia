@@ -1,4 +1,4 @@
-Zircon chooses to use the BSD License (option b):
+Fuchsia chooses to use the BSD License (option b):
 
  * libfdt - Flat Device Tree manipulation
  * Copyright (C) 2006 David Gibson, IBM Corporation.

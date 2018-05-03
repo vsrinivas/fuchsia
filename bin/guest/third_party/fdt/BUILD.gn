@@ -3,23 +3,25 @@
 # found in the LICENSE file.
 
 config("fdt_config") {
-  include_dirs = [ "include" ]
+  include_dirs = [ "." ]
   cflags = [ "-Wno-sign-compare" ]
 }
 
 source_set("fdt") {
   sources = [
-    "fdt.c",
     "fdt_addresses.c",
+    "fdt.c",
     "fdt_empty_tree.c",
+    "fdt.h",
+    "fdt_overlay.c",
     "fdt_ro.c",
     "fdt_rw.c",
     "fdt_strerror.c",
     "fdt_sw.c",
     "fdt_wip.c",
-    "include/fdt.h",
-    "include/libfdt.h",
-    "include/libfdt_env.h",
+    "libfdt_env.h",
+    "libfdt.h",
+    "libfdt_internal.h",
   ]
   public_configs = [ ":fdt_config" ]
 }

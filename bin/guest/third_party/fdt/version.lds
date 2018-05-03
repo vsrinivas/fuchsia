@@ -57,6 +57,14 @@ LIBFDT_1.2 {
 		fdt_next_property_offset;
 		fdt_first_subnode;
 		fdt_next_subnode;
+		fdt_address_cells;
+		fdt_size_cells;
+		fdt_stringlist_contains;
+		fdt_stringlist_count;
+		fdt_stringlist_search;
+		fdt_stringlist_get;
+		fdt_resize;
+		fdt_overlay_apply;
 
 	local:
 		*;

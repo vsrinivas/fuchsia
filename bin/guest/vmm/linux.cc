@@ -4,21 +4,23 @@
 
 #include "garnet/bin/guest/vmm/linux.h"
 
+#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <inttypes.h>
-#include <libfdt.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <fbl/unique_fd.h>
-
 #include "garnet/bin/guest/vmm/kernel.h"
 #include "garnet/lib/machina/bits.h"
 #include "garnet/lib/machina/guest.h"
 #include "lib/fxl/strings/string_printf.h"
+
+__BEGIN_CDECLS;
+#include <libfdt.h>
+__END_CDECLS;
 
 #if __aarch64__
 static constexpr uintptr_t kKernelOffset = 0x80000;
