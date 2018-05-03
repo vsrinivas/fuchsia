@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include <lib/fzl/time.h>
+#include <lib/fzl/fifo.h>
 #include <fbl/algorithm.h>
 #include <unittest/unittest.h>
 #include <zircon/syscalls.h>
@@ -91,10 +92,105 @@ bool TimeTest() {
     END_TEST;
 }
 
+bool FifoTest() {
+    BEGIN_TEST;
+
+    // Default constructor
+    {
+        fzl::fifo<int> invalid;
+        ASSERT_EQ(invalid.get_handle(), ZX_HANDLE_INVALID);
+    }
+
+    // Move constructors, reset() and release()
+    {
+        zx::fifo zx_fifo_0, zx_fifo_1;
+        zx_status_t status = zx::fifo::create(4, 4, 0, &zx_fifo_0, &zx_fifo_1);
+        ASSERT_EQ(status, ZX_OK);
+        zx_handle_t handle_0 = zx_fifo_0.get();
+        ASSERT_NE(handle_0, ZX_HANDLE_INVALID);
+
+        fzl::fifo<int> moved_fifo(fbl::move(zx_fifo_0));
+        ASSERT_EQ(moved_fifo.get_handle(), handle_0);
+        ASSERT_EQ(zx_fifo_0.get(), ZX_HANDLE_INVALID);
+
+        fzl::fifo<int> moved_again(fbl::move(moved_fifo));
+        ASSERT_EQ(moved_again.get_handle(), handle_0);
+        ASSERT_EQ(moved_fifo.get_handle(), ZX_HANDLE_INVALID);
+
+        zx::handle opaque_handle(moved_again.release());
+        fzl::fifo<int> from_opaque(fbl::move(opaque_handle));
+        ASSERT_EQ(from_opaque.get_handle(), handle_0);
+        ASSERT_EQ(opaque_handle.get(), ZX_HANDLE_INVALID);
+
+        from_opaque.reset();
+        ASSERT_EQ(from_opaque.get_handle(), ZX_HANDLE_INVALID);
+    }
+
+    // Create, read, write
+
+    fzl::fifo<int64_t, char[8]> fifo_0;
+    fzl::fifo<char[8], int64_t> fifo_1;
+
+    {
+        zx_status_t status = fzl::create_fifo(4, 0, &fifo_0, &fifo_1);
+        ASSERT_EQ(status, ZX_OK);
+    }
+
+    {
+        const int64_t numbers[2] = {10, -20};
+        size_t actual = 0;
+        zx_status_t status = fifo_0.write(numbers, 2, &actual);
+        ASSERT_EQ(status, ZX_OK);
+        ASSERT_EQ(actual, 2);
+    }
+
+    {
+        int64_t numbers[3] = { 0, 0, 0 };
+        size_t actual = 0;
+        zx_status_t status = fifo_1.read(numbers, 3, &actual);
+        ASSERT_EQ(status, ZX_OK);
+        ASSERT_EQ(actual, 2);
+        ASSERT_EQ(numbers[0], 10);
+        ASSERT_EQ(numbers[1], -20);
+    }
+
+    {
+        char str[8] = "hi fifo";
+        zx_status_t status = fifo_1.write_one(str);
+        ASSERT_EQ(status, ZX_OK);
+    }
+
+    {
+        char str[8] = ".......";
+        zx_status_t status = fifo_0.read_one(&str);
+        ASSERT_EQ(status, ZX_OK);
+        ASSERT_STR_EQ("hi fifo", str);
+    }
+
+    // Signal & wait_one
+    {
+        fifo_0.signal(0, ZX_USER_SIGNAL_0);
+        zx_signals_t pending = 0;
+        fifo_0.wait_one(ZX_USER_SIGNAL_0, zx::deadline_after(zx::sec(1)), &pending);
+        ASSERT_TRUE(pending & ZX_USER_SIGNAL_0);
+    }
+
+    // Replace
+    {
+        fzl::fifo<int64_t, char[8]> replaced;
+        fifo_0.replace(0, &replaced);
+        ASSERT_EQ(fifo_0.get_handle(), ZX_HANDLE_INVALID);
+        ASSERT_NE(replaced.get_handle(), ZX_HANDLE_INVALID);
+    }
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(libfzl_tests)
 RUN_TEST(TimeTest)
+RUN_TEST(FifoTest)
 END_TEST_CASE(libfzl_tests)
 
 int main(int argc, char** argv) {

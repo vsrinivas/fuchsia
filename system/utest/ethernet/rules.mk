@@ -18,6 +18,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/zxcpp \
     system/ulib/fbl \
     system/ulib/ddk \
+    system/ulib/fzl \
 
 MODULE_LIBS := \
     system/ulib/fdio \

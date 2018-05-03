@@ -22,7 +22,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <lib/zx/fifo.h>
+#include <lib/fzl/fifo.h>
 #include <lib/zx/vmo.h>
 #include <sync/completion.h>
 
@@ -187,8 +187,9 @@ private:
 class BlockServer {
 public:
     // Creates a new BlockServer.
-    static zx_status_t Create(zx_device_t* dev, block_protocol_t* bp, zx::fifo*
-                              fifo_out, BlockServer** out);
+    static zx_status_t Create(zx_device_t* dev, block_protocol_t* bp,
+                              fzl::fifo<block_fifo_request_t, block_fifo_response_t>* fifo_out,
+                              BlockServer** out);
 
     // Starts the BlockServer using the current thread
     zx_status_t Serve() TA_EXCL(server_lock_);
@@ -215,7 +216,7 @@ private:
 
     // Functions that read from the fifo and invoke the queue drainer.
     // Should not be invoked concurrently.
-    zx_status_t Read(block_fifo_request_t* requests, uint32_t* count);
+    zx_status_t Read(block_fifo_request_t* requests, size_t* count);
     void TerminateQueue();
 
     // Attempts to enqueue all operations on the |in_queue_|. Stops
@@ -225,7 +226,7 @@ private:
 
     zx_status_t FindVmoIDLocked(vmoid_t* out) TA_REQ(server_lock_);
 
-    zx::fifo fifo_;
+    fzl::fifo<block_fifo_response_t, block_fifo_request_t> fifo_;
     zx_device_t* dev_;
     block_info_t info_;
     block_protocol_t bp_;

@@ -18,6 +18,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/zx \
     system/ulib/zxcpp \
     system/ulib/fbl \
+    system/ulib/fzl \
 
 MODULE_LIBS := system/ulib/c system/ulib/driver system/ulib/zircon
 

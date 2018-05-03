@@ -36,14 +36,14 @@ constexpr zx_signals_t kSignalFifoOpsComplete = ZX_USER_SIGNAL_1;
 // into a completion object).
 constexpr zx_signals_t kSignalFifoTerminated  = ZX_USER_SIGNAL_2;
 
-void OutOfBandRespond(const zx::fifo& fifo, zx_status_t status, txnid_t txnid) {
+void OutOfBandRespond(const fzl::fifo<block_fifo_response_t, block_fifo_request_t>& fifo,
+                      zx_status_t status, txnid_t txnid) {
     block_fifo_response_t response;
     response.status = status;
     response.txnid = txnid;
     response.count = 0;
 
-    uint32_t actual;
-    status = fifo.write_old(&response, sizeof(block_fifo_response_t), &actual);
+    status = fifo.write_one(response);
     if (status != ZX_OK) {
         fprintf(stderr, "Block Server I/O error: Could not write response\n");
     }
@@ -209,7 +209,7 @@ void BlockServer::TerminateQueue() {
     }
 }
 
-zx_status_t BlockServer::Read(block_fifo_request_t* requests, uint32_t* count) {
+zx_status_t BlockServer::Read(block_fifo_request_t* requests, size_t* count) {
     auto cleanup = fbl::MakeAutoCall([this]() {
         TerminateQueue();
         ZX_ASSERT(pending_count_.load() == 0);
@@ -221,8 +221,7 @@ zx_status_t BlockServer::Read(block_fifo_request_t* requests, uint32_t* count) {
     // terminate
     zx_status_t status;
     while (true) {
-        status = fifo_.read_old(requests, BLOCK_FIFO_MAX_DEPTH *
-                                sizeof(block_fifo_request_t), count);
+        status = fifo_.read(requests, BLOCK_FIFO_MAX_DEPTH, count);
         zx_signals_t signals;
         zx_signals_t seen;
         switch (status) {
@@ -292,7 +291,7 @@ zx_status_t BlockServer::AllocateTxn(txnid_t* out) {
         if (txns_[i] == nullptr) {
             txnid_t txnid = static_cast<txnid_t>(i);
             fbl::AllocChecker ac;
-            txns_[i] = fbl::AdoptRef(new (&ac) TransactionGroup(fifo_.get(), txnid));
+            txns_[i] = fbl::AdoptRef(new (&ac) TransactionGroup(fifo_.get_handle(), txnid));
             if (!ac.check()) {
                 return ZX_ERR_NO_MEMORY;
             }
@@ -360,7 +359,8 @@ void BlockServer::InQueueDrainer() {
 }
 
 zx_status_t BlockServer::Create(zx_device_t* dev, block_protocol_t* bp,
-                                zx::fifo* fifo_out, BlockServer** out) {
+                                fzl::fifo<block_fifo_request_t, block_fifo_response_t>* fifo_out,
+                                BlockServer** out) {
     fbl::AllocChecker ac;
     BlockServer* bs = new (&ac) BlockServer(dev, bp);
     if (!ac.check()) {
@@ -368,8 +368,7 @@ zx_status_t BlockServer::Create(zx_device_t* dev, block_protocol_t* bp,
     }
 
     zx_status_t status;
-    if ((status = zx::fifo::create(BLOCK_FIFO_MAX_DEPTH, BLOCK_FIFO_ESIZE, 0,
-                                   fifo_out, &bs->fifo_)) != ZX_OK) {
+    if ((status = fzl::create_fifo(BLOCK_FIFO_MAX_DEPTH, 0, fifo_out, &bs->fifo_)) != ZX_OK) {
         delete bs;
         return status;
     }
@@ -394,7 +393,7 @@ zx_status_t BlockServer::Create(zx_device_t* dev, block_protocol_t* bp,
 zx_status_t BlockServer::Serve() {
     zx_status_t status;
     block_fifo_request_t requests[BLOCK_FIFO_MAX_DEPTH];
-    uint32_t count;
+    size_t count;
     while (true) {
         // Attempt to drain as much of the input queue as possible
         // before (potentially) blocking in Read.
@@ -565,7 +564,7 @@ void BlockServer::ShutDown() {
 // C declarations
 zx_status_t blockserver_create(zx_device_t* dev, block_protocol_t* bp,
                                zx_handle_t* fifo_out, BlockServer** out) {
-    zx::fifo fifo;
+    fzl::fifo<block_fifo_request_t, block_fifo_response_t> fifo;
     zx_status_t status = BlockServer::Create(dev, bp, &fifo, out);
     *fifo_out = fifo.release();
     return status;

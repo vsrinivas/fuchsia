@@ -16,7 +16,7 @@
 #include <zircon/device/ethertap.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
-#include <lib/zx/fifo.h>
+#include <lib/fzl/fifo.h>
 #include <lib/zx/socket.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
@@ -233,8 +233,7 @@ public:
                 .flags = 0,
                 .cookie = nullptr,
             };
-            uint32_t actual;
-            status = rx_.write_old(&entry, sizeof(entry), &actual);
+            status = rx_.write_one(entry);
             if (status != ZX_OK) {
                 fprintf(stderr, "failed call to write(): %s\n", mxstrerror(status));
                 return status;
@@ -305,8 +304,8 @@ public:
         return rc < 0 ? static_cast<zx_status_t>(rc) : ZX_OK;
     }
 
-    zx::fifo* tx_fifo() { return &tx_; }
-    zx::fifo* rx_fifo() { return &rx_; }
+    fzl::fifo<eth_fifo_entry_t>* tx_fifo() { return &tx_; }
+    fzl::fifo<eth_fifo_entry_t>* rx_fifo() { return &rx_; }
     uint32_t tx_depth() { return tx_depth_; }
     uint32_t rx_depth() { return rx_depth_; }
 
@@ -341,8 +340,8 @@ public:
     uint32_t nbufs_ = 0;
     uint16_t bufsize_ = 0;
 
-    zx::fifo tx_;
-    zx::fifo rx_;
+    fzl::fifo<eth_fifo_entry_t> tx_;
+    fzl::fifo<eth_fifo_entry_t> rx_;
     uint32_t tx_depth_ = 0;
     uint32_t rx_depth_ = 0;
 
@@ -791,9 +790,7 @@ static bool EthernetDataTest_Send() {
     entry->length = 32;
 
     // Write to the TX fifo
-    uint32_t actual = 0;
-    ASSERT_EQ(ZX_OK, client.tx_fifo()->write_old(entry, sizeof(eth_fifo_entry_t), &actual));
-    EXPECT_EQ(1u, actual);
+    ASSERT_EQ(ZX_OK, client.tx_fifo()->write_one(*entry));
 
     ExpectPacketRead(&sock, 32, buf, "");
 
@@ -802,8 +799,7 @@ static bool EthernetDataTest_Send() {
     ASSERT_TRUE(obs & ZX_FIFO_READABLE);
 
     eth_fifo_entry_t return_entry;
-    ASSERT_EQ(ZX_OK, client.tx_fifo()->read_old(&return_entry, sizeof(eth_fifo_entry_t), &actual));
-    EXPECT_EQ(1u, actual);
+    ASSERT_EQ(ZX_OK, client.tx_fifo()->read_one(&return_entry));
 
     // Check the flags on the returned entry
     EXPECT_TRUE(return_entry.flags & ETH_FIFO_TX_OK);
@@ -849,9 +845,7 @@ static bool EthernetDataTest_Recv() {
 
     // Read the RX fifo
     eth_fifo_entry_t entry;
-    uint32_t actual_entries = 0;
-    EXPECT_EQ(ZX_OK, client.rx_fifo()->read_old(&entry, sizeof(eth_fifo_entry_t), &actual_entries));
-    EXPECT_EQ(1, actual_entries);
+    EXPECT_EQ(ZX_OK, client.rx_fifo()->read_one(&entry));
 
     // Check the bytes in the VMO compared to what we sent through the socket
     auto return_buf = client.GetRxBuffer(entry.offset);
@@ -862,8 +856,7 @@ static bool EthernetDataTest_Recv() {
     ASSERT_TRUE(obs & ZX_FIFO_WRITABLE);
 
     entry.length = 2048;
-    EXPECT_EQ(ZX_OK, client.rx_fifo()->write_old(&entry, sizeof(eth_fifo_entry_t), &actual_entries));
-    EXPECT_EQ(1, actual_entries);
+    EXPECT_EQ(ZX_OK, client.rx_fifo()->write_one(entry));
 
     ASSERT_TRUE(EthernetCleanupHelper(&sock, &client));
     END_TEST;
