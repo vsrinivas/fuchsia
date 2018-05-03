@@ -27,6 +27,7 @@ source_set("cloud_provider") {
     "//peridot/bin/ledger/fidl_helpers",
     "//peridot/lib/convert",
     "//peridot/public/lib/cloud_provider/fidl",
+    "//third_party/murmurhash",
   ]
 
   configs += [ "//peridot/bin/ledger:ledger_config" ]

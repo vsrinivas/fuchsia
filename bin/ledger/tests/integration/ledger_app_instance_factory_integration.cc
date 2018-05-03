@@ -14,6 +14,7 @@
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/functional/make_copyable.h"
+#include "garnet/lib/backoff/exponential_backoff.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/testing/cloud_provider/fake_cloud_provider.h"
@@ -26,6 +27,18 @@
 namespace test {
 namespace integration {
 namespace {
+
+constexpr zx::duration kBackoffDuration = zx::msec(5);
+
+ledger::Environment BuildEnvironment(async_t* async) {
+  return ledger::EnvironmentBuilder()
+      .SetAsync(async)
+      .SetBackoffFactory([] {
+        return std::make_unique<backoff::ExponentialBackoff>(
+            kBackoffDuration, 1u, kBackoffDuration);
+      })
+      .Build();
+}
 
 class LedgerAppInstanceImpl final
     : public LedgerAppInstanceFactory::LedgerAppInstance {
@@ -48,7 +61,7 @@ class LedgerAppInstanceImpl final
         async_t* async,
         fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
             request)
-        : environment_(ledger::EnvironmentBuilder().SetAsync(async).Build()),
+        : environment_(BuildEnvironment(async)),
           factory_impl_(&environment_, nullptr),
           factory_binding_(&factory_impl_, std::move(request)) {}
     ~LedgerRepositoryFactoryContainer() {}

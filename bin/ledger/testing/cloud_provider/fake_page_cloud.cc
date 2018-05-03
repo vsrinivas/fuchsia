@@ -4,11 +4,14 @@
 
 #include "peridot/bin/ledger/testing/cloud_provider/fake_page_cloud.h"
 
+#include <functional>
+
 #include <lib/fidl/cpp/clone.h>
 
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"
 #include "peridot/lib/convert/convert.h"
+#include "third_party/murmurhash/murmurhash.h"
 
 namespace ledger {
 
@@ -17,6 +20,12 @@ namespace {
 // Number of errors to inject before allowing a request to succeed when
 // configured to inject network errors.
 constexpr size_t kInitialRemainingErrorsToInject = 2;
+
+// Seed for the murmur hash algorithm to ensure different request signatures.
+constexpr uint32_t kAddCommitsSeed = 1u;
+constexpr uint32_t kGetCommitsSeed = 2u;
+constexpr uint32_t kAddObjectSeed = 3u;
+constexpr uint32_t kGetObjectSeed = 4u;
 
 fidl::VectorPtr<uint8_t> PositionToToken(size_t position) {
   std::string bytes(
@@ -37,6 +46,19 @@ bool TokenToPosition(const fidl::VectorPtr<uint8_t>& token, size_t* result) {
   memcpy(result, token->data(), sizeof(*result));
   return true;
 }
+
+uint64_t GetVectorSignature(const fidl::VectorPtr<uint8_t>& vector, uint32_t seed) {
+  return murmurhash(reinterpret_cast<const char*>(vector.get().data()), vector.get().size(), seed);
+}
+
+uint64_t GetCommitsSignature(const fidl::VectorPtr<cloud_provider::Commit>& commits) {
+  uint64_t result = 0;
+  for (const auto& commit : commits.get()) {
+    result = result ^ GetVectorSignature(commit.id, kAddCommitsSeed);
+  }
+  return result;
+}
+
 
 }  // namespace
 
@@ -92,8 +114,7 @@ void FakePageCloud::WatcherContainer::SendCommits(
 }
 
 FakePageCloud::FakePageCloud(InjectNetworkError inject_network_error)
-    : inject_network_error_(inject_network_error),
-      remaining_errors_to_inject_(kInitialRemainingErrorsToInject) {
+    : inject_network_error_(inject_network_error) {
   bindings_.set_empty_set_handler([this] {
     if (on_empty_) {
       on_empty_();
@@ -125,23 +146,28 @@ void FakePageCloud::SendPendingCommits() {
   }
 }
 
-bool FakePageCloud::MustReturnError() {
+bool FakePageCloud::MustReturnError(uint64_t request_signature) {
   switch (inject_network_error_) {
     case InjectNetworkError::NO:
       return false;
     case InjectNetworkError::YES:
-      if (remaining_errors_to_inject_) {
-        remaining_errors_to_inject_--;
+      auto it = remaining_errors_to_inject_.find(request_signature);
+      if (it == remaining_errors_to_inject_.end()) {
+        remaining_errors_to_inject_[request_signature] = kInitialRemainingErrorsToInject;
+        it = remaining_errors_to_inject_.find(request_signature);
+      }
+      if (it->second) {
+        it->second--;
         return true;
       }
-      remaining_errors_to_inject_ = kInitialRemainingErrorsToInject;
+      remaining_errors_to_inject_.erase(it);
       return false;
   }
 }
 
 void FakePageCloud::AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
                                AddCommitsCallback callback) {
-  if (MustReturnError()) {
+  if (MustReturnError(GetCommitsSignature(commits))) {
     callback(cloud_provider::Status::NETWORK_ERROR);
     return;
   }
@@ -154,7 +180,7 @@ void FakePageCloud::AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
 
 void FakePageCloud::GetCommits(fidl::VectorPtr<uint8_t> min_position_token,
                                GetCommitsCallback callback) {
-  if (MustReturnError()) {
+  if (MustReturnError(GetVectorSignature(min_position_token, kGetCommitsSeed))) {
     callback(cloud_provider::Status::NETWORK_ERROR, nullptr, nullptr);
     return;
   }
@@ -181,7 +207,7 @@ void FakePageCloud::GetCommits(fidl::VectorPtr<uint8_t> min_position_token,
 void FakePageCloud::AddObject(fidl::VectorPtr<uint8_t> id,
                               mem::Buffer data,
                               AddObjectCallback callback) {
-  if (MustReturnError()) {
+  if (MustReturnError(GetVectorSignature(id, kAddObjectSeed))) {
     callback(cloud_provider::Status::NETWORK_ERROR);
     return;
   }
@@ -197,7 +223,7 @@ void FakePageCloud::AddObject(fidl::VectorPtr<uint8_t> id,
 
 void FakePageCloud::GetObject(fidl::VectorPtr<uint8_t> id,
                               GetObjectCallback callback) {
-  if (MustReturnError()) {
+  if (MustReturnError(GetVectorSignature(id, kGetObjectSeed))) {
     callback(cloud_provider::Status::NETWORK_ERROR, 0u, zx::socket());
     return;
   }

@@ -241,7 +241,7 @@ void LedgerRepositoryFactoryImpl::CreateRepository(
   };
   auto cloud_sync = std::make_unique<cloud_sync::UserSyncImpl>(
       environment_, std::move(user_config),
-      std::make_unique<backoff::ExponentialBackoff>(),
+      environment_->MakeBackoff(),
       std::move(on_version_mismatch));
   std::unique_ptr<p2p_sync::UserCommunicator> p2p_sync =
       CreateP2PSync(repository_information);

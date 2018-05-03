@@ -14,12 +14,7 @@ FakeCloudProvider::Builder::~Builder() = default;
 
 FakeCloudProvider::Builder& FakeCloudProvider::Builder::SetInjectNetworkError(
     InjectNetworkError inject_network_error) {
-  // FIXME(LE-462): disable self-assign-field that silences the warning in the
-  // code below which is incorrect and needs to be fixed.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wself-assign-field"
-  inject_network_error_ = inject_network_error_;
-#pragma GCC diagnostic pop
+  inject_network_error_ = inject_network_error;
   return *this;
 }
 

@@ -25,7 +25,7 @@ class FakePageCloud : public cloud_provider::PageCloud {
 
  private:
   void SendPendingCommits();
-  bool MustReturnError();
+  bool MustReturnError(uint64_t request_signature);
 
   // cloud_provider::PageCloud:
   void AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
@@ -43,7 +43,7 @@ class FakePageCloud : public cloud_provider::PageCloud {
       SetWatcherCallback callback) override;
 
   InjectNetworkError inject_network_error_;
-  size_t remaining_errors_to_inject_;
+  std::map<uint64_t, size_t> remaining_errors_to_inject_;
 
   fidl::BindingSet<cloud_provider::PageCloud> bindings_;
   fxl::Closure on_empty_;
