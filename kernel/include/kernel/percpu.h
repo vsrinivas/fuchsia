@@ -35,7 +35,7 @@ struct percpu {
     thread_t idle_thread;
 
     /* kernel counters arena */
-    uint64_t* counters;
+    int64_t* counters;
 
     /* dpc context */
     list_node_t dpc_list;

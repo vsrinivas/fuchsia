@@ -301,7 +301,7 @@ static zx_status_t x86_pfe_handler(x86_iframe_t* frame) {
 
     /* let high level code deal with this */
     if (is_from_user(frame)) {
-        kcounter_add(exceptions_user, 1u);
+        kcounter_add(exceptions_user, 1);
         struct arch_exception_context context = {true, frame, va};
         return call_dispatch_user_exception(ZX_EXCP_FATAL_PAGE_FAULT,
                                             &context, frame);
@@ -323,25 +323,25 @@ static void x86_iframe_process_pending_signals(x86_iframe_t* frame) {
 static void handle_exception_types(x86_iframe_t* frame) {
     switch (frame->vector) {
     case X86_INT_DEBUG:
-        kcounter_add(exceptions_debug, 1u);
+        kcounter_add(exceptions_debug, 1);
         x86_debug_handler(frame);
         break;
     case X86_INT_NMI:
-        kcounter_add(exceptions_nmi, 1u);
+        kcounter_add(exceptions_nmi, 1);
         x86_nmi_handler(frame);
         break;
     case X86_INT_BREAKPOINT:
-        kcounter_add(exceptions_brkpt, 1u);
+        kcounter_add(exceptions_brkpt, 1);
         x86_breakpoint_handler(frame);
         break;
 
     case X86_INT_INVALID_OP:
-        kcounter_add(exceptions_invop, 1u);
+        kcounter_add(exceptions_invop, 1);
         x86_invop_handler(frame);
         break;
 
     case X86_INT_DEVICE_NA:
-        kcounter_add(exceptions_dev_na, 1u);
+        kcounter_add(exceptions_dev_na, 1);
         exception_die(frame, "device na fault\n");
         break;
 
@@ -349,20 +349,20 @@ static void handle_exception_types(x86_iframe_t* frame) {
         x86_df_handler(frame);
         break;
     case X86_INT_FPU_FP_ERROR:
-        kcounter_add(exceptions_fpu, 1u);
+        kcounter_add(exceptions_fpu, 1);
         x86_unhandled_exception(frame);
         break;
     case X86_INT_SIMD_FP_ERROR:
-        kcounter_add(exceptions_simd, 1u);
+        kcounter_add(exceptions_simd, 1);
         x86_unhandled_exception(frame);
         break;
     case X86_INT_GP_FAULT:
-        kcounter_add(exceptions_gpf, 1u);
+        kcounter_add(exceptions_gpf, 1);
         x86_gpf_handler(frame);
         break;
 
     case X86_INT_PAGE_FAULT:
-        kcounter_add(exceptions_page, 1u);
+        kcounter_add(exceptions_page, 1);
         if (x86_pfe_handler(frame) != ZX_OK)
             x86_fatal_pfe_handler(frame, x86_get_cr2());
         break;
@@ -371,7 +371,7 @@ static void handle_exception_types(x86_iframe_t* frame) {
     case X86_INT_APIC_SPURIOUS:
         break;
     case X86_INT_APIC_ERROR: {
-        kcounter_add(exceptions_apic_err, 1u);
+        kcounter_add(exceptions_apic_err, 1);
         apic_error_interrupt_handler();
         apic_issue_eoi();
         break;
@@ -403,7 +403,7 @@ static void handle_exception_types(x86_iframe_t* frame) {
     }
     /* pass all other non-Intel defined irq vectors to the platform */
     case X86_INT_PLATFORM_BASE... X86_INT_PLATFORM_MAX: {
-        kcounter_add(exceptions_irq, 1u);
+        kcounter_add(exceptions_irq, 1);
         platform_irq(frame);
         break;
     }
@@ -420,7 +420,7 @@ static void handle_exception_types(x86_iframe_t* frame) {
     case X86_INT_STACK_FAULT:
     /* Misaligned memory access when AC=1 in flags */
     case X86_INT_ALIGNMENT_CHECK:
-        kcounter_add(exceptions_unhandled, 1u);
+        kcounter_add(exceptions_unhandled, 1);
         x86_unhandled_exception(frame);
         break;
 

@@ -38,16 +38,16 @@ KCOUNTER(channel_msg_64k_bytes, "kernel.channel.bytes.64k");
 KCOUNTER(channel_msg_received,  "kernel.channel.messages");
 
 static void record_recv_msg_sz(uint32_t size) {
-    kcounter_add(channel_msg_received, 1u);
+    kcounter_add(channel_msg_received, 1);
 
     switch(size) {
-        case     0          : kcounter_add(channel_msg_0_bytes, 1u);   break;
-        case     1 ...    64: kcounter_add(channel_msg_64_bytes, 1u);  break;
-        case    65 ...   256: kcounter_add(channel_msg_256_bytes, 1u); break;
-        case   257 ...  1024: kcounter_add(channel_msg_1k_bytes, 1u);  break;
-        case  1025 ...  4096: kcounter_add(channel_msg_4k_bytes, 1u);  break;
-        case  4097 ... 16384: kcounter_add(channel_msg_16k_bytes, 1u); break;
-        case 16385 ... 65536: kcounter_add(channel_msg_64k_bytes, 1u); break;
+        case     0          : kcounter_add(channel_msg_0_bytes, 1);   break;
+        case     1 ...    64: kcounter_add(channel_msg_64_bytes, 1);  break;
+        case    65 ...   256: kcounter_add(channel_msg_256_bytes, 1); break;
+        case   257 ...  1024: kcounter_add(channel_msg_1k_bytes, 1);  break;
+        case  1025 ...  4096: kcounter_add(channel_msg_4k_bytes, 1);  break;
+        case  4097 ... 16384: kcounter_add(channel_msg_16k_bytes, 1); break;
+        case 16385 ... 65536: kcounter_add(channel_msg_64k_bytes, 1); break;
     }
 }
 

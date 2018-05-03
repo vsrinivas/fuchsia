@@ -87,22 +87,22 @@ ChannelDispatcher::~ChannelDispatcher() {
 
     switch (max_message_count_) {
     case 0 ... 1:
-        kcounter_add(channel_packet_depth_1, 1u);
+        kcounter_add(channel_packet_depth_1, 1);
         break;
     case 2 ... 4:
-        kcounter_add(channel_packet_depth_4, 1u);
+        kcounter_add(channel_packet_depth_4, 1);
         break;
     case 5 ... 16:
-        kcounter_add(channel_packet_depth_16, 1u);
+        kcounter_add(channel_packet_depth_16, 1);
         break;
     case 17 ... 64:
-        kcounter_add(channel_packet_depth_64, 1u);
+        kcounter_add(channel_packet_depth_64, 1);
         break;
     case 65 ... 256:
-        kcounter_add(channel_packet_depth_256, 1u);
+        kcounter_add(channel_packet_depth_256, 1);
         break;
     default:
-        kcounter_add(channel_packet_depth_unbounded, 1u);
+        kcounter_add(channel_packet_depth_unbounded, 1);
         break;
     }
 }

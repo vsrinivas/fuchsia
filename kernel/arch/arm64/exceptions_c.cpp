@@ -155,7 +155,7 @@ static void arm64_instruction_abort_handler(struct arm64_iframe_long* iframe, ui
             iframe->elr, is_user, far, esr, iss);
 
     arch_enable_ints();
-    kcounter_add(exceptions_page, 1u);
+    kcounter_add(exceptions_page, 1);
     zx_status_t err = vmm_page_fault_handler(far, pf_flags);
     arch_disable_ints();
     if (err >= 0)
@@ -164,7 +164,7 @@ static void arm64_instruction_abort_handler(struct arm64_iframe_long* iframe, ui
     // If this is from user space, let the user exception handler
     // get a shot at it.
     if (is_user) {
-        kcounter_add(exceptions_user, 1u);
+        kcounter_add(exceptions_user, 1);
         if (try_dispatch_user_data_fault_exception(ZX_EXCP_FATAL_PAGE_FAULT, iframe, esr, far) == ZX_OK)
             return;
     }
@@ -200,7 +200,7 @@ static void arm64_data_abort_handler(struct arm64_iframe_long* iframe, uint exce
     uint32_t dfsc = BITS(iss, 5, 0);
     if (likely(dfsc != DFSC_ALIGNMENT_FAULT)) {
         arch_enable_ints();
-        kcounter_add(exceptions_page, 1u);
+        kcounter_add(exceptions_page, 1);
         zx_status_t err = vmm_page_fault_handler(far, pf_flags);
         arch_disable_ints();
         if (err >= 0) {
@@ -219,7 +219,7 @@ static void arm64_data_abort_handler(struct arm64_iframe_long* iframe, uint exce
     // If this is from user space, let the user exception handler
     // get a shot at it.
     if (is_user) {
-        kcounter_add(exceptions_user, 1u);
+        kcounter_add(exceptions_user, 1);
         zx_excp_type_t excp_type = ZX_EXCP_FATAL_PAGE_FAULT;
         if (unlikely(dfsc == DFSC_ALIGNMENT_FAULT)) {
             excp_type = ZX_EXCP_UNALIGNED_ACCESS;
@@ -258,16 +258,16 @@ extern "C" void arm64_sync_exception(
 
     switch (ec) {
     case 0b000000: /* unknown reason */
-        kcounter_add(exceptions_unknown, 1u);
+        kcounter_add(exceptions_unknown, 1);
         arm64_unknown_handler(iframe, exception_flags, esr);
         break;
     case 0b111000: /* BRK from arm32 */
     case 0b111100: /* BRK from arm64 */
-        kcounter_add(exceptions_brkpt, 1u);
+        kcounter_add(exceptions_brkpt, 1);
         arm64_brk_handler(iframe, exception_flags, esr);
         break;
     case 0b000111: /* floating point */
-        kcounter_add(exceptions_fpu, 1u);
+        kcounter_add(exceptions_fpu, 1);
         arm64_fpu_handler(iframe, exception_flags, esr);
         break;
     case 0b010001: /* syscall from arm32 */
@@ -295,7 +295,7 @@ extern "C" void arm64_sync_exception(
             exception_die(iframe, esr);
         }
         /* let the user exception handler get a shot at it */
-        kcounter_add(exceptions_unhandled, 1u);
+        kcounter_add(exceptions_unhandled, 1);
         if (try_dispatch_user_exception(ZX_EXCP_GENERAL, iframe, esr) == ZX_OK)
             break;
         printf("unhandled synchronous exception\n");
@@ -329,7 +329,7 @@ extern "C" uint32_t arm64_irq(struct arm64_iframe_short* iframe, uint exception_
     int_handler_saved_state_t state;
     int_handler_start(&state);
 
-    kcounter_add(exceptions_irq, 1u);
+    kcounter_add(exceptions_irq, 1);
     platform_irq(iframe);
 
     bool do_preempt = int_handler_finish(&state);

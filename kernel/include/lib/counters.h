@@ -28,7 +28,7 @@ __BEGIN_CDECLS
 //      KCOUNTER(counter_name, "<counter name>");
 //
 // 2- counters start at zero, increment the counter:
-//      kcounter_add(counter_name, 1u);
+//      kcounter_add(counter_name, 1);
 //
 //
 // Naming the counters
@@ -59,7 +59,7 @@ static_assert(sizeof(struct k_counter_desc) ==
 // cache effects); it just reserves enough space for counters_init() to
 // dole out in per-CPU chunks.
 #define KCOUNTER(var, name)                                         \
-    __USED uint64_t kcounter_arena_##var[SMP_MAX_CPUS]              \
+    __USED int64_t kcounter_arena_##var[SMP_MAX_CPUS]               \
         __asm__("kcounter." name);                                  \
     __USED __SECTION("kcountdesc." name)                            \
     static const struct k_counter_desc var[] = { { name } }
@@ -75,17 +75,17 @@ static inline size_t kcounter_index(const struct k_counter_desc* var) {
 
 // The counter, as named |var| and defined is just an offset into
 // per-cpu table, therefore to add an atomic is not required.
-static inline uint64_t* kcounter_slot(const struct k_counter_desc* var) {
+static inline int64_t* kcounter_slot(const struct k_counter_desc* var) {
     return &get_local_percpu()->counters[kcounter_index(var)];
 }
 
 static inline void kcounter_add(const struct k_counter_desc* var,
-                                uint64_t add) {
+                                int64_t add) {
 #if defined(__aarch64__)
     // use a relaxed atomic load/store for arm64 to avoid a potentially nasty
     // race between the regular load/store operations on for a +1. Relaxed
     // atomic load/stores are about as efficient as a regular load/store.
-    atomic_add_u64_relaxed(kcounter_slot(var), add);
+    atomic_add_64_relaxed(kcounter_slot(var), add);
 #else
     // x86 can do the add in a single non atomic instruction, so the data loss
     // of a preemption in the middle of this sequence is fairly minimal.

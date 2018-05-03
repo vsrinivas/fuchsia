@@ -25,7 +25,7 @@
 #include <lib/console.h>
 
 // The arena is allocated in kernel.ld linker script.
-extern uint64_t kcounters_arena[];
+extern int64_t kcounters_arena[];
 
 struct watched_counter_t {
     list_node node;

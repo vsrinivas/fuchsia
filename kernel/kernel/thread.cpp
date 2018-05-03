@@ -211,7 +211,7 @@ thread_t* thread_create_etc(
     list_add_head(&thread_list, &t->thread_list_node);
     THREAD_UNLOCK(state);
 
-    kcounter_add(thread_create_count, 1u);
+    kcounter_add(thread_create_count, 1);
     return t;
 }
 
@@ -305,7 +305,7 @@ void thread_resume(thread_t* t) {
 
     THREAD_UNLOCK(state);
 
-    kcounter_add(thread_resume_count, 1u);
+    kcounter_add(thread_resume_count, 1);
 }
 
 zx_status_t thread_detach_and_resume(thread_t* t) {
@@ -379,7 +379,7 @@ zx_status_t thread_suspend(thread_t* t) {
 
     THREAD_UNLOCK(state);
 
-    kcounter_add(thread_suspend_count, 1u);
+    kcounter_add(thread_suspend_count, 1);
     return ZX_OK;
 }
 
@@ -435,7 +435,7 @@ zx_status_t thread_join(thread_t* t, int* retcode, zx_time_t deadline) {
 
     free_thread_resources(t);
 
-    kcounter_add(thread_join_count, 1u);
+    kcounter_add(thread_join_count, 1);
 
     return ZX_OK;
 }
