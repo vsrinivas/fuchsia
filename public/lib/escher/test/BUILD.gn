@@ -6,6 +6,7 @@ executable("escher_unittests") {
   testonly = true
 
   sources = [
+    "fs/hack_filesystem_unittest.cc",
     "geometry/bounding_box_unittest.cc",
     "gpu_mem_unittest.cc",
     "impl/glsl_compiler_unittest.cc",

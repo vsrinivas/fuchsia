@@ -6,15 +6,24 @@ import("//build/package.gni")
 
 package("escher_tests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     "test:escher_unittests",
   ]
 
-  tests = [
+  binary = "escher_unittests"
+
+  meta = [
     {
-      name = "escher_unittests"
+      path = rebase_path("meta/sandbox")
+      dest = "sandbox"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("shaders/model_renderer/main.vert")
+      dest = "shaders/model_renderer/main.vert"
     },
   ]
 }
