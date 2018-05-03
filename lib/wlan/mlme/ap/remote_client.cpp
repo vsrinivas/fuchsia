@@ -844,6 +844,8 @@ uint8_t RemoteClient::GetTid() {
 
 zx_status_t RemoteClient::SendAddBaRequest() {
     debugfn();
+    if (!bss_->IsHTReady()) { return ZX_OK; }
+
     debugbss("[client] [%s] sending AddBaRequest\n", addr_.ToString().c_str());
 
     fbl::unique_ptr<Packet> packet = nullptr;

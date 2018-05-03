@@ -459,7 +459,7 @@ bool InfraBss::IsHTReady() const {
 
 bool InfraBss::IsCbw40RxReady() const {
     // TODO(NET-567): Reflect hardware capabilities and association negotiation
-    return false;
+    return true;
 }
 
 bool InfraBss::IsCbw40TxReady() const {
@@ -560,7 +560,7 @@ HtOperation InfraBss::BuildHtOperation(const wlan_channel_t& chan) const {
         head.set_sta_chan_width(HtOpInfoHead::ANY);
         break;
     case CBW40BELOW:
-        head.set_secondary_chan_offset(HtOpInfoHead::SECONDARY_ABOVE);
+        head.set_secondary_chan_offset(HtOpInfoHead::SECONDARY_BELOW);
         head.set_sta_chan_width(HtOpInfoHead::ANY);
         break;
     case CBW20:
