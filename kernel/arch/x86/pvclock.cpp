@@ -27,6 +27,7 @@ zx_status_t pvclock_init(void) {
     if (boot_time_page == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
+    arch_zero_page(paddr_to_physmap(pa));
     boot_time = static_cast<struct pvclock_boot_time*>(paddr_to_physmap(pa));
     write_msr(kKvmBootTime, pa);
 
@@ -35,6 +36,7 @@ zx_status_t pvclock_init(void) {
         pmm_free_page(boot_time_page);
         return ZX_ERR_NO_MEMORY;
     }
+    arch_zero_page(paddr_to_physmap(pa));
     system_time = static_cast<struct pvclock_system_time*>(paddr_to_physmap(pa));
     write_msr(kKvmSystemTimeMsr, pa | kSystemTimeEnable);
 
