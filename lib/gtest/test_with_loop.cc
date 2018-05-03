@@ -12,4 +12,8 @@ TestWithLoop::TestWithLoop() = default;
 
 TestWithLoop::~TestWithLoop() = default;
 
+void TestWithLoop::RunLoopRepeatedlyFor(zx::duration increment) {
+  while (RunLoopFor(increment)) {}
+}
+
 }  // namespace gtest

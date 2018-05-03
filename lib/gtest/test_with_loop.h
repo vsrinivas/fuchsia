@@ -64,6 +64,10 @@ protected:
   // Returns true iff any tasks or waits were invoked during the run.
   bool RunLoopUntilIdle() { return loop_.RunUntilIdle(); }
 
+  // Repeatedly runs the loop by |increment| until nothing further is left to
+  // dispatch.
+  void RunLoopRepeatedlyFor(zx::duration increment);
+
   // Quits the message loop. If called while running, it will immediately
   // exit and dispatch no further tasks or waits; if called before running,
   // then next call to run will immediately exit. Further calls to run will

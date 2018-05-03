@@ -74,6 +74,18 @@ TEST_F(TestWithLoopTest, LoopCanQuitAndReset) {
   EXPECT_TRUE(RunLoopUntilIdle());
 }
 
+TEST_F(TestWithLoopTest, LoopRunsRepeatedly) {
+  for (int i = 0; i <= 60; ++i) {
+      async::PostDelayedTask(dispatcher(), [] {}, zx::sec(i));
+  }
+  // Run the loop repeatedly at ten second intervals until the delayed tasks
+  // are all dispatched.
+  RunLoopRepeatedlyFor(zx::sec(10));
+  EXPECT_GE(Now(), zx::time(0) + zx::min(1));
+
+  // There should be nothing further to dispatch.
+  EXPECT_FALSE(RunLoopUntilIdle());
+}
 
 }  // namespace
 }  // namespace gtest
