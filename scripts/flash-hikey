@@ -110,8 +110,8 @@ if [[ $FLAG_FIRMWARE ]]; then
 fi
 
 BOARD=hikey960
-BOOTDATA_BIN="${BUILD_DIR}/${BOARD}-combo-bootdata.bin"
-ZBOOTDATA_BIN="${BUILD_DIR}/z${BOARD}-combo-bootdata.bin"
+BOOTDATA_BIN="${BUILD_DIR}/${BOARD}-zircon-bootimage.bin"
+ZBOOTDATA_BIN="${BUILD_DIR}/z${BOARD}-zircon-bootimage.bin"
 gzip -c ${BOOTDATA_BIN} > ${ZBOOTDATA_BIN}
 KERNEL=${ZBOOTDATA_BIN}
 RAMDISK="${BUILD_DIR}/dummy-ramdisk.bin"

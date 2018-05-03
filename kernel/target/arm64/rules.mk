@@ -8,5 +8,16 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 PLATFORM := generic-arm
 
+# combined kernel + bootdata image
+ZIRCON_BOOTIMAGE := $(BUILDDIR)/zircon-bootimage.bin
+
+$(ZIRCON_BOOTIMAGE): $(MKBOOTFS) $(OUTLKBIN) $(USER_BOOTDATA)
+	$(call BUILDECHO,generating $@)
+	@$(MKDIR)
+	$(NOECHO)$(MKBOOTFS) -o $@ $(OUTLKBIN) $(USER_BOOTDATA)
+
+GENERATED += $(ZIRCON_BOOTIMAGE)
+EXTRA_BUILDDEPS += $(ZIRCON_BOOTIMAGE)
+
 # include rules for our various arm64 boards
 include $(LOCAL_DIR)/board/*/rules.mk

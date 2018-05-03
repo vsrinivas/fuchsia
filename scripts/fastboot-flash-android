@@ -58,8 +58,8 @@ if [[ -z "${BOARD}" ]]; then
     HELP
 fi
 
-BOOTDATA_BIN="${BUILD_DIR}/${BOARD}-combo-bootdata.bin"
-ZBOOTDATA_BIN="${BUILD_DIR}/z${BOARD}-combo-bootdata.bin"
+BOOTDATA_BIN="${BUILD_DIR}/${BOARD}-zircon-bootimage.bin"
+ZBOOTDATA_BIN="${BUILD_DIR}/z${BOARD}-zircon-bootimage.bin"
 OUT_IMAGE="${BUILD_DIR}/${BOARD}-boot.img"
 
 if [[ ${USE_LZ4} == 1 ]]; then

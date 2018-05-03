@@ -48,7 +48,7 @@ if [[ -z "${BOARD}" ]]; then
 fi
 
 ZBI="${BUILD_DIR}/tools/zbi"
-BOOTDATA_BIN="${BUILD_DIR}/${BOARD}-combo-bootdata.bin"
+BOOTDATA_BIN="${BUILD_DIR}/zircon-bootimage.bin"
 CMDLINE_FILE="${BUILD_DIR}/${BOARD}-cmdline.txt"
 OUT_IMAGE="${BUILD_DIR}/${BOARD}-boot.img"
 
