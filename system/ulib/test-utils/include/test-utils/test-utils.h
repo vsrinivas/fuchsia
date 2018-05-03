@@ -46,7 +46,7 @@ char* tu_asprintf(const char* fmt, ...);
 // |what| is typically the name of the function that had the syscall failure,
 // but it can include more descriptive text as desired.
 
-void tu_fatal(const char *what, zx_status_t status);
+void tu_fatal(const char *what, zx_status_t status) __NO_RETURN;
 
 // A wrapper on zx_handle_close.
 
