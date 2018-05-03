@@ -1077,9 +1077,12 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
     std::string storage_bytes = std::move(id_and_bytes.bytes);
     Status status = ContainsCommit(handler, id);
     if (status == Status::OK) {
-      Status status = SynchronousMarkCommitSynced(handler, id);
-      if (status != Status::OK) {
-        return status;
+      // We only mark cloud-sourced commits as synced.
+      if (source == ChangeSource::CLOUD) {
+        Status status = SynchronousMarkCommitSynced(handler, id);
+        if (status != Status::OK) {
+          return status;
+        }
       }
       continue;
     }
@@ -1277,7 +1280,7 @@ Status PageStorageImpl::SynchronousAddCommits(
         return s;
       }
 
-      if (source == ChangeSource::LOCAL) {
+      if (source != ChangeSource::CLOUD) {
         s = batch->MarkCommitIdUnsynced(handler, commit->GetId(),
                                         commit->GetGeneration());
         if (s != Status::OK) {

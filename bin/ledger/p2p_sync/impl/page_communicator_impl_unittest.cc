@@ -14,6 +14,7 @@
 #include "lib/gtest/test_with_loop.h"
 #include "peridot/bin/ledger/p2p_sync/impl/device_mesh.h"
 #include "peridot/bin/ledger/storage/fake/fake_object.h"
+#include "peridot/bin/ledger/storage/testing/commit_empty_impl.h"
 #include "peridot/bin/ledger/storage/testing/page_storage_empty_impl.h"
 #include "peridot/lib/convert/convert.h"
 
@@ -28,10 +29,16 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
 
   storage::PageId GetId() override { return page_id_; }
 
+  void GetHeadCommitIds(
+      std::function<void(storage::Status, std::vector<storage::CommitId>)>
+          callback) override {
+    callback(storage::Status::OK, {"commit_id"});
+  }
+
   void GetPiece(storage::ObjectIdentifier object_identifier,
                 std::function<void(storage::Status,
                                    std::unique_ptr<const storage::Object>)>
-                    callback) {
+                    callback) override {
     async::PostTask(async_, [this, object_identifier, callback]() {
       const auto& it = objects_.find(object_identifier);
       if (it == objects_.end()) {
@@ -48,10 +55,49 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
     objects_[object_identifier] = std::move(contents);
   }
 
+  void AddCommitsFromSync(
+      std::vector<storage::PageStorage::CommitIdAndBytes> ids_and_bytes,
+      const storage::ChangeSource /*source*/,
+      std::function<void(storage::Status)> callback) override {
+    commits_from_sync_.emplace_back(
+        std::piecewise_construct,
+        std::forward_as_tuple(std::move(ids_and_bytes)),
+        std::forward_as_tuple(std::move(callback)));
+  }
+
+  storage::Status AddCommitWatcher(storage::CommitWatcher* watcher) override {
+    FXL_DCHECK(!watcher_);
+    watcher_ = watcher;
+    return storage::Status::OK;
+  }
+
+  storage::CommitWatcher* watcher_ = nullptr;
+  std::vector<std::pair<std::vector<storage::PageStorage::CommitIdAndBytes>,
+                        std::function<void(storage::Status)>>>
+      commits_from_sync_;
+
  private:
   async_t* const async_;
   const std::string page_id_;
   std::map<storage::ObjectIdentifier, std::string> objects_;
+};
+
+class FakeCommit : public storage::CommitEmptyImpl {
+ public:
+  FakeCommit(std::string id, std::string data)
+      : id_(std::move(id)), data_(std::move(data)) {}
+
+  const storage::CommitId& GetId() const override { return id_; }
+
+  fxl::StringView GetStorageBytes() const override { return data_; }
+
+  std::unique_ptr<storage::Commit> Clone() const override {
+    return std::make_unique<FakeCommit>(id_, data_);
+  }
+
+ private:
+  const std::string id_;
+  const std::string data_;
 };
 
 class FakeDeviceMesh : public DeviceMesh {
@@ -98,8 +144,8 @@ void BuildObjectRequestBuffer(
         *buffer, object_id.key_index, object_id.deletion_scope_id,
         convert::ToFlatBufferVector(buffer, object_id.object_digest)));
   }
-  flatbuffers::Offset<ObjectRequest> object_request = CreateObjectRequest(
-      *buffer, buffer->CreateVector(std::move(fb_object_ids)));
+  flatbuffers::Offset<ObjectRequest> object_request =
+      CreateObjectRequest(*buffer, buffer->CreateVector(fb_object_ids));
   flatbuffers::Offset<Request> fb_request =
       CreateRequest(*buffer, namespace_page_id, RequestMessage_ObjectRequest,
                     object_request.Union());
@@ -132,8 +178,8 @@ void BuildObjectResponseBuffer(
           CreateObject(*buffer, fb_object_id, ObjectStatus_UNKNOWN_OBJECT));
     }
   }
-  flatbuffers::Offset<ObjectResponse> object_response = CreateObjectResponse(
-      *buffer, buffer->CreateVector(std::move(fb_objects)));
+  flatbuffers::Offset<ObjectResponse> object_response =
+      CreateObjectResponse(*buffer, buffer->CreateVector(fb_objects));
   flatbuffers::Offset<Response> response =
       CreateResponse(*buffer, ResponseStatus_OK, namespace_page_id,
                      ResponseMessage_ObjectResponse, object_response.Union());
@@ -500,6 +546,82 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
   EXPECT_TRUE(called);
   EXPECT_EQ(storage::Status::NOT_FOUND, status);
   EXPECT_FALSE(data);
+}
+
+TEST_F(PageCommunicatorImplTest, CommitUpdate) {
+  FakeDeviceMesh mesh;
+  FakePageStorage storage_1(dispatcher(), "page");
+  PageCommunicatorImpl page_communicator_1(&storage_1, &storage_1, "ledger",
+                                           "page", &mesh);
+  page_communicator_1.Start();
+
+  flatbuffers::FlatBufferBuilder buffer;
+  BuildWatchStartBuffer(&buffer, "ledger", "page");
+  const Message* new_device_message = GetMessage(buffer.GetBufferPointer());
+  page_communicator_1.OnNewRequest(
+      "device2", static_cast<const Request*>(new_device_message->message()));
+  RunLoopUntilIdle();
+
+  FakePageStorage storage_2(dispatcher(), "page");
+  PageCommunicatorImpl page_communicator_2(&storage_2, &storage_2, "ledger",
+                                           "page", &mesh);
+  page_communicator_2.Start();
+
+  std::vector<std::unique_ptr<const storage::Commit>> commits;
+  commits.emplace_back(std::make_unique<FakeCommit>("id 1", "data 1"));
+  commits.emplace_back(std::make_unique<FakeCommit>("id 2", "data 2"));
+  ASSERT_NE(nullptr, storage_1.watcher_);
+  storage_1.watcher_->OnNewCommits(commits, storage::ChangeSource::CLOUD);
+
+  RunLoopUntilIdle();
+  // No new message is sent on commits from CLOUD.
+  ASSERT_EQ(0u, mesh.messages_.size());
+
+  storage_1.watcher_->OnNewCommits(commits, storage::ChangeSource::P2P);
+
+  RunLoopUntilIdle();
+  // No new message is sent on commits from P2P either.
+  ASSERT_EQ(0u, mesh.messages_.size());
+
+  storage_1.watcher_->OnNewCommits(commits, storage::ChangeSource::LOCAL);
+  RunLoopUntilIdle();
+
+  // Local commit: a message is sent.
+  ASSERT_EQ(1u, mesh.messages_.size());
+  EXPECT_EQ("device2", mesh.messages_[0].first);
+
+  flatbuffers::Verifier verifier(
+      reinterpret_cast<const unsigned char*>(mesh.messages_[0].second.data()),
+      mesh.messages_[0].second.size());
+  ASSERT_TRUE(VerifyMessageBuffer(verifier));
+
+  const Message* reply_message = GetMessage(mesh.messages_[0].second.data());
+  ASSERT_EQ(MessageUnion_Response, reply_message->message_type());
+  const Response* response =
+      static_cast<const Response*>(reply_message->message());
+  const NamespacePageId* response_namespace_page_id =
+      response->namespace_page();
+  EXPECT_EQ("ledger", convert::ExtendedStringView(
+                          response_namespace_page_id->namespace_id()));
+  EXPECT_EQ("page",
+            convert::ExtendedStringView(response_namespace_page_id->page_id()));
+  EXPECT_EQ(ResponseMessage_CommitResponse, response->response_type());
+
+  // Send it to the other side.
+  page_communicator_2.OnNewResponse("device1", response);
+  RunLoopUntilIdle();
+
+  // The other side's storage has the commit.
+  ASSERT_EQ(1u, storage_2.commits_from_sync_.size());
+  ASSERT_EQ(2u, storage_2.commits_from_sync_[0].first.size());
+  EXPECT_EQ("id 1", storage_2.commits_from_sync_[0].first[0].id);
+  EXPECT_EQ("data 1", storage_2.commits_from_sync_[0].first[0].bytes);
+  EXPECT_EQ("id 2", storage_2.commits_from_sync_[0].first[1].id);
+  EXPECT_EQ("data 2", storage_2.commits_from_sync_[0].first[1].bytes);
+
+  // Verify we don't crash on response from storage
+  storage_2.commits_from_sync_[0].second(storage::Status::OK);
+  RunLoopUntilIdle();
 }
 
 }  // namespace

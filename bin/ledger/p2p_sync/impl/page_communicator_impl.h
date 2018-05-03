@@ -26,7 +26,8 @@ namespace p2p_sync {
 class PageCommunicatorImplInspectorForTest;
 
 class PageCommunicatorImpl : public PageCommunicator,
-                             public storage::PageSyncDelegate {
+                             public storage::PageSyncDelegate,
+                             public storage::CommitWatcher {
  public:
   PageCommunicatorImpl(storage::PageStorage* storage,
                        storage::PageSyncClient* sync_client,
@@ -49,12 +50,17 @@ class PageCommunicatorImpl : public PageCommunicator,
   // PageCommunicator:
   void Start() override;
 
-  // PageSyncDelegate:
+  // storage::PageSyncDelegate:
   void GetObject(
       storage::ObjectIdentifier object_identifier,
       std::function<void(storage::Status, storage::ChangeSource,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback) override;
+
+  // storage::CommitWatcher:
+  void OnNewCommits(
+      const std::vector<std::unique_ptr<const storage::Commit>>& commits,
+      storage::ChangeSource source) override;
 
  private:
   friend class PageCommunicatorImplInspectorForTest;
@@ -65,6 +71,9 @@ class PageCommunicatorImpl : public PageCommunicator,
   void BuildWatchStopBuffer(flatbuffers::FlatBufferBuilder* buffer);
   void BuildObjectRequestBuffer(flatbuffers::FlatBufferBuilder* buffer,
                                 storage::ObjectIdentifier object_identifier);
+  void BuildCommitBuffer(
+      flatbuffers::FlatBufferBuilder* buffer,
+      const std::vector<std::unique_ptr<const storage::Commit>>& commits);
   void BuildObjectResponseBuffer(
       flatbuffers::FlatBufferBuilder* buffer,
       std::vector<std::pair<storage::ObjectIdentifier,
@@ -74,6 +83,7 @@ class PageCommunicatorImpl : public PageCommunicator,
   // Processes an incoming ObjectRequest object.
   void ProcessObjectRequest(fxl::StringView source,
                             const ObjectRequest* request);
+
   // Map of pending requests for objects.
   callback::AutoCleanableMap<storage::ObjectIdentifier,
                              PendingObjectRequestHolder>
@@ -85,6 +95,11 @@ class PageCommunicatorImpl : public PageCommunicator,
   fxl::Closure on_delete_;
   bool started_ = false;
   bool in_destructor_ = false;
+
+  // Commit upload: we queue commits to upload here while we check if a
+  // conflict exists. If it exist, we wait until it is resolved before
+  // uploading.
+  std::vector<std::unique_ptr<const storage::Commit>> commits_to_upload_;
 
   const std::string namespace_id_;
   const std::string page_id_;

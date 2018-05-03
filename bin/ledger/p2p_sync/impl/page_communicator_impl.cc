@@ -119,6 +119,7 @@ void PageCommunicatorImpl::Start() {
   FXL_DCHECK(!started_);
   started_ = true;
   sync_client_->SetSyncDelegate(this);
+  storage_->AddCommitWatcher(this);
 
   flatbuffers::FlatBufferBuilder buffer;
   BuildWatchStartBuffer(&buffer);
@@ -225,9 +226,29 @@ void PageCommunicatorImpl::OnNewResponse(fxl::StringView source,
       break;
     }
     case ResponseMessage_CommitResponse: {
-      FXL_NOTIMPLEMENTED();
+      const CommitResponse* commit_response =
+          static_cast<const CommitResponse*>(message->response());
+      std::vector<storage::PageStorage::CommitIdAndBytes> commits;
+      for (const Commit* commit : *(commit_response->commits())) {
+        if (commit->status() != CommitStatus_OK) {
+          continue;
+        }
+        commits.emplace_back(convert::ToString(commit->id()->id()),
+                             convert::ToString(commit->commit()->bytes()));
+      }
+      storage_->AddCommitsFromSync(
+          std::move(commits), storage::ChangeSource::P2P,
+          [this](storage::Status status) {
+            if (status != storage::Status::OK) {
+              // TODO(etiennej): At this point, we should initiate a full
+              // backlog sync. See LE-476.
+              FXL_LOG(WARNING)
+                  << "Unable to add commits from peer to storage: " << status;
+            }
+          });
       break;
     }
+
     case ResponseMessage_NONE:
       FXL_LOG(ERROR) << "The message received is malformed: " << message;
       return;
@@ -242,16 +263,55 @@ void PageCommunicatorImpl::GetObject(
   flatbuffers::FlatBufferBuilder buffer;
 
   BuildObjectRequestBuffer(&buffer, object_identifier);
-  char* buf = reinterpret_cast<char*>(buffer.GetBufferPointer());
-  size_t size = buffer.GetSize();
+  fxl::StringView object_request = convert::ToStringView(buffer);
 
   auto request_holder = pending_object_requests_.emplace(
       std::move(object_identifier), std::move(callback));
 
   for (const auto& device : interested_devices_) {
-    mesh_->Send(device, fxl::StringView(buf, size));
     request_holder.first->second.AddNewPendingRequest(device);
   }
+  for (const auto& device : interested_devices_) {
+    mesh_->Send(device, object_request);
+  }
+}
+
+void PageCommunicatorImpl::OnNewCommits(
+    const std::vector<std::unique_ptr<const storage::Commit>>& commits,
+    storage::ChangeSource source) {
+  if (source != storage::ChangeSource::LOCAL) {
+    // Don't propagate synced commits.
+    return;
+  }
+  for (const auto& commit : commits) {
+    commits_to_upload_.emplace_back(commit->Clone());
+  }
+  // We need to check if we need to merge first.
+  storage_->GetHeadCommitIds(callback::MakeScoped(
+      weak_factory_.GetWeakPtr(),
+      [this](storage::Status status,
+             std::vector<storage::CommitId> commit_ids) {
+        if (status != storage::Status::OK) {
+          return;
+        }
+        if (commit_ids.size() != 1) {
+          // A merge needs to happen, let's wait until we have one.
+          return;
+        }
+        if (commits_to_upload_.empty()) {
+          // Commits have already been sent. Let's stop early.
+          return;
+        }
+        flatbuffers::FlatBufferBuilder buffer;
+        BuildCommitBuffer(&buffer, commits_to_upload_);
+        char* buf = reinterpret_cast<char*>(buffer.GetBufferPointer());
+        size_t size = buffer.GetSize();
+
+        for (const auto& device : interested_devices_) {
+          mesh_->Send(device, fxl::StringView(buf, size));
+        }
+        commits_to_upload_.clear();
+      }));
 }
 
 void PageCommunicatorImpl::BuildWatchStartBuffer(
@@ -298,6 +358,34 @@ void PageCommunicatorImpl::BuildObjectRequestBuffer(
                     object_request.Union());
   flatbuffers::Offset<Message> message =
       CreateMessage(*buffer, MessageUnion_Request, request.Union());
+  buffer->Finish(message);
+}
+
+void PageCommunicatorImpl::BuildCommitBuffer(
+    flatbuffers::FlatBufferBuilder* buffer,
+    const std::vector<std::unique_ptr<const storage::Commit>>& commits) {
+  flatbuffers::Offset<NamespacePageId> namespace_page_id =
+      CreateNamespacePageId(*buffer,
+                            convert::ToFlatBufferVector(buffer, namespace_id_),
+                            convert::ToFlatBufferVector(buffer, page_id_));
+  std::vector<flatbuffers::Offset<Commit>> fb_commits;
+  for (const auto& commit : commits) {
+    flatbuffers::Offset<CommitId> fb_commit_id = CreateCommitId(
+        *buffer, convert::ToFlatBufferVector(buffer, commit->GetId()));
+    flatbuffers::Offset<Data> fb_commit_data = CreateData(
+        *buffer,
+        convert::ToFlatBufferVector(buffer, commit->GetStorageBytes()));
+    fb_commits.emplace_back(
+        CreateCommit(*buffer, fb_commit_id, CommitStatus_OK, fb_commit_data));
+  }
+
+  flatbuffers::Offset<CommitResponse> commit_response =
+      CreateCommitResponse(*buffer, buffer->CreateVector(fb_commits));
+  flatbuffers::Offset<Response> response =
+      CreateResponse(*buffer, ResponseStatus_OK, namespace_page_id,
+                     ResponseMessage_CommitResponse, commit_response.Union());
+  flatbuffers::Offset<Message> message =
+      CreateMessage(*buffer, MessageUnion_Response, response.Union());
   buffer->Finish(message);
 }
 
