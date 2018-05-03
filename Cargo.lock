@@ -678,6 +678,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fidl_wlan_service"
+version = "0.1.0"
+dependencies = [
+ "fidl 0.1.0",
+ "fuchsia-async 0.1.0",
+ "fuchsia-zircon 0.3.4",
+ "futures 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "fidl_wlantap"
 version = "0.1.0"
 dependencies = [

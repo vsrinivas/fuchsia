@@ -54,6 +54,12 @@
     "public": false
   },
   {
+    "library_name": "wlan_service",
+    "fidl_target": "//garnet/public/lib/wlan/fidl:service",
+    "library_deps": [],
+    "public": true
+  },
+  {
     "library_name": "netstack",
     "fidl_target": "//garnet/public/lib/netstack/fidl:fidl",
     "library_deps": [],

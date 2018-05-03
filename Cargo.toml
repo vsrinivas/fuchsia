@@ -67,6 +67,7 @@ members =  [
   "public/rust/fidl_crates/fidl_views",
   "public/rust/fidl_crates/fidl_views_v1",
   "public/rust/fidl_crates/fidl_views_v1_token",
+  "public/rust/fidl_crates/fidl_wlan_service",
   "public/rust/fidl_crates/fidl_xi",
 ]
 
@@ -99,6 +100,7 @@ fidl_views_v1 = { path = "public/rust/fidl_crates/fidl_views_v1" }
 fidl_views_v1_token = { path = "public/rust/fidl_crates/fidl_views_v1_token" }
 fidl_wlan_device = { path = "lib/rust/fidl_crates/fidl_wlan_device" }
 fidl_wlan_device_service = { path = "lib/rust/fidl_crates/fidl_wlan_device_service" }
+fidl_wlan_service = { path = "public/rust/fidl_crates/fidl_wlan_service" }
 fidl_wlantap = { path = "lib/rust/fidl_crates/fidl_wlantap" }
 fidl_xi = { path = "public/rust/fidl_crates/fidl_xi" }
 fuchsia-ddk = { path = "public/rust/crates/fuchsia-ddk" }
