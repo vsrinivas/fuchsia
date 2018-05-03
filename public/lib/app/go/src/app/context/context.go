@@ -13,7 +13,7 @@ import (
 	"syscall/zx/fdio"
 	"syscall/zx/mxruntime"
 
-	"fuchsia/go/component"
+	"fidl/component"
 )
 
 type Connector struct {

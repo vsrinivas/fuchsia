@@ -22,7 +22,7 @@ import (
 	"amber/pkg"
 	"amber/source"
 
-	amber_fidl "fuchsia/go/amber"
+	amber_fidl "fidl/amber"
 
 	"app/context"
 	"syscall/zx"

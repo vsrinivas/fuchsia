@@ -12,7 +12,7 @@ import (
 
 	"syscall/zx"
 
-	"fuchsia/go/echo2"
+	"fidl/echo2"
 )
 
 type echoImpl struct{}

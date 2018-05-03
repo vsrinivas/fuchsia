@@ -13,7 +13,7 @@ import (
 
 	"app/context"
 
-	"fuchsia/go/netstack"
+	"fidl/netstack"
 )
 
 type netstatApp struct {

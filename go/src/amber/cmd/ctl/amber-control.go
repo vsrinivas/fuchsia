@@ -8,7 +8,7 @@ import (
 	"app/context"
 	"flag"
 	"fmt"
-	"fuchsia/go/amber"
+	"fidl/amber"
 	"os"
 	"strings"
 	"time"

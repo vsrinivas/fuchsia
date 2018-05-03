@@ -237,6 +237,15 @@ type Method struct {
 	IsEvent bool
 }
 
+// Library represents a FIDL library as a golang package.
+type Library struct {
+	// Alias is the alias of the golang package referring to a FIDL library.
+	Alias string
+
+	// Path is the path to the golang package referring to a FIDL library.
+	Path string
+}
+
 // Root is the root of the golang backend IR structure.
 //
 // The golang backend IR structure is loosely modeled after an abstract syntax
@@ -244,6 +253,10 @@ type Method struct {
 type Root struct {
 	// Name is the name of the library.
 	Name string
+
+	// PackageName is the name of the golang package as other Go programs would
+	// import it.
+	PackageName string
 
 	// Consts represents a list of FIDL constants represented as Go constants.
 	Consts []Const
@@ -261,8 +274,7 @@ type Root struct {
 	Interfaces []Interface
 
 	// Libraries represents the set of library dependencies for this FIDL library.
-	// These are only the names of the libraries, as those are sufficient.
-	Libraries []string
+	Libraries []Library
 
 	// NeedsBindings is whether or not the generated code depends on the bindings.
 	NeedsBindings bool
@@ -280,8 +292,13 @@ type compiler struct {
 	// decls contains all top-level declarations for the FIDL source.
 	decls types.DeclMap
 
-	// library is the name of the current library
+	// library is the identifier for the current library.
 	library types.LibraryIdentifier
+
+	// library deps is a mapping of compiled library identifiers (go package paths)
+	// to aliases, which is used to resolve references to types outside of the current
+	// FIDL library.
+	libraryDeps map[string]string
 }
 
 // Contains the full set of reserved golang keywords, in addition to a set of
@@ -408,13 +425,13 @@ func (_ *compiler) compileIdentifier(id types.Identifier, export bool, ext strin
 
 func (c *compiler) compileCompoundIdentifier(eci types.EncodedCompoundIdentifier, ext string) string {
 	ci := exportIdentifier(eci)
+	pkg := compileLibraryIdentifier(ci.Library)
 	strs := []string{}
 	if c.inExternalLibrary(ci) {
-		// TODO(FIDL-159) handle more than one library name component
-		strs = append(strs, changeIfReserved(ci.Library[0], "")+".")
+		strs = append(strs, c.libraryDeps[pkg])
 	}
 	strs = append(strs, changeIfReserved(ci.Name, ext))
-	return strings.Join(strs, "")
+	return strings.Join(strs, ".")
 }
 
 func (_ *compiler) compileLiteral(val types.Literal) string {
@@ -660,11 +677,59 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 	return r
 }
 
+func compileLibraryIdentifier(lib types.LibraryIdentifier) string {
+	return "fidl/" + joinLibraryIdentifier(lib, "/")
+}
+
+func joinLibraryIdentifier(lib types.LibraryIdentifier, sep string) string {
+	str := make([]string, len([]types.Identifier(lib)))
+	for i, id := range lib {
+		str[i] = string(id)
+	}
+	return strings.Join(str, sep)
+}
+
 // Compile translates parsed FIDL IR into golang backend IR for code generation.
 func Compile(fidlData types.Root) Root {
 	libraryName := types.ParseLibraryName(fidlData.Name)
-	c := compiler{decls: fidlData.Decls, library: libraryName}
-	r := Root{Name: string(fidlData.Name)}
+	libraryPath := compileLibraryIdentifier(libraryName)
+
+	// Collect all libraries.
+	godeps := make(map[string]string)
+	libs := make([]Library, 0, len(fidlData.Libraries))
+	for _, v := range fidlData.Libraries {
+		// Don't try to import yourself.
+		if v.Name == fidlData.Name {
+			continue
+		}
+		libComponents := types.ParseLibraryName(v.Name)
+		path := compileLibraryIdentifier(libComponents)
+		alias := changeIfReserved(
+			types.Identifier(common.ToLowerCamelCase(
+				joinLibraryIdentifier(libComponents, ""),
+			)),
+			"",
+		)
+		godeps[path] = alias
+		libs = append(libs, Library{
+			Path: path,
+			Alias: alias,
+		})
+	}
+
+	// Instantiate a compiler context.
+	c := compiler{
+		decls: fidlData.Decls,
+		library: libraryName,
+		libraryDeps: godeps,
+	}
+
+	// Compile fidlData into r.
+	r := Root{
+		Name: string(fidlData.Name),
+		PackageName: libraryPath,
+		Libraries: libs,
+	}
 	for _, v := range fidlData.Consts {
 		r.Consts = append(r.Consts, c.compileConst(v))
 	}
@@ -683,13 +748,6 @@ func Compile(fidlData types.Root) Root {
 	}
 	for _, v := range fidlData.Interfaces {
 		r.Interfaces = append(r.Interfaces, c.compileInterface(v))
-	}
-	for _, v := range fidlData.Libraries {
-		// Don't try to import yourself.
-		if v.Name == fidlData.Name {
-			continue
-		}
-		r.Libraries = append(r.Libraries, string(v.Name))
 	}
 	r.NeedsSyscallZx = r.NeedsSyscallZx || c.needsSyscallZx
 	return r

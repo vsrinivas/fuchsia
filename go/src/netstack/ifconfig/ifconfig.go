@@ -13,8 +13,8 @@ import (
 
 	"app/context"
 
-	"fuchsia/go/netstack"
-	"fuchsia/go/wlan_service"
+	"fidl/netstack"
+	"fidl/wlan_service"
 )
 
 type netstackClientApp struct {

@@ -11,8 +11,8 @@ import (
 	"app/context"
 	"svc/services"
 
-	"fuchsia/go/component"
-	"fuchsia/go/echo2"
+	"fidl/component"
+	"fidl/echo2"
 )
 
 type echoClientApp struct {

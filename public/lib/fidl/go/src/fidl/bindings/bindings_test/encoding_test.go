@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	. "fidl/bindings"
-	. "fuchsia/go/go_fidl_bindings_test"
+	. "fidl/go_fidl_bindings_test"
 )
 
 func testIdentity(t *testing.T, input Payload, expectSize int, output Payload) {

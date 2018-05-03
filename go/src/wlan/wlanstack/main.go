@@ -8,7 +8,7 @@ import (
 	"app/context"
 	"fidl/bindings"
 
-	"fuchsia/go/wlan_service"
+	"fidl/wlan_service"
 	"netstack/watcher"
 	"wlan/wlan"
 

@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"app/context"
-	"fuchsia/go/amber"
+	"fidl/amber"
 	"thinfs/fs"
 	"thinfs/zircon/rpc"
 

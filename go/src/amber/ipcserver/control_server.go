@@ -11,7 +11,7 @@ import (
 
 	"fidl/bindings"
 
-	"fuchsia/go/amber"
+	"fidl/amber"
 
 	"amber/daemon"
 	"amber/lg"

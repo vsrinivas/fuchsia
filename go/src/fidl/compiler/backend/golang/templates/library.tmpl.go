@@ -20,8 +20,8 @@ import (
 	_zx "syscall/zx"
 {{- end }}
 
-{{- range $lib := .Libraries }}
-	{{ $lib }} "fuchsia/go/{{ $lib }}"
+{{- range .Libraries }}
+	{{ .Alias }} "{{ .Path }}"
 {{- end }}
 )
 

@@ -36,7 +36,13 @@ func writeGoLibrary(libpath string, tmpl *template.Template, tree ir.Root) error
 	if err := tmpl.Execute(buf, tree); err != nil {
 		return err
 	}
-	return ioutil.WriteFile(filename, buf.Bytes(), 0666)
+	if err := ioutil.WriteFile(filename, buf.Bytes(), 0666); err != nil {
+		return err
+	}
+
+	// Write go package (library) name into a file.
+	pkgfilename := filepath.Join(libpath, "pkg_name")
+	return ioutil.WriteFile(pkgfilename, []byte(tree.PackageName), 0666)
 }
 
 func (_ FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error {

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	. "fidl/bindings"
-	. "fuchsia/go/go_fidl_bindings_test"
+	. "fidl/go_fidl_bindings_test"
 )
 
 type Test1Impl struct{}

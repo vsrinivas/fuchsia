@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"app/context"
-	"fuchsia/go/device_settings"
+	"fidl/device_settings"
 )
 
 const (

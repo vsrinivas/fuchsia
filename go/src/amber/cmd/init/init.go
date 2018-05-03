@@ -6,7 +6,7 @@ package main
 
 import (
 	"app/context"
-	"fuchsia/go/amber"
+	"fidl/amber"
 )
 
 func connect(ctx *context.Context) (*amber.ControlInterface, amber.ControlInterfaceRequest) {

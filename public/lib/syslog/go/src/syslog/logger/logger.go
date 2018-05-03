@@ -18,7 +18,7 @@ import (
 
 	"app/context"
 
-	logger_fidl "fuchsia/go/logger"
+	logger_fidl "fidl/logger"
 )
 
 var (

@@ -12,7 +12,7 @@ import (
 
 	"app/context"
 
-	"fuchsia/go/wlan_service"
+	"fidl/wlan_service"
 )
 
 const (

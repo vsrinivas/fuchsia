@@ -5,7 +5,7 @@
 package wlan_test
 
 import (
-	mlme "fuchsia/go/wlan_mlme"
+	mlme "fidl/wlan_mlme"
 	"testing"
 	. "wlan/wlan"
 )

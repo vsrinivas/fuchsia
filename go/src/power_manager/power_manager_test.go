@@ -12,7 +12,7 @@ import (
 	"app/context"
 	"fidl/bindings"
 
-	"fuchsia/go/power_manager"
+	"fidl/power_manager"
 )
 
 type ClientMock struct {

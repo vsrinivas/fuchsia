@@ -13,7 +13,7 @@ import (
 
 	"app/context"
 
-	"fuchsia/go/netstack"
+	"fidl/netstack"
 
 	"github.com/google/netstack/tcpip"
 )
