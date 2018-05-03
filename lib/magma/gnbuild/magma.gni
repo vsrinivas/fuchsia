@@ -37,16 +37,11 @@ have_libvulkan = build_intel_gen || build_libvulkan_arm_mali != [] ||
                  have_prebuilt_libvulkan_arm
 
 declare_args() {
-  # Normally this is false to avoid a dependency on the "vulkan" package, but
-  # the packaging script has problems if libvulkan is built externally and
-  # executables link to it directly.
-  if (target_cpu == "x64") {
-    # Mesa doesn't properly handle loader-less operation;
-    # their GetInstanceProcAddr implementation returns 0 for some interfaces.
-    use_vulkan_loader_for_tests = true
-  } else if (target_cpu == "arm64") {
-    use_vulkan_loader_for_tests = have_prebuilt_libvulkan_arm
-  }
+  # Mesa doesn't properly handle loader-less operation;
+  # their GetInstanceProcAddr implementation returns 0 for some interfaces.
+  # On ARM there may be multiple libvulkan_arms, so they can't all be linked
+  # to.
+  use_vulkan_loader_for_tests = true
 
   if (build_intel_gen) {
     mesa_build_root = "//third_party/mesa"
