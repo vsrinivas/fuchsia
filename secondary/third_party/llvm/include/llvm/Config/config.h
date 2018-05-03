@@ -116,26 +116,32 @@
 #define HAVE_LIBZ 1
 
 /* Define to 1 if you have the <link.h> header file. */
+#if defined(__linux__)
 #define HAVE_LINK_H 1
+#endif
 
 /* Define to 1 if you have the `lseek64' function. */
-#if !defined(__Fuchsia__)
+#if defined(__linux__)
 #define HAVE_LSEEK64 1
 #endif
 
 /* Define to 1 if you have the <mach/mach.h> header file. */
-/* #undef HAVE_MACH_MACH_H */
+#if defined(__APPLE__)
+#define HAVE_MACH_MACH_H 1
+#endif
 
 /* Define to 1 if you have the `mallctl' function. */
 /* #undef HAVE_MALLCTL */
 
 /* Define to 1 if you have the `mallinfo' function. */
-#if !defined(__Fuchsia__)
+#if defined(__linux__)
 #define HAVE_MALLINFO 1
 #endif
 
 /* Define to 1 if you have the <malloc.h> header file. */
+#if defined(__linux__)
 #define HAVE_MALLOC_H 1
+#endif
 
 /* Define to 1 if you have the <malloc/malloc.h> header file. */
 /* #undef HAVE_MALLOC_MALLOC_H */
@@ -144,7 +150,9 @@
 /* #undef HAVE_MALLOC_ZONE_STATISTICS */
 
 /* Define to 1 if you have the `posix_fallocate' function. */
+#if defined(__linux__)
 #define HAVE_POSIX_FALLOCATE 1
+#endif
 
 /* Define to 1 if you have the `posix_spawn' function. */
 #define HAVE_POSIX_SPAWN 1
@@ -176,7 +184,9 @@
 #define HAVE_SETENV 1
 
 /* Define to 1 if you have the `sched_getaffinity' function. */
+#if defined(__linux__)
 #define HAVE_SCHED_GETAFFINITY 1
+#endif
 
 /* Define to 1 if you have the `CPU_COUNT' macro. */
 #define HAVE_CPU_COUNT 1
