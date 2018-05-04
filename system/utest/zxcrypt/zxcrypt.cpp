@@ -550,7 +550,7 @@ RUN_EACH_DEVICE(TestVmoAllBlocks)
 RUN_EACH_DEVICE(TestVmoOutOfBounds)
 RUN_EACH_DEVICE(TestVmoOneToMany)
 RUN_EACH_DEVICE(TestVmoManyToOne)
-RUN_EACH_DEVICE(TestVmoStall)
+// Disabled (See ZX-2112): RUN_EACH_DEVICE(TestVmoStall)
 RUN_EACH(TestWriteAfterFvmExtend)
 END_TEST_CASE(ZxcryptTest)
 
