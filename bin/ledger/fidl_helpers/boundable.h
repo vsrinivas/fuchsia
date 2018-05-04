@@ -10,7 +10,7 @@
 
 namespace ledger {
 namespace fidl_helpers {
-// SetBoundable represents an object that can be bound to once.
+// Represents an object that can be bound to once.
 template <class Interface>
 class Boundable {
  public:
@@ -20,10 +20,12 @@ class Boundable {
   virtual void Bind(fidl::InterfaceRequest<Interface> request) = 0;
 };
 
-// SetBoundable represents an object that can be bound to multiple times.
+// Represents an object that can be bound to multiple times.
 template <class Interface>
 class SetBoundable {
  public:
+  virtual ~SetBoundable() = default;
+
   // Adds a binding to the object.
   virtual void AddBinding(fidl::InterfaceRequest<Interface> request) = 0;
 };
