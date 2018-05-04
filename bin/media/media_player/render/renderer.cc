@@ -102,6 +102,8 @@ void Renderer::UpdateTimelineAt(int64_t reference_time) {
       zx::time(reference_time));
 }
 
+void Renderer::OnTimelineTransition() {}
+
 void Renderer::ApplyPendingChanges(int64_t reference_time) {
   if (!TimelineFunctionPending() ||
       pending_timeline_function_.reference_time() > reference_time) {
@@ -110,6 +112,7 @@ void Renderer::ApplyPendingChanges(int64_t reference_time) {
 
   current_timeline_function_ = pending_timeline_function_;
   ClearPendingTimelineFunction();
+  OnTimelineTransition();
 }
 
 void Renderer::ClearPendingTimelineFunction() {

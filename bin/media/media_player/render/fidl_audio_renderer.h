@@ -6,6 +6,7 @@
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_RENDER_FIDL_AUDIO_RENDERER_H_
 
 #include <fuchsia/cpp/media.h>
+#include <lib/async/cpp/task.h>
 
 #include "garnet/bin/media/media_player/metrics/packet_timing_tracker.h"
 #include "garnet/bin/media/media_player/render/audio_renderer.h"
@@ -59,6 +60,10 @@ class FidlAudioRenderer
 
   void ReleasePayloadBuffer(void* buffer) override;
 
+ protected:
+  // Renderer overrides.
+  void OnTimelineTransition() override;
+
  private:
   // Returns the current demand.
   Demand current_demand();
@@ -83,6 +88,7 @@ class FidlAudioRenderer
   uint32_t bytes_per_frame_;
   bool flushed_ = true;
   int64_t min_lead_time_ns_ = ZX_MSEC(100);
+  async::TaskClosure demand_task_;
 
   PacketTimingTracker arrivals_;
   PacketTimingTracker departures_;

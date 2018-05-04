@@ -85,6 +85,10 @@ class Renderer : public Sink {
   // specified reference time.
   void UpdateTimelineAt(int64_t reference_time);
 
+  // Called when the timeline function changes. The default implementation
+  // does nothing.
+  virtual void OnTimelineTransition();
+
   // Gets the current timeline function.
   const media::TimelineFunction& current_timeline_function() const {
     return current_timeline_function_;
@@ -94,6 +98,8 @@ class Renderer : public Sink {
   bool end_of_stream_pending() const {
     return end_of_stream_pts_ != media::kUnspecifiedTime;
   }
+
+  int64_t end_of_stream_pts() { return end_of_stream_pts_; }
 
   // Returns the minimum PTS for the specified program.
   int64_t min_pts(uint64_t program) {

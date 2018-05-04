@@ -26,6 +26,15 @@ FidlAudioRenderer::FidlAudioRenderer(media::AudioRenderer2Ptr audio_renderer)
       departures_(false) {
   FXL_DCHECK(audio_renderer_);
 
+  // |demand_task_| is used to wake up when demand might transition from
+  // negative to positive.
+  demand_task_.set_handler([this]() {
+    Demand demand = current_demand();
+    if (demand != Demand::kNegative) {
+      stage()->SetDemand(demand);
+    }
+  });
+
   audio_renderer_->GetMinLeadTime([this](int64_t min_lead_time_nsec) {
     if (min_lead_time_nsec == 0) {
       FXL_LOG(WARNING)
@@ -103,6 +112,10 @@ Demand FidlAudioRenderer::SupplyPacket(PacketPtr packet) {
 
   if (packet->end_of_stream()) {
     SetEndOfStreamPts(start_pts_ns);
+    if (current_timeline_function().invertable()) {
+      // Make sure we wake up to signal end-of-stream when the time comes.
+      UpdateTimelineAt(current_timeline_function().ApplyInverse(start_pts_ns));
+    }
 
     if (prime_callback_) {
       // We won't get any more packets, so we're as primed as we're going to
@@ -228,8 +241,20 @@ void FidlAudioRenderer::ReleasePayloadBuffer(void* buffer) {
   allocator_.ReleaseRegion(buffer_.OffsetFromPtr(buffer));
 }
 
+void FidlAudioRenderer::OnTimelineTransition() {
+  if (end_of_stream_pending() && current_timeline_function().invertable()) {
+    // Make sure we wake up to signal end-of-stream when the time comes.
+    UpdateTimelineAt(
+        current_timeline_function().ApplyInverse(end_of_stream_pts()));
+  }
+}
+
 Demand FidlAudioRenderer::current_demand() {
+  demand_task_.Cancel();
+
   if (flushed_ || end_of_stream_pending()) {
+    // If we're flushed or we've seen end of stream, we don't need any more
+    // packets.
     return Demand::kNegative;
   }
 
@@ -238,9 +263,24 @@ Demand FidlAudioRenderer::current_demand() {
 
   int64_t last_supplied_ns = to_ns(last_supplied_pts_);
 
-  return (presentation_time_ns + min_lead_time_ns_ > last_supplied_ns)
-             ? Demand::kPositive
-             : Demand::kNegative;
+  if (presentation_time_ns + min_lead_time_ns_ > last_supplied_ns) {
+    // We need more packets to meet lead time commitments.
+    return Demand::kPositive;
+  }
+
+  if (!current_timeline_function().invertable()) {
+    // We don't need packets now, and the timeline isn't progressing, so we
+    // won't need packets until the timeline starts progressing.
+    return Demand::kNegative;
+  }
+
+  // We don't need packets now. Predict when we might need the next packet
+  // and check then.
+  demand_task_.PostForTime(async(),
+                           zx::time(current_timeline_function().ApplyInverse(
+                               last_supplied_ns - min_lead_time_ns_)));
+
+  return Demand::kNegative;
 }
 
 }  // namespace media_player
