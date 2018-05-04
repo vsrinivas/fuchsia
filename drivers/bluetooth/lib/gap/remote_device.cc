@@ -41,7 +41,8 @@ RemoteDevice::RemoteDevice(const std::string& identifier,
       technology_((address.type() == common::DeviceAddress::Type::kBREDR)
                       ? TechnologyType::kClassic
                       : TechnologyType::kLowEnergy),
-      connection_state_(ConnectionState::kNotConnected),
+      le_connection_state_(ConnectionState::kNotConnected),
+      bredr_connection_state_(ConnectionState::kNotConnected),
       address_(address),
       connectable_(connectable),
       temporary_(true),
@@ -51,15 +52,26 @@ RemoteDevice::RemoteDevice(const std::string& identifier,
   // TODO(armansito): Add a mechanism for assigning "dual-mode" for technology.
 }
 
-void RemoteDevice::set_connection_state(ConnectionState state) {
+void RemoteDevice::set_le_connection_state(ConnectionState state) {
   FXL_DCHECK(connectable() || state == ConnectionState::kNotConnected);
-  FXL_VLOG(1) << "gap: RemoteDevice connection_state changed from \""
-              << ConnectionStateToString(connection_state_) << "\" to \""
+  FXL_VLOG(1) << "gap: RemoteDevice le_connection_state changed from \""
+              << ConnectionStateToString(le_connection_state_) << "\" to \""
               << ConnectionStateToString(state) << "\"";
 
   // TODO(armansito): This should notify observers once there is an Observer
   // interface for state updates.
-  connection_state_ = state;
+  le_connection_state_ = state;
+}
+
+void RemoteDevice::set_bredr_connection_state(ConnectionState state) {
+  FXL_DCHECK(connectable() || state == ConnectionState::kNotConnected);
+  FXL_VLOG(1) << "gap: RemoteDevice bredr_connection_state changed from \""
+              << ConnectionStateToString(bredr_connection_state_) << "\" to \""
+              << ConnectionStateToString(state) << "\"";
+
+  // TODO(armansito): This should notify observers once there is an Observer
+  // interface for state updates.
+  bredr_connection_state_ = state;
 }
 
 void RemoteDevice::SetLEAdvertisingData(

@@ -168,7 +168,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceErrorStatus) {
   test_device()->AddLEDevice(std::move(fake_dev));
 
   EXPECT_EQ(RemoteDevice::ConnectionState::kNotConnected,
-            dev->connection_state());
+            dev->le_connection_state());
 
   hci::Status status;
   auto callback = [&status](auto cb_status, auto conn_ref) {
@@ -178,7 +178,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceErrorStatus) {
 
   EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), callback));
   EXPECT_EQ(RemoteDevice::ConnectionState::kInitializing,
-            dev->connection_state());
+            dev->le_connection_state());
 
   RunUntilIdle();
 
@@ -186,7 +186,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceErrorStatus) {
   EXPECT_EQ(hci::StatusCode::kConnectionFailedToBeEstablished,
             status.protocol_error());
   EXPECT_EQ(RemoteDevice::ConnectionState::kNotConnected,
-            dev->connection_state());
+            dev->le_connection_state());
 }
 
 // LE Connection Complete event reports error
@@ -205,7 +205,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceFailure) {
 
   EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), callback));
   EXPECT_EQ(RemoteDevice::ConnectionState::kInitializing,
-            dev->connection_state());
+            dev->le_connection_state());
 
   RunUntilIdle();
 
@@ -213,7 +213,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceFailure) {
   EXPECT_EQ(hci::StatusCode::kConnectionFailedToBeEstablished,
             status.protocol_error());
   EXPECT_EQ(RemoteDevice::ConnectionState::kNotConnected,
-            dev->connection_state());
+            dev->le_connection_state());
 }
 
 TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceTimeout) {
@@ -232,7 +232,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceTimeout) {
   conn_mgr()->set_request_timeout_for_testing(kTestRequestTimeoutMs);
   EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), callback));
   EXPECT_EQ(RemoteDevice::ConnectionState::kInitializing,
-            dev->connection_state());
+            dev->le_connection_state());
 
   // Make sure the first HCI transaction completes before advancing the fake
   // clock.
@@ -244,7 +244,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceTimeout) {
   EXPECT_FALSE(status);
   EXPECT_EQ(common::HostError::kTimedOut, status.error()) << status.ToString();
   EXPECT_EQ(RemoteDevice::ConnectionState::kNotConnected,
-            dev->connection_state());
+            dev->le_connection_state());
 }
 
 // Successful connection to single device
@@ -268,7 +268,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDevice) {
   EXPECT_TRUE(connected_devices().empty());
   EXPECT_TRUE(conn_mgr()->Connect(dev->identifier(), callback));
   EXPECT_EQ(RemoteDevice::ConnectionState::kInitializing,
-            dev->connection_state());
+            dev->le_connection_state());
 
   RunUntilIdle();
 
@@ -280,7 +280,8 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDevice) {
   EXPECT_TRUE(conn_ref->active());
   EXPECT_EQ(dev->identifier(), conn_ref->device_identifier());
   EXPECT_FALSE(dev->temporary());
-  EXPECT_EQ(RemoteDevice::ConnectionState::kConnected, dev->connection_state());
+  EXPECT_EQ(RemoteDevice::ConnectionState::kConnected,
+            dev->le_connection_state());
 }
 
 TEST_F(GAP_LowEnergyConnectionManagerTest, ReleaseRef) {
@@ -305,7 +306,8 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ReleaseRef) {
 
   EXPECT_TRUE(status);
   EXPECT_EQ(1u, connected_devices().size());
-  EXPECT_EQ(RemoteDevice::ConnectionState::kConnected, dev->connection_state());
+  EXPECT_EQ(RemoteDevice::ConnectionState::kConnected,
+            dev->le_connection_state());
 
   ASSERT_TRUE(conn_ref);
   conn_ref = nullptr;
@@ -314,7 +316,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ReleaseRef) {
 
   EXPECT_TRUE(connected_devices().empty());
   EXPECT_EQ(RemoteDevice::ConnectionState::kNotConnected,
-            dev->connection_state());
+            dev->le_connection_state());
 }
 
 TEST_F(GAP_LowEnergyConnectionManagerTest,

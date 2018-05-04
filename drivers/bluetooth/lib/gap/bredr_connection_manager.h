@@ -52,6 +52,9 @@ class BrEdrConnectionManager {
   // Called when a ConnectionComplete event is received.
   void OnConnectionComplete(const hci::EventPacket& event);
 
+  // Called when a DisconnectComplete event is received.
+  void OnDisconnectionComplete(const hci::EventPacket& event);
+
   fxl::RefPtr<hci::Transport> hci_;
   std::unique_ptr<hci::SequentialCommandRunner> hci_cmd_runner_;
 
@@ -65,6 +68,7 @@ class BrEdrConnectionManager {
   // Handler ID for connection events
   hci::CommandChannel::EventHandlerId conn_complete_handler_id_;
   hci::CommandChannel::EventHandlerId conn_request_handler_id_;
+  hci::CommandChannel::EventHandlerId disconn_cmpl_handler_id_;
 
   // The current page scan parameters of the controller.
   // Set to 0 when non-connectable.

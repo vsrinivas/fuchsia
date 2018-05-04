@@ -148,6 +148,42 @@ constexpr OpCode kInquiryCancel = LinkControlOpCode(0x0002);
 
 // Inquiry Cancel Command has no command parameters.
 
+// =================================
+// Create Connection (v1.1) (BR/EDR)
+constexpr OpCode kCreateConnection = LinkControlOpCode(0x0005);
+
+struct CreateConnectionCommandParams {
+  // BD_ADDR of the device to be connected
+  common::DeviceAddressBytes bd_addr;
+
+  // Mask of allowable packet types. See PacketTypeBits in hci_constants.h for
+  // values.
+  PacketTypeType packet_type;
+
+  // The Page Scan Repetition Mode of the reomte device as retrieved by Inquiry.
+  PageScanRepetitionMode page_scan_repetition_mode;
+
+  // Reserved, must be set to 0.
+  uint8_t reserved;
+
+  // Clock Offset.  The lower 15 bits are set to the clock offset as retrieved
+  // by an Inquiry. The highest bit is set to 1 if the rest of this parameter
+  // is valid.
+  uint16_t clock_offset;
+
+  // Allow Role Switch.
+  // Allowed values:
+  //  0x00 - No role switch allowed, this device will be the master
+  //  0x01 - Role switch allowed, this device may become slave durong at
+  //  connection setup
+  uint8_t allow_role_switch;
+} __PACKED;
+
+// NOTE on ReturnParams: No Command Complete event will be sent by the
+// Controller to indicate that this command has been completed. Instead, the
+// Connection Complete event will indicate that this command has been
+// completed.
+
 // =======================================
 // Disconnect Command (v1.1) (BR/EDR & LE)
 constexpr OpCode kDisconnect = LinkControlOpCode(0x0006);
@@ -166,6 +202,54 @@ struct DisconnectCommandParams {
 // Controller to indicate that this command has been completed. Instead, the
 // Disconnection Complete event will indicate that this command has been
 // completed.
+
+// ========================================
+// Create Connection Cancel (v1.1) (BR/EDR)
+constexpr OpCode kCreateConnectionCancel = LinkControlOpCode(0x0008);
+
+struct CreateConnectionCancelCommandParams {
+  // BD_ADDR of the Create Connection Command Request
+  common::DeviceAddressBytes bd_addr;
+} __PACKED;
+
+struct CreateConnectionCancelReturnParams {
+  // See enum StatusCode in hci_constants.h.
+  StatusCode status;
+
+  // BD_ADDR of the Create Connection Command Request
+  common::DeviceAddressBytes bd_addr;
+} __PACKED;
+
+// =========================================
+// Accept Connection Request (v1.1) (BR/EDR)
+constexpr OpCode kAcceptConnectionRequest = LinkControlOpCode(0x0009);
+
+struct AcceptConnectionRequestCommandParams {
+  // BD_ADDR of the device to be connected
+  common::DeviceAddressBytes bd_addr;
+
+  // Role.  Allowable values:
+  //  - 0x00 - Link Manager will perform a role switch.
+  //  - 0x01 - Link Manager will not perform a role switch.
+  uint8_t role;
+} __PACKED;
+
+// =========================================
+// Reject Connection Request (v1.1) (BR/EDR)
+constexpr OpCode kRejectConnectionRequest = LinkControlOpCode(0x000A);
+
+struct RejectConnectionRequestCommandParams {
+  // BD_ADDR of the device to reject the connection from
+  common::DeviceAddressBytes bd_addr;
+
+  // Reason.
+  // Must be one of kConnectionRejected* from Status in hci_constants.h
+  StatusCode reason;
+} __PACKED;
+
+// NOTE on ReturnParams: No Command Complete event will be sent by the
+// Controller to indicate that this command has been completed. Instead, the
+// Connection Complete event will indicate that this command has been completed.
 
 // ============================================================
 // Read Remote Version Information Command (v1.1) (BR/EDR & LE)
@@ -637,7 +721,7 @@ struct ConnectionCompleteEventParams {
 
   // Connection_handle (12 bits meaningful)
   // Range: 0x0000 to kConnectioHandleMax in hci_constants.h
-  ConnectionHandle connnection_handle;
+  ConnectionHandle connection_handle;
 
   // The address of the connected device
   common::DeviceAddressBytes bd_addr;

@@ -85,6 +85,14 @@ BrEdrConnectionManager::BrEdrConnectionManager(fxl::RefPtr<hci::Transport> hci,
           self->OnConnectionRequest(event);
       },
       dispatcher_);
+  disconn_cmpl_handler_id_ = hci->command_channel()->AddEventHandler(
+      hci::kDisconnectionCompleteEventCode,
+      [self](const auto& event) {
+        if (self)
+          self->OnDisconnectionComplete(event);
+      },
+      dispatcher_);
+
   FXL_DCHECK(conn_request_handler_id_);
 };
 
@@ -191,12 +199,63 @@ void BrEdrConnectionManager::WritePageScanSettings(uint16_t interval,
 
 void BrEdrConnectionManager::OnConnectionRequest(
     const hci::EventPacket& event) {
-  FXL_LOG(INFO) << "gap: BrEdrConnectionManager: ignoring connection request";
+  FXL_DCHECK(event.event_code() == hci::kConnectionRequestEventCode);
+  const auto& params =
+      event.view().payload<hci::ConnectionRequestEventParams>();
+  std::string link_type_str =
+      params.link_type == hci::LinkType::kACL ? "ACL" : "(e)SCO";
+  FXL_VLOG(1) << "gap: BrEdrConnectionManager: " << link_type_str
+              << " conn request from " << params.bd_addr.ToString() << "("
+              << params.class_of_device.ToString() << ")";
+  // TODO(NET-410): Accept connections if they are a connection type we
+  // support.
+  FXL_LOG(INFO) << "gap: BrEdrConnectionManager: reject incoming connection";
+
+  auto reject = hci::CommandPacket::New(
+      hci::kRejectConnectionRequest,
+      sizeof(hci::RejectConnectionRequestCommandParams));
+  auto reject_params =
+      reject->mutable_view()
+          ->mutable_payload<hci::RejectConnectionRequestCommandParams>();
+  reject_params->bd_addr = params.bd_addr;
+  reject_params->reason = hci::StatusCode::kConnectionRejectedBadBdAddr;
+
+  hci_->command_channel()->SendCommand(std::move(reject), dispatcher_, nullptr,
+                                       hci::kCommandStatusEventCode);
 }
 
 void BrEdrConnectionManager::OnConnectionComplete(
     const hci::EventPacket& event) {
-  FXL_LOG(INFO) << "gap: BrEdrConnectionManager: ignoring connection complete";
+  FXL_DCHECK(event.event_code() == hci::kConnectionCompleteEventCode);
+  const auto& params =
+      event.view().payload<hci::ConnectionCompleteEventParams>();
+  FXL_VLOG(1) << "gap: BrEdrConnectionManager: " << params.bd_addr.ToString()
+              << fxl::StringPrintf(
+                     " connection complete (status: 0x%02x handle: 0x%04x)",
+                     params.status, params.connection_handle);
+  auto status = event.ToStatus();
+  if (!status) {
+    FXL_LOG(WARNING)
+        << "Unexpected Connection Complete event with error received: "
+        << status.ToString();
+    return;
+  }
+
+  // TODO(NET-410) send the connection to the appropriate place.
+  // Automatically disconnect for now
+  auto disconnect = hci::CommandPacket::New(
+      hci::kDisconnect, sizeof(hci::DisconnectCommandParams));
+  auto disconn_params = disconnect->mutable_view()
+                            ->mutable_payload<hci::DisconnectCommandParams>();
+  disconn_params->connection_handle = params.connection_handle;
+  disconn_params->reason = hci::StatusCode::kRemoteUserTerminatedConnection;
+  hci_->command_channel()->SendCommand(std::move(disconnect), dispatcher_,
+                                       nullptr, hci::kCommandStatusEventCode);
+}
+
+void BrEdrConnectionManager::OnDisconnectionComplete(
+    const hci::EventPacket& event) {
+  FXL_LOG(INFO) << "gap: BrEdrConnectionManager: ignored DisconnectionComplete";
 }
 
 }  // namespace gap

@@ -111,9 +111,15 @@ class RemoteDevice final {
     le_preferred_conn_params_ = params;
   }
 
-  // The current connection state of this RemoteDevice.
-  ConnectionState connection_state() const { return connection_state_; }
-  void set_connection_state(ConnectionState state);
+  // The current LE connection state of this RemoteDevice.
+  ConnectionState le_connection_state() const { return le_connection_state_; }
+  void set_le_connection_state(ConnectionState state);
+
+  // The current BR/EDR connection state of this RemoteDevice.
+  ConnectionState bredr_connection_state() const {
+    return bredr_connection_state_;
+  }
+  void set_bredr_connection_state(ConnectionState state);
 
   // A temporary device is one that is never persisted, such as
   //
@@ -165,7 +171,8 @@ class RemoteDevice final {
 
   std::string identifier_;
   TechnologyType technology_;
-  ConnectionState connection_state_;
+  ConnectionState le_connection_state_;
+  ConnectionState bredr_connection_state_;
   common::DeviceAddress address_;
   common::Optional<std::string> name_;
   bool connectable_;

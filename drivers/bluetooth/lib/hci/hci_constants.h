@@ -1280,5 +1280,29 @@ enum class LinkType : uint8_t {
   kExtendedSCO = 0x02, // eSCO
 };
 
+
+// Bitmask values for supported Packet Types
+// Used for HCI_Create_Connection and HCI_Change_Connection_Packet_Type
+enum class PacketTypeBits : uint16_t {
+  // Reserved (1 << 0)
+  kDisable2DH1 = (1 << 1),
+  kDisable3DH1 = (1 << 2),
+  kEnableDM1 = (1 << 3), // Note: always on in >= v1.2
+  kEnableDH1 = (1 << 4),
+  // Reserved (1 << 5)
+  // Reserved (1 << 6)
+  // Reserved (1 << 7)
+  kDisable2DH3 = (1 << 8),
+  kDisable3DH3 = (1 << 9),
+  kEnableDM3 = (1 << 10),
+  kEnableDH3 = (1 << 11),
+  kDisable2DH5 = (1 << 12),
+  kDisable3DH5 = (1 << 13),
+  kEnableDM5 = (1 << 14),
+  kEnableDH5 = (1 << 15),
+};
+
+using PacketTypeType = uint16_t;
+
 }  // namespace hci
 }  // namespace btlib
