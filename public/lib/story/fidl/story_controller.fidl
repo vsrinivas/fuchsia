@@ -47,7 +47,7 @@ interface StoryController {
   // |surface_relation| is used to determine how the started module will be
   //                    presented.
   12: AddModule(vector<string>? parent_module_path, string module_name,
-               Intent intent, SurfaceRelation? surface_relation);
+                Intent intent, SurfaceRelation? surface_relation);
 
   // Lists the active modules in the story. Active modules are those with a
   // controller.
