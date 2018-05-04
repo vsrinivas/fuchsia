@@ -76,19 +76,14 @@ constexpr float DEFAULT_PREAMP_GAIN = -5.0f;
 
 using audio::utils::AudioInput;
 
-class FxProcessor : public media::AudioRendererMinLeadTimeChangedEvent {
+class FxProcessor {
  public:
   FxProcessor(fbl::unique_ptr<AudioInput> input, fxl::Closure quit_callback)
-      : input_(fbl::move(input)),
-        quit_callback_(quit_callback),
-        lead_time_event_binding_(this) {
+      : input_(fbl::move(input)), quit_callback_(quit_callback) {
     FXL_DCHECK(quit_callback_);
   }
 
   void Startup(media::AudioServerPtr audio_server);
-
-  // media::AudioRendererMinLeadTimeChangedEvent
-  void OnMinLeadTimeChanged(int64_t new_min_lead_time_nsec);
 
  private:
   using EffectFn = void (FxProcessor::*)(int16_t* src,
@@ -106,6 +101,7 @@ class FxProcessor : public media::AudioRendererMinLeadTimeChangedEvent {
     return 1.0f - expf(-norm_value * gain);
   }
 
+  void OnMinLeadTimeChanged(int64_t new_min_lead_time_nsec);
   void RequestKeystrokeMessage();
   void HandleKeystroke(zx_status_t status, uint32_t events);
   void Shutdown(const char* reason = "unknown");
@@ -169,8 +165,6 @@ class FxProcessor : public media::AudioRendererMinLeadTimeChangedEvent {
   fsl::FDWaiter keystroke_waiter_;
   media::audio::WavWriter<kWavWriterEnabled> wav_writer_;
 
-  fidl::Binding<media::AudioRendererMinLeadTimeChangedEvent>
-      lead_time_event_binding_;
   int64_t lead_time_frames_ = 0;
   bool lead_time_frames_known_ = false;
 };
@@ -255,8 +249,11 @@ void FxProcessor::Startup(media::AudioServerPtr audio_server) {
   // Request notifications about the minimum clock lead time requirements.  We
   // will be able to start to process the input stream once we know what this
   // number is.
-  audio_renderer_->EnableMinLeadTimeEvents(
-      lead_time_event_binding_.NewBinding());
+  // TODO(johngro): Set the handler here!
+  audio_renderer_.events().OnMinLeadTimeChanged = [this](int64_t nsec) {
+    OnMinLeadTimeChanged(nsec);
+  };
+  audio_renderer_->EnableMinLeadTimeEvents(true);
 
   // Success.  Print out the usage message, and force an update of effect
   // parameters (which will also print their status).
@@ -448,7 +445,6 @@ void FxProcessor::Shutdown(const char* reason) {
 
   printf("Shutting down, reason = \"%s\"\n", reason);
   shutting_down_ = true;
-  lead_time_event_binding_.Unbind();
   audio_renderer_.Unbind();
   input_.reset();
   quit_callback_();

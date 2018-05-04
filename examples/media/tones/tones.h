@@ -48,12 +48,13 @@ class Tones {
   // Adds notes to the score.
   void BuildScore();
 
-  // Start the Tone example.
-  void Start(int64_t min_lead_time_nsec);
+  // Handle a change in the minimum lead time requirement, starting playback if
+  // needed..
+  void OnMinLeadTimeChanged(int64_t min_lead_time_nsec);
 
   // Sends as much content as is currently demanded. Ends the stream when all
   // content has been sent.
-  void Send(uint32_t amt);
+  void SendPackets();
 
   // Fills |buffer| with audio.
   void FillBuffer(float* buffer);
@@ -72,6 +73,9 @@ class Tones {
   std::list<ToneGenerator> tone_generators_;
   int64_t pts_ = 0;
   fbl::VmoMapper payload_buffer_;
+  uint32_t active_packets_in_flight_ = 0;
+  uint32_t target_packets_in_flight_ = 0;
+  bool started_ = false;
   std::unique_ptr<MidiKeyboard> midi_keyboard_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Tones);

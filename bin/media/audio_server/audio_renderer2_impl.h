@@ -7,12 +7,12 @@
 #include <fbl/unique_ptr.h>
 #include <fbl/vmo_mapper.h>
 
+#include <fuchsia/cpp/media.h>
 #include "garnet/bin/media/audio_server/audio_object.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
 #include "garnet/bin/media/audio_server/utils.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include <fuchsia/cpp/media.h>
 
 namespace media {
 namespace audio {
@@ -41,8 +41,7 @@ class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
                    uint32_t tick_per_second_denominator) final;
   void SetPtsContinuityThreshold(float threshold_seconds) final;
   void SetReferenceClock(zx::handle ref_clock) final;
-  void SendPacket(AudioPacket packet,
-                  SendPacketCallback callback) final;
+  void SendPacket(AudioPacket packet, SendPacketCallback callback) final;
   void SendPacketNoReply(AudioPacket packet) final;
   void Flush(FlushCallback callback) final;
   void FlushNoReply() final;
@@ -59,8 +58,7 @@ class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
   void SetGainMuteNoReply(float gain, bool mute, uint32_t flags) final;
   void DuplicateGainControlInterface(
       fidl::InterfaceRequest<AudioRendererGainControl> request) final;
-  void EnableMinLeadTimeEvents(
-      fidl::InterfaceHandle<AudioRendererMinLeadTimeChangedEvent> evt) final;
+  void EnableMinLeadTimeEvents(bool enabled) final;
   void GetMinLeadTime(GetMinLeadTimeCallback callback) final;
 
  protected:
@@ -166,7 +164,7 @@ class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
   TimelineRate frac_frames_per_ref_tick_;
 
   // Minimum Clock Lead Time state
-  AudioRendererMinLeadTimeChangedEventPtr min_clock_lead_time_cbk_;
+  bool min_clock_lead_time_events_enabled_ = false;
 
   fbl::Mutex ref_to_ff_lock_;
   TimelineFunction ref_clock_to_frac_frames_ FXL_GUARDED_BY(ref_to_ff_lock_);

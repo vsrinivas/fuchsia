@@ -32,6 +32,12 @@ static constexpr float kA4Frequency = 440.0f;
 static constexpr float kVolume = 0.2f;
 static constexpr float kDecay = 0.95f;
 static constexpr uint32_t kBeatsPerMinute = 90;
+static inline constexpr uint32_t nsec_to_packets(uint64_t nsec) {
+  return static_cast<uint32_t>(
+      ((nsec * kFramesPerSecond) + (kFramesPerBuffer - 1)) /
+      (ZX_SEC(1) * kFramesPerBuffer));
+}
+static constexpr uint32_t kSharedBufferPackets = nsec_to_packets(ZX_MSEC(300));
 
 // Translates a note number into a frequency.
 float Note(int32_t note) {
@@ -116,7 +122,10 @@ Tones::Tones(bool interactive, fxl::Closure quit_callback)
 
   // Fetch the minimum lead time.  When we know what this is, we can allocate
   // our payload buffer and start the synthesis loop.
-  audio_renderer_->GetMinLeadTime([this](int64_t nsec) { Start(nsec); });
+  audio_renderer_.events().OnMinLeadTimeChanged = [this](int64_t nsec) {
+    OnMinLeadTimeChanged(nsec);
+  };
+  audio_renderer_->EnableMinLeadTimeEvents(true);
 }
 
 Tones::~Tones() {}
@@ -156,9 +165,7 @@ void Tones::HandleKeystroke() {
 
 void Tones::HandleMidiNote(int note, int velocity, bool note_on) {
   if (note_on) {
-    tone_generators_.emplace_back(kFramesPerSecond,
-                                  Note(note),
-                                  kVolume,
+    tone_generators_.emplace_back(kFramesPerSecond, Note(note), kVolume,
                                   kDecay);
   }
 }
@@ -183,69 +190,85 @@ void Tones::BuildScore() {
   frequencies_by_pts_.emplace(Beat(14.0f), Note(7));
 }
 
-void Tones::Start(int64_t min_lead_time_nsec) {
+void Tones::OnMinLeadTimeChanged(int64_t min_lead_time_nsec) {
+  // If anything goes wrong here, shut down.
   auto cleanup = fbl::MakeAutoCall([this]() { Quit(); });
 
   // figure out how many packets we need to keep in flight at all times.
   if (min_lead_time_nsec < 0) {
     std::cerr << "Audio renderer reported invalid lead time ("
-              << min_lead_time_nsec << "nSec)";
+              << min_lead_time_nsec << "nSec)\n";
     return;
   }
 
   min_lead_time_nsec += kLeadTimeOverheadNSec;
-  uint32_t packets_in_flight = static_cast<uint32_t>(
-      ((min_lead_time_nsec * kFramesPerSecond) + (kFramesPerBuffer - 1)) /
-      (ZX_SEC(1) * kFramesPerBuffer));
-  size_t total_mapping_size = static_cast<size_t>(packets_in_flight) *
-                              kFramesPerBuffer * kBytesPerFrame;
-
-  // Allocate our shared payload buffer and pass a handle to it over to the
-  // renderer.
-  zx::vmo payload_vmo;
-  zx_status_t status = payload_buffer_.CreateAndMap(
-      total_mapping_size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, nullptr,
-      &payload_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
-
-  if (status != ZX_OK) {
-    std::cerr << "VmoMapper:::CreateAndMap failed - " << status;
+  target_packets_in_flight_ = nsec_to_packets(min_lead_time_nsec);
+  if (target_packets_in_flight_ > kSharedBufferPackets) {
+    std::cerr
+        << "Required min lead time (" << min_lead_time_nsec
+        << " nsec) requires more than the maximum allowable buffers in flight ("
+        << target_packets_in_flight_ << " > " << kSharedBufferPackets << ")!\n";
     return;
   }
 
-  // Assign our shared payload buffer to the renderer.
-  audio_renderer_->SetPayloadBuffer(std::move(payload_vmo));
+  if (!started_) {
+    constexpr size_t total_mapping_size =
+        static_cast<size_t>(kSharedBufferPackets) * kFramesPerBuffer *
+        kBytesPerFrame;
 
-  // Configure the renderer to use input frames of audio as its PTS units.
-  audio_renderer_->SetPtsUnits(kFramesPerSecond, 1);
+    // Allocate our shared payload buffer and pass a handle to it over to the
+    // renderer.
+    zx::vmo payload_vmo;
+    zx_status_t status = payload_buffer_.CreateAndMap(
+        total_mapping_size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+        nullptr, &payload_vmo,
+        ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
 
-  // Listen for keystrokes.
-  WaitForKeystroke();
+    if (status != ZX_OK) {
+      std::cerr << "VmoMapper:::CreateAndMap failed - " << status << "\n";
+      return;
+    }
 
-  // If we are operating in interactive mode, go looking for a midi keyboard to
-  // listen to.
-  if (interactive_) {
-    midi_keyboard_ = MidiKeyboard::Create(this);
-  }
+    // Assign our shared payload buffer to the renderer.
+    audio_renderer_->SetPayloadBuffer(std::move(payload_vmo));
 
-  if (interactive_) {
-    std::cout << "| | | |  |  | | | |  |  | | | | | |  |  | |\n";
-    std::cout << "|A| |S|  |  |F| |G|  |  |J| |K| |L|  |  |'|\n";
-    std::cout << "+-+ +-+  |  +-+ +-+  |  +-+ +-+ +-+  |  +-+\n";
-    std::cout << " |   |   |   |   |   |   |   |   |   |   | \n";
-    std::cout << " | Z | X | C | V | B | N | M | , | . | / | \n";
-    std::cout << "-+---+---+---+---+---+---+---+---+---+---+-\n";
+    // Configure the renderer to use input frames of audio as its PTS units.
+    audio_renderer_->SetPtsUnits(kFramesPerSecond, 1);
+
+    // Listen for keystrokes.
+    WaitForKeystroke();
+
+    // If we are operating in interactive mode, go looking for a midi keyboard
+    // to listen to.
+    if (interactive_) {
+      midi_keyboard_ = MidiKeyboard::Create(this);
+    }
+
+    if (interactive_) {
+      std::cout << "| | | |  |  | | | |  |  | | | | | |  |  | |\n";
+      std::cout << "|A| |S|  |  |F| |G|  |  |J| |K| |L|  |  |'|\n";
+      std::cout << "+-+ +-+  |  +-+ +-+  |  +-+ +-+ +-+  |  +-+\n";
+      std::cout << " |   |   |   |   |   |   |   |   |   |   | \n";
+      std::cout << " | Z | X | C | V | B | N | M | , | . | / | \n";
+      std::cout << "-+---+---+---+---+---+---+---+---+---+---+-\n";
+    } else {
+      std::cout
+          << "Playing a tune. Use '--interactive' to play the keyboard.\n";
+      BuildScore();
+    }
+
+    SendPackets();
+    audio_renderer_->PlayNoReply(media::kNoTimestamp, media::kNoTimestamp);
+    started_ = true;
   } else {
-    std::cout << "Playing a tune. Use '--interactive' to play the keyboard.\n";
-    BuildScore();
+    SendPackets();
   }
 
-  Send(packets_in_flight);
-  audio_renderer_->PlayNoReply(media::kNoTimestamp, media::kNoTimestamp);
   cleanup.cancel();
 }
 
-void Tones::Send(uint32_t amt) {
-  while (!done() && amt--) {
+void Tones::SendPackets() {
+  while (!done() && (active_packets_in_flight_ < target_packets_in_flight_)) {
     // Allocate packet and locate its position in the buffer.
     media::AudioPacket packet;
     packet.payload_offset = (pts_ * kBytesPerFrame) % payload_buffer_.size();
@@ -288,10 +311,17 @@ void Tones::Send(uint32_t amt) {
     // to listen for minimum lead time changed events as well (as the lead time
     // requirements can vary as we get routed to different outputs).
     if (!done()) {
-      audio_renderer_->SendPacket(std::move(packet), [this] { Send(1); });
+      auto on_complete = [this]() {
+        FXL_DCHECK(active_packets_in_flight_ > 0);
+        active_packets_in_flight_--;
+        SendPackets();
+      };
+      audio_renderer_->SendPacket(std::move(packet), std::move(on_complete));
     } else {
       audio_renderer_->SendPacket(std::move(packet), [this] { Quit(); });
     }
+
+    active_packets_in_flight_++;
   }
 }
 

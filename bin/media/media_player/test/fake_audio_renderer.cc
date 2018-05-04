@@ -159,9 +159,10 @@ void FakeAudioRenderer::DuplicateGainControlInterface(
   FXL_NOTIMPLEMENTED();
 }
 
-void FakeAudioRenderer::EnableMinLeadTimeEvents(
-    ::fidl::InterfaceHandle<media::AudioRendererMinLeadTimeChangedEvent> evt) {
-  FXL_NOTIMPLEMENTED();
+void FakeAudioRenderer::EnableMinLeadTimeEvents(bool enabled) {
+  if (enabled) {
+    binding_.events().OnMinLeadTimeChanged(min_lead_time_ns_);
+  }
 }
 
 void FakeAudioRenderer::GetMinLeadTime(GetMinLeadTimeCallback callback) {

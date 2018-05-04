@@ -35,15 +35,16 @@ FidlAudioRenderer::FidlAudioRenderer(media::AudioRenderer2Ptr audio_renderer)
     }
   });
 
-  audio_renderer_->GetMinLeadTime([this](int64_t min_lead_time_nsec) {
-    if (min_lead_time_nsec == 0) {
-      FXL_LOG(WARNING)
-          << "AudioRenderer2.GetMinLeadTime returned zero, ignoring.";
-      return;
-    }
-
-    min_lead_time_ns_ = min_lead_time_nsec;
-  });
+  audio_renderer_.events().OnMinLeadTimeChanged =
+      [this](int64_t min_lead_time_nsec) {
+        // Pad this number just a bit so we are sure to have time to get the
+        // payloads delivered to the mixer over our channel.
+        min_lead_time_nsec += ZX_MSEC(10);
+        if (min_lead_time_nsec > min_lead_time_ns_) {
+          min_lead_time_ns_ = min_lead_time_nsec;
+        }
+      };
+  audio_renderer_->EnableMinLeadTimeEvents(true);
 
   supported_stream_types_.push_back(AudioStreamTypeSet::Create(
       {StreamType::kAudioEncodingLpcm},

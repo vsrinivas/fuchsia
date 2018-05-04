@@ -45,7 +45,6 @@ void AudioRenderer2Impl::Shutdown() {
   // to destroy us.  Run some FXL_DCHECK sanity checks and get out.
   if (is_shutdown_) {
     FXL_DCHECK(!audio_renderer_binding_.is_bound());
-    FXL_DCHECK(!min_clock_lead_time_cbk_.is_bound());
     return;
   }
 
@@ -59,7 +58,6 @@ void AudioRenderer2Impl::Shutdown() {
   }
 
   gain_control_bindings_.CloseAll();
-  min_clock_lead_time_cbk_.Unbind();
   payload_buffer_.reset();
 }
 
@@ -652,9 +650,8 @@ void AudioRenderer2Impl::DuplicateGainControlInterface(
                                     std::move(request));
 }
 
-void AudioRenderer2Impl::EnableMinLeadTimeEvents(
-    fidl::InterfaceHandle<AudioRendererMinLeadTimeChangedEvent> evt) {
-  min_clock_lead_time_cbk_.Bind(std::move(evt));
+void AudioRenderer2Impl::EnableMinLeadTimeEvents(bool enabled) {
+  min_clock_lead_time_events_enabled_ = enabled;
   ReportNewMinClockLeadTime();
 }
 
@@ -663,8 +660,9 @@ void AudioRenderer2Impl::GetMinLeadTime(GetMinLeadTimeCallback callback) {
 }
 
 void AudioRenderer2Impl::ReportNewMinClockLeadTime() {
-  if (min_clock_lead_time_cbk_.is_bound()) {
-    min_clock_lead_time_cbk_->OnMinLeadTimeChanged(min_clock_lead_nsec_);
+  if (min_clock_lead_time_events_enabled_) {
+    auto& evt = audio_renderer_binding_.events();
+    evt.OnMinLeadTimeChanged(min_clock_lead_nsec_);
   }
 }
 

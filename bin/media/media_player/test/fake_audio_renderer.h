@@ -96,9 +96,7 @@ class FakeAudioRenderer : public media::AudioRenderer2 {
       ::fidl::InterfaceRequest<media::AudioRendererGainControl> request)
       override;
 
-  void EnableMinLeadTimeEvents(
-      ::fidl::InterfaceHandle<media::AudioRendererMinLeadTimeChangedEvent> evt)
-      override;
+  void EnableMinLeadTimeEvents(bool enabled) override;
 
   void GetMinLeadTime(GetMinLeadTimeCallback callback) override;
 
@@ -113,7 +111,7 @@ class FakeAudioRenderer : public media::AudioRenderer2 {
   float gain_ = 1.0f;
   bool mute_ = false;
   uint32_t gain_mute_flags_ = 0;
-  int64_t min_lead_time_ns_ = 100'000'000;
+  const int64_t min_lead_time_ns_ = 100'000'000;
   bool playing_ = false;
 
   bool dump_packets_ = false;

@@ -53,12 +53,6 @@ interface AudioRendererGainControl {
                        uint32 flags); // kGainFlagGainValid
 };
 
-
-// TODO(johngro): Remove this when FIDL events happen
-interface AudioRendererMinLeadTimeChangedEvent {
-  2: OnMinLeadTimeChanged(int64 min_lead_time_nsec);
-};
-
 //////////////////////////////////////////////////////////////////////////////
 //
 // Methods and constants related to gain control.
@@ -290,10 +284,10 @@ interface AudioRenderer2 {
   //
   // TODO(johngro): Collapse these if we ever have optional retvals in FIDL
   301: Play(int64 reference_time, // kNoTimestamp
-           int64 media_time) -> // kNoTimestamp
+            int64 media_time) -> // kNoTimestamp
     (int64 reference_time, int64 media_time);
   302: PlayNoReply(int64 reference_time, // kNoTimestamp
-                  int64 media_time); // kNoTimestamp
+                   int64 media_time); // kNoTimestamp
 
   // Immediately put the renderer into the paused state and then report the
   // relationship between the media and reference timelines which was
@@ -328,19 +322,31 @@ interface AudioRenderer2 {
   //
   // TODO(johngro): Collapse these if we ever have optional retvals in FIDL
   401: SetGainMute(float32 gain,
-                  bool mute, // false
-                  uint32 flags) // kGainFlagGainValid
+                   bool mute, // false
+                   uint32 flags) // kGainFlagGainValid
     -> (float32 gain, bool mute);
   402: SetGainMuteNoReply(float32 gain,
-                         bool mute, // false
-                         uint32 flags); // kGainFlagGainValid
+                          bool mute, // false
+                          uint32 flags); // kGainFlagGainValid
 
   // Create a new interface (bound to this renderer) which is restricted to gain
   // control functions only.
   500: DuplicateGainControlInterface(request<AudioRendererGainControl> @request);
 
   // Enable or disable notifications about changes to the minimim clock lead
-  // time (in nanoseconds) for this audio renderer.
+  // time (in nanoseconds) for this audio renderer.  Calling this method with
+  // enabled set to true will trigger an immediate OnMinLeadTimeChanged event
+  // with the current minimum lead time for the renderer.  If the value changes,
+  // an OnMinLeadTimeChanged event will be raise with the new value.  This
+  // behavior will continue until the user calls Enable with enabled set to
+  // false.
+  //
+  // TODO(johngro): Should Enable have an optional -> () return value for
+  // synchronization purposes?  Probably not; users should be able to simply
+  // send a disable request and clear their event handler if they no longer care
+  // to receive notifications.  Their in-process dispatcher framework can handle
+  // draining and dropping any lead time changed events that were already in
+  // flight when the disable message was sent.
   //
   // The minimum clock lead time is the amount of time ahead of RefClock.Now()
   // packets needs to arrive ahead of the playback clock transformation in order
@@ -361,22 +367,13 @@ interface AudioRenderer2 {
   // 2) Reference clock units (what happens if the reference clock changes?)
   // 3) PTS units (what happens when the user changes the PTS units?)
   //
-  // TODO(johngro): Convert this to use FIDL events when they are available.
-  // With FIDL events, and optional return values, this interface might look
-  // more like...
-  //
-  // EnableMinLeadTimeEvents(bool enable_events);
-  // event OnMinLeadTimeChanged(int64);
-  501: EnableMinLeadTimeEvents(AudioRendererMinLeadTimeChangedEvent? evt);
+  601: EnableMinLeadTimeEvents(bool enabled);
+  602: -> OnMinLeadTimeChanged(int64 min_lead_time_nsec);
 
-  // Get the current minimum lead time requirement for the renderer.
-  //
-  // TODO(johngro): Consider removing this.  Users who need to be concerned
-  // about the minimum lead time of a renderer in order to shave latency
-  // requirements down to the bare minimum really need to be paying attention to
-  // changes in the minimum lead time requirement.  Polling it does not really
-  // make a lot of sense.
-  502: GetMinLeadTime() -> (int64 min_lead_time_nsec);
+  // TODO(johngro): Get rid of this method when possible.  Right now, it is used
+  // by code which demands to use a synchornous FIDL interface to talk to
+  // renderers.
+  699: GetMinLeadTime() -> (int64 min_lead_time_nsec);
 
   // TODO(johngro): Spec methods/events which can be used for unintentional
   // discontinuity/underflow detection.
