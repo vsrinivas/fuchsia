@@ -3,7 +3,9 @@
 
 ## Targets
 
-There are two gn targets for building Rust:
+### The Old
+
+There are two *deprecated* gn targets for building Rust:
 - [`rust_library`][target-library] defines a library which can be used by other
 targets;
 - [`rust_binary`][target-binary] defines an executable.
@@ -14,6 +16,34 @@ toolchain.
 These GN targets must be complemented by a
 [`Cargo.toml` manifest file][manifest] just like that of a regular Rust
 crate.
+
+### The New
+
+There are two new GN targets which should be used for new projects:
+- [`rustc_library`][target-library-rustc] defines a library which can be used
+  by other targets.
+- [`rustc_binary`][target-binary-rustc] defines an executable.
+
+These GN targets do not require a `Cargo.toml` file, as they are not built with
+Cargo during a normal build of Fuchsia. However, a `Cargo.toml` file can be
+created for these targets by running `fx gen-cargo --target path/to/target:label`.
+In order to generate a Cargo.toml, there must have first been a successful build
+of Fuchsia which included the target. Generating `Cargo.toml` files is useful
+for integration with IDEs such as Intellij and VSCode, and for using the
+[`fargo`][fargo] tool to build and test targets without going through a full
+GN build and run cycle each time.
+
+### Migration
+
+Owners of existing targets should work to move to the `rustc_library` and
+`rustc_binary` rules. An example of such a migration can be seen
+[here][wlantool-migration]. Third-party crates formerly listed in Cargo.toml
+can be included as dependencies named
+`//third_party/rust-crates/rustc_deps:<cratename>`.
+First-party libraries can be depended upon directly via their `rustc_library`
+GN target. FIDL crates can be included by depending on the `fidl` target
+with a `-rustc` suffix appended, like
+`//garnet/lib/wlan/fidl:fidl-rustc` or `//garnet/lib/wlan/fidl:service-rustc`.
 
 ## Workspace
 
@@ -125,10 +155,14 @@ fx set x64 --release --args "rustc_prefix=\"/path/to/bin/dir\""
 - [Unsafe code](unsafe.md)
 
 
+[target-library-rustc]: https://fuchsia.googlesource.com/build/+/master/rust/rustc_library.gni "Rust library"
+[target-binary-rustc]: https://fuchsia.googlesource.com/build/+/master/rust/rustc_binary.gni "Rust binary"
 [target-library]: https://fuchsia.googlesource.com/build/+/master/rust/rust_library.gni "Rust library"
 [target-binary]: https://fuchsia.googlesource.com/build/+/master/rust/rust_binary.gni "Rust binary"
 [manifest]: http://doc.crates.io/manifest.html "Manifest file"
 [build-integration]: https://github.com/rust-lang/rust-roadmap/issues/12 "Build integration"
 [cargo]: https://github.com/rust-lang/cargo "Cargo"
 [cargo-vendor]: https://github.com/alexcrichton/cargo-vendor "cargo-vendor"
+[fargo]: https://fuchsia.googlesource.com/fargo
 [fidl]: https://fuchsia.googlesource.com/garnet/+/master/public/lib/fidl/ "FIDL"
+[wlantool-migration]: https://fuchsia-review.googlesource.com/c/garnet/+/149537/7/bin/wlantool/BUILD.gn
