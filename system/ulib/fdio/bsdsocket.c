@@ -33,7 +33,9 @@ static zx_status_t fdio_getsockopt(fdio_t* io, int level, int optname,
                                    socklen_t* restrict optlen);
 
 static mtx_t netstack_lock = MTX_INIT;
+static mtx_t dns_lock = MTX_INIT;
 static int netstack = INT_MIN;
+static int dns = INT_MIN;
 
 int get_netstack(void) {
     mtx_lock(&netstack_lock);
@@ -41,6 +43,22 @@ int get_netstack(void) {
         netstack = open("/svc/net.Netstack", O_PIPELINE | O_RDWR);
     int result = netstack;
     mtx_unlock(&netstack_lock);
+    return result;
+}
+
+int get_dns(void) {
+    mtx_lock(&dns_lock);
+    if (dns == INT_MIN) {
+        dns = open("/svc/dns.DNS", O_PIPELINE | O_RDWR);
+        if (dns < 0) {
+            // As a temporary mechanism to ease transition, netstack supports
+            // DNS. TODO(joshlf): Once /svc/dns.DNS is guaranteed to be present,
+            // remove this fallback path.
+            dns = get_netstack();
+        }
+    }
+    int result = dns;
+    mtx_unlock(&dns_lock);
     return result;
 }
 
@@ -242,11 +260,11 @@ int getaddrinfo(const char* __restrict node,
         errno = EINVAL;
         return EAI_SYSTEM;
     }
-    // Wait for the the network stack to publish the socket device
+    // Wait for the the DNS service to publish the socket device
     // if necessary.
     // TODO: move to a better mechanism when available.
     unsigned retry = 0;
-    while ((r = __fdio_open_at(&io, get_netstack(), ZXRIO_SOCKET_DIR_NONE,
+    while ((r = __fdio_open_at(&io, get_dns(), ZXRIO_SOCKET_DIR_NONE,
                                0, 0)) == ZX_ERR_NOT_FOUND) {
         if (retry >= 24) {
             // 10-second timeout
