@@ -185,6 +185,19 @@ public:
         EXPECT_EQ(registers::GpuCommand::kCmdCycleCountStop,
                   reg_io->Read32(registers::GpuCommand::kOffset));
     }
+
+    void TestIdle()
+    {
+        std::unique_ptr<MsdArmDevice> device = MsdArmDevice::Create(GetTestDeviceHandle(), false);
+        EXPECT_NE(device, nullptr);
+
+        MsdArmDevice::DumpState dump_state;
+        device->Dump(&dump_state);
+
+        // Ensure that the GPU is idle and not doing anything at this point. A
+        // failure in this may be caused by a previous test.
+        EXPECT_EQ(0u, dump_state.gpu_status);
+    }
 };
 
 TEST(MsdArmDevice, CreateAndDestroy)
@@ -215,4 +228,10 @@ TEST(MsdArmDevice, MockExecuteAtom)
 {
     TestMsdArmDevice test;
     test.MockExecuteAtom();
+}
+
+TEST(MsdArmDevice, Idle)
+{
+    TestMsdArmDevice test;
+    test.TestIdle();
 }
