@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("entity") {
+source_set("entity_provider_runner") {
   sources = [
     "entity_provider_controller.cc",
     "entity_provider_controller.h",
@@ -32,7 +32,7 @@ source_set("unittests") {
   ]
 
   deps = [
-    ":entity",
+    ":entity_provider_runner",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/fsl",

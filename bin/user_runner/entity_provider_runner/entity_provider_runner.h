@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_ENTITY_ENTITY_PROVIDER_RUNNER_H_
-#define PERIDOT_BIN_ENTITY_ENTITY_PROVIDER_RUNNER_H_
+#ifndef PERIDOT_BIN_USER_RUNNER_ENTITY_PROVIDER_RUNNER_ENTITY_PROVIDER_RUNNER_H_
+#define PERIDOT_BIN_USER_RUNNER_ENTITY_PROVIDER_RUNNER_ENTITY_PROVIDER_RUNNER_H_
 
 #include <map>
 
@@ -90,4 +90,4 @@ class EntityProviderRunner : EntityResolver {
 
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_ENTITY_ENTITY_PROVIDER_RUNNER_H_
+#endif  // PERIDOT_BIN_USER_RUNNER_ENTITY_PROVIDER_RUNNER_ENTITY_PROVIDER_RUNNER_H_

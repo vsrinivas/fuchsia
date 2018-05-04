@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/entity/entity_provider_launcher.h"
+#include "peridot/bin/user_runner/entity_provider_runner/entity_provider_launcher.h"
 
 namespace modular {
 EntityProviderLauncher::~EntityProviderLauncher() = default;

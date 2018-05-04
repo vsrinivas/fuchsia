@@ -4,7 +4,7 @@
 
 // TODO(vardhan): Make entity references secure (no introspection allowed).
 
-#include "peridot/bin/entity/entity_provider_runner.h"
+#include "peridot/bin/user_runner/entity_provider_runner/entity_provider_runner.h"
 
 #include <utility>
 
@@ -12,7 +12,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/type_converter.h"
-#include "peridot/bin/entity/entity_provider_controller.h"
+#include "peridot/bin/user_runner/entity_provider_runner/entity_provider_controller.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/util/string_escape.h"
 
