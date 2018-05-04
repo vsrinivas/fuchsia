@@ -17,7 +17,6 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_view.h"
-#include "peridot/bin/ledger/fidl_helpers/boundable.h"
 
 namespace test {
 

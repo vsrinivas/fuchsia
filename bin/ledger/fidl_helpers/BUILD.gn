@@ -8,7 +8,6 @@ source_set("fidl_helpers") {
   sources = [
     "bound_interface.h",
     "bound_interface_set.h",
-    "boundable.h",
   ]
 
   public_deps = [

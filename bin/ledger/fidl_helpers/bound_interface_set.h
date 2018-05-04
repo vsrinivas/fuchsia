@@ -8,18 +8,17 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/ledger/fidl_helpers/boundable.h"
 
 namespace ledger {
 namespace fidl_helpers {
 template <class Interface, class Impl>
-class BoundInterfaceSet : public SetBoundable<Interface> {
+class BoundInterfaceSet {
  public:
   template <class... Args>
   explicit BoundInterfaceSet(Args&&... args)
       : impl_(std::forward<Args>(args)...) {}
 
-  void AddBinding(fidl::InterfaceRequest<Interface> request) final {
+  void AddBinding(fidl::InterfaceRequest<Interface> request) {
     binding_.AddBinding(&impl_, std::move(request));
   }
 
