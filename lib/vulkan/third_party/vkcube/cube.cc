@@ -23,14 +23,21 @@
 * Author: Tony Barbour <tony@LunarG.com>
 */
 
+/*
+* Video frame: bbb_frame.yuv
+* (c) copyright Blender Foundation | www.bigbuckbunny.org
+*/
+
 #include "cube.h"
 
 #include <assert.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #if defined(VK_USE_PLATFORM_XLIB_KHR) || defined(VK_USE_PLATFORM_XCB_KHR)
 #include <X11/Xutil.h>
@@ -56,6 +63,14 @@
 #include "lib/fxl/log_settings_command_line.h"
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+
+//#define USE_YUV_TEXTURE 1
+
+#if USE_YUV_TEXTURE
+#define TEX_FORMAT VK_FORMAT_G8B8G8R8_422_UNORM_KHR
+#else
+#define TEX_FORMAT VK_FORMAT_R8G8B8A8_UNORM
+#endif
 
 #if defined(NDEBUG) && defined(__GNUC__)
 #define U_ASSERT_ONLY __attribute__((unused))
@@ -99,7 +114,7 @@ static PFN_vkGetDeviceProcAddr g_gdpa = NULL;
         }                                                                                          \
     }
 
-static const char* tex_files[] = {"lunarg.ppm"};
+static const char* tex_files[] = {"/pkg/data/bbb_frame.yuv"};
 
 static int validation_error = 0;
 
@@ -912,8 +927,8 @@ void demo_prepare_depth(struct demo* demo)
 #include "magma.ppm.h"
 
 /* Load a ppm file into memory */
-bool loadTexture(const char* filename, uint8_t* rgba_data, VkSubresourceLayout* layout,
-                 uint32_t* width, uint32_t* height)
+bool loadTextureRGBA(const char* filename, uint8_t* rgba_data, uint32_t data_size,
+                     VkSubresourceLayout* layout, uint32_t* width, uint32_t* height)
 {
 // #include "lunarg.ppm.h"
 //     constexpr bool kDataIsAscii = false;
@@ -975,17 +990,50 @@ bool loadTexture(const char* filename, uint8_t* rgba_data, VkSubresourceLayout* 
     return true;
 }
 
+bool loadTextureYUYV422(const char* filename, uint8_t* rgba_data, uint32_t data_size,
+                        VkSubresourceLayout* layout, uint32_t* width, uint32_t* height)
+{
+    *width = 320;
+    *height = 180;
+
+    if (!rgba_data)
+        return true;
+
+    int fd = open(filename, O_RDONLY);
+    if (fd < 0) {
+        printf("failed to open: %s\n", filename);
+        return false;
+    }
+
+    printf("reading %u bytes\n", data_size);
+    ssize_t ret = read(fd, rgba_data, data_size);
+    close(fd);
+
+    if (ret != data_size) {
+        printf("failed to read: %zd\n", ret);
+        return false;
+    }
+
+    return true;
+}
+
+#if USE_YUV_TEXTURE
+auto loadTexture = loadTextureYUYV422;
+#else
+auto loadTexture = loadTextureRGBA;
+#endif
+
 static void demo_prepare_texture_image(struct demo* demo, const char* filename,
                                        struct texture_object* tex_obj, VkImageTiling tiling,
                                        VkImageUsageFlags usage, VkFlags required_props)
 {
-    const VkFormat tex_format = VK_FORMAT_R8G8B8A8_UNORM;
+    const VkFormat tex_format = TEX_FORMAT;
     uint32_t tex_width;
     uint32_t tex_height;
     VkResult U_ASSERT_ONLY err;
     bool U_ASSERT_ONLY pass;
 
-    if (!loadTexture(filename, NULL, NULL, &tex_width, &tex_height)) {
+    if (!loadTexture(filename, NULL, 0, NULL, &tex_width, &tex_height)) {
         ERR_EXIT("Failed to load textures", "Load Texture Failure");
     }
 
@@ -1044,8 +1092,8 @@ static void demo_prepare_texture_image(struct demo* demo, const char* filename,
             vkMapMemory(demo->device, tex_obj->mem, 0, tex_obj->mem_alloc.allocationSize, 0, &data);
         assert(!err);
 
-        if (!loadTexture(filename, reinterpret_cast<uint8_t*>(data), &layout, &tex_width,
-                         &tex_height)) {
+        if (!loadTexture(filename, reinterpret_cast<uint8_t*>(data), mem_reqs.size, &layout,
+                         &tex_width, &tex_height)) {
             fprintf(stderr, "Error loading texture: %s\n", filename);
         }
 
@@ -1064,7 +1112,7 @@ static void demo_destroy_texture_image(struct demo* demo, struct texture_object*
 
 static void demo_prepare_textures(struct demo* demo)
 {
-    const VkFormat tex_format = VK_FORMAT_R8G8B8A8_UNORM;
+    const VkFormat tex_format = TEX_FORMAT;
     VkFormatProperties props;
     uint32_t i;
 
@@ -1135,9 +1183,43 @@ static void demo_prepare_textures(struct demo* demo)
             assert(!"No support for R8G8B8A8_UNORM as texture image format");
         }
 
+#if USE_YUV_TEXTURE
+        VkSamplerYcbcrConversionCreateInfoKHR sampler_ycbcr_conversion_create_info = {
+            .sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO_KHR,
+            .pNext = NULL,
+            .format = tex_format,
+            .ycbcrModel = VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_709_KHR,
+            .ycbcrRange = VK_SAMPLER_YCBCR_RANGE_ITU_NARROW_KHR,
+            .components =
+                {
+                    VK_COMPONENT_SWIZZLE_IDENTITY, // R
+                    VK_COMPONENT_SWIZZLE_IDENTITY, // G
+                    VK_COMPONENT_SWIZZLE_IDENTITY, // B
+                    VK_COMPONENT_SWIZZLE_IDENTITY, // A
+                },
+            .xChromaOffset = VK_CHROMA_LOCATION_COSITED_EVEN_KHR,
+            .yChromaOffset = VK_CHROMA_LOCATION_COSITED_EVEN_KHR,
+            .chromaFilter = VK_FILTER_LINEAR,
+            .forceExplicitReconstruction = VK_FALSE};
+        VkSamplerYcbcrConversionInfoKHR ycbcr_conversion_info = {
+            .sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO_KHR,
+            .pNext = NULL,
+            .conversion = 0 // overwritten
+        };
+
+        err = demo->fpCreateSamplerYcbcrConversionKHR(demo->device,
+                                                      &sampler_ycbcr_conversion_create_info, NULL,
+                                                      &ycbcr_conversion_info.conversion);
+        assert(!err);
+
+        void* extension_ptr = &ycbcr_conversion_info;
+#else
+        void* extension_ptr = NULL;
+#endif
+
         const VkSamplerCreateInfo sampler = {
             .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-            .pNext = NULL,
+            .pNext = extension_ptr,
             .magFilter = VK_FILTER_LINEAR,
             .minFilter = VK_FILTER_LINEAR,
             .mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
@@ -1156,13 +1238,15 @@ static void demo_prepare_textures(struct demo* demo)
 
         VkImageViewCreateInfo view = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .pNext = NULL,
+            .pNext = extension_ptr,
             .image = VK_NULL_HANDLE,
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
             .format = tex_format,
             .components =
                 {
-                    VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B,
+                    VK_COMPONENT_SWIZZLE_R,
+                    VK_COMPONENT_SWIZZLE_G,
+                    VK_COMPONENT_SWIZZLE_B,
                     VK_COMPONENT_SWIZZLE_A,
                 },
             .subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1},
@@ -1250,22 +1334,26 @@ void demo_prepare_cube_data_buffer(struct demo* demo)
 static void demo_prepare_descriptor_layout(struct demo* demo)
 {
     const VkDescriptorSetLayoutBinding layout_bindings[2] = {
-            [0] =
-                {
-                    .binding = 0,
-                    .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                    .descriptorCount = 1,
-                    .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-                    .pImmutableSamplers = NULL,
-                },
-            [1] =
-                {
-                    .binding = 1,
-                    .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                    .descriptorCount = DEMO_TEXTURE_COUNT,
-                    .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-                    .pImmutableSamplers = NULL,
-                },
+        [0] =
+            {
+                .binding = 0,
+                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .descriptorCount = 1,
+                .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+                .pImmutableSamplers = NULL,
+            },
+        [1] =
+            {
+                .binding = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .descriptorCount = DEMO_TEXTURE_COUNT,
+                .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+#if USE_YUV_TEXTURE
+                .pImmutableSamplers = &demo->textures[0].sampler,
+#else
+                .pImmutableSamplers = NULL,
+#endif
+            },
     };
     const VkDescriptorSetLayoutCreateInfo descriptor_layout = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
@@ -2185,6 +2273,10 @@ static void demo_init_vk(struct demo* demo)
                 surfaceExtFound = 1;
                 demo->extension_names[demo->enabled_extension_count++] =
                     VK_KHR_SURFACE_EXTENSION_NAME;
+            } else if (!strcmp(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
+                               instance_extensions[i].extensionName)) {
+                demo->extension_names[demo->enabled_extension_count++] =
+                    VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME;
             }
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
             if (!strcmp(VK_KHR_XLIB_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) {
@@ -2337,6 +2429,7 @@ static void demo_init_vk(struct demo* demo)
     VkBool32 swapchainExtFound = 0;
     demo->enabled_extension_count = 0;
     memset(demo->extension_names, 0, sizeof(demo->extension_names));
+    bool ycbcrExtFound = false;
 
     err = vkEnumerateDeviceExtensionProperties(demo->gpu, NULL, &device_extension_count, NULL);
     assert(!err);
@@ -2354,6 +2447,24 @@ static void demo_init_vk(struct demo* demo)
                 demo->extension_names[demo->enabled_extension_count++] =
                     VK_KHR_SWAPCHAIN_EXTENSION_NAME;
             }
+            else if (!strcmp(VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME,
+                             device_extensions[i].extensionName)) {
+                ycbcrExtFound = true;
+                demo->extension_names[demo->enabled_extension_count++] =
+                    VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME;
+            } else if (!strcmp(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
+                               device_extensions[i].extensionName)) {
+                demo->extension_names[demo->enabled_extension_count++] =
+                    VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME;
+            } else if (!strcmp(VK_KHR_BIND_MEMORY_2_EXTENSION_NAME,
+                               device_extensions[i].extensionName)) {
+                demo->extension_names[demo->enabled_extension_count++] =
+                    VK_KHR_BIND_MEMORY_2_EXTENSION_NAME;
+            } else if (!strcmp(VK_KHR_MAINTENANCE1_EXTENSION_NAME,
+                               device_extensions[i].extensionName)) {
+                demo->extension_names[demo->enabled_extension_count++] =
+                    VK_KHR_MAINTENANCE1_EXTENSION_NAME;
+            }
             assert(demo->enabled_extension_count < 64);
         }
 
@@ -2368,6 +2479,12 @@ static void demo_init_vk(struct demo* demo)
                  "information.\n",
                  "vkCreateInstance Failure");
     }
+
+#if USE_YUV_TEXTURE
+    if (!ycbcrExtFound) {
+        ERR_EXIT("VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME not found", "Fatal");
+    }
+#endif
 
     if (demo->validate) {
         demo->CreateDebugReportCallback = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(
@@ -2424,17 +2541,28 @@ static void demo_init_vk(struct demo* demo)
     vkGetPhysicalDeviceQueueFamilyProperties(demo->gpu, &demo->queue_family_count,
                                              demo->queue_props);
 
-    // Query fine-grained feature support for this device.
-    //  If app has specific feature requirements it should check supported
-    //  features based on this query
-    VkPhysicalDeviceFeatures physDevFeatures;
-    vkGetPhysicalDeviceFeatures(demo->gpu, &physDevFeatures);
-
     GET_INSTANCE_PROC_ADDR(demo->inst, GetPhysicalDeviceSurfaceSupportKHR);
     GET_INSTANCE_PROC_ADDR(demo->inst, GetPhysicalDeviceSurfaceCapabilitiesKHR);
     GET_INSTANCE_PROC_ADDR(demo->inst, GetPhysicalDeviceSurfaceFormatsKHR);
     GET_INSTANCE_PROC_ADDR(demo->inst, GetPhysicalDeviceSurfacePresentModesKHR);
+    GET_INSTANCE_PROC_ADDR(demo->inst, GetPhysicalDeviceFeatures2KHR);
     GET_INSTANCE_PROC_ADDR(demo->inst, GetSwapchainImagesKHR);
+
+    // Query fine-grained feature support for this device.
+    //  If app has specific feature requirements it should check supported
+    //  features based on this query
+    VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR ycbcr_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_YCBCR_CONVERSION_FEATURES_KHR,
+        .pNext = NULL};
+    VkPhysicalDeviceFeatures2KHR physDevFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR, .pNext = &ycbcr_features};
+    demo->fpGetPhysicalDeviceFeatures2KHR(demo->gpu, &physDevFeatures);
+
+#if USE_YUV_TEXTURE
+    if (!ycbcr_features.samplerYcbcrConversion) {
+        ERR_EXIT("samplerYcbcrConversion not supported", "Fatal");
+    }
+#endif
 }
 
 static void demo_create_device(struct demo* demo)
@@ -2570,6 +2698,7 @@ void demo_init_vk_swapchain(struct demo* demo)
     GET_DEVICE_PROC_ADDR(demo->device, GetSwapchainImagesKHR);
     GET_DEVICE_PROC_ADDR(demo->device, AcquireNextImageKHR);
     GET_DEVICE_PROC_ADDR(demo->device, QueuePresentKHR);
+    GET_DEVICE_PROC_ADDR(demo->device, CreateSamplerYcbcrConversionKHR);
 
     vkGetDeviceQueue(demo->device, demo->graphics_queue_family_index, 0, &demo->graphics_queue);
 

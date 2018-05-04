@@ -140,11 +140,13 @@ struct demo {
     PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR fpGetPhysicalDeviceSurfaceCapabilitiesKHR;
     PFN_vkGetPhysicalDeviceSurfaceFormatsKHR fpGetPhysicalDeviceSurfaceFormatsKHR;
     PFN_vkGetPhysicalDeviceSurfacePresentModesKHR fpGetPhysicalDeviceSurfacePresentModesKHR;
+    PFN_vkGetPhysicalDeviceFeatures2KHR fpGetPhysicalDeviceFeatures2KHR;
     PFN_vkCreateSwapchainKHR fpCreateSwapchainKHR;
     PFN_vkDestroySwapchainKHR fpDestroySwapchainKHR;
     PFN_vkGetSwapchainImagesKHR fpGetSwapchainImagesKHR;
     PFN_vkAcquireNextImageKHR fpAcquireNextImageKHR;
     PFN_vkQueuePresentKHR fpQueuePresentKHR;
+    PFN_vkCreateSamplerYcbcrConversionKHR fpCreateSamplerYcbcrConversionKHR;
     uint32_t swapchainImageCount;
     VkSwapchainKHR swapchain;
     SwapchainBuffers* buffers;
