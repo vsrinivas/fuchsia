@@ -40,13 +40,12 @@ interface MediaPlayer {
   // Creates a video view.
   9: CreateView(views_v1.ViewManager view_manager, request<views_v1_token.ViewOwner> view_owner);
 
-  // DEPRECATED. Used only for testing.
+  // Used only for testing.
   // TODO(dalesat): Remove when we can test with dependency injection.
   // Sets the audio renderer to use. The audio renderer can only be set on a
   // new player for which none of the SetXxxSource methods or SetAudioRenderer
-  // itself have been called. This method is ignored otherwise. If the
-  // audio_renderer parameter is null, the SetGain method does nothing.
-  10: SetAudioRenderer(media.AudioRenderer? audio_renderer, media.MediaRenderer media_renderer);
+  // itself have been called. This method is ignored otherwise.
+  10: SetAudioRenderer(media.AudioRenderer2? audio_renderer);
 
   // Adds a new binding to this MediaPlayer.
   11: AddBinding(request<MediaPlayer> media_player);

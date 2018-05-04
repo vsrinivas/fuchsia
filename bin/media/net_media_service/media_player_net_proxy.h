@@ -53,8 +53,7 @@ class MediaPlayerNetProxy
                       view_owner_request) override;
 
   void SetAudioRenderer(
-      fidl::InterfaceHandle<media::AudioRenderer> audio_renderer,
-      fidl::InterfaceHandle<media::MediaRenderer> media_renderer) override;
+      fidl::InterfaceHandle<media::AudioRenderer2> audio_renderer) override;
 
   void AddBinding(fidl::InterfaceRequest<MediaPlayer> request) override;
 

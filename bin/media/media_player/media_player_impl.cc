@@ -73,8 +73,6 @@ MediaPlayerImpl::MediaPlayerImpl(
     Update();
   });
 
-  MaybeCreateRenderer(StreamType::Medium::kAudio);
-
   status_publisher_.SetCallbackRunner([this](GetStatusCallback callback,
                                              uint64_t version) {
     MediaPlayerStatus status;
@@ -371,6 +369,8 @@ void MediaPlayerImpl::SetReader(std::shared_ptr<Reader> reader) {
   program_range_min_pts_ = 0;
   transform_subject_time_ = 0;
 
+  MaybeCreateRenderer(StreamType::Medium::kAudio);
+
   std::shared_ptr<Demux> demux = Demux::Create(ReaderCache::Create(reader));
   FXL_DCHECK(demux);
 
@@ -422,11 +422,18 @@ void MediaPlayerImpl::CreateView(
 }
 
 void MediaPlayerImpl::SetAudioRenderer(
-    fidl::InterfaceHandle<media::AudioRenderer> audio_renderer,
-    fidl::InterfaceHandle<media::MediaRenderer> media_renderer) {
-  // We're using AudioRenderer2, so we can't support this.
-  // TODO(dalesat): Change SetAudioRenderer so it takes an AudioRenderer2.
-  FXL_NOTIMPLEMENTED();
+    fidl::InterfaceHandle<media::AudioRenderer2> audio_renderer) {
+  if (audio_renderer_) {
+    return;
+  }
+
+  audio_renderer_ = FidlAudioRenderer::Create(audio_renderer.Bind());
+  if (gain_ != 1.0f) {
+    audio_renderer_->SetGain(gain_);
+  }
+
+  player_.SetSinkSegment(RendererSinkSegment::Create(audio_renderer_),
+                         StreamType::Medium::kAudio);
 }
 
 void MediaPlayerImpl::AddBinding(fidl::InterfaceRequest<MediaPlayer> request) {

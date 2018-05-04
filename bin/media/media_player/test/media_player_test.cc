@@ -62,7 +62,8 @@ class MediaPlayerTester {
         fake_renderer_ptr.NewRequest();
     fake_renderer_.Bind(std::move(renderer_request));
 
-    media_player_->SetAudioRenderer(nullptr, std::move(fake_renderer_ptr));
+    // TODO(dalesat): Fix when we have a fake AudioRenderer2.
+    media_player_->SetAudioRenderer(nullptr);
 
     media_player_->SetReaderSource(std::move(fake_reader_ptr));
     FXL_LOG(INFO) << "player created " << (media_player_ ? "ok" : "NULL PTR");

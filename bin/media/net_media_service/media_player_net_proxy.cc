@@ -127,8 +127,7 @@ void MediaPlayerNetProxy::CreateView(
 }
 
 void MediaPlayerNetProxy::SetAudioRenderer(
-    fidl::InterfaceHandle<media::AudioRenderer> audio_renderer,
-    fidl::InterfaceHandle<media::MediaRenderer> media_renderer) {
+    fidl::InterfaceHandle<media::AudioRenderer2> audio_renderer) {
   FXL_LOG(ERROR)
       << "SetAudioRenderer called on MediaPlayer proxy - not supported.";
   UnbindAndReleaseFromOwner();
