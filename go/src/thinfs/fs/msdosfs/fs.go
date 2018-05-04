@@ -17,7 +17,6 @@ import (
 	"thinfs/fs/msdosfs/direntry"
 	"thinfs/fs/msdosfs/node"
 	"thinfs/thinio"
-	"github.com/golang/glog"
 )
 
 const (
@@ -41,7 +40,6 @@ var _ fs.FileSystem = (*fsFAT)(nil)
 
 // New returns a new FAT filesystem.
 func New(path string, dev block.Device, opts fs.FileSystemOptions) (fs.FileSystem, error) {
-	glog.V(0).Infof("Creating a new FAT fs at %s\n", path)
 	f := fsFAT{
 		opts: opts,
 		info: &node.Metadata{
@@ -86,7 +84,6 @@ func New(path string, dev block.Device, opts fs.FileSystemOptions) (fs.FileSyste
 
 // Close unmounts the FAT filesystem.
 func (f *fsFAT) Close() error {
-	glog.V(0).Info("Closing filesystem")
 	f.Lock()
 	defer f.Unlock()
 	if f.unmounted {
@@ -119,7 +116,6 @@ func (f *fsFAT) Close() error {
 
 // RootDirectory returns the root directory.
 func (f *fsFAT) RootDirectory() fs.Directory {
-	glog.V(0).Info("Getting root directory")
 	f.RLock()
 	defer f.RUnlock()
 	if f.unmounted {

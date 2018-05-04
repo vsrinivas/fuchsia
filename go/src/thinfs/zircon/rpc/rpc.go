@@ -614,11 +614,19 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh zx.Handle, dw *director
 	return zx.ErrNotSupported
 }
 
-func (vfs *ThinVFS) fdioServer(msg *fdio.Msg, rh zx.Handle, cookie int64) zx.Status {
+func (vfs *ThinVFS) fdioServer(msg *fdio.Msg, rh zx.Handle, cookie int64) (status zx.Status) {
 	// Dispatching must take ownership of handles and explicitly set handles in msg
 	// to 0 in order to avoid them being closed after dispatching. This guard
 	// extensively prevents leaked handles from dispatching.
-	defer msg.DiscardHandles()
+	//
+	// Handles may still be returned (since the wrapper around fdioServer will
+	// transmit |msg| back to the client) but only when provided a successful
+	// return status.
+	defer func() {
+		if status < 0 {
+			msg.DiscardHandles()
+		}
+	}()
 
 	// Incoming number of handles must match message type
 	if msg.Hcount != msg.OpHandleCount() {

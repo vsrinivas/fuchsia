@@ -193,9 +193,9 @@ func rename(srcStart node.DirectoryNode, dstStart node.DirectoryNode, src, dst s
 	if dstName == "." || dstName == ".." {
 		return fs.ErrIsActive
 	}
-	// Verify that dst is not src (same directory, same name)
+	// If dst is src (same directory, same name), end early.
 	if srcParent.ID() == dstParent.ID() && srcName == dstName {
-		return fs.ErrIsActive
+		return nil
 	}
 
 	// If we are moving a directory to a new directory dst...
