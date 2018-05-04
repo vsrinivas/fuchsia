@@ -119,6 +119,10 @@ void OperationBase::Ready() {
   container_->Hold(this);
 }
 
+fxl::WeakPtr<OperationBase> OperationBase::GetWeakPtr() {
+  return weak_ptr_factory_.GetWeakPtr();
+}
+
 void OperationBase::Schedule() {
   TraceAsyncBegin();
 

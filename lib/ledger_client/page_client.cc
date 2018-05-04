@@ -122,13 +122,16 @@ void GetEntriesRecursive(ledger::PageSnapshot* const snapshot,
           callback(status);
           return;
         }
+
         for (size_t i = 0; i < new_entries->size(); ++i) {
           entries->push_back(std::move(new_entries->at(i)));
         }
+
         if (status == ledger::Status::OK) {
           callback(ledger::Status::OK);
           return;
         }
+
         GetEntriesRecursive(snapshot, entries, std::move(next_token),
                             std::move(callback));
       }));

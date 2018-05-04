@@ -167,6 +167,17 @@ class OperationBase {
   // Useful in log messages.
   const char* trace_name() const { return trace_name_; }
 
+  // Needed to guard callbacks to methods on FIDL pointers that are not owned by
+  // this Operation instance.
+  //
+  // Callbacks on methods on FIDL pointers that are owned by Operation instance
+  // are never invoked after the Operation instance is deleted, because they are
+  // cancelled by the destructor of the FIDL pointer. However, if the FIDL
+  // pointer is owned outside of the Operation instance, such a callback may be
+  // invoked after the Operation instance was destroyed, if the FIDL pointer
+  // lives longer.
+  fxl::WeakPtr<OperationBase> GetWeakPtr();
+
   class FlowTokenBase;
 
  private:

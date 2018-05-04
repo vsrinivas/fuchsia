@@ -148,10 +148,9 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
         right_version_.get(), &right_entries_,
         [this, flow](ledger::Status) { LogEntries("right", right_entries_); });
 
-    GetEntries(common_version_.get(), &common_entries_,
-               [this, flow](ledger::Status) {
-                 LogEntries("common", common_entries_);
-               });
+    GetEntries(
+        common_version_.get(), &common_entries_,
+        [this, flow](ledger::Status) { LogEntries("common", common_entries_); });
   }
 
   void Cont(FlowToken flow) {

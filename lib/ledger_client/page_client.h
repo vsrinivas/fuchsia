@@ -152,6 +152,10 @@ class PageClient : ledger::PageWatcher {
 
 // Retrieves all entries from the given snapshot and calls the given callback
 // with the final status.
+//
+// The FIDL pointer backing |snapshot| must have the same life time as
+// |entries|, so that callbacks are cancelled when |entries| are deleted before
+// |callback| is invoked.
 void GetEntries(ledger::PageSnapshot* snapshot,
                 std::vector<ledger::Entry>* entries,
                 std::function<void(ledger::Status)> callback);

@@ -21,16 +21,15 @@
 
 namespace modular {
 
-class LinkImpl::ReadLinkDataCall : Operation<fidl::StringPtr> {
+class LinkImpl::ReadLinkDataCall : PageOperation<fidl::StringPtr> {
  public:
   ReadLinkDataCall(OperationContainer* const container,
                    ledger::Page* const page,
                    const LinkPath& link_path,
                    ResultCall result_call)
-      : Operation("LinkImpl::ReadLinkDataCall",
-                  container,
-                  std::move(result_call)),
-        page_(page),
+      : PageOperation("LinkImpl::ReadLinkDataCall",
+                      container, page,
+                      std::move(result_call)),
         link_key_(MakeLinkKey(link_path)) {
     Ready();
   }
@@ -39,17 +38,18 @@ class LinkImpl::ReadLinkDataCall : Operation<fidl::StringPtr> {
   void Run() override {
     FlowToken flow{this, &result_};
 
-    page_->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
-                       [this, flow](ledger::Status status) {
-                         if (status != ledger::Status::OK) {
-                           FXL_LOG(ERROR)
-                               << trace_name() << " " << link_key_ << " "
-                               << " Page.GetSnapshot() " << status;
-                           return;
-                         }
+    page()->GetSnapshot(
+        page_snapshot_.NewRequest(), nullptr, nullptr,
+        Protect([this, flow](ledger::Status status) {
+            if (status != ledger::Status::OK) {
+              FXL_LOG(ERROR)
+                  << trace_name() << " " << link_key_ << " "
+                  << " Page.GetSnapshot() " << status;
+              return;
+            }
 
-                         Cont(flow);
-                       });
+            Cont(flow);
+          }));
   }
 
   void Cont(FlowToken flow) {
@@ -79,7 +79,6 @@ class LinkImpl::ReadLinkDataCall : Operation<fidl::StringPtr> {
         });
   }
 
-  ledger::Page* const page_;  // not owned
   ledger::PageSnapshotPtr page_snapshot_;
   const std::string link_key_;
   fidl::StringPtr result_;
@@ -87,17 +86,16 @@ class LinkImpl::ReadLinkDataCall : Operation<fidl::StringPtr> {
   FXL_DISALLOW_COPY_AND_ASSIGN(ReadLinkDataCall);
 };
 
-class LinkImpl::WriteLinkDataCall : Operation<> {
+class LinkImpl::WriteLinkDataCall : PageOperation<> {
  public:
   WriteLinkDataCall(OperationContainer* const container,
                     ledger::Page* const page,
                     const LinkPathPtr& link_path,
                     fidl::StringPtr data,
                     ResultCall result_call)
-      : Operation("LinkImpl::WriteLinkDataCall",
-                  container,
-                  std::move(result_call)),
-        page_(page),
+      : PageOperation("LinkImpl::WriteLinkDataCall",
+                      container, page,
+                      std::move(result_call)),
         link_key_(MakeLinkKey(link_path)),
         data_(data) {
     Ready();
@@ -107,31 +105,30 @@ class LinkImpl::WriteLinkDataCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    page_->Put(to_array(link_key_), to_array(data_),
-               [this, flow](ledger::Status status) {
-                 if (status != ledger::Status::OK) {
-                   FXL_LOG(ERROR) << trace_name() << " " << link_key_ << " "
-                                  << " Page.Put() " << status;
-                 }
-               });
+    page()->Put(
+        to_array(link_key_), to_array(data_),
+        Protect([this, flow](ledger::Status status) {
+            if (status != ledger::Status::OK) {
+              FXL_LOG(ERROR) << trace_name() << " " << link_key_ << " "
+                             << " Page.Put() " << status;
+            }
+          }));
   }
 
-  ledger::Page* const page_;  // not owned
   const std::string link_key_;
   fidl::StringPtr data_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(WriteLinkDataCall);
 };
 
-class LinkImpl::FlushWatchersCall : Operation<> {
+class LinkImpl::FlushWatchersCall : PageOperation<> {
  public:
   FlushWatchersCall(OperationContainer* const container,
                     ledger::Page* const page,
                     ResultCall result_call)
-      : Operation("LinkImpl::FlushWatchersCall",
-                  container,
-                  std::move(result_call)),
-        page_(page) {
+      : PageOperation("LinkImpl::FlushWatchersCall",
+                      container, page,
+                      std::move(result_call)) {
     Ready();
   }
 
@@ -145,24 +142,25 @@ class LinkImpl::FlushWatchersCall : Operation<> {
     // call, then all link watcher notifications are guaranteed to have been
     // received when this Operation is Done().
 
-    page_->StartTransaction([this, flow](ledger::Status status) {
-      if (status != ledger::Status::OK) {
-        FXL_LOG(ERROR) << trace_name() << " "
-                       << " Page.StartTransaction() " << status;
-        return;
-      }
-
-      page_->Commit([this, flow](ledger::Status status) {
-        if (status != ledger::Status::OK) {
-          FXL_LOG(ERROR) << trace_name() << " "
-                         << " Page.Commit() " << status;
-          return;
-        }
-      });
-    });
+    page()->StartTransaction(Protect([this, flow](ledger::Status status) {
+          if (status != ledger::Status::OK) {
+            FXL_LOG(ERROR) << trace_name() << " "
+                           << " Page.StartTransaction() " << status;
+            return;
+          }
+          Cont(flow);
+        }));
   }
 
-  ledger::Page* const page_;  // not owned
+  void Cont(FlowToken flow) {
+    page()->Commit(Protect([this, flow](ledger::Status status) {
+          if (status != ledger::Status::OK) {
+            FXL_LOG(ERROR) << trace_name() << " "
+                           << " Page.Commit() " << status;
+            return;
+          }
+        }));
+  }
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FlushWatchersCall);
 };
@@ -209,7 +207,8 @@ class LinkImpl::WriteCall : Operation<> {
  private:
   void Run() override {
     FlowToken flow{this};
-    new WriteLinkDataCall(&operation_queue_, impl_->page(), fidl::MakeOptional(std::move(impl_->link_path_)),
+    new WriteLinkDataCall(&operation_queue_, impl_->page(),
+                          fidl::MakeOptional(std::move(impl_->link_path_)),
                           JsonValueToString(impl_->doc_),
                           [this, flow] { Cont1(flow); });
   }
