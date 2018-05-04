@@ -12,7 +12,7 @@
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/component/message_queue_manager.h"
+#include "peridot/bin/user_runner/message_queue/message_queue_manager.h"
 #include "peridot/bin/user_runner/entity_provider_runner/entity_provider_runner.h"
 
 namespace modular {

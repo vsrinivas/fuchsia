@@ -21,7 +21,7 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/agent_runner/agent_runner.h"
 #include "peridot/bin/component/component_context_impl.h"
-#include "peridot/bin/component/message_queue_manager.h"
+#include "peridot/bin/user_runner/message_queue/message_queue_manager.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/proxy.h"
 #include "peridot/lib/fidl/scope.h"

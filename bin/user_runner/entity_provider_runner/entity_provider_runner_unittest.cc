@@ -18,7 +18,7 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/agent_runner/agent_runner.h"
-#include "peridot/bin/component/message_queue_manager.h"
+#include "peridot/bin/user_runner/message_queue/message_queue_manager.h"
 #include "peridot/bin/user_runner/entity_provider_runner/entity_provider_launcher.h"
 #include "peridot/bin/user_runner/entity_provider_runner/entity_provider_runner.h"
 #include "peridot/lib/fidl/array_to_string.h"

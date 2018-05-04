@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/component/message_queue_manager.h"
+#include "peridot/bin/user_runner/message_queue/message_queue_manager.h"
 
 #include <algorithm>
 #include <deque>
@@ -12,7 +12,7 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "peridot/bin/component/persistent_queue.h"
+#include "peridot/bin/user_runner/message_queue/persistent_queue.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/operations.h"

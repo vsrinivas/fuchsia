@@ -38,7 +38,7 @@ source_set("unittests") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/agent_runner",
-    "//peridot/bin/component",
+    "//peridot/bin/user_runner/message_queue",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/testing:fake_agent_runner_storage",
     "//peridot/lib/testing:fake_application_launcher",

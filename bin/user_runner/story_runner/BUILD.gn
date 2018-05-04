@@ -48,6 +48,7 @@ source_set("story_runner") {
     "//peridot/bin/device_runner/cobalt",
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/user_runner:focus",
+    "//peridot/bin/user_runner/message_queue",
     "//peridot/lib/common:teardown",
     "//peridot/lib/fidl:app_client",
     "//peridot/lib/fidl:array_to_string",

@@ -58,6 +58,7 @@ executable("user_runner_bin") {
     "//peridot/bin/device_runner/cobalt",
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/user_runner/entity_provider_runner",
+    "//peridot/bin/user_runner/message_queue",
     "//peridot/bin/user_runner/story_runner",
     "//peridot/lib/common:async_holder",
     "//peridot/lib/common:teardown",
