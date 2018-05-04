@@ -53,8 +53,8 @@
 
 #define MAX_TUNING_COUNT 40
 
-// TODO: IRQ does not work as expected at the moment. Turn below on to enale PIO Mode
-#define ENABLE_PIO_MODE 1
+// Uncomment to disable interrupts
+// #define ENABLE_PIO_MODE 1
 
 // TODO: Get base block from hardware registers
 #define IMX8M_SDHCI_BASE_CLOCK  200000000
@@ -433,8 +433,8 @@ static int imx_sdhci_irq_thread(void *args) {
     imx_sdhci_device_t* dev = (imx_sdhci_device_t*)args;
     volatile struct imx_sdhci_regs* regs = dev->regs;
     zx_handle_t irq_handle = dev->irq_handle;
-
     while(true) {
+        regs->int_signal_en = normal_interrupts | error_interrupts;
         wait_res = zx_interrupt_wait(irq_handle, NULL);
         if (wait_res != ZX_OK) {
             SDHCI_ERROR("sdhci: interrupt wait failed with retcode = %d\n", wait_res);
@@ -442,8 +442,13 @@ static int imx_sdhci_irq_thread(void *args) {
         }
 
         const uint32_t irq = regs->int_status;
-        SDHCI_ERROR("got irq 0x%08x 0x%08x en 0x%08x sig 0x%08x\n", regs->int_status, irq,
+        SDHCI_TRACE("got irq 0x%08x[stat 0x%08x en 0x%08x sig 0x%08x\n",irq, regs->int_status,
                                                     regs->int_status_en, regs->int_signal_en);
+
+
+        // disable interrupts generation since we only process one at a time
+        // int_status_en is still enabled, so we won't lose any interrupt info
+        regs->int_signal_en = 0; // disable for now
 
         // Acknowledge the IRQs that we stashed.
         regs->int_status = irq;
@@ -451,6 +456,7 @@ static int imx_sdhci_irq_thread(void *args) {
         mtx_lock(&dev->mtx);
         if (irq & error_interrupts) {
             SDHCI_ERROR("IRQ ERROR: 0x%x\n", irq);
+            imx_decode_irq_error(irq);
             esdhc_dump(dev);
             if (irq & IMX_SDHC_INT_STAT_DMAE) {
                 SDHCI_TRACE("ADMA error 0x%x ADMAADDR0 0x%x\n",
@@ -1044,6 +1050,12 @@ static zx_status_t imx_sdhci_bind(void* ctx, zx_device_t* parent) {
     // Disable all interrupts
     dev->regs->int_signal_en = 0;
     dev->regs->int_status = 0xffffffff;
+
+#ifdef ENABLE_PIO_MODE
+    SDHCI_INFO("Interrupts Disabled! Polling Mode Active\n");
+#else
+    SDHCI_INFO("Interrupts Enabled\n");
+#endif
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,

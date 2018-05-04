@@ -31,9 +31,11 @@ static const pbus_mmio_t sdhci_mmios[] = {
 static const pbus_irq_t sdhci_irqs[] = {
     {
         .irq = IMX8M_A53_INTR_USDHC1,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
         .irq = IMX8M_A53_INTR_USDHC2,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
 
