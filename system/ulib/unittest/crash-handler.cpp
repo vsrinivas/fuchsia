@@ -87,9 +87,16 @@ static void process_exception(crash_list_t crash_list, const zx_port_packet_t* p
         UNITTEST_FAIL_TRACEF("FATAL: [%" PRIu64 ".%" PRIu64
                              "] crashed with exception 0x%x but was not registered\n",
                              exception->pid, exception->tid, packet->type);
+        zx_handle_t job = zx_job_default();
+        if (job == ZX_HANDLE_INVALID) {
+            UNITTEST_FAIL_TRACEF("FATAL: Unexpected environment. Tests should have a "
+                                 "default job available\n");
+            exit(ZX_ERR_INTERNAL);
+
+        }
         zx_handle_t process;
         zx_status_t status =
-            zx_object_get_child(ZX_HANDLE_INVALID, exception->pid, ZX_RIGHT_SAME_RIGHTS, &process);
+            zx_object_get_child(job, exception->pid, ZX_RIGHT_SAME_RIGHTS, &process);
         if (status != ZX_OK) {
             UNITTEST_FAIL_TRACEF("FATAL: failed to get a handle to [%" PRIu64 "] : error %s\n",
                                  exception->pid, zx_status_get_string(status));
