@@ -10,126 +10,458 @@ import (
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/header"
+	"github.com/google/netstack/tcpip/ports"
 )
 
 const debugFilter = false
+const debugFilter2 = false
 
-var Enabled bool
+var Enabled = false
+
+type Filter struct {
+	portManager *ports.PortManager
+	rulesetMain RulesetMain
+	rulesetNAT  RulesetNAT
+	rulesetRDR  RulesetRDR
+	states      *States
+}
+
+func New(pm *ports.PortManager) *Filter {
+	return &Filter{
+		portManager: pm,
+		states:      NewStates(),
+	}
+}
 
 // Run is the entry point to the packet filter. It should be called from
 // two hook locations in the network stack: one for incoming packets, another
 // for outgoing packets.
-func Run(dir Direction, netProto tcpip.NetworkProtocolNumber, b, plb []byte) Action {
+func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, b, plb []byte) Action {
+	// Lock the state maps.
+	// TODO: Improve concurrency with more granular locking.
+	f.states.mu.Lock()
+	defer f.states.mu.Unlock()
+
+	f.states.purgeExpiredEntries(f.portManager)
+
 	// Parse the network protocol header.
 	var transProto tcpip.TransportProtocolNumber
 	var srcAddr, dstAddr tcpip.Address
+	var payloadLength uint16
 	var th []byte
 	switch netProto {
 	case header.IPv4ProtocolNumber:
 		ipv4 := header.IPv4(b)
+		if !ipv4.IsValid(len(b) + len(plb)) {
+			if debugFilter {
+				log.Printf("packet filter: ipv4 packet is not valid")
+			}
+			return Drop
+		}
 		transProto = ipv4.TransportProtocol()
 		srcAddr = ipv4.SourceAddress()
 		dstAddr = ipv4.DestinationAddress()
+		payloadLength = ipv4.PayloadLength()
 		th = b[ipv4.HeaderLength():]
 	case header.IPv6ProtocolNumber:
 		ipv6 := header.IPv6(b)
+		if !ipv6.IsValid(len(b) + len(plb)) {
+			if debugFilter {
+				log.Printf("packet filter: ipv6 packet is not valid")
+			}
+			return Drop
+		}
 		transProto = ipv6.TransportProtocol()
 		srcAddr = ipv6.SourceAddress()
 		dstAddr = ipv6.DestinationAddress()
+		payloadLength = ipv6.PayloadLength()
 		th = b[header.IPv6MinimumSize:]
 	case header.ARPProtocolNumber:
 		// TODO: Anything?
 		return Pass
 	default:
 		if debugFilter {
-			log.Printf("drop unknown network protocol")
+			log.Printf("packet filter: drop unknown network protocol: %v (%s)", netProto, dir)
 		}
 		return Drop
 	}
-
-	// Parse the transport protocol header.
-	var srcPort, dstPort uint16
-	checkNAT := false
-	checkRDR := false
 
 	switch transProto {
 	case header.ICMPv4ProtocolNumber:
-		if dir == Outgoing {
-			checkNAT = true
-		}
+		return f.runForICMPv4(dir, srcAddr, dstAddr, payloadLength, b, th, plb)
 	case header.ICMPv6ProtocolNumber:
 		// Do nothing.
+		return Pass
 	case header.UDPProtocolNumber:
-		udp := header.UDP(th)
-		srcPort = udp.SourcePort()
-		dstPort = udp.DestinationPort()
-		if dir == Outgoing {
-			checkNAT = true
-		} else {
-			checkRDR = true
-		}
+		return f.runForUDP(dir, netProto, srcAddr, dstAddr, payloadLength, b, th, plb)
 	case header.TCPProtocolNumber:
-		tcp := header.TCP(th)
-		srcPort = tcp.SourcePort()
-		dstPort = tcp.DestinationPort()
-		if dir == Outgoing {
-			checkNAT = true
-		} else {
-			checkRDR = true
-		}
+		return f.runForTCP(dir, netProto, srcAddr, dstAddr, payloadLength, b, th, plb)
 	default:
 		if debugFilter {
-			log.Printf("%d: drop unknown transport protocol: %d", dir, transProto)
+			log.Printf("packet filter: %d: drop unknown transport protocol: %d", dir, transProto)
+		}
+		return Drop
+	}
+}
+
+func (f *Filter) runForICMPv4(dir Direction, srcAddr, dstAddr tcpip.Address, payloadLength uint16, b, th, plb []byte) Action {
+	if s, err := f.states.findStateICMPv4(dir, header.IPv4ProtocolNumber, header.ICMPv4ProtocolNumber, srcAddr, dstAddr, payloadLength, th, plb); s != nil {
+		if debugFilter2 {
+			log.Printf("packet filter: icmp state found: %v", s)
+		}
+
+		// If NAT or RDR is in effect, rewrite address and port.
+		// Note that findStateICMPv4 may return a state for a different transport protocol.
+		switch s.transProto {
+		case header.ICMPv4ProtocolNumber:
+			if s.lanAddr != s.gwyAddr {
+				switch dir {
+				case Incoming:
+					rewritePacketICMPv4(s.lanAddr, false, b, th)
+				case Outgoing:
+					rewritePacketICMPv4(s.gwyAddr, true, b, th)
+				}
+			}
+		case header.UDPProtocolNumber:
+			if s.lanAddr != s.gwyAddr || s.lanPort != s.gwyPort {
+				switch dir {
+				case Incoming:
+					rewritePacketUDPv4(s.lanAddr, s.lanPort, false, b, th)
+				case Outgoing:
+					rewritePacketUDPv4(s.gwyAddr, s.gwyPort, true, b, th)
+				}
+			}
+		case header.TCPProtocolNumber:
+			if s.lanAddr != s.gwyAddr || s.lanPort != s.gwyPort {
+				switch dir {
+				case Incoming:
+					rewritePacketTCPv4(s.lanAddr, s.lanPort, false, b, th)
+				case Outgoing:
+					rewritePacketTCPv4(s.gwyAddr, s.gwyPort, true, b, th)
+				}
+			}
+		default:
+			panic("Unsupported transport protocol")
+		}
+
+		return Pass
+	} else if err != nil {
+		if debugFilter {
+			log.Printf("packet filter: %v", err)
 		}
 		return Drop
 	}
 
-	// Find if we are already tracking the connection.
-	if state := findState(dir, transProto, srcAddr, srcPort, dstAddr, dstPort); state != nil {
-		return Pass
-	}
-
 	var nat *NAT
-	var rdr *RDR
+	var origAddr tcpip.Address
 
-	if checkNAT {
-		if nat = matchNAT(transProto, srcAddr); nat != nil {
-			// TODO: Rewrite source address and port.
-		}
-	}
-	if checkRDR {
-		if rdr = matchRDR(transProto, dstAddr, dstPort); rdr != nil {
-			// TODO: Rewrite dest address and port.
+	if dir == Outgoing {
+		if nat = f.matchNAT(header.ICMPv4ProtocolNumber, srcAddr); nat != nil {
+			// Rewrite srcAddr in the packet.
+			// The original values are saved in origAddr.
+			origAddr = srcAddr
+			srcAddr = *nat.srcAddr
+			rewritePacketICMPv4(srcAddr, true, b, th)
 		}
 	}
 
 	// TODO: Add interface parameter.
-	rm := matchMain(dir, transProto, srcAddr, srcPort, dstAddr, dstPort)
+	rm := f.matchMain(dir, header.ICMPv4ProtocolNumber, srcAddr, 0, dstAddr, 0)
 	if rm != nil {
 		if rm.log {
 			// TODO: Improve the log format.
-			log.Printf("Rule matched: %v", rm)
+			log.Printf("packet filter: Rule matched: %v", rm)
 		}
 		if rm.action == DropReset {
-			// TODO: Revert the changes for NAT and RDR.
+			if nat != nil {
+				// Revert the packet modified for NAT.
+				rewritePacketICMPv4(origAddr, true, b, th)
+			}
 			// TODO: Send a Reset packet.
 			return Drop
 		} else if rm.action == Drop {
 			return Drop
 		}
 	}
-	if rm != nil || nat != nil || rdr != nil {
-		// TODO: Start a connection state tracking.
+	if (rm != nil && rm.keepState) || nat != nil {
+		f.states.createState(dir, header.ICMPv4ProtocolNumber, srcAddr, 0, dstAddr, 0, origAddr, 0, "", 0, nat != nil, false, payloadLength, b, th, plb)
 	}
 
 	return Pass
 }
 
-func matchMain(dir Direction, transProto tcpip.TransportProtocolNumber, srcAddr tcpip.Address, srcPort uint16, dstAddr tcpip.Address, dstPort uint16) *Rule {
-	rulesetMain.RLock()
-	defer rulesetMain.RUnlock()
+func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, srcAddr, dstAddr tcpip.Address, payloadLength uint16, b, th, plb []byte) Action {
+	if len(th) < header.UDPMinimumSize {
+		if debugFilter2 {
+			log.Printf("packet filter: udp packet too short")
+		}
+		return Drop
+	}
+	udp := header.UDP(th)
+	srcPort := udp.SourcePort()
+	dstPort := udp.DestinationPort()
+
+	if s, err := f.states.findStateUDP(dir, netProto, header.UDPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort, payloadLength, th); s != nil {
+		if debugFilter2 {
+			log.Printf("packet filter: udp state found: %v", s)
+		}
+
+		// If NAT or RDR is in effect, rewrite address and port.
+		if s.lanAddr != s.gwyAddr || s.lanPort != s.gwyPort {
+			switch netProto {
+			case header.IPv4ProtocolNumber:
+				switch dir {
+				case Incoming:
+					rewritePacketUDPv4(s.lanAddr, s.lanPort, false, b, th)
+				case Outgoing:
+					rewritePacketUDPv4(s.gwyAddr, s.gwyPort, true, b, th)
+				}
+			case header.IPv6ProtocolNumber:
+				switch dir {
+				case Incoming:
+					rewritePacketUDPv6(s.lanAddr, s.lanPort, false, b, th)
+				case Outgoing:
+					rewritePacketUDPv6(s.gwyAddr, s.gwyPort, true, b, th)
+				}
+			}
+		}
+
+		return Pass
+	} else if err != nil {
+		if debugFilter {
+			log.Printf("packet filter: %v", err)
+		}
+		return Drop
+	}
+
+	var nat *NAT
+	var rdr *RDR
+	var origAddr tcpip.Address
+	var origPort uint16
+	var newAddr tcpip.Address
+	var newPort uint16
+
+	switch dir {
+	case Incoming:
+		if rdr = f.matchRDR(header.UDPProtocolNumber, dstAddr, dstPort); rdr != nil {
+			// Rewrite dstAddr and dstPort in the packet.
+			// The original values are saved in origAddr and origPort.
+			origAddr = dstAddr
+			dstAddr = *rdr.dstAddr
+			origPort = dstPort
+			dstPort = rdr.dstPort
+			switch netProto {
+			case header.IPv4ProtocolNumber:
+				rewritePacketUDPv4(dstAddr, dstPort, false, b, th)
+			case header.IPv6ProtocolNumber:
+				rewritePacketUDPv6(dstAddr, dstPort, false, b, th)
+			}
+		}
+	case Outgoing:
+		if nat = f.matchNAT(header.UDPProtocolNumber, srcAddr); nat != nil {
+			newAddr = *nat.srcAddr
+			// Reserve a new port.
+			netProtos := []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber}
+			var e *tcpip.Error
+			newPort, e = f.portManager.ReservePort(netProtos, header.UDPProtocolNumber, newAddr, 0)
+			if e != nil {
+				if debugFilter {
+					log.Printf("packet filter: ReservePort: %v", e)
+				}
+				return Drop
+			}
+			// Rewrite srcAddr and srcPort in the packet.
+			// The original values are saved in origAddr and origPort.
+			origAddr = srcAddr
+			srcAddr = newAddr
+			origPort = srcPort
+			srcPort = newPort
+			switch netProto {
+			case header.IPv4ProtocolNumber:
+				rewritePacketUDPv4(srcAddr, srcPort, true, b, th)
+			case header.IPv6ProtocolNumber:
+				rewritePacketUDPv6(srcAddr, srcPort, true, b, th)
+			}
+		}
+	}
+
+	// TODO: Add interface parameter.
+	rm := f.matchMain(dir, header.UDPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort)
+	if rm != nil {
+		if rm.log {
+			// TODO: Improve the log format.
+			log.Printf("packet filter: Rule matched: %v", rm)
+		}
+		if rm.action == DropReset {
+			if nat != nil {
+				// Revert the packet modified for NAT.
+				switch netProto {
+				case header.IPv4ProtocolNumber:
+					rewritePacketUDPv4(origAddr, origPort, true, b, th)
+				case header.IPv6ProtocolNumber:
+					rewritePacketUDPv6(origAddr, origPort, true, b, th)
+				}
+			}
+			if rdr != nil {
+				// Revert the packet modified for RDR.
+				switch netProto {
+				case header.IPv4ProtocolNumber:
+					rewritePacketUDPv4(origAddr, origPort, false, b, th)
+				case header.IPv6ProtocolNumber:
+					rewritePacketUDPv6(origAddr, origPort, false, b, th)
+				}
+			}
+			// TODO: Send a Reset packet.
+			return Drop
+		} else if rm.action == Drop {
+			return Drop
+		}
+	}
+	if (rm != nil && rm.keepState) || nat != nil || rdr != nil {
+		f.states.createState(dir, header.UDPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort, origAddr, origPort, newAddr, newPort, nat != nil, rdr != nil, payloadLength, b, th, plb)
+	}
+
+	return Pass
+}
+
+func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, srcAddr, dstAddr tcpip.Address, payloadLength uint16, b, th, plb []byte) Action {
+	if len(th) < header.TCPMinimumSize {
+		if debugFilter {
+			log.Printf("packet filter: tcp packet too short")
+		}
+		return Drop
+	}
+	tcp := header.TCP(th)
+	srcPort := tcp.SourcePort()
+	dstPort := tcp.DestinationPort()
+
+	if s, err := f.states.findStateTCP(dir, netProto, header.TCPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort, payloadLength, th); s != nil {
+		if debugFilter2 {
+			log.Printf("packet filter: tcp state found: %v", s)
+		}
+
+		// If NAT or RDR is in effect, rewrite address and port.
+		if s.lanAddr != s.gwyAddr || s.lanPort != s.gwyPort {
+			switch netProto {
+			case header.IPv4ProtocolNumber:
+				switch dir {
+				case Incoming:
+					rewritePacketTCPv4(s.lanAddr, s.lanPort, false, b, th)
+				case Outgoing:
+					rewritePacketTCPv4(s.gwyAddr, s.gwyPort, true, b, th)
+				}
+			case header.IPv6ProtocolNumber:
+				switch dir {
+				case Incoming:
+					rewritePacketTCPv6(s.lanAddr, s.lanPort, false, b, th)
+				case Outgoing:
+					rewritePacketTCPv6(s.gwyAddr, s.gwyPort, true, b, th)
+				}
+			}
+		}
+
+		return Pass
+	} else if err != nil {
+		if debugFilter {
+			log.Printf("packet filter: %v", err)
+		}
+		return Drop
+	}
+
+	var nat *NAT
+	var rdr *RDR
+	var origAddr tcpip.Address
+	var origPort uint16
+	var newAddr tcpip.Address
+	var newPort uint16
+
+	switch dir {
+	case Incoming:
+		if rdr = f.matchRDR(header.TCPProtocolNumber, dstAddr, dstPort); rdr != nil {
+			// Rewrite dstAddr and dstPort in the packet.
+			// The original values are saved in origAddr and origPort.
+			origAddr = dstAddr
+			dstAddr = *rdr.dstAddr
+			origPort = dstPort
+			dstPort = rdr.dstPort
+			switch netProto {
+			case header.IPv4ProtocolNumber:
+				rewritePacketTCPv4(dstAddr, dstPort, false, b, th)
+			case header.IPv6ProtocolNumber:
+				rewritePacketTCPv6(dstAddr, dstPort, false, b, th)
+			}
+		}
+	case Outgoing:
+		if nat = f.matchNAT(header.TCPProtocolNumber, srcAddr); nat != nil {
+			newAddr = *nat.srcAddr
+			// Reserve a new port.
+			netProtos := []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber}
+			var e *tcpip.Error
+			newPort, e = f.portManager.ReservePort(netProtos, header.TCPProtocolNumber, newAddr, 0)
+			if e != nil {
+				if debugFilter {
+					log.Printf("packet filter: ReservePort: %v", e)
+				}
+				return Drop
+			}
+			// Rewrite srcAddr and srcPort in the packet.
+			// The original values are saved in origAddr and origPort.
+			origAddr = srcAddr
+			srcAddr = newAddr
+			origPort = srcPort
+			srcPort = newPort
+			switch netProto {
+			case header.IPv4ProtocolNumber:
+				rewritePacketTCPv4(srcAddr, srcPort, true, b, th)
+			case header.IPv6ProtocolNumber:
+				rewritePacketTCPv6(srcAddr, srcPort, true, b, th)
+			}
+		}
+	}
+
+	// TODO: Add interface parameter.
+	rm := f.matchMain(dir, header.TCPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort)
+	if rm != nil {
+		if rm.log {
+			// TODO: Improve the log format.
+			log.Printf("packet filter: Rule matched: %v", rm)
+		}
+		if rm.action == DropReset {
+			if nat != nil {
+				switch netProto {
+				case header.IPv4ProtocolNumber:
+					rewritePacketTCPv4(origAddr, origPort, true, b, th)
+				case header.IPv6ProtocolNumber:
+					rewritePacketTCPv6(origAddr, origPort, true, b, th)
+				}
+			}
+			if rdr != nil {
+				// Revert the packet modified for RDR.
+				switch netProto {
+				case header.IPv4ProtocolNumber:
+					rewritePacketTCPv4(origAddr, origPort, false, b, th)
+				case header.IPv6ProtocolNumber:
+					rewritePacketTCPv6(origAddr, origPort, false, b, th)
+				}
+			}
+			// TODO: Send a Reset packet.
+			return Drop
+		} else if rm.action == Drop {
+			return Drop
+		}
+	}
+	if (rm != nil && rm.keepState) || nat != nil || rdr != nil {
+		f.states.createState(dir, header.TCPProtocolNumber, srcAddr, srcPort, dstAddr, dstPort, origAddr, origPort, newAddr, newPort, nat != nil, rdr != nil, payloadLength, b, th, plb)
+	}
+
+	return Pass
+}
+
+func (f *Filter) matchMain(dir Direction, transProto tcpip.TransportProtocolNumber, srcAddr tcpip.Address, srcPort uint16, dstAddr tcpip.Address, dstPort uint16) *Rule {
+	f.rulesetMain.RLock()
+	defer f.rulesetMain.RUnlock()
 	var rm *Rule
-	for _, r := range rulesetMain.v {
+	for _, r := range f.rulesetMain.v {
 		if r.direction == dir &&
 			r.transProto == transProto &&
 			(r.srcNet == nil || r.srcNet.Contains(srcAddr) != r.srcNot) &&
@@ -145,10 +477,10 @@ func matchMain(dir Direction, transProto tcpip.TransportProtocolNumber, srcAddr 
 	return rm
 }
 
-func matchNAT(transProto tcpip.TransportProtocolNumber, srcAddr tcpip.Address) *NAT {
-	rulesetNAT.RLock()
-	defer rulesetNAT.RUnlock()
-	for _, r := range rulesetNAT.v {
+func (f *Filter) matchNAT(transProto tcpip.TransportProtocolNumber, srcAddr tcpip.Address) *NAT {
+	f.rulesetNAT.RLock()
+	defer f.rulesetNAT.RUnlock()
+	for _, r := range f.rulesetNAT.v {
 		if r.transProto == transProto &&
 			r.srcNet.Contains(srcAddr) {
 			return r
@@ -157,10 +489,10 @@ func matchNAT(transProto tcpip.TransportProtocolNumber, srcAddr tcpip.Address) *
 	return nil
 }
 
-func matchRDR(transProto tcpip.TransportProtocolNumber, dstAddr tcpip.Address, dstPort uint16) *RDR {
-	rulesetRDR.RLock()
-	defer rulesetRDR.RUnlock()
-	for _, r := range rulesetRDR.v {
+func (f *Filter) matchRDR(transProto tcpip.TransportProtocolNumber, dstAddr tcpip.Address, dstPort uint16) *RDR {
+	f.rulesetRDR.RLock()
+	defer f.rulesetRDR.RUnlock()
+	for _, r := range f.rulesetRDR.v {
 		if r.transProto == transProto &&
 			r.dstNet.Contains(dstAddr) &&
 			r.dstPort == dstPort {

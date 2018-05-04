@@ -394,7 +394,8 @@ func (ns *netstack) addEth(path string) error {
 		linkID = sniffer.New(linkID)
 	}
 	if filter.Enabled {
-		linkID = filter.New(linkID)
+		f := filter.New(ns.stack.PortManager)
+		linkID = filter.NewEndpoint(f, linkID)
 	}
 	linkID = ifs.statsEP.Wrap(linkID)
 

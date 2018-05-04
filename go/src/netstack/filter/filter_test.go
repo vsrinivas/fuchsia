@@ -8,19 +8,11 @@ import (
 	"testing"
 
 	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/buffer"
 	"github.com/google/netstack/tcpip/header"
 )
 
-const (
-	srcAddr = "\x0a\x00\x00\x00"
-	dstAddr = "\x0a\x00\x00\x02"
-	subnet  = "\x0a\x00\x00\x00"
-	netmask = "\xff\x00\x00\x00"
-)
-
 func ruleset1() ([]*Rule, error) {
-	srcNet, err := tcpip.NewSubnet(subnet, netmask)
+	srcNet, err := tcpip.NewSubnet("\x0a\x00\x00\x00", "\xff\x00\x00\x00")
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +29,7 @@ func ruleset1() ([]*Rule, error) {
 }
 
 func ruleset2() ([]*Rule, error) {
-	srcNet, err := tcpip.NewSubnet(subnet, netmask)
+	srcNet, err := tcpip.NewSubnet("\x0a\x00\x00\x00", "\xff\x00\x00\x00")
 	if err != nil {
 		return nil, err
 	}
@@ -59,50 +51,56 @@ func ruleset2() ([]*Rule, error) {
 	}, nil
 }
 
-func tcpPacket1() (tcpip.NetworkProtocolNumber, []byte, buffer.View) {
-	return tcpV4Packet([]byte("payload"), &tcpParams{
-		srcPort: 100,
-		dstPort: 200,
-	})
-}
-
-func udpPacket1() (tcpip.NetworkProtocolNumber, []byte, buffer.View) {
-	return udpV4Packet([]byte("payload"), &udpParams{
-		srcPort: 100,
-		dstPort: 200,
-	})
-}
-
 func TestRun(t *testing.T) {
-	rulesetMain.RLock()
-	saved := rulesetMain.v
-	rulesetMain.RUnlock()
-	defer func() {
-		rulesetMain.Lock()
-		rulesetMain.v = saved
-		rulesetMain.Unlock()
-	}()
-
 	var tests = []struct {
-		ruleset func() ([]*Rule, error)
-		dir     Direction
-		packet  func() (tcpip.NetworkProtocolNumber, []byte, buffer.View)
-		want    Action
+		ruleset  func() ([]*Rule, error)
+		dir      Direction
+		netProto tcpip.NetworkProtocolNumber
+		packet   func() []byte
+		want     Action
 	}{
-		{ruleset1, Incoming, tcpPacket1, Drop},
-		{ruleset2, Incoming, udpPacket1, Pass},
+		{
+			ruleset1,
+			Incoming,
+			header.IPv4ProtocolNumber,
+			func() []byte {
+				return tcpV4Packet([]byte("payload"), &tcpParams{
+					srcAddr: "\x0a\x00\x00\x00",
+					srcPort: 100,
+					dstAddr: "\x0a\x00\x00\x02",
+					dstPort: 200,
+				})
+			},
+			Drop,
+		},
+		{
+			ruleset2,
+			Incoming,
+			header.IPv4ProtocolNumber,
+			func() []byte {
+				return udpV4Packet([]byte("payload"), &udpParams{
+					srcAddr: "\x0a\x00\x00\x00",
+					srcPort: 100,
+					dstAddr: "\x0a\x00\x00\x02",
+					dstPort: 200,
+				})
+			},
+			Pass,
+		},
 	}
 
+	f := New(nil)
+
 	for _, test := range tests {
-		netProto, hdr, pl := test.packet()
+		b := test.packet()
 		var err error
-		rulesetMain.Lock()
-		rulesetMain.v, err = test.ruleset()
-		rulesetMain.Unlock()
+		f.rulesetMain.Lock()
+		f.rulesetMain.v, err = test.ruleset()
+		f.rulesetMain.Unlock()
 		if err != nil {
 			t.Fatalf("failed to generate a ruleset: %v", err)
 		}
-		a := Run(test.dir, netProto, hdr, pl)
+		a := f.Run(test.dir, test.netProto, b, nil)
 		if a != test.want {
 			t.Fatalf("wrong action, want %v, got %v", test.want, a)
 		}

@@ -17,13 +17,15 @@ import (
 )
 
 type endpoint struct {
+	filter     *Filter
 	dispatcher stack.NetworkDispatcher
 	stack.LinkEndpoint
 }
 
 // New creates a new Filter endpoint by wrapping a lower LinkEndpoint.
-func New(lower tcpip.LinkEndpointID) tcpip.LinkEndpointID {
+func NewEndpoint(filter *Filter, lower tcpip.LinkEndpointID) tcpip.LinkEndpointID {
 	return stack.RegisterLinkEndpoint(&endpoint{
+		filter:       filter,
 		LinkEndpoint: stack.FindLinkEndpoint(lower),
 	})
 }
@@ -31,7 +33,7 @@ func New(lower tcpip.LinkEndpointID) tcpip.LinkEndpointID {
 // DeliverNetworkPacket is called when a packet arrives at the lower endpoint.
 // It calls Run before dispatching the packet to the upper endpoint.
 func (e *endpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLinkAddr, srcLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, vv *buffer.VectorisedView) {
-	if Run(Incoming, protocol, vv.First(), nil) != Pass {
+	if e.filter.Run(Incoming, protocol, vv.First(), nil) != Pass {
 		return
 	}
 	e.dispatcher.DeliverNetworkPacket(e, dstLinkAddr, srcLinkAddr, protocol, vv)
@@ -46,7 +48,7 @@ func (e *endpoint) Attach(dispatcher stack.NetworkDispatcher) {
 // WritePacket is called when a packet arrives is written to the lower
 // endpoint. It calls Run to what to do with the packet.
 func (e *endpoint) WritePacket(r *stack.Route, hdr *buffer.Prependable, payload buffer.View, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
-	if Run(Outgoing, protocol, hdr.UsedBytes(), payload) != Pass {
+	if e.filter.Run(Outgoing, protocol, hdr.UsedBytes(), payload) != Pass {
 		return nil
 	}
 	return e.LinkEndpoint.WritePacket(r, hdr, payload, protocol)

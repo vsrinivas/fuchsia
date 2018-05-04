@@ -65,6 +65,7 @@ type Rule struct {
 	dstPort    uint16
 	nic        tcpip.NICID
 	log        bool
+	keepState  bool
 }
 
 // NAT is a special rule for Network Address Translation, which rewrites
@@ -72,7 +73,7 @@ type Rule struct {
 type NAT struct {
 	transProto tcpip.TransportProtocolNumber
 	srcNet     *tcpip.Subnet
-	dstAddr    *tcpip.Address
+	srcAddr    *tcpip.Address
 	nic        tcpip.NICID
 }
 
@@ -81,24 +82,22 @@ type NAT struct {
 type RDR struct {
 	transProto tcpip.TransportProtocolNumber
 	dstNet     *tcpip.Subnet
+	dstAddr    *tcpip.Address
 	dstPort    uint16
 	nic        tcpip.NICID
 }
 
-// rulesetMain is an ordered set of Rules.
-var rulesetMain struct {
+type RulesetMain struct {
 	sync.RWMutex
 	v []*Rule
 }
 
-// rulesetNAT is an ordered set of NATs.
-var rulesetNAT struct {
+type RulesetNAT struct {
 	sync.RWMutex
 	v []*NAT
 }
 
-// rulesetRDR is an ordered set of RDRs.
-var rulesetRDR struct {
+type RulesetRDR struct {
 	sync.RWMutex
 	v []*RDR
 }
