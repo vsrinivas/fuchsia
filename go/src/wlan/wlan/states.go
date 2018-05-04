@@ -71,7 +71,7 @@ func newStopBSSRequest(ssid string) *mlme.StopRequest {
 	}
 }
 
-func newResetRequest(staAddr  [6]uint8) *mlme.ResetRequest {
+func newResetRequest(staAddr [6]uint8) *mlme.ResetRequest {
 	return &mlme.ResetRequest{
 		StaAddress: staAddr,
 	}
@@ -296,11 +296,11 @@ func newScanRequest(ssid string, c *Client, channels []uint8) *mlme.ScanRequest 
 
 func (s *scanState) getChannelsSlice() []uint8 {
 	var length = ScanSlice
-	if s.channelScanOffset + ScanSlice > len(s.supportedChannels) {
+	if s.channelScanOffset+ScanSlice > len(s.supportedChannels) {
 		length = len(s.supportedChannels) - s.channelScanOffset
 	}
 	channels := make([]uint8, length)
-	channels = s.supportedChannels[s.channelScanOffset:s.channelScanOffset + length]
+	channels = s.supportedChannels[s.channelScanOffset : s.channelScanOffset+length]
 	if debug {
 		log.Printf("Channel Slice: %v Offset: %v Slice: %v Total: %v", channels, s.channelScanOffset, length, len(s.supportedChannels))
 	}
@@ -785,7 +785,7 @@ type associatedState struct {
 }
 
 func newAssociatedState() *associatedState {
-	return &associatedState{scanner:nil}
+	return &associatedState{scanner: nil}
 }
 
 func (s *associatedState) String() string {
