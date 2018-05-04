@@ -22,6 +22,7 @@
 
 #include "pinned-buffer.h"
 
+// clang-format off
 typedef volatile struct dw_mac_regs {
     uint32_t conf;            /*0 0x00 */
     uint32_t framefilt;       /*1 0x04 */
@@ -37,7 +38,9 @@ typedef volatile struct dw_mac_regs {
     uint32_t intmask;         /*15 0x3c */
     uint32_t macaddr0hi;      /*16 0x40 */
     uint32_t macaddr0lo;      /*17 0x44 */
-    uint32_t reserved_2[36];  /*18 - 53 */
+    uint32_t macaddr1hi;      /*18 0x48 */
+    uint32_t macaddr1lo;      /*19 0x4c */
+    uint32_t reserved_2[34];  /*18 - 53 */
     uint32_t rgmiistatus;     /*54 0xd8 */
 } __PACKED dw_mac_regs_t;
 
@@ -66,19 +69,19 @@ typedef volatile struct dw_dma_regs {
 } __PACKED dw_dma_regs_t;
 
 //DMA transaction descriptors
-struct dw_dmadescr {
+typedef volatile struct dw_dmadescr {
     uint32_t txrx_status;
     uint32_t dmamac_cntl;
     uint32_t dmamac_addr;
     uint32_t dmamac_next;
-} __ALIGNED(64);
-
+} __ALIGNED(64) dw_dmadescr_t;
+// clang-format on
 
 namespace eth {
 
 class AmlDWMacDevice : public ddk::Device<AmlDWMacDevice, ddk::Unbindable>,
                        public ddk::EthmacProtocol<AmlDWMacDevice> {
-  public:
+public:
     AmlDWMacDevice(zx_device_t* device);
 
     static zx_status_t Create(zx_device_t* device);
@@ -87,7 +90,7 @@ class AmlDWMacDevice : public ddk::Device<AmlDWMacDevice, ddk::Unbindable>,
     void DdkUnbind();
 
     zx_status_t EthmacQuery(uint32_t options, ethmac_info_t* info);
-    void        EthmacStop() __TA_EXCLUDES(lock_);
+    void EthmacStop() __TA_EXCLUDES(lock_);
     zx_status_t EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy) __TA_EXCLUDES(lock_);
     zx_status_t EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) __TA_EXCLUDES(lock_);
     zx_status_t EthmacSetParam(uint32_t param, int32_t value, void* data);
@@ -95,34 +98,39 @@ class AmlDWMacDevice : public ddk::Device<AmlDWMacDevice, ddk::Unbindable>,
     zx_status_t MDIORead(uint32_t reg, uint32_t* val);
     zx_handle_t EthmacGetBti();
 
-  private:
+private:
     zx_status_t InitBuffers();
     zx_status_t InitDevice();
     zx_status_t DeInitDevice() __TA_REQUIRES(lock_);
     zx_status_t InitPdev();
-    zx_status_t ShutDown()    __TA_EXCLUDES(lock_);
+    zx_status_t ShutDown() __TA_EXCLUDES(lock_);
 
     void UpdateLinkStatus() __TA_REQUIRES(lock_);
     void DumpRegisters();
     void ReleaseBuffers();
     void ProcRxBuffer(uint32_t int_status) __TA_EXCLUDES(lock_);
+    uint32_t DmaRxStatus();
+    void ResetPhy();
+    void ConfigPhy();
+
     int Thread() __TA_EXCLUDES(lock_);
+
     zx_status_t GetMAC(uint8_t* addr);
 
     //Number each of tx/rx transaction descriptors
-    static constexpr uint32_t kNumDesc    = 16;
+    static constexpr uint32_t kNumDesc = 32;
     //Size of each transaction buffer
     static constexpr uint32_t kTxnBufSize = 2048;
 
-    dw_dmadescr* tx_descriptors_ = nullptr;
-    dw_dmadescr* rx_descriptors_ = nullptr;
+    dw_dmadescr_t* tx_descriptors_ = nullptr;
+    dw_dmadescr_t* rx_descriptors_ = nullptr;
 
     fbl::RefPtr<PinnedBuffer> txn_buffer_;
     fbl::RefPtr<PinnedBuffer> desc_buffer_;
 
     uint8_t* tx_buffer_ = nullptr;
     uint32_t curr_tx_buf_ = 0;
-    uint8_t* rx_buffer_ =  nullptr;
+    uint8_t* rx_buffer_ = nullptr;
     uint32_t curr_rx_buf_ = 0;
 
     // designware mac options
@@ -156,9 +164,13 @@ class AmlDWMacDevice : public ddk::Device<AmlDWMacDevice, ddk::Unbindable>,
 
     //statistics
     uint32_t bus_errors_;
+    uint32_t tx_counter_ = 0;
+    uint32_t rx_packet_ = 0;
+    uint32_t loop_count_ = 0;
 
     fbl::atomic<bool> running_;
+
     thrd_t thread_;
 };
 
-}  // namespace eth
+} // namespace eth

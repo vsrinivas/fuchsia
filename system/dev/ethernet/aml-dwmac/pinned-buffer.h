@@ -17,7 +17,7 @@
 
 #include <zircon/types.h>
 
-class PinnedBuffer : public fbl::RefCounted<PinnedBuffer>{
+class PinnedBuffer : public fbl::RefCounted<PinnedBuffer> {
 
 public:
     static fbl::RefPtr<PinnedBuffer> Create(size_t size, const zx::bti& bti,
@@ -25,7 +25,7 @@ public:
     zx_status_t LookupPhys(zx_off_t offset, zx_paddr_t* out);
 
     void* GetBaseAddress() { return vmo_mapper_.start(); }
-    size_t GetSize() {return vmo_mapper_.size();}
+    size_t GetSize() { return vmo_mapper_.size(); }
     zx_status_t UnPin();
 
 private:
@@ -37,5 +37,4 @@ private:
     zx::pmt pmt_;
 
     fbl::unique_ptr<zx_paddr_t[]> paddrs_;
-
 };

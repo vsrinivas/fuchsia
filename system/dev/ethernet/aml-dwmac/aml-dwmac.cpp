@@ -12,6 +12,7 @@
 #include <fbl/type_support.h>
 #include <fbl/vmar_manager.h>
 #include <fbl/vmo_mapper.h>
+#include <hw/arch_ops.h>
 #include <hw/reg.h>
 #include <soc/aml-s912/s912-hw.h>
 #include <zircon/compiler.h>
@@ -50,6 +51,7 @@ int AmlDWMacDevice::Thread() {
         }
         uint32_t stat = dwdma_regs_->status;
         dwdma_regs_->status = stat;
+
         if (stat & DMA_STATUS_GLI) {
             fbl::AutoLock lock(&lock_); //Note: limited scope of autolock
             UpdateLinkStatus();
@@ -59,12 +61,7 @@ int AmlDWMacDevice::Thread() {
         }
         if (stat & DMA_STATUS_AIS) {
             bus_errors_++;
-            zxlogf(ERROR, "aml-dwmac: abnormal interrupt\n");
-        }
-        if (stat & DMA_STATUS_TI) {
-            /* Any handling of TX complete interrupts should be
-               placed here.  Leaving in for reference.
-            */
+            zxlogf(ERROR, "aml-dwmac: abnormal interrupt %08x\n", stat);
         }
     }
     return status;
@@ -76,6 +73,8 @@ void AmlDWMacDevice::UpdateLinkStatus() {
         online_ = temp;
         if (ethmac_proxy_ != nullptr) {
             ethmac_proxy_->Status(online_ ? ETH_STATUS_ONLINE : 0u);
+        } else {
+            zxlogf(ERROR, "aml-dwmac: System not ready\n");
         }
     }
     zxlogf(INFO, "aml-dwmac: Link is now %s\n", online_ ? "up" : "down");
@@ -140,6 +139,35 @@ zx_status_t AmlDWMacDevice::InitPdev() {
     return status;
 }
 
+void AmlDWMacDevice::ResetPhy() {
+    gpio_write(&gpio_, PHY_RESET, 0);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+    gpio_write(&gpio_, PHY_RESET, 1);
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+}
+
+void AmlDWMacDevice::ConfigPhy() {
+    uint32_t val;
+
+    // Fix txdelay issuee for rtl8211.  When a hw reset is performed
+    //  on the phy, it defaults to having an extra delay in the TXD path.
+    //  Since we reset the phy, this needs to be corrected.
+    MDIOWrite(MII_EPAGSR, 0xd08);
+    MDIORead(0x11, &val);
+    val &= ~0x100;
+    MDIOWrite(0x11, val);
+    MDIOWrite(MII_EPAGSR, 0x00);
+
+    //Enable GigE advertisement
+    MDIOWrite(MII_GBCR, 1 << 9);
+
+    //Restart advertisements
+    MDIORead(MII_BMCR, &val);
+    val |= BMCR_ANENABLE | BMCR_ANRESTART;
+    val &= ~BMCR_ISOLATE;
+    MDIOWrite(MII_BMCR, val);
+}
+
 zx_status_t AmlDWMacDevice::Create(zx_device_t* device) {
 
     auto mac_device = fbl::make_unique<AmlDWMacDevice>(device);
@@ -159,7 +187,7 @@ zx_status_t AmlDWMacDevice::Create(zx_device_t* device) {
            offset_ptr<uint32_t>(pregs, PER_ETH_REG2));
 
     writel(REG3_CLK_IN_EN    | REG3_ETH_REG3_19_RESVERD |
-           REG3_CFG_PHY_ADDR | REG3_CFG_MODE            |
+           REG3_CFG_PHY_ADDR | REG3_CFG_MODE |
            REG3_CFG_EN_HIGH  | REG3_ETH_REG3_2_RESERVED,
            offset_ptr<uint32_t>(pregs, PER_ETH_REG3));
 
@@ -168,28 +196,12 @@ zx_status_t AmlDWMacDevice::Create(zx_device_t* device) {
     set_bitsl(1 << 3, offset_ptr<uint32_t>(hregs, HHI_GCLK_MPEG1));
     clr_bitsl((1 << 3) | (1 << 2), offset_ptr<uint32_t>(hregs, HHI_MEM_PD_REG0));
 
-    //reset the phy
-    gpio_write(&mac_device->gpio_, PHY_RESET, 0);
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
-    gpio_write(&mac_device->gpio_, PHY_RESET, 1);
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
-
-    //Enable GigE advertisement
-    mac_device->MDIOWrite(MII_CTRL1000, 1 << 9);
-
-    //Restart advertisements
-    uint32_t val;
-    mac_device->MDIORead(MII_BMCR, &val);
-    val |= BMCR_ANENABLE | BMCR_ANRESTART;
-    val &= ~BMCR_ISOLATE;
-    mac_device->MDIOWrite(MII_BMCR, val);
-
     // Save the mac address, the reset below will clear out this register
+    //  This is temporary until we get mac address from platform
     uint32_t tempmachi = mac_device->dwmac_regs_->macaddr0hi;
     uint32_t tempmaclo = mac_device->dwmac_regs_->macaddr0lo;
 
     //Reset the dma peripheral
-    //TODO - put a timeout on this
     mac_device->dwdma_regs_->busmode |= DMAMAC_SRST;
     uint32_t loop_count = 10;
     do {
@@ -210,6 +222,12 @@ zx_status_t AmlDWMacDevice::Create(zx_device_t* device) {
         return status;
 
     mac_device->InitDevice();
+
+    //reset the phy
+    mac_device->ResetPhy();
+
+    //configure phy
+    mac_device->ConfigPhy();
 
     auto thunk = [](void* arg) -> int { return reinterpret_cast<AmlDWMacDevice*>(arg)->Thread(); };
 
@@ -238,7 +256,7 @@ zx_status_t AmlDWMacDevice::InitBuffers() {
 
     fbl::RefPtr<fbl::VmarManager> vmar_mgr;
 
-    constexpr size_t kDescSize = ROUNDUP(2 * kNumDesc * sizeof(dw_dmadescr), PAGE_SIZE);
+    constexpr size_t kDescSize = ROUNDUP(2 * kNumDesc * sizeof(dw_dmadescr_t), PAGE_SIZE);
 
     constexpr size_t kBufSize = 2 * kNumDesc * kTxnBufSize;
 
@@ -250,7 +268,7 @@ zx_status_t AmlDWMacDevice::InitBuffers() {
     //rx buffer right after tx
     rx_buffer_ = &tx_buffer_[kBufSize / 2];
 
-    tx_descriptors_ = static_cast<dw_dmadescr*>(desc_buffer_->GetBaseAddress());
+    tx_descriptors_ = static_cast<dw_dmadescr_t*>(desc_buffer_->GetBaseAddress());
     //rx descriptors right after tx
     rx_descriptors_ = &tx_descriptors_[kNumDesc];
 
@@ -259,7 +277,7 @@ zx_status_t AmlDWMacDevice::InitBuffers() {
     // Initialize descriptors. Doing tx and rx all at once
     for (uint i = 0; i < kNumDesc; i++) {
 
-        desc_buffer_->LookupPhys(((i + 1) % kNumDesc) * sizeof(dw_dmadescr), &tmpaddr);
+        desc_buffer_->LookupPhys(((i + 1) % kNumDesc) * sizeof(dw_dmadescr_t), &tmpaddr);
         tx_descriptors_[i].dmamac_next = static_cast<uint32_t>(tmpaddr);
 
         txn_buffer_->LookupPhys(i * kTxnBufSize, &tmpaddr);
@@ -267,21 +285,22 @@ zx_status_t AmlDWMacDevice::InitBuffers() {
         tx_descriptors_[i].txrx_status = 0;
         tx_descriptors_[i].dmamac_cntl = DESC_TXCTRL_TXCHAIN;
 
-        desc_buffer_->LookupPhys((((i + 1) % kNumDesc) + kNumDesc) * sizeof(dw_dmadescr), &tmpaddr);
+        desc_buffer_->LookupPhys((((i + 1) % kNumDesc) + kNumDesc) * sizeof(dw_dmadescr_t), &tmpaddr);
         rx_descriptors_[i].dmamac_next = static_cast<uint32_t>(tmpaddr);
 
         txn_buffer_->LookupPhys((i + kNumDesc) * kTxnBufSize, &tmpaddr);
         rx_descriptors_[i].dmamac_addr = static_cast<uint32_t>(tmpaddr);
         rx_descriptors_[i].dmamac_cntl =
             (MAC_MAX_FRAME_SZ & DESC_RXCTRL_SIZE1MASK) |
-             DESC_RXCTRL_RXCHAIN;
+            DESC_RXCTRL_RXCHAIN;
 
         rx_descriptors_[i].txrx_status = DESC_RXSTS_OWNBYDMA;
     }
 
     desc_buffer_->LookupPhys(0, &tmpaddr);
     dwdma_regs_->txdesclistaddr = static_cast<uint32_t>(tmpaddr);
-    desc_buffer_->LookupPhys(kNumDesc * sizeof(dw_dmadescr), &tmpaddr);
+
+    desc_buffer_->LookupPhys(kNumDesc * sizeof(dw_dmadescr_t), &tmpaddr);
     dwdma_regs_->rxdesclistaddr = static_cast<uint32_t>(tmpaddr);
     return ZX_OK;
 }
@@ -414,12 +433,14 @@ void AmlDWMacDevice::EthmacStop() {
 
 zx_status_t AmlDWMacDevice::EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy) {
     fbl::AutoLock lock(&lock_);
+
     if (ethmac_proxy_ != nullptr) {
         zxlogf(ERROR, "aml_dwmac:  Already bound!!!");
         return ZX_ERR_ALREADY_BOUND;
     } else {
         ethmac_proxy_ = fbl::move(proxy);
         UpdateLinkStatus();
+        zxlogf(INFO, "aml_dwmac: Started\n");
     }
     return ZX_OK;
 }
@@ -427,23 +448,34 @@ zx_status_t AmlDWMacDevice::EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> pro
 zx_status_t AmlDWMacDevice::InitDevice() {
 
     dwdma_regs_->intenable = 0;
-    dwdma_regs_->busmode = FIXEDBURST | PRIORXTX_41 | DMA_PBL;
+    dwdma_regs_->busmode = X8PBL | DMA_PBL;
 
     dwdma_regs_->opmode = DMA_OPMODE_TSF | DMA_OPMODE_RSF;
+
     dwdma_regs_->opmode |= DMA_OPMODE_SR | DMA_OPMODE_ST; //start tx and rx
 
-    //TODO - configure filters
-    dwmac_regs_->framefilt |= (1 << 31); //pass all for now
+    //Clear all the interrupt flags
+    dwdma_regs_->status = ~0;
 
     //Enable Interrupts
-    dwdma_regs_->intenable = DMA_INT_NIE | DMA_INT_TIE |
-                             DMA_INT_AIE | DMA_INT_FBE |
-                             DMA_INT_RIE;
+    dwdma_regs_->intenable = DMA_INT_NIE | DMA_INT_AIE | DMA_INT_FBE |
+                             DMA_INT_RIE | DMA_INT_RUE | DMA_INT_OVE |
+                             DMA_INT_UNE | DMA_INT_TSE | DMA_INT_RSE;
 
-    uint32_t temp = dwmac_regs_->conf;
-    temp |= GMAC_CORE_INIT | GMAC_CONF_TE | GMAC_CONF_RE;
-    temp &= ~GMAC_CONF_PS;
-    dwmac_regs_->conf = temp;
+    dwmac_regs_->macaddr1lo = 0;
+    dwmac_regs_->macaddr1hi = 0;
+    dwmac_regs_->hashtablehigh = 0xffffffff;
+    dwmac_regs_->hashtablelow = 0xffffffff;
+
+    //TODO - configure filters
+    zxlogf(INFO, "macaddr0hi = %08x\n", dwmac_regs_->macaddr0hi);
+    zxlogf(INFO, "macaddr0lo = %08x\n", dwmac_regs_->macaddr0lo);
+
+    dwmac_regs_->framefilt |= (1 << 10) | (1 << 4) | (1 << 0); //promiscuous
+
+    dwmac_regs_->conf = GMAC_CORE_INIT;
+
+    dwmac_regs_->conf |= GMAC_CONF_TE | GMAC_CONF_RE;
 
     return ZX_OK;
 }
@@ -464,54 +496,74 @@ zx_status_t AmlDWMacDevice::DeInitDevice() {
     return ZX_OK;
 }
 
-void AmlDWMacDevice::ProcRxBuffer(uint32_t int_status) {
+uint32_t AmlDWMacDevice::DmaRxStatus() {
+    return (dwdma_regs_->status & DMA_STATUS_RS_MASK) >> DMA_STATUS_RS_POS;
+}
 
+void AmlDWMacDevice::ProcRxBuffer(uint32_t int_status) {
     while (true) {
         uint32_t pkt_stat = rx_descriptors_[curr_rx_buf_].txrx_status;
 
         if (pkt_stat & DESC_RXSTS_OWNBYDMA) {
-            break;
+            return;
+        }
+        size_t fr_len = (pkt_stat & DESC_RXSTS_FRMLENMSK) >> DESC_RXSTS_FRMLENSHFT;
+        if (fr_len > kTxnBufSize) {
+            zxlogf(ERROR, "aml-dwmac: unsupported packet size received\n");
+            return;
         }
 
-        rx_descriptors_[curr_rx_buf_].dmamac_cntl =
-            (MAC_MAX_FRAME_SZ & DESC_RXCTRL_SIZE1MASK) |
-            DESC_RXCTRL_RXCHAIN;
-        do { // limit scope of autolock
+        uint8_t* temptr = &rx_buffer_[curr_rx_buf_ * kTxnBufSize];
+
+        zx_cache_flush(temptr, kTxnBufSize, ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
+
+        { // limit scope of autolock
             fbl::AutoLock lock(&lock_);
-            if (ethmac_proxy_ != nullptr) {
+            if ((ethmac_proxy_ != nullptr)) {
 
-                size_t fr_len = (pkt_stat & DESC_RXSTS_FRMLENMSK) >> DESC_RXSTS_FRMLENSHFT;
+                ethmac_proxy_->Recv(temptr, fr_len, 0);
 
-                uint8_t* temptr = &rx_buffer_[curr_rx_buf_ * kTxnBufSize];
-
-                ethmac_proxy_->Recv(temptr, fr_len - 4, 0);
-                //Flush/Invalidate in preparation for next use of this buffer
-                zx_cache_flush(temptr, kTxnBufSize, ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
+            } else {
+                zxlogf(ERROR, "Dropping bad packet\n");
             }
-        } while (false);
+        };
+
         rx_descriptors_[curr_rx_buf_].txrx_status = DESC_RXSTS_OWNBYDMA;
+        rx_packet_++;
+
         curr_rx_buf_ = (curr_rx_buf_ + 1) % kNumDesc;
+        if (curr_rx_buf_ == 0) {
+            loop_count_++;
+        }
+        dwdma_regs_->rxpolldemand = ~0;
     }
 }
 
 zx_status_t AmlDWMacDevice::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
 
-    fbl::AutoLock lock(&lock_);
-    if (!online_) {
-        return ZX_ERR_UNAVAILABLE;
+    { //Check to make sure we are ready to accept packets
+        fbl::AutoLock lock(&lock_);
+        if (!online_) {
+            return ZX_ERR_UNAVAILABLE;
+        }
     }
+
     if (netbuf->len > kTxnBufSize) {
         return ZX_ERR_INVALID_ARGS;
+    }
+    if (tx_descriptors_[curr_tx_buf_].txrx_status & DESC_TXSTS_OWNBYDMA) {
+        zxlogf(ERROR, "TX buffer overrun@ %u\n", curr_tx_buf_);
+        return ZX_ERR_UNAVAILABLE;
     }
     uint8_t* temptr = &tx_buffer_[curr_tx_buf_ * kTxnBufSize];
 
     memcpy(temptr, netbuf->data, netbuf->len);
+    hw_mb();
 
     zx_cache_flush(temptr, netbuf->len, ZX_CACHE_FLUSH_DATA);
 
     //Descriptors are pre-iniitialized with the paddr of their corresponding
-    // buffers
-    tx_descriptors_[curr_tx_buf_].txrx_status = DESC_TXSTS_OWNBYDMA;
+    // buffers, only need to setup the control and status fields.
     tx_descriptors_[curr_tx_buf_].dmamac_cntl =
         DESC_TXCTRL_TXINT |
         DESC_TXCTRL_TXLAST |
@@ -519,17 +571,18 @@ zx_status_t AmlDWMacDevice::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* net
         DESC_TXCTRL_TXCHAIN |
         (netbuf->len & DESC_TXCTRL_SIZE1MASK);
 
-    //TODO - prevent this from overwriting buffers in queue, but not xmitted yet.
+    tx_descriptors_[curr_tx_buf_].txrx_status = DESC_TXSTS_OWNBYDMA;
     curr_tx_buf_ = (curr_tx_buf_ + 1) % kNumDesc;
 
+    hw_mb();
     dwdma_regs_->txpolldemand = ~0;
-
+    tx_counter_++;
     return ZX_OK;
 }
 
 zx_status_t AmlDWMacDevice::EthmacSetParam(uint32_t param, int32_t value, void* data) {
-
-    return ZX_ERR_NOT_SUPPORTED;
+    zxlogf(INFO, "SetParam called  %x  %x\n", param, value);
+    return ZX_OK;
 }
 
 } // namespace eth

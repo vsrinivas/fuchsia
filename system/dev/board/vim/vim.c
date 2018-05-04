@@ -162,13 +162,12 @@ static int vim_start_thread(void* arg) {
       zxlogf(ERROR, "vim_start_thread could not add led2472g_dev: %d\n", status);
       goto fail;
     }
-    /* Disabled pending debug of issue preventing zedboot from working.
-    TODO:(hollande)
+
     if ((status = vim_eth_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "vim_eth_init failed: %d\n", status);
         goto fail;
     }
-    */
+
     return ZX_OK;
 fail:
     zxlogf(ERROR, "vim_start_thread failed, not all devices have been initialized\n");
