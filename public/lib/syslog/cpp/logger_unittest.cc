@@ -86,6 +86,16 @@ TEST(Logger, LogSimple) {
   output_compare_helper(std::move(local), FX_LOG_INFO, msg, nullptr, 0);
 }
 
+TEST(Logger, WithSeverityMacro) {
+  Cleanup cleanup;
+  zx::socket local, remote;
+  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
+  const char* msg = "test message";
+  FX_LOGS_WITH_SEVERITY(FX_LOG_INFO) << msg;
+  output_compare_helper(std::move(local), FX_LOG_INFO, msg, nullptr, 0);
+}
+
 TEST(Logger, LogSeverity) {
   Cleanup cleanup;
   zx::socket local, remote;

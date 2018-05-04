@@ -64,10 +64,12 @@ zx_status_t InitLogger();
 
 }  // namespace syslog
 
-#define FX_LOG_STREAM(severity, tag)                                           \
-  ::syslog::internal::LogMessage(FX_LOG_##severity, __FILE__, __LINE__, (tag), \
-                                 nullptr)                                      \
+#define _FX_LOG_STREAM(severity, tag)                                   \
+  ::syslog::internal::LogMessage((severity), __FILE__, __LINE__, (tag), \
+                                 nullptr)                               \
       .stream()
+
+#define FX_LOG_STREAM(severity, tag) _FX_LOG_STREAM(FX_LOG_##severity, (tag))
 
 #define FX_LOG_LAZY_STREAM(stream, condition) \
   !(condition) ? (void)0 : ::syslog::internal::LogMessageVoidify() & (stream)
@@ -80,8 +82,22 @@ zx_status_t InitLogger();
                      FX_LOG_IS_ENABLED(severity))
 
 // Writes a message to the global logger.
+// |severity| is one of FX_LOG_DEBUG, FX_LOG_INFO, FX_LOG_WARNING,
+// FX_LOG_ERROR, FX_LOG_FATAL
+// |tag| is a tag to associated with the message, or NULL if none.
+#define FX_LOGST_WITH_SEVERITY(severity, tag)           \
+  FX_LOG_LAZY_STREAM(_FX_LOG_STREAM((severity), (tag)), \
+                     fx_log_is_enabled((severity)))
+
+// Writes a message to the global logger.
 // |severity| is one of DEBUG, INFO, WARNING, ERROR, FATAL
 #define FX_LOGS(severity) FX_LOGST(severity, nullptr)
+
+// Writes a message to the global logger.
+// |severity| is one of FX_LOG_DEBUG, FX_LOG_INFO, FX_LOG_WARNING,
+// FX_LOG_ERROR, FX_LOG_FATAL
+#define FX_LOGS_WITH_SEVERITY(severity) \
+  FX_LOGST_WITH_SEVERITY((severity), nullptr)
 
 // Writes error message to the global logger if |condition| fails.
 // |tag| is a tag to associated with the message, or NULL if none.
