@@ -34,6 +34,26 @@ void FakeLayer::TriggerLEConnectionParameterUpdate(
                   [params, cb = link_data.le_conn_param_cb] { cb(params); });
 }
 
+void FakeLayer::RegisterACL(hci::ConnectionHandle handle,
+                            hci::Connection::Role role,
+                            LinkErrorCallback link_error_cb,
+                            async_t* dispatcher) {
+  if (!initialized_)
+    return;
+
+  FXL_DCHECK(links_.find(handle) == links_.end())
+      << "l2cap: Connection handle re-used!";
+
+  LinkData data;
+  data.handle = handle;
+  data.role = role;
+  data.type = hci::Connection::LinkType::kACL;
+  data.link_error_cb = std::move(link_error_cb);
+  data.dispatcher = dispatcher;
+
+  links_.emplace(handle, std::move(data));
+}
+
 void FakeLayer::RegisterLE(hci::ConnectionHandle handle,
                            hci::Connection::Role role,
                            LEConnectionParameterUpdateCallback conn_param_cb,

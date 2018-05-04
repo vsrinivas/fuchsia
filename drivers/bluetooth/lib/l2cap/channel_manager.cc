@@ -35,10 +35,16 @@ ChannelManager::~ChannelManager() {
   hci_->acl_data_channel()->SetDataRxHandler(nullptr, nullptr);
 }
 
-void ChannelManager::Register(hci::ConnectionHandle handle,
-                              hci::Connection::LinkType ll_type,
-                              hci::Connection::Role role) {
-  RegisterInternal(handle, ll_type, role);
+void ChannelManager::RegisterACL(
+    hci::ConnectionHandle handle,
+    hci::Connection::Role role,
+    LinkErrorCallback link_error_cb,
+    async_t* dispatcher) {
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_VLOG(1) << "l2cap: register ACL link (handle: " << handle << ")";
+
+  auto* ll = RegisterInternal(handle, hci::Connection::LinkType::kACL, role);
+  ll->set_error_callback(std::move(link_error_cb), dispatcher);
 }
 
 void ChannelManager::RegisterLE(

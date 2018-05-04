@@ -37,6 +37,10 @@ class FakeLayer final : public L2CAP {
   }
 
  protected:
+  void RegisterACL(hci::ConnectionHandle handle,
+                  hci::Connection::Role role,
+                  LinkErrorCallback link_error_callback,
+                  async_t* dispatcher) override;
   void RegisterLE(hci::ConnectionHandle handle,
                   hci::Connection::Role role,
                   LEConnectionParameterUpdateCallback conn_param_callback,

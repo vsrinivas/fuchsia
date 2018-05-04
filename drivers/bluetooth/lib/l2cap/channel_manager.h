@@ -51,22 +51,24 @@ class LogicalLink;
 // thread where this is used.
 class ChannelManager final {
  public:
-  using LinkErrorCallback = std::function<void()>;
+  using LinkErrorCallback = fbl::Closure;
 
   ChannelManager(fxl::RefPtr<hci::Transport> hci, async_t* l2cap_dispatcher);
   ~ChannelManager();
 
-  // Registers the given connection with the L2CAP layer. L2CAP channels can be
+  // Registers the ACL connection with the L2CAP layer. L2CAP channels can be
   // opened on the logical link represented by |handle| after a call to this
   // method.
   //
-  // It is an error to register the same |handle| value more than once without
-  // first unregistering it (this is asserted in debug builds).
+  // |link_error_callback| will be used to notify when a channel signals a link
+  // error. It will be posted onto |dispatcher|.
   //
-  // TODO(armansito): Make this private.
-  void Register(hci::ConnectionHandle handle,
-                hci::Connection::LinkType ll_type,
-                hci::Connection::Role role);
+  // It is an error to register the same |handle| value more than once as either
+  // kind of channel without first unregistering it (asserted in debug builds).
+  void RegisterACL(hci::ConnectionHandle handle,
+                   hci::Connection::Role role,
+                   LinkErrorCallback link_error_callback,
+                   async_t* dispatcher);
 
   // Registers a LE connection with the L2CAP layer. L2CAP channels can be
   // opened on the logical link represented by |handle| after a call to this
@@ -79,6 +81,9 @@ class ChannelManager final {
   // error.
   //
   // Both callbacks will be posted onto |dispatcher|.
+  //
+  // It is an error to register the same |handle| value more than once as either
+  // kind of channel without first unregistering it (asserted in debug builds).
   using LEConnectionParameterUpdateCallback =
       internal::LESignalingChannel::ConnectionParameterUpdateCallback;
   void RegisterLE(hci::ConnectionHandle handle,

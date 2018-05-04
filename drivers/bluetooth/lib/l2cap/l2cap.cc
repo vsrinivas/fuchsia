@@ -43,6 +43,18 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
     chanmgr_ = nullptr;
   }
 
+  void RegisterACL(hci::ConnectionHandle handle,
+                   hci::Connection::Role role,
+                   LinkErrorCallback link_error_callback,
+                   async_t* dispatcher) override {
+    PostMessage([this, handle, role, lec = std::move(link_error_callback),
+                 dispatcher] {
+      if (chanmgr_) {
+        chanmgr_->RegisterACL(handle, role, std::move(lec), dispatcher);
+      }
+    });
+  }
+
   void RegisterLE(hci::ConnectionHandle handle,
                   hci::Connection::Role role,
                   LEConnectionParameterUpdateCallback conn_param_callback,

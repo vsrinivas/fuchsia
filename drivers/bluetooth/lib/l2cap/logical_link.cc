@@ -190,8 +190,7 @@ void LogicalLink::SendBasicFrame(ChannelId id,
 void LogicalLink::set_error_callback(fbl::Closure callback,
                                      async_t* dispatcher) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(callback);
-  FXL_DCHECK(dispatcher);
+  FXL_DCHECK(static_cast<bool>(callback) == static_cast<bool>(dispatcher));
 
   link_error_cb_ = std::move(callback);
   link_error_dispatcher_ = dispatcher;
