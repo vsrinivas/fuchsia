@@ -17,6 +17,7 @@
 #include "lib/fxl/time/time_point.h"
 
 #include "peridot/bin/suggestion_engine/auto_select_first_query_listener.h"
+#include "peridot/bin/suggestion_engine/rankers/linear_ranker.h"
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/kronk_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/mod_pair_ranking_feature.h"
@@ -208,15 +209,19 @@ void SuggestionEngineImpl::RegisterRankingFeatures() {
   // with a configuration file
 
   // Set up the next ranking features
-  next_processor_.AddRankingFeature(1.0, ranking_features["proposal_hint_rf"]);
-  next_processor_.AddRankingFeature(-0.1, ranking_features["kronk_rf"]);
-  next_processor_.AddRankingFeature(0, ranking_features["mod_pairs_rf"]);
+  auto next_ranker = std::make_unique<LinearRanker>();
+  next_ranker->AddRankingFeature(1.0, ranking_features["proposal_hint_rf"]);
+  next_ranker->AddRankingFeature(-0.1, ranking_features["kronk_rf"]);
+  next_ranker->AddRankingFeature(0, ranking_features["mod_pairs_rf"]);
+  next_processor_.SetRanker(std::move(next_ranker));
 
   // Set up the query ranking features
-  query_processor_.AddRankingFeature(1.0, ranking_features["proposal_hint_rf"]);
-  query_processor_.AddRankingFeature(-0.1, ranking_features["kronk_rf"]);
-  query_processor_.AddRankingFeature(0, ranking_features["mod_pairs_rf"]);
-  query_processor_.AddRankingFeature(0, ranking_features["query_match_rf"]);
+  auto query_ranker = std::make_unique<LinearRanker>();
+  query_ranker->AddRankingFeature(1.0, ranking_features["proposal_hint_rf"]);
+  query_ranker->AddRankingFeature(-0.1, ranking_features["kronk_rf"]);
+  query_ranker->AddRankingFeature(0, ranking_features["mod_pairs_rf"]);
+  query_ranker->AddRankingFeature(0, ranking_features["query_match_rf"]);
+  query_processor_.SetRanker(std::move(query_ranker));
 }
 
 void SuggestionEngineImpl::PerformActions(fidl::VectorPtr<Action> actions,

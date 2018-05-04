@@ -14,6 +14,7 @@
 #include "peridot/bin/suggestion_engine/media_player.h"
 #include "peridot/bin/suggestion_engine/query_handler_record.h"
 #include "peridot/bin/suggestion_engine/query_runner.h"
+#include "peridot/bin/suggestion_engine/ranker.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 #include "peridot/lib/util/idle_waiter.h"
 
@@ -50,10 +51,7 @@ class QueryProcessor {
   void RegisterQueryHandler(fidl::StringPtr url,
                             fidl::InterfaceHandle<QueryHandler> query_handler);
 
-  // Adds a ranking feature that will be used to rank the suggestions coming
-  // from query proposals.
-  void AddRankingFeature(double weight,
-                         std::shared_ptr<RankingFeature> ranking_feature);
+  void SetRanker(std::unique_ptr<Ranker> ranker);
 
   // Returns a query suggestion with the given id.
   // While a query is being executed or if no query has been executed, nullptr

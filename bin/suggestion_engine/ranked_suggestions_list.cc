@@ -27,9 +27,13 @@ MatchPredicate GetSuggestionMatcher(const std::string& suggestion_id) {
   };
 }
 
-RankedSuggestionsList::RankedSuggestionsList() : normalization_factor_(0.0) {}
+RankedSuggestionsList::RankedSuggestionsList() {}
 
 RankedSuggestionsList::~RankedSuggestionsList() = default;
+
+void RankedSuggestionsList::SetRanker(std::unique_ptr<Ranker> ranker) {
+  ranker_ = std::move(ranker);
+}
 
 RankedSuggestion* RankedSuggestionsList::GetMatchingSuggestion(
     MatchPredicate matchFunction) const {
@@ -52,28 +56,14 @@ bool RankedSuggestionsList::RemoveMatchingSuggestion(
   }
 }
 
-void RankedSuggestionsList::AddRankingFeature(
-    double weight,
-    std::shared_ptr<RankingFeature> ranking_feature) {
-  ranking_features_.emplace_back(weight, ranking_feature);
-  // only incorporate positive weights into the normalization factor
-  if (weight > 0.0)
-    normalization_factor_ += weight;
-}
-
 void RankedSuggestionsList::Rank(const UserInput& query) {
+  if (!ranker_) {
+    FXL_LOG(WARNING)
+        << "RankedSuggestionList.Rank ignored since no ranker was set.";
+    return;
+  }
   for (auto& suggestion : suggestions_) {
-    double confidence = 0.0;
-    for (auto& feature : ranking_features_) {
-      confidence +=
-          feature.first * feature.second->ComputeFeature(query, *suggestion);
-    }
-    // TODO(jwnichols): Reconsider this normalization approach.
-    // Weights may be negative, so there is some chance that the calculated
-    // confidence score will be negative.  We pull the calculated score up to
-    // zero to guarantee final confidence values stay within the 0-1 range.
-    FXL_CHECK(normalization_factor_ > 0.0);
-    suggestion->confidence = std::max(confidence, 0.0) / normalization_factor_;
+    suggestion->confidence = ranker_->Rank(query, *suggestion);
     FXL_VLOG(1) << "Proposal "
                 << suggestion->prototype->proposal.display.headline
                 << " confidence " << suggestion->prototype->proposal.confidence

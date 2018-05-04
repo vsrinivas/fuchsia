@@ -89,10 +89,8 @@ void QueryProcessor::RegisterQueryHandler(
   query_handlers_.emplace_back(std::move(query_handler), url);
 }
 
-void QueryProcessor::AddRankingFeature(
-    double weight,
-    std::shared_ptr<RankingFeature> ranking_feature) {
-  suggestions_.AddRankingFeature(weight, ranking_feature);
+void QueryProcessor::SetRanker(std::unique_ptr<Ranker> ranker) {
+  suggestions_.SetRanker(std::move(ranker));
 }
 
 RankedSuggestion* QueryProcessor::GetSuggestion(

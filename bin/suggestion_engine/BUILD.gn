@@ -81,13 +81,35 @@ source_set("interruptions") {
 
   deps = [
     ":models",
-    ":ranking",
+    ":ranking_features",
     ":state",
     "//peridot/public/lib:fidl",
   ]
 }
 
 source_set("ranking") {
+  public_deps = [
+    ":rankers",
+    ":ranking_features"
+  ]
+}
+
+source_set("rankers") {
+  sources = [
+    "ranker.cc",
+    "ranker.h",
+    "rankers/linear_ranker.cc",
+    "rankers/linear_ranker.h"
+  ]
+
+  deps = [
+    ":models",
+    ":ranking_features",
+    "//peridot/public/lib:fidl",
+  ]
+}
+
+source_set("ranking_features") {
   sources = [
     "ranking_feature.cc",
     "ranking_feature.h",
@@ -211,7 +233,7 @@ source_set("ranking_unittest") {
   ]
 
   deps = [
-    ":ranking",
+    ":ranking_features",
     "//garnet/lib/gtest",
     "//garnet/public/lib/fxl",
     "//third_party/googletest:gtest",

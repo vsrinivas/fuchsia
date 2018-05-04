@@ -85,9 +85,8 @@ void NextProcessor::RemoveProposalFromList(const std::string& component_url,
   }
 }
 
-void NextProcessor::AddRankingFeature(
-    double weight, std::shared_ptr<RankingFeature> ranking_feature) {
-  suggestions_.AddRankingFeature(weight, ranking_feature);
+void NextProcessor::SetRanker(std::unique_ptr<Ranker> ranker) {
+  suggestions_.SetRanker(std::move(ranker));
 }
 
 RankedSuggestion* NextProcessor::GetSuggestion(

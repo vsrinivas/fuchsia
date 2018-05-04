@@ -10,6 +10,7 @@
 
 #include <fuchsia/cpp/modular.h>
 
+#include "peridot/bin/suggestion_engine/ranker.h"
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 
@@ -25,8 +26,8 @@ class RankedSuggestionsList {
   RankedSuggestionsList();
   ~RankedSuggestionsList();
 
-  void AddRankingFeature(double weight,
-                         std::shared_ptr<RankingFeature> ranking_feature);
+  void SetRanker(std::unique_ptr<Ranker> ranker);
+
   void Rank(const UserInput& query = UserInput());
 
   void AddSuggestion(SuggestionPrototype* const prototype);
@@ -59,12 +60,7 @@ class RankedSuggestionsList {
   // may be expensive.
   std::vector<std::unique_ptr<RankedSuggestion>> suggestions_;
 
-  // Ranking features as a list of (weight, feature) pairs
-  std::vector<std::pair<double, std::shared_ptr<RankingFeature>>>
-      ranking_features_;
-
-  // The sum of the weights stored in the ranking_features_ vector
-  double normalization_factor_;
+  std::unique_ptr<Ranker> ranker_;
 };
 
 }  // namespace modular
