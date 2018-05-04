@@ -15,7 +15,7 @@ static void xdc_ring_doorbell(xdc_t* xdc, xdc_endpoint_t* ep) {
 // Stores the value of the Dequeue Pointer into out_dequeue.
 // Returns ZX_OK if successful, or ZX_ERR_BAD_STATE if the endpoint was not in the Stopped state.
 static zx_status_t xdc_get_dequeue_ptr_locked(xdc_t* xdc, xdc_endpoint_t* ep,
-                                              uint64_t* out_dequeue) __TA_REQUIRES(ep->lock) {
+                                              uint64_t* out_dequeue) __TA_REQUIRES(xdc->lock) {
     if (ep->state != XDC_EP_STATE_STOPPED) {
         zxlogf(ERROR, "tried to read dequeue pointer of %s EP while not stopped, state is: %d\n",
                ep->name, ep->state);
@@ -33,7 +33,7 @@ static zx_status_t xdc_get_dequeue_ptr_locked(xdc_t* xdc, xdc_endpoint_t* ep,
 // Returns ZX_OK if the request was scheduled successfully, or ZX_ERR_SHOULD_WAIT
 // if we ran out of TRBs.
 static zx_status_t xdc_schedule_transfer_locked(xdc_t* xdc, xdc_endpoint_t* ep,
-                                                usb_request_t* req) __TA_REQUIRES(ep->lock) {
+                                                usb_request_t* req) __TA_REQUIRES(xdc->lock) {
     xhci_transfer_ring_t* ring = &ep->transfer_ring;
 
     // Need to clean the cache for both IN and OUT transfers, invalidate only for IN.
@@ -60,7 +60,7 @@ static zx_status_t xdc_schedule_transfer_locked(xdc_t* xdc, xdc_endpoint_t* ep,
 // Schedules any queued requests on the endpoint's transfer ring, until we fill our
 // transfer ring or have no more requests.
 static void xdc_process_transactions_locked(xdc_t* xdc, xdc_endpoint_t* ep)
-                                            __TA_REQUIRES(ep->lock) {
+                                            __TA_REQUIRES(xdc->lock) {
     while (1) {
         if (xhci_transfer_ring_free_trbs(&ep->transfer_ring) == 0) {
             // No available TRBs - need to wait for some to complete.
@@ -94,27 +94,23 @@ static void xdc_process_transactions_locked(xdc_t* xdc, xdc_endpoint_t* ep)
 zx_status_t xdc_queue_transfer(xdc_t* xdc, usb_request_t* req, bool in) {
     xdc_endpoint_t* ep = in ? &xdc->eps[IN_EP_IDX] : &xdc->eps[OUT_EP_IDX];
 
-    mtx_lock(&ep->lock);
-
-    mtx_lock(&xdc->configured_mutex);
+    mtx_lock(&xdc->lock);
 
     // Make sure we're recently checked the device state registers.
     xdc_update_configuration_state_locked(xdc);
     xdc_update_endpoint_state_locked(xdc, ep);
 
     if (!xdc->configured || ep->state == XDC_EP_STATE_DEAD) {
-        mtx_unlock(&xdc->configured_mutex);
-        mtx_unlock(&ep->lock);
+        mtx_unlock(&xdc->lock);
         return ZX_ERR_IO_NOT_PRESENT;
     }
-    mtx_unlock(&xdc->configured_mutex);
 
     if (req->header.length > 0) {
         zx_status_t status = usb_request_physmap(req);
         if (status != ZX_OK) {
             zxlogf(ERROR, "%s: usb_request_physmap failed: %d\n", __FUNCTION__, status);
             // Call the complete callback outside of the lock.
-            mtx_unlock(&ep->lock);
+            mtx_unlock(&xdc->lock);
             usb_request_complete(req, status, 0);
             return ZX_OK;
         }
@@ -129,7 +125,7 @@ zx_status_t xdc_queue_transfer(xdc_t* xdc, usb_request_t* req, bool in) {
         xdc_process_transactions_locked(xdc, ep);
     }
 
-    mtx_unlock(&ep->lock);
+    mtx_unlock(&xdc->lock);
 
     return ZX_OK;
 }

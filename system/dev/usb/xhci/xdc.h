@@ -38,7 +38,6 @@ typedef struct {
     usb_request_t* current_req;  // request currently being processed
     list_node_t pending_reqs;    // processed requests waiting for completion, including current_req
     xhci_transfer_state_t transfer_state;  // transfer state for current_req
-    mtx_t lock;
     uint8_t direction;  // USB_DIR_OUT or USB_DIR_IN
 
     xdc_ep_state_t state;
@@ -88,16 +87,17 @@ typedef struct {
     // The last connection time in nanoseconds, with respect to the monotonic clock.
     zx_time_t last_conn;
 
-    mtx_t configured_mutex;
     // Whether the Debug Device is in the Configured state.
     bool configured;
 
     // Whether to suspend all activity.
     atomic_bool suspended;
+
+    mtx_t lock;
 } xdc_t;
 
 // TODO(jocelyndang): we should get our own handles rather than borrowing them from XHCI.
 zx_status_t xdc_bind(zx_device_t* parent, zx_handle_t bti_handle, void* mmio);
 
-void xdc_update_configuration_state_locked(xdc_t* xdc) __TA_REQUIRES(xdc->configured_mutex);
-void xdc_update_endpoint_state_locked(xdc_t* xdc, xdc_endpoint_t* ep) __TA_REQUIRES(ep->lock);
+void xdc_update_configuration_state_locked(xdc_t* xdc) __TA_REQUIRES(xdc->lock);
+void xdc_update_endpoint_state_locked(xdc_t* xdc, xdc_endpoint_t* ep) __TA_REQUIRES(xdc->lock);
