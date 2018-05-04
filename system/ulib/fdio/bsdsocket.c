@@ -34,12 +34,16 @@ static zx_status_t fdio_getsockopt(fdio_t* io, int level, int optname,
 
 static mtx_t netstack_lock = MTX_INIT;
 static mtx_t dns_lock = MTX_INIT;
-static int netstack = INT_MIN;
-static int dns = INT_MIN;
+// Use -2 as sentinal to mean "uninitialized" so it's distinct from errors
+// returned from open, which return -1. In get_netstack and get_dns, we
+// explicitly check for -2 (not just any negative number) so that, if open fails
+// the first time we try (setting the value to -1), we won't ever retry.
+static int netstack = -2;
+static int dns = -2;
 
 int get_netstack(void) {
     mtx_lock(&netstack_lock);
-    if (netstack == INT_MIN)
+    if (netstack == -2)
         netstack = open("/svc/net.Netstack", O_PIPELINE | O_RDWR);
     int result = netstack;
     mtx_unlock(&netstack_lock);
@@ -48,7 +52,7 @@ int get_netstack(void) {
 
 int get_dns(void) {
     mtx_lock(&dns_lock);
-    if (dns == INT_MIN) {
+    if (dns == -2) {
         dns = open("/svc/dns.DNS", O_PIPELINE | O_RDWR);
         if (dns < 0) {
             // As a temporary mechanism to ease transition, netstack supports
