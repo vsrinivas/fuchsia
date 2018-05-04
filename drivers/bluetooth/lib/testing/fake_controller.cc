@@ -28,6 +28,11 @@ void UnsetBit(NUM_TYPE* num_type, ENUM_TYPE bit) {
   *num_type &= ~static_cast<NUM_TYPE>(bit);
 }
 
+template <typename NUM_TYPE, typename ENUM_TYPE>
+bool CheckBit(NUM_TYPE num_type, ENUM_TYPE bit) {
+  return (num_type & static_cast<NUM_TYPE>(bit));
+}
+
 hci::LEPeerAddressType ToPeerAddrType(common::DeviceAddress::Type type) {
   hci::LEPeerAddressType result = hci::LEPeerAddressType::kAnonymous;
 
@@ -91,6 +96,10 @@ void FakeController::Settings::AddBREDRSupportedCommands() {
   SetBit(supported_commands + 13, hci::SupportedCommand::kReadPageScanType);
   SetBit(supported_commands + 13, hci::SupportedCommand::kWritePageScanType);
   SetBit(supported_commands + 14, hci::SupportedCommand::kReadBufferSize);
+  SetBit(supported_commands + 17,
+         hci::SupportedCommand::kReadSimplePairingMode);
+  SetBit(supported_commands + 17,
+         hci::SupportedCommand::kWriteSimplePairingMode);
 }
 
 void FakeController::Settings::AddLESupportedCommands() {
@@ -897,6 +906,37 @@ void FakeController::OnCommandPacketReceived(
       const auto& in_params =
           command_packet.payload<hci::WritePageScanTypeCommandParams>();
       page_scan_type_ = in_params.page_scan_type;
+
+      RespondWithSuccess(opcode);
+      break;
+    }
+    case hci::kReadSimplePairingMode: {
+      hci::ReadSimplePairingModeReturnParams params;
+      params.status = hci::StatusCode::kSuccess;
+      if (CheckBit(settings_.lmp_features_page1,
+                   hci::LMPFeature::kSecureSimplePairingHostSupport)) {
+        params.simple_pairing_mode = hci::GenericEnableParam::kEnable;
+      }
+
+      RespondWithCommandComplete(hci::kReadSimplePairingMode,
+                                 common::BufferView(&params, sizeof(params)));
+      break;
+    }
+    case hci::kWriteSimplePairingMode: {
+      const auto& in_params =
+          command_packet.payload<hci::WriteSimplePairingModeCommandParams>();
+      // "A host shall not set the Simple Pairing Mode to 'disabled'"
+      // Spec 5.0 Vol 2 Part E Sec 7.3.59
+      if (in_params.simple_pairing_mode != hci::GenericEnableParam::kEnable) {
+        hci::SimpleReturnParams params;
+        params.status = hci::StatusCode::kInvalidHCICommandParameters;
+        RespondWithCommandComplete(hci::kWriteSimplePairingMode,
+                                   common::BufferView(&params, sizeof(params)));
+        break;
+      }
+
+      SetBit(&settings_.lmp_features_page1,
+             hci::LMPFeature::kSecureSimplePairingHostSupport);
 
       RespondWithSuccess(opcode);
       break;

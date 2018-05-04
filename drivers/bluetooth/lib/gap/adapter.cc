@@ -265,6 +265,23 @@ void Adapter::InitializeStep2(const InitializeCallback& callback) {
         }
       });
 
+  if (state_.HasLMPFeatureBit(0u, hci::LMPFeature::kSecureSimplePairing)) {
+    // HCI_Write_Simple_Pairing_Mode
+    auto write_ssp = hci::CommandPacket::New(
+        hci::kWriteSimplePairingMode,
+        sizeof(hci::WriteSimplePairingModeCommandParams));
+    write_ssp->mutable_view()
+        ->mutable_payload<hci::WriteSimplePairingModeCommandParams>()
+        ->simple_pairing_mode = hci::GenericEnableParam::kEnable;
+    init_seq_runner_->QueueCommand(std::move(write_ssp), [](const auto& event) {
+      auto status = event.ToStatus();
+      if (!status) {
+        FXL_LOG(WARNING) << "gap: Adapter: Couldn't set simple pairing mode: "
+                         << status.ToString();
+      }
+    });
+  }
+
   // If there are extended features then try to read the first page of the
   // extended features.
   if (state_.HasLMPFeatureBit(0u, hci::LMPFeature::kExtendedFeatures)) {
@@ -456,7 +473,7 @@ void Adapter::InitializeStep4(const InitializeCallback& callback) {
 uint64_t Adapter::BuildEventMask() {
   uint64_t event_mask = 0;
 
-  // Enable events that are needed for basic flow control.
+  // Enable events that are needed for basic functionality.
   event_mask |= static_cast<uint64_t>(hci::EventMask::kConnectionCompleteEvent);
   event_mask |= static_cast<uint64_t>(hci::EventMask::kConnectionRequestEvent);
   event_mask |=
@@ -469,6 +486,15 @@ uint64_t Adapter::BuildEventMask() {
       static_cast<uint64_t>(hci::EventMask::kInquiryResultWithRSSIEvent);
   event_mask |=
       static_cast<uint64_t>(hci::EventMask::kExtendedInquiryResultEvent);
+  event_mask |=
+      static_cast<uint64_t>(hci::EventMask::kIOCapabilityRequestEvent);
+  event_mask |=
+      static_cast<uint64_t>(hci::EventMask::kIOCapabilityResponseEvent);
+  event_mask |=
+      static_cast<uint64_t>(hci::EventMask::kUserConfirmationRequestEvent);
+  event_mask |= static_cast<uint64_t>(hci::EventMask::kUserPasskeyRequestEvent);
+  event_mask |=
+      static_cast<uint64_t>(hci::EventMask::kRemoteOOBDataRequestEvent);
 
   return event_mask;
 }

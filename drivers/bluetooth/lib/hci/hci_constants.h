@@ -173,7 +173,14 @@ enum class LMPFeature : uint64_t {
   // TODO(armansito): Add definitions
 
   // Octet 6
-  // TODO(armansito): Add definitions
+  kExtendedInquiryResponse          = (1ull << 48),
+  kSimultaneousLEAndBREDRSameDevice = (1ull << 49),
+  // Reserved
+  kSecureSimplePairing              = (1ull << 51),
+  kEncapsulatedPDU                  = (1ull << 52),
+  kErroneousDataReporting           = (1ull << 53),
+  kNonflushablePacketBoundaryFlag   = (1ull << 54),
+  // Reerved
 
   // Octet 7
   kLinkSupervisionTimeoutChangedEvent = (1ull << 56),
