@@ -152,11 +152,12 @@ void VirtioNet::Stream::OnFifoWritable(async_t* async,
     TRACE_FLOW_STEP("machina", "io_queue_signal", flow_id);
   }
 
-  uint32_t num_entries_written = 0;
-  status = zx_fifo_write_old(
+  size_t num_entries_written = 0;
+  status = zx_fifo_write(
       fifo_,
+      sizeof(fifo_entries_[0]),
       static_cast<const void*>(&fifo_entries_[fifo_entries_write_index_]),
-      fifo_num_entries_ * sizeof(fifo_entries_[0]), &num_entries_written);
+      fifo_num_entries_, &num_entries_written);
   fifo_entries_write_index_ += num_entries_written;
   fifo_num_entries_ -= num_entries_written;
   if (status == ZX_ERR_SHOULD_WAIT ||
@@ -197,10 +198,9 @@ void VirtioNet::Stream::OnFifoReadable(async_t* async,
   }
 
   // Dequeue entries for the Ethernet device.
-  uint32_t num_entries_read;
+  size_t num_entries_read;
   eth_fifo_entry_t entries[fifo_entries_.size()];
-  status = zx_fifo_read_old(fifo_, static_cast<void*>(entries), sizeof(entries),
-                            &num_entries_read);
+  status = zx_fifo_read(fifo_, sizeof(entries[0]), entries, countof(entries), &num_entries_read);
   if (status == ZX_ERR_SHOULD_WAIT) {
     status = wait->Begin(async);
     if (status != ZX_OK) {
@@ -213,7 +213,7 @@ void VirtioNet::Stream::OnFifoReadable(async_t* async,
     return;
   }
 
-  for (uint32_t i = 0; i < num_entries_read; i++) {
+  for (size_t i = 0; i < num_entries_read; i++) {
     auto head = reinterpret_cast<uintptr_t>(entries[i].cookie);
     auto length = entries[i].length + sizeof(virtio_net_hdr_t);
     status = queue_->Return(head, length);
