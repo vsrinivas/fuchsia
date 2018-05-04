@@ -80,6 +80,7 @@ zx_status_t pvclock_update_boot_time(hypervisor::GuestPhysicalAddressSpace* gpas
     }
     auto boot_time = guest_ptr.as<pvclock_boot_time>();
     ZX_DEBUG_ASSERT(boot_time != nullptr);
+    memset(boot_time, 0, sizeof(*boot_time));
 
     fbl::AutoLock lock(&mutex);
     zx_time_t time = utc_offset.load();
@@ -104,6 +105,7 @@ zx_status_t pvclock_reset_clock(PvClockState* pvclock, hypervisor::GuestPhysical
     }
     pvclock->system_time = pvclock->guest_ptr.as<pvclock_system_time>();
     ZX_DEBUG_ASSERT(pvclock->system_time != nullptr);
+    memset(pvclock->system_time, 0, sizeof(*pvclock->system_time));
     return ZX_OK;
 }
 
