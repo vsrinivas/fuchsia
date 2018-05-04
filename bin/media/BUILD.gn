@@ -87,6 +87,10 @@ package("tests") {
     },
 
     {
+      name = "media_player_tests"
+    },
+
+    {
       name = "media_util_tests"
     },
 

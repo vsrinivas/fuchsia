@@ -7,7 +7,7 @@
 #include <lib/async/cpp/task.h>
 
 #include "garnet/bin/media/media_player/fidl/fidl_formatting.h"
-#include "garnet/bin/media/media_player/test/fake_renderer.h"
+#include "garnet/bin/media/media_player/test/fake_audio_renderer.h"
 #include "garnet/bin/media/media_player/test/fake_wav_reader.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
@@ -32,38 +32,34 @@ class MediaPlayerTester {
     media_player_ =
         application_context_->ConnectToEnvironmentService<MediaPlayer>();
 
-    fake_renderer_.SetPtsRate(media::TimelineRate(48000, 1));
+    fake_audio_renderer_.SetPtsUnits(48000, 1);
 
-    fake_renderer_.ExpectPackets({{0, false, 4096, 0x20c39d1e31991800},
-                                  {1024, false, 4096, 0xeaf137125d313800},
-                                  {2048, false, 4096, 0x6162095671991800},
-                                  {3072, false, 4096, 0x36e551c7dd41f800},
-                                  {4096, false, 4096, 0x23dcbf6fb1991800},
-                                  {5120, false, 4096, 0xee0a5963dd313800},
-                                  {6144, false, 4096, 0x647b2ba7f1991800},
-                                  {7168, false, 4096, 0x39fe74195d41f800},
-                                  {8192, false, 4096, 0xb3de76b931991800},
-                                  {9216, false, 4096, 0x7e0c10ad5d313800},
-                                  {10240, false, 4096, 0xf47ce2f171991800},
-                                  {11264, false, 4096, 0xca002b62dd41f800},
-                                  {12288, false, 4096, 0xb6f7990ab1991800},
-                                  {13312, false, 4096, 0x812532fedd313800},
-                                  {14336, false, 4096, 0xf7960542f1991800},
-                                  {15360, false, 4052, 0x7308a9824acbd5ea},
-                                  {16373, true, 0, 0x0000000000000000}});
+    fake_audio_renderer_.ExpectPackets({{0, 4096, 0x20c39d1e31991800},
+                                        {1024, 4096, 0xeaf137125d313800},
+                                        {2048, 4096, 0x6162095671991800},
+                                        {3072, 4096, 0x36e551c7dd41f800},
+                                        {4096, 4096, 0x23dcbf6fb1991800},
+                                        {5120, 4096, 0xee0a5963dd313800},
+                                        {6144, 4096, 0x647b2ba7f1991800},
+                                        {7168, 4096, 0x39fe74195d41f800},
+                                        {8192, 4096, 0xb3de76b931991800},
+                                        {9216, 4096, 0x7e0c10ad5d313800},
+                                        {10240, 4096, 0xf47ce2f171991800},
+                                        {11264, 4096, 0xca002b62dd41f800},
+                                        {12288, 4096, 0xb6f7990ab1991800},
+                                        {13312, 4096, 0x812532fedd313800},
+                                        {14336, 4096, 0xf7960542f1991800},
+                                        {15360, 4052, 0x7308a9824acbd5ea}});
 
     SeekingReaderPtr fake_reader_ptr;
     fidl::InterfaceRequest<SeekingReader> reader_request =
         fake_reader_ptr.NewRequest();
     fake_reader_.Bind(std::move(reader_request));
 
-    media::MediaRendererPtr fake_renderer_ptr;
-    fidl::InterfaceRequest<media::MediaRenderer> renderer_request =
-        fake_renderer_ptr.NewRequest();
-    fake_renderer_.Bind(std::move(renderer_request));
+    media::AudioRenderer2Ptr fake_audio_renderer_ptr;
+    fake_audio_renderer_.Bind(fake_audio_renderer_ptr.NewRequest());
 
-    // TODO(dalesat): Fix when we have a fake AudioRenderer2.
-    media_player_->SetAudioRenderer(nullptr);
+    media_player_->SetAudioRenderer(std::move(fake_audio_renderer_ptr));
 
     media_player_->SetReaderSource(std::move(fake_reader_ptr));
     FXL_LOG(INFO) << "player created " << (media_player_ ? "ok" : "NULL PTR");
@@ -81,7 +77,8 @@ class MediaPlayerTester {
       if (status->end_of_stream) {
         ended_ = true;
         FXL_LOG(INFO) << "MediaPlayerTest "
-                      << (fake_renderer_.expected() ? "SUCCEEDED" : "FAILED");
+                      << (fake_audio_renderer_.expected() ? "SUCCEEDED"
+                                                          : "FAILED");
         quit_callback_();
       }
     }
@@ -96,7 +93,7 @@ class MediaPlayerTester {
   std::unique_ptr<component::ApplicationContext> application_context_;
   fxl::Closure quit_callback_;
   FakeWavReader fake_reader_;
-  FakeRenderer fake_renderer_;
+  FakeAudioRenderer fake_audio_renderer_;
   MediaPlayerPtr media_player_;
   bool ended_ = false;
 };
