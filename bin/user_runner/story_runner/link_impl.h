@@ -132,7 +132,8 @@ class LinkImpl : PageClient {
   void MakeReloadCall(std::function<void()> done);
   void MakeIncrementalWriteCall(modular_private::LinkChangePtr data,
                                 std::function<void()> done);
-  void MakeIncrementalChangeCall(modular_private::LinkChangePtr data, uint32_t src);
+  void MakeIncrementalChangeCall(modular_private::LinkChangePtr data,
+                                 uint32_t src);
 
   bool ApplySetOp(const CrtJsonPointer& ptr, fidl::StringPtr json);
   bool ApplyUpdateOp(const CrtJsonPointer& ptr, fidl::StringPtr json);

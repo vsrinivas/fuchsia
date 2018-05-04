@@ -45,10 +45,9 @@ class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
         new EntityProviderRunner(static_cast<EntityProviderLauncher*>(this)));
     // The |UserIntelligenceProvider| below must be nullptr in order for agent
     // creation to be synchronous, which these tests assume.
-    agent_runner_.reset(
-        new AgentRunner(&launcher_, mqm_.get(), ledger_repository(),
-                        &agent_runner_storage_, token_provider_factory_.get(),
-                        nullptr, entity_provider_runner_.get()));
+    agent_runner_.reset(new AgentRunner(
+        &launcher_, mqm_.get(), ledger_repository(), &agent_runner_storage_,
+        token_provider_factory_.get(), nullptr, entity_provider_runner_.get()));
   }
 
   void TearDown() override {
@@ -212,9 +211,9 @@ TEST_F(EntityProviderRunnerTest, Basic) {
   EntityReferenceFactoryPtr factory;
   dummy_agent->agent_context()->GetEntityReferenceFactory(factory.NewRequest());
   fidl::StringPtr entity_ref;
-  factory->CreateReference(
-      "my_cookie",
-      [&entity_ref](fidl::StringPtr retval) { entity_ref = retval; });
+  factory->CreateReference("my_cookie", [&entity_ref](fidl::StringPtr retval) {
+    entity_ref = retval;
+  });
 
   RunLoopUntilWithTimeout([&entity_ref] { return !entity_ref.is_null(); });
   EXPECT_FALSE(entity_ref.is_null());

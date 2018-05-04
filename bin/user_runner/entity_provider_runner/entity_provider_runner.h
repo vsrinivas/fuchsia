@@ -8,9 +8,6 @@
 #include <map>
 
 #include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
@@ -46,7 +43,7 @@ class EntityProviderRunner : EntityResolver {
   // Given a map of entity type -> entity data, creates an entity reference for
   // it. This data is encoded into the entity reference, and must be within
   // 16KB. If successful, a non-null value is returned.
-  std::string  CreateReferenceFromData(
+  std::string CreateReferenceFromData(
       std::map<std::string, std::string> type_to_data);
 
   // Called by a DataEntity when it has no more |Entity|s it needs to serve for

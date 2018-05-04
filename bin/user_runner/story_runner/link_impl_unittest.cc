@@ -124,7 +124,9 @@ class LinkImplTestBase : public testing::TestWithLedger, modular::LinkWatcher {
 
   int ledger_change_count() const { return page_client_peer_->changes.size(); }
 
-  modular_private::LinkChangePtr& last_change() { return page_client_peer_->last_change; }
+  modular_private::LinkChangePtr& last_change() {
+    return page_client_peer_->last_change;
+  }
 
   void ExpectOneCall(const std::string& operation_name) {
     EXPECT_EQ(1u, operations_.count(operation_name))

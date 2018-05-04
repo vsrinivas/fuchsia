@@ -11,8 +11,8 @@
 #include <fuchsia/cpp/views_v1_token.h>
 
 #include "lib/app/cpp/service_provider_impl.h"
-#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"

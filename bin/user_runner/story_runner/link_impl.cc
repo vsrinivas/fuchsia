@@ -6,12 +6,11 @@
 
 #include <functional>
 
+#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/logging.h"
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/operations.h"
 #include "peridot/lib/ledger_client/storage.h"
@@ -28,7 +27,8 @@ class LinkImpl::ReadLinkDataCall : PageOperation<fidl::StringPtr> {
                    const LinkPath& link_path,
                    ResultCall result_call)
       : PageOperation("LinkImpl::ReadLinkDataCall",
-                      container, page,
+                      container,
+                      page,
                       std::move(result_call)),
         link_key_(MakeLinkKey(link_path)) {
     Ready();
@@ -38,18 +38,17 @@ class LinkImpl::ReadLinkDataCall : PageOperation<fidl::StringPtr> {
   void Run() override {
     FlowToken flow{this, &result_};
 
-    page()->GetSnapshot(
-        page_snapshot_.NewRequest(), nullptr, nullptr,
-        Protect([this, flow](ledger::Status status) {
-            if (status != ledger::Status::OK) {
-              FXL_LOG(ERROR)
-                  << trace_name() << " " << link_key_ << " "
-                  << " Page.GetSnapshot() " << status;
-              return;
-            }
+    page()->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
+                        Protect([this, flow](ledger::Status status) {
+                          if (status != ledger::Status::OK) {
+                            FXL_LOG(ERROR)
+                                << trace_name() << " " << link_key_ << " "
+                                << " Page.GetSnapshot() " << status;
+                            return;
+                          }
 
-            Cont(flow);
-          }));
+                          Cont(flow);
+                        }));
   }
 
   void Cont(FlowToken flow) {
@@ -94,7 +93,8 @@ class LinkImpl::WriteLinkDataCall : PageOperation<> {
                     fidl::StringPtr data,
                     ResultCall result_call)
       : PageOperation("LinkImpl::WriteLinkDataCall",
-                      container, page,
+                      container,
+                      page,
                       std::move(result_call)),
         link_key_(MakeLinkKey(link_path)),
         data_(data) {
@@ -105,14 +105,13 @@ class LinkImpl::WriteLinkDataCall : PageOperation<> {
   void Run() override {
     FlowToken flow{this};
 
-    page()->Put(
-        to_array(link_key_), to_array(data_),
-        Protect([this, flow](ledger::Status status) {
-            if (status != ledger::Status::OK) {
-              FXL_LOG(ERROR) << trace_name() << " " << link_key_ << " "
-                             << " Page.Put() " << status;
-            }
-          }));
+    page()->Put(to_array(link_key_), to_array(data_),
+                Protect([this, flow](ledger::Status status) {
+                  if (status != ledger::Status::OK) {
+                    FXL_LOG(ERROR) << trace_name() << " " << link_key_ << " "
+                                   << " Page.Put() " << status;
+                  }
+                }));
   }
 
   const std::string link_key_;
@@ -127,7 +126,8 @@ class LinkImpl::FlushWatchersCall : PageOperation<> {
                     ledger::Page* const page,
                     ResultCall result_call)
       : PageOperation("LinkImpl::FlushWatchersCall",
-                      container, page,
+                      container,
+                      page,
                       std::move(result_call)) {
     Ready();
   }
@@ -143,23 +143,23 @@ class LinkImpl::FlushWatchersCall : PageOperation<> {
     // received when this Operation is Done().
 
     page()->StartTransaction(Protect([this, flow](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            FXL_LOG(ERROR) << trace_name() << " "
-                           << " Page.StartTransaction() " << status;
-            return;
-          }
-          Cont(flow);
-        }));
+      if (status != ledger::Status::OK) {
+        FXL_LOG(ERROR) << trace_name() << " "
+                       << " Page.StartTransaction() " << status;
+        return;
+      }
+      Cont(flow);
+    }));
   }
 
   void Cont(FlowToken flow) {
     page()->Commit(Protect([this, flow](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            FXL_LOG(ERROR) << trace_name() << " "
-                           << " Page.Commit() " << status;
-            return;
-          }
-        }));
+      if (status != ledger::Status::OK) {
+        FXL_LOG(ERROR) << trace_name() << " "
+                       << " Page.Commit() " << status;
+        return;
+      }
+    }));
   }
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FlushWatchersCall);
@@ -387,10 +387,9 @@ class LinkImpl::GetEntityCall : Operation<fidl::StringPtr> {
  private:
   void Run() override {
     FlowToken flow{this, &result_};
-    new GetCall(&operation_queue_, impl_, fidl::VectorPtr<fidl::StringPtr>::New(0),
-                [this, flow](fidl::StringPtr value) {
-                  Cont(std::move(flow), value);
-                });
+    new GetCall(
+        &operation_queue_, impl_, fidl::VectorPtr<fidl::StringPtr>::New(0),
+        [this, flow](fidl::StringPtr value) { Cont(std::move(flow), value); });
   }
 
   void Cont(FlowToken flow, fidl::StringPtr json) {
@@ -567,7 +566,8 @@ void LinkImpl::UpdateObject(fidl::VectorPtr<fidl::StringPtr> path,
   }
 }
 
-void LinkImpl::Erase(fidl::VectorPtr<fidl::StringPtr> path, const uint32_t src) {
+void LinkImpl::Erase(fidl::VectorPtr<fidl::StringPtr> path,
+                     const uint32_t src) {
   if (kEnableIncrementalLinks) {
     modular_private::LinkChangePtr data = modular_private::LinkChange::New();
     // Leave data->key empty to signify a new entry
@@ -585,8 +585,7 @@ void LinkImpl::GetEntity(const Link::GetEntityCallback& callback) {
   new GetEntityCall(&operation_queue_, this, callback);
 }
 
-void LinkImpl::SetEntity(fidl::StringPtr entity_reference,
-                         const uint32_t src) {
+void LinkImpl::SetEntity(fidl::StringPtr entity_reference, const uint32_t src) {
   // SetEntity() is just a variation on Set(), so delegate to Set().
   Set(fidl::VectorPtr<fidl::StringPtr>::New(0),
       EntityReferenceToJson(entity_reference), src);
@@ -611,8 +610,7 @@ bool LinkImpl::ApplySetOp(const CrtJsonPointer& ptr, fidl::StringPtr json) {
   return true;
 }
 
-bool LinkImpl::ApplyUpdateOp(const CrtJsonPointer& ptr,
-                             fidl::StringPtr json) {
+bool LinkImpl::ApplyUpdateOp(const CrtJsonPointer& ptr, fidl::StringPtr json) {
   CrtJsonDoc new_value;
   new_value.Parse(json);
   if (new_value.HasParseError()) {
@@ -791,8 +789,7 @@ LinkWatcherConnection::LinkWatcherConnection(LinkImpl* const impl,
 
 LinkWatcherConnection::~LinkWatcherConnection() = default;
 
-void LinkWatcherConnection::Notify(fidl::StringPtr value,
-                                   const uint32_t src) {
+void LinkWatcherConnection::Notify(fidl::StringPtr value, const uint32_t src) {
   if (conn_ != src) {
     watcher_->Notify(value);
   }

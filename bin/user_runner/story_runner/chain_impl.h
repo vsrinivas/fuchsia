@@ -16,7 +16,8 @@ namespace modular {
 
 class ChainImpl {
  public:
-  ChainImpl(const fidl::VectorPtr<fidl::StringPtr>& path, const ChainData& chain_data);
+  ChainImpl(const fidl::VectorPtr<fidl::StringPtr>& path,
+            const ChainData& chain_data);
   ~ChainImpl();
 
   const fidl::VectorPtr<fidl::StringPtr>& chain_path() const { return path_; }

@@ -41,10 +41,9 @@ class AgentRunnerTest : public TestWithLedger {
     entity_provider_runner_.reset(new EntityProviderRunner(nullptr));
     // The |UserIntelligenceProvider| below must be nullptr in order for agent
     // creation to be synchronous, which these tests assume.
-    agent_runner_.reset(
-        new AgentRunner(&launcher_, mqm_.get(), ledger_repository(),
-                        &agent_runner_storage_, token_provider_factory_.get(),
-                        nullptr, entity_provider_runner_.get()));
+    agent_runner_.reset(new AgentRunner(
+        &launcher_, mqm_.get(), ledger_repository(), &agent_runner_storage_,
+        token_provider_factory_.get(), nullptr, entity_provider_runner_.get()));
   }
 
   void TearDown() override {

@@ -21,10 +21,10 @@
 #include "peridot/bin/component/component_context_impl.h"
 #include "peridot/bin/component/message_queue_manager.h"
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
-#include "peridot/bin/user_runner/story_runner/link_impl.h"
-#include "peridot/bin/user_runner/story_runner/story_provider_impl.h"
 #include "peridot/bin/user_runner/device_map_impl.h"
 #include "peridot/bin/user_runner/focus.h"
+#include "peridot/bin/user_runner/story_runner/link_impl.h"
+#include "peridot/bin/user_runner/story_runner/story_provider_impl.h"
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/common/xdr.h"
 #include "peridot/lib/device_info/device_info.h"
@@ -639,9 +639,8 @@ void UserRunnerImpl::DumpState(DumpStateCallback callback) {
   XdrWrite(&account_json, &account_, XdrAccount);
   output << account_json << std::endl;
 
-  story_provider_impl_->DumpState(
-      fxl::MakeCopyable([ output = std::move(output),
-                          callback ](const std::string& debug) mutable {
+  story_provider_impl_->DumpState(fxl::MakeCopyable(
+      [output = std::move(output), callback](const std::string& debug) mutable {
         output << debug;
         callback(output.str());
       }));

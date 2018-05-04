@@ -18,7 +18,8 @@
 namespace modular {
 
 // Not in anonymous namespace; needs extern linkage for use by test.
-void XdrLinkChange(XdrContext* const xdr, modular_private::LinkChange* const data) {
+void XdrLinkChange(XdrContext* const xdr,
+                   modular_private::LinkChange* const data) {
   xdr->Field("key", &data->key);
   xdr->Field("op", &data->op);
   xdr->Field("path", &data->pointer);
@@ -187,12 +188,14 @@ void LinkImpl::ReloadCall::Run() {
   FlowToken flow{this};
   new ReadAllDataCall<modular_private::LinkChange>(
       &operation_queue_, impl_->page(), MakeLinkKey(impl_->link_path_),
-      XdrLinkChange, [this, flow](fidl::VectorPtr<modular_private::LinkChange> changes) {
+      XdrLinkChange,
+      [this, flow](fidl::VectorPtr<modular_private::LinkChange> changes) {
         if (changes->empty()) {
           if (impl_->create_link_info_ &&
               !impl_->create_link_info_->initial_data.is_null() &&
               !impl_->create_link_info_->initial_data->empty()) {
-            modular_private::LinkChangePtr data = modular_private::LinkChange::New();
+            modular_private::LinkChangePtr data =
+                modular_private::LinkChange::New();
             // Leave data->key null to signify a new entry
             data->op = modular_private::LinkChangeOp::SET;
             data->pointer = fidl::VectorPtr<fidl::StringPtr>::New(0);

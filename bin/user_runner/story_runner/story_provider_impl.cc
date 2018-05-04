@@ -21,9 +21,9 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
+#include "peridot/bin/user_runner/focus.h"
 #include "peridot/bin/user_runner/story_runner/link_impl.h"
 #include "peridot/bin/user_runner/story_runner/story_controller_impl.h"
-#include "peridot/bin/user_runner/focus.h"
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/clone.h"
@@ -190,24 +190,23 @@ class StoryProviderImpl::CreateStoryCall : LedgerOperation<fidl::StringPtr> {
   void Run() override {
     FlowToken flow{this, &story_id_};
 
-    ledger()->GetPage(
-        nullptr, story_page_.NewRequest(),
-        Protect([this, flow](ledger::Status status) {
-            if (status != ledger::Status::OK) {
-              FXL_LOG(ERROR) << trace_name() << " "
-                             << "Ledger.GetPage() " << status;
-              return;
-            }
+    ledger()->GetPage(nullptr, story_page_.NewRequest(),
+                      Protect([this, flow](ledger::Status status) {
+                        if (status != ledger::Status::OK) {
+                          FXL_LOG(ERROR) << trace_name() << " "
+                                         << "Ledger.GetPage() " << status;
+                          return;
+                        }
 
-            Cont1(flow);
-          }));
+                        Cont1(flow);
+                      }));
   }
 
   void Cont1(FlowToken flow) {
     story_page_->GetId([this, flow](ledger::PageId id) {
-        story_page_id_ = std::move(id);
-        Cont2(flow);
-      });
+      story_page_id_ = std::move(id);
+      Cont2(flow);
+    });
   }
 
   void Cont2(FlowToken flow) {
@@ -220,12 +219,10 @@ class StoryProviderImpl::CreateStoryCall : LedgerOperation<fidl::StringPtr> {
     story_data_ = modular_private::StoryData::New();
     story_data_->story_page_id = CloneOptional(story_page_id_);
     story_data_->story_info.id = story_id_;
-    story_data_->story_info.last_focus_time =
-        zx_clock_get(ZX_CLOCK_UTC);
+    story_data_->story_info.last_focus_time = zx_clock_get(ZX_CLOCK_UTC);
     story_data_->story_info.extra = std::move(extra_info_);
 
-    MakeWriteStoryDataCall(&operation_queue_, page(),
-                           std::move(story_data_),
+    MakeWriteStoryDataCall(&operation_queue_, page(), std::move(story_data_),
                            [this, flow] { Cont3(flow); });
   }
 
@@ -233,8 +230,8 @@ class StoryProviderImpl::CreateStoryCall : LedgerOperation<fidl::StringPtr> {
     controller_ = std::make_unique<StoryControllerImpl>(
         story_id_, story_provider_impl_->ledger_client_, story_page_id_,
         story_provider_impl_);
-    controller_->AddModule({} /* parent_module_path */, kRootModuleName, std::move(intent_),
-                           nullptr /* surface_relation */);
+    controller_->AddModule({} /* parent_module_path */, kRootModuleName,
+                           std::move(intent_), nullptr /* surface_relation */);
 
     // We ensure that everything has been written to the story page before this
     // operation is done.
@@ -293,18 +290,17 @@ class StoryProviderImpl::DeleteStoryCall : PageOperation<> {
       Teardown(flow);
 
     } else {
-      page()->Delete(
-          to_array(MakeStoryKey(story_id_)),
-          Protect([this, flow](ledger::Status status) {
-              // Deleting a key that doesn't exist is OK, not
-              // KEY_NOT_FOUND.
-              if (status != ledger::Status::OK) {
-                FXL_LOG(ERROR) << trace_name() << " "
-                               << " Page.Delete() " << status;
-              }
+      page()->Delete(to_array(MakeStoryKey(story_id_)),
+                     Protect([this, flow](ledger::Status status) {
+                       // Deleting a key that doesn't exist is OK, not
+                       // KEY_NOT_FOUND.
+                       if (status != ledger::Status::OK) {
+                         FXL_LOG(ERROR) << trace_name() << " "
+                                        << " Page.Delete() " << status;
+                       }
 
-              Teardown(flow);
-            }));
+                       Teardown(flow);
+                     }));
     }
   }
 
@@ -391,7 +387,8 @@ class StoryProviderImpl::GetControllerCall : Operation<> {
         *story_data_->story_page_id, story_provider_impl_);
     container.impl->Connect(std::move(request_));
     container.current_info = CloneOptional(story_data_->story_info);
-    story_provider_impl_->story_controller_impls_.emplace(story_id_, std::move(container));
+    story_provider_impl_->story_controller_impls_.emplace(story_id_,
+                                                          std::move(container));
   }
 
   StoryProviderImpl* const story_provider_impl_;  // not owned
@@ -774,7 +771,8 @@ void StoryProviderImpl::CreateStoryWithInfo(
     CreateStoryWithInfoCallback callback) {
   FXL_LOG(INFO) << "CreateStoryWithInfo() " << module_url << " " << root_json;
   new CreateStoryCall(&operation_queue_, ledger_client_->ledger(), page(), this,
-                      module_url, std::move(extra_info), std::move(root_json), callback);
+                      module_url, std::move(extra_info), std::move(root_json),
+                      callback);
 }
 
 // |StoryProvider|

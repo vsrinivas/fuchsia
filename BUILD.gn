@@ -110,7 +110,6 @@ executable("modular_unittests_bin") {
   output_name = "modular_unittests"
 
   deps = [
-    "//third_party/googletest:gtest_main",
     "//peridot/bin/agent_runner:unittests",
     "//peridot/bin/agents/clipboard:unittests",
     "//peridot/bin/device_runner:unittests",
@@ -118,6 +117,7 @@ executable("modular_unittests_bin") {
     "//peridot/bin/user_runner/story_runner:unittests",
     "//peridot/examples/counter_cpp:unittests",
     "//peridot/public/lib/entity/cpp:json_unittest",
+    "//third_party/googletest:gtest_main",
   ]
 }
 

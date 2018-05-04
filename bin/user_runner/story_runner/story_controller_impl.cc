@@ -54,7 +54,8 @@ fidl::StringPtr PathString(
 
 fidl::VectorPtr<fidl::StringPtr> ParentModulePath(
     const fidl::VectorPtr<fidl::StringPtr>& module_path) {
-  fidl::VectorPtr<fidl::StringPtr> ret = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  fidl::VectorPtr<fidl::StringPtr> ret =
+      fidl::VectorPtr<fidl::StringPtr>::New(0);
 
   if (module_path->size() > 0) {
     for (size_t i = 0; i < module_path->size() - 1; i++) {
@@ -282,14 +283,14 @@ class StoryControllerImpl::BlockingModuleDataWriteCall : Operation<> {
     // We rely on the ledger notifying us in
     // StoryControllerImpl::OnPageChange() so that it calls the method we push
     // onto StoryControllerImpl::blocked_operations_.
-    new ReadDataCall<ModuleData>(
-        &operation_queue_, story_controller_impl_->page(),
-        key_, true /* not_found_is_ok */, XdrModuleData,
-        [this, flow](ModuleDataPtr data) {
-          if (!ModuleDataEqual(data, module_data_)) {
-            WriteModuleData(flow);
-          }
-        });
+    new ReadDataCall<ModuleData>(&operation_queue_,
+                                 story_controller_impl_->page(), key_,
+                                 true /* not_found_is_ok */, XdrModuleData,
+                                 [this, flow](ModuleDataPtr data) {
+                                   if (!ModuleDataEqual(data, module_data_)) {
+                                     WriteModuleData(flow);
+                                   }
+                                 });
   }
 
   void WriteModuleData(FlowToken flow) {
@@ -323,9 +324,9 @@ class StoryControllerImpl::BlockingModuleDataWriteCall : Operation<> {
 
 // Launches (brings up a running instance) of a module.
 //
-// If the module is to be composed into the story shell, notifies the story shell
-// of the new module. If the module is composed internally, connects the view
-// owner request appropriately.
+// If the module is to be composed into the story shell, notifies the story
+// shell of the new module. If the module is composed internally, connects the
+// view owner request appropriately.
 class StoryControllerImpl::LaunchModuleCall : Operation<> {
  public:
   LaunchModuleCall(
@@ -740,9 +741,8 @@ class StoryControllerImpl::LaunchModuleInShellCall : Operation<> {
     // shell.
     new LaunchModuleCall(
         &operation_queue_, story_controller_impl_, fidl::Clone(module_data_),
-        std::move(incoming_services_),
-        std::move(module_controller_request_), view_owner_.NewRequest(),
-        [this, flow] { Cont(flow); });
+        std::move(incoming_services_), std::move(module_controller_request_),
+        view_owner_.NewRequest(), [this, flow] { Cont(flow); });
   }
 
   void Cont(FlowToken flow) {
@@ -780,9 +780,8 @@ class StoryControllerImpl::LaunchModuleInShellCall : Operation<> {
     story_controller_impl_->pending_views_.emplace(
         PathString(module_data_->module_path),
         PendingView{module_data_->module_path.Clone(),
-          std::move(manifest_clone),
-          std::move(surface_relation_clone),
-          std::move(view_owner_)});
+                    std::move(manifest_clone),
+                    std::move(surface_relation_clone), std::move(view_owner_)});
   }
 
   void ConnectView(FlowToken flow, fidl::StringPtr anchor_view_id) {
@@ -790,7 +789,8 @@ class StoryControllerImpl::LaunchModuleInShellCall : Operation<> {
 
     story_controller_impl_->story_shell_->ConnectView(
         std::move(view_owner_), view_id, anchor_view_id,
-        std::move(module_data_->surface_relation), std::move(module_data_->module_manifest));
+        std::move(module_data_->surface_relation),
+        std::move(module_data_->module_manifest));
 
     story_controller_impl_->connected_views_.emplace(view_id);
     story_controller_impl_->ProcessPendingViews();
@@ -1087,8 +1087,7 @@ class StoryControllerImpl::LedgerNotificationCall : Operation<> {
     new LaunchModuleInShellCall(
         &operation_queue_, story_controller_impl_, std::move(module_data_),
         nullptr /* incoming_services */,
-        nullptr /* module_controller_request */,
-        [flow] {});
+        nullptr /* module_controller_request */, [flow] {});
   }
 
   OperationQueue operation_queue_;
@@ -1188,25 +1187,21 @@ class StoryControllerImpl::ResolveParameterCall
  private:
   void Run() {
     FlowToken flow{this, &result_};
-    new ConnectLinkCall(
-        &operation_queue_, story_controller_impl_, fidl::Clone(link_path_),
-        nullptr /* create_link_info */,
-        false /* notify_watchers */, link_.NewRequest(),
-        [this, flow] {
-          Cont(flow);
-        });
+    new ConnectLinkCall(&operation_queue_, story_controller_impl_,
+                        fidl::Clone(link_path_), nullptr /* create_link_info */,
+                        false /* notify_watchers */, link_.NewRequest(),
+                        [this, flow] { Cont(flow); });
   }
 
   void Cont(FlowToken flow) {
-    link_->Get(nullptr /* path */,
-               [this, flow](fidl::StringPtr content) {
-                 auto link_info = ResolverLinkInfo::New();
-                 link_info->path = std::move(*link_path_);
-                 link_info->content_snapshot = std::move(content);
+    link_->Get(nullptr /* path */, [this, flow](fidl::StringPtr content) {
+      auto link_info = ResolverLinkInfo::New();
+      link_info->path = std::move(*link_path_);
+      link_info->content_snapshot = std::move(content);
 
-                 result_ = ResolverParameterConstraint::New();
-                 result_->set_link_info(std::move(*link_info));
-               });
+      result_ = ResolverParameterConstraint::New();
+      result_->set_link_info(std::move(*link_info));
+    });
   }
 
   OperationQueue operation_queue_;
@@ -1257,7 +1252,7 @@ class StoryControllerImpl::ResolveModulesCall
         // resolution.
         // TODO(thatguy): Return an error string.
         FXL_LOG(WARNING) << "A null-named module parameter is not allowed "
-          << "when using Intent.action.name.";
+                         << "when using Intent.action.name.";
         return;
       }
 
@@ -1404,10 +1399,14 @@ class StoryControllerImpl::AddIntentCall : Operation<StartModuleStatus> {
       module_data_->intent = std::move(intent_);
       fidl::Clone(module_result.manifest, &module_data_->module_manifest);
 
-      // Initialize the chain, which we need to do to get ChainData, which belongs
-      // in |module_data_|.
-      new InitializeChainCall(&operation_queue_, story_controller_impl_, fidl::Clone(module_data_->module_path), std::move(create_chain_info_),
-          [this, flow] (ChainDataPtr chain_data) { WriteModuleData(flow, std::move(chain_data)); });
+      // Initialize the chain, which we need to do to get ChainData, which
+      // belongs in |module_data_|.
+      new InitializeChainCall(&operation_queue_, story_controller_impl_,
+                              fidl::Clone(module_data_->module_path),
+                              std::move(create_chain_info_),
+                              [this, flow](ChainDataPtr chain_data) {
+                                WriteModuleData(flow, std::move(chain_data));
+                              });
       return;
     }
 
@@ -1418,7 +1417,8 @@ class StoryControllerImpl::AddIntentCall : Operation<StartModuleStatus> {
     fidl::Clone(*chain_data, &module_data_->chain_data);
     // Write the module's data.
     new BlockingModuleDataWriteCall(&operation_queue_, story_controller_impl_,
-                                    MakeModuleKey(module_data_->module_path), fidl::Clone(module_data_),
+                                    MakeModuleKey(module_data_->module_path),
+                                    fidl::Clone(module_data_),
                                     [this, flow] { MaybeLaunchModule(flow); });
   }
 
@@ -1428,24 +1428,26 @@ class StoryControllerImpl::AddIntentCall : Operation<StartModuleStatus> {
       if (!view_owner_request_) {
         new LaunchModuleInShellCall(
             &operation_queue_, story_controller_impl_, std::move(module_data_),
-            std::move(incoming_services_), std::move(module_controller_request_),
-            [flow] {});
-      } else {
-        new LaunchModuleCall(
-            &operation_queue_, story_controller_impl_, std::move(module_data_),
             std::move(incoming_services_),
-            std::move(module_controller_request_),
-            std::move(view_owner_request_),
-            [this, flow] {
-              // LaunchModuleInShellCall above already calls ProcessPendingViews().
-              // NOTE(thatguy): This cannot be moved into LaunchModuleCall,
-              // because LaunchModuleInShellCall uses LaunchModuleCall as the
-              // very first step of its operation. This would inform the story
-              // shell of a new module before we had told it about its
-              // surface-relation parent (which we do as the second part of
-              // LaunchModuleInShellCall).  So we must defer to here.
-              story_controller_impl_->ProcessPendingViews();
-            });
+            std::move(module_controller_request_), [flow] {});
+      } else {
+        new LaunchModuleCall(&operation_queue_, story_controller_impl_,
+                             std::move(module_data_),
+                             std::move(incoming_services_),
+                             std::move(module_controller_request_),
+                             std::move(view_owner_request_), [this, flow] {
+                               // LaunchModuleInShellCall above already calls
+                               // ProcessPendingViews(). NOTE(thatguy): This
+                               // cannot be moved into LaunchModuleCall, because
+                               // LaunchModuleInShellCall uses LaunchModuleCall
+                               // as the very first step of its operation. This
+                               // would inform the story shell of a new module
+                               // before we had told it about its
+                               // surface-relation parent (which we do as the
+                               // second part of LaunchModuleInShellCall).  So
+                               // we must defer to here.
+                               story_controller_impl_->ProcessPendingViews();
+                             });
       }
     }
 
@@ -1523,8 +1525,7 @@ class StoryControllerImpl::StartContainerInShellCall : Operation<> {
       new AddIntentCall(
           &operation_queue_, story_controller_impl_,
           parent_module_path_.Clone(), nodes_->at(i)->node_name,
-          std::move(intent),
-          nullptr /* incoming_services */,
+          std::move(intent), nullptr /* incoming_services */,
           nullptr /* module_controller_request */,
           fidl::MakeOptional(
               relation_map_[nodes_->at(i)->node_name]->relationship),
@@ -1615,12 +1616,9 @@ class StoryControllerImpl::StartCall : Operation<> {
         auto module_data_clone = ModuleData::New();
         fidl::Clone(module_data, module_data_clone.get());
         new LaunchModuleInShellCall(
-            &operation_queue_,
-            story_controller_impl_,
-            std::move(module_data_clone),
-            nullptr /* incoming_services */,
-            nullptr /* module_controller_request */,
-            [flow] {});
+            &operation_queue_, story_controller_impl_,
+            std::move(module_data_clone), nullptr /* incoming_services */,
+            nullptr /* module_controller_request */, [flow] {});
       }
     }
 
@@ -1854,10 +1852,10 @@ void StoryControllerImpl::ProcessPendingViews() {
     }
 
     const auto view_id = PathString(kv.second.module_path);
-    story_shell_->ConnectView(
-        std::move(kv.second.view_owner), view_id, anchor_view_id,
-        std::move(kv.second.surface_relation),
-        std::move(kv.second.module_manifest));
+    story_shell_->ConnectView(std::move(kv.second.view_owner), view_id,
+                              anchor_view_id,
+                              std::move(kv.second.surface_relation),
+                              std::move(kv.second.module_manifest));
     connected_views_.emplace(view_id);
 
     added_keys.push_back(kv.first);
@@ -2061,7 +2059,8 @@ void StoryControllerImpl::AddModule(
   if (!module_name || module_name->empty()) {
     // TODO(thatguy): When we report errors, make this an error reported back
     // to the client.
-    FXL_LOG(FATAL) << "StoryController::AddModule(): module_name must not be empty.";
+    FXL_LOG(FATAL)
+        << "StoryController::AddModule(): module_name must not be empty.";
   }
 
   // AddModule() only adds modules to the story shell. Internally, we use a null
@@ -2102,7 +2101,8 @@ void StoryControllerImpl::NotifyStateChange() {
   //
   // TODO(mesch): Maybe we should execute this inside the containing Operation.
 
-  modular_private::PerDeviceStoryInfoPtr data = modular_private::PerDeviceStoryInfo::New();
+  modular_private::PerDeviceStoryInfoPtr data =
+      modular_private::PerDeviceStoryInfo::New();
   data->device_id = story_provider_impl_->device_id();
   data->story_id = story_id_;
   data->timestamp = time(nullptr);
