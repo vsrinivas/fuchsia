@@ -190,6 +190,11 @@ func (f *installFile) open() error {
 	// is no longer writable
 	if os.IsPermission(err) {
 		f.blob.Close()
+
+		f.fs.index.Fulfill(f.name)
+		if f.isPkg {
+			importPackage(f.fs, f.name)
+		}
 		return fs.ErrAlreadyExists
 	}
 	if err != nil {
