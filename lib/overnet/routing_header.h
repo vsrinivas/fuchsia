@@ -19,6 +19,14 @@ inline uint8_t* WriteLE64(uint64_t x, uint8_t* bytes) {
   return bytes + sizeof(x);
 }
 
+inline bool ParseLE64(const uint8_t** bytes, const uint8_t* end,
+                      uint64_t* out) {
+  if (end - *bytes < 8) return false;
+  memcpy(out, *bytes, 8);
+  *bytes += 8;
+  return true;
+}
+
 // Address of a node on the overlay network. This is intended to be relatively
 // random and unguessable.
 class NodeId {
@@ -28,6 +36,8 @@ class NodeId {
   bool operator!=(NodeId other) const { return id_ != other.id_; }
 
   uint64_t Hash() const { return id_; }
+  uint64_t get() const { return id_; }
+  std::string ToString() const;
 
   size_t wire_length() const { return sizeof(id_); }
   uint8_t* Write(uint8_t* dst) const { return WriteLE64(id_, dst); }
@@ -35,6 +45,8 @@ class NodeId {
  private:
   uint64_t id_;
 };
+
+std::ostream& operator<<(std::ostream& out, NodeId node_id);
 
 // Identifier of an active stream of communication between two nodes.
 class StreamId {
@@ -44,6 +56,8 @@ class StreamId {
   bool operator!=(StreamId other) const { return id_ != other.id_; }
 
   uint64_t Hash() const { return id_; }
+  uint64_t get() const { return id_; }
+  std::string ToString() const;
 
   uint8_t wire_length() const { return varint::WireSizeFor(id_); }
   uint8_t* Write(uint8_t wire_length, uint8_t* dst) const {
@@ -54,6 +68,8 @@ class StreamId {
   uint64_t id_;
 };
 
+std::ostream& operator<<(std::ostream& out, StreamId stream_id);
+
 // A sequence number
 class SeqNum {
  public:
@@ -61,6 +77,8 @@ class SeqNum {
   // in the same stream - the wire representation will be scaled such that the
   // correct sequence number is unambiguous.
   SeqNum(uint64_t seq, uint64_t outstanding_messages);
+
+  static StatusOr<SeqNum> Parse(const uint8_t** bytes, const uint8_t* end);
 
   static bool IsOutstandingMessagesLegal(uint64_t outstanding_messages) {
     return outstanding_messages < (1 << 28);
@@ -72,14 +90,24 @@ class SeqNum {
     return dst + wire_length();
   }
 
+  std::string ToString() const;
   uint64_t Reconstruct(uint64_t window_base) const;
 
   // Helper to make writing mocks easier.
   uint64_t ReconstructFromZero_TestOnly() const { return Reconstruct(0); }
 
+  bool operator==(const SeqNum& rhs) const {
+    return wire_length() == rhs.wire_length() &&
+           0 == memcmp(rep_, rhs.rep_, wire_length());
+  }
+  bool operator!=(const SeqNum& rhs) const { return !operator==(rhs); }
+
  private:
+  SeqNum() {}
   uint8_t rep_[4];
 };
+
+std::ostream& operator<<(std::ostream& out, SeqNum seq_num);
 
 // Reliability and ordering mode for a stream
 enum class ReliabilityAndOrdering : uint8_t {
@@ -91,6 +119,9 @@ enum class ReliabilityAndOrdering : uint8_t {
   // all previous messages in the stream unreliable.
   TailReliable = 4,
 };
+
+const char* ReliabilityAndOrderingString(
+    ReliabilityAndOrdering reliability_and_ordering);
 
 // Routing headers are passed over links between nodes in a (potentially)
 // non-private way. They should expose a minimal amount of information to route
@@ -122,6 +153,11 @@ class RoutingHeader {
     NodeId dst() const { return dst_; }
     StreamId stream_id() const { return stream_id_; }
     SeqNum seq() const { return seq_; }
+
+    friend bool operator==(const Destination& a, const Destination& b) {
+      return std::tie(a.dst_, a.stream_id_, a.seq_) ==
+             std::tie(b.dst_, b.stream_id_, b.seq_);
+    }
 
    private:
     NodeId dst_;
@@ -189,6 +225,10 @@ class RoutingHeader {
         reliability_and_ordering_(ReliabilityAndOrdering::ReliableOrdered),
         payload_length_(payload_length) {}
 
+  static StatusOr<RoutingHeader> Parse(const uint8_t** bytes,
+                                       const uint8_t* end, NodeId reader,
+                                       NodeId writer);
+
   RoutingHeader& AddDestination(NodeId peer, StreamId stream, SeqNum seq) {
     dsts_.emplace_back(peer, stream, seq);
     return *this;
@@ -210,6 +250,13 @@ class RoutingHeader {
 
   const std::vector<Destination>& destinations() const { return dsts_; }
 
+  friend bool operator==(const RoutingHeader& a, const RoutingHeader& b) {
+    return std::tie(a.src_, a.is_control_, a.reliability_and_ordering_,
+                    a.payload_length_, a.dsts_) ==
+           std::tie(b.src_, b.is_control_, b.reliability_and_ordering_,
+                    b.payload_length_, b.dsts_);
+  }
+
  private:
   RoutingHeader(NodeId src, bool is_control,
                 ReliabilityAndOrdering reliability_and_ordering,
@@ -227,8 +274,26 @@ class RoutingHeader {
   std::vector<Destination> dsts_;
   uint64_t payload_length_ = 0;
 
+  // Flags format:
+  // bit 0:      is_local -- is this a single destination message whos src is
+  //                         this node and whos dst is the peer we're sending
+  //                         to?
+  // bit 1:      channel - 1 -> control channel, 0 -> payload channel
+  // bits 2,3,4: reliability/ordering mode (must be 0 for control channel)
+  // bits 5:     reserved (must be zero)
+  // bit 6...:   destination count
+  static constexpr uint64_t kFlagIsLocal = 1;
+  static constexpr uint64_t kFlagIsControl = 2;
+  static constexpr uint64_t kFlagReservedMask = 32;
+  static constexpr uint64_t kFlagsReliabilityAndOrderingShift = 2;
+  static constexpr uint64_t kFlagsDestinationCountShift = 6;
+  // all reliability and orderings must fit within this mask
+  static constexpr uint64_t kReliabilityAndOrderingMask = 0x07;
+
   uint64_t DeriveFlags(NodeId writer, NodeId target) const;
 };
+
+std::ostream& operator<<(std::ostream& out, const RoutingHeader& h);
 
 }  // namespace overnet
 

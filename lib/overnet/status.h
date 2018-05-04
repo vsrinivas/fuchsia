@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <atomic>
+#include <ostream>
 #include <string>
 
 namespace overnet {
@@ -125,6 +126,8 @@ enum class StatusCode : uint8_t {
   DATA_LOSS = 15,
 };
 
+const char* StatusCodeString(StatusCode s);
+
 namespace status_impl {
 
 struct StatusPayload final {
@@ -198,12 +201,24 @@ class Status final {
   };
 };
 
+inline std::ostream& operator<<(std::ostream& out, const Status& status) {
+  out << StatusCodeString(status.code());
+  if (status.reason().length()) {
+    out << "(" << status.reason() << ")";
+  }
+  return out;
+}
+
 // Either a status or a T - allows carrying a separate object in the case of
 // success.
 template <class T>
 class StatusOr final {
  public:
-  StatusOr(T value) : code_(StatusCode::OK), storage_(std::move(value)) {}
+  template <typename U, typename = std::enable_if_t<
+                            !std::is_convertible<U, Status>::value &&
+                            !std::is_convertible<U, StatusOr>::value>>
+  StatusOr(U&& value)
+      : code_(StatusCode::OK), storage_(std::forward<U>(value)) {}
   StatusOr(StatusCode code, const std::string& description)
       : code_(code),
         storage_(new status_impl::StatusPayload{{1}, description}) {
@@ -215,6 +230,17 @@ class StatusOr final {
     if (is_ok()) {
       new (&storage_) Storage(*other.unwrap());
     } else {
+      auto* p = other.unwrap_err();
+      new (&storage_) Storage(p);
+      p->refs.fetch_add(1, std::memory_order_relaxed);
+    }
+  }
+  StatusOr(StatusOr&& other) : code_(other.code_) {
+    if (is_ok()) {
+      new (&storage_) Storage(std::move(*other.unwrap()));
+    } else {
+      // TODO(ctiller): consider a payload-less variant of StatusOr failures so
+      // we can omit the fetch_add here
       auto* p = other.unwrap_err();
       new (&storage_) Storage(p);
       p->refs.fetch_add(1, std::memory_order_relaxed);
@@ -261,6 +287,11 @@ class StatusOr final {
     return &storage_.ok;
   }
 
+  T* unwrap() {
+    assert(is_ok());
+    return &storage_.ok;
+  }
+
   status_impl::StatusPayload* unwrap_err() const {
     assert(is_error());
     return storage_.payload;
@@ -270,7 +301,8 @@ class StatusOr final {
   union Storage {
     Storage() {}
     ~Storage() {}
-    Storage(T v) : ok(std::move(v)) {}
+    template <class U>
+    Storage(U&& v) : ok(std::forward<U>(v)) {}
     Storage(status_impl::StatusPayload* p) : payload(p) {}
     T ok;
     status_impl::StatusPayload* payload;

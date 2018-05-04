@@ -43,6 +43,27 @@ TEST(Varint, SimpleWrite) {
             Encode(0xfffefdfcfbfaf9f8ull));
 }
 
+template <class T>
+void RoundTrip(T x) {
+  auto enc = Encode(x);
+  T y;
+  const uint8_t* p = enc.data();
+  const uint8_t* end = p + enc.size();
+  EXPECT_TRUE(Read(&p, end, &y));
+  EXPECT_EQ(p, end);
+  EXPECT_EQ(x, y);
+}
+
+TEST(Varint, RoundTrip) {
+  uint64_t i = 0;
+  for (;;) {
+    RoundTrip(i);
+    uint64_t j = i + i / 10000 + 1;
+    if (j <= i) break;
+    i = j;
+  }
+}
+
 }  // namespace varint_test
 }  // namespace varint
 }  // namespace overnet

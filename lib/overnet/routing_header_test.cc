@@ -56,13 +56,22 @@ TEST(BaseTypes, SeqNum) {
   EXPECT_EQ((BinVec{1}), Encode(seq_1_1));
 }
 
-TEST(RoutingHeader, PayloadWrite) {
+static void RoundTrip(const RoutingHeader& rh, NodeId sender, NodeId receiver) {
+  auto enc = Encode(RoutingHeader::Writer(&rh, sender, receiver));
+  const uint8_t* start = enc.data();
+  auto prs_status =
+      RoutingHeader::Parse(&start, start + enc.size(), receiver, sender);
+  EXPECT_TRUE(prs_status.is_ok()) << prs_status.AsStatus();
+  EXPECT_EQ(rh, *prs_status.get());
+}
+
+TEST(RoutingHeader, PayloadWrite1) {
   auto rh = std::move(
       RoutingHeader(NodeId(1), 3, ReliabilityAndOrdering::ReliableUnordered)
           .AddDestination(NodeId(2), StreamId(1), SeqNum(1, 10)));
   // encode locally
   EXPECT_EQ((BinVec{// flags
-                    (1 << 0) | (1 << 1) | (2 << 2) | (1 << 6),
+                    (1 << 0) | (2 << 2) | (1 << 6),
                     // dests {
                     // [0] =
                     //   stream_id
@@ -73,9 +82,16 @@ TEST(RoutingHeader, PayloadWrite) {
                     //   payload_length
                     3}),
             Encode(RoutingHeader::Writer(&rh, NodeId(1), NodeId(2))));
+  RoundTrip(rh, NodeId(1), NodeId(2));
+}
+
+TEST(RoutingHeader, PayloadWrite2) {
+  auto rh = std::move(
+      RoutingHeader(NodeId(1), 3, ReliabilityAndOrdering::ReliableUnordered)
+          .AddDestination(NodeId(2), StreamId(1), SeqNum(1, 10)));
   // encode along a different route
   EXPECT_EQ((BinVec{// flags
-                    (1 << 1) | (2 << 2) | (1 << 6),
+                    (2 << 2) | (1 << 6),
                     // src
                     1, 0, 0, 0, 0, 0, 0, 0,
                     // dests {
@@ -90,10 +106,16 @@ TEST(RoutingHeader, PayloadWrite) {
                     //   payload_length
                     3}),
             Encode(RoutingHeader::Writer(&rh, NodeId(4), NodeId(2))));
-  // add another destination
-  rh.AddDestination(NodeId(3), StreamId(42), SeqNum(7, 10));
+  RoundTrip(rh, NodeId(4), NodeId(2));
+}
+
+TEST(RoutingHeader, PayloadWrite3) {
+  auto rh = std::move(
+      RoutingHeader(NodeId(1), 3, ReliabilityAndOrdering::ReliableUnordered)
+          .AddDestination(NodeId(2), StreamId(1), SeqNum(1, 10))
+          .AddDestination(NodeId(3), StreamId(42), SeqNum(7, 10)));
   EXPECT_EQ((BinVec{// flags
-                    0x8a, 0x01,
+                    0x88, 0x01,
                     // src
                     1, 0, 0, 0, 0, 0, 0, 0,
                     // dests {
@@ -115,6 +137,7 @@ TEST(RoutingHeader, PayloadWrite) {
                     //   payload_length
                     3}),
             Encode(RoutingHeader::Writer(&rh, NodeId(1), NodeId(2))));
+  RoundTrip(rh, NodeId(1), NodeId(2));
 }
 
 TEST(RoutingHeader, ControlWrite) {
@@ -123,7 +146,7 @@ TEST(RoutingHeader, ControlWrite) {
                     .AddDestination(NodeId(2), StreamId(1), SeqNum(1, 10)));
   // encode locally
   EXPECT_EQ((BinVec{// flags
-                    (1 << 0) | (1 << 6),
+                    (1 << 0) | (1 << 1) | (1 << 6),
                     // dests {
                     // [0] =
                     //   stream_id
@@ -134,6 +157,7 @@ TEST(RoutingHeader, ControlWrite) {
                     //   payload_length
                     3}),
             Encode(RoutingHeader::Writer(&rh, NodeId(1), NodeId(2))));
+  RoundTrip(rh, NodeId(1), NodeId(2));
 }
 
 }  // namespace routing_header_test

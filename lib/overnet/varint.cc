@@ -53,5 +53,107 @@ uint8_t* Write(uint64_t x, uint8_t wire_length, uint8_t* dst) {
   return dst + wire_length;
 }
 
+namespace {
+bool ReadFromArray(const uint8_t** bytes, uint64_t* value) {
+  const uint8_t* ptr = *bytes;
+  uint32_t b;
+
+  // Splitting into 32-bit pieces gives better performance on 32-bit
+  // processors.
+  uint32_t part0 = 0, part1 = 0, part2 = 0;
+
+  b = *(ptr++);
+  part0 = b;
+  if (!(b & 0x80)) goto done;
+  part0 -= 0x80;
+  b = *(ptr++);
+  part0 += b << 7;
+  if (!(b & 0x80)) goto done;
+  part0 -= 0x80 << 7;
+  b = *(ptr++);
+  part0 += b << 14;
+  if (!(b & 0x80)) goto done;
+  part0 -= 0x80 << 14;
+  b = *(ptr++);
+  part0 += b << 21;
+  if (!(b & 0x80)) goto done;
+  part0 -= 0x80 << 21;
+  b = *(ptr++);
+  part1 = b;
+  if (!(b & 0x80)) goto done;
+  part1 -= 0x80;
+  b = *(ptr++);
+  part1 += b << 7;
+  if (!(b & 0x80)) goto done;
+  part1 -= 0x80 << 7;
+  b = *(ptr++);
+  part1 += b << 14;
+  if (!(b & 0x80)) goto done;
+  part1 -= 0x80 << 14;
+  b = *(ptr++);
+  part1 += b << 21;
+  if (!(b & 0x80)) goto done;
+  part1 -= 0x80 << 21;
+  b = *(ptr++);
+  part2 = b;
+  if (!(b & 0x80)) goto done;
+  part2 -= 0x80;
+  b = *(ptr++);
+  part2 += b << 7;
+  if (!(b & 0x80)) goto done;
+  // "part2 -= 0x80 << 7" is irrelevant because (0x80 << 7) << 56 is 0.
+
+  // We have overrun the maximum size of a varint (10 bytes).  Assume
+  // the data is corrupt.
+  return false;
+
+done:
+  *value = (static_cast<uint64_t>(part0)) |
+           (static_cast<uint64_t>(part1) << 28) |
+           (static_cast<uint64_t>(part2) << 56);
+  *bytes = ptr;
+  return true;
+}
+
+bool ReadSlow(const uint8_t** bytes, const uint8_t* end, uint64_t* value) {
+  // Slow path:  This read might cross the end of the buffer, we fail if it
+  // does so
+
+  uint64_t result = 0;
+  int count = 0;
+  uint32_t b;
+
+  do {
+    if (count == 10) {
+      *value = 0;
+      return false;
+    }
+    if (*bytes == end) {
+      return false;
+    }
+    b = **bytes;
+    result |= static_cast<uint64_t>(b & 0x7f) << (7 * count);
+    ++*bytes;
+    ++count;
+  } while (b & 0x80);
+
+  *value = result;
+  return true;
+}
+}  // namespace
+
+namespace impl {
+bool ReadFallback(const uint8_t** bytes, const uint8_t* end, uint64_t* result) {
+  if (*bytes - end >= 10 ||
+      // Optimization:  We're also safe if the buffer is non-empty and it ends
+      // with a byte that would terminate a varint.
+      (end > *bytes && !(end[-1] & 0x80))) {
+    return ReadFromArray(bytes, result);
+  } else {
+    return ReadSlow(bytes, end, result);
+  }
+}
+}  // namespace impl
+
 }  // namespace varint
 }  // namespace overnet

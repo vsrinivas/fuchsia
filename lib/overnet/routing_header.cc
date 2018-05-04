@@ -3,8 +3,55 @@
 // found in the LICENSE file.
 
 #include "routing_header.h"
+#include <iomanip>
+#include <sstream>
 
 namespace overnet {
+
+static const uint64_t kMaxDestCount = 128;
+
+std::ostream& operator<<(std::ostream& out, NodeId node_id) {
+  return out << node_id.ToString();
+}
+
+std::ostream& operator<<(std::ostream& out, StreamId stream_id) {
+  return out << stream_id.ToString();
+}
+
+std::ostream& operator<<(std::ostream& out, SeqNum seq_num) {
+  return out << seq_num.ToString();
+}
+
+std::string NodeId::ToString() const {
+  std::ostringstream tmp;
+  tmp << "[";
+  tmp << std::hex << std::setfill('0') << std::setw(4);
+  tmp << ((id_ >> 48) & 0xffff);
+  tmp << "_";
+  tmp << std::hex << std::setfill('0') << std::setw(4);
+  tmp << ((id_ >> 32) & 0xffff);
+  tmp << "_";
+  tmp << std::hex << std::setfill('0') << std::setw(4);
+  tmp << ((id_ >> 16) & 0xffff);
+  tmp << "_";
+  tmp << std::hex << std::setfill('0') << std::setw(4);
+  tmp << (id_ & 0xffff);
+  tmp << "]";
+  return tmp.str();
+}
+
+std::string StreamId::ToString() const {
+  std::ostringstream tmp;
+  tmp << id_;
+  return tmp.str();
+}
+
+std::string SeqNum::ToString() const {
+  std::ostringstream tmp;
+  tmp << std::hex << std::setfill('0') << std::setw(wire_length() * 2)
+      << Reconstruct(0);
+  return tmp.str();
+}
 
 SeqNum::SeqNum(uint64_t seq, uint64_t outstanding_messages) {
   uint8_t width;
@@ -32,6 +79,22 @@ SeqNum::SeqNum(uint64_t seq, uint64_t outstanding_messages) {
   }
 }
 
+StatusOr<SeqNum> SeqNum::Parse(const uint8_t** bytes, const uint8_t* end) {
+  SeqNum r;
+  ssize_t rem;
+  if (*bytes == end) goto fail;
+  r.rep_[0] = *(*bytes)++;
+  rem = r.wire_length() - 1;
+  if (end - *bytes < rem) goto fail;
+  memcpy(r.rep_ + 1, *bytes, rem);
+  *bytes += rem;
+  return r;
+
+fail:
+  return StatusOr<SeqNum>(StatusCode::INVALID_ARGUMENT,
+                          "Failed to parse sequence number");
+}
+
 uint64_t SeqNum::Reconstruct(uint64_t window_base) const {
   uint8_t width = (rep_[0] >> 6) + 1;
   uint64_t result = window_base;
@@ -52,24 +115,33 @@ uint64_t SeqNum::Reconstruct(uint64_t window_base) const {
   return result;
 }
 
+const char* ReliabilityAndOrderingString(
+    ReliabilityAndOrdering reliability_and_ordering) {
+  switch (reliability_and_ordering) {
+    case ReliabilityAndOrdering::ReliableOrdered:
+      return "ReliableOrdered";
+    case ReliabilityAndOrdering::UnreliableOrdered:
+      return "UnreliableOrdered";
+    case ReliabilityAndOrdering::ReliableUnordered:
+      return "ReliableUnordered";
+    case ReliabilityAndOrdering::UnreliableUnordered:
+      return "UnreliableUnordered";
+    case ReliabilityAndOrdering::TailReliable:
+      return "TailReliable";
+  }
+  return "UnknownReliabilityAndOrdering";
+}
+
 uint64_t RoutingHeader::DeriveFlags(NodeId writer, NodeId target) const {
-  // Flags format:
-  // bit 0:      is_local -- is this a single destination message whos src is
-  //                         this node and whos dst is the peer we're sending
-  //                         to?
-  // bit 1:      channel - 0 -> control channel, 1 -> payload channel
-  // bits 2,3,4: reliability/ordering mode (must be 0 for control channel)
-  // bits 5:     reserved (must be zero)
-  // bit 6...:   destination count
   uint64_t flags = 0;
   if (src_ == writer && dsts_.size() == 1 && dsts_[0].dst() == target) {
-    flags |= 1 << 0;
+    flags |= kFlagIsLocal;
   }
-  if (!is_control_) flags |= 1 << 1;
+  if (is_control_) flags |= kFlagIsControl;
   const uint8_t robits = static_cast<uint8_t>(reliability_and_ordering_);
   assert(robits < (1 << 3));
-  flags |= robits << 2;
-  flags |= dsts_.size() << 6;
+  flags |= robits << kFlagsReliabilityAndOrderingShift;
+  flags |= dsts_.size() << kFlagsDestinationCountShift;
   return flags;
 }
 
@@ -108,6 +180,92 @@ uint8_t* RoutingHeader::Writer::Write(uint8_t* bytes) const {
   p = varint::Write(hdr_->payload_length_, payload_length_length_, p);
   assert(p == bytes + wire_length());
   return p;
+}
+
+StatusOr<RoutingHeader> RoutingHeader::Parse(const uint8_t** bytes,
+                                             const uint8_t* end, NodeId reader,
+                                             NodeId writer) {
+  uint64_t flags;
+  if (!varint::Read(bytes, end, &flags)) {
+    return StatusOr<RoutingHeader>(StatusCode::INVALID_ARGUMENT,
+                                   "Failed to parse routing header flags");
+  }
+  bool is_local = (flags & kFlagIsLocal) != 0;
+  bool is_control = (flags & kFlagIsControl) != 0;
+  ReliabilityAndOrdering reliability_and_ordering =
+      static_cast<ReliabilityAndOrdering>(
+          (flags >> kFlagsReliabilityAndOrderingShift) &
+          kReliabilityAndOrderingMask);
+  bool reserved_ok = (flags & kFlagReservedMask) == 0;
+  uint64_t dest_count = flags >> kFlagsDestinationCountShift;
+  if (!reserved_ok) {
+    return StatusOr<RoutingHeader>(
+        StatusCode::INVALID_ARGUMENT,
+        "Routing header reserved flag bit set: not sure what to do");
+  }
+  if (dest_count > kMaxDestCount) {
+    return StatusOr<RoutingHeader>(
+        StatusCode::INVALID_ARGUMENT,
+        "Destination count too high in routing header");
+  }
+  if (dest_count > 1 && is_local) {
+    return StatusOr<RoutingHeader>(
+        StatusCode::INVALID_ARGUMENT,
+        "Link-local messages cannot be used for multicast");
+  }
+  uint64_t src;
+  if (!is_local) {
+    if (!ParseLE64(bytes, end, &src)) {
+      return StatusOr<RoutingHeader>(StatusCode::INVALID_ARGUMENT,
+                                     "Failed to parse source node");
+    }
+  } else {
+    src = writer.get();
+  }
+  std::vector<Destination> destinations;
+  destinations.reserve(dest_count);
+  for (uint64_t i = 0; i < dest_count; i++) {
+    uint64_t dst;
+    if (!is_local) {
+      if (!ParseLE64(bytes, end, &dst)) {
+        return StatusOr<RoutingHeader>(StatusCode::INVALID_ARGUMENT,
+                                       "Failed to parse destination node");
+      }
+    } else {
+      dst = reader.get();
+    }
+    uint64_t stream_id;
+    if (!varint::Read(bytes, end, &stream_id)) {
+      return StatusOr<RoutingHeader>(
+          StatusCode::INVALID_ARGUMENT,
+          "Failed to parse stream id from routing header");
+    }
+    auto seq_num = SeqNum::Parse(bytes, end);
+    if (seq_num.is_error()) {
+      return StatusOr<RoutingHeader>(seq_num.AsStatus());
+    }
+    destinations.emplace_back(NodeId(dst), StreamId(stream_id), *seq_num.get());
+  }
+  uint64_t payload_length;
+  if (!varint::Read(bytes, end, &payload_length)) {
+    return StatusOr<RoutingHeader>(StatusCode::INVALID_ARGUMENT,
+                                   "Failed to parse payload length");
+  }
+  return RoutingHeader(NodeId(src), is_control, reliability_and_ordering,
+                       std::move(destinations), payload_length);
+}
+
+std::ostream& operator<<(std::ostream& out, const RoutingHeader& h) {
+  out << "RoutingHeader{src:" << h.src() << " ctl:" << h.is_control()
+      << " ro:" << ReliabilityAndOrderingString(h.reliability_and_ordering())
+      << " payload:" << h.payload_length() << " dsts:{";
+  int i = 0;
+  for (const auto& dst : h.destinations()) {
+    if (i) out << " ";
+    out << "[" << (i++) << "] dst:" << dst.dst()
+        << " stream_id:" << dst.stream_id() << " seq:" << dst.seq();
+  }
+  return out << "}}";
 }
 
 }  // namespace overnet

@@ -17,6 +17,19 @@ uint8_t WireSizeFor(uint64_t x);
 // convenience
 uint8_t* Write(uint64_t x, uint8_t wire_length, uint8_t* dst);
 
+namespace impl {
+bool ReadFallback(const uint8_t** bytes, const uint8_t* end, uint64_t* result);
+}
+
+// Parse a single varint
+inline bool Read(const uint8_t** bytes, const uint8_t* end, uint64_t* result) {
+  if (*bytes < end && **bytes < 0x80) {
+    *result = *(*bytes)++;
+    return true;
+  }
+  return impl::ReadFallback(bytes, end, result);
+}
+
 }  // namespace varint
 
 }  // namespace overnet
