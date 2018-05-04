@@ -68,6 +68,19 @@ template("dart_fuchsia_test") {
     ]
   }
 
+  generated_run_test_sh_target = "run_${target_name}"
+  # package.gni requires all test files to be under $root_build_dir.
+  generated_run_test_sh = "${root_build_dir}/${generated_run_test_sh_target}.sh"
+
+  action(generated_run_test_sh_target) {
+    script = "//build/dart/gen_run_sh.py"
+    outputs = [generated_run_test_sh]
+    args = [
+      "--out=" + rebase_path(generated_run_test_sh),
+      "--to_be_run=${invoker.target_name}",
+    ]
+  }
+
   dart_jit_app(target_name) {
     forward_variables_from(invoker,
                            [
@@ -76,6 +89,12 @@ template("dart_fuchsia_test") {
                            ])
     source_dir = test_source_dir
 
+    testonly = true
+
+    tests = [{
+      name = "${generated_run_test_sh_target}.sh"
+    }]
+
     deps = [
       "//third_party/dart-pkg/pub/test",
     ]
@@ -83,7 +102,8 @@ template("dart_fuchsia_test") {
       deps += invoker.deps
     }
 
-    non_dart_deps = [ ":$generated_test_main_target($target_toolchain)" ]
+    non_dart_deps = [ ":$generated_test_main_target($target_toolchain)",
+                      ":$generated_run_test_sh_target($target_toolchain)",]
     if (defined(invoker.non_dart_deps)) {
       non_dart_deps += invoker.non_dart_deps
     }
