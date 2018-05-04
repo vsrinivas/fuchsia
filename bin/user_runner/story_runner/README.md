@@ -37,4 +37,3 @@ Interface requests can be sent to handles and the handles be passed on
 immediately. However, if the receiving side is to make calls on the bound
 implementation and delegate implementation to a further service, then this is
 possible only for a returned interface.
-

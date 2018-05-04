@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/story_runner/module_controller_impl.h"
+#include "peridot/bin/user_runner/story_runner/module_controller_impl.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
@@ -13,7 +13,7 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
-#include "peridot/bin/story_runner/story_controller_impl.h"
+#include "peridot/bin/user_runner/story_runner/story_controller_impl.h"
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/clone.h"
 

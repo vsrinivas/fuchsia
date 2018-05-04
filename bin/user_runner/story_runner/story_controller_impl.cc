@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/story_runner/story_controller_impl.h"
+#include "peridot/bin/user_runner/story_runner/story_controller_impl.h"
 
 #include <memory>
 
@@ -26,11 +26,11 @@
 #include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/type_converter.h"
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
-#include "peridot/bin/story_runner/chain_impl.h"
-#include "peridot/bin/story_runner/link_impl.h"
-#include "peridot/bin/story_runner/module_context_impl.h"
-#include "peridot/bin/story_runner/module_controller_impl.h"
-#include "peridot/bin/story_runner/story_provider_impl.h"
+#include "peridot/bin/user_runner/story_runner/chain_impl.h"
+#include "peridot/bin/user_runner/story_runner/link_impl.h"
+#include "peridot/bin/user_runner/story_runner/module_context_impl.h"
+#include "peridot/bin/user_runner/story_runner/module_controller_impl.h"
+#include "peridot/bin/user_runner/story_runner/story_provider_impl.h"
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/clone.h"

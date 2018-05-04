@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_STORY_RUNNER_LINK_IMPL_H_
-#define PERIDOT_BIN_STORY_RUNNER_LINK_IMPL_H_
+#ifndef PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_LINK_IMPL_H_
+#define PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_LINK_IMPL_H_
 
 #include <set>
 #include <vector>
@@ -18,7 +18,7 @@
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/story_runner/key_generator.h"
+#include "peridot/bin/user_runner/story_runner/key_generator.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
@@ -295,4 +295,4 @@ class LinkWatcherConnection {
 
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_STORY_RUNNER_LINK_IMPL_H_
+#endif  // PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_LINK_IMPL_H_

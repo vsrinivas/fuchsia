@@ -7,8 +7,8 @@
 // can start more modules. It also serves as the factory for Link
 // instances, which are used to share data between modules.
 
-#ifndef PERIDOT_BIN_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_
-#define PERIDOT_BIN_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_
+#ifndef PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_
+#define PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_
 
 #include <map>
 #include <memory>
@@ -28,7 +28,7 @@
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/story_runner/link_impl.h"
+#include "peridot/bin/user_runner/story_runner/link_impl.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/scope.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
@@ -323,4 +323,4 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
 
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_
+#endif  // PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_STORY_CONTROLLER_IMPL_H_

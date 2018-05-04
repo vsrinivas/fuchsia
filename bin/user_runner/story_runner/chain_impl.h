@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_STORY_RUNNER_CHAIN_IMPL_H_
-#define PERIDOT_BIN_STORY_RUNNER_CHAIN_IMPL_H_
+#ifndef PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_CHAIN_IMPL_H_
+#define PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_CHAIN_IMPL_H_
 
 #include <vector>
 
@@ -32,4 +32,4 @@ class ChainImpl {
 
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_STORY_RUNNER_CHAIN_IMPL_H_
+#endif  // PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_CHAIN_IMPL_H_

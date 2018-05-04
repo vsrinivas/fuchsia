@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_STORY_RUNNER_STORY_PROVIDER_IMPL_H_
-#define PERIDOT_BIN_STORY_RUNNER_STORY_PROVIDER_IMPL_H_
+#ifndef PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_STORY_PROVIDER_IMPL_H_
+#define PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_STORY_PROVIDER_IMPL_H_
 
 #include <map>
 #include <memory>
@@ -254,4 +254,4 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
 
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_STORY_RUNNER_STORY_PROVIDER_IMPL_H_
+#endif  // PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_STORY_PROVIDER_IMPL_H_

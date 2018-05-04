@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/story_runner/module_context_impl.h"
+#include "peridot/bin/user_runner/story_runner/module_context_impl.h"
 
 #include <string>
 
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/strings/join_strings.h"
-#include "peridot/bin/story_runner/module_controller_impl.h"
-#include "peridot/bin/story_runner/story_controller_impl.h"
+#include "peridot/bin/user_runner/story_runner/module_controller_impl.h"
+#include "peridot/bin/user_runner/story_runner/story_controller_impl.h"
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/ledger_client/storage.h"
 

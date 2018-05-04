@@ -4,7 +4,6 @@
 
 visibility = [
   "//peridot/bin/device_runner/*",
-  "//peridot/bin/story_runner/*",
   "//peridot/bin/user_runner/*",
 ]
 
