@@ -287,6 +287,7 @@ func (d *Daemon) getUpdates(rec *upRec) map[pkg.Package]*GetResult {
 			if err == ErrRateExceeded {
 				log.Printf("Source rate limit exceeded\n")
 			}
+			log.Printf("daemon: error checking source for updates %s\n", err)
 			continue
 		}
 
