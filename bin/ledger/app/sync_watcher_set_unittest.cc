@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <string>
 
-#include "garnet/lib/gtest/test_with_message_loop.h"
+#include "garnet/lib/gtest/test_with_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
@@ -15,7 +15,7 @@
 namespace ledger {
 namespace {
 
-class SyncWatcherSetTest : public gtest::TestWithMessageLoop {
+class SyncWatcherSetTest : public gtest::TestWithLoop {
  public:
   SyncWatcherSetTest() {}
   ~SyncWatcherSetTest() override {}

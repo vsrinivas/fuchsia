@@ -7,7 +7,7 @@
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/callback/scoped_task_runner.h"
 #include "garnet/lib/callback/set_when_called.h"
-#include "garnet/lib/gtest/test_with_message_loop.h"
+#include "garnet/lib/gtest/test_with_loop.h"
 #include "gtest/gtest.h"
 
 namespace storage {
@@ -45,7 +45,7 @@ class SplittingDataSource : public DataSource {
   callback::ScopedTaskRunner task_runner_;
 };
 
-using ReadDataSourceTest = gtest::TestWithMessageLoop;
+using ReadDataSourceTest = gtest::TestWithLoop;
 
 TEST_F(ReadDataSourceTest, ReadDataSource) {
   std::string expected_content = "Hello World";
@@ -56,7 +56,7 @@ TEST_F(ReadDataSourceTest, ReadDataSource) {
   std::unique_ptr<DataSource::DataChunk> content;
   ReadDataSource(
       &container,
-      std::make_unique<SplittingDataSource>(message_loop_.async(),
+      std::make_unique<SplittingDataSource>(dispatcher(),
                                             expected_content),
       callback::Capture(callback::SetWhenCalled(&called), &status, &content));
   RunLoopUntilIdle();
@@ -75,7 +75,7 @@ TEST_F(ReadDataSourceTest, DeleteContainerWhileReading) {
     callback::ManagedContainer container;
     ReadDataSource(
         &container,
-        std::make_unique<SplittingDataSource>(message_loop_.async(),
+        std::make_unique<SplittingDataSource>(dispatcher(),
                                               expected_content),
         callback::Capture(callback::SetWhenCalled(&called), &status, &content));
   }

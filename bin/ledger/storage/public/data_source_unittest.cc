@@ -4,7 +4,7 @@
 
 #include "peridot/bin/ledger/storage/public/data_source.h"
 
-#include "garnet/lib/gtest/test_with_message_loop.h"
+#include "garnet/lib/gtest/test_with_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"
@@ -13,7 +13,7 @@
 namespace storage {
 namespace {
 
-class DataSourceTest : public gtest::TestWithMessageLoop {
+class DataSourceTest : public gtest::TestWithLoop {
  protected:
   ::testing::AssertionResult TestDataSource(
       std::string expected,

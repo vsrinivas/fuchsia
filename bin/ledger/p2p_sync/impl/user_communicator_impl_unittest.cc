@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <string>
 
-#include "garnet/lib/gtest/test_with_message_loop.h"
+#include "garnet/lib/gtest/test_with_loop.h"
 // gtest matchers are in gmock and we cannot include the specific header file
 // directly as it is private to the library.
 #include "gmock/gmock.h"
@@ -57,7 +57,7 @@ class FakeUserIdProvider : public p2p_provider::UserIdProvider {
   std::string user_id_;
 };
 
-class UserCommunicatorImplTest : public gtest::TestWithMessageLoop {
+class UserCommunicatorImplTest : public gtest::TestWithLoop {
  public:
   UserCommunicatorImplTest() {}
   ~UserCommunicatorImplTest() override {}

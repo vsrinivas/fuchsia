@@ -9,7 +9,7 @@
 #include <string>
 
 // gtest matchers are in gmock.
-#include "garnet/lib/gtest/test_with_message_loop.h"
+#include "garnet/lib/gtest/test_with_loop.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
@@ -75,7 +75,7 @@ std::ostream& operator<<(std::ostream& os, const RecordingClient::Message& m) {
   return os << "Message{" << m.source << ", " << m.data << "}";
 }
 
-class P2PProviderImplTest : public gtest::TestWithMessageLoop {
+class P2PProviderImplTest : public gtest::TestWithLoop {
  public:
   P2PProviderImplTest() {}
   ~P2PProviderImplTest() override {}
