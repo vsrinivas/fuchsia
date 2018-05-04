@@ -4,12 +4,6 @@
 
 library media;
 
-interface AudioCapturerClient {
-  // Called when an AudioCapturer operating in AsyncCapture mode has a packet's
-  // worth of data to deliver to the client.
-  1: OnPacketCaptured(MediaPacket packet);
-};
-
 // AudioCapturer
 //
 // An AudioCapturer is an interface returned from an AudioService's
@@ -100,13 +94,8 @@ interface AudioCapturerClient {
 // per-callback.  Once running in async mode, the AudioCapturer instance will
 // choose regions of the payload buffer to capture into, capture the specified
 // number of frames, then deliver those frames as MediaPackets using the
-// OnPacketCapture method of the AudioCapturerClient interface supplied by the
-// user.  Users may stop capturing are return the AudioCapturer instance to
-// 'sync' mode using the StopAsyncCapture method.  Likewise, closing the channel
-// underneath the supplied AudioCapturerClient will cause the AudioCapturer
-// instance to stop capturing and return to 'sync' mode (however this operation
-// is not synchronized with other operations and should not be used if the
-// client intends to either start capturing again at a future time).
+// OnPacketCapture FIDL event.  Users may stop capturing are return the
+// AudioCapturer instance to 'sync' mode using the StopAsyncCapture method.
 //
 // It is considered an error to attempt any of the following operations.
 //
@@ -229,15 +218,13 @@ interface AudioCapturerClient {
 // that the packet has been captured.  This may end up increasing overhead and
 // potentially complicating client designs.
 //
-// Asynchronous mode costs two Zircon channels (one for the AudioCapturer
-// interface and one for the AudioCapturerClient interface), but has the
-// advantage requiring only 1/2 of the messages which adds up to a significant
-// savings overall.  When operating in 'async' mode, AudioCapturer instances
-// have no way of knowing if a user is processing the MediaPackets being sent in
-// a timely fashion, and no way of automatically detecting an overflow
-// condition.  Users of 'async' mode should be careful to use a buffer large
-// enough to ensure that they will be able to process their data before an
-// AudioCapturer will be forced to overwrite it.
+// Asynchronous mode has the advantage requiring only 1/2 of the messages,
+// however, when operating in 'async' mode, AudioCapturer instances have no way
+// of knowing if a user is processing the MediaPackets being sent in a timely
+// fashion, and no way of automatically detecting an overflow condition.  Users
+// of 'async' mode should be careful to use a buffer large enough to ensure that
+// they will be able to process their data before an AudioCapturer will be
+// forced to overwrite it.
 //
 // ** Future Directions (aka TODOs) **
 //
@@ -306,13 +293,13 @@ interface AudioCapturer {
   7: FlushWithCallback() -> ();
 
   // Place the capturer into 'async' capture mode and begin to capture packets
-  // of exactly 'frames_per_packet' number of frames each.  The client-supplied
-  // AudioCapturerClient will be used to inform the client of captured packets.
-  8: StartAsyncCapture(AudioCapturerClient callback_target,
-                      uint32 frames_per_packet);
+  // of exactly 'frames_per_packet' number of frames each.  The OnPacketCaptured
+  // event will be used to inform the client of captured packets.
+  8: StartAsyncCapture(uint32 frames_per_packet);
+  9: -> OnPacketCaptured(MediaPacket packet);
 
   // Stop capturing in 'async' capture mode and (optionally) deliver a callback
   // which may be used by the client if explicit synchronization is needed.
-  9: StopAsyncCapture();
-  10: StopAsyncCaptureWithCallback() -> ();
+  10: StopAsyncCapture();
+  11: StopAsyncCaptureWithCallback() -> ();
 };

@@ -157,9 +157,7 @@ class AudioCapturerImpl : public AudioObject, public AudioCapturer {
                  CaptureAtCallback cbk) final;
   void Flush() final;
   void FlushWithCallback(FlushWithCallbackCallback cbk) final;
-  void StartAsyncCapture(
-      fidl::InterfaceHandle<AudioCapturerClient> callback_target,
-      uint32_t frames_per_packet) final;
+  void StartAsyncCapture(uint32_t frames_per_packet) final;
   void StopAsyncCapture() final;
   void StopAsyncCaptureWithCallback(
       StopAsyncCaptureWithCallbackCallback cbk) final;
@@ -243,7 +241,6 @@ class AudioCapturerImpl : public AudioObject, public AudioCapturer {
   GenerationId frames_to_clock_mono_gen_ FXL_GUARDED_BY(mix_domain_->token());
   int64_t frame_count_ FXL_GUARDED_BY(mix_domain_->token()) = 0;
 
-  AudioCapturerClientPtr async_callback_;
   uint32_t async_frames_per_packet_;
   uint32_t async_next_frame_offset_ FXL_GUARDED_BY(mix_domain_->token()) = 0;
   StopAsyncCaptureWithCallbackCallback pending_async_stop_cbk_;

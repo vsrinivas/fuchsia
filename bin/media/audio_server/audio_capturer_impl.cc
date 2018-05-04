@@ -83,11 +83,6 @@ void AudioCapturerImpl::Shutdown() {
     binding_.Unbind();
   }
 
-  if (async_callback_.is_bound()) {
-    async_callback_.set_error_handler(nullptr);
-    async_callback_.Unbind();
-  }
-
   // Deactivate our mixing domain and synchronize with any in-flight operations.
   mix_domain_->Deactivate();
 
@@ -474,9 +469,7 @@ void AudioCapturerImpl::FlushWithCallback(FlushWithCallbackCallback cbk) {
   }
 }
 
-void AudioCapturerImpl::StartAsyncCapture(
-    fidl::InterfaceHandle<AudioCapturerClient> callback_target,
-    uint32_t frames_per_packet) {
+void AudioCapturerImpl::StartAsyncCapture(uint32_t frames_per_packet) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
 
   // In order to enter async mode, we must be operating in synchronous mode, and
@@ -523,13 +516,9 @@ void AudioCapturerImpl::StartAsyncCapture(
   }
 
   // Everything looks good...
-  // 1) Take control of the callback interface
-  // 2) Record the number of frames per packet we want to produce
-  // 3) Transition to the OperatingAsync state
-  // 4) Kick the work thread to get the ball rolling.
-  FXL_DCHECK(async_callback_.is_bound() == false);
-  async_callback_.Bind(std::move(callback_target));
-  async_callback_.set_error_handler([this]() { StopAsyncCapture(); });
+  // 1) Record the number of frames per packet we want to produce
+  // 2) Transition to the OperatingAsync state
+  // 3) Kick the work thread to get the ball rolling.
   async_frames_per_packet_ = frames_per_packet;
   state_.store(State::OperatingAsync);
   mix_wakeup_->Signal();
@@ -1260,7 +1249,7 @@ void AudioCapturerImpl::FinishAsyncStopThunk() {
 
   if (!finished.is_empty()) {
     FinishBuffers(std::move(finished));
-  } else if (async_callback_.is_bound()) {
+  } else {
     MediaPacket pkt;
 
     pkt.pts = kNoTimestamp;
@@ -1271,10 +1260,8 @@ void AudioCapturerImpl::FinishAsyncStopThunk() {
     pkt.payload_offset = 0u;
     pkt.payload_size = 0u;
 
-    async_callback_->OnPacketCaptured(std::move(pkt));
+    binding_.events().OnPacketCaptured(std::move(pkt));
   }
-
-  async_callback_.Unbind();
 
   // If we have a valid callback to make, call it now.
   if (pending_async_stop_cbk_ != nullptr) {
@@ -1305,15 +1292,9 @@ void AudioCapturerImpl::FinishBuffersThunk() {
 void AudioCapturerImpl::FinishBuffers(const PcbList& finished_buffers) {
   for (const auto& finished_buffer : finished_buffers) {
     // If there is no callback tied to this buffer (meaning that it was
-    // generated while operating in async mode), and it is either not filled at
-    // all, or the async callback channel has been closed out from under us,
+    // generated while operating in async mode), and it is not filled at all,
     // just skip it.
-    //
-    // There is no point in sending an empty packet to a user over their async
-    // channel, and there is no point in allocating a MediaPacket if there is no
-    // channel to send it over..
-    if ((finished_buffer.cbk == nullptr) &&
-        (!finished_buffer.filled_frames || !async_callback_.is_bound())) {
+    if ((finished_buffer.cbk == nullptr) && !finished_buffer.filled_frames) {
       continue;
     }
 
@@ -1330,8 +1311,7 @@ void AudioCapturerImpl::FinishBuffers(const PcbList& finished_buffers) {
     if (finished_buffer.cbk != nullptr) {
       finished_buffer.cbk(std::move(pkt));
     } else {
-      FXL_DCHECK(async_callback_.is_bound());
-      async_callback_->OnPacketCaptured(std::move(pkt));
+      binding_.events().OnPacketCaptured(std::move(pkt));
     }
   }
 }

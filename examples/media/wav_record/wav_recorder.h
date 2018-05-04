@@ -15,11 +15,10 @@
 
 namespace examples {
 
-class WavRecorder : public media::AudioCapturerClient {
+class WavRecorder {
  public:
   WavRecorder(fxl::CommandLine cmd_line, fxl::Closure quit_callback)
-      : async_binding_(this),
-        cmd_line_(std::move(cmd_line)),
+      : cmd_line_(std::move(cmd_line)),
         quit_callback_(quit_callback) {
     FXL_DCHECK(quit_callback_);
   }
@@ -33,11 +32,10 @@ class WavRecorder : public media::AudioCapturerClient {
   bool SetupPayloadBuffer();
   void SendCaptureJob();
   void OnDefaultFormatFetched(media::MediaType type);
-  void OnPacketCaptured(media::MediaPacket pkt) override;
+  void OnPacketCaptured(media::MediaPacket pkt);
   void OnQuit();
 
   media::AudioCapturerPtr capturer_;
-  fidl::Binding<AudioCapturerClient> async_binding_;
   fsl::FDWaiter keystroke_waiter_;
   media::audio::WavWriter<> wav_writer_;
 

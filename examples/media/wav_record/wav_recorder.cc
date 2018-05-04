@@ -99,11 +99,6 @@ void WavRecorder::Usage() {
 }
 
 void WavRecorder::Shutdown() {
-  if (async_binding_.is_bound()) {
-    async_binding_.set_error_handler(nullptr);
-    async_binding_.Unbind();
-  }
-
   if (capturer_.is_bound()) {
     capturer_.set_error_handler(nullptr);
     capturer_.Unbind();
@@ -278,19 +273,13 @@ void WavRecorder::OnDefaultFormatFetched(media::MediaType type) {
       SendCaptureJob();
     }
   } else {
-    FXL_DCHECK(!async_binding_.is_bound());
     FXL_DCHECK(payload_buf_frames_);
     FXL_DCHECK(capture_frames_per_chunk_);
     FXL_DCHECK((payload_buf_frames_ % capture_frames_per_chunk_) == 0);
-    fidl::InterfaceHandle<AudioCapturerClient> endpoint;
-    async_binding_.Bind(endpoint.NewRequest());
-    async_binding_.set_error_handler([this]() {
-      FXL_LOG(ERROR)
-          << "Async callback connection lost unexpectedly, shutting down.";
-      Shutdown();
-    });
-    capturer_->StartAsyncCapture(std::move(endpoint),
-                                 capture_frames_per_chunk_);
+    capturer_.events().OnPacketCaptured = [this](media::MediaPacket pkt) {
+      OnPacketCaptured(std::move(pkt));
+    };
+    capturer_->StartAsyncCapture(capture_frames_per_chunk_);
   }
 
   printf("Recording %s, %u Hz, %u channel linear PCM from %s into '%s'\n",
@@ -326,7 +315,7 @@ void WavRecorder::OnPacketCaptured(media::MediaPacket pkt) {
     }
   }
 
-  if (!clean_shutdown_ && !async_binding_.is_bound()) {
+  if (!clean_shutdown_ && (capturer_.events().OnPacketCaptured == nullptr)) {
     SendCaptureJob();
   } else if (pkt.flags & media::kFlagEos) {
     Shutdown();
@@ -337,7 +326,7 @@ void WavRecorder::OnQuit() {
   printf("Shutting down...\n");
   clean_shutdown_ = true;
 
-  if (async_binding_.is_bound()) {
+  if (capturer_.events().OnPacketCaptured != nullptr) {
     capturer_->StopAsyncCapture();
   } else {
     capturer_->Flush();
