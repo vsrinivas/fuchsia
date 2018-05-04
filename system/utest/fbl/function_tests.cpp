@@ -19,6 +19,15 @@ struct Big {
     int data[64]{};
 };
 
+// An object that looks like an "empty" std::function.
+template<typename> struct EmptyFunction;
+template<typename R, typename... Args> struct EmptyFunction<R(Args...)> {
+    R operator()(Args... args) const { return fptr(args...); }
+    bool operator==(decltype(nullptr)) const { return true; }
+
+    R (*fptr)(Args...) = nullptr;
+};
+
 constexpr size_t HugeCallableSize = sizeof(Big) + sizeof(void*) * 4;
 
 template <typename ClosureFunction>
@@ -32,6 +41,16 @@ bool closure() {
     // nullptr initialization
     ClosureFunction fnull(nullptr);
     EXPECT_FALSE(!!fnull);
+
+    // null function pointer initialization
+    Closure* fptr = nullptr;
+    ClosureFunction ffunc(fptr);
+    EXPECT_FALSE(!!ffunc);
+
+    // "empty std::function" initialization
+    EmptyFunction<Closure> empty;
+    ClosureFunction fwrapper(empty);
+    EXPECT_FALSE(!!fwrapper);
 
     // inline callable initialization
     int finline_value = 0;
@@ -171,6 +190,14 @@ bool closure() {
     EXPECT_FALSE(nullptr == fnew);
     EXPECT_TRUE(nullptr != fnew);
 
+    // null function pointer assignment
+    fnew = fptr;
+    EXPECT_FALSE(!!fnew);
+
+    // "empty std::function" assignment
+    fmutinline = empty;
+    EXPECT_FALSE(!!fmutinline);
+
     // alloc checking constructor, inline
     AllocChecker ac1;
     int fcheck_value = 0;
@@ -218,6 +245,16 @@ bool binary_op() {
     // nullptr initialization
     BinaryOpFunction fnull(nullptr);
     EXPECT_FALSE(!!fnull);
+
+    // null function pointer initialization
+    BinaryOp* fptr = nullptr;
+    BinaryOpFunction ffunc(fptr);
+    EXPECT_FALSE(!!ffunc);
+
+    // "empty std::function" initialization
+    EmptyFunction<BinaryOp> empty;
+    BinaryOpFunction fwrapper(empty);
+    EXPECT_FALSE(!!fwrapper);
 
     // inline callable initialization
     int finline_value = 0;
@@ -370,6 +407,14 @@ bool binary_op() {
     EXPECT_TRUE(fnew != nullptr);
     EXPECT_FALSE(nullptr == fnew);
     EXPECT_TRUE(nullptr != fnew);
+
+    // null function pointer assignment
+    fnew = fptr;
+    EXPECT_FALSE(!!fnew);
+
+    // "empty std::function" assignment
+    fmutinline = empty;
+    EXPECT_FALSE(!!fmutinline);
 
     // alloc checking constructor, inline
     AllocChecker ac1;
@@ -571,6 +616,38 @@ bool bind_member() {
     END_TEST;
 }
 
+// Test the internal IsNull mechanism.
+struct Nullable {
+    bool is_null;
+    bool operator==(decltype(nullptr)) const { return is_null; }
+};
+
+struct NotNullable {};
+
+struct NonBoolNull {
+    void operator==(decltype(nullptr)) const {}
+};
+
+bool null_check() {
+    BEGIN_TEST;
+
+    EXPECT_TRUE(fbl::internal::IsNull(nullptr));
+
+    Nullable nf = {false};
+    EXPECT_FALSE(fbl::internal::IsNull(nf));
+
+    Nullable nt = {true};
+    EXPECT_TRUE(fbl::internal::IsNull(nt));
+
+    NotNullable nn;
+    EXPECT_FALSE(fbl::internal::IsNull(nn));
+
+    NonBoolNull nbn;
+    EXPECT_FALSE(fbl::internal::IsNull(nbn));
+
+    END_TEST;
+}
+
 // This is the code which is included in <function.h>.
 namespace example {
 using FoldFunction = fbl::Function<int(int value, int item)>;
@@ -659,6 +736,7 @@ RUN_TEST(inline_function_size_bounds);
 RUN_TEST(move_only_argument_and_result);
 RUN_TEST(implicit_construction);
 RUN_TEST(bind_member);
+RUN_TEST(null_check);
 RUN_TEST(example_code);
 END_TEST_CASE(function_tests)
 

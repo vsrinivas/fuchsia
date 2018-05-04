@@ -17,6 +17,24 @@
 namespace fbl {
 namespace internal {
 
+// Checks if |T| is null. Defaults to false. |Comparison| is the type yielded by
+// comparing a T value with nullptr.
+template <typename T, typename Comparison = bool>
+struct NullEq {
+    static constexpr bool Test(const T&) { return false; }
+};
+
+// Partial specialization for |T| values comparable to nullptr.
+template <typename T>
+struct NullEq<T, decltype(*static_cast<T*>(nullptr) == nullptr)> {
+    static constexpr bool Test(const T& v) { return v == nullptr; }
+};
+
+template <typename T>
+static constexpr bool IsNull(const T& v) {
+    return NullEq<T>::Test(v);
+}
+
 template <typename Result, typename... Args>
 class FunctionTarget {
 public:
@@ -186,16 +204,12 @@ public:
 
     template <typename Callable>
     Function(Callable target) {
-        static_assert(!require_inline || sizeof(Callable) <= inline_callable_size,
-                      "Callable too large for InlineFunction.");
-        holder_.InitializeTarget(fbl::move(target));
+        InitializeTarget(fbl::move(target));
     }
 
     template <typename Callable>
     Function(Callable target, AllocChecker* ac) {
-        static_assert(!require_inline || sizeof(Callable) <= inline_callable_size,
-                      "Callable too large for InlineFunction.");
-        holder_.InitializeTarget(fbl::move(target), ac);
+        InitializeTarget(fbl::move(target), ac);
     }
 
     ~Function() {
@@ -233,18 +247,14 @@ public:
 
     template <typename Callable>
     void SetTarget(Callable target) {
-        static_assert(!require_inline || sizeof(Callable) <= inline_callable_size,
-                      "Callable too large for InlineFunction.");
         holder_.DestroyTarget();
-        holder_.InitializeTarget(fbl::move(target));
+        InitializeTarget(fbl::move(target));
     }
 
     template <typename Callable>
     void SetTarget(Callable target, AllocChecker* ac) {
-        static_assert(!require_inline || sizeof(Callable) <= inline_callable_size,
-                      "Callable too large for InlineFunction.");
         holder_.DestroyTarget();
-        holder_.InitializeTarget(fbl::move(target), ac);
+        InitializeTarget(fbl::move(target), ac);
     }
 
     void swap(Function& other) {
@@ -255,6 +265,28 @@ public:
     }
 
 private:
+    template <typename Callable>
+    void InitializeTarget(Callable target) {
+        static_assert(!require_inline || sizeof(Callable) <= inline_callable_size,
+                      "Callable too large for InlineFunction.");
+        if (IsNull(target)) {
+            holder_.InitializeNullTarget();
+        } else {
+            holder_.InitializeTarget(fbl::move(target));
+        }
+    }
+
+    template <typename Callable>
+    void InitializeTarget(Callable target, AllocChecker* ac) {
+        static_assert(!require_inline || sizeof(Callable) <= inline_callable_size,
+                      "Callable too large for InlineFunction.");
+        if (IsNull(target)) {
+            holder_.InitializeNullTarget();
+        } else {
+            holder_.InitializeTarget(fbl::move(target), ac);
+        }
+    }
+
     TargetHolder holder_;
 };
 
