@@ -36,6 +36,11 @@ bool test_clone_simple(void) {
     memset(output, 'a', sizeof(output));
     ASSERT_EQ(write(fd, output, sizeof(output)), sizeof(output));
 
+    // TODO(ZX-510): Make seek behavior across dup consistent
+    // among filesystems. Currently, this seek is necessary
+    // for thinfs, but not for minfs/memfs.
+    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
+
     // ... Should be visible to the other fd.
     char input[5];
     ASSERT_EQ(read(fd2, input, sizeof(input)), sizeof(input));

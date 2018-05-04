@@ -32,7 +32,7 @@ static char fvm_disk_path[PATH_MAX];
 
 constexpr const char minfs_name[] = "minfs";
 constexpr const char memfs_name[] = "memfs";
-constexpr const char thinfs_name[] = "thinfs";
+constexpr const char thinfs_name[] = "FAT";
 
 const fsck_options_t test_fsck_options = {
     .verbose = false,
