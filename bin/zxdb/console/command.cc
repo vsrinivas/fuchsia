@@ -275,6 +275,7 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
     AppendControlVerbs(&all_verbs);
     AppendMemoryVerbs(&all_verbs);
     AppendProcessVerbs(&all_verbs);
+    AppendSymbolVerbs(&all_verbs);
     AppendSystemVerbs(&all_verbs);
     AppendThreadVerbs(&all_verbs);
 

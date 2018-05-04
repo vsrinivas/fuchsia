@@ -12,6 +12,8 @@
 
 namespace zxdb {
 
+struct ModuleLoadInfo;
+struct ModuleSymbolRecord;
 class SystemSymbols;
 
 // Tracks the modules loaded in a process and resolves symbols based on this.
@@ -21,21 +23,24 @@ class ProcessSymbols {
   explicit ProcessSymbols(SystemSymbols* system);
   ~ProcessSymbols();
 
+  const std::map<uint64_t, ModuleSymbolRecord>& modules() const {
+    return modules_;
+  }
+
   // Returns the local path of the module if it was found, or the empty string
   // if not. If not found, the module will have no symbols.
-  std::string AddModule(uint64_t base,
-                        const std::string& build_id,
-                        const std::string& module_name);
+  std::string AddModule(const ModuleLoadInfo& info);
+
+  // Replaces all current modules with the given updated list.
+  void SetModules(const std::vector<ModuleLoadInfo>& info);
 
   // Returns an !valid() Symbol if nothing can be resolved.
   Symbol SymbolAtAddress(uint64_t address) const;
 
  private:
-  struct ModuleRecord;
-
   SystemSymbols* system_;
 
-  std::map<uint64_t, ModuleRecord> modules_;
+  std::map<uint64_t, ModuleSymbolRecord> modules_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ProcessSymbols);
 };

@@ -8,15 +8,29 @@
 #include "garnet/bin/zxdb/client/process_impl.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/system_observer.h"
+#include "garnet/bin/zxdb/client/system_symbols_proxy.h"
 #include "garnet/bin/zxdb/client/target_impl.h"
 
 namespace zxdb {
 
-SystemImpl::SystemImpl(Session* session) : System(session) {
+SystemImpl::SystemImpl(Session* session)
+    : System(session), weak_factory_(this) {
   AddNewTarget(std::make_unique<TargetImpl>(this));
+
+  symbols_proxy_.Init([weak_system = weak_factory_.GetWeakPtr()](
+                          bool ids_loaded, const std::string& msg) {
+    if (weak_system) {
+      for (auto& observer : weak_system->observers())
+        observer.DidTryToLoadSymbolMapping(ids_loaded, msg);
+    }
+  });
 }
 
-SystemImpl::~SystemImpl() = default;
+SystemImpl::~SystemImpl() {
+  // Target destruction may depend on the symbol system. Ensure the targets
+  // get cleaned up first.
+  targets_.clear();
+}
 
 ProcessImpl* SystemImpl::ProcessImplFromKoid(uint64_t koid) const {
   for (const auto& target : targets_) {
@@ -90,8 +104,7 @@ void SystemImpl::Pause() {
   request.process_koid = 0;  // 0 means all processes.
   request.thread_koid = 0;   // 0 means all threads.
   session()->Send<debug_ipc::PauseRequest, debug_ipc::PauseReply>(
-      request,
-      std::function<void(const Err&, debug_ipc::PauseReply)>());
+      request, std::function<void(const Err&, debug_ipc::PauseReply)>());
 }
 
 void SystemImpl::Continue() {
@@ -100,8 +113,7 @@ void SystemImpl::Continue() {
   request.thread_koid = 0;   // 0 means all threads.
   request.how = debug_ipc::ResumeRequest::How::kContinue;
   session()->Send<debug_ipc::ResumeRequest, debug_ipc::ResumeReply>(
-      request,
-      std::function<void(const Err&, debug_ipc::ResumeReply)>());
+      request, std::function<void(const Err&, debug_ipc::ResumeReply)>());
 }
 
 void SystemImpl::AddNewTarget(std::unique_ptr<TargetImpl> target) {

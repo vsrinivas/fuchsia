@@ -15,7 +15,8 @@ class Err;
 enum class Syntax {
   kNormal,
   kComment,
-  kHeading
+  kHeading,
+  kError,
 };
 
 // This class collects output from commands so it can be put on the screen in

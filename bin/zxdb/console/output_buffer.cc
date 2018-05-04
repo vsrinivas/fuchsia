@@ -14,6 +14,7 @@ namespace {
 const char kNormalEscapeCode[] = "\x1b[0m";   // "[0m" = Normal.
 const char kBoldEscapeCode[] = "\x1b[1m";     // "[1m" = Bold.
 const char kCommentEscapeCode[] = "\x1b[2m";  // "[2m" = Faint.
+const char kErrorEscapeCode[] = "\x1b[31m";   // "[31m" = Red.
 
 }  // namespace
 
@@ -57,6 +58,8 @@ void OutputBuffer::WriteToStdout() const {
       fwrite(kBoldEscapeCode, 1, strlen(kBoldEscapeCode), stdout);
     else if (span.syntax == Syntax::kComment)
       fwrite(kCommentEscapeCode, 1, strlen(kCommentEscapeCode), stdout);
+    else if (span.syntax == Syntax::kError)
+      fwrite(kErrorEscapeCode, 1, strlen(kErrorEscapeCode), stdout);
 
     fwrite(span.text.data(), 1, span.text.size(), stdout);
 

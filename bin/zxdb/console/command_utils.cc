@@ -11,6 +11,7 @@
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/process.h"
+#include "garnet/bin/zxdb/client/symbols/symbol.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/command.h"
@@ -317,6 +318,13 @@ std::string DescribeBreakpoint(const ConsoleContext* context,
                            context->IdForBreakpoint(breakpoint),
                            scope.c_str(), enabled, stop.c_str(),
                            breakpoint->GetHitCount(), location.c_str());
+}
+
+std::string DescribeSymbol(const Symbol& symbol) {
+  if (!symbol.valid())
+    return "No symbol found.";
+  return symbol.file() + " " + symbol.function() + " " +
+      fxl::StringPrintf("%d", symbol.line());
 }
 
 void FormatColumns(const std::vector<ColSpec>& spec,

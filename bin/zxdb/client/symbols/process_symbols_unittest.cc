@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/zxdb/client/symbols/module_records.h"
 #include "garnet/bin/zxdb/client/symbols/process_symbols.h"
 #include "garnet/bin/zxdb/client/symbols/system_symbols.h"
 #include "garnet/public/lib/fxl/strings/string_view.h"
@@ -39,20 +40,23 @@ TEST(ProcessSymbols, Basic) {
       << "\"ls\" not found in <build_dir>/ids.txt";
 
   // Notify the process that "ls" has loaded.
-  uint64_t ls_base = 0x123561200;
-  std::string local_ls_path = process.AddModule(ls_base, ls_build_id, "ls");
+  ModuleLoadInfo load_info;
+  load_info.base = 0x123561200;
+  load_info.build_id = ls_build_id;
+  load_info.module_name = "ls";
+  std::string local_ls_path = process.AddModule(load_info);
   ASSERT_FALSE(local_ls_path.empty());
 
   // Asking for an address before the beginning should fail.
-  Symbol symbol = process.SymbolAtAddress(ls_base - 0x1000);
+  Symbol symbol = process.SymbolAtAddress(load_info.base - 0x1000);
   EXPECT_FALSE(symbol.valid()) << symbol.file() << " " << symbol.function();
 
   // Asking for a way big address should fail.
-  symbol = process.SymbolAtAddress(ls_base + 0x1000000000000);
+  symbol = process.SymbolAtAddress(load_info.base + 0x1000000000000);
   EXPECT_FALSE(symbol.valid()) << symbol.file() << " " << symbol.function();
 
   // Ask for an address inside "ls", it should resolve to *something*.
-  symbol = process.SymbolAtAddress(ls_base + 0x2000);
+  symbol = process.SymbolAtAddress(load_info.base + 0x2000);
   EXPECT_TRUE(symbol.valid());
 }
 

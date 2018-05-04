@@ -15,6 +15,7 @@ void AppendBreakpointVerbs(std::map<Verb, VerbRecord>* verbs);
 void AppendControlVerbs(std::map<Verb, VerbRecord>* verbs);
 void AppendMemoryVerbs(std::map<Verb, VerbRecord>* verbs);
 void AppendProcessVerbs(std::map<Verb, VerbRecord>* verbs);
+void AppendSymbolVerbs(std::map<Verb, VerbRecord>* verbs);
 void AppendSystemVerbs(std::map<Verb, VerbRecord>* verbs);
 void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs);
 

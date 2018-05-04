@@ -8,18 +8,23 @@
 #include <vector>
 
 #include "garnet/bin/zxdb/client/system.h"
+#include "garnet/bin/zxdb/client/system_symbols_proxy.h"
 #include "garnet/public/lib/fxl/macros.h"
+#include "garnet/public/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 
 class BreakpointImpl;
 class ProcessImpl;
+class SystemSymbolsProxy;
 class TargetImpl;
 
 class SystemImpl : public System {
  public:
   explicit SystemImpl(Session* session);
   ~SystemImpl() override;
+
+  SystemSymbolsProxy* symbols_proxy() { return &symbols_proxy_; }
 
   ProcessImpl* ProcessImplFromKoid(uint64_t koid) const;
 
@@ -35,10 +40,16 @@ class SystemImpl : public System {
   void Continue() override;
 
  private:
+  friend SystemSymbolsProxy;
+
   void AddNewTarget(std::unique_ptr<TargetImpl> target);
+
+  SystemSymbolsProxy symbols_proxy_;
 
   std::vector<std::unique_ptr<TargetImpl>> targets_;
   std::vector<std::unique_ptr<BreakpointImpl>> breakpoints_;
+
+  fxl::WeakPtrFactory<SystemImpl> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SystemImpl);
 };

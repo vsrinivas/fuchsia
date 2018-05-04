@@ -43,7 +43,7 @@ class MessageLoop {
   // and managed on one thread and sent to another thread to actually run (to
   // help with cross-thread task posting).
   MessageLoop();
-  ~MessageLoop();
+  virtual ~MessageLoop();
 
   // These must be called on the same thread as Run().
   virtual void Init();

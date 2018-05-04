@@ -17,7 +17,7 @@
 namespace zxdb {
 
 TargetImpl::TargetImpl(SystemImpl* system)
-    : Target(system->session()), impl_weak_factory_(this) {}
+    : Target(system->session()), system_(system), impl_weak_factory_(this) {}
 TargetImpl::~TargetImpl() = default;
 
 std::unique_ptr<TargetImpl> TargetImpl::Clone(SystemImpl* system) {

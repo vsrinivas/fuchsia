@@ -4,6 +4,7 @@
 
 static_library("symbols") {
   public = [
+    "module_records.h",
     "process_symbols.h",
     "symbol.h",
     "system_symbols.h",
@@ -16,6 +17,8 @@ static_library("symbols") {
     "system_symbols.cc",
   ]
 
+  # Note on deps: this should not depend on any other part of zxdb or the
+  # debug_ipc libraries so we can use the symbol handling in other contexts.
   deps = [
     "//third_party/llvm/lib/DebugInfo",
   ]

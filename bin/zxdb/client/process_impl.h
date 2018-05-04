@@ -9,11 +9,13 @@
 #include <map>
 #include <memory>
 
+#include "garnet/bin/zxdb/client/symbols_impl.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 
+class SymbolsImpl;
 class TargetImpl;
 class ThreadImpl;
 
@@ -28,9 +30,9 @@ class ProcessImpl : public Process {
   Target* GetTarget() const override;
   uint64_t GetKoid() const override;
   const std::string& GetName() const override;
+  Symbols* GetSymbols() override;
   void GetModules(
-      std::function<void(const Err&, std::vector<debug_ipc::Module>)>)
-      const override;
+      std::function<void(const Err&, std::vector<debug_ipc::Module>)>) override;
   std::vector<Thread*> GetThreads() const override;
   Thread* GetThreadFromKoid(uint64_t koid) override;
   void SyncThreads(std::function<void()> callback) override;
@@ -55,6 +57,8 @@ class ProcessImpl : public Process {
 
   // Threads indexed by their thread koid.
   std::map<uint64_t, std::unique_ptr<ThreadImpl>> threads_;
+
+  SymbolsImpl symbols_;
 
   fxl::WeakPtrFactory<ProcessImpl> weak_factory_;
 

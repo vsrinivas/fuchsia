@@ -19,6 +19,7 @@ class TargetImpl : public Target {
   explicit TargetImpl(SystemImpl* system);
   ~TargetImpl() override;
 
+  SystemImpl* system() { return system_; }
   ProcessImpl* process() { return process_.get(); }
 
   // Allocates a new target with the same settings as this one. This isn't
@@ -50,6 +51,8 @@ class TargetImpl : public Target {
                              const std::string& process_name);
 
   void OnKillOrDetachReply(const Err& err, uint32_t status, Callback callback);
+
+  SystemImpl* system_;  // Owns |this|.
 
   State state_ = kNone;
 

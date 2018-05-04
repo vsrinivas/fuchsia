@@ -90,6 +90,8 @@ class ConsoleContext
   void WillDestroyTarget(Target* target) override;
   void DidCreateBreakpoint(Breakpoint* breakpoint) override;
   void WillDestroyBreakpoint(Breakpoint* breakpoint) override;
+  void DidTryToLoadSymbolMapping(bool ids_loaded,
+                                 const std::string& msg) override;
 
   // TargetObserver implementation:
   void DidCreateProcess(Target* target, Process* process) override;

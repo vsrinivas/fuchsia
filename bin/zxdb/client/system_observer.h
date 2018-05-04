@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <string>
+
 namespace zxdb {
 
 class Breakpoint;
@@ -18,6 +20,12 @@ class SystemObserver {
   // Called immediately after creation / before destruction of a breakpoint.
   virtual void DidCreateBreakpoint(Breakpoint* breakpoint) {}
   virtual void WillDestroyBreakpoint(Breakpoint* breakpoint) {}
+
+  // Notification that the symbol mapping file was tried to load. The success
+  // of this will be in "ids_loaded", and a message (either good or bad)
+  // about the operation will be in "msg".
+  virtual void DidTryToLoadSymbolMapping(bool ids_loaded,
+                                         const std::string& msg) {}
 };
 
 }  // namespace zxdb

@@ -275,7 +275,12 @@ void ConsoleContext::WillDestroyBreakpoint(Breakpoint* breakpoint) {
 
   id_to_breakpoint_.erase(id);
   breakpoint_to_id_.erase(found_breakpoint);
+}
 
+void ConsoleContext::DidTryToLoadSymbolMapping(
+    bool ids_loaded, const std::string& msg) {
+  Console* console = Console::get();
+  console->Output(msg);
 }
 
 void ConsoleContext::DidCreateProcess(Target* target, Process* process) {
