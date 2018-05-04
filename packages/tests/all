@@ -35,6 +35,7 @@
         "garnet/packages/tests/power_manager",
         "garnet/packages/tests/runtime",
         "garnet/packages/tests/rust_crates",
+        "garnet/packages/tests/overnet",
         "garnet/packages/tests/scenic",
         "garnet/packages/tests/svc",
         "garnet/packages/tests/syslog",

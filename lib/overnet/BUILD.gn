@@ -1,0 +1,56 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+source_set("overnet") {
+  sources = [
+    "broadcast_sink.h",
+    "callback.h",
+    "router.h",
+    "router.cc",
+    "routing_header.h",
+    "routing_header.cc",
+    "sink.h",
+    "status.h",
+    "status.cc",
+    "varint.h",
+    "varint.cc",
+  ]
+}
+
+executable("overnet_unittests") {
+  testonly = true
+
+  sources = [
+    "run_all_tests.cc",
+    "broadcast_sink_test.cc",
+    "callback_test.cc",
+    "router_test.cc",
+    "routing_header_test.cc",
+    "status_test.cc",
+    "varint_test.cc",
+  ]
+
+  deps = [
+    ":overnet",
+    "//third_party/googletest:gtest",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+package("overnet_tests") {
+  testonly = true
+  deprecated_system_image = true
+
+  deps = [
+    ":overnet_unittests",
+  ]
+
+  tests = [
+    {
+       name = "overnet_unittests"
+    }
+  ]
+}
