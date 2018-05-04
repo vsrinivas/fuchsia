@@ -212,6 +212,10 @@ package("modular_tests") {
       dest = "modular_tests/trigger_test_module"
     },
     {
+      name = "trigger_test_user_shell"
+      dest = "modular_tests/trigger_test_user_shell"
+    },
+    {
       name = "user_shell_test_user_shell"
       dest = "modular_tests/user_shell_test_user_shell"
     },

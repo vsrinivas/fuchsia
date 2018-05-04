@@ -18,6 +18,28 @@ group("trigger") {
   public_deps = [
     ":trigger_test_agent",
     ":trigger_test_module",
+    ":trigger_test_user_shell",
+  ]
+}
+
+executable("trigger_test_user_shell") {
+  testonly = true
+
+  sources = [
+    "trigger_test_user_shell.cc",
+  ]
+  deps = [
+    ":defs",
+    "//garnet/public/lib/callback",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/test_runner/fidl",
+    "//peridot/lib/rapidjson",
+    "//peridot/lib/testing",
+    "//peridot/lib/testing:component_base",
+    "//peridot/public/lib:fidl",
+    "//peridot/tests/common:defs",
   ]
 }
 

@@ -9,11 +9,9 @@
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/module_driver.h"
-#include "lib/callback/scoped_callback.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include "peridot/tests/common/defs.h"
 #include "peridot/tests/trigger/defs.h"
 
 using modular::testing::TestPoint;
@@ -30,13 +28,13 @@ class TestApp {
   TestApp(
       modular::ModuleHost* const module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
-      fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
-      : module_host_(module_host) {
+      fidl::InterfaceRequest<
+          component::ServiceProvider> /*outgoing_services*/) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();
 
     // Exercise ComponentContext.ConnectToAgent()
-    module_host_->module_context()->GetComponentContext(
+    module_host->module_context()->GetComponentContext(
         component_context_.NewRequest());
 
     component::ServiceProviderPtr agent_services;
@@ -44,17 +42,31 @@ class TestApp {
                                        agent_controller_.NewRequest());
     ConnectToService(agent_services.get(), agent_service_.NewRequest());
 
-    // The message queue that is used to verify deletion triggers.
-    component_context_->ObtainMessageQueue("test", msg_queue_.NewRequest());
-    msg_queue_->GetToken([this](fidl::StringPtr token) {
+    // The message queue that is used to verify deletion triggers from explicit
+    // deletes.
+    component_context_->ObtainMessageQueue("explicit_test",
+                                           explicit_msg_queue_.NewRequest());
+    // The message queue that is used to verify deletion triggers from deletes
+    // when the module's namespace is torn down. The test user shell will
+    // verify that the agent is notified of this queues deletion.
+    component_context_->ObtainMessageQueue("implicit_test",
+                                           implicit_msg_queue_.NewRequest());
+    implicit_msg_queue_->GetToken([this](fidl::StringPtr token) {
+      modular::testing::GetStore()->Put("trigger_test_module_queue_token",
+                                        token, [] {});
       agent_service_->ObserveMessageQueueDeletion(token);
-      TestMessageQueueMessageTrigger();
+      explicit_msg_queue_->GetToken([this](fidl::StringPtr token) {
+        explicit_queue_token_ = token;
+        agent_service_->ObserveMessageQueueDeletion(token);
+
+        TestMessageQueueMessageTrigger();
+      });
     });
   }
 
   TestPoint received_trigger_token_{"Received trigger token"};
   TestPoint agent_connected_{"Agent accepted connection"};
-  TestPoint agent_stopped_{"Agent1 stopped"};
+  TestPoint agent_stopped_{"Agent stopped"};
   TestPoint task_triggered_{"Agent task triggered"};
   void TestMessageQueueMessageTrigger() {
     Await("trigger_test_agent_connected", [this] {
@@ -70,12 +82,11 @@ class TestApp {
 
           // Send a message to the stopped agent which should
           // trigger it.
-          modular::MessageSenderPtr message_sender;
           component_context_->GetMessageSender(token,
-                                               message_sender.NewRequest());
-          message_sender->Send("Time to wake up...");
+                                               message_sender_.NewRequest());
+          message_sender_->Send("Time to wake up...");
 
-          Await("task_id", [this] {
+          Await("message_queue_message", [this] {
             task_triggered_.Pass();
             Await("trigger_test_agent_stopped", [this] {
               TestMessageQueueDeletionTrigger();
@@ -100,10 +111,11 @@ class TestApp {
         Await("trigger_test_agent_stopped", [this] {
           // When the agent has stopped, delete the message queue and verify
           // that the agent is woken up and notified.
-          component_context_->DeleteMessageQueue("test");
-          Await("message_queue_deletion", [this] {
+          component_context_->DeleteMessageQueue("explicit_test");
+          Await(explicit_queue_token_, [this] {
             queue_deleted_.Pass();
-            Put(modular::testing::kTestShutdown);
+            modular::testing::GetStore()->Put("trigger_test_module_done", "",
+                                              [] {});
           });
         });
       });
@@ -111,7 +123,6 @@ class TestApp {
   }
 
   TestPoint stopped_{"Root module stopped"};
-
   // Called by ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
@@ -119,11 +130,16 @@ class TestApp {
   }
 
  private:
-  modular::ModuleHost* const module_host_;
   modular::AgentControllerPtr agent_controller_;
   modular_test_trigger::TriggerTestServicePtr agent_service_;
   modular::ComponentContextPtr component_context_;
-  modular::MessageQueuePtr msg_queue_;
+  // The queue used for observing explicit queue deletion.
+  modular::MessageQueuePtr explicit_msg_queue_;
+  std::string explicit_queue_token_;
+  // The queue used for observing queue deletion when module's namespace is torn
+  // down.
+  modular::MessageQueuePtr implicit_msg_queue_;
+  modular::MessageSenderPtr message_sender_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };

@@ -30,8 +30,9 @@ void Init(component::ApplicationContext* app_context,
       app_context->ConnectToEnvironmentService<test_runner::TestRunner>();
   g_test_runner.set_error_handler([] {
     if (g_connected) {
-      FXL_LOG(ERROR) << "Lost connection to TestRunner. Did the active test "
-                        "call Logout() while modules were still running?";
+      FXL_LOG(ERROR) << "Lost connection to TestRunner. This indicates that "
+                        "there was an observed process that was terminated "
+                        "without calling TestRunner.Done().";
     } else {
       FXL_LOG(ERROR) << "This application must be run under test_runner.";
     }

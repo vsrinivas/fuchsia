@@ -97,12 +97,29 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   // Will also start and initialize the agent as a consequence.
   void ForwardConnectionsToAgent(const std::string& agent_url);
 
-  // For triggers based on message queues.
-  void ScheduleMessageQueueTask(
-      const std::string& agent_url,
-      const std::string& task_id,
-      const std::string& queue_identifier,
-      AgentRunnerStorage::TriggerInfo::TaskType task_type);
+  // Schedules a task that triggers when a new message is available on a message
+  // queue.
+  //
+  // |agent_url| The URL of the agent creating the trigger. Only the message
+  // queue owner can schedule a task with a new message trigger, and thus this
+  // is also the agent url of the owner of the message queue.
+  // |queue_name| The name of the message queue to observe.
+  // |task_id| The identifier for the task.
+  void ScheduleMessageQueueNewMessageTask(const std::string& agent_url,
+                                          const std::string& queue_name,
+                                          const std::string& task_id);
+
+  // Schedules a task that triggers when a message queue is deleted.
+  //
+  // |agent_url| The URL of the agent creating the trigger.
+  // |queue_token| The token of the queue that is to be observed.
+  // |task_id| The identifier of the task.
+  void ScheduleMessageQueueDeletionTask(const std::string& agent_url,
+                                        const std::string& queue_token,
+                                        const std::string& task_id);
+
+  // Deletes the task scheduled for |agent_url| and |task_id|, regardless of the
+  // task type.
   void DeleteMessageQueueTask(const std::string& agent_url,
                               const std::string& task_id);
 

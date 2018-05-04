@@ -27,11 +27,11 @@ class TestApp : modular_test_trigger::TriggerTestService {
     agent_context_->GetComponentContext(component_context_.NewRequest());
 
     // Create a message queue and schedule a task to be run on receiving a
-    // message on it.
+    // message on it. This message queue is passed to the module.
     component_context_->ObtainMessageQueue("Trigger Queue",
                                            msg_queue_.NewRequest());
     modular::TaskInfo task_info;
-    task_info.task_id = "task_id";
+    task_info.task_id = "message_queue_message";
     task_info.trigger_condition.set_message_on_queue("Trigger Queue");
     task_info.persistent = true;
     agent_host->agent_context()->ScheduleTask(std::move(task_info));
@@ -60,7 +60,8 @@ class TestApp : modular_test_trigger::TriggerTestService {
   // Called by AgentDriver.
   void Terminate(const std::function<void()>& done) {
     modular::testing::GetStore()->Put("trigger_test_agent_stopped", "",
-                                      [done] { modular::testing::Done(done); });
+                                      [done] { done(); });
+    modular::testing::Done(done);
   }
 
  private:
@@ -73,7 +74,7 @@ class TestApp : modular_test_trigger::TriggerTestService {
   // |TriggerTestService|
   void ObserveMessageQueueDeletion(fidl::StringPtr queue_token) override {
     modular::TaskInfo task_info;
-    task_info.task_id = "message_queue_deletion";
+    task_info.task_id = queue_token;
     task_info.trigger_condition.set_queue_deleted(queue_token);
     task_info.persistent = true;
     agent_context_->ScheduleTask(std::move(task_info));

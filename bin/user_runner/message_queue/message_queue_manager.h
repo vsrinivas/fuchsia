@@ -64,27 +64,54 @@ class MessageQueueManager : PageClient {
   void GetMessageSender(const std::string& queue_token,
                         fidl::InterfaceRequest<MessageSender> request);
 
-  // Used by AgentRunner to look for new messages on queues which have
-  // a trigger associated with it. If a queue corresponding to
-  // |component_namespace| x |component_instance_id| x |queue_name| does not
-  // exist, a new one is created.
+  // Registers a watcher that will be called when there is a new message on a
+  // queue corresponding to |component_namespace| x |component_instance_id| x
+  // |queue_name|.
   //
-  // Registering a new watcher stomps over any existing watcher.
-  void RegisterWatcher(const std::string& component_namespace,
-                       const std::string& component_instance_id,
-                       const std::string& queue_name,
-                       WatcherEventType event_type,
-                       const std::function<void()>& watcher);
-  // Drops the specified watcher for |event_type|.
+  // |component_namespace| is the namespace of the watching component (i.e. the
+  //   creator of the queue).
+  // |component_instance_id| is the namespace of the watching component (i.e.
+  //   the creator of the queue).
+  // |queue_name| is the name of the message queue.
   //
-  // |queue_name| is the name of the queue, which is required for dropping
-  // WatcherEventType::NEW_MESSAGE. |queuE_token| is the token of the queue,
-  // which is required for dropping WatherEventType::QUEUE_DELETED.
-  void DropWatcher(const std::string& component_namespace,
-                   const std::string& component_instance_id,
-                   const std::string& queue_name,
-                   const std::string& queue_token,
-                   WatcherEventType event_type);
+  // Only one message watcher can be active for a given queue, and registering a
+  // new one will remove any existing watcher.
+  void RegisterMessageWatcher(const std::string& component_namespace,
+                              const std::string& component_instance_id,
+                              const std::string& queue_name,
+                              const std::function<void()>& watcher);
+
+  // Registers a watcher that gets notified when a message queue with
+  // |queue_token| is deleted.
+  //
+  // Only one deletion watcher can be active for a given queue, and registering
+  // a new one will remove any existing watcher.
+  //
+  // |watcher_namespace| is the namespace of the component that is watching the
+  //   message queue deletion.
+  // |watcher_instance_id| is the instance id of the component that is watching
+  //   the message queue deletion.
+  // |queue_token| is the message queue token for the queue to be observed.
+  // |watcher| is the callback that will be triggered.
+  //
+  // Note that this is different from |RegisterMessageWatcher|, where the passed
+  // in namespace, instance ids, and queue name directly describe the queue.
+  void RegisterDeletionWatcher(const std::string& watcher_namespace,
+                               const std::string& watcher_instance_id,
+                               const std::string& queue_token,
+                               const std::function<void()>& watcher);
+
+  // Drops the watcher for |component_namespace| x |component_instance_id| x
+  // |queue_name|.
+  void DropMessageWatcher(const std::string& component_namespace,
+                          const std::string& component_instance_id,
+                          const std::string& queue_name);
+
+  // Drops the watcher described by |queue_info| from watching for the
+  // deletion of the queue with |queue_token|.
+  void DropDeletionWatcher(const std::string& watcher_namespace,
+                           const std::string& watcher_instance_id,
+                           const std::string& queue_token);
 
  private:
   struct MessageQueueInfo;
@@ -96,21 +123,10 @@ class MessageQueueManager : PageClient {
       ComponentNamespace,
       std::map<ComponentInstanceId, std::map<ComponentQueueName, Value>>>;
 
-  // A pair where first is a representation of the component watching, and
-  // second is the watch function associated with that watcher.
-  using DeletionWatcher = std::pair<MessageQueueInfo, std::function<void()>>;
+  using DeletionWatchers =
+      std::map<std::string, std::map<std::string, std::function<void()>>>;
 
   static void XdrMessageQueueInfo(XdrContext* xdr, MessageQueueInfo* data);
-
-  // Drops the watcher described by |queue_info| from watching for new
-  // messages on |queue_name|.
-  void DropMessageWatcher(const MessageQueueInfo& queue_info,
-                          const std::string& queue_name);
-
-  // Drops the watcher described by |queue_info| from watching for the
-  // deletion of the queue with |queue_token|.
-  void DropDeletionWatcher(const MessageQueueInfo& queue_info,
-                           const std::string& queue_token);
 
   // Returns the |MessageQueueStorage| for the queue_token. Creates it
   // if it doesn't exist yet.
@@ -118,6 +134,10 @@ class MessageQueueManager : PageClient {
 
   // Clears the |MessageQueueStorage| for the queue_token.
   void ClearMessageQueueStorage(const MessageQueueInfo& info);
+
+  // Clears the |MessageQueueStorage| for all the queues in the provided
+  // component namespace.
+  void ClearMessageQueueStorage(const std::string& component_namespace);
 
   // |FindQueueName()| and |EraseQueueName()| are helpers used to operate on
   // component (namespace, id, queue name) mappings.
@@ -128,14 +148,26 @@ class MessageQueueManager : PageClient {
       const ComponentQueueNameMap<ValueType>& queue_map,
       const MessageQueueInfo& info);
 
+  // Erases the |ValueType| stored under the provided |info|.
+  // Implementation is in the .cc.
   template <typename ValueType>
   void EraseQueueName(ComponentQueueNameMap<ValueType>& queue_map,
                       const MessageQueueInfo& info);
+  // Erases all |ValueType|s under the provided namespace.
+  // Implementation is in the .cc.
+  template <typename ValueType>
+  void EraseNamespace(ComponentQueueNameMap<ValueType>& queue_map,
+                      const std::string& component_namespace);
 
   const std::string local_path_;
 
   // A map of queue_token to |MessageQueueStorage|.
   std::map<std::string, std::unique_ptr<MessageQueueStorage>> message_queues_;
+
+  // A map of queue_token to |MessageQueueInfo|. This allows for easy lookup of
+  // message queue information for registering watchers that take message queue
+  // tokens as parameters.
+  std::map<std::string, MessageQueueInfo> message_queue_infos_;
 
   // A map of component instance id and queue name to queue tokens.
   // Entries are only here while a |MessageQueueStorage| exists.
@@ -147,11 +179,11 @@ class MessageQueueManager : PageClient {
   // |MessageQueueStorage| is available.
   ComponentQueueNameMap<std::function<void()>> pending_watcher_callbacks_;
 
-  OperationCollection operation_collection_;
+  // A map containing watchers that are to be notified when the described
+  // message queue is deleted.
+  ComponentQueueNameMap<DeletionWatchers> deletion_watchers_;
 
-  // A map from message queue token to any associated watchers that are to be
-  // notified when the queue is deleted.
-  std::map<std::string, std::vector<DeletionWatcher>> deletion_watchers_;
+  OperationCollection operation_collection_;
 
   // Operations implemented here.
   class GetQueueTokenCall;

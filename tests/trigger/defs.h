@@ -12,6 +12,8 @@ namespace {
 constexpr int kTimeoutMilliseconds = 10000;
 constexpr char kTestAgent[] =
     "file:///system/test/modular_tests/trigger_test_agent";
+const char kModuleUrl[] =
+    "file:///system/test/modular_tests/trigger_test_module";
 
 }  // namespace
 
