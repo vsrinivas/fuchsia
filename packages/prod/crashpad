@@ -1,0 +1,6 @@
+{
+    "packages": {
+        "crashpad_handler": "//third_party/crashpad:crashpad_handler"
+    }
+}
+

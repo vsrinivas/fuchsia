@@ -10,6 +10,7 @@
         "garnet/packages/prod/build_info",
         "garnet/packages/prod/cmdutils",
         "garnet/packages/prod/cobalt_client",
+        "garnet/packages/prod/crashpad",
         "garnet/packages/prod/debug_agent",
         "garnet/packages/prod/debugserver",
         "garnet/packages/prod/device_settings",

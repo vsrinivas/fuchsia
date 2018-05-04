@@ -1,0 +1,8 @@
+{
+    "imports": [
+        "garnet/packages/prod/crashpad"
+    ],
+    "packages": {
+        "crashpad_test": "//third_party/crashpad:crashpad_test"
+    }
+}
