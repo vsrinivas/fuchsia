@@ -18,7 +18,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/component/component_context_impl.h"
+#include "peridot/bin/user_runner/component_context_impl.h"
 #include "peridot/bin/user_runner/message_queue/message_queue_manager.h"
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
 #include "peridot/bin/user_runner/device_map_impl.h"

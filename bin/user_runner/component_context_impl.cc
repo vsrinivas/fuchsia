@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/component/component_context_impl.h"
+#include "peridot/bin/user_runner/component_context_impl.h"
 
 #include <utility>
 

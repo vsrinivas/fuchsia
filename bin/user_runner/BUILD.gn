@@ -44,6 +44,7 @@ executable("user_runner_bin") {
   ]
 
   deps = [
+    ":component_context",
     ":focus",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp",
@@ -54,7 +55,6 @@ executable("user_runner_bin") {
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/bin/agent_runner",
     "//peridot/bin/cloud_provider_firebase/fidl",
-    "//peridot/bin/component",
     "//peridot/bin/device_runner/cobalt",
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/user_runner/entity_provider_runner",
@@ -108,6 +108,32 @@ executable("dev_user_shell_bin") {
     "//peridot/lib/rapidjson",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp",
+  ]
+}
+
+source_set("component_context") {
+  sources = [
+    "component_context_impl.cc",
+    "component_context_impl.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/agent_runner:public",
+    "//peridot/bin/ledger/fidl",
+    "//peridot/bin/user_runner/entity_provider_runner",
+    "//peridot/bin/user_runner/message_queue",
+    "//peridot/lib/fidl:array_to_string",
+    "//peridot/lib/fidl:json_xdr",
+    "//peridot/lib/fidl:message_receiver_client",
+    "//peridot/lib/ledger_client:operations",
+    "//peridot/lib/ledger_client:page_client",
+    "//peridot/lib/ledger_client:storage",
+    "//peridot/lib/ledger_client:types",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib/async/cpp:operation",
+    "//peridot/public/lib/ledger/fidl",
   ]
 }
 

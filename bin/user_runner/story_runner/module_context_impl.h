@@ -16,7 +16,7 @@
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/component/component_context_impl.h"
+#include "peridot/bin/user_runner/component_context_impl.h"
 
 namespace modular {
 
