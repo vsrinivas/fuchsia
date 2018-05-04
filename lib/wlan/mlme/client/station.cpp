@@ -446,6 +446,7 @@ zx_status_t Station::HandleAuthentication(const ImmutableMgmtFrame<Authenticatio
         // TODO(tkilbourn): is this the right result code?
         service::SendAuthConfirm(device_, bssid_,
                                  wlan_mlme::AuthenticateResultCodes::AUTHENTICATION_REJECTED);
+        auth_timeout_ = zx::time();
         return ZX_ERR_BAD_STATE;
     }
 
