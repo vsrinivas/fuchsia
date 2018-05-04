@@ -17,8 +17,6 @@ RealmHubHolder::RealmHubHolder(fbl::RefPtr<fs::PseudoDir> root)
     : root_dir_(root) {}
 
 zx_status_t RealmHubHolder::AddRealm(const Realm* realm) {
-  // TODO: Remove once transition is complete.
-  root_dir_->AddEntry(realm->label(), realm->hub_dir());
   bool child_found = false;
   fbl::RefPtr<fs::Vnode> realm_instance_vnode;
   fbl::RefPtr<fs::PseudoDir> realm_instance_dir;
@@ -41,8 +39,6 @@ zx_status_t RealmHubHolder::AddRealm(const Realm* realm) {
 }
 
 zx_status_t RealmHubHolder::RemoveRealm(const Realm* realm) {
-  // TODO: Remove once transition is complete.
-  root_dir_->RemoveEntry(realm->label());
   fbl::RefPtr<fs::Vnode> realm_instance_vnode;
   zx_status_t status =
       realm_dir_->Lookup(&realm_instance_vnode, realm->label());
@@ -60,9 +56,6 @@ zx_status_t RealmHubHolder::RemoveRealm(const Realm* realm) {
 
 zx_status_t RealmHubHolder::AddComponent(
     const ApplicationControllerImpl* application) {
-  // TODO: Remove once transition is complete.
-  root_dir_->AddEntry(application->label(), application->info_dir());
-
   bool child_found = false;
   fbl::RefPtr<fs::PseudoDir> component_instance_dir;
   fbl::RefPtr<fs::Vnode> component_instance_vnode;
@@ -87,8 +80,6 @@ zx_status_t RealmHubHolder::AddComponent(
 
 zx_status_t RealmHubHolder::RemoveComponent(
     const ApplicationControllerImpl* application) {
-  // TODO: Remove once transition is complete.
-  root_dir_->RemoveEntry(application->label());
   fbl::RefPtr<fs::Vnode> component_instance_vnode;
   zx_status_t status =
       component_dir_->Lookup(&component_instance_vnode, application->label());
