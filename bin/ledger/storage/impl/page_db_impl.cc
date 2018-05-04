@@ -190,9 +190,17 @@ Status PageDbImpl::HasObject(CoroutineHandler* handler,
 Status PageDbImpl::GetObjectStatus(CoroutineHandler* handler,
                                    ObjectIdentifier object_identifier,
                                    PageDbObjectStatus* object_status) {
+  // Check must be done in ascending order of status, so that a change of status
+  // between 2 reads does not create the case where no key is found.
+  // That said, the most common expected status is SYNCED, so for performance
+  // reasons, it is better to check it first.
+  // By checking it first and then checking all statuses in ascending order we
+  // both ensure correctness and performant lookup.
+  // The only case that would generate a spurious lookup is when the status is
+  // changed concurrently, which is a rare occurence.
   for (PageDbObjectStatus possible_status :
        {PageDbObjectStatus::SYNCED, PageDbObjectStatus::TRANSIENT,
-        PageDbObjectStatus::LOCAL}) {
+        PageDbObjectStatus::LOCAL, PageDbObjectStatus::SYNCED}) {
     bool has_key;
     RETURN_ON_ERROR(db_.HasKey(
         handler, ObjectStatusRow::GetKeyFor(possible_status, object_identifier),

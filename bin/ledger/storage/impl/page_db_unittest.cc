@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/storage/impl/page_db.h"
 
+#include <lib/async/cpp/task.h>
+
 #include <algorithm>
 #include <memory>
 #include <random>
@@ -417,6 +419,60 @@ TEST_F(PageDbTest, SyncMetadata) {
       EXPECT_EQ(value, returned_value);
     }
   });
+}
+
+// This test reproduces the crash of LE-451. The crash is due to a subtle
+// ordering of coroutine execution that is exactly reproduced here.
+TEST_F(PageDbTest, LE_451_ReproductionTest) {
+  auto id = RandomObjectIdentifier();
+  RunInCoroutine([&](CoroutineHandler* handler) {
+    EXPECT_EQ(Status::OK, page_db_.WriteObject(
+                              handler, id, DataSource::DataChunk::Create(""),
+                              PageDbObjectStatus::LOCAL));
+  });
+  CoroutineHandler* handler1 = nullptr;
+  CoroutineHandler* handler2 = nullptr;
+  coroutine_service_.StartCoroutine([&](CoroutineHandler* handler) {
+    handler1 = handler;
+    std::unique_ptr<PageDb::Batch> batch;
+    EXPECT_EQ(Status::OK, page_db_.StartBatch(handler, &batch));
+    EXPECT_EQ(Status::OK, batch->SetObjectStatus(handler, id, PageDbObjectStatus::SYNCED));
+    if (handler->Yield() == coroutine::ContinuationStatus::INTERRUPTED) {
+      return;
+    }
+    EXPECT_EQ(Status::OK, batch->Execute(handler));
+    handler1 = nullptr;
+  });
+  coroutine_service_.StartCoroutine([&](CoroutineHandler* handler) {
+    handler2 = handler;
+    std::unique_ptr<PageDb::Batch> batch;
+    EXPECT_EQ(Status::OK, page_db_.StartBatch(handler, &batch));
+    if (handler->Yield() == coroutine::ContinuationStatus::INTERRUPTED) {
+      return;
+    }
+    EXPECT_EQ(Status::OK, batch->SetObjectStatus(handler, id, PageDbObjectStatus::LOCAL));
+    EXPECT_EQ(Status::OK, batch->Execute(handler));
+    handler2 = nullptr;
+  });
+  ASSERT_TRUE(handler1);
+  ASSERT_TRUE(handler2);
+
+  // Reach the 2 yield points.
+  RunLoopUntilIdle();
+
+  // Posting a task at this level ensures that the right interleaving between
+  // reading and writing object status happens.
+  async::PostTask(message_loop_.async(), [&] {
+      handler1->Continue(coroutine::ContinuationStatus::OK);
+  });
+  handler2->Continue(coroutine::ContinuationStatus::OK);
+
+  // Finish the test.
+  RunLoopUntilIdle();
+
+  // Ensures both coroutines are terminated.
+  ASSERT_FALSE(handler1);
+  ASSERT_FALSE(handler2);
 }
 
 }  // namespace
