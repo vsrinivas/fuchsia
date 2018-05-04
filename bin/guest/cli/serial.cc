@@ -107,15 +107,18 @@ static fbl::unique_ptr<InputReader> input_reader;
 // Write socket output to stdout.
 static fbl::unique_ptr<OutputWriter> output_writer;
 
-void handle_serial(uint32_t guest_id) {
-  handle_serial(connect(guest_id));
+void handle_serial(uint32_t env_id, uint32_t cid) {
+  handle_serial(connect(env_id, cid));
 }
 
 void handle_serial(guest::GuestController* guest_controller) {
-  guest_controller->FetchGuestSerial([](zx::socket socket) {
-    input_reader.reset(new InputReader);
-    output_writer.reset(new OutputWriter);
-    input_reader->Start(socket.get());
-    output_writer->Start(std::move(socket));
-  });
+  guest_controller->FetchGuestSerial(
+      static_cast<void (*)(zx::socket)>(handle_serial));
+}
+
+void handle_serial(zx::socket socket) {
+  input_reader.reset(new InputReader);
+  output_writer.reset(new OutputWriter);
+  input_reader->Start(socket.get());
+  output_writer->Start(std::move(socket));
 }

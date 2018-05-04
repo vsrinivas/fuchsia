@@ -14,6 +14,10 @@ source_set("lib") {
     "guest_holder.h",
     "guest_manager_impl.cc",
     "guest_manager_impl.h",
+    "vsock_endpoint.cc",
+    "vsock_endpoint.h",
+    "vsock_server.cc",
+    "vsock_server.h",
   ]
 
   public_deps = [
@@ -43,4 +47,33 @@ package("guestmgr") {
     ":bin",
   ]
   binary = "guestmgr"
+}
+
+executable("guestmgr_unittests") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  sources = [
+    "vsock_server-unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+package("guestmgr_tests") {
+  testonly = true
+  deprecated_system_image = true
+
+  deps = [
+    ":guestmgr_unittests",
+  ]
+
+  tests = [
+    {
+      name = "guestmgr_unittests"
+    },
+  ]
 }

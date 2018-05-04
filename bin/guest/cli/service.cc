@@ -14,23 +14,16 @@
 // Pointer to the controller for the guest.
 guest::GuestControllerPtr g_guest_controller;
 
-guest::GuestController* connect(uint32_t guest_id) {
+guest::GuestController* connect(uint32_t env_id, uint32_t cid) {
   guest::GuestManagerSyncPtr guestmgr;
   component::ConnectToEnvironmentService(guestmgr.NewRequest());
 
   fidl::VectorPtr<guest::GuestEnvironmentInfo> env_infos;
-  guestmgr->ListEnvironments(&env_infos);
-  for (const auto& env_info : *env_infos) {
-    for (const auto& guest_info : *env_info.guests) {
-      if (guest_info.id == guest_id) {
-        guest::GuestEnvironmentSyncPtr env_ptr;
-        guestmgr->ConnectToEnvironment(env_info.id, env_ptr.NewRequest());
-        env_ptr->ConnectToGuest(guest_id, g_guest_controller.NewRequest());
-        g_guest_controller.set_error_handler(
-            [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
-        return g_guest_controller.get();
-      }
-    }
-  }
-  return nullptr;
+  guest::GuestEnvironmentSyncPtr env_ptr;
+  guestmgr->ConnectToEnvironment(env_id, env_ptr.NewRequest());
+
+  env_ptr->ConnectToGuest(cid, g_guest_controller.NewRequest());
+  g_guest_controller.set_error_handler(
+      [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+  return g_guest_controller.get();
 }

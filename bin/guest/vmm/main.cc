@@ -72,7 +72,6 @@ static constexpr uint64_t kUartBases[kNumUarts] = {
 };
 #endif
 
-static constexpr uint32_t kVirtioVsockGuestCid = 3;
 static constexpr size_t kInputQueueDepth = 64;
 
 static void balloon_stats_handler(machina::VirtioBalloon* balloon,
@@ -509,8 +508,8 @@ int main(int argc, char** argv) {
   }
 
   // Setup vsock device.
-  machina::VirtioVsock vsock(guest.phys_mem(), guest.device_async(),
-                             kVirtioVsockGuestCid);
+  machina::VirtioVsock vsock(application_context.get(), guest.phys_mem(),
+                             guest.device_async());
   status = bus.Connect(vsock.pci_device());
   if (status != ZX_OK) {
     return status;

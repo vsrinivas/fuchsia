@@ -8,8 +8,6 @@
 
 namespace guestmgr {
 
-static uint32_t g_next_guest_id = 0;
-
 GuestEnvironmentImpl::GuestEnvironmentImpl(
     uint32_t id,
     const std::string& label,
@@ -18,6 +16,9 @@ GuestEnvironmentImpl::GuestEnvironmentImpl(
     : id_(id), label_(label), context_(context) {
   CreateApplicationEnvironment(label);
   AddBinding(std::move(request));
+  zx_status_t status =
+      socket_server_.CreateEndpoint(guest::kHostCid, &host_socket_endpoint_);
+  FXL_DCHECK(status == ZX_OK);
 }
 
 GuestEnvironmentImpl::~GuestEnvironmentImpl() = default;
@@ -29,7 +30,8 @@ void GuestEnvironmentImpl::AddBinding(
 
 void GuestEnvironmentImpl::LaunchGuest(
     guest::GuestLaunchInfo launch_info,
-    fidl::InterfaceRequest<guest::GuestController> controller) {
+    fidl::InterfaceRequest<guest::GuestController> controller,
+    LaunchGuestCallback callback) {
   component::Services guest_services;
   component::ApplicationControllerPtr guest_app_controller;
   component::ApplicationLaunchInfo guest_launch_info;
@@ -40,20 +42,42 @@ void GuestEnvironmentImpl::LaunchGuest(
   app_launcher_->CreateApplication(std::move(guest_launch_info),
                                    guest_app_controller.NewRequest());
 
-  uint32_t guest_id = g_next_guest_id++;
+  // Setup Socket Endpoint
+  std::unique_ptr<VsockEndpoint> vsock_endpoint;
+  uint32_t cid = next_guest_cid_++;
+  zx_status_t status = socket_server_.CreateEndpoint(cid, &vsock_endpoint);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to allocate socked endpoint on CID " << cid
+                   << ": " << status;
+    callback(guest::GuestInfo());
+    return;
+  }
+  guest::SocketEndpointPtr remote_endpoint;
+  guest_services.ConnectToService(remote_endpoint.NewRequest());
+  vsock_endpoint->BindSocketEndpoint(std::move(remote_endpoint));
+
   auto& label = launch_info.label ? launch_info.label : launch_info.url;
-  auto holder =
-      std::make_unique<GuestHolder>(guest_id, label, std::move(guest_services),
-                                    std::move(guest_app_controller));
-  guest_app_controller.set_error_handler(
-      [this, guest_id] { guests_.erase(guest_id); });
+  auto holder = std::make_unique<GuestHolder>(
+      cid, label, std::move(vsock_endpoint), std::move(guest_services),
+      std::move(guest_app_controller));
+  guest_app_controller.set_error_handler([this, cid] { guests_.erase(cid); });
   holder->AddBinding(std::move(controller));
-  guests_.insert({guest_id, std::move(holder)});
+  guests_.insert({cid, std::move(holder)});
+
+  guest::GuestInfo info;
+  info.cid = cid;
+  info.label = label;
+  callback(std::move(info));
 }
 
-void GuestEnvironmentImpl::GetSocketEndpoint(
-    fidl::InterfaceRequest<guest::SocketEndpoint> request) {
-  // TODO(tjdetwiler): Implement vsock APIs.
+void GuestEnvironmentImpl::GetSocketConnector(
+    fidl::InterfaceRequest<guest::SocketConnector> request) {
+  host_socket_endpoint_->GetSocketConnector(std::move(request));
+}
+
+void GuestEnvironmentImpl::SetSocketAcceptor(
+    fidl::InterfaceHandle<guest::SocketAcceptor> acceptor) {
+  host_socket_endpoint_->SetSocketAcceptor(std::move(acceptor));
 }
 
 fidl::VectorPtr<guest::GuestInfo> GuestEnvironmentImpl::ListGuests() {
@@ -61,7 +85,7 @@ fidl::VectorPtr<guest::GuestInfo> GuestEnvironmentImpl::ListGuests() {
       fidl::VectorPtr<guest::GuestInfo>::New(0);
   for (const auto& it : guests_) {
     guest::GuestInfo guest_info;
-    guest_info.id = it.first;
+    guest_info.cid = it.first;
     guest_info.label = it.second->label();
     guest_infos.push_back(std::move(guest_info));
   }

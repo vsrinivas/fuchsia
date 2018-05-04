@@ -4,15 +4,40 @@
 
 library guest;
 
-// Invoked on every request to connect to port currently being listended on.
+// |kHostCid| is reserved for use to address the host via vsock communications.
+//
+// CIDs for guests are assigned by the GuestManager and can be found in the
+// corresponding |GuestInfo| structure.
+const uint32 kHostCid = 2;
+
+// Exposed by commponents capable of listening on vsockets. On a request to
+// establish a connection, the |Accept| method will be called. If the port is
+// open and accepting connections, the implementation should return |ZX_OK|,
+// create a new socket, and return the remote endpoint.
+//
+// Also see |SocketEndpoint|.
 interface SocketAcceptor {
-  1: OnAccept(uint32 source_cid, handle<socket> socket);
+  1: Accept(uint32 src_cid, uint32 src_port, uint32 port)
+      -> (status s, handle<socket>? socket);
 };
 
-// Represents a single socket endpoint with an associated context ID (cid).
+// Allow for out-bound connections to be established to the target (cid,port)
+// target. The caller must allocate a unique port number |src_port| to identify
+// this connection.
+interface SocketConnector {
+  1: Connect(uint32 src_port, uint32 cid, uint32 port)
+      -> (status s, handle<socket>? socket);
+};
+
+// Exposed by components capable of handling vsock traffic. During
+// initialization the guestmgr will assign a unique context ID (CID) to this
+// endpoint and provide a |SocketConnector| that can be used to establish out-
+// bound connections on this CID. The implementation should provide a
+// |SocketAcceptor| implementation that can handle any in-bound connection
+// requests.
 [Discoverable]
 interface SocketEndpoint {
-  1: Connect(uint32 cid, uint32 port) -> (handle<socket> socket);
-  2: Listen(uint32 port, SocketAcceptor acceptor);
-  3: GetCid() -> (uint32 cid);
+  1: SetContextId(uint32 cid,
+                  SocketConnector connector,
+                  request<SocketAcceptor> acceptor);
 };

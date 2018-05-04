@@ -19,7 +19,7 @@ void handle_list() {
   for (const auto& env_info : *env_infos) {
     printf("env:%-4u          %s\n", env_info.id, env_info.label->c_str());
     for (const auto& guest_info : *env_info.guests) {
-      printf(" guest:%-4u       %s\n", guest_info.id,
+      printf(" guest:%-4u       %s\n", guest_info.cid,
              guest_info.label->c_str());
     }
   }

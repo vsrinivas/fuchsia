@@ -26,8 +26,9 @@ void handle_launch(int argc, const char* argv[]) {
   for (int i = 0; i < argc - 1; ++i) {
     launch_info.vmm_args.push_back(argv[i + 1]);
   }
+  guest::GuestInfo guest_info;
   guest_env->LaunchGuest(std::move(launch_info),
-                         g_guest_controller.NewRequest());
+                         g_guest_controller.NewRequest(), &guest_info);
 
   // Create the framebuffer view.
   views_v1::ViewProviderSyncPtr view_provider;

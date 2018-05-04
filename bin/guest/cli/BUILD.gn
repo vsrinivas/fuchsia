@@ -19,6 +19,8 @@ executable("bin") {
     "serial.h",
     "service.cc",
     "service.h",
+    "socat.cc",
+    "socat.h",
   ]
 
   deps = [

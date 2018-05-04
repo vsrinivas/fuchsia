@@ -16,11 +16,9 @@ struct GuestEnvironmentInfo {
 };
 
 struct GuestInfo {
-  // A globally unique identifier for a guest instance.
-  //
-  // Note we guarantee this value will be unique across all envrionments on the
-  // the system.
-  uint32 id;
+  // Context ID to use to address this guest for vsocket communications. This
+  // can also be used to uniquely identify a guest within an environment.
+  uint32 cid;
 
   // The string provided in the |GuestLaunchInfo| structure.
   string label;

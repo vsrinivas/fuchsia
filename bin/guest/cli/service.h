@@ -9,6 +9,6 @@
 
 extern guest::GuestControllerPtr g_guest_controller;
 
-guest::GuestController* connect(uint32_t guest_id);
+guest::GuestController* connect(uint32_t env_id, uint32_t cid);
 
 #endif  // GARNET_BIN_GUEST_CLI_SERVICE_H_

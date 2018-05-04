@@ -7,12 +7,14 @@
 namespace guestmgr {
 
 GuestHolder::GuestHolder(
-    uint32_t id,
+    uint32_t cid,
     std::string label,
+    std::unique_ptr<VsockEndpoint> socket_endpoint,
     component::Services services,
     component::ApplicationControllerPtr application_controller)
-    : id_(id),
+    : cid_(cid),
       label_(std::move(label)),
+      socket_endpoint_(std::move(socket_endpoint)),
       guest_services_(std::move(services)),
       guest_app_controller_(std::move(application_controller)) {
   guest_services_.ConnectToService(guest_controller_.NewRequest());

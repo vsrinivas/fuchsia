@@ -34,8 +34,8 @@ static void dump(zx::vmo vmo, zx_vaddr_t addr, size_t len) {
   hexdump_ex(reinterpret_cast<void*>(guest_addr + addr), len, addr);
 }
 
-void handle_dump(uint32_t guest_id, zx_vaddr_t addr, size_t len) {
-  guest::GuestController* controller = connect(guest_id);
+void handle_dump(uint32_t env_id, uint32_t cid, zx_vaddr_t addr, size_t len) {
+  guest::GuestController* controller = connect(env_id, cid);
   if (controller == nullptr) {
     fsl::MessageLoop::GetCurrent()->PostQuitTask();
     return;

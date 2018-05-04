@@ -8,6 +8,7 @@
 #include <fuchsia/cpp/component.h>
 #include <fuchsia/cpp/guest.h>
 
+#include "garnet/bin/guest/mgr/vsock_endpoint.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/svc/cpp/services.h"
@@ -18,22 +19,25 @@ namespace guestmgr {
 // lifetime of the guest.
 class GuestHolder {
  public:
-  GuestHolder(uint32_t id,
+  GuestHolder(uint32_t cid,
               std::string label,
+              std::unique_ptr<VsockEndpoint> socket_endpoint,
               component::Services services,
               component::ApplicationControllerPtr application_controller);
 
-  uint32_t id() const { return id_; }
+  uint32_t cid() const { return cid_; }
   const std::string& label() const { return label_; }
 
   void AddBinding(fidl::InterfaceRequest<guest::GuestController> controller);
 
  private:
-  const uint32_t id_;
+  const uint32_t cid_;
   const std::string label_;
+  std::unique_ptr<VsockEndpoint> socket_endpoint_;
   component::Services guest_services_;
   component::ApplicationControllerPtr guest_app_controller_;
   guest::GuestControllerPtr guest_controller_;
+
   fidl::BindingSet<guest::GuestController> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GuestHolder);
