@@ -63,9 +63,9 @@ void FakeController::Settings::ApplyDualModeDefaults() {
   le_acl_data_packet_length = 512;
   le_total_num_acl_data_packets = 1;
 
-  SetBit(&lmp_features_page0, hci::LMPFeature::kSimultaneousLEAndBREDR);
   SetBit(&lmp_features_page0, hci::LMPFeature::kLESupported);
   SetBit(&lmp_features_page0, hci::LMPFeature::kExtendedFeatures);
+  SetBit(&lmp_features_page1, hci::LMPFeature::kSimultaneousLEAndBREDR);
 
   AddBREDRSupportedCommands();
   AddLESupportedCommands();
@@ -74,7 +74,7 @@ void FakeController::Settings::ApplyDualModeDefaults() {
 void FakeController::Settings::ApplyLEOnlyDefaults() {
   ApplyDualModeDefaults();
 
-  UnsetBit(&lmp_features_page0, hci::LMPFeature::kSimultaneousLEAndBREDR);
+  UnsetBit(&lmp_features_page1, hci::LMPFeature::kSimultaneousLEAndBREDR);
   SetBit(&lmp_features_page0, hci::LMPFeature::kBREDRNotSupported);
 
   std::memset(supported_commands, 0, sizeof(supported_commands));
