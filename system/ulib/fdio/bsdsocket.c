@@ -264,11 +264,11 @@ int getaddrinfo(const char* __restrict node,
         errno = EINVAL;
         return EAI_SYSTEM;
     }
-    // Wait for the the DNS service to publish the socket device
-    // if necessary.
+    // Wait for Netstack to publish the socket device if necessary.
+    // TODO(joshlf): Use DNS (get_dns()) instead of Netstack
     // TODO: move to a better mechanism when available.
     unsigned retry = 0;
-    while ((r = __fdio_open_at(&io, get_dns(), ZXRIO_SOCKET_DIR_NONE,
+    while ((r = __fdio_open_at(&io, get_netstack(), ZXRIO_SOCKET_DIR_NONE,
                                0, 0)) == ZX_ERR_NOT_FOUND) {
         if (retry >= 24) {
             // 10-second timeout
