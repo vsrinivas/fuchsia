@@ -18,6 +18,8 @@
 ##   --fars-dir           Directory to be used to build the meta FAR
 ##   --update-repo        Directory to be used to publish the meta FAR and
 ##                        associated content blobs
+##   --mono-versions      Base the repository versioning on monotonically
+##                        increasing values instead of time since epoch
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
@@ -38,6 +40,7 @@ function main {
   local argz=()
   local c=0
   local has_dir=0
+  local mono_version=0
 
   # first parse the non-pkg args which should be named
   while (( "$#" )); do
@@ -50,6 +53,10 @@ function main {
         argz+=($1)
         shift
         has_dir=1
+        ;;
+      --mono-versions)
+        mono_version=1
+        shift
         ;;
       --*)
         argz+=($1)
@@ -84,6 +91,11 @@ function main {
     esac
   done
 
+  if [[ mono_version -eq 1 ]]; then
+    argz+=("--ver-scheme" "mono")
+  else
+    argz+=("--ver-scheme" "time")
+  fi
   # no build directory, use the default
   if [[ has_dir -eq 0 ]]; then
     build_dir="${FUCHSIA_BUILD_DIR}"
