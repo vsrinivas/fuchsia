@@ -2,7 +2,7 @@
     "packages": {
         "action_log": "//peridot/bin/action_log",
         "context_engine": "//peridot/bin/context_engine",
-        "maxwell": "//peridot/bin/user:maxwell",
+        "maxwell": "//peridot/bin/maxwell",
         "maxwell_agents": "//peridot:maxwell_agents",
         "module_resolver": "//peridot/bin/module_resolver",
         "module_package_indexer": "//peridot/bin/module_resolver/module_package_indexer",

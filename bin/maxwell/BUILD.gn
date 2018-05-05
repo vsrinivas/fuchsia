@@ -19,11 +19,11 @@ package("maxwell") {
 
   resources = [
     {
-      path = rebase_path("//peridot/bin/user/resources/default_config.json")
+      path = rebase_path("//peridot/bin/maxwell/resources/default_config.json")
       dest = "maxwell/default_config.json"
     },
     {
-      path = rebase_path("//peridot/bin/user/resources/test_config.json")
+      path = rebase_path("//peridot/bin/maxwell/resources/test_config.json")
       dest = "maxwell/test_config.json"
     },
   ]

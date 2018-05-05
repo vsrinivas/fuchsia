@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/user/agent_launcher.h"
+#include "peridot/bin/maxwell/agent_launcher.h"
 
 #include "lib/fxl/logging.h"
 

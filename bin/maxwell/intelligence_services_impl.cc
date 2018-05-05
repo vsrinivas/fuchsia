@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/user/intelligence_services_impl.h"
+#include "peridot/bin/maxwell/intelligence_services_impl.h"
 
 #include <fuchsia/cpp/modular.h>
 

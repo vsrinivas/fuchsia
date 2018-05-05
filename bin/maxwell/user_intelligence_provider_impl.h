@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_USER_USER_INTELLIGENCE_PROVIDER_IMPL_H_
-#define PERIDOT_BIN_USER_USER_INTELLIGENCE_PROVIDER_IMPL_H_
+#ifndef PERIDOT_BIN_MAXWELL_USER_INTELLIGENCE_PROVIDER_IMPL_H_
+#define PERIDOT_BIN_MAXWELL_USER_INTELLIGENCE_PROVIDER_IMPL_H_
 
 #include <deque>
 
 #include <fuchsia/cpp/modular.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/svc/cpp/services.h"
-#include "peridot/bin/user/agent_launcher.h"
-#include "peridot/bin/user/config.h"
+#include "peridot/bin/maxwell/agent_launcher.h"
+#include "peridot/bin/maxwell/config.h"
 #include "peridot/lib/util/rate_limited_retry.h"
 
 namespace maxwell {
@@ -126,4 +126,4 @@ class UserIntelligenceProviderFactoryImpl
 
 }  // namespace maxwell
 
-#endif  // PERIDOT_BIN_USER_USER_INTELLIGENCE_PROVIDER_IMPL_H_
+#endif  // PERIDOT_BIN_MAXWELL_USER_INTELLIGENCE_PROVIDER_IMPL_H_

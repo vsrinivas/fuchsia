@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_USER_INTELLIGENCE_SERVICES_IMPL_H_
-#define PERIDOT_BIN_USER_INTELLIGENCE_SERVICES_IMPL_H_
+#ifndef PERIDOT_BIN_MAXWELL_INTELLIGENCE_SERVICES_IMPL_H_
+#define PERIDOT_BIN_MAXWELL_INTELLIGENCE_SERVICES_IMPL_H_
 
 #include <fuchsia/cpp/modular.h>
 
@@ -43,4 +43,4 @@ class IntelligenceServicesImpl : public modular::IntelligenceServices {
 
 }  // namespace maxwell
 
-#endif  // PERIDOT_BIN_USER_INTELLIGENCE_SERVICES_IMPL_H_
+#endif  // PERIDOT_BIN_MAXWELL_INTELLIGENCE_SERVICES_IMPL_H_

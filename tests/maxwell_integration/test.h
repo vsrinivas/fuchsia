@@ -10,7 +10,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app/cpp/service_provider_impl.h"
-#include "peridot/bin/user/agent_launcher.h"
+#include "peridot/bin/maxwell/agent_launcher.h"
 #include "peridot/lib/testing/component_context_fake.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"
 

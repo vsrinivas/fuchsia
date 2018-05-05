@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/user/user_intelligence_provider_impl.h"
+#include "peridot/bin/maxwell/user_intelligence_provider_impl.h"
 
 #include <fuchsia/cpp/bluetooth_low_energy.h>
 #include <fuchsia/cpp/cobalt.h>
@@ -12,7 +12,7 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "peridot/bin/user/intelligence_services_impl.h"
+#include "peridot/bin/maxwell/intelligence_services_impl.h"
 
 namespace maxwell {
 
@@ -230,26 +230,26 @@ UserIntelligenceProviderImpl::AddStandardServices(
   fidl::VectorPtr<fidl::StringPtr> service_names;
 
   service_names.push_back(modular::ContextWriter::Name_);
-  agent_host->AddService<modular::ContextWriter>(fxl::MakeCopyable([
-    this, client_info = CloneScope(agent_info), url
-  ](fidl::InterfaceRequest<modular::ContextWriter> request) {
-    context_engine_->GetWriter(CloneScope(client_info), std::move(request));
-  }));
+  agent_host->AddService<modular::ContextWriter>(fxl::MakeCopyable(
+      [this, client_info = CloneScope(agent_info),
+       url](fidl::InterfaceRequest<modular::ContextWriter> request) {
+        context_engine_->GetWriter(CloneScope(client_info), std::move(request));
+      }));
 
   service_names.push_back(modular::ContextReader::Name_);
-  agent_host->AddService<modular::ContextReader>(fxl::MakeCopyable([
-    this, client_info = CloneScope(agent_info), url
-  ](fidl::InterfaceRequest<modular::ContextReader> request) {
-    context_engine_->GetReader(CloneScope(client_info), std::move(request));
-  }));
+  agent_host->AddService<modular::ContextReader>(fxl::MakeCopyable(
+      [this, client_info = CloneScope(agent_info),
+       url](fidl::InterfaceRequest<modular::ContextReader> request) {
+        context_engine_->GetReader(CloneScope(client_info), std::move(request));
+      }));
 
   service_names.push_back(modular::IntelligenceServices::Name_);
-  agent_host->AddService<modular::IntelligenceServices>(fxl::MakeCopyable([
-    this, client_info = CloneScope(agent_info), url
-  ](fidl::InterfaceRequest<modular::IntelligenceServices> request) {
-    this->GetComponentIntelligenceServices(CloneScope(client_info),
-                                           std::move(request));
-  }));
+  agent_host->AddService<modular::IntelligenceServices>(fxl::MakeCopyable(
+      [this, client_info = CloneScope(agent_info),
+       url](fidl::InterfaceRequest<modular::IntelligenceServices> request) {
+        this->GetComponentIntelligenceServices(CloneScope(client_info),
+                                               std::move(request));
+      }));
 
   service_names.push_back(modular::ProposalPublisher::Name_);
   agent_host->AddService<modular::ProposalPublisher>(

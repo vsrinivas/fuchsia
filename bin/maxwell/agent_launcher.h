@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_USER_AGENT_LAUNCHER_H_
-#define PERIDOT_BIN_USER_AGENT_LAUNCHER_H_
+#ifndef PERIDOT_BIN_MAXWELL_AGENT_LAUNCHER_H_
+#define PERIDOT_BIN_MAXWELL_AGENT_LAUNCHER_H_
 
 #include <fuchsia/cpp/component.h>
 
@@ -29,4 +29,4 @@ class AgentLauncher {
 
 }  // namespace maxwell
 
-#endif  // PERIDOT_BIN_USER_AGENT_LAUNCHER_H_
+#endif  // PERIDOT_BIN_MAXWELL_AGENT_LAUNCHER_H_

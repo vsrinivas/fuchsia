@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_USER_CONFIG_H_
-#define PERIDOT_BIN_USER_CONFIG_H_
+#ifndef PERIDOT_BIN_MAXWELL_CONFIG_H_
+#define PERIDOT_BIN_MAXWELL_CONFIG_H_
 
 #include <list>
 #include <ostream>
@@ -26,4 +26,4 @@ std::ostream& operator<<(std::ostream& out, const Config& config);
 
 }  // namespace maxwell
 
-#endif  // PERIDOT_BIN_USER_CONFIG_H_
+#endif  // PERIDOT_BIN_MAXWELL_CONFIG_H_
