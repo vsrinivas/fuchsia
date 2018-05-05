@@ -29,7 +29,7 @@ try -j16 or -j8.
 
 On Ubuntu this should obtain the necessary pre-reqs:
 ```
-sudo apt-get install texinfo libglib2.0-dev autoconf libtool libsdl-dev build-essential
+sudo apt-get install texinfo libglib2.0-dev autoconf libtool bison libsdl-dev build-essential
 ```
 
 ### macOS
