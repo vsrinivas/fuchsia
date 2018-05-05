@@ -45,11 +45,15 @@ public:
     // It is safe to delete ManagedVfs from within the closure.
     //
     // It is unsafe to call Shutdown multiple times.
-    void Shutdown(ShutdownCallback handler) override;
+    virtual void Shutdown(ShutdownCallback handler) override;
 
 private:
     // Posts the task for OnShutdownComplete if it is safe to do so.
     void CheckForShutdownComplete();
+
+    // Identifies if the filesystem has fully terminated, and is
+    // ready for "OnShutdownComplete" to execute.
+    bool IsTerminated() const;
 
     // Invokes the handler from |Shutdown| once all connections have been
     // released. Additionally, unmounts all sub-mounted filesystems, if any

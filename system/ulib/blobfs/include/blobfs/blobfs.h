@@ -132,6 +132,19 @@ public:
     virtual ~VnodeBlob();
     void CompleteSync();
 
+    // When blob VMOs are cloned and returned to clients, blobfs watches
+    // the original VMO handle for the signal |ZX_VMO_ZERO_CHILDREN|.
+    // While this signal is not set, the blob's Vnode keeps an extra
+    // reference to itself to prevent teardown while clients are using
+    // this Vmo. This reference is internally called the "clone watcher".
+    //
+    // This function may be called on a blob to tell it to forcefully release
+    // the "reference to itself" that is kept when the blob is mapped.
+    //
+    // Returns this reference, if it exists, to provide control over
+    // when the Vnode destructor is executed.
+    fbl::RefPtr<VnodeBlob> CloneWatcherTeardown();
+
     // Constructs a blob, reads in data, verifies the contents, then destroys the in-memory copy.
     static zx_status_t VerifyBlob(Blobfs* bs, size_t node_index);
 private:

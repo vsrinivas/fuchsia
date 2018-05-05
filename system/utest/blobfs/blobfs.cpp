@@ -949,7 +949,66 @@ static bool UmountWithOpenFile(void) {
     ASSERT_TRUE(VerifyContents(fd.get(), info->data.get(), info->size_data));
     ASSERT_EQ(close(fd.release()), 0, "Could not close blob");
 
-    // TODO(smklein): Verify unmount while mapped doesn't break anything
+    ASSERT_EQ(unlink(info->path), 0);
+    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
+    END_TEST;
+}
+
+template <FsTestType TestType>
+static bool UmountWithMappedFile(void) {
+    BEGIN_TEST;
+    BlobfsTest blobfsTest(TestType);
+    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
+
+    fbl::unique_ptr<blob_info_t> info;
+    ASSERT_TRUE(GenerateBlob(1 << 16, &info));
+    fbl::unique_fd fd;
+    ASSERT_TRUE(MakeBlob(info.get(), &fd));
+
+    void* addr = mmap(nullptr, info->size_data, PROT_READ, MAP_SHARED, fd.get(), 0);
+    ASSERT_NONNULL(addr);
+    ASSERT_EQ(close(fd.release()), 0);
+
+    // Intentionally don't unmap the file descriptor: Unmount anyway.
+    ASSERT_TRUE(blobfsTest.Remount());
+    // Just closing our local handle; the connection should be disconnected.
+    ASSERT_EQ(munmap(addr, info->size_data), 0);
+
+    fd.reset(open(info->path, O_RDONLY));
+    ASSERT_GE(fd.get(), 0, "Failed to open blob");
+    ASSERT_TRUE(VerifyContents(fd.get(), info->data.get(), info->size_data));
+    ASSERT_EQ(close(fd.release()), 0, "Could not close blob");
+
+    ASSERT_EQ(unlink(info->path), 0);
+    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
+    END_TEST;
+}
+
+template <FsTestType TestType>
+static bool UmountWithOpenMappedFile(void) {
+    BEGIN_TEST;
+    BlobfsTest blobfsTest(TestType);
+    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
+
+    fbl::unique_ptr<blob_info_t> info;
+    ASSERT_TRUE(GenerateBlob(1 << 16, &info));
+    fbl::unique_fd fd;
+    ASSERT_TRUE(MakeBlob(info.get(), &fd));
+
+    void* addr = mmap(nullptr, info->size_data, PROT_READ, MAP_SHARED, fd.get(), 0);
+    ASSERT_NONNULL(addr);
+
+    // Intentionally don't close the file descriptor: Unmount anyway.
+    ASSERT_TRUE(blobfsTest.Remount());
+    // Just closing our local handle; the connection should be disconnected.
+    ASSERT_EQ(munmap(addr, info->size_data), 0);
+    ASSERT_EQ(close(fd.release()), -1);
+    ASSERT_EQ(errno, EPIPE);
+
+    fd.reset(open(info->path, O_RDONLY));
+    ASSERT_GE(fd.get(), 0, "Failed to open blob");
+    ASSERT_TRUE(VerifyContents(fd.get(), info->data.get(), info->size_data));
+    ASSERT_EQ(close(fd.release()), 0, "Could not close blob");
 
     ASSERT_EQ(unlink(info->path), 0);
     ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
@@ -2014,6 +2073,8 @@ RUN_TEST_FOR_ALL_TYPES(MEDIUM, CorruptedBlob)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, CorruptedDigest)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, EdgeAllocation)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, UmountWithOpenFile)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, UmountWithMappedFile)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, UmountWithOpenMappedFile)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, CreateUmountRemountSmall)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, EarlyRead)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, WaitForRead)

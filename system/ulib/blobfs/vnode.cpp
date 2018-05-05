@@ -282,6 +282,15 @@ void VnodeBlob::CompleteSync() {
     atomic_store(&syncing_, false);
 }
 
+fbl::RefPtr<VnodeBlob> VnodeBlob::CloneWatcherTeardown() {
+    if (clone_watcher_.is_pending()) {
+        clone_watcher_.Cancel();
+        clone_watcher_.set_object(ZX_HANDLE_INVALID);
+        return fbl::move(clone_ref_);
+    }
+    return nullptr;
+}
+
 zx_status_t VnodeBlob::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
     fd_count_++;
     return ZX_OK;

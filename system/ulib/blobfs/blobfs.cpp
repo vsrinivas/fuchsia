@@ -459,6 +459,7 @@ void VnodeBlob::HandleNoClones(async_t* async, async::WaitBase* wait,
                                zx_status_t status, const zx_packet_signal_t* signal) {
     ZX_DEBUG_ASSERT(status == ZX_OK);
     ZX_DEBUG_ASSERT((signal->observed & ZX_VMO_ZERO_CHILDREN) != 0);
+    ZX_DEBUG_ASSERT(clone_watcher_.object() != ZX_HANDLE_INVALID);
     clone_watcher_.set_object(ZX_HANDLE_INVALID);
     clone_ref_ = nullptr;
 }
@@ -718,8 +719,23 @@ void Blobfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
     ZX_DEBUG_ASSERT_MSG(writeback_ != nullptr, "Shutdown requires writeback thread to sync");
 
     // 1) Shutdown all external connections to blobfs.
-    ManagedVfs::Shutdown([this, cb = fbl::move(cb)] (zx_status_t status) mutable {
-        // 2) Flush all pending work to blobfs to the underlying storage.
+    ManagedVfs::Shutdown([this, cb = fbl::move(cb)](zx_status_t status) mutable {
+        // 2a) Shutdown all internal connections to blobfs.
+        // Store the Vnodes in a vector to avoid destroying
+        // them while holding the hash lock.
+        fbl::Vector<fbl::RefPtr<VnodeBlob>> internal_references;
+        {
+            fbl::AutoLock lock(&hash_lock_);
+            for (auto& blob : open_hash_) {
+                auto vn = blob.CloneWatcherTeardown();
+                if (vn != nullptr) {
+                    internal_references.push_back(fbl::move(vn));
+                }
+            }
+        }
+        internal_references.reset();
+
+        // 2b) Flush all pending work to blobfs to the underlying storage.
         Sync([this, cb = fbl::move(cb)](zx_status_t status) mutable {
             async::PostTask(async(), [this, cb = fbl::move(cb)]() mutable {
                 // 3) Ensure the underlying disk has also flushed.
@@ -1257,7 +1273,7 @@ void Blobfs::VnodeReleaseSoft(VnodeBlob* raw_vn) {
     fbl::AutoLock lock(&hash_lock_);
     raw_vn->ResurrectRef();
     fbl::RefPtr<VnodeBlob> vn = fbl::internal::MakeRefPtrNoAdopt(raw_vn);
-    ZX_ASSERT((raw_vn = open_hash_.erase(raw_vn->GetKey())) != nullptr);
+    ZX_ASSERT(open_hash_.erase(raw_vn->GetKey()) != nullptr);
     ZX_ASSERT(VnodeInsertClosedLocked(fbl::move(vn)) == ZX_OK);
 }
 

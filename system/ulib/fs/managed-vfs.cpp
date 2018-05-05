@@ -19,6 +19,10 @@ ManagedVfs::~ManagedVfs() {
     ZX_DEBUG_ASSERT(connections_.is_empty());
 }
 
+bool ManagedVfs::IsTerminated() const {
+    return is_shutting_down_ && connections_.is_empty();
+}
+
 // Asynchronously drop all connections.
 void ManagedVfs::Shutdown(ShutdownCallback handler) {
     ZX_DEBUG_ASSERT(handler);
@@ -28,31 +32,29 @@ void ManagedVfs::Shutdown(ShutdownCallback handler) {
         is_shutting_down_ = true;
 
         UninstallAll(ZX_TIME_INFINITE);
-        if (connections_.is_empty()) {
-            CheckForShutdownComplete();
-        } else {
-            // Signal the teardown on channels in a way that doesn't potentially
-            // pull them out from underneath async callbacks.
-            for (auto& c : connections_) {
-                c.AsyncTeardown();
-            }
+
+        // Signal the teardown on channels in a way that doesn't potentially
+        // pull them out from underneath async callbacks.
+        for (auto& c : connections_) {
+            c.AsyncTeardown();
         }
+
+        CheckForShutdownComplete();
     });
     ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
 // Trigger "OnShutdownComplete" if all preconditions have been met.
 void ManagedVfs::CheckForShutdownComplete() {
-    if (connections_.is_empty() && is_shutting_down_) {
+    if (IsTerminated()) {
         shutdown_task_.Post(async());
     }
 }
 
 void ManagedVfs::OnShutdownComplete(async_t*, async::TaskBase*, zx_status_t status) {
-    ZX_ASSERT_MSG(connections_.is_empty(),
+    ZX_ASSERT_MSG(IsTerminated(),
                   "Failed to complete VFS shutdown: dispatcher status = %d\n", status);
     ZX_DEBUG_ASSERT(shutdown_handler_);
-    ZX_DEBUG_ASSERT(is_shutting_down_);
 
     auto handler = fbl::move(shutdown_handler_);
     handler(status);
