@@ -452,11 +452,13 @@ zx_status_t xhci_start(xhci_t* xhci) {
 
     xhci_start_device_thread(xhci);
 
+#if defined(__x86_64__)
     // TODO(jocelyndang): start xdc in a new process.
     zx_status_t status = xdc_bind(xhci->zxdev, xhci->bti_handle, xhci->mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "xhci_start: xdc_bind failed %d\n", status);
     }
+#endif
 
     return ZX_OK;
 }
