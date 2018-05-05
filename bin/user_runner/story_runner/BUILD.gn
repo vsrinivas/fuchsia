@@ -43,7 +43,7 @@ source_set("story_runner") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/views/fidl:v1",
-    "//peridot/bin/agent_runner:public",
+    "//peridot/bin/user_runner/agent_runner:public",
     "//peridot/bin/device_runner/cobalt",
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/user_runner:component_context",

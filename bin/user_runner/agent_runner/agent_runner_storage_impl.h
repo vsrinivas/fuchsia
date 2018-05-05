@@ -8,7 +8,7 @@
 #include "lib/async/cpp/operation.h"
 #include "lib/fxl/macros.h"
 #include <fuchsia/cpp/ledger.h>
-#include "peridot/bin/agent_runner/agent_runner_storage.h"
+#include "peridot/bin/user_runner/agent_runner/agent_runner_storage.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/agent_runner/agent_runner.h"
+#include "peridot/bin/user_runner/agent_runner/agent_runner.h"
 
 #include <map>
 #include <set>
@@ -14,8 +14,8 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "peridot/bin/agent_runner/agent_context_impl.h"
-#include "peridot/bin/agent_runner/agent_runner_storage_impl.h"
+#include "peridot/bin/user_runner/agent_runner/agent_context_impl.h"
+#include "peridot/bin/user_runner/agent_runner/agent_runner_storage_impl.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/storage.h"

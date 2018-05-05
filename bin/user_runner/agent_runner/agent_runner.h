@@ -24,7 +24,7 @@
 #include "lib/fxl/macros.h"
 #include <fuchsia/cpp/ledger.h>
 #include <fuchsia/cpp/modular.h>
-#include "peridot/bin/agent_runner/agent_runner_storage.h"
+#include "peridot/bin/user_runner/agent_runner/agent_runner_storage.h"
 #include <fuchsia/cpp/ledger_internal.h>
 
 namespace modular {

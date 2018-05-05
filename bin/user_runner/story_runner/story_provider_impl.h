@@ -19,7 +19,7 @@
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/agent_runner/agent_runner.h"
+#include "peridot/bin/user_runner/agent_runner/agent_runner.h"
 #include "peridot/bin/user_runner/message_queue/message_queue_manager.h"
 #include "peridot/bin/user_runner/component_context_impl.h"
 #include "peridot/lib/fidl/app_client.h"

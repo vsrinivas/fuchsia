@@ -23,7 +23,7 @@
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/agent_runner/agent_runner_storage_impl.h"
+#include "peridot/bin/user_runner/agent_runner/agent_runner_storage_impl.h"
 #include "peridot/bin/user_runner/entity_provider_runner/entity_provider_launcher.h"
 #include "peridot/bin/user_runner/entity_provider_runner/entity_provider_runner.h"
 #include "peridot/lib/common/async_holder.h"
