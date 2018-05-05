@@ -5,8 +5,7 @@
 import("//build/compiled_action.gni")
 import("//build/package.gni")
 
-module_manifest_schema =
-    "//peridot/bin/package_manager/metadata_schemas/module.json"
+module_manifest_schema = "//peridot/build/module_manifest_schema.json"
 
 # This template generates a target that will verify the supplied module
 # manifest.
@@ -70,7 +69,9 @@ template("verify_module_manifest") {
 #   packages = [ "my_module_package1", "my_module_package2" ]
 # }
 template("initial_module_packages") {
-  assert(defined(invoker.packages), "'packages' must be defined for $target_name")
+  assert(defined(invoker.packages),
+         "'packages' must be defined for $target_name")
+
   # NOTE: The fully resolved path will be
   # /system/data/module_manifest_repository
   # This must match that given in bin/module_resolver/module_resolver_main.cc
