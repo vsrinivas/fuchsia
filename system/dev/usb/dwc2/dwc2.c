@@ -525,6 +525,12 @@ static zx_status_t dwc_cancel_all(void* ctx, uint32_t device_id, uint8_t ep_addr
     return ZX_ERR_NOT_SUPPORTED;
 }
 
+static zx_status_t dwc_get_bti(void* ctx, zx_handle_t* out_handle) {
+    dwc_usb_t* usb_dwc = ctx;
+    *out_handle = usb_dwc->bti_handle;
+    return ZX_OK;
+}
+
 static void dwc_request_queue(void* ctx, usb_request_t* usb_req) {
     dwc_usb_t* usb_dwc = ctx;
     usb_header_t* header = &usb_req->header;
@@ -775,6 +781,7 @@ static usb_hci_protocol_ops_t dwc_hci_protocol = {
     .reset_endpoint = dwc_reset_endpoint,
     .get_max_transfer_size = dwc_get_max_transfer_size,
     .cancel_all = dwc_cancel_all,
+    .get_bti = dwc_get_bti,
 };
 
 static void dwc_handle_channel_irq(uint32_t channel, dwc_usb_t* dwc) {
