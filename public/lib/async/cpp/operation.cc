@@ -23,6 +23,12 @@ OperationContainer::OperationContainer() = default;
 
 OperationContainer::~OperationContainer() = default;
 
+void OperationContainer::Add(OperationBase* const o) {
+  FXL_DCHECK(o != nullptr);
+  o->SetOwner(this);
+  Hold(o);  // Takes ownership.
+}
+
 void OperationContainer::Schedule(OperationBase* const o) {
   o->Schedule();
 }
@@ -106,7 +112,9 @@ void OperationQueue::Cont() {
 OperationBase::OperationBase(const char* const trace_name,
                              OperationContainer* const c,
                              std::string trace_info)
-    : container_(c->GetWeakPtr()),
+    // While we transition all operations to be explicitly added to containers
+    // with OperationContainer::Add(), some |c|'s are going to be null.
+    : container_(c != nullptr ? c->GetWeakPtr() : fxl::WeakPtr<OperationContainer>()),
       weak_ptr_factory_(this),
       trace_name_(trace_name),
       trace_id_(TRACE_NONCE()),
@@ -121,6 +129,12 @@ void OperationBase::Ready() {
 
 fxl::WeakPtr<OperationBase> OperationBase::GetWeakPtr() {
   return weak_ptr_factory_.GetWeakPtr();
+}
+
+void OperationBase::SetOwner(OperationContainer* c) {
+  FXL_DCHECK(!container_) << "If using OperationContainer::Add(), do NOT "
+    << "pass an OperationContainer* in as a constructor argument.";
+  container_ = c->GetWeakPtr();
 }
 
 void OperationBase::Schedule() {

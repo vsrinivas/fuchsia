@@ -26,6 +26,9 @@ class OperationContainer {
   OperationContainer();
   virtual ~OperationContainer();
 
+  // Adds |o| to this container and takes ownership.
+  virtual void Add(OperationBase* o) final;
+
  protected:
   void Schedule(OperationBase* o);
   void InvalidateWeakPtrs(OperationBase* o);
@@ -162,6 +165,8 @@ class OperationBase {
 
   // Derived classes of Operation<> call this when they are ready for |Run()| to
   // be scheduled by their container.
+  // DEPRECATED: Prefer to call OperationContainer::Add() with a pointer to
+  // |this|.
   void Ready();
 
   // Useful in log messages.
@@ -183,6 +188,9 @@ class OperationBase {
  private:
   // OperationContainer calls InvalidateWeakPtrs() and Schedule().
   friend class OperationContainer;
+
+  // Called only by OperationContainer::Add().
+  void SetOwner(OperationContainer* c);
 
   // Called only by OperationContainer.
   void Schedule();
@@ -222,7 +230,7 @@ class OperationBase {
   void TraceAsyncBegin();
   void TraceAsyncEnd();
 
-  fxl::WeakPtr<OperationContainer> const container_;
+  fxl::WeakPtr<OperationContainer> container_;
 
   // Used by FlowTokenBase to suppress Done() calls after the Operation instance
   // is deleted. The OperationContainer will invalidate all weak pointers to
