@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_AGENT_RUNNER_AGENT_RUNNER_STORAGE_IMPL_H_
-#define PERIDOT_BIN_AGENT_RUNNER_AGENT_RUNNER_STORAGE_IMPL_H_
+#ifndef PERIDOT_BIN_USER_RUNNER_AGENT_RUNNER_AGENT_RUNNER_STORAGE_IMPL_H_
+#define PERIDOT_BIN_USER_RUNNER_AGENT_RUNNER_AGENT_RUNNER_STORAGE_IMPL_H_
 
+#include <fuchsia/cpp/ledger.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/user_runner/agent_runner/agent_runner_storage.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
@@ -57,4 +57,4 @@ class AgentRunnerStorageImpl : public AgentRunnerStorage, PageClient {
 
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_AGENT_RUNNER_AGENT_RUNNER_STORAGE_IMPL_H_
+#endif  // PERIDOT_BIN_USER_RUNNER_AGENT_RUNNER_AGENT_RUNNER_STORAGE_IMPL_H_

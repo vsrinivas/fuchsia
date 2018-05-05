@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_COMPONENT_COMPONENT_CONTEXT_IMPL_H_
-#define PERIDOT_BIN_COMPONENT_COMPONENT_CONTEXT_IMPL_H_
+#ifndef PERIDOT_BIN_USER_RUNNER_COMPONENT_CONTEXT_IMPL_H_
+#define PERIDOT_BIN_USER_RUNNER_COMPONENT_CONTEXT_IMPL_H_
 
 #include <string>
 
@@ -12,8 +12,8 @@
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/user_runner/message_queue/message_queue_manager.h"
 #include "peridot/bin/user_runner/entity_provider_runner/entity_provider_runner.h"
+#include "peridot/bin/user_runner/message_queue/message_queue_manager.h"
 
 namespace modular {
 
@@ -104,4 +104,4 @@ class ComponentContextImpl : public ComponentContext {
 
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_COMPONENT_COMPONENT_CONTEXT_IMPL_H_
+#endif  // PERIDOT_BIN_USER_RUNNER_COMPONENT_CONTEXT_IMPL_H_

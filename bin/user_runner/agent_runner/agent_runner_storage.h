@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_AGENT_RUNNER_AGENT_RUNNER_STORAGE_H_
-#define PERIDOT_BIN_AGENT_RUNNER_AGENT_RUNNER_STORAGE_H_
+#ifndef PERIDOT_BIN_USER_RUNNER_AGENT_RUNNER_AGENT_RUNNER_STORAGE_H_
+#define PERIDOT_BIN_USER_RUNNER_AGENT_RUNNER_AGENT_RUNNER_STORAGE_H_
 
 #include <functional>
 #include <string>
@@ -85,4 +85,4 @@ class AgentRunnerStorage {
 
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_AGENT_RUNNER_AGENT_RUNNER_STORAGE_H_
+#endif  // PERIDOT_BIN_USER_RUNNER_AGENT_RUNNER_AGENT_RUNNER_STORAGE_H_

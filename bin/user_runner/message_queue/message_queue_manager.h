@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_COMPONENT_MESSAGE_QUEUE_MANAGER_H_
-#define PERIDOT_BIN_COMPONENT_MESSAGE_QUEUE_MANAGER_H_
+#ifndef PERIDOT_BIN_USER_RUNNER_MESSAGE_QUEUE_MESSAGE_QUEUE_MANAGER_H_
+#define PERIDOT_BIN_USER_RUNNER_MESSAGE_QUEUE_MESSAGE_QUEUE_MANAGER_H_
 
 #include <functional>
 #include <map>
@@ -12,13 +12,13 @@
 #include <string>
 #include <utility>
 
-#include "lib/async/cpp/operation.h"
+#include <fuchsia/cpp/ledger.h>
 #include <fuchsia/cpp/modular.h>
+#include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/ledger.h>
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
@@ -165,4 +165,4 @@ class MessageQueueManager : PageClient {
 
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_COMPONENT_MESSAGE_QUEUE_MANAGER_H_
+#endif  // PERIDOT_BIN_USER_RUNNER_MESSAGE_QUEUE_MESSAGE_QUEUE_MANAGER_H_

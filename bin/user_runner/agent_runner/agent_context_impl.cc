@@ -158,13 +158,12 @@ class AgentContextImpl::StopCall : Operation<bool> {
     // TODO(mesch): AppClient/AsyncHolder should implement this. See also
     // StoryProviderImpl::StopStoryShellCall.
     FlowTokenHolder branch{flow};
-    agent_context_impl_->app_client_->Teardown(
-        kBasicTimeout, [this, branch] {
-          std::unique_ptr<FlowToken> cont = branch.Continue();
-          if (cont) {
-            Kill(*cont);
-          }
-        });
+    agent_context_impl_->app_client_->Teardown(kBasicTimeout, [this, branch] {
+      std::unique_ptr<FlowToken> cont = branch.Continue();
+      if (cont) {
+        Kill(*cont);
+      }
+    });
   }
 
   void Kill(FlowToken flow) {
@@ -208,35 +207,39 @@ void AgentContextImpl::NewAgentConnection(
         incoming_services_request,
     fidl::InterfaceRequest<AgentController> agent_controller_request) {
   // Queue adding the connection
-  new SyncCall(&operation_queue_, fxl::MakeCopyable([
-    this, requestor_url,
-    incoming_services_request = std::move(incoming_services_request),
-    agent_controller_request = std::move(agent_controller_request)
-  ]() mutable {
-    FXL_CHECK(state_ == State::RUNNING);
+  new SyncCall(
+      &operation_queue_,
+      fxl::MakeCopyable([this, requestor_url,
+                         incoming_services_request =
+                             std::move(incoming_services_request),
+                         agent_controller_request =
+                             std::move(agent_controller_request)]() mutable {
+        FXL_CHECK(state_ == State::RUNNING);
 
-    agent_->Connect(requestor_url, std::move(incoming_services_request));
+        agent_->Connect(requestor_url, std::move(incoming_services_request));
 
-    // Add a binding to the |controller|. When all the bindings go away,
-    // the agent will stop.
-    agent_controller_bindings_.AddBinding(this,
-                                          std::move(agent_controller_request));
-  }));
+        // Add a binding to the |controller|. When all the bindings go away,
+        // the agent will stop.
+        agent_controller_bindings_.AddBinding(
+            this, std::move(agent_controller_request));
+      }));
 }
 
 void AgentContextImpl::NewEntityProviderConnection(
     fidl::InterfaceRequest<EntityProvider> entity_provider_request,
     fidl::InterfaceRequest<AgentController> agent_controller_request) {
-  new SyncCall(&operation_queue_, fxl::MakeCopyable([
-    this, entity_provider_request = std::move(entity_provider_request),
-    agent_controller_request = std::move(agent_controller_request)
-  ]() mutable {
-    FXL_CHECK(state_ == State::RUNNING);
-    app_client_->services().ConnectToService(
-        std::move(entity_provider_request));
-    agent_controller_bindings_.AddBinding(this,
-                                          std::move(agent_controller_request));
-  }));
+  new SyncCall(
+      &operation_queue_,
+      fxl::MakeCopyable(
+          [this, entity_provider_request = std::move(entity_provider_request),
+           agent_controller_request =
+               std::move(agent_controller_request)]() mutable {
+            FXL_CHECK(state_ == State::RUNNING);
+            app_client_->services().ConnectToService(
+                std::move(entity_provider_request));
+            agent_controller_bindings_.AddBinding(
+                this, std::move(agent_controller_request));
+          }));
 }
 
 void AgentContextImpl::NewTask(const std::string& task_id) {

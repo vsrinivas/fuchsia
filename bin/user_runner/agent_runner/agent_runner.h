@@ -2,30 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_AGENT_RUNNER_AGENT_RUNNER_H_
-#define PERIDOT_BIN_AGENT_RUNNER_AGENT_RUNNER_H_
+#ifndef PERIDOT_BIN_USER_RUNNER_AGENT_RUNNER_AGENT_RUNNER_H_
+#define PERIDOT_BIN_USER_RUNNER_AGENT_RUNNER_AGENT_RUNNER_H_
 
 #include <functional>
 #include <map>
 #include <memory>
 #include <string>
 
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/component.h>
-#include "lib/async/cpp/operation.h"
+#include <fuchsia/cpp/ledger.h>
+#include <fuchsia/cpp/ledger_internal.h>
+#include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/modular_auth.h>
-#include <fuchsia/cpp/modular.h>
+#include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/ledger.h>
-#include <fuchsia/cpp/modular.h>
 #include "peridot/bin/user_runner/agent_runner/agent_runner_storage.h"
-#include <fuchsia/cpp/ledger_internal.h>
 
 namespace modular {
 
@@ -60,7 +55,8 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   // Connects to an agent (and starts it up if it doesn't exist) through
   // |Agent.Connect|. Called using ComponentContext.
   void ConnectToAgent(
-      const std::string& requestor_url, const std::string& agent_url,
+      const std::string& requestor_url,
+      const std::string& agent_url,
       fidl::InterfaceRequest<component::ServiceProvider>
           incoming_services_request,
       fidl::InterfaceRequest<AgentController> agent_controller_request);
@@ -211,4 +207,4 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
 
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_AGENT_RUNNER_AGENT_RUNNER_H_
+#endif  // PERIDOT_BIN_USER_RUNNER_AGENT_RUNNER_AGENT_RUNNER_H_

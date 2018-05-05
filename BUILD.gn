@@ -110,9 +110,9 @@ executable("modular_unittests_bin") {
   output_name = "modular_unittests"
 
   deps = [
-    "//peridot/bin/user_runner/agent_runner:unittests",
     "//peridot/bin/agents/clipboard:unittests",
     "//peridot/bin/device_runner:unittests",
+    "//peridot/bin/user_runner/agent_runner:unittests",
     "//peridot/bin/user_runner/entity_provider_runner:unittests",
     "//peridot/bin/user_runner/story_runner:unittests",
     "//peridot/examples/counter_cpp:unittests",

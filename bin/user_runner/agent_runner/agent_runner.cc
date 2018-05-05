@@ -89,8 +89,7 @@ void AgentRunner::Teardown(const std::function<void()>& callback) {
 
   auto cont_timeout = [cont] { cont(true); };
 
-  async::PostDelayedTask(async_get_default(),
-                         std::move(cont_timeout),
+  async::PostDelayedTask(async_get_default(), std::move(cont_timeout),
                          kTeardownTimeout);
 }
 

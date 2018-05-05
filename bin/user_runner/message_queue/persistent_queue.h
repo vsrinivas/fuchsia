@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_COMPONENT_PERSISTENT_QUEUE_H_
-#define PERIDOT_BIN_COMPONENT_PERSISTENT_QUEUE_H_
+#ifndef PERIDOT_BIN_USER_RUNNER_MESSAGE_QUEUE_PERSISTENT_QUEUE_H_
+#define PERIDOT_BIN_USER_RUNNER_MESSAGE_QUEUE_PERSISTENT_QUEUE_H_
 
 #include <deque>
 #include <string>
@@ -47,4 +47,4 @@ class PersistentQueue {
 
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_COMPONENT_PERSISTENT_QUEUE_H_
+#endif  // PERIDOT_BIN_USER_RUNNER_MESSAGE_QUEUE_PERSISTENT_QUEUE_H_
