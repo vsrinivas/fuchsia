@@ -31,4 +31,11 @@ interface GuestEnvironment {
   // Retrieve the host vsock endpoint for this environment. This can be used
   // to listen for requests to open host ports, or to connect to guest ports.
   2: GetSocketEndpoint(request<SocketEndpoint> socket_endpoint);
+
+  // Query for guests running in this environment.
+  3: ListGuests() -> (vector<GuestInfo> env_infos);
+
+  // Connect to a currently running guest instance identified via |id|. The
+  // |id| can be found via a call to |ListGuests|.
+  4: ConnectToGuest(uint32 id, request<GuestController> controller);
 };

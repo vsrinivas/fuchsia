@@ -9,6 +9,7 @@
 #include <fuchsia/cpp/views_v1.h>
 
 #include "garnet/bin/guest/cli/serial.h"
+#include "lib/app/cpp/environment_services.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/svc/cpp/services.h"
 

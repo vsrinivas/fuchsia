@@ -11,21 +11,20 @@ namespace guestmgr {
 static uint32_t g_next_guest_id = 0;
 
 GuestEnvironmentImpl::GuestEnvironmentImpl(
-    component::ApplicationContext* context,
+    uint32_t id,
     const std::string& label,
+    component::ApplicationContext* context,
     fidl::InterfaceRequest<guest::GuestEnvironment> request)
-    : context_(context) {
+    : id_(id), label_(label), context_(context) {
   CreateApplicationEnvironment(label);
-  bindings_.AddBinding(this, std::move(request));
+  AddBinding(std::move(request));
 }
+
 GuestEnvironmentImpl::~GuestEnvironmentImpl() = default;
 
-std::vector<GuestHolder*> GuestEnvironmentImpl::guests() const {
-  std::vector<GuestHolder*> guests;
-  for (const auto& guest : guests_) {
-    guests.push_back(guest.first);
-  }
-  return guests;
+void GuestEnvironmentImpl::AddBinding(
+    fidl::InterfaceRequest<GuestEnvironment> request) {
+  bindings_.AddBinding(this, std::move(request));
 }
 
 void GuestEnvironmentImpl::LaunchGuest(
@@ -41,19 +40,46 @@ void GuestEnvironmentImpl::LaunchGuest(
   app_launcher_->CreateApplication(std::move(guest_launch_info),
                                    guest_app_controller.NewRequest());
 
+  uint32_t guest_id = g_next_guest_id++;
   auto& label = launch_info.label ? launch_info.label : launch_info.url;
-  auto holder = std::make_unique<GuestHolder>(g_next_guest_id++, label,
-                                              std::move(guest_services),
-                                              std::move(guest_app_controller));
+  auto holder =
+      std::make_unique<GuestHolder>(guest_id, label, std::move(guest_services),
+                                    std::move(guest_app_controller));
   guest_app_controller.set_error_handler(
-      [this, holder = holder.get()] { guests_.erase(holder); });
-  holder->Bind(std::move(controller));
-  guests_.insert({holder.get(), std::move(holder)});
+      [this, guest_id] { guests_.erase(guest_id); });
+  holder->AddBinding(std::move(controller));
+  guests_.insert({guest_id, std::move(holder)});
 }
 
 void GuestEnvironmentImpl::GetSocketEndpoint(
     fidl::InterfaceRequest<guest::SocketEndpoint> request) {
   // TODO(tjdetwiler): Implement vsock APIs.
+}
+
+fidl::VectorPtr<guest::GuestInfo> GuestEnvironmentImpl::ListGuests() {
+  fidl::VectorPtr<guest::GuestInfo> guest_infos =
+      fidl::VectorPtr<guest::GuestInfo>::New(0);
+  for (const auto& it : guests_) {
+    guest::GuestInfo guest_info;
+    guest_info.id = it.first;
+    guest_info.label = it.second->label();
+    guest_infos.push_back(std::move(guest_info));
+  }
+  return guest_infos;
+}
+
+void GuestEnvironmentImpl::ListGuests(ListGuestsCallback callback) {
+  callback(ListGuests());
+}
+
+void GuestEnvironmentImpl::ConnectToGuest(
+    uint32_t id,
+    fidl::InterfaceRequest<guest::GuestController> request) {
+  const auto& it = guests_.find(id);
+  if (it == guests_.end()) {
+    return;
+  }
+  it->second->AddBinding(std::move(request));
 }
 
 void GuestEnvironmentImpl::CreateApplicationEnvironment(

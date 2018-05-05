@@ -19,12 +19,17 @@ namespace guestmgr {
 
 class GuestEnvironmentImpl : public guest::GuestEnvironment {
  public:
-  GuestEnvironmentImpl(component::ApplicationContext* context,
+  GuestEnvironmentImpl(uint32_t id,
                        const std::string& label,
+                       component::ApplicationContext* context,
                        fidl::InterfaceRequest<guest::GuestEnvironment> request);
   ~GuestEnvironmentImpl() override;
 
-  std::vector<GuestHolder*> guests() const;
+  void AddBinding(fidl::InterfaceRequest<GuestEnvironment> request);
+
+  fidl::VectorPtr<guest::GuestInfo> ListGuests();
+  uint32_t id() const { return id_; }
+  const std::string& label() const { return label_; }
 
  private:
   // |guest::GuestEnvironment|
@@ -33,8 +38,15 @@ class GuestEnvironmentImpl : public guest::GuestEnvironment {
       fidl::InterfaceRequest<guest::GuestController> controller) override;
   void GetSocketEndpoint(
       fidl::InterfaceRequest<guest::SocketEndpoint> socket_endpoint) override;
+  void ListGuests(ListGuestsCallback callback) override;
+  void ConnectToGuest(
+      uint32_t id,
+      fidl::InterfaceRequest<guest::GuestController> controller) override;
 
   void CreateApplicationEnvironment(const std::string& label);
+
+  const uint32_t id_;
+  const std::string label_;
 
   component::ApplicationContext* context_;
   fidl::BindingSet<guest::GuestEnvironment> bindings_;
@@ -44,7 +56,7 @@ class GuestEnvironmentImpl : public guest::GuestEnvironment {
   component::ApplicationLauncherPtr app_launcher_;
   component::ServiceProviderBridge service_provider_bridge_;
 
-  std::unordered_map<GuestHolder*, std::unique_ptr<GuestHolder>> guests_;
+  std::unordered_map<uint32_t, std::unique_ptr<GuestHolder>> guests_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GuestEnvironmentImpl);
 };

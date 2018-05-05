@@ -18,7 +18,8 @@ GuestHolder::GuestHolder(
   guest_services_.ConnectToService(guest_controller_.NewRequest());
 }
 
-void GuestHolder::Bind(fidl::InterfaceRequest<guest::GuestController> request) {
+void GuestHolder::AddBinding(
+    fidl::InterfaceRequest<guest::GuestController> request) {
   bindings_.AddBinding(guest_controller_.get(), std::move(request));
 }
 

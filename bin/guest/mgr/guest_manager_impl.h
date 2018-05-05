@@ -26,15 +26,14 @@ class GuestManagerImpl : public guest::GuestManager {
   void CreateEnvironment(
       fidl::StringPtr label,
       fidl::InterfaceRequest<guest::GuestEnvironment> env) override;
-  void ListGuests(ListGuestsCallback callback) override;
-  void Connect(
-      uint32_t guest_id,
-      ::fidl::InterfaceRequest<guest::GuestController> controller) override;
+  void ListEnvironments(ListEnvironmentsCallback callback) override;
+  void ConnectToEnvironment(
+      uint32_t id,
+      fidl::InterfaceRequest<guest::GuestEnvironment> env) override;
 
   std::unique_ptr<component::ApplicationContext> context_;
   fidl::BindingSet<guest::GuestManager> bindings_;
-  std::unordered_map<GuestEnvironmentImpl*,
-                     std::unique_ptr<GuestEnvironmentImpl>>
+  std::unordered_map<uint32_t, std::unique_ptr<GuestEnvironmentImpl>>
       environments_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GuestManagerImpl);

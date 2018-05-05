@@ -4,8 +4,22 @@
 
 library guest;
 
+struct GuestEnvironmentInfo {
+  // A globally unique identifier for this environment.
+  uint32 id;
+
+  // The string provided to |GuestManager.CreateEnvirionment|.
+  string label;
+
+  // List of guests running in this environment.
+  vector<GuestInfo> guests;
+};
+
 struct GuestInfo {
   // A globally unique identifier for a guest instance.
+  //
+  // Note we guarantee this value will be unique across all envrionments on the
+  // the system.
   uint32 id;
 
   // The string provided in the |GuestLaunchInfo| structure.
@@ -20,14 +34,14 @@ interface GuestManager {
   // naming resources and dumping debug info.
   1: CreateEnvironment(string? label, request<GuestEnvironment> env);
 
-  // Query for existing guest instances.
+  // Query for existing guest environments.
   //
   // This is intended for diagnostic purposes only.
-  2: ListGuests() -> (vector<GuestInfo> guest_infos);
+  2: ListEnvironments() -> (vector<GuestEnvironmentInfo> env_infos);
 
-  // Connect to a currently running guest instance identified via the
-  // |guest_id|. The |guest_id| can be found via a call to |ListGuests|.
+  // Connect to a currently running guest envrionment identified by |id|. The
+  // |id| can be found via a call to |ListEnvironments|.
   //
   // This is intended for diagnostic purposes only.
-  3: Connect(uint32 guest_id, request<GuestController> controller);
+  3: ConnectToEnvironment(uint32 id, request<GuestEnvironment> env);
 };

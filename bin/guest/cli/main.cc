@@ -4,6 +4,8 @@
 
 #include <fbl/function.h>
 
+#include <iostream>
+
 #include "garnet/bin/guest/cli/dump.h"
 #include "garnet/bin/guest/cli/launch.h"
 #include "garnet/bin/guest/cli/list.h"
@@ -12,8 +14,6 @@
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/strings/string_printf.h"
-
-guest::GuestControllerPtr g_guest_controller;
 
 using CommandFunc = fbl::Function<void()>;
 

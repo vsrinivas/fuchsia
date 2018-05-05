@@ -26,11 +26,11 @@ class GuestHolder {
   uint32_t id() const { return id_; }
   const std::string& label() const { return label_; }
 
-  void Bind(fidl::InterfaceRequest<guest::GuestController> controller);
+  void AddBinding(fidl::InterfaceRequest<guest::GuestController> controller);
 
  private:
-  uint32_t id_;
-  std::string label_;
+  const uint32_t id_;
+  const std::string label_;
   component::Services guest_services_;
   component::ApplicationControllerPtr guest_app_controller_;
   guest::GuestControllerPtr guest_controller_;
