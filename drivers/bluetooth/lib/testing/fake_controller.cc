@@ -379,7 +379,7 @@ void FakeController::SendNumberOfCompletedPacketsEvent(
 }
 
 void FakeController::ConnectLowEnergy(const common::DeviceAddress& addr,
-                                      hci::LEConnectionRole role) {
+                                      hci::ConnectionRole role) {
   async::PostTask(dispatcher(), [addr, role, this] {
     FakeDevice* dev = FindDeviceByAddress(addr);
     if (!dev) {
@@ -650,7 +650,7 @@ void FakeController::OnLECreateConnectionCommandReceived(
     response.conn_interval = le16toh(interval);
     response.supervision_timeout = params.supervision_timeout;
 
-    response.role = hci::LEConnectionRole::kMaster;
+    response.role = hci::ConnectionRole::kMaster;
 
     hci::ConnectionHandle handle = ++next_conn_handle_;
     response.connection_handle = htole16(handle);
@@ -877,18 +877,17 @@ void FakeController::OnCommandPacketReceived(
     case hci::kWriteLocalName: {
       const auto& in_params =
           command_packet.payload<hci::WriteLocalNameCommandParams>();
-      local_name_ =
-          std::string(in_params.local_name,
-                      in_params.local_name + hci::kMaxLocalNameLength);
+      local_name_ = std::string(in_params.local_name,
+                                in_params.local_name + hci::kMaxNameLength);
       RespondWithSuccess(opcode);
       break;
     }
     case hci::kReadLocalName: {
       hci::ReadLocalNameReturnParams params;
       params.status = hci::StatusCode::kSuccess;
-      auto mut_view = common::MutableBufferView(params.local_name,
-                                                hci::kMaxLocalNameLength);
-      mut_view.Write((uint8_t*)(local_name_.c_str()), hci::kMaxLocalNameLength);
+      auto mut_view =
+          common::MutableBufferView(params.local_name, hci::kMaxNameLength);
+      mut_view.Write((uint8_t*)(local_name_.c_str()), hci::kMaxNameLength);
       RespondWithCommandComplete(hci::kReadLocalName,
                                  BufferView(&params, sizeof(params)));
       break;

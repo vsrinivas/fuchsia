@@ -4,6 +4,8 @@
 
 #include "bredr_connection_manager.h"
 
+#include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
+#include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 #include "garnet/drivers/bluetooth/lib/hci/sequential_command_runner.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
@@ -55,6 +57,7 @@ BrEdrConnectionManager::BrEdrConnectionManager(fxl::RefPtr<hci::Transport> hci,
                                                bool use_interlaced_scan)
     : hci_(hci),
       cache_(device_cache),
+      interrogator_(cache_, hci_, async_get_default()),
       page_scan_interval_(0),
       page_scan_window_(0),
       use_interlaced_scan_(use_interlaced_scan),
@@ -96,6 +99,8 @@ BrEdrConnectionManager::BrEdrConnectionManager(fxl::RefPtr<hci::Transport> hci,
 };
 
 BrEdrConnectionManager::~BrEdrConnectionManager() {
+  // Disconnect any connections that we're holding.
+  connections_.clear();
   SetPageScanEnabled(false, hci_, dispatcher_, [](const auto) {});
   hci_->command_channel()->RemoveEventHandler(conn_request_handler_id_);
   conn_request_handler_id_ = 0;
@@ -206,9 +211,28 @@ void BrEdrConnectionManager::OnConnectionRequest(
   FXL_VLOG(1) << "gap: BrEdrConnectionManager: " << link_type_str
               << " conn request from " << params.bd_addr.ToString() << "("
               << params.class_of_device.ToString() << ")";
-  // TODO(NET-410): Accept connections if they are a connection type we
-  // support.
-  FXL_LOG(INFO) << "gap: BrEdrConnectionManager: reject incoming connection";
+  if (params.link_type == hci::LinkType::kACL) {
+    // Accept the connection, performing a role switch. We receive a
+    // Connection Complete event when the connection is complete, and finish
+    // the link then.
+    FXL_LOG(INFO) << "gap: BrEdrConnectionManager: accept incoming connection";
+
+    auto accept = hci::CommandPacket::New(
+        hci::kAcceptConnectionRequest,
+        sizeof(hci::AcceptConnectionRequestCommandParams));
+    auto accept_params =
+        accept->mutable_view()
+            ->mutable_payload<hci::AcceptConnectionRequestCommandParams>();
+    accept_params->bd_addr = params.bd_addr;
+    accept_params->role = hci::ConnectionRole::kMaster;
+
+    hci_->command_channel()->SendCommand(std::move(accept), dispatcher_,
+                                         nullptr, hci::kCommandStatusEventCode);
+    return;
+  }
+
+  // Reject this connection.
+  FXL_LOG(INFO) << "gap: BrEdrConnectionManager: reject unsupported connection";
 
   auto reject = hci::CommandPacket::New(
       hci::kRejectConnectionRequest,
@@ -234,27 +258,83 @@ void BrEdrConnectionManager::OnConnectionComplete(
                      params.status, params.connection_handle);
   auto status = event.ToStatus();
   if (!status) {
-    FXL_LOG(WARNING)
-        << "Unexpected Connection Complete event with error received: "
-        << status.ToString();
+    FXL_LOG(WARNING) << "Connection Complete event with error received: "
+                     << status.ToString();
     return;
   }
 
-  // TODO(NET-410) send the connection to the appropriate place.
-  // Automatically disconnect for now
-  auto disconnect = hci::CommandPacket::New(
-      hci::kDisconnect, sizeof(hci::DisconnectCommandParams));
-  auto disconn_params = disconnect->mutable_view()
-                            ->mutable_payload<hci::DisconnectCommandParams>();
-  disconn_params->connection_handle = params.connection_handle;
-  disconn_params->reason = hci::StatusCode::kRemoteUserTerminatedConnection;
-  hci_->command_channel()->SendCommand(std::move(disconnect), dispatcher_,
-                                       nullptr, hci::kCommandStatusEventCode);
+  common::DeviceAddress addr(common::DeviceAddress::Type::kBREDR,
+                             params.bd_addr);
+
+  // TODO(jamuraa): support non-master connections.
+  auto conn_ptr = std::make_unique<hci::Connection>(
+      params.connection_handle, hci::Connection::Role::kMaster, addr, hci_);
+
+  if (params.link_type != hci::LinkType::kACL) {
+    // Drop the connection if we don't support it.
+    return;
+  }
+
+  RemoteDevice* device = cache_->FindDeviceByAddress(addr);
+  if (!device) {
+    device = cache_->NewDevice(addr, true);
+  }
+  // Interrogate this device to find out it's version/capabilities.
+  interrogator_.Start(
+      device->identifier(), std::move(conn_ptr),
+      [device, self = weak_ptr_factory_.GetWeakPtr()](auto status,
+                                                      auto conn_ptr) {
+        if (!status) {
+          FXL_LOG(WARNING) << "gap: BrEdrConnectionManager: interrogation "
+                              "failed, dropping connection";
+          return;
+        }
+
+        self->connections_.emplace(device->identifier(), std::move(conn_ptr));
+        // TODO(NET-406, NET-407): set up the L2CAP signalling channel and
+        // start SDP service discovery.
+      });
 }
 
 void BrEdrConnectionManager::OnDisconnectionComplete(
     const hci::EventPacket& event) {
-  FXL_LOG(INFO) << "gap: BrEdrConnectionManager: ignored DisconnectionComplete";
+  FXL_DCHECK(event.event_code() == hci::kDisconnectionCompleteEventCode);
+  const auto& params =
+      event.view().payload<hci::DisconnectionCompleteEventParams>();
+
+  hci::ConnectionHandle handle = le16toh(params.connection_handle);
+  auto status = event.ToStatus();
+  if (!status) {
+    FXL_VLOG(1) << fxl::StringPrintf(
+        "gap: BrEdrConnectionManager: HCI disconnection error received "
+        "(status: \"%s\", handle: 0x%04x)",
+        status.ToString().c_str(), handle);
+    return;
+  }
+
+  auto it = std::find_if(
+      connections_.begin(), connections_.end(),
+      [handle](const auto& p) { return (p.second->handle() == handle); });
+
+  if (it == connections_.end()) {
+    FXL_VLOG(1) << fxl::StringPrintf(
+        "gap: BrEdrConnectionManager: disconnect from unknown handle 0x%04x",
+        handle);
+    return;
+  }
+  std::string device = it->first;
+  auto conn = std::move(it->second);
+  connections_.erase(it);
+
+  FXL_LOG(INFO) << fxl::StringPrintf(
+      "gap: BrEdrConnectionManager: %s disconnected - "
+      "status: %s, handle: 0x%04x, reason: 0x%02x",
+      device.c_str(), status.ToString().c_str(), handle, params.reason);
+
+  // TODO(NET-406): Inform L2CAP that the connection has been disconnected.
+
+  // Connection is already closed, so we don't need to send a disconnect.
+  conn->set_closed();
 }
 
 }  // namespace gap

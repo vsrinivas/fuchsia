@@ -7,6 +7,13 @@
 namespace btlib {
 namespace hci {
 
+namespace {
+
+// The length of a timeslice in the parameters, in milliseconds.
+constexpr static float kTimesliceMs = 1.25f;
+
+}  // namespace
+
 LEConnectionParameters::LEConnectionParameters(uint16_t interval,
                                                uint16_t latency,
                                                uint16_t supervision_timeout)
@@ -21,6 +28,13 @@ bool LEConnectionParameters::operator==(
     const LEConnectionParameters& other) const {
   return interval_ == other.interval_ && latency_ == other.latency_ &&
          supervision_timeout_ == other.supervision_timeout_;
+}
+
+std::string LEConnectionParameters::ToString() const {
+  return fxl::StringPrintf(
+      "interval: %.2f ms, latency: %.2f ms, timeout: %u ms",
+      static_cast<float>(interval_) * kTimesliceMs,
+      static_cast<float>(latency_) * kTimesliceMs, supervision_timeout_ * 10u);
 }
 
 LEPreferredConnectionParameters::LEPreferredConnectionParameters(
@@ -46,5 +60,6 @@ bool LEPreferredConnectionParameters::operator==(
          max_latency_ == other.max_latency_ &&
          supervision_timeout_ == other.supervision_timeout_;
 }
+
 }  // namespace hci
 }  // namespace btlib

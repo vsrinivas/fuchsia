@@ -191,6 +191,9 @@ class Adapter final {
   // Contains the global adapter state.
   AdapterState state_;
 
+  // The maximum LMP feature page that we will read.
+  size_t max_lmp_feature_page_index_;
+
   // Provides access to discovered, connected, and/or bonded remote Bluetooth
   // devices.
   RemoteDeviceCache device_cache_;

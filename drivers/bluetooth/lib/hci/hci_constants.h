@@ -1150,9 +1150,9 @@ constexpr int8_t kRSSIInvalid = 127;
 // Invalid Tx Power value
 constexpr int8_t kTxPowerInvalid = 127;
 
-// The maximum length of Local Name that can be assigned to a BR/EDR controller,
-// in octets.
-constexpr size_t kMaxLocalNameLength = 248;
+// The maximum length of a friendly name that can be assigned to a BR/EDR
+// controller, in octets.
+constexpr size_t kMaxNameLength = 248;
 
 // The maximum number of bytes in a HCI Command Packet payload, excluding the
 // header. See Core Spec v5.0 Vol 2, Part E, 5.4.1, paragraph 2.
@@ -1191,8 +1191,8 @@ enum class ACLBroadcastFlag : uint8_t {
   kActiveSlaveBroadcast = 0x01,
 };
 
-// The LE connection role.
-enum class LEConnectionRole : uint8_t {
+// A connection role. Used for LE and BR/EDR connection roles.
+enum class ConnectionRole : uint8_t {
   kMaster = 0x00,
   kSlave = 0x01,
 };

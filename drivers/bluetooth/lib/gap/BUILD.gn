@@ -14,6 +14,8 @@ static_library("gap") {
     "bredr_connection_manager.h",
     "bredr_discovery_manager.cc",
     "bredr_discovery_manager.h",
+    "bredr_interrogator.cc",
+    "bredr_interrogator.h",
     "discovery_filter.cc",
     "discovery_filter.h",
     "gap.h",

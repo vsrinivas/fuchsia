@@ -6,8 +6,10 @@
 
 #include "lib/fxl/memory/weak_ptr.h"
 
+#include "garnet/drivers/bluetooth/lib/gap/bredr_interrogator.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "garnet/drivers/bluetooth/lib/hci/command_channel.h"
+#include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
 
 namespace btlib {
@@ -59,11 +61,17 @@ class BrEdrConnectionManager {
   std::unique_ptr<hci::SequentialCommandRunner> hci_cmd_runner_;
 
   // Device cache is used to look up parameters for connecting to devices and
-  // update the state of connected devices as well as store unknown devices.
+  // update the state of connected devices as well as introduce unknown devices.
   // This object must outlive this instance.
   // TODO(NET-410) - put newly found devices OnConnectionRequest/Complete
   // and use for Connect()
   RemoteDeviceCache* cache_ __UNUSED;
+
+  // Interregator for new connections to pass.
+  BrEdrInterrogator interrogator_;
+
+  // Connections that are active.
+  std::unordered_map<std::string, hci::ConnectionPtr> connections_;
 
   // Handler ID for connection events
   hci::CommandChannel::EventHandlerId conn_complete_handler_id_;

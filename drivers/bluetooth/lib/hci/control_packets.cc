@@ -112,9 +112,14 @@ bool EventPacket::ToStatusCode(StatusCode* out_code) const {
   switch (event_code()) {
     CASE_EVENT_STATUS(CommandComplete);
     CASE_EVENT_STATUS(CommandStatus);
+    CASE_EVENT_STATUS(ConnectionComplete);
     CASE_EVENT_STATUS(DisconnectionComplete);
     CASE_EVENT_STATUS(InquiryComplete);
     CASE_EVENT_STATUS(EncryptionChange);
+    CASE_EVENT_STATUS(RemoteNameRequestComplete);
+    CASE_EVENT_STATUS(ReadRemoteVersionInfoComplete);
+    CASE_EVENT_STATUS(ReadRemoteSupportedFeaturesComplete);
+    CASE_EVENT_STATUS(ReadRemoteExtendedFeaturesComplete);
 
       // TODO(armansito): Complete this list.
 

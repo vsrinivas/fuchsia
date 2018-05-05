@@ -26,12 +26,12 @@ namespace btlib {
 namespace gap {
 
 Adapter::Adapter(fxl::RefPtr<hci::Transport> hci,
-                 fbl::RefPtr<l2cap::L2CAP> l2cap,
-                 fbl::RefPtr<gatt::GATT> gatt)
+                 fbl::RefPtr<l2cap::L2CAP> l2cap, fbl::RefPtr<gatt::GATT> gatt)
     : identifier_(fxl::GenerateUUID()),
       dispatcher_(async_get_default()),
       hci_(hci),
       init_state_(State::kNotInitialized),
+      max_lmp_feature_page_index_(0),
       l2cap_(l2cap),
       gatt_(gatt),
       weak_ptr_factory_(this) {
@@ -117,7 +117,7 @@ bool Adapter::Initialize(InitializeCallback callback,
         auto params =
             cmd_complete
                 .return_params<hci::ReadLocalSupportedFeaturesReturnParams>();
-        state_.lmp_features_[0] = le64toh(params->lmp_features);
+        state_.features_.SetPage(0, le64toh(params->lmp_features));
       });
 
   // HCI_Read_BD_ADDR
@@ -164,8 +164,8 @@ bool Adapter::IsDiscovering() const {
 void Adapter::SetLocalName(std::string name, hci::StatusCallback callback) {
   // TODO(jamuraa): set the public LE advertisement name from |name|
   bool null_term = true;
-  if (name.size() >= hci::kMaxLocalNameLength) {
-    name.resize(hci::kMaxLocalNameLength);
+  if (name.size() >= hci::kMaxNameLength) {
+    name.resize(hci::kMaxNameLength);
     null_term = false;
   }
   auto write_name = hci::CommandPacket::New(
@@ -174,7 +174,7 @@ void Adapter::SetLocalName(std::string name, hci::StatusCallback callback) {
       write_name->mutable_view()
           ->mutable_payload<hci::WriteLocalNameCommandParams>()
           ->local_name,
-      hci::kMaxLocalNameLength);
+      hci::kMaxNameLength);
   name_buf.Write(reinterpret_cast<const uint8_t*>(name.data()), name.size());
   if (null_term) {
     name_buf[name.size()] = 0;
@@ -265,7 +265,7 @@ void Adapter::InitializeStep2(InitializeCallback callback) {
         }
       });
 
-  if (state_.HasLMPFeatureBit(0u, hci::LMPFeature::kSecureSimplePairing)) {
+  if (state_.features().HasBit(0u, hci::LMPFeature::kSecureSimplePairing)) {
     // HCI_Write_Simple_Pairing_Mode
     auto write_ssp = hci::CommandPacket::New(
         hci::kWriteSimplePairingMode,
@@ -284,9 +284,9 @@ void Adapter::InitializeStep2(InitializeCallback callback) {
 
   // If there are extended features then try to read the first page of the
   // extended features.
-  if (state_.HasLMPFeatureBit(0u, hci::LMPFeature::kExtendedFeatures)) {
+  if (state_.features().HasBit(0u, hci::LMPFeature::kExtendedFeatures)) {
     // Page index 1 must be available.
-    state_.max_lmp_feature_page_index_ = 1;
+    max_lmp_feature_page_index_ = 1;
 
     // HCI_Read_Local_Extended_Features
     auto cmd_packet = hci::CommandPacket::New(
@@ -303,8 +303,8 @@ void Adapter::InitializeStep2(InitializeCallback callback) {
           auto params =
               cmd_complete
                   .return_params<hci::ReadLocalExtendedFeaturesReturnParams>();
-          state_.lmp_features_[1] = le64toh(params->extended_lmp_features);
-          state_.max_lmp_feature_page_index_ = params->maximum_page_number;
+          state_.features_.SetPage(1, le64toh(params->extended_lmp_features));
+          max_lmp_feature_page_index_ = params->maximum_page_number;
         });
   }
 
@@ -374,7 +374,7 @@ void Adapter::InitializeStep3(InitializeCallback callback) {
 
   // HCI_Write_LE_Host_Support if the appropriate feature bit is not set AND if
   // the controller supports this command.
-  if (!state_.HasLMPFeatureBit(1, hci::LMPFeature::kLESupportedHost) &&
+  if (!state_.features().HasBit(1, hci::LMPFeature::kLESupportedHost) &&
       state_.IsCommandSupported(24,
                                 hci::SupportedCommand::kWriteLEHostSupport)) {
     auto cmd_packet = hci::CommandPacket::New(
@@ -388,7 +388,7 @@ void Adapter::InitializeStep3(InitializeCallback callback) {
 
   // If we know that Page 2 of the extended features bitfield is available, then
   // request it.
-  if (state_.max_lmp_feature_page_index_ > 1) {
+  if (max_lmp_feature_page_index_ > 1) {
     auto cmd_packet = hci::CommandPacket::New(
         hci::kReadLocalExtendedFeatures,
         sizeof(hci::ReadLocalExtendedFeaturesCommandParams));
@@ -404,8 +404,8 @@ void Adapter::InitializeStep3(InitializeCallback callback) {
           auto params =
               cmd_complete
                   .return_params<hci::ReadLocalExtendedFeaturesReturnParams>();
-          state_.lmp_features_[2] = le64toh(params->extended_lmp_features);
-          state_.max_lmp_feature_page_index_ = params->maximum_page_number;
+          state_.features_.SetPage(2, le64toh(params->extended_lmp_features));
+          max_lmp_feature_page_index_ = params->maximum_page_number;
         });
   }
 
@@ -461,7 +461,7 @@ void Adapter::InitializeStep4(InitializeCallback callback) {
 
   bredr_connection_manager_ = std::make_unique<BrEdrConnectionManager>(
       hci_, &device_cache_,
-      state_.HasLMPFeatureBit(0, hci::LMPFeature::kInterlacedPageScan));
+      state_.features().HasBit(0, hci::LMPFeature::kInterlacedPageScan));
   bredr_discovery_manager_ =
       std::make_unique<BrEdrDiscoveryManager>(hci_, &device_cache_);
 

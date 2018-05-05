@@ -228,10 +228,10 @@ struct AcceptConnectionRequestCommandParams {
   // BD_ADDR of the device to be connected
   common::DeviceAddressBytes bd_addr;
 
-  // Role.  Allowable values:
-  //  - 0x00 - Link Manager will perform a role switch.
-  //  - 0x01 - Link Manager will not perform a role switch.
-  uint8_t role;
+  // Role. Allowable values:
+  //  - kMaster - Host will become the master (Link Master will role switch)
+  //  - kSlave - Host will remain the slave.
+  ConnectionRole role;
 } __PACKED;
 
 // =========================================
@@ -250,6 +250,69 @@ struct RejectConnectionRequestCommandParams {
 // NOTE on ReturnParams: No Command Complete event will be sent by the
 // Controller to indicate that this command has been completed. Instead, the
 // Connection Complete event will indicate that this command has been completed.
+
+// ============================================================
+// Read Remote Version Information Command (v1.1) (BR/EDR & LE)
+constexpr OpCode kRemoteNameRequest = LinkControlOpCode(0x0019);
+
+struct RemoteNameRequestCommandParams {
+  // Address of the device whose name is to be requested.
+  common::DeviceAddressBytes bd_addr;
+
+  // Page Scan Repetition Mode of the device, obtained by Inquiry.
+  PageScanRepetitionMode page_scan_repetition_mode;
+
+  // Reserved and must be 0x00
+  uint8_t reserved;
+
+  // Clock offset.  The lower 15 bits of this represent bits 14-2
+  // of CLKNslave-CLK, and the highest bit is set when the other
+  // bits are valid.
+  uint16_t clock_offset;
+} __PACKED;
+
+// NOTE on ReturnParams: No Command Complete event will be sent by the
+// Controller to indicate that this command has been completed. Instead, the
+// Remote Name Request Complete event will indicate that this command has been
+// completed.
+
+// ======================================================
+// Read Remote Supported Features Command (v1.1) (BR/EDR)
+constexpr OpCode kReadRemoteSupportedFeatures = LinkControlOpCode(0x001B);
+
+struct ReadRemoteSupportedFeaturesCommandParams {
+  // Connection_Handle (only the lower 12-bits are meaningful).
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  // Must be the handle of a connected ACL-U logical link.
+  ConnectionHandle connection_handle;
+} __PACKED;
+
+// NOTE on ReturnParams: No Command Complete event will be sent by the
+// Controller to indicate that this command has been completed. Instead, the
+// Read Remote Supported Features Complete event will indicate that this
+// command has been completed.
+
+// =====================================================
+// Read Remote Extended Features Command (v1.2) (BR/EDR)
+constexpr OpCode kReadRemoteExtendedFeatures = LinkControlOpCode(0x001C);
+
+struct ReadRemoteExtendedFeaturesCommandParams {
+  // Connection_Handle (only the lower 12-bits are meaningful).
+  //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  // Must be the handle of a connected ACL-U logical link.
+  ConnectionHandle connection_handle;
+
+  // Page of features to read.
+  // Values:
+  //  - 0x00 standard features as if requested by Read Remote Supported Features
+  //  - 0x01-0xFF the corresponding features page see Vol 2, Part C, Sec 3.3)
+  uint8_t page_number;
+} __PACKED;
+
+// NOTE on ReturnParams: No Command Complete event will be sent by the
+// Controller to indicate that this command has been completed. Instead, the
+// Read Remote Extended Features Complete event will indicate that this
+// command has been completed.
 
 // ============================================================
 // Read Remote Version Information Command (v1.1) (BR/EDR & LE)
@@ -298,7 +361,7 @@ struct WriteLocalNameCommandParams {
   // of the name is indicated by a NULL octet (0x00), and the following octets
   // (to fill up 248 octets, which is the length of the parameter) do not have
   // valid values.
-  uint8_t local_name[kMaxLocalNameLength];
+  uint8_t local_name[kMaxNameLength];
 } __PACKED;
 
 // =======================================
@@ -314,7 +377,7 @@ struct ReadLocalNameReturnParams {
   // of the name is indicated by a NULL octet (0x00), and the following octets
   // (to fill up 248 octets, which is the length of the parameter) do not have
   // valid values.
-  uint8_t local_name[kMaxLocalNameLength];
+  uint8_t local_name[kMaxNameLength];
 } __PACKED;
 
 // ========================================
@@ -809,6 +872,41 @@ struct EncryptionChangeEventParams {
   uint8_t encryption_enabled;
 } __PACKED;
 
+// ==================================================
+// Remote Name Request Complete Event (v1.1) (BR/EDR)
+constexpr EventCode kRemoteNameRequestCompleteEventCode = 0x07;
+
+struct RemoteNameRequestCompleteEventParams {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(RemoteNameRequestCompleteEventParams);
+  // See enum StatusCode in hci_constants.h.
+  StatusCode status;
+
+  // Address of the device
+  common::DeviceAddressBytes bd_addr;
+
+  // Remote Name - UTF-8 encoded friendly name.
+  // If the name is less than 248 characters, it is null terminated and
+  // the remaining bytes are not valid.
+  uint8_t remote_name[];
+} __PACKED;
+
+// =============================================================
+// Read Remote Supported Features Complete Event (v1.1) (BR/EDR)
+constexpr EventCode kReadRemoteSupportedFeaturesCompleteEventCode = 0x0B;
+
+struct ReadRemoteSupportedFeaturesCompleteEventParams {
+  // See enum StatusCode in hci_constants.h.
+  StatusCode status;
+
+  // A connection handle for an ACL connection.
+  //  Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+
+  // Bit Mask List of LMP features. See enum class LMPFeature in hci_constants.h
+  // for how to interpret this bitfield.
+  uint64_t lmp_features;
+} __PACKED;
+
 // ===================================================================
 // Read Remote Version Information Complete Event (v1.1) (BR/EDR & LE)
 constexpr EventCode kReadRemoteVersionInfoCompleteEventCode = 0x0C;
@@ -822,8 +920,11 @@ struct ReadRemoteVersionInfoCompleteEventParams {
   //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
   ConnectionHandle connection_handle;
 
-  uint8_t lmp_version;
+  HCIVersion lmp_version;
+  // Manufacturer Name. Assigned by Bluetooth SIG. See Assigned Numbers
+  // (https://www.bluetooth.com/specifications/assigned-numbers/company-identifiers)
   uint16_t manufacturer_name;
+  // See Spec 5.0 Vol 2, Part C, Sec 5.2. Defined by each company.
   uint16_t lmp_subversion;
 } __PACKED;
 
@@ -838,7 +939,7 @@ struct CommandCompleteEventParams {
   // Controller from the Host.
   uint8_t num_hci_command_packets;
 
-  // Opcode of the command which caused this event.
+  // OpCode of the command which caused this event.
   uint16_t command_opcode;
 
   // This is the return parameter(s) for the command specified in the
@@ -861,7 +962,7 @@ struct CommandStatusEventParams {
   // Controller from the Host.
   uint8_t num_hci_command_packets;
 
-  // Opcode of the command which caused this event and is pending completion.
+  // OpCode of the command which caused this event and is pending completion.
   uint16_t command_opcode;
 } __PACKED;
 
@@ -889,6 +990,31 @@ struct NumberOfCompletedPacketsEventParams {
 
   uint8_t number_of_handles;
   NumberOfCompletedPacketsEventData data[];
+} __PACKED;
+
+// =============================================================
+// Read Remote Extended Features Complete Event (v1.1) (BR/EDR)
+constexpr EventCode kReadRemoteExtendedFeaturesCompleteEventCode = 0x23;
+
+struct ReadRemoteExtendedFeaturesCompleteEventParams {
+  // See enum StatusCode in hci_constants.h.
+  StatusCode status;
+
+  // A connection handle for an ACL connection.
+  //  Range: 0x0000 to kConnectioHandleMax in hci_constants.h
+  ConnectionHandle connection_handle;
+
+  // Page number
+  uint8_t page_number;
+
+  // Maximum page number
+  // The highest features page number that has non-zero bits on the remote
+  // device.
+  uint8_t max_page_number;
+
+  // Bit Mask List of LMP features. See enum class LMPFeature in hci_constants.h
+  // for how to interpret this bitfield.
+  uint64_t lmp_features;
 } __PACKED;
 
 // ================================================================
@@ -931,7 +1057,7 @@ struct LEConnectionCompleteSubeventParams {
   //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
   ConnectionHandle connection_handle;
 
-  LEConnectionRole role;
+  ConnectionRole role;
   LEPeerAddressType peer_address_type;
 
   // Public Device Address or Random Device Address of the peer device.
@@ -1141,7 +1267,7 @@ struct LEEnhancedConnectionCompleteSubeventParams {
   //   Range: 0x0000 to kConnectioHandleMax in hci_constants.h
   ConnectionHandle connection_handle;
 
-  LEConnectionRole role;
+  ConnectionRole role;
   LEAddressType peer_address_type;
 
   // Public Device Address, or Random Device Address, Public Identity Address or

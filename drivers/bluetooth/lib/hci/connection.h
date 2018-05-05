@@ -52,6 +52,11 @@ class Connection final {
              const LEConnectionParameters& params,
              fxl::RefPtr<Transport> hci);
 
+  // Initializes this as a BR/EDR ACL connection.
+  Connection(ConnectionHandle handle, Role role,
+             const common::DeviceAddress& peer_address,
+             fxl::RefPtr<Transport> hci);
+
   // The destructor closes this connection.
   ~Connection();
 

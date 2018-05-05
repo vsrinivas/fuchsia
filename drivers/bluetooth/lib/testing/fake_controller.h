@@ -192,9 +192,8 @@ class FakeController : public FakeControllerBase,
 
   // Sets up a LE link to the device with the given |addr|. FakeController will
   // report a connection event in which it is in the given |role|.
-  void ConnectLowEnergy(
-      const common::DeviceAddress& addr,
-      hci::LEConnectionRole role = hci::LEConnectionRole::kSlave);
+  void ConnectLowEnergy(const common::DeviceAddress& addr,
+                        hci::ConnectionRole role = hci::ConnectionRole::kSlave);
 
   // Tells a fake device to initiate the L2CAP Connection Parameter Update
   // procedure using the given |params|. Has no effect if a connected fake

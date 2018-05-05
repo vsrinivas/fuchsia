@@ -7,9 +7,8 @@
 namespace btlib {
 namespace gap {
 
-AdapterState::AdapterState() : max_lmp_feature_page_index_(0) {
+AdapterState::AdapterState() {
   std::memset(supported_commands_, 0, sizeof(supported_commands_));
-  std::memset(lmp_features_, 0, sizeof(lmp_features_));
 }
 
 }  // namespace gap

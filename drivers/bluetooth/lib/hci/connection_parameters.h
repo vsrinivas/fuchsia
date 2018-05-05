@@ -5,6 +5,9 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
+
+#include "lib/fxl/strings/string_printf.h"
 
 namespace btlib {
 namespace hci {
@@ -49,6 +52,8 @@ class LEConnectionParameters final {
 
   // Equality operator
   bool operator==(const LEConnectionParameters& other) const;
+
+  std::string ToString() const;
 
  private:
   uint16_t interval_;

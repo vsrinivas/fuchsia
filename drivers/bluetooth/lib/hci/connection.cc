@@ -51,6 +51,21 @@ Connection::Connection(ConnectionHandle handle,
   FXL_DCHECK(hci_);
 }
 
+Connection::Connection(ConnectionHandle handle, Role role,
+                       const common::DeviceAddress& peer_address,
+                       fxl::RefPtr<Transport> hci)
+    : ll_type_(LinkType::kACL),
+      handle_(handle),
+      role_(role),
+      is_open_(true),
+      peer_address_(peer_address),
+      hci_(hci),
+      weak_ptr_factory_(this) {
+  FXL_DCHECK(handle_);
+  FXL_DCHECK(hci_);
+  FXL_DCHECK(peer_address_.type() == common::DeviceAddress::Type::kBREDR);
+}
+
 Connection::~Connection() {
   Close();
 }
@@ -94,15 +109,14 @@ void Connection::Close(StatusCode reason) {
 }
 
 std::string Connection::ToString() const {
-  return fxl::StringPrintf(
-      "(%s link - handle: 0x%04x, role: %s, address: %s, "
-      "interval: %.2f ms, latency: %.2f ms, timeout: %u ms)",
-      LinkTypeToString(ll_type_).c_str(), handle_,
-      role_ == Role::kMaster ? "master" : "slave",
-      peer_address_.ToString().c_str(),
-      static_cast<float>(le_params_.interval()) * 1.25f,
-      static_cast<float>(le_params_.latency()) * 1.25f,
-      le_params_.supervision_timeout() * 10u);
+  std::string params = "";
+  if (ll_type() == LinkType::kLE) {
+    params = ", " + le_params_.ToString();
+  }
+  return fxl::StringPrintf("(%s link—handle: 0x%04x, role: %s, address: %s%s)",
+                           LinkTypeToString(ll_type_).c_str(), handle_,
+                           role_ == Role::kMaster ? "master" : "slave",
+                           peer_address_.ToString().c_str(), params.c_str());
 }
 
 }  // namespace hci

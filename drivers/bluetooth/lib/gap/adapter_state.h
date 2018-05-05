@@ -10,6 +10,7 @@
 #include "garnet/drivers/bluetooth/lib/gap/low_energy_state.h"
 #include "garnet/drivers/bluetooth/lib/hci/acl_data_channel.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
+#include "garnet/drivers/bluetooth/lib/hci/lmp_feature_set.h"
 #include "lib/fxl/logging.h"
 
 namespace btlib {
@@ -34,21 +35,16 @@ class AdapterState final {
     return controller_address_;
   }
 
-  // Returns true if |feature_bit| is set as supported in the local LMP features
-  // list.
-  inline bool HasLMPFeatureBit(size_t page, hci::LMPFeature feature_bit) const {
-    FXL_DCHECK(page < 3);
-    return lmp_features_[page] & static_cast<uint64_t>(feature_bit);
-  }
+  // The features that are supported by this controller.
+  const hci::LMPFeatureSet& features() const { return features_; }
 
   // Helpers for querying LMP capabilities.
-
   inline bool IsBREDRSupported() const {
-    return !HasLMPFeatureBit(0u, hci::LMPFeature::kBREDRNotSupported);
+    return !features().HasBit(0u, hci::LMPFeature::kBREDRNotSupported);
   }
 
   inline bool IsLowEnergySupported() const {
-    return HasLMPFeatureBit(0u, hci::LMPFeature::kLESupported);
+    return features().HasBit(0u, hci::LMPFeature::kLESupported);
   }
 
   // Returns true if |command_bit| in the given |octet| is set in the supported
@@ -80,16 +76,8 @@ class AdapterState final {
   // HCI version supported by the controller.
   hci::HCIVersion hci_version_;
 
-  // Supported LMP (Link Manager Protocol) features reported to us by the
-  // controller. LMP features are organized into 3 "pages", each containing a
-  // bit-mask of supported controller features. See Core Spec v5.0, Vol 2, Part
-  // C, Secton 3.3 "Feature Mask Definition".
-  uint64_t lmp_features_[3];  // pages 0-2 of LMP features.
-
-  // The maximum number of LMP feature pages that the controller has. Since only
-  // the first 3 pages are specified, we use this to figure out whether or not
-  // to read page index 2.
-  uint8_t max_lmp_feature_page_index_;
+  // The Features that are supported by this adapter.
+  hci::LMPFeatureSet features_;
 
   // Bitmask list of HCI commands that the controller supports.
   uint8_t supported_commands_[64];

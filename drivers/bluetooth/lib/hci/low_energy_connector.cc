@@ -210,8 +210,8 @@ void LowEnergyConnector::OnConnectionCompleteEvent(const EventPacket& event) {
 
   auto connection = std::make_unique<Connection>(
       le16toh(params->connection_handle),
-      (params->role == LEConnectionRole::kMaster) ? Connection::Role::kMaster
-                                                  : Connection::Role::kSlave,
+      (params->role == ConnectionRole::kMaster) ? Connection::Role::kMaster
+                                                : Connection::Role::kSlave,
       peer_address, connection_params, hci_);
 
   if (matches_pending_request) {
