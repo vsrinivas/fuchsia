@@ -77,6 +77,11 @@ void AmlDWMacDevice::UpdateLinkStatus() {
             zxlogf(ERROR, "aml-dwmac: System not ready\n");
         }
     }
+    if (online_) {
+        dwmac_regs_->conf |= GMAC_CONF_TE | GMAC_CONF_RE;
+    } else {
+        dwmac_regs_->conf &= ~(GMAC_CONF_TE | GMAC_CONF_RE);
+    }
     zxlogf(INFO, "aml-dwmac: Link is now %s\n", online_ ? "up" : "down");
 }
 
@@ -95,6 +100,7 @@ zx_status_t AmlDWMacDevice::InitPdev() {
     }
 
     gpio_config(&gpio_, PHY_RESET, GPIO_DIR_OUT);
+    gpio_write(&gpio_, PHY_RESET, 0);
 
     // Map amlogic peripheral control registers
     status = pdev_map_mmio_buffer(&pdev_, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
@@ -221,13 +227,12 @@ zx_status_t AmlDWMacDevice::Create(zx_device_t* device) {
     if (status != ZX_OK)
         return status;
 
-    mac_device->InitDevice();
-
     //reset the phy
     mac_device->ResetPhy();
-
     //configure phy
     mac_device->ConfigPhy();
+
+    mac_device->InitDevice();
 
     auto thunk = [](void* arg) -> int { return reinterpret_cast<AmlDWMacDevice*>(arg)->Thread(); };
 
@@ -474,8 +479,6 @@ zx_status_t AmlDWMacDevice::InitDevice() {
     dwmac_regs_->framefilt |= (1 << 10) | (1 << 4) | (1 << 0); //promiscuous
 
     dwmac_regs_->conf = GMAC_CORE_INIT;
-
-    dwmac_regs_->conf |= GMAC_CONF_TE | GMAC_CONF_RE;
 
     return ZX_OK;
 }
