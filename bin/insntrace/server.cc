@@ -19,6 +19,8 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
+#include "garnet/lib/debugger_utils/jobs.h"
+#include "garnet/lib/debugger_utils/sysinfo.h"
 #include "garnet/lib/debugger_utils/util.h"
 
 #include "control.h"
@@ -93,7 +95,8 @@ uint64_t IptConfig::AddrEnd(unsigned i) const {
 }
 
 IptServer::IptServer(const IptConfig& config)
-  : config_(config) {
+  : Server(util::GetRootJob(), util::GetDefaultJob()),
+    config_(config) {
 }
 
 bool IptServer::StartInferior() {
@@ -121,13 +124,6 @@ bool IptServer::StartInferior() {
     FXL_LOG(ERROR) << "failed to set up inferior";
     goto Fail;
   }
-
-  FXL_DCHECK(!process->IsAttached());
-  if (!process->Attach()) {
-    FXL_LOG(ERROR) << "failed to attach to process";
-    goto Fail;
-  }
-  FXL_DCHECK(process->IsAttached());
 
   if (!config_.cr3_match_set) {
     // TODO(dje): fetch cr3 for inferior and apply it to cr3_match

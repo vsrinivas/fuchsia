@@ -61,7 +61,7 @@ int main(int argc, char* argv[]) {
     PrintUsageString();
     return EXIT_SUCCESS;
   }
-  if (cl.positional_args().size() < 1) {
+  if (cl.positional_args().empty()) {
     PrintUsageString();
     return EXIT_FAILURE;
   }
@@ -90,27 +90,20 @@ int main(int argc, char* argv[]) {
   // Give this thread an identifiable name for debugging purposes.
   fsl::SetCurrentThreadName("server (main)");
 
-  debugserver::RspServer server(port);
+  debugserver::RspServer server(port, attach_pid);
 
   std::vector<std::string> inferior_argv(cl.positional_args().begin() + 1,
                                          cl.positional_args().end());
   auto inferior = new debugserver::Process(&server, &server);
 
   // Are we passed a pid or a program?
-  if (attach_pid != ZX_KOID_INVALID && inferior_argv.size() != 0) {
+  if (attach_pid != ZX_KOID_INVALID && !inferior_argv.empty()) {
     FXL_LOG(ERROR) << "Cannot specify both --attach=pid and a program";
     return EXIT_FAILURE;
   }
 
-  if (attach_pid != ZX_KOID_INVALID) {
-    if (!inferior->Initialize(attach_pid)) {
-      FXL_LOG(ERROR) << "Failed to set up inferior";
-      return EXIT_FAILURE;
-    }
-    // Note: We're not attached yet, that happens later.
-  } else {
-    // inferior_argv can be empty here, in which case it must be supplied by
-    // the debugger.
+  // If inferior_argv is empty, it must be supplied by the debugger.
+  if (!inferior_argv.empty()) {
     inferior->set_argv(inferior_argv);
   }
 

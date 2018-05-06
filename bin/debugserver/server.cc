@@ -14,6 +14,8 @@
 #include <string>
 #include <vector>
 
+#include "garnet/lib/debugger_utils/jobs.h"
+#include "garnet/lib/debugger_utils/sysinfo.h"
 #include "garnet/lib/debugger_utils/util.h"
 
 #include "lib/fxl/functional/auto_call.h"
@@ -43,8 +45,13 @@ RspServer::PendingNotification::PendingNotification(
       event(event.data(), event.size()),
       timeout(timeout) {}
 
-RspServer::RspServer(uint16_t port)
-    : port_(port), server_sock_(-1), command_handler_(this) {}
+RspServer::RspServer(uint16_t port, zx_koid_t initial_attach_pid)
+  : ServerWithIO(util::GetRootJob(), util::GetDefaultJob()),
+    port_(port),
+    initial_attach_pid_(initial_attach_pid),
+    server_sock_(-1),
+    command_handler_(this) {
+}
 
 bool RspServer::Run() {
   FXL_DCHECK(!io_loop_);
@@ -62,10 +69,10 @@ bool RspServer::Run() {
 
   // If we're to attach to a running process at start-up, do so here.
   // This needs to be done after |exception_port_| is set up.
-  auto inferior = current_process();
-  if (inferior->attached_running()) {
+  if (initial_attach_pid_ != ZX_KOID_INVALID) {
+    auto inferior = current_process();
     FXL_DCHECK(!inferior->IsAttached());
-    if (!inferior->Attach()) {
+    if (!inferior->Attach(initial_attach_pid_)) {
       FXL_LOG(ERROR) << "Failed to attach to inferior";
       return false;
     }

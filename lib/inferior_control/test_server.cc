@@ -16,6 +16,8 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
+#include "garnet/lib/debugger_utils/jobs.h"
+#include "garnet/lib/debugger_utils/sysinfo.h"
 #include "garnet/lib/debugger_utils/util.h"
 
 #include "gtest/gtest.h"
@@ -25,6 +27,10 @@
 #include "lib/fxl/strings/string_printf.h"
 
 namespace debugserver {
+
+TestServer::TestServer()
+  : Server(util::GetRootJob(), util::GetDefaultJob()) {
+}
 
 void TestServer::SetUp() {
   ASSERT_TRUE(exception_port_.Run());
@@ -78,13 +84,6 @@ bool TestServer::RunHelperProgram(zx::channel channel) {
       return false;
     }
   }
-
-  FXL_DCHECK(!process->IsAttached());
-  if (!process->Attach()) {
-    FXL_LOG(ERROR) << "failed to attach to process";
-    return false;
-  }
-  FXL_DCHECK(process->IsAttached());
 
   FXL_DCHECK(!process->IsLive());
   if (!process->Start()) {

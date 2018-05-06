@@ -80,15 +80,17 @@ TEST(JobsTest, ThisThreadAndStop) {
   EXPECT_EQ(WalkJobTree(job, nullptr, nullptr, &thread_callback), ZX_ERR_STOP);
 }
 
+static zx_status_t GetHandleInfo(zx_handle_t handle,
+                                 zx_info_handle_basic_t* info) {
+  return zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, info,
+                            sizeof(*info), nullptr, nullptr);
+}
+
 static void TestKoids(zx_handle_t task, zx_koid_t koid, zx_koid_t parent_koid) {
   zx_info_handle_basic_t info;
-  auto status = zx_object_get_info(task, ZX_INFO_HANDLE_BASIC, &info,
-                                   sizeof(info), nullptr, nullptr);
-  EXPECT_EQ(status, ZX_OK);
-  if (status == ZX_OK) {
-    EXPECT_EQ(koid, info.koid);
-    EXPECT_EQ(parent_koid, info.related_koid);
-  }
+  ASSERT_EQ(GetHandleInfo(task, &info), ZX_OK);
+  EXPECT_EQ(koid, info.koid);
+  EXPECT_EQ(parent_koid, info.related_koid);
 }
 
 static void TestJobProcessThread(zx::job& search_job) {
@@ -149,6 +151,15 @@ TEST(JobsTest, RootJob) {
   // current functionality.
   auto job = GetRootJob();
   TestJobProcessThread(job);
+}
+
+TEST(JobsTest, FindProcess) {
+  auto job = GetDefaultJob();
+  auto pid = GetKoid(zx_process_self());
+  auto process = FindProcess(job.get(), pid);
+  zx_info_handle_basic_t info;
+  ASSERT_EQ(GetHandleInfo(process.get(), &info), ZX_OK);
+  EXPECT_EQ(info.koid, pid);
 }
 
 }  // namespace

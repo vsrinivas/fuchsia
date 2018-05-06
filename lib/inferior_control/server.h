@@ -9,6 +9,7 @@
 #include <queue>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/zx/job.h>
 
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
@@ -36,6 +37,9 @@ class Server : public Process::Delegate {
   // among the uses.
   virtual bool Run() = 0;
 
+  zx_handle_t job_for_search() const { return job_for_search_.get(); }
+  zx_handle_t job_for_launch() const { return job_for_launch_.get(); }
+
   // Returns a raw pointer to the current inferior. The instance pointed to by
   // the returned pointer is owned by this Server instance and should not be
   // deleted.
@@ -61,14 +65,25 @@ class Server : public Process::Delegate {
   // owned by this Server instance and should not be deleted.
   ExceptionPort& exception_port() { return exception_port_; }
 
-  // Call this to schedule termination of gdbserver.
-  // Any outstanding messages will be sent first.
+  // Call this to schedule termination of the server.
   // N.B. The Server will exit its main loop asynchronously so any
   // subsequently posted tasks will be dropped.
   void PostQuitMessageLoop(bool status);
 
+ private:
+  // Returns a borrowed handle of the job whose processes we may attach to.
+  // If this is ZX_HANDLE_INVALID then we may not attach to any process.
+  zx::job job_for_search_;
+
+  // Returns a borrowed handle of the job where processes are launched.
+  // This is not necessarily |job_for_search_|, we may be able to attach to
+  // any process but not necessarily want to start new processes in the root
+  // job itself. If this is ZX_HANDLE_INVALID then starting new processes is
+  // not allowed.
+  zx::job job_for_launch_;
+
  protected:
-  Server();
+  Server(zx::job job_for_search, zx::job job_for_launch);
   virtual ~Server();
 
   // Sets the run status and quits the main message loop.
@@ -96,7 +111,7 @@ class Server : public Process::Delegate {
   // for "Run()" when |message_loop_| exits.
   bool run_status_;
 
- private:
+private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Server);
 };
 
@@ -104,7 +119,7 @@ class Server : public Process::Delegate {
 // An example use-case is debugserver for gdb.
 class ServerWithIO : public Server, public IOLoop::Delegate {
 protected:
-  ServerWithIO();
+  ServerWithIO(zx::job job_for_search, zx::job job_for_launch);
   virtual ~ServerWithIO();
 
   // The IOLoop used for blocking I/O operations over |client_sock_|.

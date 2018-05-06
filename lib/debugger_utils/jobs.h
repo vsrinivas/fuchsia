@@ -51,6 +51,11 @@ zx_status_t WalkJobTree(zx::job& job, JobTreeJobCallback* job_callback,
                         JobTreeProcessCallback* process_callback,
                         JobTreeThreadCallback* thread_callback);
 
+// Simple wrapper on WalkJobTree for finding processes.
+// Returns zx::process(ZX_HANDLE_INVALID) if not found.
+zx::process FindProcess(zx::job& job, zx_koid_t pid);
+zx::process FindProcess(zx_handle_t job, zx_koid_t pid);
+
 }  // namespace util
 }  // namespace debugserver
 

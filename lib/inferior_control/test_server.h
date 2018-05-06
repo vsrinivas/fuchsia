@@ -28,7 +28,7 @@ namespace debugserver {
 // calling methods which modify the internal state of a TestServer instance.
 class TestServer : public Server, public ::testing::Test {
  public:
-  TestServer() = default;
+  TestServer();
 
   // ::testing::Test overrides
   void SetUp() override;

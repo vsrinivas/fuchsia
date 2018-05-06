@@ -373,6 +373,30 @@ zx_status_t WalkJobTree(zx::job& job, JobTreeJobCallback* job_callback,
   return WalkJobTreeInternal(&stack, &ctx);
 }
 
+zx::process FindProcess(zx::job& job, zx_koid_t pid) {
+  zx::process process;
+  JobTreeProcessCallback find_process_callback = [&] (
+      zx::process& task, zx_koid_t koid,
+      zx_koid_t parent_koid, int depth) -> zx_status_t {
+    if (koid == pid) {
+      process.reset(task.release());
+      return ZX_ERR_STOP;
+    }
+    return ZX_OK;
+  };
+  // There's no real need to check the result here.
+  util::WalkJobTree(job, nullptr, &find_process_callback, nullptr);
+  return process;
+}
+
+zx::process FindProcess(zx_handle_t job_h, zx_koid_t pid) {
+  zx::job job(job_h);
+  auto result = FindProcess(job, pid);
+  // Don't close |job_h| when we return.
+  auto released_handle __UNUSED = job.release();
+  return result;
+}
+
 // The default job is not ours to own so we need to make a copy.
 // This is a simple wrapper to do that.
 zx::job GetDefaultJob() {

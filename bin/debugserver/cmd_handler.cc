@@ -1106,17 +1106,10 @@ bool CommandHandler::Handle_vAttach(const fxl::StringView& packet,
       return ReplyWithError(util::ErrorCode::PERM, callback);
   }
 
-  if (!current_process->Initialize(pid)) {
-    FXL_LOG(ERROR) << "Failed to set up inferior";
+  if (!current_process->Attach(pid)) {
+    FXL_LOG(ERROR) << "vAttach: failed to attach to inferior " << pid;
     return ReplyWithError(util::ErrorCode::PERM, callback);
   }
-
-  FXL_DCHECK(!current_process->IsAttached());
-  if (!current_process->Attach()) {
-    FXL_LOG(ERROR) << "vAttach: Failed to attach process!";
-    return ReplyWithError(util::ErrorCode::PERM, callback);
-  }
-  FXL_DCHECK(current_process->IsAttached());
 
   // It's Attach()'s job to mark the process as live, since it knows we just
   // attached to an already running program.
@@ -1289,13 +1282,6 @@ bool CommandHandler::Handle_vRun(const fxl::StringView& packet,
     FXL_LOG(ERROR) << "Failed to set up inferior";
     return ReplyWithError(util::ErrorCode::PERM, callback);
   }
-
-  FXL_DCHECK(!current_process->IsAttached());
-  if (!current_process->Attach()) {
-    FXL_LOG(ERROR) << "vRun: Failed to attach process!";
-    return ReplyWithError(util::ErrorCode::PERM, callback);
-  }
-  FXL_DCHECK(current_process->IsAttached());
 
   // On Linux, the program is considered "live" after vRun, e.g. $pc is set. On
   // Zircon, calling zx_process_start (called by launchpad_go, which is

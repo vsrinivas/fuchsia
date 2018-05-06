@@ -53,8 +53,7 @@ class AttachTest : public TestServer {
     auto inferior = current_process();
     auto pid = inferior->id();
     EXPECT_TRUE(inferior->Detach());
-    EXPECT_TRUE(inferior->Initialize(pid));
-    EXPECT_TRUE(inferior->Attach());
+    EXPECT_TRUE(inferior->Attach(pid));
     // If attaching failed we'll hang since we won't see the inferior exiting.
     if (!inferior->IsAttached()) {
       QuitMessageLoop(true);

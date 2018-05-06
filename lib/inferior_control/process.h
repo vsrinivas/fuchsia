@@ -11,7 +11,6 @@
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
 
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 
 #include "garnet/lib/debugger_utils/dso_list.h"
@@ -27,7 +26,7 @@ namespace debugserver {
 class Server;
 class Thread;
 
-// Represents an inferior process that the stub is currently attached to.
+// Represents an inferior process that we're attached to.
 class Process final {
  public:
  public:
@@ -82,33 +81,29 @@ class Process final {
 
   static const char* StateName(Process::State state);
 
-  // Creates and initializes the inferior process but does not start it.
+  // Creates and initializes the inferior process, via launchpad, but does
+  // not start it. set_argv() must have already been called.
+  // This also "attaches" to the inferior: A debug-capable process handle is
+  // obtained and the debugger exception port is bound to.
   // Returns false if there is an error.
-  // The process must still be attached to by calling Attach().
   // Do not call this if the process is currently live (state is kStarting or
   // kRunning).
   bool Initialize();
 
-  // Creates and initializes the inferior for debugging a running program.
+  // Attach to running program with pid |pid|.
+  // A debug-capable process handle is obtained and the debugger exception
+  // port is bound to.
   // Returns false if there is an error.
-  // The process must still be attached to by calling Attach().
   // Do not call this if the process is currently live (state is kStarting or
   // kRunning).
-  bool Initialize(zx_koid_t pid);
-
-  // Obtains a debug-capable handle and binds an exception port for receiving
-  // exceptions from the inferior process.
-  // Returns true on success, or false in the case of an error. One form of
-  // Initialize() MUST be called successfully before calling Attach().
-  // TODO(dje): While IWBN to have separate steps for "obtain debug-capable
-  // handle" and "bind exception port", it is important to the reader that
-  // "detach" means "release all connections with the inferior". After
-  // detaching we should have absolutely no effect on the inferior, including
-  // not preserving the lifetime of the kernel process instance because we
-  // still have a handle of the process.
-  bool Attach();
+  bool Attach(zx_koid_t pid);
 
   // Detach from an attached process, and return to pre-attached state.
+  // This includes unbinding from the exception port and closing the process
+  // handle. To keep things simple and clean "detach" means "release all
+  // connections with the inferior". After detaching we should have absolutely
+  // no effect on the inferior, including not preserving the lifetime of the
+  // kernel process instance because we still have a handle of the process.
   // Returns true on success, or false if already detached.
   bool Detach();
 
@@ -219,7 +214,8 @@ class Process final {
                            const zx_exception_context_t& context);
 
   // Debug handle mgmt.
-  bool AllocDebugHandle();
+  bool AllocDebugHandle(launchpad_t* lp);
+  bool AllocDebugHandle(zx_koid_t pid);
   void CloseDebugHandle();
 
   // Exception port mgmt.
