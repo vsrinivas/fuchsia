@@ -66,6 +66,7 @@ std::pair<escher::BufferPtr, escher::BufferPtr> MeshBuffer::Preserve(
                   /* keep_content= */ true);
   }
 
+  // TODO(SCN-712): Fix alignment.
   return {vertex_buffer_->Preserve(frame, vertex_size),
           index_buffer_->Preserve(frame, index_size)};
 };

@@ -72,7 +72,9 @@ void EscherBuffer::AppendData(escher::impl::CommandBuffer* command,
         GetCapacity(total_size), kBufferUsageFlags, kMemoryPropertyFlags);
     command->CopyBufferAfterBarrier(
         buffer_, new_buffer, {0, 0, size_},
-        vk::AccessFlagBits::eTransferWrite | vk::AccessFlagBits::eShaderRead);
+        vk::AccessFlagBits::eTransferWrite | vk::AccessFlagBits::eShaderRead,
+        vk::PipelineStageFlagBits::eTransfer |
+            vk::PipelineStageFlagBits::eComputeShader);
     buffer_ = std::move(new_buffer);
   }
   auto staging_buffer = GetStagingBuffer(factory, size);

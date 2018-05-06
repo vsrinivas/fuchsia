@@ -132,8 +132,6 @@ void Stroke::TessellateAndMerge(Frame* frame, MeshBuffer* mesh_buffer) {
     division_segment_index_buffer_.SetData(
         command, buffer_factory, division_segment_indices.data(),
         division_segment_indices.size() * sizeof(uint32_t));
-
-    is_path_updated_ = false;
   }
 
   uint32_t base_vertex_index = mesh_buffer->vertex_count();
@@ -156,11 +154,8 @@ void Stroke::TessellateAndMerge(Frame* frame, MeshBuffer* mesh_buffer) {
                          cumulative_division_counts_buffer_.get(),
                          division_segment_index_buffer_.get(), vertex_buffer,
                          index_buffer, command, profiler,
-                         path_.division_count());
-
-  // Dependency is pretty clear within the command buffer. The compute command
-  // depends on the copy command for input. No further command depends on the
-  // output of the compute command. Therefore, a barrier is not required here.
+                         path_.division_count(), is_path_updated_);
+  is_path_updated_ = false;
 }
 
 }  // namespace sketchy_service

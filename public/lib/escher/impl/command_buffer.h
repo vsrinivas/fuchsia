@@ -84,7 +84,8 @@ class CommandBuffer {
   // queue family indices are VK_QUEUE_FAMILY_IGNORED).
   void CopyBufferAfterBarrier(const BufferPtr& src, const BufferPtr& dst,
                               vk::BufferCopy region,
-                              vk::AccessFlags src_access_mask);
+                              vk::AccessFlags src_access_mask,
+                              vk::PipelineStageFlags src_stage_mask);
 
   // Transition the image between the two layouts; see section 11.4 of the
   // Vulkan spec.  Retain image in used_resources.

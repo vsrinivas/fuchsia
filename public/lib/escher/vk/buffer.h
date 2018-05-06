@@ -19,12 +19,6 @@ class Buffer : public WaitableResource {
   static const ResourceTypeInfo kTypeInfo;
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
 
-  // Construct an ownerless Buffer.  When the Buffer is destroyed, all resources
-  // are immediately freed/destroyed.
-  Buffer(ResourceManager* manager, GpuAllocator* allocator, vk::DeviceSize size,
-         vk::BufferUsageFlags usage_flags,
-         vk::MemoryPropertyFlags memory_property_flags);
-
   static BufferPtr New(ResourceManager* manager, GpuAllocator* allocator,
                        vk::DeviceSize size, vk::BufferUsageFlags usage_flags,
                        vk::MemoryPropertyFlags memory_property_flags);

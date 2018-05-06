@@ -53,6 +53,7 @@ SharedBuffer::SharedBuffer(scenic_lib::Session* session,
 
 escher::BufferPtr SharedBuffer::Preserve(Frame* frame, vk::DeviceSize size) {
   FXL_CHECK(size_ + size <= capacity());
+
   size_ += size;
   auto factory = frame->shared_buffer_pool()->factory();
   return factory->NewBuffer(escher_buffer_->mem(), kBufferUsageFlags, size,
@@ -60,10 +61,12 @@ escher::BufferPtr SharedBuffer::Preserve(Frame* frame, vk::DeviceSize size) {
 }
 
 void SharedBuffer::Copy(Frame* frame, const SharedBufferPtr& from) {
-  FXL_CHECK(from->size() <= capacity());
+  FXL_DCHECK(from->size() <= capacity());
   frame->command()->CopyBufferAfterBarrier(
       from->escher_buffer(), escher_buffer_, {0, 0, from->size()},
-      vk::AccessFlagBits::eTransferWrite | vk::AccessFlagBits::eShaderWrite);
+      vk::AccessFlagBits::eTransferWrite | vk::AccessFlagBits::eShaderWrite,
+      vk::PipelineStageFlagBits::eTransfer |
+          vk::PipelineStageFlagBits::eComputeShader);
   size_ = from->size();
 }
 

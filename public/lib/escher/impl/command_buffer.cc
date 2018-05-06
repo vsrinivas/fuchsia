@@ -153,10 +153,9 @@ void CommandBuffer::CopyBuffer(const BufferPtr& src, const BufferPtr& dst,
   KeepAlive(dst);
 }
 
-void CommandBuffer::CopyBufferAfterBarrier(const BufferPtr& src,
-                                           const BufferPtr& dst,
-                                           vk::BufferCopy region,
-                                           vk::AccessFlags src_access_mask) {
+void CommandBuffer::CopyBufferAfterBarrier(
+    const BufferPtr& src, const BufferPtr& dst, vk::BufferCopy region,
+    vk::AccessFlags src_access_mask, vk::PipelineStageFlags src_stage_mask) {
   vk::BufferMemoryBarrier barrier;
   barrier.srcAccessMask = src_access_mask;
   barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
@@ -165,10 +164,9 @@ void CommandBuffer::CopyBufferAfterBarrier(const BufferPtr& src,
   barrier.buffer = dst->vk();
   barrier.offset = 0;
   barrier.size = dst->size();
-  command_buffer_.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
-                                  vk::PipelineStageFlagBits::eTransfer,
-                                  vk::DependencyFlags(), 0, nullptr, 1,
-                                  &barrier, 0, nullptr);
+  command_buffer_.pipelineBarrier(
+      src_stage_mask, vk::PipelineStageFlagBits::eTransfer,
+      vk::DependencyFlags(), 0, nullptr, 1, &barrier, 0, nullptr);
   CopyBuffer(src, dst, region);
 }
 
