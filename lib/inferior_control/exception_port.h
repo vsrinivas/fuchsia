@@ -38,7 +38,7 @@ class ExceptionPort final {
   using Callback = std::function<void(const zx_port_packet_t& packet,
                                       const zx_exception_context_t& context)>;
 
-  ExceptionPort();
+  explicit ExceptionPort(async_t* async);
   ~ExceptionPort();
 
   // Creates an exception port and starts waiting for events on it in a special

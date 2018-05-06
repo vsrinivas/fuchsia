@@ -3,6 +3,7 @@
         "garnet/packages/prod/debugserver"
     ],
     "packages": {
-        "debugserver_tests": "//garnet/bin/debugserver:debugserver_tests"
+        "debugserver_tests": "//garnet/bin/debugserver:debugserver_tests",
+        "inferior_control_tests": "//garnet/lib/inferior_control:inferior_control_tests"
     }
 }

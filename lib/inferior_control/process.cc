@@ -512,8 +512,10 @@ Thread* Process::FindThreadById(zx_koid_t thread_id) {
   zx_status_t status = zx_object_get_child(
       handle_, thread_id, ZX_RIGHT_SAME_RIGHTS, &thread_handle);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Could not obtain a debug handle to thread: "
-                   << util::ZxErrorString(status);
+    // If the process just exited then the thread will be gone. So this is
+    // just a debug message, not a warning or error.
+    FXL_VLOG(1) << "Could not obtain a debug handle to thread "
+                << thread_id << ": " << util::ZxErrorString(status);
     return nullptr;
   }
 
@@ -684,9 +686,10 @@ void Process::OnExceptionOrSignal(const zx_port_packet_t& packet,
   }
 
   zx_excp_type_t type = static_cast<zx_excp_type_t>(packet.type);
+  zx_koid_t tid = packet.exception.tid;
   Thread* thread = nullptr;
-  if (packet.exception.tid != ZX_KOID_INVALID)
-    thread = FindThreadById(packet.exception.tid);
+  if (tid != ZX_KOID_INVALID)
+    thread = FindThreadById(tid);
 
   // Finding the load address of the main executable requires a few steps.
   // It's not loaded until the first time we hit the _dl_debug_state
@@ -709,18 +712,24 @@ void Process::OnExceptionOrSignal(const zx_port_packet_t& packet,
 
   switch (type) {
     case ZX_EXCP_THREAD_STARTING:
-      FXL_VLOG(1) << "Received ZX_EXCP_THREAD_STARTING exception";
       FXL_DCHECK(thread);
       FXL_DCHECK(thread->state() == Thread::State::kNew);
+      FXL_VLOG(1) << "Received ZX_EXCP_THREAD_STARTING exception for thread "
+                  << thread->GetName();
       thread->OnException(type, context);
       delegate_->OnThreadStarting(this, thread, context);
       break;
     case ZX_EXCP_THREAD_EXITING:
-      FXL_DCHECK(thread);
-      FXL_VLOG(1) << "Received ZX_EXCP_THREAD_EXITING exception for thread "
-                  << thread->GetName();
-      thread->OnException(type, context);
-      delegate_->OnThreadExiting(this, thread, context);
+      // If the process also exited, then the thread may be gone.
+      if (thread) {
+        FXL_VLOG(1) << "Received ZX_EXCP_THREAD_EXITING exception for thread "
+                    << tid << ", " << thread->GetName();
+        thread->OnException(type, context);
+        delegate_->OnThreadExiting(this, thread, context);
+      } else {
+        FXL_VLOG(1) << "Received ZX_EXCP_THREAD_EXITING exception for thread "
+                    << tid;
+      }
       break;
     case ZX_EXCP_POLICY_ERROR:
       FXL_DCHECK(thread);
@@ -730,7 +739,8 @@ void Process::OnExceptionOrSignal(const zx_port_packet_t& packet,
       delegate_->OnSyntheticException(this, thread, type, context);
       break;
     default:
-      FXL_LOG(ERROR) << "Ignoring unrecognized synthetic exception: " << type;
+      FXL_LOG(ERROR) << "Ignoring unrecognized synthetic exception for thread "
+                     << tid << ": " << type;
       break;
   }
 }

@@ -51,8 +51,8 @@ std::string IOPortPacketTypeToString(const zx_port_packet_t& pkt) {
 // static
 ExceptionPort::Key ExceptionPort::g_key_counter = 0;
 
-ExceptionPort::ExceptionPort()
-    : keep_running_(false), origin_dispatcher_(async_get_default()) {
+ExceptionPort::ExceptionPort(async_t* async)
+  : keep_running_(false), origin_dispatcher_(async) {
   FXL_DCHECK(origin_dispatcher_);
 }
 

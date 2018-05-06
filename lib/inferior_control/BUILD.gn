@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/package.gni")
+
 # A framework for running subprocesses ("inferiors") under debugger-like
 # control.
 static_library("inferior_control") {
@@ -60,4 +62,53 @@ static_library("inferior_control") {
   ]
 
   include_dirs = [ ".." ]
+}
+
+executable("tests") {
+  testonly = true
+  output_name = "inferior_control_tests"
+
+  sources = [
+    "process_unittest.cc",
+    "test_server.cc",
+    "test_server.h"
+  ]
+
+  deps = [
+    ":inferior_control",
+    "//garnet/lib/debugger_utils",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("test_helper") {
+  testonly = true
+  output_name = "inferior_control_test_helper"
+
+  sources = [
+    "test_helper.cc",
+  ]
+
+  libs = [ "zircon" ]
+}
+
+package("inferior_control_tests") {
+  testonly = true
+  deprecated_system_image = true
+
+  deps = [
+    ":tests",
+    ":test_helper",
+  ]
+
+  tests = [
+    {
+      name = "inferior_control_tests"
+    },
+    {
+      name = "inferior_control_test_helper"
+      dest = "helper/inferior_control_test_helper"
+    },
+  ]
 }

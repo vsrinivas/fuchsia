@@ -72,6 +72,8 @@ class Process final {
   const util::Argv& argv() { return argv_; }
   void set_argv(const util::Argv& argv) { argv_ = argv; }
 
+  launchpad_t* launchpad() const { return launchpad_; }
+
   // Returns the current state of this process.
   State state() const { return state_; }
 
