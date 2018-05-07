@@ -10,7 +10,6 @@ members =  [
   "bin/power_manager",
   "bin/wlantool",
   "bin/xi_core",
-  "drivers/wlan/testing/util",
   "bin/bluetooth_tests/integration",
   "examples/bluetooth/ble_battery_service",
   "examples/fidl/*rust",
@@ -19,7 +18,6 @@ members =  [
   "examples/rust/testing",
   "lib/rust/crates/eapol",
   "lib/rust/crates/fuchsia-bluetooth",
-  "lib/rust/crates/fuchsia-wlan-dev",
   "lib/rust/crates/wlan-rsn",
   "lib/rust/crates/wlan-sme",
   "lib/rust/fidl_crates/fidl_bluetooth_host",
@@ -106,7 +104,6 @@ fuchsia-syslog = { path = "public/rust/crates/fuchsia-syslog" }
 fuchsia-async = { path = "public/rust/crates/fuchsia-async" }
 fuchsia-bluetooth = { path = "lib/rust/crates/fuchsia-bluetooth" }
 fuchsia-vfs-watcher = { path = "public/rust/crates/fuchsia-vfs/fuchsia-vfs-watcher" }
-fuchsia-wlan-dev = { path = "lib/rust/crates/fuchsia-wlan-dev" }
 fuchsia-zircon = { path = "public/rust/crates/fuchsia-zircon" }
 fuchsia-zircon-sys = { path = "public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys" }
 mio = { path = "../third_party/rust-mirrors/mio" }

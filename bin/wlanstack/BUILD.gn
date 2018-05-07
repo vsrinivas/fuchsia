@@ -10,7 +10,7 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/lib/rust/crates/fuchsia-wlan-dev:fuchsia-wlan-dev-rustc",
+    "//garnet/lib/rust/crates/fuchsia-wlan-dev",
     "//garnet/lib/rust/crates/wlan-sme",
     "//garnet/lib/wlan/fidl:fidl-rustc",
     "//garnet/lib/wlan/fidl:service-rustc",

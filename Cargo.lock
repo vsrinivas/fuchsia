@@ -806,17 +806,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fuchsia-wlan-dev"
-version = "0.1.0"
-dependencies = [
- "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "fdio 0.2.0",
- "fidl_wlan_device 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
-]
-
-[[package]]
 name = "fuchsia-zircon"
 version = "0.3.4"
 dependencies = [
@@ -1672,20 +1661,6 @@ dependencies = [
 [[package]]
 name = "wlan-sme"
 version = "0.1.0"
-
-[[package]]
-name = "wlan-test-util"
-version = "0.1.0"
-dependencies = [
- "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "fdio 0.2.0",
- "fidl 0.1.0",
- "fidl_wlan_device 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-wlan-dev 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
 
 [[package]]
 name = "wlantool2"
