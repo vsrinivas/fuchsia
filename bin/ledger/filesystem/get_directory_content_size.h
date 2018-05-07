@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_TESTING_GET_DIRECTORY_CONTENT_SIZE_H_
-#define PERIDOT_BIN_LEDGER_TESTING_GET_DIRECTORY_CONTENT_SIZE_H_
+#ifndef PERIDOT_BIN_LEDGER_FILESYSTEM_GET_DIRECTORY_CONTENT_SIZE_H_
+#define PERIDOT_BIN_LEDGER_FILESYSTEM_GET_DIRECTORY_CONTENT_SIZE_H_
 
 #include "lib/fxl/strings/string_view.h"
 
-namespace test {
-namespace benchmark {
+namespace ledger {
 
 // Recursively compute the full size of the directory. If a directory (top-level
 // |directory| or any of the nested ones) contents can't be retrieved or the
@@ -17,7 +16,6 @@ namespace benchmark {
 // accumulated size in bytes.
 bool GetDirectoryContentSize(fxl::StringView directory, uint64_t* size);
 
-}  // namespace benchmark
-}  // namespace test
+}  // namespace ledger
 
-#endif  // PERIDOT_BIN_LEDGER_TESTING_GET_DIRECTORY_CONTENT_SIZE_H_
+#endif  // PERIDOT_BIN_LEDGER_FILESYSTEM_GET_DIRECTORY_CONTENT_SIZE_H_

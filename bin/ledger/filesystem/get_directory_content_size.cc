@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/testing/get_directory_content_size.h"
+#include "peridot/bin/ledger/filesystem/get_directory_content_size.h"
 
 #include <queue>
 #include <string>
@@ -10,10 +10,9 @@
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"
-#include "peridot/bin/ledger/storage/impl/directory_reader.h"
+#include "peridot/bin/ledger/filesystem/directory_reader.h"
 
-namespace test {
-namespace benchmark {
+namespace ledger {
 
 bool GetDirectoryContentSize(fxl::StringView directory, uint64_t* size) {
   *size = 0;
@@ -22,7 +21,7 @@ bool GetDirectoryContentSize(fxl::StringView directory, uint64_t* size) {
   while (!directories.empty()) {
     std::string parent = directories.front();
     directories.pop();
-    if (!storage::DirectoryReader::GetDirectoryEntries(
+    if (!DirectoryReader::GetDirectoryEntries(
             parent, [&parent, size, &directories](fxl::StringView child) {
               std::string full_path =
                   files::AbsolutePath(parent + "/" + child.ToString());
@@ -45,5 +44,4 @@ bool GetDirectoryContentSize(fxl::StringView directory, uint64_t* size) {
   return true;
 }
 
-}  // namespace benchmark
-}  // namespace test
+}  // namespace ledger

@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_STORAGE_IMPL_DIRECTORY_READER_H_
-#define PERIDOT_BIN_LEDGER_STORAGE_IMPL_DIRECTORY_READER_H_
+#ifndef PERIDOT_BIN_LEDGER_FILESYSTEM_DIRECTORY_READER_H_
+#define PERIDOT_BIN_LEDGER_FILESYSTEM_DIRECTORY_READER_H_
 
 #include <functional>
 
 #include "lib/fxl/strings/string_view.h"
 
-namespace storage {
+namespace ledger {
 
 class DirectoryReader {
  public:
@@ -19,6 +19,6 @@ class DirectoryReader {
       std::function<bool(fxl::StringView)> callback);
 };
 
-}  // namespace storage
+}  // namespace ledger
 
-#endif  // PERIDOT_BIN_LEDGER_STORAGE_IMPL_DIRECTORY_READER_H_
+#endif  // PERIDOT_BIN_LEDGER_FILESYSTEM_DIRECTORY_READER_H_

@@ -1,0 +1,35 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//peridot/bin/ledger/*" ]
+
+source_set("filesystem") {
+  sources = [
+    "directory_reader.cc",
+    "directory_reader.h",
+    "get_directory_content_size.cc",
+    "get_directory_content_size.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "filesystem_unittest.cc",
+  ]
+
+  deps = [
+    ":filesystem",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}

@@ -17,7 +17,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "peridot/bin/ledger/testing/get_directory_content_size.h"
+#include "peridot/bin/ledger/filesystem/get_directory_content_size.h"
 #include "peridot/bin/ledger/testing/get_ledger.h"
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
@@ -260,10 +260,12 @@ void BacklogBenchmark::ShutDown() {
 
   uint64_t tmp_dir_size = 0;
   // TODO(mariagl): Use trace event to record this information.
-  FXL_CHECK(GetDirectoryContentSize(writer_tmp_dir_.path(), &tmp_dir_size));
+  FXL_CHECK(
+      ledger::GetDirectoryContentSize(writer_tmp_dir_.path(), &tmp_dir_size));
   FXL_LOG(INFO) << "Writer directory (" << writer_tmp_dir_.path()
                 << ") size: " << tmp_dir_size;
-  FXL_CHECK(GetDirectoryContentSize(reader_tmp_dir_.path(), &tmp_dir_size));
+  FXL_CHECK(
+      ledger::GetDirectoryContentSize(reader_tmp_dir_.path(), &tmp_dir_size));
   FXL_LOG(INFO) << "Reader directory (" << reader_tmp_dir_.path()
                 << ") size: " << tmp_dir_size;
 }

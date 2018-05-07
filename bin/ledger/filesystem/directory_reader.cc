@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/storage/impl/directory_reader.h"
+#include "peridot/bin/ledger/filesystem/directory_reader.h"
 
 #include <functional>
 #include <memory>
@@ -11,7 +11,7 @@
 
 #include "lib/fxl/strings/string_view.h"
 
-namespace storage {
+namespace ledger {
 namespace {
 
 void SafeCloseDir(DIR* dir) {
@@ -46,4 +46,4 @@ bool DirectoryReader::GetDirectoryEntries(
   return true;
 }
 
-};  // namespace storage
+};  // namespace ledger

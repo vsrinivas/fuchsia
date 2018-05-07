@@ -34,7 +34,6 @@
 #include "peridot/bin/ledger/storage/impl/commit_impl.h"
 #include "peridot/bin/ledger/storage/impl/commit_random_impl.h"
 #include "peridot/bin/ledger/storage/impl/constants.h"
-#include "peridot/bin/ledger/storage/impl/directory_reader.h"
 #include "peridot/bin/ledger/storage/impl/journal_impl.h"
 #include "peridot/bin/ledger/storage/impl/object_digest.h"
 #include "peridot/bin/ledger/storage/impl/page_db_empty_impl.h"

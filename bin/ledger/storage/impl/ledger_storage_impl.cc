@@ -15,7 +15,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/concatenate.h"
-#include "peridot/bin/ledger/storage/impl/directory_reader.h"
+#include "peridot/bin/ledger/filesystem/directory_reader.h"
 #include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/lib/base64url/base64url.h"
@@ -124,7 +124,7 @@ bool LedgerStorageImpl::DeletePageStorage(PageIdView page_id) {
 
 std::vector<PageId> LedgerStorageImpl::ListLocalPages() {
   std::vector<PageId> local_pages;
-  DirectoryReader::GetDirectoryEntries(
+  ledger::DirectoryReader::GetDirectoryEntries(
       storage_dir_, [&local_pages](fxl::StringView encoded_page_id) {
         local_pages.emplace_back(GetId(encoded_page_id));
         return true;
