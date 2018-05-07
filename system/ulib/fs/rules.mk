@@ -18,6 +18,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/pseudo-file.cpp \
     $(LOCAL_DIR)/remote-dir.cpp \
     $(LOCAL_DIR)/service.cpp \
+    $(LOCAL_DIR)/synchronous-vfs.cpp \
     $(LOCAL_DIR)/unmount.cpp \
     $(LOCAL_DIR)/vfs.cpp \
     $(LOCAL_DIR)/vmo-file.cpp \

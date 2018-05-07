@@ -50,11 +50,12 @@ public:
     // to prevent a race.
     ~Connection();
 
-    void SignalTeardown() {
-        if (channel_) {
-            ZX_ASSERT(channel_.signal(0, kLocalTeardownSignal) == ZX_OK);
-        }
-    }
+    // Set a signal on the channel which causes it to be torn down and
+    // closed asynchronously.
+    void AsyncTeardown();
+
+    // Explicitly tear down and close the connection synchronously.
+    void SyncTeardown();
 
     // Begins waiting for messages on the channel.
     //

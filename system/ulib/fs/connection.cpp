@@ -153,6 +153,18 @@ Connection::~Connection() {
     }
 }
 
+void Connection::AsyncTeardown() {
+    if (channel_) {
+        ZX_ASSERT(channel_.signal(0, kLocalTeardownSignal) == ZX_OK);
+    }
+}
+
+void Connection::SyncTeardown() {
+    if (wait_.Cancel() == ZX_OK) {
+        Terminate(/* call_close= */ true);
+    }
+}
+
 zx_status_t Connection::Serve() {
     wait_.set_object(channel_.get());
     return wait_.Begin(vfs_->async());

@@ -16,11 +16,7 @@ ManagedVfs::ManagedVfs() : is_shutting_down_(false) {}
 ManagedVfs::ManagedVfs(async_t* async) : Vfs(async), is_shutting_down_(false) {}
 
 ManagedVfs::~ManagedVfs() {
-    if (!connections_.is_empty()) {
-        printf("WARNING: ManagedVfs destroyed with live connections.\n"
-               "         Call ManagedVfs::Shutdown before terminating.\n");
-    }
-    // TODO(US-480): Assert that connections is empty.
+    ZX_DEBUG_ASSERT(connections_.is_empty());
 }
 
 // Asynchronously drop all connections.
@@ -31,13 +27,14 @@ void ManagedVfs::Shutdown(ShutdownCallback handler) {
         shutdown_handler_ = fbl::move(closure);
         is_shutting_down_ = true;
 
+        UninstallAll(ZX_TIME_INFINITE);
         if (connections_.is_empty()) {
             CheckForShutdownComplete();
         } else {
             // Signal the teardown on channels in a way that doesn't potentially
             // pull them out from underneath async callbacks.
             for (auto& c : connections_) {
-                c.SignalTeardown();
+                c.AsyncTeardown();
             }
         }
     });
@@ -57,7 +54,6 @@ void ManagedVfs::OnShutdownComplete(async_t*, async::TaskBase*, zx_status_t stat
     ZX_DEBUG_ASSERT(shutdown_handler_);
     ZX_DEBUG_ASSERT(is_shutting_down_);
 
-    UninstallAll(zx_deadline_after(ZX_SEC(5)));
     auto handler = fbl::move(shutdown_handler_);
     handler(status);
 }

@@ -17,12 +17,16 @@
 
 namespace fs {
 
-// A specialization of |Vfs| which tears down all active connections when it
-// is destroyed.
+// A specialization of |Vfs| which provides a mechanism to tear down
+// all active connections before it is destroyed.
 //
-// Unlike |Vfs|, this class is NOT thread-safe and it must be used with a
-// single-threaded asynchronous dispatcher. It is unsafe to shutdown the
-// dispatch loop before shutting down the ManagedVfs object.
+// This class is NOT thread-safe and it must be used with a
+// single-threaded asynchronous dispatcher. However, after an operation
+// has been dispatched to a connection, it is safe to defer completion
+// of that operation, returning "ERR_DISPATCHER_ASYNC".
+//
+// It is unsafe to shutdown the dispatch loop before shutting down the
+// ManagedVfs object.
 class ManagedVfs : public Vfs {
 public:
     ManagedVfs();

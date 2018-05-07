@@ -433,23 +433,6 @@ zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel) 
     return vn->Serve(this, fbl::move(channel), ZX_FS_RIGHT_ADMIN);
 }
 
-void Vfs::Shutdown(ShutdownCallback closure) {
-    closure(ZX_ERR_NOT_SUPPORTED);
-}
-
-bool Vfs::IsTerminating() const {
-    return false;
-}
-
-void Vfs::RegisterConnection(fbl::unique_ptr<Connection> connection) {
-    // The connection will be destroyed by |UnregisterConnection()|.
-    __UNUSED auto ptr = connection.release();
-}
-
-void Vfs::UnregisterConnection(Connection* connection) {
-    delete connection;
-}
-
 #endif // ifdef __Fuchsia__
 
 zx_status_t Vfs::Ioctl(fbl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_t in_len,

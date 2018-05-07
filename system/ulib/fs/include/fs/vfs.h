@@ -130,14 +130,15 @@ public:
 
 #ifdef __Fuchsia__
     // Unmounts the underlying filesystem.
+    //
+    // The closure may be invoked before or after |Shutdown| returns.
     using ShutdownCallback = fbl::Function<void(zx_status_t status)>;
-    virtual void Shutdown(ShutdownCallback closure);
+    virtual void Shutdown(ShutdownCallback closure) = 0;
 
     // Identifies if the filesystem is in the process of terminating.
     // May be checked by active connections, which, upon reading new
     // port packets, should ignore them and close immediately.
-    virtual bool IsTerminating() const;
-
+    virtual bool IsTerminating() const = 0;
 
     void TokenDiscard(zx::event ios_token) __TA_EXCLUDES(vfs_lock_);
     zx_status_t VnodeToToken(fbl::RefPtr<Vnode> vn, zx::event* ios_token,
@@ -242,10 +243,10 @@ protected:
     mtx_t vfs_lock_{};
 
     // Starts tracking the lifetime of the connection.
-    virtual void RegisterConnection(fbl::unique_ptr<Connection> connection);
+    virtual void RegisterConnection(fbl::unique_ptr<Connection> connection) = 0;
 
     // Stops tracking the lifetime of the connection.
-    virtual void UnregisterConnection(Connection* connection);
+    virtual void UnregisterConnection(Connection* connection) = 0;
 
 #endif // ifdef __Fuchsia__
 };

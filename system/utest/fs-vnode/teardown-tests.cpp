@@ -4,6 +4,7 @@
 
 #include <fdio/io.fidl.h>
 #include <fs/managed-vfs.h>
+#include <fs/synchronous-vfs.h>
 #include <fs/vnode.h>
 #include <fs/vfs.h>
 #include <lib/async/cpp/task.h>
@@ -20,25 +21,41 @@
 
 namespace {
 
-class AsyncTearDownVnode : public fs::Vnode {
+class FdCountVnode : public fs::Vnode {
 public:
-    AsyncTearDownVnode(completion_t* completions) :
-        callback_(nullptr), completions_(completions), fd_count_(0) {}
-
-    ~AsyncTearDownVnode() {
-        // C) Tear down the Vnode.
+    FdCountVnode() : fd_count_(0) {}
+    virtual ~FdCountVnode() {
         ZX_ASSERT(fd_count_ == 0);
-        completion_signal(&completions_[2]);
+    }
+
+    int fds() const {
+        return fd_count_;
     }
 
     zx_status_t Open(uint32_t, fbl::RefPtr<Vnode>* redirect) final {
         fd_count_++;
         return ZX_OK;
     }
+
     zx_status_t Close() final {
         fd_count_--;
         ZX_ASSERT(fd_count_ >= 0);
         return ZX_OK;
+    }
+
+private:
+    int fd_count_;
+};
+
+class AsyncTearDownVnode : public FdCountVnode {
+public:
+    AsyncTearDownVnode(completion_t* completions) :
+        callback_(nullptr), completions_(completions) {}
+
+    ~AsyncTearDownVnode() {
+        // C) Tear down the Vnode.
+        ZX_ASSERT(fds() == 0);
+        completion_signal(&completions_[2]);
     }
 
 private:
@@ -66,7 +83,6 @@ private:
 
     fs::Vnode::SyncCallback callback_;
     completion_t* completions_;
-    int fd_count_;
 };
 
 bool send_sync(const zx::channel& client) {
@@ -285,6 +301,42 @@ bool test_teardown_slow_clone() {
     END_TEST;
 }
 
+bool test_synchronous_teardown() {
+    BEGIN_TEST;
+    async::Loop loop;
+    ASSERT_EQ(loop.StartThread(), ZX_OK);
+    zx::channel client;
+
+    {
+        // Tear down the VFS while the async loop is running.
+        auto vfs = fbl::make_unique<fs::SynchronousVfs>(loop.async());
+        auto vn = fbl::AdoptRef(new FdCountVnode());
+        zx::channel server;
+        ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
+        ASSERT_EQ(vn->Open(0, nullptr), ZX_OK);
+        ASSERT_EQ(vn->Serve(vfs.get(), fbl::move(server), 0), ZX_OK);
+    }
+
+    loop.Quit();
+
+    {
+        // Tear down the VFS while the async loop is not running.
+        auto vfs = fbl::make_unique<fs::SynchronousVfs>(loop.async());
+        auto vn = fbl::AdoptRef(new FdCountVnode());
+        zx::channel server;
+        ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
+        ASSERT_EQ(vn->Open(0, nullptr), ZX_OK);
+        ASSERT_EQ(vn->Serve(vfs.get(), fbl::move(server), 0), ZX_OK);
+    }
+
+    {
+        // Tear down the VFS with no active connections.
+        auto vfs = fbl::make_unique<fs::SynchronousVfs>(loop.async());
+    }
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(teardown_tests)
@@ -293,4 +345,5 @@ RUN_TEST(test_posted_teardown)
 RUN_TEST(test_teardown_delete_this)
 RUN_TEST(test_teardown_slow_async_callback)
 RUN_TEST(test_teardown_slow_clone)
+RUN_TEST(test_synchronous_teardown)
 END_TEST_CASE(teardown_tests)
