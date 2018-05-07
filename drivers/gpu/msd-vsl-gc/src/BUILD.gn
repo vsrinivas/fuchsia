@@ -7,6 +7,8 @@ import("//garnet/lib/magma/gnbuild/magma.gni")
 source_set("src") {
   public = []
   sources = [
+    "address_space.cc",
+    "address_space.h",
     "msd_vsl_buffer.cc",
     "msd_vsl_connection.cc",
     "msd_vsl_device.cc",
@@ -26,6 +28,6 @@ source_set("src") {
     "//garnet/lib/magma/src/magma_util/platform:mmio",
   ]
   friend = [
-    "../tests/unit_tests:hardware_tests",
+    "../tests/unit_tests:*",
   ]
 }

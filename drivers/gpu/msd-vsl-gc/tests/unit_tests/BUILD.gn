@@ -2,6 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+executable("nonhardware_tests") {
+  testonly = true
+  output_name="msd_vsl_gc_nonhardware_tests"
+
+  sources = [
+    "main.cc",
+    "test_address_space.cc",
+  ]
+
+  deps = [
+    "//garnet/drivers/gpu/msd-vsl-gc/src",
+    "//garnet/lib/magma/tests/mock:bus_mapper",
+    "//garnet/lib/magma/tests/mock:mmio",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/ddk",
+  ]
+}
+
 # These tests require a graphics device to run.
 # They can be run inside the test build of the driver.
 source_set("hardware_tests") {
