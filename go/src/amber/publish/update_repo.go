@@ -75,7 +75,7 @@ func InitRepo(r string, k string) (*UpdateRepo, error) {
 		return nil, e
 	}
 
-	if e := u.CommitUpdates(); e != nil {
+	if e := u.CommitUpdates(false); e != nil {
 		return nil, e
 	}
 
@@ -130,7 +130,42 @@ func (u *UpdateRepo) RemoveContentBlob(merkle string) error {
 	return os.Remove(filepath.Join(u.path, "repository", "blobs", merkle))
 }
 
-func (u *UpdateRepo) CommitUpdates() error {
+// CommitUpdates finalizes the changes to the update repository that have been
+// staged by calling AddPackageFile. Setting dateVersioning to true will set
+// the version of the targets, snapshot, and timestamp metadata files based on
+// an offset in seconds from epoch (1970-01-01 00:00:00 UTC).
+func (u *UpdateRepo) CommitUpdates(dateVersioning bool) error {
+	if dateVersioning {
+		dTime := int(time.Now().Unix())
+
+		tVer, err := u.repo.TargetsVersion()
+		if err != nil {
+			return err
+		}
+		if dTime > tVer {
+			u.repo.SetTargetsVersion(dTime)
+		}
+
+		sVer, err := u.repo.SnapshotVersion()
+		if err != nil {
+			return err
+		}
+		if dTime > sVer {
+			u.repo.SetSnapshotVersion(dTime)
+		}
+
+		tsVer, err := u.repo.TimestampVersion()
+		if err != nil {
+			return err
+		}
+		if dTime > tsVer {
+			u.repo.SetTimestampVersion(dTime)
+		}
+	}
+	return u.commitUpdates()
+}
+
+func (u *UpdateRepo) commitUpdates() error {
 	if err := u.repo.SnapshotWithExpires(tuf.CompressionTypeNone, time.Now().AddDate(0, 0, 30)); err != nil {
 		return NewAddErr("problem snapshotting repository", err)
 	}

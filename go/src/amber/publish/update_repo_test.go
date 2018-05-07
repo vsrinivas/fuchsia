@@ -181,7 +181,7 @@ func TestAddTUFFile(t *testing.T) {
 		t.Fatalf("Problem adding repo file %v", err)
 	}
 
-	if err = amberRepo.CommitUpdates(); err != nil {
+	if err = amberRepo.CommitUpdates(true); err != nil {
 		t.Fatalf("Failure commiting update %s", err)
 	}
 

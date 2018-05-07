@@ -49,6 +49,7 @@ var (
 	repoPath     = flag.String("r", "", "Path to the TUF repository directory.")
 	keySrc       = flag.String("k", fuchsiaBuildDir, "Directory containing the signing keys.")
 	verbose      = flag.Bool("v", false, "Print out more informational messages.")
+	verTime      = flag.Bool("vt", false, "Set repo versioning based on time rather than a monotonic increment")
 )
 
 func main() {
@@ -126,7 +127,7 @@ func main() {
 				log.Fatalf("Failed to add package %q from %q: %s", parts[0], parts[1], err)
 			}
 		}
-		if err := repo.CommitUpdates(); err != nil {
+		if err := repo.CommitUpdates(*verTime); err != nil {
 			log.Fatalf("error committing repository updates: %s", err)
 		}
 	} else if *blobSet {
@@ -165,7 +166,7 @@ func main() {
 		if err = repo.AddPackageFile(filePaths[0], *name); err != nil {
 			log.Fatalf("Problem adding signed file: %s\n", err)
 		}
-		if err = repo.CommitUpdates(); err != nil {
+		if err = repo.CommitUpdates(*verTime); err != nil {
 			log.Fatalf("error signing added file: %s\n", err)
 		}
 	} else if *regFile {
