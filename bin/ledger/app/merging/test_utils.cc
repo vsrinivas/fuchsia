@@ -6,8 +6,8 @@
 
 #include <lib/async/dispatcher.h>
 
-#include "garnet/lib/callback/capture.h"
 #include "gtest/gtest.h"
+#include "lib/callback/capture.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/encryption/primitives/hash.h"
 #include "peridot/bin/ledger/storage/impl/page_storage_impl.h"
@@ -91,8 +91,8 @@ TestWithPageStorage::DeleteKeyFromJournal(const std::string& key) {
     std::unique_ptr<storage::PageStorage>* page_storage) {
   std::unique_ptr<storage::PageStorageImpl> local_page_storage =
       std::make_unique<storage::PageStorageImpl>(
-          message_loop_.async(), &coroutine_service_,
-          &encryption_service_, tmp_dir_.path(), kRootPageId.ToString());
+          message_loop_.async(), &coroutine_service_, &encryption_service_,
+          tmp_dir_.path(), kRootPageId.ToString());
   storage::Status status;
   local_page_storage->Init(callback::Capture(MakeQuitTask(), &status));
   RunLoop();

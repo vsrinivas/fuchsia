@@ -6,8 +6,8 @@
 
 #include <vector>
 
-#include "garnet/lib/callback/scoped_callback.h"
-#include "garnet/lib/callback/waiter.h"
+#include "lib/callback/scoped_callback.h"
+#include "lib/callback/waiter.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/app/diff_utils.h"

@@ -4,7 +4,7 @@
 
 #include "peridot/bin/ledger/environment/environment.h"
 
-#include "garnet/lib/backoff/exponential_backoff.h"
+#include "lib/backoff/exponential_backoff.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 

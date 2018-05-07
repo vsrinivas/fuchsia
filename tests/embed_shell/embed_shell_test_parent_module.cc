@@ -7,8 +7,8 @@
 #include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/views_v1.h>
 #include <fuchsia/cpp/views_v1_token.h>
-#include "garnet/lib/callback/scoped_callback.h"
 #include "lib/app_driver/cpp/module_driver.h"
+#include "lib/callback/scoped_callback.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/testing/reporting.h"

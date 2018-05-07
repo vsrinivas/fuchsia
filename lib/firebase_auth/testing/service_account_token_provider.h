@@ -8,8 +8,8 @@
 #include <map>
 
 #include <fuchsia/cpp/modular_auth.h>
-#include "garnet/lib/callback/cancellable.h"
-#include "garnet/lib/network_wrapper/network_wrapper.h"
+#include "lib/callback/cancellable.h"
+#include "lib/network_wrapper/network_wrapper.h"
 
 #include "lib/fxl/macros.h"
 

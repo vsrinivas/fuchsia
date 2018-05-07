@@ -36,7 +36,7 @@ source_set("lib") {
   deps = [
     ":internal",
     ":tree_node_storage",
-    "//garnet/lib/callback",
+    "//garnet/public/lib/callback",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/encryption/primitives",
     "//peridot/bin/ledger/storage/impl:object_identifier_lib",
@@ -86,7 +86,7 @@ source_set("unittests") {
   deps = [
     ":lib",
     ":tree_node_storage",
-    "//garnet/lib/callback",
+    "//garnet/public/lib/callback",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/encryption/fake",

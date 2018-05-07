@@ -20,7 +20,7 @@ executable("integration") {
 
   deps = [
     ":integration_lib",
-    "//garnet/lib/callback",
+    "//garnet/public/lib/callback",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/test_runner/cpp:gtest_main",
@@ -58,8 +58,8 @@ source_set("integration_lib") {
   ]
 
   public_deps = [
-    "//garnet/lib/gtest",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/gtest",
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/ledger/testing:ledger_instance_factory",
     "//peridot/public/lib/ledger/fidl",

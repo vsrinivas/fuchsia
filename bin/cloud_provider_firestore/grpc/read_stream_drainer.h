@@ -11,7 +11,7 @@
 
 #include <grpc++/grpc++.h>
 
-#include "garnet/public/lib/fxl/functional/closure.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firestore/grpc/stream_controller.h"
 #include "peridot/bin/cloud_provider_firestore/grpc/stream_reader.h"

@@ -11,8 +11,8 @@
 #include <lib/zx/socket.h>
 #include <lib/zx/vmo.h>
 
-#include "garnet/lib/callback/cancellable.h"
-#include "garnet/lib/network_wrapper/network_wrapper.h"
+#include "lib/callback/cancellable.h"
+#include "lib/network_wrapper/network_wrapper.h"
 #include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage.h"
 
 namespace gcs {

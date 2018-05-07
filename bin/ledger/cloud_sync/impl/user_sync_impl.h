@@ -11,8 +11,8 @@
 #include <set>
 
 #include <fuchsia/cpp/cloud_provider.h>
-#include "garnet/lib/backoff/backoff.h"
-#include "garnet/lib/callback/scoped_task_runner.h"
+#include "lib/backoff/backoff.h"
+#include "lib/callback/scoped_task_runner.h"
 #include "lib/fidl/cpp/binding.h"
 #include "peridot/bin/ledger/cloud_sync/impl/aggregator.h"
 #include "peridot/bin/ledger/cloud_sync/impl/ledger_sync_impl.h"

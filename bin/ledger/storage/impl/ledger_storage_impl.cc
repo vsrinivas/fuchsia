@@ -9,7 +9,7 @@
 
 #include <dirent.h>
 
-#include "garnet/lib/callback/trace_callback.h"
+#include "lib/callback/trace_callback.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -66,9 +66,9 @@ void LedgerStorageImpl::CreatePageStorage(
     timed_callback(Status::INTERNAL_IO_ERROR, nullptr);
     return;
   }
-  auto result = std::make_unique<PageStorageImpl>(
-      async_, coroutine_service_, encryption_service_, path,
-      std::move(page_id));
+  auto result = std::make_unique<PageStorageImpl>(async_, coroutine_service_,
+                                                  encryption_service_, path,
+                                                  std::move(page_id));
   result->Init(
       fxl::MakeCopyable([callback = std::move(timed_callback),
                          result = std::move(result)](Status status) mutable {
@@ -95,9 +95,9 @@ void LedgerStorageImpl::GetPageStorage(
     return;
   }
 
-  auto result = std::make_unique<PageStorageImpl>(
-      async_, coroutine_service_, encryption_service_, path,
-      std::move(page_id));
+  auto result = std::make_unique<PageStorageImpl>(async_, coroutine_service_,
+                                                  encryption_service_, path,
+                                                  std::move(page_id));
   result->Init(
       fxl::MakeCopyable([callback = std::move(timed_callback),
                          result = std::move(result)](Status status) mutable {

@@ -7,13 +7,13 @@
 #include <fuchsia/cpp/cloud_provider.h>
 #include <lib/async/cpp/task.h>
 
-#include "garnet/lib/callback/capture.h"
-#include "garnet/lib/gtest/test_with_message_loop.h"
+#include "lib/callback/capture.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
+#include "lib/gtest/test_with_message_loop.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/testing/test_page_cloud_handler.h"
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
@@ -308,10 +308,8 @@ TEST_F(PageCloudImplTest, SetWatcherNotificationsOneAtATime) {
       cloud_provider_firebase::Commit("id_1", "data_1"), "43");
   handler_->DeliverRemoteCommits();
   // Verify that the client does not receive another notification.
-  async::PostDelayedTask(
-      message_loop_.async(),
-      [this] { message_loop_.PostQuitTask(); },
-      zx::msec(1));
+  async::PostDelayedTask(message_loop_.async(),
+                         [this] { message_loop_.PostQuitTask(); }, zx::msec(1));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1u, on_new_commits_commits_->size());
   EXPECT_EQ(1, on_new_commits_calls_);

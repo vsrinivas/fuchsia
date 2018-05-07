@@ -6,9 +6,9 @@
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_PAGE_DOWNLOAD_H_
 
 #include <fuchsia/cpp/cloud_provider.h>
-#include "garnet/lib/backoff/backoff.h"
-#include "garnet/lib/callback/managed_container.h"
-#include "garnet/lib/callback/scoped_task_runner.h"
+#include "lib/backoff/backoff.h"
+#include "lib/callback/managed_container.h"
+#include "lib/callback/scoped_task_runner.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"

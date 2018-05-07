@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include "garnet/lib/callback/waiter.h"
+#include "lib/callback/waiter.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"

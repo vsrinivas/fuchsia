@@ -41,9 +41,9 @@ source_set("service_account") {
   ]
 
   public_deps = [
-    "//garnet/lib/callback",
-    "//garnet/lib/network_wrapper",
+    "//garnet/public/lib/callback",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/network_wrapper",
     "//peridot/public/lib/auth/fidl",
   ]
 
@@ -65,8 +65,8 @@ source_set("unittests") {
 
   deps = [
     ":service_account",
-    "//garnet/lib/gtest",
-    "//garnet/lib/network_wrapper:fake",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/network_wrapper:fake",
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
   ]

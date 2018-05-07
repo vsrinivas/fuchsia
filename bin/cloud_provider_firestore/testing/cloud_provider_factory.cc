@@ -9,7 +9,7 @@
 #include <fuchsia/cpp/network.h>
 #include <lib/async/cpp/task.h>
 
-#include "garnet/lib/backoff/exponential_backoff.h"
+#include "lib/backoff/exponential_backoff.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/random/uuid.h"
@@ -86,11 +86,13 @@ void CloudProviderFactory::MakeCloudProvider(
                      << "only with unauthenticated server instances.";
   }
   modular_auth::TokenProviderPtr token_provider;
-  async::PostTask(services_loop_.async(), fxl::MakeCopyable(
-      [ this, request = token_provider.NewRequest() ]() mutable {
-        token_providers_.emplace(application_context_, services_loop_.async(),
-                                 credentials_path_, std::move(request));
-      }));
+  async::PostTask(services_loop_.async(),
+                  fxl::MakeCopyable(
+                      [this, request = token_provider.NewRequest()]() mutable {
+                        token_providers_.emplace(
+                            application_context_, services_loop_.async(),
+                            credentials_path_, std::move(request));
+                      }));
 
   cloud_provider_firestore::Config firebase_config;
   firebase_config.server_id = server_id;

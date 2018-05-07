@@ -8,7 +8,7 @@
 #include <fuchsia/cpp/ledger.h>
 #include <map>
 #include <memory>
-#include "garnet/lib/callback/auto_cleanable.h"
+#include "lib/callback/auto_cleanable.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
 #include "peridot/bin/ledger/storage/public/commit.h"

@@ -7,7 +7,7 @@
 #include <memory>
 #include <string>
 
-#include "garnet/lib/backoff/exponential_backoff.h"
+#include "lib/backoff/exponential_backoff.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/random/rand.h"
 #include "peridot/bin/ledger/app/merging/auto_merge_strategy.h"

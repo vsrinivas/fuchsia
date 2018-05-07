@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <utility>
 
-#include "garnet/lib/callback/waiter.h"
+#include "lib/callback/waiter.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/ref_counted.h"

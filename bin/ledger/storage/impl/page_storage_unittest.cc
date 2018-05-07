@@ -13,9 +13,9 @@
 
 #include <lib/async/cpp/task.h>
 
-#include "garnet/lib/callback/capture.h"
-#include "garnet/lib/callback/set_when_called.h"
 #include "gtest/gtest.h"
+#include "lib/callback/capture.h"
+#include "lib/callback/set_when_called.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/files/directory.h"
@@ -67,9 +67,9 @@ class PageStorageImplAccessorForTest {
       encryption::EncryptionService* encryption_service,
       std::unique_ptr<PageDb> page_db,
       PageId page_id) {
-    return std::unique_ptr<PageStorageImpl>(new PageStorageImpl(
-        async, coroutine_service, encryption_service,
-        std::move(page_db), std::move(page_id)));
+    return std::unique_ptr<PageStorageImpl>(
+        new PageStorageImpl(async, coroutine_service, encryption_service,
+                            std::move(page_db), std::move(page_id)));
   }
 };
 
@@ -94,8 +94,7 @@ class FakeErrorDataSource : public DataSource {
   void Get(std::function<void(std::unique_ptr<DataChunk>, Status)> callback)
       override {
     async::PostTask(
-      async_,
-      [callback] { callback(nullptr, DataSource::Status::ERROR); });
+        async_, [callback] { callback(nullptr, DataSource::Status::ERROR); });
   }
 
   async_t* const async_;
@@ -965,9 +964,8 @@ TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
   // with journal entry update, to fail with a NOT_IMPLEMENTED error.
   std::unique_ptr<PageStorageImpl> test_storage =
       PageStorageImplAccessorForTest::CreateStorage(
-          message_loop_.async(), &coroutine_service_,
-          &encryption_service_, std::make_unique<FakePageDbImpl>(),
-          RandomString(10));
+          message_loop_.async(), &coroutine_service_, &encryption_service_,
+          std::make_unique<FakePageDbImpl>(), RandomString(10));
 
   bool called;
   Status status;

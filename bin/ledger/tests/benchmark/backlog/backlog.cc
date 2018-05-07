@@ -9,7 +9,7 @@
 #include <fuchsia/cpp/cloud_provider.h>
 #include <trace/event.h>
 
-#include "garnet/lib/callback/waiter.h"
+#include "lib/callback/waiter.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/command_line.h"

@@ -4,7 +4,7 @@
 
 #include "peridot/bin/ledger/lock/lock.h"
 
-#include "garnet/lib/callback/capture.h"
+#include "lib/callback/capture.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
 namespace lock {

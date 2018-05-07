@@ -10,7 +10,7 @@
 
 #include <grpc++/grpc++.h>
 
-#include "garnet/lib/callback/scoped_task_runner.h"
+#include "lib/callback/scoped_task_runner.h"
 #include "peridot/bin/cloud_provider_firestore/app/credentials_provider.h"
 
 namespace cloud_provider_firestore {

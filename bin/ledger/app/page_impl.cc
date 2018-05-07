@@ -6,7 +6,7 @@
 
 #include <trace/event.h>
 
-#include "garnet/lib/callback/trace_callback.h"
+#include "lib/callback/trace_callback.h"
 #include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/app/page_delegate.h"
 

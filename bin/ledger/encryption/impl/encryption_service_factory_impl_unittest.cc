@@ -4,8 +4,8 @@
 
 #include "peridot/bin/ledger/encryption/impl/encryption_service_factory_impl.h"
 
-#include "garnet/lib/gtest/test_with_loop.h"
 #include "gtest/gtest.h"
+#include "lib/gtest/test_with_loop.h"
 
 namespace encryption {
 namespace {

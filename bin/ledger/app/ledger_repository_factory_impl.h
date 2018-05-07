@@ -12,9 +12,9 @@
 #include <fuchsia/cpp/ledger_internal.h>
 #include <fuchsia/cpp/modular_auth.h>
 #include <fuchsia/cpp/netconnector.h>
-#include "garnet/lib/callback/auto_cleanable.h"
-#include "garnet/lib/callback/cancellable.h"
-#include "garnet/lib/callback/managed_container.h"
+#include "lib/callback/auto_cleanable.h"
+#include "lib/callback/cancellable.h"
+#include "lib/callback/managed_container.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/ledger_repository_impl.h"
 #include "peridot/bin/ledger/cloud_sync/public/user_config.h"

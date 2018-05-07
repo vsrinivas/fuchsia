@@ -9,8 +9,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "garnet/lib/callback/capture.h"
 #include "gtest/gtest.h"
+#include "lib/callback/capture.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/macros.h"
@@ -450,8 +450,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherParallel) {
   EXPECT_EQ("Bob", ToString(change.changed_entries->at(0).value));
 
   async::PostDelayedTask(async_get_default(),
-                         [this] { message_loop_.QuitNow(); },
-                         zx::sec(1));
+                         [this] { message_loop_.QuitNow(); }, zx::sec(1));
   fsl::MessageLoop::GetCurrent()->Run();
   // A merge happens now. Only the first watcher should see a change.
   EXPECT_EQ(2u, watcher1.changes_seen);

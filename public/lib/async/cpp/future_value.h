@@ -12,9 +12,9 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "garnet/public/lib/fsl/tasks/message_loop.h"
-#include "garnet/public/lib/fxl/functional/make_copyable.h"
-#include "garnet/public/lib/fxl/macros.h"
+#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/macros.h"
 
 namespace modular {
 

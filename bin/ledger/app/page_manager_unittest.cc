@@ -9,12 +9,12 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "garnet/lib/backoff/exponential_backoff.h"
-#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
+#include "lib/backoff/exponential_backoff.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/macros.h"
+#include "lib/gtest/test_with_message_loop.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
@@ -33,8 +33,8 @@ std::unique_ptr<MergeResolver> GetDummyResolver(Environment* environment,
                                                 storage::PageStorage* storage) {
   return std::make_unique<MergeResolver>(
       [] {}, environment, storage,
-      std::make_unique<backoff::ExponentialBackoff>(
-          zx::sec(0), 1u, zx::sec(0)));
+      std::make_unique<backoff::ExponentialBackoff>(zx::sec(0), 1u,
+                                                    zx::sec(0)));
 }
 
 std::string ToString(const mem::BufferPtr& vmo) {
@@ -280,10 +280,9 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncTimeout) {
   EXPECT_FALSE(fake_page_sync_ptr->start_called);
   EXPECT_FALSE(fake_page_sync_ptr->on_backlog_downloaded_callback);
 
-  PageManager page_manager(&environment_, std::move(storage),
-                           std::move(fake_page_sync), std::move(merger),
-                           PageManager::PageStorageState::NEEDS_SYNC,
-                           zx::sec(0));
+  PageManager page_manager(
+      &environment_, std::move(storage), std::move(fake_page_sync),
+      std::move(merger), PageManager::PageStorageState::NEEDS_SYNC, zx::sec(0));
 
   EXPECT_NE(nullptr, fake_page_sync_ptr->watcher);
   EXPECT_TRUE(fake_page_sync_ptr->start_called);
@@ -315,10 +314,9 @@ TEST_F(PageManagerTest, ExitWhenSyncFinishes) {
   EXPECT_FALSE(fake_page_sync_ptr->start_called);
   EXPECT_FALSE(fake_page_sync_ptr->on_backlog_downloaded_callback);
 
-  PageManager page_manager(&environment_, std::move(storage),
-                           std::move(fake_page_sync), std::move(merger),
-                           PageManager::PageStorageState::NEEDS_SYNC,
-                           zx::sec(0));
+  PageManager page_manager(
+      &environment_, std::move(storage), std::move(fake_page_sync),
+      std::move(merger), PageManager::PageStorageState::NEEDS_SYNC, zx::sec(0));
 
   EXPECT_NE(nullptr, fake_page_sync_ptr->watcher);
 

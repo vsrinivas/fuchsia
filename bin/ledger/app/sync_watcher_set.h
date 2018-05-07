@@ -6,7 +6,7 @@
 #define PERIDOT_BIN_LEDGER_APP_SYNC_WATCHER_SET_H_
 
 #include <fuchsia/cpp/ledger.h>
-#include "garnet/lib/callback/auto_cleanable.h"
+#include "lib/callback/auto_cleanable.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/sync_coordinator/public/sync_state_watcher.h"
 

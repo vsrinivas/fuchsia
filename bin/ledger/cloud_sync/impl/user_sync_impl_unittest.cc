@@ -6,12 +6,12 @@
 
 #include <utility>
 
-#include "garnet/lib/backoff/backoff.h"
-#include "garnet/lib/backoff/testing/test_backoff.h"
-#include "garnet/lib/gtest/test_with_loop.h"
+#include "lib/backoff/backoff.h"
+#include "lib/backoff/testing/test_backoff.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
+#include "lib/gtest/test_with_loop.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_cloud_provider.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 
@@ -30,9 +30,8 @@ class TestSyncStateWatcher : public SyncStateWatcher {
 class UserSyncImplTest : public gtest::TestWithLoop {
  public:
   UserSyncImplTest()
-      : environment_(ledger::EnvironmentBuilder()
-                         .SetAsync(dispatcher())
-                         .Build()),
+      : environment_(
+            ledger::EnvironmentBuilder().SetAsync(dispatcher()).Build()),
         cloud_provider_(cloud_provider_ptr_.NewRequest()),
         encryption_service_(dispatcher()) {
     UserConfig user_config;

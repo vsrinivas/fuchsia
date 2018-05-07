@@ -10,14 +10,14 @@
 
 #include <lib/async/cpp/task.h>
 
-#include "garnet/lib/backoff/backoff.h"
-#include "garnet/lib/callback/capture.h"
-#include "garnet/lib/callback/set_when_called.h"
-#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
+#include "lib/backoff/backoff.h"
+#include "lib/callback/capture.h"
+#include "lib/callback/set_when_called.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
+#include "lib/gtest/test_with_message_loop.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_cloud.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_page_storage.h"

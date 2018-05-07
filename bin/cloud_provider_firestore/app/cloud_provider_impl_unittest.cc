@@ -4,10 +4,10 @@
 
 #include "peridot/bin/cloud_provider_firestore/app/cloud_provider_impl.h"
 
-#include "garnet/lib/gtest/test_with_message_loop.h"
 #include <fuchsia/cpp/cloud_provider.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
+#include "lib/gtest/test_with_message_loop.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/testing/test_firestore_service.h"
 #include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
 

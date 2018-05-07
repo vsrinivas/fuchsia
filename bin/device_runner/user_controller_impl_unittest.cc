@@ -5,8 +5,8 @@
 #include "peridot/bin/device_runner/user_controller_impl.h"
 
 #include <fuchsia/cpp/component.h>
-#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
+#include "lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/testing/fake_application_launcher.h"
 

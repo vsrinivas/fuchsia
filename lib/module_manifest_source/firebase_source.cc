@@ -13,10 +13,10 @@
 
 #include <lib/async/cpp/task.h>
 
-#include "garnet/lib/backoff/exponential_backoff.h"
-#include "garnet/lib/network_wrapper/network_wrapper_impl.h"
+#include "lib/backoff/exponential_backoff.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"
+#include "lib/network_wrapper/network_wrapper_impl.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/firebase/firebase_impl.h"
 #include "third_party/rapidjson/rapidjson/document.h"
@@ -124,14 +124,13 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
     // Try to reconnect.
     FXL_LOG(INFO) << "Reconnecting to Firebase in " << reconnect_wait_seconds_
                   << " seconds.";
-    async::PostDelayedTask(
-        async_,
-        [ owner = owner_, this ]() {
-          if (!owner)
-            return;
-          owner->StartWatching(this);
-        },
-        zx::sec(reconnect_wait_seconds_));
+    async::PostDelayedTask(async_,
+                           [owner = owner_, this]() {
+                             if (!owner)
+                               return;
+                             owner->StartWatching(this);
+                           },
+                           zx::sec(reconnect_wait_seconds_));
   }
 
   void ProcessEntry(const std::string& name, const rapidjson::Value& value) {
@@ -188,11 +187,10 @@ FirebaseModuleManifestSource::~FirebaseModuleManifestSource() {
   }
 }
 
-void FirebaseModuleManifestSource::Watch(
-    async_t* async,
-    IdleFn idle_fn,
-    NewEntryFn new_fn,
-    RemovedEntryFn removed_fn) {
+void FirebaseModuleManifestSource::Watch(async_t* async,
+                                         IdleFn idle_fn,
+                                         NewEntryFn new_fn,
+                                         RemovedEntryFn removed_fn) {
   auto watcher = std::make_unique<Watcher>(
       async, std::move(idle_fn), std::move(new_fn), std::move(removed_fn),
       weak_factory_.GetWeakPtr());

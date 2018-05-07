@@ -7,8 +7,8 @@
 
 #include <fuchsia/cpp/ledger.h>
 #include <fuchsia/cpp/ledger_internal.h>
-#include "garnet/lib/callback/capture.h"
 #include "gtest/gtest.h"
+#include "lib/callback/capture.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/files/scoped_temp_dir.h"

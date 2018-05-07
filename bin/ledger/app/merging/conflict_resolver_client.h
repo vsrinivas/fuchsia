@@ -9,8 +9,8 @@
 #include <vector>
 
 #include <fuchsia/cpp/ledger.h>
-#include "garnet/lib/callback/operation_serializer.h"
-#include "garnet/lib/callback/waiter.h"
+#include "lib/callback/operation_serializer.h"
+#include "lib/callback/waiter.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/app/diff_utils.h"

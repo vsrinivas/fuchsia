@@ -6,12 +6,12 @@
 
 #include <memory>
 
-#include "garnet/lib/callback/capture.h"
-#include "garnet/lib/callback/set_when_called.h"
-#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
+#include "lib/callback/capture.h"
+#include "lib/callback/set_when_called.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
+#include "lib/gtest/test_with_message_loop.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 

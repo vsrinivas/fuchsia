@@ -9,10 +9,8 @@
 #include <utility>
 
 #include <fuchsia/cpp/network.h>
-#include "garnet/lib/callback/capture.h"
-#include "garnet/lib/gtest/test_with_message_loop.h"
-#include "garnet/lib/network_wrapper/fake_network_wrapper.h"
 #include "gtest/gtest.h"
+#include "lib/callback/capture.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
@@ -20,6 +18,8 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_number_conversions.h"
+#include "lib/gtest/test_with_message_loop.h"
+#include "lib/network_wrapper/fake_network_wrapper.h"
 
 namespace gcs {
 namespace {
@@ -41,9 +41,7 @@ class CloudStorageImplTest : public gtest::TestWithMessageLoop {
  public:
   CloudStorageImplTest()
       : fake_network_wrapper_(message_loop_.async()),
-        gcs_(&fake_network_wrapper_,
-             "project",
-             "prefix") {}
+        gcs_(&fake_network_wrapper_, "project", "prefix") {}
   ~CloudStorageImplTest() override {}
 
  protected:

@@ -9,13 +9,13 @@
 
 #include <lib/async/cpp/task.h>
 
-#include "garnet/lib/callback/cancellable_helper.h"
-#include "garnet/lib/callback/capture.h"
-#include "garnet/lib/callback/set_when_called.h"
-#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
+#include "lib/callback/cancellable_helper.h"
+#include "lib/callback/capture.h"
+#include "lib/callback/set_when_called.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
+#include "lib/gtest/test_with_message_loop.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/merging/last_one_wins_merge_strategy.h"
 #include "peridot/bin/ledger/app/merging/test_utils.h"
@@ -235,8 +235,7 @@ class VerifyingMergeStrategy : public MergeStrategy {
       EXPECT_EQ(head2_, actual_head2_id);
     }
     async::PostTask(
-          async_,
-          [callback = std::move(callback)]() { callback(Status::OK); });
+        async_, [callback = std::move(callback)]() { callback(Status::OK); });
   }
 
   void Cancel() override{};
@@ -278,8 +277,8 @@ TEST_F(MergeResolverTest, CommonAncestor) {
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_5));
 
   std::unique_ptr<VerifyingMergeStrategy> strategy =
-      std::make_unique<VerifyingMergeStrategy>(message_loop_.async(),
-                                               commit_5, commit_3, commit_2);
+      std::make_unique<VerifyingMergeStrategy>(message_loop_.async(), commit_5,
+                                               commit_3, commit_2);
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<test::TestBackoff>(nullptr));
   resolver.SetMergeStrategy(std::move(strategy));

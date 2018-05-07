@@ -9,12 +9,12 @@
 #include <fuchsia/cpp/cloud_provider_firebase.h>
 #include <fuchsia/cpp/modular_auth.h>
 
-#include "garnet/lib/callback/auto_cleanable.h"
-#include "garnet/lib/callback/cancellable.h"
-#include "garnet/lib/network_wrapper/network_wrapper.h"
+#include "lib/callback/auto_cleanable.h"
+#include "lib/callback/cancellable.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
+#include "lib/network_wrapper/network_wrapper.h"
 #include "peridot/bin/cloud_provider_firebase/app/device_set_impl.h"
 #include "peridot/bin/cloud_provider_firebase/app/page_cloud_impl.h"
 #include "peridot/lib/firebase/firebase_impl.h"

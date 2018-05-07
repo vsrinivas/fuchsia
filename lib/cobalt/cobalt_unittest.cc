@@ -6,11 +6,11 @@
 
 #include <lib/async/default.h>
 
-#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
+#include "lib/gtest/test_with_message_loop.h"
 #include "lib/svc/cpp/service_provider_bridge.h"
 
 namespace cobalt {
@@ -127,27 +127,24 @@ class FakeCobaltEncoderImpl : public CobaltEncoder {
       fidl::VectorPtr<BucketDistributionEntry> distribution,
       AddIntBucketDistributionCallback callback) override {}
 
-  void StartTimer(
-      uint32_t metric_id,
-      uint32_t encoding_id,
-      fidl::StringPtr timer_id,
-      uint64_t timestamp,
-      uint32_t timeout_s,
-      StartTimerCallback callback) override{};
+  void StartTimer(uint32_t metric_id,
+                  uint32_t encoding_id,
+                  fidl::StringPtr timer_id,
+                  uint64_t timestamp,
+                  uint32_t timeout_s,
+                  StartTimerCallback callback) override{};
 
-  void EndTimer(
-      fidl::StringPtr timer_id,
-      uint64_t timestamp,
-      uint32_t timeout_s,
-      EndTimerCallback callback) override{};
+  void EndTimer(fidl::StringPtr timer_id,
+                uint64_t timestamp,
+                uint32_t timeout_s,
+                EndTimerCallback callback) override{};
 
-  void EndTimerMultiPart(
-      fidl::StringPtr timer_id,
-      uint64_t timestamp,
-      fidl::StringPtr part_name,
-      fidl::VectorPtr<ObservationValue> observations,
-      uint32_t timeout_s,
-      EndTimerMultiPartCallback callback) override{};
+  void EndTimerMultiPart(fidl::StringPtr timer_id,
+                         uint64_t timestamp,
+                         fidl::StringPtr part_name,
+                         fidl::VectorPtr<ObservationValue> observations,
+                         uint32_t timeout_s,
+                         EndTimerMultiPartCallback callback) override{};
 
   void AddMultipartObservation(
       uint32_t metric_id,
@@ -194,7 +191,6 @@ class FakeCobaltEncoderImpl : public CobaltEncoder {
       multipart_calls_;
 };
 
-
 class FakeCobaltEncoderFactoryImpl : public CobaltEncoderFactory {
  public:
   FakeCobaltEncoderFactoryImpl() {}
@@ -206,19 +202,16 @@ class FakeCobaltEncoderFactoryImpl : public CobaltEncoderFactory {
                                         std::move(request));
   }
 
-  FakeCobaltEncoderImpl* cobalt_encoder() {
-    return cobalt_encoder_.get();
-  }
+  FakeCobaltEncoderImpl* cobalt_encoder() { return cobalt_encoder_.get(); }
 
  private:
   std::unique_ptr<FakeCobaltEncoderImpl> cobalt_encoder_;
   fidl::BindingSet<CobaltEncoder> cobalt_encoder_bindings_;
 };
 
-
 class CobaltTest : public gtest::TestWithMessageLoop {
  public:
-  CobaltTest() : app_context_(InitApplicationContext()) {  }
+  CobaltTest() : app_context_(InitApplicationContext()) {}
   ~CobaltTest() override {}
 
   component::ApplicationContext* app_context() { return app_context_.get(); }

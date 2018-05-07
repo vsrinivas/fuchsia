@@ -10,15 +10,15 @@
 #include <lib/async/cpp/task.h>
 #include <rapidjson/document.h>
 
-#include "garnet/lib/gtest/test_with_message_loop.h"
+#include <fuchsia/cpp/network.h>
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include <fuchsia/cpp/network.h>
-#include "garnet/lib/network_wrapper/fake_network_wrapper.h"
-#include "garnet/lib/network_wrapper/network_wrapper_impl.h"
+#include "lib/gtest/test_with_message_loop.h"
+#include "lib/network_wrapper/fake_network_wrapper.h"
+#include "lib/network_wrapper/network_wrapper_impl.h"
 #include "peridot/lib/socket/socket_pair.h"
 
 namespace firebase {

@@ -7,7 +7,7 @@
 
 #include <fuchsia/cpp/netconnector.h>
 
-#include "garnet/lib/callback/auto_cleanable.h"
+#include "lib/callback/auto_cleanable.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface.h"

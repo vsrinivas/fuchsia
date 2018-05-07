@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "garnet/lib/callback/operation_serializer.h"
+#include "lib/callback/operation_serializer.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"

@@ -10,8 +10,8 @@
 
 #include "peridot/bin/ledger/app/page_snapshot_impl.h"
 
-#include "garnet/lib/callback/trace_callback.h"
-#include "garnet/lib/callback/waiter.h"
+#include "lib/callback/trace_callback.h"
+#include "lib/callback/waiter.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"

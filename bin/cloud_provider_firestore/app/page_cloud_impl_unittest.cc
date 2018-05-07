@@ -5,14 +5,14 @@
 #include "peridot/bin/cloud_provider_firestore/app/page_cloud_impl.h"
 
 #include <fuchsia/cpp/cloud_provider.h>
-#include "garnet/lib/callback/capture.h"
-#include "garnet/lib/callback/set_when_called.h"
-#include "garnet/lib/gtest/test_with_message_loop.h"
+#include "lib/callback/capture.h"
+#include "lib/callback/set_when_called.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/vector.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fsl/vmo/strings.h"
+#include "lib/gtest/test_with_message_loop.h"
 #include "peridot/bin/cloud_provider_firestore/app/testing/test_credentials_provider.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/encoding.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/testing/test_firestore_service.h"

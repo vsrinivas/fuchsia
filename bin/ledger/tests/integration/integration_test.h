@@ -12,9 +12,9 @@
 
 #include <fuchsia/cpp/ledger.h>
 #include <fuchsia/cpp/ledger_internal.h>
-#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
+#include "lib/gtest/test_with_message_loop.h"
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 
 namespace test {

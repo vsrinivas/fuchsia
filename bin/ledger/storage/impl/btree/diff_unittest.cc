@@ -4,8 +4,8 @@
 
 #include "peridot/bin/ledger/storage/impl/btree/diff.h"
 
-#include "garnet/lib/callback/capture.h"
 #include "gtest/gtest.h"
+#include "lib/callback/capture.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"

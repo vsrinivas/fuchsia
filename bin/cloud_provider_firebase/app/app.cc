@@ -5,13 +5,13 @@
 #include <trace-provider/provider.h>
 
 #include <fuchsia/cpp/modular.h>
-#include "garnet/lib/backoff/exponential_backoff.h"
-#include "garnet/lib/network_wrapper/network_wrapper_impl.h"
 #include "lib/app/cpp/application_context.h"
+#include "lib/backoff/exponential_backoff.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
+#include "lib/network_wrapper/network_wrapper_impl.h"
 #include "peridot/bin/cloud_provider_firebase/app/factory_impl.h"
 
 namespace cloud_provider_firebase {

@@ -10,8 +10,8 @@
 #include <fuchsia/cpp/modular_auth.h>
 #include <lib/async/dispatcher.h>
 
-#include "garnet/lib/callback/auto_cleanable.h"
-#include "garnet/lib/callback/cancellable.h"
+#include "lib/callback/auto_cleanable.h"
+#include "lib/callback/cancellable.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/cloud_provider_firestore/app/cloud_provider_impl.h"

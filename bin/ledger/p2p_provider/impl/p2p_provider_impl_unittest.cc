@@ -9,11 +9,11 @@
 #include <string>
 
 // gtest matchers are in gmock.
-#include "garnet/lib/gtest/test_with_loop.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
+#include "lib/gtest/test_with_loop.h"
 #include "peridot/bin/ledger/p2p_provider/public/user_id_provider.h"
 #include "peridot/bin/ledger/testing/netconnector/netconnector_factory.h"
 

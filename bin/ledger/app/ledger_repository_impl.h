@@ -8,7 +8,7 @@
 #include <fuchsia/cpp/ledger.h>
 #include <fuchsia/cpp/ledger_internal.h>
 #include <fuchsia/cpp/modular_auth.h>
-#include "garnet/lib/callback/auto_cleanable.h"
+#include "lib/callback/auto_cleanable.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/macros.h"

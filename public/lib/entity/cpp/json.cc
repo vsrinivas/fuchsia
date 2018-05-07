@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include "garnet/public/lib/fxl/logging.h"
+#include "lib/fxl/logging.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 

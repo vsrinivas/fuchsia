@@ -12,8 +12,8 @@
 
 #include <lib/async/dispatcher.h>
 
-#include "garnet/lib/callback/managed_container.h"
-#include "garnet/lib/callback/operation_serializer.h"
+#include "lib/callback/managed_container.h"
+#include "lib/callback/operation_serializer.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_view.h"

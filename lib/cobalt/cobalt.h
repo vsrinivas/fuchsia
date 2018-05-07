@@ -9,8 +9,8 @@
 
 #include <fuchsia/cpp/cobalt.h>
 
-#include "garnet/lib/backoff/exponential_backoff.h"
 #include "lib/app/cpp/application_context.h"
+#include "lib/backoff/exponential_backoff.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
@@ -46,7 +46,8 @@ class CobaltObservation {
 
 class CobaltContext {
  public:
-  CobaltContext(async_t* async, component::ApplicationContext* app_context,
+  CobaltContext(async_t* async,
+                component::ApplicationContext* app_context,
                 int32_t project_id);
   ~CobaltContext();
 
@@ -75,7 +76,8 @@ class CobaltContext {
 // deleted. This method must not be called again until then.
 fxl::AutoCall<fxl::Closure> InitializeCobalt(
     async_t* async,
-    component::ApplicationContext* app_context, int32_t project_id,
+    component::ApplicationContext* app_context,
+    int32_t project_id,
     CobaltContext** cobalt_context);
 
 // Report an observation to Cobalt.

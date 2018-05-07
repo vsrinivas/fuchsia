@@ -10,8 +10,8 @@
 #include <string>
 #include <vector>
 
-#include "garnet/public/lib/fxl/memory/weak_ptr.h"
 #include <fuchsia/cpp/network.h>
+#include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/module_manifest_source/module_manifest_source.h"
 
 namespace firebase {

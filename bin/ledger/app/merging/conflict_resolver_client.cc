@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "garnet/lib/callback/waiter.h"
+#include "lib/callback/waiter.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"

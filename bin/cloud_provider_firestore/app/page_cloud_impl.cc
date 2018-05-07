@@ -4,7 +4,7 @@
 
 #include "peridot/bin/cloud_provider_firestore/app/page_cloud_impl.h"
 
-#include "garnet/lib/callback/scoped_callback.h"
+#include "lib/callback/scoped_callback.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fsl/vmo/strings.h"

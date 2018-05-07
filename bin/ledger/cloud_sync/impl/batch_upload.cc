@@ -10,9 +10,9 @@
 
 #include <trace/event.h>
 
-#include "garnet/lib/callback/scoped_callback.h"
-#include "garnet/lib/callback/trace_callback.h"
-#include "garnet/lib/callback/waiter.h"
+#include "lib/callback/scoped_callback.h"
+#include "lib/callback/trace_callback.h"
+#include "lib/callback/waiter.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/logging.h"
 

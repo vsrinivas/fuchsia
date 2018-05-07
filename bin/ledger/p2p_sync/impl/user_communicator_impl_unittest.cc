@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <string>
 
-#include "garnet/lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_with_loop.h"
 // gtest matchers are in gmock and we cannot include the specific header file
 // directly as it is private to the library.
 #include "gmock/gmock.h"

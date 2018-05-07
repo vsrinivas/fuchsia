@@ -48,8 +48,8 @@ source_set("lib") {
   ]
 
   deps = [
-    "//garnet/lib/backoff",
-    "//garnet/lib/callback",
+    "//garnet/public/lib/backoff",
+    "//garnet/public/lib/callback",
     "//peridot/lib/convert",
   ]
 }
@@ -65,9 +65,9 @@ source_set("unittests") {
 
   deps = [
     ":lib",
-    "//garnet/lib/network_wrapper:fake",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl:fxl_printers",
+    "//garnet/public/lib/network_wrapper:fake",
     "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/bin/cloud_provider_firebase/device_set/testing",
     "//peridot/bin/cloud_provider_firebase/fidl",

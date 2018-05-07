@@ -7,8 +7,8 @@
 
 #include <algorithm>
 
-#include "garnet/lib/callback/capture.h"
 #include "gtest/gtest.h"
+#include "lib/callback/capture.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/logging.h"

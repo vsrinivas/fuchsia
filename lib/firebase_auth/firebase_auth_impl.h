@@ -11,9 +11,9 @@
 
 #include <lib/async/dispatcher.h>
 
-#include "garnet/lib/backoff/backoff.h"
-#include "garnet/lib/callback/scoped_task_runner.h"
 #include <fuchsia/cpp/modular_auth.h>
+#include "lib/backoff/backoff.h"
+#include "lib/callback/scoped_task_runner.h"
 #include "peridot/lib/firebase_auth/firebase_auth.h"
 
 namespace firebase_auth {

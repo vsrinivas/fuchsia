@@ -7,7 +7,7 @@
 #include <limits>
 #include <sstream>
 
-#include "garnet/lib/callback/waiter.h"
+#include "lib/callback/waiter.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"

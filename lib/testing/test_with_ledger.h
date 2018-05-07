@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "garnet/lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/testing/ledger_repository_for_testing.h"
 
 namespace modular {

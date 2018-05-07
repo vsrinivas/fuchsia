@@ -12,8 +12,8 @@ executable("app") {
 
   deps = [
     ":lib",
-    "//garnet/lib/backoff",
     "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/backoff",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -80,7 +80,7 @@ source_set("lib") {
   ]
 
   deps = [
-    "//garnet/lib/callback",
+    "//garnet/public/lib/callback",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -127,7 +127,7 @@ source_set("unittests") {
 
   deps = [
     ":lib",
-    "//garnet/lib/backoff/testing",
+    "//garnet/public/lib/backoff/testing",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",

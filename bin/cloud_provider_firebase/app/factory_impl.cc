@@ -4,7 +4,7 @@
 
 #include "peridot/bin/cloud_provider_firebase/app/factory_impl.h"
 
-#include "garnet/lib/backoff/exponential_backoff.h"
+#include "lib/backoff/exponential_backoff.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
@@ -26,22 +26,24 @@ void FactoryImpl::GetCloudProvider(
       async_, config.api_key, std::move(token_provider_ptr),
       std::make_unique<backoff::ExponentialBackoff>());
   firebase_auth::FirebaseAuthImpl* firebase_auth_ptr = firebase_auth.get();
-  auto request = firebase_auth_ptr->GetFirebaseUserId(fxl::MakeCopyable([
-    this, config = std::move(config), firebase_auth = std::move(firebase_auth),
-    cloud_provider = std::move(cloud_provider), callback
-  ](firebase_auth::AuthStatus status, std::string user_id) mutable {
-    if (status != firebase_auth::AuthStatus::OK) {
-      FXL_LOG(ERROR)
-          << "Failed to retrieve the user ID from auth token provider";
-      callback(cloud_provider::Status::AUTH_ERROR);
-      return;
-    }
+  auto request =
+      firebase_auth_ptr->GetFirebaseUserId(fxl::MakeCopyable(
+          [this, config = std::move(config),
+           firebase_auth = std::move(firebase_auth),
+           cloud_provider = std::move(cloud_provider), callback](
+              firebase_auth::AuthStatus status, std::string user_id) mutable {
+            if (status != firebase_auth::AuthStatus::OK) {
+              FXL_LOG(ERROR)
+                  << "Failed to retrieve the user ID from auth token provider";
+              callback(cloud_provider::Status::AUTH_ERROR);
+              return;
+            }
 
-    providers_.emplace(network_wrapper_, user_id,
-                       std::move(config), std::move(firebase_auth),
-                       std::move(cloud_provider));
-    callback(cloud_provider::Status::OK);
-  }));
+            providers_.emplace(network_wrapper_, user_id, std::move(config),
+                               std::move(firebase_auth),
+                               std::move(cloud_provider));
+            callback(cloud_provider::Status::OK);
+          }));
   token_requests_.emplace(request);
 }
 

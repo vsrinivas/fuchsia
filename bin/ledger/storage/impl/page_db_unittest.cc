@@ -13,8 +13,8 @@
 #include <utility>
 #include <vector>
 
-#include "garnet/lib/callback/set_when_called.h"
 #include "gtest/gtest.h"
+#include "lib/callback/set_when_called.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/random/rand.h"
@@ -436,7 +436,8 @@ TEST_F(PageDbTest, LE_451_ReproductionTest) {
     handler1 = handler;
     std::unique_ptr<PageDb::Batch> batch;
     EXPECT_EQ(Status::OK, page_db_.StartBatch(handler, &batch));
-    EXPECT_EQ(Status::OK, batch->SetObjectStatus(handler, id, PageDbObjectStatus::SYNCED));
+    EXPECT_EQ(Status::OK,
+              batch->SetObjectStatus(handler, id, PageDbObjectStatus::SYNCED));
     if (handler->Yield() == coroutine::ContinuationStatus::INTERRUPTED) {
       return;
     }
@@ -450,7 +451,8 @@ TEST_F(PageDbTest, LE_451_ReproductionTest) {
     if (handler->Yield() == coroutine::ContinuationStatus::INTERRUPTED) {
       return;
     }
-    EXPECT_EQ(Status::OK, batch->SetObjectStatus(handler, id, PageDbObjectStatus::LOCAL));
+    EXPECT_EQ(Status::OK,
+              batch->SetObjectStatus(handler, id, PageDbObjectStatus::LOCAL));
     EXPECT_EQ(Status::OK, batch->Execute(handler));
     handler2 = nullptr;
   });
@@ -463,7 +465,7 @@ TEST_F(PageDbTest, LE_451_ReproductionTest) {
   // Posting a task at this level ensures that the right interleaving between
   // reading and writing object status happens.
   async::PostTask(message_loop_.async(), [&] {
-      handler1->Continue(coroutine::ContinuationStatus::OK);
+    handler1->Continue(coroutine::ContinuationStatus::OK);
   });
   handler2->Continue(coroutine::ContinuationStatus::OK);
 

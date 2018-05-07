@@ -7,11 +7,11 @@
 #include <utility>
 
 #include <fuchsia/cpp/modular_auth.h>
-#include "garnet/lib/backoff/testing/test_backoff.h"
-#include "garnet/lib/callback/capture.h"
-#include "garnet/lib/gtest/test_with_message_loop.h"
+#include "lib/backoff/testing/test_backoff.h"
+#include "lib/callback/capture.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/functional/make_copyable.h"
+#include "lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/firebase_auth/testing/test_token_provider.h"
 
 namespace firebase_auth {

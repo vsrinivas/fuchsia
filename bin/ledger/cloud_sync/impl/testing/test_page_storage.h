@@ -12,7 +12,7 @@
 
 #include <lib/async/dispatcher.h>
 
-#include "garnet/lib/callback/capture.h"
+#include "lib/callback/capture.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/functional/closure.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_commit.h"

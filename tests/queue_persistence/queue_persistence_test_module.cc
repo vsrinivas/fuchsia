@@ -7,9 +7,9 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "garnet/lib/callback/scoped_callback.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/module_driver.h"
+#include "lib/callback/scoped_callback.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/testing/reporting.h"
@@ -50,7 +50,8 @@ class ParentApp {
     // we time out. If that happens, the module will exit normally through
     // Stop(), but the test will fail because some TestPoints will not have been
     // passed.
-    async::PostDelayedTask(async_get_default(),
+    async::PostDelayedTask(
+        async_get_default(),
         callback::MakeScoped(
             weak_ptr_factory_.GetWeakPtr(),
             [this] { module_host_->module_context()->Done(); }),

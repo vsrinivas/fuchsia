@@ -5,11 +5,11 @@
 #ifndef PERIDOT_TESTS_MAXWELL_INTEGRATION_TEST_H_
 #define PERIDOT_TESTS_MAXWELL_INTEGRATION_TEST_H_
 
-#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app/cpp/service_provider_impl.h"
+#include "lib/gtest/test_with_message_loop.h"
 #include "peridot/bin/maxwell/agent_launcher.h"
 #include "peridot/lib/testing/component_context_fake.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"

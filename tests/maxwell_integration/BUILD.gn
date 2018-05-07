@@ -98,8 +98,8 @@ source_set("common") {
   ]
 
   public_deps = [
-    "//garnet/lib/gtest",
     "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest",
   ]
 }

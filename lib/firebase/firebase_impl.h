@@ -10,9 +10,9 @@
 #include <string>
 #include <vector>
 
-#include "garnet/lib/callback/auto_cleanable.h"
-#include "garnet/lib/callback/cancellable.h"
-#include "garnet/lib/network_wrapper/network_wrapper.h"
+#include "lib/callback/auto_cleanable.h"
+#include "lib/callback/cancellable.h"
+#include "lib/network_wrapper/network_wrapper.h"
 #include "peridot/lib/firebase/event_stream.h"
 #include "peridot/lib/firebase/firebase.h"
 #include "peridot/lib/firebase/status.h"

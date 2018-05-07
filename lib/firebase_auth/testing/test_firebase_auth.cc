@@ -8,7 +8,7 @@
 
 #include <lib/async/cpp/task.h>
 
-#include "garnet/lib/callback/cancellable_helper.h"
+#include "lib/callback/cancellable_helper.h"
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace firebase_auth {
@@ -24,9 +24,9 @@ fxl::RefPtr<callback::Cancellable> TestFirebaseAuth::GetFirebaseToken(
   auto cancellable = callback::CancellableImpl::Create([] {});
 
   async::PostTask(async_,
-      [this, callback = cancellable->WrapCallback(callback)] {
-        callback(status_to_return, token_to_return);
-      });
+                  [this, callback = cancellable->WrapCallback(callback)] {
+                    callback(status_to_return, token_to_return);
+                  });
   return cancellable;
 }
 
@@ -35,9 +35,9 @@ fxl::RefPtr<callback::Cancellable> TestFirebaseAuth::GetFirebaseUserId(
   auto cancellable = callback::CancellableImpl::Create([] {});
 
   async::PostTask(async_,
-      [this, callback = cancellable->WrapCallback(callback)] {
-        callback(status_to_return, user_id_to_return);
-      });
+                  [this, callback = cancellable->WrapCallback(callback)] {
+                    callback(status_to_return, user_id_to_return);
+                  });
   return cancellable;
 }
 

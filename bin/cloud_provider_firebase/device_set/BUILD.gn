@@ -32,7 +32,7 @@ source_set("unittests") {
 
   deps = [
     ":device_set",
-    "//garnet/lib/gtest",
+    "//garnet/public/lib/gtest",
     "//peridot/lib/firebase",
     "//third_party/rapidjson",
   ]

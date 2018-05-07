@@ -114,9 +114,9 @@ source_set("chain_impl_unittest") {
 
   deps = [
     ":story_runner",
-    "//garnet/lib/gtest",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/gtest",
     "//peridot/lib/testing:story_controller_mock",
     "//third_party/googletest:gtest",
   ]

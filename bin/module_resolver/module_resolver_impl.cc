@@ -10,9 +10,9 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "garnet/public/lib/fxl/strings/split_string.h"
 #include "lib/context/cpp/context_helper.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/strings/split_string.h"
 #include "peridot/public/lib/entity/cpp/json.h"
 
 namespace modular {
@@ -44,8 +44,7 @@ void ModuleResolverImpl::AddSource(
   auto ptr = repo.get();
   sources_.emplace(name, std::move(repo));
 
-  ptr->Watch(async_get_default(),
-             [this, name]() { OnSourceIdle(name); },
+  ptr->Watch(async_get_default(), [this, name]() { OnSourceIdle(name); },
              [this, name](std::string id, modular::ModuleManifest entry) {
                OnNewManifestEntry(name, std::move(id), std::move(entry));
              },

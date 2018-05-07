@@ -11,8 +11,8 @@
 #include <fuchsia/cpp/cloud_provider.h>
 #include <lib/async/dispatcher.h>
 
-#include "garnet/lib/backoff/backoff.h"
-#include "garnet/lib/callback/scoped_task_runner.h"
+#include "lib/backoff/backoff.h"
+#include "lib/callback/scoped_task_runner.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/time/time_delta.h"
 #include "peridot/bin/ledger/cloud_sync/impl/batch_download.h"

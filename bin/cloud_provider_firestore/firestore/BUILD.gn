@@ -17,7 +17,7 @@ source_set("firestore") {
   ]
 
   public_deps = [
-    "//garnet/lib/callback",
+    "//garnet/public/lib/callback",
     "//garnet/public/lib/fxl",
     "//peridot/bin/cloud_provider_firestore/grpc",
     "//peridot/public/lib/cloud_provider/fidl",
@@ -44,9 +44,9 @@ source_set("unittests") {
 
   deps = [
     ":firestore",
-    "//garnet/lib/gtest",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl:fxl_printers",
+    "//garnet/public/lib/gtest",
     "//peridot/lib/convert",
   ]
 }

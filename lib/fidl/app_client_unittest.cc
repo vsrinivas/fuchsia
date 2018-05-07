@@ -6,8 +6,8 @@
 
 #include <fuchsia/cpp/component.h>
 #include <fuchsia/cpp/modular_test.h>
-#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
+#include "lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/testing/fake_application_launcher.h"
 
 namespace modular {

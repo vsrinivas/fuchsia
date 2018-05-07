@@ -9,8 +9,8 @@
 #include <vector>
 
 #include <fuchsia/cpp/ledger_internal.h>
-#include "garnet/lib/callback/auto_cleanable.h"
-#include "garnet/lib/callback/scoped_task_runner.h"
+#include "lib/callback/auto_cleanable.h"
+#include "lib/callback/scoped_task_runner.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/functional/closure.h"

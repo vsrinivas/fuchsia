@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/module_resolver/module_resolver_impl.h"
-#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/entity/cpp/json.h"
 #include "lib/fxl/files/file.h"
+#include "lib/gtest/test_with_message_loop.h"
 #include "lib/module_resolver/cpp/formatting.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"
 
@@ -54,7 +54,7 @@ class QueryBuilder {
     fidl::VectorPtr<fidl::StringPtr> types_array;
     types_array->reserve(types.size());
     for (auto& type : types) {
-        types_array->emplace_back(std::move(type));
+      types_array->emplace_back(std::move(type));
     }
     parameter.set_entity_type(std::move(types_array));
     modular::ResolverParameterConstraintEntry
@@ -100,7 +100,7 @@ class QueryBuilder {
     modular::LinkPath link_path;
     link_path.module_path->reserve(path_parts.first.size());
     for (auto& part : path_parts.first) {
-        link_path.module_path->emplace_back(std::move(part));
+      link_path.module_path->emplace_back(std::move(part));
     }
     link_path.link_name = path_parts.second;
 
@@ -128,16 +128,18 @@ class QueryBuilder {
     modular::LinkPath link_path;
     link_path.module_path->reserve(path_parts.first.size());
     for (auto& part : path_parts.first) {
-        link_path.module_path->emplace_back(std::move(part));
+      link_path.module_path->emplace_back(std::move(part));
     }
     link_path.link_name = path_parts.second;
 
     modular::ResolverLinkInfo link_info;
     link_info.path = std::move(link_path);
     link_info.allowed_types = modular::LinkAllowedTypes::New();
-    link_info.allowed_types->allowed_entity_types->reserve(allowed_types.size());
+    link_info.allowed_types->allowed_entity_types->reserve(
+        allowed_types.size());
     for (auto& type : allowed_types) {
-        link_info.allowed_types->allowed_entity_types->emplace_back(std::move(type));
+      link_info.allowed_types->allowed_entity_types->emplace_back(
+          std::move(type));
     }
 
     modular::ResolverParameterConstraint parameter;

@@ -8,7 +8,7 @@
 
 #include <numeric>
 
-#include "garnet/lib/callback/capture.h"
+#include "lib/callback/capture.h"
 #include "lib/fxl/random/rand.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"

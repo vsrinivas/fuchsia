@@ -11,7 +11,7 @@
 #include <vector>
 
 #include <fuchsia/cpp/ledger.h>
-#include "garnet/lib/callback/operation_serializer.h"
+#include "lib/callback/operation_serializer.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"

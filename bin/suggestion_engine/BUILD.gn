@@ -90,7 +90,7 @@ source_set("interruptions") {
 source_set("ranking") {
   public_deps = [
     ":rankers",
-    ":ranking_features"
+    ":ranking_features",
   ]
 }
 
@@ -99,7 +99,7 @@ source_set("rankers") {
     "ranker.cc",
     "ranker.h",
     "rankers/linear_ranker.cc",
-    "rankers/linear_ranker.h"
+    "rankers/linear_ranker.h",
   ]
 
   deps = [
@@ -234,8 +234,8 @@ source_set("ranking_unittest") {
 
   deps = [
     ":ranking_features",
-    "//garnet/lib/gtest",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest",
   ]
 }

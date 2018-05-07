@@ -7,7 +7,7 @@
 #include <trace/event.h>
 #include <unistd.h>
 
-#include "garnet/lib/backoff/exponential_backoff.h"
+#include "lib/backoff/exponential_backoff.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"
@@ -240,8 +240,7 @@ void LedgerRepositoryFactoryImpl::CreateRepository(
     OnVersionMismatch(repository_information);
   };
   auto cloud_sync = std::make_unique<cloud_sync::UserSyncImpl>(
-      environment_, std::move(user_config),
-      environment_->MakeBackoff(),
+      environment_, std::move(user_config), environment_->MakeBackoff(),
       std::move(on_version_mismatch));
   std::unique_ptr<p2p_sync::UserCommunicator> p2p_sync =
       CreateP2PSync(repository_information);

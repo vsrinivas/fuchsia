@@ -28,8 +28,8 @@ source_set("impl") {
 
   deps = [
     ":envelope",
-    "//garnet/lib/backoff",
-    "//garnet/lib/callback",
+    "//garnet/public/lib/backoff",
+    "//garnet/public/lib/callback",
     "//peridot/bin/ledger/environment",
     "//peridot/lib/convert",
     "//peridot/lib/firebase_auth",
@@ -53,7 +53,7 @@ source_set("unittests") {
 
   deps = [
     ":impl",
-    "//garnet/lib/backoff/testing",
+    "//garnet/public/lib/backoff/testing",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",

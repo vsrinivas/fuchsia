@@ -19,7 +19,7 @@ source_set("testing") {
   ]
 
   deps = [
-    "//garnet/lib/callback",
+    "//garnet/public/lib/callback",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/encryption/primitives",
     "//peridot/bin/ledger/storage/impl/btree:lib",

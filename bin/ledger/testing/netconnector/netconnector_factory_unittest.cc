@@ -8,10 +8,10 @@
 
 #include <fuchsia/cpp/netconnector.h>
 
-#include "garnet/lib/callback/capture.h"
-#include "garnet/lib/callback/set_when_called.h"
-#include "garnet/lib/gtest/test_with_message_loop.h"
+#include "lib/callback/capture.h"
+#include "lib/callback/set_when_called.h"
 #include "lib/fxl/macros.h"
+#include "lib/gtest/test_with_message_loop.h"
 #include "lib/netconnector/cpp/message_relay.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/lib/convert/convert.h"

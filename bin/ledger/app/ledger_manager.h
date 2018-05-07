@@ -11,7 +11,7 @@
 #include <type_traits>
 
 #include <fuchsia/cpp/ledger_internal.h>
-#include "garnet/lib/callback/auto_cleanable.h"
+#include "lib/callback/auto_cleanable.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"

@@ -5,16 +5,16 @@
 #include <memory>
 #include <string>
 
-#include <lib/async/cpp/task.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
 
 #include "gtest/gtest.h"
+#include "lib/backoff/exponential_backoff.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/handles/object_info.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "garnet/lib/backoff/exponential_backoff.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/testing/cloud_provider/fake_cloud_provider.h"
@@ -99,19 +99,23 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
       services_dispatcher_(services_dispatcher),
       cloud_provider_(cloud_provider) {
   loop_.StartThread();
-  async::PostTask(loop_.async(), fxl::MakeCopyable(
-      [this, request = std::move(repository_factory_request)]() mutable {
-        factory_container_ = std::make_unique<LedgerRepositoryFactoryContainer>(
-            loop_.async(), std::move(request));
-      }));
+  async::PostTask(
+      loop_.async(),
+      fxl::MakeCopyable(
+          [this, request = std::move(repository_factory_request)]() mutable {
+            factory_container_ =
+                std::make_unique<LedgerRepositoryFactoryContainer>(
+                    loop_.async(), std::move(request));
+          }));
 }
 
 cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
   cloud_provider::CloudProviderPtr cloud_provider;
-  async::PostTask(services_dispatcher_, fxl::MakeCopyable(
-      [this, request = cloud_provider.NewRequest()]() mutable {
-        cloud_provider_->AddBinding(std::move(request));
-      }));
+  async::PostTask(services_dispatcher_,
+                  fxl::MakeCopyable(
+                      [this, request = cloud_provider.NewRequest()]() mutable {
+                        cloud_provider_->AddBinding(std::move(request));
+                      }));
   return cloud_provider;
 }
 

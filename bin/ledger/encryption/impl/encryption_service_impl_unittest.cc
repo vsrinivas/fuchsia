@@ -4,10 +4,10 @@
 
 #include "peridot/bin/ledger/encryption/impl/encryption_service_impl.h"
 
-#include "garnet/lib/callback/capture.h"
-#include "garnet/lib/callback/set_when_called.h"
-#include "garnet/lib/gtest/test_with_loop.h"
 #include "gtest/gtest.h"
+#include "lib/callback/capture.h"
+#include "lib/callback/set_when_called.h"
+#include "lib/gtest/test_with_loop.h"
 #include "peridot/bin/ledger/storage/fake/fake_object.h"
 
 namespace encryption {
@@ -15,8 +15,7 @@ namespace {
 
 class EncryptionServiceTest : public gtest::TestWithLoop {
  public:
-  EncryptionServiceTest()
-      : encryption_service_(dispatcher(), "namespace_id") {}
+  EncryptionServiceTest() : encryption_service_(dispatcher(), "namespace_id") {}
 
  protected:
   void EncryptCommit(std::string commit_storage,

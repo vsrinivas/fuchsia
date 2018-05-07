@@ -13,15 +13,15 @@
 #include <lib/zx/socket.h>
 #include <lib/zx/vmo.h>
 
-#include "garnet/lib/callback/capture.h"
-#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
+#include "lib/callback/capture.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
+#include "lib/gtest/test_with_message_loop.h"
 #include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/impl/timestamp_conversions.h"
 #include "peridot/lib/firebase/encoding.h"
@@ -50,9 +50,9 @@ class PageCloudHandlerImplTest : public gtest::TestWithMessageLoop,
     upload_auth_tokens_.push_back(std::move(auth_token));
     upload_keys_.push_back(key);
     upload_data_.push_back(std::move(data));
-    async::PostTask(
-        message_loop_.async(),
-        [callback = std::move(callback)] { callback(gcs::Status::OK); });
+    async::PostTask(message_loop_.async(), [callback = std::move(callback)] {
+      callback(gcs::Status::OK);
+    });
   }
 
   void DownloadObject(
@@ -62,12 +62,11 @@ class PageCloudHandlerImplTest : public gtest::TestWithMessageLoop,
           callback) override {
     download_auth_tokens_.push_back(std::move(auth_token));
     download_keys_.push_back(key);
-    async::PostTask(
-        message_loop_.async(),
-        [this, callback = std::move(callback)] {
-          callback(download_status_, download_response_size_,
-                   std::move(download_response_));
-        });
+    async::PostTask(message_loop_.async(),
+                    [this, callback = std::move(callback)] {
+                      callback(download_status_, download_response_size_,
+                               std::move(download_response_));
+                    });
   }
 
   // firebase::Firebase:
@@ -78,12 +77,11 @@ class PageCloudHandlerImplTest : public gtest::TestWithMessageLoop,
                          const rapidjson::Value& value)> callback) override {
     get_keys_.push_back(key);
     get_queries_.push_back(query_params);
-    async::PostTask(
-        message_loop_.async(),
-        [this, callback = std::move(callback)] {
-          callback(firebase::Status::OK, *get_response_);
-          message_loop_.PostQuitTask();
-        });
+    async::PostTask(message_loop_.async(),
+                    [this, callback = std::move(callback)] {
+                      callback(firebase::Status::OK, *get_response_);
+                      message_loop_.PostQuitTask();
+                    });
   }
 
   void Put(const std::string& key,
@@ -92,12 +90,11 @@ class PageCloudHandlerImplTest : public gtest::TestWithMessageLoop,
            std::function<void(firebase::Status status)> callback) override {
     put_keys_.push_back(key);
     put_data_.push_back(data);
-    async::PostTask(
-        message_loop_.async(),
-        [this, callback = std::move(callback)] {
-          callback(firebase::Status::OK);
-          message_loop_.PostQuitTask();
-        });
+    async::PostTask(message_loop_.async(),
+                    [this, callback = std::move(callback)] {
+                      callback(firebase::Status::OK);
+                      message_loop_.PostQuitTask();
+                    });
   }
 
   void Patch(const std::string& key,
@@ -107,12 +104,11 @@ class PageCloudHandlerImplTest : public gtest::TestWithMessageLoop,
     patch_keys_.push_back(key);
     patch_queries_.push_back(query_params);
     patch_data_.push_back(data);
-    async::PostTask(
-        message_loop_.async(),
-        [this, callback = std::move(callback)] {
-          callback(firebase::Status::OK);
-          message_loop_.PostQuitTask();
-        });
+    async::PostTask(message_loop_.async(),
+                    [this, callback = std::move(callback)] {
+                      callback(firebase::Status::OK);
+                      message_loop_.PostQuitTask();
+                    });
   }
 
   void Delete(

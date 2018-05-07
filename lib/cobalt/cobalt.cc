@@ -11,9 +11,9 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "garnet/lib/backoff/exponential_backoff.h"
-#include "garnet/lib/callback/waiter.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/backoff/exponential_backoff.h"
+#include "lib/callback/waiter.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -54,8 +54,8 @@ CobaltObservation::CobaltObservation(
 CobaltObservation::CobaltObservation(const CobaltObservation& rhs)
     : CobaltObservation(rhs.metric_id_, CloneObservationValues(rhs.parts_)) {}
 
-CobaltObservation::CobaltObservation(CobaltObservation&& rhs) :
-  CobaltObservation(rhs.metric_id_, std::move(rhs.parts_)) {}
+CobaltObservation::CobaltObservation(CobaltObservation&& rhs)
+    : CobaltObservation(rhs.metric_id_, std::move(rhs.parts_)) {}
 
 void CobaltObservation::Report(CobaltEncoderPtr& encoder,
                                std::function<void(Status)> callback) && {
@@ -183,9 +183,7 @@ CobaltObservation& CobaltObservation::operator=(CobaltObservation&& rhs) {
 CobaltContext::CobaltContext(async_t* async,
                              component::ApplicationContext* app_context,
                              int32_t project_id)
-    : async_(async),
-      app_context_(app_context),
-      project_id_(project_id) {
+    : async_(async), app_context_(app_context), project_id_(project_id) {
   ConnectToCobaltApplication();
 }
 
@@ -204,7 +202,8 @@ void CobaltContext::ReportObservation(CobaltObservation observation) {
 
   // Hop to the main thread, and go back to the global object dispatcher.
   async::PostTask(async_, [observation = std::move(observation), this]() {
-      ::cobalt::ReportObservation(observation, this); });
+    ::cobalt::ReportObservation(observation, this);
+  });
 }
 
 void CobaltContext::ConnectToCobaltApplication() {
@@ -223,9 +222,8 @@ void CobaltContext::OnConnectionError() {
                                observations_in_transit_.end());
   observations_in_transit_.clear();
   encoder_.Unbind();
-  async::PostDelayedTask(async_,
-                        [this] { ConnectToCobaltApplication(); },
-                        backoff_.GetNext());
+  async::PostDelayedTask(async_, [this] { ConnectToCobaltApplication(); },
+                         backoff_.GetNext());
 }
 
 void CobaltContext::ReportObservationOnMainThread(
@@ -271,15 +269,15 @@ void CobaltContext::SendObservations() {
     // A transient error happened, retry after a delay.
     // TODO(miguelfrde): issue if we delete the context while a retry is in
     // flight.
-    async::PostDelayedTask(
-        async_,
-        [this]() {
-          observations_to_send_.insert(observations_in_transit_.begin(),
+    async::PostDelayedTask(async_,
+                           [this]() {
+                             observations_to_send_.insert(
+                                 observations_in_transit_.begin(),
                                  observations_in_transit_.end());
-          observations_in_transit_.clear();
-          SendObservations();
-        },
-        backoff_.GetNext());
+                             observations_in_transit_.clear();
+                             SendObservations();
+                           },
+                           backoff_.GetNext());
   });
 }
 
@@ -291,11 +289,10 @@ void CobaltContext::AddObservationCallback(CobaltObservation observation,
       FXL_DCHECK(false) << "Unexpected status: " << status;
     case cobalt::Status::OBSERVATION_TOO_BIG:  // fall through
       // Log the failure.
-      FXL_LOG(WARNING)
-          << "Cobalt rejected obsevation for metric: "
-          << observation.metric_id()
-          << " with value: " << observation.ValueRepr()
-          << " with status: " << status;
+      FXL_LOG(WARNING) << "Cobalt rejected obsevation for metric: "
+                       << observation.metric_id()
+                       << " with value: " << observation.ValueRepr()
+                       << " with status: " << status;
     case cobalt::Status::OK:  // fall through
       // Remove the observation from the set of observations to send.
       observations_in_transit_.erase(observation);
@@ -310,11 +307,12 @@ void CobaltContext::AddObservationCallback(CobaltObservation observation,
 
 fxl::AutoCall<fxl::Closure> InitializeCobalt(
     async_t* async,
-    component::ApplicationContext* app_context, int32_t project_id,
+    component::ApplicationContext* app_context,
+    int32_t project_id,
     CobaltContext** cobalt_context) {
   FXL_DCHECK(!*cobalt_context);
-  auto context = std::make_unique<CobaltContext>(async, app_context,
-                                                 project_id);
+  auto context =
+      std::make_unique<CobaltContext>(async, app_context, project_id);
   *cobalt_context = context.get();
   return fxl::MakeAutoCall<fxl::Closure>(fxl::MakeCopyable(
       [context = std::move(context), cobalt_context]() mutable {

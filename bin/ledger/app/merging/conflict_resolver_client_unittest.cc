@@ -7,13 +7,13 @@
 #include <memory>
 #include <string>
 
-#include "garnet/lib/callback/cancellable_helper.h"
-#include "garnet/lib/callback/capture.h"
-#include "garnet/lib/callback/set_when_called.h"
-#include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
+#include "lib/callback/cancellable_helper.h"
+#include "lib/callback/capture.h"
+#include "lib/callback/set_when_called.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
+#include "lib/gtest/test_with_message_loop.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/merging/custom_merge_strategy.h"
 #include "peridot/bin/ledger/app/merging/test_utils.h"
@@ -148,7 +148,7 @@ TEST_F(ConflictResolverClientTest, Error) {
   // Set the resolver.
   ConflictResolverPtr conflict_resolver_ptr;
   ConflictResolverImpl conflict_resolver_impl(
-      conflict_resolver_ptr.NewRequest(), [this] {message_loop_.QuitNow(); });
+      conflict_resolver_ptr.NewRequest(), [this] { message_loop_.QuitNow(); });
   std::unique_ptr<CustomMergeStrategy> custom_merge_strategy =
       std::make_unique<CustomMergeStrategy>(std::move(conflict_resolver_ptr));
 

@@ -10,14 +10,14 @@
 
 #include <lib/async/cpp/task.h>
 
-#include "garnet/lib/callback/capture.h"
-#include "garnet/lib/callback/set_when_called.h"
-#include "garnet/lib/callback/waiter.h"
-#include "garnet/lib/gtest/test_with_loop.h"
 #include "gtest/gtest.h"
+#include "lib/callback/capture.h"
+#include "lib/callback/set_when_called.h"
+#include "lib/callback/waiter.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/random/rand.h"
+#include "lib/gtest/test_with_loop.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
@@ -109,8 +109,7 @@ class FakeLedgerSync : public sync_coordinator::LedgerSync {
 class LedgerManagerTest : public gtest::TestWithLoop {
  public:
   LedgerManagerTest()
-      : environment_(
-            EnvironmentBuilder().SetAsync(dispatcher()).Build()) {}
+      : environment_(EnvironmentBuilder().SetAsync(dispatcher()).Build()) {}
 
   // gtest::TestWithMessageLoop:
   void SetUp() override {
@@ -146,8 +145,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
 
   PagePtr page;
   storage_ptr->should_get_page_fail = true;
-  ledger_->GetPage(nullptr, page.NewRequest(),
-                   [this](Status) { QuitLoop(); });
+  ledger_->GetPage(nullptr, page.NewRequest(), [this](Status) { QuitLoop(); });
   RunLoopUntilIdle();
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(1u, storage_ptr->get_page_calls.size());
@@ -156,8 +154,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   storage_ptr->ClearCalls();
 
   storage_ptr->should_get_page_fail = true;
-  ledger_->GetRootPage(page.NewRequest(),
-                       [this](Status) { QuitLoop(); });
+  ledger_->GetRootPage(page.NewRequest(), [this](Status) { QuitLoop(); });
   RunLoopUntilIdle();
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(1u, storage_ptr->get_page_calls.size());

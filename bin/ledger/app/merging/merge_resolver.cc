@@ -10,9 +10,9 @@
 #include <set>
 #include <utility>
 
-#include "garnet/lib/callback/scoped_callback.h"
-#include "garnet/lib/callback/trace_callback.h"
-#include "garnet/lib/callback/waiter.h"
+#include "lib/callback/scoped_callback.h"
+#include "lib/callback/trace_callback.h"
+#include "lib/callback/waiter.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/weak_ptr.h"

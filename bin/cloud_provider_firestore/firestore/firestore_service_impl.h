@@ -10,7 +10,7 @@
 
 #include <lib/async/dispatcher.h>
 
-#include "garnet/lib/callback/auto_cleanable.h"
+#include "lib/callback/auto_cleanable.h"
 #include "lib/fxl/functional/closure.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/firestore_service.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/listen_call.h"

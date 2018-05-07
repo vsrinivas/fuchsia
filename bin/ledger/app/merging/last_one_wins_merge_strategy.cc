@@ -7,7 +7,7 @@
 #include <memory>
 #include <string>
 
-#include "garnet/lib/callback/waiter.h"
+#include "lib/callback/waiter.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/app/page_manager.h"

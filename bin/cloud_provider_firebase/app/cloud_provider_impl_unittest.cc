@@ -5,10 +5,10 @@
 #include "peridot/bin/cloud_provider_firebase/app/cloud_provider_impl.h"
 
 #include <fuchsia/cpp/cloud_provider.h>
-#include "garnet/lib/gtest/test_with_message_loop.h"
-#include "garnet/lib/network_wrapper/fake_network_wrapper.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
+#include "lib/gtest/test_with_message_loop.h"
+#include "lib/network_wrapper/fake_network_wrapper.h"
 #include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
 #include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
 
@@ -26,8 +26,7 @@ Config GetFirebaseConfig() {
 std::unique_ptr<firebase_auth::FirebaseAuth> InitFirebaseAuth(
     async_t* async,
     firebase_auth::TestFirebaseAuth** ptr) {
-  auto firebase_auth =
-      std::make_unique<firebase_auth::TestFirebaseAuth>(async);
+  auto firebase_auth = std::make_unique<firebase_auth::TestFirebaseAuth>(async);
   *ptr = firebase_auth.get();
   return firebase_auth;
 }

@@ -4,7 +4,7 @@
 
 #include "peridot/bin/cloud_provider_firebase/page_handler/impl/page_cloud_handler_impl.h"
 
-#include "garnet/lib/callback/trace_callback.h"
+#include "lib/callback/trace_callback.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/logging.h"

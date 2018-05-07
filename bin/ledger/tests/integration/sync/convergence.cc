@@ -8,9 +8,9 @@
 #include <trace/event.h>
 
 #include <fuchsia/cpp/ledger.h>
-#include "garnet/lib/callback/auto_cleanable.h"
-#include "garnet/lib/callback/capture.h"
-#include "garnet/lib/callback/waiter.h"
+#include "lib/callback/auto_cleanable.h"
+#include "lib/callback/capture.h"
+#include "lib/callback/waiter.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/vmo/vector.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -32,8 +32,7 @@ fidl::VectorPtr<uint8_t> DoubleToArray(double dbl) {
   return array;
 }
 
-::testing::AssertionResult VmoToDouble(const mem::BufferPtr& vmo,
-                                       double* dbl) {
+::testing::AssertionResult VmoToDouble(const mem::BufferPtr& vmo, double* dbl) {
   if (vmo->size != sizeof(double)) {
     return ::testing::AssertionFailure()
            << "VMO has the wrong size: " << vmo->size << " instead of "

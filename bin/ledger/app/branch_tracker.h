@@ -8,7 +8,7 @@
 #include <memory>
 
 #include <fuchsia/cpp/ledger.h>
-#include "garnet/lib/callback/auto_cleanable.h"
+#include "lib/callback/auto_cleanable.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/app/page_snapshot_impl.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"

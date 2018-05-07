@@ -22,13 +22,13 @@ source_set("firebase") {
   ]
 
   public_deps = [
-    "//garnet/lib/network_wrapper",
+    "//garnet/public/lib/network_wrapper",
     "//peridot/lib/convert",
     "//third_party/rapidjson",
   ]
 
   deps = [
-    "//garnet/lib/callback",
+    "//garnet/public/lib/callback",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/lib/base64url",
@@ -47,10 +47,10 @@ source_set("unittests") {
 
   deps = [
     ":firebase",
-    "//garnet/lib/gtest",
-    "//garnet/lib/network_wrapper:fake",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/network_wrapper:fake",
     "//peridot/lib/convert",
     "//peridot/lib/socket",
     "//third_party/googletest:gtest",

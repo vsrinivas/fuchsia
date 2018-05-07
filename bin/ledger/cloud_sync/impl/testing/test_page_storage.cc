@@ -11,7 +11,7 @@
 
 #include <lib/async/cpp/task.h>
 
-#include "garnet/lib/callback/capture.h"
+#include "lib/callback/capture.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -62,11 +62,9 @@ void TestPageStorage::GetCommit(
     return;
   }
 
-  async::PostTask(
-      async_,
-      [this, commit_id = commit_id.ToString(), callback = std::move(callback)] {
-          callback(storage::Status::OK,
-                   std::move(new_commits_to_return[commit_id]));
+  async::PostTask(async_, [this, commit_id = commit_id.ToString(),
+                           callback = std::move(callback)] {
+    callback(storage::Status::OK, std::move(new_commits_to_return[commit_id]));
   });
   new_commits_to_return.erase(commit_id.ToString());
 }
@@ -77,9 +75,8 @@ void TestPageStorage::AddCommitsFromSync(
   add_commits_from_sync_calls++;
 
   if (should_fail_add_commit_from_sync) {
-    async::PostTask(
-      async_,
-      [callback]() { callback(storage::Status::IO_ERROR); });
+    async::PostTask(async_,
+                    [callback]() { callback(storage::Status::IO_ERROR); });
     return;
   }
 
@@ -97,9 +94,9 @@ void TestPageStorage::AddCommitsFromSync(
                   }),
               unsynced_commits_to_return.end());
         }
-        async::PostTask(
-          async_,
-          [callback = std::move(callback)] { callback(storage::Status::OK); });
+        async::PostTask(async_, [callback = std::move(callback)] {
+          callback(storage::Status::OK);
+        });
       });
   if (should_delay_add_commit_confirmation) {
     delayed_add_commit_confirmations.push_back(move(confirm));
@@ -189,11 +186,10 @@ void TestPageStorage::GetSyncMetadata(
     });
     return;
   }
-  async::PostTask(
-      async_,
-      [callback = std::move(callback), metadata = it->second] {
-        callback(storage::Status::OK, metadata);
-  });
+  async::PostTask(async_,
+                  [callback = std::move(callback), metadata = it->second] {
+                    callback(storage::Status::OK, metadata);
+                  });
 }
 
 }  // namespace cloud_sync

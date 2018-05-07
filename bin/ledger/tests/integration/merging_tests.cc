@@ -10,8 +10,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "garnet/lib/callback/capture.h"
 #include "gtest/gtest.h"
+#include "lib/callback/capture.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/vmo/sized_vmo.h"

@@ -20,8 +20,8 @@
 #include <lib/zx/vmo.h>
 #include <trace/event.h>
 
-#include "garnet/lib/callback/trace_callback.h"
-#include "garnet/lib/callback/waiter.h"
+#include "lib/callback/trace_callback.h"
+#include "lib/callback/waiter.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
@@ -79,12 +79,12 @@ PageStorageImpl::PageStorageImpl(
     encryption::EncryptionService* encryption_service,
     std::string page_dir,
     PageId page_id)
-    : PageStorageImpl(async,
-                      coroutine_service,
-                      encryption_service,
-                      std::make_unique<PageDbImpl>(async,
-                                                   page_dir + kLevelDbDir),
-                      std::move(page_id)) {}
+    : PageStorageImpl(
+          async,
+          coroutine_service,
+          encryption_service,
+          std::make_unique<PageDbImpl>(async, page_dir + kLevelDbDir),
+          std::move(page_id)) {}
 
 PageStorageImpl::PageStorageImpl(
     async_t* async,

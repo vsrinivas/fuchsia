@@ -7,12 +7,12 @@
 #include <set>
 #include <sstream>
 
-#include "garnet/public/lib/fxl/functional/make_copyable.h"
 #include "lib/context/cpp/context_metadata_builder.h"
 #include "lib/context/cpp/formatting.h"
 #include "lib/entity/cpp/json.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/acquirers/story_info/story_watcher_impl.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/storage.h"

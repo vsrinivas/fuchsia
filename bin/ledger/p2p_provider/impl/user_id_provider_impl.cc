@@ -4,7 +4,7 @@
 
 #include "peridot/bin/ledger/p2p_provider/impl/user_id_provider_impl.h"
 
-#include "garnet/lib/backoff/exponential_backoff.h"
+#include "lib/backoff/exponential_backoff.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/logging.h"
 #include "peridot/lib/firebase_auth/firebase_auth_impl.h"
@@ -19,8 +19,7 @@ UserIdProviderImpl::UserIdProviderImpl(
     : user_directory_(std::move(user_directory)) {
   firebase_auth_ = std::make_unique<firebase_auth::FirebaseAuthImpl>(
       environment->async(), modular::kFirebaseApiKey,
-      std::move(token_provider_ptr),
-      environment->MakeBackoff());
+      std::move(token_provider_ptr), environment->MakeBackoff());
 }
 
 void UserIdProviderImpl::GetUserId(

@@ -26,7 +26,7 @@ source_set("impl") {
   ]
 
   public_deps = [
-    "//garnet/lib/backoff",
+    "//garnet/public/lib/backoff",
     "//peridot/bin/ledger/cloud_sync/public",
     "//peridot/bin/ledger/encryption/impl",
     "//peridot/bin/ledger/encryption/public",
@@ -59,7 +59,7 @@ source_set("unittests") {
 
   deps = [
     ":impl",
-    "//garnet/lib/backoff/testing",
+    "//garnet/public/lib/backoff/testing",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/cloud_sync/impl/testing",

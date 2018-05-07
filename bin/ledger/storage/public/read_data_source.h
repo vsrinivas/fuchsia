@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "garnet/lib/callback/managed_container.h"
+#include "lib/callback/managed_container.h"
 #include "peridot/bin/ledger/storage/public/data_source.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 

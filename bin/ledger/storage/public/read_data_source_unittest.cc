@@ -4,11 +4,11 @@
 
 #include "peridot/bin/ledger/storage/public/read_data_source.h"
 
-#include "garnet/lib/callback/capture.h"
-#include "garnet/lib/callback/scoped_task_runner.h"
-#include "garnet/lib/callback/set_when_called.h"
-#include "garnet/lib/gtest/test_with_loop.h"
 #include "gtest/gtest.h"
+#include "lib/callback/capture.h"
+#include "lib/callback/scoped_task_runner.h"
+#include "lib/callback/set_when_called.h"
+#include "lib/gtest/test_with_loop.h"
 
 namespace storage {
 namespace {
@@ -16,11 +16,8 @@ namespace {
 // Data source which returns the given content byte-by-byte in separate chunks.
 class SplittingDataSource : public DataSource {
  public:
-  SplittingDataSource(async_t* async,
-                      std::string content)
-      : content_(std::move(content)),
-        index_(0),
-        task_runner_(async) {}
+  SplittingDataSource(async_t* async, std::string content)
+      : content_(std::move(content)), index_(0), task_runner_(async) {}
 
   uint64_t GetSize() override { return content_.size(); };
 
@@ -56,8 +53,7 @@ TEST_F(ReadDataSourceTest, ReadDataSource) {
   std::unique_ptr<DataSource::DataChunk> content;
   ReadDataSource(
       &container,
-      std::make_unique<SplittingDataSource>(dispatcher(),
-                                            expected_content),
+      std::make_unique<SplittingDataSource>(dispatcher(), expected_content),
       callback::Capture(callback::SetWhenCalled(&called), &status, &content));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
@@ -75,8 +71,7 @@ TEST_F(ReadDataSourceTest, DeleteContainerWhileReading) {
     callback::ManagedContainer container;
     ReadDataSource(
         &container,
-        std::make_unique<SplittingDataSource>(dispatcher(),
-                                              expected_content),
+        std::make_unique<SplittingDataSource>(dispatcher(), expected_content),
         callback::Capture(callback::SetWhenCalled(&called), &status, &content));
   }
   RunLoopUntilIdle();

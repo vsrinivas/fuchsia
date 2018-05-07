@@ -10,7 +10,7 @@
 #include <fuchsia/cpp/ledger_internal.h>
 #include <lib/async/cpp/task.h>
 
-#include "garnet/lib/callback/capture.h"
+#include "lib/callback/capture.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/svc/cpp/services.h"

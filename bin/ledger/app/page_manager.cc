@@ -7,7 +7,7 @@
 #include <algorithm>
 
 #include <fuchsia/cpp/ledger.h>
-#include "garnet/lib/callback/trace_callback.h"
+#include "lib/callback/trace_callback.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/random/rand.h"
 #include "peridot/bin/ledger/app/page_utils.h"

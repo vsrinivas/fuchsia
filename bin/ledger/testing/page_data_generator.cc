@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include "garnet/lib/callback/waiter.h"
+#include "lib/callback/waiter.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"

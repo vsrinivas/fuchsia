@@ -8,7 +8,7 @@
 #include <functional>
 #include <string>
 
-#include "garnet/lib/callback/cancellable.h"
+#include "lib/callback/cancellable.h"
 #include "lib/fxl/macros.h"
 
 namespace firebase_auth {

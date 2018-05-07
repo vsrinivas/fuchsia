@@ -4,7 +4,7 @@
 
 #include "peridot/bin/ledger/storage/impl/btree/builder.h"
 
-#include "garnet/lib/callback/waiter.h"
+#include "lib/callback/waiter.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/storage/impl/btree/internal_helper.h"

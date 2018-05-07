@@ -4,8 +4,8 @@
 
 #include "peridot/bin/ledger/cache/lru_cache.h"
 
-#include "garnet/lib/callback/capture.h"
-#include "garnet/lib/callback/set_when_called.h"
+#include "lib/callback/capture.h"
+#include "lib/callback/set_when_called.h"
 
 #include "gtest/gtest.h"
 

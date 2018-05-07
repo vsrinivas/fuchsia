@@ -4,9 +4,9 @@
 
 #include "peridot/bin/ledger/storage/impl/btree/tree_node.h"
 
-#include "garnet/lib/callback/capture.h"
-#include "garnet/lib/callback/set_when_called.h"
 #include "gtest/gtest.h"
+#include "lib/callback/capture.h"
+#include "lib/callback/set_when_called.h"
 #include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/impl/btree/encoding.h"

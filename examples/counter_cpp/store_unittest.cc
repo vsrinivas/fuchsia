@@ -6,11 +6,11 @@
 
 #include <string>
 
-#include "garnet/lib/gtest/test_with_message_loop.h"
+#include <fuchsia/cpp/modular.h>
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/strings/string_view.h"
-#include <fuchsia/cpp/modular.h>
+#include "lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/mock_base.h"
 

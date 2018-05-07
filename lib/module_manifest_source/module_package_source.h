@@ -11,8 +11,8 @@
 #include <vector>
 
 #include <fuchsia/cpp/module_manifest_source.h>
-#include "garnet/public/lib/app/cpp/application_context.h"
-#include "garnet/public/lib/fxl/memory/weak_ptr.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/module_manifest_source/module_manifest_source.h"
 
 namespace modular {

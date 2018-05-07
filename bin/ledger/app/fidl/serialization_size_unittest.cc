@@ -6,13 +6,13 @@
 
 #include <memory>
 
-#include "garnet/lib/gtest/test_with_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "lib/gtest/test_with_loop.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace ledger {

@@ -13,7 +13,7 @@
 #include <rapidjson/writer.h>
 #include <zircon/syscalls.h>
 
-#include "garnet/lib/callback/auto_cleanable.h"
+#include "lib/callback/auto_cleanable.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/logging.h"

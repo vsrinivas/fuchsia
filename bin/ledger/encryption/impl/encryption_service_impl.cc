@@ -7,12 +7,12 @@
 #include <flatbuffers/flatbuffers.h>
 #include <lib/async/cpp/task.h>
 
+#include "lib/callback/scoped_callback.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/strings/concatenate.h"
-#include "garnet/lib/callback/scoped_callback.h"
 #include "peridot/bin/ledger/encryption/impl/encrypted_commit_generated.h"
 #include "peridot/bin/ledger/encryption/primitives/encrypt.h"
 #include "peridot/bin/ledger/encryption/primitives/kdf.h"
@@ -69,12 +69,14 @@ class EncryptionServiceImpl::KeyService {
   // Retrieves the master key.
   void GetMasterKey(uint32_t key_index,
                     std::function<void(std::string)> callback) {
-    async::PostTask(async_, callback::MakeScoped(weak_factory_.GetWeakPtr(),
-        [key_index, callback = std::move(callback)]() {
-          std::string master_key(16u, 0);
-          memcpy(&master_key[0], &key_index, sizeof(key_index));
-          callback(std::move(master_key));
-        }));
+    async::PostTask(async_, callback::MakeScoped(
+                                weak_factory_.GetWeakPtr(),
+                                [key_index, callback = std::move(callback)]() {
+                                  std::string master_key(16u, 0);
+                                  memcpy(&master_key[0], &key_index,
+                                         sizeof(key_index));
+                                  callback(std::move(master_key));
+                                }));
   }
 
   // Retrieves the reference key associated to the given namespace and reference
@@ -86,19 +88,21 @@ class EncryptionServiceImpl::KeyService {
     std::string result =
         HMAC256KDF(fxl::Concatenate({namespace_id, reference_key_id}),
                    kRandomlyGeneratedKeySize);
-    async::PostTask(async_, callback::MakeScoped(weak_factory_.GetWeakPtr(),
-        [result = std::move(result), callback = std::move(callback)]() mutable {
-          callback(result);
-        }));
+    async::PostTask(async_, callback::MakeScoped(
+                                weak_factory_.GetWeakPtr(),
+                                [result = std::move(result),
+                                 callback = std::move(callback)]() mutable {
+                                  callback(result);
+                                }));
   }
 
  private:
-   async_t* const async_;
-   fxl::WeakPtrFactory<EncryptionServiceImpl::KeyService> weak_factory_;
+  async_t* const async_;
+  fxl::WeakPtrFactory<EncryptionServiceImpl::KeyService> weak_factory_;
 };
 
-EncryptionServiceImpl::EncryptionServiceImpl(
-    async_t* async, std::string namespace_id)
+EncryptionServiceImpl::EncryptionServiceImpl(async_t* async,
+                                             std::string namespace_id)
     : namespace_id_(std::move(namespace_id)),
       key_service_(std::make_unique<KeyService>(async)),
       master_keys_(kKeyIndexCacheSize,
@@ -115,8 +119,7 @@ EncryptionServiceImpl::EncryptionServiceImpl(
                       Status::OK,
                       [this](auto k, auto c) {
                         FetchReferenceKey(std::move(k), std::move(c));
-                      })
-      {}
+                      }) {}
 
 EncryptionServiceImpl::~EncryptionServiceImpl() {}
 
