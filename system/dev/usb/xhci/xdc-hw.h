@@ -109,11 +109,15 @@ static_assert(sizeof(xdc_context_data_t) == 0xC0, "xdc context data wrong size")
 #define DCPORTSC_CEC                      (1 << 23)
 
 // Debug Capability Device Descriptor Info Register 1 (DCDDI1) bits
-#define DCDDI1_VENDOR_ID_START       16
-#define DCDDI1_VENDOR_ID_BITS        16
+#define DCDDI1_VENDOR_ID_START            16
+#define DCDDI1_VENDOR_ID_BITS             16
 
 // Debug Capability Device Descriptor Info Register 2 (DCDDI2) bits
-#define DCDDI2_PRODUCT_ID_START      0
-#define DCDDI2_PRODUCT_ID_BITS       16
-#define DCDDI2_DEVICE_REVISION_START 16
-#define DCDDI2_DEVICE_REVISION_BITS  16
+#define DCDDI2_PRODUCT_ID_START           0
+#define DCDDI2_PRODUCT_ID_BITS            16
+#define DCDDI2_DEVICE_REVISION_START      16
+#define DCDDI2_DEVICE_REVISION_BITS       16
+
+// Device Context Index for the bulk endpoint TRBs.
+#define EP_OUT_DEV_CTX_IDX                2
+#define EP_IN_DEV_CTX_IDX                 3

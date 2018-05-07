@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include "xdc.h"
+#include "xdc-transfer.h"
 #include "xhci-hw.h"
 #include "xhci-util.h"
 
@@ -24,7 +25,6 @@
 // Multi-segment event rings are not currently supported.
 #define ERST_ARRAY_SIZE        1
 #define EVENT_RING_SIZE        (PAGE_SIZE / sizeof(xhci_trb_t))
-#define TRANSFER_RING_SIZE     (PAGE_SIZE / sizeof(xhci_trb_t))
 
 // The maximum duration to transition from connected to configured state.
 #define TRANSITION_CONFIGURED_THRESHOLD ZX_SEC(5)
@@ -92,6 +92,7 @@ static zx_status_t xdc_endpoint_ctx_init(xdc_t* xdc, uint32_t ep_idx) {
     xdc_endpoint_t* ep = &xdc->eps[ep_idx];
     list_initialize(&ep->queued_reqs);
     list_initialize(&ep->pending_reqs);
+    list_initialize(&ep->completed_reqs);
     ep->direction = ep_idx == IN_EP_IDX ? USB_DIR_IN : USB_DIR_OUT;
     snprintf(ep->name, MAX_EP_DEBUG_NAME_LEN, ep_idx == IN_EP_IDX ? "IN" : "OUT");
     ep->state = XDC_EP_STATE_RUNNING;
@@ -236,6 +237,9 @@ static void xdc_shutdown(xdc_t* xdc) {
         ep->state = XDC_EP_STATE_DEAD;
 
         usb_request_t* req;
+        while ((req = list_remove_tail_type(&ep->completed_reqs, usb_request_t, node)) != NULL) {
+            usb_request_complete(req, req->response.status, req->response.actual);
+        }
         while ((req = list_remove_tail_type(&ep->pending_reqs, usb_request_t, node)) != NULL) {
             usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0);
         }
@@ -319,7 +323,7 @@ static void xdc_handle_port_status_change(xdc_t* xdc) {
     XHCI_WRITE32(&xdc->debug_cap_regs->dcportsc, dcportsc);
 }
 
-static void xdc_handle_events(xdc_t* xdc) {
+static void xdc_handle_events_locked(xdc_t* xdc) __TA_REQUIRES(xdc->lock) {
     xhci_event_ring_t* er = &xdc->event_ring;
 
     // process all TRBs with cycle bit matching our CCS
@@ -328,6 +332,9 @@ static void xdc_handle_events(xdc_t* xdc) {
         switch (type) {
         case TRB_EVENT_PORT_STATUS_CHANGE:
             xdc_handle_port_status_change(xdc);
+            break;
+        case TRB_EVENT_TRANSFER:
+            xdc_handle_transfer_event_locked(xdc, er->current);
             break;
         default:
             zxlogf(ERROR, "xdc_handle_events: unhandled event type %d\n", type);
@@ -343,7 +350,13 @@ static void xdc_handle_events(xdc_t* xdc) {
     xdc_update_erdp(xdc);
 }
 
-void xdc_update_configuration_state_locked(xdc_t* xdc) {
+void xdc_update_state_locked(xdc_t* xdc) {
+    uint32_t dcst = XHCI_GET_BITS32(&xdc->debug_cap_regs->dcst, DCST_ER_NOT_EMPTY_START,
+                                    DCST_ER_NOT_EMPTY_BITS);
+    if (dcst) {
+        xdc_handle_events_locked(xdc);
+    }
+
     uint32_t dcctrl = XHCI_READ32(&xdc->debug_cap_regs->dcctrl);
 
     if (dcctrl & DCCTRL_DRC) {
@@ -383,8 +396,7 @@ void xdc_update_configuration_state_locked(xdc_t* xdc) {
     }
 }
 
-static void xdc_endpoint_set_halt_locked(xdc_t* xdc,
-                                         xdc_endpoint_t* ep) __TA_REQUIRES(xdc->lock) {
+void xdc_endpoint_set_halt_locked(xdc_t* xdc, xdc_endpoint_t* ep) __TA_REQUIRES(xdc->lock) {
     switch (ep->state) {
     case XDC_EP_STATE_DEAD:
         return;
@@ -423,13 +435,28 @@ static void xdc_endpoint_clear_halt_locked(xdc_t* xdc,
         return;
     }
 
-    // If we get here, we are now in the STOPPED state.
-    // TODO(jocelyndang): transition from STOPPED to RUNNING if we have processed the
-    // error events on the event ring.
+    // If we get here, we are now in the STOPPED state and the halt has been cleared.
+    // We should have processed the error events on the event ring once the halt flag was set,
+    // but double-check this is the case.
+    if (ep->got_err_event) {
+        zx_status_t status = xdc_restart_transfer_ring_locked(xdc, ep);
+        if (status != ZX_OK) {
+            // This should never fail. If it does, disable the debug capability.
+            // TODO(jocelyndang): the polling thread should re-initialize everything
+            // if DCE is cleared.
+            zxlogf(ERROR, "xdc_restart_transfer_ring got err %d, clearing DCE\n", status);
+            XHCI_WRITE32(&xdc->debug_cap_regs->dcctrl, 0);
+        }
+        ep->got_err_event = false;
+    }
 }
 
 void xdc_update_endpoint_state_locked(xdc_t* xdc, xdc_endpoint_t* ep) {
     uint32_t dcctrl = XHCI_READ32(&xdc->debug_cap_regs->dcctrl);
+    if (!(dcctrl & DCCTRL_DCR)) {
+        // Halt bits are irrelevant when the debug capability isn't in Run Mode.
+        return;
+    }
     uint32_t bit = ep->direction == USB_DIR_OUT ? DCCTRL_HOT : DCCTRL_HIT;
     if (dcctrl & bit) {
         xdc_endpoint_set_halt_locked(xdc, ep);
@@ -445,22 +472,28 @@ zx_status_t xdc_poll(xdc_t* xdc) {
             break;
         }
 
-        uint32_t dcst = XHCI_GET_BITS32(&xdc->debug_cap_regs->dcst, DCST_ER_NOT_EMPTY_START,
-                                        DCST_ER_NOT_EMPTY_BITS);
-        if (dcst) {
-            xdc_handle_events(xdc);
-        }
+        list_node_t completed[NUM_EPS];
 
         mtx_lock(&xdc->lock);
-        xdc_update_configuration_state_locked(xdc);
+        xdc_update_state_locked(xdc);
 
-        // Check if an endpoint has halted or recovered.
+        // Copy the endpoint's completed requests (if any) and check if it has halted or recovered.
         for (int i = 0; i < NUM_EPS; i++) {
             xdc_endpoint_t* ep = &xdc->eps[i];
+            list_initialize(&completed[i]);
+            list_move(&ep->completed_reqs, &completed[i]);
             xdc_update_endpoint_state_locked(xdc, ep);
         }
-
         mtx_unlock(&xdc->lock);
+
+        // Call complete callbacks out of the lock.
+        // TODO(jocelyndang): might want a separate thread for this.
+        usb_request_t* req;
+        for (int i = 0; i < NUM_EPS; i++) {
+            while ((req = list_remove_tail_type(&completed[i], usb_request_t, node)) != NULL) {
+                usb_request_complete(req, req->response.status, req->response.actual);
+            }
+        }
 
         zx_nanosleep(zx_deadline_after(POLL_INTERVAL));
     }

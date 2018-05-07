@@ -7,6 +7,9 @@
 #include "xdc.h"
 #include "xdc-transfer.h"
 
+// Reads a range of bits from an integer.
+#define READ_FIELD(i, start, bits) (((i) >> (start)) & ((1 << (bits)) - 1))
+
 static void xdc_ring_doorbell(xdc_t* xdc, xdc_endpoint_t* ep) {
     uint8_t doorbell_val = ep->direction == USB_DIR_IN ? DCDB_DB_EP_IN : DCDB_DB_EP_OUT;
     XHCI_SET_BITS32(&xdc->debug_cap_regs->dcdb, DCDB_DB_START, DCDB_DB_BITS, doorbell_val);
@@ -97,7 +100,7 @@ zx_status_t xdc_queue_transfer(xdc_t* xdc, usb_request_t* req, bool in) {
     mtx_lock(&xdc->lock);
 
     // Make sure we're recently checked the device state registers.
-    xdc_update_configuration_state_locked(xdc);
+    xdc_update_state_locked(xdc);
     xdc_update_endpoint_state_locked(xdc, ep);
 
     if (!xdc->configured || ep->state == XDC_EP_STATE_DEAD) {
@@ -178,4 +181,103 @@ zx_status_t xdc_restart_transfer_ring_locked(xdc_t* xdc, xdc_endpoint_t* ep) {
     }
     xdc_process_transactions_locked(xdc, ep);
     return ZX_OK;
+}
+
+void xdc_handle_transfer_event_locked(xdc_t* xdc, xhci_trb_t* trb) {
+    uint32_t control = XHCI_READ32(&trb->control);
+    uint32_t status = XHCI_READ32(&trb->status);
+    uint32_t ep_dev_ctx_idx = READ_FIELD(control, TRB_ENDPOINT_ID_START, TRB_ENDPOINT_ID_BITS);
+    uint8_t xdc_ep_idx = ep_dev_ctx_idx == EP_IN_DEV_CTX_IDX ? IN_EP_IDX : OUT_EP_IDX;
+    xdc_endpoint_t* ep = &xdc->eps[xdc_ep_idx];
+    xhci_transfer_ring_t* ring = &ep->transfer_ring;
+
+    uint32_t cc = READ_FIELD(status, EVT_TRB_CC_START, EVT_TRB_CC_BITS);
+    uint32_t length = READ_FIELD(status, EVT_TRB_XFER_LENGTH_START, EVT_TRB_XFER_LENGTH_BITS);
+    usb_request_t* req = NULL;
+    bool error = false;
+
+    switch (cc) {
+        case TRB_CC_SUCCESS:
+        case TRB_CC_SHORT_PACKET:
+            break;
+        case TRB_CC_BABBLE_DETECTED_ERROR:
+        case TRB_CC_USB_TRANSACTION_ERROR:
+        case TRB_CC_TRB_ERROR:
+        case TRB_CC_STALL_ERROR:
+            zxlogf(ERROR, "xdc_handle_transfer_event: error condition code: %d\n", cc);
+            error = true;
+            break;
+        default:
+            zxlogf(ERROR, "xdc_handle_transfer_event: unexpected condition code %d\n", cc);
+            error = true;
+            break;
+    }
+
+    // Even though the main poll loop checks for changes in the halt registers,
+    // it's possible we missed the halt register being set if the halt was cleared fast enough.
+    if (error) {
+        if (ep->state == XDC_EP_STATE_RUNNING) {
+             xdc_endpoint_set_halt_locked(xdc, ep);
+        }
+        ep->got_err_event = true;
+        // We're going to requeue the transfer when we restart the transfer ring,
+        // so nothing else to do.
+        return;
+    }
+
+    if (control & EVT_TRB_ED) {
+        // An Event Data TRB generated the completion event, so the TRB Pointer field
+        // will contain the usb request pointer we previously stored.
+        req = (usb_request_t *)trb_get_ptr(trb);
+    } else {
+        // Get the pointer to the TRB that generated the event.
+        trb = xhci_read_trb_ptr(ring, trb);
+        if (trb_get_type(trb) == TRB_TRANSFER_NOOP) {
+            // If it's the NO-OP TRB we queued when dealing with the halt condition,
+            // there won't be a corresponding usb request.
+            zxlogf(TRACE, "xdc_handle_transfer_event: got a NO-OP TRB\n");
+            xhci_set_dequeue_ptr(ring, xhci_get_next_trb(ring, trb));
+            xdc_process_transactions_locked(xdc, ep);
+            return;
+        }
+
+        // Look for the Event Data TRB which will have the usb request pointer.
+        for (uint i = 0; i < TRANSFER_RING_SIZE && trb; i++) {
+            if (trb_get_type(trb) == TRB_TRANSFER_EVENT_DATA) {
+                req = (usb_request_t *)trb_get_ptr(trb);
+                break;
+            }
+            trb = xhci_get_next_trb(ring, trb);
+        }
+    }
+
+    if (!req) {
+        zxlogf(ERROR, "xdc_handle_transfer_event: unable to find request to complete\n");
+        return;
+    }
+
+    // Find the usb request in the pending list.
+    bool found_req = false;
+    usb_request_t* test;
+    list_for_every_entry(&ep->pending_reqs, test, usb_request_t, node) {
+        if (test == req) {
+            found_req = true;
+            break;
+        }
+    }
+    if (!found_req) {
+        zxlogf(ERROR, "xdc_handle_transfer_event: ignoring event for completed transfer\n");
+        return;
+    }
+    // Remove request from pending_reqs.
+    list_delete(&req->node);
+
+    // Update our copy of the dequeue_ptr to the TRB following this transaction.
+    xhci_set_dequeue_ptr(ring, req->context);
+    xdc_process_transactions_locked(xdc, ep);
+
+    // Save the request to be completed later out of the lock.
+    req->response.status = ZX_OK;
+    req->response.actual = length;
+    list_add_tail(&ep->completed_reqs, &req->node);
 }

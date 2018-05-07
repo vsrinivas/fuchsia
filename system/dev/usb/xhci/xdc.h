@@ -11,6 +11,8 @@
 #include "xhci-transfer-common.h"
 #include "xhci-trb.h"
 
+#define TRANSFER_RING_SIZE     (PAGE_SIZE / sizeof(xhci_trb_t))
+
 // The type and length fields for a string descriptor are one byte each.
 #define STR_DESC_METADATA_LEN  2
 #define MAX_STR_LEN            64
@@ -37,10 +39,12 @@ typedef struct {
     list_node_t queued_reqs;     // requests waiting to be processed
     usb_request_t* current_req;  // request currently being processed
     list_node_t pending_reqs;    // processed requests waiting for completion, including current_req
+    list_node_t completed_reqs;  // requests that need their complete_cb called
     xhci_transfer_state_t transfer_state;  // transfer state for current_req
     uint8_t direction;  // USB_DIR_OUT or USB_DIR_IN
 
     xdc_ep_state_t state;
+    bool got_err_event; // encountered a TRB error on the event ring
 
     char name[MAX_EP_DEBUG_NAME_LEN];  // For debug printing.
 } xdc_endpoint_t;
@@ -99,5 +103,6 @@ typedef struct {
 // TODO(jocelyndang): we should get our own handles rather than borrowing them from XHCI.
 zx_status_t xdc_bind(zx_device_t* parent, zx_handle_t bti_handle, void* mmio);
 
-void xdc_update_configuration_state_locked(xdc_t* xdc) __TA_REQUIRES(xdc->lock);
+void xdc_update_state_locked(xdc_t* xdc) __TA_REQUIRES(xdc->lock);
 void xdc_update_endpoint_state_locked(xdc_t* xdc, xdc_endpoint_t* ep) __TA_REQUIRES(xdc->lock);
+void xdc_endpoint_set_halt_locked(xdc_t* xdc, xdc_endpoint_t* ep) __TA_REQUIRES(xdc->lock);
