@@ -42,7 +42,8 @@ typedef enum {
 typedef struct {
     node_t  node;
     uintptr_t initrd_start;
-    size_t memory;
+    size_t memory_base;
+    size_t memory_size;
     char* cmdline;
     size_t cmdline_length;
     uint32_t cpu_count;
@@ -99,10 +100,14 @@ static int prop_callback(const char *name, uint8_t *data, uint32_t size, void *c
         }
     } else if (ctx->node == NODE_MEMORY) {
         if (!strcmp(name, "reg") && size == 16) {
+            // memory size is big endian uint64_t at offset 0
+            uint64_t most = dt_rd32(data + 0);
+            uint64_t least = dt_rd32(data + 4);
+            ctx->memory_base = (most << 32) | least;
             // memory size is big endian uint64_t at offset 8
-            uint64_t most = dt_rd32(data + 8);
-            uint64_t least = dt_rd32(data + 12);
-            ctx->memory = (most << 32) | least;
+            most = dt_rd32(data + 8);
+            least = dt_rd32(data + 12);
+            ctx->memory_size = (most << 32) | least;
         }
     }
 
@@ -173,7 +178,8 @@ boot_shim_return_t boot_shim(void* device_tree) {
     device_tree_context_t ctx;
     ctx.node = NODE_NONE;
     ctx.initrd_start = 0;
-    ctx.memory = 0;
+    ctx.memory_base = 0;
+    ctx.memory_size = 0;
     ctx.cmdline = NULL;
     ctx.cpu_count = 0;
     read_device_tree(device_tree, &ctx);
@@ -202,14 +208,16 @@ boot_shim_return_t boot_shim(void* device_tree) {
 #if HAS_DEVICE_TREE
     // look for optional RAM size in device tree
     // do this last so device tree can override value in boot-shim-config.h
-    if (ctx.memory) {
+    if (ctx.memory_size) {
         bootdata_mem_range_t mem_range;
-        mem_range.paddr = 0;
-        mem_range.length = ctx.memory;
+        mem_range.paddr = ctx.memory_base;
+        mem_range.length = ctx.memory_size;
         mem_range.type = BOOTDATA_MEM_RANGE_RAM;
 
-        uart_puts("Setting RAM size device tree value: ");
-        uart_print_hex(ctx.memory);
+        uart_puts("Setting RAM base and size device tree value: ");
+        uart_print_hex(ctx.memory_base);
+        uart_puts(" ");
+        uart_print_hex(ctx.memory_size);
         uart_puts("\n");
         append_bootdata(bootdata, BOOTDATA_MEM_CONFIG, 0, &mem_range, sizeof(mem_range));
     } else {

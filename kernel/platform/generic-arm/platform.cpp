@@ -270,6 +270,10 @@ static void process_mem_range(const bootdata_mem_range_t* mem_range) {
             dprintf(INFO, "mem_arena.base %#" PRIx64 " size %#" PRIx64 "\n", mem_arena.base,
                     mem_arena.size);
         } else {
+            if (mem_range->paddr) {
+                mem_arena.base = mem_range->paddr;
+                dprintf(INFO, "overriding mem arena 0 base from FDT: %#zx\n", mem_arena.base);
+            }
             // if mem_area.base is already set, then just update the size
             mem_arena.size = mem_range->length;
             dprintf(INFO, "overriding mem arena 0 size from FDT: %#zx\n", mem_arena.size);
