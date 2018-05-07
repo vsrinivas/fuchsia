@@ -8,6 +8,7 @@
 
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/unique_ptr.h>
+#include <trace/event.h>
 
 #include "garnet/lib/machina/gpu_bitmap.h"
 #include "garnet/lib/machina/gpu_resource.h"
@@ -53,25 +54,73 @@ zx_status_t VirtioGpu::QueueHandler(VirtioQueue* queue,
   return gpu->HandleGpuCommand(queue, head, used);
 }
 
+namespace {
+
+// Returns a string representation of the given virtio_gpu_ctrl_type command.
+const char* command_to_string(uint32_t command) {
+  switch (command) {
+    case VIRTIO_GPU_CMD_GET_DISPLAY_INFO:
+      return "get_display_info";
+    case VIRTIO_GPU_CMD_RESOURCE_CREATE_2D:
+      return "resource_create_2d";
+    case VIRTIO_GPU_CMD_RESOURCE_UNREF:
+      return "resource_unref";
+    case VIRTIO_GPU_CMD_SET_SCANOUT:
+      return "set_scanout";
+    case VIRTIO_GPU_CMD_RESOURCE_FLUSH:
+      return "resource_flush";
+    case VIRTIO_GPU_CMD_TRANSFER_TO_HOST_2D:
+      return "transfer_to_host_2d";
+    case VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING:
+      return "resource_attach_backing";
+    case VIRTIO_GPU_CMD_RESOURCE_DETACH_BACKING:
+      return "resource_detach_backing";
+    case VIRTIO_GPU_CMD_UPDATE_CURSOR:
+      return "update_cursor";
+    case VIRTIO_GPU_CMD_MOVE_CURSOR:
+      return "move_cursor";
+    default:
+      return "[unknown]";
+  }
+}
+
+}  // namespace
+
 zx_status_t VirtioGpu::HandleGpuCommand(VirtioQueue* queue,
                                         uint16_t head,
                                         uint32_t* used) {
   virtio_desc_t request_desc;
   queue->ReadDesc(head, &request_desc);
-  auto request_header =
+  const auto request_header =
       reinterpret_cast<virtio_gpu_ctrl_hdr_t*>(request_desc.addr);
+  const uint32_t command_type = request_header->type;
+  const char* command_label = command_to_string(command_type);
+
+  // Attempt to correlate the processing of descriptors with a previous kick.
+  // As noted in virtio_device.cc this should be considered best-effort only.
+  const uint16_t sel =
+      queue == control_queue() ? VIRTIO_GPU_Q_CONTROLQ : VIRTIO_GPU_Q_CURSORQ;
+  const char* queue_label = sel == VIRTIO_GPU_Q_CONTROLQ ? "control" : "cursor";
+  const trace_async_id_t flow_id = trace_flow_id(sel)->exchange(0);
+  TRACE_DURATION("machina", "virtio_gpu_command", "queue",
+                 TA_STRING_LITERAL(queue_label), "command",
+                 TA_STRING_LITERAL(command_label), "flow_id", flow_id);
+  if (flow_id != 0) {
+    TRACE_FLOW_END("machina", "io_queue_signal", flow_id);
+  }
 
   // Cursor commands don't send a response (at least not in the linux driver).
   if (!request_desc.has_next &&
-      request_header->type != VIRTIO_GPU_CMD_MOVE_CURSOR &&
-      request_header->type != VIRTIO_GPU_CMD_UPDATE_CURSOR) {
-    FXL_LOG(ERROR) << "Command " << request_header->type
-                   << " does not contain a response descriptor";
+      command_type != VIRTIO_GPU_CMD_MOVE_CURSOR &&
+      command_type != VIRTIO_GPU_CMD_UPDATE_CURSOR) {
+    FXL_LOG(ERROR) << "GPU command "
+                   << "'" << command_label << "' (" << command_type << ") "
+                   << "does not contain a response descriptor";
     return ZX_OK;
   }
 
   virtio_gpu_ctrl_hdr_t* response_header = nullptr;
-  switch (request_header->type) {
+  switch (command_type) {
     case VIRTIO_GPU_CMD_GET_DISPLAY_INFO: {
       virtio_desc_t response_desc;
       queue->ReadDesc(request_desc.next, &response_desc);
@@ -190,7 +239,8 @@ zx_status_t VirtioGpu::HandleGpuCommand(VirtioQueue* queue,
       break;
     }
     default: {
-      FXL_LOG(ERROR) << "Unsupported GPU command " << request_header->type;
+      FXL_LOG(ERROR) << "Unsupported GPU command "
+                     << "'" << command_label << "' (" << command_type << ")";
       // ACK.
       virtio_desc_t response_desc;
       queue->ReadDesc(request_desc.next, &response_desc);
@@ -223,6 +273,7 @@ zx_status_t VirtioGpu::HandleGpuCommand(VirtioQueue* queue,
 
 void VirtioGpu::GetDisplayInfo(const virtio_gpu_ctrl_hdr_t* request,
                                virtio_gpu_resp_display_info_t* response) {
+  TRACE_DURATION("machina", "virtio_gpu_get_display_info");
   virtio_gpu_display_one_t* display = &response->pmodes[0];
   if (scanout_ == nullptr) {
     memset(display, 0, sizeof(*display));
@@ -240,6 +291,7 @@ void VirtioGpu::GetDisplayInfo(const virtio_gpu_ctrl_hdr_t* request,
 
 void VirtioGpu::ResourceCreate2D(const virtio_gpu_resource_create_2d_t* request,
                                  virtio_gpu_ctrl_hdr_t* response) {
+  TRACE_DURATION("machina", "virtio_gpu_resource_create_2d");
   fbl::unique_ptr<GpuResource> res = GpuResource::Create(request, this);
   if (!res) {
     response->type = VIRTIO_GPU_RESP_ERR_UNSPEC;
@@ -251,6 +303,7 @@ void VirtioGpu::ResourceCreate2D(const virtio_gpu_resource_create_2d_t* request,
 
 void VirtioGpu::ResourceUnref(const virtio_gpu_resource_unref_t* request,
                               virtio_gpu_ctrl_hdr_t* response) {
+  TRACE_DURATION("machina", "virtio_gpu_resource_unref");
   auto it = resources_.find(request->resource_id);
   if (it == resources_.end()) {
     response->type = VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID;
@@ -262,6 +315,7 @@ void VirtioGpu::ResourceUnref(const virtio_gpu_resource_unref_t* request,
 
 void VirtioGpu::SetScanout(const virtio_gpu_set_scanout_t* request,
                            virtio_gpu_ctrl_hdr_t* response) {
+  TRACE_DURATION("machina", "virtio_gpu_set_scanout");
   if (request->resource_id == 0) {
     // Resource ID 0 is a special case and means the provided scanout
     // should be disabled.
@@ -289,6 +343,7 @@ void VirtioGpu::ResourceAttachBacking(
     const virtio_gpu_resource_attach_backing_t* request,
     const virtio_gpu_mem_entry_t* mem_entries,
     virtio_gpu_ctrl_hdr_t* response) {
+  TRACE_DURATION("machina", "virtio_gpu_resource_attach_backing");
   auto it = resources_.find(request->resource_id);
   if (it == resources_.end()) {
     response->type = VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID;
@@ -300,6 +355,7 @@ void VirtioGpu::ResourceAttachBacking(
 void VirtioGpu::ResourceDetachBacking(
     const virtio_gpu_resource_detach_backing_t* request,
     virtio_gpu_ctrl_hdr_t* response) {
+  TRACE_DURATION("machina", "virtio_gpu_resource_detach_backing");
   auto it = resources_.find(request->resource_id);
   if (it == resources_.end()) {
     response->type = VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID;
@@ -311,6 +367,7 @@ void VirtioGpu::ResourceDetachBacking(
 void VirtioGpu::TransferToHost2D(
     const virtio_gpu_transfer_to_host_2d_t* request,
     virtio_gpu_ctrl_hdr_t* response) {
+  TRACE_DURATION("machina", "virtio_gpu_transfer_to_host_2d");
   auto it = resources_.find(request->resource_id);
   if (it == resources_.end()) {
     response->type = VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID;
@@ -321,6 +378,7 @@ void VirtioGpu::TransferToHost2D(
 
 void VirtioGpu::ResourceFlush(const virtio_gpu_resource_flush_t* request,
                               virtio_gpu_ctrl_hdr_t* response) {
+  TRACE_DURATION("machina", "virtio_gpu_resource_flush");
   auto it = resources_.find(request->resource_id);
   if (it == resources_.end()) {
     response->type = VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID;
@@ -331,6 +389,8 @@ void VirtioGpu::ResourceFlush(const virtio_gpu_resource_flush_t* request,
 
 void VirtioGpu::MoveOrUpdateCursor(const virtio_gpu_update_cursor_t* request) {
   bool is_update = request->hdr.type == VIRTIO_GPU_CMD_UPDATE_CURSOR;
+  TRACE_DURATION("machina", is_update ? "virtio_gpu_update_cursor"
+                                      : "virtio_gpu_move_cursor");
   GpuResource* resource = nullptr;
   if (is_update && request->resource_id != 0) {
     auto it = resources_.find(request->resource_id);
