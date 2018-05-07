@@ -9,11 +9,11 @@ executable("unittests") {
   output_name = "garnet_lib_unittests"
 
   deps = [
+    "//garnet/public/lib/backoff:unittests",
+    "//garnet/public/lib/callback:unittests",
+    "//garnet/public/lib/gtest:unittests",
+    "//garnet/public/lib/network_wrapper:unittests",
     "//garnet/public/lib/test_runner/cpp:gtest_main",
-    "//garnet/lib/backoff:unittests",
-    "//garnet/lib/callback:unittests",
-    "//garnet/lib/gtest:unittests",
-    "//garnet/lib/network_wrapper:unittests",
   ]
 }
 
@@ -25,7 +25,9 @@ package("garnet_lib_tests") {
     ":unittests",
   ]
 
-  tests = [ {
-        name = "garnet_lib_unittests"
-      } ]
+  tests = [
+    {
+      name = "garnet_lib_unittests"
+    },
+  ]
 }

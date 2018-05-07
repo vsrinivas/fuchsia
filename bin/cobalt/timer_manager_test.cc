@@ -4,7 +4,7 @@
 
 #include "garnet/bin/cobalt/timer_manager.h"
 
-#include "garnet/lib/gtest/test_with_loop.h"
+#include "lib/gtest/test_with_loop.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace cobalt {

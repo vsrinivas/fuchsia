@@ -93,8 +93,8 @@ executable("bin") {
   sources = [
     "cobalt_main.cc",
     "product_hack.h",
-    "timer_manager.h",
     "timer_manager.cc",
+    "timer_manager.h",
   ]
 
   deps = [
@@ -137,17 +137,17 @@ executable("cobalt_garnet_unittests") {
   testonly = true
 
   sources = [
-    "timer_manager.h",
     "timer_manager.cc",
+    "timer_manager.h",
     "timer_manager_test.cc",
   ]
 
   deps = [
     "//garnet/lib/wlan/mlme:mlme",
-    "//garnet/lib/gtest",
+    "//garnet/public/lib/cobalt/fidl:fidl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl/test:gtest_main",
-    "//garnet/public/lib/cobalt/fidl:fidl",
+    "//garnet/public/lib/gtest",
   ]
 }
 
