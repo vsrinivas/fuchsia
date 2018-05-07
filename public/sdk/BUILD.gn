@@ -14,10 +14,6 @@ sdk("zircon_sysroot") {
 
   deps = [
     "//zircon/public/sysroot:sysroot_sdk",
-
-    # TODO(abarth): Remove these once the SDK rolls into Chromium.
-    "//zircon/public/lib/backtrace:backtrace_sdk",
-    "//zircon/public/lib/fdio:fdio_sdk",
   ]
 }
 
