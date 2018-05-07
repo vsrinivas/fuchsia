@@ -201,7 +201,7 @@ typedef struct imx_sdhci_regs {
 #define IMX_SDHC_MIX_CTRL_AC12EN                    (1 << 2)
 #define IMX_SDHC_MIX_CTRL_BCEN                      (1 << 1)
 #define IMX_SDHC_MIX_CTRL_DMAEN                     (1 << 0)
-#define IMX_SDHC_MIX_CTRL_CMD_MASK                  (0xb7 << 0)
+#define IMX_SDHC_MIX_CTRL_CMD_MASK                  (0xb6 << 0)
 
 #define IMX_SDHC_VEND_SPEC_CARD_CLK_SOFT_EN         (1 << 14)
 #define IMX_SDHC_VEND_SPEC_IPG_PERCLK_SOFT_EN       (1 << 13)

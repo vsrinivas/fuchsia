@@ -35,6 +35,14 @@
 #include <pretty/hexdump.h>
 
 #include "imx-sdhci.h"
+
+// Uncomment to disable interrupts
+// #define ENABLE_POLLING
+
+// Uncomment to disable DMA Mode
+// #define DISABLE_DMA
+
+// Uncomment to print logs at all levels
 // #define SDHCI_LOG_ALL 1
 
 #ifdef SDHCI_LOG_ALL
@@ -49,12 +57,37 @@
 #define SDHCI_FUNC_ENTRY_LOG        zxlogf(TRACE, "[%s %d]\n", __func__, __LINE__)
 #endif
 
+#define PAGE_MASK   (PAGE_SIZE - 1ull)
 #define SD_FREQ_SETUP_HZ  400000
-
 #define MAX_TUNING_COUNT 40
 
-// Uncomment to disable interrupts
-// #define ENABLE_PIO_MODE 1
+typedef struct sdhci_adma64_desc {
+    union {
+        struct {
+            uint8_t valid : 1;
+            uint8_t end   : 1;
+            uint8_t intr  : 1;
+            uint8_t rsvd0 : 1;
+            uint8_t act1  : 1;
+            uint8_t act2  : 1;
+            uint8_t rsvd1 : 2;
+            uint8_t rsvd2;
+        } __PACKED;
+        uint16_t attr;
+    } __PACKED;
+    uint16_t length;
+    uint32_t address;
+} __PACKED sdhci_adma64_desc_t;
+
+static_assert(sizeof(sdhci_adma64_desc_t) == 8, "unexpected ADMA2 descriptor size");
+
+// 64k max per descriptor
+#define ADMA2_DESC_MAX_LENGTH   0x10000 // 64k
+// for 2M max transfer size for fully discontiguous
+// also see SDMMC_PAGES_COUNT in ddk/protocol/sdmmc.h
+#define DMA_DESC_COUNT          512
+
+
 
 // TODO: Get base block from hardware registers
 #define IMX8M_SDHCI_BASE_CLOCK  200000000
@@ -71,26 +104,20 @@ typedef struct imx_sdhci_device {
     zx_handle_t                 regs_handle;
     zx_handle_t                 bti_handle;
 
-    // Held when a command or action is in progress.
-    mtx_t mtx;
-    // Current command request
-    sdmmc_req_t* cmd_req;
-    // Current data line request
-    sdmmc_req_t* data_req;
-    // Current block id to transfer (PIO)
-    uint16_t data_blockid;
-    // Set to true if the data stage completed before the command stage
-    bool data_done;
-    // used to signal request complete
-    completion_t req_completion;
-    // Controller info
-    sdmmc_host_info_t info;
-    // Controller specific quirks
-    uint64_t quirks;
-    // Base clock rate
-    uint32_t base_clock;
-    // DDR Mode enable flag
-    bool    ddr_mode;
+    // DMA descriptors
+    io_buffer_t iobuf;
+    sdhci_adma64_desc_t* descs;
+
+    mtx_t mtx;                      // Held when a command or action is in progress.
+    sdmmc_req_t* cmd_req;           // Current command request
+    sdmmc_req_t* data_req;          // Current data line request
+    uint16_t data_blockid;          // Current block id to transfer (PIO)
+    bool data_done;                 // Set to true if the data stage completed before the cmd stage
+    completion_t req_completion;    // used to signal request complete
+    sdmmc_host_info_t info;         // Controller info
+    uint32_t base_clock;            // Base clock rate
+    bool    ddr_mode;               // DDR Mode enable flag
+    bool    dma_mode;               // Flag used to switch between dma and pio mode
 } imx_sdhci_device_t;
 
 static const uint32_t error_interrupts = (
@@ -111,6 +138,12 @@ static const uint32_t normal_interrupts = (
     IMX_SDHC_INT_STAT_BWR   |
     IMX_SDHC_INT_STAT_DINT  |
     IMX_SDHC_INT_STAT_BGE   |
+    IMX_SDHC_INT_STAT_TC    |
+    IMX_SDHC_INT_STAT_CC
+);
+
+static const uint32_t dma_normal_interrupts = (
+    IMX_SDHC_INT_STAT_DINT  |
     IMX_SDHC_INT_STAT_TC    |
     IMX_SDHC_INT_STAT_CC
 );
@@ -203,11 +236,6 @@ static bool imx_sdmmc_cmd_rsp_busy(uint32_t cmd_flags) {
 
 static bool imx_sdmmc_has_data(uint32_t cmd_flags) {
     return cmd_flags & SDMMC_RESP_DATA_PRESENT;
-}
-
-
-static bool imx_sdmmc_supports_adma2_64bit(imx_sdhci_device_t* dev) {
-    return (false); // TODO: Not supported at the moment
 }
 
 static uint32_t imx_sdhci_prepare_cmd(sdmmc_req_t* req) {
@@ -427,7 +455,7 @@ static uint32_t get_clock_divider(imx_sdhci_device_t* dev,
     return (((pre_div & 0xFF) << 16)| (div & 0xF));
 }
 
-#ifndef ENABLE_PIO_MODE
+#ifndef ENABLE_POLLING
 static int imx_sdhci_irq_thread(void *args) {
     zx_status_t wait_res;
     imx_sdhci_device_t* dev = (imx_sdhci_device_t*)args;
@@ -484,6 +512,76 @@ static int imx_sdhci_irq_thread(void *args) {
 
 static zx_status_t imx_sdhci_build_dma_desc(imx_sdhci_device_t* dev, sdmmc_req_t* req) {
     SDHCI_FUNC_ENTRY_LOG;
+    block_op_t* bop = &req->txn->bop;
+    uint64_t pagecount = ((bop->rw.offset_vmo & PAGE_MASK) + bop->rw.length + PAGE_MASK) /
+                         PAGE_SIZE;
+    if (pagecount > SDMMC_PAGES_COUNT) {
+        SDHCI_ERROR("too many pages %lu vs %lu\n", pagecount, SDMMC_PAGES_COUNT);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    // pin the vmo
+    zx_paddr_t phys[SDMMC_PAGES_COUNT];
+    zx_handle_t pmt;
+    // offset_vmo is converted to bytes by the sdmmc layer
+    uint32_t options = bop->command == BLOCK_OP_READ ? ZX_BTI_PERM_WRITE : ZX_BTI_PERM_READ;
+    zx_status_t st = zx_bti_pin(dev->bti_handle, options, bop->rw.vmo,
+                                bop->rw.offset_vmo & ~PAGE_MASK,
+                                pagecount * PAGE_SIZE, phys, pagecount, &pmt);
+    if (st != ZX_OK) {
+        SDHCI_ERROR("error %d bti_pin\n", st);
+        return st;
+    }
+    // cache this for zx_pmt_unpin() later
+    req->pmt = pmt;
+
+    phys_iter_buffer_t buf = {
+        .phys = phys,
+        .phys_count = pagecount,
+        .length = bop->rw.length,
+        .vmo_offset = bop->rw.offset_vmo,
+    };
+    phys_iter_t iter;
+    phys_iter_init(&iter, &buf, ADMA2_DESC_MAX_LENGTH);
+
+    int count = 0;
+    size_t length;
+    zx_paddr_t paddr;
+    sdhci_adma64_desc_t* desc = dev->descs;
+    for (;;) {
+        length = phys_iter_next(&iter, &paddr);
+        if (length == 0) {
+            if (desc != dev->descs) {
+                desc -= 1;
+                desc->end = 1; // set end bit on the last descriptor
+                break;
+            } else {
+                SDHCI_TRACE("empty descriptor list!\n");
+                return ZX_ERR_NOT_SUPPORTED;
+            }
+        } else if (length > ADMA2_DESC_MAX_LENGTH) {
+            SDHCI_TRACE("chunk size > %zu is unsupported\n", length);
+            return ZX_ERR_NOT_SUPPORTED;
+        } else if ((++count) > DMA_DESC_COUNT) {
+            SDHCI_TRACE("request with more than %zd chunks is unsupported\n",
+                    length);
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+        desc->length = length & 0xffff; // 0 = 0x10000 bytes
+        desc->address = paddr;
+        desc->attr = 0;
+        desc->valid = 1;
+        desc->act2 = 1; // transfer data
+        desc += 1;
+    }
+
+    if (driver_get_log_flags() & DDK_LOG_SPEW) {
+        desc = dev->descs;
+        do {
+            SDHCI_TRACE("desc: addr=0x%" PRIx32 " length=0x%04x attr=0x%04x\n",
+                    desc->address, desc->length, desc->attr);
+        } while (!(desc++)->end);
+    }
     return ZX_OK;
 }
 
@@ -495,15 +593,10 @@ static zx_status_t imx_sdhci_start_req_locked(imx_sdhci_device_t* dev, sdmmc_req
     uint32_t cmd = imx_sdhci_prepare_cmd(req);
     bool has_data = imx_sdmmc_has_data(req->cmd_flags);
 
-    if (req->use_dma) {
+    if (req->use_dma && !dev->dma_mode) {
         SDHCI_INFO("we don't support dma yet\t");
         return ZX_ERR_NOT_SUPPORTED;
     }
-
-    if (req->use_dma && !imx_sdmmc_supports_adma2_64bit(dev)) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
 
     SDHCI_TRACE("start_req cmd=0x%08x (data %d dma %d bsy %d) blkcnt %u blksiz %u\n",
                   cmd, has_data, req->use_dma, imx_sdmmc_cmd_rsp_busy(cmd), blkcnt, blksiz);
@@ -523,7 +616,20 @@ static zx_status_t imx_sdhci_start_req_locked(imx_sdhci_device_t* dev, sdmmc_req
         zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
     }
 
+    zx_status_t st = ZX_OK;
     if (has_data) {
+        if (req->use_dma) {
+            st = imx_sdhci_build_dma_desc(dev, req);
+            if (st != ZX_OK) {
+                SDHCI_ERROR("Could not build DMA Descriptor\n");
+                return st;
+            }
+            zx_paddr_t desc_phys = io_buffer_phys(&dev->iobuf);
+            io_buffer_cache_flush(&dev->iobuf, 0,
+                          DMA_DESC_COUNT * sizeof(sdhci_adma64_desc_t));
+            regs->adma_sys_addr = (uint32_t) desc_phys;
+            regs->mix_ctrl |= IMX_SDHC_MIX_CTRL_DMAEN;
+        }
         if (cmd & SDHCI_CMD_MULTI_BLK) {
             cmd |= SDHCI_CMD_AUTO12;
         }
@@ -537,11 +643,15 @@ static zx_status_t imx_sdhci_start_req_locked(imx_sdhci_device_t* dev, sdmmc_req
     // Clear any pending interrupts before starting the transaction
     regs->int_status = 0xFFFFFFFF;
 
-#ifndef ENABLE_PIO_MODE
-    // Unmask and enable interrupts
-    regs->int_signal_en = error_interrupts | normal_interrupts;
-#endif
-    regs->int_status_en = error_interrupts | normal_interrupts;
+    if (req->use_dma) {
+        // Unmask and enable interrupts
+        regs->int_signal_en = error_interrupts | dma_normal_interrupts;
+        regs->int_status_en = error_interrupts | dma_normal_interrupts;
+    } else {
+        // Unmask and enable interrupts
+        regs->int_signal_en = error_interrupts | normal_interrupts;
+        regs->int_status_en = error_interrupts | normal_interrupts;
+    }
 
     dev->cmd_req = req;
 
@@ -558,7 +668,7 @@ static zx_status_t imx_sdhci_start_req_locked(imx_sdhci_device_t* dev, sdmmc_req
     regs->mix_ctrl |= (cmd & IMX_SDHC_MIX_CTRL_CMD_MASK);
     regs->cmd_xfr_typ = (cmd & IMX_SDHC_CMD_XFER_TYPE_CMD_MASK);
 
-#ifdef ENABLE_PIO_MODE
+#ifdef ENABLE_POLLING
     bool pio_done = false;
 
     while (!pio_done) {
@@ -829,6 +939,9 @@ static void imx_sdhci_hw_reset(void* ctx) {
     dev->regs->sys_ctrl &= ~(IMX_SDHC_SYS_CTRL_DTOCV_MASK);
     dev->regs->sys_ctrl |= (IMX_SDHC_SYS_CTRL_DTOCV(0xe));
     dev->regs->prot_ctrl = IMX_SDHC_PROT_CTRL_INIT;
+    if (dev->dma_mode) {
+        dev->regs->prot_ctrl |= IMX_SDHC_PROT_CTRL_DMASEL_ADMA2;
+    }
 
     uint32_t regVal = dev->regs->tuning_ctrl;
     regVal &= ~(IMX_SDHC_TUNING_CTRL_START_TAP_MASK);
@@ -1013,7 +1126,7 @@ static zx_status_t imx_sdhci_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-#ifndef ENABLE_PIO_MODE
+#ifndef ENABLE_POLLING
     thrd_t irq_thread;
     if (thrd_create_with_name(&irq_thread, imx_sdhci_irq_thread,
                                         dev, "imx_sdhci_irq_thread") != thrd_success) {
@@ -1034,7 +1147,9 @@ static zx_status_t imx_sdhci_bind(void* ctx, zx_device_t* parent) {
 
     //TODO: Turn off 8-bit mode for now since it doesn't work
     dev->info.caps |= SDMMC_HOST_CAP_BUS_WIDTH_8;
-
+#ifndef DISABLE_DMA
+    dev->info.caps |= SDMMC_HOST_CAP_ADMA2;
+#endif
     if (caps0 & SDHCI_CORECFG_3P3_VOLT_SUPPORT) {
         dev->info.caps |= SDMMC_HOST_CAP_VOLTAGE_330;
     }
@@ -1043,15 +1158,34 @@ static zx_status_t imx_sdhci_bind(void* ctx, zx_device_t* parent) {
 
     // TODO: Disable HS400 for now
     dev->info.prefs |= SDMMC_HOST_PREFS_DISABLE_HS400;
-
-    // no dma for now
-    dev->info.max_transfer_size = 0;
+#ifndef DISABLE_DMA
+    status = io_buffer_init(&dev->iobuf, dev->bti_handle,
+                            DMA_DESC_COUNT * sizeof(sdhci_adma64_desc_t),
+                            IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    if (status != ZX_OK) {
+        SDHCI_ERROR("Could not allocate DMA buffer. Falling to PIO Mode\n");
+        dev->dma_mode = false;
+        dev->info.max_transfer_size = 0;
+    } else {
+        SDHCI_ERROR("0x%lx %p\n", io_buffer_phys(&dev->iobuf), io_buffer_virt(&dev->iobuf));
+        dev->descs = io_buffer_virt(&dev->iobuf);
+        dev->info.max_transfer_size = DMA_DESC_COUNT * PAGE_SIZE;
+        dev->regs->prot_ctrl &= ~(IMX_SDHC_PROT_CTRL_DMASEL_MASK);
+        dev->regs->prot_ctrl |= IMX_SDHC_PROT_CTRL_DMASEL_ADMA2;
+        dev->dma_mode = true;
+        SDHCI_ERROR("Enabling DMA Mode\n");
+    }
+#else
+        SDHCI_ERROR("DMA Mode Disabled. Using PIO Mode\n");
+        dev->dma_mode = false;
+        dev->info.max_transfer_size = 0;
+#endif
 
     // Disable all interrupts
     dev->regs->int_signal_en = 0;
     dev->regs->int_status = 0xffffffff;
 
-#ifdef ENABLE_PIO_MODE
+#ifdef ENABLE_POLLING
     SDHCI_INFO("Interrupts Disabled! Polling Mode Active\n");
 #else
     SDHCI_INFO("Interrupts Enabled\n");
