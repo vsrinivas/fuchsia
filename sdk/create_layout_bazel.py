@@ -14,7 +14,7 @@ from layout_builder import Builder, process_manifest
 class CppBuilder(Builder):
 
     def __init__(self, output, overlay, debug):
-        super(CppBuilder, self).__init__(domains=['cpp', 'exe'])
+        super(CppBuilder, self).__init__(domains=['cpp', 'exe', 'fidl'])
         self.output = output
         self.is_overlay = overlay
         self.is_debug = debug
@@ -192,6 +192,8 @@ class CppBuilder(Builder):
         destination = os.path.join(self.output, 'tools', file.destination)
         self.make_dir(destination)
         shutil.copyfile(file.source, destination)
+
+    def install_fidl_atom(self, atom): pass
 
 
 def main():
