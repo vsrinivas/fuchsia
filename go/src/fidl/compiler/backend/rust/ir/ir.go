@@ -245,6 +245,7 @@ var handleSubtypes = map[types.HandleSubtype]string{
 type compiler struct {
 	decls   *types.DeclMap
 	library types.LibraryIdentifier
+	externCrates map[string]bool
 }
 
 func (c *compiler) inExternalLibrary(ci types.CompoundIdentifier) bool {
@@ -279,7 +280,9 @@ func compileScreamingSnakeIdentifier(val types.Identifier) string {
 func (c *compiler) compileCompoundIdentifier(val types.CompoundIdentifier) string {
 	strs := []string{}
 	if c.inExternalLibrary(val) {
-		strs = append(strs, compileLibraryName(val.Library))
+		externName := compileLibraryName(val.Library)
+		c.externCrates[externName] = true
+		strs = append(strs, externName)
 	}
 	str := changeIfReserved(val.Name)
 	strs = append(strs, str)
@@ -549,14 +552,8 @@ func (c *compiler) compileUnion(val types.Union) Union {
 
 func Compile(r types.Root) Root {
 	root := Root{}
-	c := compiler{&r.Decls, types.ParseLibraryName(r.Name)}
-
-	for _, l := range r.Libraries {
-		if l.Name != r.Name {
-			library := types.ParseLibraryName(l.Name)
-			root.ExternCrates = append(root.ExternCrates, compileLibraryName(library))
-		}
-	}
+	thisLibParsed := types.ParseLibraryName(r.Name)
+	c := compiler{&r.Decls, thisLibParsed, map[string]bool{}}
 
 	for _, v := range r.Consts {
 		root.Consts = append(root.Consts, c.compileConst(v))
@@ -576,6 +573,13 @@ func Compile(r types.Root) Root {
 
 	for _, v := range r.Unions {
 		root.Unions = append(root.Unions, c.compileUnion(v))
+	}
+
+	thisLibCompiled := compileLibraryName(thisLibParsed)
+	for k, _ := range c.externCrates {
+		if k != thisLibCompiled {
+			root.ExternCrates = append(root.ExternCrates, k)
+		}
 	}
 
 	return root
