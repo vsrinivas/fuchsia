@@ -502,34 +502,20 @@ extern {
         out1: *mut zx_handle_t
         ) -> zx_status_t;
 
-    #[deprecated]
     pub fn zx_fifo_read(
         handle: zx_handle_t,
+        elem_size: usize,
         data: *mut u8,
-        len: usize,
-        num_written: *mut u32
+        count: usize,
+        actual_count: *mut usize
         ) -> zx_status_t;
 
-    pub fn zx_fifo_read_old(
-        handle: zx_handle_t,
-        data: *mut u8,
-        len: usize,
-        num_written: *mut u32
-        ) -> zx_status_t;
-
-    #[deprecated]
     pub fn zx_fifo_write(
         handle: zx_handle_t,
+        elem_size: usize,
         data: *const u8,
-        len: usize,
-        num_written: *mut u32
-        ) -> zx_status_t;
-
-    pub fn zx_fifo_write_old(
-        handle: zx_handle_t,
-        data: *const u8,
-        len: usize,
-        num_written: *mut u32
+        count: usize,
+        actual_count: *mut usize
         ) -> zx_status_t;
 
     pub fn zx_vmar_unmap_handle_close_thread_exit(

@@ -35,44 +35,40 @@ impl Fifo {
         ))}
     }
 
-    /// Attempts to write some number of elements into the fifo. The number of bytes written will be
-    /// rounded down to a multiple of the fifo's element size.
-    /// Return value (on success) is number of elements actually written.
+    /// Attempts to write some number of elements into the fifo. The length of `bytes` must be
+    /// divisible by `elem_size`, which must match the fifo's element size.
+    /// On success, returns the number of elements actually written.
     ///
     /// Wraps
     /// [zx_fifo_write](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/fifo_write.md).
-    #[deprecated]
-    pub fn write(&self, bytes: &[u8]) -> Result<u32, Status> {
-        self.write_old(bytes)
-    }
-
-    pub fn write_old(&self, bytes: &[u8]) -> Result<u32, Status> {
-        let mut num_entries_written = 0;
+    pub fn write(&self, elem_size: usize, bytes: &[u8]) -> Result<usize, Status> {
+        let count = bytes.len() / elem_size;
+        debug_assert!(count * elem_size == bytes.len(),
+                      "bytes.len() must be divisible by elem_size");
+        let mut actual_count = 0;
         let status = unsafe {
-            sys::zx_fifo_write_old(self.raw_handle(), bytes.as_ptr(), bytes.len(),
-                &mut num_entries_written)
+            sys::zx_fifo_write(self.raw_handle(), elem_size, bytes.as_ptr(), count,
+                               &mut actual_count)
         };
-        ok(status).map(|()| num_entries_written)
+        ok(status).map(|()| actual_count)
     }
 
-    /// Attempts to read some number of elements out of the fifo. The number of bytes read will
-    /// always be a multiple of the fifo's element size.
-    /// Return value (on success) is number of elements actually read.
+    /// Attempts to read some number of elements out of the fifo. The length of `bytes` must be
+    /// divisible by `elem_size`, which must match the fifo's element size.
+    /// On success, returns the number of elements actually read.
     ///
     /// Wraps
     /// [zx_fifo_read](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/fifo_read.md).
-    #[deprecated]
-    pub fn read(&self, bytes: &mut [u8]) -> Result<u32, Status> {
-        self.read_old(bytes)
-    }
-
-    pub fn read_old(&self, bytes: &mut [u8]) -> Result<u32, Status> {
-        let mut num_entries_read = 0;
+    pub fn read(&self, elem_size: usize, bytes: &mut [u8]) -> Result<usize, Status> {
+        let count = bytes.len() / elem_size;
+        debug_assert!(count * elem_size == bytes.len(),
+                      "bytes.len() must be divisible by elem_size");
+        let mut actual_count = 0;
         let status = unsafe {
-            sys::zx_fifo_read_old(self.raw_handle(), bytes.as_mut_ptr(), bytes.len(),
-                &mut num_entries_read)
+            sys::zx_fifo_read(self.raw_handle(), elem_size, bytes.as_mut_ptr(), count,
+                              &mut actual_count)
         };
-        ok(status).map(|()| num_entries_read)
+        ok(status).map(|()| actual_count)
     }
 }
 
@@ -85,24 +81,28 @@ mod tests {
         let (fifo1, fifo2) = Fifo::create(4, 2).unwrap();
 
         // Trying to write less than one element should fail.
-        assert_eq!(fifo1.write_old(b""), Err(Status::OUT_OF_RANGE));
-        assert_eq!(fifo1.write_old(b"h"), Err(Status::OUT_OF_RANGE));
+        assert_eq!(fifo1.write(2, b""), Err(Status::OUT_OF_RANGE));
+        // Trying to write using a wrong elem_size should fail
+        assert_eq!(fifo1.write(1, b"hi"), Err(Status::OUT_OF_RANGE));
 
-        // Should write one element "he" and ignore the last half-element as it rounds down.
-        assert_eq!(fifo1.write_old(b"hex").unwrap(), 1);
+        // Should write one element "he"
+        assert_eq!(fifo1.write(2, b"he").unwrap(), 1);
 
         // Should write three elements "ll" "o " "wo" and drop the rest as it is full.
-        assert_eq!(fifo1.write_old(b"llo worlds").unwrap(), 3);
+        assert_eq!(fifo1.write(2, b"llo worlds").unwrap(), 3);
 
         // Now that the fifo is full any further attempts to write should fail.
-        assert_eq!(fifo1.write_old(b"blah blah"), Err(Status::SHOULD_WAIT));
+        assert_eq!(fifo1.write(2, b"blahblah"), Err(Status::SHOULD_WAIT));
+
+        // Reading with a wrong elem_size should fail
+        let mut read_vec = vec![0; 8];
+        assert_eq!(fifo2.read(1, &mut read_vec), Err(Status::OUT_OF_RANGE));
 
         // Read all 4 entries from the other end.
-        let mut read_vec = vec![0; 8];
-        assert_eq!(fifo2.read_old(&mut read_vec).unwrap(), 4);
+        assert_eq!(fifo2.read(2, &mut read_vec).unwrap(), 4);
         assert_eq!(read_vec, b"hello wo");
 
         // Reading again should fail as the fifo is empty.
-        assert_eq!(fifo2.read_old(&mut read_vec), Err(Status::SHOULD_WAIT));
+        assert_eq!(fifo2.read(2, &mut read_vec), Err(Status::SHOULD_WAIT));
     }
 }
