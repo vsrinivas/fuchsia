@@ -48,16 +48,19 @@ TEST(ProcessSymbols, Basic) {
   ASSERT_FALSE(local_ls_path.empty());
 
   // Asking for an address before the beginning should fail.
-  Symbol symbol = process.SymbolAtAddress(load_info.base - 0x1000);
-  EXPECT_FALSE(symbol.valid()) << symbol.file() << " " << symbol.function();
+  Location loc = process.ResolveAddress(load_info.base - 0x1000);
+  EXPECT_EQ(load_info.base - 0x1000, loc.address());
+  EXPECT_FALSE(loc.symbol().valid())
+      << loc.symbol().file() << " " << loc.symbol().function();
 
   // Asking for a way big address should fail.
-  symbol = process.SymbolAtAddress(load_info.base + 0x1000000000000);
-  EXPECT_FALSE(symbol.valid()) << symbol.file() << " " << symbol.function();
+  loc = process.ResolveAddress(load_info.base + 0x1000000000000);
+  EXPECT_FALSE(loc.symbol().valid())
+      << loc.symbol().file() << " " << loc.symbol().function();
 
   // Ask for an address inside "ls", it should resolve to *something*.
-  symbol = process.SymbolAtAddress(load_info.base + 0x2000);
-  EXPECT_TRUE(symbol.valid());
+  loc = process.ResolveAddress(load_info.base + 0x2000);
+  EXPECT_TRUE(loc.symbol().valid());
 }
 
 }  // namespace zxdb

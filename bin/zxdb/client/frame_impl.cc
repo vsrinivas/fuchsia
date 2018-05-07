@@ -9,9 +9,12 @@
 namespace zxdb {
 
 FrameImpl::FrameImpl(ThreadImpl* thread,
-                     const debug_ipc::StackFrame& stack_frame)
-    : Frame(thread->session()), thread_(thread), stack_frame_(stack_frame) {
-}
+                     const debug_ipc::StackFrame& stack_frame,
+                     Location location)
+    : Frame(thread->session()),
+      thread_(thread),
+      stack_frame_(stack_frame),
+      location_(std::move(location)) {}
 
 FrameImpl::~FrameImpl() = default;
 
@@ -19,8 +22,8 @@ Thread* FrameImpl::GetThread() const {
   return thread_;
 }
 
-uint64_t FrameImpl::GetIP() const {
-  return stack_frame_.ip;
+const Location& FrameImpl::GetLocation() const {
+  return location_;
 }
 
 }  // namespace zxdb

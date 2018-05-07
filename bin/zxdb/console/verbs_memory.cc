@@ -14,6 +14,7 @@
 #include "garnet/bin/zxdb/client/memory_dump.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/session.h"
+#include "garnet/bin/zxdb/client/symbols/location.h"
 #include "garnet/bin/zxdb/client/system.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/console/command.h"
@@ -218,7 +219,7 @@ Err DoDisassemble(ConsoleContext* context, const Command& cmd) {
           "must be stopped to use the implicit current address. Otherwise,\n"
           "you must supply an explicit address to disassemble.");
     }
-    address = frame->GetIP();
+    address = frame->GetLocation().address();
   } else if (cmd.args().size() == 1) {
     // One argument is the address to read.
     err = StringToUint64(cmd.args()[0], &address);

@@ -19,6 +19,7 @@ class Command;
 class ConsoleContext;
 class Err;
 class Frame;
+class Location;
 class Symbol;
 class Thread;
 
@@ -73,6 +74,7 @@ std::string DescribeFrame(const Frame* frame, int id);
 std::string DescribeBreakpoint(const ConsoleContext* context,
                                const Breakpoint* breakpoint);
 
+std::string DescribeLocation(const Location& loc);
 std::string DescribeSymbol(const Symbol& symbol);
 
 enum class Align { kLeft, kRight };

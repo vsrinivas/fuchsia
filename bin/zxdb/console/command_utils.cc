@@ -11,6 +11,7 @@
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/process.h"
+#include "garnet/bin/zxdb/client/symbols/location.h"
 #include "garnet/bin/zxdb/client/symbols/symbol.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
@@ -266,12 +267,12 @@ std::string DescribeTarget(const ConsoleContext* context,
   // concat'd even when not present and things look nice.
   std::string koid_str;
   if (target->GetState() == Target::State::kRunning) {
-    koid_str = fxl::StringPrintf("koid=%" PRIu64 " ",
-                                 target->GetProcess()->GetKoid());
+    koid_str =
+        fxl::StringPrintf("koid=%" PRIu64 " ", target->GetProcess()->GetKoid());
   }
 
-  std::string result =
-      fxl::StringPrintf("Process %d %s %s", id, state.c_str(), koid_str.c_str());
+  std::string result = fxl::StringPrintf("Process %d %s %s", id, state.c_str(),
+                                         koid_str.c_str());
   result += DescribeTargetName(target);
   return result;
 }
@@ -303,7 +304,8 @@ std::string DescribeThread(const ConsoleContext* context,
 // you know the index when calling into here, and it's inefficient to look up.
 std::string DescribeFrame(const Frame* frame, int id) {
   // This will need symbols hooked up.
-  return fxl::StringPrintf("Frame %d @ 0x%" PRIx64, id, frame->GetIP());
+  return fxl::StringPrintf("Frame %d ", id) +
+         DescribeLocation(frame->GetLocation());
 }
 
 std::string DescribeBreakpoint(const ConsoleContext* context,
@@ -315,16 +317,36 @@ std::string DescribeBreakpoint(const ConsoleContext* context,
       fxl::StringPrintf("0x%" PRIx64, breakpoint->GetAddressLocation());
 
   return fxl::StringPrintf("Breakpoint %d on %s, %s, stop=%s, hit=%d, @ %s",
-                           context->IdForBreakpoint(breakpoint),
-                           scope.c_str(), enabled, stop.c_str(),
-                           breakpoint->GetHitCount(), location.c_str());
+                           context->IdForBreakpoint(breakpoint), scope.c_str(),
+                           enabled, stop.c_str(), breakpoint->GetHitCount(),
+                           location.c_str());
+}
+
+std::string DescribeLocation(const Location& loc) {
+  if (loc.symbol().valid())
+    return DescribeSymbol(loc.symbol());
+  return fxl::StringPrintf("0x%" PRIx64, loc.address());
 }
 
 std::string DescribeSymbol(const Symbol& symbol) {
   if (!symbol.valid())
     return "No symbol found.";
-  return symbol.file() + " " + symbol.function() + " " +
-      fxl::StringPrintf("%d", symbol.line());
+
+  // Only print out the leaf file name.
+  std::string file_part;
+  const std::string& filename = symbol.file();
+  size_t last_slash = filename.rfind('/');
+  if (last_slash == std::string::npos)
+    file_part = filename;
+  else
+    file_part = filename.substr(last_slash + 1);
+
+  std::string function;
+  if (!symbol.function().empty())
+    function = symbol.function() + " ";
+
+  return function + "@ " + file_part + ":" +
+         fxl::StringPrintf("%d", symbol.line());
 }
 
 void FormatColumns(const std::vector<ColSpec>& spec,

@@ -377,6 +377,25 @@ void ConsoleContext::WillDestroyThread(Process* process, Thread* thread) {
   }
 }
 
+// For comparison, GDB's printout for a breakpoint hit is:
+//
+//   Breakpoint 1, main () at eraseme.c:4
+//   4         printf("Hello\n");
+//
+// And LLDB's is:
+//
+//   * thread #1: tid = 33767, 0x000055555555463e a.out`main + 4 at
+//   eraseme.c:4, name = 'a.out', stop reason = breakpoint 1.1
+//       frame #0: 0x000055555555463e a.out`main + 4 at eraseme.c:4
+//      1    #include <stdio.h>
+//      2
+//      3    int main() {
+//   -> 4    printf("Hello\n");
+//      5    return 1;
+//      6  }
+//
+// When stepping, GDB prints out only the 2nd line with source info, and LLDB
+// prints out the whole thing with "step over" for "stop reason".
 void ConsoleContext::OnThreadStopped(Thread* thread,
                                      debug_ipc::NotifyException::Type type) {
   // Set this process and thread as active.
@@ -406,7 +425,7 @@ void ConsoleContext::OnThreadStopped(Thread* thread,
   // Frame (current position will always be frame 0).
   const auto& frames = thread->GetFrames();
   FXL_DCHECK(!frames.empty());
-  out.Append(DescribeFrame(frames[0].get(), 0));
+  out.Append(DescribeLocation(frames[0]->GetLocation()));
 
   console->Output(std::move(out));
 }

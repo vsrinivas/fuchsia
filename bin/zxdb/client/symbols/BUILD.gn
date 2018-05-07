@@ -4,6 +4,7 @@
 
 static_library("symbols") {
   public = [
+    "location.h",
     "module_records.h",
     "process_symbols.h",
     "symbol.h",

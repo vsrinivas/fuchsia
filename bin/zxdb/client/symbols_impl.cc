@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/client/symbols_impl.h"
 
+#include "garnet/bin/zxdb/client/frame_impl.h"
 #include "garnet/bin/zxdb/client/symbols/module_records.h"
 #include "garnet/bin/zxdb/client/symbols/process_symbols.h"
 #include "garnet/bin/zxdb/client/system_symbols_proxy.h"
@@ -40,17 +41,17 @@ SymbolsImpl::~SymbolsImpl() {
   });
 }
 
-void SymbolsImpl::AddModule(
-    const debug_ipc::Module& module,
-    std::function<void(const std::string&)> callback) {
+void SymbolsImpl::AddModule(const debug_ipc::Module& module,
+                            std::function<void(const std::string&)> callback) {
   ModuleLoadInfo info = ModuleLoadInfoFromDebugIPC(module);
 
-  system_proxy_->symbol_loop()->PostTask(
-      [ symbols = symbols_.get(), info,
-          main_loop = system_proxy_->main_loop(), callback](){
-        std::string local_path = symbols->AddModule(info);
-        main_loop->PostTask([ callback, local_path ](){ callback(local_path); });
-      });
+  system_proxy_->symbol_loop()->PostTask([
+    symbols = symbols_.get(), info, main_loop = system_proxy_->main_loop(),
+    callback
+  ]() {
+    std::string local_path = symbols->AddModule(info);
+    main_loop->PostTask([callback, local_path]() { callback(local_path); });
+  });
 }
 
 void SymbolsImpl::SetModules(const std::vector<debug_ipc::Module>& modules) {
@@ -58,34 +59,53 @@ void SymbolsImpl::SetModules(const std::vector<debug_ipc::Module>& modules) {
   for (const auto& module : modules)
     info.push_back(ModuleLoadInfoFromDebugIPC(module));
 
-  system_proxy_->symbol_loop()->PostTask([ symbols = symbols_.get(), info ]() {
-    symbols->SetModules(info);
+  system_proxy_->symbol_loop()->PostTask(
+      [ symbols = symbols_.get(), info ]() { symbols->SetModules(info); });
+}
+
+void SymbolsImpl::ResolveAddress(uint64_t address,
+                                 std::function<void(Location)> callback) {
+  system_proxy_->symbol_loop()->PostTask([
+    symbols = symbols_.get(), address, callback,
+    main_loop = system_proxy_->main_loop()
+  ]() {
+    Location result = symbols->ResolveAddress(address);
+    main_loop->PostTask([callback, result]() { callback(result); });
   });
 }
 
-void SymbolsImpl::SymbolAtAddress(uint64_t address,
-                                  std::function<void(Symbol)> callback) {
-  system_proxy_->symbol_loop()->PostTask(
-      [ symbols = symbols_.get(), address, callback,
-          main_loop = system_proxy_->main_loop() ](){
-        Symbol result = symbols->SymbolAtAddress(address);
-        main_loop->PostTask([ callback, result ](){ callback(result); });
-      });
+void SymbolsImpl::ResolveAddresses(
+    std::vector<uint64_t> addresses,
+    std::function<void(std::vector<Location>)> callback) {
+  system_proxy_->symbol_loop()->PostTask([
+    symbols = symbols_.get(), addresses = std::move(addresses),
+    main_loop = system_proxy_->main_loop(), callback
+  ]() {
+    // Symbolize each location on the symbol thread.
+    std::vector<Location> locations;
+    for (const auto& address : addresses)
+      locations.push_back(symbols->ResolveAddress(address));
+
+    // Forward locations back to the main loop in the callback.
+    main_loop->PostTask([ locations = std::move(locations), callback ]() {
+      callback(std::move(locations));
+    });
+  });
 }
 
 void SymbolsImpl::GetModuleInfo(
     std::function<void(std::vector<ModuleSymbolRecord> records)> callback) {
-  system_proxy_->symbol_loop()->PostTask(
-      [ symbols = symbols_.get(), main_loop = system_proxy_->main_loop(),
-          callback](){
-        std::vector<ModuleSymbolRecord> records;
-        for (const auto& record : symbols->modules())
-          records.push_back(record.second);
+  system_proxy_->symbol_loop()->PostTask([
+    symbols = symbols_.get(), main_loop = system_proxy_->main_loop(), callback
+  ]() {
+    std::vector<ModuleSymbolRecord> records;
+    for (const auto& record : symbols->modules())
+      records.push_back(record.second);
 
-        main_loop->PostTask([ callback, records = std::move(records) ](){
-          callback(std::move(records));
-        });
-      });
+    main_loop->PostTask([ callback, records = std::move(records) ]() {
+      callback(std::move(records));
+    });
+  });
 }
 
 }  // namespace zxdb

@@ -6,7 +6,7 @@
 
 #include <map>
 
-#include "garnet/bin/zxdb/client/symbols/symbol.h"
+#include "garnet/bin/zxdb/client/symbols/location.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/observer_list.h"
 
@@ -34,8 +34,9 @@ class ProcessSymbols {
   // Replaces all current modules with the given updated list.
   void SetModules(const std::vector<ModuleLoadInfo>& info);
 
-  // Returns an !valid() Symbol if nothing can be resolved.
-  Symbol SymbolAtAddress(uint64_t address) const;
+  // If the address can't be resolved, the Symbol in the address will be
+  // !valid().
+  Location ResolveAddress(uint64_t address) const;
 
  private:
   SystemSymbols* system_;

@@ -8,7 +8,9 @@
 #include "garnet/public/lib/fxl/macros.h"
 
 namespace debug_ipc {
+class Frame;
 struct Module;
+struct StackFrame;
 }
 
 namespace zxdb {
@@ -38,8 +40,11 @@ class SymbolsImpl : public Symbols {
   void SetModules(const std::vector<debug_ipc::Module>& modules);
 
   // Symbols implementation.
-  void SymbolAtAddress(uint64_t address,
-                       std::function<void(Symbol)> callback) override;
+  void ResolveAddress(uint64_t address,
+                      std::function<void(Location)> callback) override;
+  void ResolveAddresses(
+      std::vector<uint64_t> addresses,
+      std::function<void(std::vector<Location>)> callback) override;
   void GetModuleInfo(
       std::function<void(std::vector<ModuleSymbolRecord> records)> callback)
     override;

@@ -11,6 +11,7 @@
 
 namespace zxdb {
 
+class Location;
 class Thread;
 
 class Frame : public ClientObject {
@@ -21,8 +22,8 @@ class Frame : public ClientObject {
   // Guaranteed non-null.
   virtual Thread* GetThread() const = 0;
 
-  // Returns the instruction pointer for the frame.
-  virtual uint64_t GetIP() const = 0;
+  // Returns the location of the stack frame code.
+  virtual const Location& GetLocation() const = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Frame);

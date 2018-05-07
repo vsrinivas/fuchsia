@@ -12,7 +12,7 @@
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/symbols.h"
 #include "garnet/bin/zxdb/client/symbols/module_records.h"
-#include "garnet/bin/zxdb/client/symbols/symbol.h"
+#include "garnet/bin/zxdb/client/symbols/location.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
@@ -120,9 +120,9 @@ Err DoSymNear(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
-  cmd.target()->GetProcess()->GetSymbols()->SymbolAtAddress(
+  cmd.target()->GetProcess()->GetSymbols()->ResolveAddress(
       address,
-      [](Symbol symbol) { Console::get()->Output(DescribeSymbol(symbol)); });
+      [](Location loc) { Console::get()->Output(DescribeLocation(loc)); });
   return Err();
 }
 

@@ -35,7 +35,10 @@ class ThreadImpl : public Thread {
   void OnException(const debug_ipc::NotifyException& notify);
 
  private:
-  void HaveFrames(const std::vector<debug_ipc::StackFrame>& frames);
+  // Symbolizes the given stack frames, saves them, and issues the callback.
+  // The callback will only be issued if the Thread object is still valid.
+  void HaveFrames(const std::vector<debug_ipc::StackFrame>& frames,
+                  std::function<void()> callback);
 
   // Invlidates the cached frames.
   void ClearFrames();
