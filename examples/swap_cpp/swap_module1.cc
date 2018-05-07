@@ -12,7 +12,7 @@ int main(int /*argc*/, const char** /*argv*/) {
 
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::AppDriver<modular_example::ModuleApp> driver(
-      app_context->outgoing_services(),
+      app_context->outgoing().deprecated_services(),
       std::make_unique<modular_example::ModuleApp>(
           app_context.get(),
           [](auto view_manager, auto view_owner_request) {

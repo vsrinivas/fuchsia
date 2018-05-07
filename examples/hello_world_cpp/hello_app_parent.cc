@@ -64,7 +64,7 @@ int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::AppDriver<HelloAppParent> driver(
-      app_context->outgoing_services(),
+      app_context->outgoing().deprecated_services(),
       std::make_unique<HelloAppParent>(
           app_context.get(), fxl::CommandLineFromArgcArgv(argc, argv)),
       [&loop] { loop.QuitNow(); });

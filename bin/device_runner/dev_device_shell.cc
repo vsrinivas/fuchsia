@@ -167,7 +167,7 @@ int main(int argc, const char** argv) {
 
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::AppDriver<DevDeviceShellApp> driver(
-      app_context->outgoing_services(),
+      app_context->outgoing().deprecated_services(),
       std::make_unique<DevDeviceShellApp>(app_context.get(), settings),
       [&loop] { loop.QuitNow(); });
 

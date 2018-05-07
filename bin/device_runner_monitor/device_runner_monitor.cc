@@ -18,7 +18,7 @@ class DeviceRunnerMonitorApp : DeviceRunnerMonitor {
   DeviceRunnerMonitorApp()
       : app_context_(
             component::ApplicationContext::CreateFromStartupInfoNotChecked()) {
-    app_context_->outgoing_services()->AddService<DeviceRunnerMonitor>(
+    app_context_->outgoing().AddPublicService<DeviceRunnerMonitor>(
         [this](fidl::InterfaceRequest<DeviceRunnerMonitor> request) {
           bindings_.AddBinding(this, std::move(request));
         });

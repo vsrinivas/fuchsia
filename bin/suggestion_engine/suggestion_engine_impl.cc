@@ -44,15 +44,15 @@ SuggestionEngineImpl::SuggestionEngineImpl(
       auto_select_first_query_listener_(this),
       auto_select_first_query_listener_binding_(
           &auto_select_first_query_listener_) {
-  app_context->outgoing_services()->AddService<SuggestionEngine>(
+  app_context->outgoing().AddPublicService<SuggestionEngine>(
       [this](fidl::InterfaceRequest<SuggestionEngine> request) {
         bindings_.AddBinding(this, std::move(request));
       });
-  app_context->outgoing_services()->AddService<SuggestionProvider>(
+  app_context->outgoing().AddPublicService<SuggestionProvider>(
       [this](fidl::InterfaceRequest<SuggestionProvider> request) {
         suggestion_provider_bindings_.AddBinding(this, std::move(request));
       });
-  app_context->outgoing_services()->AddService<SuggestionDebug>(
+  app_context->outgoing().AddPublicService<SuggestionDebug>(
       [this](fidl::InterfaceRequest<SuggestionDebug> request) {
         debug_bindings_.AddBinding(debug_.get(), std::move(request));
       });
@@ -372,7 +372,7 @@ int main(int argc, const char** argv) {
   fxl::WeakPtr<modular::SuggestionDebugImpl> debug = suggestion_engine->debug();
   debug->GetIdleWaiter()->SetMessageLoop(&loop);
   modular::AppDriver<modular::SuggestionEngineImpl> driver(
-      app_context->outgoing_services(), std::move(suggestion_engine),
+      app_context->outgoing().deprecated_services(), std::move(suggestion_engine),
       [&loop] { loop.QuitNow(); });
 
   // The |WaitUntilIdle| debug functionality escapes the main message loop to

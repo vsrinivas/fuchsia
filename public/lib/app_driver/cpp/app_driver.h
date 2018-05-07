@@ -24,9 +24,9 @@ namespace modular {
 
 // AppDriver is a wrapper that simplifies participating in lifecycle management
 // by the application's parent. It does this by exposing the Lifecycle service
-// in component::ApplicationContext::outgoing_services() and proxies the
-// Terminate() call of modular::Lifecycle to the Terminate() method on your
-// application's class instance.
+// in component::ApplicationContext::outgoing().deprecated_services() and
+// proxies the Terminate() call of modular::Lifecycle to the Terminate() method
+// on your application's class instance.
 //
 // Usage:
 //
@@ -41,7 +41,7 @@ namespace modular {
 // class HelloWorldApp {
 //  public:
 //   HelloWorldApp(component::ApplicationContext* app_context) {
-//     app_context->outgoing_services()->AddService<..>(...);
+//     app_context->outgoing().AddPublicService<..>(...);
 //   }
 //
 //   void Terminate(const std::function<void()>& done) {
@@ -53,7 +53,7 @@ namespace modular {
 //   fsl::MessageLoop loop;
 //   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
 //   modular::AppDriver<HelloWorldApp> driver(
-//       app_context->outgoing_services(),
+//       app_context->outgoing().deprecated_services(),
 //       std::make_unique<HelloWorldApp>(app_context.get()),
 //       [&loop] { loop.QuitNow(); });
 //   loop.Run();

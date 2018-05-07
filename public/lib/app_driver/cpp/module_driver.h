@@ -78,15 +78,15 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleImpl::Delegate, ModuleHost {
   ModuleDriver(component::ApplicationContext* const app_context,
                std::function<void()> on_terminated)
       : app_context_(app_context),
-        lifecycle_impl_(app_context->outgoing_services(), this),
+        lifecycle_impl_(app_context->outgoing().deprecated_services(), this),
         module_impl_(std::make_unique<ModuleImpl>(
-            app_context->outgoing_services(),
+            app_context->outgoing().deprecated_services(),
             static_cast<ModuleImpl::Delegate*>(this))),
         on_terminated_(std::move(on_terminated)) {
     // There is no guarantee that |ViewProvider| will be requested from us
     // before ModuleHost.set_view_provider_handler() is called from |Impl|, so
     // we buffer both events until they are both satisfied.
-    app_context_->outgoing_services()->AddService<views_v1::ViewProvider>(
+    app_context_->outgoing().AddPublicService<views_v1::ViewProvider>(
         [this](fidl::InterfaceRequest<views_v1::ViewProvider> request) {
           view_provider_request_ = std::move(request);
           MaybeInstantiateImpl();

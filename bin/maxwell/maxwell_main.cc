@@ -24,8 +24,7 @@ class App {
  public:
   App(component::ApplicationContext* app_context, const Config& config)
       : factory_impl_(app_context, config) {
-    auto services = app_context->outgoing_services();
-    services->AddService<modular::UserIntelligenceProviderFactory>(
+    app_context->outgoing().AddPublicService<modular::UserIntelligenceProviderFactory>(
         [this](fidl::InterfaceRequest<modular::UserIntelligenceProviderFactory>
                    request) {
           factory_bindings_.AddBinding(&factory_impl_, std::move(request));

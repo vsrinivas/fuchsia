@@ -17,7 +17,7 @@ namespace {
 class HelloAppChild : public hello_world_module::Hello {
  public:
   HelloAppChild(component::ApplicationContext* app_context) {
-    app_context->outgoing_services()->AddService<hello_world_module::Hello>(
+    app_context->outgoing().AddPublicService<hello_world_module::Hello>(
         [this](fidl::InterfaceRequest<hello_world_module::Hello> request) {
           hello_binding_.AddBinding(this, std::move(request));
         });
@@ -45,7 +45,7 @@ int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::AppDriver<HelloAppChild> driver(
-      app_context->outgoing_services(),
+      app_context->outgoing().deprecated_services(),
       std::make_unique<HelloAppChild>(app_context.get()),
       [&loop] { loop.QuitNow(); });
   loop.Run();

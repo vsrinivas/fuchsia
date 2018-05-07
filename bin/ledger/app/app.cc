@@ -84,15 +84,15 @@ class App : public ledger_internal::LedgerController {
     factory_impl_ = std::make_unique<LedgerRepositoryFactoryImpl>(
         environment_.get(), std::move(user_communicator_factory));
 
-    application_context_->outgoing_services()
-        ->AddService<ledger_internal::LedgerRepositoryFactory>(
+    application_context_->outgoing()
+        .AddPublicService<ledger_internal::LedgerRepositoryFactory>(
             [this](
                 fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
                     request) {
               factory_bindings_.AddBinding(factory_impl_.get(),
                                            std::move(request));
             });
-    application_context_->outgoing_services()->AddService<LedgerController>(
+    application_context_->outgoing().AddPublicService<LedgerController>(
         [this](fidl::InterfaceRequest<LedgerController> request) {
           controller_bindings_.AddBinding(this, std::move(request));
         });

@@ -47,7 +47,7 @@ class UserActionLogFactoryApp {
     factory_impl_.swap(factory_impl);
 
     // Singleton service
-    context_->outgoing_services()->AddService<UserActionLogFactory>(
+    context_->outgoing().AddPublicService<UserActionLogFactory>(
         [this](fidl::InterfaceRequest<UserActionLogFactory> request) {
           factory_bindings_.AddBinding(factory_impl_.get(), std::move(request));
         });

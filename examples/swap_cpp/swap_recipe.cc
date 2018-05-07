@@ -143,7 +143,7 @@ int main(int /*argc*/, const char** /*argv*/) {
 
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::AppDriver<RecipeApp> driver(
-      app_context->outgoing_services(),
+      app_context->outgoing().deprecated_services(),
       std::make_unique<RecipeApp>(app_context.get()),
       [&loop] { loop.QuitNow(); });
 

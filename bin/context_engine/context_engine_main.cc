@@ -22,7 +22,7 @@ class ContextEngineApp {
     component_context->GetEntityResolver(entity_resolver_.NewRequest());
     context_engine_impl_.reset(new ContextEngineImpl(entity_resolver_.get()));
 
-    app_context->outgoing_services()->AddService<ContextEngine>(
+    app_context->outgoing().AddPublicService<ContextEngine>(
         [this](fidl::InterfaceRequest<ContextEngine> request) {
           context_engine_impl_->AddBinding(std::move(request));
         });
@@ -53,7 +53,7 @@ int main(int argc, const char** argv) {
   debug->GetIdleWaiter()->SetMessageLoop(&loop);
 
   modular::AppDriver<modular::ContextEngineApp> driver(
-      app_context->outgoing_services(), std::move(context_engine_app),
+      app_context->outgoing().deprecated_services(), std::move(context_engine_app),
       [&loop] { loop.QuitNow(); });
 
   // The |WaitUntilIdle| debug functionality escapes the main message loop to

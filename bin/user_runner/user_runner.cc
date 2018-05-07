@@ -35,7 +35,7 @@ int main(int argc, const char** argv) {
       test, std::move(loop.async()), app_context.get());
 
   modular::AppDriver<modular::UserRunnerImpl> driver(
-      app_context->outgoing_services(),
+      app_context->outgoing().deprecated_services(),
       std::make_unique<modular::UserRunnerImpl>(app_context.get(), test),
       [&loop, &cobalt_cleanup] {
         cobalt_cleanup.call();

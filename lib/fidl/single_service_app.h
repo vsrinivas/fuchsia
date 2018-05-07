@@ -27,12 +27,12 @@ class SingleServiceApp : protected Service, private views_v1::ViewProvider {
       : application_context_(application_context),
         service_binding_(new fidl::Binding<Service>(this)),
         view_provider_binding_(this) {
-    application_context_->outgoing_services()->AddService<Service>(
+    application_context_->outgoing().AddPublicService<Service>(
         [this](fidl::InterfaceRequest<Service> request) {
           FXL_DCHECK(!service_binding_->is_bound());
           service_binding_->Bind(std::move(request));
         });
-    application_context_->outgoing_services()->AddService<views_v1::ViewProvider>(
+    application_context_->outgoing().AddPublicService<views_v1::ViewProvider>(
         [this](fidl::InterfaceRequest<views_v1::ViewProvider> request) {
           FXL_DCHECK(!view_provider_binding_.is_bound());
           view_provider_binding_.Bind(std::move(request));

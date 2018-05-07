@@ -61,9 +61,9 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
   AgentDriver(component::ApplicationContext* const app_context,
               std::function<void()> on_terminated)
       : app_context_(app_context),
-        lifecycle_impl_(app_context->outgoing_services(), this),
+        lifecycle_impl_(app_context->outgoing().deprecated_services(), this),
         agent_impl_(std::make_unique<AgentImpl>(
-            app_context->outgoing_services(),
+            app_context->outgoing().deprecated_services(),
             static_cast<AgentImpl::Delegate*>(this))),
         on_terminated_(std::move(on_terminated)),
         agent_context_(

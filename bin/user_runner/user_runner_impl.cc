@@ -126,15 +126,15 @@ UserRunnerImpl::UserRunnerImpl(
       user_shell_context_binding_(this),
       story_provider_impl_("StoryProviderImpl"),
       agent_runner_("AgentRunner") {
-  application_context_->outgoing_services()->AddService<UserRunner>(
+  application_context_->outgoing().AddPublicService<UserRunner>(
       [this](fidl::InterfaceRequest<UserRunner> request) {
         bindings_.AddBinding(this, std::move(request));
       });
 
   // TODO(alhaad): Once VFS supports asynchronous operations, expose directly
   // to filesystem instead of this indirection.
-  application_context_->outgoing_services()
-      ->AddService<modular_private::UserRunnerDebug>(
+  application_context_->outgoing()
+      .AddPublicService<modular_private::UserRunnerDebug>(
           [this](fidl::InterfaceRequest<modular_private::UserRunnerDebug>
                      request) {
             user_runner_debug_bindings_.AddBinding(this, std::move(request));

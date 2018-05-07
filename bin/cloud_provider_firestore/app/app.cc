@@ -26,11 +26,11 @@ class App : public modular::Lifecycle {
   }
 
   void Run() {
-    application_context_->outgoing_services()->AddService<modular::Lifecycle>(
+    application_context_->outgoing().AddPublicService<modular::Lifecycle>(
         [this](fidl::InterfaceRequest<modular::Lifecycle> request) {
           lifecycle_bindings_.AddBinding(this, std::move(request));
         });
-    application_context_->outgoing_services()->AddService<Factory>(
+    application_context_->outgoing().AddPublicService<Factory>(
         [this](fidl::InterfaceRequest<Factory> request) {
           factory_bindings_.AddBinding(&factory_impl_, std::move(request));
         });

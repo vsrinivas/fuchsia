@@ -227,7 +227,7 @@ int main(int /*argc*/, const char** /*argv*/) {
 
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::AppDriver<Module1App> driver(
-      app_context->outgoing_services(),
+      app_context->outgoing().deprecated_services(),
       std::make_unique<Module1App>(app_context.get()),
       [&loop] { loop.QuitNow(); });
 

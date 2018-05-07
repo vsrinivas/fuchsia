@@ -49,7 +49,7 @@ AccountProviderImpl::AccountProviderImpl()
     : application_context_(
           component::ApplicationContext::CreateFromStartupInfo()),
       binding_(this) {
-  application_context_->outgoing_services()->AddService<AccountProvider>(
+  application_context_->outgoing().AddPublicService<AccountProvider>(
       [this](fidl::InterfaceRequest<AccountProvider> request) {
         binding_.Bind(std::move(request));
       });

@@ -101,7 +101,7 @@ void ComponentMain(Args... args) {
 
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   modular::AppDriver<Impl> driver(
-      app_context->outgoing_services(),
+      app_context->outgoing().deprecated_services(),
       std::make_unique<Impl>(app_context.get(), std::move(args)...),
       [&loop] { loop.QuitNow(); });
 

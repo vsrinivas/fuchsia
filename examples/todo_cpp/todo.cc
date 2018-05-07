@@ -103,7 +103,7 @@ TodoApp::TodoApp()
       context_(component::ApplicationContext::CreateFromStartupInfo()),
       module_binding_(this),
       page_watcher_binding_(this) {
-  context_->outgoing_services()->AddService<modular::Module>(
+  context_->outgoing().AddPublicService<modular::Module>(
       [this](fidl::InterfaceRequest<modular::Module> request) {
         FXL_DCHECK(!module_binding_.is_bound());
         module_binding_.Bind(std::move(request));

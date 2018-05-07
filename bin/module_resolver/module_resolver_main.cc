@@ -80,7 +80,7 @@ class ModuleResolverApp : ContextListener {
     context_reader_->Subscribe(std::move(query),
                                context_listener_binding_.NewBinding());
 
-    context->outgoing_services()->AddService<modular::ModuleResolver>(
+    context->outgoing().AddPublicService<modular::ModuleResolver>(
         [this](fidl::InterfaceRequest<modular::ModuleResolver> request) {
           resolver_impl_->Connect(std::move(request));
         });
@@ -306,7 +306,7 @@ int main(int argc, const char** argv) {
   auto is_test = command_line.HasOption("test");
   auto context = component::ApplicationContext::CreateFromStartupInfo();
   modular::AppDriver<modular::ModuleResolverApp> driver(
-      context->outgoing_services(),
+      context->outgoing().deprecated_services(),
       std::make_unique<modular::ModuleResolverApp>(context.get(), is_test),
       [&loop] { loop.QuitNow(); });
   loop.Run();
