@@ -13,7 +13,7 @@
 
 namespace component {
 
-class JobHolder;
+class Realm;
 class ApplicationControllerImpl;
 
 // TODO: refactor to also create ComponentHubHolder
@@ -21,8 +21,8 @@ class RealmHubHolder {
  public:
   RealmHubHolder(fbl::RefPtr<fs::PseudoDir> root);
 
-  zx_status_t AddRealm(const JobHolder* job);
-  zx_status_t RemoveRealm(const JobHolder* job);
+  zx_status_t AddRealm(const Realm* realm);
+  zx_status_t RemoveRealm(const Realm* realm);
 
   zx_status_t AddComponent(const ApplicationControllerImpl* application);
   zx_status_t RemoveComponent(const ApplicationControllerImpl* application);

@@ -5,7 +5,7 @@
 #include "garnet/bin/appmgr/realm_hub_holder.h"
 
 #include "garnet/bin/appmgr/application_controller_impl.h"
-#include "garnet/bin/appmgr/job_holder.h"
+#include "garnet/bin/appmgr/realm.h"
 
 #include <fbl/ref_ptr.h>
 #include <fs/pseudo-dir.h>
@@ -16,9 +16,9 @@ namespace component {
 RealmHubHolder::RealmHubHolder(fbl::RefPtr<fs::PseudoDir> root)
     : root_dir_(root) {}
 
-zx_status_t RealmHubHolder::AddRealm(const JobHolder* job) {
+zx_status_t RealmHubHolder::AddRealm(const Realm* realm) {
   // TODO: Remove once transition is complete.
-  root_dir_->AddEntry(job->label(), job->hub_dir());
+  root_dir_->AddEntry(realm->label(), realm->hub_dir());
   bool child_found = false;
   fbl::RefPtr<fs::Vnode> realm_instance_vnode;
   fbl::RefPtr<fs::PseudoDir> realm_instance_dir;
@@ -27,30 +27,31 @@ zx_status_t RealmHubHolder::AddRealm(const JobHolder* job) {
     root_dir_->AddEntry("r", realm_dir_);
   } else {
     zx_status_t status =
-        realm_dir_->Lookup(&realm_instance_vnode, job->label());
+        realm_dir_->Lookup(&realm_instance_vnode, realm->label());
     child_found = (status != ZX_ERR_NOT_FOUND);
   }
   if (!child_found) {
     realm_instance_dir = fbl::AdoptRef(new fs::PseudoDir());
-    realm_dir_->AddEntry(job->label(), realm_instance_dir);
+    realm_dir_->AddEntry(realm->label(), realm_instance_dir);
   } else {
     realm_instance_dir = fbl::RefPtr<fs::PseudoDir>(
         static_cast<fs::PseudoDir*>(realm_instance_vnode.get()));
   }
-  return realm_instance_dir->AddEntry(job->koid(), job->hub_dir());
+  return realm_instance_dir->AddEntry(realm->koid(), realm->hub_dir());
 }
 
-zx_status_t RealmHubHolder::RemoveRealm(const JobHolder* job) {
+zx_status_t RealmHubHolder::RemoveRealm(const Realm* realm) {
   // TODO: Remove once transition is complete.
-  root_dir_->RemoveEntry(job->label());
+  root_dir_->RemoveEntry(realm->label());
   fbl::RefPtr<fs::Vnode> realm_instance_vnode;
-  zx_status_t status = realm_dir_->Lookup(&realm_instance_vnode, job->label());
+  zx_status_t status =
+      realm_dir_->Lookup(&realm_instance_vnode, realm->label());
   if (status == ZX_OK) {
     auto realm_instance_dir = fbl::RefPtr<fs::PseudoDir>(
         static_cast<fs::PseudoDir*>(realm_instance_vnode.get()));
-    status = realm_instance_dir->RemoveEntry(job->koid());
+    status = realm_instance_dir->RemoveEntry(realm->koid());
     if (realm_instance_dir->IsEmpty()) {
-      realm_dir_->RemoveEntry(job->label());
+      realm_dir_->RemoveEntry(realm->label());
     }
     return status;
   }

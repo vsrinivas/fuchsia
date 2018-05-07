@@ -17,7 +17,7 @@
 #include "lib/fxl/memory/ref_ptr.h"
 
 namespace component {
-class JobHolder;
+class Realm;
 
 enum class ExportedDirType {
   // Legacy exported directory layout where each file / service is exposed at
@@ -37,7 +37,7 @@ class ApplicationControllerImpl : public ApplicationController {
  public:
   ApplicationControllerImpl(
       fidl::InterfaceRequest<ApplicationController> request,
-      JobHolder* job_holder,
+      Realm* realm,
       std::unique_ptr<archive::FileSystem> fs,
       zx::process process,
       std::string url,
@@ -66,7 +66,7 @@ class ApplicationControllerImpl : public ApplicationController {
   bool SendReturnCodeIfTerminated();
 
   fidl::Binding<ApplicationController> binding_;
-  JobHolder* job_holder_;
+  Realm* realm_;
   std::unique_ptr<archive::FileSystem> fs_;
   zx::process process_;
   std::string label_;

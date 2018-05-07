@@ -10,9 +10,10 @@
 
 #include <vector>
 
-#include "garnet/bin/appmgr/job_holder.h"
+#include "garnet/bin/appmgr/realm.h"
 #include "garnet/bin/appmgr/sandbox_metadata.h"
 #include "lib/fxl/macros.h"
+
 #include <fuchsia/cpp/component.h>
 
 namespace component {

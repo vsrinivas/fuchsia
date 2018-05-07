@@ -12,17 +12,17 @@
 #include "lib/fxl/macros.h"
 
 namespace component {
-class JobHolder;
+class Realm;
 
 class ApplicationEnvironmentControllerImpl
     : public ApplicationEnvironmentController {
  public:
   ApplicationEnvironmentControllerImpl(
       fidl::InterfaceRequest<ApplicationEnvironmentController> request,
-      std::unique_ptr<JobHolder> job_holder);
+      std::unique_ptr<Realm> realm);
   ~ApplicationEnvironmentControllerImpl() override;
 
-  JobHolder* job_holder() const { return job_holder_.get(); }
+  Realm* realm() const { return realm_.get(); }
 
   // ApplicationEnvironmentController implementation:
 
@@ -32,7 +32,7 @@ class ApplicationEnvironmentControllerImpl
 
  private:
   fidl::Binding<ApplicationEnvironmentController> binding_;
-  std::unique_ptr<JobHolder> job_holder_;
+  std::unique_ptr<Realm> realm_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ApplicationEnvironmentControllerImpl);
 };

@@ -6,13 +6,14 @@
 
 #include <utility>
 
-#include "garnet/bin/appmgr/job_holder.h"
+#include "garnet/bin/appmgr/realm.h"
 
 namespace component {
 
-Namespace::Namespace(fxl::RefPtr<Namespace> parent, JobHolder* job_holder,
+Namespace::Namespace(fxl::RefPtr<Namespace> parent,
+                     Realm* realm,
                      ServiceListPtr service_list)
-    : parent_(parent), job_holder_(job_holder) {
+    : parent_(parent), realm_(realm) {
   component::ServiceProviderPtr services_backend;
   if (parent_) {
     parent_->services().AddBinding(services_backend.NewRequest());
@@ -53,9 +54,8 @@ void Namespace::CreateNestedEnvironment(
     fidl::InterfaceRequest<ApplicationEnvironment> environment,
     fidl::InterfaceRequest<ApplicationEnvironmentController> controller,
     fidl::StringPtr label) {
-  job_holder_->CreateNestedJob(std::move(host_directory),
-                               std::move(environment), std::move(controller),
-                               label);
+  realm_->CreateNestedJob(std::move(host_directory), std::move(environment),
+                          std::move(controller), label);
 }
 
 void Namespace::GetApplicationLauncher(
@@ -74,7 +74,7 @@ void Namespace::GetDirectory(zx::channel directory_request) {
 void Namespace::CreateApplication(
     ApplicationLaunchInfo launch_info,
     fidl::InterfaceRequest<ApplicationController> controller) {
-  job_holder_->CreateApplication(std::move(launch_info), std::move(controller));
+  realm_->CreateApplication(std::move(launch_info), std::move(controller));
 }
 
 }  // namespace component

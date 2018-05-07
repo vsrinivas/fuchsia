@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/appmgr/job_holder.h"
+#include "garnet/bin/appmgr/realm.h"
 
 #include <fcntl.h>
 #include <fdio/namespace.h>
@@ -187,11 +187,9 @@ ExportedDirChannels BindDirectory(ApplicationLaunchInfo* launch_info) {
 
 }  // namespace
 
-uint32_t JobHolder::next_numbered_label_ = 1u;
+uint32_t Realm::next_numbered_label_ = 1u;
 
-JobHolder::JobHolder(JobHolder* parent,
-                     zx::channel host_directory,
-                     fidl::StringPtr label)
+Realm::Realm(Realm* parent, zx::channel host_directory, fidl::StringPtr label)
     : parent_(parent),
       default_namespace_(
           fxl::MakeRefCounted<Namespace>(nullptr, this, nullptr)),
@@ -225,37 +223,36 @@ JobHolder::JobHolder(JobHolder* parent,
   loader_ = ConnectToService<ApplicationLoader>(service_provider.get());
 }
 
-JobHolder::~JobHolder() {
+Realm::~Realm() {
   job_.kill();
 }
 
-zx::channel JobHolder::OpenRootInfoDir() {
+zx::channel Realm::OpenRootInfoDir() {
   // TODO: define /hub access policy: CP-26
-  JobHolder* root_job_holder = this;
-  while (root_job_holder->parent() != nullptr) {
-    root_job_holder = root_job_holder->parent();
+  Realm* root_realm = this;
+  while (root_realm->parent() != nullptr) {
+    root_realm = root_realm->parent();
   }
   zx::channel h1, h2;
   if (zx::channel::create(0, &h1, &h2) < 0) {
     return zx::channel();
   }
 
-  if (info_vfs_.ServeDirectory(root_job_holder->hub_dir(), std::move(h1)) !=
-      ZX_OK) {
+  if (info_vfs_.ServeDirectory(root_realm->hub_dir(), std::move(h1)) != ZX_OK) {
     return zx::channel();
   }
   return h2;
 }
 
-void JobHolder::CreateNestedJob(
+void Realm::CreateNestedJob(
     zx::channel host_directory,
     fidl::InterfaceRequest<ApplicationEnvironment> environment,
     fidl::InterfaceRequest<ApplicationEnvironmentController> controller_request,
     fidl::StringPtr label) {
   auto controller = std::make_unique<ApplicationEnvironmentControllerImpl>(
       std::move(controller_request),
-      std::make_unique<JobHolder>(this, std::move(host_directory), label));
-  JobHolder* child = controller->job_holder();
+      std::make_unique<Realm>(this, std::move(host_directory), label));
+  Realm* child = controller->realm();
   child->AddBinding(std::move(environment));
 
   // update hub
@@ -263,15 +260,15 @@ void JobHolder::CreateNestedJob(
 
   children_.emplace(child, std::move(controller));
 
-  JobHolder* root_job_holder = this;
-  while (root_job_holder->parent() != nullptr) {
-    root_job_holder = root_job_holder->parent();
+  Realm* root_realm = this;
+  while (root_realm->parent() != nullptr) {
+    root_realm = root_realm->parent();
   }
   child->default_namespace_->services().ServeDirectory(
-      std::move(root_job_holder->svc_channel_server_));
+      std::move(root_realm->svc_channel_server_));
 }
 
-void JobHolder::CreateApplication(
+void Realm::CreateApplication(
     ApplicationLaunchInfo launch_info,
     fidl::InterfaceRequest<ApplicationController> controller) {
   if (launch_info.url.get().empty()) {
@@ -325,8 +322,8 @@ void JobHolder::CreateApplication(
       }));
 }
 
-std::unique_ptr<ApplicationEnvironmentControllerImpl> JobHolder::ExtractChild(
-    JobHolder* child) {
+std::unique_ptr<ApplicationEnvironmentControllerImpl> Realm::ExtractChild(
+    Realm* child) {
   auto it = children_.find(child);
   if (it == children_.end()) {
     return nullptr;
@@ -340,7 +337,7 @@ std::unique_ptr<ApplicationEnvironmentControllerImpl> JobHolder::ExtractChild(
   return controller;
 }
 
-std::unique_ptr<ApplicationControllerImpl> JobHolder::ExtractApplication(
+std::unique_ptr<ApplicationControllerImpl> Realm::ExtractApplication(
     ApplicationControllerImpl* controller) {
   auto it = applications_.find(controller);
   if (it == applications_.end()) {
@@ -355,12 +352,12 @@ std::unique_ptr<ApplicationControllerImpl> JobHolder::ExtractApplication(
   return application;
 }
 
-void JobHolder::AddBinding(
+void Realm::AddBinding(
     fidl::InterfaceRequest<ApplicationEnvironment> environment) {
   default_namespace_->AddBinding(std::move(environment));
 }
 
-void JobHolder::CreateApplicationWithProcess(
+void Realm::CreateApplicationWithProcess(
     ApplicationPackagePtr package,
     ApplicationLaunchInfo launch_info,
     fidl::InterfaceRequest<ApplicationController> controller,
@@ -405,7 +402,7 @@ void JobHolder::CreateApplicationWithProcess(
   }
 }
 
-void JobHolder::CreateApplicationFromPackage(
+void Realm::CreateApplicationFromPackage(
     ApplicationPackagePtr package,
     ApplicationLaunchInfo launch_info,
     fidl::InterfaceRequest<ApplicationController> controller,
@@ -524,8 +521,7 @@ void JobHolder::CreateApplicationFromPackage(
   }
 }
 
-ApplicationRunnerHolder* JobHolder::GetOrCreateRunner(
-    const std::string& runner) {
+ApplicationRunnerHolder* Realm::GetOrCreateRunner(const std::string& runner) {
   // We create the entry in |runners_| before calling ourselves
   // recursively to detect cycles.
   auto result = runners_.emplace(runner, nullptr);
@@ -553,12 +549,12 @@ ApplicationRunnerHolder* JobHolder::GetOrCreateRunner(
   return result.first->second.get();
 }
 
-zx_status_t JobHolder::BindSvc(zx::channel channel) {
-  JobHolder* root_job_holder = this;
-  while (root_job_holder->parent() != nullptr) {
-    root_job_holder = root_job_holder->parent();
+zx_status_t Realm::BindSvc(zx::channel channel) {
+  Realm* root_realm = this;
+  while (root_realm->parent() != nullptr) {
+    root_realm = root_realm->parent();
   }
-  return fdio_service_clone_to(root_job_holder->svc_channel_client_.get(),
+  return fdio_service_clone_to(root_realm->svc_channel_client_.get(),
                                channel.release());
 }
 

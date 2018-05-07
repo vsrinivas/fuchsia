@@ -6,19 +6,19 @@
 
 #include <utility>
 
-#include "garnet/bin/appmgr/job_holder.h"
+#include "garnet/bin/appmgr/realm.h"
 #include "lib/fxl/functional/closure.h"
 
 namespace component {
 
 ApplicationEnvironmentControllerImpl::ApplicationEnvironmentControllerImpl(
     fidl::InterfaceRequest<ApplicationEnvironmentController> request,
-    std::unique_ptr<JobHolder> job_holder)
-    : binding_(this), job_holder_(std::move(job_holder)) {
+    std::unique_ptr<Realm> realm)
+    : binding_(this), realm_(std::move(realm)) {
   if (request.is_valid()) {
     binding_.Bind(std::move(request));
     binding_.set_error_handler([this] {
-      job_holder_->parent()->ExtractChild(job_holder_.get());
+      realm_->parent()->ExtractChild(realm_.get());
       // The destructor of the temporary returned by ExtractChild destroys
       // |this| at the end of the previous statement.
     });
@@ -30,8 +30,8 @@ ApplicationEnvironmentControllerImpl::~ApplicationEnvironmentControllerImpl() =
 
 void ApplicationEnvironmentControllerImpl::Kill(KillCallback callback) {
   std::unique_ptr<ApplicationEnvironmentControllerImpl> self =
-      job_holder_->parent()->ExtractChild(job_holder_.get());
-  job_holder_ = nullptr;
+      realm_->parent()->ExtractChild(realm_.get());
+  realm_ = nullptr;
   callback();
   // The |self| destructor destroys |this| when we unwind this stack frame.
 }

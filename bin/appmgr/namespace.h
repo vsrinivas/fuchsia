@@ -17,7 +17,7 @@
 #include "lib/svc/cpp/service_provider_bridge.h"
 
 namespace component {
-class JobHolder;
+class Realm;
 
 class Namespace : public ApplicationEnvironment,
                   public ApplicationLauncher,
@@ -50,7 +50,8 @@ class Namespace : public ApplicationEnvironment,
 
  private:
   FRIEND_MAKE_REF_COUNTED(Namespace);
-  Namespace(fxl::RefPtr<Namespace> parent, JobHolder* job_holder,
+  Namespace(fxl::RefPtr<Namespace> parent,
+            Realm* realm,
             ServiceListPtr service_list);
 
   FRIEND_REF_COUNTED_THREAD_SAFE(Namespace);
@@ -62,7 +63,7 @@ class Namespace : public ApplicationEnvironment,
   ServiceProviderBridge services_;
 
   fxl::RefPtr<Namespace> parent_;
-  JobHolder* job_holder_;
+  Realm* realm_;
   ServiceProviderPtr additional_services_;
   ApplicationLoaderPtr loader_;
 
@@ -71,4 +72,4 @@ class Namespace : public ApplicationEnvironment,
 
 }  // namespace component
 
-#endif  // GARNET_BIN_APPMGR_APPLICATION_NAMESPACE_H_
+#endif  // GARNET_BIN_APPMGR_NAMESPACE_H_

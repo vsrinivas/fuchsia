@@ -13,8 +13,8 @@
 #include <cinttypes>
 #include <utility>
 
-#include "garnet/bin/appmgr/job_holder.h"
 #include "garnet/bin/appmgr/namespace.h"
+#include "garnet/bin/appmgr/realm.h"
 #include "lib/fsl/handles/object_info.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/closure.h"
@@ -23,7 +23,7 @@ namespace component {
 
 ApplicationControllerImpl::ApplicationControllerImpl(
     fidl::InterfaceRequest<ApplicationController> request,
-    JobHolder* job_holder,
+    Realm* realm,
     std::unique_ptr<archive::FileSystem> fs,
     zx::process process,
     std::string url,
@@ -33,7 +33,7 @@ ApplicationControllerImpl::ApplicationControllerImpl(
     zx::channel exported_dir,
     zx::channel client_request)
     : binding_(this),
-      job_holder_(job_holder),
+      realm_(realm),
       fs_(std::move(fs)),
       process_(std::move(process)),
       label_(std::move(label)),
@@ -143,7 +143,7 @@ void ApplicationControllerImpl::Handler(async_t* async,
 
   process_.reset();
 
-  job_holder_->ExtractApplication(this);
+  realm_->ExtractApplication(this);
   // The destructor of the temporary returned by ExtractApplication destroys
   // |this| at the end of the previous statement.
 }

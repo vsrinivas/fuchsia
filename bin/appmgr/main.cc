@@ -18,7 +18,7 @@
 #include <zircon/processargs.h>
 
 #include "garnet/bin/appmgr/dynamic_library_loader.h"
-#include "garnet/bin/appmgr/job_holder.h"
+#include "garnet/bin/appmgr/realm.h"
 #include "garnet/bin/appmgr/root_application_loader.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/file.h"
@@ -28,7 +28,7 @@ namespace {
 
 constexpr char kRootLabel[] = "app";
 
-void PublishRootDir(component::JobHolder* root, fs::ManagedVfs* vfs) {
+void PublishRootDir(component::Realm* root, fs::ManagedVfs* vfs) {
   static zx_handle_t request = zx_get_startup_handle(PA_DIRECTORY_REQUEST);
   if (request == ZX_HANDLE_INVALID)
     return;
@@ -67,16 +67,15 @@ int main(int argc, char** argv) {
     return -1;
   if (vfs.ServeDirectory(directory, std::move(h2)) != ZX_OK)
     return -1;
-  component::JobHolder root_job_holder(nullptr, std::move(h1), kRootLabel);
+  component::Realm root_realm(nullptr, std::move(h1), kRootLabel);
   fs::ManagedVfs publish_vfs(loop.async());
-  PublishRootDir(&root_job_holder, &vfs);
+  PublishRootDir(&root_realm, &vfs);
 
   component::ApplicationControllerPtr sysmgr;
-  auto run_sysmgr = [&root_job_holder, &sysmgr] {
+  auto run_sysmgr = [&root_realm, &sysmgr] {
     component::ApplicationLaunchInfo launch_info;
     launch_info.url = "sysmgr";
-    root_job_holder.CreateApplication(std::move(launch_info),
-                                      sysmgr.NewRequest());
+    root_realm.CreateApplication(std::move(launch_info), sysmgr.NewRequest());
   };
 
   async::PostTask(loop.async(), [&run_sysmgr, &sysmgr] {

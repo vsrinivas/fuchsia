@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_APPMGR_JOB_HOLDER_H_
-#define GARNET_BIN_APPMGR_JOB_HOLDER_H_
+#ifndef GARNET_BIN_APPMGR_REALM_H_
+#define GARNET_BIN_APPMGR_REALM_H_
 
 #include <fs/managed-vfs.h>
 #include <zx/channel.h>
@@ -27,14 +27,12 @@
 
 namespace component {
 
-class JobHolder {
+class Realm {
  public:
-  JobHolder(JobHolder* parent,
-            zx::channel host_directory,
-            fidl::StringPtr label);
-  ~JobHolder();
+  Realm(Realm* parent, zx::channel host_directory, fidl::StringPtr label);
+  ~Realm();
 
-  JobHolder* parent() const { return parent_; }
+  Realm* parent() const { return parent_; }
   const std::string& label() const { return label_; }
   const std::string& koid() const { return koid_; }
 
@@ -50,12 +48,12 @@ class JobHolder {
       ApplicationLaunchInfo launch_info,
       fidl::InterfaceRequest<ApplicationController> controller);
 
-  // Removes the child job holder from this job holder and returns the owning
+  // Removes the child realm from this realm and returns the owning
   // reference to the child's controller. The caller of this function typically
   // destroys the controller (and hence the environment) shortly after calling
   // this function.
   std::unique_ptr<ApplicationEnvironmentControllerImpl> ExtractChild(
-      JobHolder* child);
+      Realm* child);
 
   // Removes the application from this environment and returns the owning
   // reference to the application's controller. The caller of this function
@@ -86,7 +84,7 @@ class JobHolder {
 
   zx::channel OpenRootInfoDir();
 
-  JobHolder* const parent_;
+  Realm* const parent_;
   ApplicationLoaderPtr loader_;
   std::string label_;
   std::string koid_;
@@ -99,7 +97,7 @@ class JobHolder {
   RealmHubHolder hub_;
   fs::ManagedVfs info_vfs_;
 
-  std::unordered_map<JobHolder*,
+  std::unordered_map<Realm*,
                      std::unique_ptr<ApplicationEnvironmentControllerImpl>>
       children_;
 
@@ -113,9 +111,9 @@ class JobHolder {
   zx::channel svc_channel_client_;
   zx::channel svc_channel_server_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(JobHolder);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Realm);
 };
 
 }  // namespace component
 
-#endif  // GARNET_BIN_APPMGR_JOB_HOLDER_H_
+#endif  // GARNET_BIN_APPMGR_REALM_H_
