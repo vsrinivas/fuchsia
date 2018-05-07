@@ -21,9 +21,9 @@ class BroadcastSink final : public Sink<T> {
 
   StatusOrCallback<Sink<T>*> AddTarget() {
     pending_targets_++;
-    return StatusOrCallbackFromMemberFunctionNoRef<
-        BroadcastSink, Sink<T>*,
-        &BroadcastSink::PendingTargetReady>::UponInstance(this);
+    return StatusOrCallback<Sink<T>*>([this](const StatusOr<Sink<T>*>& status) {
+      this->PendingTargetReady(status);
+    });
   }
 
   void Close(const Status& status) override {
@@ -47,8 +47,8 @@ class BroadcastSink final : public Sink<T> {
 
   StatusCallback AddPush() {
     pending_targets_++;
-    return StatusCallbackFromMemberFunctionNoRef<
-        BroadcastSink, &BroadcastSink::PendingPushDone>::UponInstance(this);
+    return StatusCallback(
+        [this](const Status& status) { this->PendingPushDone(status); });
   }
 
   void PendingTargetReady(const StatusOr<Sink<T>*>& status) {

@@ -53,8 +53,10 @@ class MockSinkCB {
   MOCK_METHOD1(Callback, void(const StatusOr<Sink<Chunk>*>&));
 
   StatusOrCallback<Sink<Chunk>*> MakeCallback() {
-    return StatusOrCallbackFromMemberFunctionNoRef<
-        MockSinkCB, Sink<Chunk>*, &MockSinkCB::Callback>::UponInstance(this);
+    return StatusOrCallback<Sink<Chunk>*>(
+        [this](const StatusOr<Sink<Chunk>*>& status) {
+          this->Callback(status);
+        });
   }
 };
 

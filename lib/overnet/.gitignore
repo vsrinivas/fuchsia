@@ -7,3 +7,4 @@ bazel-out
 bazel-overnet
 bazel-testlogs
 fuzz-*.log
+corpora

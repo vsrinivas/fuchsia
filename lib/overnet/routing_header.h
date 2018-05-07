@@ -7,8 +7,9 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include <tuple>
 #include <vector>
-
+#include "reliability_and_ordering.h"
 #include "status.h"
 #include "varint.h"
 
@@ -108,20 +109,6 @@ class SeqNum {
 };
 
 std::ostream& operator<<(std::ostream& out, SeqNum seq_num);
-
-// Reliability and ordering mode for a stream
-enum class ReliabilityAndOrdering : uint8_t {
-  ReliableOrdered = 0,
-  UnreliableOrdered = 1,
-  ReliableUnordered = 2,
-  UnreliableUnordered = 3,
-  // The last sent message in a stream is reliable, and sending a message makes
-  // all previous messages in the stream unreliable.
-  TailReliable = 4,
-};
-
-const char* ReliabilityAndOrderingString(
-    ReliabilityAndOrdering reliability_and_ordering);
 
 // Routing headers are passed over links between nodes in a (potentially)
 // non-private way. They should expose a minimal amount of information to route

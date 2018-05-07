@@ -6,8 +6,14 @@ import("//build/package.gni")
 
 source_set("overnet") {
   sources = [
+    "ack_frame.h",
+    "ack_frame.cc",
     "broadcast_sink.h",
     "callback.h",
+    "receive_mode.h",
+    "receive_mode.cc",
+    "reliability_and_ordering.h",
+    "reliability_and_ordering.cc",
     "router.h",
     "router.cc",
     "routing_header.h",
@@ -25,8 +31,11 @@ executable("overnet_unittests") {
 
   sources = [
     "run_all_tests.cc",
+    "ack_frame_test.cc",
     "broadcast_sink_test.cc",
     "callback_test.cc",
+    "receive_mode_fuzzer_helpers.h",
+    "receive_mode_test.cc",
     "router_test.cc",
     "routing_header_test.cc",
     "status_test.cc",

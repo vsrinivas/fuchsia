@@ -190,7 +190,7 @@ def mapdep(n):
     return m[n]
 
 
-FUZZERS = ['routing_header']
+FUZZERS = ['receive_mode', 'routing_header']
 
 
 with open('BUILD.bazel', 'w') as o:
@@ -216,7 +216,7 @@ with open('BUILD.bazel', 'w') as o:
     for fuzzer in FUZZERS:
         print >>o, 'cc_binary('
         print >>o, '  name="%s_fuzzer",' % fuzzer
-        print >>o, '  srcs=["%s_fuzzer.cc"],' % fuzzer,
+        print >>o, '  srcs=["%s_fuzzer.cc", "receive_mode_fuzzer_helpers.h"],' % fuzzer,
         print >>o, '  deps=[":overnet"],'
         print >>o, ')'
 
@@ -236,6 +236,7 @@ BAZELRC = """
 # Make changes there
 
 build --client_env=CC=clang
+build --copt -std=c++14
 
 build:asan --strip=never
 build:asan --copt -fsanitize=address

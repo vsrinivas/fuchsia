@@ -115,23 +115,6 @@ uint64_t SeqNum::Reconstruct(uint64_t window_base) const {
   return result;
 }
 
-const char* ReliabilityAndOrderingString(
-    ReliabilityAndOrdering reliability_and_ordering) {
-  switch (reliability_and_ordering) {
-    case ReliabilityAndOrdering::ReliableOrdered:
-      return "ReliableOrdered";
-    case ReliabilityAndOrdering::UnreliableOrdered:
-      return "UnreliableOrdered";
-    case ReliabilityAndOrdering::ReliableUnordered:
-      return "ReliableUnordered";
-    case ReliabilityAndOrdering::UnreliableUnordered:
-      return "UnreliableUnordered";
-    case ReliabilityAndOrdering::TailReliable:
-      return "TailReliable";
-  }
-  return "UnknownReliabilityAndOrdering";
-}
-
 uint64_t RoutingHeader::DeriveFlags(NodeId writer, NodeId target) const {
   uint64_t flags = 0;
   if (src_ == writer && dsts_.size() == 1 && dsts_[0].dst() == target) {

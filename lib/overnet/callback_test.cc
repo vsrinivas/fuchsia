@@ -30,106 +30,34 @@ TEST(Callback, CallingEmptyCallbackCrashes) {
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// RefStatusCallback
+// StatusCallback
 
-TEST(RefStatusCallback, NotCalledCallsCancel) {
+TEST(StatusCallback, NotCalledCallsCancel) {
   StrictMock<MockCallbackClass> mock;
 
-  EXPECT_CALL(mock, Ref());
-
-  StatusCallback cb = StatusCallbackFromMemberFunction<
-      MockCallbackClass,
-      &MockCallbackClass::CallbackStatus>::UponInstance(&mock);
-
-  EXPECT_CALL(mock,
-              CallbackStatus(Property(&Status::code, StatusCode::CANCELLED)));
-  EXPECT_CALL(mock, Unref());
-}
-
-TEST(RefStatusCallback, CalledWorks) {
-  StrictMock<MockCallbackClass> mock;
-
-  EXPECT_CALL(mock, Ref());
-
-  StatusCallback cb = StatusCallbackFromMemberFunction<
-      MockCallbackClass,
-      &MockCallbackClass::CallbackStatus>::UponInstance(&mock);
-
-  EXPECT_CALL(mock, CallbackStatus(Property(&Status::is_ok, true)));
-  EXPECT_CALL(mock, Unref());
-  cb(Status::Ok());
-  EXPECT_DEATH_IF_SUPPORTED(cb(Status::Ok()), "");
-}
-
-TEST(RefStatusCallback, MoveWorks) {
-  StrictMock<MockCallbackClass> mock;
-
-  EXPECT_CALL(mock, Ref());
-
-  StatusCallback cb = StatusCallbackFromMemberFunction<
-      MockCallbackClass,
-      &MockCallbackClass::CallbackStatus>::UponInstance(&mock);
-
-  StatusCallback cb2 = std::move(cb);
-  EXPECT_DEATH_IF_SUPPORTED(cb(Status::Ok()), "");
-
-  EXPECT_CALL(mock, CallbackStatus(Property(&Status::is_ok, true)));
-  EXPECT_CALL(mock, Unref());
-  cb2(Status::Ok());
-}
-
-TEST(RefStatusCallback, MoveAssignWorks) {
-  StrictMock<MockCallbackClass> mock;
-
-  EXPECT_CALL(mock, Ref());
-
-  StatusCallback cb = StatusCallbackFromMemberFunction<
-      MockCallbackClass,
-      &MockCallbackClass::CallbackStatus>::UponInstance(&mock);
-
-  StatusCallback cb2 = std::move(cb);
-  EXPECT_DEATH_IF_SUPPORTED(cb(Status::Ok()), "");
-
-  cb = std::move(cb2);
-  EXPECT_DEATH_IF_SUPPORTED(cb2(Status::Ok()), "");
-
-  EXPECT_CALL(mock, CallbackStatus(Property(&Status::is_ok, true)));
-  EXPECT_CALL(mock, Unref());
-  cb(Status::Ok());
-}
-
-//////////////////////////////////////////////////////////////////////////////
-// NoRefStatusCallback
-
-TEST(NoRefStatusCallback, NotCalledCallsCancel) {
-  StrictMock<MockCallbackClass> mock;
-
-  StatusCallback cb = StatusCallbackFromMemberFunctionNoRef<
-      MockCallbackClass,
-      &MockCallbackClass::CallbackStatus>::UponInstance(&mock);
+  StatusCallback cb(
+      [&mock](const Status& status) { mock.CallbackStatus(status); });
 
   EXPECT_CALL(mock,
               CallbackStatus(Property(&Status::code, StatusCode::CANCELLED)));
 }
 
-TEST(NoRefStatusCallback, CalledWorks) {
+TEST(StatusCallback, CalledWorks) {
   StrictMock<MockCallbackClass> mock;
 
-  StatusCallback cb = StatusCallbackFromMemberFunctionNoRef<
-      MockCallbackClass,
-      &MockCallbackClass::CallbackStatus>::UponInstance(&mock);
+  StatusCallback cb(
+      [&mock](const Status& status) { mock.CallbackStatus(status); });
 
   EXPECT_CALL(mock, CallbackStatus(Property(&Status::is_ok, true)));
   cb(Status::Ok());
   EXPECT_DEATH_IF_SUPPORTED(cb(Status::Ok()), "");
 }
 
-TEST(NoRefStatusCallback, MoveWorks) {
+TEST(StatusCallback, MoveWorks) {
   StrictMock<MockCallbackClass> mock;
 
-  StatusCallback cb = StatusCallbackFromMemberFunctionNoRef<
-      MockCallbackClass,
-      &MockCallbackClass::CallbackStatus>::UponInstance(&mock);
+  StatusCallback cb(
+      [&mock](const Status& status) { mock.CallbackStatus(status); });
 
   StatusCallback cb2 = std::move(cb);
   EXPECT_DEATH_IF_SUPPORTED(cb(Status::Ok()), "");
@@ -138,12 +66,11 @@ TEST(NoRefStatusCallback, MoveWorks) {
   cb2(Status::Ok());
 }
 
-TEST(NoRefStatusCallback, MoveAssignWorks) {
+TEST(StatusCallback, MoveAssignWorks) {
   StrictMock<MockCallbackClass> mock;
 
-  StatusCallback cb = StatusCallbackFromMemberFunctionNoRef<
-      MockCallbackClass,
-      &MockCallbackClass::CallbackStatus>::UponInstance(&mock);
+  StatusCallback cb(
+      [&mock](const Status& status) { mock.CallbackStatus(status); });
 
   StatusCallback cb2 = std::move(cb);
   EXPECT_DEATH_IF_SUPPORTED(cb(Status::Ok()), "");
@@ -156,97 +83,25 @@ TEST(NoRefStatusCallback, MoveAssignWorks) {
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// RefStatusOrCallback
+// StatusOrCallback
 
-TEST(RefStatusOrCallback, NotCalledCallsCancel) {
+TEST(StatusOrCallback, NotCalledCallsCancel) {
   StrictMock<MockCallbackClass> mock;
 
-  EXPECT_CALL(mock, Ref());
-
-  StatusOrCallback<BoxedInt> cb = StatusOrCallbackFromMemberFunction<
-      MockCallbackClass, BoxedInt,
-      &MockCallbackClass::CallbackStatusOr>::UponInstance(&mock);
-
-  EXPECT_CALL(mock, CallbackStatusOr(Property(&StatusOr<BoxedInt>::code,
-                                              StatusCode::CANCELLED)));
-  EXPECT_CALL(mock, Unref());
-}
-
-TEST(RefStatusOrCallback, CalledWorks) {
-  StrictMock<MockCallbackClass> mock;
-
-  EXPECT_CALL(mock, Ref());
-
-  StatusOrCallback<BoxedInt> cb = StatusOrCallbackFromMemberFunction<
-      MockCallbackClass, BoxedInt,
-      &MockCallbackClass::CallbackStatusOr>::UponInstance(&mock);
-
-  EXPECT_CALL(mock,
-              CallbackStatusOr(Property(&StatusOr<BoxedInt>::is_ok, true)));
-  EXPECT_CALL(mock, Unref());
-  cb(boxed_int());
-  EXPECT_DEATH_IF_SUPPORTED(cb(boxed_int()), "");
-}
-
-TEST(RefStatusOrCallback, MoveWorks) {
-  StrictMock<MockCallbackClass> mock;
-
-  EXPECT_CALL(mock, Ref());
-
-  StatusOrCallback<BoxedInt> cb = StatusOrCallbackFromMemberFunction<
-      MockCallbackClass, BoxedInt,
-      &MockCallbackClass::CallbackStatusOr>::UponInstance(&mock);
-
-  StatusOrCallback<BoxedInt> cb2 = std::move(cb);
-  EXPECT_DEATH_IF_SUPPORTED(cb(boxed_int()), "");
-
-  EXPECT_CALL(mock,
-              CallbackStatusOr(Property(&StatusOr<BoxedInt>::is_ok, true)));
-  EXPECT_CALL(mock, Unref());
-  cb2(boxed_int());
-}
-
-TEST(RefStatusOrCallback, MoveAssignWorks) {
-  StrictMock<MockCallbackClass> mock;
-
-  EXPECT_CALL(mock, Ref());
-
-  StatusOrCallback<BoxedInt> cb = StatusOrCallbackFromMemberFunction<
-      MockCallbackClass, BoxedInt,
-      &MockCallbackClass::CallbackStatusOr>::UponInstance(&mock);
-
-  StatusOrCallback<BoxedInt> cb2 = std::move(cb);
-  EXPECT_DEATH_IF_SUPPORTED(cb(boxed_int()), "");
-
-  cb = std::move(cb2);
-  EXPECT_DEATH_IF_SUPPORTED(cb2(boxed_int()), "");
-
-  EXPECT_CALL(mock,
-              CallbackStatusOr(Property(&StatusOr<BoxedInt>::is_ok, true)));
-  EXPECT_CALL(mock, Unref());
-  cb(boxed_int());
-}
-
-//////////////////////////////////////////////////////////////////////////////
-// NoRefStatusOrCallback
-
-TEST(NoRefStatusOrCallback, NotCalledCallsCancel) {
-  StrictMock<MockCallbackClass> mock;
-
-  StatusOrCallback<BoxedInt> cb = StatusOrCallbackFromMemberFunctionNoRef<
-      MockCallbackClass, BoxedInt,
-      &MockCallbackClass::CallbackStatusOr>::UponInstance(&mock);
+  StatusOrCallback<BoxedInt> cb([&mock](const StatusOr<BoxedInt>& status) {
+    mock.CallbackStatusOr(status);
+  });
 
   EXPECT_CALL(mock, CallbackStatusOr(Property(&StatusOr<BoxedInt>::code,
                                               StatusCode::CANCELLED)));
 }
 
-TEST(NoRefStatusOrCallback, CalledWorks) {
+TEST(StatusOrCallback, CalledWorks) {
   StrictMock<MockCallbackClass> mock;
 
-  StatusOrCallback<BoxedInt> cb = StatusOrCallbackFromMemberFunctionNoRef<
-      MockCallbackClass, BoxedInt,
-      &MockCallbackClass::CallbackStatusOr>::UponInstance(&mock);
+  StatusOrCallback<BoxedInt> cb([&mock](const StatusOr<BoxedInt>& status) {
+    mock.CallbackStatusOr(status);
+  });
 
   EXPECT_CALL(mock,
               CallbackStatusOr(Property(&StatusOr<BoxedInt>::is_ok, true)));
@@ -254,12 +109,12 @@ TEST(NoRefStatusOrCallback, CalledWorks) {
   EXPECT_DEATH_IF_SUPPORTED(cb(boxed_int()), "");
 }
 
-TEST(NoRefStatusOrCallback, MoveWorks) {
+TEST(StatusOrCallback, MoveWorks) {
   StrictMock<MockCallbackClass> mock;
 
-  StatusOrCallback<BoxedInt> cb = StatusOrCallbackFromMemberFunctionNoRef<
-      MockCallbackClass, BoxedInt,
-      &MockCallbackClass::CallbackStatusOr>::UponInstance(&mock);
+  StatusOrCallback<BoxedInt> cb([&mock](const StatusOr<BoxedInt>& status) {
+    mock.CallbackStatusOr(status);
+  });
 
   StatusOrCallback<BoxedInt> cb2 = std::move(cb);
   EXPECT_DEATH_IF_SUPPORTED(cb(boxed_int()), "");
@@ -269,12 +124,12 @@ TEST(NoRefStatusOrCallback, MoveWorks) {
   cb2(boxed_int());
 }
 
-TEST(NoRefStatusOrCallback, MoveAssignWorks) {
+TEST(StatusOrCallback, MoveAssignWorks) {
   StrictMock<MockCallbackClass> mock;
 
-  StatusOrCallback<BoxedInt> cb = StatusOrCallbackFromMemberFunctionNoRef<
-      MockCallbackClass, BoxedInt,
-      &MockCallbackClass::CallbackStatusOr>::UponInstance(&mock);
+  StatusOrCallback<BoxedInt> cb([&mock](const StatusOr<BoxedInt>& status) {
+    mock.CallbackStatusOr(status);
+  });
 
   StatusOrCallback<BoxedInt> cb2 = std::move(cb);
   EXPECT_DEATH_IF_SUPPORTED(cb(boxed_int()), "");
