@@ -4,15 +4,14 @@
 
 #include "garnet/bin/media/media_player/framework/graph.h"
 
+#include "garnet/bin/media/media_player/util/callback_joiner.h"
 #include "garnet/bin/media/media_player/util/threadsafe_callback_joiner.h"
 
 namespace media_player {
 
 Graph::Graph(async_t* async) : async_(async) {}
 
-Graph::~Graph() {
-  Reset();
-}
+Graph::~Graph() { Reset(); }
 
 void Graph::RemoveNode(NodeRef node) {
   FXL_DCHECK(node);
@@ -212,17 +211,25 @@ void Graph::UnprepareInput(const InputRef& input) {
   engine_.UnprepareInput(input.actual());
 }
 
-void Graph::FlushOutput(const OutputRef& output, bool hold_frame) {
+void Graph::FlushOutput(const OutputRef& output, bool hold_frame,
+                        fxl::Closure callback) {
   FXL_DCHECK(output);
-  engine_.FlushOutput(output.actual(), hold_frame);
+  std::queue<Output*> backlog;
+  backlog.push(output.actual());
+  FlushOutputs(&backlog, hold_frame, callback);
 }
 
-void Graph::FlushAllOutputs(NodeRef node, bool hold_frame) {
+void Graph::FlushAllOutputs(NodeRef node, bool hold_frame,
+                            fxl::Closure callback) {
   FXL_DCHECK(node);
+
+  std::queue<Output*> backlog;
   size_t output_count = node.output_count();
   for (size_t output_index = 0; output_index < output_count; output_index++) {
-    FlushOutput(node.output(output_index), hold_frame);
+    backlog.push(node.output(output_index).actual());
   }
+
+  FlushOutputs(&backlog, hold_frame, callback);
 }
 
 void Graph::PostTask(const fxl::Closure& task,
@@ -259,6 +266,47 @@ NodeRef Graph::AddStage(std::shared_ptr<StageImpl> stage) {
   }
 
   return NodeRef(stage.get());
+}
+
+void Graph::FlushOutputs(std::queue<Output*>* backlog, bool hold_frame,
+                         fxl::Closure callback) {
+  FXL_DCHECK(backlog);
+
+  auto callback_joiner = CallbackJoiner::Create();
+
+  // Walk the graph downstream from the outputs already in the backlog until
+  // we hit a sink. The |FlushOutput| and |FlushInput| calls are all issued
+  // synchronously from this loop, and then we wait for all the callbacks to
+  // be called. This works, because downstream flow is halted synchronously,
+  // even though the nodes may have additional flushing business that needs
+  // time to complete.
+  while (!backlog->empty()) {
+    Output* output = backlog->front();
+    backlog->pop();
+    FXL_DCHECK(output);
+
+    if (!output->connected()) {
+      continue;
+    }
+
+    Input* input = output->mate();
+    FXL_DCHECK(input);
+    FXL_DCHECK(input->prepared());
+    StageImpl* input_stage = input->stage();
+
+    output->stage()->FlushOutput(output->index(),
+                                 callback_joiner->NewCallback());
+
+    input_stage->FlushInput(input->index(), hold_frame,
+                            callback_joiner->NewCallback());
+
+    for (size_t output_index = 0; output_index < input_stage->output_count();
+         ++output_index) {
+      backlog->push(&input_stage->output(output_index));
+    }
+  }
+
+  callback_joiner->WhenJoined(callback);
 }
 
 }  // namespace media_player

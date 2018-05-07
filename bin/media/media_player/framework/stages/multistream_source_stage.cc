@@ -106,17 +106,22 @@ void MultistreamSourceStageImpl::Update() {
 
 void MultistreamSourceStageImpl::FlushInput(size_t index,
                                             bool hold_frame,
-                                            DownstreamCallback callback) {
+                                            fxl::Closure callback) {
   FXL_CHECK(false) << "FlushInput called on source";
 }
 
-void MultistreamSourceStageImpl::FlushOutput(size_t index) {
-  fbl::AutoLock lock(&mutex_);
-  FXL_DCHECK(index < outputs_.size());
-  FXL_DCHECK(source_);
-  packets_per_output_[index].clear();
-  ended_streams_ = 0;
-  packet_request_outstanding_ = false;
+void MultistreamSourceStageImpl::FlushOutput(size_t index,
+                                             fxl::Closure callback) {
+  {
+    fbl::AutoLock lock(&mutex_);
+    FXL_DCHECK(index < outputs_.size());
+    FXL_DCHECK(source_);
+    packets_per_output_[index].clear();
+    ended_streams_ = 0;
+    packet_request_outstanding_ = false;
+  }
+
+  callback();
 }
 
 void MultistreamSourceStageImpl::PostTask(const fxl::Closure& task) {

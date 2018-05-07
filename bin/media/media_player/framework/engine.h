@@ -29,20 +29,14 @@ class Engine {
 
   // Flushes the output and the subgraph downstream of it. |hold_frame|
   // indicates whether a video renderer should hold and display the newest
-  // frame.
-  void FlushOutput(Output* output, bool hold_frame);
+  // frame. |callback| is used to signal completion.
+  void FlushOutput(Output* output, bool hold_frame, fxl::Closure callback);
 
  private:
   using UpstreamVisitor = std::function<
       void(Input* input, Output* output, StageImpl::UpstreamCallback callback)>;
-  using DownstreamVisitor =
-      std::function<void(Output* output,
-                         Input* input,
-                         StageImpl::DownstreamCallback callback)>;
 
   void VisitUpstream(Input* input, const UpstreamVisitor& visitor);
-
-  void VisitDownstream(Output* output, const DownstreamVisitor& visitor);
 };
 
 }  // namespace media_player

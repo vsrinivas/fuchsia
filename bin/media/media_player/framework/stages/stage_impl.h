@@ -23,6 +23,14 @@
 namespace media_player {
 
 // Host for a source, sink or transform.
+//
+// Flushing:
+// A flushing operation starts at a given output and proceeds downstream until
+// a sink (a stage with no outputs) is encountered. All FlushInput/Output calls
+// in a given flush operation are issued without waiting for callbacks from the
+// previous calls. The entire flush operation isn't complete until all the
+// callbacks are called, at which time packet flow may resume or the graph may
+// be edited.
 class StageImpl : public std::enable_shared_from_this<StageImpl> {
  public:
   using UpstreamCallback = std::function<void(size_t input_index)>;
@@ -70,14 +78,25 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
   virtual void UnprepareOutput(size_t index, UpstreamCallback callback);
 
   // Flushes an input. |hold_frame| indicates whether a video renderer should
-  // hold and display the newest frame. The callback is used to indicate what
-  // outputs are ready to be flushed as a consequence of flushing the input.
-  virtual void FlushInput(size_t index,
-                          bool hold_frame,
-                          DownstreamCallback callback) = 0;
+  // hold and display the newest frame. The callback is used to indicate that
+  // the flush operation is complete. It must be called on the graph's thread
+  // and may be called synchronously.
+  //
+  // The input in question must be flushed (|Input.Flush|) synchronously with
+  // this call to eject the queued packet (if there is one) and to set the
+  // input's demand to |kNegative|. The callback is provided in case the node
+  // has additional flushing business that can't be completed synchronously.
+  virtual void FlushInput(size_t index, bool hold_frame,
+                          fxl::Closure callback) = 0;
 
-  // Flushes an output.
-  virtual void FlushOutput(size_t index) = 0;
+  // Flushes an output. The callback is used to indicate that the flush
+  // operation is complete. It must be called on the graph's thread and may be
+  // called synchronously. The callback is provided in case the node has
+  // additional flushing business that can't be completed synchronously.
+  //
+  // The output in question must not produce any packets after this method is
+  // called and before new demand is signalled.
+  virtual void FlushOutput(size_t index, fxl::Closure callback) = 0;
 
   // Gets the generic node.
   virtual GenericNode* GetGenericNode() = 0;

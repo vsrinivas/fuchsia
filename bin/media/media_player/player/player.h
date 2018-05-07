@@ -75,12 +75,14 @@ class Player {
   }
 
   // Prepares the graph for playback by satisfying initial renderer demand.
+  // |callback| will never be called synchronously.
   void Prime(fxl::Closure callback);
 
-  // Flushes packets from the graph.
-  void Flush(bool hold_frame);
+  // Flushes packets from the graph. |callback| will never be called
+  // synchronously.
+  void Flush(bool hold_frame, fxl::Closure callback);
 
-  // Sets the timeline function.
+  // Sets the timeline function. |callback| will never be called synchronously.
   void SetTimelineFunction(media::TimelineFunction timeline_function,
                            fxl::Closure callback);
 
@@ -91,7 +93,8 @@ class Player {
   // Sets a program range for the renderers.
   void SetProgramRange(uint64_t program, int64_t min_pts, int64_t max_pts);
 
-  // Seeks to the specified position.
+  // Seeks to the specified position. |callback| will never be called
+  // synchronously.
   void Seek(int64_t position, fxl::Closure callback);
 
   // Indicates whether the player has reached end of stream.

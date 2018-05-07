@@ -90,17 +90,18 @@ void TransformStageImpl::Update() {
 
 void TransformStageImpl::FlushInput(size_t index,
                                     bool hold_frame,
-                                    DownstreamCallback callback) {
+                                    fxl::Closure callback) {
   FXL_DCHECK(index == 0u);
   input_.Flush();
-  callback(0);
+  callback();
 }
 
-void TransformStageImpl::FlushOutput(size_t index) {
+void TransformStageImpl::FlushOutput(size_t index, fxl::Closure callback) {
   FXL_DCHECK(index == 0u);
   FXL_DCHECK(transform_);
-  PostTask([this]() { transform_->Flush(); });
+  transform_->Flush();
   input_packet_is_new_ = true;
+  callback();
 }
 
 void TransformStageImpl::PostTask(const fxl::Closure& task) {

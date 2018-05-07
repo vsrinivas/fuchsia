@@ -126,6 +126,7 @@ TEST(PlayerTest, NullSourceSegment) {
     set_source_segment_callback_called = true;
   });
 
+  loop.RunUntilIdle();
   EXPECT_TRUE(set_source_segment_callback_called);
   EXPECT_FALSE(player.has_source_segment());
   ExpectNoStreams(player);
@@ -148,8 +149,6 @@ TEST(PlayerTest, FakeSegments) {
   std::unique_ptr<FakeSourceSegment> source_segment = FakeSourceSegment::Create(
       [&source_segment_destroyed](FakeSourceSegment* source_segment) {
         source_segment_destroyed = true;
-        EXPECT_TRUE(source_segment->flush_called_);
-        EXPECT_EQ(false, source_segment->flush_call_param_hold_frame_);
         EXPECT_TRUE(source_segment->will_deprovision_called_);
         EXPECT_FALSE(source_segment->TEST_provisioned());
       });
@@ -385,11 +384,16 @@ TEST(PlayerTest, FakeSegments) {
   EXPECT_FALSE(prime_callback_called);
 
   video_sink_segment_raw->prime_call_param_callback_();
+  loop.RunUntilIdle();
   EXPECT_TRUE(prime_callback_called);
 
   // Test Flush.
   EXPECT_FALSE(source_segment_raw->flush_called_);
-  player.Flush(true);
+  bool flush_callback_called = false;
+  player.Flush(true,
+               [&flush_callback_called]() { flush_callback_called = true; });
+  loop.RunUntilIdle();
+  EXPECT_TRUE(flush_callback_called);
   EXPECT_TRUE(source_segment_raw->flush_called_);
   source_segment_raw->flush_called_ = false;
   EXPECT_EQ(true, source_segment_raw->flush_call_param_hold_frame_);
@@ -423,6 +427,7 @@ TEST(PlayerTest, FakeSegments) {
   EXPECT_FALSE(set_timeline_function_callback_called);
 
   video_sink_segment_raw->set_timeline_function_call_param_callback_();
+  loop.RunUntilIdle();
   EXPECT_TRUE(set_timeline_function_callback_called);
   EXPECT_EQ(timeline_function, player.timeline_function());
 
@@ -452,6 +457,7 @@ TEST(PlayerTest, FakeSegments) {
   EXPECT_NE(nullptr, source_segment_raw->seek_call_param_callback_);
 
   source_segment_raw->seek_call_param_callback_();
+  loop.RunUntilIdle();
   EXPECT_TRUE(seek_callback_called);
 
   // Test end_of_stream.
@@ -513,6 +519,7 @@ TEST(PlayerTest, FakeSegments) {
   player.SetSourceSegment(nullptr, [&set_source_segment_callback_called]() {
     set_source_segment_callback_called = true;
   });
+  loop.RunUntilIdle();
   EXPECT_TRUE(set_source_segment_callback_called);
   EXPECT_TRUE(source_segment_destroyed);
   source_segment_raw = nullptr;

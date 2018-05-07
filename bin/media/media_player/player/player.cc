@@ -4,8 +4,10 @@
 
 #include "garnet/bin/media/media_player/player/player.h"
 
+#include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
 
+#include "garnet/bin/media/media_player/framework/formatting.h"
 #include "garnet/bin/media/media_player/util/callback_joiner.h"
 #include "lib/fxl/logging.h"
 
@@ -23,7 +25,6 @@ Player::~Player() {}
 void Player::SetSourceSegment(std::unique_ptr<SourceSegment> source_segment,
                               fxl::Closure callback) {
   if (source_segment_) {
-    source_segment_->Flush(false);
     source_segment_->Deprovision();
 
     while (!streams_.empty()) {
@@ -116,12 +117,16 @@ void Player::Prime(fxl::Closure callback) {
     }
   }
 
-  callback_joiner->WhenJoined(callback);
+  callback_joiner->WhenJoined(
+      [this, callback]() { async::PostTask(async_, callback); });
 }
 
-void Player::Flush(bool hold_frame) {
+void Player::Flush(bool hold_frame, fxl::Closure callback) {
   if (source_segment_) {
-    source_segment_->Flush(hold_frame);
+    source_segment_->Flush(
+        hold_frame, [this, callback]() { async::PostTask(async_, callback); });
+  } else {
+    async::PostTask(async_, callback);
   }
 }
 
@@ -151,11 +156,11 @@ void Player::SetTimelineFunction(media::TimelineFunction timeline_function,
     }
   }
 
-  callback_joiner->WhenJoined(callback);
+  callback_joiner->WhenJoined(
+      [this, callback]() { async::PostTask(async_, callback); });
 }
 
-void Player::SetProgramRange(uint64_t program,
-                             int64_t min_pts,
+void Player::SetProgramRange(uint64_t program, int64_t min_pts,
                              int64_t max_pts) {
   for (auto& stream : streams_) {
     if (stream.sink_segment_) {
@@ -166,9 +171,10 @@ void Player::SetProgramRange(uint64_t program,
 
 void Player::Seek(int64_t position, fxl::Closure callback) {
   if (source_segment_) {
-    source_segment_->Seek(position, callback);
+    source_segment_->Seek(
+        position, [this, callback]() { async::PostTask(async_, callback); });
   } else {
-    callback();
+    async::PostTask(async_, callback);
   }
 }
 
@@ -259,8 +265,7 @@ SinkSegment* Player::GetParkedSinkSegment(StreamType::Medium medium) const {
   return iter == parked_sink_segments_.end() ? nullptr : iter->second.get();
 }
 
-void Player::OnStreamUpdated(size_t index,
-                             const StreamType& type,
+void Player::OnStreamUpdated(size_t index, const StreamType& type,
                              OutputRef output) {
   if (streams_.size() < index + 1) {
     streams_.resize(index + 1);
@@ -380,6 +385,7 @@ void Player::ConnectAndPrepareStream(Stream* stream) {
 }
 
 void Player::Dump(std::ostream& os) const {
+  os << newl << "source:             ";
   source_node().GetGenericNode()->Dump(os, source_node());
 }
 

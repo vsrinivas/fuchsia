@@ -31,9 +31,10 @@ class FakeSourceSegment : public SourceSegment {
 
   const Metadata* metadata() const override { return metadata_; }
 
-  void Flush(bool hold_frame) override {
+  void Flush(bool hold_frame, fxl::Closure callback) override {
     flush_called_ = true;
     flush_call_param_hold_frame_ = hold_frame;
+    callback();
   }
 
   void Seek(int64_t position, fxl::Closure callback) override {

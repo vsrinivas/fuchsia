@@ -43,7 +43,7 @@ void SourceStageImpl::PrepareOutput(size_t index,
   FXL_DCHECK(source_);
 
   if (source_->can_accept_allocator()) {
-    // Give the source the provided allocator or the default if non was
+    // Give the source the provided allocator or the default if none was
     // provided.
     source_->set_allocator(allocator == nullptr ? PayloadAllocator::GetDefault()
                                                 : allocator);
@@ -87,15 +87,21 @@ void SourceStageImpl::Update() {
 
 void SourceStageImpl::FlushInput(size_t index,
                                  bool hold_frame,
-                                 DownstreamCallback callback) {
+                                 fxl::Closure callback) {
   FXL_CHECK(false) << "FlushInput called on source";
 }
 
-void SourceStageImpl::FlushOutput(size_t index) {
+void SourceStageImpl::FlushOutput(size_t index, fxl::Closure callback) {
+  FXL_DCHECK(index == 0u);
   FXL_DCHECK(source_);
   source_->Flush();
-  std::lock_guard<std::mutex> locker(mutex_);
-  packets_.clear();
+
+  {
+    std::lock_guard<std::mutex> locker(mutex_);
+    packets_.clear();
+  }
+
+  callback();
 }
 
 void SourceStageImpl::PostTask(const fxl::Closure& task) {
@@ -107,9 +113,9 @@ void SourceStageImpl::SupplyPacket(PacketPtr packet) {
 
   {
     std::lock_guard<std::mutex> locker(mutex_);
-    bool packets_was_empty_ = packets_.empty();
+    bool packets_was_empty = packets_.empty();
     packets_.push_back(std::move(packet));
-    if (packets_was_empty_ && prepared_) {
+    if (packets_was_empty && prepared_) {
       needs_update = true;
     }
   }

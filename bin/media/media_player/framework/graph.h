@@ -148,13 +148,14 @@ class Graph {
 
   // Flushes the output and the subgraph downstream of it. |hold_frame|
   // indicates whether a video renderer should hold and display the newest
-  // frame.
-  void FlushOutput(const OutputRef& output, bool hold_frame);
+  // frame. |callback| is called when all flushes are complete.
+  void FlushOutput(const OutputRef& output, bool hold_frame,
+                   fxl::Closure callback);
 
   // Flushes the node and the subgraph downstream of it. |hold_frame|
   // indicates whether a video renderer should hold and display the newest
-  // frame.
-  void FlushAllOutputs(NodeRef node, bool hold_frame);
+  // frame. |callback| is called when all flushes are complete.
+  void FlushAllOutputs(NodeRef node, bool hold_frame, fxl::Closure callback);
 
   // Executes |task| after having acquired |nodes|. No update or other
   // task will touch any of the nodes while |task| is executing.
@@ -163,6 +164,12 @@ class Graph {
  private:
   // Adds a stage to the graph.
   NodeRef AddStage(std::shared_ptr<StageImpl> stage);
+
+  // Flushes all the outputs in |backlog| and all inputs/outputs downstream
+  // and calls |callback| when all flush operations are complete. |backlog| is
+  // empty when this method returns.
+  void FlushOutputs(std::queue<Output*>* backlog, bool hold_frame,
+                    fxl::Closure callback);
 
   async_t* async_;
 

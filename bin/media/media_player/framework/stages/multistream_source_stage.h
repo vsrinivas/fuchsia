@@ -44,9 +44,9 @@ class MultistreamSourceStageImpl : public StageImpl,
 
   void FlushInput(size_t index,
                   bool hold_frame,
-                  DownstreamCallback callback) override;
+                  fxl::Closure callback) override;
 
-  void FlushOutput(size_t index) override;
+  void FlushOutput(size_t index, fxl::Closure callback) override;
 
  protected:
   // StageImpl implementation.

@@ -72,9 +72,9 @@ void DemuxSourceSegment::BuildGraph() {
   }
 }
 
-void DemuxSourceSegment::Flush(bool hold_frame) {
+void DemuxSourceSegment::Flush(bool hold_frame, fxl::Closure callback) {
   FXL_DCHECK(demux_initialized_.occurred());
-  graph().FlushAllOutputs(demux_node_, hold_frame);
+  graph().FlushAllOutputs(demux_node_, hold_frame, callback);
 }
 
 void DemuxSourceSegment::Seek(int64_t position, fxl::Closure callback) {

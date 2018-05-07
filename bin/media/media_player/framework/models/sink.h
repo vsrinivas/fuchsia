@@ -18,6 +18,9 @@ class SinkStage : public Stage {
  public:
   ~SinkStage() override {}
 
+  // Sets the demand on the input. |demand| must be either |kPositive| or
+  // |kNeutral|.
+  // TODO(dalesat): Get rid of neutral demand and remove the |demand| parameter.
   virtual void SetDemand(Demand demand) = 0;
 };
 
@@ -42,8 +45,7 @@ class SinkStageImpl;
 
 template <typename TNode>
 struct NodeTraits<
-    TNode,
-    typename std::enable_if<std::is_base_of<Sink, TNode>::value>::type> {
+    TNode, typename std::enable_if<std::is_base_of<Sink, TNode>::value>::type> {
   using stage_impl_type = SinkStageImpl;
 };
 

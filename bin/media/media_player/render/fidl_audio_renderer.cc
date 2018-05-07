@@ -28,12 +28,7 @@ FidlAudioRenderer::FidlAudioRenderer(media::AudioRenderer2Ptr audio_renderer)
 
   // |demand_task_| is used to wake up when demand might transition from
   // negative to positive.
-  demand_task_.set_handler([this]() {
-    Demand demand = current_demand();
-    if (demand != Demand::kNegative) {
-      stage()->SetDemand(demand);
-    }
-  });
+  demand_task_.set_handler([this]() { SignalCurrentDemand(); });
 
   audio_renderer_.events().OnMinLeadTimeChanged =
       [this](int64_t min_lead_time_nsec) {
@@ -66,9 +61,7 @@ FidlAudioRenderer::FidlAudioRenderer(media::AudioRenderer2Ptr audio_renderer)
 
 FidlAudioRenderer::~FidlAudioRenderer() {}
 
-const char* FidlAudioRenderer::label() const {
-  return "audio renderer";
-}
+const char* FidlAudioRenderer::label() const { return "audio renderer"; }
 
 void FidlAudioRenderer::Dump(std::ostream& os, NodeRef ref) const {
   Renderer::Dump(os, ref);
@@ -103,7 +96,7 @@ Demand FidlAudioRenderer::SupplyPacket(PacketPtr packet) {
   if (flushed_ || end_pts < from_ns(min_pts(0)) ||
       start_pts > from_ns(max_pts(0))) {
     // Discard this packet.
-    return current_demand();
+    return GetCurrentDemand();
   }
 
   arrivals_.AddSample(now, current_timeline_function()(now), start_pts_ns,
@@ -139,7 +132,7 @@ Demand FidlAudioRenderer::SupplyPacket(PacketPtr packet) {
       int64_t now = media::Timeline::local_now();
 
       UpdateTimeline(now);
-      stage()->SetDemand(current_demand());
+      SignalCurrentDemand();
 
       departures_.AddSample(now, current_timeline_function()(now),
                             packet->GetPts(media::TimelineRate::NsPerSecond),
@@ -147,7 +140,7 @@ Demand FidlAudioRenderer::SupplyPacket(PacketPtr packet) {
     });
   }
 
-  Demand demand = current_demand();
+  Demand demand = GetCurrentDemand();
 
   if (prime_callback_ && demand == Demand::kNegative) {
     prime_callback_();
@@ -196,18 +189,17 @@ void FidlAudioRenderer::Prime(fxl::Closure callback) {
 
   flushed_ = false;
 
-  if (current_demand() == Demand::kNegative || end_of_stream_pending()) {
+  if (GetCurrentDemand() == Demand::kNegative || end_of_stream_pending()) {
     callback();
     return;
   }
 
   prime_callback_ = callback;
-  stage()->SetDemand(current_demand());
+  SignalCurrentDemand();
 }
 
 void FidlAudioRenderer::SetTimelineFunction(
-    media::TimelineFunction timeline_function,
-    fxl::Closure callback) {
+    media::TimelineFunction timeline_function, fxl::Closure callback) {
   // AudioRenderer2 only supports 0/1 (paused) or 1/1 (normal playback rate).
   // TODO(dalesat): Remove this DCHECK when AudioRenderer2 supports other rates,
   // build an SRC into this class, or prohibit other rates entirely.
@@ -224,8 +216,6 @@ void FidlAudioRenderer::SetTimelineFunction(
     audio_renderer_->PlayNoReply(timeline_function.reference_time(),
                                  presentation_time);
   }
-
-  UpdateTimelineAt(timeline_function.reference_time());
 }
 
 void FidlAudioRenderer::SetGain(float gain) {
@@ -250,7 +240,7 @@ void FidlAudioRenderer::OnTimelineTransition() {
   }
 }
 
-Demand FidlAudioRenderer::current_demand() {
+Demand FidlAudioRenderer::GetCurrentDemand() {
   demand_task_.Cancel();
 
   if (flushed_ || end_of_stream_pending()) {
@@ -282,6 +272,13 @@ Demand FidlAudioRenderer::current_demand() {
                                last_supplied_ns - min_lead_time_ns_)));
 
   return Demand::kNegative;
+}
+
+void FidlAudioRenderer::SignalCurrentDemand() {
+  Demand demand = GetCurrentDemand();
+  if (demand != Demand::kNegative) {
+    stage()->SetDemand(demand);
+  }
 }
 
 }  // namespace media_player

@@ -81,18 +81,23 @@ void MultistreamSinkStageImpl::Update() {
 
 void MultistreamSinkStageImpl::FlushInput(size_t index,
                                           bool hold_frame,
-                                          DownstreamCallback callback) {
+                                          fxl::Closure callback) {
   FXL_DCHECK(sink_);
 
   sink_->Flush(hold_frame);
 
-  std::lock_guard<std::mutex> locker(mutex_);
-  inputs_[index]->input_.Flush();
+  {
+    std::lock_guard<std::mutex> locker(mutex_);
+    inputs_[index]->input_.Flush();
 
-  pending_inputs_.remove(index);
+    pending_inputs_.remove(index);
+  }
+
+  callback();
 }
 
-void MultistreamSinkStageImpl::FlushOutput(size_t index) {
+void MultistreamSinkStageImpl::FlushOutput(size_t index,
+                                           fxl::Closure callback) {
   FXL_CHECK(false) << "FlushOutput called on sink";
 }
 

@@ -76,6 +76,8 @@ class MediaPlayerImpl : public MediaPlayer {
     kPlaying,   // Time is progressing.
   };
 
+  static const char* ToString(State value);
+
   // Sets the current reader.
   void SetReader(std::shared_ptr<Reader> reader);
 
@@ -86,16 +88,14 @@ class MediaPlayerImpl : public MediaPlayer {
   void ConnectSinks();
 
   // Prepares a stream.
-  void PrepareStream(size_t index,
-                     const media::MediaType& input_media_type,
+  void PrepareStream(size_t index, const media::MediaType& input_media_type,
                      const std::function<void()>& callback);
 
   // Takes action based on current state.
   void Update();
 
   // Sets the timeline function.
-  void SetTimelineFunction(float rate,
-                           int64_t reference_time,
+  void SetTimelineFunction(float rate, int64_t reference_time,
                            fxl::Closure callback);
 
   // Sends status updates to clients.
@@ -115,6 +115,7 @@ class MediaPlayerImpl : public MediaPlayer {
 
   // The state we're currently in.
   State state_ = State::kWaiting;
+  const char* waiting_reason_ = "to initialize";
 
   // The state we're trying to transition to, either because the client has
   // called |Play| or |Pause| or because we've hit end-of-stream.

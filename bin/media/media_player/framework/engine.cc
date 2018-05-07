@@ -36,22 +36,6 @@ void Engine::UnprepareInput(Input* input) {
   });
 }
 
-void Engine::FlushOutput(Output* output, bool hold_frame) {
-  FXL_DCHECK(output);
-  if (!output->connected()) {
-    return;
-  }
-
-  VisitDownstream(output, [hold_frame](Output* output, Input* input,
-                                       StageImpl::DownstreamCallback callback) {
-    FXL_DCHECK(output);
-    FXL_DCHECK(input);
-    FXL_DCHECK(input->prepared());
-    output->stage()->FlushOutput(output->index());
-    input->stage()->FlushInput(input->index(), hold_frame, callback);
-  });
-}
-
 void Engine::VisitUpstream(Input* input, const UpstreamVisitor& visitor) {
   FXL_DCHECK(input);
 
@@ -69,27 +53,6 @@ void Engine::VisitUpstream(Input* input, const UpstreamVisitor& visitor) {
 
     visitor(input, output, [output_stage, &backlog](size_t input_index) {
       backlog.push(&output_stage->input(input_index));
-    });
-  }
-}
-
-void Engine::VisitDownstream(Output* output, const DownstreamVisitor& visitor) {
-  FXL_DCHECK(output);
-
-  std::queue<Output*> backlog;
-  backlog.push(output);
-
-  while (!backlog.empty()) {
-    Output* output = backlog.front();
-    backlog.pop();
-    FXL_DCHECK(output);
-    FXL_DCHECK(output->connected());
-
-    Input* input = output->mate();
-    StageImpl* input_stage = input->stage();
-
-    visitor(output, input, [input_stage, &backlog](size_t output_index) {
-      backlog.push(&input_stage->output(output_index));
     });
   }
 }

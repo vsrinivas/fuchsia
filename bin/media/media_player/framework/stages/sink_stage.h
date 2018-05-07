@@ -5,8 +5,7 @@
 #ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_STAGES_SINK_STAGE_H_
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_STAGES_SINK_STAGE_H_
 
-#include <deque>
-#include <mutex>
+#include <atomic>
 
 #include "garnet/bin/media/media_player/framework/models/sink.h"
 #include "garnet/bin/media/media_player/framework/stages/stage_impl.h"
@@ -32,15 +31,13 @@ class SinkStageImpl : public StageImpl, public SinkStage {
 
   std::shared_ptr<PayloadAllocator> PrepareInput(size_t index) override;
 
-  void PrepareOutput(size_t index,
-                     std::shared_ptr<PayloadAllocator> allocator,
+  void PrepareOutput(size_t index, std::shared_ptr<PayloadAllocator> allocator,
                      UpstreamCallback callback) override;
 
-  void FlushInput(size_t index,
-                  bool hold_frame,
-                  DownstreamCallback callback) override;
+  void FlushInput(size_t index, bool hold_frame,
+                  fxl::Closure callback) override;
 
-  void FlushOutput(size_t index) override;
+  void FlushOutput(size_t index, fxl::Closure callback) override;
 
  protected:
   // StageImpl implementation.
@@ -57,8 +54,12 @@ class SinkStageImpl : public StageImpl, public SinkStage {
   Input input_;
   std::shared_ptr<Sink> sink_;
 
-  mutable std::mutex mutex_;
-  Demand sink_demand_ FXL_GUARDED_BY(mutex_) = Demand::kNegative;
+  // |sink_demand_| reflects the current demand of the sink. It's atomic,
+  // because it may be accessed by both the main graph thread and by an
+  // arbitrary thread via |SetDemand|. |SetDemand| can only increase demand
+  // (from |kNegative| to either |kPositive| or |kNeutral|) and will ensure that
+  // |Update| runs after that transition.
+  std::atomic<Demand> sink_demand_;
 };
 
 }  // namespace media_player

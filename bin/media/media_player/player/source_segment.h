@@ -46,7 +46,7 @@ class SourceSegment : public Segment {
   virtual const Metadata* metadata() const = 0;
 
   // Flushes the source.
-  virtual void Flush(bool hold_frame) = 0;
+  virtual void Flush(bool hold_frame, fxl::Closure callback) = 0;
 
   // Seeks to the specified position.
   virtual void Seek(int64_t position, fxl::Closure callback) = 0;

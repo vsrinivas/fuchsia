@@ -65,8 +65,12 @@ class FidlAudioRenderer
   void OnTimelineTransition() override;
 
  private:
-  // Returns the current demand.
-  Demand current_demand();
+  // Gets the current demand.
+  Demand GetCurrentDemand();
+
+  // Signals current demand via the stage's |SetDemand| method if it's not
+  // negative.
+  void SignalCurrentDemand();
 
   // Converts a pts in |pts_rate_| units to ns.
   int64_t to_ns(int64_t pts) {
