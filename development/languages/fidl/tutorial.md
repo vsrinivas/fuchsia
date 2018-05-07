@@ -371,7 +371,7 @@ allowing `main()` to return and the program to terminate.
 You can run the Hello World example like this:
 
 ```sh
-$ /pkgfs/packages/echo2_client_cpp/0/bin/echo2_client_cpp
+$ run echo2_client_cpp
 ```
 
 You do not need to specifically run the server because the call to
