@@ -26,7 +26,7 @@ namespace debugserver {
 // NOTE: This class is generally not thread safe. Care must be taken when
 // calling methods such as set_current_process() and SetCurrentThread()
 // which modify its internal state.
-class Server : public IOLoop::Delegate, public Process::Delegate {
+class Server : public Process::Delegate {
  public:
   // Starts the main loop, and returns when the main loop exits.
   // Returns true if the main loop exits cleanly, or false in the case of an
@@ -81,15 +81,6 @@ class Server : public IOLoop::Delegate, public Process::Delegate {
   // The main loop.
   async::Loop message_loop_;
 
-  // The IOLoop used for blocking I/O operations over |client_sock_|.
-  // |message_loop_| and |client_sock_| both MUST outlive |io_loop_|. We take
-  // care to clean it up in the destructor.
-  std::unique_ptr<IOLoop> io_loop_;
-
-  // File descriptor for the socket (or terminal) used for communication.
-  // TODO(dje): Rename from *sock* after things are working.
-  fxl::UniqueFD client_sock_;
-
   // The ExceptionPort used by inferiors to receive exceptions.
   // (This is declared after |message_loop_| since that needs to have been
   // created before this can be initialized).
@@ -107,6 +98,23 @@ class Server : public IOLoop::Delegate, public Process::Delegate {
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Server);
+};
+
+// Same as Server, but provides I/O support.
+// An example use-case is debugserver for gdb.
+class ServerWithIO : public Server, public IOLoop::Delegate {
+protected:
+  ServerWithIO();
+  virtual ~ServerWithIO();
+
+  // The IOLoop used for blocking I/O operations over |client_sock_|.
+  // |message_loop_| and |client_sock_| both MUST outlive |io_loop_|. We take
+  // care to clean it up in the destructor.
+  std::unique_ptr<IOLoop> io_loop_;
+
+  // File descriptor for the socket (or terminal) used for communication.
+  // TODO(dje): Rename from *sock* after things are working.
+  fxl::UniqueFD client_sock_;
 };
 
 }  // namespace debugserver

@@ -20,15 +20,11 @@
 namespace debugserver {
 
 Server::Server()
-    : client_sock_(-1),
-      exception_port_(message_loop_.async()),
+    : exception_port_(message_loop_.async()),
       run_status_(true) {
 }
 
 Server::~Server() {
-  // This will invoke the IOLoop destructor which will clean up and join the I/O
-  // threads.
-  io_loop_.reset();
 }
 
 void Server::SetCurrentThread(Thread* thread) {
@@ -46,6 +42,18 @@ void Server::QuitMessageLoop(bool status) {
 void Server::PostQuitMessageLoop(bool status) {
   run_status_ = status;
   async::PostTask(message_loop_.async(), [this] { message_loop_.Quit(); });
+}
+
+ServerWithIO::ServerWithIO()
+    : client_sock_(-1) {
+}
+
+ServerWithIO::~ServerWithIO() {
+  // This will invoke the IOLoop destructor which will clean up and join the
+  // I/O threads. This is done now because |message_loop_| and |client_sock_|
+  // must outlive |io_loop_|. The former is handled by virtue of being in the
+  // baseclass. The latter is handled here.
+  io_loop_.reset();
 }
 
 }  // namespace debugserver

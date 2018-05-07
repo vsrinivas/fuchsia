@@ -171,8 +171,6 @@ bool IptServer::DumpResults() {
 }
 
 bool IptServer::Run() {
-  FXL_DCHECK(!io_loop_);
-
   if (!exception_port_.Run()) {
     FXL_LOG(ERROR) << "Failed to initialize exception port!";
     return false;
@@ -197,18 +195,6 @@ bool IptServer::Run() {
   }
 
   return run_status_;
-}
-
-void IptServer::OnBytesRead(const fxl::StringView& bytes_read) {
-  // TODO(dje): Do we need an i/o loop?
-}
-
-void IptServer::OnDisconnected() {
-  // TODO(dje): Do we need an i/o loop?
-}
-
-void IptServer::OnIOError() {
-  // TODO(dje): Do we need an i/o loop?
 }
 
 void IptServer::OnThreadStarting(Process* process,

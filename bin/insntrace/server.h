@@ -99,11 +99,6 @@ class IptServer final : public Server {
   bool StartInferior();
   bool DumpResults();
 
-  // IOLoop::Delegate overrides.
-  void OnBytesRead(const fxl::StringView& bytes) override;
-  void OnDisconnected() override;
-  void OnIOError() override;
-
   // Process::Delegate overrides.
   void OnThreadStarting(Process* process,
                         Thread* thread,

@@ -27,7 +27,6 @@
 namespace debugserver {
 
 void TestServer::SetUp() {
-  EXPECT_FALSE(io_loop_);
   ASSERT_TRUE(exception_port_.Run());
   exception_port_started_ = true;
 }
@@ -122,18 +121,6 @@ bool TestServer::TestSuccessfulExit() {
     return false;
   }
   return true;
-}
-
-void TestServer::OnBytesRead(const fxl::StringView& bytes_read) {
-  // TODO(dje): Do we need an i/o loop?
-}
-
-void TestServer::OnDisconnected() {
-  // TODO(dje): Do we need an i/o loop?
-}
-
-void TestServer::OnIOError() {
-  // TODO(dje): Do we need an i/o loop?
 }
 
 void TestServer::OnThreadStarting(Process* process,

@@ -29,7 +29,7 @@ namespace debugserver {
 // NOTE: This class is generally not thread safe. Care must be taken when
 // calling methods such as set_current_process(), SetCurrentThread(), and
 // QueueNotification() which modify its internal state.
-class RspServer final : public Server {
+class RspServer final : public ServerWithIO {
  public:
   // The default timeout interval used when sending notifications.
   constexpr static int64_t kDefaultTimeoutSeconds = 30;

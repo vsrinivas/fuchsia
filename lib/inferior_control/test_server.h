@@ -45,11 +45,6 @@ class TestServer : public Server, public ::testing::Test {
   bool exit_code_set() const { return exit_code_set_; }
 
  protected:
-  // IOLoop::Delegate overrides.
-  void OnBytesRead(const fxl::StringView& bytes) override;
-  void OnDisconnected() override;
-  void OnIOError() override;
-
   // Process::Delegate overrides.
   void OnThreadStarting(Process* process, Thread* thread,
                         const zx_exception_context_t& context) override;
