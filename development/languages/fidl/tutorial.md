@@ -28,8 +28,28 @@ For details on the design and implementation of FIDL, see
 
 See the [instructions for getting and building Fuchsia](/getting_started.md).
 
-The examples we will use for this tutorial are located inside Garnet at:
-[garnet/examples/fidl/](https://fuchsia.googlesource.com/garnet/+/master/examples/fidl/)
+Most examples we will use for this tutorial are located in Garnet at:
+[https://fuchsia.googlesource.com/garnet/+/master/examples/fidl/](https://fuchsia.googlesource.com/garnet/+/master/examples/fidl/)
+
+Dart examples are in Topaz at:
+[https://fuchsia.googlesource.com/topaz/+/master/examples/fidl/](https://fuchsia.googlesource.com/topaz/+/master/examples/fidl/)
+
+While you're reading on, warm up your build:
+
+```sh
+# You'll need Topaz for Dart later
+fx set-layer topaz
+# Also include garnet examples when building Topaz
+fx set x64 --packages topaz/packages/default,garnet/packages/examples/fidl
+fx full-build
+```
+
+Alternatively if you're not interested in Dart:
+
+```sh
+fx set-layer garnet
+fx full-build
+```
 
 ## FIDL architecture
 
