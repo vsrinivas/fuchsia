@@ -2,13 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rust_binary.gni")
+import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
 
-rust_binary("bin") {
+rustc_binary("bin") {
+  name = "wlanstack2"
   with_unit_tests = true
 
-  name = "wlanstack2"
+  deps = [
+    "//garnet/lib/rust/crates/fuchsia-wlan-dev:fuchsia-wlan-dev-rustc",
+    "//garnet/lib/rust/crates/wlan-sme",
+    "//garnet/lib/wlan/fidl:fidl-rustc",
+    "//garnet/lib/wlan/fidl:service-rustc",
+    "//garnet/public/lib/fidl/rust/fidl:fidl-rustc",
+    "//garnet/public/rust/crates/fuchsia-app:fuchsia-app-rustc",
+    "//garnet/public/rust/crates/fuchsia-async:fuchsia-async-rustc",
+    "//garnet/public/rust/crates/fuchsia-vfs/fuchsia-vfs-watcher:fuchsia-vfs-watcher-rustc",
+    "//garnet/public/rust/crates/fuchsia-zircon:fuchsia-zircon-rustc",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures",
+    "//third_party/rust-crates/rustc_deps:log",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
+  ]
 }
 
 package("wlanstack2") {
@@ -17,7 +32,7 @@ package("wlanstack2") {
     ":bin",
   ]
 
-  binary = "wlanstack2"
+  binary = "rust_crates/wlanstack2"
 
   meta = [{
     path = rebase_path("meta/sandbox")
