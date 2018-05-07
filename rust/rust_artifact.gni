@@ -311,7 +311,13 @@ template("rust_artifact") {
     }
 
     if (is_fuchsia) {
-      deps += [ "//garnet/public/sdk:zircon_sysroot_export" ]
+      deps += [
+        "//garnet/public/sdk:zircon_sysroot_export",
+        # These libraries are required by libstd.
+        "//zircon/public/lib/backtrace",
+        "//zircon/public/lib/fdio",
+        "//zircon/public/lib/launchpad",
+      ]
 
       args += [
         "--clang_prefix",

@@ -188,7 +188,13 @@ template("rustc_artifact") {
     }
 
     if (is_fuchsia) {
-      deps += [ "//garnet/public/sdk:zircon_sysroot_export" ]
+      deps += [
+        "//garnet/public/sdk:zircon_sysroot_export",
+        # These libraries are required by libstd.
+        "//zircon/public/lib/backtrace",
+        "//zircon/public/lib/fdio",
+        "//zircon/public/lib/launchpad",
+      ]
       args += [
         "--clang_prefix", rebase_path(clang_prefix, "", root_out_dir),
         "--sysroot", rebase_path("$root_out_dir/sdks/zircon_sysroot/sysroot"),
