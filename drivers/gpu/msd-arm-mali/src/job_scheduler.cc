@@ -5,6 +5,8 @@
 #include "job_scheduler.h"
 
 #include "magma_util/dlog.h"
+#include "msd_arm_connection.h"
+#include "msd_defs.h"
 #include "platform_trace.h"
 
 JobScheduler::JobScheduler(Owner* owner, uint32_t job_slots)
@@ -74,8 +76,10 @@ void JobScheduler::TryToSchedule()
                         atom->SetExecutionStarted();
                         executing_atoms_[slot] = atom;
                         atoms_.erase(it);
+                        std::shared_ptr<MsdArmConnection> connection = atom->connection().lock();
+                        msd_client_id_t id = connection ? connection->client_id() : 0;
                         TRACE_ASYNC_BEGIN("magma", AtomRunningString(slot),
-                                          executing_atoms_[slot]->trace_nonce());
+                                          executing_atoms_[slot]->trace_nonce(), "id", id);
                         owner_->RunAtom(executing_atoms_[slot].get());
                         break;
                     }
