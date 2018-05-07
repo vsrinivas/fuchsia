@@ -161,6 +161,7 @@ def main():
                 crate_name = crate_info["crate_name"]
                 crates[crate_name] = crate_info
 
+    create_base_directory(args.out_deps_data)
     with open(args.out_deps_data, "w") as file:
         file.write(json.dumps({
             "crates": crates,

@@ -5,7 +5,17 @@
 
 import argparse
 import json
+import os
 import sys
+
+# Creates the directory containing the given file.
+def create_base_directory(file):
+    path = os.path.dirname(file)
+    try:
+        os.makedirs(path)
+    except os.error:
+        # Already existed.
+        pass
 
 def main():
     parser = argparse.ArgumentParser(
@@ -18,6 +28,7 @@ def main():
                         required=True)
     args = parser.parse_args()
 
+    create_base_directory(args.output)
     with open(args.output, "w") as file:
         file.write(json.dumps({
             "crate_name": args.crate_name,

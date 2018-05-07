@@ -184,6 +184,7 @@ def main():
             return retcode
 
     # Write output dependency info
+    create_base_directory(args.out_info)
     with open(args.out_info, "w") as file:
         file.write(json.dumps({
             "crate_name": args.crate_name,
