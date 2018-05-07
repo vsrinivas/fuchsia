@@ -49,6 +49,11 @@ public:
     // Removes all directory entries.
     void RemoveAllEntries();
 
+    // Checks if directory is empty.
+    // Be careful while using this function if using this Dir in multiple
+    // threads.
+    bool IsEmpty() const;
+
     // |Vnode| implementation:
     zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
     zx_status_t Getattr(vnattr_t* a) final;
@@ -76,7 +81,7 @@ private:
     };
     using EntryList = fbl::DoublyLinkedList<fbl::unique_ptr<Entry>>;
 
-    fbl::Mutex mutex_;
+    mutable fbl::Mutex mutex_;
 
     uint64_t next_node_id_ __TA_GUARDED(mutex_) = kDotId + 1;
     EntryList entries_ __TA_GUARDED(mutex_);

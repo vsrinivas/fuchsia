@@ -125,6 +125,11 @@ void PseudoDir::RemoveAllEntries() {
     entries_.clear();
 }
 
+bool PseudoDir::IsEmpty() const {
+    fbl::AutoLock lock(&mutex_);
+    return entries_.is_empty();
+}
+
 PseudoDir::Entry::Entry(uint64_t id, fbl::String name, fbl::RefPtr<fs::Vnode> node)
     : id_(id), name_(fbl::move(name)), node_(fbl::move(node)) {
 }
