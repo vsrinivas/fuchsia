@@ -11,6 +11,9 @@ import sys
 from layout_builder import Builder, process_manifest
 
 
+def remove_dashes(name):
+    return name.replace("-", "_")
+
 class CppBuilder(Builder):
 
     def __init__(self, output, overlay, debug):
@@ -102,6 +105,8 @@ class CppBuilder(Builder):
                   'skipping %s.' % atom.id)
             return
 
+        atom_name = remove_dashes(atom.id.name)
+
         hdrs = []
         srcs = []
         deps = []
@@ -110,7 +115,7 @@ class CppBuilder(Builder):
             destination = file.destination
             extension = os.path.splitext(destination)[1][1:]
             if extension == 'so' or extension == 'o':
-                dest = os.path.join(self.output, 'pkg', atom.id.name,'arch',
+                dest = os.path.join(self.output, 'pkg', atom_name,'arch',
                                     self.metadata.target_arch, destination)
                 if os.path.isfile(dest):
                     raise Exception('File already exists: %s.' % dest)
@@ -125,7 +130,7 @@ class CppBuilder(Builder):
                 continue
             elif (extension == 'h' or extension == 'modulemap' or
                     extension == 'inc' or extension == 'rs'):
-                dest = os.path.join(self.output, 'pkg', atom.id.name,
+                dest = os.path.join(self.output, 'pkg', atom_name,
                                     destination)
                 self.make_dir(dest)
                 shutil.copyfile(file.source, dest)
@@ -135,14 +140,17 @@ class CppBuilder(Builder):
                 raise Exception('Error: unknow file extension "%s" for %s.' %
                                 (extension, atom.id))
         for dep_id in atom.deps:
-            dep = os.path.join("//pkg/", dep_id.name)
+            dep_name = remove_dashes(dep_id.name)
+            dep = os.path.join("//pkg/", dep_name)
             deps.append(dep)
 
-        self.write_build_file(atom.id.name, atom.tags['type'], hdrs, srcs, deps)
+        self.write_build_file(atom_name, atom.tags['type'], hdrs, srcs, deps)
 
 
     def install_cpp_source_atom(self, atom):
         '''Installs a source atom from the "cpp" domain.'''
+
+        atom_name = remove_dashes(atom.id.name)
 
         hdrs = []
         srcs = []
@@ -150,7 +158,7 @@ class CppBuilder(Builder):
         if self.is_overlay:
             return
         for file in atom.files:
-            dest = os.path.join(self.output, 'pkg', atom.id.name,
+            dest = os.path.join(self.output, 'pkg', atom_name,
                                 file.destination)
             self.make_dir(dest)
             shutil.copyfile(file.source, dest)
@@ -169,7 +177,7 @@ class CppBuilder(Builder):
             deps.append(dep)
 
 
-        self.write_build_file(atom.id.name, atom.tags['type'], hdrs, srcs, deps)
+        self.write_build_file(atom_name, atom.tags['type'], hdrs, srcs, deps)
 
 
     def install_sysroot_atom(self, atom):
@@ -194,6 +202,7 @@ class CppBuilder(Builder):
         shutil.copyfile(file.source, destination)
 
     def install_fidl_atom(self, atom): pass
+
 
 
 def main():
