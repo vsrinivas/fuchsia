@@ -1,0 +1,5 @@
+{
+    "packages": {
+        "audio_policy": "//garnet/bin/media/audio_policy"
+    }
+}

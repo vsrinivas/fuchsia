@@ -36,6 +36,8 @@
         "garnet/packages/prod/mdns_standalone",
         "garnet/packages/prod/media",
         "garnet/packages/prod/media_audio",
+        "garnet/packages/prod/media_player",
+        "garnet/packages/prod/media_policy",
         "garnet/packages/prod/netconnector",
         "garnet/packages/prod/netstack",
         "garnet/packages/prod/netstack_tools",

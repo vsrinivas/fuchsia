@@ -1,6 +1,6 @@
 {
     "imports": [
-      "garnet/packages/config/services"
+        "garnet/packages/config/services"
     ],
     "packages": {
         "thermd_config": "//garnet/bin/thermd:config"
