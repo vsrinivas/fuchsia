@@ -32,9 +32,7 @@ package("netstack_tools") {
   deps = [
     "ifconfig",
     "ifinfo",
-    "netstack_service_test",
     "netstat",
-    "//garnet/public/lib/netstack/fidl",
   ]
 
   binaries = [
@@ -43,9 +41,6 @@ package("netstack_tools") {
     },
     {
       name = "ifinfo"
-    },
-    {
-      name = "netstack_service_test"
     },
     {
       name = "netstat"
@@ -60,7 +55,14 @@ package("netstack_gotests") {
   deps = [
     ":netstack_filter_test",
     ":netstack_netiface_test",
+    "netstack_service_test",
     "//garnet/go/src/netstack/netstat:netstack_netstat_test",
+  ]
+
+  binaries = [
+    {
+      name = "netstack_service_test"
+    },
   ]
 
   tests = [
