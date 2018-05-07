@@ -6,14 +6,14 @@
 
 #include <string>
 
-#include <fs/managed-vfs.h>
+#include <fs/synchronous-vfs.h>
 #include <fs/pseudo-dir.h>
 #include <fs/service.h>
 
 struct svc_dir {
   explicit svc_dir(async_t* async) : vfs(async) {}
 
-  fs::ManagedVfs vfs;
+  fs::SynchronousVfs vfs;
   fbl::RefPtr<fs::PseudoDir> root;
 };
 

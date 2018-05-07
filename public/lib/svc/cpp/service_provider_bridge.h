@@ -6,7 +6,7 @@
 #define LIB_SVC_CPP_SERVICE_PROVIDER_BRIDGE_H_
 
 #include <fbl/ref_ptr.h>
-#include <fs/managed-vfs.h>
+#include <fs/synchronous-vfs.h>
 #include <lib/zx/channel.h>
 
 #include <functional>
@@ -87,7 +87,7 @@ class ServiceProviderBridge : public component::ServiceProvider {
   void ConnectToService(fidl::StringPtr service_name,
                         zx::channel channel) override;
 
-  fs::ManagedVfs vfs_;
+  fs::SynchronousVfs vfs_;
   fidl::BindingSet<component::ServiceProvider> bindings_;
   fbl::RefPtr<ServiceProviderDir> directory_;
 

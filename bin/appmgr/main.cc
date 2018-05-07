@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <fs/managed-vfs.h>
+#include <fs/synchronous-vfs.h>
 #include <fs/pseudo-dir.h>
 #include <fs/service.h>
 #include <fs/vfs.h>
@@ -28,7 +28,7 @@ namespace {
 
 constexpr char kRootLabel[] = "app";
 
-void PublishRootDir(component::Realm* root, fs::ManagedVfs* vfs) {
+void PublishRootDir(component::Realm* root, fs::SynchronousVfs* vfs) {
   static zx_handle_t request = zx_get_startup_handle(PA_DIRECTORY_REQUEST);
   if (request == ZX_HANDLE_INVALID)
     return;
@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  fs::ManagedVfs vfs(loop.async());
+  fs::SynchronousVfs vfs(loop.async());
   component::RootApplicationLoader root_loader;
   fbl::RefPtr<fs::PseudoDir> directory(fbl::AdoptRef(new fs::PseudoDir()));
   directory->AddEntry(
@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
   if (vfs.ServeDirectory(directory, std::move(h2)) != ZX_OK)
     return -1;
   component::Realm root_realm(nullptr, std::move(h1), kRootLabel);
-  fs::ManagedVfs publish_vfs(loop.async());
+  fs::SynchronousVfs publish_vfs(loop.async());
   PublishRootDir(&root_realm, &vfs);
 
   component::ApplicationControllerPtr sysmgr;

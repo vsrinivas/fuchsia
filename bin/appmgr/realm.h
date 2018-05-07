@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_APPMGR_REALM_H_
 #define GARNET_BIN_APPMGR_REALM_H_
 
-#include <fs/managed-vfs.h>
+#include <fs/synchronous-vfs.h>
 #include <zx/channel.h>
 
 #include <iosfwd>
@@ -95,7 +95,7 @@ class Realm {
   fxl::RefPtr<Namespace> default_namespace_;
 
   RealmHubHolder hub_;
-  fs::ManagedVfs info_vfs_;
+  fs::SynchronousVfs info_vfs_;
 
   std::unordered_map<Realm*,
                      std::unique_ptr<ApplicationEnvironmentControllerImpl>>

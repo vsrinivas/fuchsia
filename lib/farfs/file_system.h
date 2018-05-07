@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_FARFS_FILE_SYSTEM_H_
 #define GARNET_LIB_FARFS_FILE_SYSTEM_H_
 
-#include <fs/managed-vfs.h>
+#include <fs/synchronous-vfs.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <vmofs/vmofs.h>
@@ -51,7 +51,7 @@ class FileSystem {
   // The owning reference to the vmo is stored inside |reader_| as a file
   /// descriptor.
   zx_handle_t vmo_;
-  fs::ManagedVfs vfs_;
+  fs::SynchronousVfs vfs_;
   std::unique_ptr<ArchiveReader> reader_;
   fbl::RefPtr<vmofs::VnodeDir> directory_;
 };

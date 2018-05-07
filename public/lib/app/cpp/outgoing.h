@@ -103,7 +103,7 @@ class Outgoing {
   }
 
  private:
-  fs::ManagedVfs vfs_;
+  fs::SynchronousVfs vfs_;
   fbl::RefPtr<fs::PseudoDir> root_dir_;
   fbl::RefPtr<fs::PseudoDir> public_dir_;
   fbl::RefPtr<fs::PseudoDir> debug_dir_;
