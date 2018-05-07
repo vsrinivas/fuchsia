@@ -9,6 +9,7 @@ members =  [
   "bin/logger",
   "bin/power_manager",
   "bin/wlan-hw-sim",
+  "bin/wlanstack",
   "bin/wlantool",
   "bin/xi_core",
   "drivers/wlan/testing/util",

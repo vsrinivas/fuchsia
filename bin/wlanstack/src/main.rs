@@ -36,17 +36,16 @@ use parking_lot::Mutex;
 use std::sync::Arc;
 use wlan_service::DeviceServiceMarker;
 
-const MAX_LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
+const MAX_LOG_LEVEL: log::LogLevelFilter = log::LogLevelFilter::Info;
 
 const PHY_PATH: &str = "/dev/class/wlanphy";
 const IFACE_PATH: &str = "/dev/class/wlanif";
 
-static LOGGER: logger::Logger = logger::Logger;
-
 fn main() -> Result<(), Error> {
-    log::set_logger(&LOGGER)?;
-    log::set_max_level(MAX_LOG_LEVEL);
-
+    log::set_logger(|max_level| {
+        max_level.set(MAX_LOG_LEVEL);
+        Box::new(logger::Logger)
+    })?;
     info!("Starting");
 
     let mut exec = async::Executor::new().context("error creating event loop")?;

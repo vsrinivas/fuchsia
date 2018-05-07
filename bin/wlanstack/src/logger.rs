@@ -4,27 +4,27 @@
 
 #![deny(warnings)]
 
-use log;
+use log::{self, LogLevel, LogMetadata, LogRecord};
 
-const LOG_LEVEL: log::Level = log::Level::Debug;
+const LOG_LEVEL: LogLevel = LogLevel::Debug;
 
 pub struct Logger;
 
-fn short_log_level(level: &log::Level) -> &'static str {
+fn short_log_level(level: &LogLevel) -> &'static str {
     match *level {
-        log::Level::Error => "E",
-        log::Level::Warn => "W",
-        log::Level::Info => "I",
-        log::Level::Debug => "D",
-        log::Level::Trace => "T",
+        LogLevel::Error => "E",
+        LogLevel::Warn => "W",
+        LogLevel::Info => "I",
+        LogLevel::Debug => "D",
+        LogLevel::Trace => "T",
     }
 }
 
 impl log::Log for Logger {
-    fn enabled(&self, metadata: &log::Metadata) -> bool {
+    fn enabled(&self, metadata: &LogMetadata) -> bool {
         metadata.level() <= LOG_LEVEL
     }
-    fn log(&self, record: &log::Record) {
+    fn log(&self, record: &LogRecord) {
         if self.enabled(record.metadata()) {
             println!(
                 "{} [{}]: {}",
@@ -34,5 +34,4 @@ impl log::Log for Logger {
             );
         }
     }
-    fn flush(&self) {}
 }
