@@ -28,9 +28,15 @@ Read this all before? Here are the common case commands
 3. Make the install media
     * [[ insert USB drive into host ]]
     * `fx mkzedboot <usb_drive_device_path>`
-        * Mac users: If you see 'ERROR: Can't open /dev/disk[n]: Resource busy'
-          then you will have to unmount the usb drive.
-          For this run `hdiutil unmount /dev/disk[n]`
+        * Mac users:
+          - The USB drives connected to your computer can be found by running
+            `diskutil list | grep external`.
+            They are usually of the form /dev/disk[n], e.g. '/dev/disk2'.
+          - If you see 'ERROR: Can't open /dev/disk[n]: Resource busy'
+            then you will have to unmount the usb drive.
+            For this run `hdiutil unmount /dev/disk[n]`.
+            If this does not fix the error, try reformating the drive:
+            `diskutil eraseDisk JHFSX <name_of_the_usb_stick> /dev/disk[n]`.
 4. Boot and pave
     * [[ move USB drive to target ]]
     * `fx boot <efi|vboot|nuc|cros|..>`
