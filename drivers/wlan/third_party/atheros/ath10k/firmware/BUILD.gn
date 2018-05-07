@@ -49,7 +49,7 @@ copy("ath10k-firmware-copy") {
 }
 
 package("atheros-firmware") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     # The copy step has to be in the shared-library toolchain to use the
