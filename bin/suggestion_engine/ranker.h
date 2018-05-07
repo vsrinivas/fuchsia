@@ -14,6 +14,7 @@ namespace modular {
 // Base class for performing ranking on a suggestion.
 class Ranker {
  public:
+  Ranker();
   virtual ~Ranker();
 
   // Ranks a suggestion based on a given query (which might be empty) and

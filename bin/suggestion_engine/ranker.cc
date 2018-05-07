@@ -6,6 +6,8 @@
 
 namespace modular {
 
+Ranker::Ranker() = default;
+
 Ranker::~Ranker() = default;
 
 }  // namespace modular
