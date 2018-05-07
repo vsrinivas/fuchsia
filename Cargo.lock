@@ -688,17 +688,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fidl_wlantap"
-version = "0.1.0"
-dependencies = [
- "fidl 0.1.0",
- "fidl_wlan_device 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "fidl_xi"
 version = "0.1.0"
 dependencies = [
@@ -1662,21 +1651,6 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "wlan-hw-sim"
-version = "0.1.0"
-dependencies = [
- "bitfield 0.12.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "byteorder 1.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "fidl_wlan_device 0.1.0",
- "fidl_wlantap 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "wlantap-client 0.1.0",
-]
-
-[[package]]
 name = "wlan-rsn"
 version = "0.1.0"
 dependencies = [
@@ -1709,21 +1683,6 @@ dependencies = [
  "fidl_wlan_device 0.1.0",
  "fuchsia-async 0.1.0",
  "fuchsia-wlan-dev 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "wlantap-client"
-version = "0.1.0"
-dependencies = [
- "byteorder 1.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "fdio 0.2.0",
- "fidl 0.1.0",
- "fidl_wlan_device 0.1.0",
- "fidl_wlantap 0.1.0",
- "fuchsia-async 0.1.0",
  "fuchsia-zircon 0.3.4",
  "futures 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]

@@ -48,12 +48,6 @@
     "public": false
   },
   {
-    "library_name": "wlantap",
-    "fidl_target": "//garnet/lib/wlan/fidl:wlantap",
-    "library_deps": ["wlan_device"],
-    "public": false
-  },
-  {
     "library_name": "wlan_service",
     "fidl_target": "//garnet/public/lib/wlan/fidl:service",
     "library_deps": [],
