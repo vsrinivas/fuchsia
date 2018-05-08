@@ -52,6 +52,10 @@ static int aml_start_thread(void* arg) {
         goto fail;
     }
 */
+    if ((status = aml_mali_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "aml_mali_init failed: %d\n", status);
+        goto fail;
+    }
     if ((status = aml_usb_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "aml_usb_init failed: %d\n", status);
         goto fail;

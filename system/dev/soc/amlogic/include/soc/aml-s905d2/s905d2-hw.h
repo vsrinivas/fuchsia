@@ -26,6 +26,12 @@
 #define S905D2_USBPHY21_BASE            0xff63a000
 #define S905D2_USBPHY21_LENGTH          0x2000
 
+#define S905D2_HIU_BASE                 0xff63c000
+#define S905D2_HIU_LENGTH               0x2000
+
+#define S905D2_MALI_BASE                0xffe40000
+#define S905D2_MALI_LENGTH              0x40000
+
 // Reset register offsets
 #define S905D2_RESET0_REGISTER          0x04
 #define S905D2_RESET1_REGISTER          0x08
@@ -59,5 +65,8 @@
 #define S905D2_GPIO_IRQ_5               99
 #define S905D2_GPIO_IRQ_6               100
 #define S905D2_GPIO_IRQ_7               101
+#define S905D2_MALI_IRQ_GP              192
+#define S905D2_MALI_IRQ_GPMMU           193
+#define S905D2_MALI_IRQ_PP              194
 #define S905D2_A0_GPIO_IRQ_0            238
 #define S905D2_A0_GPIO_IRQ_1            239
