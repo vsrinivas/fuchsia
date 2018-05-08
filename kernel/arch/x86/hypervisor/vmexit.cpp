@@ -197,6 +197,9 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
                 reinterpret_cast<uint32_t*>(&guest_state->rdx));
         switch (leaf) {
         case X86_CPUID_MODEL_FEATURES:
+            // Override the initial local APIC ID. From Vol 2, Table 3-8.
+            guest_state->rbx &= ~(0xff << 24);
+            guest_state->rbx |= (vmcs->Read(VmcsField16::VPID) - 1) << 24;
             // Enable the hypervisor bit.
             guest_state->rcx |= 1u << X86_FEATURE_HYPERVISOR.bit;
             // Enable the x2APIC bit.
@@ -211,6 +214,9 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
             guest_state->rdx &= ~(1u << X86_FEATURE_SEP.bit);
             // Disable the Thermal Monitor bit.
             guest_state->rdx &= ~(1u << X86_FEATURE_TM.bit);
+            break;
+        case X86_CPUID_TOPOLOGY:
+            guest_state->rdx = vmcs->Read(VmcsField16::VPID) - 1;
             break;
         case X86_CPUID_XSAVE:
             if (subleaf == 0) {
