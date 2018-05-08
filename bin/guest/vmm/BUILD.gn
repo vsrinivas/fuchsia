@@ -89,12 +89,11 @@ executable("vmm_unittests") {
 
   sources = [
     "guest_config-unittest.cc",
-    "run_all_unittests.cc",
   ]
 
   deps = [
     ":lib",
-    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
     "//zircon/public/lib/fbl",
   ]
 }
