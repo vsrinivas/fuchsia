@@ -24,6 +24,20 @@ executable("bin") {
   output_name = "suggestion_engine"
 
   sources = [
+    "suggestion_engine_main.cc",
+  ]
+
+  deps = [
+    ":debug",
+    ":suggestion_engine_impl",
+    "//peridot/public/lib:fidl",
+    "//garnet/public/lib/app/cpp",
+    "//peridot/public/lib/app_driver/cpp",
+  ]
+}
+
+source_set("suggestion_engine_impl") {
+  sources = [
     "auto_select_first_query_listener.cc",
     "auto_select_first_query_listener.h",
     "media_player.cc",
@@ -52,7 +66,6 @@ executable("bin") {
     ":state",
     ":timeline_stories_filter",
     ":timeline_stories_watcher",
-    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/media/timeline",
@@ -60,7 +73,6 @@ executable("bin") {
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/util:rate_limited_retry",
     "//peridot/public/lib:fidl",
-    "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/context/cpp:context_helper",
   ]
 }

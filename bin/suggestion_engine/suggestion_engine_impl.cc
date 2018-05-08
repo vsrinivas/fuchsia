@@ -7,8 +7,6 @@
 #include <fuchsia/cpp/modular.h>
 #include <string>
 
-#include "lib/app/cpp/application_context.h"
-#include "lib/app_driver/cpp/app_driver.h"
 #include "lib/context/cpp/context_helper.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -33,30 +31,14 @@ constexpr int kQueryActionMaxResults = 1;
 
 }  // namespace
 
-SuggestionEngineImpl::SuggestionEngineImpl(
-    component::ApplicationContext* const app_context)
+SuggestionEngineImpl::SuggestionEngineImpl(media::AudioServerPtr audio_server)
     : debug_(std::make_shared<SuggestionDebugImpl>()),
       next_processor_(debug_),
-      query_processor_(
-          app_context->ConnectToEnvironmentService<media::AudioServer>(),
-          debug_),
+      query_processor_(std::move(audio_server), debug_),
       context_listener_binding_(this),
       auto_select_first_query_listener_(this),
       auto_select_first_query_listener_binding_(
-          &auto_select_first_query_listener_) {
-  app_context->outgoing().AddPublicService<SuggestionEngine>(
-      [this](fidl::InterfaceRequest<SuggestionEngine> request) {
-        bindings_.AddBinding(this, std::move(request));
-      });
-  app_context->outgoing().AddPublicService<SuggestionProvider>(
-      [this](fidl::InterfaceRequest<SuggestionProvider> request) {
-        suggestion_provider_bindings_.AddBinding(this, std::move(request));
-      });
-  app_context->outgoing().AddPublicService<SuggestionDebug>(
-      [this](fidl::InterfaceRequest<SuggestionDebug> request) {
-        debug_bindings_.AddBinding(debug_.get(), std::move(request));
-      });
-}
+          &auto_select_first_query_listener_) {}
 
 SuggestionEngineImpl::~SuggestionEngineImpl() = default;
 
@@ -72,6 +54,21 @@ void SuggestionEngineImpl::AddNextProposal(ProposalPublisherImpl* source,
 void SuggestionEngineImpl::RemoveNextProposal(const std::string& component_url,
                                               const std::string& proposal_id) {
   next_processor_.RemoveProposal(component_url, proposal_id);
+}
+
+void SuggestionEngineImpl::Connect(
+    fidl::InterfaceRequest<SuggestionEngine> request) {
+  bindings_.AddBinding(this, std::move(request));
+}
+
+void SuggestionEngineImpl::Connect(
+    fidl::InterfaceRequest<SuggestionProvider> request) {
+  suggestion_provider_bindings_.AddBinding(this, std::move(request));
+}
+
+void SuggestionEngineImpl::Connect(
+    fidl::InterfaceRequest<SuggestionDebug> request) {
+  debug_bindings_.AddBinding(debug_.get(), std::move(request));
 }
 
 // |SuggestionProvider|
@@ -358,23 +355,3 @@ void SuggestionEngineImpl::OnContextUpdate(ContextUpdate update) {
 }
 
 }  // namespace modular
-
-int main(int argc, const char** argv) {
-  fsl::MessageLoop loop;
-  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  auto suggestion_engine =
-      std::make_unique<modular::SuggestionEngineImpl>(app_context.get());
-  fxl::WeakPtr<modular::SuggestionDebugImpl> debug = suggestion_engine->debug();
-  debug->GetIdleWaiter()->SetMessageLoop(&loop);
-  modular::AppDriver<modular::SuggestionEngineImpl> driver(
-      app_context->outgoing().deprecated_services(), std::move(suggestion_engine),
-      [&loop] { loop.QuitNow(); });
-
-  // The |WaitUntilIdle| debug functionality escapes the main message loop to
-  // perform its test.
-  do {
-    loop.Run();
-  } while (debug && debug->GetIdleWaiter()->FinishIdleCheck());
-
-  return 0;
-}

@@ -10,8 +10,6 @@
 #include <string>
 #include <vector>
 
-
-#include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
@@ -64,7 +62,7 @@ class SuggestionEngineImpl : public ContextListener,
                              public SuggestionEngine,
                              public SuggestionProvider {
  public:
-  SuggestionEngineImpl(component::ApplicationContext* const app_context);
+  SuggestionEngineImpl(media::AudioServerPtr audio_server);
   ~SuggestionEngineImpl();
 
   fxl::WeakPtr<SuggestionDebugImpl> debug();
@@ -76,6 +74,12 @@ class SuggestionEngineImpl : public ContextListener,
   void RemoveSourceClient(const std::string& component_url) {
     proposal_publishers_.erase(component_url);
   }
+
+  void Connect(fidl::InterfaceRequest<SuggestionEngine> request);
+
+  void Connect(fidl::InterfaceRequest<SuggestionDebug> request);
+
+  void Connect(fidl::InterfaceRequest<SuggestionProvider> request);
 
   // Should only be called from ProposalPublisherImpl.
   void AddNextProposal(ProposalPublisherImpl* source, Proposal proposal);
