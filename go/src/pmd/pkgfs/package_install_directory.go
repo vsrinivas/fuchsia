@@ -191,9 +191,15 @@ func (f *installFile) open() error {
 	if os.IsPermission(err) {
 		f.blob.Close()
 
-		f.fs.index.Fulfill(f.name)
+		pkgs := f.fs.index.Fulfill(f.name)
 		if f.isPkg {
 			importPackage(f.fs, f.name)
+		} else {
+			// in theory this never happens because this means the incoming blob
+			// already existed in blobfs and therefore we shouldn't have a
+			// a pending fulfillment which just happened, but this shouldn't be
+			// harmful
+			notifyActivation(f.fs, pkgs)
 		}
 		return fs.ErrAlreadyExists
 	}
