@@ -45,7 +45,7 @@ typedef struct {
 #define IOCTL_THERMAL_SET_TRIP \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_THERMAL, 2)
 
-// Get an event to get trip point notifications on. ZX_SIGNAL_USER_0 is changed
+// Get an event to get trip point notifications on. ZX_USER_SIGNAL_0 is changed
 // when either trip point is reached. It is deasserted when the state is read
 // via IOCTL_THERMAL_GET_INFO.
 #define IOCTL_THERMAL_GET_STATE_CHANGE_EVENT \

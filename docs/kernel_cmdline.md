@@ -301,7 +301,7 @@ you to pass arguments to an executable.
 
 This option requests that *command* be run once the blob partition is
 mounted. The given command is expected to mount /system, and then signal its
-process handle with `ZX_SIGNAL_USER0`.
+process handle with `ZX_USER_SIGNAL_0`.
 
 *command* may not assume that any other filesystem has been mounted. If
 `zircon.system.blob-init-arg` is set, it will be provided as the first

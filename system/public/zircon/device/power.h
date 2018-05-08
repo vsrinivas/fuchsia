@@ -73,7 +73,7 @@ typedef struct {
 #define IOCTL_POWER_GET_BATTERY_INFO \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_POWER, 2)
 
-// Get an event to get state change notifications on. ZX_SIGNAL_USER_0 is
+// Get an event to get state change notifications on. ZX_USER_SIGNAL_0 is
 // asserted when power_info_t.state is changed. It is deasserted when the
 // state is read via IOCTL_POWER_GET_INFO.
 #define IOCTL_POWER_GET_STATE_CHANGE_EVENT \
