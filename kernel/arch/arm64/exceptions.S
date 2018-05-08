@@ -451,7 +451,8 @@ LOCAL_FUNCTION_LABEL(arm64_syscall_dispatcher)
     cmp  x16, #ZX_SYS_COUNT
     bhs  .Lunknown_syscall
     // Jump to the right syscall wrapper.
-    adr  x12, .Lcall_wrapper_table
+    // call_wrapper_table is 4096 byte aligned so just use adrp
+    adrp x12, call_wrapper_table
     ldr  x12, [x12, x16, LSL#3]
     br   x12
 .Lunknown_syscall:
@@ -487,8 +488,9 @@ END_FUNCTION(arm64_syscall_dispatcher)
 // Adds the label for the jump table.
 .macro start_syscall_dispatch
     .pushsection .rodata.syscall-table,"a",%progbits
-    .balign 8
-    .Lcall_wrapper_table:
+    // align on 4096 byte boundary to save an instruction on table lookup
+    .balign 4096
+    call_wrapper_table:
     .popsection
 .endm
 
