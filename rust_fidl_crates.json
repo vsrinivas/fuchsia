@@ -18,12 +18,6 @@
     "public": true
   },
   {
-    "library_name": "device_settings",
-    "fidl_target": "//garnet/public/lib/device_settings/fidl:fidl",
-    "library_deps": [],
-    "public": true
-  },
-  {
     "library_name": "xi",
     "fidl_target": "//garnet/public/lib/xi/fidl:fidl",
     "library_deps": [],

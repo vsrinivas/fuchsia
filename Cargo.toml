@@ -4,7 +4,6 @@
 members =  [
   "bin/bluetooth_tools/bthci_fake_util",
   "bin/bluetooth_tools/btsnoop",
-  "bin/device_settings",
   "bin/power_manager",
   "bin/wlantool",
   "bin/xi_core",
@@ -40,7 +39,6 @@ members =  [
   "public/rust/fidl_crates/fidl_bluetooth_gatt",
   "public/rust/fidl_crates/fidl_bluetooth_low_energy",
   "public/rust/fidl_crates/fidl_component",
-  "public/rust/fidl_crates/fidl_device_settings",
   "public/rust/fidl_crates/fidl_echo2",
   "public/rust/fidl_crates/fidl_geometry",
   "public/rust/fidl_crates/fidl_gfx",
@@ -69,7 +67,6 @@ fidl_bluetooth_gatt = { path = "public/rust/fidl_crates/fidl_bluetooth_gatt" }
 fidl_bluetooth_host = { path = "lib/rust/fidl_crates/fidl_bluetooth_host" }
 fidl_bluetooth_low_energy = { path = "public/rust/fidl_crates/fidl_bluetooth_low_energy" }
 fidl_component = { path = "public/rust/fidl_crates/fidl_component" }
-fidl_device_settings = { path = "public/rust/fidl_crates/fidl_device_settings" }
 fidl_echo2 = { path = "public/rust/fidl_crates/fidl_echo2" }
 fidl_geometry = { path = "public/rust/fidl_crates/fidl_geometry" }
 fidl_gfx = { path = "public/rust/fidl_crates/fidl_gfx" }

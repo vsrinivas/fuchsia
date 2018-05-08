@@ -2,13 +2,29 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rust_binary.gni")
+import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
 
-rust_binary("bin") {
+rustc_binary("bin") {
+  name = "device_settings_manager"
   with_unit_tests = true
 
-  name = "device_settings_manager"
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl:fidl-rustc",
+    "//garnet/public/lib/device_settings/fidl:fidl-rustc",
+    "//garnet/public/rust/crates/fdio:fdio-rustc",
+    "//garnet/public/rust/crates/fuchsia-app:fuchsia-app-rustc",
+    "//garnet/public/rust/crates/fuchsia-async:fuchsia-async-rustc",
+    "//garnet/public/rust/crates/fuchsia-syslog:fuchsia-syslog-rustc",
+    "//garnet/public/rust/crates/fuchsia-zircon:fuchsia-zircon-rustc",
+    "//garnet/public/rust/crates/mxruntime:mxruntime-rustc",
+    "//garnet/public/rust/crates/mxruntime/mxruntime-sys:mxruntime-sys-rustc",
+    "//third_party/rust-crates/rustc_deps:bytes",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
+    "//third_party/rust-crates/rustc_deps:tempdir",
+  ]
 }
 
 package("device_settings_manager") {
@@ -16,7 +32,7 @@ package("device_settings_manager") {
     ":bin",
   ]
 
-  binary = "device_settings_manager"
+  binary = "rust_crates/device_settings_manager"
 
   meta = [
     {
@@ -40,7 +56,7 @@ package("device_settings_manager_tests") {
 
   tests = [
     {
-      name = "device_settings_manager-bin-unit-test"
+      name = "device_settings_manager_bin_test_rustc"
     },
   ]
 }
