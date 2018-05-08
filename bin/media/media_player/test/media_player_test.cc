@@ -31,6 +31,14 @@ class MediaPlayerTester {
     FXL_LOG(INFO) << "creating player";
     media_player_ =
         application_context_->ConnectToEnvironmentService<MediaPlayer>();
+    media_player_.events().StatusChanged = [this](MediaPlayerStatus status) {
+      if (status.end_of_stream) {
+        FXL_LOG(INFO) << "MediaPlayerTest "
+                      << (fake_audio_renderer_.expected() ? "SUCCEEDED"
+                                                          : "FAILED");
+        quit_callback_();
+      }
+    };
 
     fake_audio_renderer_.SetPtsUnits(48000, 1);
 
@@ -64,38 +72,17 @@ class MediaPlayerTester {
     media_player_->SetReaderSource(std::move(fake_reader_ptr));
     FXL_LOG(INFO) << "player created " << (media_player_ ? "ok" : "NULL PTR");
 
-    HandleStatusUpdates();
     FXL_LOG(INFO) << "calling play";
     media_player_->Play();
     FXL_LOG(INFO) << "called play";
   }
 
  private:
-  void HandleStatusUpdates(uint64_t version = media::kInitialStatus,
-                           MediaPlayerStatusPtr status = nullptr) {
-    if (status) {
-      if (status->end_of_stream) {
-        ended_ = true;
-        FXL_LOG(INFO) << "MediaPlayerTest "
-                      << (fake_audio_renderer_.expected() ? "SUCCEEDED"
-                                                          : "FAILED");
-        quit_callback_();
-      }
-    }
-
-    // Request a status update.
-    media_player_->GetStatus(
-        version, [this](uint64_t version, MediaPlayerStatus status) {
-          HandleStatusUpdates(version, fidl::MakeOptional(std::move(status)));
-        });
-  }
-
   std::unique_ptr<component::ApplicationContext> application_context_;
   fxl::Closure quit_callback_;
   FakeWavReader fake_reader_;
   FakeAudioRenderer fake_audio_renderer_;
   MediaPlayerPtr media_player_;
-  bool ended_ = false;
 };
 
 }  // namespace test

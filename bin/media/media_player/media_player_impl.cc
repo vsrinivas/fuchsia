@@ -64,42 +64,21 @@ MediaPlayerImpl::MediaPlayerImpl(
         return ZX_OK;
       })));
 
+  UpdateStatus();
   AddBinding(std::move(request));
 
   bindings_.set_empty_set_handler([this]() { quit_callback_(); });
 
   player_.SetUpdateCallback([this]() {
-    status_publisher_.SendUpdates();
+    SendStatusUpdates();
     Update();
   });
 
-  status_publisher_.SetCallbackRunner([this](GetStatusCallback callback,
-                                             uint64_t version) {
-    MediaPlayerStatus status;
-    status.timeline_transform =
-        fidl::MakeOptional(player_.timeline_function().ToTimelineTransform());
-    status.end_of_stream = player_.end_of_stream();
-    status.content_has_audio =
-        player_.content_has_medium(StreamType::Medium::kAudio);
-    status.content_has_video =
-        player_.content_has_medium(StreamType::Medium::kVideo);
-    status.audio_connected =
-        player_.medium_connected(StreamType::Medium::kAudio);
-    status.video_connected =
-        player_.medium_connected(StreamType::Medium::kVideo);
-
-    status.metadata = fxl::To<MediaMetadataPtr>(player_.metadata());
-
-    if (video_renderer_) {
-      status.video_size = SafeClone(video_renderer_->video_size());
-      status.pixel_aspect_ratio =
-          SafeClone(video_renderer_->pixel_aspect_ratio());
-    }
-
-    status.problem = SafeClone(player_.problem());
-
-    callback(version, std::move(status));
-  });
+  status_publisher_.SetCallbackRunner(
+      [this](GetStatusCallback callback, uint64_t version) {
+        UpdateStatus();
+        callback(version, fidl::Clone(status_));
+      });
 
   state_ = State::kInactive;
 }
@@ -139,7 +118,7 @@ void MediaPlayerImpl::MaybeCreateRenderer(StreamType::Medium medium) {
       if (!video_renderer_) {
         video_renderer_ = FidlVideoRenderer::Create();
         video_renderer_->SetGeometryUpdateCallback(
-            [this]() { status_publisher_.SendUpdates(); });
+            [this]() { SendStatusUpdates(); });
 
         player_.SetSinkSegment(RendererSinkSegment::Create(video_renderer_),
                                medium);
@@ -342,7 +321,7 @@ void MediaPlayerImpl::SetTimelineFunction(float rate,
                               media::TimelineRate(rate)),
       callback);
   transform_subject_time_ = media::kUnspecifiedTime;
-  status_publisher_.SendUpdates();
+  SendStatusUpdates();
 }
 
 void MediaPlayerImpl::SetHttpSource(fidl::StringPtr http_url) {
@@ -376,7 +355,7 @@ void MediaPlayerImpl::SetReader(std::shared_ptr<Reader> reader) {
 
   player_.SetSourceSegment(DemuxSourceSegment::Create(demux), [this]() {
     state_ = State::kFlushed;
-    status_publisher_.SendUpdates();
+    SendStatusUpdates();
     Update();
   });
 }
@@ -439,6 +418,43 @@ void MediaPlayerImpl::SetAudioRenderer(
 void MediaPlayerImpl::AddBinding(fidl::InterfaceRequest<MediaPlayer> request) {
   FXL_DCHECK(request);
   bindings_.AddBinding(this, std::move(request));
+
+  // Fire |StatusChanged| event for the new client.
+  bindings_.bindings().back()->events().StatusChanged(fidl::Clone(status_));
+}
+
+void MediaPlayerImpl::SendStatusUpdates() {
+  status_publisher_.SendUpdates();
+
+  UpdateStatus();
+
+  for (auto& binding : bindings_.bindings()) {
+    binding->events().StatusChanged(fidl::Clone(status_));
+  }
+}
+
+void MediaPlayerImpl::UpdateStatus() {
+  status_.timeline_transform =
+      fidl::MakeOptional(player_.timeline_function().ToTimelineTransform());
+  status_.end_of_stream = player_.end_of_stream();
+  status_.content_has_audio =
+      player_.content_has_medium(StreamType::Medium::kAudio);
+  status_.content_has_video =
+      player_.content_has_medium(StreamType::Medium::kVideo);
+  status_.audio_connected =
+      player_.medium_connected(StreamType::Medium::kAudio);
+  status_.video_connected =
+      player_.medium_connected(StreamType::Medium::kVideo);
+
+  status_.metadata = fxl::To<MediaMetadataPtr>(player_.metadata());
+
+  if (video_renderer_) {
+    status_.video_size = SafeClone(video_renderer_->video_size());
+    status_.pixel_aspect_ratio =
+        SafeClone(video_renderer_->pixel_aspect_ratio());
+  }
+
+  status_.problem = SafeClone(player_.problem());
 }
 
 }  // namespace media_player

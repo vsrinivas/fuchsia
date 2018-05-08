@@ -28,6 +28,8 @@ interface MediaPlayer {
   // Seeks to the specified position, specified in nanoseconds.
   6: Seek(int64 position);
 
+  // DEPRECATED - use StatusChanged.
+  // TODO(dalesat): Remove
   // Gets the status. To get the status immediately, call
   // GetStatus(kInitialStatus). To get updates thereafter, pass the version
   // sent in the previous callback.
@@ -38,7 +40,8 @@ interface MediaPlayer {
   8: SetGain(float32 db_gain);
 
   // Creates a video view.
-  9: CreateView(views_v1.ViewManager view_manager, request<views_v1_token.ViewOwner> view_owner);
+  9: CreateView(views_v1.ViewManager view_manager,
+                request<views_v1_token.ViewOwner> view_owner);
 
   // Used only for testing.
   // TODO(dalesat): Remove when we can test with dependency injection.
@@ -49,6 +52,10 @@ interface MediaPlayer {
 
   // Adds a new binding to this MediaPlayer.
   11: AddBinding(request<MediaPlayer> media_player);
+
+  // Provides current status immediately after binding and whenever status
+  // changes thereafter.
+  12: -> StatusChanged(MediaPlayerStatus @status);
 };
 
 // MediaPlayer status information.

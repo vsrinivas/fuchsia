@@ -98,6 +98,12 @@ class MediaPlayerImpl : public MediaPlayer {
                            int64_t reference_time,
                            fxl::Closure callback);
 
+  // Sends status updates to clients.
+  void SendStatusUpdates();
+
+  // Updates |status_|.
+  void UpdateStatus();
+
   component::ApplicationContext* application_context_;
   fxl::Closure quit_callback_;
   fidl::BindingSet<MediaPlayer> bindings_;
@@ -127,6 +133,7 @@ class MediaPlayerImpl : public MediaPlayer {
   int64_t program_range_min_pts_ = media::kMinTime;
 
   media::FidlPublisher<GetStatusCallback> status_publisher_;
+  MediaPlayerStatus status_;
 };
 
 }  // namespace media_player
