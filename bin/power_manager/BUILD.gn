@@ -2,13 +2,27 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rust_binary.gni")
+import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
 
-rust_binary("bin") {
+rustc_binary("bin") {
+  name = "power_manager"
   with_unit_tests = true
 
-  name = "power_manager"
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl:fidl-rustc",
+    "//garnet/public/lib/power_manager/fidl:fidl-rustc",
+    "//garnet/public/rust/crates/fdio:fdio-rustc",
+    "//garnet/public/rust/crates/fuchsia-app:fuchsia-app-rustc",
+    "//garnet/public/rust/crates/fuchsia-async:fuchsia-async-rustc",
+    "//garnet/public/rust/crates/fuchsia-syslog:fuchsia-syslog-rustc",
+    "//garnet/public/rust/crates/fuchsia-vfs/fuchsia-vfs-watcher",
+    "//garnet/public/rust/crates/fuchsia-zircon:fuchsia-zircon-rustc",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures",
+    "//third_party/rust-crates/rustc_deps:libc",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
+  ]
 }
 
 package("power_manager") {
@@ -16,7 +30,7 @@ package("power_manager") {
     ":bin",
   ]
 
-  binary = "power_manager"
+  binary = "rust_crates/power_manager"
 
   meta = [
     {
@@ -40,7 +54,7 @@ package("power_manager_tests") {
 
   tests = [
     {
-      name = "power_manager-bin-unit-test"
+      name = "power_manager_bin_test_rustc"
     },
   ]
 }

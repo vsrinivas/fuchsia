@@ -4,7 +4,6 @@
 members =  [
   "bin/bluetooth_tools/bthci_fake_util",
   "bin/bluetooth_tools/btsnoop",
-  "bin/power_manager",
   "bin/wlantool",
   "bin/xi_core",
   "bin/bluetooth_tests/integration",
@@ -29,7 +28,6 @@ members =  [
   "public/rust/crates/fuchsia-async",
   "public/rust/crates/fuchsia-syslog",
   "public/rust/crates/fuchsia-vfs",
-  "public/rust/crates/fuchsia-vfs/fuchsia-vfs-watcher",
   "public/rust/crates/fuchsia-zircon",
   "public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys",
   "public/rust/crates/mxruntime",
@@ -93,7 +91,6 @@ fuchsia-app = { path = "public/rust/crates/fuchsia-app" }
 fuchsia-syslog = { path = "public/rust/crates/fuchsia-syslog" }
 fuchsia-async = { path = "public/rust/crates/fuchsia-async" }
 fuchsia-bluetooth = { path = "lib/rust/crates/fuchsia-bluetooth" }
-fuchsia-vfs-watcher = { path = "public/rust/crates/fuchsia-vfs/fuchsia-vfs-watcher" }
 fuchsia-zircon = { path = "public/rust/crates/fuchsia-zircon" }
 fuchsia-zircon-sys = { path = "public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys" }
 mio = { path = "../third_party/rust-mirrors/mio" }

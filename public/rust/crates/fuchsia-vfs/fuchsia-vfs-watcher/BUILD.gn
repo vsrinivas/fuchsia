@@ -2,14 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rust_library.gni")
 import("//build/rust/rustc_library.gni")
 
-rust_library("fuchsia-vfs-watcher") {
-  with_unit_tests = true
-}
-
-rustc_library("fuchsia-vfs-watcher-rustc") {
+rustc_library("fuchsia-vfs-watcher") {
   name = "fuchsia_vfs_watcher"
   version = "0.1"
   with_unit_tests = true

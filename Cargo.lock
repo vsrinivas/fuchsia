@@ -738,17 +738,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fuchsia-vfs-watcher"
-version = "0.1.0"
-dependencies = [
- "fdio 0.2.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "tempdir 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "fuchsia-zircon"
 version = "0.3.4"
 dependencies = [
@@ -1134,24 +1123,6 @@ dependencies = [
  "chrono 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.43 (registry+https://github.com/rust-lang/crates.io-index)",
  "xml-rs 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "power_manager"
-version = "0.1.0"
-dependencies = [
- "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "fdio 0.2.0",
- "fidl 0.1.0",
- "fidl_power_manager 0.1.0",
- "fuchsia-app 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-syslog 0.1.0",
- "fuchsia-vfs-watcher 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.40 (registry+https://github.com/rust-lang/crates.io-index)",
- "parking_lot 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

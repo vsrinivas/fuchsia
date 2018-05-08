@@ -31,7 +31,7 @@ package("rust-crates-tests") {
     { name = "fuchsia_async-lib-unit-test" },
     { name = "fuchsia_async_lib_test_rustc" },
     { name = "fuchsia_vfs-lib-unit-test" },
-    { name = "fuchsia_vfs_watcher-lib-unit-test" },
+    { name = "fuchsia_vfs_watcher_lib_test_rustc" },
     { name = "fuchsia_zircon-lib-unit-test" },
     { name = "fuchsia_zircon_lib_test_rustc" },
     { name = "fuchsia_syslog-lib-unit-test" },

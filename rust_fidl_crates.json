@@ -78,12 +78,6 @@
     "public": true
   },
   {
-    "library_name": "power_manager",
-    "fidl_target": "//garnet/public/lib/power_manager/fidl:fidl",
-    "library_deps": [],
-    "public": true
-  },
-  {
     "library_name": "input",
     "fidl_target": "//garnet/public/lib/ui/input/fidl:fidl",
     "library_deps": [
