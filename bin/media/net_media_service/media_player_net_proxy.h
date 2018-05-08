@@ -67,6 +67,8 @@ class MediaPlayerNetProxy
 
   void HandleReceivedMessage(std::vector<uint8_t> message);
 
+  void SendStatusUpdates();
+
   netconnector::MessageRelay message_relay_;
   media::FidlPublisher<GetStatusCallback> status_publisher_;
   MediaPlayerStatusPtr status_;

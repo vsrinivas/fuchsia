@@ -27,9 +27,7 @@ MediaPlayerNetPublisher::MediaPlayerNetPublisher(
     NetMediaServiceImpl* owner)
     : NetMediaServiceImpl::ProductBase(owner),
       media_player_(media_player.Bind()),
-      responder_(media_player_.get(),
-                 service_name,
-                 owner->application_context()) {
+      responder_(media_player_, service_name, owner->application_context()) {
   FXL_DCHECK(owner);
 
   media_player_.set_error_handler([this]() {

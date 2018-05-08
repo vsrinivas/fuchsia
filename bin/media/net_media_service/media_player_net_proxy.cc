@@ -40,10 +40,11 @@ MediaPlayerNetProxy::MediaPlayerNetProxy(
 
   status_publisher_.SetCallbackRunner(
       [this](GetStatusCallback callback, uint64_t version) {
-        MediaPlayerStatus status_clone;
-        fidl::Clone(*status_, &status_clone);
-        callback(version, std::move(status_clone));
+        callback(version, fidl::Clone(*status_));
       });
+
+  // Fire |StatusChanged| event for the new client.
+  SendStatusUpdates();
 
   message_relay_.SetMessageReceivedCallback(
       [this](std::vector<uint8_t> message) { HandleReceivedMessage(message); });
@@ -136,6 +137,9 @@ void MediaPlayerNetProxy::SetAudioRenderer(
 void MediaPlayerNetProxy::AddBinding(
     fidl::InterfaceRequest<MediaPlayer> request) {
   MultiClientProduct::AddBinding(std::move(request));
+
+  // Fire |StatusChanged| event for the new client.
+  bindings().bindings().back()->events().StatusChanged(fidl::Clone(*status_));
 }
 
 void MediaPlayerNetProxy::SendTimeCheckMessage() {
@@ -187,8 +191,16 @@ void MediaPlayerNetProxy::HandleReceivedMessage(
         status_->timeline_transform->reference_time =
             remote_to_local_(status_->timeline_transform->reference_time);
       }
-      status_publisher_.SendUpdates();
+      SendStatusUpdates();
       break;
+  }
+}
+
+void MediaPlayerNetProxy::SendStatusUpdates() {
+  status_publisher_.SendUpdates();
+
+  for (auto& binding : bindings().bindings()) {
+    binding->events().StatusChanged(fidl::Clone(*status_));
   }
 }
 

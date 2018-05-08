@@ -9,6 +9,7 @@
 #include <lib/zx/channel.h>
 
 #include "lib/app/cpp/application_context.h"
+#include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
@@ -16,12 +17,15 @@
 namespace media_player {
 
 MediaPlayerNetStub::MediaPlayerNetStub(
-    MediaPlayer* player,
-    zx::channel channel,
+    const fidl::InterfacePtr<MediaPlayer>& player, zx::channel channel,
     netconnector::NetStubResponder<MediaPlayer, MediaPlayerNetStub>* responder)
     : player_(player), responder_(responder) {
   FXL_DCHECK(player_);
   FXL_DCHECK(responder_);
+
+  player_.events().StatusChanged = [this](MediaPlayerStatus status) {
+    HandleStatusChanged(status);
+  };
 
   message_relay_.SetMessageReceivedCallback(
       [this](std::vector<uint8_t> message) { HandleReceivedMessage(message); });
@@ -56,9 +60,11 @@ void MediaPlayerNetStub::HandleReceivedMessage(
               message->time_check_request_->requestor_time_,
               media::Timeline::local_now())));
 
-      // Do this here so we never send a status message before we respond
-      // to the initial time check message.
-      HandleStatusUpdates();
+      time_check_received_ = true;
+      if (cached_status_) {
+        HandleStatusChanged(*cached_status_);
+        cached_status_ = nullptr;
+      }
       break;
 
     case MediaPlayerInMessageType::kSetHttpSourceRequest:
@@ -86,24 +92,15 @@ void MediaPlayerNetStub::HandleReceivedMessage(
   }
 }
 
-void MediaPlayerNetStub::HandleStatusUpdates(uint64_t version,
-                                             MediaPlayerStatusPtr status) {
-  if (status) {
-    message_relay_.SendMessage(Serializer::Serialize(
-        MediaPlayerOutMessage::StatusNotification(std::move(status))));
+void MediaPlayerNetStub::HandleStatusChanged(const MediaPlayerStatus& status) {
+  if (!time_check_received_) {
+    cached_status_ = fidl::MakeOptional(fidl::Clone(status));
+    return;
   }
 
-  // Request a status update.
-  player_->GetStatus(
-      version,
-      [weak_this = std::weak_ptr<MediaPlayerNetStub>(shared_from_this())](
-          uint64_t version, MediaPlayerStatus status) {
-        auto shared_this = weak_this.lock();
-        if (shared_this) {
-          shared_this->HandleStatusUpdates(
-              version, fidl::MakeOptional(std::move(status)));
-        }
-      });
+  message_relay_.SendMessage(
+      Serializer::Serialize(MediaPlayerOutMessage::StatusNotification(
+          fidl::MakeOptional(fidl::Clone(status)))));
 }
 
 }  // namespace media_player

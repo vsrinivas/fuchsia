@@ -23,7 +23,7 @@ class MediaPlayerNetStub
     : public std::enable_shared_from_this<MediaPlayerNetStub> {
  public:
   MediaPlayerNetStub(
-      MediaPlayer* player,
+      const fidl::InterfacePtr<MediaPlayer>& player,
       zx::channel channel,
       netconnector::NetStubResponder<MediaPlayer, MediaPlayerNetStub>*
           responder);
@@ -34,14 +34,14 @@ class MediaPlayerNetStub
   // Handles a message received via the relay.
   void HandleReceivedMessage(std::vector<uint8_t> message);
 
-  // Handles a status update from the player. When called with the default
-  // argument values, initiates status updates.
-  void HandleStatusUpdates(uint64_t version = media::kInitialStatus,
-                           MediaPlayerStatusPtr status = nullptr);
+  // Handles a status change from the player.
+  void HandleStatusChanged(const MediaPlayerStatus& status);
 
-  MediaPlayer* player_;
+  const fidl::InterfacePtr<MediaPlayer>& player_;
   netconnector::MessageRelay message_relay_;
   netconnector::NetStubResponder<MediaPlayer, MediaPlayerNetStub>* responder_;
+  MediaPlayerStatusPtr cached_status_;
+  bool time_check_received_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerNetStub);
 };
