@@ -229,7 +229,6 @@ static zx_status_t ath10k_htt_verify_version(struct ath10k_htt* htt) {
 }
 
 zx_status_t ath10k_htt_setup(struct ath10k_htt* htt) {
-    struct ath10k* ar = htt->ar;
     zx_status_t status;
 
     htt->target_version_received = COMPLETION_INIT;

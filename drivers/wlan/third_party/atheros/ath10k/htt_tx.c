@@ -15,13 +15,16 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <linux/etherdevice.h>
+#include <assert.h>
+
 #include "htt.h"
+#include "ieee80211.h"
 #include "mac.h"
 #include "hif.h"
 #include "txrx.h"
 #include "debug.h"
 
+#if 0 // NEEDS PORTING
 static uint8_t ath10k_htt_tx_txq_calc_size(size_t count) {
     int exp;
     int factor;
@@ -150,49 +153,54 @@ void ath10k_htt_tx_txq_update(struct ieee80211_hw* hw,
     __ath10k_htt_tx_txq_sync(ar);
     mtx_unlock(&ar->htt.tx_lock);
 }
+#endif // NEEDS PORTING
 
 void ath10k_htt_tx_dec_pending(struct ath10k_htt* htt) {
     ASSERT_MTX_HELD(&htt->tx_lock);
 
     htt->num_pending_tx--;
+#if 0 // NEEDS PORTING
     if (htt->num_pending_tx == htt->max_num_pending_tx - 1) {
         ath10k_mac_tx_unlock(htt->ar, ATH10K_TX_PAUSE_Q_FULL);
     }
+#endif // NEEDS PORTING
 }
 
-int ath10k_htt_tx_inc_pending(struct ath10k_htt* htt) {
+zx_status_t ath10k_htt_tx_inc_pending(struct ath10k_htt* htt) {
     ASSERT_MTX_HELD(&htt->tx_lock);
 
     if (htt->num_pending_tx >= htt->max_num_pending_tx) {
-        return -EBUSY;
+        // Don't return ZX_ERR_SHOULD_WAIT here, that has a special meaning to the
+        // queue_tx caller.
+        return ZX_ERR_NO_RESOURCES;
     }
 
     htt->num_pending_tx++;
+#if 0 // NEEDS PORTING
     if (htt->num_pending_tx == htt->max_num_pending_tx) {
         ath10k_mac_tx_lock(htt->ar, ATH10K_TX_PAUSE_Q_FULL);
     }
+#endif // NEEDS PORTING
 
-    return 0;
+    return ZX_OK;
 }
 
-int ath10k_htt_tx_mgmt_inc_pending(struct ath10k_htt* htt, bool is_mgmt,
-                                   bool is_presp) {
+zx_status_t ath10k_htt_tx_mgmt_inc_pending(struct ath10k_htt* htt, bool is_mgmt, bool is_presp) {
     struct ath10k* ar = htt->ar;
 
     ASSERT_MTX_HELD(&htt->tx_lock);
 
     if (!is_mgmt || !ar->hw_params.max_probe_resp_desc_thres) {
-        return 0;
+        return ZX_OK;
     }
 
-    if (is_presp &&
-            ar->hw_params.max_probe_resp_desc_thres < htt->num_pending_mgmt_tx) {
-        return -EBUSY;
+    if (is_presp && (int)ar->hw_params.max_probe_resp_desc_thres < htt->num_pending_mgmt_tx) {
+        return ZX_ERR_SHOULD_WAIT;
     }
 
     htt->num_pending_mgmt_tx++;
 
-    return 0;
+    return ZX_OK;
 }
 
 void ath10k_htt_tx_mgmt_dec_pending(struct ath10k_htt* htt) {
@@ -236,114 +244,115 @@ void ath10k_htt_tx_free_msdu_id(struct ath10k_htt* htt, uint16_t msdu_id) {
 }
 
 static void ath10k_htt_tx_free_cont_txbuf(struct ath10k_htt* htt) {
-    struct ath10k* ar = htt->ar;
-    size_t size;
-
-    if (!htt->txbuf.vaddr) {
+    if (!io_buffer_is_valid(&htt->txbuf.handle)) {
         return;
     }
 
-    size = htt->max_num_pending_tx * sizeof(struct ath10k_htt_txbuf);
-    dma_free_coherent(ar->dev, size, htt->txbuf.vaddr, htt->txbuf.paddr);
+    io_buffer_release(&htt->txbuf.handle);
     htt->txbuf.vaddr = NULL;
+    htt->txbuf.paddr = 0;
 }
 
-static int ath10k_htt_tx_alloc_cont_txbuf(struct ath10k_htt* htt) {
+static zx_status_t ath10k_htt_tx_alloc_cont_txbuf(struct ath10k_htt* htt) {
     struct ath10k* ar = htt->ar;
     size_t size;
+    zx_handle_t bti_handle;
+    zx_status_t ret;
 
-    size = htt->max_num_pending_tx * sizeof(struct ath10k_htt_txbuf);
-    htt->txbuf.vaddr = dma_alloc_coherent(ar->dev, size, &htt->txbuf.paddr,
-                                          GFP_KERNEL);
-    if (!htt->txbuf.vaddr) {
-        return -ENOMEM;
+    ret = ath10k_hif_get_bti_handle(ar, &bti_handle);
+    if (ret != ZX_OK) {
+        return ret;
     }
 
-    return 0;
+    size = htt->max_num_pending_tx * sizeof(struct ath10k_htt_txbuf);
+    ret = io_buffer_init(&htt->txbuf.handle, bti_handle, size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    if (ret != ZX_OK) {
+        return ret;
+    }
+    htt->txbuf.vaddr = io_buffer_virt(&htt->txbuf.handle);
+    htt->txbuf.paddr = io_buffer_phys(&htt->txbuf.handle);
+
+    return ZX_OK;
 }
 
 static void ath10k_htt_tx_free_cont_frag_desc(struct ath10k_htt* htt) {
-    size_t size;
-
-    if (!htt->frag_desc.vaddr) {
+    if (!io_buffer_is_valid(&htt->frag_desc.handle)) {
         return;
     }
 
-    size = htt->max_num_pending_tx * sizeof(struct htt_msdu_ext_desc);
-
-    dma_free_coherent(htt->ar->dev,
-                      size,
-                      htt->frag_desc.vaddr,
-                      htt->frag_desc.paddr);
+    io_buffer_release(&htt->frag_desc.handle);
     htt->frag_desc.vaddr = NULL;
+    htt->frag_desc.paddr = 0;
 }
 
-static int ath10k_htt_tx_alloc_cont_frag_desc(struct ath10k_htt* htt) {
+static zx_status_t ath10k_htt_tx_alloc_cont_frag_desc(struct ath10k_htt* htt) {
     struct ath10k* ar = htt->ar;
+    zx_handle_t bti_handle;
+    zx_status_t ret;
     size_t size;
 
     if (!ar->hw_params.continuous_frag_desc) {
         return 0;
     }
 
-    size = htt->max_num_pending_tx * sizeof(struct htt_msdu_ext_desc);
-    htt->frag_desc.vaddr = dma_alloc_coherent(ar->dev, size,
-                           &htt->frag_desc.paddr,
-                           GFP_KERNEL);
-    if (!htt->frag_desc.vaddr) {
-        return -ENOMEM;
+    ret = ath10k_hif_get_bti_handle(ar, &bti_handle);
+    if (ret != ZX_OK) {
+        return ret;
     }
 
-    return 0;
+    size = htt->max_num_pending_tx * sizeof(struct htt_msdu_ext_desc);
+    ret = io_buffer_init(&htt->frag_desc.handle, bti_handle, size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    if (ret != ZX_OK) {
+        return ret;
+    }
+    htt->frag_desc.vaddr = io_buffer_virt(&htt->frag_desc.handle);
+    htt->frag_desc.paddr = io_buffer_phys(&htt->frag_desc.handle);
+
+    return ZX_OK;
 }
 
 static void ath10k_htt_tx_free_txq(struct ath10k_htt* htt) {
     struct ath10k* ar = htt->ar;
-    size_t size;
 
-    if (!test_bit(ATH10K_FW_FEATURE_PEER_FLOW_CONTROL,
-                  ar->running_fw->fw_file.fw_features)) {
+    if (!test_bit(ATH10K_FW_FEATURE_PEER_FLOW_CONTROL, ar->running_fw->fw_file.fw_features)) {
         return;
     }
 
-    size = sizeof(*htt->tx_q_state.vaddr);
-
-    dma_unmap_single(ar->dev, htt->tx_q_state.paddr, size, DMA_TO_DEVICE);
-    kfree(htt->tx_q_state.vaddr);
+    io_buffer_release(&htt->tx_q_state.handle);
 }
 
-static int ath10k_htt_tx_alloc_txq(struct ath10k_htt* htt) {
+static zx_status_t ath10k_htt_tx_alloc_txq(struct ath10k_htt* htt) {
     struct ath10k* ar = htt->ar;
+    zx_handle_t bti_handle;
     size_t size;
-    int ret;
+    zx_status_t ret;
 
-    if (!test_bit(ATH10K_FW_FEATURE_PEER_FLOW_CONTROL,
-                  ar->running_fw->fw_file.fw_features)) {
-        return 0;
+    if (!(test_bit(ATH10K_FW_FEATURE_PEER_FLOW_CONTROL, ar->running_fw->fw_file.fw_features))) {
+        return ZX_OK;
     }
 
     htt->tx_q_state.num_peers = HTT_TX_Q_STATE_NUM_PEERS;
     htt->tx_q_state.num_tids = HTT_TX_Q_STATE_NUM_TIDS;
     htt->tx_q_state.type = HTT_Q_DEPTH_TYPE_BYTES;
 
+    ret = ath10k_hif_get_bti_handle(ar, &bti_handle);
+    if (ret != ZX_OK) {
+        return ret;
+    }
+
     size = sizeof(*htt->tx_q_state.vaddr);
-    htt->tx_q_state.vaddr = kzalloc(size, GFP_KERNEL);
-    if (!htt->tx_q_state.vaddr) {
-        return -ENOMEM;
+    ret = io_buffer_init(&htt->tx_q_state.handle, bti_handle, size,
+                         IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    if (ret != ZX_OK) {
+        return ret;
     }
+    htt->tx_q_state.vaddr = io_buffer_virt(&htt->tx_q_state.handle);
+    htt->tx_q_state.paddr = io_buffer_phys(&htt->tx_q_state.handle);
 
-    htt->tx_q_state.paddr = dma_map_single(ar->dev, htt->tx_q_state.vaddr,
-                                           size, DMA_TO_DEVICE);
-    ret = dma_mapping_error(ar->dev, htt->tx_q_state.paddr);
-    if (ret) {
-        ath10k_warn("failed to dma map tx_q_state: %d\n", ret);
-        kfree(htt->tx_q_state.vaddr);
-        return -EIO;
-    }
-
-    return 0;
+    return ZX_OK;
 }
 
+#if 0 // NEEDS PORTING
 static void ath10k_htt_tx_free_txdone_fifo(struct ath10k_htt* htt) {
     WARN_ON(!kfifo_is_empty(&htt->txdone_fifo));
     kfifo_free(&htt->txdone_fifo);
@@ -357,10 +366,10 @@ static int ath10k_htt_tx_alloc_txdone_fifo(struct ath10k_htt* htt) {
     ret = kfifo_alloc(&htt->txdone_fifo, size, GFP_KERNEL);
     return ret;
 }
+#endif // NEEDS PORTING
 
-static int ath10k_htt_tx_alloc_buf(struct ath10k_htt* htt) {
-    struct ath10k* ar = htt->ar;
-    int ret;
+static zx_status_t ath10k_htt_tx_alloc_buf(struct ath10k_htt* htt) {
+    zx_status_t ret;
 
     ret = ath10k_htt_tx_alloc_cont_txbuf(htt);
     if (ret) {
@@ -380,15 +389,19 @@ static int ath10k_htt_tx_alloc_buf(struct ath10k_htt* htt) {
         goto free_frag_desc;
     }
 
+#if 0 // NEEDS PORTING
     ret = ath10k_htt_tx_alloc_txdone_fifo(htt);
     if (ret) {
         ath10k_err("failed to alloc txdone fifo: %d\n", ret);
         goto free_txq;
     }
+#endif // NEEDS PORTING
 
-    return 0;
+    return ZX_OK;
 
+#if 0 // NEEDS PORTING
 free_txq:
+#endif // NEEDS PORTING
     ath10k_htt_tx_free_txq(htt);
 
 free_frag_desc:
@@ -400,9 +413,9 @@ free_txbuf:
     return ret;
 }
 
-int ath10k_htt_tx_start(struct ath10k_htt* htt) {
+zx_status_t ath10k_htt_tx_start(struct ath10k_htt* htt) {
     struct ath10k* ar = htt->ar;
-    int ret;
+    zx_status_t ret;
 
     ath10k_dbg(ar, ATH10K_DBG_BOOT, "htt tx max num pending tx %d\n",
                htt->max_num_pending_tx);
@@ -411,7 +424,7 @@ int ath10k_htt_tx_start(struct ath10k_htt* htt) {
     sa_init(&htt->pending_tx, htt->max_num_pending_tx);
 
     if (htt->tx_mem_allocated) {
-        return 0;
+        return ZX_OK;
     }
 
     ret = ath10k_htt_tx_alloc_buf(htt);
@@ -421,7 +434,7 @@ int ath10k_htt_tx_start(struct ath10k_htt* htt) {
 
     htt->tx_mem_allocated = true;
 
-    return 0;
+    return ZX_OK;
 
 free_sa_pending_tx:
     sa_free(htt->pending_tx);
@@ -429,7 +442,8 @@ free_sa_pending_tx:
     return ret;
 }
 
-static int ath10k_htt_tx_clean_up_pending(int msdu_id, void* skb, void* ctx) {
+static void ath10k_htt_tx_clean_up_pending(ssize_t ndx, void* skb, void* ctx) {
+    uint16_t msdu_id = ndx;
     struct ath10k* ar = ctx;
     struct ath10k_htt* htt = &ar->htt;
     struct htt_tx_done tx_done = {0};
@@ -440,8 +454,6 @@ static int ath10k_htt_tx_clean_up_pending(int msdu_id, void* skb, void* ctx) {
     tx_done.status = HTT_TX_COMPL_STATE_DISCARD;
 
     ath10k_txrx_tx_unref(htt, &tx_done);
-
-    return 0;
 }
 
 void ath10k_htt_tx_destroy(struct ath10k_htt* htt) {
@@ -452,7 +464,9 @@ void ath10k_htt_tx_destroy(struct ath10k_htt* htt) {
     ath10k_htt_tx_free_cont_txbuf(htt);
     ath10k_htt_tx_free_txq(htt);
     ath10k_htt_tx_free_cont_frag_desc(htt);
+#if 0 // NEEDS PORTING
     ath10k_htt_tx_free_txdone_fifo(htt);
+#endif // NEEDS PORTING
     htt->tx_mem_allocated = false;
 }
 
@@ -466,42 +480,37 @@ void ath10k_htt_tx_free(struct ath10k_htt* htt) {
     ath10k_htt_tx_destroy(htt);
 }
 
-void ath10k_htt_htc_tx_complete(struct ath10k* ar, struct sk_buff* skb) {
-    dev_kfree_skb_any(skb);
+void ath10k_htt_htc_tx_complete(struct ath10k* ar, struct ath10k_msg_buf* buff) {
+    ath10k_msg_buf_free(buff);
 }
 
-void ath10k_htt_hif_tx_complete(struct ath10k* ar, struct sk_buff* skb) {
-    dev_kfree_skb_any(skb);
+void ath10k_htt_hif_tx_complete(struct ath10k* ar, struct ath10k_msg_buf* msg_buf) {
+    ath10k_msg_buf_free(msg_buf);
 }
 
-int ath10k_htt_h2t_ver_req_msg(struct ath10k_htt* htt) {
+zx_status_t ath10k_htt_h2t_ver_req_msg(struct ath10k_htt* htt) {
     struct ath10k* ar = htt->ar;
-    struct sk_buff* skb;
-    struct htt_cmd* cmd;
-    int len = 0;
-    int ret;
+    struct ath10k_msg_buf* msg_buf;
+    zx_status_t ret;
 
-    len += sizeof(cmd->hdr);
-    len += sizeof(cmd->ver_req);
-
-    skb = ath10k_htc_alloc_skb(ar, len);
-    if (!skb) {
-        return -ENOMEM;
-    }
-
-    skb_put(skb, len);
-    cmd = (struct htt_cmd*)skb->data;
-    cmd->hdr.msg_type = HTT_H2T_MSG_TYPE_VERSION_REQ;
-
-    ret = ath10k_htc_send(&htt->ar->htc, htt->eid, skb);
-    if (ret) {
-        dev_kfree_skb_any(skb);
+    ret = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_HTT_CMD_VER_REQ, 0);
+    if (ret != ZX_OK) {
         return ret;
     }
 
-    return 0;
+    struct htt_cmd_hdr* cmd_hdr = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_HTT_CMD);
+    cmd_hdr->msg_type = HTT_H2T_MSG_TYPE_VERSION_REQ;
+
+    ret = ath10k_htc_send(&htt->ar->htc, htt->eid, msg_buf);
+    if (ret != ZX_OK) {
+        ath10k_msg_buf_free(msg_buf);
+        return ret;
+    }
+
+    return ZX_OK;
 }
 
+#if 0 // NEEDS PORTING
 int ath10k_htt_h2t_stats_req(struct ath10k_htt* htt, uint8_t mask, uint64_t cookie) {
     struct ath10k* ar = htt->ar;
     struct htt_stats_req* req;
@@ -544,33 +553,32 @@ int ath10k_htt_h2t_stats_req(struct ath10k_htt* htt, uint8_t mask, uint64_t cook
 
     return 0;
 }
+#endif // NEEDS PORTING
 
-int ath10k_htt_send_frag_desc_bank_cfg(struct ath10k_htt* htt) {
+zx_status_t ath10k_htt_send_frag_desc_bank_cfg(struct ath10k_htt* htt) {
     struct ath10k* ar = htt->ar;
-    struct sk_buff* skb;
-    struct htt_cmd* cmd;
+    struct ath10k_msg_buf* msg_buf;
+    struct htt_cmd_hdr* cmd_hdr;
     struct htt_frag_desc_bank_cfg* cfg;
-    int ret, size;
+    zx_status_t ret;
     uint8_t info;
 
     if (!ar->hw_params.continuous_frag_desc) {
-        return 0;
+        return ZX_OK;
     }
 
     if (!htt->frag_desc.paddr) {
         ath10k_warn("invalid frag desc memory\n");
-        return -EINVAL;
+        return ZX_ERR_BAD_STATE;
     }
 
-    size = sizeof(cmd->hdr) + sizeof(cmd->frag_desc_bank_cfg);
-    skb = ath10k_htc_alloc_skb(ar, size);
-    if (!skb) {
-        return -ENOMEM;
+    ret = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_HTT_CMD_FRAG_DESC_BANK_CFG, 0);
+    if (ret != ZX_OK) {
+        return ret;
     }
 
-    skb_put(skb, size);
-    cmd = (struct htt_cmd*)skb->data;
-    cmd->hdr.msg_type = HTT_H2T_MSG_TYPE_FRAG_DESC_BANK_CFG;
+    cmd_hdr = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_HTT_CMD);
+    cmd_hdr->msg_type = HTT_H2T_MSG_TYPE_FRAG_DESC_BANK_CFG;
 
     info = 0;
     info |= SM(htt->tx_q_state.type,
@@ -581,7 +589,7 @@ int ath10k_htt_send_frag_desc_bank_cfg(struct ath10k_htt* htt) {
         info |= HTT_FRAG_DESC_BANK_CFG_INFO_Q_STATE_VALID;
     }
 
-    cfg = &cmd->frag_desc_bank_cfg;
+    cfg = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_HTT_CMD_FRAG_DESC_BANK_CFG);
     cfg->info = info;
     cfg->num_banks = 1;
     cfg->desc_size = sizeof(struct htt_msdu_ext_desc);
@@ -597,46 +605,43 @@ int ath10k_htt_send_frag_desc_bank_cfg(struct ath10k_htt* htt) {
 
     ath10k_dbg(ar, ATH10K_DBG_HTT, "htt frag desc bank cmd\n");
 
-    ret = ath10k_htc_send(&htt->ar->htc, htt->eid, skb);
-    if (ret) {
-        ath10k_warn("failed to send frag desc bank cfg request: %d\n",
-                    ret);
-        dev_kfree_skb_any(skb);
+    ret = ath10k_htc_send(&htt->ar->htc, htt->eid, msg_buf);
+    if (ret != ZX_OK) {
+        ath10k_warn("failed to send frag desc bank cfg request: %s\n",
+                    zx_status_get_string(ret));
+        ath10k_msg_buf_free(msg_buf);
         return ret;
     }
 
-    return 0;
+    return ZX_OK;
 }
 
-int ath10k_htt_send_rx_ring_cfg_ll(struct ath10k_htt* htt) {
+zx_status_t ath10k_htt_send_rx_ring_cfg_ll(struct ath10k_htt* htt) {
     struct ath10k* ar = htt->ar;
-    struct sk_buff* skb;
+    struct ath10k_msg_buf* msg_buf;
     struct htt_cmd* cmd;
     struct htt_rx_ring_setup_ring* ring;
-    const int num_rx_ring = 1;
     uint16_t flags;
     uint32_t fw_idx;
-    int len;
-    int ret;
+    zx_status_t ret;
 
     /*
      * the HW expects the buffer to be an integral number of 4-byte
      * "words"
      */
-    BUILD_BUG_ON(!IS_ALIGNED(HTT_RX_BUF_SIZE, 4));
-    BUILD_BUG_ON((HTT_RX_BUF_SIZE & HTT_MAX_CACHE_LINE_SIZE_MASK) != 0);
+    static_assert(IS_ALIGNED(HTT_RX_BUF_SIZE, 4),
+                  "Rx ring buffer size must be an increment of 4 bytes");
+    static_assert((HTT_RX_BUF_SIZE & HTT_MAX_CACHE_LINE_SIZE_MASK) == 0,
+                  "Rx ring buffer insufficiently aligned");
 
-    len = sizeof(cmd->hdr) + sizeof(cmd->rx_setup.hdr)
-          + (sizeof(*ring) * num_rx_ring);
-    skb = ath10k_htc_alloc_skb(ar, len);
-    if (!skb) {
-        return -ENOMEM;
+    size_t extra = sizeof(struct htt_rx_ring_setup_ring);
+    ret = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_HTT_CMD_RX_SETUP, extra);
+    if (ret != ZX_OK) {
+        return ret;
     }
 
-    skb_put(skb, len);
-
-    cmd = (struct htt_cmd*)skb->data;
-    ring = &cmd->rx_setup.rings[0];
+    cmd = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_HTT_CMD);
+    ring = cmd->rx_setup.rings;
 
     cmd->hdr.msg_type = HTT_H2T_MSG_TYPE_RX_RING_CFG;
     cmd->rx_setup.hdr.num_rings = 1;
@@ -685,48 +690,43 @@ int ath10k_htt_send_rx_ring_cfg_ll(struct ath10k_htt* htt) {
 
 #undef desc_offset
 
-    ret = ath10k_htc_send(&htt->ar->htc, htt->eid, skb);
-    if (ret) {
-        dev_kfree_skb_any(skb);
+    ret = ath10k_htc_send(&htt->ar->htc, htt->eid, msg_buf);
+    if (ret != ZX_OK) {
+        ath10k_msg_buf_free(msg_buf);
         return ret;
     }
 
-    return 0;
+    return ZX_OK;
 }
 
-int ath10k_htt_h2t_aggr_cfg_msg(struct ath10k_htt* htt,
-                                uint8_t max_subfrms_ampdu,
-                                uint8_t max_subfrms_amsdu) {
+zx_status_t ath10k_htt_h2t_aggr_cfg_msg(struct ath10k_htt* htt,
+                                        uint8_t max_subfrms_ampdu,
+                                        uint8_t max_subfrms_amsdu) {
     struct ath10k* ar = htt->ar;
     struct htt_aggr_conf* aggr_conf;
-    struct sk_buff* skb;
+    struct ath10k_msg_buf* msg_buf;
     struct htt_cmd* cmd;
-    int len;
-    int ret;
+    zx_status_t ret;
 
     /* Firmware defaults are: amsdu = 3 and ampdu = 64 */
 
     if (max_subfrms_ampdu == 0 || max_subfrms_ampdu > 64) {
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     if (max_subfrms_amsdu == 0 || max_subfrms_amsdu > 31) {
-        return -EINVAL;
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    len = sizeof(cmd->hdr);
-    len += sizeof(cmd->aggr_conf);
-
-    skb = ath10k_htc_alloc_skb(ar, len);
-    if (!skb) {
-        return -ENOMEM;
+    ret = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_HTT_CMD_AGGR_CONF, 0);
+    if (ret != ZX_OK) {
+        return ret;
     }
 
-    skb_put(skb, len);
-    cmd = (struct htt_cmd*)skb->data;
+    cmd = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_HTT_CMD);;
     cmd->hdr.msg_type = HTT_H2T_MSG_TYPE_AGGR_CFG;
 
-    aggr_conf = &cmd->aggr_conf;
+    aggr_conf = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_HTT_CMD_AGGR_CONF);
     aggr_conf->max_num_ampdu_subframes = max_subfrms_ampdu;
     aggr_conf->max_num_amsdu_subframes = max_subfrms_amsdu;
 
@@ -734,15 +734,16 @@ int ath10k_htt_h2t_aggr_cfg_msg(struct ath10k_htt* htt,
                aggr_conf->max_num_amsdu_subframes,
                aggr_conf->max_num_ampdu_subframes);
 
-    ret = ath10k_htc_send(&htt->ar->htc, htt->eid, skb);
-    if (ret) {
-        dev_kfree_skb_any(skb);
+    ret = ath10k_htc_send(&htt->ar->htc, htt->eid, msg_buf);
+    if (ret != ZX_OK) {
+        ath10k_msg_buf_free(msg_buf);
         return ret;
     }
 
-    return 0;
+    return ZX_OK;
 }
 
+#if 0 // NEEDS PORTING
 int ath10k_htt_tx_fetch_resp(struct ath10k* ar,
                              uint32_t token,
                              uint16_t fetch_seq_num,
@@ -791,38 +792,34 @@ err_free_skb:
 
     return ret;
 }
+#endif // NEEDS PORTING
 
-static uint8_t ath10k_htt_tx_get_vdev_id(struct ath10k* ar, struct sk_buff* skb) {
-    struct ieee80211_tx_info* info = IEEE80211_SKB_CB(skb);
-    struct ath10k_skb_cb* cb = ATH10K_SKB_CB(skb);
-    struct ath10k_vif* arvif;
+static uint8_t ath10k_htt_tx_get_vdev_id(struct ath10k* ar) {
+    struct ath10k_vif* arvif = &ar->arvif;
 
+#if 0 // NEEDS PORTING
     if (info->flags & IEEE80211_TX_CTL_TX_OFFCHAN) {
         return ar->scan.vdev_id;
-    } else if (cb->vif) {
-        arvif = (void*)cb->vif->drv_priv;
-        return arvif->vdev_id;
-    } else if (ar->monitor_started) {
-        return ar->monitor_vdev_id;
-    } else {
-        return 0;
-    }
+    } else
+#endif // NEEDS PORTING
+    return arvif->vdev_id;
 }
 
-static uint8_t ath10k_htt_tx_get_tid(struct sk_buff* skb, bool is_eth) {
-    struct ieee80211_hdr* hdr = (void*)skb->data;
-    struct ath10k_skb_cb* cb = ATH10K_SKB_CB(skb);
-
-    if (!is_eth && ieee80211_is_mgmt(hdr->frame_control)) {
+static uint8_t ath10k_htt_tx_get_tid(struct ath10k_msg_buf* tx_buf, bool is_eth) {
+    struct ieee80211_frame_header* hdr = ath10k_msg_buf_get_payload(tx_buf);
+    if (!is_eth && (ieee80211_get_frame_type(hdr) == IEEE80211_FRAME_TYPE_MGMT)) {
         return HTT_DATA_TX_EXT_TID_MGMT;
-    } else if (cb->flags & ATH10K_SKB_F_QOS) {
-        return skb->priority % IEEE80211_QOS_CTL_TID_MASK;
+    } else if (tx_buf->tx.flags & ATH10K_TX_BUF_QOS) {
+        // TODO: priority % IEEE80211_QOS_CTL_TID_MASK
+        return 0;
     } else {
         return HTT_DATA_TX_EXT_TID_NON_QOS_MCAST_BCAST;
     }
 }
 
-int ath10k_htt_mgmt_tx(struct ath10k_htt* htt, struct sk_buff* msdu) {
+zx_status_t ath10k_htt_mgmt_tx(struct ath10k_htt* htt, struct ath10k_msg_buf* tx_buf) {
+ath10k_err("ath10k_htt_mgmt_tx unimplemented - dropping tx packet!\n");
+#if 0 // NEEDS PORTING
     struct ath10k* ar = htt->ar;
     struct device* dev = ar->dev;
     struct sk_buff* txdesc = NULL;
@@ -896,68 +893,61 @@ err_free_msdu_id:
     mtx_unlock(&htt->tx_lock);
 err:
     return res;
+#endif // NEEDS PORTING
+return ZX_ERR_NOT_SUPPORTED;
 }
 
-int ath10k_htt_tx(struct ath10k_htt* htt, enum ath10k_hw_txrx_mode txmode,
-                  struct sk_buff* msdu) {
+zx_status_t ath10k_htt_tx(struct ath10k_htt* htt,
+                          enum ath10k_hw_txrx_mode txmode,
+                          struct ath10k_msg_buf* msdu) {
     struct ath10k* ar = htt->ar;
-    struct device* dev = ar->dev;
-    struct ieee80211_hdr* hdr = (struct ieee80211_hdr*)msdu->data;
-    struct ieee80211_tx_info* info = IEEE80211_SKB_CB(msdu);
-    struct ath10k_skb_cb* skb_cb = ATH10K_SKB_CB(msdu);
     struct ath10k_hif_sg_item sg_items[2];
-    struct ath10k_htt_txbuf* txbuf;
     struct htt_data_tx_desc_frag* frags;
     bool is_eth = (txmode == ATH10K_HW_TXRX_ETHERNET);
-    uint8_t vdev_id = ath10k_htt_tx_get_vdev_id(ar, msdu);
+    uint8_t vdev_id = ath10k_htt_tx_get_vdev_id(ar);
     uint8_t tid = ath10k_htt_tx_get_tid(msdu, is_eth);
-    int prefetch_len;
-    int res;
     uint8_t flags0 = 0;
-    uint16_t msdu_id, flags1 = 0;
+    uint16_t flags1 = 0;
     uint16_t freq = 0;
     uint32_t frags_paddr = 0;
-    uint32_t txbuf_paddr;
     struct htt_msdu_ext_desc* ext_desc = NULL;
+    zx_status_t ret;
+    ssize_t id;
 
     mtx_lock(&htt->tx_lock);
-    res = ath10k_htt_tx_alloc_msdu_id(htt, msdu);
+    ret = ath10k_htt_tx_alloc_msdu_id(htt, msdu, &id);
     mtx_unlock(&htt->tx_lock);
-    if (res < 0) {
+    if (ret != ZX_OK) {
         goto err;
     }
 
-    msdu_id = res;
+    uint16_t msdu_id = id;
 
-    prefetch_len = min(htt->prefetch_len, msdu->len);
+    int prefetch_len = min(htt->prefetch_len, msdu->used);
     prefetch_len = roundup(prefetch_len, 4);
 
-    txbuf = &htt->txbuf.vaddr[msdu_id];
-    txbuf_paddr = htt->txbuf.paddr +
-                  (sizeof(struct ath10k_htt_txbuf) * msdu_id);
+    struct ath10k_htt_txbuf* txbuf = &htt->txbuf.vaddr[msdu_id];
+    uint32_t txbuf_paddr = htt->txbuf.paddr
+                           + (sizeof(struct ath10k_htt_txbuf) * msdu_id);
 
-    if ((ieee80211_is_action(hdr->frame_control) ||
-            ieee80211_is_deauth(hdr->frame_control) ||
-            ieee80211_is_disassoc(hdr->frame_control)) &&
-            ieee80211_has_protected(hdr->frame_control)) {
-        skb_put(msdu, IEEE80211_CCMP_MIC_LEN);
-    } else if (!(skb_cb->flags & ATH10K_SKB_F_NO_HWCRYPT) &&
+    struct ieee80211_frame_header* hdr = ath10k_msg_buf_get_payload(msdu);
+    if ((ieee80211_get_frame_type(hdr) == IEEE80211_FRAME_TYPE_MGMT)
+        && ((ieee80211_get_frame_subtype(hdr) == IEEE80211_FRAME_SUBTYPE_ACTION)
+            || (ieee80211_get_frame_subtype(hdr) == IEEE80211_FRAME_SUBTYPE_DEAUTH)
+            || (ieee80211_get_frame_subtype(hdr) == IEEE80211_FRAME_SUBTYPE_DISASSOC))
+        && (hdr->frame_control & IEEE80211_FRAME_PROTECTED_MASK)) {
+        msdu->used += IEEE80211_CCMP_MIC_LEN;
+    } else if (!(msdu->tx.flags & ATH10K_TX_BUF_NO_HWCRYPT) &&
                txmode == ATH10K_HW_TXRX_RAW &&
-               ieee80211_has_protected(hdr->frame_control)) {
-        skb_put(msdu, IEEE80211_CCMP_MIC_LEN);
+               (hdr->frame_control & IEEE80211_FRAME_PROTECTED_MASK)) {
+        msdu->used += IEEE80211_CCMP_MIC_LEN;
     }
 
-    skb_cb->paddr = dma_map_single(dev, msdu->data, msdu->len,
-                                   DMA_TO_DEVICE);
-    res = dma_mapping_error(dev, skb_cb->paddr);
-    if (res) {
-        res = -EIO;
-        goto err_free_msdu_id;
-    }
-
+#if 0 // NEEDS PORTING
     if (unlikely(info->flags & IEEE80211_TX_CTL_TX_OFFCHAN)) {
         freq = ar->scan.roc_freq;
     }
+#endif // NEEDS PORTING
 
     switch (txmode) {
     case ATH10K_HW_TXRX_RAW:
@@ -972,17 +962,17 @@ int ath10k_htt_tx(struct ath10k_htt* htt, enum ath10k_hw_txrx_mode txmode,
                     &htt->frag_desc.vaddr[msdu_id].frags;
             ext_desc = &htt->frag_desc.vaddr[msdu_id];
             frags[0].tword_addr.paddr_lo =
-                skb_cb->paddr;
+                msdu->paddr;
             frags[0].tword_addr.paddr_hi = 0;
-            frags[0].tword_addr.len_16 = msdu->len;
+            frags[0].tword_addr.len_16 = msdu->used;
 
-            frags_paddr =  htt->frag_desc.paddr +
-                           (sizeof(struct htt_msdu_ext_desc) * msdu_id);
+            frags_paddr = htt->frag_desc.paddr
+                          + (sizeof(struct htt_msdu_ext_desc) * msdu_id);
         } else {
             frags = txbuf->frags;
             frags[0].dword_addr.paddr =
-                skb_cb->paddr;
-            frags[0].dword_addr.len = msdu->len;
+                msdu->paddr;
+            frags[0].dword_addr.len = msdu->used;
             frags[1].dword_addr.paddr = 0;
             frags[1].dword_addr.len = 0;
 
@@ -995,7 +985,7 @@ int ath10k_htt_tx(struct ath10k_htt* htt, enum ath10k_hw_txrx_mode txmode,
                      HTT_DATA_TX_DESC_FLAGS0_PKT_TYPE);
         flags0 |= HTT_DATA_TX_DESC_FLAGS0_MAC_HDR_PRESENT;
 
-        frags_paddr = skb_cb->paddr;
+        frags_paddr = msdu->paddr;
         break;
     }
 
@@ -1017,17 +1007,16 @@ int ath10k_htt_tx(struct ath10k_htt* htt, enum ath10k_hw_txrx_mode txmode,
      */
 
     txbuf->htc_hdr.eid = htt->eid;
-    txbuf->htc_hdr.len = sizeof(txbuf->cmd_hdr +
-                                       sizeof(txbuf->cmd_tx) +
-                                       prefetch_len);
+    txbuf->htc_hdr.len = sizeof(txbuf->cmd_hdr) + sizeof(txbuf->cmd_tx) + prefetch_len;
     txbuf->htc_hdr.flags = 0;
 
-    if (skb_cb->flags & ATH10K_SKB_F_NO_HWCRYPT) {
+    if (msdu->tx.flags & ATH10K_TX_BUF_NO_HWCRYPT) {
         flags0 |= HTT_DATA_TX_DESC_FLAGS0_NO_ENCRYPT;
     }
 
     flags1 |= SM((uint16_t)vdev_id, HTT_DATA_TX_DESC_FLAGS1_VDEV_ID);
     flags1 |= SM((uint16_t)tid, HTT_DATA_TX_DESC_FLAGS1_EXT_TID);
+#if 0 // NEEDS PORTING
     if (msdu->ip_summed == CHECKSUM_PARTIAL &&
             !test_bit(ATH10K_FLAG_RAW_MODE, &ar->dev_flags)) {
         flags1 |= HTT_DATA_TX_DESC_FLAGS1_CKSUM_L3_OFFLOAD;
@@ -1036,6 +1025,7 @@ int ath10k_htt_tx(struct ath10k_htt* htt, enum ath10k_hw_txrx_mode txmode,
             ext_desc->flags |= HTT_MSDU_CHECKSUM_ENABLE;
         }
     }
+#endif // NEEDS PORTING
 
     /* Prevent firmware from sending up tx inspection requests. There's
      * nothing ath10k can do with frames requested for inspection so force
@@ -1046,28 +1036,22 @@ int ath10k_htt_tx(struct ath10k_htt* htt, enum ath10k_hw_txrx_mode txmode,
     txbuf->cmd_hdr.msg_type = HTT_H2T_MSG_TYPE_TX_FRM;
     txbuf->cmd_tx.flags0 = flags0;
     txbuf->cmd_tx.flags1 = flags1;
-    txbuf->cmd_tx.len = msdu->len;
+    txbuf->cmd_tx.len = msdu->used;
     txbuf->cmd_tx.id = msdu_id;
     txbuf->cmd_tx.frags_paddr = frags_paddr;
     if (ath10k_mac_tx_frm_has_freq(ar)) {
-        txbuf->cmd_tx.offchan_tx.peerid =
-            HTT_INVALID_PEERID;
-        txbuf->cmd_tx.offchan_tx.freq =
-            freq;
+        txbuf->cmd_tx.offchan_tx.peerid = HTT_INVALID_PEERID;
+        txbuf->cmd_tx.offchan_tx.freq = freq;
     } else {
-        txbuf->cmd_tx.peerid =
-            HTT_INVALID_PEERID;
+        txbuf->cmd_tx.peerid = HTT_INVALID_PEERID;
     }
 
-    trace_ath10k_htt_tx(ar, msdu_id, msdu->len, vdev_id, tid);
     ath10k_dbg(ar, ATH10K_DBG_HTT,
                "htt tx flags0 %hhu flags1 %hu len %d id %hu frags_paddr %08x, msdu_paddr %08x vdev %hhu tid %hhu freq %hu\n",
-               flags0, flags1, msdu->len, msdu_id, frags_paddr,
-               (uint32_t)skb_cb->paddr, vdev_id, tid, freq);
+               flags0, flags1, msdu->used, msdu_id, frags_paddr,
+               (uint32_t)msdu->paddr, vdev_id, tid, freq);
     ath10k_dbg_dump(ar, ATH10K_DBG_HTT_DUMP, NULL, "htt tx msdu: ",
-                    msdu->data, msdu->len);
-    trace_ath10k_tx_hdr(ar, msdu->data, msdu->len);
-    trace_ath10k_tx_payload(ar, msdu->data, msdu->len);
+                    ath10k_msg_buf_get_payload(msdu), msdu->used);
 
     sg_items[0].transfer_id = 0;
     sg_items[0].transfer_context = NULL;
@@ -1080,23 +1064,22 @@ int ath10k_htt_tx(struct ath10k_htt* htt, enum ath10k_hw_txrx_mode txmode,
 
     sg_items[1].transfer_id = 0;
     sg_items[1].transfer_context = NULL;
-    sg_items[1].vaddr = msdu->data;
-    sg_items[1].paddr = skb_cb->paddr;
+    sg_items[1].vaddr = ath10k_msg_buf_get_payload(msdu);
+    sg_items[1].paddr = msdu->paddr;
     sg_items[1].len = prefetch_len;
 
-    res = ath10k_hif_tx_sg(htt->ar,
+    ret = ath10k_hif_tx_sg(htt->ar,
                            htt->ar->htc.endpoint[htt->eid].ul_pipe_id,
                            sg_items, countof(sg_items));
-    if (res) {
-        goto err_unmap_msdu;
+    if (ret != ZX_OK) {
+        ath10k_warn("failed to transmit msdu %d\n", msdu_id);
+        goto err_free_msdu_id;
     }
 
-    return 0;
+    return ZX_OK;
 
-err_unmap_msdu:
-    dma_unmap_single(dev, skb_cb->paddr, msdu->len, DMA_TO_DEVICE);
 err_free_msdu_id:
     ath10k_htt_tx_free_msdu_id(htt, msdu_id);
 err:
-    return res;
+    return ret;
 }
