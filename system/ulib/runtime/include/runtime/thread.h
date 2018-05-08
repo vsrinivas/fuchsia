@@ -6,8 +6,6 @@
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-#include <runtime/mutex.h>
-#include <stdatomic.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -15,10 +13,9 @@ __BEGIN_CDECLS
 
 typedef void (*zxr_thread_entry_t)(void*);
 
+// size = 16 on all platforms
 typedef struct {
-    zxr_thread_entry_t entry;
-    zx_handle_t handle;
-    atomic_int state;
+    char internal[16];
 } zxr_thread_t;
 
 #pragma GCC visibility push(hidden)

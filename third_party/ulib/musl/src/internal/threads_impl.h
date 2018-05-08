@@ -143,7 +143,7 @@ static inline pid_t __thread_get_tid(void) {
     // We rely on the fact that the high bit is not set. For now,
     // let's incur the cost of this check, until we consider the
     // userspace handle value representation completely baked.
-    pid_t id = __pthread_self()->zxr_thread.handle;
+    pid_t id = zxr_thread_get_handle(&__pthread_self()->zxr_thread);
     if (id & PTHREAD_MUTEX_OWNED_LOCK_BIT) {
         __builtin_trap();
     }

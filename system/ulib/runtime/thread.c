@@ -27,20 +27,34 @@ enum {
     DONE,
 };
 
+typedef struct {
+    zxr_thread_entry_t entry;
+    zx_handle_t handle;
+    atomic_int state;
+} zxr_internal_thread_t;
+
+// zxr_thread_t should reserve enough size for our internal data.
+_Static_assert(sizeof(zxr_thread_t) == sizeof(zxr_internal_thread_t),
+               "Update zxr_thread_t size for this platform.");
+
+static inline zxr_internal_thread_t* to_internal(zxr_thread_t* external) {
+  return (zxr_internal_thread_t*)(external);
+}
+
 zx_status_t zxr_thread_destroy(zxr_thread_t* thread) {
-    zx_handle_t handle = thread->handle;
-    thread->handle = ZX_HANDLE_INVALID;
+    zx_handle_t handle = to_internal(thread)->handle;
+    to_internal(thread)->handle = ZX_HANDLE_INVALID;
     return handle == ZX_HANDLE_INVALID ? ZX_OK : _zx_handle_close(handle);
 }
 
 // Put the thread into EXITING state.  Returns the previous state.
-static int begin_exit(zxr_thread_t* thread) {
+static int begin_exit(zxr_internal_thread_t* thread) {
     return atomic_exchange_explicit(&thread->state, EXITING, memory_order_release);
 }
 
 // Claim the thread as JOINED or DETACHED.  Returns true on success, which only
 // happens if the previous state was JOINABLE.  Always returns the previous state.
-static bool claim_thread(zxr_thread_t* thread, int new_state, int* old_state) {
+static bool claim_thread(zxr_internal_thread_t* thread, int new_state, int* old_state) {
     *old_state = JOINABLE;
     return atomic_compare_exchange_strong_explicit(
             &thread->state, old_state, new_state,
@@ -49,13 +63,13 @@ static bool claim_thread(zxr_thread_t* thread, int new_state, int* old_state) {
 
 // Extract the handle from the thread structure.  This must only be called by the thread
 // itself (i.e., this is not thread-safe).
-static zx_handle_t take_handle(zxr_thread_t* thread) {
+static zx_handle_t take_handle(zxr_internal_thread_t* thread) {
     zx_handle_t tmp = thread->handle;
     thread->handle = ZX_HANDLE_INVALID;
     return tmp;
 }
 
-static _Noreturn void exit_non_detached(zxr_thread_t* thread) {
+static _Noreturn void exit_non_detached(zxr_internal_thread_t* thread) {
     // As soon as thread->state has changed to to DONE, a caller of zxr_thread_join
     // might complete and deallocate the memory containing the thread descriptor.
     // Hence it's no longer safe to touch *thread or read anything out of it.
@@ -76,7 +90,7 @@ static _Noreturn void exit_non_detached(zxr_thread_t* thread) {
 }
 
 static _Noreturn void thread_trampoline(uintptr_t ctx, uintptr_t arg) {
-    zxr_thread_t* thread = (zxr_thread_t*)ctx;
+    zxr_internal_thread_t* thread = (zxr_internal_thread_t*)ctx;
 
     thread->entry((void*)arg);
 
@@ -100,17 +114,17 @@ static _Noreturn void thread_trampoline(uintptr_t ctx, uintptr_t arg) {
 _Noreturn void zxr_thread_exit_unmap_if_detached(
     zxr_thread_t* thread, zx_handle_t vmar, uintptr_t addr, size_t len) {
 
-    int old_state = begin_exit(thread);
+    int old_state = begin_exit(to_internal(thread));
     switch (old_state) {
     case DETACHED: {
-        zx_handle_t handle = take_handle(thread);
+        zx_handle_t handle = take_handle(to_internal(thread));
         _zx_vmar_unmap_handle_close_thread_exit(vmar, addr, len, handle);
         break;
     }
     // See comments in thread_trampoline.
     case JOINABLE:
     case JOINED:
-        exit_non_detached(thread);
+        exit_non_detached(to_internal(thread));
         break;
     }
 
@@ -126,29 +140,29 @@ static size_t local_strlen(const char* s) {
     return len;
 }
 
-static void initialize_thread(zxr_thread_t* thread,
+static void initialize_thread(zxr_internal_thread_t* thread,
                               zx_handle_t handle, bool detached) {
-    *thread = (zxr_thread_t){ .handle = handle, };
+    *thread = (zxr_internal_thread_t){ .handle = handle, };
     atomic_init(&thread->state, detached ? DETACHED : JOINABLE);
 }
 
 zx_status_t zxr_thread_create(zx_handle_t process, const char* name,
                               bool detached, zxr_thread_t* thread) {
-    initialize_thread(thread, ZX_HANDLE_INVALID, detached);
+    initialize_thread(to_internal(thread), ZX_HANDLE_INVALID, detached);
     if (name == NULL)
         name = "";
     size_t name_length = local_strlen(name) + 1;
-    return _zx_thread_create(process, name, name_length, 0, &thread->handle);
+    return _zx_thread_create(process, name, name_length, 0, &to_internal(thread)->handle);
 }
 
 zx_status_t zxr_thread_start(zxr_thread_t* thread, uintptr_t stack_addr, size_t stack_size, zxr_thread_entry_t entry, void* arg) {
-    thread->entry = entry;
+    to_internal(thread)->entry = entry;
 
     // compute the starting address of the stack
     uintptr_t sp = compute_initial_stack_pointer(stack_addr, stack_size);
 
     // kick off the new thread
-    zx_status_t status = _zx_thread_start(thread->handle,
+    zx_status_t status = _zx_thread_start(to_internal(thread)->handle,
                                           (uintptr_t)thread_trampoline, sp,
                                           (uintptr_t)thread, (uintptr_t)arg);
 
@@ -157,7 +171,7 @@ zx_status_t zxr_thread_start(zxr_thread_t* thread, uintptr_t stack_addr, size_t 
     return status;
 }
 
-static void wait_for_done(zxr_thread_t* thread, int old_state) {
+static void wait_for_done(zxr_internal_thread_t* thread, int old_state) {
     do {
         switch (_zx_futex_wait(&thread->state, old_state, ZX_TIME_INFINITE)) {
             case ZX_ERR_BAD_STATE:   // Never blocked because it had changed.
@@ -176,7 +190,9 @@ static void wait_for_done(zxr_thread_t* thread, int old_state) {
         __builtin_trap();
 }
 
-zx_status_t zxr_thread_join(zxr_thread_t* thread) {
+zx_status_t zxr_thread_join(zxr_thread_t* external_thread) {
+    zxr_internal_thread_t* thread = to_internal(external_thread);
+
     int old_state;
     // Try to claim the join slot on this thread.
     if (claim_thread(thread, JOINED, &old_state)) {
@@ -207,7 +223,7 @@ zx_status_t zxr_thread_join(zxr_thread_t* thread) {
 zx_status_t zxr_thread_detach(zxr_thread_t* thread) {
     int old_state;
     // Try to claim the join slot on this thread on behalf of the thread.
-    if (!claim_thread(thread, DETACHED, &old_state)) {
+    if (!claim_thread(to_internal(thread), DETACHED, &old_state)) {
         switch (old_state) {
             case DETACHED:
             case JOINED:
@@ -244,15 +260,15 @@ zx_status_t zxr_thread_detach(zxr_thread_t* thread) {
 }
 
 bool zxr_thread_detached(zxr_thread_t* thread) {
-    int state = atomic_load_explicit(&thread->state, memory_order_acquire);
+    int state = atomic_load_explicit(&to_internal(thread)->state, memory_order_acquire);
     return state == DETACHED;
 }
 
 zx_handle_t zxr_thread_get_handle(zxr_thread_t* thread) {
-    return thread->handle;
+    return to_internal(thread)->handle;
 }
 
 zx_status_t zxr_thread_adopt(zx_handle_t handle, zxr_thread_t* thread) {
-    initialize_thread(thread, handle, false);
+    initialize_thread(to_internal(thread), handle, false);
     return handle == ZX_HANDLE_INVALID ? ZX_ERR_BAD_HANDLE : ZX_OK;
 }
