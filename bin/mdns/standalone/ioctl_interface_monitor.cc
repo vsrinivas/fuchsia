@@ -66,10 +66,16 @@ bool IoctlInterfaceMonitor::CheckInterfaces() {
   }
 
   netc_get_if_info_t if_infos;
-  ssize_t size = ioctl_netc_get_if_info(socket_fd.get(), &if_infos);
-
+  const ssize_t size = ioctl_netc_get_num_ifs(socket_fd.get(), &if_infos.n_info);
   if (size < 0 || if_infos.n_info == 0) {
     return true;
+  }
+  for (uint32_t i = 0; i < if_infos.n_info; i++) {
+    const ssize_t size =
+        ioctl_netc_get_if_info_at(socket_fd.get(), &i, &if_infos.info[i]);
+    if (size < 0) {
+      return true;
+    }
   }
 
   for (uint32_t i = 0; i < if_infos.n_info; ++i) {

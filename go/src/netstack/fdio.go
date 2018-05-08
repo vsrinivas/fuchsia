@@ -47,7 +47,6 @@ const LOCAL_SIGNAL_CLOSING = zx.SignalUser5
 const defaultNIC = 2
 
 var (
-	ioctlNetcGetIfInfo   = fdio.IoctlNum(fdio.IoctlKindDefault, fdio.IoctlFamilyNetconfig, 0)
 	ioctlNetcGetNumIfs   = fdio.IoctlNum(fdio.IoctlKindDefault, fdio.IoctlFamilyNetconfig, 1)
 	ioctlNetcGetIfInfoAt = fdio.IoctlNum(fdio.IoctlKindDefault, fdio.IoctlFamilyNetconfig, 2)
 	ioctlNetcGetNodename = fdio.IoctlNum(fdio.IoctlKindDefault, fdio.IoctlFamilyNetconfig, 8)
@@ -902,7 +901,7 @@ func (s *socketServer) buildIfInfos() *c_netc_get_if_info {
 		}
 		rep.info[index].index = uint16(index + 1)
 		rep.info[index].flags |= NETC_IFF_UP
-		copy(rep.info[index].name[:], []byte(fmt.Sprintf("en%d", nicid)))
+		copy(rep.info[index].name[:], ifs.nic.Name)
 		writeSockaddrStorage(&rep.info[index].addr, tcpip.FullAddress{NIC: nicid, Addr: ifs.nic.Addr})
 		writeSockaddrStorage(&rep.info[index].netmask, tcpip.FullAddress{NIC: nicid, Addr: tcpip.Address(ifs.nic.Netmask)})
 
@@ -925,10 +924,6 @@ var lastIfInfo *c_netc_get_if_info
 func (s *socketServer) opIoctl(ios *iostate, msg *zxsocket.Msg) zx.Status {
 	// TODO: deprecated in favor of FIDL service. Remove.
 	switch msg.IoctlOp() {
-	case ioctlNetcGetIfInfo:
-		rep := s.buildIfInfos()
-		rep.Encode(msg)
-		return zx.ErrOk
 	case ioctlNetcGetNumIfs:
 		lastIfInfo = s.buildIfInfos()
 		binary.LittleEndian.PutUint32(msg.Data[:msg.Arg], lastIfInfo.n_info)

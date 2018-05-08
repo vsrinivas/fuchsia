@@ -40,9 +40,6 @@ typedef struct {
   netc_if_info_t info[NETC_IF_INFO_MAX];
 } netc_get_if_info_t;
 
-// Deprecated. Use GET_NUM_IFS and GET_IF_INFO_AT instead.
-#define IOCTL_NETC_GET_IF_INFO \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_NETCONFIG, 0)
 // Usage: call ioctl_get_num_ifs first to find the number of interfaces, then
 // query each interface by index, starting from 0, using get_if_info_at. The
 // interface list is snapshot from the last time get_num_ifs was called.
@@ -52,8 +49,6 @@ typedef struct {
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_NETCONFIG, 2)
 
 // Get if info
-// ssize_t ioctl_netc_get_if_info(int fd, netc_get_if_info_t* get_if_info)
-IOCTL_WRAPPER_OUT(ioctl_netc_get_if_info, IOCTL_NETC_GET_IF_INFO, netc_get_if_info_t);
 // ssize_t ioctl_netc_get_num_ifs(int fd, uint32_t* num_ifs)
 IOCTL_WRAPPER_OUT(ioctl_netc_get_num_ifs, IOCTL_NETC_GET_NUM_IFS, uint32_t);
 // ssize_t ioctl_netc_get_if_info_at(int fd, uint32_t* index, netc_if_info_t* if_info)
