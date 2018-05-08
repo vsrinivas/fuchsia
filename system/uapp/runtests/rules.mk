@@ -14,9 +14,12 @@ MODULE_SRCS += \
 
 MODULE_NAME := runtests
 
+# zxcpp required for fbl to work.
 MODULE_STATIC_LIBS := \
+    system/ulib/fbl \
     system/ulib/runtests-utils \
     system/ulib/zx \
+    system/ulib/zxcpp \
 
 # We have to include all MODULE_LIBS from runtests-utils because transitive dependencies don't
 # get linked in automatically :-(.

@@ -13,6 +13,12 @@ MODULE_GROUP := test
 MODULE_SRCS += \
     $(LOCAL_DIR)/runtests-utils.cpp \
 
+# zxcpp required for fbl to work.
+MODULE_STATIC_LIBS := \
+    system/ulib/fbl \
+    system/ulib/zx \
+    system/ulib/zxcpp \
+
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/fdio \
