@@ -129,6 +129,8 @@ test("tests") {
     "test/mixer_resampler_tests.cc",
     "test/mixer_frequency_tests.cc",
     "test/mixer_dynamic_range_tests.cc",
+    "test/audio_performance.cc",
+    "test/audio_performance.h",
     "test/mixer_tests_recap.cc",
   ]
 
