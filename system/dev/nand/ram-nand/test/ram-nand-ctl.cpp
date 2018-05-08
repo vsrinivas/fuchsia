@@ -17,9 +17,8 @@ class NandDevice {
   public:
     NandDevice() {
         nand_info_t config = {4096, 4, 5, 6, 0};
-        char path[PATH_MAX];
-        if (!create_ram_nand(&config, path)) {
-            device_.reset(open(path, O_RDWR));
+        if (!create_ram_nand(&config, path_)) {
+            device_.reset(open(path_, O_RDWR));
         }
     }
 
@@ -28,6 +27,8 @@ class NandDevice {
     bool IsValid() const { return device_ ? true : false; }
 
     int get() const { return device_.get(); }
+
+    const char* path() const { return path_; }
 
     bool Unlink() {
         if (device_ && ioctl_ram_nand_unlink(device_.get()) != ZX_OK) {
@@ -38,6 +39,7 @@ class NandDevice {
 
   private:
     fbl::unique_fd device_;
+    char path_[PATH_MAX];
     DISALLOW_COPY_ASSIGN_AND_MOVE(NandDevice);
 };
 
@@ -46,6 +48,9 @@ bool TrivialLifetimeTest() {
     NandDevice device;
     ASSERT_TRUE(device.IsValid());
     ASSERT_TRUE(device.Unlink());
+
+    fbl::unique_fd found(open(device.path(), O_RDWR));
+    ASSERT_FALSE(found);
     END_TEST;
 }
 

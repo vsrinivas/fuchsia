@@ -6,6 +6,8 @@
 
 #include <stdlib.h>
 
+#include <zircon/device/ram-nand.h>
+
 zx_status_t RamNandDevice::Bind() {
     char name[NAME_MAX];
     zx_status_t status = ram_nand_.Init(name);
@@ -26,7 +28,11 @@ void RamNandDevice::DdkUnbind() {
 
 zx_status_t RamNandDevice::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
                                     void* out_buf, size_t out_len, size_t* out_actual) {
-    return ram_nand_.Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
+    zx_status_t status = ram_nand_.Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
+    if (status == ZX_OK && op == IOCTL_RAM_NAND_UNLINK) {
+        DdkRemove();
+    }
+    return status;
 }
 
 void RamNandDevice::Query(nand_info_t* info_out, size_t* nand_op_size_out) {
