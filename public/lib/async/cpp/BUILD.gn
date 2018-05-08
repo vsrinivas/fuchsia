@@ -28,3 +28,26 @@ source_set("operation") {
     "//garnet/public/lib/fsl",
   ]
 }
+
+group("unittests") {
+  testonly = true
+
+  deps = [
+    ":operation_unittest",
+  ]
+}
+
+source_set("operation_unittest") {
+  testonly = true
+
+  sources = [
+    "operation_unittest.cc",
+  ]
+
+  deps = [
+    ":operation",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest",
+  ]
+}

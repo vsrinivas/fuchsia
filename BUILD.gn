@@ -116,7 +116,7 @@ executable("modular_unittests_bin") {
     "//peridot/bin/user_runner/entity_provider_runner:unittests",
     "//peridot/bin/user_runner/story_runner:unittests",
     "//peridot/examples/counter_cpp:unittests",
-    "//peridot/public/lib/entity/cpp:json_unittest",
+    "//peridot/public/lib:unittests",
     "//third_party/googletest:gtest_main",
   ]
 }

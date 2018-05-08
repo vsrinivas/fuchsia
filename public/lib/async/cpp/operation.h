@@ -20,7 +20,8 @@ namespace modular {
 class OperationBase;
 
 // An abstract base class which provides methods to hold on to Operation
-// instances until they declare themselves to be Done().
+// instances until they declare themselves to be Done(). Ownership of
+// the operations must be managed by implementations.
 class OperationContainer {
  public:
   OperationContainer();
@@ -38,7 +39,9 @@ class OperationContainer {
   friend class OperationBase;
 
   virtual fxl::WeakPtr<OperationContainer> GetWeakPtr() = 0;
+  // Must take ownership of |o|.
   virtual void Hold(OperationBase* o) = 0;
+  // Must clean up memory for |o|.
   virtual void Drop(OperationBase* o) = 0;
   virtual void Cont() = 0;
 };
@@ -186,7 +189,7 @@ class OperationBase {
   class FlowTokenBase;
 
  private:
-  // OperationContainer calls InvalidateWeakPtrs() and Schedule().
+  // OperationContainer calls SetOwner(), InvalidateWeakPtrs() and Schedule().
   friend class OperationContainer;
 
   // Called only by OperationContainer::Add().
@@ -231,6 +234,11 @@ class OperationBase {
   void TraceAsyncEnd();
 
   fxl::WeakPtr<OperationContainer> container_;
+  // Set to true when |container_->Hold(this)| is called. There are currently
+  // two pathways, SetOwner() and Ready(), and they are incompatible. We
+  // fail in either if this bool is already set.
+  // TODO(thatguy): Clean this up once no operations use Ready().
+  bool already_owned_ = false;
 
   // Used by FlowTokenBase to suppress Done() calls after the Operation instance
   // is deleted. The OperationContainer will invalidate all weak pointers to

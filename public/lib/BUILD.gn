@@ -16,6 +16,15 @@ group("just_fidl") {
   ]
 }
 
+group("unittests") {
+  testonly = true
+
+  deps = [
+    "entity/cpp:unittests",
+    "async/cpp:unittests",
+  ]
+}
+
 fidl("fidl") {
   name = "modular"
 

@@ -8,6 +8,14 @@ group("cpp") {
   ]
 }
 
+group("unittests") {
+  testonly = true
+
+  deps = [
+    ":json_unittest",
+  ]
+}
+
 source_set("json") {
   sources = [
     "json.cc",
