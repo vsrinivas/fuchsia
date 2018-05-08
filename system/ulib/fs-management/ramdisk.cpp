@@ -134,24 +134,26 @@ static int finish_create(ramdisk_ioctl_config_response_t* response, char* out_pa
 }
 
 int create_ramdisk(uint64_t blk_size, uint64_t blk_count, char* out_path) {
-    int fd = open_ramctl();
-    if (fd < 0)
-        return fd;
+    fbl::unique_fd fd(open_ramctl());
+    if (fd.get() < 0) {
+        return -1;
+    }
     ramdisk_ioctl_config_t config;
     config.blk_size = blk_size;
     config.blk_count = blk_count;
     ramdisk_ioctl_config_response_t response;
     return finish_create(&response, out_path,
-                         ioctl_ramdisk_config(fd, &config, &response));
+                         ioctl_ramdisk_config(fd.get(), &config, &response));
 }
 
 int create_ramdisk_from_vmo(zx_handle_t vmo, char* out_path) {
-    int fd = open_ramctl();
-    if (fd < 0)
-        return fd;
+    fbl::unique_fd fd(open_ramctl());
+    if (fd.get() < 0) {
+        return -1;
+    }
     ramdisk_ioctl_config_response_t response;
     return finish_create(&response, out_path,
-                         ioctl_ramdisk_config_vmo(fd, &vmo, &response));
+                         ioctl_ramdisk_config_vmo(fd.get(), &vmo, &response));
 }
 
 int sleep_ramdisk(const char* ramdisk_path, uint64_t txn_count) {
