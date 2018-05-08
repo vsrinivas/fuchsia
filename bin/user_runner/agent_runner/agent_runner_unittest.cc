@@ -5,6 +5,7 @@
 #include <memory>
 
 #include <fs/service.h>
+#include <fs/synchronous-vfs.h>
 
 #include <fuchsia/cpp/component.h>
 #include <fuchsia/cpp/modular.h>
@@ -119,7 +120,7 @@ class MyDummyAgent : Agent,
   }
 
  private:
-  fs::ManagedVfs vfs_;
+  fs::SynchronousVfs vfs_;
   fbl::RefPtr<fs::PseudoDir> outgoing_directory_;
   fidl::Binding<component::ApplicationController> app_controller_;
   fidl::Binding<modular::Agent> agent_binding_;

@@ -5,6 +5,7 @@
 #include <memory>
 
 #include <fs/service.h>
+#include <fs/synchronous-vfs.h>
 
 #include <fuchsia/cpp/component.h>
 #include <fuchsia/cpp/modular.h>
@@ -168,7 +169,7 @@ class MyEntityProvider : AgentImpl::Delegate,
   }
 
  private:
-  fs::ManagedVfs vfs_;
+  fs::SynchronousVfs vfs_;
   fbl::RefPtr<fs::PseudoDir> outgoing_directory_;
   AgentContextPtr agent_context_;
   std::unique_ptr<AgentImpl> agent_impl_;
