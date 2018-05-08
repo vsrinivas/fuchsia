@@ -107,15 +107,15 @@ void Presentation::Present(
   yield_callback_ = std::move(yield_callback);
   shutdown_callback_ = std::move(shutdown_callback);
 
-  scenic_->GetDisplayInfo(fxl::MakeCopyable([
-    weak = weak_factory_.GetWeakPtr(), view_owner = std::move(view_owner),
-    presentation_request = std::move(presentation_request)
-  ](gfx::DisplayInfo display_info) mutable {
-    if (weak)
-      weak->CreateViewTree(std::move(view_owner),
-                           std::move(presentation_request),
-                           std::move(display_info));
-  }));
+  scenic_->GetDisplayInfo(fxl::MakeCopyable(
+      [weak = weak_factory_.GetWeakPtr(), view_owner = std::move(view_owner),
+       presentation_request = std::move(presentation_request)](
+          gfx::DisplayInfo display_info) mutable {
+        if (weak)
+          weak->CreateViewTree(std::move(view_owner),
+                               std::move(presentation_request),
+                               std::move(display_info));
+      }));
 }
 
 void Presentation::CreateViewTree(
@@ -442,7 +442,7 @@ void Presentation::CaptureKeyboardEvent(
   presentation::KeyboardCaptureListenerPtr listener;
   listener.Bind(std::move(listener_handle));
   // Auto-remove listeners if the interface closes.
-  listener.set_error_handler([ this, listener = listener.get() ] {
+  listener.set_error_handler([this, listener = listener.get()] {
     captured_keybindings_.erase(
         std::remove_if(captured_keybindings_.begin(),
                        captured_keybindings_.end(),
@@ -476,7 +476,6 @@ void Presentation::SetPresentationModeListener(
   presentation_mode_listener_.Bind(std::move(listener));
   FXL_LOG(INFO) << "Presentation mode, now listening.";
 }
-
 
 bool Presentation::GlobalHooksHandleEvent(const input::InputEvent& event) {
   return display_rotater_.OnEvent(event, this) ||
@@ -570,7 +569,6 @@ void Presentation::OnSensorEvent(uint32_t device_id, input::InputReport event) {
     }
   }
 }
-
 
 void Presentation::OnChildAttached(uint32_t child_key,
                                    views_v1::ViewInfo child_view_info,

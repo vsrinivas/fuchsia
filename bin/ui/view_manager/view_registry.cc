@@ -737,8 +737,8 @@ void ViewRegistry::HitTest(views_v1::ViewTreeToken view_tree_token,
   session_.HitTestDeviceRay(
       (float[3]){ray_origin.x, ray_origin.y, ray_origin.z},
       (float[3]){ray_direction.x, ray_direction.y, ray_direction.z},
-      [ this, callback = std::move(callback), ray_origin,
-        ray_direction ](fidl::VectorPtr<gfx::Hit> hits) {
+      [this, callback = std::move(callback), ray_origin,
+       ray_direction](fidl::VectorPtr<gfx::Hit> hits) {
         auto view_hits = fidl::VectorPtr<ViewHit>::New(0);
         for (auto& hit : *hits) {
           auto it = views_by_token_.find(hit.tag_value);

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_UTIL_TYPE_UTILS_H_
+#define LIB_ESCHER_UTIL_TYPE_UTILS_H_
 
 #include "lib/escher/geometry/types.h"
 
@@ -17,3 +18,4 @@ inline vec4 homogenize(const vec4& vector) {
 }
 
 }  // namespace escher
+#endif  // LIB_ESCHER_UTIL_TYPE_UTILS_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_IMPL_MODEL_MOMENT_SHADOW_MAP_PASS_H_
+#define LIB_ESCHER_IMPL_MODEL_MOMENT_SHADOW_MAP_PASS_H_
 
 #include "lib/escher/impl/model_shadow_map_pass.h"
 
@@ -18,6 +19,7 @@ class ModelMomentShadowMapPass final : public ModelShadowMapPass {
                            vk::Format color_format,
                            vk::Format depth_format,
                            uint32_t sample_count);
+
  protected:
   // |ModelRenderPass|
   std::string GetFragmentShaderSourceCode(
@@ -26,3 +28,5 @@ class ModelMomentShadowMapPass final : public ModelShadowMapPass {
 
 }  // namespace impl
 }  // namespace escher
+
+#endif  // LIB_ESCHER_IMPL_MODEL_MOMENT_SHADOW_MAP_PASS_H_

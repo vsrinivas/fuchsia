@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_VK_SHADER_STAGE_H_
+#define LIB_ESCHER_VK_SHADER_STAGE_H_
 
 #include <vulkan/vulkan.hpp>
 
@@ -41,3 +42,5 @@ inline vk::ShaderStageFlags ShaderStageToFlags(ShaderStage stage) {
 }
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_VK_SHADER_STAGE_H_

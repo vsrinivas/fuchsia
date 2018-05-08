@@ -8,21 +8,20 @@
 #include <map>
 #include <memory>
 
+#include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/presentation.h>
+#include <fuchsia/cpp/views_v1.h>
 #include "garnet/examples/ui/tile/tile_params.h"
 #include "lib/app/cpp/application_context.h"
-#include <fuchsia/cpp/component.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/svc/cpp/service_provider_bridge.h"
-#include <fuchsia/cpp/presentation.h>
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/view_framework/base_view.h"
-#include <fuchsia/cpp/views_v1.h>
 
 namespace examples {
 
-class TileView : public mozart::BaseView,
-                 public presentation::Presenter {
+class TileView : public mozart::BaseView, public presentation::Presenter {
  public:
   TileView(views_v1::ViewManagerPtr view_manager,
            fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
@@ -33,7 +32,8 @@ class TileView : public mozart::BaseView,
 
  private:
   struct ViewData {
-    explicit ViewData(const std::string& url, uint32_t key,
+    explicit ViewData(const std::string& url,
+                      uint32_t key,
                       component::ApplicationControllerPtr controller,
                       scenic_lib::Session* session);
     ~ViewData();

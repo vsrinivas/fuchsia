@@ -242,7 +242,8 @@ void InputDispatcherImpl::DeliverKeyEvent(
 
         if (!handled && propagation_index + 1 < focus_chain->chain.size()) {
           // Avoid re-entrance on DeliverKeyEvent
-          async::PostTask(async_get_default(),
+          async::PostTask(
+              async_get_default(),
               fxl::MakeCopyable([weak = weak_factory_.GetWeakPtr(),
                                  focus_chain = std::move(focus_chain),
                                  propagation_index,
@@ -325,8 +326,7 @@ void InputDispatcherImpl::OnHitTestResult(const geometry::PointF& point,
             focus.focused = true;
             event.set_focus(std::move(focus));
             owner_->DeliverEvent(new_chain->chain.front(), std::move(event),
-                                nullptr);
-
+                                 nullptr);
           }
 
           active_focus_chain_ = std::move(new_chain);

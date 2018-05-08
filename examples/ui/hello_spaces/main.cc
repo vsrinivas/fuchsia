@@ -5,10 +5,10 @@
 #include <fuchsia/cpp/ui.h>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/ui/scenic/client/session.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
+#include "lib/ui/scenic/client/session.h"
 
 namespace hello_spaces {
 
@@ -85,7 +85,6 @@ void App::ReleaseSessionResources() {
 }
 
 }  // namespace hello_spaces
-
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);

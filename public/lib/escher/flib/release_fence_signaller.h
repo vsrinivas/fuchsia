@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_FLIB_RELEASE_FENCE_SIGNALLER_H_
+#define LIB_ESCHER_FLIB_RELEASE_FENCE_SIGNALLER_H_
 
 #include <deque>
 #include <queue>
@@ -64,3 +65,5 @@ class ReleaseFenceSignaller
 };
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_FLIB_RELEASE_FENCE_SIGNALLER_H_

@@ -5,8 +5,8 @@
 #include <trace-provider/provider.h>
 
 #include "garnet/examples/ui/spinning_square/spinning_square_view.h"
-#include "lib/ui/view_framework/view_provider_app.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/ui/view_framework/view_provider_app.h"
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;

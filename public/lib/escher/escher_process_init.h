@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_ESCHER_PROCESS_INIT_H_
+#define LIB_ESCHER_ESCHER_PROCESS_INIT_H_
 
 namespace escher {
 
@@ -27,3 +28,5 @@ void GlslangInitializeProcess();
 void GlslangFinalizeProcess();
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_ESCHER_PROCESS_INIT_H_

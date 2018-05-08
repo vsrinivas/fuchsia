@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_RESOURCES_RESOURCE_H_
+#define LIB_ESCHER_RESOURCES_RESOURCE_H_
 
 #include "lib/escher/base/ownable.h"
 #include "lib/escher/base/owner.h"
@@ -60,3 +61,5 @@ class Resource : public Ownable<Resource, ResourceTypeInfo> {
 typedef fxl::RefPtr<Resource> ResourcePtr;
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_RESOURCES_RESOURCE_H_

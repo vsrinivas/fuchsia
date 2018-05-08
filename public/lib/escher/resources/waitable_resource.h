@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_RESOURCES_WAITABLE_RESOURCE_H_
+#define LIB_ESCHER_RESOURCES_WAITABLE_RESOURCE_H_
 
 #include "lib/escher/renderer/semaphore.h"
 #include "lib/escher/resources/resource.h"
@@ -51,3 +52,5 @@ inline void WaitableResource::ReplaceWaitSemaphore(SemaphorePtr semaphore) {
 }
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_RESOURCES_WAITABLE_RESOURCE_H_

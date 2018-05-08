@@ -49,9 +49,9 @@ class App : public presentation::Presenter,
                    presentation_request) override;
 
   // |InputDeviceRegistry|:
-  void RegisterDevice(input::DeviceDescriptor descriptor,
-                      fidl::InterfaceRequest<input::InputDevice>
-                          input_device_request) override;
+  void RegisterDevice(
+      input::DeviceDescriptor descriptor,
+      fidl::InterfaceRequest<input::InputDevice> input_device_request) override;
 
   void InitializeServices();
   void Reset();

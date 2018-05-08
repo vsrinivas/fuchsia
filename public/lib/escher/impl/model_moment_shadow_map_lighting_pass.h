@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_IMPL_MODEL_MOMENT_SHADOW_MAP_LIGHTING_PASS_H_
+#define LIB_ESCHER_IMPL_MODEL_MOMENT_SHADOW_MAP_LIGHTING_PASS_H_
 
 #include "lib/escher/impl/model_shadow_map_lighting_pass.h"
 
@@ -28,3 +29,5 @@ class ModelMomentShadowMapLightingPass final
 
 }  // namespace impl
 }  // namespace escher
+
+#endif  // LIB_ESCHER_IMPL_MODEL_MOMENT_SHADOW_MAP_LIGHTING_PASS_H_

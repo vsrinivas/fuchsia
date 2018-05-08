@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_IMPL_MODEL_DISPLAY_LIST_FLAGS_H_
+#define LIB_ESCHER_IMPL_MODEL_DISPLAY_LIST_FLAGS_H_
 
 #include <vulkan/vulkan.hpp>
 
@@ -51,3 +52,5 @@ struct FlagTraits<escher::impl::ModelDisplayListFlag> {
 };
 
 }  // namespace vk
+
+#endif  // LIB_ESCHER_IMPL_MODEL_DISPLAY_LIST_FLAGS_H_

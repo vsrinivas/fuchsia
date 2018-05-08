@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_GEOMETRY_BOUNDING_BOX_H_
+#define LIB_ESCHER_GEOMETRY_BOUNDING_BOX_H_
 
 #include "lib/escher/geometry/types.h"
 
@@ -66,3 +67,5 @@ inline BoundingBox operator+(const BoundingBox& box, const vec3& translation) {
 ESCHER_DEBUG_PRINTABLE(BoundingBox);
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_GEOMETRY_BOUNDING_BOX_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_UTIL_HASH_MAP_H_
+#define LIB_ESCHER_UTIL_HASH_MAP_H_
 
 #include <unordered_map>
 
@@ -45,3 +46,5 @@ template <typename KeyT, typename ValueT>
 using HashMap = std::unordered_map<KeyT, ValueT, HashMapHasher<KeyT>>;
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_UTIL_HASH_MAP_H_

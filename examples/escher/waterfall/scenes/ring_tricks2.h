@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_RING_TRICKS2_H_
+#define GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_RING_TRICKS2_H_
 
 #include "lib/escher/escher.h"
 #include "lib/escher/shape/rounded_rect_factory.h"
@@ -42,3 +43,5 @@ class RingTricks2 : public Scene {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RingTricks2);
 };
+
+#endif  // GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_RING_TRICKS2_H_

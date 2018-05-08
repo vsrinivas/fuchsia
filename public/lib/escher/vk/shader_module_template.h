@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_VK_SHADER_MODULE_TEMPLATE_H_
+#define LIB_ESCHER_VK_SHADER_MODULE_TEMPLATE_H_
 
 #include <string>
 #include <utility>
@@ -139,3 +140,5 @@ ShaderModuleVariantArgs::definitions() const {
 }
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_VK_SHADER_MODULE_TEMPLATE_H_

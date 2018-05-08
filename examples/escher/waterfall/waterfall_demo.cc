@@ -83,9 +83,8 @@ void WaterfallDemo::ProcessCommandLineArgs(int argc, char** argv) {
 
 void WaterfallDemo::InitializeEscherStage(
     const DemoHarness::WindowParams& window_params) {
-  stage_.set_viewing_volume(
-      escher::ViewingVolume(
-          window_params.width, window_params.height, kNear, kFar));
+  stage_.set_viewing_volume(escher::ViewingVolume(
+      window_params.width, window_params.height, kNear, kFar));
   stage_.set_key_light(
       escher::DirectionalLight(escher::vec2(1.5f * M_PI, 1.5f * M_PI),
                                0.15f * M_PI, vec3(kLightIntensity)));
@@ -212,8 +211,9 @@ static escher::Camera GenerateCamera(int camera_projection_mode,
 
     case 1:
       return escher::Camera::NewPerspective(
-          volume, glm::translate(
-                      vec3(-volume.width() / 2, -volume.height() / 2, -10000)),
+          volume,
+          glm::translate(
+              vec3(-volume.width() / 2, -volume.height() / 2, -10000)),
           glm::radians(8.f));
     case 2: {
       vec3 eye(volume.width() / 3, 6000, 3000);
@@ -306,8 +306,8 @@ void WaterfallDemo::DrawFrame() {
   if (shadow_mode_ == kShadowMap || shadow_mode_ == kMomentShadowMap) {
     const vec3 directional_light_color(kLightIntensity);
     renderer_->set_ambient_light_color(vec3(1.f) - directional_light_color);
-    const auto& shadow_renderer = shadow_mode_ == kShadowMap ?
-        shadow_renderer_ : moment_shadow_renderer_;
+    const auto& shadow_renderer =
+        shadow_mode_ == kShadowMap ? shadow_renderer_ : moment_shadow_renderer_;
     shadow_map = shadow_renderer->GenerateDirectionalShadowMap(
         frame, stage_, *model, light_direction, directional_light_color);
   }

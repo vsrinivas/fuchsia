@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_SCENE_DIRECTIONAL_LIGHT_H_
+#define LIB_ESCHER_SCENE_DIRECTIONAL_LIGHT_H_
 
 #include "lib/escher/geometry/types.h"
 
@@ -56,3 +57,5 @@ class DirectionalLight {
 };
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_SCENE_DIRECTIONAL_LIGHT_H_

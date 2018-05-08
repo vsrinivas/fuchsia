@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_BASE_OWNABLE_H_
+#define LIB_ESCHER_BASE_OWNABLE_H_
 
 #include "lib/escher/base/typed_reffable.h"
 
@@ -56,3 +57,5 @@ class Ownable : public TypedReffable<TypeInfoT> {
 };
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_BASE_OWNABLE_H_

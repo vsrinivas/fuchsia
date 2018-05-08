@@ -72,7 +72,7 @@ TEST_F(ResourceLinkerTest, AllowsImport) {
   ASSERT_EQ(3u, session_->GetTotalResourceCount());
   linker->ImportResource(import.get(),
                          ::gfx::ImportSpec::NODE,  // import spec
-                         std::move(destination));   // import handle
+                         std::move(destination));  // import handle
 
   ASSERT_EQ(3u, session_->GetTotalResourceCount());
 
@@ -104,7 +104,7 @@ TEST_F(ResourceLinkerTest, CannotImportWithDeadSourceAndDestinationHandles) {
       fxl::MakeRefCounted<Import>(session_.get(), 1, ::gfx::ImportSpec::NODE);
   ASSERT_FALSE(
       linker->ImportResource(import.get(),
-                             ::gfx::ImportSpec::NODE,      // import spec
+                             ::gfx::ImportSpec::NODE,       // import spec
                              std::move(destination_out)));  // import handle
 
   ASSERT_EQ(0u, linker->NumUnresolvedImports());
@@ -134,7 +134,7 @@ TEST_F(ResourceLinkerTest, CannotImportWithDeadDestinationHandles) {
       fxl::MakeRefCounted<Import>(session_.get(), 1, ::gfx::ImportSpec::NODE);
   ASSERT_FALSE(
       linker->ImportResource(import.get(),
-                             ::gfx::ImportSpec::NODE,      // import spec
+                             ::gfx::ImportSpec::NODE,       // import spec
                              std::move(destination_out)));  // import handle
 
   ASSERT_EQ(0u, linker->NumUnresolvedImports());
@@ -160,37 +160,36 @@ TEST_F(ResourceLinkerTest, CanImportWithDeadSourceHandle) {
   scenic::gfx::ResourcePtr resource;
   ImportPtr import;
 
-  thread.TaskRunner()->PostTask(
-      fxl::MakeCopyable([this, &import, &resource, linker, &latch,
-                         destination = std::move(destination)]() mutable {
-        // Set an expiry callback that checks the resource expired for the right
-        // reason and signal the latch.
-        linker->SetOnExpiredCallback(
-            [&linker, &latch](Resource*,
-                              ResourceLinker::ExpirationCause cause) {
-              ASSERT_EQ(ResourceLinker::ExpirationCause::kExportTokenClosed,
-                        cause);
-              ASSERT_EQ(0u, linker->NumUnresolvedImports());
-              ASSERT_EQ(0u, linker->NumExports());
-              latch.Signal();
-            });
+  thread.TaskRunner()->PostTask(fxl::MakeCopyable([this, &import, &resource,
+                                                   linker, &latch,
+                                                   destination = std::move(
+                                                       destination)]() mutable {
+    // Set an expiry callback that checks the resource expired for the right
+    // reason and signal the latch.
+    linker->SetOnExpiredCallback(
+        [&linker, &latch](Resource*, ResourceLinker::ExpirationCause cause) {
+          ASSERT_EQ(ResourceLinker::ExpirationCause::kExportTokenClosed, cause);
+          ASSERT_EQ(0u, linker->NumUnresolvedImports());
+          ASSERT_EQ(0u, linker->NumExports());
+          latch.Signal();
+        });
 
-        bool did_resolve = false;
-        linker->SetOnImportResolvedCallback(
-            [&did_resolve](Import* import, Resource* resource,
-                           ImportResolutionResult cause) -> void {
-              did_resolve = true;
-            });
-        import = fxl::MakeRefCounted<Import>(session_.get(), 1,
-                                             ::gfx::ImportSpec::NODE);
-        ASSERT_TRUE(
-            linker->ImportResource(import.get(),
-                                   ::gfx::ImportSpec::NODE,  // import spec
-                                   std::move(destination)));  // import handle
+    bool did_resolve = false;
+    linker->SetOnImportResolvedCallback(
+        [&did_resolve](Import* import, Resource* resource,
+                       ImportResolutionResult cause) -> void {
+          did_resolve = true;
+        });
+    import =
+        fxl::MakeRefCounted<Import>(session_.get(), 1, ::gfx::ImportSpec::NODE);
+    ASSERT_TRUE(
+        linker->ImportResource(import.get(),
+                               ::gfx::ImportSpec::NODE,   // import spec
+                               std::move(destination)));  // import handle
 
-        ASSERT_EQ(1u, linker->NumUnresolvedImports());
-        ASSERT_FALSE(did_resolve);
-      }));
+    ASSERT_EQ(1u, linker->NumUnresolvedImports());
+    ASSERT_FALSE(did_resolve);
+  }));
 
   latch.Wait();
 
@@ -360,10 +359,10 @@ TEST_F(ResourceLinkerTest,
           latch.Signal();
         });
 
-    import = fxl::MakeRefCounted<Import>(session_.get(), 2,
-                                         ::gfx::ImportSpec::NODE);
+    import =
+        fxl::MakeRefCounted<Import>(session_.get(), 2, ::gfx::ImportSpec::NODE);
     linker->ImportResource(import.get(),
-                           ::gfx::ImportSpec::NODE,     // import spec
+                           ::gfx::ImportSpec::NODE,      // import spec
                            CopyEventPair(destination));  // import handle
 
     ASSERT_EQ(1u, linker->NumUnresolvedImports());
@@ -445,7 +444,7 @@ TEST_F(ResourceLinkerTest, ImportsBeforeExportsAreServiced) {
       fxl::MakeRefCounted<Import>(session_.get(), 2, ::gfx::ImportSpec::NODE);
   linker->ImportResource(import.get(),
                          ::gfx::ImportSpec::NODE,  // import spec
-                         std::move(destination));   // import handle
+                         std::move(destination));  // import handle
 
   ASSERT_FALSE(did_resolve);
   ASSERT_EQ(0u, linker->NumExports());
@@ -494,7 +493,7 @@ TEST_F(ResourceLinkerTest, ImportAfterReleasedExportedResourceFails) {
       fxl::MakeRefCounted<Import>(session_.get(), 2, ::gfx::ImportSpec::NODE);
   linker->ImportResource(import.get(),
                          ::gfx::ImportSpec::NODE,  // import spec
-                         std::move(destination));   // import handle
+                         std::move(destination));  // import handle
   RUN_MESSAGE_LOOP_UNTIL(did_resolve);
   ASSERT_TRUE(did_resolve);
   ASSERT_EQ(0u, linker->NumUnresolvedImports());
@@ -533,7 +532,7 @@ TEST_F(ResourceLinkerTest, DuplicatedDestinationHandlesAllowMultipleImports) {
     // Need to keep the import alive.
     imports.push_back(import);
     linker->ImportResource(import.get(),
-                           ::gfx::ImportSpec::NODE,           // import spec
+                           ::gfx::ImportSpec::NODE,            // import spec
                            std::move(duplicate_destination));  // import handle
 
     ASSERT_EQ(0u, resolution_count);
@@ -576,7 +575,7 @@ TEST_F(ResourceLinkerTest, UnresolvedImportIsRemovedIfDestroyed) {
     ImportPtr import = fxl::MakeRefCounted<Import>(session_.get(), i + 1,
                                                    ::gfx::ImportSpec::NODE);
     linker->ImportResource(import.get(),
-                           ::gfx::ImportSpec::NODE,           // import spec
+                           ::gfx::ImportSpec::NODE,            // import spec
                            std::move(duplicate_destination));  // import handle
 
     ASSERT_EQ(0u, linker->NumExports());

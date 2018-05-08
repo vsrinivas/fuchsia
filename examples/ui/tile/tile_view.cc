@@ -14,10 +14,11 @@
 
 namespace examples {
 
-TileView::TileView(views_v1::ViewManagerPtr view_manager,
-                   fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
-                   component::ApplicationContext* application_context,
-                   const TileParams& params)
+TileView::TileView(
+    views_v1::ViewManagerPtr view_manager,
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+    component::ApplicationContext* application_context,
+    const TileParams& params)
     : BaseView(std::move(view_manager), std::move(view_owner_request), "Tile"),
       application_context_(application_context),
       params_(params),
@@ -61,7 +62,6 @@ void TileView::ConnectViews() {
   }
 }
 
-
 void TileView::CreateNestedEnvironment() {
   application_context_->environment()->CreateNestedEnvironment(
       service_provider_bridge_.OpenAsDirectory(), env_.NewRequest(),
@@ -76,8 +76,7 @@ void TileView::CreateNestedEnvironment() {
 
   zx::channel h1, h2;
   if (zx::channel::create(0, &h1, &h2) < 0)
-    return
-  application_context_->environment()->GetDirectory(std::move(h1));
+    return application_context_->environment()->GetDirectory(std::move(h1));
   service_provider_bridge_.set_backing_dir(std::move(h2));
 }
 
@@ -171,15 +170,16 @@ void TileView::OnSceneInvalidated(images::PresentationInfo presentation_info) {
       views_v1::ViewProperties view_properties_clone;
       view_properties.Clone(&view_properties_clone);
       view_data->view_properties = std::move(view_properties_clone);
-      GetViewContainer()->SetChildProperties(it->first,
-          fidl::MakeOptional(std::move(view_properties)));
+      GetViewContainer()->SetChildProperties(
+          it->first, fidl::MakeOptional(std::move(view_properties)));
     }
 
     view_data->host_node.SetTranslation(layout_bounds.x, layout_bounds.y, 0u);
   }
 }
 
-TileView::ViewData::ViewData(const std::string& url, uint32_t key,
+TileView::ViewData::ViewData(const std::string& url,
+                             uint32_t key,
                              component::ApplicationControllerPtr controller,
                              scenic_lib::Session* session)
     : url(url),

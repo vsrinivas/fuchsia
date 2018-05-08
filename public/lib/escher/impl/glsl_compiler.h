@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_IMPL_GLSL_COMPILER_H_
+#define LIB_ESCHER_IMPL_GLSL_COMPILER_H_
 
 #include <future>
 #include <vector>
@@ -47,3 +48,5 @@ class GlslToSpirvCompiler {
 
 }  // namespace impl
 }  // namespace escher
+
+#endif  // LIB_ESCHER_IMPL_GLSL_COMPILER_H_

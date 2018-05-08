@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_UI_GFX_TAKE_SCREENSHOT_H_
-#define GARNET_LIB_UI_GFX_TAKE_SCREENSHOT_H_
+#ifndef GARNET_LIB_UI_GFX_SCREENSHOTTER_H_
+#define GARNET_LIB_UI_GFX_SCREENSHOTTER_H_
 
 #include <fuchsia/cpp/ui.h>
 #include <string>
@@ -17,8 +17,7 @@ namespace gfx {
 
 class Screenshotter {
  public:
-  explicit Screenshotter(Engine* engine)
-      : engine_(engine) {}
+  explicit Screenshotter(Engine* engine) : engine_(engine) {}
 
   void TakeScreenshot(const std::string& filename,
                       ui::Scenic::TakeScreenshotCallback callback);
@@ -38,4 +37,4 @@ class Screenshotter {
 }  // namespace gfx
 }  // namespace scenic
 
-#endif  // GARNET_LIB_UI_GFX_TAKE_SCREENSHOT_H_
+#endif  // GARNET_LIB_UI_GFX_SCREENSHOTTER_H_

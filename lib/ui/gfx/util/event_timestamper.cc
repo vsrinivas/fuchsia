@@ -112,18 +112,16 @@ EventTimestamper::Waiter::Waiter(
     : task_runner_(task_runner),
       event_(std::move(event)),
       callback_(std::move(callback)),
-      wait_(this, event_.get(), trigger) {
-}
+      wait_(this, event_.get(), trigger) {}
 
 EventTimestamper::Waiter::~Waiter() {
   FXL_DCHECK(state_ == State::STOPPED || state_ == State::ABANDONED);
 }
 
-void EventTimestamper::Waiter::Handle(
-    async_t* async,
-    async::WaitBase* wait,
-    zx_status_t status,
-    const zx_packet_signal_t* signal) {
+void EventTimestamper::Waiter::Handle(async_t* async,
+                                      async::WaitBase* wait,
+                                      zx_status_t status,
+                                      const zx_packet_signal_t* signal) {
   zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
   task_runner_->PostTask([now, this] {
     if (state_ == State::ABANDONED) {

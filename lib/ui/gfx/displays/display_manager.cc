@@ -19,21 +19,20 @@ DisplayManager::~DisplayManager() = default;
 void DisplayManager::WaitForDefaultDisplay(fxl::Closure callback) {
   FXL_DCHECK(!default_display_);
 
-  display_watcher_.WaitForDisplay(
-      [this, callback = std::move(callback)](uint32_t width_in_px,
-                                             uint32_t height_in_px,
-                                             zx::event ownership_event) {
-        CreateDefaultDisplay(
-            width_in_px, height_in_px, std::move(ownership_event));
-        callback();
-      });
+  display_watcher_.WaitForDisplay([this, callback = std::move(callback)](
+                                      uint32_t width_in_px,
+                                      uint32_t height_in_px,
+                                      zx::event ownership_event) {
+    CreateDefaultDisplay(width_in_px, height_in_px, std::move(ownership_event));
+    callback();
+  });
 }
 
 void DisplayManager::CreateDefaultDisplay(uint32_t width_in_px,
                                           uint32_t height_in_px,
                                           zx::event ownership_event) {
-  default_display_ = std::make_unique<Display>(
-      width_in_px, height_in_px, std::move(ownership_event));
+  default_display_ = std::make_unique<Display>(width_in_px, height_in_px,
+                                               std::move(ownership_event));
 }
 
 }  // namespace gfx

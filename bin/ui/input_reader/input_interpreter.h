@@ -17,7 +17,6 @@
 #include "garnet/bin/ui/input_reader/hid_decoder.h"
 
 #include <fuchsia/cpp/input.h>
-#include <fuchsia/cpp/input.h>
 
 namespace mozart {
 
@@ -62,12 +61,7 @@ class InputInterpreter {
     EGALAX
   };
 
-  enum class MouseDeviceType {
-    NONE,
-    BOOT,
-    PARADISEv1,
-    PARADISEv2,
-    GAMEPAD };
+  enum class MouseDeviceType { NONE, BOOT, PARADISEv1, PARADISEv2, GAMEPAD };
 
   enum class SensorDeviceType {
     NONE,

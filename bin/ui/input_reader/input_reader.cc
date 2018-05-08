@@ -18,8 +18,9 @@ constexpr char kInputDevPath[] = "/dev/class/input";
 
 struct InputReader::DeviceInfo {
   std::unique_ptr<InputInterpreter> interpreter;
-  std::unique_ptr<async::WaitMethod<InputReader,
-                                    &InputReader::OnDeviceHandleReady>> waiter;
+  std::unique_ptr<
+      async::WaitMethod<InputReader, &InputReader::OnDeviceHandleReady>>
+      waiter;
 };
 
 InputReader::InputReader(input::InputDeviceRegistry* registry,
@@ -45,8 +46,7 @@ void InputReader::SetOwnershipEvent(zx::event event) {
   zx_signals_t signals = ui::displayOwnedSignal | ui::displayNotOwnedSignal;
   display_ownership_waiter_.set_object(display_ownership_event_);
   display_ownership_waiter_.set_trigger(signals);
-  zx_status_t status =
-      display_ownership_waiter_.Begin(async_get_default());
+  zx_status_t status = display_ownership_waiter_.Begin(async_get_default());
   FXL_CHECK(status == ZX_OK);
 }
 
@@ -63,8 +63,8 @@ void InputReader::DeviceAdded(std::unique_ptr<InputInterpreter> interpreter) {
   FXL_VLOG(1) << "Input device " << interpreter->name() << " added ";
   zx_handle_t handle = interpreter->handle();
 
-  auto wait = std::make_unique<async::WaitMethod<InputReader,
-                                    &InputReader::OnDeviceHandleReady>>(
+  auto wait = std::make_unique<
+      async::WaitMethod<InputReader, &InputReader::OnDeviceHandleReady>>(
       this, handle, ZX_USER_SIGNAL_0);
 
   zx_status_t status = wait->Begin(async_get_default());
@@ -74,11 +74,10 @@ void InputReader::DeviceAdded(std::unique_ptr<InputInterpreter> interpreter) {
                    new DeviceInfo{std::move(interpreter), std::move(wait)});
 }
 
-void InputReader::OnDeviceHandleReady(
-    async_t* async,
-    async::WaitBase* wait,
-    zx_status_t status,
-    const zx_packet_signal_t* signal) {
+void InputReader::OnDeviceHandleReady(async_t* async,
+                                      async::WaitBase* wait,
+                                      zx_status_t status,
+                                      const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     FXL_LOG(ERROR)
         << "InputReader::OnDeviceHandleReady received an error status code: "
@@ -99,16 +98,15 @@ void InputReader::OnDeviceHandleReady(
 
   status = wait->Begin(async);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR)
-        << "InputReader::OnDeviceHandleReady wait failed: " << status;
+    FXL_LOG(ERROR) << "InputReader::OnDeviceHandleReady wait failed: "
+                   << status;
   }
 }
 
-void InputReader::OnDisplayHandleReady(
-    async_t* async,
-    async::WaitBase* wait,
-    zx_status_t status,
-    const zx_packet_signal_t* signal) {
+void InputReader::OnDisplayHandleReady(async_t* async,
+                                       async::WaitBase* wait,
+                                       zx_status_t status,
+                                       const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     FXL_LOG(ERROR)
         << "InputReader::OnDisplayHandleReady received an error status code: "

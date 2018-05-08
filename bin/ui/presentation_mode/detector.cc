@@ -29,7 +29,7 @@ std::pair<bool, presentation::PresentationMode> Detector::Update(
   const fidl::Array<int16_t, 3>& vector = event.sensor->vector();
   AccelerometerData data{vector[0], vector[1], vector[2]};
 
-  switch(sensor.loc) {
+  switch (sensor.loc) {
     case input::SensorLocation::BASE:
       base_accelerometer_->Update(data);
       break;

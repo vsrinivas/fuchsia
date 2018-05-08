@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_PUBLIC_LIB_ESCHER_TEST_GTEST_VULKAN_INTERNAL_H_
-#define GARNET_PUBLIC_LIB_ESCHER_TEST_GTEST_VULKAN_INTERNAL_H_
+#ifndef LIB_ESCHER_TEST_GTEST_VULKAN_INTERNAL_H_
+#define LIB_ESCHER_TEST_GTEST_VULKAN_INTERNAL_H_
 
 #include "gtest/gtest.h"
 
@@ -61,4 +61,4 @@ TestFactoryBase* ConcreteTestFactoryFactory() {
               GTEST_TEST_CLASS_NAME_(test_case_name, test_name)>);            \
   void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody()
 
-#endif  // GARNET_PUBLIC_LIB_ESCHER_TEST_GTEST_VULKAN_INTERNAL_H_
+#endif  // LIB_ESCHER_TEST_GTEST_VULKAN_INTERNAL_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_VK_RENDER_PASS_H_
+#define LIB_ESCHER_VK_RENDER_PASS_H_
 
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/resources/resource.h"
@@ -105,3 +106,5 @@ class RenderPass : public Resource {
 };
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_VK_RENDER_PASS_H_

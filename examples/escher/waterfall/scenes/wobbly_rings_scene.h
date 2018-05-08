@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_WOBBLY_RINGS_SCENE_H_
+#define GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_WOBBLY_RINGS_SCENE_H_
 
 #include "lib/escher/escher.h"
 
@@ -45,3 +46,5 @@ class WobblyRingsScene : public Scene {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(WobblyRingsScene);
 };
+
+#endif  // GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_WOBBLY_RINGS_SCENE_H_

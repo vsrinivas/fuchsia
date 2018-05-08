@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_IMPL_MODEL_RENDERER_H_
+#define LIB_ESCHER_IMPL_MODEL_RENDERER_H_
 
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/impl/model_data.h"
@@ -71,3 +72,5 @@ class ModelRenderer final : public fxl::RefCountedThreadSafe<ModelRenderer> {
 
 }  // namespace impl
 }  // namespace escher
+
+#endif  // LIB_ESCHER_IMPL_MODEL_RENDERER_H_

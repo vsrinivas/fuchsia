@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_RENDERER_MOMENT_SHADOW_MAP_RENDERER_H_
+#define LIB_ESCHER_RENDERER_MOMENT_SHADOW_MAP_RENDERER_H_
 
 #include "lib/escher/impl/gaussian_3x3f16.h"
 #include "lib/escher/renderer/shadow_map_renderer.h"
@@ -46,3 +47,5 @@ class MomentShadowMapRenderer final : public ShadowMapRenderer {
 };
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_RENDERER_MOMENT_SHADOW_MAP_RENDERER_H_

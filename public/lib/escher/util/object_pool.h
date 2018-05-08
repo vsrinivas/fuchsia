@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_UTIL_OBJECT_POOL_H_
+#define LIB_ESCHER_UTIL_OBJECT_POOL_H_
 
 #include <utility>
 #include <vector>
@@ -145,3 +146,5 @@ class ObjectPool {
 };
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_UTIL_OBJECT_POOL_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_RESOURCES_RESOURCE_MANAGER_H_
+#define LIB_ESCHER_RESOURCES_RESOURCE_MANAGER_H_
 
 #include "lib/escher/base/owner.h"
 #include "lib/escher/forward_declarations.h"
@@ -39,3 +40,5 @@ class ResourceManager : public Owner<Resource, ResourceTypeInfo> {
 };
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_RESOURCES_RESOURCE_MANAGER_H_

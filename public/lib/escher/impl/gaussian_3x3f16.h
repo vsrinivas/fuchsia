@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_IMPL_GAUSSIAN_3X3F16_H_
+#define LIB_ESCHER_IMPL_GAUSSIAN_3X3F16_H_
 
 #include <memory>
 #include "lib/escher/forward_declarations.h"
@@ -36,3 +37,5 @@ class Gaussian3x3f16 {
 
 }  // namespace impl
 }  // namespace escher
+
+#endif  // LIB_ESCHER_IMPL_GAUSSIAN_3X3F16_H_

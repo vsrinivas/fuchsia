@@ -110,8 +110,7 @@ escher::image_utils::ImageConversionFunction GetFunctionToConvertToBgra8(
   size_t bpp = BytesPerPixel(image_info.pixel_format);
   switch (image_info.pixel_format) {
     case images::PixelFormat::BGRA_8:
-      if (image_info.transform ==
-          images::Transform::FLIP_HORIZONTAL) {
+      if (image_info.transform == images::Transform::FLIP_HORIZONTAL) {
         return [](void* out, void* in, uint32_t width, uint32_t height) {
           MirrorBgra(reinterpret_cast<uint32_t*>(out),
                      reinterpret_cast<uint32_t*>(in), width, height);
@@ -125,8 +124,7 @@ escher::image_utils::ImageConversionFunction GetFunctionToConvertToBgra8(
       break;
     // TODO(MZ-551): support vertical flipping
     case images::PixelFormat::YUY2:
-      if (image_info.transform ==
-          images::Transform::FLIP_HORIZONTAL) {
+      if (image_info.transform == images::Transform::FLIP_HORIZONTAL) {
         return [](void* out, void* in, uint32_t width, uint32_t height) {
           ConvertYuy2ToBgraAndMirror(reinterpret_cast<uint8_t*>(out),
                                      reinterpret_cast<uint8_t*>(in), width,
@@ -146,4 +144,4 @@ escher::image_utils::ImageConversionFunction GetFunctionToConvertToBgra8(
 
 }  // namespace image_formats
 }  // namespace gfx
-}  // namespace scenic 
+}  // namespace scenic

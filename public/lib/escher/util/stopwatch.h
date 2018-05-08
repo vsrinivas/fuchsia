@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_UTIL_STOPWATCH_H_
+#define LIB_ESCHER_UTIL_STOPWATCH_H_
 
 #include <chrono>
 #include "lib/fxl/macros.h"
@@ -75,3 +76,5 @@ inline uint64_t Stopwatch::GetElapsedMicroseconds() const {
 }
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_UTIL_STOPWATCH_H_

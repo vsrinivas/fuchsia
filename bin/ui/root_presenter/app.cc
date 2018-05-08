@@ -28,11 +28,10 @@ App::App(const fxl::CommandLine& command_line)
         presenter_bindings_.AddBinding(this, std::move(request));
       });
 
-  application_context_->outgoing()
-      .AddPublicService<input::InputDeviceRegistry>(
-          [this](fidl::InterfaceRequest<input::InputDeviceRegistry> request) {
-            input_receiver_bindings_.AddBinding(this, std::move(request));
-          });
+  application_context_->outgoing().AddPublicService<input::InputDeviceRegistry>(
+      [this](fidl::InterfaceRequest<input::InputDeviceRegistry> request) {
+        input_receiver_bindings_.AddBinding(this, std::move(request));
+      });
 }
 
 App::~App() {}
@@ -42,9 +41,8 @@ void App::Present(
     fidl::InterfaceRequest<presentation::Presentation> presentation_request) {
   InitializeServices();
 
-  auto presentation =
-      std::make_unique<Presentation>(view_manager_.get(),
-                                     scenic_.get(), session_.get());
+  auto presentation = std::make_unique<Presentation>(
+      view_manager_.get(), scenic_.get(), session_.get());
   Presentation::YieldCallback yield_callback = [this](bool yield_to_next) {
     if (yield_to_next) {
       SwitchToNextPresentation();
@@ -54,36 +52,37 @@ void App::Present(
   };
   Presentation::ShutdownCallback shutdown_callback =
       [this, presentation = presentation.get()] {
-    size_t idx;
-    for (idx = 0; idx < presentations_.size(); ++idx) {
-      if (presentations_[idx].get() == presentation) {
-        break;
-      }
-    }
-    FXL_DCHECK(idx != presentations_.size());
+        size_t idx;
+        for (idx = 0; idx < presentations_.size(); ++idx) {
+          if (presentations_[idx].get() == presentation) {
+            break;
+          }
+        }
+        FXL_DCHECK(idx != presentations_.size());
 
-    if (idx == active_presentation_idx_) {
-      // This works fine when idx == 0, because the previous idx chosen will
-      // also be 0, and it will be an no-op within SwitchToPreviousPresentation.
-      // Finally, at the end of the callback, everything will be cleaned up.
-      SwitchToPreviousPresentation();
-    }
+        if (idx == active_presentation_idx_) {
+          // This works fine when idx == 0, because the previous idx chosen will
+          // also be 0, and it will be an no-op within
+          // SwitchToPreviousPresentation. Finally, at the end of the callback,
+          // everything will be cleaned up.
+          SwitchToPreviousPresentation();
+        }
 
-    presentations_.erase(presentations_.begin() + idx);
-    if (idx < active_presentation_idx_) {
-      // Adjust index into presentations_.
-      active_presentation_idx_--;
-    }
+        presentations_.erase(presentations_.begin() + idx);
+        if (idx < active_presentation_idx_) {
+          // Adjust index into presentations_.
+          active_presentation_idx_--;
+        }
 
-    if (presentations_.empty()) {
-      layer_stack_->RemoveAllLayers();
-      active_presentation_idx_ = std::numeric_limits<size_t>::max();
-    }
-  };
+        if (presentations_.empty()) {
+          layer_stack_->RemoveAllLayers();
+          active_presentation_idx_ = std::numeric_limits<size_t>::max();
+        }
+      };
 
-  presentation->Present(
-      view_owner_handle.Bind(), std::move(presentation_request),
-      yield_callback, shutdown_callback);
+  presentation->Present(view_owner_handle.Bind(),
+                        std::move(presentation_request), yield_callback,
+                        shutdown_callback);
 
   for (auto& it : devices_by_id_) {
     presentation->OnDeviceAdded(it.second.get());
@@ -105,14 +104,12 @@ void App::SwitchToPresentation(const size_t presentation_idx) {
 }
 
 void App::SwitchToNextPresentation() {
-  SwitchToPresentation(
-      (active_presentation_idx_ + 1) % presentations_.size());
+  SwitchToPresentation((active_presentation_idx_ + 1) % presentations_.size());
 }
 
 void App::SwitchToPreviousPresentation() {
-  SwitchToPresentation(
-      (active_presentation_idx_ + presentations_.size() - 1) %
-          presentations_.size());
+  SwitchToPresentation((active_presentation_idx_ + presentations_.size() - 1) %
+                       presentations_.size());
 }
 
 void App::RegisterDevice(
@@ -181,8 +178,8 @@ void App::InitializeServices() {
       Reset();
     });
 
-    compositor_ = std::make_unique<scenic_lib::DisplayCompositor>(
-        session_.get());
+    compositor_ =
+        std::make_unique<scenic_lib::DisplayCompositor>(session_.get());
     layer_stack_ = std::make_unique<scenic_lib::LayerStack>(session_.get());
     compositor_->SetLayerStack(*layer_stack_.get());
     session_->Present(0, [](images::PresentationInfo info) {});

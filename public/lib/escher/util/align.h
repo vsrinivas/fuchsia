@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_UTIL_ALIGN_H_
+#define LIB_ESCHER_UTIL_ALIGN_H_
 
 #include "lib/fxl/logging.h"
 
@@ -22,3 +23,4 @@ inline size_t AlignedToNext(size_t position, size_t alignment) {
 }
 
 }  // namespace escher
+#endif  // LIB_ESCHER_UTIL_ALIGN_H_

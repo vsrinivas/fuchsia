@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_RENDERER_SHADOW_MAP_RENDERER_H_
+#define LIB_ESCHER_RENDERER_SHADOW_MAP_RENDERER_H_
 
 #include "lib/escher/escher.h"
 #include "lib/escher/forward_declarations.h"
@@ -94,3 +95,5 @@ class ShadowMapRenderer : public Renderer {
 };
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_RENDERER_SHADOW_MAP_RENDERER_H_

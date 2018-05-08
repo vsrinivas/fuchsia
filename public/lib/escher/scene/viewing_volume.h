@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_SCENE_VIEWING_VOLUME_H_
+#define LIB_ESCHER_SCENE_VIEWING_VOLUME_H_
 
 #include <math.h>
 
@@ -42,3 +43,5 @@ class ViewingVolume {
 ESCHER_DEBUG_PRINTABLE(ViewingVolume);
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_SCENE_VIEWING_VOLUME_H_

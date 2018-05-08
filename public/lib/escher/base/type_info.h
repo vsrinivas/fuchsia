@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_BASE_TYPE_INFO_H_
+#define LIB_ESCHER_BASE_TYPE_INFO_H_
 
 #include <utility>
 #include "lib/fxl/logging.h"
@@ -99,3 +100,5 @@ struct TypeInfo {
 };
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_BASE_TYPE_INFO_H_

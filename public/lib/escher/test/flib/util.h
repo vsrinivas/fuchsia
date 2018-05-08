@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_TEST_FLIB_UTIL_H_
+#define LIB_ESCHER_TEST_FLIB_UTIL_H_
 
 #include <lib/zx/event.h>
 #include "lib/fxl/time/time_delta.h"
@@ -24,3 +25,5 @@ zx::event CopyEvent(const zx::event& event);
 
 }  // namespace test
 }  // namespace escher
+
+#endif  // LIB_ESCHER_TEST_FLIB_UTIL_H_

@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_RENDERER_FRAME_H_
+#define LIB_ESCHER_RENDERER_FRAME_H_
 
 #include <cstdint>
 #include <functional>
 #include <vulkan/vulkan.hpp>
 
-#include "lib/escher/forward_declarations.h"
 #include "lib/escher/base/reffable.h"
+#include "lib/escher/forward_declarations.h"
 #include "lib/escher/impl/command_buffer.h"
 #include "lib/escher/profiling/timestamp_profiler.h"
 
@@ -71,3 +72,5 @@ class Frame : public Reffable {
 };
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_RENDERER_FRAME_H_

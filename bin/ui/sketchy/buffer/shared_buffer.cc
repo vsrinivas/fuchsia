@@ -26,8 +26,7 @@ const vk::MemoryPropertyFlags kMemoryPropertyFlags =
 std::unique_ptr<scenic_lib::Buffer> NewScenicBufferFromEscherBuffer(
     const escher::BufferPtr& buffer,
     scenic_lib::Session* session) {
-  zx::vmo vmo =
-      escher::ExportMemoryAsVmo(buffer->escher(), buffer->mem());
+  zx::vmo vmo = escher::ExportMemoryAsVmo(buffer->escher(), buffer->mem());
 
   scenic_lib::Memory memory(session, std::move(vmo),
                             images::MemoryType::VK_DEVICE_MEMORY);
@@ -48,26 +47,24 @@ SharedBuffer::SharedBuffer(scenic_lib::Session* session,
                            escher::BufferFactory* factory,
                            vk::DeviceSize capacity)
     : session_(session),
-      escher_buffer_(
-          factory->NewBuffer(
-              capacity, kBufferUsageFlags, kMemoryPropertyFlags)),
-      scenic_buffer_(
-          NewScenicBufferFromEscherBuffer(escher_buffer_, session)) {}
+      escher_buffer_(factory->NewBuffer(capacity,
+                                        kBufferUsageFlags,
+                                        kMemoryPropertyFlags)),
+      scenic_buffer_(NewScenicBufferFromEscherBuffer(escher_buffer_, session)) {
+}
 
-escher::BufferPtr SharedBuffer::Preserve(Frame* frame,
-                                         vk::DeviceSize size) {
+escher::BufferPtr SharedBuffer::Preserve(Frame* frame, vk::DeviceSize size) {
   FXL_CHECK(size_ + size <= capacity());
   size_ += size;
   auto factory = frame->shared_buffer_pool()->factory();
-  return factory->NewBuffer(
-      escher_buffer_->mem(), kBufferUsageFlags, size, size_ - size);
+  return factory->NewBuffer(escher_buffer_->mem(), kBufferUsageFlags, size,
+                            size_ - size);
 }
 
 void SharedBuffer::Copy(Frame* frame, const SharedBufferPtr& from) {
   FXL_CHECK(from->size() <= capacity());
   frame->command()->CopyBufferAfterBarrier(
-      from->escher_buffer(), escher_buffer_,
-      {0, 0, from->size()},
+      from->escher_buffer(), escher_buffer_, {0, 0, from->size()},
       vk::AccessFlagBits::eTransferWrite | vk::AccessFlagBits::eShaderWrite);
   size_ = from->size();
 }

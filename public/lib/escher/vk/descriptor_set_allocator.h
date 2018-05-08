@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_VK_DESCRIPTOR_SET_ALLOCATOR_H_
+#define LIB_ESCHER_VK_DESCRIPTOR_SET_ALLOCATOR_H_
 
 #include <map>
 #include <vulkan/vulkan.hpp>
@@ -88,3 +89,5 @@ class DescriptorSetAllocator {
 };
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_VK_DESCRIPTOR_SET_ALLOCATOR_H_

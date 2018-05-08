@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_VK_FRAMEBUFFER_H_
+#define LIB_ESCHER_VK_FRAMEBUFFER_H_
 
 #include <vulkan/vulkan.hpp>
 
@@ -54,3 +55,5 @@ class Framebuffer : public Resource {
 typedef fxl::RefPtr<Framebuffer> FramebufferPtr;
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_VK_FRAMEBUFFER_H_

@@ -33,8 +33,7 @@ bool DisplayRotater::OnEvent(const input::InputEvent& event,
   if (event.is_keyboard()) {
     const input::KeyboardEvent& kbd = event.keyboard();
     const uint32_t kVolumeDownKey = 232;
-    if (kbd.modifiers == 0 &&
-        kbd.phase == input::KeyboardEventPhase::PRESSED &&
+    if (kbd.modifiers == 0 && kbd.phase == input::KeyboardEventPhase::PRESSED &&
         kbd.code_point == 0 && kbd.hid_usage == kVolumeDownKey) {
       FlipDisplay(presentation);
       return true;

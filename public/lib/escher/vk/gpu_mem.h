@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_VK_GPU_MEM_H_
+#define LIB_ESCHER_VK_GPU_MEM_H_
 
 #include <vulkan/vulkan.hpp>
 
@@ -75,3 +76,5 @@ class GpuMem : public fxl::RefCountedThreadSafe<GpuMem> {
 };
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_VK_GPU_MEM_H_

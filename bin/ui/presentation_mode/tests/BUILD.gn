@@ -4,13 +4,17 @@
 
 group("tests") {
   testonly = true
-  public_deps = [":unittests"]
+  public_deps = [
+    ":unittests",
+  ]
 }
 
 executable("unittests") {
   output_name = "presentation_mode_unittests"
   testonly = true
-  sources = ["detector_unittest.cc"]
+  sources = [
+    "detector_unittest.cc",
+  ]
   deps = [
     "//garnet/bin/ui/presentation_mode",
     "//third_party/googletest:gtest_main",

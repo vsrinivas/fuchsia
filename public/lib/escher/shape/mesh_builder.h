@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_SHAPE_MESH_BUILDER_H_
+#define LIB_ESCHER_SHAPE_MESH_BUILDER_H_
 
 #include "lib/escher/shape/mesh.h"
 #include "lib/fxl/memory/ref_counted.h"
@@ -102,3 +103,5 @@ MeshBuilder& MeshBuilder::AddVertex(const VertexT& v) {
 }
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_SHAPE_MESH_BUILDER_H_

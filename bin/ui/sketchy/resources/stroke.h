@@ -5,8 +5,6 @@
 #ifndef GARNET_BIN_UI_SKETCHY_RESOURCES_STROKE_H_
 #define GARNET_BIN_UI_SKETCHY_RESOURCES_STROKE_H_
 
-#include "lib/ui/scenic/client/resources.h"
-#include "lib/ui/scenic/client/session.h"
 #include "garnet/bin/ui/sketchy/buffer/escher_buffer.h"
 #include "garnet/bin/ui/sketchy/buffer/mesh_buffer.h"
 #include "garnet/bin/ui/sketchy/frame.h"
@@ -15,6 +13,8 @@
 #include "garnet/bin/ui/sketchy/stroke/stroke_fitter.h"
 #include "garnet/bin/ui/sketchy/stroke/stroke_path.h"
 #include "garnet/bin/ui/sketchy/stroke/stroke_tessellator.h"
+#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/scenic/client/session.h"
 
 namespace sketchy_service {
 

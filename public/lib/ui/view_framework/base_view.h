@@ -139,7 +139,8 @@ class BaseView : private views_v1::ViewListener,
   // Called when a child is attached.
   //
   // The default implementation does nothing.
-  virtual void OnChildAttached(uint32_t child_key, views_v1::ViewInfo child_view_info);
+  virtual void OnChildAttached(uint32_t child_key,
+                               views_v1::ViewInfo child_view_info);
 
   // Called when a child becomes unavailable.
   //
@@ -148,9 +149,8 @@ class BaseView : private views_v1::ViewListener,
 
  private:
   // |ViewListener|:
-  void OnPropertiesChanged(
-      views_v1::ViewProperties properties,
-      OnPropertiesChangedCallback callback) override;
+  void OnPropertiesChanged(views_v1::ViewProperties properties,
+                           OnPropertiesChangedCallback callback) override;
 
   // |ViewContainerListener|:
   void OnChildAttached(uint32_t child_key,
@@ -160,8 +160,7 @@ class BaseView : private views_v1::ViewListener,
                           OnChildUnavailableCallback callback) override;
 
   // |InputListener|:
-  void OnEvent(input::InputEvent event,
-               OnEventCallback callback) override;
+  void OnEvent(input::InputEvent event, OnEventCallback callback) override;
 
   void PresentScene(zx_time_t presentation_time);
   void HandleSessionEvents(fidl::VectorPtr<ui::Event> events);
@@ -169,7 +168,8 @@ class BaseView : private views_v1::ViewListener,
 
   views_v1::ViewManagerPtr view_manager_;
   fidl::Binding<views_v1::ViewListener> view_listener_binding_;
-  fidl::Binding<views_v1::ViewContainerListener> view_container_listener_binding_;
+  fidl::Binding<views_v1::ViewContainerListener>
+      view_container_listener_binding_;
   fidl::Binding<input::InputListener> input_listener_binding_;
 
   views_v1::ViewPtr view_;

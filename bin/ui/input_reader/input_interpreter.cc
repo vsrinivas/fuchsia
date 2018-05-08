@@ -23,11 +23,11 @@
 
 #include <trace/event.h>
 
+#include <fuchsia/cpp/input.h>
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_point.h"
 #include "lib/ui/input/cpp/formatting.h"
-#include <fuchsia/cpp/input.h>
 
 namespace {
 
@@ -99,8 +99,9 @@ bool InputInterpreter::Initialize() {
              protocol == HidDecoder::Protocol::Gamepad) {
     FXL_VLOG(2) << "Device " << name() << " has mouse";
     has_mouse_ = true;
-    mouse_device_type_ = (protocol == HidDecoder::Protocol::Mouse) ?
-      MouseDeviceType::BOOT : MouseDeviceType::GAMEPAD;
+    mouse_device_type_ = (protocol == HidDecoder::Protocol::Mouse)
+                             ? MouseDeviceType::BOOT
+                             : MouseDeviceType::GAMEPAD;
 
     mouse_descriptor_ = input::MouseDescriptor::New();
     mouse_descriptor_->rel_x.range.min = INT32_MIN;
@@ -175,7 +176,7 @@ bool InputInterpreter::Initialize() {
     touchscreen_report_ = input::InputReport::New();
     touchscreen_report_->touchscreen = input::TouchscreenReport::New();
 
-      touch_device_type_ = TouchDeviceType::SAMSUNG;
+    touch_device_type_ = TouchDeviceType::SAMSUNG;
   } else if (protocol == HidDecoder::Protocol::ParadiseV1Touch) {
     // TODO(cpu): Add support for stylus.
     FXL_VLOG(2) << "Device " << name() << " has touchscreen";
@@ -344,8 +345,8 @@ bool InputInterpreter::Read(bool discard) {
   // If positive |rc| is the number of bytes read. If negative the error
   // while reading.
   int rc = 1;
-  auto report = hid_decoder_.use_legacy_mode() ?
-    hid_decoder_.Read(&rc) : std::vector<uint8_t>(1,1);
+  auto report = hid_decoder_.use_legacy_mode() ? hid_decoder_.Read(&rc)
+                                               : std::vector<uint8_t>(1, 1);
 
   // TODO(cpu): remove legacy mode, so no raw HidDecoder::Read(int*) is
   // issued from this code.
@@ -372,14 +373,16 @@ bool InputInterpreter::Read(bool discard) {
       }
       break;
     case MouseDeviceType::PARADISEv1:
-      if (ParseParadiseTouchpadReport<paradise_touchpad_v1_t>(report.data(), rc)) {
+      if (ParseParadiseTouchpadReport<paradise_touchpad_v1_t>(report.data(),
+                                                              rc)) {
         if (!discard) {
           input_device_->DispatchReport(CloneReport(mouse_report_));
         }
       }
       break;
     case MouseDeviceType::PARADISEv2:
-      if (ParseParadiseTouchpadReport<paradise_touchpad_v2_t>(report.data(), rc)) {
+      if (ParseParadiseTouchpadReport<paradise_touchpad_v2_t>(report.data(),
+                                                              rc)) {
         if (!discard) {
           input_device_->DispatchReport(CloneReport(mouse_report_));
         }
@@ -430,7 +433,8 @@ bool InputInterpreter::Read(bool discard) {
 
     case TouchDeviceType::PARADISEv1:
       if (report[0] == PARADISE_RPT_ID_TOUCH) {
-        if (ParseParadiseTouchscreenReport<paradise_touch_t>(report.data(), rc)) {
+        if (ParseParadiseTouchscreenReport<paradise_touch_t>(report.data(),
+                                                             rc)) {
           if (!discard) {
             input_device_->DispatchReport(CloneReport(touchscreen_report_));
           }
@@ -439,7 +443,8 @@ bool InputInterpreter::Read(bool discard) {
       break;
     case TouchDeviceType::PARADISEv2:
       if (report[0] == PARADISE_RPT_ID_TOUCH) {
-        if (ParseParadiseTouchscreenReport<paradise_touch_v2_t>(report.data(), rc)) {
+        if (ParseParadiseTouchscreenReport<paradise_touch_v2_t>(report.data(),
+                                                                rc)) {
           if (!discard) {
             input_device_->DispatchReport(CloneReport(touchscreen_report_));
           }
@@ -505,8 +510,8 @@ void InputInterpreter::ParseMouseReport(uint8_t* r, size_t len) {
 }
 
 void InputInterpreter::ParseGamepadMouseReport(
-  // TODO(cpu): remove this once we have a better way to test gamepads.
-  const HidDecoder::HidGamepadSimple* gamepad) {
+    // TODO(cpu): remove this once we have a better way to test gamepads.
+    const HidDecoder::HidGamepadSimple* gamepad) {
   mouse_report_->event_time = InputEventTimestampNow();
 
   mouse_report_->mouse->rel_x = gamepad->left_x;

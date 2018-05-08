@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_IMPL_VULKAN_UTILS_H_
+#define LIB_ESCHER_IMPL_VULKAN_UTILS_H_
 
 #include <vulkan/vulkan.hpp>
 
@@ -65,3 +66,5 @@ vk::SampleCountFlagBits SampleCountFlagBitsFromInt(uint32_t sample_count);
 
 }  // namespace impl
 }  // namespace escher
+
+#endif  // LIB_ESCHER_IMPL_VULKAN_UTILS_H_

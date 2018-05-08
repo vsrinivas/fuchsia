@@ -2,19 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "gtest/gtest.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
-#include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/fxl/time/time_point.h"
 
+#include <fuchsia/cpp/views_v1.h>
 #include "lib/ui/tests/mocks/mock_view_container_listener.h"
 #include "lib/ui/tests/mocks/mock_view_listener.h"
 #include "lib/ui/tests/mocks/mock_view_tree_listener.h"
 #include "lib/ui/tests/test_with_message_loop.h"
-#include <fuchsia/cpp/views_v1.h>
-#include <fuchsia/cpp/views_v1.h>
 
 extern std::unique_ptr<component::ApplicationContext> g_application_context;
 
@@ -147,8 +146,9 @@ TEST_F(ViewManagerTest, SetChildProperties) {
   tree->GetContainer(tree_container.NewRequest());
   views_v1::ViewContainerListenerPtr tree_container_listener;
   mozart::test::MockViewContainerListener mock_tree_container_listener;
-  fidl::Binding<views_v1::ViewContainerListener> tree_container_listener_binding(
-      &mock_tree_container_listener, tree_container_listener.NewRequest());
+  fidl::Binding<views_v1::ViewContainerListener>
+      tree_container_listener_binding(&mock_tree_container_listener,
+                                      tree_container_listener.NewRequest());
   tree_container->SetListener(std::move(tree_container_listener));
 
   // Create and bind a mock view listener for a parent view

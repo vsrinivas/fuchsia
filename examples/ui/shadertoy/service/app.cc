@@ -13,14 +13,14 @@ namespace shadertoy {
 App::App(component::ApplicationContext* app_context, escher::Escher* escher)
     : escher_(escher),
       renderer_(escher, kDefaultImageFormat),
-      compiler_(escher, renderer_.render_pass(),
+      compiler_(escher,
+                renderer_.render_pass(),
                 renderer_.descriptor_set_layout()) {
   app_context->outgoing().AddPublicService<shadertoy::ShadertoyFactory>(
-          [this](fidl::InterfaceRequest<shadertoy::ShadertoyFactory>
-                     request) {
-            FXL_LOG(INFO) << "Accepting connection to ShadertoyFactory";
-            factory_bindings_.AddBinding(this, std::move(request));
-          });
+      [this](fidl::InterfaceRequest<shadertoy::ShadertoyFactory> request) {
+        FXL_LOG(INFO) << "Accepting connection to ShadertoyFactory";
+        factory_bindings_.AddBinding(this, std::move(request));
+      });
 }
 
 App::~App() = default;

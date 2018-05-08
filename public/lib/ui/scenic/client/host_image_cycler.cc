@@ -19,12 +19,11 @@ HostImageCycler::HostImageCycler(Session* session)
 
 HostImageCycler::~HostImageCycler() = default;
 
-const HostImage* HostImageCycler::AcquireImage(
-    uint32_t width,
-    uint32_t height,
-    uint32_t stride,
-    images::PixelFormat pixel_format,
-    images::ColorSpace color_space) {
+const HostImage* HostImageCycler::AcquireImage(uint32_t width,
+                                               uint32_t height,
+                                               uint32_t stride,
+                                               images::PixelFormat pixel_format,
+                                               images::ColorSpace color_space) {
   FXL_DCHECK(!acquired_image_);
 
   // Update the image pool and content shape.

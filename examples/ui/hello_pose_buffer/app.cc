@@ -161,8 +161,7 @@ void App::Init(gfx::DisplayInfo display_info) {
 
   // Wait kSessionDuration seconds, and close the session.
   constexpr zx::duration kSessionDuration = zx::sec(40);
-  async::PostDelayedTask(loop_->async(),
-                         [this] { ReleaseSessionResources(); },
+  async::PostDelayedTask(loop_->async(), [this] { ReleaseSessionResources(); },
                          kSessionDuration);
 
   // Set up initial scene.

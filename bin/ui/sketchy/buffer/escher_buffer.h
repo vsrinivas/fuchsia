@@ -18,13 +18,15 @@ class EscherBuffer {
   // capacity is insufficient, allocate a new buffer first.
   void SetData(escher::impl::CommandBuffer* command,
                escher::BufferFactory* factory,
-               const void* data, size_t size);
+               const void* data,
+               size_t size);
   // Append contents of |data| to the buffer. If the existing capacity is
   // insufficient, first copy the existing data to a new buffer that is large
   // enough, then append to that.
   void AppendData(escher::impl::CommandBuffer* command,
                   escher::BufferFactory* factory,
-                  const void* data, size_t size);
+                  const void* data,
+                  size_t size);
 
   escher::BufferPtr get() const { return buffer_; }
   vk::DeviceSize size() const { return size_; }

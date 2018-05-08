@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_IMPL_MODEL_LIGHTING_PASS_H_
+#define LIB_ESCHER_IMPL_MODEL_LIGHTING_PASS_H_
 
 #include "lib/escher/impl/model_render_pass.h"
 
@@ -36,3 +37,5 @@ class ModelLightingPass : public ModelRenderPass {
 
 }  // namespace impl
 }  // namespace escher
+
+#endif  // LIB_ESCHER_IMPL_MODEL_LIGHTING_PASS_H_

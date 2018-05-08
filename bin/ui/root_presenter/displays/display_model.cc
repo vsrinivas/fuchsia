@@ -39,7 +39,8 @@ constexpr float kDefaultPixelVisualAngleDegrees = 0.0213;
 // settings. Empirically determined to be around 0.255.
 constexpr float kIdealPipVisualAngleDegrees = 0.0255;
 
-constexpr float GetDefaultViewingDistanceInMm(presentation::DisplayUsage usage) {
+constexpr float GetDefaultViewingDistanceInMm(
+    presentation::DisplayUsage usage) {
   switch (usage) {
     case presentation::DisplayUsage::kHandheld:
       return 360.f;

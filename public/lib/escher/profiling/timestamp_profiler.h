@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_PROFILING_TIMESTAMP_PROFILER_H_
+#define LIB_ESCHER_PROFILING_TIMESTAMP_PROFILER_H_
 
 #include <vector>
 
@@ -68,3 +69,5 @@ class TimestampProfiler : public fxl::RefCountedThreadSafe<TimestampProfiler> {
 };
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_PROFILING_TIMESTAMP_PROFILER_H_

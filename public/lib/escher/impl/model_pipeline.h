@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_IMPL_MODEL_PIPELINE_H_
+#define LIB_ESCHER_IMPL_MODEL_PIPELINE_H_
 
 #include <vulkan/vulkan.hpp>
 
@@ -40,3 +41,5 @@ class ModelPipeline {
 
 }  // namespace impl
 }  // namespace escher
+
+#endif  // LIB_ESCHER_IMPL_MODEL_PIPELINE_H_

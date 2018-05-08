@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_SHAPE_MODIFIER_WOBBLE_H_
+#define LIB_ESCHER_SHAPE_MODIFIER_WOBBLE_H_
 
 #include "lib/escher/scene/shape.h"
 
@@ -24,3 +25,5 @@ struct ModifierWobble {
 };
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_SHAPE_MODIFIER_WOBBLE_H_

@@ -20,7 +20,5 @@ executable("hello_spaces") {
     "//garnet/public/lib/ui/spaces/fidl",
   ]
 
-  include_dirs = [
-    "//lib",
-  ]
+  include_dirs = [ "//lib" ]
 }

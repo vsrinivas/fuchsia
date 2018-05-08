@@ -8,12 +8,11 @@
 #include <functional>
 #include <vector>
 
+#include <fuchsia/cpp/views_v1.h>
 #include "lib/app/cpp/application_context.h"
-#include "lib/ui/view_framework/base_view.h"
-#include <fuchsia/cpp/views_v1.h>
-#include <fuchsia/cpp/views_v1.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
+#include "lib/ui/view_framework/base_view.h"
 
 namespace mozart {
 
@@ -38,13 +37,15 @@ using ViewFactory =
 class ViewProviderService : public views_v1::ViewProvider {
  public:
   explicit ViewProviderService(
-      component::ApplicationContext* application_context, ViewFactory factory);
+      component::ApplicationContext* application_context,
+      ViewFactory factory);
   ~ViewProviderService();
 
   // |ViewProvider|
-  void CreateView(fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
-                  fidl::InterfaceRequest<component::ServiceProvider>
-                      view_services) override;
+  void CreateView(
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<component::ServiceProvider> view_services)
+      override;
 
  private:
   component::ApplicationContext* application_context_;

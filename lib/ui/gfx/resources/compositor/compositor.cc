@@ -303,20 +303,14 @@ void Compositor::DrawToImage(escher::PaperRenderer* escher_renderer,
     return;
   }
   escher::FramePtr frame = escher()->NewFrame("Scenic Compositor");
-  auto overlay_model =
-      DrawOverlaysToModel(drawable_layers, frame, frame_timings,
-                          escher_renderer, shadow_renderer);
+  auto overlay_model = DrawOverlaysToModel(
+      drawable_layers, frame, frame_timings, escher_renderer, shadow_renderer);
   if (overlay_model == nullptr) {
     FXL_LOG(FATAL) << "Failed to generate overlay model";
   }
   const auto& bottom_layer = drawable_layers[0];
-  DrawLayer(frame,
-            frame_timings,
-            escher_renderer,
-            shadow_renderer,
-            bottom_layer,
-            output_image,
-            overlay_model.get());
+  DrawLayer(frame, frame_timings, escher_renderer, shadow_renderer,
+            bottom_layer, output_image, overlay_model.get());
   frame->EndFrame(frame_done_semaphore, nullptr);
 }
 

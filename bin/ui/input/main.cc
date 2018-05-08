@@ -259,7 +259,8 @@ class InputApp {
     input_device->DispatchReport(std::move(report));
 
     zx::duration delta = zx::msec(duration_ms);
-    async::PostDelayedTask(async_get_default(),
+    async::PostDelayedTask(
+        async_get_default(),
         fxl::MakeCopyable([device = std::move(input_device)]() mutable {
           // UP
           input::TouchscreenReportPtr touchscreen =

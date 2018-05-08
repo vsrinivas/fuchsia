@@ -23,7 +23,7 @@
 
 namespace {
 bool log_err(ssize_t rc, const std::string& what, const std::string& name) {
-  FXL_LOG(ERROR) << "hid: could not get "<<  what << " from " << name
+  FXL_LOG(ERROR) << "hid: could not get " << what << " from " << name
                  << " (status=" << rc << ")";
   return false;
 }
@@ -38,11 +38,12 @@ int8_t signed_bit_cast(uint8_t src) {
 // Extracts an int8_t sign extended to int32_t from a byte vector |v|.
 // Both |begin| and |count| are in bits units. This function does not
 // check for the vector being long enough.
-int32_t extract_int(
-  const std::vector<uint8_t>& v, uint32_t begin, uint32_t count) {
-    uint8_t val = v[begin / 8u] >> (begin % 8u);
-    val =  (count < 8) ? (val & ~(1u << count)) : val;
-    return signed_bit_cast(val);
+int32_t extract_int(const std::vector<uint8_t>& v,
+                    uint32_t begin,
+                    uint32_t count) {
+  uint8_t val = v[begin / 8u] >> (begin % 8u);
+  val = (count < 8) ? (val & ~(1u << count)) : val;
+  return signed_bit_cast(val);
 };
 
 }  // namespace
@@ -50,8 +51,7 @@ int32_t extract_int(
 namespace mozart {
 
 HidDecoder::HidDecoder(const std::string& name, int fd)
-    : fd_(fd), name_(name), protocol_(Protocol::Other) {
-}
+    : fd_(fd), name_(name), protocol_(Protocol::Other) {}
 
 bool HidDecoder::Init() {
   if (!ParseProtocol(&protocol_))
@@ -138,10 +138,11 @@ bool HidDecoder::ParseProtocol(Protocol* protocol) {
   // library.
 
   hid::DeviceDescriptor* dev_desc = nullptr;
-  auto parse_res = hid::ParseReportDescriptor(desc.data(), desc.size(), &dev_desc);
+  auto parse_res =
+      hid::ParseReportDescriptor(desc.data(), desc.size(), &dev_desc);
   if (parse_res != hid::ParseResult::kParseOk) {
     FXL_LOG(ERROR) << "hid-parser: error " << int(parse_res)
-      << " parsing report descriptor for " << name_;
+                   << " parsing report descriptor for " << name_;
     return false;
   }
 
@@ -182,9 +183,9 @@ bool HidDecoder::ParseProtocol(Protocol* protocol) {
     return false;
   }
 
-  FXL_LOG(INFO) << "hid-parser succesful for " << name_
-                << " with usage page " << collection->usage.page
-                << " and usage " << collection->usage.usage;
+  FXL_LOG(INFO) << "hid-parser succesful for " << name_ << " with usage page "
+                << collection->usage.page << " and usage "
+                << collection->usage.usage;
 
   if (collection->usage.page == hid::usage::Page::kGenericDesktop) {
     if (collection->usage.usage == hid::usage::GenericDesktop::kJoystick) {
@@ -202,8 +203,8 @@ bool HidDecoder::use_legacy_mode() const {
   return protocol_ != Protocol::Gamepad;
 }
 
-bool HidDecoder::ParseGamepadDescriptor(
-  const hid::ReportField* fields, size_t count) {
+bool HidDecoder::ParseGamepadDescriptor(const hid::ReportField* fields,
+                                        size_t count) {
   // Need to recover the five fields as seen in HidGamepadSimple and put
   // them into the decoder_ in the same order.
   if (count < 5u)
@@ -215,17 +216,17 @@ bool HidDecoder::ParseGamepadDescriptor(
   if (fields[0].report_id != 0) {
     // If exists, the first entry (8-bits) is always the report id and
     // all items start after the first byte.
-    decoder_[0] = DataLocator { 0u, 8u, fields[0].report_id };
+    decoder_[0] = DataLocator{0u, 8u, fields[0].report_id};
     offset = 8u;
   }
 
   // Needs to be kept in sync with HidGamepadSimple {}.
   const uint16_t table[] = {
-    static_cast<uint16_t>(hid::usage::GenericDesktop::kX),        // left X.
-    static_cast<uint16_t>(hid::usage::GenericDesktop::kY),        // left Y.
-    static_cast<uint16_t>(hid::usage::GenericDesktop::kZ),        // right X.
-    static_cast<uint16_t>(hid::usage::GenericDesktop::kRz),       // right Y.
-    static_cast<uint16_t>(hid::usage::GenericDesktop::kHatSwitch) // buttons
+      static_cast<uint16_t>(hid::usage::GenericDesktop::kX),         // left X.
+      static_cast<uint16_t>(hid::usage::GenericDesktop::kY),         // left Y.
+      static_cast<uint16_t>(hid::usage::GenericDesktop::kZ),         // right X.
+      static_cast<uint16_t>(hid::usage::GenericDesktop::kRz),        // right Y.
+      static_cast<uint16_t>(hid::usage::GenericDesktop::kHatSwitch)  // buttons
   };
 
   uint32_t bit_count = 0;
@@ -239,8 +240,8 @@ bool HidDecoder::ParseGamepadDescriptor(
     for (size_t iy = 0; iy != countof(table); iy++) {
       if (fields[ix].attr.usage.usage == table[iy]) {
         // Found a required usage.
-        decoder_[iy + 1] = DataLocator {
-          bit_count + offset, fields[ix].attr.bit_sz, 0 };
+        decoder_[iy + 1] =
+            DataLocator{bit_count + offset, fields[ix].attr.bit_sz, 0};
         break;
       }
     }
@@ -283,11 +284,15 @@ bool HidDecoder::Read(HidGamepadSimple* gamepad) {
     ++cur;
   }
 
-  gamepad->left_x  = extract_int(report, cur->begin, cur->count) / 2; ++cur;
-  gamepad->left_y  = extract_int(report, cur->begin, cur->count) / 2; ++cur;
-  gamepad->right_x = extract_int(report, cur->begin, cur->count) / 2; ++cur;
-  gamepad->right_y = extract_int(report, cur->begin, cur->count) / 2; ++cur;
-  gamepad->hat_switch  = extract_int(report, cur->begin, cur->count);
+  gamepad->left_x = extract_int(report, cur->begin, cur->count) / 2;
+  ++cur;
+  gamepad->left_y = extract_int(report, cur->begin, cur->count) / 2;
+  ++cur;
+  gamepad->right_x = extract_int(report, cur->begin, cur->count) / 2;
+  ++cur;
+  gamepad->right_y = extract_int(report, cur->begin, cur->count) / 2;
+  ++cur;
+  gamepad->hat_switch = extract_int(report, cur->begin, cur->count);
   return true;
 }
 

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_VK_IMAGE_H_
+#define LIB_ESCHER_VK_IMAGE_H_
 
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/renderer/semaphore.h"
@@ -97,3 +98,5 @@ typedef fxl::RefPtr<Image> ImagePtr;
 ESCHER_DEBUG_PRINTABLE(ImageInfo);
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_VK_IMAGE_H_

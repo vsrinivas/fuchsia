@@ -4,9 +4,6 @@
 
 #include <lib/async-loop/cpp/loop.h>
 
-#include "lib/ui/input/device_state.h"
-#include "lib/ui/input/input_device_impl.h"
-#include "lib/ui/input/cpp/formatting.h"
 #include <fuchsia/cpp/input.h>
 #include "garnet/bin/ui/input_reader/input_reader.h"
 #include "lib/fxl/command_line.h"
@@ -14,6 +11,9 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "lib/ui/input/cpp/formatting.h"
+#include "lib/ui/input/device_state.h"
+#include "lib/ui/input/input_device_impl.h"
 
 namespace print_input {
 

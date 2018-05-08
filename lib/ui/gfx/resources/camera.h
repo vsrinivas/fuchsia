@@ -33,8 +33,8 @@ class Camera : public Resource {
 
   void SetProjection(const float fovy);
 
-  // Sets the buffer for this camera. For details see SetCameraPoseBufferCommand in
-  // //garnet/public/lib/ui/gfx/fidl/commands.fidl
+  // Sets the buffer for this camera. For details see SetCameraPoseBufferCommand
+  // in //garnet/public/lib/ui/gfx/fidl/commands.fidl
   void SetPoseBuffer(fxl::RefPtr<Buffer> buffer,
                      uint32_t num_entries,
                      uint64_t base_time,

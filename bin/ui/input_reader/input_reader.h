@@ -8,12 +8,11 @@
 #include <map>
 #include <utility>
 
+#include <fuchsia/cpp/input.h>
 #include <lib/async/cpp/wait.h>
 #include "garnet/bin/ui/input_reader/input_interpreter.h"
 #include "lib/fsl/io/device_watcher.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/input.h>
-#include <fuchsia/cpp/input.h>
 
 namespace mozart {
 

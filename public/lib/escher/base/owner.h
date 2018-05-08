@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_BASE_OWNER_H_
+#define LIB_ESCHER_BASE_OWNER_H_
 
 #include "lib/escher/base/ownable.h"
 #include "lib/fxl/memory/ref_counted.h"
@@ -64,3 +65,5 @@ class Owner {
 };
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_BASE_OWNER_H_

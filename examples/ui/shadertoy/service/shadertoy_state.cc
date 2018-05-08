@@ -53,8 +53,9 @@ void ShadertoyState::SetPaused(bool paused) {
   RequestFrame(0);
 }
 
-void ShadertoyState::SetShaderCode(fidl::StringPtr glsl,
-                                   shadertoy::Shadertoy::SetShaderCodeCallback callback) {
+void ShadertoyState::SetShaderCode(
+    fidl::StringPtr glsl,
+    shadertoy::Shadertoy::SetShaderCodeCallback callback) {
   compiler_->Compile(std::string(glsl),
                      [weak = weak_ptr_factory_.GetWeakPtr(),
                       callback = callback](Compiler::Result result) {

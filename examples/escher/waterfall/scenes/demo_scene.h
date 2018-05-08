@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_DEMO_SCENE_H_
+#define GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_DEMO_SCENE_H_
 
 #include "lib/escher/escher.h"
 
@@ -26,3 +27,5 @@ class DemoScene : public Scene {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DemoScene);
 };
+
+#endif  // GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_DEMO_SCENE_H_

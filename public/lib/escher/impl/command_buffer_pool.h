@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_IMPL_COMMAND_BUFFER_POOL_H_
+#define LIB_ESCHER_IMPL_COMMAND_BUFFER_POOL_H_
 
 #include <queue>
 
@@ -66,3 +67,5 @@ class CommandBufferPool : CommandBufferSequencerController {
 
 }  // namespace impl
 }  // namespace escher
+
+#endif  // LIB_ESCHER_IMPL_COMMAND_BUFFER_POOL_H_

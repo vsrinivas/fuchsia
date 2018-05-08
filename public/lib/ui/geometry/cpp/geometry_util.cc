@@ -98,4 +98,4 @@ geometry::PointF TransformPoint(const geometry::Transform& transform,
   return result;
 }
 
-}  // namespace mozart
+}  // namespace geometry

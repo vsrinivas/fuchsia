@@ -93,7 +93,8 @@ class Renderer : public Resource {
 
   CameraPtr camera_;
   escher::MaterialPtr default_material_;
-  ::gfx::ShadowTechnique shadow_technique_ = ::gfx::ShadowTechnique::SCREEN_SPACE;
+  ::gfx::ShadowTechnique shadow_technique_ =
+      ::gfx::ShadowTechnique::SCREEN_SPACE;
   bool disable_clipping_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Renderer);

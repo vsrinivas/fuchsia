@@ -10,8 +10,9 @@
 namespace scenic_lib {
 
 constexpr size_t kCommandsPerMessage =
-    (ZX_CHANNEL_MAX_MSG_BYTES - sizeof(fidl_message_header_t)
-                              - sizeof(fidl_vector_t)) / sizeof(ui::Command);
+    (ZX_CHANNEL_MAX_MSG_BYTES - sizeof(fidl_message_header_t) -
+     sizeof(fidl_vector_t)) /
+    sizeof(ui::Command);
 
 Session::Session(ui::SessionPtr session,
                  fidl::InterfaceRequest<ui::SessionListener> session_listener)

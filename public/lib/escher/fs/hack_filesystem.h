@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_FS_HACK_FILESYSTEM_H_
+#define LIB_ESCHER_FS_HACK_FILESYSTEM_H_
 
 #include <functional>
 #include <unordered_map>
@@ -94,3 +95,5 @@ class HackFilesystemWatcher final {
 };
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_FS_HACK_FILESYSTEM_H_

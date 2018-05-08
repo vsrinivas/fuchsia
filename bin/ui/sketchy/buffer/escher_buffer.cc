@@ -13,10 +13,10 @@ constexpr vk::DeviceSize kDefaultCapacity = 1U << kDefaultPower;
 
 const vk::BufferUsageFlags kBufferUsageFlags =
     vk::BufferUsageFlagBits::eVertexBuffer |
-        vk::BufferUsageFlagBits::eIndexBuffer |
-        vk::BufferUsageFlagBits::eStorageBuffer |
-        vk::BufferUsageFlagBits::eTransferSrc |
-        vk::BufferUsageFlagBits::eTransferDst;
+    vk::BufferUsageFlagBits::eIndexBuffer |
+    vk::BufferUsageFlagBits::eStorageBuffer |
+    vk::BufferUsageFlagBits::eTransferSrc |
+    vk::BufferUsageFlagBits::eTransferDst;
 
 const vk::MemoryPropertyFlags kMemoryPropertyFlags =
     vk::MemoryPropertyFlagBits::eDeviceLocal;
@@ -30,11 +30,9 @@ vk::DeviceSize GetCapacity(vk::DeviceSize capacity_req) {
 // TODO(MZ-269): Implement a staging buffer pool.
 escher::BufferPtr GetStagingBuffer(escher::BufferFactory* factory,
                                    vk::DeviceSize capacity_req) {
-  return factory->NewBuffer(
-      capacity_req,
-      vk::BufferUsageFlagBits::eTransferSrc,
-      vk::MemoryPropertyFlagBits::eHostVisible |
-          vk::MemoryPropertyFlagBits::eHostCoherent);
+  return factory->NewBuffer(capacity_req, vk::BufferUsageFlagBits::eTransferSrc,
+                            vk::MemoryPropertyFlagBits::eHostVisible |
+                                vk::MemoryPropertyFlagBits::eHostCoherent);
 }
 
 }  // namespace
@@ -42,20 +40,21 @@ escher::BufferPtr GetStagingBuffer(escher::BufferFactory* factory,
 namespace sketchy_service {
 
 EscherBuffer::EscherBuffer(escher::BufferFactory* factory)
-    : buffer_(
-        factory->NewBuffer(
-            kDefaultCapacity, kBufferUsageFlags, kMemoryPropertyFlags)) {}
+    : buffer_(factory->NewBuffer(kDefaultCapacity,
+                                 kBufferUsageFlags,
+                                 kMemoryPropertyFlags)) {}
 
 void EscherBuffer::SetData(escher::impl::CommandBuffer* command,
                            escher::BufferFactory* factory,
-                           const void* data, size_t size) {
+                           const void* data,
+                           size_t size) {
   if (size == 0) {
     size_ = 0;
     return;
   }
   if (size > capacity()) {
-    buffer_ = factory->NewBuffer(
-        GetCapacity(size), kBufferUsageFlags, kMemoryPropertyFlags);
+    buffer_ = factory->NewBuffer(GetCapacity(size), kBufferUsageFlags,
+                                 kMemoryPropertyFlags);
   }
   auto staging_buffer = GetStagingBuffer(factory, size);
   memcpy(staging_buffer->ptr(), data, size);
@@ -65,7 +64,8 @@ void EscherBuffer::SetData(escher::impl::CommandBuffer* command,
 
 void EscherBuffer::AppendData(escher::impl::CommandBuffer* command,
                               escher::BufferFactory* factory,
-                              const void* data, size_t size) {
+                              const void* data,
+                              size_t size) {
   if (size == 0) {
     return;
   }

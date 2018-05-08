@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 config("common_include_dirs") {
-  include_dirs = [
-    "//third_party/glm",
-  ]
+  include_dirs = [ "//third_party/glm" ]
 }
 
 source_set("input") {

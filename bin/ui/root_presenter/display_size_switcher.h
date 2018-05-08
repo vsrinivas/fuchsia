@@ -5,8 +5,8 @@
 #ifndef GARNET_BIN_UI_ROOT_PRESENTER_DISPLAY_SIZE_SWITCHER_H_
 #define GARNET_BIN_UI_ROOT_PRESENTER_DISPLAY_SIZE_SWITCHER_H_
 
-#include "lib/fxl/macros.h"
 #include <fuchsia/cpp/input.h>
+#include "lib/fxl/macros.h"
 #include "lib/ui/scenic/client/resources.h"
 
 #include "garnet/bin/ui/root_presenter/displays/display_metrics.h"

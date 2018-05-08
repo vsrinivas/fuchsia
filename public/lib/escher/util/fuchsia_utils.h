@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_UTIL_FUCHSIA_UTILS_H_
+#define LIB_ESCHER_UTIL_FUCHSIA_UTILS_H_
 
 #include <lib/zx/event.h>
 #include <lib/zx/vmo.h>
@@ -28,3 +29,5 @@ zx::event GetEventForSemaphore(
 zx::vmo ExportMemoryAsVmo(escher::Escher* escher, const escher::GpuMemPtr& mem);
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_UTIL_FUCHSIA_UTILS_H_

@@ -35,8 +35,8 @@ VK_TEST_F(PoseBufferTest, Validation) {
 
   ASSERT_TRUE(Apply(scenic_lib::NewCreateMemoryCommand(
       memory_id, std::move(vmo), images::MemoryType::VK_DEVICE_MEMORY)));
-  ASSERT_TRUE(
-      Apply(scenic_lib::NewCreateBufferCommand(buffer_id, memory_id, 0, vmo_size)));
+  ASSERT_TRUE(Apply(
+      scenic_lib::NewCreateBufferCommand(buffer_id, memory_id, 0, vmo_size)));
 
   // Actual Tests
 

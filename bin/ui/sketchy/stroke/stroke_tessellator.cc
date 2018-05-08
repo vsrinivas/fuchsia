@@ -147,7 +147,8 @@ void main() {
 namespace sketchy_service {
 
 StrokeTessellator::StrokeTessellator(escher::Escher* escher)
-    : kernel_(escher, std::vector<vk::ImageLayout>{},
+    : kernel_(escher,
+              std::vector<vk::ImageLayout>{},
               std::vector<vk::DescriptorType>{
                   // Binding 0: |stroke_info_buffer|
                   vk::DescriptorType::eUniformBuffer,
@@ -165,7 +166,8 @@ StrokeTessellator::StrokeTessellator(escher::Escher* escher)
                   vk::DescriptorType::eStorageBuffer,
                   // Binding 7: output index buffer
                   vk::DescriptorType::eStorageBuffer},
-              /* push_constants_size= */ 0, kShaderCode) {}
+              /* push_constants_size= */ 0,
+              kShaderCode) {}
 
 void StrokeTessellator::Dispatch(
     escher::BufferPtr stroke_info_buffer,
@@ -180,30 +182,25 @@ void StrokeTessellator::Dispatch(
     escher::TimestampProfiler* profiler,
     uint32_t division_count) {
   if (profiler) {
-    profiler->AddTimestamp(
-        command, vk::PipelineStageFlagBits::eBottomOfPipe,
-        "Before Tessellation");
+    profiler->AddTimestamp(command, vk::PipelineStageFlagBits::eBottomOfPipe,
+                           "Before Tessellation");
   }
 
   uint32_t group_count = (division_count + kLocalSize - 1) / kLocalSize;
   kernel_.Dispatch(
       std::vector<escher::TexturePtr>{},
-      {std::move(stroke_info_buffer),
-       std::move(control_points_buffer),
-       std::move(re_params_buffer),
-       std::move(division_counts_buffer),
+      {std::move(stroke_info_buffer), std::move(control_points_buffer),
+       std::move(re_params_buffer), std::move(division_counts_buffer),
        std::move(cumulative_division_counts_buffer),
-       std::move(division_segment_index_buffer),
-       std::move(vertex_buffer),
+       std::move(division_segment_index_buffer), std::move(vertex_buffer),
        std::move(index_buffer)},
       command, group_count,
       /* group_count_y= */ 1, /* group_count_z= */ 1,
       /* push_constants= */ nullptr);
 
   if (profiler) {
-    profiler->AddTimestamp(
-        command, vk::PipelineStageFlagBits::eBottomOfPipe,
-        "After Tessellation");
+    profiler->AddTimestamp(command, vk::PipelineStageFlagBits::eBottomOfPipe,
+                           "After Tessellation");
   }
 }
 

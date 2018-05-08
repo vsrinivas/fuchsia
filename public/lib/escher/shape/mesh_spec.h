@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_SHAPE_MESH_SPEC_H_
+#define LIB_ESCHER_SHAPE_MESH_SPEC_H_
 
 #include <string>
 #include <vector>
@@ -71,3 +72,5 @@ std::ostream& operator<<(std::ostream& str, const MeshAttribute& attr);
 std::ostream& operator<<(std::ostream& str, const MeshSpec& spec);
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_SHAPE_MESH_SPEC_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_SCENE_SHAPE_MODIFIER_H_
+#define LIB_ESCHER_SCENE_SHAPE_MODIFIER_H_
 
 #include <vulkan/vulkan.hpp>
 
@@ -42,3 +43,5 @@ struct FlagTraits<escher::ShapeModifier> {
 };
 
 }  // namespace vk
+
+#endif  // LIB_ESCHER_SCENE_SHAPE_MODIFIER_H_

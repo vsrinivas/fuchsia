@@ -8,7 +8,7 @@
 #include <zircon/types.h>
 
 namespace hid {
-  struct ReportField;
+struct ReportField;
 }
 
 namespace mozart {
@@ -17,7 +17,7 @@ namespace mozart {
 // device and presents a simpler Read() interface. This is a transitional
 // step towards fully wrapping the HID protocol.
 class HidDecoder {
-public:
+ public:
   enum class Protocol : uint32_t {
     Other,
     Keyboard,
@@ -75,7 +75,7 @@ public:
   // Only valid if Init() out_proto is Protocol::Gamepad.
   bool Read(HidGamepadSimple* gamepad);
 
-private:
+ private:
   struct DataLocator {
     uint32_t begin;
     uint32_t count;

@@ -143,13 +143,13 @@ void ShadertoyStateForImagePipe::DrawFrame(uint64_t presentation_time,
                         fb.release_semaphore, fb.acquire_semaphore);
 
   // Present the image and request another frame.
-  auto present_image_callback = [weak = weak_ptr_factory()->GetWeakPtr()](
-      images::PresentationInfo info) {
-    // Need this cast in order to call protected member of superclass.
-    if (auto self = static_cast<ShadertoyStateForImagePipe*>(weak.get())) {
-      self->OnFramePresented(std::move(info));
-    }
-  };
+  auto present_image_callback =
+      [weak = weak_ptr_factory()->GetWeakPtr()](images::PresentationInfo info) {
+        // Need this cast in order to call protected member of superclass.
+        if (auto self = static_cast<ShadertoyStateForImagePipe*>(weak.get())) {
+          self->OnFramePresented(std::move(info));
+        }
+      };
 
   fidl::VectorPtr<zx::event> acquire_fences;
   acquire_fences.push_back(std::move(acquire_fence));

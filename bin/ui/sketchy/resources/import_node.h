@@ -5,10 +5,10 @@
 #ifndef GARNET_BIN_UI_SKETCHY_RESOURCES_IMPORT_NODE_H_
 #define GARNET_BIN_UI_SKETCHY_RESOURCES_IMPORT_NODE_H_
 
-#include "lib/ui/scenic/client/resources.h"
-#include "lib/ui/scenic/client/session.h"
 #include "garnet/bin/ui/sketchy/resources/resource.h"
 #include "lib/fxl/memory/ref_counted.h"
+#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/scenic/client/session.h"
 
 namespace sketchy_service {
 

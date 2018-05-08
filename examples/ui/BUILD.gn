@@ -121,15 +121,16 @@ package("tile_view") {
 }
 
 package("video_display") {
-
   deps = [
     "video_display",
   ]
 
   binary = "video_display"
 
-  meta = [ {
-        path = rebase_path("video_display/meta/sandbox")
-        dest = "sandbox"
-      } ]
+  meta = [
+    {
+      path = rebase_path("video_display/meta/sandbox")
+      dest = "sandbox"
+    },
+  ]
 }

@@ -8,8 +8,8 @@
 #include <memory>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/ui/view_framework/view_provider_service.h"
 #include "lib/fxl/macros.h"
+#include "lib/ui/view_framework/view_provider_service.h"
 
 namespace mozart {
 

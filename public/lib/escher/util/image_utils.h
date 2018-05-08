@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_UTIL_IMAGE_UTILS_H_
+#define LIB_ESCHER_UTIL_IMAGE_UTILS_H_
 
 #ifdef __Fuchsia__
 #include <fbl/function.h>
@@ -140,3 +141,5 @@ std::unique_ptr<uint8_t[]> NewNoisePixels(uint32_t width,
 
 }  // namespace image_utils
 }  // namespace escher
+
+#endif  // LIB_ESCHER_UTIL_IMAGE_UTILS_H_

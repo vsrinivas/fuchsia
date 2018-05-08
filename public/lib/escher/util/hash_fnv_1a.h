@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_UTIL_HASH_FNV_1A_H_
+#define LIB_ESCHER_UTIL_HASH_FNV_1A_H_
 
 #include <cstdint>
 
@@ -25,3 +26,5 @@ inline uint64_t hash_fnv_1a_64(const uint8_t* data,
 }
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_UTIL_HASH_FNV_1A_H_

@@ -294,9 +294,9 @@ class ContainerNode : public Node {
  public:
   // Adds a child to the node.
   void AddChild(const Node& child) {
-   FXL_DCHECK(session() == child.session());
-   AddChild(child.id());
- }
+    FXL_DCHECK(session() == child.session());
+    AddChild(child.id());
+  }
   void AddChild(uint32_t child_node_id);
 
   void AddPart(const Node& part) {

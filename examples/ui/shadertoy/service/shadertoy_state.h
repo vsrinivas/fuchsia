@@ -5,15 +5,15 @@
 #ifndef GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_SHADERTOY_STATE_H_
 #define GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_SHADERTOY_STATE_H_
 
-#include "garnet/examples/ui/shadertoy/service/glm_hack.h"
+#include <fuchsia/cpp/images.h>
 #include <fuchsia/cpp/shadertoy.h>
+#include <fuchsia/cpp/views_v1_token.h>
+#include "garnet/examples/ui/shadertoy/service/glm_hack.h"
 #include "lib/escher/escher.h"
 #include "lib/escher/resources/resource.h"
 #include "lib/escher/util/stopwatch.h"
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include <fuchsia/cpp/images.h>
-#include <fuchsia/cpp/views_v1_token.h>
 
 namespace shadertoy {
 

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_GEOMETRY_TESSELLATION_H_
+#define LIB_ESCHER_GEOMETRY_TESSELLATION_H_
 
 #include <vector>
 
@@ -80,3 +81,5 @@ MeshPtr NewSphereMesh(MeshBuilderFactory* factory,
                       float radius);
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_GEOMETRY_TESSELLATION_H_

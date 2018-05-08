@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_SHAPE_ROUNDED_RECT_FACTORY_H_
+#define LIB_ESCHER_SHAPE_ROUNDED_RECT_FACTORY_H_
 
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/shape/rounded_rect.h"
@@ -30,3 +31,5 @@ class RoundedRectFactory : private ResourceRecycler {
 };
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_SHAPE_ROUNDED_RECT_FACTORY_H_

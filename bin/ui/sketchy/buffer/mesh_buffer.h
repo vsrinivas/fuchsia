@@ -5,8 +5,8 @@
 #ifndef GARNET_BIN_UI_SKETCHY_BUFFER_MESH_BUFFER_H_
 #define GARNET_BIN_UI_SKETCHY_BUFFER_MESH_BUFFER_H_
 
-#include <unordered_map>
 #include <zx/event.h>
+#include <unordered_map>
 
 #include "garnet/bin/ui/sketchy/buffer/shared_buffer.h"
 #include "garnet/bin/ui/sketchy/frame.h"
@@ -34,7 +34,9 @@ class MeshBuffer final {
   // grow dynamically if it's not enough.
   // TODO(ES-45): Return ranges to avoid sub-buffering.
   std::pair<escher::BufferPtr, escher::BufferPtr> Preserve(
-      Frame* frame, uint32_t vertex_count, uint32_t index_count,
+      Frame* frame,
+      uint32_t vertex_count,
+      uint32_t index_count,
       const escher::BoundingBox& bbox);
 
   // Provide all the necessary parameters to gfx::Mesh::BindBuffers().

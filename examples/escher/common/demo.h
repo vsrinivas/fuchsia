@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_EXAMPLES_ESCHER_COMMON_DEMO_H_
+#define GARNET_EXAMPLES_ESCHER_COMMON_DEMO_H_
 
 #include "garnet/examples/escher/common/demo_harness.h"
 #include "lib/escher/escher.h"
@@ -51,3 +52,5 @@ class Demo {
   escher::VulkanContext vulkan_context_;
   escher::Escher escher_;
 };
+
+#endif  // GARNET_EXAMPLES_ESCHER_COMMON_DEMO_H_

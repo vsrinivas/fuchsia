@@ -6,8 +6,7 @@
 
 namespace sketchy_service {
 
-const ResourceTypeInfo Resource::kTypeInfo("Resource",
-                                           ResourceType::kResource);
+const ResourceTypeInfo Resource::kTypeInfo("Resource", ResourceType::kResource);
 
 Resource* Resource::GetDelegate(const ResourceTypeInfo& expected_type) {
   return type_info().IsKindOf(expected_type) ? this : nullptr;

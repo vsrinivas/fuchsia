@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_TEST_FLIB_TEST_WITH_MESSAGE_LOOP_H_
+#define LIB_ESCHER_TEST_FLIB_TEST_WITH_MESSAGE_LOOP_H_
 
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 // Run message loop *while* condition is true (timeout after 400*10ms = 4000ms)
 #define RUN_MESSAGE_LOOP_WHILE(condition)                             \
@@ -38,3 +39,5 @@ bool RunLoopWithTimeout(
 
 }  // namespace test
 }  // namespace escher
+
+#endif  // LIB_ESCHER_TEST_FLIB_TEST_WITH_MESSAGE_LOOP_H_

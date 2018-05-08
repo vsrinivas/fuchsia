@@ -43,7 +43,8 @@ ShapesView::ShapesView(
 
 ShapesView::~ShapesView() {}
 
-void ShapesView::OnSceneInvalidated(images::PresentationInfo presentation_info) {
+void ShapesView::OnSceneInvalidated(
+    images::PresentationInfo presentation_info) {
   if (!has_logical_size())
     return;
 

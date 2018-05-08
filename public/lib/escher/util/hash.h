@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_UTIL_HASH_H_
+#define LIB_ESCHER_UTIL_HASH_H_
 
 #include <cstdint>
 
@@ -19,3 +20,5 @@ struct Hash {
 };
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_UTIL_HASH_H_

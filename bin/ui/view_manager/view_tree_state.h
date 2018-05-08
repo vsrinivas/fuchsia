@@ -44,9 +44,7 @@ class ViewTreeState : public ViewContainerState {
   }
 
   // Gets the token used to refer to this view tree globally.
-  views_v1::ViewTreeToken view_tree_token() const {
-    return view_tree_token_;
-  }
+  views_v1::ViewTreeToken view_tree_token() const { return view_tree_token_; }
 
   // Gets the view tree listener interface, never null.
   // Caller does not obtain ownership of the view tree listener.

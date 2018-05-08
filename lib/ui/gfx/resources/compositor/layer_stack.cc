@@ -42,7 +42,7 @@ bool LayerStack::AddLayer(LayerPtr layer) {
 bool LayerStack::RemoveLayer(LayerPtr layer) {
   if (layer->layer_stack_ != this) {
     error_reporter()->ERROR()
-       << "LayerStack::RemoveLayer(): layer doesn't belong to this stack.";
+        << "LayerStack::RemoveLayer(): layer doesn't belong to this stack.";
     return false;
   }
   layer->layer_stack_ = nullptr;

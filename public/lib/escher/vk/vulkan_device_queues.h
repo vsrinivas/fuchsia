@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_VK_VULKAN_DEVICE_QUEUES_H_
+#define LIB_ESCHER_VK_VULKAN_DEVICE_QUEUES_H_
 
 #include <set>
 #include <string>
@@ -115,3 +116,5 @@ class VulkanDeviceQueues
 };
 
 };  // namespace escher
+
+#endif  // LIB_ESCHER_VK_VULKAN_DEVICE_QUEUES_H_

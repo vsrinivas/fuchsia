@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_IMPL_MODEL_DISPLAY_LIST_H_
+#define LIB_ESCHER_IMPL_MODEL_DISPLAY_LIST_H_
 
 #include <vulkan/vulkan.hpp>
 
@@ -50,3 +51,5 @@ typedef fxl::RefPtr<ModelDisplayList> ModelDisplayListPtr;
 
 }  // namespace impl
 }  // namespace escher
+
+#endif  // LIB_ESCHER_IMPL_MODEL_DISPLAY_LIST_H_

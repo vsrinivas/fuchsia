@@ -28,9 +28,7 @@ const ResourceTypeInfo StrokeGroup::kTypeInfo("StrokeGroup",
                                               ResourceType::kResource);
 
 StrokeGroup::StrokeGroup(scenic_lib::Session* session)
-    : shape_node_(session),
-      mesh_(session),
-      material_(session) {
+    : shape_node_(session), mesh_(session), material_(session) {
   material_.SetColor(255, 0, 255, 255);
   shape_node_.SetMaterial(material_);
   shape_node_.SetShape(mesh_);
@@ -78,8 +76,8 @@ void StrokeGroup::MergeStrokes(Frame* frame) {
     return;
   }
   auto pair = EstimateDeltaCounts(strokes_to_add_);
-  mesh_buffer_.Prepare(
-      frame, /* from_scratch= */ false, pair.first, pair.second);
+  mesh_buffer_.Prepare(frame, /* from_scratch= */ false, pair.first,
+                       pair.second);
   while (!strokes_to_add_.empty()) {
     const auto& stroke = *strokes_to_add_.begin();
     strokes_to_add_.erase(stroke);
@@ -90,8 +88,8 @@ void StrokeGroup::MergeStrokes(Frame* frame) {
 
 void StrokeGroup::ReTessellateStrokes(Frame* frame) {
   auto pair = EstimateDeltaCounts(strokes_);
-  mesh_buffer_.Prepare(
-      frame, /* from_scratch= */ true, pair.first, pair.second);
+  mesh_buffer_.Prepare(frame, /* from_scratch= */ true, pair.first,
+                       pair.second);
   for (auto it = strokes_.begin(); it != strokes_.end(); it++) {
     (*it)->TessellateAndMerge(frame, &mesh_buffer_);
   }

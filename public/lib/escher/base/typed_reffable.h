@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_BASE_TYPED_REFFABLE_H_
+#define LIB_ESCHER_BASE_TYPED_REFFABLE_H_
 
 #include "lib/escher/base/reffable.h"
 
@@ -59,3 +60,5 @@ class TypedReffable : public Reffable {
 };
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_BASE_TYPED_REFFABLE_H_

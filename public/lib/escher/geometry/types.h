@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_GEOMETRY_TYPES_H_
+#define LIB_ESCHER_GEOMETRY_TYPES_H_
 
 #if defined(countof)
 // Workaround for compiler error due to Zircon defining countof() as a macro.
@@ -59,3 +60,5 @@ inline ray4 operator*(const glm::mat4& matrix, const ray4& ray) {
 constexpr float kEpsilon = 0.0000001f;
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_GEOMETRY_TYPES_H_

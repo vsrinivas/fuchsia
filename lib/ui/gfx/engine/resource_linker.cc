@@ -51,9 +51,8 @@ bool ResourceLinker::ExportResource(Resource* resource,
 
   // The resource must be removed from being considered for import if its
   // peer is closed.
-  auto wait = std::make_unique<async::Wait>(
-      export_token.get(),     // handle
-      kEventPairDeathSignals  // trigger
+  auto wait = std::make_unique<async::Wait>(export_token.get(),     // handle
+                                            kEventPairDeathSignals  // trigger
   );
   wait->set_handler(std::bind(&ResourceLinker::OnTokenPeerDeath, this,
                               import_koid, std::placeholders::_3,
@@ -163,10 +162,9 @@ bool ResourceLinker::ImportResource(Import* import,
   return true;
 }
 
-void ResourceLinker::OnTokenPeerDeath(
-    zx_koid_t import_koid,
-    zx_status_t status,
-    const zx_packet_signal* signal) {
+void ResourceLinker::OnTokenPeerDeath(zx_koid_t import_koid,
+                                      zx_status_t status,
+                                      const zx_packet_signal* signal) {
   // This is invoked when all the peers for the registered export
   // handle are closed, or if there is a loop death or other error.
   RemoveExportEntryForExpiredKoid(import_koid);

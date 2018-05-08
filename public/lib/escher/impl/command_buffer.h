@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_IMPL_COMMAND_BUFFER_H_
+#define LIB_ESCHER_IMPL_COMMAND_BUFFER_H_
 
 #include <functional>
 #include <vector>
@@ -167,3 +168,5 @@ class CommandBuffer {
 
 }  // namespace impl
 }  // namespace escher
+
+#endif  // LIB_ESCHER_IMPL_COMMAND_BUFFER_H_

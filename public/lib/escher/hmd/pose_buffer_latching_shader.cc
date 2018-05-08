@@ -4,13 +4,13 @@
 
 #include "garnet/public/lib/escher/hmd/pose_buffer_latching_shader.h"
 
-#include "garnet/public/lib/escher/hmd/pose_buffer.h"
 #include "garnet/public/lib/escher/escher.h"
+#include "garnet/public/lib/escher/hmd/pose_buffer.h"
 #include "garnet/public/lib/escher/renderer/frame.h"
 #include "garnet/public/lib/escher/resources/resource_recycler.h"
-#include "garnet/public/lib/escher/vk/texture.h"
-#include "garnet/public/lib/escher/vk/buffer.h"
 #include "garnet/public/lib/escher/scene/camera.h"
+#include "garnet/public/lib/escher/vk/buffer.h"
+#include "garnet/public/lib/escher/vk/texture.h"
 
 namespace escher {
 namespace hmd {
@@ -176,5 +176,5 @@ BufferPtr PoseBufferLatchingShader::LatchStereoPose(
 
   return output_buffer;
 }
-}
-}
+}  // namespace hmd
+}  // namespace escher

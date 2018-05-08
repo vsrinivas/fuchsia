@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_IMPL_GPU_MEM_SLAB_H_
+#define LIB_ESCHER_IMPL_GPU_MEM_SLAB_H_
 
 #include <vulkan/vulkan.hpp>
 
@@ -57,3 +58,5 @@ class GpuMemSlab final : public GpuMem {
 
 }  // namespace impl
 }  // namespace escher
+
+#endif  // LIB_ESCHER_IMPL_GPU_MEM_SLAB_H_

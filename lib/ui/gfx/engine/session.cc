@@ -1299,7 +1299,7 @@ bool Session::ScheduleUpdate(uint64_t presentation_time,
     // zero acquire fences).
 
     acquire_fence_set->WaitReadyAsync(
-        [ weak = weak_factory_.GetWeakPtr(), presentation_time ] {
+        [weak = weak_factory_.GetWeakPtr(), presentation_time] {
           if (weak)
             weak->engine_->session_manager()->ScheduleUpdateForSession(
                 weak->engine_, presentation_time, SessionPtr(weak.get()));

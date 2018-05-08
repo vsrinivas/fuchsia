@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_IMPL_GPU_UPLOADER_H_
+#define LIB_ESCHER_IMPL_GPU_UPLOADER_H_
 
 #include "lib/escher/resources/resource_manager.h"
 #include "lib/escher/resources/resource_recycler.h"
@@ -107,3 +108,5 @@ class GpuUploader : public ResourceRecycler {
 
 }  // namespace impl
 }  // namespace escher
+
+#endif  // LIB_ESCHER_IMPL_GPU_UPLOADER_H_

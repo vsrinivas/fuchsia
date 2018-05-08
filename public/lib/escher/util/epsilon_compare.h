@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_UTIL_EPSILON_COMPARE_H_
+#define LIB_ESCHER_UTIL_EPSILON_COMPARE_H_
 
-#include <ostream>
 #include <iomanip>
+#include <ostream>
 
 namespace escher {
 
@@ -41,3 +42,4 @@ bool CompareMatrix(glm::mat4 m0, glm::mat4 m1, float epsilon = 0.0) {
 }
 
 }  // namespace escher
+#endif  // LIB_ESCHER_UTIL_EPSILON_COMPARE_H_

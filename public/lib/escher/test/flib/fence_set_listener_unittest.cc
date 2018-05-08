@@ -7,8 +7,8 @@
 #include "lib/escher/flib/fence.h"
 #include "lib/escher/flib/fence_set_listener.h"
 #include "lib/escher/impl/command_buffer_sequencer.h"
-#include "lib/escher/test/flib/util.h"
 #include "lib/escher/test/flib/test_with_message_loop.h"
+#include "lib/escher/test/flib/util.h"
 
 namespace escher {
 namespace test {

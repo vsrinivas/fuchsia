@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_PUBLIC_LIB_ESCHER_TEST_GTEST_ESCHER_H_
-#define GARNET_PUBLIC_LIB_ESCHER_TEST_GTEST_ESCHER_H_
+#ifndef LIB_ESCHER_TEST_GTEST_ESCHER_H_
+#define LIB_ESCHER_TEST_GTEST_ESCHER_H_
 
 #include "garnet/public/lib/escher/escher.h"
 #include "garnet/public/lib/escher/test/gtest_vulkan.h"
@@ -25,4 +25,4 @@ void TearDownEscher();
 }  // namespace test
 }  // namespace escher
 
-#endif  // GARNET_PUBLIC_LIB_ESCHER_TEST_GTEST_ESCHER_H_
+#endif  // LIB_ESCHER_TEST_GTEST_ESCHER_H_

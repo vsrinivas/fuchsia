@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_EXAMPLES_ESCHER_WATERFALL_WATERFALL_DEMO_H_
+#define GARNET_EXAMPLES_ESCHER_WATERFALL_WATERFALL_DEMO_H_
 
 #include <stdlib.h>
 #include <cmath>
@@ -16,9 +17,9 @@
 
 #include "lib/escher/geometry/types.h"
 #include "lib/escher/material/color_utils.h"
+#include "lib/escher/renderer/moment_shadow_map_renderer.h"
 #include "lib/escher/renderer/paper_renderer.h"
 #include "lib/escher/renderer/shadow_map_renderer.h"
-#include "lib/escher/renderer/moment_shadow_map_renderer.h"
 #include "lib/escher/scene/stage.h"
 #include "lib/escher/util/stopwatch.h"
 #include "lib/escher/vk/vulkan_swapchain_helper.h"
@@ -86,3 +87,5 @@ class WaterfallDemo : public Demo {
   uint64_t frame_count_ = 0;
   uint64_t first_frame_microseconds_;
 };
+
+#endif  // GARNET_EXAMPLES_ESCHER_WATERFALL_WATERFALL_DEMO_H_

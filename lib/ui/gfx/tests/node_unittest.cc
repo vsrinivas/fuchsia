@@ -64,23 +64,26 @@ TEST_F(NodeTest, NodesWithChildren) {
   // TODO: const scenic::ResourceId kClipNodeId = 12;
   EXPECT_TRUE(Apply(scenic_lib::NewCreateEntityNodeCommand(kEntityNodeId)));
   EXPECT_TRUE(Apply(scenic_lib::NewCreateShapeNodeCommand(kShapeNodeId)));
-  // TODO: EXPECT_TRUE(Apply(scenic_lib::NewCreateClipNodeCommand(kClipNodeId)));
+  // TODO:
+  // EXPECT_TRUE(Apply(scenic_lib::NewCreateClipNodeCommand(kClipNodeId)));
   auto entity_node = FindResource<EntityNode>(kEntityNodeId);
   auto shape_node = FindResource<ShapeNode>(kShapeNodeId);
   // auto clip_node = FindResource<ClipNode>(kClipNodeId);
 
   // We expect to be able to add children to these types.
-  EXPECT_TRUE(Apply(scenic_lib::NewAddChildCommand(kEntityNodeId, kChildNodeId)));
+  EXPECT_TRUE(
+      Apply(scenic_lib::NewAddChildCommand(kEntityNodeId, kChildNodeId)));
   EXPECT_EQ(entity_node.get(), child_node->parent());
   EXPECT_TRUE(Apply(scenic_lib::NewDetachCommand(kChildNodeId)));
   // EXPECT_TRUE(Apply(scenic_lib::NewDetachCommand(kChildNodeId)));
 
   // We do not expect to be able to add children to these types.
   // TODO:
-  // EXPECT_FALSE(Apply(scenic_lib::NewAddChildCommand(kClipNodeId, kChildNodeId)));
+  // EXPECT_FALSE(Apply(scenic_lib::NewAddChildCommand(kClipNodeId,
+  // kChildNodeId))); EXPECT_EQ(nullptr, child_node->parent());
   // EXPECT_EQ(nullptr, child_node->parent());
-  // EXPECT_EQ(nullptr, child_node->parent());
-  EXPECT_FALSE(Apply(scenic_lib::NewAddChildCommand(kShapeNodeId, kChildNodeId)));
+  EXPECT_FALSE(
+      Apply(scenic_lib::NewAddChildCommand(kShapeNodeId, kChildNodeId)));
   EXPECT_EQ(nullptr, child_node->parent());
 }
 
@@ -94,8 +97,7 @@ TEST_F(NodeTest, SettingHitTestBehavior) {
 
   EXPECT_TRUE(Apply(scenic_lib::NewSetHitTestBehaviorCommand(
       kNodeId, ::gfx::HitTestBehavior::kSuppress)));
-  EXPECT_EQ(::gfx::HitTestBehavior::kSuppress,
-            shape_node->hit_test_behavior());
+  EXPECT_EQ(::gfx::HitTestBehavior::kSuppress, shape_node->hit_test_behavior());
 }
 
 }  // namespace test

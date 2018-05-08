@@ -8,8 +8,7 @@
 
 namespace sketchy_service {
 
-DividedStrokePath::DividedStrokePath(float half_width,
-                                     float pixel_per_division)
+DividedStrokePath::DividedStrokePath(float half_width, float pixel_per_division)
     : half_width_(half_width),
       pixel_per_division_(pixel_per_division),
       path_(std::make_unique<StrokePath>()) {}
@@ -68,17 +67,15 @@ void DividedStrokePath::UpdateGeometry(const StrokePath* path) {
   for (const auto& seg : path->control_points()) {
     glm::vec3 bmin = {
         std::min({seg.pts[0].x, seg.pts[1].x, seg.pts[2].x, seg.pts[3].x}),
-        std::min({seg.pts[0].y, seg.pts[1].y, seg.pts[2].y, seg.pts[3].y}),
-        0};
+        std::min({seg.pts[0].y, seg.pts[1].y, seg.pts[2].y, seg.pts[3].y}), 0};
     glm::vec3 bmax = {
         std::max({seg.pts[0].x, seg.pts[1].x, seg.pts[2].x, seg.pts[3].x}),
-        std::max({seg.pts[0].y, seg.pts[1].y, seg.pts[2].y, seg.pts[3].y}),
-        0};
+        std::max({seg.pts[0].y, seg.pts[1].y, seg.pts[2].y, seg.pts[3].y}), 0};
     bbox_.Join({bmin - half_width_, bmax + half_width_});
   }
   for (const auto& length : path->segment_lengths()) {
-    uint32_t division_count = std::max(1U, static_cast<uint32_t>(
-        length / pixel_per_division_));
+    uint32_t division_count =
+        std::max(1U, static_cast<uint32_t>(length / pixel_per_division_));
     division_counts_.push_back(division_count);
     cumulative_division_counts_.push_back(division_count_);
     division_count_ += division_count;

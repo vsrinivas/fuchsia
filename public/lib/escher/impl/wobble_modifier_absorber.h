@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_IMPL_WOBBLE_MODIFIER_ABSORBER_H_
+#define LIB_ESCHER_IMPL_WOBBLE_MODIFIER_ABSORBER_H_
 
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/impl/compute_shader.h"
@@ -45,3 +46,4 @@ class WobbleModifierAbsorber {
 
 }  // namespace impl
 }  // namespace escher
+#endif  // LIB_ESCHER_IMPL_WOBBLE_MODIFIER_ABSORBER_H_

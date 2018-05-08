@@ -41,9 +41,7 @@ class DividedStrokePath final {
   const void* control_points_data() const {
     return path_->control_points().data();
   }
-  size_t control_points_size() const {
-    return path_->control_points_size();
-  }
+  size_t control_points_size() const { return path_->control_points_size(); }
   const void* re_params_data() const { return path_->re_params().data(); }
   size_t re_params_size() const { return path_->re_params_size(); }
   const void* division_counts_data() const { return division_counts_.data(); }
@@ -76,4 +74,4 @@ class DividedStrokePath final {
 
 }  // namespace sketchy_service
 
-#endif  // GARNET_BIN_UI_SKETCHY_RESOURCES_DIVIDED_STROKE_PATH_H_
+#endif  // GARNET_BIN_UI_SKETCHY_STROKE_DIVIDED_STROKE_PATH_H_

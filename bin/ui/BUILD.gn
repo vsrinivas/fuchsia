@@ -113,8 +113,8 @@ package("scenic_tools") {
   deps = [
     "input",
     "print_input",
-    "set_root_view",
     "screencap",
+    "set_root_view",
   ]
 
   binaries = [

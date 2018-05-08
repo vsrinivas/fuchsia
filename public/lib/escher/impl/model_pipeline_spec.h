@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_IMPL_MODEL_PIPELINE_SPEC_H_
+#define LIB_ESCHER_IMPL_MODEL_PIPELINE_SPEC_H_
 
 #include "lib/escher/scene/shape.h"
 #include "lib/escher/shape/mesh_spec.h"
@@ -63,3 +64,5 @@ ESCHER_DEBUG_PRINTABLE(impl::ModelPipelineSpec);
 ESCHER_DEBUG_PRINTABLE(impl::ModelPipelineSpec::ClipperState);
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_IMPL_MODEL_PIPELINE_SPEC_H_

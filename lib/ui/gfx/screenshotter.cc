@@ -50,11 +50,11 @@ void Screenshotter::OnCommandBufferDone(
     const uint8_t* pchannel = row;
     for (uint32_t x = 0; x < width; x++) {
       // Image format is BGRA, PPM expects RGBA. So swap the channels.
-      uint8_t* channel = (uint8_t*) &pixel;
+      uint8_t* channel = (uint8_t*)&pixel;
       channel[0] = pchannel[2];
       channel[1] = pchannel[1];
       channel[2] = pchannel[0];
-      file.write((const char*) &pixel, 3);
+      file.write((const char*)&pixel, 3);
       pchannel += 4;
     }
     row += sr_layout.rowPitch;
@@ -82,23 +82,20 @@ void Screenshotter::TakeScreenshot(
   image_info.width = width;
   image_info.height = height;
   image_info.usage = vk::ImageUsageFlagBits::eColorAttachment |
-      vk::ImageUsageFlagBits::eSampled;
+                     vk::ImageUsageFlagBits::eSampled;
   image_info.memory_flags = vk::MemoryPropertyFlagBits::eHostVisible;
   image_info.tiling = vk::ImageTiling::eLinear;
 
-  escher::ImagePtr image =
-      escher->image_cache()->NewImage(image_info);
+  escher::ImagePtr image = escher->image_cache()->NewImage(image_info);
   auto frame_done_semaphore = escher::Semaphore::New(escher->vk_device());
-  compositor->DrawToImage(
-      engine_->paper_renderer(), engine_->shadow_renderer(),
-      image, frame_done_semaphore);
+  compositor->DrawToImage(engine_->paper_renderer(), engine_->shadow_renderer(),
+                          image, frame_done_semaphore);
 
   vk::Queue queue = escher->command_buffer_pool()->queue();
   auto* command_buffer = escher->command_buffer_pool()->GetCommandBuffer();
 
-  auto submit_callback = std::bind(
-      &OnCommandBufferDone, filename, image, width, height, escher->vk_device(),
-      done_callback);
+  auto submit_callback = std::bind(&OnCommandBufferDone, filename, image, width,
+                                   height, escher->vk_device(), done_callback);
   command_buffer->Submit(queue, std::move(submit_callback));
   // Force the command buffer to retire so that the submitted commands will run.
   // TODO(SCN-211): Make this a proper wait instead of spinning.

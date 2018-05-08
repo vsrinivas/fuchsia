@@ -11,13 +11,11 @@
 
 namespace sketchy_service {
 
-Frame::Frame(SharedBufferPool* shared_buffer_pool,
-             bool enable_profiler)
+Frame::Frame(SharedBufferPool* shared_buffer_pool, bool enable_profiler)
     : shared_buffer_pool_(shared_buffer_pool),
       escher_(shared_buffer_pool->escher()),
       command_(escher_->command_buffer_pool()->GetCommandBuffer()) {
-  auto acquire_semaphore_pair =
-      escher::NewSemaphoreEventPair(escher_);
+  auto acquire_semaphore_pair = escher::NewSemaphoreEventPair(escher_);
   if (!acquire_semaphore_pair.first) {
     init_failed_ = true;
     return;
@@ -35,10 +33,10 @@ Frame::Frame(SharedBufferPool* shared_buffer_pool,
     profiler_ = fxl::MakeRefCounted<escher::TimestampProfiler>(
         escher_->vk_device(), escher_->timestamp_period());
     // Intel/Mesa workaround. See the submit callback underneath.
-    profiler_->AddTimestamp(
-        command_, vk::PipelineStageFlagBits::eBottomOfPipe, "Throwaway");
-    profiler_->AddTimestamp(
-        command_, vk::PipelineStageFlagBits::eBottomOfPipe, "Start");
+    profiler_->AddTimestamp(command_, vk::PipelineStageFlagBits::eBottomOfPipe,
+                            "Throwaway");
+    profiler_->AddTimestamp(command_, vk::PipelineStageFlagBits::eBottomOfPipe,
+                            "Start");
   }
 }
 
@@ -56,13 +54,12 @@ void Frame::RequestScenicPresent(
     uint64_t presentation_time,
     scenic_lib::Session::PresentCallback callback) {
   if (profiler_) {
-    profiler_->AddTimestamp(
-        command_, vk::PipelineStageFlagBits::eBottomOfPipe, "End");
+    profiler_->AddTimestamp(command_, vk::PipelineStageFlagBits::eBottomOfPipe,
+                            "End");
   }
   command_->AddSignalSemaphore(std::move(acquire_semaphore_));
   command_->Submit(
-      escher_->device()->vk_main_queue(),
-      [profiler = std::move(profiler_)]() {
+      escher_->device()->vk_main_queue(), [profiler = std::move(profiler_)]() {
         if (!profiler) {
           return;
         }

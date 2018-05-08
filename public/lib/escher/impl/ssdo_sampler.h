@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_IMPL_SSDO_SAMPLER_H_
+#define LIB_ESCHER_IMPL_SSDO_SAMPLER_H_
 
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/geometry/types.h"
@@ -90,3 +91,5 @@ class SsdoSampler {
 
 }  // namespace impl
 }  // namespace escher
+
+#endif  // LIB_ESCHER_IMPL_SSDO_SAMPLER_H_

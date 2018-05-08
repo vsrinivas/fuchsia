@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_H_
+#define GARNET_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_H_
 
 #include <cstdint>
 #include <vulkan/vulkan.hpp>
@@ -150,3 +151,5 @@ class DemoHarness {
   bool should_quit_ = false;
   bool shutdown_complete_ = false;
 };
+
+#endif  // GARNET_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_H_

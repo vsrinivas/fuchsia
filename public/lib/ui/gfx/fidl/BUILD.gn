@@ -10,11 +10,11 @@ fidl("fidl") {
   sdk_candidate = true
 
   sources = [
-    "display_info.fidl",
-    "hit.fidl",
-    "events.fidl",
-    "nodes.fidl",
     "commands.fidl",
+    "display_info.fidl",
+    "events.fidl",
+    "hit.fidl",
+    "nodes.fidl",
     "renderer.fidl",
     "resources.fidl",
     "shapes.fidl",

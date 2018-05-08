@@ -4,12 +4,12 @@
 
 source_set("input_reader") {
   sources = [
+    "hid_decoder.cc",
+    "hid_decoder.h",
     "input_interpreter.cc",
     "input_interpreter.h",
     "input_reader.cc",
     "input_reader.h",
-    "hid_decoder.cc",
-    "hid_decoder.h",
   ]
 
   deps = [

@@ -170,14 +170,12 @@ void KeyboardState::Repeat(uint64_t sequence) {
 }
 
 void KeyboardState::ScheduleRepeat(uint64_t sequence, zx::duration delta) {
-  async::PostDelayedTask(
-    async_get_default(),
-    [ weak = weak_ptr_factory_.GetWeakPtr(), sequence ] {
-      if (weak)
-        weak->Repeat(sequence);
-    },
-    delta
-  );
+  async::PostDelayedTask(async_get_default(),
+                         [weak = weak_ptr_factory_.GetWeakPtr(), sequence] {
+                           if (weak)
+                             weak->Repeat(sequence);
+                         },
+                         delta);
 }
 
 void MouseState::OnRegistered() {}
@@ -228,8 +226,8 @@ void MouseState::Update(input::InputReport input_report,
               buttons_);
   } else {
     if (pressed) {
-      SendEvent(position_.x, position_.y, now,
-                input::PointerEventPhase::DOWN, pressed);
+      SendEvent(position_.x, position_.y, now, input::PointerEventPhase::DOWN,
+                pressed);
     }
     if (released) {
       SendEvent(position_.x, position_.y, now, input::PointerEventPhase::UP,
@@ -305,23 +303,23 @@ void StylusState::Update(input::InputReport input_report,
   } else {
     // Quantize the value to [0, 1) based on the resolution.
     float x_denominator =
-        (1 + static_cast<float>(descriptor->x.range.max -
-                                descriptor->x.range.min) /
-                 static_cast<float>(descriptor->x.resolution)) *
+        (1 +
+         static_cast<float>(descriptor->x.range.max - descriptor->x.range.min) /
+             static_cast<float>(descriptor->x.resolution)) *
         static_cast<float>(descriptor->x.resolution);
     float x =
-        static_cast<float>(display_size.width * (input_report.stylus->x -
-                                                 descriptor->x.range.min)) /
+        static_cast<float>(display_size.width *
+                           (input_report.stylus->x - descriptor->x.range.min)) /
         x_denominator;
 
     float y_denominator =
-        (1 + static_cast<float>(descriptor->y.range.max -
-                                descriptor->y.range.min) /
-                 static_cast<float>(descriptor->y.resolution)) *
+        (1 +
+         static_cast<float>(descriptor->y.range.max - descriptor->y.range.min) /
+             static_cast<float>(descriptor->y.resolution)) *
         static_cast<float>(descriptor->y.resolution);
     float y =
-        static_cast<float>(display_size.height * (input_report.stylus->y -
-                                                  descriptor->y.range.min)) /
+        static_cast<float>(display_size.height *
+                           (input_report.stylus->y - descriptor->y.range.min)) /
         y_denominator;
 
     uint32_t buttons = 0;
@@ -367,18 +365,18 @@ void TouchscreenState::Update(input::InputReport input_report,
 
     // Quantize the value to [0, 1) based on the resolution.
     float x_denominator =
-        (1 + static_cast<float>(descriptor->x.range.max -
-                                descriptor->x.range.min) /
-                 static_cast<float>(descriptor->x.resolution)) *
+        (1 +
+         static_cast<float>(descriptor->x.range.max - descriptor->x.range.min) /
+             static_cast<float>(descriptor->x.resolution)) *
         static_cast<float>(descriptor->x.resolution);
     float x = static_cast<float>(display_size.width *
                                  (touch.x - descriptor->x.range.min)) /
               x_denominator;
 
     float y_denominator =
-        (1 + static_cast<float>(descriptor->y.range.max -
-                                descriptor->y.range.min) /
-                 static_cast<float>(descriptor->y.resolution)) *
+        (1 +
+         static_cast<float>(descriptor->y.range.max - descriptor->y.range.min) /
+             static_cast<float>(descriptor->y.resolution)) *
         static_cast<float>(descriptor->y.resolution);
     float y = static_cast<float>(display_size.height *
                                  (touch.y - descriptor->y.range.min)) /

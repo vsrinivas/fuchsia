@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_FUCHSIA_H_
+#define GARNET_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_FUCHSIA_H_
 
 #include <memory>
 
@@ -55,3 +56,5 @@ class DemoHarnessFuchsia : public DemoHarness, public escher_demo::EscherDemo {
   fidl::Binding<escher_demo::EscherDemo> escher_demo_binding_;
   std::unique_ptr<component::ServiceProviderImpl> outgoing_services_;
 };
+
+#endif  // GARNET_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_FUCHSIA_H_

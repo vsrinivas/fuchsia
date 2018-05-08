@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_APP_TEST_SCENE_H_
+#define GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_APP_TEST_SCENE_H_
 
 #include "lib/escher/gl/mesh.h"
 #include "lib/escher/scene/model.h"
@@ -32,3 +33,5 @@ class AppTestScene {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AppTestScene);
 };
+
+#endif  // GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_APP_TEST_SCENE_H_

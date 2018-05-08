@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_LINUX_H_
+#define GARNET_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_LINUX_H_
 
 #include "garnet/examples/escher/common/demo_harness.h"
 
@@ -25,3 +26,5 @@ class DemoHarnessLinux : public DemoHarness {
   // Called by Shutdown().
   void ShutdownWindowSystem() override;
 };
+
+#endif  // GARNET_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_LINUX_H_

@@ -43,6 +43,6 @@ geometry::TransformPtr Scale(geometry::TransformPtr transform,
 geometry::PointF TransformPoint(const geometry::Transform& transform,
                                 const geometry::PointF& point);
 
-}  // namespace mozart
+}  // namespace geometry
 
 #endif  // LIB_UI_GEOMETRY_CPP_GEOMETRY_UTIL_H_

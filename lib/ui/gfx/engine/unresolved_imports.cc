@@ -52,11 +52,11 @@ void UnresolvedImports::ListenForTokenPeerDeath(Import* import) {
 
     // The resource must be removed from being considered for import
     // if its peer is closed.
-    auto wait = std::make_unique<async::Wait>(
-        import_handle, kEventPairDeathSignals);
+    auto wait =
+        std::make_unique<async::Wait>(import_handle, kEventPairDeathSignals);
     wait->set_handler(std::bind(&UnresolvedImports::OnTokenPeerDeath, this,
-                                import_koid,
-                                std::placeholders::_3, std::placeholders::_4));
+                                import_koid, std::placeholders::_3,
+                                std::placeholders::_4));
     zx_status_t status = wait->Begin(async_get_default());
     FXL_CHECK(status == ZX_OK);
 
@@ -143,10 +143,9 @@ size_t UnresolvedImports::NumUnresolvedImportsForKoid(
   }
 }
 
-void UnresolvedImports::OnTokenPeerDeath(
-    zx_koid_t import_koid,
-    zx_status_t status,
-    const zx_packet_signal* signal) {
+void UnresolvedImports::OnTokenPeerDeath(zx_koid_t import_koid,
+                                         zx_status_t status,
+                                         const zx_packet_signal* signal) {
   // Remove |import_koid|, even if there was an error (i.e. status != ZX_OK).
   auto imports = RemoveUnresolvedImportsForKoid(import_koid);
 

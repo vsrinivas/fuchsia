@@ -30,13 +30,11 @@ void DisplayWatcher::WaitForDisplay(DisplayReadyCallback callback) {
 #else
   callback_ = std::move(callback);
   display_watcher_ = fsl::DeviceWatcher::Create(
-      kDisplayDir,
-      std::bind(&DisplayWatcher::HandleDevice, this, true,
-                std::placeholders::_1, std::placeholders::_2));
+      kDisplayDir, std::bind(&DisplayWatcher::HandleDevice, this, true,
+                             std::placeholders::_1, std::placeholders::_2));
   framebuffer_watcher_ = fsl::DeviceWatcher::Create(
-      kFramebufferDir,
-      std::bind(&DisplayWatcher::HandleDevice, this, false,
-                std::placeholders::_1, std::placeholders::_2));
+      kFramebufferDir, std::bind(&DisplayWatcher::HandleDevice, this, false,
+                                 std::placeholders::_1, std::placeholders::_2));
 #endif
 }
 
@@ -52,8 +50,8 @@ void DisplayWatcher::HandleDevice(bool display,
   // Get display info.
   std::string path = (display ? kDisplayDir : kFramebufferDir) + "/" + filename;
 
-  FXL_LOG(INFO) << "SceneManager: Acquired " <<
-      (display ? "display" : "framebuffer") << " " << path << ".";
+  FXL_LOG(INFO) << "SceneManager: Acquired "
+                << (display ? "display" : "framebuffer") << " " << path << ".";
   fxl::UniqueFD fd(open(path.c_str(), O_RDWR));
   if (!fd.is_valid()) {
     FXL_DLOG(ERROR) << "Failed to open " << path << ": errno=" << errno;
@@ -88,11 +86,11 @@ void DisplayWatcher::HandleDevice(bool display,
       framebuffer_fd_.get(), ownership_event.reset_and_get_address());
   if (result == sizeof(zx_handle_t)) {
     FXL_DLOG(WARNING) << "IOCTL_DISPLAY_GET_OWNERSHIP_CHANGE_EVENT failed: "
-        << "result=" << result;
+                      << "result=" << result;
   }
 
   callback_(description.info.width, description.info.height,
-           std::move(ownership_event));
+            std::move(ownership_event));
 }
 
 }  // namespace gfx

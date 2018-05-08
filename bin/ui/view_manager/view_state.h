@@ -8,14 +8,14 @@
 #include <memory>
 #include <string>
 
-#include "lib/ui/scenic/client/resources.h"
-#include "lib/ui/views/cpp/formatting.h"
 #include <fuchsia/cpp/views_v1.h>
 #include "garnet/bin/ui/view_manager/internal/view_inspector.h"
 #include "garnet/bin/ui/view_manager/view_container_state.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
+#include "lib/ui/scenic/client/resources.h"
+#include "lib/ui/views/cpp/formatting.h"
 
 namespace view_manager {
 
@@ -90,7 +90,8 @@ class ViewState : public ViewContainerState {
 
   // Binds the |ViewOwner| interface to the view which has the effect of
   // tying the view's lifetime to that of the owner's pipe.
-  void BindOwner(fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
+  void BindOwner(
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
 
   // Unbinds the view from its owner.
   void ReleaseOwner();

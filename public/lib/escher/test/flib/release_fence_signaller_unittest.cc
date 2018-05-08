@@ -4,9 +4,9 @@
 
 #include "gtest/gtest.h"
 
-#include "lib/escher/impl/command_buffer_sequencer.h"
 #include "lib/escher/flib/fence.h"
 #include "lib/escher/flib/release_fence_signaller.h"
+#include "lib/escher/impl/command_buffer_sequencer.h"
 #include "lib/escher/test/flib/util.h"
 
 namespace escher {

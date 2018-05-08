@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_SHAPE_MESH_H_
+#define LIB_ESCHER_SHAPE_MESH_H_
 
 #include <map>
 
@@ -61,3 +62,5 @@ class Mesh : public WaitableResource {
 typedef fxl::RefPtr<Mesh> MeshPtr;
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_SHAPE_MESH_H_

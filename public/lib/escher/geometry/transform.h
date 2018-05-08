@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ESCHER_GEOMETRY_TRANSFORM_H_
+#define LIB_ESCHER_GEOMETRY_TRANSFORM_H_
 
 #include "lib/escher/geometry/types.h"
 #include "lib/escher/util/debug_print.h"
@@ -58,3 +59,5 @@ struct Transform {
 ESCHER_DEBUG_PRINTABLE(Transform);
 
 }  // namespace escher
+
+#endif  // LIB_ESCHER_GEOMETRY_TRANSFORM_H_

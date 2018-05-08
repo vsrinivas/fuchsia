@@ -22,8 +22,8 @@ class Canvas;
 // corresponds to a separate canvas resource.
 //
 // Resource is the base class for these other classes.
-// provides lifecycle management; the constructor enqueues a CreateResourceCommand
-// and the destructor enqueues a ReleaseResourceCommand.
+// provides lifecycle management; the constructor enqueues a
+// CreateResourceCommand and the destructor enqueues a ReleaseResourceCommand.
 class Resource {
  public:
   Canvas* canvas() const { return canvas_; }
@@ -49,8 +49,8 @@ class Resource {
   //     canvas can import.
   // |spec| Type of the resource.
   void EnqueueImportResourceCommand(ResourceId resource_id,
-                               zx::eventpair token,
-                               gfx::ImportSpec spec) const;
+                                    zx::eventpair token,
+                                    gfx::ImportSpec spec) const;
 
   // Enqueue an op in canvas.
   void EnqueueCommand(sketchy::Command command) const;

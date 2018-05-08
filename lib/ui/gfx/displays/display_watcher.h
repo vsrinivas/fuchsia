@@ -7,9 +7,9 @@
 
 #include <memory>
 
-#include "lib/zx/event.h"
 #include "lib/fsl/io/device_watcher.h"
 #include "lib/fxl/macros.h"
+#include "lib/zx/event.h"
 
 namespace scenic {
 namespace gfx {
@@ -20,8 +20,9 @@ class DisplayWatcher {
  public:
   // Callback that accepts display metrics.
   // |metrics| may be null if the display was not successfully acquired.
-  using DisplayReadyCallback = std::function<void(
-      uint32_t width_in_px, uint32_t height_in_px, zx::event ownership_event)>;
+  using DisplayReadyCallback = std::function<void(uint32_t width_in_px,
+                                                  uint32_t height_in_px,
+                                                  zx::event ownership_event)>;
 
   DisplayWatcher();
   ~DisplayWatcher();

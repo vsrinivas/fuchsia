@@ -26,12 +26,11 @@ int main(int argc, const char** argv) {
         escher::VulkanInstance::New(std::move(instance_params));
 
     auto vulkan_device = escher::VulkanDeviceQueues::New(
-        vulkan_instance,
-        {{VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME,
-          VK_KHR_EXTERNAL_MEMORY_FUCHSIA_EXTENSION_NAME,
-          VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
-          VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME},
-         vk::SurfaceKHR()});
+        vulkan_instance, {{VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME,
+                           VK_KHR_EXTERNAL_MEMORY_FUCHSIA_EXTENSION_NAME,
+                           VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
+                           VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME},
+                          vk::SurfaceKHR()});
 
     escher::Escher escher(vulkan_device);
 

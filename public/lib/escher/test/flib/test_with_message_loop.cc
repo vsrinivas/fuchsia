@@ -14,7 +14,7 @@ bool RunLoopWithTimeout(fxl::TimeDelta timeout) {
   bool* canceled_ptr = canceled.get();
   bool timed_out = false;
   fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-      fxl::MakeCopyable([ canceled = std::move(canceled), &timed_out ] {
+      fxl::MakeCopyable([canceled = std::move(canceled), &timed_out] {
         if (*canceled) {
           return;
         }
