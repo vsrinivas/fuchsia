@@ -64,12 +64,13 @@ zx_status_t aml_usb_phy_v2_init(zx_handle_t bti) {
     uint32_t val = readl(reset_regs + 0x21 * 4);
     writel((val | (0x3 << 16)), reset_regs + 0x21 * 4);
 
+    // amlogic_new_usbphy_reset_v2()
     volatile uint32_t* reset_1 = (uint32_t *)(reset_regs + S905D2_RESET1_REGISTER);
     writel(readl(reset_1) | S905D2_RESET1_USB, reset_1);
     // FIXME(voydanoff) this delay is very long, but it is what the Amlogic Linux kernel is doing.
     zx_nanosleep(zx_deadline_after(ZX_MSEC(500)));
 
-    // amlogic_new_usb2_init
+    // amlogic_new_usb2_init()
     for (int i = 0; i < 2; i++) {
         volatile void* addr = usbctrl_regs + (i * PHY_REGISTER_SIZE) + U2P_R0_OFFSET;
         uint32_t temp = readl(addr);
@@ -83,11 +84,12 @@ zx_status_t aml_usb_phy_v2_init(zx_handle_t bti) {
 
         zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
 
-        writel(readl(reset_1) | (1 << (16 + i)), reset_1);
+        // amlogic_new_usbphy_reset_phycfg_v2()
+        writel(readl(reset_1) | (1 << (16 + 0 /*i is always zero here */)), reset_1);
 
         zx_nanosleep(zx_deadline_after(ZX_USEC(50)));
 
-        addr = usbctrl_regs + (i * PHY_REGISTER_SIZE) + USB_R1_OFFSET;
+        addr = usbctrl_regs + (i * PHY_REGISTER_SIZE) + U2P_R1_OFFSET;
 
         temp = readl(addr);
         int cnt = 0;
