@@ -20,8 +20,8 @@ typedef struct {
 static periph_range_t periph_ranges[PERIPH_RANGE_MAX] = {};
 
 zx_status_t add_periph_range(paddr_t base_phys, size_t length) {
-    // peripheral ranges are allocated below KERNEL_BASE
-     uint64_t base_virt = KERNEL_BASE;
+    // peripheral ranges are allocated below the kernel image.
+    uint64_t base_virt = (uint64_t)__code_start;
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(base_phys));
     DEBUG_ASSERT(IS_PAGE_ALIGNED(length));

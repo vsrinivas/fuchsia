@@ -210,6 +210,20 @@ def writeline(line):
         break
 
 
+# Offset the address based on binary code start and bias
+# Return same type than input
+def kaslr_offset(addr, code_start, bias):
+    if not code_start or not bias:
+        return addr
+    is_string = isinstance(addr, str)
+    if is_string:
+        addr = int(addr, 16)
+    addr -= bias - code_start
+    if is_string:
+        return '%x' % addr
+    return addr
+
+
 def main():
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -297,7 +311,9 @@ def main():
     zircon_pc_re = re.compile("RIP: (0x[0-9a-z]+)")
     zircon_bt_re = re.compile(full_prefix +
         "bt#(\d+): (\dx[0-9a-fA-F]+)$")
+    zircon_nm_codestart = re.compile('^([a-f0-9]+) t __code_start$', re.M)
     zircon_elf_path = ''
+    zircon_code_start = None
     zircon_bt = False
     zircon_pc = ''
 
@@ -359,6 +375,15 @@ def main():
             name = m.group(4)
             name_to_buildid[name] = buildid
             bias_to_name[bias] = name
+
+            if zircon_code_start and zircon_code_start != bias:
+                if zircon_code_start < bias:
+                    diff = bias - zircon_code_start
+                    c = '+'
+                else:
+                    diff = zircon_code_start - bias
+                    c = '-'
+                writeline('kaslr offset is %c0x%x' % (c, diff))
             continue
         # We didn't see a dso line, so we're done with this list.
         # The next time we see one means we're starting a new list.
@@ -378,6 +403,10 @@ def main():
 
                 dso = m.group(4)
                 off = m.group(5)
+
+                # Adapt offset for KASLR move
+                off = kaslr_offset(off, zircon_code_start, bias)
+
                 dso_full_path = find_dso_full_path(
                     dso, args.app, name_to_buildid, build_dirs)
                 if dso_full_path:
@@ -415,16 +444,22 @@ def main():
         # Zircon Specific Handling
         if zircon_crash_re.search(line):
             zircon_elf_path = find_file_in_build_dir("zircon.elf", build_dirs)
-            if zircon_elf_path:
-                zircon_bt = True
-            else:
+            if not zircon_elf_path:
                 sys.stderr.write("Symbolize could not find the zircon elf binary. Perhaps you need "
                                   "to build zircon or specify the build directory with -b?\n")
+                continue
+            zircon_bt = True
+            nm_result = run_tool(arch, "nm", zircon_elf_path)
+            m = zircon_nm_codestart.search(nm_result)
+            if not m:
+                sys.stderr.write("Failed to find __code_start from nm")
+                continue
+            zircon_code_start = int(m.group(1), 16)
             continue
 
         m = zircon_pc_re.search(line)
         if m:
-            zircon_pc = m.group(1)
+            zircon_pc = kaslr_offset(m.group(1), zircon_code_start, bias)
             continue
 
         m = zircon_bt_re.match(line)
@@ -438,6 +473,9 @@ def main():
                 processed_lines.append(prefix +
                         a2l_out.replace("(inlined", (" " * len(prefix)) + "(inlined"))
                 zircon_pc = None
+
+            # Adapt offset for KASLR move
+            addr = kaslr_offset(addr, zircon_code_start, bias)
 
             prefix = "bt#%s: %s => " % (frame_num, addr)
             call_loc = get_call_location(arch, zircon_elf_path, addr)
@@ -470,6 +508,9 @@ def main():
                 processed_lines.append("#%s: unknown, can't find full path for %s\n" %
                     (frame_num, dso))
                 continue
+
+            # Adapt offset for KASLR move
+            offset = kaslr_offset(offset, zircon_code_start, bias)
 
             prefix = "bt#%s: 0x%x => " % (frame_num, addr)
             call_loc = run_addr2line(arch, dso_full_path, "0x%x" % offset)

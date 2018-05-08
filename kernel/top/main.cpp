@@ -22,12 +22,11 @@
 #include <string.h>
 #include <target.h>
 #include <vm/init.h>
+#include <vm/vm.h>
 #include <zircon/compiler.h>
 
 extern void (*const __init_array_start[])();
 extern void (*const __init_array_end[])();
-extern int __bss_start;
-extern int _end;
 
 static uint secondary_idle_thread_count;
 
@@ -59,6 +58,8 @@ void lk_main() {
     target_early_init();
 
     dprintf(INFO, "\nwelcome to Zircon\n\n");
+
+    dprintf(INFO, "KASLR: .text section at %p\n", __code_start);
 
     lk_primary_cpu_init_level(LK_INIT_LEVEL_TARGET_EARLY, LK_INIT_LEVEL_VM_PREHEAP - 1);
     dprintf(SPEW, "initializing vm pre-heap\n");

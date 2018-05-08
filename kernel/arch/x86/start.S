@@ -42,6 +42,27 @@
     rep stosb // while (ecx-- > 0) *edi++ = al;
 .endm
 
+#define ADDR_OFFSET_MASK ((1 << ADDR_OFFSET)-1)
+#define SHIFT_OFFSET(_s) ((_s) >> 3)
+#define SHIFT_REMAIN(_s) ((_s) - (SHIFT_OFFSET(_s) << 3))
+
+// Set a page table entry for the kernel module relocated 64-bit virtual
+// address in 32-bit code. Clobbers the %ecx register.
+.macro set_relocated_page_table_entry table, shift, value
+    // Extract 32-bit chunk of kernel_relocated_base containing the index bits
+    // for this page level shift.
+    mov PHYS(kernel_relocated_base + SHIFT_OFFSET(\shift)), %ecx
+
+    // Get the exact portion of the 32-bit value that is the index
+    shrl $SHIFT_REMAIN(\shift), %ecx
+    andl $ADDR_OFFSET_MASK, %ecx
+
+    // Get the adddress on the page table of index * 8 and set the value
+    shll $3, %ecx
+    addl $PHYS(\table), %ecx
+    movl \value, (%ecx)
+.endm
+
 /* shared code to set up a default 64bit page table structure */
 .macro page_table_init
     /* Setting the First PML4E with a PDP table reference*/
@@ -57,12 +78,12 @@
     /* point the pml4e at the second high PDP (for -2GB mapping) */
     movl $PHYS(pdp_high),   %eax
     orl  $X86_KERNEL_PD_FLAGS, %eax
-    movl %eax, PHYS(pml4 + 8*511)
+    set_relocated_page_table_entry pml4, PML4_SHIFT, %eax
 
     /* point the second pdp at the same low level page table */
     movl $PHYS(pte), %eax
     orl  $X86_KERNEL_PD_FLAGS, %eax
-    movl %eax, PHYS(pdp_high + 8*510)
+    set_relocated_page_table_entry pdp_high, PDP_SHIFT, %eax
 
     /* map the first 1GB in this table */
     movl $PHYS(pte), %esi
@@ -109,6 +130,18 @@
     loop 0b
 .endm
 
+// Load our new GDT by physical pointer.
+// _gdtr has it as a virtual pointer, so copy it and adjust.
+// Clobbers %eax and %ecx.
+.macro load_phys_gdtr
+    movw PHYS(_gdtr), %ax
+    movl PHYS(_gdtr+2), %ecx
+    sub $PHYS_ADDR_DELTA, %ecx
+    movw %ax, -6(%esp)
+    movl %ecx, -4(%esp)
+    lgdt -6(%esp)
+.endm
+
 // This section name is known specially to kernel.ld and gen-kaslr-fixups.sh.
 // This code has relocations for absolute physical addresses, which do not get
 // adjusted by the boot-time fixups (which this code calls at the end).
@@ -120,14 +153,8 @@ FUNCTION_LABEL(_multiboot_start)
     xor %ebx,%ebx
 0:  // multiboot_info_t pointer is in %ebx.
 
-    // Load our new GDT by physical pointer.
-    // _gdtr has it as a virtual pointer, so copy it and adjust.
-    movw PHYS(_gdtr), %ax
-    movl PHYS(_gdtr+2), %ecx
-    sub $PHYS_ADDR_DELTA, %ecx
-    movw %ax, -6(%esp)
-    movl %ecx, -4(%esp)
-    lgdt -6(%esp)
+    /* load our gdtr */
+    load_phys_gdtr
 
     /* load our data selectors */
     movw $DATA_SELECTOR, %ax
@@ -194,8 +221,9 @@ farjump64:
     /* give the boot allocator a chance to compute the physical address of the kernel */
     call boot_alloc_init
 
-    /* branch to our high address */
-    mov  $high_entry, %rax
+    /* branch to our high address, with the relocated offset */
+    mov $PHYS(high_entry), %rax
+    addq PHYS(kernel_relocated_base), %rax
     jmp  *%rax
 
 // The 64-bit entry path also gets here; see below.
@@ -213,14 +241,14 @@ high_entry:
     /* load the high kernel stack */
     lea _kstack_end(%rip), %rsp
 
-    /* reload the gdtr */
-    lgdt _gdtr(%rip)
-
     // move_fixups_and_zero_bss copied the fixup code to _end.
     // It expects %rdi to contain the actual runtime address of __code_start.
     lea __code_start(%rip), %rdi
     call _end
     // The fixup code won't be used again, so the memory can be reused now.
+
+    /* reload the gdtr after relocations as it relies on relocated VAs */
+    lgdt _gdtr(%rip)
 
     // Set %gs.base to &bp_percpu.  It's statically initialized
     // with kernel_unsafe_sp set, so after this it's safe to call
@@ -298,11 +326,13 @@ FUNCTION_LABEL(_start)
     mov  %rax, %cr3
 
     /* load our gdtr */
-    lgdt _gdtr
+    load_phys_gdtr
 
-    /* long jump to our code selector and the high address */
+    /* long jump to our code selector and the high address relocated */
     push  $CODE_64_SELECTOR
-    push  $high_entry
+    mov  $PHYS(high_entry), %rax
+    addq PHYS(kernel_relocated_base), %rax
+    pushq %rax
     lretq
 
 .bss
@@ -311,8 +341,12 @@ DATA(_kstack)
     .skip 4096
 DATA(_kstack_end)
 
-// These symbols are used by image.S.
+// These symbols are used by image.S
 .global IMAGE_ELF_ENTRY
 .global IMAGE_MULTIBOOT_ENTRY
 IMAGE_ELF_ENTRY = _start
 IMAGE_MULTIBOOT_ENTRY = _multiboot_start
+
+// This symbol is used by gdb python to know the base of the kernel module
+.global KERNEL_BASE_ADDRESS
+KERNEL_BASE_ADDRESS = KERNEL_BASE - KERNEL_LOAD_OFFSET

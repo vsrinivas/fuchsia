@@ -48,8 +48,18 @@ volatile pt_entry_t linear_map_pdp[(64ULL * GB) / (2 * MB)] __ALIGNED(PAGE_SIZE)
 /* which of the above variables is the top level page table */
 #define KERNEL_PT pml4
 
+// Static relocated base to prepare for KASLR. Used at early boot and by gdb
+// script to know the target relocated address.
+// TODO(thgarnie): Move to a dynamicly generated base address
+#if DISABLE_KASLR
+uint64_t kernel_relocated_base = KERNEL_BASE - KERNEL_LOAD_OFFSET;
+#else
+uint64_t kernel_relocated_base = 0xffffffff00000000;
+#endif
+
 /* kernel base top level page table in physical space */
-static const paddr_t kernel_pt_phys = (vaddr_t)KERNEL_PT - KERNEL_BASE + KERNEL_LOAD_OFFSET;
+static const paddr_t kernel_pt_phys =
+    (vaddr_t)KERNEL_PT - (vaddr_t)__code_start + KERNEL_LOAD_OFFSET;
 
 /* valid EPT MMU flags */
 static const uint kValidEptFlags =

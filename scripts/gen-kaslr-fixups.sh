@@ -84,7 +84,7 @@ NF == 0 || $1 == "Offset" { next }
 # Ignore standard non-allocated sections.
 secname ~ /^\.debug/ || secname == ".comment" { next }
 # .text.boot contains code that runs before fixups.
-secname ~ /^\.text\.boot/ { next }
+secname == ".text.boot" { next }
 $3 == "R_X86_64_PC32" || $3 == "R_X86_64_PLT32" || \
 $3 == "R_AARCH64_PREL32" || $3 == "R_AARCH64_PREL64" || \
 $3 == "R_AARCH64_CALL26" || $3 == "R_AARCH64_JUMP26" || \

@@ -27,15 +27,22 @@ _ZIRCON_COMMAND_PREFIX = "zircon"
 _KERNEL_EXCEPTION_UNWINDER_PARAMETER = "kernel-exception-unwinder"
 
 _THREAD_MAGIC = 0x74687264
+_BOOT_MAGIC = 0x544f4f42
+_KERNEL_BASE_ADDRESS = "KERNEL_BASE_ADDRESS"
 
 print("Loading zircon.elf-gdb.py ...")
 
+def _get_architecture():
+  # TODO(dje): gdb doesn't provide us with a simple way to do this.
+  return gdb.execute("show architecture", to_string=True)
 
 def _is_x86_64():
   """Return True if we're on an x86-64 platform."""
-  # TODO(dje): gdb doesn't provide us with a simple way to do this.
-  arch_text = gdb.execute("show architecture", to_string=True)
-  return re.search(r"x86-64", arch_text)
+  return re.search(r"x86-64", _get_architecture())
+
+def _is_arm64():
+  """Return True if we're on an aarch64 platform."""
+  return re.search(r"aarch64", _get_architecture())
 
 
 # The default is 2 seconds which is too low.
@@ -643,10 +650,302 @@ _InfoZirconHandles()
 
 _ZirconKernelExceptionUnwinder()
 
+_ull = gdb.lookup_type("unsigned long long")
+_uint = gdb.lookup_type("unsigned int")
+
+
+def _cast(value, t, shift=64):
+  return int(value.cast(t)) & ((1 << shift)-1)
+
+
+def _cast_ull(value):
+  """ Cast a value to unsigned long long """
+  global _ull
+  return _cast(value, _ull)
+
+
+def _cast_uint(value):
+  """ Cast a value to unsigned int"""
+  global _uint
+  return _cast(value, _uint, 32)
+
+
+def _read_symbol_address(name):
+  """ Read the address of a symbol """
+  addr = gdb.parse_and_eval("&"+name)
+  try:
+    if addr is not None:
+      return _cast_ull(addr)
+  except gdb.MemoryError:
+    pass
+  print("Can't find %s to lookup KASLR relocation" % name)
+  return None
+
+
+def _read_pointer(addr):
+  """ Read a pointer in an address """
+  value = gdb.parse_and_eval("*(unsigned long*)0x%x" % addr)
+  try:
+    if value is not None:
+      return _cast_ull(value)
+  except gdb.MemoryError:
+    pass
+
+  print("Can't read 0x%x to lookup KASLR ptr value" % addr)
+  return None
+
+
+def _read_uint(addr):
+  """ Read a uint """
+  value = gdb.parse_and_eval("*(unsigned int*)0x%x" % addr)
+  try:
+    if value is not None:
+      return _cast_uint(value)
+  except gdb.MemoryError:
+    pass
+  print("Can't read 0x%x to lookup KASLR uint value" % addr)
+  return None
+
+
+def _offset_symbols_and_breakpoints(kernel_relocated_base=None):
+  """ Using the KASLR relocation address, reload symbols and breakpoints """
+  print("Update symbols and breakpoints for KASLR")
+
+  base_address = _read_symbol_address(_KERNEL_BASE_ADDRESS)
+  if not base_address:
+    return False
+
+  load_start = _read_symbol_address("IMAGE_LOAD_START")
+  if not load_start:
+    return False
+
+  if not kernel_relocated_base:
+    kernel_relocated_base = _read_symbol_address("kernel_relocated_base")
+    if not kernel_relocated_base:
+      return False
+
+  relocated = _read_pointer(kernel_relocated_base)
+  if not relocated:
+    print("Failed to fetch KASLR base address")
+    return False
+
+  # There is no api for symbol management.
+  # Everything has to be done by custom commands
+  sym = gdb.execute("info target", to_string=True)
+  m = re.match("^Symbols from \"([^\"]+)\"", sym)
+  if not m:
+    print("Error: Cannot find the target symbol")
+    return False
+  sym_path = m.group(1)
+
+  # Identify all section addresses
+  x = gdb.execute("info target", to_string=True)
+  m = re.findall("\s0x([a-f0-9]+) - 0x[a-f0-9]+ is (.*)", x)
+
+  offset = base_address - relocated
+  sections = dict([(name, int(addr, 16)) for addr,name in m])
+  if len(sections) == 0:
+    print("Error: Failed to find sections in binary")
+    return False
+
+  if ".text" not in sections:
+    print("Error: Failed to find .text section")
+    return False
+
+  # Do not prompt the user
+  confirm_was_enabled  = gdb.parameter("confirm")
+  if confirm_was_enabled:
+    gdb.execute("set confirm off", to_string=True)
+
+  # Disable auto loading to prevent the script to be reloaded
+  auto_loading_enabled = gdb.parameter("auto-load python-scripts")
+  if auto_loading_enabled:
+    gdb.execute("set auto-load python-scripts off", to_string=True)
+
+  # Remove all symbols
+  gdb.execute("symbol-file", to_string=True)
+
+  # Update all addresses to the relocated address
+  sections = dict([(name, addr - offset) for name,addr in sections.iteritems()])
+
+  text_addr = sections[".text"]
+  del sections[".text"]
+
+  args = ["-s %s 0x%x" % (name, addr) for name,addr in sections.iteritems()]
+
+  # Reload the ELF with all sections set
+  gdb.execute("add-symbol-file \"%s\" 0x%x -readnow %s" \
+              % (sym_path, text_addr, " ".join(args)), to_string=True)
+
+  if auto_loading_enabled:
+    gdb.execute("set auto-load python-scripts on", to_string=True)
+  
+  if confirm_was_enabled:
+    gdb.execute("set confirm on", to_string=True)
+
+  # Verify it works as expected
+  code_start = _read_symbol_address("__code_start")
+  if not kernel_relocated_base:
+    return False
+
+  expected = relocated + (load_start - base_address)
+  if code_start != expected:
+    print("Error: Incorrect relocation for __code_start 0x%x vs 0x%x" \
+          % (expected, code_start))
+    return False
+
+  print("KASLR: Correctly reloaded kernel at 0x%x" % relocated)
+  return True
+
+class KASLRBootWatchpoint(gdb.Breakpoint):
+  """ Watchpoint to catch read access to KASLR relocated address
+
+  The assumption is the address was written before it is read. It is an
+  architecture independent way to start at the right moment if the relocated
+  KASLR symbol name is the same.
+  """
+  def __init__(self, pc):
+    self._is_valid = False
+
+    base_address = _read_symbol_address(_KERNEL_BASE_ADDRESS)
+    if not base_address:
+      return
+
+    kernel_relocated_base = _read_symbol_address("kernel_relocated_base")
+    if not kernel_relocated_base:
+      return
+
+    self._relocated_base_offset = kernel_relocated_base
+
+    if _is_x86_64():
+      # x86_64 uses the physical address
+      self._relocated_base_offset -= base_address
+    elif _is_arm64():
+      # Search from pc to find BOOT tag
+      found = False
+      for addr in range(pc, pc+0x100000, 0x1000):
+        data = _read_uint(addr)
+        if data == _BOOT_MAGIC:
+          self._relocated_base_offset -= base_address
+          self._relocated_base_offset += addr
+          found = True
+          break
+
+      if found == False:
+        print("Error: Could not found BOOT_MAGIC")
+        return
+
+    self._is_valid = True
+    super(KASLRBootWatchpoint, self).__init__("*0x%x" % self._relocated_base_offset,
+                                              gdb.BP_WATCHPOINT,
+                                              gdb.WP_READ,
+                                              internal=True)
+
+    self.silence = True
+
+
+  def is_valid(self):
+    if super(KASLRBootWatchpoint, self).is_valid() == False:
+      return False
+    return self._is_valid
+
+
+  def stop(self):
+    # A breakpoint cannot change anything so get callback on the following stop
+    gdb.events.stop.connect(self._stop_callback)
+    return True
+
+
+  # Callback through events so the state can be changed
+  def _stop_callback(self, event):
+    gdb.events.stop.disconnect(self._stop_callback)
+    self.delete() # Temporary watchpoint are not supported, delete it manually
+
+    # Load symbols using load_offset
+    _offset_symbols_and_breakpoints(self._relocated_base_offset)
+
+
+def _align(addr, shift):
+  b64 = (1 << 64) - 1
+  mask = (1 << shift) - 1
+  return addr & (~mask & b64)
+
+
+def _identify_offset_to_reload(pc):
+  """ From $pc, search the base address to the page size
+  Used when attaching to an existing debugging session
+  """
+  print("Search KASLR base address based on $pc")
+  if (pc >> 63) != 1:
+    print("Error: Didn't break into kernel code")
+    return False
+
+  base_address = _read_symbol_address(_KERNEL_BASE_ADDRESS)
+  if not base_address:
+    return False
+
+  end = _read_symbol_address("_end")
+  if not end:
+    return False
+
+  kernel_relocated_base = _read_symbol_address("kernel_relocated_base")
+  if not kernel_relocated_base:
+    return False
+
+  offset = kernel_relocated_base - base_address
+  max_size = end - base_address
+
+  # Search base+offset == base for each previous page until the max size
+  found = False
+  addr = pc
+  while addr > (pc - max_size):
+    addr = _align(addr - 1, 12)
+    target = addr + offset
+    value = _read_pointer(target)
+    if value == None:
+      break
+    if addr == value:
+      found = True
+      break
+
+  if found == False:
+    print("Error: Failed to find the KASLR relocation from the $pc")
+    return False
+
+  return _offset_symbols_and_breakpoints(target)
+
+
+def _is_earlyboot_pc(pc):
+  """ Early boot if the top 32-bit is zero """
+  return not (pc >> 32)
+
+
+def _KASLR_stop_event(event):
+  """ Called on first stop after debugger started """
+  gdb.events.stop.disconnect(_KASLR_stop_event)
+  pc = _cast_ull(gdb.parse_and_eval("$pc"))
+  if not _is_earlyboot_pc(pc):
+    # If not early boot, try to find the kernel base and adapt
+    _identify_offset_to_reload(pc)
+    return
+
+  x = KASLRBootWatchpoint(pc)
+  if not x.is_valid():
+    print("Error: Failed create KASLR boot watchpoint")
+    return
+
+  print("Watchpoint set on KASLR relocated base variable")
+  gdb.execute("continue")
+
+
 def _install():
   current_objfile = gdb.current_objfile()
   register_zircon_pretty_printers(current_objfile)
   if current_objfile is not None and _is_x86_64():
     gdb.unwinder.register_unwinder(current_objfile, _Amd64KernelExceptionUnwinder(), True)
+
+  if not _is_x86_64() and not _is_arm64():
+    print("Warning: Unsupported architecture, KASLR support will be experimental")
+  gdb.events.stop.connect(_KASLR_stop_event)
 
 _install()

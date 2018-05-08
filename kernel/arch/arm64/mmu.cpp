@@ -54,6 +54,15 @@ static_assert(((long)KERNEL_ASPACE_BASE >> MMU_KERNEL_SIZE_SHIFT) == -1, "");
 static_assert(MMU_KERNEL_SIZE_SHIFT <= 48, "");
 static_assert(MMU_KERNEL_SIZE_SHIFT >= 25, "");
 
+// Static relocated base to prepare for KASLR. Used at early boot and by gdb
+// script to know the target relocated address.
+// TODO(SEC-31): Choose it randomly.
+#if DISABLE_KASLR
+uint64_t kernel_relocated_base = KERNEL_BASE;
+#else
+uint64_t kernel_relocated_base = 0xffffffff10000000;
+#endif
+
 // The main translation table.
 pte_t arm64_kernel_translation_table[MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP] __ALIGNED(MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP * 8);
 

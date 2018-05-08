@@ -63,9 +63,10 @@ FUNCTION(_start)
 
     // This can be any arbitrary (page-aligned) address >= KERNEL_ASPACE_BASE.
     // TODO(SEC-31): Choose it randomly.
-    movlit  kernel_vaddr, KERNEL_BASE
+    adr_global  tmp, kernel_relocated_base
+    ldr     kernel_vaddr, [tmp]
 
-    // This function is executed by all CPUs. It's cruicial that only
+    // This function is executed by all CPUs. It's crucial that only
     // the first CPU relocate the kernel. Skip over it unless we're CPU 0.
     cbnz     cpuid, .Lskip_fixup
 
@@ -324,6 +325,10 @@ DATA(tt_trampoline)
     .skip 8 * MMU_PAGE_TABLE_ENTRIES_IDENT
 END_DATA(tt_trampoline)
 
-// This symbol is used by image.S.
+// This symbol is used by image.S
 .global IMAGE_ELF_ENTRY
 IMAGE_ELF_ENTRY = _start
+
+// This symbol is used by gdb python to know the base of the kernel module
+.global KERNEL_BASE_ADDRESS
+KERNEL_BASE_ADDRESS = KERNEL_BASE
