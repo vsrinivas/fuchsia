@@ -23,7 +23,7 @@
     <project name="third_party/angle"
              path="third_party/angle"
              remote="https://chromium.googlesource.com/angle/angle"
-             revision="3b9b027c59f38580cb038f94d49887e98a80b082"/>
+             revision="c009255c79d2e6594a76cb88aeaa157ce99d4ea5"/>
     <project name="third_party/asio"
              path="third_party/asio"
              remote="https://fuchsia.googlesource.com/third_party/asio"
