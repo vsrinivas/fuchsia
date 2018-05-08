@@ -14,6 +14,8 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -23,7 +25,7 @@ var upload = flag.Bool("upload", true, "Whether to upload the dumped symbols")
 var url = flag.String("url", "https://clients2.google.com/cr/symbol", "Endpoint to use")
 var verbose = flag.Bool("v", false, "Verbose output")
 
-func getBinariesFromIds(idsFilename string) []string {
+func getBinariesFromIds(idsFilename string) sort.StringSlice {
 	var binaries []string
 	file, err := os.Open(idsFilename)
 	if err != nil {
@@ -44,11 +46,15 @@ func getBinariesFromIds(idsFilename string) []string {
 	return binaries
 }
 
-func dump(bin string) string {
+func dump(bin, fuchsiaRoot string) string {
 	if *verbose || *dryRun {
 		fmt.Println("Dumping binary", bin)
 	}
-	symfile := path.Join(*symbolDir, path.Base(bin)+".sym")
+	relToRoot, err := filepath.Rel(fuchsiaRoot, bin)
+	if err != nil {
+		log.Fatal("could not filepath.Rel ", bin, ": ", err)
+	}
+	symfile := path.Join(*symbolDir, strings.Replace(relToRoot, "/", "$", -1)+".sym")
 	if *dryRun {
 		return symfile
 	}
@@ -74,7 +80,7 @@ func uploadSymbols(symfile string) {
 
 	out, err := exec.Command("buildtools/linux-x64/symupload/sym_upload", symfile, *url).CombinedOutput()
 	if err != nil {
-		log.Fatal("sym_upload failed with output ", string(out), " error ", err)
+		log.Fatal("sym_upload for ", symfile, " failed with output ", string(out), " error ", err)
 	}
 }
 
@@ -89,6 +95,24 @@ func mkdir(d string) {
 	if err != nil {
 		log.Fatal("could not create directory", d)
 	}
+}
+
+// Based on https://github.com/xtgo/set/blob/master/mutators.go#L17.
+func uniq(data sort.StringSlice) sort.StringSlice {
+	p, l := 0, data.Len()
+	if l <= 1 {
+		return data
+	}
+	for i := 1; i < l; i++ {
+		if !data.Less(p, i) {
+			continue
+		}
+		p++
+		if p < i {
+			data.Swap(p, i)
+		}
+	}
+	return data[:p+1]
 }
 
 func main() {
@@ -108,6 +132,15 @@ crash server and then optionally uploads them.
 		flag.Usage()
 		log.Fatalf("Fuchsia root not found at \"%v\"\n", fuchsiaRoot)
 	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("Could not Getwd")
+	}
+	cwd, err = filepath.EvalSymlinks(cwd)
+	if err != nil {
+		log.Fatalf("Could not EvalSymlinks")
+	}
+	fuchsiaRoot = filepath.Join(cwd, fuchsiaRoot)
 
 	if *symbolDir == "" {
 		var err error
@@ -129,11 +162,19 @@ crash server and then optionally uploads them.
 	binaries = append(binaries, getBinariesFromIds(path.Join(fuchsiaRoot, armBuildDir, "ids.txt"))...)
 	binaries = append(binaries, getBinariesFromIds(path.Join(fuchsiaRoot, x64ZxBuildDir, "ids.txt"))...)
 	binaries = append(binaries, getBinariesFromIds(path.Join(fuchsiaRoot, armZxBuildDir, "ids.txt"))...)
+	sort.Sort(binaries)
+	binaries = uniq(binaries)
+	for i, v := range binaries {
+		binaries[i], err = filepath.EvalSymlinks(v)
+		if err != nil {
+			log.Fatalf("Could not EvalSymlinks")
+		}
+	}
 
 	sem := make(chan bool, len(binaries))
 	for _, binary := range binaries {
 		go func(binary string) {
-			symfile := dump(binary)
+			symfile := dump(binary, fuchsiaRoot)
 			if *upload {
 				uploadSymbols(symfile)
 			}
