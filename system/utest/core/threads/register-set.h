@@ -35,8 +35,9 @@ __BEGIN_CDECLS;
 void spin_with_regs(zx_thread_state_general_regs_t* regs);
 void spin_with_regs_spin_address(void);
 
-// This assembly code routine saves the registers into an zx_general_regs_t
-// pointed to by the stack pointer, and then calls zx_thread_exit().
+// This assembly code routine saves the registers into a
+// zx_thread_state_general_regs_t pointed to by the stack pointer, and then
+// calls zx_thread_exit().
 void save_regs_and_exit_thread(void);
 
 __END_CDECLS;
