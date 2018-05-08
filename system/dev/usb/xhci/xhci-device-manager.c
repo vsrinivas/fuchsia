@@ -191,7 +191,8 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
             status = xhci_get_descriptor(xhci, slot_id, USB_TYPE_STANDARD, USB_DT_DEVICE << 8, 0,
                                          &device_desc, 8);
             if (status != ZX_OK) {
-                break;
+                // try again
+                continue;
             }
             switch (device_desc.bMaxPacketSize0) {
                 case 8:
@@ -208,7 +209,8 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
                     break;
             }
             if (status != ZX_OK) {
-                break;
+                // try again
+                continue;
             }
             XHCI_SET_BITS32(&ep0c->epc1, EP_CTX_MAX_PACKET_SIZE_START, EP_CTX_MAX_PACKET_SIZE_BITS,
                             device_desc.bMaxPacketSize0);
@@ -697,7 +699,6 @@ zx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
         }
         mtx_unlock(&ep->lock);
         return status;
-
     } else {
         // xhci_stop_endpoint will try to acquire the endpoint lock.
         // It also needs to wait for the TRB_CMD_STOP_ENDPOINT completion, which may never
