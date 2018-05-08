@@ -54,7 +54,7 @@ func dump(bin, fuchsiaRoot string) string {
 	if err != nil {
 		log.Fatal("could not filepath.Rel ", bin, ": ", err)
 	}
-	symfile := path.Join(*symbolDir, strings.Replace(relToRoot, "/", "$", -1)+".sym")
+	symfile := path.Join(*symbolDir, strings.Replace(relToRoot, "/", "#", -1)+".sym")
 	if *dryRun {
 		return symfile
 	}
@@ -62,6 +62,16 @@ func dump(bin, fuchsiaRoot string) string {
 	if err != nil {
 		log.Fatal("could not dump_syms ", bin, ": ", err)
 	}
+
+	// Many Fuchsia binaries are built as "something.elf", but then packaged as
+	// just "something". In the ids.txt file, the name still includes the ".elf"
+	// extension, which dump_syms emits into the .sym file, and the crash server
+	// uses as part of the lookup (that is, both the name and the buildid have to
+	// match). So, if the first header line ends in ".elf" strip it off.
+	lines := strings.Split(string(out), "\n")
+	lines[0] = strings.TrimSuffix(lines[0], ".elf")
+	out = []byte(strings.Join(lines, "\n"))
+
 	err = ioutil.WriteFile(symfile, out, 0644)
 	if err != nil {
 		log.Fatal("could not write output file", symfile, ": ", err)
