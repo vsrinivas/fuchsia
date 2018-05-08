@@ -144,6 +144,13 @@ The "file descriptor" of the Zircon kernel.  A Handle is how a userspace process
 to a kernel object.  They can be passed to other processes over [Channel](#Channel)s.
 - [Handle (in Zircon Concepts Doc)](https://fuchsia.googlesource.com/zircon/+/master/docs/concepts.md)
 
+#### **Hub**
+
+The hub is a portal for introspection.  It enables tools to access detailed
+structural information about realms and component instances at runtime,
+such as their names, job and process ids, and published services.
+- [Hub](https://fuchsia.googlesource.com/zircon/+/master/docs/the-book/hub.md)
+
 #### **Jiri**
 
 Jiri is a tool for multi-repo development. It is used to checkout the Fuchsia
@@ -237,6 +244,10 @@ Peridot is one of the four layers of the Fuchsia codebase.
 - [The Fuchsia layercake](development/source_code/layers.md)
 - [Source](https://fuchsia.googlesource.com/peridot/+/master)
 
+#### **Realm**
+
+TODO(jeffbrown): add definition.
+
 #### **RemoteIO**
 
 RemoteIO is the Zircon RPC protocol used between fdio (open/close/read/write/ioctl)
@@ -302,7 +313,7 @@ a process, or shared with another process by passing a Handle over a Channel.
 
 #### **Zedboot** ####
 
-TOO(raggi): add definition.s
+TODO(raggi): add definition.
 
 #### **Zircon**
 
