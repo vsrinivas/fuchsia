@@ -127,7 +127,7 @@ class ThreadOrProcess {
 // both use zx_object_wait_one() to wait.
 class BasicChannelTest {
  public:
-  BasicChannelTest(MultiProc multiproc) {
+  explicit BasicChannelTest(MultiProc multiproc) {
     zx_handle_t server;
     FXL_CHECK(zx_channel_create(0, &server, &client_) == ZX_OK);
     thread_or_process_.Launch("BasicChannelTest::ThreadFunc", &server, 1,
@@ -159,7 +159,7 @@ class BasicChannelTest {
 // both use Zircon ports to wait, using ZX_WAIT_ASYNC_ONCE.
 class ChannelPortTest {
  public:
-  ChannelPortTest(MultiProc multiproc) {
+  explicit ChannelPortTest(MultiProc multiproc) {
     zx_handle_t server;
     FXL_CHECK(zx_channel_create(0, &server, &client_) == ZX_OK);
     thread_or_process_.Launch("ChannelPortTest::ThreadFunc", &server, 1,
@@ -228,7 +228,7 @@ class ChannelPortTest {
 // uses zx_channel_call() for the send+wait+read.
 class ChannelCallTest {
  public:
-  ChannelCallTest(MultiProc multiproc) {
+  explicit ChannelCallTest(MultiProc multiproc) {
     zx_handle_t server;
     FXL_CHECK(zx_channel_create(0, &server, &client_) == ZX_OK);
     thread_or_process_.Launch("ChannelCallTest::ThreadFunc", &server, 1,
@@ -277,7 +277,7 @@ class ChannelCallTest {
 // but it is useful for measuring the overhead of ports.
 class PortTest {
  public:
-  PortTest(MultiProc multiproc) {
+  explicit PortTest(MultiProc multiproc) {
     FXL_CHECK(zx_port_create(0, &ports_[0]) == ZX_OK);
     FXL_CHECK(zx_port_create(0, &ports_[1]) == ZX_OK);
 
@@ -340,7 +340,7 @@ class RoundTripServiceImpl : public zircon_benchmarks::RoundTripService {
 // client side.
 class FidlTest {
  public:
-  FidlTest(MultiProc multiproc) {
+  explicit FidlTest(MultiProc multiproc) {
     zx_handle_t server = service_ptr_.NewRequest().TakeChannel().release();
     thread_or_process_.Launch("FidlTest::ThreadFunc", &server, 1, multiproc);
   }
