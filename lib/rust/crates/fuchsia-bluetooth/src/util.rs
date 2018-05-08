@@ -6,6 +6,7 @@ use fidl_bluetooth;
 use fidl_bluetooth_control::{AdapterInfo, AdapterState};
 
 /// Macro to help make cloning host dispatchers nicer
+#[macro_export]
 macro_rules! make_clones {
     ($obj:ident => $($copy:ident),* $(,)*) => {
         $( let $copy = $obj.clone(); )*
@@ -16,6 +17,7 @@ macro_rules! make_clones {
 /// No Args is a success
 /// One Arg is the error type
 /// Two Args is the error type & a description
+#[macro_export]
 macro_rules! bt_fidl_status {
     () => (fidl_bluetooth::Status { error: None } );
 
@@ -36,7 +38,8 @@ macro_rules! bt_fidl_status {
     });
 }
 
-// Only here until Rust bindings can derive `Clone`
+/// Clone Adapter Info
+/// Only here until Rust bindings can derive `Clone`
 pub fn clone_adapter_info(a: &AdapterInfo) -> AdapterInfo {
     let state = match a.state {
         Some(ref s) => Some(Box::new(clone_adapter_state(&**s))),
@@ -50,12 +53,15 @@ pub fn clone_adapter_info(a: &AdapterInfo) -> AdapterInfo {
     }
 }
 
-fn clone_bt_fidl_bool(a: &fidl_bluetooth::Bool) -> fidl_bluetooth::Bool {
+/// Clone Bluetooth Fidl bool type
+/// Only here until Rust bindings can derive `Clone`
+pub fn clone_bt_fidl_bool(a: &fidl_bluetooth::Bool) -> fidl_bluetooth::Bool {
     fidl_bluetooth::Bool { value: a.value }
 }
 
-// Only here until Rust bindings can derive `Clone`
-fn clone_adapter_state(a: &AdapterState) -> AdapterState {
+/// Clone Adapter State
+/// Only here until Rust bindings can derive `Clone`
+pub fn clone_adapter_state(a: &AdapterState) -> AdapterState {
     let discoverable = match a.discoverable {
         Some(ref disc) => Some(Box::new(clone_bt_fidl_bool(disc))),
         None => None,

@@ -15,6 +15,7 @@ extern crate fidl_bluetooth_host;
 extern crate fidl_bluetooth_low_energy;
 extern crate fuchsia_app as app;
 extern crate fuchsia_async as async;
+#[macro_use]
 extern crate fuchsia_bluetooth as bt;
 extern crate fuchsia_vfs_watcher as vfs_watcher;
 extern crate fuchsia_zircon as zx;
@@ -34,8 +35,7 @@ use futures::FutureExt;
 use parking_lot::RwLock;
 use std::sync::Arc;
 
-#[macro_use]
-mod util;
+use bt::util;
 mod adapter;
 mod control_service;
 mod host_dispatcher;
