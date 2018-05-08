@@ -105,19 +105,20 @@ typedef struct imx_sdhci_device {
     zx_handle_t                 bti_handle;
 
     // DMA descriptors
-    io_buffer_t iobuf;
-    sdhci_adma64_desc_t* descs;
+    io_buffer_t                 iobuf;
+    sdhci_adma64_desc_t*        descs;
 
-    mtx_t mtx;                      // Held when a command or action is in progress.
-    sdmmc_req_t* cmd_req;           // Current command request
-    sdmmc_req_t* data_req;          // Current data line request
-    uint16_t data_blockid;          // Current block id to transfer (PIO)
-    bool data_done;                 // Set to true if the data stage completed before the cmd stage
-    completion_t req_completion;    // used to signal request complete
-    sdmmc_host_info_t info;         // Controller info
-    uint32_t base_clock;            // Base clock rate
-    bool    ddr_mode;               // DDR Mode enable flag
-    bool    dma_mode;               // Flag used to switch between dma and pio mode
+    mtx_t                       mtx;                // Held when a command or action is in progress.
+    sdmmc_req_t*                cmd_req;            // Current command request
+    sdmmc_req_t*                data_req;           // Current data line request
+    uint16_t                    data_blockid;       // Current block id to transfer (PIO)
+    bool                        data_done;          // Set to true if the data stage completed
+                                                    // before the cmd stage
+    completion_t                req_completion;     // used to signal request complete
+    sdmmc_host_info_t           info;               // Controller info
+    uint32_t                    base_clock;         // Base clock rate
+    bool                        ddr_mode;           // DDR Mode enable flag
+    bool                        dma_mode;           // Flag used to switch between dma and pio mode
 } imx_sdhci_device_t;
 
 static const uint32_t error_interrupts = (
@@ -136,14 +137,11 @@ static const uint32_t error_interrupts = (
 static const uint32_t normal_interrupts = (
     IMX_SDHC_INT_STAT_BRR   |
     IMX_SDHC_INT_STAT_BWR   |
-    IMX_SDHC_INT_STAT_DINT  |
-    IMX_SDHC_INT_STAT_BGE   |
     IMX_SDHC_INT_STAT_TC    |
     IMX_SDHC_INT_STAT_CC
 );
 
 static const uint32_t dma_normal_interrupts = (
-    IMX_SDHC_INT_STAT_DINT  |
     IMX_SDHC_INT_STAT_TC    |
     IMX_SDHC_INT_STAT_CC
 );
@@ -628,7 +626,12 @@ static zx_status_t imx_sdhci_start_req_locked(imx_sdhci_device_t* dev, sdmmc_req
             io_buffer_cache_flush(&dev->iobuf, 0,
                           DMA_DESC_COUNT * sizeof(sdhci_adma64_desc_t));
             regs->adma_sys_addr = (uint32_t) desc_phys;
+            dev->regs->prot_ctrl &= ~(IMX_SDHC_PROT_CTRL_DMASEL_MASK);
+            dev->regs->prot_ctrl |= IMX_SDHC_PROT_CTRL_DMASEL_ADMA2;
+            regs->adma_err_status = 0;
             regs->mix_ctrl |= IMX_SDHC_MIX_CTRL_DMAEN;
+        } else {
+            dev->regs->prot_ctrl &= ~(IMX_SDHC_PROT_CTRL_DMASEL_MASK);
         }
         if (cmd & SDHCI_CMD_MULTI_BLK) {
             cmd |= SDHCI_CMD_AUTO12;
@@ -939,9 +942,6 @@ static void imx_sdhci_hw_reset(void* ctx) {
     dev->regs->sys_ctrl &= ~(IMX_SDHC_SYS_CTRL_DTOCV_MASK);
     dev->regs->sys_ctrl |= (IMX_SDHC_SYS_CTRL_DTOCV(0xe));
     dev->regs->prot_ctrl = IMX_SDHC_PROT_CTRL_INIT;
-    if (dev->dma_mode) {
-        dev->regs->prot_ctrl |= IMX_SDHC_PROT_CTRL_DMASEL_ADMA2;
-    }
 
     uint32_t regVal = dev->regs->tuning_ctrl;
     regVal &= ~(IMX_SDHC_TUNING_CTRL_START_TAP_MASK);
