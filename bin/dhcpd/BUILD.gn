@@ -6,9 +6,8 @@ import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
 
 rustc_binary("bin") {
-  with_unit_tests = true
-
   name = "dhcpd"
+  with_unit_tests = true
 }
 
 package("dhcpd") {
@@ -16,5 +15,21 @@ package("dhcpd") {
     ":bin",
   ]
 
-  binary = "rust_crates/dhcpd" 
+  binary = "rust_crates/dhcpd"
+}
+
+package("dhcpd-tests") {
+  deprecated_system_image = true
+  testonly = true
+
+  deps = [
+    ":bin"
+  ]
+
+  tests = [
+    {
+      name = "dhcpd_bin_test_rustc"
+      dest = "dhcpd_bin_test_rustc"
+    }
+  ]
 }
