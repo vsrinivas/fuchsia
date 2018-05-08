@@ -127,11 +127,17 @@ class AudioCapturerImpl : public AudioObject, public AudioCapturer {
 
   friend PcbAllocator;
 
+  // TODO(mpuryear): per MTWN-129, combine this with RendererBookkeeping, and
+  // integrate it into the Mixer class itself.
   struct CaptureLinkBookkeeping : public AudioLink::Bookkeeping {
     std::unique_ptr<Mixer> mixer;
     TimelineFunction dest_frames_to_frac_source_frames;
     TimelineFunction clock_mono_to_src_frames_fence;
     uint32_t step_size;
+    uint32_t modulo;
+    uint32_t denominator() const {
+      return dest_frames_to_frac_source_frames.rate().reference_delta();
+    }
     uint32_t dest_trans_gen_id = kInvalidGenerationId;
     uint32_t source_trans_gen_id = kInvalidGenerationId;
   };
@@ -178,8 +184,7 @@ class AudioCapturerImpl : public AudioObject, public AudioCapturer {
   void FinishAsyncStopThunk() FXL_LOCKS_EXCLUDED(mix_domain_->token());
   void FinishBuffersThunk() FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
-  // Helper function used to set a set of pending capture buffers back to a
-  // user.
+  // Helper function used to return a set of pending capture buffers to a user.
   void FinishBuffers(const PcbList& finished_buffers)
       FXL_LOCKS_EXCLUDED(mix_domain_->token());
 

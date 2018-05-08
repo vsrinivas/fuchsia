@@ -342,11 +342,11 @@ bool StandardOutputBase::ProcessMix(
   FXL_DCHECK(info->mixer);
   Mixer& mixer = *(info->mixer);
 
-  // If this renderer is currently paused (or being sampled extremely slowly),
-  // our step size will be zero.  We know that this packet will be relevant at
-  // some point in the future, but right now it contributes nothing.  Tell the
-  // ForeachLink loop that we are done and to hold onto this packet for now.
-  if (!info->step_size) {
+  // If this renderer is currently paused, our subject_delta (not just our
+  // step_size) will be zero.  This packet may be relevant at some point in the
+  // future, but right now it contributes nothing.  Tell the ForeachLink loop
+  // that we are done and to hold onto this packet for now.
+  if (!info->output_frames_to_renderer_subframes.subject_delta()) {
     return false;
   }
 
@@ -364,14 +364,12 @@ bool StandardOutputBase::ProcessMix(
   // expressed in fractional renderer frames.
   int64_t first_sample_ftf = info->output_frames_to_renderer_subframes(
       cur_mix_job_.start_pts_of + cur_mix_job_.frames_produced);
-
-  FXL_DCHECK(frames_left);
+  // Without the "-1", this would be the first output frame of the NEXT job.
   int64_t final_sample_ftf =
       first_sample_ftf +
-      ((frames_left - 1) * static_cast<int64_t>(info->step_size));
+      info->output_frames_to_renderer_subframes.rate().Scale(frames_left - 1);
 
-  // If the packet has no frames, there's no need to mix it and it may be
-  // skipped.
+  // If packet has no frames, there's no need to mix it; it may be skipped.
   if (packet->end_pts() == packet->start_pts()) {
     return true;
   }
@@ -407,10 +405,12 @@ bool StandardOutputBase::ProcessMix(
   // filter window, then we need to skip some number of output frames before
   // starting to produce data.
   if (packet->start_pts() > first_sample_pos_window_edge) {
-    output_offset_64 = (packet->start_pts() - first_sample_pos_window_edge +
-                        info->step_size - 1) /
-                       info->step_size;
-    input_offset_64 += output_offset_64 * info->step_size;
+    const TimelineRate& dst_to_src =
+        info->output_frames_to_renderer_subframes.rate();
+    output_offset_64 = dst_to_src.Inverse().Scale(packet->start_pts() -
+                                                  first_sample_pos_window_edge +
+                                                  Mixer::FRAC_ONE - 1);
+    input_offset_64 += dst_to_src.Scale(output_offset_64);
   }
 
   FXL_DCHECK(output_offset_64 >= 0);
@@ -427,10 +427,35 @@ bool StandardOutputBase::ProcessMix(
 
   bool consumed_source = false;
   if (frac_input_offset < static_cast<int32_t>(packet->frac_frame_len())) {
+    // When calling Mix(), we communicate the resampling rate with three
+    // parameters. We augment frac_step_size with modulo and denominator
+    // arguments that capture the remaining rate component that cannot be
+    // expressed by a 19.13 fixed-point step_size. Note: frac_step_size and
+    // frac_input_offset use the same format -- they have the same limitations
+    // in what they can and cannot communicate. This begs two questions:
+    //
+    // Q1: For perfect position accuracy, don't we also need an in/out param
+    // to specify initial/final subframe modulo, for fractional source offset?
+    // A1: Yes, for optimum position accuracy (within quantization limits), we
+    // SHOULD incorporate running subframe position_modulo in this way.
+    //
+    // For now, we are defering this work, tracking it with MTWN-128.
+    //
+    // Q2: Why did we solve this issue for rate but not for initial position?
+    // A2: We solved this issue for *rate* because its effect accumulates over
+    // time, causing clearly measurable distortion that becomes crippling with
+    // larger jobs. For *position*, there is no accumulated magnification over
+    // time -- in analyzing the distortion that this should cause, mix job
+    // size would affect the distortion frequency but not amplitude. We expect
+    // the effects to be below audible thresholds. Until the effects are
+    // measurable and attributable to this jitter, we will defer this work.
+
+    // TODO(mpuryear): integrate bookkeeping into the Mixer itself (MTWN-129).
     consumed_source = info->mixer->Mix(
         buf, frames_left, &output_offset, packet->payload(),
         packet->frac_frame_len(), &frac_input_offset, info->step_size,
-        info->amplitude_scale, cur_mix_job_.accumulate);
+        info->amplitude_scale, cur_mix_job_.accumulate, info->modulo,
+        info->denominator());
     FXL_DCHECK(output_offset <= frames_left);
   }
 
@@ -546,6 +571,7 @@ void StandardOutputBase::RendererBookkeeping::UpdateOutputTrans(
   FXL_DCHECK(dst.rate().reference_delta());
   if (!dst.rate().subject_delta()) {
     step_size = 0;
+    modulo = 0;
   } else {
     int64_t tmp_step_size = dst.rate().Scale(1);
 
@@ -553,6 +579,7 @@ void StandardOutputBase::RendererBookkeeping::UpdateOutputTrans(
     FXL_DCHECK(tmp_step_size <= std::numeric_limits<uint32_t>::max());
 
     step_size = static_cast<uint32_t>(tmp_step_size);
+    modulo = dst.rate().subject_delta() - (denominator() * step_size);
   }
 
   // Done, update our generation.

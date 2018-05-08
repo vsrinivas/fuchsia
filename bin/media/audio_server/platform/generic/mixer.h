@@ -22,6 +22,7 @@ class Mixer {
   static constexpr uint32_t FRAC_MASK = FRAC_ONE - 1u;
   virtual ~Mixer();
 
+  //
   // Resampler enum
   //
   // This enum lists Fuchsia's available resamplers. Callers of Mixer::Select
@@ -34,6 +35,7 @@ class Mixer {
     LinearInterpolation,
   };
 
+  //
   // Select
   //
   // Select an appropriate mixer instance, based on an optionally-specified
@@ -54,6 +56,7 @@ class Mixer {
                          const AudioMediaTypeDetails& dst_format,
                          Resampler resampler_type = Resampler::Default);
 
+  //
   // Mix
   //
   // Perform a mixing operation from the source buffer into the destination
@@ -90,15 +93,6 @@ class Mixer {
   // How much to increment the fractional sampling position for each output
   // frame produced.
   //
-  // TODO(johngro): Right now, this number may have some amount of rounding
-  // error which will accumulate as sampling position error as we produce more
-  // output samples for a single call to Mix.  This error will reset when we
-  // switch to the next source buffer, but could (in theory) be the source of
-  // distortion.  If this becomes a problem, we should consider switching to
-  // some form of (N,M) stepping system where we count by frac_step_size for N
-  // output samples, then frac_step_size+1 for M samples, etc...
-  // MTWN-49 represents this work.
-  //
   // @param amplitude_scale
   // The scale factor for the amplitude to be applied when mixing.  Currently,
   // this is expressed as a 4.28 fixed point integer.  See the AudioLink class
@@ -108,6 +102,18 @@ class Mixer {
   // When true, the mixer will accumulate into the destination buffer (read,
   // sum, clip, write-back).  When false, the mixer will simply replace the
   // destination buffer with its output.
+  //
+  // @param modulo
+  // If frac_step_size cannot perfectly express the mix's resampling ratio,
+  // this parameter (along with subsequent denominator) expresses any leftover
+  // precision.  When present, modulo and denominator express a fractional value
+  // of frac_step_size unit that should be advanced, for each destination frame.
+  //
+  // @param denominator
+  // If frac_step_size cannot perfectly express the mix's resampling ratio, this
+  // parameter (along with precedent modulo) expresses any leftover precision.
+  // When present, modulo and denominator express a fractional value of
+  // frac_step_size unit that should be advanced, for each destination frame.
   //
   // @return True if the mixer is finished with this source data and will not
   // need it in the future.  False if the mixer has not consumed the entire
@@ -123,8 +129,33 @@ class Mixer {
                    int32_t* frac_src_offset,
                    uint32_t frac_step_size,
                    Gain::AScale amplitude_scale,
-                   bool accumulate) = 0;
+                   bool accumulate,
+                   uint32_t modulo = 0,
+                   uint32_t denominator = 1) = 0;
+  // When calling Mix(), we communicate the resampling rate with three
+  // parameters. We augment frac_step_size with modulo and denominator
+  // arguments that capture the remaining rate component that cannot be
+  // expressed by a 19.13 fixed-point step_size. Note: frac_step_size and
+  // frac_input_offset use the same format -- they have the same limitations
+  // in what they can and cannot communicate. This begs two questions:
+  //
+  // Q1: For perfect position accuracy, don't we also need an in/out param
+  // to specify initial/final subframe modulo, for fractional source offset?
+  // A1: Yes, for optimum position accuracy (within quantization limits), we
+  // SHOULD incorporate running subframe position_modulo in this way.
+  //
+  // For now, we are defering this work, tracking it with MTWN-128.
+  //
+  // Q2: Why did we solve this issue for rate but not for initial position?
+  // A2: We solved this issue for *rate* because its effect accumulates over
+  // time, causing clearly measurable distortion that becomes crippling with
+  // larger jobs. For *position*, there is no accumulated magnification over
+  // time -- in analyzing the distortion that this should cause, mix job
+  // size would affect the distortion frequency but not amplitude. We expect
+  // the effects to be below audible thresholds. Until the effects are
+  // measurable and attributable to this jitter, we will defer this work.
 
+  //
   // Reset
   //
   // Reset the internal state of the mixer.  Will be called every time there is
@@ -132,6 +163,9 @@ class Mixer {
   // anything related to their internal filter state.
   virtual void Reset() {}
 
+  //
+  // Filter widths
+  //
   // The positive and negative widths of the filter for this mixer, expressed in
   // fractional input renderer units.  These widths convey which input frames
   // will be referenced by the filter, when producing output for a specific

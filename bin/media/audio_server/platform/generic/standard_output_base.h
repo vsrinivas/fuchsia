@@ -6,6 +6,7 @@
 
 #include <dispatcher-pool/dispatcher-timer.h>
 
+#include <fuchsia/cpp/media.h>
 #include "garnet/bin/media/audio_server/audio_link.h"
 #include "garnet/bin/media/audio_server/audio_link_packet_source.h"
 #include "garnet/bin/media/audio_server/audio_output.h"
@@ -14,8 +15,6 @@
 #include "garnet/bin/media/audio_server/platform/generic/mixer.h"
 #include "garnet/bin/media/audio_server/platform/generic/output_formatter.h"
 #include "lib/fxl/time/time_delta.h"
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_function.h"
 
@@ -43,6 +42,8 @@ class StandardOutputBase : public AudioOutput {
     uint32_t frames_produced;
   };
 
+  // TODO(mpuryear): per MTWN-129, combine this with CaptureLinkBookkeeping, and
+  // integrate it into the Mixer class itself.
   struct RendererBookkeeping : public AudioLink::Bookkeeping {
     RendererBookkeeping();
     ~RendererBookkeeping() override;
@@ -57,6 +58,10 @@ class StandardOutputBase : public AudioOutput {
     uint32_t local_time_to_renderer_subframes_gen = kInvalidGenerationId;
     uint32_t out_frames_to_renderer_subframes_gen = kInvalidGenerationId;
     uint32_t step_size;
+    uint32_t modulo;
+    uint32_t denominator() const {
+      return output_frames_to_renderer_subframes.rate().reference_delta();
+    }
     Gain::AScale amplitude_scale;
     MixerPtr mixer;
 
@@ -115,7 +120,7 @@ class StandardOutputBase : public AudioOutput {
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
   bool ProcessTrim(const fbl::RefPtr<AudioRendererImpl>& renderer,
                    RendererBookkeeping* info,
-                  const fbl::RefPtr<AudioPacketRef>& pkt_ref)
+                   const fbl::RefPtr<AudioPacketRef>& pkt_ref)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
   fxl::TimePoint next_sched_time_;

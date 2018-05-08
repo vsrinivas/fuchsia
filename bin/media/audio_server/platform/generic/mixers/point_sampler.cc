@@ -29,7 +29,9 @@ class PointSamplerImpl : public PointSampler {
            int32_t* frac_src_offset,
            uint32_t frac_step_size,
            Gain::AScale amplitude_scale,
-           bool accumulate) override;
+           bool accumulate,
+           uint32_t modulo = 0,
+           uint32_t denominator = 1) override;
 
  private:
   template <ScalerType ScaleType, bool DoAccumulate>
@@ -40,6 +42,8 @@ class PointSamplerImpl : public PointSampler {
                          uint32_t frac_src_frames,
                          int32_t* frac_src_offset,
                          uint32_t frac_step_size,
+                         uint32_t modulo,
+                         uint32_t denominator,
                          Gain::AScale amplitude_scale);
 };
 
@@ -58,7 +62,9 @@ class NxNPointSamplerImpl : public PointSampler {
            int32_t* frac_src_offset,
            uint32_t frac_step_size,
            Gain::AScale amplitude_scale,
-           bool accumulate) override;
+           bool accumulate,
+           uint32_t modulo = 0,
+           uint32_t denominator = 1) override;
 
  private:
   template <ScalerType ScaleType, bool DoAccumulate>
@@ -69,6 +75,8 @@ class NxNPointSamplerImpl : public PointSampler {
                          uint32_t frac_src_frames,
                          int32_t* frac_src_offset,
                          uint32_t frac_step_size,
+                         uint32_t modulo,
+                         uint32_t denominator,
                          Gain::AScale amplitude_scale,
                          uint32_t chan_count);
   uint32_t chan_count_ = 0;
@@ -86,6 +94,8 @@ inline bool PointSamplerImpl<DChCount, SType, SChCount>::Mix(
     uint32_t frac_src_frames,
     int32_t* frac_src_offset,
     uint32_t frac_step_size,
+    uint32_t modulo,
+    uint32_t denominator,
     Gain::AScale amplitude_scale) {
   static_assert(
       ScaleType != ScalerType::MUTED || DoAccumulate == true,
@@ -105,6 +115,10 @@ inline bool PointSamplerImpl<DChCount, SType, SChCount>::Mix(
   const SType* src = static_cast<const SType*>(src_void);
   uint32_t doff = *dst_offset;
   int32_t soff = *frac_src_offset;
+
+  FXL_DCHECK(denominator > 0);
+  FXL_DCHECK(denominator > modulo);
+  uint32_t source_modulo = 0;
 
   FXL_DCHECK(doff < dst_frames);
   FXL_DCHECK(frac_src_frames >= FRAC_ONE);
@@ -132,13 +146,18 @@ inline bool PointSamplerImpl<DChCount, SType, SChCount>::Mix(
         out[dst_iter] = DM::Mix(out[dst_iter], sample, amplitude_scale);
       }
 
-      doff += 1;
+      ++doff;
       soff += frac_step_size;
+
+      source_modulo += modulo;
+      if (source_modulo >= denominator) {
+        ++soff;
+        source_modulo -= denominator;
+      }
     }
   } else {
     if (doff < dst_frames) {
-      // Figure out how many samples we would have produced and update the soff
-      // and doff values appropriately.
+      // Calc how many samples we would have produced; update soff and doff.
       uint32_t src_avail =
           ((frac_src_frames - soff) + frac_step_size - 1) / frac_step_size;
       uint32_t dst_avail = (dst_frames - doff);
@@ -146,6 +165,10 @@ inline bool PointSamplerImpl<DChCount, SType, SChCount>::Mix(
 
       soff += avail * frac_step_size;
       doff += avail;
+
+      source_modulo += (modulo * avail);
+      soff += (source_modulo / denominator);
+      source_modulo %= denominator;
     }
   }
 
@@ -166,25 +189,31 @@ bool PointSamplerImpl<DChCount, SType, SChCount>::Mix(
     int32_t* frac_src_offset,
     uint32_t frac_step_size,
     Gain::AScale amplitude_scale,
-    bool accumulate) {
+    bool accumulate,
+    uint32_t modulo,
+    uint32_t denominator) {
   if (amplitude_scale == Gain::kUnityScale) {
     return accumulate ? Mix<ScalerType::EQ_UNITY, true>(
                             dst, dst_frames, dst_offset, src, frac_src_frames,
-                            frac_src_offset, frac_step_size, amplitude_scale)
+                            frac_src_offset, frac_step_size, modulo,
+                            denominator, amplitude_scale)
                       : Mix<ScalerType::EQ_UNITY, false>(
                             dst, dst_frames, dst_offset, src, frac_src_frames,
-                            frac_src_offset, frac_step_size, amplitude_scale);
+                            frac_src_offset, frac_step_size, modulo,
+                            denominator, amplitude_scale);
   } else if (amplitude_scale <= Gain::MuteThreshold()) {
-    return Mix<ScalerType::MUTED, true>(dst, dst_frames, dst_offset, src,
-                                        frac_src_frames, frac_src_offset,
-                                        frac_step_size, amplitude_scale);
+    return Mix<ScalerType::MUTED, true>(
+        dst, dst_frames, dst_offset, src, frac_src_frames, frac_src_offset,
+        frac_step_size, modulo, denominator, amplitude_scale);
   } else {
     return accumulate ? Mix<ScalerType::NE_UNITY, true>(
                             dst, dst_frames, dst_offset, src, frac_src_frames,
-                            frac_src_offset, frac_step_size, amplitude_scale)
+                            frac_src_offset, frac_step_size, modulo,
+                            denominator, amplitude_scale)
                       : Mix<ScalerType::NE_UNITY, false>(
                             dst, dst_frames, dst_offset, src, frac_src_frames,
-                            frac_src_offset, frac_step_size, amplitude_scale);
+                            frac_src_offset, frac_step_size, modulo,
+                            denominator, amplitude_scale);
   }
 }
 
@@ -199,6 +228,8 @@ inline bool NxNPointSamplerImpl<SType>::Mix(int32_t* dst,
                                             uint32_t frac_src_frames,
                                             int32_t* frac_src_offset,
                                             uint32_t frac_step_size,
+                                            uint32_t modulo,
+                                            uint32_t denominator,
                                             Gain::AScale amplitude_scale,
                                             uint32_t chan_count) {
   static_assert(
@@ -218,6 +249,10 @@ inline bool NxNPointSamplerImpl<SType>::Mix(int32_t* dst,
   const SType* src = static_cast<const SType*>(src_void);
   uint32_t doff = *dst_offset;
   int32_t soff = *frac_src_offset;
+
+  FXL_DCHECK(denominator > 0);
+  FXL_DCHECK(denominator > modulo);
+  uint32_t source_modulo = 0;
 
   FXL_DCHECK(doff < dst_frames);
   FXL_DCHECK(frac_src_frames >= FRAC_ONE);
@@ -248,6 +283,12 @@ inline bool NxNPointSamplerImpl<SType>::Mix(int32_t* dst,
 
       doff += 1;
       soff += frac_step_size;
+
+      source_modulo += modulo;
+      if (source_modulo >= denominator) {
+        ++soff;
+        source_modulo -= denominator;
+      }
     }
   } else {
     if (doff < dst_frames) {
@@ -260,6 +301,10 @@ inline bool NxNPointSamplerImpl<SType>::Mix(int32_t* dst,
 
       soff += avail * frac_step_size;
       doff += avail;
+
+      source_modulo += (modulo * avail);
+      soff += (source_modulo / denominator);
+      source_modulo %= denominator;
     }
   }
 
@@ -279,29 +324,31 @@ bool NxNPointSamplerImpl<SType>::Mix(int32_t* dst,
                                      int32_t* frac_src_offset,
                                      uint32_t frac_step_size,
                                      Gain::AScale amplitude_scale,
-                                     bool accumulate) {
+                                     bool accumulate,
+                                     uint32_t modulo,
+                                     uint32_t denominator) {
   if (amplitude_scale == Gain::kUnityScale) {
     return accumulate ? Mix<ScalerType::EQ_UNITY, true>(
                             dst, dst_frames, dst_offset, src, frac_src_frames,
-                            frac_src_offset, frac_step_size, amplitude_scale,
-                            chan_count_)
+                            frac_src_offset, frac_step_size, modulo,
+                            denominator, amplitude_scale, chan_count_)
                       : Mix<ScalerType::EQ_UNITY, false>(
                             dst, dst_frames, dst_offset, src, frac_src_frames,
-                            frac_src_offset, frac_step_size, amplitude_scale,
-                            chan_count_);
+                            frac_src_offset, frac_step_size, modulo,
+                            denominator, amplitude_scale, chan_count_);
   } else if (amplitude_scale <= Gain::MuteThreshold()) {
     return Mix<ScalerType::MUTED, true>(
         dst, dst_frames, dst_offset, src, frac_src_frames, frac_src_offset,
-        frac_step_size, amplitude_scale, chan_count_);
+        frac_step_size, modulo, denominator, amplitude_scale, chan_count_);
   } else {
     return accumulate ? Mix<ScalerType::NE_UNITY, true>(
                             dst, dst_frames, dst_offset, src, frac_src_frames,
-                            frac_src_offset, frac_step_size, amplitude_scale,
-                            chan_count_)
+                            frac_src_offset, frac_step_size, modulo,
+                            denominator, amplitude_scale, chan_count_)
                       : Mix<ScalerType::NE_UNITY, false>(
                             dst, dst_frames, dst_offset, src, frac_src_frames,
-                            frac_src_offset, frac_step_size, amplitude_scale,
-                            chan_count_);
+                            frac_src_offset, frac_step_size, modulo,
+                            denominator, amplitude_scale, chan_count_);
   }
 }
 

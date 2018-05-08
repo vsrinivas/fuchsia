@@ -244,7 +244,9 @@ void MeasureFreqRespSinad(MixerPtr mixer,
   // from the resampler, this extra source element should equal source[0].
   std::vector<float> source(src_buf_size + 1);
   std::vector<int32_t> accum(kFreqTestBufSize);
-  uint32_t step_size = Mixer::FRAC_ONE * src_buf_size / kFreqTestBufSize;
+  uint32_t step_size = (Mixer::FRAC_ONE * src_buf_size) / kFreqTestBufSize;
+  uint32_t modulo =
+      (Mixer::FRAC_ONE * src_buf_size) - (step_size * kFreqTestBufSize);
 
   // kReferenceFreqs[] contains the full set of official test frequencies (47).
   // The "summary" list is a small subset (3) of that list. Each kSummaryIdxs[]
@@ -288,7 +290,7 @@ void MeasureFreqRespSinad(MixerPtr mixer,
 
       mixer->Mix(accum.data(), dst_frames, &dst_offset, source.data(),
                  frac_src_frames, &frac_src_offset, step_size,
-                 Gain::kUnityScale, false);
+                 Gain::kUnityScale, false, modulo, kFreqTestBufSize);
       EXPECT_EQ(dst_frames, dst_offset);
     }
 
@@ -375,7 +377,7 @@ void TestDownSampleRatio2(Resampler sampler_type,
   MixerPtr mixer =
       SelectMixer(AudioSampleFormat::FLOAT, 1, 88200, 1, 48000, sampler_type);
 
-  MeasureFreqRespSinad(std::move(mixer),  // previously was step_size 0x1D67
+  MeasureFreqRespSinad(std::move(mixer),
                        round(kFreqTestBufSize * 88200.0 / 48000.0),
                        freq_resp_results, sinad_results);
 }
@@ -388,7 +390,7 @@ void TestUpSampleRatio1(Resampler sampler_type,
   MixerPtr mixer =
       SelectMixer(AudioSampleFormat::FLOAT, 1, 44100, 1, 48000, sampler_type);
 
-  MeasureFreqRespSinad(std::move(mixer),  // previously was step_size 0x0EB3
+  MeasureFreqRespSinad(std::move(mixer),
                        round(kFreqTestBufSize * 44100.0 / 48000.0),
                        freq_resp_results, sinad_results);
 }

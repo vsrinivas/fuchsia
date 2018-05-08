@@ -16,7 +16,9 @@ bool NoOp::Mix(int32_t* dst,
                int32_t* frac_src_offset,
                uint32_t frac_step_size,
                Gain::AScale amplitude_scale,
-               bool accumulate) {
+               bool accumulate,
+               uint32_t modulo,
+               uint32_t denominator) {
   return false;
 }
 

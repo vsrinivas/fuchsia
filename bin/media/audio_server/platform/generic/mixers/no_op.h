@@ -22,7 +22,9 @@ class NoOp : public Mixer {
            int32_t* frac_src_offset,
            uint32_t frac_step_size,
            Gain::AScale amplitude_scale,
-           bool accumulate) override;
+           bool accumulate,
+           uint32_t modulo,
+           uint32_t denominator) override;
 };
 
 }  // namespace mixers

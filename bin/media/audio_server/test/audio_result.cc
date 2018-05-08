@@ -207,7 +207,7 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
 
 const std::array<double, FrequencySet::kNumReferenceFreqs>
     AudioResult::kPrevFreqRespLinearMicro = {
-         0.0000000e+00, -2.3466227e-06, -3.6788049e-06, -5.0488957e-06, -7.7213105e-06, -1.1397148e-05,
+         0.0000000e+00, -2.3466227e-06, -3.7789807e-06, -5.1051663e-06, -7.7213105e-06, -1.1397148e-05,
         -1.8925543e-05, -3.0434620e-05, -4.7744450e-05, -8.1041148e-05, -1.2769346e-04, -1.9481191e-04,
         -3.3341719e-04, -5.0162696e-04, -7.9464478e-04, -1.2698768e-03, -2.0004111e-03, -3.1887139e-03,
         -5.0442906e-03, -8.1376035e-03, -1.2701520e-02, -1.9830443e-02, -3.2589023e-02, -5.0940216e-02,
@@ -470,24 +470,28 @@ void AudioResult::DumpThresholdValues() {
   DumpFreqRespValues(AudioResult::FreqRespPointDown2.data(), "FR-PointDown2");
   DumpFreqRespValues(AudioResult::FreqRespPointUp1.data(), "FR-PointUp1");
   DumpFreqRespValues(AudioResult::FreqRespPointUp2.data(), "FR-PointUp2");
+  DumpFreqRespValues(AudioResult::FreqRespPointMicro.data(), "FR-PointMicro");
 
   DumpFreqRespValues(AudioResult::FreqRespLinearUnity.data(), "FR-LinearUnity");
   DumpFreqRespValues(AudioResult::FreqRespLinearDown1.data(), "FR-LinearDown1");
   DumpFreqRespValues(AudioResult::FreqRespLinearDown2.data(), "FR-LinearDown2");
   DumpFreqRespValues(AudioResult::FreqRespLinearUp1.data(), "FR-LinearUp1");
   DumpFreqRespValues(AudioResult::FreqRespLinearUp2.data(), "FR-LinearUp2");
+  DumpFreqRespValues(AudioResult::FreqRespLinearMicro.data(), "FR-LinearMicro");
 
   DumpSinadValues(AudioResult::SinadPointUnity.data(), "SinadPointUnity");
   DumpSinadValues(AudioResult::SinadPointDown1.data(), "SinadPointDown1");
   DumpSinadValues(AudioResult::SinadPointDown2.data(), "SinadPointDown2");
   DumpSinadValues(AudioResult::SinadPointUp1.data(), "SinadPointUp1");
   DumpSinadValues(AudioResult::SinadPointUp2.data(), "SinadPointUp2");
+  DumpSinadValues(AudioResult::SinadPointMicro.data(), "SinadPointMicro");
 
   DumpSinadValues(AudioResult::SinadLinearUnity.data(), "SinadLinearUnity");
   DumpSinadValues(AudioResult::SinadLinearDown1.data(), "SinadLinearDown1");
   DumpSinadValues(AudioResult::SinadLinearDown2.data(), "SinadLinearDown2");
   DumpSinadValues(AudioResult::SinadLinearUp1.data(), "SinadLinearUp1");
   DumpSinadValues(AudioResult::SinadLinearUp2.data(), "SinadLinearUp2");
+  DumpSinadValues(AudioResult::SinadLinearMicro.data(), "SinadLinearMicro");
 
   DumpLevelValues();
   DumpLevelToleranceValues();

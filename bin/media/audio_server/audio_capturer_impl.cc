@@ -997,30 +997,17 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       int64_t first_sample_pos_window_edge =
           job_start + bk->mixer->pos_filter_width();
 
-      // If the first frame in this source region comes after the positive edge
-      // of the filter window, then we need to skip some number of output frames
-      // before starting to produce data.
+      const TimelineRate& dest_to_src =
+          bk->dest_frames_to_frac_source_frames.rate();
+      // If first frame in this source region comes after positive edge of
+      // filter window, we must skip output frames before producing data.
       if (region.sfrac_pts > first_sample_pos_window_edge) {
-        // TODO(johngro): Fix this as well.  This is another manifestation of
-        // MTWN-49.  We need to...
-        //
-        // 1) Maintain a step ratio (instead of a step size with rounding
-        //    error).
-        // 2) Add the ability to scale with roundup to our fraction class.
-        // 3) Scale number of frames we are going to skip by the inverse of step
-        //    ratio rounded up.
-        // 4) Then scale this back using the step ratio to figure out our source
-        //    offset.
-        //
-        // IOW
-        // frac_source_frames_to_skip = region.sfrac_pts
-        //                            - first_sample_pos_window_edge;
-        // oo64  = step_ratio.Inv.ScaleRoundUp(frac_source_frames_to_skip);
-        // so64 += step_ratio.Scale(oo64);
-        output_offset_64 = (region.sfrac_pts - first_sample_pos_window_edge +
-                            bk->step_size - 1) /
-                           bk->step_size;
-        source_offset_64 += output_offset_64 * bk->step_size;
+        int64_t src_to_skip = region.sfrac_pts - first_sample_pos_window_edge;
+
+        // "+subject_delta-1" so that we 'round up' any fractional leftover.
+        output_offset_64 = dest_to_src.Inverse().Scale(
+            src_to_skip + dest_to_src.subject_delta() - 1);
+        source_offset_64 += dest_to_src.Scale(output_offset_64);
       }
 
       FXL_DCHECK(output_offset_64 >= 0);
@@ -1047,22 +1034,46 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       // 2) If our driver's ring buffer is not being fed directly from hardware,
       //    there is no reason to invalidate the cache here.
       //
-      // Also, at some point in time I need to come back and double check to
-      // make certaint that the mixer's filter width is being accounted for
-      // properly here.
+      // Also, at some point I need to come back and double check that the
+      // mixer's filter width is being accounted for properly here.
       FXL_DCHECK(output_offset <= frames_left);
+      uint64_t cache_target_frac_frames =
+          dest_to_src.Scale(frames_left - output_offset);
       uint32_t cache_target_frames =
-          (((frames_left - output_offset) * bk->step_size) >>
-           kPtsFractionalBits);
+          ((cache_target_frac_frames - 1) >> kPtsFractionalBits) + 1;
       cache_target_frames = std::min(cache_target_frames, region.len);
       zx_cache_flush(region_source, cache_target_frames * rb->frame_size(),
                      ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
 
       // Looks like we are ready to go. Mix.
-      bool consumed_source =
-          bk->mixer->Mix(buf, frames_left, &output_offset, region_source,
-                         region_frac_frame_len, &frac_source_offset,
-                         bk->step_size, amplitude_scale, accumulate);
+      // TODO(mpuryear): integrate bookkeeping into the Mixer itself (MTWN-129).
+      //
+      // When calling Mix(), we communicate the resampling rate with three
+      // parameters. We augment frac_step_size with modulo and denominator
+      // arguments that capture the remaining rate component that cannot be
+      // expressed by a 19.13 fixed-point step_size. Note: frac_step_size and
+      // frac_input_offset use the same format -- they have the same limitations
+      // in what they can and cannot communicate. This begs two questions:
+      //
+      // Q1: For perfect position accuracy, don't we also need an in/out param
+      // to specify initial/final subframe modulo, for fractional source offset?
+      // A1: Yes, for optimum position accuracy (within quantization limits), we
+      // SHOULD incorporate running subframe position_modulo in this way.
+      //
+      // For now, we are deferring this work, tracking it with MTWN-128.
+      //
+      // Q2: Why did we solve this issue for rate but not for initial position?
+      // A2: We solved this issue for *rate* because its effect accumulates over
+      // time, causing clearly measurable distortion that becomes crippling with
+      // larger jobs. For *position*, there is no accumulated magnification over
+      // time -- in analyzing the distortion that this should cause, mix job
+      // size would affect the distortion frequency but not amplitude. We expect
+      // the effects to be below audible thresholds. Until the effects are
+      // measurable and attributable to this jitter, we will defer this work.
+      bool consumed_source = bk->mixer->Mix(
+          buf, frames_left, &output_offset, region_source,
+          region_frac_frame_len, &frac_source_offset, bk->step_size,
+          amplitude_scale, accumulate, bk->modulo, bk->denominator());
       FXL_DCHECK(output_offset <= frames_left);
 
       if (!consumed_source) {
@@ -1119,12 +1130,14 @@ void AudioCapturerImpl::UpdateTransformation(
       TimelineFunction(-offset, 0, frac_frames_to_frames),
       src_clock_mono_to_ring_pos_frac_frames);
 
-  // TODO(johngro): Fix this.  See MTWN-49
   int64_t tmp_step_size = bk->dest_frames_to_frac_source_frames.rate().Scale(1);
   FXL_DCHECK(tmp_step_size >= 0);
   FXL_DCHECK(tmp_step_size <= std::numeric_limits<uint32_t>::max());
   bk->step_size = static_cast<uint32_t>(tmp_step_size);
+  bk->modulo = bk->dest_frames_to_frac_source_frames.rate().subject_delta() -
+               (bk->denominator() * bk->step_size);
 
+  FXL_DCHECK(bk->denominator() > 0);
   bk->dest_trans_gen_id = frames_to_clock_mono_gen_.get();
   bk->source_trans_gen_id = rb_snap.gen_id;
 }

@@ -130,20 +130,10 @@ their stage in the flow of audio through the mixer:
 *   MTWN-87
 
     Today, interpolation and media scheduling is performed using audio sample
-positions that are represented by a 32-bit integer, in fixed-point form: 20 bits
-of integer, and 12 bits of fraction. This by design puts a limit on the accuracy
+positions that are represented by a 32-bit integer, in fixed-point form: 19 bits
+of integer, and 13 bits of fraction. This by design puts a limit on the accuracy
 of our interpolating sample-rate converters. By increasing the number of
 fractional bits, we can improve our SRC quality.
-
-*   MTWN-49
-
-    Today, our internal representation of rate-conversion ratios is only precise
-to 12 fixed-point fractional bits. This means that if our destination sample
-rate is 48000, the incoming sample rate can only be faithfully rendered down to
-a precision of ~ 12 Hz increments. By changing how we advance through the source
-buffer (instead of using a single 32-bit fixed-point "19.13" step_size), we can
-increase our accuracy and decrease any distortion resulting from the lack of
-complete precision.
 
 *   MTWN-75
 

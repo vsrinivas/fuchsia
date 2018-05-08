@@ -23,7 +23,6 @@ namespace audio {
 // this is our granularity. As an example, when resampling a 48 kHz audio
 // packet, the "clicks on the dial" of our actual resampling rates are multiples
 // of 6 Hz. Again, we do correct any positional error at mix job boundaries.
-// TODO(mpuryear): MTWN-49 Use rate ratios (not frac_step_size) when resampling.
 //
 // This also affects our interpolation accuracy: because fractional position has
 // a potential error of 2^-13, the worst-case error for interpolated values is

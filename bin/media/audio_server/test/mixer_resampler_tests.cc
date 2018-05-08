@@ -264,6 +264,51 @@ TEST(Resampling, Position_Fractional_Linear) {
   EXPECT_TRUE(CompareBuffers(accum, expect2, fbl::count_of(accum)));
 }
 
+void TestPositionModulo(Resampler sampler_type) {
+  MixerPtr mixer =
+      SelectMixer(AudioSampleFormat::FLOAT, 1, 32000, 1, 48000, sampler_type);
+
+  int16_t source[] = {0, 1, 2};
+  uint32_t frac_step_size = (Mixer::FRAC_ONE * 2) / 3;
+  int32_t accum[3];
+  int32_t expected_frac_src_offset = 2 << kPtsFractionalBits;
+
+  // Without modulo, ending source position should be short of full [2/3 * 2].
+  int32_t frac_src_offset = 0;
+  uint32_t dst_offset = 0;
+  mixer->Mix(accum, fbl::count_of(accum), &dst_offset, source,
+             fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset,
+             frac_step_size, Gain::kUnityScale, false);
+
+  EXPECT_EQ(fbl::count_of(accum), dst_offset);
+  EXPECT_LT(frac_src_offset, expected_frac_src_offset);
+
+  // Now with modulo, source position should be exactly correct.
+  frac_src_offset = 0;
+  dst_offset = 0;
+  uint32_t modulo = (2 << kPtsFractionalBits) - (frac_step_size * 3);
+  uint32_t denominator = 3;
+
+  mixer->Mix(accum, fbl::count_of(accum), &dst_offset, source,
+             fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset,
+             frac_step_size, Gain::kUnityScale, false, modulo, denominator);
+
+  EXPECT_EQ(fbl::count_of(accum), dst_offset);
+  EXPECT_EQ(frac_src_offset, expected_frac_src_offset);
+}
+
+// Verify PointSampler correctly incorporates modulo & denominator parameters
+// into position and interpolation results.
+TEST(Resampling, Position_Modulo_Point) {
+  TestPositionModulo(Resampler::SampleAndHold);
+}
+
+// Verify LinearSampler correctly incorporates modulo & denominator parameters
+// into position and interpolation results.
+TEST(Resampling, Position_Modulo_Linear) {
+  TestPositionModulo(Resampler::LinearInterpolation);
+}
+
 // Test LinearSampler interpolation accuracy, given fractional position.
 // Inputs trigger various +/- values that should be rounded each direction.
 void TestInterpolation(uint32_t source_frames_per_second,
