@@ -4,6 +4,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/protocol/platform-defs.h>
+#include <hw/reg.h>
 #include <soc/aml-common/aml-usb-phy-v2.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
@@ -43,6 +44,43 @@ static const pbus_dev_t xhci_dev = {
     .bti_count = countof(xhci_btis),
 };
 
+// magic numbers for USB PHY tuning
+#define PLL_SETTING_3   0xfe18
+#define PLL_SETTING_4   0xfff
+#define PLL_SETTING_5   0x78000
+#define PLL_SETTING_6   0xe0004
+#define PLL_SETTING_7   0xe000c
+
+static zx_status_t astro_usb_tuning(zx_handle_t bti, bool host, bool default_val) {
+    io_buffer_t buf;
+    zx_status_t status;
+
+    status = io_buffer_init_physical(&buf, bti, S905D2_USBPHY21_BASE, S905D2_USBPHY21_LENGTH,
+                                     get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    volatile void* base = io_buffer_virt(&buf);
+
+    if (default_val) {
+        writel(0, base + 0x38);
+        writel(PLL_SETTING_5, base + 0x34);
+    } else {
+        writel(PLL_SETTING_3, base + 0x50);
+        writel(PLL_SETTING_4, base + 0x10);
+        if (host) {
+            writel(PLL_SETTING_6, base + 0x38);
+        } else {
+            writel(PLL_SETTING_7, base + 0x38);
+        }
+        writel(PLL_SETTING_5, base + 0x34);
+    }
+
+    io_buffer_release(&buf);
+    return ZX_OK;
+}
+
 zx_status_t aml_usb_init(aml_bus_t* bus) {
     zx_handle_t bti;
 
@@ -53,6 +91,11 @@ zx_status_t aml_usb_init(aml_bus_t* bus) {
     }
 
     status = aml_usb_phy_v2_init(bti);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    status = astro_usb_tuning(bti, true, false);
     zx_handle_close(bti);
     if (status != ZX_OK) {
         return status;
