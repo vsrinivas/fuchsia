@@ -6,7 +6,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_library("fuchsia-wlan-dev") {
   name = "fuchsia_wlan_dev"
-  version = "0.1"
+  version = "0.1.0"
 
   deps = [
     "//garnet/lib/wlan/fidl:fidl-rustc",

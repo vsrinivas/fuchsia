@@ -6,7 +6,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_library("wlantap-client") {
   name = "wlantap_client"
-  version = "0.1"
+  version = "0.1.0"
 
   deps = [
     "//garnet/lib/wlan/fidl:fidl-rustc",
