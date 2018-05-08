@@ -304,10 +304,11 @@ static zx_status_t pty_openat(pty_server_t* ps, zx_device_t** out, uint32_t id, 
         num_clients++;
     }
     list_add_tail(&ps->clients, &pc->node);
+
+    ps->refcount++;
     mtx_unlock(&ps->lock);
 
     pc->srv = ps;
-    ps->refcount++;
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
