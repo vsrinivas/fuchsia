@@ -147,6 +147,9 @@ END {
             }
         }
     }
+    # 256 bytes is the max reach of a load/store post indexed instruction on arm64
+    max_stride = 256;
+
     run_start = -1;
     run_length = 0;
     run_stride = 0;
@@ -154,7 +157,9 @@ END {
         offset = relocs[i];
         if (offset == run_start + (run_length * run_stride)) {
             ++run_length;
-        } else if (i > 0 && run_length == 1 && (offset - run_start) % 8 == 0 && (offset - run_start) < 0x1000) {
+        } else if (i > 0 && run_length == 1 &&
+            (offset - run_start) % 8 == 0 &&
+            (offset - run_start) < max_stride) {
             run_stride = offset - run_start;
             run_length = 2;
         } else {
