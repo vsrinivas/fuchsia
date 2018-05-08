@@ -8,7 +8,6 @@ members =  [
   "bin/xi_core",
   "bin/bluetooth_tests/integration",
   "examples/bluetooth/ble_battery_service",
-  "examples/fidl/*rust",
   "examples/media/audio_player_rust",
   "examples/rust/testing",
   "lib/rust/crates/eapol",
@@ -37,7 +36,6 @@ members =  [
   "public/rust/fidl_crates/fidl_bluetooth_gatt",
   "public/rust/fidl_crates/fidl_bluetooth_low_energy",
   "public/rust/fidl_crates/fidl_component",
-  "public/rust/fidl_crates/fidl_echo2",
   "public/rust/fidl_crates/fidl_geometry",
   "public/rust/fidl_crates/fidl_gfx",
   "public/rust/fidl_crates/fidl_images",
@@ -65,7 +63,6 @@ fidl_bluetooth_gatt = { path = "public/rust/fidl_crates/fidl_bluetooth_gatt" }
 fidl_bluetooth_host = { path = "lib/rust/fidl_crates/fidl_bluetooth_host" }
 fidl_bluetooth_low_energy = { path = "public/rust/fidl_crates/fidl_bluetooth_low_energy" }
 fidl_component = { path = "public/rust/fidl_crates/fidl_component" }
-fidl_echo2 = { path = "public/rust/fidl_crates/fidl_echo2" }
 fidl_geometry = { path = "public/rust/fidl_crates/fidl_geometry" }
 fidl_gfx = { path = "public/rust/fidl_crates/fidl_gfx" }
 fidl_images = { path = "public/rust/fidl_crates/fidl_images" }

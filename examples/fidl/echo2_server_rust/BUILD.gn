@@ -2,12 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rust_binary.gni")
-import("//build/rust/toolchain.gni")
+import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
 
-rust_binary("echo2_server_rust_bin") {
+rustc_binary("echo2_server_rust_bin") {
   name = "echo2_server_rust"
+
+  deps = [
+    "//garnet/examples/fidl/services:echo2-rustc",
+    "//garnet/public/lib/fidl/rust/fidl:fidl-rustc",
+    "//garnet/public/rust/crates/fuchsia-app:fuchsia-app-rustc",
+    "//garnet/public/rust/crates/fuchsia-async:fuchsia-async-rustc",
+    "//garnet/public/rust/crates/fuchsia-zircon:fuchsia-zircon-rustc",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures",
+  ]
 }
 
 package("echo2_server_rust") {
@@ -15,7 +24,7 @@ package("echo2_server_rust") {
     ":echo2_server_rust_bin"
   ]
 
-  binary = "echo2_server_rust"
+  binary = "rust_crates/echo2_server_rust"
 
   meta = [{
     path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")

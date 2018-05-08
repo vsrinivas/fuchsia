@@ -274,33 +274,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "echo2_client_rust"
-version = "0.1.0"
-dependencies = [
- "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "fidl 0.1.0",
- "fidl_echo2 0.1.0",
- "fuchsia-app 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "structopt 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "echo2_server_rust"
-version = "0.1.0"
-dependencies = [
- "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "fidl 0.1.0",
- "fidl_echo2 0.1.0",
- "fuchsia-app 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "either"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -415,16 +388,6 @@ version = "0.1.0"
 dependencies = [
  "fidl 0.1.0",
  "fidl_mem 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "fidl_echo2"
-version = "0.1.0"
-dependencies = [
- "fidl 0.1.0",
  "fuchsia-async 0.1.0",
  "fuchsia-zircon 0.3.4",
  "futures 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
