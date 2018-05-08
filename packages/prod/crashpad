@@ -1,6 +1,7 @@
 {
     "packages": {
-        "crashpad_handler": "//third_party/crashpad:crashpad_handler"
+        "crashpad_handler": "//third_party/crashpad:crashpad_handler",
+        "crashpad_startup": "//garnet/bin/crashpad:crashpad_startup"
     }
 }
 

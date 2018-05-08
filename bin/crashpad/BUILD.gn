@@ -1,0 +1,35 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("bin") {
+  output_name = "crashpad_startup"
+
+  deps = [
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/launchpad",
+    "//zircon/public/lib/zx",
+  ]
+
+  sources = [
+    "crashpad_startup.cc",
+  ]
+
+  libs = [ "zircon" ]
+}
+
+package("crashpad_startup") {
+  deprecated_system_image = true
+
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "crashpad_startup"
+    },
+  ]
+}

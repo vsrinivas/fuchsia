@@ -1,0 +1,2 @@
+crashlogger.disable=true
+crashpad.enable=true
