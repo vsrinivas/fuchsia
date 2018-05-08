@@ -49,7 +49,7 @@ appropriate.
         structs should be recursive (follow pointers, iterate over array
         members). These are more easily tackled in the idiomatic form, hence it
         is tempting to let the native form be purely POD and avoid destructors.
-    *   Could consider making an zx::unowned_handle which lacks a destructor and
+    *   Could consider making a zx::unowned_handle which lacks a destructor and
         would therefore be POD.
 
 ### Idiomatic Usage Style

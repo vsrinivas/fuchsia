@@ -620,7 +620,7 @@ The body of an epitaph is described by the following structure:
 
 ```
 struct Epitaph {
-    // Generic protocol status, represented as an zx_status_t.
+    // Generic protocol status, represented as a zx_status_t.
     uint32 status;
 
     // Protocol-specific data, interpretation depends on the interface

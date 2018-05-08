@@ -371,7 +371,7 @@ typedef struct zx_info_resource {
 // Argument is the base address of the vDSO mapping (or zero), a uintptr_t.
 #define ZX_PROP_PROCESS_VDSO_BASE_ADDRESS   6u
 
-// Argument is an zx_job_importance_t value.
+// Argument is a zx_job_importance_t value.
 #define ZX_PROP_JOB_IMPORTANCE              7u
 
 // Argument is a size_t.

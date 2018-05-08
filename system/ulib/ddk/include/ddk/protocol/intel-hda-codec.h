@@ -10,7 +10,7 @@
 __BEGIN_CDECLS;
 
 typedef struct ihda_codec_protocol_ops {
-    // Fetch an zx_handle_t to a channel which can be used to communicate with the codec device.
+    // Fetch a zx_handle_t to a channel which can be used to communicate with the codec device.
     zx_status_t (*get_driver_channel)(void* ctx, zx_handle_t* channel_out);
 } ihda_codec_protocol_ops_t;
 
