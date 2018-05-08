@@ -74,7 +74,7 @@ int main(int argc, char* const argv[]) {
   static const char* argv_crashpad_handler[] = {
       "/system/bin/crashpad_handler",
       "--database=/data/crashes",
-      "--url=http://clients2.google.com/cr/staging_report",
+      "--url=http://clients2.google.com/cr/report",
       "--annotation=product=Fuchsia",
       "--annotation=version=unknown",
   };
