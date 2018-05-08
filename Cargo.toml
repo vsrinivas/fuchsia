@@ -5,7 +5,6 @@ members =  [
   "bin/bluetooth_tools/bthci_fake_util",
   "bin/bluetooth_tools/btsnoop",
   "bin/device_settings",
-  "bin/logger",
   "bin/power_manager",
   "bin/wlantool",
   "bin/xi_core",
@@ -47,7 +46,6 @@ members =  [
   "public/rust/fidl_crates/fidl_gfx",
   "public/rust/fidl_crates/fidl_images",
   "public/rust/fidl_crates/fidl_input",
-  "public/rust/fidl_crates/fidl_logger",
   "public/rust/fidl_crates/fidl_media",
   "public/rust/fidl_crates/fidl_media_player",
   "public/rust/fidl_crates/fidl_mem",
@@ -77,7 +75,6 @@ fidl_geometry = { path = "public/rust/fidl_crates/fidl_geometry" }
 fidl_gfx = { path = "public/rust/fidl_crates/fidl_gfx" }
 fidl_images = { path = "public/rust/fidl_crates/fidl_images" }
 fidl_input = { path = "public/rust/fidl_crates/fidl_input" }
-fidl_logger = { path = "public/rust/fidl_crates/fidl_logger" }
 fidl_media = { path = "public/rust/fidl_crates/fidl_media" }
 fidl_media_player = { path = "public/rust/fidl_crates/fidl_media_player" }
 fidl_mem = { path = "public/rust/fidl_crates/fidl_mem" }
