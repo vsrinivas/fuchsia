@@ -9,6 +9,9 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"app/context"
@@ -113,5 +116,52 @@ func fetchPackage(p *Package, amber *amber.ControlInterface) error {
 	} else {
 		return fmt.Errorf("fetch: reply channel was not readable")
 	}
+	return nil
+}
+
+func WriteImgs(imgs []string) error {
+	for _, img := range imgs {
+		var c *exec.Cmd
+		switch img {
+		case "efi":
+			c = exec.Command("install-disk-image", "install-efi")
+		case "kernc":
+			c = exec.Command("install-disk-image", "install-kernc")
+		default:
+			return fmt.Errorf("unrecognized image %q", img)
+		}
+
+		err := writeImg(c, filepath.Join("/pkg", "data", img))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func writeImg(c *exec.Cmd, path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	if info.Size() == 0 {
+		return fmt.Errorf("img_writer: image file is empty!")
+	}
+	imgFile, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+
+	defer imgFile.Close()
+	c.Stdin = imgFile
+
+	if err = c.Start(); err != nil {
+		return fmt.Errorf("img_writer: error starting command: %s", err)
+	}
+
+	if err = c.Wait(); err != nil {
+		return fmt.Errorf("img_writer: command failed during execution: %s", err)
+	}
+
 	return nil
 }
