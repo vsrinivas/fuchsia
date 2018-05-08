@@ -60,12 +60,6 @@
     "public": true
   },
   {
-    "library_name": "network",
-    "fidl_target": "//garnet/public/lib/network/fidl:fidl",
-    "library_deps": ["mem", "netstack"],
-    "public": true
-  },
-  {
     "library_name": "bluetooth",
     "fidl_target": "//garnet/public/lib/bluetooth/fidl:bluetooth",
     "library_deps": [],

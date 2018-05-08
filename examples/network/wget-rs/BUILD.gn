@@ -2,11 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rust_binary.gni")
+import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
 
-rust_binary("bin") {
-  name = "wget-rs"
+rustc_binary("bin") {
+  name = "wget_rs"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl:fidl-rustc",
+    "//garnet/public/lib/mem/fidl:fidl-rustc",
+    "//garnet/public/lib/network/fidl:fidl-rustc",
+    "//garnet/public/rust/crates/fuchsia-app:fuchsia-app-rustc",
+    "//garnet/public/rust/crates/fuchsia-async:fuchsia-async-rustc",
+    "//garnet/public/rust/crates/fuchsia-zircon:fuchsia-zircon-rustc",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures",
+  ]
 }
 
 package("wget-rs") {
@@ -17,6 +28,7 @@ package("wget-rs") {
   ]
 
   binaries = [ {
-        name = "wget-rs"
+        name = "rust_crates/wget_rs"
+        dest = "wget-rs"
       } ]
 }
