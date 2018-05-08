@@ -173,6 +173,10 @@ bool ZirconPlatformBuffer::SetCachePolicy(magma_cache_policy_t cache_policy)
             zx_cache_policy = ZX_CACHE_POLICY_WRITE_COMBINING;
             break;
 
+       case MAGMA_CACHE_POLICY_UNCACHED:
+            zx_cache_policy = ZX_CACHE_POLICY_UNCACHED;
+            break;
+
         default:
             return DRETF(false, "Invalid cache policy %d", cache_policy);
     }

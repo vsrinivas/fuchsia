@@ -101,6 +101,7 @@ public:
 
         EXPECT_TRUE(buffer->SetCachePolicy(MAGMA_CACHE_POLICY_CACHED));
         EXPECT_TRUE(buffer->SetCachePolicy(MAGMA_CACHE_POLICY_WRITE_COMBINING));
+        EXPECT_TRUE(buffer->SetCachePolicy(MAGMA_CACHE_POLICY_UNCACHED));
     }
 
     static void test_buffer_passing(magma::PlatformBuffer* buf, magma::PlatformBuffer* buf1)
