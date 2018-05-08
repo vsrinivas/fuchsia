@@ -5,6 +5,7 @@
 #include "garnet/bin/ui/sketchy/stroke/divided_stroke_path.h"
 
 #include "lib/escher/util/trace_macros.h"
+#include "lib/fxl/logging.h"
 
 namespace sketchy_service {
 
@@ -16,12 +17,12 @@ DividedStrokePath::DividedStrokePath(float half_width, float pixel_per_division)
 void DividedStrokePath::SetPath(std::unique_ptr<StrokePath> path) {
   Reset(path->segment_count());
   path_ = std::move(path);
-  UpdateGeometry(path_.get());
+  UpdateGeometry(*path_);
 }
 
-void DividedStrokePath::Extend(const StrokePath* path) {
-  path_->ExtendWithPath(path);
-  UpdateGeometry(path);
+void DividedStrokePath::Extend(const StrokePath& delta_path) {
+  path_->ExtendWithPath(delta_path);
+  UpdateGeometry(delta_path);
 }
 
 void DividedStrokePath::Reset(size_t segment_count) {
@@ -41,30 +42,38 @@ void DividedStrokePath::Reset(size_t segment_count) {
 }
 
 std::vector<uint32_t> DividedStrokePath::ComputeCumulativeDivisionCounts(
-    uint32_t base_division_count) {
+    uint32_t base_division_count) const {
   auto cumulative_division_counts = cumulative_division_counts_;
-  for (size_t i = 0; i < cumulative_division_counts.size(); i++) {
+  for (size_t i = 0; i < cumulative_division_counts.size(); ++i) {
     cumulative_division_counts[i] += base_division_count;
   }
   return cumulative_division_counts;
 }
 
-std::vector<uint32_t> DividedStrokePath::PrepareDivisionSegmentIndices() {
+std::vector<uint32_t> DividedStrokePath::PrepareDivisionSegmentIndices(
+    const DividedStrokePath& trailing_path) {
   TRACE_DURATION(
       "gfx",
       "sketchy_service::DividedStrokePath::PrepareDivisionSegmentIndices");
-  std::vector<uint32_t> division_segment_indices(division_count_);
-  for (uint32_t i = 0; i < division_counts_.size(); i++) {
+  std::vector<uint32_t> division_segment_indices(division_count_ +
+                                                 trailing_path.division_count_);
+  for (uint32_t i = 0; i < division_counts_.size(); ++i) {
     auto begin =
         division_segment_indices.begin() + cumulative_division_counts_[i];
     auto end = begin + division_counts_[i];
     std::fill(begin, end, i);
   }
+  for (uint32_t i = 0; i < trailing_path.division_counts_.size(); ++i) {
+    auto begin = division_segment_indices.begin() + division_count_ +
+                 trailing_path.cumulative_division_counts_[i];
+    auto end = begin + trailing_path.division_counts_[i];
+    std::fill(begin, end, division_counts_.size() + i);
+  }
   return division_segment_indices;
 }
 
-void DividedStrokePath::UpdateGeometry(const StrokePath* path) {
-  for (const auto& seg : path->control_points()) {
+void DividedStrokePath::UpdateGeometry(const StrokePath& delta_path) {
+  for (const auto& seg : delta_path.control_points()) {
     glm::vec3 bmin = {
         std::min({seg.pts[0].x, seg.pts[1].x, seg.pts[2].x, seg.pts[3].x}),
         std::min({seg.pts[0].y, seg.pts[1].y, seg.pts[2].y, seg.pts[3].y}), 0};
@@ -73,7 +82,7 @@ void DividedStrokePath::UpdateGeometry(const StrokePath* path) {
         std::max({seg.pts[0].y, seg.pts[1].y, seg.pts[2].y, seg.pts[3].y}), 0};
     bbox_.Join({bmin - half_width_, bmax + half_width_});
   }
-  for (const auto& length : path->segment_lengths()) {
+  for (const auto& length : delta_path.segment_lengths()) {
     uint32_t division_count =
         std::max(1U, static_cast<uint32_t>(length / pixel_per_division_));
     division_counts_.push_back(division_count);

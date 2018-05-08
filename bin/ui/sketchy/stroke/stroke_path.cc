@@ -16,7 +16,7 @@ StrokePath::StrokePath(sketchy::StrokePath path) {
   }
 }
 
-void StrokePath::ExtendWithCurve(CubicBezier2f curve) {
+void StrokePath::ExtendWithCurve(const CubicBezier2f& curve) {
   auto pair = curve.ArcLengthParameterization();
   control_points_.push_back(curve);
   re_params_.push_back(pair.first);
@@ -24,15 +24,14 @@ void StrokePath::ExtendWithCurve(CubicBezier2f curve) {
   length_ += pair.second;
 }
 
-void StrokePath::ExtendWithPath(const StrokePath* path) {
-  control_points_.insert(control_points_.end(), path->control_points_.begin(),
-                         path->control_points_.end());
-  re_params_.insert(re_params_.end(), path->re_params_.begin(),
-                    path->re_params_.end());
-  segment_lengths_.insert(segment_lengths_.end(),
-                          path->segment_lengths_.begin(),
-                          path->segment_lengths_.end());
-  length_ += path->length_;
+void StrokePath::ExtendWithPath(const StrokePath& path) {
+  control_points_.insert(control_points_.end(), path.control_points_.begin(),
+                         path.control_points_.end());
+  re_params_.insert(re_params_.end(), path.re_params_.begin(),
+                    path.re_params_.end());
+  segment_lengths_.insert(segment_lengths_.end(), path.segment_lengths_.begin(),
+                          path.segment_lengths_.end());
+  length_ += path.length_;
 }
 
 void StrokePath::Reset(size_t segment_count) {

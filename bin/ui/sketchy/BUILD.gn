@@ -10,8 +10,8 @@ executable("bin") {
   sources = [
     "app.cc",
     "app.h",
-    "buffer/escher_buffer.cc",
-    "buffer/escher_buffer.h",
+    "buffer/appendable_buffer.cc",
+    "buffer/appendable_buffer.h",
     "buffer/mesh_buffer.cc",
     "buffer/mesh_buffer.h",
     "buffer/shared_buffer.cc",

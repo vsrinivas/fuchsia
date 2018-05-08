@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_UI_SKETCHY_RESOURCES_STROKE_H_
 #define GARNET_BIN_UI_SKETCHY_RESOURCES_STROKE_H_
 
-#include "garnet/bin/ui/sketchy/buffer/escher_buffer.h"
+#include "garnet/bin/ui/sketchy/buffer/appendable_buffer.h"
 #include "garnet/bin/ui/sketchy/buffer/mesh_buffer.h"
 #include "garnet/bin/ui/sketchy/frame.h"
 #include "garnet/bin/ui/sketchy/resources/resource.h"
@@ -38,24 +38,37 @@ class Stroke final : public Resource {
   // buffer, so the order change in |mesh_buffer| won't matter.
   void TessellateAndMerge(Frame* frame, MeshBuffer* mesh_buffer);
 
-  uint32_t vertex_count() const { return path_.vertex_count(); }
-  uint32_t index_count() const { return path_.index_count(); }
+  uint32_t vertex_count() const { return stable_path_.vertex_count(); }
+  uint32_t index_count() const { return stable_path_.index_count(); }
 
  private:
+  void AppendPathToBuffers(escher::impl::CommandBuffer* command,
+                           escher::BufferFactory* buffer_factory,
+                           const DividedStrokePath& path, bool is_stable);
+
+  // TODO(SCN-269): Document how tessellator and fitter work together.
   StrokeTessellator* const tessellator_;
   std::unique_ptr<StrokeFitter> fitter_;
 
-  DividedStrokePath path_;
-  DividedStrokePath delta_path_;
+  // The stable part of the path that is taken from the fitter. Will be updated
+  // on |TessellateAndMerge()|.
+  DividedStrokePath stable_path_;
+
+  // The delta but stable part of the path that is taken from the fitter. Will
+  // be updated on |Finish()| and |TessellateAndMerge()|. It is required because
+  // at |Finish()|, we have no access to command buffer in order to update the
+  // buffers. We have to keep this delta path until tessellation to update them.
+  DividedStrokePath delta_stable_path_;
+
   // True if either path is reset or extended.
   bool is_path_updated_ = false;
 
   escher::BufferPtr stroke_info_buffer_;
-  EscherBuffer control_points_buffer_;
-  EscherBuffer re_params_buffer_;
-  EscherBuffer division_counts_buffer_;
-  EscherBuffer cumulative_division_counts_buffer_;
-  EscherBuffer division_segment_index_buffer_;
+  AppendableBuffer control_points_buffer_;
+  AppendableBuffer re_params_buffer_;
+  AppendableBuffer division_counts_buffer_;
+  AppendableBuffer cumulative_division_counts_buffer_;
+  AppendableBuffer division_segment_index_buffer_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Stroke);
 };

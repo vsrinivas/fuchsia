@@ -17,20 +17,21 @@ class DividedStrokePath final {
  public:
   DividedStrokePath(float half_width, float pixel_per_division);
   void SetPath(std::unique_ptr<StrokePath> path);
-  void Extend(const StrokePath* path);
+  void Extend(const StrokePath& delta_path);
   void Reset(size_t segment_count = 0);
 
   // Compute the |cumulative_division_counts_| with and offset, as this path
   // might be a portion of a longer path.
   std::vector<uint32_t> ComputeCumulativeDivisionCounts(
-      uint32_t base_division_count);
+      uint32_t base_division_count) const;
 
   // Fore each division, fill its segment index in |division_segment_indices_|.
   // This is a workaround solution to avoid dynamic branching in shader. It
   // could be expensive if |path_| is very very long.
-  std::vector<uint32_t> PrepareDivisionSegmentIndices();
+  std::vector<uint32_t> PrepareDivisionSegmentIndices(
+      const DividedStrokePath& trailing_path);
 
-  const StrokePath* path() const { return path_.get(); }
+  const StrokePath& path() const { return *path_; }
   bool empty() const { return vertex_count_ == 0; }
   float length() const { return path_->length(); }
   size_t segment_count() const { return path_->segment_count(); }
@@ -41,22 +42,26 @@ class DividedStrokePath final {
   const void* control_points_data() const {
     return path_->control_points().data();
   }
-  size_t control_points_size() const { return path_->control_points_size(); }
+  size_t control_points_data_size() const {
+    return path_->control_points().size() * sizeof(CubicBezier2f);
+  }
   const void* re_params_data() const { return path_->re_params().data(); }
-  size_t re_params_size() const { return path_->re_params_size(); }
+  size_t re_params_data_size() const {
+    return path_->re_params().size() * sizeof(CubicBezier1f);
+  }
   const void* division_counts_data() const { return division_counts_.data(); }
-  size_t division_counts_size() const {
+  size_t division_counts_data_size() const {
     return division_counts_.size() * sizeof(uint32_t);
   }
   const void* cumulative_division_counts_data() const {
     return cumulative_division_counts_.data();
   }
-  size_t cumulative_division_counts_size() const {
+  size_t cumulative_division_counts_data_size() const {
     return cumulative_division_counts_.size() * sizeof(uint32_t);
   }
 
  private:
-  void UpdateGeometry(const StrokePath* path);
+  void UpdateGeometry(const StrokePath& delta_path);
 
   float half_width_;
   float pixel_per_division_;

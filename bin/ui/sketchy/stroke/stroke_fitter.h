@@ -20,17 +20,15 @@ class StrokeFitter final {
  public:
   explicit StrokeFitter(glm::vec2 start_pt);
   void Extend(const std::vector<glm::vec2>& sampled_pts);
-  // TODO(MZ-269): Preserve tangent, so we can fit a smooth curve even after
-  // taking the previous path and points.
-  void Reset();
 
-  const StrokePath* path() const { return path_.get(); }
+  // Fits the entire curve, populates the path, and pops the points that are
+  // stable enough. Returns if the path is stable or not.
+  bool FitAndPop(StrokePath* path);
 
  private:
   void FitSampleRange(int start_index, int end_index, glm::vec2 left_tangent,
-                      glm::vec2 right_tangent);
+                      glm::vec2 right_tangent, StrokePath* path);
 
-  std::unique_ptr<StrokePath> path_;
   std::vector<glm::vec2> points_;
   std::vector<float> params_;
 

@@ -61,11 +61,15 @@ template <typename VecT>
 float CubicBezier<VecT>::ArcLength(uint8_t debug_depth) const {
   constexpr float kMaxErrorRate = 0.01f;
   constexpr float kEpsilon = 0.000005f;
-  FXL_DCHECK(debug_depth < 100);
 
   float upper_bound = distance(pts[0], pts[1]) + distance(pts[1], pts[2]) +
                       distance(pts[2], pts[3]);
   float lower_bound = distance(pts[0], pts[3]);
+
+  if (debug_depth > 100) {
+    FXL_DLOG(WARNING) << "Recursion too deep!";
+    return 0.5 * (upper_bound + lower_bound);
+  }
 
   if (!(upper_bound > 0.f)) {
     // Catch zero and NaN before they become a problem.
@@ -118,6 +122,9 @@ CubicBezier<VecT> FitCubicBezier(const VecT* pts, int count,
                                  const float* params, float param_shift,
                                  float param_scale, VecT endpoint_tangent_0,
                                  VecT endpoint_tangent_1) {
+  // Fitting a cubic bezier curve requires at lease 4 points.
+  FXL_DCHECK(count >= 4);
+
   float c00, c01, c10, c11;
   c00 = c01 = c10 = c11 = 0.f;
   VecT x;
@@ -175,122 +182,29 @@ CubicBezier2f FitCubicBezier2f(const vec2* pts, int count, const float* params,
                                float param_shift, float param_scale,
                                vec2 endpoint_tangent_0,
                                vec2 endpoint_tangent_1) {
-// TODO: consider using vectorized version
-#if 1
+  FXL_DCHECK(count >= 3);
+
+  // TODO(SCN-269): Figure out a better way to fit a bezier curve given 3 pts.
+  // Possibility 1: Fit a quadratic curve.
+  // Possibility 2: Take the tangent as constraint and fit a cubic curve.
+  if (count == 3) {
+    vec2 _pts[4];
+    _pts[0] = pts[0];
+    _pts[1] = 0.667f * pts[0] + 0.333f * pts[1];
+    _pts[2] = 0.333f * pts[1] + 0.667f * pts[2];
+    _pts[3] = pts[2];
+    float _params[4];
+    _params[0] = params[0];
+    _params[1] = 0.5f * params[0] + 0.5f * params[1];
+    _params[2] = 0.5f * params[1] + 0.5f * params[2];
+    _params[3] = params[2];
+    return FitCubicBezier<vec2>(_pts, /* count= */ 4, _params, param_shift,
+                                param_scale, endpoint_tangent_0,
+                                endpoint_tangent_1);
+  }
+
   return FitCubicBezier<vec2>(pts, count, params, param_shift, param_scale,
                               endpoint_tangent_0, endpoint_tangent_1);
-#else
-  float c00, c01, c10, c11;
-  c00 = c01 = c10 = c11 = 0.0f;
-  vec2 x;
-
-#if 1
-  // Non-vectorized version
-  for (int i = 0; i < count; ++i) {
-    float t = (params[i] + param_shift) * param_scale;
-    float omt = 1.0 - t;
-    float b0 = omt * omt * omt;
-    float b1 = 3.0 * t * omt * omt;
-    float b2 = 3.0 * t * t * omt;
-    float b3 = t * t * t;
-    vec2 a0 = endpoint_tangent_0 * b1;
-    vec2 a1 = endpoint_tangent_1 * b2;
-    c00 += dot(a0, a0);
-    c01 += dot(a0, a1);
-    // c10 == dot(a1, a0) == c01, so don't compute here,
-    // but instead set it just after the loop.
-    c11 += dot(a1, a1);
-    vec2 tmp = pts[i] - (pts[0] * (b0 + b1) + pts[count - 1] * (b2 + b3));
-    x[0] += dot(a0, tmp);
-    x[1] += dot(a1, tmp);
-  }
-#else  // VECTORIZE
-
-  // Requires -ffast-math.  TODO: experiment with fp_contract pragma (maybe
-  // globally enabling -ffast-math isn't necessary).
-
-  float first_valx = pts[0].x;
-  float first_valy = pts[0].y;
-  float last_valx = pts[count - 1].x;
-  float last_valy = pts[count - 1].y;
-
-  float et0x = endpoint_tangent_0[0];
-  float et0y = endpoint_tangent_0[1];
-  float et1x = endpoint_tangent_1[0];
-  float et1y = endpoint_tangent_1[1];
-
-  float c00[2000];
-  float c01[2000];
-  float c11[2000];
-  float x0[2000];
-  float x1[2000];
-
-#pragma clang loop vectorize(enable) interleave(enable)
-  for (int i = 0; i < count; i++) {
-    float t = (params[i] + param_shift) * param_scale;
-    float omt = 1.0 - t;
-    float b0 = omt * omt * omt;
-    float b1 = 3.0 * t * omt * omt;
-    float b2 = 3.0 * t * t * omt;
-    float b3 = t * t * t;
-    float b0b1 = b0 + b1;
-    float b2b3 = b2 + b3;
-
-    float a0x = et0x * b1;
-    float a0y = et0y * b1;
-    float a1x = et1x * b2;
-    float a1y = et1y * b2;
-
-    c00[i] = a0x * a0x + a0y * a0y;  // dot(a0, a0);
-    c01[i] = a0x * a1x + a0y * a1y;  // dot(a0, a1);
-    c11[i] = a1x * a1x + a1y * a1y;  // dot(a1, a1);
-    float tmpx = pts[i * 2] - first_valx * b0b1 - last_valx * b2b3;
-    float tmpy = pts[i * 2 + 1] - first_valy * b0b1 - last_valy * b2b3;
-    x0[i] = a0x * tmpx + a0y * tmpy;  // dot(a0, tmp);
-    x1[i] = a1x * tmpx + a1y * tmpy;  // dot(a1, tmp);
-  }
-
-// Accumulate sums.  If we try to do this in the loop above, the vectorizer
-// fails.
-#pragma clang loop vectorize(enable) interleave(enable)
-  for (int i = 0; i < count; i++) {
-    c00 += c00[i];
-    c01 += c01[i];
-    c11 += c11[i];
-    x[0] += x0[i];
-    x[1] += x1[i];
-  }
-#endif  // VECTORIZE
-
-  c10 = c01;
-
-  float det_c0_c1 = c00 * c11 - c10 * c01;
-  float det_c0_x = c00 * x[1] - c01 * x[0];
-  float det_x_c1 = x[0] * c11 - x[1] * c01;
-
-  if (det_c0_c1 == 0.0)
-    det_c0_c1 = c00 * c11 * 10e-12;
-
-  // Compute alpha values used to determine the distance along the left/right
-  // tangent vectors to place the middle two control points.  If either alpha
-  // value is negative, recompute it using Wu/Barsky heuristic.
-  float alpha_l = det_x_c1 / det_c0_c1;
-  float alpha_r = det_c0_x / det_c0_c1;
-  if (alpha_l < 0.0 || alpha_r < 0.0) {
-    // Alpha was negative, so use Wu/Barsky heuristic to place points.
-    // TODO: if only one alpha value is negative, should only that one be
-    // adjusted?
-    alpha_l = alpha_r = distance(pts[0], pts[count - 1]);
-  }
-
-  // Set all 4 control points and return the curve.
-  CubicBezier2f fit;
-  fit.pts[0] = pts[0];
-  fit.pts[1] = pts[0] + endpoint_tangent_0 * alpha_l;
-  fit.pts[2] = pts[count - 1] + endpoint_tangent_1 * alpha_r;
-  fit.pts[3] = pts[count - 1];
-  return fit;
-#endif
 }
 
 std::pair<vec2, vec2> EvaluatePointAndNormal(const CubicBezier<vec2>& bez,

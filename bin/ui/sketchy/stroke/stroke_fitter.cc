@@ -10,6 +10,8 @@ namespace {
 
 constexpr float kEpsilon = 6e-6;
 constexpr float kErrorThreshold = 10;
+// Minimum number of fitting points for a curve to be counted as stable.
+constexpr int kMinStableSize = 12;
 
 inline std::ostream& operator<<(std::ostream& os, const glm::vec2& pt) {
   return os << "(" << pt.x << "," << pt.y << ")";
@@ -19,39 +21,50 @@ inline std::ostream& operator<<(std::ostream& os, const glm::vec2& pt) {
 
 namespace sketchy_service {
 
-StrokeFitter::StrokeFitter(glm::vec2 start_pt)
-    : path_(std::make_unique<StrokePath>()) {
+StrokeFitter::StrokeFitter(glm::vec2 start_pt) {
   points_.push_back(start_pt);
   params_.push_back(0.f);
 }
 
 void StrokeFitter::Extend(const std::vector<glm::vec2>& sampled_pts) {
-  bool changed = false;
   for (const auto& pt : sampled_pts) {
     float dist = glm::distance(pt, points_.back());
     if (dist > kEpsilon) {
       points_.push_back(pt);
       params_.push_back(params_.back() + dist);
-      changed = true;
     }
   }
-  if (!changed) {
-    return;
-  }
+}
 
-  // Recursively compute a list of cubic Bezier segments.
-  // TODO: don't recompute stable path segments near the beginning of the
-  // stroke.
-  size_t end_index = points_.size() - 1;
-  glm::vec2 left_tangent = points_[1] - points_[0];
-  glm::vec2 right_tangent = points_[end_index - 1] - points_[end_index];
-  FitSampleRange(0, static_cast<int>(end_index), left_tangent, right_tangent);
+bool StrokeFitter::FitAndPop(StrokePath* path) {
+  FXL_DCHECK(points_.size() == params_.size());
+  if (points_.size() > 1) {
+    // Pick as many as we can into the stable part.
+    FitSampleRange(
+        0, static_cast<int>(points_.size()) - 1, points_[1] - points_[0],
+        points_[points_.size() - 1] - points_[points_.size() - 2], path);
+    if (points_.size() > kMinStableSize) {
+      // Pop the points and params, leaving two points for future fitting.
+      auto point0 = points_[points_.size() - 2];
+      auto point1 = points_[points_.size() - 1];
+      points_.resize(2);
+      points_[0] = point0;
+      points_[1] = point1;
+      auto param0 = params_[params_.size() - 2];
+      auto param1 = params_[params_.size() - 1];
+      params_.resize(2);
+      params_[0] = param0;
+      params_[1] = param1;
+      return true;
+    }
+  }
+  return false;
 }
 
 void StrokeFitter::FitSampleRange(int start_index, int end_index,
                                   glm::vec2 left_tangent,
-                                  glm::vec2 right_tangent) {
-  FXL_DCHECK(glm::length(left_tangent) > 0 && glm::length(right_tangent))
+                                  glm::vec2 right_tangent, StrokePath* path) {
+  FXL_DCHECK(glm::length(left_tangent) > 0 && glm::length(right_tangent) > 0)
       << "  left: " << left_tangent << "  right: " << right_tangent;
   FXL_DCHECK(end_index > start_index);
 
@@ -73,13 +86,13 @@ void StrokeFitter::FitSampleRange(int start_index, int end_index,
     FXL_DCHECK(!std::isnan(line.pts[2].y));
     FXL_DCHECK(!std::isnan(line.pts[3].x));
     FXL_DCHECK(!std::isnan(line.pts[3].y));
-    path_->ExtendWithCurve(line);
+    path->ExtendWithCurve(line);
     return;
   }
 
   // Normalize cumulative length between 0.0 and 1.0.
   float param_shift = -params_[start_index];
-  float param_scale = 1.0 / (params_[end_index] + param_shift);
+  float param_scale = 1.f / (params_[end_index] + param_shift);
 
   CubicBezier2f curve =
       FitCubicBezier2f(&(points_[start_index]), end_index - start_index + 1,
@@ -108,7 +121,7 @@ void StrokeFitter::FitSampleRange(int start_index, int end_index,
     FXL_DCHECK(!std::isnan(curve.pts[2].y));
     FXL_DCHECK(!std::isnan(curve.pts[3].x));
     FXL_DCHECK(!std::isnan(curve.pts[3].y));
-    path_->ExtendWithCurve(curve);
+    path->ExtendWithCurve(curve);
     return;
   }
 
@@ -125,15 +138,10 @@ void StrokeFitter::FitSampleRange(int start_index, int end_index,
     right_middle_tangent = points_[split_index + 1] - points_[split_index];
   }
   glm::vec2 left_middle_tangent = right_middle_tangent * -1.f;
-  FitSampleRange(start_index, split_index, left_tangent, left_middle_tangent);
-  FitSampleRange(split_index, end_index, right_middle_tangent, right_tangent);
-}
-
-void StrokeFitter::Reset() {
-  FXL_DCHECK(points_.size() > 0 && params_.size() > 0);
-  points_.erase(points_.begin(), points_.begin() + points_.size() - 1);
-  params_.erase(params_.begin(), params_.begin() + params_.size() - 1);
-  path_->Reset();
+  FitSampleRange(start_index, split_index, left_tangent, left_middle_tangent,
+                 path);
+  FitSampleRange(split_index, end_index, right_middle_tangent, right_tangent,
+                 path);
 }
 
 }  // namespace sketchy_service

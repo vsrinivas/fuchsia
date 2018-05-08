@@ -58,8 +58,6 @@ bool View::OnInputEvent(fuchsia::ui::input::InputEvent event) {
           return false;
         }
         stroke->Extend({{pointer.x, pointer.y}});
-        // TODO(MZ-269): The current stroke fitter would simply connect the
-        // point if Canvas::Present() is called after extending with one point.
         canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
                         [](fuchsia::images::PresentationInfo info) {});
         return true;
