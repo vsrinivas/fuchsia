@@ -5,7 +5,6 @@ members =  [
   "bin/bluetooth_tools/bthci_fake_util",
   "bin/bluetooth_tools/btsnoop",
   "bin/device_settings",
-  "bin/log_listener",
   "bin/logger",
   "bin/power_manager",
   "bin/wlantool",
