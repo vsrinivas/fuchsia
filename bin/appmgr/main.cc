@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
     return -1;
   component::Realm root_realm(nullptr, std::move(h1), kRootLabel);
   fs::SynchronousVfs publish_vfs(loop.async());
-  PublishRootDir(&root_realm, &vfs);
+  PublishRootDir(&root_realm, &publish_vfs);
 
   component::ApplicationControllerPtr sysmgr;
   auto run_sysmgr = [&root_realm, &sysmgr] {
