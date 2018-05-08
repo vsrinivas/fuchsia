@@ -36,7 +36,7 @@
 
 // POLL_MASK and POLL_SHIFT intend to convert the lower five POLL events into
 // ZX_USER_SIGNALs and vice-versa. Other events need to be manually converted to
-// an zx_signal_t, if they are desired.
+// a zx_signals_t, if they are desired.
 #define POLL_SHIFT  24
 #define POLL_MASK   0x1F
 

@@ -227,7 +227,7 @@ private:
 
 // PeeredDispatchers have opposing endpoints to coordinate state
 // with. For example, writing into one endpoint of a Channel needs to
-// modify zx_signal_t state (for the readability bit) on the opposite
+// modify zx_signals_t state (for the readability bit) on the opposite
 // side. To coordinate their state, they share a mutex, which is held
 // by the PeerHolder. Both endpoints have a RefPtr back to the
 // PeerHolder; no one else ever does.
