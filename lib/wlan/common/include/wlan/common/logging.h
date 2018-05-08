@@ -35,6 +35,7 @@ LOG_CATEGORY(kLogFrameHandlerTrace, 22);
 LOG_CATEGORY(kLogFinspect, 23);  // Packet decoder log
 LOG_CATEGORY(kLogBss, 24);
 LOG_CATEGORY(kLogPs, 25);
+LOG_CATEGORY(kLogClt, 26);
 
 #undef LOG_CATEGORY
 
@@ -62,7 +63,7 @@ constexpr bool kFinspectEnabled = kLogLevel & kLogFinspect;
 #define debugbcn(args...)  wlogf(wlan::kLogDataBeaconTrace, "[V:bcn ] ", args)
 #define debugbss(args...)  wlogf(wlan::kLogBss, "[V:bss ] ", args)
 #define debugps(args...)  wlogf(wlan::kLogPs, "[V:PS  ] ", args)
-#define debugclt(args...)  wlogf(wlan::kLogBss, "[V:clt ] ", args)
+#define debugclt(args...)  wlogf(wlan::kLogClt, "[V:clt ] ", args)
 #define debugfhandler(args...)  wlogf(wlan::kLogFrameHandlerTrace, "[V:fhdl] ", args)
 // clang-format on
 
