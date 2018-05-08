@@ -49,8 +49,19 @@ bool TimerManager::isMultipart(const std::unique_ptr<TimerVal>& timer_val_ptr) {
 bool TimerManager::isValidTimerArguments(fidl::StringPtr timer_id,
                                          int64_t timestamp,
                                          uint32_t timeout_s) {
-  return !timer_id.is_null() && timer_id.get() != "" && timestamp > 0 &&
-         timeout_s > 0 && timeout_s < kMaxTimerTimeout;
+  if (timer_id.is_null() || timer_id.get() == "") {
+    FXL_DLOG(ERROR) << "Invalid timer_id.";
+    return false;
+  }
+  if (timestamp <= 0) {
+    FXL_DLOG(ERROR) << "Invalid timestamp.";
+    return false;
+  }
+  if (timeout_s <= 0 || timeout_s > kMaxTimerTimeout) {
+    FXL_DLOG(ERROR) << "Invalid timeout_s.";
+    return false;
+  }
+  return true;
 }
 
 Status TimerManager::GetTimerValWithStart(

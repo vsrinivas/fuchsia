@@ -381,7 +381,15 @@ void CobaltEncoderImpl::AddTimerObservationIfReady(
   }
 
   if (TimerManager::isMultipart(timer_val_ptr)) {
-    // TODO(ninai) Add a Multipart Observation
+    ObservationValue value;
+    value.name = std::move(timer_val_ptr->part_name);
+    value.encoding_id = timer_val_ptr->encoding_id;
+    value.value.set_int_value(timer_val_ptr->end_timestamp -
+                              timer_val_ptr->start_timestamp);
+
+    timer_val_ptr->observation.push_back(std::move(value));
+    AddMultipartObservation(timer_val_ptr->metric_id,
+                            std::move(timer_val_ptr->observation), callback);
   } else {
     AddIntObservation(
         timer_val_ptr->metric_id, timer_val_ptr->encoding_id,
@@ -398,11 +406,9 @@ void CobaltEncoderImpl::StartTimer(
     uint32_t timeout_s,
     StartTimerCallback callback) {
   std::unique_ptr<TimerVal> timer_val_ptr;
-  auto status = Status::OK;  // placeholder until the interface is implemented.
-
-  // timer_manager_->GetTimerValWithStart(metric_id, encoding_id,
-  //                                      timer_id.get(), timestamp,
-  //                                       timeout_s, &timer_val_ptr);
+  auto status = timer_manager_->GetTimerValWithStart(metric_id, encoding_id,
+                                                     timer_id.get(), timestamp,
+                                                     timeout_s, &timer_val_ptr);
 
   if (status != Status::OK) {
     callback(status);
@@ -418,12 +424,8 @@ void CobaltEncoderImpl::EndTimer(
     uint32_t timeout_s,
     EndTimerCallback callback) {
   std::unique_ptr<TimerVal> timer_val_ptr;
-  auto status = Status::OK;  // placeholder until the interface is implemented.
-  // Intentionally passing invalid arguments until the interface is implemented.
-  timer_manager_->GetTimerValWithEnd("", 0, 0, &timer_val_ptr);
-
-  // timer_manager_->GetTimerValWithEnd(timer_id.get(), timestamp,
-  //                                    timeout_s, &timer_val_ptr);
+  auto status = timer_manager_->GetTimerValWithEnd(timer_id.get(), timestamp,
+                                                   timeout_s, &timer_val_ptr);
 
   if (status != Status::OK) {
     callback(status);
@@ -441,11 +443,9 @@ void CobaltEncoderImpl::EndTimerMultiPart(
     uint32_t timeout_s,
     EndTimerMultiPartCallback callback) {
   std::unique_ptr<TimerVal> timer_val_ptr;
-  auto status = Status::OK;  // placeholder until the interface is implemented.
-
-  // timer_manager_->GetTimerValWithEnd(
-  //     timer_id.get(), timestamp, timeout_s, part_name.get(),
-  //     std::move(observation), &timer_val_ptr);
+  auto status = timer_manager_->GetTimerValWithEnd(
+      timer_id.get(), timestamp, timeout_s, part_name.get(),
+      std::move(observation), &timer_val_ptr);
 
   if (status != Status::OK) {
     callback(status);

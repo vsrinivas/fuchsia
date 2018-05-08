@@ -80,6 +80,26 @@ const uint32_t kAvgReadTimeEncodingId = 4;
 const uint32_t kSpaceshipVelocityMetricId = 7;
 const uint32_t kSpaceshipVelocityEncodingId = 4;
 
+// For mod initialisation time.
+const std::string kModTimerId = "test_mod_timer";
+const uint32_t kModTimerMetricId = 8;
+const uint32_t kModTimerEncodingId = 4;
+const uint64_t kModStartTimestamp = 40;
+const uint64_t kModEndTimestamp = 75;
+const uint32_t kModTimeout = 1;
+
+// For app startup time.
+const std::string kAppTimerId = "test_app_timer";
+const uint32_t kAppTimerMetricId = 9;
+const uint32_t kAppTimerEncodingId = 4;
+const std::string kAppTimerPartName = "time_ns";
+const uint64_t kAppStartTimestamp = 10;
+const uint64_t kAppEndTimestamp = 20;
+const uint32_t kAppTimeout = 2;
+const std::string kAppName = "hangouts";
+const std::string kAppPartName = "app_name";
+const uint32_t kAppNameEncodingId = 4;
+
 std::string StatusToString(cobalt::Status status) {
   switch (status) {
     case cobalt::Status::OK:
@@ -161,6 +181,10 @@ class CobaltTestApp {
 
   bool TestRareEventWithIndicesUsingServiceFromEnvironment();
 
+  bool TestModInitialisationTime();
+
+  bool TestAppStartupTime();
+
   bool RequestSendSoonTests();
 
   // Synchronously invokes AddStringObservation() |num_observations_per_batch_|
@@ -211,6 +235,18 @@ class CobaltTestApp {
                                uint32_t encoding_id1,
                                std::string val1,
                                bool use_request_send_soon);
+
+  bool EncodeTimerAndSend(uint32_t metric_id, uint32_t encoding_config_id,
+                          uint32_t start_time, uint32_t end_time,
+                          std::string timer_id, uint32_t timeout_s,
+                          bool use_request_send_soon);
+
+  bool EncodeMultipartTimerAndSend(uint32_t metric_id, std::string part0,
+                                   uint32_t encoding_id0, std::string val0,
+                                   std::string part1, uint32_t encoding_id1,
+                                   uint32_t start_time, uint32_t end_time,
+                                   std::string timer_id, uint32_t timeout_s,
+                                   bool use_request_send_soon);
 
   // If |use_network_| is false this method returns true immediately.
   // Otherwise, uses one of two strategies to cause the Observations that
@@ -367,6 +403,12 @@ bool CobaltTestApp::RequestSendSoonTests() {
   if (!TestModulePairs()) {
     return false;
   }
+  if (!TestModInitialisationTime()) {
+    return false;
+  }
+  if (!TestAppStartupTime()) {
+    return false;
+  }
   return true;
 }
 
@@ -483,6 +525,30 @@ bool CobaltTestApp::TestRareEventWithIndicesUsingServiceFromEnvironment() {
   FXL_LOG(INFO) << "TestRareEventWithIndicesUsingServiceFromEnvironment: PASS";
   use_network_ = save_use_network_value;
   return true;
+}
+
+bool CobaltTestApp::TestModInitialisationTime() {
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestModInitialisationTime";
+  bool use_request_send_soon = true;
+  bool success = EncodeTimerAndSend(
+      kModTimerMetricId, kModTimerEncodingId, kModStartTimestamp,
+      kModEndTimestamp, kModTimerId, kModTimeout, use_request_send_soon);
+  FXL_LOG(INFO) << "TestModInitialisationTime : "
+                << (success ? "PASS" : "FAIL");
+  return success;
+}
+
+bool CobaltTestApp::TestAppStartupTime() {
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestAppStartupTime";
+  bool use_request_send_soon = true;
+  bool success = EncodeMultipartTimerAndSend(
+      kAppTimerMetricId, kAppPartName, kAppNameEncodingId, kAppName,
+      kAppTimerPartName, kAppTimerEncodingId, kAppStartTimestamp,
+      kAppEndTimestamp, kAppTimerId, kAppTimeout, use_request_send_soon);
+  FXL_LOG(INFO) << "TestAppStartupTime : " << (success ? "PASS" : "FAIL");
+  return success;
 }
 
 bool CobaltTestApp::EncodeStringAndSend(uint32_t metric_id,
@@ -625,6 +691,61 @@ bool CobaltTestApp::EncodeIndexAndSend(uint32_t metric_id,
   return CheckForSuccessfulSend(use_request_send_soon);
 }
 
+bool CobaltTestApp::EncodeTimerAndSend(uint32_t metric_id,
+                                       uint32_t encoding_config_id,
+                                       uint32_t start_time, uint32_t end_time,
+                                       std::string timer_id, uint32_t timeout_s,
+                                       bool use_request_send_soon) {
+  for (int i = 0; i < num_observations_per_batch_; i++) {
+    cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
+    encoder_->StartTimer(metric_id, encoding_config_id, timer_id, start_time,
+                         timeout_s, &status);
+    encoder_->EndTimer(timer_id, end_time, timeout_s, &status);
+
+    FXL_VLOG(1) << "AddTimerObservation("
+                << "timer_id:" << timer_id << ", start_time:" << start_time
+                << ", end_time:" << end_time << ") => "
+                << StatusToString(status);
+    if (status != cobalt::Status::OK) {
+      FXL_LOG(ERROR) << "AddTimerObservation() => " << StatusToString(status);
+      return false;
+    }
+  }
+
+  return CheckForSuccessfulSend(use_request_send_soon);
+}
+
+bool CobaltTestApp::EncodeMultipartTimerAndSend(
+    uint32_t metric_id, std::string part0, uint32_t encoding_id0,
+    std::string val0, std::string part1, uint32_t encoding_id1,
+    uint32_t start_time, uint32_t end_time, std::string timer_id,
+    uint32_t timeout_s, bool use_request_send_soon) {
+  for (int i = 0; i < num_observations_per_batch_; i++) {
+    cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
+    fidl::VectorPtr<ObservationValue> parts(1);
+    parts->at(0).name = part0;
+    parts->at(0).encoding_id = encoding_id0;
+    parts->at(0).value.set_string_value(val0);
+
+    encoder_->StartTimer(metric_id, encoding_id1, timer_id, start_time,
+                         timeout_s, &status);
+    encoder_->EndTimerMultiPart(timer_id, end_time, part1, std::move(parts),
+                                timeout_s, &status);
+
+    FXL_VLOG(1) << "AddMultipartTimerObservation("
+                << "timer_id:" << timer_id << ", start_time:" << start_time
+                << ", end_time:" << end_time << ") => "
+                << StatusToString(status);
+    if (status != cobalt::Status::OK) {
+      FXL_LOG(ERROR) << "AddMultipartTimerObservation() => "
+                     << StatusToString(status);
+      return false;
+    }
+  }
+
+  return CheckForSuccessfulSend(use_request_send_soon);
+}
+
 bool CobaltTestApp::EncodeStringPairAndSend(uint32_t metric_id,
                                             std::string part0,
                                             uint32_t encoding_id0,
@@ -646,7 +767,8 @@ bool CobaltTestApp::EncodeStringPairAndSend(uint32_t metric_id,
     FXL_VLOG(1) << "AddMultipartObservation(" << val0 << ", " << val1 << ") => "
                 << StatusToString(status);
     if (status != cobalt::Status::OK) {
-      FXL_LOG(ERROR) << "AddIndexObservation() => " << StatusToString(status);
+      FXL_LOG(ERROR) << "AddMultipartObservation() => "
+                     << StatusToString(status);
       return false;
     }
   }
