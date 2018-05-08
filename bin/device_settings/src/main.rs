@@ -220,7 +220,7 @@ fn main_ds() -> Result<(), Error> {
                 watchers: watchers.clone(),
             };
 
-            d.initialize_keys(DATA_DIR, &["Timezone", "TestSetting"]);
+            d.initialize_keys(DATA_DIR, &["DeviceName", "TestSetting"]);
 
             async::spawn(device_settings_server(d, channel))
         }))
