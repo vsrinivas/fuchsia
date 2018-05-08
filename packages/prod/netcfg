@@ -1,0 +1,5 @@
+{
+  "packages": {
+    "netcfg": "//garnet/bin/netcfg"
+  }
+}

@@ -1,0 +1,57 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/package.gni")
+
+rustc_binary("bin") {
+  with_unit_tests = true
+  deps = [
+  "//garnet/public/lib/device_settings/fidl:fidl-rustc",
+  "//garnet/public/rust/crates/fuchsia-app:fuchsia-app-rustc",
+  "//garnet/public/rust/crates/fuchsia-async:fuchsia-async-rustc",
+  "//garnet/public/rust/crates/fuchsia-zircon:fuchsia-zircon-rustc",
+  "//third_party/rust-crates/rustc_deps:failure",
+  "//third_party/rust-crates/rustc_deps:futures",
+  "//third_party/rust-crates/rustc_deps:serde",
+  "//third_party/rust-crates/rustc_deps:serde_derive",
+  "//third_party/rust-crates/rustc_deps:serde_json",
+  ]
+
+  name = "netcfg"
+}
+
+package("netcfg") {
+
+  deps = [
+    ":bin",
+  ]
+
+  binary = "rust_crates/netcfg"
+
+  meta = [
+    {
+      path = rebase_path("meta/sandbox")
+      dest = "sandbox"
+    },
+  ]
+
+  resources = [
+    {
+        path = rebase_path("config/default.json")
+        dest = "default.json"
+    },
+  ]
+}
+
+package("config") {
+  deprecated_system_image = true
+  package_name = "netcfg_config"
+  resources = [
+    {
+      dest = "sysmgr/netcfg.config"
+      path = rebase_path("netcfg.config")
+    },
+  ]
+}
