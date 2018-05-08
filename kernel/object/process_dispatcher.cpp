@@ -62,11 +62,12 @@ zx_status_t ProcessDispatcher::Create(
     fbl::RefPtr<VmAddressRegionDispatcher>* root_vmar_disp,
     zx_rights_t* root_vmar_rights) {
     fbl::AllocChecker ac;
-    fbl::unique_ptr<ProcessDispatcher> process(new (&ac) ProcessDispatcher(job, name, flags));
+    fbl::RefPtr<ProcessDispatcher> process =
+        fbl::AdoptRef(new (&ac) ProcessDispatcher(job, name, flags));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    if (!job->AddChildProcess(process.get()))
+    if (!job->AddChildProcess(process))
         return ZX_ERR_BAD_STATE;
 
     zx_status_t result = process->Initialize();
@@ -84,7 +85,7 @@ zx_status_t ProcessDispatcher::Create(
     }
 
     *rights = ZX_DEFAULT_PROCESS_RIGHTS;
-    *dispatcher = fbl::AdoptRef<Dispatcher>(process.release());
+    *dispatcher = fbl::move(process);
     *root_vmar_disp = DownCastDispatcher<VmAddressRegionDispatcher>(
             &new_vmar_dispatcher);
 

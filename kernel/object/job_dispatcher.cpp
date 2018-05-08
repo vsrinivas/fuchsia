@@ -131,7 +131,7 @@ zx_status_t JobDispatcher::Create(uint32_t flags,
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    if (!parent->AddChildJob(job.get())) {
+    if (!parent->AddChildJob(job)) {
         return ZX_ERR_BAD_STATE;
     }
 
@@ -204,26 +204,26 @@ zx_koid_t JobDispatcher::get_related_koid() const {
     return parent_ ? parent_->get_koid() : 0u;
 }
 
-bool JobDispatcher::AddChildProcess(ProcessDispatcher* process) {
+bool JobDispatcher::AddChildProcess(const fbl::RefPtr<ProcessDispatcher>& process) {
     canary_.Assert();
 
     AutoLock lock(get_lock());
     if (state_ != State::READY)
         return false;
-    procs_.push_back(process);
+    procs_.push_back(process.get());
     ++process_count_;
     UpdateSignalsIncrementLocked();
     return true;
 }
 
-bool JobDispatcher::AddChildJob(JobDispatcher* job) {
+bool JobDispatcher::AddChildJob(const fbl::RefPtr<JobDispatcher>& job) {
     canary_.Assert();
 
     AutoLock lock(get_lock());
     if (state_ != State::READY)
         return false;
 
-    jobs_.push_back(job);
+    jobs_.push_back(job.get());
     ++job_count_;
     UpdateSignalsIncrementLocked();
     return true;

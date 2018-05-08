@@ -106,7 +106,7 @@ public:
     // used by the killer thread to avoid jobs whose capped importance is
     // IMMORTAL.
 
-    bool AddChildProcess(ProcessDispatcher* process);
+    bool AddChildProcess(const fbl::RefPtr<ProcessDispatcher>& process);
     void RemoveChildProcess(ProcessDispatcher* process);
     void Kill();
 
@@ -164,7 +164,7 @@ private:
     // method may return ZX_JOB_IMPORTANCE_INHERITED.
     zx_job_importance_t GetRawImportance() const;
 
-    bool AddChildJob(JobDispatcher* job);
+    bool AddChildJob(const fbl::RefPtr<JobDispatcher>& job);
     void RemoveChildJob(JobDispatcher* job);
 
     void UpdateSignalsIncrementLocked() TA_REQ(get_lock());
