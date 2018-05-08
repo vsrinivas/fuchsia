@@ -24,6 +24,7 @@
 #include "garnet/bin/appmgr/runtime_metadata.h"
 #include "garnet/bin/appmgr/sandbox_metadata.h"
 #include "garnet/bin/appmgr/url_resolver.h"
+#include "garnet/bin/appmgr/util.h"
 #include "garnet/lib/far/format.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/handles/object_info.h"
@@ -63,13 +64,6 @@ std::vector<const char*> GetArgv(const std::string& argv0,
   return argv;
 }
 
-std::string GetLabelFromURL(const std::string& url) {
-  size_t last_slash = url.rfind('/');
-  if (last_slash == std::string::npos || last_slash + 1 == url.length())
-    return url;
-  return url.substr(last_slash + 1);
-}
-
 void PushFileDescriptor(fuchsia::sys::FileDescriptorPtr fd, int new_fd,
                         std::vector<uint32_t>* ids,
                         std::vector<zx_handle_t>* handles) {
@@ -96,7 +90,7 @@ zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data,
   if (!data)
     return zx::process();
 
-  std::string label = GetLabelFromURL(launch_info.url);
+  std::string label = util::GetLabelFromURL(launch_info.url);
   std::vector<const char*> argv = GetArgv(argv0, launch_info);
 
   std::vector<uint32_t> ids;
@@ -159,43 +153,6 @@ LaunchType Classify(const zx::vmo& data, std::string* runner) {
   if (memcmp(magic.data(), &archive::kMagic, sizeof(archive::kMagic)) == 0)
     return LaunchType::kArchive;
   return LaunchType::kProcess;
-}
-
-struct ExportedDirChannels {
-  // The client side of the channel serving connected application's exported
-  // dir.
-  zx::channel exported_dir;
-
-  // The server side of our client's |LaunchInfo.directory_request|.
-  zx::channel client_request;
-};
-
-ExportedDirChannels BindDirectory(LaunchInfo* launch_info) {
-  zx::channel exported_dir_server, exported_dir_client;
-  zx_status_t status =
-      zx::channel::create(0u, &exported_dir_server, &exported_dir_client);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create channel for service directory: status="
-                   << status;
-    return {zx::channel(), zx::channel()};
-  }
-
-  auto client_request = std::move(launch_info->directory_request);
-  launch_info->directory_request = std::move(exported_dir_server);
-  return {std::move(exported_dir_client), std::move(client_request)};
-}
-
-std::string GetArgsString(
-    const ::fidl::VectorPtr<::fidl::StringPtr>& arguments) {
-  std::string args = "";
-  if (!arguments->empty()) {
-    std::ostringstream buf;
-    std::copy(arguments->begin(), arguments->end() - 1,
-              std::ostream_iterator<std::string>(buf, " "));
-    buf << *arguments->rbegin();
-    args = buf.str();
-  }
-  return args;
 }
 
 }  // namespace
@@ -292,7 +249,8 @@ void Realm::CreateNestedJob(
 
 void Realm::CreateComponent(
     LaunchInfo launch_info,
-    fidl::InterfaceRequest<ComponentController> controller) {
+    fidl::InterfaceRequest<ComponentController> controller,
+    ComponentObjectCreatedCallback callback) {
   if (launch_info.url.get().empty()) {
     FXL_LOG(ERROR) << "Cannot create application because launch_info contains"
                       " an empty url";
@@ -310,7 +268,8 @@ void Realm::CreateComponent(
   fidl::StringPtr url = launch_info.url;
   loader_->LoadComponent(
       url, fxl::MakeCopyable([this, launch_info = std::move(launch_info),
-                              controller = std::move(controller)](
+                              controller = std::move(controller),
+                              callback = fbl::move(callback)](
                                  PackagePtr package) mutable {
         fxl::RefPtr<Namespace> ns = default_namespace_;
         if (launch_info.additional_services) {
@@ -327,18 +286,18 @@ void Realm::CreateComponent(
               case LaunchType::kProcess:
                 CreateComponentWithProcess(
                     std::move(package), std::move(launch_info),
-                    std::move(controller), std::move(ns));
+                    std::move(controller), std::move(ns), fbl::move(callback));
                 break;
               case LaunchType::kArchive:
                 CreateComponentFromPackage(
                     std::move(package), std::move(launch_info),
-                    std::move(controller), std::move(ns));
+                    std::move(controller), std::move(ns), fbl::move(callback));
                 break;
             }
           } else if (package->directory) {
-            CreateComponentFromPackage(std::move(package),
-                                       std::move(launch_info),
-                                       std::move(controller), std::move(ns));
+            CreateComponentFromPackage(
+                std::move(package), std::move(launch_info),
+                std::move(controller), std::move(ns), fbl::move(callback));
           }
         }
       }));
@@ -403,7 +362,7 @@ void Realm::AddBinding(fidl::InterfaceRequest<Environment> environment) {
 void Realm::CreateComponentWithProcess(
     PackagePtr package, LaunchInfo launch_info,
     fidl::InterfaceRequest<ComponentController> controller,
-    fxl::RefPtr<Namespace> ns) {
+    fxl::RefPtr<Namespace> ns, ComponentObjectCreatedCallback callback) {
   zx::channel svc = ns->services().OpenAsDirectory();
   if (!svc)
     return;
@@ -425,9 +384,9 @@ void Realm::CreateComponentWithProcess(
   if (!fsl::SizedVmo::FromTransport(std::move(*package->data), &executable))
     return;
 
-  const std::string args = GetArgsString(launch_info.arguments);
+  const std::string args = util::GetArgsString(launch_info.arguments);
   const std::string url = launch_info.url;  // Keep a copy before moving it.
-  auto channels = BindDirectory(&launch_info);
+  auto channels = util::BindDirectory(&launch_info);
   zx::process process =
       CreateProcess(job_for_child_, std::move(executable), url,
                     std::move(launch_info), zx::channel(), builder.Build());
@@ -435,12 +394,15 @@ void Realm::CreateComponentWithProcess(
   if (process) {
     auto application = std::make_unique<ComponentControllerImpl>(
         std::move(controller), this, nullptr, std::move(process), url,
-        std::move(args), GetLabelFromURL(url), std::move(ns),
+        std::move(args), util::GetLabelFromURL(url), std::move(ns),
         ExportedDirType::kPublicDebugCtrlLayout,
         std::move(channels.exported_dir), std::move(channels.client_request));
     // update hub
     hub_.AddComponent(application->HubInfo());
     ComponentControllerImpl* key = application.get();
+    if (callback != nullptr) {
+      callback(key);
+    }
     applications_.emplace(key, std::move(application));
   }
 }
@@ -448,7 +410,7 @@ void Realm::CreateComponentWithProcess(
 void Realm::CreateComponentFromPackage(
     PackagePtr package, LaunchInfo launch_info,
     fidl::InterfaceRequest<ComponentController> controller,
-    fxl::RefPtr<Namespace> ns) {
+    fxl::RefPtr<Namespace> ns, ComponentObjectCreatedCallback callback) {
   zx::channel svc = ns->services().OpenAsDirectory();
   if (!svc)
     return;
@@ -534,9 +496,9 @@ void Realm::CreateComponentFromPackage(
   builder.AddFlatNamespace(std::move(launch_info.flat_namespace));
 
   if (app_data) {
-    const std::string args = GetArgsString(launch_info.arguments);
+    const std::string args = util::GetArgsString(launch_info.arguments);
     const std::string url = launch_info.url;  // Keep a copy before moving it.
-    auto channels = BindDirectory(&launch_info);
+    auto channels = util::BindDirectory(&launch_info);
     zx::process process = CreateProcess(
         job_for_child_, std::move(app_data), kAppArv0, std::move(launch_info),
         std::move(loader_service), builder.Build());
@@ -544,12 +506,15 @@ void Realm::CreateComponentFromPackage(
     if (process) {
       auto application = std::make_unique<ComponentControllerImpl>(
           std::move(controller), this, std::move(pkg_fs), std::move(process),
-          url, std::move(args), GetLabelFromURL(url), std::move(ns),
+          url, std::move(args), util::GetLabelFromURL(url), std::move(ns),
           exported_dir_layout, std::move(channels.exported_dir),
           std::move(channels.client_request));
       // update hub
       hub_.AddComponent(application->HubInfo());
       ComponentControllerImpl* key = application.get();
+      if (callback != nullptr) {
+        callback(key);
+      }
       applications_.emplace(key, std::move(application));
     }
   } else {
@@ -589,14 +554,11 @@ RunnerHolder* Realm::GetOrCreateRunner(const std::string& runner) {
     LaunchInfo runner_launch_info;
     runner_launch_info.url = runner;
     runner_launch_info.directory_request = runner_services.NewRequest();
-    CreateComponent(std::move(runner_launch_info),
-                    runner_controller.NewRequest());
-
-    runner_controller.set_error_handler(
+    result.first->second = std::make_unique<RunnerHolder>(
+        std::move(runner_services), std::move(runner_controller),
+        std::move(runner_launch_info), this,
         [this, runner] { runners_.erase(runner); });
 
-    result.first->second = std::make_unique<RunnerHolder>(
-        std::move(runner_services), std::move(runner_controller));
   } else if (!result.first->second) {
     // There was a cycle in the runner graph.
     FXL_LOG(ERROR) << "Detected a cycle in the runner graph for " << runner

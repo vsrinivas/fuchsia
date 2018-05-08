@@ -27,7 +27,10 @@ zx_status_t Hub::AddEntry(fbl::String name, fbl::String value) {
                             }))));
 }
 
-zx_status_t Hub::CreateComponentDir() {
+zx_status_t Hub::EnsureComponentDir() {
+  if (component_dir_) {
+    return ZX_OK;
+  }
   component_dir_ = fbl::AdoptRef(new fs::PseudoDir());
   return AddEntry("c", component_dir_);
 }

@@ -42,6 +42,8 @@ source_set("lib") {
     "sandbox_metadata.h",
     "url_resolver.cc",
     "url_resolver.h",
+    "util.cc",
+    "util.h",
   ]
 
   public_deps = [
@@ -87,6 +89,7 @@ executable("tests") {
     "namespace_builder_unittest.cc",
     "runtime_metadata_unittest.cc",
     "sandbox_metadata_unittest.cc",
+    "util_unittest.cc",
   ]
 
   deps = [

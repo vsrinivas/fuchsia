@@ -34,12 +34,11 @@ class Hub {
     return AddEntry("job-id", fbl::move(koid));
   }
 
+  zx_status_t EnsureComponentDir();
   zx_status_t AddComponent(const HubInfo& hub_info);
   zx_status_t RemoveComponent(const HubInfo& hub_info);
 
  protected:
-  zx_status_t CreateComponentDir();
-
   fbl::RefPtr<fs::PseudoDir> dir_;
   fbl::RefPtr<fs::PseudoDir> component_dir_;
 

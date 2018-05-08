@@ -21,6 +21,7 @@
 #include "garnet/bin/appmgr/namespace.h"
 #include "garnet/bin/appmgr/runner_holder.h"
 #include "lib/fidl/cpp/binding_set.h"
+#include "lib/fit/function.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_view.h"
@@ -47,8 +48,12 @@ class Realm {
                        fidl::InterfaceRequest<EnvironmentController> controller,
                        fidl::StringPtr label);
 
+  using ComponentObjectCreatedCallback =
+      fit::function<void(ComponentControllerImpl* component)>;
+
   void CreateComponent(LaunchInfo launch_info,
-                       fidl::InterfaceRequest<ComponentController> controller);
+                       fidl::InterfaceRequest<ComponentController> controller,
+                       ComponentObjectCreatedCallback callback = nullptr);
 
   // Removes the child realm from this realm and returns the owning
   // reference to the child's controller. The caller of this function typically
@@ -77,11 +82,14 @@ class Realm {
   void CreateComponentWithProcess(
       PackagePtr package, LaunchInfo launch_info,
       fidl::InterfaceRequest<ComponentController> controller,
-      fxl::RefPtr<Namespace> ns);
+      fxl::RefPtr<Namespace> ns,
+      ComponentObjectCreatedCallback callback = nullptr);
+
   void CreateComponentFromPackage(
       PackagePtr package, LaunchInfo launch_info,
       fidl::InterfaceRequest<ComponentController> controller,
-      fxl::RefPtr<Namespace> ns);
+      fxl::RefPtr<Namespace> ns,
+      ComponentObjectCreatedCallback callback = nullptr);
 
   zx::channel OpenRootInfoDir();
 
