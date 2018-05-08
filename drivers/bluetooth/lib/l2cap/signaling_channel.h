@@ -93,12 +93,15 @@ class SignalingChannel {
   void ProcessBrEdrSigSdu(const SDU& sdu);
   void ProcessPacket(const SignalingPacket& packet);
 
+  // Destroy all other members prior to this so they can use this for checking.
+  fxl::ThreadChecker thread_checker_;
+
   bool is_open_;
   l2cap::ScopedChannel chan_;
   hci::Connection::Role role_;
   uint16_t mtu_;
 
-  fxl::ThreadChecker thread_checker_;
+  fxl::WeakPtrFactory<SignalingChannel> weak_ptr_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SignalingChannel);
 };

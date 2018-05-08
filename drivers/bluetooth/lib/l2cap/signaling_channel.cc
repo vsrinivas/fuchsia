@@ -18,31 +18,33 @@ namespace internal {
 
 SignalingChannel::SignalingChannel(fbl::RefPtr<Channel> chan,
                                    hci::Connection::Role role)
-    : is_open_(true), chan_(std::move(chan)), role_(role) {
+    : is_open_(true), chan_(std::move(chan)), role_(role),
+      weak_ptr_factory_(this) {
   FXL_DCHECK(chan_);
   FXL_DCHECK(chan_->id() == kSignalingChannelId ||
              chan_->id() == kLESignalingChannelId);
 
-  // Note: No need to guard against invalid access as these callbacks are called
-  // on the L2CAP thread.
-  chan_->Activate(fbl::BindMember(this, &SignalingChannel::OnRxBFrame),
-                  fbl::BindMember(this, &SignalingChannel::OnChannelClosed),
+  // Note: No need to guard against out-of-thread access as these callbacks are
+  // called on the L2CAP thread.
+  auto self = weak_ptr_factory_.GetWeakPtr();
+  chan_->Activate([self](const SDU& sdu) { if (self) self->OnRxBFrame(sdu); },
+                  [self] { if (self) self->OnChannelClosed(); },
                   async_get_default());
 }
 
 SignalingChannel::~SignalingChannel() {
-  IsCreationThreadCurrent();
+  FXL_DCHECK(IsCreationThreadCurrent());
 }
 
 bool SignalingChannel::SendPacket(CommandCode code,
                                   uint8_t identifier,
                                   const common::ByteBuffer& data) {
-  IsCreationThreadCurrent();
+  FXL_DCHECK(IsCreationThreadCurrent());
   return Send(BuildPacket(code, identifier, data));
 }
 
 bool SignalingChannel::Send(std::unique_ptr<const common::ByteBuffer> packet) {
-  IsCreationThreadCurrent();
+  FXL_DCHECK(IsCreationThreadCurrent());
   FXL_DCHECK(packet);
   FXL_DCHECK(packet->size() >= sizeof(CommandHeader));
 
@@ -101,14 +103,14 @@ bool SignalingChannel::SendCommandReject(uint8_t identifier,
 }
 
 void SignalingChannel::OnChannelClosed() {
-  IsCreationThreadCurrent();
+  FXL_DCHECK(IsCreationThreadCurrent());
   FXL_DCHECK(is_open());
 
   is_open_ = false;
 }
 
 void SignalingChannel::OnRxBFrame(const SDU& sdu) {
-  IsCreationThreadCurrent();
+  FXL_DCHECK(IsCreationThreadCurrent());
 
   if (!is_open())
     return;

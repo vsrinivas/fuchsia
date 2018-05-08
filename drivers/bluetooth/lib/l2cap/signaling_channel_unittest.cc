@@ -54,16 +54,26 @@ class L2CAP_SignalingChannelTest : public testing::FakeChannelTest {
     ChannelOptions options(kLESignalingChannelId);
     options.conn_handle = kTestHandle;
 
-    auto fake_chan = CreateFakeChannel(options);
-    sig_ = std::make_unique<TestSignalingChannel>(std::move(fake_chan));
+    fake_channel_inst_ = CreateFakeChannel(options);
+    sig_ = std::make_unique<TestSignalingChannel>(fake_channel_inst_);
   }
 
-  void TearDown() override { sig_ = nullptr; }
+  void TearDown() override {
+    // Unless a test called DestroySig(), the signaling channel will outlive the
+    // underlying channel.
+    fake_channel_inst_ = nullptr;
+    DestroySig();
+  }
 
   TestSignalingChannel* sig() const { return sig_.get(); }
 
+  void DestroySig() { sig_ = nullptr; }
+
  private:
   std::unique_ptr<TestSignalingChannel> sig_;
+
+  // Own the fake channel so that its lifetime can span beyond that of |sig_|.
+  fbl::RefPtr<Channel> fake_channel_inst_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(L2CAP_SignalingChannelTest);
 };
@@ -204,6 +214,23 @@ TEST_F(L2CAP_SignalingChannelTest, HandlePacket) {
 
   RunUntilIdle();
   EXPECT_TRUE(called);
+}
+
+TEST_F(L2CAP_SignalingChannelTest, UseChannelAfterSignalFree) {
+  // Destroy the underlying channel's user (SignalingChannel).
+  DestroySig();
+
+  // Ensure that the underlying channel is still alive.
+  ASSERT_TRUE(static_cast<bool>(fake_chan()));
+
+  // SignalingChannel is expected to deactivate the channel if it doesn't own
+  // it. Either way, the channel isn't in a state that can receive test data.
+  EXPECT_FALSE(fake_chan()->activated());
+
+  // Ensure that closing the channel (possibly firing callback) is OK.
+  fake_chan()->Close();
+
+  RunUntilIdle();
 }
 
 }  // namespace
