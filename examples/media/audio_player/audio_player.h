@@ -23,10 +23,8 @@ class AudioPlayer {
   ~AudioPlayer();
 
  private:
-  // Handles a status update from the player. When called with the default
-  // argument values, initiates status updates.
-  void HandleStatusUpdates(uint64_t version = media::kInitialStatus,
-                           media_player::MediaPlayerStatusPtr status = nullptr);
+  // Handles a status update from the player.
+  void HandleStatusChanged(const media_player::MediaPlayerStatus& status);
 
   fxl::Closure quit_callback_;
   media_player::MediaPlayerPtr media_player_;

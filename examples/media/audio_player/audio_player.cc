@@ -37,6 +37,9 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params,
 
   media_player_ =
       application_context->ConnectToEnvironmentService<MediaPlayer>();
+  media_player_.events().StatusChanged = [this](MediaPlayerStatus status) {
+    HandleStatusChanged(status);
+  };
 
   if (!params.service_name().empty()) {
     auto net_media_service =
@@ -61,66 +64,56 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params,
 
     media_player_->Play();
   }
-
-  HandleStatusUpdates();
 }
 
 AudioPlayer::~AudioPlayer() {}
 
-void AudioPlayer::HandleStatusUpdates(uint64_t version,
-                                      MediaPlayerStatusPtr status) {
-  if (status) {
-    // Process status received from the player.
-    if (status->end_of_stream && quit_when_done_) {
-      quit_callback_();
-      FXL_LOG(INFO) << "Reached end-of-stream. Quitting.";
-    }
-
-    if (status->problem) {
-      if (!problem_shown_) {
-        FXL_DLOG(INFO) << "PROBLEM: " << status->problem->type << ", "
-                       << status->problem->details;
-        problem_shown_ = true;
-        if (quit_when_done_) {
-          quit_callback_();
-          FXL_LOG(INFO) << "Problem detected. Quitting.";
-        }
-      }
-    } else {
-      problem_shown_ = false;
-    }
-
-    if (status->metadata && !metadata_shown_) {
-      FXL_LOG(INFO) << "duration   " << std::fixed << std::setprecision(1)
-                    << double(status->metadata->duration) / 1000000000.0
-                    << " seconds";
-      if (status->metadata->title) {
-        FXL_LOG(INFO) << "title      " << status->metadata->title;
-      }
-      if (status->metadata->artist) {
-        FXL_LOG(INFO) << "artist     " << status->metadata->artist;
-      }
-      if (status->metadata->album) {
-        FXL_LOG(INFO) << "album      " << status->metadata->album;
-      }
-      if (status->metadata->publisher) {
-        FXL_LOG(INFO) << "publisher  " << status->metadata->publisher;
-      }
-      if (status->metadata->genre) {
-        FXL_LOG(INFO) << "genre      " << status->metadata->genre;
-      }
-      if (status->metadata->composer) {
-        FXL_LOG(INFO) << "composer   " << status->metadata->composer;
-      }
-      metadata_shown_ = true;
-    }
+void AudioPlayer::HandleStatusChanged(
+    const media_player::MediaPlayerStatus& status) {
+  // Process status received from the player.
+  if (status.end_of_stream && quit_when_done_) {
+    quit_callback_();
+    FXL_LOG(INFO) << "Reached end-of-stream. Quitting.";
   }
 
-  // Request a status update.
-  media_player_->GetStatus(
-      version, [this](uint64_t version, MediaPlayerStatus status) {
-        HandleStatusUpdates(version, fidl::MakeOptional(std::move(status)));
-      });
+  if (status.problem) {
+    if (!problem_shown_) {
+      FXL_DLOG(INFO) << "PROBLEM: " << status.problem->type << ", "
+                     << status.problem->details;
+      problem_shown_ = true;
+      if (quit_when_done_) {
+        quit_callback_();
+        FXL_LOG(INFO) << "Problem detected. Quitting.";
+      }
+    }
+  } else {
+    problem_shown_ = false;
+  }
+
+  if (status.metadata && !metadata_shown_) {
+    FXL_LOG(INFO) << "duration   " << std::fixed << std::setprecision(1)
+                  << double(status.metadata->duration) / 1000000000.0
+                  << " seconds";
+    if (status.metadata->title) {
+      FXL_LOG(INFO) << "title      " << status.metadata->title;
+    }
+    if (status.metadata->artist) {
+      FXL_LOG(INFO) << "artist     " << status.metadata->artist;
+    }
+    if (status.metadata->album) {
+      FXL_LOG(INFO) << "album      " << status.metadata->album;
+    }
+    if (status.metadata->publisher) {
+      FXL_LOG(INFO) << "publisher  " << status.metadata->publisher;
+    }
+    if (status.metadata->genre) {
+      FXL_LOG(INFO) << "genre      " << status.metadata->genre;
+    }
+    if (status.metadata->composer) {
+      FXL_LOG(INFO) << "composer   " << status.metadata->composer;
+    }
+    metadata_shown_ = true;
+  }
 }
 
 }  // namespace examples
