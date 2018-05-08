@@ -1502,6 +1502,13 @@ static bool TestSliceAccessNonContiguousPhysical(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
+
+    // This takes 130sec on a fast desktop, target x86 non-kvm qemu.
+    // On the bots for arm it times out after 200sec.
+    // For now just disable the timeout. An alternative is to make it
+    // a large test, but then it won't get run for CQ/CI.
+    unittest_cancel_timeout();
+
     ASSERT_EQ(StartFVMTest(512, 1 << 20, 8lu * (1 << 20), ramdisk_path, fvm_driver), 0,
               "error mounting FVM");
     const size_t kDiskSize = use_real_disk ? test_block_size * test_block_count : 512 * (1 << 20);
