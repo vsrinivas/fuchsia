@@ -23,17 +23,17 @@ static const bootdata_mem_range_t mem_config[] = {
         .paddr = 0xf5800000,
         .length = 0x0a800000,
     },
+    // secmon_reserved:linux,secmon
     {
-        // linux,secmon
         .type = BOOTDATA_MEM_RANGE_RESERVED,
-        .paddr = 0,
-        .length = 0x400000,
+        .paddr = 0x05000000,
+        .length = 0x2400000,
     },
+	// logo_reserved:linux,meson-fb
     {
-    // linux,secos
         .type = BOOTDATA_MEM_RANGE_RESERVED,
-        .paddr = 0x05300000,
-        .length = 0x2000000,
+        .paddr = 0x5f800000,
+        .length = 0x800000,
     },
 };
 
