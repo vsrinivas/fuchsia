@@ -135,9 +135,6 @@ class SuggestionEngineImpl : public ContextListener,
                   fidl::InterfaceHandle<ContextWriter> context_writer,
                   fidl::InterfaceHandle<ContextReader> context_reader) override;
 
-  // re-ranks dirty channels and dispatches updates
-  void UpdateRanking();
-
   void Terminate(std::function<void()> done) { done(); }
 
  private:

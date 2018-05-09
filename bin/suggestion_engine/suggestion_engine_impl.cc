@@ -81,10 +81,6 @@ void SuggestionEngineImpl::Query(fidl::InterfaceHandle<QueryListener> listener,
   query_processor_.ExecuteQuery(std::move(input), count, std::move(listener));
 }
 
-void SuggestionEngineImpl::UpdateRanking() {
-  next_processor_.UpdateRanking();
-}
-
 // |SuggestionProvider|
 void SuggestionEngineImpl::SubscribeToInterruptions(
     fidl::InterfaceHandle<InterruptionListener> listener) {
@@ -137,7 +133,6 @@ void SuggestionEngineImpl::NotifyInteraction(fidl::StringPtr suggestion_uuid,
 
     if (suggestion_in_ask) {
       query_processor_.CleanUpPreviousQuery();
-      UpdateRanking();
     } else {
       RemoveNextProposal(suggestion->prototype->source_url, proposal.id);
     }
@@ -359,7 +354,7 @@ void SuggestionEngineImpl::OnContextUpdate(ContextUpdate update) {
       it.second->UpdateContext(result.second);
     }
   }
-  UpdateRanking();
+  next_processor_.UpdateRanking();
 }
 
 }  // namespace modular
