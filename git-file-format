@@ -34,7 +34,7 @@ CHECK_HEADER_GUARDS_TOOL = os.path.join(paths.FUCHSIA_ROOT, "scripts", "style",
                                         "check-header-guards.py")
 
 C_CMD = [
-    CLANG_TOOL, "-style=file", "-fallback-style=Chromium", "-sort-includes",
+    CLANG_TOOL, "-style=file", "-fallback-style=Google", "-sort-includes",
     "-i"
 ]
 DART_CMD = [DART_TOOL, "-w"]
