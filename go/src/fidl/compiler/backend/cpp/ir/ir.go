@@ -115,7 +115,7 @@ type Parameter struct {
 type Root struct {
 	PrimaryHeader string
 	Headers       []string
-	Namespace     string
+	Library       types.LibraryIdentifier
 	Decls         []Decl
 }
 
@@ -325,6 +325,14 @@ func changeIfReserved(i types.Identifier, ext string) string {
 	return str
 }
 
+func formatNamespace(library types.LibraryIdentifier) string {
+	parts := []string{}
+	for _, part := range library {
+		parts = append(parts, string(part))
+	}
+	return changeIfReserved(types.Identifier(strings.Join(parts, "::")), "")
+}
+
 func formatDestructor(eci types.EncodedCompoundIdentifier) string {
 	val := types.ParseCompoundIdentifier(eci)
 	return fmt.Sprintf("~%s", changeIfReserved(val.Name, ""))
@@ -353,8 +361,7 @@ func (c *compiler) compileCompoundIdentifier(eci types.EncodedCompoundIdentifier
 	val := types.ParseCompoundIdentifier(eci)
 	strs := []string{}
 	if c.isInExternalLibrary(val) {
-		// TODO(FIDL-160) handle more than one library name component
-		strs = append(strs, changeIfReserved(val.Library[0], ""))
+		strs = append(strs, formatNamespace(val.Library))
 	}
 	strs = append(strs, changeIfReserved(val.Name, ext))
 	return strings.Join(strs, "::")
@@ -621,14 +628,13 @@ func Compile(r types.Root) Root {
 	root := Root{}
 	library := types.ParseLibraryName(r.Name)
 	c := compiler{
-		// TODO(FIDL-160) handle more than one library name component
-		changeIfReserved(library[0], ""),
+		formatNamespace(library),
 		&r.Decls,
 		types.ParseLibraryName(r.Name),
 		string(r.Name),
 	}
 
-	root.Namespace = c.namespace
+	root.Library = library
 
 	decls := map[types.EncodedCompoundIdentifier]Decl{}
 

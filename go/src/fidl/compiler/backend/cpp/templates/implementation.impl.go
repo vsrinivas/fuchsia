@@ -14,10 +14,14 @@ const Implementation = `
 
 #include "lib/fidl/cpp/internal/implementation.h"
 
-namespace {{ .Namespace }} {
+{{- range .Library }}
+namespace {{ . }} {
+{{- end }}
 {{ end }}
 
 {{- define "GenerateImplementationPostamble" -}}
-}  // namespace {{ .Namespace }}
+{{- range .Library }}
+}
+{{- end }}
 {{ end }}
 `

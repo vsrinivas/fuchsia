@@ -18,11 +18,15 @@ const Header = `
 #include <{{ . }}>
 {{ end -}}
 
-namespace {{ .Namespace }} {
+{{- range .Library }}
+namespace {{ . }} {
+{{- end }}
 {{ end }}
 
 {{- define "GenerateHeaderPostamble" -}}
-}  // namespace {{ .Namespace }}
+{{- range .Library }}
+}
+{{- end }}
 {{ end }}
 
 {{- define "GenerateTraitsPreamble" -}}
