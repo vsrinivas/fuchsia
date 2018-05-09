@@ -21,7 +21,7 @@
 namespace modular {
 
 namespace {
-const std::string kInitialLinkValue = "{}";
+const char kInitialLinkValue[] = "{}";
 }  // namespace
 
 // Defined in incremental_link.cc.

@@ -223,11 +223,11 @@ void XdrModuleData(XdrContext* const xdr, ModuleData* const data) {
 }
 
 void XdrPerDeviceStoryInfo(XdrContext* const xdr,
-                           modular_private::PerDeviceStoryInfo* const info) {
-  xdr->Field("device", &info->device_id);
-  xdr->Field("id", &info->story_id);
-  xdr->Field("time", &info->timestamp);
-  xdr->Field("state", &info->state);
+                           modular_private::PerDeviceStoryInfo* const data) {
+  xdr->Field("device", &data->device_id);
+  xdr->Field("id", &data->story_id);
+  xdr->Field("time", &data->timestamp);
+  xdr->Field("state", &data->state);
 }
 
 }  // namespace

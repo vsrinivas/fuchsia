@@ -24,11 +24,6 @@ void XdrDeviceData(XdrContext* const xdr, DeviceMapEntry* const data) {
   xdr->Field("device_id", &data->device_id);
   xdr->Field("profile", &data->profile);
   xdr->Field("hostname", &data->hostname);
-
-  // TODO(jimbe) Remove error handler after 2017-12-01
-  // The time below is 26 Sep 2017 17:44:40 GMT, just to mark the entry as old.
-  xdr->ReadErrorHandler([data] { data->last_change_timestamp = 1506447879; })
-      ->Field("last_change_timestamp", &data->last_change_timestamp);
 }
 
 std::string LoadHostname() {
