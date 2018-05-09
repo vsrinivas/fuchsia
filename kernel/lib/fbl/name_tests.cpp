@@ -24,11 +24,12 @@ bool buffer_invariants_hold(const char* buf, size_t size) {
         }
     }
     idx++; // Skip the NUL
-    // The rest of the buffer should be filled with the |fill| byte.
+    // The rest of the buffer should be filled with the NUL byte
+    // to ensure stale data isn't leaked.
     while (idx < size) {
-        if (buf[idx] != fill) {
+        if (buf[idx] != '\0') {
             unittest_printf(
-                "buf[%d] 0x%02x != fill 0x%02x\n", idx, buf[idx], fill);
+                "buf[%d] 0x%02x != 0x00\n", idx, buf[idx]);
             return false;
         }
         idx++;
@@ -177,7 +178,9 @@ bool output_buffer_size() {
     EXPECT_EQ(out[OutSize - 1], 0, "");
 
     // Check that the extra fill is intact.
-    EXPECT_TRUE(buffer_invariants_hold(out, sizeof(out)), "");
+    EXPECT_TRUE(buffer_invariants_hold(out, OutSize), "");
+    EXPECT_EQ(out[OutSize], fill, "");
+    EXPECT_EQ(out[OutSize+1], fill, "");
 
     END_TEST;
 }

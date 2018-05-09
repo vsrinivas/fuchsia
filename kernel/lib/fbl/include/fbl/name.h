@@ -11,6 +11,7 @@
 #include <kernel/auto_lock.h>
 #include <kernel/spinlock.h>
 
+#include <zircon/compiler.h>
 #include <zircon/types.h>
 #include <zircon/thread_annotations.h>
 
@@ -42,7 +43,8 @@ public:
     // Copy the Name's data out. The written data is guaranteed to be
     // nul terminated, except when out_len is 0, in which case no data
     // is written.
-    void get(size_t out_len, char *out_name) const {
+    void get(size_t out_len, char *out_name) const __NONNULL((3)) {
+        memset(out_name, 0, out_len);
         if (out_len > 0u) {
             AutoSpinLock lock(&lock_);
             strlcpy(out_name, name_, min(out_len, Size));
@@ -51,7 +53,10 @@ public:
 
     // Reset the Name to the given data. This will be guaranteed to
     // be nul terminated, so the given data may be truncated.
-    zx_status_t set(const char* name, size_t len) {
+    zx_status_t set(const char* name, size_t len) __NONNULL((2)) {
+        // ignore characters after the first NUL
+        len = strnlen(name, len);
+
         if (len >= Size)
             len = Size - 1;
 

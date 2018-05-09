@@ -18,6 +18,7 @@
 #include <object/excp_port.h>
 #include <object/futex_node.h>
 
+#include <zircon/compiler.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
@@ -108,8 +109,8 @@ public:
     // accessors
     ProcessDispatcher* process() const { return process_.get(); }
 
-    zx_status_t set_name(const char* name, size_t len) final;
-    void get_name(char out_name[ZX_MAX_NAME_LEN]) const final;
+    zx_status_t set_name(const char* name, size_t len) final __NONNULL((2));
+    void get_name(char out_name[ZX_MAX_NAME_LEN]) const final __NONNULL((2));
     uint64_t runtime_ns() const { return thread_runtime(&thread_); }
 
     zx_status_t SetExceptionPort(fbl::RefPtr<ExceptionPort> eport);

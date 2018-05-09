@@ -598,7 +598,7 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
         case ZX_PROP_NAME: {
             if (size < ZX_MAX_NAME_LEN)
                 return ZX_ERR_BUFFER_TOO_SMALL;
-            char name[ZX_MAX_NAME_LEN];
+            char name[ZX_MAX_NAME_LEN] = {};
             dispatcher->get_name(name);
             if (_value.copy_array_to_user(name, ZX_MAX_NAME_LEN) != ZX_OK)
                 return ZX_ERR_INVALID_ARGS;

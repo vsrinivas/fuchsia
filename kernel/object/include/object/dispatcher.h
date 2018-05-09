@@ -9,6 +9,7 @@
 #include <err.h>
 #include <stdint.h>
 #include <stdint.h>
+#include <string.h>
 
 #include <fbl/auto_lock.h>
 #include <fbl/canary.h>
@@ -23,6 +24,7 @@
 #include <kernel/spinlock.h>
 #include <object/state_observer.h>
 
+#include <zircon/compiler.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
@@ -163,7 +165,9 @@ public:
 
     // get_name() will return a null-terminated name of ZX_MAX_NAME_LEN - 1 or fewer
     // characters.  For objects that don't have names it will be "".
-    virtual void get_name(char out_name[ZX_MAX_NAME_LEN]) const { out_name[0] = 0; }
+    virtual void get_name(char out_name[ZX_MAX_NAME_LEN]) const __NONNULL((2)) {
+        memset(out_name, 0, ZX_MAX_NAME_LEN);
+    }
 
     // set_name() will truncate to ZX_MAX_NAME_LEN - 1 and ensure there is a
     // terminating null

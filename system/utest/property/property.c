@@ -37,6 +37,21 @@ static bool test_name_property(zx_handle_t object) {
     char set_name[ZX_MAX_NAME_LEN];
     char get_name[ZX_MAX_NAME_LEN];
 
+    // name with extra garbage at the end
+    memset(set_name, 'A', sizeof(set_name));
+    set_name[1] = '\0';
+
+    EXPECT_EQ(zx_object_set_property(object, ZX_PROP_NAME,
+                                     set_name, sizeof(set_name)),
+              ZX_OK, "");
+    EXPECT_EQ(zx_object_get_property(object, ZX_PROP_NAME,
+                                     get_name, sizeof(get_name)),
+              ZX_OK, "");
+    EXPECT_EQ(get_name[0], 'A', "");
+    for (size_t i = 1; i < sizeof(get_name); i++) {
+        EXPECT_EQ(get_name[i], '\0', "");
+    }
+
     // empty name
     strcpy(set_name, "");
     EXPECT_EQ(zx_object_set_property(object, ZX_PROP_NAME,
@@ -77,6 +92,52 @@ static bool test_name_property(zx_handle_t object) {
     return true;
 }
 
+static bool job_name_test(void) {
+    BEGIN_TEST;
+
+    zx_handle_t testjob;
+    zx_status_t s = zx_job_create(zx_job_default(), 0, &testjob);
+    EXPECT_EQ(s, ZX_OK, "");
+
+    bool success = test_name_property(testjob);
+    if (!success)
+        return false;
+
+    zx_handle_close(testjob);
+    END_TEST;
+}
+
+static bool channel_name_test(void) {
+    BEGIN_TEST;
+
+    zx_handle_t channel1;
+    zx_handle_t channel2;
+    zx_status_t s = zx_channel_create(0, &channel1, &channel2);
+    EXPECT_EQ(s, ZX_OK, "");
+
+    char name[ZX_MAX_NAME_LEN];
+
+    memset(name, 'A', sizeof(name));
+    EXPECT_EQ(zx_object_get_property(channel1, ZX_PROP_NAME,
+                                     name, sizeof(name)),
+              ZX_OK, "");
+    for (size_t i = 0; i < sizeof(name); i++) {
+        EXPECT_EQ(name[i], '\0', "");
+    }
+
+    memset(name, 'A', sizeof(name));
+    EXPECT_EQ(zx_object_get_property(channel2, ZX_PROP_NAME,
+                                     name, sizeof(name)),
+              ZX_OK, "");
+    for (size_t i = 0; i < sizeof(name); i++) {
+        EXPECT_EQ(name[i], '\0', "");
+    }
+
+    zx_handle_close(channel1);
+    zx_handle_close(channel2);
+    END_TEST;
+}
+
 static bool process_name_test(void) {
     BEGIN_TEST;
 
@@ -107,11 +168,15 @@ static bool vmo_name_test(void) {
     ASSERT_EQ(zx_vmo_create(16, 0u, &vmo), ZX_OK, "");
     unittest_printf("VMO handle %d\n", vmo);
 
+    char name[ZX_MAX_NAME_LEN];
+    memset(name, 'A', sizeof(name));
+
     // Name should start out empty.
-    char name[ZX_MAX_NAME_LEN] = {'x', '\0'};
     EXPECT_EQ(zx_object_get_property(vmo, ZX_PROP_NAME, name, sizeof(name)),
               ZX_OK, "");
-    EXPECT_EQ(strcmp("", name), 0, "");
+    for (size_t i = 0; i < sizeof(name); i++) {
+        EXPECT_EQ(name[i], '\0', "");
+    }
 
     // Check the rest.
     bool success = test_name_property(vmo);
@@ -464,7 +529,9 @@ static bool gs_test(void) {
 BEGIN_TEST_CASE(property_tests)
 RUN_TEST(process_name_test);
 RUN_TEST(thread_name_test);
+RUN_TEST(job_name_test);
 RUN_TEST(vmo_name_test);
+RUN_TEST(channel_name_test);
 RUN_TEST(importance_smoke_test);
 RUN_TEST(bad_importance_value_fails);
 RUN_TEST(socket_buffer_test);
