@@ -1,23 +1,6 @@
 # Rust
 
-
 ## Targets
-
-### The Old
-
-There are two *deprecated* gn targets for building Rust:
-- [`rust_library`][target-library] defines a library which can be used by other
-targets;
-- [`rust_binary`][target-binary] defines an executable.
-
-Note that both targets can be used with the Fuchsia toolchain and with the host
-toolchain.
-
-These GN targets must be complemented by a
-[`Cargo.toml` manifest file][manifest] just like that of a regular Rust
-crate.
-
-### The New
 
 There are two new GN targets which should be used for new projects:
 - [`rustc_library`][target-library-rustc] defines a library which can be used
@@ -33,7 +16,23 @@ for integration with IDEs such as Intellij and VSCode, and for using the
 [`fargo`][fargo] tool to build and test targets without going through a full
 GN build and run cycle each time.
 
-### Migration
+## The Old Build System
+
+### Deprecated: Targets
+
+There are two *deprecated* gn targets for building Rust:
+- [`rust_library`][target-library] defines a library which can be used by other
+targets;
+- [`rust_binary`][target-binary] defines an executable.
+
+Note that both targets can be used with the Fuchsia toolchain and with the host
+toolchain.
+
+These GN targets must be complemented by a
+[`Cargo.toml` manifest file][manifest] just like that of a regular Rust
+crate.
+
+### Migration From Old to New
 
 Owners of existing targets should work to move to the `rustc_library` and
 `rustc_binary` rules. An example of such a migration can be seen
@@ -45,7 +44,7 @@ GN target. FIDL crates can be included by depending on the `fidl` target
 with a `-rustc` suffix appended, like
 `//garnet/lib/wlan/fidl:fidl-rustc` or `//garnet/lib/wlan/fidl:service-rustc`.
 
-## Workspace
+### Deprecated: Workspace
 
 `garnet/Cargo.toml` establishes a workspace for all the crates in the garnet
 subtree of Fuchsia. All crates in garnet that are part of the build must be listed
@@ -56,7 +55,7 @@ statement in the workspace file. Refer to the workspace file for examples.
 When adding a new crate to Garnet it is important to add it to both sections
 of the workspace file.
 
-## FIDL Facade Crates
+### Deprecated: FIDL Facade Crates
 
 A Cargo workspace requires that all crates in the workspace live in the same file
 system subtree as the workspace file. Fuchsia build system rules do not allow generated
@@ -65,7 +64,7 @@ in the garnet tree that locate the generated code at compile time and include it
 `include!()`. See `garnet/public/rust/fidl_crates/garnet_examples_fidl_services` for
 an example.
 
-## Non-Rust Dependencies
+### Deprecated: Non-Rust Dependencies
 
 If a Garnet Rust crate depends on something that cannot be expressed in Cargo it
 must specify that dependency in BUILD.gn. The most common case of this is when
@@ -107,38 +106,13 @@ tokio-core = "0.1"
 tokio-fuchsia = "0.1.0"
 ```
 
-## Testing
+### Deprecated: Testing
 
 Both `rust_library` and `rust_binary` have a `with_tests` attribute which, if
 set to _true_, will trigger unit tests associated with the target to be built
 alongside the target and packaged in a test executable.
 
 Integration tests are currently not supported.
-
-
-## GN build strategy
-
-Integration of Rust into build systems is still very much
-[a work in progress][build-integration]. It largely boils down to the decision
-of using the `rustc` compiler and handling dependencies directly in the build
-system, or letting the high-level [Cargo][cargo] package manager take care of
-most of the work. Here's a quick breakdown of how the two strategies compare:
-
-| Approach                                       | rustc        | cargo                                       |
-|------------------------------------------------|--------------|---------------------------------------------|
-| Integration cost                               | High         | Low                                         |
-| Redundancy of build steps                      | Low          | Medium                                      |
-| Handling of third-party deps                   | Fully manual | Automated with [cargo vendor][cargo-vendor] |
-| Granularity of third-party deps integration    | High         | Low                                         |
-| Handling of generated code (e.g. [FIDL][fidl]) | Fully manual | Fully manual                                |
-| Proximity to standard workflow                 | Low          | High                                        |
-
-Given the relatively low amount of Rust code we currently host in the Fuchsia
-source tree, the Cargo-based approach made more sense:
-- extra build costs remain low overall;
-- maintenance of the build system is straightforward;
-- familiar workflow for existing Rust developers.
-
 
 ## Building With a Custom Toolchain
 
