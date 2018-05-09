@@ -61,32 +61,19 @@ static inline struct arm64_percpu* arm64_read_percpu_ptr(void) {
 static inline uint32_t arm64_read_percpu_u32(size_t offset) {
     uint32_t val;
 
-    if (__builtin_constant_p(offset)) {
-        // mark as volatile to force a read of the field to make sure
-        // the compiler always emits a read when asked and does not cache
-        // a copy between
-        __asm__ volatile("ldr %w[val], [x18, %[offset]]"
-                         : [val] "=r"(val)
-                         : [offset] "I"(offset));
-    } else {
-        // not constant, use the register form
-        __asm__ volatile("ldr %w[val], [x18, %[offset]]"
-                         : [val] "=r"(val)
-                         : [offset] "r"(offset));
-    }
+    // mark as volatile to force a read of the field to make sure
+    // the compiler always emits a read when asked and does not cache
+    // a copy between
+    __asm__ volatile("ldr %w[val], [x18, %[offset]]"
+                     : [val] "=r"(val)
+                     : [offset] "Ir"(offset));
     return val;
 }
 
 static inline void arm64_write_percpu_u32(size_t offset, uint32_t val) {
-    if (__builtin_constant_p(offset)) {
-        __asm__("str %w[val], [x18, %[offset]]"
-                ::[val] "r"(val), [offset] "I"(offset)
-                : "memory");
-    } else {
-        __asm__("str %w[val], [x18, %[offset]]"
-                ::[val] "r"(val), [offset] "r"(offset)
-                : "memory");
-    }
+    __asm__("str %w[val], [x18, %[offset]]"
+            ::[val] "r"(val), [offset] "Ir"(offset)
+            : "memory");
 }
 
 static inline cpu_num_t arch_curr_cpu_num(void) {
