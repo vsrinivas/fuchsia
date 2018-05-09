@@ -23,30 +23,30 @@ OUT_DIR="$1"
 # Run "local" Ledger benchmarks.  These don't need external services to function
 # properly.
 
-runbench_exec "${OUT_DIR}/ledger.add_new_page" \
+runbench_exec "${OUT_DIR}/ledger.add_new_page.json" \
     trace record \
     --spec-file=/system/data/ledger/benchmark/add_new_page.tspec \
-    --benchmark-results-file="${OUT_DIR}/ledger.add_new_page"
+    --benchmark-results-file="${OUT_DIR}/ledger.add_new_page.json"
 
-runbench_exec "${OUT_DIR}/ledger.get_same_page" \
+runbench_exec "${OUT_DIR}/ledger.get_same_page.json" \
     trace record \
     --spec-file=/system/data/ledger/benchmark/get_same_page.tspec \
-    --benchmark-results-file="${OUT_DIR}/ledger.get_same_page"
+    --benchmark-results-file="${OUT_DIR}/ledger.get_same_page.json"
 
-runbench_exec "${OUT_DIR}/ledger.put" \
+runbench_exec "${OUT_DIR}/ledger.put.json" \
     trace record \
     --spec-file=/system/data/ledger/benchmark/put.tspec \
-    --benchmark-results-file="${OUT_DIR}/ledger.put"
+    --benchmark-results-file="${OUT_DIR}/ledger.put.json"
 
-runbench_exec "${OUT_DIR}/ledger.put_as_reference" \
+runbench_exec "${OUT_DIR}/ledger.put_as_reference.json" \
     trace record \
     --spec-file=/system/data/ledger/benchmark/put_as_reference.tspec \
-    --benchmark-results-file="${OUT_DIR}/ledger.put_as_reference"
+    --benchmark-results-file="${OUT_DIR}/ledger.put_as_reference.json"
 
-runbench_exec "${OUT_DIR}/ledger.transaction" \
+runbench_exec "${OUT_DIR}/ledger.transaction.json" \
     trace record \
     --spec-file=/system/data/ledger/benchmark/transaction.tspec \
-    --benchmark-results-file="${OUT_DIR}/ledger.transaction"
+    --benchmark-results-file="${OUT_DIR}/ledger.transaction.json"
 
 # Exit with a code indicating whether any errors occurred.
 runbench_finish "${OUT_DIR}"
