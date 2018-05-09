@@ -283,14 +283,14 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint get_story_info_null_{"StoryProvider.GetStoryInfo() is null"};
 
   void TestStoryProvider_GetStoryInfo_Null() {
-    story_provider_->GetStoryInfo("X",
-                                  [this](modular::StoryInfoPtr story_info) {
-                                    if (!story_info) {
-                                      get_story_info_null_.Pass();
-                                    }
+    story_provider_->GetStoryInfo(
+        "X", [this](modular::StoryInfoPtr story_info) {
+          if (!story_info) {
+            get_story_info_null_.Pass();
+          }
 
-                                    TestUserShellContext_GetLink();
-                                  });
+          TestUserShellContext_GetLink();
+        });
   }
 
   TestPoint get_link_{"UserShellContext.GetLink()"};
@@ -319,46 +319,18 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
       fidl::VectorPtr<modular::StoryInfo> stories) {
     if (stories->empty()) {
       get_story_info_.Pass();
-      TestStory1();
-      return;
     }
 
-    std::shared_ptr<unsigned int> count = std::make_shared<unsigned int>(0);
-    for (auto& story_info : *stories) {
-      fidl::StringPtr id = story_info.id;
-      story_provider_->GetStoryInfo(
-          id, [this, count, id,
-                     max = stories->size()](modular::StoryInfoPtr new_story_info) {
-            ++*count;
-
-            if (new_story_info) {
-              FXL_LOG(INFO) << "Previous story " << *count << " of " << max
-                            << " " << id << " " << new_story_info->url;
-            } else {
-              FXL_LOG(INFO) << "Previous story " << *count << " of " << max
-                            << " " << id << " was deleted";
-            }
-
-            if (*count == max) {
-              get_story_info_.Pass();
-              TestStory1();
-            }
-          });
-    }
+    TestStory1();
   }
 
   TestPoint story1_create_{"Story1 Create"};
 
   void TestStory1() {
-    const std::string& url = kCommonDoneModule;
-
-    modular::JsonDoc doc;
-    std::vector<std::string> segments{"example", url, "created-with-info"};
-    modular::CreatePointer(doc, segments.begin(), segments.end())
-        .Set(doc, true);
-
+    const std::string url = kCommonDoneModule;
+    const std::string initial_json = R"({"created-with-info": true})";
     story_provider_->CreateStoryWithInfo(url, nullptr /* extra_info */,
-                                         modular::JsonValueToString(doc),
+                                         initial_json,
                                          [this](fidl::StringPtr story_id) {
                                            story1_create_.Pass();
                                            TestStory1_GetController(story_id);
@@ -381,41 +353,40 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void TestStory1_Run() {
     story_done_watcher_.Continue([this] {
-      story_controller_->Stop([this] {
-        TeardownStoryController();
-        story1_run_.Pass();
-
-        // When the story is done, we start the next one.
-        async::PostTask(async_get_default(), [this] { TestStory2(); });
+        TestStory1_Stop();
       });
-    });
 
     story_done_watcher_.Watch(&story_controller_);
-
     story_modules_watcher_.Watch(&story_controller_);
     story_links_watcher_.Watch(&story_controller_);
 
     // Start and show the new story.
     fidl::InterfaceHandle<views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
+    story1_run_.Pass();
+  }
+
+  TestPoint story1_stop_{"Story1 Stop"};
+
+  void TestStory1_Stop() {
+    story_controller_->Stop([this] {
+        TeardownStoryController();
+        story1_stop_.Pass();
+
+        // When the story is done, we start the next one.
+        TestStory2();
+      });
   }
 
   TestPoint story2_create_{"Story2 Create"};
 
   void TestStory2() {
-    const std::string& url = kCommonNullModule;
-
-    modular::JsonDoc doc;
-    std::vector<std::string> segments{"example", url, "created-with-info"};
-    modular::CreatePointer(doc, segments.begin(), segments.end())
-        .Set(doc, true);
-
-    story_provider_->CreateStoryWithInfo(url, nullptr /* extra_info */,
-                                         modular::JsonValueToString(doc),
-                                         [this](fidl::StringPtr story_id) {
-                                           story2_create_.Pass();
-                                           TestStory2_GetController(story_id);
-                                         });
+    const std::string url = kCommonNullModule;
+    story_provider_->CreateStory(url,
+                                 [this](fidl::StringPtr story_id) {
+                                   story2_create_.Pass();
+                                   TestStory2_GetController(story_id);
+                                 });
   }
 
   TestPoint story2_get_controller_{"Story2 Get Controller"};
@@ -425,9 +396,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     story_controller_->GetInfo(
         [this](modular::StoryInfo story_info, modular::StoryState state) {
           story_info_ = std::move(story_info);
-
           story2_get_controller_.Pass();
-
           TestStory2_GetModules();
         });
   }
@@ -437,61 +406,39 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   void TestStory2_GetModules() {
     story_controller_->GetModules(
         [this](fidl::VectorPtr<modular::ModuleData> modules) {
-          story2_get_modules_.Pass();
-
-          FXL_LOG(INFO) << "TestUserShell MODULES:";
-          for (const auto& module_data : *modules) {
-            FXL_LOG(INFO) << "TestUserShell MODULE: url="
-                          << module_data.module_url;
-            std::string path;
-            for (const auto& path_element : *module_data.module_path) {
-              path.push_back(' ');
-              path.append(path_element);
-            }
-            if (!path.empty()) {
-              FXL_LOG(INFO) << "TestUserShell         path=" << path.substr(1);
-            }
+          if (modules->size() == 1) {
+            story2_get_modules_.Pass();
           }
 
           TestStory2_Run();
         });
   }
 
-  TestPoint story2_info_before_run_{"Story2 GetInfo before Run"};
-  TestPoint story2_run_{"Story2 Run"};
+  TestPoint story2_state_before_run_{"Story2 State before Run"};
+  TestPoint story2_state_after_run_{"Story2 State after Run"};
 
   void TestStory2_Run() {
-    story_controller_->GetInfo(
-        [this](modular::StoryInfo info, modular::StoryState state) {
-          story2_info_before_run_.Pass();
-          FXL_LOG(INFO) << "StoryState before Start(): " << state;
+    story_controller_->GetInfo([this](modular::StoryInfo info,
+                                      modular::StoryState state) {
+      if (state == modular::StoryState::INITIAL ||
+          state == modular::StoryState::STOPPED) {
+        story2_state_before_run_.Pass();
+      }
+    });
 
-          if (state != modular::StoryState::INITIAL &&
-              state != modular::StoryState::STOPPED) {
-            modular::testing::Fail(
-                "StoryState before Start() must be STARTING or RUNNING.");
-          }
-        });
-
-    // Start and show the new story.
+    // Start and show the new story *while* the GetInfo() call above is in
+    // flight.
     fidl::InterfaceHandle<views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
     story_controller_->GetInfo([this](modular::StoryInfo info,
                                       modular::StoryState state) {
-      story2_run_.Pass();
-
-      FXL_LOG(INFO) << "StoryState after Start(): " << state;
-
-      if (state != modular::StoryState::STARTING &&
-          state != modular::StoryState::RUNNING) {
-        modular::testing::Fail(
-            "StoryState after Start() must be STARTING or RUNNING.");
+      if (state == modular::StoryState::STARTING ||
+          state == modular::StoryState::RUNNING) {
+        story2_state_after_run_.Pass();
       }
 
-      async::PostDelayedTask(async_get_default(),
-                             [this] { TestStory2_DeleteStory(); },
-                             zx::sec(5));
+      TestStory2_DeleteStory();
     });
   }
 
