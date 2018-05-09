@@ -21,19 +21,19 @@ fi
 OUT_DIR="$1"
 
 # Benchmark example, here for demonstration.
-runbench_exec "${OUT_DIR}/benchmark_example" \
+runbench_exec "${OUT_DIR}/benchmark_example.json" \
     trace record \
     --spec-file=/system/data/benchmark_example/benchmark_example.tspec \
-    --benchmark-results-file="${OUT_DIR}/benchmark_example"
+    --benchmark-results-file="${OUT_DIR}/benchmark_example.json"
 
 # Performance tests implemented in the Zircon repo.
-runbench_exec "${OUT_DIR}/zircon.perf_test" \
-    /system/test/sys/perf-test -p --out="${OUT_DIR}/zircon.perf_test"
+runbench_exec "${OUT_DIR}/zircon.perf_test.json" \
+    /system/test/sys/perf-test -p --out="${OUT_DIR}/zircon.perf_test.json"
 
 # Performance tests implemented in the Garnet repo (the name
 # "zircon_benchmarks" is now misleading).
-runbench_exec "${OUT_DIR}/zircon_benchmarks" \
-    /system/bin/zircon_benchmarks -p --out="${OUT_DIR}/zircon_benchmarks"
+runbench_exec "${OUT_DIR}/zircon_benchmarks.json" \
+    /system/bin/zircon_benchmarks -p --out="${OUT_DIR}/zircon_benchmarks.json"
 
 # Exit with a code indicating whether any errors occurred.
 runbench_finish "${OUT_DIR}"
