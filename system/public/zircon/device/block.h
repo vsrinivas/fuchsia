@@ -42,8 +42,8 @@
 // otherwise, closing the client fifo is sufficient to shut down the server.
 #define IOCTL_BLOCK_FIFO_CLOSE \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 10)
-// Allocate a virtual partition with the requested length
-#define IOCTL_BLOCK_FVM_ALLOC \
+// Allocate a virtual partition with the requested length.
+#define IOCTL_BLOCK_FVM_ALLOC_PARTITION \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 11)
 // Extend a virtual partition.
 #define IOCTL_BLOCK_FVM_EXTEND \
@@ -52,7 +52,8 @@
 // freed, even if part of the requested range contains unallocated slices.
 #define IOCTL_BLOCK_FVM_SHRINK \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 13)
-#define IOCTL_BLOCK_FVM_DESTROY \
+// Given a handle to a partition, destroy it.
+#define IOCTL_BLOCK_FVM_DESTROY_PARTITION \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 14)
 // Returns the total number of vslices and slice size for an FVM partition
 #define IOCTL_BLOCK_FVM_QUERY \
@@ -166,8 +167,8 @@ typedef struct {
     uint32_t flags; // Refer to fvm.h for options here; default is zero.
 } alloc_req_t;
 
-// ssize_t ioctl_block_fvm_alloc(int fd, const alloc_req_t* req);
-IOCTL_WRAPPER_IN(ioctl_block_fvm_alloc, IOCTL_BLOCK_FVM_ALLOC, alloc_req_t);
+// ssize_t ioctl_block_fvm_alloc_partition(int fd, const alloc_req_t* req);
+IOCTL_WRAPPER_IN(ioctl_block_fvm_alloc_partition, IOCTL_BLOCK_FVM_ALLOC_PARTITION, alloc_req_t);
 
 typedef struct {
     size_t offset; // Both in units of "slice". "0" = slice 0, "1" = slice 1, etc...
@@ -180,8 +181,8 @@ IOCTL_WRAPPER_IN(ioctl_block_fvm_extend, IOCTL_BLOCK_FVM_EXTEND, extend_request_
 // ssize_t ioctl_block_fvm_shrink(int fd, const extend_request_t* request);
 IOCTL_WRAPPER_IN(ioctl_block_fvm_shrink, IOCTL_BLOCK_FVM_SHRINK, extend_request_t);
 
-// ssize_t ioctl_block_fvm_destroy(int fd);
-IOCTL_WRAPPER(ioctl_block_fvm_destroy, IOCTL_BLOCK_FVM_DESTROY);
+// ssize_t ioctl_block_fvm_destroy_partition(int fd);
+IOCTL_WRAPPER(ioctl_block_fvm_destroy_partition, IOCTL_BLOCK_FVM_DESTROY_PARTITION);
 
 typedef struct {
     bool allocated; // true if vslices are allocated, false otherwise

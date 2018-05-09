@@ -790,7 +790,7 @@ static bool TestDestroyDuringAccess(void) {
     // Let the background thread warm up a little bit...
     usleep(10000);
     // ... and destroy the vpartition
-    ASSERT_EQ(ioctl_block_fvm_destroy(vp_fd), 0);
+    ASSERT_EQ(ioctl_block_fvm_destroy_partition(vp_fd), 0);
 
     int res;
     ASSERT_EQ(thrd_join(thread, &res), thrd_success);
@@ -883,7 +883,7 @@ static bool TestVPartitionExtend(void) {
     // We can't allocate a new VPartition
     strcpy(request.name, kTestPartName2);
     memcpy(request.type, kTestPartGUIDBlob, GUID_LEN);
-    ASSERT_LT(ioctl_block_fvm_alloc(fd, &request), 0, "Couldn't allocate VPart");
+    ASSERT_LT(ioctl_block_fvm_alloc_partition(fd, &request), 0, "Couldn't allocate VPart");
 
     ASSERT_EQ(close(vp_fd), 0);
     ASSERT_EQ(close(fd), 0);
@@ -1218,13 +1218,13 @@ static bool TestVPartitionDestroy(void) {
     ASSERT_TRUE(CheckWriteReadBlock(sys_fd, 0, 1));
 
     // But not after we destroy the blob partition.
-    ASSERT_EQ(ioctl_block_fvm_destroy(blob_fd), 0);
+    ASSERT_EQ(ioctl_block_fvm_destroy_partition(blob_fd), 0);
     ASSERT_TRUE(CheckWriteReadBlock(data_fd, 0, 1));
     ASSERT_TRUE(CheckDeadBlock(blob_fd));
     ASSERT_TRUE(CheckWriteReadBlock(sys_fd, 0, 1));
 
     // We also can't re-destroy the blob partition.
-    ASSERT_LT(ioctl_block_fvm_destroy(blob_fd), 0);
+    ASSERT_LT(ioctl_block_fvm_destroy_partition(blob_fd), 0);
 
     // We also can't allocate slices to the destroyed blob partition.
     extend_request_t erequest;
@@ -1233,12 +1233,12 @@ static bool TestVPartitionDestroy(void) {
     ASSERT_LT(ioctl_block_fvm_extend(blob_fd, &erequest), 0);
 
     // Destroy the other two VPartitions.
-    ASSERT_EQ(ioctl_block_fvm_destroy(data_fd), 0);
+    ASSERT_EQ(ioctl_block_fvm_destroy_partition(data_fd), 0);
     ASSERT_TRUE(CheckDeadBlock(data_fd));
     ASSERT_TRUE(CheckDeadBlock(blob_fd));
     ASSERT_TRUE(CheckWriteReadBlock(sys_fd, 0, 1));
 
-    ASSERT_EQ(ioctl_block_fvm_destroy(sys_fd), 0);
+    ASSERT_EQ(ioctl_block_fvm_destroy_partition(sys_fd), 0);
     ASSERT_TRUE(CheckDeadBlock(data_fd));
     ASSERT_TRUE(CheckDeadBlock(blob_fd));
     ASSERT_TRUE(CheckDeadBlock(sys_fd));
@@ -2092,7 +2092,7 @@ static bool TestVPartitionUpgrade(void) {
     // Destroy and reallocate the first partition as inactive.
     vp_fd = open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr);
     ASSERT_GT(vp_fd, 0);
-    ASSERT_EQ(ioctl_block_fvm_destroy(vp_fd), 0);
+    ASSERT_EQ(ioctl_block_fvm_destroy_partition(vp_fd), 0);
     ASSERT_EQ(close(vp_fd), 0);
     request.flags = fvm::kVPartFlagInactive;
     memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
@@ -2802,7 +2802,7 @@ static bool TestRandomOpMultithreaded(void) {
         EXPECT_EQ(thrd_join(s.thread_states[i].thr, &r), thrd_success);
         EXPECT_EQ(r, 0);
         EXPECT_TRUE(CheckWriteReadBlock(s.thread_states[i].vp_fd, 0, kBlocksPerSlice));
-        EXPECT_EQ(ioctl_block_fvm_destroy(s.thread_states[i].vp_fd), 0);
+        EXPECT_EQ(ioctl_block_fvm_destroy_partition(s.thread_states[i].vp_fd), 0);
         EXPECT_EQ(close(s.thread_states[i].vp_fd), 0);
     }
 

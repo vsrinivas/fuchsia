@@ -608,7 +608,7 @@ zx_status_t fvm_stream_partitions(fbl::unique_fd src_fd) {
             // we checked earlier and verified that parts[p].old_part, if it exists,
             // is a vpartition.
             ssize_t r;
-            if ((r = ioctl_block_fvm_destroy(parts[p].old_part.get())) < 0) {
+            if ((r = ioctl_block_fvm_destroy_partition(parts[p].old_part.get())) < 0) {
                 ERROR("Couldn't destroy partition: %ld\n", r);
                 return static_cast<zx_status_t>(r);
             }

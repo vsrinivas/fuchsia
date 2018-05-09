@@ -307,7 +307,7 @@ zx_status_t fvm_destroy(const char* path) {
 // Helper function to allocate, find, and open VPartition.
 int fvm_allocate_partition(int fvm_fd, const alloc_req_t* request) {
     ssize_t r;
-    if ((r = ioctl_block_fvm_alloc(fvm_fd, request)) != ZX_OK) {
+    if ((r = ioctl_block_fvm_alloc_partition(fvm_fd, request)) != ZX_OK) {
         return -1;
     }
 
@@ -375,6 +375,6 @@ zx_status_t destroy_partition(const uint8_t* uniqueGUID, const uint8_t* typeGUID
     }
 
     xprintf("Destroying partition %s\n", path);
-    return static_cast<zx_status_t>(ioctl_block_fvm_destroy(fd.get()));
+    return static_cast<zx_status_t>(ioctl_block_fvm_destroy_partition(fd.get()));
 }
 #endif

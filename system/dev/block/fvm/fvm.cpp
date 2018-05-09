@@ -545,7 +545,7 @@ zx_status_t VPartitionManager::DdkIoctl(uint32_t op, const void* cmd,
                                         size_t cmdlen, void* reply, size_t max,
                                         size_t* out_actual) {
     switch (op) {
-    case IOCTL_BLOCK_FVM_ALLOC: {
+    case IOCTL_BLOCK_FVM_ALLOC_PARTITION: {
         if (cmdlen < sizeof(alloc_req_t))
             return ZX_ERR_BUFFER_TOO_SMALL;
         const alloc_req_t* request = static_cast<const alloc_req_t*>(cmd);
@@ -886,7 +886,7 @@ zx_status_t VPartition::DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen,
         }
         return mgr_->FreeSlices(this, request->offset, request->length);
     }
-    case IOCTL_BLOCK_FVM_DESTROY: {
+    case IOCTL_BLOCK_FVM_DESTROY_PARTITION: {
         return mgr_->FreeSlices(this, 0, mgr_->VSliceMax());
     }
     default:
