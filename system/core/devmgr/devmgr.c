@@ -18,6 +18,7 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/object.h>
 
 #include <fdio/namespace.h>
@@ -26,6 +27,9 @@
 #include "bootfs.h"
 #include "devmgr.h"
 #include "memfs-private.h"
+
+// Set this to switch back to the old crashlogger exception behavior
+// #define ENABLE_CRASHLOGGER 1
 
 // Global flag tracking if devmgr believes this is a full Fuchsia build
 // (requiring /system, etc) or not.
@@ -55,6 +59,7 @@ static zx_handle_t root_resource_handle;
 static zx_handle_t root_job_handle;
 static zx_handle_t svcs_job_handle;
 static zx_handle_t fuchsia_job_handle;
+static zx_handle_t exception_channel;
 
 zx_handle_t virtcon_open;
 
@@ -166,6 +171,72 @@ static int fuchsia_starter(void* arg) {
     return 0;
 }
 
+// Reads messages from crashsvc and launches analyzers for exceptions.
+int analyzer_starter(void* arg) {
+    for (;;) {
+        zx_signals_t observed;
+        zx_status_t status =
+            zx_object_wait_one(exception_channel, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                               ZX_TIME_INFINITE, &observed);
+        if (status != ZX_OK) {
+            printf("devmgr: analyzer_starter zx_object_wait_one failed: %d\n", status);
+            return 1;
+        }
+        if ((observed & ZX_CHANNEL_READABLE) == 0) {
+            printf("devmgr: analyzer_starter: peer closed\n");
+            return 1;
+        }
+
+        uint32_t exception_type;
+        zx_handle_t handles[2];
+        uint32_t actual_bytes, actual_handles;
+        status =
+            zx_channel_read(exception_channel, 0, &exception_type, handles, sizeof(exception_type),
+                            countof(handles), &actual_bytes, &actual_handles);
+        if (status != ZX_OK) {
+            printf("devmgr: zx_channel_read failed: %d\n", status);
+            continue;
+        }
+        if (actual_bytes != sizeof(exception_type) || actual_handles != countof(handles)) {
+            printf("devmgr: zx_channel_read unexpected read size: %d\n", status);
+            for (size_t i = 0; i < actual_handles; ++i) {
+                zx_handle_close(handles[i]);
+            }
+            continue;
+        }
+
+        // launchpad always takes ownership of handles (even on failure). It's
+        // necessary to resume the thread on failure otherwise the process will
+        // hang indefinitely, so copy the thread handle before launch.
+        zx_handle_t thread_handle;
+        status = zx_handle_duplicate(handles[1], ZX_RIGHT_SAME_RIGHTS, &thread_handle);
+        if (status != ZX_OK) {
+            printf("devmgr: analyzer_starter: thread handle duplicate failed: %d\n", status);
+            zx_handle_close(handles[0]);
+            zx_handle_close(handles[1]);
+            continue;
+        }
+
+        printf("devmgr: analyzer_starter: launching for exception type %d\n", exception_type);
+        char buf[9];
+        snprintf(buf, sizeof(buf), "%x", exception_type);
+        const char* argv_crashanalyzer[] = {"/boot/bin/crashanalyzer", buf};
+        uint32_t handle_types[] = {PA_HND(PA_USER0, 0), PA_HND(PA_USER0, 1)};
+        status =
+            devmgr_launch(svcs_job_handle, "analyzer", countof(argv_crashanalyzer), argv_crashanalyzer,
+                          NULL, -1, handles, handle_types, countof(handles), NULL, FS_ALL);
+        if (status != ZX_OK) {
+            printf("devmgr: analyzer_starter: launch failed: %d\n", status);
+            status = zx_task_resume(thread_handle, ZX_RESUME_EXCEPTION | ZX_RESUME_TRY_NEXT);
+            if (status != ZX_OK) {
+                printf("devmgr: analyzer_starter: zx_task_resume: %d\n", status);
+            }
+        }
+
+        zx_handle_close(thread_handle);
+    }
+}
+
 int service_starter(void* arg) {
     // Features like Intel Processor Trace need a dump of ld.so activity.
     // The output has a specific format, and will eventually be recorded
@@ -180,6 +251,7 @@ int service_starter(void* arg) {
         // It has its own check.
     }
 
+#ifdef ENABLE_CRASHLOGGER
     // Start crashlogger.
     if (!getenv_bool("crashlogger.disable", false)) {
         static const char* argv_crashlogger[] = {
@@ -214,6 +286,28 @@ int service_starter(void* arg) {
                           countof(handles), NULL, 0);
         }
     }
+#else
+    // Start crashsvc. Bind the exception port now, to avoid missing any crashes
+    // that might occur early on before crashsvc has finished initializing.
+    // crashsvc writes messages to the passed channel when an analyzer for an
+    // exception is required.
+    zx_handle_t exception_port, exception_channel_passed;
+    if (zx_port_create(0, &exception_port) == ZX_OK &&
+        zx_channel_create(0, &exception_channel, &exception_channel_passed) == ZX_OK &&
+        zx_task_bind_exception_port(root_job_handle, exception_port, 0, 0) == ZX_OK) {
+        thrd_t t;
+        if ((thrd_create_with_name(&t, analyzer_starter, NULL,
+                                   "analyzer-starter")) == thrd_success) {
+            thrd_detach(t);
+        }
+        zx_handle_t handles[] = {ZX_HANDLE_INVALID, exception_port, exception_channel_passed};
+        zx_handle_duplicate(root_job_handle, ZX_RIGHT_SAME_RIGHTS, &handles[0]);
+        uint32_t handle_types[] = {PA_HND(PA_USER0, 0), PA_HND(PA_USER0, 1), PA_HND(PA_USER0, 2)};
+        static const char* argv_crashsvc[] = { "/boot/bin/crashsvc" };
+        devmgr_launch(svcs_job_handle, "crashsvc", countof(argv_crashsvc), argv_crashsvc, NULL, -1,
+                      handles, handle_types, countof(handles), NULL, 0);
+    }
+#endif
 
     char vcmd[64];
     __UNUSED bool netboot = false;
