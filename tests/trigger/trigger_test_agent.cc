@@ -17,11 +17,11 @@ using modular::testing::TestPoint;
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestAgentApp : modular_test_trigger::TriggerTestService {
+class TestApp : modular_test_trigger::TriggerTestService {
  public:
   TestPoint initialized_{"Trigger test agent initialized"};
 
-  TestAgentApp(modular::AgentHost* const agent_host)
+  TestApp(modular::AgentHost* const agent_host)
       : agent_context_(agent_host->agent_context()) {
     modular::testing::Init(agent_host->application_context(), __FILE__);
     agent_context_->GetComponentContext(component_context_.NewRequest());
@@ -88,6 +88,8 @@ class TestAgentApp : modular_test_trigger::TriggerTestService {
   modular::MessageQueuePtr msg_queue_;
 
   fidl::BindingSet<modular_test_trigger::TriggerTestService> service_bindings_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace
@@ -95,8 +97,8 @@ class TestAgentApp : modular_test_trigger::TriggerTestService {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::AgentDriver<TestAgentApp> driver(app_context.get(),
-                                            [&loop] { loop.QuitNow(); });
+  modular::AgentDriver<TestApp> driver(app_context.get(),
+                                       [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

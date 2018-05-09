@@ -22,13 +22,14 @@
 #include "peridot/tests/chain/defs.h"
 #include "peridot/tests/common/defs.h"
 
-namespace modular {
+using modular::testing::TestPoint;
+
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp : public testing::ComponentBase<UserShell>,
-                StoryWatcher,
-                ModuleWatcher {
+class TestApp : public modular::testing::ComponentBase<modular::UserShell>,
+                modular::StoryWatcher,
+                modular::ModuleWatcher {
  public:
   TestApp(component::ApplicationContext* const application_context)
       : ComponentBase(application_context),
@@ -40,13 +41,11 @@ class TestApp : public testing::ComponentBase<UserShell>,
   ~TestApp() override = default;
 
  private:
-  using TestPoint = testing::TestPoint;
-
   TestPoint initialize_{"Initialize()"};
 
   // |UserShell|
   void Initialize(
-      fidl::InterfaceHandle<UserShellContext> user_shell_context) override {
+      fidl::InterfaceHandle<modular::UserShellContext> user_shell_context) override {
     initialize_.Pass();
     user_shell_context_.Bind(std::move(user_shell_context));
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
@@ -55,14 +54,14 @@ class TestApp : public testing::ComponentBase<UserShell>,
   }
 
   // |StoryWatcher|
-  void OnStateChange(StoryState state) override {
-    if (state == StoryState::DONE)
+  void OnStateChange(modular::StoryState state) override {
+    if (state == modular::StoryState::DONE)
       Logout();
   }
 
   // |ModuleWatcher|
-  void OnStateChange(ModuleState state) override {
-    if (state == ModuleState::DONE) {
+  void OnStateChange(modular::ModuleState state) override {
+    if (state == modular::ModuleState::DONE) {
       // When our child Module exits, we should exit.
       // child_module_->Stop([this] { module_context_->Done(); });
       child_module_->Stop([] {});
@@ -70,7 +69,7 @@ class TestApp : public testing::ComponentBase<UserShell>,
   }
 
   // |StoryWatcher|
-  void OnModuleAdded(ModuleData module_data) override {}
+  void OnModuleAdded(modular::ModuleData module_data) override {}
 
   TestPoint create_story_{"CreateStory()"};
 
@@ -87,12 +86,12 @@ class TestApp : public testing::ComponentBase<UserShell>,
   }
 
   void AddRootModule() {
-    Intent intent;
+    modular::Intent intent;
     intent.action.handler = kModuleUrl;
 
-    IntentParameterData data;
+    modular::IntentParameterData data;
     data.set_json(R"("initial data for the story")");
-    IntentParameter intent_parameter;
+    modular::IntentParameter intent_parameter;
     intent_parameter.name = "rootModuleNoun1";
     intent_parameter.data = std::move(data);
     intent.parameters.push_back(std::move(intent_parameter));
@@ -102,7 +101,7 @@ class TestApp : public testing::ComponentBase<UserShell>,
     path.reset({"rootMod"});
     story_controller_->GetModuleController(std::move(path),
                                            child_module_.NewRequest());
-    ModuleWatcherPtr watcher;
+    modular::ModuleWatcherPtr watcher;
     module_watcher_binding_.Bind(watcher.NewRequest());
     child_module_->Watch(std::move(watcher));
 
@@ -114,31 +113,30 @@ class TestApp : public testing::ComponentBase<UserShell>,
     fidl::InterfacePtr<views_v1_token::ViewOwner> story_view_binding;
     story_controller_->Start(story_view_binding.NewRequest());
 
-    StoryWatcherPtr watcher;
+    modular::StoryWatcherPtr watcher;
     story_watcher_binding_.Bind(watcher.NewRequest());
     story_controller_->Watch(std::move(watcher));
   }
 
   void Logout() { user_shell_context_->Logout(); }
 
-  UserShellContextPtr user_shell_context_;
-  StoryProviderPtr story_provider_;
+  modular::UserShellContextPtr user_shell_context_;
+  modular::StoryProviderPtr story_provider_;
 
   fidl::StringPtr story_id_;
-  StoryControllerPtr story_controller_;
+  modular::StoryControllerPtr story_controller_;
 
-  ModuleControllerPtr child_module_;
+  modular::ModuleControllerPtr child_module_;
 
-  fidl::Binding<StoryWatcher> story_watcher_binding_;
-  fidl::Binding<ModuleWatcher> module_watcher_binding_;
+  fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
+  fidl::Binding<modular::ModuleWatcher> module_watcher_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace
-}  // namespace modular
 
 int main(int /*argc*/, const char** /*argv*/) {
-  modular::testing::ComponentMain<modular::TestApp>();
+  modular::testing::ComponentMain<TestApp>();
   return 0;
 }

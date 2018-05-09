@@ -23,9 +23,11 @@ using modular::testing::TestPoint;
 namespace {
 
 // Cf. README.md for what this test does and how.
-class ParentApp {
+class TestApp {
  public:
-  ParentApp(
+  TestPoint initialized_{"Parent module initialized"};
+
+  TestApp(
       modular::ModuleHost* module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
       fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
@@ -44,6 +46,8 @@ class ParentApp {
 
     StartChildModuleTwice();
   }
+
+  TestPoint stopped_{"Parent module stopped"};
 
   // Called by ModuleDriver.
   void Terminate(const std::function<void()>& done) {
@@ -106,14 +110,13 @@ class ParentApp {
     module_host_->module_context()->Done();
   }
 
-  TestPoint initialized_{"Parent module initialized"};
-  TestPoint stopped_{"Parent module stopped"};
-
   modular::ModuleHost* module_host_;
   modular::ModuleControllerPtr child_module_;
   modular::ModuleControllerPtr child_module2_;
 
-  fxl::WeakPtrFactory<ParentApp> weak_ptr_factory_;
+  fxl::WeakPtrFactory<TestApp> weak_ptr_factory_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace
@@ -121,8 +124,8 @@ class ParentApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::ModuleDriver<ParentApp> driver(app_context.get(),
-                                          [&loop] { loop.QuitNow(); });
+  modular::ModuleDriver<TestApp> driver(app_context.get(),
+                                        [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

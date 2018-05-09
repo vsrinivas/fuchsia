@@ -34,6 +34,7 @@ class CounterTrigger {
  public:
   CounterTrigger(int count, std::function<void()> trigger)
       : count_(count), trigger_(std::move(trigger)) {}
+
   void Step() {
     if (!finished_) {
       // If this CHECK triggers, then you've called Step() more times than
@@ -65,12 +66,12 @@ class CounterTrigger {
 };
 
 // Cf. README.md for what this test does and how.
-class ParentApp {
+class TestApp {
  public:
   TestPoint initialized_{"Root module initialized"};
   TestPoint one_agent_connected_{"One agent accepted connection"};
 
-  ParentApp(
+  TestApp(
       modular::ModuleHost* module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
       fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
@@ -197,7 +198,9 @@ class ParentApp {
 
   std::unique_ptr<modular::MessageReceiverClient> msg_receiver_;
 
-  fxl::WeakPtrFactory<ParentApp> weak_ptr_factory_;
+  fxl::WeakPtrFactory<TestApp> weak_ptr_factory_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace
@@ -205,8 +208,8 @@ class ParentApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::ModuleDriver<ParentApp> driver(app_context.get(),
-                                          [&loop] { loop.QuitNow(); });
+  modular::ModuleDriver<TestApp> driver(app_context.get(),
+                                        [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

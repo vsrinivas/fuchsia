@@ -21,6 +21,8 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/story_shell/defs.h"
 
+using modular::testing::TestPoint;
+
 namespace {
 
 void Put(const fidl::StringPtr& message) {
@@ -41,8 +43,6 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
   ~TestApp() override = default;
 
  private:
-  using TestPoint = modular::testing::TestPoint;
-
   // |StoryShell|
   void Initialize(
       fidl::InterfaceHandle<modular::StoryContext> story_context) override {
@@ -107,6 +107,7 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
       fidl::VectorPtr<modular::ContainerView> /* views */) override {}
 
   modular::StoryContextPtr story_context_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 

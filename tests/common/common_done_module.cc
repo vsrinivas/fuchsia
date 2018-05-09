@@ -15,6 +15,8 @@ namespace {
 // The DoneModule immediately is Done().
 class DoneModule {
  public:
+  TestPoint initialized_{"Null module initialized"};
+
   DoneModule(
       modular::ModuleHost* const module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
@@ -26,6 +28,8 @@ class DoneModule {
     module_host_->module_context()->Done();
   }
 
+  TestPoint stopped_{"Null module stopped"};
+
   // Called by ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
@@ -33,9 +37,6 @@ class DoneModule {
   }
 
  private:
-  TestPoint initialized_{"Null module initialized"};
-  TestPoint stopped_{"Null module stopped"};
-
   modular::ModuleHost* const module_host_;
 };
 

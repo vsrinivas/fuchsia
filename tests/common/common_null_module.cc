@@ -15,6 +15,8 @@ namespace {
 // The NullModule just sits there and does nothing until it's terminated.
 class NullModule {
  public:
+  TestPoint initialized_{"Null module initialized"};
+
   NullModule(
       modular::ModuleHost* const module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
@@ -25,6 +27,8 @@ class NullModule {
     initialized_.Pass();
   }
 
+  TestPoint stopped_{"Null module stopped"};
+
   // Called by ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
@@ -32,9 +36,6 @@ class NullModule {
   }
 
  private:
-  TestPoint initialized_{"Null module initialized"};
-  TestPoint stopped_{"Null module stopped"};
-
   modular::ModuleHost* const module_host_;
 };
 

@@ -16,9 +16,9 @@ using modular::testing::TestPoint;
 namespace {
 
 // Cf. README.md for what this test does and how.
-class ChildApp : modular::ModuleWatcher {
+class TestApp : modular::ModuleWatcher {
  public:
-  ChildApp(
+  TestApp(
       modular::ModuleHost* const module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
       fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
@@ -54,6 +54,8 @@ class ChildApp : modular::ModuleWatcher {
   modular::ModuleHost* const module_host_;
   modular::ModuleControllerPtr child_module_;
   fidl::BindingSet<modular::ModuleWatcher> module_watcher_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace
@@ -61,8 +63,8 @@ class ChildApp : modular::ModuleWatcher {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::ModuleDriver<ChildApp> driver(app_context.get(),
-                                         [&loop] { loop.QuitNow(); });
+  modular::ModuleDriver<TestApp> driver(app_context.get(),
+                                        [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

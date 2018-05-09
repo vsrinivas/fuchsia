@@ -17,28 +17,29 @@
 
 using modular::testing::TestPoint;
 
-namespace modular {
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp : public ModuleWatcher {
+class TestApp : public modular::ModuleWatcher {
  public:
+  TestPoint initialized_{"Parent module initialized"};
+
   TestApp(
-      ModuleHost* module_host,
+      modular::ModuleHost* module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
       fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : module_context_(module_host->module_context()),
         module_watcher_binding_(this) {
     module_context_->GetComponentContext(component_context_.NewRequest());
-    testing::Init(module_host->application_context(), __FILE__);
+    modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();
 
     // We'll use an Entity stored on one of our Links, which will be used in
     // the resolution process to choose a compatible Module.
     // TODO(thatguy): We should be specifying type constraints when we create
     // the Link.
-    auto entity_data = fidl::VectorPtr<TypeToDataEntry>::New(1);
-    entity_data->at(0) = TypeToDataEntry();
+    auto entity_data = fidl::VectorPtr<modular::TypeToDataEntry>::New(1);
+    entity_data->at(0) = modular::TypeToDataEntry();
     entity_data->at(0).type = "myType";
     entity_data->at(0).data = "1337";
 
@@ -49,13 +50,18 @@ class TestApp : public ModuleWatcher {
         });
   }
 
+  TestPoint stopped_{"Parent module stopped"};
+
   // Called from ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
-    testing::Done(done);
+    modular::testing::Done(done);
   }
 
  private:
+  TestPoint child_module_stopped_{"Child module observed to have stopped"};
+  TestPoint start_intent_{"Started child Intent"};
+
   void EmbedModule() {
     intent_.action.handler = kChildModuleUrl;
     intent_.parameters.resize(4);
@@ -72,31 +78,31 @@ class TestApp : public ModuleWatcher {
     // by the Framework. We don't get access to that Link.
     module_context_->GetLink("foo", link_one_.NewRequest());
     link_one_->SetEntity(entity_one_reference_);
-    IntentParameterData parameter_data;
+    modular::IntentParameterData parameter_data;
     parameter_data.set_link_name("foo");
-    intent_.parameters->at(0) = IntentParameter();
+    intent_.parameters->at(0) = modular::IntentParameter();
     intent_.parameters->at(0).name = "one";
     intent_.parameters->at(0).data = std::move(parameter_data);
 
     module_context_->GetLink("bar", link_two_.NewRequest());
     link_two_->Set(nullptr, "12345");
-    parameter_data = IntentParameterData();
+    parameter_data = modular::IntentParameterData();
     parameter_data.set_link_name("bar");
-    intent_.parameters->at(1) = IntentParameter();
+    intent_.parameters->at(1) = modular::IntentParameter();
     intent_.parameters->at(1).name = "two";
     intent_.parameters->at(1).data = std::move(parameter_data);
 
-    parameter_data = IntentParameterData();
+    parameter_data = modular::IntentParameterData();
     parameter_data.set_json("67890");
-    intent_.parameters->at(2) = IntentParameter();
+    intent_.parameters->at(2) = modular::IntentParameter();
     intent_.parameters->at(2).name = "three";
     intent_.parameters->at(2).data = std::move(parameter_data);
 
     // This noun doesn't have a name, and will appear as the root or default
     // link for the child mod. This is for backwards compatibility.
-    parameter_data = IntentParameterData();
+    parameter_data = modular::IntentParameterData();
     parameter_data.set_json("1337");
-    intent_.parameters->at(3) = IntentParameter();
+    intent_.parameters->at(3) = modular::IntentParameter();
     intent_.parameters->at(3).data = std::move(parameter_data);
 
     // Sync to avoid race conditions between writing
@@ -104,8 +110,8 @@ class TestApp : public ModuleWatcher {
       link_two_->Sync([this] {
         module_context_->EmbedModule(
             "my child", std::move(intent_), nullptr, child_module_.NewRequest(),
-            child_view_.NewRequest(), [this](StartModuleStatus status) {
-              if (status == StartModuleStatus::SUCCESS) {
+            child_view_.NewRequest(), [this](modular::StartModuleStatus status) {
+              if (status == modular::StartModuleStatus::SUCCESS) {
                 start_intent_.Pass();
               } else {
                 module_context_->Done();
@@ -113,7 +119,7 @@ class TestApp : public ModuleWatcher {
             });
         child_module_.set_error_handler(
             [this]() { child_module_stopped_.Pass(); });
-        ModuleWatcherPtr watcher;
+        modular::ModuleWatcherPtr watcher;
         module_watcher_binding_.Bind(watcher.NewRequest());
         child_module_->Watch(std::move(watcher));
       });
@@ -121,40 +127,36 @@ class TestApp : public ModuleWatcher {
   }
 
   // |ModuleWatcher|
-  void OnStateChange(ModuleState state) override {
-    if (state == ModuleState::DONE) {
+  void OnStateChange(modular::ModuleState state) override {
+    if (state == modular::ModuleState::DONE) {
       // When our child Module exits, we should exit.
       child_module_->Stop([this] { module_context_->Done(); });
     }
   }
 
-  ComponentContextPtr component_context_;
-  ModuleContext* module_context_;
-  ModuleControllerPtr child_module_;
+  modular::ComponentContextPtr component_context_;
+  modular::ModuleContext* module_context_;
+  modular::ModuleControllerPtr child_module_;
   views_v1_token::ViewOwnerPtr child_view_;
 
   fidl::StringPtr entity_one_reference_;
-  Intent intent_;
+  modular::Intent intent_;
 
-  LinkPtr link_one_;
-  LinkPtr link_two_;
+  modular::LinkPtr link_one_;
+  modular::LinkPtr link_two_;
 
   fidl::Binding<ModuleWatcher> module_watcher_binding_;
 
-  TestPoint start_intent_{"Started child Intent"};
-  TestPoint child_module_stopped_{"Child module observed to have stopped"};
-  TestPoint initialized_{"Parent module initialized"};
-  TestPoint stopped_{"Parent module stopped"};
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace
-}  // namespace modular
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::ModuleDriver<modular::TestApp> driver(app_context.get(),
-                                                 [&loop] { loop.QuitNow(); });
+  modular::ModuleDriver<TestApp> driver(app_context.get(),
+                                        [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

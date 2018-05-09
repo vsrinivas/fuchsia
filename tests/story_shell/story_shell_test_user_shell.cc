@@ -27,6 +27,8 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/story_shell/defs.h"
 
+using modular::testing::TestPoint;
+
 namespace {
 
 // Creates function that invokes the |proceed| callback after being called |limit| times.
@@ -60,8 +62,6 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   ~TestApp() override = default;
 
  private:
-  using TestPoint = modular::testing::TestPoint;
-
   TestPoint create_view_{"CreateView()"};
 
   // |SingleServiceApp|

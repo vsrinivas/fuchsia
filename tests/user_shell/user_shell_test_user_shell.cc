@@ -25,6 +25,8 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/user_shell/defs.h"
 
+using modular::testing::TestPoint;
+
 namespace {
 
 // A simple story watcher implementation that invokes a "continue" callback when
@@ -57,6 +59,9 @@ class StoryDoneWatcherImpl : modular::StoryWatcher {
     continue_();
   }
 
+  TestPoint on_module_added_{"OnModuleAdded"};
+  bool on_module_added_called_ = false;
+
   // |StoryWatcher|
   void OnModuleAdded(modular::ModuleData module_data) override {
     FXL_LOG(INFO) << "OnModuleAdded: " << module_data.module_url;
@@ -68,8 +73,7 @@ class StoryDoneWatcherImpl : modular::StoryWatcher {
 
   fidl::Binding<modular::StoryWatcher> binding_;
   std::function<void()> continue_;
-  modular::testing::TestPoint on_module_added_{"OnModuleAdded"};
-  bool on_module_added_called_ = false;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryDoneWatcherImpl);
 };
 
@@ -158,7 +162,7 @@ class StoryProviderStateWatcherImpl : modular::StoryProviderWatcher {
   void Reset() { binding_.Unbind(); }
 
  private:
-  modular::testing::TestPoint on_delete_called_once_{"OnDelete() Called"};
+  TestPoint on_delete_called_once_{"OnDelete() Called"};
   int on_delete_called_{};
 
   // |StoryProviderWatcher|
@@ -172,19 +176,16 @@ class StoryProviderStateWatcherImpl : modular::StoryProviderWatcher {
     deleted_stories_.emplace(story_id);
   }
 
-  modular::testing::TestPoint on_starting_called_once_{
-      "OnChange() STARTING Called"};
+  TestPoint on_starting_called_once_{"OnChange() STARTING Called"};
   int on_starting_called_{};
 
-  modular::testing::TestPoint on_running_called_once_{
-      "OnChange() RUNNING Called"};
+  TestPoint on_running_called_once_{"OnChange() RUNNING Called"};
   int on_running_called_{};
 
-  modular::testing::TestPoint on_stopped_called_once_{
-      "OnChange() STOPPED Called"};
+  TestPoint on_stopped_called_once_{"OnChange() STOPPED Called"};
   int on_stopped_called_{};
 
-  modular::testing::TestPoint on_done_called_once_{"OnChange() DONE Called"};
+  TestPoint on_done_called_once_{"OnChange() DONE Called"};
   int on_done_called_{};
 
   // |StoryProviderWatcher|
@@ -255,8 +256,6 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   ~TestApp() override = default;
 
  private:
-  using TestPoint = modular::testing::TestPoint;
-
   TestPoint create_view_{"CreateView()"};
 
   // |SingleServiceApp|

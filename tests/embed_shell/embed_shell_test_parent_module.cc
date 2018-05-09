@@ -21,9 +21,9 @@ using modular::testing::TestPoint;
 namespace {
 
 // Cf. README.md for what this test does and how.
-class ParentApp {
+class TestApp {
  public:
-  ParentApp(
+  TestApp(
       modular::ModuleHost* const module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
       fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
@@ -63,6 +63,8 @@ class ParentApp {
   modular::ModuleHost* const module_host_;
   modular::ModuleControllerPtr child_module_;
   views_v1_token::ViewOwnerPtr child_view_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace
@@ -70,8 +72,8 @@ class ParentApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::ModuleDriver<ParentApp> driver(app_context.get(),
-                                          [&loop] { loop.QuitNow(); });
+  modular::ModuleDriver<TestApp> driver(app_context.get(),
+                                        [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

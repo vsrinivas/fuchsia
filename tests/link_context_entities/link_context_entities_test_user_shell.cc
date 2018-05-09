@@ -22,6 +22,8 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/link_context_entities/defs.h"
 
+using modular::testing::TestPoint;
+
 namespace {
 
 // A context reader watcher implementation.
@@ -69,6 +71,7 @@ class ContextListenerImpl : modular::ContextListener {
 
   fidl::Binding<modular::ContextListener> binding_;
   Handler handler_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(ContextListenerImpl);
 };
 
@@ -83,8 +86,6 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   ~TestApp() override = default;
 
  private:
-  using TestPoint = modular::testing::TestPoint;
-
   TestPoint initialize_{"Initialize()"};
 
   // |UserShell|

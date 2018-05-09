@@ -19,6 +19,8 @@ namespace {
 // Cf. README.md for what this test does and how.
 class TestApp {
  public:
+  TestPoint initialized_{"Child module initialized"};
+
   TestApp(
       modular::ModuleHost* module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
@@ -29,6 +31,8 @@ class TestApp {
     module_host->module_context()->GetLink(kLink, link_.NewRequest());
     Set1();
   }
+
+  TestPoint stopped_{"Child module stopped"};
 
   // Called from ModuleDriver.
   void Terminate(const std::function<void()>& done) {
@@ -50,9 +54,9 @@ class TestApp {
                "context_link_test\"}}");
   }
 
-  TestPoint initialized_{"Child module initialized"};
-  TestPoint stopped_{"Child module stopped"};
   modular::LinkPtr link_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace

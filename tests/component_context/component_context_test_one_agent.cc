@@ -18,9 +18,9 @@ using modular::testing::TestPoint;
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestAgentApp : component_context_test::ComponentContextTestService {
+class TestApp : component_context_test::ComponentContextTestService {
  public:
-  TestAgentApp(modular::AgentHost* const agent_host) {
+  TestApp(modular::AgentHost* const agent_host) {
     modular::testing::Init(agent_host->application_context(), __FILE__);
     agent_host->agent_context()->GetComponentContext(
         component_context_.NewRequest());
@@ -79,6 +79,8 @@ class TestAgentApp : component_context_test::ComponentContextTestService {
 
   component::ServiceNamespace agent_services_;
   fidl::BindingSet<component_context_test::ComponentContextTestService> agent_interface_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace
@@ -86,8 +88,8 @@ class TestAgentApp : component_context_test::ComponentContextTestService {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::AgentDriver<TestAgentApp> driver(app_context.get(),
-                                            [&loop] { loop.QuitNow(); });
+  modular::AgentDriver<TestApp> driver(app_context.get(),
+                                       [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

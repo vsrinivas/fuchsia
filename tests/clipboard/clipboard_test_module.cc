@@ -17,12 +17,12 @@ using modular::testing::TestPoint;
 namespace {
 
 // Cf. README.md for what this test does and how.
-class ClipboardTestApp {
+class TestApp {
  public:
   TestPoint initialized_{"Clipboard module initialized"};
   TestPoint successful_peek_{"Clipboard pushed and peeked value"};
 
-  ClipboardTestApp(
+  TestApp(
       modular::ModuleHost* const module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
       fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
@@ -65,6 +65,8 @@ class ClipboardTestApp {
   modular::AgentControllerPtr agent_controller_;
   modular::ClipboardPtr clipboard_;
   modular::ComponentContextPtr component_context_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace
@@ -72,8 +74,8 @@ class ClipboardTestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::ModuleDriver<ClipboardTestApp> driver(app_context.get(),
-                                                 [&loop] { loop.QuitNow(); });
+  modular::ModuleDriver<TestApp> driver(app_context.get(),
+                                        [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

@@ -21,9 +21,13 @@ using modular::testing::TestPoint;
 namespace {
 
 // Cf. README.md for what this test does and how.
-class SuggestionApp : modular::ProposalListener {
+class TestApp : modular::ProposalListener {
  public:
-  SuggestionApp(
+  TestPoint initialized_{"Root module initialized"};
+  TestPoint received_story_id_{"Root module received story id"};
+  TestPoint proposal_was_accepted_{"Proposal was accepted"};
+
+  TestApp(
       modular::ModuleHost* module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
       fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
@@ -83,6 +87,8 @@ class SuggestionApp : modular::ProposalListener {
         zx::msec(kTimeoutMilliseconds));
   }
 
+  TestPoint stopped_{"Root module stopped"};
+
   // Called by ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
@@ -99,14 +105,10 @@ class SuggestionApp : modular::ProposalListener {
   modular::ModuleHost* const module_host_;
   modular::ModuleContextPtr module_context_;
   modular::ProposalPublisherPtr proposal_publisher_;
-
-  TestPoint initialized_{"Root module initialized"};
-  TestPoint received_story_id_{"Root module received story id"};
-  TestPoint proposal_was_accepted_{"Proposal was accepted"};
-  TestPoint stopped_{"Root module stopped"};
-
-  fxl::WeakPtrFactory<SuggestionApp> weak_ptr_factory_;
   fidl::BindingSet<modular::ProposalListener> proposal_listener_bindings_;
+  fxl::WeakPtrFactory<TestApp> weak_ptr_factory_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace
@@ -114,8 +116,8 @@ class SuggestionApp : modular::ProposalListener {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::ModuleDriver<SuggestionApp> driver(app_context.get(),
-                                              [&loop] { loop.QuitNow(); });
+  modular::ModuleDriver<TestApp> driver(app_context.get(),
+                                        [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

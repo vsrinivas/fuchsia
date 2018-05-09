@@ -15,6 +15,8 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/suggestion/defs.h"
 
+using modular::testing::TestPoint;
+
 namespace {
 
 // Cf. README.md for what this test does and how.
@@ -30,8 +32,6 @@ class TestApp : modular::StoryWatcher,
   ~TestApp() override = default;
 
  private:
-  using TestPoint = modular::testing::TestPoint;
-
   TestPoint initialized_{"SuggestionTestUserShell initialized"};
 
   // |UserShell|

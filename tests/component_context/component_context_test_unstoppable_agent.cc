@@ -47,6 +47,8 @@ class TestApp {
  private:
   modular::AgentContextPtr agent_context_;
   modular::ComponentContextPtr component_context_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace

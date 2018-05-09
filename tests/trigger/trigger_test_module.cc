@@ -30,11 +30,11 @@ void Await(fidl::StringPtr condition,
 }
 
 // Cf. README.md for what this test does and how.
-class ParentApp {
+class TestApp {
  public:
   TestPoint initialized_{"Root module initialized"};
 
-  ParentApp(
+  TestApp(
       modular::ModuleHost* const module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
       fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
@@ -140,7 +140,9 @@ class ParentApp {
   modular_test_trigger::TriggerTestServicePtr agent_service_;
   modular::ComponentContextPtr component_context_;
   modular::MessageQueuePtr msg_queue_;
-  fxl::WeakPtrFactory<ParentApp> weak_ptr_factory_;
+  fxl::WeakPtrFactory<TestApp> weak_ptr_factory_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace
@@ -148,8 +150,8 @@ class ParentApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::ModuleDriver<ParentApp> driver(app_context.get(),
-                                          [&loop] { loop.QuitNow(); });
+  modular::ModuleDriver<TestApp> driver(app_context.get(),
+                                        [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

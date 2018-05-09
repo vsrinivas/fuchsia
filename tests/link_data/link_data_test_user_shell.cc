@@ -22,6 +22,8 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/link_data/defs.h"
 
+using modular::testing::TestPoint;
+
 namespace {
 
 // Cf. README.md for what this test does and how.
@@ -35,8 +37,6 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   ~TestApp() override = default;
 
  private:
-  using TestPoint = modular::testing::TestPoint;
-
   TestPoint initialize_{"Initialize()"};
 
   // |UserShell|

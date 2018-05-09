@@ -18,6 +18,8 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/story_update/defs.h"
 
+using modular::testing::TestPoint;
+
 namespace {
 
 // A simple module watcher implementation allows to specify the actual
@@ -62,8 +64,6 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   ~TestApp() override = default;
 
  private:
-  using TestPoint = modular::testing::TestPoint;
-
   TestPoint initialize_{"Initialize()"};
   TestPoint story_create_{"Story Create"};
 

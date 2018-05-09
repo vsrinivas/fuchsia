@@ -17,12 +17,16 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/queue_persistence/defs.h"
 
+using modular::testing::TestPoint;
+
 namespace {
 
 // Cf. README.md for what this test does and how.
-class ParentApp {
+class TestApp {
  public:
-  ParentApp(
+  TestPoint initialized_{"Root module initialized"};
+
+  TestApp(
       modular::ModuleHost* module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
       fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
@@ -54,6 +58,8 @@ class ParentApp {
         zx::msec(kTimeoutMilliseconds));
   }
 
+  TestPoint stopped_{"Root module stopped"};
+
   // Called by ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
@@ -61,11 +67,16 @@ class ParentApp {
   }
 
  private:
+  TestPoint agent_connected_{"Agent accepted connection"};
+
   void AgentConnected() {
     agent_connected_.Pass();
     agent_service_->GetMessageQueueToken(
         [this](const fidl::StringPtr& token) { ReceivedQueueToken(token); });
   }
+
+  TestPoint received_queue_persistence_token_{
+      "Received queue_persistence token"};
 
   void ReceivedQueueToken(const fidl::StringPtr& token) {
     queue_token_ = token;
@@ -78,6 +89,8 @@ class ParentApp {
         "queue_persistence_test_agent_stopped",
         [this](const fidl::StringPtr&) { AgentStopped(); });
   }
+
+  TestPoint agent_stopped_{"Agent stopped"};
 
   void AgentStopped() {
     agent_stopped_.Pass();
@@ -100,12 +113,16 @@ class ParentApp {
         [this](const fidl::StringPtr&) { AgentConnectedAgain(); });
   }
 
+  TestPoint agent_connected_again_{"Agent accepted connection, again"};
+
   void AgentConnectedAgain() {
     agent_connected_again_.Pass();
     modular::testing::GetStore()->Get(
         "queue_persistence_test_agent_received_message",
         [this](const fidl::StringPtr&) { AgentReceivedMessage(); });
   }
+
+  TestPoint agent_received_message_{"Agent received message"};
 
   void AgentReceivedMessage() {
     agent_received_message_.Pass();
@@ -127,17 +144,9 @@ class ParentApp {
 
   std::string queue_token_;
 
-  using TestPoint = modular::testing::TestPoint;
-  TestPoint initialized_{"Root module initialized"};
-  TestPoint received_queue_persistence_token_{
-      "Received queue_persistence token"};
-  TestPoint stopped_{"Root module stopped"};
-  TestPoint agent_connected_{"Agent accepted connection"};
-  TestPoint agent_connected_again_{"Agent accepted connection, again"};
-  TestPoint agent_received_message_{"Agent received message"};
-  TestPoint agent_stopped_{"Agent stopped"};
+  fxl::WeakPtrFactory<TestApp> weak_ptr_factory_;
 
-  fxl::WeakPtrFactory<ParentApp> weak_ptr_factory_;
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace
@@ -145,8 +154,8 @@ class ParentApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::ModuleDriver<ParentApp> driver(app_context.get(),
-                                          [&loop] { loop.QuitNow(); });
+  modular::ModuleDriver<TestApp> driver(app_context.get(),
+                                        [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

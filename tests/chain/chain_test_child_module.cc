@@ -17,20 +17,21 @@
 
 using modular::testing::TestPoint;
 
-namespace modular {
 namespace {
 
 // Cf. README.md for what this test does and how.
 class TestApp {
  public:
+  TestPoint initialized_{"Child module initialized"};
+
   TestApp(
-      ModuleHost* module_host,
+      modular::ModuleHost* module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
       fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : module_context_(module_host->module_context()) {
     module_context_->GetComponentContext(component_context_.NewRequest());
     component_context_->GetEntityResolver(entity_resolver_.NewRequest());
-    testing::Init(module_host->application_context(), __FILE__);
+    modular::testing::Init(module_host->application_context(), __FILE__);
 
     initialized_.Pass();
 
@@ -39,14 +40,17 @@ class TestApp {
     VerifyLinkOne();
   }
 
+  TestPoint stopped_{"Child module stopped"};
+
   // Called from ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
-    testing::Done(done);
+    modular::testing::Done(done);
   }
 
  private:
   TestPoint link_one_correct_{"Link one value is correct."};
+
   void VerifyLinkOne() {
     module_context_->GetLink("one", link_one_.NewRequest());
     link_one_->GetEntity([this](const fidl::StringPtr& entity_reference) {
@@ -66,6 +70,7 @@ class TestApp {
   }
 
   TestPoint link_two_correct_{"Link two value is correct."};
+
   void VerifyLinkTwo() {
     module_context_->GetLink("two", link_two_.NewRequest());
     link_two_->Get(nullptr, [this](fidl::StringPtr content) {
@@ -78,6 +83,7 @@ class TestApp {
   }
 
   TestPoint link_three_correct_{"Link three value is correct."};
+
   void VerifyLinkThree() {
     module_context_->GetLink("three", link_three_.NewRequest());
     link_three_->Get(nullptr, [this](fidl::StringPtr content) {
@@ -90,6 +96,7 @@ class TestApp {
   }
 
   TestPoint default_link_correct_{"Default Link value is correct."};
+
   void VerifyDefaultLink() {
     // Check that we did get a default link as specified by the Intent.
     module_context_->GetLink(nullptr, default_link_.NewRequest());
@@ -102,33 +109,31 @@ class TestApp {
     });
   }
 
-  ComponentContextPtr component_context_;
-  EntityResolverPtr entity_resolver_;
-  ModuleContext* module_context_;
-  ModuleControllerPtr child_module_;
+  modular::ComponentContextPtr component_context_;
+  modular::EntityResolverPtr entity_resolver_;
+  modular::ModuleContext* module_context_;
+  modular::ModuleControllerPtr child_module_;
   views_v1_token::ViewOwnerPtr child_view_;
 
-  LinkPtr link_one_;
-  LinkPtr link_two_;
-  LinkPtr link_three_;
-  LinkPtr default_link_;
+  modular::LinkPtr link_one_;
+  modular::LinkPtr link_two_;
+  modular::LinkPtr link_three_;
+  modular::LinkPtr default_link_;
 
-  EntityPtr entity_;
+  modular::EntityPtr entity_;
 
   fidl::StringPtr entity_one_reference_;
 
-  TestPoint initialized_{"Child module initialized"};
-  TestPoint stopped_{"Child module stopped"};
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace
-}  // namespace modular
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::ModuleDriver<modular::TestApp> driver(app_context.get(),
-                                                 [&loop] { loop.QuitNow(); });
+  modular::ModuleDriver<TestApp> driver(app_context.get(),
+                                        [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

@@ -19,6 +19,8 @@ namespace {
 // Cf. README.md for what this test does and how.
 class TestApp {
  public:
+  TestPoint initialized_{"Child module initialized"};
+
   TestApp(
       modular::ModuleHost* module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
@@ -30,6 +32,8 @@ class TestApp {
     module_host->module_context()->GetLink("link2", link2_.NewRequest());
     Set1();
   }
+
+  TestPoint stopped_{"Child module stopped"};
 
   // Called from ModuleDriver.
   void Terminate(const std::function<void()>& done) {
@@ -46,10 +50,10 @@ class TestApp {
     // simple Entity reference and slap it into the Link.
   }
 
-  TestPoint initialized_{"Child module initialized"};
-  TestPoint stopped_{"Child module stopped"};
   modular::LinkPtr link1_;
   modular::LinkPtr link2_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace

@@ -17,6 +17,8 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/last_focus_time/defs.h"
 
+using modular::testing::TestPoint;
+
 namespace {
 
 // A simple story provider watcher implementation. It confirms that it sees an
@@ -28,8 +30,6 @@ class StoryProviderWatcherImpl : public modular::StoryProviderWatcherBase {
   ~StoryProviderWatcherImpl() override = default;
 
  private:
-  using TestPoint = modular::testing::TestPoint;
-
   TestPoint last_focus_time_created_{
       "StoryInfo::last_focus_time increased after create"};
   TestPoint last_focus_time_focused_{
@@ -131,6 +131,7 @@ class FocusWatcherImpl : modular::FocusWatcher {
   }
 
   fidl::Binding<modular::FocusWatcher> binding_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(FocusWatcherImpl);
 };
 
@@ -145,8 +146,6 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   ~TestApp() override = default;
 
  private:
-  using TestPoint = modular::testing::TestPoint;
-
   TestPoint initialize_{"Initialize()"};
 
   // |UserShell|

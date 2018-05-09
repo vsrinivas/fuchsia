@@ -18,10 +18,10 @@ using modular::testing::TestPoint;
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestAgentApp
+class TestApp
     : queue_persistence_test_service::QueuePersistenceTestService {
  public:
-  TestAgentApp(modular::AgentHost* agent_host) {
+  TestApp(modular::AgentHost* agent_host) {
     modular::testing::Init(agent_host->application_context(), __FILE__);
     agent_host->agent_context()->GetComponentContext(
         component_context_.NewRequest());
@@ -88,6 +88,8 @@ class TestAgentApp
   component::ServiceNamespace services_;
   fidl::BindingSet<queue_persistence_test_service::QueuePersistenceTestService>
       services_bindings_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace
@@ -95,8 +97,8 @@ class TestAgentApp
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::AgentDriver<TestAgentApp> driver(app_context.get(),
-                                            [&loop] { loop.QuitNow(); });
+  modular::AgentDriver<TestApp> driver(app_context.get(),
+                                       [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

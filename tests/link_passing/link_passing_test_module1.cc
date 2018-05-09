@@ -103,6 +103,8 @@ class TestApp : modular::LinkWatcher {
   modular::LinkPtr link2_;
   fidl::Binding<modular::LinkWatcher> link2_watcher_binding_;
   modular::ModuleControllerPtr module_controller_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace
