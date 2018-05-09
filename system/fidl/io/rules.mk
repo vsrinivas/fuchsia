@@ -10,8 +10,6 @@ MODULE_TYPE := fidl
 
 MODULE_PACKAGE := fidl
 
-MODULE_FIDL_LIBRARY := fuchsia.process
-
-MODULE_SRCS += $(LOCAL_DIR)/process.fidl
+MODULE_SRCS += $(LOCAL_DIR)/io.fidl
 
 include make/module.mk

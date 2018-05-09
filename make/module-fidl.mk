@@ -3,3 +3,52 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
+
+ifneq ($(MODULE_DEPS)$(MODULE_HOST_LIBS)$(MODULE_HOST_SYSLIBS),)
+$(error $(MODULE) $(MODULE_TYPE) fidl modules must use MODULE_FIDL_DEPS
+endif
+
+MODULE_RULESMK := $(MODULE_SRCDIR)/rules.mk
+
+ifeq ($(filter fidl,$(MODULE_EXPORT)),fidl)
+MODULE_PACKAGE += $(sort $(MODULE_PACKAGE) fidl)
+endif
+
+ifneq ($(strip $(MODULE_PACKAGE)),)
+
+MODULE_PKG_FILE := $(MODULE_BUILDDIR)/$(MODULE_NAME).pkg
+MODULE_EXP_FILE := $(BUILDDIR)/export/$(MODULE_NAME).pkg
+
+MODULE_PKG_SRCS := $(MODULE_SRCS)
+
+ifneq ($(strip $(MODULE_PACKAGE)),)
+MODULE_PKG_SRCS := $(foreach src,$(MODULE_PKG_SRCS),$(patsubst $(MODULE_SRCDIR)/%,%,$(src))=SOURCE/$(src))
+MODULE_PKG_TAG := "[fidl]"
+endif
+
+$(MODULE_PKG_FILE): _NAME := $(MODULE_NAME)
+$(MODULE_PKG_FILE): _SRCS := $(if $(MODULE_PKG_SRCS),$(MODULE_PKG_TAG) $(sort $(MODULE_PKG_SRCS)))
+$(MODULE_PKG_FILE): $(MODULE_RULESMK) make/module-fidl.mk
+	@$(call BUILDECHO,creating fidl library package $@ ;)\
+	$(MKDIR) ;\
+	echo "[package]" > $@ ;\
+	echo "name=$(_NAME)" >> $@ ;\
+	echo "arch=fidl" >> $@ ;\
+	echo "type=fidl" >> $@ ;\
+	for i in $(_SRCS) ; do echo $$i >> $@ ; done ;\
+
+$(MODULE_EXP_FILE): $(MODULE_PKG_FILE)
+	@$(MKDIR) ;\
+	if [ -f "$@" ]; then \
+		if ! cmp "$<" "$@" >/dev/null 2>&1; then \
+			$(if $(BUILDECHO),echo installing $@ ;)\
+			cp -f $< $@; \
+		fi \
+	else \
+		$(if $(BUILDECHO),echo installing $@ ;)\
+		cp -f $< $@; \
+	fi
+GENERATED += $(MODULE_EXP_FILE) $(MODULE_PKG_FILE)
+ALLPKGS += $(MODULE_EXP_FILE)
+
+endif # // ifneq ($(strip $(MODULE_PACKAGE)),)
