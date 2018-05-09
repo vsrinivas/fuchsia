@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 const serverBase = "amber-files"
@@ -48,7 +49,9 @@ func main() {
 			if len(rStr) > maxLen {
 				rStr = fmt.Sprintf("%s...%s", rStr[0:maxLen-trailLen-3], rStr[len(rStr)-trailLen:])
 			}
-			fmt.Printf("Serving %q\n", rStr)
+			currentTime := time.Now()
+			fmt.Printf("%s [serve-updates]: Serving %q\n",
+				currentTime.Format("2006-01-02 15:04:05"), rStr)
 		}
 		http.ServeFile(w, r, filepath.Join(repoDir, r.URL.Path))
 	})
