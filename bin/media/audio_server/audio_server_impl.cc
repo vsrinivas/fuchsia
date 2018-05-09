@@ -17,22 +17,9 @@ namespace media {
 namespace audio {
 
 AudioServerImpl::AudioServerImpl() : device_manager_(this) {
-  auto service =
-      fbl::AdoptRef(new fs::Service([this](zx::channel ch) -> zx_status_t {
-        bindings_.AddBinding(
-            this, fidl::InterfaceRequest<fuchsia::media::Audio>(std::move(ch)));
-        bindings_.bindings().back()->events().SystemGainMuteChanged(
-            system_gain_db_, system_muted_);
-        return ZX_OK;
-      }));
-  outgoing_.public_dir()->AddEntry(fuchsia::media::Audio::Name_,
-                                   std::move(service));
-
   // Stash a pointer to our async object.
   async_ = async_get_default();
   FXL_DCHECK(async_);
-
-  // TODO(dalesat): Load the gain/mute values.
 
   // TODO(johngro) : See MG-940
   //
@@ -61,14 +48,37 @@ AudioServerImpl::AudioServerImpl() : device_manager_(this) {
   // manager so that we wait until we are certain that we have discovered and
   // probed the capabilities of all of the pre-existing inputs and outputs
   // before proceeding.  See MTWN-118
-  async::PostDelayedTask(async_, [this]() { outgoing_.ServeFromStartupInfo(); },
-                         zx::msec(50));
+  async::PostDelayedTask(async_, [this]() { PublishServices(); }, zx::msec(50));
 }
 
 AudioServerImpl::~AudioServerImpl() {
   Shutdown();
   FXL_DCHECK(packet_cleanup_queue_.is_empty());
   FXL_DCHECK(flush_cleanup_queue_.is_empty());
+}
+
+void AudioServerImpl::PublishServices() {
+  auto audio_service =
+      fbl::AdoptRef(new fs::Service([this](zx::channel ch) -> zx_status_t {
+        bindings_.AddBinding(
+            this, fidl::InterfaceRequest<fuchsia::media::Audio>(std::move(ch)));
+        bindings_.bindings().back()->events().SystemGainMuteChanged(
+            system_gain_db_, system_muted_);
+        return ZX_OK;
+      }));
+  outgoing_.public_dir()->AddEntry(fuchsia::media::Audio::Name_,
+                                   std::move(audio_service));
+  // TODO(dalesat): Load the gain/mute values.
+
+  auto audio_device_enumerator_service =
+      fbl::AdoptRef(new fs::Service([this](zx::channel ch) -> zx_status_t {
+        device_manager_.AddDeviceEnumeratorClient(std::move(ch));
+        return ZX_OK;
+      }));
+  outgoing_.public_dir()->AddEntry(fuchsia::media::AudioDeviceEnumerator::Name_,
+                                   std::move(audio_device_enumerator_service));
+
+  outgoing_.ServeFromStartupInfo();
 }
 
 void AudioServerImpl::Shutdown() {

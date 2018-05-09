@@ -17,13 +17,14 @@
 #include "garnet/bin/media/audio_server/audio_output.h"
 #include "garnet/bin/media/audio_server/audio_plug_detector.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
+#include "lib/fidl/cpp/binding_set.h"
 
 namespace media {
 namespace audio {
 
 class AudioCapturerImpl;
 
-class AudioDeviceManager {
+class AudioDeviceManager : public ::fuchsia::media::AudioDeviceEnumerator {
  public:
   explicit AudioDeviceManager(AudioServerImpl* server);
   ~AudioDeviceManager();
@@ -48,6 +49,10 @@ class AudioDeviceManager {
   // shutdown called from the destructor has to do real work, something has gone
   // Very Seriously Wrong.
   void Shutdown();
+
+  // Add a new client for the device enumerator functionality.  Called from the
+  // service framework each time a new client attempts to connect.
+  void AddDeviceEnumeratorClient(zx::channel ch);
 
   // Add a renderer to the set of active audio renderers.
   void AddRenderer(fbl::RefPtr<AudioRendererImpl> renderer) {
@@ -116,6 +121,15 @@ class AudioDeviceManager {
   void SetMasterGain(float db_gain);
   float master_gain() const { return master_gain_; }
 
+  // Implementation of the AudioDeviceEnumerator FIDL interface.
+  void GetDevices(GetDevicesCallback cbk) final;
+  void GetDeviceGain(uint64_t device_token, GetDeviceGainCallback cbk) final;
+  void SetDeviceGain(uint64_t device_token,
+                     ::fuchsia::media::AudioGainInfo gain_info,
+                     uint32_t set_flags) final;
+  void GetDefaultInputDevice(GetDefaultInputDeviceCallback cbk) final;
+  void GetDefaultOutputDevice(GetDefaultOutputDeviceCallback cbk) final;
+
  private:
   // Find the last plugged input or output (excluding the throttle_output) in
   // the system.  If allow_unplugged is true, the most recently unplugged
@@ -149,6 +163,9 @@ class AudioDeviceManager {
   // A pointer to the server which encapsulates us.  It is not possible for this
   // pointer to be bad while we still exist.
   AudioServerImpl* server_;
+
+  // The set of AudioDeviceEnumerator clients we are currently tending to.
+  fidl::BindingSet<::fuchsia::media::AudioDeviceEnumerator> bindings_;
 
   // Our sets of currently active audio devices, capturers, and renderers.
   //

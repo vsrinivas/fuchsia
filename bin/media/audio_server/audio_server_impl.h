@@ -76,6 +76,7 @@ class AudioServerImpl : public fuchsia::media::Audio {
   static constexpr float kMaxSystemAudioGain = 0.0f;
 
   void NotifyGainMuteChanged();
+  void PublishServices();
   void Shutdown();
   void DoPacketCleanup();
 
