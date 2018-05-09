@@ -120,30 +120,30 @@ fn device_settings_server(state: DeviceSettingsManagerServer, channel: async::Ch
             let file = if let Some(f) = state.setting_file_map.get(&key) {
                 f
             } else {
-                res.send(&mut 0, &mut Status::ErrInvalidSetting)?;
+                res.send(0, Status::ErrInvalidSetting)?;
                 return Ok(());
             };
             match read_file(file) {
                 Err(e) => {
                     if e.kind() == io::ErrorKind::NotFound {
-                        res.send(&mut 0, &mut Status::ErrNotSet)
+                        res.send(0, Status::ErrNotSet)
                     } else {
                         fx_log_err!("reading integer: {:?}", e);
-                        res.send(&mut 0, &mut Status::ErrRead)
+                        res.send(0, Status::ErrRead)
                     }
                 }
                 Ok(str) => match str.parse::<i64>() {
-                    Err(_e) => res.send(&mut 0, &mut Status::ErrIncorrectType),
-                    Ok(mut i) => res.send(&mut i, &mut Status::Ok),
+                    Err(_e) => res.send(0, Status::ErrIncorrectType),
+                    Ok(i) => res.send(i, Status::Ok),
                 },
             }
         }),
         set_integer: |state, key, val, res| catch_and_log_err("set_integer", || {
             match state.set_key(&key, val.to_string().as_bytes(), ValueType::Number) {
-                Ok(mut r) => res.send(&mut r),
+                Ok(r) => res.send(r),
                 Err(e) => {
                     fx_log_err!("setting integer: {:?}", e);
-                    res.send(&mut false)
+                    res.send(false)
                 }
             }
         }),
@@ -151,45 +151,45 @@ fn device_settings_server(state: DeviceSettingsManagerServer, channel: async::Ch
             let file = if let Some(f) = state.setting_file_map.get(&key) {
                 f
             } else {
-                res.send(&mut "".to_string(), &mut Status::ErrInvalidSetting)?;
+                res.send("", Status::ErrInvalidSetting)?;
                 return Ok(());
             };
             match read_file(file) {
                 Err(e) => {
                     if e.kind() == io::ErrorKind::NotFound {
-                        res.send(&mut "".to_string(), &mut Status::ErrNotSet)
+                        res.send("", Status::ErrNotSet)
                     } else {
                         fx_log_err!("reading string: {:?}", e);
-                        res.send(&mut "".to_string(), &mut Status::ErrRead)
+                        res.send("", Status::ErrRead)
                     }
                 }
-                Ok(mut s) => res.send(&mut s, &mut Status::Ok),
+                Ok(s) => res.send(&*s, Status::Ok),
             }
         }),
         set_string: |state, key, val, res| catch_and_log_err("set_string", || {
             fx_log_info!("setting string key: {:?}, val: {:?}", key, val);
             match state.set_key(&key, val.as_bytes(), ValueType::Text) {
-                Ok(mut r) => res.send(&mut r),
+                Ok(mut r) => res.send(r),
                 Err(e) => {
                     fx_log_err!("setting string: {:?}", e);
-                    res.send(&mut false)
+                    res.send(false)
                 }
             }
         }),
         watch: |state, key, watcher, res| catch_and_log_err("watch", || {
             if !state.setting_file_map.contains_key(&key) {
-                return res.send(&mut Status::ErrInvalidSetting);
+                return res.send(Status::ErrInvalidSetting);
             }
             match watcher.into_proxy() {
                 Err(e) => {
                     fx_log_err!("getting watcher proxy: {:?}", e);
-                    res.send(&mut Status::ErrUnknown)
+                    res.send(Status::ErrUnknown)
                 }
                 Ok(w) => {
                     let mut map = state.watchers.lock();
                     let mv = map.entry(key).or_insert(Vec::new());
                     mv.push(w);
-                    res.send(&mut Status::Ok)
+                    res.send(Status::Ok)
                 }
             }
         }),

@@ -491,24 +491,33 @@ fn encode_byte_slice(encoder: &mut Encoder, slice_opt: Option<&[u8]>) -> Result<
     }
 }
 
-fn encode_encodable_slice<T: Encodable>(
+fn encode_encodable_iter<Iter, T>(
     encoder: &mut Encoder,
-    slice_opt: Option<&mut [T]>
-) -> Result<()> {
-    match slice_opt {
+    iter_opt: Option<Iter>,
+) -> Result<()>
+where
+    Iter: ExactSizeIterator<Item = T>,
+    T: Encodable,
+{
+    match iter_opt {
         None => {
             0u64.encode(encoder)?;
             ALLOC_ABSENT_U64.encode(encoder)
         }
-        Some(slice) => {
+        Some(mut iter) => {
             // Two u64: (len, present)
-            (slice.len() as u64).encode(encoder)?;
+            (iter.len() as u64).encode(encoder)?;
             ALLOC_PRESENT_U64.encode(encoder)?;
-            if slice.len() == 0 { return Ok(()); }
-            let bytes_len = slice.len() * slice.get(0).map(Encodable::inline_size).unwrap_or(0);
+            let mut first = if let Some(first) = iter.next() {
+                first
+            } else {
+                return Ok(())
+            };
+            let bytes_len = (iter.len() + 1) * first.inline_size();
             encoder.write_out_of_line(bytes_len, |encoder| {
                 encoder.recurse(|encoder| {
-                    for item in slice.iter_mut() {
+                    first.encode(encoder)?;
+                    for mut item in iter {
                         item.encode(encoder)?;
                     }
                     Ok(())
@@ -573,6 +582,16 @@ fn decode_vec<T: Decodable>(decoder: &mut Decoder, vec: &mut Vec<T>) -> Result<b
     })
 }
 
+impl<'a> Encodable for &'a str {
+    fn inline_align(&self) -> usize { 8 }
+
+    fn inline_size(&self) -> usize { 16 }
+
+    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+        encode_byte_slice(encoder, Some(self.as_bytes()))
+    }
+}
+
 impl Encodable for String {
     fn inline_align(&self) -> usize { 8 }
 
@@ -601,13 +620,23 @@ impl Decodable for String {
     }
 }
 
+impl<'a> Encodable for Option<&'a str> {
+    fn inline_align(&self) -> usize { 8 }
+
+    fn inline_size(&self) -> usize { 16 }
+
+    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+        encode_byte_slice(encoder, self.as_ref().map(|x| x.as_bytes()))
+    }
+}
+
 impl Encodable for Option<String> {
     fn inline_align(&self) -> usize { 8 }
 
     fn inline_size(&self) -> usize { 16 }
 
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
-        encode_byte_slice(encoder, self.as_mut().map(|x| x.as_bytes()))
+        encode_byte_slice(encoder, self.as_ref().map(|x| x.as_bytes()))
     }
 }
 
@@ -631,13 +660,35 @@ impl Decodable for Option<String> {
     }
 }
 
+impl<'a, 'b: 'a, T: Encodable> Encodable for
+    &'a mut ExactSizeIterator<Item = T>
+{
+    fn inline_align(&self) -> usize { 8 }
+
+    fn inline_size(&self) -> usize { 16 }
+
+    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+        encode_encodable_iter(encoder, Some(self))
+    }
+}
+
+impl<'a, T: Encodable> Encodable for &'a mut [T] {
+    fn inline_align(&self) -> usize { 8 }
+
+    fn inline_size(&self) -> usize { 16 }
+
+    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+        encode_encodable_iter(encoder, Some(self.iter_mut()))
+    }
+}
+
 impl<T: Encodable> Encodable for Vec<T> {
     fn inline_align(&self) -> usize { 8 }
 
     fn inline_size(&self) -> usize { 16 }
 
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
-        encode_encodable_slice(encoder, Some(self.as_mut_slice()))
+        encode_encodable_iter(encoder, Some(self.iter_mut()))
     }
 }
 
@@ -659,13 +710,35 @@ impl<T: Decodable> Decodable for Vec<T> {
     }
 }
 
+impl<'a, 'b: 'a, T: Encodable> Encodable for
+    Option<&'a mut ExactSizeIterator<Item = T>>
+{
+    fn inline_align(&self) -> usize { 8 }
+
+    fn inline_size(&self) -> usize { 16 }
+
+    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+        encode_encodable_iter(encoder, self.as_mut().map(|x| &mut **x))
+    }
+}
+
+impl<'a, T: Encodable> Encodable for Option<&'a mut [T]> {
+    fn inline_align(&self) -> usize { 8 }
+
+    fn inline_size(&self) -> usize { 16 }
+
+    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+        encode_encodable_iter(encoder, self.as_mut().map(|x| x.iter_mut()))
+    }
+}
+
 impl<T: Encodable> Encodable for Option<Vec<T>> {
     fn inline_align(&self) -> usize { 8 }
 
     fn inline_size(&self) -> usize { 16 }
 
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
-        encode_encodable_slice(encoder, self.as_mut().map(|v| v.as_mut_slice()))
+        encode_encodable_iter(encoder, self.as_mut().map(|x| x.iter_mut()))
     }
 }
 
@@ -1325,10 +1398,10 @@ macro_rules! tuple_impls {
 
     // Finally expand into the implementation
     ([($idx:tt, $typ:ident); $( ($nidx:tt, $ntyp:ident); )*]) => {
-        impl<'a, $typ, $( $ntyp ,)*>
-            Encodable for (&'a mut $typ, $( &'a mut $ntyp ,)*)
-            where $typ: Encodable + 'a,
-                  $( $ntyp: Encodable + 'a ,)*
+        impl<$typ, $( $ntyp ,)*>
+            Encodable for ($typ, $( $ntyp ,)*)
+            where $typ: Encodable,
+                  $( $ntyp: Encodable,)*
         {
             fn inline_align(&self) -> usize {
                 let mut max = 0;
@@ -1372,41 +1445,6 @@ macro_rules! tuple_impls {
                 })
             }
         }
-
-        /* TODO(cramertj) enable when some form of specialization is stable in the future...
-        impl<$typ, $( $ntyp ,)*>
-            Encodable for ($typ, $( $ntyp ,)*)
-            where $typ: Encodable,
-                  $( $ntyp: Encodable,)*
-        {
-            fn inline_align(&self) -> usize {
-                (
-                    &mut self.$idx,
-                    $(
-                        &mut self.$nidx,
-                    )*
-                ).inline_align()
-            }
-
-            fn inline_size(&self) -> usize {
-                (
-                    &mut self.$idx,
-                    $(
-                        &mut self.$nidx,
-                    )*
-                ).inline_size()
-            }
-
-            fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
-                (
-                    &mut self.$idx,
-                    $(
-                        &mut self.$nidx,
-                    )*
-                ).encode(encoder)
-            }
-        }
-        */
 
         impl<$typ, $( $ntyp ),*> Decodable for ($typ, $( $ntyp, )*)
             where $typ: Decodable,

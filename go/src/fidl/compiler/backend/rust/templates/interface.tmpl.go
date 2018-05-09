@@ -394,7 +394,7 @@ impl {{ $interface.Name }}ControlHandle {
 	{{- if not $method.HasRequest }}
 	pub fn send_{{ $method.Name }}(&self
 		{{- range $param := $method.Response -}},
-		{{- $param.Name -}}: &mut {{ $param.Type -}}
+		mut {{ $param.Name -}}: {{ $param.BorrowedType -}}
 		{{- end -}}
 	) -> Result<(), fidl::Error> {
 		let header = fidl::encoding2::TransactionHeader {
@@ -405,8 +405,8 @@ impl {{ $interface.Name }}ControlHandle {
 
 		let mut response = (
 			{{- range $index, $param := $method.Response -}}
-				{{- if ne 0 $index -}}, {{- $param.Name -}}
-				{{- else -}} {{- $param.Name -}}
+				{{- if ne 0 $index -}}, &mut {{ $param.Name -}}
+				{{- else -}} &mut {{ $param.Name -}}
 				{{- end -}}
 			{{- end -}}
 		);
@@ -440,7 +440,7 @@ impl {{ $interface.Name }}{{ $method.CamelName }}Responder {
 
 	pub fn send(&self,
 		{{- range $param := $method.Response -}}
-		{{- $param.Name -}}: &mut {{ $param.Type -}},
+		mut {{ $param.Name -}}: {{ $param.BorrowedType -}},
 		{{- end -}}
 	) -> Result<(), fidl::Error> {
 		let header = fidl::encoding2::TransactionHeader {
@@ -451,8 +451,8 @@ impl {{ $interface.Name }}{{ $method.CamelName }}Responder {
 
 		let mut response = (
 			{{- range $index, $param := $method.Response -}}
-			{{- if ne 0 $index -}}, {{- $param.Name -}}
-			{{- else -}} {{- $param.Name -}}
+			{{- if ne 0 $index -}}, &mut {{ $param.Name -}}
+			{{- else -}} &mut {{ $param.Name -}}
 			{{- end -}}
 			{{- end -}}
 		);

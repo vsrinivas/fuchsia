@@ -83,6 +83,7 @@ type Method struct {
 
 type Parameter struct {
 	Type   string
+	BorrowedType string
 	Name   string
 	Offset int
 }
@@ -348,7 +349,7 @@ func (c *compiler) compileConst(val types.Const) Const {
 		}
 	} else {
 		r = Const{
-			Type:  c.compileType(val.Type).Decl,
+			Type:  c.compileType(val.Type, false).Decl,
 			Name:  name,
 			Value: c.compileConstant(val.Value),
 		}
@@ -372,30 +373,50 @@ func compileHandleSubtype(val types.HandleSubtype) string {
 	return ""
 }
 
-func (c *compiler) compileType(val types.Type) Type {
+func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 	var r string
 	var declType types.DeclType
 	switch val.Kind {
 	case types.ArrayType:
-		t := c.compileType(*val.ElementType)
+		t := c.compileType(*val.ElementType, borrowed)
 		r = fmt.Sprintf("[%s; %v]", t.Decl, *val.ElementCount)
+		if borrowed {
+			r = fmt.Sprintf("&mut %s", r)
+		}
 	case types.VectorType:
-		t := c.compileType(*val.ElementType)
-		if val.Nullable {
-			r = fmt.Sprintf("Option<Vec<%s>>", t.Decl)
+		t := c.compileType(*val.ElementType, borrowed)
+		var inner string
+		if borrowed {
+			inner = fmt.Sprintf("&mut ExactSizeIterator<Item = %s>", t.Decl)
 		} else {
-			r = fmt.Sprintf("Vec<%s>", t.Decl)
+			inner = fmt.Sprintf("Vec<%s>", t.Decl)
+		}
+		if val.Nullable {
+			r = fmt.Sprintf("Option<%s>", inner)
+		} else {
+			r = inner
 		}
 	case types.StringType:
-		if val.Nullable {
-			r = "Option<String>"
+		if borrowed {
+			if val.Nullable {
+				r = "Option<&str>"
+			} else {
+				r = "&str"
+			}
 		} else {
-			r = "String"
+			if val.Nullable {
+				r = "Option<String>"
+			} else {
+				r = "String"
+			}
 		}
 	case types.HandleType:
 		r = fmt.Sprintf("zx::%s", compileHandleSubtype(val.HandleSubtype))
 		if val.Nullable {
 			r = fmt.Sprintf("Option<%s>", r)
+		}
+		if borrowed {
+			r = fmt.Sprintf("&mut %s", r)
 		}
 	case types.RequestType:
 		r = c.compileCamelCompoundIdentifier(val.RequestSubtype)
@@ -403,7 +424,12 @@ func (c *compiler) compileType(val types.Type) Type {
 		if val.Nullable {
 			r = fmt.Sprintf("Option<%s>", r)
 		}
+		if borrowed {
+			r = fmt.Sprintf("&mut %s", r)
+		}
 	case types.PrimitiveType:
+		// Primitive types are small, simple, and never contain handles,
+		// so there's no need to borrow them
 		r = compilePrimitiveSubtype(val.PrimitiveSubtype)
 	case types.IdentifierType:
 		t := c.compileCamelCompoundIdentifier(val.Identifier)
@@ -412,9 +438,12 @@ func (c *compiler) compileType(val types.Type) Type {
 			log.Fatal("unknown identifier: ", val.Identifier)
 		}
 		switch declType {
-		case types.ConstDeclType:
-			fallthrough
 		case types.EnumDeclType:
+			// Enums are small, simple, and never contain handles,
+			// so no need to borrow
+			borrowed = false
+			fallthrough
+		case types.ConstDeclType:
 			fallthrough
 		case types.StructDeclType:
 			fallthrough
@@ -431,6 +460,9 @@ func (c *compiler) compileType(val types.Type) Type {
 			}
 		default:
 			log.Fatal("Unknown declaration type: ", declType)
+		}
+		if borrowed {
+			r = fmt.Sprintf("&mut %s", r)
 		}
 	default:
 		log.Fatal("Unknown type kind: ", val.Kind)
@@ -463,7 +495,8 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 
 	for _, v := range val {
 		p := Parameter{
-			c.compileType(v.Type).Decl,
+			c.compileType(v.Type, false).Decl,
+			c.compileType(v.Type, true).Decl,
 			changeIfReserved(v.Name),
 			v.Offset,
 		}
@@ -503,7 +536,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 
 func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	return StructMember{
-		Type:         c.compileType(val.Type).Decl,
+		Type:         c.compileType(val.Type, false).Decl,
 		Name:         compileSnakeIdentifier(val.Name),
 		Offset:       val.Offset,
 		HasDefault:   false,
@@ -529,7 +562,7 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 
 func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 	return UnionMember{
-		Type:   c.compileType(val.Type).Decl,
+		Type:   c.compileType(val.Type, false).Decl,
 		Name:   compileCamelIdentifier(val.Name),
 		Offset: val.Offset,
 	}

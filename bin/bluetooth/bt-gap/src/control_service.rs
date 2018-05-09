@@ -59,11 +59,8 @@ pub fn make_control_service(
         get_adapters: |hd, res| {
             //TODO:(NET-854)
             let hd = hd.read();
-            let mut adapters = vec![];
-            for adapter in hd.get_adapters() {
-                adapters.push(adapter);
-            }
-            res.send(&mut Some(adapters))
+            let mut adapters = hd.get_adapters();
+            res.send(Some(&mut adapters.iter_mut()))
                 .into_future()
                 .recover(|e| eprintln!("error sending response: {:?}", e))
         },
@@ -75,7 +72,7 @@ pub fn make_control_service(
             } else {
                 false
             };
-            res.send(&mut is_avail)
+            res.send(is_avail)
                 .into_future()
                 .recover(|e| eprintln!("error sending response: {:?}", e))
         },
