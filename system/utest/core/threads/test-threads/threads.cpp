@@ -78,9 +78,9 @@ void threads_test_port_fn(void* arg) {
 }
 
 void threads_test_channel_call_fn(void* arg_) {
-    struct channel_call_suspend_test_arg* arg = arg_;
+    channel_call_suspend_test_arg* arg = static_cast<channel_call_suspend_test_arg*>(arg_);
 
-    uint8_t send_buf[9] = "abcdefghi";
+    uint8_t send_buf[9] = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i' };
     uint8_t recv_buf[9];
     uint32_t actual_bytes, actual_handles;
 

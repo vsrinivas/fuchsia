@@ -77,7 +77,7 @@ static bool resume_thread_synchronous(zx_handle_t thread, zx_handle_t suspend_to
 static bool advance_over_breakpoint(zx_handle_t thread) {
 #if defined(__aarch64__)
     // Advance 4 bytes to the next instruction after the debug break.
-    struct zx_thread_state_general_regs regs;
+    zx_thread_state_general_regs regs;
     ASSERT_EQ(zx_thread_read_state(thread, ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)),
               ZX_OK, "");
     regs.pc += 4;
@@ -158,13 +158,13 @@ static bool set_debugger_exception_port(zx_handle_t* eport_out) {
     return true;
 }
 
-static void clear_debugger_exception_port(void) {
+static void clear_debugger_exception_port() {
     zx_handle_t self = zx_process_self();
     zx_task_bind_exception_port(self, ZX_HANDLE_INVALID, kExceptionPortKey,
                                 ZX_EXCEPTION_PORT_DEBUGGER);
 }
 
-static bool test_basics(void) {
+static bool test_basics() {
     BEGIN_TEST;
     zxr_thread_t thread;
     zx_handle_t thread_h;
@@ -176,7 +176,7 @@ static bool test_basics(void) {
     END_TEST;
 }
 
-static bool test_detach(void) {
+static bool test_detach() {
     BEGIN_TEST;
     zxr_thread_t thread;
     zx_handle_t event;
@@ -203,7 +203,7 @@ static bool test_detach(void) {
     END_TEST;
 }
 
-static bool test_long_name_succeeds(void) {
+static bool test_long_name_succeeds() {
     BEGIN_TEST;
     // Creating a thread with a super long name should succeed.
     static const char long_name[] =
@@ -222,7 +222,7 @@ static bool test_long_name_succeeds(void) {
 // zx_thread_start() is not supposed to be usable for creating a
 // process's first thread.  That's what zx_process_start() is for.
 // Check that zx_thread_start() returns an error in this case.
-static bool test_thread_start_on_initial_thread(void) {
+static bool test_thread_start_on_initial_thread() {
     BEGIN_TEST;
 
     static const char kProcessName[] = "test-proc-thread1";
@@ -245,7 +245,7 @@ static bool test_thread_start_on_initial_thread(void) {
 // Test that we don't get an assertion failure (and kernel panic) if we
 // pass a zero instruction pointer when starting a thread (in this case via
 // zx_process_start()).
-static bool test_thread_start_with_zero_instruction_pointer(void) {
+static bool test_thread_start_with_zero_instruction_pointer() {
     BEGIN_TEST;
 
     static const char kProcessName[] = "test-proc-thread2";
@@ -272,7 +272,7 @@ static bool test_thread_start_with_zero_instruction_pointer(void) {
     END_TEST;
 }
 
-static bool test_kill_busy_thread(void) {
+static bool test_kill_busy_thread() {
     BEGIN_TEST;
 
     ASSERT_TRUE(start_and_kill_thread(threads_test_busy_fn, NULL), "");
@@ -280,7 +280,7 @@ static bool test_kill_busy_thread(void) {
     END_TEST;
 }
 
-static bool test_kill_sleep_thread(void) {
+static bool test_kill_sleep_thread() {
     BEGIN_TEST;
 
     ASSERT_TRUE(start_and_kill_thread(threads_test_infinite_sleep_fn, NULL), "");
@@ -288,7 +288,7 @@ static bool test_kill_sleep_thread(void) {
     END_TEST;
 }
 
-static bool test_kill_wait_thread(void) {
+static bool test_kill_wait_thread() {
     BEGIN_TEST;
 
     zx_handle_t event;
@@ -299,7 +299,7 @@ static bool test_kill_wait_thread(void) {
     END_TEST;
 }
 
-static bool test_bad_state_nonstarted_thread(void) {
+static bool test_bad_state_nonstarted_thread() {
     BEGIN_TEST;
 
     // Perform a bunch of apis against non started threads (in the INITIAL STATE).
@@ -340,7 +340,7 @@ struct self_killing_thread_args {
 };
 
 __NO_SAFESTACK static void self_killing_fn(void* arg) {
-    struct self_killing_thread_args* args = arg;
+    self_killing_thread_args* args = static_cast<self_killing_thread_args*>(arg);
     // Kill the current thread.
     zx_task_kill(zxr_thread_get_handle(&args->thread));
     // We should not reach here -- the syscall should not have returned.
@@ -350,10 +350,10 @@ __NO_SAFESTACK static void self_killing_fn(void* arg) {
 
 // This tests that the zx_task_kill() syscall does not return when a thread
 // uses it to kill itself.
-static bool test_thread_kills_itself(void) {
+static bool test_thread_kills_itself() {
     BEGIN_TEST;
 
-    struct self_killing_thread_args args;
+    self_killing_thread_args args;
     args.test_value = 111;
     zx_handle_t thread_handle;
     ASSERT_TRUE(start_thread(self_killing_fn, &args, &args.thread, &thread_handle), "");
@@ -369,7 +369,7 @@ static bool test_thread_kills_itself(void) {
     END_TEST;
 }
 
-static bool test_info_task_stats_fails(void) {
+static bool test_info_task_stats_fails() {
     BEGIN_TEST;
     // Spin up a thread.
     zxr_thread_t thread;
@@ -392,7 +392,7 @@ static bool test_info_task_stats_fails(void) {
     END_TEST;
 }
 
-static bool test_resume_suspended(void) {
+static bool test_resume_suspended() {
     BEGIN_TEST;
 
     zx_handle_t event;
@@ -461,7 +461,7 @@ static bool test_resume_suspended(void) {
     END_TEST;
 }
 
-static bool test_suspend_sleeping(void) {
+static bool test_suspend_sleeping() {
     BEGIN_TEST;
 
     const zx_time_t sleep_deadline = zx_deadline_after(ZX_MSEC(100));
@@ -505,13 +505,13 @@ static bool test_suspend_sleeping(void) {
     END_TEST;
 }
 
-static bool test_suspend_channel_call(void) {
+static bool test_suspend_channel_call() {
     BEGIN_TEST;
 
     zxr_thread_t thread;
 
     zx_handle_t channel;
-    struct channel_call_suspend_test_arg thread_arg;
+    channel_call_suspend_test_arg thread_arg;
     ASSERT_EQ(zx_channel_create(0, &thread_arg.channel, &channel), ZX_OK, "");
     thread_arg.call_status = ZX_ERR_BAD_STATE;
 
@@ -563,7 +563,7 @@ static bool test_suspend_channel_call(void) {
     END_TEST;
 }
 
-static bool test_suspend_port_call(void) {
+static bool test_suspend_port_call() {
     BEGIN_TEST;
 
     zxr_thread_t thread;
@@ -610,19 +610,19 @@ struct test_writing_thread_arg {
 };
 
 __NO_SAFESTACK static void test_writing_thread_fn(void* arg_) {
-    struct test_writing_thread_arg* arg = arg_;
+    test_writing_thread_arg* arg = static_cast<test_writing_thread_arg*>(arg_);
     while (true) {
         arg->v = 1;
     }
     __builtin_trap();
 }
 
-static bool test_suspend_stops_thread(void) {
+static bool test_suspend_stops_thread() {
     BEGIN_TEST;
 
     zxr_thread_t thread;
 
-    struct test_writing_thread_arg arg = { .v = 0 };
+    test_writing_thread_arg arg = { .v = 0 };
     zx_handle_t thread_h;
     ASSERT_TRUE(start_thread(test_writing_thread_fn, &arg, &thread, &thread_h), "");
 
@@ -654,7 +654,7 @@ static bool test_suspend_stops_thread(void) {
     END_TEST;
 }
 
-static bool test_suspend_multiple(void) {
+static bool test_suspend_multiple() {
     BEGIN_TEST;
 
     // TODO(brettw) ZX-1072 Fix this test and enable. Currently suspend tokens
@@ -731,11 +731,11 @@ static bool test_suspend_multiple(void) {
 
 // This tests for a bug in which killing a suspended thread causes the
 // thread to be resumed and execute more instructions in userland.
-static bool test_kill_suspended_thread(void) {
+static bool test_kill_suspended_thread() {
     BEGIN_TEST;
 
     zxr_thread_t thread;
-    struct test_writing_thread_arg arg = { .v = 0 };
+    test_writing_thread_arg arg = { .v = 0 };
     zx_handle_t thread_h;
     ASSERT_TRUE(start_thread(test_writing_thread_fn, &arg, &thread, &thread_h), "");
 
@@ -918,14 +918,14 @@ static bool test_suspend_wait_async_signal_delivery_worker(bool use_repeating) {
 }
 
 // Test signal delivery of suspended threads via single async wait.
-static bool test_suspend_single_wait_async_signal_delivery(void) {
+static bool test_suspend_single_wait_async_signal_delivery() {
     BEGIN_TEST;
     EXPECT_TRUE(test_suspend_wait_async_signal_delivery_worker(false), "");
     END_TEST;
 }
 
 // Test signal delivery of suspended threads via repeating async wait.
-static bool test_suspend_repeating_wait_async_signal_delivery(void) {
+static bool test_suspend_repeating_wait_async_signal_delivery() {
     BEGIN_TEST;
     EXPECT_TRUE(test_suspend_wait_async_signal_delivery_worker(true), "");
     END_TEST;
@@ -934,7 +934,7 @@ static bool test_suspend_repeating_wait_async_signal_delivery(void) {
 // This tests the registers reported by zx_thread_read_state() for a
 // suspended thread.  It starts a thread which sets all the registers to
 // known test values.
-static bool test_reading_register_state(void) {
+static bool test_reading_register_state() {
     BEGIN_TEST;
 
     zx_thread_state_general_regs_t regs_expected;
@@ -971,7 +971,7 @@ static bool test_reading_register_state(void) {
 // This tests writing registers using zx_thread_write_state().  After
 // setting registers using that syscall, it reads back the registers and
 // checks their values.
-static bool test_writing_register_state(void) {
+static bool test_writing_register_state() {
     BEGIN_TEST;
 
     zxr_thread_t thread;
@@ -1015,7 +1015,7 @@ static bool test_writing_register_state(void) {
 // This is based on code from kernel/ which isn't usable by code in system/.
 enum { X86_CPUID_ADDR_WIDTH = 0x80000008 };
 
-static uint32_t x86_linear_address_width(void) {
+static uint32_t x86_linear_address_width() {
     uint32_t eax, ebx, ecx, edx;
     __asm__("cpuid"
             : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
@@ -1030,7 +1030,7 @@ static uint32_t x86_linear_address_width(void) {
 // because if the kernel returns to that address using SYSRET, that can
 // cause a fault in kernel mode that is exploitable.  See
 // sysret_problem.md.
-static bool test_noncanonical_rip_address(void) {
+static bool test_noncanonical_rip_address() {
     BEGIN_TEST;
 
 #if defined(__x86_64__)
@@ -1102,11 +1102,11 @@ static bool test_noncanonical_rip_address(void) {
 // FIQ interrupt disable flags.  We don't want userland to be able to set
 // those flags to 1, since that would disable interrupts.  Also, userland
 // should not be able to read these bits.
-static bool test_writing_arm_flags_register(void) {
+static bool test_writing_arm_flags_register() {
     BEGIN_TEST;
 
 #if defined(__aarch64__)
-    struct test_writing_thread_arg arg = { .v = 0 };
+    test_writing_thread_arg arg = { .v = 0 };
     zxr_thread_t thread;
     zx_handle_t thread_handle;
     ASSERT_TRUE(start_thread(test_writing_thread_fn, &arg, &thread,

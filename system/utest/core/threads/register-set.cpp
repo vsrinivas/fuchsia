@@ -9,7 +9,7 @@
 
 void regs_fill_test_values(zx_thread_state_general_regs_t* regs) {
     for (uint32_t index = 0; index < sizeof(*regs); ++index) {
-        ((uint8_t*)regs)[index] = index + 1;
+        ((uint8_t*)regs)[index] = static_cast<uint8_t>(index + 1);
     }
     // Set various flags bits that will read back the same.
 #if defined(__x86_64__)
