@@ -48,7 +48,7 @@ void DebuggedThread::OnException(uint32_t type) {
     // was from a normal completion of the breakpoing step, or whether
     // something else went wrong while stepping.
     bool completes_bp_step =
-        current_breakpoint_->BreakpointStepHasException(this, type);
+        current_breakpoint_->BreakpointStepHasException(koid_, type);
     current_breakpoint_ = nullptr;
     if (completes_bp_step &&
         after_breakpoint_step_ == AfterBreakpointStep::kContinue) {
@@ -115,7 +115,7 @@ void DebuggedThread::Resume(debug_ipc::ResumeRequest::How how) {
       else
         after_breakpoint_step_ = AfterBreakpointStep::kContinue;
 
-      current_breakpoint_->BeginStepOver(this);
+      current_breakpoint_->BeginStepOver(koid_);
     } else {
       SetSingleStep(how == debug_ipc::ResumeRequest::How::kStepInstruction);
     }

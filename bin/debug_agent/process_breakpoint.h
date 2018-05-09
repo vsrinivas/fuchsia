@@ -7,21 +7,21 @@
 #include <map>
 
 #include "garnet/bin/debug_agent/arch.h"
+#include "garnet/bin/debug_agent/process_memory_accessor.h"
 #include "garnet/lib/debug_ipc/records.h"
 #include "garnet/public/lib/fxl/macros.h"
 
 namespace debug_agent {
-
-class DebuggedProcess;
-class DebuggedThread;
 
 // Represents a breakpoint in the debug agent. These breakpoints are
 // per-process (client breakpoints in the zxdb debugger can span multiple
 // processes, and in that case will reference multiple ProcessBreakpoints).
 class ProcessBreakpoint {
  public:
+  // The memory accessor must outlive this class.
+  //
   // Call SetSettings immediately after construction.
-  explicit ProcessBreakpoint(DebuggedProcess* process);
+  explicit ProcessBreakpoint(ProcessMemoryAccessor* memory_accessor);
   ~ProcessBreakpoint();
 
   uint64_t address() const { return settings_.address; }
@@ -41,7 +41,7 @@ class ProcessBreakpoint {
   //
   // The thread must be put into single-step mode by the caller when this
   // function is called.
-  void BeginStepOver(DebuggedThread* thread);
+  void BeginStepOver(zx_koid_t thread_koid);
 
   // When a thread has a "current breakpoint" its handling, exceptions will be
   // routed here first. A thread has a current breakpoint when it's either
@@ -53,7 +53,7 @@ class ProcessBreakpoint {
   // (the one with the breakpoint) caused an exception itself (say, an access
   // violation). In either case, the breakpoint will clean up after itself from
   // a single-step.
-  bool BreakpointStepHasException(DebuggedThread* thread,
+  bool BreakpointStepHasException(zx_koid_t thread_koid,
                                   uint32_t exception_type);
 
  private:
@@ -73,7 +73,7 @@ class ProcessBreakpoint {
   bool Install();
   void Uninstall();
 
-  DebuggedProcess* process_;  // Backpointer to owner of this class.
+  ProcessMemoryAccessor* memory_accessor_;
 
   debug_ipc::BreakpointSettings settings_;
 
@@ -85,7 +85,7 @@ class ProcessBreakpoint {
 
   // Tracks the threads currently single-stepping over this breakpoint.
   // Normally this will be empty (nobody) or have one thread, but could be more
-  // than one in rare cases.
+  // than one in rare cases. Maps thread koid to status.
   //
   // A step is executed by putting back the original instruction, stepping the
   // thread, and then re-inserting the breakpoint instruction. The breakpoint
@@ -100,7 +100,7 @@ class ProcessBreakpoint {
   // can execute and miss the breakpoint. To avoid this, we need to implement
   // something similar to GDB's "displaced step" to execute the instruction
   // without ever removing the breakpoint instruction.
-  std::map<DebuggedThread*, StepStatus> thread_step_over_;
+  std::map<zx_koid_t, StepStatus> thread_step_over_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ProcessBreakpoint);
 };

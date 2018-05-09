@@ -5,21 +5,16 @@
 #include "garnet/bin/debug_agent/process_breakpoint.h"
 
 #include <inttypes.h>
-#include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 
-#include "garnet/bin/debug_agent/debugged_process.h"
-#include "garnet/bin/debug_agent/debugged_thread.h"
 #include "garnet/public/lib/fxl/logging.h"
 
 namespace debug_agent {
 
-ProcessBreakpoint::ProcessBreakpoint(DebuggedProcess* process)
-    : process_(process) {}
+ProcessBreakpoint::ProcessBreakpoint(ProcessMemoryAccessor* memory_accessor)
+    : memory_accessor_(memory_accessor) {}
 
-ProcessBreakpoint::~ProcessBreakpoint() {
-  Uninstall();
-}
+ProcessBreakpoint::~ProcessBreakpoint() { Uninstall(); }
 
 bool ProcessBreakpoint::SetSettings(
     const debug_ipc::BreakpointSettings& settings) {
@@ -32,8 +27,7 @@ bool ProcessBreakpoint::SetSettings(
       // breakpoint isn't currently installed, so we can't uninstall it.
       // Instead, mark the threads currently waiting on a single step as
       // being obsolete so they will not try to put back the breakpoint.
-      for (auto& pair : thread_step_over_)
-        pair.second = StepStatus::kObsolete;
+      for (auto& pair : thread_step_over_) pair.second = StepStatus::kObsolete;
     }
     settings_ = settings;
     return Install();
@@ -43,8 +37,7 @@ bool ProcessBreakpoint::SetSettings(
 }
 
 void ProcessBreakpoint::FixupMemoryBlock(debug_ipc::MemoryBlock* block) {
-  if (block->data.empty())
-    return;  // Nothing to do.
+  if (block->data.empty()) return;  // Nothing to do.
   FXL_DCHECK(static_cast<size_t>(block->size) == block->data.size());
 
   size_t src_size = sizeof(arch::BreakInstructionType);
@@ -61,21 +54,21 @@ void ProcessBreakpoint::FixupMemoryBlock(debug_ipc::MemoryBlock* block) {
   }
 }
 
-void ProcessBreakpoint::BeginStepOver(DebuggedThread* thread) {
+void ProcessBreakpoint::BeginStepOver(zx_koid_t thread_koid) {
   // Should't be recursively stepping over a breakpoint from the same thread.
-  FXL_DCHECK(thread_step_over_.find(thread) == thread_step_over_.end());
+  FXL_DCHECK(thread_step_over_.find(thread_koid) == thread_step_over_.end());
 
   if (!CurrentlySteppingOver()) {
     // This is the first thread to attempt to step over the breakpoint (there
     // could theoretically be more than one).
     Uninstall();
   }
-  thread_step_over_[thread] = StepStatus::kCurrent;
+  thread_step_over_[thread_koid] = StepStatus::kCurrent;
 }
 
-bool ProcessBreakpoint::BreakpointStepHasException(DebuggedThread* thread,
+bool ProcessBreakpoint::BreakpointStepHasException(zx_koid_t thread_koid,
                                                    uint32_t exception_type) {
-  auto found_thread = thread_step_over_.find(thread);
+  auto found_thread = thread_step_over_.find(thread_koid);
   if (found_thread == thread_step_over_.end()) {
     // Shouldn't be getting these notifications from a thread not currently
     // doing a step-over.
@@ -97,8 +90,7 @@ bool ProcessBreakpoint::BreakpointStepHasException(DebuggedThread* thread,
 
 bool ProcessBreakpoint::CurrentlySteppingOver() const {
   for (const auto& pair : thread_step_over_) {
-    if (pair.second == StepStatus::kCurrent)
-      return true;
+    if (pair.second == StepStatus::kCurrent) return true;
   }
   return false;
 }
@@ -108,15 +100,15 @@ bool ProcessBreakpoint::Install() {
 
   // Read previous instruction contents.
   size_t actual = 0;
-  zx_status_t status = process_->process().read_memory(
+  zx_status_t status = memory_accessor_->ReadProcessMemory(
       address(), &previous_data_, sizeof(arch::BreakInstructionType), &actual);
   if (status != ZX_OK || actual != sizeof(arch::BreakInstructionType))
     return false;
 
   // Replace with breakpoint instruction.
-  status = process_->process().write_memory(address(), &arch::kBreakInstruction,
-                                            sizeof(arch::BreakInstructionType),
-                                            &actual);
+  status = memory_accessor_->WriteProcessMemory(
+      address(), &arch::kBreakInstruction, sizeof(arch::BreakInstructionType),
+      &actual);
   if (status != ZX_OK || actual != sizeof(arch::BreakInstructionType))
     return false;
   installed_ = true;
@@ -124,8 +116,7 @@ bool ProcessBreakpoint::Install() {
 }
 
 void ProcessBreakpoint::Uninstall() {
-  if (!installed_)
-    return;  // Not installed.
+  if (!installed_) return;  // Not installed.
 
   // If the breakpoint was previously installed it means the memory address
   // was valid and writable, so we generally expect to be able to do the same
@@ -134,7 +125,7 @@ void ProcessBreakpoint::Uninstall() {
   // breakpoint instruction before doing any writes.
   arch::BreakInstructionType current_contents = 0;
   size_t actual = 0;
-  zx_status_t status = process_->process().read_memory(
+  zx_status_t status = memory_accessor_->ReadProcessMemory(
       address(), &current_contents, sizeof(arch::BreakInstructionType),
       &actual);
   if (status != ZX_OK || actual != sizeof(arch::BreakInstructionType))
@@ -148,7 +139,7 @@ void ProcessBreakpoint::Uninstall() {
     return;  // Replaced with something else, ignore.
   }
 
-  status = process_->process().write_memory(
+  status = memory_accessor_->WriteProcessMemory(
       address(), &previous_data_, sizeof(arch::BreakInstructionType), &actual);
   if (status != ZX_OK || actual != sizeof(arch::BreakInstructionType)) {
     fprintf(stderr, "Warning: unable to remove breakpoint at %" PRIX64 ".",

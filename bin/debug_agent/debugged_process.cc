@@ -14,6 +14,7 @@
 #include "garnet/bin/debug_agent/debugged_thread.h"
 #include "garnet/bin/debug_agent/process_breakpoint.h"
 #include "garnet/bin/debug_agent/process_info.h"
+#include "garnet/bin/debug_agent/process_memory_accessor.h"
 #include "garnet/lib/debug_ipc/agent_protocol.h"
 #include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
@@ -254,6 +255,16 @@ void DebuggedProcess::OnException(zx_koid_t process_koid,
             "Exception for thread %" PRIu64 " which we don't know about.\n",
             thread_koid);
   }
+}
+
+zx_status_t DebuggedProcess::ReadProcessMemory(
+    uintptr_t address, void* buffer, size_t len, size_t* actual) {
+  return process_.read_memory(address, buffer, len, actual);
+}
+
+zx_status_t DebuggedProcess::WriteProcessMemory(
+    uintptr_t address, const void* buffer, size_t len, size_t* actual) {
+  return process_.write_memory(address, buffer, len, actual);
 }
 
 }  // namespace debug_agent

@@ -25,6 +25,7 @@ static_library("lib") {
     "process_info.h",
     "process_breakpoint.cc",
     "process_breakpoint.h",
+    "process_memory_accessor.h",
     "remote_api.h",
     "remote_api_adapter.cc",
     "remote_api_adapter.h",
@@ -99,6 +100,7 @@ executable("unittests") {
 
   sources = [
     "process_info_unittests.cc",
+    "process_breakpoint_unittest.cc",
     "system_info_unittests.cc",
   ]
 

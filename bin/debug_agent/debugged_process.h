@@ -9,6 +9,7 @@
 #include <map>
 #include <memory>
 
+#include "garnet/bin/debug_agent/process_memory_accessor.h"
 #include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "garnet/lib/debug_ipc/helper/zircon_exception_watcher.h"
@@ -20,7 +21,8 @@ class DebugAgent;
 class DebuggedThread;
 class ProcessBreakpoint;
 
-class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
+class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
+                        public ProcessMemoryAccessor {
  public:
   // Caller must call Init immediately after construction and delete the
   // object if that fails.
@@ -71,6 +73,13 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
   void OnException(zx_koid_t process_koid,
                    zx_koid_t thread_koid,
                    uint32_t type) override;
+
+  // ProcessMemoryAccessor implementation.
+  zx_status_t ReadProcessMemory(
+      uintptr_t address, void* buffer, size_t len, size_t* actual) override;
+  zx_status_t WriteProcessMemory(
+      uintptr_t address, const void* buffer, size_t len, size_t* actual)
+    override;
 
   DebugAgent* debug_agent_;  // Non-owning.
   zx_koid_t koid_;
