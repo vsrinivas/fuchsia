@@ -50,8 +50,6 @@ dBh operator-(const dBh& rhs) {
     return dBh(-rhs.val);
 }
 
-dBm::dBm(int8_t v) : EnergyType<int8_t, dBm>(v) {}
-
 dBm operator+(const dBm& lhs, const dB& rhs) {
     return dBm(lhs.val + rhs.val);
 }

@@ -4,6 +4,7 @@
 
 #include <gtest/gtest.h>
 
+#include <cmath>
 #include <wlan/common/energy.h>
 
 namespace wlan {
@@ -125,6 +126,42 @@ TEST_F(EnergyTest, Arithmetics) {
     dBm k(-71);
     dBm l = j + k;
     EXPECT_EQ(l.val, -67);  // -70 dBm + (-71) dBm = -67 dBm
+}
+
+TEST_F(EnergyTest, DbmToFemtoWatt) {
+    using i8_limits = std::numeric_limits<int8_t>;
+
+    for (int dbm = -100; dbm <= 48; ++dbm) {
+        uint64_t got = to_femtoWatt_approx(dBm(dbm)).val;
+
+        // Relative error should be within 3%
+        double want = pow(10.0, 12 + dbm * 0.1);
+        double rel_err = fabs((static_cast<double>(got) - want) / want);
+        EXPECT_LT(rel_err, 0.03);
+
+        // Converting back to dBm should produce the original number
+        int back_to_dbm = round(10.0 * (log10(want) - 12.0));
+        EXPECT_EQ(back_to_dbm, dbm);
+    }
+
+    for (int dbm = i8_limits::min(); dbm < -100; ++dbm) {
+        uint64_t res = to_femtoWatt_approx(dBm(dbm)).val;
+        // For input below 100 dBm, the result should be below 100 femtowatts
+        EXPECT_LT(res, 100u);
+    }
+
+    for (int dbm = 49; dbm < i8_limits::max(); ++dbm) {
+        uint64_t res = to_femtoWatt_approx(dBm(dbm)).val;
+        uint64_t res_48 = to_femtoWatt_approx(dBm(48)).val;
+        // For inputs above 48 dBm, the result should be >= the result for 48 dBm
+        EXPECT_GE(res, res_48);
+    }
+
+    for (int dbm = i8_limits::min(); dbm <= i8_limits::max(); ++dbm) {
+        uint64_t res = to_femtoWatt_approx(dBm(dbm)).val;
+        // For all inputs, the output should be less than 2^56
+        EXPECT_LT(res, 1ull << 56);
+    }
 }
 
 }  // namespace
