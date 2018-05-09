@@ -201,6 +201,8 @@ zx_status_t ChannelDispatcher::Read(uint32_t* msg_size,
 zx_status_t ChannelDispatcher::Write(fbl::unique_ptr<MessagePacket> msg) {
     canary_.Assert();
 
+    AutoReschedDisable resched_disable; // Must come before the AutoLock.
+    resched_disable.Disable();
     AutoLock lock(get_lock());
     if (!peer_) {
         // |msg| will be destroyed but we want to keep the handles alive since
@@ -230,6 +232,8 @@ zx_status_t ChannelDispatcher::Call(fbl::unique_ptr<MessagePacket> msg,
     }
 
     {
+        AutoReschedDisable resched_disable; // Must come before the AutoLock.
+        resched_disable.Disable();
         AutoLock lock(get_lock());
 
         if (!peer_) {
