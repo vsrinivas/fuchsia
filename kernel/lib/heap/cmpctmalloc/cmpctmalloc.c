@@ -1095,9 +1095,9 @@ static ssize_t heap_grow(size_t size) {
             return ZX_ERR_NO_MEMORY;
         }
         LTRACEF("Growing heap by 0x%zx bytes, new ptr %p\n", size, ptr);
+        theheap.size += size;
     }
 
-    theheap.size += size;
     add_to_heap(ptr, size);
 
     return size;
