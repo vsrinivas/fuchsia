@@ -1837,6 +1837,10 @@ bool TestPartialWrite(void) {
 template <FsTestType TestType>
 bool TestPartialWriteSleepRamdisk(void) {
     BEGIN_TEST;
+    if (gUseRealDisk) {
+        fprintf(stderr, "Ramdisk required; skipping test\n");
+        return true;
+    }
     BlobfsTest blobfsTest(TestType);
     ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
     fbl::unique_ptr<blob_info_t> info_complete;
