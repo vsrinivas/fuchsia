@@ -32,24 +32,34 @@ zx_status_t AudioDriver::Init(zx::channel stream_channel) {
     return ZX_ERR_NO_RESOURCES;
   }
 
+  // Fetch the KOID of our stream channel.  We will end up using this unique ID
+  // as our device's device token.
+  zx_status_t res;
+  zx_info_handle_basic_t sc_info;
+  res = zx_object_get_info(stream_channel.get(), ZX_INFO_HANDLE_BASIC, &sc_info,
+                           sizeof(sc_info), nullptr, nullptr);
+  if (res != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to to fetch stream channel KOID (res " << res
+                   << ")";
+    return res;
+  }
+  stream_channel_koid_ = sc_info.koid;
+
   // Activate the stream channel.
-  // clang-format off
   ::dispatcher::Channel::ProcessHandler process_handler(
-    [ this ](::dispatcher::Channel* channel) -> zx_status_t {
-      OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
-      FXL_DCHECK(stream_channel_.get() == channel);
-      return ProcessStreamChannelMessage();
-    });
+      [this](::dispatcher::Channel* channel) -> zx_status_t {
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
+        FXL_DCHECK(stream_channel_.get() == channel);
+        return ProcessStreamChannelMessage();
+      });
 
   ::dispatcher::Channel::ChannelClosedHandler channel_closed_handler(
-    [ this ](const ::dispatcher::Channel* channel) {
-      OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
-      FXL_DCHECK(stream_channel_.get() == channel);
-      ShutdownSelf("Stream channel closed unexpectedly");
-    });
-  // clang-format on
+      [this](const ::dispatcher::Channel* channel) {
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
+        FXL_DCHECK(stream_channel_.get() == channel);
+        ShutdownSelf("Stream channel closed unexpectedly");
+      });
 
-  zx_status_t res;
   res = stream_channel_->Activate(
       fbl::move(stream_channel), owner_->mix_domain_,
       fbl::move(process_handler), fbl::move(channel_closed_handler));
@@ -60,15 +70,13 @@ zx_status_t AudioDriver::Init(zx::channel stream_channel) {
   }
 
   // Activate the command timeout timer.
-  // clang-format off
   ::dispatcher::Timer::ProcessHandler cmd_timeout_handler(
-    [ this ](::dispatcher::Timer* timer) -> zx_status_t {
-      OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
-      FXL_DCHECK(cmd_timeout_.get() == timer);
-      ShutdownSelf("Unexpected command timeout");
-      return ZX_OK;
-    });
-  // clang-format on
+      [this](::dispatcher::Timer* timer) -> zx_status_t {
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
+        FXL_DCHECK(cmd_timeout_.get() == timer);
+        ShutdownSelf("Unexpected command timeout");
+        return ZX_OK;
+      });
 
   res = cmd_timeout_->Activate(owner_->mix_domain_,
                                fbl::move(cmd_timeout_handler));
@@ -614,21 +622,19 @@ zx_status_t AudioDriver::ProcessSetFormatResponse(
   external_delay_nsec_ = resp.external_delay_nsec;
 
   // Activate out ring buffer channel in our execution domain.
-  // clang-format off
   ::dispatcher::Channel::ProcessHandler process_handler(
-    [ this ](::dispatcher::Channel * channel) -> zx_status_t {
-      OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
-      FXL_DCHECK(rb_channel_.get() == channel);
-      return ProcessRingBufferChannelMessage();
-    });
+      [this](::dispatcher::Channel* channel) -> zx_status_t {
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
+        FXL_DCHECK(rb_channel_.get() == channel);
+        return ProcessRingBufferChannelMessage();
+      });
 
   ::dispatcher::Channel::ChannelClosedHandler channel_closed_handler(
-    [ this ](const ::dispatcher::Channel* channel) {
-      OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
-      FXL_DCHECK(rb_channel_.get() == channel);
-      ShutdownSelf("Ring buffer channel closed unexpectedly");
-    });
-  // clang-format on
+      [this](const ::dispatcher::Channel* channel) {
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
+        FXL_DCHECK(rb_channel_.get() == channel);
+        ShutdownSelf("Ring buffer channel closed unexpectedly");
+      });
 
   zx_status_t res;
   res = rb_channel_->Activate(fbl::move(rb_channel), owner_->mix_domain_,

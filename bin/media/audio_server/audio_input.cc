@@ -107,15 +107,11 @@ void AudioInput::OnDriverPlugStateChange(bool plugged, zx_time_t plug_time) {
 
   // Reflect this message to the AudioDeviceManager so it can deal with the
   // routing consequences of the plug state change.
-  // clang-format off
-  manager_->ScheduleMainThreadTask(
-    [ manager = manager_,
-      output = fbl::WrapRefPtr(this),
-      plugged,
-      plug_time ]() {
-      manager->HandlePlugStateChange(output, plugged, plug_time);
-    });
-  // clang-format on
+  manager_->ScheduleMainThreadTask([manager = manager_,
+                                    output = fbl::WrapRefPtr(this), plugged,
+                                    plug_time]() {
+    manager->HandlePlugStateChange(output, plugged, plug_time);
+  });
 }
 
 }  // namespace audio

@@ -82,6 +82,7 @@ class AudioDriver {
   uint32_t bytes_per_frame() const { return bytes_per_frame_; }
   uint32_t fifo_depth_bytes() const { return fifo_depth_bytes_; }
   uint32_t fifo_depth_frames() const { return fifo_depth_frames_; }
+  zx_koid_t stream_channel_koid() const { return stream_channel_koid_; }
 
   void SetEndFenceToStartFenceFrames(uint32_t dist) {
     std::lock_guard<std::mutex> lock(ring_buffer_state_lock_);
@@ -188,6 +189,7 @@ class AudioDriver {
   fbl::RefPtr<::dispatcher::Channel> rb_channel_;
   fbl::RefPtr<::dispatcher::Timer> cmd_timeout_;
   zx_time_t last_set_timeout_ = ZX_TIME_INFINITE;
+  zx_koid_t stream_channel_koid_ = ZX_KOID_INVALID;
 
   // State for configured format ranges
   std::vector<audio_stream_format_range_t> format_ranges_;

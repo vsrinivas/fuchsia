@@ -56,6 +56,7 @@ class AudioDevice : public AudioObject {
   bool plugged() const { return plugged_; }
   zx_time_t plug_time() const { return plug_time_; }
   const std::unique_ptr<AudioDriver>& driver() const { return driver_; }
+  uint64_t token() const;
 
   // NotifyDestFormatPreference
   //

@@ -46,15 +46,13 @@ zx_status_t StandardOutputBase::Init() {
     return ZX_ERR_NO_MEMORY;
   }
 
-  // clang-format off
   ::dispatcher::Timer::ProcessHandler process_handler(
-    [ output = fbl::WrapRefPtr(this) ]
-    (::dispatcher::Timer * timer) -> zx_status_t {
-      OBTAIN_EXECUTION_DOMAIN_TOKEN(token, output->mix_domain_);
-      output->Process();
-      return ZX_OK;
-    });
-  // clang-format on
+      [output =
+           fbl::WrapRefPtr(this)](::dispatcher::Timer* timer) -> zx_status_t {
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, output->mix_domain_);
+        output->Process();
+        return ZX_OK;
+      });
 
   res = mix_timer_->Activate(mix_domain_, fbl::move(process_handler));
   if (res != ZX_OK) {

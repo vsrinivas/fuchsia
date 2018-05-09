@@ -26,6 +26,10 @@ void AudioDevice::Wakeup() {
   mix_wakeup_->Signal();
 }
 
+uint64_t AudioDevice::token() const {
+  return driver_ ? driver_->stream_channel_koid() : ZX_KOID_INVALID;
+}
+
 zx_status_t AudioDevice::Init() {
   // TODO(johngro) : See MG-940.  Eliminate this priority boost as soon as we
   // have a more official way of meeting real-time latency requirements.
@@ -36,15 +40,13 @@ zx_status_t AudioDevice::Init() {
     return ZX_ERR_NO_MEMORY;
   }
 
-  // clang-format off
   ::dispatcher::WakeupEvent::ProcessHandler process_handler(
-      [ output = fbl::WrapRefPtr(this) ]
-      (::dispatcher::WakeupEvent * event) -> zx_status_t {
+      [output = fbl::WrapRefPtr(this)](
+          ::dispatcher::WakeupEvent* event) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, output->mix_domain_);
         output->OnWakeup();
         return ZX_OK;
       });
-  // clang-format on
 
   zx_status_t res =
       mix_wakeup_->Activate(mix_domain_, fbl::move(process_handler));
@@ -68,13 +70,11 @@ void AudioDevice::ShutdownSelf() {
     FXL_DCHECK(mix_domain_);
     mix_domain_->DeactivateFromWithinDomain();
 
-    // clang-format off
     FXL_DCHECK(manager_);
     manager_->ScheduleMainThreadTask(
-      [ manager = manager_, self = fbl::WrapRefPtr(this) ]() {
-        manager->RemoveDevice(self);
-      });
-    // clang-format on
+        [manager = manager_, self = fbl::WrapRefPtr(this)]() {
+          manager->RemoveDevice(self);
+        });
   }
 }
 

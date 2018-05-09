@@ -286,30 +286,24 @@ void AudioCapturerImpl::SetPayloadBuffer(zx::vmo payload_buf_vmo) {
   payload_buf_virt_ = reinterpret_cast<void*>(tmp);
 
   // Activate the dispatcher primitives we will use to drive the mixing process.
-  // clang-format off
   res = mix_wakeup_->Activate(
-      mix_domain_,
-      [ this ](::dispatcher::WakeupEvent* event) -> zx_status_t {
+      mix_domain_, [this](::dispatcher::WakeupEvent* event) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, mix_domain_);
         FXL_DCHECK(event == mix_wakeup_.get());
         return Process();
       });
-  // clang-format on
 
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed activate wakeup event (res = " << res << ")";
     return;
   }
 
-  // clang-format off
   res = mix_timer_->Activate(
-      mix_domain_,
-      [ this ](::dispatcher::Timer* timer) -> zx_status_t {
+      mix_domain_, [this](::dispatcher::Timer* timer) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, mix_domain_);
         FXL_DCHECK(timer == mix_timer_.get());
         return Process();
       });
-  // clang-format on
 
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed activate timer (res = " << res << ")";
@@ -778,11 +772,8 @@ zx_status_t AudioCapturerImpl::Process() {
 
     // If we need to poke the server thread, do so.
     if (wakeup_server_thread) {
-      // clang-format off
-      owner_->ScheduleMainThreadTask([ thiz = fbl::WrapRefPtr(this) ]() {
-        thiz->FinishBuffersThunk();
-      });
-      // clang-format on
+      owner_->ScheduleMainThreadTask(
+          [thiz = fbl::WrapRefPtr(this)]() { thiz->FinishBuffersThunk(); });
     }
 
     // If we are in async mode, and we just finished a buffer, queue a new
@@ -1174,11 +1165,8 @@ void AudioCapturerImpl::DoStopAsyncCapture() {
   // Transition to the AsyncStoppingCallbackPending state, and signal the server
   // thread so it can complete the stop operation.
   state_.store(State::AsyncStoppingCallbackPending);
-  // clang-format off
-  owner_->ScheduleMainThreadTask([ thiz = fbl::WrapRefPtr(this) ]() {
-    thiz->FinishAsyncStopThunk();
-  });
-  // clang-format on
+  owner_->ScheduleMainThreadTask(
+      [thiz = fbl::WrapRefPtr(this)]() { thiz->FinishAsyncStopThunk(); });
 }
 
 bool AudioCapturerImpl::QueueNextAsyncPendingBuffer() {
@@ -1224,11 +1212,8 @@ void AudioCapturerImpl::ShutdownFromMixDomain() {
   mix_domain_->DeactivateFromWithinDomain();
   state_.store(State::Shutdown);
 
-  // clang-format off
-  owner_->ScheduleMainThreadTask([ thiz = fbl::WrapRefPtr(this) ]() {
-    thiz->Shutdown();
-  });
-  // clang-format on
+  owner_->ScheduleMainThreadTask(
+      [thiz = fbl::WrapRefPtr(this)]() { thiz->Shutdown(); });
 }
 
 void AudioCapturerImpl::FinishAsyncStopThunk() {
