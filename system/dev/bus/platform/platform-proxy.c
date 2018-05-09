@@ -200,6 +200,66 @@ static gpio_protocol_ops_t gpio_ops = {
     .set_polarity = pdev_gpio_set_polarity,
 };
 
+static zx_status_t pdev_scpi_get_sensor_value(void* ctx, uint32_t sensor_id,
+                                         uint32_t* sensor_value) {
+    platform_proxy_t* proxy = ctx;
+    pdev_req_t req = {
+        .op = PDEV_SCPI_GET_SENSOR_VALUE,
+        .scpi.sensor_id = sensor_id,
+    };
+
+    pdev_resp_t resp;
+
+    zx_status_t status =  platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp),
+                                           NULL, 0, NULL);
+    if (status == ZX_OK) {
+        *sensor_value = resp.scpi.sensor_value;
+    }
+    return status;
+}
+
+static zx_status_t pdev_scpi_get_sensor(void* ctx, const char* name,
+                                         uint32_t* sensor_id) {
+    platform_proxy_t* proxy = ctx;
+    pdev_req_t req = {
+        .op = PDEV_SCPI_GET_SENSOR,
+    };
+    memcpy(&req.scpi.name, name, strlen(name));
+    pdev_resp_t resp;
+
+    zx_status_t status =  platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp),
+                                           NULL, 0, NULL);
+    if (status == ZX_OK) {
+        *sensor_id = resp.scpi.sensor_id;
+    }
+    return status;
+}
+
+static scpi_protocol_ops_t scpi_ops = {
+    .get_sensor = pdev_scpi_get_sensor,
+    .get_sensor_value = pdev_scpi_get_sensor_value,
+};
+
+static zx_status_t pdev_mailbox_send_cmd(void* ctx, mailbox_channel_t* channel,
+                                         mailbox_data_buf_t* mdata) {
+    platform_proxy_t* proxy = ctx;
+    pdev_req_t req = {
+        .op = PDEV_MAILBOX_SEND_CMD,
+    };
+    memcpy(&req.mailbox.channel, channel, sizeof(*channel));
+    memcpy(&req.mailbox.mdata, mdata, sizeof(*mdata));
+    pdev_resp_t resp;
+
+    zx_status_t status =  platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp),
+                                           NULL, 0, NULL);
+    memcpy(channel, &resp.mailbox.channel, sizeof(*channel));
+    return status;
+}
+
+static mailbox_protocol_ops_t mailbox_ops = {
+    .send_cmd = pdev_mailbox_send_cmd,
+};
+
 static zx_status_t pdev_i2c_get_max_transfer_size(void* ctx, uint32_t index, size_t* out_size) {
     platform_proxy_t* proxy = ctx;
 
@@ -438,6 +498,18 @@ static zx_status_t platform_dev_get_protocol(void* ctx, uint32_t proto_id, void*
         clk_protocol_t* proto = out;
         proto->ctx = ctx;
         proto->ops = &clk_ops;
+        return ZX_OK;
+    }
+    case ZX_PROTOCOL_MAILBOX: {
+        mailbox_protocol_t* proto = out;
+        proto->ctx = ctx;
+        proto->ops = &mailbox_ops;
+        return ZX_OK;
+    }
+    case ZX_PROTOCOL_SCPI: {
+        scpi_protocol_t* proto = out;
+        proto->ctx = ctx;
+        proto->ops = &scpi_ops;
         return ZX_OK;
     }
     default:

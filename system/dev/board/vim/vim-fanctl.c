@@ -10,48 +10,6 @@
 #include <soc/aml-s912/s912-hw.h>
 #include "vim.h"
 
-// Fan Control GPIO regions
-static const pbus_mmio_t fanctl_mmios[] = {
-    // Mailbox
-    {
-        .base = S912_HIU_MAILBOX_BASE,
-        .length = S912_HIU_MAILBOX_LENGTH,
-    },
-    // Mailbox Payload
-    {
-        .base = S912_MAILBOX_PAYLOAD_BASE,
-        .length = S912_MAILBOX_PAYLOAD_LENGTH,
-    },
-};
-
-// IRQ for Mailbox
-static const pbus_irq_t fanctl_irqs[] = {
-    {
-        .irq = S912_MBOX_IRQ_RECEIV0,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH
-    },
-    {
-        .irq = S912_MBOX_IRQ_RECEIV1,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH
-    },
-    {
-        .irq = S912_MBOX_IRQ_RECEIV2,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH
-    },
-    {
-        .irq = S912_MBOX_IRQ_SEND3,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH
-    },
-    {
-        .irq = S912_MBOX_IRQ_SEND4,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH
-    },
-    {
-        .irq = S912_MBOX_IRQ_SEND5,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH
-    },
-};
-
 static const pbus_gpio_t fanctl_gpios[] = {
     {
         .gpio = S912_GPIODV(14),
@@ -66,10 +24,6 @@ static const pbus_dev_t fanctl_dev = {
     .vid = PDEV_VID_KHADAS,
     .pid = PDEV_PID_VIM2,
     .did = PDEV_DID_AMLOGIC_FANCTL,
-    .mmios = fanctl_mmios,
-    .mmio_count = countof(fanctl_mmios),
-    .irqs = fanctl_irqs,
-    .irq_count = countof(fanctl_irqs),
     .gpios = fanctl_gpios,
     .gpio_count = countof(fanctl_gpios),
 };

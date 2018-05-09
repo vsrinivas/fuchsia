@@ -277,6 +277,36 @@ static zx_status_t pdev_rpc_set_gpio_polarity(platform_dev_t* dev,
     index = dev->gpios[index].gpio;
     return gpio_set_polarity(&bus->gpio, index, flags);
 }
+
+static zx_status_t pdev_rpc_mailbox_send_cmd(platform_dev_t* dev,
+                                             pdev_mailbox_ctx_t mailbox) {
+    platform_bus_t* bus = dev->bus;
+    if (!bus->mailbox.ops) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return mailbox_send_cmd(&bus->mailbox, &mailbox.channel, &mailbox.mdata);
+}
+
+static zx_status_t pdev_rpc_scpi_get_sensor(platform_dev_t* dev,
+                                            char* name,
+                                            uint32_t *sensor_id) {
+    platform_bus_t* bus = dev->bus;
+    if (!bus->scpi.ops) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return scpi_get_sensor(&bus->scpi, name, sensor_id);
+}
+
+static zx_status_t pdev_rpc_scpi_get_sensor_value(platform_dev_t* dev,
+                                            uint32_t sensor_id,
+                                            uint32_t* sensor_value) {
+    platform_bus_t* bus = dev->bus;
+    if (!bus->scpi.ops) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return scpi_get_sensor_value(&bus->scpi, sensor_id, sensor_value);
+}
+
 static zx_status_t pdev_rpc_i2c_transact(platform_dev_t* dev, pdev_req_t* req, uint8_t* data,
                                         zx_handle_t channel) {
     platform_bus_t* bus = dev->bus;
@@ -386,6 +416,16 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
         break;
     case PDEV_GPIO_SET_POLARITY:
         resp.status = pdev_rpc_set_gpio_polarity(dev, req->index, req->flags);
+        break;
+    case PDEV_MAILBOX_SEND_CMD:
+        resp.status = pdev_rpc_mailbox_send_cmd(dev, req->mailbox);
+        break;
+    case PDEV_SCPI_GET_SENSOR:
+        resp.status = pdev_rpc_scpi_get_sensor(dev, req->scpi.name, &resp.scpi.sensor_id);
+        break;
+    case PDEV_SCPI_GET_SENSOR_VALUE:
+        resp.status = pdev_rpc_scpi_get_sensor_value(dev, req->scpi.sensor_id,
+                                                     &resp.scpi.sensor_value);
         break;
     case PDEV_I2C_GET_MAX_TRANSFER:
         resp.status = i2c_impl_get_max_transfer_size(&dev->bus->i2c, req->index,

@@ -16,6 +16,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/gpio.h>
+#include <ddk/protocol/scpi.h>
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
 
@@ -52,13 +53,14 @@ static int aml_fanctl_init_thread(void *ctx) {
     uint32_t temperature;
 
     // Get the sensor ID
-    zx_status_t status = aml_get_sensor(fanctl, "aml_thermal", &temp_sensor_id);
+    zx_status_t status = scpi_get_sensor(&fanctl->scpi, "aml_thermal", &temp_sensor_id);
     if (status != ZX_OK) {
         FANCTL_ERROR("Unable to get thermal sensor information: Thermal disabled\n");
         return ZX_OK;
     }
+
     while(true) {
-        status = aml_get_sensor_value(fanctl, temp_sensor_id, &temperature);
+        status = scpi_get_sensor_value(&fanctl->scpi, temp_sensor_id, &temperature);
         if (status != ZX_OK) {
             FANCTL_ERROR("Unable to get thermal sensor value: Thermal disabled\n");
             return ZX_OK;
@@ -81,8 +83,6 @@ static int aml_fanctl_init_thread(void *ctx) {
 
 static void aml_fanctl_release(void* ctx) {
     aml_fanctl_t *fanctl = ctx;
-    zx_interrupt_destroy(fanctl->inth);
-    zx_handle_close(fanctl->inth);
     thrd_join(fanctl->main_thread, NULL);
     free(fanctl);
 }
@@ -112,34 +112,16 @@ static zx_status_t aml_fanctl_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
+    status = device_get_protocol(parent, ZX_PROTOCOL_SCPI, &fanctl->scpi);
+    if (status != ZX_OK) {
+        FANCTL_ERROR("Could not get SCPI protocol\n");
+        goto fail;
+    }
+
     pdev_device_info_t info;
     status = pdev_get_device_info(&fanctl->pdev, &info);
     if (status != ZX_OK) {
         FANCTL_ERROR("pdev_get_device_info failed\n");
-        goto fail;
-    }
-
-    // Map all MMIOs
-    status = pdev_map_mmio_buffer(&fanctl->pdev, MMIO_MAILBOX,
-                                  ZX_CACHE_POLICY_UNCACHED_DEVICE,
-        &fanctl->mmio_mailbox);
-    if (status != ZX_OK) {
-        FANCTL_ERROR("Could not map fanctl MMIO_MAILBOX %d\n",status);
-        goto fail;
-    }
-
-    status = pdev_map_mmio_buffer(&fanctl->pdev, MMIO_MAILBOX_PAYLOAD,
-                                  ZX_CACHE_POLICY_UNCACHED_DEVICE,
-        &fanctl->mmio_mailbox_payload);
-    if (status != ZX_OK) {
-        FANCTL_ERROR("Could not map fanctl MMIO_MAILBOX_PAYLOAD %d\n",status);
-        goto fail;
-    }
-
-    status = pdev_map_interrupt(&fanctl->pdev, 1,
-                                    &fanctl->inth);
-    if (status != ZX_OK) {
-        FANCTL_ERROR("pdev_map_interrupt failed %d\n", status);
         goto fail;
     }
 

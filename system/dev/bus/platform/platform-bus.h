@@ -14,6 +14,8 @@
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/usb-mode-switch.h>
+#include <ddk/protocol/mailbox.h>
+#include <ddk/protocol/scpi.h>
 #include <sync/completion.h>
 #include <zircon/boot/bootdata.h>
 #include <zircon/types.h>
@@ -28,6 +30,8 @@ typedef struct {
     zx_device_t* zxdev;
     usb_mode_switch_protocol_t ums;
     gpio_protocol_t gpio;
+    mailbox_protocol_t mailbox;
+    scpi_protocol_t scpi;
     i2c_impl_protocol_t i2c;
     clk_protocol_t clk;
     iommu_protocol_t iommu;

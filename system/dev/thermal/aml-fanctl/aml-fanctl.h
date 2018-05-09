@@ -6,6 +6,7 @@
 
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/gpio.h>
+#include <ddk/protocol/scpi.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/protocol/platform-bus.h>
@@ -19,12 +20,6 @@
 #define TRIGGER_LEVEL_1 60
 #define TRIGGER_LEVEL_2 70
 
-// MMIO Indexes
-enum {
-    MMIO_MAILBOX,
-    MMIO_MAILBOX_PAYLOAD,
-};
-
 // GPIO Indexes
 enum {
     FAN_CTL0,
@@ -36,14 +31,7 @@ typedef struct {
     platform_device_protocol_t          pdev;
 
     gpio_protocol_t                     gpio;
+    scpi_protocol_t                     scpi;
 
     thrd_t                              main_thread;
-
-    io_buffer_t                         mmio_mailbox;
-    io_buffer_t                         mmio_mailbox_payload;
-
-    zx_handle_t                         inth;
 } aml_fanctl_t;
-
-zx_status_t aml_get_sensor(aml_fanctl_t *fanctl, const char *name, uint32_t *sensor_value);
-zx_status_t aml_get_sensor_value(aml_fanctl_t *fanctl, uint32_t sensor_id, uint32_t *sensor_value);

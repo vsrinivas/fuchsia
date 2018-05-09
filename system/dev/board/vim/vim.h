@@ -53,3 +53,6 @@ zx_status_t vim_eth_init(vim_bus_t* bus);
 
 // vim-fanctl.c
 zx_status_t vim2_fanctl_init(vim_bus_t* bus);
+
+// vim-mailbox.c
+zx_status_t vim2_mailbox_init(vim_bus_t* bus);

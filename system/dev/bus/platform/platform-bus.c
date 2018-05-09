@@ -59,6 +59,12 @@ static zx_status_t platform_bus_set_protocol(void* ctx, uint32_t proto_id, void*
     case ZX_PROTOCOL_IOMMU:
         memcpy(&bus->iommu, protocol, sizeof(bus->iommu));
         break;
+    case ZX_PROTOCOL_MAILBOX:
+        memcpy(&bus->mailbox, protocol, sizeof(bus->mailbox));
+        break;
+    case ZX_PROTOCOL_SCPI:
+        memcpy(&bus->scpi, protocol, sizeof(bus->scpi));
+        break;
     default:
         // TODO(voydanoff) consider having a registry of arbitrary protocols
         return ZX_ERR_NOT_SUPPORTED;
@@ -172,6 +178,18 @@ zx_status_t platform_bus_get_protocol(void* ctx, uint32_t proto_id, void* protoc
     case ZX_PROTOCOL_IOMMU:
         if (bus->iommu.ops) {
             memcpy(protocol, &bus->iommu, sizeof(bus->iommu));
+            return ZX_OK;
+        }
+        break;
+    case ZX_PROTOCOL_MAILBOX:
+        if (bus->mailbox.ops) {
+            memcpy(protocol, &bus->mailbox, sizeof(bus->mailbox));
+            return ZX_OK;
+        }
+        break;
+    case ZX_PROTOCOL_SCPI:
+        if (bus->scpi.ops) {
+            memcpy(protocol, &bus->scpi, sizeof(bus->scpi));
             return ZX_OK;
         }
         break;

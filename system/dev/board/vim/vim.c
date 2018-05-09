@@ -144,6 +144,10 @@ static int vim_start_thread(void* arg) {
         goto fail;
     }
 
+    if ((status = vim2_mailbox_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "vim2_mailbox_init failed: %d\n", status);
+        goto fail;
+    }
     if ((status = vim2_fanctl_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "vim2_fanctl_init failed: %d\n", status);
         goto fail;

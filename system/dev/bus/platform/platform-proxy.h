@@ -7,6 +7,8 @@
 #include <stdint.h>
 #include <ddk/device.h>
 #include <ddk/protocol/gpio.h>
+#include <ddk/protocol/mailbox.h>
+#include <ddk/protocol/scpi.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/usb-mode-switch.h>
 
@@ -41,7 +43,29 @@ enum {
     // ZX_PROTOCOL_CLK
     PDEV_CLK_ENABLE,
     PDEV_CLK_DISABLE,
+
+    // ZX_PROTOCOL_MAILBOX
+    PDEV_MAILBOX_SEND_CMD,
+
+    // ZX_PROTOCOL_SCPI
+    PDEV_SCPI_GET_SENSOR,
+    PDEV_SCPI_GET_SENSOR_VALUE,
 };
+
+// context for mailbox
+typedef struct {
+    mailbox_channel_t channel;
+    mailbox_data_buf_t mdata;
+} pdev_mailbox_ctx_t;
+
+// context for scpi
+typedef struct {
+    uint32_t sensor_id;
+    uint32_t sensor_value;
+    union {
+        char* name;
+    };
+} pdev_scpi_ctx_t;
 
 // context for i2c_transact
 typedef struct {
@@ -69,6 +93,8 @@ typedef struct pdev_req {
         pdev_i2c_txn_ctx_t i2c_txn;
         uint32_t i2c_bitrate;
         uint32_t flags;
+        pdev_mailbox_ctx_t mailbox;
+        pdev_scpi_ctx_t scpi;
     };
 } pdev_req_t;
 
@@ -85,5 +111,7 @@ typedef struct {
             size_t length;
         } mmio;
         pdev_device_info_t info;
+        pdev_mailbox_ctx_t mailbox;
+        pdev_scpi_ctx_t scpi;
     };
 } pdev_resp_t;

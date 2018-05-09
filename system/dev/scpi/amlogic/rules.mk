@@ -9,10 +9,25 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/aml-fanctl.c \
+    $(LOCAL_DIR)/aml-mailbox.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 
 MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
+
+include make/module.mk
+
+MODULE := $(LOCAL_DIR).proxy
+
+MODULE_TYPE := driver
+
+MODULE_NAME := scpi
+
+MODULE_SRCS := \
+    $(LOCAL_DIR)/aml-scpi.c \
+
+MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
+
+MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
 include make/module.mk
