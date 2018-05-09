@@ -72,8 +72,7 @@ class InterfacePtr {
   }
 
   InterfacePtr& operator=(InterfacePtr&& other) {
-    if (this != &other)
-      controller_ = std::move(other.controller_);
+    if (this != &other) controller_ = std::move(other.controller_);
     return *this;
   }
 
@@ -212,7 +211,7 @@ class InterfacePtr {
   //
   // Arriving events are dispatched to the callbacks stored on this object.
   // Events for unbound callbacks are ignored.
-  Proxy& events() { return proxy_; }
+  Proxy& events() const { return proxy_; }
 
   // Blocks the calling thread until either a message arrives on the previously
   // bound channel or an error occurs.
