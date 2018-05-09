@@ -41,3 +41,19 @@ interface SocketEndpoint {
                   SocketConnector connector,
                   request<SocketAcceptor> acceptor);
 };
+
+// An interface that provides access to a shared socked endpoint (ex: the host
+// endpoint).
+//
+// Allows listeners to be multiplexed by port and manages dynamic port
+// allocation for out-bound connections.
+interface ManagedSocketEndpoint {
+  // Register |acceptor| to be invoked for any connection requests to |port|.
+  1: Listen(uint32 port, SocketAcceptor acceptor)
+      -> (status s);
+
+  // Similar to |SocketConnector.Connect| except the |src_port| will be
+  // generated automatically.
+  2: Connect(uint32 cid, uint32 port)
+      -> (status s, handle<socket>? socket);
+};

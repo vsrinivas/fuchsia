@@ -25,7 +25,7 @@ static void usage() {
             << "  launch        <package> <vmm-args>...\n"
             << "  list\n"
             << "  serial        <env_id> <cid>\n"
-            << "  socat         <env_id> <host-port> <cid> <port>\n"
+            << "  socat         <env_id> <cid> <port>\n"
             << "  socat-listen  <env_id> <host-port>\n"
             << "  dump          <env_id> <cid> <hex-addr> <hex-len>\n";
 }
@@ -85,31 +85,31 @@ static bool parse_args(int argc, const char** argv, CommandFunc* func) {
       std::cerr << "Invalid environment ID: " << env_id_view << "\n";
       return false;
     }
-    uint32_t host_port;
-    fxl::StringView host_port_view(argv[5]);
-    if (!fxl::StringToNumberWithError(host_port_view, &host_port)) {
-      std::cerr << "Invalid port: " << host_port_view << "\n";
-      return false;
-    }
 
-    if (cmd_view == "socat" && argc == 6) {
+    if (cmd_view == "socat" && argc == 5) {
       uint32_t cid;
-      fxl::StringView cid_view(argv[4]);
+      fxl::StringView cid_view(argv[3]);
       if (!fxl::StringToNumberWithError(cid_view, &cid)) {
         std::cerr << "Invalid context ID: " << cid_view << "\n";
         return false;
       }
       uint32_t port;
-      fxl::StringView port_view(argv[5]);
+      fxl::StringView port_view(argv[4]);
       if (!fxl::StringToNumberWithError(port_view, &port)) {
         std::cerr << "Invalid port: " << port_view << "\n";
         return false;
       }
-      *func = [env_id, host_port, cid, port]() {
-        handle_socat_connect(env_id, host_port, cid, port);
+      *func = [env_id, cid, port]() {
+        handle_socat_connect(env_id, cid, port);
       };
       return true;
     } else if (cmd_view == "socat-listen" && argc == 4) {
+      uint32_t host_port;
+      fxl::StringView host_port_view(argv[3]);
+      if (!fxl::StringToNumberWithError(host_port_view, &host_port)) {
+        std::cerr << "Invalid port: " << host_port_view << "\n";
+        return false;
+      }
       *func = [env_id, host_port]() { handle_socat_listen(env_id, host_port); };
       return true;
     }

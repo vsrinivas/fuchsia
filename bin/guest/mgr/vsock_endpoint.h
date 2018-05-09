@@ -28,33 +28,23 @@ class VsockServer;
 // For both cases, we provide an implementation of |SocketConnector| that can
 // be used for those components to establish out-bound socket connections. In
 // both cases the provided |SocketConnector| is bound to the endpoints CID.
-class VsockEndpoint : public guest::SocketConnector {
+class VsockEndpoint : public guest::SocketConnector,
+                      public guest::SocketAcceptor {
  public:
-  VsockEndpoint(uint32_t cid, VsockServer* server);
+  VsockEndpoint(uint32_t cid);
   ~VsockEndpoint() override;
 
   uint32_t cid() const { return cid_; }
 
-  // Called to bind both the |SocketConnector| and |SocketAcceptor| to a single
-  // |SocketEndpoint|.
-  void BindSocketEndpoint(guest::SocketEndpointPtr endpoint);
-
-  // Binds |request| to a |SocketConnector| for this endpoint.
-  void GetSocketConnector(
-      fidl::InterfaceRequest<guest::SocketConnector> request);
-
-  // Sets the |SocketAcceptor| to use for requests to this endpoint's |CID|.
-  void SetSocketAcceptor(fidl::InterfaceHandle<guest::SocketAcceptor> handle);
+  void set_vsock_server(VsockServer* server) { vsock_server_ = server; }
 
   // |guest::SocketConnector|
   void Connect(uint32_t port, uint32_t dest_cid, uint32_t dest_port,
                ConnectCallback callback) override;
 
  private:
-  uint32_t cid_;
-  VsockServer* vsock_server_;
-  fidl::BindingSet<guest::SocketConnector> connector_bindings_;
-  guest::SocketAcceptorPtr remote_acceptor_;
+  const uint32_t cid_;
+  VsockServer* vsock_server_ = nullptr;
 };
 
 }  // namespace guestmgr

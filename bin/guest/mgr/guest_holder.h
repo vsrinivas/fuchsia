@@ -8,7 +8,7 @@
 #include <fuchsia/cpp/component.h>
 #include <fuchsia/cpp/guest.h>
 
-#include "garnet/bin/guest/mgr/vsock_endpoint.h"
+#include "garnet/bin/guest/mgr/remote_vsock_endpoint.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/svc/cpp/services.h"
@@ -20,7 +20,7 @@ namespace guestmgr {
 class GuestHolder {
  public:
   GuestHolder(uint32_t cid, std::string label,
-              std::unique_ptr<VsockEndpoint> socket_endpoint,
+              std::unique_ptr<RemoteVsockEndpoint> socket_endpoint,
               component::Services services,
               component::ApplicationControllerPtr application_controller);
 
@@ -32,7 +32,7 @@ class GuestHolder {
  private:
   const uint32_t cid_;
   const std::string label_;
-  std::unique_ptr<VsockEndpoint> socket_endpoint_;
+  std::unique_ptr<RemoteVsockEndpoint> socket_endpoint_;
   component::Services guest_services_;
   component::ApplicationControllerPtr guest_app_controller_;
   guest::GuestControllerPtr guest_controller_;

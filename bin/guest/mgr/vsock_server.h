@@ -19,8 +19,7 @@ class VsockServer {
   //
   // Returns |ZX_ERR_ALREADY_BOUND| if |cid| is already in use and |ZX_OK|
   // otherwise.
-  zx_status_t CreateEndpoint(uint32_t cid,
-                             std::unique_ptr<VsockEndpoint>* endpoint);
+  zx_status_t AddEndpoint(VsockEndpoint* endpoint);
 
   // Finds the |VsockEndpoint| addressed by |cid|. Returns |nullptr| if no
   // endpoint exists for |cid|.

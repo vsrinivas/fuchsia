@@ -14,6 +14,10 @@ source_set("lib") {
     "guest_holder.h",
     "guest_manager_impl.cc",
     "guest_manager_impl.h",
+    "host_vsock_endpoint.cc",
+    "host_vsock_endpoint.h",
+    "remote_vsock_endpoint.cc",
+    "remote_vsock_endpoint.h",
     "vsock_endpoint.cc",
     "vsock_endpoint.h",
     "vsock_server.cc",
@@ -27,6 +31,7 @@ source_set("lib") {
     "//garnet/public/lib/guest/fidl",
     "//garnet/public/lib/svc/cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/bitmap",
   ]
 }
 

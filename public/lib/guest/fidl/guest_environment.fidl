@@ -35,11 +35,6 @@ interface GuestEnvironment {
   // |id| can be found via a call to |ListGuests|.
   3: ConnectToGuest(uint32 id, request<GuestController> controller);
 
-  // Obtain a |SocketConnector| instance that can be used to establish vsock
-  // connections originating from the host (typically from |kHostCid|).
-  4: GetSocketConnector(request<SocketConnector> conncetor);
-
-  // Sets the |SocketAcceptor| instance to use to handle in-bound connection
-  // requests to the host (typically requests addressed to |kHostCid|).
-  5: SetSocketAcceptor(SocketAcceptor acceptor);
+  // Returns an interface that can be used to access the host vsock endpoint.
+  4: GetHostSocketEndpoint(request<ManagedSocketEndpoint> endpoint);
 };

@@ -12,12 +12,13 @@ GuestEnvironmentImpl::GuestEnvironmentImpl(
     uint32_t id, const std::string& label,
     component::ApplicationContext* context,
     fidl::InterfaceRequest<guest::GuestEnvironment> request)
-    : id_(id), label_(label), context_(context) {
+    : id_(id),
+      label_(label),
+      context_(context),
+      host_socket_endpoint_(guest::kHostCid) {
   CreateApplicationEnvironment(label);
   AddBinding(std::move(request));
-  zx_status_t status =
-      socket_server_.CreateEndpoint(guest::kHostCid, &host_socket_endpoint_);
-  FXL_DCHECK(status == ZX_OK);
+  FXL_CHECK(socket_server_.AddEndpoint(&host_socket_endpoint_) == ZX_OK);
 }
 
 GuestEnvironmentImpl::~GuestEnvironmentImpl() = default;
@@ -42,9 +43,9 @@ void GuestEnvironmentImpl::LaunchGuest(
                                    guest_app_controller.NewRequest());
 
   // Setup Socket Endpoint
-  std::unique_ptr<VsockEndpoint> vsock_endpoint;
   uint32_t cid = next_guest_cid_++;
-  zx_status_t status = socket_server_.CreateEndpoint(cid, &vsock_endpoint);
+  auto vsock_endpoint = std::make_unique<RemoteVsockEndpoint>(cid);
+  zx_status_t status = socket_server_.AddEndpoint(vsock_endpoint.get());
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to allocate socked endpoint on CID " << cid
                    << ": " << status;
@@ -69,14 +70,9 @@ void GuestEnvironmentImpl::LaunchGuest(
   callback(std::move(info));
 }
 
-void GuestEnvironmentImpl::GetSocketConnector(
-    fidl::InterfaceRequest<guest::SocketConnector> request) {
-  host_socket_endpoint_->GetSocketConnector(std::move(request));
-}
-
-void GuestEnvironmentImpl::SetSocketAcceptor(
-    fidl::InterfaceHandle<guest::SocketAcceptor> acceptor) {
-  host_socket_endpoint_->SetSocketAcceptor(std::move(acceptor));
+void GuestEnvironmentImpl::GetHostSocketEndpoint(
+    fidl::InterfaceRequest<guest::ManagedSocketEndpoint> request) {
+  host_socket_endpoint_.AddBinding(std::move(request));
 }
 
 fidl::VectorPtr<guest::GuestInfo> GuestEnvironmentImpl::ListGuests() {

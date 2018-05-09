@@ -8,18 +8,15 @@
 
 namespace guestmgr {
 
-zx_status_t VsockServer::CreateEndpoint(uint32_t cid,
-                                        std::unique_ptr<VsockEndpoint>* out) {
-  if (FindEndpoint(cid) != nullptr) {
+zx_status_t VsockServer::AddEndpoint(VsockEndpoint* endpoint) {
+  uint32_t cid = endpoint->cid();
+  bool inserted;
+  std::tie(std::ignore, inserted) = endpoints_.insert({cid, endpoint});
+  if (!inserted) {
     FXL_LOG(ERROR) << "CID " << cid << " is already bound";
     return ZX_ERR_ALREADY_BOUND;
   }
-
-  auto endpoint = std::make_unique<VsockEndpoint>(cid, this);
-  bool inserted;
-  std::tie(std::ignore, inserted) = endpoints_.insert({cid, endpoint.get()});
-  FXL_DCHECK(inserted);
-  *out = std::move(endpoint);
+  endpoint->set_vsock_server(this);
   return ZX_OK;
 }
 

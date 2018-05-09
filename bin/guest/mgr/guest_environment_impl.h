@@ -10,6 +10,7 @@
 #include <unordered_map>
 
 #include "garnet/bin/guest/mgr/guest_holder.h"
+#include "garnet/bin/guest/mgr/host_vsock_endpoint.h"
 #include "garnet/bin/guest/mgr/vsock_server.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
@@ -45,10 +46,8 @@ class GuestEnvironmentImpl : public guest::GuestEnvironment {
   void ConnectToGuest(
       uint32_t id,
       fidl::InterfaceRequest<guest::GuestController> controller) override;
-  void GetSocketConnector(
-      fidl::InterfaceRequest<guest::SocketConnector> connector) override;
-  void SetSocketAcceptor(
-      fidl::InterfaceHandle<guest::SocketAcceptor> endpoint) override;
+  void GetHostSocketEndpoint(
+      fidl::InterfaceRequest<guest::ManagedSocketEndpoint> endpoint) override;
 
   void CreateApplicationEnvironment(const std::string& label);
 
@@ -67,7 +66,7 @@ class GuestEnvironmentImpl : public guest::GuestEnvironment {
   std::unordered_map<uint32_t, std::unique_ptr<GuestHolder>> guests_;
 
   VsockServer socket_server_;
-  std::unique_ptr<VsockEndpoint> host_socket_endpoint_;
+  HostVsockEndpoint host_socket_endpoint_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GuestEnvironmentImpl);
 };
