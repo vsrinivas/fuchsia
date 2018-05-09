@@ -22,15 +22,10 @@
 #include "peridot/tests/story_shell/defs.h"
 
 using modular::testing::TestPoint;
+using modular::testing::Get;
+using modular::testing::Put;
 
 namespace {
-
-void Put(const fidl::StringPtr& message) {
-  // We use the message as both the key and the value. The value is used by the
-  // receiver to display what key it was waiting on. That way the same receiver
-  // function can be used to wait for multiple keys.
-  modular::testing::GetStore()->Put(message, message, []{});
-}
 
 // Cf. README.md for what this test does and how.
 class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {

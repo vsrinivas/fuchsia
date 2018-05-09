@@ -18,16 +18,9 @@
 #include "peridot/tests/trigger/defs.h"
 
 using modular::testing::TestPoint;
+using modular::testing::Await;
 
 namespace {
-
-// Waits for |condition| to be available in the TestRunnerStore before calling
-// |cont| with the result.
-void Await(fidl::StringPtr condition,
-           std::function<void(fidl::StringPtr)> cont) {
-  modular::testing::GetStore()->Get(condition,
-                                    [cont](fidl::StringPtr str) { cont(str); });
-}
 
 // Cf. README.md for what this test does and how.
 class TestApp {
@@ -73,7 +66,7 @@ class TestApp {
   TestPoint agent_stopped_{"Agent1 stopped"};
   TestPoint task_triggered_{"Agent task triggered"};
   void TestMessageQueueMessageTrigger() {
-    Await("trigger_test_agent_connected", [this](fidl::StringPtr) {
+    Await("trigger_test_agent_connected", [this] {
       agent_connected_.Pass();
       agent_service_->GetMessageQueueToken([this](fidl::StringPtr token) {
         received_trigger_token_.Pass();
@@ -81,7 +74,7 @@ class TestApp {
         // Stop the agent.
         agent_controller_.Unbind();
 
-        Await("trigger_test_agent_stopped", [this, token](fidl::StringPtr) {
+        Await("trigger_test_agent_stopped", [this, token] {
           agent_stopped_.Pass();
 
           // Send a message to the stopped agent which should
@@ -91,9 +84,9 @@ class TestApp {
                                                message_sender.NewRequest());
           message_sender->Send("Time to wake up...");
 
-          Await("task_id", [this](fidl::StringPtr) {
+          Await("task_id", [this] {
             task_triggered_.Pass();
-            Await("trigger_test_agent_stopped", [this](fidl::StringPtr) {
+            Await("trigger_test_agent_stopped", [this] {
               TestMessageQueueDeletionTrigger();
             });
           });
@@ -110,14 +103,14 @@ class TestApp {
     ConnectToService(agent_services.get(), agent_service_.NewRequest());
 
     // First wait for the agent to connect, and then kill it.
-    Await("trigger_test_agent_connected", [this](fidl::StringPtr) {
-      Await("trigger_test_agent_token_received", [this](fidl::StringPtr) {
+    Await("trigger_test_agent_connected", [this] {
+      Await("trigger_test_agent_token_received", [this] {
         agent_controller_.Unbind();
-        Await("trigger_test_agent_stopped", [this](fidl::StringPtr) {
+        Await("trigger_test_agent_stopped", [this] {
           // When the agent has stopped, delete the message queue and verify
           // that the agent is woken up and notified.
           component_context_->DeleteMessageQueue("test");
-          Await("message_queue_deletion", [this](fidl::StringPtr) {
+          Await("message_queue_deletion", [this] {
             queue_deleted_.Pass();
             module_host_->module_context()->Done();
           });

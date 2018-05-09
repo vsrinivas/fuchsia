@@ -56,6 +56,24 @@ void Teardown(const std::function<void()>& ack);
 // ApplicationEnvironment. Init() must be called before GetStore().
 test_runner::TestRunnerStore* GetStore();
 
+// Creates function that invokes the |proceed| callback after being called |limit| times.
+std::function<void(fidl::StringPtr)> NewBarrierClosure(const int limit,
+                                                       std::function<void()> proceed);
+
+// Defined for convenience of using GetStore() only. The |message| is used as
+// both the key and the value. The value is used by the receiver to display what
+// key it was waiting on. That way the same receiver function can be used to
+// wait for multiple keys. Cf. Get().
+void Put(const fidl::StringPtr& message);
+
+// Defined for convenience of using GetStore() only. The |message| is the key;
+// the value is ignored since it's the same as the key. Cf. Put().
+void Get(const fidl::StringPtr& message, std::function<void(fidl::StringPtr)> callback);
+
+// Defined for convenience of using GetStore() only. Waits for |condition| to be
+// present as a key in the TestRunnerStore before calling |cont|.
+void Await(fidl::StringPtr condition, std::function<void()> cont);
+
 namespace internal {
 
 // Registers a test point that should pass for a test to be considered

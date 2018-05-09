@@ -28,28 +28,10 @@
 #include "peridot/tests/story_shell/defs.h"
 
 using modular::testing::TestPoint;
+using modular::testing::Get;
+using modular::testing::Put;
 
 namespace {
-
-// Creates function that invokes the |proceed| callback after being called |limit| times.
-std::function<void(fidl::StringPtr)> NewBarrierClosure(const int limit,
-                                                       std::function<void()> proceed) {
-  return [limit, count = std::make_shared<int>(0),
-          proceed = std::move(proceed)](fidl::StringPtr value) {
-    // Cf. function Put() in story_shell_test_story_shell.cc: The value is the
-    // same as the key we wait to Get().
-    FXL_LOG(INFO) << "Got: " << value;
-    ++*count;
-    if (*count == limit) {
-      proceed();
-    }
-  };
-}
-
-// Defined for convenience only.
-void Get(const fidl::StringPtr& message, std::function<void(fidl::StringPtr)> callback) {
-  modular::testing::GetStore()->Get(message, std::move(callback));
-}
 
 // Cf. README.md for what this test does and how.
 class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
@@ -98,7 +80,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint story1_run1_{"Story1 Run1"};
 
   void Story1_Run1(fidl::StringPtr story_id) {
-    auto proceed_after_5 = NewBarrierClosure(5, [this] {
+    auto proceed_after_5 = modular::testing::NewBarrierClosure(5, [this] {
         story1_run1_.Pass();
         Story1_Stop1();
       });
@@ -146,7 +128,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint story1_run2_{"Story1 Run2"};
 
   void Story1_Run2() {
-    auto proceed_after_5 = NewBarrierClosure(5, [this] {
+    auto proceed_after_5 = modular::testing::NewBarrierClosure(5, [this] {
         story1_run2_.Pass();
         Story1_Stop2();
       });
@@ -183,7 +165,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint story2_run1_{"Story2 Run1"};
 
   void Story2_Run1(fidl::StringPtr story_id) {
-    auto proceed_after_5 = NewBarrierClosure(5, [this] {
+    auto proceed_after_5 = modular::testing::NewBarrierClosure(5, [this] {
         story2_run1_.Pass();
         Story2_Stop1();
       });
@@ -226,7 +208,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint story2_run2_{"Story2 Run2"};
 
   void Story2_Run2() {
-    auto proceed_after_5 = NewBarrierClosure(5, [this] {
+    auto proceed_after_5 = modular::testing::NewBarrierClosure(5, [this] {
         story2_run2_.Pass();
         Story2_Stop2();
       });

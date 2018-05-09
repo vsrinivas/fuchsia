@@ -84,6 +84,30 @@ test_runner::TestRunnerStore* GetStore() {
   return g_test_runner_store.get();
 }
 
+std::function<void(fidl::StringPtr)> NewBarrierClosure(const int limit,
+                                                       std::function<void()> proceed) {
+  return [limit, count = std::make_shared<int>(0),
+          proceed = std::move(proceed)](fidl::StringPtr value) {
+    ++*count;
+    if (*count == limit) {
+      proceed();
+    }
+  };
+}
+
+void Get(const fidl::StringPtr& message, std::function<void(fidl::StringPtr)> callback) {
+  modular::testing::GetStore()->Get(message, std::move(callback));
+}
+
+void Put(const fidl::StringPtr& message) {
+  modular::testing::GetStore()->Put(message, message, []{});
+}
+
+void Await(fidl::StringPtr condition, std::function<void()> cont) {
+  modular::testing::GetStore()->Get(
+      condition, [cont = std::move(cont)](fidl::StringPtr) { cont(); });
+}
+
 namespace internal {
 
 void RegisterTestPoint(const std::string& label) {
