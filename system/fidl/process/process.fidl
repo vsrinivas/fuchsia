@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library process;
+library fuchsia.process;
 
-using io;
-using ldsvc;
+// TODO: Add when Zircon's build supports library dependencies.
+// using io;
+// using ldsvc;
 
 struct HandleInfo {
     // The handle to use for this argument.
@@ -22,7 +23,8 @@ struct NameInfo {
     string path;
 
     // The associated directory.
-    io.Directory directory;
+    // TODO: Use io.Directory when Zircon's build supports library dependencies.
+    handle<channel> directory;
 };
 
 struct LaunchInfo {
@@ -33,7 +35,8 @@ struct LaunchInfo {
     handle<job> job;
 
     // The shared library loader to use for the process.
-    ldsvc.Loader loader;
+    // TODO: Use ldsvc.Loader when Zircon's build supports library dependencies.
+    handle<channel> loader;
 };
 
 struct LaunchResult {

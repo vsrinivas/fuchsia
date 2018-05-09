@@ -31,6 +31,7 @@
 # MODULE_LIBS : shared libraries for a userapp or userlib to depend on
 # MODULE_STATIC_LIBS : static libraries for a userapp or userlib to depend on
 # MODULE_FIDL_LIBS : fidl libraries for a userapp or userlib to depend on the C bindings of
+# MODULE_FIDL_LIBRARY : the name of the FIDL library being built (for fidl modules)
 # MODULE_SO_NAME : linkage name for the shared library
 # MODULE_HOST_LIBS: static libraries for a hostapp or hostlib to depend on
 # MODULE_HOST_SYSLIBS: system libraries for a hostapp or hostlib to depend on
@@ -290,6 +291,7 @@ MODULE_EXPORT :=
 MODULE_LIBS :=
 MODULE_STATIC_LIBS :=
 MODULE_FIDL_LIBS :=
+MODULE_FIDL_LIBRARY :=
 MODULE_SO_NAME :=
 MODULE_INSTALL_PATH :=
 MODULE_SO_INSTALL_NAME :=

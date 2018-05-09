@@ -8,8 +8,8 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := fidl
 
-MODULE_FIDL_LIBRARY := test
+MODULE_FIDL_LIBRARY := fuchsia.process
 
-MODULE_SRCS += $(LOCAL_DIR)/test.fidl
+MODULE_SRCS += $(LOCAL_DIR)/process.fidl
 
 include make/module.mk

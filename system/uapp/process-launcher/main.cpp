@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <test/c/fidl.h>
+#include <fuchsia/process/c/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <zircon/status.h>
 
 int main(int argc, char** argv) {
-    test_Test test;
-    return sizeof(test);
+    async::Loop loop;
+    return loop.Run();
 }
