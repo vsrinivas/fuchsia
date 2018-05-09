@@ -21,7 +21,7 @@ impl Supplicant {
 
 impl Supplicant {
     pub fn on_eapol_key_frame(
-        &self, _frame: &eapol::KeyFrame, _plain_data: &[u8],
+        &self, _frame: &eapol::KeyFrame, _plain_data: &[u8]
     ) -> Result<(), failure::Error> {
         // TODO(hahnr): Implement.
         Ok(())

@@ -7,6 +7,7 @@ mod supplicant;
 
 use self::authenticator::Authenticator;
 use self::supplicant::Supplicant;
+use Error;
 use akm::Akm;
 use cipher::{Cipher, GROUP_CIPHER_SUITE, TKIP};
 use eapol;
@@ -17,7 +18,6 @@ use key::exchange::Key;
 use key::ptk::Ptk;
 use rsna::Role;
 use rsne::Rsne;
-use Error;
 
 enum RoleHandler {
     Authenticator(Authenticator),
