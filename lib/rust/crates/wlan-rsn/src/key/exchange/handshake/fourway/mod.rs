@@ -7,15 +7,17 @@ mod supplicant;
 
 use self::authenticator::Authenticator;
 use self::supplicant::Supplicant;
+use Error;
 use akm::Akm;
 use cipher::{Cipher, GROUP_CIPHER_SUITE, TKIP};
 use eapol;
 use failure;
 use key::exchange::Key;
+use key::gtk::Gtk;
 use key::ptk::Ptk;
-use rsna::{Role, SecAssocResult};
+use rsna::{Role, SecAssocResult, SecAssocUpdate};
 use rsne::Rsne;
-use Error;
+use std::rc::Rc;
 
 enum RoleHandler {
     Authenticator(Authenticator),
@@ -32,17 +34,16 @@ pub enum MessageNumber {
 
 #[derive(Debug)]
 pub struct Config {
-    role: Role,
-    sta_addr: [u8; 6],
-    sta_rsne: Rsne,
-    peer_addr: [u8; 6],
-    peer_rsne: Rsne,
+    pub role: Role,
+    pub sta_addr: [u8; 6],
+    pub sta_rsne: Rsne,
+    pub peer_addr: [u8; 6],
+    pub peer_rsne: Rsne,
 }
 
 impl Config {
     pub fn new(
-        role: Role, pmk: Vec<u8>, sta_addr: [u8; 6], sta_rsne: Rsne, peer_addr: [u8; 6],
-        peer_rsne: Rsne,
+        role: Role, sta_addr: [u8; 6], sta_rsne: Rsne, peer_addr: [u8; 6], peer_rsne: Rsne
     ) -> Result<Config, failure::Error> {
         // TODO(hahnr): Validate configuration for:
         // (1) Correct RSNE subset
@@ -65,37 +66,71 @@ impl Config {
 }
 
 pub struct Fourway {
-    cfg: Config,
+    cfg: Rc<Config>,
     handler: RoleHandler,
     ptk: Option<Ptk>,
+    gtk: Option<Gtk>,
 }
 
 impl Fourway {
-    pub fn new(cfg: Config) -> Result<Fourway, failure::Error> {
-        let handler = match &cfg.role {
-            &Role::Supplicant => RoleHandler::Supplicant(Supplicant::new()?),
+    pub fn new(cfg: Config, pmk: Vec<u8>) -> Result<Fourway, failure::Error> {
+        let shared_cfg = Rc::new(cfg);
+        let handler = match &shared_cfg.role {
+            &Role::Supplicant => RoleHandler::Supplicant(Supplicant::new(shared_cfg.clone(), pmk)?),
             &Role::Authenticator => RoleHandler::Authenticator(Authenticator::new()?),
         };
         Ok(Fourway {
-            cfg,
-            handler,
+            cfg: shared_cfg,
+            handler: handler,
             ptk: None,
+            gtk: None,
         })
     }
 
-    pub fn initiate(&mut self, pmk: Vec<u8>) -> Result<(), failure::Error> {
-        match &self.handler {
-            &RoleHandler::Authenticator(ref a) => a.initiate(),
-            _ => Err(Error::UnexpectedInitiationRequest.into()),
+    fn on_key_confirmed(&mut self, key: Key) {
+        match key {
+            Key::Ptk(ptk) => self.ptk = Some(ptk),
+            Key::Gtk(gtk) => self.gtk = Some(gtk),
+            _ => (),
         }
     }
 
-    pub fn completed(&self) -> bool {
-        // TODO(hahnr): Implement
-        false
+    pub fn on_eapol_key_frame(&mut self, frame: &eapol::KeyFrame) -> SecAssocResult {
+        // (1) Validate frame.
+        let () = self.validate_eapol_key_frame(frame)?;
+
+        // (2) Decrypt key data.
+        let mut plaintext = None;
+        if frame.key_info.encrypted_key_data() {
+            let rsne = self.cfg.negotiated_rsne();
+            let akm = &rsne.akm_suites[0];
+            plaintext = match self.ptk.as_ref() {
+                // Return error if key data is encrypted but the PTK was not yet derived.
+                None => Err(Error::UnexpectedEncryptedKeyData.into()),
+                // Else attempt to decrypt key data.
+                Some(ptk) => akm.keywrap_algorithm()
+                    .ok_or(Error::UnsupportedAkmSuite)?
+                    .unwrap(ptk.kek(), &frame.key_data[..])
+                    .map(|p| Some(p)),
+            }.map_err(|e| failure::Error::from(e))?;
+        }
+        let key_data = match plaintext.as_ref() {
+            Some(data) => &data[..],
+            // Key data was never encrypted.
+            None => &frame.key_data[..],
+        };
+
+        // (3) Process frame by handler.
+        let result = match &mut self.handler {
+            &mut RoleHandler::Authenticator(ref a) => a.on_eapol_key_frame(frame, key_data),
+            &mut RoleHandler::Supplicant(ref mut s) => s.on_eapol_key_frame(frame, key_data),
+        }?;
+
+        // (4) Process results from handler.
+        self.process_updates(result)
     }
 
-    pub fn on_eapol_key_frame(&self, frame: &eapol::KeyFrame) -> SecAssocResult {
+    fn validate_eapol_key_frame(&self, frame: &eapol::KeyFrame) -> Result<(), failure::Error> {
         // IEEE Std 802.1X-2010, 11.9
         let key_descriptor = match eapol::KeyDescriptor::from_u8(frame.descriptor_type) {
             Some(eapol::KeyDescriptor::Ieee802dot11) => Ok(eapol::KeyDescriptor::Ieee802dot11),
@@ -167,7 +202,7 @@ impl Fourway {
         // IEEE Std 802.11-2016, 12.7.2, d)
         let min_key_replay_counter = match &self.handler {
             &RoleHandler::Authenticator(ref a) => a.key_replay_counter,
-            &RoleHandler::Supplicant(ref s) => s.key_replay_counter,
+            &RoleHandler::Supplicant(ref s) => s.key_replay_counter(),
         };
         if frame.key_replay_counter <= min_key_replay_counter {
             return Err(Error::InvalidKeyReplayCounter.into());
@@ -179,7 +214,7 @@ impl Fourway {
         // Nonce in 3rd message must be same as the one from the 1st message.
         if let MessageNumber::Message3 = msg_no {
             let nonce_match = match &self.handler {
-                &RoleHandler::Supplicant(ref s) => frame.key_nonce == s.a_nonce,
+                &RoleHandler::Supplicant(ref s) => &frame.key_nonce[..] == s.anonce(),
                 _ => false,
             };
             if !nonce_match {
@@ -229,31 +264,30 @@ impl Fourway {
         if frame.key_data_len as usize != frame.key_data.len() {
             return Err(Error::InvalidKeyDataLength.into());
         }
+        Ok(())
+    }
 
-        let mut plaintext = None;
-        if frame.key_info.encrypted_key_data() {
-            plaintext = match self.ptk.as_ref() {
-                // Return error if key data is encrypted but the PTK was not yet derived.
-                None => Err(Error::UnexpectedEncryptedKeyData.into()),
-                // Else attempt to decrypt key data.
-                Some(ptk) => akm.keywrap_algorithm()
-                    .ok_or(Error::UnsupportedAkmSuite)?
-                    .unwrap(ptk.kek(), &frame.key_data[..])
-                    .map(|p| Some(p)),
-            }.map_err(|e| failure::Error::from(e))?;
+    fn process_updates(&mut self, mut updates: Vec<SecAssocUpdate>) -> SecAssocResult {
+        // Filter key updates and process ourselves to prevent reporting keys before the Handshake
+        // completed successfully. Report all other updates.
+        updates
+            .drain_filter(|update| match update {
+                SecAssocUpdate::Key(key) => true,
+                _ => false,
+            })
+            .for_each(|update| {
+                if let SecAssocUpdate::Key(key) = update {
+                    self.on_key_confirmed(key);
+                }
+            });
+
+        // If both PTK and GTK are known the Handshake completed successfully and keys can be
+        // reported.
+        if let (Some(ptk), Some(gtk)) = (self.ptk.as_ref(), self.gtk.as_ref()) {
+            updates.push(SecAssocUpdate::Key(Key::Ptk(ptk.clone())));
+            updates.push(SecAssocUpdate::Key(Key::Gtk(gtk.clone())));
         }
-
-        let key_data = match plaintext.as_ref() {
-            Some(data) => &data[..],
-            // Key data was never encrypted.
-            None => &frame.key_data[..],
-        };
-
-        // Frame is okay. Pass frame to handler.
-        match &self.handler {
-            &RoleHandler::Authenticator(ref a) => a.on_eapol_key_frame(frame, key_data),
-            &RoleHandler::Supplicant(ref s) => s.on_eapol_key_frame(frame, key_data),
-        }
+        Ok(updates)
     }
 }
 

@@ -6,7 +6,7 @@ use cipher::Cipher;
 use crypto_utils::prf;
 use {Error, Result};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Gtk {
     gtk: Vec<u8>,
     tk_len: usize,

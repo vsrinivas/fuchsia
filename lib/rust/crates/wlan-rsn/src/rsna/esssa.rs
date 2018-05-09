@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use Error;
 use auth;
 use eapol;
 use failure;
@@ -9,17 +10,46 @@ use key::exchange;
 use key::exchange::Key;
 use key::gtk::Gtk;
 use key::ptk::Ptk;
+use rsna::SecAssocUpdate;
 use rsna::{Role, SecAssocResult};
 use rsne::Rsne;
-use Error;
+use std::mem;
 
 struct Pmksa {
-    auth_method: auth::Method,
+    method: auth::Method,
     pmk: Option<Vec<u8>>,
 }
 
-struct Ptksa {
-    exchange_method: exchange::Method,
+enum Ptksa {
+    Uninitialized(Option<exchange::Config>),
+    Initialized(PtksaCfg),
+}
+
+impl Ptksa {
+    fn initialize(&mut self, pmk: Vec<u8>) -> Result<(), failure::Error> {
+        let cfg_option = match self {
+            Ptksa::Uninitialized(cfg) => cfg.take(),
+            _ => None,
+        };
+        match cfg_option {
+            Some(cfg) => {
+                *self = Ptksa::Initialized(PtksaCfg {
+                    method: exchange::Method::from_config(cfg, pmk)?,
+                    ptk: None,
+                });
+            }
+            _ => (),
+        }
+        Ok(())
+    }
+
+    pub fn by_mut_ref(&mut self) -> &mut Self {
+        self
+    }
+}
+
+struct PtksaCfg {
+    method: exchange::Method,
     ptk: Option<Ptk>,
 }
 
@@ -44,7 +74,6 @@ impl EssSa {
         sta_rsne: Rsne, peer_addr: [u8; 6], peer_rsne: Rsne,
     ) -> Result<EssSa, failure::Error> {
         let auth_method = auth::Method::from_config(auth_cfg)?;
-        let ptk_exchange = exchange::Method::from_config(ptk_exch_cfg)?;
 
         let mut rsna = EssSa {
             role,
@@ -53,15 +82,12 @@ impl EssSa {
             peer_rsne,
             sta_rsne,
             pmksa: Pmksa {
-                auth_method,
+                method: auth_method,
                 pmk: None,
             },
-            ptksa: Ptksa {
-                exchange_method: ptk_exchange,
-                ptk: None,
-            },
+            ptksa: Ptksa::Uninitialized(Some(ptk_exch_cfg)),
         };
-        rsna.initiate_pmksa()?;
+        rsna.init_pmksa()?;
         Ok(rsna)
     }
 
@@ -69,15 +95,27 @@ impl EssSa {
         match key {
             Key::Pmk(pmk) => {
                 self.pmksa.pmk = Some(pmk);
-                self.initiate_ptksa()
+                self.init_ptksa()
+            }
+            Key::Ptk(ptk) => {
+                if let Ptksa::Initialized(ptksa) = self.ptksa.by_mut_ref() {
+                    ptksa.ptk = Some(ptk);
+                }
+                // TODO(hahnr): Received new PTK. Invalidate GTKSA if it was already established.
+                Ok(())
+            }
+            Key::Gtk(_gtk) => {
+                // TODO(hahnr): Update GTKSA
+                // Once both, PTKSA and GTKSA were established, install keys.
+                Ok(())
             }
             _ => Ok(()),
         }
     }
 
-    fn initiate_pmksa(&mut self) -> Result<(), failure::Error> {
+    fn init_pmksa(&mut self) -> Result<(), failure::Error> {
         // PSK allows deriving the PMK without exchanging frames.
-        let pmk = match self.pmksa.auth_method.by_ref() {
+        let pmk = match self.pmksa.method.by_ref() {
             auth::Method::Psk(psk) => Some(psk.compute()),
             _ => None,
         };
@@ -91,29 +129,38 @@ impl EssSa {
         Ok(())
     }
 
-    fn initiate_ptksa(&mut self) -> Result<(), failure::Error> {
+    fn init_ptksa(&mut self) -> Result<(), failure::Error> {
         match self.pmksa.pmk.as_ref() {
             None => Err(Error::PmksaNotEstablished.into()),
-            Some(pmk) => match self.ptksa.exchange_method.by_mut_ref() {
-                exchange::Method::FourWayHandshake(hs) => hs.initiate(pmk.to_vec()),
-                _ => Ok(()),
-            },
+            Some(pmk) => self.ptksa.initialize(pmk.to_vec()),
         }
     }
 
-    pub fn on_eapol_frame(&self, frame: &eapol::Frame) -> SecAssocResult {
+    pub fn on_eapol_frame(&mut self, frame: &eapol::Frame) -> SecAssocResult {
         // Only processes EAPOL Key frames. Drop all other frames silently.
-        match frame {
+        let updates = match frame {
             &eapol::Frame::Key(ref key_frame) => self.on_eapol_key_frame(&key_frame),
             _ => Ok(vec![]),
+        }?;
+
+        // Track keys to correctly update corresponding security associations.
+        for update in &updates {
+            if let SecAssocUpdate::Key(key) = update {
+                self.on_key_confirmed(key.clone());
+            }
         }
+
+        Ok(updates)
     }
 
-    fn on_eapol_key_frame(&self, frame: &eapol::KeyFrame) -> SecAssocResult {
+    fn on_eapol_key_frame(&mut self, frame: &eapol::KeyFrame) -> SecAssocResult {
         // PMKSA must be established before any other security association can be established.
         match self.pmksa.pmk {
-            None => self.pmksa.auth_method.on_eapol_key_frame(frame),
-            Some(_) => self.ptksa.exchange_method.on_eapol_key_frame(frame),
+            None => self.pmksa.method.on_eapol_key_frame(frame),
+            Some(_) => match self.ptksa.by_mut_ref() {
+                Ptksa::Uninitialized(_) => Ok(vec![]),
+                Ptksa::Initialized(ptksa) => ptksa.method.on_eapol_key_frame(frame),
+            },
         }
     }
 }

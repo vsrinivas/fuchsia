@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod nonce;
+pub mod nonce;
 
 use crypto::hmac::Hmac;
 use crypto::mac::Mac;

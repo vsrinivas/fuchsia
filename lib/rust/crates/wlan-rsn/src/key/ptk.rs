@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use Error;
 use akm::Akm;
 use bytes::Bytes;
 use cipher::Cipher;
 use crypto_utils::prf;
+use failure;
 use std::cmp::{max, min};
-use {Error, Result};
 
 /// A PTK is derived from a PMK and provides access to the PTK's key-hierarchy which yields a KEK,
 /// KCK, and TK, used for EAPOL frame protection, integrity check and unicast frame protection
 /// respectively.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Ptk {
     ptk: Vec<u8>,
     kck_len: usize,
@@ -22,6 +23,51 @@ pub struct Ptk {
 }
 
 impl Ptk {
+    // IEEE 802.11-2016, 12.7.1.3
+    pub fn new(
+        pmk: &[u8], aa: &[u8; 6], spa: &[u8; 6], anonce: &[u8], snonce: &[u8], akm: &Akm,
+        cipher: &Cipher,
+    ) -> Result<Ptk, failure::Error> {
+        if anonce.len() != 32 {
+            return Err(Error::InvalidNonceSize(anonce.len()).into());
+        }
+        if snonce.len() != 32 {
+            return Err(Error::InvalidNonceSize(snonce.len()).into());
+        }
+
+        let pmk_bits = akm.pmk_bits()
+            .ok_or_else(|| failure::Error::from(Error::PtkHierarchyUnsupportedAkmError))?;
+        if pmk.len() != (pmk_bits / 8) as usize {
+            return Err(Error::PtkHierarchyInvalidPmkError.into());
+        }
+
+        let kck_bits = akm.kck_bits()
+            .ok_or_else(|| failure::Error::from(Error::PtkHierarchyUnsupportedAkmError))?;
+        let kek_bits = akm.kek_bits()
+            .ok_or_else(|| failure::Error::from(Error::PtkHierarchyUnsupportedAkmError))?;
+        let tk_bits = cipher
+            .tk_bits()
+            .ok_or_else(|| failure::Error::from(Error::PtkHierarchyUnsupportedCipherError))?;
+        let prf_bits = kck_bits + kek_bits + tk_bits;
+
+        // data length = 6 (aa) + 6 (spa) + 32 (anonce) + 32 (snonce)
+        let mut data: [u8; 76] = [0; 76];
+        data[0..6].copy_from_slice(&min(aa, spa)[..]);
+        data[6..12].copy_from_slice(&max(aa, spa)[..]);
+        data[12..44].copy_from_slice(&min(anonce, snonce)[..]);
+        data[44..].copy_from_slice(&max(anonce, snonce)[..]);
+
+        // Use PRF to derive the PTK from the PMK while grants access to the KEK, KCK and TK.
+        let ptk_bytes = prf(pmk, "Pairwise key expansion", &data, prf_bits as usize)?;
+        let ptk = Ptk {
+            ptk: ptk_bytes,
+            kck_len: (kck_bits / 8) as usize,
+            kek_len: (kek_bits / 8) as usize,
+            tk_len: (tk_bits / 8) as usize,
+        };
+        Ok(ptk)
+    }
+
     pub fn kck(&self) -> &[u8] {
         &self.ptk[0..self.kck_len]
     }
@@ -35,44 +81,6 @@ impl Ptk {
         let start = self.kck_len + self.kek_len;
         &self.ptk[start..start + self.tk_len]
     }
-}
-
-// IEEE 802.11-2016, 12.7.1.3
-pub fn new(
-    pmk: &[u8], aa: &[u8; 6], spa: &[u8; 6], anonce: &[u8; 32], snonce: &[u8; 32], akm: &Akm,
-    cipher: &Cipher,
-) -> Result<Ptk> {
-    let pmk_bits = akm.pmk_bits()
-        .ok_or_else(|| Error::PtkHierarchyUnsupportedAkmError)?;
-    if pmk.len() != (pmk_bits / 8) as usize {
-        return Err(Error::PtkHierarchyInvalidPmkError);
-    }
-
-    let kck_bits = akm.kck_bits()
-        .ok_or_else(|| Error::PtkHierarchyUnsupportedAkmError)?;
-    let kek_bits = akm.kek_bits()
-        .ok_or_else(|| Error::PtkHierarchyUnsupportedAkmError)?;
-    let tk_bits = cipher
-        .tk_bits()
-        .ok_or_else(|| Error::PtkHierarchyUnsupportedCipherError)?;
-    let prf_bits = kck_bits + kek_bits + tk_bits;
-
-    // data length = 6 (aa) + 6 (spa) + 32 (anonce) + 32 (snonce)
-    let mut data: [u8; 76] = [0; 76];
-    data[0..6].copy_from_slice(&min(aa, spa)[..]);
-    data[6..12].copy_from_slice(&max(aa, spa)[..]);
-    data[12..44].copy_from_slice(&min(anonce, snonce)[..]);
-    data[44..].copy_from_slice(&max(anonce, snonce)[..]);
-
-    // Use PRF to derive the PTK from the PMK while grants access to the KEK, KCK and TK.
-    let ptk_bytes = prf(pmk, "Pairwise key expansion", &data, prf_bits as usize)?;
-    let ptk = Ptk {
-        ptk: ptk_bytes,
-        kck_len: (kck_bits / 8) as usize,
-        kek_len: (kek_bits / 8) as usize,
-        tk_len: (tk_bits / 8) as usize,
-    };
-    Ok(ptk)
 }
 
 #[cfg(test)]
@@ -112,10 +120,10 @@ mod tests {
         }
     }
 
-    fn new_ptk(data: &TestData, akm_suite: u8, cipher_suite: u8) -> Result<Ptk> {
+    fn new_ptk(data: &TestData, akm_suite: u8, cipher_suite: u8) -> Result<Ptk, failure::Error> {
         let akm = Akm::new(Bytes::from(&OUI[..]), akm_suite).unwrap();
         let cipher = Cipher::new(Bytes::from(&OUI[..]), cipher_suite).unwrap();
-        new(
+        Ptk::new(
             &data.pmk[..],
             &data.aa,
             &data.spa,

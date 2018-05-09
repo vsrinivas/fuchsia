@@ -5,11 +5,11 @@
 pub mod psk;
 
 use self::psk::Psk;
+use Error;
 use eapol;
 use failure;
 use key::exchange::Key;
 use rsna::SecAssocResult;
-use Error;
 
 pub enum Method {
     Psk(psk::Psk),

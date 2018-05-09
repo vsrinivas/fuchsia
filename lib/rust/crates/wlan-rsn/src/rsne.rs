@@ -8,7 +8,7 @@ use cipher;
 use pmkid;
 use suite_selector;
 
-use nom::{le_u16, le_u8, IResult};
+use nom::{IResult, le_u16, le_u8};
 
 macro_rules! if_remaining (
   ($i:expr, $f:expr) => ( cond!($i, $i.len() !=0, call!($f)); );
