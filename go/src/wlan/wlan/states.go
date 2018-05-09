@@ -617,9 +617,12 @@ func (s *authState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
 
 		if v.ResultCode == mlme.AuthenticateResultCodesSuccess {
 			return newAssocState(), nil
-		} else {
-			return newScanState(c), nil
 		}
+
+		if v.ResultCode != mlme.AuthenticateResultCodesAuthFailureTimeout {
+			c.cfg = nil
+		}
+		return newScanState(c), nil
 	default:
 		return s, fmt.Errorf("unexpected message type: %T", v)
 	}
