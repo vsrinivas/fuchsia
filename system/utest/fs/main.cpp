@@ -6,6 +6,7 @@
 #include <limits.h>
 #include <unistd.h>
 
+#include <fbl/unique_fd.h>
 #include <fvm/fvm.h>
 #include <unittest/unittest.h>
 #include <zircon/device/device.h>
@@ -34,11 +35,11 @@ int main(int argc, char** argv) {
     int i = 1;
     while (i < argc) {
         if (!strcmp(argv[i], "-d") && (i + 1 < argc)) {
-            int fd = open(argv[i + 1], O_RDWR);
-            if (fd < 0) {
+            fbl::unique_fd fd(open(argv[i + 1], O_RDWR));
+            if (!fd) {
                 fprintf(stderr, "[fs] Could not open block device\n");
                 return -1;
-            } else if (ioctl_device_get_topo_path(fd, test_disk_path, PATH_MAX) < 0) {
+            } else if (ioctl_device_get_topo_path(fd.get(), test_disk_path, PATH_MAX) < 0) {
                 fprintf(stderr, "[fs] Could not acquire topological path of block device\n");
                 return -1;
             }
@@ -46,7 +47,6 @@ int main(int argc, char** argv) {
             // have created an FVM and failed. (Try to) clean up from previous state
             // before re-running.
             fvm_destroy(test_disk_path);
-            close(fd);
             use_real_disk = true;
             i += 2;
         } else if (!strcmp(argv[i], "-f") && (i + 1 < argc)) {

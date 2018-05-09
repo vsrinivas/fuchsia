@@ -1981,54 +1981,62 @@ RUN_TEST_MEDIUM(CorruptAtMount<FsTestType::kFvm>)
 RUN_TEST_FOR_ALL_TYPES(LARGE, CreateWriteReopen)
 END_TEST_CASE(blobfs_tests)
 
+static void print_test_help(FILE* f) {
+    fprintf(f,
+            "  -d <blkdev>\n"
+            "      Use block device <blkdev> instead of a ramdisk\n"
+            "\n");
+}
+
 int main(int argc, char** argv) {
     gUseRealDisk = false;
+
+    unittest_register_test_help_printer(print_test_help);
+
     int i = 1;
-    while (i < argc - 1) {
-        if ((strlen(argv[i]) == 2) && (argv[i][0] == '-') && (argv[i][1] == 'd')) {
-            if (strnlen(argv[i + 1], PATH_MAX) > 0) {
-                fbl::unique_fd fd(open(argv[i + 1], O_RDWR));
-                if (!fd) {
-                    fprintf(stderr, "[fs] Could not open block device\n");
-                    return -1;
-                } else if (ioctl_device_get_topo_path(fd.get(), gRealDiskInfo.disk_path, PATH_MAX)
-                           < 0) {
-                    fprintf(stderr, "[fs] Could not acquire topological path of block device\n");
-                    return -1;
-                }
-
-                block_info_t block_info;
-                ssize_t rc = ioctl_block_get_info(fd.get(), &block_info);
-
-                if (rc < 0 || rc != sizeof(block_info)) {
-                    fprintf(stderr, "[fs] Could not query block device info\n");
-                    return -1;
-                }
-
-                // If we previously tried running tests on this disk, it may
-                // have created an FVM and failed. (Try to) clean up from previous state
-                // before re-running.
-                fvm_destroy(gRealDiskInfo.disk_path);
-                gUseRealDisk = true;
-                gRealDiskInfo.blk_size = block_info.block_size;
-                gRealDiskInfo.blk_count = block_info.block_count;
-
-                size_t disk_size = gRealDiskInfo.blk_size * gRealDiskInfo.blk_count;
-                if (disk_size < kBytesNormalMinimum) {
-                    fprintf(stderr, "Error: Insufficient disk space for tests");
-                    return -1;
-                } else if (disk_size < kTotalBytesFvmMinimum) {
-                    fprintf(stderr, "Error: Insufficient disk space for FVM tests");
-                    return -1;
-                }
-                break;
+    while (i < argc) {
+        if (!strcmp(argv[i], "-d") && (i + 1 < argc)) {
+            fbl::unique_fd fd(open(argv[i + 1], O_RDWR));
+            if (!fd) {
+                fprintf(stderr, "[fs] Could not open block device\n");
+                return -1;
+            } else if (ioctl_device_get_topo_path(fd.get(), gRealDiskInfo.disk_path, PATH_MAX)
+                       < 0) {
+                fprintf(stderr, "[fs] Could not acquire topological path of block device\n");
+                return -1;
             }
-        }
-        i += 1;
-    }
 
-    // Destroy all existing partitions that match the test GUIDs
-    while (destroy_partition(kTestUniqueGUID, kTestPartGUID) == ZX_OK) {}
+            // If we previously tried running tests on this disk, it may
+            // have created an FVM and failed. (Try to) clean up from previous state
+            // before re-running.
+            fvm_destroy(gRealDiskInfo.disk_path);
+
+            block_info_t block_info;
+            ssize_t rc = ioctl_block_get_info(fd.get(), &block_info);
+
+            if (rc < 0 || rc != sizeof(block_info)) {
+                fprintf(stderr, "[fs] Could not query block device info\n");
+                return -1;
+            }
+
+            gUseRealDisk = true;
+            gRealDiskInfo.blk_size = block_info.block_size;
+            gRealDiskInfo.blk_count = block_info.block_count;
+
+            size_t disk_size = gRealDiskInfo.blk_size * gRealDiskInfo.blk_count;
+            if (disk_size < kBytesNormalMinimum) {
+                fprintf(stderr, "Error: Insufficient disk space for tests");
+                return -1;
+            } else if (disk_size < kTotalBytesFvmMinimum) {
+                fprintf(stderr, "Error: Insufficient disk space for FVM tests");
+                return -1;
+            }
+            i += 2;
+        } else {
+            // Ignore options we don't recognize. See ulib/unittest/README.md.
+            break;
+        }
+    }
 
     return unittest_run_all_tests(argc, argv) ? 0 : -1;
 }

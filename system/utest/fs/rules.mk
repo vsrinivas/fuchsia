@@ -14,7 +14,7 @@ MODULE_NAME := fs-test
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/filesystems.cpp \
-    $(LOCAL_DIR)/main.c \
+    $(LOCAL_DIR)/main.cpp \
     $(LOCAL_DIR)/misc.c \
     $(LOCAL_DIR)/wrap.c \
     $(LOCAL_DIR)/test-access.cpp \
