@@ -1,0 +1,101 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media;
+
+const uint32 AudioGainInfoFlag_Mute = 0x01;
+const uint32 AudioGainInfoFlag_AgcSupported = 0x02;
+const uint32 AudioGainInfoFlag_AgcEnabled = 0x04;
+
+struct AudioGainInfo {
+  float32 db_gain;
+  uint32 flags;
+};
+
+struct AudioDeviceInfo {
+  string name;
+  string unique_id;
+  uint64 token_id;
+  bool is_input;
+
+  // TODO(johngro): Verify whether or not we want to leave this stuff in place
+  // or not.  Technically it is not needed (all of these things could be
+  // queried), but it seems like useful information to send during device
+  // enumeration as it saves a user a round trip to the server and eliminates
+  // any need to have extra states in a user's state machine when trying to
+  // figure out the current state of a device during initial enumeration.
+  AudioGainInfo gain_info;
+  bool is_default;
+};
+
+const uint32 SetAudioGainFlag_GainValid = 0x01;
+const uint32 SetAudioGainFlag_MuteValid = 0x02;
+const uint32 SetAudioGainFlag_AgcValid = 0x04;
+
+[Discoverable]
+interface AudioDeviceEnumerator {
+  // Obtain the list of currently active audio devices.
+  100: GetDevices() -> (vector<AudioDeviceInfo> devices);
+
+  // Events sent when devices are added or removed, or when properties of a
+  // device change.
+  //
+  // TODO(johngro): Should we have a set of filters which control which of these
+  // events a user receives?
+  //
+  // Pro: Having filters like this removes the need for the server to send
+  // messages to clients who don't care.  In particular, it seems likely that a
+  // client who just called SetDeviceGain will not care about the
+  // OnDeviceGainChanged event being fired.
+  //
+  // Con: Having filters like this means that the server needs to maintain a bit
+  // more per-client state.
+  110: -> OnDeviceAdded(AudioDeviceInfo device);
+  111: -> OnDeviceRemoved(uint64 device_token);
+  112: -> OnDeviceGainChanged(uint64 device_token, AudioGainInfo gain_info);
+  113: -> OnDefaultDeviceChanged(uint64 old_default, uint64 new_default);
+
+  // Gain/Mute/AGC control
+  //
+  // Note that each of these operations requires a device_token in order to
+  // target the proper input/output.
+  //
+  // The Get command returns the device_token
+  // of the device whose gain is being reported, or ZX_KOID_INVALID in the case
+  // that the requested device_token was invalid or the device had been removed
+  // from the system before the Get command could be processed.
+  //
+  // Set commands which are given an invalid device token are ignored and have
+  // no effect on the system.  In addition, users do not need to control all of
+  // the gain settings for an audio device with each call.  Only the settings
+  // with a corresponding flag set in the set_flags parameter will be affected.
+  // For example, passing SetAudioGainFlag_MuteValid will cause a SetDeviceGain
+  // call to care only about the mute setting in the gain_info structure, while
+  // passing (SetAudioGainFlag_GainValid | SetAudioGainFlag_MuteValid) will
+  // cause both the mute and the gain status to be changed simultaneously.
+  200: GetDeviceGain(uint64 device_token)
+         -> (uint64 device_token, AudioGainInfo gain_info);
+  201: SetDeviceGain(uint64 device_token,
+                     AudioGainInfo gain_info,
+                     uint32 set_flags);
+
+  // Default Device
+  //
+  // Fetch the device ID of the current default input or output device, or
+  // ZX_KOID_INVALID if no such device exists.
+  //
+  // TODO(johngro): solidify the concept of "default" device.  Right now, it
+  // basically means the device which would be chosen for an AudioRenderer or
+  // AudioCapturer in the absence of...
+  //
+  // 1) Any manual routing configuration imposed by the user.
+  // 2) Any property based routing decision made by the audio service.
+  //
+  // Currently, this translates to "the default inputs/output will be the last
+  // plugged input/output".  As the human level logic which drives the audio
+  // routing policy evolves and becomes more complicated, this will probably
+  // change.
+  300: GetDefaultInputDevice() -> (uint64 device_token);
+  301: GetDefaultOutputDevice() -> (uint64 device_token);
+};
