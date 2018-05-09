@@ -333,7 +333,7 @@ func (d *Daemon) getUpdates(rec *upRec) map[pkg.Package]*GetResult {
 	}
 
 	if len(unfoundPkgs) > 0 {
-		log.Printf("Some packages were not found %d\n", len(unfoundPkgs))
+		log.Printf("daemon: While getting updates, the following packages were not found:\n")
 	}
 
 	for _, pkg := range unfoundPkgs {
@@ -342,6 +342,7 @@ func (d *Daemon) getUpdates(rec *upRec) map[pkg.Package]*GetResult {
 			File: nil,
 			Err:  NewErrProcessPackage("update not found"),
 		}
+		log.Printf("daemon:     %s\n", pkg)
 		results[*pkg] = &res
 	}
 	return results
@@ -386,7 +387,8 @@ func (d *Daemon) CancelAll() {
 type ErrProcessPackage string
 
 func NewErrProcessPackage(f string, args ...interface{}) error {
-	return ErrProcessPackage(fmt.Sprintf("processor: %s", fmt.Sprintf(f, args...)))
+	return ErrProcessPackage(fmt.Sprintf("pkg processor: %s",
+		fmt.Sprintf(f, args...)))
 }
 
 func (e ErrProcessPackage) Error() string {

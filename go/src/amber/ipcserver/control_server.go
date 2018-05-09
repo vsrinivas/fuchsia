@@ -113,7 +113,7 @@ func (c *ControlSrvr) downloadPkgMeta(name string, version, merkle *string) (*da
 	}
 
 	if len(name) == 0 {
-		return nil, fmt.Errorf("No name provided")
+		return nil, fmt.Errorf("No package name provided")
 	}
 
 	if name[0] != '/' {
@@ -126,29 +126,31 @@ func (c *ControlSrvr) downloadPkgMeta(name string, version, merkle *string) (*da
 
 	c.initDaemon()
 	updates := c.daemon.GetUpdates(ps)
-	res, ok := updates[pkg]
+	result, ok := updates[pkg]
 	if !ok {
-		return nil, fmt.Errorf("No update available")
+		return nil, fmt.Errorf("No update available for %s", name)
 	}
-	if res.Err != nil {
-		return nil, res.Err
+	if result.Err != nil {
+		return nil,
+			fmt.Errorf("Error while checking for update to %s: %s", result.Orig.Name,
+				result.Err)
 	}
 
-	return res, nil
+	return result, nil
 }
 
 func (c *ControlSrvr) GetUpdate(name string, version, merkle *string) (*string, error) {
-	res, err := c.downloadPkgMeta(name, version, merkle)
+	result, err := c.downloadPkgMeta(name, version, merkle)
 	if err != nil {
 		return nil, err
 	}
 
-	wrtReq := startUpdateRequest{pkgData: res, wg: &sync.WaitGroup{}, err: nil}
+	wrtReq := startUpdateRequest{pkgData: result, wg: &sync.WaitGroup{}, err: nil}
 	wrtReq.wg.Add(1)
 	c.writeReqs <- &wrtReq
 	wrtReq.wg.Wait()
 
-	return &res.Update.Merkle, wrtReq.err
+	return &result.Update.Merkle, wrtReq.err
 }
 
 func (c *ControlSrvr) GetBlob(merkle string) error {
