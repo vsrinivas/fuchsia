@@ -98,6 +98,13 @@ typedef struct {
     atomic_bool suspended;
 
     mtx_t lock;
+
+    list_node_t free_write_reqs;
+    mtx_t write_lock;
+
+    list_node_t free_read_reqs;
+    list_node_t completed_reads;
+    mtx_t read_lock;
 } xdc_t;
 
 // TODO(jocelyndang): we should get our own handles rather than borrowing them from XHCI.
