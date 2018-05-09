@@ -347,14 +347,11 @@ zx_status_t Dispatcher::InvalidateCookie(CookieJar* cookiejar) {
     return InvalidateCookieLocked(cookiejar);
 }
 
-StateObserver::Flags Dispatcher::UpdateInternalLocked(ObserverList* obs_to_remove, zx_signals_t signals) {
+void Dispatcher::UpdateInternalLocked(ObserverList* obs_to_remove, zx_signals_t signals) {
     ZX_DEBUG_ASSERT(has_state_tracker());
-
-    StateObserver::Flags flags = 0;
 
     for (auto it = observers_.begin(); it != observers_.end();) {
         StateObserver::Flags it_flags = it->OnStateChange(signals);
-        flags |= it_flags;
         if (it_flags & StateObserver::kNeedRemoval) {
             auto to_remove = it;
             ++it;
@@ -363,7 +360,4 @@ StateObserver::Flags Dispatcher::UpdateInternalLocked(ObserverList* obs_to_remov
             ++it;
         }
     }
-
-    // Filter out NeedRemoval flag because we processed that here
-    return flags & (~StateObserver::kNeedRemoval);
 }

@@ -213,9 +213,8 @@ private:
     void AddObserverHelper(StateObserver* observer,
                            const StateObserver::CountInfo* cinfo, Mutex* mutex);
 
-    // Returns flag kHandled if one of the observers have been signaled.
-    StateObserver::Flags UpdateInternalLocked(ObserverList* obs_to_remove,
-                                              zx_signals_t signals) TA_REQ(get_lock());
+    void UpdateInternalLocked(ObserverList* obs_to_remove,
+                              zx_signals_t signals) TA_REQ(get_lock());
 
     const zx_koid_t koid_;
     uint32_t handle_count_;
