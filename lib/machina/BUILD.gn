@@ -4,7 +4,7 @@
 
 import("//build/package.gni")
 
-shared_library("machina") {
+source_set("machina") {
   sources = [
     "bits.h",
     "block_dispatcher.cc",
@@ -120,9 +120,6 @@ shared_library("machina") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxcpp",
   ]
-
-  # TODO(ZX-1411): Add visibility annotations to code and remove this.
-  configs -= [ "//build/config:symbol_visibility_hidden" ]
 }
 
 executable("machina_unittests") {
