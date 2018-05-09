@@ -52,15 +52,8 @@ int get_netstack(void) {
 
 int get_dns(void) {
     mtx_lock(&dns_lock);
-    if (dns == -2) {
+    if (dns == -2)
         dns = open("/svc/dns.DNS", O_PIPELINE | O_RDWR);
-        if (dns < 0) {
-            // As a temporary mechanism to ease transition, netstack supports
-            // DNS. TODO(joshlf): Once /svc/dns.DNS is guaranteed to be present,
-            // remove this fallback path.
-            dns = get_netstack();
-        }
-    }
     int result = dns;
     mtx_unlock(&dns_lock);
     return result;
