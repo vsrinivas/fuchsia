@@ -32,6 +32,16 @@
 #define S905D2_MALI_BASE                0xffe40000
 #define S905D2_MALI_LENGTH              0x40000
 
+#define S905D2_CBUS_BASE                0xffd00000
+#define S905D2_I2C0_BASE                (S905D2_CBUS_BASE + 0x1f000)
+#define S905D2_I2C1_BASE                (S905D2_CBUS_BASE + 0x1e000)
+#define S905D2_I2C2_BASE                (S905D2_CBUS_BASE + 0x1d000)
+#define S905D2_I2C3_BASE                (S905D2_CBUS_BASE + 0x1c000)
+
+#define S905D2_AOBUS_BASE               0xff800000
+
+#define S905D2_I2C_AO_0_BASE            (S905D2_AOBUS_BASE + 0x5000)
+
 // Reset register offsets
 #define S905D2_RESET0_REGISTER          0x04
 #define S905D2_RESET1_REGISTER          0x08
@@ -55,6 +65,13 @@
 #define S905D2_RESET4_LEVEL             0x90
 #define S905D2_RESET6_LEVEL             0x98
 #define S905D2_RESET7_LEVEL             0x9c
+
+
+#define S905D2_I2C0_IRQ                 53
+#define S905D2_I2C1_IRQ                 246
+#define S905D2_I2C2_IRQ                 247
+#define S905D2_I2C3_IRQ                 71
+#define S905D2_I2C_AO_0_IRQ             227
 
 #define S905D2_USB0_IRQ                 62
 #define S905D2_GPIO_IRQ_0               94

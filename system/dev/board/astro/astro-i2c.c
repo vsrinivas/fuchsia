@@ -5,8 +5,8 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/protocol/platform-defs.h>
-#include <soc/aml-s912/s912-gpio.h>
-#include <soc/aml-s912/s912-hw.h>
+#include <soc/aml-s905d2/s905d2-gpio.h>
+#include <soc/aml-s905d2/s905d2-hw.h>
 
 #include <limits.h>
 
@@ -14,48 +14,32 @@
 
 static const pbus_mmio_t i2c_mmios[] = {
     {
-        // AML_I2C_A
-        .base = 0xc1108500,
+        .base = S905D2_I2C_AO_0_BASE,
         .length = 0x20,
     },
     {
-        // AML_I2C_B
-        .base = 0xc11087c0,
+        .base = S905D2_I2C2_BASE,
         .length = 0x20,
     },
     {
-        // AML_I2C_C
-        .base = 0xc11087e0,
+        .base = S905D2_I2C3_BASE,
         .length = 0x20,
     },
-/*
-    {
-        // AML_I2C_D
-        .base = 0xc1108d20,
-        .length = 0x20,
-    },
-*/
 };
 
 static const pbus_irq_t i2c_irqs[] = {
     {
-        .irq = 21 + 32,
+        .irq = S905D2_I2C_AO_0_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        .irq = 214 + 32,
+        .irq = S905D2_I2C2_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        .irq = 215 + 32,
+        .irq = S905D2_I2C3_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
-/*
-    {
-        .irq = 39 + 32,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
-*/
 };
 
 static const pbus_dev_t i2c_dev = {
@@ -71,13 +55,16 @@ static const pbus_dev_t i2c_dev = {
 
 zx_status_t aml_i2c_init(aml_bus_t* bus) {
     // setup pinmux for our I2C busses
-    // I2C_A and I2C_B are exposed on the 40 pin header and I2C_C on the FPC connector
-    gpio_set_alt_function(&bus->gpio, S912_I2C_SDA_A, S912_I2C_SDA_A_FN);
-    gpio_set_alt_function(&bus->gpio, S912_I2C_SCK_A, S912_I2C_SCK_A_FN);
-    gpio_set_alt_function(&bus->gpio, S912_I2C_SDA_B, S912_I2C_SDA_B_FN);
-    gpio_set_alt_function(&bus->gpio, S912_I2C_SCK_B, S912_I2C_SCK_B_FN);
-    gpio_set_alt_function(&bus->gpio, S912_I2C_SDA_C, S912_I2C_SDA_C_FN);
-    gpio_set_alt_function(&bus->gpio, S912_I2C_SCK_C, S912_I2C_SCK_C_FN);
+
+    //i2c_ao_0
+    gpio_set_alt_function(&bus->gpio, S905D2_GPIOAO(2), 1);
+    gpio_set_alt_function(&bus->gpio, S905D2_GPIOAO(3), 1);
+    //i2c2
+    gpio_set_alt_function(&bus->gpio, S905D2_GPIOZ(14), 3);
+    gpio_set_alt_function(&bus->gpio, S905D2_GPIOZ(15), 3);
+    //i2c3
+    gpio_set_alt_function(&bus->gpio, S905D2_GPIOA(14), 2);
+    gpio_set_alt_function(&bus->gpio, S905D2_GPIOA(15), 2);
 
     zx_status_t status = pbus_device_add(&bus->pbus, &i2c_dev, PDEV_ADD_PBUS_DEVHOST);
     if (status != ZX_OK) {
