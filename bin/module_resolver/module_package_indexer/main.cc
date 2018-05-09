@@ -40,7 +40,7 @@ std::string FindModulePackageIndexerService() {
   closedir(fd);
 
   FXL_CHECK(!user_env.empty()) << "Could not find the running user's job.";
-  return fxl::StringPrintf("/hub/sys/%s/module_resolver/export/debug/%s",
+  return fxl::StringPrintf("/hub/sys/%s/module_resolver/out/debug/%s",
                            user_env.c_str(),
                            module_manifest_source::ModulePackageIndexer::Name_);
 }
