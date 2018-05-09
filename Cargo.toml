@@ -9,7 +9,6 @@ members =  [
   "bin/wlantool",
   "bin/xi_core",
   "examples/bluetooth/ble_battery_service",
-  "examples/media/audio_player_rust",
   "examples/rust/testing",
   "lib/rust/crates/eapol",
   "lib/rust/crates/fuchsia-bluetooth",
@@ -38,19 +37,11 @@ members =  [
   "public/rust/fidl_crates/fidl_bluetooth_gatt",
   "public/rust/fidl_crates/fidl_bluetooth_low_energy",
   "public/rust/fidl_crates/fidl_component",
-  "public/rust/fidl_crates/fidl_geometry",
-  "public/rust/fidl_crates/fidl_gfx",
   "public/rust/fidl_crates/fidl_images",
-  "public/rust/fidl_crates/fidl_input",
   "public/rust/fidl_crates/fidl_media",
-  "public/rust/fidl_crates/fidl_media_player",
   "public/rust/fidl_crates/fidl_mem",
   "public/rust/fidl_crates/fidl_netstack",
   "public/rust/fidl_crates/fidl_power_manager",
-  "public/rust/fidl_crates/fidl_ui",
-  "public/rust/fidl_crates/fidl_views",
-  "public/rust/fidl_crates/fidl_views_v1",
-  "public/rust/fidl_crates/fidl_views_v1_token",
   "public/rust/fidl_crates/fidl_wlan_service",
   "public/rust/fidl_crates/fidl_xi",
 ]
@@ -65,19 +56,11 @@ fidl_bluetooth_gatt = { path = "public/rust/fidl_crates/fidl_bluetooth_gatt" }
 fidl_bluetooth_host = { path = "lib/rust/fidl_crates/fidl_bluetooth_host" }
 fidl_bluetooth_low_energy = { path = "public/rust/fidl_crates/fidl_bluetooth_low_energy" }
 fidl_component = { path = "public/rust/fidl_crates/fidl_component" }
-fidl_geometry = { path = "public/rust/fidl_crates/fidl_geometry" }
-fidl_gfx = { path = "public/rust/fidl_crates/fidl_gfx" }
 fidl_images = { path = "public/rust/fidl_crates/fidl_images" }
-fidl_input = { path = "public/rust/fidl_crates/fidl_input" }
 fidl_media = { path = "public/rust/fidl_crates/fidl_media" }
-fidl_media_player = { path = "public/rust/fidl_crates/fidl_media_player" }
 fidl_mem = { path = "public/rust/fidl_crates/fidl_mem" }
 fidl_netstack = { path = "public/rust/fidl_crates/fidl_netstack" }
 fidl_power_manager = { path = "public/rust/fidl_crates/fidl_power_manager" }
-fidl_ui = { path = "public/rust/fidl_crates/fidl_ui" }
-fidl_views = { path = "public/rust/fidl_crates/fidl_views" }
-fidl_views_v1 = { path = "public/rust/fidl_crates/fidl_views_v1" }
-fidl_views_v1_token = { path = "public/rust/fidl_crates/fidl_views_v1_token" }
 fidl_wlan_device = { path = "lib/rust/fidl_crates/fidl_wlan_device" }
 fidl_wlan_device_service = { path = "lib/rust/fidl_crates/fidl_wlan_device_service" }
 fidl_wlan_service = { path = "public/rust/fidl_crates/fidl_wlan_service" }

@@ -27,7 +27,8 @@ package("media") {
       name = "audio_player"
     },
     {
-      name = "audio_player_rust"
+      name = "rust_crates/audio_player_rust"
+      dest = "audio_player_rust"
     },
     {
       name = "fx"
