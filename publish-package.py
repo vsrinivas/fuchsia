@@ -80,14 +80,13 @@ def assemble_manifest(manifests_dir, output_stream):
 
     No returns, but may raise an exception if writing to output_stream fails.
     """
-    inputs = ["final_package_manifest"]
+    inputs = ["final_package_manifest", "package_manifest"]
     for input in inputs:
         manifest = os.path.join(manifests_dir, input)
         if os.path.exists(manifest) and os.stat(manifest).st_size > 0:
             with open(manifest, "r") as src:
                 for line in src:
                     output_stream.write(line)
-            break
 
 def add_far_to_repo(amber_bin, name, far, key_dir, repo_dir, ver_scheme, version=0):
     """Add a FAR to the update repository under the specified name
@@ -243,6 +242,9 @@ def main():
                         help="""scheme to base repository versions on, defaults to "mono"
                         for "monotonic" but can be set to "time" to base versions on the number
                         of seconds since amber epoch""")
+    parser.add_argument('--pkgs-dir', action='store', required=False,
+                        help="""Parent directory of all generated package
+                        metadata""")
     args = parser.parse_args()
 
     build_dir = args.build_dir
@@ -302,9 +304,12 @@ def main():
       print "'%s' is not a recognized version scheme, use 'time' or 'mono'"
       return -1
 
+    pkgs_dir = args.pkgs_dir
+    if not pkgs_dir:
+      pkgs_dir = os.path.join(build_dir, "package")
+
     return publish(pm_bin, amber_bin, pkg_key, build_dir, pkg_stg_dir, repo_dir,
-                   os.path.join(build_dir, "package"), pkg_list, args.ver_scheme,
-                   not args.quiet)
+                   pkgs_dir, pkg_list, args.ver_scheme, not args.quiet)
 
 if __name__ == '__main__':
     sys.exit(main())
