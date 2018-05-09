@@ -37,8 +37,6 @@ class AdapterServer : public AdapterServerBase<::bluetooth_host::Adapter> {
  private:
   // ::bluetooth_control::Adapter overrides:
   void GetInfo(GetInfoCallback callback) override;
-  void SetDelegate(::fidl::InterfaceHandle<::bluetooth_host::AdapterDelegate>
-                       delegate) override;
   void SetLocalName(::fidl::StringPtr local_name,
                     SetLocalNameCallback callback) override;
   void StartDiscovery(StartDiscoveryCallback callback) override;
@@ -64,9 +62,6 @@ class AdapterServer : public AdapterServerBase<::bluetooth_host::Adapter> {
   bool requesting_discoverable_;
   std::unique_ptr<::btlib::gap::BrEdrDiscoverableSession>
       bredr_discoverable_session_;
-
-  // The delegate that was set via SetDelegate().
-  ::bluetooth_host::AdapterDelegatePtr delegate_;
 
   // Keep this as the last member to make sure that all weak pointers are
   // invalidated before other members get destroyed.

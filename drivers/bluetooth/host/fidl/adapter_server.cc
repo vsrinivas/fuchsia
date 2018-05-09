@@ -18,8 +18,6 @@ using bluetooth::ErrorCode;
 using bluetooth::Status;
 
 using bluetooth_control::AdapterState;
-using bluetooth_host::AdapterDelegate;
-using bluetooth_host::AdapterDelegatePtr;
 
 namespace bthost {
 
@@ -34,34 +32,6 @@ AdapterServer::~AdapterServer() {}
 
 void AdapterServer::GetInfo(GetInfoCallback callback) {
   callback(fidl_helpers::NewAdapterInfo(*adapter()));
-}
-
-void AdapterServer::SetDelegate(
-    fidl::InterfaceHandle<AdapterDelegate> delegate) {
-  if (delegate) {
-    delegate_ = delegate.Bind();
-  } else {
-    delegate_ = nullptr;
-  }
-  if (delegate_) {
-    delegate_.set_error_handler([this] {
-      FXL_VLOG(1) << "Adapter delegate disconnected";
-      delegate_ = nullptr;
-
-      // TODO(armansito): Define a function for terminating all procedures that
-      // rely on a delegate. For now we only support discovery, so we end it
-      // directly.
-      if (le_discovery_session_) {
-        le_discovery_session_ = nullptr;
-      }
-    });
-  }
-
-  // Setting a new delegate will terminate all on-going procedures associated
-  // with this AdapterServer.
-  if (le_discovery_session_) {
-    le_discovery_session_ = nullptr;
-  }
 }
 
 void AdapterServer::SetLocalName(::fidl::StringPtr local_name,
@@ -143,12 +113,11 @@ void AdapterServer::StartDiscovery(StartDiscoveryCallback callback) {
       self->requesting_discovery_ = false;
 
       // Send the adapter state update.
-      if (self->delegate_) {
-        AdapterState state;
-        state.discovering = bluetooth::Bool::New();
-        state.discovering->value = true;
-        self->delegate_->OnAdapterStateChanged(std::move(state));
-      }
+      AdapterState state;
+      state.discovering = bluetooth::Bool::New();
+      state.discovering->value = true;
+      self->binding()->events().OnAdapterStateChanged(std::move(state));
+
       callback(Status());
     });
   });
@@ -165,12 +134,12 @@ void AdapterServer::StopDiscovery(StopDiscoveryCallback callback) {
 
   bredr_discovery_session_ = nullptr;
   le_discovery_session_ = nullptr;
-  if (delegate_) {
-    AdapterState state;
-    state.discovering = bluetooth::Bool::New();
-    state.discovering->value = false;
-    delegate_->OnAdapterStateChanged(std::move(state));
-  }
+
+  AdapterState state;
+  state.discovering = bluetooth::Bool::New();
+  state.discovering->value = false;
+  this->binding()->events().OnAdapterStateChanged(std::move(state));
+
   callback(Status());
 }
 
@@ -190,12 +159,12 @@ void AdapterServer::SetDiscoverable(bool discoverable,
   // TODO(NET-830): advertise LE here
   if (!discoverable) {
     bredr_discoverable_session_ = nullptr;
-    if (delegate_) {
-      AdapterState state;
-      state.discoverable = bluetooth::Bool::New();
-      state.discoverable->value = false;
-      delegate_->OnAdapterStateChanged(std::move(state));
-    }
+
+    AdapterState state;
+    state.discoverable = bluetooth::Bool::New();
+    state.discoverable->value = false;
+    this->binding()->events().OnAdapterStateChanged(std::move(state));
+
     callback(Status());
   }
   if (discoverable && requesting_discoverable_) {
@@ -221,28 +190,23 @@ void AdapterServer::SetDiscoverable(bool discoverable,
           self->requesting_discoverable_ = false;
         }
         self->bredr_discoverable_session_ = std::move(session);
-        if (self->delegate_) {
-          AdapterState state;
-          state.discoverable = bluetooth::Bool::New();
-          state.discoverable->value = true;
-          self->delegate_->OnAdapterStateChanged(std::move(state));
-        }
+        AdapterState state;
+        state.discoverable = bluetooth::Bool::New();
+        state.discoverable->value = true;
+        self->binding()->events().OnAdapterStateChanged(std::move(state));
         callback(Status());
       });
 }
 
 void AdapterServer::OnDiscoveryResult(
     const ::btlib::gap::RemoteDevice& remote_device) {
-  if (!delegate_)
-    return;
-
   auto fidl_device = fidl_helpers::NewRemoteDevice(remote_device);
   if (!fidl_device) {
     FXL_VLOG(1) << "Ignoring malformed discovery result";
     return;
   }
 
-  delegate_->OnDeviceDiscovered(std::move(*fidl_device));
+  this->binding()->events().OnDeviceDiscovered(std::move(*fidl_device));
 }
 
 }  // namespace bthost

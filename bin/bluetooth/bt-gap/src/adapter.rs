@@ -3,19 +3,16 @@
 // found in the LICENSE file.
 
 use fidl;
-use fidl::endpoints2::ServerEnd;
 use fidl_bluetooth::Status;
 use fidl_bluetooth_control::AdapterInfo;
-use fidl_bluetooth_host::{AdapterDelegate, AdapterDelegateImpl, AdapterDelegateMarker,
-                          AdapterMarker, AdapterProxy, HostProxy};
+use fidl_bluetooth_host::{AdapterEvent, AdapterEventStream, AdapterProxy, HostProxy};
+use futures::{FutureExt, StreamExt};
 use futures::Future;
 use futures::future::ok as fok;
 use host_dispatcher::HostDispatcher;
-use parking_lot::{Mutex, RwLock};
+use parking_lot::RwLock;
 use std::sync::Arc;
-
-type HostAdapterPtr = ServerEnd<AdapterMarker>;
-type AdapterDelegatePtr = ServerEnd<AdapterDelegateMarker>;
+use util::clone_adapter_state;
 
 pub struct HostDevice {
     host: HostProxy,
@@ -35,6 +32,7 @@ impl HostDevice {
     pub fn get_host(&self) -> &HostProxy {
         &self.host
     }
+
     pub fn get_info(&self) -> &AdapterInfo {
         &self.info
     }
@@ -63,23 +61,25 @@ impl HostDevice {
 }
 
 pub fn run_host_device(
-    hd: Arc<RwLock<HostDispatcher>>, adapter: Arc<Mutex<HostDevice>>
-) -> impl AdapterDelegate {
-    AdapterDelegateImpl {
-        state: (hd, adapter),
-        on_open: |_, _| fok(()),
-        on_device_discovered: |(hd, adapter), mut remote_device, _res| {
-            if let Some(ref delegate) = hd.write().remote_device_delegate {
-                delegate
-                    .on_device_updated(&mut remote_device)
-                    .map_err(|e| warn!("Device Updated Callback Error: {:?}", e));
-            }
+    hd: Arc<RwLock<HostDispatcher>>, adapter: Arc<RwLock<HostDevice>>
+) -> impl Future<Item = AdapterEventStream, Error = fidl::Error> {
+    make_clones!(adapter => stream_adapter, adapter);
+    let stream = stream_adapter.read().adapter.take_event_stream();
+    stream
+        .for_each(move |evt| {
+            match evt {
+                AdapterEvent::OnAdapterStateChanged { ref state } => {
+                    adapter.write().info.state = Some(Box::new(clone_adapter_state(&state)));
+                }
+                AdapterEvent::OnDeviceDiscovered { mut device } => {
+                    if let Some(ref events) = hd.write().events {
+                        let _res = events
+                            .send_on_device_updated(&mut device)
+                            .map_err(|e| error!("Failed to send device discovery event: {:?}", e));
+                    }
+                }
+            };
             fok(())
-        },
-        on_adapter_state_changed: |(_hd, adapter), adapter_state, _res| {
-            let mut adapter = adapter.lock();
-            adapter.info.state = Some(Box::new(adapter_state));
-            fok(())
-        },
-    }
+        })
+        .err_into()
 }

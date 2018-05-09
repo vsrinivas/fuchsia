@@ -6,15 +6,12 @@ use async;
 use fidl::encoding2::OutOfLine;
 use fidl_bluetooth;
 use fidl_bluetooth_control::{Control, ControlImpl};
-use futures::{Future, FutureExt, Never};
-use futures::future;
+use futures::{future, Future, FutureExt, Never};
 use futures::future::Either::{Left, Right};
 use futures::prelude::*;
 use host_dispatcher::*;
 use parking_lot::RwLock;
 use std::sync::Arc;
-#[macro_use]
-use util;
 
 struct ControlServiceState {
     host: Arc<RwLock<HostDispatcher>>,
@@ -33,7 +30,12 @@ pub fn make_control_service(
             discovery_token: None,
             discoverable_token: None,
         })),
-        on_open: |_, _| future::ok(()),
+        on_open: |state, handle| {
+            let wstate = state.write();
+            let mut hd = wstate.host.write();
+            hd.events = Some(handle.clone());
+            future::ok(())
+        },
         connect: |_, _, _, res| {
             res.send(&mut bt_fidl_status!(NotSupported))
                 .into_future()
@@ -57,8 +59,8 @@ pub fn make_control_service(
                 .recover(|e| eprintln!("error sending response: {:?}", e))
         },
         get_active_adapter_info: |state, res| {
-            let rstate = state.read();
-            let mut hd = rstate.host.read();
+            let wstate = state.write();
+            let mut hd = wstate.host.write();
             let mut adap = hd.get_active_adapter_info();
 
             res.send(adap.as_mut().map(OutOfLine))
@@ -78,11 +80,7 @@ pub fn make_control_service(
         is_bluetooth_available: |state, res| {
             let rstate = state.read();
             let hd = rstate.host.read();
-            let mut is_avail = if hd.get_adapters().len() > 0 {
-                true
-            } else {
-                false
-            };
+            let is_avail = !hd.get_adapters().is_empty();
             res.send(is_avail)
                 .into_future()
                 .recover(|e| eprintln!("error sending response: {:?}", e))
@@ -128,27 +126,11 @@ pub fn make_control_service(
                 .into_future()
                 .recover(|e| eprintln!("error sending response: {:?}", e))
         },
-        set_delegate: |state, delegate, _res| {
-            if let Ok(proxy) = delegate.into_proxy() {
-                let mut wstate = state.write();
-                wstate.host.write().control_delegate = Some(proxy);
-            }
-            future::ok(())
-        },
         set_pairing_delegate: |state, _, _, delegate, _res| {
             if let Some(delegate) = delegate {
                 if let Ok(proxy) = delegate.into_proxy() {
                     let mut wstate = state.write();
                     wstate.host.write().pairing_delegate = Some(proxy);
-                }
-            }
-            future::ok(())
-        },
-        set_remote_device_delegate: |state, remote_device_delegate, _include_rssi, _res| {
-            if let Some(rdd) = remote_device_delegate {
-                if let Ok(proxy) = rdd.into_proxy() {
-                    let mut wstate = state.write();
-                    wstate.host.write().remote_device_delegate = Some(proxy);
                 }
             }
             future::ok(())

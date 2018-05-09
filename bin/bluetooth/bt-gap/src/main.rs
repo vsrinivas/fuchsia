@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![allow(warnings)]
-#![feature(use_extern_macros, conservative_impl_trait, universal_impl_trait)]
+#![deny(warnings)]
 
 extern crate failure;
 extern crate fdio;
@@ -26,6 +25,7 @@ extern crate futures;
 extern crate parking_lot;
 
 use app::server::ServicesServer;
+use bt::util;
 use failure::{Error, ResultExt};
 use fidl::endpoints2::{ServerEnd, ServiceMarker};
 use fidl_bluetooth_control::ControlMarker;
@@ -35,7 +35,6 @@ use futures::FutureExt;
 use parking_lot::RwLock;
 use std::sync::Arc;
 
-use bt::util;
 mod adapter;
 mod control_service;
 mod host_dispatcher;
@@ -47,7 +46,7 @@ const MAX_LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
 static LOGGER: logger::Logger = logger::Logger;
 
 fn main() -> Result<(), Error> {
-    log::set_logger(&LOGGER);
+    let _ = log::set_logger(&LOGGER);
     log::set_max_level(MAX_LOG_LEVEL);
 
     info!("Starting bt-gap...");
@@ -56,6 +55,7 @@ fn main() -> Result<(), Error> {
     let hd = Arc::new(RwLock::new(HostDispatcher::new()));
 
     make_clones!(hd => host_hd, control_hd, central_hd, peripheral_hd, gatt_hd);
+
     let host_watcher = watch_hosts(host_hd);
 
     let server = ServicesServer::new()
@@ -69,8 +69,8 @@ fn main() -> Result<(), Error> {
         .add_service((CentralMarker::NAME, move |chan: async::Channel| {
             trace!("Connecting Control Service to Adapter");
             if let Some(adap) = central_hd.write().get_active_adapter() {
-                let remote = ServerEnd::<CentralMarker>::new(chan.into());
-                adap.lock()
+                let mut remote = ServerEnd::<CentralMarker>::new(chan.into());
+                let _res = adap.read()
                     .get_host()
                     .request_low_energy_central(remote);
             }
@@ -79,7 +79,7 @@ fn main() -> Result<(), Error> {
             trace!("Connecting Peripheral Service to Adapter");
             if let Some(adap) = peripheral_hd.write().get_active_adapter() {
                 let mut remote = ServerEnd::<PeripheralMarker>::new(chan.into());
-                adap.lock()
+                let _res = adap.read()
                     .get_host()
                     .request_low_energy_peripheral(remote);
             }
@@ -87,8 +87,8 @@ fn main() -> Result<(), Error> {
         .add_service((Server_Marker::NAME, move |chan: async::Channel| {
             trace!("Connecting Gatt Service to Adapter");
             if let Some(adap) = gatt_hd.write().get_active_adapter() {
-                let remote = ServerEnd::<Server_Marker>::new(chan.into());
-                adap.lock().get_host().request_gatt_server_(remote);
+                let mut remote = ServerEnd::<Server_Marker>::new(chan.into());
+                let _res = adap.read().get_host().request_gatt_server_(remote);
             }
         }))
         .start()

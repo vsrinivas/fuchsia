@@ -171,20 +171,6 @@ struct AdapterInfo {
   AdapterState? state;
 };
 
-interface ControlDelegate {
-  // Called when the active adapter has been updated. If |active_adapter| is
-  // null, then no adapter is currently active.
-  1: OnActiveAdapterChanged(AdapterInfo? adapter);
-
-  // Called when an adapter has been updated. If |adapter| is null, then no
-  // adapter is currently available.
-  2: OnAdapterUpdated(AdapterInfo adapter);
-
-  // Called when an adapter with the given |identifier| has been removed from
-  // the system.
-  3: OnAdapterRemoved(string identifier);
-};
-
 interface PairingDelegate {
   // If |pin| is not null, |response| must match to accept the pairing request.
   // Otherwise if |response| is present, pairing is accepted and the response
@@ -193,22 +179,11 @@ interface PairingDelegate {
                   (string? response);
 };
 
-interface RemoteDeviceDelegate {
-  // Called to update the status of a known device.
-  1: OnDeviceUpdated(RemoteDevice device);
-
-  // Called to indicate a device has been removed.
-  2: OnDeviceRemoved(string identifier);
-};
-
 // Primary Bluetooth control service to access bluetooth
 [Discoverable]
 interface Control {
   // Returns whether or not Bluetooth is currently available on the system.
   1: IsBluetoothAvailable() -> (bool available);
-
-  // Registers a delegate to receive notifications about adapters.
-  2: SetDelegate(ControlDelegate delegate);
 
   // Registers a delegate to handle pairing requests.
   // Indicate the capability type of the PairingDelegate using |in| and |out|.
@@ -229,14 +204,6 @@ interface Control {
 
   // Returns information on the current active adapter, if it exists.
   6: GetActiveAdapterInfo() -> (AdapterInfo? @adapter);
-
-  // Add a delegate to receive updates to devices as their properties change.
-  // If |include_rssi| is true, device updates will also be sent if the only
-  // thing changed is the RSSI to the remote device.
-  //
-  // To stop receiving updates, set |delegate| to null.
-  7: SetRemoteDeviceDelegate(RemoteDeviceDelegate? delegate,
-                             bool include_rssi);
 
   // If |discovery| is true, active discovery is requested.
   // When requesting discovery, general discovery for BR/EDR and LE will be
@@ -269,4 +236,23 @@ interface Control {
   // Forgets |device_id| completely, removing all bonding information.
   // This will disconnect a device if it is connected.
   14: Forget(string device_id) -> (bluetooth.Status @status);
+
+  // Events
+
+  // Sent when the active adapter has been updated. If |active_adapter| is
+  // null, then no adapter is currently active.
+  10100: -> OnActiveAdapterChanged(AdapterInfo? adapter);
+
+  // Sent when an adapter has been updated.
+  10101: -> OnAdapterUpdated(AdapterInfo adapter);
+
+  // Sent when an adapter with the given |identifier| has been removed from
+  // the system.
+  10102: -> OnAdapterRemoved(string identifier);
+
+  // Sent when a Host Device is Updated
+  10700: -> OnDeviceUpdated(RemoteDevice device);
+
+  // Sent when a Host Device is removed
+  10701: -> OnDeviceRemoved(string identifier);
 };

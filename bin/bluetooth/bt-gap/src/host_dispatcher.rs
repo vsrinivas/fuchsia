@@ -5,21 +5,19 @@
 use adapter::{self, HostDevice};
 use async;
 use bt;
+use bt::util::clone_adapter_info;
 use failure::Error;
 use fidl;
-use fidl::endpoints2::{ClientEnd, ServerEnd};
-use fidl::endpoints2::Proxy;
+use fidl::endpoints2::{Proxy, ServerEnd};
 use fidl_bluetooth;
-use fidl_bluetooth_control::{AdapterInfo, RemoteDeviceDelegateMarker};
-use fidl_bluetooth_control::{ControlDelegateProxy, PairingDelegateProxy, RemoteDeviceDelegateProxy};
-use fidl_bluetooth_host::{AdapterDelegate, AdapterDelegateMarker, AdapterMarker, AdapterProxy,
-                          HostProxy};
+use fidl_bluetooth_control::{ControlControlHandle, PairingDelegateProxy};
+use fidl_bluetooth_control::AdapterInfo;
+use fidl_bluetooth_host::{AdapterMarker, AdapterProxy, HostProxy};
 use futures::{Future, FutureExt};
 use futures::IntoFuture;
 use futures::StreamExt;
 use futures::future::Either::{Left, Right};
 use futures::future::ok as fok;
-use parking_lot::Mutex;
 use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::fs::File;
@@ -34,30 +32,28 @@ static BT_HOST_DIR: &'static str = "/dev/class/bt-host";
 static DEFAULT_NAME: &'static str = "fuchsia";
 
 type HostAdapterPtr = ServerEnd<AdapterMarker>;
-type AdapterDelegatePtr = ServerEnd<AdapterDelegateMarker>;
-type RemoteDeviceDelegatePtr = Option<ClientEnd<RemoteDeviceDelegateMarker>>;
 
 pub struct DiscoveryRequestToken {
-    adap: Weak<Mutex<HostDevice>>,
+    adap: Weak<RwLock<HostDevice>>,
 }
 
 impl Drop for DiscoveryRequestToken {
     fn drop(&mut self) {
         if let Some(host) = self.adap.upgrade() {
-            let mut host = host.lock();
+            let mut host = host.write();
             host.stop_discovery();
         }
     }
 }
 
 pub struct DiscoverableRequestToken {
-    adap: Weak<Mutex<HostDevice>>,
+    adap: Weak<RwLock<HostDevice>>,
 }
 
 impl Drop for DiscoverableRequestToken {
     fn drop(&mut self) {
         if let Some(host) = self.adap.upgrade() {
-            let mut host = host.lock();
+            let mut host = host.write();
             host.set_discoverable(false);
         }
     }
@@ -65,13 +61,13 @@ impl Drop for DiscoverableRequestToken {
 
 pub struct HostDispatcher {
     active_id: Option<String>,
-    host_devices: HashMap<String, Arc<Mutex<HostDevice>>>,
+    host_devices: HashMap<String, Arc<RwLock<HostDevice>>>,
     name: String,
     discovery: Option<Weak<DiscoveryRequestToken>>,
     discoverable: Option<Weak<DiscoverableRequestToken>>,
-    pub remote_device_delegate: Option<RemoteDeviceDelegateProxy>,
-    pub control_delegate: Option<ControlDelegateProxy>,
+
     pub pairing_delegate: Option<PairingDelegateProxy>,
+    pub events: Option<ControlControlHandle>,
 }
 
 impl HostDispatcher {
@@ -82,9 +78,8 @@ impl HostDispatcher {
             name: DEFAULT_NAME.to_string(),
             discovery: None,
             discoverable: None,
-            remote_device_delegate: None,
-            control_delegate: None,
             pairing_delegate: None,
+            events: None,
         }
     }
 
@@ -98,12 +93,13 @@ impl HostDispatcher {
         match self.get_active_id() {
             Some(ref id) => {
                 let adap = self.host_devices.get(id).unwrap();
-                let mut adap = adap.lock();
+                let adap = adap.write();
                 Left(adap.set_name(self.name.clone()))
             }
-            None => Right(fok(
-                bt_fidl_status!(BluetoothNotAvailable, "No Adapter found"),
-            )),
+            None => Right(fok(bt_fidl_status!(
+                BluetoothNotAvailable,
+                "No Adapter found"
+            ))),
         }
     }
 
@@ -139,17 +135,18 @@ impl HostDispatcher {
                 let adap = hdr.host_devices.get(id).unwrap();
                 let weak_adap = Arc::downgrade(&adap);
                 let hdref = Arc::clone(&hd);
-                let mut adap = adap.lock();
-                Right(adap.start_discovery().and_then(
-                    move |mut resp| match resp.error {
-                        Some(_) => fok((resp, None)),
-                        None => {
-                            let token = Arc::new(DiscoveryRequestToken { adap: weak_adap });
-                            hdref.write().discovery = Some(Arc::downgrade(&token));
-                            fok((resp, Some(token)))
-                        }
-                    },
-                ))
+                let mut adap = adap.write();
+                Right(
+                    adap.start_discovery()
+                        .and_then(move |resp| match resp.error {
+                            Some(_) => fok((resp, None)),
+                            None => {
+                                let token = Arc::new(DiscoveryRequestToken { adap: weak_adap });
+                                hdref.write().discovery = Some(Arc::downgrade(&token));
+                                fok((resp, Some(token)))
+                            }
+                        }),
+                )
             }
             None => Left(fok((
                 bt_fidl_status!(BluetoothNotAvailable, "No Adapter found"),
@@ -182,17 +179,18 @@ impl HostDispatcher {
                 let adap = hdr.host_devices.get(id).unwrap();
                 let weak_adap = Arc::downgrade(&adap);
                 let hdref = Arc::clone(&hd);
-                let mut adap = adap.lock();
-                Right(adap.set_discoverable(true).and_then(
-                    move |mut resp| match resp.error {
-                        Some(_) => fok((resp, None)),
-                        None => {
-                            let token = Arc::new(DiscoverableRequestToken { adap: weak_adap });
-                            hdref.write().discoverable = Some(Arc::downgrade(&token));
-                            fok((resp, Some(token)))
-                        }
-                    },
-                ))
+                let mut adap = adap.write();
+                Right(
+                    adap.set_discoverable(true)
+                        .and_then(move |resp| match resp.error {
+                            Some(_) => fok((resp, None)),
+                            None => {
+                                let token = Arc::new(DiscoverableRequestToken { adap: weak_adap });
+                                hdref.write().discoverable = Some(Arc::downgrade(&token));
+                                fok((resp, Some(token)))
+                            }
+                        }),
+                )
             }
             None => Left(fok((
                 bt_fidl_status!(BluetoothNotAvailable, "No Adapter found"),
@@ -205,7 +203,7 @@ impl HostDispatcher {
         if self.host_devices.contains_key(&adapter_id) {
             // Close the prior adapter
             if let Some(ref id) = self.active_id {
-                self.host_devices[id].lock().close();
+                let _ = self.host_devices[id].write().close();
             }
             self.active_id = Some(adapter_id);
             return bt_fidl_status!();
@@ -214,18 +212,18 @@ impl HostDispatcher {
         bt_fidl_status!(BadState, "Attempting to activate an unknown adapter")
     }
 
-    pub fn get_active_adapter(&mut self) -> Option<Arc<Mutex<HostDevice>>> {
+    pub fn get_active_adapter(&mut self) -> Option<Arc<RwLock<HostDevice>>> {
         match self.get_active_id() {
             Some(id) => Some(self.host_devices.get(&id).unwrap().clone()),
             None => None,
         }
     }
 
-    pub fn get_active_adapter_info(&self) -> Option<AdapterInfo> {
-        match self.active_id {
+    pub fn get_active_adapter_info(&mut self) -> Option<AdapterInfo> {
+        match self.get_active_id() {
             Some(ref id) => {
                 // Id must always be valid
-                let adap = self.host_devices.get(id).unwrap().lock();
+                let adap = self.host_devices.get(id).unwrap().read();
                 Some(util::clone_adapter_info(adap.get_info()))
             }
             None => None,
@@ -237,7 +235,7 @@ impl HostDispatcher {
         // Not ready if zero in self.adapters
         let mut host_devices = vec![];
         for adapter in self.host_devices.values() {
-            let adapter = adapter.lock();
+            let adapter = adapter.read();
             host_devices.push(util::clone_adapter_info(adapter.get_info()));
         }
         host_devices
@@ -265,43 +263,43 @@ fn add_adapter(
             let (host_local, host_remote) = zx::Channel::create().unwrap();
             let host_adapter =
                 AdapterProxy::from_channel(async::Channel::from_channel(host_local).unwrap());
-            let mut host_req = HostAdapterPtr::new(host_remote);
-            host.request_adapter(host_req);
+            let host_req = HostAdapterPtr::new(host_remote);
+            let _ = host.request_adapter(host_req);
 
-            let (del_local, del_remote) = zx::Channel::create().unwrap();
-            let del_local = async::Channel::from_channel(del_local).unwrap();
-            let mut adap_delegate = ClientEnd::<AdapterDelegateMarker>::new(del_remote);
-            host_adapter.set_connectable(true).map(move |status| {
-                status.error.and_then::<Box<Error>, _>(|e| {
-                    info!("Can't set connectable: {:?}", e);
-                    None
+            // Set the adapter as connectable
+            host_adapter
+                .set_connectable(true)
+                .map_err(|e| {
+                    error!("Failed to set host adapter as connectable");
+                    e.into()
                 })
-            });
-            host_adapter.set_delegate(adap_delegate);
-
+                .map(|_| (host_adapter, host, adapter_info))
+        })
+        .and_then(move |(host_adapter, host, adapter_info)| {
             // Add to the adapters
             let id = adapter_info.identifier.clone();
-            let adapter = Arc::new(Mutex::new(
-                HostDevice::new(host, host_adapter, adapter_info),
-            ));
+            let adapter = Arc::new(RwLock::new(HostDevice::new(
+                host,
+                host_adapter,
+                adapter_info,
+            )));
             hd.write().host_devices.insert(id, adapter.clone());
-
-            fok((hd.clone(), adapter, del_local))
+            fok((hd.clone(), adapter))
         })
-        .and_then(|(hd, adapter, del_local)| {
-            if let Some(ref control_delegate) = hd.read().control_delegate {
-                control_delegate
-                    .on_adapter_updated(&mut util::clone_adapter_info(adapter.lock().get_info()));
+        .and_then(|(hd, adapter)| {
+            if let Some(ref events) = hd.read().events {
+                let _res = events
+                    .send_on_adapter_updated(&mut clone_adapter_info(adapter.read().get_info()));
             }
-            info!("Host added: {:?}", adapter.lock().get_info().identifier);
+            info!("Host added: {:?}", adapter.read().get_info().identifier);
             adapter::run_host_device(hd.clone(), adapter.clone())
-                .serve(del_local)
-                .map_err(|e| e.into())
+                .err_into()
+                .map(|_| ())
         })
 }
 
-fn rm_adapter(
-    _: Arc<RwLock<HostDispatcher>>, host_path: PathBuf
+pub fn rm_adapter(
+    _hd: Arc<RwLock<HostDispatcher>>, host_path: PathBuf
 ) -> impl Future<Item = (), Error = Error> {
     info!("Host removed: {:?}", host_path);
     // TODO:(NET-852)
@@ -324,22 +322,23 @@ pub fn watch_hosts(hd: Arc<RwLock<HostDispatcher>>) -> impl Future<Item = (), Er
 
                     match msg.event {
                         vfs_watcher::WatchEvent::EXISTING | vfs_watcher::WatchEvent::ADD_FILE => {
-                            Left(Left(
-                                add_adapter(hd.clone(), path).map_err(
-                                    |e| io::Error::new(io::ErrorKind::Other, e.to_string()),
-                                ),
-                            ))
+                            info!("Adding device from {:?}", path);
+                            Left(Left(add_adapter(hd.clone(), path).map_err(|e| {
+                                io::Error::new(io::ErrorKind::Other, e.to_string())
+                            })))
                         }
-                        vfs_watcher::WatchEvent::REMOVE_FILE => Left(Right(
-                            rm_adapter(hd.clone(), path)
-                                .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string())),
-                        )),
+                        vfs_watcher::WatchEvent::REMOVE_FILE => {
+                            info!("Removing device from {:?}", path);
+                            Left(Right(rm_adapter(hd.clone(), path).map_err(|e| {
+                                io::Error::new(io::ErrorKind::Other, e.to_string())
+                            })))
+                        }
                         vfs_watcher::WatchEvent::IDLE => {
                             debug!("HostDispatcher is IDLE");
                             Right(fok(()))
                         }
                         e => {
-                            debug!("Unrecognized event: {:?}", e);
+                            warn!("Unrecognized host watch event: {:?}", e);
                             Right(fok(()))
                         }
                     }
