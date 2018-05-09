@@ -27,7 +27,7 @@ executable("bin") {
   ]
 
   deps = [
-    ":module_resolver_impl",
+    ":local_module_resolver",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -45,14 +45,14 @@ group("unittests") {
   testonly = true
 
   deps = [
-    ":module_resolver_impl_unittest",
+    ":local_module_resolver_unittest",
   ]
 }
 
-source_set("module_resolver_impl") {
+source_set("local_module_resolver") {
   sources = [
-    "module_resolver_impl.cc",
-    "module_resolver_impl.h",
+    "local_module_resolver.cc",
+    "local_module_resolver.h",
     "type_inference.cc",
     "type_inference.h",
   ]
@@ -67,15 +67,15 @@ source_set("module_resolver_impl") {
   ]
 }
 
-source_set("module_resolver_impl_unittest") {
+source_set("local_module_resolver_unittest") {
   testonly = true
 
   sources = [
-    "module_resolver_impl_unittest.cc",
+    "local_module_resolver_unittest.cc",
   ]
 
   deps = [
-    ":module_resolver_impl",
+    ":local_module_resolver",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_MODULE_RESOLVER_MODULE_RESOLVER_IMPL_H_
-#define PERIDOT_BIN_MODULE_RESOLVER_MODULE_RESOLVER_IMPL_H_
+#ifndef PERIDOT_BIN_MODULE_RESOLVER_LOCAL_MODULE_RESOLVER_H_
+#define PERIDOT_BIN_MODULE_RESOLVER_LOCAL_MODULE_RESOLVER_H_
 
 #include <functional>
 #include <memory>
@@ -19,10 +19,10 @@
 
 namespace modular {
 
-class ModuleResolverImpl : modular::ModuleResolver, QueryHandler {
+class LocalModuleResolver : modular::ModuleResolver, QueryHandler {
  public:
-  ModuleResolverImpl(modular::EntityResolverPtr entity_resolver);
-  ~ModuleResolverImpl() override;
+  LocalModuleResolver(modular::EntityResolverPtr entity_resolver);
+  ~LocalModuleResolver() override;
 
   // Adds a source of Module manifests to index. It is not allowed to call
   // AddSource() after Connect(). |name| must be unique.
@@ -63,7 +63,7 @@ class ModuleResolverImpl : modular::ModuleResolver, QueryHandler {
   }
 
   // TODO(thatguy): At some point, factor the index functions out of
-  // ModuleResolverImpl so that they can be re-used by the general all-modules
+  // LocalModuleResolver so that they can be re-used by the general all-modules
   // Ask handler.
   std::map<std::string, std::unique_ptr<modular::ModuleManifestSource>>
       sources_;
@@ -91,10 +91,11 @@ class ModuleResolverImpl : modular::ModuleResolver, QueryHandler {
 
   modular::OperationCollection operations_;
 
-  fxl::WeakPtrFactory<ModuleResolverImpl> weak_factory_;
-  FXL_DISALLOW_COPY_AND_ASSIGN(ModuleResolverImpl);
+  fxl::WeakPtrFactory<LocalModuleResolver> weak_factory_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(LocalModuleResolver);
 };
 
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_MODULE_RESOLVER_MODULE_RESOLVER_IMPL_H_
+#endif  // PERIDOT_BIN_MODULE_RESOLVER_LOCAL_MODULE_RESOLVER_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/module_resolver/module_resolver_impl.h"
+#include "peridot/bin/module_resolver/local_module_resolver.h"
+
 #include "gtest/gtest.h"
 #include "lib/entity/cpp/json.h"
 #include "lib/fxl/files/file.h"
@@ -174,7 +175,7 @@ class TestManifestSource : public modular::ModuleManifestSource {
   }
 };
 
-class ModuleResolverImplTest : public gtest::TestWithMessageLoop {
+class LocalModuleResolverTest : public gtest::TestWithMessageLoop {
  protected:
   void ResetResolver() {
     modular::EntityResolverPtr entity_resolver_ptr;
@@ -182,7 +183,7 @@ class ModuleResolverImplTest : public gtest::TestWithMessageLoop {
     entity_resolver_->Connect(entity_resolver_ptr.NewRequest());
     // TODO: |impl_| will fail to resolve any queries whose parameters are
     // entity references.
-    impl_.reset(new ModuleResolverImpl(std::move(entity_resolver_ptr)));
+    impl_.reset(new LocalModuleResolver(std::move(entity_resolver_ptr)));
     for (auto entry : test_sources_) {
       impl_->AddSource(
           entry.first,
@@ -221,7 +222,7 @@ class ModuleResolverImplTest : public gtest::TestWithMessageLoop {
     return result_.modules;
   }
 
-  std::unique_ptr<ModuleResolverImpl> impl_;
+  std::unique_ptr<LocalModuleResolver> impl_;
   std::unique_ptr<modular::EntityResolverFake> entity_resolver_;
 
   std::map<std::string, modular::ModuleManifestSource*> test_sources_;
@@ -230,7 +231,7 @@ class ModuleResolverImplTest : public gtest::TestWithMessageLoop {
   modular::FindModulesResult result_;
 };
 
-TEST_F(ModuleResolverImplTest, Null) {
+TEST_F(LocalModuleResolverTest, Null) {
   auto source = AddSource("test");
   ResetResolver();
 
@@ -248,7 +249,7 @@ TEST_F(ModuleResolverImplTest, Null) {
   ASSERT_EQ(0lu, results()->size());
 }
 
-TEST_F(ModuleResolverImplTest, ExplicitUrl) {
+TEST_F(LocalModuleResolverTest, ExplicitUrl) {
   auto source = AddSource("test");
   ResetResolver();
 
@@ -269,7 +270,7 @@ TEST_F(ModuleResolverImplTest, ExplicitUrl) {
   EXPECT_EQ("another URL", results()->at(0).module_id);
 }
 
-TEST_F(ModuleResolverImplTest, Simpleaction) {
+TEST_F(LocalModuleResolverTest, Simpleaction) {
   // Also add Modules from multiple different sources.
   auto source1 = AddSource("test1");
   auto source2 = AddSource("test2");
@@ -329,7 +330,7 @@ TEST_F(ModuleResolverImplTest, Simpleaction) {
   ASSERT_EQ(0lu, results()->size());
 }
 
-TEST_F(ModuleResolverImplTest, SimpleParameterTypes) {
+TEST_F(LocalModuleResolverTest, SimpleParameterTypes) {
   auto source = AddSource("test");
   ResetResolver();
 
@@ -415,7 +416,7 @@ TEST_F(ModuleResolverImplTest, SimpleParameterTypes) {
   EXPECT_FALSE(start->create_link().allowed_types);
 }
 
-TEST_F(ModuleResolverImplTest, SimpleJsonParameters) {
+TEST_F(LocalModuleResolverTest, SimpleJsonParameters) {
   auto source = AddSource("test");
   ResetResolver();
 
@@ -495,7 +496,7 @@ TEST_F(ModuleResolverImplTest, SimpleJsonParameters) {
   EXPECT_FALSE(destination->create_link().allowed_types);
 }
 
-TEST_F(ModuleResolverImplTest, LinkInfoParameterType) {
+TEST_F(LocalModuleResolverTest, LinkInfoParameterType) {
   auto source = AddSource("test");
   ResetResolver();
 
@@ -547,7 +548,7 @@ TEST_F(ModuleResolverImplTest, LinkInfoParameterType) {
   EXPECT_EQ("c", start->link_path().link_name);
 }
 
-TEST_F(ModuleResolverImplTest, ReAddExistingEntries) {
+TEST_F(LocalModuleResolverTest, ReAddExistingEntries) {
   // Add the same entry twice, to simulate what could happen during a network
   // reconnect, and show that the Module is still available.
   auto source = AddSource("test1");
@@ -575,7 +576,7 @@ TEST_F(ModuleResolverImplTest, ReAddExistingEntries) {
 
 // Tests that a query that does not contain a action or a URL matches a
 // parameter with the correct types.
-TEST_F(ModuleResolverImplTest, MatchingParameterWithNoactionOrUrl) {
+TEST_F(LocalModuleResolverTest, MatchingParameterWithNoactionOrUrl) {
   auto source = AddSource("test");
   ResetResolver();
 
@@ -603,7 +604,7 @@ TEST_F(ModuleResolverImplTest, MatchingParameterWithNoactionOrUrl) {
 
 // Tests that a query that does not contain a action or a URL matches when the
 // parameter types do, even if the parameter name does not.
-TEST_F(ModuleResolverImplTest, CorrectParameterTypeWithNoactionOrUrl) {
+TEST_F(LocalModuleResolverTest, CorrectParameterTypeWithNoactionOrUrl) {
   auto source = AddSource("test");
   ResetResolver();
 
@@ -631,7 +632,7 @@ TEST_F(ModuleResolverImplTest, CorrectParameterTypeWithNoactionOrUrl) {
 
 // Tests that a query that does not contain a action or a URL returns results
 // for multiple matching entries.
-TEST_F(ModuleResolverImplTest,
+TEST_F(LocalModuleResolverTest,
        CorrectParameterTypeWithNoactionOrUrlMultipleMatches) {
   auto source = AddSource("test");
   ResetResolver();
@@ -671,7 +672,7 @@ TEST_F(ModuleResolverImplTest,
 
 // Tests that a query that does not contain a action or a URL does not match
 // when the parameter types don't match.
-TEST_F(ModuleResolverImplTest, IncorrectParameterTypeWithNoactionOrUrl) {
+TEST_F(LocalModuleResolverTest, IncorrectParameterTypeWithNoactionOrUrl) {
   auto source = AddSource("test");
   ResetResolver();
 
@@ -698,7 +699,7 @@ TEST_F(ModuleResolverImplTest, IncorrectParameterTypeWithNoactionOrUrl) {
 
 // Tests that a query without a action or url, that contains more parameters
 // than the potential result, still returns that result.
-TEST_F(ModuleResolverImplTest, QueryWithMoreParametersThanEntry) {
+TEST_F(LocalModuleResolverTest, QueryWithMoreParametersThanEntry) {
   auto source = AddSource("test");
   ResetResolver();
 
@@ -727,7 +728,7 @@ TEST_F(ModuleResolverImplTest, QueryWithMoreParametersThanEntry) {
 
 // Tests that for a query with multiple parameters, each parameter gets assigned
 // to the correct module parameters.
-TEST_F(ModuleResolverImplTest, QueryWithoutActionAndMultipleParameters) {
+TEST_F(LocalModuleResolverTest, QueryWithoutActionAndMultipleParameters) {
   auto source = AddSource("test");
   ResetResolver();
 
@@ -776,7 +777,7 @@ TEST_F(ModuleResolverImplTest, QueryWithoutActionAndMultipleParameters) {
 
 // Tests that when there are multiple valid mappings of query parameter types to
 // entities, all such combinations are returned.
-TEST_F(ModuleResolverImplTest, QueryWithoutActionAndTwoParametersOfSameType) {
+TEST_F(LocalModuleResolverTest, QueryWithoutActionAndTwoParametersOfSameType) {
   auto source = AddSource("test");
   ResetResolver();
 
@@ -842,7 +843,8 @@ TEST_F(ModuleResolverImplTest, QueryWithoutActionAndTwoParametersOfSameType) {
 
 // Tests that a query with three parameters of the same type matches an entry
 // with three expected parameters in 6 different ways.
-TEST_F(ModuleResolverImplTest, QueryWithoutActionAndThreeParametersOfSameType) {
+TEST_F(LocalModuleResolverTest,
+       QueryWithoutActionAndThreeParametersOfSameType) {
   auto source = AddSource("test");
   ResetResolver();
 
@@ -889,7 +891,7 @@ TEST_F(ModuleResolverImplTest, QueryWithoutActionAndThreeParametersOfSameType) {
 
 // Tests that a query with three parameters of the same type matches an entry
 // with two expected parameters in 6 different ways.
-TEST_F(ModuleResolverImplTest,
+TEST_F(LocalModuleResolverTest,
        QueryWithoutActionAndDifferentNumberOfParametersInQueryVsEntry) {
   auto source = AddSource("test");
   ResetResolver();
@@ -933,7 +935,7 @@ TEST_F(ModuleResolverImplTest,
 
 // Tests that a query without a action does not match a module that requires a
 // proper superset of the query parameters.
-TEST_F(ModuleResolverImplTest,
+TEST_F(LocalModuleResolverTest,
        QueryWithoutActionWithEntryContainingProperSuperset) {
   auto source = AddSource("test");
   ResetResolver();
@@ -970,7 +972,7 @@ TEST_F(ModuleResolverImplTest,
 
 // Tests that a query without a action does not match an entry where the
 // parameter types are incompatible.
-TEST_F(ModuleResolverImplTest, QueryWithoutActionIncompatibleParameterTypes) {
+TEST_F(LocalModuleResolverTest, QueryWithoutActionIncompatibleParameterTypes) {
   auto source = AddSource("test");
   ResetResolver();
 
@@ -1003,7 +1005,7 @@ TEST_F(ModuleResolverImplTest, QueryWithoutActionIncompatibleParameterTypes) {
 // Tests that a query with a action requires parameter name and type to match
 // (i.e. does not behave like action-less matching where the parameter names are
 // disregarded).
-TEST_F(ModuleResolverImplTest,
+TEST_F(LocalModuleResolverTest,
        QueryWithActionMatchesBothParameterNamesAndTypes) {
   auto source = AddSource("test");
   ResetResolver();

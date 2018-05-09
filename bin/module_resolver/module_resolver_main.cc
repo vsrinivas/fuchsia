@@ -15,7 +15,7 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/module_resolver/module_resolver_impl.h"
+#include "peridot/bin/module_resolver/local_module_resolver.h"
 #include "peridot/lib/fidl/equals.h"
 #include "peridot/lib/module_manifest_source/firebase_source.h"
 #include "peridot/lib/module_manifest_source/module_package_source.h"
@@ -41,7 +41,7 @@ class ModuleResolverApp : ContextListener {
     intelligence_services_->GetContextReader(context_reader_.NewRequest());
 
     resolver_impl_ =
-        std::make_unique<ModuleResolverImpl>(std::move(entity_resolver));
+        std::make_unique<LocalModuleResolver>(std::move(entity_resolver));
     // Set up |resolver_impl_|.
     resolver_impl_->AddSource(
         "module_package",
@@ -267,7 +267,7 @@ class ModuleResolverApp : ContextListener {
   }
 
  private:
-  std::unique_ptr<ModuleResolverImpl> resolver_impl_;
+  std::unique_ptr<LocalModuleResolver> resolver_impl_;
 
   // The proposal publisher that is used to make proposals based on the current
   // context.

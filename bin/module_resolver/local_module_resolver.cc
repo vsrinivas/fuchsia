@@ -4,7 +4,7 @@
 
 #include <algorithm>
 
-#include "peridot/bin/module_resolver/module_resolver_impl.h"
+#include "peridot/bin/module_resolver/local_module_resolver.h"
 
 #include <fuchsia/cpp/modular.h>
 #include <lib/async/cpp/task.h>
@@ -19,7 +19,7 @@ namespace modular {
 
 namespace {
 
-// << operator for ModuleResolverImpl::EntryId.
+// << operator for LocalModuleResolver::EntryId.
 std::ostream& operator<<(std::ostream& o,
                          const std::pair<std::string, std::string>& id) {
   return o << id.first << ":" << id.second;
@@ -27,16 +27,16 @@ std::ostream& operator<<(std::ostream& o,
 
 }  // namespace
 
-ModuleResolverImpl::ModuleResolverImpl(
+LocalModuleResolver::LocalModuleResolver(
     modular::EntityResolverPtr entity_resolver)
     : query_handler_binding_(this),
       already_checking_if_sources_are_ready_(false),
       type_helper_(std::move(entity_resolver)),
       weak_factory_(this) {}
 
-ModuleResolverImpl::~ModuleResolverImpl() = default;
+LocalModuleResolver::~LocalModuleResolver() = default;
 
-void ModuleResolverImpl::AddSource(
+void LocalModuleResolver::AddSource(
     std::string name, std::unique_ptr<modular::ModuleManifestSource> repo) {
   FXL_CHECK(bindings_.size() == 0);
 
@@ -52,7 +52,7 @@ void ModuleResolverImpl::AddSource(
              });
 }
 
-void ModuleResolverImpl::Connect(
+void LocalModuleResolver::Connect(
     fidl::InterfaceRequest<modular::ModuleResolver> request) {
   if (!AllSourcesAreReady()) {
     PeriodicCheckIfSourcesAreReady();
@@ -62,21 +62,21 @@ void ModuleResolverImpl::Connect(
   }
 }
 
-void ModuleResolverImpl::BindQueryHandler(
+void LocalModuleResolver::BindQueryHandler(
     fidl::InterfaceRequest<QueryHandler> request) {
   query_handler_binding_.Bind(std::move(request));
 }
 
-class ModuleResolverImpl::FindModulesCall
+class LocalModuleResolver::FindModulesCall
     : public modular::Operation<modular::FindModulesResult> {
  public:
-  FindModulesCall(ModuleResolverImpl* module_resolver_impl,
+  FindModulesCall(LocalModuleResolver* local_module_resolver,
                   modular::ResolverQuery query,
                   modular::ResolverScoringInfoPtr scoring_info,
                   ResultCall result_call)
-      : Operation("ModuleResolverImpl::FindModulesCall",
+      : Operation("LocalModuleResolver::FindModulesCall",
                   std::move(result_call)),
-        module_resolver_impl_(module_resolver_impl),
+        local_module_resolver_(local_module_resolver),
         query_(std::move(query)),
         scoring_info_(std::move(scoring_info)) {}
 
@@ -98,8 +98,8 @@ class ModuleResolverImpl::FindModulesCall
 
     if (query_.action) {
       auto action_it =
-          module_resolver_impl_->action_to_entries_.find(query_.action);
-      if (action_it == module_resolver_impl_->action_to_entries_.end()) {
+          local_module_resolver_->action_to_entries_.find(query_.action);
+      if (action_it == local_module_resolver_->action_to_entries_.end()) {
         result_ = CreateEmptyResult();
         return;
       }
@@ -120,7 +120,7 @@ class ModuleResolverImpl::FindModulesCall
       const auto& parameter_name = parameter_entry.key;
       const auto& parameter_constraints = parameter_entry.constraint;
 
-      module_resolver_impl_->type_helper_.GetParameterTypes(
+      local_module_resolver_->type_helper_.GetParameterTypes(
           parameter_constraints,
           [parameter_name, flow, this](std::vector<std::string> types) {
             ProcessParameterTypes(parameter_name, std::move(types),
@@ -178,9 +178,9 @@ class ModuleResolverImpl::FindModulesCall
       const std::string& parameter_type) {
     std::set<EntryId> found_entries;
     auto found_entries_it =
-        module_resolver_impl_->parameter_type_to_entries_.find(parameter_type);
+        local_module_resolver_->parameter_type_to_entries_.find(parameter_type);
     if (found_entries_it !=
-        module_resolver_impl_->parameter_type_to_entries_.end()) {
+        local_module_resolver_->parameter_type_to_entries_.end()) {
       found_entries.insert(found_entries_it->second.begin(),
                            found_entries_it->second.end());
     }
@@ -193,10 +193,10 @@ class ModuleResolverImpl::FindModulesCall
       const std::string& parameter_type, const std::string& parameter_name) {
     std::set<EntryId> found_entries;
     auto found_entries_it =
-        module_resolver_impl_->parameter_type_and_name_to_entries_.find(
+        local_module_resolver_->parameter_type_and_name_to_entries_.find(
             std::make_pair(parameter_type, parameter_name));
     if (found_entries_it !=
-        module_resolver_impl_->parameter_type_and_name_to_entries_.end()) {
+        local_module_resolver_->parameter_type_and_name_to_entries_.end()) {
       found_entries.insert(found_entries_it->second.begin(),
                            found_entries_it->second.end());
     }
@@ -218,8 +218,8 @@ class ModuleResolverImpl::FindModulesCall
     // action or handler, results will be constructed for each mapping from
     // entry parameter to |query_| parameter where the types are compatible.
     for (auto id : candidates_) {
-      auto entry_it = module_resolver_impl_->entries_.find(id);
-      FXL_CHECK(entry_it != module_resolver_impl_->entries_.end()) << id;
+      auto entry_it = local_module_resolver_->entries_.find(id);
+      FXL_CHECK(entry_it != local_module_resolver_->entries_.end()) << id;
 
       const auto& entry = entry_it->second;
 
@@ -454,7 +454,7 @@ class ModuleResolverImpl::FindModulesCall
       const modular::ResolverQuery& query) {
     modular::ModuleResolverResult mod_result;
     mod_result.module_id = query.handler;
-    for (const auto& iter : module_resolver_impl_->entries_) {
+    for (const auto& iter : local_module_resolver_->entries_) {
       if (iter.second.binary == query.handler) {
         mod_result.manifest = modular::ModuleManifest::New();
         fidl::Clone(iter.second, mod_result.manifest.get());
@@ -476,7 +476,7 @@ class ModuleResolverImpl::FindModulesCall
 
   modular::FindModulesResult result_;
 
-  ModuleResolverImpl* const module_resolver_impl_;
+  LocalModuleResolver* const local_module_resolver_;
   modular::ResolverQuery query_;
   modular::ResolverScoringInfoPtr scoring_info_;
 
@@ -489,12 +489,12 @@ class ModuleResolverImpl::FindModulesCall
   FXL_DISALLOW_COPY_AND_ASSIGN(FindModulesCall);
 };
 
-void ModuleResolverImpl::FindModules(modular::ResolverQuery query,
-                                     FindModulesCallback done) {
+void LocalModuleResolver::FindModules(modular::ResolverQuery query,
+                                      FindModulesCallback done) {
   operations_.Add(new FindModulesCall(this, std::move(query), nullptr, done));
 }
 
-void ModuleResolverImpl::FindModules(
+void LocalModuleResolver::FindModules(
     modular::ResolverQuery query, modular::ResolverScoringInfoPtr scoring_info,
     FindModulesCallback done) {
   operations_.Add(new FindModulesCall(this, std::move(query),
@@ -507,11 +507,11 @@ bool StringStartsWith(const std::string& str, const std::string& prefix) {
 }
 }  // namespace
 
-void ModuleResolverImpl::OnQuery(UserInput query, OnQueryCallback done) {
+void LocalModuleResolver::OnQuery(UserInput query, OnQueryCallback done) {
   // TODO(thatguy): This implementation is bare-bones. Don't judge.
   // Before adding new member variables to support OnQuery() (and tying the
-  // ModuleResolverImpl internals up with what's needed for this method),
-  // please split the index-building & querying portion of ModuleResolverImpl
+  // LocalModuleResolver internals up with what's needed for this method),
+  // please split the index-building & querying portion of LocalModuleResolver
   // out into its own class. Then, make a new class to handle OnQuery() and
   // share the same index instance here and there.
   auto proposals = fidl::VectorPtr<Proposal>::New(0);
@@ -562,7 +562,7 @@ void ModuleResolverImpl::OnQuery(UserInput query, OnQueryCallback done) {
   done(std::move(response));
 }
 
-void ModuleResolverImpl::OnSourceIdle(const std::string& source_name) {
+void LocalModuleResolver::OnSourceIdle(const std::string& source_name) {
   auto res = ready_sources_.insert(source_name);
   if (!res.second) {
     // It's OK for us to get an idle notification twice from a repo. This
@@ -580,9 +580,9 @@ void ModuleResolverImpl::OnSourceIdle(const std::string& source_name) {
   }
 }
 
-void ModuleResolverImpl::OnNewManifestEntry(const std::string& source_name,
-                                            std::string id_in,
-                                            modular::ModuleManifest new_entry) {
+void LocalModuleResolver::OnNewManifestEntry(
+    const std::string& source_name, std::string id_in,
+    modular::ModuleManifest new_entry) {
   FXL_LOG(INFO) << "New Module manifest " << id_in
                 << ": action = " << new_entry.action
                 << ", binary = " << new_entry.binary;
@@ -606,8 +606,8 @@ void ModuleResolverImpl::OnNewManifestEntry(const std::string& source_name,
   }
 }
 
-void ModuleResolverImpl::OnRemoveManifestEntry(const std::string& source_name,
-                                               std::string id_in) {
+void LocalModuleResolver::OnRemoveManifestEntry(const std::string& source_name,
+                                                std::string id_in) {
   EntryId id{source_name, id_in};
   auto it = entries_.find(id);
   if (it == entries_.end()) {
@@ -628,7 +628,7 @@ void ModuleResolverImpl::OnRemoveManifestEntry(const std::string& source_name,
   entries_.erase(id);
 }
 
-void ModuleResolverImpl::PeriodicCheckIfSourcesAreReady() {
+void LocalModuleResolver::PeriodicCheckIfSourcesAreReady() {
   if (!AllSourcesAreReady()) {
     for (const auto& it : sources_) {
       if (ready_sources_.count(it.first) == 0) {
@@ -636,7 +636,8 @@ void ModuleResolverImpl::PeriodicCheckIfSourcesAreReady() {
       }
     }
 
-    if (already_checking_if_sources_are_ready_) return;
+    if (already_checking_if_sources_are_ready_)
+      return;
     already_checking_if_sources_are_ready_ = true;
     async::PostDelayedTask(
         async_get_default(),
