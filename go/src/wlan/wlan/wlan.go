@@ -103,7 +103,8 @@ func ConvertWapToAp(ap AP) wlan_service.Ap {
 	is_secure := ap.BSSDesc.Rsn != nil
 	// TODO: Revisit this RSSI conversion.
 	last_rssi := int8(ap.LastRSSI)
-	return wlan_service.Ap{bssid, ap.SSID, int32(last_rssi), is_secure}
+	is_compatible := ap.IsCompatible
+	return wlan_service.Ap{bssid, ap.SSID, int32(last_rssi), is_secure, is_compatible}
 }
 
 func (c *Client) Status() wlan_service.WlanStatus {

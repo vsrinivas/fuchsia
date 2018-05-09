@@ -9,13 +9,15 @@ import (
 	mlme "fuchsia/go/wlan_mlme"
 	"sort"
 	"strings"
+	"wlan/eapol"
 )
 
 type AP struct {
-	BSSID    [6]uint8
-	SSID     string
-	BSSDesc  *mlme.BssDescription
-	LastRSSI uint8
+	BSSID        [6]uint8
+	SSID         string
+	BSSDesc      *mlme.BssDescription
+	LastRSSI     uint8
+	IsCompatible bool
 }
 
 // ByRSSI implements sort.Interface for []AP based on the LastRSSI field.
@@ -40,9 +42,17 @@ func macStr(macArray [6]uint8) string {
 		macArray[0], macArray[1], macArray[2], macArray[3], macArray[4], macArray[5])
 }
 
+func IsBssCompatible(bss *mlme.BssDescription) bool {
+	if bss.Rsn != nil && len(*bss.Rsn) > 0 {
+		is_rsn_compatible, err := eapol.IsRSNSupported(*bss.Rsn)
+		return is_rsn_compatible && (err == nil)
+	}
+	return true
+}
+
 func CollectScanResults(resp *mlme.ScanConfirm, ssid string, bssid string) []AP {
 	aps := []AP{}
-	for _, s := range resp.BssDescriptionSet {
+	for idx, s := range resp.BssDescriptionSet {
 		if bssid != "" {
 			// Match the specified BSSID only
 			if macStr(s.Bssid) != strings.ToLower(bssid) {
@@ -53,6 +63,7 @@ func CollectScanResults(resp *mlme.ScanConfirm, ssid string, bssid string) []AP 
 		if s.Ssid == ssid || ssid == "" {
 			ap := NewAP(&s)
 			ap.LastRSSI = s.RssiMeasurement
+			ap.IsCompatible = IsBssCompatible(&resp.BssDescriptionSet[idx])
 			aps = append(aps, *ap)
 		}
 	}

@@ -148,8 +148,13 @@ func (a *ToolApp) Status() {
 			if ap.IsSecure {
 				prot = "*"
 			}
-			fmt.Printf("%x (RSSI: %d) %v %q\n",
-				ap.Bssid, ap.LastRssi, prot, ap.Ssid)
+			compatStr := "[NoSupport]"
+			if ap.IsCompatible {
+				compatStr = ""
+			}
+
+			fmt.Printf("%12s %x (RSSI: %d) %v %q\n",
+				compatStr, ap.Bssid, ap.LastRssi, prot, ap.Ssid)
 		}
 	}
 }

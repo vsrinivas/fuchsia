@@ -22,6 +22,7 @@ struct AP {
   string       ssid; // TODO(NET-698): ssid should be []byte for unicode handling
   int32        last_rssi; // dBm (some vendors may not support dBm)
   bool         is_secure;
+  bool         is_compatible; // with respect to Fuchsia
 };
 
 struct ScanRequest {
