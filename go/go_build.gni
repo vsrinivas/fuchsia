@@ -86,6 +86,13 @@ template("go_build") {
 
     deps += [ "//third_party/go:go_runtime" ]
 
+    if (is_fuchsia) {
+      deps += [
+        "//zircon/public/lib/fdio",
+        "//zircon/public/lib/launchpad",
+      ]
+    }
+
     go_dependencies = []
     if (defined(invoker.go_dependencies)) {
       go_dependencies = invoker.go_dependencies
