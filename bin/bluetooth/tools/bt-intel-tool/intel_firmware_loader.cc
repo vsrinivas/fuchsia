@@ -102,8 +102,7 @@ class MemoryFile {
 
 constexpr size_t kMaxSecureSendArgLen = 252;
 
-bool SecureSend(CommandChannel* channel,
-                uint8_t type,
+bool SecureSend(CommandChannel* channel, uint8_t type,
                 const BufferView& bytes) {
   size_t left = bytes.size();
   bool abort = false;

@@ -12,8 +12,7 @@
 namespace bluetooth_tools {
 
 CommandDispatcher::CommandHandlerData::CommandHandlerData(
-    const std::string& description,
-    const CommandHandler& handler)
+    const std::string& description, const CommandHandler& handler)
     : description(description), handler(handler) {}
 
 bool CommandDispatcher::ExecuteCommand(const std::vector<std::string>& argv,
@@ -23,12 +22,14 @@ bool CommandDispatcher::ExecuteCommand(const std::vector<std::string>& argv,
 
   *out_cmd_found = false;
 
-  if (argv.empty())
+  if (argv.empty()) {
     return false;
+  }
 
   const auto& iter = handler_map_.find(argv[0]);
-  if (iter == handler_map_.end())
+  if (iter == handler_map_.end()) {
     return false;
+  }
 
   *out_cmd_found = true;
 
@@ -58,8 +59,7 @@ std::vector<std::string> CommandDispatcher::GetCommandsThatMatch(
   std::vector<std::string> result;
   for (auto& iter : handler_map_) {
     auto& cmd_name = iter.first;
-    if (prefix.length() > cmd_name.length())
-      continue;
+    if (prefix.length() > cmd_name.length()) continue;
     if (cmd_name.compare(0, prefix.length(), prefix) == 0) {
       result.push_back(cmd_name);
     }

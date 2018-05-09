@@ -138,9 +138,7 @@ std::string TechnologyTypeToString(bluetooth_control::TechnologyType type) {
   return "(unknown)";
 }
 
-std::string BoolToString(bool val) {
-  return val ? "yes" : "no";
-}
+std::string BoolToString(bool val) { return val ? "yes" : "no"; }
 
 std::string ErrorCodeToString(bluetooth::ErrorCode error_code) {
   switch (error_code) {

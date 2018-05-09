@@ -11,8 +11,6 @@ LogMessage::LogMessage(size_t indent_count) {
   std::cout << std::string(2 + indent_count * 2, ' ');
 }
 
-LogMessage::~LogMessage() {
-  std::cout << std::endl;
-}
+LogMessage::~LogMessage() { std::cout << std::endl; }
 
 }  // namespace bluetoothcli

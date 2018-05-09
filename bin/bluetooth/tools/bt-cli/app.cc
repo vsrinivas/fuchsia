@@ -30,7 +30,7 @@ App::App(async::Loop* loop)
       context_->ConnectToEnvironmentService<bluetooth_control::Control>();
   FXL_DCHECK(control_);
 
-  control_.set_error_handler([this]{
+  control_.set_error_handler([this] {
     CLI_LOG() << "Control disconnected";
     PostQuit();
   });
@@ -65,8 +65,7 @@ void App::ReadNextInput() {
   }
 
   auto ac = fxl::MakeAutoCall([&call_complete_cb, line, complete_cb] {
-    if (call_complete_cb)
-      complete_cb();
+    if (call_complete_cb) complete_cb();
     free(line);
   });
 
@@ -117,12 +116,10 @@ void App::OnDeviceRemoved(::fidl::StringPtr identifier) {
   discovered_devices_.erase(identifier);
 }
 
-void App::Quit() {
-  loop_->Quit();
-}
+void App::Quit() { loop_->Quit(); }
 
 void App::PostQuit() {
-  async::PostTask(async(), [this] {Quit();} );
+  async::PostTask(async(), [this] { Quit(); });
 }
 
 }  // namespace bluetoothcli

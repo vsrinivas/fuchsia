@@ -70,8 +70,7 @@ class MfgModeEnabler {
   bool patch_reset_needed_;
 
   std::unique_ptr<CommandPacket> MakeMfgModePacket(
-      bool enable,
-      MfgDisableMode disable_mode = MfgDisableMode::kNoPatches) {
+      bool enable, MfgDisableMode disable_mode = MfgDisableMode::kNoPatches) {
     auto packet = CommandPacket::New(kMfgModeChange,
                                      sizeof(IntelMfgModeChangeCommandParams));
     auto params = packet->mutable_view()
@@ -202,8 +201,7 @@ bool HandleReadBootParams(CommandChannel* cmd_channel,
   return false;
 }
 
-bool HandleReset(CommandChannel* cmd_channel,
-                 const fxl::CommandLine& cmd_line,
+bool HandleReset(CommandChannel* cmd_channel, const fxl::CommandLine& cmd_line,
                  const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: reset" << std::endl;

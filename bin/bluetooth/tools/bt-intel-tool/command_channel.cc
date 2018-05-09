@@ -138,8 +138,7 @@ void CommandChannel::SendCommandSync(
 
     status = timeout.wait_one(ZX_TIMER_SIGNALED, zx::time(), nullptr);
     if (status != ZX_ERR_TIMED_OUT) {
-      if (status == ZX_OK)
-        status = ZX_ERR_TIMED_OUT;
+      if (status == ZX_OK) status = ZX_ERR_TIMED_OUT;
       break;
     }
   }
@@ -152,12 +151,10 @@ void CommandChannel::SendCommandSync(
   }
 }
 
-void CommandChannel::HandleChannelReady(
-    const zx::channel& channel,
-    async_t* async,
-    async::WaitBase* wait,
-    zx_status_t status,
-    const zx_packet_signal_t* signal) {
+void CommandChannel::HandleChannelReady(const zx::channel& channel,
+                                        async_t* async, async::WaitBase* wait,
+                                        zx_status_t status,
+                                        const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     std::cerr << "CommandChannel: channel error: "
               << zx_status_get_string(status) << std::endl;
@@ -226,19 +223,15 @@ void CommandChannel::HandleChannelReady(
   }
 }
 
-void CommandChannel::OnCmdChannelReady(
-    async_t* async,
-    async::WaitBase* wait,
-    zx_status_t status,
-    const zx_packet_signal_t* signal) {
+void CommandChannel::OnCmdChannelReady(async_t* async, async::WaitBase* wait,
+                                       zx_status_t status,
+                                       const zx_packet_signal_t* signal) {
   HandleChannelReady(cmd_channel_, async, wait, status, signal);
 }
 
-void CommandChannel::OnAclChannelReady(
-    async_t* async,
-    async::WaitBase* wait,
-    zx_status_t status,
-    const zx_packet_signal_t* signal) {
+void CommandChannel::OnAclChannelReady(async_t* async, async::WaitBase* wait,
+                                       zx_status_t status,
+                                       const zx_packet_signal_t* signal) {
   // A Command packet response from a Secure Send command.
   HandleChannelReady(acl_channel_, async, wait, status, signal);
 }

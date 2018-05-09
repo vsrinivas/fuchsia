@@ -35,8 +35,7 @@ void StatusFilterCallback(fxl::Closure complete_cb,
     auto status = event.ToStatus();
     std::cout << "  Command Status: " << status.ToString() << " (id=" << id
               << ")" << std::endl;
-    if (status != ::btlib::hci::StatusCode::kSuccess)
-      complete_cb();
+    if (status != ::btlib::hci::StatusCode::kSuccess) complete_cb();
     return;
   }
   cb(id, event);
@@ -129,8 +128,7 @@ std::vector<std::string> AdvFlagsToStrings(uint8_t flags) {
 }
 
 void DisplayAdvertisingReport(const ::btlib::hci::LEAdvertisingReportData& data,
-                              int8_t rssi,
-                              const std::string& name_filter,
+                              int8_t rssi, const std::string& name_filter,
                               const std::string& addr_type_filter) {
   ::btlib::gap::AdvertisingDataReader reader(
       ::btlib::common::BufferView(data.data, data.length_data));
@@ -250,8 +248,7 @@ bool HandleVersionInfo(const CommandData* cmd_data,
   return true;
 }
 
-bool HandleReset(const CommandData* cmd_data,
-                 const fxl::CommandLine& cmd_line,
+bool HandleReset(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
                  const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size() || cmd_line.options().size()) {
     std::cout << "  Usage: reset" << std::endl;
@@ -358,8 +355,7 @@ bool HandleSetEventMask(const CommandData* cmd_data,
   }
 
   std::string hex = cmd_line.positional_args()[0];
-  if (hex.size() >= 2 && hex[0] == '0' && hex[1] == 'x')
-    hex = hex.substr(2);
+  if (hex.size() >= 2 && hex[0] == '0' && hex[1] == 'x') hex = hex.substr(2);
 
   uint64_t mask;
   if (!fxl::StringToNumberWithError<uint64_t>(hex, &mask, fxl::Base::k16)) {
@@ -597,8 +593,7 @@ bool HandleLESetScanParams(const CommandData* cmd_data,
   return true;
 }
 
-bool HandleLEScan(const CommandData* cmd_data,
-                  const fxl::CommandLine& cmd_line,
+bool HandleLEScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
                   const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: set-scan-params "
@@ -682,8 +677,8 @@ bool HandleLEScan(const CommandData* cmd_data,
       ::btlib::hci::kLEAdvertisingReportSubeventCode, le_adv_report_cb,
       cmd_data->dispatcher());
 
-  auto cleanup_cb =
-      [ complete_cb, event_handler_id, cmd_channel = cmd_data->cmd_channel() ] {
+  auto cleanup_cb = [complete_cb, event_handler_id,
+                     cmd_channel = cmd_data->cmd_channel()] {
     cmd_channel->RemoveEventHandler(event_handler_id);
     complete_cb();
   };
@@ -724,7 +719,8 @@ bool HandleLEScan(const CommandData* cmd_data,
       cleanup_cb();
       return;
     }
-    async::PostDelayedTask(dispatcher, scan_disable_cb, zx::duration(timeout.ToNanoseconds()));
+    async::PostDelayedTask(dispatcher, scan_disable_cb,
+                           zx::duration(timeout.ToNanoseconds()));
   };
 
   auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
@@ -735,8 +731,7 @@ bool HandleLEScan(const CommandData* cmd_data,
   return true;
 }
 
-bool HandleBRScan(const CommandData* cmd_data,
-                  const fxl::CommandLine& cmd_line,
+bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
                   const fxl::Closure& complete_cb) {
   if (cmd_line.positional_args().size()) {
     std::cout << "  Usage: scan "

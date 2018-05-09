@@ -17,15 +17,13 @@ namespace bluetoothcli {
 namespace commands {
 namespace {
 
-bool HandleHelp(const App* app,
-                const fxl::CommandLine& cmd_line,
+bool HandleHelp(const App* app, const fxl::CommandLine& cmd_line,
                 const fxl::Closure& complete_cb) {
   app->command_dispatcher().DescribeAllCommands();
   return false;
 }
 
-bool HandleAvailable(const App* app,
-                     const fxl::CommandLine& cmd_line,
+bool HandleAvailable(const App* app, const fxl::CommandLine& cmd_line,
                      const fxl::Closure& complete_cb) {
   app->control()->IsBluetoothAvailable([complete_cb](bool available) {
     CLI_LOG() << fxl::StringPrintf("Bluetooth is %savailable",
@@ -35,8 +33,7 @@ bool HandleAvailable(const App* app,
   return true;
 }
 
-bool HandleListAdapters(const App* app,
-                        const fxl::CommandLine& cmd_line,
+bool HandleListAdapters(const App* app, const fxl::CommandLine& cmd_line,
                         const fxl::Closure& complete_cb) {
   app->control()->GetAdapters(
       [complete_cb](fidl::VectorPtr<bluetooth_control::AdapterInfo> adapters) {
@@ -56,8 +53,7 @@ bool HandleListAdapters(const App* app,
   return true;
 }
 
-bool HandleActiveAdapter(const App* app,
-                         const fxl::CommandLine& cmd_line,
+bool HandleActiveAdapter(const App* app, const fxl::CommandLine& cmd_line,
                          const fxl::Closure& complete_cb) {
   app->control()->GetActiveAdapterInfo([complete_cb](auto adapter_info) {
     if (!adapter_info) {
@@ -72,15 +68,13 @@ bool HandleActiveAdapter(const App* app,
   return true;
 }
 
-bool HandleExit(App* app,
-                const fxl::CommandLine& cmd_line,
+bool HandleExit(App* app, const fxl::CommandLine& cmd_line,
                 const fxl::Closure& complete_cb) {
   app->Quit();
   return true;
 }
 
-bool HandleStartDiscovery(App* app,
-                          const fxl::CommandLine& cmd_line,
+bool HandleStartDiscovery(App* app, const fxl::CommandLine& cmd_line,
                           const fxl::Closure& complete_cb) {
   app->control()->RequestDiscovery(true, [complete_cb](auto status) {
     if (status.error) {
@@ -96,8 +90,7 @@ bool HandleStartDiscovery(App* app,
   return true;
 }
 
-bool HandleStopDiscovery(App* app,
-                         const fxl::CommandLine& cmd_line,
+bool HandleStopDiscovery(App* app, const fxl::CommandLine& cmd_line,
                          const fxl::Closure& complete_cb) {
   app->control()->RequestDiscovery(false, [complete_cb](auto status) {
     if (status.error) {
@@ -113,8 +106,7 @@ bool HandleStopDiscovery(App* app,
   return true;
 }
 
-bool HandleListDevices(const App* app,
-                       const fxl::CommandLine& cmd_line,
+bool HandleListDevices(const App* app, const fxl::CommandLine& cmd_line,
                        const fxl::Closure& complete_cb) {
   if (app->discovered_devices().empty()) {
     CLI_LOG() << "No devices discovered";
