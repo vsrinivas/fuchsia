@@ -33,18 +33,17 @@ public:
     typedef unsigned Flags;
 
     // Bitmask of return values for On...() methods
-    static constexpr Flags kWokeThreads = 1;
-    static constexpr Flags kNeedRemoval = 2;
-    static constexpr Flags kHandled = 4;
+    static constexpr Flags kNeedRemoval = 1;
+    static constexpr Flags kHandled = 2;
 
     // Called when this object is added to a StateTracker, to give it the initial state.
     // Note that |cinfo| might be null.
-    // May return flags: kWokeThreads, kNeedRemoval
+    // May return flags: kNeedRemoval
     // WARNING: This is called under StateTracker's mutex.
     virtual Flags OnInitialize(zx_signals_t initial_state, const CountInfo* cinfo) = 0;
 
     // Called whenever the state changes, to give it the new state.
-    // May return flags: kWokeThreads, kNeedRemoval
+    // May return flags: kNeedRemoval
     // WARNING: This is called under StateTracker's mutex
     virtual Flags OnStateChange(zx_signals_t new_state) = 0;
 
@@ -53,7 +52,7 @@ public:
     // also be destroyed shortly afterwards.)
     // Returns flag kHandled if |this| observer handled the call which normally
     // means it was bound to |handle|.
-    // May also return flags: kNeedRemoval, kWokeThreads
+    // May also return flags: kNeedRemoval
     // WARNING: This is called under StateTracker's mutex.
     virtual Flags OnCancel(const Handle* handle) = 0;
 
@@ -61,7 +60,7 @@ public:
     // case the object might not be destroyed.
     // Returns flag kHandled if |this| observer handled the call which normally
     // means it was bound to |handle| and |key|.
-    // May also return flags: kNeedRemoval, kWokeThreads
+    // May also return flags: kNeedRemoval
     // WARNING: This is called under StateTracker's mutex.
     virtual Flags OnCancelByKey(const Handle* handle, const void* port, uint64_t key) { return 0; }
 

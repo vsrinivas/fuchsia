@@ -77,8 +77,8 @@ public:
         ~MessageWaiter();
 
         zx_status_t BeginWait(fbl::RefPtr<ChannelDispatcher> channel);
-        int Deliver(fbl::unique_ptr<MessagePacket> msg);
-        int Cancel(zx_status_t status);
+        void Deliver(fbl::unique_ptr<MessagePacket> msg);
+        void Cancel(zx_status_t status);
         fbl::RefPtr<ChannelDispatcher> get_channel() { return channel_; }
         zx_txid_t get_txid() const { return txid_; }
         void set_txid(zx_txid_t txid) { txid_ = txid; };
@@ -104,7 +104,7 @@ private:
 
     explicit ChannelDispatcher(fbl::RefPtr<PeerHolder<ChannelDispatcher>> holder);
     void Init(fbl::RefPtr<ChannelDispatcher> other);
-    int WriteSelf(fbl::unique_ptr<MessagePacket> msg) TA_REQ(get_lock());
+    void WriteSelf(fbl::unique_ptr<MessagePacket> msg) TA_REQ(get_lock());
     zx_status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask) TA_REQ(get_lock());
     void OnPeerZeroHandlesLocked();
 

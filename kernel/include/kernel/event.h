@@ -111,10 +111,8 @@ public:
         return event_wait_deadline(&event_, deadline, true);
     }
 
-    // Returns number of ready threads. If it is bigger than 0
-    // the caller must call thread_reschedule().
-    __WARN_UNUSED_RESULT int Signal(zx_status_t status = ZX_OK) {
-        return event_signal_etc(&event_, false, status);
+    void Signal(zx_status_t status = ZX_OK) {
+        event_signal_etc(&event_, true, status);
     }
 
     zx_status_t Unsignal() {

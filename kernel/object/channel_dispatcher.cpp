@@ -211,8 +211,7 @@ zx_status_t ChannelDispatcher::Write(fbl::unique_ptr<MessagePacket> msg) {
         return ZX_ERR_PEER_CLOSED;
     }
 
-    if (peer_->WriteSelf(fbl::move(msg)) > 0)
-        thread_reschedule();
+    peer_->WriteSelf(fbl::move(msg));
 
     return ZX_OK;
 }
@@ -316,7 +315,7 @@ size_t ChannelDispatcher::TxMessageMax() const {
     return SIZE_MAX;
 }
 
-int ChannelDispatcher::WriteSelf(fbl::unique_ptr<MessagePacket> msg) {
+void ChannelDispatcher::WriteSelf(fbl::unique_ptr<MessagePacket> msg) {
     canary_.Assert();
 
     if (!waiters_.is_empty()) {
@@ -329,8 +328,8 @@ int ChannelDispatcher::WriteSelf(fbl::unique_ptr<MessagePacket> msg) {
             // Remove waiter from list.
             if (waiter.get_txid() == txid) {
                 waiters_.erase(waiter);
-                // we return how many threads have been woken up, or zero.
-                return waiter.Deliver(fbl::move(msg));
+                waiter.Deliver(fbl::move(msg));
+                return;
             }
         }
     }
@@ -341,7 +340,6 @@ int ChannelDispatcher::WriteSelf(fbl::unique_ptr<MessagePacket> msg) {
     }
 
     UpdateStateLocked(0u, ZX_CHANNEL_READABLE);
-    return 0;
 }
 
 zx_status_t ChannelDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mask) {
@@ -369,19 +367,19 @@ zx_status_t ChannelDispatcher::MessageWaiter::BeginWait(fbl::RefPtr<ChannelDispa
     return ZX_OK;
 }
 
-int ChannelDispatcher::MessageWaiter::Deliver(fbl::unique_ptr<MessagePacket> msg) {
+void ChannelDispatcher::MessageWaiter::Deliver(fbl::unique_ptr<MessagePacket> msg) {
     DEBUG_ASSERT(channel_);
 
     msg_ = fbl::move(msg);
     status_ = ZX_OK;
-    return event_.Signal(ZX_OK);
+    event_.Signal(ZX_OK);
 }
 
-int ChannelDispatcher::MessageWaiter::Cancel(zx_status_t status) {
+void ChannelDispatcher::MessageWaiter::Cancel(zx_status_t status) {
     DEBUG_ASSERT(!InContainer());
     DEBUG_ASSERT(channel_);
     status_ = status;
-    return event_.Signal(status);
+    event_.Signal(status);
 }
 
 zx_status_t ChannelDispatcher::MessageWaiter::Wait(zx_time_t deadline) {

@@ -201,8 +201,6 @@ void Dispatcher::AddObserverHelper(StateObserver* observer,
     }
     if (flags & StateObserver::kNeedRemoval)
         observer->OnRemoved();
-    if (flags & StateObserver::kWokeThreads)
-        thread_reschedule();
 
     kcounter_add(dispatcher_observe_count, 1);
 }
@@ -234,9 +232,6 @@ bool Dispatcher::Cancel(Handle* handle) {
 
     kcounter_add(dispatcher_cancel_bh_count, 1);
 
-    // We could request a reschedule if kWokeThreads is asserted,
-    // but cancellation is not likely to benefit from aggressive
-    // rescheduling.
     return flags & StateObserver::kHandled;
 }
 
@@ -250,9 +245,6 @@ bool Dispatcher::CancelByKey(Handle* handle, const void* port, uint64_t key) {
 
     kcounter_add(dispatcher_cancel_bk_count, 1);
 
-    // We could request a reschedule if kWokeThreads is asserted,
-    // but cancellation is not likely to benefit from aggressive
-    // rescheduling.
     return flags & StateObserver::kHandled;
 }
 
@@ -264,7 +256,6 @@ template <typename Mutex>
 void Dispatcher::UpdateStateHelper(zx_signals_t clear_mask,
                                    zx_signals_t set_mask,
                                    Mutex* mutex) TA_NO_THREAD_SAFETY_ANALYSIS {
-    StateObserver::Flags flags;
     Dispatcher::ObserverList obs_to_remove;
 
     {
@@ -276,15 +267,12 @@ void Dispatcher::UpdateStateHelper(zx_signals_t clear_mask,
         if (previous_signals == signals_)
             return;
 
-        flags = UpdateInternalLocked(&obs_to_remove, signals_);
+        UpdateInternalLocked(&obs_to_remove, signals_);
     }
 
     while (!obs_to_remove.is_empty()) {
         obs_to_remove.pop_front()->OnRemoved();
     }
-
-    if (flags & StateObserver::kWokeThreads)
-        thread_reschedule();
 }
 
 void Dispatcher::UpdateState(zx_signals_t clear_mask,

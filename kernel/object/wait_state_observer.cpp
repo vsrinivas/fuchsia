@@ -62,9 +62,7 @@ StateObserver::Flags WaitStateObserver::OnInitialize(zx_signals_t initial_state,
     wakeup_reasons_ = initial_state;
 
     if (initial_state & watched_signals_) {
-        if (event_->Signal() > 0) {
-            return kWokeThreads;
-        }
+        event_->Signal();
     }
 
     return 0;
@@ -80,9 +78,7 @@ StateObserver::Flags WaitStateObserver::OnStateChange(zx_signals_t new_state) {
     wakeup_reasons_ |= new_state;
 
     if (new_state & watched_signals_) {
-        if (event_->Signal() > 0) {
-            return kWokeThreads;
-        }
+        event_->Signal();
     }
 
     return 0;
@@ -93,11 +89,8 @@ StateObserver::Flags WaitStateObserver::OnCancel(const Handle* handle) {
 
     if (handle == handle_) {
         wakeup_reasons_ |= ZX_SIGNAL_HANDLE_CLOSED;
-        if (event_->Signal(ZX_ERR_CANCELED) > 0) {
-            return kHandled | kWokeThreads;
-        } else {
-            return kHandled;
-        }
+        event_->Signal(ZX_ERR_CANCELED);
+        return kHandled;
     } else {
         return 0;
     }
