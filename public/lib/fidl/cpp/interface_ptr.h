@@ -60,19 +60,21 @@ class InterfacePtr {
   using Proxy = typename Interface::Proxy_;
 
   // Creates an unbound |InterfacePtr|.
-  InterfacePtr() : proxy_(&controller_) { controller_.set_proxy(&proxy_); }
+  InterfacePtr() : impl_(new Impl) {}
   InterfacePtr(std::nullptr_t) : InterfacePtr() {}
 
   InterfacePtr(const InterfacePtr& other) = delete;
   InterfacePtr& operator=(const InterfacePtr& other) = delete;
 
-  InterfacePtr(InterfacePtr&& other)
-      : controller_(std::move(other.controller_)), proxy_(&controller_) {
-    controller_.set_proxy(&proxy_);
+  InterfacePtr(InterfacePtr&& other) : impl_(std::move(other.impl_)) {
+    other.impl_.reset(new Impl);
   }
 
   InterfacePtr& operator=(InterfacePtr&& other) {
-    if (this != &other) controller_ = std::move(other.controller_);
+    if (this != &other) {
+      impl_ = std::move(other.impl_);
+      other.impl_.reset(new Impl);
+    }
     return *this;
   }
 
@@ -135,7 +137,7 @@ class InterfacePtr {
   // Returns an error if the binding was not able to be created (e.g., because
   // the |channel| lacks |ZX_RIGHT_WAIT|).
   zx_status_t Bind(zx::channel channel, async_t* async = nullptr) {
-    return controller_.reader().Bind(std::move(channel), async);
+    return impl_->controller.reader().Bind(std::move(channel), async);
   }
 
   // Binds the |InterfacePtr| to the given |InterfaceHandle|.
@@ -170,7 +172,7 @@ class InterfacePtr {
   // After this method returns, a subsequent call to |Bind| is required before
   // calling any additional |Interface| methods.
   InterfaceHandle<Interface> Unbind() {
-    return InterfaceHandle<Interface>(controller_.reader().Unbind());
+    return InterfaceHandle<Interface>(impl_->controller.reader().Unbind());
   }
 
   // Whether this |InterfacePtr| is currently bound to a channel.
@@ -183,7 +185,7 @@ class InterfacePtr {
   //
   //  * |Bind|, which binds a channel to this |InterfacePtr|.
   //  * |Unbind|, which unbinds a channel from this |InterfacePtr|.
-  bool is_bound() const { return controller_.reader().is_bound(); }
+  bool is_bound() const { return impl_->controller.reader().is_bound(); }
 
   // Whether this |InterfacePtr| is currently bound to a channel.
   //
@@ -203,7 +205,7 @@ class InterfacePtr {
   //
   // The returned |Interface| is thread-hostile and can be used only on the
   // thread on which the |InterfacePtr| was bound.
-  Interface* get() const { return &proxy_; }
+  Interface* get() const { return &impl_->proxy; }
   Interface* operator->() const { return get(); }
   Interface& operator*() const { return *get(); }
 
@@ -211,7 +213,7 @@ class InterfacePtr {
   //
   // Arriving events are dispatched to the callbacks stored on this object.
   // Events for unbound callbacks are ignored.
-  Proxy& events() const { return proxy_; }
+  Proxy& events() const { return impl_->proxy; }
 
   // Blocks the calling thread until either a message arrives on the previously
   // bound channel or an error occurs.
@@ -240,7 +242,8 @@ class InterfacePtr {
   // This method can be called only if this |InterfacePtr| is currently bound to
   // a channel.
   zx_status_t WaitForResponseUntil(zx::time deadline) {
-    return controller_.reader().WaitAndDispatchOneMessageUntil(deadline);
+    return impl_->controller.reader().WaitAndDispatchOneMessageUntil(
+        deadline);
   }
 
   // Sets an error handler that will be called if an error causes the
@@ -250,15 +253,25 @@ class InterfacePtr {
   // channel sends an invalid message. When the error handler is called, the
   // |InterfacePtr| will no longer be bound to the channel.
   void set_error_handler(std::function<void()> error_handler) {
-    controller_.reader().set_error_handler(std::move(error_handler));
+    impl_->controller.reader().set_error_handler(std::move(error_handler));
   }
 
   // The underlying channel.
-  const zx::channel& channel() const { return controller_.reader().channel(); }
+  const zx::channel& channel() const {
+    return impl_->controller.reader().channel();
+  }
 
  private:
-  internal::ProxyController controller_;
-  mutable Proxy proxy_;
+  struct Impl;
+
+  std::unique_ptr<Impl> impl_;
+};
+
+template <typename T>
+struct InterfacePtr<T>::Impl {
+  Impl() : proxy(&controller) { controller.set_proxy(&proxy); }
+  internal::ProxyController controller;
+  mutable Proxy proxy;
 };
 
 }  // namespace fidl
