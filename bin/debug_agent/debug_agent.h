@@ -7,6 +7,7 @@
 #include <map>
 #include <memory>
 #include <zircon/types.h>
+#include "garnet/bin/debug_agent/breakpoint.h"
 #include "garnet/bin/debug_agent/debugged_process.h"
 #include "garnet/bin/debug_agent/remote_api.h"
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
@@ -15,7 +16,7 @@
 namespace debug_agent {
 
 // Main state and control for the debug agent.
-class DebugAgent : public RemoteAPI {
+class DebugAgent : public RemoteAPI, public Breakpoint::ProcessDelegate {
  public:
   // A MessageLoopZircon should already be set up on the current thread.
   //
@@ -60,6 +61,10 @@ class DebugAgent : public RemoteAPI {
   void OnBacktrace(const debug_ipc::BacktraceRequest& request,
                    debug_ipc::BacktraceReply* reply) override;
 
+  // Breakpoint::ProcessDelegate implementation.
+  zx_status_t RegisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid, uint64_t address) override;
+  void UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid, uint64_t address) override;
+
   // Returns the debugged process/thread for the given koid(s) or null if not
   // found.
   DebuggedProcess* GetDebuggedProcess(zx_koid_t koid);
@@ -73,6 +78,8 @@ class DebugAgent : public RemoteAPI {
   debug_ipc::StreamBuffer* stream_;
 
   std::map<zx_koid_t, std::unique_ptr<DebuggedProcess>> procs_;
+
+  std::map<uint32_t, Breakpoint> breakpoints_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DebugAgent);
 };

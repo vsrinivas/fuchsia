@@ -5,13 +5,13 @@
 #include "garnet/bin/debug_agent/debugged_process.h"
 
 #include <inttypes.h>
-#include <utility>
 #include <zircon/syscalls/exception.h>
+#include <utility>
 
 #include "garnet/bin/debug_agent/debug_agent.h"
 #include "garnet/bin/debug_agent/debugged_thread.h"
-#include "garnet/bin/debug_agent/object_util.h"
 #include "garnet/bin/debug_agent/debugged_thread.h"
+#include "garnet/bin/debug_agent/object_util.h"
 #include "garnet/bin/debug_agent/process_breakpoint.h"
 #include "garnet/bin/debug_agent/process_info.h"
 #include "garnet/bin/debug_agent/process_memory_accessor.h"
@@ -23,8 +23,7 @@
 
 namespace debug_agent {
 
-DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent,
-                                 zx_koid_t koid,
+DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent, zx_koid_t koid,
                                  zx::process proc)
     : debug_agent_(debug_agent), koid_(koid), process_(std::move(proc)) {}
 DebuggedProcess::~DebuggedProcess() = default;
@@ -42,28 +41,24 @@ bool DebuggedProcess::Init() {
 void DebuggedProcess::OnPause(const debug_ipc::PauseRequest& request) {
   if (request.thread_koid) {
     DebuggedThread* thread = GetThread(request.thread_koid);
-    if (thread)
-      thread->Pause();
+    if (thread) thread->Pause();
     // Could be not found if there is a race between the thread exiting and
     // the client sending the request.
   } else {
     // 0 thread ID means resume all in process.
-    for (const auto& pair : threads_)
-      pair.second->Pause();
+    for (const auto& pair : threads_) pair.second->Pause();
   }
 }
 
 void DebuggedProcess::OnResume(const debug_ipc::ResumeRequest& request) {
   if (request.thread_koid) {
     DebuggedThread* thread = GetThread(request.thread_koid);
-    if (thread)
-      thread->Resume(request.how);
+    if (thread) thread->Resume(request.how);
     // Could be not found if there is a race between the thread exiting and
     // the client sending the request.
   } else {
     // 0 thread ID means resume all in process.
-    for (const auto& pair : threads_)
-      pair.second->Resume(request.how);
+    for (const auto& pair : threads_) pair.second->Resume(request.how);
   }
 }
 
@@ -90,66 +85,6 @@ void DebuggedProcess::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
   reply->blocks.emplace_back(std::move(block));
 }
 
-void DebuggedProcess::OnAddOrChangeBreakpoint(
-    const debug_ipc::AddOrChangeBreakpointRequest& request,
-    debug_ipc::AddOrChangeBreakpointReply* reply) {
-  // Need to make sure there aren't two breakpoints at the same address that
-  // will step on each other. This does not check for partial overlaps which
-  // implies that the client set the breakpoint at something other than an
-  // instruction boundary and is corrupt anyway.
-  FXL_DCHECK(address_to_breakpoint_id_.size() == breakpoints_.size());
-  const auto found_addr =
-      address_to_breakpoint_id_.find(request.breakpoint.address);
-
-  auto found_id = breakpoints_.find(request.breakpoint.breakpoint_id);
-  if (found_id == breakpoints_.end()) {
-    // New breakpoint. Shouldn't have any existing breakpoint at this address.
-    if (found_addr != address_to_breakpoint_id_.end()) {
-      reply->status = ZX_ERR_ALREADY_EXISTS;
-      reply->error_message = "There is already a breakpoint at this address.";
-      return;
-    }
-    found_id = breakpoints_
-                   .emplace(request.breakpoint.breakpoint_id,
-                            std::make_unique<ProcessBreakpoint>(this))
-                   .first;
-  } else {
-    // Modifying an existing breakpoint. If there's an existing breakpoint
-    // at this address, it should be the same one.
-    if (found_addr != address_to_breakpoint_id_.end()) {
-      if (found_addr->first != request.breakpoint.breakpoint_id) {
-        reply->status = ZX_ERR_ALREADY_EXISTS;
-        reply->error_message = "There is already a breakpoint at this address.";
-        return;
-      }
-
-      if (request.breakpoint.address != found_id->second->address()) {
-        // Existing breakpoint moving. Remove the old address mapping. The new
-        // one will be created at the bottom.
-        address_to_breakpoint_id_.erase(found_addr);
-      }
-    }
-  }
-
-  found_id->second->SetSettings(request.breakpoint);
-  address_to_breakpoint_id_[request.breakpoint.address] =
-      request.breakpoint.breakpoint_id;
-}
-
-void DebuggedProcess::OnRemoveBreakpoint(
-    const debug_ipc::RemoveBreakpointRequest& request,
-    debug_ipc::RemoveBreakpointReply* reply) {
-  auto found_id = breakpoints_.find(request.breakpoint_id);
-  if (found_id == breakpoints_.end()) {
-    FXL_NOTREACHED();
-    return;
-  }
-
-  address_to_breakpoint_id_.erase(found_id->second->address());
-  breakpoints_.erase(found_id);
-  FXL_DCHECK(address_to_breakpoint_id_.size() == breakpoints_.size());
-}
-
 void DebuggedProcess::OnKill(const debug_ipc::KillRequest& request,
                              debug_ipc::KillReply* reply) {
   reply->status = process_.kill();
@@ -157,8 +92,7 @@ void DebuggedProcess::OnKill(const debug_ipc::KillRequest& request,
 
 DebuggedThread* DebuggedProcess::GetThread(zx_koid_t thread_koid) {
   auto found_thread = threads_.find(thread_koid);
-  if (found_thread == threads_.end())
-    return nullptr;
+  if (found_thread == threads_.end()) return nullptr;
   return found_thread->second.get();
 }
 
@@ -170,27 +104,46 @@ void DebuggedProcess::PopulateCurrentThreads() {
     zx_handle_t handle;
     if (zx_object_get_child(process_.get(), koid, ZX_RIGHT_SAME_RIGHTS,
                             &handle) == ZX_OK) {
-      auto added = threads_.emplace(koid, std::make_unique<DebuggedThread>(
-                                 this, zx::thread(handle), koid, true));
+      auto added =
+          threads_.emplace(koid, std::make_unique<DebuggedThread>(
+                                     this, zx::thread(handle), koid, true));
       added.first->second->SendThreadNotification();
     }
   }
 }
 
-ProcessBreakpoint* DebuggedProcess::FindBreakpointForAddr(uint64_t address) {
-  FXL_DCHECK(breakpoints_.size() == address_to_breakpoint_id_.size());
+ProcessBreakpoint* DebuggedProcess::FindProcessBreakpointForAddr(
+    uint64_t address) {
+  auto found = breakpoints_.find(address);
+  if (found == breakpoints_.end()) return nullptr;
+  return found->second.get();
+}
 
-  auto found = address_to_breakpoint_id_.find(address);
-  if (found == address_to_breakpoint_id_.end())
-    return nullptr;
+zx_status_t DebuggedProcess::RegisterBreakpoint(Breakpoint* bp,
+                                                uint64_t address) {
+  auto found = breakpoints_.find(address);
+  if (found == breakpoints_.end()) {
+    auto process_breakpoint =
+        std::make_unique<ProcessBreakpoint>(bp, this, koid_, address);
+    zx_status_t status = process_breakpoint->Init();
+    if (status != ZX_OK) return status;
 
-  uint32_t id = found->second;
-  auto found_id = breakpoints_.find(id);
-  if (found_id == breakpoints_.end()) {
-    FXL_NOTREACHED();
-    return nullptr;
+    breakpoints_[address] = std::move(process_breakpoint);
+  } else {
+    found->second->RegisterBreakpoint(bp);
   }
-  return found_id->second.get();
+  return ZX_OK;
+}
+
+void DebuggedProcess::UnregisterBreakpoint(Breakpoint* bp, uint64_t address) {
+  auto found = breakpoints_.find(address);
+  if (found == breakpoints_.end()) {
+    FXL_NOTREACHED();  // Should always be found.
+    return;
+  }
+
+  bool still_used = found->second->UnregisterBreakpoint(bp);
+  if (!still_used) breakpoints_.erase(found);
 }
 
 void DebuggedProcess::OnProcessTerminated(zx_koid_t process_koid) {
@@ -217,8 +170,8 @@ void DebuggedProcess::OnThreadStarting(zx_koid_t process_koid,
   thread.resume(ZX_RESUME_EXCEPTION);
 
   FXL_DCHECK(threads_.find(thread_koid) == threads_.end());
-  auto added = threads_.emplace(thread_koid,
-                   std::make_unique<DebuggedThread>(this, std::move(thread),
+  auto added = threads_.emplace(
+      thread_koid, std::make_unique<DebuggedThread>(this, std::move(thread),
                                                     thread_koid, true));
 
   // Notify the client.
@@ -244,8 +197,7 @@ void DebuggedProcess::OnThreadExiting(zx_koid_t process_koid,
   debug_agent_->stream()->Write(writer.MessageComplete());
 }
 
-void DebuggedProcess::OnException(zx_koid_t process_koid,
-                                  zx_koid_t thread_koid,
+void DebuggedProcess::OnException(zx_koid_t process_koid, zx_koid_t thread_koid,
                                   uint32_t type) {
   DebuggedThread* thread = GetThread(thread_koid);
   if (thread) {
@@ -257,13 +209,14 @@ void DebuggedProcess::OnException(zx_koid_t process_koid,
   }
 }
 
-zx_status_t DebuggedProcess::ReadProcessMemory(
-    uintptr_t address, void* buffer, size_t len, size_t* actual) {
+zx_status_t DebuggedProcess::ReadProcessMemory(uintptr_t address, void* buffer,
+                                               size_t len, size_t* actual) {
   return process_.read_memory(address, buffer, len, actual);
 }
 
-zx_status_t DebuggedProcess::WriteProcessMemory(
-    uintptr_t address, const void* buffer, size_t len, size_t* actual) {
+zx_status_t DebuggedProcess::WriteProcessMemory(uintptr_t address,
+                                                const void* buffer, size_t len,
+                                                size_t* actual) {
   return process_.write_memory(address, buffer, len, actual);
 }
 

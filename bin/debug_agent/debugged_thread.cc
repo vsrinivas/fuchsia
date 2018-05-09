@@ -5,9 +5,9 @@
 #include "garnet/bin/debug_agent/debugged_thread.h"
 
 #include <inttypes.h>
-#include <memory>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
+#include <memory>
 
 #include "garnet/bin/debug_agent/arch.h"
 #include "garnet/bin/debug_agent/debug_agent.h"
@@ -23,16 +23,13 @@
 
 namespace debug_agent {
 
-DebuggedThread::DebuggedThread(DebuggedProcess* process,
-                               zx::thread thread,
-                               zx_koid_t koid,
-                               bool starting)
+DebuggedThread::DebuggedThread(DebuggedProcess* process, zx::thread thread,
+                               zx_koid_t koid, bool starting)
     : debug_agent_(process->debug_agent()),
       process_(process),
       thread_(std::move(thread)),
       koid_(koid) {
-  if (starting)
-    thread_.resume(ZX_RESUME_EXCEPTION);
+  if (starting) thread_.resume(ZX_RESUME_EXCEPTION);
 }
 
 DebuggedThread::~DebuggedThread() {}
@@ -99,8 +96,7 @@ void DebuggedThread::OnException(uint32_t type) {
 
 void DebuggedThread::Pause() {
   if (suspend_reason_ == SuspendReason::kNone) {
-    if (thread_.suspend() == ZX_OK)
-      suspend_reason_ = SuspendReason::kOther;
+    if (thread_.suspend() == ZX_OK) suspend_reason_ = SuspendReason::kOther;
   }
 }
 
@@ -136,10 +132,9 @@ void DebuggedThread::GetBacktrace(
     std::vector<debug_ipc::StackFrame>* frames) const {
   // This call will fail if the thread isn't in a state to get its backtrace.
   zx_thread_state_general_regs regs;
-  zx_status_t status = thread_.read_state(
-      ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
-  if (status != ZX_OK)
-    return;
+  zx_status_t status =
+      thread_.read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
+  if (status != ZX_OK) return;
 
   constexpr size_t kMaxStackDepth = 256;
   UnwindStack(process_->process(), thread_, *arch::IPInRegs(&regs),
@@ -165,7 +160,8 @@ void DebuggedThread::UpdateForSoftwareBreakpoint(
   uint64_t breakpoint_address =
       arch::BreakpointInstructionForExceptionAddress(*arch::IPInRegs(regs));
 
-  current_breakpoint_ = process_->FindBreakpointForAddr(breakpoint_address);
+  current_breakpoint_ =
+      process_->FindProcessBreakpointForAddr(breakpoint_address);
   if (current_breakpoint_) {
     // When the program hits one of our breakpoints, set the IP back to
     // the exact address that triggered the breakpoint. When the thread

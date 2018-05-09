@@ -11,6 +11,8 @@ include_test_app = false
 static_library("lib") {
   sources = [
     "arch.h",
+    "breakpoint.cc",
+    "breakpoint.h",
     "debug_agent.cc",
     "debug_agent.h",
     "debugged_process.cc",
@@ -99,6 +101,7 @@ executable("unittests") {
   output_name = "debug_agent_tests"
 
   sources = [
+    "breakpoint_unittest.cc",
     "process_info_unittests.cc",
     "process_breakpoint_unittest.cc",
     "system_info_unittests.cc",

@@ -6,6 +6,7 @@
 #include <zircon/syscalls/exception.h>
 
 #include "garnet/bin/debug_agent/arch.h"
+#include "garnet/bin/debug_agent/breakpoint.h"
 #include "garnet/bin/debug_agent/process_breakpoint.h"
 #include "garnet/bin/debug_agent/process_memory_accessor.h"
 #include "gtest/gtest.h"
@@ -87,6 +88,17 @@ class BreakpointFakeMemory {
   FakeMemory memory_;
 };
 
+// A no-op process delegate.
+class TestProcessDelegate : public Breakpoint::ProcessDelegate {
+ public:
+  TestProcessDelegate() = default;
+
+  zx_status_t RegisterBreakpoint(Breakpoint*, zx_koid_t, uint64_t) override {
+    return ZX_OK;
+  }
+  void UnregisterBreakpoint(Breakpoint*, zx_koid_t, uint64_t) override {}
+};
+
 constexpr uintptr_t BreakpointFakeMemory::kAddress;
 constexpr size_t BreakpointFakeMemory::kDataSize;
 const char
@@ -97,13 +109,12 @@ const char
 
 TEST(ProcessBreakpoint, InstallAndFixup) {
   BreakpointFakeMemory mem;
-  ProcessBreakpoint bp(mem.memory());
+  TestProcessDelegate process_delegate;
+  Breakpoint main_breakpoint(&process_delegate);
 
-  debug_ipc::BreakpointSettings settings;
-  settings.breakpoint_id = 1;
-  settings.thread_koid = 1;
-  settings.address = BreakpointFakeMemory::kAddress;
-  ASSERT_TRUE(bp.SetSettings(settings));
+  ProcessBreakpoint bp(&main_breakpoint, mem.memory(), 1,
+                       BreakpointFakeMemory::kAddress);
+  ASSERT_EQ(ZX_OK, bp.Init());
 
   // Should have written the breakpoint instruction to the buffer.
   EXPECT_TRUE(mem.StartsWithBreak());
@@ -132,13 +143,12 @@ TEST(ProcessBreakpoint, InstallAndFixup) {
 // time.
 TEST(ProcessBreakpoint, StepMultiple) {
   BreakpointFakeMemory mem;
-  ProcessBreakpoint bp(mem.memory());
+  TestProcessDelegate process_delegate;
+  Breakpoint main_breakpoint(&process_delegate);
 
-  debug_ipc::BreakpointSettings settings;
-  settings.breakpoint_id = 1;
-  settings.thread_koid = 1;
-  settings.address = BreakpointFakeMemory::kAddress;
-  ASSERT_TRUE(bp.SetSettings(settings));
+  ProcessBreakpoint bp(&main_breakpoint, mem.memory(), 1,
+                       BreakpointFakeMemory::kAddress);
+  ASSERT_EQ(ZX_OK, bp.Init());
 
   // The breakpoint should be installed.
   EXPECT_TRUE(mem.StartsWithBreak());

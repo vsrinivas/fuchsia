@@ -191,7 +191,6 @@ void BreakpointImpl::StopObserving() {
     session()->system().RemoveObserver(this);
     is_system_observer_ = false;
   }
-
   if (is_target_observer_) {
     target_scope_->RemoveObserver(this);
     is_target_observer_ = false;
@@ -228,12 +227,14 @@ void BreakpointImpl::SendAddOrChange(Process* process,
   FXL_DCHECK(enabled_);  // Shouldn't add or change disabled ones.
 
   debug_ipc::AddOrChangeBreakpointRequest request;
-  request.process_koid = process->GetKoid();
   request.breakpoint.breakpoint_id = backend_id_;
-  request.breakpoint.thread_koid =
-      thread_scope_ ? thread_scope_->GetKoid() : 0;
-  request.breakpoint.address = address_;
   request.breakpoint.stop = stop_mode_;
+
+  request.breakpoint.locations.resize(1);
+  request.breakpoint.locations[0].process_koid = process->GetKoid();
+  request.breakpoint.locations[0].thread_koid =
+      thread_scope_ ? thread_scope_->GetKoid() : 0;
+  request.breakpoint.locations[0].address = address_;
 
   session()->Send<debug_ipc::AddOrChangeBreakpointRequest,
                   debug_ipc::AddOrChangeBreakpointReply>(
@@ -258,7 +259,7 @@ void BreakpointImpl::SendAddOrChange(Process* process,
         if (breakpoint)
           breakpoint->enabled_ = false;
         if (callback)
-          callback(Err(ErrType::kGeneral, reply.error_message));
+          callback(Err(ErrType::kGeneral, "Breakpoint set error."));
       } else {
         // Success.
         if (callback)
@@ -274,7 +275,6 @@ void BreakpointImpl::SendBreakpointRemove(
   FXL_DCHECK(backend_id_);
 
   debug_ipc::RemoveBreakpointRequest request;
-  request.process_koid = process->GetKoid();
   request.breakpoint_id = backend_id_;
 
   session()->Send<debug_ipc::RemoveBreakpointRequest,

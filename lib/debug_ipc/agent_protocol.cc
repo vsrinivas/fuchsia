@@ -10,6 +10,35 @@
 
 namespace debug_ipc {
 
+// Record deserializers --------------------------------------------------------
+
+bool Deserialize(MessageReader* reader, ProcessBreakpointSettings* settings) {
+  if (!reader->ReadUint64(&settings->process_koid))
+    return false;
+  if (!reader->ReadUint64(&settings->thread_koid))
+    return false;
+  return reader->ReadUint64(&settings->address);
+}
+
+bool Deserialize(MessageReader* reader, BreakpointSettings* settings) {
+  if (!reader->ReadUint32(&settings->breakpoint_id))
+    return false;
+
+  uint32_t one_shot;
+  if (!reader->ReadUint32(&one_shot) || !(one_shot == 0 || one_shot == 1))
+    return false;
+  settings->one_shot = !!one_shot;
+
+  uint32_t stop;
+  if (!reader->ReadUint32(&stop))
+    return false;
+  settings->stop = static_cast<Stop>(stop);
+
+  return Deserialize(reader, &settings->locations);
+}
+
+// Record serializers ----------------------------------------------------------
+
 void Serialize(const ProcessTreeRecord& record, MessageWriter* writer) {
   writer->WriteUint32(static_cast<uint32_t>(record.type));
   writer->WriteUint64(record.koid);
@@ -219,14 +248,13 @@ bool ReadRequest(MessageReader* reader, AddOrChangeBreakpointRequest* request,
   MsgHeader header;
   if (!reader->ReadHeader(&header)) return false;
   *transaction_id = header.transaction_id;
-  return reader->ReadBytes(sizeof(AddOrChangeBreakpointRequest), request);
+  return Deserialize(reader, &request->breakpoint);
 }
 
 void WriteReply(const AddOrChangeBreakpointReply& reply,
                 uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kAddOrChangeBreakpoint, transaction_id);
   writer->WriteUint32(reply.status);
-  writer->WriteString(reply.error_message);
 }
 
 // RemoveBreakpoint ------------------------------------------------------------

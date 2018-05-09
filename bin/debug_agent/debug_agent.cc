@@ -12,6 +12,7 @@
 #include "garnet/bin/debug_agent/debugged_thread.h"
 #include "garnet/bin/debug_agent/launcher.h"
 #include "garnet/bin/debug_agent/object_util.h"
+#include "garnet/bin/debug_agent/process_breakpoint.h"
 #include "garnet/bin/debug_agent/process_info.h"
 #include "garnet/bin/debug_agent/system_info.h"
 #include "garnet/lib/debug_ipc/agent_protocol.h"
@@ -179,30 +180,52 @@ void DebugAgent::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
 void DebugAgent::OnAddOrChangeBreakpoint(
     const debug_ipc::AddOrChangeBreakpointRequest& request,
     debug_ipc::AddOrChangeBreakpointReply* reply) {
-  DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
-  if (proc) {
-    proc->OnAddOrChangeBreakpoint(request, reply);
-  } else {
-    reply->status = ZX_ERR_NOT_FOUND;
-    reply->error_message = fxl::StringPrintf("Unknown process ID %" PRIu64 ".",
-                                             request.process_koid);
+  uint32_t id = request.breakpoint.breakpoint_id;
+
+  auto found = breakpoints_.find(id);
+  if (found == breakpoints_.end()) {
+    found = breakpoints_
+                .emplace(std::piecewise_construct, std::forward_as_tuple(id),
+                         std::forward_as_tuple(this))
+                .first;
   }
+  reply->status = found->second.SetSettings(request.breakpoint);
 }
 
 void DebugAgent::OnRemoveBreakpoint(
     const debug_ipc::RemoveBreakpointRequest& request,
     debug_ipc::RemoveBreakpointReply* reply) {
-  DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
-  if (proc)
-    proc->OnRemoveBreakpoint(request, reply);
+  auto found = breakpoints_.find(request.breakpoint_id);
+  if (found != breakpoints_.end())
+    breakpoints_.erase(found);
 }
 
 void DebugAgent::OnBacktrace(const debug_ipc::BacktraceRequest& request,
                              debug_ipc::BacktraceReply* reply) {
-  DebuggedThread* thread = GetDebuggedThread(
-      request.process_koid, request.thread_koid);
+  DebuggedThread* thread =
+      GetDebuggedThread(request.process_koid, request.thread_koid);
   if (thread)
     thread->GetBacktrace(&reply->frames);
+}
+
+zx_status_t DebugAgent::RegisterBreakpoint(Breakpoint* bp,
+                                           zx_koid_t process_koid,
+                                           uint64_t address) {
+  DebuggedProcess* proc = GetDebuggedProcess(process_koid);
+  if (proc)
+    return proc->RegisterBreakpoint(bp, address);
+
+  // The process might legitimately be not found if there was a race between
+  // the process terminating and a breakpoint add/change.
+  return ZX_ERR_NOT_FOUND;
+}
+
+void DebugAgent::UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
+                                      uint64_t address) {
+  // The process might legitimately be not found if it was terminated.
+  DebuggedProcess* proc = GetDebuggedProcess(process_koid);
+  if (proc)
+    proc->UnregisterBreakpoint(bp, address);
 }
 
 DebuggedProcess* DebugAgent::GetDebuggedProcess(zx_koid_t koid) {
@@ -222,8 +245,8 @@ DebuggedThread* DebugAgent::GetDebuggedThread(zx_koid_t process_koid,
 
 DebuggedProcess* DebugAgent::AddDebuggedProcess(zx_koid_t process_koid,
                                                 zx::process zx_proc) {
-  auto proc = std::make_unique<DebuggedProcess>(
-      this, process_koid, std::move(zx_proc));
+  auto proc =
+      std::make_unique<DebuggedProcess>(this, process_koid, std::move(zx_proc));
   if (!proc->Init())
     return nullptr;
 

@@ -29,6 +29,10 @@ SystemImpl::SystemImpl(Session* session)
 SystemImpl::~SystemImpl() {
   // Target destruction may depend on the symbol system. Ensure the targets
   // get cleaned up first.
+  for (auto& target : targets_) {
+    for (auto& observer : observers())
+      observer.WillDestroyTarget(target.get());
+  }
   targets_.clear();
 }
 

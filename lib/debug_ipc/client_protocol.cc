@@ -10,6 +10,8 @@
 
 namespace debug_ipc {
 
+// Record deserializers --------------------------------------------------------
+
 bool Deserialize(MessageReader* reader, ProcessTreeRecord* record) {
   if (!reader->ReadUint32(reinterpret_cast<uint32_t*>(&record->type)))
     return false;
@@ -55,6 +57,21 @@ bool Deserialize(MessageReader* reader, Module* module) {
 
 bool Deserialize(MessageReader* reader, StackFrame* frame) {
   return reader->ReadBytes(sizeof(StackFrame), frame);
+}
+
+// Record serializers ----------------------------------------------------------
+
+void Serialize(const ProcessBreakpointSettings& settings, MessageWriter* writer) {
+  writer->WriteUint64(settings.process_koid);
+  writer->WriteUint64(settings.thread_koid);
+  writer->WriteUint64(settings.address);
+}
+
+void Serialize(const BreakpointSettings& settings, MessageWriter* writer) {
+  writer->WriteUint32(settings.breakpoint_id);
+  writer->WriteUint32(settings.one_shot ? 1 : 0);
+  writer->WriteUint32(static_cast<uint32_t>(settings.stop));
+  Serialize(settings.locations, writer);
 }
 
 // Hello -----------------------------------------------------------------------
@@ -237,7 +254,7 @@ bool ReadReply(MessageReader* reader, ReadMemoryReply* reply,
 void WriteRequest(const AddOrChangeBreakpointRequest& request,
                   uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kAddOrChangeBreakpoint, transaction_id);
-  writer->WriteBytes(&request, sizeof(AddOrChangeBreakpointRequest));
+  Serialize(request.breakpoint, writer);
 }
 
 bool ReadReply(MessageReader* reader, AddOrChangeBreakpointReply* reply,
@@ -246,8 +263,7 @@ bool ReadReply(MessageReader* reader, AddOrChangeBreakpointReply* reply,
   if (!reader->ReadHeader(&header)) return false;
   *transaction_id = header.transaction_id;
 
-  if (!reader->ReadUint32(&reply->status)) return false;
-  return reader->ReadString(&reply->error_message);
+  return reader->ReadUint32(&reply->status);
 }
 
 // RemoveBreakpoint ------------------------------------------------------------

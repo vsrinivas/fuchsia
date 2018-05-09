@@ -300,45 +300,46 @@ TEST(Protocol, ReadMemoryReply) {
 
 TEST(Protocol, AddOrChangeBreakpointRequest) {
   AddOrChangeBreakpointRequest initial;
-  initial.process_koid = 1234;
   initial.breakpoint.breakpoint_id = 8976;
-  initial.breakpoint.thread_koid = 14612;
-  initial.breakpoint.address = 0x723456234;
   initial.breakpoint.stop = debug_ipc::Stop::kProcess;
+  initial.breakpoint.locations.resize(1);
+
+  ProcessBreakpointSettings& pr_settings = initial.breakpoint.locations.back();
+  pr_settings.process_koid = 1234;
+  pr_settings.thread_koid = 14612;
+  pr_settings.address = 0x723456234;
 
   AddOrChangeBreakpointRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
 
-  EXPECT_EQ(initial.process_koid, second.process_koid);
   EXPECT_EQ(initial.breakpoint.breakpoint_id, second.breakpoint.breakpoint_id);
-  EXPECT_EQ(initial.breakpoint.thread_koid, second.breakpoint.thread_koid);
-  EXPECT_EQ(initial.breakpoint.address, second.breakpoint.address);
   EXPECT_EQ(initial.breakpoint.stop, second.breakpoint.stop);
+  ASSERT_EQ(initial.breakpoint.locations.size(), second.breakpoint.locations.size());
+
+  EXPECT_EQ(initial.breakpoint.locations[0].process_koid, second.breakpoint.locations[0].process_koid);
+  EXPECT_EQ(initial.breakpoint.locations[0].thread_koid, second.breakpoint.locations[0].thread_koid);
+  EXPECT_EQ(initial.breakpoint.locations[0].address, second.breakpoint.locations[0].address);
 }
 
 TEST(Protocol, AddOrChangeBreakpointReply) {
   AddOrChangeBreakpointReply initial;
   initial.status = 78;
-  initial.error_message = "foo bar";
 
   AddOrChangeBreakpointReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
 
   EXPECT_EQ(initial.status, second.status);
-  EXPECT_EQ(initial.error_message, second.error_message);
 }
 
 // RemoveBreakpoint ------------------------------------------------------------
 
 TEST(Protocol, RemoveBreakpointRequest) {
   RemoveBreakpointRequest initial;
-  initial.process_koid = 1234;
   initial.breakpoint_id = 8976;
 
   RemoveBreakpointRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
 
-  EXPECT_EQ(initial.process_koid, second.process_koid);
   EXPECT_EQ(initial.breakpoint_id, second.breakpoint_id);
 }
 

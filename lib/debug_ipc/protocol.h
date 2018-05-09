@@ -158,20 +158,22 @@ struct ReadMemoryReply {
 };
 
 struct AddOrChangeBreakpointRequest {
-  uint64_t process_koid = 0;
   BreakpointSettings breakpoint;
 };
 struct AddOrChangeBreakpointReply {
-  // If the status is not ZX_OK (0), the breakpoint add/change did not
-  // succeded. In the case of changed breakpoints failing to modify, the
-  // breakpoint with the given ID will be removed so the client and agent can
-  // be in a consistent state (error always means it doesn't exist).
+  // A variety of race conditions could cause a breakpoint modification or
+  // set to fail. For example, updating or setting a breakpoint could race
+  // with the library containing that code unloading.
+  //
+  // The update or set will always apply the breakpoint to any contexts that
+  // it can apply to (if there are multiple locations, we don't want to
+  // remove them all just because one failed). Therefore, you can't
+  // definitively say the breakpoint is invalid just because it has a failure
+  // code here. If necessary, we can add more information in the failure.
   uint32_t status = 0;  // zx_status_t
-  std::string error_message;
 };
 
 struct RemoveBreakpointRequest {
-  uint64_t process_koid = 0;
   uint32_t breakpoint_id = 0;
 };
 struct RemoveBreakpointReply {};

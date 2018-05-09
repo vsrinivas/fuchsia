@@ -48,7 +48,12 @@ Location ProcessSymbols::ResolveAddress(uint64_t address) const {
   auto out = system_->symbolizer()->symbolizeCode(
       record.local_path, address - record.base);
   if (!out) {
-    auto err = out.takeError();  // Marks the error as consumed.
+    // Currently it's interesting to see what kinds of errors we get from
+    // LLVM. When we don't want it spewing, the printf should be removed
+    // and replaced with:
+    //   llvm::consumeError(out.takeError());
+    auto err_str = llvm::toString(out.takeError());
+    fprintf(stderr, "Symbol error: %s\n", err_str.c_str());
     return result;
   }
 

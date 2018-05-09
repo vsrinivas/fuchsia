@@ -13,21 +13,38 @@
 
 namespace debug_agent {
 
-// Represents a breakpoint in the debug agent. These breakpoints are
-// per-process (client breakpoints in the zxdb debugger can span multiple
-// processes, and in that case will reference multiple ProcessBreakpoints).
+class Breakpoint;
+
+// Represents one breakpoint address in a single process. One Breakpoint object
+// can expand to many ProcessBreakpoints across multiple processes and within a
+// single one (when a symbolic breakpoint expands to multiple addresses). Also,
+// multiple Breakpoint objects can refer to the same ProcessBreakpoint when
+// they refer to the same address.
 class ProcessBreakpoint {
  public:
-  // The memory accessor must outlive this class.
+  // Given the initial Breakpoint object this corresponds to. Breakpoints
+  // can be added or removed later.
   //
-  // Call SetSettings immediately after construction.
-  explicit ProcessBreakpoint(ProcessMemoryAccessor* memory_accessor);
+  // Call Init() immediately after construction to initalize the parts that
+  // can report errors.
+  explicit ProcessBreakpoint(Breakpoint* breakpoint,
+                             ProcessMemoryAccessor* memory_accessor,
+                             zx_koid_t process_koid,
+                             uint64_t address);
   ~ProcessBreakpoint();
 
-  uint64_t address() const { return settings_.address; }
+  // Call immediately after construction. If it returns failure, the breakpoint
+  // will not work.
+  zx_status_t Init();
 
-  // If SetSettings fails, this breakpoint is invalid and should be deleted.
-  bool SetSettings(const debug_ipc::BreakpointSettings& settings);
+  zx_koid_t process_koid() const { return process_koid_; }
+  uint64_t address() const { return address_; }
+
+  // Adds or removes breakpoints associated with this process/address.
+  // Unregister returns whether there are still any breakpoints referring to
+  // this address (false means this is unused and should be deleted).
+  void RegisterBreakpoint(Breakpoint* breakpoint);
+  bool UnregisterBreakpoint(Breakpoint* breakpoint);
 
   // Writing debug breakpoints changes memory contents. If an unmodified
   // virtual picture of memory is needed, this function will replace the
@@ -70,18 +87,23 @@ class ProcessBreakpoint {
   bool CurrentlySteppingOver() const;
 
   // Install or uninstall this breakpoint.
-  bool Install();
+  zx_status_t Install();
   void Uninstall();
 
-  ProcessMemoryAccessor* memory_accessor_;
+  ProcessMemoryAccessor* memory_accessor_;  // Non-owning.
 
-  debug_ipc::BreakpointSettings settings_;
+  zx_koid_t process_koid_;
+  uint64_t address_;
 
   // Set to true when the instruction has been replaced.
   bool installed_ = false;
 
   // Previous memory contents before being replaced with the break instruction.
   arch::BreakInstructionType previous_data_ = 0;
+
+  // Breakpoints that refer to this ProcessBreakpoint. More than one Breakpoint
+  // can refer to the same memory address.
+  std::vector<Breakpoint*> breakpoints_;
 
   // Tracks the threads currently single-stepping over this breakpoint.
   // Normally this will be empty (nobody) or have one thread, but could be more
