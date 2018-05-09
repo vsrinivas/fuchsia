@@ -29,3 +29,5 @@ mod timer;
 pub use timer::{Interval, Timer, TimeoutExt, OnTimeout};
 mod executor;
 pub use executor::{Executor, EHandle, spawn};
+mod fifo;
+pub use fifo::{Fifo, FifoEntry};
