@@ -22,23 +22,18 @@
 namespace component {
 
 ApplicationControllerImpl::ApplicationControllerImpl(
-    fidl::InterfaceRequest<ApplicationController> request,
-    Realm* realm,
-    std::unique_ptr<archive::FileSystem> fs,
-    zx::process process,
-    std::string url,
-    std::string label,
-    fxl::RefPtr<Namespace> ns,
-    ExportedDirType export_dir_type,
-    zx::channel exported_dir,
-    zx::channel client_request)
+    fidl::InterfaceRequest<ApplicationController> request, Realm* realm,
+    std::unique_ptr<archive::FileSystem> fs, zx::process process,
+    std::string url, std::string args, std::string label,
+    fxl::RefPtr<Namespace> ns, ExportedDirType export_dir_type,
+    zx::channel exported_dir, zx::channel client_request)
     : binding_(this),
       realm_(realm),
       fs_(std::move(fs)),
       process_(std::move(process)),
       label_(std::move(label)),
       koid_(std::to_string(fsl::GetKoid(process_.get()))),
-      info_dir_(fbl::AdoptRef(new fs::PseudoDir())),
+      hub_(fbl::AdoptRef(new fs::PseudoDir())),
       exported_dir_(std::move(exported_dir)),
       ns_(std::move(ns)),
       wait_(this, process_.get(), ZX_TASK_TERMINATED) {
@@ -61,34 +56,19 @@ ApplicationControllerImpl::ApplicationControllerImpl(
       fdio_service_clone_to(exported_dir_.get(), client_request.release());
     }
   }
+  hub_.SetName(label_);
+  hub_.SetJobId(realm_->koid());
+  hub_.SetProcessId(koid_);
+  hub_.AddEntry("url", fbl::move(url));
+  hub_.AddEntry("args", fbl::move(args));
   if (export_dir_type == ExportedDirType::kPublicDebugCtrlLayout) {
-    zx::channel debug_dir_server, debug_dir_client;
-    zx_status_t status =
-        zx::channel::create(0u, &debug_dir_server, &debug_dir_client);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to create channel for service directory."
-                     << status;
-      return;
+    zx_handle_t dir_client = fdio_service_clone(exported_dir_.get());
+    if (dir_client == ZX_HANDLE_INVALID) {
+      FXL_LOG(ERROR) << "Failed to clone exported directory.";
+    } else {
+      zx::channel chan(std::move(dir_client));
+      hub_.PublishOut(fbl::AdoptRef(new fs::RemoteDir(fbl::move(chan))));
     }
-    fdio_service_connect_at(exported_dir_.get(), "debug",
-                            debug_dir_server.release());
-    fbl::String process_koid = koid_;
-    info_dir_->AddEntry("process", fbl::AdoptRef(new fs::UnbufferedPseudoFile(
-                                       [process_koid](fbl::String* output) {
-                                         *output = process_koid;
-                                         return ZX_OK;
-                                       })));
-    info_dir_->AddEntry(
-        "url",
-        fbl::AdoptRef(new fs::UnbufferedPseudoFile([url](fbl::String* output) {
-          *output = url;
-          return ZX_OK;
-        })));
-
-    auto out_dir = fbl::AdoptRef(new fs::PseudoDir());
-    info_dir_->AddEntry("out", out_dir);
-    out_dir->AddEntry(
-        "debug", fbl::AdoptRef(new fs::RemoteDir(fbl::move(debug_dir_client))));
   }
 }
 
@@ -101,9 +81,7 @@ ApplicationControllerImpl::~ApplicationControllerImpl() {
     process_.kill();
 }
 
-void ApplicationControllerImpl::Kill() {
-  process_.kill();
-}
+void ApplicationControllerImpl::Kill() { process_.kill(); }
 
 void ApplicationControllerImpl::Detach() {
   binding_.set_error_handler(fxl::Closure());
@@ -133,8 +111,7 @@ void ApplicationControllerImpl::Wait(WaitCallback callback) {
 }
 
 // Called when process terminates, regardless of if Kill() was invoked.
-void ApplicationControllerImpl::Handler(async_t* async,
-                                        async::WaitBase* wait,
+void ApplicationControllerImpl::Handler(async_t* async, async::WaitBase* wait,
                                         zx_status_t status,
                                         const zx_packet_signal* signal) {
   FXL_DCHECK(status == ZX_OK);
