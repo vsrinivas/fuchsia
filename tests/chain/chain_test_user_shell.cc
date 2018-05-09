@@ -19,12 +19,11 @@
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/chain/defs.h"
+#include "peridot/tests/common/defs.h"
 
 namespace modular {
 namespace {
-
-constexpr char kModuleUrl[] =
-    "file:///system/test/modular_tests/chain_test_module";
 
 // Cf. README.md for what this test does and how.
 class TestApp : public testing::ComponentBase<UserShell>,

@@ -24,11 +24,10 @@
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/common/defs.h"
+#include "peridot/tests/story_shell/defs.h"
 
 namespace {
-
-constexpr char kNullModule[] = "common_null_module";
-constexpr char kNullAction[] = "com.google.fuchsia.common.null";
 
 // Creates function that invokes the |proceed| callback after being called |limit| times.
 std::function<void(fidl::StringPtr)> NewBarrierClosure(const int limit,
@@ -89,7 +88,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     // before the story is running. So we start the story with a default module,
     // and then AddModule() after starting the story. The story controller calls
     // need A LOT of cleanup.
-    story_provider_->CreateStory(kNullModule,
+    story_provider_->CreateStory(kCommonNullModule,
                                  [this](fidl::StringPtr story_id) {
                                    story1_create_.Pass();
                                    Story1_Run1(story_id);
@@ -123,7 +122,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     fidl::VectorPtr<fidl::StringPtr> parent_one;
     parent_one.push_back("root");
     modular::Intent intent_one;
-    intent_one.action.name = kNullAction;
+    intent_one.action.name = kCommonNullAction;
     story_controller_->AddModule(std::move(parent_one), "one",
                                  std::move(intent_one),
                                  nullptr /* surface_relation */);
@@ -132,7 +131,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     parent_two.push_back("root");
     parent_two.push_back("one");
     modular::Intent intent_two;
-    intent_two.action.name = kNullAction;
+    intent_two.action.name = kCommonNullAction;
     story_controller_->AddModule(std::move(parent_two), "two",
                                  std::move(intent_two),
                                  nullptr /* surface_relation */);
@@ -174,7 +173,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint story2_create_{"Story2 Create"};
 
   void Story2_Create() {
-    story_provider_->CreateStory(kNullModule,
+    story_provider_->CreateStory(kCommonNullModule,
                                  [this](fidl::StringPtr story_id) {
                                    story2_create_.Pass();
                                    Story2_Run1(story_id);
@@ -203,7 +202,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     fidl::VectorPtr<fidl::StringPtr> parent_one;
     parent_one.push_back("root");
     modular::Intent intent_one;
-    intent_one.action.handler = kNullModule;
+    intent_one.action.handler = kCommonNullModule;
     story_controller_->AddModule(std::move(parent_one), "one",
                                  std::move(intent_one),
                                  nullptr /*surface_relation) */);
@@ -212,7 +211,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     parent_two.push_back("root");
     parent_two.push_back("one");
     modular::Intent intent_two;
-    intent_two.action.handler = kNullModule;
+    intent_two.action.handler = kCommonNullModule;
     story_controller_->AddModule(std::move(parent_two), "two",
                                  std::move(intent_two),
                                  nullptr /* surface_relation */);

@@ -2,6 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+source_set("defs") {
+  testonly = true
+
+  sources = [
+    "defs.h",
+  ]
+}
+
 group("story_shell") {
   testonly = true
 
@@ -19,6 +27,7 @@ executable("story_shell_test_story_shell") {
   ]
 
   deps = [
+    ":defs",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -32,6 +41,7 @@ executable("story_shell_test_story_shell") {
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/context/cpp:formatting",
+    "//peridot/tests/common:defs",
   ]
 }
 
@@ -43,6 +53,7 @@ executable("story_shell_test_user_shell") {
   ]
 
   deps = [
+    ":defs",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -56,5 +67,6 @@ executable("story_shell_test_user_shell") {
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/context/cpp:formatting",
+    "//peridot/tests/common:defs",
   ]
 }

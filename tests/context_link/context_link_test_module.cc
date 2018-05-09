@@ -9,12 +9,12 @@
 #include "lib/fxl/time/time_delta.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/common/defs.h"
+#include "peridot/tests/context_link/defs.h"
 
 using modular::testing::TestPoint;
 
 namespace {
-
-constexpr char kLink[] = "context_link";
 
 // Cf. README.md for what this test does and how.
 class TestApp {

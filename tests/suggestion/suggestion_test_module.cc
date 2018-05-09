@@ -13,16 +13,12 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/common/defs.h"
+#include "peridot/tests/suggestion/defs.h"
 
 using modular::testing::TestPoint;
 
 namespace {
-
-// This is how long we wait for the test to finish before we timeout and tear
-// down our test.
-constexpr int kTimeoutMilliseconds = 5000;
-constexpr char kProposalId[] =
-    "file:///system/bin/modular_tests/suggestion_proposal_test#proposal";
 
 // Cf. README.md for what this test does and how.
 class SuggestionApp : modular::ProposalListener {

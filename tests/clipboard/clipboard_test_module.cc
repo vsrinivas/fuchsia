@@ -9,13 +9,12 @@
 #include "lib/app_driver/cpp/module_driver.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/clipboard/defs.h"
+#include "peridot/tests/common/defs.h"
 
 using modular::testing::TestPoint;
 
 namespace {
-
-// The url of the clipboard agent under test.
-constexpr char kClipboardAgentUrl[] = "file:///system/bin/agents/clipboard";
 
 // Cf. README.md for what this test does and how.
 class ClipboardTestApp {

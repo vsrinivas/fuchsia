@@ -17,6 +17,7 @@ executable("clipboard_test_module") {
     "clipboard_test_module.cc",
   ]
   deps = [
+    ":defs",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -24,5 +25,14 @@ executable("clipboard_test_module") {
     "//peridot/lib/testing",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp",
+    "//peridot/tests/common:defs",
+  ]
+}
+
+source_set("defs") {
+  testonly = true
+
+  sources = [
+    "defs.h",
   ]
 }

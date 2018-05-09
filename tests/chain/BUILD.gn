@@ -19,6 +19,7 @@ executable("chain_test_user_shell") {
     "chain_test_user_shell.cc",
   ]
   deps = [
+    ":defs",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -31,6 +32,7 @@ executable("chain_test_user_shell") {
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/context/cpp:formatting",
+    "//peridot/tests/common:defs",
   ]
 }
 
@@ -41,12 +43,14 @@ executable("chain_test_module") {
     "chain_test_module.cc",
   ]
   deps = [
+    ":defs",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/tests/common:defs",
   ]
 }
 
@@ -57,11 +61,21 @@ executable("chain_test_child_module") {
     "chain_test_child_module.cc",
   ]
   deps = [
+    ":defs",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/tests/common:defs",
+  ]
+}
+
+source_set("defs") {
+  testonly = true
+
+  sources = [
+    "defs.h",
   ]
 }

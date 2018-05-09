@@ -12,14 +12,13 @@
 #include "lib/fxl/time/time_delta.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/chain/defs.h"
+#include "peridot/tests/common/defs.h"
 
 using modular::testing::TestPoint;
 
 namespace modular {
 namespace {
-
-constexpr char kChildModuleUrl[] =
-    "/system/test/modular_tests/chain_test_child_module";
 
 // Cf. README.md for what this test does and how.
 class TestApp : public ModuleWatcher {

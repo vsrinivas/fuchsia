@@ -2,6 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+source_set("defs") {
+  testonly = true
+
+  sources = [
+    "defs.h",
+  ]
+}
+
 group("link_context_entities") {
   testonly = true
 
@@ -18,6 +26,7 @@ executable("link_context_entities_test_user_shell") {
     "link_context_entities_test_user_shell.cc",
   ]
   deps = [
+    ":defs",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -31,6 +40,7 @@ executable("link_context_entities_test_user_shell") {
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/context/cpp:formatting",
+    "//peridot/tests/common:defs",
   ]
 }
 
@@ -41,11 +51,13 @@ executable("link_context_entities_test_module") {
     "link_context_entities_test_module.cc",
   ]
   deps = [
+    ":defs",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/tests/common:defs",
   ]
 }

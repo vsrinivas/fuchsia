@@ -14,14 +14,10 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/common/defs.h"
+#include "peridot/tests/queue_persistence/defs.h"
 
 namespace {
-
-// This is how long we wait for the test to finish before we timeout and tear
-// down our test.
-constexpr int kTimeoutMilliseconds = 10000;
-constexpr char kTestAgent[] =
-    "file:///system/test/modular_tests/queue_persistence_test_agent";
 
 // Cf. README.md for what this test does and how.
 class ParentApp {

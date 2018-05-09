@@ -9,17 +9,19 @@
 #include "lib/fxl/logging.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/common/defs.h"
+#include "peridot/tests/component_context/defs.h"
 
 using modular::testing::TestPoint;
 
 namespace {
 
 // Cf. README.md for what this test does and how.
-class UnstoppableAgentApp {
+class TestApp {
  public:
   TestPoint initialized_{"Unstoppable agent initialized"};
 
-  UnstoppableAgentApp(modular::AgentHost* agent_host) {
+  TestApp(modular::AgentHost* agent_host) {
     modular::testing::Init(agent_host->application_context(), __FILE__);
     agent_host->agent_context()->GetComponentContext(
         component_context_.NewRequest());
@@ -52,8 +54,8 @@ class UnstoppableAgentApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::AgentDriver<UnstoppableAgentApp> driver(app_context.get(),
-                                                   [&loop] { loop.QuitNow(); });
+  modular::AgentDriver<TestApp> driver(app_context.get(),
+                                       [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

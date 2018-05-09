@@ -2,6 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+source_set("defs") {
+  testonly = true
+
+  sources = [
+    "defs.h",
+  ]
+}
+
 group("link_update") {
   testonly = true
 
@@ -17,6 +25,7 @@ executable("link_update_test_user_shell") {
     "link_update_test_user_shell.cc",
   ]
   deps = [
+    ":defs",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -27,5 +36,6 @@ executable("link_update_test_user_shell") {
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib:fidl_private",
+    "//peridot/tests/common:defs",
   ]
 }

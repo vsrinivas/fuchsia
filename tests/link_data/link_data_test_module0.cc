@@ -12,6 +12,7 @@
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/common/defs.h"
 #include "peridot/tests/link_data/defs.h"
 
 namespace {

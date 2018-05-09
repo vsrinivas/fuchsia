@@ -4,6 +4,14 @@
 
 import("//build/fidl/fidl.gni")
 
+source_set("defs") {
+  testonly = true
+
+  sources = [
+    "defs.h",
+  ]
+}
+
 group("trigger") {
   testonly = true
 
@@ -20,12 +28,14 @@ executable("trigger_test_module") {
     "trigger_test_module.cc",
   ]
   deps = [
+    ":defs",
     ":trigger_test_service",
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/tests/common:defs",
   ]
 }
 
@@ -36,11 +46,13 @@ executable("trigger_test_agent") {
     "trigger_test_agent.cc",
   ]
   deps = [
+    ":defs",
     ":trigger_test_service",
     "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
+    "//peridot/tests/common:defs",
   ]
 }
 

@@ -19,11 +19,10 @@
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/common/defs.h"
+#include "peridot/tests/link_context_entities/defs.h"
 
 namespace {
-
-constexpr char kModuleUrl[] =
-    "file:///system/test/modular_tests/link_context_entities_test_module";
 
 // A context reader watcher implementation.
 class ContextListenerImpl : modular::ContextListener {

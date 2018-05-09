@@ -9,6 +9,8 @@
 #include "lib/fxl/logging.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/common/defs.h"
+#include "peridot/tests/component_context/defs.h"
 
 using modular::testing::TestPoint;
 

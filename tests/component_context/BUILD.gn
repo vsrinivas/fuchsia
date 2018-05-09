@@ -23,12 +23,14 @@ executable("component_context_test_module") {
   ]
   deps = [
     ":component_context_test_service",
+    ":defs",
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fsl",
     "//peridot/lib/fidl:message_receiver_client",
     "//peridot/lib/testing",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/tests/common:defs",
   ]
 }
 
@@ -40,10 +42,12 @@ executable("component_context_test_one_agent") {
   ]
   deps = [
     ":component_context_test_service",
+    ":defs",
     "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
+    "//peridot/tests/common:defs",
   ]
 }
 
@@ -54,10 +58,12 @@ executable("component_context_test_two_agent") {
     "component_context_test_two_agent.cc",
   ]
   deps = [
+    ":defs",
     "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
+    "//peridot/tests/common:defs",
   ]
 }
 
@@ -68,10 +74,12 @@ executable("component_context_test_unstoppable_agent") {
     "component_context_test_unstoppable_agent.cc",
   ]
   deps = [
+    ":defs",
     "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
+    "//peridot/tests/common:defs",
   ]
 }
 
@@ -82,3 +90,12 @@ fidl("component_context_test_service") {
     "component_context_test_service.fidl",
   ]
 }
+
+source_set("defs") {
+  testonly = true
+
+  sources = [
+    "defs.h",
+  ]
+}
+

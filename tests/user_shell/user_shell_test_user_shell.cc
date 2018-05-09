@@ -22,24 +22,10 @@
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/common/defs.h"
+#include "peridot/tests/user_shell/defs.h"
 
 namespace {
-
-constexpr char kDoneModuleUrl[] = "common_done_module";
-constexpr char kNullModuleUrl[] = "common_null_module";
-
-class Settings {
- public:
-  explicit Settings(const fxl::CommandLine& command_line) {
-    first_module =
-        command_line.GetOptionValueWithDefault("first_module", kDoneModuleUrl);
-    second_module =
-        command_line.GetOptionValueWithDefault("second_module", kNullModuleUrl);
-  }
-
-  std::string first_module;
-  std::string second_module;
-};
 
 // A simple story watcher implementation that invokes a "continue" callback when
 // it sees the watched story transition to DONE state. Used to push the test
@@ -261,9 +247,8 @@ class StoryProviderStateWatcherImpl : modular::StoryProviderWatcher {
 // Cf. README.md for what this test does and how.
 class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
  public:
-  explicit TestApp(component::ApplicationContext* const application_context,
-                   Settings settings)
-      : ComponentBase(application_context), settings_(std::move(settings)) {
+  explicit TestApp(component::ApplicationContext* const application_context)
+      : ComponentBase(application_context) {
     TestInit(__FILE__);
   }
 
@@ -366,7 +351,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint story1_create_{"Story1 Create"};
 
   void TestStory1() {
-    const std::string& url = settings_.first_module;
+    const std::string& url = kCommonDoneModule;
 
     modular::JsonDoc doc;
     std::vector<std::string> segments{"example", url, "created-with-info"};
@@ -419,7 +404,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint story2_create_{"Story2 Create"};
 
   void TestStory2() {
-    const std::string& url = settings_.second_module;
+    const std::string& url = kCommonNullModule;
 
     modular::JsonDoc doc;
     std::vector<std::string> segments{"example", url, "created-with-info"};
@@ -541,8 +526,6 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     story_controller_.Unbind();
   }
 
-  const Settings settings_;
-
   StoryProviderStateWatcherImpl story_provider_state_watcher_;
   StoryDoneWatcherImpl story_done_watcher_;
   StoryModulesWatcherImpl story_modules_watcher_;
@@ -561,7 +544,6 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  Settings settings(command_line);
-  modular::testing::ComponentMain<TestApp, Settings>(std::move(settings));
+  modular::testing::ComponentMain<TestApp>();
   return 0;
 }

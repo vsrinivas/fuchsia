@@ -18,13 +18,10 @@
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/common/defs.h"
+#include "peridot/tests/context_link/defs.h"
 
 namespace {
-
-constexpr char kModuleUrl[] =
-    "file:///system/test/modular_tests/context_link_test_module";
-constexpr char kTopic[] = "link/context_link_test";
-constexpr char kLink[] = "context_link";
 
 // A context reader watcher implementation.
 class ContextListenerImpl : modular::ContextListener {

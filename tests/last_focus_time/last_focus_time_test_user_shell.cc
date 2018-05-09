@@ -14,10 +14,10 @@
 #include "peridot/lib/common/story_provider_watcher_base.h"
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/common/defs.h"
+#include "peridot/tests/last_focus_time/defs.h"
 
 namespace {
-
-constexpr char kModuleUrl[] = "common_null_module";
 
 // A simple story provider watcher implementation. It confirms that it sees an
 // increase in the last_focus_time in the StoryInfo it receives, and pushes the
@@ -168,7 +168,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint create_story_{"CreateStory()"};
 
   void CreateStory() {
-    story_provider_->CreateStory(kModuleUrl,
+    story_provider_->CreateStory(kCommonNullModule,
                                  [this](const fidl::StringPtr& story_id) {
                                    create_story_.Pass();
                                    story_id_ = story_id;

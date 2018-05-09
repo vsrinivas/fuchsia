@@ -10,6 +10,8 @@
 #include "peridot/lib/fidl/message_receiver_client.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/common/defs.h"
+#include "peridot/tests/queue_persistence/defs.h"
 
 using modular::testing::TestPoint;
 

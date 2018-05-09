@@ -102,3 +102,11 @@ initial_module_packages("common_module_index") {
     "common_done_module",
   ]
 }
+
+source_set("defs") {
+  testonly = true
+
+  sources = [
+    "defs.h",
+  ]
+}

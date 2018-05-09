@@ -8,13 +8,12 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/common/defs.h"
+#include "peridot/tests/embed_shell/defs.h"
 
 using modular::testing::TestPoint;
 
 namespace {
-
-constexpr char kChildModuleName[] = "child";
-constexpr char kChildModuleUrl[] = "common_null_module";
 
 // Cf. README.md for what this test does and how.
 class ChildApp : modular::ModuleWatcher {
@@ -36,7 +35,7 @@ class ChildApp : modular::ModuleWatcher {
  private:
   void StartChildModule() {
     modular::Intent intent;
-    intent.action.handler = kChildModuleUrl;
+    intent.action.handler = kCommonNullModule;
     module_host_->module_context()->StartModule(
         kChildModuleName, std::move(intent), nullptr /* incoming_services */,
         child_module_.NewRequest(), nullptr /* surface_relation */,

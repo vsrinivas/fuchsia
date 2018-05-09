@@ -15,16 +15,12 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/common/defs.h"
+#include "peridot/tests/parent_child/defs.h"
 
 using modular::testing::TestPoint;
 
 namespace {
-
-constexpr int kTimeoutMilliseconds = 5000;
-
-constexpr char kChildModuleName[] = "child";
-constexpr char kChildModuleUrl[] =
-    "file:///system/test/modular_tests/parent_child_test_child_module";
 
 // Cf. README.md for what this test does and how.
 class ParentApp {

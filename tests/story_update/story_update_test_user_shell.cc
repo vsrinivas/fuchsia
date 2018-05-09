@@ -15,10 +15,10 @@
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/common/defs.h"
+#include "peridot/tests/story_update/defs.h"
 
 namespace {
-
-const char kModuleUrl[] = "common_null_module";
 
 // A simple module watcher implementation allows to specify the actual
 // notification callback as a lambda and update it dynamically.
@@ -75,7 +75,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     user_shell_context_.Bind(std::move(user_shell_context));
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
-    story_provider_->CreateStory(kModuleUrl, [this](fidl::StringPtr story_id) {
+    story_provider_->CreateStory(kCommonNullModule, [this](fidl::StringPtr story_id) {
       story_create_.Pass();
       GetController(story_id);
     });
@@ -125,7 +125,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     //
     // The observability of the STOPPED state, however, is guaranteed.
     modular::Intent intent;
-    intent.action.handler = kModuleUrl;
+    intent.action.handler = kCommonNullModule;
     story_controller_->AddModule(nullptr /* parent_module_path */, "module1",
                                  std::move(intent),
                                  nullptr /* surface_relation */);
@@ -184,7 +184,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     // the controller connection is just closed, and flow of control would need
     // to resume from the connection error handler of the module controller.
     modular::Intent intent;
-    intent.action.handler = kModuleUrl;
+    intent.action.handler = kCommonNullModule;
     story_controller_->AddModule(nullptr /* parent_module_path */, "module2",
                                  std::move(intent),
                                  nullptr /* surface_relation */);

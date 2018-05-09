@@ -16,10 +16,10 @@
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/common/defs.h"
+#include "peridot/tests/link_update/defs.h"
 
 namespace {
-
-constexpr char kModuleUrl[] = "common_null_module";
 
 // A simple link watcher implementation allows to specify the actual
 // notification callback as a lambda and update it dynamically.
@@ -74,7 +74,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     user_shell_context_.Bind(std::move(user_shell_context));
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
-    story_provider_->CreateStory(kModuleUrl,
+    story_provider_->CreateStory(kCommonNullModule,
                                  [this](const fidl::StringPtr& story_id) {
                                    story_create_.Pass();
                                    GetController(story_id);

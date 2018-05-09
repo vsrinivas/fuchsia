@@ -9,6 +9,8 @@
 #include "lib/fxl/time/time_delta.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/common/defs.h"
+#include "peridot/tests/link_context_entities/defs.h"
 
 using modular::testing::TestPoint;
 

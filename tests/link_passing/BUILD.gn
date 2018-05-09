@@ -2,6 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+source_set("defs") {
+  testonly = true
+
+  sources = [
+    "defs.h",
+  ]
+}
+
 group("link_passing") {
   testonly = true
 
@@ -19,11 +27,13 @@ executable("link_passing_test_module1") {
     "link_passing_test_module1.cc",
   ]
   deps = [
+    ":defs",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/testing",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/tests/common:defs",
   ]
 }
 
@@ -34,11 +44,13 @@ executable("link_passing_test_module2") {
     "link_passing_test_module2.cc",
   ]
   deps = [
+    ":defs",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/testing",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/tests/common:defs",
   ]
 }
 
@@ -49,10 +61,12 @@ executable("link_passing_test_module3") {
     "link_passing_test_module3.cc",
   ]
   deps = [
+    ":defs",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/testing",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/tests/common:defs",
   ]
 }

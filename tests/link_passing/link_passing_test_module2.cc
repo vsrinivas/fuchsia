@@ -8,11 +8,10 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/common/defs.h"
+#include "peridot/tests/link_passing/defs.h"
 
 using modular::testing::TestPoint;
-
-constexpr char kModule3Url[] =
-    "file:///system/test/modular_tests/link_passing_test_module3";
 
 namespace {
 

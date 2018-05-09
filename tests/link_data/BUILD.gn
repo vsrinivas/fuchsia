@@ -2,6 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+source_set("defs") {
+  testonly = true
+
+  sources = [
+    "defs.h",
+  ]
+}
+
 group("link_data") {
   testonly = true
 
@@ -10,12 +18,6 @@ group("link_data") {
     ":link_data_test_module0",
     ":link_data_test_module1",
     ":link_data_test_module2",
-  ]
-}
-
-source_set("defs") {
-  sources = [
-    "defs.h",
   ]
 }
 
@@ -38,10 +40,13 @@ executable("link_data_test_user_shell") {
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib:fidl_private",
+    "//peridot/tests/common:defs",
   ]
 }
 
 executable("link_data_test_module0") {
+  testonly = true
+
   sources = [
     "link_data_test_module0.cc",
   ]
@@ -54,10 +59,13 @@ executable("link_data_test_module0") {
     "//peridot/lib/testing",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/tests/common:defs",
   ]
 }
 
 executable("link_data_test_module1") {
+  testonly = true
+
   sources = [
     "link_data_test_module1.cc",
   ]
@@ -70,10 +78,13 @@ executable("link_data_test_module1") {
     "//peridot/lib/testing",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/tests/common:defs",
   ]
 }
 
 executable("link_data_test_module2") {
+  testonly = true
+
   sources = [
     "link_data_test_module2.cc",
   ]
@@ -86,5 +97,6 @@ executable("link_data_test_module2") {
     "//peridot/lib/testing",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/tests/common:defs",
   ]
 }

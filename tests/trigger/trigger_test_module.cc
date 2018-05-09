@@ -14,6 +14,8 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/common/defs.h"
+#include "peridot/tests/trigger/defs.h"
 
 using modular::testing::TestPoint;
 
@@ -26,12 +28,6 @@ void Await(fidl::StringPtr condition,
   modular::testing::GetStore()->Get(condition,
                                     [cont](fidl::StringPtr str) { cont(str); });
 }
-
-// This is how long we wait for the test to finish before we timeout and tear
-// down our test.
-constexpr int kTimeoutMilliseconds = 10000;
-constexpr char kTestAgent[] =
-    "file:///system/test/modular_tests/trigger_test_agent";
 
 // Cf. README.md for what this test does and how.
 class ParentApp {

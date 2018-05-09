@@ -17,6 +17,8 @@
 #include "peridot/lib/fidl/message_receiver_client.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/common/defs.h"
+#include "peridot/tests/component_context/defs.h"
 
 using modular::testing::TestPoint;
 
@@ -25,15 +27,6 @@ namespace {
 // This is how long we wait for the test to finish before we timeout and tear
 // down our test.
 constexpr zx::duration kTimeout = zx::sec(15);
-
-constexpr char kOneAgentUrl[] =
-    "file:///system/test/modular_tests/component_context_test_one_agent";
-
-constexpr char kUnstoppableAgent[] =
-    "file:///system/test/modular_tests/"
-    "component_context_test_unstoppable_agent";
-
-constexpr int kTotalSimultaneousTests = 2;
 
 // Execute a trigger after the counter reaches a particular value OR if the
 // count is canceled.
