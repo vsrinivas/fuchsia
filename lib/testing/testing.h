@@ -52,11 +52,6 @@ void Done(const std::function<void()>& ack);
 // noticed first by the test runner, it terminates the test as failed.
 void Teardown(const std::function<void()>& ack);
 
-// Signals that this process expects to be terminated within the time specified.
-// If it is not killed that is a failure. A test that calls this should not call
-// Done() or Teardown().
-void WillTerminate(double withinSeconds);
-
 // Returns the TestRunnerStore interface from the caller's
 // ApplicationEnvironment. Init() must be called before GetStore().
 test_runner::TestRunnerStore* GetStore();

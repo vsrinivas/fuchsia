@@ -79,12 +79,6 @@ void Teardown(const std::function<void()>& ack) {
   }
 }
 
-void WillTerminate(double withinSeconds) {
-  if (g_test_runner.is_bound()) {
-    g_test_runner->WillTerminate(withinSeconds);
-  }
-}
-
 test_runner::TestRunnerStore* GetStore() {
   FXL_CHECK(g_test_runner_store.is_bound());
   return g_test_runner_store.get();
