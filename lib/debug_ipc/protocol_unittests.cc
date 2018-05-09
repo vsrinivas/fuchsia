@@ -411,6 +411,52 @@ TEST(Protocol, ModulesReply) {
   EXPECT_EQ(initial.modules[1].base, second.modules[1].base);
 }
 
+// Modules ---------------------------------------------------------------------
+
+TEST(Protocol, AspaceRequest) {
+  AddressSpaceRequest initial;
+  initial.process_koid = 1234;
+  initial.address = 0x717171;
+
+  AddressSpaceRequest second;
+  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+
+  EXPECT_EQ(initial.process_koid, second.process_koid);
+  EXPECT_EQ(initial.address, second.address);
+}
+
+TEST(Protocol, AspaceReply) {
+  const uint64_t kOneT = 1024 * 1024u * 1024u * 1024ull;
+  AddressSpaceReply initial;
+
+  initial.map.resize(4u);
+  initial.map[0] = AddressRegion{"proc:5616", 0x1000000, 127 * kOneT, 0};
+  initial.map[1] = AddressRegion{"root", 0x1000000, 127 * kOneT, 0};
+  initial.map[2] = AddressRegion{"useralloc", 0x371f1276000, 12 * 1024, 1};
+  initial.map[3] = AddressRegion{"initial-thread", 0x371f1277000, 4 * 1024, 2};
+
+  AddressSpaceReply second;
+  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+
+  EXPECT_EQ(4u, second.map.size());
+  EXPECT_EQ(initial.map[0].name, second.map[0].name);
+  EXPECT_EQ(initial.map[0].base, second.map[0].base);
+  EXPECT_EQ(initial.map[0].size, second.map[0].size);
+  EXPECT_EQ(initial.map[0].depth, second.map[0].depth);
+  EXPECT_EQ(initial.map[1].name, second.map[1].name);
+  EXPECT_EQ(initial.map[1].base, second.map[1].base);
+  EXPECT_EQ(initial.map[1].size, second.map[1].size);
+  EXPECT_EQ(initial.map[1].depth, second.map[1].depth);
+  EXPECT_EQ(initial.map[2].name, second.map[2].name);
+  EXPECT_EQ(initial.map[2].base, second.map[2].base);
+  EXPECT_EQ(initial.map[2].size, second.map[2].size);
+  EXPECT_EQ(initial.map[2].depth, second.map[2].depth);
+  EXPECT_EQ(initial.map[3].name, second.map[3].name);
+  EXPECT_EQ(initial.map[3].base, second.map[3].base);
+  EXPECT_EQ(initial.map[3].size, second.map[3].size);
+  EXPECT_EQ(initial.map[3].depth, second.map[3].depth);
+}
+
 // Notifications ---------------------------------------------------------------
 
 TEST(Protocol, NotifyThread) {

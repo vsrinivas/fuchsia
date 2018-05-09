@@ -69,6 +69,20 @@ void ProcessImpl::GetModules(
       });
 }
 
+void ProcessImpl::GetAspace(
+    uint64_t address,
+    std::function<void(const Err&, std::vector<debug_ipc::AddressRegion>)>
+        callback) const {
+  debug_ipc::AddressSpaceRequest request;
+  request.process_koid = koid_;
+  request.address = address;
+  session()->Send<debug_ipc::AddressSpaceRequest, debug_ipc::AddressSpaceReply>(
+      request, [callback](const Err& err, debug_ipc::AddressSpaceReply reply) {
+        if (callback)
+          callback(err, std::move(reply.map));
+      });
+}
+
 std::vector<Thread*> ProcessImpl::GetThreads() const {
   std::vector<Thread*> result;
   result.reserve(threads_.size());

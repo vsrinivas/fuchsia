@@ -95,6 +95,12 @@ bool ReadRequest(MessageReader* reader, ModulesRequest* request,
 void WriteReply(const ModulesReply& reply, uint32_t transaction_id,
                 MessageWriter* writer);
 
+// Addres space
+bool ReadRequest(MessageReader* reader, AddressSpaceRequest* request,
+                 uint32_t* transaction_id);
+void WriteReply(const AddressSpaceReply& reply, uint32_t transaction_id,
+                MessageWriter* writer);
+
 // Notifications ---------------------------------------------------------------
 //
 // (These don't have a "request"/"reply".)

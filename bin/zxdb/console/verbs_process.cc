@@ -345,6 +345,102 @@ Err DoLibs(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
+// libs ------------------------------------------------------------------------
+
+std::string PrintRegionSize(uint64_t size) {
+  const uint64_t kOneK = 1024u;
+  const uint64_t kOneM = kOneK * kOneK;
+  const uint64_t kOneG = kOneM * kOneK;
+  const uint64_t kOneT = kOneG * kOneK;
+
+  if (size < kOneK)
+    return fxl::StringPrintf("%" PRIu64 "B", size);
+  if (size < kOneM)
+    return fxl::StringPrintf("%" PRIu64 "K", size / kOneK);
+  if (size < kOneG)
+    return fxl::StringPrintf("%" PRIu64 "M", size / kOneM);
+  if (size < kOneT)
+    return fxl::StringPrintf("%" PRIu64 "G", size / kOneG);
+  return fxl::StringPrintf("%" PRIu64 "T", size / kOneT);
+}
+
+std::string PrintRegionName(uint64_t depth, const std::string& name) {
+  return fxl::StringPrintf("%*c%s", static_cast<int>(depth * 2), ' ',
+                           name.c_str());
+}
+
+const char kAspaceShortHelp[] = "aspace: Show address space for a process.";
+const char kAspaceHelp[] =
+    R"(aspace [ <address> ]
+
+  Shows the address space map for the given process.
+
+  With no parameters, it shows the entire process address map.
+  You can pass a single address and it will show all the regions that
+  contain it.
+
+Examples
+
+  aspace
+  aspace 0x530b010dc000
+  process 2 aspace
+)";
+
+void OnAspaceComplete(const Err& err,
+                      std::vector<debug_ipc::AddressRegion> map) {
+  Console* console = Console::get();
+  if (err.has_error()) {
+    console->Output(err);
+    return;
+  }
+
+  if (map.empty()) {
+    console->Output("Region not mapped.");
+    return;
+  }
+
+  std::vector<std::vector<std::string>> rows;
+  for (const auto& region : map) {
+    rows.push_back(std::vector<std::string>{
+        fxl::StringPrintf("0x%" PRIx64, region.base),
+        fxl::StringPrintf("0x%" PRIx64, region.base + region.size),
+        PrintRegionSize(region.size),
+        PrintRegionName(region.depth, region.name)});
+  }
+
+  OutputBuffer out;
+  FormatColumns({ColSpec(Align::kRight, 0, "Start", 2),
+                 ColSpec(Align::kRight, 0, "End", 2),
+                 ColSpec(Align::kRight, 0, "Size", 2),
+                 ColSpec(Align::kLeft, 0, "Name", 1)},
+                rows, &out);
+
+  console->Output(std::move(out));
+}
+
+Err DoAspace(ConsoleContext* context, const Command& cmd) {
+  // Only a process can be specified.
+  Err err = cmd.ValidateNouns({Noun::kProcess});
+  if (err.has_error())
+    return err;
+
+  uint64_t address = 0;
+  if (cmd.args().size() == 1) {
+    err = ReadUint64Arg(cmd, 0, "address", &address);
+    if (err.has_error())
+      return err;
+  } else if (cmd.args().size() > 1) {
+    return Err(ErrType::kInput, "\"aspace\" takes zero or one parameter.");
+  }
+
+  err = AssertRunningTarget(context, "aspace", cmd.target());
+  if (err.has_error())
+    return err;
+
+  cmd.target()->GetProcess()->GetAspace(address, &OnAspaceComplete);
+  return Err();
+}
+
 }  // namespace
 
 void AppendProcessVerbs(std::map<Verb, VerbRecord>* verbs) {
@@ -359,6 +455,8 @@ void AppendProcessVerbs(std::map<Verb, VerbRecord>* verbs) {
       VerbRecord(&DoDetach, {"detach"}, kDetachShortHelp, kDetachHelp);
   (*verbs)[Verb::kLibs] =
       VerbRecord(&DoLibs, {"libs"}, kLibsShortHelp, kLibsHelp);
+  (*verbs)[Verb::kAspace] =
+      VerbRecord(&DoAspace, {"aspace", "as"}, kAspaceShortHelp, kAspaceHelp);
 }
 
 }  // namespace zxdb

@@ -61,6 +61,9 @@ class RemoteAPI {
   virtual void OnBacktrace(
       const debug_ipc::BacktraceRequest& request,
       debug_ipc::BacktraceReply* reply) = 0;
+
+  virtual void OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,
+                              debug_ipc::AddressSpaceReply* reply) = 0;
 };
 
 }  // namespace debug_agent

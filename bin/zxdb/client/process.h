@@ -19,6 +19,7 @@ namespace debug_ipc {
 struct MemoryBlock;
 struct Module;
 struct ThreadRecord;
+struct AddressRegion;
 }
 
 namespace zxdb {
@@ -56,6 +57,14 @@ class Process : public ClientObject {
   // recomputes the list).
   virtual void GetModules(
       std::function<void(const Err&, std::vector<debug_ipc::Module>)>) = 0;
+
+  // Queries the process for its address map if |address| is zero the entire
+  // map is requested. If |address| is non-zero only the containing region
+  // if exists will be retrieved.
+  virtual void GetAspace(
+      uint64_t address,
+      std::function<void(const Err&, std::vector<debug_ipc::AddressRegion>)>)
+      const = 0;
 
   // Returns all threads in the process. This is as of the last update from
   // the system. If the program is currently running, the actual threads may be

@@ -228,6 +228,13 @@ void DebugAgent::UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
     proc->UnregisterBreakpoint(bp, address);
 }
 
+void DebugAgent::OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,
+                                debug_ipc::AddressSpaceReply* reply) {
+  DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
+  if (proc)
+    proc->OnAddressSpace(request, reply);
+}
+
 DebuggedProcess* DebugAgent::GetDebuggedProcess(zx_koid_t koid) {
   auto found = procs_.find(koid);
   if (found == procs_.end())

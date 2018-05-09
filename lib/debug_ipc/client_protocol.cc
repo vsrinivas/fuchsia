@@ -74,6 +74,18 @@ void Serialize(const BreakpointSettings& settings, MessageWriter* writer) {
   Serialize(settings.locations, writer);
 }
 
+bool Deserialize(MessageReader* reader, AddressRegion* region) {
+  if (!reader->ReadString(&region->name))
+    return false;
+  if (!reader->ReadUint64(&region->base))
+    return false;
+  if (!reader->ReadUint64(&region->size))
+    return false;
+  if (!reader->ReadUint64(&region->depth))
+    return false;
+  return true;
+}
+
 // Hello -----------------------------------------------------------------------
 
 void WriteRequest(const HelloRequest& request, uint32_t transaction_id,
@@ -316,6 +328,25 @@ bool ReadReply(MessageReader* reader, ModulesReply* reply,
 
   Deserialize(reader, &reply->modules);
   return true;
+}
+
+// Address Space
+// ---------------------------------------------------------------------
+
+void WriteRequest(const AddressSpaceRequest& request, uint32_t transaction_id,
+                  MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kAddressSpace, transaction_id);
+  writer->WriteBytes(&request, sizeof(AddressSpaceRequest));
+}
+
+bool ReadReply(MessageReader* reader, AddressSpaceReply* reply,
+               uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+
+  return Deserialize(reader, &reply->map);
 }
 
 // Notifications ---------------------------------------------------------------

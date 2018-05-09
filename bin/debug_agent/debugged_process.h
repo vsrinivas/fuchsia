@@ -14,6 +14,7 @@
 #include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "garnet/lib/debug_ipc/helper/zircon_exception_watcher.h"
+
 #include "garnet/public/lib/fxl/macros.h"
 
 namespace debug_agent {
@@ -47,6 +48,8 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
                     debug_ipc::ReadMemoryReply* reply);
   void OnKill(const debug_ipc::KillRequest& request,
               debug_ipc::KillReply* reply);
+  void OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,
+                      debug_ipc::AddressSpaceReply* reply);
 
   // Returns the thread or null if there is no known thread for this koid.
   DebuggedThread* GetThread(zx_koid_t thread_koid);

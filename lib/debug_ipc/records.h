@@ -112,6 +112,13 @@ struct StackFrame {
   uint64_t sp = 0;  // Stack pointer.
 };
 
+struct AddressRegion {
+  std::string name;
+  uint64_t base;
+  uint64_t size;
+  uint64_t depth;
+};
+
 #pragma pack(pop)
 
 }  // namespace debug_ipc

@@ -70,6 +70,13 @@ void Serialize(const StackFrame& frame, MessageWriter* writer) {
   writer->WriteBytes(&frame, sizeof(StackFrame));
 }
 
+void Serialize(const AddressRegion& region, MessageWriter* writer) {
+  writer->WriteString(region.name);
+  writer->WriteUint64(region.base);
+  writer->WriteUint64(region.size);
+  writer->WriteUint64(region.depth);
+}
+
 // Hello -----------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, HelloRequest* request,
@@ -302,6 +309,23 @@ void WriteReply(const ModulesReply& reply, uint32_t transaction_id,
                 MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kModules, transaction_id);
   Serialize(reply.modules, writer);
+}
+
+// Address space ---------------------------------------------------------------
+
+bool ReadRequest(MessageReader* reader, AddressSpaceRequest* request,
+                 uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+  return reader->ReadBytes(sizeof(AddressSpaceRequest), request);
+}
+
+void WriteReply(const AddressSpaceReply& reply, uint32_t transaction_id,
+                MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kAddressSpace, transaction_id);
+  Serialize(reply.map, writer);
 }
 
 // Notifications ---------------------------------------------------------------

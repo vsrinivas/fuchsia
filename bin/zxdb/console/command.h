@@ -43,6 +43,7 @@ std::string NounToString(Noun n);
 enum class Verb {
   kNone = 0,
 
+  kAspace,
   kAttach,
   kBreak,
   kClear,

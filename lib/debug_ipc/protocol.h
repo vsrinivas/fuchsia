@@ -35,6 +35,7 @@ struct MsgHeader {
     kAddOrChangeBreakpoint,
     kRemoveBreakpoint,
     kBacktrace,
+    kAddressSpace,
 
     // The "notify" messages are sent unrequested from the agent to the client.
     kNotifyProcessExiting,
@@ -185,6 +186,17 @@ struct BacktraceRequest {
 struct BacktraceReply {
   // Will be empty if the thread doesn't exist or isn't stopped.
   std::vector<StackFrame> frames;
+};
+
+struct AddressSpaceRequest {
+  uint64_t process_koid = 0;
+  // if non-zero |address| indicates to return only the regions
+  // that contain it.
+  uint64_t address = 0;
+};
+
+struct AddressSpaceReply {
+  std::vector<AddressRegion> map;
 };
 
 struct ModulesRequest {

@@ -60,6 +60,8 @@ class DebugAgent : public RemoteAPI, public Breakpoint::ProcessDelegate {
                           debug_ipc::RemoveBreakpointReply* reply) override;
   void OnBacktrace(const debug_ipc::BacktraceRequest& request,
                    debug_ipc::BacktraceReply* reply) override;
+  void OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,
+                      debug_ipc::AddressSpaceReply* reply) override;
 
   // Breakpoint::ProcessDelegate implementation.
   zx_status_t RegisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid, uint64_t address) override;

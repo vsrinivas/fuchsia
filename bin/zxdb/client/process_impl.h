@@ -33,6 +33,10 @@ class ProcessImpl : public Process {
   Symbols* GetSymbols() override;
   void GetModules(
       std::function<void(const Err&, std::vector<debug_ipc::Module>)>) override;
+  void GetAspace(
+      uint64_t address,
+      std::function<void(const Err&, std::vector<debug_ipc::AddressRegion>)>)
+      const override;
   std::vector<Thread*> GetThreads() const override;
   Thread* GetThreadFromKoid(uint64_t koid) override;
   void SyncThreads(std::function<void()> callback) override;
