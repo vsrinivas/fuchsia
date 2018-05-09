@@ -85,9 +85,9 @@ ApplicationControllerImpl::ApplicationControllerImpl(
           return ZX_OK;
         })));
 
-    auto export_dir = fbl::AdoptRef(new fs::PseudoDir());
-    info_dir_->AddEntry("export", export_dir);
-    export_dir->AddEntry(
+    auto out_dir = fbl::AdoptRef(new fs::PseudoDir());
+    info_dir_->AddEntry("out", out_dir);
+    out_dir->AddEntry(
         "debug", fbl::AdoptRef(new fs::RemoteDir(fbl::move(debug_dir_client))));
   }
 }
