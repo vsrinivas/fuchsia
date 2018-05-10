@@ -80,12 +80,14 @@ class TestApp : modular::LinkWatcher {
     // received.
     FXL_LOG(INFO) << "module1 link: " << json;
 
-    if (json == "1") {
+    // TODO(mesch): Although allowed by Link in principle, it's not quite clear
+    // why we receive this notification twice.
+    if (json == "1" && !link1_checked_) {
       link1_check_.Pass();
       link1_checked_ = true;
     }
 
-    if (json == "2") {
+    if (json == "2" && !link2_checked_) {
       link2_check_.Pass();
       link2_checked_ = true;
     }
