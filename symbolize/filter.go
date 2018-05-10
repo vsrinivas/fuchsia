@@ -25,6 +25,7 @@ type logHeader struct {
 }
 
 type LogLine struct {
+	lineno uint64
 	header lineHeader
 	source lineSource
 }
@@ -135,10 +136,10 @@ func (f *Filter) Start(ctx context.Context, input <-chan InputLine) <-chan Outpu
 				var res OutputLine
 				if res.line = ParseLine(elem.msg); res.line == nil {
 					res.line = &Text{text: elem.msg}
-					log.Printf("warning malformed input %s", elem.msg)
+					log.Printf("warning malformed input %s on line %d", elem.msg, elem.lineno)
 				}
 				// Update AST with source locations.
-				res.line.Accept(&FilterVisitor{f})
+				res.line.Accept(&FilterVisitor{filter: f, lineno: elem.lineno})
 				res.LogLine = elem.LogLine
 				out <- res
 			}
@@ -149,12 +150,13 @@ func (f *Filter) Start(ctx context.Context, input <-chan InputLine) <-chan Outpu
 
 type FilterVisitor struct {
 	filter *Filter
+	lineno uint64
 }
 
 func (f *FilterVisitor) VisitBt(elem *BacktraceElement) {
 	info, err := f.filter.FindInfoForAddress(elem.vaddr)
 	if err != nil {
-		log.Printf("warning: %v", err)
+		log.Printf("warning on line %d: %v", f.lineno, err)
 	}
 	elem.info = info
 }
@@ -162,7 +164,7 @@ func (f *FilterVisitor) VisitBt(elem *BacktraceElement) {
 func (f *FilterVisitor) VisitPc(elem *PCElement) {
 	info, err := f.filter.FindInfoForAddress(elem.vaddr)
 	if err != nil {
-		log.Printf("warning: %v", err)
+		log.Printf("warning on line %d: %v", f.lineno, err)
 	}
 	elem.info = info
 }
@@ -180,6 +182,7 @@ func (f *FilterVisitor) VisitText(_ *Text) {
 }
 
 func (f *FilterVisitor) VisitReset(elem *ResetElement) {
+	// TODO: Check if Reset had an effect and output that a pid reuse occured.
 	f.filter.Reset()
 }
 

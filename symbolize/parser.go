@@ -186,6 +186,8 @@ func ParseLogLine(b *ParserState) (InputLine, error) {
 
 func StartParsing(ctx context.Context, reader io.Reader) <-chan InputLine {
 	out := make(chan InputLine)
+	// This is not used for demuxing. It is a human readable line number.
+	var lineno uint64 = 1
 	go func() {
 		defer close(out)
 		scanner := bufio.NewScanner(reader)
@@ -203,14 +205,17 @@ func StartParsing(ctx context.Context, reader io.Reader) <-chan InputLine {
 				var line InputLine
 				line.source = dummySource{}
 				line.msg = dummyText
+				// Use the same lineno for both lines as it is for debugging from the original.
+				line.lineno = lineno
 				out <- line
 			}
 			// Now attempt to parse the log line
 			line, err := ParseLogLine(b)
+			line.lineno = lineno
+			lineno++
 			// If we error out send this line whole to the dummy process
 			if err != nil {
 				// Some partial bit of this might have parsed so just modify it.
-				line.source = dummySource{}
 				line.msg = string(*b)
 			}
 			out <- line

@@ -78,7 +78,7 @@ func ExampleBasic() {
 	filter.AddSegment(Segment{2, 0x23456000, 539776, "rx", 0x80000})
 	line := ParseLine("\033[1m Error at {{{pc:0x123879c0}}}")
 	// print out a more precise form
-	line.Accept(&FilterVisitor{filter})
+	line.Accept(&FilterVisitor{filter, 1})
 	json, err := GetLineJson(line)
 	if err != nil {
 		fmt.Printf("json did not parse correctly: %v", err)
@@ -159,7 +159,7 @@ func TestBacktrace(t *testing.T) {
 	// add some context
 	filter.AddModule(Module{"libc.so", "be4c4336e20b734db97a58e0f083d0644461317c", 1})
 	filter.AddSegment(Segment{1, 0x12345000, 849596, "rx", 0x0})
-	line.Accept(&FilterVisitor{filter})
+	line.Accept(&FilterVisitor{filter, 1})
 
 	json, err := GetLineJson(line)
 	if err != nil {
@@ -240,7 +240,7 @@ func TestReset(t *testing.T) {
 	}
 
 	// now forget the context
-	line.Accept(&FilterVisitor{filter})
+	line.Accept(&FilterVisitor{filter, 1})
 
 	if _, err := filter.FindInfoForAddress(addr); err == nil {
 		t.Error("expected non-nil error but got", err)
