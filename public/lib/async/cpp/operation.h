@@ -276,6 +276,12 @@ class Operation : public OperationBase {
       : OperationBase(trace_name, container, trace_info),
         result_call_(std::move(result_call)) {}
 
+  Operation(const char* const trace_name,
+            ResultCall result_call,
+            const std::string& trace_info = "")
+      : OperationBase(trace_name, nullptr, trace_info),
+        result_call_(std::move(result_call)) {}
+
   // Derived classes call this when they are prepared to be removed from the
   // container. Must be the last thing this instance does, as it results in
   // destructor invocation.
