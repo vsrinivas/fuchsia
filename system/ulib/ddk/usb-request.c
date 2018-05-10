@@ -174,3 +174,14 @@ usb_request_t* usb_request_pool_get(usb_request_pool_t* pool, size_t length) {
 
     return found ? req : NULL;
 }
+
+void usb_request_pool_release(usb_request_pool_t* pool) {
+    mtx_lock(&pool->lock);
+
+    usb_request_t* req;
+    while ((req = list_remove_tail_type(&pool->free_reqs, usb_request_t, node)) != NULL) {
+        usb_request_release(req);
+    }
+
+    mtx_unlock(&pool->lock);
+}

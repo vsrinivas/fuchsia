@@ -170,4 +170,7 @@ void usb_request_pool_add(usb_request_pool_t* pool, usb_request_t* req);
 // The request is not re-initialized in any way and should be set accordingly by the user.
 usb_request_t* usb_request_pool_get(usb_request_pool_t* pool, size_t length);
 
+// releases all usb requests stored in the pool.
+void usb_request_pool_release(usb_request_pool_t* pool);
+
 __END_CDECLS;
