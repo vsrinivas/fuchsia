@@ -31,8 +31,8 @@ PageClient::Conflict ToConflict(const ledger::DiffEntry* entry) {
     conflict.has_left = true;
     std::string value;
     if (!fsl::StringFromVmo(*entry->left->value, &value)) {
-      FXL_LOG(ERROR) << "Unable to read vmo for left entry of " << to_hex_string(conflict.key)
-                     << ".";
+      FXL_LOG(ERROR) << "Unable to read vmo for left entry of "
+                     << to_hex_string(conflict.key) << ".";
       return conflict;
     }
     conflict.left = std::move(value);
@@ -43,8 +43,8 @@ PageClient::Conflict ToConflict(const ledger::DiffEntry* entry) {
     conflict.has_right = true;
     std::string value;
     if (!fsl::StringFromVmo(*entry->right->value, &value)) {
-      FXL_LOG(ERROR) << "Unable to read vmo for right entry of " << to_hex_string(conflict.key)
-                     << ".";
+      FXL_LOG(ERROR) << "Unable to read vmo for right entry of "
+                     << to_hex_string(conflict.key) << ".";
       return conflict;
     }
     conflict.right = std::move(value);
@@ -58,10 +58,11 @@ void GetDiffRecursive(ledger::MergeResultProvider* const result,
                       std::map<std::string, PageClient::Conflict>* conflicts,
                       LedgerToken token,
                       std::function<void(ledger::Status)> callback) {
-  auto cont = fxl::MakeCopyable(
-      [result, conflicts, callback = std::move(callback)](
-          ledger::Status status, fidl::VectorPtr<ledger::DiffEntry> change_delta,
-          LedgerToken token) mutable {
+  auto cont =
+      fxl::MakeCopyable([result, conflicts, callback = std::move(callback)](
+                            ledger::Status status,
+                            fidl::VectorPtr<ledger::DiffEntry> change_delta,
+                            LedgerToken token) mutable {
         if (status != ledger::Status::OK &&
             status != ledger::Status::PARTIAL_RESULT) {
           callback(status);
@@ -69,8 +70,7 @@ void GetDiffRecursive(ledger::MergeResultProvider* const result,
         }
 
         for (auto& diff_entry : *change_delta) {
-          (*conflicts)[to_string(diff_entry.key)] =
-              ToConflict(&diff_entry);
+          (*conflicts)[to_string(diff_entry.key)] = ToConflict(&diff_entry);
         }
 
         if (status == ledger::Status::OK) {
@@ -107,22 +107,19 @@ bool HasPrefix(const std::string& value, const std::string& prefix) {
 
 }  // namespace
 
-class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
+class LedgerClient::ConflictResolverImpl::ResolveCall : public Operation<> {
  public:
-  ResolveCall(OperationContainer* const container,
-              ConflictResolverImpl* const impl,
+  ResolveCall(ConflictResolverImpl* const impl,
               ledger::MergeResultProviderPtr result_provider,
               ledger::PageSnapshotPtr left_version,
               ledger::PageSnapshotPtr right_version,
               ledger::PageSnapshotPtr common_version)
-      : Operation("LedgerClient::ResolveCall", container, [] {}),
+      : Operation("LedgerClient::ResolveCall", [] {}),
         impl_(impl),
         result_provider_(std::move(result_provider)),
         left_version_(std::move(left_version)),
         right_version_(std::move(right_version)),
-        common_version_(std::move(common_version)) {
-    Ready();
-  }
+        common_version_(std::move(common_version)) {}
 
  private:
   void Run() override {
@@ -148,9 +145,10 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
         right_version_.get(), &right_entries_,
         [this, flow](ledger::Status) { LogEntries("right", right_entries_); });
 
-    GetEntries(
-        common_version_.get(), &common_entries_,
-        [this, flow](ledger::Status) { LogEntries("common", common_entries_); });
+    GetEntries(common_version_.get(), &common_entries_,
+               [this, flow](ledger::Status) {
+                 LogEntries("common", common_entries_);
+               });
   }
 
   void Cont(FlowToken flow) {
@@ -269,9 +267,9 @@ LedgerClient::LedgerClient(ledger::LedgerPtr ledger)
       });
 }
 
-LedgerClient::LedgerClient(ledger_internal::LedgerRepository* const ledger_repository,
-                           const std::string& name,
-                           std::function<void()> error)
+LedgerClient::LedgerClient(
+    ledger_internal::LedgerRepository* const ledger_repository,
+    const std::string& name, std::function<void()> error)
     : ledger_name_(name) {
   ledger_repository->Duplicate(
       ledger_repository_.NewRequest(), [error](ledger::Status status) {
@@ -304,8 +302,9 @@ LedgerClient::LedgerClient(ledger_internal::LedgerRepository* const ledger_repos
       });
 }
 
-LedgerClient::LedgerClient(ledger_internal::LedgerRepository* const ledger_repository,
-                           const std::string& name)
+LedgerClient::LedgerClient(
+    ledger_internal::LedgerRepository* const ledger_repository,
+    const std::string& name)
     : ledger_name_(name) {
   ledger_repository->Duplicate(
       ledger_repository_.NewRequest(), [](ledger::Status status) {
@@ -353,14 +352,16 @@ ledger::Page* LedgerClient::GetPage(PageClient* const page_client,
   }
 
   ledger::PagePtr page;
-  ledger::PageIdPtr page_id_copy = ledger::PageId::New();;
+  ledger::PageIdPtr page_id_copy = ledger::PageId::New();
+  ;
   page_id_copy->id = page_id.id;
-  ledger_->GetPage(
-      std::move(page_id_copy), page.NewRequest(), [context](ledger::Status status) {
-        if (status != ledger::Status::OK) {
-          FXL_LOG(ERROR) << "Ledger.GetPage() " << context << " " << status;
-        }
-      });
+  ledger_->GetPage(std::move(page_id_copy), page.NewRequest(),
+                   [context](ledger::Status status) {
+                     if (status != ledger::Status::OK) {
+                       FXL_LOG(ERROR)
+                           << "Ledger.GetPage() " << context << " " << status;
+                     }
+                   });
 
   auto entry = std::make_unique<PageEntry>();
   entry->page_id = CloneStruct(page_id);
@@ -399,8 +400,7 @@ void LedgerClient::DropPageClient(PageClient* const page_client) {
   }
 }
 
-void LedgerClient::GetPolicy(LedgerPageId page_id,
-                             GetPolicyCallback callback) {
+void LedgerClient::GetPolicy(LedgerPageId page_id, GetPolicyCallback callback) {
   auto i = std::find_if(pages_.begin(), pages_.end(), [&page_id](auto& entry) {
     return PageIdsEqual(entry->page_id, page_id);
   });
@@ -436,9 +436,10 @@ void LedgerClient::NewConflictResolver(
 }
 
 void LedgerClient::ClearConflictResolver(const LedgerPageId& page_id) {
-  auto i = std::remove_if(
-      resolvers_.begin(), resolvers_.end(),
-      [&page_id](auto& item) { return PageIdsEqual(item->page_id(), page_id); });
+  auto i = std::remove_if(resolvers_.begin(), resolvers_.end(),
+                          [&page_id](auto& item) {
+                            return PageIdsEqual(item->page_id(), page_id);
+                          });
 
   if (i != resolvers_.end()) {
     resolvers_.erase(i, resolvers_.end());
@@ -446,8 +447,7 @@ void LedgerClient::ClearConflictResolver(const LedgerPageId& page_id) {
 }
 
 LedgerClient::ConflictResolverImpl::ConflictResolverImpl(
-    LedgerClient* const ledger_client,
-    const LedgerPageId& page_id)
+    LedgerClient* const ledger_client, const LedgerPageId& page_id)
     : ledger_client_(ledger_client), page_id_(CloneStruct(page_id)) {}
 
 LedgerClient::ConflictResolverImpl::~ConflictResolverImpl() = default;
@@ -462,9 +462,9 @@ void LedgerClient::ConflictResolverImpl::Resolve(
     fidl::InterfaceHandle<ledger::PageSnapshot> right_version,
     fidl::InterfaceHandle<ledger::PageSnapshot> common_version,
     fidl::InterfaceHandle<ledger::MergeResultProvider> result_provider) {
-  new ResolveCall(&operation_queue_, this, result_provider.Bind(),
-                  left_version.Bind(), right_version.Bind(),
-                  common_version.Bind());
+  operation_queue_.Add(
+      new ResolveCall(this, result_provider.Bind(), left_version.Bind(),
+                      right_version.Bind(), common_version.Bind()));
 }
 
 void LedgerClient::ConflictResolverImpl::GetPageClients(
