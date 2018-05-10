@@ -2,7 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("dev_token_manager") {
+import("//build/package.gni")
+
+package("dev_token_manager") {
+  deps = [
+    ":dev_token_manager_bin",
+  ]
+
+  binary = "dev_token_manager"
+}
+
+executable("dev_token_manager_bin") {
+  output_name = "dev_token_manager"
+
   sources = [
     "dev_token_manager.cc",
   ]

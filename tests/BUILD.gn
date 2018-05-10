@@ -48,7 +48,6 @@ package("modular_tests") {
     "clipboard",
     "component_context",
     "context_link",
-    "dev_token_manager",
     "embed_shell",
     "last_focus_time",
     "link_context_entities",
@@ -62,12 +61,6 @@ package("modular_tests") {
     "suggestion",
     "trigger",
     "user_shell",
-  ]
-
-  binaries = [
-    {
-      name = "dev_token_manager"
-    },
   ]
 
   tests = [

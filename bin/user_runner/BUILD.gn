@@ -19,17 +19,11 @@ package("user_runner") {
 }
 
 package("dev_user_shell") {
-  deprecated_system_image = true
-
   deps = [
     ":dev_user_shell_bin",
   ]
 
-  binaries = [
-    {
-      name = "dev_user_shell"
-    },
-  ]
+  binary = "dev_user_shell"
 }
 
 executable("user_runner_bin") {

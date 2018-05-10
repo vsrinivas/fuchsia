@@ -5,17 +5,11 @@
 import("//build/package.gni")
 
 package("dev_story_shell") {
-  deprecated_system_image = true
-
   deps = [
     ":dev_story_shell_bin",
   ]
 
-  binaries = [
-    {
-      name = "dev_story_shell"
-    },
-  ]
+  binary = "dev_story_shell"
 }
 
 source_set("story_runner") {
