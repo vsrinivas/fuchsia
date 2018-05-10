@@ -10,7 +10,7 @@
 #include <list>
 #include <vector>
 
-#include <fuchsia/cpp/trace_link.h>
+#include <fuchsia/cpp/tracelink.h>
 #include <lib/zx/socket.h>
 #include <lib/zx/vmo.h>
 
@@ -40,8 +40,7 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   // unrecoverable errors that render the session dead.
   explicit TraceSession(zx::socket destination,
                         fidl::VectorPtr<fidl::StringPtr> categories,
-                        size_t trace_buffer_size,
-                        fxl::Closure abort_handler);
+                        size_t trace_buffer_size, fxl::Closure abort_handler);
   // Frees all allocated resources and closes the outgoing
   // connection.
   ~TraceSession();

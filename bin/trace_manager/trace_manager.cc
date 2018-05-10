@@ -32,8 +32,7 @@ TraceManager::TraceManager(component::ApplicationContext* context,
 
 TraceManager::~TraceManager() = default;
 
-void TraceManager::StartTracing(TraceOptions options,
-                                zx::socket output,
+void TraceManager::StartTracing(TraceOptions options, zx::socket output,
                                 StartTracingCallback start_callback) {
   if (session_) {
     FXL_LOG(ERROR) << "Trace already in progress";
@@ -60,8 +59,7 @@ void TraceManager::StartTracing(TraceOptions options,
 }
 
 void TraceManager::StopTracing() {
-  if (!session_)
-    return;
+  if (!session_) return;
 
   FXL_LOG(INFO) << "Stopping trace";
   session_->Stop(
@@ -81,24 +79,21 @@ void TraceManager::GetKnownCategories(GetKnownCategoriesCallback callback) {
 }
 
 void TraceManager::RegisterTraceProvider(
-    fidl::InterfaceHandle<trace_link::Provider> handle) {
+    fidl::InterfaceHandle<tracelink::Provider> handle) {
   auto it = providers_.emplace(
       providers_.end(),
       TraceProviderBundle{handle.Bind(), next_provider_id_++});
 
   it->provider.set_error_handler([this, it]() {
-    if (session_)
-      session_->RemoveDeadProvider(&(*it));
+    if (session_) session_->RemoveDeadProvider(&(*it));
     providers_.erase(it);
   });
 
-  if (session_)
-    session_->AddProvider(&(*it));
+  if (session_) session_->AddProvider(&(*it));
 }
 
 void TraceManager::LaunchConfiguredProviders() {
-  if (config_.providers().empty())
-    return;
+  if (config_.providers().empty()) return;
 
   if (!context_->launcher()) {
     FXL_LOG(ERROR)

@@ -11,8 +11,8 @@ namespace tracing {
 TraceManagerApp::TraceManagerApp(const Config& config)
     : context_(component::ApplicationContext::CreateFromStartupInfo()),
       trace_manager_(context_.get(), config) {
-  context_->outgoing().AddPublicService<trace_link::Registry>(
-      [this](fidl::InterfaceRequest<trace_link::Registry> request) {
+  context_->outgoing().AddPublicService<tracelink::Registry>(
+      [this](fidl::InterfaceRequest<tracelink::Registry> request) {
         trace_registry_bindings_.AddBinding(&trace_manager_,
                                             std::move(request));
       });

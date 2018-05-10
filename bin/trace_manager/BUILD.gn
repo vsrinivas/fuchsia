@@ -24,7 +24,7 @@ executable("bin") {
     "tracee.h",
   ]
   deps = [
-    ":trace_link_fidl",
+    ":tracelink_fidl",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -35,17 +35,17 @@ executable("bin") {
 }
 
 # This eventually should be replaced by the real target under //zircon/public.
-fidl("trace_link_fidl") {
-  name = "trace_link"
+fidl("tracelink_fidl") {
+  name = "tracelink"
   sources = [
-    "//zircon/system/fidl/tracing/trace_link.fidl",
+    "//zircon/system/fidl/tracelink/tracelink.fidl",
   ]
 }
 
 package("trace_manager") {
   deps = [
     ":bin",
-    ":trace_link_fidl",
+    ":tracelink_fidl",
   ]
 
   binary = "trace_manager"

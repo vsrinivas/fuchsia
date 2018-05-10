@@ -9,12 +9,12 @@
 
 #include <iosfwd>
 
-#include <fuchsia/cpp/trace_link.h>
+#include <fuchsia/cpp/tracelink.h>
 
 namespace tracing {
 
 struct TraceProviderBundle {
-  trace_link::ProviderPtr provider;
+  tracelink::ProviderPtr provider;
   uint32_t id;
 };
 
