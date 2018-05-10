@@ -81,6 +81,10 @@ endif
 _MODULE_DEPS := $(MODULE_DEPS) $(MODULE_LIBS) $(MODULE_STATIC_LIBS) \
                 $(MODULE_HOST_LIBS) $(MODULE_FIDL_LIBS)
 
+ifneq ($(MODULE_FIDL_LIBS),)
+MODULE_STATIC_LIBS += $(MODULE_FIDL_LIBS)
+endif
+
 # Catch the depends on nonexistant module error case
 # here where we can tell you what module has the bad deps.
 # Strip any .postfixes, as these refer to "sub-modules" defined in the

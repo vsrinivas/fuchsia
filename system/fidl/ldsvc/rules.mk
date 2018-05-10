@@ -12,6 +12,6 @@ MODULE_PACKAGE := fidl
 
 MODULE_FIDL_LIBRARY := fuchsia.ldsvc
 
-MODULE_SRCS += $(LOCAL_DIR)/loader.fidl
+MODULE_SRCS += $(LOCAL_DIR)/ldsvc.fidl
 
 include make/module.mk

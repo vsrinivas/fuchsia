@@ -5,8 +5,19 @@
 # https://opensource.org/licenses/MIT
 
 ifneq ($(MODULE_DEPS)$(MODULE_HOST_LIBS)$(MODULE_HOST_SYSLIBS),)
-$(error $(MODULE) $(MODULE_TYPE) fidl modules must use MODULE_FIDL_DEPS
+$(error $(MODULE) $(MODULE_TYPE) fidl modules must use MODULE_FIDL_DEPS)
 endif
+
+# build static library
+$(MODULE_LIBNAME).a: $(MODULE_FIDL_OBJ)
+	@$(MKDIR)
+	$(call BUILDECHO,linking $@)
+	@rm -f -- "$@"
+	$(call BUILDCMD,$(AR),cr $@ $^)
+
+# always build all libraries
+EXTRA_BUILDDEPS += $(MODULE_LIBNAME).a
+GENERATED += $(MODULE_LIBNAME).a
 
 MODULE_RULESMK := $(MODULE_SRCDIR)/rules.mk
 
