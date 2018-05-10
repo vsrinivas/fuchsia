@@ -75,6 +75,10 @@ int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
 
   uint8_t* buffer = static_cast<uint8_t*>(
       allocator_to_use->AllocatePayloadBuffer(buffer_size));
+  if (!buffer) {
+    // TODO(dalesat): Renderer VMO is full. What can we do about this?
+    FXL_LOG(FATAL) << "Ran out of memory for decoded audio.";
+  }
 
   if (!av_sample_fmt_is_planar(av_sample_format)) {
     // Samples are interleaved. There's just one buffer.
@@ -145,6 +149,10 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(
     uint64_t payload_size =
         stream_type_->audio()->min_buffer_size(av_frame.nb_samples);
     void* payload_buffer = allocator->AllocatePayloadBuffer(payload_size);
+    if (!payload_buffer) {
+      // TODO(dalesat): Renderer VMO is full. What can we do about this?
+      FXL_LOG(FATAL) << "Ran out of memory for decoded, interleaved audio.";
+    }
 
     lpcm_util_->Interleave(av_frame.buf[0]->data, av_frame.buf[0]->size,
                            payload_buffer, av_frame.nb_samples);
@@ -162,8 +170,6 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(
   }
 }
 
-const char* FfmpegAudioDecoder::label() const {
-  return "audio decoder";
-}
+const char* FfmpegAudioDecoder::label() const { return "audio decoder"; }
 
 }  // namespace media_player
