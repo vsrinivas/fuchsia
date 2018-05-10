@@ -20,14 +20,14 @@ void print_hostent(struct hostent* h) {
   for (int i = 0; h->h_addr_list[i] != NULL; i++) {
     char buf[INET6_ADDRSTRLEN];
     switch (h->h_length) {
-    case 4:
-      printf("h_addr_list[%d]: %s\n",
-             i, inet_ntop(AF_INET, h->h_addr_list[i], buf, sizeof(buf)));
-      break;
-    case 16:
-      printf("h_addr_list[%d]: %s\n",
-             i, inet_ntop(AF_INET6, h->h_addr_list[i], buf, sizeof(buf)));
-      break;
+      case 4:
+        printf("h_addr_list[%d]: %s\n", i,
+               inet_ntop(AF_INET, h->h_addr_list[i], buf, sizeof(buf)));
+        break;
+      case 16:
+        printf("h_addr_list[%d]: %s\n", i,
+               inet_ntop(AF_INET6, h->h_addr_list[i], buf, sizeof(buf)));
+        break;
     }
   }
 }
@@ -35,34 +35,34 @@ void print_hostent(struct hostent* h) {
 void call_gethostbyname(char* name, int af, size_t buflen) {
   char* buf = malloc(buflen);
 
-  struct hostent *res;
+  struct hostent* res;
   int h_err;
   struct hostent h;
 
   int r = gethostbyname2_r(name, af, &h, buf, buflen, &res, &h_err);
   if (r != 0) {
     switch (r) {
-    case ERANGE:
-      printf("Buffer is too small (%zd bytes) to store the result\n", buflen);
-      break;
-    default:
-      printf("Unknown return val: %d\n", r);
-      break;
+      case ERANGE:
+        printf("Buffer is too small (%zd bytes) to store the result\n", buflen);
+        break;
+      default:
+        printf("Unknown return val: %d\n", r);
+        break;
     }
   } else if (res == NULL) {
     switch (h_err) {
-    case HOST_NOT_FOUND:
-      printf("Host Not Found\n");
-      break;
-    case NO_RECOVERY:
-      printf("No Recovery\n");
-      break;
-    case TRY_AGAIN:
-      printf("Try Again\n");
-      break;
-    default:
-      printf("h_err: %d\n", h_err);
-      break;
+      case HOST_NOT_FOUND:
+        printf("Host Not Found\n");
+        break;
+      case NO_RECOVERY:
+        printf("No Recovery\n");
+        break;
+      case TRY_AGAIN:
+        printf("Try Again\n");
+        break;
+      default:
+        printf("h_err: %d\n", h_err);
+        break;
     }
   } else {
     print_hostent(res);

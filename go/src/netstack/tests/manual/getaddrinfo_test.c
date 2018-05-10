@@ -32,15 +32,15 @@ void print_ai(struct addrinfo* ai) {
 
 int getaddrinfo_test(const char* address, int family) {
   switch (family) {
-  case AF_UNSPEC:
-    printf("looking up %s ...\n", address);
-    break;
-  case AF_INET:
-    printf("looking up %s for v4 (family %d)...\n", address, family);
-    break;
-  case AF_INET6:
-    printf("looking up %s for v6 (family %d)...\n", address, family);
-    break;
+    case AF_UNSPEC:
+      printf("looking up %s ...\n", address);
+      break;
+    case AF_INET:
+      printf("looking up %s for v4 (family %d)...\n", address, family);
+      break;
+    case AF_INET6:
+      printf("looking up %s for v6 (family %d)...\n", address, family);
+      break;
   }
 
   struct addrinfo hints;
@@ -67,9 +67,7 @@ int getaddrinfo_test(const char* address, int family) {
   return 0;
 }
 
-void usage() {
-  printf("usage: getaddrinfo_test address [4 or 6]\n");
-}
+void usage() { printf("usage: getaddrinfo_test address [4 or 6]\n"); }
 
 int main(int argc, char** argv) {
   if (argc != 2 && argc != 3) {

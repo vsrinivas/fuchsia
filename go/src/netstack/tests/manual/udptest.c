@@ -134,8 +134,7 @@ int server(const char* service) {
     char buf[128];
     int nrecv;
     socklen_t addrlen = sizeof(addr);
-    nrecv =
-        recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr*)&addr, &addrlen);
+    nrecv = recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr*)&addr, &addrlen);
     if (nrecv < 0) {
       printf("recvfrom failed (%d) (errno = %d)\n", nrecv, errno);
       close(s);

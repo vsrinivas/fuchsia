@@ -26,8 +26,7 @@ const char* sa_to_str(const struct sockaddr* sa, char* str, size_t strlen) {
   }
 }
 
-int client(const char* if_address,
-           const char* mc_address,
+int client(const char* if_address, const char* mc_address,
            const char* service) {
   unsigned short port = atoi(service);
 
@@ -67,8 +66,7 @@ int client(const char* if_address,
   char message[1024];
   memset(message, 0, sizeof(message));
   while (fgets(message, sizeof(message), stdin)) {
-    if (message[0] == '\n')
-      break;
+    if (message[0] == '\n') break;
 
     int nsendto;
     nsendto = sendto(s, message, strlen(message), 0, (struct sockaddr*)&addr,
@@ -84,8 +82,7 @@ int client(const char* if_address,
   return 0;
 }
 
-int server(const char* if_address,
-           const char* mc_address,
+int server(const char* if_address, const char* mc_address,
            const char* service) {
   unsigned short port = atoi(service);
 
@@ -127,7 +124,9 @@ int server(const char* if_address,
 
   if (setsockopt(s, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mc_req, sizeof(mc_req)) ==
       0) {
-    printf("setsockopt: duplicate IP_ADD_MEMBERSHIP succeeded when it should have failed\n");
+    printf(
+        "setsockopt: duplicate IP_ADD_MEMBERSHIP succeeded when it should have "
+        "failed\n");
   }
 
 #define NTIMES 4
@@ -158,7 +157,9 @@ int server(const char* if_address,
 
   if (setsockopt(s, IPPROTO_IP, IP_DROP_MEMBERSHIP, &mc_req, sizeof(mc_req)) ==
       0) {
-    printf("setsockopt: duplicate IP_DROP_MEMBERSHIP succeeded when it should have failed\n");
+    printf(
+        "setsockopt: duplicate IP_DROP_MEMBERSHIP succeeded when it should "
+        "have failed\n");
   }
   close(s);
 

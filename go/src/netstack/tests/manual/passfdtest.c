@@ -6,8 +6,6 @@
 #include <ctype.h>
 #include <errno.h>
 #include <launchpad/launchpad.h>
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <stdio.h>
@@ -16,11 +14,12 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
 
 #undef CAN_CLONE_SOCKETS
 
-static const char* sa_to_str(const struct sockaddr* sa,
-                             char* str,
+static const char* sa_to_str(const struct sockaddr* sa, char* str,
                              size_t strlen) {
   if (sa->sa_family == AF_INET) {
     struct sockaddr_in* sin = (struct sockaddr_in*)sa;
@@ -102,7 +101,6 @@ static int server(const char* service) {
   zx_object_wait_one(proc, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, &observed);
 
   printf("child exited.\n");
-
 
   close(s);
 

@@ -21,11 +21,10 @@
 // SO_DONTROUTE: default = off... setsockopt success = on
 // SO_ERROR: default = 0... setsockopt error (92)
 // SO_KEEPALIVE: default = off... setsockopt success = on
-// SO_LINGER: default = l_onoff:0, l_linger:0... setsockopt success = l_onoff:0, l_linger:0
-// SO_OOBINLINE: default = off... setsockopt success = on
-// SO_RCVBUF: default = 87380... setsockopt unchanged
-// SO_SNDBUF: default = 16384... setsockopt unchanged
-// SO_RCVLOWAT: default = 1... setsockopt success = 43
+// SO_LINGER: default = l_onoff:0, l_linger:0... setsockopt success = l_onoff:0,
+// l_linger:0 SO_OOBINLINE: default = off... setsockopt success = on SO_RCVBUF:
+// default = 87380... setsockopt unchanged SO_SNDBUF: default = 16384...
+// setsockopt unchanged SO_RCVLOWAT: default = 1... setsockopt success = 43
 // SO_SNDLOWAT: default = 1... setsockopt error (92)
 // SO_RCVTIMEO: default = 0s 0usec... setsockopt success = 0s 0usec
 // SO_SNDTIMEO: default = 0s 0usec... setsockopt success = 0s 0usec
@@ -84,8 +83,8 @@ static char* sock_str_linger(union val* ptr, int len) {
     snprintf(strres, sizeof(strres), "size (%d) not sizeof(struct linger)",
              len);
   else
-    snprintf(strres, sizeof(strres), "l_onoff:%d, l_linger:%d",
-             lptr->l_onoff, lptr->l_linger);
+    snprintf(strres, sizeof(strres), "l_onoff:%d, l_linger:%d", lptr->l_onoff,
+             lptr->l_linger);
   return (strres);
 }
 
@@ -140,17 +139,18 @@ struct sock_opts {
     {"TCP_WINDOW_CLAMP", IPPROTO_TCP, TCP_WINDOW_CLAMP, sock_str_int},
     {"TCP_INFO", IPPROTO_TCP, TCP_INFO, sock_str_int},
     {"TCP_QUICKACK", IPPROTO_TCP, TCP_QUICKACK, sock_str_flag},
-    {NULL, 0, 0, NULL}
-};
+    {NULL, 0, 0, NULL}};
 
-int test_setsockopt(int fd, struct sock_opts* ptr, union val *valp, socklen_t len) {
+int test_setsockopt(int fd, struct sock_opts* ptr, union val* valp,
+                    socklen_t len) {
   if (setsockopt(fd, ptr->opt_level, ptr->opt_name, valp, len) == -1) {
     printf("setsockopt error (%d)", errno);
   } else {
     union val new_val;
     new_val.i_val = 0xdeadbeef;
     socklen_t new_len = sizeof(new_val);
-    if (getsockopt(fd, ptr->opt_level, ptr->opt_name, &new_val, &new_len) == -1) {
+    if (getsockopt(fd, ptr->opt_level, ptr->opt_name, &new_val, &new_len) ==
+        -1) {
       printf("getsockopt error (%d)", errno);
     } else if (new_val.i_val == (int)0xdeadbeef) {
       printf("setsockopt unchanged");
@@ -176,8 +176,7 @@ int main(int argc, char** argv) {
   for (ptr = sock_opts_table; ptr->opt_str != NULL; ptr++) {
     int fd = -1;
     int sock_type = SOCK_STREAM;
-    if (ptr->opt_name == IP_MULTICAST_TTL)
-      sock_type = SOCK_DGRAM;
+    if (ptr->opt_name == IP_MULTICAST_TTL) sock_type = SOCK_DGRAM;
     switch (ptr->opt_level) {
       case SOL_SOCKET:
       case IPPROTO_IP:
@@ -213,7 +212,7 @@ int main(int argc, char** argv) {
         // Change the option back to the initial value.
         test_setsockopt(fd, ptr, &ini_val, len);
       }
-      printf ("\n");
+      printf("\n");
     }
   }
 

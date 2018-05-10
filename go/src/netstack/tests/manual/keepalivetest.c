@@ -5,8 +5,9 @@
 // Tests TCP keepalives. Use as follows:
 // host: run `nc -l 1234`
 // test: run `keepalivetest HOST 1234`
-// host: run `ifconfig eth0 down` (where eth0) is the interface to the test client
-// test should close the socket after 4 failed keepalives (10 + 3*5 seconds).
+// host: run `ifconfig eth0 down` (where eth0) is the interface to the test
+// client test should close the socket after 4 failed keepalives (10 + 3*5
+// seconds).
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -44,8 +45,7 @@ int client(const char* address, const char* service) {
       printf("socket failed (errno = %d)\n", errno);
       continue;
     }
-    if (connect(s, rp->ai_addr, rp->ai_addrlen) != -1)
-      break;
+    if (connect(s, rp->ai_addr, rp->ai_addrlen) != -1) break;
     printf("connect failed (errno = %d)\n", errno);
     close(s);
   }
@@ -55,49 +55,47 @@ int client(const char* address, const char* service) {
   }
   freeaddrinfo(result);
 
-   int optval = 1;
-   if (setsockopt(s, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0) {
-     printf("setsockopt failed: %d\n", errno);
-     close(s);
-     return -1;
-   }
-   optval = 10;
-   if (setsockopt(s, SOL_TCP, TCP_KEEPIDLE, &optval, sizeof(optval)) < 0) {
-     printf("setsockopt failed: %d\n", errno);
-     close(s);
-     return -1;
-   }
-   optval = 5;
-   if (setsockopt(s, SOL_TCP, TCP_KEEPINTVL, &optval, sizeof(optval)) < 0) {
-     printf("setsockopt failed: %d\n", errno);
-     close(s);
-     return -1;
-   }
-   optval = 4;
-   if (setsockopt(s, SOL_TCP, TCP_KEEPCNT, &optval, sizeof(optval)) < 0) {
-     printf("setsockopt failed: %d\n", errno);
-     close(s);
-     return -1;
-   }
+  int optval = 1;
+  if (setsockopt(s, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0) {
+    printf("setsockopt failed: %d\n", errno);
+    close(s);
+    return -1;
+  }
+  optval = 10;
+  if (setsockopt(s, SOL_TCP, TCP_KEEPIDLE, &optval, sizeof(optval)) < 0) {
+    printf("setsockopt failed: %d\n", errno);
+    close(s);
+    return -1;
+  }
+  optval = 5;
+  if (setsockopt(s, SOL_TCP, TCP_KEEPINTVL, &optval, sizeof(optval)) < 0) {
+    printf("setsockopt failed: %d\n", errno);
+    close(s);
+    return -1;
+  }
+  optval = 4;
+  if (setsockopt(s, SOL_TCP, TCP_KEEPCNT, &optval, sizeof(optval)) < 0) {
+    printf("setsockopt failed: %d\n", errno);
+    close(s);
+    return -1;
+  }
 
-   for (;;) {
-     char buf[4096];
-     int nread = read(s, buf, sizeof(buf));
-     if (nread < 0) {
-       printf("read failed: %d (errno = %d)\n", nread, errno);
-       close(s);
-       break;
-     }
-     printf("read: %s\n", buf);
+  for (;;) {
+    char buf[4096];
+    int nread = read(s, buf, sizeof(buf));
+    if (nread < 0) {
+      printf("read failed: %d (errno = %d)\n", nread, errno);
+      close(s);
+      break;
+    }
+    printf("read: %s\n", buf);
   }
 
   close(s);
   return 0;
 }
 
-void usage(void) {
-  printf("       keepalivetest address port\n");
-}
+void usage(void) { printf("       keepalivetest address port\n"); }
 
 int main(int argc, char** argv) {
   if (argc > 2) return client(argv[1], argv[2]);

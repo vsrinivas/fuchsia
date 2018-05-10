@@ -11,9 +11,9 @@
 #include <poll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <unistd.h>
 #include <string>
 #include <thread>
-#include <unistd.h>
 
 #include <fdio/io.h>
 #include <fdio/private.h>
@@ -26,8 +26,8 @@
 namespace netstack {
 namespace {
 
-const int32_t kTimeout = 10000; // 10 seconds
-const int32_t kRepeatEach = 1; // How many times to repeat each test
+const int32_t kTimeout = 10000;  // 10 seconds
+const int32_t kRepeatEach = 1;   // How many times to repeat each test
 
 // InterThread communication helper
 
@@ -45,7 +45,7 @@ void NotifyFail(int ntfyfd) {
 }
 
 bool WaitSuccess(int ntfyfd, int timeout) {
-  struct pollfd fds = { ntfyfd, POLLIN, 0 };
+  struct pollfd fds = {ntfyfd, POLLIN, 0};
   int nfds = poll(&fds, 1, timeout);
   EXPECT_GE(nfds, 0) << "poll failed: " << errno;
   if (nfds == 1) {
@@ -144,14 +144,14 @@ void NoClose(int fd) {
   EXPECT_GE(status, 0);
   zx_handle_t h;
   zx_signals_t sigs;
-  __fdio_wait_begin(io, 0,  &h, &sigs);
+  __fdio_wait_begin(io, 0, &h, &sigs);
   EXPECT_NE(NULL, h);
   zx_handle_close(h);
   __fdio_release(io);
 }
 
 void BlockingAcceptWriteNoClose() {
-  short port = 0; // will be assigned by the first bind.
+  short port = 0;  // will be assigned by the first bind.
 
   for (int j = 0; j < 2; j++) {
     int acptfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -607,7 +607,7 @@ void GetTcpInfo() {
 
   tcp_info info;
   socklen_t info_len = sizeof(tcp_info);
-  int rv = getsockopt(connfd, SOL_TCP, TCP_INFO, (void *)&info, &info_len);
+  int rv = getsockopt(connfd, SOL_TCP, TCP_INFO, (void*)&info, &info_len);
   ASSERT_GE(rv, 0) << "getsockopt failed: " << errno;
   ASSERT_EQ(sizeof(tcp_info), info_len);
   ASSERT_EQ(0u, info.tcpi_rtt);
@@ -636,7 +636,7 @@ void PollSignal(struct sockaddr_in* addr, short events, short* revents,
     return;
   }
 
-  struct pollfd fds = { connfd, events, 0 };
+  struct pollfd fds = {connfd, events, 0};
 
   int n = poll(&fds, 1, kTimeout);
   EXPECT_GT(n, 0) << "poll failed: " << errno;
@@ -702,10 +702,9 @@ TEST(NetStreamTest, Shutdown) {
 
 // NetDatagramTest.DatagramSendto
 
-void DatagramRead(int recvfd, std::string* out,
-                  struct sockaddr_in* addr, socklen_t *addrlen,
-                  int ntfyfd, int timeout) {
-  struct pollfd fds = { recvfd, POLLIN, 0 };
+void DatagramRead(int recvfd, std::string* out, struct sockaddr_in* addr,
+                  socklen_t* addrlen, int ntfyfd, int timeout) {
+  struct pollfd fds = {recvfd, POLLIN, 0};
   int nfds = poll(&fds, 1, timeout);
   EXPECT_EQ(1, nfds) << "poll returned: " << nfds << " errno: " << errno;
   if (nfds != 1) {
@@ -714,8 +713,8 @@ void DatagramRead(int recvfd, std::string* out,
   }
 
   char buf[4096];
-  int nbytes = recvfrom(recvfd, buf, sizeof(buf), 0, (struct sockaddr*)addr,
-                        addrlen);
+  int nbytes =
+      recvfrom(recvfd, buf, sizeof(buf), 0, (struct sockaddr*)addr, addrlen);
   EXPECT_GT(nbytes, 0) << "recvfrom failed: " << errno;
   if (nbytes < 0) {
     NotifyFail(ntfyfd);
@@ -747,16 +746,16 @@ void DatagramSendto() {
   ASSERT_EQ(0, pipe(ntfyfd));
 
   std::string out;
-  std::thread thrd(DatagramRead, recvfd,
-                   &out, &addr, &addrlen, ntfyfd[1], kTimeout);
+  std::thread thrd(DatagramRead, recvfd, &out, &addr, &addrlen, ntfyfd[1],
+                   kTimeout);
 
   const char* msg = "hello";
 
   int sendfd = socket(AF_INET, SOCK_DGRAM, 0);
   ASSERT_GE(sendfd, 0) << "socket failed: " << errno;
-  ASSERT_EQ((ssize_t)strlen(msg), sendto(sendfd, msg, strlen(msg), 0, (struct sockaddr*)&addr,
-                   addrlen)) << "sendto failed: "
-                                                      << errno;
+  ASSERT_EQ((ssize_t)strlen(msg), sendto(sendfd, msg, strlen(msg), 0,
+                                         (struct sockaddr*)&addr, addrlen))
+      << "sendto failed: " << errno;
   ASSERT_EQ(0, close(sendfd));
 
   ASSERT_EQ(true, WaitSuccess(ntfyfd[0], kTimeout));
@@ -798,8 +797,8 @@ void DatagramConnectWrite() {
   ASSERT_EQ(0, pipe(ntfyfd));
 
   std::string out;
-  std::thread thrd(DatagramRead, recvfd,
-                   &out, &addr, &addrlen, ntfyfd[1], kTimeout);
+  std::thread thrd(DatagramRead, recvfd, &out, &addr, &addrlen, ntfyfd[1],
+                   kTimeout);
 
   const char* msg = "hello";
 

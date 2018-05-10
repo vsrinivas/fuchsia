@@ -90,16 +90,13 @@ int server(const char* service) {
              sa_to_str((struct sockaddr*)&addr, str, sizeof(str)));
 
       FD_SET(conn, &active_readfds);
-      if (nwatch < (conn + 1))
-        nwatch = conn + 1;
+      if (nwatch < (conn + 1)) nwatch = conn + 1;
     }
 
     for (int fd = 0; fd < nwatch; fd++) {
-      if (nready == 0)
-        break;
+      if (nready == 0) break;
 
-      if (fd == s)
-        continue;
+      if (fd == s) continue;
 
       if (FD_ISSET(fd, &readfds)) {
         --nready;
@@ -132,7 +129,7 @@ int server(const char* service) {
       }
     }
   }
- end:
+end:
   for (int i = 0; i < nwatch; i++) {
     if (FD_ISSET(i, &active_readfds)) {
       close(i);
