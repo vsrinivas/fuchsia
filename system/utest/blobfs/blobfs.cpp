@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <assert.h>
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -25,6 +26,8 @@
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
 #include <fvm/fvm.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <memfs/memfs.h>
 #include <zircon/device/device.h>
 #include <zircon/device/ramdisk.h>
 #include <zircon/device/vfs.h>
@@ -33,7 +36,8 @@
 
 #include "blobfs-test.h"
 
-#define MOUNT_PATH "/tmp/zircon-blobfs-test"
+#define TMPFS_PATH "/blobfs-tmp"
+#define MOUNT_PATH "/blobfs-tmp/zircon-blobfs-test"
 
 namespace {
 using digest::Digest;
@@ -1993,8 +1997,6 @@ static void print_test_help(FILE* f) {
 }
 
 int main(int argc, char** argv) {
-    gUseRealDisk = false;
-
     unittest_register_test_help_printer(print_test_help);
 
     int i = 1;
@@ -2040,6 +2042,17 @@ int main(int argc, char** argv) {
             // Ignore options we don't recognize. See ulib/unittest/README.md.
             break;
         }
+    }
+
+    // Initialize tmpfs.
+    async::Loop loop;
+    if (loop.StartThread() != ZX_OK) {
+        fprintf(stderr, "Error: Cannot initialize local tmpfs loop\n");
+        return -1;
+    }
+    if (memfs_install_at(loop.async(), TMPFS_PATH) != ZX_OK) {
+        fprintf(stderr, "Error: Cannot install local tmpfs\n");
+        return -1;
     }
 
     return unittest_run_all_tests(argc, argv) ? 0 : -1;

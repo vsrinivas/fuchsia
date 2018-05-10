@@ -7,15 +7,14 @@
 #include <stdint.h>
 
 namespace {
-enum class FsTestType {
 
+enum class FsTestType {
     // The partition may appear as any generic block device
     kNormal,
 
     // The partition should appear on top of a resizable
     // FVM device
     kFvm,
-
 };
 
 enum class FsTestState {
@@ -75,4 +74,5 @@ private:
     bool read_only_ = false;
     bool asleep_ = false;
 };
+
 }  // namespace
