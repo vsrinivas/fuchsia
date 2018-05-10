@@ -13,7 +13,6 @@ extern crate failure;
 extern crate nom;
 extern crate test;
 
-use byteorder::BigEndian;
 use bytes::{BufMut, Bytes, BytesMut};
 use nom::{be_u16, be_u64, be_u8};
 use std::convert::AsMut;
@@ -126,22 +125,22 @@ impl KeyFrame {
         let mut buf = BytesMut::with_capacity(frame_len);
         buf.put_u8(self.version);
         buf.put_u8(self.packet_type);
-        buf.put_u16::<BigEndian>(self.packet_body_len);
+        buf.put_u16_be(self.packet_body_len);
         buf.put_u8(self.descriptor_type);
-        buf.put_u16::<BigEndian>(self.key_info.value());
-        buf.put_u16::<BigEndian>(self.key_len);
-        buf.put_u64::<BigEndian>(self.key_replay_counter);
+        buf.put_u16_be(self.key_info.value());
+        buf.put_u16_be(self.key_len);
+        buf.put_u64_be(self.key_replay_counter);
         buf.put_slice(&self.key_nonce[..]);
         buf.put_slice(&self.key_iv[..]);
-        buf.put_u64::<BigEndian>(self.key_rsc);
-        buf.put_uint::<BigEndian>(0, 8);
+        buf.put_u64_be(self.key_rsc);
+        buf.put_uint_be(0, 8);
         if clear_mic {
             let zeroes: Vec<u8> = vec![0; self.key_mic.len()];
             buf.put_slice(&zeroes[..]);
         } else {
             buf.put_slice(&self.key_mic[..]);
         }
-        buf.put_u16::<BigEndian>(self.key_data_len);
+        buf.put_u16_be(self.key_data_len);
         buf.put_slice(&self.key_data[..]);
         buf
     }

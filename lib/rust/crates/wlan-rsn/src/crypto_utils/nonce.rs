@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use Result;
-use bytes::{BufMut, BytesMut, LittleEndian};
+use bytes::{BufMut, BytesMut};
 use crypto_utils::prf;
 use num::bigint::{BigUint, RandBigInt};
 use rand::OsRng;
@@ -20,7 +20,7 @@ impl NonceReader {
         // Fuchsia has no support for NTP yet; instead use a regular timestamp.
         // TODO(NET-430): Use time in NTP format once Fuchsia added support.
         let mut buf = BytesMut::with_capacity(14);
-        buf.put_u64::<LittleEndian>(time::precise_time_ns());
+        buf.put_u64_le(time::precise_time_ns());
         buf.put_slice(&sta_addr[..]);
         let k = OsRng::new()?.gen_biguint(256).to_bytes_le();
         let init = prf(&k[..], "Init Counter", &buf[..], 256)?;
