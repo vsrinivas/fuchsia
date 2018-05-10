@@ -121,6 +121,7 @@ where
 {
     DeviceListenerImpl {
         state: Arc::new(state),
+        on_open: |_, _| future::ok(()),
         on_phy_added: |state, id, _| on_phy_added(state, id),
 
         on_phy_removed: |state, id, _| on_phy_removed(state, id),

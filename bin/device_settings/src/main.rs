@@ -116,6 +116,7 @@ fn device_settings_server(state: DeviceSettingsManagerServer, channel: async::Ch
 {
     DeviceSettingsManagerImpl {
         state,
+        on_open: |_,_| fok(()),
         get_integer: |state, key, res| catch_and_log_err("get_integer", || {
             let file = if let Some(f) = state.setting_file_map.get(&key) {
                 f

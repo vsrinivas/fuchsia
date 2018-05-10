@@ -262,6 +262,7 @@ fn spawn_log_manager(state: LogManager, chan: async::Channel) {
     async::spawn(
         LogImpl {
             state,
+            on_open: |_, _| fok(()),
             dump_logs: |state, log_listener, options, _controller| {
                 log_manager_helper(state, log_listener, options, true)
             },
@@ -277,6 +278,7 @@ fn spawn_log_sink(state: LogManager, chan: async::Channel) {
     async::spawn(
         LogSinkImpl {
             state,
+            on_open: |_, _| fok(()),
             connect: |state, socket, _controller| {
                 let ls = match logger::LoggerStream::new(socket) {
                     Err(e) => {
@@ -448,6 +450,7 @@ mod tests {
         async::spawn(
             LogListenerImpl {
                 state: ll,
+                on_open: |_,_| fok(()),
                 done: |ll, _| {
                     ll.closed.store(true, Ordering::Relaxed);
                     fok(())

@@ -271,6 +271,7 @@ fn spawn_power_manager(pm: PowerManagerServer, chan: async::Channel) {
     async::spawn(
         PowerManagerImpl {
             state: pm,
+            on_open: |_, _| fok(()),
             get_battery_status: |pm, c| {
                 fx_log_info!("get_battery_status called");
                 let mut bsh = pm.battery_status_helper.lock();

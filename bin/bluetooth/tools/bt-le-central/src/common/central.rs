@@ -52,6 +52,8 @@ pub fn make_central_delegate(state: CentralStatePtr, channel: async::Channel)
     -> impl Future<Item = (), Error = Never> {
     CentralDelegateImpl {
         state: state,
+        on_open: |_, _| future::ok(()),
+
         on_scan_state_changed: |_, scanning: bool, _| {
             println!("  scan state changed: {}", scanning);
             future::ok(())

@@ -174,6 +174,8 @@ var reservedWords = map[string]bool{
 	"futures": true,
 	"zx":      true,
 	"async":   true,
+	"on_open": true,
+	"OnOpen":  true,
 }
 
 var reservedSuffixes = []string{

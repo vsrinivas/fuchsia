@@ -61,6 +61,7 @@ pub fn run_host_device(
 ) -> impl AdapterDelegate {
     AdapterDelegateImpl {
         state: (hd, adapter),
+        on_open: |_, _| fok(()),
         on_device_discovered: |(hd, adapter), mut remote_device, _res| {
             if let Some(ref delegate) = hd.write().remote_device_delegate {
                 delegate

@@ -21,6 +21,7 @@ pub fn make_control_service(
 ) -> impl Future<Item = (), Error = Never> {
     ControlImpl {
         state: hd,
+        on_open: |_, _| future::ok(()),
         connect: |_, _, _, res| {
             res.send(&mut bt_fidl_status!(NotSupported))
                 .into_future()

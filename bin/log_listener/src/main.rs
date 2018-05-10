@@ -214,6 +214,7 @@ where
 {
     LogListenerImpl {
         state: listener,
+        on_open: |_,_| fok(()),
         done: |_, _| {
             //ignore, only called when dump_logs is called.
             fok(())

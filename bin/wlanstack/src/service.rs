@@ -28,6 +28,7 @@ pub fn device_service(
 ) -> impl Future<Item = (), Error = Never> {
     DeviceServiceImpl {
         state: devmgr,
+        on_open: |_, _| future::ok(()),
 
         list_phys: |state, c| {
             debug!("list_phys");

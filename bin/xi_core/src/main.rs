@@ -82,6 +82,7 @@ fn spawn_json_server(chan: async::Channel) {
     async::spawn(
     JsonImpl {
         state: (),
+        on_open: |_, _| future::ok(()),
         connect_socket: |_state, socket, _controller| {
             eprintln!("connect_socket");
             let _ = thread::spawn(move || editor_main(socket));

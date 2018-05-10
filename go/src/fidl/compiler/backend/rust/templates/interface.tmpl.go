@@ -8,6 +8,8 @@ const Interface = `
 {{- define "GenerateImplGenerics" -}}
 {{- $interface := . -}}
 State,
+OnOpen: FnMut(&mut State, {{ $interface.Name }}ControlHandle) -> OnOpenFut,
+OnOpenFut: Future<Item = (), Error = Never> + Send,
 {{- range $method := $interface.Methods }}
 	{{- if $method.HasRequest }}
 	{{ $method.CamelName }}: FnMut(&mut State,
@@ -207,6 +209,9 @@ pub enum {{ $interface.Name }}Event {
 }
 
 pub trait {{ $interface.Name }} {
+	type OnOpenFut: Future<Item = (), Error = Never> + Send;
+	fn on_open(&mut self, controller: {{ $interface.Name }}ControlHandle) -> Self::OnOpenFut;
+
 	{{- range $method := $interface.Methods }}
 	{{- if $method.HasRequest }}
 	type {{ $method.CamelName }}Fut: Future<Item = (), Error = Never> + Send;
@@ -223,14 +228,21 @@ pub trait {{ $interface.Name }} {
 	{{ end -}}
 	{{- end }}
 
-	fn serve(self, channel: async::Channel)
+	fn serve(mut self, channel: async::Channel)
 		-> {{ $interface.Name }}Server<Self>
 	where Self: Sized
 	{
+		let channel = ::std::sync::Arc::new(channel);
+		let on_open_fut = self.on_open(
+			{{ $interface.Name }}ControlHandle {
+				channel: channel.clone(),
+			}
+		);
 		{{ $interface.Name }}Server {
 			server: self,
-			channel: ::std::sync::Arc::new(channel),
+			channel,
 			msg_buf: zx::MessageBuf::new(),
+			on_open_fut: Some(on_open_fut),
 			{{- range $method := $interface.Methods }}
 			{{- if $method.HasRequest -}}
 			{{ $method.Name }}_futures: futures::stream::FuturesUnordered::new(),
@@ -244,6 +256,7 @@ pub struct {{ $interface.Name }}Server<T: {{ $interface.Name }}> {
 	server: T,
 	channel: ::std::sync::Arc<async::Channel>,
 	msg_buf: zx::MessageBuf,
+	on_open_fut: Option<T::OnOpenFut>,
 	{{- range $method := $interface.Methods }}
 	{{- if $method.HasRequest -}}
 	{{ $method.Name }}_futures: futures::stream::FuturesUnordered<T::{{ $method.CamelName }}Fut>,
@@ -257,6 +270,21 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
 
 	fn poll(&mut self, cx: &mut futures::task::Context) -> futures::Poll<Self::Item, Self::Error> { loop {
 		let mut made_progress_this_loop_iter = false;
+
+		let completed_on_open = if let Some(on_open_fut) = &mut self.on_open_fut {
+			match on_open_fut.poll(cx) {
+				Ok(futures::Async::Ready(())) => true,
+				Ok(futures::Async::Pending) => false,
+				Err(never) => match never {},
+			}
+		} else {
+			false
+		};
+
+		if completed_on_open {
+			made_progress_this_loop_iter = true;
+			self.on_open_fut.take();
+		}
 
 		{{- range $method := $interface.Methods }}
 		{{- if $method.HasRequest -}}
@@ -339,6 +367,7 @@ pub struct {{ $interface.Name }}Impl<
 	{{ template "GenerateImplGenerics" $interface }}
 > {
 	pub state: State,
+	pub on_open: OnOpen,
 	{{- range $method := $interface.Methods -}}
 	{{ if $method.HasRequest }}
 	pub {{ $method.Name }}: {{ $method.CamelName }},
@@ -348,7 +377,7 @@ pub struct {{ $interface.Name }}Impl<
 
 impl<
 	{{ template "GenerateImplGenerics" $interface }}
-> {{ $interface.Name }} for {{ $interface.Name }}Impl<State,
+> {{ $interface.Name }} for {{ $interface.Name }}Impl<State, OnOpen, OnOpenFut,
 	{{- range $method := $interface.Methods -}}
 	{{ if $method.HasRequest }}
 	{{ $method.CamelName }},
@@ -357,6 +386,11 @@ impl<
 	{{- end }}
 >
 {
+	type OnOpenFut = OnOpenFut;
+	fn on_open(&mut self, response_chan: {{ $interface.Name}}ControlHandle) -> Self::OnOpenFut {
+		(self.on_open)(&mut self.state, response_chan)
+	}
+
 	{{- range $method := $interface.Methods }}
 	{{- if $method.HasRequest }}
 	type {{ $method.CamelName }}Fut = {{ $method.CamelName }}Fut;
