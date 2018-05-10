@@ -1028,9 +1028,13 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks) {
         return status;
     }
 
+    // Since we are extending the bitmap, we need to fill the expanded
+    // portion of the allocation block bitmap with zeroes.
     if (abmblks > abmblks_old) {
-        wb->txn()->Enqueue(block_map_.StorageUnsafe()->GetVmo(), abmblks_old,
-                     DataStartBlock(info_) + abmblks_old, abmblks - abmblks_old);
+        uint64_t vmo_offset = abmblks_old;
+        uint64_t dev_offset = BlockMapStartBlock(info_) + abmblks_old;
+        uint64_t length = abmblks - abmblks_old;
+        wb->txn()->Enqueue(block_map_.StorageUnsafe()->GetVmo(), vmo_offset, dev_offset, length);
     }
 
     info_.vslice_count += request.length;
