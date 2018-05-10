@@ -114,7 +114,7 @@ zx_status_t AuthenticatedState::HandleAuthentication(
 
 zx_status_t AuthenticatedState::HandleDeauthentication(
     const ImmutableMgmtFrame<Deauthentication>& frame, const wlan_rx_info_t& rxinfo) {
-    debugbss("[client] [%s] received Deauthentication: %u\n", client_->addr().ToString().c_str(),
+    debugbss("[client] [%s] received Deauthentication: %hu\n", client_->addr().ToString().c_str(),
              frame.body->reason_code);
     MoveToState<DeauthenticatingState>();
     return ZX_ERR_STOP;
@@ -249,7 +249,7 @@ zx_status_t AssociatedState::HandleEthFrame(const ImmutableBaseFrame<EthernetII>
 
 zx_status_t AssociatedState::HandleDeauthentication(
     const ImmutableMgmtFrame<Deauthentication>& frame, const wlan_rx_info_t& rxinfo) {
-    debugbss("[client] [%s] received Deauthentication: %u\n", client_->addr().ToString().c_str(),
+    debugbss("[client] [%s] received Deauthentication: %hu\n", client_->addr().ToString().c_str(),
              frame.body->reason_code);
     req_deauth_ = false;
     MoveToState<DeauthenticatingState>();
@@ -759,7 +759,7 @@ zx_status_t RemoteClient::SendDeauthentication(reason_code::ReasonCode reason_co
     hdr->sc.set_seq(bss_->NextSeq(*hdr));
 
     auto deauth = frame.body;
-    deauth->reason_code = reason_code;
+    deauth->reason_code = static_cast<uint16_t>(reason_code);
 
     auto status = bss_->SendMgmtFrame(fbl::move(packet));
     if (status != ZX_OK) {

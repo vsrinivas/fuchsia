@@ -217,7 +217,7 @@ zx_status_t Station::HandleMlmeDeauthReq(const wlan_mlme::DeauthenticateRequest&
     FillTxInfo(&packet, *hdr);
 
     auto deauth = frame.body;
-    deauth->reason_code = req.reason_code;
+    deauth->reason_code = static_cast<uint16_t>(req.reason_code);
 
     finspect("Outbound Mgmt Frame(Deauth): %s\n", debug::Describe(*hdr).c_str());
     zx_status_t status = device_->SendWlan(std::move(packet));
@@ -226,7 +226,7 @@ zx_status_t Station::HandleMlmeDeauthReq(const wlan_mlme::DeauthenticateRequest&
         // Deauthenticate nevertheless. IEEE isn't clear on what we are supposed to do.
     }
 
-    infof("deauthenticating from %s, reason=%u\n", bss_->ssid->data(), req.reason_code);
+    infof("deauthenticating from %s, reason=%hu\n", bss_->ssid->data(), req.reason_code);
 
     // TODO(hahnr): Refactor once we have the new state machine.
     state_ = WlanState::kUnauthenticated;
@@ -471,13 +471,14 @@ zx_status_t Station::HandleDeauthentication(const ImmutableMgmtFrame<Deauthentic
     }
 
     auto deauth = frame.body;
-    infof("deauthenticating from %s, reason=%u\n", bss_->ssid->data(), deauth->reason_code);
+    infof("deauthenticating from %s, reason=%hu\n", bss_->ssid->data(), deauth->reason_code);
 
     state_ = WlanState::kUnauthenticated;
     device_->SetStatus(0);
     controlled_port_ = eapol::PortState::kBlocked;
 
-    return service::SendDeauthIndication(device_, bssid_, deauth->reason_code);
+    return service::SendDeauthIndication(device_, bssid_,
+                                         static_cast<wlan_mlme::ReasonCode>(deauth->reason_code));
 }
 
 zx_status_t Station::HandleAssociationResponse(const ImmutableMgmtFrame<AssociationResponse>& frame,

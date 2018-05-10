@@ -83,7 +83,7 @@ zx_status_t SendAuthConfirm(DeviceInterface* device, const common::MacAddr& peer
                             wlan_mlme::AuthenticateResultCodes code);
 zx_status_t SendDeauthConfirm(DeviceInterface* device, const common::MacAddr& peer_sta);
 zx_status_t SendDeauthIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
-                                 uint16_t code);
+                                 wlan_mlme::ReasonCode code);
 zx_status_t SendAssocConfirm(DeviceInterface* device, wlan_mlme::AssociateResultCodes code,
                              uint16_t aid = 0);
 zx_status_t SendDisassociateIndication(DeviceInterface* device, const common::MacAddr& peer_sta,

@@ -87,7 +87,7 @@ zx_status_t SendDeauthConfirm(DeviceInterface* device, const common::MacAddr& pe
 }
 
 zx_status_t SendDeauthIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
-                                 uint16_t code) {
+                                 wlan_mlme::ReasonCode code) {
     debugfn();
 
     auto ind = wlan_mlme::DeauthenticateIndication::New();

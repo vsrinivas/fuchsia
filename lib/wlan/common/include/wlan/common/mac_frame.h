@@ -13,6 +13,8 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <fuchsia/cpp/wlan_mlme.h>
+
 #include <cstdint>
 
 namespace wlan {
@@ -169,6 +171,8 @@ class CapabilityInfo : public common::BitField<uint16_t> {
     WLAN_BIT_FIELD(immediate_block_ack, 15, 1);
 };
 
+
+// TODO: Replace native ReasonCode with FIDL ReasonCode
 // IEEE Std 802.11-2016, 9.4.1.7, Table 9-45
 namespace reason_code {
 enum ReasonCode : uint16_t {
