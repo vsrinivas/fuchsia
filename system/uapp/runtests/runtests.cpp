@@ -30,6 +30,9 @@ namespace {
 // The name of the file containing stdout and stderr of each test.
 constexpr char kOutputFileName[] = "stdout-and-stderr.txt";
 
+// Ignore test directories where the last component is this.
+constexpr char kIgnoreDirName[] = "helper";
+
 // We want the default to be the same, whether the test is run by us
 // or run standalone. Do this by leaving the verbosity unspecified unless
 // provided by the user.
@@ -527,6 +530,13 @@ int main(int argc, char** argv) {
         char abs_test_dir[PATH_MAX];
         if (realpath(test_dirs[i], abs_test_dir) == nullptr) {
             printf("Error: Could not resolve path %s: %s\n", test_dirs[i], strerror(errno));
+            continue;
+        }
+
+        // Silently skip |kIgnoreDirName|.
+        // The user may have done something like runtests /foo/bar/h*.
+        const auto test_dir_base = basename(abs_test_dir);
+        if (strcmp(test_dir_base, kIgnoreDirName) == 0) {
             continue;
         }
 
