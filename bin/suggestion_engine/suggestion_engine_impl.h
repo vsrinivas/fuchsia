@@ -155,6 +155,7 @@ class SuggestionEngineImpl : public ContextListener,
   void PerformActions(fidl::VectorPtr<Action> actions,
                       fidl::InterfaceHandle<ProposalListener> listener,
                       const std::string& proposal_id,
+                      const std::string& override_story_id,
                       const std::string& source_url,
                       uint32_t story_color);
 
@@ -170,7 +171,11 @@ class SuggestionEngineImpl : public ContextListener,
 
   void PerformFocusStoryAction(const Action& action);
 
-  void PerformAddModuleAction(const Action& action);
+  void PerformAddModuleAction(const Action& action,
+                              const std::string& override_story_id);
+
+  void PerformSetLinkValueAction(const Action& action,
+                                 const std::string& override_story_id);
 
   void PerformQueryAction(const Action& action);
 

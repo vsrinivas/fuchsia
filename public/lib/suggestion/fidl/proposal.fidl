@@ -56,6 +56,7 @@ union Action {
   CreateStory create_story;
   FocusStory focus_story;
   AddModule add_module;
+  SetLinkValueAction set_link_value_action;
   CustomAction custom_action;
   QueryAction query_action;
 };
@@ -99,6 +100,15 @@ struct AddModule {
   // The module path of an existing module to assign as the surface-relationship
   // parent of this new module.
   vector<string> surface_parent_module_path;
+};
+
+struct SetLinkValueAction {
+  // Identifies the link within the story.
+  LinkPath link_path;
+
+  // The bytes that will be written to the link.
+  // If empty, unsets the link value.
+  string? value;
 };
 
 // An action that calls back to the proposal publisher to be performed.

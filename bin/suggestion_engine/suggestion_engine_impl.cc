@@ -128,6 +128,7 @@ void SuggestionEngineImpl::NotifyInteraction(fidl::StringPtr suggestion_uuid,
     if (interaction.type == InteractionType::SELECTED) {
       PerformActions(std::move(proposal.on_selected),
                      std::move(proposal.listener), proposal.id,
+                     proposal.story_id,
                      suggestion->prototype->source_url, proposal.display.color);
     }
 
@@ -226,6 +227,7 @@ void SuggestionEngineImpl::PerformActions(
     fidl::VectorPtr<Action> actions,
     fidl::InterfaceHandle<ProposalListener> listener,
     const std::string& proposal_id,
+    const std::string& override_story_id,
     const std::string& source_url,
     uint32_t story_color) {
   // TODO(rosswang): If we're asked to add multiple modules, we probably
@@ -243,11 +245,15 @@ void SuggestionEngineImpl::PerformActions(
         break;
       }
       case Action::Tag::kAddModule: {
-        PerformAddModuleAction(action);
+        PerformAddModuleAction(action, override_story_id);
         break;
       }
       case Action::Tag::kQueryAction: {
         PerformQueryAction(action);
+        break;
+      }
+      case Action::Tag::kSetLinkValueAction: {
+        PerformSetLinkValueAction(action, override_story_id);
         break;
       }
       case Action::Tag::kCustomAction: {
@@ -325,21 +331,31 @@ void SuggestionEngineImpl::PerformFocusStoryAction(const Action& action) {
   focus_provider_ptr_->Request(focus_story.story_id);
 }
 
-void SuggestionEngineImpl::PerformAddModuleAction(const Action& action) {
-  if (story_provider_) {
-    const auto& add_module = action.add_module();
-    const auto& module_name = add_module.module_name;
-    const auto& story_id = add_module.story_id;
-    modular::StoryControllerPtr story_controller;
-    story_provider_->GetController(story_id, story_controller.NewRequest());
-    modular::Intent intent;
-    fidl::Clone(add_module.intent, &intent);
-    story_controller->AddModule(
-        add_module.surface_parent_module_path.Clone(), module_name,
-        std::move(intent), fidl::MakeOptional(add_module.surface_relation));
-  } else {
+void SuggestionEngineImpl::PerformAddModuleAction(
+    const Action& action, const std::string& override_story_id) {
+  if (!story_provider_) {
     FXL_LOG(WARNING) << "Unable to add module; no story provider";
+    return;
   }
+  const auto& add_module = action.add_module();
+  const auto& module_name = add_module.module_name;
+  std::string story_id = add_module.story_id;
+  if (!override_story_id.empty()) {
+    story_id = override_story_id;
+    if (override_story_id != add_module.story_id) {
+      FXL_LOG(WARNING) << "story_id provided on Proposal (" << override_story_id
+                       << ") does not match that on AddModule action ("
+                       << add_module.story_id << "). Using "
+                       << override_story_id << ".";
+    }
+  }
+  modular::StoryControllerPtr story_controller;
+  story_provider_->GetController(story_id, story_controller.NewRequest());
+  modular::Intent intent;
+  fidl::Clone(add_module.intent, &intent);
+  story_controller->AddModule(
+      add_module.surface_parent_module_path.Clone(), module_name,
+      std::move(intent), fidl::MakeOptional(add_module.surface_relation));
 }
 
 void SuggestionEngineImpl::PerformCustomAction(Action* action,
@@ -359,9 +375,27 @@ void SuggestionEngineImpl::PerformCustomAction(Action* action,
           // Since there is no listener provided to PerformActions, it is fine
           // to use an empty proposal id here.
           PerformActions(std::move(non_null_actions), nullptr /* listener */,
-                         "", source_url, story_color);
+                         "", "", source_url, story_color);
         }
       }));
+}
+
+void SuggestionEngineImpl::PerformSetLinkValueAction(
+    const Action& action, const std::string& story_id) {
+  if (!story_provider_) {
+    FXL_LOG(WARNING) << "Unable to set entity; no story provider";
+    return;
+  }
+
+  modular::StoryControllerPtr story_controller;
+  story_provider_->GetController(story_id, story_controller.NewRequest());
+
+  const auto& set_link_value = action.set_link_value_action();
+  const auto& link_path = set_link_value.link_path;
+  LinkPtr link;
+  story_controller->GetLink(link_path.module_path.Clone(), link_path.link_name,
+                            link.NewRequest());
+  link->Set(nullptr, set_link_value.value);
 }
 
 void SuggestionEngineImpl::PerformQueryAction(const Action& action) {
