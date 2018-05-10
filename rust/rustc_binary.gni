@@ -38,7 +38,7 @@ import("//build/rust/rustc_artifact.gni")
 #
 # Example of usage:
 #
-#   rustc_library("foo") {
+#   rustc_binary("foo") {
 #     deps = [
 #       "//garnet/public/rust/crates/bar",
 #       "//third_party/rust-crates/rustc_deps:clap",
