@@ -62,7 +62,7 @@ type pipe struct {
 // Demuxer demultiplexes incomming input lines, spins up new filters, and sends them input lines.
 type Demuxer struct {
 	// Spin up new filters as new procsses are found.
-	filters map[uint64]pipe
+	filters map[lineSource]pipe
 	// Use same symbolizer for all
 	symbolizer Symbolizer
 	// Use same repo for all
@@ -74,7 +74,7 @@ func NewDemuxer(repo *SymbolizerRepo, symbo Symbolizer) *Demuxer {
 	return &Demuxer{
 		repo:       repo,
 		symbolizer: symbo,
-		filters:    make(map[uint64]pipe),
+		filters:    make(map[lineSource]pipe),
 	}
 }
 
@@ -107,13 +107,13 @@ func (d *Demuxer) Start(ctx context.Context, input <-chan InputLine) <-chan Outp
 					return
 				}
 				var fpipe pipe
-				if fpipe, ok = d.filters[line.process]; !ok {
+				if fpipe, ok = d.filters[line.source]; !ok {
 					fin := make(chan InputLine)
 					// Spin up a new Filter for this process.
 					filt := NewFilter(d.repo, d.symbolizer)
 					fout := filt.Start(ctx, fin)
 					fpipe = pipe{in: fin, out: fout}
-					d.filters[line.process] = fpipe
+					d.filters[line.source] = fpipe
 				}
 				// sequence a read from fpipe.out
 				remux.sequence(fpipe.out)

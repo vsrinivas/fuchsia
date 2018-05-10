@@ -29,6 +29,17 @@ func (b *ParserState) expect(what string) bool {
 	return false
 }
 
+// This is like before but does not consume the expected delimiter
+func (b *ParserState) onlyBefore(what string) (string, error) {
+	idx := strings.Index(string(*b), what)
+	if idx == -1 {
+		return "", fmt.Errorf("expected '%s'", what)
+	}
+	str := (*b)[:idx]
+	*b = (*b)[idx:]
+	return string(str), nil
+}
+
 func (b *ParserState) before(what string) (string, error) {
 	idx := strings.Index(string(*b), what)
 	if idx == -1 {

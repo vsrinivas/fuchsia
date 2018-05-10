@@ -38,6 +38,30 @@ func TestExpect(t *testing.T) {
 	}
 }
 
+func TestOnlyBefore(t *testing.T) {
+	buf := ParserState("this is a test")
+	v1, err := buf.onlyBefore(" ")
+	if err != nil {
+		t.Error(err)
+	}
+	if v1 != "this" {
+		t.Error("expected", "this", "got", v1)
+	}
+	if string(buf) != " is a test" {
+		t.Error("expected", " is a test", "got", string(buf))
+	}
+	// The following is just to consume the trailing space
+	buf.before(" ")
+
+	_, err = buf.onlyBefore("#")
+	if err == nil {
+		t.Error("expected an error but got none")
+	}
+	if string(buf) != "is a test" {
+		t.Error("input consumed when it should not have been")
+	}
+}
+
 func TestBefore(t *testing.T) {
 	buf := ParserState("this is a test")
 	v1, err := buf.before(" ")

@@ -37,6 +37,46 @@ func TestColor(t *testing.T) {
 	}
 }
 
+func ExampleDummyProcess() {
+	// mock the input and outputs of llvm-symbolizer
+	symbo := newMockSymbolizer([]mockModule{
+		{"libc.so", map[uint64][]SourceLocation{
+			0x429c0: {{NewOptStr("atan2.c"), 33, NewOptStr("atan2")}},
+		}},
+	})
+
+	// mock ids.txt
+	repo := NewRepo()
+	repo.AddObjects(map[string]string{
+		"be4c4336e20b734db97a58e0f083d0644461317c": "libc.so",
+	})
+
+	// make a demuxer
+	demuxer := NewDemuxer(repo, symbo)
+
+	// define a little message that will need to be parsed
+	msg := "{{{module:1:libc.so:elf:be4c4336e20b734db97a58e0f083d0644461317c}}}\n" +
+		"{{{mmap:0x12345000:849596:load:1:rx:0x0}}}\n" +
+		"{{{pc:0x123879c0}}}\n" +
+		"blarg[0.0] 0.0> This should be on it's own line\n"
+
+	// start sending InputLines to the demuxer
+	ctx := context.Background()
+	in := StartParsing(ctx, strings.NewReader(msg))
+	// start the demuxer which will cause filters to send output lines to 'out'
+	out := demuxer.Start(ctx, in)
+
+	presenter := NewBasicPresenter(os.Stdout, false)
+	presenter.Start(out)
+
+	//Output:
+	//{{{module:be4c4336e20b734db97a58e0f083d0644461317c:libc.so:1}}}
+	//{{{mmap:0x12345000:0xcf6bc:load:1:rx:0x0}}}
+	//atan2 at atan2.c:33
+	//blarg
+	//[0.000] 0.0> This should be on it's own line
+}
+
 func ExampleDemux() {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{

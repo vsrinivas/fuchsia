@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"strings"
 )
 
@@ -159,25 +158,25 @@ func ParseLine(line string) Node {
 	// TODO: add node type for malformed text and emit warning
 }
 
-func ParseLogLine(line string) (InputLine, error) {
-	buf := ParserState(line)
-	b := &buf
+func ParseLogLine(b *ParserState) (InputLine, error) {
 	var out InputLine
 	if b.expect("[") {
 		var err error
-		out.time, err = b.floatBefore("]")
+		time, err := b.floatBefore("]")
 		if err != nil {
 			return out, err
 		}
 		b.whitespace()
-		out.process, err = b.decBefore(".")
+		pid, err := b.decBefore(".")
 		if err != nil {
 			return out, err
 		}
-		out.thread, err = b.decBefore(">")
+		out.source = process(pid)
+		tid, err := b.decBefore(">")
 		if err != nil {
 			return out, err
 		}
+		out.header = logHeader{process: pid, thread: tid, time: time}
 		b.whitespace()
 		out.msg = string(*b)
 		return out, nil
@@ -196,12 +195,25 @@ func StartParsing(ctx context.Context, reader io.Reader) <-chan InputLine {
 				return
 			default: // Continue.
 			}
-			line, err := ParseLogLine(scanner.Text())
-			if err != nil {
-				log.Printf("warning: malformed line: %v", err)
-			} else {
+			text := ParserState(scanner.Text())
+			b := &text
+			// If there is some stuff at the start, make it into a dummy line.
+			dummyText, err := b.onlyBefore("[")
+			if err == nil && dummyText != "" {
+				var line InputLine
+				line.source = dummySource{}
+				line.msg = dummyText
 				out <- line
 			}
+			// Now attempt to parse the log line
+			line, err := ParseLogLine(b)
+			// If we error out send this line whole to the dummy process
+			if err != nil {
+				// Some partial bit of this might have parsed so just modify it.
+				line.source = dummySource{}
+				line.msg = string(*b)
+			}
+			out <- line
 		}
 	}()
 	return out

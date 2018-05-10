@@ -10,10 +10,23 @@ import (
 	"log"
 )
 
-type LogLine struct {
+type lineSource interface{}
+
+type process uint64
+
+type dummySource struct{}
+
+type lineHeader interface{}
+
+type logHeader struct {
 	time    float64
 	process uint64
 	thread  uint64
+}
+
+type LogLine struct {
+	header lineHeader
+	source lineSource
 }
 
 type InputLine struct {
@@ -126,9 +139,7 @@ func (f *Filter) Start(ctx context.Context, input <-chan InputLine) <-chan Outpu
 				}
 				// Update AST with source locations.
 				res.line.Accept(&FilterVisitor{f})
-				res.time = elem.time
-				res.thread = elem.thread
-				res.process = elem.process
+				res.LogLine = elem.LogLine
 				out <- res
 			}
 		}
