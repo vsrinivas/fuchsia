@@ -55,11 +55,11 @@ impl DeviceSettingsManagerServer {
             .collect();
     }
 
-    fn run_watchers(&mut self, key: &str, mut t: ValueType) {
+    fn run_watchers(&mut self, key: &str, t: ValueType) {
         let mut map = self.watchers.lock();
         if let Some(m) = map.get_mut(key) {
             m.retain(|w| {
-                if let Err(e) = w.on_change_settings(&mut t) {
+                if let Err(e) = w.on_change_settings(t) {
                     match e {
                         fidl::Error::ClientRead(zx::Status::PEER_CLOSED)
                         | fidl::Error::ClientWrite(zx::Status::PEER_CLOSED) => {
@@ -278,10 +278,10 @@ mod tests {
     fn test_int() {
         async_test(&["TestKey"], |device_settings| {
             device_settings
-                .set_integer(&mut "TestKey".to_string(), &mut 18)
+                .set_integer("TestKey", 18)
                 .and_then(move |response| {
                     assert!(response, "set_integer failed");
-                    device_settings.get_integer(&mut "TestKey".to_string())
+                    device_settings.get_integer("TestKey")
                 })
                 .and_then(move |response| {
                     assert_eq!(response, (18, Status::Ok));
@@ -294,10 +294,10 @@ mod tests {
     fn test_string() {
         async_test(&["TestKey"], |device_settings| {
             device_settings
-                .set_string(&mut "TestKey".to_string(), &mut "mystring".to_string())
+                .set_string("TestKey", "mystring")
                 .and_then(move |response| {
                     assert!(response, "set_string failed");
-                    device_settings.get_string(&mut "TestKey".to_string())
+                    device_settings.get_string("TestKey")
                 })
                 .and_then(move |response| {
                     assert_eq!(response, ("mystring".to_string(), Status::Ok));
@@ -310,10 +310,10 @@ mod tests {
     fn test_invalid_key() {
         async_test(&[], |device_settings| {
             device_settings
-                .get_string(&mut "TestKey".to_string())
+                .get_string("TestKey")
                 .and_then(move |response| {
                     assert_eq!(response, ("".to_string(), Status::ErrInvalidSetting));
-                    device_settings.get_integer(&mut "TestKey".to_string())
+                    device_settings.get_integer("TestKey")
                 })
                 .and_then(move |response| {
                     assert_eq!(response, (0, Status::ErrInvalidSetting));
@@ -326,10 +326,10 @@ mod tests {
     fn test_incorrect_type() {
         async_test(&["TestKey"], |device_settings| {
             device_settings
-                .set_string(&mut "TestKey".to_string(), &mut "mystring".to_string())
+                .set_string("TestKey", "mystring")
                 .and_then(move |response| {
                     assert!(response, "set_string failed");
-                    device_settings.get_integer(&mut "TestKey".to_string())
+                    device_settings.get_integer("TestKey")
                 })
                 .and_then(move |response| {
                     assert_eq!(response, (0, Status::ErrIncorrectType));
@@ -342,10 +342,10 @@ mod tests {
     fn test_not_set_err() {
         async_test(&["TestKey"], |device_settings| {
             device_settings
-                .get_integer(&mut "TestKey".to_string())
+                .get_integer("TestKey")
                 .and_then(move |response| {
                     assert_eq!(response, (0, Status::ErrNotSet));
-                    device_settings.get_string(&mut "TestKey".to_string())
+                    device_settings.get_string("TestKey")
                 })
                 .and_then(move |response| {
                     assert_eq!(response, ("".to_string(), Status::ErrNotSet));
@@ -358,22 +358,22 @@ mod tests {
     fn test_multiple_keys() {
         async_test(&["TestKey1", "TestKey2"], |device_settings| {
             device_settings
-                .set_integer(&mut "TestKey1".to_string(), &mut 18)
+                .set_integer("TestKey1", 18)
                 .and_then(move |response| {
                     assert!(response, "set_integer failed");
                     device_settings
-                        .set_string(&mut "TestKey2".to_string(), &mut "mystring".to_string())
+                        .set_string("TestKey2", "mystring")
                         .map(move |response| (response, device_settings))
                 })
                 .and_then(|(response, device_settings)| {
                     assert!(response, "set_string failed");
                     device_settings
-                        .get_integer(&mut "TestKey1".to_string())
+                        .get_integer("TestKey1")
                         .map(move |response| (response, device_settings))
                 })
                 .and_then(|(response, device_settings)| {
                     assert_eq!(response, (18, Status::Ok));
-                    device_settings.get_string(&mut "TestKey2".to_string())
+                    device_settings.get_string("TestKey2")
                 })
                 .and_then(|response| {
                     assert_eq!(response, ("mystring".to_string(), Status::Ok));

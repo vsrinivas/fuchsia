@@ -90,7 +90,7 @@ impl App {
 
         let til_done = loop_fn(self, |app| {
             player
-                .get_status(&mut app.status_version)
+                .get_status(app.status_version)
                 .map(|(version, status)| {
                     app.status_version = version;
                     app.display_status(&status);

@@ -47,7 +47,7 @@ pub trait {{ $interface.Name }}ProxyInterface: Send + Sync {
 	{{- if $method.HasRequest }}
 	fn {{ $method.Name }}(&self,
 		{{- range $request := $method.Request }}
-		{{ $request.Name }}: &mut {{ $request.Type }},
+		{{ $request.Name }}: {{ $request.BorrowedType }},
 		{{- end }}
 	)
 	{{- if $method.HasResponse -}}
@@ -85,7 +85,7 @@ impl {{ $interface.Name }}Proxy {
 	{{- if $method.HasRequest }}
 	pub fn {{ $method.Name }}(&self,
 		{{- range $request := $method.Request }}
-		mut {{ $request.Name }}: &mut {{ $request.Type }},
+		mut {{ $request.Name }}: {{ $request.BorrowedType }},
 		{{- end }}
 	)
 	{{- if $method.HasResponse -}}
@@ -122,7 +122,7 @@ impl {{ $interface.Name}}ProxyInterface for {{ $interface.Name}}Proxy {
 	{{- if $method.HasRequest }}
 	fn {{ $method.Name }}(&self,
 		{{- range $request := $method.Request }}
-		mut {{ $request.Name }}: &mut {{ $request.Type }},
+		mut {{ $request.Name }}: {{ $request.BorrowedType }},
 		{{- end }}
 	)
 	{{- if $method.HasResponse -}}
@@ -133,8 +133,8 @@ impl {{ $interface.Name}}ProxyInterface for {{ $interface.Name}}Proxy {
 		self.client.send(&mut (
 	{{- end -}}
 		{{- range $index, $request := $method.Request -}}
-		{{- if (eq $index 0) -}} &mut *{{ $request.Name }}
-		{{- else -}}, &mut *{{ $request.Name }} {{- end -}}
+		{{- if (eq $index 0) -}} {{ $request.Name }}
+		{{- else -}}, {{ $request.Name }} {{- end -}}
 		{{- end -}}
 	), {{ $method.Ordinal }})
 	}
@@ -405,8 +405,8 @@ impl {{ $interface.Name }}ControlHandle {
 
 		let mut response = (
 			{{- range $index, $param := $method.Response -}}
-				{{- if ne 0 $index -}}, &mut {{ $param.Name -}}
-				{{- else -}} &mut {{ $param.Name -}}
+				{{- if ne 0 $index -}}, {{ $param.Name -}}
+				{{- else -}} {{ $param.Name -}}
 				{{- end -}}
 			{{- end -}}
 		);
@@ -451,8 +451,8 @@ impl {{ $interface.Name }}{{ $method.CamelName }}Responder {
 
 		let mut response = (
 			{{- range $index, $param := $method.Response -}}
-			{{- if ne 0 $index -}}, &mut {{ $param.Name -}}
-			{{- else -}} &mut {{ $param.Name -}}
+			{{- if ne 0 $index -}}, {{ $param.Name -}}
+			{{- else -}} {{ $param.Name -}}
 			{{- end -}}
 			{{- end -}}
 		);

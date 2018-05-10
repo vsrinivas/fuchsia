@@ -112,11 +112,11 @@ pub fn device_service(
 }
 
 impl device::EventListener for DeviceListenerProxy {
-    fn on_phy_added(&self, mut id: u16) -> Result<(), Error> {
-        DeviceListenerProxy::on_phy_added(self, &mut id).map_err(|e| e.into())
+    fn on_phy_added(&self, id: u16) -> Result<(), Error> {
+        DeviceListenerProxy::on_phy_added(self, id).map_err(|e| e.into())
     }
 
-    fn on_phy_removed(&self, mut id: u16) -> Result<(), Error> {
-        DeviceListenerProxy::on_phy_removed(self, &mut id).map_err(|e| e.into())
+    fn on_phy_removed(&self, id: u16) -> Result<(), Error> {
+        DeviceListenerProxy::on_phy_removed(self, id).map_err(|e| e.into())
     }
 }

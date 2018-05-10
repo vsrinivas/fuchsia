@@ -45,7 +45,7 @@ fn main_res() -> Result<(), Error> {
     let echo = app.connect_to_service(EchoMarker)
        .context("Failed to connect to echo service")?;
 
-    let fut = echo.echo_string(&mut Some("hello world!".to_string()))
+    let fut = echo.echo_string(Some("hello world!"))
         .map(|res| println!("response: {:?}", res));
 
     executor.run_singlethreaded(fut).context("failed to execute echo future")?;
