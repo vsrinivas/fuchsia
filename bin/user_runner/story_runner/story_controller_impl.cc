@@ -1633,7 +1633,7 @@ void StoryControllerImpl::StopForTeardown(const StopCallback& done) {
 StoryState StoryControllerImpl::GetStoryState() const { return state_; }
 
 void StoryControllerImpl::Sync(const std::function<void()>& done) {
-  new SyncCall(&operation_queue_, done);
+  operation_queue_.Add(new SyncCall(done));
 }
 
 void StoryControllerImpl::FocusModule(
@@ -1829,7 +1829,7 @@ void StoryControllerImpl::GetInfo(GetInfoCallback callback) {
   // callback of the operation on the first queue.
   //
   // This race is normal fidl concurrency behavior.
-  new SyncCall(&operation_queue_, [this, callback] {
+  operation_queue_.Add(new SyncCall([this, callback] {
     story_provider_impl_->GetStoryInfo(
         story_id_,
         // We capture only |state_| and not |this| because (1) we want the state
@@ -1841,7 +1841,7 @@ void StoryControllerImpl::GetInfo(GetInfoCallback callback) {
         [state = state_, callback](modular::StoryInfoPtr story_info) {
           callback(std::move(*story_info), state);
         });
-  });
+  }));
 }
 
 // |StoryController|
@@ -1876,21 +1876,20 @@ void StoryControllerImpl::GetActiveModules(
   // We execute this in a SyncCall so that we are sure we don't fall in a crack
   // between a module being created and inserted in the connections collection
   // during some Operation.
-  new SyncCall(&operation_queue_,
-               fxl::MakeCopyable(
-                   [this, watcher = std::move(watcher), callback]() mutable {
-                     if (watcher) {
-                       auto ptr = watcher.Bind();
-                       modules_watchers_.AddInterfacePtr(std::move(ptr));
-                     }
+  operation_queue_.Add(new SyncCall(fxl::MakeCopyable(
+      [this, watcher = std::move(watcher), callback]() mutable {
+        if (watcher) {
+          auto ptr = watcher.Bind();
+          modules_watchers_.AddInterfacePtr(std::move(ptr));
+        }
 
-                     fidl::VectorPtr<ModuleData> result;
-                     result.resize(connections_.size());
-                     for (size_t i = 0; i < connections_.size(); i++) {
-                       connections_[i].module_data->Clone(&result->at(i));
-                     }
-                     callback(std::move(result));
-                   }));
+        fidl::VectorPtr<ModuleData> result;
+        result.resize(connections_.size());
+        for (size_t i = 0; i < connections_.size(); i++) {
+          connections_[i].module_data->Clone(&result->at(i));
+        }
+        callback(std::move(result));
+      })));
 }
 
 // |StoryController|
@@ -1906,8 +1905,7 @@ void StoryControllerImpl::GetModules(GetModulesCallback callback) {
 void StoryControllerImpl::GetModuleController(
     fidl::VectorPtr<fidl::StringPtr> module_path,
     fidl::InterfaceRequest<ModuleController> request) {
-  new SyncCall(
-      &operation_queue_,
+  operation_queue_.Add(new SyncCall(
       fxl::MakeCopyable([this, module_path = std::move(module_path),
                          request = std::move(request)]() mutable {
         for (auto& connection : connections_) {
@@ -1919,7 +1917,7 @@ void StoryControllerImpl::GetModuleController(
 
         // Trying to get a controller for a module that is not active just
         // drops the connection request.
-      }));
+      })));
 }
 
 // |StoryController|
@@ -1930,26 +1928,25 @@ void StoryControllerImpl::GetActiveLinks(
   // between a link being created and inserted in the links collection during
   // some Operation. (Right now Links are not created in an Operation, but we
   // don't want to rely on it.)
-  new SyncCall(&operation_queue_,
-               fxl::MakeCopyable(
-                   [this, watcher = std::move(watcher), callback]() mutable {
-                     if (watcher) {
-                       auto ptr = watcher.Bind();
-                       links_watchers_.AddInterfacePtr(std::move(ptr));
-                     }
+  operation_queue_.Add(new SyncCall(fxl::MakeCopyable(
+      [this, watcher = std::move(watcher), callback]() mutable {
+        if (watcher) {
+          auto ptr = watcher.Bind();
+          links_watchers_.AddInterfacePtr(std::move(ptr));
+        }
 
-                     // Only active links, i.e. links currently in use by a
-                     // module, are returned here. Eventually we might want to
-                     // list all links, but this requires some changes to how
-                     // links are stored to make it nice. (Right now we need to
-                     // parse keys, which we don't want to.)
-                     fidl::VectorPtr<LinkPath> result;
-                     result.resize(links_.size());
-                     for (size_t i = 0; i < links_.size(); i++) {
-                       links_[i]->link_path().Clone(&result->at(i));
-                     }
-                     callback(std::move(result));
-                   }));
+        // Only active links, i.e. links currently in use by a
+        // module, are returned here. Eventually we might want to
+        // list all links, but this requires some changes to how
+        // links are stored to make it nice. (Right now we need to
+        // parse keys, which we don't want to.)
+        fidl::VectorPtr<LinkPath> result;
+        result.resize(links_.size());
+        for (size_t i = 0; i < links_.size(); i++) {
+          links_[i]->link_path().Clone(&result->at(i));
+        }
+        callback(std::move(result));
+      })));
 }
 
 // |StoryController|

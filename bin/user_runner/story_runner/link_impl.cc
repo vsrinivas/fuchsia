@@ -526,7 +526,7 @@ void LinkImpl::SetEntity(fidl::StringPtr entity_reference, const uint32_t src) {
 }
 
 void LinkImpl::Sync(const std::function<void()>& callback) {
-  new SyncCall(&operation_queue_, callback);
+  operation_queue_.Add(new SyncCall(callback));
 }
 
 bool LinkImpl::ApplySetOp(const CrtJsonPointer& ptr, fidl::StringPtr json) {

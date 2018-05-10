@@ -189,18 +189,19 @@ void AgentRunnerStorageImpl::DeleteTask(const std::string& agent_url,
 void AgentRunnerStorageImpl::OnPageChange(const std::string& key,
                                           const std::string& value) {
   FXL_DCHECK(delegate_ != nullptr);
-  new SyncCall(&operation_queue_, [this, key, value] {
+  operation_queue_.Add(new SyncCall([this, key, value] {
     TriggerInfo data;
     if (!XdrRead(value, &data, XdrTriggerInfo)) {
       return;
     }
     delegate_->AddedTask(key, data);
-  });
+  }));
 }
 
 void AgentRunnerStorageImpl::OnPageDelete(const std::string& key) {
   FXL_DCHECK(delegate_ != nullptr);
-  new SyncCall(&operation_queue_, [this, key] { delegate_->DeletedTask(key); });
+  operation_queue_.Add(
+      new SyncCall([this, key] { delegate_->DeletedTask(key); }));
 }
 
 }  // namespace modular

@@ -194,13 +194,11 @@ void AgentContextImpl::NewAgentConnection(
         incoming_services_request,
     fidl::InterfaceRequest<AgentController> agent_controller_request) {
   // Queue adding the connection
-  new SyncCall(
-      &operation_queue_,
-      fxl::MakeCopyable([this, requestor_url,
-                         incoming_services_request =
-                             std::move(incoming_services_request),
-                         agent_controller_request =
-                             std::move(agent_controller_request)]() mutable {
+  operation_queue_.Add(new SyncCall(fxl::MakeCopyable(
+      [this, requestor_url,
+       incoming_services_request = std::move(incoming_services_request),
+       agent_controller_request =
+           std::move(agent_controller_request)]() mutable {
         FXL_CHECK(state_ == State::RUNNING);
 
         agent_->Connect(requestor_url, std::move(incoming_services_request));
@@ -209,28 +207,26 @@ void AgentContextImpl::NewAgentConnection(
         // the agent will stop.
         agent_controller_bindings_.AddBinding(
             this, std::move(agent_controller_request));
-      }));
+      })));
 }
 
 void AgentContextImpl::NewEntityProviderConnection(
     fidl::InterfaceRequest<EntityProvider> entity_provider_request,
     fidl::InterfaceRequest<AgentController> agent_controller_request) {
-  new SyncCall(
-      &operation_queue_,
-      fxl::MakeCopyable(
-          [this, entity_provider_request = std::move(entity_provider_request),
-           agent_controller_request =
-               std::move(agent_controller_request)]() mutable {
-            FXL_CHECK(state_ == State::RUNNING);
-            app_client_->services().ConnectToService(
-                std::move(entity_provider_request));
-            agent_controller_bindings_.AddBinding(
-                this, std::move(agent_controller_request));
-          }));
+  operation_queue_.Add(new SyncCall(fxl::MakeCopyable(
+      [this, entity_provider_request = std::move(entity_provider_request),
+       agent_controller_request =
+           std::move(agent_controller_request)]() mutable {
+        FXL_CHECK(state_ == State::RUNNING);
+        app_client_->services().ConnectToService(
+            std::move(entity_provider_request));
+        agent_controller_bindings_.AddBinding(
+            this, std::move(agent_controller_request));
+      })));
 }
 
 void AgentContextImpl::NewTask(const std::string& task_id) {
-  new SyncCall(&operation_queue_, [this, task_id] {
+  operation_queue_.Add(new SyncCall([this, task_id] {
     FXL_CHECK(state_ == State::RUNNING);
     // Increment the counter for number of incomplete tasks. Decrement it when
     // we receive its callback;
@@ -239,7 +235,7 @@ void AgentContextImpl::NewTask(const std::string& task_id) {
       incomplete_task_count_--;
       MaybeStopAgent();
     });
-  });
+  }));
 }
 
 void AgentContextImpl::GetComponentContext(

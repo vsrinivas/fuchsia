@@ -532,8 +532,8 @@ class StoryProviderImpl::DumpStateCall : public Operation<std::string> {
 
           // This needs to be the last operations on |operation_queue_| since we
           // need to get all the content from |output_| into |dump_|.
-          new SyncCall(&operation_queue_,
-                       [this, flow] { dump_ = output_.str(); });
+          operation_queue_.Add(
+              new SyncCall([this, flow] { dump_ = output_.str(); }));
         });
   }
 
@@ -654,18 +654,18 @@ std::unique_ptr<AppClient<Lifecycle>> StoryProviderImpl::StartStoryShell(
 }
 
 void StoryProviderImpl::MaybeLoadStoryShellDelayed() {
-  async::PostDelayedTask(async_get_default(),
-                         [weak_this = weak_factory_.GetWeakPtr()] {
-                           if (weak_this) {
-                             new SyncCall(&weak_this->operation_queue_,
-                                          [weak_this] {
-                                            if (weak_this) {
-                                              weak_this->MaybeLoadStoryShell();
-                                            }
-                                          });
-                           }
-                         },
-                         zx::sec(5));
+  async::PostDelayedTask(
+      async_get_default(),
+      [weak_this = weak_factory_.GetWeakPtr()] {
+        if (weak_this) {
+          weak_this->operation_queue_.Add(new SyncCall([weak_this] {
+            if (weak_this) {
+              weak_this->MaybeLoadStoryShell();
+            }
+          }));
+        }
+      },
+      zx::sec(5));
 }
 
 void StoryProviderImpl::MaybeLoadStoryShell() {

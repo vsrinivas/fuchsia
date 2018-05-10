@@ -439,10 +439,8 @@ class Operation<Args...>::FlowTokenHolder {
 // making sure that all operations that run before this have completed.
 class SyncCall : public Operation<> {
  public:
-  SyncCall(OperationContainer* const container, ResultCall result_call)
-      : Operation("SyncCall", container, std::move(result_call)) {
-    Ready();
-  }
+  SyncCall(ResultCall result_call)
+      : Operation("SyncCall", std::move(result_call)) {}
 
   void Run() override { Done(); }
 
