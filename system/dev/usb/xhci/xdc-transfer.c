@@ -133,6 +133,16 @@ zx_status_t xdc_queue_transfer(xdc_t* xdc, usb_request_t* req, bool in) {
     return ZX_OK;
 }
 
+bool xdc_has_free_trbs(xdc_t* xdc, bool in) {
+    mtx_lock(&xdc->lock);
+
+    xdc_endpoint_t* ep = in ? &xdc->eps[IN_EP_IDX] : &xdc->eps[OUT_EP_IDX];
+    bool has_trbs = xhci_transfer_ring_free_trbs(&ep->transfer_ring) > 0;
+
+    mtx_unlock(&xdc->lock);
+    return has_trbs;
+}
+
 zx_status_t xdc_restart_transfer_ring_locked(xdc_t* xdc, xdc_endpoint_t* ep) {
     // Once the DbC clears the halt flag for the endpoint, the address stored in the
     // TR Dequeue Pointer field is the next TRB to be executed (see XHCI Spec 7.6.4.3).

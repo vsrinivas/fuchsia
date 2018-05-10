@@ -272,10 +272,9 @@ static void xdc_free(xdc_t* xdc) {
         xhci_transfer_ring_free(&ep->transfer_ring);
     }
 
+    usb_request_pool_release(&xdc->free_write_reqs);
+
     usb_request_t* req;
-    while ((req = list_remove_tail_type(&xdc->free_write_reqs, usb_request_t, node)) != NULL) {
-        usb_request_release(req);
-    }
     while ((req = list_remove_tail_type(&xdc->free_read_reqs, usb_request_t, node)) != NULL) {
         usb_request_release(req);
     }
@@ -311,7 +310,8 @@ static void xdc_release(void* ctx) {
 
 static void xdc_update_write_signal_locked(xdc_t* xdc, bool online)
                                            __TA_REQUIRES(xdc->write_lock) {
-    if (online && list_length(&xdc->free_write_reqs) > 0) {
+    xdc->writable = online && xdc_has_free_trbs(xdc, false /* in */);
+    if (xdc->writable) {
         device_state_set(xdc->zxdev, DEV_STATE_WRITABLE);
     } else {
         device_state_clr(xdc->zxdev, DEV_STATE_WRITABLE);
@@ -327,7 +327,7 @@ static void xdc_write_complete(usb_request_t* req, void* cookie) {
     }
 
     mtx_lock(&xdc->write_lock);
-    list_add_tail(&xdc->free_write_reqs, &req->node);
+    usb_request_pool_add(&xdc->free_write_reqs, req);
     xdc_update_write_signal_locked(xdc, status != ZX_ERR_IO_NOT_PRESENT /* online */);
     mtx_unlock(&xdc->write_lock);
 }
@@ -335,28 +335,32 @@ static void xdc_write_complete(usb_request_t* req, void* cookie) {
 zx_status_t xdc_write(void* ctx, const void* buf, size_t count, zx_off_t off, size_t* actual) {
     xdc_t* xdc = ctx;
 
-    // TODO(jocelyndang): handle bigger writes.
-    if (count > MAX_REQ_SIZE) {
-        return ZX_ERR_BUFFER_TOO_SMALL;
-    }
+    // TODO(jocelyndang): we should check for requests that are too big to fit on the transfer ring.
 
     zx_status_t status = ZX_OK;
 
     mtx_lock(&xdc->write_lock);
 
-    if (list_length(&xdc->free_write_reqs) == 0) {
-        status = ZX_ERR_SHOULD_WAIT;
-        goto out;
+    if (!xdc->writable) {
+        // Need to wait for some requests to complete.
+        mtx_unlock(&xdc->write_lock);
+        return ZX_ERR_SHOULD_WAIT;
     }
 
-    usb_request_t* req = list_remove_head_type(&xdc->free_write_reqs, usb_request_t, node);
+    usb_request_t* req = usb_request_pool_get(&xdc->free_write_reqs, count);
+    if (!req) {
+        zx_status_t status = usb_request_alloc(&req, xdc->bti_handle, count, OUT_EP_ADDR);
+        if (status != ZX_OK) {
+            goto out;
+        }
+    }
     usb_request_copyto(req, buf, count, 0);
     req->header.length = count;
 
     status = xdc_queue_transfer(xdc, req, false /* in */);
     if (status != ZX_OK) {
         zxlogf(ERROR, "xdc_write failed %d\n", status);
-        list_add_tail(&xdc->free_write_reqs, &req->node);
+        usb_request_pool_add(&xdc->free_write_reqs, req);
         goto out;
     }
 
@@ -365,7 +369,7 @@ zx_status_t xdc_write(void* ctx, const void* buf, size_t count, zx_off_t off, si
 out:
     xdc_update_write_signal_locked(xdc, status != ZX_ERR_IO_NOT_PRESENT /* online */);
     mtx_unlock(&xdc->write_lock);
-    return ZX_OK;
+    return status;
 }
 
 static void xdc_update_read_signal_locked(xdc_t* xdc) __TA_REQUIRES(xdc->read_lock) {
@@ -677,7 +681,7 @@ static int xdc_start_thread(void* arg) {
 static zx_status_t xdc_init_internal(xdc_t* xdc) {
     mtx_init(&xdc->lock, mtx_plain);
 
-    list_initialize(&xdc->free_write_reqs);
+    usb_request_pool_init(&xdc->free_write_reqs);
     mtx_init(&xdc->write_lock, mtx_plain);
 
     list_initialize(&xdc->free_read_reqs);
@@ -694,7 +698,7 @@ static zx_status_t xdc_init_internal(xdc_t* xdc) {
         }
         req->complete_cb = xdc_write_complete;
         req->cookie = xdc;
-        list_add_head(&xdc->free_write_reqs, &req->node);
+        usb_request_pool_add(&xdc->free_write_reqs, req);
     }
     for (int i = 0; i < MAX_REQS; i++) {
         usb_request_t* req;

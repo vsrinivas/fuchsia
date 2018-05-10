@@ -99,7 +99,8 @@ typedef struct {
 
     mtx_t lock;
 
-    list_node_t free_write_reqs;
+    bool writable;
+    usb_request_pool_t free_write_reqs;
     mtx_t write_lock;
 
     list_node_t free_read_reqs;
