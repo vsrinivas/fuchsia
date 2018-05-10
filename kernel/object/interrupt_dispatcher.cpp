@@ -195,8 +195,8 @@ zx_status_t InterruptDispatcher::Ack() {
             if (!SendPacketLocked(timestamp_)) {
                 // We cannot queue another packet here.
                 // If we reach here it means that the
-                // interrupt packed has not been processed,
-                // another interrupt has occured & then the
+                // interrupt packet has not been processed,
+                // another interrupt has occurred & then the
                 // interrupt was ACK'd
                 return ZX_ERR_BAD_STATE;
             }
