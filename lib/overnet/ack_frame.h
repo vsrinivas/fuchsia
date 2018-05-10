@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <tuple>
 #include <vector>
+#include "slice.h"
 #include "status.h"
 
 namespace overnet {
@@ -70,7 +71,7 @@ class AckFrame {
     nack_seqs_.push_back(seq);
   }
 
-  static StatusOr<AckFrame> Parse(const uint8_t** bytes, const uint8_t* end);
+  static StatusOr<AckFrame> Parse(Slice slice);
 
   friend bool operator==(const AckFrame& a, const AckFrame& b) {
     return std::tie(a.ack_to_seq_, a.ack_delay_us_, a.window_grant_bytes_,

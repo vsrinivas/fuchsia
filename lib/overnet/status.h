@@ -9,6 +9,8 @@
 #include <atomic>
 #include <ostream>
 #include <string>
+#include <tuple>
+#include <type_traits>
 
 namespace overnet {
 
@@ -214,9 +216,9 @@ inline std::ostream& operator<<(std::ostream& out, const Status& status) {
 template <class T>
 class StatusOr final {
  public:
-  template <typename U, typename = std::enable_if_t<
+  template <typename U, typename = typename std::enable_if<
                             !std::is_convertible<U, Status>::value &&
-                            !std::is_convertible<U, StatusOr>::value>>
+                            !std::is_convertible<U, StatusOr>::value>::type>
   StatusOr(U&& value)
       : code_(StatusCode::OK), storage_(std::forward<U>(value)) {}
   StatusOr(StatusCode code, const std::string& description)
@@ -271,6 +273,11 @@ class StatusOr final {
   // Return (a pointer-to) an object on successful completion, or nullptr on
   // failure
   const T* get() const {
+    if (is_ok()) return unwrap();
+    return nullptr;
+  }
+
+  T* get() {
     if (is_ok()) return unwrap();
     return nullptr;
   }

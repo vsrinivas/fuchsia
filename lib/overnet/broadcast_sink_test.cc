@@ -21,12 +21,11 @@ namespace broadcast_sink_test {
 class MockSink : public Sink<int> {
  public:
   MOCK_METHOD1(Close, void(const Status&));
-  MOCK_METHOD2(Pushed,
-               void(const int& item, std::function<void(const Status&)> done));
+  MOCK_METHOD2(Pushed, void(int item, std::function<void(const Status&)> done));
   // since gmock has a hard time with move-only types, we provide this override
   // directly, and use Pushed as the mock method (which takes a function that
   // wraps done)
-  void Push(const int& item, StatusCallback done) override {
+  void Push(int item, StatusCallback done) override {
     auto done_ptr = std::make_shared<StatusCallback>(std::move(done));
     this->Pushed(item,
                  [done_ptr](const Status& status) { (*done_ptr)(status); });

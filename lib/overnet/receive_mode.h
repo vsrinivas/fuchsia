@@ -29,6 +29,8 @@ class ReceiveMode {
   virtual bool Completed(uint64_t seq, const Status& status) = 0;
   // Create an Ack frame
   virtual AckFrame GenerateAck() const = 0;
+  // Base of the current receive window
+  virtual uint64_t WindowBase() const = 0;
 };
 
 class ReliableOrdered final : public ReceiveMode {
@@ -40,6 +42,7 @@ class ReliableOrdered final : public ReceiveMode {
   bool Begin(uint64_t seq, StatusCallback ready) override;
   bool Completed(uint64_t seq, const Status& status) override;
   AckFrame GenerateAck() const override;
+  uint64_t WindowBase() const override { return cur_; }
 
  private:
   uint64_t cur_ = 1;
@@ -59,6 +62,7 @@ class ReliableUnordered final : public ReceiveMode {
   bool Begin(uint64_t seq, StatusCallback ready) override;
   bool Completed(uint64_t seq, const Status& status) override;
   AckFrame GenerateAck() const override;
+  uint64_t WindowBase() const override { return tip_; }
 
  private:
   uint64_t tip_ = 1;
@@ -76,6 +80,7 @@ class UnreliableOrdered final : public ReceiveMode {
   bool Begin(uint64_t seq, StatusCallback ready) override;
   bool Completed(uint64_t seq, const Status& status) override;
   AckFrame GenerateAck() const override;
+  uint64_t WindowBase() const override { return cur_; }
 
  private:
   uint64_t cur_ = 1;
@@ -95,6 +100,7 @@ class UnreliableUnordered final : public ReceiveMode {
   bool Begin(uint64_t seq, StatusCallback ready) override;
   bool Completed(uint64_t seq, const Status& status) override;
   AckFrame GenerateAck() const override;
+  uint64_t WindowBase() const override { return tip_; }
 
  private:
   uint64_t tip_ = 1;
@@ -111,6 +117,7 @@ class TailReliable final : public ReceiveMode {
   bool Begin(uint64_t seq, StatusCallback ready) override;
   bool Completed(uint64_t seq, const Status& status) override;
   AckFrame GenerateAck() const override;
+  uint64_t WindowBase() const override { return cur_; }
 
  private:
   uint64_t cur_ = 1;
@@ -128,6 +135,7 @@ class Error final : public ReceiveMode {
   bool Begin(uint64_t seq, StatusCallback ready) override;
   bool Completed(uint64_t seq, const Status& status) override;
   AckFrame GenerateAck() const override;
+  uint64_t WindowBase() const override { return 1; }
 };
 
 class ParameterizedReceiveMode final : public ReceiveMode {
@@ -143,6 +151,9 @@ class ParameterizedReceiveMode final : public ReceiveMode {
     return receive_mode_->Completed(seq, status);
   }
   AckFrame GenerateAck() const override { return receive_mode_->GenerateAck(); }
+  uint64_t WindowBase() const override { return receive_mode_->WindowBase(); }
+
+  ReceiveMode* get() const { return receive_mode_; }
 
  private:
   union Storage {

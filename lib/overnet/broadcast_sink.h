@@ -32,7 +32,7 @@ class BroadcastSink final : public Sink<T> {
     if (closed_ && pending_targets_ == 0) delete this;
   }
 
-  void Push(const T& item, StatusCallback done) override {
+  void Push(T item, StatusCallback done) override {
     assert(pending_targets_ == 0 && error_.is_ok());
     push_done_ = std::move(done);
     // guard against instant completion within tgt->Push (which could cause us

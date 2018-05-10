@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "router.h"
+#include <iostream>
 
 namespace overnet {
 

@@ -9,6 +9,7 @@
 #include "callback.h"
 #include "routing_header.h"
 #include "sink.h"
+#include "slice.h"
 
 namespace overnet {
 namespace router_impl {
@@ -33,17 +34,6 @@ struct hash<overnet::router_impl::LocalStreamId> {
 }  // namespace std
 
 namespace overnet {
-
-// TODO(ctiller): this should be a reference counted wrapper around some
-// arbitrary byte array (or portion thereof).
-struct Slice final {
-  const uint8_t* bytes;
-};
-
-struct Chunk final {
-  size_t offset;
-  Slice slice;
-};
 
 struct Message final {
   RoutingHeader routing_header;
@@ -76,6 +66,8 @@ class Router final {
                         StreamHandler* stream_handler);
   // Register a link to another router (usually on a different machine)
   Status RegisterLink(NodeId peer, Link* link);
+
+  NodeId node_id() const { return node_id_; }
 
  private:
   const NodeId node_id_;

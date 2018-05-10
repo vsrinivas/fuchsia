@@ -4,6 +4,8 @@
 
 #include <stdint.h>
 
+#pragma once
+
 namespace overnet {
 
 // Reliability and ordering mode for a stream

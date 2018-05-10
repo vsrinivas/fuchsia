@@ -44,32 +44,34 @@ uint8_t* AckFrame::Writer::Write(uint8_t* out) const {
   return p;
 }
 
-StatusOr<AckFrame> AckFrame::Parse(const uint8_t** bytes, const uint8_t* end) {
+StatusOr<AckFrame> AckFrame::Parse(Slice slice) {
+  const uint8_t* bytes = slice.begin();
+  const uint8_t* end = slice.end();
   uint64_t ack_to_seq;
-  if (!varint::Read(bytes, end, &ack_to_seq)) {
+  if (!varint::Read(&bytes, end, &ack_to_seq)) {
     return StatusOr<AckFrame>(StatusCode::INVALID_ARGUMENT,
                               "Failed to parse ack_to_seq from ack frame");
   }
-  if (ack_to_seq < 1) {
+  if (ack_to_seq == 0) {
     return StatusOr<AckFrame>(StatusCode::INVALID_ARGUMENT,
                               "Ack frame cannot ack_to_seq 0");
   }
   uint64_t ack_delay_us;
-  if (!varint::Read(bytes, end, &ack_delay_us)) {
+  if (!varint::Read(&bytes, end, &ack_delay_us)) {
     return StatusOr<AckFrame>(StatusCode::INVALID_ARGUMENT,
                               "Failed to parse ack_delay_us from ack frame");
   }
   uint64_t window_grant_bytes;
-  if (!varint::Read(bytes, end, &window_grant_bytes)) {
+  if (!varint::Read(&bytes, end, &window_grant_bytes)) {
     return StatusOr<AckFrame>(
         StatusCode::INVALID_ARGUMENT,
         "Failed to parse window_grant_bytes from ack frame");
   }
   AckFrame frame(ack_to_seq, ack_delay_us, window_grant_bytes);
-  uint64_t base = ack_to_seq - 1;
-  while (*bytes != end) {
+  uint64_t base = ack_to_seq;
+  while (bytes != end) {
     uint64_t offset;
-    if (!varint::Read(bytes, end, &offset)) {
+    if (!varint::Read(&bytes, end, &offset)) {
       return StatusOr<AckFrame>(StatusCode::INVALID_ARGUMENT,
                                 "Failed to read nack offset from ack frame");
     }

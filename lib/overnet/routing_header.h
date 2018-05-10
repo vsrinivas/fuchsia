@@ -4,111 +4,16 @@
 
 #pragma once
 
-#include <stddef.h>
-#include <stdint.h>
-#include <string.h>
 #include <tuple>
 #include <vector>
+#include "node_id.h"
 #include "reliability_and_ordering.h"
+#include "seq_num.h"
 #include "status.h"
+#include "stream_id.h"
 #include "varint.h"
 
 namespace overnet {
-
-inline uint8_t* WriteLE64(uint64_t x, uint8_t* bytes) {
-  memcpy(bytes, &x, sizeof(x));
-  return bytes + sizeof(x);
-}
-
-inline bool ParseLE64(const uint8_t** bytes, const uint8_t* end,
-                      uint64_t* out) {
-  if (end - *bytes < 8) return false;
-  memcpy(out, *bytes, 8);
-  *bytes += 8;
-  return true;
-}
-
-// Address of a node on the overlay network. This is intended to be relatively
-// random and unguessable.
-class NodeId {
- public:
-  explicit NodeId(uint64_t id) : id_(id) {}
-  bool operator==(NodeId other) const { return id_ == other.id_; }
-  bool operator!=(NodeId other) const { return id_ != other.id_; }
-
-  uint64_t Hash() const { return id_; }
-  uint64_t get() const { return id_; }
-  std::string ToString() const;
-
-  size_t wire_length() const { return sizeof(id_); }
-  uint8_t* Write(uint8_t* dst) const { return WriteLE64(id_, dst); }
-
- private:
-  uint64_t id_;
-};
-
-std::ostream& operator<<(std::ostream& out, NodeId node_id);
-
-// Identifier of an active stream of communication between two nodes.
-class StreamId {
- public:
-  explicit StreamId(uint64_t id) : id_(id) {}
-  bool operator==(StreamId other) const { return id_ == other.id_; }
-  bool operator!=(StreamId other) const { return id_ != other.id_; }
-
-  uint64_t Hash() const { return id_; }
-  uint64_t get() const { return id_; }
-  std::string ToString() const;
-
-  uint8_t wire_length() const { return varint::WireSizeFor(id_); }
-  uint8_t* Write(uint8_t wire_length, uint8_t* dst) const {
-    return varint::Write(id_, wire_length, dst);
-  }
-
- private:
-  uint64_t id_;
-};
-
-std::ostream& operator<<(std::ostream& out, StreamId stream_id);
-
-// A sequence number
-class SeqNum {
- public:
-  // Construct with the sequence number and the number of outstanding messages
-  // in the same stream - the wire representation will be scaled such that the
-  // correct sequence number is unambiguous.
-  SeqNum(uint64_t seq, uint64_t outstanding_messages);
-
-  static StatusOr<SeqNum> Parse(const uint8_t** bytes, const uint8_t* end);
-
-  static bool IsOutstandingMessagesLegal(uint64_t outstanding_messages) {
-    return outstanding_messages < (1 << 28);
-  }
-
-  size_t wire_length() const { return (rep_[0] >> 6) + 1; }
-  uint8_t* Write(uint8_t* dst) const {
-    memcpy(dst, rep_, wire_length());
-    return dst + wire_length();
-  }
-
-  std::string ToString() const;
-  uint64_t Reconstruct(uint64_t window_base) const;
-
-  // Helper to make writing mocks easier.
-  uint64_t ReconstructFromZero_TestOnly() const { return Reconstruct(0); }
-
-  bool operator==(const SeqNum& rhs) const {
-    return wire_length() == rhs.wire_length() &&
-           0 == memcmp(rep_, rhs.rep_, wire_length());
-  }
-  bool operator!=(const SeqNum& rhs) const { return !operator==(rhs); }
-
- private:
-  SeqNum() {}
-  uint8_t rep_[4];
-};
-
-std::ostream& operator<<(std::ostream& out, SeqNum seq_num);
 
 // Routing headers are passed over links between nodes in a (potentially)
 // non-private way. They should expose a minimal amount of information to route

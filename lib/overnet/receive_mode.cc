@@ -7,6 +7,8 @@
 namespace overnet {
 namespace receive_mode {
 
+static const uint64_t kMaxSeq = ~uint64_t(0);
+
 ///////////////////////////////////////////////////////////////////////////////
 // ReliableOrdered
 
@@ -28,16 +30,20 @@ bool ReliableOrdered::Begin(uint64_t seq, StatusCallback ready) {
 bool ReliableOrdered::Completed(uint64_t seq, const Status& status) {
   assert(seq == cur_ && cur_in_progress_);
   if (status.is_ok()) {
-    cur_++;
-    cur_in_progress_ = false;
-    auto it = later_.find(cur_);
-    if (it != later_.end()) {
-      cur_in_progress_ = true;
-      auto cb = std::move(it->second);
-      later_.erase(it);
-      cb(Status::Ok());
+    if (cur_ == kMaxSeq) {
+      return true;
+    } else {
+      cur_++;
+      cur_in_progress_ = false;
+      auto it = later_.find(cur_);
+      if (it != later_.end()) {
+        cur_in_progress_ = true;
+        auto cb = std::move(it->second);
+        later_.erase(it);
+        cb(Status::Ok());
+      }
+      return true;
     }
-    return true;
   } else {
     cur_in_progress_ = false;
     return false;
@@ -77,12 +83,12 @@ bool ReliableUnordered::Completed(uint64_t seq, const Status& status) {
     done_.set(idx);
     if (idx == 0) {
       // TODO(ctiller): count how far to shift, and then do this, as the
-      // shifts could be expensive
-      do {
+      // shifts could be expensive.
+      while (tip_ != kMaxSeq && done_.test(0)) {
         tip_++;
         in_progress_ >>= 1;
         done_ >>= 1;
-      } while (done_.test(0));
+      }
       return true;
     } else {
       return false;
@@ -134,7 +140,7 @@ bool UnreliableOrdered::Completed(uint64_t seq, const Status& status) {
     later_cb(Status::Ok());
     return !later_.empty() && later_.begin()->first > cur_ + 1;
   } else {
-    if (status.is_ok()) cur_++;
+    if (status.is_ok() && cur_ != kMaxSeq) cur_++;
     return true;
   }
 }
@@ -163,7 +169,7 @@ AckFrame UnreliableOrdered::GenerateAck() const {
 bool UnreliableUnordered::Begin(uint64_t seq, StatusCallback ready) {
   if (seq < tip_) return false;
   bool moved_tip = false;
-  if (seq >= tip_ + kLookaheadWindow) {
+  if (seq >= kLookaheadWindow && seq - kLookaheadWindow >= tip_) {
     uint64_t new_tip = seq - kLookaheadWindow + 1;
     assert(tip_ < new_tip);
     uint64_t move = new_tip - tip_;
@@ -175,7 +181,7 @@ bool UnreliableUnordered::Begin(uint64_t seq, StatusCallback ready) {
     tip_ = new_tip;
     moved_tip = true;
   }
-  // After window check => always legal index in GenerateAck
+  // After window check => always legal index in GenerateAck.
   if (seq > max_seen_) max_seen_ = seq;
   if (!in_progress_.test(seq - tip_)) {
     in_progress_.set(seq - tip_);
@@ -189,8 +195,10 @@ bool UnreliableUnordered::Completed(uint64_t seq, const Status& status) {
   bool moved_tip = false;
   if (status.is_ok()) {
     if (seq == tip_) {
-      tip_++;
-      in_progress_ >>= 1;
+      if (tip_ != kMaxSeq) {
+        tip_++;
+        in_progress_ >>= 1;
+      }
       moved_tip = true;
     }
   } else {
@@ -240,7 +248,7 @@ bool TailReliable::Completed(uint64_t seq, const Status& status) {
     later_cb(Status::Ok());
     return !later_.empty() && later_.begin()->first > cur_ + 1;
   } else {
-    if (status.is_ok()) cur_++;
+    if (status.is_ok() && cur_ != kMaxSeq) cur_++;
     return true;
   }
 }

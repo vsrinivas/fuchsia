@@ -68,7 +68,7 @@ class MockSink : public Sink<Chunk> {
   // Since gmock has a hard time with move-only types, we provide this override
   // directly, and use Pushed as the mock method (which takes a function that
   // wraps done).
-  void Push(const Chunk& item, StatusCallback done) override {
+  void Push(Chunk item, StatusCallback done) override {
     auto done_ptr = std::make_shared<StatusCallback>(std::move(done));
     this->Pushed(item,
                  [done_ptr](const Status& status) { (*done_ptr)(status); });

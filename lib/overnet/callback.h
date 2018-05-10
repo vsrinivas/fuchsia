@@ -74,6 +74,14 @@ class Callback {
 
   bool empty() const { return vtable_ == &null_vtable; }
 
+  static Callback Ignored() {
+    return Callback([](const Arg&) {});
+  }
+
+  static Callback Unimplemented() {
+    return Callback([](const Arg&) { abort(); });
+  }
+
  private:
   static void NullVTableNotCalled(void*) {}
   static void NullVTableCall(void*, Arg&&) { abort(); }

@@ -20,10 +20,9 @@ std::vector<uint8_t> Encode(const AckFrame& h) {
 void RoundTrip(const AckFrame& h, const std::vector<uint8_t>& expect) {
   auto v = Encode(h);
   EXPECT_EQ(expect, v);
-  const uint8_t* data = v.data();
-  auto p = AckFrame::Parse(&data, data + v.size());
-  EXPECT_EQ(data, v.data() + v.size());
+  auto p = AckFrame::Parse(Slice::FromCopiedBuffer(v.data(), v.size()));
   EXPECT_TRUE(p.is_ok());
+  EXPECT_EQ(h, *p.get());
 }
 
 TEST(AckFrame, NoNack) {

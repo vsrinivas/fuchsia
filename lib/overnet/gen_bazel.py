@@ -5,6 +5,7 @@
 # found in the LICENSE file.
 
 import collections
+import os
 import sys
 
 # This program generates BUILD.bazel, WORKSPACE, .bazelrc from BUILD.gn
@@ -190,7 +191,7 @@ def mapdep(n):
     return m[n]
 
 
-FUZZERS = ['receive_mode', 'routing_header']
+FUZZERS = ['linearizer', 'receive_mode', 'routing_header']
 
 
 with open('BUILD.bazel', 'w') as o:
@@ -216,7 +217,11 @@ with open('BUILD.bazel', 'w') as o:
     for fuzzer in FUZZERS:
         print >>o, 'cc_binary('
         print >>o, '  name="%s_fuzzer",' % fuzzer
-        print >>o, '  srcs=["%s_fuzzer.cc", "receive_mode_fuzzer_helpers.h"],' % fuzzer,
+        srcs = ['%s_fuzzer.cc' % fuzzer]
+        helpers_h = '%s_fuzzer_helpers.h' % fuzzer
+        if os.path.exists(helpers_h):
+            srcs.append(helpers_h)
+        print >>o, '  srcs=[%s],' % ', '.join('"%s"' % s for s in srcs)
         print >>o, '  deps=[":overnet"],'
         print >>o, ')'
 
@@ -248,6 +253,7 @@ build:asan --action_env=LSAN_OPTIONS=report_objects=1
 
 build:asan-fuzzer --strip=never
 build:asan-fuzzer --copt -fsanitize=fuzzer,address
+build:asan-fuzzer --copt -fsanitize-coverage=trace-cmp
 build:asan-fuzzer --copt -O0
 build:asan-fuzzer --copt -fno-omit-frame-pointer
 build:asan-fuzzer --linkopt -fsanitize=fuzzer,address
@@ -272,6 +278,14 @@ build:ubsan --copt -DNDEBUG
 build:ubsan --copt -fno-sanitize=function,vptr
 build:ubsan --linkopt -fsanitize=undefined
 build:ubsan --action_env=UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
+
+build:ubsan-fuzzer --strip=never
+build:ubsan-fuzzer --copt -fsanitize=fuzzer,undefined
+build:ubsan-fuzzer --copt -fno-omit-frame-pointer
+build:ubsan-fuzzer --copt -DNDEBUG
+build:ubsan-fuzzer --copt -fno-sanitize=function,vptr
+build:ubsan-fuzzer --linkopt -fsanitize=fuzzer,undefined
+build:ubsan-fuzzer --action_env=UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
 """
 
 with open('WORKSPACE', 'w') as o:
