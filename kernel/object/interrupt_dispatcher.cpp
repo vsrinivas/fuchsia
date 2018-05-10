@@ -135,22 +135,21 @@ void InterruptDispatcher::InterruptHandler(bool pci) {
 
 zx_status_t InterruptDispatcher::Destroy() {
     AutoSpinLock guard(&spinlock_);
-    bool packet_in_queue = false;
 
     if (!(flags_ & INTERRUPT_VIRTUAL)) {
         MaskInterrupt(vector_);
         UnregisterInterruptHandler(vector_);
     }
     if (port_dispatcher_) {
-        packet_in_queue = port_dispatcher_->RemoveInterruptPacket(&port_packet_);
+        bool packet_was_in_queue = port_dispatcher_->RemoveInterruptPacket(&port_packet_);
         if ((state_ == InterruptState::NEEDACK) &&
-            !packet_in_queue) {
+            !packet_was_in_queue) {
             state_ = InterruptState::DESTROYED;
             return ZX_ERR_NOT_FOUND;
         }
         if ((state_ == InterruptState::IDLE) ||
             ((state_ == InterruptState::NEEDACK) &&
-             packet_in_queue)) {
+             packet_was_in_queue)) {
             state_ = InterruptState::DESTROYED;
             return ZX_OK;
         }
