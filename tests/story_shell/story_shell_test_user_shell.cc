@@ -66,10 +66,6 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint story1_create_{"Story1 Create"};
 
   void Story1_Create() {
-    // TODO(mesch): StoryController.AddModule() is broken when it's called
-    // before the story is running. So we start the story with a default module,
-    // and then AddModule() after starting the story. The story controller calls
-    // need A LOT of cleanup.
     story_provider_->CreateStory(kCommonNullModule,
                                  [this](fidl::StringPtr story_id) {
                                    story1_create_.Pass();
