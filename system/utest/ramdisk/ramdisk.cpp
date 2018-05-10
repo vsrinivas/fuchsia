@@ -1280,9 +1280,9 @@ bool ramdisk_test_fifo_sleep_unavailable(void) {
 
     ramdisk_txn_counts_t counts;
     ASSERT_GE(ioctl_ramdisk_get_txn_counts(fd, &counts), 0);
-    ASSERT_GE(counts.received, 2);
-    ASSERT_GE(counts.successful, 1);
-    ASSERT_GE(counts.failed, 1);
+    ASSERT_EQ(counts.received, 2);
+    ASSERT_EQ(counts.successful, 1);
+    ASSERT_EQ(counts.failed, 1);
 
     // Wake the ramdisk back up
     ASSERT_GE(ioctl_ramdisk_wake_up(fd), 0);
@@ -1392,7 +1392,7 @@ bool ramdisk_test_fifo_sleep_deferred(void) {
     for (size_t i = 0; i < fbl::count_of(requests); ++i) {
         requests[i].txnid = txnid;
         requests[i].vmoid = vmoid;
-        requests[i].opcode = BLOCKIO_READ;
+        requests[i].opcode = BLOCKIO_WRITE;
         requests[i].length = 1;
         requests[i].vmo_offset = 0;
         requests[i].dev_offset = i;

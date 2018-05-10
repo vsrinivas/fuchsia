@@ -39,6 +39,7 @@ typedef struct ramdisk_device {
     mtx_t lock;
     completion_t signal;
     list_node_t txn_list;
+    list_node_t deferred_list;
     bool dead;
 
     uint32_t flags;
@@ -62,23 +63,33 @@ static int worker_thread(void* arg) {
     zx_status_t status = ZX_OK;
     ramdisk_device_t* dev = (ramdisk_device_t*)arg;
     ramdisk_txn_t* txn = NULL;
-    bool dead, asleep;
+    bool dead, asleep, defer;
 
     for (;;) {
         for (;;) {
             mtx_lock(&dev->lock);
+            txn = NULL;
             dead = dev->dead;
             asleep = dev->asleep;
-            // Grab the next transaction unless the device is saving them until it wakes
-            if (!dead && asleep && (dev->flags & RAMDISK_FLAG_RESUME_ON_WAKE) != 0) {
-                txn = NULL;
-            } else {
+            defer = (dev->flags & RAMDISK_FLAG_RESUME_ON_WAKE) != 0;
+
+            if (!asleep) {
+                // If we are awake, try grabbing pending transactions from the deferred list.
+                txn = list_remove_head_type(&dev->deferred_list, ramdisk_txn_t, node);
+            }
+
+            if (txn == NULL) {
+                // If no transactions were available in the deferred list (or we are asleep),
+                // grab one from the regular txn_list.
                 txn = list_remove_head_type(&dev->txn_list, ramdisk_txn_t, node);
             }
+
             mtx_unlock(&dev->lock);
+
             if (dead) {
                 goto goodbye;
             }
+
             if (txn == NULL) {
                 completion_wait(&dev->signal, ZX_TIME_INFINITE);
             } else {
@@ -92,27 +103,38 @@ static int worker_thread(void* arg) {
 
         if (len > MAX_TRANSFER_SIZE) {
             status = ZX_ERR_OUT_OF_RANGE;
-        } else if (asleep) {
-            status = ZX_ERR_UNAVAILABLE;
         } else if (txn->op.command == BLOCK_OP_READ) {
+            // A read operation should always succeed, even if the ramdisk is "asleep".
             status = zx_vmo_write(txn->op.rw.vmo, addr, txn->op.rw.offset_vmo, len);
+        } else if (asleep) {
+            if (defer) {
+                // If we are asleep but resuming on wake, add txn to the deferred_list.
+                // deferred_list is only accessed by the worker_thread, so a lock is not needed.
+                list_add_tail(&dev->deferred_list, &txn->node);
+                continue;
+            } else {
+                status = ZX_ERR_UNAVAILABLE;
+            }
         } else { // BLOCK_OP_WRITE
             status = zx_vmo_read(txn->op.rw.vmo, addr, txn->op.rw.offset_vmo, len);
         }
 
-        mtx_lock(&dev->lock);
-        // Increment the count based on the result of the last transaction.
-        if (status == ZX_OK) {
-            dev->txn_counts.successful++;
-        } else {
-            dev->txn_counts.failed++;
+        if (txn->op.command == BLOCK_OP_WRITE) {
+            // Since we aren't failing read transactions, only include write transaction counts.
+            mtx_lock(&dev->lock);
+            // Increment the count based on the result of the last transaction.
+            if (status == ZX_OK) {
+                dev->txn_counts.successful++;
+            } else {
+                dev->txn_counts.failed++;
+            }
+            // Put the ramdisk to sleep if we have reached the required # of transactions.
+            if (dev->sa_txn_count != 0) {
+                --dev->sa_txn_count;
+                dev->asleep = (dev->sa_txn_count == 0);
+            }
+            mtx_unlock(&dev->lock);
         }
-        // Put the ramdisk to sleep if we have reached the required # of transactions.
-        if (dev->sa_txn_count != 0) {
-            --dev->sa_txn_count;
-            dev->asleep = (dev->sa_txn_count == 0);
-        }
-        mtx_unlock(&dev->lock);
 
         txn->op.completion_cb(&txn->op, status);
     }
@@ -120,9 +142,13 @@ static int worker_thread(void* arg) {
 goodbye:
     while (txn != NULL) {
         txn->op.completion_cb(&txn->op, ZX_ERR_BAD_STATE);
-        mtx_lock(&dev->lock);
-        txn = list_remove_head_type(&dev->txn_list, ramdisk_txn_t, node);
-        mtx_unlock(&dev->lock);
+        txn = list_remove_head_type(&dev->deferred_list, ramdisk_txn_t, node);
+
+        if (txn == NULL) {
+            mtx_lock(&dev->lock);
+            txn = list_remove_head_type(&dev->txn_list, ramdisk_txn_t, node);
+            mtx_unlock(&dev->lock);
+        }
     }
     return 0;
 }
@@ -236,9 +262,11 @@ static void ramdisk_queue(void* ctx, block_op_t* bop) {
     ramdisk_device_t* ramdev = ctx;
     ramdisk_txn_t* txn = containerof(bop, ramdisk_txn_t, op);
     bool dead;
+    bool read = false;
 
     switch ((txn->op.command &= BLOCK_OP_MASK)) {
     case BLOCK_OP_READ:
+        read = true;
     case BLOCK_OP_WRITE:
         if ((txn->op.rw.offset_dev >= ramdev->blk_count) ||
             ((ramdev->blk_count - txn->op.rw.offset_dev) < txn->op.rw.length)) {
@@ -250,7 +278,9 @@ static void ramdisk_queue(void* ctx, block_op_t* bop) {
 
         mtx_lock(&ramdev->lock);
         if (!(dead = ramdev->dead)) {
-            ramdev->txn_counts.received++;
+            if (!read) {
+                ramdev->txn_counts.received++;
+            }
             list_add_tail(&ramdev->txn_list, &txn->node);
         }
         mtx_unlock(&ramdev->lock);
@@ -343,6 +373,7 @@ static zx_status_t ramctl_config(ramctl_device_t* ramctl, zx_handle_t vmo,
         goto fail_mtx;
     }
     list_initialize(&ramdev->txn_list);
+    list_initialize(&ramdev->deferred_list);
     if (thrd_create(&ramdev->worker, worker_thread, ramdev) != thrd_success) {
         goto fail_unmap;
     }
