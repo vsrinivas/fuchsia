@@ -177,5 +177,7 @@ constexpr FemtoWatt to_femtoWatt_approx(dBm dbm) {
     return FemtoWatt((a * b) >> 8);
 }
 
+dBm to_dBm(FemtoWatt fw);
+
 }  // namespace common
 }  // namespace wlan
