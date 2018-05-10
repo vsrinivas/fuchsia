@@ -138,7 +138,7 @@ zx_status_t aml_scpi_get_sensor(void* ctx, const char* name,
             SCPI_ERROR("mailbox_send_cmd failed\n");
             return status;
         }
-        if (!strcmp(name, aml_sensor_info.sensor_name)) {
+        if (!strncmp(name, aml_sensor_info.sensor_name, sizeof(aml_sensor_info.sensor_name))) {
             *sensor_value = aml_sensor_info.sensor;
             break;
         }

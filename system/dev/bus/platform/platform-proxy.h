@@ -63,7 +63,7 @@ typedef struct {
     uint32_t sensor_id;
     uint32_t sensor_value;
     union {
-        char* name;
+        char name[20];
     };
 } pdev_scpi_ctx_t;
 

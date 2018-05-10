@@ -224,7 +224,12 @@ static zx_status_t pdev_scpi_get_sensor(void* ctx, const char* name,
     pdev_req_t req = {
         .op = PDEV_SCPI_GET_SENSOR,
     };
-    memcpy(&req.scpi.name, name, strlen(name));
+    uint32_t max_len = sizeof(req.scpi.name);
+    uint32_t len = strnlen(name, max_len);
+    if (len == max_len) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    memcpy(&req.scpi.name, name, len + 1);
     pdev_resp_t resp;
 
     zx_status_t status =  platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp),
