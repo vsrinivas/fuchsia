@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_LIB_COMMON_TEARDOWN_
-#define APPS_MODULAR_LIB_COMMON_TEARDOWN_
+#ifndef PERIDOT_LIB_COMMON_TEARDOWN_H_
+#define PERIDOT_LIB_COMMON_TEARDOWN_H_
 
 #include "lib/fxl/time/time_delta.h"
 
@@ -33,4 +33,4 @@ constexpr auto kUserProviderTimeout = kBasicTimeout + kUserRunnerTimeout;
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_LIB_COMMON_TEARDOWN_
+#endif  // PERIDOT_LIB_COMMON_TEARDOWN_H_

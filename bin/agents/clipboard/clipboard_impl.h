@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_AGENTS_CLIPBOARD_CLIPBOARD_AGENT_H_
-#define PERIDOT_BIN_AGENTS_CLIPBOARD_CLIPBOARD_AGENT_H_
+#ifndef PERIDOT_BIN_AGENTS_CLIPBOARD_CLIPBOARD_IMPL_H_
+#define PERIDOT_BIN_AGENTS_CLIPBOARD_CLIPBOARD_IMPL_H_
 
 #include <string>
 
@@ -42,4 +42,4 @@ class ClipboardImpl : Clipboard {
 
 }  // namespace modular
 
-#endif  // PERIDOT_BIN_AGENTS_CLIPBOARD_CLIPBOARD_AGENT_H_
+#endif  // PERIDOT_BIN_AGENTS_CLIPBOARD_CLIPBOARD_IMPL_H_

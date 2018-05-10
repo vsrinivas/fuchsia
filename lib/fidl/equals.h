@@ -128,4 +128,4 @@ bool ModuleDataEqual(const ModuleDataPtr& a, const ModuleDataPtr& b) {
 
 }  // namespace modular
 
-#endif
+#endif  // PERIDOT_LIB_FIDL_EQUALS_H_

@@ -19,4 +19,4 @@ void XdrAccount(XdrContext* const xdr, modular_auth::Account* const data) {
 
 }  // namespace modular
 
-#endif  // PERIDOT_LIB_LEDGER_CLIENT_PAGE_CLIENT_H_
+#endif  // PERIDOT_LIB_COMMON_XDR_H_

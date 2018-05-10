@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_LIB_COMMON_ASYNC_HOLDER_
-#define APPS_MODULAR_LIB_COMMON_ASYNC_HOLDER_
+#ifndef PERIDOT_LIB_COMMON_ASYNC_HOLDER_H_
+#define PERIDOT_LIB_COMMON_ASYNC_HOLDER_H_
 
 #include <functional>
 #include <memory>
@@ -85,4 +85,4 @@ class AsyncHolder : public AsyncHolderBase {
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_LIB_COMMON_ASYNC_HOLDER_
+#endif  // PERIDOT_LIB_COMMON_ASYNC_HOLDER_H_

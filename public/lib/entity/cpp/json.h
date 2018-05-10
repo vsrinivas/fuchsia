@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef LIB_ENTITY_CPP_JSON_H_
+#define LIB_ENTITY_CPP_JSON_H_
+
 #include <string>
 #include <vector>
 
@@ -28,3 +31,5 @@ bool ExtractEntityTypesFromJson(const rapidjson::Value& value,
                                 std::vector<std::string>* types);
 
 }  // namespace modular
+
+#endif  // LIB_ENTITY_CPP_JSON_H_

@@ -71,4 +71,4 @@ inline fidl::VectorPtr<fidl::StringPtr> to_array(
 
 }  // namespace modular
 
-#endif
+#endif  // PERIDOT_LIB_FIDL_ARRAY_TO_STRING_H_
