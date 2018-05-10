@@ -28,9 +28,9 @@ static constexpr uint16_t kVirtioConsoleNumQueues =
 static_assert(kVirtioConsoleNumQueues % 2 == 0,
               "There must be a queue for both RX and TX");
 
-class VirtioConsole : public VirtioDeviceBase<VIRTIO_ID_CONSOLE,
-                                              kVirtioConsoleNumQueues,
-                                              virtio_console_config_t> {
+class VirtioConsole
+    : public VirtioDeviceBase<VIRTIO_ID_CONSOLE, kVirtioConsoleNumQueues,
+                              virtio_console_config_t> {
  public:
   VirtioConsole(const PhysMem&, async_t* async, zx::socket socket);
   ~VirtioConsole();

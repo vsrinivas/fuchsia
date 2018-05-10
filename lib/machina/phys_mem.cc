@@ -14,8 +14,9 @@ namespace machina {
 
 zx_status_t PhysMem::Init(size_t size) {
   zx_status_t status = zx::vmo::create(size, 0, &vmo_);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   status = zx::vmar::root_self().map(0, vmo_, 0, size, kMapFlags, &addr_);
   if (status != ZX_OK) {

@@ -43,10 +43,8 @@ zx_status_t VolatileWriteBlockDispatcher::Create(
 }
 
 VolatileWriteBlockDispatcher::VolatileWriteBlockDispatcher(
-    fbl::unique_ptr<BlockDispatcher> dispatcher,
-    zx::vmo vmo,
-    uintptr_t map_address,
-    size_t vmo_size)
+    fbl::unique_ptr<BlockDispatcher> dispatcher, zx::vmo vmo,
+    uintptr_t map_address, size_t vmo_size)
     : BlockDispatcher(dispatcher->size(), false /* read-only */),
       dispatcher_(fbl::move(dispatcher)),
       vmo_(fbl::move(vmo)),
@@ -65,8 +63,7 @@ zx_status_t VolatileWriteBlockDispatcher::Submit() {
   return dispatcher_->Submit();
 }
 
-zx_status_t VolatileWriteBlockDispatcher::Read(off_t disk_offset,
-                                               void* buf,
+zx_status_t VolatileWriteBlockDispatcher::Read(off_t disk_offset, void* buf,
                                                size_t size) {
   if (!ValidateBlockParams(disk_offset, size)) {
     return ZX_ERR_INVALID_ARGS;
@@ -105,8 +102,7 @@ zx_status_t VolatileWriteBlockDispatcher::Read(off_t disk_offset,
 }
 
 zx_status_t VolatileWriteBlockDispatcher::Write(off_t disk_offset,
-                                                const void* buf,
-                                                size_t size) {
+                                                const void* buf, size_t size) {
   if (!ValidateBlockParams(disk_offset, size)) {
     return ZX_ERR_INVALID_ARGS;
   }

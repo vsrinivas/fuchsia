@@ -22,8 +22,7 @@ class GpuResource
     : public fbl::SinglyLinkedListable<fbl::unique_ptr<GpuResource>> {
  public:
   static fbl::unique_ptr<GpuResource> Create(
-      const virtio_gpu_resource_create_2d_t* request,
-      VirtioGpu* gpu);
+      const virtio_gpu_resource_create_2d_t* request, VirtioGpu* gpu);
 
   // The driver will provide a scatter-gather list of memory pages to back
   // the framebuffer in guest physical memory.

@@ -24,14 +24,12 @@
 namespace machina {
 
 // Virtio input device.
-class VirtioInput : public VirtioDeviceBase<VIRTIO_ID_INPUT,
-                                            VIRTIO_INPUT_Q_COUNT,
-                                            virtio_input_config_t> {
+class VirtioInput
+    : public VirtioDeviceBase<VIRTIO_ID_INPUT, VIRTIO_INPUT_Q_COUNT,
+                              virtio_input_config_t> {
  public:
-  VirtioInput(InputEventQueue* event_queue,
-              const PhysMem& phys_mem,
-              const char* device_name,
-              const char* device_serial);
+  VirtioInput(InputEventQueue* event_queue, const PhysMem& phys_mem,
+              const char* device_name, const char* device_serial);
 
   zx_status_t WriteConfig(uint64_t addr, const IoValue& value) override;
 
@@ -59,10 +57,8 @@ class VirtioInput : public VirtioDeviceBase<VIRTIO_ID_INPUT,
 
 class VirtioKeyboard : public VirtioInput {
  public:
-  VirtioKeyboard(InputEventQueue* event_queue,
-                 const PhysMem& phys_mem,
-                 const char* device_name,
-                 const char* device_serial)
+  VirtioKeyboard(InputEventQueue* event_queue, const PhysMem& phys_mem,
+                 const char* device_name, const char* device_serial)
       : VirtioInput(event_queue, phys_mem, device_name, device_serial) {}
 
   zx_status_t WriteConfig(uint64_t addr, const IoValue& value) override;
@@ -70,10 +66,8 @@ class VirtioKeyboard : public VirtioInput {
 
 class VirtioRelativePointer : public VirtioInput {
  public:
-  VirtioRelativePointer(InputEventQueue* event_queue,
-                        const PhysMem& phys_mem,
-                        const char* device_name,
-                        const char* device_serial)
+  VirtioRelativePointer(InputEventQueue* event_queue, const PhysMem& phys_mem,
+                        const char* device_name, const char* device_serial)
       : VirtioInput(event_queue, phys_mem, device_name, device_serial) {}
 
   zx_status_t WriteConfig(uint64_t addr, const IoValue& value) override;
@@ -81,12 +75,9 @@ class VirtioRelativePointer : public VirtioInput {
 
 class VirtioAbsolutePointer : public VirtioInput {
  public:
-  VirtioAbsolutePointer(InputEventQueue* event_queue,
-                        const PhysMem& phys_mem,
-                        const char* device_name,
-                        const char* device_serial,
-                        uint32_t max_width,
-                        uint32_t max_height)
+  VirtioAbsolutePointer(InputEventQueue* event_queue, const PhysMem& phys_mem,
+                        const char* device_name, const char* device_serial,
+                        uint32_t max_width, uint32_t max_height)
       : VirtioInput(event_queue, phys_mem, device_name, device_serial),
         max_width_(max_width),
         max_height_(max_height) {}

@@ -20,8 +20,7 @@ class Stream {
       : async_(async),
         socket_(socket),
         queue_(queue),
-        queue_wait_(async,
-                    queue,
+        queue_wait_(async, queue,
                     fbl::BindMember(this, &Stream::OnQueueReady)) {}
 
   zx_status_t Start() { return WaitOnQueue(); }
@@ -57,9 +56,7 @@ class Stream {
     return socket_wait_.Begin(async_);
   }
 
-  void OnSocketReady(async_t* async,
-                     async::WaitBase* wait,
-                     zx_status_t status,
+  void OnSocketReady(async_t* async, async::WaitBase* wait, zx_status_t status,
                      const zx_packet_signal_t* signal) {
     if (status != ZX_OK) {
       status = queue_->Return(head_, 0);
@@ -126,9 +123,7 @@ class Stream {
 
 class VirtioConsole::Port {
  public:
-  Port(async_t* async,
-       VirtioQueue* rx_queue,
-       VirtioQueue* tx_queue,
+  Port(async_t* async, VirtioQueue* rx_queue, VirtioQueue* tx_queue,
        zx::socket socket)
       : socket_(fbl::move(socket)),
         rx_stream_(async, rx_queue, socket_.get()),
@@ -148,8 +143,7 @@ class VirtioConsole::Port {
   Stream tx_stream_;
 };
 
-VirtioConsole::VirtioConsole(const PhysMem& phys_mem,
-                             async_t* async,
+VirtioConsole::VirtioConsole(const PhysMem& phys_mem, async_t* async,
                              zx::socket socket)
     : VirtioDeviceBase(phys_mem) {
   {

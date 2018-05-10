@@ -29,8 +29,9 @@ static constexpr size_t kNumAsyncWorkers = 2;
 
 static zx_status_t guest_get_resource(zx_handle_t* resource) {
   int fd = open(kResourcePath, O_RDWR);
-  if (fd < 0)
+  if (fd < 0) {
     return ZX_ERR_IO;
+  }
   ssize_t n = ioctl_sysinfo_get_hypervisor_resource(fd, resource);
   close(fd);
   return n < 0 ? ZX_ERR_IO : ZX_OK;
@@ -86,15 +87,10 @@ zx_status_t Guest::Init(size_t mem_size) {
   return ZX_OK;
 }
 
-Guest::~Guest() {
-  zx_handle_close(guest_);
-}
+Guest::~Guest() { zx_handle_close(guest_); }
 
-zx_status_t Guest::CreateMapping(TrapType type,
-                                 uint64_t addr,
-                                 size_t size,
-                                 uint64_t offset,
-                                 IoHandler* handler) {
+zx_status_t Guest::CreateMapping(TrapType type, uint64_t addr, size_t size,
+                                 uint64_t offset, IoHandler* handler) {
   uint32_t kind = trap_kind(type);
   fbl::AllocChecker ac;
   auto mapping = fbl::make_unique_checked<IoMapping>(&ac, kind, addr, size,

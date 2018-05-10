@@ -149,8 +149,7 @@ class QcowFile {
 
 class QcowDispatcher : public BlockDispatcher {
  public:
-  static zx_status_t Create(int fd,
-                            bool read_only,
+  static zx_status_t Create(int fd, bool read_only,
                             fbl::unique_ptr<BlockDispatcher>* out);
 
  private:

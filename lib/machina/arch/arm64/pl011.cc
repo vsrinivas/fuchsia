@@ -79,8 +79,9 @@ void Pl011::Print(uint8_t ch) {
   {
     fbl::AutoLock lock(&mutex_);
     tx_buffer_[tx_offset_++] = ch;
-    if (tx_offset_ < kBufferSize && ch != '\r')
+    if (tx_offset_ < kBufferSize && ch != '\r') {
       return;
+    }
     fprintf(stdout, "%.*s", tx_offset_, tx_buffer_);
     tx_offset_ = 0;
   }

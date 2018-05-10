@@ -29,8 +29,7 @@ static_assert(kVirtioNetRxQueueIndex != kVirtioNetTxQueueIndex,
               "RX and TX queues must be distinct");
 
 // Implements a Virtio Ethernet device.
-class VirtioNet : public VirtioDeviceBase<VIRTIO_ID_NET,
-                                          kVirtioNetNumQueues,
+class VirtioNet : public VirtioDeviceBase<VIRTIO_ID_NET, kVirtioNetNumQueues,
                                           virtio_net_config_t> {
  public:
   VirtioNet(const PhysMem& phys_mem, async_t* async);
@@ -60,9 +59,7 @@ class VirtioNet : public VirtioDeviceBase<VIRTIO_ID_NET,
   // A single data stream (either RX or TX).
   class Stream {
    public:
-    Stream(VirtioNet* device,
-           async_t* async,
-           VirtioQueue* queue,
+    Stream(VirtioNet* device, async_t* async, VirtioQueue* queue,
            std::atomic<trace_async_id_t>* trace_flow_id);
     zx_status_t Start(zx_handle_t fifo, size_t fifo_num_entries, bool rx);
 
@@ -71,17 +68,13 @@ class VirtioNet : public VirtioDeviceBase<VIRTIO_ID_NET,
     zx_status_t WaitOnQueue();
     void OnQueueReady(zx_status_t status, uint16_t index);
     zx_status_t WaitOnFifoWritable();
-    void OnFifoWritable(async_t* async,
-                        async::WaitBase* wait,
-                        zx_status_t status,
-                        const zx_packet_signal_t* signal);
+    void OnFifoWritable(async_t* async, async::WaitBase* wait,
+                        zx_status_t status, const zx_packet_signal_t* signal);
 
     // Return buffers from FIFO to VirtioQueue.
     zx_status_t WaitOnFifoReadable();
-    void OnFifoReadable(async_t* async,
-                        async::WaitBase* wait,
-                        zx_status_t status,
-                        const zx_packet_signal_t* signal);
+    void OnFifoReadable(async_t* async, async::WaitBase* wait,
+                        zx_status_t status, const zx_packet_signal_t* signal);
 
     VirtioNet* device_;
     async_t* async_;

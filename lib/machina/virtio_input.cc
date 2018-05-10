@@ -178,10 +178,8 @@ constexpr uint32_t kButtonMousePrimaryCode = 0x110;
 constexpr uint32_t kButtonMouseSecondaryCode = 0x111;
 constexpr uint32_t kButtonMouseTertiaryCode = 0x112;
 
-VirtioInput::VirtioInput(InputEventQueue* event_queue,
-                         const PhysMem& phys_mem,
-                         const char* device_name,
-                         const char* device_serial)
+VirtioInput::VirtioInput(InputEventQueue* event_queue, const PhysMem& phys_mem,
+                         const char* device_name, const char* device_serial)
     : VirtioDeviceBase(phys_mem),
       device_name_(device_name),
       device_serial_(device_serial),

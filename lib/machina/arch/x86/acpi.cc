@@ -26,15 +26,14 @@ static uint8_t acpi_checksum(void* table, uint32_t length) {
   uint8_t sum = 0;
   uint8_t* start = reinterpret_cast<uint8_t*>(table);
   uint8_t* end = start + length;
-  for (; start != end; ++start)
+  for (; start != end; ++start) {
     sum = static_cast<uint8_t>(sum + *start);
+  }
   return static_cast<uint8_t>(UINT8_MAX - sum + 1);
 }
 
-static void acpi_header(ACPI_TABLE_HEADER* header,
-                        const char* table_id,
-                        const char* signature,
-                        uint32_t length) {
+static void acpi_header(ACPI_TABLE_HEADER* header, const char* table_id,
+                        const char* signature, uint32_t length) {
   memcpy(header->Signature, signature, ACPI_NAME_SIZE);
   header->Length = length;
   memcpy(header->OemId, "ZX", 2);
@@ -43,10 +42,8 @@ static void acpi_header(ACPI_TABLE_HEADER* header,
   header->Checksum = acpi_checksum(header, header->Length);
 }
 
-static zx_status_t load_file(const char* path,
-                             const machina::PhysMem& phys_mem,
-                             uint32_t off,
-                             uint32_t* actual) {
+static zx_status_t load_file(const char* path, const machina::PhysMem& phys_mem,
+                             uint32_t off, uint32_t* actual) {
   fbl::unique_fd fd(open(path, O_RDONLY));
   if (!fd) {
     FXL_LOG(ERROR) << "Failed to open ACPI table " << path;
@@ -75,10 +72,8 @@ static T* madt_subtable(void* base, uint32_t off, uint8_t type) {
   return subtable;
 }
 
-static zx_status_t create_madt(ACPI_TABLE_MADT* madt,
-                               zx_vaddr_t io_apic_addr,
-                               uint8_t num_cpus,
-                               uint32_t* actual) {
+static zx_status_t create_madt(ACPI_TABLE_MADT* madt, zx_vaddr_t io_apic_addr,
+                               uint8_t num_cpus, uint32_t* actual) {
   uint32_t table_size = static_cast<uint32_t>(
       sizeof(ACPI_TABLE_MADT) + (num_cpus * sizeof(ACPI_MADT_LOCAL_APIC)) +
       sizeof(ACPI_MADT_IO_APIC));
@@ -107,8 +102,9 @@ static zx_status_t create_madt(ACPI_TABLE_MADT* madt,
 namespace machina {
 
 zx_status_t create_acpi_table(const AcpiConfig& cfg, const PhysMem& phys_mem) {
-  if (phys_mem.size() < kAcpiOffset + PAGE_SIZE)
+  if (phys_mem.size() < kAcpiOffset + PAGE_SIZE) {
     return ZX_ERR_BUFFER_TOO_SMALL;
+  }
 
   const uint32_t rsdt_entries = 3;
   const uint32_t rsdt_length =
@@ -139,21 +135,24 @@ zx_status_t create_acpi_table(const AcpiConfig& cfg, const PhysMem& phys_mem) {
   // DSDT.
   uint32_t actual;
   zx_status_t status = load_file(cfg.dsdt_path, phys_mem, dsdt_off, &actual);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   // MADT.
   const uint32_t madt_off = dsdt_off + actual;
   status = create_madt(phys_mem.as<ACPI_TABLE_MADT>(madt_off), cfg.io_apic_addr,
                        cfg.num_cpus, &actual);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   // MCFG.
   const uint32_t mcfg_off = madt_off + actual;
   status = load_file(cfg.mcfg_path, phys_mem, mcfg_off, &actual);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   // RSDT.
   auto rsdt = phys_mem.as<ACPI_TABLE_RSDT>(rsdp->RsdtPhysicalAddress);

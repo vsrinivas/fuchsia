@@ -13,8 +13,7 @@ VirtioVsock::Connection::~Connection() {
 }
 
 template <VirtioVsock::StreamFunc F>
-VirtioVsock::Stream<F>::Stream(async_t* async,
-                               VirtioQueue* queue,
+VirtioVsock::Stream<F>::Stream(async_t* async, VirtioQueue* queue,
                                VirtioVsock* vsock)
     : waiter_(async, queue, fbl::BindMember(vsock, F)) {}
 
@@ -24,8 +23,7 @@ zx_status_t VirtioVsock::Stream<F>::WaitOnQueue() {
 }
 
 VirtioVsock::VirtioVsock(component::ApplicationContext* context,
-                         const PhysMem& phys_mem,
-                         async_t* async)
+                         const PhysMem& phys_mem, async_t* async)
     : VirtioDeviceBase(phys_mem),
       async_(async),
       rx_stream_(async, rx_queue(), this),
@@ -44,8 +42,7 @@ uint32_t VirtioVsock::guest_cid() const {
   return config_.guest_cid;
 }
 
-bool VirtioVsock::HasConnection(uint32_t src_cid,
-                                uint32_t src_port,
+bool VirtioVsock::HasConnection(uint32_t src_cid, uint32_t src_port,
                                 uint32_t dst_port) const {
   ConnectionKey key{src_cid, src_port, dst_port};
   fbl::AutoLock lock(&mutex_);
@@ -53,8 +50,7 @@ bool VirtioVsock::HasConnection(uint32_t src_cid,
 }
 
 void VirtioVsock::SetContextId(
-    uint32_t cid,
-    fidl::InterfaceHandle<guest::SocketConnector> connector,
+    uint32_t cid, fidl::InterfaceHandle<guest::SocketConnector> connector,
     fidl::InterfaceRequest<guest::SocketAcceptor> acceptor) {
   {
     fbl::AutoLock lock(&config_mutex_);
@@ -67,9 +63,7 @@ void VirtioVsock::SetContextId(
   // Send transport reset
 }
 
-void VirtioVsock::Accept(uint32_t src_cid,
-                         uint32_t src_port,
-                         uint32_t port,
+void VirtioVsock::Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
                          AcceptCallback callback) {
   if (HasConnection(src_cid, src_port, port)) {
     callback(ZX_ERR_ALREADY_BOUND, zx::socket());
@@ -105,8 +99,7 @@ void VirtioVsock::Accept(uint32_t src_cid,
   }
 }
 
-void VirtioVsock::ConnectCallback(ConnectionKey key,
-                                  zx_status_t status,
+void VirtioVsock::ConnectCallback(ConnectionKey key, zx_status_t status,
                                   zx::socket socket) {
   auto new_conn = fbl::make_unique<Connection>();
   Connection* conn = new_conn.get();
@@ -211,8 +204,7 @@ zx_status_t VirtioVsock::WaitOnQueueLocked(ConnectionKey key,
   return stream->WaitOnQueue();
 }
 
-void VirtioVsock::WaitOnSocketLocked(zx_status_t status,
-                                     ConnectionKey key,
+void VirtioVsock::WaitOnSocketLocked(zx_status_t status, ConnectionKey key,
                                      async::Wait* wait) {
   if (status == ZX_OK && !wait->is_pending()) {
     status = wait->Begin(async_);
@@ -228,8 +220,7 @@ void VirtioVsock::WaitOnSocketLocked(zx_status_t status,
   }
 }
 
-void VirtioVsock::OnSocketReady(async_t* async,
-                                async::Wait* wait,
+void VirtioVsock::OnSocketReady(async_t* async, async::Wait* wait,
                                 zx_status_t status,
                                 const zx_packet_signal_t* signal,
                                 ConnectionKey key) {

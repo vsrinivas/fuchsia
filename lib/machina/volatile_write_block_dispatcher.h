@@ -33,8 +33,7 @@ class VolatileWriteBlockDispatcher : public BlockDispatcher {
 
  private:
   VolatileWriteBlockDispatcher(fbl::unique_ptr<BlockDispatcher> dispatcher,
-                               zx::vmo vmo,
-                               uintptr_t map_address,
+                               zx::vmo vmo, uintptr_t map_address,
                                size_t vmo_size);
 
   bool ValidateBlockParams(off_t disk_offset, size_t size);

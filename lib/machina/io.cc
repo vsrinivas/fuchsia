@@ -13,10 +13,7 @@ namespace machina {
 
 static constexpr IoValue kBellValue = {};
 
-IoMapping::IoMapping(uint32_t kind,
-                     uint64_t base,
-                     size_t size,
-                     uint64_t offset,
+IoMapping::IoMapping(uint32_t kind, uint64_t base, size_t size, uint64_t offset,
                      IoHandler* handler)
     : kind_(kind),
       base_(base),

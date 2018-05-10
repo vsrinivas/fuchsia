@@ -58,8 +58,7 @@ zx_status_t VirtioBlock::Start() {
   return queue(0)->Poll(poll_func, this, "virtio-block");
 }
 
-zx_status_t VirtioBlock::HandleBlockRequest(VirtioQueue* queue,
-                                            uint16_t head,
+zx_status_t VirtioBlock::HandleBlockRequest(VirtioQueue* queue, uint16_t head,
                                             uint32_t* used) {
   // Attempt to correlate the processing of descriptors with a previous kick.
   // As noted in virtio_device.cc this should be considered best-effort only.

@@ -191,8 +191,9 @@ zx_status_t VirtioPci::CommonCfgRead(uint64_t addr, IoValue* value) const {
     }
     case VIRTIO_PCI_COMMON_CFG_QUEUE_NOTIFY_OFF: {
       fbl::AutoLock lock(&device_->mutex_);
-      if (device_->queue_sel_ >= device_->num_queues_)
+      if (device_->queue_sel_ >= device_->num_queues_) {
         return ZX_ERR_BAD_STATE;
+      }
 
       value->u32 = device_->queue_sel_;
       value->access_size = 4;
@@ -248,8 +249,9 @@ static void virtio_queue_update_addr(VirtioQueue* queue) {
 zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
   switch (addr) {
     case VIRTIO_PCI_COMMON_CFG_DEVICE_FEATURES_SEL: {
-      if (value.access_size != 4)
+      if (value.access_size != 4) {
         return ZX_ERR_IO_DATA_INTEGRITY;
+      }
 
       fbl::AutoLock lock(&device_->mutex_);
       device_->features_sel_ = value.u32;
@@ -257,25 +259,29 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
     }
 
     case VIRTIO_PCI_COMMON_CFG_DRIVER_FEATURES_SEL: {
-      if (value.access_size != 4)
+      if (value.access_size != 4) {
         return ZX_ERR_IO_DATA_INTEGRITY;
+      }
 
       fbl::AutoLock lock(&device_->mutex_);
       device_->driver_features_sel_ = value.u32;
       return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_DRIVER_FEATURES: {
-      if (value.access_size != 4)
+      if (value.access_size != 4) {
         return ZX_ERR_IO_DATA_INTEGRITY;
+      }
 
       fbl::AutoLock lock(&device_->mutex_);
-      if (device_->driver_features_sel_ == 0)
+      if (device_->driver_features_sel_ == 0) {
         device_->driver_features_ = value.u32;
+      }
       return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_DEVICE_STATUS: {
-      if (value.access_size != 1)
+      if (value.access_size != 1) {
         return ZX_ERR_IO_DATA_INTEGRITY;
+      }
 
       {
         fbl::AutoLock lock(&device_->mutex_);
@@ -287,18 +293,21 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
       return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_QUEUE_SEL: {
-      if (value.access_size != 2)
+      if (value.access_size != 2) {
         return ZX_ERR_IO_DATA_INTEGRITY;
-      if (value.u16 >= device_->num_queues_)
+      }
+      if (value.u16 >= device_->num_queues_) {
         return ZX_ERR_OUT_OF_RANGE;
+      }
 
       fbl::AutoLock lock(&device_->mutex_);
       device_->queue_sel_ = value.u16;
       return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_QUEUE_SIZE: {
-      if (value.access_size != 2)
+      if (value.access_size != 2) {
         return ZX_ERR_IO_DATA_INTEGRITY;
+      }
       VirtioQueue* queue = selected_queue();
       if (queue == nullptr) {
         return ZX_ERR_BAD_STATE;
@@ -360,13 +369,9 @@ zx_status_t VirtioPci::ConfigBarWrite(uint64_t addr, const IoValue& value) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-void VirtioPci::SetupCap(pci_cap_t* cap,
-                         virtio_pci_cap_t* virtio_cap,
-                         uint8_t cfg_type,
-                         size_t cap_len,
-                         size_t data_length,
-                         uint8_t bar,
-                         size_t bar_offset) {
+void VirtioPci::SetupCap(pci_cap_t* cap, virtio_pci_cap_t* virtio_cap,
+                         uint8_t cfg_type, size_t cap_len, size_t data_length,
+                         uint8_t bar, size_t bar_offset) {
   virtio_cap->cfg_type = cfg_type;
   virtio_cap->bar = bar;
   virtio_cap->offset = static_cast<uint32_t>(bar_offset);
@@ -471,8 +476,7 @@ VirtioPci::VirtioPci(VirtioDevice* device)
   SetupCaps();
 }
 
-zx_status_t VirtioPci::ReadBar(uint8_t bar,
-                               uint64_t offset,
+zx_status_t VirtioPci::ReadBar(uint8_t bar, uint64_t offset,
                                IoValue* value) const {
   TRACE_DURATION("machina", "pci_readbar", "bar", bar, "offset", offset,
                  "access_size", value->access_size);
@@ -484,8 +488,7 @@ zx_status_t VirtioPci::ReadBar(uint8_t bar,
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t VirtioPci::WriteBar(uint8_t bar,
-                                uint64_t offset,
+zx_status_t VirtioPci::WriteBar(uint8_t bar, uint64_t offset,
                                 const IoValue& value) {
   TRACE_DURATION("machina", "pci_writebar", "bar", bar, "offset", offset,
                  "access_size", value.access_size);
@@ -500,8 +503,9 @@ zx_status_t VirtioPci::WriteBar(uint8_t bar,
 }
 
 zx_status_t VirtioPci::NotifyBarWrite(uint64_t offset, const IoValue& value) {
-  if (!is_aligned(offset, kVirtioPciNotifyCfgMultiplier))
+  if (!is_aligned(offset, kVirtioPciNotifyCfgMultiplier)) {
     return ZX_ERR_INVALID_ARGS;
+  }
 
   uint64_t notify_queue = offset / kVirtioPciNotifyCfgMultiplier;
   return device_->Kick(static_cast<uint16_t>(notify_queue));

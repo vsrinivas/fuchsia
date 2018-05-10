@@ -33,15 +33,14 @@ static constexpr char kBlockDirPath[] = "/dev/class/block";
 // (ex: read/write to a file descriptor).
 class FdioBlockDispatcher : public BlockDispatcher {
  public:
-  static zx_status_t Create(int fd,
-                            size_t size,
-                            bool read_only,
+  static zx_status_t Create(int fd, size_t size, bool read_only,
                             fbl::unique_ptr<BlockDispatcher>* out) {
     fbl::AllocChecker ac;
     auto dispatcher =
         fbl::make_unique_checked<FdioBlockDispatcher>(&ac, size, read_only, fd);
-    if (!ac.check())
+    if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
+    }
 
     *out = fbl::move(dispatcher);
     return ZX_OK;
@@ -62,12 +61,14 @@ class FdioBlockDispatcher : public BlockDispatcher {
     fbl::AutoLock lock(&file_mutex_);
 
     off_t off = lseek(fd_, disk_offset, SEEK_SET);
-    if (off < 0)
+    if (off < 0) {
       return ZX_ERR_IO;
+    }
 
     size_t ret = read(fd_, buf, size);
-    if (ret != size)
+    if (ret != size) {
       return ZX_ERR_IO;
+    }
     return ZX_OK;
   }
 
@@ -78,12 +79,14 @@ class FdioBlockDispatcher : public BlockDispatcher {
     fbl::AutoLock lock(&file_mutex_);
 
     off_t off = lseek(fd_, disk_offset, SEEK_SET);
-    if (off < 0)
+    if (off < 0) {
       return ZX_ERR_IO;
+    }
 
     size_t ret = write(fd_, buf, size);
-    if (ret != size)
+    if (ret != size) {
       return ZX_ERR_IO;
+    }
     return ZX_OK;
   }
 
@@ -98,10 +101,7 @@ class FdioBlockDispatcher : public BlockDispatcher {
 };
 
 zx_status_t BlockDispatcher::CreateFromPath(
-    const char* path,
-    Mode mode,
-    DataPlane data_plane,
-    const PhysMem& phys_mem,
+    const char* path, Mode mode, DataPlane data_plane, const PhysMem& phys_mem,
     fbl::unique_ptr<BlockDispatcher>* dispatcher) {
   bool read_only = mode == Mode::RO;
   int fd = open(path, read_only ? O_RDONLY : O_RDWR);
@@ -121,9 +121,7 @@ struct GuidLookupArgs {
   ssize_t (*guid_ioctl)(int fd, void* out, size_t out_len);
 };
 
-static zx_status_t MatchBlockDeviceToGuid(int dirfd,
-                                          int event,
-                                          const char* fn,
+static zx_status_t MatchBlockDeviceToGuid(int dirfd, int event, const char* fn,
                                           void* cookie) {
   if (event != WATCH_EVENT_ADD_FILE) {
     return ZX_OK;
@@ -154,12 +152,8 @@ static zx_status_t MatchBlockDeviceToGuid(int dirfd,
 }
 
 zx_status_t BlockDispatcher::CreateFromGuid(
-    const Guid& guid,
-    zx_duration_t timeout,
-    Mode mode,
-    DataPlane data_plane,
-    const PhysMem& phys_mem,
-    fbl::unique_ptr<BlockDispatcher>* dispatcher) {
+    const Guid& guid, zx_duration_t timeout, Mode mode, DataPlane data_plane,
+    const PhysMem& phys_mem, fbl::unique_ptr<BlockDispatcher>* dispatcher) {
   GuidLookupArgs args = {-1, mode, guid, nullptr};
   switch (guid.type) {
     case GuidType::GPT_PARTITION_GUID:
@@ -186,10 +180,7 @@ zx_status_t BlockDispatcher::CreateFromGuid(
 }
 
 zx_status_t BlockDispatcher::CreateFromFd(
-    int fd,
-    Mode mode,
-    DataPlane data_plane,
-    const PhysMem& phys_mem,
+    int fd, Mode mode, DataPlane data_plane, const PhysMem& phys_mem,
     fbl::unique_ptr<BlockDispatcher>* dispatcher) {
   off_t file_size = lseek(fd, 0, SEEK_END);
   if (file_size < 0) {

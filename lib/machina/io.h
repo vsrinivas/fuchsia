@@ -62,10 +62,7 @@ class IoMapping : public fbl::SinglyLinkedListable<fbl::unique_ptr<IoMapping>> {
   // displacement into |base|. This implies that |handler| should be prepared
   // handle accesses between |offset| (inclusive) and |offset| + |size|
   // (exclusive).
-  IoMapping(uint32_t kind,
-            uint64_t base,
-            size_t size,
-            uint64_t offset,
+  IoMapping(uint32_t kind, uint64_t base, size_t size, uint64_t offset,
             IoHandler* handler);
 
   uint64_t base() const {
@@ -97,8 +94,7 @@ class IoMapping : public fbl::SinglyLinkedListable<fbl::unique_ptr<IoMapping>> {
   zx_status_t SetTrap(Guest* guest);
 
  protected:
-  void CallIoHandlerAsync(async_t* async,
-                          async::GuestBellTrapBase* trap,
+  void CallIoHandlerAsync(async_t* async, async::GuestBellTrapBase* trap,
                           zx_status_t status,
                           const zx_packet_guest_bell_t* bell);
 

@@ -92,11 +92,8 @@ class VirtioDevice {
   PciDevice* pci_device() { return &pci_; }
 
  protected:
-  VirtioDevice(uint8_t device_id,
-               size_t config_size,
-               VirtioQueue* queues,
-               uint16_t num_queues,
-               const PhysMem& phys_mem);
+  VirtioDevice(uint8_t device_id, size_t config_size, VirtioQueue* queues,
+               uint16_t num_queues, const PhysMem& phys_mem);
 
   // Handles kicks from the driver that a queue needs attention.
   virtual zx_status_t Kick(uint16_t kicked_queue);
@@ -150,17 +147,12 @@ class VirtioDevice {
   VirtioPci pci_;
 };
 
-template <uint16_t VIRTIO_ID,
-          int NUM_QUEUES,
-          typename ConfigType,
+template <uint16_t VIRTIO_ID, int NUM_QUEUES, typename ConfigType,
           uint16_t QUEUE_SIZE_MAX = 128>
 class VirtioDeviceBase : public VirtioDevice {
  public:
   VirtioDeviceBase(const PhysMem& phys_mem)
-      : VirtioDevice(VIRTIO_ID,
-                     sizeof(config_),
-                     queues_,
-                     NUM_QUEUES,
+      : VirtioDevice(VIRTIO_ID, sizeof(config_), queues_, NUM_QUEUES,
                      phys_mem) {
     // Advertise support for common/bus features.
     add_device_features(kVirtioBusFeatures);

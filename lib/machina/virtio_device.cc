@@ -15,10 +15,8 @@
 
 namespace machina {
 
-VirtioDevice::VirtioDevice(uint8_t device_id,
-                           size_t config_size,
-                           VirtioQueue* queues,
-                           uint16_t num_queues,
+VirtioDevice::VirtioDevice(uint8_t device_id, size_t config_size,
+                           VirtioQueue* queues, uint16_t num_queues,
                            const PhysMem& phys_mem)
     : device_id_(device_id),
       device_config_size_(config_size),

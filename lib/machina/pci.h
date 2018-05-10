@@ -103,15 +103,13 @@ class PciDevice {
   };
 
   // Read from a region mapped by a BAR register.
-  virtual zx_status_t ReadBar(uint8_t bar,
-                              uint64_t addr,
+  virtual zx_status_t ReadBar(uint8_t bar, uint64_t addr,
                               IoValue* value) const {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   // Write to a region mapped by a BAR register.
-  virtual zx_status_t WriteBar(uint8_t bar,
-                               uint64_t addr,
+  virtual zx_status_t WriteBar(uint8_t bar, uint64_t addr,
                                const IoValue& value) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -158,8 +156,7 @@ class PciDevice {
 
   zx_status_t ReadCapability(uint8_t addr, uint32_t* out) const;
 
-  const pci_cap_t* FindCapability(uint8_t addr,
-                                  uint8_t* cap_index,
+  const pci_cap_t* FindCapability(uint8_t addr, uint8_t* cap_index,
                                   uint32_t* cap_base) const;
 
   mutable fbl::Mutex mutex_;

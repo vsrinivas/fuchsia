@@ -35,11 +35,8 @@ typedef struct queue_ctx {
  *  (c) Otherwise, the guest is allowed to re-use pages previously given to the
  *      balloon before the device has acknowledged their withdrawal.
  */
-static zx_status_t queue_range_op(void* addr,
-                                  uint32_t len,
-                                  uint16_t flags,
-                                  uint32_t* used,
-                                  void* ctx) {
+static zx_status_t queue_range_op(void* addr, uint32_t len, uint16_t flags,
+                                  uint32_t* used, void* ctx) {
   queue_ctx_t* balloon_ctx = static_cast<queue_ctx_t*>(ctx);
   uint32_t* pfns = static_cast<uint32_t*>(addr);
   uint32_t pfn_count = len / 4;
@@ -61,8 +58,9 @@ static zx_status_t queue_range_op(void* addr,
           zx_vmo_op_range(balloon_ctx->vmo, balloon_ctx->op,
                           region_base * VirtioBalloon::kPageSize,
                           region_length * VirtioBalloon::kPageSize, nullptr, 0);
-      if (status != ZX_OK)
+      if (status != ZX_OK) {
         return status;
+      }
     }
 
     // Create a new region.
@@ -76,8 +74,9 @@ static zx_status_t queue_range_op(void* addr,
         zx_vmo_op_range(balloon_ctx->vmo, balloon_ctx->op,
                         region_base * VirtioBalloon::kPageSize,
                         region_length * VirtioBalloon::kPageSize, nullptr, 0);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
       return status;
+    }
   }
 
   return ZX_OK;
@@ -92,8 +91,9 @@ zx_status_t VirtioBalloon::HandleDescriptor(uint16_t queue_sel) {
       ctx.op = ZX_VMO_OP_DECOMMIT;
       break;
     case VIRTIO_BALLOON_Q_DEFLATEQ:
-      if (deflate_on_demand_)
+      if (deflate_on_demand_) {
         return ZX_OK;
+      }
       ctx.op = ZX_VMO_OP_COMMIT;
       break;
     default:

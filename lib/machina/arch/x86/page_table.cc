@@ -39,8 +39,7 @@ static constexpr size_t kPtesPerPage = PAGE_SIZE / sizeof(uint64_t);
 static uintptr_t create_page_table_level(const machina::PhysMem& phys_mem,
                                          size_t l1_page_size,
                                          uintptr_t l1_pte_off,
-                                         uint64_t* aspace_off,
-                                         bool has_page,
+                                         uint64_t* aspace_off, bool has_page,
                                          uint64_t map_flags) {
   const size_t size = phys_mem.size() - *aspace_off;
   const size_t l1_ptes = (size + l1_page_size - 1) / l1_page_size;
@@ -54,8 +53,9 @@ static uintptr_t create_page_table_level(const machina::PhysMem& phys_mem,
       pt[i] = *aspace_off | X86_PTE_P | X86_PTE_RW | map_flags;
       *aspace_off += l1_page_size;
     } else {
-      if (i > 0 && (i % kPtesPerPage == 0))
+      if (i > 0 && (i % kPtesPerPage == 0)) {
         l0_pte_off += PAGE_SIZE;
+      }
       pt[i] = l0_pte_off | X86_PTE_P | X86_PTE_RW;
     }
   }

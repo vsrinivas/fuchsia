@@ -80,16 +80,18 @@ zx_status_t I8250::Write(uint64_t addr, const IoValue& io) {
       }
       return ZX_OK;
     case I8250Register::INTERRUPT_ENABLE:
-      if (io.access_size != 1)
+      if (io.access_size != 1) {
         return ZX_ERR_IO_DATA_INTEGRITY;
+      }
       {
         fbl::AutoLock lock(&mutex_);
         interrupt_enable_ = io.u8;
       }
       return ZX_OK;
     case I8250Register::LINE_CONTROL:
-      if (io.access_size != 1)
+      if (io.access_size != 1) {
         return ZX_ERR_IO_DATA_INTEGRITY;
+      }
       {
         fbl::AutoLock lock(&mutex_);
         line_control_ = io.u8;
@@ -106,8 +108,9 @@ zx_status_t I8250::Write(uint64_t addr, const IoValue& io) {
 
 void I8250::Print(uint8_t ch) {
   tx_buffer_[tx_offset_++] = ch;
-  if (tx_offset_ < kBufferSize && ch != '\r')
+  if (tx_offset_ < kBufferSize && ch != '\r') {
     return;
+  }
   fprintf(stdout, "%.*s", tx_offset_, tx_buffer_);
   fflush(stdout);
   tx_offset_ = 0;

@@ -289,8 +289,7 @@ zx_status_t QcowFile::Read(uint64_t disk_offset, void* buf, size_t size) {
   return ZX_OK;
 }
 
-zx_status_t QcowDispatcher::Create(int fd,
-                                   bool read_only,
+zx_status_t QcowDispatcher::Create(int fd, bool read_only,
                                    fbl::unique_ptr<BlockDispatcher>* out) {
   if (!read_only) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -313,18 +312,13 @@ zx_status_t QcowDispatcher::Read(off_t disk_offset, void* buf, size_t size) {
   return qcow_.Read(disk_offset, buf, size);
 }
 
-zx_status_t QcowDispatcher::Write(off_t disk_offset,
-                                  const void* buf,
+zx_status_t QcowDispatcher::Write(off_t disk_offset, const void* buf,
                                   size_t size) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t QcowDispatcher::Submit() {
-  return ZX_OK;
-}
+zx_status_t QcowDispatcher::Submit() { return ZX_OK; }
 
-zx_status_t QcowDispatcher::Flush() {
-  return ZX_OK;
-}
+zx_status_t QcowDispatcher::Flush() { return ZX_OK; }
 
 }  //  namespace machina

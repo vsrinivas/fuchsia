@@ -17,20 +17,16 @@
 
 namespace machina {
 
-VirtioNet::Stream::Stream(VirtioNet* device,
-                          async_t* async,
-                          VirtioQueue* queue,
+VirtioNet::Stream::Stream(VirtioNet* device, async_t* async, VirtioQueue* queue,
                           std::atomic<trace_async_id_t>* trace_flow_id)
     : device_(device),
       async_(async),
       queue_(queue),
       trace_flow_id_(trace_flow_id),
-      queue_wait_(async,
-                  queue,
+      queue_wait_(async, queue,
                   fbl::BindMember(this, &VirtioNet::Stream::OnQueueReady)) {}
 
-zx_status_t VirtioNet::Stream::Start(zx_handle_t fifo,
-                                     size_t fifo_max_entries,
+zx_status_t VirtioNet::Stream::Start(zx_handle_t fifo, size_t fifo_max_entries,
                                      bool rx) {
   fifo_ = fifo;
   rx_ = rx;
@@ -53,9 +49,7 @@ zx_status_t VirtioNet::Stream::Start(zx_handle_t fifo,
   return status;
 }
 
-zx_status_t VirtioNet::Stream::WaitOnQueue() {
-  return queue_wait_.Begin();
-}
+zx_status_t VirtioNet::Stream::WaitOnQueue() { return queue_wait_.Begin(); }
 
 void VirtioNet::Stream::OnQueueReady(zx_status_t status, uint16_t index) {
   if (status != ZX_OK) {
@@ -135,8 +129,7 @@ zx_status_t VirtioNet::Stream::WaitOnFifoWritable() {
   return fifo_writable_wait_.Begin(async_);
 }
 
-void VirtioNet::Stream::OnFifoWritable(async_t* async,
-                                       async::WaitBase* wait,
+void VirtioNet::Stream::OnFifoWritable(async_t* async, async::WaitBase* wait,
                                        zx_status_t status,
                                        const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
@@ -154,8 +147,7 @@ void VirtioNet::Stream::OnFifoWritable(async_t* async,
 
   size_t num_entries_written = 0;
   status = zx_fifo_write(
-      fifo_,
-      sizeof(fifo_entries_[0]),
+      fifo_, sizeof(fifo_entries_[0]),
       static_cast<const void*>(&fifo_entries_[fifo_entries_write_index_]),
       fifo_num_entries_, &num_entries_written);
   fifo_entries_write_index_ += num_entries_written;
@@ -180,8 +172,7 @@ zx_status_t VirtioNet::Stream::WaitOnFifoReadable() {
   return fifo_readable_wait_.Begin(async_);
 }
 
-void VirtioNet::Stream::OnFifoReadable(async_t* async,
-                                       async::WaitBase* wait,
+void VirtioNet::Stream::OnFifoReadable(async_t* async, async::WaitBase* wait,
                                        zx_status_t status,
                                        const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
@@ -200,7 +191,8 @@ void VirtioNet::Stream::OnFifoReadable(async_t* async,
   // Dequeue entries for the Ethernet device.
   size_t num_entries_read;
   eth_fifo_entry_t entries[fifo_entries_.size()];
-  status = zx_fifo_read(fifo_, sizeof(entries[0]), entries, countof(entries), &num_entries_read);
+  status = zx_fifo_read(fifo_, sizeof(entries[0]), entries, countof(entries),
+                        &num_entries_read);
   if (status == ZX_ERR_SHOULD_WAIT) {
     status = wait->Begin(async);
     if (status != ZX_OK) {

@@ -27,9 +27,7 @@ typedef struct e820entry {
 
 namespace machina {
 
-size_t e820_entries(size_t size) {
-  return (size > kAddr4000mb ? 6 : 5);
-}
+size_t e820_entries(size_t size) { return (size > kAddr4000mb ? 6 : 5); }
 
 size_t e820_size(size_t size) {
   return e820_entries(size) * sizeof(e820entry_t);

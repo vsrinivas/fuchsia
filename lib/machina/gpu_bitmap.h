@@ -30,17 +30,12 @@ class GpuBitmap {
   GpuBitmap();
 
   // Create a bitmap with an existing buffer.
-  GpuBitmap(uint32_t width,
-            uint32_t height,
-            zx_pixel_format_t format,
+  GpuBitmap(uint32_t width, uint32_t height, zx_pixel_format_t format,
             uint8_t* buffer);
 
   // Create a bitmap with an existing buffer.
-  GpuBitmap(uint32_t width,
-            uint32_t height,
-            uint32_t stride,
-            zx_pixel_format_t format,
-            uint8_t* buffer);
+  GpuBitmap(uint32_t width, uint32_t height, uint32_t stride,
+            zx_pixel_format_t format, uint8_t* buffer);
 
   // Create a bitmap for a given size.
   GpuBitmap(uint32_t width, uint32_t height, zx_pixel_format_t format);
@@ -62,8 +57,7 @@ class GpuBitmap {
   //
   // |source_rect| and |dest_rect| must both be wholly contained within
   // the respective bitmaps and must have the same width and height.
-  void DrawBitmap(const GpuBitmap& from,
-                  const GpuRect& source_rect,
+  void DrawBitmap(const GpuBitmap& from, const GpuRect& source_rect,
                   const GpuRect& dest_rect);
 
  private:

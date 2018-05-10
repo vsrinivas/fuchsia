@@ -46,10 +46,8 @@ zx_status_t VirtioGpu::AddScanout(GpuScanout* scanout) {
   return ZX_OK;
 }
 
-zx_status_t VirtioGpu::QueueHandler(VirtioQueue* queue,
-                                    uint16_t head,
-                                    uint32_t* used,
-                                    void* ctx) {
+zx_status_t VirtioGpu::QueueHandler(VirtioQueue* queue, uint16_t head,
+                                    uint32_t* used, void* ctx) {
   VirtioGpu* gpu = reinterpret_cast<VirtioGpu*>(ctx);
   return gpu->HandleGpuCommand(queue, head, used);
 }
@@ -86,8 +84,7 @@ const char* command_to_string(uint32_t command) {
 
 }  // namespace
 
-zx_status_t VirtioGpu::HandleGpuCommand(VirtioQueue* queue,
-                                        uint16_t head,
+zx_status_t VirtioGpu::HandleGpuCommand(VirtioQueue* queue, uint16_t head,
                                         uint32_t* used) {
   virtio_desc_t request_desc;
   queue->ReadDesc(head, &request_desc);
@@ -110,8 +107,7 @@ zx_status_t VirtioGpu::HandleGpuCommand(VirtioQueue* queue,
   }
 
   // Cursor commands don't send a response (at least not in the linux driver).
-  if (!request_desc.has_next &&
-      command_type != VIRTIO_GPU_CMD_MOVE_CURSOR &&
+  if (!request_desc.has_next && command_type != VIRTIO_GPU_CMD_MOVE_CURSOR &&
       command_type != VIRTIO_GPU_CMD_UPDATE_CURSOR) {
     FXL_LOG(ERROR) << "GPU command "
                    << "'" << command_label << "' (" << command_type << ") "

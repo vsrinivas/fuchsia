@@ -22,9 +22,9 @@
 namespace machina {
 
 // Virtio memory balloon device.
-class VirtioBalloon : public VirtioDeviceBase<VIRTIO_ID_BALLOON,
-                                              VIRTIO_BALLOON_Q_COUNT,
-                                              virtio_balloon_config_t> {
+class VirtioBalloon
+    : public VirtioDeviceBase<VIRTIO_ID_BALLOON, VIRTIO_BALLOON_Q_COUNT,
+                              virtio_balloon_config_t> {
  public:
   // Per Virtio 1.0 Section 5.5.6, This value is historical, and independent
   // of the guest page size.

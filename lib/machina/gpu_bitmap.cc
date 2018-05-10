@@ -66,9 +66,7 @@ static void argb8888_to_luma(uint8_t* dst, const uint8_t* src, size_t size) {
   }
 }
 
-static void copy(uint8_t* dst,
-                 const uint8_t* src,
-                 size_t size,
+static void copy(uint8_t* dst, const uint8_t* src, size_t size,
                  zx_pixel_format_t format) {
   switch (format) {
     case ZX_PIXEL_FORMAT_ARGB_8888:
@@ -89,17 +87,12 @@ static void copy(uint8_t* dst,
 
 GpuBitmap::GpuBitmap() : GpuBitmap(0, 0, 0, nullptr) {}
 
-GpuBitmap::GpuBitmap(uint32_t width,
-                     uint32_t height,
-                     zx_pixel_format_t format,
+GpuBitmap::GpuBitmap(uint32_t width, uint32_t height, zx_pixel_format_t format,
                      uint8_t* ptr)
     : GpuBitmap(width, height, width, format, ptr) {}
 
-GpuBitmap::GpuBitmap(uint32_t width,
-                     uint32_t height,
-                     uint32_t stride,
-                     zx_pixel_format_t format,
-                     uint8_t* ptr)
+GpuBitmap::GpuBitmap(uint32_t width, uint32_t height, uint32_t stride,
+                     zx_pixel_format_t format, uint8_t* ptr)
     : width_(width),
       height_(height),
       stride_(stride),
@@ -135,8 +128,7 @@ GpuBitmap& GpuBitmap::operator=(GpuBitmap&& o) {
   return *this;
 }
 
-void GpuBitmap::DrawBitmap(const GpuBitmap& src_bitmap,
-                           const GpuRect& src_rect,
+void GpuBitmap::DrawBitmap(const GpuBitmap& src_bitmap, const GpuRect& src_rect,
                            const GpuRect& dst_rect) {
   if (src_rect.width != dst_rect.width || src_rect.height != dst_rect.height) {
     return;

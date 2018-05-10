@@ -41,11 +41,13 @@ class VirtioGpuTest {
 
   zx_status_t Init() {
     zx_status_t status = control_queue_.Init(kQueueSize);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
       return status;
+    }
     status = gpu_.Init();
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
       return status;
+    }
     return CreateScanout(kDisplayWidth, kDisplayHeight);
   }
 
@@ -77,8 +79,7 @@ class VirtioGpuTest {
     return ZX_OK;
   }
 
-  zx_status_t CreateResource(uint32_t resource_id,
-                             uint32_t width,
+  zx_status_t CreateResource(uint32_t resource_id, uint32_t width,
                              uint32_t height) {
     virtio_gpu_resource_create_2d_t request = {};
     request.hdr.type = VIRTIO_GPU_CMD_RESOURCE_CREATE_2D;
@@ -123,9 +124,7 @@ class VirtioGpuTest {
 
   // Attaches a single, contiguous memory region to the resource.
   zx_status_t AttachBacking(
-      uint32_t resource_id,
-      uint32_t width,
-      uint32_t height,
+      uint32_t resource_id, uint32_t width, uint32_t height,
       fbl::SinglyLinkedList<fbl::unique_ptr<BackingPages>>* backing_pages) {
     virtio_gpu_resource_attach_backing_t request = {};
     request.hdr.type = VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING;
@@ -173,8 +172,9 @@ class VirtioGpuTest {
                              .AppendReadable(&request, sizeof(request))
                              .AppendWritable(&response, sizeof(response))
                              .Build(&desc);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
       return status;
+    }
 
     loop_.RunUntilIdle();
     EXPECT_TRUE(control_queue_.HasUsed());
@@ -198,8 +198,9 @@ class VirtioGpuTest {
                              .AppendReadable(&request, sizeof(request))
                              .AppendWritable(&response, sizeof(response))
                              .Build(&desc);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
       return status;
+    }
 
     loop_.RunUntilIdle();
     EXPECT_TRUE(control_queue_.HasUsed());

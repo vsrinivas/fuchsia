@@ -35,8 +35,7 @@ class VirtioBlock
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_status_t HandleBlockRequest(VirtioQueue* queue,
-                                 uint16_t head,
+  zx_status_t HandleBlockRequest(VirtioQueue* queue, uint16_t head,
                                  uint32_t* used);
 
   bool is_read_only() { return has_device_features(VIRTIO_BLK_F_RO); }

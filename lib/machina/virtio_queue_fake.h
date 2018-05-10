@@ -85,9 +85,7 @@ class VirtioQueueFake {
   // to write to more than descriptors than the queue was initialized with.
   // ZX_ERR_NO_MEMORY is returned if the pool of available descriptors has
   // been exhausted.
-  zx_status_t WriteDescriptor(void* addr,
-                              size_t len,
-                              uint16_t flags,
+  zx_status_t WriteDescriptor(void* addr, size_t len, uint16_t flags,
                               uint16_t* desc);
 
   // Write to |desc| that it is continued via |next|.

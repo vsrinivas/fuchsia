@@ -23,8 +23,7 @@ VirtioQueue::VirtioQueue() {
   FXL_CHECK(zx::event::create(0, &event_) == ZX_OK);
 }
 
-static bool validate_queue_range(VirtioDevice* device,
-                                 zx_vaddr_t addr,
+static bool validate_queue_range(VirtioDevice* device, zx_vaddr_t addr,
                                  size_t size) {
   uintptr_t mem_addr = device->phys_mem().addr();
   size_t mem_size = device->phys_mem().size();
@@ -35,10 +34,8 @@ static bool validate_queue_range(VirtioDevice* device,
 }
 
 template <typename T>
-static void queue_set_segment_addr(VirtioQueue* queue,
-                                   uint64_t guest_paddr,
-                                   size_t size,
-                                   T** ptr) {
+static void queue_set_segment_addr(VirtioQueue* queue, uint64_t guest_paddr,
+                                   size_t size, T** ptr) {
   VirtioDevice* device = queue->device();
   zx_vaddr_t host_vaddr = guest_paddr_to_host_vaddr(device, guest_paddr);
 
@@ -204,8 +201,7 @@ static int virtio_queue_poll_task(void* ctx) {
   return result;
 }
 
-zx_status_t VirtioQueue::Poll(virtio_queue_poll_fn_t handler,
-                              void* ctx,
+zx_status_t VirtioQueue::Poll(virtio_queue_poll_fn_t handler, void* ctx,
                               std::string name) {
   auto args = new poll_task_args_t{this, handler, std::move(name), ctx};
 
@@ -227,10 +223,8 @@ zx_status_t VirtioQueue::Poll(virtio_queue_poll_fn_t handler,
   return ZX_OK;
 }
 
-zx_status_t VirtioQueue::PollAsync(async_t* async,
-                                   async::Wait* wait,
-                                   virtio_queue_poll_fn_t handler,
-                                   void* ctx) {
+zx_status_t VirtioQueue::PollAsync(async_t* async, async::Wait* wait,
+                                   virtio_queue_poll_fn_t handler, void* ctx) {
   wait->set_object(event_.get());
   wait->set_trigger(SIGNAL_QUEUE_AVAIL);
   wait->set_handler([this, handler, ctx](async_t* async, async::Wait* wait,
@@ -241,8 +235,7 @@ zx_status_t VirtioQueue::PollAsync(async_t* async,
   return wait->Begin(async);
 }
 
-void VirtioQueue::InvokeAsyncHandler(async_t* async,
-                                     async::Wait* wait,
+void VirtioQueue::InvokeAsyncHandler(async_t* async, async::Wait* wait,
                                      zx_status_t status,
                                      virtio_queue_poll_fn_t handler,
                                      void* ctx) {
@@ -286,8 +279,7 @@ zx_status_t VirtioQueue::ReadDesc(uint16_t desc_index, virtio_desc_t* out) {
   return ZX_OK;
 }
 
-zx_status_t VirtioQueue::Return(uint16_t index,
-                                uint32_t len,
+zx_status_t VirtioQueue::Return(uint16_t index, uint32_t len,
                                 InterruptAction action) {
   bool needs_interrupt = false;
   bool use_event_index =

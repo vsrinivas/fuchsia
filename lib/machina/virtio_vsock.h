@@ -22,14 +22,13 @@ namespace machina {
 
 static constexpr uint16_t kVirtioVsockNumQueues = 3;
 
-class VirtioVsock : public VirtioDeviceBase<VIRTIO_ID_VSOCK,
-                                            kVirtioVsockNumQueues,
-                                            virtio_vsock_config_t>,
-                    public guest::SocketEndpoint,
-                    public guest::SocketAcceptor {
+class VirtioVsock
+    : public VirtioDeviceBase<VIRTIO_ID_VSOCK, kVirtioVsockNumQueues,
+                              virtio_vsock_config_t>,
+      public guest::SocketEndpoint,
+      public guest::SocketAcceptor {
  public:
-  VirtioVsock(component::ApplicationContext* context,
-              const PhysMem&,
+  VirtioVsock(component::ApplicationContext* context, const PhysMem&,
               async_t* async);
 
   uint32_t guest_cid() const;
@@ -38,8 +37,7 @@ class VirtioVsock : public VirtioDeviceBase<VIRTIO_ID_VSOCK,
   // tuple, local_cid/local_port, and a remote tuple, guest_cid/remote_port. The
   // local tuple identifies the host-side of the connection, and the remote
   // tuple identifies the guest-side of the connection.
-  bool HasConnection(uint32_t local_cid,
-                     uint32_t local_port,
+  bool HasConnection(uint32_t local_cid, uint32_t local_port,
                      uint32_t remote_port) const;
 
   VirtioQueue* rx_queue() { return queue(0); }
@@ -48,13 +46,10 @@ class VirtioVsock : public VirtioDeviceBase<VIRTIO_ID_VSOCK,
  private:
   // |guest::SocketEndpoint|
   void SetContextId(
-      uint32_t cid,
-      fidl::InterfaceHandle<guest::SocketConnector> connector,
+      uint32_t cid, fidl::InterfaceHandle<guest::SocketConnector> connector,
       fidl::InterfaceRequest<guest::SocketAcceptor> acceptor) override;
   // |guest::SocketAcceptor|
-  void Accept(uint32_t src_cid,
-              uint32_t src_port,
-              uint32_t port,
+  void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
               AcceptCallback callback) override;
 
   struct ConnectionKey {
@@ -87,8 +82,9 @@ class VirtioVsock : public VirtioDeviceBase<VIRTIO_ID_VSOCK,
     async::Wait tx_wait;
     guest::SocketAcceptor::AcceptCallback acceptor;
   };
-  using ConnectionMap = std::
-      unordered_map<ConnectionKey, fbl::unique_ptr<Connection>, ConnectionHash>;
+  using ConnectionMap =
+      std::unordered_map<ConnectionKey, fbl::unique_ptr<Connection>,
+                         ConnectionHash>;
   using ConnectionSet = std::unordered_set<ConnectionKey, ConnectionHash>;
 
   using StreamFunc = void (VirtioVsock::*)(zx_status_t, uint16_t);
@@ -103,32 +99,25 @@ class VirtioVsock : public VirtioDeviceBase<VIRTIO_ID_VSOCK,
     VirtioQueueWaiter waiter_;
   };
 
-  void ConnectCallback(ConnectionKey key,
-                       zx_status_t status,
+  void ConnectCallback(ConnectionKey key, zx_status_t status,
                        zx::socket socket);
   zx_status_t SetupConnection(ConnectionKey key, Connection* conn);
   zx_status_t AddConnectionLocked(ConnectionKey key,
                                   fbl::unique_ptr<Connection> conn)
       __TA_REQUIRES(mutex_);
   Connection* GetConnectionLocked(ConnectionKey key) __TA_REQUIRES(mutex_);
-  virtio_vsock_hdr_t* GetHeaderLocked(VirtioQueue* queue,
-                                      uint16_t index,
-                                      virtio_desc_t* desc,
-                                      bool writable) __TA_REQUIRES(mutex_);
+  virtio_vsock_hdr_t* GetHeaderLocked(VirtioQueue* queue, uint16_t index,
+                                      virtio_desc_t* desc, bool writable)
+      __TA_REQUIRES(mutex_);
 
   template <StreamFunc F>
-  zx_status_t WaitOnQueueLocked(ConnectionKey key,
-                                ConnectionSet* keys,
+  zx_status_t WaitOnQueueLocked(ConnectionKey key, ConnectionSet* keys,
                                 Stream<F>* stream) __TA_REQUIRES(mutex_);
-  void WaitOnSocketLocked(zx_status_t status,
-                          ConnectionKey key,
+  void WaitOnSocketLocked(zx_status_t status, ConnectionKey key,
                           async::Wait* wait) __TA_REQUIRES(mutex_);
 
-  void OnSocketReady(async_t* async,
-                     async::Wait* wait,
-                     zx_status_t status,
-                     const zx_packet_signal_t* signal,
-                     ConnectionKey key);
+  void OnSocketReady(async_t* async, async::Wait* wait, zx_status_t status,
+                     const zx_packet_signal_t* signal, ConnectionKey key);
 
   void Mux(zx_status_t status, uint16_t index);
   void Demux(zx_status_t status, uint16_t index);

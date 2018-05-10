@@ -92,8 +92,7 @@ zx_status_t VirtioQueueFake::SetNext(uint16_t desc_index, uint16_t next_index) {
   return ZX_OK;
 }
 
-zx_status_t VirtioQueueFake::WriteDescriptor(void* buf,
-                                             size_t len,
+zx_status_t VirtioQueueFake::WriteDescriptor(void* buf, size_t len,
                                              uint16_t flags,
                                              uint16_t* desc_out) {
   uint16_t desc_index = next_free_desc_;

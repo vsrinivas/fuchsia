@@ -71,19 +71,14 @@ class VirtioVsockTest : public testing::Test, public guest::SocketConnector {
   std::vector<ConnectionRequest> connections_established_;
 
   // |guest::SocketConnector|
-  void Connect(uint32_t src_port,
-               uint32_t cid,
-               uint32_t port,
+  void Connect(uint32_t src_port, uint32_t cid, uint32_t port,
                guest::SocketConnector::ConnectCallback callback) override {
     connection_requests_.emplace_back(
         ConnectionRequest{src_port, cid, port, std::move(callback)});
   }
 
-  void VerifyHeader(virtio_vsock_hdr_t* header,
-                    uint32_t host_port,
-                    uint32_t guest_port,
-                    uint32_t len,
-                    uint16_t op,
+  void VerifyHeader(virtio_vsock_hdr_t* header, uint32_t host_port,
+                    uint32_t guest_port, uint32_t len, uint16_t op,
                     uint32_t flags) {
     EXPECT_EQ(header->src_cid, guest::kHostCid);
     EXPECT_EQ(header->dst_cid, kVirtioVsockGuestCid);
@@ -103,9 +98,7 @@ class VirtioVsockTest : public testing::Test, public guest::SocketConnector {
     loop_.RunUntilIdle();
   }
 
-  void DoSend(uint32_t host_port,
-              uint32_t guest_port,
-              uint16_t type,
+  void DoSend(uint32_t host_port, uint32_t guest_port, uint16_t type,
               uint16_t op) {
     virtio_vsock_hdr_t tx_header = {
         .src_cid = kVirtioVsockGuestCid,
@@ -124,8 +117,7 @@ class VirtioVsockTest : public testing::Test, public guest::SocketConnector {
   }
 
   void HostConnectOnPortRequest(
-      uint32_t host_port,
-      guest::SocketAcceptor::AcceptCallback callback) {
+      uint32_t host_port, guest::SocketAcceptor::AcceptCallback callback) {
     acceptor_->Accept(guest::kHostCid, host_port, kVirtioVsockGuestPort,
                       std::move(callback));
 
@@ -228,8 +220,7 @@ class VirtioVsockTest : public testing::Test, public guest::SocketConnector {
     }
   }
 
-  void GuestConnectOnPortResponse(uint32_t host_port,
-                                  uint16_t op,
+  void GuestConnectOnPortResponse(uint32_t host_port, uint16_t op,
                                   uint32_t guest_port) {
     virtio_vsock_hdr_t rx_header = {};
     DoReceive(&rx_header, sizeof(rx_header));
@@ -251,9 +242,7 @@ class VirtioVsockTest : public testing::Test, public guest::SocketConnector {
   }
 };
 
-TEST_F(VirtioVsockTest, Connect) {
-  HostConnectOnPort(kVirtioVsockHostPort);
-}
+TEST_F(VirtioVsockTest, Connect) { HostConnectOnPort(kVirtioVsockHostPort); }
 
 TEST_F(VirtioVsockTest, ConnectMultipleTimes) {
   HostConnectOnPort(kVirtioVsockHostPort);

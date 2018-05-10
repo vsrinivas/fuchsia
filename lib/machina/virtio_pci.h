@@ -23,12 +23,10 @@ class VirtioPci : public PciDevice {
   VirtioPci(VirtioDevice* device);
 
   // Read a value at |bar| and |offset| from this device.
-  zx_status_t ReadBar(uint8_t bar,
-                      uint64_t offset,
+  zx_status_t ReadBar(uint8_t bar, uint64_t offset,
                       IoValue* value) const override;
   // Write a value at |bar| and |offset| to this device.
-  zx_status_t WriteBar(uint8_t bar,
-                       uint64_t offset,
+  zx_status_t WriteBar(uint8_t bar, uint64_t offset,
                        const IoValue& value) override;
 
  private:
@@ -44,12 +42,8 @@ class VirtioPci : public PciDevice {
   zx_status_t NotifyBarWrite(uint64_t addr, const IoValue& value);
 
   void SetupCaps();
-  void SetupCap(pci_cap_t* cap,
-                virtio_pci_cap_t* virtio_cap,
-                uint8_t cfg_type,
-                size_t cap_len,
-                size_t data_length,
-                uint8_t bar,
+  void SetupCap(pci_cap_t* cap, virtio_pci_cap_t* virtio_cap, uint8_t cfg_type,
+                size_t cap_len, size_t data_length, uint8_t bar,
                 size_t bar_offset);
 
   VirtioQueue* selected_queue() const;

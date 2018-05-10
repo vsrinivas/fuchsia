@@ -23,8 +23,7 @@ static zx_pixel_format_t pixel_format(uint32_t virtio_format) {
 namespace machina {
 
 fbl::unique_ptr<GpuResource> GpuResource::Create(
-    const virtio_gpu_resource_create_2d_t* request,
-    VirtioGpu* gpu) {
+    const virtio_gpu_resource_create_2d_t* request, VirtioGpu* gpu) {
   zx_pixel_format_t format = pixel_format(request->format);
   if (format == ZX_PIXEL_FORMAT_NONE) {
     FXL_LOG(INFO) << "Unsupported GPU format " << request->format;
@@ -39,8 +38,7 @@ GpuResource::GpuResource(VirtioGpu* gpu, ResourceId id, GpuBitmap bitmap)
     : gpu_(gpu), res_id_(id), bitmap_(fbl::move(bitmap)) {}
 
 virtio_gpu_ctrl_type GpuResource::AttachBacking(
-    const virtio_gpu_mem_entry_t* mem_entries,
-    uint32_t num_entries) {
+    const virtio_gpu_mem_entry_t* mem_entries, uint32_t num_entries) {
   const size_t required_bytes =
       bitmap_.width() * bitmap_.height() * bitmap_.pixelsize();
   size_t backing_size = 0;
@@ -106,8 +104,9 @@ virtio_gpu_ctrl_type GpuResource::Flush(
 void GpuResource::CopyBytes(uint64_t offset, uint8_t* dest, size_t size) {
   size_t base = 0;
   for (const auto& entry : backing_) {
-    if (size == 0)
+    if (size == 0) {
       break;
+    }
     if (base + entry.length > offset) {
       size_t len = (entry.length + base) - offset;
       len = len > size ? size : len;

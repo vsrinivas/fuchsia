@@ -29,8 +29,7 @@ using ResourceId = uint32_t;
 using ScanoutId = uint32_t;
 
 // Virtio 2D GPU device.
-class VirtioGpu : public VirtioDeviceBase<VIRTIO_ID_GPU,
-                                          VIRTIO_GPU_Q_COUNT,
+class VirtioGpu : public VirtioDeviceBase<VIRTIO_ID_GPU, VIRTIO_GPU_Q_COUNT,
                                           virtio_gpu_config_t> {
  public:
   VirtioGpu(const PhysMem& phys_mem, async_t* async);
@@ -48,15 +47,12 @@ class VirtioGpu : public VirtioDeviceBase<VIRTIO_ID_GPU,
   // be returned if this method is called multiple times.
   zx_status_t AddScanout(GpuScanout* scanout);
 
-  zx_status_t HandleGpuCommand(VirtioQueue* queue,
-                               uint16_t head,
+  zx_status_t HandleGpuCommand(VirtioQueue* queue, uint16_t head,
                                uint32_t* used);
 
  protected:
-  static zx_status_t QueueHandler(VirtioQueue* queue,
-                                  uint16_t head,
-                                  uint32_t* used,
-                                  void* ctx);
+  static zx_status_t QueueHandler(VirtioQueue* queue, uint16_t head,
+                                  uint32_t* used, void* ctx);
 
   // VIRTIO_GPU_CMD_GET_DISPLAY_INFO
   void GetDisplayInfo(const virtio_gpu_ctrl_hdr_t* request,
@@ -104,11 +100,9 @@ class VirtioGpu : public VirtioDeviceBase<VIRTIO_ID_GPU,
   // virtcons only use a single resource.
   static constexpr size_t kNumHashTableBuckets = 1;
   using ResourceTable =
-      fbl::HashTable<ResourceId,
-                     fbl::unique_ptr<GpuResource>,
+      fbl::HashTable<ResourceId, fbl::unique_ptr<GpuResource>,
                      fbl::SinglyLinkedList<fbl::unique_ptr<GpuResource>>,
-                     size_t,
-                     kNumHashTableBuckets>;
+                     size_t, kNumHashTableBuckets>;
 
   ResourceTable resources_;
   async_t* async_;

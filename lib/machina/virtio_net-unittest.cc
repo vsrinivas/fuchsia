@@ -58,9 +58,11 @@ TEST_F(VirtioNetTest, DrainQueue) {
   ASSERT_EQ(0u, net_.rx_queue()->ring()->used->idx);
 
   // Return a descriptor to the queue, this should trigger it to be returned.
-  ASSERT_EQ(ZX_OK, zx_fifo_read(fifo_[0], sizeof(entry[0]), entry, countof(entry), &count));
+  ASSERT_EQ(ZX_OK, zx_fifo_read(fifo_[0], sizeof(entry[0]), entry,
+                                countof(entry), &count));
   ASSERT_EQ(1u, count);
-  ASSERT_EQ(ZX_OK, zx_fifo_write(fifo_[0], sizeof(entry[0]), &entry[0], 1, nullptr));
+  ASSERT_EQ(ZX_OK,
+            zx_fifo_write(fifo_[0], sizeof(entry[0]), &entry[0], 1, nullptr));
 
   // Run the async tasks, verify buffers are returned.
   loop_.RunUntilIdle();
@@ -85,7 +87,8 @@ TEST_F(VirtioNetTest, HeaderOnDifferentBuffer) {
   eth_fifo_entry_t entry[fifos_.rx_depth];
 
   // Read the fifo entry.
-  ASSERT_EQ(ZX_OK, zx_fifo_read(fifo_[0], sizeof(entry[0]), entry, countof(entry), &count));
+  ASSERT_EQ(ZX_OK, zx_fifo_read(fifo_[0], sizeof(entry[0]), entry,
+                                countof(entry), &count));
   ASSERT_EQ(1u, count);
   ASSERT_EQ(reinterpret_cast<uintptr_t>(packet_ptr), entry[0].offset);
   ASSERT_EQ(packet_len, entry[0].length);
@@ -104,8 +107,9 @@ TEST_F(VirtioNetTest, InvalidDesc) {
   // Expect nothing is written to the FIFO.
   loop_.RunUntilIdle();
   eth_fifo_entry_t entry[fifos_.rx_depth];
-  ASSERT_EQ(zx_fifo_read(fifo_[0], sizeof(entry[0]), entry, countof(entry), nullptr),
-            ZX_ERR_SHOULD_WAIT);
+  ASSERT_EQ(
+      zx_fifo_read(fifo_[0], sizeof(entry[0]), entry, countof(entry), nullptr),
+      ZX_ERR_SHOULD_WAIT);
 }
 
 TEST_F(VirtioNetTest, PeerClosed) {

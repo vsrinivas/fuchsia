@@ -35,10 +35,8 @@ struct Instruction {
   uint64_t* flags;
 };
 
-zx_status_t inst_decode(const uint8_t* inst_buf,
-                        uint32_t inst_len,
-                        zx_vcpu_state_t* vcpu_state,
-                        Instruction* inst);
+zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len,
+                        zx_vcpu_state_t* vcpu_state, Instruction* inst);
 
 #define DEFINE_INST_VAL(size)                                            \
   static inline uint##size##_t inst_val##size(const Instruction* inst) { \
@@ -92,12 +90,12 @@ static inline uint16_t x86_flags_for_test8(uint8_t value1, uint8_t value2) {
 }
 #endif
 
-static inline zx_status_t inst_test8(const Instruction* inst,
-                                     uint8_t inst_val,
+static inline zx_status_t inst_test8(const Instruction* inst, uint8_t inst_val,
                                      uint8_t value) {
   if (inst->type != INST_TEST || inst->access_size != 1u ||
-      inst_val8(inst) != inst_val)
+      inst_val8(inst) != inst_val) {
     return ZX_ERR_NOT_SUPPORTED;
+  }
 #if __x86_64__
   *inst->flags &= ~X86_FLAGS_STATUS;
   *inst->flags |= x86_flags_for_test8(inst_val, value);

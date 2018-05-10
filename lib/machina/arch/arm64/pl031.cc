@@ -26,8 +26,9 @@ zx_status_t Pl031::Init(Guest* guest) {
 zx_status_t Pl031::Read(uint64_t addr, IoValue* value) const {
   switch (static_cast<Pl031Register>(addr)) {
     case Pl031Register::DR:
-      if (value->access_size != 4)
+      if (value->access_size != 4) {
         return ZX_ERR_IO_DATA_INTEGRITY;
+      }
       value->u32 = rtc_time();
       return ZX_OK;
     default:

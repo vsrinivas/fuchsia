@@ -51,23 +51,14 @@ class BlockDispatcher {
       fbl::unique_ptr<BlockDispatcher>* out);
 
   static zx_status_t CreateFromPath(
-      const char* path,
-      Mode mode,
-      DataPlane data_plane,
-      const PhysMem& phys_mem,
-      fbl::unique_ptr<BlockDispatcher>* dispatcher);
+      const char* path, Mode mode, DataPlane data_plane,
+      const PhysMem& phys_mem, fbl::unique_ptr<BlockDispatcher>* dispatcher);
 
   static zx_status_t CreateFromGuid(
-      const Guid& guid,
-      zx_duration_t timeout,
-      Mode mode,
-      DataPlane data_plane,
-      const PhysMem& phys_mem,
-      fbl::unique_ptr<BlockDispatcher>* dispatcher);
+      const Guid& guid, zx_duration_t timeout, Mode mode, DataPlane data_plane,
+      const PhysMem& phys_mem, fbl::unique_ptr<BlockDispatcher>* dispatcher);
 
-  static zx_status_t CreateFromFd(int fd,
-                                  Mode mode,
-                                  DataPlane data_plane,
+  static zx_status_t CreateFromFd(int fd, Mode mode, DataPlane data_plane,
                                   const PhysMem& phys_mem,
                                   fbl::unique_ptr<BlockDispatcher>* dispatcher);
 
@@ -77,8 +68,7 @@ class BlockDispatcher {
 
   virtual zx_status_t Flush() = 0;
   virtual zx_status_t Read(off_t disk_offset, void* buf, size_t size) = 0;
-  virtual zx_status_t Write(off_t disk_offset,
-                            const void* buf,
+  virtual zx_status_t Write(off_t disk_offset, const void* buf,
                             size_t size) = 0;
   virtual zx_status_t Submit() = 0;
 

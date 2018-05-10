@@ -76,14 +76,16 @@ uint32_t PciBar::base() const {
 }
 
 zx_status_t PciBar::Read(uint64_t addr, IoValue* value) const {
-  if (device == nullptr)
+  if (device == nullptr) {
     return ZX_ERR_BAD_STATE;
+  }
   return device->ReadBar(n, addr, value);
 }
 
 zx_status_t PciBar::Write(uint64_t addr, const IoValue& value) {
-  if (device == nullptr)
+  if (device == nullptr) {
     return ZX_ERR_BAD_STATE;
+  }
   return device->WriteBar(n, addr, value);
 }
 
@@ -126,21 +128,24 @@ zx_status_t PciBus::Init() {
   root_complex_.bar_[0].size = 0x10;
   root_complex_.bar_[0].trap_type = TrapType::MMIO_SYNC;
   zx_status_t status = Connect(&root_complex_);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   // Setup ECAM trap for a single bus.
   status = guest_->CreateMapping(TrapType::MMIO_SYNC, kPciEcamPhysBase,
                                  pci_ecam_size(0, 1), 0, &ecam_handler_);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
 #if __x86_64__
   // Setup PIO trap.
   status = guest_->CreateMapping(TrapType::PIO_SYNC, kPciConfigPortBase,
                                  kPciConfigPortSize, 0, &port_handler_);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 #endif
 
   return ZX_OK;
@@ -194,13 +199,9 @@ zx_status_t PciBus::Connect(PciDevice* device) {
 // treat Configuration Space write operations to reserved registers as no-ops;
 // that is, the access must be completed normally on the bus and the data
 // discarded.
-static inline zx_status_t pci_write_unimplemented_register() {
-  return ZX_OK;
-}
+static inline zx_status_t pci_write_unimplemented_register() { return ZX_OK; }
 
-static inline zx_status_t pci_write_unimplemented_device() {
-  return ZX_OK;
-}
+static inline zx_status_t pci_write_unimplemented_device() { return ZX_OK; }
 
 // PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.1: Read accesses to reserved
 // or unimplemented registers must be completed normally and a data value of 0
@@ -334,8 +335,7 @@ static inline uint8_t pci_cap_len(const pci_cap_t* cap) {
 
 PciDevice::PciDevice(const Attributes attrs) : attrs_(attrs) {}
 
-const pci_cap_t* PciDevice::FindCapability(uint8_t addr,
-                                           uint8_t* cap_index,
+const pci_cap_t* PciDevice::FindCapability(uint8_t addr, uint8_t* cap_index,
                                            uint32_t* cap_base) const {
   uint32_t base = PCI_REGISTER_CAP_BASE;
   for (uint8_t i = 0; i < num_capabilities_; ++i) {
@@ -359,15 +359,17 @@ zx_status_t PciDevice::ReadCapability(uint8_t addr, uint32_t* out) const {
   uint8_t cap_index;
   uint32_t cap_base;
   const pci_cap_t* cap = FindCapability(addr, &cap_index, &cap_base);
-  if (cap == nullptr)
+  if (cap == nullptr) {
     return ZX_ERR_NOT_FOUND;
+  }
 
   uint32_t word = 0;
   uint32_t cap_offset = addr - cap_base;
   for (uint8_t byte = 0; byte < sizeof(word); ++byte, ++cap_offset) {
     // In the case of padding bytes, return 0.
-    if (cap_offset >= cap->len)
+    if (cap_offset >= cap->len) {
       break;
+    }
 
     // PCI Local Bus Spec v3.0 Section 6.7:
     // Each capability in the list consists of an 8-bit ID field assigned
@@ -382,8 +384,9 @@ zx_status_t PciDevice::ReadCapability(uint8_t addr, uint32_t* out) const {
       case kPciCapNextOffset:
         // PCI Local Bus Spec v3.0 Section 6.7: A pointer value of 00h is
         // used to indicate the last capability in the list.
-        if (cap_index + 1u < num_capabilities_)
+        if (cap_index + 1u < num_capabilities_) {
           val = cap_base + pci_cap_len(cap);
+        }
         break;
       default:
         val = cap->data[cap_offset];
@@ -416,8 +419,9 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) const {
       *value = command_;
 
       uint16_t status = PCI_STATUS_INTERRUPT;
-      if (capabilities_ != nullptr)
+      if (capabilities_ != nullptr) {
         status |= PCI_STATUS_NEW_CAPS;
+      }
       *value |= status << 16;
       return ZX_OK;
     }
@@ -442,8 +446,9 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) const {
     case PCI_REGISTER_BAR_4:
     case PCI_REGISTER_BAR_5: {
       uint32_t bar_num = (reg - PCI_REGISTER_BAR_0) / 4;
-      if (bar_num >= PCI_MAX_BARS)
+      if (bar_num >= PCI_MAX_BARS) {
         return pci_read_unimplemented_register(value);
+      }
 
       fbl::AutoLock lock(&mutex_);
       const PciBar* bar = &bar_[bar_num];
@@ -473,12 +478,14 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) const {
     //  ------------------------------------------
     case PCI_CONFIG_CAPABILITIES:
       *value = 0;
-      if (capabilities_ != nullptr)
+      if (capabilities_ != nullptr) {
         *value |= PCI_REGISTER_CAP_BASE;
+      }
       return ZX_OK;
     case PCI_REGISTER_CAP_BASE ... PCI_REGISTER_CAP_TOP:
-      if (ReadCapability(reg, value) != ZX_ERR_NOT_FOUND)
+      if (ReadCapability(reg, value) != ZX_ERR_NOT_FOUND) {
         return ZX_OK;
+      }
     // Fall-through if the capability is not-implemented.
     default:
       return pci_read_unimplemented_register(value);
@@ -493,8 +500,9 @@ zx_status_t PciDevice::ReadConfig(uint64_t reg, IoValue* value) const {
   uint8_t word_aligend_reg = static_cast<uint8_t>(reg & ~reg_mask);
   uint8_t bit_offset = static_cast<uint8_t>((reg & reg_mask) * 8);
   zx_status_t status = ReadConfigWord(word_aligend_reg, &word);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   word >>= bit_offset;
   word &= bit_mask<uint32_t>(value->access_size * 8);
@@ -528,12 +536,14 @@ zx_status_t PciDevice::WriteConfig(uint64_t reg, const IoValue& value) {
     case PCI_REGISTER_BAR_3:
     case PCI_REGISTER_BAR_4:
     case PCI_REGISTER_BAR_5: {
-      if (value.access_size != 4)
+      if (value.access_size != 4) {
         return ZX_ERR_NOT_SUPPORTED;
+      }
 
       uint64_t bar_num = (reg - PCI_REGISTER_BAR_0) / 4;
-      if (bar_num >= PCI_MAX_BARS)
+      if (bar_num >= PCI_MAX_BARS) {
         return pci_write_unimplemented_register();
+      }
 
       fbl::AutoLock lock(&mutex_);
       PciBar* bar = &bar_[bar_num];
@@ -550,8 +560,9 @@ zx_status_t PciDevice::WriteConfig(uint64_t reg, const IoValue& value) {
 zx_status_t PciDevice::SetupBarTraps(Guest* guest) {
   for (uint8_t i = 0; i < PCI_MAX_BARS; ++i) {
     PciBar* bar = &bar_[i];
-    if (!is_bar_implemented(i))
+    if (!is_bar_implemented(i)) {
       break;
+    }
 
     bar->n = i;
     bar->device = this;
@@ -560,16 +571,18 @@ zx_status_t PciDevice::SetupBarTraps(Guest* guest) {
     uint64_t size = bar->size;
     zx_status_t status =
         guest->CreateMapping(bar->trap_type, addr, size, 0, bar);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
       return status;
+    }
   }
 
   return ZX_OK;
 }
 
 zx_status_t PciDevice::Interrupt() {
-  if (!bus_)
+  if (!bus_) {
     return ZX_ERR_BAD_STATE;
+  }
   return bus_->Interrupt(*this);
 }
 

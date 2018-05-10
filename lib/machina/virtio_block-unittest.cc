@@ -29,39 +29,45 @@ class VirtioBlockTest {
   VirtioBlockTest() : block_(phys_mem_), queue_(block_.request_queue()) {}
 
   ~VirtioBlockTest() {
-    if (fd_ > 0)
+    if (fd_ > 0) {
       close(fd_);
+    }
   }
 
   zx_status_t Init(char* block_path) {
     fd_ = CreateBlockFile(block_path);
-    if (fd_ < 0)
+    if (fd_ < 0) {
       return ZX_ERR_IO;
+    }
 
     fbl::unique_ptr<machina::BlockDispatcher> dispatcher;
     zx_status_t status = machina::BlockDispatcher::CreateFromPath(
         block_path, machina::BlockDispatcher::Mode::RW,
         machina::BlockDispatcher::DataPlane::FDIO, phys_mem_, &dispatcher);
     status = block_.SetDispatcher(fbl::move(dispatcher));
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
       return status;
+    }
 
     return queue_.Init(QUEUE_SIZE);
   }
 
   zx_status_t WriteSector(uint8_t value, uint32_t sector, size_t len) {
-    if (len > VirtioBlock::kSectorSize)
+    if (len > VirtioBlock::kSectorSize) {
       return ZX_ERR_OUT_OF_RANGE;
+    }
 
     uint8_t buffer[VirtioBlock::kSectorSize];
     memset(buffer, value, len);
 
     ssize_t ret = lseek(fd_, sector * VirtioBlock::kSectorSize, SEEK_SET);
-    if (ret < 0)
+    if (ret < 0) {
       return ZX_ERR_IO;
+    }
     ret = write(fd_, buffer, len);
-    if (ret < 0)
+    if (ret < 0) {
       return ZX_ERR_IO;
+    }
 
     return ZX_OK;
   }
@@ -79,8 +85,9 @@ class VirtioBlockTest {
       uint8_t zeroes[VirtioBlock::kSectorSize * 8];
       memset(zeroes, 0, sizeof(zeroes));
       ssize_t ret = write(fd, zeroes, sizeof(zeroes));
-      if (ret < 0)
+      if (ret < 0) {
         return static_cast<int>(ret);
+      }
     }
     return fd;
   }

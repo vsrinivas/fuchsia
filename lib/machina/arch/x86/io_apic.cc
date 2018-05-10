@@ -49,25 +49,29 @@ zx_status_t IoApic::Init(Guest* guest) {
 }
 
 zx_status_t IoApic::RegisterVcpu(uint8_t local_apic_id, Vcpu* vcpu) {
-  if (local_apic_id >= kMaxVcpus)
+  if (local_apic_id >= kMaxVcpus) {
     return ZX_ERR_OUT_OF_RANGE;
-  if (vcpus_[local_apic_id] != nullptr)
+  }
+  if (vcpus_[local_apic_id] != nullptr) {
     return ZX_ERR_ALREADY_EXISTS;
+  }
   vcpus_[local_apic_id] = vcpu;
   return ZX_OK;
 }
 
 zx_status_t IoApic::SetRedirect(uint32_t global_irq, RedirectEntry& redirect) {
-  if (global_irq >= kNumRedirects)
+  if (global_irq >= kNumRedirects) {
     return ZX_ERR_OUT_OF_RANGE;
+  }
   fbl::AutoLock lock(&mutex_);
   redirect_[global_irq] = redirect;
   return ZX_OK;
 }
 
 zx_status_t IoApic::Interrupt(uint32_t global_irq) {
-  if (global_irq >= kNumRedirects)
+  if (global_irq >= kNumRedirects) {
     return ZX_ERR_OUT_OF_RANGE;
+  }
 
   RedirectEntry entry;
   {
@@ -93,8 +97,9 @@ zx_status_t IoApic::Interrupt(uint32_t global_irq) {
   if (destmod == IO_APIC_DESTMOD_PHYSICAL) {
     uint32_t dest = bits_shift(entry.upper, 27, 24);
     Vcpu* vcpu = dest < kMaxVcpus ? vcpus_[dest] : nullptr;
-    if (vcpu == nullptr)
+    if (vcpu == nullptr) {
       return ZX_ERR_NOT_FOUND;
+    }
     return vcpu->Interrupt(vector);
   }
 
@@ -103,11 +108,13 @@ zx_status_t IoApic::Interrupt(uint32_t global_irq) {
   for (uint8_t local_apic_id = 0; local_apic_id < kMaxVcpus; ++local_apic_id) {
     // See Intel Volume 3, Section 10.12.10.2: logical ID = 1 << x2APIC ID[3:0].
     uint16_t logical_id = 1 << local_apic_id;
-    if (!(logical_id & dest))
+    if (!(logical_id & dest)) {
       continue;
+    }
     Vcpu* vcpu = vcpus_[local_apic_id];
-    if (vcpu == nullptr)
+    if (vcpu == nullptr) {
       continue;
+    }
     // Note we're not currently respecting the DELMODE field and
     // instead are only delivering to the fist local APIC that is
     // targeted.
@@ -140,8 +147,9 @@ zx_status_t IoApic::Read(uint64_t addr, IoValue* value) const {
 zx_status_t IoApic::Write(uint64_t addr, const IoValue& value) {
   switch (addr) {
     case IO_APIC_IOREGSEL: {
-      if (value.u32 > UINT8_MAX)
+      if (value.u32 > UINT8_MAX) {
         return ZX_ERR_INVALID_ARGS;
+      }
       fbl::AutoLock lock(&mutex_);
       select_ = value.u32;
       return ZX_OK;

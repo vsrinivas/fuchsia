@@ -98,8 +98,9 @@ zx_status_t Pm1Handler::Init(Guest* guest) {
   // Map 2 distinct register blocks for event and control registers.
   zx_status_t status = guest->CreateMapping(TrapType::PIO_SYNC, kPm1EventPort,
                                             kPm1Size, 0, this);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
   return guest->CreateMapping(TrapType::PIO_SYNC, kPm1ControlPort, kPm1Size,
                               kPm1ControlPort, this);
 }
@@ -130,8 +131,9 @@ zx_status_t Pm1Handler::Write(uint64_t addr, const IoValue& value) {
     case kPm1StatusPortOffset:
       break;
     case kPm1EnablePortOffset: {
-      if (value.access_size != 2)
+      if (value.access_size != 2) {
         return ZX_ERR_IO_DATA_INTEGRITY;
+      }
       fbl::AutoLock lock(&mutex_);
       enable_ = value.u16;
       break;
@@ -187,8 +189,9 @@ zx_status_t CmosHandler::Write(uint64_t addr, const IoValue& value) {
       return WriteCmosRegister(cmos_index, value.u8);
     }
     case kCmosIndexPort: {
-      if (value.access_size != 1)
+      if (value.access_size != 1) {
         return ZX_ERR_IO_DATA_INTEGRITY;
+      }
       fbl::AutoLock lock(&mutex_);
       index_ = value.u8;
       return ZX_OK;
@@ -202,8 +205,9 @@ zx_status_t CmosHandler::ReadCmosRegister(uint8_t cmos_index,
                                           uint8_t* value) const {
   time_t now = rtc_time();
   struct tm tm;
-  if (localtime_r(&now, &tm) == nullptr)
+  if (localtime_r(&now, &tm) == nullptr) {
     return ZX_ERR_INTERNAL;
+  }
   switch (cmos_index) {
     case kCmosRegisterRtcSeconds:
       *value = to_bcd(tm.tm_sec);
@@ -224,8 +228,9 @@ zx_status_t CmosHandler::ReadCmosRegister(uint8_t cmos_index,
     case kCmosRegisterRtcYear: {
       // RTC expects the number of years since 2000.
       int year = tm.tm_year - 100;
-      if (year < 0)
+      if (year < 0) {
         year = 0;
+      }
       *value = to_bcd(year);
       break;
     }
@@ -235,8 +240,9 @@ zx_status_t CmosHandler::ReadCmosRegister(uint8_t cmos_index,
       break;
     case kCmosRegisterB:
       *value = kCmosRegisterBHourFormat;
-      if (tm.tm_isdst)
+      if (tm.tm_isdst) {
         *value |= kCmosRegisterBDaylightSavings;
+      }
       break;
     // Alarms are not implemented but allow reads of the registers.
     case kCmosRegisterRtcSecondsAlarm:
@@ -259,8 +265,9 @@ zx_status_t CmosHandler::WriteCmosRegister(uint8_t cmos_index, uint8_t value) {
       return ZX_OK;
     case kCmosRegisterB:
       // No interrupts are implemented.
-      if (value & kCmosRegisterBInterruptMask)
+      if (value & kCmosRegisterBInterruptMask) {
         return ZX_ERR_NOT_SUPPORTED;
+      }
       return ZX_OK;
     case kCmosRegisterRtcSeconds:
     case kCmosRegisterRtcMinutes:
@@ -281,8 +288,9 @@ zx_status_t CmosHandler::WriteCmosRegister(uint8_t cmos_index, uint8_t value) {
 zx_status_t I8042Handler::Init(Guest* guest) {
   zx_status_t status = guest->CreateMapping(
       TrapType::PIO_SYNC, kI8042Base + kI8042DataPort, 1, kI8042DataPort, this);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   return guest->CreateMapping(TrapType::PIO_SYNC,
                               kI8042Base + kI8042CommandPort, 1,
@@ -311,8 +319,9 @@ zx_status_t I8042Handler::Write(uint64_t port, const IoValue& value) {
   switch (port) {
     case kI8042DataPort:
     case kI8042CommandPort: {
-      if (value.access_size != 1)
+      if (value.access_size != 1) {
         return ZX_ERR_IO_DATA_INTEGRITY;
+      }
       fbl::AutoLock lock(&mutex_);
       command_ = value.u8;
       break;
@@ -361,26 +370,33 @@ zx_status_t ProcessorInterfaceHandler::Write(uint64_t addr,
 zx_status_t IoPort::Init(Guest* guest) {
   zx_status_t status;
   status = pic1_.Init(guest, kPic1Base);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
   status = pic2_.Init(guest, kPic2Base);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
   status = pit_.Init(guest);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
   status = pm1_.Init(guest);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
   status = cmos_.Init(guest);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
   status = i8042_.Init(guest);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
   status = proc_iface_.Init(guest);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   return ZX_OK;
 }

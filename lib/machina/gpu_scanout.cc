@@ -33,8 +33,7 @@ void GpuScanout::DrawScanoutResource(const virtio_gpu_rect_t& rect) {
   InvalidateRegion(dest_rect);
 }
 
-void GpuScanout::Draw(const GpuResource& res,
-                      const GpuRect& source_rect,
+void GpuScanout::Draw(const GpuResource& res, const GpuRect& source_rect,
                       const GpuRect& dest_rect) {
   surface_.DrawBitmap(res.bitmap(), source_rect, dest_rect);
 }

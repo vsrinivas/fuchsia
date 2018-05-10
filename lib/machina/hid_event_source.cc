@@ -128,8 +128,7 @@ zx_status_t HidEventSource::WatchInputDirectory(void* arg) {
   return fdio_watch_directory(dir_fd.get(), callback, ZX_TIME_INFINITE, arg);
 }
 
-zx_status_t HidEventSource::AddInputDevice(int dirfd,
-                                           int event,
+zx_status_t HidEventSource::AddInputDevice(int dirfd, int event,
                                            const char* fn) {
   if (event != WATCH_EVENT_ADD_FILE) {
     return ZX_OK;
