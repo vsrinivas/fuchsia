@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Run this command in Fuchsia development environment, or at minimum,
+# source ${FUCHSIA_DIR}/scripts/devshell/lib/vars.sh
+
+### Register Zircon tools at MacOS Application Firewall
+
+FIREWALL_CMD="/usr/libexec/ApplicationFirewall/socketfilterfw"
+
+function list_zircon_tools() {
+  TOOL_LIST="$(${FIREWALL_CMD} --listapps | grep zircon | awk '{print $3}')"
+  for f in "${TOOL_LIST[@]}"; do
+    echo "${f}"
+  done
+}
+
+function clear_zircon_tools() {
+  TOOL_LIST="$(${FIREWALL_CMD} --listapps | grep zircon | awk '{print $3}')"
+  for f in ${TOOL_LIST}; do
+    sudo ${FIREWALL_CMD} --remove "${f}" &> /dev/null
+  done
+}
+
+function allow_zircon_tools() {
+  for f in ${ZIRCON_TOOLS_DIR}/*; do
+    sudo ${FIREWALL_CMD} --add "$f" --unblockapp "$f" &> /dev/null
+  done
+}
+
+function main() {
+  echo "  clearing firewall rules.."
+  clear_zircon_tools
+  echo "  adding firewall rules.."
+  allow_zircon_tools
+
+  # Activate the changes
+  sudo ${FIREWALL_CMD} --setglobalstate off &> /dev/null
+  sudo ${FIREWALL_CMD} --setglobalstate on &> /dev/null
+  echo "..done"
+
+  echo "  following tools are registered in the firewall rules:"
+  echo " "
+  list_zircon_tools
+  echo " "
+}
+
+main
