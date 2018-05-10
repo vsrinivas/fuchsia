@@ -27,7 +27,7 @@ template <typename ValueType, typename SumType, uint32_t N> class MovingAverage 
         }
         sum += item;
         items[i] = item;
-        i = ++i % N;
+        i = (i + 1) % N;
     }
 
     void reset() { i = n = sum = 0; }
