@@ -124,6 +124,48 @@ public:
     static auto Get() { return magma::RegisterAddr<Specs4>(0x9C); }
 };
 
+class IdleState : public magma::RegisterBase {
+public:
+    bool IsIdle() { return reg_value() == 0x7fffffff; }
+
+    static auto Get() { return magma::RegisterAddr<IdleState>(0x4); }
+};
+
+class SecureCommandControl : public magma::RegisterBase {
+public:
+    DEF_FIELD(15, 0, prefetch);
+    DEF_BIT(16, enable);
+
+    static auto Get() { return magma::RegisterAddr<SecureCommandControl>(0x3A4); }
+};
+
+class SecureAhbControl : public magma::RegisterBase {
+public:
+    DEF_BIT(1, non_secure_access);
+
+    static auto Get() { return magma::RegisterAddr<SecureAhbControl>(0x3A8); }
+};
+
+class FetchEngineCommandAddress : public magma::RegisterBase {
+public:
+    DEF_FIELD(31, 0, addr);
+
+    static auto Get() { return magma::RegisterAddr<FetchEngineCommandAddress>(0x654); }
+};
+
+class FetchEngineCommandControl : public magma::RegisterBase {
+public:
+    DEF_FIELD(15, 0, prefetch);
+    DEF_BIT(16, enable);
+
+    static auto Get() { return magma::RegisterAddr<FetchEngineCommandControl>(0x658); }
+};
+
+class DmaAddress : public magma::RegisterBase {
+public:
+    static auto Get() { return magma::RegisterAddr<DmaAddress>(0x664); }
+};
+
 } // namespace registers
 
 #endif // REGISTERS_H

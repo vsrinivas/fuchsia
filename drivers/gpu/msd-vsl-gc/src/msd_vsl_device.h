@@ -23,8 +23,15 @@ public:
 
     uint32_t device_id() { return device_id_; }
 
+    bool IsIdle();
+
 private:
     bool Init(void* device_handle);
+    void HardwareInit();
+
+    bool SubmitCommandBufferNoMmu(uint64_t bus_addr, uint32_t length, uint16_t* prefetch_out);
+
+    magma::RegisterIo* register_io() { return register_io_.get(); }
 
     magma::PlatformBusMapper* bus_mapper() { return bus_mapper_.get(); }
 
@@ -35,6 +42,8 @@ private:
     std::unique_ptr<GpuFeatures> gpu_features_;
     uint32_t device_id_ = 0;
     std::unique_ptr<magma::PlatformBusMapper> bus_mapper_;
+
+    friend class TestMsdVslDevice;
 };
 
 #endif // MSD_VSL_DEVICE_H
