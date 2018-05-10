@@ -2,7 +2,7 @@ Fuchsia Boot Sequence
 =====================
 
 This document describes the boot sequence for Fuchsia from the time the Zircon
-layer hands control over to the Fuchsia layer.  This document is a work in
+layer hands control over to the Garnet layer.  This document is a work in
 progress that will need to be extended as we bring up more of the system.
 
 # Layer 1: [appmgr](https://fuchsia.googlesource.com/garnet/+/master/bin/appmgr)
