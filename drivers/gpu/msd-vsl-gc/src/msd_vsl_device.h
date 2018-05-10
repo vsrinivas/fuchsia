@@ -29,6 +29,7 @@ public:
 private:
     bool Init(void* device_handle);
     void HardwareInit();
+    void Reset();
 
     bool SubmitCommandBufferNoMmu(uint64_t bus_addr, uint32_t length, uint16_t* prefetch_out);
 

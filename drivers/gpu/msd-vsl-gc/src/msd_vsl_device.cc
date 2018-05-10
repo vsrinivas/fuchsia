@@ -7,6 +7,8 @@
 #include "msd.h"
 #include "platform_mmio.h"
 #include "registers.h"
+#include <chrono>
+#include <thread>
 
 std::unique_ptr<MsdVslDevice> MsdVslDevice::Create(void* device_handle)
 {
@@ -65,6 +67,7 @@ bool MsdVslDevice::Init(void* device_handle)
     if (!page_table_arrays_)
         return DRETF(false, "failed to create page table arrays");
 
+    Reset();
     HardwareInit();
 
     return true;
@@ -79,6 +82,37 @@ void MsdVslDevice::HardwareInit()
     }
 
     page_table_arrays_->HardwareInit(register_io_.get());
+}
+
+void MsdVslDevice::Reset()
+{
+    DLOG("Reset start");
+
+    auto clock_control = registers::ClockControl::Get().FromValue(0);
+    clock_control.isolate_gpu().set(1);
+    clock_control.WriteTo(register_io());
+
+    {
+        auto reg = registers::SecureAhbControl::Get().FromValue(0);
+        reg.reset().set(1);
+        reg.WriteTo(register_io_.get());
+    }
+
+    std::this_thread::sleep_for(std::chrono::microseconds(100));
+
+    clock_control.soft_reset().set(0);
+    clock_control.WriteTo(register_io());
+
+    clock_control.isolate_gpu().set(0);
+    clock_control.WriteTo(register_io());
+
+    clock_control = registers::ClockControl::Get().ReadFrom(register_io_.get());
+
+    if (!IsIdle() || !clock_control.idle_3d().get()) {
+        magma::log(magma::LOG_WARNING, "Gpu reset: failed to idle");
+    }
+
+    DLOG("Reset complete");
 }
 
 bool MsdVslDevice::IsIdle()

@@ -11,6 +11,15 @@
 
 namespace registers {
 
+class ClockControl : public magma::RegisterBase {
+public:
+    DEF_BIT(12, soft_reset);
+    DEF_BIT(16, idle_3d);
+    DEF_BIT(19, isolate_gpu);
+
+    static auto Get() { return magma::RegisterAddr<ClockControl>(0x0); }
+};
+
 class ChipId : public magma::RegisterBase {
 public:
     DEF_FIELD(31, 0, chip_id);
@@ -190,6 +199,7 @@ public:
 
 class SecureAhbControl : public magma::RegisterBase {
 public:
+    DEF_BIT(0, reset);
     DEF_BIT(1, non_secure_access);
 
     static auto Get() { return magma::RegisterAddr<SecureAhbControl>(0x3A8); }
@@ -208,6 +218,16 @@ public:
     DEF_BIT(16, enable);
 
     static auto Get() { return magma::RegisterAddr<FetchEngineCommandControl>(0x658); }
+};
+
+class DmaStatus : public magma::RegisterBase {
+public:
+    static auto Get() { return magma::RegisterAddr<DmaStatus>(0x65C); }
+};
+
+class DmaDebugState : public magma::RegisterBase {
+public:
+    static auto Get() { return magma::RegisterAddr<DmaDebugState>(0x660); }
 };
 
 class DmaAddress : public magma::RegisterBase {
