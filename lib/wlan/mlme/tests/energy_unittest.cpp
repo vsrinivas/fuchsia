@@ -126,6 +126,14 @@ TEST_F(EnergyTest, Arithmetics) {
     dBm k(-71);
     dBm l = j + k;
     EXPECT_EQ(l.val, -67);  // -70 dBm + (-71) dBm = -67 dBm
+
+    FemtoWatt fw(4);
+    fw += FemtoWatt(3);
+    EXPECT_EQ(fw.val, 7u);
+
+    fw -= FemtoWatt(2);
+    EXPECT_EQ(fw.val, 5u);
+
 }
 
 TEST_F(EnergyTest, DbmToFemtoWatt) {

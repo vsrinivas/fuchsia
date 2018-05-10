@@ -76,6 +76,16 @@ struct FemtoWatt : EnergyType<uint64_t, FemtoWatt> {
     explicit constexpr FemtoWatt(uint64_t v = 0) : EnergyType<uint64_t, FemtoWatt>(v) {}
 };
 
+constexpr FemtoWatt& operator+= (FemtoWatt& lhs, FemtoWatt rhs) {
+    lhs.val += rhs.val;
+    return lhs;
+}
+
+constexpr FemtoWatt& operator-= (FemtoWatt& lhs, FemtoWatt rhs) {
+    lhs.val -= rhs.val;
+    return lhs;
+}
+
 // IEEE Std 802.11-2016, Table 9-60, 9-71
 // For the use for SNR or relative comparison.
 // For precision of 1 dB step, See IEEE 802.11-2016, Table 6-7, 9-18, etc.
