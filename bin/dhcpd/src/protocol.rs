@@ -53,3 +53,72 @@ pub struct ConfigOption {
     pub code: u8,
     pub value: Vec<u8>
 }
+
+impl ConfigOption {
+    fn serialize(mut self) -> Option<Vec<u8>> {
+        if !self.is_valid_code() {
+            return None;
+        }
+        let len = self.value.len() as u8;
+        if len > 0 {
+            self.value.insert(0, len);
+        }
+        self.value.insert(0, self.code);
+        Some(self.value)
+    }
+
+    fn is_valid_code(&self) -> bool {
+        // code is between 0 and 61, inclusive, or is 255
+        (self.code >= 0 && self.code <= 61) || self.code == 255
+    }
+}
+
+#[test]
+fn test_serialize_with_valid_option_returns_correct_bytes() {
+    let opt = ConfigOption{
+        code: 1,
+        value: vec!(255, 255, 255, 0)
+    };
+    let bytes = opt.serialize();
+    match bytes {
+        Some(b) => {
+            assert_eq!(b.len(), 6);
+            assert_eq!(b[0], 1);
+            assert_eq!(b[1], 4);
+            assert_eq!(b[2], 255);
+            assert_eq!(b[3], 255);
+            assert_eq!(b[4], 255);
+            assert_eq!(b[5], 0);
+        },
+        None => assert!(false), // test failure
+    }
+}
+
+#[test]
+fn test_serialize_with_invalid_code_returns_none() {
+    let opt = ConfigOption {
+        code: 100,
+        value: vec!(42)
+    };
+    let bytes = opt.serialize();
+    match bytes {
+        Some(b) => assert!(false), // test failure
+        None => assert!(true) // test success
+    }
+}
+
+#[test]
+fn test_serialize_with_fixed_len_option_returns_correct_bytes() {
+    let opt = ConfigOption {
+        code: 255,
+        value: vec!(),
+    };
+    let bytes = opt.serialize();
+    match bytes {
+        Some(b) => {
+            assert_eq!(b.len(), 1);
+            assert_eq!(b[0], 255);
+        },
+        None => assert!(false), // test failure
+    }
+}
