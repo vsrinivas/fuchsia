@@ -5,13 +5,11 @@
 pub mod handshake;
 
 use self::handshake::fourway::{self, Fourway};
-use Error;
 use eapol;
 use failure;
-use futures::future::Either;
-use futures::{task, Async, Poll, Stream};
-use rsna::Role;
+use rsna::{Role, SecAssocResult};
 use rsne::Rsne;
+use Error;
 
 pub enum Key {
     Pmk(Vec<u8>),
@@ -35,25 +33,11 @@ impl Method {
             _ => Err(Error::UnknownKeyExchange.into()),
         }
     }
-}
 
-impl Stream for Method {
-    type Item = Either<eapol::Frame, Key>;
-    type Error = failure::Error;
-
-    fn poll_next(&mut self, cx: &mut task::Context) -> Poll<Option<Self::Item>, Self::Error> {
-        match self {
-            &mut Method::FourWayHandshake(ref mut hs) => hs.poll_next(cx),
-            _ => Ok(Async::Pending),
-        }
-    }
-}
-
-impl eapol::KeyFrameReceiver for Method {
-    fn on_eapol_key_frame(&self, frame: &eapol::KeyFrame) -> Result<(), failure::Error> {
+    pub fn on_eapol_key_frame(&self, frame: &eapol::KeyFrame) -> SecAssocResult {
         match self {
             &Method::FourWayHandshake(ref hs) => hs.on_eapol_key_frame(frame),
-            _ => Ok(()),
+            _ => Ok(vec![]),
         }
     }
 }

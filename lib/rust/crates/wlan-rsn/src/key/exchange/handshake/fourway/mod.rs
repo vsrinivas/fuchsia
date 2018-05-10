@@ -7,17 +7,15 @@ mod supplicant;
 
 use self::authenticator::Authenticator;
 use self::supplicant::Supplicant;
-use Error;
 use akm::Akm;
 use cipher::{Cipher, GROUP_CIPHER_SUITE, TKIP};
 use eapol;
 use failure;
-use futures::future::Either;
-use futures::{task, Async, Poll, Stream};
 use key::exchange::Key;
 use key::ptk::Ptk;
-use rsna::Role;
+use rsna::{Role, SecAssocResult};
 use rsne::Rsne;
+use Error;
 
 enum RoleHandler {
     Authenticator(Authenticator),
@@ -99,10 +97,8 @@ impl Fourway {
         // TODO(hahnr): Implement
         false
     }
-}
 
-impl eapol::KeyFrameReceiver for Fourway {
-    fn on_eapol_key_frame(&self, frame: &eapol::KeyFrame) -> Result<(), failure::Error> {
+    pub fn on_eapol_key_frame(&self, frame: &eapol::KeyFrame) -> SecAssocResult {
         // IEEE Std 802.1X-2010, 11.9
         let key_descriptor = match eapol::KeyDescriptor::from_u8(frame.descriptor_type) {
             Some(eapol::KeyDescriptor::Ieee802dot11) => Ok(eapol::KeyDescriptor::Ieee802dot11),
@@ -468,16 +464,6 @@ fn derive_key_descriptor_version(rsne: &Rsne, key_descriptor_type: eapol::KeyDes
 
 fn is_zero(slice: &[u8]) -> bool {
     slice.iter().all(|&x| x == 0)
-}
-
-impl Stream for Fourway {
-    type Item = Either<eapol::Frame, Key>;
-    type Error = failure::Error;
-
-    fn poll_next(&mut self, _cx: &mut task::Context) -> Poll<Option<Self::Item>, Self::Error> {
-        // TODO(hahnr): Forward to active handler.
-        Ok(Async::Pending)
-    }
 }
 
 // TODO(hahnr): Add tests.

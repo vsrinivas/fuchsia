@@ -4,6 +4,7 @@
 
 use eapol;
 use failure;
+use rsna::SecAssocResult;
 
 pub struct Supplicant {
     pub key_replay_counter: u64,
@@ -21,9 +22,9 @@ impl Supplicant {
 
 impl Supplicant {
     pub fn on_eapol_key_frame(
-        &self, _frame: &eapol::KeyFrame, _plain_data: &[u8]
-    ) -> Result<(), failure::Error> {
+        &self, _frame: &eapol::KeyFrame, _plain_data: &[u8],
+    ) -> SecAssocResult {
         // TODO(hahnr): Implement.
-        Ok(())
+        Ok(vec![])
     }
 }

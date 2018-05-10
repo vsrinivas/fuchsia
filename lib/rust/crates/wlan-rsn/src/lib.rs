@@ -11,7 +11,6 @@ extern crate crypto;
 extern crate eapol;
 #[macro_use]
 extern crate failure;
-extern crate futures;
 extern crate hex;
 #[macro_use]
 extern crate nom;
@@ -67,13 +66,15 @@ pub enum Error {
     PtkHierarchyUnsupportedCipherError,
     #[fail(display = "error invalid key size for AES keywrap: {}", _0)]
     InvalidAesKeywrapKeySize(usize),
-    #[fail(display = "error data must be a multiple of 64-bit blocks and at least 128 bits: {}",
-           _0)]
+    #[fail(
+        display = "error data must be a multiple of 64-bit blocks and at least 128 bits: {}", _0
+    )]
     InvalidAesKeywrapDataLength(usize),
     #[fail(display = "error wrong key for AES Keywrap unwrapping")]
     WrongAesKeywrapKey,
-    #[fail(display = "invalid key data length; must be at least 16 bytes and a multiple of 8: {}",
-           _0)]
+    #[fail(
+        display = "invalid key data length; must be at least 16 bytes and a multiple of 8: {}", _0
+    )]
     InvaidKeyDataLength(usize),
     #[fail(display = "invalid key data; error code: {:?}", _0)]
     InvalidKeyData(nom::IError),
