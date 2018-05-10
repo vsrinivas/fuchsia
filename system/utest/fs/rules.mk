@@ -51,16 +51,24 @@ MODULE_LDFLAGS += --wrap utimes --wrap link --wrap symlink --wrap rmdir
 MODULE_LDFLAGS += --wrap chdir --wrap renameat --wrap realpath --wrap remove
 
 MODULE_STATIC_LIBS := \
+    system/ulib/async.cpp \
+    system/ulib/async \
+    system/ulib/async-loop.cpp \
+    system/ulib/async-loop \
+    system/ulib/digest \
+    system/ulib/gpt \
+    system/ulib/fbl \
     system/ulib/fvm \
     system/ulib/fs \
-    system/ulib/gpt \
-    system/ulib/digest \
+    system/ulib/memfs \
+    system/ulib/sync \
     system/ulib/trace \
+    system/ulib/zx \
     system/ulib/zxcpp \
-    system/ulib/fbl \
     third_party/ulib/uboringssl \
 
 MODULE_LIBS := \
+    system/ulib/async.default \
     system/ulib/c \
     system/ulib/fdio \
     system/ulib/fs-management \

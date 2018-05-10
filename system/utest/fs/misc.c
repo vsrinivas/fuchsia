@@ -73,8 +73,8 @@ bool check_file_contents(int fd, const uint8_t* buf, size_t length) {
 
 bool check_remount(void) {
     BEGIN_HELPER;
-    ASSERT_EQ(test_info->unmount(test_root_path), 0, "");
+    ASSERT_EQ(test_info->unmount(kMountPath), 0, "");
     ASSERT_EQ(test_info->fsck(test_disk_path), 0, "");
-    ASSERT_EQ(test_info->mount(test_disk_path, test_root_path), 0, "");
+    ASSERT_EQ(test_info->mount(test_disk_path, kMountPath), 0, "");
     END_HELPER;
 }

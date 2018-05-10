@@ -18,7 +18,7 @@
 namespace {
 
 bool QueryInfo(size_t expected_nodes) {
-    int fd = open(MOUNT_PATH, O_RDONLY | O_DIRECTORY);
+    int fd = open(kMountPath, O_RDONLY | O_DIRECTORY);
     ASSERT_GT(fd, 0);
 
     char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
@@ -52,7 +52,7 @@ bool TestQueryInfo(void) {
     ASSERT_TRUE(QueryInfo(0));
     for (int i = 0; i < 16; i++) {
         char path[128];
-        snprintf(path, sizeof(path) - 1, "%s/file_%d", MOUNT_PATH, i);
+        snprintf(path, sizeof(path) - 1, "%s/file_%d", kMountPath, i);
 
         int fd = open(path, O_CREAT | O_RDWR);
         ASSERT_GT(fd, 0, "Failed to create file");

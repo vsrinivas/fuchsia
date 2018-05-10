@@ -8,6 +8,8 @@
 
 #include <fbl/unique_fd.h>
 #include <fvm/fvm.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <memfs/memfs.h>
 #include <unittest/unittest.h>
 #include <zircon/device/device.h>
 
@@ -67,6 +69,17 @@ int main(int argc, char** argv) {
             // Ignore options we don't recognize. See ulib/unittest/README.md.
             break;
         }
+    }
+
+    // Initialize tmpfs.
+    async::Loop loop;
+    if (loop.StartThread() != ZX_OK) {
+        fprintf(stderr, "Error: Cannot initialize local tmpfs loop\n");
+        return -1;
+    }
+    if (memfs_install_at(loop.async(), kTmpfsPath) != ZX_OK) {
+        fprintf(stderr, "Error: Cannot install local tmpfs\n");
+        return -1;
     }
 
     return unittest_run_all_tests(argc, argv) ? 0 : -1;

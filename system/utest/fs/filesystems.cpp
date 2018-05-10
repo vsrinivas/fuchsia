@@ -21,7 +21,9 @@
 
 #include "filesystems.h"
 
-const char* test_root_path;
+const char* kTmpfsPath = "/fs-test-tmp";
+const char* kMountPath = "/fs-test-tmp/mount";
+
 bool use_real_disk = false;
 char test_disk_path[PATH_MAX];
 fs_info_t* test_info;
@@ -56,8 +58,7 @@ constexpr uint8_t kTestUniqueGUID[] = {
 constexpr uint8_t kTestPartGUID[] = GUID_DATA_VALUE;
 
 void setup_fs_test(size_t disk_size, fs_test_type_t test_class) {
-    test_root_path = MOUNT_PATH;
-    int r = mkdir(test_root_path, 0755);
+    int r = mkdir(kMountPath, 0755);
     if ((r < 0) && errno != EEXIST) {
         fprintf(stderr, "Could not create mount point for test filesystem\n");
         exit(-1);
@@ -126,14 +127,14 @@ void setup_fs_test(size_t disk_size, fs_test_type_t test_class) {
         exit(-1);
     }
 
-    if (test_info->mount(test_disk_path, test_root_path)) {
+    if (test_info->mount(test_disk_path, kMountPath)) {
         fprintf(stderr, "[FAILED]: Error mounting filesystem\n");
         exit(-1);
     }
 }
 
 void teardown_fs_test(fs_test_type_t test_class) {
-    if (test_info->unmount(test_root_path)) {
+    if (test_info->unmount(kMountPath)) {
         fprintf(stderr, "[FAILED]: Error unmounting filesystem\n");
         exit(-1);
     }
@@ -226,19 +227,19 @@ static int unlink_recursive(const char* path) {
 // filesystem.
 int mount_memfs(const char* disk_path, const char* mount_path) {
     struct stat st;
-    if (stat(test_root_path, &st)) {
-        if (mkdir(test_root_path, 0644) < 0) {
+    if (stat(kMountPath, &st)) {
+        if (mkdir(kMountPath, 0644) < 0) {
             return -1;
         }
     } else if (!S_ISDIR(st.st_mode)) {
         return -1;
     }
-    int r = unlink_recursive(test_root_path);
+    int r = unlink_recursive(kMountPath);
     return r;
 }
 
 int unmount_memfs(const char* mount_path) {
-    return unlink_recursive(test_root_path);
+    return unlink_recursive(kMountPath);
 }
 
 int mkfs_minfs(const char* disk_path) {

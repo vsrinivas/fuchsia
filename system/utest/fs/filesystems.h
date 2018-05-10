@@ -33,8 +33,8 @@ typedef struct fs_info {
 } fs_info_t;
 
 // Path to mounted filesystem currently being tested
-#define MOUNT_PATH "/tmp/zircon-fs-test"
-extern const char* test_root_path;
+extern const char* kTmpfsPath;
+extern const char* kMountPath;
 
 // Path to the mounted filesystem's backing store (if it exists)
 extern char test_disk_path[];
