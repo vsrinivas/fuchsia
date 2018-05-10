@@ -30,9 +30,7 @@ class TestSocketAcceptor : public guest::SocketAcceptor {
   ~TestSocketAcceptor() override = default;
 
   // |guest::SocketAcceptor|
-  void Accept(uint32_t src_cid,
-              uint32_t src_port,
-              uint32_t port,
+  void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
               AcceptCallback callback) override {
     delegate_(src_cid, src_port, port, std::move(callback));
   };

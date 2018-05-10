@@ -58,8 +58,7 @@ class ScenicScanout : public machina::GpuScanout,
 class GuestView : public mozart::BaseView {
  public:
   GuestView(
-      machina::GpuScanout* scanout,
-      machina::InputDispatcher* input_dispatcher,
+      machina::GpuScanout* scanout, machina::InputDispatcher* input_dispatcher,
       views_v1::ViewManagerPtr view_manager,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
 

@@ -101,8 +101,7 @@ using OptionTransform =
 // given vector.
 template <typename T>
 static GuestConfigParser::OptionHandler append_option(
-    std::vector<T>* out,
-    OptionTransform<T> transform) {
+    std::vector<T>* out, OptionTransform<T> transform) {
   return [out, transform](const std::string& key, const std::string& value) {
     if (value.empty()) {
       FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key

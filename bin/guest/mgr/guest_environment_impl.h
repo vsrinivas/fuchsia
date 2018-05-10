@@ -25,8 +25,7 @@ static constexpr uint32_t kFirstGuestCid = 3;
 
 class GuestEnvironmentImpl : public guest::GuestEnvironment {
  public:
-  GuestEnvironmentImpl(uint32_t id,
-                       const std::string& label,
+  GuestEnvironmentImpl(uint32_t id, const std::string& label,
                        component::ApplicationContext* context,
                        fidl::InterfaceRequest<guest::GuestEnvironment> request);
   ~GuestEnvironmentImpl() override;

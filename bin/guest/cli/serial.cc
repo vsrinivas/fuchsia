@@ -54,9 +54,7 @@ class InputReader {
 
   void SendKeyToGuest() { OnSocketReady(async_, &wait_, ZX_OK, nullptr); }
 
-  void OnSocketReady(async_t* async,
-                     async::WaitBase* wait,
-                     zx_status_t status,
+  void OnSocketReady(async_t* async, async::WaitBase* wait, zx_status_t status,
                      const zx_packet_signal_t* signal) {
     if (status != ZX_OK) {
       return;

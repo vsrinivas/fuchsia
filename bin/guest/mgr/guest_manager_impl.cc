@@ -45,8 +45,7 @@ void GuestManagerImpl::ListEnvironments(ListEnvironmentsCallback callback) {
 }
 
 void GuestManagerImpl::ConnectToEnvironment(
-    uint32_t id,
-    fidl::InterfaceRequest<guest::GuestEnvironment> request) {
+    uint32_t id, fidl::InterfaceRequest<guest::GuestEnvironment> request) {
   const auto& it = environments_.find(id);
   if (it == environments_.end()) {
     return;

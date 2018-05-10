@@ -23,9 +23,7 @@ zx_status_t VsockServer::CreateEndpoint(uint32_t cid,
   return ZX_OK;
 }
 
-void VsockServer::RemoveEndpoint(uint32_t cid) {
-  endpoints_.erase(cid);
-}
+void VsockServer::RemoveEndpoint(uint32_t cid) { endpoints_.erase(cid); }
 
 VsockEndpoint* VsockServer::FindEndpoint(uint32_t cid) {
   auto it = endpoints_.find(cid);

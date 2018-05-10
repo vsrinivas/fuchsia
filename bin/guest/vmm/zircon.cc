@@ -103,9 +103,7 @@ static bool is_bootdata(const bootdata_t* header) {
          header->magic == BOOTITEM_MAGIC;
 }
 
-static void set_bootdata(bootdata_t* header,
-                         uint32_t type,
-                         uint32_t extra,
+static void set_bootdata(bootdata_t* header, uint32_t type, uint32_t extra,
                          uint32_t len) {
   // Guest memory is initially zeroed, so we skip fields that must be zero.
   header->type = type;
@@ -139,8 +137,7 @@ static zx_status_t load_cmdline(const std::string& cmdline,
   return ZX_OK;
 }
 
-static zx_status_t load_bootfs(const int fd,
-                               const machina::PhysMem& phys_mem,
+static zx_status_t load_bootfs(const int fd, const machina::PhysMem& phys_mem,
                                const uintptr_t bootdata_off) {
   bootdata_t ramdisk_hdr;
   ssize_t ret = read(fd, &ramdisk_hdr, sizeof(bootdata_t));
@@ -175,8 +172,7 @@ static zx_status_t load_bootfs(const int fd,
 }
 
 static zx_status_t create_bootdata(const machina::PhysMem& phys_mem,
-                                   uintptr_t bootdata_off,
-                                   uint32_t num_cpus) {
+                                   uintptr_t bootdata_off, uint32_t num_cpus) {
   if (BOOTDATA_ALIGN(bootdata_off) != bootdata_off) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -299,8 +295,7 @@ static zx_status_t read_bootdata(const machina::PhysMem& phys_mem,
 }
 
 zx_status_t setup_zircon(const GuestConfig cfg,
-                         const machina::PhysMem& phys_mem,
-                         uintptr_t* guest_ip,
+                         const machina::PhysMem& phys_mem, uintptr_t* guest_ip,
                          uintptr_t* boot_ptr) {
   // Read the kernel image.
   zx_status_t status = load_kernel(cfg.kernel_path(), phys_mem, kKernelOffset);

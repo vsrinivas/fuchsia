@@ -7,8 +7,7 @@
 namespace guestmgr {
 
 GuestHolder::GuestHolder(
-    uint32_t cid,
-    std::string label,
+    uint32_t cid, std::string label,
     std::unique_ptr<VsockEndpoint> socket_endpoint,
     component::Services services,
     component::ApplicationControllerPtr application_controller)

@@ -47,9 +47,7 @@ class VsockEndpoint : public guest::SocketConnector {
   void SetSocketAcceptor(fidl::InterfaceHandle<guest::SocketAcceptor> handle);
 
   // |guest::SocketConnector|
-  void Connect(uint32_t port,
-               uint32_t dest_cid,
-               uint32_t dest_port,
+  void Connect(uint32_t port, uint32_t dest_cid, uint32_t dest_port,
                ConnectCallback callback) override;
 
  private:

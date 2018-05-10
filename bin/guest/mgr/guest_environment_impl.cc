@@ -9,8 +9,7 @@
 namespace guestmgr {
 
 GuestEnvironmentImpl::GuestEnvironmentImpl(
-    uint32_t id,
-    const std::string& label,
+    uint32_t id, const std::string& label,
     component::ApplicationContext* context,
     fidl::InterfaceRequest<guest::GuestEnvironment> request)
     : id_(id), label_(label), context_(context) {
@@ -97,8 +96,7 @@ void GuestEnvironmentImpl::ListGuests(ListGuestsCallback callback) {
 }
 
 void GuestEnvironmentImpl::ConnectToGuest(
-    uint32_t id,
-    fidl::InterfaceRequest<guest::GuestController> request) {
+    uint32_t id, fidl::InterfaceRequest<guest::GuestController> request) {
   const auto& it = guests_.find(id);
   if (it == guests_.end()) {
     return;

@@ -17,9 +17,7 @@ class SocketAcceptor : public guest::SocketAcceptor {
  public:
   SocketAcceptor(uint32_t port) : port_(port) {}
 
-  void Accept(uint32_t src_cid,
-              uint32_t src_port,
-              uint32_t port,
+  void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
               AcceptCallback callback) {
     if (port != port_) {
       callback(ZX_ERR_CONNECTION_REFUSED, zx::socket());
@@ -50,9 +48,7 @@ void handle_socat_listen(uint32_t env_id, uint32_t port) {
   guest_env->SetSocketAcceptor(binding.NewBinding());
 }
 
-void handle_socat_connect(uint32_t env_id,
-                          uint32_t host_port,
-                          uint32_t cid,
+void handle_socat_connect(uint32_t env_id, uint32_t host_port, uint32_t cid,
                           uint32_t port) {
   guest::GuestManagerSyncPtr guestmgr;
   component::ConnectToEnvironmentService(guestmgr.NewRequest());

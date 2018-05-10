@@ -12,9 +12,7 @@ namespace guestmgr {
 VsockEndpoint::VsockEndpoint(uint32_t cid, VsockServer* server)
     : cid_(cid), vsock_server_(server) {}
 
-VsockEndpoint::~VsockEndpoint() {
-  vsock_server_->RemoveEndpoint(cid_);
-}
+VsockEndpoint::~VsockEndpoint() { vsock_server_->RemoveEndpoint(cid_); }
 
 void VsockEndpoint::BindSocketEndpoint(guest::SocketEndpointPtr endpoint) {
   endpoint->SetContextId(cid_, connector_bindings_.AddBinding(this),
@@ -31,10 +29,8 @@ void VsockEndpoint::SetSocketAcceptor(
   remote_acceptor_ = handle.Bind();
 }
 
-void VsockEndpoint::Connect(uint32_t src_port,
-                            uint32_t dest_cid,
-                            uint32_t dest_port,
-                            ConnectCallback callback) {
+void VsockEndpoint::Connect(uint32_t src_port, uint32_t dest_cid,
+                            uint32_t dest_port, ConnectCallback callback) {
   VsockEndpoint* dest = vsock_server_->FindEndpoint(dest_cid);
   if (dest == nullptr || !dest->remote_acceptor_) {
     callback(ZX_ERR_CONNECTION_REFUSED, zx::socket());

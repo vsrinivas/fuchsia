@@ -19,8 +19,7 @@ namespace guestmgr {
 // lifetime of the guest.
 class GuestHolder {
  public:
-  GuestHolder(uint32_t cid,
-              std::string label,
+  GuestHolder(uint32_t cid, std::string label,
               std::unique_ptr<VsockEndpoint> socket_endpoint,
               component::Services services,
               component::ApplicationControllerPtr application_controller);

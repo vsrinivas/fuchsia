@@ -163,10 +163,8 @@ static bool is_mz(const MzHeader* header) {
          header->pe_off >= sizeof(MzHeader);
 }
 
-static zx_status_t read_fd(const int fd,
-                           const machina::PhysMem& phys_mem,
-                           const uintptr_t off,
-                           size_t* file_size) {
+static zx_status_t read_fd(const int fd, const machina::PhysMem& phys_mem,
+                           const uintptr_t off, size_t* file_size) {
   struct stat stat;
   ssize_t ret = fstat(fd, &stat);
   if (ret < 0) {
@@ -184,10 +182,8 @@ static zx_status_t read_fd(const int fd,
 
 static zx_status_t read_device_tree(const int fd,
                                     const machina::PhysMem& phys_mem,
-                                    const uintptr_t off,
-                                    const uintptr_t limit,
-                                    void** dtb,
-                                    size_t* dtb_size) {
+                                    const uintptr_t off, const uintptr_t limit,
+                                    void** dtb, size_t* dtb_size) {
   zx_status_t status = read_fd(fd, phys_mem, off, dtb_size);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to read device tree";
@@ -478,10 +474,8 @@ static std::string linux_cmdline(std::string cmdline) {
 #endif
 }
 
-zx_status_t setup_linux(const GuestConfig cfg,
-                        const machina::PhysMem& phys_mem,
-                        uintptr_t* guest_ip,
-                        uintptr_t* boot_ptr) {
+zx_status_t setup_linux(const GuestConfig cfg, const machina::PhysMem& phys_mem,
+                        uintptr_t* guest_ip, uintptr_t* boot_ptr) {
   // Read the kernel image.
   zx_status_t status = load_kernel(cfg.kernel_path(), phys_mem, kKernelOffset);
   if (status != ZX_OK) {
