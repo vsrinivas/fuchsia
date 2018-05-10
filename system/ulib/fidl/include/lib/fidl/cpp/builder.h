@@ -39,6 +39,9 @@ public:
     Builder(const Builder& other) = delete;
     Builder& operator=(const Builder& other) = delete;
 
+    Builder(Builder&& other);
+    Builder& operator=(Builder&& other);
+
     // Allocates storage in the buffer of sufficient size to store an object of
     // type |T|. The object must have alignment constraints that are compatible
     // with FIDL messages.

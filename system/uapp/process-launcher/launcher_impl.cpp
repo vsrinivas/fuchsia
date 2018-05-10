@@ -1,0 +1,248 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "launcher_impl.h"
+
+#include <fbl/string.h>
+#include <fbl/vector.h>
+#include <fuchsia/process/c/fidl.h>
+#include <launchpad/launchpad.h>
+#include <lib/fidl/cpp/message_buffer.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/job.h>
+#include <stdint.h>
+#include <zircon/processargs.h>
+#include <zircon/status.h>
+
+namespace process {
+namespace {
+
+fbl::String GetString(fidl_string_t string) {
+    return fbl::String(string.data, string.size);
+}
+
+void PushStrings(fidl_vector_t* input, fbl::Vector<fbl::String>* target) {
+    fidl_string_t* data = static_cast<fidl_string_t*>(input->data);
+    for (size_t i = 0; i < input->count; ++i) {
+        target->push_back(GetString(data[i]));
+    }
+}
+
+void PushCStrs(const fbl::Vector<fbl::String>& source, fbl::Vector<const char*>* target) {
+    target->reserve(target->size() + source.size());
+    for (const auto& str : source) {
+        target->push_back(str.c_str());
+    }
+}
+
+} // namespace
+
+LauncherImpl::LauncherImpl(zx::channel channel)
+    : channel_(fbl::move(channel)),
+      wait_(this, channel_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED) {
+}
+
+LauncherImpl::~LauncherImpl() = default;
+
+zx_status_t LauncherImpl::Begin(async_t* async) {
+    return wait_.Begin(async);
+}
+
+void LauncherImpl::OnHandleReady(async_t* async, async::WaitBase* wait, zx_status_t status,
+                                 const zx_packet_signal_t* signal) {
+    if (status != ZX_OK) {
+        NotifyError(status);
+        return;
+    }
+
+    if (signal->observed & ZX_CHANNEL_READABLE) {
+        fidl::MessageBuffer buffer;
+        for (uint64_t i = 0; i < signal->count; i++) {
+            status = ReadAndDispatchMessage(&buffer);
+            if (status == ZX_ERR_SHOULD_WAIT)
+                break;
+            if (status != ZX_OK) {
+                NotifyError(status);
+                return;
+            }
+        }
+        status = wait_.Begin(async);
+        if (status != ZX_OK) {
+            NotifyError(status);
+        }
+        return;
+    }
+
+    ZX_DEBUG_ASSERT(signal->observed & ZX_CHANNEL_PEER_CLOSED);
+    // Notice that we don't notify an error until we've drained all the messages
+    // out of the channel.
+    NotifyError(ZX_ERR_PEER_CLOSED);
+}
+
+zx_status_t LauncherImpl::ReadAndDispatchMessage(fidl::MessageBuffer* buffer) {
+    fidl::Message message = buffer->CreateEmptyMessage();
+    zx_status_t status = message.Read(channel_.get(), 0);
+    if (status != ZX_OK)
+        return status;
+    if (!message.has_header())
+        return ZX_ERR_INVALID_ARGS;
+    switch (message.ordinal()) {
+    case fuchsia_process_LauncherLaunchOrdinal:
+        return Launch(buffer, fbl::move(message));
+    case fuchsia_process_LauncherAddArgsOrdinal:
+        return AddArgs(fbl::move(message));
+    case fuchsia_process_LauncherAddEnvironsOrdinal:
+        return AddEnvirons(fbl::move(message));
+    case fuchsia_process_LauncherAddNamesOrdinal:
+        return AddNames(fbl::move(message));
+    case fuchsia_process_LauncherAddHandlesOrdinal:
+        return AddHandles(fbl::move(message));
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
+
+zx_status_t LauncherImpl::Launch(fidl::MessageBuffer* buffer, fidl::Message message) {
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(&fuchsia_process_LauncherLaunchRequestTable, &error_msg);
+    if (status != ZX_OK) {
+        fprintf(stderr, "process-launcher: error: Launcher::Launch: %s\n", error_msg);
+        return status;
+    }
+
+    fuchsia_process_LaunchInfo* info = message.GetPayloadAs<fuchsia_process_LaunchInfo>();
+
+    zx_txid_t txid = message.txid();
+    uint32_t ordinal = message.ordinal();
+
+    // Grab an owning reference to the job because launchpad does not take
+    // ownership of the job. We need to close the handle ourselves.
+    zx::job job(info->job);
+    fbl::String name = GetString(info->name);
+
+    fbl::Vector<const char*> args, environs, nametable;
+    PushCStrs(args_, &args);
+    PushCStrs(environs_, &environs);
+    PushCStrs(nametable_, &nametable);
+    environs.push_back(nullptr);
+
+    launchpad_t* lp;
+    launchpad_create(job.get(), name.c_str(), &lp);
+
+    // There's a subtle issue at this point. The problem is that launchpad will
+    // make a synchronous call into the loader service to read the PT_INTERP,
+    // but this handle was provided by our client, which means our client can
+    // hang the process-launcher.
+    zx::channel old_loader(launchpad_use_loader_service(lp, info->loader));
+
+    launchpad_load_from_vmo(lp, info->executable);
+    launchpad_set_args(lp, static_cast<int>(args.size()), args.get());
+    launchpad_set_environ(lp, environs.get());
+    launchpad_set_nametable(lp, nametable.size(), nametable.get());
+    launchpad_add_handles(lp, ids_.size(), ids_.get(), reinterpret_cast<zx_handle_t*>(handles_.get()));
+
+    fidl::Builder builder = buffer->CreateBuilder();
+    fidl_message_header_t* header = builder.New<fidl_message_header_t>();
+    header->txid = txid;
+    header->ordinal = ordinal;
+    fuchsia_process_LaunchResult* result = builder.New<fuchsia_process_LaunchResult>();
+
+    result->status = launchpad_go(lp, &result->process, &error_msg);
+    if (result->status == ZX_OK) {
+        zx_handle_t root_vmar = launchpad_get_root_vmar_handle(lp);
+        // We ignore any errors from zx_handle_duplicate because there's nothing
+        // for us to do with the error other than return ZX_HANDLE_INVALID in
+        // result.root_vmar, which is what will happen anyway.
+        zx_handle_duplicate(root_vmar, ZX_RIGHT_SAME_RIGHTS, &result->root_vmar);
+    } else {
+        uint32_t len = static_cast<uint32_t>(strlen(error_msg));
+        result->error_message.size = len;
+        result->error_message.data = builder.NewArray<char>(len);
+        strncpy(result->error_message.data, error_msg, len);
+    }
+    message.set_bytes(builder.Finalize());
+
+    launchpad_destroy(lp);
+    Reset();
+
+    status = message.Encode(&fuchsia_process_LauncherLaunchResponseTable, &error_msg);
+    if (status != ZX_OK) {
+        fprintf(stderr, "process-launcher: error: Launcher::Launch: %s\n", error_msg);
+        return status;
+    }
+    return message.Write(channel_.get(), 0);
+}
+
+zx_status_t LauncherImpl::AddArgs(fidl::Message message) {
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(&fuchsia_process_LauncherAddArgsRequestTable, &error_msg);
+    if (status != ZX_OK) {
+        fprintf(stderr, "process-launcher: error: Launcher::AddArgs: %s\n", error_msg);
+        return status;
+    }
+    PushStrings(message.GetPayloadAs<fidl_vector_t>(), &args_);
+    return ZX_OK;
+}
+
+zx_status_t LauncherImpl::AddEnvirons(fidl::Message message) {
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(&fuchsia_process_LauncherAddEnvironsRequestTable, &error_msg);
+    if (status != ZX_OK) {
+        fprintf(stderr, "process-launcher: error: Launcher::AddEnvirons: %s\n", error_msg);
+        return status;
+    }
+    PushStrings(message.GetPayloadAs<fidl_vector_t>(), &environs_);
+    return ZX_OK;
+}
+
+zx_status_t LauncherImpl::AddNames(fidl::Message message) {
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(&fuchsia_process_LauncherAddNamesRequestTable, &error_msg);
+    if (status != ZX_OK) {
+        fprintf(stderr, "process-launcher: error: Launcher::AddNames: %s\n", error_msg);
+        return status;
+    }
+    fidl_vector_t* payload = message.GetPayloadAs<fidl_vector_t>();
+    fuchsia_process_NameInfo* names = static_cast<fuchsia_process_NameInfo*>(payload->data);
+    for (size_t i = 0; i < payload->count; ++i) {
+        ids_.push_back(PA_HND(PA_NS_DIR, static_cast<uint32_t>(nametable_.size())));
+        handles_.push_back(zx::handle(names[i].directory));
+        nametable_.push_back(GetString(names[i].path));
+    }
+    return ZX_OK;
+}
+
+zx_status_t LauncherImpl::AddHandles(fidl::Message message) {
+    const char* error_msg = nullptr;
+    zx_status_t status = message.Decode(&fuchsia_process_LauncherAddHandlesRequestTable, &error_msg);
+    if (status != ZX_OK) {
+        fprintf(stderr, "process-launcher: error: Launcher::AddHandles: %s\n", error_msg);
+        return status;
+    }
+    fidl_vector_t* payload = message.GetPayloadAs<fidl_vector_t>();
+    fuchsia_process_HandleInfo* handles = static_cast<fuchsia_process_HandleInfo*>(payload->data);
+    for (size_t i = 0; i < payload->count; ++i) {
+        ids_.push_back(handles[i].id);
+        handles_.push_back(zx::handle(handles[i].handle));
+    }
+    return ZX_OK;
+}
+
+void LauncherImpl::Reset() {
+    args_.reset();
+    environs_.reset();
+    nametable_.reset();
+    ids_.reset();
+    handles_.reset();
+}
+
+void LauncherImpl::NotifyError(zx_status_t error) {
+    Reset();
+    channel_.reset();
+    if (error_handler_)
+        error_handler_(error);
+    // We might be deleted now.
+}
+
+} // namespace process

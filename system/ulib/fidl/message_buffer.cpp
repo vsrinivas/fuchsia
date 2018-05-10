@@ -43,4 +43,8 @@ Message MessageBuffer::CreateEmptyMessage() {
                    HandlePart(handles(), handles_capacity()));
 }
 
+Builder MessageBuffer::CreateBuilder() {
+    return Builder(bytes(), bytes_capacity());
+}
+
 } // namespace fidl

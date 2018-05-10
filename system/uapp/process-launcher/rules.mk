@@ -9,13 +9,18 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userapp
 MODULE_GROUP := core
 
-MODULE_SRCS := $(LOCAL_DIR)/main.cpp
+MODULE_SRCS := \
+    $(LOCAL_DIR)/launcher_impl.cpp \
+    $(LOCAL_DIR)/main.cpp
 
 MODULE_FIDL_LIBS := \
     system/fidl/process
 
 MODULE_STATIC_LIBS := \
+    system/ulib/svc \
+    system/ulib/fs \
     system/ulib/async \
+    system/ulib/async.cpp \
     system/ulib/async-loop.cpp \
     system/ulib/async-loop \
     system/ulib/trace \
@@ -27,6 +32,7 @@ MODULE_STATIC_LIBS := \
 
 MODULE_LIBS := \
     system/ulib/async.default \
+    system/ulib/launchpad \
     system/ulib/fdio \
     system/ulib/c \
     system/ulib/trace-engine \

@@ -43,6 +43,9 @@ public:
     // The returned |Message| contains no bytes or handles.
     Message CreateEmptyMessage();
 
+    // Creates a |Builder| that is backed by the memory in this buffer.
+    Builder CreateBuilder();
+
 private:
     uint8_t* const buffer_;
     const uint32_t bytes_capacity_;

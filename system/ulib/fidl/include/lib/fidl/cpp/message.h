@@ -86,6 +86,7 @@ public:
     // The storage for the bytes of the message.
     BytePart& bytes() { return bytes_; }
     const BytePart& bytes() const { return bytes_; }
+    void set_bytes(BytePart bytes) { bytes_ = static_cast<BytePart&&>(bytes); }
 
     // The storage for the handles of the message.
     //

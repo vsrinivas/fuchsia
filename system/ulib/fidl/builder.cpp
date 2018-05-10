@@ -10,13 +10,31 @@
 
 namespace fidl {
 
-Builder::Builder() : capacity_(0u), at_(0u), buffer_(nullptr) {}
+Builder::Builder()
+    : capacity_(0u), at_(0u), buffer_(nullptr) {}
 
 Builder::Builder(void* buffer, uint32_t capacity)
     : capacity_(capacity), at_(0u), buffer_(static_cast<uint8_t*>(buffer)) {
 }
 
 Builder::~Builder() = default;
+
+Builder::Builder(Builder&& other)
+    : capacity_(other.capacity_),
+      at_(other.at_),
+      buffer_(other.buffer_) {
+    other.Reset(nullptr, 0);
+}
+
+Builder& Builder::operator=(Builder&& other) {
+    if (this != &other) {
+        capacity_ = other.capacity_;
+        at_ = other.at_;
+        buffer_ = other.buffer_;
+        other.Reset(nullptr, 0);
+    }
+    return *this;
+}
 
 void* Builder::Allocate(uint32_t size) {
     uint64_t limit = FidlAlign(at_ + size);

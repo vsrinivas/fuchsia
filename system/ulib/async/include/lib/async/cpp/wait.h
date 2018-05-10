@@ -123,7 +123,7 @@ private:
 //
 // class Foo {
 //     void Handle(async_t* async, async::WaitBase* wait, zx_status_t status,
-//                 const zx_packet_signal_t* signals) { ... }
+//                 const zx_packet_signal_t* signal) { ... }
 //     async::WaitMethod<Foo, &Foo::Handle> wait_{this};
 // };
 template <class Class,

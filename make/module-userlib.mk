@@ -42,6 +42,7 @@ endif
 ifneq ($(MODULE_SO_NAME)$(MODULE_SO_INSTALL_NAME),)
 MODULE_ALIBS := $(foreach lib,$(MODULE_STATIC_LIBS),$(call TOBUILDDIR,$(lib))/lib$(notdir $(lib)).a)
 MODULE_SOLIBS := $(foreach lib,$(MODULE_LIBS),$(call TOBUILDDIR,$(lib))/lib$(notdir $(lib)).so.abi)
+MODULE_EXTRA_OBJS += $(foreach lib,$(MODULE_FIDL_LIBS),$(call TOBUILDDIR,$(lib))/gen/obj/tables.cpp.o)
 
 # Include this in every link.
 MODULE_EXTRA_OBJS += scripts/dso_handle.ld

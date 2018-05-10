@@ -37,6 +37,9 @@ struct LaunchInfo {
     // The shared library loader to use for the process.
     // TODO: Use ldsvc.Loader when Zircon's build supports library dependencies.
     handle<channel> loader;
+
+    // The name to assign to the created process.
+    string name;
 };
 
 struct LaunchResult {
@@ -63,6 +66,9 @@ struct LaunchResult {
 
 interface Launcher {
     // Creates and starts the process described by |info|.
+    //
+    // After processing this message, the |Launcher| is reset to its initial
+    // state and is ready to launch another process.
     1: Launch(LaunchInfo info) -> (LaunchResult result);
 
     // The arguments to pass to the process.
