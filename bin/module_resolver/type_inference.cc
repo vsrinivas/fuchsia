@@ -23,17 +23,13 @@ ParameterTypeInferenceHelper::~ParameterTypeInferenceHelper() = default;
 class ParameterTypeInferenceHelper::GetParameterTypesCall
     : public modular::Operation<std::vector<std::string>> {
  public:
-  GetParameterTypesCall(modular::OperationContainer* container,
-                        modular::EntityResolver* entity_resolver,
+  GetParameterTypesCall(modular::EntityResolver* entity_resolver,
                         const fidl::StringPtr& entity_reference,
                         ResultCall result)
       : Operation("ParameterTypeInferenceHelper::GetParameterTypesCall",
-                  container,
                   std::move(result)),
         entity_resolver_(entity_resolver),
-        entity_reference_(entity_reference) {
-    Ready();
-  }
+        entity_reference_(entity_reference) {}
 
   void Run() {
     entity_resolver_->ResolveEntity(entity_reference_, entity_.NewRequest());
@@ -68,9 +64,9 @@ void ParameterTypeInferenceHelper::GetParameterTypes(
       result_callback(types);
     }
   } else if (parameter_constraint.is_entity_reference()) {
-    new GetParameterTypesCall(&operation_collection_, entity_resolver_.get(),
-                              parameter_constraint.entity_reference(),
-                              result_callback);
+    operation_collection_.Add(new GetParameterTypesCall(
+        entity_resolver_.get(), parameter_constraint.entity_reference(),
+        result_callback));
   } else if (parameter_constraint.is_link_info()) {
     if (parameter_constraint.link_info().allowed_types) {
       std::vector<std::string> types(
@@ -90,9 +86,8 @@ void ParameterTypeInferenceHelper::GetParameterTypes(
       if (modular::EntityReferenceFromJson(
               parameter_constraint.link_info().content_snapshot,
               &entity_reference)) {
-        new GetParameterTypesCall(&operation_collection_,
-                                  entity_resolver_.get(), entity_reference,
-                                  result_callback);
+        operation_collection_.Add(new GetParameterTypesCall(
+            entity_resolver_.get(), entity_reference, result_callback));
       }
     }
   } else {

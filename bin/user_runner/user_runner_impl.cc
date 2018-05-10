@@ -103,9 +103,7 @@ std::function<void(std::function<void()>)> Reset(
 // members.
 template <typename X>
 std::function<void(std::function<void()>)> Teardown(
-    const fxl::TimeDelta timeout,
-    const char* const message,
-    X* const field) {
+    const fxl::TimeDelta timeout, const char* const message, X* const field) {
   return [timeout, message, field](std::function<void()> cont) {
     field->Teardown(timeout, [message, cont] {
       if (message) {
@@ -119,8 +117,7 @@ std::function<void(std::function<void()>)> Teardown(
 }  // namespace
 
 UserRunnerImpl::UserRunnerImpl(
-    component::ApplicationContext* const application_context,
-    const bool test)
+    component::ApplicationContext* const application_context, const bool test)
     : application_context_(application_context),
       test_(test),
       user_shell_context_binding_(this),
@@ -144,8 +141,7 @@ UserRunnerImpl::UserRunnerImpl(
 UserRunnerImpl::~UserRunnerImpl() = default;
 
 void UserRunnerImpl::Initialize(
-    modular_auth::AccountPtr account,
-    AppConfig user_shell,
+    modular_auth::AccountPtr account, AppConfig user_shell,
     AppConfig story_shell,
     fidl::InterfaceHandle<modular_auth::TokenProviderFactory>
         token_provider_factory,
@@ -260,8 +256,7 @@ void UserRunnerImpl::InitializeLedger() {
 }
 
 void UserRunnerImpl::InitializeLedgerDashboard() {
-  if (test_)
-    return;
+  if (test_) return;
   ledger_dashboard_scope_ = std::make_unique<Scope>(
       user_scope_->environment(), std::string(kLedgerDashboardEnvLabel));
   AtEnd(Reset(&ledger_dashboard_scope_));
@@ -587,19 +582,14 @@ void UserRunnerImpl::TerminateUserShell(const std::function<void()>& done) {
   });
 }
 
-class UserRunnerImpl::SwapUserShellOperation : Operation<> {
+class UserRunnerImpl::SwapUserShellOperation : public Operation<> {
  public:
-  SwapUserShellOperation(OperationContainer* const container,
-                         UserRunnerImpl* const user_runner_impl,
-                         AppConfig user_shell_config,
-                         ResultCall result_call)
+  SwapUserShellOperation(UserRunnerImpl* const user_runner_impl,
+                         AppConfig user_shell_config, ResultCall result_call)
       : Operation("UserRunnerImpl::SwapUserShellOperation",
-                  container,
                   std::move(result_call)),
         user_runner_impl_(user_runner_impl),
-        user_shell_config_(std::move(user_shell_config)) {
-    Ready();
-  }
+        user_shell_config_(std::move(user_shell_config)) {}
 
  private:
   void Run() override {
@@ -619,8 +609,8 @@ class UserRunnerImpl::SwapUserShellOperation : Operation<> {
 
 void UserRunnerImpl::SwapUserShell(AppConfig user_shell_config,
                                    SwapUserShellCallback callback) {
-  new SwapUserShellOperation(&operation_queue_, this,
-                             std::move(user_shell_config), callback);
+  operation_queue_.Add(
+      new SwapUserShellOperation(this, std::move(user_shell_config), callback));
 }
 
 void UserRunnerImpl::Terminate(std::function<void()> done) {
@@ -723,9 +713,7 @@ void UserRunnerImpl::GetVisibleStoriesController(
   visible_stories_handler_->AddControllerBinding(std::move(request));
 }
 
-void UserRunnerImpl::Logout() {
-  user_context_->Logout();
-}
+void UserRunnerImpl::Logout() { user_context_->Logout(); }
 
 // |EntityProviderLauncher|
 void UserRunnerImpl::ConnectToEntityProvider(

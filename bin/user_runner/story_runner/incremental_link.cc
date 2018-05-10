@@ -73,10 +73,9 @@ class LinkImpl::IncrementalWriteCall : public Operation<> {
  private:
   void Run() {
     FlowToken flow{this};
-    new WriteDataCall<modular_private::LinkChange>(
-        &operation_queue_, impl_->page(),
-        MakeSequencedLinkKey(impl_->link_path_, data_->key), XdrLinkChange,
-        std::move(data_), [this, flow] {});
+    operation_queue_.Add(new WriteDataCall<modular_private::LinkChange>(
+        impl_->page(), MakeSequencedLinkKey(impl_->link_path_, data_->key),
+        XdrLinkChange, std::move(data_), [this, flow] {}));
   }
 
   LinkImpl* const impl_;  // not owned
@@ -176,9 +175,9 @@ class LinkImpl::IncrementalChangeCall : public Operation<> {
 // (3) the |Replay()| path will be taken in any recursive call
 void LinkImpl::ReloadCall::Run() {
   FlowToken flow{this};
-  new ReadAllDataCall<modular_private::LinkChange>(
-      &operation_queue_, impl_->page(),
-      MakeSequencedLinkKeyPrefix(impl_->link_path_), XdrLinkChange,
+  operation_queue_.Add(new ReadAllDataCall<modular_private::LinkChange>(
+      impl_->page(), MakeSequencedLinkKeyPrefix(impl_->link_path_),
+      XdrLinkChange,
       [this, flow](fidl::VectorPtr<modular_private::LinkChange> changes) {
         // TODO(mesch): Initial link data must be applied even when there
         // already are data present in the link.
@@ -198,7 +197,7 @@ void LinkImpl::ReloadCall::Run() {
         } else {
           impl_->Replay(std::move(changes));
         }
-      });
+      }));
 }
 
 void LinkImpl::Replay(fidl::VectorPtr<modular_private::LinkChange> changes) {

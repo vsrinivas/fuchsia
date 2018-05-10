@@ -50,9 +50,7 @@ DeviceMapImpl::DeviceMapImpl(const std::string& device_name,
                              const std::string& device_profile,
                              LedgerClient* const ledger_client,
                              LedgerPageId page_id)
-    : PageClient("DeviceMapImpl",
-                 ledger_client,
-                 std::move(page_id),
+    : PageClient("DeviceMapImpl", ledger_client, std::move(page_id),
                  kDeviceKeyPrefix) {
   current_device_id_ = device_id;
 
@@ -74,8 +72,8 @@ void DeviceMapImpl::Connect(fidl::InterfaceRequest<DeviceMap> request) {
 }
 
 void DeviceMapImpl::Query(QueryCallback callback) {
-  new ReadAllDataCall<DeviceMapEntry>(
-      &operation_queue_, page(), kDeviceKeyPrefix, XdrDeviceData, callback);
+  operation_queue_.Add(new ReadAllDataCall<DeviceMapEntry>(
+      page(), kDeviceKeyPrefix, XdrDeviceData, callback));
 }
 
 void DeviceMapImpl::GetCurrentDevice(GetCurrentDeviceCallback callback) {
@@ -92,9 +90,9 @@ void DeviceMapImpl::SaveCurrentDevice() {
   auto& device = devices_[current_device_id_];
   device.last_change_timestamp = time(nullptr);
 
-  new WriteDataCall<DeviceMapEntry>(
-      &operation_queue_, page(), MakeDeviceKey(current_device_id_),
-      XdrDeviceData, fidl::MakeOptional(device), [] {});
+  operation_queue_.Add(new WriteDataCall<DeviceMapEntry>(
+      page(), MakeDeviceKey(current_device_id_), XdrDeviceData,
+      fidl::MakeOptional(device), [] {}));
 }
 
 void DeviceMapImpl::WatchDeviceMap(

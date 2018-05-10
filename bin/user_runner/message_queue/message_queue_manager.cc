@@ -49,8 +49,7 @@ class MessageQueueConnection : public MessageQueue {
 // manipulate the message queue. Owned by |MessageQueueManager|.
 class MessageQueueStorage : MessageSender {
  public:
-  MessageQueueStorage(std::string queue_name,
-                      std::string queue_token,
+  MessageQueueStorage(std::string queue_name, std::string queue_token,
                       const std::string& file_name_)
       : queue_name_(std::move(queue_name)),
         queue_token_(std::move(queue_token)),
@@ -194,24 +193,17 @@ struct MessageQueueManager::MessageQueueInfo {
   }
 };
 
-class MessageQueueManager::GetQueueTokenCall : PageOperation<fidl::StringPtr> {
+class MessageQueueManager::GetQueueTokenCall
+    : public PageOperation<fidl::StringPtr> {
  public:
-  GetQueueTokenCall(OperationContainer* const container,
-                    ledger::Page* const page,
-                    std::string component_namespace,
+  GetQueueTokenCall(ledger::Page* const page, std::string component_namespace,
                     std::string component_instance_id,
-                    const std::string& queue_name,
-                    ResultCall result_call)
-      : PageOperation("MessageQueueManager::GetQueueTokenCall",
-                      container,
-                      page,
-                      std::move(result_call),
-                      queue_name),
+                    const std::string& queue_name, ResultCall result_call)
+      : PageOperation("MessageQueueManager::GetQueueTokenCall", page,
+                      std::move(result_call), queue_name),
         component_namespace_(std::move(component_namespace)),
         component_instance_id_(std::move(component_instance_id)),
-        queue_name_(queue_name) {
-    Ready();
-  }
+        queue_name_(queue_name) {}
 
  private:
   void Run() override {
@@ -275,22 +267,15 @@ class MessageQueueManager::GetQueueTokenCall : PageOperation<fidl::StringPtr> {
   FXL_DISALLOW_COPY_AND_ASSIGN(GetQueueTokenCall);
 };
 
-class MessageQueueManager::GetMessageSenderCall : PageOperation<> {
+class MessageQueueManager::GetMessageSenderCall : public PageOperation<> {
  public:
-  GetMessageSenderCall(OperationContainer* const container,
-                       MessageQueueManager* const message_queue_manager,
-                       ledger::Page* const page,
-                       std::string token,
+  GetMessageSenderCall(MessageQueueManager* const message_queue_manager,
+                       ledger::Page* const page, std::string token,
                        fidl::InterfaceRequest<MessageSender> request)
-      : PageOperation("MessageQueueManager::GetMessageSenderCall",
-                      container,
-                      page,
-                      [] {}),
+      : PageOperation("MessageQueueManager::GetMessageSenderCall", page, [] {}),
         message_queue_manager_(message_queue_manager),
         token_(std::move(token)),
-        request_(std::move(request)) {
-    Ready();
-  }
+        request_(std::move(request)) {}
 
  private:
   void Run() override {
@@ -359,34 +344,29 @@ class MessageQueueManager::GetMessageSenderCall : PageOperation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(GetMessageSenderCall);
 };
 
-class MessageQueueManager::ObtainMessageQueueCall : PageOperation<> {
+class MessageQueueManager::ObtainMessageQueueCall : public PageOperation<> {
  public:
-  ObtainMessageQueueCall(OperationContainer* const container,
-                         MessageQueueManager* const message_queue_manager,
+  ObtainMessageQueueCall(MessageQueueManager* const message_queue_manager,
                          ledger::Page* const page,
                          const std::string& component_namespace,
                          const std::string& component_instance_id,
                          const std::string& queue_name,
                          fidl::InterfaceRequest<MessageQueue> request)
-      : PageOperation("MessageQueueManager::ObtainMessageQueueCall",
-                      container,
-                      page,
-                      [] {},
-                      queue_name),
+      : PageOperation("MessageQueueManager::ObtainMessageQueueCall", page,
+                      [] {}, queue_name),
         message_queue_manager_(message_queue_manager),
         request_(std::move(request)) {
     message_queue_info_.component_namespace = component_namespace;
     message_queue_info_.component_instance_id = component_instance_id;
     message_queue_info_.queue_name = queue_name;
-    Ready();
   }
 
  private:
   void Run() override {
     FlowToken flow{this};
 
-    new GetQueueTokenCall(
-        &operation_collection_, page(), message_queue_info_.component_namespace,
+    operation_collection_.Add(new GetQueueTokenCall(
+        page(), message_queue_info_.component_namespace,
         message_queue_info_.component_instance_id,
         message_queue_info_.queue_name, [this, flow](fidl::StringPtr token) {
           if (token) {
@@ -397,7 +377,7 @@ class MessageQueueManager::ObtainMessageQueueCall : PageOperation<> {
           }
 
           Cont(flow);
-        });
+        }));
   }
 
   void Cont(FlowToken flow) {
@@ -472,32 +452,27 @@ class MessageQueueManager::ObtainMessageQueueCall : PageOperation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(ObtainMessageQueueCall);
 };
 
-class MessageQueueManager::DeleteMessageQueueCall : PageOperation<> {
+class MessageQueueManager::DeleteMessageQueueCall : public PageOperation<> {
  public:
-  DeleteMessageQueueCall(OperationContainer* const container,
-                         MessageQueueManager* const message_queue_manager,
+  DeleteMessageQueueCall(MessageQueueManager* const message_queue_manager,
                          ledger::Page* const page,
                          const std::string& component_namespace,
                          const std::string& component_instance_id,
                          const std::string& queue_name)
-      : PageOperation("MessageQueueManager::DeleteMessageQueueCall",
-                      container,
-                      page,
-                      [] {},
-                      queue_name),
+      : PageOperation("MessageQueueManager::DeleteMessageQueueCall", page,
+                      [] {}, queue_name),
         message_queue_manager_(message_queue_manager) {
     message_queue_info_.component_namespace = component_namespace;
     message_queue_info_.component_instance_id = component_instance_id;
     message_queue_info_.queue_name = queue_name;
-    Ready();
   }
 
  private:
   void Run() override {
     FlowToken flow{this};
 
-    new GetQueueTokenCall(
-        &operation_collection_, page(), message_queue_info_.component_namespace,
+    operation_collection_.Add(new GetQueueTokenCall(
+        page(), message_queue_info_.component_namespace,
         message_queue_info_.component_instance_id,
         message_queue_info_.queue_name, [this, flow](fidl::StringPtr token) {
           if (!token) {
@@ -559,7 +534,7 @@ class MessageQueueManager::DeleteMessageQueueCall : PageOperation<> {
                           << message_queue_info_.component_instance_id << "/"
                           << message_queue_info_.queue_name;
           }));
-        });
+        }));
   }
 
   MessageQueueManager* const message_queue_manager_;  // not owned
@@ -571,22 +546,16 @@ class MessageQueueManager::DeleteMessageQueueCall : PageOperation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(DeleteMessageQueueCall);
 };
 
-class MessageQueueManager::DeleteNamespaceCall : PageOperation<> {
+class MessageQueueManager::DeleteNamespaceCall : public PageOperation<> {
  public:
-  DeleteNamespaceCall(OperationContainer* const container,
-                      MessageQueueManager* const /*message_queue_manager*/,
+  DeleteNamespaceCall(MessageQueueManager* const /*message_queue_manager*/,
                       ledger::Page* const page,
                       const std::string& component_namespace,
                       std::function<void()> done)
-      : PageOperation("MessageQueueManager::DeleteNamespaceCall",
-                      container,
-                      page,
-                      std::move(done),
-                      component_namespace),
+      : PageOperation("MessageQueueManager::DeleteNamespaceCall", page,
+                      std::move(done), component_namespace),
         message_queues_key_prefix_(
-            MakeMessageQueuesPrefix(component_namespace)) {
-    Ready();
-  }
+            MakeMessageQueuesPrefix(component_namespace)) {}
 
  private:
   void Run() override {
@@ -661,12 +630,11 @@ MessageQueueManager::~MessageQueueManager() = default;
 
 void MessageQueueManager::ObtainMessageQueue(
     const std::string& component_namespace,
-    const std::string& component_instance_id,
-    const std::string& queue_name,
+    const std::string& component_instance_id, const std::string& queue_name,
     fidl::InterfaceRequest<MessageQueue> request) {
-  new ObtainMessageQueueCall(&operation_collection_, this, page(),
-                             component_namespace, component_instance_id,
-                             queue_name, std::move(request));
+  operation_collection_.Add(new ObtainMessageQueueCall(
+      this, page(), component_namespace, component_instance_id, queue_name,
+      std::move(request)));
 }
 
 template <typename ValueType>
@@ -689,8 +657,7 @@ const ValueType* MessageQueueManager::FindQueueName(
 
 template <typename ValueType>
 void MessageQueueManager::EraseQueueName(
-    ComponentQueueNameMap<ValueType>& queue_map,
-    const MessageQueueInfo& info) {
+    ComponentQueueNameMap<ValueType>& queue_map, const MessageQueueInfo& info) {
   auto it1 = queue_map.find(info.component_namespace);
   if (it1 != queue_map.end()) {
     auto it2 = it1->second.find(info.component_instance_id);
@@ -752,18 +719,15 @@ void MessageQueueManager::ClearMessageQueueStorage(
 
 void MessageQueueManager::DeleteMessageQueue(
     const std::string& component_namespace,
-    const std::string& component_instance_id,
-    const std::string& queue_name) {
-  new DeleteMessageQueueCall(&operation_collection_, this, page(),
-                             component_namespace, component_instance_id,
-                             queue_name);
+    const std::string& component_instance_id, const std::string& queue_name) {
+  operation_collection_.Add(new DeleteMessageQueueCall(
+      this, page(), component_namespace, component_instance_id, queue_name));
 }
 
 void MessageQueueManager::DeleteNamespace(
-    const std::string& component_namespace,
-    std::function<void()> done) {
-  new DeleteNamespaceCall(&operation_collection_, this, page(),
-                          component_namespace, std::move(done));
+    const std::string& component_namespace, std::function<void()> done) {
+  operation_collection_.Add(new DeleteNamespaceCall(
+      this, page(), component_namespace, std::move(done)));
 }
 
 void MessageQueueManager::GetMessageSender(
@@ -776,16 +740,14 @@ void MessageQueueManager::GetMessageSender(
     return;
   }
 
-  new GetMessageSenderCall(&operation_collection_, this, page(), queue_token,
-                           std::move(request));
+  operation_collection_.Add(
+      new GetMessageSenderCall(this, page(), queue_token, std::move(request)));
 }
 
 void MessageQueueManager::RegisterWatcher(
     const std::string& component_namespace,
-    const std::string& component_instance_id,
-    const std::string& queue_name,
-    WatcherEventType event_type,
-    const std::function<void()>& watcher) {
+    const std::string& component_instance_id, const std::string& queue_name,
+    WatcherEventType event_type, const std::function<void()>& watcher) {
   if (event_type == WatcherEventType::NEW_MESSAGE) {
     const std::string* const token =
         FindQueueName(message_queue_tokens_,
@@ -846,8 +808,7 @@ void MessageQueueManager::DropMessageWatcher(const MessageQueueInfo& queue_info,
 }
 
 void MessageQueueManager::DropDeletionWatcher(
-    const MessageQueueInfo& queue_info,
-    const std::string& queue_token) {
+    const MessageQueueInfo& queue_info, const std::string& queue_token) {
   const auto& it = deletion_watchers_.find(queue_token);
   if (it == deletion_watchers_.end()) {
     return;

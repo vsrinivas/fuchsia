@@ -82,21 +82,19 @@ void XdrStoryData(XdrContext* const xdr,
   }
 }
 
-void MakeGetStoryDataCall(
-    OperationContainer* const container, ledger::Page* const page,
-    fidl::StringPtr story_id,
+OperationBase* MakeGetStoryDataCall(
+    ledger::Page* const page, fidl::StringPtr story_id,
     std::function<void(modular_private::StoryDataPtr)> result_call) {
-  new ReadDataCall<modular_private::StoryData>(
-      container, page, MakeStoryKey(story_id), true /* not_found_is_ok */,
-      XdrStoryData, std::move(result_call));
+  return new ReadDataCall<modular_private::StoryData>(
+      page, MakeStoryKey(story_id), true /* not_found_is_ok */, XdrStoryData,
+      std::move(result_call));
 };
 
-void MakeWriteStoryDataCall(OperationContainer* const container,
-                            ledger::Page* const page,
-                            modular_private::StoryDataPtr story_data,
-                            std::function<void()> result_call) {
-  new WriteDataCall<modular_private::StoryData>(
-      container, page, MakeStoryKey(story_data->story_info.id), XdrStoryData,
+OperationBase* MakeWriteStoryDataCall(ledger::Page* const page,
+                                      modular_private::StoryDataPtr story_data,
+                                      std::function<void()> result_call) {
+  return new WriteDataCall<modular_private::StoryData>(
+      page, MakeStoryKey(story_data->story_info.id), XdrStoryData,
       std::move(story_data), std::move(result_call));
 };
 
@@ -118,8 +116,8 @@ class StoryProviderImpl::MutateStoryDataCall : public Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    MakeGetStoryDataCall(
-        &operation_queue_, page_, story_id_,
+    operation_queue_.Add(MakeGetStoryDataCall(
+        page_, story_id_,
         [this, flow](modular_private::StoryDataPtr story_data) {
           if (!story_data) {
             // If the story doesn't exist, it was deleted and
@@ -131,9 +129,9 @@ class StoryProviderImpl::MutateStoryDataCall : public Operation<> {
             return;
           }
 
-          MakeWriteStoryDataCall(&operation_queue_, page_,
-                                 std::move(story_data), [flow] {});
-        });
+          operation_queue_.Add(
+              MakeWriteStoryDataCall(page_, std::move(story_data), [flow] {}));
+        }));
   }
 
   ledger::Page* const page_;  // not owned
@@ -210,8 +208,8 @@ class StoryProviderImpl::CreateStoryCall
     story_data_->story_info.last_focus_time = zx_clock_get(ZX_CLOCK_UTC);
     story_data_->story_info.extra = std::move(extra_info_);
 
-    MakeWriteStoryDataCall(&operation_queue_, page(), std::move(story_data_),
-                           [this, flow] { Cont3(flow); });
+    operation_queue_.Add(MakeWriteStoryDataCall(page(), std::move(story_data_),
+                                                [this, flow] { Cont3(flow); }));
   }
 
   void Cont3(FlowToken flow) {
@@ -348,14 +346,14 @@ class StoryProviderImpl::GetControllerCall : public Operation<> {
       return;
     }
 
-    MakeGetStoryDataCall(
-        &operation_queue_, story_provider_impl_->page(), story_id_,
+    operation_queue_.Add(MakeGetStoryDataCall(
+        story_provider_impl_->page(), story_id_,
         [this, flow](modular_private::StoryDataPtr story_data) {
           if (story_data) {
             story_data_ = std::move(story_data);
             Cont1(flow);
           }
-        });
+        }));
   }
 
   void Cont1(FlowToken flow) {
@@ -462,14 +460,14 @@ class StoryProviderImpl::GetLinkPeerCall : public Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    MakeGetStoryDataCall(
-        &operation_queue_, impl_->page(), story_id_,
+    operation_queue_.Add(MakeGetStoryDataCall(
+        impl_->page(), story_id_,
         [this, flow](modular_private::StoryDataPtr story_data) {
           if (story_data) {
             story_data_ = std::move(story_data);
             Cont(flow);
           }
-        });
+        }));
   }
 
   void Cont(FlowToken flow) {
@@ -520,11 +518,11 @@ class StoryProviderImpl::DumpStateCall : public Operation<std::string> {
 
     output_ << "=================Begin story provider info=======" << std::endl;
 
-    new DumpPageSnapshotCall(&operation_queue_, story_provider_impl_->page(),
-                             [this, flow](auto dump) { output_ << dump; });
-    new ReadAllDataCall<modular_private::StoryData>(
-        &operation_queue_, story_provider_impl_->page(), kStoryKeyPrefix,
-        XdrStoryData,
+    operation_queue_.Add(
+        new DumpPageSnapshotCall(story_provider_impl_->page(),
+                                 [this, flow](auto dump) { output_ << dump; }));
+    operation_queue_.Add(new ReadAllDataCall<modular_private::StoryData>(
+        story_provider_impl_->page(), kStoryKeyPrefix, XdrStoryData,
         [this, flow](fidl::VectorPtr<modular_private::StoryData> data) {
           for (size_t i = 0; i < data->size(); ++i) {
             DumpStoryPage(std::move(data->at(i)), flow);
@@ -534,7 +532,7 @@ class StoryProviderImpl::DumpStateCall : public Operation<std::string> {
           // need to get all the content from |output_| into |dump_|.
           operation_queue_.Add(
               new SyncCall([this, flow] { dump_ = output_.str(); }));
-        });
+        }));
   }
 
   void DumpStoryPage(modular_private::StoryData story_data, FlowToken flow) {
@@ -544,13 +542,12 @@ class StoryProviderImpl::DumpStateCall : public Operation<std::string> {
     story_provider_impl_->ledger_client_->ledger()->GetPage(
         std::move(page_id), story_page.NewRequest(), [](auto s) {});
     story_pages_.push_back(std::move(story_page));
-    new DumpPageSnapshotCall(&operation_queue_, story_pages_.back().get(),
-                             [this, story_id, flow](auto dump) {
-                               output_
-                                   << "=================Story id: " << story_id
-                                   << "===========" << std::endl;
-                               output_ << dump;
-                             });
+    operation_queue_.Add(new DumpPageSnapshotCall(
+        story_pages_.back().get(), [this, story_id, flow](auto dump) {
+          output_ << "=================Story id: " << story_id
+                  << "===========" << std::endl;
+          output_ << dump;
+        }));
   }
 
   StoryProviderImpl* const story_provider_impl_;  // not owned
@@ -741,13 +738,12 @@ void StoryProviderImpl::DeleteStory(fidl::StringPtr story_id,
 // |StoryProvider|
 void StoryProviderImpl::GetStoryInfo(fidl::StringPtr story_id,
                                      GetStoryInfoCallback callback) {
-  MakeGetStoryDataCall(
-      &operation_queue_, page(), story_id,
-      [callback](modular_private::StoryDataPtr story_data) {
+  operation_queue_.Add(MakeGetStoryDataCall(
+      page(), story_id, [callback](modular_private::StoryDataPtr story_data) {
         callback(story_data
                      ? fidl::MakeOptional(std::move(story_data->story_info))
                      : nullptr);
-      });
+      }));
 }
 
 // Called by StoryControllerImpl on behalf of ModuleContextImpl
@@ -779,8 +775,8 @@ void StoryProviderImpl::GetController(
 
 // |StoryProvider|
 void StoryProviderImpl::PreviousStories(PreviousStoriesCallback callback) {
-  new ReadAllDataCall<modular_private::StoryData>(
-      &operation_queue_, page(), kStoryKeyPrefix, XdrStoryData,
+  operation_queue_.Add(new ReadAllDataCall<modular_private::StoryData>(
+      page(), kStoryKeyPrefix, XdrStoryData,
       [callback](fidl::VectorPtr<modular_private::StoryData> data) {
         auto result = fidl::VectorPtr<modular::StoryInfo>::New(0);
 
@@ -789,7 +785,7 @@ void StoryProviderImpl::PreviousStories(PreviousStoriesCallback callback) {
         }
 
         callback(std::move(result));
-      });
+      }));
 }
 
 // |StoryProvider|

@@ -49,18 +49,8 @@ class PageOperation : public Operation<Args...> {
  public:
   using ResultCall = std::function<void(Args...)>;
 
-  PageOperation(const char* const trace_name,
-                OperationContainer* const container,
-                ledger::Page* const page,
-                ResultCall result_call,
-                const std::string& trace_info = "")
-      : Operation<Args...>(trace_name, container, std::move(result_call), trace_info),
-        page_(page) {}
-
-  PageOperation(const char* const trace_name,
-                ledger::Page* const page,
-                ResultCall result_call,
-                const std::string& trace_info = "")
+  PageOperation(const char* const trace_name, ledger::Page* const page,
+                ResultCall result_call, const std::string& trace_info = "")
       : Operation<Args...>(trace_name, std::move(result_call), trace_info),
         page_(page) {}
 
@@ -93,13 +83,12 @@ class LedgerOperation : public Operation<Args...> {
  public:
   using ResultCall = std::function<void(Args...)>;
 
-  LedgerOperation(const char* const trace_name,
-                  ledger::Ledger* ledger,
-                  ledger::Page* const page,
-                  ResultCall result_call,
+  LedgerOperation(const char* const trace_name, ledger::Ledger* ledger,
+                  ledger::Page* const page, ResultCall result_call,
                   const std::string& trace_info = "")
       : Operation<Args...>(trace_name, std::move(result_call), trace_info),
-      ledger_(ledger), page_(page) {}
+        ledger_(ledger),
+        page_(page) {}
 
  protected:
   ledger::Ledger* ledger() const { return ledger_; }
@@ -121,79 +110,69 @@ class LedgerOperation : public Operation<Args...> {
   ledger::Page* const page_;
 };
 
-template <typename Data,
-          typename DataPtr = std::unique_ptr<Data>,
+template <typename Data, typename DataPtr = std::unique_ptr<Data>,
           typename DataFilter = XdrFilterType<Data>>
-class ReadDataCall : PageOperation<DataPtr> {
+class ReadDataCall : public PageOperation<DataPtr> {
  public:
   using ResultCall = std::function<void(DataPtr)>;
   using FlowToken = typename Operation<DataPtr>::FlowToken;
 
-  ReadDataCall(OperationContainer* const container,
-               ledger::Page* const page,
-               const std::string& key,
-               const bool not_found_is_ok,
-               DataFilter filter,
+  ReadDataCall(ledger::Page* const page, const std::string& key,
+               const bool not_found_is_ok, DataFilter filter,
                ResultCall result_call)
-      : PageOperation<DataPtr>("ReadDataCall",
-                               container,
-                               page,
-                               std::move(result_call),
+      : PageOperation<DataPtr>("ReadDataCall", page, std::move(result_call),
                                key),
         key_(key),
         not_found_is_ok_(not_found_is_ok),
-        filter_(filter) {
-    this->Ready();
-  }
+        filter_(filter) {}
 
  private:
   void Run() override {
     FlowToken flow{this, &result_};
 
-    this->page()->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
-                              this->Protect([this, flow](ledger::Status status) {
-                            if (status != ledger::Status::OK) {
-                              FXL_LOG(ERROR)
-                                  << this->trace_name() << " " << key_ << " "
-                                  << "Page.GetSnapshot() " << status;
-                              return;
-                            }
+    this->page()->GetSnapshot(
+        page_snapshot_.NewRequest(), nullptr, nullptr,
+        this->Protect([this, flow](ledger::Status status) {
+          if (status != ledger::Status::OK) {
+            FXL_LOG(ERROR) << this->trace_name() << " " << key_ << " "
+                           << "Page.GetSnapshot() " << status;
+            return;
+          }
 
-                            Cont(flow);
-                          }));
+          Cont(flow);
+        }));
   }
 
   void Cont(FlowToken flow) {
-    page_snapshot_->Get(
-        to_array(key_),
-        [this, flow](ledger::Status status, mem::BufferPtr value) {
-          if (status != ledger::Status::OK) {
-            if (status != ledger::Status::KEY_NOT_FOUND || !not_found_is_ok_) {
-              FXL_LOG(ERROR) << this->trace_name() << " " << key_ << " "
-                             << "PageSnapshot.Get() " << status;
-            }
-            return;
-          }
+    page_snapshot_->Get(to_array(key_), [this, flow](ledger::Status status,
+                                                     mem::BufferPtr value) {
+      if (status != ledger::Status::OK) {
+        if (status != ledger::Status::KEY_NOT_FOUND || !not_found_is_ok_) {
+          FXL_LOG(ERROR) << this->trace_name() << " " << key_ << " "
+                         << "PageSnapshot.Get() " << status;
+        }
+        return;
+      }
 
-          if (!value) {
-            FXL_LOG(ERROR) << this->trace_name() << " " << key_ << " "
-                           << "PageSnapshot.Get() null vmo";
-          }
+      if (!value) {
+        FXL_LOG(ERROR) << this->trace_name() << " " << key_ << " "
+                       << "PageSnapshot.Get() null vmo";
+      }
 
-          std::string value_as_string;
-          if (!fsl::StringFromVmo(*value, &value_as_string)) {
-            FXL_LOG(ERROR) << this->trace_name() << " " << key_
-                           << " Unable to extract data.";
-            return;
-          }
+      std::string value_as_string;
+      if (!fsl::StringFromVmo(*value, &value_as_string)) {
+        FXL_LOG(ERROR) << this->trace_name() << " " << key_
+                       << " Unable to extract data.";
+        return;
+      }
 
-          if (!XdrRead(value_as_string, &result_, filter_)) {
-            result_.reset();
-            return;
-          }
+      if (!XdrRead(value_as_string, &result_, filter_)) {
+        result_.reset();
+        return;
+      }
 
-          FXL_DCHECK(result_);
-        });
+      FXL_DCHECK(result_);
+    });
   }
 
   const std::string key_;
@@ -205,28 +184,20 @@ class ReadDataCall : PageOperation<DataPtr> {
   FXL_DISALLOW_COPY_AND_ASSIGN(ReadDataCall);
 };
 
-template <typename Data,
-          typename DataArray = fidl::VectorPtr<Data>,
+template <typename Data, typename DataArray = fidl::VectorPtr<Data>,
           typename DataFilter = XdrFilterType<Data>>
-class ReadAllDataCall : PageOperation<DataArray> {
+class ReadAllDataCall : public PageOperation<DataArray> {
  public:
   using ResultCall = std::function<void(DataArray)>;
   using FlowToken = typename Operation<DataArray>::FlowToken;
 
-  ReadAllDataCall(OperationContainer* const container,
-                  ledger::Page* const page,
-                  std::string prefix,
-                  DataFilter const filter,
-                  ResultCall result_call)
-      : PageOperation<DataArray>("ReadAllDataCall",
-                                 container,
-                                 page,
-                                 std::move(result_call),
-                                 prefix),
+  ReadAllDataCall(ledger::Page* const page, std::string prefix,
+                  DataFilter const filter, ResultCall result_call)
+      : PageOperation<DataArray>("ReadAllDataCall", page,
+                                 std::move(result_call), prefix),
         prefix_(std::move(prefix)),
         filter_(filter) {
     data_.resize(0);
-    this->Ready();
   }
 
  private:
@@ -236,14 +207,14 @@ class ReadAllDataCall : PageOperation<DataArray> {
     this->page()->GetSnapshot(
         page_snapshot_.NewRequest(), to_array(prefix_), nullptr,
         this->Protect([this, flow](ledger::Status status) {
-            if (status != ledger::Status::OK) {
-              FXL_LOG(ERROR) << this->trace_name() << " "
-                             << "Page.GetSnapshot() " << status;
-              return;
-            }
+          if (status != ledger::Status::OK) {
+            FXL_LOG(ERROR) << this->trace_name() << " "
+                           << "Page.GetSnapshot() " << status;
+            return;
+          }
 
-            Cont1(flow);
-          }));
+          Cont1(flow);
+        }));
   }
 
   void Cont1(FlowToken flow) {
@@ -286,23 +257,16 @@ class ReadAllDataCall : PageOperation<DataArray> {
   FXL_DISALLOW_COPY_AND_ASSIGN(ReadAllDataCall);
 };
 
-template <typename Data,
-          typename DataPtr = std::unique_ptr<Data>,
+template <typename Data, typename DataPtr = std::unique_ptr<Data>,
           typename DataFilter = XdrFilterType<Data>>
-class WriteDataCall : PageOperation<> {
+class WriteDataCall : public PageOperation<> {
  public:
-  WriteDataCall(OperationContainer* const container,
-                ledger::Page* const page,
-                const std::string& key,
-                DataFilter filter,
-                DataPtr data,
-                ResultCall result_call)
-      : PageOperation("WriteDataCall", container, page, std::move(result_call), key),
+  WriteDataCall(ledger::Page* const page, const std::string& key,
+                DataFilter filter, DataPtr data, ResultCall result_call)
+      : PageOperation("WriteDataCall", page, std::move(result_call), key),
         key_(key),
         filter_(filter),
-        data_(std::move(data)) {
-    Ready();
-  }
+        data_(std::move(data)) {}
 
  private:
   void Run() override {
@@ -311,14 +275,14 @@ class WriteDataCall : PageOperation<> {
     std::string json;
     XdrWrite(&json, &data_, filter_);
 
-    this->page()->Put(
-        to_array(key_), to_array(json),
-        this->Protect([this, flow](ledger::Status status) {
-            if (status != ledger::Status::OK) {
-              FXL_LOG(ERROR) << this->trace_name() << " " << key_ << " "
-                             << "Page.Put() " << status;
-            }
-          }));
+    this->page()->Put(to_array(key_), to_array(json),
+                      this->Protect([this, flow](ledger::Status status) {
+                        if (status != ledger::Status::OK) {
+                          FXL_LOG(ERROR)
+                              << this->trace_name() << " " << key_ << " "
+                              << "Page.Put() " << status;
+                        }
+                      }));
   }
 
   const std::string key_;
@@ -328,30 +292,25 @@ class WriteDataCall : PageOperation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(WriteDataCall);
 };
 
-class DumpPageSnapshotCall : PageOperation<std::string> {
+class DumpPageSnapshotCall : public PageOperation<std::string> {
  public:
-  DumpPageSnapshotCall(OperationContainer* const container,
-                       ledger::Page* const page,
-                       ResultCall result_call)
-      : PageOperation("DumpPageSnapshotCall", container, page, std::move(result_call)) {
-    Ready();
-  }
+  DumpPageSnapshotCall(ledger::Page* const page, ResultCall result_call)
+      : PageOperation("DumpPageSnapshotCall", page, std::move(result_call)) {}
 
  private:
   void Run() override {
     FlowToken flow{this, &dump_};
 
-    page()->GetSnapshot(
-        page_snapshot_.NewRequest(), nullptr, nullptr,
-        Protect([this, flow](ledger::Status status) {
-            if (status != ledger::Status::OK) {
-              FXL_LOG(ERROR) << this->trace_name() << " "
-                             << "Page.GetSnapshot() " << status;
-              return;
-            }
+    page()->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
+                        Protect([this, flow](ledger::Status status) {
+                          if (status != ledger::Status::OK) {
+                            FXL_LOG(ERROR) << this->trace_name() << " "
+                                           << "Page.GetSnapshot() " << status;
+                            return;
+                          }
 
-            Cont1(flow);
-          }));
+                          Cont1(flow);
+                        }));
   }
 
   void Cont1(FlowToken flow) {

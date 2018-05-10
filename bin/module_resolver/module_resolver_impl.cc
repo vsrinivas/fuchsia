@@ -37,8 +37,7 @@ ModuleResolverImpl::ModuleResolverImpl(
 ModuleResolverImpl::~ModuleResolverImpl() = default;
 
 void ModuleResolverImpl::AddSource(
-    std::string name,
-    std::unique_ptr<modular::ModuleManifestSource> repo) {
+    std::string name, std::unique_ptr<modular::ModuleManifestSource> repo) {
   FXL_CHECK(bindings_.size() == 0);
 
   auto ptr = repo.get();
@@ -69,21 +68,17 @@ void ModuleResolverImpl::BindQueryHandler(
 }
 
 class ModuleResolverImpl::FindModulesCall
-    : modular::Operation<modular::FindModulesResult> {
+    : public modular::Operation<modular::FindModulesResult> {
  public:
-  FindModulesCall(modular::OperationContainer* container,
-                  ModuleResolverImpl* module_resolver_impl,
+  FindModulesCall(ModuleResolverImpl* module_resolver_impl,
                   modular::ResolverQuery query,
                   modular::ResolverScoringInfoPtr scoring_info,
                   ResultCall result_call)
       : Operation("ModuleResolverImpl::FindModulesCall",
-                  container,
                   std::move(result_call)),
         module_resolver_impl_(module_resolver_impl),
         query_(std::move(query)),
-        scoring_info_(std::move(scoring_info)) {
-    Ready();
-  }
+        scoring_info_(std::move(scoring_info)) {}
 
   // Finds all modules that match |query_|.
   //
@@ -195,8 +190,7 @@ class ModuleResolverImpl::FindModulesCall
   // Returns the EntryIds of all entries with a parameter that matches the
   // provided name and type.
   std::set<EntryId> GetEntriesMatchingParameterByTypeAndName(
-      const std::string& parameter_type,
-      const std::string& parameter_name) {
+      const std::string& parameter_type, const std::string& parameter_name) {
     std::set<EntryId> found_entries;
     auto found_entries_it =
         module_resolver_impl_->parameter_type_and_name_to_entries_.find(
@@ -497,15 +491,14 @@ class ModuleResolverImpl::FindModulesCall
 
 void ModuleResolverImpl::FindModules(modular::ResolverQuery query,
                                      FindModulesCallback done) {
-  new FindModulesCall(&operations_, this, std::move(query), nullptr, done);
+  operations_.Add(new FindModulesCall(this, std::move(query), nullptr, done));
 }
 
 void ModuleResolverImpl::FindModules(
-    modular::ResolverQuery query,
-    modular::ResolverScoringInfoPtr scoring_info,
+    modular::ResolverQuery query, modular::ResolverScoringInfoPtr scoring_info,
     FindModulesCallback done) {
-  new FindModulesCall(&operations_, this, std::move(query),
-                      std::move(scoring_info), done);
+  operations_.Add(new FindModulesCall(this, std::move(query),
+                                      std::move(scoring_info), done));
 }
 
 namespace {
@@ -643,8 +636,7 @@ void ModuleResolverImpl::PeriodicCheckIfSourcesAreReady() {
       }
     }
 
-    if (already_checking_if_sources_are_ready_)
-      return;
+    if (already_checking_if_sources_are_ready_) return;
     already_checking_if_sources_are_ready_ = true;
     async::PostDelayedTask(
         async_get_default(),

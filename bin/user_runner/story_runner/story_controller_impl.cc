@@ -279,19 +279,18 @@ class StoryControllerImpl::BlockingModuleDataWriteCall : public Operation<> {
     // We rely on the ledger notifying us in
     // StoryControllerImpl::OnPageChange() so that it calls the method we push
     // onto StoryControllerImpl::blocked_operations_.
-    new ReadDataCall<ModuleData>(&operation_queue_,
-                                 story_controller_impl_->page(), key_,
-                                 true /* not_found_is_ok */, XdrModuleData,
-                                 [this, flow](ModuleDataPtr data) {
-                                   if (!ModuleDataEqual(data, module_data_)) {
-                                     WriteModuleData(flow);
-                                   }
-                                 });
+    operation_queue_.Add(new ReadDataCall<ModuleData>(
+        story_controller_impl_->page(), key_, true /* not_found_is_ok */,
+        XdrModuleData, [this, flow](ModuleDataPtr data) {
+          if (!ModuleDataEqual(data, module_data_)) {
+            WriteModuleData(flow);
+          }
+        }));
   }
 
   void WriteModuleData(FlowToken flow) {
-    new WriteDataCall<ModuleData>(
-        &operation_queue_, story_controller_impl_->page(), key_, XdrModuleData,
+    operation_queue_.Add(new WriteDataCall<ModuleData>(
+        story_controller_impl_->page(), key_, XdrModuleData,
         std::move(module_data_), [this, flow] {
           FlowTokenHolder hold{flow};
           fn_ = [hold] {
@@ -303,7 +302,7 @@ class StoryControllerImpl::BlockingModuleDataWriteCall : public Operation<> {
           if (fn_called_) {
             fn_();
           }
-        });
+        }));
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
@@ -913,13 +912,12 @@ class StoryControllerImpl::StopModuleCall : public Operation<> {
     // why.
 
     // Read the module data.
-    new ReadDataCall<ModuleData>(
-        &operation_queue_, story_controller_impl_->page(),
-        MakeModuleKey(module_path_), false /* not_found_is_ok */, XdrModuleData,
-        [this](ModuleDataPtr data) {
+    operation_queue_.Add(new ReadDataCall<ModuleData>(
+        story_controller_impl_->page(), MakeModuleKey(module_path_),
+        false /* not_found_is_ok */, XdrModuleData, [this](ModuleDataPtr data) {
           module_data_ = std::move(data);
           Cont1();
-        });
+        }));
   }
 
   void Cont1() {
@@ -1107,7 +1105,7 @@ class StoryControllerImpl::DefocusCall : public Operation<> {
  public:
   DefocusCall(StoryControllerImpl* const story_controller_impl,
               fidl::VectorPtr<fidl::StringPtr> module_path)
-      : Operation("StoryControllerImpl::DefocusCall", nullptr, [] {}),
+      : Operation("StoryControllerImpl::DefocusCall", [] {}),
         story_controller_impl_(story_controller_impl),
         module_path_(std::move(module_path)) {}
 
@@ -1537,11 +1535,11 @@ class StoryControllerImpl::StartCall : public Operation<> {
 
     // Start *all* the root modules, not just the first one, with their
     // respective links.
-    new ReadAllDataCall<ModuleData>(
-        &operation_queue_, story_controller_impl_->page(), kModuleKeyPrefix,
-        XdrModuleData, [this, flow](fidl::VectorPtr<ModuleData> data) {
+    operation_queue_.Add(new ReadAllDataCall<ModuleData>(
+        story_controller_impl_->page(), kModuleKeyPrefix, XdrModuleData,
+        [this, flow](fidl::VectorPtr<ModuleData> data) {
           Cont(flow, std::move(data));
-        });
+        }));
   }
 
   void Cont(FlowToken flow, fidl::VectorPtr<ModuleData> data) {
@@ -1894,11 +1892,11 @@ void StoryControllerImpl::GetActiveModules(
 
 // |StoryController|
 void StoryControllerImpl::GetModules(GetModulesCallback callback) {
-  new ReadAllDataCall<ModuleData>(&operation_queue_, page(), kModuleKeyPrefix,
-                                  XdrModuleData,
-                                  [callback](fidl::VectorPtr<ModuleData> data) {
-                                    callback(std::move(data));
-                                  });
+  operation_queue_.Add(new ReadAllDataCall<ModuleData>(
+      page(), kModuleKeyPrefix, XdrModuleData,
+      [callback](fidl::VectorPtr<ModuleData> data) {
+        callback(std::move(data));
+      }));
 }
 
 // |StoryController|
@@ -2020,10 +2018,11 @@ void StoryControllerImpl::NotifyStateChange() {
   data->timestamp = time(nullptr);
   data->state = state_;
 
-  new WriteDataCall<modular_private::PerDeviceStoryInfo,
-                    modular_private::PerDeviceStoryInfoPtr>(
-      &operation_queue_, page(), MakePerDeviceKey(data->device_id),
-      XdrPerDeviceStoryInfo, std::move(data), [] {});
+  operation_queue_.Add(
+      new WriteDataCall<modular_private::PerDeviceStoryInfo,
+                        modular_private::PerDeviceStoryInfoPtr>(
+          page(), MakePerDeviceKey(data->device_id), XdrPerDeviceStoryInfo,
+          std::move(data), [] {}));
 }
 
 void StoryControllerImpl::DisposeLink(LinkImpl* const link) {
