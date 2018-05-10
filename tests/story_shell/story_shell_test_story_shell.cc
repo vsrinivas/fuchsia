@@ -8,6 +8,7 @@
 #include <memory>
 
 #include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/presentation.h>
 #include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
@@ -42,6 +43,7 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
   void Initialize(
       fidl::InterfaceHandle<modular::StoryContext> story_context) override {
     story_context_.Bind(std::move(story_context));
+    story_context_->GetPresentation(presentation_.NewRequest());
   }
 
   // Keep state to check ordering. Cf. below.
@@ -102,6 +104,7 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
       fidl::VectorPtr<modular::ContainerView> /* views */) override {}
 
   modular::StoryContextPtr story_context_;
+  presentation::PresentationPtr presentation_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };

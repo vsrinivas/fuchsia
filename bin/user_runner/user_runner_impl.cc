@@ -23,8 +23,10 @@
 #include "peridot/bin/user_runner/device_map_impl.h"
 #include "peridot/bin/user_runner/focus.h"
 #include "peridot/bin/user_runner/message_queue/message_queue_manager.h"
+#include "peridot/bin/user_runner/presentation_provider.h"
 #include "peridot/bin/user_runner/story_runner/link_impl.h"
 #include "peridot/bin/user_runner/story_runner/story_provider_impl.h"
+#include "peridot/lib/common/names.h"
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/common/xdr.h"
 #include "peridot/lib/device_info/device_info.h"
@@ -115,6 +117,27 @@ std::function<void(std::function<void()>)> Teardown(
 }
 
 }  // namespace
+
+class UserRunnerImpl::PresentationProviderImpl : public PresentationProvider {
+ public:
+  PresentationProviderImpl(UserRunnerImpl* const impl) : impl_(impl) {}
+  ~PresentationProviderImpl() override = default;
+
+ private:
+  // |PresentationProvider|
+  void GetPresentation(
+      fidl::StringPtr story_id,
+      fidl::InterfaceRequest<presentation::Presentation> request) override {
+    if (impl_->user_shell_app_) {
+      UserShellPresentationProviderPtr provider;
+      impl_->user_shell_app_->services().ConnectToService(
+          provider.NewRequest());
+      provider->GetPresentation(std::move(story_id), std::move(request));
+    }
+  }
+
+  UserRunnerImpl* const impl_;
+};
 
 UserRunnerImpl::UserRunnerImpl(
     component::ApplicationContext* const application_context, const bool test)
@@ -504,6 +527,9 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::StringPtr& user_shell_url,
   auto focus_provider_request_story_provider =
       focus_provider_story_provider.NewRequest();
 
+  presentation_provider_impl_.reset(new PresentationProviderImpl(this));
+  AtEnd(Reset(&presentation_provider_impl_));
+
   // We create |story_provider_impl_| after |agent_runner_| so
   // story_provider_impl_ is termiated before agent_runner_ because the modules
   // running in a story might freak out if agents they are connected to go away
@@ -514,7 +540,7 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::StringPtr& user_shell_url,
       ledger_client_.get(), ledger::PageId(), std::move(story_shell),
       component_context_info, std::move(focus_provider_story_provider),
       user_intelligence_provider_.get(), module_resolver_service_.get(),
-      test_));
+      presentation_provider_impl_.get(), test_));
   story_provider_impl_->Connect(std::move(story_provider_request));
 
   AtEnd(

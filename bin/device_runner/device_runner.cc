@@ -114,7 +114,7 @@ class Settings {
     SHELL_ARGS: Comma separated list of arguments. Backslash escapes comma.
     ACCOUNT_PROVIDER: URL of the account provider to use.
                 Defaults to "oauth_token_manager".
-                For integration tests use ""dev_token_manager".)USAGE";
+                For integration tests use "dev_token_manager".)USAGE";
   }
 
   AppConfig device_shell;

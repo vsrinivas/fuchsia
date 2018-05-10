@@ -67,7 +67,7 @@ class UserControllerImpl : UserController, modular_private::UserContext {
 
   // |UserContext|
   void GetPresentation(
-      fidl::InterfaceRequest<presentation::Presentation> presentation) override;
+      fidl::InterfaceRequest<presentation::Presentation> request) override;
 
   std::unique_ptr<Scope> user_runner_scope_;
   std::unique_ptr<AppClient<Lifecycle>> user_runner_app_;

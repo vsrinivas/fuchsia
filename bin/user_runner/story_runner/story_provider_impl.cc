@@ -22,6 +22,7 @@
 #include "lib/fsl/vmo/strings.h"
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
 #include "peridot/bin/user_runner/focus.h"
+#include "peridot/bin/user_runner/presentation_provider.h"
 #include "peridot/bin/user_runner/story_runner/link_impl.h"
 #include "peridot/bin/user_runner/story_runner/story_controller_impl.h"
 #include "peridot/lib/common/names.h"
@@ -569,7 +570,8 @@ StoryProviderImpl::StoryProviderImpl(
     AppConfig story_shell, const ComponentContextInfo& component_context_info,
     FocusProviderPtr focus_provider,
     UserIntelligenceProvider* const user_intelligence_provider,
-    ModuleResolver* module_resolver, const bool test)
+    ModuleResolver* const module_resolver,
+    PresentationProvider* const presentation_provider, const bool test)
     : PageClient("StoryProviderImpl", ledger_client, std::move(root_page_id),
                  kStoryKeyPrefix),
       user_scope_(user_scope),
@@ -580,6 +582,7 @@ StoryProviderImpl::StoryProviderImpl(
       component_context_info_(component_context_info),
       user_intelligence_provider_(user_intelligence_provider),
       module_resolver_(module_resolver),
+      presentation_provider_(presentation_provider),
       focus_provider_(std::move(focus_provider)),
       focus_watcher_binding_(this),
       weak_factory_(this) {
@@ -878,6 +881,13 @@ void StoryProviderImpl::GetLinkPeer(
     fidl::StringPtr link_name, fidl::InterfaceRequest<Link> request) {
   operation_queue_.Add(new GetLinkPeerCall(
       this, story_id, std::move(module_path), link_name, std::move(request)));
+}
+
+void StoryProviderImpl::GetPresentation(
+    fidl::StringPtr story_id,
+    fidl::InterfaceRequest<presentation::Presentation> request) {
+  presentation_provider_->GetPresentation(std::move(story_id),
+                                          std::move(request));
 }
 
 }  // namespace modular

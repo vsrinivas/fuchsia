@@ -12,6 +12,12 @@ namespace modular {
 // StoryProvider::CreateStoryWithInfo() with a non-null |module_url| parameter.
 constexpr char kRootModuleName[] = "root";
 
+// The service name of the Presentation service that is routed between
+// DeviceShell and UserShell. The same service exchage between UserShell and
+// StoryShell uses the UserShellPresentationProvider service, which is
+// discoverable.
+constexpr char kPresentationService[] = "mozart.Presentation";
+
 }  // namespace modular
 
 #endif  // PERIDOT_LIB_COMMON_NAMES_H_

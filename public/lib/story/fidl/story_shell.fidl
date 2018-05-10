@@ -16,6 +16,8 @@ library modular;
 // by the user runner being terminated, or by the system shutting down.
 [Discoverable]  // Created by story shell applications.
 interface StoryShell {
+  // TODO(mesch): In analogy to DeviceShellContext, UserShellContext,
+  // ModuleContext, AgentContext, this should be called StoryShellContext.
   1: Initialize(StoryContext story_context);
 
   // Registers a new view to be displayed by the StoryShell. More context that
@@ -56,4 +58,8 @@ struct ContainerView {
 // This interface provides the StoryShell instance with everything it needs to
 // know or be able to do about the Story. Not much right now, but we expect this
 // to increase.
-interface StoryContext {};
+interface StoryContext {
+  // Requests a Presentation connection from the UserShell. See
+  // UserShellPresenationProvider in user_shell.fidl.
+  1: GetPresentation(request<presentation.Presentation> @request);
+};

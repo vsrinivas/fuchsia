@@ -11,6 +11,7 @@
 
 #include <fuchsia/cpp/ledger.h>
 #include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/presentation.h>
 #include <fuchsia/cpp/views_v1_token.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -30,21 +31,20 @@
 #include "peridot/lib/ledger_client/types.h"
 
 namespace modular {
+class PresentationProvider;
 class Resolver;
 class StoryControllerImpl;
 
 class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
  public:
-  StoryProviderImpl(Scope* user_scope,
-                    std::string device_id,
-                    LedgerClient* ledger_client,
-                    LedgerPageId page_id,
+  StoryProviderImpl(Scope* user_scope, std::string device_id,
+                    LedgerClient* ledger_client, LedgerPageId page_id,
                     AppConfig story_shell,
                     const ComponentContextInfo& component_context_info,
                     FocusProviderPtr focus_provider,
                     UserIntelligenceProvider* user_intelligence_provider,
                     ModuleResolver* module_resolver,
-                    bool test);
+                    PresentationProvider* presentation_provider, bool test);
 
   ~StoryProviderImpl() override;
 
@@ -99,6 +99,12 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
 
   // Called by StoryControllerImpl.
   void NotifyStoryStateChange(fidl::StringPtr story_id, StoryState story_state);
+
+  // Called by StoryControllerImpl. Sends request to UserShell through
+  // PresentationProvider.
+  void GetPresentation(
+      fidl::StringPtr story_id,
+      fidl::InterfaceRequest<presentation::Presentation> request);
 
   void DumpState(const std::function<void(const std::string&)>& callback);
 
@@ -206,8 +212,8 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   const ComponentContextInfo component_context_info_;
 
   UserIntelligenceProvider* const user_intelligence_provider_;  // Not owned.
-
   ModuleResolver* const module_resolver_;  // Not owned.
+  PresentationProvider* const presentation_provider_;  // Not owned.
 
   // When a story gets created, or when it gets focused on this device, we write
   // a record of the current context in the story page. So we need to watch the

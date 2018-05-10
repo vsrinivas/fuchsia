@@ -9,6 +9,7 @@
 
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "peridot/lib/common/async_holder.h"
+#include "peridot/lib/common/names.h"
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/array_to_string.h"
 
@@ -97,10 +98,10 @@ void UserControllerImpl::Logout(LogoutCallback done) {
 
 // |UserContext|
 void UserControllerImpl::GetPresentation(
-    fidl::InterfaceRequest<presentation::Presentation> presentation) {
+    fidl::InterfaceRequest<presentation::Presentation> request) {
   if (device_shell_services_) {
-    device_shell_services_->ConnectToService("mozart.Presentation",
-                                             presentation.TakeChannel());
+    device_shell_services_->ConnectToService(kPresentationService,
+                                             request.TakeChannel());
   }
 }
 

@@ -10,8 +10,8 @@
 #include <fuchsia/cpp/ledger.h>
 #include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/modular_private.h>
+#include <fuchsia/cpp/presentation.h>
 #include <fuchsia/cpp/views_v1.h>
-
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/clone.h"
@@ -2113,6 +2113,11 @@ StoryControllerImpl::Connection* StoryControllerImpl::FindAnchor(
   }
 
   return anchor;
+}
+
+void StoryControllerImpl::GetPresentation(
+    fidl::InterfaceRequest<presentation::Presentation> request) {
+  story_provider_impl_->GetPresentation(story_id_, std::move(request));
 }
 
 }  // namespace modular

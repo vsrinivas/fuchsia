@@ -58,8 +58,6 @@ class UserRunnerImpl : modular_private::UserRunner,
   void Terminate(std::function<void()> done);
 
  private:
-  class SwapUserShellOperation;
-
   // |UserRunner|
   void Initialize(
       modular_auth::AccountPtr account,
@@ -220,6 +218,9 @@ class UserRunnerImpl : modular_private::UserRunner,
   component::ServiceProviderImpl module_resolver_ns_services_;
   ModuleResolverPtr module_resolver_service_;
 
+  class PresentationProviderImpl;
+  std::unique_ptr<PresentationProviderImpl> presentation_provider_impl_;
+
   std::unique_ptr<FocusHandler> focus_handler_;
   std::unique_ptr<VisibleStoriesHandler> visible_stories_handler_;
 
@@ -250,6 +251,8 @@ class UserRunnerImpl : modular_private::UserRunner,
 
   // The agent controller used to control the clipboard agent.
   AgentControllerPtr clipboard_agent_controller_;
+
+  class SwapUserShellOperation;
 
   OperationQueue operation_queue_;
 

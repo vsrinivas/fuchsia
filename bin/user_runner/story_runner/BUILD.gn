@@ -41,6 +41,7 @@ source_set("story_runner") {
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/user_runner:component_context",
     "//peridot/bin/user_runner:focus",
+    "//peridot/bin/user_runner:presentation_provider",
     "//peridot/bin/user_runner/agent_runner:public",
     "//peridot/bin/user_runner/message_queue",
     "//peridot/lib/common:names",

@@ -177,6 +177,10 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
                fidl::StringPtr name,
                fidl::InterfaceRequest<Link> request) override;
 
+  // |StoryContext|
+  void GetPresentation(
+      fidl::InterfaceRequest<presentation::Presentation> request) override;
+
   // Phases of Start() broken out into separate methods.
   void StartStoryShell(
       fidl::InterfaceRequest<views_v1_token::ViewOwner> request);

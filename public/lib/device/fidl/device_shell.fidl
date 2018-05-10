@@ -18,7 +18,7 @@ library modular;
 [Discoverable]
 interface DeviceShell {
   1: Initialize(DeviceShellContext device_shell_context,
-               DeviceShellParams device_shell_params);
+                DeviceShellParams device_shell_params);
 
   // This method may be invoked by the device runner to request an
   // AuthenticationContext associated with |username|. |request| will then be
@@ -28,7 +28,7 @@ interface DeviceShell {
   // A |request| is tied to a |username| because the device runner allows
   // multiple users to be logged in at the same time.
   2: GetAuthenticationContext(string username,
-                             request<modular_auth.AuthenticationContext> @request);
+                              request<modular_auth.AuthenticationContext> @request);
 };
 
 // This interface allows the |DeviceShell| to request capabilities from the
@@ -46,5 +46,3 @@ struct DeviceShellParams {
   // TODO(jjosh): make this non-optional, if feasible.
   presentation.Presentation? presentation;
 };
-
-

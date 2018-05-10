@@ -8,6 +8,7 @@
 
 #include <fuchsia/cpp/component.h>
 #include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/presentation.h>
 #include <fuchsia/cpp/views_v1_token.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
@@ -19,6 +20,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_delta.h"
+#include "peridot/lib/common/names.h"
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/component_base.h"
@@ -34,16 +36,51 @@ using modular::testing::Put;
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
+class TestApp : public modular::testing::ComponentBase<modular::UserShell>,
+                modular::UserShellPresentationProvider {
  public:
   explicit TestApp(component::ApplicationContext* const application_context)
       : ComponentBase(application_context) {
     TestInit(__FILE__);
+
+    application_context->outgoing()
+        .AddPublicService<modular::UserShellPresentationProvider>(
+            [this](
+                fidl::InterfaceRequest<modular::UserShellPresentationProvider>
+                    request) {
+              presentation_provider_bindings_.AddBinding(this,
+                                                         std::move(request));
+            });
   }
 
   ~TestApp() override = default;
 
  private:
+  TestPoint story1_presentation_request_{"Story1 Presentation request"};
+  bool story1_presentation_request_received_{};
+
+  TestPoint story2_presentation_request_{"Story2 Presentation request"};
+  bool story2_presentation_request_received_{};
+
+  // |UserShellPresentationProvider|
+  void GetPresentation(
+      fidl::StringPtr story_id,
+      fidl::InterfaceRequest<presentation::Presentation> request) override {
+    if (!story1_id_.is_null() && story_id == story1_id_ &&
+        !story1_presentation_request_received_) {
+      story1_presentation_request_.Pass();
+      story1_presentation_request_received_ = true;
+    }
+
+    if (!story2_id_.is_null() && story_id == story2_id_ &&
+        !story2_presentation_request_received_) {
+      story2_presentation_request_.Pass();
+      story2_presentation_request_received_ = true;
+    }
+
+    MaybeLogout();
+  }
+
   TestPoint create_view_{"CreateView()"};
 
   // |SingleServiceApp|
@@ -68,14 +105,15 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   void Story1_Create() {
     story_provider_->CreateStory(kCommonNullModule,
                                  [this](fidl::StringPtr story_id) {
+                                   story1_id_ = std::move(story_id);
                                    story1_create_.Pass();
-                                   Story1_Run1(story_id);
+                                   Story1_Run1();
                                  });
   }
 
   TestPoint story1_run1_{"Story1 Run1"};
 
-  void Story1_Run1(fidl::StringPtr story_id) {
+  void Story1_Run1() {
     auto proceed_after_5 = modular::testing::NewBarrierClosure(5, [this] {
         story1_run1_.Pass();
         Story1_Stop1();
@@ -87,7 +125,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     Get("root:one:two manifest", proceed_after_5);
     Get("root:one:two ordering", proceed_after_5);
 
-    story_provider_->GetController(story_id, story_controller_.NewRequest());
+    story_provider_->GetController(story1_id_, story_controller_.NewRequest());
 
     fidl::InterfaceHandle<views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
@@ -153,14 +191,15 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   void Story2_Create() {
     story_provider_->CreateStory(kCommonNullModule,
                                  [this](fidl::StringPtr story_id) {
+                                   story2_id_ = std::move(story_id);
                                    story2_create_.Pass();
-                                   Story2_Run1(story_id);
+                                   Story2_Run1();
                                  });
   }
 
   TestPoint story2_run1_{"Story2 Run1"};
 
-  void Story2_Run1(fidl::StringPtr story_id) {
+  void Story2_Run1() {
     auto proceed_after_5 = modular::testing::NewBarrierClosure(5, [this] {
         story2_run1_.Pass();
         Story2_Stop1();
@@ -172,7 +211,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     Get("root:one:two manifest", proceed_after_5);
     Get("root:one:two ordering", proceed_after_5);
 
-    story_provider_->GetController(story_id, story_controller_.NewRequest());
+    story_provider_->GetController(story2_id_, story_controller_.NewRequest());
 
     fidl::InterfaceHandle<views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
@@ -219,15 +258,30 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     story_controller_->Start(story_view.NewRequest());
   }
 
+  bool end_of_story2_{};
+
   void Story2_Stop2() {
     story_controller_->Stop([this] {
-        user_shell_context_->Logout();
-      });
+      end_of_story2_ = true;
+      MaybeLogout();
+    });
+  }
+
+  void MaybeLogout() {
+    if (story1_presentation_request_received_ &&
+        story2_presentation_request_received_ && end_of_story2_) {
+      user_shell_context_->Logout();
+    }
   }
 
   modular::UserShellContextPtr user_shell_context_;
   modular::StoryProviderPtr story_provider_;
   modular::StoryControllerPtr story_controller_;
+  fidl::BindingSet<modular::UserShellPresentationProvider>
+      presentation_provider_bindings_;
+
+  fidl::StringPtr story1_id_;
+  fidl::StringPtr story2_id_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
