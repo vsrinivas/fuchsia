@@ -33,8 +33,7 @@ void AudioOutputManager::EnumerateDevices() {
 }
 
 int AudioOutputManager::GetOutputDevices(
-    fuchsia_audio_device_description* buffer,
-    int num_device_descriptions) {
+    fuchsia_audio_device_description* buffer, int num_device_descriptions) {
   FXL_DCHECK((buffer == nullptr) == (num_device_descriptions == 0));
   FXL_DCHECK(num_device_descriptions >= 0);
 
@@ -66,8 +65,7 @@ int AudioOutputManager::GetDeviceNumFromId(char* device_id) {
 }
 
 int AudioOutputManager::GetOutputDeviceDefaultParameters(
-    char* device_id,
-    fuchsia_audio_parameters* stream_params) {
+    char* device_id, fuchsia_audio_parameters* stream_params) {
   FXL_DCHECK(stream_params);
 
   int device_num = GetDeviceNumFromId(device_id);
@@ -83,8 +81,7 @@ int AudioOutputManager::GetOutputDeviceDefaultParameters(
 }
 
 int AudioOutputManager::CreateOutputStream(
-    char* device_id,
-    fuchsia_audio_parameters* stream_params,
+    char* device_id, fuchsia_audio_parameters* stream_params,
     media_client::AudioOutputStream** stream_out) {
   FXL_DCHECK(stream_params);
 
@@ -95,8 +92,7 @@ int AudioOutputManager::CreateOutputStream(
 
   media_client::AudioOutputStream* stream =
       devices_[device_num]->CreateStream(stream_params);
-  if (!stream)
-    return ZX_ERR_CONNECTION_ABORTED;
+  if (!stream) return ZX_ERR_CONNECTION_ABORTED;
 
   *stream_out = stream;
   return ZX_OK;

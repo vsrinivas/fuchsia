@@ -10,11 +10,7 @@ namespace debug_ipc {
 
 constexpr uint32_t kProtocolVersion = 2;
 
-enum class Arch {
-  kUnknown = 0,
-  kX64,
-  kArm64
-};
+enum class Arch { kUnknown = 0, kX64, kArm64 };
 
 #pragma pack(push, 8)
 
@@ -119,12 +115,11 @@ struct PauseRequest {
   // If 0, all threads in the given process will be paused.
   uint64_t thread_koid = 0;
 };
-struct PauseReply {
-};
+struct PauseReply {};
 
 struct ResumeRequest {
   enum class How : uint32_t {
-    kContinue = 0,  // Continue execution without stopping.
+    kContinue = 0,     // Continue execution without stopping.
     kStepInstruction,  // Step one machine instruction.
 
     kLast  // Not a real state, used for validation.
@@ -138,8 +133,7 @@ struct ResumeRequest {
 
   How how = How::kContinue;
 };
-struct ResumeReply {
-};
+struct ResumeReply {};
 
 struct ProcessTreeRequest {};
 struct ProcessTreeReply {
@@ -180,8 +174,7 @@ struct RemoveBreakpointRequest {
   uint64_t process_koid = 0;
   uint32_t breakpoint_id = 0;
 };
-struct RemoveBreakpointReply {
-};
+struct RemoveBreakpointReply {};
 
 struct BacktraceRequest {
   uint64_t process_koid = 0;

@@ -18,8 +18,7 @@ struct EventSpec {
   fbl::String category;
 };
 
-bool EventMatchesSpec(const trace::Record::Event& event,
-                      const EventSpec& spec);
+bool EventMatchesSpec(const trace::Record::Event& event, const EventSpec& spec);
 
 std::ostream& operator<<(std::ostream& os, EventSpec event_spec);
 

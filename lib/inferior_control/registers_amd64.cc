@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "registers.h"
 #include "registers_amd64.h"
+#include "registers.h"
 
 #include <cinttypes>
 #include <cstring>
@@ -22,17 +22,11 @@
 namespace debugserver {
 namespace arch {
 
-int GetPCRegisterNumber() {
-  return static_cast<int>(Amd64Register::RIP);
-}
+int GetPCRegisterNumber() { return static_cast<int>(Amd64Register::RIP); }
 
-int GetFPRegisterNumber() {
-  return static_cast<int>(Amd64Register::RBP);
-}
+int GetFPRegisterNumber() { return static_cast<int>(Amd64Register::RBP); }
 
-int GetSPRegisterNumber() {
-  return static_cast<int>(Amd64Register::RSP);
-}
+int GetSPRegisterNumber() { return static_cast<int>(Amd64Register::RSP); }
 
 namespace {
 
@@ -139,32 +133,30 @@ class RegistersAmd64 final : public Registers {
   }
 
   std::string GetFormattedRegset(int regset) override {
-    if (regset != 0)
-      return fxl::StringPrintf("Invalid regset %d\n", regset);
+    if (regset != 0) return fxl::StringPrintf("Invalid regset %d\n", regset);
 
     return FormatGeneralRegisters();
   }
 
  private:
-
   std::string FormatGeneralRegisters() {
     std::string result;
 
-    result += fxl::StringPrintf(
-        "  CS: %#18llx RIP: %#18" PRIx64 " EFL: %#18" PRIx64 "\n",
-        0ull, gregs_.rip, gregs_.rflags);
-    result += fxl::StringPrintf(
-        " RAX: %#18" PRIx64 " RBX: %#18" PRIx64 " RCX: %#18" PRIx64 " RDX: %#18" PRIx64 "\n",
-        gregs_.rax, gregs_.rbx, gregs_.rcx, gregs_.rdx);
-    result += fxl::StringPrintf(
-        " RSI: %#18" PRIx64 " RDI: %#18" PRIx64 " RBP: %#18" PRIx64 " RSP: %#18" PRIx64 "\n",
-        gregs_.rsi, gregs_.rdi, gregs_.rbp, gregs_.rsp);
-    result += fxl::StringPrintf(
-        "  R8: %#18" PRIx64 "  R9: %#18" PRIx64 " R10: %#18" PRIx64 " R11: %#18" PRIx64 "\n",
-        gregs_.r8, gregs_.r9, gregs_.r10, gregs_.r11);
-    result += fxl::StringPrintf(
-        " R12: %#18" PRIx64 " R13: %#18" PRIx64 " R14: %#18" PRIx64 " R15: %#18" PRIx64 "\n",
-        gregs_.r12, gregs_.r13, gregs_.r14, gregs_.r15);
+    result += fxl::StringPrintf("  CS: %#18llx RIP: %#18" PRIx64
+                                " EFL: %#18" PRIx64 "\n",
+                                0ull, gregs_.rip, gregs_.rflags);
+    result += fxl::StringPrintf(" RAX: %#18" PRIx64 " RBX: %#18" PRIx64
+                                " RCX: %#18" PRIx64 " RDX: %#18" PRIx64 "\n",
+                                gregs_.rax, gregs_.rbx, gregs_.rcx, gregs_.rdx);
+    result += fxl::StringPrintf(" RSI: %#18" PRIx64 " RDI: %#18" PRIx64
+                                " RBP: %#18" PRIx64 " RSP: %#18" PRIx64 "\n",
+                                gregs_.rsi, gregs_.rdi, gregs_.rbp, gregs_.rsp);
+    result += fxl::StringPrintf("  R8: %#18" PRIx64 "  R9: %#18" PRIx64
+                                " R10: %#18" PRIx64 " R11: %#18" PRIx64 "\n",
+                                gregs_.r8, gregs_.r9, gregs_.r10, gregs_.r11);
+    result += fxl::StringPrintf(" R12: %#18" PRIx64 " R13: %#18" PRIx64
+                                " R14: %#18" PRIx64 " R15: %#18" PRIx64 "\n",
+                                gregs_.r12, gregs_.r13, gregs_.r14, gregs_.r15);
 
     return result;
   }
@@ -185,9 +177,7 @@ std::string Registers::GetUninitializedGeneralRegistersAsString() {
 }
 
 // static
-size_t Registers::GetRegisterSize() {
-  return sizeof(uint64_t);
-}
+size_t Registers::GetRegisterSize() { return sizeof(uint64_t); }
 
 }  // namespace arch
 }  // namespace debugserver

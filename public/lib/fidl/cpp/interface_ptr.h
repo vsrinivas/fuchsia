@@ -242,8 +242,7 @@ class InterfacePtr {
   // This method can be called only if this |InterfacePtr| is currently bound to
   // a channel.
   zx_status_t WaitForResponseUntil(zx::time deadline) {
-    return impl_->controller.reader().WaitAndDispatchOneMessageUntil(
-        deadline);
+    return impl_->controller.reader().WaitAndDispatchOneMessageUntil(deadline);
   }
 
   // Sets an error handler that will be called if an error causes the

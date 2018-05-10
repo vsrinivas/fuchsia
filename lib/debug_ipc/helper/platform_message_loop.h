@@ -18,4 +18,4 @@ using PlatformMessageLoop = MessageLoopZircon;
 using PlatformMessageLoop = MessageLoopPoll;
 #endif
 
-}  // namespace
+}  // namespace debug_ipc

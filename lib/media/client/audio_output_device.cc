@@ -21,8 +21,7 @@ AudioOutputDevice::AudioOutputDevice(const char* device_id,
   name_ = device_name;
 }
 AudioOutputDevice::~AudioOutputDevice() {
-  for (const auto& stream : streams_)
-    stream->Stop();
+  for (const auto& stream : streams_) stream->Stop();
 }
 
 AudioOutputStream* AudioOutputDevice::CreateStream(

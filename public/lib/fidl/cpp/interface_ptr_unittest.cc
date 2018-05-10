@@ -15,9 +15,7 @@
 namespace fidl {
 namespace {
 
-TEST(InterfacePtr, Trivial) {
-  frobinator::FrobinatorPtr ptr;
-}
+TEST(InterfacePtr, Trivial) { frobinator::FrobinatorPtr ptr; }
 
 TEST(InterfacePtr, Control) {
   fidl::test::AsyncLoopForTest loop;
@@ -55,9 +53,7 @@ TEST(InterfacePtr, Events) {
   EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
 
   std::vector<std::string> hrobs;
-  ptr.events().Hrob = [&hrobs] (StringPtr value) {
-    hrobs.push_back(value);
-  };
+  ptr.events().Hrob = [&hrobs](StringPtr value) { hrobs.push_back(value); };
 
   binding.events().Hrob("one");
   EXPECT_TRUE(hrobs.empty());
@@ -189,9 +185,7 @@ TEST(InterfacePtr, MoveConstructWithEvents) {
   EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
 
   std::vector<std::string> hrobs;
-  ptr.events().Hrob = [&hrobs] (StringPtr value) {
-    hrobs.push_back(value);
-  };
+  ptr.events().Hrob = [&hrobs](StringPtr value) { hrobs.push_back(value); };
 
   binding.events().Hrob("one");
   EXPECT_TRUE(hrobs.empty());
@@ -215,9 +209,7 @@ TEST(InterfacePtr, MoveAssignWithEvents) {
   EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
 
   std::vector<std::string> hrobs;
-  ptr.events().Hrob = [&hrobs] (StringPtr value) {
-    hrobs.push_back(value);
-  };
+  ptr.events().Hrob = [&hrobs](StringPtr value) { hrobs.push_back(value); };
 
   binding.events().Hrob("one");
   EXPECT_TRUE(hrobs.empty());
@@ -241,9 +233,8 @@ TEST(InterfacePtr, MoveIntoMethodCapture) {
   EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
 
   std::vector<std::string> grobs;
-  ptr->Grob("one", fxl::MakeCopyable([moved = std::move(ptr), &grobs] (StringPtr s) {
-    grobs.push_back(s);
-  }));
+  ptr->Grob("one", fxl::MakeCopyable([moved = std::move(ptr), &grobs](
+                                         StringPtr s) { grobs.push_back(s); }));
   EXPECT_FALSE(ptr.is_bound());
   EXPECT_TRUE(grobs.empty());
 

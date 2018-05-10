@@ -82,7 +82,8 @@ class Registers {
   // GetRegsetAsString(), as described above.
   // WriteRegset() must be called afterwards.
   // Returns true on success.
-  virtual bool SetRegsetFromString(int regset, const fxl::StringView& value) = 0;
+  virtual bool SetRegsetFromString(int regset,
+                                   const fxl::StringView& value) = 0;
 
   // Gets the value of the register numbered |regno|. Returns an empty
   // string in case of an error or if |regno| is invalid. This avoids

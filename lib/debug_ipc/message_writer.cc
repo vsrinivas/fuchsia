@@ -28,15 +28,11 @@ void MessageWriter::WriteBytes(const void* data, uint32_t len) {
   buffer_.insert(buffer_.end(), begin, end);
 }
 
-void MessageWriter::WriteInt32(int32_t i) {
-  WriteBytes(&i, sizeof(int32_t));
-}
+void MessageWriter::WriteInt32(int32_t i) { WriteBytes(&i, sizeof(int32_t)); }
 void MessageWriter::WriteUint32(uint32_t i) {
   WriteBytes(&i, sizeof(uint32_t));
 }
-void MessageWriter::WriteInt64(int64_t i) {
-  WriteBytes(&i, sizeof(int64_t));
-}
+void MessageWriter::WriteInt64(int64_t i) { WriteBytes(&i, sizeof(int64_t)); }
 void MessageWriter::WriteUint64(uint64_t i) {
   WriteBytes(&i, sizeof(uint64_t));
 }
@@ -45,8 +41,7 @@ void MessageWriter::WriteString(const std::string& str) {
   // 32-bit size first, followed by bytes.
   uint32_t size = static_cast<uint32_t>(str.size());
   WriteUint32(size);
-  if (!str.empty())
-    WriteBytes(&str[0], size);
+  if (!str.empty()) WriteBytes(&str[0], size);
 }
 
 void MessageWriter::WriteHeader(MsgHeader::Type type, uint32_t transaction_id) {

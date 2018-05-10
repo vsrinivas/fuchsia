@@ -70,10 +70,8 @@ void FDWaiter::Cancel() {
   }
 }
 
-void FDWaiter::Handler(async_t* async,
-                       async::WaitBase* wait,
-                       zx_status_t status,
-                       const zx_packet_signal_t* signal) {
+void FDWaiter::Handler(async_t* async, async::WaitBase* wait,
+                       zx_status_t status, const zx_packet_signal_t* signal) {
   FXL_DCHECK(io_);
 
   uint32_t events = 0;

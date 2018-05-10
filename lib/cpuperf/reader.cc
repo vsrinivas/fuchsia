@@ -55,8 +55,8 @@ bool Reader::MapBufferVmo(zx_handle_t vmo) {
     }
   }
 
-  auto status = vmar_.map(0, current_vmo_, 0, buffer_size_,
-                          ZX_VM_FLAG_PERM_READ, &addr);
+  auto status =
+      vmar_.map(0, current_vmo_, 0, buffer_size_, ZX_VM_FLAG_PERM_READ, &addr);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Unable to map buffer vmo: " << status;
     return false;
@@ -70,9 +70,8 @@ static bool ReadBufferHeader(const void* buffer, uint32_t cpu,
                              cpuperf_buffer_header_t* hdr) {
   memcpy(hdr, buffer, sizeof(*hdr));
 
-  FXL_LOG(INFO) << "cpu " << cpu
-                << ": buffer version " << hdr->version
-                << ", " << hdr->capture_end << " bytes";
+  FXL_LOG(INFO) << "cpu " << cpu << ": buffer version " << hdr->version << ", "
+                << hdr->capture_end << " bytes";
 
   uint32_t expected_version = CPUPERF_BUFFER_VERSION;
   if (hdr->version != expected_version) {
@@ -98,10 +97,8 @@ bool Reader::ReadNextRecord(uint32_t* cpu, SampleRecord* record) {
     // If this is the first cpu, or if we're done with this cpu's records,
     // move to the next cpu.
     if (next_record_ == nullptr || next_record_ >= capture_end_) {
-      if (next_record_ != nullptr)
-        ++current_cpu_;
-      if (current_cpu_ >= num_cpus_)
-        break;
+      if (next_record_ != nullptr) ++current_cpu_;
+      if (current_cpu_ >= num_cpus_) break;
       ioctl_cpuperf_buffer_handle_req_t req;
       req.descriptor = current_cpu_;
       zx_handle_t handle;
@@ -113,12 +110,10 @@ bool Reader::ReadNextRecord(uint32_t* cpu, SampleRecord* record) {
       }
 
       // Out with the old, in with the new.
-      if (!MapBufferVmo(handle))
-        return false;
+      if (!MapBufferVmo(handle)) return false;
 
       cpuperf_buffer_header_t header;
-      if (!ReadBufferHeader(buffer_start_, current_cpu_, &header))
-        return false;
+      if (!ReadBufferHeader(buffer_start_, current_cpu_, &header)) return false;
       next_record_ = buffer_start_ + sizeof(header);
       capture_end_ = buffer_start_ + header.capture_end;
       ticks_per_second_ = header.ticks_per_second;
@@ -127,12 +122,11 @@ bool Reader::ReadNextRecord(uint32_t* cpu, SampleRecord* record) {
                          << ", end point within header";
         continue;
       }
-      if (next_record_ == capture_end_)
-        continue;
+      if (next_record_ == capture_end_) continue;
     }
 
     const cpuperf_record_header_t* hdr =
-      reinterpret_cast<const cpuperf_record_header_t*>(next_record_);
+        reinterpret_cast<const cpuperf_record_header_t*>(next_record_);
     if (next_record_ + sizeof(*hdr) > capture_end_) {
       FXL_LOG(WARNING) << "Bad trace data for cpu " << current_cpu_
                        << ", no space for final record header";
@@ -168,24 +162,23 @@ bool Reader::ReadNextRecord(uint32_t* cpu, SampleRecord* record) {
     switch (record_type) {
       case CPUPERF_RECORD_TIME:
         record->time =
-          reinterpret_cast<const cpuperf_time_record_t*>(next_record_);
+            reinterpret_cast<const cpuperf_time_record_t*>(next_record_);
         time_ = record->time->time;
         break;
       case CPUPERF_RECORD_TICK:
         record->tick =
-          reinterpret_cast<const cpuperf_tick_record_t*>(next_record_);
+            reinterpret_cast<const cpuperf_tick_record_t*>(next_record_);
         break;
       case CPUPERF_RECORD_COUNT:
         record->count =
-          reinterpret_cast<const cpuperf_count_record_t*>(next_record_);
+            reinterpret_cast<const cpuperf_count_record_t*>(next_record_);
         break;
       case CPUPERF_RECORD_VALUE:
         record->value =
-          reinterpret_cast<const cpuperf_value_record_t*>(next_record_);
+            reinterpret_cast<const cpuperf_value_record_t*>(next_record_);
         break;
       case CPUPERF_RECORD_PC:
-        record->pc =
-          reinterpret_cast<const cpuperf_pc_record_t*>(next_record_);
+        record->pc = reinterpret_cast<const cpuperf_pc_record_t*>(next_record_);
         break;
       default:
         // We shouldn't get here because RecordSize() should have returned

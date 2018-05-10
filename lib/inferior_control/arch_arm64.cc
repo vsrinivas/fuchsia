@@ -58,9 +58,7 @@ bool IsSingleStepException(const zx_exception_context_t& context) {
   return false;
 }
 
-void DumpArch(FILE* out) {
-  FXL_NOTIMPLEMENTED();
-}
+void DumpArch(FILE* out) { FXL_NOTIMPLEMENTED(); }
 
 }  // namespace arch
 }  // namespace debugserver

@@ -36,9 +36,7 @@ class CallbackMessageHandler : public MessageHandler {
   }
 };
 
-TEST(StubController, Trivial) {
-  StubController controller;
-}
+TEST(StubController, Trivial) { StubController controller; }
 
 TEST(StubController, NoResponse) {
   zx::channel h1, h2;

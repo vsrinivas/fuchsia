@@ -62,9 +62,9 @@ struct MemoryBlock {
 
 // What threads to stop when the breakpoint is hit.
 enum class Stop : uint32_t {
-  kAll,  // Stop all threads of all processes attached to the debugger.
+  kAll,      // Stop all threads of all processes attached to the debugger.
   kProcess,  // Stop all threads of the process that hit the breakpoint.
-  kThread  // Stop only the thread that hit the breakpoint.
+  kThread    // Stop only the thread that hit the breakpoint.
 };
 
 struct BreakpointSettings {

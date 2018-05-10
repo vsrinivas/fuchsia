@@ -11,36 +11,25 @@ namespace tracing {
 namespace measure {
 namespace test {
 
-trace::Record::Event DurationBegin(fbl::String name,
-                                   fbl::String category,
+trace::Record::Event DurationBegin(fbl::String name, fbl::String category,
                                    uint64_t timestamp);
 
-trace::Record::Event DurationEnd(fbl::String name,
-                                 fbl::String category,
+trace::Record::Event DurationEnd(fbl::String name, fbl::String category,
                                  uint64_t timestamp);
 
-trace::Record::Event AsyncBegin(uint64_t id,
-                                fbl::String name,
-                                fbl::String category,
-                                uint64_t timestamp);
+trace::Record::Event AsyncBegin(uint64_t id, fbl::String name,
+                                fbl::String category, uint64_t timestamp);
 
-trace::Record::Event AsyncEnd(uint64_t id,
-                              fbl::String name,
-                              fbl::String category,
-                              uint64_t timestamp);
+trace::Record::Event AsyncEnd(uint64_t id, fbl::String name,
+                              fbl::String category, uint64_t timestamp);
 
-trace::Record::Event FlowBegin(uint64_t id,
-                               fbl::String name,
-                               fbl::String category,
-                               uint64_t timestamp);
+trace::Record::Event FlowBegin(uint64_t id, fbl::String name,
+                               fbl::String category, uint64_t timestamp);
 
-trace::Record::Event FlowEnd(uint64_t id,
-                             fbl::String name,
-                             fbl::String category,
-                             uint64_t timestamp);
+trace::Record::Event FlowEnd(uint64_t id, fbl::String name,
+                             fbl::String category, uint64_t timestamp);
 
-trace::Record::Event Instant(fbl::String name,
-                             fbl::String category,
+trace::Record::Event Instant(fbl::String name, fbl::String category,
                              uint64_t timestamp);
 }  // namespace test
 

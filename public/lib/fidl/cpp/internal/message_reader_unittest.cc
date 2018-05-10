@@ -53,17 +53,14 @@ class DestructionCounter {
   DestructionCounter(int* counter) : counter_(counter) {}
 
   ~DestructionCounter() {
-    if (counter_)
-      ++(*counter_);
+    if (counter_) ++(*counter_);
   }
 
  private:
   int* counter_ = nullptr;
 };
 
-TEST(MessageReader, Trivial) {
-  MessageReader reader;
-}
+TEST(MessageReader, Trivial) { MessageReader reader; }
 
 TEST(MessageReader, Bind) {
   MessageReader reader;

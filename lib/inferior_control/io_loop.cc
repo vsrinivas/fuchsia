@@ -9,13 +9,16 @@
 #include <lib/async/cpp/task.h>
 
 #include "garnet/lib/debugger_utils/util.h"
-#include "lib/fxl/logging.h"
 #include "lib/fsl/handles/object_info.h"
+#include "lib/fxl/logging.h"
 
 namespace debugserver {
 
 IOLoop::IOLoop(int fd, Delegate* delegate, async::Loop* origin_loop)
-    : quit_called_(false), fd_(fd), delegate_(delegate), is_running_(false),
+    : quit_called_(false),
+      fd_(fd),
+      delegate_(delegate),
+      is_running_(false),
       origin_loop_(origin_loop) {
   FXL_DCHECK(fd_ >= 0);
   FXL_DCHECK(delegate_);
@@ -58,15 +61,15 @@ void IOLoop::Quit() {
 void IOLoop::PostWriteTask(const fxl::StringView& bytes) {
   // We copy the data into the closure.
   // TODO(armansito): Pass a refptr/weaktpr to |this|?
-  async::PostTask(write_loop_.async(), [ this, bytes = bytes.ToString() ] {
+  async::PostTask(write_loop_.async(), [this, bytes = bytes.ToString()] {
     ssize_t bytes_written = write(fd_, bytes.data(), bytes.size());
 
     // This cast isn't really safe, then again it should be virtually
     // impossible to send a large enough packet to cause an overflow (at
     // least with the GDB Remote protocol).
     if (bytes_written != static_cast<ssize_t>(bytes.size())) {
-      FXL_LOG(ERROR) << "Failed to send bytes" << ", "
-                     << util::ErrnoString(errno);
+      FXL_LOG(ERROR) << "Failed to send bytes"
+                     << ", " << util::ErrnoString(errno);
       ReportError();
       return;
     }
@@ -83,7 +86,8 @@ void IOLoop::ReportError() {
 void IOLoop::ReportDisconnected() {
   // We copy the data into the closure.
   // TODO(armansito): Pass a refptr/weaktpr to |this|?
-  async::PostTask(origin_loop_->async(), [this] { delegate_->OnDisconnected(); });
+  async::PostTask(origin_loop_->async(),
+                  [this] { delegate_->OnDisconnected(); });
 }
 
 }  // namespace debugserver

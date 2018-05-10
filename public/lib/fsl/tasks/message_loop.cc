@@ -45,9 +45,7 @@ MessageLoop::~MessageLoop() {
   g_current = nullptr;
 }
 
-MessageLoop* MessageLoop::GetCurrent() {
-  return g_current;
-}
+MessageLoop* MessageLoop::GetCurrent() { return g_current; }
 
 void MessageLoop::PostTask(fxl::Closure task, fxl::TimePoint target_time) {
   zx_status_t status = async::PostTaskForTime(
@@ -75,28 +73,21 @@ void MessageLoop::Run(bool until_idle) {
   is_running_ = false;
 }
 
-void MessageLoop::Run() {
-  Run(false);
-}
+void MessageLoop::Run() { Run(false); }
 
-void MessageLoop::RunUntilIdle() {
-  Run(true);
-}
+void MessageLoop::RunUntilIdle() { Run(true); }
 
 void MessageLoop::QuitNow() {
   FXL_DCHECK(g_current == this);
 
-  if (is_running_)
-    loop_.Quit();
+  if (is_running_) loop_.Quit();
 }
 
 void MessageLoop::PostQuitTask() {
   task_runner()->PostTask([this]() { QuitNow(); });
 }
 
-bool MessageLoop::RunsTasksOnCurrentThread() {
-  return g_current == this;
-}
+bool MessageLoop::RunsTasksOnCurrentThread() { return g_current == this; }
 
 void MessageLoop::SetAfterTaskCallback(fxl::Closure callback) {
   FXL_DCHECK(g_current == this);
@@ -112,8 +103,7 @@ void MessageLoop::ClearAfterTaskCallback() {
 
 void MessageLoop::Epilogue(async_loop_t*, void* data) {
   auto loop = static_cast<MessageLoop*>(data);
-  if (loop->after_task_callback_)
-    loop->after_task_callback_();
+  if (loop->after_task_callback_) loop->after_task_callback_();
 }
 
 }  // namespace fsl

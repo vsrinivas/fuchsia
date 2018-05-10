@@ -36,21 +36,22 @@ struct CodingTraits<bool> {
   inline static void Encode(Encoder* encoder, bool* value, size_t offset) {
     *encoder->GetPtr<bool>(offset) = *value;
   }
-  inline static void Encode(Encoder* encoder, std::vector<bool>::iterator value, size_t offset) {
+  inline static void Encode(Encoder* encoder, std::vector<bool>::iterator value,
+                            size_t offset) {
     *encoder->GetPtr<bool>(offset) = *value;
   }
   inline static void Decode(Decoder* decoder, bool* value, size_t offset) {
     *value = *decoder->GetPtr<bool>(offset);
   }
-  inline static void Decode(Decoder* decoder, std::vector<bool>::iterator value, size_t offset) {
+  inline static void Decode(Decoder* decoder, std::vector<bool>::iterator value,
+                            size_t offset) {
     *value = *decoder->GetPtr<bool>(offset);
   }
 };
 
 template <typename T>
-struct CodingTraits<
-    T,
-    typename std::enable_if<std::is_base_of<zx::object_base, T>::value>::type> {
+struct CodingTraits<T, typename std::enable_if<
+                           std::is_base_of<zx::object_base, T>::value>::type> {
   static constexpr size_t encoded_size = sizeof(zx_handle_t);
   static void Encode(Encoder* encoder, zx::object_base* value, size_t offset) {
     encoder->EncodeHandle(value, offset);
@@ -63,8 +64,7 @@ struct CodingTraits<
 template <typename T>
 struct CodingTraits<std::unique_ptr<T>> {
   static constexpr size_t encoded_size = sizeof(uintptr_t);
-  static void Encode(Encoder* encoder,
-                     std::unique_ptr<T>* value,
+  static void Encode(Encoder* encoder, std::unique_ptr<T>* value,
                      size_t offset) {
     if (value->get()) {
       *encoder->GetPtr<uintptr_t>(offset) = FIDL_ALLOC_PRESENT;
@@ -74,12 +74,10 @@ struct CodingTraits<std::unique_ptr<T>> {
       *encoder->GetPtr<uintptr_t>(offset) = FIDL_ALLOC_ABSENT;
     }
   }
-  static void Decode(Decoder* decoder,
-                     std::unique_ptr<T>* value,
+  static void Decode(Decoder* decoder, std::unique_ptr<T>* value,
                      size_t offset) {
     uintptr_t ptr = *decoder->GetPtr<uintptr_t>(offset);
-    if (!ptr)
-      return value->reset();
+    if (!ptr) return value->reset();
     *value = std::make_unique<T>();
     CodingTraits<T>::Decode(decoder, value->get(), decoder->GetOffset(ptr));
   }
@@ -92,8 +90,7 @@ template <typename T>
 struct CodingTraits<VectorPtr<T>> {
   static constexpr size_t encoded_size = sizeof(fidl_vector_t);
   static void Encode(Encoder* encoder, VectorPtr<T>* value, size_t offset) {
-    if (value->is_null())
-      return EncodeNullVector(encoder, offset);
+    if (value->is_null()) return EncodeNullVector(encoder, offset);
     size_t count = (*value)->size();
     EncodeVectorPointer(encoder, count, offset);
     size_t stride = CodingTraits<T>::encoded_size;

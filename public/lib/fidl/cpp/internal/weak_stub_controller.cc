@@ -12,18 +12,13 @@ WeakStubController::WeakStubController(StubController* controller)
 
 WeakStubController::~WeakStubController() = default;
 
-void WeakStubController::AddRef() {
-  ++ref_count_;
-}
+void WeakStubController::AddRef() { ++ref_count_; }
 
 void WeakStubController::Release() {
-  if (--ref_count_ == 0)
-    delete this;
+  if (--ref_count_ == 0) delete this;
 }
 
-void WeakStubController::Invalidate() {
-  controller_ = nullptr;
-}
+void WeakStubController::Invalidate() { controller_ = nullptr; }
 
 }  // namespace internal
 }  // namespace fidl

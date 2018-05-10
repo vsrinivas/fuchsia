@@ -10,12 +10,10 @@ namespace debug_ipc {
 class ZirconExceptionWatcher {
  public:
   virtual void OnProcessTerminated(zx_koid_t process_koid) {}
-  virtual void OnThreadStarting(zx_koid_t process_koid,
-                                zx_koid_t thread_koid) {}
-  virtual void OnThreadExiting(zx_koid_t process_koid,
-                               zx_koid_t thread_koid) {}
-  virtual void OnException(zx_koid_t process_koid,
-                           zx_koid_t thread_koid,
+  virtual void OnThreadStarting(zx_koid_t process_koid, zx_koid_t thread_koid) {
+  }
+  virtual void OnThreadExiting(zx_koid_t process_koid, zx_koid_t thread_koid) {}
+  virtual void OnException(zx_koid_t process_koid, zx_koid_t thread_koid,
                            uint32_t type) {}
 };
 

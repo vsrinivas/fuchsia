@@ -48,8 +48,7 @@ class SynchronousProxy {
   //
   // Returns an error if validation, writing, reading, or decoding fails.
   zx_status_t Call(const fidl_type_t* request_type,
-                   const fidl_type_t* response_type,
-                   Message request,
+                   const fidl_type_t* response_type, Message request,
                    Message* response);
 
  private:

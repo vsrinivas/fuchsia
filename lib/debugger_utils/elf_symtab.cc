@@ -14,8 +14,7 @@ SymbolTable::SymbolTable(const std::string& file_name,
     : file_name_(file_name), contents_(contents) {}
 
 SymbolTable::~SymbolTable() {
-  if (symbols_)
-    delete[] symbols_;
+  if (symbols_) delete[] symbols_;
 }
 
 bool SymbolTable::Populate(elf::Reader* elf, unsigned symtab_type) {
@@ -34,8 +33,7 @@ bool SymbolTable::Populate(elf::Reader* elf, unsigned symtab_type) {
   }
 
   const SectionHeader* shdr = elf->GetSectionHeaderByType(symtab_type);
-  if (!shdr)
-    return true;  // empty symbol table
+  if (!shdr) return true;  // empty symbol table
 
   size_t num_sections = elf->GetNumSections();
   size_t string_section = shdr->sh_link;
@@ -87,10 +85,8 @@ bool SymbolTable::Populate(elf::Reader* elf, unsigned symtab_type) {
 static int CompareSymbol(const void* ap, const void* bp) {
   auto a = reinterpret_cast<const Symbol*>(ap);
   auto b = reinterpret_cast<const Symbol*>(bp);
-  if (a->addr >= b->addr && a->addr < b->addr + b->size)
-    return 0;
-  if (b->addr >= a->addr && b->addr < a->addr + a->size)
-    return 0;
+  if (a->addr >= b->addr && a->addr < b->addr + b->size) return 0;
+  if (b->addr >= a->addr && b->addr < a->addr + a->size) return 0;
   return a->addr - b->addr;
 }
 
@@ -113,8 +109,7 @@ void SymbolTable::Dump(FILE* f) const {
   fprintf(f, "contents: %s\n", contents_.c_str());
   for (size_t i = 0; i < num_symbols_; i++) {
     Symbol* s = &symbols_[i];
-    if (s->addr && s->name[0])
-      fprintf(f, "%p %s\n", (void*)s->addr, s->name);
+    if (s->addr && s->name[0]) fprintf(f, "%p %s\n", (void*)s->addr, s->name);
   }
 }
 

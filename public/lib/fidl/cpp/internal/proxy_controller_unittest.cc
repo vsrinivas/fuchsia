@@ -25,9 +25,7 @@ class CallbackMessageHandler : public MessageHandler {
   }
 };
 
-TEST(ProxyController, Trivial) {
-  ProxyController controller;
-}
+TEST(ProxyController, Trivial) { ProxyController controller; }
 
 TEST(ProxyController, Send) {
   zx::channel h1, h2;

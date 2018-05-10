@@ -15,25 +15,17 @@ Thread::Thread()
 
 Thread::~Thread() {}
 
-bool Thread::Run(size_t stack_size) {
-  return thread_.Run(stack_size);
-}
+bool Thread::Run(size_t stack_size) { return thread_.Run(stack_size); }
 
-bool Thread::IsRunning() const {
-  return thread_.IsRunning();
-}
+bool Thread::IsRunning() const { return thread_.IsRunning(); }
 
-fxl::RefPtr<fxl::TaskRunner> Thread::TaskRunner() const {
-  return task_runner_;
-}
+fxl::RefPtr<fxl::TaskRunner> Thread::TaskRunner() const { return task_runner_; }
 
 void Thread::Main(void) {
   fsl::MessageLoop message_loop(task_runner_);
   message_loop.Run();
 }
 
-bool Thread::Join() {
-  return thread_.Join();
-}
+bool Thread::Join() { return thread_.Join(); }
 
 }  // namespace fsl

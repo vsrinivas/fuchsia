@@ -106,12 +106,9 @@ class MessageReader {
   }
 
  private:
-  static void CallHandler(async_t* async,
-                          async_wait_t* wait,
-                          zx_status_t status,
-                          const zx_packet_signal_t* signal);
-  void OnHandleReady(async_t* async,
-                     zx_status_t status,
+  static void CallHandler(async_t* async, async_wait_t* wait,
+                          zx_status_t status, const zx_packet_signal_t* signal);
+  void OnHandleReady(async_t* async, zx_status_t status,
                      const zx_packet_signal_t* signal);
   zx_status_t ReadAndDispatchMessage(MessageBuffer* buffer);
   void NotifyError();

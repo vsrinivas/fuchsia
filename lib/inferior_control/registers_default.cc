@@ -9,17 +9,11 @@
 namespace debugserver {
 namespace arch {
 
-int GetPCRegisterNumber() {
-  return -1;
-}
+int GetPCRegisterNumber() { return -1; }
 
-int GetFPRegisterNumber() {
-  return -1;
-}
+int GetFPRegisterNumber() { return -1; }
 
-int GetSPRegisterNumber() {
-  return -1;
-}
+int GetSPRegisterNumber() { return -1; }
 
 namespace {
 
@@ -66,14 +60,10 @@ std::unique_ptr<Registers> Registers::Create(Thread* thread) {
 }
 
 // static
-std::string Registers::GetUninitializedGeneralRegistersAsString() {
-  return "";
-}
+std::string Registers::GetUninitializedGeneralRegistersAsString() { return ""; }
 
 // static
-size_t Registers::GetRegisterSize() {
-  return 0;
-}
+size_t Registers::GetRegisterSize() { return 0; }
 
 }  // namespace arch
 }  // namespace debugserver

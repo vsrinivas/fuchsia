@@ -15,10 +15,9 @@ class Process;
 class ProcessMemory final : public util::ByteBlock {
  public:
   explicit ProcessMemory(Process* process);
-  bool Read(uintptr_t address, void* out_buffer, size_t length)
-    const override;
-  bool Write(uintptr_t address, const void* buffer, size_t length)
-    const override;
+  bool Read(uintptr_t address, void* out_buffer, size_t length) const override;
+  bool Write(uintptr_t address, const void* buffer,
+             size_t length) const override;
 
  private:
   Process* process_;  // weak

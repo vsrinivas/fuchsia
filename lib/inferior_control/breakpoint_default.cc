@@ -9,29 +9,17 @@
 namespace debugserver {
 namespace arch {
 
-bool SoftwareBreakpoint::Insert() {
-  return false;
-}
+bool SoftwareBreakpoint::Insert() { return false; }
 
-bool SoftwareBreakpoint::Remove() {
-  return false;
-}
+bool SoftwareBreakpoint::Remove() { return false; }
 
-bool SoftwareBreakpoint::IsInserted() const {
-  return false;
-}
+bool SoftwareBreakpoint::IsInserted() const { return false; }
 
-bool SingleStepBreakpoint::Insert() {
-  return false;
-}
+bool SingleStepBreakpoint::Insert() { return false; }
 
-bool SingleStepBreakpoint::Remove() {
-  return false;
-}
+bool SingleStepBreakpoint::Remove() { return false; }
 
-bool SingleStepBreakpoint::IsInserted() const {
-  return false;
-}
+bool SingleStepBreakpoint::IsInserted() const { return false; }
 
 }  // namespace arch
 }  // namespace debugserver

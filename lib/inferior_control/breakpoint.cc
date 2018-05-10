@@ -15,21 +15,18 @@ namespace arch {
 Breakpoint::Breakpoint(uintptr_t address, size_t kind)
     : address_(address), kind_(kind) {}
 
-ProcessBreakpoint::ProcessBreakpoint(uintptr_t address,
-                                     size_t kind,
+ProcessBreakpoint::ProcessBreakpoint(uintptr_t address, size_t kind,
                                      ProcessBreakpointSet* owner)
     : Breakpoint(address, kind), owner_(owner) {
   FXL_DCHECK(owner_);
 }
 
-SoftwareBreakpoint::SoftwareBreakpoint(uintptr_t address,
-                                       size_t kind,
+SoftwareBreakpoint::SoftwareBreakpoint(uintptr_t address, size_t kind,
                                        ProcessBreakpointSet* owner)
     : ProcessBreakpoint(address, kind, owner) {}
 
 SoftwareBreakpoint::~SoftwareBreakpoint() {
-  if (IsInserted())
-    Remove();
+  if (IsInserted()) Remove();
 }
 
 ProcessBreakpointSet::ProcessBreakpointSet(Process* process)
@@ -73,8 +70,7 @@ bool ProcessBreakpointSet::RemoveSoftwareBreakpoint(uintptr_t address) {
   return true;
 }
 
-ThreadBreakpoint::ThreadBreakpoint(uintptr_t address,
-                                   size_t kind,
+ThreadBreakpoint::ThreadBreakpoint(uintptr_t address, size_t kind,
                                    ThreadBreakpointSet* owner)
     : Breakpoint(address, kind), owner_(owner) {
   FXL_DCHECK(owner_);
@@ -85,8 +81,7 @@ SingleStepBreakpoint::SingleStepBreakpoint(uintptr_t address,
     : ThreadBreakpoint(address, 0 /*TODO:type?*/, owner) {}
 
 SingleStepBreakpoint::~SingleStepBreakpoint() {
-  if (IsInserted())
-    Remove();
+  if (IsInserted()) Remove();
 }
 
 ThreadBreakpointSet::ThreadBreakpointSet(Thread* thread) : thread_(thread) {

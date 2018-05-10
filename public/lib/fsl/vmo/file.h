@@ -23,8 +23,7 @@ FXL_EXPORT bool VmoFromFilename(const std::string& filename,
                                 SizedVmo* handle_ptr);
 
 // Make a new shared buffer with the contents of a file.
-FXL_EXPORT bool VmoFromFilenameAt(int dirfd,
-                                  const std::string& filename,
+FXL_EXPORT bool VmoFromFilenameAt(int dirfd, const std::string& filename,
                                   SizedVmo* handle_ptr);
 
 }  // namespace fsl

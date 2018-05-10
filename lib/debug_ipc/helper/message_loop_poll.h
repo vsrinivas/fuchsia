@@ -25,8 +25,7 @@ class MessageLoopPoll : public MessageLoop, public FDWatcher {
   void Init() override;
   void Cleanup() override;
   void Run() override;
-  WatchHandle WatchFD(WatchMode mode, int fd,
-                      FDWatcher* watcher) override;
+  WatchHandle WatchFD(WatchMode mode, int fd, FDWatcher* watcher) override;
 
  private:
   struct WatchInfo;

@@ -88,8 +88,7 @@ bool Thread::IsLive() const {
 
 void Thread::Clear() {
   // We close the handle here so the o/s will release the thread.
-  if (handle_ != ZX_HANDLE_INVALID)
-    zx_handle_close(handle_);
+  if (handle_ != ZX_HANDLE_INVALID) zx_handle_close(handle_);
   handle_ = ZX_HANDLE_INVALID;
 }
 
@@ -172,9 +171,9 @@ void Thread::ResumeForExit() {
     // It shouldn't otherwise fail. Just log the failure, nothing else
     // we can do.
     zx_info_process_t info;
-    auto info_status = zx_object_get_info(process()->handle(),
-                                          ZX_INFO_PROCESS, &info,
-                                          sizeof(info), nullptr, nullptr);
+    auto info_status =
+        zx_object_get_info(process()->handle(), ZX_INFO_PROCESS, &info,
+                           sizeof(info), nullptr, nullptr);
     if (info_status != ZX_OK) {
       FXL_LOG(ERROR) << "error getting process info: "
                      << util::ZxErrorString(info_status);
@@ -204,8 +203,7 @@ bool Thread::Step() {
   }
   zx_vaddr_t pc = registers_->GetPC();
 
-  if (!breakpoints_.InsertSingleStepBreakpoint(pc))
-    return false;
+  if (!breakpoints_.InsertSingleStepBreakpoint(pc)) return false;
 
   // This is printed here before resuming the task so that this is always
   // printed before any subsequent exception report (which is read by another

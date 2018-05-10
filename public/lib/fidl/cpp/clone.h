@@ -21,13 +21,15 @@ namespace fidl {
 namespace internal {
 
 template <typename T>
-inline typename std::enable_if<zx::object_traits<T>::supports_duplication, zx_status_t>::type
+inline typename std::enable_if<zx::object_traits<T>::supports_duplication,
+                               zx_status_t>::type
 CloneKernelObject(const zx::object<T>& object, zx::object<T>* result) {
   return object.duplicate(ZX_RIGHT_SAME_RIGHTS, result);
 }
 
 template <typename T>
-inline typename std::enable_if<!zx::object_traits<T>::supports_duplication, zx_status_t>::type
+inline typename std::enable_if<!zx::object_traits<T>::supports_duplication,
+                               zx_status_t>::type
 CloneKernelObject(const zx::object<T>& object, zx::object<T>* result) {
   return ZX_ERR_ACCESS_DENIED;
 }
@@ -44,8 +46,7 @@ CloneKernelObject(const zx::object<T>& object, zx::object<T>* result) {
 //   zx_status_t Clone(const T& value, T* result);
 template <typename T>
 inline typename std::enable_if<IsPrimitive<T>::value, zx_status_t>::type Clone(
-    const T& value,
-    T* result) {
+    const T& value, T* result) {
   *result = value;
   return ZX_OK;
 }
@@ -71,8 +72,8 @@ inline zx_status_t Clone(const std::unique_ptr<T>& value,
 }
 
 template <typename T>
-inline typename std::enable_if<!IsPrimitive<T>::value, zx_status_t>::type
-Clone(const VectorPtr<T>& value, VectorPtr<T>* result) {
+inline typename std::enable_if<!IsPrimitive<T>::value, zx_status_t>::type Clone(
+    const VectorPtr<T>& value, VectorPtr<T>* result) {
   if (!value) {
     *result = VectorPtr<T>();
     return ZX_OK;
@@ -80,15 +81,14 @@ Clone(const VectorPtr<T>& value, VectorPtr<T>* result) {
   result->resize(value->size());
   for (size_t i = 0; i < value->size(); ++i) {
     zx_status_t status = Clone(value->at(i), &(*result)->at(i));
-    if (status != ZX_OK)
-      return status;
+    if (status != ZX_OK) return status;
   }
   return ZX_OK;
 }
 
 template <typename T>
-inline typename std::enable_if<IsPrimitive<T>::value, zx_status_t>::type
-Clone(const VectorPtr<T>& value, VectorPtr<T>* result) {
+inline typename std::enable_if<IsPrimitive<T>::value, zx_status_t>::type Clone(
+    const VectorPtr<T>& value, VectorPtr<T>* result) {
   if (!value) {
     *result = VectorPtr<T>();
     return ZX_OK;
@@ -101,8 +101,7 @@ template <typename T, size_t N>
 inline zx_status_t Clone(const Array<T, N>& value, Array<T, N>* result) {
   for (size_t i = 0; i < N; ++i) {
     zx_status_t status = Clone(value[i], &result->at(i));
-    if (status != ZX_OK)
-      return status;
+    if (status != ZX_OK) return status;
   }
   return ZX_OK;
 }

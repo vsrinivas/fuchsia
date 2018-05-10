@@ -5,8 +5,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
 #include "garnet/lib/debug_ipc/helper/fd_watcher.h"
+#include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
 #include "gtest/gtest.h"
 
 #if defined(__Fuchsia__)
@@ -31,7 +31,7 @@ TEST(MessageLoop, PostQuit) {
 
 TEST(MessageLoop, WatchPipeFD) {
   // Make a pipe to talk about.
-  int pipefd[2] = { -1, -1 };
+  int pipefd[2] = {-1, -1};
   ASSERT_EQ(0, pipe(pipefd));
   ASSERT_NE(-1, pipefd[0]);
   ASSERT_NE(-1, pipefd[1]);
@@ -47,9 +47,8 @@ TEST(MessageLoop, WatchPipeFD) {
   class ReadableWatcher : public FDWatcher {
    public:
     explicit ReadableWatcher(MessageLoop* loop) : loop_(loop) {}
-    void OnFDReadable(int fd) override {
-      loop_->QuitNow();
-    }
+    void OnFDReadable(int fd) override { loop_->QuitNow(); }
+
    private:
     MessageLoop* loop_;
   };
@@ -67,9 +66,7 @@ TEST(MessageLoop, WatchPipeFD) {
     ASSERT_TRUE(watch_handle.watching());
 
     // Enqueue a task that should cause pipefd[1] to become readable.
-    loop.PostTask([write_fd = pipefd[1]]() {
-      write(write_fd, "Hello", 5);
-    });
+    loop.PostTask([write_fd = pipefd[1]]() { write(write_fd, "Hello", 5); });
 
     // This will quit on success because the OnFDReadable callback called
     // QuitNow, or hang forever on failure.
@@ -90,6 +87,7 @@ TEST(MessageLoop, ZirconSocket) {
     void OnSocketReadable(zx_handle_t socket_handle) override {
       loop_->QuitNow();
     }
+
    private:
     MessageLoop* loop_;
   };
@@ -101,8 +99,8 @@ TEST(MessageLoop, ZirconSocket) {
   {
     ReadableWatcher watcher(&loop);
 
-    MessageLoop::WatchHandle watch_handle =
-        loop.WatchSocket(MessageLoop::WatchMode::kRead, receiver.get(), &watcher);
+    MessageLoop::WatchHandle watch_handle = loop.WatchSocket(
+        MessageLoop::WatchMode::kRead, receiver.get(), &watcher);
     ASSERT_TRUE(watch_handle.watching());
 
     // Enqueue a task that should cause receiver to become readable.

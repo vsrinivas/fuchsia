@@ -39,8 +39,7 @@ ProxyController& ProxyController::operator=(ProxyController&& other) {
 }
 
 zx_status_t ProxyController::Send(
-    const fidl_type_t* type,
-    Message message,
+    const fidl_type_t* type, Message message,
     std::unique_ptr<MessageHandler> response_handler) {
   zx_txid_t txid = 0;
   if (response_handler) {
@@ -60,8 +59,7 @@ zx_status_t ProxyController::Send(
     FIDL_REPORT_CHANNEL_WRITING_ERROR(message, type, status);
     return status;
   }
-  if (response_handler)
-    handlers_.emplace(txid, std::move(response_handler));
+  if (response_handler) handlers_.emplace(txid, std::move(response_handler));
   return ZX_OK;
 }
 
@@ -71,25 +69,20 @@ void ProxyController::Reset() {
 }
 
 zx_status_t ProxyController::OnMessage(Message message) {
-  if (!message.has_header())
-    return ZX_ERR_INVALID_ARGS;
+  if (!message.has_header()) return ZX_ERR_INVALID_ARGS;
   zx_txid_t txid = message.txid();
   if (!txid) {
-    if (!proxy_)
-      return ZX_ERR_NOT_SUPPORTED;
+    if (!proxy_) return ZX_ERR_NOT_SUPPORTED;
     return proxy_->Dispatch_(std::move(message));
   }
   auto it = handlers_.find(txid);
-  if (it == handlers_.end())
-    return ZX_ERR_NOT_FOUND;
+  if (it == handlers_.end()) return ZX_ERR_NOT_FOUND;
   std::unique_ptr<MessageHandler> handler = std::move(it->second);
   handlers_.erase(it);
   return handler->OnMessage(std::move(message));
 }
 
-void ProxyController::OnChannelGone() {
-  ClearPendingHandlers();
-}
+void ProxyController::OnChannelGone() { ClearPendingHandlers(); }
 
 void ProxyController::ClearPendingHandlers() {
   handlers_.clear();

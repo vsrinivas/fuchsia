@@ -33,9 +33,7 @@ ArchiveReader::ArchiveReader(fxl::UniqueFD fd) : fd_(std::move(fd)) {}
 
 ArchiveReader::~ArchiveReader() = default;
 
-bool ArchiveReader::Read() {
-  return ReadIndex() && ReadDirectory();
-}
+bool ArchiveReader::Read() { return ReadIndex() && ReadDirectory(); }
 
 bool ArchiveReader::Extract(fxl::StringView output_dir) const {
   for (const auto& entry : directory_table_) {
@@ -61,8 +59,7 @@ bool ArchiveReader::Extract(fxl::StringView output_dir) const {
 bool ArchiveReader::ExtractFile(fxl::StringView archive_path,
                                 const char* output_path) const {
   DirectoryTableEntry entry;
-  if (!GetDirectoryEntryByPath(archive_path, &entry))
-    return false;
+  if (!GetDirectoryEntryByPath(archive_path, &entry)) return false;
   if (lseek(fd_.get(), entry.data_offset, SEEK_SET) < 0) {
     fprintf(stderr, "error: Failed to seek to offset of file.\n");
     return false;
@@ -76,8 +73,7 @@ bool ArchiveReader::ExtractFile(fxl::StringView archive_path,
 
 bool ArchiveReader::CopyFile(fxl::StringView archive_path, int dst_fd) const {
   DirectoryTableEntry entry;
-  if (!GetDirectoryEntryByPath(archive_path, &entry))
-    return false;
+  if (!GetDirectoryEntryByPath(archive_path, &entry)) return false;
   if (lseek(fd_.get(), entry.data_offset, SEEK_SET) < 0) {
     fprintf(stderr, "error: Failed to seek to offset of file.\n");
     return false;
@@ -91,8 +87,7 @@ bool ArchiveReader::CopyFile(fxl::StringView archive_path, int dst_fd) const {
 
 bool ArchiveReader::GetDirectoryEntryByIndex(uint64_t index,
                                              DirectoryTableEntry* entry) const {
-  if (index >= directory_table_.size())
-    return false;
+  if (index >= directory_table_.size()) return false;
   *entry = directory_table_[index];
   return true;
 }
@@ -117,9 +112,7 @@ bool ArchiveReader::GetDirectoryIndexByPath(fxl::StringView archive_path,
   return true;
 }
 
-fxl::UniqueFD ArchiveReader::TakeFileDescriptor() {
-  return std::move(fd_);
-}
+fxl::UniqueFD ArchiveReader::TakeFileDescriptor() { return std::move(fd_); }
 
 fxl::StringView ArchiveReader::GetPathView(
     const DirectoryTableEntry& entry) const {
@@ -231,8 +224,7 @@ bool ArchiveReader::ReadDirectory() {
 
 const IndexEntry* ArchiveReader::GetIndexEntry(uint64_t type) const {
   for (auto& entry : index_) {
-    if (entry.type == type)
-      return &entry;
+    if (entry.type == type) return &entry;
   }
   return nullptr;
 }

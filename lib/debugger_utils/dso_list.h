@@ -36,8 +36,7 @@ typedef struct dsoinfo {
   char name[];
 } dsoinfo_t;
 
-extern dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb,
-                                 zx_vaddr_t lmap,
+extern dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb, zx_vaddr_t lmap,
                                  const char* name);
 
 extern void dso_free_list(dsoinfo_t*);

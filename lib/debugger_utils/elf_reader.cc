@@ -20,11 +20,16 @@ namespace elf {
 
 const char* ErrorName(Error err) {
   switch (err) {
-  case Error::OK: return "OK";
-  case Error::IO: return "IO";
-  case Error::BADELF: return "BADELF";
-  case Error::NOMEM: return "NOMEM";
-  default: return "UNKNOWN";
+    case Error::OK:
+      return "OK";
+    case Error::IO:
+      return "IO";
+    case Error::BADELF:
+      return "BADELF";
+    case Error::NOMEM:
+      return "NOMEM";
+    default:
+      return "UNKNOWN";
   }
 }
 
@@ -47,12 +52,8 @@ Error Reader::Create(const std::string& file_name,
 }
 
 Reader::Reader(const std::string& file_name,
-               std::shared_ptr<util::ByteBlock> byte_block,
-               uint64_t base)
-  : file_name_(file_name),
-    byte_block_(byte_block),
-    base_(base) {
-}
+               std::shared_ptr<util::ByteBlock> byte_block, uint64_t base)
+    : file_name_(file_name), byte_block_(byte_block), base_(base) {}
 
 Reader::~Reader() {
   FreeSegmentHeaders();
@@ -66,22 +67,17 @@ bool Reader::ReadHeader(const util::ByteBlock& m, uint64_t base, Header* hdr) {
 
 // static
 bool Reader::VerifyHeader(const Header* hdr) {
-  if (memcmp(hdr->e_ident, ELFMAG, SELFMAG))
-    return false;
+  if (memcmp(hdr->e_ident, ELFMAG, SELFMAG)) return false;
   // TODO(dje): Support larger entries.
-  if (hdr->e_ehsize != sizeof(Header))
-    return false;
-  if (hdr->e_phentsize != sizeof(SegmentHeader))
-    return false;
-  if (hdr->e_shentsize != sizeof(SectionHeader))
-    return false;
+  if (hdr->e_ehsize != sizeof(Header)) return false;
+  if (hdr->e_phentsize != sizeof(SegmentHeader)) return false;
+  if (hdr->e_shentsize != sizeof(SectionHeader)) return false;
   // TODO(dje): Could add more checks.
   return true;
 }
 
 Error Reader::ReadSegmentHeaders() {
-  if (segment_headers_)
-    return Error::OK;
+  if (segment_headers_) return Error::OK;
   size_t num_segments = GetNumSegments();
   auto seg_hdrs = new SegmentHeader[num_segments];
   if (!byte_block_->Read(base_ + header_.e_phoff, seg_hdrs,
@@ -94,8 +90,7 @@ Error Reader::ReadSegmentHeaders() {
 }
 
 void Reader::FreeSegmentHeaders() {
-  if (segment_headers_)
-    delete[] segment_headers_;
+  if (segment_headers_) delete[] segment_headers_;
   segment_headers_ = nullptr;
 }
 
@@ -106,8 +101,7 @@ const SegmentHeader& Reader::GetSegmentHeader(size_t segment_number) {
 }
 
 Error Reader::ReadSectionHeaders() {
-  if (section_headers_)
-    return Error::OK;
+  if (section_headers_) return Error::OK;
   size_t num_sections = GetNumSections();
   auto scn_hdrs = new SectionHeader[num_sections];
   if (!byte_block_->Read(base_ + header_.e_shoff, scn_hdrs,
@@ -120,8 +114,7 @@ Error Reader::ReadSectionHeaders() {
 }
 
 void Reader::FreeSectionHeaders() {
-  if (section_headers_)
-    delete[] section_headers_;
+  if (section_headers_) delete[] section_headers_;
   section_headers_ = nullptr;
 }
 
@@ -135,15 +128,13 @@ const SectionHeader* Reader::GetSectionHeaderByType(unsigned type) {
   size_t num_sections = GetNumSections();
   for (size_t i = 0; i < num_sections; ++i) {
     const SectionHeader& shdr = GetSectionHeader(i);
-    if (shdr.sh_type == type)
-      return &shdr;
+    if (shdr.sh_type == type) return &shdr;
   }
   return nullptr;
 }
 
 Error Reader::GetSectionContents(
-    const SectionHeader& sh,
-    std::unique_ptr<SectionContents>* out_contents) {
+    const SectionHeader& sh, std::unique_ptr<SectionContents>* out_contents) {
   void* buffer = malloc(sh.sh_size);
   if (!buffer) {
     FXL_LOG(ERROR) << "OOM getting space for section contents";
@@ -167,15 +158,13 @@ Error Reader::ReadBuildId(char* buf, size_t buf_size) {
   FXL_DCHECK(buf_size >= kMaxBuildIdSize * 2 + 1);
 
   Error rc = ReadSegmentHeaders();
-  if (rc != Error::OK)
-    return rc;
+  if (rc != Error::OK) return rc;
 
   size_t num_segments = GetNumSegments();
 
   for (size_t i = 0; i < num_segments; ++i) {
     const auto& phdr = GetSegmentHeader(i);
-    if (phdr.p_type != PT_NOTE)
-      continue;
+    if (phdr.p_type != PT_NOTE) continue;
 
     struct {
       Elf32_Nhdr hdr;
@@ -218,21 +207,19 @@ Error Reader::ReadBuildId(char* buf, size_t buf_size) {
 }
 
 SectionContents::SectionContents(const SectionHeader& header, void* contents)
-  : header_(header), contents_(contents) {
+    : header_(header), contents_(contents) {
   FXL_DCHECK(contents);
 }
 
-SectionContents::~SectionContents() {
-  free(contents_);
-}
+SectionContents::~SectionContents() { free(contents_); }
 
 size_t SectionContents::GetNumEntries() const {
   switch (header_.sh_type) {
-  case SHT_SYMTAB:
-  case SHT_DYNSYM:
-    break;
-  default:
-    return 0;
+    case SHT_SYMTAB:
+    case SHT_DYNSYM:
+      break;
+    default:
+      return 0;
   }
 
   FXL_DCHECK(header_.sh_entsize != 0);

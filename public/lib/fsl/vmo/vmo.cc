@@ -40,8 +40,7 @@ bool VmoFromContainer(const Container& container, SizedVmo* sized_vmo_ptr) {
 }
 
 template <typename Container>
-bool ContainerFromVmo(const zx::vmo& buffer,
-                      uint64_t num_bytes,
+bool ContainerFromVmo(const zx::vmo& buffer, uint64_t num_bytes,
                       Container* container_ptr) {
   FXL_CHECK(container_ptr);
 

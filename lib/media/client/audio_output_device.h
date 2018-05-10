@@ -19,10 +19,8 @@ class AudioOutputManager;
 
 class AudioOutputDevice {
  public:
-  AudioOutputDevice(const char* device_id,
-                    const char* device_name,
-                    int preferred_sample_rate,
-                    int preferred_num_channels,
+  AudioOutputDevice(const char* device_id, const char* device_name,
+                    int preferred_sample_rate, int preferred_num_channels,
                     int preferred_num_frames_in_buffer);
   ~AudioOutputDevice();
 

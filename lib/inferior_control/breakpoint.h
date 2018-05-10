@@ -51,8 +51,7 @@ class Breakpoint {
 
 class ProcessBreakpoint : public Breakpoint {
  protected:
-  ProcessBreakpoint(uintptr_t address,
-                    size_t kind,
+  ProcessBreakpoint(uintptr_t address, size_t kind,
                     ProcessBreakpointSet* owner);
   ProcessBreakpointSet* owner() const { return owner_; }
 
@@ -67,8 +66,7 @@ class ProcessBreakpoint : public Breakpoint {
 // Represents a software breakpoint.
 class SoftwareBreakpoint final : public ProcessBreakpoint {
  public:
-  SoftwareBreakpoint(uintptr_t address,
-                     size_t kind,
+  SoftwareBreakpoint(uintptr_t address, size_t kind,
                      ProcessBreakpointSet* owner);
   ~SoftwareBreakpoint() override;
 

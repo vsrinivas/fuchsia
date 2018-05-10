@@ -26,8 +26,7 @@ class BuildIdTable {
   const BuildId* LookupBuildId(const std::string& bid);
 
  private:
-  void AddBuildId(const std::string& file_dir,
-                  const std::string& build_id,
+  void AddBuildId(const std::string& file_dir, const std::string& build_id,
                   const std::string& path);
 
   std::vector<BuildId> build_ids_;

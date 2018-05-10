@@ -14,7 +14,7 @@ namespace {
 // TODO(dje): This isn't needed until we support debugserver-injected
 // breakpoints.
 // The arm64 s/w breakpoint instruction.
-//const uint32_t kBreakpoint = 0xd4200000;
+// const uint32_t kBreakpoint = 0xd4200000;
 
 }  // namespace
 

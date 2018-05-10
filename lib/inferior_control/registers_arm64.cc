@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "registers.h"
 #include "registers_arm64.h"
+#include "registers.h"
 
 #include <cinttypes>
 #include <cstring>
@@ -23,17 +23,11 @@
 namespace debugserver {
 namespace arch {
 
-int GetPCRegisterNumber() {
-  return static_cast<int>(Arm64Register::PC);
-}
+int GetPCRegisterNumber() { return static_cast<int>(Arm64Register::PC); }
 
-int GetFPRegisterNumber() {
-  return static_cast<int>(Arm64Register::FP);
-}
+int GetFPRegisterNumber() { return static_cast<int>(Arm64Register::FP); }
 
-int GetSPRegisterNumber() {
-  return static_cast<int>(Arm64Register::SP);
-}
+int GetSPRegisterNumber() { return static_cast<int>(Arm64Register::SP); }
 
 namespace {
 
@@ -152,7 +146,6 @@ class RegistersArm64 final : public Registers {
   }
 
  private:
-
   void TranslateToRsp(RspArm64GeneralRegs* rsp_gregs) {
     static_assert(arraysize(rsp_gregs->r) == arraysize(gregs_.r),
                   "gregs_.r size");
@@ -189,9 +182,7 @@ std::string Registers::GetUninitializedGeneralRegistersAsString() {
 }
 
 // static
-size_t Registers::GetRegisterSize() {
-  return sizeof(uint64_t);
-}
+size_t Registers::GetRegisterSize() { return sizeof(uint64_t); }
 
 }  // namespace arch
 }  // namespace debugserver

@@ -10,23 +10,14 @@
 namespace fidl {
 namespace internal {
 
-void ReportEncodingError(const Message& message,
-                         const fidl_type_t* type,
-                         const char* error_msg,
-                         const char* file,
-                         int line);
+void ReportEncodingError(const Message& message, const fidl_type_t* type,
+                         const char* error_msg, const char* file, int line);
 
-void ReportDecodingError(const Message& message,
-                         const fidl_type_t* type,
-                         const char* error_msg,
-                         const char* file,
-                         int line);
+void ReportDecodingError(const Message& message, const fidl_type_t* type,
+                         const char* error_msg, const char* file, int line);
 
-void ReportChannelWritingError(const Message& message,
-                               const fidl_type_t* type,
-                               zx_status_t status,
-                               const char* file,
-                               int line);
+void ReportChannelWritingError(const Message& message, const fidl_type_t* type,
+                               zx_status_t status, const char* file, int line);
 
 #define FIDL_REPORT_ENCODING_ERROR(message, type, error_msg)            \
   ::fidl::internal::ReportEncodingError((message), (type), (error_msg), \
@@ -38,7 +29,7 @@ void ReportChannelWritingError(const Message& message,
 
 #define FIDL_REPORT_CHANNEL_WRITING_ERROR(message, type, status)           \
   ::fidl::internal::ReportChannelWritingError((message), (type), (status), \
-                                        __FILE__, __LINE__)
+                                              __FILE__, __LINE__)
 
 }  // namespace internal
 }  // namespace fidl

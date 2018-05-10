@@ -16,11 +16,11 @@ namespace debugserver {
 namespace ktrace {
 
 union KtraceRecord {
-    ktrace_header_t hdr;
-    ktrace_rec_32b_t r_16B;
-    ktrace_rec_32b_t r_32B;
-    ktrace_rec_name_t r_NAME;
-    uint8_t raw[256];
+  ktrace_header_t hdr;
+  ktrace_rec_32b_t r_16B;
+  ktrace_rec_32b_t r_32B;
+  ktrace_rec_name_t r_NAME;
+  uint8_t raw[256];
 };
 
 // The type of the function to pass to ReadFile.

@@ -23,15 +23,13 @@ class ByteBlock {
   // |address| into |out_buffer|. |out_buffer| must be at least as large as
   // |length|.
   // Returns true on success or false on failure.
-  virtual bool Read(uintptr_t address,
-                    void* out_buffer,
+  virtual bool Read(uintptr_t address, void* out_buffer,
                     size_t length) const = 0;
 
   // Writes the block of memory of length |length| bytes from |buffer| to the
   // memory address |address| of this process.
   // Returns true on success or false on failure.
-  virtual bool Write(uintptr_t address,
-                     const void* buffer,
+  virtual bool Write(uintptr_t address, const void* buffer,
                      size_t length) const = 0;
 
  protected:

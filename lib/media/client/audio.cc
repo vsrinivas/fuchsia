@@ -30,8 +30,7 @@ void fuchsia_audio_manager_free(fuchsia_audio_manager* manager) {
 }
 
 int fuchsia_audio_manager_get_output_devices(
-    fuchsia_audio_manager* manager,
-    fuchsia_audio_device_description* buffer,
+    fuchsia_audio_manager* manager, fuchsia_audio_device_description* buffer,
     int num_device_descriptions) {
   FXL_DCHECK(manager);
 
@@ -41,8 +40,7 @@ int fuchsia_audio_manager_get_output_devices(
 }
 
 int fuchsia_audio_manager_get_output_device_default_parameters(
-    fuchsia_audio_manager* manager,
-    char* device_id,
+    fuchsia_audio_manager* manager, char* device_id,
     fuchsia_audio_parameters* stream_params) {
   FXL_DCHECK(manager);
 
@@ -53,8 +51,7 @@ int fuchsia_audio_manager_get_output_device_default_parameters(
 }
 
 int fuchsia_audio_manager_create_output_stream(
-    fuchsia_audio_manager* manager,
-    char* device_id,
+    fuchsia_audio_manager* manager, char* device_id,
     fuchsia_audio_parameters* stream_params,
     fuchsia_audio_output_stream** stream_out) {
   FXL_DCHECK(manager);
@@ -82,8 +79,7 @@ int fuchsia_audio_output_stream_free(fuchsia_audio_output_stream* stream) {
 }
 
 int fuchsia_audio_output_stream_get_min_delay(
-    fuchsia_audio_output_stream* stream,
-    zx_duration_t* delay_nsec_out) {
+    fuchsia_audio_output_stream* stream, zx_duration_t* delay_nsec_out) {
   FXL_DCHECK(stream);
 
   auto stream_obj = reinterpret_cast<media_client::AudioOutputStream*>(stream);
@@ -98,8 +94,7 @@ int fuchsia_audio_output_stream_set_gain(fuchsia_audio_output_stream* stream,
 }
 
 int fuchsia_audio_output_stream_write(fuchsia_audio_output_stream* stream,
-                                      float* sample_buffer,
-                                      int num_samples,
+                                      float* sample_buffer, int num_samples,
                                       zx_time_t pres_time) {
   FXL_DCHECK(stream);
 

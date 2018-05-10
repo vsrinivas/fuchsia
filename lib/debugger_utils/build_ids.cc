@@ -33,8 +33,7 @@ bool BuildIdTable::ReadIdsFile(const std::string& file) {
 
   for (; getline(&line, &linelen, f) > 0; ++lineno) {
     size_t n = strlen(line);
-    if (n > 0 && line[n - 1] == '\n')
-      line[n - 1] = '\0';
+    if (n > 0 && line[n - 1] == '\n') line[n - 1] = '\0';
     FXL_VLOG(2) << fxl::StringPrintf("read %d: %s", lineno, line);
 
 #define MAX_LINE_LEN 1024
@@ -43,10 +42,8 @@ bool BuildIdTable::ReadIdsFile(const std::string& file) {
       continue;
     }
 
-    if (!strcmp(line, "\n"))
-      continue;
-    if (line[0] == '#')
-      continue;
+    if (!strcmp(line, "\n")) continue;
+    if (line[0] == '#') continue;
 
     char build_id[linelen];
     char path[linelen];
@@ -85,8 +82,7 @@ void BuildIdTable::AddBuildId(const std::string& file_dir,
 
 const BuildId* BuildIdTable::LookupBuildId(const std::string& bid) {
   for (const auto& b : build_ids_) {
-    if (bid == b.build_id)
-      return &b;
+    if (bid == b.build_id) return &b;
   }
 
   return nullptr;

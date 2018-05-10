@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <atomic>
 #include <array>
+#include <atomic>
 #include <thread>
 
 #include <lib/async-loop/cpp/loop.h>

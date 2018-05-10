@@ -13,7 +13,7 @@ namespace debug_ipc {
 
 namespace {
 
-template<typename RequestType>
+template <typename RequestType>
 bool SerializeDeserializeRequest(const RequestType& in, RequestType* out) {
   MessageWriter writer;
   uint32_t in_transaction_id = 32;
@@ -23,13 +23,12 @@ bool SerializeDeserializeRequest(const RequestType& in, RequestType* out) {
 
   MessageReader reader(std::move(serialized));
   uint32_t out_transaction_id = 0;
-  if (!ReadRequest(&reader, out, &out_transaction_id))
-    return false;
+  if (!ReadRequest(&reader, out, &out_transaction_id)) return false;
   EXPECT_EQ(in_transaction_id, out_transaction_id);
   return true;
 }
 
-template<typename ReplyType>
+template <typename ReplyType>
 bool SerializeDeserializeReply(const ReplyType& in, ReplyType* out) {
   MessageWriter writer;
   uint32_t in_transaction_id = 32;
@@ -39,16 +38,14 @@ bool SerializeDeserializeReply(const ReplyType& in, ReplyType* out) {
 
   MessageReader reader(std::move(serialized));
   uint32_t out_transaction_id = 0;
-  if (!ReadReply(&reader, out, &out_transaction_id))
-    return false;
+  if (!ReadReply(&reader, out, &out_transaction_id)) return false;
   EXPECT_EQ(in_transaction_id, out_transaction_id);
   return true;
 }
 
-template<typename NotificationType>
+template <typename NotificationType>
 bool SerializeDeserializeNotification(
-    const NotificationType& in,
-    NotificationType* out,
+    const NotificationType& in, NotificationType* out,
     void (*write_fn)(const NotificationType&, MessageWriter*),
     bool (*read_fn)(MessageReader*, NotificationType*)) {
   MessageWriter writer;

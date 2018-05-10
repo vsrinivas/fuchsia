@@ -27,10 +27,8 @@ static bool IsSampleMode(const cpuperf_config_t& config) {
   return false;
 }
 
-static uint32_t GetBufferSize(bool sample_mode,
-                              uint32_t requested_size_in_mb) {
-  if (sample_mode)
-    return requested_size_in_mb * 1024 * 1024;
+static uint32_t GetBufferSize(bool sample_mode, uint32_t requested_size_in_mb) {
+  if (sample_mode) return requested_size_in_mb * 1024 * 1024;
   // For "counting mode" we just need something large enough to hold
   // the header + records for each event.
   unsigned num_events = CPUPERF_MAX_EVENTS;
@@ -54,8 +52,7 @@ Controller::Controller(uint32_t buffer_size_in_mb,
   fd_.reset(fd);
 
   Alloc();
-  if (!alloc_)
-    fd_.reset();
+  if (!alloc_) fd_.reset();
 }
 
 Controller::~Controller() {
@@ -63,9 +60,7 @@ Controller::~Controller() {
   Free();
 }
 
-bool Controller::is_valid() const {
-  return fd_.is_valid() && alloc_;
-}
+bool Controller::is_valid() const { return fd_.is_valid() && alloc_; }
 
 bool Controller::Start() {
   if (!is_valid()) {
@@ -97,7 +92,7 @@ void Controller::Stop() {
   if (status != ZX_OK) {
     // This can get called while tracing is currently stopped.
     if (!started_ && status == ZX_ERR_BAD_STATE) {
-      ; // dont report an error in this case
+      ;  // dont report an error in this case
     } else {
       FXL_LOG(ERROR) << "ioctl_cpuperf_stop failed: status=" << status;
     }
@@ -138,7 +133,7 @@ void Controller::Free() {
   if (status != ZX_OK) {
     // This can get called while tracing is currently stopped.
     if (!started_ && status == ZX_ERR_BAD_STATE) {
-      ; // dont report an error in this case
+      ;  // dont report an error in this case
     } else {
       FXL_LOG(ERROR) << "ioctl_cpuperf_free_trace failed: status=" << status;
     }

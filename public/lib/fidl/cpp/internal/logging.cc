@@ -11,11 +11,8 @@
 namespace fidl {
 namespace internal {
 
-void ReportEncodingError(const Message& message,
-                         const fidl_type_t* type,
-                         const char* error_msg,
-                         const char* file,
-                         int line) {
+void ReportEncodingError(const Message& message, const fidl_type_t* type,
+                         const char* error_msg, const char* file, int line) {
   char type_name[1024];
   size_t type_name_length =
       fidl_format_type_name(type, type_name, sizeof(type_name));
@@ -26,11 +23,8 @@ void ReportEncodingError(const Message& message,
           message.bytes().actual(), message.handles().actual());
 }
 
-void ReportDecodingError(const Message& message,
-                         const fidl_type_t* type,
-                         const char* error_msg,
-                         const char* file,
-                         int line) {
+void ReportDecodingError(const Message& message, const fidl_type_t* type,
+                         const char* error_msg, const char* file, int line) {
   char type_name[1024];
   size_t type_name_length =
       fidl_format_type_name(type, type_name, sizeof(type_name));
@@ -41,11 +35,8 @@ void ReportDecodingError(const Message& message,
           message.bytes().actual(), message.handles().actual());
 }
 
-void ReportChannelWritingError(const Message& message,
-                               const fidl_type_t* type,
-                               zx_status_t status,
-                               const char* file,
-                               int line) {
+void ReportChannelWritingError(const Message& message, const fidl_type_t* type,
+                               zx_status_t status, const char* file, int line) {
   char type_name[1024];
   size_t type_name_length =
       fidl_format_type_name(type, type_name, sizeof(type_name));

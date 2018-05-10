@@ -9,23 +9,21 @@
 VkCubeView::VkCubeView(
     views_v1::ViewManagerPtr view_manager,
     fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
-    std::function<void(float width,
-                       float height,
-                       fidl::InterfaceHandle<images::ImagePipe>
-                           interface_request)> resize_callback)
-    : BaseView(std::move(view_manager),
-               std::move(view_owner_request),
+    std::function<
+        void(float width, float height,
+             fidl::InterfaceHandle<images::ImagePipe> interface_request)>
+        resize_callback)
+    : BaseView(std::move(view_manager), std::move(view_owner_request),
                "vkcube"),
       pane_node_(session()),
       resize_callback_(resize_callback) {}
 
 VkCubeView::~VkCubeView() {}
 
-void VkCubeView::OnSceneInvalidated(images::PresentationInfo presentation_info) {
-  if (!has_metrics())
-    return;
-  if (size_ == logical_size() && physical_size_ == physical_size())
-    return;
+void VkCubeView::OnSceneInvalidated(
+    images::PresentationInfo presentation_info) {
+  if (!has_metrics()) return;
+  if (size_ == logical_size() && physical_size_ == physical_size()) return;
 
   size_ = logical_size();
   physical_size_ = physical_size();

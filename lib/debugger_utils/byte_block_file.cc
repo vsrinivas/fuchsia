@@ -4,8 +4,8 @@
 
 #include "byte_block_file.h"
 
-#include <cinttypes>
 #include <unistd.h>
+#include <cinttypes>
 
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -15,14 +15,9 @@
 namespace debugserver {
 namespace util {
 
-FileByteBlock::FileByteBlock(int fd)
-    : fd_(fd) {
-  FXL_DCHECK(fd >= 0);
-}
+FileByteBlock::FileByteBlock(int fd) : fd_(fd) { FXL_DCHECK(fd >= 0); }
 
-FileByteBlock::~FileByteBlock() {
-  close(fd_);
-}
+FileByteBlock::~FileByteBlock() { close(fd_); }
 
 bool FileByteBlock::Read(uintptr_t address, void* out_buffer,
                          size_t length) const {
@@ -30,22 +25,22 @@ bool FileByteBlock::Read(uintptr_t address, void* out_buffer,
 
   off_t where = lseek(fd_, address, SEEK_SET);
   if (where != static_cast<off_t>(address)) {
-    FXL_LOG(ERROR) << fxl::StringPrintf("lseek to 0x%" PRIxPTR, address)
-                   << ", " << util::ErrnoString(errno);
+    FXL_LOG(ERROR) << fxl::StringPrintf("lseek to 0x%" PRIxPTR, address) << ", "
+                   << util::ErrnoString(errno);
     return false;
   }
 
   ssize_t bytes_read = read(fd_, out_buffer, length);
   if (bytes_read < 0) {
-    FXL_LOG(ERROR) <<
-      fxl::StringPrintf("Failed to read memory at addr: 0x%" PRIxPTR, address)
+    FXL_LOG(ERROR) << fxl::StringPrintf(
+                          "Failed to read memory at addr: 0x%" PRIxPTR, address)
                    << ", " << util::ErrnoString(errno);
     return false;
   }
 
   if (length != static_cast<size_t>(bytes_read)) {
-    FXL_LOG(ERROR) << fxl::StringPrintf("Short read, got %zu bytes, expected %zu",
-                                        bytes_read, length);
+    FXL_LOG(ERROR) << fxl::StringPrintf(
+        "Short read, got %zu bytes, expected %zu", bytes_read, length);
     return false;
   }
 
@@ -65,22 +60,22 @@ bool FileByteBlock::Write(uintptr_t address, const void* buffer,
 
   off_t where = lseek(fd_, address, SEEK_SET);
   if (where != static_cast<off_t>(address)) {
-    FXL_LOG(ERROR) << fxl::StringPrintf("lseek to 0x%" PRIxPTR, address)
-                   << ", " << util::ErrnoString(errno);
+    FXL_LOG(ERROR) << fxl::StringPrintf("lseek to 0x%" PRIxPTR, address) << ", "
+                   << util::ErrnoString(errno);
     return false;
   }
 
   ssize_t bytes_written = write(fd_, buffer, length);
   if (bytes_written < 0) {
-    FXL_LOG(ERROR) <<
-      fxl::StringPrintf("Failed to read memory at addr: 0x%" PRIxPTR, address)
+    FXL_LOG(ERROR) << fxl::StringPrintf(
+                          "Failed to read memory at addr: 0x%" PRIxPTR, address)
                    << ", " << util::ErrnoString(errno);
     return false;
   }
 
   if (length != static_cast<size_t>(bytes_written)) {
-    FXL_LOG(ERROR) << fxl::StringPrintf("Short write, wrote %zu bytes, expected %zu",
-                                        bytes_written, length);
+    FXL_LOG(ERROR) << fxl::StringPrintf(
+        "Short write, wrote %zu bytes, expected %zu", bytes_written, length);
     return false;
   }
 

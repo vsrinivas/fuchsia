@@ -26,11 +26,7 @@ class FDWatcher;
 // host in addition to a Zircon target.
 class MessageLoop {
  public:
-  enum class WatchMode {
-    kRead,
-    kWrite,
-    kReadWrite
-  };
+  enum class WatchMode { kRead, kWrite, kReadWrite };
 
   class WatchHandle;
 
@@ -73,8 +69,7 @@ class MessageLoop {
   //
   // You can only watch a handle once. Note that stdin/stdout/stderr can be
   // the same underlying OS handle, so the caller can only watch one of them.
-  virtual WatchHandle WatchFD(WatchMode mode, int fd,
-                              FDWatcher* watcher) = 0;
+  virtual WatchHandle WatchFD(WatchMode mode, int fd, FDWatcher* watcher) = 0;
 
  protected:
   // Used by WatchHandle to unregister a watch. Can be called from any thread

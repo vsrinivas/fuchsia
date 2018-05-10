@@ -18,11 +18,7 @@ namespace arch {
 namespace x86 {
 
 // cpu vendors
-enum x86_vendor_list {
-  X86_VENDOR_UNKNOWN,
-  X86_VENDOR_INTEL,
-  X86_VENDOR_AMD
-};
+enum x86_vendor_list { X86_VENDOR_UNKNOWN, X86_VENDOR_INTEL, X86_VENDOR_AMD };
 
 struct x86_model_info {
   uint8_t processor_type;
@@ -36,7 +32,7 @@ struct x86_model_info {
 
 const x86_model_info* x86_get_model();
 
-#define MAX_SUPPORTED_CPUID     (0x17)
+#define MAX_SUPPORTED_CPUID (0x17)
 #define MAX_SUPPORTED_CPUID_EXT (0x80000008)
 
 struct cpuid_leaf {
@@ -69,44 +65,45 @@ const cpuid_leaf* x86_get_cpuid_leaf(enum x86_cpuid_leaf_num leaf);
 
 // Retrieve the specified subleaf.  This function is not cached.
 // Returns false if leaf num is invalid.
-bool x86_get_cpuid_subleaf(enum x86_cpuid_leaf_num, uint32_t,
-                           cpuid_leaf*);
+bool x86_get_cpuid_subleaf(enum x86_cpuid_leaf_num, uint32_t, cpuid_leaf*);
 
 bool x86_feature_test(x86_cpuid_bit bit);
 
 // TODO(dje): Switch to iostreams later, maybe.
 void x86_feature_debug(FILE* out);
 
-#define X86_CPUID_BIT(leaf, word, bit) \
-  (::debugserver::arch::x86::x86_cpuid_bit){(::debugserver::arch::x86::x86_cpuid_leaf_num)(leaf), (word), (bit)}
+#define X86_CPUID_BIT(leaf, word, bit)                                  \
+  (::debugserver::arch::x86::x86_cpuid_bit) {                           \
+    (::debugserver::arch::x86::x86_cpuid_leaf_num)(leaf), (word), (bit) \
+  }
 
 // add feature bits to test here
-#define X86_FEATURE_SSE3         X86_CPUID_BIT(0x1, 2, 0)
-#define X86_FEATURE_SSSE3        X86_CPUID_BIT(0x1, 2, 9)
-#define X86_FEATURE_SSE4_1       X86_CPUID_BIT(0x1, 2, 19)
-#define X86_FEATURE_SSE4_2       X86_CPUID_BIT(0x1, 2, 20)
+#define X86_FEATURE_SSE3 X86_CPUID_BIT(0x1, 2, 0)
+#define X86_FEATURE_SSSE3 X86_CPUID_BIT(0x1, 2, 9)
+#define X86_FEATURE_SSE4_1 X86_CPUID_BIT(0x1, 2, 19)
+#define X86_FEATURE_SSE4_2 X86_CPUID_BIT(0x1, 2, 20)
 #define X86_FEATURE_TSC_DEADLINE X86_CPUID_BIT(0x1, 2, 24)
-#define X86_FEATURE_AESNI        X86_CPUID_BIT(0x1, 2, 25)
-#define X86_FEATURE_XSAVE        X86_CPUID_BIT(0x1, 2, 26)
-#define X86_FEATURE_AVX          X86_CPUID_BIT(0x1, 2, 28)
-#define X86_FEATURE_RDRAND       X86_CPUID_BIT(0x1, 2, 30)
-#define X86_FEATURE_FPU          X86_CPUID_BIT(0x1, 3, 0)
-#define X86_FEATURE_MMX          X86_CPUID_BIT(0x1, 3, 23)
-#define X86_FEATURE_FXSR         X86_CPUID_BIT(0x1, 3, 24)
-#define X86_FEATURE_SSE          X86_CPUID_BIT(0x1, 3, 25)
-#define X86_FEATURE_SSE2         X86_CPUID_BIT(0x1, 3, 26)
-#define X86_FEATURE_TSC_ADJUST   X86_CPUID_BIT(0x7, 1, 1)
-#define X86_FEATURE_AVX2         X86_CPUID_BIT(0x7, 1, 5)
-#define X86_FEATURE_SMEP         X86_CPUID_BIT(0x7, 1, 7)
-#define X86_FEATURE_RDSEED       X86_CPUID_BIT(0x7, 1, 18)
-#define X86_FEATURE_SMAP         X86_CPUID_BIT(0x7, 1, 20)
-#define X86_FEATURE_PT           X86_CPUID_BIT(0x7, 1, 25)
-#define X86_FEATURE_PKU          X86_CPUID_BIT(0x7, 2, 3)
-#define X86_FEATURE_SYSCALL      X86_CPUID_BIT(0x80000001, 3, 11)
-#define X86_FEATURE_NX           X86_CPUID_BIT(0x80000001, 3, 20)
-#define X86_FEATURE_HUGE_PAGE    X86_CPUID_BIT(0x80000001, 3, 26)
-#define X86_FEATURE_RDTSCP       X86_CPUID_BIT(0x80000001, 3, 27)
-#define X86_FEATURE_INVAR_TSC    X86_CPUID_BIT(0x80000007, 3, 8)
+#define X86_FEATURE_AESNI X86_CPUID_BIT(0x1, 2, 25)
+#define X86_FEATURE_XSAVE X86_CPUID_BIT(0x1, 2, 26)
+#define X86_FEATURE_AVX X86_CPUID_BIT(0x1, 2, 28)
+#define X86_FEATURE_RDRAND X86_CPUID_BIT(0x1, 2, 30)
+#define X86_FEATURE_FPU X86_CPUID_BIT(0x1, 3, 0)
+#define X86_FEATURE_MMX X86_CPUID_BIT(0x1, 3, 23)
+#define X86_FEATURE_FXSR X86_CPUID_BIT(0x1, 3, 24)
+#define X86_FEATURE_SSE X86_CPUID_BIT(0x1, 3, 25)
+#define X86_FEATURE_SSE2 X86_CPUID_BIT(0x1, 3, 26)
+#define X86_FEATURE_TSC_ADJUST X86_CPUID_BIT(0x7, 1, 1)
+#define X86_FEATURE_AVX2 X86_CPUID_BIT(0x7, 1, 5)
+#define X86_FEATURE_SMEP X86_CPUID_BIT(0x7, 1, 7)
+#define X86_FEATURE_RDSEED X86_CPUID_BIT(0x7, 1, 18)
+#define X86_FEATURE_SMAP X86_CPUID_BIT(0x7, 1, 20)
+#define X86_FEATURE_PT X86_CPUID_BIT(0x7, 1, 25)
+#define X86_FEATURE_PKU X86_CPUID_BIT(0x7, 2, 3)
+#define X86_FEATURE_SYSCALL X86_CPUID_BIT(0x80000001, 3, 11)
+#define X86_FEATURE_NX X86_CPUID_BIT(0x80000001, 3, 20)
+#define X86_FEATURE_HUGE_PAGE X86_CPUID_BIT(0x80000001, 3, 26)
+#define X86_FEATURE_RDTSCP X86_CPUID_BIT(0x80000001, 3, 27)
+#define X86_FEATURE_INVAR_TSC X86_CPUID_BIT(0x80000007, 3, 8)
 
 // topology
 
@@ -134,7 +131,7 @@ struct x86_topology_level {
  * @return true if the requested level existed (and there may be higher levels).
  * @return false if the requested level does not exist (and no higher ones do).
  */
-bool x86_topology_enumerate(uint8_t level, x86_topology_level *info);
+bool x86_topology_enumerate(uint8_t level, x86_topology_level* info);
 
 }  // namespace x86
 }  // namespace arch

@@ -42,7 +42,11 @@ TEST(Results, Duration) {
 TEST(Results, TimeBetween) {
   Measurements measurements;
   measurements.time_between = {{
-      42u, {"foo1", "bar1"}, Anchor::Begin, {"foo2", "bar2"}, Anchor::Begin,
+      42u,
+      {"foo1", "bar1"},
+      Anchor::Begin,
+      {"foo2", "bar2"},
+      Anchor::Begin,
   }};
 
   std::unordered_map<uint64_t, std::vector<trace_ticks_t>> ticks;

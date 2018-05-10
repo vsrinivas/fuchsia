@@ -95,8 +95,7 @@ class Reader {
  public:
   static Error Create(const std::string& file_name,
                       std::shared_ptr<util::ByteBlock> byte_block,
-                      uint32_t options,
-                      uint64_t base,
+                      uint32_t options, uint64_t base,
                       std::unique_ptr<Reader>* out);
   ~Reader();
 
@@ -169,8 +168,7 @@ class Reader {
 
  private:
   Reader(const std::string& file_name,
-         std::shared_ptr<util::ByteBlock> byte_block,
-         uint64_t base);
+         std::shared_ptr<util::ByteBlock> byte_block, uint64_t base);
 
   // For debugging/informational purposes only.
   const std::string file_name_;

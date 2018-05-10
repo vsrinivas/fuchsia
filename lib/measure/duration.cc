@@ -121,8 +121,7 @@ bool MeasureDuration::ProcessDurationEnd(const trace::Record::Event& event) {
   return true;
 }
 
-void MeasureDuration::AddResult(uint64_t spec_id,
-                                trace_ticks_t from,
+void MeasureDuration::AddResult(uint64_t spec_id, trace_ticks_t from,
                                 trace_ticks_t to) {
   results_[spec_id].push_back(to - from);
 }

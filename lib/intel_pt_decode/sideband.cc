@@ -101,7 +101,8 @@ bool DecoderState::ReadKtraceFile(const std::string& file) {
 
   fxl::UniqueFD fd(open(file.c_str(), O_RDONLY));
   if (!fd.is_valid()) {
-    FXL_LOG(ERROR) << "error opening ktrace file" << ", " << ErrnoString(errno);
+    FXL_LOG(ERROR) << "error opening ktrace file"
+                   << ", " << ErrnoString(errno);
     return false;
   }
 
@@ -130,8 +131,8 @@ bool DecoderState::ReadPtListFile(const std::string& file) {
 
   FILE* f = fopen(file.c_str(), "r");
   if (!f) {
-    FXL_LOG(ERROR) << "error opening pt file list file" << ", "
-                   << ErrnoString(errno);
+    FXL_LOG(ERROR) << "error opening pt file list file"
+                   << ", " << ErrnoString(errno);
     return false;
   }
 
@@ -146,8 +147,7 @@ bool DecoderState::ReadPtListFile(const std::string& file) {
 
   for (; getline(&line, &linelen, f) > 0; ++lineno) {
     size_t n = strlen(line);
-    if (n > 0 && line[n - 1] == '\n')
-      line[n - 1] = '\0';
+    if (n > 0 && line[n - 1] == '\n') line[n - 1] = '\0';
     FXL_VLOG(2) << fxl::StringPrintf("read %d: %s", lineno, line);
 
 #define MAX_LINE_LEN 1024
@@ -156,10 +156,8 @@ bool DecoderState::ReadPtListFile(const std::string& file) {
       continue;
     }
 
-    if (!strcmp(line, "\n"))
-      continue;
-    if (line[0] == '#')
-      continue;
+    if (!strcmp(line, "\n")) continue;
+    if (line[0] == '#') continue;
 
     unsigned long long id;
     char path[linelen];
@@ -177,24 +175,19 @@ void DecoderState::AddSymtab(std::unique_ptr<SymbolTable> symtab) {
   symtabs_.push_back(std::move(symtab));
 }
 
-bool DecoderState::ReadElf(const std::string& file_name,
-                           uint64_t base,
-                           uint64_t cr3,
-                           uint64_t file_off,
-                           uint64_t map_len) {
+bool DecoderState::ReadElf(const std::string& file_name, uint64_t base,
+                           uint64_t cr3, uint64_t file_off, uint64_t map_len) {
   FXL_DCHECK(image_);
 
   std::unique_ptr<SymbolTable> symtab;
   std::unique_ptr<SymbolTable> dynsym;
 
-  if (!simple_pt::ReadElf(file_name.c_str(), image_, base, cr3,
-                          file_off, map_len, &symtab, &dynsym))
+  if (!simple_pt::ReadElf(file_name.c_str(), image_, base, cr3, file_off,
+                          map_len, &symtab, &dynsym))
     return false;
 
-  if (symtab)
-    AddSymtab(std::move(symtab));
-  if (dynsym)
-    AddSymtab(std::move(dynsym));
+  if (symtab) AddSymtab(std::move(symtab));
+  if (dynsym) AddSymtab(std::move(dynsym));
   return true;
 }
 
@@ -204,14 +197,12 @@ bool DecoderState::ReadKernelElf(const std::string& file_name, uint64_t cr3) {
   std::unique_ptr<SymbolTable> symtab;
   std::unique_ptr<SymbolTable> dynsym;
 
-  if (!simple_pt::ReadNonPicElf(file_name.c_str(), image_, cr3, true,
-                                &symtab, &dynsym))
+  if (!simple_pt::ReadNonPicElf(file_name.c_str(), image_, cr3, true, &symtab,
+                                &dynsym))
     return false;
 
-  if (symtab)
-    AddSymtab(std::move(symtab));
-  if (dynsym)
-    FXL_LOG(WARNING) << "Kernel has SHT_DYNSYM symtab?";
+  if (symtab) AddSymtab(std::move(symtab));
+  if (dynsym) FXL_LOG(WARNING) << "Kernel has SHT_DYNSYM symtab?";
   return true;
 }
 

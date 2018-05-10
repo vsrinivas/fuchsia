@@ -5,9 +5,9 @@
 #include <lib/fidl/cpp/array.h>
 #include <zircon/compiler.h>
 
+#include "gtest/gtest.h"
 #include "lib/fidl/cpp/vector.h"
 #include "lib/fsl/types/type_converters.h"
-#include "gtest/gtest.h"
 
 namespace {
 struct MyInteger {
@@ -16,7 +16,7 @@ struct MyInteger {
   int i;
 };
 
-static inline bool operator==(const MyInteger& lhs, const MyInteger& rhs){
+static inline bool operator==(const MyInteger& lhs, const MyInteger& rhs) {
   return lhs.i == rhs.i;
 }
 }  // namespace
@@ -24,16 +24,12 @@ static inline bool operator==(const MyInteger& lhs, const MyInteger& rhs){
 namespace fxl {
 template <>
 struct TypeConverter<int, MyInteger> {
-  static int Convert(const MyInteger& value) {
-    return value.i;
-  }
+  static int Convert(const MyInteger& value) { return value.i; }
 };
 
 template <>
 struct TypeConverter<MyInteger, int> {
-  static MyInteger Convert(const int& value) {
-    return MyInteger(value);
-  }
+  static MyInteger Convert(const int& value) { return MyInteger(value); }
 };
 }  // namespace fxl
 
@@ -69,7 +65,7 @@ TEST(TypeConversionTest, Vector_DifferentTypes) {
 }
 
 TEST(TypeConversionTest, Vector_Null) {
-    fidl::VectorPtr<int> vecptr;
+  fidl::VectorPtr<int> vecptr;
   std::vector<int> vec = fxl::To<std::vector<int>>(vecptr);
   EXPECT_TRUE(vec.empty());
 }
@@ -101,7 +97,8 @@ TEST(TypeConversionTest, Array_Vector_DifferentTypes) {
     array[i] = kOriginal[i];
   }
 
-  fidl::VectorPtr<MyInteger> vecptr = fxl::To<fidl::VectorPtr<MyInteger>>(array);
+  fidl::VectorPtr<MyInteger> vecptr =
+      fxl::To<fidl::VectorPtr<MyInteger>>(array);
   for (size_t i = 0; i < kSize; ++i) {
     EXPECT_EQ(MyInteger(kOriginal[i]), (*vecptr)[i]);
   }

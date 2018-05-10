@@ -15,7 +15,7 @@
 namespace cpuperf {
 
 class Reader {
-public:
+ public:
   // When reading sample data, the record we read is one of these.
   // To avoid unnecessary copying of the larger records we just return a
   // pointer to the record, which will remain valid until the next record
@@ -48,7 +48,7 @@ public:
   uint64_t ticks_per_second() const { return ticks_per_second_; }
 
   // Return the current time, in ticks, based on the last time record read.
-  zx_time_t time() const { return time_ ; }
+  zx_time_t time() const { return time_; }
 
   bool GetProperties(cpuperf_properties_t* props);
 
@@ -65,10 +65,10 @@ public:
   // Returns 0 for an invalid record type or invalid record.
   static size_t RecordSize(const cpuperf_record_header_t* hdr);
 
-private:
+ private:
   bool MapBufferVmo(zx_handle_t vmo);
 
-  int fd_; // borrowed
+  int fd_;  // borrowed
   const uint32_t buffer_size_;
   const uint32_t num_cpus_;
   uint32_t current_cpu_ = 0;

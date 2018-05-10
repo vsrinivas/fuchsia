@@ -11,8 +11,8 @@
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
 
-#include "lib/fxl/macros.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/macros.h"
 
 #include "garnet/lib/debugger_utils/dso_list.h"
 #include "garnet/lib/debugger_utils/util.h"
@@ -40,38 +40,30 @@ class Process final {
 
     // Called when a new thread that is part of this process has been started.
     // This is indicated by ZX_EXCP_THREAD_STARTING.
-    virtual void OnThreadStarting(Process* process,
-                                  Thread* thread,
+    virtual void OnThreadStarting(Process* process, Thread* thread,
                                   const zx_exception_context_t& context) = 0;
 
     // Called when |thread| has exited (ZX_EXCP_THREAD_EXITING).
-    virtual void OnThreadExiting(
-        Process* process,
-        Thread* thread,
-        const zx_exception_context_t& context) = 0;
+    virtual void OnThreadExiting(Process* process, Thread* thread,
+                                 const zx_exception_context_t& context) = 0;
 
     // Called when |process| has exited.
     virtual void OnProcessExit(Process* process) = 0;
 
     // Called when the kernel reports an architectural exception.
     virtual void OnArchitecturalException(
-        Process* process,
-        Thread* thread,
-        const zx_excp_type_t type,
+        Process* process, Thread* thread, const zx_excp_type_t type,
         const zx_exception_context_t& context) = 0;
 
     // Called when |thread| has gets a synthetic exception
     // (e.g., ZX_EXCP_POLICY_ERROR) that is akin to an architectural
     // exception: the program got an error and by default crashes.
     virtual void OnSyntheticException(
-        Process* process,
-        Thread* thread,
-        const zx_excp_type_t type,
+        Process* process, Thread* thread, const zx_excp_type_t type,
         const zx_exception_context_t& context) = 0;
   };
 
-  explicit Process(Server* server,
-                   Delegate* delegate_);
+  explicit Process(Server* server, Delegate* delegate_);
   ~Process();
 
   std::string GetName() const;

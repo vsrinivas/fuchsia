@@ -48,19 +48,10 @@ TEST(UtilTest, DecodeByteString) {
     const char* str;
     const uint8_t byte;
   } kTestCases[] = {
-    { kByteStr1, kByte1 },
-    { kByteStr2, kByte2 },
-    { kByteStr3, kByte3 },
-    { kByteStr4, kByte4 },
-    { kByteStr5, kByte5 },
-    { kByteStr6, kByte6 },
-    { kByteStr7, kByte2 },
-    { kByteStr8, kByte3 },
-    { kByteStr9, kByte4 },
-    { kByteStr10, kByte5 },
-    { kByteStr11, kByte6 },
-    { }
-  };
+      {kByteStr1, kByte1},  {kByteStr2, kByte2},  {kByteStr3, kByte3},
+      {kByteStr4, kByte4},  {kByteStr5, kByte5},  {kByteStr6, kByte6},
+      {kByteStr7, kByte2},  {kByteStr8, kByte3},  {kByteStr9, kByte4},
+      {kByteStr10, kByte5}, {kByteStr11, kByte6}, {}};
 
   for (int i = 0; kTestCases[i].str; ++i) {
     EXPECT_TRUE(DecodeByteString(kTestCases[i].str, &result));
@@ -72,15 +63,13 @@ TEST(UtilTest, EncodeByteString) {
   struct {
     const char* str;
     const uint8_t byte;
-  } kTestCases[] = {
-    { kByteStr1, kByte1 },
-    { kByteStr7, kByte2 },
-    { kByteStr8, kByte3 },
-    { kByteStr9, kByte4 },
-    { kByteStr10, kByte5 },
-    { kByteStr11, kByte6 },
-    { }
-  };
+  } kTestCases[] = {{kByteStr1, kByte1},
+                    {kByteStr7, kByte2},
+                    {kByteStr8, kByte3},
+                    {kByteStr9, kByte4},
+                    {kByteStr10, kByte5},
+                    {kByteStr11, kByte6},
+                    {}};
 
   for (int i = 0; kTestCases[i].str; ++i) {
     char result[2];
@@ -109,7 +98,10 @@ TEST(UtilTest, DecodeByteArrayString) {
 
 TEST(UtilTest, DecodeString) {
   EXPECT_EQ(std::string(""), DecodeString(""));
-  EXPECT_EQ(std::string("\x0a" "bc" "\xff"), DecodeString("0a6263ff"));
+  EXPECT_EQ(std::string("\x0a"
+                        "bc"
+                        "\xff"),
+            DecodeString("0a6263ff"));
 }
 
 TEST(UtilTest, EscapeNonPrintableString) {

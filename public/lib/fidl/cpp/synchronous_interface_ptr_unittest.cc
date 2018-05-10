@@ -16,9 +16,7 @@
 namespace fidl {
 namespace {
 
-TEST(SynchronousInterfacePtr, Trivial) {
-  frobinator::FrobinatorSyncPtr ptr;
-}
+TEST(SynchronousInterfacePtr, Trivial) { frobinator::FrobinatorSyncPtr ptr; }
 
 TEST(SynchronousInterfacePtr, Control) {
   frobinator::FrobinatorSyncPtr ptr;

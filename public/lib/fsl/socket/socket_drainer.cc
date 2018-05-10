@@ -21,21 +21,20 @@ SocketDrainer::SocketDrainer(Client* client, async_t* async)
 
 SocketDrainer::~SocketDrainer() {
   wait_.Cancel();
-  if (destruction_sentinel_)
-    *destruction_sentinel_ = true;
+  if (destruction_sentinel_) *destruction_sentinel_ = true;
 }
 
 void SocketDrainer::Start(zx::socket source) {
   source_ = std::move(source);
   wait_.set_object(source_.get());
-  wait_.set_trigger(ZX_SOCKET_READABLE | ZX_SOCKET_READ_DISABLED
-                    | ZX_SOCKET_PEER_CLOSED);
+  wait_.set_trigger(ZX_SOCKET_READABLE | ZX_SOCKET_READ_DISABLED |
+                    ZX_SOCKET_PEER_CLOSED);
   OnHandleReady(async_, &wait_, ZX_OK, nullptr);
 }
 
-void SocketDrainer::OnHandleReady(
-    async_t* async, async::WaitBase* wait, zx_status_t status,
-    const zx_packet_signal_t* signal) {
+void SocketDrainer::OnHandleReady(async_t* async, async::WaitBase* wait,
+                                  zx_status_t status,
+                                  const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     client_->OnDataComplete();
     return;
@@ -50,8 +49,7 @@ void SocketDrainer::OnHandleReady(
     bool is_destroyed = false;
     destruction_sentinel_ = &is_destroyed;
     client_->OnDataAvailable(buffer.data(), num_bytes);
-    if (is_destroyed)
-      return;
+    if (is_destroyed) return;
     destruction_sentinel_ = nullptr;
     status = ZX_ERR_SHOULD_WAIT;
   }

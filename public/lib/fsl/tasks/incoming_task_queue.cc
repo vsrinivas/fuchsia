@@ -32,8 +32,7 @@ void IncomingTaskQueue::PostDelayedTask(fxl::Closure task,
 void IncomingTaskQueue::AddTask(fxl::Closure task, fxl::TimePoint target_time) {
   std::lock_guard<std::mutex> locker(mutex_);
 
-  if (drop_incoming_tasks_)
-    return;
+  if (drop_incoming_tasks_) return;
   if (delegate_) {
     delegate_->PostTask(std::move(task), target_time);
   } else {

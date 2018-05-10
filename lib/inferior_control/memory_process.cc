@@ -4,8 +4,8 @@
 
 #include "memory_process.h"
 
-#include <cinttypes>
 #include <zircon/syscalls.h>
+#include <cinttypes>
 
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -18,8 +18,7 @@ namespace debugserver {
 
 ProcessMemory::ProcessMemory(Process* process) : process_(process) {}
 
-bool ProcessMemory::Read(uintptr_t address,
-                         void* out_buffer,
+bool ProcessMemory::Read(uintptr_t address, void* out_buffer,
                          size_t length) const {
   FXL_DCHECK(out_buffer);
 
@@ -46,8 +45,7 @@ bool ProcessMemory::Read(uintptr_t address,
   return true;
 }
 
-bool ProcessMemory::Write(uintptr_t address,
-                          const void* buffer,
+bool ProcessMemory::Write(uintptr_t address, const void* buffer,
                           size_t length) const {
   FXL_DCHECK(buffer);
 

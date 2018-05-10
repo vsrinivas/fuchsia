@@ -111,13 +111,9 @@ inline bool operator!=(const StringPtr& a, const StringPtr& b) {
   return !(a == b);
 }
 
-inline bool operator!=(const char* a, const StringPtr& b) {
-  return !(a == b);
-}
+inline bool operator!=(const char* a, const StringPtr& b) { return !(a == b); }
 
-inline bool operator!=(const StringPtr& a, const char* b) {
-  return !(a == b);
-}
+inline bool operator!=(const StringPtr& a, const char* b) { return !(a == b); }
 
 inline bool operator<(const StringPtr& a, const StringPtr& b) {
   if (a.is_null() || b.is_null()) {
@@ -165,25 +161,17 @@ inline bool operator<=(const StringPtr& a, const StringPtr& b) {
   return !(a > b);
 }
 
-inline bool operator<=(const char* a, const StringPtr& b) {
-  return !(a > b);
-}
+inline bool operator<=(const char* a, const StringPtr& b) { return !(a > b); }
 
-inline bool operator<=(const StringPtr& a, const char* b) {
-  return !(a > b);
-}
+inline bool operator<=(const StringPtr& a, const char* b) { return !(a > b); }
 
 inline bool operator>=(const StringPtr& a, const StringPtr& b) {
   return !(a < b);
 }
 
-inline bool operator>=(const char* a, const StringPtr& b) {
-  return !(a < b);
-}
+inline bool operator>=(const char* a, const StringPtr& b) { return !(a < b); }
 
-inline bool operator>=(const StringPtr& a, const char* b) {
-  return !(a < b);
-}
+inline bool operator>=(const StringPtr& a, const char* b) { return !(a < b); }
 
 inline std::ostream& operator<<(std::ostream& out, const StringPtr& str) {
   return out << str.get();

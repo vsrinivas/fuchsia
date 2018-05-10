@@ -11,9 +11,7 @@
 namespace fidl {
 namespace {
 
-TEST(BindingSet, Trivial) {
-  BindingSet<frobinator::Frobinator> binding_set;
-}
+TEST(BindingSet, Trivial) { BindingSet<frobinator::Frobinator> binding_set; }
 
 TEST(BindingSet, Control) {
   constexpr size_t kCount = 10;
@@ -38,27 +36,22 @@ TEST(BindingSet, Control) {
 
   EXPECT_EQ(kCount, binding_set.size());
 
-  for (const auto& impl : impls)
-    EXPECT_TRUE(impl.frobs.empty());
+  for (const auto& impl : impls) EXPECT_TRUE(impl.frobs.empty());
 
-  for (auto& ptr : ptrs)
-    ptr->Frob("one");
+  for (auto& ptr : ptrs) ptr->Frob("one");
 
   loop.RunUntilIdle();
 
-  for (const auto& impl : impls)
-    EXPECT_EQ(1u, impl.frobs.size());
+  for (const auto& impl : impls) EXPECT_EQ(1u, impl.frobs.size());
 
-  for (size_t i = 0; i < kCount / 2; ++i)
-    ptrs[i].Unbind();
+  for (size_t i = 0; i < kCount / 2; ++i) ptrs[i].Unbind();
 
   loop.RunUntilIdle();
 
   EXPECT_EQ(kCount / 2, binding_set.size());
   EXPECT_EQ(0, empty_count);
 
-  for (size_t i = kCount / 2; i < kCount; ++i)
-    ptrs[i]->Frob("two");
+  for (size_t i = kCount / 2; i < kCount; ++i) ptrs[i]->Frob("two");
 
   loop.RunUntilIdle();
 
@@ -71,8 +64,7 @@ TEST(BindingSet, Control) {
   EXPECT_EQ(0u, binding_set.size());
   EXPECT_EQ(0, empty_count);
 
-  for (size_t i = kCount / 2; i < kCount; ++i)
-    ptrs[i]->Frob("three");
+  for (size_t i = kCount / 2; i < kCount; ++i) ptrs[i]->Frob("three");
 
   loop.RunUntilIdle();
 
@@ -126,8 +118,7 @@ TEST(BindingSet, EmptyHandler) {
   loop.RunUntilIdle();
   EXPECT_EQ(0, empty_count);
 
-  for (size_t i = 0; i < kCount - 1; ++i)
-    ptrs[i].Unbind();
+  for (size_t i = 0; i < kCount - 1; ++i) ptrs[i].Unbind();
 
   EXPECT_EQ(0, empty_count);
   EXPECT_EQ(kCount, binding_set.size());

@@ -61,8 +61,7 @@ fxl::StringView PopLastDirectory(fxl::StringView* path) {
 
 bool PopFirstDirectory(fxl::StringView* path) {
   size_t end = path->find('/');
-  if (end == fxl::StringView::npos)
-    return false;
+  if (end == fxl::StringView::npos) return false;
   *path = path->substr(end + 1);
   return true;
 }
@@ -85,8 +84,7 @@ void LeaveDirectory(fxl::StringView name, std::vector<DirRecord>* stack) {
   parent.children.push_back(std::move(child));
 }
 
-bool GetDirectoryEntryByPath(ArchiveReader* const reader,
-                             fxl::StringView path,
+bool GetDirectoryEntryByPath(ArchiveReader* const reader, fxl::StringView path,
                              DirectoryTableEntry* const entry) {
   if (!reader) {
     return false;
@@ -103,11 +101,9 @@ FileSystem::FileSystem(zx::vmo vmo)
     : vmo_(vmo.get()), vfs_(async_get_default()) {
   uint64_t num_bytes = 0;
   zx_status_t status = vmo.get_size(&num_bytes);
-  if (status != ZX_OK)
-    return;
+  if (status != ZX_OK) return;
   fxl::UniqueFD fd(fdio_vmo_fd(vmo.release(), 0, num_bytes));
-  if (!fd.is_valid())
-    return;
+  if (!fd.is_valid()) return;
   reader_ = std::make_unique<ArchiveReader>(std::move(fd));
   CreateDirectory();
 }
@@ -121,10 +117,8 @@ bool FileSystem::Serve(zx::channel channel) {
 
 zx::channel FileSystem::OpenAsDirectory() {
   zx::channel h1, h2;
-  if (zx::channel::create(0, &h1, &h2) < 0)
-    return zx::channel();
-  if (!Serve(std::move(h1)))
-    return zx::channel();
+  if (zx::channel::create(0, &h1, &h2) < 0) return zx::channel();
+  if (!Serve(std::move(h1))) return zx::channel();
   return h2;
 }
 
@@ -156,17 +150,15 @@ bool FileSystem::GetFileAsString(fxl::StringView path, std::string* result) {
   }
   std::string data;
   data.resize(entry.data_length);
-  zx_status_t status = zx_vmo_read(vmo_, &data[0], entry.data_offset,
-                                       entry.data_length);
-  if (status != ZX_OK)
-    return false;
+  zx_status_t status =
+      zx_vmo_read(vmo_, &data[0], entry.data_offset, entry.data_length);
+  if (status != ZX_OK) return false;
   result->swap(data);
   return true;
 }
 
 void FileSystem::CreateDirectory() {
-  if (!reader_ || !reader_->Read())
-    return;
+  if (!reader_ || !reader_->Read()) return;
 
   std::vector<DirRecord> stack;
   stack.push_back(DirRecord());

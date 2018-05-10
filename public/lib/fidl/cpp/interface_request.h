@@ -100,8 +100,7 @@ class InterfaceRequest {
     encoder->EncodeHandle(&channel_, offset);
   }
 
-  static void Decode(Decoder* decoder,
-                     InterfaceRequest<Interface>* value,
+  static void Decode(Decoder* decoder, InterfaceRequest<Interface>* value,
                      size_t offset) {
     decoder->DecodeHandle(&value->channel_, offset);
   }
@@ -112,11 +111,13 @@ class InterfaceRequest {
 
 // Equality.
 template <typename T>
-bool operator==(const InterfaceRequest<T>& lhs, const InterfaceRequest<T>& rhs) {
+bool operator==(const InterfaceRequest<T>& lhs,
+                const InterfaceRequest<T>& rhs) {
   return lhs.channel() == rhs.channel();
 }
 template <typename T>
-bool operator!=(const InterfaceRequest<T>& lhs, const InterfaceRequest<T>& rhs) {
+bool operator!=(const InterfaceRequest<T>& lhs,
+                const InterfaceRequest<T>& rhs) {
   return !(lhs == rhs);
 }
 
@@ -130,11 +131,13 @@ bool operator>(const InterfaceRequest<T>& lhs, const InterfaceRequest<T>& rhs) {
   return lhs.channel() > rhs.channel();
 }
 template <typename T>
-bool operator<=(const InterfaceRequest<T>& lhs, const InterfaceRequest<T>& rhs) {
+bool operator<=(const InterfaceRequest<T>& lhs,
+                const InterfaceRequest<T>& rhs) {
   return !(lhs > rhs);
 }
 template <typename T>
-bool operator>=(const InterfaceRequest<T>& lhs, const InterfaceRequest<T>& rhs) {
+bool operator>=(const InterfaceRequest<T>& lhs,
+                const InterfaceRequest<T>& rhs) {
   return !(lhs < rhs);
 }
 

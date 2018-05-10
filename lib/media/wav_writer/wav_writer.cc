@@ -25,9 +25,7 @@ constexpr const char* kWavFileExtension = ".wav";
 //
 
 // Encode a 32-bit 'fourcc' value from these 4 byte values
-static inline constexpr uint32_t make_fourcc(uint8_t a,
-                                             uint8_t b,
-                                             uint8_t c,
+static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c,
                                              uint8_t d) {
   return (static_cast<uint32_t>(d) << 24) | (static_cast<uint32_t>(c) << 16) |
          (static_cast<uint32_t>(b) << 8) | static_cast<uint32_t>(a);
@@ -128,10 +126,8 @@ constexpr const uint32_t kWavHeaderOverhead =
 // cursor is positioned immediately after the headers, at the correct location
 // to write any audio samples we are given.
 // This private function assumes the given file_desc is valid.
-zx_status_t WriteNewHeader(int file_desc,
-                           AudioSampleFormat sample_format,
-                           uint32_t channel_count,
-                           uint32_t frame_rate,
+zx_status_t WriteNewHeader(int file_desc, AudioSampleFormat sample_format,
+                           uint32_t channel_count, uint32_t frame_rate,
                            uint16_t bits_per_sample) {
   if (channel_count > std::numeric_limits<uint16_t>::max()) {
     return ZX_ERR_INVALID_ARGS;
@@ -233,8 +229,7 @@ fbl::atomic<uint32_t> WavWriter<true>::instance_count_(0u);
 template <bool enabled>
 bool WavWriter<enabled>::Initialize(const char* const file_name,
                                     AudioSampleFormat sample_format,
-                                    uint32_t channel_count,
-                                    uint32_t frame_rate,
+                                    uint32_t channel_count, uint32_t frame_rate,
                                     uint32_t bits_per_sample) {
   // Open our output file.
   uint32_t instance_count = instance_count_.fetch_add(1);

@@ -68,10 +68,8 @@ std::string ZxErrorString(zx_status_t status);
 // an assertion failure.
 //
 // Returns the size of the resulting string.
-size_t JoinStrings(const std::deque<std::string>& strings,
-                   const char delimiter,
-                   char* buffer,
-                   size_t buffer_size);
+size_t JoinStrings(const std::deque<std::string>& strings, const char delimiter,
+                   char* buffer, size_t buffer_size);
 
 // An argv abstraction, and easier to type.
 using Argv = std::vector<std::string>;

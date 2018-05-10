@@ -15,8 +15,7 @@ template <typename T>
 bool ReadObject(int fd, T* object) {
   char buffer[sizeof(T)];
   ssize_t actual = fxl::ReadFileDescriptor(fd, buffer, sizeof(T));
-  if (actual < 0 || static_cast<size_t>(actual) != sizeof(T))
-    return false;
+  if (actual < 0 || static_cast<size_t>(actual) != sizeof(T)) return false;
   memcpy(object, buffer, sizeof(T));
   return true;
 }

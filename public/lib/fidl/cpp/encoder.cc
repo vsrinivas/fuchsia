@@ -17,9 +17,7 @@ size_t Align(size_t size) {
 
 }  // namespace
 
-Encoder::Encoder(uint32_t ordinal) {
-  EncodeMessageHeader(ordinal);
-}
+Encoder::Encoder(uint32_t ordinal) { EncodeMessageHeader(ordinal); }
 
 Encoder::~Encoder() = default;
 

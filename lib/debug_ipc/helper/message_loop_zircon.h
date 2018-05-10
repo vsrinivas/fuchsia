@@ -25,8 +25,7 @@ class MessageLoopZircon : public MessageLoop {
 
   // MessageLoop implementation.
   void Run() override;
-  WatchHandle WatchFD(WatchMode mode, int fd,
-                      FDWatcher* watcher) override;
+  WatchHandle WatchFD(WatchMode mode, int fd, FDWatcher* watcher) override;
 
   // Watches the given socket for read/write status. The watcher must outlive
   // the returned WatchHandle. Must only be called on the message loop thread.
@@ -46,11 +45,7 @@ class MessageLoopZircon : public MessageLoop {
                                      ZirconExceptionWatcher* watcher);
 
  private:
-  enum class WatchType {
-    kFdio,
-    kProcessExceptions,
-    kSocket
-  };
+  enum class WatchType { kFdio, kProcessExceptions, kSocket };
   struct WatchInfo;
 
   // MessageLoop protected implementation.
@@ -60,9 +55,10 @@ class MessageLoopZircon : public MessageLoop {
   // Handle an event of the given type.
   void OnFdioSignal(int watch_id, const WatchInfo& info,
                     const zx_port_packet_t& packet);
-  void OnProcessException(const WatchInfo& info, const zx_port_packet_t& packet);
-  void OnSocketSignal(int watch_id,
-                      const WatchInfo& info, const zx_port_packet_t& packet);
+  void OnProcessException(const WatchInfo& info,
+                          const zx_port_packet_t& packet);
+  void OnSocketSignal(int watch_id, const WatchInfo& info,
+                      const zx_port_packet_t& packet);
 
   using WatchMap = std::map<int, WatchInfo>;
   WatchMap watches_;

@@ -30,10 +30,8 @@ struct StartupHandle {
 // |out_socket| receives the local end of the socket.
 // |out_startup_handle| receives the startup handle which must be passed to
 // the launcher to bind the remote end of the socket in the new process.
-FXL_EXPORT zx_status_t
-CreateRedirectedSocket(int startup_fd,
-                       zx::socket* out_socket,
-                       StartupHandle* out_startup_handle);
+FXL_EXPORT zx_status_t CreateRedirectedSocket(
+    int startup_fd, zx::socket* out_socket, StartupHandle* out_startup_handle);
 
 }  // namespace fsl
 

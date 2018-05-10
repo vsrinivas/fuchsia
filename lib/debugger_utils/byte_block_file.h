@@ -18,10 +18,9 @@ class FileByteBlock final : public util::ByteBlock {
   explicit FileByteBlock(int fd);
   ~FileByteBlock();
 
-  bool Read(uintptr_t address, void* out_buffer, size_t length)
-    const override;
-  bool Write(uintptr_t address, const void* buffer, size_t length)
-    const override;
+  bool Read(uintptr_t address, void* out_buffer, size_t length) const override;
+  bool Write(uintptr_t address, const void* buffer,
+             size_t length) const override;
 
  private:
   int fd_;

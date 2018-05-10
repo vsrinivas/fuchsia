@@ -24,8 +24,8 @@ int ReadFile(int fd, RecordReader* reader, void* arg) {
   KtraceRecord rec;
   unsigned offset = 0;
 
-  while (read(fd, rec.raw, sizeof(ktrace_header_t))
-         == sizeof(ktrace_header_t)) {
+  while (read(fd, rec.raw, sizeof(ktrace_header_t)) ==
+         sizeof(ktrace_header_t)) {
     uint32_t tag = rec.hdr.tag;
     uint32_t len = KTRACE_LEN(tag);
     if (tag == 0) {
@@ -44,8 +44,7 @@ int ReadFile(int fd, RecordReader* reader, void* arg) {
     }
 
     int rc = reader(&rec, arg);
-    if (rc)
-      return rc;
+    if (rc) return rc;
   }
 
   return 0;
@@ -54,9 +53,12 @@ int ReadFile(int fd, RecordReader* reader, void* arg) {
 const char* RecName(uint32_t tag) {
   // TODO: Remove magic number
   switch (tag & 0xffffff00u) {
-#define KTRACE_DEF(num,type,name,group) case KTRACE_TAG(num,KTRACE_GRP_##group, 0): return #name;
+#define KTRACE_DEF(num, type, name, group)     \
+  case KTRACE_TAG(num, KTRACE_GRP_##group, 0): \
+    return #name;
 #include <zircon/ktrace-def.h>
-  default: return "UNKNOWN";
+    default:
+      return "UNKNOWN";
   }
 }
 
@@ -91,14 +93,14 @@ static void DumpRecord(const KtraceRecord* rec) {
 
   // TODO: Remove magic number
   switch (rec->hdr.tag & 0xffffff00u) {
-#define KTRACE_DEF(num,type,name,group) \
-  case KTRACE_TAG(num,KTRACE_GRP_##group, 0): \
-    Dump_ ## type(&rec->r_ ## type); \
+#define KTRACE_DEF(num, type, name, group)     \
+  case KTRACE_TAG(num, KTRACE_GRP_##group, 0): \
+    Dump_##type(&rec->r_##type);               \
     break;
 #include <zircon/ktrace-def.h>
-  default:
-    printf(" ???");
-    break;
+    default:
+      printf(" ???");
+      break;
   }
 
   printf("\n");
@@ -138,4 +140,3 @@ int main(int argc, char* argv[]) {
 }
 
 #endif
-

@@ -29,9 +29,7 @@ bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
     FXL_LOG(ERROR) << "error opening file, " << ErrnoString(errno);
     return false;
   }
-  auto close_file = fxl::MakeAutoCall([&]() {
-      fclose(f);
-    });
+  auto close_file = fxl::MakeAutoCall([&]() { fclose(f); });
 
   constexpr size_t kMaxLineLen = 1024;
   char* line = nullptr;
@@ -50,12 +48,12 @@ bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
   char* so_name = reinterpret_cast<char*>(malloc(kMaxLineLen));
 
   auto free_mem = fxl::MakeAutoCall([&]() {
-      free(line);
-      free(prefix);
-      free(build_id);
-      free(name);
-      free(so_name);
-    });
+    free(line);
+    free(prefix);
+    free(build_id);
+    free(name);
+    free(so_name);
+  });
 
   if (!prefix || !build_id || !name || !so_name) {
     FXL_LOG(ERROR) << "Out of memory";
@@ -70,18 +68,15 @@ bool LoadMapTable::ReadLogListenerOutput(const std::string& file) {
                        << std::string(line, line_len);
       continue;
     }
-    if (n > 0 && line[n - 1] == '\n')
-      line[n - 1] = '\0';
+    if (n > 0 && line[n - 1] == '\n') line[n - 1] = '\0';
     FXL_VLOG(2) << fxl::StringPrintf("%d: %s", lineno, line);
 
     if (n > kMaxLineLen) {
       FXL_VLOG(2) << fxl::StringPrintf("%d: too long, ignoring", lineno);
     }
 
-    if (!strcmp(line, "\n"))
-      continue;
-    if (line[0] == '#')
-      continue;
+    if (!strcmp(line, "\n")) continue;
+    if (line[0] == '#') continue;
 
     // If this is a new boot, start over.
     if (strstr(line, "welcome to lk/MP")) {
@@ -166,14 +161,11 @@ void LoadMapTable::AddLoadMap(const LoadMap& map) {
   maps_.push_back(map);
 }
 
-void LoadMapTable::Clear() {
-  maps_.clear();
-}
+void LoadMapTable::Clear() { maps_.clear(); }
 
 const LoadMap* LoadMapTable::LookupLoadMap(zx_koid_t pid, uint64_t addr) {
   for (auto& m : maps_) {
-    if (pid == m.pid && addr >= m.load_addr && addr < m.end_addr)
-      return &m;
+    if (pid == m.pid && addr >= m.load_addr && addr < m.end_addr) return &m;
   }
 
   return nullptr;

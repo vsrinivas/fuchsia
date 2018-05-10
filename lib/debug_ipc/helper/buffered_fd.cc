@@ -4,8 +4,8 @@
 
 #include "garnet/lib/debug_ipc/helper/buffered_fd.h"
 
-#include <algorithm>
 #include <unistd.h>
+#include <algorithm>
 
 namespace debug_ipc {
 
@@ -46,13 +46,10 @@ void BufferedFD::OnFDReadable(int fd) {
     // data so this pipe doesn't starve the entire app.
   }
 
-  if (callback_)
-    callback_();
+  if (callback_) callback_();
 }
 
-void BufferedFD::OnFDWritable(int fd) {
-  stream_.SetWritable();
-}
+void BufferedFD::OnFDWritable(int fd) { stream_.SetWritable(); }
 
 size_t BufferedFD::ConsumeStreamBufferData(const char* data, size_t len) {
   return std::max(0l, write(fd_.get(), data, len));

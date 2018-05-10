@@ -10,8 +10,8 @@
 
 #include "x86_cpuid.h"
 
-#include <atomic>
 #include <cpuid.h>
+#include <atomic>
 #include <cstdint>
 #include <cstring>
 #include <mutex>
@@ -23,13 +23,13 @@ namespace x86 {
 // Trick to get a 1 of the right size.
 #define ONE(x) (1 + ((x) - (x)))
 #define BITS_SHIFT(x, high, low) \
-  (((x) >> (low)) & ((ONE(x)<<((high)-(low)+1))-1))
+  (((x) >> (low)) & ((ONE(x) << ((high) - (low) + 1)) - 1))
 
 // Note: cpuid state is constant once computed, and thus isn't guarded.
 
 static struct cpuid_leaf cpuid[MAX_SUPPORTED_CPUID + 1];
-static struct cpuid_leaf cpuid_ext[MAX_SUPPORTED_CPUID_EXT -
-                                   X86_CPUID_EXT_BASE + 1];
+static struct cpuid_leaf
+    cpuid_ext[MAX_SUPPORTED_CPUID_EXT - X86_CPUID_EXT_BASE + 1];
 static uint32_t max_cpuid = 0;
 static uint32_t max_ext_cpuid = 0;
 
@@ -39,23 +39,20 @@ static struct x86_model_info model_info;
 
 static std::mutex cpuid_mutex;
 
-static bool initialized = false; // TODO(dje): add guard annotation
+static bool initialized = false;  // TODO(dje): add guard annotation
 
 static const cpuid_leaf* x86_get_cpuid_leaf_raw(enum x86_cpuid_leaf_num leaf);
 
-void x86_feature_init(void)
-{
+void x86_feature_init(void) {
   std::lock_guard<std::mutex> lock(cpuid_mutex);
 
-  if (initialized)
-    return;
+  if (initialized) return;
 
   // test for cpuid count
   __cpuid(0, cpuid[0].a, cpuid[0].b, cpuid[0].c, cpuid[0].d);
 
   max_cpuid = cpuid[0].a;
-  if (max_cpuid > MAX_SUPPORTED_CPUID)
-    max_cpuid = MAX_SUPPORTED_CPUID;
+  if (max_cpuid > MAX_SUPPORTED_CPUID) max_cpuid = MAX_SUPPORTED_CPUID;
 
   // figure out the vendor
   union {
@@ -80,8 +77,8 @@ void x86_feature_init(void)
   }
 
   // test for extended cpuid count
-  __cpuid(X86_CPUID_EXT_BASE, cpuid_ext[0].a, cpuid_ext[0].b,
-          cpuid_ext[0].c, cpuid_ext[0].d);
+  __cpuid(X86_CPUID_EXT_BASE, cpuid_ext[0].a, cpuid_ext[0].b, cpuid_ext[0].c,
+          cpuid_ext[0].d);
 
   max_ext_cpuid = cpuid_ext[0].a;
   if (max_ext_cpuid > MAX_SUPPORTED_CPUID_EXT)
@@ -96,7 +93,7 @@ void x86_feature_init(void)
 
   // populate the model info
   const struct cpuid_leaf* leaf =
-    x86_get_cpuid_leaf_raw(X86_CPUID_MODEL_FEATURES);
+      x86_get_cpuid_leaf_raw(X86_CPUID_MODEL_FEATURES);
   if (leaf) {
     model_info.processor_type = BITS_SHIFT(leaf->a, 13, 12);
     model_info.family = BITS_SHIFT(leaf->a, 11, 8);
@@ -117,13 +114,11 @@ void x86_feature_init(void)
 }
 
 bool x86_get_cpuid_subleaf(enum x86_cpuid_leaf_num num, uint32_t subleaf,
-                           struct cpuid_leaf* leaf)
-{
+                           struct cpuid_leaf* leaf) {
   x86_feature_init();
 
   if (num < X86_CPUID_EXT_BASE) {
-    if (num > max_cpuid)
-      return false;
+    if (num > max_cpuid) return false;
   } else if (num > max_ext_cpuid) {
     return false;
   }
@@ -132,111 +127,111 @@ bool x86_get_cpuid_subleaf(enum x86_cpuid_leaf_num num, uint32_t subleaf,
   return true;
 }
 
-static const cpuid_leaf* x86_get_cpuid_leaf_raw(enum x86_cpuid_leaf_num leaf)
-{
+static const cpuid_leaf* x86_get_cpuid_leaf_raw(enum x86_cpuid_leaf_num leaf) {
   if (leaf < X86_CPUID_EXT_BASE) {
-    if (leaf > max_cpuid)
-      return nullptr;
+    if (leaf > max_cpuid) return nullptr;
 
     return &cpuid[leaf];
   } else {
-    if (leaf > max_ext_cpuid)
-      return nullptr;
+    if (leaf > max_ext_cpuid) return nullptr;
 
     return &cpuid_ext[(uint32_t)leaf - (uint32_t)X86_CPUID_EXT_BASE];
   }
 }
 
-const cpuid_leaf* x86_get_cpuid_leaf(enum x86_cpuid_leaf_num leaf)
-{
+const cpuid_leaf* x86_get_cpuid_leaf(enum x86_cpuid_leaf_num leaf) {
   x86_feature_init();
   return x86_get_cpuid_leaf_raw(leaf);
 }
 
-bool x86_feature_test(struct x86_cpuid_bit bit)
-{
+bool x86_feature_test(struct x86_cpuid_bit bit) {
   FXL_DCHECK(bit.word <= 3 && bit.bit <= 31);
 
-  if (bit.word > 3 || bit.bit > 31)
-    return false;
+  if (bit.word > 3 || bit.bit > 31) return false;
 
   const cpuid_leaf* leaf = x86_get_cpuid_leaf(bit.leaf_num);
-  if (!leaf)
-    return false;
+  if (!leaf) return false;
 
   switch (bit.word) {
-  case 0: return !!((1u << bit.bit) & leaf->a);
-  case 1: return !!((1u << bit.bit) & leaf->b);
-  case 2: return !!((1u << bit.bit) & leaf->c);
-  case 3: return !!((1u << bit.bit) & leaf->d);
-  default: return false;
+    case 0:
+      return !!((1u << bit.bit) & leaf->a);
+    case 1:
+      return !!((1u << bit.bit) & leaf->b);
+    case 2:
+      return !!((1u << bit.bit) & leaf->c);
+    case 3:
+      return !!((1u << bit.bit) & leaf->d);
+    default:
+      return false;
   }
 }
 
-bool x86_topology_enumerate(uint8_t level, struct x86_topology_level* info)
-{
+bool x86_topology_enumerate(uint8_t level, struct x86_topology_level* info) {
   uint32_t eax, ebx, ecx, edx;
   __cpuid_count(X86_CPUID_TOPOLOGY, level, eax, ebx, ecx, edx);
 
   uint8_t type = (ecx >> 8) & 0xff;
-  if (type == X86_TOPOLOGY_INVALID)
-    return false;
+  if (type == X86_TOPOLOGY_INVALID) return false;
 
   info->right_shift = eax & 0x1f;
   info->type = type;
   return true;
 }
 
-const struct x86_model_info* x86_get_model(void)
-{
+const struct x86_model_info* x86_get_model(void) {
   x86_feature_init();
   return &model_info;
 }
 
 // N.B. The output is parsed by spt-sideband.cc.
 
-void x86_feature_debug(FILE* out)
-{
+void x86_feature_debug(FILE* out) {
   static const struct {
     x86_cpuid_bit bit;
     const char* name;
   } features[] = {
-    { X86_FEATURE_FPU, "fpu" },
-    { X86_FEATURE_SSE, "sse" },
-    { X86_FEATURE_SSE2, "sse2" },
-    { X86_FEATURE_SSE3, "sse3" },
-    { X86_FEATURE_SSSE3, "ssse3" },
-    { X86_FEATURE_SSE4_1, "sse4.1" },
-    { X86_FEATURE_SSE4_2, "sse4.2" },
-    { X86_FEATURE_MMX, "mmx" },
-    { X86_FEATURE_AVX, "avx" },
-    { X86_FEATURE_AVX2, "avx2" },
-    { X86_FEATURE_FXSR, "fxsr" },
-    { X86_FEATURE_XSAVE, "xsave" },
-    { X86_FEATURE_AESNI, "aesni" },
-    { X86_FEATURE_TSC_ADJUST, "tsc_adj" },
-    { X86_FEATURE_SMEP, "smep" },
-    { X86_FEATURE_SMAP, "smap" },
-    { X86_FEATURE_RDRAND, "rdrand" },
-    { X86_FEATURE_RDSEED, "rdseed" },
-    { X86_FEATURE_PT, "pt" },
-    { X86_FEATURE_PKU, "pku" },
-    { X86_FEATURE_SYSCALL, "syscall" },
-    { X86_FEATURE_NX, "nx" },
-    { X86_FEATURE_HUGE_PAGE, "huge" },
-    { X86_FEATURE_RDTSCP, "rdtscp" },
-    { X86_FEATURE_INVAR_TSC, "invar_tsc" },
-    { X86_FEATURE_TSC_DEADLINE, "tsc_deadline" },
+      {X86_FEATURE_FPU, "fpu"},
+      {X86_FEATURE_SSE, "sse"},
+      {X86_FEATURE_SSE2, "sse2"},
+      {X86_FEATURE_SSE3, "sse3"},
+      {X86_FEATURE_SSSE3, "ssse3"},
+      {X86_FEATURE_SSE4_1, "sse4.1"},
+      {X86_FEATURE_SSE4_2, "sse4.2"},
+      {X86_FEATURE_MMX, "mmx"},
+      {X86_FEATURE_AVX, "avx"},
+      {X86_FEATURE_AVX2, "avx2"},
+      {X86_FEATURE_FXSR, "fxsr"},
+      {X86_FEATURE_XSAVE, "xsave"},
+      {X86_FEATURE_AESNI, "aesni"},
+      {X86_FEATURE_TSC_ADJUST, "tsc_adj"},
+      {X86_FEATURE_SMEP, "smep"},
+      {X86_FEATURE_SMAP, "smap"},
+      {X86_FEATURE_RDRAND, "rdrand"},
+      {X86_FEATURE_RDSEED, "rdseed"},
+      {X86_FEATURE_PT, "pt"},
+      {X86_FEATURE_PKU, "pku"},
+      {X86_FEATURE_SYSCALL, "syscall"},
+      {X86_FEATURE_NX, "nx"},
+      {X86_FEATURE_HUGE_PAGE, "huge"},
+      {X86_FEATURE_RDTSCP, "rdtscp"},
+      {X86_FEATURE_INVAR_TSC, "invar_tsc"},
+      {X86_FEATURE_TSC_DEADLINE, "tsc_deadline"},
   };
 
   x86_feature_init();
 
   const char* vendor_string;
   switch (x86_vendor) {
-  default:
-  case X86_VENDOR_UNKNOWN: vendor_string = "unknown"; break;
-  case X86_VENDOR_INTEL: vendor_string = "Intel"; break;
-  case X86_VENDOR_AMD: vendor_string = "AMD"; break;
+    default:
+    case X86_VENDOR_UNKNOWN:
+      vendor_string = "unknown";
+      break;
+    case X86_VENDOR_INTEL:
+      vendor_string = "Intel";
+      break;
+    case X86_VENDOR_AMD:
+      vendor_string = "AMD";
+      break;
   }
   fprintf(out, "Vendor: %s\n", vendor_string);
 
@@ -255,15 +250,13 @@ void x86_feature_debug(FILE* out)
   fprintf(out, "Features:\n");
   size_t col = 0;
   for (auto& f : features) {
-    if (x86_feature_test(f.bit))
-      col += fprintf(out, " %s", f.name);
+    if (x86_feature_test(f.bit)) col += fprintf(out, " %s", f.name);
     if (col >= 80) {
       fprintf(out, "\n");
       col = 0;
     }
   }
-  if (col > 0)
-    fprintf(out, "\n");
+  if (col > 0) fprintf(out, "\n");
 }
 
 }  // namespace x86

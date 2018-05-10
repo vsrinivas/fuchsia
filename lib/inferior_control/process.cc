@@ -4,13 +4,13 @@
 
 #include "process.h"
 
-#include <cinttypes>
 #include <link.h>
+#include <cinttypes>
 
+#include <fdio/io.h>
 #include <launchpad/vmo.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
-#include <fdio/io.h>
 
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -30,22 +30,18 @@ bool SetupLaunchpad(launchpad_t** out_lp, const util::Argv& argv) {
 
   // Construct the argument array.
   const char* c_args[argv.size()];
-  for (size_t i = 0; i < argv.size(); ++i)
-    c_args[i] = argv[i].c_str();
+  for (size_t i = 0; i < argv.size(); ++i) c_args[i] = argv[i].c_str();
   const char* name = util::basename(c_args[0]);
 
   launchpad_t* lp = nullptr;
   zx_status_t status = launchpad_create(0u, name, &lp);
-  if (status != ZX_OK)
-    goto fail;
+  if (status != ZX_OK) goto fail;
 
   status = launchpad_set_args(lp, argv.size(), c_args);
-  if (status != ZX_OK)
-    goto fail;
+  if (status != ZX_OK) goto fail;
 
   status = launchpad_add_vdso_vmo(lp);
-  if (status != ZX_OK)
-    goto fail;
+  if (status != ZX_OK) goto fail;
 
   // Clone root, cwd, stdio, and environ.
   launchpad_clone(lp, LP_CLONE_FDIO_ALL | LP_CLONE_ENVIRON);
@@ -55,8 +51,7 @@ bool SetupLaunchpad(launchpad_t** out_lp, const util::Argv& argv) {
 
 fail:
   FXL_LOG(ERROR) << "Process setup failed: " << util::ZxErrorString(status);
-  if (lp)
-    launchpad_destroy(lp);
+  if (lp) launchpad_destroy(lp);
   return false;
 }
 
@@ -134,8 +129,8 @@ zx_handle_t GetProcessDebugHandle(zx_koid_t pid) {
 
 // static
 const char* Process::StateName(Process::State state) {
-#define CASE_TO_STR(x)     \
-  case Process::State::x:  \
+#define CASE_TO_STR(x)    \
+  case Process::State::x: \
     return #x
   switch (state) {
     CASE_TO_STR(kNew);
@@ -206,13 +201,11 @@ bool Process::Initialize() {
 
   FXL_LOG(INFO) << "argv: " << util::ArgvToString(argv_);
 
-  if (!SetupLaunchpad(&launchpad_, argv_))
-    return false;
+  if (!SetupLaunchpad(&launchpad_, argv_)) return false;
 
   FXL_LOG(INFO) << "Process setup complete";
 
-  if (!LoadBinary(launchpad_, argv_[0]))
-    goto fail;
+  if (!LoadBinary(launchpad_, argv_[0])) goto fail;
 
   FXL_VLOG(1) << "Binary loaded";
 
@@ -282,8 +275,7 @@ bool Process::Initialize(zx_koid_t pid) {
 bool Process::AllocDebugHandle() {
   FXL_DCHECK(handle_ == ZX_HANDLE_INVALID);
   auto handle = GetProcessDebugHandle(id_);
-  if (handle == ZX_HANDLE_INVALID)
-    return false;
+  if (handle == ZX_HANDLE_INVALID) return false;
   handle_ = handle;
   return true;
 }
@@ -295,11 +287,9 @@ void Process::CloseDebugHandle() {
 
 bool Process::BindExceptionPort() {
   ExceptionPort::Key key = server_->exception_port()->Bind(
-    handle_,
-    std::bind(&Process::OnExceptionOrSignal, this, std::placeholders::_1,
-              std::placeholders::_2));
-  if (!key)
-    return false;
+      handle_, std::bind(&Process::OnExceptionOrSignal, this,
+                         std::placeholders::_1, std::placeholders::_2));
+  if (!key) return false;
   eport_key_ = key;
   return true;
 }
@@ -319,8 +309,7 @@ bool Process::Attach() {
 
   FXL_LOG(INFO) << "Attaching to process " << id();
 
-  if (!AllocDebugHandle())
-    return false;
+  if (!AllocDebugHandle()) return false;
 
   if (!BindExceptionPort()) {
     CloseDebugHandle();
@@ -470,8 +459,7 @@ void Process::Clear() {
   dsos_ = nullptr;
   dsos_build_failed_ = false;
 
-  if (launchpad_)
-    launchpad_destroy(launchpad_);
+  if (launchpad_) launchpad_destroy(launchpad_);
   launchpad_ = nullptr;
 
   // The process may just exited or whatever. Force the state to kGone.
@@ -537,8 +525,7 @@ Thread* Process::FindThreadById(zx_koid_t thread_id) {
 Thread* Process::PickOneThread() {
   EnsureThreadMapFresh();
 
-  if (threads_.empty())
-    return nullptr;
+  if (threads_.empty()) return nullptr;
 
   return threads_.begin()->second.get();
 }
@@ -550,9 +537,8 @@ bool Process::RefreshAllThreads() {
   // buffer. This is racy but unless the caller stops all threads that's just
   // the way things are.
   size_t num_threads;
-  zx_status_t status =
-      zx_object_get_info(handle_, ZX_INFO_PROCESS_THREADS, nullptr, 0,
-                         nullptr, &num_threads);
+  zx_status_t status = zx_object_get_info(handle_, ZX_INFO_PROCESS_THREADS,
+                                          nullptr, 0, nullptr, &num_threads);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to get process thread info (#threads): "
                    << util::ZxErrorString(status);
@@ -562,8 +548,8 @@ bool Process::RefreshAllThreads() {
   auto buffer_size = num_threads * sizeof(zx_koid_t);
   auto koids = std::make_unique<zx_koid_t[]>(num_threads);
   size_t records_read;
-  status = zx_object_get_info(handle_, ZX_INFO_PROCESS_THREADS,
-                              koids.get(), buffer_size, &records_read, nullptr);
+  status = zx_object_get_info(handle_, ZX_INFO_PROCESS_THREADS, koids.get(),
+                              buffer_size, &records_read, nullptr);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to get process thread info: "
                    << util::ZxErrorString(status);
@@ -597,8 +583,7 @@ bool Process::RefreshAllThreads() {
 void Process::ForEachThread(const ThreadCallback& callback) {
   EnsureThreadMapFresh();
 
-  for (const auto& iter : threads_)
-    callback(iter.second.get());
+  for (const auto& iter : threads_) callback(iter.second.get());
 }
 
 void Process::ForEachLiveThread(const ThreadCallback& callback) {
@@ -606,8 +591,7 @@ void Process::ForEachLiveThread(const ThreadCallback& callback) {
 
   for (const auto& iter : threads_) {
     Thread* thread = iter.second.get();
-    if (thread->state() != Thread::State::kGone)
-      callback(thread);
+    if (thread->state() != Thread::State::kGone) callback(thread);
   }
 }
 
@@ -626,12 +610,13 @@ void Process::TryBuildLoadedDsosList(Thread* thread, bool check_ldso_bkpt) {
 
   uintptr_t debug_addr;
   zx_handle_t process_handle = thread->process()->handle();
-  zx_status_t status = zx_object_get_property(process_handle,
-                                              ZX_PROP_PROCESS_DEBUG_ADDR,
-                                              &debug_addr, sizeof(debug_addr));
+  zx_status_t status =
+      zx_object_get_property(process_handle, ZX_PROP_PROCESS_DEBUG_ADDR,
+                             &debug_addr, sizeof(debug_addr));
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx_object_get_property failed, unable to fetch dso list: "
-		   << util::ZxErrorString(status);
+    FXL_LOG(ERROR)
+        << "zx_object_get_property failed, unable to fetch dso list: "
+        << util::ZxErrorString(status);
     return;
   }
 
@@ -684,8 +669,8 @@ void Process::OnExceptionOrSignal(const zx_port_packet_t& packet,
                                   const zx_exception_context_t& context) {
   // Process exit is sent as a regular signal.
   if (packet.type == ZX_PKT_TYPE_SIGNAL_ONE) {
-    FXL_VLOG(1) << "Received ZX_PKT_TYPE_SIGNAL_ONE, trigger 0x"
-                << std::hex << packet.signal.trigger;
+    FXL_VLOG(1) << "Received ZX_PKT_TYPE_SIGNAL_ONE, trigger 0x" << std::hex
+                << packet.signal.trigger;
     if (packet.signal.trigger & ZX_TASK_TERMINATED) {
       set_state(Process::State::kGone);
       delegate_->OnProcessExit(this);

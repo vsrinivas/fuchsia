@@ -19,8 +19,7 @@ bool IsOfSupportedType(const trace::Record::Event& event) {
 }
 
 bool EventMatchesSpecWithAnchor(const trace::Record::Event& event,
-                                EventSpec spec,
-                                Anchor anchor) {
+                                EventSpec spec, Anchor anchor) {
   if (!EventMatchesSpec(event, spec)) {
     return false;
   }
@@ -68,8 +67,7 @@ bool MeasureTimeBetween::Process(const trace::Record::Event& event) {
   return true;
 }
 
-void MeasureTimeBetween::AddResult(uint64_t spec_id,
-                                   trace_ticks_t from,
+void MeasureTimeBetween::AddResult(uint64_t spec_id, trace_ticks_t from,
                                    trace_ticks_t to) {
   results_[spec_id].push_back(to - from);
 }

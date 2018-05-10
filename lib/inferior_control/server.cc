@@ -19,9 +19,7 @@
 
 namespace debugserver {
 
-Server::Server()
-    : client_sock_(-1),
-      run_status_(true) {}
+Server::Server() : client_sock_(-1), run_status_(true) {}
 
 Server::~Server() {
   // This will invoke the IOLoop destructor which will clean up and join the I/O

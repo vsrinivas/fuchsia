@@ -54,9 +54,10 @@ TEST(SysloggerSettings, ParseValidOptions) {
       fxl::CommandLineFromInitializerList({"argv0", "--quiet=3"}), &settings));
   EXPECT_EQ(3, settings.severity);
 
-  EXPECT_STR_EMPTY(ParseLoggerSettings(
-      fxl::CommandLineFromInitializerList({"argv0", "--log-file=/tmp/custom.log"}),
-      &settings));
+  EXPECT_STR_EMPTY(
+      ParseLoggerSettings(fxl::CommandLineFromInitializerList(
+                              {"argv0", "--log-file=/tmp/custom.log"}),
+                          &settings));
   EXPECT_GT(settings.fd, 0);
   close(settings.fd);
 }

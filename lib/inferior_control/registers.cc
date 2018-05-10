@@ -45,7 +45,8 @@ bool Registers::RefreshRegsetHelper(int regset, void* buf, size_t buf_size) {
     return true;
   }
 
-  zx_status_t status = zx_thread_read_state(thread()->handle(), regset, buf, buf_size);
+  zx_status_t status =
+      zx_thread_read_state(thread()->handle(), regset, buf, buf_size);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to read regset " << regset << ": "
                    << util::ZxErrorString(status);
@@ -58,7 +59,8 @@ bool Registers::RefreshRegsetHelper(int regset, void* buf, size_t buf_size) {
 
 bool Registers::WriteRegsetHelper(int regset, const void* buf,
                                   size_t buf_size) {
-  zx_status_t status = zx_thread_write_state(thread()->handle(), regset, buf, buf_size);
+  zx_status_t status =
+      zx_thread_write_state(thread()->handle(), regset, buf, buf_size);
   if (status < 0) {
     FXL_LOG(ERROR) << "Failed to write regset " << regset << ": "
                    << util::ZxErrorString(status);
@@ -69,8 +71,8 @@ bool Registers::WriteRegsetHelper(int regset, const void* buf,
   return true;
 }
 
-bool Registers::SetRegsetFromStringHelper(int regset,
-                                          void* buffer, size_t buf_size,
+bool Registers::SetRegsetFromStringHelper(int regset, void* buffer,
+                                          size_t buf_size,
                                           const fxl::StringView& value) {
   auto bytes = util::DecodeByteArrayString(value);
   if (bytes.size() != buf_size) {
@@ -91,17 +93,11 @@ zx_vaddr_t Registers::GetIntRegister(int regno) {
   return value;
 }
 
-zx_vaddr_t Registers::GetPC() {
-  return GetIntRegister(GetPCRegisterNumber());
-}
+zx_vaddr_t Registers::GetPC() { return GetIntRegister(GetPCRegisterNumber()); }
 
-zx_vaddr_t Registers::GetSP() {
-  return GetIntRegister(GetSPRegisterNumber());
-}
+zx_vaddr_t Registers::GetSP() { return GetIntRegister(GetSPRegisterNumber()); }
 
-zx_vaddr_t Registers::GetFP() {
-  return GetIntRegister(GetFPRegisterNumber());
-}
+zx_vaddr_t Registers::GetFP() { return GetIntRegister(GetFPRegisterNumber()); }
 
 }  // namespace arch
 }  // namespace debugserver

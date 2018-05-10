@@ -84,9 +84,8 @@ TEST(MessageLoop, TriplyNestedTasks) {
     tasks.push_back("one");
     loop.task_runner()->PostTask([&tasks, &loop]() {
       tasks.push_back("two");
-      loop.task_runner()->PostTask([&tasks, &loop]() {
-        tasks.push_back("three");
-      });
+      loop.task_runner()->PostTask(
+          [&tasks, &loop]() { tasks.push_back("three"); });
     });
   });
   loop.RunUntilIdle();
@@ -177,7 +176,7 @@ TEST(MessageLoop, TaskDestructionTime) {
     loop.RunUntilIdle();
     auto observer1 = std::make_unique<DestructorObserver>(
         [&destructed] { destructed = true; });
-    task_runner->PostTask(fxl::MakeCopyable([p = std::move(observer1)](){}));
+    task_runner->PostTask(fxl::MakeCopyable([p = std::move(observer1)]() {}));
     EXPECT_FALSE(destructed);
   }
   EXPECT_TRUE(destructed);
@@ -185,7 +184,7 @@ TEST(MessageLoop, TaskDestructionTime) {
   destructed = false;
   auto observer2 = std::make_unique<DestructorObserver>(
       [&destructed] { destructed = true; });
-  task_runner->PostTask(fxl::MakeCopyable([p = std::move(observer2)](){}));
+  task_runner->PostTask(fxl::MakeCopyable([p = std::move(observer2)]() {}));
   EXPECT_TRUE(destructed);
 }
 
@@ -196,9 +195,7 @@ TEST(MessageLoop, CanQuitCurrent) {
     count++;
     MessageLoop::GetCurrent()->QuitNow();
   });
-  loop.task_runner()->PostTask([&count]() {
-    count++;
-  });
+  loop.task_runner()->PostTask([&count]() { count++; });
   loop.RunUntilIdle();
   EXPECT_EQ(1, count);
 }
@@ -264,23 +261,20 @@ TEST(MessageLoop, TaskRunnerAvailableDuringLoopDestruction) {
   bool task_posted_from_task_ran = false;
   bool task_posted_from_task_destroyed = false;
   fxl::Closure task =
-      [d = DestructorObserver([
-         task_runner = loop->task_runner(),            //
-         &task_observed_runs_tasks_on_current_thread,  //
-         &task_destroyed,                              //
-         &task_posted_from_task_ran,                   //
-         &task_posted_from_task_destroyed
-       ] {
+      [d = DestructorObserver([task_runner = loop->task_runner(),            //
+                               &task_observed_runs_tasks_on_current_thread,  //
+                               &task_destroyed,                              //
+                               &task_posted_from_task_ran,                   //
+                               &task_posted_from_task_destroyed] {
          task_destroyed = true;
          task_observed_runs_tasks_on_current_thread =
              task_runner->RunsTasksOnCurrentThread();
-         task_runner->PostTask([
-           &task_posted_from_task_ran,
-           d = DestructorObserver([&task_posted_from_task_destroyed] {
-             task_posted_from_task_destroyed = true;
-           })
-         ] { task_posted_from_task_ran = true; });
-       })]{};
+         task_runner->PostTask(
+             [&task_posted_from_task_ran,
+              d = DestructorObserver([&task_posted_from_task_destroyed] {
+                task_posted_from_task_destroyed = true;
+              })] { task_posted_from_task_ran = true; });
+       })] {};
 
   loop->task_runner()->PostTask(std::move(task));
   loop.reset();

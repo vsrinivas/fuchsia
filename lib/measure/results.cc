@@ -19,10 +19,10 @@ std::string GetLabel(const measure::DurationSpec& spec) {
 
 std::string GetLabel(const measure::TimeBetweenSpec& spec) {
   std::ostringstream os;
-  os << spec.first_event.name.c_str()
-     << " (" << spec.first_event.category.c_str() << ") to ";
-  os << spec.second_event.name.c_str()
-     << " (" << spec.second_event.category.c_str() << ")";
+  os << spec.first_event.name.c_str() << " ("
+     << spec.first_event.category.c_str() << ") to ";
+  os << spec.second_event.name.c_str() << " ("
+     << spec.second_event.category.c_str() << ")";
   return os.str();
 }
 
@@ -33,8 +33,7 @@ std::string GetSampleGroupLabel(size_t begin, size_t end) {
 }
 
 template <typename Spec>
-Result ComputeSingle(Spec spec,
-                     const std::vector<trace_ticks_t>& ticks,
+Result ComputeSingle(Spec spec, const std::vector<trace_ticks_t>& ticks,
                      std::vector<size_t> split_samples_at,
                      uint64_t ticks_per_second) {
   Result result;
@@ -74,8 +73,7 @@ Result ComputeSingle(Spec spec,
 
 template <typename T>
 const T& get_or_default(const std::unordered_map<uint64_t, T>& dictionary,
-                        uint64_t id,
-                        const T& default_value) {
+                        uint64_t id, const T& default_value) {
   return dictionary.count(id) ? dictionary.at(id) : default_value;
 }
 

@@ -31,9 +31,7 @@ class FXL_EXPORT SocketDrainer {
   void Start(zx::socket source);
 
  private:
-  void OnHandleReady(async_t* async,
-                     async::WaitBase* wait,
-                     zx_status_t status,
+  void OnHandleReady(async_t* async, async::WaitBase* wait, zx_status_t status,
                      const zx_packet_signal_t* signal);
 
   Client* client_;

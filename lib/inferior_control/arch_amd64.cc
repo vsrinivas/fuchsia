@@ -95,9 +95,7 @@ bool IsSingleStepException(const zx_exception_context_t& context) {
   return arch_exception == x86::INT_DEBUG;
 }
 
-void DumpArch(FILE* out) {
-  x86::x86_feature_debug(out);
-}
+void DumpArch(FILE* out) { x86::x86_feature_debug(out); }
 
 }  // namespace arch
 }  // namespace debugserver

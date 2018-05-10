@@ -33,24 +33,19 @@ TEST(ThreadSafeBindingSet, Control) {
     }
   }
 
-  for (const auto& impl : impls)
-    EXPECT_TRUE(impl.frobs.empty());
+  for (const auto& impl : impls) EXPECT_TRUE(impl.frobs.empty());
 
-  for (auto& ptr : ptrs)
-    ptr->Frob("one");
+  for (auto& ptr : ptrs) ptr->Frob("one");
 
   loop.RunUntilIdle();
 
-  for (const auto& impl : impls)
-    EXPECT_EQ(1u, impl.frobs.size());
+  for (const auto& impl : impls) EXPECT_EQ(1u, impl.frobs.size());
 
-  for (size_t i = 0; i < kCount / 2; ++i)
-    ptrs[i].Unbind();
+  for (size_t i = 0; i < kCount / 2; ++i) ptrs[i].Unbind();
 
   loop.RunUntilIdle();
 
-  for (size_t i = kCount / 2; i < kCount; ++i)
-    ptrs[i]->Frob("two");
+  for (size_t i = kCount / 2; i < kCount; ++i) ptrs[i]->Frob("two");
 
   loop.RunUntilIdle();
 
@@ -61,8 +56,7 @@ TEST(ThreadSafeBindingSet, Control) {
 
   binding_set.CloseAll();
 
-  for (size_t i = kCount / 2; i < kCount; ++i)
-    ptrs[i]->Frob("three");
+  for (size_t i = kCount / 2; i < kCount; ++i) ptrs[i]->Frob("three");
 
   loop.RunUntilIdle();
 

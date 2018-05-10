@@ -88,8 +88,7 @@ class SynchronousInterfacePtr {
   InterfaceRequest<Interface> NewRequest() {
     zx::channel h1;
     zx::channel h2;
-    if (zx::channel::create(0, &h1, &h2) != ZX_OK)
-      return nullptr;
+    if (zx::channel::create(0, &h1, &h2) != ZX_OK) return nullptr;
     Bind(std::move(h1));
     return InterfaceRequest<Interface>(std::move(h2));
   }

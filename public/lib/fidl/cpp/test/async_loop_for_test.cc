@@ -29,13 +29,9 @@ zx_status_t AsyncLoopForTest::RunUntilIdle() {
   return impl_->loop()->RunUntilIdle();
 }
 
-zx_status_t AsyncLoopForTest::Run() {
-  return impl_->loop()->Run();
-}
+zx_status_t AsyncLoopForTest::Run() { return impl_->loop()->Run(); }
 
-async_t* AsyncLoopForTest::async() {
-  return impl_->loop()->async();
-}
+async_t* AsyncLoopForTest::async() { return impl_->loop()->async(); }
 
 }  // namespace test
 }  // namespace fidl

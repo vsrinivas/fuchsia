@@ -96,8 +96,7 @@ TEST(FidlTest, UnionComparison) {
 // generator generates values ordered by the given index.
 template <typename A>
 std::vector<fidl::VectorPtr<A>> BuildSortedVector(
-    size_t size,
-    const std::function<A(int32_t)>& generator) {
+    size_t size, const std::function<A(int32_t)>& generator) {
   constexpr int32_t kNbBaseElement = 3;
 
   std::vector<fidl::VectorPtr<A>> result;

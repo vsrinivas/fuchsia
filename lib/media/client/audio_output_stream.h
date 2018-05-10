@@ -36,8 +36,7 @@ class AudioOutputStream {
   bool GetDelays();
 
   void PullFromClientBuffer(float* client_buffer, int num_samples);
-  media::MediaPacket CreateMediaPacket(zx_time_t pts,
-                                       size_t payload_offset,
+  media::MediaPacket CreateMediaPacket(zx_time_t pts, size_t payload_offset,
                                        size_t payload_size);
   bool SendMediaPacket(media::MediaPacket packet);
 

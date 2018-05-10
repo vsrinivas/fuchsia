@@ -16,9 +16,7 @@
 namespace fidl {
 namespace {
 
-TEST(Binding, Trivial) {
-  Binding<frobinator::Frobinator> binding(nullptr);
-}
+TEST(Binding, Trivial) { Binding<frobinator::Frobinator> binding(nullptr); }
 
 TEST(Binding, Control) {
   fidl::test::AsyncLoopForTest loop;

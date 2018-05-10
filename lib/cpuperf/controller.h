@@ -17,7 +17,7 @@
 namespace cpuperf {
 
 class Controller {
-public:
+ public:
   Controller(uint32_t buffer_size_in_mb, const cpuperf_config_t& config);
   ~Controller();
 
@@ -30,7 +30,7 @@ public:
 
   std::unique_ptr<Reader> GetReader();
 
-private:
+ private:
   void Alloc();
   bool Stage();
   void Free();

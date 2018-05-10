@@ -23,14 +23,12 @@ void StreamBuffer::SetWritable() {
 }
 
 bool StreamBuffer::IsAvailable(size_t count) const {
-  if (count == 0)
-    return true;
+  if (count == 0) return true;
 
   size_t current_node_offset = first_read_buffer_offset_;
   for (const auto& cur : read_buffer_) {
     size_t in_current = cur.size() - current_node_offset;
-    if (count <= in_current)
-      return true;
+    if (count <= in_current) return true;
     count -= in_current;
     current_node_offset = 0;
   }
@@ -47,12 +45,10 @@ size_t StreamBuffer::Peek(char* buffer, size_t buffer_len) const {
 
 void StreamBuffer::Write(std::vector<char> data) {
   write_buffer_.push_back(std::move(data));
-  if (can_write_)
-    FlushWriteBuffer();
+  if (can_write_) FlushWriteBuffer();
 }
 
-size_t StreamBuffer::ReadOrPeek(char* buffer,
-                                size_t buffer_len,
+size_t StreamBuffer::ReadOrPeek(char* buffer, size_t buffer_len,
                                 bool erase_consumed) {
   size_t buffer_pos = 0;
 
@@ -74,8 +70,7 @@ size_t StreamBuffer::ReadOrPeek(char* buffer,
   }
   if (erase_consumed) {
     // Update the state to reflect these read bytes.
-    while (read_buffer_.begin() != cur)
-      read_buffer_.pop_front();
+    while (read_buffer_.begin() != cur) read_buffer_.pop_front();
     first_read_buffer_offset_ = current_node_offset;
   }
   return buffer_pos;

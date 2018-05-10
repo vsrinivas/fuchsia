@@ -10,8 +10,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <zircon/types.h>
 #include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -25,8 +25,7 @@ namespace util {
 const char kDebugDirectory[] = "/boot/debug";
 const char kDebugSuffix[] = ".debug";
 
-static dsoinfo_t* dsolist_add(dsoinfo_t** list,
-                              const char* name,
+static dsoinfo_t* dsolist_add(dsoinfo_t** list, const char* name,
                               uintptr_t base) {
   if (!strcmp(name, "libc.so")) {
     name = "libmusl.so";
@@ -69,8 +68,7 @@ dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb, zx_vaddr_t lmap_addr,
     // If there's a failure here, say because the internal data structures got
     // corrupted, just bail and return what we've collected so far.
 
-    if (!bb->Read(lmap_addr, &lmap, sizeof(lmap)))
-      break;
+    if (!bb->Read(lmap_addr, &lmap, sizeof(lmap))) break;
     if (!ReadString(*bb, reinterpret_cast<zx_vaddr_t>(lmap.l_name), dsoname,
                     sizeof(dsoname)))
       break;
@@ -79,8 +77,8 @@ dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb, zx_vaddr_t lmap_addr,
     dsoinfo_t* dso = dsolist_add(&dsolist, file_name, lmap.l_addr);
 
     std::unique_ptr<elf::Reader> elf_reader;
-    elf::Error rc = elf::Reader::Create(file_name, bb, 0, dso->base,
-                                        &elf_reader);
+    elf::Error rc =
+        elf::Reader::Create(file_name, bb, 0, dso->base, &elf_reader);
     if (rc != elf::Error::OK) {
       FXL_LOG(ERROR) << "Unable to read ELF file: " << elf::ErrorName(rc);
       break;
@@ -96,24 +94,21 @@ dsoinfo_t* dso_fetch_list(std::shared_ptr<ByteBlock> bb, zx_vaddr_t lmap_addr,
       uint32_t num_loadable_phdrs = 0;
       for (size_t i = 0; i < num_segments; ++i) {
         const elf::SegmentHeader& phdr = elf_reader->GetSegmentHeader(i);
-        if (phdr.p_type == PT_LOAD)
-          ++num_loadable_phdrs;
+        if (phdr.p_type == PT_LOAD) ++num_loadable_phdrs;
       }
       // malloc may, or may not, return NULL for a zero byte request.
       // Remove the ambiguity for consumers and always use NULL if there no
       // loadable phdrs.
       elf::SegmentHeader* loadable_phdrs = NULL;
       if (num_loadable_phdrs > 0) {
-        loadable_phdrs =
-          reinterpret_cast<elf::SegmentHeader*>(malloc(num_loadable_phdrs *
-                                                       hdr.e_phentsize));
+        loadable_phdrs = reinterpret_cast<elf::SegmentHeader*>(
+            malloc(num_loadable_phdrs * hdr.e_phentsize));
       }
       if (loadable_phdrs || num_loadable_phdrs == 0) {
         size_t j = 0;
         for (size_t i = 0; i < num_segments; ++i) {
           const elf::SegmentHeader& phdr = elf_reader->GetSegmentHeader(i);
-          if (phdr.p_type == PT_LOAD)
-            loadable_phdrs[j++] = phdr;
+          if (phdr.p_type == PT_LOAD) loadable_phdrs[j++] = phdr;
         }
         FXL_DCHECK(j == num_loadable_phdrs);
         dso->num_loadable_phdrs = num_loadable_phdrs;
@@ -154,8 +149,7 @@ void dso_free_list(dsoinfo_t* list) {
 
 dsoinfo_t* dso_lookup(dsoinfo_t* dso_list, zx_vaddr_t pc) {
   for (auto dso = dso_list; dso != nullptr; dso = dso->next) {
-    if (pc >= dso->base)
-      return dso;
+    if (pc >= dso->base) return dso;
   }
 
   return nullptr;
@@ -163,8 +157,7 @@ dsoinfo_t* dso_lookup(dsoinfo_t* dso_list, zx_vaddr_t pc) {
 
 dsoinfo_t* dso_get_main_exec(dsoinfo_t* dso_list) {
   for (auto dso = dso_list; dso != nullptr; dso = dso->next) {
-    if (dso->is_main_exec)
-      return dso;
+    if (dso->is_main_exec) return dso;
   }
 
   return nullptr;
@@ -172,8 +165,8 @@ dsoinfo_t* dso_get_main_exec(dsoinfo_t* dso_list) {
 
 void dso_print_list(FILE* out, const dsoinfo_t* dso_list) {
   for (auto dso = dso_list; dso != nullptr; dso = dso->next) {
-    fprintf(out,"dso: id=%s base=%p name=%s\n",
-            dso->buildid, (void*) dso->base, dso->name);
+    fprintf(out, "dso: id=%s base=%p name=%s\n", dso->buildid, (void*)dso->base,
+            dso->name);
   }
 }
 

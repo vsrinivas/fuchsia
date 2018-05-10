@@ -51,8 +51,7 @@ ApplicationContext::CreateFromStartupInfoNotChecked() {
 std::unique_ptr<ApplicationContext> ApplicationContext::CreateFrom(
     ApplicationStartupInfo startup_info) {
   FlatNamespace& flat = startup_info.flat_namespace;
-  if (flat.paths->size() != flat.directories->size())
-    return nullptr;
+  if (flat.paths->size() != flat.directories->size()) return nullptr;
 
   zx::channel service_root;
   for (size_t i = 0; i < flat.paths->size(); ++i) {
@@ -68,8 +67,7 @@ std::unique_ptr<ApplicationContext> ApplicationContext::CreateFrom(
 }
 
 void ApplicationContext::ConnectToEnvironmentService(
-    const std::string& interface_name,
-    zx::channel channel) {
+    const std::string& interface_name, zx::channel channel) {
   return incoming_services().ConnectToService(std::move(channel),
                                               interface_name);
 }

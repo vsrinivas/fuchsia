@@ -42,10 +42,8 @@ namespace audio {
 template <bool enabled = true>
 class WavWriter {
  public:
-  bool Initialize(const char* const file_name,
-                  AudioSampleFormat sample_format,
-                  uint32_t channel_count,
-                  uint32_t frame_rate,
+  bool Initialize(const char* const file_name, AudioSampleFormat sample_format,
+                  uint32_t channel_count, uint32_t frame_rate,
                   uint32_t bits_per_sample);
 
   bool Write(void* const buffer, uint32_t num_bytes);
@@ -70,10 +68,7 @@ class WavWriter {
 template <>
 class WavWriter<false> {
  public:
-  bool Initialize(const char* const,
-                  AudioSampleFormat,
-                  uint32_t,
-                  uint32_t,
+  bool Initialize(const char* const, AudioSampleFormat, uint32_t, uint32_t,
                   uint32_t) {
     return true;
   };

@@ -70,9 +70,7 @@ bool SoftwareBreakpoint::Remove() {
   return true;
 }
 
-bool SoftwareBreakpoint::IsInserted() const {
-  return !original_bytes_.empty();
-}
+bool SoftwareBreakpoint::IsInserted() const { return !original_bytes_.empty(); }
 
 namespace {
 
@@ -107,8 +105,7 @@ bool SingleStepBreakpoint::Insert() {
 
   // TODO: Manage things like the user having already set TF.
 
-  if (!SetRflagsTF(owner()->thread(), true))
-    return false;
+  if (!SetRflagsTF(owner()->thread(), true)) return false;
 
   inserted_ = true;
   return true;
@@ -120,16 +117,13 @@ bool SingleStepBreakpoint::Remove() {
     return false;
   }
 
-  if (!SetRflagsTF(owner()->thread(), false))
-    return false;
+  if (!SetRflagsTF(owner()->thread(), false)) return false;
 
   inserted_ = false;
   return true;
 }
 
-bool SingleStepBreakpoint::IsInserted() const {
-  return inserted_;
-}
+bool SingleStepBreakpoint::IsInserted() const { return inserted_; }
 
 }  // namespace arch
 }  // namespace debugserver

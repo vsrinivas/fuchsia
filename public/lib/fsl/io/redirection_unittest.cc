@@ -19,8 +19,7 @@ TEST(Redirection, CreateRedirectedSocket) {
 
   ASSERT_EQ(ZX_OK, status);
   EXPECT_TRUE(socket);
-  EXPECT_EQ(static_cast<uint32_t>(PA_HND(PA_FDIO_PIPE, 2)),
-            startup_handle.id);
+  EXPECT_EQ(static_cast<uint32_t>(PA_HND(PA_FDIO_PIPE, 2)), startup_handle.id);
   EXPECT_TRUE(startup_handle.handle);
 }
 

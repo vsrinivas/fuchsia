@@ -18,23 +18,17 @@ namespace {
 #if !defined(OS_LINUX)
 bool SetCloseOnExec(int fd) {
   const int flags = fcntl(fd, F_GETFD);
-  if (flags == -1)
-    return false;
-  if (flags & FD_CLOEXEC)
-    return true;
-  if (HANDLE_EINTR(fcntl(fd, F_SETFD, flags | FD_CLOEXEC)) == -1)
-    return false;
+  if (flags == -1) return false;
+  if (flags & FD_CLOEXEC) return true;
+  if (HANDLE_EINTR(fcntl(fd, F_SETFD, flags | FD_CLOEXEC)) == -1) return false;
   return true;
 }
 
 bool SetNonBlocking(int fd) {
   const int flags = fcntl(fd, F_GETFL);
-  if (flags == -1)
-    return false;
-  if (flags & O_NONBLOCK)
-    return true;
-  if (HANDLE_EINTR(fcntl(fd, F_SETFL, flags | O_NONBLOCK)) == -1)
-    return false;
+  if (flags == -1) return false;
+  if (flags & O_NONBLOCK) return true;
+  if (HANDLE_EINTR(fcntl(fd, F_SETFL, flags | O_NONBLOCK)) == -1) return false;
   return true;
 }
 #endif
@@ -44,26 +38,20 @@ bool SetNonBlocking(int fd) {
 bool CreateLocalNonBlockingPipe(fxl::UniqueFD* out_end, fxl::UniqueFD* in_end) {
 #if defined(OS_LINUX)
   int fds[2];
-  if (pipe2(fds, O_CLOEXEC | O_NONBLOCK) != 0)
-    return false;
+  if (pipe2(fds, O_CLOEXEC | O_NONBLOCK) != 0) return false;
   out_end->reset(fds[0]);
   in_end->reset(fds[1]);
   return true;
 #else
   int fds[2];
-  if (pipe(fds) != 0)
-    return false;
+  if (pipe(fds) != 0) return false;
 
   fxl::UniqueFD fd_out(fds[0]);
   fxl::UniqueFD fd_in(fds[1]);
-  if (!SetCloseOnExec(fd_out.get()))
-    return false;
-  if (!SetCloseOnExec(fd_in.get()))
-    return false;
-  if (!SetNonBlocking(fd_out.get()))
-    return false;
-  if (!SetNonBlocking(fd_in.get()))
-    return false;
+  if (!SetCloseOnExec(fd_out.get())) return false;
+  if (!SetCloseOnExec(fd_in.get())) return false;
+  if (!SetNonBlocking(fd_out.get())) return false;
+  if (!SetNonBlocking(fd_in.get())) return false;
 
   *out_end = std::move(fd_out);
   *in_end = std::move(fd_in);
@@ -115,8 +103,7 @@ void MessageLoopPoll::Run() {
   }
 }
 
-MessageLoop::WatchHandle MessageLoopPoll::WatchFD(WatchMode mode,
-                                                  int fd,
+MessageLoop::WatchHandle MessageLoopPoll::WatchFD(WatchMode mode, int fd,
                                                   FDWatcher* watcher) {
   // The dispatch code for watch callbacks requires this be called on the
   // same thread as the message loop is.
@@ -162,8 +149,7 @@ void MessageLoopPoll::OnFDReadable(int fd) {
 
   // ProcessPendingTask must be called with the lock held.
   std::lock_guard<std::mutex> guard(mutex_);
-  if (ProcessPendingTask())
-    SetHasTasks();
+  if (ProcessPendingTask()) SetHasTasks();
 }
 
 void MessageLoopPoll::SetHasTasks() {
@@ -174,8 +160,7 @@ void MessageLoopPoll::SetHasTasks() {
 }
 
 void MessageLoopPoll::ConstructFDMapping(
-    std::vector<pollfd>* poll_vect,
-    std::vector<size_t>* map_indices) const {
+    std::vector<pollfd>* poll_vect, std::vector<size_t>* map_indices) const {
   // The watches_ vector is not threadsafe.
   FXL_DCHECK(Current() == this);
 
