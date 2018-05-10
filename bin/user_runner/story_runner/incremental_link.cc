@@ -43,14 +43,10 @@ std::string MakeSequencedLinkKeyPrefix(const LinkPath& link_path) {
 // Reload needs to run if:
 // 1. LinkImpl was just constructed
 // 2. IncrementalChangeCall sees an out-of-order change
-class LinkImpl::ReloadCall : Operation<> {
+class LinkImpl::ReloadCall : public Operation<> {
  public:
-  ReloadCall(OperationContainer* const container,
-             LinkImpl* const impl,
-             ResultCall result_call)
-      : Operation("LinkImpl::ReloadCall", container, result_call), impl_(impl) {
-    Ready();
-  }
+  ReloadCall(LinkImpl* const impl, ResultCall result_call)
+      : Operation("LinkImpl::ReloadCall", result_call), impl_(impl) {}
 
  private:
   void Run();
@@ -61,19 +57,15 @@ class LinkImpl::ReloadCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(ReloadCall);
 };
 
-class LinkImpl::IncrementalWriteCall : Operation<> {
+class LinkImpl::IncrementalWriteCall : public Operation<> {
  public:
-  IncrementalWriteCall(OperationContainer* const container,
-                       LinkImpl* const impl,
+  IncrementalWriteCall(LinkImpl* const impl,
                        modular_private::LinkChangePtr data,
                        ResultCall result_call)
-      : Operation("LinkImpl::IncrementalWriteCall",
-                  container,
-                  std::move(result_call)),
+      : Operation("LinkImpl::IncrementalWriteCall", std::move(result_call)),
         impl_(impl),
         data_(std::move(data)) {
     FXL_DCHECK(!data_->key.is_null());
-    Ready();
   }
 
   std::string key() { return data_->key; }
@@ -94,21 +86,15 @@ class LinkImpl::IncrementalWriteCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(IncrementalWriteCall);
 };
 
-class LinkImpl::IncrementalChangeCall : Operation<> {
+class LinkImpl::IncrementalChangeCall : public Operation<> {
  public:
-  IncrementalChangeCall(OperationContainer* const container,
-                        LinkImpl* const impl,
-                        modular_private::LinkChangePtr data,
-                        uint32_t src,
+  IncrementalChangeCall(LinkImpl* const impl,
+                        modular_private::LinkChangePtr data, uint32_t src,
                         ResultCall result_call)
-      : Operation("LinkImpl::IncrementalChangeCall",
-                  container,
-                  std::move(result_call)),
+      : Operation("LinkImpl::IncrementalChangeCall", std::move(result_call)),
         impl_(impl),
         data_(std::move(data)),
-        src_(src) {
-    Ready();
-  }
+        src_(src) {}
 
  private:
   void Run() {
@@ -144,16 +130,16 @@ class LinkImpl::IncrementalChangeCall : Operation<> {
 
       data_->key = impl_->key_generator_.Create();
       impl_->pending_ops_.push_back(CloneStruct(*data_));
-      new IncrementalWriteCall(&operation_queue_, impl_, CloneOptional(data_),
-                               [flow] {});
+      operation_queue_.Add(
+          new IncrementalWriteCall(impl_, CloneOptional(data_), [flow] {}));
     }
 
     const bool reload = data_->key < impl_->latest_key_;
     if (reload) {
       // Use kOnChangeConnectionId because the interaction of this change with
       // later changes is unpredictable.
-      new ReloadCall(&operation_queue_, impl_,
-                     [this, flow] { Cont1(flow, kOnChangeConnectionId); });
+      operation_queue_.Add(new ReloadCall(
+          impl_, [this, flow] { Cont1(flow, kOnChangeConnectionId); }));
     } else {
       if (!impl_->ApplyChange(data_.get())) {
         FXL_LOG(WARNING) << trace_name() << " "
@@ -192,8 +178,7 @@ void LinkImpl::ReloadCall::Run() {
   FlowToken flow{this};
   new ReadAllDataCall<modular_private::LinkChange>(
       &operation_queue_, impl_->page(),
-      MakeSequencedLinkKeyPrefix(impl_->link_path_),
-      XdrLinkChange,
+      MakeSequencedLinkKeyPrefix(impl_->link_path_), XdrLinkChange,
       [this, flow](fidl::VectorPtr<modular_private::LinkChange> changes) {
         // TODO(mesch): Initial link data must be applied even when there
         // already are data present in the link.
@@ -207,8 +192,8 @@ void LinkImpl::ReloadCall::Run() {
             data->op = modular_private::LinkChangeOp::SET;
             data->pointer = fidl::VectorPtr<fidl::StringPtr>::New(0);
             data->json = std::move(impl_->create_link_info_->initial_data);
-            new IncrementalChangeCall(&operation_queue_, impl_, std::move(data),
-                                      kWatchAllConnectionId, [flow] {});
+            operation_queue_.Add(new IncrementalChangeCall(
+                impl_, std::move(data), kWatchAllConnectionId, [flow] {}));
           }
         } else {
           impl_->Replay(std::move(changes));
@@ -286,19 +271,19 @@ bool LinkImpl::ApplyChange(modular_private::LinkChange* const change) {
 }
 
 void LinkImpl::MakeReloadCall(std::function<void()> done) {
-  new ReloadCall(&operation_queue_, this, std::move(done));
+  operation_queue_.Add(new ReloadCall(this, std::move(done)));
 }
 
 void LinkImpl::MakeIncrementalWriteCall(modular_private::LinkChangePtr data,
                                         std::function<void()> done) {
-  new IncrementalWriteCall(&operation_queue_, this, std::move(data),
-                           std::move(done));
+  operation_queue_.Add(
+      new IncrementalWriteCall(this, std::move(data), std::move(done)));
 }
 
 void LinkImpl::MakeIncrementalChangeCall(modular_private::LinkChangePtr data,
                                          uint32_t src) {
-  new IncrementalChangeCall(&operation_queue_, this, std::move(data), src,
-                            [] {});
+  operation_queue_.Add(
+      new IncrementalChangeCall(this, std::move(data), src, [] {}));
 }
 
 void LinkImpl::OnPageChange(const std::string& key, const std::string& value) {

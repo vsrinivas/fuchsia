@@ -34,16 +34,12 @@ constexpr char kCurrentValueKey[] = "current_value";
 
 }  // namespace
 
-class ClipboardStorage::PushCall : Operation<> {
+class ClipboardStorage::PushCall : public Operation<> {
  public:
-  PushCall(OperationContainer* const container,
-           ClipboardStorage* const impl,
-           const fidl::StringPtr& text)
-      : Operation("ClipboardStorage::PushCall", container, [] {}),
+  PushCall(ClipboardStorage* const impl, const fidl::StringPtr& text)
+      : Operation("ClipboardStorage::PushCall", [] {}),
         impl_(impl),
-        text_(text) {
-    Ready();
-  }
+        text_(text) {}
 
  private:
   void Run() override {
@@ -62,16 +58,12 @@ class ClipboardStorage::PushCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(PushCall);
 };
 
-
-class ClipboardStorage::PeekCall : Operation<fidl::StringPtr> {
+class ClipboardStorage::PeekCall : public Operation<fidl::StringPtr> {
  public:
-  PeekCall(OperationContainer* const container,
-           ClipboardStorage* const impl,
+  PeekCall(ClipboardStorage* const impl,
            std::function<void(fidl::StringPtr)> result)
-      : Operation("ClipboardStorage::PeekCall", container, std::move(result)),
+      : Operation("ClipboardStorage::PeekCall", std::move(result)),
         impl_(impl) {
-    Ready();
-
     // No error checking: Absent ledger value yields "", not
     // null. TODO(mesch): Once we support types, distinction of
     // null may make sense.
@@ -81,16 +73,15 @@ class ClipboardStorage::PeekCall : Operation<fidl::StringPtr> {
  private:
   void Run() override {
     FlowToken flow{this, &text_};
-    impl_->page()->GetSnapshot(snapshot_.NewRequest(), nullptr, nullptr,
-                               [](ledger::Status status) {
-                                 if (status != ledger::Status::OK) {
-                                   FXL_LOG(ERROR) << "Failed to get page snapshot";
-                                 }
-                               });
+    impl_->page()->GetSnapshot(
+        snapshot_.NewRequest(), nullptr, nullptr, [](ledger::Status status) {
+          if (status != ledger::Status::OK) {
+            FXL_LOG(ERROR) << "Failed to get page snapshot";
+          }
+        });
 
     snapshot_->Get(ToArray(kCurrentValueKey),
-                   [this, flow](ledger::Status status,
-                                mem::BufferPtr value) {
+                   [this, flow](ledger::Status status, mem::BufferPtr value) {
                      if (value) {
                        text_ = ToString(std::move(*value));
                      }
@@ -104,7 +95,6 @@ class ClipboardStorage::PeekCall : Operation<fidl::StringPtr> {
   FXL_DISALLOW_COPY_AND_ASSIGN(PeekCall);
 };
 
-
 ClipboardStorage::ClipboardStorage(LedgerClient* ledger_client,
                                    LedgerPageId page_id)
     : PageClient("ClipboardStorage", ledger_client, std::move(page_id)) {}
@@ -112,11 +102,12 @@ ClipboardStorage::ClipboardStorage(LedgerClient* ledger_client,
 ClipboardStorage::~ClipboardStorage() = default;
 
 void ClipboardStorage::Push(const fidl::StringPtr& text) {
-  new PushCall(&operation_queue_, this, text);
+  operation_queue_.Add(new PushCall(this, text));
 }
 
-void ClipboardStorage::Peek(const std::function<void(fidl::StringPtr)>& callback) {
-  new PeekCall(&operation_queue_, this, callback);
+void ClipboardStorage::Peek(
+    const std::function<void(fidl::StringPtr)>& callback) {
+  operation_queue_.Add(new PeekCall(this, callback));
 }
 
 }  // namespace modular

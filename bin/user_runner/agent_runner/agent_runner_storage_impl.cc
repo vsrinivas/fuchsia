@@ -29,19 +29,14 @@ void XdrTriggerInfo(XdrContext* const xdr,
 
 }  // namespace
 
-class AgentRunnerStorageImpl::InitializeCall : Operation<> {
+class AgentRunnerStorageImpl::InitializeCall : public Operation<> {
  public:
-  InitializeCall(OperationContainer* const container,
-                 NotificationDelegate* const delegate,
+  InitializeCall(NotificationDelegate* const delegate,
                  std::shared_ptr<ledger::PageSnapshotPtr> const snapshot,
                  std::function<void()> done)
-      : Operation("AgentRunnerStorageImpl::InitializeCall",
-                  container,
-                  std::move(done)),
+      : Operation("AgentRunnerStorageImpl::InitializeCall", std::move(done)),
         delegate_(delegate),
-        snapshot_(snapshot) {
-    Ready();
-  }
+        snapshot_(snapshot) {}
 
  private:
   void Run() override {
@@ -89,19 +84,14 @@ class AgentRunnerStorageImpl::InitializeCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(InitializeCall);
 };
 
-class AgentRunnerStorageImpl::WriteTaskCall : Operation<bool> {
+class AgentRunnerStorageImpl::WriteTaskCall : public Operation<bool> {
  public:
-  WriteTaskCall(OperationContainer* const container,
-                AgentRunnerStorageImpl* storage,
-                std::string agent_url,
-                TriggerInfo data,
-                std::function<void(bool)> done)
-      : Operation("AgentRunnerStorageImpl::WriteTaskCall", container, done),
+  WriteTaskCall(AgentRunnerStorageImpl* storage, std::string agent_url,
+                TriggerInfo data, std::function<void(bool)> done)
+      : Operation("AgentRunnerStorageImpl::WriteTaskCall", done),
         storage_(storage),
         agent_url_(std::move(agent_url)),
-        data_(std::move(data)) {
-    Ready();
-  }
+        data_(std::move(data)) {}
 
  private:
   void Run() override {
@@ -132,19 +122,14 @@ class AgentRunnerStorageImpl::WriteTaskCall : Operation<bool> {
   FXL_DISALLOW_COPY_AND_ASSIGN(WriteTaskCall);
 };
 
-class AgentRunnerStorageImpl::DeleteTaskCall : Operation<bool> {
+class AgentRunnerStorageImpl::DeleteTaskCall : public Operation<bool> {
  public:
-  DeleteTaskCall(OperationContainer* const container,
-                 AgentRunnerStorageImpl* storage,
-                 std::string agent_url,
-                 std::string task_id,
-                 std::function<void(bool)> done)
-      : Operation("AgentRunnerStorageImpl::DeleteTaskCall", container, done),
+  DeleteTaskCall(AgentRunnerStorageImpl* storage, std::string agent_url,
+                 std::string task_id, std::function<void(bool)> done)
+      : Operation("AgentRunnerStorageImpl::DeleteTaskCall", done),
         storage_(storage),
         agent_url_(std::move(agent_url)),
-        task_id_(std::move(task_id)) {
-    Ready();
-  }
+        task_id_(std::move(task_id)) {}
 
  private:
   void Run() override {
@@ -183,21 +168,22 @@ void AgentRunnerStorageImpl::Initialize(NotificationDelegate* const delegate,
                                         std::function<void()> done) {
   FXL_DCHECK(!delegate_);
   delegate_ = delegate;
-  new InitializeCall(&operation_queue_, delegate_, page_snapshot(),
-                     std::move(done));
+  operation_queue_.Add(
+      new InitializeCall(delegate_, page_snapshot(), std::move(done)));
 }
 
 void AgentRunnerStorageImpl::WriteTask(const std::string& agent_url,
                                        const TriggerInfo data,
                                        std::function<void(bool)> done) {
-  new WriteTaskCall(&operation_queue_, this, agent_url, data, std::move(done));
+  operation_queue_.Add(
+      new WriteTaskCall(this, agent_url, data, std::move(done)));
 }
 
 void AgentRunnerStorageImpl::DeleteTask(const std::string& agent_url,
                                         const std::string& task_id,
                                         std::function<void(bool)> done) {
-  new DeleteTaskCall(&operation_queue_, this, agent_url, task_id,
-                     std::move(done));
+  operation_queue_.Add(
+      new DeleteTaskCall(this, agent_url, task_id, std::move(done)));
 }
 
 void AgentRunnerStorageImpl::OnPageChange(const std::string& key,

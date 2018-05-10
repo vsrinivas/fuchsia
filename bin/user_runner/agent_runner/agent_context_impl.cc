@@ -32,21 +32,16 @@ std::string HashAgentUrl(const std::string& agent_url) {
 
 };  // namespace
 
-class AgentContextImpl::InitializeCall : Operation<> {
+class AgentContextImpl::InitializeCall : public Operation<> {
  public:
-  InitializeCall(OperationContainer* const container,
-                 AgentContextImpl* const agent_context_impl,
+  InitializeCall(AgentContextImpl* const agent_context_impl,
                  component::ApplicationLauncher* const app_launcher,
                  AppConfig agent_config)
-      : Operation("AgentContextImpl::InitializeCall",
-                  container,
-                  [] {},
+      : Operation("AgentContextImpl::InitializeCall", [] {},
                   agent_context_impl->url_),
         agent_context_impl_(agent_context_impl),
         app_launcher_(app_launcher),
-        agent_config_(std::move(agent_config)) {
-    Ready();
-  }
+        agent_config_(std::move(agent_config)) {}
 
  private:
   void Run() override {
@@ -120,20 +115,14 @@ class AgentContextImpl::InitializeCall : Operation<> {
 // of whether there is an open-connection or running task. Returns |true| if the
 // agent was stopped, false otherwise (could be because agent has pending
 // tasks).
-class AgentContextImpl::StopCall : Operation<bool> {
+class AgentContextImpl::StopCall : public Operation<bool> {
  public:
-  StopCall(OperationContainer* const container,
-           const bool terminating,
-           AgentContextImpl* const agent_context_impl,
+  StopCall(const bool terminating, AgentContextImpl* const agent_context_impl,
            ResultCall result_call)
-      : Operation("AgentContextImpl::StopCall",
-                  container,
-                  std::move(result_call),
+      : Operation("AgentContextImpl::StopCall", std::move(result_call),
                   agent_context_impl->url_),
         agent_context_impl_(agent_context_impl),
-        terminating_(terminating) {
-    Ready();
-  }
+        terminating_(terminating) {}
 
  private:
   void Run() override {
@@ -184,9 +173,7 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
     : url_(agent_config.url),
       agent_runner_(info.component_context_info.agent_runner),
       component_context_impl_(info.component_context_info,
-                              kAgentComponentNamespace,
-                              url_,
-                              url_),
+                              kAgentComponentNamespace, url_, url_),
       token_provider_factory_(info.token_provider_factory),
       entity_provider_runner_(
           info.component_context_info.entity_provider_runner),
@@ -195,8 +182,8 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
       [this](fidl::InterfaceRequest<AgentContext> request) {
         agent_context_bindings_.AddBinding(this, std::move(request));
       });
-  new InitializeCall(&operation_queue_, this, info.app_launcher,
-                     std::move(agent_config));
+  operation_queue_.Add(
+      new InitializeCall(this, info.app_launcher, std::move(agent_config)));
 }
 
 AgentContextImpl::~AgentContextImpl() = default;
@@ -290,23 +277,25 @@ void AgentContextImpl::DeleteTask(fidl::StringPtr task_id) {
 }
 
 void AgentContextImpl::MaybeStopAgent() {
-  new StopCall(&operation_queue_, false /* is agent runner terminating? */,
-               this, [this](bool stopped) {
-                 if (stopped) {
-                   agent_runner_->RemoveAgent(url_);
-                   // |this| is no longer valid at this point.
-                 }
-               });
+  operation_queue_.Add(new StopCall(false /* is agent runner terminating? */,
+                                    this, [this](bool stopped) {
+                                      if (stopped) {
+                                        agent_runner_->RemoveAgent(url_);
+                                        // |this| is no longer valid at this
+                                        // point.
+                                      }
+                                    }));
 }
 
 void AgentContextImpl::StopForTeardown() {
   FXL_DLOG(INFO) << "AgentContextImpl::StopForTeardown() " << url_;
-  new StopCall(&operation_queue_, true /* is agent runner terminating? */, this,
-               [this](bool stopped) {
-                 FXL_DCHECK(stopped);
-                 agent_runner_->RemoveAgent(url_);
-                 // |this| is no longer valid at this point.
-               });
+  operation_queue_.Add(new StopCall(true /* is agent runner terminating? */,
+                                    this, [this](bool stopped) {
+                                      FXL_DCHECK(stopped);
+                                      agent_runner_->RemoveAgent(url_);
+                                      // |this| is no longer valid at this
+                                      // point.
+                                    }));
 }
 
 }  // namespace modular
