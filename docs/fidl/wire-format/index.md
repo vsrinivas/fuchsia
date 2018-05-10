@@ -472,6 +472,9 @@ to the selected option.
 *   Each message is prefixed with a simple 16 byte header, body immediately
     follows header.
     *   zx_txid_t transaction id (currently 32 bits, padded to 64 bits)
+        * txids with the high bit set are reserved for use by zx_channel_call
+        * txids with the high bit unset are reserved for use by userspace
+        * See the [channel call] manpage for more details on txid allocation
     *   uint32 flags, all unused bits must be set to zero
     *   uint32 ordinal
         *   The zero ordinal is invalid.
@@ -912,6 +915,8 @@ safety checks:
 <!-- Footnotes themselves at the bottom. -->
 
 ## Notes
+
+[channel call]: ../../syscalls/channel_call.md
 
 [^1]: Justification for unterminated strings. Since strings can contain embedded
     null characters, it is safer to encode the size explicitly and to make no
