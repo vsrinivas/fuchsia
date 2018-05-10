@@ -37,6 +37,8 @@ fidl("media_player") {
 
   public_deps = [
     ":fidl",
+    "//garnet/public/lib/ui/geometry/fidl",
     "//garnet/public/lib/ui/views/fidl:v1",
+    "//garnet/public/lib/ui/views/fidl:view_token",
   ]
 }

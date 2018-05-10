@@ -22,6 +22,7 @@ fidl("v1") {
   public_deps = [
     ":view_token",
     "//garnet/public/lib/app/fidl",
+    "//garnet/public/lib/ui/geometry/fidl",
     "//garnet/public/lib/ui/gfx/fidl",
     "//garnet/public/lib/ui/input/fidl",
     "//garnet/public/lib/ui/scenic/fidl",
