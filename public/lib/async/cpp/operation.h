@@ -166,12 +166,6 @@ class OperationBase {
                 OperationContainer* c,
                 std::string trace_info);
 
-  // Derived classes of Operation<> call this when they are ready for |Run()| to
-  // be scheduled by their container.
-  // DEPRECATED: Prefer to call OperationContainer::Add() with a pointer to
-  // |this|.
-  void Ready();
-
   // Useful in log messages.
   const char* trace_name() const { return trace_name_; }
 
@@ -234,11 +228,6 @@ class OperationBase {
   void TraceAsyncEnd();
 
   fxl::WeakPtr<OperationContainer> container_;
-  // Set to true when |container_->Hold(this)| is called. There are currently
-  // two pathways, SetOwner() and Ready(), and they are incompatible. We
-  // fail in either if this bool is already set.
-  // TODO(thatguy): Clean this up once no operations use Ready().
-  bool already_owned_ = false;
 
   // Used by FlowTokenBase to suppress Done() calls after the Operation instance
   // is deleted. The OperationContainer will invalidate all weak pointers to
@@ -269,13 +258,6 @@ class Operation : public OperationBase {
   using ResultCall = std::function<void(Args...)>;
 
  protected:
-  Operation(const char* const trace_name,
-            OperationContainer* const container,
-            ResultCall result_call,
-            const std::string& trace_info = "")
-      : OperationBase(trace_name, container, trace_info),
-        result_call_(std::move(result_call)) {}
-
   Operation(const char* const trace_name,
             ResultCall result_call,
             const std::string& trace_info = "")

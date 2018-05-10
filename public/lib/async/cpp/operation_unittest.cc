@@ -53,18 +53,8 @@ class TestOperation : public Operation<Args...> {
  public:
   using ResultCall = std::function<void(Args...)>;
   TestOperation(std::function<void()> task, ResultCall done)
-      : Operation<Args...>("Test Operation",
-                           nullptr /* container */,
-                           std::move(done)),
+      : Operation<Args...>("Test Operation", std::move(done)),
         task_(task) {}
-
-  // Variant that allows passing a container.
-  TestOperation(OperationContainer* c,
-                std::function<void()> task,
-                ResultCall done)
-      : Operation<Args...>("Test Operation", c, std::move(done)), task_(task) {}
-
-  void SayReady() { this->Ready(); }
 
   void SayDone(Args... args) { this->Done(args...); }
 
@@ -149,56 +139,6 @@ TEST_F(OperationTest, Lifecycle) {
   EXPECT_EQ(1, container.cont_count);
 }
 
-TEST_F(OperationTest, LifecycleWithReady) {
-  // Just like the above, but instead of using OperationContainer::Add(), we use
-  // the method of associating an operation with its container by passing in a
-  // constructor argument and calling Ready().
-  TestContainer container;
-  bool op_ran = false;
-  bool op_done = false;
-  auto op = std::make_unique<TestOperation<>>(
-      &container, [&op_ran]() { op_ran = true; },
-      [&op_done, &container]() {
-        op_done = true;
-
-        EXPECT_EQ(1, container.drop_count);
-        EXPECT_EQ(0, container.cont_count);
-      });
-
-  // This pathway, unlike Add(), does not call Hold() until the Operation
-  // reports Ready().
-  EXPECT_EQ(0, container.hold_count);
-  EXPECT_EQ(0, container.drop_count);
-  EXPECT_EQ(0, container.cont_count);
-  EXPECT_FALSE(op_ran);
-  EXPECT_FALSE(op_done);
-
-  op->SayReady();
-  EXPECT_EQ(1, container.hold_count);
-  EXPECT_EQ(op.get(), container.last_held);
-  EXPECT_EQ(0, container.drop_count);
-  EXPECT_EQ(0, container.cont_count);
-  EXPECT_FALSE(op_ran);
-  EXPECT_FALSE(op_done);
-
-  container.Schedule(op.get());
-
-  RunLoopUntilIdle();
-  EXPECT_TRUE(op_ran);
-  EXPECT_FALSE(op_done);
-  EXPECT_EQ(1, container.hold_count);
-  EXPECT_EQ(0, container.drop_count);
-  EXPECT_EQ(0, container.cont_count);
-
-  op->SayDone();
-  EXPECT_TRUE(op_ran);
-  EXPECT_TRUE(op_done);
-  EXPECT_EQ(1, container.hold_count);
-  EXPECT_EQ(1, container.drop_count);
-  EXPECT_EQ(op.get(), container.last_dropped);
-  EXPECT_EQ(1, container.cont_count);
-}
-
 TEST_F(OperationTest, Lifecycle_ContainerGoesAway) {
   // In this test, we make the Operation think that its container's memory has
   // been cleaned up in its done callback. This manifests itself as the
@@ -241,11 +181,7 @@ TEST_F(OperationTest, ResultsAreReceived) {
 class TestFlowTokenOperation : public Operation<int> {
  public:
   TestFlowTokenOperation(ResultCall done)
-      : Operation("Test FlowToken Operation",
-                  nullptr /* container */,
-                  std::move(done)) {}
-
-  void SayReady() { this->Ready(); }
+      : Operation("Test FlowToken Operation", std::move(done)) {}
 
   // |call_before_flow_dies| is invoked before the FlowToken goes out of scope.
   void SayDone(int result,

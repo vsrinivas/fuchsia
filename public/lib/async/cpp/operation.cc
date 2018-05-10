@@ -122,25 +122,13 @@ OperationBase::OperationBase(const char* const trace_name,
 
 OperationBase::~OperationBase() = default;
 
-void OperationBase::Ready() {
-  FXL_DCHECK(container_);
-  FXL_DCHECK(!already_owned_) << "If using OperationContainer::Add(), do "
-    << "NOT call Ready() from within the Operation's constructor.";
-  already_owned_ = true;
-  container_->Hold(this);
-}
-
 fxl::WeakPtr<OperationBase> OperationBase::GetWeakPtr() {
   return weak_ptr_factory_.GetWeakPtr();
 }
 
 void OperationBase::SetOwner(OperationContainer* c) {
-  FXL_DCHECK(!container_) << "If using OperationContainer::Add(), do NOT "
-    << "pass an OperationContainer* in as a constructor argument.";
-  FXL_DCHECK(!already_owned_) << "If using OperationContainer::Add(), do "
-    << "NOT call Ready() from within the Operation's constructor.";
+  FXL_DCHECK(!container_);
   container_ = c->GetWeakPtr();
-  already_owned_ = true;
 }
 
 void OperationBase::Schedule() {
