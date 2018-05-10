@@ -54,3 +54,22 @@ Once booted:
 ```
 guest launch debian_guest
 ```
+
+## Telnet shell
+
+The Debian system exposes a simple telnet interface over vsock port 23. You can
+use the `guest` CLI to connect to this socket to open a shell. First we need to
+identify the environment ID and the guest context ID (CID) to use:
+
+```
+$ guest list
+env:0             debian_guest
+ guest:3          debian_guest
+```
+
+The above indicates the debian guest is CID 3 in environment 0. Open a shell
+with:
+
+```
+$ guest socat 0 3 23
+```

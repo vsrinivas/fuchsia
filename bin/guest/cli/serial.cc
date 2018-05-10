@@ -94,7 +94,9 @@ class OutputWriter : public fsl::SocketDrainer::Client {
     std::cout.flush();
   }
 
-  void OnDataComplete() override {}
+  void OnDataComplete() override {
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+  }
 
  private:
   fsl::SocketDrainer socket_drainer_;

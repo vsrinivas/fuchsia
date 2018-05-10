@@ -38,4 +38,33 @@ EOF
 
 update-initramfs -u
 
+# Expose a simple telnet interface over vsock port 23.
+#
+# Note we're using socat to bind the pty to the socket so that we ensure we
+# don't send any telnet control messages.
+cat >> /etc/systemd/system/telnet.socket << EOF
+[Unit]
+Description=Telnet Server Activation Port
+
+[Socket]
+ListenStream=vsock::23
+Accept=true
+
+[Install]
+WantedBy=sockets.target
+EOF
+
+cat >> /etc/systemd/system/telnet@.service << EOF
+[Unit]
+Description=Telnet Server
+After=local-fs.target
+
+[Service]
+ExecStart=-/usr/bin/socat - EXEC:/bin/login,pty,stderr,setsid,sigint,sane,ctty,crlf,echo=1
+StandardInput=socket
+StandardOutput=socket
+EOF
+
+systemctl enable telnet.socket
+
 apt clean
