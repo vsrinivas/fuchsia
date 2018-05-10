@@ -57,6 +57,10 @@ bool MsdVslDevice::Init(void* device_handle)
         return DRETF(false, "Gpu has no 3d pipe: features 0x%x\n",
                      gpu_features_->features().reg_value());
 
+    bus_mapper_ = magma::PlatformBusMapper::Create(platform_device_->GetBusTransactionInitiator());
+    if (!bus_mapper_)
+        return DRETF(false, "failed to create bus mapper");
+
     return true;
 }
 
