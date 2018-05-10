@@ -28,13 +28,6 @@ static bool test_json_output() {
         test_case->AppendValue(val);
     }
 
-    // Test the summary statistics.
-    perftest::SummaryStatistics stats = test_case->GetSummaryStatistics();
-    EXPECT_EQ(stats.min, 101);
-    EXPECT_EQ(stats.max, 105);
-    EXPECT_EQ(stats.mean, 103);
-    EXPECT_EQ(static_cast<int>(stats.std_dev), 1);
-
     // Write the JSON output to a buffer in memory.
     char buf[1000];
     FILE* fp = fmemopen(buf, sizeof(buf), "w+");
@@ -45,6 +38,34 @@ static bool test_json_output() {
     // Test the JSON output.
     const char* expected = R"JSON([{"label":"ExampleNullSyscall","unit":"nanoseconds","samples":[{"values":[101.000000,102.000000,103.000000,104.000000,105.000000]}]}])JSON";
     EXPECT_STR_EQ(expected, buf, "");
+
+    END_TEST;
+}
+
+static bool test_summary_statistics() {
+    BEGIN_TEST;
+
+    perftest::ResultsSet results;
+    perftest::TestCaseResults* test_case =
+        results.AddTestCase("ExampleNullSyscall", "nanoseconds");
+    // Fill out some example data in a non-sorted order.
+    test_case->AppendValue(200);
+    test_case->AppendValue(6);
+    test_case->AppendValue(100);
+    test_case->AppendValue(110);
+
+    perftest::SummaryStatistics stats = test_case->GetSummaryStatistics();
+    EXPECT_EQ(stats.min, 6);
+    EXPECT_EQ(stats.max, 200);
+    EXPECT_EQ(stats.mean, 104);
+    EXPECT_EQ(static_cast<int>(stats.std_dev), 68);
+    // There is an even number of values, so the median is interpolated.
+    EXPECT_EQ(stats.median, (100 + 110) / 2);
+
+    test_case->AppendValue(300);
+    stats = test_case->GetSummaryStatistics();
+    // There is an odd number of values, so the median is not interpolated.
+    EXPECT_EQ(stats.median, 110);
 
     END_TEST;
 }
@@ -67,5 +88,6 @@ static bool test_json_string_escaping() {
 
 BEGIN_TEST_CASE(perf_results_output_tests)
 RUN_TEST(test_json_output)
+RUN_TEST(test_summary_statistics)
 RUN_TEST(test_json_string_escaping)
 END_TEST_CASE(perf_results_output_tests)

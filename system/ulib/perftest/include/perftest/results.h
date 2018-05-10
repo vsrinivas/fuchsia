@@ -30,6 +30,7 @@ struct SummaryStatistics {
     double max;
     double mean;
     double std_dev;
+    double median;
 };
 
 // This represents the results for a particular test case.  It contains a

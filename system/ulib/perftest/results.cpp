@@ -34,6 +34,36 @@ double StdDev(const fbl::Vector<double>& values, double mean) {
     return sqrt(sum_of_squared_diffs / static_cast<double>(values.size()));
 }
 
+// Comparison function for use with qsort().
+int CompareDoubles(const void* ptr1, const void* ptr2) {
+    double val1 = *reinterpret_cast<const double*>(ptr1);
+    double val2 = *reinterpret_cast<const double*>(ptr2);
+    if (val1 < val2) {
+        return -1;
+    }
+    if (val1 > val2) {
+        return 1;
+    }
+    return 0;
+}
+
+double Median(const fbl::Vector<double>& values) {
+    // Make a sorted copy of the vector.
+    fbl::Vector<double> copy;
+    copy.reserve(values.size());
+    for (double value : values) {
+        copy.push_back(value);
+    }
+    qsort(copy.get(), copy.size(), sizeof(copy[0]), CompareDoubles);
+
+    size_t index = copy.size() / 2;
+    // Interpolate two values if necessary.
+    if (copy.size() % 2 == 0) {
+        return (copy[index - 1] + copy[index]) / 2;
+    }
+    return copy[index];
+}
+
 } // namespace
 
 SummaryStatistics TestCaseResults::GetSummaryStatistics() const {
@@ -44,6 +74,7 @@ SummaryStatistics TestCaseResults::GetSummaryStatistics() const {
         .max = Max(values_),
         .mean = mean,
         .std_dev = StdDev(values_, mean),
+        .median = Median(values_),
     };
 }
 
@@ -123,15 +154,15 @@ void ResultsSet::WriteJSON(FILE* out_file) const {
 
 void ResultsSet::PrintSummaryStatistics(FILE* out_file) const {
     // Print table headings row.
-    fprintf(out_file, "%10s %10s %10s %10s %-12s %s\n",
-           "Mean", "Std dev", "Min", "Max", "Unit", "Test case");
+    fprintf(out_file, "%10s %10s %10s %10s %10s %-12s %s\n",
+            "Mean", "Std dev", "Min", "Max", "Median", "Unit", "Test case");
     if (results_.size() == 0) {
         fprintf(out_file, "(No test results)\n");
     }
     for (const auto& test : results_) {
         SummaryStatistics stats = test.GetSummaryStatistics();
-        fprintf(out_file, "%10.0f %10.0f %10.0f %10.0f %-12s %s\n",
-                stats.mean, stats.std_dev, stats.min, stats.max,
+        fprintf(out_file, "%10.0f %10.0f %10.0f %10.0f %10.0f %-12s %s\n",
+                stats.mean, stats.std_dev, stats.min, stats.max, stats.median,
                 test.unit().c_str(), test.label().c_str());
     }
 }
