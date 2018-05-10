@@ -403,26 +403,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fidl_images"
-version = "0.1.0"
-dependencies = [
- "fidl 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "fidl_media"
-version = "0.1.0"
-dependencies = [
- "fidl 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "fidl_mem"
 version = "0.1.0"
 dependencies = [
@@ -433,48 +413,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "fidl_netstack"
-version = "0.1.0"
-dependencies = [
- "fidl 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "fidl_power_manager"
-version = "0.1.0"
-dependencies = [
- "fidl 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "fidl_wlan_device"
-version = "0.1.0"
-dependencies = [
- "fidl 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "fidl_wlan_device_service"
-version = "0.1.0"
-dependencies = [
- "fidl 0.1.0",
- "fidl_wlan_device 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "fidl_wlan_service"
 version = "0.1.0"
 dependencies = [
  "fidl 0.1.0",
@@ -1335,22 +1274,6 @@ name = "wlan-sme"
 version = "0.1.0"
 
 [[package]]
-name = "wlantool2"
-version = "0.1.0"
-dependencies = [
- "clap 2.31.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "fidl 0.1.0",
- "fidl_wlan_device 0.1.0",
- "fidl_wlan_device_service 0.1.0",
- "fuchsia-app 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "structopt 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "xi-core-lib"
 version = "0.2.0"
 dependencies = [
@@ -1448,10 +1371,6 @@ version = "0.6.13"
 [[patch.unused]]
 name = "rand"
 version = "0.3.17"
-
-[[patch.unused]]
-name = "tokio-core"
-version = "0.1.12"
 
 [metadata]
 "checksum adler32 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "6cbd0b9af8587c72beadc9f72d35b9fbb070982c9e6203e46e93f10df25f8f45"

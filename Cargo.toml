@@ -6,7 +6,6 @@ members =  [
   "bin/bluetooth/tests/integration",
   "bin/bluetooth/tools/bt-fake-hci",
   "bin/bluetooth/tools/bt-snoop",
-  "bin/wlantool",
   "bin/xi_core",
   "examples/bluetooth/ble_battery_service",
   "examples/rust/testing",
@@ -15,8 +14,6 @@ members =  [
   "lib/rust/crates/wlan-rsn",
   "lib/rust/crates/wlan-sme",
   "lib/rust/fidl_crates/fidl_bluetooth_host",
-  "lib/rust/fidl_crates/fidl_wlan_device",
-  "lib/rust/fidl_crates/fidl_wlan_device_service",
   "public/lib/fidl/rust/fidl",
   "public/rust/crates/fuchsia-ddk",
   "public/rust/crates/fuchsia-ddk/examples/ddk_toy",
@@ -37,12 +34,8 @@ members =  [
   "public/rust/fidl_crates/fidl_bluetooth_gatt",
   "public/rust/fidl_crates/fidl_bluetooth_low_energy",
   "public/rust/fidl_crates/fidl_component",
-  "public/rust/fidl_crates/fidl_images",
-  "public/rust/fidl_crates/fidl_media",
   "public/rust/fidl_crates/fidl_mem",
-  "public/rust/fidl_crates/fidl_netstack",
   "public/rust/fidl_crates/fidl_power_manager",
-  "public/rust/fidl_crates/fidl_wlan_service",
   "public/rust/fidl_crates/fidl_xi",
 ]
 
@@ -56,14 +49,8 @@ fidl_bluetooth_gatt = { path = "public/rust/fidl_crates/fidl_bluetooth_gatt" }
 fidl_bluetooth_host = { path = "lib/rust/fidl_crates/fidl_bluetooth_host" }
 fidl_bluetooth_low_energy = { path = "public/rust/fidl_crates/fidl_bluetooth_low_energy" }
 fidl_component = { path = "public/rust/fidl_crates/fidl_component" }
-fidl_images = { path = "public/rust/fidl_crates/fidl_images" }
-fidl_media = { path = "public/rust/fidl_crates/fidl_media" }
 fidl_mem = { path = "public/rust/fidl_crates/fidl_mem" }
-fidl_netstack = { path = "public/rust/fidl_crates/fidl_netstack" }
 fidl_power_manager = { path = "public/rust/fidl_crates/fidl_power_manager" }
-fidl_wlan_device = { path = "lib/rust/fidl_crates/fidl_wlan_device" }
-fidl_wlan_device_service = { path = "lib/rust/fidl_crates/fidl_wlan_device_service" }
-fidl_wlan_service = { path = "public/rust/fidl_crates/fidl_wlan_service" }
 fidl_xi = { path = "public/rust/fidl_crates/fidl_xi" }
 fuchsia-ddk = { path = "public/rust/crates/fuchsia-ddk" }
 eapol = { path = "lib/rust/crates/eapol" }
@@ -80,7 +67,6 @@ mio = { path = "../third_party/rust-mirrors/mio" }
 mxruntime = { path = "public/rust/crates/mxruntime" }
 mxruntime-sys = { path = "public/rust/crates/mxruntime/mxruntime-sys" }
 rand = { path = "../third_party/rust-mirrors/rand" }
-tokio-core = { path = "../third_party/rust-mirrors/tokio-core" }
 wlan-rsn = { path = "lib/rust/crates/wlan-rsn" }
 wlan-sme = { path = "lib/rust/crates/wlan-sme" }
 xi-core-lib = { path = "../third_party/rust-mirrors/xi-editor/rust/core-lib" }
