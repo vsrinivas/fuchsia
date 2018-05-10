@@ -27,6 +27,16 @@ package("cobalt") {
               "/cobalt_config.binproto")
       dest = "cobalt_config.binproto"
     },
+    {
+      path = rebase_path(
+              "//third_party/cobalt/production/fuchsia-cobalt-us-central1-c/analyzer_public.pem")
+      dest = "certs/cobaltv0.1/analyzer_public.pem"
+    },
+    {
+      path = rebase_path(
+              "//third_party/cobalt/production/fuchsia-cobalt-us-central1-c/shuffler_public.pem")
+      dest = "certs/cobaltv0.1/shuffler_public.pem"
+    },
   ]
 }
 
@@ -106,6 +116,7 @@ executable("bin") {
     "//third_party/cobalt/config:client_config",
     "//third_party/cobalt/config:cobalt_config_proto",
     "//third_party/cobalt/encoder",
+    "//third_party/cobalt/util:pem_util",
     "//third_party/grpc:grpc++",
     "//third_party/protobuf:protobuf_lite",
   ]

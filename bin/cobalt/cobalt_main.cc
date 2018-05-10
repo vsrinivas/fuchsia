@@ -32,6 +32,7 @@
 #include "third_party/cobalt/encoder/send_retryer.h"
 #include "third_party/cobalt/encoder/shipping_manager.h"
 #include "third_party/cobalt/encoder/shuffler_client.h"
+#include "third_party/cobalt/util/pem_util.h"
 
 namespace {
 
@@ -53,6 +54,7 @@ using cobalt::encoder::ShippingManager;
 using cobalt::encoder::ShufflerClient;
 using cobalt::encoder::SystemData;
 using cobalt::encoder::send_retryer::SendRetryer;
+using cobalt::util::PemUtil;
 
 // Command-line flags
 
@@ -88,6 +90,10 @@ const std::chrono::seconds kInitialRpcDeadline(10);
 const std::chrono::seconds kDeadlinePerSendAttempt(60);
 
 const char* kConfigBinProtoPath = "/pkg/data/cobalt_config.binproto";
+const char* kAnalyzerPublicKeyPemPath =
+    "/pkg/data/certs/cobaltv0.1/analyzer_public.pem";
+const char* kShufflerPublicKeyPemPath =
+    "/pkg/data/certs/cobaltv0.1/shuffler_public.pem";
 
 // Maps a ShippingManager::Status to a cobalt::Status.
 cobalt::Status ToCobaltStatus(ShippingManager::Status s) {
@@ -105,6 +111,17 @@ cobalt::Status ToCobaltStatus(ShippingManager::Status s) {
     case ShippingManager::kEncryptionFailed:
       return Status::INTERNAL_ERROR;
   }
+}
+
+// Reads the PEM file at the specified path and returns the contents as
+// a string. CHECK fails if the file cannot be read.
+std::string ReadPublicKeyPem(const std::string& pem_file_path) {
+  VLOG(2) << "Reading PEM file at " << pem_file_path;
+  std::string pem_out;
+  FXL_CHECK(PemUtil::ReadTextFile(pem_file_path, &pem_out))
+      << "Unable to read file public key PEM file from path " << pem_file_path
+      << ".";
+  return pem_out;
 }
 
 //////////////////////////////////////////////////////////
@@ -564,9 +581,11 @@ CobaltApp::CobaltApp(async_t* async, std::chrono::seconds schedule_interval,
                                       kMaxBytesPerEnvelope, kMaxBytesTotal,
                                       kMinEnvelopeSendSize),
           ShippingManager::ScheduleParams(schedule_interval, min_interval),
-          // TODO(rudominer): Enable encryption.
-          ShippingManager::EnvelopeMakerParams("", EncryptedMessage::NONE, "",
-                                               EncryptedMessage::NONE),
+          ShippingManager::EnvelopeMakerParams(
+              ReadPublicKeyPem(kAnalyzerPublicKeyPemPath),
+              EncryptedMessage::HYBRID_ECDH_V1,
+              ReadPublicKeyPem(kShufflerPublicKeyPemPath),
+              EncryptedMessage::HYBRID_ECDH_V1),
           ShippingManager::SendRetryerParams(kInitialRpcDeadline,
                                              kDeadlinePerSendAttempt),
           &send_retryer_),
