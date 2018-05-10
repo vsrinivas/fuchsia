@@ -10,6 +10,8 @@ MODULE_TYPE := fidl
 
 MODULE_PACKAGE := fidl
 
-MODULE_SRCS += $(LOCAL_DIR)/trace_link.fidl
+MODULE_FIDL_LIBRARY := fuchsia.ldsvc
+
+MODULE_SRCS += $(LOCAL_DIR)/loader.fidl
 
 include make/module.mk
