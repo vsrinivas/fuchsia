@@ -24,6 +24,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/remoteio.c \
     $(LOCAL_DIR)/service.c \
     $(LOCAL_DIR)/socketpair.c \
+    $(LOCAL_DIR)/spawn.c \
     $(LOCAL_DIR)/stubs.c \
     $(LOCAL_DIR)/uname.c \
     $(LOCAL_DIR)/unistd.c \
@@ -31,12 +32,20 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/waitable.c \
     $(LOCAL_DIR)/watcher.c \
 
-
-
 MODULE_EXPORT := so
 
 MODULE_SO_NAME := fdio
-MODULE_LIBS := system/ulib/zircon system/ulib/c
-MODULE_STATIC_LIBS := system/ulib/fidl system/ulib/fbl system/ulib/zxcpp system/ulib/zx
+
+MODULE_FIDL_LIBS := \
+    system/fidl/process
+
+MODULE_STATIC_LIBS := \
+    system/ulib/fidl \
+    system/ulib/fbl \
+    system/ulib/zxcpp \
+    system/ulib/zx
+
+MODULE_LIBS := system/ulib/zircon \
+    system/ulib/c
 
 include make/module.mk
