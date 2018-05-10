@@ -57,6 +57,13 @@ class PageOperation : public Operation<Args...> {
       : Operation<Args...>(trace_name, container, std::move(result_call), trace_info),
         page_(page) {}
 
+  PageOperation(const char* const trace_name,
+                ledger::Page* const page,
+                ResultCall result_call,
+                const std::string& trace_info = "")
+      : Operation<Args...>(trace_name, std::move(result_call), trace_info),
+        page_(page) {}
+
  protected:
   ledger::Page* page() const { return page_; }
 
@@ -87,12 +94,11 @@ class LedgerOperation : public Operation<Args...> {
   using ResultCall = std::function<void(Args...)>;
 
   LedgerOperation(const char* const trace_name,
-                  OperationContainer* const container,
                   ledger::Ledger* ledger,
                   ledger::Page* const page,
                   ResultCall result_call,
                   const std::string& trace_info = "")
-      : Operation<Args...>(trace_name, container, std::move(result_call), trace_info),
+      : Operation<Args...>(trace_name, std::move(result_call), trace_info),
       ledger_(ledger), page_(page) {}
 
  protected:
