@@ -88,6 +88,7 @@ template("go_build") {
 
     if (is_fuchsia) {
       deps += [
+        "//garnet/public/sdk:zircon_sysroot_export",
         "//zircon/public/lib/fdio",
         "//zircon/public/lib/launchpad",
       ]
@@ -160,10 +161,6 @@ template("go_build") {
       "--package",
       invoker.gopackage,
     ]
-
-    if (is_fuchsia) {
-      deps += [ "//garnet/public/sdk:zircon_sysroot_export" ]
-    }
   }
 
   if (defined(invoker.sdk_candidate) && invoker.sdk_candidate) {
