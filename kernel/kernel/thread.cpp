@@ -480,7 +480,8 @@ static void thread_free_dpc(struct dpc* dpc) {
     free_thread_resources(t);
 }
 
-__NO_RETURN static void thread_exit_locked(thread_t* current_thread, int retcode) {
+__NO_RETURN static void thread_exit_locked(thread_t* current_thread,
+                                           int retcode) TA_REQ(thread_lock) {
     /* create a dpc on the stack to queue up a free */
     /* must be put at top scope in this function to force the compiler to keep it from
      * reusing the stack before the function exits

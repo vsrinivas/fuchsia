@@ -474,7 +474,7 @@ void sched_reschedule(void) {
 }
 
 /* migrate the current thread to a new cpu and locally reschedule to seal the deal */
-static void migrate_current_thread(thread_t* current_thread) {
+static void migrate_current_thread(thread_t* current_thread) TA_REQ(thread_lock) {
     bool local_resched = false;
     cpu_mask_t accum_cpu_mask = 0;
 
@@ -522,7 +522,7 @@ void sched_transition_off_cpu(cpu_num_t old_cpu) {
 
 /* check to see if the current thread needs to migrate to a new core */
 /* the passed argument must be the current thread and must already be pushed into the READY state */
-static bool local_migrate_if_needed(thread_t* curr_thread) {
+static bool local_migrate_if_needed(thread_t* curr_thread) TA_REQ(thread_lock) {
     DEBUG_ASSERT(curr_thread == get_current_thread());
     DEBUG_ASSERT(curr_thread->state == THREAD_READY);
 
@@ -591,7 +591,8 @@ void sched_migrate(thread_t* t) {
 // the effective priority of a thread has changed, do what is necessary to move the thread
 // from different queues and inform us if we need to reschedule
 static void sched_priority_changed(thread_t* t, int old_prio,
-                                   bool* local_resched, cpu_mask_t* accum_cpu_mask) {
+                                   bool* local_resched,
+                                   cpu_mask_t* accum_cpu_mask) TA_REQ(thread_lock) {
     switch (t->state) {
     case THREAD_RUNNING:
         if (t->effec_priority < old_prio) {

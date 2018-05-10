@@ -195,7 +195,7 @@ static void wait_queue_timeout_handler(timer_t* timer, zx_time_t now,
 }
 
 static zx_status_t wait_queue_block_worker(wait_queue_t* wait, zx_time_t deadline,
-                                           uint signal_mask) {
+                                           uint signal_mask) TA_REQ(thread_lock) {
     timer_t timer;
 
     thread_t* current_thread = get_current_thread();

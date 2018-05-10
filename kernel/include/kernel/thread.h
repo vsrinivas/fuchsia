@@ -484,11 +484,11 @@ __END_CDECLS
 
 class AutoThreadLock {
 public:
-    AutoThreadLock() {
+    AutoThreadLock() TA_ACQ(thread_lock) {
         spin_lock_irqsave(&thread_lock, state_);
     }
 
-    ~AutoThreadLock() {
+    ~AutoThreadLock() TA_REL(thread_lock) {
         spin_unlock_irqrestore(&thread_lock, state_);
     }
 
