@@ -164,7 +164,6 @@ void ModelRenderer::Draw(const Stage& stage,
   vk::Pipeline current_pipeline;
   vk::PipelineLayout current_pipeline_layout;
   uint32_t current_stencil_reference = 0;
-  vk_command_buffer.setStencilReference(vk::StencilFaceFlagBits::eFront, 0);
   for (const ModelDisplayList::Item& item : display_list->items()) {
     // Bind new pipeline and PerModel descriptor set, if necessary.
     if (current_pipeline != item.pipeline->pipeline()) {
