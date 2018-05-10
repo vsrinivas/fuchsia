@@ -615,14 +615,19 @@ func (s *authState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
 			PrintAuthenticateConfirm(v)
 		}
 
-		if v.ResultCode == mlme.AuthenticateResultCodesSuccess {
+		switch v.ResultCode {
+		case mlme.AuthenticateResultCodesSuccess:
 			return newAssocState(), nil
-		}
-
-		if v.ResultCode != mlme.AuthenticateResultCodesAuthFailureTimeout {
+		case mlme.AuthenticateResultCodesAuthFailureTimeout:
+			return newScanState(c), nil
+		case mlme.AuthenticateResultCodesAuthenticationRejected:
+			err := fmt.Errorf("Authentication rejected by %v (%v)", c.cfg.SSID, c.cfg.BSSID)
 			c.cfg = nil
+			return newScanState(c), err
+		default:
+			c.cfg = nil
+			return newScanState(c), fmt.Errorf("Authentication failed with result code %v", v.ResultCode)
 		}
-		return newScanState(c), nil
 	default:
 		return s, fmt.Errorf("unexpected message type: %T", v)
 	}
@@ -859,7 +864,12 @@ func (s *associatedState) handleMLMEMsg(msg interface{}, c *Client) (state, erro
 		if debug {
 			PrintDeauthenticateIndication(v)
 		}
-		return newAuthState(), nil
+		err := fmt.Errorf("DeauthenticateIndication received, reason code: %v", v.ReasonCode)
+		if v.ReasonCode == mlme.ReasonCodeInvalidAuthentication { // INVALID_AUTHENTICATION
+			err = fmt.Errorf("Invalid authentication (possibly a wrong password?) with %v (%v)", c.cfg.SSID, c.cfg.BSSID)
+		}
+		c.cfg = nil
+		return newScanState(c), err
 	case *mlme.SignalReportIndication:
 		if debug {
 			PrintSignalReportIndication(v)
