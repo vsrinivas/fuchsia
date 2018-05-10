@@ -24,12 +24,9 @@
 
 namespace runtests {
 
-Result RunTest(const char* path, signed char verbosity, FILE* out) {
+Result RunTest(const char* argv[], int argc, FILE* out) {
     int fds[2];
-    // This arithmetic is invalid if verbosity < 0, but in that case by setting argc = 1.
-    char verbose_opt[] = {'v','=', static_cast<char>(verbosity + '0'), 0};
-    const char* argv[] = {path, verbose_opt};
-    int argc = verbosity >= 0 ? 2 : 1;
+    const char* path = argv[0];
 
     launchpad_t* lp = nullptr;
     zx_status_t status = ZX_OK;
@@ -58,7 +55,7 @@ Result RunTest(const char* path, signed char verbosity, FILE* out) {
       printf("FAILURE: launchpad_create() returned %d\n", status);
       return Result(path, FAILED_TO_LAUNCH, 0);
     }
-    status = launchpad_load_from_file(lp, argv[0]);
+    status = launchpad_load_from_file(lp, path);
     if (status != ZX_OK) {
       printf("FAILURE: launchpad_load_from_file() returned %d\n", status);
       return Result(path, FAILED_TO_LAUNCH, 0);

@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <regex.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <runtests-utils/runtests-utils.h>
@@ -11,23 +10,20 @@
 namespace runtests {
 namespace {
 
-// We're using the ps binary as our test binary for now because:
-// * It's present by default, thus likely to be there when we result the test.
-// * It succeeds when result with no arguments.
-// * It prints predictable output when result with no arguments.
-// * It can be made to fail by specifying additional arguments.
-// Ideally we'd use a custom test binary that we can control the behavior of and not rely
-// on any external binaries we haven't ensured are there, but this works for now.
-static constexpr char kTestBinaryPath[] = "/boot/bin/ps";
-// ps's output is something like "TASK             PSS PRIVATE  SHARED NAME"
-static constexpr char kTestBinarySuccessStdOut[] = "TASK\\s+";
-static constexpr signed char kNoVerbosity = -1;
+static char* my_own_path;
 static constexpr size_t kOneMegabyte = 1 << 20;
+static constexpr char kPrintToStdOutAndSucceedFlag[] = "--print-to-std-out-and-succeed";
+static constexpr char kPrintToStdErrAndFailFlag[] = "--print-to-std-err-and-fail";
+static constexpr char kExpectedOutput[] = "Expect this!\n";
+// Arbitrary, but different from EXIT_FAILURE so we can be sure
+// which code path gets taken in main().
+static constexpr int kFailureReturnCode = 77;
 
 bool RunTestSuccess() {
     BEGIN_TEST;
-    const Result result = RunTest(kTestBinaryPath, kNoVerbosity, nullptr);
-    EXPECT_STR_EQ(kTestBinaryPath, result.name.c_str());
+    const char* argv[] = {my_own_path, kPrintToStdOutAndSucceedFlag};
+    const Result result = RunTest(argv, 2, nullptr);
+    EXPECT_STR_EQ(my_own_path, result.name.c_str());
     EXPECT_EQ(SUCCESS, result.launch_status);
     EXPECT_EQ(0, result.return_code);
     END_TEST;
@@ -38,14 +34,11 @@ bool RunTestSuccessWithStdout() {
     // A reasonable guess that the process won't output more than this.
     char* buf = static_cast<char *>(malloc(kOneMegabyte));
     FILE* buf_file = fmemopen(buf, kOneMegabyte, "w");
-    const Result result = RunTest(kTestBinaryPath, kNoVerbosity, buf_file);
+    const char* argv[] = {my_own_path, kPrintToStdOutAndSucceedFlag};
+    const Result result = RunTest(argv, 2, buf_file);
     fclose(buf_file);
-    regex_t re;
-    ASSERT_EQ(0, regcomp(&re, kTestBinarySuccessStdOut, REG_EXTENDED | REG_NOSUB));
-    const int regexec_status = regexec(&re, buf, (size_t) 0, nullptr, 0);
-    ASSERT_EQ(0, regexec_status);
-    regfree(&re);
-    EXPECT_STR_EQ(kTestBinaryPath, result.name.c_str());
+    ASSERT_STR_EQ(kExpectedOutput, buf);
+    EXPECT_STR_EQ(my_own_path, result.name.c_str());
     EXPECT_EQ(SUCCESS, result.launch_status);
     EXPECT_EQ(0, result.return_code);
     END_TEST;
@@ -55,25 +48,23 @@ bool RunTestFailureWithStderr() {
     BEGIN_TEST;
     char buf[1024];
     FILE* buf_file = fmemopen(buf, sizeof(buf), "w");
-    // Specifying verbosity such that extra args get passed to the test binary.
-    // In this case, these args will cause the binary to exit with failure and print something
+    // In this case, extra args will cause the binary to exit with failure and print something
     // to stderr.
-    const Result result = RunTest(kTestBinaryPath, kNoVerbosity + 1, buf_file);
+    const char* argv[] = {my_own_path, kPrintToStdErrAndFailFlag};
+    const Result result = RunTest(argv, 2, buf_file);
     fclose(buf_file);
-    // Don't want to hard code the binary's usage string.
-    // TODO(garymm): When I control the binary that gets result, assert the stderr is correct.
-    ASSERT_GT(strlen(buf), 0);
-    EXPECT_STR_EQ(kTestBinaryPath, result.name.c_str());
+    ASSERT_STR_EQ(kExpectedOutput, buf);
+    EXPECT_STR_EQ(my_own_path, result.name.c_str());
     EXPECT_EQ(FAILED_NONZERO_RETURN_CODE, result.launch_status);
-    EXPECT_NE(0, result.return_code);
+    EXPECT_EQ(kFailureReturnCode, result.return_code);
     END_TEST;
 }
 
 bool RunTestFailureToLoadFile() {
     BEGIN_TEST;
-    const char non_existent_test[] = "i/do/not/exist/";
-    const Result result = RunTest(non_existent_test, kNoVerbosity, nullptr);
-    EXPECT_STR_EQ(non_existent_test, result.name.c_str());
+    const char* argv[] = {"i/do/not/exist/"};
+    const Result result = RunTest(argv, 1, nullptr);
+    EXPECT_STR_EQ(argv[0], result.name.c_str());
     EXPECT_EQ(FAILED_TO_LAUNCH, result.launch_status);
     END_TEST;
 }
@@ -89,5 +80,18 @@ END_TEST_CASE(RunTest)
 }  // namespace resulttests
 
 int main(int argc, char** argv) {
+    // Record the path to the path to this binary in a global variable so it can be
+    // re-used in the tests.
+    // We couldn't figure out how to get the makefiles to produce a
+    // helper binary in a subdirectory, so we're using this binary itself
+    // as the helper binary to test various cases.
+    runtests::my_own_path = argv[0];
+    if (argc == 2 && !strcmp(runtests::kPrintToStdOutAndSucceedFlag, argv[1])) {
+        fprintf(stdout, runtests::kExpectedOutput);
+        return EXIT_SUCCESS;
+    } else if (argc == 2 && !strcmp(runtests::kPrintToStdErrAndFailFlag, argv[1])) {
+        fprintf(stderr, runtests::kExpectedOutput);
+        return runtests::kFailureReturnCode;
+    }
     return unittest_run_all_tests(argc, argv) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

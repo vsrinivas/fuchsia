@@ -179,6 +179,10 @@ bool RunTestsInDir(const char* dirn, const char** filter_names, const int num_fi
         return false;
     }
 
+    // This arithmetic is invalid if verbosity < 0, but in that case by setting argc = 1.
+    const char verbose_opt[] = {'v','=', static_cast<char>(verbosity + '0'), 0};
+    const int argc = verbosity >= 0 ? 2 : 1;
+
     struct dirent* de;
     struct stat stat_buf;
     int test_count = 0;
@@ -233,7 +237,8 @@ bool RunTestsInDir(const char* dirn, const char** filter_names, const int num_fi
         }
 
         // Execute the test binary.
-        results->push_back(runtests::RunTest(test_path, verbosity, out));
+        const char* argv[] = {test_path, verbose_opt};
+        results->push_back(runtests::RunTest(argv, argc, out));
         if ((*results)[results->size() - 1].launch_status != runtests::SUCCESS) {
             failed_count++;
         }

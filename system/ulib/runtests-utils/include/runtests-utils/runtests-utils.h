@@ -22,7 +22,7 @@ enum LaunchStatus {
 
 // Represents the result of a single test run.
 struct Result {
-    fbl::String name;
+    fbl::String name;  // argv[0].
     LaunchStatus launch_status;
     int return_code;  // Only valid if launch_stauts == SUCCESS or FAILED_NONZERO_RETURN_CODE.
     // TODO(ZX-2050): Track duration of test binary.
@@ -35,13 +35,12 @@ struct Result {
 
 // Invokes a test binary and prints results to stdout.
 //
-// |path| specifies the path to the binary.
-// |verbosity| if positive, will be converted to a string and passed on the command line
-//   to the test. I.e. |path| v=|verbosity|.
+// |argv| argument strings passed to the test program. Result.name will be set to argv[0].
+// |argc| is the number of strings in argv.
 // |out| is a file stream to which the test binary's output will be written. May be
 //   nullptr, in which output will not be redirected.
 //
 // Returns a Result indicating the result.
-Result RunTest(const char* path, signed char verbosity, FILE* out);
+Result RunTest(const char* argv[], int argc, FILE* out);
 
 }  // namespace runtests
