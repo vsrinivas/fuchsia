@@ -14,24 +14,32 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/fvm.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/async.cpp \
+    system/ulib/async \
+    system/ulib/async-loop.cpp \
+    system/ulib/async-loop \
+    system/ulib/bitmap \
     system/ulib/block-client \
+    system/ulib/digest \
+    system/ulib/fbl \
     system/ulib/fvm \
     system/ulib/fs \
     system/ulib/gpt \
-    system/ulib/digest \
+    system/ulib/memfs \
+    system/ulib/minfs \
+    system/ulib/sync \
+    system/ulib/trace \
     system/ulib/zx \
     system/ulib/zxcpp \
-    system/ulib/fbl \
-    system/ulib/sync \
     third_party/ulib/uboringssl \
-    system/ulib/minfs \
-    system/ulib/bitmap
 
 MODULE_LIBS := \
+    system/ulib/async.default \
     system/ulib/c \
-    system/ulib/fs-management \
-    system/ulib/zircon \
     system/ulib/fdio \
+    system/ulib/fs-management \
+    system/ulib/trace-engine \
     system/ulib/unittest \
+    system/ulib/zircon \
 
 include make/module.mk

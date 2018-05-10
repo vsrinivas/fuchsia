@@ -33,6 +33,8 @@
 #include <fvm/fvm.h>
 #include <minfs/format.h>
 #include <gpt/gpt.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <memfs/memfs.h>
 #include <zircon/device/block.h>
 #include <zircon/device/device.h>
 #include <zircon/device/ramdisk.h>
@@ -43,10 +45,15 @@
 
 #include <unittest/unittest.h>
 
-/////////////////////// Helper functions for creating FVM:
-
 #define FVM_DRIVER_LIB "/boot/driver/fvm.so"
 #define STRLEN(s) sizeof(s) / sizeof((s)[0])
+
+namespace {
+
+/////////////////////// Helper functions for creating FVM:
+
+const char kTmpfsPath[] = "/fvm-tmp";
+const char kMountPath[] = "/fvm-tmp/minfs_test_mountpath";
 
 static bool use_real_disk = false;
 static char test_disk_path[PATH_MAX];
@@ -367,7 +374,7 @@ bool VmoClient::CheckRead(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t l
     END_HELPER;
 }
 
-static bool CheckWrite(int fd, size_t off, size_t len, uint8_t* buf) {
+bool CheckWrite(int fd, size_t off, size_t len, uint8_t* buf) {
     BEGIN_HELPER;
     for (size_t i = 0; i < len; i++) {
         buf[i] = static_cast<uint8_t>(rand());
@@ -377,7 +384,7 @@ static bool CheckWrite(int fd, size_t off, size_t len, uint8_t* buf) {
     END_HELPER;
 }
 
-static bool CheckRead(int fd, size_t off, size_t len, const uint8_t* in) {
+bool CheckRead(int fd, size_t off, size_t len, const uint8_t* in) {
     BEGIN_HELPER;
     fbl::AllocChecker ac;
     fbl::unique_ptr<uint8_t[]> out(new (&ac) uint8_t[len]);
@@ -389,7 +396,7 @@ static bool CheckRead(int fd, size_t off, size_t len, const uint8_t* in) {
     END_HELPER;
 }
 
-static bool CheckWriteColor(int fd, size_t off, size_t len, uint8_t color) {
+bool CheckWriteColor(int fd, size_t off, size_t len, uint8_t color) {
     BEGIN_HELPER;
     fbl::AllocChecker ac;
     fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[len]);
@@ -400,7 +407,7 @@ static bool CheckWriteColor(int fd, size_t off, size_t len, uint8_t color) {
     END_HELPER;
 }
 
-static bool CheckReadColor(int fd, size_t off, size_t len, uint8_t color) {
+bool CheckReadColor(int fd, size_t off, size_t len, uint8_t color) {
     BEGIN_HELPER;
     fbl::AllocChecker ac;
     fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[len]);
@@ -413,7 +420,7 @@ static bool CheckReadColor(int fd, size_t off, size_t len, uint8_t color) {
     END_HELPER;
 }
 
-static bool CheckWriteReadBlock(int fd, size_t block, size_t count) {
+bool CheckWriteReadBlock(int fd, size_t block, size_t count) {
     BEGIN_HELPER;
     block_info_t info;
     ASSERT_GE(ioctl_block_get_info(fd, &info), 0);
@@ -427,7 +434,7 @@ static bool CheckWriteReadBlock(int fd, size_t block, size_t count) {
     END_HELPER;
 }
 
-static bool CheckNoAccessBlock(int fd, size_t block, size_t count) {
+bool CheckNoAccessBlock(int fd, size_t block, size_t count) {
     BEGIN_HELPER;
     block_info_t info;
     ASSERT_GE(ioctl_block_get_info(fd, &info), 0);
@@ -445,7 +452,7 @@ static bool CheckNoAccessBlock(int fd, size_t block, size_t count) {
     END_HELPER;
 }
 
-static bool CheckDeadBlock(int fd) {
+bool CheckDeadBlock(int fd) {
     BEGIN_HELPER;
     block_info_t info;
     ASSERT_LT(ioctl_block_get_info(fd, &info), 0);
@@ -463,7 +470,7 @@ static bool CheckDeadBlock(int fd) {
 /////////////////////// Actual tests:
 
 // Test initializing the FVM on a partition that is smaller than a slice
-static bool TestTooSmall(void) {
+bool TestTooSmall(void) {
     BEGIN_TEST;
 
     if (use_real_disk) {
@@ -484,7 +491,7 @@ static bool TestTooSmall(void) {
 }
 
 // Test initializing the FVM on a large partition, with metadata size > the max transfer size
-static bool TestLarge(void) {
+bool TestLarge(void) {
     BEGIN_TEST;
 
     if (use_real_disk) {
@@ -519,7 +526,7 @@ static bool TestLarge(void) {
 }
 
 // Load and unload an empty FVM
-static bool TestEmpty(void) {
+bool TestEmpty(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -530,7 +537,7 @@ static bool TestEmpty(void) {
 }
 
 // Test allocating a single partition
-static bool TestAllocateOne(void) {
+bool TestAllocateOne(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -571,7 +578,7 @@ static bool TestAllocateOne(void) {
 }
 
 // Test allocating a collection of partitions
-static bool TestAllocateMany(void) {
+bool TestAllocateMany(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -616,7 +623,7 @@ static bool TestAllocateMany(void) {
 
 // Test that the fvm driver can cope with a sudden close during read / write
 // operations.
-static bool TestCloseDuringAccess(void) {
+bool TestCloseDuringAccess(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -679,7 +686,7 @@ static bool TestCloseDuringAccess(void) {
 
 // Test that the fvm driver can cope with a sudden release during read / write
 // operations.
-static bool TestReleaseDuringAccess(void) {
+bool TestReleaseDuringAccess(void) {
     BEGIN_TEST;
 
     if (use_real_disk) {
@@ -741,7 +748,7 @@ static bool TestReleaseDuringAccess(void) {
     END_TEST;
 }
 
-static bool TestDestroyDuringAccess(void) {
+bool TestDestroyDuringAccess(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -804,7 +811,7 @@ static bool TestDestroyDuringAccess(void) {
 }
 
 // Test allocating additional slices to a vpartition.
-static bool TestVPartitionExtend(void) {
+bool TestVPartitionExtend(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -893,7 +900,7 @@ static bool TestVPartitionExtend(void) {
 }
 
 // Test allocating very sparse VPartition
-static bool TestVPartitionExtendSparse(void) {
+bool TestVPartitionExtendSparse(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -958,7 +965,7 @@ static bool TestVPartitionExtendSparse(void) {
 }
 
 // Test removing slices from a VPartition.
-static bool TestVPartitionShrink(void) {
+bool TestVPartitionShrink(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -1051,7 +1058,7 @@ static bool TestVPartitionShrink(void) {
 }
 
 // Test splitting a contiguous slice extent into multiple parts
-static bool TestVPartitionSplit(void) {
+bool TestVPartitionSplit(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -1185,7 +1192,7 @@ static bool TestVPartitionSplit(void) {
 }
 
 // Test removing VPartitions within an FVM
-static bool TestVPartitionDestroy(void) {
+bool TestVPartitionDestroy(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -1253,7 +1260,7 @@ static bool TestVPartitionDestroy(void) {
     END_TEST;
 }
 
-static bool TestVPartitionQuery(void) {
+bool TestVPartitionQuery(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -1352,7 +1359,7 @@ static bool TestVPartitionQuery(void) {
 }
 
 // Test allocating and accessing slices which are allocated contiguously.
-static bool TestSliceAccessContiguous(void) {
+bool TestSliceAccessContiguous(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -1418,7 +1425,7 @@ static bool TestSliceAccessContiguous(void) {
 }
 
 // Test allocating and accessing multiple (3+) slices at once.
-static bool TestSliceAccessMany(void) {
+bool TestSliceAccessMany(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -1498,7 +1505,7 @@ static bool TestSliceAccessMany(void) {
 // Test allocating and accessing slices which are allocated
 // virtually contiguously (they appear sequential to the client) but are
 // actually noncontiguous on the FVM partition.
-static bool TestSliceAccessNonContiguousPhysical(void) {
+bool TestSliceAccessNonContiguousPhysical(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -1648,7 +1655,7 @@ static bool TestSliceAccessNonContiguousPhysical(void) {
 
 // Test allocating and accessing slices which are
 // allocated noncontiguously from the client's perspective.
-static bool TestSliceAccessNonContiguousVirtual(void) {
+bool TestSliceAccessNonContiguousVirtual(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -1733,7 +1740,7 @@ static bool TestSliceAccessNonContiguousVirtual(void) {
 }
 
 // Test that the FVM driver actually persists updates.
-static bool TestPersistenceSimple(void) {
+bool TestPersistenceSimple(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -1848,7 +1855,7 @@ static bool TestPersistenceSimple(void) {
     END_TEST;
 }
 
-static bool TestCorruptMount(void) {
+bool TestCorruptMount(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -1920,9 +1927,8 @@ static bool TestCorruptMount(void) {
               query_request.vslice_start[2] - query_request.vslice_start[1]);
 
     // Mount the VPart
-    const char* mount_path = "/tmp/minfs_test_mountpath";
-    ASSERT_EQ(mkdir(mount_path, 0666), 0);
-    ASSERT_EQ(mount(vp_fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options,
+    ASSERT_EQ(mkdir(kMountPath, 0666), 0);
+    ASSERT_EQ(mount(vp_fd, kMountPath, DISK_FORMAT_MINFS, &default_mount_options,
                     launch_stdio_async), ZX_OK);
 
     // Create a file large enough to force slice extension
@@ -1932,14 +1938,14 @@ static bool TestCorruptMount(void) {
     memset(buf.get(), 0, slice_size);
 
     char fname[128];
-    snprintf(fname, sizeof(fname), "%s/wow", mount_path);
+    snprintf(fname, sizeof(fname), "%s/wow", kMountPath);
     int file_fd = open(fname, O_CREAT | O_RDWR | O_EXCL);
     ASSERT_GT(file_fd, 0);
     ASSERT_EQ(write(file_fd, buf.get(), slice_size), (ssize_t)slice_size);
     ASSERT_EQ(close(file_fd), 0);
 
     // Clean up
-    ASSERT_EQ(umount(mount_path), ZX_OK);
+    ASSERT_EQ(umount(kMountPath), ZX_OK);
 
     vp_fd = open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr);
     ASSERT_GT(vp_fd, 0);
@@ -1959,18 +1965,18 @@ static bool TestCorruptMount(void) {
     extend_request.length = 1;
     ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &extend_request), 0);
 
-    ASSERT_EQ(mount(vp_fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options,
+    ASSERT_EQ(mount(vp_fd, kMountPath, DISK_FORMAT_MINFS, &default_mount_options,
                     launch_stdio_async), ZX_OK);
-    ASSERT_EQ(umount(mount_path), ZX_OK);
+    ASSERT_EQ(umount(kMountPath), ZX_OK);
 
     // Clean up
-    ASSERT_EQ(rmdir(mount_path), 0);
+    ASSERT_EQ(rmdir(kMountPath), 0);
     ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
 
-static bool TestVPartitionUpgrade(void) {
+bool TestVPartitionUpgrade(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -2120,7 +2126,7 @@ static bool TestVPartitionUpgrade(void) {
 }
 
 // Test that the FVM driver can mount filesystems.
-static bool TestMounting(void) {
+bool TestMounting(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -2150,14 +2156,13 @@ static bool TestMounting(void) {
               ZX_OK);
 
     // Mount the VPart
-    const char* mount_path = "/tmp/minfs_test_mountpath";
-    ASSERT_EQ(mkdir(mount_path, 0666), 0);
-    ASSERT_EQ(mount(vp_fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options,
+    ASSERT_EQ(mkdir(kMountPath, 0666), 0);
+    ASSERT_EQ(mount(vp_fd, kMountPath, DISK_FORMAT_MINFS, &default_mount_options,
                     launch_stdio_async),
               ZX_OK);
 
     // Verify that the mount was successful
-    int rootfd = open(mount_path, O_RDONLY | O_DIRECTORY);
+    int rootfd = open(kMountPath, O_RDONLY | O_DIRECTORY);
     ASSERT_GT(rootfd, 0);
     char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
     vfs_query_info_t* out = reinterpret_cast<vfs_query_info_t*>(buf);
@@ -2173,8 +2178,8 @@ static bool TestMounting(void) {
 
     // Clean up
     ASSERT_EQ(close(rootfd), 0);
-    ASSERT_EQ(umount(mount_path), ZX_OK);
-    ASSERT_EQ(rmdir(mount_path), 0);
+    ASSERT_EQ(umount(kMountPath), ZX_OK);
+    ASSERT_EQ(rmdir(kMountPath), 0);
     ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(FVMCheck(fvm_driver, 64lu * (1 << 20)), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
@@ -2182,7 +2187,7 @@ static bool TestMounting(void) {
 }
 
 // Test that FVM-aware filesystem can be reformatted.
-static bool TestMkfs(void) {
+bool TestMkfs(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -2221,15 +2226,14 @@ static bool TestMkfs(void) {
 
     // Demonstrate that mounting as minfs will fail, but mounting as blobfs
     // is successful.
-    const char* mount_path = "/tmp/minfs_test_mountpath";
-    ASSERT_EQ(mkdir(mount_path, 0666), 0);
-    ASSERT_NE(mount(vp_fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options,
+    ASSERT_EQ(mkdir(kMountPath, 0666), 0);
+    ASSERT_NE(mount(vp_fd, kMountPath, DISK_FORMAT_MINFS, &default_mount_options,
                     launch_stdio_sync), ZX_OK);
     vp_fd = open(partition_path, O_RDWR);
     ASSERT_GE(vp_fd, 0);
-    ASSERT_EQ(mount(vp_fd, mount_path, DISK_FORMAT_BLOBFS, &default_mount_options,
+    ASSERT_EQ(mount(vp_fd, kMountPath, DISK_FORMAT_BLOBFS, &default_mount_options,
                     launch_stdio_async), ZX_OK);
-    ASSERT_EQ(umount(mount_path), ZX_OK);
+    ASSERT_EQ(umount(kMountPath), ZX_OK);
 
     // ... and reformat back to MinFS again.
     ASSERT_EQ(mkfs(partition_path, DISK_FORMAT_MINFS, launch_stdio_sync,
@@ -2238,11 +2242,11 @@ static bool TestMkfs(void) {
     // Mount the VPart.
     vp_fd = open(partition_path, O_RDWR);
     ASSERT_GE(vp_fd, 0);
-    ASSERT_EQ(mount(vp_fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options,
+    ASSERT_EQ(mount(vp_fd, kMountPath, DISK_FORMAT_MINFS, &default_mount_options,
                     launch_stdio_async), ZX_OK);
 
     // Verify that the mount was successful.
-    int rootfd = open(mount_path, O_RDONLY | O_DIRECTORY);
+    int rootfd = open(kMountPath, O_RDONLY | O_DIRECTORY);
     ASSERT_GT(rootfd, 0);
     char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
     vfs_query_info_t* out = reinterpret_cast<vfs_query_info_t*>(buf);
@@ -2258,8 +2262,8 @@ static bool TestMkfs(void) {
 
     // Clean up.
     ASSERT_EQ(close(rootfd), 0);
-    ASSERT_EQ(umount(mount_path), ZX_OK);
-    ASSERT_EQ(rmdir(mount_path), 0);
+    ASSERT_EQ(umount(kMountPath), ZX_OK);
+    ASSERT_EQ(rmdir(kMountPath), 0);
     ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(FVMCheck(fvm_driver, 64lu * (1 << 20)), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
@@ -2268,7 +2272,7 @@ static bool TestMkfs(void) {
 
 // Test that the FVM can recover when one copy of
 // metadata becomes corrupt.
-static bool TestCorruptionOk(void) {
+bool TestCorruptionOk(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -2347,7 +2351,7 @@ static bool TestCorruptionOk(void) {
     END_TEST;
 }
 
-static bool TestCorruptionRegression(void) {
+bool TestCorruptionRegression(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -2418,7 +2422,7 @@ static bool TestCorruptionRegression(void) {
     END_TEST;
 }
 
-static bool TestCorruptionUnrecoverable(void) {
+bool TestCorruptionUnrecoverable(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -2697,7 +2701,7 @@ int random_access_thread(void* arg) {
 }
 
 template <size_t ThreadCount, bool Persistence>
-static bool TestRandomOpMultithreaded(void) {
+bool TestRandomOpMultithreaded(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
@@ -2812,6 +2816,8 @@ static bool TestRandomOpMultithreaded(void) {
     END_TEST;
 }
 
+}  // namespace
+
 BEGIN_TEST_CASE(fvm_tests)
 RUN_TEST_MEDIUM(TestTooSmall)
 RUN_TEST_MEDIUM(TestLarge)
@@ -2885,6 +2891,17 @@ int main(int argc, char** argv) {
             }
         }
         i += 1;
+    }
+
+    // Initialize tmpfs.
+    async::Loop loop;
+    if (loop.StartThread() != ZX_OK) {
+        fprintf(stderr, "Error: Cannot initialize local tmpfs loop\n");
+        return -1;
+    }
+    if (memfs_install_at(loop.async(), kTmpfsPath) != ZX_OK) {
+        fprintf(stderr, "Error: Cannot install local tmpfs\n");
+        return -1;
     }
 
     return unittest_run_all_tests(argc, argv) ? 0 : -1;
