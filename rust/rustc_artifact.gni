@@ -207,6 +207,21 @@ template("rustc_artifact") {
     }
   }
 
+  # Copy binaries and staticlibs out of rust_crates/* into the root dir
+  # TODO(cramertj) remove and replace with writing directly to the root
+  # dir once all existing build rules have moved off of using rust_crates/*
+  if (type == "bin" || type == "staticlib") {
+    copy_target_name = "${target_name}_copy"
+    group_deps += [ ":${copy_target_name}" ]
+    copy(copy_target_name) {
+      deps = [ ":${build_target_name}" ]
+      sources = [ output_file ]
+      outputs = [
+        "${root_out_dir}/${prefix}${name}${extension}"
+      ]
+    }
+  }
+
   cargo_toml_target_name = "${target_name}_cargo"
   group_deps += [ ":${cargo_toml_target_name}" ]
   action(cargo_toml_target_name) {
