@@ -9,6 +9,7 @@
 #include "magma_util/macros.h"
 #include "magma_util/register_io.h"
 #include "msd.h"
+#include "page_table_arrays.h"
 #include "platform_bus_mapper.h"
 #include "platform_device.h"
 
@@ -35,6 +36,8 @@ private:
 
     magma::PlatformBusMapper* bus_mapper() { return bus_mapper_.get(); }
 
+    PageTableArrays* page_table_arrays() { return page_table_arrays_.get(); }
+
     static const uint32_t kMagic = 0x64657669; //"devi"
 
     std::unique_ptr<magma::PlatformDevice> platform_device_;
@@ -42,6 +45,7 @@ private:
     std::unique_ptr<GpuFeatures> gpu_features_;
     uint32_t device_id_ = 0;
     std::unique_ptr<magma::PlatformBusMapper> bus_mapper_;
+    std::unique_ptr<PageTableArrays> page_table_arrays_;
 
     friend class TestMsdVslDevice;
 };

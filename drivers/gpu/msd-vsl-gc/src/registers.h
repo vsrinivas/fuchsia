@@ -124,11 +124,60 @@ public:
     static auto Get() { return magma::RegisterAddr<Specs4>(0x9C); }
 };
 
+class MmuPageTableArrayConfig : public magma::RegisterBase {
+public:
+    DEF_FIELD(15, 0, index);
+
+    static auto Get() { return magma::RegisterAddr<MmuPageTableArrayConfig>(0x1AC); }
+};
+
 class IdleState : public magma::RegisterBase {
 public:
     bool IsIdle() { return reg_value() == 0x7fffffff; }
 
     static auto Get() { return magma::RegisterAddr<IdleState>(0x4); }
+};
+
+class MmuSecureControl : public magma::RegisterBase {
+public:
+    DEF_BIT(0, enable);
+
+    static auto Get() { return magma::RegisterAddr<MmuSecureControl>(0x388); }
+};
+
+class PageTableArrayAddressLow : public magma::RegisterBase {
+public:
+    static auto Get() { return magma::RegisterAddr<PageTableArrayAddressLow>(0x38C); }
+};
+
+class PageTableArrayAddressHigh : public magma::RegisterBase {
+public:
+    static auto Get() { return magma::RegisterAddr<PageTableArrayAddressHigh>(0x390); }
+};
+
+class PageTableArrayControl : public magma::RegisterBase {
+public:
+    DEF_BIT(0, enable);
+
+    static auto Get() { return magma::RegisterAddr<PageTableArrayControl>(0x394); }
+};
+
+class MmuNonSecuritySafeAddressLow : public magma::RegisterBase {
+public:
+    static auto Get() { return magma::RegisterAddr<MmuNonSecuritySafeAddressLow>(0x398); }
+};
+
+class MmuSecuritySafeAddressLow : public magma::RegisterBase {
+public:
+    static auto Get() { return magma::RegisterAddr<MmuSecuritySafeAddressLow>(0x39C); }
+};
+
+class MmuSafeAddressConfig : public magma::RegisterBase {
+public:
+    DEF_FIELD(7, 0, non_security_safe_address_high);
+    DEF_FIELD(23, 16, security_safe_address_high);
+
+    static auto Get() { return magma::RegisterAddr<MmuSafeAddressConfig>(0x3A0); }
 };
 
 class SecureCommandControl : public magma::RegisterBase {

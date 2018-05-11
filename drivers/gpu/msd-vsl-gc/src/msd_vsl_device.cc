@@ -61,6 +61,10 @@ bool MsdVslDevice::Init(void* device_handle)
     if (!bus_mapper_)
         return DRETF(false, "failed to create bus mapper");
 
+    page_table_arrays_ = PageTableArrays::Create(bus_mapper_.get());
+    if (!page_table_arrays_)
+        return DRETF(false, "failed to create page table arrays");
+
     HardwareInit();
 
     return true;
@@ -68,9 +72,13 @@ bool MsdVslDevice::Init(void* device_handle)
 
 void MsdVslDevice::HardwareInit()
 {
-    auto reg = registers::SecureAhbControl::Get().ReadFrom(register_io_.get());
-    reg.non_secure_access().set(1);
-    reg.WriteTo(register_io_.get());
+    {
+        auto reg = registers::SecureAhbControl::Get().ReadFrom(register_io_.get());
+        reg.non_secure_access().set(1);
+        reg.WriteTo(register_io_.get());
+    }
+
+    page_table_arrays_->HardwareInit(register_io_.get());
 }
 
 bool MsdVslDevice::IsIdle()

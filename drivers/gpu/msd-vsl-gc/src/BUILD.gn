@@ -16,6 +16,8 @@ source_set("src") {
     "msd_vsl_driver.cc",
     "msd_vsl_driver.h",
     "msd_vsl_semaphore.cc",
+    "page_table_arrays.cc",
+    "page_table_arrays.h",
   ]
   public_deps = [
     "//garnet/lib/magma/include:msd_abi",
