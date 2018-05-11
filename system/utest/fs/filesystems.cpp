@@ -246,51 +246,72 @@ int unmount_memfs(const char* mount_path) {
     return unlink_recursive(kMountPath);
 }
 
-int mkfs_minfs(const char* disk_path) {
+static int mkfs_common(const char* disk_path, disk_format_t fs_type) {
     zx_status_t status;
-    if ((status = mkfs(disk_path, DISK_FORMAT_MINFS, launch_stdio_sync,
+    if ((status = mkfs(disk_path, fs_type, launch_stdio_sync,
                        &default_mkfs_options)) != ZX_OK) {
-        fprintf(stderr, "Could not mkfs filesystem");
+        fprintf(stderr, "Could not mkfs filesystem(%s)",
+                disk_format_string(fs_type));
         return -1;
     }
     return 0;
 }
 
-int fsck_minfs(const char* disk_path) {
+static int fsck_common(const char* disk_path, disk_format_t fs_type) {
     zx_status_t status;
-    if ((status = fsck(disk_path, DISK_FORMAT_MINFS, &test_fsck_options, launch_stdio_sync)) != ZX_OK) {
-        fprintf(stderr, "fsck on MinFS failed");
+    if ((status = fsck(disk_path, fs_type, &test_fsck_options,
+                       launch_stdio_sync)) != ZX_OK) {
+        fprintf(stderr, "fsck on %s failed", disk_format_string(fs_type));
         return -1;
     }
     return 0;
 }
 
-int mount_minfs(const char* disk_path, const char* mount_path) {
+static int mount_common(const char* disk_path, const char* mount_path,
+                        disk_format_t fs_type) {
     int fd = open(disk_path, O_RDWR);
+
     if (fd < 0) {
         fprintf(stderr, "Could not open disk: %s\n", disk_path);
         return -1;
     }
 
-    // fd consumed by mount. By default, mount waits until the filesystem is ready to accept
-    // commands.
+    // fd consumed by mount. By default, mount waits until the filesystem is
+    // ready to accept commands.
     zx_status_t status;
-    if ((status = mount(fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options,
+    if ((status = mount(fd, mount_path, fs_type, &default_mount_options,
                         launch_stdio_async)) != ZX_OK) {
-        fprintf(stderr, "Could not mount filesystem\n");
+        fprintf(stderr, "Could not mount %s filesystem\n",
+                disk_format_string(fs_type));
         return status;
     }
 
     return 0;
 }
 
-int unmount_minfs(const char* mount_path) {
+static int unmount_common(const char* mount_path) {
     zx_status_t status = umount(mount_path);
     if (status != ZX_OK) {
         fprintf(stderr, "Failed to unmount filesystem\n");
         return status;
     }
     return 0;
+}
+
+int mkfs_minfs(const char* disk_path) {
+    return mkfs_common(disk_path, DISK_FORMAT_MINFS);
+}
+
+int fsck_minfs(const char* disk_path) {
+    return fsck_common(disk_path, DISK_FORMAT_MINFS);
+}
+
+int mount_minfs(const char* disk_path, const char* mount_path) {
+    return mount_common(disk_path, mount_path, DISK_FORMAT_MINFS);
+}
+
+int unmount_minfs(const char* mount_path) {
+    return unmount_common(mount_path);
 }
 
 bool should_test_thinfs(void) {
@@ -299,50 +320,19 @@ bool should_test_thinfs(void) {
 }
 
 int mkfs_thinfs(const char* disk_path) {
-    zx_status_t status;
-    if ((status = mkfs(disk_path, DISK_FORMAT_FAT, launch_stdio_sync,
-                       &default_mkfs_options)) != ZX_OK) {
-        fprintf(stderr, "Could not mkfs filesystem");
-        return -1;
-    }
-    return 0;
+    return mkfs_common(disk_path, DISK_FORMAT_FAT);
 }
 
 int fsck_thinfs(const char* disk_path) {
-    zx_status_t status;
-    if ((status = fsck(disk_path, DISK_FORMAT_FAT, &test_fsck_options, launch_stdio_sync)) != ZX_OK) {
-        fprintf(stderr, "fsck on FAT failed");
-        return -1;
-    }
-    return 0;
+    return fsck_common(disk_path, DISK_FORMAT_FAT);
 }
 
 int mount_thinfs(const char* disk_path, const char* mount_path) {
-    int fd = open(disk_path, O_RDWR);
-    if (fd < 0) {
-        fprintf(stderr, "Could not open disk: %s\n", disk_path);
-        return -1;
-    }
-
-    // fd consumed by mount. By default, mount waits until the filesystem is ready to accept
-    // commands.
-    zx_status_t status;
-    if ((status = mount(fd, mount_path, DISK_FORMAT_FAT, &default_mount_options,
-                        launch_stdio_async)) != ZX_OK) {
-        fprintf(stderr, "Could not mount filesystem\n");
-        return status;
-    }
-
-    return 0;
+    return mount_common(disk_path, mount_path, DISK_FORMAT_FAT);
 }
 
 int unmount_thinfs(const char* mount_path) {
-    zx_status_t status = umount(mount_path);
-    if (status != ZX_OK) {
-        fprintf(stderr, "Failed to unmount filesystem\n");
-        return status;
-    }
-    return 0;
+    return unmount_common(mount_path);
 }
 
 fs_info_t FILESYSTEMS[NUM_FILESYSTEMS] = {

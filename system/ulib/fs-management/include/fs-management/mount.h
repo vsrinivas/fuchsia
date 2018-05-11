@@ -29,7 +29,22 @@ typedef enum disk_format_type {
     DISK_FORMAT_BLOBFS,
     DISK_FORMAT_FVM,
     DISK_FORMAT_ZXCRYPT,
+    DISK_FORMAT_COUNT_,
 } disk_format_t;
+
+static const char* disk_format_string_[DISK_FORMAT_COUNT_] = {
+        [DISK_FORMAT_UNKNOWN] = "unknown",
+        [DISK_FORMAT_GPT] = "gpt",
+        [DISK_FORMAT_MBR] = "mbr",
+        [DISK_FORMAT_MINFS] = "minfs",
+        [DISK_FORMAT_FAT] = "fat",
+        [DISK_FORMAT_BLOBFS] = "blobfs",
+        [DISK_FORMAT_FVM] = "fvm",
+        [DISK_FORMAT_ZXCRYPT] = "zxcrypt"};
+
+static inline const char* disk_format_string(disk_format_t fs_type) {
+    return disk_format_string_[fs_type];
+}
 
 #define HEADER_SIZE 4096
 
