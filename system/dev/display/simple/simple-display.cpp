@@ -15,6 +15,7 @@
 #include <zircon/types.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "simple-display.h"
@@ -64,11 +65,39 @@ void SimpleDisplay::ReleaseImage(image_t* image) {
     // noop
 }
 
-bool SimpleDisplay::CheckConfiguration(display_config_t** display_config, uint32_t display_count) {
-    return display_count == 1;
+void SimpleDisplay::CheckConfiguration(const display_config_t** display_configs,
+                                       uint32_t** layer_cfg_results,
+                                       uint32_t display_count) {
+    if (display_count != 1) {
+        ZX_DEBUG_ASSERT(display_count == 0);
+        return;
+    }
+    ZX_DEBUG_ASSERT(display_configs[0]->display_id == kDisplayId);
+    bool success;
+    if (display_configs[0]->layer_count != 1) {
+        success = false;
+    } else {
+        primary_layer_t* layer = &display_configs[0]->layers[0]->cfg.primary;
+        frame_t frame = {
+                .x_pos = 0, .y_pos = 0, .width = width_, .height = height_,
+        };
+        success = display_configs[0]->layers[0]->type == LAYER_PRIMARY
+                && layer->transform_mode == FRAME_TRANSFORM_IDENTITY
+                && layer->image.width == width_
+                && layer->image.height == height_
+                && memcmp(&layer->dest_frame, &frame, sizeof(frame_t)) == 0
+                && memcmp(&layer->src_frame, &frame, sizeof(frame_t)) == 0;
+    }
+    if (!success) {
+        layer_cfg_results[0][0] = CLIENT_MERGE_BASE;
+        for (unsigned i = 1; i < display_configs[0]->layer_count; i++) {
+            layer_cfg_results[0][i] = CLIENT_MERGE_SRC;
+        }
+    }
 }
 
-void SimpleDisplay::ApplyConfiguration(display_config_t** display_config, uint32_t display_count) {
+void SimpleDisplay::ApplyConfiguration(const display_config_t** display_config,
+                                       uint32_t display_count) {
     // noop
 }
 

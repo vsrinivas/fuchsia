@@ -19,8 +19,8 @@ void on_displays_changed(void* ctx, uint64_t* displays_added, uint32_t added_cou
             displays_added, added_count, displays_removed, removed_count);
 }
 
-void on_display_vsync(void* ctx, uint64_t display, void* handle) {
-    static_cast<display::Controller*>(ctx)->OnDisplayVsync(display, handle);
+void on_display_vsync(void* ctx, uint64_t display, void** handles, uint32_t handle_count) {
+    static_cast<display::Controller*>(ctx)->OnDisplayVsync(display, handles, handle_count);
 }
 
 display_controller_cb_t dc_cb = {
@@ -103,7 +103,12 @@ void Controller::OnDisplaysChanged(uint64_t* displays_added, uint32_t added_coun
     }
 }
 
-void Controller::OnDisplayVsync(uint64_t display_id, void* handle) {
+void Controller::OnDisplayVsync(uint64_t display_id, void** handles, uint32_t handle_count) {
+    // TODO(stevensd): Support multiple layers
+    if (handle_count != 1) {
+        ZX_DEBUG_ASSERT(handle_count == 0);
+        return;
+    }
     fbl::AutoLock lock(&mtx_);
     fbl::DoublyLinkedList<fbl::RefPtr<Image>>* images = nullptr;
     for (auto& display_config : displays_) {
@@ -117,7 +122,7 @@ void Controller::OnDisplayVsync(uint64_t display_id, void* handle) {
         while (!images->is_empty()) {
             auto& image = images->front();
             image.OnPresent();
-            if (image.info().handle == handle) {
+            if (image.info().handle == handles[0]) {
                 break;
             } else {
                 image.OnRetire();

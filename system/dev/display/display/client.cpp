@@ -349,27 +349,42 @@ void Client::HandleAllocateVmo(const fuchsia_display_ControllerAllocateVmoReques
 }
 
 bool Client::CheckConfig() {
-    display_config_t* configs[configs_.size()];
+    const display_config_t* configs[configs_.size()];
+    uint32_t* display_cfg_results[configs_.size()];
+    uint32_t layer_cfg_results[configs_.size()];
+    memset(layer_cfg_results, 0, configs_.size() * sizeof(uint32_t));
+
     int idx = 0;
     for (auto& display_config : configs_) {
         if (display_config.has_pending_image) {
             if (display_config.pending_image != nullptr) {
-                display_config.pending.image = display_config.pending_image->info();
+                display_config.pending_layer.cfg.primary.image =
+                        display_config.pending_image->info();
+                display_cfg_results[idx] = layer_cfg_results + idx;
                 configs[idx++] = &display_config.pending;
             }
         } else if (!display_config.waiting_images.is_empty()) {
-            display_config.pending.image = display_config.waiting_images.back().info();
+            display_config.pending_layer.cfg.primary.image =
+                    display_config.waiting_images.back().info();
+            display_cfg_results[idx] = layer_cfg_results + idx;
             configs[idx++] = &display_config.pending;
         } else if (display_config.displayed_image != nullptr) {
+            display_cfg_results[idx] = layer_cfg_results + idx;
             configs[idx++] = &display_config.current;
         }
     }
 
-    return DC_IMPL_CALL(check_configuration, configs, idx);
+    DC_IMPL_CALL(check_configuration, configs, display_cfg_results, idx);
+    for (int i = 0; i < idx; i++) {
+        if (layer_cfg_results[i]) {
+            return false;
+        }
+    }
+    return true;
 }
 
 void Client::ApplyConfig() {
-    display_config_t* configs[configs_.size()];
+    const display_config_t* configs[configs_.size()];
     int idx = 0;
     for (auto& display_config : configs_) {
         // Find the newest image which is ready
@@ -392,7 +407,7 @@ void Client::ApplyConfig() {
                 early_retire->EarlyRetire();
             }
             display_config.displayed_image = display_config.waiting_images.pop_front();
-            display_config.current.image = display_config.displayed_image->info();
+            display_config.current_layer.cfg.primary.image = display_config.displayed_image->info();
             config_applied_ = false;
         }
 
@@ -714,6 +729,23 @@ zx_status_t ClientProxy::OnDisplaysChanged(const DisplayInfo** displays_added,
                     d->info.panel.params.width * d->info.panel.params.height / 1000 / 10;
         }
         config->pending = config->current;
+
+        // TODO(stevensd): Dynamic layer configuration
+        config->current.layers = &config->current_layer_ptr;
+        config->current.layer_count = 1;
+        config->pending.layers = &config->pending_layer_ptr;
+        config->pending.layer_count = 1;
+
+        config->current_layer.type = LAYER_PRIMARY;
+        config->current_layer.z_index = 0;
+        config->current_layer.cfg.primary.transform_mode = 0;
+        config->current_layer.cfg.primary.dest_frame = {
+                .x_pos = 0, .y_pos = 0,
+                .width = config->current.mode.h_addressable,
+                .height = config->current.mode.v_addressable,
+        };
+        config->current_layer.cfg.primary.src_frame = config->current_layer.cfg.primary.dest_frame;
+        config->pending_layer = config->current_layer;
 
         added[added_idx] = fbl::move(config);
     }

@@ -49,13 +49,13 @@ class DisplayControllerProtocol : public internal::base_protocol {
         static_cast<D*>(ctx)->ReleaseImage(image);
     }
 
-    static bool CheckConfiguration(void* ctx,
-                                   display_config_t** display_config, uint32_t display_count) {
-        return static_cast<D*>(ctx)->CheckConfiguration(display_config, display_count);
+    static void CheckConfiguration(void* ctx, const display_config_t** display_config,
+                                   uint32_t** layer_cfg_result, uint32_t display_count) {
+        static_cast<D*>(ctx)->CheckConfiguration(display_config, layer_cfg_result, display_count);
     }
 
-    static void ApplyConfiguration(void* ctx,
-                                   display_config_t** display_config, uint32_t display_count) {
+    static void ApplyConfiguration(void* ctx, const display_config_t** display_config,
+                                   uint32_t display_count) {
         static_cast<D*>(ctx)->ApplyConfiguration(display_config, display_count);
     }
 

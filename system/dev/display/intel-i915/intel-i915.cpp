@@ -203,23 +203,30 @@ void Controller::HandlePipeVsync(registers::Pipe pipe) {
     }
 
     uint64_t id = INVALID_DISPLAY_ID;
-    void* handle = nullptr;
+    void* handles[3];
+    int32_t handle_count = 0;
     {
         fbl::AutoLock lock(&display_lock_);
         for (auto& display : display_devices_) {
             if (display->pipe() == pipe) {
-                registers::PipeRegs regs(pipe);
-                auto live_surface = regs.PlaneSurfaceLive().ReadFrom(mmio_space());
-                handle = reinterpret_cast<void*>(
-                        live_surface.surface_base_addr() << live_surface.kPageShift);
                 id = display->id();
+
+                registers::PipeRegs regs(pipe);
+                for (int i = 0; i < 3; i++) {
+                    auto live_surface = regs.PlaneSurfaceLive(i).ReadFrom(mmio_space());
+                    void* handle = reinterpret_cast<void*>(
+                            live_surface.surface_base_addr() << live_surface.kPageShift);
+                    if (handle) {
+                        handles[handle_count++] = handle;
+                    }
+                }
                 break;
             }
         }
     }
 
-    if (id != INVALID_DISPLAY_ID) {
-        dc_cb()->on_display_vsync(dc_cb_ctx_, id, handle);
+    if (id != INVALID_DISPLAY_ID && handle_count) {
+        dc_cb()->on_display_vsync(dc_cb_ctx_, id, handles, handle_count);
     }
     release_dc_cb_lock();
 }
@@ -368,8 +375,10 @@ void Controller::ResetPipe(registers::Pipe pipe) {
     registers::PipeRegs pipe_regs(pipe);
 
     // Disable planes
-    pipe_regs.PlaneControl().FromValue(0).WriteTo(mmio_space());
-    pipe_regs.PlaneSurface().FromValue(0).WriteTo(mmio_space());
+    for (int i = 0; i < 3; i++ ) {
+        pipe_regs.PlaneControl(i).FromValue(0).WriteTo(mmio_space());
+        pipe_regs.PlaneSurface(i).FromValue(0).WriteTo(mmio_space());
+    }
 
     // Disable the scalers (double buffered on PipeScalerWinSize)
     pipe_regs.PipeScalerCtrl(0).ReadFrom(mmio_space()).set_enable(0).WriteTo(mmio_space());
@@ -485,36 +494,41 @@ void Controller::AllocDisplayBuffers() {
     // Do display buffer alloc and watermark programming with fixed allocation from
     // intel docs. This allows the display to work but prevents power management.
     // TODO(ZX-1413): Calculate these dynamically based on what's enabled.
-    for (unsigned i = 0; i < registers::kPipeCount; i++) {
-        registers::Pipe pipe = registers::kPipes[i];
+    for (unsigned pipe_num = 0; pipe_num < registers::kPipeCount; pipe_num++) {
+        registers::Pipe pipe = registers::kPipes[pipe_num];
         registers::PipeRegs pipe_regs(pipe);
 
-        // Plane 1 gets everything
-        constexpr uint32_t kPerDdi = 891 / 3;
-        auto buf_cfg = pipe_regs.PlaneBufCfg(1).FromValue(0);
-        buf_cfg.set_buffer_start(kPerDdi * pipe);
-        buf_cfg.set_buffer_end(kPerDdi * (pipe + 1) - 1);
-        buf_cfg.WriteTo(mmio_space());
-
-        // Cursor and planes 2 and 3 get nothing
+        // Don't give the cursor anything
         pipe_regs.PlaneBufCfg(0).FromValue(0).WriteTo(mmio_space());
-        pipe_regs.PlaneBufCfg(2).FromValue(0).WriteTo(mmio_space());
-        pipe_regs.PlaneBufCfg(3).FromValue(0).WriteTo(mmio_space());
-
-        auto wm0 = pipe_regs.PlaneWatermark(0).FromValue(0);
-        wm0.set_enable(1);
-        wm0.set_lines(2);
-        wm0.set_blocks(kPerDdi);
-        wm0.WriteTo(mmio_space());
-
-        for (int i = 1; i < 8; i++) {
-            auto wm = pipe_regs.PlaneWatermark(i).FromValue(0);
+        for (int wm_num = 0; wm_num < 8; wm_num++) {
+            auto wm = pipe_regs.PlaneWatermark(0, wm_num).FromValue(0);
             wm.WriteTo(mmio_space());
         }
 
-        // Write so double-buffered regs are updated
-        auto base = pipe_regs.PlaneSurface().ReadFrom(mmio_space());
-        base.WriteTo(mmio_space());
+        // Split evenly between all regular planes across all DDIs
+        constexpr uint32_t kPerDdi = 891 / registers::kDdiCount;
+        constexpr uint32_t kPerPlane = kPerDdi / registers::kPrimaryPlaneCount;
+        for (unsigned plane_num = 0; plane_num < registers::kPrimaryPlaneCount; plane_num++) {
+            auto buf_cfg = pipe_regs.PlaneBufCfg(plane_num + 1).FromValue(0);
+            buf_cfg.set_buffer_start(kPerDdi * pipe + (kPerPlane * plane_num));
+            buf_cfg.set_buffer_end(kPerDdi * pipe  + (kPerPlane * (plane_num + 1)) - 1);
+            buf_cfg.WriteTo(mmio_space());
+
+            auto wm0 = pipe_regs.PlaneWatermark(plane_num + 1, 0).FromValue(0);
+            wm0.set_enable(1);
+            wm0.set_lines(2);
+            wm0.set_blocks(kPerPlane);
+            wm0.WriteTo(mmio_space());
+
+            for (int wm_num = 1; wm_num < 8; wm_num++) {
+                auto wm = pipe_regs.PlaneWatermark(plane_num + 1, wm_num).FromValue(0);
+                wm.WriteTo(mmio_space());
+            }
+
+            // Write so double-buffered regs are updated
+            auto base = pipe_regs.PlaneSurface(plane_num).ReadFrom(mmio_space());
+            base.WriteTo(mmio_space());
+        }
     }
     // TODO(ZX-1413): Wait for vblank instead of sleeping
     zx_nanosleep(zx_deadline_after(ZX_MSEC(33)));
@@ -595,17 +609,20 @@ void Controller::SetDisplayControllerCb(void* cb_ctx, display_controller_cb_t* c
     dc_cb_ctx_ = cb_ctx;
     _dc_cb_ = cb;
 
-    uint64_t displays[registers::kDdiCount];
-    uint32_t size;
-    {
-        fbl::AutoLock lock(&display_lock_);
-        size = static_cast<uint32_t>(display_devices_.size());
-        for (unsigned i = 0; i < size; i++) {
-            displays[i] = display_devices_[i]->id();
+    if (ready_for_callback_) {
+        uint64_t displays[registers::kDdiCount];
+        uint32_t size;
+        {
+            fbl::AutoLock lock(&display_lock_);
+            size = static_cast<uint32_t>(display_devices_.size());
+            for (unsigned i = 0; i < size; i++) {
+                displays[i] = display_devices_[i]->id();
+            }
         }
+
+        cb->on_displays_changed(cb_ctx, displays, size, NULL, 0);
     }
 
-    cb->on_displays_changed(cb_ctx, displays, size, NULL, 0);
     release_dc_cb_lock();
 }
 
@@ -651,6 +668,20 @@ zx_status_t Controller::ImportVmoImage(image_t* image, const zx::vmo& vmo, size_
     if (status != ZX_OK) {
         return status;
     }
+
+    // The vsync logic requires that images not have base == 0
+    if (gtt_region->base() == 0) {
+        fbl::unique_ptr<GttRegion> alt_gtt_region;
+        zx_status_t status = gtt_.AllocRegion(length,
+                                              registers::PlaneSurface::kLinearAlignment,
+                                              registers::PlaneSurface::kTrailingPtePadding,
+                                              &alt_gtt_region);
+        if (status != ZX_OK) {
+            return status;
+        }
+        gtt_region = fbl::move(alt_gtt_region);
+    }
+
     status = gtt_region->PopulateRegion(vmo.get(), offset / PAGE_SIZE, length);
     if (status != ZX_OK) {
         return status;
@@ -671,38 +702,69 @@ void Controller::ReleaseImage(image_t* image) {
     }
 }
 
-bool Controller::CheckConfiguration(display_config_t** display_config, uint32_t display_count) {
+void Controller::CheckConfiguration(const display_config_t** display_config,
+                                    uint32_t** layer_cfg_result, uint32_t display_count) {
     fbl::AutoLock lock(&display_lock_);
     for (unsigned i = 0; i < display_count; i++) {
         auto* config = display_config[i];
-        if (!FindDevice(config->display_id)) {
-            return false;
+        if (config->layer_count > 3) {
+            layer_cfg_result[i][0] = CLIENT_MERGE_BASE;
+            for (unsigned j = 1; j < config->layer_count; j++) {
+                layer_cfg_result[i][j] = CLIENT_MERGE_SRC;
+            }
+            continue;
         }
-        if (config->image.width != config->mode.h_addressable
-                || config->image.height != config->mode.v_addressable
-                || config->image.pixel_format != ZX_PIXEL_FORMAT_ARGB_8888) {
-            return false;
-        }
-    }
-    return true;
-}
 
-void Controller::ApplyConfiguration(display_config_t** display_config, uint32_t display_count) {
-    ZX_DEBUG_ASSERT(CheckConfiguration(display_config, display_count));
-    fbl::AutoLock lock(&display_lock_);
-
-    for (auto& display : display_devices_) {
-        display_config_t* config = nullptr;
-        for (unsigned i = 0; i < display_count; i++) {
-            if (display_config[i]->display_id == display->id()) {
-                config = display_config[i];
-                break;
+        for (unsigned j = 0; j < config->layer_count; j++) {
+            if (config->layers[j]->type != LAYER_PRIMARY) {
+                layer_cfg_result[i][j] = CLIENT_USE_PRIMARY;
+                continue;
+            }
+            primary_layer_t* primary = &config->layers[j]->cfg.primary;
+            if (primary->transform_mode != FRAME_TRANSFORM_IDENTITY) {
+                layer_cfg_result[i][j] |= CLIENT_TRANSFORM;
+            }
+            if (primary->dest_frame.width != primary->src_frame.width
+                    || primary->dest_frame.height != primary->src_frame.height) {
+                layer_cfg_result[i][j] |= CLIENT_FRAME_SCALE;
             }
         }
-        if (config != nullptr) {
+    }
+}
+
+void Controller::ApplyConfiguration(const display_config_t** display_config,
+                                    uint32_t display_count) {
+    uint64_t fake_vsyncs[registers::kDdiCount];
+    uint32_t fake_vsync_count = 0;
+
+    {
+        fbl::AutoLock lock(&display_lock_);
+        for (auto& display : display_devices_) {
+            const display_config_t* config = nullptr;
+            for (unsigned i = 0; i < display_count; i++) {
+                if (display_config[i]->display_id == display->id()) {
+                    config = display_config[i];
+                    break;
+                }
+            }
             display->ApplyConfiguration(config);
+
+            // The hardware only gives vsyncs if at least one plane is enabled, so
+            // fake one if we need to, to inform the client that we're done with the
+            // images.
+            if (!config || config->layer_count == 0) {
+                fake_vsyncs[fake_vsync_count++] = display->id();
+            }
         }
     }
+
+    acquire_dc_cb_lock();
+    if (dc_cb()) {
+        for (unsigned i = 0; i < fake_vsync_count; i++) {
+            dc_cb()->on_display_vsync(dc_cb_ctx_, fake_vsyncs[i], nullptr, 0);
+        }
+    }
+    release_dc_cb_lock();
 }
 
 uint32_t Controller::ComputeLinearStride(uint32_t width, zx_pixel_format_t format) {
@@ -894,11 +956,11 @@ zx_status_t Controller::DdkSuspend(uint32_t hint) {
                 // TODO(ZX-1413): Reset/scale the display to ensure the buffer displays properly
                 registers::PipeRegs pipe_regs(display->pipe());
 
-                auto plane_stride = pipe_regs.PlaneSurfaceStride().ReadFrom(mmio_space_.get());
+                auto plane_stride = pipe_regs.PlaneSurfaceStride(0).ReadFrom(mmio_space_.get());
                 plane_stride.set_stride(IMAGE_TYPE_SIMPLE, stride, format);
                 plane_stride.WriteTo(mmio_space_.get());
 
-                auto plane_surface = pipe_regs.PlaneSurface().ReadFrom(mmio_space_.get());
+                auto plane_surface = pipe_regs.PlaneSurface(0).ReadFrom(mmio_space_.get());
                 plane_surface.set_surface_base_addr(0);
                 plane_surface.WriteTo(mmio_space_.get());
             }
@@ -956,6 +1018,8 @@ void Controller::FinishInit() {
     if (dc_cb() && size) {
         dc_cb()->on_displays_changed(dc_cb_ctx_, displays, size, NULL, 0);
     }
+
+    ready_for_callback_ = true;
     release_dc_cb_lock();
 
     interrupts_.FinishInit();

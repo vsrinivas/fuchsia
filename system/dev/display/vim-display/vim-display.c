@@ -152,30 +152,55 @@ static void vim_release_image(void* ctx, image_t* image) {
     }
 }
 
-static bool vim_check_configuration(void* ctx,
-                                    display_config_t** display_configs, uint32_t display_count) {
+static void vim_check_configuration(void* ctx,
+                                    const display_config_t** display_configs,
+                                    uint32_t** layer_cfg_results,
+                                    uint32_t display_count) {
     if (display_count != 1) {
-        return display_count == 0;
+        ZX_DEBUG_ASSERT(display_count == 0);
+        return;
     }
     vim2_display_t* display = ctx;
     mtx_lock(&display->display_lock);
-    bool res = (display->display_attached
-               && display_configs[0]->display_id == display->display_id
-               && display_configs[0]->mode.h_addressable == display->width
-               && display_configs[0]->image.width == display->width
-               && display_configs[0]->mode.v_addressable == display->height
-               && display_configs[0]->image.height == display->height);
+
+    // no-op, just wait for the client to try a new config
+    if (!display->display_attached || display_configs[0]->display_id != display->display_id) {
+        mtx_unlock(&display->display_lock);
+        return;
+    }
+
+    bool success;
+    if (display_configs[0]->layer_count != 1) {
+        success = display_configs[0]->layer_count == 0;
+    } else {
+        primary_layer_t* layer = &display_configs[0]->layers[0]->cfg.primary;
+        frame_t frame = {
+                .x_pos = 0, .y_pos = 0, .width = display->width, .height = display->height,
+        };
+        success = display_configs[0]->layers[0]->type == LAYER_PRIMARY
+                && layer->transform_mode == FRAME_TRANSFORM_IDENTITY
+                && layer->image.width == display->width
+                && layer->image.height == display->height
+                && memcmp(&layer->dest_frame, &frame, sizeof(frame_t)) == 0
+                && memcmp(&layer->src_frame, &frame, sizeof(frame_t)) == 0;
+    }
+    if (!success) {
+        layer_cfg_results[0][0] = CLIENT_MERGE_BASE;
+        for (unsigned i = 1; i < display_configs[0]->layer_count; i++) {
+            layer_cfg_results[0][i] = CLIENT_MERGE_SRC;
+        }
+    }
     mtx_unlock(&display->display_lock);
-    return res;
 }
 
 static void vim_apply_configuration(void* ctx,
-                                    display_config_t** display_configs, uint32_t display_count) {
+                                    const display_config_t** display_configs,
+                                    uint32_t display_count) {
     vim2_display_t* display = ctx;
     mtx_lock(&display->display_lock);
 
     uint8_t addr;
-    if (display_count == 1) {
+    if (display_count == 1 && display_configs[0]->layer_count) {
         // The only way a checked configuration could now be invalid is if display was
         // unplugged. If that's the case, then the upper layers will give a new configuration
         // once they finish handling the unplug event. So just return.
@@ -183,7 +208,7 @@ static void vim_apply_configuration(void* ctx,
             mtx_unlock(&display->display_lock);
             return;
         }
-        addr = (uint8_t) (uint64_t) display_configs[0]->image.handle;
+        addr = (uint8_t) (uint64_t) display_configs[0]->layers[0]->cfg.primary.image.handle;
     } else {
         addr = display->fb_canvas_idx;
     }
@@ -385,11 +410,13 @@ static int vsync_thread(void *arg)
 
         uint64_t display_id = display->display_id;
         bool attached = display->display_attached;
-        zx_paddr_t live = display->current_image;
+        void* live = (void*) (uint64_t) display->current_image;
+        uint8_t is_client_handle = display->current_image != display->fb_canvas_idx;
         mtx_unlock(&display->display_lock);
 
         if (display->dc_cb && attached) {
-            display->dc_cb->on_display_vsync(display->dc_cb_ctx, display_id, (void*) live);
+            display->dc_cb->on_display_vsync(display->dc_cb_ctx, display_id,
+                                             &live, is_client_handle);
         }
 
         mtx_unlock(&display->cb_lock);

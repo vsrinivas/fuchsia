@@ -474,7 +474,7 @@ bool HdmiDisplay::QueryDevice(edid::Edid* edid) {
     return true;
 }
 
-bool HdmiDisplay::DoModeset() {
+bool HdmiDisplay::ConfigureDdi() {
     registers::Dpll dpll = controller()->SelectDpll(false /* is_edp */, true /* is_hdmi */,
                                                     mode().pixel_clock_10khz);
     if (dpll == registers::DPLL_INVALID) {
@@ -678,17 +678,6 @@ bool HdmiDisplay::DoModeset() {
     pipe_size.set_horizontal_source_size(h_active);
     pipe_size.set_vertical_source_size(v_active);
     pipe_size.WriteTo(mmio_space());
-
-    auto plane_control = pipe_regs.PlaneControl().FromValue(0);
-    plane_control.set_plane_enable(1);
-    plane_control.set_source_pixel_format(plane_control.kFormatRgb8888);
-    plane_control.set_tiled_surface(plane_control.kLinear);
-    plane_control.WriteTo(mmio_space());
-
-    auto plane_size = pipe_regs.PlaneSurfaceSize().FromValue(0);
-    plane_size.set_width_minus_1(h_active);
-    plane_size.set_height_minus_1(v_active);
-    plane_size.WriteTo(mmio_space());
 
     return true;
 }

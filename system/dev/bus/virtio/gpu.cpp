@@ -100,8 +100,7 @@ zx_status_t GpuDevice::virtio_gpu_import_vmo_image(void* ctx, image_t* image,
         }
     }
 
-    status = gd->allocate_2d_resource(&import_data->resource_id,
-                                      gd->pmode_.r.width, gd->pmode_.r.height);
+    status = gd->allocate_2d_resource(&import_data->resource_id, image->width, image->height);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: failed to allocate 2d resource\n", gd->tag());
         return status;
@@ -122,23 +121,44 @@ void GpuDevice::virtio_gpu_release_image(void* ctx, image_t* image) {
     delete reinterpret_cast<imported_image_t*>(image->handle);
 }
 
-bool GpuDevice::virtio_gpu_check_configuration(void* ctx, display_config_t** display_configs,
+void GpuDevice::virtio_gpu_check_configuration(void* ctx,
+                                               const display_config_t** display_configs,
+                                               uint32_t** layer_cfg_results,
                                                uint32_t display_count) {
     GpuDevice* gd = static_cast<GpuDevice*>(ctx);
-    if (display_count > 1) {
-        return false;
+    if (display_count != 1) {
+        ZX_DEBUG_ASSERT(display_count == 0);
+        return;
     }
-    return display_count == 0 || (display_configs[0]->display_id == kDisplayId
-            && display_configs[0]->mode.h_addressable == gd->pmode_.r.width
-            && display_configs[0]->image.width == gd->pmode_.r.width
-            && display_configs[0]->mode.v_addressable == gd->pmode_.r.height
-            && display_configs[0]->image.height == gd->pmode_.r.height);
+    ZX_DEBUG_ASSERT(display_configs[0]->display_id == kDisplayId);
+    bool success;
+    if (display_configs[0]->layer_count != 1) {
+        success = display_configs[0]->layer_count == 0;
+    } else {
+        primary_layer_t* layer = &display_configs[0]->layers[0]->cfg.primary;
+        frame_t frame = {
+                .x_pos = 0, .y_pos = 0, .width = gd->pmode_.r.width, .height = gd->pmode_.r.height,
+        };
+        success = display_configs[0]->layers[0]->type == LAYER_PRIMARY
+                && layer->transform_mode == FRAME_TRANSFORM_IDENTITY
+                && layer->image.width == gd->pmode_.r.width
+                && layer->image.height == gd->pmode_.r.height
+                && memcmp(&layer->dest_frame, &frame, sizeof(frame_t)) == 0
+                && memcmp(&layer->src_frame, &frame, sizeof(frame_t)) == 0;
+    }
+    if (!success) {
+        layer_cfg_results[0][0] = CLIENT_MERGE_BASE;
+        for (unsigned i = 1; i < display_configs[0]->layer_count; i++) {
+            layer_cfg_results[0][i] = CLIENT_MERGE_SRC;
+        }
+    }
 }
 
-void GpuDevice::virtio_gpu_apply_configuration(void* ctx, display_config_t** display_configs,
+void GpuDevice::virtio_gpu_apply_configuration(void* ctx, const display_config_t** display_configs,
                                                uint32_t display_count) {
     GpuDevice* gd = static_cast<GpuDevice*>(ctx);
-    void* handle = display_count == 0 ? nullptr : display_configs[0]->image.handle;
+    void* handle = display_count == 0 || display_configs[0]->layer_count == 0
+            ? nullptr : display_configs[0]->layers[0]->cfg.primary.image.handle;
 
     {
         fbl::AutoLock al(&gd->flush_lock_);
@@ -406,8 +426,9 @@ void GpuDevice::virtio_gpu_flusher() {
 
         {
             fbl::AutoLock al(&flush_lock_);
-            if (dc_cb_ && displayed_fb_) {
-                dc_cb_->on_display_vsync(dc_cb_ctx_, kDisplayId, displayed_fb_);
+            if (dc_cb_) {
+                void* handles[] = { static_cast<void*>(displayed_fb_) };
+                dc_cb_->on_display_vsync(dc_cb_ctx_, kDisplayId, handles, displayed_fb_ != nullptr);
             }
         }
     }

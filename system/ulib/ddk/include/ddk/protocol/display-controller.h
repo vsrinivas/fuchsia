@@ -79,8 +79,58 @@ typedef struct display_controller_cb {
                                 uint64_t* displays_added, uint32_t added_count,
                                 uint64_t* displays_removed, uint32_t removed_count);
 
-    void (*on_display_vsync)(void* ctx, uint64_t display_id, void* handle);
+    // |handles| points to an array of image handles of each framebuffer being
+    // displayed, in increasing z-order.
+    void (*on_display_vsync)(void* ctx, uint64_t display_id, void** handle, uint32_t handle_count);
 } display_controller_cb_t;
+
+// Rotations are applied counter-clockwise, and are applied before reflections.
+#define FRAME_TRANSFORM_IDENTITY 0
+#define FRAME_TRANSFORM_REFLECT_X 1
+#define FRAME_TRANSFORM_REFLECT_Y 2
+#define FRAME_TRANSFORM_ROT_90 3
+#define FRAME_TRANSFORM_ROT_180 4
+#define FRAME_TRANSFORM_ROT_270 5
+#define FRAME_TRANSFORM_ROT_90_REFLECT_X 6
+#define FRAME_TRANSFORM_ROT_90_REFLECT_Y 7
+
+typedef struct frame {
+    // (x_pos, y_pos) specifies the position of the upper-left corner
+    // of the frame.
+    uint32_t x_pos;
+    uint32_t y_pos;
+    uint32_t width;
+    uint32_t height;
+} frame_t;
+
+typedef struct primary_layer {
+    image_t image;
+
+    uint32_t transform_mode;
+
+    // The source frame, where (0,0) is the top-left corner of the image. The
+    // client guarantees that src_frame lies entirely within the image.
+    frame_t src_frame;
+
+    // The destination frame, where (0,0) is the top-left corner of the
+    // composed output. The client guarantees that dest_frame lies entirely
+    // within the composed output.
+    frame_t dest_frame;
+} primary_layer_t;
+
+// Types of layers.
+
+#define LAYER_PRIMARY 0
+
+typedef struct layer {
+    // One of the LAYER_* flags.
+    uint32_t type;
+    // z_index of the layer. See |check_configuration| and |apply_configuration|.
+    uint32_t z_index;
+    union {
+        primary_layer_t primary;
+    } cfg;
+} layer_t;
 
 // constants for display_config's mode_flags field
 #define MODE_FLAG_VSYNC_POSITIVE (1 << 0)
@@ -107,8 +157,29 @@ typedef struct display_config {
 
     display_mode_t mode;
 
-    image_t image;
+    uint32_t layer_count;
+    layer_t** layers;
 } display_config_t;
+
+// The client should convert the corresponding layer to a primary layer.
+#define CLIENT_USE_PRIMARY (1 << 0)
+// The client should compose all layers with MERGE_BASE and MERGE_SRC into a new,
+// single primary layer at the MERGE_BASE layer's z-order. The driver must accept
+// a fullscreen layer with the default pixel format, but may accept other layer
+// parameters.
+//
+// MERGE_BASE should only be set on one layer per display. If it is set on multiple
+// layers, the client will arbitrarily pick one and change the rest to MERGE_SRC.
+#define CLIENT_MERGE_BASE (1 << 1)
+#define CLIENT_MERGE_SRC (1 << 2)
+// The client should pre-scale the image so that src_frame's dimensions are equal
+// to dest_frame's dimensions.
+#define CLIENT_FRAME_SCALE (1 << 3)
+// The client should pre-clip the image so that src_frame's dimensions are equal to
+// the image's dimensions.
+#define CLIENT_SRC_FRAME (1 << 4)
+// The client should pre-apply the transformation so TRANSFORM_IDENTITY can be used.
+#define CLIENT_TRANSFORM (1 << 5)
 
 // The client guarantees that check_configuration and apply_configuration are always
 // made from a single thread. The client makes no other threading guarantees.
@@ -132,23 +203,43 @@ typedef struct display_controller_protocol_ops {
 
     // Validates the given configuration.
     //
+    // The configuration may not include all displays. Omiteed displays should be treated as
+    // whichever of off or displaying a blank screen results in a more premissive validation.
+    //
+    // All displays in a configuration will have at least one layer. The layers will be
+    // arranged in increasing z-order, and their z_index fields will be set consecutively.
+    //
     // Whether or not the driver can accept the configuration cannot depend on the
     // particular image handles, as it must always be possible to present a new image in
     // place of another image with a matching configuration.
     //
+    // layer_cfg_result points to an array of arrays. The primary length is display_count, the
+    // secondary lengths are the corresponding display_cfg's layer_count. Any errors in layer
+    // configuration should be returned as a CLIENT* flag in the corresponding layer_cfg_result
+    // entry.
+    //
     // The driver must not retain references to the configuration after this function returns.
-    bool (*check_configuration)(void* ctx,
-                                display_config_t** display_config, uint32_t display_count);
+    void (*check_configuration)(void* ctx, const display_config_t** display_config,
+                                uint32_t** layer_cfg_result, uint32_t display_count);
 
     // Applies the configuration.
     //
-    // |display_config| will contain configurations for all displays which the controller
-    // has advertised. The client guarantees that the configuration has been successfully
-    // validated with check_configuration.
+    // All configurations passed to this function will be derived from configurations which
+    // have been succesfully validated, with the only differences either being omitted layers
+    // or different image handles. To account for any layers which are not present, the driver
+    // must use the z_index values of the present layers to configure them as if the whole
+    // configuration was present.
+    //
+    // Unlike with check_configuration, displays included in the configuration are not
+    // guaranteed to include any layers. Both omitted displays and displays with no layers
+    // can either be turned off or set to display a blank screen, but for displays with no
+    // layers there is a strong preference to display a blank screen instead of turn them off.
+    // In either case, the driver must drop all references to old images and invoke the vsync
+    // callback after doing so.
     //
     // The driver must not retain references to the configuration after this function returns.
     void (*apply_configuration)(void* ctx,
-                                display_config_t** display_configs, uint32_t display_count);
+                                const display_config_t** display_configs, uint32_t display_count);
 
     // Computes the stride (in pixels) necessary for a linear image with the given width
     // and pixel format. Returns 0 on error.

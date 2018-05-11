@@ -21,6 +21,8 @@ static const Pipe kPipes[kPipeCount] = {
     PIPE_A, PIPE_B, PIPE_C,
 };
 
+static constexpr uint32_t kPrimaryPlaneCount = 3;
+
 // PIPE_SRCSZ
 class PipeSourceSize : public hwreg::RegisterBase<PipeSourceSize, uint32_t> {
 public:
@@ -150,7 +152,7 @@ public:
 // PLANE_WM
 class PlaneWm : public hwreg::RegisterBase<PlaneWm, uint32_t> {
 public:
-    static constexpr uint32_t kBaseAddr = 0x70240;
+    static constexpr uint32_t kBaseAddr = 0x70140;
 
     DEF_BIT(31, enable);
     DEF_FIELD(18, 14, lines);
@@ -180,6 +182,24 @@ public:
     DEF_BIT(1, vsync);
 };
 
+// PLANE_OFFSET
+class PlaneOffset : public hwreg::RegisterBase<PlaneOffset, uint32_t> {
+public:
+    static constexpr uint32_t kBaseAddr = 0x701a4;
+
+    DEF_FIELD(28, 16, start_y);
+    DEF_FIELD(12, 0, start_x);
+};
+
+// PLANE_POS
+class PlanePosition : public hwreg::RegisterBase<PlanePosition, uint32_t> {
+public:
+    static constexpr uint32_t kBaseAddr = 0x7018c;
+
+    DEF_FIELD(28, 16, y_pos);
+    DEF_FIELD(12, 0, x_pos);
+};
+
 // An instance of PipeRegs represents the registers for a particular pipe.
 class PipeRegs {
 public:
@@ -194,21 +214,26 @@ public:
         return GetReg<registers::PipeSourceSize>();
     }
 
-    // The following methods get the instance of the plane register for plane 1.
-    hwreg::RegisterAddr<registers::PlaneSurface> PlaneSurface() {
-        return GetReg<registers::PlaneSurface>();
+    hwreg::RegisterAddr<registers::PlaneSurface> PlaneSurface(int32_t plane_num) {
+        return GetPlaneReg<registers::PlaneSurface>(plane_num);
     }
-    hwreg::RegisterAddr<registers::PlaneSurfaceLive> PlaneSurfaceLive() {
-        return GetReg<registers::PlaneSurfaceLive>();
+    hwreg::RegisterAddr<registers::PlaneSurfaceLive> PlaneSurfaceLive(int32_t plane_num) {
+        return GetPlaneReg<registers::PlaneSurfaceLive>(plane_num);
     }
-    hwreg::RegisterAddr<registers::PlaneSurfaceStride> PlaneSurfaceStride() {
-        return GetReg<registers::PlaneSurfaceStride>();
+    hwreg::RegisterAddr<registers::PlaneSurfaceStride> PlaneSurfaceStride(int32_t plane_num) {
+        return GetPlaneReg<registers::PlaneSurfaceStride>(plane_num);
     }
-    hwreg::RegisterAddr<registers::PlaneSurfaceSize> PlaneSurfaceSize() {
-        return GetReg<registers::PlaneSurfaceSize>();
+    hwreg::RegisterAddr<registers::PlaneSurfaceSize> PlaneSurfaceSize(int32_t plane_num) {
+        return GetPlaneReg<registers::PlaneSurfaceSize>(plane_num);
     }
-    hwreg::RegisterAddr<registers::PlaneControl> PlaneControl() {
-        return GetReg<registers::PlaneControl>();
+    hwreg::RegisterAddr<registers::PlaneControl> PlaneControl(int32_t plane_num) {
+        return GetPlaneReg<registers::PlaneControl>(plane_num);
+    }
+    hwreg::RegisterAddr<registers::PlaneOffset> PlaneOffset(int32_t plane_num) {
+        return GetPlaneReg<registers::PlaneOffset>(plane_num);
+    }
+    hwreg::RegisterAddr<registers::PlanePosition> PlanePosition(int32_t plane_num) {
+        return GetPlaneReg<registers::PlanePosition>(plane_num);
     }
     // 0 == cursor, 1-3 are regular planes
     hwreg::RegisterAddr<registers::PlaneBufCfg> PlaneBufCfg(int plane) {
@@ -216,8 +241,9 @@ public:
                 PlaneBufCfg::kBaseAddr + 0x1000 * pipe_ + 0x100 * plane);
     }
 
-    hwreg::RegisterAddr<registers::PlaneWm>PlaneWatermark(int wm_num) {
-        return hwreg::RegisterAddr<PlaneWm>(PlaneWm::kBaseAddr + 0x1000 * pipe_ + 4 * wm_num);
+    hwreg::RegisterAddr<registers::PlaneWm>PlaneWatermark(int plane, int wm_num) {
+        return hwreg::RegisterAddr<PlaneWm>(
+                PlaneWm::kBaseAddr + 0x1000 * pipe_ + 0x100 * plane + 4 * wm_num);
     }
 
     hwreg::RegisterAddr<registers::PipeScalerCtrl> PipeScalerCtrl(int num) {
@@ -237,6 +263,10 @@ public:
 private:
     template <class RegType> hwreg::RegisterAddr<RegType> GetReg() {
         return hwreg::RegisterAddr<RegType>(RegType::kBaseAddr + 0x1000 * pipe_);
+    }
+
+    template <class RegType> hwreg::RegisterAddr<RegType> GetPlaneReg(int32_t plane) {
+        return hwreg::RegisterAddr<RegType>(RegType::kBaseAddr + 0x1000 * pipe_ + 0x100 * plane);
     }
 
     Pipe pipe_;

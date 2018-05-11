@@ -949,7 +949,7 @@ bool DpDisplay::QueryDevice(edid::Edid* edid) {
     return true;
 }
 
-bool DpDisplay::DoModeset() {
+bool DpDisplay::ConfigureDdi() {
     bool is_edp = controller()->igd_opregion().IsEdp(ddi());
     if (is_edp) {
         auto panel_ctrl = registers::PanelPowerCtrl::Get().ReadFrom(mmio_space());
@@ -1163,26 +1163,6 @@ bool DpDisplay::DoModeset() {
     trans_conf.set_transcoder_enable(1);
     trans_conf.set_interlaced_mode(timing.interlaced);
     trans_conf.WriteTo(mmio_space());
-
-    // Configure the pipe
-    registers::PipeRegs pipe_regs(pipe());
-
-    auto pipe_size = pipe_regs.PipeSourceSize().FromValue(0);
-    pipe_size.set_horizontal_source_size(h_active);
-    pipe_size.set_vertical_source_size(v_active);
-    pipe_size.WriteTo(mmio_space());
-
-
-    auto plane_control = pipe_regs.PlaneControl().FromValue(0);
-    plane_control.set_plane_enable(1);
-    plane_control.set_source_pixel_format(plane_control.kFormatRgb8888); // kPixelFormat
-    plane_control.set_tiled_surface(plane_control.kLinear);
-    plane_control.WriteTo(mmio_space());
-
-    auto plane_size = pipe_regs.PlaneSurfaceSize().FromValue(0);
-    plane_size.set_width_minus_1(h_active);
-    plane_size.set_height_minus_1(v_active);
-    plane_size.WriteTo(mmio_space());
 
     if (controller()->igd_opregion().IsEdp(ddi())) {
         dpcd::EdpConfigCap config_cap;

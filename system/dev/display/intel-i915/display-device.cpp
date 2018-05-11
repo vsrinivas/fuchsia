@@ -72,9 +72,11 @@ bool DisplayDevice::Init() {
         return false;
     }
 
-    if (!DoModeset()) {
+    if (!ConfigureDdi()) {
         return false;
     }
+
+    controller_->interrupts()->EnablePipeVsync(pipe_, true);
 
     inited_ = true;
 
@@ -82,53 +84,100 @@ bool DisplayDevice::Init() {
 }
 
 bool DisplayDevice::Resume() {
-    if (!DoModeset()) {
+    if (!ConfigureDdi()) {
         return false;
     }
 
-    if (is_enabled_) {
-        controller_->interrupts()->EnablePipeVsync(pipe_, true);
-    }
+    controller_->interrupts()->EnablePipeVsync(pipe_, true);
 
     return true;
 }
 
-void DisplayDevice::ApplyConfiguration(display_config_t* config) {
-    bool enabled = config != nullptr;
-    if (enabled != is_enabled_) {
-        controller_->interrupts()->EnablePipeVsync(pipe_, enabled);
-        is_enabled_ = enabled;
-    }
-    if (!is_enabled_) {
+void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
+    if (config == nullptr) {
+        ResetPipe();
         return;
+    }
+
+    if (memcmp(&config->mode, &info_, sizeof(display_mode_t)) != 0) {
+        ResetPipe();
+        ResetTrans();
+        ResetDdi();
+
+        info_ = config->mode;
+
+        ConfigureDdi();
     }
 
     registers::PipeRegs pipe_regs(pipe());
 
-    image_type_ = config->image.type;
+    auto pipe_size = pipe_regs.PipeSourceSize().FromValue(0);
+    pipe_size.set_horizontal_source_size(info_.h_addressable - 1);
+    pipe_size.set_vertical_source_size(info_.v_addressable - 1);
+    pipe_size.WriteTo(mmio_space());
 
-    auto stride_reg = pipe_regs.PlaneSurfaceStride().FromValue(0);
-    stride_reg.set_stride(config->image.type, config->image.width, config->image.pixel_format);
-    stride_reg.WriteTo(controller_->mmio_space());
+    for (unsigned i = 0; i < 3; i++) {
+        primary_layer_t* primary = nullptr;
+        for (unsigned j = 0; j < config->layer_count; j++) {
+            layer_t* layer = config->layers[j];
+            if (layer->z_index == i) {
+                primary = &layer->cfg.primary;
+                break;
+            }
+        }
+        if (!primary) {
+            auto plane_ctrl = pipe_regs.PlaneControl(i).ReadFrom(controller_->mmio_space());
+            plane_ctrl.set_plane_enable(0);
+            plane_ctrl.WriteTo(controller_->mmio_space());
 
-    auto plane_ctrl = pipe_regs.PlaneControl().ReadFrom(controller_->mmio_space());
-    if (config->image.type == IMAGE_TYPE_SIMPLE) {
-        plane_ctrl.set_tiled_surface(plane_ctrl.kLinear);
-    } else if (config->image.type == IMAGE_TYPE_X_TILED) {
-        plane_ctrl.set_tiled_surface(plane_ctrl.kTilingX);
-    } else if (config->image.type == IMAGE_TYPE_Y_LEGACY_TILED) {
-        plane_ctrl.set_tiled_surface(plane_ctrl.kTilingYLegacy);
-    } else {
-        ZX_ASSERT(config->image.type == IMAGE_TYPE_YF_TILED);
-        plane_ctrl.set_tiled_surface(plane_ctrl.kTilingYF);
+            auto plane_surface = pipe_regs.PlaneSurface(i).ReadFrom(controller_->mmio_space());
+            plane_surface.set_surface_base_addr(0);
+            plane_surface.WriteTo(controller_->mmio_space());
+            continue;
+        }
+
+        auto plane_size = pipe_regs.PlaneSurfaceSize(i).FromValue(0);
+        plane_size.set_width_minus_1(primary->dest_frame.width - 1);
+        plane_size.set_height_minus_1(primary->dest_frame.height - 1);
+        plane_size.WriteTo(mmio_space());
+
+        auto plane_pos = pipe_regs.PlanePosition(i).FromValue(0);
+        plane_pos.set_x_pos(primary->dest_frame.x_pos);
+        plane_pos.set_y_pos(primary->dest_frame.y_pos);
+        plane_pos.WriteTo(mmio_space());
+
+        auto plane_offset = pipe_regs.PlaneOffset(i).FromValue(0);
+        plane_offset.set_start_x(primary->src_frame.x_pos);
+        plane_offset.set_start_y(primary->src_frame.y_pos);
+        plane_offset.WriteTo(mmio_space());
+
+        auto stride_reg = pipe_regs.PlaneSurfaceStride(i).FromValue(0);
+        stride_reg.set_stride(primary->image.type,
+                              primary->image.width, primary->image.pixel_format);
+        stride_reg.WriteTo(controller_->mmio_space());
+
+        auto plane_ctrl = pipe_regs.PlaneControl(i).ReadFrom(controller_->mmio_space());
+        plane_ctrl.set_plane_enable(1);
+        plane_ctrl.set_source_pixel_format(plane_ctrl.kFormatRgb8888);
+        if (primary->image.type == IMAGE_TYPE_SIMPLE) {
+            plane_ctrl.set_tiled_surface(plane_ctrl.kLinear);
+        } else if (primary->image.type == IMAGE_TYPE_X_TILED) {
+            plane_ctrl.set_tiled_surface(plane_ctrl.kTilingX);
+        } else if (primary->image.type == IMAGE_TYPE_Y_LEGACY_TILED) {
+            plane_ctrl.set_tiled_surface(plane_ctrl.kTilingYLegacy);
+        } else {
+            ZX_ASSERT(primary->image.type == IMAGE_TYPE_YF_TILED);
+            plane_ctrl.set_tiled_surface(plane_ctrl.kTilingYF);
+        }
+        plane_ctrl.WriteTo(controller_->mmio_space());
+
+        uint32_t base_address =
+                static_cast<uint32_t>(reinterpret_cast<uint64_t>(primary->image.handle));
+
+        auto plane_surface = pipe_regs.PlaneSurface(i).ReadFrom(controller_->mmio_space());
+        plane_surface.set_surface_base_addr(base_address >> plane_surface.kRShiftCount);
+        plane_surface.WriteTo(controller_->mmio_space());
     }
-    plane_ctrl.WriteTo(controller_->mmio_space());
-
-    uint32_t base_address = static_cast<uint32_t>(reinterpret_cast<uint64_t>(config->image.handle));
-
-    auto plane_surface = pipe_regs.PlaneSurface().ReadFrom(controller_->mmio_space());
-    plane_surface.set_surface_base_addr(base_address >> plane_surface.kRShiftCount);
-    plane_surface.WriteTo(controller_->mmio_space());
 }
 
 } // namespace i915

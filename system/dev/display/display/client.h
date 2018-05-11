@@ -30,7 +30,14 @@ namespace display {
 class DisplayConfig : public IdMappable<fbl::unique_ptr<DisplayConfig>> {
 public:
     display_config_t current;
+    // TODO(stevensd): Move into a seperately managed struct
+    layer_t current_layer;
+    layer_t* current_layer_ptr = &current_layer;
+
     display_config_t pending;
+    // TODO(stevensd): Move into a seperately managed struct
+    layer_t pending_layer;
+    layer_t* pending_layer_ptr = &pending_layer;
 
     uint64_t pending_wait_event_id;
     uint64_t pending_present_event_id;

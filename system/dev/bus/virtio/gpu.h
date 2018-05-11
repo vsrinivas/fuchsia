@@ -43,10 +43,11 @@ private:
     static zx_status_t virtio_gpu_import_vmo_image(
             void* ctx, image_t* image, zx_handle_t vmo, size_t offset);
     static void virtio_gpu_release_image(void* ctx, image_t* image);
-    static bool virtio_gpu_check_configuration(
-            void* ctx, display_config_t** display_configs, uint32_t display_count);
+    static void virtio_gpu_check_configuration(
+            void* ctx, const display_config_t** display_configs,
+            uint32_t** layer_cfg_result, uint32_t display_count);
     static void virtio_gpu_apply_configuration(
-            void* ctx, display_config_t** display_configs, uint32_t display_count);
+            void* ctx, const display_config_t** display_configs, uint32_t display_count);
     static uint32_t virtio_gpu_compute_linear_stride(
             void* ctx, uint32_t width, zx_pixel_format_t format);
     static zx_status_t virtio_gpu_allocate_vmo(void* ctx, uint64_t size, zx_handle_t* vmo_out);

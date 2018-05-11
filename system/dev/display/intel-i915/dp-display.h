@@ -17,7 +17,7 @@ public:
 
 private:
     bool QueryDevice(edid::Edid* edid) final;
-    bool DoModeset() final;
+    bool ConfigureDdi() final;
     bool DdcRead(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t len) final;
 
     bool DpAuxRead(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, size_t size);

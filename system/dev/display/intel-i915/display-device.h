@@ -27,7 +27,7 @@ public:
                   registers::Ddi ddi, registers::Trans trans, registers::Pipe pipe);
     virtual ~DisplayDevice();
 
-    void ApplyConfiguration(display_config_t* config);
+    void ApplyConfiguration(const display_config_t* config);
 
     bool Init();
     bool Resume();
@@ -52,7 +52,7 @@ protected:
     // there is, then returns true and populates |edid| and |info|.
     virtual bool QueryDevice(edid::Edid* edid) = 0;
     // Configures the hardware to display a framebuffer at the preferred resolution.
-    virtual bool DoModeset() = 0;
+    virtual bool ConfigureDdi() = 0;
 
     hwreg::RegisterIo* mmio_space() const;
     const display_mode_t& mode() const { return info_; }
@@ -75,10 +75,7 @@ private:
 
     bool inited_ = false;
     display_mode_t info_;
-
-    uint32_t image_type_;
     edid::Edid edid_;
-    bool is_enabled_;
 };
 
 } // namespace i915

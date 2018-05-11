@@ -48,8 +48,9 @@ public:
     zx_status_t GetDisplayInfo(uint64_t display_id, display_info_t* info);
     zx_status_t ImportVmoImage(image_t* image, const zx::vmo& vmo, size_t offset);
     void ReleaseImage(image_t* image);
-    bool CheckConfiguration(display_config_t** display_config, uint32_t display_count);
-    void ApplyConfiguration(display_config_t** display_config, uint32_t display_count);
+    void CheckConfiguration(const display_config_t** display_config,
+                            uint32_t** layer_cfg_result, uint32_t display_count);
+    void ApplyConfiguration(const display_config_t** display_config, uint32_t display_count);
     uint32_t ComputeLinearStride(uint32_t width, zx_pixel_format_t format);
     zx_status_t AllocateVmo(uint64_t size, zx_handle_t* vmo_out);
 
@@ -100,6 +101,7 @@ private:
     void* dc_cb_ctx_ __TA_GUARDED(_dc_cb_lock_);
     display_controller_cb_t* _dc_cb_ __TA_GUARDED(_dc_cb_lock_) = nullptr;
     mtx_t _dc_cb_lock_;
+    bool ready_for_callback_ __TA_GUARDED(_dc_cb_lock_) = false;
 
     // To prevent deadlocks, require that only the callback lock is held when making
     // callbacks and that the callback lock is acquired before any other locks.

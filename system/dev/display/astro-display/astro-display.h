@@ -49,6 +49,7 @@
 
 #define OSD2_DMC_CAV_INDEX 0x40
 
+#define PANEL_DISPLAY_ID 1
 
 typedef struct {
     zx_device_t*                        zxdev;
@@ -79,8 +80,6 @@ typedef struct {
     uint8_t                             fb_canvas_idx;
     zx_handle_t                         vsync_interrupt;
 
-    // The current display id (if display_attached), or the next display id
-    uint64_t                            display_id;
     uint32_t                            width;
     uint32_t                            height;
     uint32_t                            stride;
