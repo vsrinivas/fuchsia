@@ -12,6 +12,10 @@ use futures::prelude::*;
 use host_dispatcher::*;
 use parking_lot::RwLock;
 use std::sync::Arc;
+use zx::Duration;
+use async::TimeoutExt;
+
+pub static TIMEOUT: u64 = 3; // Seconds
 
 struct ControlServiceState {
     host: Arc<RwLock<HostDispatcher>>,
@@ -67,21 +71,23 @@ pub fn make_control_service(
                 .into_future()
                 .recover(|e| eprintln!("error sending response: {:?}", e))
         },
+        get_known_remote_devices: |_state, _res| future::ok(()),
         get_adapters: |state, res| {
-            // TODO:(NET-854)
-            let rstate = state.read();
-            let hd = rstate.host.read();
-            let mut adapters = hd.get_adapters();
-            res.send(Some(&mut adapters.iter_mut()))
-                .into_future()
+            let wstate = state.write();
+            let mut hd = wstate.host.clone();
+            HostDispatcher::get_adapters(&mut hd)
+                .on_timeout(Duration::from_seconds(TIMEOUT).after_now(), || {
+                    eprintln!("Timed out waiting for adapters");
+                    Ok(vec![])
+                }).unwrap()
+                .and_then(move |mut resp| res.send(Some(&mut resp.iter_mut())))
                 .recover(|e| eprintln!("error sending response: {:?}", e))
         },
-        get_known_remote_devices: |_state, _res| future::ok(()),
         is_bluetooth_available: |state, res| {
             let rstate = state.read();
-            let hd = rstate.host.read();
-            let is_avail = !hd.get_adapters().is_empty();
-            res.send(is_avail)
+            let mut hd = rstate.host.write();
+            let is_available = hd.get_active_adapter_info().is_some();
+            res.send(is_available)
                 .into_future()
                 .recover(|e| eprintln!("error sending response: {:?}", e))
         },

@@ -13,7 +13,7 @@ use fidl_bluetooth;
 use fidl_bluetooth_control::{ControlControlHandle, PairingDelegateProxy};
 use fidl_bluetooth_control::AdapterInfo;
 use fidl_bluetooth_host::{AdapterMarker, AdapterProxy, HostProxy};
-use futures::{Future, FutureExt};
+use futures::{Poll, task, Async, Future, FutureExt};
 use futures::IntoFuture;
 use futures::StreamExt;
 use futures::future::Either::{Left, Right};
@@ -212,13 +212,6 @@ impl HostDispatcher {
         bt_fidl_status!(BadState, "Attempting to activate an unknown adapter")
     }
 
-    pub fn get_active_adapter(&mut self) -> Option<Arc<RwLock<HostDevice>>> {
-        match self.get_active_id() {
-            Some(id) => Some(self.host_devices.get(&id).unwrap().clone()),
-            None => None,
-        }
-    }
-
     pub fn get_active_adapter_info(&mut self) -> Option<AdapterInfo> {
         match self.get_active_id() {
             Some(ref id) => {
@@ -230,17 +223,42 @@ impl HostDispatcher {
         }
     }
 
-    pub fn get_adapters(&self) -> Vec<AdapterInfo> {
-        // TODO:(bwb) future-ify this for initialization reasons
-        // Not ready if zero in self.adapters
+    pub fn get_active_adapter(hd: Arc<RwLock<HostDispatcher>>) -> impl Future<Item = Option<Arc<RwLock<HostDevice>>>, Error = fidl::Error> {
+        OnAdaptersFound(hd.clone()).and_then(move |_adapters| {
+            let mut whd = hd.write();
+            fok(match whd.get_active_id() {
+                Some(id) => Some(hd.read().host_devices.get(&id).unwrap().clone()),
+                None => None,
+            })
+        })
+    }
+
+    pub fn get_adapters(hd: &mut Arc<RwLock<HostDispatcher>>) -> impl Future<Item = Vec<AdapterInfo>, Error = fidl::Error> {
+        OnAdaptersFound(hd.clone())
+    }
+
+}
+
+/// A future that completes when at least one adapter is available.
+#[must_use = "futures do nothing unless polled"]
+pub struct OnAdaptersFound(Arc<RwLock<HostDispatcher>>);
+
+impl Future for OnAdaptersFound {
+    type Item = Vec<AdapterInfo>;
+    type Error = fidl::Error;
+    fn poll(&mut self, _: &mut task::Context) -> Poll<Self::Item, Self::Error> {
+        if self.0.read().host_devices.len() < 1 {
+            return Ok(Async::Pending);
+        }
         let mut host_devices = vec![];
-        for adapter in self.host_devices.values() {
+        for adapter in self.0.read().host_devices.values() {
             let adapter = adapter.read();
             host_devices.push(util::clone_adapter_info(adapter.get_info()));
         }
-        host_devices
+        Ok(Async::Ready(host_devices))
     }
 }
+
 
 /// Adds an adapter to the host dispatcher. Called by the watch_hosts device
 /// watcher

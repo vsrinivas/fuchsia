@@ -25,6 +25,8 @@ extern crate futures;
 extern crate parking_lot;
 
 use app::server::ServicesServer;
+use futures::future::ok as fok;
+
 use bt::util;
 use failure::{Error, ResultExt};
 use fidl::endpoints2::{ServerEnd, ServiceMarker};
@@ -68,28 +70,33 @@ fn main() -> Result<(), Error> {
         }))
         .add_service((CentralMarker::NAME, move |chan: async::Channel| {
             trace!("Connecting Control Service to Adapter");
-            if let Some(adap) = central_hd.write().get_active_adapter() {
-                let mut remote = ServerEnd::<CentralMarker>::new(chan.into());
-                let _res = adap.read()
-                    .get_host()
-                    .request_low_energy_central(remote);
-            }
+            async::spawn(HostDispatcher::get_active_adapter(central_hd.clone()).and_then(move |adapter| {
+                let remote = ServerEnd::<CentralMarker>::new(chan.into());
+                if let Some(adapter) = adapter {
+                    let _ = adapter.read().get_host().request_low_energy_central(remote);
+                }
+                fok(())
+            }).recover(|e| eprintln!("Failed to connect: {}", e)))
         }))
         .add_service((PeripheralMarker::NAME, move |chan: async::Channel| {
             trace!("Connecting Peripheral Service to Adapter");
-            if let Some(adap) = peripheral_hd.write().get_active_adapter() {
-                let mut remote = ServerEnd::<PeripheralMarker>::new(chan.into());
-                let _res = adap.read()
-                    .get_host()
-                    .request_low_energy_peripheral(remote);
-            }
+            async::spawn(HostDispatcher::get_active_adapter(peripheral_hd.clone()).and_then(move |adapter| {
+                let remote = ServerEnd::<PeripheralMarker>::new(chan.into());
+                if let Some(adapter) = adapter {
+                    let _ = adapter.read().get_host().request_low_energy_peripheral(remote);
+                }
+                fok(())
+            }).recover(|e| eprintln!("Failed to connect: {}", e)))
         }))
         .add_service((Server_Marker::NAME, move |chan: async::Channel| {
             trace!("Connecting Gatt Service to Adapter");
-            if let Some(adap) = gatt_hd.write().get_active_adapter() {
-                let mut remote = ServerEnd::<Server_Marker>::new(chan.into());
-                let _res = adap.read().get_host().request_gatt_server_(remote);
-            }
+            async::spawn(HostDispatcher::get_active_adapter(gatt_hd.clone()).and_then(move |adapter| {
+                let remote = ServerEnd::<Server_Marker>::new(chan.into());
+                if let Some(adapter) = adapter {
+                    let _ = adapter.read().get_host().request_gatt_server_(remote);
+                }
+                fok(())
+            }).recover(|e| eprintln!("Failed to connect: {}", e)))
         }))
         .start()
         .map_err(|e| e.context("error starting bt-gap service"))?;
