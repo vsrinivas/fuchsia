@@ -23,6 +23,16 @@ LAYERS = [
     'zircon',
 ]
 
+# Authors whose commits are not displayed.
+IGNORED_AUTHORS = [
+    'skia-fuchsia-autoroll@skia-buildbots.google.com.iam.gserviceaccount.com',
+    'third-party-roller',
+    'topaz-roller',
+    'peridot-roller',
+    'garnet-roller',
+    'zircon-roller',
+]
+
 
 def http_get(url):
     """Fetches the content at a given URL."""
@@ -78,13 +88,7 @@ def get_commits(layer, revision):
 
 def filter_commit(commit):
     """Returns True if a commit should be listed."""
-    author = commit['author']['name']
-    if author == 'skia-fuchsia-autoroll@skia-buildbots.google.com.iam.gserviceaccount.com':
-        return False
-    for layer in LAYERS:
-        if author == '%s-roller' % layer:
-            return False
-    return True
+    return commit['author']['name'] not in IGNORED_AUTHORS
 
 
 class MyTimezone(tzinfo):
