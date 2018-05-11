@@ -13,7 +13,7 @@ use atomic_future::AtomicFuture;
 
 use std::cell::RefCell;
 use std::fmt;
-use std::sync::{Arc, Weak};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::{usize, u64};
@@ -94,7 +94,7 @@ impl fmt::Debug for Executor {
 }
 
 thread_local!(
-    static EXECUTOR: RefCell<Option<Weak<Inner>>> = RefCell::new(None)
+    static EXECUTOR: RefCell<Option<Arc<Inner>>> = RefCell::new(None)
 );
 
 impl Executor {
@@ -247,6 +247,7 @@ impl Executor {
         executor.clone().set_local();
         loop {
             if inner.done.load(Ordering::SeqCst) {
+                EHandle::rm_local();
                 return;
             }
 
@@ -256,6 +257,7 @@ impl Executor {
                     // TODO: logging, awaken main thread, signal error somehow.
                     // Maybe retry on a timeout?
                     eprintln!("Error calling port wait: {:?}", status);
+                    EHandle::rm_local();
                     return;
                 }
             };
@@ -278,6 +280,9 @@ impl Executor {
 
 impl Drop for Executor {
     fn drop(&mut self) {
+        // Done flag must be set before dropping packet recievers
+        // so that future receivers that attempt to deregister themselves
+        // know that it's okay if their entries are already missing.
         self.inner.done.store(true, Ordering::SeqCst);
 
         // Wake the threads so they can kill themselves.
@@ -288,6 +293,9 @@ impl Drop for Executor {
 
         // Drop all of the uncompleted tasks
         while let Some(_) = self.inner.ready_tasks.try_pop() {}
+
+        // Remove the thread-local executor set in `new`.
+        EHandle::rm_local();
     }
 }
 
@@ -321,15 +329,19 @@ impl<'a> FutureExecutor for &'a EHandle {
 impl EHandle {
     /// Returns the thread-local executor.
     pub fn local() -> Self {
-        let inner = EXECUTOR.with(|e| e.borrow().as_ref().and_then(|e| e.upgrade()))
+        let inner = EXECUTOR.with(|e| e.borrow().clone())
             .expect("Fuchsia Executor must be created first");
 
         EHandle { inner }
     }
 
     fn set_local(self) {
-        let weak_inner = Arc::downgrade(&self.inner);
-        EXECUTOR.with(|e| *e.borrow_mut() = Some(weak_inner));
+        let inner = self.inner.clone();
+        EXECUTOR.with(|e| *e.borrow_mut() = Some(inner));
+    }
+
+    fn rm_local() {
+        EXECUTOR.with(|e| *e.borrow_mut() = None);
     }
 
     /// Get a reference to the Fuchsia `zx::Port` being used to listen for events.
@@ -352,7 +364,15 @@ impl EHandle {
     }
 
     fn deregister_receiver(&self, key: u64) {
-        self.inner.receivers.lock().remove(key as usize);
+        let key = key as usize;
+        let mut lock = self.inner.receivers.lock();
+        if lock.contains(key) {
+            lock.remove(key);
+        } else {
+            // The executor is shutting down and already removed the entry.
+            assert!(self.inner.done.load(Ordering::SeqCst),
+                "Missing receiver to deregister");
+        }
     }
 }
 
