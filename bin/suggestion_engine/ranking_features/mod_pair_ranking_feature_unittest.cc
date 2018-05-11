@@ -7,7 +7,6 @@
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/fxl/logging.h"
 
 namespace modular {
 namespace {
@@ -74,7 +73,6 @@ TEST_F(ModPairRankingFeatureTest, ComputeFeatureCreateStoryAction) {
   fidl::VectorPtr<ContextValue> context_update;
   AddValueToContextUpdate(context_update, "mod1");
   AddValueToContextUpdate(context_update, "mod2");
-  FXL_LOG(INFO) << "SIZE " << context_update->size();
   mod_pair_feature.UpdateContext(context_update);
   double value = mod_pair_feature.ComputeFeature(query, suggestion);
   EXPECT_EQ(value, 1.0);
