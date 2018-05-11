@@ -17,6 +17,8 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/queue_persistence/defs.h"
 
+using modular::testing::Await;
+using modular::testing::Put;
 using modular::testing::TestPoint;
 
 namespace {
@@ -42,20 +44,8 @@ class TestApp {
                                        agent_controller_.NewRequest());
     ConnectToService(agent_services.get(), agent_service_.NewRequest());
 
-    modular::testing::GetStore()->Get(
-        "queue_persistence_test_agent_connected",
-        [this](const fidl::StringPtr&) { AgentConnected(); });
-
-    // Start a timer to call Story.Done() in case the test agent misbehaves and
-    // we time out. If that happens, the module will exit normally through
-    // Stop(), but the test will fail because some TestPoints will not have been
-    // passed.
-    async::PostDelayedTask(
-        async_get_default(),
-        callback::MakeScoped(
-            weak_ptr_factory_.GetWeakPtr(),
-            [this] { module_host_->module_context()->Done(); }),
-        zx::msec(kTimeoutMilliseconds));
+    Await("queue_persistence_test_agent_connected",
+          [this] { AgentConnected(); });
   }
 
   TestPoint stopped_{"Root module stopped"};
@@ -85,9 +75,8 @@ class TestApp {
     // Stop the agent.
     agent_controller_.Unbind();
     agent_service_.Unbind();
-    modular::testing::GetStore()->Get(
-        "queue_persistence_test_agent_stopped",
-        [this](const fidl::StringPtr&) { AgentStopped(); });
+    Await("queue_persistence_test_agent_stopped",
+          [this] { AgentStopped(); });
   }
 
   TestPoint agent_stopped_{"Agent stopped"};
@@ -108,18 +97,16 @@ class TestApp {
                                        agent_controller_.NewRequest());
     ConnectToService(agent_services.get(), agent_service_.NewRequest());
 
-    modular::testing::GetStore()->Get(
-        "queue_persistence_test_agent_connected",
-        [this](const fidl::StringPtr&) { AgentConnectedAgain(); });
+    Await("queue_persistence_test_agent_connected",
+          [this] { AgentConnectedAgain(); });
   }
 
   TestPoint agent_connected_again_{"Agent accepted connection, again"};
 
   void AgentConnectedAgain() {
     agent_connected_again_.Pass();
-    modular::testing::GetStore()->Get(
-        "queue_persistence_test_agent_received_message",
-        [this](const fidl::StringPtr&) { AgentReceivedMessage(); });
+    Await("queue_persistence_test_agent_received_message",
+          [this] { AgentReceivedMessage(); });
   }
 
   TestPoint agent_received_message_{"Agent received message"};
@@ -130,10 +117,8 @@ class TestApp {
     // Stop the agent again.
     agent_controller_.Unbind();
     agent_service_.Unbind();
-    modular::testing::GetStore()->Get("queue_persistence_test_agent_stopped",
-                                      [this](const fidl::StringPtr&) {
-                                        module_host_->module_context()->Done();
-                                      });
+    Await("queue_persistence_test_agent_stopped",
+          [this] { Put(modular::testing::kTestShutdown); });
   }
 
   modular::ModuleHost* module_host_;

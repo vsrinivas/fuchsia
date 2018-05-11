@@ -9,11 +9,13 @@ namespace {
 
 // URLs of the modules used here.
 constexpr char kOneAgentUrl[] =
-    "/system/test/modular_tests/component_context_test_one_agent";
+    "file:///system/test/modular_tests/component_context_test_one_agent";
+
 constexpr char kUnstoppableAgent[] =
-    "/system/test/modular_tests/component_context_test_unstoppable_agent";
+    "file:///system/test/modular_tests/component_context_test_unstoppable_agent";
+
 constexpr char kTwoAgentUrl[] =
-    "/system/test/modular_tests/component_context_test_two_agent";
+    "file:///system/test/modular_tests/component_context_test_two_agent";
 
 constexpr int kTotalSimultaneousTests = 2;
 

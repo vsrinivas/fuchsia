@@ -88,15 +88,6 @@ interface ModuleContext {
   // ModuleState for all states and transitions. TODO(vardhan): Deprecate this
   // in favour of adding a return callback to Module.Initialize().
   11: Ready();
-
-  // The Module instance holding this handle to the ModuleContext declares it's
-  // done and wants to be torn down. The ModuleContext implementation notifies
-  // all ModuleWatchers registered on the ModuleController by calling
-  // OnStateChange(). The receiver is free to decide whether it's appropriate to
-  // Stop() the Module instance. (It might be appropriate for the receiver to
-  // call Done() on its own instead.) See ModuleState for all states and
-  // transitions.
-  12: Done();
 };
 
 // Communicates the status of an Intent to a Module.

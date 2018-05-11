@@ -7,7 +7,9 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include "peridot/tests/common/defs.h"
 
+using modular::testing::Put;
 using modular::testing::TestPoint;
 
 namespace {
@@ -25,12 +27,14 @@ class NullModule {
     modular::testing::Init(module_host_->application_context(), __FILE__);
     module_host_->module_context()->Ready();
     initialized_.Pass();
+    Put(kCommonNullModuleStarted);
   }
 
   TestPoint stopped_{"Null module stopped"};
 
   // Called by ModuleDriver.
   void Terminate(const std::function<void()>& done) {
+    Put(kCommonNullModuleStopped);
     stopped_.Pass();
     modular::testing::Done(done);
   }

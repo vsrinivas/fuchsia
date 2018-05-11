@@ -22,19 +22,17 @@
 #include "peridot/tests/chain/defs.h"
 #include "peridot/tests/common/defs.h"
 
+using modular::testing::Await;
+using modular::testing::Put;
 using modular::testing::TestPoint;
 
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp : public modular::testing::ComponentBase<modular::UserShell>,
-                modular::StoryWatcher,
-                modular::ModuleWatcher {
+class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
  public:
   TestApp(component::ApplicationContext* const application_context)
-      : ComponentBase(application_context),
-        story_watcher_binding_(this),
-        module_watcher_binding_(this) {
+      : ComponentBase(application_context) {
     TestInit(__FILE__);
   }
 
@@ -52,24 +50,6 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell>,
 
     CreateStory();
   }
-
-  // |StoryWatcher|
-  void OnStateChange(modular::StoryState state) override {
-    if (state == modular::StoryState::DONE)
-      Logout();
-  }
-
-  // |ModuleWatcher|
-  void OnStateChange(modular::ModuleState state) override {
-    if (state == modular::ModuleState::DONE) {
-      // When our child Module exits, we should exit.
-      // child_module_->Stop([this] { module_context_->Done(); });
-      child_module_->Stop([] {});
-    }
-  }
-
-  // |StoryWatcher|
-  void OnModuleAdded(modular::ModuleData module_data) override {}
 
   TestPoint create_story_{"CreateStory()"};
 
@@ -101,10 +81,6 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell>,
     path.reset({"rootMod"});
     story_controller_->GetModuleController(std::move(path),
                                            child_module_.NewRequest());
-    modular::ModuleWatcherPtr watcher;
-    module_watcher_binding_.Bind(watcher.NewRequest());
-    child_module_->Watch(std::move(watcher));
-
     StartStory();
   }
 
@@ -112,25 +88,13 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell>,
     // Start and show the new story.
     fidl::InterfacePtr<views_v1_token::ViewOwner> story_view_binding;
     story_controller_->Start(story_view_binding.NewRequest());
-
-    modular::StoryWatcherPtr watcher;
-    story_watcher_binding_.Bind(watcher.NewRequest());
-    story_controller_->Watch(std::move(watcher));
   }
-
-  void Logout() { user_shell_context_->Logout(); }
 
   modular::UserShellContextPtr user_shell_context_;
   modular::StoryProviderPtr story_provider_;
-
   fidl::StringPtr story_id_;
   modular::StoryControllerPtr story_controller_;
-
   modular::ModuleControllerPtr child_module_;
-
-  fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
-  fidl::Binding<modular::ModuleWatcher> module_watcher_binding_;
-
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 

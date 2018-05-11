@@ -20,13 +20,11 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/component_context/defs.h"
 
+using modular::testing::Await;
+using modular::testing::Put;
 using modular::testing::TestPoint;
 
 namespace {
-
-// This is how long we wait for the test to finish before we timeout and tear
-// down our test.
-constexpr zx::duration kTimeout = zx::sec(15);
 
 // Execute a trigger after the counter reaches a particular value OR if the
 // count is canceled.
@@ -76,7 +74,7 @@ class TestApp {
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
       fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : steps_(kTotalSimultaneousTests,
-               [this, module_host] { module_host->module_context()->Done(); }),
+               [this, module_host] { Put(modular::testing::kTestShutdown); }),
         weak_ptr_factory_(this) {
     modular::testing::Init(module_host->application_context(), __FILE__);
 
@@ -93,24 +91,16 @@ class TestApp {
     ConnectToService(one_agent_services.get(),
                      one_agent_interface_.NewRequest());
 
-    modular::testing::GetStore()->Get(
-        "one_agent_connected", [this](const fidl::StringPtr&) {
-          one_agent_connected_.Pass();
-          TestMessageQueue([this] {
+    Await("one_agent_connected", [this] {
+        one_agent_connected_.Pass();
+        TestMessageQueue([this] {
             TestAgentController(callback::MakeScoped(
                 weak_ptr_factory_.GetWeakPtr(), [this] { steps_.Step(); }));
           });
-        });
+      });
 
     TestUnstoppableAgent(callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
                                               [this] { steps_.Step(); }));
-
-    // Start a timer to quit in case another test component misbehaves and we
-    // time out.
-    async::PostDelayedTask(async_get_default(),
-                           callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
-                                                [this] { steps_.Cancel(); }),
-                           kTimeout);
   }
 
   TestPoint stopped_{"Root module stopped"};
@@ -159,11 +149,10 @@ class TestApp {
     // Closing the agent controller should trigger the agent to stop.
     one_agent_controller.Unbind();
 
-    modular::testing::GetStore()->Get("one_agent_stopped",
-                                      [this, done_cb](const fidl::StringPtr&) {
-                                        one_agent_stopped_.Pass();
-                                        done_cb();
-                                      });
+    Await("one_agent_stopped", [this, done_cb] {
+        one_agent_stopped_.Pass();
+        done_cb();
+      });
   }
 
   // Start an agent that will not stop of its own accord.

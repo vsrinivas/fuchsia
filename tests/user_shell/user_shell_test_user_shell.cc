@@ -25,57 +25,11 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/user_shell/defs.h"
 
+using modular::testing::Await;
+using modular::testing::Put;
 using modular::testing::TestPoint;
 
 namespace {
-
-// A simple story watcher implementation that invokes a "continue" callback when
-// it sees the watched story transition to DONE state. Used to push the test
-// sequence forward when the test story is done.
-class StoryDoneWatcherImpl : modular::StoryWatcher {
- public:
-  StoryDoneWatcherImpl() : binding_(this) {}
-  ~StoryDoneWatcherImpl() override = default;
-
-  // Registers itself as a watcher on the given story. Only one story at a time
-  // can be watched.
-  void Watch(modular::StoryControllerPtr* const story_controller) {
-    (*story_controller)->Watch(binding_.NewBinding());
-  }
-
-  // Deregisters itself from the watched story.
-  void Reset() { binding_.Unbind(); }
-
-  // Sets the function where to continue when the story is observed to be done.
-  void Continue(std::function<void()> at) { continue_ = at; }
-
- private:
-  // |StoryWatcher|
-  void OnStateChange(modular::StoryState state) override {
-    if (state != modular::StoryState::DONE) {
-      return;
-    }
-
-    continue_();
-  }
-
-  TestPoint on_module_added_{"OnModuleAdded"};
-  bool on_module_added_called_ = false;
-
-  // |StoryWatcher|
-  void OnModuleAdded(modular::ModuleData module_data) override {
-    FXL_LOG(INFO) << "OnModuleAdded: " << module_data.module_url;
-    if (!on_module_added_called_) {
-      on_module_added_.Pass();
-      on_module_added_called_ = true;
-    }
-  }
-
-  fidl::Binding<modular::StoryWatcher> binding_;
-  std::function<void()> continue_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(StoryDoneWatcherImpl);
-};
 
 // A simple story modules watcher implementation that just logs the
 // notifications it receives.
@@ -185,9 +139,6 @@ class StoryProviderStateWatcherImpl : modular::StoryProviderWatcher {
   TestPoint on_stopped_called_once_{"OnChange() STOPPED Called"};
   int on_stopped_called_{};
 
-  TestPoint on_done_called_once_{"OnChange() DONE Called"};
-  int on_done_called_{};
-
   // |StoryProviderWatcher|
   void OnChange(const modular::StoryInfo story_info,
                 const modular::StoryState story_state) override {
@@ -225,9 +176,8 @@ class StoryProviderStateWatcherImpl : modular::StoryProviderWatcher {
         }
         break;
       case modular::StoryState::DONE:
-        if (++on_done_called_ == 1) {
-          on_done_called_once_.Pass();
-        }
+        // Doesn't happen anymore.
+        FXL_CHECK(story_state != modular::StoryState::DONE);
         break;
       case modular::StoryState::ERROR:
         // Doesn't happen in this test.
@@ -327,9 +277,9 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint story1_create_{"Story1 Create"};
 
   void TestStory1() {
-    const std::string url = kCommonDoneModule;
     const std::string initial_json = R"({"created-with-info": true})";
-    story_provider_->CreateStoryWithInfo(url, nullptr /* extra_info */,
+    story_provider_->CreateStoryWithInfo(kCommonNullModule,
+                                         nullptr /* extra_info */,
                                          initial_json,
                                          [this](fidl::StringPtr story_id) {
                                            story1_create_.Pass();
@@ -352,11 +302,9 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint story1_run_{"Story1 Run"};
 
   void TestStory1_Run() {
-    story_done_watcher_.Continue([this] {
-        TestStory1_Stop();
-      });
+    Await(kCommonNullModuleStarted,
+          [this] { TestStory1_Stop(); });
 
-    story_done_watcher_.Watch(&story_controller_);
     story_modules_watcher_.Watch(&story_controller_);
     story_links_watcher_.Watch(&story_controller_);
 
@@ -462,18 +410,16 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
       modular::testing::Fail("StoryInfo after DeleteStory() must return null.");
     }
 
-    user_shell_context_->Logout();
+    Put(modular::testing::kTestShutdown);
   }
 
   void TeardownStoryController() {
-    story_done_watcher_.Reset();
     story_modules_watcher_.Reset();
     story_links_watcher_.Reset();
     story_controller_.Unbind();
   }
 
   StoryProviderStateWatcherImpl story_provider_state_watcher_;
-  StoryDoneWatcherImpl story_done_watcher_;
   StoryModulesWatcherImpl story_modules_watcher_;
   StoryLinksWatcherImpl story_links_watcher_;
 

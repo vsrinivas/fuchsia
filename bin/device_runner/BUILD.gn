@@ -105,6 +105,7 @@ executable("dev_device_shell_bin") {
   ]
 
   deps = [
+    "//garnet/public/lib/callback",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/views/fidl:v1",

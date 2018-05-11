@@ -128,7 +128,6 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
       }
     });
     store_.AddCallback([this] { IncrementCounterAction(); });
-    store_.AddCallback([this] { CheckForDone(); });
   }
 
   ~Module1App() override = default;
@@ -171,12 +170,6 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
         });
 
     module_context_->Ready();
-  }
-
-  void CheckForDone() {
-    if (store_.counter.counter > 10) {
-      module_context_->Done();
-    }
   }
 
   void IncrementCounterAction() {

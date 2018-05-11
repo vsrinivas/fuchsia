@@ -14,6 +14,14 @@
 namespace modular {
 namespace testing {
 
+// TestStore key used to signal termination of the integration test suite to the
+// DevDeviceShell, causing it to call Shutdown().
+constexpr char kTestShutdown[] = "test_shutdown";
+
+// Integration tests that run under DevDeviceShell are cut off after this
+// timeout.
+constexpr int kTestTimeoutMilliseconds = 15000;
+
 // Connects to the TestRunner service in the caller's ApplicationEnvironment.
 // This function must be invoked first before calling any of the ones below. A
 // test is expected to call either Done() or Teardown() before terminating

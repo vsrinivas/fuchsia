@@ -15,17 +15,18 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/suggestion/defs.h"
 
+using modular::testing::Await;
+using modular::testing::Put;
 using modular::testing::TestPoint;
 
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp : modular::StoryWatcher,
-                modular::NextListener,
+class TestApp : modular::NextListener,
                 public modular::testing::ComponentBase<modular::UserShell> {
  public:
   TestApp(component::ApplicationContext* const application_context)
-      : ComponentBase(application_context), story_watcher_binding_(this) {
+      : ComponentBase(application_context) {
     TestInit(__FILE__);
   }
 
@@ -48,9 +49,17 @@ class TestApp : modular::StoryWatcher,
         20 /* arbitrarily chosen */);
 
     story_provider_->CreateStory(
-        "file:///system/test/modular_tests/suggestion_test_module",
+        kSuggestionTestModule,
         [this](const fidl::StringPtr& story_id) { StartStoryById(story_id); });
+
     initialized_.Pass();
+
+    Await(kSuggestionTestModuleDone, [this] {
+        story_controller_->Stop([this] {
+            story_controller_.Unbind();
+            Put(modular::testing::kTestShutdown);
+          });
+      });
   }
 
   void StartStoryById(const fidl::StringPtr& story_id) {
@@ -60,26 +69,8 @@ class TestApp : modular::StoryWatcher,
                      << " died. Does this story exist?";
     });
 
-    story_controller_->Watch(story_watcher_binding_.NewBinding());
-
     story_controller_->Start(view_owner_.NewRequest());
   }
-
-  // |StoryWatcher|
-  void OnStateChange(modular::StoryState state) override {
-    if (state != modular::StoryState::DONE) {
-      return;
-    }
-    story_controller_->Stop([this] {
-      story_watcher_binding_.Unbind();
-      story_controller_.Unbind();
-
-      user_shell_context_->Logout();
-    });
-  }
-
-  // |StoryWatcher|
-  void OnModuleAdded(modular::ModuleData /*module_data*/) override {}
 
   TestPoint received_suggestion_{"SuggestionTestUserShell received suggestion"};
 
@@ -105,12 +96,9 @@ class TestApp : modular::StoryWatcher,
   void OnProcessingChange(bool processing) override {}
 
   views_v1_token::ViewOwnerPtr view_owner_;
-
   modular::UserShellContextPtr user_shell_context_;
   modular::StoryProviderPtr story_provider_;
   modular::StoryControllerPtr story_controller_;
-  fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
-
   modular::SuggestionProviderPtr suggestion_provider_;
   fidl::BindingSet<modular::NextListener> suggestion_listener_bindings_;
 

@@ -9,17 +9,19 @@
 #include <memory>
 #include <utility>
 
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
+#include "lib/callback/scoped_callback.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/views_v1_token.h>
 
 namespace {
 
@@ -49,9 +51,24 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
       Settings settings)
       : SingleServiceApp(application_context),
         settings_(std::move(settings)),
-        user_watcher_binding_(this) {
+        user_watcher_binding_(this),
+        weak_ptr_factory_(this) {
     if (settings_.test) {
       modular::testing::Init(this->application_context(), __FILE__);
+      modular::testing::Await(modular::testing::kTestShutdown, [this] {
+          device_shell_context_->Shutdown();
+        });
+
+      // Start a timer to quit in case a test component misbehaves and hangs.
+      async::PostDelayedTask(
+          async_get_default(),
+          callback::MakeScoped(
+              weak_ptr_factory_.GetWeakPtr(),
+              [this] {
+                FXL_LOG(WARNING) << "DevDeviceShell timed out";
+                device_shell_context_->Shutdown();
+              }),
+          zx::msec(modular::testing::kTestTimeoutMilliseconds));
     }
   }
 
@@ -154,6 +171,7 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
   modular::DeviceShellContextPtr device_shell_context_;
   modular::UserControllerPtr user_controller_;
   modular::UserProviderPtr user_provider_;
+  fxl::WeakPtrFactory<DevDeviceShellApp> weak_ptr_factory_;
   FXL_DISALLOW_COPY_AND_ASSIGN(DevDeviceShellApp);
 };
 

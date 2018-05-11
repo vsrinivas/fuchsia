@@ -127,10 +127,4 @@ void ModuleContextImpl::Ready() {
   }
 }
 
-void ModuleContextImpl::Done() {
-  if (module_controller_impl_) {
-    module_controller_impl_->SetState(ModuleState::DONE);
-  }
-}
-
 }  // namespace modular

@@ -70,22 +70,17 @@ class LinkForwarder : modular::LinkWatcher {
 
 class ModuleMonitor : modular::ModuleWatcher {
  public:
-  ModuleMonitor(modular::ModuleController* const module_client,
-                modular::ModuleContext* const module_context)
-      : binding_(this), module_context_(module_context) {
+  ModuleMonitor(modular::ModuleController* const module_client)
+      : binding_(this) {
     module_client->Watch(binding_.NewBinding());
   }
 
   void OnStateChange(modular::ModuleState new_state) override {
-    if (new_state == modular::ModuleState::DONE) {
-      FXL_LOG(INFO) << "RecipeImpl DONE";
-      module_context_->Done();
-    }
+    FXL_LOG(INFO) << "RecipeImpl " << new_state;
   }
 
  private:
   fidl::Binding<modular::ModuleWatcher> binding_;
-  modular::ModuleContext* const module_context_;
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleMonitor);
 };
 
@@ -218,10 +213,8 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
     connections_.emplace_back(
         new LinkForwarder(module2_link_.get(), link_.get()));
 
-    module_monitors_.emplace_back(
-        new ModuleMonitor(module1_.get(), module_context_.get()));
-    module_monitors_.emplace_back(
-        new ModuleMonitor(module2_.get(), module_context_.get()));
+    module_monitors_.emplace_back(new ModuleMonitor(module1_.get()));
+    module_monitors_.emplace_back(new ModuleMonitor(module2_.get()));
 
     module1_link_->Get(nullptr, [this](const fidl::StringPtr& json) {
       if (json == "null") {

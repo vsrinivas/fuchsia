@@ -20,7 +20,7 @@ using modular::testing::TestPoint;
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp : public modular::ModuleWatcher {
+class TestApp {
  public:
   TestPoint initialized_{"Parent module initialized"};
 
@@ -28,8 +28,7 @@ class TestApp : public modular::ModuleWatcher {
       modular::ModuleHost* module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
       fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
-      : module_context_(module_host->module_context()),
-        module_watcher_binding_(this) {
+      : module_context_(module_host->module_context()) {
     module_context_->GetComponentContext(component_context_.NewRequest());
     modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();
@@ -59,7 +58,6 @@ class TestApp : public modular::ModuleWatcher {
   }
 
  private:
-  TestPoint child_module_stopped_{"Child module observed to have stopped"};
   TestPoint start_intent_{"Started child Intent"};
 
   void EmbedModule() {
@@ -113,25 +111,10 @@ class TestApp : public modular::ModuleWatcher {
             child_view_.NewRequest(), [this](modular::StartModuleStatus status) {
               if (status == modular::StartModuleStatus::SUCCESS) {
                 start_intent_.Pass();
-              } else {
-                module_context_->Done();
               }
             });
-        child_module_.set_error_handler(
-            [this]() { child_module_stopped_.Pass(); });
-        modular::ModuleWatcherPtr watcher;
-        module_watcher_binding_.Bind(watcher.NewRequest());
-        child_module_->Watch(std::move(watcher));
-      });
+        });
     });
-  }
-
-  // |ModuleWatcher|
-  void OnStateChange(modular::ModuleState state) override {
-    if (state == modular::ModuleState::DONE) {
-      // When our child Module exits, we should exit.
-      child_module_->Stop([this] { module_context_->Done(); });
-    }
   }
 
   modular::ComponentContextPtr component_context_;
@@ -144,8 +127,6 @@ class TestApp : public modular::ModuleWatcher {
 
   modular::LinkPtr link_one_;
   modular::LinkPtr link_two_;
-
-  fidl::Binding<ModuleWatcher> module_watcher_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };

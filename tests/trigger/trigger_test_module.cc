@@ -11,7 +11,6 @@
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/callback/scoped_callback.h"
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
 #include "peridot/tests/common/defs.h"
@@ -19,6 +18,7 @@
 
 using modular::testing::TestPoint;
 using modular::testing::Await;
+using modular::testing::Put;
 
 namespace {
 
@@ -31,7 +31,7 @@ class TestApp {
       modular::ModuleHost* const module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
       fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
-      : module_host_(module_host), weak_ptr_factory_(this) {
+      : module_host_(module_host) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();
 
@@ -50,15 +50,6 @@ class TestApp {
       agent_service_->ObserveMessageQueueDeletion(token);
       TestMessageQueueMessageTrigger();
     });
-
-    // Start a timer to quit in case another test component misbehaves and we
-    // time out.
-    async::PostDelayedTask(
-        async_get_default(),
-        callback::MakeScoped(
-            weak_ptr_factory_.GetWeakPtr(),
-            [this] { module_host_->module_context()->Done(); }),
-        zx::msec(kTimeoutMilliseconds));
   }
 
   TestPoint received_trigger_token_{"Received trigger token"};
@@ -112,7 +103,7 @@ class TestApp {
           component_context_->DeleteMessageQueue("test");
           Await("message_queue_deletion", [this] {
             queue_deleted_.Pass();
-            module_host_->module_context()->Done();
+            Put(modular::testing::kTestShutdown);
           });
         });
       });
@@ -133,7 +124,6 @@ class TestApp {
   modular_test_trigger::TriggerTestServicePtr agent_service_;
   modular::ComponentContextPtr component_context_;
   modular::MessageQueuePtr msg_queue_;
-  fxl::WeakPtrFactory<TestApp> weak_ptr_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };

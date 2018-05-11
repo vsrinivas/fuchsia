@@ -16,6 +16,8 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/embed_shell/defs.h"
 
+using modular::testing::Await;
+using modular::testing::Put;
 using modular::testing::TestPoint;
 
 namespace {
@@ -39,16 +41,15 @@ class TestApp {
 
  private:
   void ScheduleDone() {
-    auto check = [this,
-                  done = std::make_shared<int>(0)](fidl::StringPtr value) {
+    auto check = [this, done = std::make_shared<int>(0)] {
       ++*done;
       if (*done == 2) {
-        module_host_->module_context()->Done();
+        Put(modular::testing::kTestShutdown);
       }
     };
 
-    modular::testing::GetStore()->Get("story_shell_done", check);
-    modular::testing::GetStore()->Get("child_module_done", check);
+    Await("story_shell_done", check);
+    Await("child_module_done", check);
   }
 
   void StartChildModule() {

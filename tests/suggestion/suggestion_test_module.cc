@@ -10,12 +10,13 @@
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/callback/scoped_callback.h"
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/suggestion/defs.h"
 
+using modular::testing::Await;
+using modular::testing::Put;
 using modular::testing::TestPoint;
 
 namespace {
@@ -31,7 +32,7 @@ class TestApp : modular::ProposalListener {
       modular::ModuleHost* module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
       fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
-      : module_host_(module_host), weak_ptr_factory_(this) {
+      : module_host_(module_host) {
     modular::testing::Init(module_host_->application_context(), __FILE__);
     initialized_.Pass();
 
@@ -67,24 +68,13 @@ class TestApp : modular::ProposalListener {
 
           proposal_publisher_->Propose(std::move(proposal));
 
-          modular::testing::GetStore()->Get(
-              "suggestion_proposal_received", [this](const fidl::StringPtr&) {
-                modular::testing::GetStore()->Get(
-                    "proposal_was_accepted", [this](const fidl::StringPtr&) {
-                      proposal_was_accepted_.Pass();
-                      module_host_->module_context()->Done();
-                    });
-              });
+          Await("suggestion_proposal_received", [this] {
+              Await("proposal_was_accepted", [this] {
+                  proposal_was_accepted_.Pass();
+                  Put(kSuggestionTestModuleDone);
+                });
+            });
         });
-
-    // Start a timer to quit in case another test component misbehaves and we
-    // time out.
-    async::PostDelayedTask(
-        async_get_default(),
-        callback::MakeScoped(
-            weak_ptr_factory_.GetWeakPtr(),
-            [this] { module_host_->module_context()->Done(); }),
-        zx::msec(kTimeoutMilliseconds));
   }
 
   TestPoint stopped_{"Root module stopped"};
@@ -98,7 +88,7 @@ class TestApp : modular::ProposalListener {
   // |ProposalListener|
   void OnProposalAccepted(fidl::StringPtr proposal_id,
                           fidl::StringPtr story_id) override {
-    modular::testing::GetStore()->Put("proposal_was_accepted", "", [] {});
+    Put("proposal_was_accepted");
   }
 
  private:
@@ -106,8 +96,6 @@ class TestApp : modular::ProposalListener {
   modular::ModuleContextPtr module_context_;
   modular::ProposalPublisherPtr proposal_publisher_;
   fidl::BindingSet<modular::ProposalListener> proposal_listener_bindings_;
-  fxl::WeakPtrFactory<TestApp> weak_ptr_factory_;
-
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 

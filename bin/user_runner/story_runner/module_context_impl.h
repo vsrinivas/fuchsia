@@ -88,8 +88,6 @@ class ModuleContextImpl : ModuleContext {
   void RequestFocus() override;
   // |ModuleContext|
   void Ready() override;
-  // |ModuleContext|
-  void Done() override;
 
   // Identifies the module by its path, holds the URL of the running module, and
   // the link it was started with.

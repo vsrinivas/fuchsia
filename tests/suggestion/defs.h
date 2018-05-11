@@ -7,9 +7,11 @@
 
 namespace {
 
-// This is how long we wait for the test to finish before we timeout and tear
-// down our test.
-constexpr int kTimeoutMilliseconds = 5000;
+constexpr char kSuggestionTestModule[] =
+    "file:///system/test/modular_tests/suggestion_test_module";
+
+constexpr char kSuggestionTestModuleDone[] = "suggestion_test_module_done";
+
 constexpr char kProposalId[] =
     "file:///system/bin/modular_tests/suggestion_proposal_test#proposal";
 

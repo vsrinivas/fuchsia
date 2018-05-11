@@ -18,6 +18,8 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/parent_child/defs.h"
 
+using modular::testing::Await;
+using modular::testing::Put;
 using modular::testing::TestPoint;
 
 namespace {
@@ -31,18 +33,9 @@ class TestApp {
       modular::ModuleHost* module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
       fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
-      : module_host_(module_host), weak_ptr_factory_(this) {
+      : module_host_(module_host) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();
-
-    // Start a timer to quit in case another test component misbehaves and we
-    // time out.
-    async::PostDelayedTask(
-        async_get_default(),
-        callback::MakeScoped(
-            weak_ptr_factory_.GetWeakPtr(),
-            [this] { module_host_->module_context()->Done(); }),
-        zx::msec(kTimeoutMilliseconds));
 
     StartChildModuleTwice();
   }
@@ -72,22 +65,21 @@ class TestApp {
     // Once the module starts, start the same module again, but with a different
     // link mapping. This stops the previous module instance and starts a new
     // one.
-    modular::testing::GetStore()->Get(
-        "child_module_init", [this](const fidl::StringPtr&) {
-          child_module_.set_error_handler([this] { OnChildModuleStopped(); });
+    Await("child_module_init", [this] {
+        child_module_.set_error_handler([this] { OnChildModuleStopped(); });
 
-          modular::Intent intent;
-          intent.action.handler = kChildModuleUrl;
-          modular::IntentParameter intent_parameter;
-          intent_parameter.name = "link";
-          intent_parameter.data = modular::IntentParameterData();
-          intent_parameter.data.set_link_name("module2link");
-          intent.parameters.push_back(std::move(intent_parameter));
-          module_host_->module_context()->StartModule(
-              kChildModuleName, std::move(intent), nullptr,
-              child_module2_.NewRequest(), nullptr,
-              [](const modular::StartModuleStatus) {});
-        });
+        modular::Intent intent;
+        intent.action.handler = kChildModuleUrl;
+        modular::IntentParameter intent_parameter;
+        intent_parameter.name = "link";
+        intent_parameter.data = modular::IntentParameterData();
+        intent_parameter.data.set_link_name("module2link");
+        intent.parameters.push_back(std::move(intent_parameter));
+        module_host_->module_context()->StartModule(
+            kChildModuleName, std::move(intent), nullptr,
+            child_module2_.NewRequest(), nullptr,
+            [](const modular::StartModuleStatus) {});
+      });
   }
 
   TestPoint child_module_down_{"Child module killed for restart"};
@@ -97,25 +89,21 @@ class TestApp {
 
     // Confirm that the first module instance stopped, and then stop the second
     // module instance.
-    modular::testing::GetStore()->Get(
-        "child_module_stop", [this](const fidl::StringPtr&) {
-          child_module2_->Stop([this] { OnChildModule2Stopped(); });
-        });
+    Await("child_module_stop", [this] {
+        child_module2_->Stop([this] { OnChildModule2Stopped(); });
+      });
   }
 
   TestPoint child_module_stopped_{"Child module stopped"};
 
   void OnChildModule2Stopped() {
     child_module_stopped_.Pass();
-    module_host_->module_context()->Done();
+    Put(modular::testing::kTestShutdown);
   }
 
   modular::ModuleHost* module_host_;
   modular::ModuleControllerPtr child_module_;
   modular::ModuleControllerPtr child_module2_;
-
-  fxl::WeakPtrFactory<TestApp> weak_ptr_factory_;
-
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 

@@ -11,6 +11,7 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/link_passing/defs.h"
 
+using modular::testing::Put;
 using modular::testing::TestPoint;
 
 namespace {
@@ -93,7 +94,7 @@ class TestApp : modular::LinkWatcher {
     }
 
     if (link1_checked_ && link2_checked_) {
-      module_host_->module_context()->Done();
+      Put(modular::testing::kTestShutdown);
     }
   }
 
