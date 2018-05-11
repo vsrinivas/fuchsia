@@ -179,8 +179,16 @@ void LinkImpl::ReloadCall::Run() {
       impl_->page(), MakeSequencedLinkKeyPrefix(impl_->link_path_),
       XdrLinkChange,
       [this, flow](fidl::VectorPtr<modular_private::LinkChange> changes) {
-        // TODO(mesch): Initial link data must be applied even when there
-        // already are data present in the link.
+        // NOTE(mesch): Initial link data must be applied only at the time the
+        // Intent is originally issued, not when the story is resumed and
+        // modules are restarted from the Intent stored in the story record.
+        // Therefore, initial data from create_link_info are ignored if there
+        // are increments to replay.
+        //
+        // Presumably, it is possible that at the time the Intent is issued with
+        // initial data for a link, a link of the same name already exists. In
+        // that case the initial data are not applied either. Unclear whether
+        // that should be considered wrong or not.
         if (changes->empty()) {
           if (impl_->create_link_info_ &&
               !impl_->create_link_info_->initial_data.is_null() &&
