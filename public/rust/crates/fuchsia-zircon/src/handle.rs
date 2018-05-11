@@ -1,6 +1,6 @@
 use {Port, Rights, Signals, Status, Time, WaitAsyncOpts, ok, sys};
 use std::marker::PhantomData;
-use std::mem;
+use std::mem::{self, ManuallyDrop};
 
 /// An object representing a Zircon
 /// [handle](https://fuchsia.googlesource.com/zircon/+/master/docs/handles.md).
@@ -19,7 +19,10 @@ pub struct Handle(sys::zx_handle_t);
 
 impl AsHandleRef for Handle {
     fn as_handle_ref(&self) -> HandleRef {
-        HandleRef { handle: self.0, phantom: Default::default() }
+        Unowned {
+            inner: ManuallyDrop::new(Handle(self.0)),
+            marker: PhantomData,
+        }
     }
 }
 
@@ -57,48 +60,65 @@ impl Handle {
     }
 }
 
-/// A borrowed reference to a `Handle`.
+/// A borrowed value of type `T`.
 ///
-/// Mostly useful as part of a `WaitItem`.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+/// This is primarily used for working with borrowed values of `HandleBased` types.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
-pub struct HandleRef<'a> {
-    handle: sys::zx_handle_t,
-    phantom: PhantomData<&'a sys::zx_handle_t>,
+pub struct Unowned<'a, T: 'a> {
+    inner: ManuallyDrop<T>,
+    marker: PhantomData<&'a T>,
 }
 
-impl<'a> HandleRef<'a> {
+impl<'a, T> ::std::ops::Deref for Unowned<'a, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.inner
+    }
+}
+
+pub type HandleRef<'a> = Unowned<'a, Handle>;
+
+impl<'a, T: HandleBased> Unowned<'a, T> {
     /// Create a `HandleRef` from a raw handle. Use this method when you are given a raw handle but
     /// should not take ownership of it. Examples include process-global handles like the root
     /// VMAR. This method should be called with an explicitly provided lifetime that must not
     /// outlive the lifetime during which the handle is owned by the current process. It is unsafe
     /// because most of the time, it is better to use a `Handle` to prevent leaking resources.
     pub unsafe fn from_raw_handle(handle: sys::zx_handle_t) -> Self {
-        HandleRef { handle, phantom: PhantomData }
+        Unowned {
+            inner: ManuallyDrop::new(T::from(Handle::from_raw(handle))),
+            marker: PhantomData,
+        }
     }
 
     pub fn raw_handle(&self) -> sys::zx_handle_t {
-        self.handle
+        self.inner.raw_handle()
     }
 
     pub fn duplicate(&self, rights: Rights) -> Result<Handle, Status> {
-        let handle = self.handle;
         let mut out = 0;
-        let status = unsafe { sys::zx_handle_duplicate(handle, rights.bits(), &mut out) };
+        let status = unsafe {
+            sys::zx_handle_duplicate(
+                self.raw_handle(), rights.bits(), &mut out)
+        };
         ok(status).map(|()| Handle(out))
     }
 
     pub fn signal(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
-        let handle = self.handle;
-        let status = unsafe { sys::zx_object_signal(handle, clear_mask.bits(), set_mask.bits()) };
+        let status = unsafe {
+            sys::zx_object_signal(
+                self.raw_handle(), clear_mask.bits(), set_mask.bits())
+        };
         ok(status)
     }
 
     pub fn wait(&self, signals: Signals, deadline: Time) -> Result<Signals, Status> {
-        let handle = self.handle;
         let mut pending = Signals::empty().bits();
         let status = unsafe {
-            sys::zx_object_wait_one(handle, signals.bits(), deadline.nanos(), &mut pending)
+            sys::zx_object_wait_one(
+                self.raw_handle(), signals.bits(), deadline.nanos(), &mut pending)
         };
         ok(status).map(|()| Signals::from_bits_truncate(pending))
     }
@@ -106,10 +126,9 @@ impl<'a> HandleRef<'a> {
     pub fn wait_async(&self, port: &Port, key: u64, signals: Signals, options: WaitAsyncOpts)
         -> Result<(), Status>
     {
-        let handle = self.handle;
         let status = unsafe {
             sys::zx_object_wait_async(
-                handle, port.raw_handle(), key, signals.bits(), options as u32)
+                self.raw_handle(), port.raw_handle(), key, signals.bits(), options as u32)
         };
         ok(status)
     }
@@ -125,7 +144,7 @@ pub trait AsHandleRef {
     /// handles will have different raw values (so it can perhaps be used as a
     /// key in a data structure).
     fn raw_handle(&self) -> sys::zx_handle_t {
-        self.as_handle_ref().raw_handle()
+        self.as_handle_ref().inner.0
     }
 
     /// Set and clear userspace-accessible signal bits on an object. Wraps the
@@ -152,8 +171,13 @@ pub trait AsHandleRef {
     }
 }
 
-impl<'a> AsHandleRef for HandleRef<'a> {
-    fn as_handle_ref(&self) -> HandleRef { *self }
+impl<'a, T: HandleBased> AsHandleRef for Unowned<'a, T> {
+    fn as_handle_ref(&self) -> HandleRef {
+        Unowned {
+            inner: ManuallyDrop::new(Handle(self.raw_handle())),
+            marker: PhantomData,
+        }
+    }
 }
 
 /// A trait implemented by all handle-based types.
@@ -222,7 +246,7 @@ pub trait Peered: HandleBased {
     /// [zx_object_signal_peer](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/object_signal.md)
     /// syscall.
     fn signal_peer(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
-        let handle = self.as_handle_ref().handle;
+        let handle = self.raw_handle();
         let status = unsafe {
             sys::zx_object_signal_peer(handle, clear_mask.bits(), set_mask.bits())
         };
@@ -236,9 +260,11 @@ pub trait Cookied: HandleBased {
     /// [zx_object_get_cookie](https://fuchsia.googlesource.com/zircon/+/HEAD/docs/syscalls/object_get_cookie.md)
     /// syscall.
     fn get_cookie(&self, scope: &HandleRef) -> Result<u64, Status> {
-        let handle = self.as_handle_ref().handle;
         let mut cookie = 0;
-        let status = unsafe { sys::zx_object_get_cookie(handle, scope.handle, &mut cookie) };
+        let status = unsafe {
+            sys::zx_object_get_cookie(
+                self.raw_handle(), scope.raw_handle(), &mut cookie)
+        };
         ok(status).map(|()| cookie)
     }
 
@@ -247,8 +273,10 @@ pub trait Cookied: HandleBased {
     /// [zx_object_set_cookie](https://fuchsia.googlesource.com/zircon/+/HEAD/docs/syscalls/object_set_cookie.md)
     /// syscall.
     fn set_cookie(&self, scope: &HandleRef, cookie: u64) -> Result<(), Status> {
-        let handle = self.as_handle_ref().handle;
-        let status = unsafe { sys::zx_object_set_cookie(handle, scope.handle, cookie) };
+        let status = unsafe {
+            sys::zx_object_set_cookie(
+                self.raw_handle(), scope.raw_handle(), cookie)
+        };
         ok(status)
     }
 }
