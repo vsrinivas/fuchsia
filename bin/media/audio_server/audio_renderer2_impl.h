@@ -45,15 +45,12 @@ class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
   void SendPacketNoReply(AudioPacket packet) final;
   void Flush(FlushCallback callback) final;
   void FlushNoReply() final;
-  void Play(int64_t reference_time,
-            int64_t media_time,
+  void Play(int64_t reference_time, int64_t media_time,
             PlayCallback callback) final;
   void PlayNoReply(int64_t reference_time, int64_t media_time) final;
   void Pause(PauseCallback callback) final;
   void PauseNoReply() final;
-  void SetGainMute(float gain,
-                   bool mute,
-                   uint32_t flags,
+  void SetGainMute(float gain, bool mute, uint32_t flags,
                    SetGainMuteCallback callback) final;
   void SetGainMuteNoReply(float gain, bool mute, uint32_t flags) final;
   void DuplicateGainControlInterface(
@@ -86,10 +83,8 @@ class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
 
     AudioPacketRefV2(fbl::RefPtr<fbl::RefCountedVmoMapper> vmo_ref,
                      AudioRenderer2::SendPacketCallback callback,
-                     AudioPacket packet,
-                     AudioServerImpl* server,
-                     uint32_t frac_frame_len,
-                     int64_t start_pts);
+                     AudioPacket packet, AudioServerImpl* server,
+                     uint32_t frac_frame_len, int64_t start_pts);
 
    protected:
     bool NeedsCleanup() final { return callback_ != nullptr; }
@@ -109,9 +104,7 @@ class AudioRenderer2Impl : public AudioRendererImpl, public AudioRenderer2 {
     bool gain_events_enabled() const { return gain_events_enabled_; }
 
     // AudioRendererGainControl
-    void SetGainMute(float gain,
-                     bool mute,
-                     uint32_t flags,
+    void SetGainMute(float gain, bool mute, uint32_t flags,
                      SetGainMuteCallback callback) override;
     void SetGainMuteNoReply(float gain, bool mute, uint32_t flags) override;
 

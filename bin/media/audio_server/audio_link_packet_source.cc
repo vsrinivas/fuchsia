@@ -13,8 +13,7 @@ namespace media {
 namespace audio {
 
 AudioLinkPacketSource::AudioLinkPacketSource(
-    fbl::RefPtr<AudioObject> source,
-    fbl::RefPtr<AudioObject> dest,
+    fbl::RefPtr<AudioObject> source, fbl::RefPtr<AudioObject> dest,
     fbl::RefPtr<AudioRendererFormatInfo> format_info)
     : AudioLink(SourceType::Packet, std::move(source), std::move(dest)),
       format_info_(std::move(format_info)) {}
@@ -27,8 +26,7 @@ AudioLinkPacketSource::~AudioLinkPacketSource() {
 
 // static
 std::shared_ptr<AudioLinkPacketSource> AudioLinkPacketSource::Create(
-    fbl::RefPtr<AudioObject> source,
-    fbl::RefPtr<AudioObject> dest) {
+    fbl::RefPtr<AudioObject> source, fbl::RefPtr<AudioObject> dest) {
   FXL_DCHECK(source);
   FXL_DCHECK(dest);
 
@@ -102,8 +100,7 @@ void AudioLinkPacketSource::CopyPendingQueue(
   FXL_DCHECK(this != other.get());
 
   std::lock_guard<std::mutex> source_locker(other->pending_mutex_);
-  if (other->pending_packet_queue_.empty())
-    return;
+  if (other->pending_packet_queue_.empty()) return;
 
   std::lock_guard<std::mutex> locker(pending_mutex_);
   FXL_DCHECK(pending_packet_queue_.empty());

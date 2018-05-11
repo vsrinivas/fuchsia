@@ -15,8 +15,7 @@
 // than 4MB of pending capture buffer bookkeeping, something has gone seriously
 // wrong.
 DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(
-    ::media::audio::AudioCapturerImpl::PcbAllocatorTraits,
-    0x100);
+    ::media::audio::AudioCapturerImpl::PcbAllocatorTraits, 0x100);
 
 namespace media {
 namespace audio {
@@ -30,16 +29,14 @@ AtomicGenerationId AudioCapturerImpl::PendingCaptureBuffer::sequence_generator;
 
 fbl::RefPtr<AudioCapturerImpl> AudioCapturerImpl::Create(
     fidl::InterfaceRequest<AudioCapturer> audio_capturer_request,
-    AudioServerImpl* owner,
-    bool loopback) {
+    AudioServerImpl* owner, bool loopback) {
   return fbl::AdoptRef(new AudioCapturerImpl(std::move(audio_capturer_request),
                                              owner, loopback));
 }
 
 AudioCapturerImpl::AudioCapturerImpl(
     fidl::InterfaceRequest<AudioCapturer> audio_capturer_request,
-    AudioServerImpl* owner,
-    bool loopback)
+    AudioServerImpl* owner, bool loopback)
     : AudioObject(Type::Capturer),
       binding_(this, std::move(audio_capturer_request)),
       owner_(owner),
@@ -379,8 +376,7 @@ void AudioCapturerImpl::SetPayloadBuffer(zx::vmo payload_buf_vmo) {
   cleanup.cancel();
 }
 
-void AudioCapturerImpl::CaptureAt(uint32_t offset_frames,
-                                  uint32_t num_frames,
+void AudioCapturerImpl::CaptureAt(uint32_t offset_frames, uint32_t num_frames,
                                   CaptureAtCallback cbk) {
   // If something goes wrong, hang up the phone and shutdown.
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });

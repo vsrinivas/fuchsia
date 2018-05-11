@@ -44,9 +44,7 @@ DriverOutput::DriverOutput(AudioDeviceManager* manager,
     : StandardOutputBase(manager),
       initial_stream_channel_(fbl::move(initial_stream_channel)) {}
 
-DriverOutput::~DriverOutput() {
-  wav_writer_.Close();
-}
+DriverOutput::~DriverOutput() { wav_writer_.Close(); }
 
 MediaResult DriverOutput::Init() {
   FXL_DCHECK(state_ == State::Uninitialized);

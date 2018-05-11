@@ -9,9 +9,7 @@
 namespace media {
 namespace audio {
 
-PendingFlushToken::~PendingFlushToken() {
-  FXL_DCHECK(was_recycled_);
-}
+PendingFlushToken::~PendingFlushToken() { FXL_DCHECK(was_recycled_); }
 
 void PendingFlushToken::fbl_recycle() {
   if (!was_recycled_) {

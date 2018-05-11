@@ -31,10 +31,8 @@ DriverRingBuffer::~DriverRingBuffer() {
   }
 }
 
-zx_status_t DriverRingBuffer::Init(zx::vmo vmo,
-                                   uint32_t frame_size,
-                                   uint32_t frame_count,
-                                   bool input) {
+zx_status_t DriverRingBuffer::Init(zx::vmo vmo, uint32_t frame_size,
+                                   uint32_t frame_count, bool input) {
   if (!vmo.is_valid()) {
     FXL_LOG(ERROR) << "Invalid VMO!";
     return ZX_ERR_INVALID_ARGS;

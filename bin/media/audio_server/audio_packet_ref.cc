@@ -9,8 +9,7 @@
 namespace media {
 namespace audio {
 
-AudioPacketRef::AudioPacketRef(AudioServerImpl* server,
-                               uint32_t frac_frame_len,
+AudioPacketRef::AudioPacketRef(AudioServerImpl* server, uint32_t frac_frame_len,
                                int64_t start_pts)
     : server_(server),
       frac_frame_len_(frac_frame_len),

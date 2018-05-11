@@ -88,8 +88,7 @@ class AudioDriver {
   }
 
   zx_status_t GetSupportedFormats();
-  zx_status_t Configure(uint32_t frames_per_second,
-                        uint32_t channels,
+  zx_status_t Configure(uint32_t frames_per_second, uint32_t channels,
                         AudioSampleFormat fmt,
                         zx_duration_t min_ring_buffer_duration);
   zx_status_t Start();
@@ -101,10 +100,8 @@ class AudioDriver {
 
   // Dispatchers for messages received over stream and ring buffer channels.
   zx_status_t ReadMessage(const fbl::RefPtr<::dispatcher::Channel>& channel,
-                          void* buf,
-                          uint32_t buf_size,
-                          uint32_t* bytes_read_out,
-                          zx::handle* handle_out)
+                          void* buf, uint32_t buf_size,
+                          uint32_t* bytes_read_out, zx::handle* handle_out)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
   zx_status_t ProcessStreamChannelMessage()
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
@@ -116,8 +113,7 @@ class AudioDriver {
       const audio_stream_cmd_get_formats_resp_t& resp)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
   zx_status_t ProcessSetFormatResponse(
-      const audio_stream_cmd_set_format_resp_t& resp,
-      zx::channel rb_channel)
+      const audio_stream_cmd_set_format_resp_t& resp, zx::channel rb_channel)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
 
   // Ring buffer message handlers.
@@ -125,8 +121,7 @@ class AudioDriver {
       const audio_rb_cmd_get_fifo_depth_resp_t& resp)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
   zx_status_t ProcessGetBufferResponse(
-      const audio_rb_cmd_get_buffer_resp_t& resp,
-      zx::vmo rb_vmo)
+      const audio_rb_cmd_get_buffer_resp_t& resp, zx::vmo rb_vmo)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
   zx_status_t ProcessStartResponse(const audio_rb_cmd_start_resp_t& resp)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());

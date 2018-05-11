@@ -10,9 +10,9 @@
 #include <zircon/device/vfs.h>
 #include <zircon/types.h>
 
+#include <fuchsia/cpp/media.h>
 #include "lib/fsl/io/device_watcher.h"
 #include "lib/fxl/files/unique_fd.h"
-#include <fuchsia/cpp/media.h>
 
 namespace media {
 namespace audio {

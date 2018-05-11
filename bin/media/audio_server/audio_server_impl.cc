@@ -17,12 +17,12 @@ namespace media {
 namespace audio {
 
 AudioServerImpl::AudioServerImpl() : device_manager_(this) {
-  auto service = fbl::AdoptRef(new fs::Service(
-        [this](zx::channel ch) -> zx_status_t {
-          bindings_.AddBinding(
-              this, fidl::InterfaceRequest<AudioServer>(std::move(ch)));
-          return ZX_OK;
-        }));
+  auto service =
+      fbl::AdoptRef(new fs::Service([this](zx::channel ch) -> zx_status_t {
+        bindings_.AddBinding(
+            this, fidl::InterfaceRequest<AudioServer>(std::move(ch)));
+        return ZX_OK;
+      }));
   outgoing_.public_dir()->AddEntry(AudioServer::Name_, std::move(service));
 
   // Stash a pointer to our async object.
@@ -56,8 +56,8 @@ AudioServerImpl::AudioServerImpl() : device_manager_(this) {
   // manager so that we wait until we are certain that we have discovered and
   // probed the capabilities of all of the pre-existing inputs and outputs
   // before proceeding.  See MTWN-118
-  async::PostDelayedTask(
-      async_, [this]() { outgoing_.ServeFromStartupInfo(); }, zx::msec(50));
+  async::PostDelayedTask(async_, [this]() { outgoing_.ServeFromStartupInfo(); },
+                         zx::msec(50));
 }
 
 AudioServerImpl::~AudioServerImpl() {

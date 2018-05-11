@@ -20,12 +20,9 @@ using Resampler = media::audio::Mixer::Resampler;
 // accumulation format (not the destination format), so we need not specify a
 // dst_format. Actual frame rate values are unimportant, but inter-rate RATIO
 // is VERY important: required SRC is the primary factor in Mix selection.
-MixerPtr SelectMixer(AudioSampleFormat src_format,
-                     uint32_t src_channels,
-                     uint32_t src_frame_rate,
-                     uint32_t dst_channels,
-                     uint32_t dst_frame_rate,
-                     Resampler resampler) {
+MixerPtr SelectMixer(AudioSampleFormat src_format, uint32_t src_channels,
+                     uint32_t src_frame_rate, uint32_t dst_channels,
+                     uint32_t dst_frame_rate, Resampler resampler) {
   AudioMediaTypeDetails src_details;
   src_details.sample_format = src_format;
   src_details.channels = src_channels;
@@ -79,12 +76,8 @@ void NormalizeInt24ToPipelineBitwidth(int32_t* source, uint32_t source_len) {
 // Use the supplied mixer to scale from src into accum buffers.  Assumes a
 // specific buffer size, with no SRC, starting at the beginning of each buffer.
 // By default, does not gain-scale or accumulate (both can be overridden).
-void DoMix(MixerPtr mixer,
-           const void* src_buf,
-           int32_t* accum_buf,
-           bool accumulate,
-           int32_t num_frames,
-           Gain::AScale mix_scale) {
+void DoMix(MixerPtr mixer, const void* src_buf, int32_t* accum_buf,
+           bool accumulate, int32_t num_frames, Gain::AScale mix_scale) {
   uint32_t dst_offset = 0;
   int32_t frac_src_offset = 0;
   bool mix_result =

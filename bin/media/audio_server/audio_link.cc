@@ -8,8 +8,7 @@
 namespace media {
 namespace audio {
 
-AudioLink::AudioLink(SourceType source_type,
-                     fbl::RefPtr<AudioObject> source,
+AudioLink::AudioLink(SourceType source_type, fbl::RefPtr<AudioObject> source,
                      fbl::RefPtr<AudioObject> dest)
     : source_type_(source_type),
       source_(std::move(source)),

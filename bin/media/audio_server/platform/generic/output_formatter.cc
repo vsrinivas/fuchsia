@@ -21,8 +21,7 @@ class DstConverter;
 
 template <typename DType>
 class DstConverter<
-    DType,
-    typename std::enable_if<std::is_same<DType, int16_t>::value>::type> {
+    DType, typename std::enable_if<std::is_same<DType, int16_t>::value>::type> {
  public:
   static inline constexpr DType Convert(int32_t sample) {
     if (kAudioPipelineWidth > 16) {
@@ -41,8 +40,7 @@ class DstConverter<
 
 template <typename DType>
 class DstConverter<
-    DType,
-    typename std::enable_if<std::is_same<DType, uint8_t>::value>::type> {
+    DType, typename std::enable_if<std::is_same<DType, uint8_t>::value>::type> {
  public:
   static inline constexpr DType Convert(int32_t sample) {
     // Before we right-shift, add "0.5" to convert truncation into rounding.
@@ -59,8 +57,7 @@ class DstConverter<
 
 template <typename DType>
 class DstConverter<
-    DType,
-    typename std::enable_if<std::is_same<DType, float>::value>::type> {
+    DType, typename std::enable_if<std::is_same<DType, float>::value>::type> {
  public:
   // This will emit +1.0 values, which are legal per WAV format custom.
   static inline constexpr DType Convert(int32_t sample) {
@@ -76,9 +73,8 @@ class SilenceMaker;
 
 template <typename DType>
 class SilenceMaker<
-    DType,
-    typename std::enable_if<std::is_same<DType, int16_t>::value ||
-                            std::is_same<DType, float>::value>::type> {
+    DType, typename std::enable_if<std::is_same<DType, int16_t>::value ||
+                                   std::is_same<DType, float>::value>::type> {
  public:
   static inline void Fill(void* dest, size_t samples) {
     // This works even if DType is float/double: per IEEE-754, all 0s == +0.0.
@@ -88,8 +84,7 @@ class SilenceMaker<
 
 template <typename DType>
 class SilenceMaker<
-    DType,
-    typename std::enable_if<std::is_same<DType, uint8_t>::value>::type> {
+    DType, typename std::enable_if<std::is_same<DType, uint8_t>::value>::type> {
  public:
   static inline void Fill(void* dest, size_t samples) {
     ::memset(dest, 0x80, samples * sizeof(DType));
@@ -104,8 +99,7 @@ class OutputFormatterImpl : public OutputFormatter {
   explicit OutputFormatterImpl(const AudioMediaTypeDetailsPtr& format)
       : OutputFormatter(format, sizeof(DType)) {}
 
-  void ProduceOutput(const int32_t* source,
-                     void* dest_void,
+  void ProduceOutput(const int32_t* source, void* dest_void,
                      uint32_t frames) const override {
     using DC = DstConverter<DType>;
     DType* dest = static_cast<DType*>(dest_void);

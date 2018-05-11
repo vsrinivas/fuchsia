@@ -59,8 +59,7 @@ class AudioPacketRef
   friend class fbl::Recyclable<AudioPacketRef>;
   friend class fbl::unique_ptr<AudioPacketRef>;
 
-  AudioPacketRef(AudioServerImpl* server,
-                 uint32_t frac_frame_len,
+  AudioPacketRef(AudioServerImpl* server, uint32_t frac_frame_len,
                  int64_t start_pts);
   virtual ~AudioPacketRef() = default;
 

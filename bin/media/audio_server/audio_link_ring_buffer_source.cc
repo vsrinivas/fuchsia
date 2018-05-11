@@ -10,15 +10,13 @@ namespace audio {
 
 // static
 std::shared_ptr<AudioLinkRingBufferSource> AudioLinkRingBufferSource::Create(
-    fbl::RefPtr<AudioDevice> source,
-    fbl::RefPtr<AudioObject> dest) {
+    fbl::RefPtr<AudioDevice> source, fbl::RefPtr<AudioObject> dest) {
   return std::shared_ptr<AudioLinkRingBufferSource>(
       new AudioLinkRingBufferSource(std::move(source), std::move(dest)));
 }
 
 AudioLinkRingBufferSource::AudioLinkRingBufferSource(
-    fbl::RefPtr<AudioDevice> source,
-    fbl::RefPtr<AudioObject> dest)
+    fbl::RefPtr<AudioDevice> source, fbl::RefPtr<AudioObject> dest)
     : AudioLink(SourceType::RingBuffer, std::move(source), std::move(dest)) {}
 
 }  // namespace audio

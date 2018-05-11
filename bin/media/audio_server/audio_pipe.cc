@@ -17,9 +17,7 @@ namespace audio {
 
 AudioPipe::AudioPacketRefV1::AudioPacketRefV1(
     std::unique_ptr<MediaPacketConsumerBase::SuppliedPacket> supplied_packet,
-    AudioServerImpl* server,
-    uint32_t frac_frame_len,
-    int64_t start_pts)
+    AudioServerImpl* server, uint32_t frac_frame_len, int64_t start_pts)
     : AudioPacketRef(server, frac_frame_len, start_pts),
       supplied_packet_(std::move(supplied_packet)) {
   FXL_DCHECK(supplied_packet_);
@@ -46,8 +44,7 @@ AudioPipe::AudioPipe(AudioRenderer1Impl* owner, AudioServerImpl* server)
 
 AudioPipe::~AudioPipe() {}
 
-void AudioPipe::ProgramRangeSet(uint64_t program,
-                                int64_t min_pts,
+void AudioPipe::ProgramRangeSet(uint64_t program, int64_t min_pts,
                                 int64_t max_pts) {
   FXL_DCHECK(program == 0) << "Non-zero program not implemented";
   UpdateMinPts(min_pts);
@@ -64,8 +61,7 @@ void AudioPipe::UpdateMinPts(int64_t min_pts) {
   }
 }
 
-void AudioPipe::PrimeRequested(
-    MediaTimelineControlPoint::PrimeCallback cbk) {
+void AudioPipe::PrimeRequested(MediaTimelineControlPoint::PrimeCallback cbk) {
   if (prime_callback_) {
     // Prime was already requested. Complete the old one and warn.
     FXL_LOG(WARNING) << "multiple prime requests received";

@@ -121,17 +121,11 @@ class Mixer {
   //
   // TODO(mpuryear): Change frac_src_frames parameter to be (integer)
   // src_frames, as number of src_frames was never intended to be fractional.
-  virtual bool Mix(int32_t* dst,
-                   uint32_t dst_frames,
-                   uint32_t* dst_offset,
-                   const void* src,
-                   uint32_t frac_src_frames,
-                   int32_t* frac_src_offset,
-                   uint32_t frac_step_size,
-                   Gain::AScale amplitude_scale,
-                   bool accumulate,
-                   uint32_t modulo = 0,
-                   uint32_t denominator = 1) = 0;
+  virtual bool Mix(int32_t* dst, uint32_t dst_frames, uint32_t* dst_offset,
+                   const void* src, uint32_t frac_src_frames,
+                   int32_t* frac_src_offset, uint32_t frac_step_size,
+                   Gain::AScale amplitude_scale, bool accumulate,
+                   uint32_t modulo = 0, uint32_t denominator = 1) = 0;
   // When calling Mix(), we communicate the resampling rate with three
   // parameters. We augment frac_step_size with modulo and denominator
   // arguments that capture the remaining rate component that cannot be

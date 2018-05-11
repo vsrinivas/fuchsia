@@ -415,9 +415,7 @@ void TestInterpolation(uint32_t source_frames_per_second,
 }
 
 // This test varies the fractional starting offsets, still with rate ratio ONE.
-TEST(Resampling, Interpolation_Values) {
-  TestInterpolation(48000, 48000);
-}
+TEST(Resampling, Interpolation_Values) { TestInterpolation(48000, 48000); }
 
 // Various checks similar to above, while varying rate ratio. Interp results
 // should not change: they depend only on frac_src_pos, not the rate ratio.
@@ -437,9 +435,7 @@ TEST(Resampling, Interpolation_Rate_48_441) {
 
 // Power-of-3 rate ratio 1:3 is guaranteed to have fractional rate error, since
 // 1/3 cannot be perfectly represented by a single binary value.
-TEST(Resampling, Interpolation_Rate_16_48) {
-  TestInterpolation(16000, 48000);
-}
+TEST(Resampling, Interpolation_Rate_16_48) { TestInterpolation(16000, 48000); }
 
 // Rate change by the smallest-possible increment will be used as micro-SRC, to
 // synchronize multiple physically-distinct output devices. This rate ratio also

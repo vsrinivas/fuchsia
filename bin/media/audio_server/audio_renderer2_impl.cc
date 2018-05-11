@@ -451,12 +451,9 @@ void AudioRenderer2Impl::Flush(FlushCallback callback) {
   pause_time_frac_frames_valid_ = false;
 }
 
-void AudioRenderer2Impl::FlushNoReply() {
-  Flush(nullptr);
-}
+void AudioRenderer2Impl::FlushNoReply() { Flush(nullptr); }
 
-void AudioRenderer2Impl::Play(int64_t reference_time,
-                              int64_t media_time,
+void AudioRenderer2Impl::Play(int64_t reference_time, int64_t media_time,
                               PlayCallback callback) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
 
@@ -593,13 +590,9 @@ void AudioRenderer2Impl::Pause(PauseCallback callback) {
   cleanup.cancel();
 }
 
-void AudioRenderer2Impl::PauseNoReply() {
-  Pause(nullptr);
-}
+void AudioRenderer2Impl::PauseNoReply() { Pause(nullptr); }
 
-void AudioRenderer2Impl::SetGainMute(float gain,
-                                     bool mute,
-                                     uint32_t flags,
+void AudioRenderer2Impl::SetGainMute(float gain, bool mute, uint32_t flags,
                                      SetGainMuteCallback callback) {
   auto cleanup = fbl::MakeAutoCall([this]() { Shutdown(); });
   bool dirty = false;
@@ -638,8 +631,7 @@ void AudioRenderer2Impl::SetGainMute(float gain,
   cleanup.cancel();
 }
 
-void AudioRenderer2Impl::SetGainMuteNoReply(float gain,
-                                            bool mute,
+void AudioRenderer2Impl::SetGainMuteNoReply(float gain, bool mute,
                                             uint32_t flags) {
   SetGainMute(gain, mute, flags, nullptr);
 }
@@ -668,11 +660,8 @@ void AudioRenderer2Impl::ReportNewMinClockLeadTime() {
 
 AudioRenderer2Impl::AudioPacketRefV2::AudioPacketRefV2(
     fbl::RefPtr<fbl::RefCountedVmoMapper> vmo_ref,
-    AudioRenderer2::SendPacketCallback callback,
-    AudioPacket packet,
-    AudioServerImpl* server,
-    uint32_t frac_frame_len,
-    int64_t start_pts)
+    AudioRenderer2::SendPacketCallback callback, AudioPacket packet,
+    AudioServerImpl* server, uint32_t frac_frame_len, int64_t start_pts)
     : AudioPacketRef(server, frac_frame_len, start_pts),
       vmo_ref_(std::move(vmo_ref)),
       callback_(callback),
@@ -682,17 +671,12 @@ AudioRenderer2Impl::AudioPacketRefV2::AudioPacketRefV2(
 
 // Shorthand to save horizontal space for the thunks which follow.
 void AudioRenderer2Impl::GainControlBinding::SetGainMute(
-    float gain,
-    bool mute,
-    uint32_t flags,
-    SetGainMuteCallback callback) {
+    float gain, bool mute, uint32_t flags, SetGainMuteCallback callback) {
   owner_->SetGainMute(gain, mute, flags, callback);
 }
 
 void AudioRenderer2Impl::GainControlBinding::SetGainMuteNoReply(
-    float gain,
-    bool mute,
-    uint32_t flags) {
+    float gain, bool mute, uint32_t flags) {
   owner_->SetGainMuteNoReply(gain, mute, flags);
 }
 

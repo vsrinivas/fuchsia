@@ -28,8 +28,7 @@ class AudioCapturerImpl : public AudioObject, public AudioCapturer {
  public:
   static fbl::RefPtr<AudioCapturerImpl> Create(
       fidl::InterfaceRequest<AudioCapturer> audio_capturer_request,
-      AudioServerImpl* owner,
-      bool loopback);
+      AudioServerImpl* owner, bool loopback);
 
   bool loopback() const { return loopback_; }
   void SetInitialFormat(AudioMediaTypeDetails format)
@@ -144,16 +143,14 @@ class AudioCapturerImpl : public AudioObject, public AudioCapturer {
 
   AudioCapturerImpl(
       fidl::InterfaceRequest<AudioCapturer> audio_capturer_request,
-      AudioServerImpl* owner,
-      bool loopback);
+      AudioServerImpl* owner, bool loopback);
 
   // AudioCapturer FIDL implementation
   void GetMediaType(GetMediaTypeCallback cbk) final;
   void SetMediaType(MediaType media_type) final;
   void SetGain(float gain) final;
   void SetPayloadBuffer(zx::vmo payload_buf_vmo) final;
-  void CaptureAt(uint32_t offset_frames,
-                 uint32_t num_frames,
+  void CaptureAt(uint32_t offset_frames, uint32_t num_frames,
                  CaptureAtCallback cbk) final;
   void Flush() final;
   void FlushWithCallback(FlushWithCallbackCallback cbk) final;
@@ -187,8 +184,7 @@ class AudioCapturerImpl : public AudioObject, public AudioCapturer {
       FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
   // Bookkeeping helper.
-  void UpdateFormat(media::AudioSampleFormat sample_format,
-                    uint32_t channels,
+  void UpdateFormat(media::AudioSampleFormat sample_format, uint32_t channels,
                     uint32_t frames_per_second)
       FXL_LOCKS_EXCLUDED(mix_domain_->token());
 

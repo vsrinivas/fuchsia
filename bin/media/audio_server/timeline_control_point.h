@@ -61,8 +61,7 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
 
   // Get the TimelineFunction for the reference_time (which should be 'now',
   // approximately).
-  void SnapshotCurrentFunction(int64_t reference_time,
-                               TimelineFunction* out,
+  void SnapshotCurrentFunction(int64_t reference_time, TimelineFunction* out,
                                uint32_t* generation = nullptr);
 
   // Sets the current end_of_stream status published by the control point.
@@ -79,8 +78,7 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
   void GetTimelineConsumer(
       fidl::InterfaceRequest<TimelineConsumer> timeline_consumer) override;
 
-  void SetProgramRange(uint64_t program,
-                       int64_t min_pts,
+  void SetProgramRange(uint64_t program, int64_t min_pts,
                        int64_t max_pts) override;
 
   void Prime(PrimeCallback callback) override;

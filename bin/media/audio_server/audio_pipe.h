@@ -6,9 +6,9 @@
 
 #include <memory>
 
+#include <fuchsia/cpp/media.h>
 #include "garnet/bin/media/audio_server/audio_packet_ref.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
-#include <fuchsia/cpp/media.h>
 #include "lib/media/transport/media_packet_consumer_base.h"
 
 namespace media {
@@ -28,9 +28,7 @@ class AudioPipe : public MediaPacketConsumerBase {
     friend class AudioPipe;
     AudioPacketRefV1(
         std::unique_ptr<MediaPacketConsumerBase::SuppliedPacket> packet,
-        AudioServerImpl* server,
-        uint32_t frac_frame_len,
-        int64_t start_pts);
+        AudioServerImpl* server, uint32_t frac_frame_len, int64_t start_pts);
 
     std::unique_ptr<MediaPacketConsumerBase::SuppliedPacket> supplied_packet_;
   };

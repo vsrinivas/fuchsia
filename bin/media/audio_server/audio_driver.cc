@@ -114,8 +114,7 @@ void AudioDriver::SnapshotRingBuffer(RingBufferSnapshot* snapshot) const {
 AudioMediaTypeDetailsPtr AudioDriver::GetSourceFormat() const {
   std::lock_guard<std::mutex> lock(configured_format_lock_);
 
-  if (!configured_format_)
-    return nullptr;
+  if (!configured_format_) return nullptr;
 
   AudioMediaTypeDetailsPtr result;
   fidl::Clone(configured_format_, &result);
@@ -161,8 +160,7 @@ zx_status_t AudioDriver::GetSupportedFormats() {
 }
 
 zx_status_t AudioDriver::Configure(uint32_t frames_per_second,
-                                   uint32_t channels,
-                                   AudioSampleFormat fmt,
+                                   uint32_t channels, AudioSampleFormat fmt,
                                    zx_duration_t min_ring_buffer_duration) {
   // TODO(johngro) : Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
@@ -366,11 +364,8 @@ zx_status_t AudioDriver::SetPlugDetectEnabled(bool enabled) {
 }
 
 zx_status_t AudioDriver::ReadMessage(
-    const fbl::RefPtr<::dispatcher::Channel>& channel,
-    void* buf,
-    uint32_t buf_size,
-    uint32_t* bytes_read_out,
-    zx::handle* handle_out) {
+    const fbl::RefPtr<::dispatcher::Channel>& channel, void* buf,
+    uint32_t buf_size, uint32_t* bytes_read_out, zx::handle* handle_out) {
   FXL_DCHECK(buf != nullptr);
   FXL_DCHECK(bytes_read_out != nullptr);
   FXL_DCHECK(handle_out != nullptr);
@@ -597,8 +592,7 @@ zx_status_t AudioDriver::ProcessGetFormatsResponse(
 }
 
 zx_status_t AudioDriver::ProcessSetFormatResponse(
-    const audio_stream_cmd_set_format_resp_t& resp,
-    zx::channel rb_channel) {
+    const audio_stream_cmd_set_format_resp_t& resp, zx::channel rb_channel) {
   if (state_ != State::Configuring_SettingFormat) {
     FXL_LOG(ERROR) << "Received unexpected set format response while in state "
                    << static_cast<uint32_t>(state_);
@@ -730,8 +724,7 @@ zx_status_t AudioDriver::ProcessGetFifoDepthResponse(
 }
 
 zx_status_t AudioDriver::ProcessGetBufferResponse(
-    const audio_rb_cmd_get_buffer_resp_t& resp,
-    zx::vmo rb_vmo) {
+    const audio_rb_cmd_get_buffer_resp_t& resp, zx::vmo rb_vmo) {
   if (state_ != State::Configuring_GettingRingBuffer) {
     FXL_LOG(ERROR) << "Received unexpected get buffer response while in state "
                    << static_cast<uint32_t>(state_);

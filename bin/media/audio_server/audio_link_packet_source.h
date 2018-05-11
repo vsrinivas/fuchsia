@@ -24,8 +24,7 @@ namespace audio {
 class AudioLinkPacketSource : public AudioLink {
  public:
   static std::shared_ptr<AudioLinkPacketSource> Create(
-      fbl::RefPtr<AudioObject> source,
-      fbl::RefPtr<AudioObject> dest);
+      fbl::RefPtr<AudioObject> source, fbl::RefPtr<AudioObject> dest);
   ~AudioLinkPacketSource() override;
 
   // Accessor for the format info assigned to this link.

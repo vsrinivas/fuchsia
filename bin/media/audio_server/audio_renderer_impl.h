@@ -22,8 +22,7 @@ class AudioRendererImpl
   virtual void OnRenderRange(int64_t presentation_time, uint32_t duration) = 0;
 
   virtual void SnapshotCurrentTimelineFunction(
-      int64_t reference_time,
-      TimelineFunction* out,
+      int64_t reference_time, TimelineFunction* out,
       uint32_t* generation = nullptr) = 0;
 
   void SetThrottleOutput(
@@ -49,7 +48,7 @@ class AudioRendererImpl
  protected:
   AudioRendererImpl();
 
-  virtual void ReportNewMinClockLeadTime() { }
+  virtual void ReportNewMinClockLeadTime() {}
 
   fbl::RefPtr<AudioRendererFormatInfo> format_info_;
   float db_gain_ = 0.0;

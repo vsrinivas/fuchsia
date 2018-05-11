@@ -37,8 +37,7 @@ class SampleNormalizer;
 
 template <typename SType>
 class SampleNormalizer<
-    SType,
-    typename std::enable_if<std::is_same<SType, uint8_t>::value>::type> {
+    SType, typename std::enable_if<std::is_same<SType, uint8_t>::value>::type> {
  public:
   static inline int32_t Read(const SType* src) {
     return (static_cast<int32_t>(*src) - 0x80) << (kAudioPipelineWidth - 8);
@@ -47,8 +46,7 @@ class SampleNormalizer<
 
 template <typename SType>
 class SampleNormalizer<
-    SType,
-    typename std::enable_if<std::is_same<SType, int16_t>::value>::type> {
+    SType, typename std::enable_if<std::is_same<SType, int16_t>::value>::type> {
  public:
   // Called frequently; expecting optimizing compiler to take advantage of
   // constexpr kAudioPipelineWidth to eliminate the conditional.
@@ -61,8 +59,7 @@ class SampleNormalizer<
 
 template <typename SType>
 class SampleNormalizer<
-    SType,
-    typename std::enable_if<std::is_same<SType, float>::value>::type> {
+    SType, typename std::enable_if<std::is_same<SType, float>::value>::type> {
  public:
   static inline int32_t Read(const SType* src) {
     // 1. constrain value to [-1.0, +1.0]; 2. scale to fixed-point nominal range
@@ -85,17 +82,15 @@ template <ScalerType ScaleType, typename Enable = void>
 class SampleScaler;
 
 template <ScalerType ScaleType>
-class SampleScaler<
-    ScaleType,
-    typename std::enable_if<(ScaleType == ScalerType::MUTED)>::type> {
+class SampleScaler<ScaleType, typename std::enable_if<(
+                                  ScaleType == ScalerType::MUTED)>::type> {
  public:
   static inline int32_t Scale(int32_t, Gain::AScale) { return 0; }
 };
 
 template <ScalerType ScaleType>
-class SampleScaler<
-    ScaleType,
-    typename std::enable_if<(ScaleType == ScalerType::NE_UNITY)>::type> {
+class SampleScaler<ScaleType, typename std::enable_if<(
+                                  ScaleType == ScalerType::NE_UNITY)>::type> {
  public:
   static inline int32_t Scale(int32_t val, Gain::AScale scale) {
     // Called extremely frequently: 1 COMPARE, 1 MUL, 1 ADD, 1 SHIFT
@@ -108,25 +103,20 @@ class SampleScaler<
 };
 
 template <ScalerType ScaleType>
-class SampleScaler<
-    ScaleType,
-    typename std::enable_if<(ScaleType == ScalerType::EQ_UNITY)>::type> {
+class SampleScaler<ScaleType, typename std::enable_if<(
+                                  ScaleType == ScalerType::EQ_UNITY)>::type> {
  public:
   static inline int32_t Scale(int32_t val, Gain::AScale) { return val; }
 };
 
 // Template to read normalized source samples, and combine channels if required.
-template <typename SType,
-          size_t SChCount,
-          size_t DChCount,
+template <typename SType, size_t SChCount, size_t DChCount,
           typename Enable = void>
 class SrcReader;
 
 template <typename SType, size_t SChCount, size_t DChCount>
 class SrcReader<
-    SType,
-    SChCount,
-    DChCount,
+    SType, SChCount, DChCount,
     typename std::enable_if<(SChCount == DChCount) ||
                                 ((SChCount == 1) && (DChCount == 2)),
                             void>::type> {
@@ -139,9 +129,7 @@ class SrcReader<
 
 template <typename SType, size_t SChCount, size_t DChCount>
 class SrcReader<
-    SType,
-    SChCount,
-    DChCount,
+    SType, SChCount, DChCount,
     typename std::enable_if<(SChCount == 2) && (DChCount == 1)>::type> {
  public:
   static constexpr size_t DstPerSrc = 1;
@@ -159,24 +147,20 @@ template <ScalerType ScaleType, bool DoAccumulate, typename Enable = void>
 class DstMixer;
 
 template <ScalerType ScaleType, bool DoAccumulate>
-class DstMixer<ScaleType,
-               DoAccumulate,
+class DstMixer<ScaleType, DoAccumulate,
                typename std::enable_if<DoAccumulate == false>::type> {
  public:
-  static inline constexpr int32_t Mix(int32_t,
-                                      int32_t sample,
+  static inline constexpr int32_t Mix(int32_t, int32_t sample,
                                       Gain::AScale scale) {
     return SampleScaler<ScaleType>::Scale(sample, scale);
   }
 };
 
 template <ScalerType ScaleType, bool DoAccumulate>
-class DstMixer<ScaleType,
-               DoAccumulate,
+class DstMixer<ScaleType, DoAccumulate,
                typename std::enable_if<DoAccumulate == true>::type> {
  public:
-  static inline constexpr int32_t Mix(int32_t dst,
-                                      int32_t sample,
+  static inline constexpr int32_t Mix(int32_t dst, int32_t sample,
                                       Gain::AScale scale) {
     // TODO(mpuryear): MTWN-83 Accumulator should clamp to int32.
     return SampleScaler<ScaleType>::Scale(sample, scale) + dst;

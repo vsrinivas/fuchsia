@@ -19,8 +19,7 @@ class AudioDevice;
 class AudioLinkRingBufferSource : public AudioLink {
  public:
   static std::shared_ptr<AudioLinkRingBufferSource> Create(
-      fbl::RefPtr<AudioDevice> source,
-      fbl::RefPtr<AudioObject> dest);
+      fbl::RefPtr<AudioDevice> source, fbl::RefPtr<AudioObject> dest);
 
  private:
   AudioLinkRingBufferSource(fbl::RefPtr<AudioDevice> source,

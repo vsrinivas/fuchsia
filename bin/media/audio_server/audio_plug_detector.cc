@@ -34,9 +34,7 @@ static const struct {
     {.path = "/dev/class/audio-input", .is_input = true},
 };
 
-AudioPlugDetector::~AudioPlugDetector() {
-  FXL_DCHECK(manager_ == nullptr);
-}
+AudioPlugDetector::~AudioPlugDetector() { FXL_DCHECK(manager_ == nullptr); }
 
 MediaResult AudioPlugDetector::Start(AudioDeviceManager* manager) {
   FXL_DCHECK(manager != nullptr);
@@ -84,11 +82,9 @@ void AudioPlugDetector::Stop() {
   watchers_.clear();
 }
 
-void AudioPlugDetector::AddAudioDevice(int dir_fd,
-                                       const std::string& name,
+void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name,
                                        bool is_input) {
-  if (manager_ == nullptr)
-    return;
+  if (manager_ == nullptr) return;
 
   // Open the device node.
   fxl::UniqueFD dev_node(::openat(dir_fd, name.c_str(), O_RDONLY));

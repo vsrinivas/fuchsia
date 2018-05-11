@@ -9,11 +9,10 @@
 namespace media {
 namespace audio {
 
-AudioRendererImpl::AudioRendererImpl()
-  : AudioObject(Type::Renderer) { }
+AudioRendererImpl::AudioRendererImpl() : AudioObject(Type::Renderer) {}
 
 void AudioRendererImpl::SetThrottleOutput(
-      std::shared_ptr<AudioLinkPacketSource> throttle_output_link) {
+    std::shared_ptr<AudioLinkPacketSource> throttle_output_link) {
   FXL_DCHECK(throttle_output_link != nullptr);
   FXL_DCHECK(throttle_output_link_ == nullptr);
   throttle_output_link_ = std::move(throttle_output_link);

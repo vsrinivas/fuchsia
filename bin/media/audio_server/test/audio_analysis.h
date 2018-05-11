@@ -12,24 +12,18 @@ namespace audio {
 namespace test {
 
 // Convert double into decibels, from RMS *level* (hence 20dB per 10x, not 10).
-inline double ValToDb(double value) {
-  return std::log10(value) * 20.0;
-}
+inline double ValToDb(double value) { return std::log10(value) * 20.0; }
 
 // Numerically compare two buffers of integers. A bool (default true) represents
 // whether we expect the comparison to fail (for error logging purposes).
 template <typename T>
-bool CompareBuffers(const T* actual,
-                    const T* expected,
-                    uint32_t buf_size,
+bool CompareBuffers(const T* actual, const T* expected, uint32_t buf_size,
                     bool expect_to_pass = true);
 
 // Numerically compare buffer of integers to a specific value. A bool represents
 // whether we expect the comparison to fail (for error logging purposes).
 template <typename T>
-bool CompareBufferToVal(const T* buf,
-                        T val,
-                        uint32_t buf_size,
+bool CompareBufferToVal(const T* buf, T val, uint32_t buf_size,
                         bool expect_to_pass = true);
 
 // Print values of a double-float array -- used during debugging, not test-runs
@@ -45,26 +39,18 @@ void DisplayVals(const double* buf, uint32_t buf_size);
 // in radians, so runs from -M_PI to +M_PI); 'accum' represents whether to add
 // the results to current contents of the buffer, or to overwrite it.
 template <typename T>
-void GenerateCosine(T* buffer,
-                    uint32_t buf_size,
-                    double freq,
-                    bool accumulate,
-                    double magn = 1.0,
-                    double phase = 0.0);
+void GenerateCosine(T* buffer, uint32_t buf_size, double freq, bool accumulate,
+                    double magn = 1.0, double phase = 0.0);
+
 template <typename T>
-void AccumulateCosine(T* buffer,
-                      uint32_t buf_size,
-                      double freq,
-                      double magn = 1.0,
-                      double phase = 0.0) {
+void AccumulateCosine(T* buffer, uint32_t buf_size, double freq,
+                      double magn = 1.0, double phase = 0.0) {
   GenerateCosine(buffer, buf_size, freq, true, magn, phase);
 }
+
 template <typename T>
-void OverwriteCosine(T* buffer,
-                     uint32_t buf_size,
-                     double freq,
-                     double magn = 1.0,
-                     double phase = 0.0) {
+void OverwriteCosine(T* buffer, uint32_t buf_size, double freq,
+                     double magn = 1.0, double phase = 0.0) {
   GenerateCosine(buffer, buf_size, freq, false, magn, phase);
 }
 
@@ -83,11 +69,8 @@ void FFT(double* real, double* imag, uint32_t buf_size);
 // all other content. Useful for frequency response and signal-to-noise.
 // Internally uses an FFT, so buf_size must be a power-of-two.
 template <typename T>
-void MeasureAudioFreq(T* audio,
-                      uint32_t buf_size,
-                      uint32_t freq,
-                      double* magn_signal,
-                      double* magn_other = nullptr);
+void MeasureAudioFreq(T* audio, uint32_t buf_size, uint32_t freq,
+                      double* magn_signal, double* magn_other = nullptr);
 }  // namespace test
 }  // namespace audio
 }  // namespace media

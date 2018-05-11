@@ -58,8 +58,7 @@ class AudioLink {
   }
 
  protected:
-  AudioLink(SourceType source_type,
-            fbl::RefPtr<AudioObject> source,
+  AudioLink(SourceType source_type, fbl::RefPtr<AudioObject> source,
             fbl::RefPtr<AudioObject> dest);
 
  private:

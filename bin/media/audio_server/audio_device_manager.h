@@ -84,8 +84,7 @@ class AudioDeviceManager {
 
   // Handles a plugged/unplugged state change for the supplied audio device.
   void HandlePlugStateChange(const fbl::RefPtr<AudioDevice>& device,
-                             bool plugged,
-                             zx_time_t plug_time);
+                             bool plugged, zx_time_t plug_time);
 
   // Master gain control.  Only safe to access via the main message loop thread.
   void SetMasterGain(float db_gain);

@@ -138,8 +138,7 @@ void TimelineControlPoint::GetTimelineConsumer(
   consumer_binding_.Bind(std::move(timeline_consumer));
 }
 
-void TimelineControlPoint::SetProgramRange(uint64_t program,
-                                           int64_t min_pts,
+void TimelineControlPoint::SetProgramRange(uint64_t program, int64_t min_pts,
                                            int64_t max_pts) {
   if (program_range_set_callback_) {
     program_range_set_callback_(program, min_pts, max_pts);

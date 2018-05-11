@@ -4,25 +4,24 @@
 
 #pragma once
 
+#include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/intrusive_double_list.h>
-#include <functional>
 #include <stdint.h>
+#include <functional>
 
 namespace media {
 namespace audio {
 
 class AudioServerImpl;
 
-class PendingFlushToken :
-  public fbl::RefCounted<PendingFlushToken>,
-  public fbl::Recyclable<PendingFlushToken>,
-  public fbl::DoublyLinkedListable<fbl::unique_ptr<PendingFlushToken>> {
+class PendingFlushToken
+    : public fbl::RefCounted<PendingFlushToken>,
+      public fbl::Recyclable<PendingFlushToken>,
+      public fbl::DoublyLinkedListable<fbl::unique_ptr<PendingFlushToken>> {
  public:
   static fbl::RefPtr<PendingFlushToken> Create(
-      AudioServerImpl* const server,
-      const std::function<void()>& callback) {
+      AudioServerImpl* const server, const std::function<void()>& callback) {
     return fbl::AdoptRef(new PendingFlushToken(server, callback));
   }
 
@@ -38,7 +37,7 @@ class PendingFlushToken :
   // renderer.
   PendingFlushToken(AudioServerImpl* const server,
                     const std::function<void()>& callback)
-    : server_(server), callback_(callback) {}
+      : server_(server), callback_(callback) {}
 
   ~PendingFlushToken();
 

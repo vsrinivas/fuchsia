@@ -10,8 +10,8 @@
 #include <atomic>
 #include <vector>
 
-#include "garnet/bin/media/audio_server/constants.h"
 #include <fuchsia/cpp/media.h>
+#include "garnet/bin/media/audio_server/constants.h"
 
 namespace media {
 namespace audio {
@@ -54,8 +54,7 @@ class AtomicGenerationId {
 // and leave the in/out params as they were.
 zx_status_t SelectBestFormat(
     const std::vector<audio_stream_format_range_t>& fmts,
-    uint32_t* frames_per_second_inout,
-    uint32_t* channels_inout,
+    uint32_t* frames_per_second_inout, uint32_t* channels_inout,
     AudioSampleFormat* sample_format_inout);
 
 }  // namespace audio

@@ -18,9 +18,7 @@ AudioDevice::AudioDevice(AudioObject::Type type, AudioDeviceManager* manager)
   FXL_DCHECK((type == Type::Input) || (type == Type::Output));
 }
 
-AudioDevice::~AudioDevice() {
-  FXL_DCHECK(is_shutting_down());
-}
+AudioDevice::~AudioDevice() { FXL_DCHECK(is_shutting_down()); }
 
 void AudioDevice::Wakeup() {
   FXL_DCHECK(mix_wakeup_ != nullptr);
