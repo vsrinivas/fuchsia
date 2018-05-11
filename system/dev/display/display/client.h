@@ -98,6 +98,7 @@ private:
     Controller* controller_;
     ClientProxy* proxy_;
     bool is_vc_;
+    uint64_t console_fb_display_id_ = -1;
 
     zx::channel server_handle_;
     uint64_t next_image_id_ = 1; // Only INVALID_ID == 0 is invalid

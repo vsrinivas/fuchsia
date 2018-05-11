@@ -149,7 +149,6 @@ void Controller::EnableBacklight(bool enable) {
 void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
     zxlogf(TRACE, "i915: hotplug detected %d %d\n", ddi, long_pulse);
     fbl::unique_ptr<DisplayDevice> device = nullptr;
-    bool was_kernel_framebuffer = false;
     uint64_t display_added = INVALID_DISPLAY_ID;
     uint64_t display_removed = INVALID_DISPLAY_ID;
 
@@ -165,23 +164,10 @@ void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
                     return;
                 }
                 device = display_devices_.erase(i);
-                was_kernel_framebuffer = i == 0;
                 break;
             }
         }
         if (device) { // Existing device was unplugged
-            if (was_kernel_framebuffer) {
-                if (display_devices_.is_empty()) {
-                    zx_set_framebuffer_vmo(get_root_resource(), ZX_HANDLE_INVALID, 0, 0, 0, 0, 0);
-                } else {
-                    fbl::unique_ptr<DisplayDevice>& new_device = display_devices_[0];
-                    zx_set_framebuffer_vmo(get_root_resource(),
-                                           new_device->framebuffer_vmo().get(),
-                                           static_cast<uint32_t>(new_device->framebuffer_size()),
-                                           new_device->format(), new_device->width(),
-                                           new_device->height(), new_device->stride());
-                }
-            }
             zxlogf(SPEW, "Display unplugged\n");
             display_removed = device->id();
         } else { // New device was plugged in
@@ -589,14 +575,6 @@ zx_status_t Controller::AddDisplay(fbl::unique_ptr<DisplayDevice>&& display) {
     } else {
         zxlogf(ERROR, "i915: failed to add display device\n");
         return ZX_ERR_NO_MEMORY;
-    }
-
-    if (display_devices_.size() == 1) {
-        fbl::unique_ptr<DisplayDevice>& new_device = display_devices_[0];
-        zx_set_framebuffer_vmo(get_root_resource(), new_device->framebuffer_vmo().get(),
-                               static_cast<uint32_t>(new_device->framebuffer_size()),
-                               new_device->format(), new_device->width(),
-                               new_device->height(), new_device->stride());
     }
 
     next_id_++;

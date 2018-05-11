@@ -396,6 +396,31 @@ void Client::ApplyConfig() {
             config_applied_ = false;
         }
 
+        if (is_vc_) {
+            if (display_config.displayed_image) {
+                // If the virtcon is displaying an image, set it as the kernel's framebuffer vmo. If
+                // the the virtcon is displaying images on multiple displays, this ends executing
+                // multiple times, but the extra work is okay since the virtcon shouldn't be
+                // flipping images.
+                console_fb_display_id_ = display_config.id;
+
+                auto& fb = display_config.displayed_image;
+                uint32_t stride = DC_IMPL_CALL(compute_linear_stride,
+                                               fb->info().width, fb->info().pixel_format);
+                uint32_t size =
+                        fb->info().height * ZX_PIXEL_FORMAT_BYTES(fb->info().pixel_format) * stride;
+                zx_set_framebuffer_vmo(get_root_resource(),
+                                       fb->vmo().get(), size, fb->info().pixel_format,
+                                       fb->info().width, fb->info().height, stride);
+            } else if (console_fb_display_id_ == display_config.id) {
+                // If this display doesnt' have an image but it was the display which had the
+                // kernel's framebuffer, make the kernel drop the reference. Note that this
+                // executes when tearing down the the virtcon client.
+                zx_set_framebuffer_vmo(get_root_resource(), ZX_HANDLE_INVALID, 0, 0, 0, 0, 0);
+                console_fb_display_id_ = -1;
+            }
+        }
+
         // Skip the display since there's nothing to show
         if (display_config.displayed_image == nullptr) {
             continue;

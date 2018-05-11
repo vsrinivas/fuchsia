@@ -29,7 +29,6 @@ public:
 
     void ApplyConfiguration(display_config_t* config);
 
-    void Flush();
     bool Init();
     bool Resume();
     // Method to allow the display device to handle hotplug events. Returns
@@ -38,8 +37,6 @@ public:
     virtual bool HandleHotplug(bool long_pulse) { return false; }
 
     uint64_t id() const { return id_; }
-    const zx::vmo& framebuffer_vmo() const { return framebuffer_vmo_; }
-    uint32_t framebuffer_size() const { return framebuffer_size_; }
     registers::Ddi ddi() const { return ddi_; }
     registers::Pipe pipe() const { return pipe_; }
     registers::Trans trans() const { return trans_; }
@@ -49,10 +46,6 @@ public:
     uint32_t width() const { return info_.v_addressable; }
     uint32_t height() const { return info_.h_addressable; }
     uint32_t format() const { return ZX_PIXEL_FORMAT_ARGB_8888; }
-    uint32_t stride() const {
-        return registers::PlaneSurfaceStride::compute_pixel_stride(
-                IMAGE_TYPE_SIMPLE, width(), format());
-    }
 
 protected:
     // Queries the DisplayDevice to see if there is a supported display attached. If
@@ -79,11 +72,6 @@ private:
 
     PowerWellRef ddi_power_;
     PowerWellRef pipe_power_;
-
-    uintptr_t framebuffer_;
-    uint32_t framebuffer_size_;
-    zx::vmo framebuffer_vmo_;
-    fbl::unique_ptr<GttRegion> fb_gfx_addr_;
 
     bool inited_;
     display_mode_t info_;

@@ -49,6 +49,7 @@ public:
 
     bool IsReady() const { return wait_fence_ == nullptr; }
 
+    const zx::vmo& vmo() { return vmo_; }
 private:
     image_t info_;
     Controller* controller_;
