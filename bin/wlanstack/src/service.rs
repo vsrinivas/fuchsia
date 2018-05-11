@@ -27,7 +27,11 @@ pub fn device_service(
 ) -> impl Future<Item = (), Error = Never> {
     DeviceServiceImpl {
         state: devmgr,
-        on_open: |_, _| future::ok(()),
+        on_open: |state, control_handle| {
+            debug!("on_open");
+            state.lock().add_listener(Box::new(control_handle));
+            future::ok(())
+        },
 
         list_phys: |state, c| {
             debug!("list_phys");
@@ -96,14 +100,6 @@ pub fn device_service(
                         Err(e) => c.send(e.into_raw()),
                     })
                 })
-        },
-
-        register_listener: |state, c| {
-            catch_and_log_err("register_listener", || {
-                debug!("register listener");
-                state.lock().add_listener(Box::new(c.controller().clone()));
-                c.send(zx::Status::OK.into_raw())
-            })
         },
     }.serve(channel)
         .recover(|e| eprintln!("error running wlan device service: {:?}", e))

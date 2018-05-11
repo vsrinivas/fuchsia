@@ -21,7 +21,7 @@ mod config;
 mod device;
 
 use config::Config;
-use failure::{Error, Fail, ResultExt};
+use failure::{Error, ResultExt};
 use futures::prelude::*;
 use wlan_service::DeviceServiceMarker;
 
@@ -33,23 +33,12 @@ fn main() -> Result<(), Error> {
         .context("failed to connect to device service")?;
 
     let event_stream = wlan_svc.take_event_stream();
-    let fut = wlan_svc
-        .register_listener()
-        .map_err(|e| Error::from(e.context("failed to register listener")))
-        .and_then(|status| {
-            zx::Status::ok(status)
-                .map_err(|e| Error::from(e.context("failed to register listener")))
-                .into_future()
-        })
-        .and_then(|_| {
-            let listener = device::Listener::new(wlan_svc, cfg);
-            event_stream
-                .for_each(move |evt| device::handle_event(&listener, evt))
-                .err_into()
-        });
+    let listener = device::Listener::new(wlan_svc, cfg);
+    let fut = event_stream
+        .for_each(move |evt| device::handle_event(&listener, evt))
+        .err_into();
 
     executor
         .run_singlethreaded(fut)
-        .map_err(|e| Error::from(e))
         .map(|_| ())
 }

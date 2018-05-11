@@ -51,11 +51,6 @@ interface DeviceService {
   // 20: reserved for StopIface
   21: DestroyIface(DestroyIfaceRequest req) -> (int32 @status);
 
-  // Register a DeviceListener to be notified of device events. A listener is
-  // unregistered by closing the channel.
-  // TODO(tkilbourn): remove this when FIDL-169 is fixed.
-  0x100: RegisterListener() -> (int32 @status);
-
   // Device events
   0x1000: -> OnPhyAdded(uint16 id);
   0x1001: -> OnPhyRemoved(uint16 id);
