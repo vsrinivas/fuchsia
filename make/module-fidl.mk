@@ -38,12 +38,14 @@ MODULE_PKG_TAG := "[fidl]"
 endif
 
 $(MODULE_PKG_FILE): _NAME := $(MODULE_NAME)
+$(MODULE_PKG_FILE): _LIBRARY := $(MODULE_FIDL_LIBRARY)
 $(MODULE_PKG_FILE): _SRCS := $(if $(MODULE_PKG_SRCS),$(MODULE_PKG_TAG) $(sort $(MODULE_PKG_SRCS)))
 $(MODULE_PKG_FILE): $(MODULE_RULESMK) make/module-fidl.mk
 	@$(call BUILDECHO,creating fidl library package $@ ;)\
 	$(MKDIR) ;\
 	echo "[package]" > $@ ;\
 	echo "name=$(_NAME)" >> $@ ;\
+	echo "library=$(_LIBRARY)" >> $@ ;\
 	echo "arch=fidl" >> $@ ;\
 	echo "type=fidl" >> $@ ;\
 	for i in $(_SRCS) ; do echo $$i >> $@ ; done ;\
