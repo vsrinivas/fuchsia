@@ -13,6 +13,7 @@ use std::ptr;
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]
+#[repr(transparent)]
 pub struct Vmo(Handle);
 impl_handle_based!(Vmo);
 impl Cookied for Vmo {}
@@ -103,8 +104,8 @@ impl Vmo {
 }
 
 /// VM Object opcodes
-#[repr(C)]
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(transparent)]
 pub struct VmoOp(u32);
 impl VmoOp {
     pub fn from_raw(raw: u32) -> VmoOp {

@@ -2,7 +2,7 @@ use sys;
 
 bitflags! {
     /// Flags to VMAR routines
-    #[repr(C)]
+    #[repr(transparent)]
     pub struct VmarFlags: u32 {
         const PERM_READ          = sys::ZX_VM_FLAG_PERM_READ;
         const PERM_WRITE         = sys::ZX_VM_FLAG_PERM_WRITE;

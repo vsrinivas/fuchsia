@@ -14,6 +14,7 @@ use {sys, ok};
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]
+#[repr(transparent)]
 pub struct Port(Handle);
 impl_handle_based!(Port);
 

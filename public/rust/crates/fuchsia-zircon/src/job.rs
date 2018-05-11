@@ -10,5 +10,6 @@ use {AsHandleRef, HandleBased, Handle, HandleRef};
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]
+#[repr(transparent)]
 pub struct Job(Handle);
 impl_handle_based!(Job);

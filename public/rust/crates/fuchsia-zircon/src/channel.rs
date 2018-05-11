@@ -13,6 +13,7 @@ use std::mem;
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq, Hash)]
+#[repr(transparent)]
 pub struct Channel(Handle);
 impl_handle_based!(Channel);
 impl Peered for Channel {}

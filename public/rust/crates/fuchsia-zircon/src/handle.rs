@@ -14,6 +14,7 @@ use std::mem;
 /// returned by the kernel. These conversions don't change the underlying
 /// representation, but do change the type and thus what operations are available.
 #[derive(Debug, Eq, PartialEq, Hash)]
+#[repr(transparent)]
 pub struct Handle(sys::zx_handle_t);
 
 impl AsHandleRef for Handle {
@@ -60,6 +61,7 @@ impl Handle {
 ///
 /// Mostly useful as part of a `WaitItem`.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[repr(transparent)]
 pub struct HandleRef<'a> {
     handle: sys::zx_handle_t,
     phantom: PhantomData<&'a sys::zx_handle_t>,

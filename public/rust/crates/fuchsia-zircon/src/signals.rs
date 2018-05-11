@@ -6,7 +6,7 @@ bitflags! {
     /// See
     /// [Objects and signals](https://fuchsia.googlesource.com/zircon/+/master/docs/concepts.md#Objects-and-Signals)
     /// in the Zircon kernel documentation. Note: the names of signals are still in flux.
-    #[repr(C)]
+    #[repr(transparent)]
     pub struct Signals: zx_signals_t {
         const NONE          = ZX_SIGNAL_NONE;
         const OBJECT_ALL    = ZX_OBJECT_SIGNAL_ALL;

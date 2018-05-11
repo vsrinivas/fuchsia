@@ -14,12 +14,14 @@ use std::ptr;
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]
+#[repr(transparent)]
 pub struct Socket(Handle);
 impl_handle_based!(Socket);
 impl Peered for Socket {}
 
 
 bitflags! {
+    #[repr(transparent)]
     pub struct SocketOpts: u32 {
         const STREAM = 0 << 0;
         const DATAGRAM = 1 << 0;

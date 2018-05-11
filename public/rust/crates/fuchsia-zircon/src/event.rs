@@ -12,6 +12,7 @@ use {sys, ok};
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]
+#[repr(transparent)]
 pub struct Event(Handle);
 impl_handle_based!(Event);
 impl Cookied for Event {}

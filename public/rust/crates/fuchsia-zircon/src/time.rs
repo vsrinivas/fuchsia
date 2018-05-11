@@ -10,9 +10,11 @@ use std::ops;
 use std::time as stdtime;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(transparent)]
 pub struct Duration(sys::zx_duration_t);
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(transparent)]
 pub struct Time(sys::zx_time_t);
 
 impl From<stdtime::Duration> for Duration {
@@ -262,6 +264,7 @@ pub fn ticks_per_second() -> u64 {
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]
+#[repr(transparent)]
 pub struct Timer(Handle);
 impl_handle_based!(Timer);
 
