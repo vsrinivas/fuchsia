@@ -7,8 +7,8 @@
 #include <fdio/io.h>
 #include <fdio/util.h>
 #include <launchpad/launchpad.h>
-#include <lib/async/cpp/wait.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
@@ -146,8 +146,8 @@ class Service {
       return;
     }
 
-    std::unique_ptr<async::Wait> waiter = std::make_unique<async::Wait>(
-        process.get(), ZX_PROCESS_TERMINATED);
+    std::unique_ptr<async::Wait> waiter =
+        std::make_unique<async::Wait>(process.get(), ZX_PROCESS_TERMINATED);
     waiter->set_handler(
         [this, process = std::move(process), job = std::move(child_job)](
             async_t*, async::Wait*, zx_status_t status,
@@ -164,11 +164,10 @@ class Service {
     FXL_CHECK(job.kill() == ZX_OK);
 
     // Find the waiter.
-    auto i =
-        std::find_if(process_waiters_.begin(), process_waiters_.end(),
-                     [&process](const std::unique_ptr<async::Wait>& w) {
-                       return w->object() == process.get();
-                     });
+    auto i = std::find_if(process_waiters_.begin(), process_waiters_.end(),
+                          [&process](const std::unique_ptr<async::Wait>& w) {
+                            return w->object() == process.get();
+                          });
     // And remove it.
     if (i != process_waiters_.end()) {
       process_waiters_.erase(i);
