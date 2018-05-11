@@ -7,7 +7,7 @@
 
 #include <list>
 
-#include <fuchsia/cpp/tracelink.h>
+#include <fuchsia/cpp/fuchsia.tracelink.h>
 #include <fuchsia/cpp/tracing.h>
 
 #include "garnet/bin/trace_manager/config.h"
@@ -22,7 +22,8 @@
 
 namespace tracing {
 
-class TraceManager : public tracelink::Registry, public TraceController {
+class TraceManager : public fuchsia::tracelink::Registry,
+                     public TraceController {
  public:
   TraceManager(component::ApplicationContext* context, const Config& config);
   ~TraceManager() override;
@@ -36,7 +37,7 @@ class TraceManager : public tracelink::Registry, public TraceController {
 
   // |TraceRegistry| implementation.
   void RegisterTraceProvider(
-      fidl::InterfaceHandle<tracelink::Provider> provider) override;
+      fidl::InterfaceHandle<fuchsia::tracelink::Provider> provider) override;
 
   void FinalizeTracing();
   void LaunchConfiguredProviders();

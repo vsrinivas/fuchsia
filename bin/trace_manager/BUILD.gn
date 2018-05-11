@@ -36,7 +36,7 @@ executable("bin") {
 
 # This eventually should be replaced by the real target under //zircon/public.
 fidl("tracelink_fidl") {
-  name = "tracelink"
+  name = "fuchsia.tracelink"
   sources = [
     "//zircon/system/fidl/tracelink/tracelink.fidl",
   ]

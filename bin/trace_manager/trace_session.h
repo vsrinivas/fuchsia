@@ -10,7 +10,7 @@
 #include <list>
 #include <vector>
 
-#include <fuchsia/cpp/tracelink.h>
+#include <fuchsia/cpp/fuchsia.tracelink.h>
 #include <lib/zx/socket.h>
 #include <lib/zx/vmo.h>
 
