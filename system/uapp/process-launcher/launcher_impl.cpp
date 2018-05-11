@@ -11,6 +11,7 @@
 #include <lib/fidl/cpp/message_buffer.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
+#include <lib/zx/vmar.h>
 #include <stdint.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
@@ -99,6 +100,7 @@ zx_status_t LauncherImpl::ReadAndDispatchMessage(fidl::MessageBuffer* buffer) {
     case fuchsia_process_LauncherAddHandlesOrdinal:
         return AddHandles(fbl::move(message));
     default:
+        fprintf(stderr, "process-launcher: error: Unknown message ordinal: %d\n", message.ordinal());
         return ZX_ERR_NOT_SUPPORTED;
     }
 }
@@ -107,7 +109,7 @@ zx_status_t LauncherImpl::Launch(fidl::MessageBuffer* buffer, fidl::Message mess
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(&fuchsia_process_LauncherLaunchRequestTable, &error_msg);
     if (status != ZX_OK) {
-        fprintf(stderr, "process-launcher: error: Launcher::Launch: %s\n", error_msg);
+        fprintf(stderr, "process-launcher: error: Launch: %s\n", error_msg);
         return status;
     }
 
@@ -134,13 +136,13 @@ zx_status_t LauncherImpl::Launch(fidl::MessageBuffer* buffer, fidl::Message mess
     // make a synchronous call into the loader service to read the PT_INTERP,
     // but this handle was provided by our client, which means our client can
     // hang the process-launcher.
-    zx::channel old_loader(launchpad_use_loader_service(lp, info->loader));
+    zx::channel old_ldsvc(launchpad_use_loader_service(lp, ldsvc_.release()));
 
     launchpad_load_from_vmo(lp, info->executable);
     launchpad_set_args(lp, static_cast<int>(args.size()), args.get());
     launchpad_set_environ(lp, environs.get());
     launchpad_set_nametable(lp, nametable.size(), nametable.get());
-    launchpad_add_handles(lp, ids_.size(), ids_.get(), reinterpret_cast<zx_handle_t*>(handles_.get()));
+    launchpad_add_handles(lp, ids_.size(), reinterpret_cast<zx_handle_t*>(handles_.get()), ids_.get());
 
     fidl::Builder builder = buffer->CreateBuilder();
     fidl_message_header_t* header = builder.New<fidl_message_header_t>();
@@ -148,27 +150,30 @@ zx_status_t LauncherImpl::Launch(fidl::MessageBuffer* buffer, fidl::Message mess
     header->ordinal = ordinal;
     fuchsia_process_LaunchResult* result = builder.New<fuchsia_process_LaunchResult>();
 
-    result->status = launchpad_go(lp, &result->process, &error_msg);
-    if (result->status == ZX_OK) {
-        zx_handle_t root_vmar = launchpad_get_root_vmar_handle(lp);
-        // We ignore any errors from zx_handle_duplicate because there's nothing
-        // for us to do with the error other than return ZX_HANDLE_INVALID in
-        // result.root_vmar, which is what will happen anyway.
-        zx_handle_duplicate(root_vmar, ZX_RIGHT_SAME_RIGHTS, &result->root_vmar);
-    } else {
+    zx::vmar root_vmar;
+    status = zx_handle_duplicate(launchpad_get_root_vmar_handle(lp), ZX_RIGHT_SAME_RIGHTS,
+                                 root_vmar.reset_and_get_address());
+    if (status != ZX_OK)
+        launchpad_abort(lp, status, "failed to get root vmar");
+
+    status = launchpad_go(lp, &result->process, &error_msg);
+
+    result->status = status;
+    if (status == ZX_OK) {
+        result->root_vmar = root_vmar.release();
+    } else if (error_msg) {
         uint32_t len = static_cast<uint32_t>(strlen(error_msg));
         result->error_message.size = len;
         result->error_message.data = builder.NewArray<char>(len);
         strncpy(result->error_message.data, error_msg, len);
     }
-    message.set_bytes(builder.Finalize());
 
-    launchpad_destroy(lp);
+    message.set_bytes(builder.Finalize());
     Reset();
 
     status = message.Encode(&fuchsia_process_LauncherLaunchResponseTable, &error_msg);
     if (status != ZX_OK) {
-        fprintf(stderr, "process-launcher: error: Launcher::Launch: %s\n", error_msg);
+        fprintf(stderr, "process-launcher: error: Launch: %s\n", error_msg);
         return status;
     }
     return message.Write(channel_.get(), 0);
@@ -178,7 +183,7 @@ zx_status_t LauncherImpl::AddArgs(fidl::Message message) {
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(&fuchsia_process_LauncherAddArgsRequestTable, &error_msg);
     if (status != ZX_OK) {
-        fprintf(stderr, "process-launcher: error: Launcher::AddArgs: %s\n", error_msg);
+        fprintf(stderr, "process-launcher: error: AddArgs: %s\n", error_msg);
         return status;
     }
     PushStrings(message.GetPayloadAs<fidl_vector_t>(), &args_);
@@ -189,7 +194,7 @@ zx_status_t LauncherImpl::AddEnvirons(fidl::Message message) {
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(&fuchsia_process_LauncherAddEnvironsRequestTable, &error_msg);
     if (status != ZX_OK) {
-        fprintf(stderr, "process-launcher: error: Launcher::AddEnvirons: %s\n", error_msg);
+        fprintf(stderr, "process-launcher: error: AddEnvirons: %s\n", error_msg);
         return status;
     }
     PushStrings(message.GetPayloadAs<fidl_vector_t>(), &environs_);
@@ -200,7 +205,7 @@ zx_status_t LauncherImpl::AddNames(fidl::Message message) {
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(&fuchsia_process_LauncherAddNamesRequestTable, &error_msg);
     if (status != ZX_OK) {
-        fprintf(stderr, "process-launcher: error: Launcher::AddNames: %s\n", error_msg);
+        fprintf(stderr, "process-launcher: error: AddNames: %s\n", error_msg);
         return status;
     }
     fidl_vector_t* payload = message.GetPayloadAs<fidl_vector_t>();
@@ -217,14 +222,19 @@ zx_status_t LauncherImpl::AddHandles(fidl::Message message) {
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(&fuchsia_process_LauncherAddHandlesRequestTable, &error_msg);
     if (status != ZX_OK) {
-        fprintf(stderr, "process-launcher: error: Launcher::AddHandles: %s\n", error_msg);
+        fprintf(stderr, "process-launcher: error: AddHandles: %s\n", error_msg);
         return status;
     }
     fidl_vector_t* payload = message.GetPayloadAs<fidl_vector_t>();
     fuchsia_process_HandleInfo* handles = static_cast<fuchsia_process_HandleInfo*>(payload->data);
     for (size_t i = 0; i < payload->count; ++i) {
-        ids_.push_back(handles[i].id);
-        handles_.push_back(zx::handle(handles[i].handle));
+        if (handles[i].id == PA_SVC_LOADER) {
+            // We need to feed PA_SVC_LOADER to launchpad through a different API.
+            ldsvc_.reset(handles[i].handle);
+        } else {
+            ids_.push_back(handles[i].id);
+            handles_.push_back(zx::handle(handles[i].handle));
+        }
     }
     return ZX_OK;
 }
@@ -235,6 +245,7 @@ void LauncherImpl::Reset() {
     nametable_.reset();
     ids_.reset();
     handles_.reset();
+    ldsvc_.reset();
 }
 
 void LauncherImpl::NotifyError(zx_status_t error) {

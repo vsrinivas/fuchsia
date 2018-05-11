@@ -4,7 +4,9 @@
 
 #pragma once
 
+#include <fbl/intrusive_wavl_tree.h>
 #include <fbl/string.h>
+#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/message_buffer.h>
@@ -13,7 +15,7 @@
 
 namespace process {
 
-class LauncherImpl {
+class LauncherImpl : public fbl::WAVLTreeContainable<fbl::unique_ptr<LauncherImpl>> {
 public:
     using ErrorCallback = fbl::Function<void(zx_status_t)>;
 
@@ -25,6 +27,8 @@ public:
     void set_error_handler(ErrorCallback error_handler) {
         error_handler_ = fbl::move(error_handler);
     }
+
+    LauncherImpl* GetKey() const { return const_cast<LauncherImpl*>(this); }
 
 private:
     void OnHandleReady(async_t* async, async::WaitBase* wait, zx_status_t status,
@@ -50,6 +54,7 @@ private:
     fbl::Vector<fbl::String> nametable_;
     fbl::Vector<uint32_t> ids_;
     fbl::Vector<zx::handle> handles_;
+    zx::handle ldsvc_;
 };
 
 } // namespace process

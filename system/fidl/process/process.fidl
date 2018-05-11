@@ -6,7 +6,6 @@ library fuchsia.process;
 
 // TODO: Add when Zircon's build supports library dependencies.
 // using io;
-// using ldsvc;
 
 struct HandleInfo {
     // The handle to use for this argument.
@@ -33,10 +32,6 @@ struct LaunchInfo {
 
     // The job in which to create the process.
     handle<job> job;
-
-    // The shared library loader to use for the process.
-    // TODO: Use ldsvc.Loader when Zircon's build supports library dependencies.
-    handle<channel> loader;
 
     // The name to assign to the created process.
     string name;

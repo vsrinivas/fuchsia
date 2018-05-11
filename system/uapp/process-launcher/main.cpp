@@ -4,6 +4,7 @@
 
 #include "launcher_impl.h"
 
+#include <fbl/intrusive_wavl_tree.h>
 #include <fbl/unique_ptr.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/svc/outgoing.h>
@@ -21,19 +22,26 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    fbl::WAVLTree<process::LauncherImpl*, fbl::unique_ptr<process::LauncherImpl>> launchers;
+
     outgoing.public_dir()->AddEntry(
         "fuchsia.process.Launcher",
-        fbl::MakeRefCounted<fs::Service>([async](zx::channel request) {
+        fbl::MakeRefCounted<fs::Service>([async, &launchers](zx::channel request) {
             auto launcher = fbl::make_unique<process::LauncherImpl>(fbl::move(request));
+
             zx_status_t status = launcher->Begin(async);
             if (status != ZX_OK) {
                 fprintf(stderr, "process-launcher: error: Failed to serve request: %d (%s).\n",
                         status, zx_status_get_string(status));
                 return status;
             }
-            launcher->set_error_handler([launcher = fbl::move(launcher)](zx_status_t status) mutable {
+
+            auto ptr = launcher.get();
+            launchers.insert(fbl::move(launcher));
+
+            ptr->set_error_handler([ptr, &launchers](zx_status_t status) {
                 // If we encounter an error, we tear down the launcher.
-                launcher.reset();
+                launchers.erase(ptr);
             });
             return ZX_OK;
         }));
