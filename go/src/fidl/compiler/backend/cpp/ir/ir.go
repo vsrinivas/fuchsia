@@ -325,12 +325,20 @@ func changeIfReserved(i types.Identifier, ext string) string {
 	return str
 }
 
-func formatNamespace(library types.LibraryIdentifier) string {
+func formatLibrary(library types.LibraryIdentifier, sep string) string {
 	parts := []string{}
 	for _, part := range library {
 		parts = append(parts, string(part))
 	}
-	return changeIfReserved(types.Identifier(strings.Join(parts, "::")), "")
+	return changeIfReserved(types.Identifier(strings.Join(parts, sep)), "")
+}
+
+func formatNamespace(library types.LibraryIdentifier) string {
+	return formatLibrary(library, "::")
+}
+
+func formatLibraryPrefix(library types.LibraryIdentifier) string {
+	return formatLibrary(library, "_")
 }
 
 func formatDestructor(eci types.EncodedCompoundIdentifier) string {
@@ -339,10 +347,10 @@ func formatDestructor(eci types.EncodedCompoundIdentifier) string {
 }
 
 type compiler struct {
-	namespace       string
-	decls           *types.DeclMap
-	library         types.LibraryIdentifier
-	compiledLibrary string
+	namespace    string
+	symbolPrefix string
+	decls        *types.DeclMap
+	library      types.LibraryIdentifier
 }
 
 func (c *compiler) isInExternalLibrary(ci types.CompoundIdentifier) bool {
@@ -550,11 +558,11 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			v.HasRequest,
 			c.compileParameterArray(v.Request),
 			v.RequestSize,
-			fmt.Sprintf("%s_%s%sRequestTable", c.compiledLibrary, r.Name, v.Name),
+			fmt.Sprintf("%s_%s%sRequestTable", c.symbolPrefix, r.Name, v.Name),
 			v.HasResponse,
 			c.compileParameterArray(v.Response),
 			v.ResponseSize,
-			fmt.Sprintf("%s_%s%s%s", c.compiledLibrary, r.Name, v.Name, responseTypeNameSuffix),
+			fmt.Sprintf("%s_%s%s%s", c.symbolPrefix, r.Name, v.Name, responseTypeNameSuffix),
 			callbackType,
 			fmt.Sprintf("%s_%s_ResponseHandler", r.Name, v.Name),
 			fmt.Sprintf("%s_%s_Responder", r.Name, v.Name),
@@ -586,7 +594,7 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 	r := Struct{
 		c.namespace,
 		name,
-		fmt.Sprintf("%s_%sTable", c.compiledLibrary, name),
+		fmt.Sprintf("%s_%sTable", c.symbolPrefix, name),
 		[]StructMember{},
 		val.Size,
 	}
@@ -629,9 +637,9 @@ func Compile(r types.Root) Root {
 	library := types.ParseLibraryName(r.Name)
 	c := compiler{
 		formatNamespace(library),
+		formatLibraryPrefix(library),
 		&r.Decls,
 		types.ParseLibraryName(r.Name),
-		string(r.Name),
 	}
 
 	root.Library = library
