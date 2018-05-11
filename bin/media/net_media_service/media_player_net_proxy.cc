@@ -19,29 +19,19 @@ namespace media_player {
 
 // static
 std::shared_ptr<MediaPlayerNetProxy> MediaPlayerNetProxy::Create(
-    fidl::StringPtr device_name,
-    fidl::StringPtr service_name,
-    fidl::InterfaceRequest<MediaPlayer> request,
-    NetMediaServiceImpl* owner) {
+    fidl::StringPtr device_name, fidl::StringPtr service_name,
+    fidl::InterfaceRequest<MediaPlayer> request, NetMediaServiceImpl* owner) {
   return std::shared_ptr<MediaPlayerNetProxy>(new MediaPlayerNetProxy(
       device_name, service_name, std::move(request), owner));
 }
 
 MediaPlayerNetProxy::MediaPlayerNetProxy(
-    fidl::StringPtr device_name,
-    fidl::StringPtr service_name,
-    fidl::InterfaceRequest<MediaPlayer> request,
-    NetMediaServiceImpl* owner)
-    : NetMediaServiceImpl::MultiClientProduct<MediaPlayer>(this,
-                                                           std::move(request),
-                                                           owner),
+    fidl::StringPtr device_name, fidl::StringPtr service_name,
+    fidl::InterfaceRequest<MediaPlayer> request, NetMediaServiceImpl* owner)
+    : NetMediaServiceImpl::MultiClientProduct<MediaPlayer>(
+          this, std::move(request), owner),
       status_(MediaPlayerStatus::New()) {
   FXL_DCHECK(owner);
-
-  status_publisher_.SetCallbackRunner(
-      [this](GetStatusCallback callback, uint64_t version) {
-        callback(version, fidl::Clone(*status_));
-      });
 
   // Fire |StatusChanged| event for the new client.
   SendStatusUpdates();
@@ -108,11 +98,6 @@ void MediaPlayerNetProxy::Pause() {
 void MediaPlayerNetProxy::Seek(int64_t position) {
   message_relay_.SendMessage(
       Serializer::Serialize(MediaPlayerInMessage::SeekRequest(position)));
-}
-
-void MediaPlayerNetProxy::GetStatus(uint64_t version_last_seen,
-                                    GetStatusCallback callback) {
-  status_publisher_.Get(version_last_seen, callback);
 }
 
 void MediaPlayerNetProxy::SetGain(float gain) {
@@ -197,8 +182,6 @@ void MediaPlayerNetProxy::HandleReceivedMessage(
 }
 
 void MediaPlayerNetProxy::SendStatusUpdates() {
-  status_publisher_.SendUpdates();
-
   for (auto& binding : bindings().bindings()) {
     binding->events().StatusChanged(fidl::Clone(*status_));
   }

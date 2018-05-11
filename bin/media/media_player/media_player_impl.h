@@ -13,7 +13,6 @@
 #include "garnet/bin/media/media_player/player/player.h"
 #include "garnet/bin/media/media_player/render/fidl_audio_renderer.h"
 #include "garnet/bin/media/media_player/render/fidl_video_renderer.h"
-#include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/functional/closure.h"
@@ -49,9 +48,6 @@ class MediaPlayerImpl : public MediaPlayer {
   void Pause() override;
 
   void Seek(int64_t position) override;
-
-  void GetStatus(uint64_t version_last_seen,
-                 GetStatusCallback callback) override;
 
   void SetGain(float gain) override;
 
@@ -133,7 +129,6 @@ class MediaPlayerImpl : public MediaPlayer {
   // The minimum program range PTS to be used for SetProgramRange.
   int64_t program_range_min_pts_ = media::kMinTime;
 
-  media::FidlPublisher<GetStatusCallback> status_publisher_;
   MediaPlayerStatus status_;
 };
 

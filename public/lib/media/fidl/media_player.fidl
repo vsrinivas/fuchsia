@@ -28,19 +28,11 @@ interface MediaPlayer {
   // Seeks to the specified position, specified in nanoseconds.
   6: Seek(int64 position);
 
-  // DEPRECATED - use StatusChanged.
-  // TODO(dalesat): Remove
-  // Gets the status. To get the status immediately, call
-  // GetStatus(kInitialStatus). To get updates thereafter, pass the version
-  // sent in the previous callback.
-  7: GetStatus(uint64 version_last_seen)
-      -> (uint64 version, MediaPlayerStatus @status);
-
   // See AudioRenderer.SetGain.
-  8: SetGain(float32 db_gain);
+  7: SetGain(float32 db_gain);
 
   // Creates a video view.
-  9: CreateView(views_v1.ViewManager view_manager,
+  8: CreateView(views_v1.ViewManager view_manager,
                 request<views_v1_token.ViewOwner> view_owner);
 
   // Used only for testing.
@@ -48,14 +40,14 @@ interface MediaPlayer {
   // Sets the audio renderer to use. The audio renderer can only be set on a
   // new player for which none of the SetXxxSource methods or SetAudioRenderer
   // itself have been called. This method is ignored otherwise.
-  10: SetAudioRenderer(media.AudioRenderer2? audio_renderer);
+  9: SetAudioRenderer(media.AudioRenderer2? audio_renderer);
 
   // Adds a new binding to this MediaPlayer.
-  11: AddBinding(request<MediaPlayer> media_player);
+  10: AddBinding(request<MediaPlayer> media_player);
 
   // Provides current status immediately after binding and whenever status
   // changes thereafter.
-  12: -> StatusChanged(MediaPlayerStatus @status);
+  11: -> StatusChanged(MediaPlayerStatus @status);
 };
 
 // MediaPlayer status information.

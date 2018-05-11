@@ -10,7 +10,6 @@
 
 #include "garnet/bin/media/net_media_service/media_player_messages.h"
 #include "garnet/bin/media/net_media_service/net_media_service_impl.h"
-#include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/netconnector/cpp/message_relay.h"
 
@@ -22,10 +21,8 @@ class MediaPlayerNetProxy
       public MediaPlayer {
  public:
   static std::shared_ptr<MediaPlayerNetProxy> Create(
-      fidl::StringPtr device_name,
-      fidl::StringPtr service_name,
-      fidl::InterfaceRequest<MediaPlayer> request,
-      NetMediaServiceImpl* owner);
+      fidl::StringPtr device_name, fidl::StringPtr service_name,
+      fidl::InterfaceRequest<MediaPlayer> request, NetMediaServiceImpl* owner);
 
   ~MediaPlayerNetProxy() override;
 
@@ -43,9 +40,6 @@ class MediaPlayerNetProxy
 
   void Seek(int64_t position) override;
 
-  void GetStatus(uint64_t version_last_seen,
-                 GetStatusCallback callback) override;
-
   void SetGain(float gain) override;
 
   void CreateView(fidl::InterfaceHandle<views_v1::ViewManager> view_manager,
@@ -58,8 +52,7 @@ class MediaPlayerNetProxy
   void AddBinding(fidl::InterfaceRequest<MediaPlayer> request) override;
 
  private:
-  MediaPlayerNetProxy(fidl::StringPtr device_name,
-                      fidl::StringPtr service_name,
+  MediaPlayerNetProxy(fidl::StringPtr device_name, fidl::StringPtr service_name,
                       fidl::InterfaceRequest<MediaPlayer> request,
                       NetMediaServiceImpl* owner);
 
@@ -70,7 +63,6 @@ class MediaPlayerNetProxy
   void SendStatusUpdates();
 
   netconnector::MessageRelay message_relay_;
-  media::FidlPublisher<GetStatusCallback> status_publisher_;
   MediaPlayerStatusPtr status_;
   media::TimelineFunction remote_to_local_;
 

@@ -33,7 +33,6 @@ executable("bin") {
 
   deps = [
     ":serialization",
-    "//garnet/bin/media/util",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",

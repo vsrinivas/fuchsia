@@ -30,7 +30,6 @@ executable("media_player_bin") {
     "//garnet/bin/media/media_player/player",
     "//garnet/bin/media/media_player/render",
     "//garnet/bin/media/media_player/util",
-    "//garnet/bin/media/util",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
