@@ -262,7 +262,7 @@ public:
     static bool Create(int fd, fbl::RefPtr<VmoClient>* out);
     bool CheckWrite(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t len);
     bool CheckRead(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t len);
-    bool Txn(block_fifo_request_t* requests, size_t count) {
+    bool Transaction(block_fifo_request_t* requests, size_t count) {
         BEGIN_HELPER;
         ASSERT_EQ(block_fifo_txn(client_, &requests[0], count), ZX_OK); END_HELPER;
     }
@@ -313,7 +313,7 @@ public:
             request.group = client_->group();
             request.vmoid = vmoid_;
             request.opcode = BLOCKIO_CLOSE_VMO;
-            client_->Txn(&request, 1);
+            client_->Transaction(&request, 1);
         }
     }
 
@@ -365,7 +365,7 @@ bool VmoClient::CheckWrite(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t 
     request.length = static_cast<uint32_t>(len / info_.block_size);
     request.vmo_offset = buf_off / info_.block_size;
     request.dev_offset = dev_off / info_.block_size;
-    ASSERT_TRUE(Txn(&request, 1));
+    ASSERT_TRUE(Transaction(&request, 1));
     END_HELPER;
 }
 
@@ -389,7 +389,7 @@ bool VmoClient::CheckRead(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t l
     request.length = static_cast<uint32_t>(len / info_.block_size);
     request.vmo_offset = buf_off / info_.block_size;
     request.dev_offset = dev_off / info_.block_size;
-    ASSERT_TRUE(Txn(&request, 1));
+    ASSERT_TRUE(Transaction(&request, 1));
 
     // Read from the registered VMO
     ASSERT_EQ(vbuf->vmo_.read(out.get(), buf_off, len), ZX_OK);

@@ -8,7 +8,7 @@
 #include <stddef.h>
 #include <string.h>
 
-#include <block-client/client.h>
+#include <block-client/cpp/client.h>
 #include <crypto/bytes.h>
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
@@ -70,7 +70,7 @@ inline fvm::extent_descriptor_t* GetExtent(fvm::partition_descriptor_t* pd, size
 
 // Registers a FIFO
 zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, zx_handle_t vmo,
-                                vmoid_t* vmoid_out, fifo_client_t** client_out) {
+                                vmoid_t* vmoid_out, block_client::Client* client_out) {
     zx::fifo fifo;
     if (ioctl_block_get_fifos(fd.get(), fifo.reset_and_get_address()) < 0) {
         ERROR("Couldn't attach fifo to partition\n");
@@ -87,16 +87,12 @@ zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, zx_handle_t vmo,
         ERROR("Couldn't attach VMO\n");
         return ZX_ERR_IO;
     }
-    if (block_fifo_create_client(fifo.release(), client_out) != ZX_OK) {
-        ERROR("Couldn't create block client\n");
-        return ZX_ERR_IO;
-    }
-    return ZX_OK;
+    return block_client::Client::Create(fbl::move(fifo), client_out);
 }
 
 // Stream an FVM partition to disk.
 zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
-                               fzl::MappedVmo* mvmo, fifo_client_t* client, size_t block_size,
+                               fzl::MappedVmo* mvmo, const block_client::Client& client, size_t block_size,
                                block_fifo_request_t* request) {
     size_t slice_size = reader->Image()->slice_size;
     const size_t vmo_cap = mvmo->GetSize();
@@ -137,7 +133,7 @@ zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
             request->dev_offset = offset / block_size;
 
             ssize_t r;
-            if ((r = block_fifo_txn(client, request, 1)) != ZX_OK) {
+            if ((r = client.Transaction(request, 1)) != ZX_OK) {
                 ERROR("Error writing partition data\n");
                 return static_cast<zx_status_t>(r);
             }
@@ -163,7 +159,7 @@ zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
             request->dev_offset = offset / block_size;
 
             zx_status_t status;
-            if ((status = block_fifo_txn(client, request, 1)) != ZX_OK) {
+            if ((status = client.Transaction(request, 1)) != ZX_OK) {
                 ERROR("Error writing trailing zeroes\n");
                 return status;
             }
@@ -216,13 +212,12 @@ zx_status_t WriteVmoToBlock(fzl::MappedVmo* mvmo, size_t vmo_size,
     ZX_ASSERT(vmo_size % info.block_size == 0);
 
     vmoid_t vmoid;
-    fifo_client_t* client;
+    block_client::Client client;
     zx_status_t status = RegisterFastBlockIo(partition_fd, mvmo->GetVmo(), &vmoid, &client);
     if (status != ZX_OK) {
         ERROR("Cannot register fast block I/O\n");
         return status;
     }
-    const auto closer = fbl::MakeAutoCall([&]() { block_fifo_release_client(client); });
 
     block_fifo_request_t request;
     request.group = 0;
@@ -238,7 +233,7 @@ zx_status_t WriteVmoToBlock(fzl::MappedVmo* mvmo, size_t vmo_size,
     request.vmo_offset = 0;
     request.dev_offset = 0;
 
-    if ((status = block_fifo_txn(client, &request, 1)) != ZX_OK) {
+    if ((status = client.Transaction(&request, 1)) != ZX_OK) {
         ERROR("Error writing partition data: %d\n", status);
         return status;
     }
@@ -611,14 +606,13 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
     // Now that all partitions are preallocated, begin streaming data to them.
     for (size_t p = 0; p < hdr->partition_count; p++) {
         vmoid_t vmoid;
-        fifo_client_t* client;
+        block_client::Client client;
         zx_status_t status = RegisterFastBlockIo(parts[p].new_part,
                                                  mvmo->GetVmo(), &vmoid, &client);
         if (status != ZX_OK) {
             ERROR("Failed to register fast block IO\n");
             return status;
         }
-        const auto closer = fbl::MakeAutoCall([&]() { block_fifo_release_client(client); });
 
         block_fifo_request_t request;
         request.group = 0;

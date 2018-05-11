@@ -64,8 +64,7 @@ zx_status_t Bcache::Create(fbl::unique_ptr<Bcache>* out, fbl::unique_fd fd, uint
         return ZX_ERR_NO_MEMORY;
     }
 #ifdef __Fuchsia__
-    zx_status_t status;
-    zx_handle_t fifo;
+    zx::fifo fifo;
     ssize_t r;
 
     if ((r = ioctl_block_get_info(bc->fd_.get(), &bc->info_)) < 0) {
@@ -74,12 +73,12 @@ zx_status_t Bcache::Create(fbl::unique_ptr<Bcache>* out, fbl::unique_fd fd, uint
     } else if (kMinfsBlockSize % bc->info_.block_size != 0) {
         FS_TRACE_ERROR("minfs: minfs Block size not multiple of underlying block size\n");
         return ZX_ERR_BAD_STATE;
-    } else if ((r = ioctl_block_get_fifos(bc->fd_.get(), &fifo)) < 0) {
+    } else if ((r = ioctl_block_get_fifos(bc->fd_.get(), fifo.reset_and_get_address())) < 0) {
         FS_TRACE_ERROR("minfs: Cannot acquire block device fifo: %" PRId64 "\n", r);
         return static_cast<zx_status_t>(r);
-    } else if ((status = block_fifo_create_client(fifo, &bc->fifo_client_)) != ZX_OK) {
-        FS_TRACE_ERROR("minfs: Cannot create block fifo client: %d\n", status);
-        zx_handle_close(fifo);
+    }
+    zx_status_t status;
+    if ((status = block_client::Client::Create(fbl::move(fifo), &bc->fifo_client_)) != ZX_OK) {
         return status;
     }
 #endif
@@ -113,9 +112,8 @@ Bcache::Bcache(fbl::unique_fd fd, uint32_t blockmax) :
 
 Bcache::~Bcache() {
 #ifdef __Fuchsia__
-    if (fifo_client_ != nullptr) {
+    if (fd_) {
         ioctl_block_fifo_close(fd_.get());
-        block_fifo_release_client(fifo_client_);
     }
 #endif
 }

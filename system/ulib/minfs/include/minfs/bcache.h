@@ -10,7 +10,7 @@
 #include <inttypes.h>
 
 #ifdef __Fuchsia__
-#include <block-client/client.h>
+#include <block-client/cpp/client.h>
 #include <fs/fvm.h>
 #include <lib/zx/vmo.h>
 #else
@@ -52,8 +52,8 @@ public:
 
     ssize_t GetDevicePath(char* out, size_t out_len);
     zx_status_t AttachVmo(zx_handle_t vmo, vmoid_t* out) const;
-    zx_status_t Txn(block_fifo_request_t* requests, size_t count) {
-        return block_fifo_txn(fifo_client_, requests, count);
+    zx_status_t Transaction(block_fifo_request_t* requests, size_t count) const {
+        return fifo_client_.Transaction(requests, count);
     }
 
     zx_status_t FVMQuery(fvm_info_t* info) {
@@ -119,7 +119,7 @@ private:
     Bcache(fbl::unique_fd fd, uint32_t blockmax);
 
 #ifdef __Fuchsia__
-    fifo_client_t* fifo_client_{}; // Fast path to interact with block device
+    block_client::Client fifo_client_{}; // Fast path to interact with block device
     block_info_t info_{};
     fbl::atomic<groupid_t> next_group_ = {};
 #else

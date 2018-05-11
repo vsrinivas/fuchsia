@@ -1086,7 +1086,7 @@ VnodeMinfs::~VnodeMinfs() {
         request_count++;
     }
     if (request_count) {
-        fs_->bc_->Txn(&request[0], request_count);
+        fs_->bc_->Transaction(&request[0], request_count);
     }
 #endif
 }

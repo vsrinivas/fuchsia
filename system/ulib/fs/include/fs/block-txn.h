@@ -105,7 +105,7 @@ inline zx_status_t BlockTxn<vmoid_t, Write, BlockSize, TxnHandler>::Flush() {
     }
     zx_status_t status = ZX_OK;
     if (requests_.size() != 0) {
-        status = handler_->Txn(requests_.get(), requests_.size());
+        status = handler_->Transaction(requests_.get(), requests_.size());
     }
     requests_.reset();
     return status;

@@ -10,15 +10,18 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/client.c \
+    $(LOCAL_DIR)/client.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/fbl \
     system/ulib/fs \
     system/ulib/sync \
 
 MODULE_LIBS := \
     system/ulib/c \
-    system/ulib/zircon \
     system/ulib/fdio \
+    system/ulib/zircon \
+    system/ulib/zx \
 
 MODULE_HEADER_DEPS := system/ulib/ddk
 

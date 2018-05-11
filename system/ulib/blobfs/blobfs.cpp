@@ -1168,7 +1168,7 @@ zx_status_t Blobfs::DetachVmo(vmoid_t vmoid) {
     request.group = BlockGroupID();
     request.vmoid = vmoid;
     request.opcode = BLOCKIO_CLOSE_VMO;
-    return Txn(&request, 1);
+    return Transaction(&request, 1);
 }
 
 zx_status_t Blobfs::AddInodes() {
@@ -1370,9 +1370,8 @@ Blobfs::~Blobfs() {
     ZX_ASSERT(open_hash_.is_empty());
     closed_hash_.clear();
 
-    if (fifo_client_ != nullptr) {
+    if (blockfd_) {
         ioctl_block_fifo_close(Fd());
-        block_fifo_release_client(fifo_client_);
     }
 }
 
@@ -1388,17 +1387,18 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const blobfs_info_t* info,
     fbl::AllocChecker ac;
     auto fs = fbl::unique_ptr<Blobfs>(new Blobfs(fbl::move(fd), info));
 
-    zx_handle_t fifo;
+    zx::fifo fifo;
     ssize_t r;
     if ((r = ioctl_block_get_info(fs->Fd(), &fs->block_info_)) < 0) {
         return static_cast<zx_status_t>(r);
     } else if (kBlobfsBlockSize % fs->block_info_.block_size != 0) {
         return ZX_ERR_IO;
-    } else if ((r = ioctl_block_get_fifos(fs->Fd(), &fifo)) < 0) {
+    } else if ((r = ioctl_block_get_fifos(fs->Fd(), fifo.reset_and_get_address())) < 0) {
         fprintf(stderr, "Failed to mount blobfs: Someone else is using the block device\n");
         return static_cast<zx_status_t>(r);
-    } else if ((status = block_fifo_create_client(fifo, &fs->fifo_client_)) != ZX_OK) {
-        zx_handle_close(fifo);
+    }
+
+    if ((status = block_client::Client::Create(fbl::move(fifo), &fs->fifo_client_)) != ZX_OK) {
         return status;
     }
 

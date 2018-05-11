@@ -57,7 +57,7 @@ zx_status_t WriteTxn::Flush() {
     }
 
     // Actually send the operations to the underlying block device.
-    zx_status_t status = bs_->Txn(blk_reqs, requests_.size());
+    zx_status_t status = bs_->Transaction(blk_reqs, requests_.size());
 
     if (bs_->CollectingMetrics()) {
         uint64_t sum = 0;
@@ -176,7 +176,7 @@ WritebackBuffer::~WritebackBuffer() {
         request.group = bs_->BlockGroupID();
         request.vmoid = buffer_vmoid_;
         request.opcode = BLOCKIO_CLOSE_VMO;
-        bs_->Txn(&request, 1);
+        bs_->Transaction(&request, 1);
     }
 }
 

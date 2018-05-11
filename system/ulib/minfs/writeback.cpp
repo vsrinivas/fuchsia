@@ -81,7 +81,7 @@ zx_status_t WriteTxn::Flush(zx_handle_t vmo, vmoid_t vmoid) {
     }
 
     // Actually send the operations to the underlying block device.
-    zx_status_t status = bc_->Txn(blk_reqs, requests_.size());
+    zx_status_t status = bc_->Transaction(blk_reqs, requests_.size());
 
     requests_.reset();
     return status;
@@ -194,7 +194,7 @@ WritebackBuffer::~WritebackBuffer() {
         request.group = bc_->BlockGroupID();
         request.vmoid = buffer_vmoid_;
         request.opcode = BLOCKIO_CLOSE_VMO;
-        bc_->Txn(&request, 1);
+        bc_->Transaction(&request, 1);
     }
 }
 

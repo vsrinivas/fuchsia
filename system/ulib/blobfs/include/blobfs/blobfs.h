@@ -15,7 +15,7 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/rle-bitmap.h>
-#include <block-client/client.h>
+#include <block-client/cpp/client.h>
 #include <digest/digest.h>
 #include <fbl/algorithm.h>
 #include <fbl/intrusive_double_list.h>
@@ -364,9 +364,9 @@ public:
     // Release an allocated vmoid.
     zx_status_t DetachVmo(vmoid_t vmoid);
 
-    zx_status_t Txn(block_fifo_request_t* requests, size_t count) {
-        TRACE_DURATION("blobfs", "Blobfs::Txn", "count", count);
-        return block_fifo_txn(fifo_client_, requests, count);
+    zx_status_t Transaction(block_fifo_request_t* requests, size_t count) {
+        TRACE_DURATION("blobfs", "Blobfs::Transaction", "count", count);
+        return fifo_client_.Transaction(requests, count);
     }
     uint32_t BlockSize() const { return block_info_.block_size; }
 
@@ -552,7 +552,7 @@ private:
     fbl::unique_fd blockfd_;
     block_info_t block_info_ = {};
     fbl::atomic<groupid_t> next_group_ = {};
-    fifo_client_t* fifo_client_ = {};
+    block_client::Client fifo_client_;
 
     RawBitmap block_map_ = {};
     vmoid_t block_map_vmoid_ = {};

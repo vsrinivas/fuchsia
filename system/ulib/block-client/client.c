@@ -5,12 +5,11 @@
 #include <assert.h>
 #include <unistd.h>
 
+#include <block-client/client.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 #include <sync/completion.h>
-
-#include "block-client/client.h"
 
 // Writes on a FIFO, repeating the write later if the FIFO is full.
 static zx_status_t do_write(zx_handle_t fifo, block_fifo_request_t* request, size_t count) {
@@ -73,6 +72,7 @@ typedef struct fifo_client {
 zx_status_t block_fifo_create_client(zx_handle_t fifo, fifo_client_t** out) {
     fifo_client_t* client = calloc(sizeof(fifo_client_t), 1);
     if (client == NULL) {
+        zx_handle_close(fifo);
         return ZX_ERR_NO_MEMORY;
     }
     client->fifo = fifo;

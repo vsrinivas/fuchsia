@@ -16,11 +16,12 @@ typedef struct fifo_client fifo_client_t;
 
 // Allocates a block fifo client. The client is thread-safe, as long
 // as each thread accessing the client uses a distinct reqid.
+// This function takes ownership of |fifo|.
 //
 // Valid groups are in the range [0, MAX_TXN_GROUP_COUNT).
 zx_status_t block_fifo_create_client(zx_handle_t fifo, fifo_client_t** out);
 
-// Frees a block fifo client
+// Frees a block fifo client.
 void block_fifo_release_client(fifo_client_t* client);
 
 // Sends 'count' block device requests and waits for a response.
