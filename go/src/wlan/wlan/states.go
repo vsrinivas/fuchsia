@@ -621,12 +621,13 @@ func (s *authState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
 		case mlme.AuthenticateResultCodesAuthFailureTimeout:
 			return newScanState(c), nil
 		case mlme.AuthenticateResultCodesAuthenticationRejected:
-			err := fmt.Errorf("Authentication rejected by %v (%v)", c.cfg.SSID, c.cfg.BSSID)
+			log.Printf("Authentication rejected by %v (%v), reset wlanstack state", c.cfg.SSID, c.cfg.BSSID)
 			c.cfg = nil
-			return newScanState(c), err
+			return newScanState(c), nil
 		default:
+			log.Printf("Authentication failed with result code %v, reset wlanstack state", v.ResultCode)
 			c.cfg = nil
-			return newScanState(c), fmt.Errorf("Authentication failed with result code %v", v.ResultCode)
+			return newScanState(c), nil
 		}
 	default:
 		return s, fmt.Errorf("unexpected message type: %T", v)
@@ -766,7 +767,7 @@ func (s *assocState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
 
 		if v.ResultCode == mlme.AssociateResultCodesSuccess {
 			if c.eapolC == nil {
-				log.Printf("WLAN connected (EAPOL)")
+				log.Printf("WLAN connected (Open Authentication)")
 			}
 			return newAssociatedState(), nil
 		} else {
@@ -867,12 +868,13 @@ func (s *associatedState) handleMLMEMsg(msg interface{}, c *Client) (state, erro
 		if debug {
 			PrintDeauthenticateIndication(v)
 		}
-		err := fmt.Errorf("DeauthenticateIndication received, reason code: %v", v.ReasonCode)
 		if v.ReasonCode == mlme.ReasonCodeInvalidAuthentication { // INVALID_AUTHENTICATION
-			err = fmt.Errorf("Invalid authentication (possibly a wrong password?) with %v (%v)", c.cfg.SSID, c.cfg.BSSID)
+			log.Printf("Invalid authentication (possibly a wrong password?) with %v (%v), reset wlanstack state", c.cfg.SSID, c.cfg.BSSID)
+		} else {
+			log.Printf("DeauthenticateIndication received, reason code: %v, reset wlanstack state", v.ReasonCode)
 		}
 		c.cfg = nil
-		return newScanState(c), err
+		return newScanState(c), nil
 	case *mlme.SignalReportIndication:
 		if debug {
 			PrintSignalReportIndication(v)
@@ -887,7 +889,7 @@ func (s *associatedState) handleMLMEMsg(msg interface{}, c *Client) (state, erro
 	case *mlme.EapolConfirm:
 		// TODO(hahnr): Evaluate response code.
 		if c.eapolC.KeyExchange().IsComplete() {
-			log.Printf("WLAN connected (Open Authentication)")
+			log.Printf("WLAN connected (EAPOL)")
 		}
 		return s, nil
 	default:

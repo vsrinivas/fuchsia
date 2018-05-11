@@ -163,7 +163,7 @@ func (c *Client) Run() {
 	watchingMLME := false
 	c.state = newQueryState()
 
-	// event_loop:
+event_loop:
 	for {
 		if mlmeTimeout, err = c.state.run(c); err != nil {
 			log.Printf("could not run state \"%v\": %v", c.state, err)
@@ -226,10 +226,7 @@ func (c *Client) Run() {
 		}
 		if err != nil {
 			log.Printf("%v", err)
-			// Need this because returned value will be nil if error is not nil
-			if nextState == nil {
-				nextState = newScanState(c)
-			}
+			break event_loop
 		}
 
 		if nextState != c.state {
