@@ -138,6 +138,8 @@ pub enum Error {
     ErrorNonceDoesntMatch,
     #[fail(display = "invalid IV; expected zeroed IV")]
     InvalidIv,
+    #[fail(display = "PMKSA was not yet established")]
+    PmksaNotEstablished,
 }
 
 impl From<std::io::Error> for Error {

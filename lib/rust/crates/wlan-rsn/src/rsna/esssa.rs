@@ -6,8 +6,22 @@ use auth;
 use eapol;
 use failure;
 use key::exchange;
+use key::exchange::Key;
+use key::gtk::Gtk;
+use key::ptk::Ptk;
 use rsna::{Role, SecAssocResult};
 use rsne::Rsne;
+use Error;
+
+struct Pmksa {
+    auth_method: auth::Method,
+    pmk: Option<Vec<u8>>,
+}
+
+struct Ptksa {
+    exchange_method: exchange::Method,
+    ptk: Option<Ptk>,
+}
 
 // IEEE Std 802.11-2016, 12.6.1.3.2
 pub struct EssSa {
@@ -17,65 +31,73 @@ pub struct EssSa {
     sta_rsne: Rsne,
     peer_addr: [u8; 6],
     peer_rsne: Rsne,
-    auth_method: auth::Method,
-    key_exchange: exchange::Method,
 
     // Security associations.
-    pmksa: Option<Vec<u8>>,
-    ptksa: Option<Vec<u8>>,
-    gtksa: Option<Vec<u8>>,
-    igtksa: Option<Vec<u8>>,
+    pmksa: Pmksa,
+    ptksa: Ptksa,
+    // TODO(hahnr): Add GTK and optional IGTK support.
 }
 
 impl EssSa {
     pub fn new(
-        role: Role, auth_cfg: auth::Config, exchange_cfg: exchange::Config, sta_addr: [u8; 6],
+        role: Role, auth_cfg: auth::Config, ptk_exch_cfg: exchange::Config, sta_addr: [u8; 6],
         sta_rsne: Rsne, peer_addr: [u8; 6], peer_rsne: Rsne,
     ) -> Result<EssSa, failure::Error> {
-        let key_exchange = exchange::Method::from_config(exchange_cfg)?;
         let auth_method = auth::Method::from_config(auth_cfg)?;
+        let ptk_exchange = exchange::Method::from_config(ptk_exch_cfg)?;
 
-        // Some AKMs allow pre-computing the PMK such as PSK.
-        let pmksa = match &auth_method {
-            &auth::Method::Psk(ref psk) => Some(psk.compute()),
-            _ => None,
-        };
-
-        let rsna = EssSa {
+        let mut rsna = EssSa {
             role,
             sta_addr,
             peer_addr,
             peer_rsne,
             sta_rsne,
-            key_exchange,
-            auth_method,
-            pmksa,
-            ptksa: None,
-            gtksa: None,
-            igtksa: None,
+            pmksa: Pmksa {
+                auth_method,
+                pmk: None,
+            },
+            ptksa: Ptksa {
+                exchange_method: ptk_exchange,
+                ptk: None,
+            },
         };
-
-        // Initiate security association if STA is Authenticator.
-        if let Role::Authenticator = rsna.role {
-            rsna.initiate_pmksa()?;
-        }
+        rsna.initiate_pmksa()?;
         Ok(rsna)
     }
 
-    fn initiate_pmksa(&self) -> Result<(), failure::Error> {
-        match self.pmksa {
-            // If PSK was used and PMKSA was already established, initiate PTKSA.
-            Some(_) => self.initiate_ptksa(),
-            // Initiate authentication methods. Only PSK is used so far and does not need
-            // initiation.
+    fn on_key_confirmed(&mut self, key: Key) -> Result<(), failure::Error> {
+        match key {
+            Key::Pmk(pmk) => {
+                self.pmksa.pmk = Some(pmk);
+                self.initiate_ptksa()
+            }
             _ => Ok(()),
         }
     }
 
-    fn initiate_ptksa(&self) -> Result<(), failure::Error> {
-        match &self.key_exchange {
-            &exchange::Method::FourWayHandshake(ref hs) => hs.initiate(),
-            _ => Ok(()),
+    fn initiate_pmksa(&mut self) -> Result<(), failure::Error> {
+        // PSK allows deriving the PMK without exchanging frames.
+        let pmk = match self.pmksa.auth_method.by_ref() {
+            auth::Method::Psk(psk) => Some(psk.compute()),
+            _ => None,
+        };
+        if let Some(pmk_data) = pmk {
+            self.on_key_confirmed(Key::Pmk(pmk_data))?;
+        }
+
+        // TODO(hahnr): Support 802.1X authentication if STA is Authenticator and authentication
+        // method is not PSK.
+
+        Ok(())
+    }
+
+    fn initiate_ptksa(&mut self) -> Result<(), failure::Error> {
+        match self.pmksa.pmk.as_ref() {
+            None => Err(Error::PmksaNotEstablished.into()),
+            Some(pmk) => match self.ptksa.exchange_method.by_mut_ref() {
+                exchange::Method::FourWayHandshake(hs) => hs.initiate(pmk.to_vec()),
+                _ => Ok(()),
+            },
         }
     }
 
@@ -89,9 +111,9 @@ impl EssSa {
 
     fn on_eapol_key_frame(&self, frame: &eapol::KeyFrame) -> SecAssocResult {
         // PMKSA must be established before any other security association can be established.
-        match self.pmksa {
-            Some(_) => self.key_exchange.on_eapol_key_frame(frame),
-            None => self.auth_method.on_eapol_key_frame(frame),
+        match self.pmksa.pmk {
+            None => self.pmksa.auth_method.on_eapol_key_frame(frame),
+            Some(_) => self.ptksa.exchange_method.on_eapol_key_frame(frame),
         }
     }
 }

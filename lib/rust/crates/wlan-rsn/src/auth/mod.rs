@@ -29,6 +29,10 @@ impl Method {
             _ => Ok(vec![]),
         }
     }
+
+    pub fn by_ref(&self) -> &Self {
+        self
+    }
 }
 
 #[derive(Debug)]
@@ -41,5 +45,9 @@ impl Config {
         psk::Config::new(passphrase, ssid)
             .map_err(|e| e.into())
             .map(|c| Config::Psk(c))
+    }
+
+    pub fn by_ref(&self) -> &Self {
+        self
     }
 }

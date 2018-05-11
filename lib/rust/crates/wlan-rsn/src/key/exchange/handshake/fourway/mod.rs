@@ -33,7 +33,6 @@ pub enum MessageNumber {
 #[derive(Debug)]
 pub struct Config {
     role: Role,
-    pmk: Vec<u8>,
     sta_addr: [u8; 6],
     sta_rsne: Rsne,
     peer_addr: [u8; 6],
@@ -48,10 +47,8 @@ impl Config {
         // TODO(hahnr): Validate configuration for:
         // (1) Correct RSNE subset
         // (2) Correct AKM and Cipher Suite configuration
-        // (3) Valid PMK for negotiated AKM
         Ok(Config {
             role,
-            pmk,
             sta_addr,
             sta_rsne,
             peer_addr,
@@ -86,7 +83,7 @@ impl Fourway {
         })
     }
 
-    pub fn initiate(&self) -> Result<(), failure::Error> {
+    pub fn initiate(&mut self, pmk: Vec<u8>) -> Result<(), failure::Error> {
         match &self.handler {
             &RoleHandler::Authenticator(ref a) => a.initiate(),
             _ => Err(Error::UnexpectedInitiationRequest.into()),

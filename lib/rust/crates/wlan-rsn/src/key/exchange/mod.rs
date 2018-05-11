@@ -5,13 +5,14 @@
 pub mod handshake;
 
 use self::handshake::fourway::{self, Fourway};
+use Error;
 use eapol;
 use failure;
 use rsna::{Role, SecAssocResult};
 use rsne::Rsne;
-use Error;
 
 pub enum Key {
+    Invalid,
     Pmk(Vec<u8>),
     Ptk(Vec<u8>),
     Gtk(Vec<u8>),
@@ -22,8 +23,15 @@ pub enum Key {
     Stk(Vec<u8>),
 }
 
+impl Key {
+    pub fn by_ref(&self) -> &Self {
+        self
+    }
+}
+
 pub enum Method {
     FourWayHandshake(Fourway),
+    // TODO(hahnr): Add Group Key Handshake support,
 }
 
 impl Method {
@@ -40,10 +48,15 @@ impl Method {
             _ => Ok(vec![]),
         }
     }
+
+    pub fn by_mut_ref(&mut self) -> &mut Self {
+        self
+    }
 }
 
 pub enum Config {
     FourWayHandshake(fourway::Config),
+    // TODO(hahnr): Add Group Key Handshake support,
 }
 
 impl Config {
@@ -54,5 +67,9 @@ impl Config {
         fourway::Config::new(role, pmk, sta_addr, sta_rsne, peer_addr, peer_rsne)
             .map_err(|e| e.into())
             .map(|c| Config::FourWayHandshake(c))
+    }
+
+    pub fn by_ref(&self) -> &Self {
+        self
     }
 }
