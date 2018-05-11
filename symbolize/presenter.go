@@ -104,6 +104,6 @@ func (b *BasicPresenter) VisitModule(node *ModuleElement) {
 }
 
 func (b *BasicPresenter) VisitMapping(node *MappingElement) {
-	fmt.Fprintf(b.output, "{{{mmap:0x%x:%d:load:%d:%s:0x%x}}}", node.seg.vaddr, node.seg.size, node.seg.mod, node.seg.flags,
+	fmt.Fprintf(b.output, "{{{mmap:0x%x:0x%x:load:%d:%s:0x%x}}}", node.seg.vaddr, node.seg.size, node.seg.mod, node.seg.flags,
 		node.seg.modRelAddr)
 }
