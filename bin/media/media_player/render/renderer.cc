@@ -60,6 +60,8 @@ void Renderer::SetTimelineFunction(media::TimelineFunction timeline_function,
   if (!was_progressing && Progressing()) {
     OnProgressStarted();
   }
+
+  UpdateTimelineAt(timeline_function.reference_time());
 }
 
 bool Renderer::end_of_stream() const {
