@@ -261,6 +261,7 @@ source_set("escher") {
     "shape/rounded_rect_factory.h",
     "status.h",
     "util/align.h",
+    "util/bit_ops.h",
     "util/depth_to_color.cc",
     "util/depth_to_color.h",
     "util/enum_cast.h",
