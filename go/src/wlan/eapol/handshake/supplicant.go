@@ -5,12 +5,13 @@
 package handshake
 
 import (
-	"wlan/eapol"
 	"fmt"
+	"wlan/eapol"
 )
 
 type Handshake interface {
 	HandleEAPOLKeyFrame(s *Supplicant, f *eapol.KeyFrame) error
+	IsComplete() bool
 }
 
 type Supplicant struct {
@@ -35,4 +36,8 @@ func (s *Supplicant) HandleEAPOLKeyFrame(f *eapol.KeyFrame) error {
 	// the third message must have the secure bit set.
 
 	return s.handshake.HandleEAPOLKeyFrame(s, f)
+}
+
+func (s *Supplicant) IsComplete() bool {
+	return s.handshake.IsComplete()
 }

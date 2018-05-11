@@ -105,6 +105,15 @@ func (hs *FourWay) HandleEAPOLKeyFrame(s *Supplicant, f *eapol.KeyFrame) error {
 	return hs.state.handleEAPOLKeyFrame(hs, f)
 }
 
+func (hs *FourWay) IsComplete() bool {
+	switch hs.state.(type) {
+	case *fourWayStateCompleted:
+		return true
+	default:
+		return false
+	}
+}
+
 func (s *fourWayStateIdle) isMessageAllowed(f *eapol.KeyFrame) bool {
 	return getMessageNumber(f) == Message1
 }

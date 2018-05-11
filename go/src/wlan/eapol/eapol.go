@@ -69,6 +69,11 @@ func (c *Client) HandleEAPOLFrame(frame []byte) {
 	}
 }
 
+// Export KeyExchange in order to determine EAPOL status
+func (c *Client) KeyExchange() KeyExchange {
+	return c.config.KeyExchange
+}
+
 // Returns 'nil' if the given RSNE is supported by this EAPOL implementation.
 //
 // Supported:

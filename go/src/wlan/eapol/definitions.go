@@ -5,15 +5,15 @@
 package eapol
 
 import (
-	"wlan/wlan/sme"
 	mlme "fuchsia/go/wlan_mlme"
+	"wlan/wlan/sme"
 
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha1"
 	"encoding/binary"
 	"fmt"
 	"io"
-	"crypto/hmac"
-	"crypto/sha1"
 )
 
 // IEEE Std 802.1X-2010, 11.3.2, Table 11-3
@@ -195,6 +195,7 @@ func computeMIC(kck []byte, f *KeyFrame) []byte {
 // authentication, and key derivation.
 type KeyExchange interface {
 	HandleEAPOLKeyFrame(f *KeyFrame) error
+	IsComplete() bool
 }
 
 // Transports EAPOL frames to their destination.

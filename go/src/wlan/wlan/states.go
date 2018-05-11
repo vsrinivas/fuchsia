@@ -765,6 +765,9 @@ func (s *assocState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
 		}
 
 		if v.ResultCode == mlme.AssociateResultCodesSuccess {
+			if c.eapolC == nil {
+				log.Printf("WLAN connected (EAPOL)")
+			}
 			return newAssociatedState(), nil
 		} else {
 			return newScanState(c), nil
@@ -883,6 +886,9 @@ func (s *associatedState) handleMLMEMsg(msg interface{}, c *Client) (state, erro
 		return s, nil
 	case *mlme.EapolConfirm:
 		// TODO(hahnr): Evaluate response code.
+		if c.eapolC.KeyExchange().IsComplete() {
+			log.Printf("WLAN connected (Open Authentication)")
+		}
 		return s, nil
 	default:
 		if s.scanner != nil {
