@@ -45,11 +45,8 @@ class Image : public WaitableResource {
   // If |mem| is passed and |bind_image_memory| is true, this method also binds
   // the memory to the image. |mem_offset| is the offset of the image's memory
   // within |mem|.
-  static ImagePtr New(ResourceManager* image_owner,
-                      ImageInfo info,
-                      vk::Image,
-                      GpuMemPtr mem,
-                      vk::DeviceSize mem_offset = 0,
+  static ImagePtr New(ResourceManager* image_owner, ImageInfo info, vk::Image,
+                      GpuMemPtr mem, vk::DeviceSize mem_offset = 0,
                       bool bind_image_memory = true);
 
   // Returns image_ and mem_ to the owner.
@@ -75,10 +72,7 @@ class Image : public WaitableResource {
   // working with images associated with a vk::SwapchainKHR); this is done by
   // passing nullptr as the |mem| argument.
   // |mem_offset| is the offset of the image's memory within |mem|.
-  Image(ResourceManager* image_owner,
-        ImageInfo info,
-        vk::Image,
-        GpuMemPtr mem,
+  Image(ResourceManager* image_owner, ImageInfo info, vk::Image, GpuMemPtr mem,
         vk::DeviceSize mem_offset);
 
  private:

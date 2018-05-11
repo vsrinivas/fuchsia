@@ -36,6 +36,69 @@ size_t BytesPerPixel(vk::Format format) {
   }
 }
 
+bool IsDepthFormat(vk::Format format) {
+  switch (format) {
+    case vk::Format::eD16Unorm:
+    case vk::Format::eX8D24UnormPack32:
+    case vk::Format::eD32Sfloat:
+    case vk::Format::eD16UnormS8Uint:
+    case vk::Format::eD24UnormS8Uint:
+    case vk::Format::eD32SfloatS8Uint:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool IsStencilFormat(vk::Format format) {
+  switch (format) {
+    case vk::Format::eS8Uint:
+    case vk::Format::eD16UnormS8Uint:
+    case vk::Format::eD24UnormS8Uint:
+    case vk::Format::eD32SfloatS8Uint:
+      return true;
+    default:
+      return false;
+  }
+}
+
+std::pair<bool, bool> IsDepthStencilFormat(vk::Format format) {
+  switch (format) {
+    case vk::Format::eD16UnormS8Uint:
+    case vk::Format::eD24UnormS8Uint:
+    case vk::Format::eD32SfloatS8Uint:
+      return {true, true};
+    case vk::Format::eD16Unorm:
+    case vk::Format::eX8D24UnormPack32:
+    case vk::Format::eD32Sfloat:
+      return {true, false};
+    case vk::Format::eS8Uint:
+      return {false, true};
+    default:
+      return {false, false};
+  }
+}
+
+vk::ImageAspectFlags FormatToColorOrDepthStencilAspectFlags(vk::Format format) {
+  const auto is_depth_stencil = IsDepthStencilFormat(format);
+  const bool is_depth = is_depth_stencil.first;
+  const bool is_stencil = is_depth_stencil.second;
+
+  if (is_depth) {
+    // Maybe also stencil?
+    return is_stencil
+               ? vk::ImageAspectFlagBits::eDepth |
+                     vk::ImageAspectFlagBits::eStencil
+               : vk::ImageAspectFlagBits::eDepth;
+  } else if (is_stencil) {
+    // Only stencil, not depth.
+    return vk::ImageAspectFlagBits::eStencil;
+  } else {
+    // Neither depth nor stencil.
+    return vk::ImageAspectFlagBits::eColor;
+  }
+}
+
 vk::Image CreateVkImage(const vk::Device& device, ImageInfo info) {
   vk::ImageCreateInfo create_info;
   create_info.imageType = vk::ImageType::e2D;
@@ -67,10 +130,8 @@ vk::Image CreateVkImage(const vk::Device& device, ImageInfo info) {
   return image;
 }
 
-ImagePtr NewDepthImage(ImageFactory* image_factory,
-                       vk::Format format,
-                       uint32_t width,
-                       uint32_t height,
+ImagePtr NewDepthImage(ImageFactory* image_factory, vk::Format format,
+                       uint32_t width, uint32_t height,
                        vk::ImageUsageFlags additional_flags) {
   FXL_DCHECK(image_factory);
   ImageInfo info;
@@ -84,8 +145,7 @@ ImagePtr NewDepthImage(ImageFactory* image_factory,
   return image_factory->NewImage(info);
 }
 
-ImagePtr NewColorAttachmentImage(ImageFactory* image_factory,
-                                 uint32_t width,
+ImagePtr NewColorAttachmentImage(ImageFactory* image_factory, uint32_t width,
                                  uint32_t height,
                                  vk::ImageUsageFlags additional_flags) {
   FXL_DCHECK(image_factory);
@@ -99,10 +159,8 @@ ImagePtr NewColorAttachmentImage(ImageFactory* image_factory,
   return image_factory->NewImage(info);
 }
 
-ImagePtr NewImage(ImageFactory* image_factory,
-                  vk::Format format,
-                  uint32_t width,
-                  uint32_t height,
+ImagePtr NewImage(ImageFactory* image_factory, vk::Format format,
+                  uint32_t width, uint32_t height,
                   vk::ImageUsageFlags additional_flags) {
   FXL_DCHECK(image_factory);
 
@@ -120,11 +178,9 @@ ImagePtr NewImage(ImageFactory* image_factory,
   return image;
 }
 
-void WritePixelsToImage(
-    impl::GpuUploader* gpu_uploader,
-    uint8_t* pixels,
-    ImagePtr image,
-    const ImageConversionFunction& conversion_func) {
+void WritePixelsToImage(impl::GpuUploader* gpu_uploader, uint8_t* pixels,
+                        ImagePtr image,
+                        const ImageConversionFunction& conversion_func) {
   FXL_DCHECK(gpu_uploader);
   FXL_DCHECK(image);
   FXL_DCHECK(pixels);
@@ -155,10 +211,8 @@ void WritePixelsToImage(
 }
 
 ImagePtr NewRgbaImage(ImageFactory* image_factory,
-                      impl::GpuUploader* gpu_uploader,
-                      uint32_t width,
-                      uint32_t height,
-                      uint8_t* pixels) {
+                      impl::GpuUploader* gpu_uploader, uint32_t width,
+                      uint32_t height, uint8_t* pixels) {
   FXL_DCHECK(image_factory);
   FXL_DCHECK(gpu_uploader);
 
@@ -170,8 +224,7 @@ ImagePtr NewRgbaImage(ImageFactory* image_factory,
 }
 
 ImagePtr NewCheckerboardImage(ImageFactory* image_factory,
-                              impl::GpuUploader* gpu_uploader,
-                              uint32_t width,
+                              impl::GpuUploader* gpu_uploader, uint32_t width,
                               uint32_t height) {
   FXL_DCHECK(image_factory);
   FXL_DCHECK(gpu_uploader);
@@ -185,8 +238,7 @@ ImagePtr NewCheckerboardImage(ImageFactory* image_factory,
 }
 
 ImagePtr NewGradientImage(ImageFactory* image_factory,
-                          impl::GpuUploader* gpu_uploader,
-                          uint32_t width,
+                          impl::GpuUploader* gpu_uploader, uint32_t width,
                           uint32_t height) {
   FXL_DCHECK(image_factory);
   FXL_DCHECK(gpu_uploader);
@@ -200,10 +252,8 @@ ImagePtr NewGradientImage(ImageFactory* image_factory,
 }
 
 ImagePtr NewNoiseImage(ImageFactory* image_factory,
-                       impl::GpuUploader* gpu_uploader,
-                       uint32_t width,
-                       uint32_t height,
-                       vk::ImageUsageFlags additional_flags) {
+                       impl::GpuUploader* gpu_uploader, uint32_t width,
+                       uint32_t height, vk::ImageUsageFlags additional_flags) {
   FXL_DCHECK(image_factory);
   FXL_DCHECK(gpu_uploader);
 
@@ -240,8 +290,7 @@ std::unique_ptr<uint8_t[]> NewCheckerboardPixels(uint32_t width,
   return ptr;
 }
 
-std::unique_ptr<uint8_t[]> NewGradientPixels(uint32_t width,
-                                             uint32_t height,
+std::unique_ptr<uint8_t[]> NewGradientPixels(uint32_t width, uint32_t height,
                                              size_t* out_size) {
   FXL_DCHECK(width % 2 == 0);
   FXL_DCHECK(height % 2 == 0);
@@ -266,8 +315,7 @@ std::unique_ptr<uint8_t[]> NewGradientPixels(uint32_t width,
   return ptr;
 }
 
-std::unique_ptr<uint8_t[]> NewNoisePixels(uint32_t width,
-                                          uint32_t height,
+std::unique_ptr<uint8_t[]> NewNoisePixels(uint32_t width, uint32_t height,
                                           size_t* out_size) {
   size_t size_in_bytes = width * height;
   auto ptr = std::make_unique<uint8_t[]>(size_in_bytes);
