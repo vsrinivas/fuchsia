@@ -60,29 +60,10 @@ zx::handle Handle() {
     return ::testing::AssertionFailure()
            << "zx_object_get_info(b) returned " << status;
   }
-  // TODO(garymm): Follow-up to see why this assertion fails.
-  // if (a_info.koid != b_info.koid) {
-  //   return ::testing::AssertionFailure()
-  //          << std::endl << "a_info.koid is: " << a_info.koid
-  //          << std::endl << "b_info.koid is: " << b_info.koid;
-  // }
-  if (a_info.rights != b_info.rights) {
+  if (a_info.koid != b_info.koid) {
     return ::testing::AssertionFailure()
-           << std::endl
-           << "a_info.rights is: " << a_info.rights << std::endl
-           << "b_info.rights is: " << b_info.rights;
-  }
-  if (a_info.type != b_info.type) {
-    return ::testing::AssertionFailure()
-           << std::endl
-           << "a_info.type is: " << a_info.type << std::endl
-           << "b_info.type is: " << b_info.type;
-  }
-  if (a_info.props != b_info.props) {
-    return ::testing::AssertionFailure()
-           << std::endl
-           << "a_info.props is: " << a_info.props << std::endl
-           << "b_info.props is: " << b_info.props;
+           << std::endl << "a_info.koid is: " << a_info.koid
+           << std::endl << "b_info.koid is: " << b_info.koid;
   }
   return ::testing::AssertionSuccess();
 }
@@ -917,8 +898,8 @@ TEST_P(CompatibilityTest, Struct) {
   compatibility_test_service::EchoClientApp app;
   app.Start(proxy_url_);
 
-  compatibility_test_service::Struct sent_copy;
-  Initialize(&sent_copy);
+  compatibility_test_service::Struct sent_clone;
+  sent.Clone(&sent_clone);
   compatibility_test_service::Struct resp_clone;
   app.echo()->EchoStruct(
       std::move(sent), [&resp_clone](compatibility_test_service::Struct resp) {
@@ -929,7 +910,7 @@ TEST_P(CompatibilityTest, Struct) {
       << "Failed to wait for response from proxy "
       << files::GetBaseName(proxy_url_) << " and server "
       << files::GetBaseName(server_url_);
-  ExpectEq(sent_copy, resp_clone);
+  ExpectEq(sent_clone, resp_clone);
 }
 
 }  // namespace
