@@ -53,7 +53,9 @@ executable("tests") {
     "test/fake_audio_renderer.h",
     "test/fake_wav_reader.cc",
     "test/fake_wav_reader.h",
-    "test/media_player_test.cc",
+    "test/main.cc",
+    "test/media_player_test_unattended.cc",
+    "test/media_player_test_unattended.h",
   ]
 
   deps = [
