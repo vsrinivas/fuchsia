@@ -9,7 +9,7 @@ package("modular_examples") {
 
   deps = [
     "counter_cpp",
-    "hello_world_cpp",
+    "hello_world",
     "swap_cpp",
     "todo_cpp",
   ]
@@ -20,6 +20,9 @@ package("modular_examples") {
     },
     {
       name = "hello_app_parent"
+    },
+    {
+      name = "rust_crates/hello_world_rust"
     },
     {
       name = "example_module1"
