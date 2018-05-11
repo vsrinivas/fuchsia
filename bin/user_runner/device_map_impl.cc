@@ -24,6 +24,7 @@ void XdrDeviceData(XdrContext* const xdr, DeviceMapEntry* const data) {
   xdr->Field("device_id", &data->device_id);
   xdr->Field("profile", &data->profile);
   xdr->Field("hostname", &data->hostname);
+  xdr->Field("last_change_timestamp", &data->last_change_timestamp);
 }
 
 std::string LoadHostname() {
