@@ -6,3 +6,5 @@ BasedOnStyle: Google
 # 'int>>' if the file already contains at least one such instance.)
 Standard: Cpp11
 SortIncludes: true
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
