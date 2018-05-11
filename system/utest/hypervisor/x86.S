@@ -7,8 +7,11 @@
 #include "constants_priv.h"
 
 #define IA32_GS_BASE              0xc0000101
-#define INTERRUPT_ADDR(base, x)   (x - base + GUEST_ENTRY)
-#define CODE_64_SELECTOR          0x8
+#define ABSOLUTE_ADDR(base, x)    (x - base + GUEST_ENTRY)
+#define CODE_64_SELECTOR          (1<<3)
+#define CODE_32_SELECTOR          (2<<3)
+#define CODE_16_SELECTOR          (3<<3)
+#define DATA_SELECTOR             (4<<3)
 
 .text
 
@@ -21,14 +24,10 @@
     1:
 .endm
 
-.macro init_interrupt_handling start
-    lgdt INTERRUPT_ADDR(\start, gdtr_for_\start)
-    lidt INTERRUPT_ADDR(\start, idtr_for_\start)
+.macro init_gdt start
+    lgdt ABSOLUTE_ADDR(\start, gdtr_for_\start)
     mov $GUEST_ENTRY + 0x1000, %rsp
-    jmp end_of_\start
-
-int32_for_\start:
-    movq $0, (EXIT_TEST_ADDR)
+    jmp end_of_init_gdt_for_\start
 
 .align 8
 gdt_for_\start:
@@ -41,14 +40,46 @@ gdt_for_\start:
     .byte  0b10011010                               // P(1) DPL(00) S(1) 1 C(0) R(1) A(0)
     .byte  0b10101111                               // G(1) D(0) L(1) AVL(0) Limit 19:16
     .byte  0x0                                      // Base 31:24
+    // CODE_32_SELECTOR
+    .2byte 0xffff                                   // Limit 15:00
+    .2byte 0x0000                                   // Base 15:00
+    .byte  0x00                                     // Base 23:16
+    .byte  0b10011010                               // P(1) DPL(00) S(1) 1 C(0) R(1) A(0)
+    .byte  0b11001111                               // G(1) D(1) L(0) AVL(0) Limit 19:16
+    .byte  0x0                                      // Base 31:24
+    // CODE_16_SELECTOR
+    .2byte 0xffff                                   // Limit 15:00
+    .2byte 0x0000                                   // Base 15:00
+    .byte  0x00                                     // Base 23:16
+    .byte  0b10011010                               // P(1) DPL(00) S(1) 1 C(0) R(1) A(0)
+    .byte  0b10001111                               // G(1) D(0) L(0) AVL(0) Limit 19:16
+    .byte  0x0                                      // Base 31:24
+    // DATA_SELECTOR
+    .2byte 0xffff                                   // Limit 15:00
+    .2byte 0x0000                                   // Base 15:00
+    .byte  0x00                                     // Base 23:16
+    .byte  0b10010010                               // P(1) DPL(00) S(1) 0 E(0) W(1) A(0)
+    .byte  0b11001111                               // G(1) B(1) L(0) AVL(0) Limit 19:16
+    .byte  0x0                                      // Base 31:24
 gdtr_for_\start:
     .2byte gdtr_for_\start - gdt_for_\start - 1
-    .8byte INTERRUPT_ADDR(\start, gdt_for_\start)
+    .8byte ABSOLUTE_ADDR(\start, gdt_for_\start)
+end_of_init_gdt_for_\start:
+.endm
+
+.macro init_interrupt_handling start
+    init_gdt \start
+    lidt ABSOLUTE_ADDR(\start, idtr_for_\start)
+    mov $GUEST_ENTRY + 0x1000, %rsp
+    jmp end_of_\start
+
+int32_for_\start:
+    movq $0, (EXIT_TEST_ADDR)
 
 .align 8
 idt_for_\start:
     .fill 64, 8, 0                                  // 32 null entries
-    .2byte INTERRUPT_ADDR(\start, int32_for_\start) // Offset 15:00
+    .2byte ABSOLUTE_ADDR(\start, int32_for_\start)  // Offset 15:00
     .2byte CODE_64_SELECTOR                         // Segment selector
     .byte  0                                        // IST(000)
     .byte  0b10001110                               // P(1) DPL(00) 0 Type(1110)
@@ -57,7 +88,7 @@ idt_for_\start:
     .4byte 0                                        // Reserved
 idtr_for_\start:
     .2byte idtr_for_\start - idt_for_\start - 1     // Limit
-    .8byte INTERRUPT_ADDR(\start, idt_for_\start)   // Address
+    .8byte ABSOLUTE_ADDR(\start, idt_for_\start)    // Address
 end_of_\start:
 .endm
 
@@ -139,6 +170,77 @@ FUNCTION vcpu_read_write_state_start
 
     movq $0, (EXIT_TEST_ADDR)
 FUNCTION vcpu_read_write_state_end
+
+// Test 32 bit compatibility mode (long mode disabled).
+FUNCTION vcpu_compat_mode_start
+    init_gdt vcpu_compat_mode_start
+    movq $0, %rbx
+    movq $0, %rcx
+
+    // Drop into compatibility mode
+    pushq $CODE_32_SELECTOR
+    lea vcpu_compat_mode_code(%rip),%rax
+    pushq %rax
+    lretq
+
+.code32
+vcpu_compat_mode_code:
+    // Hack to check if we're x86 or x64. In x86, 0x41 is `inc %ecx` and loop
+    // falls through. In x64, 0x41 is the REX.B prefix and %ecx is not
+    // incremented so loop jmps to vcpu_compat_mode_exit.
+    xor %ecx,%ecx
+    .byte 0x41 // x86: inc %ecx; x64: rex.B prefix
+    loop vcpu_compat_mode_exit
+
+    // Write a value to ebx to check in guest.cpp
+    mov $1,%ebx
+
+    // Go back to long mode
+    pushl $CODE_64_SELECTOR
+    pushl $ABSOLUTE_ADDR(vcpu_compat_mode_start, vcpu_compat_mode_test16)
+    lret
+.code64
+
+vcpu_compat_mode_test16:
+    // Drop into compatibility mode with 16 bit default operands.
+    pushq $CODE_16_SELECTOR
+    lea vcpu_compat_mode_code16(%rip),%rax
+    pushq %rax
+    lretq
+
+.code32
+vcpu_compat_mode_code16:
+    // The default operand size should be 16 bits and push should subtract 2
+    // from the stack pointer.
+    mov %esp,%eax
+    sub $2,%eax
+    push $0
+    cmp %esp,%eax
+    pop %eax
+    jne vcpu_compat_mode_code16_done
+
+    // Write a value to ebx to check in guest.cpp
+    mov $2,%ecx
+
+    // Go back to long mode
+vcpu_compat_mode_code16_done:
+    pushl $CODE_64_SELECTOR
+    pushl $ABSOLUTE_ADDR(vcpu_compat_mode_start, vcpu_compat_mode_done)
+    lret
+.code64
+
+vcpu_compat_mode_done:
+    // Fix the data segment selectors
+    mov $DATA_SELECTOR,%rax
+    mov %rax,%ds
+    mov %rax,%es
+    mov %rax,%fs
+    mov %rax,%gs
+    mov %rax,%ss
+
+vcpu_compat_mode_exit:
+    movq $0, (EXIT_TEST_ADDR)
+FUNCTION vcpu_compat_mode_end
 
 // Test guest_set_trap using a memory-based trap.
 FUNCTION guest_set_trap_start

@@ -42,6 +42,8 @@ extern const char vcpu_aarch32_fp_start[];
 extern const char vcpu_aarch32_fp_end[];
 extern const char vcpu_read_write_state_start[];
 extern const char vcpu_read_write_state_end[];
+extern const char vcpu_compat_mode_start[];
+extern const char vcpu_compat_mode_end[];
 extern const char guest_set_trap_start[];
 extern const char guest_set_trap_end[];
 extern const char guest_set_trap_with_io_start[];
@@ -453,6 +455,33 @@ static bool vcpu_read_write_state() {
     END_TEST;
 }
 
+static bool vcpu_compat_mode() {
+    BEGIN_TEST;
+
+    test_t test;
+    ASSERT_TRUE(setup(&test, vcpu_compat_mode_start, vcpu_compat_mode_end));
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+
+    zx_port_packet_t packet = {};
+    ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
+    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
+
+    zx_vcpu_state_t vcpu_state;
+    ASSERT_EQ(zx_vcpu_read_state(test.vcpu, ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
+#if __x86_64__
+    EXPECT_EQ(vcpu_state.rbx, 1u);
+    EXPECT_EQ(vcpu_state.rcx, 2u);
+#endif
+
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
 static bool guest_set_trap_with_mem() {
     BEGIN_TEST;
 
@@ -561,5 +590,6 @@ RUN_TEST(guest_set_trap_with_io)
 RUN_TEST(vcpu_hlt)
 RUN_TEST(vcpu_pause)
 RUN_TEST(vcpu_write_cr0)
+RUN_TEST(vcpu_compat_mode)
 #endif
 END_TEST_CASE(guest)
