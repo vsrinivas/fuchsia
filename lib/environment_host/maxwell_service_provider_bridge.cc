@@ -18,9 +18,9 @@ constexpr char kNetstack[] = "net.Netstack";
 
 MaxwellServiceProviderBridge::MaxwellServiceProviderBridge(
     component::ApplicationEnvironment* parent_env) {
-  AddService<component::ApplicationLoader>(
+  AddService<component::Loader>(
       [parent_env](
-          fidl::InterfaceRequest<component::ApplicationLoader> request) {
+          fidl::InterfaceRequest<component::Loader> request) {
         component::ServiceProviderPtr services;
         parent_env->GetServices(services.NewRequest());
         component::ConnectToService(services.get(), std::move(request));
