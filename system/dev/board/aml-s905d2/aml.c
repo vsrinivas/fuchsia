@@ -18,8 +18,7 @@
 #include <ddk/protocol/platform-defs.h>
 #include <hw/reg.h>
 
-#include <soc/aml-s912/s912-hw.h>
-#include <soc/aml-s912/s912-gpio.h>
+#include <soc/aml-s905d2/aml-mali.h>
 
 #include <zircon/assert.h>
 #include <zircon/process.h>
@@ -52,7 +51,16 @@ static int aml_start_thread(void* arg) {
         goto fail;
     }
 */
-    if ((status = aml_mali_init(bus)) != ZX_OK) {
+    zx_handle_t bti;
+    status = iommu_get_bti(&bus->iommu, 0, BTI_BOARD, &bti);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "aml_mali_init: iommu_get_bti failed: %d\n", status);
+        goto fail;
+    }
+
+    status = aml_mali_init(&bus->pbus, bti, BTI_MALI);
+    zx_handle_close(bti);
+    if (status != ZX_OK) {
         zxlogf(ERROR, "aml_mali_init failed: %d\n", status);
         goto fail;
     }

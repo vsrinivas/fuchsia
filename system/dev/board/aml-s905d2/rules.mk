@@ -12,7 +12,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/aml.c \
     $(LOCAL_DIR)/aml-gpio.c \
     $(LOCAL_DIR)/aml-i2c.c \
-    $(LOCAL_DIR)/aml-mali.c \
     $(LOCAL_DIR)/aml-usb.c \
 
 MODULE_STATIC_LIBS := \

@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <ddk/io-buffer.h>
+#include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
 #include <hw/reg.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
-
-#include "aml.h"
 
 static const pbus_mmio_t mali_mmios[] = {
     {
@@ -31,40 +31,13 @@ static const pbus_irq_t mali_irqs[] = {
     },
 };
 
-static const pbus_bti_t mali_btis[] = {
-    {
-        .iommu_index = 0,
-        .bti_id = BTI_MALI,
-    },
-};
-
-static const pbus_dev_t mali_dev = {
-    .name = "mali",
-    .vid = PDEV_VID_GENERIC,
-    .pid = PDEV_PID_GENERIC,
-    .did = PDEV_DID_ARM_MALI,
-    .mmios = mali_mmios,
-    .mmio_count = countof(mali_mmios),
-    .irqs = mali_irqs,
-    .irq_count = countof(mali_irqs),
-    .btis = mali_btis,
-    .bti_count = countof(mali_btis),
-};
-
 #define HHI_MALI_CLK_CNTL (0x6c << 2)
 
-zx_status_t aml_mali_init(aml_bus_t* bus) {
+zx_status_t aml_mali_init(platform_bus_protocol_t* pbus, zx_handle_t parent_bti, uint32_t bti_index) {
     zx_status_t status = ZX_OK;
 
-    zx_handle_t bti;
-    status = iommu_get_bti(&bus->iommu, 0, BTI_BOARD, &bti);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "aml_mali_init: iommu_get_bti failed: %d\n", status);
-        return status;
-    }
-
     io_buffer_t hiu_buffer;
-    status = io_buffer_init_physical(&hiu_buffer, bti, S905D2_HIU_BASE, S905D2_HIU_LENGTH,
+    status = io_buffer_init_physical(&hiu_buffer, parent_bti, S905D2_HIU_BASE, S905D2_HIU_LENGTH,
                                      get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml_mali_init io_buffer_init_physical hiu failed %d\n", status);
@@ -72,7 +45,7 @@ zx_status_t aml_mali_init(aml_bus_t* bus) {
     }
 
     io_buffer_t preset_buffer;
-    status = io_buffer_init_physical(&preset_buffer, bti, S905D2_RESET_BASE, S905D2_RESET_LENGTH,
+    status = io_buffer_init_physical(&preset_buffer, parent_bti, S905D2_RESET_BASE, S905D2_RESET_LENGTH,
                                      get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml_mali_init io_buffer_init_physical preset failed %d\n", status);
@@ -80,7 +53,7 @@ zx_status_t aml_mali_init(aml_bus_t* bus) {
     }
 
     io_buffer_t gpu_buffer;
-    status = io_buffer_init_physical(&gpu_buffer, bti, S905D2_MALI_BASE, S905D2_MALI_LENGTH,
+    status = io_buffer_init_physical(&gpu_buffer, parent_bti, S905D2_MALI_BASE, S905D2_MALI_LENGTH,
                                      get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
         zxlogf(ERROR, "aml_mali_init io_buffer_init_physical gpu failed %d\n", status);
@@ -143,7 +116,27 @@ zx_status_t aml_mali_init(aml_bus_t* bus) {
     writel(0x2968A819, gpu_regs + PWR_KEY);
     writel(0xfff | (0x20 << 16), gpu_regs + PWR_OVERRIDE1);
 
-    if ((status = pbus_device_add(&bus->pbus, &mali_dev, 0)) != ZX_OK) {
+    const pbus_bti_t mali_btis[] = {
+        {
+            .iommu_index = 0,
+            .bti_id = bti_index,
+        },
+    };
+
+    const pbus_dev_t mali_dev = {
+        .name = "mali",
+        .vid = PDEV_VID_GENERIC,
+        .pid = PDEV_PID_GENERIC,
+        .did = PDEV_DID_ARM_MALI,
+        .mmios = mali_mmios,
+        .mmio_count = countof(mali_mmios),
+        .irqs = mali_irqs,
+        .irq_count = countof(mali_irqs),
+        .btis = mali_btis,
+        .bti_count = countof(mali_btis),
+    };
+
+    if ((status = pbus_device_add(pbus, &mali_dev, 0)) != ZX_OK) {
         zxlogf(ERROR, "aml_mali_init could not add mali_dev: %d\n", status);
     }
 
@@ -153,7 +146,6 @@ fail3:
 fail2:
     io_buffer_release(&gpu_buffer);
 fail1:
-    zx_handle_close(bti);
 
     return status;
 }
