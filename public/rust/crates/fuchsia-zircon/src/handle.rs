@@ -66,6 +66,15 @@ pub struct HandleRef<'a> {
 }
 
 impl<'a> HandleRef<'a> {
+    /// Create a `HandleRef` from a raw handle. Use this method when you are given a raw handle but
+    /// should not take ownership of it. Examples include process-global handles like the root
+    /// VMAR. This method should be called with an explicitly provided lifetime that must not
+    /// outlive the lifetime during which the handle is owned by the current process. It is unsafe
+    /// because most of the time, it is better to use a `Handle` to prevent leaking resources.
+    pub unsafe fn from_raw_handle(handle: sys::zx_handle_t) -> Self {
+        HandleRef { handle, phantom: PhantomData }
+    }
+
     pub fn raw_handle(&self) -> sys::zx_handle_t {
         self.handle
     }
