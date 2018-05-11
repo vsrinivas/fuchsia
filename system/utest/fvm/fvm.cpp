@@ -32,7 +32,6 @@
 #include <fs-management/ramdisk.h>
 #include <fvm/fvm.h>
 #include <minfs/format.h>
-#include <gpt/gpt.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <memfs/memfs.h>
 #include <zircon/device/block.h>
@@ -217,17 +216,41 @@ static int EndFVMTest(const char* ramdisk_path) {
 
 constexpr uint8_t kTestUniqueGUID[] = {
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-    0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
+    0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
+};
 constexpr uint8_t kTestUniqueGUID2[] = {
     0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
-    0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f};
+    0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f
+};
+
+// Intentionally avoid aligning these GUIDs with
+// the actual system GUIDs; otherwise, limited versions
+// of Fuchsia may attempt to actually mount these
+// partitions automatically.
+
+#define GUID_TEST_DATA_VALUE {                      \
+    0xAA, 0xFF, 0xBB, 0x00, 0x33, 0x44, 0x88, 0x99, \
+    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17  \
+}
+
+#define GUID_TEST_BLOB_VALUE {                      \
+    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, \
+    0xAA, 0xFF, 0xBB, 0x00, 0x33, 0x44, 0x88, 0x99  \
+}
+
+#define GUID_TEST_SYS_VALUE {                       \
+    0xEE, 0xFF, 0xBB, 0x00, 0x33, 0x44, 0x88, 0x99, \
+    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17  \
+}
 
 constexpr char kTestPartName1[] = "data";
-constexpr uint8_t kTestPartGUIDData[] = GUID_DATA_VALUE;
+constexpr uint8_t kTestPartGUIDData[] = GUID_TEST_DATA_VALUE;
+
 constexpr char kTestPartName2[] = "blob";
-constexpr uint8_t kTestPartGUIDBlob[] = GUID_BLOB_VALUE;
+constexpr uint8_t kTestPartGUIDBlob[] = GUID_TEST_BLOB_VALUE;
+
 constexpr char kTestPartName3[] = "system";
-constexpr uint8_t kTestPartGUIDSys[] = GUID_SYSTEM_VALUE;
+constexpr uint8_t kTestPartGUIDSystem[] = GUID_TEST_SYS_VALUE;
 
 class VmoBuf;
 
@@ -603,7 +626,7 @@ bool TestAllocateMany(void) {
     ASSERT_GT(blob_fd, 0);
 
     strcpy(request.name, kTestPartName3);
-    memcpy(request.type, kTestPartGUIDSys, GUID_LEN);
+    memcpy(request.type, kTestPartGUIDSystem, GUID_LEN);
     int sys_fd = fvm_allocate_partition(fd, &request);
     ASSERT_GT(sys_fd, 0);
 
@@ -1215,7 +1238,7 @@ bool TestVPartitionDestroy(void) {
     int blob_fd = fvm_allocate_partition(fd, &request);
     ASSERT_GT(blob_fd, 0);
     strcpy(request.name, kTestPartName3);
-    memcpy(request.type, kTestPartGUIDSys, GUID_LEN);
+    memcpy(request.type, kTestPartGUIDSystem, GUID_LEN);
     int sys_fd = fvm_allocate_partition(fd, &request);
     ASSERT_GT(sys_fd, 0);
 
@@ -1540,9 +1563,9 @@ bool TestSliceAccessNonContiguousPhysical(void) {
     } vdata_t;
 
     vdata_t vparts[kNumVParts] = {
-        {0, GUID_DATA_VALUE, "data", request.slice_count},
-        {0, GUID_BLOB_VALUE, "blob", request.slice_count},
-        {0, GUID_SYSTEM_VALUE, "sys", request.slice_count},
+        {0, GUID_TEST_DATA_VALUE, "data", request.slice_count},
+        {0, GUID_TEST_BLOB_VALUE, "blob", request.slice_count},
+        {0, GUID_TEST_SYS_VALUE, "sys", request.slice_count},
     };
 
     for (size_t i = 0; i < countof(vparts); i++) {
@@ -1683,9 +1706,9 @@ bool TestSliceAccessNonContiguousVirtual(void) {
     } vdata_t;
 
     vdata_t vparts[kNumVParts] = {
-        {0, GUID_DATA_VALUE, "data", request.slice_count, request.slice_count},
-        {0, GUID_BLOB_VALUE, "blob", request.slice_count, request.slice_count},
-        {0, GUID_SYSTEM_VALUE, "sys", request.slice_count, request.slice_count},
+        {0, GUID_TEST_DATA_VALUE, "data", request.slice_count, request.slice_count},
+        {0, GUID_TEST_BLOB_VALUE, "blob", request.slice_count, request.slice_count},
+        {0, GUID_TEST_SYS_VALUE, "sys", request.slice_count, request.slice_count},
     };
 
     for (size_t i = 0; i < countof(vparts); i++) {
