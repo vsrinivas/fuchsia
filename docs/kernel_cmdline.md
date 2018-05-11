@@ -23,10 +23,13 @@ lines starting with # are ignored.  Whitespace is not allowed in names.
 If this option is set, the system will not use Address Space Layout
 Randomization.
 
-## crashlogger.disable
+## crashsvc.analyzer=\<path\>
 
-If this option is set, the crashlogger is not started. You should leave this
-option off unless you suspect the crashlogger is causing problems.
+If this option is set, the given analyzer will be used when crashsvc encounters
+an exception. If it is empty, the default (`/boot/bin/crashanalyzer`) will be
+used which logs exception information and a backtrace to the system log. The
+analyzer process is passed two startup handles: the process and thread that
+sustained the exception.
 
 ## crashlogger.pt=true
 

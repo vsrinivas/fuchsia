@@ -222,17 +222,13 @@ static zx_koid_t get_koid(zx_handle_t handle) {
     return info.koid;
 }
 
-void process_report(zx_handle_t process, zx_handle_t thread, uint32_t type, bool use_libunwind) {
-    if (!ZX_EXCP_IS_ARCH(type) && type != ZX_EXCP_POLICY_ERROR)
-        return;
-
+void process_report(zx_handle_t process, zx_handle_t thread, bool use_libunwind) {
     zx_koid_t pid = get_koid(process);
     zx_koid_t tid = get_koid(thread);
 
     // Record the crashed thread so that if we crash then self_dump_func
     // can (try to) "resume" the thread so that it's not left hanging.
     crashed_thread = thread;
-    crashed_thread_excp_type = type;
 
     zx_exception_report_t report;
     zx_status_t status = zx_object_get_info(thread, ZX_INFO_THREAD_EXCEPTION_REPORT,
@@ -243,6 +239,13 @@ void process_report(zx_handle_t process, zx_handle_t thread, uint32_t type, bool
         zx_handle_close(thread);
         return;
     }
+
+    uint32_t type = report.header.type;
+
+    if (!ZX_EXCP_IS_ARCH(type) && type != ZX_EXCP_POLICY_ERROR)
+        return;
+
+    crashed_thread_excp_type = type;
     auto context = report.context;
 
     zx_thread_state_general_regs_t reg_buf;
@@ -345,13 +348,6 @@ Fail:
     zx_handle_close(process);
 }
 
-void usage() {
-    fprintf(stderr, "Usage: crashanalyzer exception_type_in_hex\n");
-    fprintf(stderr, "\n");
-    fprintf(stderr, "The process that encountered the exception must be passed as PA_HND(PA_USER0, 0)\n");
-    fprintf(stderr, "The thread that encountered the exception must be passed as PA_HND(PA_USER0, 1)\n");
-}
-
 int main(int argc, char** argv) {
     // Whether to use libunwind or not.
     // If not then we use a simple algorithm that assumes ABI-specific
@@ -363,16 +359,6 @@ int main(int argc, char** argv) {
         pt_dump_enabled = true;
     }
 #endif
-
-    if (argc != 2) {
-        usage();
-        return 1;
-    }
-    uint32_t exception_type;
-    if (sscanf(argv[1], "%x", &exception_type) <= 0) {
-        usage();
-        return 1;
-    }
 
     inspector_set_verbosity(verbosity_level);
 
@@ -398,6 +384,6 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    process_report(process, thread, exception_type, use_libunwind);
+    process_report(process, thread, use_libunwind);
     return 0;
 }

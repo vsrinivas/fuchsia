@@ -217,19 +217,39 @@ int analyzer_starter(void* arg) {
             continue;
         }
 
-        printf("devmgr: analyzer_starter: launching for exception type %d\n", exception_type);
-        char buf[9];
-        snprintf(buf, sizeof(buf), "%x", exception_type);
-        const char* argv_crashanalyzer[] = {"/boot/bin/crashanalyzer", buf};
-        uint32_t handle_types[] = {PA_HND(PA_USER0, 0), PA_HND(PA_USER0, 1)};
-        status =
-            devmgr_launch(svcs_job_handle, "analyzer", countof(argv_crashanalyzer), argv_crashanalyzer,
-                          NULL, -1, handles, handle_types, countof(handles), NULL, FS_ALL);
-        if (status != ZX_OK) {
+        const char* analyzer_command = getenv("crashsvc.analyzer");
+        static const char default_analyzer[] = "/boot/bin/crashanalyzer";
+        if (analyzer_command == NULL) {
+            analyzer_command = default_analyzer;
+        }
+
+        for (;;) {
+            printf("devmgr: analyzer_starter: launching for exception type 0x%x\n", exception_type);
+            const char* argv_crashanalyzer[] = {analyzer_command};
+            uint32_t handle_types[] = {PA_HND(PA_USER0, 0), PA_HND(PA_USER0, 1)};
+            // The FS_* flags that grant access should be reduced to a minimal
+            // set, or potentially configured per analyzer. ZX-2151 tracks this.
+            status = devmgr_launch(svcs_job_handle, "analyzer",
+                                   countof(argv_crashanalyzer), argv_crashanalyzer,
+                                   NULL, -1, handles, handle_types, countof(handles),
+                                   NULL, FS_SVC | FS_DATA);
+            if (status == ZX_OK) {
+                break;
+            }
+
             printf("devmgr: analyzer_starter: launch failed: %d\n", status);
-            status = zx_task_resume(thread_handle, ZX_RESUME_EXCEPTION | ZX_RESUME_TRY_NEXT);
-            if (status != ZX_OK) {
-                printf("devmgr: analyzer_starter: zx_task_resume: %d\n", status);
+            if (strcmp(analyzer_command, default_analyzer) == 0) {
+                // The analyzer to be launched was already our fallback one,
+                // and it still failed. Terminate and bail.
+                status = zx_task_resume(thread_handle, ZX_RESUME_EXCEPTION | ZX_RESUME_TRY_NEXT);
+                if (status != ZX_OK) {
+                    printf("devmgr: analyzer_starter: zx_task_resume: %d\n", status);
+                }
+                break;
+            } else {
+                // The configured analyzer failed to launch, try the default
+                // crashanalyzer as a fallback.
+                analyzer_command = default_analyzer;
             }
         }
 
