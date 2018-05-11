@@ -49,7 +49,7 @@
     <project name="third_party/crashpad"
              path="third_party/crashpad"
              remote="https://fuchsia.googlesource.com/third_party/crashpad"
-             revision="177d56f7440715d0b0a107b3460074618a1f97f2"
+             revision="04b10a053d3f839577b54f1ab7e7cb16078c8f74"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/expat"
              path="third_party/expat"
@@ -165,7 +165,7 @@
     <project name="third_party/mini_chromium"
              path="third_party/crashpad/third_party/mini_chromium/mini_chromium"
              remote="https://fuchsia.googlesource.com/third_party/mini_chromium"
-             revision="ce9be1361314abd30f130176d42b32a422eac203"
+             revision="40cb6722bbc6bd6fb5fccecd80362313440a0537"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/netstack"
              path="third_party/netstack"
