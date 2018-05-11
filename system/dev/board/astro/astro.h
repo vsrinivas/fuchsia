@@ -16,6 +16,7 @@
 enum {
     BTI_BOARD,
     BTI_USB_XHCI,
+    BTI_DISPLAY,
 };
 
 typedef struct {
@@ -35,3 +36,16 @@ zx_status_t aml_i2c_init(aml_bus_t* bus);
 
 // aml-usb.c
 zx_status_t aml_usb_init(aml_bus_t* bus);
+
+// astro-display.c
+zx_status_t aml_display_init(aml_bus_t* bus);
+
+// These should match the mmio table defined in astro-i2c.c
+enum {
+    ASTRO_I2C_A0_0,
+    ASTRO_I2C_2,
+    ASTRO_I2C_3,
+};
+
+/* Astro I2C Devices */
+#define I2C_BACKLIGHT_ADDR (0x2C)

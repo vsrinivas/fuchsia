@@ -69,6 +69,7 @@ __BEGIN_CDECLS;
 #define PDEV_DID_AMLOGIC_FANCTL     8
 #define PDEV_DID_AMLOGIC_MAILBOX    9
 #define PDEV_DID_AMLOGIC_SCPI       10
+#define PDEV_DID_AMLOGIC_DISPLAY    11
 
 // Broadcom
 #define PDEV_VID_BROADCOM           6

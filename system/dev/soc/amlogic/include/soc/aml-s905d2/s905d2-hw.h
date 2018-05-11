@@ -14,6 +14,9 @@
 #define S905D2_USB0_BASE                0xff500000
 #define S905D2_USB0_LENGTH              0x100000
 
+#define S905D2_DMC_BASE                 0xff638000
+#define S905D2_DMC_LENGTH               0x1000
+
 #define S905D2_USBCTRL_BASE             0xffe09000
 #define S905D2_USBCTRL_LENGTH           0x2000
 
