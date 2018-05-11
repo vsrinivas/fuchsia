@@ -47,5 +47,15 @@ func main() {
 		log.Fatalf("error writing image file: %s", err)
 	}
 
-	log.Println("system update complete, reboot when ready.")
+	log.Println("system update complete, rebooting...")
+
+	dmctl, err := os.OpenFile("/dev/misc/dmctl", os.O_RDWR, os.ModePerm)
+	if err != nil {
+		log.Printf("error forcing restart: %s", err)
+	}
+	defer dmctl.Close()
+	cmd := []byte("reboot")
+	if _, err := dmctl.Write(cmd); err != nil {
+		log.Printf("error writing to control socket: %s", err)
+	}
 }
