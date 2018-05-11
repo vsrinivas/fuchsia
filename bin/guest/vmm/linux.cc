@@ -254,8 +254,10 @@ static zx_status_t write_boot_params(const machina::PhysMem& phys_mem,
   bp(phys_mem, VIDEO_LINES) = 0;
 
   // Set the address and size of the initial RAM disk.
-  bp(phys_mem, RAMDISK_IMAGE) = kRamdiskOffset;
-  bp(phys_mem, RAMDISK_SIZE) = static_cast<uint32_t>(initrd_size);
+  if (initrd_size > 0) {
+    bp(phys_mem, RAMDISK_IMAGE) = kRamdiskOffset;
+    bp(phys_mem, RAMDISK_SIZE) = static_cast<uint32_t>(initrd_size);
+  }
 
   // Copy the command line string.
   size_t cmdline_len = cmdline.size() + 1;
@@ -373,17 +375,19 @@ static zx_status_t load_device_tree(const int dtb_fd,
     return ZX_ERR_BAD_STATE;
   }
 
-  // Add the memory range of the initial RAM disk.
-  ret = fdt_setprop_u64(dtb, off, "linux,initrd-start", kRamdiskOffset);
-  if (ret != 0) {
-    device_tree_error_msg("linux,initrd-start");
-    return ZX_ERR_BAD_STATE;
-  }
-  ret = fdt_setprop_u64(dtb, off, "linux,initrd-end",
-                        kRamdiskOffset + initrd_size);
-  if (ret != 0) {
-    device_tree_error_msg("linux,initrd-end");
-    return ZX_ERR_BAD_STATE;
+  if (initrd_size > 0) {
+    // Add the memory range of the initial RAM disk.
+    ret = fdt_setprop_u64(dtb, off, "linux,initrd-start", kRamdiskOffset);
+    if (ret != 0) {
+      device_tree_error_msg("linux,initrd-start");
+      return ZX_ERR_BAD_STATE;
+    }
+    ret = fdt_setprop_u64(dtb, off, "linux,initrd-end",
+                          kRamdiskOffset + initrd_size);
+    if (ret != 0) {
+      device_tree_error_msg("linux,initrd-end");
+      return ZX_ERR_BAD_STATE;
+    }
   }
 
   // Add CPUs to device tree.
