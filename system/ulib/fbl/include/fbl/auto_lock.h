@@ -27,7 +27,7 @@ namespace fbl {
 class __TA_SCOPED_CAPABILITY AutoLock {
 public:
     explicit AutoLock(fbl_mutex_t* mutex) __TA_ACQUIRE(mutex)
-        :   mutex_(mutex) {
+        : mutex_(mutex), acquired_(true) {
         fbl_mutex_acquire(mutex_);
     }
 
@@ -35,7 +35,7 @@ public:
         :   AutoLock(mutex->GetInternal()) {}
 
     explicit AutoLock(fbl::NullLock* mutex) __TA_ACQUIRE(mutex)
-        : mutex_(nullptr) { }
+        : mutex_(nullptr), acquired_(false) {}
 
     ~AutoLock()  __TA_RELEASE() {
         release();
@@ -43,9 +43,12 @@ public:
 
     // early release the mutex before the object goes out of scope
     void release() __TA_RELEASE() {
-        if (mutex_) {
+        // In typical usage, this conditional will be optimized away so
+        // that fbl_mutex_release() is called unconditionally.
+        if (acquired_) {
             fbl_mutex_release(mutex_);
             mutex_ = nullptr;
+            acquired_ = false;
         }
     }
 
@@ -54,6 +57,7 @@ public:
 
 private:
     fbl_mutex_t* mutex_;
+    bool acquired_;
 };
 
 }  // namespace fbl
