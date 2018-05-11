@@ -65,12 +65,17 @@ FUNCTION(_start)
     // TODO(SEC-31): Choose it randomly.
     movlit  kernel_vaddr, KERNEL_BASE
 
+    // This function is executed by all CPUs. It's cruicial that only
+    // the first CPU relocate the kernel. Skip over it unless we're CPU 0.
+    cbnz     cpuid, .Lskip_fixup
+
     // The fixup code appears right after the kernel image (at __data_end
     // in our view).  It expects x0 to contain the actual runtime address
     // of __code_start.
     mov     x0, kernel_vaddr
     bl      __data_end
 
+.Lskip_fixup:
     /* load the base of the translation tables */
     adr_global page_table0, tt_trampoline
     adr_global page_table1, arm64_kernel_translation_table
