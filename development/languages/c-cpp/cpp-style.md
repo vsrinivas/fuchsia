@@ -28,13 +28,14 @@ while (!done) {
 }
 ```
 
-#### Conditionals
+
+#### Conditionals and loops
 
 Do not use spaces inside parentheses (the Google style guide discourages but
 permits this).
 
-Do not use the single-line form for short conditionals (the Google style guide
-permits both forms):
+Do not use the single-line form for short conditionals and loops (the Google
+style guide permits both forms):
 
 ```cpp
 // Don't do this:
