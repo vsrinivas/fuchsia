@@ -8,7 +8,6 @@ group("tests") {
   public_deps = [
     ":apptests",
     ":unittests",
-    ":unittests_using_escher",
   ]
 }
 
@@ -23,8 +22,9 @@ source_set("testing_deps") {
     "//garnet/lib/ui/gfx",
     "//garnet/public/lib/escher",
     "//garnet/public/lib/escher/test:gtest_vulkan",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//garnet/public/lib/ui/scenic:fidl_helpers",
-    "//garnet/public/lib/ui/tests",
   ]
 }
 
@@ -64,33 +64,11 @@ executable("unittests") {
 
   deps = [
     ":testing_deps",
-    "//garnet/bin/ui/tests:main",
   ]
 
   include_dirs = [
     "//garnet/public/lib/escher",
     "//third_party/glm",
-  ]
-}
-
-executable("unittests_using_escher") {
-  output_name = "gfx_unittests_using_escher"
-
-  testonly = true
-
-  sources = [
-    "escher_test_environment.cc",
-    "escher_test_environment.h",
-    "session_test.cc",
-    "session_test.h",
-    "session_unittest_using_escher.cc",
-  ]
-
-  deps = [
-    ":testing_deps",
-    "//garnet/examples/escher/common",
-    "//garnet/public/lib/escher",
-    "//garnet/public/lib/test_runner/cpp/reporting",
   ]
 }
 
@@ -105,8 +83,7 @@ executable("apptests") {
   ]
 
   deps = [
-    "//garnet/bin/ui/tests:main",
-    "//garnet/lib/ui/gfx/tests:testing_deps",
+    ":testing_deps",
     "//garnet/lib/ui/scenic/tests:testing_deps",
   ]
 }

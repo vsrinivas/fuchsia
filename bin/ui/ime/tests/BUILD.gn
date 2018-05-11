@@ -30,6 +30,6 @@ executable("unittests") {
 
   deps = [
     ":testing_deps",
-    "//garnet/bin/ui/tests:main",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
   ]
 }

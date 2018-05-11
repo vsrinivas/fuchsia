@@ -16,7 +16,6 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/synchronization/waitable_event.h"
 #include "lib/ui/scenic/fidl_helpers.h"
-#include "lib/ui/tests/test_with_message_loop.h"
 
 namespace scenic {
 namespace gfx {
@@ -494,7 +493,9 @@ TEST_F(ResourceLinkerTest, ImportAfterReleasedExportedResourceFails) {
   linker->ImportResource(import.get(),
                          ::gfx::ImportSpec::NODE,  // import spec
                          std::move(destination));  // import handle
-  RUN_MESSAGE_LOOP_UNTIL(did_resolve);
+  ASSERT_TRUE(RunLoopUntilWithTimeout([&did_resolve]() -> bool {
+    return did_resolve;
+  }));
   ASSERT_TRUE(did_resolve);
   ASSERT_EQ(0u, linker->NumUnresolvedImports());
 }

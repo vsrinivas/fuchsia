@@ -20,12 +20,11 @@ executable("input_apptests") {
   ]
 
   deps = [
-    "//garnet/bin/ui/tests:main",
     "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//garnet/public/lib/ui/input/fidl",
-    "//garnet/public/lib/ui/tests",
     "//garnet/public/lib/ui/tests/mocks",
-    "//third_party/googletest:gtest",
     "//zircon/public/lib/hid",
   ]
 }

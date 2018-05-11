@@ -14,7 +14,6 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/synchronization/waitable_event.h"
 #include "lib/ui/scenic/fidl_helpers.h"
-#include "lib/ui/tests/test_with_message_loop.h"
 
 namespace scenic {
 namespace gfx {
@@ -193,7 +192,9 @@ TEST_F(ImportTest, DestroyingExportedResourceSendsEvent) {
   EXPECT_TRUE(Apply(scenic_lib::NewReleaseResourceCommand(node_id)));
 
   // Run the message loop until we get an event.
-  RUN_MESSAGE_LOOP_UNTIL(events_.size() > 0);
+  ASSERT_TRUE(RunLoopUntilWithTimeout([this]() -> bool {
+    return events_.size() > 0;
+  }));
 
   // Verify that we got an ImportUnboundEvent.
   EXPECT_EQ(1u, events_.size());
@@ -223,7 +224,9 @@ TEST_F(ImportTest, ImportingNodeAfterDestroyingExportedResourceSendsEvent) {
       import_node, ::gfx::ImportSpec::NODE, std::move(destination))));
 
   // Run the message loop until we get an event.
-  RUN_MESSAGE_LOOP_UNTIL(events_.size() > 0);
+  ASSERT_TRUE(RunLoopUntilWithTimeout([this]() -> bool {
+    return events_.size() > 0;
+  }));
 
   // Verify that we got an ImportUnboundEvent.
   EXPECT_EQ(1u, events_.size());

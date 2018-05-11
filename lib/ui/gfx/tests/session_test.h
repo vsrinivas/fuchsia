@@ -11,12 +11,13 @@
 #include "gtest/gtest.h"
 #include "lib/fsl/threading/thread.h"
 #include "lib/fxl/synchronization/waitable_event.h"
+#include "lib/gtest/test_with_message_loop.h"
 
 namespace scenic {
 namespace gfx {
 namespace test {
 
-class SessionTest : public ::testing::Test,
+class SessionTest : public ::gtest::TestWithMessageLoop,
                     public ErrorReporter,
                     public EventReporter {
  public:

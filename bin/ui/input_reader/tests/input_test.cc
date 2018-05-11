@@ -3,18 +3,17 @@
 // found in the LICENSE file.
 
 #include <hid/usages.h>
+#include <input/cpp/fidl.h>
 
 #include "gtest/gtest.h"
-
-#include <input/cpp/fidl.h>
+#include "lib/gtest/test_with_message_loop.h"
 #include "lib/ui/tests/mocks/mock_input_device.h"
 #include "lib/ui/tests/mocks/mock_input_device_registry.h"
-#include "lib/ui/tests/test_with_message_loop.h"
 
 namespace input {
 namespace test {
 
-class InputTest : public ::testing::Test {};
+using InputTest = ::gtest::TestWithMessageLoop;
 
 input::DeviceDescriptor GenerateKeyboardDescriptor() {
   input::KeyboardDescriptorPtr keyboard = input::KeyboardDescriptor::New();
@@ -41,8 +40,8 @@ TEST_F(InputTest, RegisterKeyboardTest) {
 
   registry.RegisterDevice(std::move(descriptor), input_device.NewRequest());
 
-  RUN_MESSAGE_LOOP_WHILE(on_register_count == 0);
-  EXPECT_EQ(1u, on_register_count);
+  EXPECT_TRUE(RunLoopUntilWithTimeout(
+      [&on_register_count]() -> bool { return on_register_count == 1u; }));
 }
 
 TEST_F(InputTest, InputKeyboardTest) {
@@ -68,8 +67,8 @@ TEST_F(InputTest, InputKeyboardTest) {
   report.keyboard = std::move(keyboard_report);
   input_device->DispatchReport(std::move(report));
 
-  RUN_MESSAGE_LOOP_WHILE(on_report_count == 0);
-  EXPECT_EQ(1u, on_report_count);
+  EXPECT_TRUE(RunLoopUntilWithTimeout(
+      [&on_report_count]() -> bool { return on_report_count == 1u; }));
 }
 
 }  // namespace test

@@ -6,17 +6,18 @@
 #include <chrono>
 #include <thread>
 
-#include "gtest/gtest.h"
-
 #include "garnet/lib/ui/gfx/tests/util.h"
 #include "garnet/lib/ui/gfx/util/event_timestamper.h"
-#include "lib/ui/tests/test_with_message_loop.h"
+#include "gtest/gtest.h"
+#include "lib/gtest/test_with_message_loop.h"
 
 namespace scenic {
 namespace gfx {
 namespace test {
 
-TEST(EventTimestamper, DISABLED_SmokeTest) {
+using EventTimestamperTest = ::gtest::TestWithMessageLoop;
+
+TEST_F(EventTimestamperTest, DISABLED_SmokeTest) {
   constexpr size_t kEventCount = 3;
   std::vector<zx::event> events;
   std::vector<EventTimestamper::Watch> watches;
@@ -47,7 +48,9 @@ TEST(EventTimestamper, DISABLED_SmokeTest) {
   }
 
   for (size_t i = 0; i < kEventCount; ++i) {
-    RUN_MESSAGE_LOOP_UNTIL(target_callback_times[i] == 0u);
+    ASSERT_TRUE(RunLoopUntilWithTimeout([&target_callback_times,&i]() -> bool {
+      return target_callback_times[i] == 0u;
+    }));
   }
 
   // Watches must not outlive the timestamper.

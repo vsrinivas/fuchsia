@@ -2,17 +2,15 @@
 // Use of source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
-#include "lib/escher/util/image_utils.h"
-
 #include "garnet/lib/ui/gfx/resources/host_image.h"
 #include "garnet/lib/ui/gfx/resources/image_pipe.h"
 #include "garnet/lib/ui/gfx/tests/mocks.h"
 #include "garnet/lib/ui/gfx/tests/session_test.h"
 #include "garnet/lib/ui/gfx/tests/util.h"
+#include "gtest/gtest.h"
 #include "lib/escher/flib/fence.h"
+#include "lib/escher/util/image_utils.h"
 #include "lib/ui/scenic/fidl_helpers.h"
-#include "lib/ui/tests/test_with_message_loop.h"
 
 namespace scenic {
 namespace gfx {
@@ -203,7 +201,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
 
   // Current presented image should be null, since we haven't signalled
   // acquire fence yet.
-  ::scenic::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
+  RunLoopWithTimeout(kPumpMessageLoopDuration);
   ASSERT_FALSE(image_pipe->GetEscherImage());
 
   // Signal on the acquire fence.
@@ -212,7 +210,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   // Run until image1 is presented.
   for (int i = 0; !image_pipe->GetEscherImage() && i < 400; i++) {
     image_pipe->Update(0u, 0u);
-    ::scenic::test::RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(10));
+    RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(10));
   }
 
   ASSERT_TRUE(image_pipe->GetEscherImage());
@@ -235,7 +233,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   }
 
   // The first image should not have been released.
-  ::scenic::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
+  RunLoopWithTimeout(kPumpMessageLoopDuration);
   ASSERT_FALSE(IsEventSignalled(release_fence1, escher::kFenceSignalled));
 
   // Make gradient the currently displayed image.
@@ -247,14 +245,16 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
 
   // Verify that the currently display image hasn't changed yet, since we
   // haven't signalled the acquire fence.
-  ::scenic::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
+  RunLoopWithTimeout(kPumpMessageLoopDuration);
   ASSERT_EQ(image_pipe->GetEscherImage(), image1);
 
   // Signal on the acquire fence.
   acquire_fence2.signal(0u, escher::kFenceSignalled);
 
   // There should be a new image presented.
-  RUN_MESSAGE_LOOP_UNTIL(image1 != image_pipe->GetEscherImage());
+  ASSERT_TRUE(RunLoopUntilWithTimeout([&image1, &image_pipe]() -> bool {
+    return image1 != image_pipe->GetEscherImage();
+  }));
   escher::ImagePtr image2 = image_pipe->GetEscherImage();
   ASSERT_TRUE(image2);
   ASSERT_NE(image1, image2);

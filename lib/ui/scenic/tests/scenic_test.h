@@ -9,17 +9,19 @@
 #include "garnet/lib/ui/scenic/tests/clock_task_runner.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "gtest/gtest.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/fxl/tasks/task_runner.h"
+#include "lib/gtest/test_with_message_loop.h"
 
 namespace scenic {
 namespace test {
 
 // Base class that can be specialized to configure a Scenic with the systems
 // required for a set of tests.
-class ScenicTest : public ::testing::Test,
+class ScenicTest : public ::gtest::TestWithMessageLoop,
                    public ErrorReporter,
                    public EventReporter {
- public:
+ protected:
   // ::testing::Test virtual method.
   void SetUp() override;
 
@@ -31,7 +33,6 @@ class ScenicTest : public ::testing::Test,
 
   Scenic* scenic() { return scenic_.get(); }
 
- protected:
   // Subclasses may override this to install any systems required by the test;
   // none are installed by default.
   virtual void InitializeScenic(Scenic* scenic);
@@ -53,6 +54,7 @@ class ScenicTest : public ::testing::Test,
     }
   }
 
+  static std::unique_ptr<component::ApplicationContext> app_context_;
   fxl::RefPtr<ClockTaskRunner> clock_task_runner_;
   std::unique_ptr<Scenic> scenic_;
   std::vector<std::string> reported_errors_;

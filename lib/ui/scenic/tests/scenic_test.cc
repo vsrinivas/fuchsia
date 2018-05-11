@@ -4,14 +4,19 @@
 
 #include "garnet/lib/ui/scenic/tests/scenic_test.h"
 
-extern std::unique_ptr<component::ApplicationContext> g_application_context;
-
 namespace scenic {
 namespace test {
 
+std::unique_ptr<component::ApplicationContext> ScenicTest::app_context_;
+
 void ScenicTest::SetUp() {
+  // TODO(SCN-720): Wrap CreateFromStartupInfo using ::gtest::Environment
+  // instead of this hack.  This code has the chance to break non-ScenicTests.
+  if (app_context_ == nullptr) {
+    app_context_ = component::ApplicationContext::CreateFromStartupInfo();
+  }
   clock_task_runner_ = ClockTaskRunner::New(0);
-  scenic_ = std::make_unique<Scenic>(g_application_context.get(),
+  scenic_ = std::make_unique<Scenic>(app_context_.get(),
                                      clock_task_runner_.get(),
                                      clock_task_runner_.get());
   InitializeScenic(scenic_.get());
