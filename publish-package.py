@@ -58,7 +58,7 @@ def build_package(pm_bin, pkg_key, far_stg_dir, manifest, pkg_name):
     try:
         subprocess.check_call(build_cmd)
     except subprocess.CalledProcessError as e:
-        return None, "Could not create package metadata FAR: %s" % e
+        return None, None, "Could not create package metadata FAR: %s" % e
     except OSError as e:
         return None, None, "Could not start packging tool %s" % e
 
