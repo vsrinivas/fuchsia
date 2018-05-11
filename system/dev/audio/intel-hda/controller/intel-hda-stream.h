@@ -48,6 +48,10 @@ public:
     Type        configured_type() const { return configured_type_; }
     uint8_t     tag()             const { return tag_; }
     uint16_t    id()              const { return id_; }
+    uint16_t    dma_id()          const {
+        ZX_DEBUG_ASSERT(id() > 0);
+        return static_cast<uint16_t>(id() - 1);
+    }
     uint16_t    GetKey()          const { return id(); }
 
     zx_status_t SetStreamFormat(const fbl::RefPtr<dispatcher::ExecutionDomain>& domain,

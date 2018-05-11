@@ -456,6 +456,10 @@ zx_status_t IntelHDADSP::ProcessRequestStream(dispatcher::Channel* channel,
     auto stream = controller_.AllocateStream(type);
 
     if (stream != nullptr) {
+        LOG(TRACE, "Decouple stream #%u\n", stream->id());
+        // Decouple stream
+        REG_SET_BITS<uint32_t>(&pp_regs()->ppctl, (1 << stream->dma_id()));
+
         // Success, send its ID and its tag back to the codec and add it to the
         // set of active streams owned by this codec.
         resp.result     = ZX_OK;
@@ -489,6 +493,11 @@ zx_status_t IntelHDADSP::ProcessReleaseStream(dispatcher::Channel* channel,
     // phone on it.
     if (stream == nullptr)
         return ZX_ERR_BAD_STATE;
+
+    LOG(TRACE, "Couple stream #%u\n", stream->id());
+
+    // Couple stream
+    REG_CLR_BITS<uint32_t>(&pp_regs()->ppctl, (1 << stream->dma_id()));
 
     // Give the stream back to the controller and (if an ack was requested) tell
     // our codec driver that things went well.

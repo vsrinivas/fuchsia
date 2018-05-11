@@ -34,9 +34,9 @@ constexpr zx_time_t INTEL_ADSP_BASE_FW_INIT_TIMEOUT_NSEC = ZX_SEC (  3); // 3S A
 constexpr zx_time_t INTEL_ADSP_POLL_FW_NSEC              = ZX_MSEC(  1); //.1mS Arbitrary
 }  // anon namespace
 
-fbl::unique_ptr<IntelAudioDsp> IntelAudioDsp::Create(zx_device_t* hda_dev) {
+fbl::RefPtr<IntelAudioDsp> IntelAudioDsp::Create() {
     fbl::AllocChecker ac;
-    fbl::unique_ptr<IntelAudioDsp> ret(new (&ac) IntelAudioDsp(hda_dev));
+    auto ret = fbl::AdoptRef(new (&ac) IntelAudioDsp());
     if (!ac.check()) {
         GLOBAL_LOG(ERROR, "Out of memory attempting to allocate IHDA DSP\n");
         return nullptr;
@@ -44,9 +44,8 @@ fbl::unique_ptr<IntelAudioDsp> IntelAudioDsp::Create(zx_device_t* hda_dev) {
     return ret;
 }
 
-IntelAudioDsp::IntelAudioDsp(zx_device_t* hda_dev)
-    : IntelAudioDspDeviceType(hda_dev),
-      ipc_(*this) {
+IntelAudioDsp::IntelAudioDsp()
+    : ipc_(*this) {
     for (auto& id : module_ids_) { id = MODULE_ID_INVALID; }
     snprintf(log_prefix_, sizeof(log_prefix_), "IHDA DSP (unknown BDF)");
 }
@@ -56,8 +55,33 @@ adsp_fw_registers_t* IntelAudioDsp::fw_regs() const {
                                                   SKL_ADSP_SRAM0_OFFSET);
 }
 
-zx_status_t IntelAudioDsp::DriverBind() {
-    zx_status_t res = device_get_protocol(parent(), ZX_PROTOCOL_IHDA_DSP,
+zx_status_t IntelAudioDsp::DriverBind(zx_device_t* hda_dev) {
+    // IntelHDACodecDriverBase initialization. Do first so the parent reference is set.
+    zx_status_t res = Bind(hda_dev, "intel-sst-dsp");
+
+    res = SetupDspDevice();
+    if (res != ZX_OK) {
+        return res;
+    }
+
+    state_ = State::INITIALIZING;
+
+    // Perform hardware initializastion in a thread.
+    int c11_res = thrd_create(
+            &init_thread_,
+            [](void* ctx) -> int { return static_cast<IntelAudioDsp*>(ctx)->InitThread(); },
+            this);
+    if (c11_res < 0) {
+        LOG(ERROR, "Failed to create init thread (res = %d)\n", c11_res);
+        state_ = State::ERROR;
+        return ZX_ERR_INTERNAL;
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t IntelAudioDsp::SetupDspDevice() {
+    zx_status_t res = device_get_protocol(codec_device(), ZX_PROTOCOL_IHDA_DSP,
                                           reinterpret_cast<void*>(&ihda_dsp_));
     if (res != ZX_OK) {
         LOG(ERROR, "IHDA DSP device does not support IHDA DSP protocol (err %d)\n", res);
@@ -138,29 +162,6 @@ zx_status_t IntelAudioDsp::DriverBind() {
         return res;
     }
 
-    state_ = State::INITIALIZING;
-
-    // Perform hardware initializastion in a thread.
-    int c11_res = thrd_create(
-            &init_thread_,
-            [](void* ctx) -> int { return static_cast<IntelAudioDsp*>(ctx)->InitThread(); },
-            this);
-    if (c11_res < 0) {
-        LOG(ERROR, "Failed to create init thread (res = %d)\n", c11_res);
-        state_ = State::ERROR;
-        return ZX_ERR_INTERNAL;
-    }
-
-    // Add a device
-    char dev_name[ZX_DEVICE_NAME_MAX] = { 0 };
-    snprintf(dev_name, sizeof(dev_name), "intel-sst-dsp");
-
-    res = DdkAdd(dev_name);
-    if (res != ZX_OK) {
-        LOG(ERROR, "Failed to add DSP device (err %d)\n", res);
-        return res;
-    }
-
     return ZX_OK;
 }
 
@@ -176,13 +177,6 @@ void IntelAudioDsp::DeviceShutdown() {
     ihda_dsp_disable(&ihda_dsp_);
 
     state_ = State::SHUT_DOWN;
-}
-
-void IntelAudioDsp::DdkUnbind() {
-    DeviceShutdown();
-}
-
-void IntelAudioDsp::DdkRelease() {
 }
 
 int IntelAudioDsp::InitThread() {
@@ -227,6 +221,7 @@ int IntelAudioDsp::InitThread() {
     // DSP Firmware is now ready.
     LOG(INFO, "DSP firmware ready\n");
 
+    // Setup pipelines
     st = GetModulesInfo();
     if (st != ZX_OK) {
         LOG(ERROR, "Error getting DSP modules info\n");
@@ -238,8 +233,45 @@ int IntelAudioDsp::InitThread() {
         return -1;
     }
 
+    // Create and publish streams.
+    st = CreateAndStartStreams();
+    if (st != ZX_OK) {
+        LOG(ERROR, "Error starting DSP streams\n");
+        return -1;
+    }
+
     cleanup.cancel();
     return 0;
+}
+
+zx_status_t IntelAudioDsp::CreateAndStartStreams() {
+    zx_status_t res = ZX_OK;
+
+    // Create and publish the streams we will use.
+    static struct {
+        uint32_t stream_id;
+        bool is_input;
+    } STREAMS[] = {
+        // Speakers
+        {
+            .stream_id = 1,
+            .is_input = false,
+        },
+    };
+
+    for (size_t i = 0; i < countof(STREAMS); ++i) {
+        const auto& stream_def = STREAMS[i];
+        auto stream = fbl::AdoptRef(new IntelDspStream(stream_def.stream_id, stream_def.is_input));
+
+        res = ActivateStream(stream);
+        if (res != ZX_OK) {
+            LOG(ERROR, "Failed to activate %s stream id #%u (res %d)!",
+                       stream_def.is_input ? "input" : "output", stream_def.stream_id, res);
+            return res;
+        }
+    }
+
+    return ZX_OK;
 }
 
 zx_status_t IntelAudioDsp::Boot() {
@@ -329,7 +361,8 @@ zx_status_t IntelAudioDsp::LoadFirmware() {
     // Get the VMO containing the firmware.
     zx::vmo fw_vmo;
     size_t fw_size;
-    st = load_firmware(parent(), ADSP_FIRMWARE_PATH, fw_vmo.reset_and_get_address(), &fw_size);
+    st = load_firmware(codec_device(), ADSP_FIRMWARE_PATH, fw_vmo.reset_and_get_address(),
+                       &fw_size);
     if (st != ZX_OK) {
         LOG(ERROR, "Error fetching firmware (err %d)\n", st);
         return st;
@@ -548,7 +581,7 @@ zx_status_t IntelAudioDsp::SetupPipelines() {
     // TODO(yky): this should come from ACPI (NHLT table)
     zx::vmo blob_vmo;
     size_t blob_size;
-    st = load_firmware(parent(), I2S_CFG_PATH, blob_vmo.reset_and_get_address(), &blob_size);
+    st = load_firmware(codec_device(), I2S_CFG_PATH, blob_vmo.reset_and_get_address(), &blob_size);
     if (st != ZX_OK) {
         LOG(ERROR, "Error getting I2S config blob (err %d)\n", st);
         return st;
@@ -628,16 +661,6 @@ zx_status_t IntelAudioDsp::SetupPipelines() {
         return st;
     }
 
-    // Start pipelines. Start sink pipeline before source
-    st = RunPipeline(PIPELINE1_ID);
-    if (st != ZX_OK) {
-        return st;
-    }
-    st = RunPipeline(PIPELINE0_ID);
-    if (st != ZX_OK) {
-        return st;
-    }
-
     return ZX_OK;
 }
 
@@ -648,6 +671,33 @@ zx_status_t IntelAudioDsp::RunPipeline(uint8_t pipeline_id) {
         return st;
     }
     return ipc_.SetPipelineState(pipeline_id, PipelineState::RUNNING, true);
+}
+
+zx_status_t IntelAudioDsp::StartPipelines() {
+    zx_status_t st = RunPipeline(1);
+    if (st != ZX_OK) {
+        return st;
+    }
+    return RunPipeline(0);
+    // TODO Error recovery
+}
+
+zx_status_t IntelAudioDsp::PausePipelines() {
+    zx_status_t st = ipc_.SetPipelineState(0, PipelineState::PAUSED, true);
+    if (st != ZX_OK) {
+        return st;
+    }
+    st = ipc_.SetPipelineState(1, PipelineState::PAUSED, true);
+    if (st != ZX_OK) {
+        return st;
+    }
+    // Reset DSP DMA
+    st = ipc_.SetPipelineState(0, PipelineState::RESET, true);
+    if (st != ZX_OK) {
+        return st;
+    }
+    return ipc_.SetPipelineState(1, PipelineState::RESET, true);
+    // TODO Error recovery
 }
 
 bool IntelAudioDsp::IsCoreEnabled(uint8_t core_mask) {
@@ -739,14 +789,14 @@ zx_status_t ihda_dsp_init_hook(void** out_ctx) {
 }
 
 zx_status_t ihda_dsp_bind_hook(void* ctx, zx_device_t* hda_dev) {
-    auto dev = ::audio::intel_hda::IntelAudioDsp::Create(hda_dev);
+    auto dev = ::audio::intel_hda::IntelAudioDsp::Create();
     if (!dev) {
         return ZX_ERR_NO_MEMORY;
     }
-    zx_status_t st = dev->DriverBind();
+    zx_status_t st = dev->DriverBind(hda_dev);
     if (st == ZX_OK) {
         // devmgr is now in charge of the memory for dev
-        void* ptr __UNUSED = dev.release();
+        void* ptr __UNUSED = dev.leak_ref();
     }
     return st;
 }

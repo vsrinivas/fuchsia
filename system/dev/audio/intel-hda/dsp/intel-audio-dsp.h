@@ -8,9 +8,7 @@
 #include <ddk/device.h>
 #include <ddk/protocol/intel-hda-codec.h>
 #include <ddk/protocol/intel-hda-dsp.h>
-#include <ddktl/device.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vmo_mapper.h>
 
 #include <sync/completion.h>
@@ -18,22 +16,22 @@
 #include <string.h>
 #include <threads.h>
 
+#include <dispatcher-pool/dispatcher-channel.h>
+#include <intel-hda/codec-utils/codec-driver-base.h>
 #include <intel-hda/utils/intel-audio-dsp-ipc.h>
 #include <intel-hda/utils/intel-hda-registers.h>
 #include <intel-hda/utils/utils.h>
 
 #include "debug-logging.h"
 #include "intel-dsp-ipc.h"
+#include "intel-dsp-stream.h"
 
 namespace audio {
 namespace intel_hda {
 
-class IntelAudioDsp;
-using IntelAudioDspDeviceType = ddk::Device<IntelAudioDsp, ddk::Unbindable>;
-
-class IntelAudioDsp : public IntelAudioDspDeviceType {
+class IntelAudioDsp : public codecs::IntelHDACodecDriverBase {
 public:
-    static fbl::unique_ptr<IntelAudioDsp> Create(zx_device_t* hda_dev);
+    static fbl::RefPtr<IntelAudioDsp> Create();
 
     const char*  log_prefix() const { return log_prefix_; }
 
@@ -53,17 +51,16 @@ public:
         mailbox_in_.Read(data, size);
     }
 
-    zx_status_t DriverBind() __WARN_UNUSED_RESULT;
+    zx_status_t StartPipelines();
+    zx_status_t PausePipelines();
+
+    zx_status_t DriverBind(zx_device_t* hda_dev) __WARN_UNUSED_RESULT;
     void        DeviceShutdown();
 
-    // Ddktl device interface implementation
-    void DdkUnbind();
-    void DdkRelease();
-
 private:
-    friend class fbl::unique_ptr<IntelAudioDsp>;
+    friend class fbl::RefPtr<IntelAudioDsp>;
 
-    IntelAudioDsp(zx_device_t* hda_dev);
+    IntelAudioDsp();
     ~IntelAudioDsp() { }
 
     // Accessor for our mapped registers
@@ -71,6 +68,8 @@ private:
         return reinterpret_cast<adsp_registers_t*>(mapped_regs_.start());
     }
     adsp_fw_registers_t* fw_regs() const;
+
+    zx_status_t SetupDspDevice();
 
     int InitThread();
 
@@ -93,6 +92,8 @@ private:
 
     // Interrupt handler.
     void ProcessIrq();
+
+    zx_status_t CreateAndStartStreams();
 
     // Debug
     void DumpFirmwareConfig(const TLVHeader* config, size_t length);
