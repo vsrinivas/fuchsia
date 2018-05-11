@@ -7,12 +7,6 @@
 namespace maxwell {
 
 std::string StoryStateToString(modular::StoryState state) {
-  // INITIAL
-  // STARTING
-  // RUNNING
-  // DONE
-  // STOPPED
-  // ERROR
   switch (state) {
     case modular::StoryState::INITIAL:
       return "INITIAL";
@@ -20,14 +14,10 @@ std::string StoryStateToString(modular::StoryState state) {
       return "STARTING";
     case modular::StoryState::RUNNING:
       return "RUNNING";
-    case modular::StoryState::DONE:
-      return "DONE";
     case modular::StoryState::STOPPED:
       return "STOPPED";
     case modular::StoryState::ERROR:
       return "ERROR";
-    default:
-      FXL_LOG(FATAL) << "Unknown modular::StoryState value: " << state;
   }
 }
 

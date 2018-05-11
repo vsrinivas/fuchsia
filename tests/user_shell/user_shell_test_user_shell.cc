@@ -175,10 +175,6 @@ class StoryProviderStateWatcherImpl : modular::StoryProviderWatcher {
           on_stopped_called_once_.Pass();
         }
         break;
-      case modular::StoryState::DONE:
-        // Doesn't happen anymore.
-        FXL_CHECK(story_state != modular::StoryState::DONE);
-        break;
       case modular::StoryState::ERROR:
         // Doesn't happen in this test.
         FXL_CHECK(story_state != modular::StoryState::ERROR);

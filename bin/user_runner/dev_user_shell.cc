@@ -137,17 +137,7 @@ class DevUserShellApp : modular::StoryWatcher,
 
   // |StoryWatcher|
   void OnStateChange(modular::StoryState state) override {
-    if (state != modular::StoryState::DONE) {
-      return;
-    }
-
-    FXL_LOG(INFO) << "DevUserShell DONE";
-    story_controller_->Stop([this] {
-      FXL_LOG(INFO) << "DevUserShell STOP";
-      story_watcher_binding_.Unbind();
-      story_controller_.Unbind();
-      user_shell_context_->Logout();
-    });
+    FXL_LOG(INFO) << "DevUserShell State " << state;
   }
 
   // |StoryWatcher|

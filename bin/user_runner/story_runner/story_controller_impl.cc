@@ -1611,7 +1611,6 @@ bool StoryControllerImpl::IsRunning() {
   switch (state_) {
     case StoryState::STARTING:
     case StoryState::RUNNING:
-    case StoryState::DONE:
       return true;
     case StoryState::INITIAL:
     case StoryState::STOPPED:
@@ -2056,10 +2055,6 @@ void StoryControllerImpl::OnModuleStateChange(
   if (first_module_path_ == module_path) {
     UpdateStoryState(state);
   }
-
-  if (IsExternalModule(module_path) && state == ModuleState::DONE) {
-    StopModule(module_path, [] {});
-  }
 }
 
 void StoryControllerImpl::UpdateStoryState(const ModuleState state) {
@@ -2082,11 +2077,6 @@ void StoryControllerImpl::UpdateStoryState(const ModuleState state) {
       // record, because actually starting newly added modules is gated by the
       // story to be running. This makes little sense. FW-334
       state_ = StoryState::STOPPED;
-      break;
-    case ModuleState::DONE:
-      // TODO(mesch): Same problem for modules remaining running and for newly
-      // added modules as for STOPPED. FW-334
-      state_ = StoryState::DONE;
       break;
     case ModuleState::ERROR:
       state_ = StoryState::ERROR;

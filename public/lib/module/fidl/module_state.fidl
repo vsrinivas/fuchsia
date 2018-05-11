@@ -19,12 +19,9 @@ library modular;
 //            -> STARTING    Story.StartModule()
 //   STARTING -> UNLINKED    Module connection closed immediately
 //   STARTING -> RUNNING     Story.Ready()
-//   STARTING -> DONE        Module impl calls Story.Done()
-//   RUNNING  -> DONE        (same)
 //   STARTING -> STOPPED     ModuleController.Stop() or Story.Stop()
 //   UNLINKED -> STOPPED     (same)
 //   RUNNING  -> STOPPED     (same)
-//   DONE     -> STOPPED     (same)
 //   STARTING -> ERROR       application doesn't start
 //   UNLINKED -> ERROR       application exits
 //   RUNNING  -> ERROR       Module connection closed
@@ -47,14 +44,6 @@ enum ModuleState {
   // module of a story becomes UNLINKED doesn't affect the state of
   // the Story; that remains RUNNING either way.
   UNLINKED = 6;
-  // Module instance called Done() on its Story handle. The receiver
-  // is free to decide whether it's appropriate to Stop() the module.
-  // (It might be appropriate for the receiver to call Done() on its
-  // own instead.) The module, conversely, is free to continue
-  // running, but once it indicated its willingnes to participate in
-  // the Story/Module life cycle it should not close its connection;
-  // that transitions it to ERROR.
-  DONE = 3;
   // Module instance is stopped after Module.Stop(). The module can
   // now close its connection without transition to ERROR. No further
   // transitions are to be expected. An UNLINKED module transitions
