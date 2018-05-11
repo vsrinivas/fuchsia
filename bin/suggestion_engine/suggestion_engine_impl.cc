@@ -17,6 +17,7 @@
 #include "peridot/bin/suggestion_engine/auto_select_first_query_listener.h"
 #include "peridot/bin/suggestion_engine/rankers/linear_ranker.h"
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
+#include "peridot/bin/suggestion_engine/ranking_features/focused_story_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/kronk_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/mod_pair_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/proposal_hint_ranking_feature.h"
@@ -186,6 +187,8 @@ void SuggestionEngineImpl::RegisterRankingFeatures() {
   ranking_features["mod_pairs_rf"] = std::make_shared<ModPairRankingFeature>();
   ranking_features["query_match_rf"] =
       std::make_shared<QueryMatchRankingFeature>();
+  ranking_features["focused_story_rf"] =
+      std::make_shared<FocusedStoryRankingFeature>();
 
   // Get context updates every time a story is focused to rerank suggestions
   // based on the story that is focused at the moment.
@@ -207,6 +210,7 @@ void SuggestionEngineImpl::RegisterRankingFeatures() {
   next_ranker->AddRankingFeature(1.0, ranking_features["proposal_hint_rf"]);
   next_ranker->AddRankingFeature(-0.1, ranking_features["kronk_rf"]);
   next_ranker->AddRankingFeature(0, ranking_features["mod_pairs_rf"]);
+  next_ranker->AddRankingFeature(1.0, ranking_features["focused_story_rf"]);
   next_processor_.SetRanker(std::move(next_ranker));
 
   // Set up the query ranking features

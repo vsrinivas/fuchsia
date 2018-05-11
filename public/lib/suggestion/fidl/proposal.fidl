@@ -9,6 +9,18 @@ struct Proposal {
   // proposal channel (Query or Next/Interruption).
   string id;
 
+  // Id of the story from which the proposal originates.
+  string? source_story;
+
+  // The story ID this proposal applies to. A null story_id will create a new
+  // story.
+  // NOTE(thatguy): Deprecate all story_id fields on Actions.
+  string? story_id;
+
+  // If set to true, this proposal will only show up when |story_id| is in the
+  // foreground.
+  bool story_affinity;
+
   // The list of actions to take when the user selects the associated
   // Suggestion.
   vector<Action> on_selected;

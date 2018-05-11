@@ -125,6 +125,8 @@ source_set("ranking_features") {
   sources = [
     "ranking_feature.cc",
     "ranking_feature.h",
+    "ranking_features/focused_story_ranking_feature.cc",
+    "ranking_features/focused_story_ranking_feature.h",
     "ranking_features/kronk_ranking_feature.cc",
     "ranking_features/kronk_ranking_feature.h",
     "ranking_features/mod_pair_ranking_feature.cc",
@@ -238,6 +240,7 @@ source_set("ranking_unittest") {
   testonly = true
 
   sources = [
+    "ranking_features/focused_story_ranking_feature_unittest.cc",
     "ranking_features/kronk_ranking_feature_unittest.cc",
     "ranking_features/mod_pair_ranking_feature_unittest.cc",
     "ranking_features/proposal_hint_ranking_feature_unittest.cc",
