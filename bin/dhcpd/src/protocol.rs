@@ -183,8 +183,37 @@ pub struct ConfigOption {
 }
 
 impl ConfigOption {
+    fn from_buffer(buf: &[u8]) -> Option<ConfigOption> {
+        if buf.len() <= 0 {
+            return None;
+        }
+        let code = buf[0];
+        if !ConfigOption::is_valid_code(code) {
+            return None;
+        }
+        let len: usize = match buf.get(1) {
+            Some(l) => *l as usize,
+            None => 0,
+        };
+        let mut value = Vec::new();
+        let mut i: usize = 2;
+        while i < len + 2 {
+            let v = match buf.get(i) {
+                Some(val) => *val,
+                None => return None,
+            };
+            value.push(v);
+            i += 1;
+        }
+        if len != value.len() {
+            return None;
+        }
+        let opt = ConfigOption { code, value };
+        Some(opt)
+    }
+
     fn serialize_to(&self, output: &mut Vec<u8>) {
-        if !self.is_valid_code() {
+        if !self.has_valid_code() {
             return;
         }
         output.push(self.code);
@@ -195,9 +224,14 @@ impl ConfigOption {
         output.extend(&self.value);
     }
 
-    fn is_valid_code(&self) -> bool {
+    fn has_valid_code(&self) -> bool {
         // code is between 0 and 61, inclusive, or is 255
         self.code <= 61 || self.code == 255
+    }
+
+    fn is_valid_code(code: u8) -> bool {
+        // code is between 0 and 61, inclusive, or is 255
+        code <= 61 || code == 255
     }
 }
 
@@ -239,4 +273,50 @@ fn test_serialize_with_fixed_len_option_returns_correct_bytes() {
     opt.serialize_to(&mut bytes);
     assert_eq!(bytes.len(), 1);
     assert_eq!(bytes[0], 255);
+}
+
+#[test]
+fn test_option_from_valid_buffer_has_correct_values() {
+    let buf = vec![1, 4, 255, 255, 255, 0];
+    let result = ConfigOption::from_buffer(&buf);
+    match result {
+        Some(opt) => {
+            assert_eq!(opt.code, 1);
+            assert_eq!(opt.value, vec![255, 255, 255, 0]);
+        }
+        None => assert!(false), // test failure
+    }
+}
+
+#[test]
+fn test_option_from_valid_buffer_with_fixed_length_has_correct_values() {
+    let buf = vec![255];
+    let result = ConfigOption::from_buffer(&buf);
+    match result {
+        Some(opt) => {
+            assert_eq!(opt.code, 255);
+            assert!(opt.value.is_empty());
+        }
+        None => assert!(false), // test failure
+    }
+}
+
+#[test]
+fn test_option_from_buffer_with_invalid_code_returns_none() {
+    let buf = vec![72, 2, 1, 2];
+    let result = ConfigOption::from_buffer(&buf);
+    match result {
+        Some(opt) => assert!(false), // test failure
+        None => assert!(true),       // test success
+    }
+}
+
+#[test]
+fn test_option_from_buffer_with_invalid_length_returns_none() {
+    let buf = vec![1, 6, 255, 255, 255, 0];
+    let result = ConfigOption::from_buffer(&buf);
+    match result {
+        Some(opt) => assert!(false), // test failure
+        None => assert!(true),       // test success
+    }
 }
