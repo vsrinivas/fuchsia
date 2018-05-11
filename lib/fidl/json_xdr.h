@@ -436,12 +436,17 @@ class XdrContext {
   };
 
  public:
-  // When adding a new value to a filter, use this function to ignore errors
-  // on the called function(s) in that scope. For example:
+  // When adding a new value to a filter, use this function to deal with this
+  // field beign absent in JSON data that was written before the value was
+  // added. For example:
   //
   //   xdr->ReadErrorHandler([data] { data->ctime = time(nullptr); })
   //      ->Field("ctime", &data->ctime);
   //
+  // In the case that the "ctime" field cannot be read from the JSON input, the
+  // function supplied as argument to ReadErrorHandler() will be invoked
+  // instead. The error handler usually should just set a default value of the
+  // field.
   XdrCallbackOnReadError ReadErrorHandler(std::function<void()> callback);
 
  private:
