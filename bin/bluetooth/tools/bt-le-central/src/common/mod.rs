@@ -3,6 +3,5 @@
 // found in the LICENSE file.
 
 pub mod central;
-pub mod error;
 pub mod gatt;
 pub mod gatt_types;

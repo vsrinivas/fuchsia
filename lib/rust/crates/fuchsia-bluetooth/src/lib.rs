@@ -18,6 +18,8 @@ extern crate fuchsia_zircon as zircon;
 extern crate fidl_bluetooth;
 extern crate fidl_bluetooth_control;
 
+/// Bluetooth Error type
+pub mod error;
 /// Bluetooth hci API
 pub mod hci;
 /// Bluetooth host API

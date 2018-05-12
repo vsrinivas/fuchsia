@@ -5,23 +5,25 @@
 #![deny(warnings)]
 #![feature(rustc_private)]
 
-#[macro_use]
 extern crate failure;
 extern crate fidl;
+extern crate fidl_bluetooth as fidl_bt;
+extern crate fidl_bluetooth_gatt as fidl_gatt;
+extern crate fidl_bluetooth_low_energy as fidl_ble;
 extern crate fuchsia_app as app;
 extern crate fuchsia_async as async;
+extern crate fuchsia_bluetooth as bt;
 extern crate fuchsia_zircon as zx;
 extern crate futures;
-extern crate fidl_bluetooth as bt;
-extern crate fidl_bluetooth_gatt as gatt;
-extern crate fidl_bluetooth_low_energy as ble;
 extern crate getopts;
 extern crate parking_lot;
 
-use ble::{CentralDelegateMarker, CentralMarker, CentralProxy, ScanFilter};
+use bt::error::Error as BTError;
 use failure::{Error, Fail, ResultExt};
 use fidl::encoding2::OutOfLine;
+use fidl_ble::{CentralDelegateMarker, CentralMarker, CentralProxy, ScanFilter};
 use futures::future;
+use futures::future::Either::{Left, Right};
 use futures::prelude::*;
 use getopts::Options;
 
@@ -29,11 +31,8 @@ mod common;
 
 use common::central::{CentralState, make_central_delegate};
 
-// TODO(NET-857): Pull these from the fuchsia-bluetooth crate.
-use common::error::{BluetoothError, BluetoothFidlError};
-
 fn do_scan(args: &[String], central: &CentralProxy)
-    -> (bool, bool, Box<Future<Item = (), Error = Error>>) {
+    -> (bool, bool, impl Future<Item = (), Error = Error>) {
     let mut opts = Options::new();
 
     opts.optflag("h", "help", "");
@@ -53,7 +52,7 @@ fn do_scan(args: &[String], central: &CentralProxy)
     let matches = match opts.parse(args) {
         Ok(m) => m,
         Err(fail) => {
-            return (false, false, Box::new(future::err(fail.into())));
+            return (false, false, Left(future::err(fail.into())));
         }
     };
 
@@ -63,7 +62,7 @@ fn do_scan(args: &[String], central: &CentralProxy)
         return (
             false,
             false,
-            Box::new(future::err(Error::from(BluetoothError))),
+            Left(future::err(BTError::new("invalid input").into())),
         );
     }
 
@@ -81,7 +80,7 @@ fn do_scan(args: &[String], central: &CentralProxy)
                     return (
                         false,
                         false,
-                        Box::new(future::err(Error::from(BluetoothError))),
+                        Left(future::err(BTError::new("invalid input").into())),
                     );
                 }
             },
@@ -103,40 +102,41 @@ fn do_scan(args: &[String], central: &CentralProxy)
         None
     };
 
-    let fut = Box::new(
+    let fut = Right(
         central
             .start_scan(filter.as_mut().map(OutOfLine))
             .map_err(|e| e.context("failed to initiate scan").into())
             .and_then(|status| match status.error {
                 None => Ok(()),
-                Some(e) => Err(Error::from(BluetoothFidlError::new(*e))),
+                Some(e) => Err(BTError::from(*e).into()),
             }),
     );
 
     (scan_once, connect, fut)
 }
 
-fn do_connect(args: &[String], central: &CentralProxy) -> Box<Future<Item = (), Error = Error>> {
+fn do_connect(args: &[String], central: &CentralProxy) -> impl Future<Item = (), Error = Error> {
     if args.len() != 1 {
         println!("connect: peer-id is required");
-        return Box::new(future::err(Error::from(BluetoothError)));
+        return Left(future::err(BTError::new("invalid input").into()));
     }
 
     let (_, remote) = match zx::Channel::create() {
         Err(e) => {
-            return Box::new(future::err(e.into()));
+            return Left(future::err(e.into()));
         }
         Ok(x) => x,
     };
-    let server_end = fidl::endpoints2::ServerEnd::<gatt::ClientMarker>::new(remote);
 
-    Box::new(
+    let server_end = fidl::endpoints2::ServerEnd::<fidl_gatt::ClientMarker>::new(remote);
+
+    Right(
         central
             .connect_peripheral(&mut args[0].clone(), server_end)
             .map_err(|e| e.context("failed to connect to peripheral").into())
             .and_then(|status| match status.error {
                 None => Ok(()),
-                Some(e) => Err(Error::from(BluetoothFidlError::new(*e))),
+                Some(e) => Err(BTError::from(*e).into()),
             }),
     )
 }
@@ -185,20 +185,21 @@ fn main() -> Result<(), Error> {
             let (scan_once, connect, fut) = do_scan(&args[2..], central.get_svc());
             central.scan_once = scan_once;
             central.connect = connect;
-            fut
+            Left(fut)
         }
-        "connect" => do_connect(&args[2..], state.read().get_svc()),
+        "connect" => Right(do_connect(&args[2..], state.read().get_svc())),
         _ => {
             println!("Invalid command: {}", command);
             usage(appname);
-            return Err(Error::from(BluetoothError));
+            return Err(BTError::new("invalid input").into());
         }
     };
 
     // |delegate_fut| can never fail but we map its error type to a placeholder to coerce the
     // types.
-    let delegate_fut =
-        make_central_delegate(state, local).map_err(|_| BluetoothError::new().into());
+    let delegate_fut = make_central_delegate(state, local).map_err(|_| {
+        BTError::new("Central disconnected").into()
+    });
     let fut = command_fut.and_then(|_| delegate_fut);
     executor.run_singlethreaded(fut).map_err(Into::into)
 }

@@ -5,16 +5,16 @@
 
 use async;
 
-use common::error::{BluetoothError, BluetoothFidlError};
+use bt::error::Error as BTError;
 use common::gatt_types::Service;
 use failure::Error;
 use fidl::endpoints2::ServerEnd;
+use fidl_gatt::{Characteristic as FidlCharacteristic, ClientMarker, ClientProxy,
+                RemoteServiceEvent, RemoteServiceMarker, RemoteServiceProxy, ServiceInfo};
 use futures::{Future, FutureExt, Never, Stream, StreamExt, future};
 use futures::channel::mpsc::channel;
 use futures::future::Either::{Left, Right};
 use futures::future::FutureResult;
-use gatt::{Characteristic as FidlCharacteristic, ClientMarker, ClientProxy, RemoteServiceEvent,
-           RemoteServiceMarker, RemoteServiceProxy, ServiceInfo};
 
 use parking_lot::RwLock;
 use std::io::{self, Read, Write};
@@ -98,8 +98,9 @@ pub fn start_gatt_loop(proxy: ClientProxy) -> impl Future<Item = (), Error = Err
         .proxy
         .list_services(None)
         .map_err(|e| {
-            println!("failed to list services: {}", e);
-            BluetoothError::new().into()
+            let err = BTError::new(&format!("failed to list services: {}", e));
+            println!("{}", e);
+            err.into()
         })
         .and_then(move |(status, services)| match status.error {
             None => {
@@ -107,7 +108,7 @@ pub fn start_gatt_loop(proxy: ClientProxy) -> impl Future<Item = (), Error = Err
                 Ok(())
             }
             Some(e) => {
-                let err = BluetoothFidlError::new(*e).into();
+                let err = BTError::from(*e).into();
                 println!("failed to list services: {}", err);
                 Err(err)
             }
@@ -115,18 +116,22 @@ pub fn start_gatt_loop(proxy: ClientProxy) -> impl Future<Item = (), Error = Err
 
     get_services.and_then(|_| {
         stdin_stream()
-            .map_err(|e| {
-                println!("stream error: {:?}", e);
-                BluetoothError::new().into()
-            })
+            .map_err(|e| BTError::new(&format!("stream error: {:?}", e)).into())
             .for_each(move |cmd| if cmd == "exit" {
-                Left(future::err(BluetoothError::new().into()))
+                Left(future::err(BTError::new("exited").into()))
             } else {
-                Right(handle_cmd(cmd, client2.clone()).and_then(|_| {
-                    print!("> ");
-                    io::stdout().flush().unwrap();
-                    Ok(())
-                }))
+                Right(
+                    handle_cmd(cmd, client2.clone())
+                        .map_err(|e| {
+                            println!("Error: {}", e);
+                            e
+                        })
+                        .and_then(|_| {
+                            print!("> ");
+                            io::stdout().flush().unwrap();
+                            Ok(())
+                        }),
+                )
             })
             .and_then(|_| Ok(()))
     })
@@ -142,16 +147,10 @@ fn discover_characteristics(client: GattClientPtr) -> impl Future<Item = (), Err
         .as_ref()
         .unwrap()
         .discover_characteristics()
-        .map_err(|_| {
-            println!("Failed to send message");
-            BluetoothError::new().into()
-        })
+        .map_err(|_| BTError::new("Failed to send message").into())
         .and_then(move |(status, chrcs)| match status.error {
             Some(e) => {
-                println!(
-                    "Failed to read characteristics: {}",
-                    BluetoothFidlError::new(*e)
-                );
+                println!("Failed to read characteristics: {}", BTError::from(*e));
                 Ok(())
             }
             None => {
@@ -191,16 +190,10 @@ fn read_characteristic(client: GattClientPtr, id: u64) -> impl Future<Item = (),
         .as_ref()
         .unwrap()
         .read_characteristic(id, 0)
-        .map_err(|_| {
-            println!("Failed to send message");
-            BluetoothError::new().into()
-        })
+        .map_err(|_| BTError::new("Failed to send message").into())
         .and_then(move |(status, value)| match status.error {
             Some(e) => {
-                println!(
-                    "Failed to read characteristic: {}",
-                    BluetoothFidlError::new(*e)
-                );
+                println!("Failed to read characteristic: {}", BTError::from(*e));
                 Ok(())
             }
             None => {
@@ -219,16 +212,10 @@ fn write_characteristic(client: GattClientPtr, id: u64, value: Vec<u8>)
         .as_ref()
         .unwrap()
         .write_characteristic(id, 0, &mut value.into_iter())
-        .map_err(|_| {
-            println!("Failed to send message");
-            BluetoothError::new().into()
-        })
+        .map_err(|_| BTError::new("Failed to send message").into())
         .and_then(move |status| match status.error {
             Some(e) => {
-                println!(
-                    "Failed to write to characteristic: {}",
-                    BluetoothFidlError::new(*e)
-                );
+                println!("Failed to write to characteristic: {}", BTError::from(*e));
                 Ok(())
             }
             None => {
@@ -308,14 +295,15 @@ fn do_connect(args: Vec<&str>, client: GattClientPtr) -> impl Future<Item = (), 
 
     // Initialize the remote service proxy.
     match create_remote_service_pair() {
-        Err(_) => {
-            println!("Failed to connect to remote service");
-            Left(future::err(BluetoothError::new().into()))
-        }
+        Err(e) => Left(future::err(e.into())),
         Ok((proxy, server)) => {
-            if let Err(_) = client.read().proxy.connect_to_service(svc_id, server) {
-                println!("Failed to connect to remote service");
-                return Left(future::err(BluetoothError::new().into()));
+            // First close the connection to the currently active service.
+            if client.read().active_proxy.is_some() {
+                client.write().active_proxy = None;
+            }
+
+            if let Err(e) = client.read().proxy.connect_to_service(svc_id, server) {
+                return Left(future::err(e.into()));
             }
             client.write().active_index = index;
             client.write().active_proxy = Some(proxy);
@@ -404,16 +392,10 @@ fn do_enable_notify(args: Vec<&str>, client: GattClientPtr)
             .as_ref()
             .unwrap()
             .notify_characteristic(id, true)
-            .map_err(|_| {
-                println!("Failed to send message");
-                BluetoothError::new().into()
-            })
+            .map_err(|_| BTError::new("Failed to send message").into())
             .and_then(move |status| match status.error {
                 Some(e) => {
-                    println!(
-                        "Failed to enable notifications: {}",
-                        BluetoothFidlError::new(*e)
-                    );
+                    println!("Failed to enable notifications: {}", BTError::from(*e));
                     Ok(())
                 }
                 None => {
@@ -451,16 +433,10 @@ fn do_disable_notify(args: Vec<&str>, client: GattClientPtr)
             .as_ref()
             .unwrap()
             .notify_characteristic(id, false)
-            .map_err(|_| {
-                println!("Failed to send message");
-                BluetoothError::new().into()
-            })
+            .map_err(|_| BTError::new("Failed to send message").into())
             .and_then(move |status| match status.error {
                 Some(e) => {
-                    println!(
-                        "Failed to disable notifications: {}",
-                        BluetoothFidlError::new(*e)
-                    );
+                    println!("Failed to disable notifications: {}", BTError::from(*e));
                     Ok(())
                 }
                 None => {

@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use gatt;
-use gatt::{Characteristic as FidlCharacteristic, ServiceInfo};
-
+use fidl_gatt;
+use fidl_gatt::{Characteristic as FidlCharacteristic, ServiceInfo};
 use std::fmt;
 
 // TODO(armansito): Make these objects stateful so that GATT operations can be performed through
@@ -82,31 +81,31 @@ impl fmt::Display for Characteristic {
 fn props_to_string(props: u32) -> String {
     let mut prop_strs = vec![];
 
-    if props & gatt::PROPERTY_BROADCAST != 0 {
+    if props & fidl_gatt::PROPERTY_BROADCAST != 0 {
         prop_strs.push("broadcast");
     }
-    if props & gatt::PROPERTY_READ != 0 {
+    if props & fidl_gatt::PROPERTY_READ != 0 {
         prop_strs.push("read");
     }
-    if props & gatt::PROPERTY_WRITE_WITHOUT_RESPONSE != 0 {
+    if props & fidl_gatt::PROPERTY_WRITE_WITHOUT_RESPONSE != 0 {
         prop_strs.push("write (without response)");
     }
-    if props & gatt::PROPERTY_WRITE != 0 {
+    if props & fidl_gatt::PROPERTY_WRITE != 0 {
         prop_strs.push("write");
     }
-    if props & gatt::PROPERTY_NOTIFY != 0 {
+    if props & fidl_gatt::PROPERTY_NOTIFY != 0 {
         prop_strs.push("notify");
     }
-    if props & gatt::PROPERTY_INDICATE != 0 {
+    if props & fidl_gatt::PROPERTY_INDICATE != 0 {
         prop_strs.push("indicate");
     }
-    if props & gatt::PROPERTY_AUTHENTICATED_SIGNED_WRITES != 0 {
+    if props & fidl_gatt::PROPERTY_AUTHENTICATED_SIGNED_WRITES != 0 {
         prop_strs.push("write (signed)");
     }
-    if props & gatt::PROPERTY_RELIABLE_WRITE != 0 {
+    if props & fidl_gatt::PROPERTY_RELIABLE_WRITE != 0 {
         prop_strs.push("write (reliable)");
     }
-    if props & gatt::PROPERTY_WRITABLE_AUXILIARIES != 0 {
+    if props & fidl_gatt::PROPERTY_WRITABLE_AUXILIARIES != 0 {
         prop_strs.push("writable aux.");
     }
 
