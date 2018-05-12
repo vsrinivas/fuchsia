@@ -82,10 +82,6 @@ endif
 _MODULE_DEPS := $(MODULE_DEPS) $(MODULE_LIBS) $(MODULE_STATIC_LIBS) \
                 $(MODULE_HOST_LIBS) $(MODULE_FIDL_LIBS)
 
-ifneq ($(MODULE_FIDL_LIBS),)
-MODULE_STATIC_LIBS += $(MODULE_FIDL_LIBS)
-endif
-
 # Catch the depends on nonexistant module error case
 # here where we can tell you what module has the bad deps.
 # Strip any .postfixes, as these refer to "sub-modules" defined in the
@@ -126,7 +122,7 @@ MODULE_COMPILEFLAGS += -Iglobal/include
 MODULE_COMPILEFLAGS += -I$(LOCAL_DIR)/include
 MODULE_COMPILEFLAGS += -Ithird_party/ulib/musl/include
 MODULE_DEFINES += MODULE_LIBS=\"$(subst $(SPACE),_,$(MODULE_LIBS))\"
-MODULE_DEFINES += MODULE_STATIC_LIBS=\"$(subst $(SPACE),_,$(MODULE_STATIC_LIBS))\"
+MODULE_DEFINES += MODULE_STATIC_LIBS=\"$(subst $(SPACE),_,$(MODULE_STATIC_LIBS) $(MODULE_FIDL_LIBS))\"
 
 # depend on the generated-headers of the modules we depend on
 # to insure they are generated before we are built
@@ -261,8 +257,8 @@ endif
 
 ifeq ($(MODULE_TYPE),)
 # modules with no type are kernel modules
-ifneq ($(MODULE_LIBS)$(MODULE_STATIC_LIBS),)
-$(error $(MODULE) kernel modules may not use MODULE_LIBS or MODULE_STATIC_LIBS)
+ifneq ($(MODULE_LIBS)$(MODULE_STATIC_LIBS)$(MODULE_FIDL_LIBS),)
+$(error $(MODULE) kernel modules may not use MODULE_LIBS, MODULE_STATIC_LIBS, or MODULE_FIDL_LIBS)
 endif
 # make the rest of the build depend on our output
 ALLMODULE_OBJS := $(ALLMODULE_OBJS) $(MODULE_OBJECT)
