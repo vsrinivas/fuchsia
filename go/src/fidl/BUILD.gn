@@ -8,7 +8,7 @@ import("//build/host.gni")
 go_binary("fidlgen") {
   gopackage = "fidl/compiler/backend"
 
-  sdk_candidate = true
+  sdk_category = "partner"
 
   go_dependencies = [
     {

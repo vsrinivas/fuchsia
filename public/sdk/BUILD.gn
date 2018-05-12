@@ -35,6 +35,8 @@ sdk("zircon_sysroot_for_toolchain") {
 }
 
 sdk("garnet") {
+  category = "partner"
+
   deps = [
     "//garnet/bin/far:bin_sdk($host_toolchain)",
     "//garnet/go/src/fidl:fidlgen_sdk($host_toolchain)",

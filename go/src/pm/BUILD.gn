@@ -10,7 +10,7 @@ import("//build/package.gni")
 go_binary("pm_bin") {
   output_name = "pm"
   gopackage = "fuchsia.googlesource.com/pm/cmd/pm"
-  sdk_candidate = true
+  sdk_category = "partner"
   go_dependencies = [
     {
       package = "fuchsia.googlesource.com/pm"

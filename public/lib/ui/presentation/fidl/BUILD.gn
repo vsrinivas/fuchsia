@@ -7,7 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("fidl") {
   name = "presentation"
 
-  sdk_candidate = true
+  sdk_category = "partner"
 
   sources = [
     "display_usage.fidl",

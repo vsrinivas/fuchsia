@@ -7,7 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("fidl") {
   name = "images"
 
-  sdk_candidate = true
+  sdk_category = "partner"
 
   sources = [
     "encoded_image.fidl",

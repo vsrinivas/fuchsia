@@ -9,7 +9,7 @@ import("//build/fidl/fidl.gni")
 fidl("fidl") {
   name = "spaces"
 
-  sdk_candidate = true
+  sdk_category = "partner"
 
   sources = [
     "space_provider.fidl",
