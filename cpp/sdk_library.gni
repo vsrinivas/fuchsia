@@ -29,10 +29,10 @@ import("//build/sdk/sdk_atom.gni")
 #     Defaults to "include".
 
 template("sdk_library") {
-  if (!defined(invoker.type)) {
-    assert(false, "Must specify a library type.")
-  }
+  assert(defined(invoker.type), "Must specify a library type.")
   library_type = invoker.type
+
+  assert(defined(invoker.category), "Must define an SDK category")
 
   main_target_name = target_name
   sdk_target_name = "${target_name}_sdk"
@@ -94,12 +94,7 @@ template("sdk_library") {
       name = atom_name
     }
 
-    if (defined(invoker.category)) {
-      category = invoker.category
-    } else {
-      # TODO(DX-89): remove default value and assert existence above.
-      category = "partner"
-    }
+    category = invoker.category
 
     tags = [ "type:sources" ]
 

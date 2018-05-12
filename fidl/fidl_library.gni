@@ -183,11 +183,6 @@ template("fidl_library") {
     ]
   }
 
-  # TODO(DX-89): remove default value.
-  if (defined(invoker.sdk_candidate) && invoker.sdk_candidate) {
-    invoker.sdk_category = "partner"
-  }
-
   if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
     library_name = target_name
     if (defined(invoker.name)) {

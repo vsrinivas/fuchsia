@@ -37,6 +37,8 @@ import("sdk_molecule.gni")
 #     Only the "cpp" domain is currently supported.
 
 template("sdk") {
+  assert(defined(invoker.category), "Must define an SDK category")
+
   main_target_name = target_name
   generation_target_name = "${target_name}_molecule"
   copy_target_name = "${target_name}_copy"
@@ -74,12 +76,7 @@ template("sdk") {
                              "old_school",
                            ])
 
-    if (defined(invoker.category)) {
-      category = invoker.category
-    } else {
-      # TODO(DX-89): remove default value and assert existence above.
-      category = "partner"
-    }
+    category = invoker.category
 
     metadata = [
       {

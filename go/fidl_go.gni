@@ -18,8 +18,6 @@ template("fidl_go") {
       "This template can only be used in $go_toolchain.")
 
   not_needed(invoker, [
-    # TODO(DX-89): remove this.
-    "sdk_candidate",
     "sdk_category",
     "sources"
   ])

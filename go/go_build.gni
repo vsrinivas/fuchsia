@@ -163,11 +163,6 @@ template("go_build") {
     ]
   }
 
-  # TODO(DX-89): remove this.
-  if (defined(invoker.sdk_candidate) && invoker.sdk_candidate) {
-    invoker.sdk_category = "partner"
-  }
-
   if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
     sdk_atom("${target_name}_sdk") {
       domain = "exe"

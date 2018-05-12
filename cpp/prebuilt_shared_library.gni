@@ -35,6 +35,8 @@ set_defaults("prebuilt_shared_library") {
 }
 
 template("prebuilt_shared_library") {
+  assert(defined(invoker.category), "Must define an SDK category")
+
   main_target_name = target_name
   manifest_target_name = "${target_name}_sdk_manifest"
   sdk_target_name = "${target_name}_sdk"
@@ -119,12 +121,7 @@ template("prebuilt_shared_library") {
     }
     tags = [ "type:compiled_shared" ]
 
-    if (defined(invoker.category)) {
-      category = invoker.category
-    } else {
-      # TODO(DX-89): remove default value and assert existence above.
-      category = "partner"
-    }
+    category = invoker.category
 
     if (is_fuchsia) {
       tags += [ "arch:target" ]

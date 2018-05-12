@@ -93,8 +93,6 @@ template("fidl_dart") {
   dart_library(main_target_name) {
     forward_variables_from(invoker, [
       "testonly",
-      # TODO(DX-89): remove this parameter.
-      "sdk_candidate",
       "sdk_category",
       "visibility",
     ])

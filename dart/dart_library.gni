@@ -386,11 +386,6 @@ if (current_toolchain == dart_toolchain) {
     # SDK support
     #
 
-    # TODO(DX-89): remove default value.
-    if (defined(invoker.sdk_candidate) && invoker.sdk_candidate) {
-      invoker.sdk_category = "partner"
-    }
-
     if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
       assert(
           defined(invoker.package_name),
