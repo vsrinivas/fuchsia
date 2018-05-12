@@ -35,11 +35,12 @@ const port = 8083
 
 var (
 	// TODO(jmatt) replace hard-coded values with something better/more flexible
-	usage = "usage: amber [-k=<path>] [-s=<path>] [-u=<url>]"
-	store = flag.String("s", "/data/amber/tuf", "The path to the local file store")
-	addr  = flag.String("u", fmt.Sprintf("%s:%d", lhIP, port), "The URL (including port if not using port 80)  of the update server.")
-	keys  = flag.String("k", "/pkg/data/keys", "Path to use to initialize the client's keys. This is only needed the first time the command is run.")
-	delay = flag.Duration("d", 0*time.Second, "Set a delay before Amber does its work")
+	usage      = "usage: amber [-k=<path>] [-s=<path>] [-u=<url>]"
+	store      = flag.String("s", "/data/amber/tuf", "The path to the local file store")
+	addr       = flag.String("u", fmt.Sprintf("%s:%d", lhIP, port), "The URL (including port if not using port 80)  of the update server.")
+	keys       = flag.String("k", "/pkg/data/keys", "Path to use to initialize the client's keys. This is only needed the first time the command is run.")
+	delay      = flag.Duration("d", 0*time.Second, "Set a delay before Amber does its work")
+	autoUpdate = flag.Bool("a", false, "Automatically update and restart the system as updates become available")
 
 	needsPath = "/pkgfs/needs"
 )
@@ -69,9 +70,18 @@ func main() {
 	ticker := source.NewTickGenerator(source.InitBackoff)
 	go ticker.Run()
 
-	daemon := startupDaemon(srvUrl, *store, keys, ticker)
-	startFIDLSvr(daemon, ticker)
-	defer daemon.CancelAll()
+	d := startupDaemon(srvUrl, *store, keys, ticker)
+	if *autoUpdate {
+		go func() {
+			supMon := daemon.NewSystemUpdateMonitor(d)
+			supMon.Start()
+			log.Println("system update monitor exited")
+		}()
+	}
+
+	startFIDLSvr(d, ticker)
+
+	defer d.CancelAll()
 
 	//block forever
 	select {}
@@ -102,7 +112,7 @@ func startupDaemon(srvURL *url.URL, store string, keys []*tuf_data.Key,
 	go func() {
 		client, _, err := source.InitNewTUFClient(srvURL.String(), store, keys, ticker)
 		if err != nil {
-			log.Printf("client initialization failed: %s\n", err)
+			log.Printf("client initialization failed: %s", err)
 			return
 		}
 
