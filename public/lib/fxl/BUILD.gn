@@ -176,6 +176,8 @@ if (is_fuchsia) {
   prebuilt_shared_library("fxl_logging") {
     no_headers = true
 
+    category = "partner"
+
     public_deps = [
       ":fxl_logging_lib",
     ]
@@ -193,6 +195,8 @@ if (is_fuchsia) {
 if (is_fuchsia) {
   prebuilt_shared_library("fxl") {
     no_headers = true
+
+    category = "partner"
 
     public_deps = [
       ":fxl_lib",

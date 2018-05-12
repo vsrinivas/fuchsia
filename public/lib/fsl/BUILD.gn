@@ -15,6 +15,8 @@ sdk_group("fsl") {
 prebuilt_shared_library("fsl_lib") {
   output_name = "fsl"
 
+  category = "partner"
+
   no_headers = true
 
   public_deps = [

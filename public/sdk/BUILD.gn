@@ -6,6 +6,8 @@ import("//build/fidl/toolchain.gni")
 import("//build/sdk/sdk.gni")
 
 sdk("zircon_sysroot") {
+  category = "partner"
+
   export = true
 
   old_school = true
@@ -19,6 +21,8 @@ sdk("zircon_sysroot") {
 
 # TODO(DX-134): Remove these once the toolchain can consume SDKs with libraries outside the sysroot.
 sdk("zircon_sysroot_for_toolchain") {
+  category = "internal"
+
   export = true
 
   old_school = true

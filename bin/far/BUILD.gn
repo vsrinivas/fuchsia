@@ -9,6 +9,8 @@ import("//build/package.gni")
 sdk_executable("bin") {
   output_name = "far"
 
+  category = "partner"
+
   sources = [
     "main.cc",
   ]
