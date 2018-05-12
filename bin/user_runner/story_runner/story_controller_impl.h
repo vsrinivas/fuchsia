@@ -201,7 +201,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
 
   // This is the canonical source for state. The value in the ledger is just a
   // write-behind copy of this value.
-  StoryState state_{StoryState::INITIAL};
+  StoryState state_{StoryState::STOPPED};
 
   // Story state is determined by external module state, but only until the
   // story gets stopped or deleted. This flag blocks processing of state

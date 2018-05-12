@@ -53,10 +53,12 @@ ModuleControllerImpl::ModuleControllerImpl(
           std::string(kAppStoragePath) + HashModuleUrl(module_config.url),
           std::move(service_list)),
       module_data_(module_data) {
-  app_client_.SetAppErrorHandler([this] { SetState(ModuleState::ERROR); });
+  app_client_.SetAppErrorHandler([this] { OnAppConnectionError(); });
 
   app_client_.services().ConnectToService(module_service_.NewRequest());
-  module_service_.set_error_handler([this] { OnConnectionError(); });
+
+  module_service_.set_error_handler([this] { OnModuleConnectionError(); });
+
   module_service_->Initialize(std::move(module_context),
                               std::move(incoming_services));
 
@@ -77,13 +79,21 @@ void ModuleControllerImpl::Connect(
   module_controller_bindings_.AddBinding(this, std::move(request));
 }
 
-// If the Module instance closes its own connection, we signal this to
-// all current and future watchers by an appropriate state transition.
-void ModuleControllerImpl::OnConnectionError() {
-  if (state_ == ModuleState::STARTING) {
+// If the ApplicationController connection closes, it means the module cannot be
+// started. We indicate this by the ERROR state.
+void ModuleControllerImpl::OnAppConnectionError() {
+  SetState(ModuleState::ERROR);
+}
+
+// If the Module connection closes, it means the module doesn't implement the
+// Module service and doesn't fully participate in the story, especially it
+// doesn't have access to links. We indicate this by the UNLINKED state.
+//
+// If the module cannot run at all, it also cannot keep its Module connection
+// open, but that's already covered by the ERROR state, cf. above.
+void ModuleControllerImpl::OnModuleConnectionError() {
+  if (state_ != ModuleState::ERROR) {
     SetState(ModuleState::UNLINKED);
-  } else {
-    SetState(ModuleState::ERROR);
   }
 }
 

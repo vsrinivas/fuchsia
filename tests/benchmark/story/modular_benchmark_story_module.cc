@@ -25,7 +25,6 @@ class NullModule : modular::LinkWatcher {
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
       fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host), link_watcher_binding_(this) {
-    module_host_->module_context()->Ready();
     module_host_->module_context()->GetLink(nullptr, link_.NewRequest());
 
     // Will call Notify() with current value.

@@ -43,7 +43,6 @@ class ModuleContextImpl : ModuleContext {
   // (message queues, Links).
   ModuleContextImpl(const ModuleContextInfo& info,
                     const ModuleData* module_data,
-                    ModuleControllerImpl* module_controller_impl,
                     fidl::InterfaceRequest<component::ServiceProvider>
                         service_provider_request);
 
@@ -86,8 +85,6 @@ class ModuleContextImpl : ModuleContext {
   void GetStoryId(GetStoryIdCallback callback) override;
   // |ModuleContext|
   void RequestFocus() override;
-  // |ModuleContext|
-  void Ready() override;
 
   // Identifies the module by its path, holds the URL of the running module, and
   // the link it was started with.
@@ -96,9 +93,6 @@ class ModuleContextImpl : ModuleContext {
   // Not owned. The StoryControllerImpl for the Story in which this Module
   // lives.
   StoryControllerImpl* const story_controller_impl_;
-
-  // Not owned. Used to notify module watchers and request tear down.
-  ModuleControllerImpl* const module_controller_impl_;
 
   ComponentContextImpl component_context_impl_;
 

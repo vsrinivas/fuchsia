@@ -32,7 +32,7 @@ class StoryControllerMock : public StoryController {
     StoryInfo info;
     info.id = "wow";
     info.url = "wow";
-    callback(std::move(info), modular::StoryState::INITIAL);
+    callback(std::move(info), modular::StoryState::STOPPED);
   }
 
   // |StoryController|

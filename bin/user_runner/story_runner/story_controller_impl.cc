@@ -438,7 +438,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
 
     connection.module_context_impl = std::make_unique<ModuleContextImpl>(
         module_context_info, connection.module_data.get(),
-        connection.module_controller_impl.get(), std::move(provider_request));
+        std::move(provider_request));
 
     story_controller_impl_->connections_.emplace_back(std::move(connection));
 
@@ -1556,7 +1556,7 @@ class StoryControllerImpl::StartCall : public Operation<> {
       }
     }
 
-    story_controller_impl_->state_ = StoryState::STARTING;
+    story_controller_impl_->state_ = StoryState::RUNNING;
     story_controller_impl_->NotifyStateChange();
   }
 
@@ -1609,10 +1609,8 @@ void StoryControllerImpl::Connect(
 
 bool StoryControllerImpl::IsRunning() {
   switch (state_) {
-    case StoryState::STARTING:
     case StoryState::RUNNING:
       return true;
-    case StoryState::INITIAL:
     case StoryState::STOPPED:
     case StoryState::ERROR:
       return false;
@@ -2059,9 +2057,6 @@ void StoryControllerImpl::OnModuleStateChange(
 
 void StoryControllerImpl::UpdateStoryState(const ModuleState state) {
   switch (state) {
-    case ModuleState::STARTING:
-      state_ = StoryState::STARTING;
-      break;
     case ModuleState::RUNNING:
     case ModuleState::UNLINKED:
       state_ = StoryState::RUNNING;

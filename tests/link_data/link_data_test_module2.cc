@@ -24,7 +24,6 @@ class TestApp : modular::LinkWatcher {
         link_watcher_binding_(this) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     modular::testing::GetStore()->Put("module2_init", "", [] {});
-    module_host_->module_context()->Ready();
     Start();
   }
 

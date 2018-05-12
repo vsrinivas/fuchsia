@@ -65,8 +65,11 @@ class ModuleControllerImpl : ModuleController {
   // |ModuleController|
   void Stop(StopCallback done) override;
 
+  // Used as application error handler on the Module app client.
+  void OnAppConnectionError();
+
   // Used as connection error handler on the Module connection.
-  void OnConnectionError();
+  void OnModuleConnectionError();
 
   // The story this Module instance runs in.
   StoryControllerImpl* const story_controller_impl_;
@@ -83,13 +86,12 @@ class ModuleControllerImpl : ModuleController {
   // Watchers of this Module instance.
   fidl::InterfacePtrSet<ModuleWatcher> watchers_;
 
-  // The state of this Module instance, stored here to initialize
-  // watchers registered in the future to the current state.
-  ModuleState state_{ModuleState::STARTING};
+  // The state of this Module instance, stored here to initialize watchers
+  // registered in the future to the current state.
+  ModuleState state_{ModuleState::RUNNING};
 
-  // Callbacks of Teardown() invocations. If there is one Stop()
-  // request pending, a second one is only queued, no second call to
-  // Stop() is made.
+  // Callbacks of Teardown() invocations. If there is one Stop() request
+  // pending, a second one is only queued, no second call to Stop() is made.
   std::vector<std::function<void()>> teardown_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleControllerImpl);

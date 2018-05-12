@@ -25,7 +25,6 @@ class TestApp {
       : module_host_(module_host) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     modular::testing::GetStore()->Put("module1_init", "", [] {});
-    module_host_->module_context()->Ready();
 
     path_.push_back(kCount);
 

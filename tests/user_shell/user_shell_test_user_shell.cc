@@ -130,9 +130,6 @@ class StoryProviderStateWatcherImpl : modular::StoryProviderWatcher {
     deleted_stories_.emplace(story_id);
   }
 
-  TestPoint on_starting_called_once_{"OnChange() STARTING Called"};
-  int on_starting_called_{};
-
   TestPoint on_running_called_once_{"OnChange() RUNNING Called"};
   int on_running_called_{};
 
@@ -155,16 +152,6 @@ class StoryProviderStateWatcherImpl : modular::StoryProviderWatcher {
     // Just check that all states are covered at least once, proving that we get
     // state notifications at all from the story provider.
     switch (story_state) {
-      case modular::StoryState::INITIAL:
-        FXL_CHECK(story_state != modular::StoryState::INITIAL);
-        // Doesn't happen in this test, presumably because of the STOPPED
-        // StoryState HACK(jimbe) in StoryProviderImpl::OnChange().
-        break;
-      case modular::StoryState::STARTING:
-        if (++on_starting_called_ == 1) {
-          on_starting_called_once_.Pass();
-        }
-        break;
       case modular::StoryState::RUNNING:
         if (++on_running_called_ == 1) {
           on_running_called_once_.Pass();
@@ -364,8 +351,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   void TestStory2_Run() {
     story_controller_->GetInfo([this](modular::StoryInfo info,
                                       modular::StoryState state) {
-      if (state == modular::StoryState::INITIAL ||
-          state == modular::StoryState::STOPPED) {
+      if (state == modular::StoryState::STOPPED) {
         story2_state_before_run_.Pass();
       }
     });
@@ -377,8 +363,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
     story_controller_->GetInfo([this](modular::StoryInfo info,
                                       modular::StoryState state) {
-      if (state == modular::StoryState::STARTING ||
-          state == modular::StoryState::RUNNING) {
+      if (state == modular::StoryState::RUNNING) {
         story2_state_after_run_.Pass();
       }
 

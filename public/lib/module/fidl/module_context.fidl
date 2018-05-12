@@ -81,13 +81,6 @@ interface ModuleContext {
   // Requests that the current story and module gain focus. It's up to the story
   // shell and user shell to honor that request.
   10: RequestFocus();
-
-  // The Module instance holding this handle to the ModuleContext declares it's
-  // ready to run. The ModuleContext implementation notifies all ModuleWatchers
-  // registered on the ModuleController by calling OnStateChange(). See
-  // ModuleState for all states and transitions. TODO(vardhan): Deprecate this
-  // in favour of adding a return callback to Module.Initialize().
-  11: Ready();
 };
 
 // Communicates the status of an Intent to a Module.

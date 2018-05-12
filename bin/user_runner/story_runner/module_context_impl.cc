@@ -9,7 +9,6 @@
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/strings/join_strings.h"
-#include "peridot/bin/user_runner/story_runner/module_controller_impl.h"
 #include "peridot/bin/user_runner/story_runner/story_controller_impl.h"
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/ledger_client/storage.h"
@@ -19,11 +18,9 @@ namespace modular {
 ModuleContextImpl::ModuleContextImpl(
     const ModuleContextInfo& info,
     const ModuleData* const module_data,
-    ModuleControllerImpl* const module_controller_impl,
     fidl::InterfaceRequest<component::ServiceProvider> service_provider_request)
     : module_data_(module_data),
       story_controller_impl_(info.story_controller_impl),
-      module_controller_impl_(module_controller_impl),
       component_context_impl_(info.component_context_info,
                               EncodeModuleComponentNamespace(
                                   info.story_controller_impl->GetStoryId()),
@@ -115,16 +112,8 @@ void ModuleContextImpl::GetStoryId(GetStoryIdCallback callback) {
 }
 
 void ModuleContextImpl::RequestFocus() {
-  // TODO(zbowling): we should be asking the module_controller_impl_ if it's ok.
-  // For now, we are not going to "request" anything. Just do it.
   story_controller_impl_->FocusModule(module_data_->module_path);
   story_controller_impl_->RequestStoryFocus();
-}
-
-void ModuleContextImpl::Ready() {
-  if (module_controller_impl_) {
-    module_controller_impl_->SetState(ModuleState::RUNNING);
-  }
 }
 
 }  // namespace modular

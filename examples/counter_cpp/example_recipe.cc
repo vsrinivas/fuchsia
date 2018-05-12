@@ -238,8 +238,6 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
       }
     });
 
-    module_context_->Ready();
-
     // This snippet of code demonstrates using the module's Ledger. Each time
     // this module is initialized, it updates a counter in the root page.
     // 1. Get the module's ledger.

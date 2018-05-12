@@ -138,8 +138,6 @@ class Module2App : public modular::SingleServiceApp<modular::Module> {
     modular::LinkPtr link;
     module_context_->GetLink("theOneLink", link.NewRequest());
     store_.Initialize(std::move(link));
-
-    module_context_->Ready();
   }
 
   void IncrementCounterAction() {

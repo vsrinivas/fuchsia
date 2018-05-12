@@ -187,6 +187,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
     story_watcher_.Continue([this] {
       start_story_.Pass();
+      story_watcher_.Reset();
       Focus();
     });
   }
@@ -198,12 +199,12 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
     story_provider_watcher_.Continue([this] {
       focus_.Pass();
+      story_provider_watcher_.Reset();
       Logout();
     });
   }
 
   void Logout() {
-    story_provider_watcher_.Reset();
     user_shell_context_->Logout();
   }
 

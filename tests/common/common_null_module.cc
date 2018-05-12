@@ -25,7 +25,6 @@ class NullModule {
       fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host) {
     modular::testing::Init(module_host_->application_context(), __FILE__);
-    module_host_->module_context()->Ready();
     initialized_.Pass();
     Put(kCommonNullModuleStarted);
   }

@@ -16,19 +16,14 @@ library modular;
 // Currently possible state transitions (and the events that cause
 // them) are:
 //
-//            -> STARTING    Story.StartModule()
-//   STARTING -> UNLINKED    Module connection closed immediately
-//   STARTING -> RUNNING     Story.Ready()
-//   STARTING -> STOPPED     ModuleController.Stop() or Story.Stop()
+//            -> RUNNING     ModuleContext.StartModule() or StoryController.AddModule()
+//   RUNNING  -> UNLINKED    Module connection closed immediately
+//   RUNNING  -> STOPPED     ModuleController.Stop() or StoryController.Stop()
 //   UNLINKED -> STOPPED     (same)
-//   RUNNING  -> STOPPED     (same)
-//   STARTING -> ERROR       application doesn't start
-//   UNLINKED -> ERROR       application exits
-//   RUNNING  -> ERROR       Module connection closed
+//   RUNNING  -> ERROR       application exits
+//   UNLINKED -> ERROR       (same)
 //
 enum ModuleState {
-  // Module instance was requested from the Story.
-  STARTING = 1;
   // Module instance called Ready() on its Story handle.
   RUNNING = 2;
   // Module closed the connection on its Module interface request.

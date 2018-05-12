@@ -51,7 +51,6 @@ class TestApp {
         module_context_(module_host_->module_context()) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     modular::testing::GetStore()->Put("module0_init", "", [] {});
-    module_context_->Ready();
 
     Start();
   }

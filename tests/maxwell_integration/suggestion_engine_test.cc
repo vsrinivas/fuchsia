@@ -1120,7 +1120,7 @@ TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
   story_info.url = "foo://bazzle_dazzle";
   story_info.id = "";
   story_provider()->NotifyStoryChanged(std::move(story_info),
-                                       modular::StoryState::INITIAL);
+                                       modular::StoryState::STOPPED);
 
   modular::CreateStory create_story;
   create_story.module_id = "foo://bar";

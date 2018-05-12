@@ -168,8 +168,6 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
         [this](fidl::InterfaceRequest<modular_calculator_example::Multiplier> req) {
           multiplier_clients_.AddBinding(&multiplier_service_, std::move(req));
         });
-
-    module_context_->Ready();
   }
 
   void IncrementCounterAction() {
