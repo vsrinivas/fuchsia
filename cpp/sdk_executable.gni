@@ -17,7 +17,9 @@ template("sdk_executable") {
   main_target_name = target_name
 
   executable(main_target_name) {
-    forward_variables_from(invoker, "*")
+    forward_variables_from(invoker, "*", [
+      "category",
+    ])
   }
 
   output_name = target_name

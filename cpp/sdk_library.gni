@@ -41,6 +41,7 @@ template("sdk_library") {
     forward_variables_from(invoker,
                            "*",
                            [
+                             "category",
                              "include_base",
                              "sdk_name",
                              "source_dir",
