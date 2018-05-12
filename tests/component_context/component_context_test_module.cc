@@ -21,7 +21,7 @@
 #include "peridot/tests/component_context/defs.h"
 
 using modular::testing::Await;
-using modular::testing::Put;
+using modular::testing::Signal;
 using modular::testing::TestPoint;
 
 namespace {
@@ -74,7 +74,7 @@ class TestApp {
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
       fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : steps_(kTotalSimultaneousTests,
-               [this, module_host] { Put(modular::testing::kTestShutdown); }),
+               [this, module_host] { Signal(modular::testing::kTestShutdown); }),
         weak_ptr_factory_(this) {
     modular::testing::Init(module_host->application_context(), __FILE__);
 

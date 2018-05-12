@@ -22,6 +22,8 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/link_data/defs.h"
 
+using modular::testing::Await;
+using modular::testing::Get;
 using modular::testing::TestPoint;
 
 namespace {
@@ -111,16 +113,14 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     views_v1_token::ViewOwnerPtr story_view;
     story_controller_->Start(story_view.NewRequest());
 
-    modular::testing::GetStore()->Get(
-        std::string("module0_link") + ":" + kRootJson1,
-        [this](fidl::StringPtr) {
-          story1_run_module0_link_.Pass();
-          TestStory1_Wait();
-        });
+    Await(std::string("module0_link") + ":" + kRootJson1, [this] {
+        story1_run_module0_link_.Pass();
+        TestStory1_Wait();
+      });
   }
 
   void TestStory1_Wait() {
-    modular::testing::GetStore()->Get("module2_link", [this](fidl::StringPtr value) {
+    Get("module2_link", [this](fidl::StringPtr value) {
         FXL_LOG(INFO) << "GET module2_link " << value;
         rapidjson::Document doc;
         doc.Parse(value);
@@ -185,7 +185,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   }
 
   void TestStory2_Wait() {
-    modular::testing::GetStore()->Get("module2_link", [this](fidl::StringPtr value) {
+    Get("module2_link", [this](fidl::StringPtr value) {
         rapidjson::Document doc;
         doc.Parse(value);
         if (!doc.IsObject() || !doc.HasMember(kCount) ||

@@ -12,7 +12,7 @@
 #include "peridot/tests/clipboard/defs.h"
 #include "peridot/tests/common/defs.h"
 
-using modular::testing::Put;
+using modular::testing::Signal;
 using modular::testing::TestPoint;
 
 namespace {
@@ -39,7 +39,7 @@ class TestApp {
       if (expected_value == text) {
         successful_peek_.Pass();
       }
-      Put(modular::testing::kTestShutdown);
+      Signal(modular::testing::kTestShutdown);
     });
   }
 

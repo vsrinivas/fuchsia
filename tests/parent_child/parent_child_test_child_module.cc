@@ -11,7 +11,7 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/parent_child/defs.h"
 
-using modular::testing::Put;
+using modular::testing::Signal;
 using modular::testing::TestPoint;
 
 namespace {
@@ -25,7 +25,7 @@ class TestApp {
       fidl::InterfaceRequest<
           component::ServiceProvider> /*outgoing_services*/) {
     modular::testing::Init(module_host->application_context(), __FILE__);
-    Put("child_module_init");
+    Signal("child_module_init");
   }
 
   TestPoint stopped_{"Child module stopped"};
@@ -33,7 +33,7 @@ class TestApp {
   // Called from ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
-    Put("child_module_stop");
+    Signal("child_module_stop");
     modular::testing::Done(done);
   }
 

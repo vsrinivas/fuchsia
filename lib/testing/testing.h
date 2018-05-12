@@ -68,19 +68,24 @@ test_runner::TestRunnerStore* GetStore();
 std::function<void(fidl::StringPtr)> NewBarrierClosure(const int limit,
                                                        std::function<void()> proceed);
 
-// Defined for convenience of using GetStore() only. The |message| is used as
-// both the key and the value. The value is used by the receiver to display what
-// key it was waiting on. That way the same receiver function can be used to
-// wait for multiple keys. Cf. Get().
-void Put(const fidl::StringPtr& message);
+// Defined for convenience of using GetStore().
+void Put(const fidl::StringPtr& key, const fidl::StringPtr& value);
 
-// Defined for convenience of using GetStore() only. The |message| is the key;
-// the value is ignored since it's the same as the key. Cf. Put().
-void Get(const fidl::StringPtr& message, std::function<void(fidl::StringPtr)> callback);
+// Defined for convenience of using GetStore(). Listens for the |key|; the value
+// is passed to the |callback| function.
+void Get(const fidl::StringPtr& key, std::function<void(fidl::StringPtr)> callback);
 
-// Defined for convenience of using GetStore() only. Waits for |condition| to be
-// present as a key in the TestRunnerStore before calling |cont|.
-void Await(fidl::StringPtr condition, std::function<void()> cont);
+// Defined for convenience of using GetStore(). The |condition| is used as both
+// the key and the value. When listening for the key using Get(), the value is
+// used by the receiver to display what key it was waiting on. That way the same
+// receiver function can be used to wait for multiple keys. Otherwise, Await()
+// can be used to listen for the key.
+void Signal(const fidl::StringPtr& condition);
+
+// Defined for convenience of using GetStore(). Waits for |condition| to be
+// present as a key in the TestRunnerStore before calling |cont|. The value on
+// that key is not exposed to the receiver function |cont|.
+void Await(const fidl::StringPtr& condition, std::function<void()> cont);
 
 namespace internal {
 

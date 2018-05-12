@@ -15,7 +15,7 @@
 #include "peridot/tests/chain/defs.h"
 #include "peridot/tests/common/defs.h"
 
-using modular::testing::Put;
+using modular::testing::Signal;
 using modular::testing::TestPoint;
 
 namespace {
@@ -106,7 +106,7 @@ class TestApp {
         default_link_correct_.Pass();
       }
 
-      Put(modular::testing::kTestShutdown);
+      Signal(modular::testing::kTestShutdown);
     });
   }
 

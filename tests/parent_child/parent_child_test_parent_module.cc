@@ -19,7 +19,7 @@
 #include "peridot/tests/parent_child/defs.h"
 
 using modular::testing::Await;
-using modular::testing::Put;
+using modular::testing::Signal;
 using modular::testing::TestPoint;
 
 namespace {
@@ -98,7 +98,7 @@ class TestApp {
 
   void OnChildModule2Stopped() {
     child_module_stopped_.Pass();
-    Put(modular::testing::kTestShutdown);
+    Signal(modular::testing::kTestShutdown);
   }
 
   modular::ModuleHost* module_host_;

@@ -9,7 +9,7 @@
 #include "peridot/lib/testing/testing.h"
 #include "peridot/tests/common/defs.h"
 
-using modular::testing::Put;
+using modular::testing::Signal;
 using modular::testing::TestPoint;
 
 namespace {
@@ -26,14 +26,14 @@ class NullModule {
       : module_host_(module_host) {
     modular::testing::Init(module_host_->application_context(), __FILE__);
     initialized_.Pass();
-    Put(kCommonNullModuleStarted);
+    Signal(kCommonNullModuleStarted);
   }
 
   TestPoint stopped_{"Null module stopped"};
 
   // Called by ModuleDriver.
   void Terminate(const std::function<void()>& done) {
-    Put(kCommonNullModuleStopped);
+    Signal(kCommonNullModuleStopped);
     stopped_.Pass();
     modular::testing::Done(done);
   }

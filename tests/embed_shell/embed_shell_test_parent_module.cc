@@ -17,7 +17,7 @@
 #include "peridot/tests/embed_shell/defs.h"
 
 using modular::testing::Await;
-using modular::testing::Put;
+using modular::testing::Signal;
 using modular::testing::TestPoint;
 
 namespace {
@@ -44,7 +44,7 @@ class TestApp {
     auto check = [this, done = std::make_shared<int>(0)] {
       ++*done;
       if (*done == 2) {
-        Put(modular::testing::kTestShutdown);
+        Signal(modular::testing::kTestShutdown);
       }
     };
 

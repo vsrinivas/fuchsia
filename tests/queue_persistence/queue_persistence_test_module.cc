@@ -18,7 +18,7 @@
 #include "peridot/tests/queue_persistence/defs.h"
 
 using modular::testing::Await;
-using modular::testing::Put;
+using modular::testing::Signal;
 using modular::testing::TestPoint;
 
 namespace {
@@ -118,7 +118,7 @@ class TestApp {
     agent_controller_.Unbind();
     agent_service_.Unbind();
     Await("queue_persistence_test_agent_stopped",
-          [this] { Put(modular::testing::kTestShutdown); });
+          [this] { Signal(modular::testing::kTestShutdown); });
   }
 
   modular::ModuleHost* module_host_;

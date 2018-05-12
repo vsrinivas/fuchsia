@@ -22,9 +22,7 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/story_shell/defs.h"
 
-using modular::testing::TestPoint;
-using modular::testing::Get;
-using modular::testing::Put;
+using modular::testing::Signal;
 
 namespace {
 
@@ -60,26 +58,26 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
                   << (module_manifest ? module_manifest->composition_pattern : " NO MANIFEST");
 
     if (view_id == "root:one" && anchor_id == "root") {
-      Put("root:one");
+      Signal("root:one");
 
       if (module_manifest && module_manifest->composition_pattern == "ticker" &&
           module_manifest->action == "com.google.fuchsia.common.null") {
-        Put("root:one manifest");
+        Signal("root:one manifest");
       }
 
       seen_root_one_ = true;
     }
 
     if (view_id == "root:one:two" && anchor_id == "root:one") {
-      Put("root:one:two");
+      Signal("root:one:two");
 
       if (module_manifest && module_manifest->composition_pattern == "ticker" &&
           module_manifest->action == "com.google.fuchsia.common.null") {
-        Put("root:one:two manifest");
+        Signal("root:one:two manifest");
       }
 
       if (seen_root_one_) {
-        Put("root:one:two ordering");
+        Signal("root:one:two ordering");
       }
     }
   }

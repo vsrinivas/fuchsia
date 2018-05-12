@@ -14,9 +14,9 @@
 #include "peridot/lib/testing/testing.h"
 #include "peridot/tests/trigger/defs.h"
 
-using modular::testing::TestPoint;
 using modular::testing::Await;
-using modular::testing::Put;
+using modular::testing::Signal;
+using modular::testing::TestPoint;
 
 namespace {
 
@@ -114,8 +114,7 @@ class TestApp {
           component_context_->DeleteMessageQueue("explicit_test");
           Await(explicit_queue_token_, [this] {
             queue_deleted_.Pass();
-            modular::testing::GetStore()->Put("trigger_test_module_done", "",
-                                              [] {});
+            Signal("trigger_test_module_done");
           });
         });
       });

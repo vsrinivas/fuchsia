@@ -16,7 +16,7 @@
 #include "peridot/tests/suggestion/defs.h"
 
 using modular::testing::Await;
-using modular::testing::Put;
+using modular::testing::Signal;
 using modular::testing::TestPoint;
 
 namespace {
@@ -57,7 +57,7 @@ class TestApp : modular::NextListener,
     Await(kSuggestionTestModuleDone, [this] {
         story_controller_->Stop([this] {
             story_controller_.Unbind();
-            Put(modular::testing::kTestShutdown);
+            Signal(modular::testing::kTestShutdown);
           });
       });
   }

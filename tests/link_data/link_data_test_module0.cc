@@ -15,6 +15,8 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/link_data/defs.h"
 
+using modular::testing::Signal;
+
 namespace {
 
 // Implementation of the LinkWatcher service that forwards the value of one Link
@@ -50,7 +52,7 @@ class TestApp {
       : module_host_(module_host),
         module_context_(module_host_->module_context()) {
     modular::testing::Init(module_host->application_context(), __FILE__);
-    modular::testing::GetStore()->Put("module0_init", "", [] {});
+    Signal("module0_init");
 
     Start();
   }
@@ -63,8 +65,7 @@ class TestApp {
     module_context_->GetLink(nullptr, link_.NewRequest());
     link_->Get(nullptr, [this](fidl::StringPtr value) {
         if (value == kRootJson1) {
-          modular::testing::GetStore()->Put(
-              std::string("module0_link") + ":" + kRootJson1, "1", [] {});
+          Signal(std::string("module0_link") + ":" + kRootJson1);
         }
 
         StartModules();
@@ -112,7 +113,7 @@ class TestApp {
 
   // Called from ModuleDriver.
   void Terminate(const std::function<void()>& done) {
-    modular::testing::GetStore()->Put("module1_stop", "", [] {});
+    Signal("module1_stop");
     modular::testing::Done(done);
   }
 

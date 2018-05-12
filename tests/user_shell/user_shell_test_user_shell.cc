@@ -26,7 +26,7 @@
 #include "peridot/tests/user_shell/defs.h"
 
 using modular::testing::Await;
-using modular::testing::Put;
+using modular::testing::Signal;
 using modular::testing::TestPoint;
 
 namespace {
@@ -391,7 +391,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
       modular::testing::Fail("StoryInfo after DeleteStory() must return null.");
     }
 
-    Put(modular::testing::kTestShutdown);
+    Signal(modular::testing::kTestShutdown);
   }
 
   void TeardownStoryController() {

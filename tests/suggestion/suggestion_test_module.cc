@@ -16,7 +16,7 @@
 #include "peridot/tests/suggestion/defs.h"
 
 using modular::testing::Await;
-using modular::testing::Put;
+using modular::testing::Signal;
 using modular::testing::TestPoint;
 
 namespace {
@@ -71,7 +71,7 @@ class TestApp : modular::ProposalListener {
           Await("suggestion_proposal_received", [this] {
               Await("proposal_was_accepted", [this] {
                   proposal_was_accepted_.Pass();
-                  Put(kSuggestionTestModuleDone);
+                  Signal(kSuggestionTestModuleDone);
                 });
             });
         });
@@ -88,7 +88,7 @@ class TestApp : modular::ProposalListener {
   // |ProposalListener|
   void OnProposalAccepted(fidl::StringPtr proposal_id,
                           fidl::StringPtr story_id) override {
-    Put("proposal_was_accepted");
+    Signal("proposal_was_accepted");
   }
 
  private:

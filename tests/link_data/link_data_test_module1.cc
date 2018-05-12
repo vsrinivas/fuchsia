@@ -12,6 +12,9 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/link_data/defs.h"
 
+using modular::testing::Put;
+using modular::testing::Signal;
+
 namespace {
 
 // Cf. README.md for what this test does and how.
@@ -24,7 +27,7 @@ class TestApp {
       component::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host) {
     modular::testing::Init(module_host->application_context(), __FILE__);
-    modular::testing::GetStore()->Put("module1_init", "", [] {});
+    Signal("module1_init");
 
     path_.push_back(kCount);
 
@@ -39,7 +42,7 @@ class TestApp {
   void Loop() {
     link_->Get(path_.Clone(), [this](fidl::StringPtr value) {
         if (!value.is_null()) {
-          modular::testing::GetStore()->Put("module1_link", value, [] {});
+          Put("module1_link", value);
         }
         rapidjson::Document doc;
         doc.Parse(value.get().c_str());

@@ -96,15 +96,19 @@ std::function<void(fidl::StringPtr)> NewBarrierClosure(const int limit,
   };
 }
 
-void Get(const fidl::StringPtr& message, std::function<void(fidl::StringPtr)> callback) {
-  modular::testing::GetStore()->Get(message, std::move(callback));
+void Put(const fidl::StringPtr& key, const fidl::StringPtr& value) {
+  modular::testing::GetStore()->Put(key, value, []{});
 }
 
-void Put(const fidl::StringPtr& message) {
-  modular::testing::GetStore()->Put(message, message, []{});
+void Get(const fidl::StringPtr& key, std::function<void(fidl::StringPtr)> callback) {
+  modular::testing::GetStore()->Get(key, std::move(callback));
 }
 
-void Await(fidl::StringPtr condition, std::function<void()> cont) {
+void Signal(const fidl::StringPtr& condition) {
+  modular::testing::GetStore()->Put(condition, condition, []{});
+}
+
+void Await(const fidl::StringPtr& condition, std::function<void()> cont) {
   modular::testing::GetStore()->Get(
       condition, [cont = std::move(cont)](fidl::StringPtr) { cont(); });
 }
