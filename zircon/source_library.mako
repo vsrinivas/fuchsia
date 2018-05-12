@@ -28,6 +28,9 @@ source_set("${data.name}") {
     % for dep in sorted(data.deps):
     "../${dep}",
     % endfor
+    % for dep in sorted(data.fidl_deps):
+    "../../fidl/${dep}",
+    % endfor
   ]
 
   libs = [

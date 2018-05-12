@@ -135,6 +135,7 @@ class SourceLibrary(object):
         self.include_dirs = set()
         self.sources = {}
         self.deps = []
+        self.fidl_deps = []
         self.libs = set()
 
 
@@ -159,6 +160,7 @@ def generate_source_library(package, context):
     # Dependencies.
     data.deps += filter_deps(package.get('deps', []))
     data.deps += filter_deps(package.get('static-deps', []))
+    data.fidl_deps = filter_deps(package.get('fidl-deps', []))
 
     # Libraries.
     if 'zircon' in package.get('deps', []):
@@ -179,6 +181,7 @@ class CompiledLibrary(object):
         self.includes = {}
         self.include_dirs = set()
         self.deps = []
+        self.fidl_deps = []
         self.lib_name = ''
         self.has_impl_prebuilt = False
         self.impl_prebuilt = ''
@@ -229,6 +232,7 @@ def generate_compiled_library(package, context):
     # Dependencies.
     data.deps += filter_deps(package.get('deps', []))
     data.deps += filter_deps(package.get('static-deps', []))
+    data.fidl_deps = filter_deps(package.get('fidl-deps', []))
 
     # Generate the build file.
     template = 'shared_library.mako' if is_shared else 'static_library.mako'
