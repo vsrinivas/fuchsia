@@ -112,6 +112,8 @@ CATEGORIES = [
 
 
 def index_for_category(category):
+    if not category in CATEGORIES:
+        raise Exception('Unknown SDK category "%s"' % category)
     return CATEGORIES.index(category)
 
 

@@ -39,6 +39,10 @@ class SdkCommonTests(unittest.TestCase):
         atoms = [_atom('hello', 'internal'), _atom('world', 'public')]
         self.assertTrue(detect_category_violations('partner', atoms))
 
+    def test_category_name_bogus(self):
+        atoms = [_atom('hello', 'foobarnotgood'), _atom('world', 'public')]
+        self.assertRaises(Exception, detect_category_violations, 'partner', atoms)
+
 
 if __name__ == '__main__':
     unittest.main()
