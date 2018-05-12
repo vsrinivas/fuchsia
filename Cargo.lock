@@ -85,23 +85,6 @@ version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "ble-central-tool"
-version = "0.1.0"
-dependencies = [
- "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "fidl 0.1.0",
- "fidl_bluetooth 0.1.0",
- "fidl_bluetooth_gatt 0.1.0",
- "fidl_bluetooth_low_energy 0.1.0",
- "fuchsia-app 0.1.0",
- "fuchsia-async 0.1.0",
- "fuchsia-zircon 0.3.4",
- "futures 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "getopts 0.2.17 (registry+https://github.com/rust-lang/crates.io-index)",
- "parking_lot 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "ble_battery_service"
 version = "0.1.0"
 dependencies = [
