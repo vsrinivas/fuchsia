@@ -16,9 +16,7 @@ namespace backoff {
 
 constexpr zx::duration kDefaultInitialValue = zx::msec(10);
 
-uint64_t GetSeed() {
-  return 1u;
-}
+uint64_t GetSeed() { return 1u; }
 
 class ExponentialBackoffTest : public ::testing::Test {
  public:

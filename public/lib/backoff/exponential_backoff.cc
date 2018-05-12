@@ -44,8 +44,6 @@ zx::duration ExponentialBackoff::GetNext() {
   return result;
 }
 
-void ExponentialBackoff::Reset() {
-  next_delay_ = initial_delay_;
-}
+void ExponentialBackoff::Reset() { next_delay_ = initial_delay_; }
 
 }  // namespace backoff

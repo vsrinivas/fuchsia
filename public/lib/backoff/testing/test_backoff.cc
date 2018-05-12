@@ -18,9 +18,7 @@ zx::duration TestBackoff::GetNext() {
   return backoff_to_return;
 }
 
-void TestBackoff::Reset() {
-  reset_count++;
-}
+void TestBackoff::Reset() { reset_count++; }
 
 void TestBackoff::SetOnGetNext(fxl::Closure on_get_next) {
   on_get_next_ = on_get_next;

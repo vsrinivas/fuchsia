@@ -21,9 +21,7 @@ class ExponentialBackoff : public Backoff {
   explicit ExponentialBackoff(
       std::function<uint64_t()> seed_generator = fxl::RandUint64);
   ExponentialBackoff(
-      zx::duration initial_delay,
-      uint32_t retry_factor,
-      zx::duration max_delay,
+      zx::duration initial_delay, uint32_t retry_factor, zx::duration max_delay,
       std::function<uint64_t()> seed_generator = fxl::RandUint64);
   ~ExponentialBackoff() override;
 
