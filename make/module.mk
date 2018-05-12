@@ -186,7 +186,7 @@ ifeq ($(call TOBOOL,$(ENABLE_ULIB_ONLY)),true)
 # sort of like an inside-out userlib (drivers need their devhost like
 # executables need their shared libraries).  Elide everything else.
 MODULE_ELIDED := \
-    $(call TOBOOL,$(filter-out userlib:% userapp:system/core/devmgr.host,\
+	$(call TOBOOL,$(filter-out userlib:% fidl:% userapp:system/core/devmgr.host,\
 			       $(MODULE_TYPE):$(MODULE)))
 else
 MODULE_ELIDED := false
