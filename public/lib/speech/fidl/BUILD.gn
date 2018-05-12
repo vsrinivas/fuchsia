@@ -7,7 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("fidl") {
   name = "speech"
 
-  sdk_candidate = true
+  sdk_category = "partner"
 
   sources = [
     "speech_to_text.fidl",

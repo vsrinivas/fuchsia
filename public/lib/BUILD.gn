@@ -28,7 +28,7 @@ group("unittests") {
 fidl("fidl") {
   name = "modular"
 
-  sdk_candidate = true
+  sdk_category = "partner"
 
   sources = [
     "action_log/fidl/component.fidl",
