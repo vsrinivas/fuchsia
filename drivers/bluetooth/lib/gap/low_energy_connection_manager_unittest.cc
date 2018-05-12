@@ -284,6 +284,59 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDevice) {
             dev->le_connection_state());
 }
 
+struct TestObject final : fbl::RefCounted<TestObject> {
+  explicit TestObject(bool* d) : deleted(d) {
+    FXL_DCHECK(deleted);
+    *deleted = false;
+  }
+
+  ~TestObject() { *deleted = true; }
+
+  bool* deleted;
+};
+
+TEST_F(GAP_LowEnergyConnectionManagerTest, DeleteRefInClosedCallback) {
+  auto* dev = dev_cache()->NewDevice(kAddress0, true);
+  test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
+
+  bool deleted = false;
+  auto obj = fbl::AdoptRef(new TestObject(&deleted));
+  LowEnergyConnectionRefPtr conn_ref;
+  int closed_count = 0;
+  auto closed_cb = [&, obj = std::move(obj)] {
+    closed_count++;
+    conn_ref = nullptr;
+
+    // The object should remain alive for the duration of this callback.
+    EXPECT_FALSE(deleted);
+  };
+
+  auto success_cb = [&conn_ref, &closed_cb, this](auto status,
+                                                  auto cb_conn_ref) {
+    EXPECT_TRUE(status);
+    ASSERT_TRUE(cb_conn_ref);
+    conn_ref = std::move(cb_conn_ref);
+    conn_ref->set_closed_callback(std::move(closed_cb));
+  };
+
+  ASSERT_TRUE(conn_mgr()->Connect(dev->identifier(), success_cb));
+  RunUntilIdle();
+
+  ASSERT_TRUE(conn_ref);
+  ASSERT_TRUE(conn_ref->active());
+
+  // This will trigger the closed callback.
+  EXPECT_TRUE(conn_mgr()->Disconnect(dev->identifier()));
+  RunUntilIdle();
+
+  EXPECT_EQ(1, closed_count);
+  EXPECT_TRUE(connected_devices().empty());
+  EXPECT_FALSE(conn_ref);
+
+  // The object should be deleted.
+  EXPECT_TRUE(deleted);
+}
+
 TEST_F(GAP_LowEnergyConnectionManagerTest, ReleaseRef) {
   auto* dev = dev_cache()->NewDevice(kAddress0, true);
   auto fake_dev = std::make_unique<FakeDevice>(kAddress0);

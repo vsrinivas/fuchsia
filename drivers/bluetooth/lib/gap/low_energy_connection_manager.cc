@@ -141,22 +141,28 @@ LowEnergyConnectionRef::LowEnergyConnectionRef(
 
 LowEnergyConnectionRef::~LowEnergyConnectionRef() {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  if (active_)
+  if (active_) {
     Release();
+  }
 };
 
 void LowEnergyConnectionRef::Release() {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(active_);
   active_ = false;
-  if (manager_)
+  if (manager_) {
     manager_->ReleaseReference(this);
+  }
 }
 
 void LowEnergyConnectionRef::MarkClosed() {
   active_ = false;
-  if (closed_cb_)
-    closed_cb_();
+  if (closed_cb_) {
+    // Move the callback out of |closed_cb_| to prevent it from deleting itself
+    // by deleting |this|.
+    auto f = std::move(closed_cb_);
+    f();
+  }
 }
 
 LowEnergyConnectionManager::PendingRequestData::PendingRequestData(
