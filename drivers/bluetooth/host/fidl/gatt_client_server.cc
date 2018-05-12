@@ -42,7 +42,7 @@ void GattClientServer::ListServices(
         callback(fidl_helpers::NewFidlError(
                      ErrorCode::INVALID_ARGUMENTS,
                      "Invalid UUID: " + fidl_uuids.get()[i].get()),
-                 nullptr);
+                 fidl::VectorPtr<ServiceInfo>((size_t)0u));
         return;
       }
     }
@@ -50,14 +50,16 @@ void GattClientServer::ListServices(
 
   auto cb = [callback = std::move(callback)](btlib::att::Status status,
                                              auto services) {
+    std::vector<ServiceInfo> out;
     if (!status) {
       auto fidl_status =
           fidl_helpers::StatusToFidl(status, "Failed to discover services");
-      callback(std::move(fidl_status), nullptr);
+      callback(std::move(fidl_status),
+               fidl::VectorPtr<ServiceInfo>(std::move(out)));
       return;
     }
 
-    std::vector<ServiceInfo> out(services.size());
+    out.resize(services.size());
 
     size_t i = 0;
     for (const auto& svc : services) {
