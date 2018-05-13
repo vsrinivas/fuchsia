@@ -37,6 +37,6 @@ func (_ FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error
 	template.Must(tmpls.Parse(templates.Struct))
 	template.Must(tmpls.Parse(templates.Union))
 
-	libraryPath := config.OutputBase + ".dart"
+	libraryPath := config.OutputBase
 	return writeFile(libraryPath, "GenerateLibraryFile", tmpls, tree)
 }

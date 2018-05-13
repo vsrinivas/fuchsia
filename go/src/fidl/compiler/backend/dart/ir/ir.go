@@ -273,6 +273,14 @@ func formatUnionMemberList(members []UnionMember) string {
 	return fmt.Sprintf("const <$fidl.MemberType>[\n%s  ]", strings.Join(lines, ""))
 }
 
+func formatLibraryName(library types.LibraryIdentifier) string {
+	parts := []string{}
+	for _, part := range library {
+		parts = append(parts, string(part))
+	}
+	return strings.Join(parts, "_")
+}
+
 func typeExprForMethod(request []Parameter, response []Parameter) string {
 	return fmt.Sprintf(`const $fidl.MethodType(
     request: %s,
@@ -288,8 +296,8 @@ func typeExprForPrimitiveSubtype(val types.PrimitiveSubtype) string {
 	return fmt.Sprintf("const $fidl.%s()", t)
 }
 
-func libraryPrefix(library types.Identifier) string {
-	return fmt.Sprintf("lib$%s", string(library))
+func libraryPrefix(library types.LibraryIdentifier) string {
+	return fmt.Sprintf("lib$%s", formatLibraryName(library))
 }
 
 func isReservedWord(str string) bool {
@@ -324,8 +332,7 @@ func (c *compiler) inExternalLibrary(ci types.CompoundIdentifier) bool {
 func (c *compiler) typeSymbolForCompoundIdentifier(ident types.CompoundIdentifier) string {
 	t := fmt.Sprintf("k%s_Type", ident.Name)
 	if c.inExternalLibrary(ident) {
-		// TODO(FIDL-161) handle more than one library name component
-		return fmt.Sprintf("%s.%s", libraryPrefix(ident.Library[0]), t)
+		return fmt.Sprintf("%s.%s", libraryPrefix(ident.Library), t)
 	}
 	return t
 }
@@ -341,8 +348,7 @@ func (c *compiler) compileLowerCamelIdentifier(val types.Identifier) string {
 func (c *compiler) compileCompoundIdentifier(val types.CompoundIdentifier) string {
 	strs := []string{}
 	if c.inExternalLibrary(val) {
-		// TODO(FIDL-161) handle more than one library name component
-		strs = append(strs, libraryPrefix(val.Library[0]))
+		strs = append(strs, libraryPrefix(val.Library))
 	}
 	strs = append(strs, changeIfReserved(string(val.Name)))
 	return strings.Join(strs, ".")
@@ -668,7 +674,7 @@ func Compile(r types.Root) Root {
 	root := Root{}
 	c := compiler{&r.Decls, types.ParseLibraryName(r.Name)}
 
-	root.LibraryName = fmt.Sprintf("fuchsia.fidl.%s", r.Name)
+	root.LibraryName = fmt.Sprintf("fidl_%s", formatLibraryName(c.library))
 
 	for _, v := range r.Consts {
 		root.Consts = append(root.Consts, c.compileConst(v))
@@ -695,10 +701,9 @@ func Compile(r types.Root) Root {
 			// We don't need to import our own package.
 			continue
 		}
-		// TODO(FIDL-161) handle more than one library name component
-		library := types.ParseLibraryName(l.Name)[0]
+		library := types.ParseLibraryName(l.Name)
 		root.Imports = append(root.Imports, Import{
-			fmt.Sprintf("package:fuchsia.fidl.%s/%s.dart", library, library),
+			fmt.Sprintf("package:fidl_%s/fidl.dart", formatLibraryName(library)),
 			libraryPrefix(library),
 		})
 	}
