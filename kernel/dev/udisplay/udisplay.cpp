@@ -26,20 +26,20 @@ constexpr uint kFramebufferArchMmuFlags = ARCH_MMU_FLAG_WRITE_COMBINING | ARCH_M
 static qrcodegen::QrCode qrcode;
 
 #define MAX_QRCODE_DATA (2953u)
-static char qrlogbuf[MAX_QRCODE_DATA];
-static size_t qrlogptr;
+static char crashlogbuf[MAX_QRCODE_DATA];
+static size_t crashlogptr;
 
-static void qrcode_print_callback(print_callback_t* cb, const char* str, size_t len) {
-    if (len > (MAX_QRCODE_DATA - qrlogptr))
-        len = (MAX_QRCODE_DATA - qrlogptr);
+static void crashlog_print_callback(print_callback_t* cb, const char* str, size_t len) {
+    if (len > (sizeof(crashlogbuf) - crashlogptr))
+        len = (sizeof(crashlogbuf) - crashlogptr);
 
-    memcpy(qrlogbuf + qrlogptr, str, len);
-    qrlogptr += len;
+    memcpy(crashlogbuf + crashlogptr, str, len);
+    crashlogptr += len;
 }
 
-static print_callback_t qrcode_cb = {
+static print_callback_t crashlog_cb = {
     .entry = {},
-    .print = qrcode_print_callback,
+    .print = crashlog_print_callback,
     .context = nullptr
 };
 
@@ -57,12 +57,12 @@ zx_status_t udisplay_init(void) {
 }
 
 void dlog_bluescreen_halt(void) {
-    platform_stow_crashlog(qrlogbuf, qrlogptr);
+    platform_stow_crashlog(crashlogbuf, crashlogptr);
 
     if (g_udisplay.framebuffer_virt == 0)
         return;
 
-    if (qrcode.encodeBinary(qrlogbuf, qrlogptr, qrcodegen::Ecc::LOW)) {
+    if (qrcode.encodeBinary(crashlogbuf, crashlogptr, qrcodegen::Ecc::LOW)) {
         printf("cannot create qrcode\n");
         return;
     }
@@ -156,10 +156,10 @@ zx_status_t udisplay_set_display_info(struct display_info* display) {
 }
 
 zx_status_t udisplay_bind_gfxconsole(void) {
+    register_print_callback(&crashlog_cb);
+
     if (g_udisplay.framebuffer_virt == 0)
         return ZX_ERR_NOT_FOUND;
-
-    register_print_callback(&qrcode_cb);
 
     // bind the display to the gfxconsole
     g_udisplay.info.framebuffer = g_udisplay.framebuffer_virt;

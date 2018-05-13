@@ -60,6 +60,8 @@ extern paddr_t zbi_paddr;
 static void* ramdisk_base;
 static size_t ramdisk_size;
 
+static zbi_nvram_t lastlog_nvram;
+
 static uint cpu_cluster_count = 0;
 static uint cpu_cluster_cpus[SMP_CPU_MAX_CLUSTERS] = {0};
 
@@ -333,6 +335,13 @@ static void process_boot_item(zbi_header_t* item) {
         save_mexec_zbi(item);
         break;
     }
+    case ZBI_TYPE_NVRAM: {
+        zbi_nvram_t* nvram = reinterpret_cast<zbi_nvram_t*>(item + 1);
+        memcpy(&lastlog_nvram, nvram, sizeof(lastlog_nvram));
+        boot_reserve_add_range(nvram->base, nvram->length);
+        save_mexec_zbi(item);
+        break;
+    }
     }
 }
 
@@ -544,13 +553,71 @@ void platform_halt(platform_halt_action suggested_action, platform_halt_reason r
         ;
 }
 
+typedef struct {
+    //TODO: combine with x86 nvram crashlog handling
+    //TODO: ECC for more robust crashlogs
+    uint64_t magic;
+    uint64_t length;
+    uint64_t nmagic;
+    uint64_t nlength;
+} log_hdr_t;
+
+#define NVRAM_MAGIC (0x6f8962d66b28504fULL)
+
 size_t platform_stow_crashlog(void* log, size_t len) {
-    return 0;
+    size_t max = lastlog_nvram.length - sizeof(log_hdr_t);
+    void* nvram = paddr_to_physmap(lastlog_nvram.base);
+    if (nvram == NULL) {
+        return 0;
+    }
+
+    if (log == NULL) {
+        return max;
+    }
+    if (len > max) {
+        len = max;
+    }
+
+    log_hdr_t hdr = {
+        .magic = NVRAM_MAGIC,
+        .length = len,
+        .nmagic = ~NVRAM_MAGIC,
+        .nlength = ~len,
+    };
+    memcpy(nvram, &hdr, sizeof(hdr));
+    memcpy(static_cast<char*>(nvram) + sizeof(hdr), log, len);
+    arch_clean_cache_range((uintptr_t)nvram, sizeof(hdr) + len);
+    return len;
 }
 
 size_t platform_recover_crashlog(size_t len, void* cookie,
                                  void (*func)(const void* data, size_t, size_t len, void* cookie)) {
-    return 0;
+    size_t max = lastlog_nvram.length - sizeof(log_hdr_t);
+    void* nvram = paddr_to_physmap(lastlog_nvram.base);
+    if (nvram == NULL) {
+        return 0;
+    }
+    log_hdr_t hdr;
+    memcpy(&hdr, nvram, sizeof(hdr));
+    if ((hdr.magic != NVRAM_MAGIC) || (hdr.length > max) ||
+        (hdr.nmagic != ~NVRAM_MAGIC) || (hdr.nlength != ~hdr.length)) {
+        printf("nvram-crashlog: bad header: %016lx %016lx %016lx %016lx\n",
+               hdr.magic, hdr.length, hdr.nmagic, hdr.nlength);
+        return 0;
+    }
+    if (len == 0) {
+        return hdr.length;
+    }
+    if (len > hdr.length) {
+        len = hdr.length;
+    }
+    func(static_cast<char*>(nvram) + sizeof(hdr), 0, len, cookie);
+
+    // invalidate header so we don't get a stale crashlog
+    // on future boots
+    hdr.magic = 0;
+    memcpy(nvram, &hdr, sizeof(hdr));
+    return hdr.length;
 }
 
 zx_status_t platform_mexec_patch_bootdata(uint8_t* zbi, const size_t len) {
