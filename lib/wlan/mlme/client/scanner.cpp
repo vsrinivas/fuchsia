@@ -13,6 +13,7 @@
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/wlan.h>
 
+#include <fuchsia/c/wlan_mlme.h>
 #include "lib/fidl/cpp/vector.h"
 
 #include <fbl/unique_ptr.h>
@@ -349,7 +350,7 @@ zx_status_t Scanner::SendScanConfirm() {
 
     auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
     packet->set_peer(Packet::Peer::kService);
-    zx_status_t status = SerializeServiceMsg(packet.get(), wlan_mlme::Method::SCAN_confirm, resp_.get());
+    zx_status_t status = SerializeServiceMsg(packet.get(), wlan_mlme_MLMEScanConfOrdinal, resp_.get());
     if (status != ZX_OK) {
         errorf("could not serialize ScanResponse: %d\n", status);
     } else {

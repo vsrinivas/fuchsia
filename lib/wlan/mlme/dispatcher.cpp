@@ -18,6 +18,7 @@
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 
+#include <fuchsia/c/wlan_mlme.h>
 #include <fuchsia/cpp/wlan_mlme.h>
 #include <fuchsia/c/wlan_stats.h>
 
@@ -47,7 +48,7 @@ Dispatcher::~Dispatcher() {}
 
 template <>
 zx_status_t Dispatcher::HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(
-    fbl::unique_ptr<Packet> packet, wlan_mlme::Method method);
+    fbl::unique_ptr<Packet> packet, uint32_t ordinal);
 
 zx_status_t Dispatcher::HandlePacket(fbl::unique_ptr<Packet> packet) {
     debugfn();
@@ -399,39 +400,37 @@ zx_status_t Dispatcher::HandleSvcPacket(fbl::unique_ptr<Packet> packet) {
     }
     debughdr("service packet txid=%u flags=%u ordinal=%u\n", hdr->txid, hdr->flags, hdr->ordinal);
 
-    auto method = static_cast<wlan_mlme::Method>(hdr->ordinal);
-
-    if (method == wlan_mlme::Method::DEVICE_QUERY_request) {
-        return HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(fbl::move(packet), method);
+    if (hdr->ordinal == wlan_mlme_MLMEDeviceQueryReqOrdinal) {
+        return HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(fbl::move(packet), hdr->ordinal);
     }
 
-    switch (method) {
-    case wlan_mlme::Method::RESET_request:
+    switch (hdr->ordinal) {
+    case wlan_mlme_MLMEResetReqOrdinal:
         infof("resetting MLME\n");
-        HandleMlmeMethod<wlan_mlme::ResetRequest>(fbl::move(packet), method);
+        HandleMlmeMethod<wlan_mlme::ResetRequest>(fbl::move(packet), hdr->ordinal);
         return ZX_OK;
-    case wlan_mlme::Method::START_request:
-        return HandleMlmeMethod<wlan_mlme::StartRequest>(fbl::move(packet), method);
-    case wlan_mlme::Method::STOP_request:
-        return HandleMlmeMethod<wlan_mlme::StopRequest>(fbl::move(packet), method);
-    case wlan_mlme::Method::SCAN_request:
-        return HandleMlmeMethod<wlan_mlme::ScanRequest>(fbl::move(packet), method);
-    case wlan_mlme::Method::JOIN_request:
-        return HandleMlmeMethod<wlan_mlme::JoinRequest>(fbl::move(packet), method);
-    case wlan_mlme::Method::AUTHENTICATE_request:
-        return HandleMlmeMethod<wlan_mlme::AuthenticateRequest>(fbl::move(packet), method);
-    case wlan_mlme::Method::AUTHENTICATE_response:
-        return HandleMlmeMethod<wlan_mlme::AuthenticateResponse>(fbl::move(packet), method);
-    case wlan_mlme::Method::DEAUTHENTICATE_request:
-        return HandleMlmeMethod<wlan_mlme::DeauthenticateRequest>(fbl::move(packet), method);
-    case wlan_mlme::Method::ASSOCIATE_request:
-        return HandleMlmeMethod<wlan_mlme::AssociateRequest>(fbl::move(packet), method);
-    case wlan_mlme::Method::ASSOCIATE_response:
-        return HandleMlmeMethod<wlan_mlme::AssociateResponse>(fbl::move(packet), method);
-    case wlan_mlme::Method::EAPOL_request:
-        return HandleMlmeMethod<wlan_mlme::EapolRequest>(fbl::move(packet), method);
-    case wlan_mlme::Method::SETKEYS_request:
-        return HandleMlmeMethod<wlan_mlme::SetKeysRequest>(fbl::move(packet), method);
+    case wlan_mlme_MLMEStartReqOrdinal:
+        return HandleMlmeMethod<wlan_mlme::StartRequest>(fbl::move(packet), hdr->ordinal);
+    case wlan_mlme_MLMEStopReqOrdinal:
+        return HandleMlmeMethod<wlan_mlme::StopRequest>(fbl::move(packet), hdr->ordinal);
+    case wlan_mlme_MLMEScanReqOrdinal:
+        return HandleMlmeMethod<wlan_mlme::ScanRequest>(fbl::move(packet), hdr->ordinal);
+    case wlan_mlme_MLMEJoinReqOrdinal:
+        return HandleMlmeMethod<wlan_mlme::JoinRequest>(fbl::move(packet), hdr->ordinal);
+    case wlan_mlme_MLMEAuthenticateReqOrdinal:
+        return HandleMlmeMethod<wlan_mlme::AuthenticateRequest>(fbl::move(packet), hdr->ordinal);
+    case wlan_mlme_MLMEAuthenticateRespOrdinal:
+        return HandleMlmeMethod<wlan_mlme::AuthenticateResponse>(fbl::move(packet), hdr->ordinal);
+    case wlan_mlme_MLMEDeauthenticateReqOrdinal:
+        return HandleMlmeMethod<wlan_mlme::DeauthenticateRequest>(fbl::move(packet), hdr->ordinal);
+    case wlan_mlme_MLMEAssociateReqOrdinal:
+        return HandleMlmeMethod<wlan_mlme::AssociateRequest>(fbl::move(packet), hdr->ordinal);
+    case wlan_mlme_MLMEAssociateRespOrdinal:
+        return HandleMlmeMethod<wlan_mlme::AssociateResponse>(fbl::move(packet), hdr->ordinal);
+    case wlan_mlme_MLMEEapolReqOrdinal:
+        return HandleMlmeMethod<wlan_mlme::EapolRequest>(fbl::move(packet), hdr->ordinal);
+    case wlan_mlme_MLMESetKeysReqOrdinal:
+        return HandleMlmeMethod<wlan_mlme::SetKeysRequest>(fbl::move(packet), hdr->ordinal);
     default:
         warnf("unknown MLME method %u\n", hdr->ordinal);
         return ZX_ERR_NOT_SUPPORTED;
@@ -439,21 +438,21 @@ zx_status_t Dispatcher::HandleSvcPacket(fbl::unique_ptr<Packet> packet) {
 }
 
 template <typename Message>
-zx_status_t Dispatcher::HandleMlmeMethod(fbl::unique_ptr<Packet> packet, wlan_mlme::Method method) {
+zx_status_t Dispatcher::HandleMlmeMethod(fbl::unique_ptr<Packet> packet, uint32_t ordinal) {
     Message msg;
-    auto status = DeserializeServiceMsg<Message>(*packet, method, &msg);
+    auto status = DeserializeServiceMsg<Message>(*packet, ordinal, &msg);
     if (status != ZX_OK) {
-        errorf("could not deserialize MLME Method %d: %d\n", method, status);
+        errorf("could not deserialize MLME Method %d: %d\n", ordinal, status);
         return status;
     }
-    return mlme_->HandleFrame(method, msg);
+    return mlme_->HandleFrame(ordinal, msg);
 }
 
 template <>
 zx_status_t Dispatcher::HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(fbl::unique_ptr<Packet> _,
-                                                                        wlan_mlme::Method method) {
+                                                                        uint32_t ordinal) {
     debugfn();
-    ZX_DEBUG_ASSERT(method == wlan_mlme::Method::DEVICE_QUERY_request);
+    ZX_DEBUG_ASSERT(ordinal == wlan_mlme_MLMEDeviceQueryReqOrdinal);
 
     wlan_mlme::DeviceQueryConfirm resp;
     const wlanmac_info_t& info = device_->GetWlanInfo();
@@ -503,7 +502,7 @@ zx_status_t Dispatcher::HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(fbl::uni
     auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
     packet->set_peer(Packet::Peer::kService);
     zx_status_t status =
-        SerializeServiceMsg(packet.get(), wlan_mlme::Method::DEVICE_QUERY_confirm, &resp);
+        SerializeServiceMsg(packet.get(), wlan_mlme_MLMEDeviceQueryConfOrdinal, &resp);
     if (status != ZX_OK) {
         errorf("could not serialize DeviceQueryResponse: %d\n", status);
         return status;

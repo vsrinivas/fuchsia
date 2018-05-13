@@ -43,7 +43,7 @@ class Dispatcher {
     zx_status_t HandleEthPacket(fbl::unique_ptr<Packet> packet);
     zx_status_t HandleSvcPacket(fbl::unique_ptr<Packet> packet);
     template <typename Message>
-    zx_status_t HandleMlmeMethod(fbl::unique_ptr<Packet> packet, wlan_mlme::Method method);
+    zx_status_t HandleMlmeMethod(fbl::unique_ptr<Packet> packet, uint32_t ordinal);
     zx_status_t HandleActionPacket(fbl::unique_ptr<Packet> packet, const MgmtFrameHeader* hdr,
                                    const ActionFrame* action, const wlan_rx_info_t* rxinfo);
 

@@ -75,7 +75,7 @@ class Station : public FrameHandler {
 
     zx_status_t SendKeepAliveResponse();
 
-    zx_status_t HandleMlmeMessage(const wlan_mlme::Method& method) override;
+    zx_status_t HandleMlmeMessage(uint32_t ordinal) override;
     zx_status_t HandleMlmeJoinReq(const wlan_mlme::JoinRequest& req) override;
     zx_status_t HandleMlmeAuthReq(const wlan_mlme::AuthenticateRequest& req) override;
     zx_status_t HandleMlmeDeauthReq(const wlan_mlme::DeauthenticateRequest& req) override;

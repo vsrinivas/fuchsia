@@ -20,7 +20,7 @@
     WLAN_DECL_VIRT_FUNC_HANDLE(methodName, const wlan_mlme::mlmeMsgType&)
 
 #define WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(methodName, mlmeMsgType)                    \
-    zx_status_t HandleMlmeFrameInternal(const wlan_mlme::Method& method, const wlan_mlme::mlmeMsgType& msg) { \
+    zx_status_t HandleMlmeFrameInternal(uint32_t ordinal, const wlan_mlme::mlmeMsgType& msg) { \
         return methodName(msg);                                                         \
     }
 
@@ -141,7 +141,7 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     }
 
     // Service Message handlers.
-    virtual zx_status_t HandleMlmeMessage(const wlan_mlme::Method& method) { return ZX_OK; }
+    virtual zx_status_t HandleMlmeMessage(uint32_t ordinal) { return ZX_OK; }
     WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeResetReq, ResetRequest)
     WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeScanReq, ScanRequest)
     WLAN_DECL_FUNC_HANDLE_MLME(HandleMlmeJoinReq, JoinRequest)
@@ -182,11 +182,11 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
    private:
     // Internal Service Message handlers.
     template <typename Message>
-    zx_status_t HandleFrameInternal(const wlan_mlme::Method& method, const Message& msg) {
-        auto status = HandleMlmeMessage(method);
+    zx_status_t HandleFrameInternal(uint32_t ordinal, const Message& msg) {
+        auto status = HandleMlmeMessage(ordinal);
         if (status != ZX_OK) { return status; }
 
-        return HandleMlmeFrameInternal(method, msg);
+        return HandleMlmeFrameInternal(ordinal, msg);
     }
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeResetReq, ResetRequest)
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MLME(HandleMlmeScanReq, ScanRequest)

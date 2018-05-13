@@ -108,10 +108,10 @@ struct MockDevice : public DeviceInterface {
 
     uint16_t GetChannelNumber() { return state->channel().primary; }
 
-    template <typename T> zx_status_t GetQueuedServiceMsg(wlan_mlme::Method method, T* out) {
+    template <typename T> zx_status_t GetQueuedServiceMsg(uint32_t ordinal, T* out) {
         EXPECT_EQ(1u, svc_queue.size());
         auto packet = svc_queue.Dequeue();
-        return DeserializeServiceMsg<T>(*packet, method, out);
+        return DeserializeServiceMsg<T>(*packet, ordinal, out);
     }
 
     fbl::RefPtr<DeviceState> state;

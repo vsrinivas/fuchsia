@@ -19,12 +19,12 @@ namespace wlan {
 class DeviceInterface;
 
 template <typename T>
-zx_status_t DeserializeServiceMsg(const Packet& packet, wlan_mlme::Method m, T* out) {
+zx_status_t DeserializeServiceMsg(const Packet& packet, uint32_t ordinal, T* out) {
     if (out == nullptr) return ZX_ERR_INVALID_ARGS;
 
     // Verify that the message header contains the ordinal we expect.
     auto h = packet.mut_field<fidl_message_header_t>(0);
-    if (static_cast<wlan_mlme::Method>(h->ordinal) != m) return ZX_ERR_IO;
+    if (h->ordinal != ordinal) return ZX_ERR_IO;
 
     // Extract the message contents and decode in-place (i.e., fixup all the out-of-line pointers to
     // be offsets into the buffer).
@@ -44,9 +44,9 @@ zx_status_t DeserializeServiceMsg(const Packet& packet, wlan_mlme::Method m, T* 
     return ZX_OK;
 }
 
-template <typename T> zx_status_t SerializeServiceMsg(Packet* packet, wlan_mlme::Method m, T* msg) {
+template <typename T> zx_status_t SerializeServiceMsg(Packet* packet, uint32_t ordinal, T* msg) {
     // Create an encoder that sets the ordinal to m.
-    fidl::Encoder enc(static_cast<uint32_t>(m));
+    fidl::Encoder enc(ordinal);
 
     // Encode our message of type T. The encoder will take care of extending the buffer to
     // accommodate out-of-line data (e.g., vectors, strings, and nullable data).

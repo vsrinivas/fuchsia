@@ -16,6 +16,7 @@
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
 
+#include <fuchsia/c/wlan_mlme.h>
 #include <fuchsia/c/wlan_stats.h>
 
 #include <cstring>
@@ -46,10 +47,10 @@ void Station::Reset() {
     bssid_.Reset();
 }
 
-zx_status_t Station::HandleMlmeMessage(const wlan_mlme::Method& method) {
+zx_status_t Station::HandleMlmeMessage(uint32_t ordinal) {
     WLAN_STATS_INC(svc_msg.in);
     // Always allow MLME-JOIN.request.
-    if (method == wlan_mlme::Method::JOIN_request) { return ZX_OK; }
+    if (ordinal == wlan_mlme_MLMEJoinReqOrdinal) { return ZX_OK; }
     // Drop other MLME requests if there is no BSSID set yet.
     return (bssid() == nullptr ? ZX_ERR_STOP : ZX_OK);
 }
