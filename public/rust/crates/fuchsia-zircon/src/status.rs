@@ -24,6 +24,17 @@ impl Status {
         }
     }
 
+    /// Returns `Ok(status)` if the status was non-negative,
+    /// otherwise returns `Err(status)`.
+    /// This is useful primarily for ioctls.
+    pub fn ioctl_ok(raw: sys::zx_status_t) -> Result<u32, Status> {
+        if raw >= Status::OK.0 {
+            Ok(raw as u32)
+        } else {
+            Err(Status(raw))
+        }
+    }
+
     pub fn from_raw(raw: sys::zx_status_t) -> Self {
         Status(raw)
     }
