@@ -221,12 +221,9 @@ enum ReasonCode : uint16 {
     MISSING_ACKS = 34;
     EXCEEDED_TXOP = 35;
     STA_LEAVING = 36;
-    // The following groups of reasons share the same code
-    END_TS = 37;
-    END_BA = 37;
-    END_DLS = 37;
-    UNKNOWN_TS = 39;
-    UNKNOWN_BA = 38;
+    // Values 37 and 38 are overloaded but should be clear from context.
+    END_TS_BA_DLS = 37;
+    UNKNOWN_TS_BA = 38;
     TIMEOUT = 39;
     // 40-44 Reserved
     PEERKEY_MISMATCH = 45;
