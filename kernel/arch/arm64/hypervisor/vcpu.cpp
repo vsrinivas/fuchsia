@@ -185,7 +185,6 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     bool force_virtual_interrupt = false;
     zx_status_t status;
     do {
-        bool has_active_interrupt;
         {
             AutoGich auto_gich(&gich_state_);
             uint64_t curr_hcr = hcr_;
@@ -198,9 +197,8 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
             running_.store(true);
             status = arm64_el2_resume(vttbr, el2_state_.PhysicalAddress(), curr_hcr);
             running_.store(false);
-
-            has_active_interrupt = gich_active_interrupts(&gich_state_);
         }
+        bool has_active_interrupt = gich_active_interrupts(&gich_state_);
         if (status == ZX_ERR_NEXT) {
             // We received a physical interrupt. If it was due to the thread
             // being killed, then we should exit with an error, otherwise return
