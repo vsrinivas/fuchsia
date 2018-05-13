@@ -25,7 +25,7 @@ class AppendableBuffer {
                   escher::BufferFactory* factory, const void* data, size_t size,
                   bool is_stable);
 
-  escher::BufferPtr get() const { return buffer_; }
+  const escher::BufferPtr& get() const { return buffer_; }
   vk::DeviceSize size() const { return size_; }
   vk::DeviceSize capacity() const { return buffer_->size(); }
 

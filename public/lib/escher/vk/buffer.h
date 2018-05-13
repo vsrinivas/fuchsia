@@ -13,6 +13,12 @@ namespace escher {
 class Buffer;
 typedef fxl::RefPtr<Buffer> BufferPtr;
 
+// Range within the buffer.
+struct BufferRange {
+  vk::DeviceSize offset;
+  vk::DeviceSize size;
+};
+
 // Escher's standard interface to Vulkan buffer objects.
 class Buffer : public WaitableResource {
  public:

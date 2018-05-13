@@ -26,9 +26,12 @@ class SharedBuffer final : public fxl::RefCountedThreadSafe<SharedBuffer> {
                              escher::BufferFactory* factory,
                              vk::DeviceSize capacity);
 
-  // Preserve a chunk of |size| for use. The requested |size| MUST fit in the
-  // rest of the buffer.
-  escher::BufferPtr Preserve(Frame* frame, vk::DeviceSize size);
+  // Reserve a chunk of |size| for use. The requested |size| MUST fit in the
+  // remaining unused space in the buffer.  Return the range in the buffer
+  // that may be used by the caller; it is unsafe to use anything outside
+  // this range (unless the caller somehow knows about the previously-reserved
+  // ranges).
+  escher::BufferRange Reserve(vk::DeviceSize size);
 
   // Discard the original content, and copy the content from the other one.
   void Copy(Frame* frame, const SharedBufferPtr& from);

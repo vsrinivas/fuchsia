@@ -183,12 +183,14 @@ StrokeTessellator::StrokeTessellator(escher::Escher* escher)
               /* push_constants_size= */ 0, kShaderCode) {}
 
 void StrokeTessellator::Dispatch(
-    escher::BufferPtr stroke_info_buffer,
-    escher::BufferPtr control_points_buffer, escher::BufferPtr re_params_buffer,
-    escher::BufferPtr division_counts_buffer,
-    escher::BufferPtr cumulative_division_counts_buffer,
-    escher::BufferPtr division_segment_index_buffer,
-    escher::BufferPtr vertex_buffer, escher::BufferPtr index_buffer,
+    const escher::BufferPtr& stroke_info_buffer,
+    const escher::BufferPtr& control_points_buffer,
+    const escher::BufferPtr& re_params_buffer,
+    const escher::BufferPtr& division_counts_buffer,
+    const escher::BufferPtr& cumulative_division_counts_buffer,
+    const escher::BufferPtr& division_segment_index_buffer,
+    escher::BufferPtr vertex_buffer, const escher::BufferRange& vertex_range,
+    escher::BufferPtr index_buffer, const escher::BufferRange& index_range,
     escher::impl::CommandBuffer* command, escher::TimestampProfiler* profiler,
     uint32_t division_count, bool apply_barrier) {
   if (profiler) {
@@ -225,15 +227,21 @@ void StrokeTessellator::Dispatch(
         vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), 0,
         nullptr, kInputBufferCnt, barriers, 0, nullptr);
   }
-
   uint32_t group_count = (division_count + kLocalSize - 1) / kLocalSize;
-  kernel_.Dispatch(
+  kernel_.DispatchWithRanges(
       std::vector<escher::TexturePtr>{},
-      {std::move(stroke_info_buffer), std::move(control_points_buffer),
-       std::move(re_params_buffer), std::move(division_counts_buffer),
-       std::move(cumulative_division_counts_buffer),
-       std::move(division_segment_index_buffer), std::move(vertex_buffer),
+      {stroke_info_buffer, control_points_buffer, re_params_buffer,
+       division_counts_buffer, cumulative_division_counts_buffer,
+       division_segment_index_buffer, std::move(vertex_buffer),
        std::move(index_buffer)},
+      {{0, stroke_info_buffer->size()},
+       {0, control_points_buffer->size()},
+       {0, re_params_buffer->size()},
+       {0, division_counts_buffer->size()},
+       {0, cumulative_division_counts_buffer->size()},
+       {0, division_segment_index_buffer->size()},
+       {vertex_range.offset, vertex_range.size},
+       {index_range.offset, index_range.size}},
       command, group_count,
       /* group_count_y= */ 1, /* group_count_z= */ 1,
       /* push_constants= */ nullptr);

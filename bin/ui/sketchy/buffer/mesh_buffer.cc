@@ -45,7 +45,7 @@ void MeshBuffer::Prepare(Frame* frame, bool from_scratch,
   }
 }
 
-std::pair<escher::BufferPtr, escher::BufferPtr> MeshBuffer::Preserve(
+std::pair<escher::BufferRange, escher::BufferRange> MeshBuffer::Reserve(
     Frame* frame, uint32_t vertex_count, uint32_t index_count,
     const escher::BoundingBox& bbox) {
   vertex_count_ += vertex_count;
@@ -66,9 +66,8 @@ std::pair<escher::BufferPtr, escher::BufferPtr> MeshBuffer::Preserve(
                   /* keep_content= */ true);
   }
 
-  // TODO(SCN-712): Fix alignment.
-  return {vertex_buffer_->Preserve(frame, vertex_size),
-          index_buffer_->Preserve(frame, index_size)};
+  return {vertex_buffer_->Reserve(vertex_size),
+          index_buffer_->Reserve(index_size)};
 };
 
 void MeshBuffer::ProvideBuffersToScenicMesh(scenic_lib::Mesh* scenic_mesh) {

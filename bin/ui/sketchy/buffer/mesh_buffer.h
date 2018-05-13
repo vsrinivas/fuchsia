@@ -28,16 +28,19 @@ class MeshBuffer final {
   void Prepare(Frame* frame, bool from_scratch, uint32_t delta_vertex_count = 0,
                uint32_t delta_index_count = 0);
 
-  // Preserve a pair of vertex/index buffer for use. The underlying buffers will
-  // grow dynamically if it's not enough.
-  // TODO(ES-45): Return ranges to avoid sub-buffering.
-  std::pair<escher::BufferPtr, escher::BufferPtr> Preserve(
+  // Reserve appropriately-sized regions within the underlying vertex/index
+  // buffers, each of which will be resized automatically if not enough free
+  // space is available.
+  std::pair<escher::BufferRange, escher::BufferRange> Reserve(
       Frame* frame, uint32_t vertex_count, uint32_t index_count,
       const escher::BoundingBox& bbox);
 
-  // Provide all the necessary parameters to fuchsia::ui::gfx::Mesh::BindBuffers().
+  // Provide all the necessary parameters to
+  // fuchsia::ui::gfx::Mesh::BindBuffers().
   void ProvideBuffersToScenicMesh(scenic_lib::Mesh* scenic_mesh);
 
+  const SharedBufferPtr& vertex_buffer() const { return vertex_buffer_; }
+  const SharedBufferPtr& index_buffer() const { return index_buffer_; }
   uint32_t vertex_count() const { return vertex_count_; }
 
  private:

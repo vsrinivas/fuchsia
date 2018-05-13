@@ -147,14 +147,14 @@ void Stroke::TessellateAndMerge(Frame* frame, MeshBuffer* mesh_buffer) {
   }
 
   uint32_t base_vertex_index = mesh_buffer->vertex_count();
-  auto pair = mesh_buffer->Preserve(
+  auto pair = mesh_buffer->Reserve(
       frame, stable_path_.vertex_count() + delta_unstable_path.vertex_count(),
       stable_path_.index_count() + delta_unstable_path.index_count(),
       escher::BoundingBox()
           .Join(stable_path_.bbox())
           .Join(delta_unstable_path.bbox()));
-  auto vertex_buffer = std::move(pair.first);
-  auto index_buffer = std::move(pair.second);
+  const auto& vertex_range = pair.first;
+  const auto& index_range = pair.second;
 
   StrokeInfo stroke_info = {
       .segment_count = static_cast<uint32_t>(
@@ -171,8 +171,10 @@ void Stroke::TessellateAndMerge(Frame* frame, MeshBuffer* mesh_buffer) {
       stroke_info_buffer_, control_points_buffer_.get(),
       re_params_buffer_.get(), division_counts_buffer_.get(),
       cumulative_division_counts_buffer_.get(),
-      division_segment_index_buffer_.get(), vertex_buffer, index_buffer,
-      command, profiler,
+      division_segment_index_buffer_.get(),
+      mesh_buffer->vertex_buffer()->escher_buffer(), vertex_range,
+      mesh_buffer->index_buffer()->escher_buffer(), index_range, command,
+      profiler,
       stable_path_.division_count() + delta_unstable_path.division_count(),
       is_path_updated_);
   is_path_updated_ = false;

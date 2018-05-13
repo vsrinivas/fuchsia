@@ -13,13 +13,17 @@ namespace sketchy_service {
 class StrokeTessellator final {
  public:
   explicit StrokeTessellator(escher::Escher* escher);
-  void Dispatch(escher::BufferPtr stroke_info_buffer,
-                escher::BufferPtr control_points_buffer,
-                escher::BufferPtr re_params_buffer,
-                escher::BufferPtr division_counts_buffer,
-                escher::BufferPtr cumulative_division_counts_buffer,
-                escher::BufferPtr division_segment_index_buffer,
-                escher::BufferPtr vertex_buffer, escher::BufferPtr index_buffer,
+
+  void Dispatch(const escher::BufferPtr& stroke_info_buffer,
+                const escher::BufferPtr& control_points_buffer,
+                const escher::BufferPtr& re_params_buffer,
+                const escher::BufferPtr& division_counts_buffer,
+                const escher::BufferPtr& cumulative_division_counts_buffer,
+                const escher::BufferPtr& division_segment_index_buffer,
+                escher::BufferPtr vertex_buffer,
+                const escher::BufferRange& vertex_range,
+                escher::BufferPtr index_buffer,
+                const escher::BufferRange& index_range,
                 escher::impl::CommandBuffer* command,
                 escher::TimestampProfiler* profiler, uint32_t division_count,
                 bool apply_barrier);
