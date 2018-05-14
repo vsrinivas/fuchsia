@@ -60,7 +60,7 @@ Description=Telnet Server
 After=local-fs.target
 
 [Service]
-ExecStart=-/usr/bin/socat - EXEC:/bin/login,pty,stderr,setsid,sigint,sane,ctty,crlf,echo=1
+ExecStart=-/usr/bin/socat - EXEC:/bin/login,pty,stderr,setsid,sigint,sane,ctty
 StandardInput=socket
 StandardOutput=socket
 EOF
