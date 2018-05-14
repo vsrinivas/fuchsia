@@ -174,10 +174,8 @@ int wait_queue_blocked_priority(wait_queue_t* wait) {
     return t->effec_priority;
 }
 
-// Disable thread safety analysis here since Clang has trouble with the analysis
-// around timer_trylock_or_cancel.
 static void wait_queue_timeout_handler(timer_t* timer, zx_time_t now,
-                                       void* arg) TA_NO_THREAD_SAFETY_ANALYSIS {
+                                       void* arg) {
     thread_t* thread = (thread_t*)arg;
 
     DEBUG_ASSERT(thread->magic == THREAD_MAGIC);

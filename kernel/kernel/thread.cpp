@@ -841,8 +841,7 @@ void thread_check_preempt_pending(void) {
 }
 
 /* timer callback to wake up a sleeping thread */
-static void thread_sleep_handler(timer_t* timer, zx_time_t now,
-                                 void* arg) TA_NO_THREAD_SAFETY_ANALYSIS {
+static void thread_sleep_handler(timer_t* timer, zx_time_t now, void* arg) {
     thread_t* t = (thread_t*)arg;
 
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);

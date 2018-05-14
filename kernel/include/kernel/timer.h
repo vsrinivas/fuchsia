@@ -135,6 +135,6 @@ void timer_thaw_percpu(void);
  * timer cancel, which is needed in a few special cases.
  * returns ZX_OK if spinlock was acquired, ZX_ERR_TIMED_OUT if timer was canceled.
  */
-zx_status_t timer_trylock_or_cancel(timer_t* t, spin_lock_t* lock);
+zx_status_t timer_trylock_or_cancel(timer_t* t, spin_lock_t* lock) TA_TRY_ACQ(false, lock);
 
 __END_CDECLS
