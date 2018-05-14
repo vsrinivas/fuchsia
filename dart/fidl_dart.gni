@@ -30,8 +30,7 @@ template("fidl_dart") {
     library_name = invoker.name
   }
   root_dir = "$target_gen_dir/${library_name}_package"
-  file_stem = "$root_dir/lib/$library_name"
-  bindings_file = "$file_stem.dart"
+  bindings_file = "$root_dir/lib/fidl.dart"
 
   fidl_target_gen_dir = get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
   json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
@@ -55,7 +54,7 @@ template("fidl_dart") {
       "--json",
       rebase_path(json_representation, root_build_dir),
       "--output-base",
-      rebase_path(file_stem, root_build_dir),
+      rebase_path(bindings_file, root_build_dir),
       "--include-base",
       rebase_path(root_gen_dir, root_build_dir),
       "--generators",
@@ -99,7 +98,12 @@ template("fidl_dart") {
 
     package_root = root_dir
 
-    package_name = "fuchsia.fidl.$library_name"
+    package_name = exec_script("//build/dart/fidl_package_from_library.py",
+        [
+          "--name",
+          library_name,
+        ],
+        "trim string")
 
     sources = [
       bindings_file,
