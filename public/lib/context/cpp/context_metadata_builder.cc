@@ -63,6 +63,12 @@ modular::ContextMetadata ContextMetadataBuilder::Build() {
   return std::move(m_);
 }
 
+modular::ContextMetadataPtr ContextMetadataBuilder::BuildPtr() {
+  auto meta = modular::ContextMetadata::New();
+  *meta.get() = std::move(m_);
+  return meta;
+}
+
 #define ENSURE_MEMBER(field, class_name)    \
   if (!m_.field) {                          \
     m_.field = modular::class_name::New();  \

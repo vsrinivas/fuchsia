@@ -29,8 +29,9 @@ class ContextMetadataBuilder {
       const fidl::VectorPtr<fidl::StringPtr>& module_path,
       const fidl::StringPtr& name);
 
-  // Build() can be called only once, as it moves |m_|.
+  // Build() or BuildPtr() can be called only once, as they move |m_|.
   modular::ContextMetadata Build();
+  modular::ContextMetadataPtr BuildPtr();
 
  private:
   modular::StoryMetadataPtr& StoryMetadata();

@@ -4,12 +4,15 @@
 
 #include <fuchsia/cpp/modular.h>
 
-#include "peridot/bin/context_engine/context_repository.h"
 #include "gtest/gtest.h"
-#include "lib/context/cpp/context_metadata_builder.h"
 #include "lib/context/cpp/context_helper.h"
+#include "lib/context/cpp/context_metadata_builder.h"
 #include "lib/context/cpp/formatting.h"
+#include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
+#include "peridot/bin/context_engine/context_repository.h"
+
+using maxwell::ContextMetadataBuilder;
 
 namespace modular {
 namespace {
@@ -57,46 +60,39 @@ class TestListener : public ContextListener {
   void reset() { last_update.reset(); }
 };
 
-// FIXME(MW-319): These tests assume that ContextMetadata::meta is nullable
-// but the fidl declarations say otherwise.  Disabled until someone can
-// take a closer look.
-#if 0
-
-ContextValue CreateValue(ContextValueType type,
-                         const std::string& content,
-                         ContextMetadataPtr metadata) {
+ContextValue CreateValue(ContextValueType type, const std::string& content) {
   ContextValue value;
   value.type = type;
   value.content = content;
-  value.meta = std::move(metadata);
   return value;
 }
 
-#endif
+ContextValue CreateValue(ContextValueType type, const std::string& content,
+                         ContextMetadata meta) {
+  ContextValue value;
+  value.type = type;
+  value.content = content;
+  value.meta = std::move(meta);
+  return value;
+}
 
 }  // namespace
-
-#if 0
 
 TEST_F(ContextRepositoryTest, GetAddUpdateRemove) {
   // This test ensures that we can do basic, synchronous add/update/remove/get
   // operations.
 
   // Show that when we set values, we can get them back.
-  auto id1 = repository_.Add(
-      CreateValue(ContextValueType::ENTITY, "content", nullptr));
+  auto id1 = repository_.Add(CreateValue(ContextValueType::ENTITY, "content"));
   auto value1 = repository_.Get(id1);
   ASSERT_TRUE(value1);
-  ASSERT_FALSE(value1->meta);
   EXPECT_EQ(ContextValueType::ENTITY, value1->type);
   EXPECT_EQ("content", value1->content);
 
   // Setting another value doesn't affect the original value.
-  auto id2 = repository_.Add(
-      CreateValue(ContextValueType::ENTITY, "content2", nullptr));
+  auto id2 = repository_.Add(CreateValue(ContextValueType::ENTITY, "content2"));
   auto value2 = repository_.Get(id2);
   ASSERT_TRUE(value2);
-  ASSERT_FALSE(value2->meta);
   EXPECT_EQ("content2", value2->content);
   value1 = repository_.Get(id1);
   ASSERT_TRUE(value1);
@@ -110,8 +106,8 @@ TEST_F(ContextRepositoryTest, GetAddUpdateRemove) {
   auto value3 = repository_.Get(id3);
   ASSERT_TRUE(value3);
   EXPECT_EQ("content3", value3->content);
-  ASSERT_TRUE(value3->meta);
-  EXPECT_EQ("id3story", value3->meta->story->id);
+  ASSERT_TRUE(value3->meta.story);
+  EXPECT_EQ("id3story", value3->meta.story->id);
 
   // Update one of the previous values.
   repository_.Update(
@@ -120,8 +116,8 @@ TEST_F(ContextRepositoryTest, GetAddUpdateRemove) {
                   ContextMetadataBuilder().SetStoryId("id2story").Build()));
   value2 = repository_.Get(id2);
   ASSERT_TRUE(value2);
-  ASSERT_TRUE(value2->meta);
-  EXPECT_EQ("id2story", value2->meta->story->id);
+  ASSERT_TRUE(value2->meta.story);
+  EXPECT_EQ("id2story", value2->meta.story->id);
   EXPECT_EQ("new content2", value2->content);
 
   // Now remove id3.
@@ -140,60 +136,55 @@ TEST_F(ContextRepositoryTest, GetAddUpdateRemove) {
 TEST_F(ContextRepositoryTest, ValuesInheritMetadata) {
   // When a value is added as a child of another value, the child inherits the
   // metadata of its parent.
-  ContextMetadataPtr meta1 = ContextMetadataBuilder().SetStoryId("id").Build();
+  auto meta1 = ContextMetadataBuilder().SetStoryId("id").Build();
   auto id1 = repository_.Add(
       CreateValue(ContextValueType::STORY, "s", std::move(meta1)));
 
-  ContextMetadataPtr meta2 =
-      ContextMetadataBuilder().SetModuleUrl("url").Build();
+  auto meta2 = ContextMetadataBuilder().SetModuleUrl("url").Build();
   auto id2 = repository_.Add(
       id1, CreateValue(ContextValueType::MODULE, "m", std::move(meta2)));
 
   auto value1 = repository_.GetMerged(id1);
   ASSERT_TRUE(value1);
   // value1's metadata shouldn't have changed.
-  ASSERT_TRUE(value1->meta);
-  ASSERT_TRUE(value1->meta->story);
-  EXPECT_EQ("id", value1->meta->story->id);
-  ASSERT_FALSE(value1->meta->mod);
+  ASSERT_TRUE(value1->meta.story);
+  EXPECT_EQ("id", value1->meta.story->id);
+  ASSERT_FALSE(value1->meta.mod);
 
   auto value2 = repository_.GetMerged(id2);
   ASSERT_TRUE(value2);
   // value2's metadata should combine both value1's and value2's.
-  ASSERT_TRUE(value2->meta);
-  ASSERT_TRUE(value2->meta->story);
-  EXPECT_EQ("id", value2->meta->story->id);
-  ASSERT_TRUE(value2->meta->mod);
-  ASSERT_TRUE(value2->meta->mod->url);
-  EXPECT_EQ("url", value2->meta->mod->url);
+  ASSERT_TRUE(value2->meta.story);
+  EXPECT_EQ("id", value2->meta.story->id);
+  ASSERT_TRUE(value2->meta.mod);
+  ASSERT_TRUE(value2->meta.mod->url);
+  EXPECT_EQ("url", value2->meta.mod->url);
 
   // Changing the parent's metadata value should update the child's also.
-  meta1 = ContextMetadata::New();
-  meta1->story = StoryMetadata::New();
-  meta1->story->id = "newid";
+  meta1 = ContextMetadata();
+  meta1.story = StoryMetadata::New();
+  meta1.story->id = "newid";
   repository_.Update(
       id1, CreateValue(ContextValueType::STORY, "s", std::move(meta1)));
   value2 = repository_.GetMerged(id2);
   ASSERT_TRUE(value2);
-  ASSERT_TRUE(value2->meta);
-  ASSERT_TRUE(value2->meta->story);
-  EXPECT_EQ("newid", value2->meta->story->id);
-  ASSERT_TRUE(value2->meta->mod);
-  ASSERT_TRUE(value2->meta->mod->url);
-  EXPECT_EQ("url", value2->meta->mod->url);
+  ASSERT_TRUE(value2->meta.story);
+  EXPECT_EQ("newid", value2->meta.story->id);
+  ASSERT_TRUE(value2->meta.mod);
+  ASSERT_TRUE(value2->meta.mod->url);
+  EXPECT_EQ("url", value2->meta.mod->url);
 
   // If a parent contains metadata that the child also contains (they both have
   // 'mod' metadata), the parent's takes precendence.
   meta1 =
-      ContextMetadataBuilder(meta1.Clone()).SetModuleUrl("override").Build();
+      ContextMetadataBuilder(std::move(meta1)).SetModuleUrl("override").Build();
   repository_.Update(
       id1, CreateValue(ContextValueType::STORY, "s", std::move(meta1)));
   value2 = repository_.GetMerged(id2);
   ASSERT_TRUE(value2);
-  ASSERT_TRUE(value2->meta);
-  ASSERT_FALSE(value2->meta->story);
-  ASSERT_TRUE(value2->meta->mod);
-  ASSERT_EQ("override", value2->meta->mod->url);
+  ASSERT_FALSE(value2->meta.story);
+  ASSERT_TRUE(value2->meta.mod);
+  ASSERT_EQ("override", value2->meta.mod->url);
 }
 
 TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
@@ -206,67 +197,67 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
   // 4) When a value is removed, it is no longer returned.
 
   // (1)
-  auto query = ContextQuery::New();
-  auto selector = ContextSelector::New();
-  selector->type = ContextValueType::ENTITY;
-  selector->meta = ContextMetadataBuilder().SetEntityTopic("topic").Build();
-  AddToContextQuery(query.get(), "a", std::move(selector));
+  ContextQuery query;
+  ContextSelector selector;
+  selector.type = ContextValueType::ENTITY;
+  selector.meta = ContextMetadataBuilder().SetEntityTopic("topic").BuildPtr();
+  AddToContextQuery(&query, "a", std::move(selector));
 
   TestListener listener;
   repository_.AddSubscription(std::move(query), &listener,
-                              SubscriptionDebugInfoPtr());
-  EXPECT_EQ(0lu, TakeContextValue(listener.last_update.get(), "a").second->size());
+                              SubscriptionDebugInfo());
+  EXPECT_EQ(0lu,
+            TakeContextValue(listener.last_update.get(), "a").second->size());
   listener.reset();
 
   // (a)
-  auto value = ContextValue::New();
-  value->type = ContextValueType::STORY;
-  value->content = "no match";
-  value->meta = ContextMetadataBuilder().SetEntityTopic("topic").Build();
+  ContextValue value;
+  value.type = ContextValueType::STORY;
+  value.content = "no match";
+  value.meta = ContextMetadataBuilder().SetEntityTopic("topic").Build();
   repository_.Add(std::move(value));
   // No new update because nothing changed for our subscription.
   EXPECT_FALSE(listener.last_update);
   listener.reset();
 
   // (b)
-  value = ContextValue::New();
-  value->type = ContextValueType::ENTITY;
-  value->content = "no match yet";
-  value->meta =
-      ContextMetadataBuilder().SetEntityTopic("not the topic").Build();
+  value = ContextValue();
+  value.type = ContextValueType::ENTITY;
+  value.content = "no match yet";
+  value.meta = ContextMetadataBuilder().SetEntityTopic("not the topic").Build();
   auto id = repository_.Add(std::move(value));  // Save id for later.
   // No new update because nothing changed for our subscription.
   EXPECT_FALSE(listener.last_update);
   listener.reset();
 
   // (2)
-  value = ContextValue::New();
-  value->type = ContextValueType::ENTITY;
-  value->content = "match";
-  value->meta = ContextMetadataBuilder().SetEntityTopic("topic").Build();
+  value = ContextValue();
+  value.type = ContextValueType::ENTITY;
+  value.content = "match";
+  value.meta = ContextMetadataBuilder().SetEntityTopic("topic").Build();
   repository_.Add(std::move(value));
   auto result = TakeContextValue(listener.last_update.get(), "a").second;
   EXPECT_EQ(1lu, result->size());
-  EXPECT_EQ("match", result->at(0)->content);
+  EXPECT_EQ("match", result->at(0).content);
   listener.reset();
 
   // (3)
-  value = ContextValue::New();
-  value->type = ContextValueType::ENTITY;
-  value->content = "now it matches";
+  value = ContextValue();
+  value.type = ContextValueType::ENTITY;
+  value.content = "now it matches";
   // Add more metadata than the query is looking for. It shouldn't affect
   // the query, because it doesn't express any constraint on 'type'.
-  value->meta = ContextMetadataBuilder()
-                    .SetEntityTopic("topic")
-                    .AddEntityType("type1")
-                    .AddEntityType("type2")
-                    .Build();
+  value.meta = ContextMetadataBuilder()
+                   .SetEntityTopic("topic")
+                   .AddEntityType("type1")
+                   .AddEntityType("type2")
+                   .Build();
   repository_.Update(id, std::move(value));
   ASSERT_TRUE(listener.last_update);
   result = TakeContextValue(listener.last_update.get(), "a").second;
   EXPECT_EQ(2lu, result->size());
-  EXPECT_EQ("now it matches", result->at(0)->content);
-  EXPECT_EQ("match", result->at(1)->content);
+  EXPECT_EQ("now it matches", result->at(0).content);
+  EXPECT_EQ("match", result->at(1).content);
   listener.reset();
 
   // (4)
@@ -274,41 +265,42 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates) {
   ASSERT_TRUE(listener.last_update);
   result = TakeContextValue(listener.last_update.get(), "a").second;
   EXPECT_EQ(1lu, result->size());
-  EXPECT_EQ("match", result->at(0)->content);
+  EXPECT_EQ("match", result->at(0).content);
   listener.reset();
 }
 
 TEST_F(ContextRepositoryTest, ListenersGetUpdates_WhenParentsUpdated) {
   // We should see updates to listeners when an update to a node's
   // parent causes that node to be matched by a query.
-  auto query = ContextQuery::New();
-  auto selector = ContextSelector::New();
-  selector->type = ContextValueType::ENTITY;
-  selector->meta = ContextMetadataBuilder().SetStoryId("match").Build();
-  AddToContextQuery(query.get(), "a", std::move(selector));
+  ContextQuery query;
+  ContextSelector selector;
+  selector.type = ContextValueType::ENTITY;
+  selector.meta = ContextMetadataBuilder().SetStoryId("match").BuildPtr();
+  AddToContextQuery(&query, "a", std::move(selector));
 
   TestListener listener;
   repository_.AddSubscription(std::move(query), &listener,
-                              SubscriptionDebugInfoPtr());
+                              SubscriptionDebugInfo());
   ASSERT_TRUE(listener.last_update);
   auto result = TakeContextValue(listener.last_update.get(), "a").second;
   EXPECT_EQ(0lu, result->size());
   listener.reset();
 
   // Add a Story value.
-  auto story_value = ContextValue::New();
-  story_value->type = ContextValueType::STORY;
-  story_value->meta = ContextMetadataBuilder().SetStoryId("no match").Build();
-  auto first_story_value = story_value.Clone();  // Save for later.
+  ContextValue story_value;
+  story_value.type = ContextValueType::STORY;
+  story_value.meta = ContextMetadataBuilder().SetStoryId("no match").Build();
+  ContextValue first_story_value;
+  fidl::Clone(story_value, &first_story_value);  // Save for later.
   auto story_value_id = repository_.Add(std::move(story_value));
 
   // Expect no update.
   EXPECT_FALSE(listener.last_update);
 
   // Add an Entity node, but it still shouldn't match.
-  auto entity_value = ContextValue::New();
-  entity_value->type = ContextValueType::ENTITY;
-  entity_value->content = "content";
+  ContextValue entity_value;
+  entity_value.type = ContextValueType::ENTITY;
+  entity_value.content = "content";
   repository_.Add(story_value_id, std::move(entity_value));
 
   // Still expect no update.
@@ -316,19 +308,20 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates_WhenParentsUpdated) {
 
   // Update the story value so its metadata matches the query, and we should
   // see the entity value returned in our update.
-  story_value = ContextValue::New();
-  story_value->type = ContextValueType::STORY;
-  story_value->meta = ContextMetadataBuilder().SetStoryId("match").Build();
-  auto matching_story_value = story_value.Clone();  // Save for later.
+  story_value = ContextValue();
+  story_value.type = ContextValueType::STORY;
+  story_value.meta = ContextMetadataBuilder().SetStoryId("match").Build();
+  ContextValue matching_story_value;
+  fidl::Clone(story_value, &matching_story_value);  // Save for later.
   repository_.Update(story_value_id, std::move(story_value));
 
   ASSERT_TRUE(listener.last_update);
   result = TakeContextValue(listener.last_update.get(), "a").second;
   EXPECT_EQ(1lu, result->size());
-  EXPECT_EQ("content", result->at(0)->content);
+  EXPECT_EQ("content", result->at(0).content);
   // Make sure we adopted the parent metadata from the story node.
-  ASSERT_TRUE(result->at(0)->meta->story);
-  EXPECT_EQ("match", result->at(0)->meta->story->id);
+  ASSERT_TRUE(result->at(0).meta.story);
+  EXPECT_EQ("match", result->at(0).meta.story->id);
   listener.reset();
 
   // Set the value back to something that doesn't match, and we should get an
@@ -354,6 +347,4 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates_WhenParentsUpdated) {
   listener.reset();
 }
 
-#endif
-
-}  // namespace maxwell
+}  // namespace modular

@@ -252,7 +252,7 @@ ContextUpdate ContextRepository::Query(const ContextQuery& query) {
 
 ContextRepository::Id ContextRepository::AddSubscription(
     ContextQuery query,
-    ContextListenerPtr* const listener,
+    ContextListener* const listener,
     SubscriptionDebugInfo debug_info) {
   // Add the subscription to our list.
   Subscription subscription;
@@ -275,12 +275,10 @@ ContextRepository::Id ContextRepository::AddSubscription(
 void ContextRepository::AddSubscription(ContextQuery query,
                                         ContextListenerPtr listener,
                                         SubscriptionDebugInfo debug_info) {
-  auto id = AddSubscription(std::move(query), &listener, std::move(debug_info));
+  auto id = AddSubscription(std::move(query), listener.get(), std::move(debug_info));
   listener.set_error_handler([this, id] { RemoveSubscription(id); });
   // RemoveSubscription() above is responsible for freeing this memory.
-  Subscription& subscription = subscriptions_[id];
-  subscription.listener_storage = std::move(listener);
-  subscription.listener = &subscription.listener_storage;
+  subscriptions_[id].listener_storage = std::move(listener);
 }
 
 ContextDebugImpl* ContextRepository::debug() {
@@ -346,7 +344,7 @@ void ContextRepository::QueryAndMaybeNotify(Subscription* const subscription,
   }
   subscription->last_update = result.second;
 
-  (*subscription->listener)->OnContextUpdate(std::move(result.first));
+  subscription->listener->OnContextUpdate(std::move(result.first));
 }
 
 void ContextRepository::ReindexAndNotify(

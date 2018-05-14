@@ -98,7 +98,7 @@ class ContextRepository {
   // Does not take ownership of |listener|. |listener| must remain valid until
   // RemoveSubscription() is called with the returned Id.
   Id AddSubscription(ContextQuery query,
-                     ContextListenerPtr* listener,
+                     ContextListener* listener,
                      SubscriptionDebugInfo debug_info);
   void RemoveSubscription(Id id);
 
@@ -147,7 +147,7 @@ struct ContextRepository::ValueInternal {
 
 struct ContextRepository::Subscription {
   ContextQuery query;
-  ContextListenerPtr* listener;  // Optionally owned by |listener_storage|.
+  ContextListener* listener;  // Optionally owned by |listener_storage|.
   ContextListenerPtr listener_storage;
   SubscriptionDebugInfo debug_info;
   // The set of value id and version we sent the last time we notified
