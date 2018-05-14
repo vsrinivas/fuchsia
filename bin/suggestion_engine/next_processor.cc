@@ -9,7 +9,7 @@
 namespace modular {
 
 NextProcessor::NextProcessor(std::shared_ptr<SuggestionDebugImpl> debug)
-    : debug_(debug), dirty_(false), processing_(false) {}
+    : debug_(debug), processing_(false) {}
 
 NextProcessor::~NextProcessor() = default;
 
@@ -60,7 +60,6 @@ void NextProcessor::AddProposal(const std::string& component_url,
   }
 
   suggestions_.AddSuggestion(suggestion);
-  dirty_ = true;
   UpdateRanking();
 }
 
@@ -80,7 +79,6 @@ void NextProcessor::RemoveProposalFromList(const std::string& component_url,
                                            const std::string& proposal_id) {
   NotifyOfProcessingChange(true);
   if (suggestions_.RemoveProposal(component_url, proposal_id)) {
-    dirty_ = true;
     UpdateRanking();
   }
 }
@@ -95,13 +93,10 @@ RankedSuggestion* NextProcessor::GetSuggestion(
 }
 
 void NextProcessor::UpdateRanking() {
-  if (dirty_) {
-    suggestions_.Rank(UserInput());
-    NotifyAllOfResults();
-    debug_->OnNextUpdate(&suggestions_);
-    NotifyOfProcessingChange(false);
-    dirty_ = false;
-  }
+  suggestions_.Rank(UserInput());
+  NotifyAllOfResults();
+  debug_->OnNextUpdate(&suggestions_);
+  NotifyOfProcessingChange(false);
 }
 
 void NextProcessor::NotifyAllOfResults() {

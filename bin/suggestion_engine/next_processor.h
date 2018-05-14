@@ -70,7 +70,6 @@ class NextProcessor {
   RankedSuggestionsList suggestions_;
   std::shared_ptr<SuggestionDebugImpl> debug_;
   SuggestionPrototypeMap prototypes_;
-  bool dirty_;
   bool processing_;
 
   std::vector<std::pair<NextListenerPtr, size_t>> listeners_;
