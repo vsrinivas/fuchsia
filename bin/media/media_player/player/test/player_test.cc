@@ -600,11 +600,13 @@ TEST(PlayerTest, BuildGraphWithRealSegmentsSourceFirst) {
   player.SetSinkSegment(
       RendererSinkSegment::Create(FakeAudioRenderer::Create()),
       StreamType::Medium::kAudio);
+  loop.RunUntilIdle();
   EXPECT_TRUE(player.medium_connected(StreamType::Medium::kAudio));
 
   player.SetSinkSegment(
       RendererSinkSegment::Create(FakeVideoRenderer::Create()),
       StreamType::Medium::kVideo);
+  loop.RunUntilIdle();
   EXPECT_TRUE(player.medium_connected(StreamType::Medium::kVideo));
 
   ExpectRealSegmentsGraph(player);
@@ -627,6 +629,7 @@ TEST(PlayerTest, BuildGraphWithRealSegmentsSinksFirst) {
 
   player.SetSourceSegment(DemuxSourceSegment::Create(FakeDemux::Create()),
                           nullptr);
+  loop.RunUntilIdle();
   EXPECT_TRUE(player.medium_connected(StreamType::Medium::kAudio));
   EXPECT_TRUE(player.medium_connected(StreamType::Medium::kVideo));
 

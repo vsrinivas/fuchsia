@@ -10,12 +10,16 @@
 
 #include "garnet/bin/media/media_player/metrics/packet_timing_tracker.h"
 #include "garnet/bin/media/media_player/render/audio_renderer.h"
+#include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/media/transport/fifo_allocator.h"
 #include "lib/media/transport/mapped_shared_buffer.h"
 
 namespace media_player {
 
 // AudioRenderer that renders audio via FIDL services.
+//
+// This class run single-threaded with the execption of the |PayloadAllocator|
+// methods, which can run on an arbitrary thread.
 class FidlAudioRenderer
     : public AudioRendererInProc,
       public PayloadAllocator,
@@ -84,15 +88,18 @@ class FidlAudioRenderer
 
   std::vector<std::unique_ptr<StreamTypeSet>> supported_stream_types_;
   media::AudioRenderer2Ptr audio_renderer_;
-  media::MappedSharedBuffer buffer_;
-  media::FifoAllocator allocator_;
   media::TimelineRate pts_rate_;
-  int64_t last_supplied_pts_ = 0;
+  int64_t last_supplied_pts_ns_ = 0;
+  int64_t last_departed_pts_ns_ = 0;
   fxl::Closure prime_callback_;
   uint32_t bytes_per_frame_;
   bool flushed_ = true;
   int64_t min_lead_time_ns_ = ZX_MSEC(100);
   async::TaskClosure demand_task_;
+
+  mutable std::mutex mutex_;
+  media::MappedSharedBuffer buffer_ FXL_GUARDED_BY(mutex_);
+  media::FifoAllocator allocator_ FXL_GUARDED_BY(mutex_);
 
   PacketTimingTracker arrivals_;
   PacketTimingTracker departures_;

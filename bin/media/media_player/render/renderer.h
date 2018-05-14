@@ -49,15 +49,14 @@ class Renderer : public Sink {
                                    fxl::Closure callback);
 
   // Sets a program range for this renderer.
-  virtual void SetProgramRange(uint64_t program,
-                               int64_t min_pts,
+  virtual void SetProgramRange(uint64_t program, int64_t min_pts,
                                int64_t max_pts);
 
   // Determines whether end-of-stream has been reached.
   bool end_of_stream() const;
 
  protected:
-  async_t* async() {
+  async_t* async() const {
     FXL_DCHECK(async_) << "async() called on unprovisioned renderer.";
     return async_;
   }
