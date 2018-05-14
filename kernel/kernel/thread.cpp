@@ -984,20 +984,19 @@ void thread_construct_first(thread_t* t, const char* name) {
     cpu_num_t cpu = arch_curr_cpu_num();
 
     init_thread_struct(t, name);
-    t->base_priority = HIGHEST_PRIORITY;
-    t->priority_boost = 0;
     t->state = THREAD_RUNNING;
     t->flags = THREAD_FLAG_DETACHED;
     t->signals = 0;
     t->curr_cpu = cpu;
     t->last_cpu = cpu;
     t->cpu_affinity = cpu_num_to_mask(cpu);
+    sched_init_thread(t, HIGHEST_PRIORITY);
 
     arch_thread_construct_first(t);
+    set_current_thread(t);
 
     THREAD_LOCK(state);
     list_add_head(&thread_list, &t->thread_list_node);
-    set_current_thread(t);
     THREAD_UNLOCK(state);
 }
 
@@ -1081,13 +1080,12 @@ void thread_become_idle(void) {
     thread_set_name(name);
 
     /* mark ourself as idle */
-    t->base_priority = IDLE_PRIORITY;
-    t->priority_boost = 0;
     t->flags |= THREAD_FLAG_IDLE;
     cpu_num_t curr_cpu = arch_curr_cpu_num();
     t->last_cpu = curr_cpu;
     t->curr_cpu = curr_cpu;
     t->cpu_affinity = cpu_num_to_mask(curr_cpu);
+    sched_init_thread(t, IDLE_PRIORITY);
 
     mp_set_curr_cpu_active(true);
     mp_set_cpu_idle(arch_curr_cpu_num());
