@@ -9,14 +9,13 @@ package("garnet-rust-examples") {
   deprecated_system_image = true
 
   deps = [
-    "testing", #TARGET
+    "testing:testing-tests", #TARGET
   ]
 
   # You need to include these for them to end up in the final image
-  # pattern is : $TARGET-$OUT_TYPE-$TEST_TYPE-test
   tests = [
-    { name = "testing-lib-unit-test" },
-    { name = "testing-integration_test_two-lib-integration-test" },
-    { name = "testing-integration_test-lib-integration-test" },
+    { name = "testing_lib_test_rustc" },
+    { name = "testing_integration_test" },
+    { name = "testing_integration_test_two" },
   ]
 }
