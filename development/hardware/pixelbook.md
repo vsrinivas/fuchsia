@@ -66,3 +66,75 @@ buttons. To shortcut this you can press Ctrl+D or Ctrl+U when on the grey screen
 that warns that the OS will not be verified. Ctrl+D will cause the device to
 skip the timeout and boot from its default source. Ctrl+U will skip the timeout
 and boot the device from USB.
+
+### Going back to ChromeOS
+
+To go back to ChromeOS you must modify the priority of the Fuchsia kernel
+partition to be lower than that of at least one of the two ChromeOS kernel
+partitions.
+
+1. Press Alt+Esc to get to a virtual console
+2. Find the disk that contains the KERN-A, KERN-B, and KERN-C partitions with
+the `lsblk` command. Below this is device 000, note how the device path of the
+kernel partitions is an extension of that device.
+
+        $ lsblk
+        ID  SIZE TYPE             LABEL                FLAGS  DEVICE
+        000 232G                                              /dev/sys/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block
+        001   5G data             STATE                       /dev/sys/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block/part-000/block
+        002  16M cros kernel      KERN-A                      /dev/sys/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block/part-001/block
+        003   4G cros rootfs      ROOT-A                      /dev/sys/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block/part-002/block
+        004  16M cros kernel      KERN-B                      /dev/sys/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block/part-003/block
+        005   4G cros rootfs      ROOT-B                      /dev/sys/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block/part-004/block
+        006  64M cros kernel      KERN-C                      /dev/sys/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block/part-005/block
+        007   4G cros rootfs      ROOT-C                      /dev/sys/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block/part-006/block
+3. Use the `gpt` command to look at the device's (eg. 000) partition map.
+
+        $ gpt dump /dev/class/block/000
+        blocksize=0x200 blocks=488554496
+        Partition table is valid
+        GPT contains usable blocks from 34 to 488554462 (inclusive)
+        Paritition 0: STATE
+            Start: 478035968, End: 488521727 (10485760 blocks)
+            id:   51E8D442-0419-2447-96E5-49CB60CF0B25
+            type: EBD0A0A2-B9E5-4433-87C0-68B6B72699C7
+            flags: 0x0000000000000000
+        Paritition 1: KERN-A
+            Start: 20480, End: 53247 (32768 blocks)
+            id:   054CD627-F23C-5C40-8035-C188FA57DE9C
+            type: FE3A2A5D-4F32-41A7-B725-ACCC3285A309
+            flags: priority=2 tries=0 successful=1
+        Paritition 2: ROOT-A
+            Start: 8704000, End: 17092607 (8388608 blocks)
+            id:   936E138F-1ACF-E242-9C5B-3667FAA3C10C
+            type: 3CB8E202-3B7E-47DD-8A3C-7FF2A13CFCEC
+            flags: 0x0000000000000000
+        Paritition 3: KERN-B
+            Start: 53248, End: 86015 (32768 blocks)
+            id:   A8667891-8209-8648-9D5E-63DC9B8D0CB3
+            type: FE3A2A5D-4F32-41A7-B725-ACCC3285A309
+            flags: priority=1 tries=0 successful=1
+        Paritition 4: ROOT-B
+            Start: 315392, End: 8703999 (8388608 blocks)
+            id:   8B5D7BB4-590B-E445-B596-1E7AA1BB501F
+            type: 3CB8E202-3B7E-47DD-8A3C-7FF2A13CFCEC
+            flags: 0x0000000000000000
+        Paritition 5: KERN-C
+            Start: 17092608, End: 17223679 (131072 blocks)
+            id:   C7D6B203-C18F-BC4D-9160-A09BA8970CE1
+            type: FE3A2A5D-4F32-41A7-B725-ACCC3285A309
+            flags: priority=3 tries=15 successful=1
+        Paritition 6: ROOT-C
+            Start: 17223680, End: 25612287 (8388608 blocks)
+            id:   769444A7-6E13-D74D-B583-C3A9CF0DE307
+            type: 3CB8E202-3B7E-47DD-8A3C-7FF2A13CFCEC
+            flags: 0x0000000000000000
+4. KERN-C typically hosts the Zircon kernel. KERN-A and KERN-B typically have
+ChromeOS kernels. To go to ChromeOS we need to lower the priority of KERN-C
+here by referencing the **partition** index on the **disk** that has that
+partition.
+
+        $ gpt edit_cros 5 -P 0 /dev/class/block/000
+5. Reboot
+
+To go back to the Fuchsia kernel, just re-pave the device.
