@@ -120,6 +120,10 @@ class VirtioVsock
                      const zx_packet_signal_t* signal, ConnectionKey key);
 
   void Mux(zx_status_t status, uint16_t index);
+  zx_status_t SendMessageForConnectionLocked(const ConnectionKey& key,
+                                             Connection* conn, uint16_t desc,
+                                             uint32_t* used)
+      __TA_REQUIRES(mutex_);
   void Demux(zx_status_t status, uint16_t index);
 
   async_t* const async_;
