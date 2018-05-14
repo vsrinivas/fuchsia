@@ -45,8 +45,8 @@ protected:
                                                       uint32_t flags) TA_REQ(get_lock());
     InterruptDispatcher();
     void on_zero_handles() final;
-    int Signal() {
-        return event_signal_etc(&event_, true, ZX_OK);
+    void Signal() {
+        event_signal_etc(&event_, true, ZX_OK);
     }
     bool SendPacketLocked(zx_time_t timestamp) TA_REQ(spinlock_);
     // Bits for Interrupt.flags
