@@ -5,7 +5,7 @@ for setting up an environment which provides access to global system
 services.
 
 This application runs quite early in the Fuchsia boot process. See the
-[boot sequence](https://fuchsia.googlesource.com/docs/+/master/boot_sequence.md)
+[boot sequence](https://fuchsia.googlesource.com/docs/+/master/the-book/boot_sequence.md)
 for more information.
 
 sysmgr is designed to be fairly robust.  If any of the services
