@@ -17,29 +17,21 @@ enum Status {
   UNKNOWN_ERROR = 8;
 };
 
-// Type of external OAuth identity providers. An identity provider authenticates
-// and authorizes users for accessing their services.
-//
-// It also provides unique identifiers for users to interact with the system
-// and may provide information about the user that is known to the provider.
-enum AuthProviderType {
-  // An identity provider that's used for development and testing.
-  DEV = 1;
-
-  // Uses Google as the identity provider. Authorization from Google requires a
-  // working network connection and a web view.
-  GOOGLE = 2;
-
-  // Uses Spotify as the identity provider.
-  SPOTIFY = 3;
-};
-
 // Stores configuration parameters required to connect to available
 // |AuthProvider|s. It is used by TokenManager to instantiate all auth providers
 // during startup.
 struct AuthProviderConfig {
-  // Unique value to identify the external identity provider.
-  AuthProviderType auth_provider_type;
+  // Type of OAuth Identity provider. An identity provider authenticates and
+  // authorizes users for accessing their services. They also provide unique
+  // identifiers for users to interact with the system and may provide
+  // information about the user that is known to the provider.
+  //
+  // Sample auth provider types include:
+  //     Dev : An identity provider that's used for development and testing.
+  //     Google: Uses Google as the identity provider. Authorization from Google
+  //             requires a working network connection and a web view.
+  //     Spotify: Uses Spotify as an identity provider.
+  string auth_provider_type;
 
   // Url of AuthProvider
   string? url;
@@ -52,7 +44,7 @@ struct AuthProviderConfig {
 // details are used in the OAuth authorization step.
 struct AppConfig {
   // OAuth identity provider
-  AuthProviderType auth_provider_type;
+  string auth_provider_type;
 
   // OAuth client id
   string? client_id;
@@ -88,9 +80,6 @@ interface TokenManagerFactory {
   // This instance is also initialized with a provider for fetching secure
   // AuthenticationUIContext to display OAuth permissions during first-time
   // user authorization or for subsequent re-auth operations.
-  //
-  // TODO: AuthproviderConfig should support new custom auth providers added by
-  // third party developers.
   1: GetTokenManager(string user_id, string application_url,
       vector<AuthProviderConfig> auth_provider_configs,
       AuthenticationContextProvider auth_context_provider,

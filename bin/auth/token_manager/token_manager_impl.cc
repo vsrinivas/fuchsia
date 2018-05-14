@@ -14,25 +14,11 @@ namespace auth {
 
 namespace {
 
-const cache::CacheKey GetCacheKey(auth::AuthProviderType auth_provider_type,
+const cache::CacheKey GetCacheKey(fidl::StringPtr auth_provider_type,
                                   fidl::StringPtr user_profile_id) {
-  // TODO: consider replacing the static cast with a string map (more type safe)
-  return cache::CacheKey(std::to_string(static_cast<int>(auth_provider_type)),
-                         user_profile_id.get());
+  return cache::CacheKey(auth_provider_type, user_profile_id.get());
 }
 
-// Maps |AuthProviderType| to store |IdentityProvider| value.
-auth::store::IdentityProvider MapToStoreIdentityProvider(
-    auth::AuthProviderType provider_type) {
-  switch (provider_type) {
-    case AuthProviderType::GOOGLE:
-      return auth::store::IdentityProvider::GOOGLE;
-    case AuthProviderType::SPOTIFY:
-      return auth::store::IdentityProvider::SPOTIFY;
-    case AuthProviderType::DEV:
-      return auth::store::IdentityProvider::TEST;
-  }
-}
 }  // namespace
 
 using fuchsia::auth::AppConfig;
@@ -135,9 +121,8 @@ void TokenManagerImpl::Authorize(
           return;
         }
 
-        auto cred_id = store::CredentialIdentifier(
-            user_profile_info->id,
-            MapToStoreIdentityProvider(auth_provider_type));
+        auto cred_id = store::CredentialIdentifier(user_profile_info->id,
+                                                   auth_provider_type);
 
         if (auth_db_->AddCredential(store::CredentialValue(
                 cred_id, credential)) != store::Status::kOK) {
@@ -160,9 +145,8 @@ void TokenManagerImpl::GetAccessToken(
   }
 
   std::string credential;
-  auto cred_id = store::CredentialIdentifier(
-      user_profile_id,
-      MapToStoreIdentityProvider(app_config.auth_provider_type));
+  auto cred_id = store::CredentialIdentifier(user_profile_id,
+                                             app_config.auth_provider_type);
   auth_db_->GetRefreshToken(cred_id, &credential);
 
   auto cache_key = GetCacheKey(app_config.auth_provider_type, user_profile_id);
@@ -214,9 +198,8 @@ void TokenManagerImpl::GetIdToken(AppConfig app_config,
   }
 
   std::string credential;
-  auto cred_id = store::CredentialIdentifier(
-      user_profile_id,
-      MapToStoreIdentityProvider(app_config.auth_provider_type));
+  auto cred_id = store::CredentialIdentifier(user_profile_id,
+                                             app_config.auth_provider_type);
   auth_db_->GetRefreshToken(cred_id, &credential);
   auto cache_key = GetCacheKey(app_config.auth_provider_type, user_profile_id);
   cache::OAuthTokens tokens;
@@ -331,9 +314,8 @@ void TokenManagerImpl::DeleteAllTokens(AppConfig app_config,
   }
 
   std::string credential;
-  auto cred_id = store::CredentialIdentifier(
-      user_profile_id,
-      MapToStoreIdentityProvider(app_config.auth_provider_type));
+  auto cred_id = store::CredentialIdentifier(user_profile_id,
+                                             app_config.auth_provider_type);
   cache::CacheKey cache_key =
       GetCacheKey(app_config.auth_provider_type, user_profile_id);
 
@@ -356,8 +338,7 @@ void TokenManagerImpl::DeleteAllTokens(AppConfig app_config,
         }
 
         auto cred_id = store::CredentialIdentifier(
-            user_profile_id,
-            MapToStoreIdentityProvider(app_config.auth_provider_type));
+            user_profile_id, app_config.auth_provider_type);
         auth_db_->DeleteCredential(cred_id);
 
         callback(Status::OK);

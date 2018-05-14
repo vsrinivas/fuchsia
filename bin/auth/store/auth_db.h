@@ -42,18 +42,16 @@ enum Status {
   kCredentialNotFound
 };
 
-enum IdentityProvider { GOOGLE = 0, SPOTIFY, TEST };
-
 // Uniquely identifies a given user credential using an identifier |id| provided
 // by the Identity Provider |identity_provider|. The identifier here refers to
 // user's email address or profile url as configured on the Identity Provider's
 // backend.
 struct CredentialIdentifier {
   std::string id;
-  IdentityProvider identity_provider;
+  std::string identity_provider;
 
-  CredentialIdentifier(std::string id, IdentityProvider identity_provider)
-      : id(std::move(id)), identity_provider(identity_provider) {}
+  CredentialIdentifier(std::string id, std::string identity_provider)
+      : id(std::move(id)), identity_provider(std::move(identity_provider)) {}
 
   bool operator==(const CredentialIdentifier& other) const {
     if (id == other.id && identity_provider == other.identity_provider) {

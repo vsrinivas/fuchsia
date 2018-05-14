@@ -36,10 +36,11 @@ namespace {
 const std::string kTestUserId = "tq_auth_user_1";
 const std::string kTestUserProfileId = "tq_auth_user_profile_1";
 const std::string kTestAppUrl = "/system/test/dev_auth_provider";
+const std::string kDevIdp = "Dev";
 
 fuchsia::auth::AppConfig MakeDevAppConfig() {
   fuchsia::auth::AppConfig dev_app_config;
-  dev_app_config.auth_provider_type = auth::AuthProviderType::DEV;
+  dev_app_config.auth_provider_type = kDevIdp;
   dev_app_config.client_id = "test_client_id";
   dev_app_config.client_secret = "test_client_secret";
   return dev_app_config;
@@ -78,7 +79,7 @@ class DevTokenManagerAppTest : public gtest::TestWithMessageLoop,
     services.ConnectToService(token_mgr_factory_.NewRequest());
 
     fuchsia::auth::AuthProviderConfig dev_config;
-    dev_config.auth_provider_type = auth::AuthProviderType::DEV;
+    dev_config.auth_provider_type = kDevIdp;
     dev_config.url = "dev_auth_provider";
 
     fidl::VectorPtr<fuchsia::auth::AuthProviderConfig> auth_provider_configs;
@@ -319,9 +320,7 @@ TEST_F(DevTokenManagerAppTest, GetAndRevokeCredential) {
   auto db_status = auth_db.Load();
   EXPECT_EQ(db_status, auth::store::Status::kOK);
   db_status = auth_db.GetRefreshToken(
-      auth::store::CredentialIdentifier(user_profile_id,
-                                        auth::store::IdentityProvider::TEST),
-      &credential);
+      auth::store::CredentialIdentifier(user_profile_id, kDevIdp), &credential);
   EXPECT_EQ(db_status, auth::store::Status::kOK);
 
   EXPECT_TRUE(credential.find("rt_") != std::string::npos);

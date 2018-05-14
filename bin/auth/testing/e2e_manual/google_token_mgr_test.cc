@@ -32,6 +32,7 @@ namespace {
 
 const std::string kTestUserId = "tq_user_1";
 const std::string kTestAppUrl = "/system/test/google_oauth_demo";
+const std::string kGoogleIdp = "Google";
 constexpr fxl::StringView kRefreshTokenFlag = "refresh-token";
 constexpr fxl::StringView kUserProfileIdFlag = "user-profile-id";
 
@@ -44,8 +45,7 @@ void PrintUsage(const char* executable_name) {
 fuchsia::auth::AppConfig MakeGoogleAppConfig(const std::string& client_id,
                                              const std::string& client_secret) {
   fuchsia::auth::AppConfig google_app_config;
-  google_app_config.auth_provider_type =
-      fuchsia::auth::AuthProviderType::GOOGLE;
+  google_app_config.auth_provider_type = kGoogleIdp;
   google_app_config.client_id = client_id;
   google_app_config.client_secret = client_secret;
   return google_app_config;
@@ -103,7 +103,7 @@ class GoogleTokenManagerApp : fuchsia::auth::AuthenticationContextProvider {
     services.ConnectToService(token_mgr_factory_.NewRequest());
 
     fuchsia::auth::AuthProviderConfig google_config;
-    google_config.auth_provider_type = fuchsia::auth::AuthProviderType::GOOGLE;
+    google_config.auth_provider_type = kGoogleIdp;
     google_config.url = "google_auth_provider";
 
     fidl::VectorPtr<fuchsia::auth::AuthProviderConfig> auth_provider_configs;
@@ -125,8 +125,8 @@ class GoogleTokenManagerApp : fuchsia::auth::AuthenticationContextProvider {
                      << " ,exiting...";
     }
 
-    auto cred_id = auth::store::CredentialIdentifier(
-        user_profile_id_, auth::store::IdentityProvider::GOOGLE);
+    auto cred_id =
+        auth::store::CredentialIdentifier(user_profile_id_, kGoogleIdp);
 
     if (auth_db->AddCredential(auth::store::CredentialValue(
             cred_id, refresh_token_)) != auth::store::Status::kOK) {

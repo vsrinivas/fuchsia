@@ -19,46 +19,20 @@ namespace store {
 
 namespace {
 
-// Converts |CredentialValue.identity_provider| to |IdentityProvider| defined in
-// credentials.fbs.
-auth::IdentityProvider MapToFbsIdentityProvider(
-    auth::store::IdentityProvider idp) {
-  switch (idp) {
-    case auth::store::IdentityProvider::GOOGLE:
-      return IdentityProvider_GOOGLE;
-    case auth::store::IdentityProvider::SPOTIFY:
-      return IdentityProvider_SPOTIFY;
-    case auth::store::IdentityProvider::TEST:
-      return IdentityProvider_TEST;
-  }
-}
-
-// Converts |IdentityProvider| defined in credentials.fbs to
-// |CredentialValue.identity_provider| value.
-auth::store::IdentityProvider MapToAuthIdentityProvider(
-    auth::IdentityProvider idp) {
-  switch (idp) {
-    case IdentityProvider_GOOGLE:
-      return auth::store::IdentityProvider::GOOGLE;
-    case IdentityProvider_SPOTIFY:
-      return auth::store::IdentityProvider::SPOTIFY;
-    case IdentityProvider_TEST:
-      return auth::store::IdentityProvider::TEST;
-  }
-}
-
 // Generates a flatbuffer |IdpCredential| instance for the given |idp| using the
 // flatbuffer |builder|.
 flatbuffers::Offset<::auth::IdpCredential> MakeIdpCredential(
     const std::string& idp_cred_id,
-    const ::auth::IdentityProvider idp,
+    const std::string& idp,
     const std::string& refresh_token,
     flatbuffers::FlatBufferBuilder* builder) {
   FXL_DCHECK(builder);
+  FXL_DCHECK(!idp.empty());
   FXL_DCHECK(!idp_cred_id.empty());
 
   return ::auth::CreateIdpCredential(*builder,
-                                     builder->CreateString(idp_cred_id), idp,
+                                     builder->CreateString(idp_cred_id),
+                                     builder->CreateString(idp),
                                      builder->CreateString(refresh_token));
 }
 
@@ -144,9 +118,8 @@ Status AuthDbFileImpl::GetAllCredentials(
   if (cred_store != nullptr) {
     for (const auto* credential : *cred_store->creds()) {
       credentials_out->push_back(CredentialValue(
-          CredentialIdentifier(
-              credential->id()->str(),
-              MapToAuthIdentityProvider(credential->identity_provider())),
+          CredentialIdentifier(credential->id()->str(),
+                               credential->identity_provider()->str()),
           credential->refresh_token()->str()));
     }
   }
@@ -176,13 +149,10 @@ Status AuthDbFileImpl::GetRefreshToken(
       reinterpret_cast<const uint8_t*>(cred_store_buffer_.c_str()));
 
   if (cred_store != nullptr) {
-    auth::IdentityProvider fbs_idp =
-        MapToFbsIdentityProvider(credential_id.identity_provider);
-
-    for (const auto* token : *cred_store->creds()) {
-      if (fbs_idp == token->identity_provider() &&
-          credential_id.id == token->id()->str()) {
-        *refresh_token_out = token->refresh_token()->str();
+    for (const auto* cred : *cred_store->creds()) {
+      if (credential_id.identity_provider == cred->identity_provider()->str() &&
+          credential_id.id == cred->id()->str()) {
+        *refresh_token_out = cred->refresh_token()->str();
         return Status::kOK;
       }
     }
@@ -239,8 +209,7 @@ Status AuthDbFileImpl::UpdateDb(const CredentialIdentifier& credential_id,
   flatbuffers::FlatBufferBuilder builder;
   std::vector<flatbuffers::Offset<::auth::IdpCredential>> creds;
 
-  auth::IdentityProvider idp =
-      MapToFbsIdentityProvider(credential_id.identity_provider);
+  auto idp = credential_id.identity_provider;
 
   bool delete_cred = refresh_token.empty();
   bool cred_found = false;
@@ -251,7 +220,7 @@ Status AuthDbFileImpl::UpdateDb(const CredentialIdentifier& credential_id,
         reinterpret_cast<const uint8_t*>(cred_store_buffer_.c_str()));
     if (cred_store != nullptr) {
       for (const auto* idp_cred : *cred_store->creds()) {
-        if (idp == idp_cred->identity_provider() &&
+        if (idp == idp_cred->identity_provider()->str() &&
             credential_id.id == idp_cred->id()->str()) {
           cred_found = true;
 
@@ -263,7 +232,7 @@ Status AuthDbFileImpl::UpdateDb(const CredentialIdentifier& credential_id,
         } else {
           // Carry over existing credentials.
           creds.push_back(MakeIdpCredential(
-              idp_cred->id()->str(), idp_cred->identity_provider(),
+              idp_cred->id()->str(), idp_cred->identity_provider()->str(),
               idp_cred->refresh_token()->str(), &builder));
         }
       }

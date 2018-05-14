@@ -21,7 +21,6 @@
 namespace auth {
 
 using fuchsia::auth::AuthProviderPtr;
-using fuchsia::auth::AuthProviderType;
 
 constexpr int kMaxCacheSize = 10;
 
@@ -64,10 +63,10 @@ class TokenManagerImpl : public fuchsia::auth::TokenManager {
 
   fuchsia::auth::AuthenticationContextProviderPtr auth_context_provider_;
 
-  std::map<AuthProviderType, fuchsia::sys::ComponentControllerPtr>
+  std::map<fidl::StringPtr, fuchsia::sys::ComponentControllerPtr>
       auth_provider_controllers_;
 
-  std::map<AuthProviderType, auth::AuthProviderPtr> auth_providers_;
+  std::map<fidl::StringPtr, auth::AuthProviderPtr> auth_providers_;
 
   cache::TokenCache token_cache_;
 
