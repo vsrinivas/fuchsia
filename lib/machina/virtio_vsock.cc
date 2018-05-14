@@ -4,6 +4,8 @@
 
 #include "garnet/lib/machina/virtio_vsock.h"
 
+#include <fbl/auto_call.h>
+
 namespace machina {
 
 VirtioVsock::Connection::~Connection() {
@@ -436,6 +438,8 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
   virtio_desc_t desc;
   fbl::AutoLock lock(&mutex_);
   do {
+    auto free_desc =
+        fbl::MakeAutoCall([this, index]() { tx_queue()->Return(index, 0); });
     auto header = GetHeaderLocked(tx_queue(), index, &desc, false);
     if (header == nullptr) {
       FXL_LOG(ERROR) << "Failed to get header from write queue";
@@ -444,7 +448,6 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
       set_shutdown(header);
       FXL_LOG(ERROR) << "Only stream sockets are supported";
     }
-    uint32_t used = sizeof(*header);
     ConnectionKey key{
         static_cast<uint32_t>(header->dst_cid),
         header->dst_port,
@@ -462,7 +465,10 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
         set_shutdown(header);
         FXL_LOG(ERROR) << "Connection does not exist";
       } else if (writable_.find(key) == writable_.end()) {
-        // There was a write, but the socket is not ready.
+        // There was a write, but the socket is not ready. If the guest is
+        // respecting the credit update messages this should not happen.
+        FXL_LOG(ERROR) << "Received write to a socket that is not wriable!"
+                       << "Data will be lost.";
         continue;
       } else if (conn->op == VIRTIO_VSOCK_OP_RW &&
                  conn->flags & VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND) {
@@ -513,13 +519,30 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
       case VIRTIO_VSOCK_OP_RW:
         // We are writing to the socket.
         desc.addr = header + 1;
-        desc.len -= used;
+        desc.len -= sizeof(*header);
         do {
           uint32_t len = std::min(desc.len, header->len);
           size_t actual;
           status = conn->socket.write(0, desc.addr, len, &actual);
-          used += actual;
           header->len -= actual;
+          if (status != ZX_OK) {
+            // NOTE: this drops some bytes in this data payload. Since we send
+            // credit update messages that inform that guest about available
+            // buffer space in the socket we don't expect this to happen in
+            // practice.
+            //
+            // It's possible we've hit other error conditions here (ex:
+            // PEER_CLOSED) so we'll just remove the connection and update
+            // status accordingly.
+            FXL_LOG(ERROR) << "Failed to write to connection socket " << status
+                           << ". Attempted to write  " << len
+                           << "b but only wrote " << actual << "b.";
+            writable_.erase(key);
+            if (status == ZX_ERR_SHOULD_WAIT) {
+              status = ZX_OK;
+            }
+            break;
+          }
           if (!desc.has_next || header->len == 0) {
             break;
           }
@@ -554,11 +577,9 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
         break;
     }
 
-    writable_.erase(key);
     if (conn != nullptr && conn->socket.is_valid()) {
       WaitOnSocketLocked(status, key, &conn->tx_wait);
     }
-    tx_queue()->Return(index, used);
   } while (tx_queue()->NextAvail(&index) == ZX_OK);
 
   status = tx_stream_.WaitOnQueue();

@@ -164,26 +164,30 @@ class VirtioVsockTest : public testing::Test, public guest::SocketConnector {
     EXPECT_EQ(memcmp(rx_buffer->data, expected_data, kDataSize), 0);
   }
 
-  void HostWriteOnPort(uint32_t host_port, zx::socket* socket) {
-    uint8_t tx_buffer[sizeof(virtio_vsock_hdr_t) + kDataSize] = {};
+  void HostQueueWriteOnPort(uint32_t host_port, uint8_t* tx_buffer,
+                            size_t len) {
     auto tx_header = reinterpret_cast<virtio_vsock_hdr_t*>(tx_buffer);
+    ASSERT_GE(len, sizeof(*tx_header));
     *tx_header = {
         .src_cid = kVirtioVsockGuestCid,
         .dst_cid = guest::kHostCid,
         .src_port = kVirtioVsockGuestPort,
         .dst_port = host_port,
-        .len = kDataSize,
+        .len = static_cast<uint32_t>(len - sizeof(*tx_header)),
         .type = VIRTIO_VSOCK_TYPE_STREAM,
         .op = VIRTIO_VSOCK_OP_RW,
     };
 
+    ASSERT_EQ(
+        tx_queue_.BuildDescriptor().AppendReadable(tx_buffer, len).Build(),
+        ZX_OK);
+  }
+
+  void HostWriteOnPort(uint32_t host_port, zx::socket* socket) {
+    uint8_t tx_buffer[sizeof(virtio_vsock_hdr_t) + kDataSize] = {};
     uint8_t expected_data[kDataSize] = {2, 3, 0, 1};
-    auto tx_data = tx_buffer + sizeof(*tx_header);
-    memcpy(tx_data, expected_data, kDataSize);
-    ASSERT_EQ(tx_queue_.BuildDescriptor()
-                  .AppendReadable(tx_buffer, sizeof(tx_buffer))
-                  .Build(),
-              ZX_OK);
+    memcpy(tx_buffer + sizeof(virtio_vsock_hdr_t), expected_data, kDataSize);
+    HostQueueWriteOnPort(host_port, tx_buffer, sizeof(tx_buffer));
 
     loop_.RunUntilIdle();
 
@@ -395,6 +399,72 @@ TEST_F(VirtioVsockTest, Write) {
   HostConnectOnPortResponse(kVirtioVsockHostPort);
   HostWriteOnPort(kVirtioVsockHostPort, &connection.socket);
   HostWriteOnPort(kVirtioVsockHostPort, &connection.socket);
+}
+
+struct SingleBytePacket {
+  virtio_vsock_hdr_t header;
+  char c;
+
+  SingleBytePacket(char c_) : c(c_) {}
+} __PACKED;
+
+TEST_F(VirtioVsockTest, WriteMultiple) {
+  TestConnection connection;
+  HostConnectOnPortRequest(kVirtioVsockHostPort, connection.callback());
+  HostConnectOnPortResponse(kVirtioVsockHostPort);
+
+  SingleBytePacket p1('a');
+  SingleBytePacket p2('b');
+  HostQueueWriteOnPort(kVirtioVsockHostPort, reinterpret_cast<uint8_t*>(&p1),
+                       sizeof(p1));
+  HostQueueWriteOnPort(kVirtioVsockHostPort, reinterpret_cast<uint8_t*>(&p2),
+                       sizeof(p2));
+  loop_.RunUntilIdle();
+
+  size_t actual_len = 0;
+  uint8_t actual_data[3] = {};
+  ASSERT_EQ(
+      connection.socket.read(0, actual_data, sizeof(actual_data), &actual_len),
+      ZX_OK);
+  ASSERT_EQ(2u, actual_len);
+  ASSERT_EQ('a', actual_data[0]);
+  ASSERT_EQ('b', actual_data[1]);
+}
+
+TEST_F(VirtioVsockTest, WriteSocketFullDropBytes) {
+  TestConnection connection;
+  HostConnectOnPortRequest(kVirtioVsockHostPort, connection.callback());
+  HostConnectOnPortResponse(kVirtioVsockHostPort);
+
+  size_t socket_size = 0;
+  ASSERT_EQ(ZX_OK,
+            connection.socket.get_property(ZX_PROP_SOCKET_TX_BUF_MAX,
+                                           &socket_size, sizeof(socket_size)));
+  size_t buf_size = socket_size + sizeof(virtio_vsock_hdr_t) + 1;
+  auto buf = std::make_unique<uint8_t[]>(buf_size);
+  memset(buf.get(), 'a', buf_size);
+
+  // Queue one descriptor that will completely fill the socket (and then some),
+  // and a second descriptor with a single byte. We'll verify everything that
+  // comes after the socket is full gets dropped.
+  SingleBytePacket p1('z');
+  HostQueueWriteOnPort(kVirtioVsockHostPort, buf.get(), buf_size);
+  HostQueueWriteOnPort(kVirtioVsockHostPort, reinterpret_cast<uint8_t*>(&p1),
+                       sizeof(p1));
+  loop_.RunUntilIdle();
+
+  memset(buf.get(), 0, buf_size);
+  size_t actual_len = 0;
+  ASSERT_EQ(connection.socket.read(0, buf.get(), buf_size, &actual_len), ZX_OK);
+  ASSERT_EQ(socket_size, actual_len);
+  for (size_t i = 0; i < actual_len; ++i) {
+    ASSERT_EQ('a', buf[i]);
+  }
+
+  // Verify nothing more gets written now that the socket is wriable again.
+  loop_.RunUntilIdle();
+  ASSERT_EQ(ZX_ERR_SHOULD_WAIT,
+            connection.socket.read(0, buf.get(), buf_size, &actual_len));
 }
 
 TEST_F(VirtioVsockTest, MultipleConnections) {
