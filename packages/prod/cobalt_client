@@ -1,6 +1,6 @@
 {
     "packages": {
-        "cobalt": "//garnet/bin/cobalt:cobalt",
-        "cobalt_system_metrics": "//garnet/bin/cobalt:cobalt_system_metrics"
+        "cobalt": "//garnet/bin/cobalt/app:cobalt",
+        "cobalt_system_metrics": "//garnet/bin/cobalt/system-metrics:cobalt_system_metrics"
     }
 }

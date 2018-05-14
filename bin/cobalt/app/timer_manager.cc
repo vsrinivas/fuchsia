@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/cobalt/timer_manager.h"
+#include "garnet/bin/cobalt/app/timer_manager.h"
 
 #include <thread>
 
@@ -11,6 +11,8 @@ namespace cobalt {
 using cobalt::Status;
 using std::string;
 using wlan::SystemClock;
+
+const uint32_t kMaxTimerTimeout = 300;
 
 void TimerVal::AddStart(uint32_t metric_id, uint32_t encoding_id,
                         int64_t timestamp) {
@@ -27,8 +29,7 @@ void TimerVal::AddEnd(int64_t timestamp, const std::string& part_name,
 }
 
 TimerManager::TimerManager(async_t* async)
-    : clock_(new SystemClock()),
-      async_(async) {}
+    : clock_(new SystemClock()), async_(async) {}
 
 TimerManager::~TimerManager() {}
 

@@ -5,54 +5,12 @@
 import("//build/package.gni")
 import("//third_party/protobuf/proto_library.gni")
 
-package("cobalt") {
+executable("cobalt_encoder_unittests") {
+  testonly = true
+
   deps = [
-    ":bin",
-    "//third_party/cobalt_config",
+    "//third_party/cobalt/encoder:unittests",
   ]
-
-  binary = "cobalt"
-
-  meta = [
-    {
-      path = rebase_path("meta/sandbox")
-      dest = "sandbox"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path(
-              get_label_info("//third_party/cobalt_config", "target_gen_dir") +
-              "/cobalt_config.binproto")
-      dest = "cobalt_config.binproto"
-    },
-    {
-      path = rebase_path(
-              "//third_party/cobalt/production/fuchsia-cobalt-us-central1-c/analyzer_public.pem")
-      dest = "certs/cobaltv0.1/analyzer_public.pem"
-    },
-    {
-      path = rebase_path(
-              "//third_party/cobalt/production/fuchsia-cobalt-us-central1-c/shuffler_public.pem")
-      dest = "certs/cobaltv0.1/shuffler_public.pem"
-    },
-  ]
-}
-
-package("cobalt_system_metrics") {
-  deps = [
-    ":cobalt_system_metrics_bin",
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/system_metrics_sandbox")
-      dest = "sandbox"
-    },
-  ]
-
-  binary = "cobalt_system_metrics"
 }
 
 package("cobalt_tests") {
@@ -60,11 +18,12 @@ package("cobalt_tests") {
   deprecated_system_image = true
 
   deps = [
-    ":cobalt_garnet_unittests",
-    ":cobalt_testapp",
-    ":cobalt_testapp_no_environment",
-    ":cobalt_testapp_no_network",
-    ":cobalt_unittests",
+    ":cobalt_encoder_unittests",
+    "app:app",
+    "app:cobalt_app_unittests",
+    "testapp:cobalt_testapp",
+    "testapp:cobalt_testapp_no_environment",
+    "testapp:cobalt_testapp_no_network",
   ]
 
   binaries = [
@@ -75,11 +34,11 @@ package("cobalt_tests") {
 
   tests = [
     {
-      name = "cobalt_garnet_unittests"
+      name = "cobalt_app_unittests"
     },
 
     {
-      name = "cobalt_unittests"
+      name = "cobalt_encoder_unittests"
     },
 
     {
@@ -97,101 +56,3 @@ package("cobalt_tests") {
   ]
 }
 
-executable("bin") {
-  output_name = "cobalt"
-
-  sources = [
-    "cobalt_main.cc",
-    "product_hack.h",
-    "timer_manager.cc",
-    "timer_manager.h",
-  ]
-
-  deps = [
-    "//garnet/lib/wlan/mlme:mlme",
-    "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/cobalt/fidl:fidl",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
-    "//third_party/cobalt/config:client_config",
-    "//third_party/cobalt/config:cobalt_config_proto",
-    "//third_party/cobalt/encoder",
-    "//third_party/cobalt/util:pem_util",
-    "//third_party/grpc:grpc++",
-    "//third_party/protobuf:protobuf_lite",
-  ]
-}
-
-executable("cobalt_system_metrics_bin") {
-  output_name = "cobalt_system_metrics"
-
-  sources = [
-    "system_metrics_main.cc",
-  ]
-
-  deps = [
-    "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/cobalt/fidl:fidl",
-    "//garnet/public/lib/fsl",
-  ]
-}
-
-executable("cobalt_unittests") {
-  testonly = true
-
-  deps = [
-    "//third_party/cobalt/encoder:unittests",
-  ]
-}
-
-executable("cobalt_garnet_unittests") {
-  testonly = true
-
-  sources = [
-    "timer_manager.cc",
-    "timer_manager.h",
-    "timer_manager_test.cc",
-  ]
-
-  deps = [
-    "//garnet/lib/wlan/mlme:mlme",
-    "//garnet/public/lib/cobalt/fidl:fidl",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl/test:gtest_main",
-    "//garnet/public/lib/gtest",
-  ]
-}
-
-executable("cobalt_testapp") {
-  sources = [
-    "cobalt_testapp.cc",
-  ]
-
-  deps = [
-    "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/cobalt/fidl",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/svc/cpp",
-  ]
-}
-
-copy("cobalt_testapp_no_network") {
-  sources = [
-    "cobalt_testapp_no_network",
-  ]
-
-  outputs = [
-    "$root_out_dir/cobalt_testapp_no_network",
-  ]
-}
-
-copy("cobalt_testapp_no_environment") {
-  sources = [
-    "cobalt_testapp_no_environment",
-  ]
-
-  outputs = [
-    "$root_out_dir/cobalt_testapp_no_environment",
-  ]
-}

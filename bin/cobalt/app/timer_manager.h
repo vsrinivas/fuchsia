@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_COBALT_TIMER_H
-#define GARNET_BIN_COBALT_TIMER_H
+#ifndef GARNET_BIN_COBALT_APP_TIMER_MANAGER_H
+#define GARNET_BIN_COBALT_APP_TIMER_MANAGER_H
 
 #include <stdlib.h>
 
@@ -22,8 +22,6 @@
 #include "garnet/lib/wlan/mlme/include/wlan/mlme/clock.h"
 
 namespace cobalt {
-
-const uint32_t kMaxTimerTimeout = 300;
 
 // Used to store all necessary values for a Timer to be able to create an
 // Observation.
@@ -141,4 +139,4 @@ class TimerManager {
 
 }  // namespace cobalt
 
-#endif  // GARNET_BIN_COBALT_TIMER_H
+#endif  // GARNET_BIN_COBALT_APP_TIMER_MANAGER_H

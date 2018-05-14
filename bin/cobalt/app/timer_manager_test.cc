@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/cobalt/timer_manager.h"
+#include "garnet/bin/cobalt/app/timer_manager.h"
 
 #include "lib/gtest/test_with_loop.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
