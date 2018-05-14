@@ -1,7 +1,7 @@
 {
     "packages": {
-        "crashpad_handler": "//third_party/crashpad:crashpad_handler",
-        "crashpad_startup": "//garnet/bin/crashpad:crashpad_startup"
+        "crashpad_analyzer": "//garnet/bin/crashpad:crashpad_analyzer",
+        "crashpad_database_util": "//third_party/crashpad:crashpad_database_util"
     }
 }
 

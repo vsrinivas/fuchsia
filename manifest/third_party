@@ -49,7 +49,7 @@
     <project name="third_party/crashpad"
              path="third_party/crashpad"
              remote="https://fuchsia.googlesource.com/third_party/crashpad"
-             revision="04b10a053d3f839577b54f1ab7e7cb16078c8f74"
+             revision="741d105159bdb95b55cd5db17ce6206867b1beca"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/expat"
              path="third_party/expat"

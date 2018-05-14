@@ -5,22 +5,25 @@
 import("//build/package.gni")
 
 executable("bin") {
-  output_name = "crashpad_startup"
+  output_name = "crashpad_analyzer"
 
   deps = [
+    "//third_party/crashpad/client",
+    "//third_party/crashpad/handler",
+    "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/launchpad",
     "//zircon/public/lib/zx",
   ]
 
   sources = [
-    "crashpad_startup.cc",
+    "crashpad_analyzer.cc",
   ]
 
   libs = [ "zircon" ]
 }
 
-package("crashpad_startup") {
+package("crashpad_analyzer") {
   deprecated_system_image = true
 
   deps = [
@@ -29,7 +32,7 @@ package("crashpad_startup") {
 
   binaries = [
     {
-      name = "crashpad_startup"
+      name = "crashpad_analyzer"
     },
   ]
 }

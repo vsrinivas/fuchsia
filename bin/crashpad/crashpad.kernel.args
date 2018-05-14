@@ -1,2 +1,1 @@
-crashlogger.disable=true
-crashpad.enable=true
+crashsvc.analyzer=/system/bin/crashpad_analyzer
