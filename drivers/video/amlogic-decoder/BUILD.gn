@@ -1,0 +1,42 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+
+driver_module("amlogic_decoder") {
+  output_name = "amlogic_video_decoder"
+
+  deps = [
+    ":sources",
+  ]
+}
+
+source_set("sources") {
+  sources = [
+    "amlogic-video.cc",
+    "amlogic-video.h",
+    "binding.c",
+  ]
+  public_deps = [
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+package("amlogic_video_decoder") {
+  deprecated_system_image = true
+  deps = [
+    ":amlogic_decoder",
+  ]
+
+  drivers = [
+    {
+      name = "amlogic_video_decoder.so"
+    },
+  ]
+}
