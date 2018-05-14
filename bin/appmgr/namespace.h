@@ -50,8 +50,7 @@ class Namespace : public ApplicationEnvironment,
 
  private:
   FRIEND_MAKE_REF_COUNTED(Namespace);
-  Namespace(fxl::RefPtr<Namespace> parent,
-            Realm* realm,
+  Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
             ServiceListPtr service_list);
 
   FRIEND_REF_COUNTED_THREAD_SAFE(Namespace);
@@ -65,7 +64,7 @@ class Namespace : public ApplicationEnvironment,
   fxl::RefPtr<Namespace> parent_;
   Realm* realm_;
   ServiceProviderPtr additional_services_;
-  ApplicationLoaderPtr loader_;
+  LoaderPtr loader_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Namespace);
 };

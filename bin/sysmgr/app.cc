@@ -122,7 +122,7 @@ void App::RegisterSingleton(std::string service_name,
           env_launcher_->CreateApplication(std::move(dup_launch_info),
                                            controller.NewRequest());
           controller.set_error_handler(
-              [ this, url = launch_info->url, &controller ] {
+              [this, url = launch_info->url, &controller] {
                 FXL_LOG(ERROR) << "Singleton " << url << " died";
                 controller.Unbind();  // kills the singleton application
                 services_.erase(url);
@@ -138,13 +138,12 @@ void App::RegisterSingleton(std::string service_name,
 }
 
 void App::RegisterAppLoaders(Config::ServiceMap app_loaders) {
-  app_loader_ = std::make_unique<DelegatingApplicationLoader>(
+  app_loader_ = std::make_unique<DelegatingLoader>(
       std::move(app_loaders), env_launcher_.get(),
-      application_context_
-          ->ConnectToEnvironmentService<component::ApplicationLoader>());
+      application_context_->ConnectToEnvironmentService<component::Loader>());
 
-  service_provider_bridge_.AddService<component::ApplicationLoader>(
-      [this](fidl::InterfaceRequest<component::ApplicationLoader> request) {
+  service_provider_bridge_.AddService<component::Loader>(
+      [this](fidl::InterfaceRequest<component::Loader> request) {
         app_loader_bindings_.AddBinding(app_loader_.get(), std::move(request));
       });
 }

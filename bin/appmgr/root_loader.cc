@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/appmgr/root_application_loader.h"
+#include "garnet/bin/appmgr/root_loader.h"
 
 #include <fcntl.h>
 
@@ -18,12 +18,12 @@
 
 namespace component {
 
-RootApplicationLoader::RootApplicationLoader() = default;
+RootLoader::RootLoader() = default;
 
-RootApplicationLoader::~RootApplicationLoader() = default;
+RootLoader::~RootLoader() = default;
 
-void RootApplicationLoader::LoadApplication(fidl::StringPtr url,
-                                            LoadApplicationCallback callback) {
+void RootLoader::LoadComponent(fidl::StringPtr url,
+                               LoadComponentCallback callback) {
   std::string path = GetPathFromURL(url);
   if (path.empty()) {
     // TODO(abarth): Support URL schemes other than file:// by querying the host
@@ -36,7 +36,8 @@ void RootApplicationLoader::LoadApplication(fidl::StringPtr url,
       if (path.find('/') == std::string::npos) {
         // TODO(abarth): We're currently hardcoding version 0 of the package,
         // but we'll eventually need to do something smarter.
-        std::string pkg_path = fxl::Concatenate({"/pkgfs/packages/", path, "/0"});
+        std::string pkg_path =
+            fxl::Concatenate({"/pkgfs/packages/", path, "/0"});
         fd.reset(open(pkg_path.c_str(), O_DIRECTORY | O_RDONLY));
         if (fd.is_valid()) {
           zx::channel directory = fsl::CloneChannelFromFileDescriptor(fd.get());
@@ -49,8 +50,9 @@ void RootApplicationLoader::LoadApplication(fidl::StringPtr url,
           }
         }
       }
-      for (const auto& entry : { "/system/bin", "/system/pkgs" }) {
-        std::string qualified_path = fxl::Concatenate({fxl::StringView(entry), "/", path});
+      for (const auto& entry : {"/system/bin", "/system/pkgs"}) {
+        std::string qualified_path =
+            fxl::Concatenate({fxl::StringView(entry), "/", path});
         fd.reset(open(qualified_path.c_str(), O_RDONLY));
         if (fd.is_valid()) {
           path = qualified_path;
@@ -72,8 +74,7 @@ void RootApplicationLoader::LoadApplication(fidl::StringPtr url,
   callback(nullptr);
 }
 
-void RootApplicationLoader::AddBinding(
-    fidl::InterfaceRequest<ApplicationLoader> request) {
+void RootLoader::AddBinding(fidl::InterfaceRequest<Loader> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 

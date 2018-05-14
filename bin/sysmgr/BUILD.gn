@@ -12,8 +12,8 @@ executable("bin") {
     "app.h",
     "config.cc",
     "config.h",
-    "delegating_application_loader.cc",
-    "delegating_application_loader.h",
+    "delegating_loader.cc",
+    "delegating_loader.h",
     "main.cc",
   ]
 

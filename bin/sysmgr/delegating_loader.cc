@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/sysmgr/delegating_application_loader.h"
+#include "garnet/bin/sysmgr/delegating_loader.h"
 
 #include "lib/fidl/cpp/clone.h"
 #include "lib/svc/cpp/services.h"
@@ -12,17 +12,16 @@ namespace {
 
 std::string GetScheme(const std::string& url) {
   size_t pos = url.find(':');
-  if (pos == std::string::npos)
-    return std::string();
+  if (pos == std::string::npos) return std::string();
   return url.substr(0, pos);
 }
 
 }  // namespace
 
-DelegatingApplicationLoader::DelegatingApplicationLoader(
+DelegatingLoader::DelegatingLoader(
     Config::ServiceMap delegates,
     component::ApplicationLauncher* delegate_launcher,
-    component::ApplicationLoaderPtr fallback)
+    component::LoaderPtr fallback)
     : delegate_launcher_(delegate_launcher), fallback_(std::move(fallback)) {
   for (auto& pair : delegates) {
     auto& record = delegate_instances_[pair.second->url];
@@ -31,11 +30,10 @@ DelegatingApplicationLoader::DelegatingApplicationLoader(
   }
 }
 
-DelegatingApplicationLoader::~DelegatingApplicationLoader() = default;
+DelegatingLoader::~DelegatingLoader() = default;
 
-void DelegatingApplicationLoader::LoadApplication(
-    fidl::StringPtr url,
-    LoadApplicationCallback callback) {
+void DelegatingLoader::LoadComponent(fidl::StringPtr url,
+                                     LoadComponentCallback callback) {
   std::string scheme = GetScheme(url);
   if (!scheme.empty()) {
     auto it = delegates_by_scheme_.find(scheme);
@@ -44,16 +42,15 @@ void DelegatingApplicationLoader::LoadApplication(
       if (!record->loader) {
         StartDelegate(record);
       }
-      record->loader->LoadApplication(url, callback);
+      record->loader->LoadComponent(url, callback);
       return;
     }
   }
 
-  fallback_->LoadApplication(url, callback);
+  fallback_->LoadComponent(url, callback);
 }
 
-void DelegatingApplicationLoader::StartDelegate(
-    ApplicationLoaderRecord* record) {
+void DelegatingLoader::StartDelegate(LoaderRecord* record) {
   component::Services services;
   component::ApplicationLaunchInfo dup_launch_info;
   dup_launch_info.url = record->launch_info->url;
@@ -62,9 +59,9 @@ void DelegatingApplicationLoader::StartDelegate(
   delegate_launcher_->CreateApplication(std::move(dup_launch_info),
                                         record->controller.NewRequest());
 
-  record->loader = services.ConnectToService<component::ApplicationLoader>();
+  record->loader = services.ConnectToService<component::Loader>();
   record->loader.set_error_handler([this, record] {
-    // proactively kill the loader app entirely if its ApplicationLoader died on
+    // proactively kill the loader app entirely if its Loader died on
     // us
     record->controller.Unbind();
   });

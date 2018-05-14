@@ -14,9 +14,9 @@ fidl("fidl") {
     "application_environment.fidl",
     "application_environment_controller.fidl",
     "application_launcher.fidl",
-    "application_loader.fidl",
     "application_runner.fidl",
     "flat_namespace.fidl",
+    "loader.fidl",
     "service_provider.fidl",
   ]
 

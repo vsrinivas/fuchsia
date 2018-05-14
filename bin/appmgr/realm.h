@@ -72,20 +72,18 @@ class Realm {
   ApplicationRunnerHolder* GetOrCreateRunner(const std::string& runner);
 
   void CreateApplicationWithProcess(
-      ApplicationPackagePtr package,
-      ApplicationLaunchInfo launch_info,
+      ApplicationPackagePtr package, ApplicationLaunchInfo launch_info,
       fidl::InterfaceRequest<ApplicationController> controller,
       fxl::RefPtr<Namespace> ns);
   void CreateApplicationFromPackage(
-      ApplicationPackagePtr package,
-      ApplicationLaunchInfo launch_info,
+      ApplicationPackagePtr package, ApplicationLaunchInfo launch_info,
       fidl::InterfaceRequest<ApplicationController> controller,
       fxl::RefPtr<Namespace> ns);
 
   zx::channel OpenRootInfoDir();
 
   Realm* const parent_;
-  ApplicationLoaderPtr loader_;
+  LoaderPtr loader_;
   std::string label_;
   std::string koid_;
 

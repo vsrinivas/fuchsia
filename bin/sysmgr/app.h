@@ -9,14 +9,13 @@
 #include <memory>
 #include <vector>
 
+#include <fuchsia/cpp/component.h>
+#include "garnet/bin/sysmgr/delegating_loader.h"
 #include "lib/app/cpp/application_context.h"
-#include "lib/svc/cpp/service_namespace.h"
-#include "lib/svc/cpp/services.h"
-#include "lib/svc/cpp/service_provider_bridge.h"
-#include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/component.h>
-#include "garnet/bin/sysmgr/delegating_application_loader.h"
 #include "lib/fxl/macros.h"
+#include "lib/svc/cpp/service_namespace.h"
+#include "lib/svc/cpp/service_provider_bridge.h"
+#include "lib/svc/cpp/services.h"
 
 namespace sysmgr {
 
@@ -49,8 +48,8 @@ class App {
   component::ServiceProviderBridge service_provider_bridge_;
   component::ApplicationLauncherPtr env_launcher_;
 
-  std::unique_ptr<DelegatingApplicationLoader> app_loader_;
-  fidl::BindingSet<component::ApplicationLoader> app_loader_bindings_;
+  std::unique_ptr<DelegatingLoader> app_loader_;
+  fidl::BindingSet<component::Loader> app_loader_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

@@ -3,6 +3,6 @@
         "garnet/packages/prod/network"
     ],
     "packages": {
-        "network_application_loader": "//garnet/bin/network_application_loader"
+        "network_loader": "//garnet/bin/network_loader"
     }
 }

@@ -5,7 +5,7 @@
 import("//build/package.gni")
 
 executable("bin") {
-  output_name = "network_application_loader"
+  output_name = "network_loader"
 
   sources = [
     "main.cc",
@@ -20,10 +20,10 @@ executable("bin") {
   ]
 }
 
-package("network_application_loader") {
+package("network_loader") {
   deps = [
     ":bin",
   ]
 
-  binary = "network_application_loader"
+  binary = "network_loader"
 }

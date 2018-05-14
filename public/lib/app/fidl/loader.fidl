@@ -4,9 +4,9 @@
 
 library component;
 
-// An interface for loading applications.
+// An interface for loading components.
 [Discoverable]
-interface ApplicationLoader {
-  // Load an application's package.
-  1: LoadApplication(string url) -> (ApplicationPackage? package);
+interface Loader {
+  // Load a components's package.
+  1: LoadComponent(string url) -> (ApplicationPackage? package);
 };

@@ -67,12 +67,10 @@ std::string GetLabelFromURL(const std::string& url) {
   return url.substr(last_slash + 1);
 }
 
-void PushFileDescriptor(component::FileDescriptorPtr fd,
-                        int new_fd,
+void PushFileDescriptor(component::FileDescriptorPtr fd, int new_fd,
                         std::vector<uint32_t>* ids,
                         std::vector<zx_handle_t>* handles) {
-  if (!fd)
-    return;
+  if (!fd) return;
   if (fd->type0) {
     ids->push_back(PA_HND(PA_HND_TYPE(fd->type0), new_fd));
     handles->push_back(fd->handle0.release());
@@ -87,14 +85,12 @@ void PushFileDescriptor(component::FileDescriptorPtr fd,
   }
 }
 
-zx::process CreateProcess(const zx::job& job,
-                          fsl::SizedVmo data,
+zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data,
                           const std::string& argv0,
                           ApplicationLaunchInfo launch_info,
                           zx::channel loader_service,
                           fdio_flat_namespace_t* flat) {
-  if (!data)
-    return zx::process();
+  if (!data) return zx::process();
 
   std::string label = GetLabelFromURL(launch_info.url);
   std::vector<const char*> argv = GetArgv(argv0, launch_info);
@@ -126,10 +122,8 @@ zx::process CreateProcess(const zx::job& job,
 
   launchpad_clone(lp, LP_CLONE_ENVIRON);
   launchpad_clone_fd(lp, STDIN_FILENO, STDIN_FILENO);
-  if (!launch_info.out)
-    launchpad_clone_fd(lp, STDOUT_FILENO, STDOUT_FILENO);
-  if (!launch_info.err)
-    launchpad_clone_fd(lp, STDERR_FILENO, STDERR_FILENO);
+  if (!launch_info.out) launchpad_clone_fd(lp, STDOUT_FILENO, STDOUT_FILENO);
+  if (!launch_info.err) launchpad_clone_fd(lp, STDERR_FILENO, STDERR_FILENO);
   if (loader_service)
     launchpad_use_loader_service(lp, loader_service.release());
   launchpad_set_args(lp, argv.size(), argv.data());
@@ -150,12 +144,10 @@ zx::process CreateProcess(const zx::job& job,
 }
 
 LaunchType Classify(const zx::vmo& data, std::string* runner) {
-  if (!data)
-    return LaunchType::kProcess;
+  if (!data) return LaunchType::kProcess;
   std::string magic(archive::kMagicLength, '\0');
   zx_status_t status = data.read(&magic[0], 0, magic.length());
-  if (status != ZX_OK)
-    return LaunchType::kProcess;
+  if (status != ZX_OK) return LaunchType::kProcess;
   if (memcmp(magic.data(), &archive::kMagic, sizeof(archive::kMagic)) == 0)
     return LaunchType::kArchive;
   return LaunchType::kProcess;
@@ -220,12 +212,10 @@ Realm::Realm(Realm* parent, zx::channel host_directory, fidl::StringPtr label)
 
   ServiceProviderPtr service_provider;
   default_namespace_->services().AddBinding(service_provider.NewRequest());
-  loader_ = ConnectToService<ApplicationLoader>(service_provider.get());
+  loader_ = ConnectToService<Loader>(service_provider.get());
 }
 
-Realm::~Realm() {
-  job_.kill();
-}
+Realm::~Realm() { job_.kill(); }
 
 zx::channel Realm::OpenRootInfoDir() {
   // TODO: define /hub access policy: CP-26
@@ -284,9 +274,9 @@ void Realm::CreateApplication(
   }
   launch_info.url = canon_url;
 
-  // launch_info is moved before LoadApplication() gets at its first argument.
+  // launch_info is moved before LoadComponent() gets at its first argument.
   fidl::StringPtr url = launch_info.url;
-  loader_->LoadApplication(
+  loader_->LoadComponent(
       url, fxl::MakeCopyable([this, launch_info = std::move(launch_info),
                               controller = std::move(controller)](
                                  ApplicationPackagePtr package) mutable {
@@ -358,13 +348,11 @@ void Realm::AddBinding(
 }
 
 void Realm::CreateApplicationWithProcess(
-    ApplicationPackagePtr package,
-    ApplicationLaunchInfo launch_info,
+    ApplicationPackagePtr package, ApplicationLaunchInfo launch_info,
     fidl::InterfaceRequest<ApplicationController> controller,
     fxl::RefPtr<Namespace> ns) {
   zx::channel svc = ns->services().OpenAsDirectory();
-  if (!svc)
-    return;
+  if (!svc) return;
 
   NamespaceBuilder builder;
   builder.AddServices(std::move(svc));
@@ -403,13 +391,11 @@ void Realm::CreateApplicationWithProcess(
 }
 
 void Realm::CreateApplicationFromPackage(
-    ApplicationPackagePtr package,
-    ApplicationLaunchInfo launch_info,
+    ApplicationPackagePtr package, ApplicationLaunchInfo launch_info,
     fidl::InterfaceRequest<ApplicationController> controller,
     fxl::RefPtr<Namespace> ns) {
   zx::channel svc = ns->services().OpenAsDirectory();
-  if (!svc)
-    return;
+  if (!svc) return;
 
   zx::channel pkg;
   std::unique_ptr<archive::FileSystem> pkg_fs;
@@ -445,8 +431,7 @@ void Realm::CreateApplicationFromPackage(
     if (DynamicLibraryLoader::Start(std::move(fd), &loader_service) != ZX_OK)
       return;
   }
-  if (!pkg)
-    return;
+  if (!pkg) return;
 
   // Note that |builder| is only used in the else block below. It is left here
   // because we would like to use it everywhere once US-313 is fixed.
@@ -465,8 +450,7 @@ void Realm::CreateApplicationFromPackage(
     // If an app has the "shell" feature, then we use the libraries from the
     // system rather than from the package because programs spawned from the
     // shell will need the system-provided libraries to run.
-    if (sandbox.HasFeature("shell"))
-      loader_service.reset();
+    if (sandbox.HasFeature("shell")) loader_service.reset();
 
     builder.AddSandbox(sandbox, [this] { return OpenRootInfoDir(); });
   }

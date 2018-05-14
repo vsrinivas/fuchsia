@@ -22,10 +22,8 @@ namespace {
 
 class RetryingLoader {
  public:
-  RetryingLoader(
-      network::URLLoaderPtr url_loader,
-      const std::string& url,
-      const component::ApplicationLoader::LoadApplicationCallback& callback)
+  RetryingLoader(network::URLLoaderPtr url_loader, const std::string& url,
+                 const component::Loader::LoadComponentCallback& callback)
       : url_loader_(std::move(url_loader)),
         url_(url),
         callback_(callback),
@@ -112,7 +110,7 @@ class RetryingLoader {
 
   const network::URLLoaderPtr url_loader_;
   const std::string url_;
-  const component::ApplicationLoader::LoadApplicationCallback callback_;
+  const component::Loader::LoadComponentCallback callback_;
   fxl::Closure deleter_;
   // Tries before an error is printed. No errors will be printed afterwards
   // either.
@@ -122,20 +120,20 @@ class RetryingLoader {
   fxl::WeakPtrFactory<RetryingLoader> weak_ptr_factory_;
 };
 
-class NetworkApplicationLoader : public component::ApplicationLoader {
+class NetworkLoader : public component::Loader {
  public:
-  NetworkApplicationLoader()
+  NetworkLoader()
       : context_(component::ApplicationContext::CreateFromStartupInfo()) {
-    context_->outgoing().AddPublicService<component::ApplicationLoader>(
-        [this](fidl::InterfaceRequest<component::ApplicationLoader> request) {
+    context_->outgoing().AddPublicService<component::Loader>(
+        [this](fidl::InterfaceRequest<component::Loader> request) {
           bindings_.AddBinding(this, std::move(request));
         });
 
     context_->ConnectToEnvironmentService(net_.NewRequest());
   }
 
-  void LoadApplication(fidl::StringPtr url,
-                       LoadApplicationCallback callback) override {
+  void LoadComponent(fidl::StringPtr url,
+                     LoadComponentCallback callback) override {
     network::URLLoaderPtr loader;
     net_->CreateURLLoader(loader.NewRequest());
 
@@ -149,7 +147,7 @@ class NetworkApplicationLoader : public component::ApplicationLoader {
 
  private:
   std::unique_ptr<component::ApplicationContext> context_;
-  fidl::BindingSet<component::ApplicationLoader> bindings_;
+  fidl::BindingSet<component::Loader> bindings_;
 
   network::NetworkServicePtr net_;
   std::unordered_map<RetryingLoader*, std::unique_ptr<RetryingLoader>> loaders_;
@@ -159,7 +157,7 @@ class NetworkApplicationLoader : public component::ApplicationLoader {
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
-  NetworkApplicationLoader app;
+  NetworkLoader app;
   loop.Run();
   return 0;
 }
