@@ -77,6 +77,14 @@ private:
     zx_status_t LoadFirmware();
 
     zx_status_t GetModulesInfo();
+    zx_status_t CreateHostDmaModule(uint8_t instance_id, uint8_t pipeline_id,
+                                    const CopierCfg& cfg);
+    zx_status_t CreateI2SModule(uint8_t instance_id, uint8_t pipeline_id,
+                                const CopierCfg& cfg, const zx::vmo& i2s_cfg, size_t i2s_cfg_size);
+    zx_status_t CreateMixinModule(uint8_t instance_id, uint8_t pipeline_id,
+                                  const BaseModuleCfg& cfg);
+    zx_status_t CreateMixoutModule(uint8_t instance_id, uint8_t pipeline_id,
+                                   const BaseModuleCfg& cfg);
     zx_status_t SetupPipelines();
     zx_status_t RunPipeline(uint8_t pipeline_id);
 

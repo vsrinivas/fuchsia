@@ -16,7 +16,8 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/intel-audio-dsp.cpp \
     $(LOCAL_DIR)/intel-dsp-code-loader.cpp \
     $(LOCAL_DIR)/intel-dsp-ipc.cpp \
-    $(LOCAL_DIR)/intel-dsp-stream.cpp
+    $(LOCAL_DIR)/intel-dsp-stream.cpp \
+    $(LOCAL_DIR)/intel-dsp-topology.cpp \
 
 MODULE_LIBS := \
     system/ulib/driver \
