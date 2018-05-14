@@ -17,7 +17,7 @@ namespace {
 TEST(NamespaceBuilder, Control) {
   SandboxMetadata sandbox;
   EXPECT_TRUE(sandbox.Parse(R"JSON({
-    "dev": [ "class/input", "class/display" ],
+    "dev": [ "class/input", "class/display-controller" ],
     "features": [ "vulkan" ]
   })JSON"));
 
@@ -33,8 +33,8 @@ TEST(NamespaceBuilder, Control) {
 
   EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/dev/class/input") !=
               paths.end());
-  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/dev/class/display") !=
-              paths.end());
+  EXPECT_TRUE(std::find(paths.begin(), paths.end(),
+                        "/dev/class/display-controller") != paths.end());
   EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/dev/class/gpu") !=
               paths.end());
   EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system/data/vulkan") !=
