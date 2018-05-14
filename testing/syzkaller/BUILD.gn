@@ -38,8 +38,6 @@ executable("syz-executor") {
 }
 
 package("syzkaller") {
-  fuchsia_image = true
-
   deps = [
     ":syz-execprog",
     ":syz-executor",
