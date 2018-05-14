@@ -23,7 +23,6 @@ Example usage #3 (for zircon kernel output):
   ./scripts/symbolize --build-dir=build-x64
   <copy and paste output from Zircon>
 
-
 """
 
 import argparse
@@ -39,6 +38,11 @@ PREBUILTS_BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(SCRIPT_DIR), "
 GCC_VERSION = '6.3.0'
 name_to_full_path = {}
 debug_mode = False
+
+# Paths to various external tools can be provided on the command line.
+# If these are None then use the prebuilt location.
+addr2line_tool_path = None
+gdb_tool_path = None
 
 
 def find_func(find_args, dirname, names):
@@ -140,7 +144,9 @@ def find_dso_full_path(dso, exe_name, name_to_buildid, build_dirs):
     return found_path
 
 
-def tool_path(arch, tool):
+def tool_path(arch, tool, user_provided_path):
+    if user_provided_path is not None:
+        return user_provided_path
     if sys.platform.startswith("linux"):
         platform = "Linux"
     elif sys.platform.startswith("darwin"):
@@ -151,13 +157,14 @@ def tool_path(arch, tool):
             (PREBUILTS_BASE_DIR, arch, tool))
 
 
-def run_tool(arch, tool, *args):
-    cmd = [tool_path(arch, tool)] + list(args)
+def run_tool(path, *args):
+    cmd = [path] + list(args)
     if debug_mode:
         print "Running: %s" % " ".join(cmd)
     try:
         output = subprocess.check_output(cmd)
     except Exception as e:
+        tool = os.path.basename(path)
         print "Calling %s failed: command %s error %s" % (tool, cmd, e)
         return False
     return output
@@ -166,7 +173,13 @@ def run_tool(arch, tool, *args):
 # Note: addr2line requires hex addresses.
 # |addr_as_hex_string| must already be PIE-adjusted.
 def run_addr2line(arch, elf_path, addr_as_hex_string):
+    path = tool_path(arch, "addr2line", addr2line_tool_path)
     return run_tool(arch, "addr2line", "-Cipfe", elf_path, addr_as_hex_string)
+
+
+def run_gdb(arch, *args):
+    path = tool_path(arch, "gdb", gdb_tool_path)
+    return run_tool(path, *args)
 
 
 def get_call_location(arch, elf_path, addr_as_hex_string):
@@ -218,11 +231,19 @@ def main():
                         help="Don't echo lines of input")
     parser.add_argument("--debug", "-D", action="store_true",
                         help="Print messages for debugging symbolize")
+    parser.add_argument("--addr2line", default=None,
+                        help="Path of addr2line program to use")
+    parser.add_argument("--gdb", default=None,
+                        help="Path of gdb program to use")
     parser.add_argument("app", nargs="?", help="Name of primary application")
     parser.set_defaults(echo=True)
     args = parser.parse_args()
     global debug_mode
     debug_mode = args.debug
+    global addr2line_tool_path
+    addr2line_tool_path = args.addr2line
+    global gdb_tool_path
+    gdb_tool_path = args.gdb
 
     zircon_build_dir = os.path.join(
         os.path.dirname(SCRIPT_DIR), "build-x64")
@@ -366,20 +387,20 @@ def main():
                             "#%s: %s" % (frame_num, call_loc))
                     if args.disassemble:
                         pc = int(off, 16)
-                        disassembly = run_tool(
-                            arch, "gdb", "--nx", "--batch", "-ex",
+                        disassembly = run_gdb(
+                            arch, "--nx", "--batch", "-ex",
                             "disassemble %#x" % pc, dso_full_path)
                         if disassembly:
                             for line in disassembly.splitlines():
                                 m = disasm_re.match(line)
                                 if m:
-                                    timestamp, addr, rest = m.groups()
+                                    addr, rest = m.groups()
                                     addr = int(addr, 16)
                                     if addr == pc:
                                         prefix = "=> "
                                     else:
                                         prefix = "   "
-                                        line = "%s%#.16x%s" % (prefix, bias + addr, rest)
+                                    line = "%s%#.16x%s" % (prefix, bias + addr, rest)
                                     processed_lines.append(line + "\n")
                     continue
                 else:
