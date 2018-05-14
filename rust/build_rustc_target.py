@@ -144,11 +144,12 @@ def main():
     if args.dep_data:
         for data_path in args.dep_data:
             dep_data = json.load(open(data_path))
+            crate = dep_data["crate_name"]
+            crate_underscore = crate.replace("-", "_")
             if dep_data["third_party"]:
-                crate = dep_data["crate_name"]
-                externs.append("%s=%s" % (crate, third_party_json["crates"][crate]["lib_path"]))
+                externs.append("%s=%s" % (crate_underscore, third_party_json["crates"][crate]["lib_path"]))
             else:
-                externs.append("%s=%s" % (dep_data["crate_name"], dep_data["lib_path"]))
+                externs.append("%s=%s" % (crate_underscore, dep_data["lib_path"]))
 
     # add externs to arguments
     for extern in externs:

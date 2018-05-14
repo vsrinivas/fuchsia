@@ -13,6 +13,12 @@ ROOT_PATH = os.path.abspath(__file__ + "/../../..")
 sys.path += [os.path.join(ROOT_PATH, "third_party", "pytoml")]
 import pytoml
 
+# Removes the (//path/to/crate) from the crate id "foo 0.1.0 (//path/to/crate)"
+# This is necessary in order to support locally-patched (mirrored) crates
+def truncate_crate_id(crate_id):
+    split_id = crate_id.split(" ")
+    return split_id[0] + " " + split_id[1]
+
 # Creates the directory containing the given file.
 def create_base_directory(file):
     path = os.path.dirname(file)
@@ -127,7 +133,7 @@ def main():
         data = json.loads(line)
         if "filenames" not in data:
             continue
-        crate_id = data["package_id"]
+        crate_id = truncate_crate_id(data["package_id"])
         assert len(data["filenames"]) == 1
         lib_path = data["filenames"][0]
         crate_name = data["target"]["name"]
@@ -137,9 +143,8 @@ def main():
         src_path = data["target"]["src_path"]
         # go from foo/bar/src/main.rs to foo/bar (where hopefully there is a Cargo.toml)
         cargo_toml_dir = os.path.abspath(os.path.join(os.path.dirname(src_path), os.pardir))
-        # parse "1.0.1" out of "foo 1.0.1 (....)"
+        # parse "1.0.1" out of "foo 1.0.1"
         crate_id_parts = crate_id.split(" ")
-        assert len(crate_id_parts) == 3, "crate_id was not three distinct elements: \"%s\"" % crate_id
         version = crate_id_parts[1]
         crate_id_to_info[crate_id] = {
             "crate_name": crate_name,
@@ -157,6 +162,7 @@ def main():
     for package in cargo_lock_toml["package"]:
         if package["name"] == "fuchsia-third-party":
             for crate_id in package["dependencies"]:
+                crate_id = truncate_crate_id(crate_id)
                 crate_info = crate_id_to_info[crate_id]
                 crate_name = crate_info["crate_name"]
                 crates[crate_name] = crate_info
