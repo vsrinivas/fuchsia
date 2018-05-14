@@ -23,9 +23,9 @@ MODULE_STATIC_LIBS := \
     system/ulib/runtime \
     system/ulib/sync \
 
-# This is a hack to deal with these functions needing to be compiled with
+# This separate library is a hack to deal with these functions needing to be compiled with
 # -fno-stack-protector
-MODULE_STATIC_LIBS += system/utest/core/threads/test-threads
+MODULE_STATIC_LIBS += system/utest/core/threads/thread-functions
 
 MODULE_LIBS := \
     system/ulib/unittest \

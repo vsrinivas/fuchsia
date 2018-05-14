@@ -17,7 +17,7 @@
 #include <runtime/thread.h>
 
 #include "register-set.h"
-#include "test-threads/threads.h"
+#include "thread-functions/thread-functions.h"
 
 static const char kThreadName[] = "test-thread";
 

@@ -12,7 +12,7 @@
 
 #include <runtime/thread.h>
 
-#include "threads.h"
+#include "thread-functions.h"
 
 void threads_test_sleep_fn(void* arg) {
     // Note: You shouldn't use C standard library functions from this thread.
