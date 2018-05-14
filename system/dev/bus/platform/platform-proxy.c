@@ -240,9 +240,62 @@ static zx_status_t pdev_scpi_get_sensor(void* ctx, const char* name,
     return status;
 }
 
+static zx_status_t pdev_scpi_get_dvfs_info(void* ctx, uint8_t power_domain,
+                                           scpi_opp_t* opps) {
+    platform_proxy_t* proxy = ctx;
+    pdev_req_t req = {
+        .op = PDEV_SCPI_GET_DVFS_INFO,
+        .scpi.power_domain = power_domain,
+    };
+
+    pdev_resp_t resp;
+
+    zx_status_t status =  platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp),
+                                           NULL, 0, NULL);
+    if (status == ZX_OK) {
+        memcpy(opps, &resp.scpi.opps, sizeof(scpi_opp_t));
+    }
+    return status;
+}
+
+static zx_status_t pdev_scpi_get_dvfs_idx(void* ctx, uint8_t power_domain,
+                                           uint16_t* idx) {
+    platform_proxy_t* proxy = ctx;
+    pdev_req_t req = {
+        .op = PDEV_SCPI_GET_DVFS_IDX,
+        .scpi.power_domain = power_domain,
+    };
+
+    pdev_resp_t resp;
+
+    zx_status_t status =  platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp),
+                                           NULL, 0, NULL);
+    if (status == ZX_OK) {
+        *idx = resp.scpi.idx;
+    }
+    return status;
+}
+
+static zx_status_t pdev_scpi_set_dvfs_idx(void* ctx, uint8_t power_domain,
+                                           uint16_t idx) {
+    platform_proxy_t* proxy = ctx;
+    pdev_req_t req = {
+        .op = PDEV_SCPI_SET_DVFS_IDX,
+        .scpi.power_domain = power_domain,
+        .scpi.idx = idx,
+    };
+
+    pdev_resp_t resp;
+    return platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp),
+                                           NULL, 0, NULL);
+}
+
 static scpi_protocol_ops_t scpi_ops = {
-    .get_sensor = pdev_scpi_get_sensor,
-    .get_sensor_value = pdev_scpi_get_sensor_value,
+    .get_sensor         = pdev_scpi_get_sensor,
+    .get_sensor_value   = pdev_scpi_get_sensor_value,
+    .get_dvfs_info      = pdev_scpi_get_dvfs_info,
+    .get_dvfs_idx       = pdev_scpi_get_dvfs_idx,
+    .set_dvfs_idx       = pdev_scpi_set_dvfs_idx,
 };
 
 static zx_status_t pdev_mailbox_send_cmd(void* ctx, mailbox_channel_t* channel,

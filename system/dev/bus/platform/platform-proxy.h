@@ -50,6 +50,9 @@ enum {
     // ZX_PROTOCOL_SCPI
     PDEV_SCPI_GET_SENSOR,
     PDEV_SCPI_GET_SENSOR_VALUE,
+    PDEV_SCPI_GET_DVFS_INFO,
+    PDEV_SCPI_GET_DVFS_IDX,
+    PDEV_SCPI_SET_DVFS_IDX,
 };
 
 // context for mailbox
@@ -60,9 +63,16 @@ typedef struct {
 
 // context for scpi
 typedef struct {
-    uint32_t sensor_id;
-    uint32_t sensor_value;
     union {
+        uint32_t sensor_id;
+        uint8_t power_domain;
+    };
+    union {
+        uint32_t sensor_value;
+        uint16_t idx;
+    };
+    union {
+        scpi_opp_t opps;
         char name[20];
     };
 } pdev_scpi_ctx_t;

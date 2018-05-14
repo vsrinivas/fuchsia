@@ -307,6 +307,36 @@ static zx_status_t pdev_rpc_scpi_get_sensor_value(platform_dev_t* dev,
     return scpi_get_sensor_value(&bus->scpi, sensor_id, sensor_value);
 }
 
+static zx_status_t pdev_rpc_scpi_get_dvfs_info(platform_dev_t* dev,
+                                               uint8_t power_domain,
+                                               scpi_opp_t* opps) {
+    platform_bus_t* bus = dev->bus;
+    if (!bus->scpi.ops) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return scpi_get_dvfs_info(&bus->scpi, power_domain, opps);
+}
+
+static zx_status_t pdev_rpc_scpi_get_dvfs_idx(platform_dev_t* dev,
+                                              uint8_t power_domain,
+                                              uint16_t* idx) {
+    platform_bus_t* bus = dev->bus;
+    if (!bus->scpi.ops) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return scpi_get_dvfs_idx(&bus->scpi, power_domain, idx);
+}
+
+static zx_status_t pdev_rpc_scpi_set_dvfs_idx(platform_dev_t* dev,
+                                              uint8_t power_domain,
+                                              uint16_t idx) {
+    platform_bus_t* bus = dev->bus;
+    if (!bus->scpi.ops) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return scpi_set_dvfs_idx(&bus->scpi, power_domain, idx);
+}
+
 static zx_status_t pdev_rpc_i2c_transact(platform_dev_t* dev, pdev_req_t* req, uint8_t* data,
                                         zx_handle_t channel) {
     platform_bus_t* bus = dev->bus;
@@ -426,6 +456,18 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
     case PDEV_SCPI_GET_SENSOR_VALUE:
         resp.status = pdev_rpc_scpi_get_sensor_value(dev, req->scpi.sensor_id,
                                                      &resp.scpi.sensor_value);
+        break;
+    case PDEV_SCPI_GET_DVFS_INFO:
+        resp.status = pdev_rpc_scpi_get_dvfs_info(dev, req->scpi.power_domain,
+                                                  &resp.scpi.opps);
+        break;
+    case PDEV_SCPI_GET_DVFS_IDX:
+        resp.status = pdev_rpc_scpi_get_dvfs_idx(dev, req->scpi.power_domain,
+                                                 &resp.scpi.idx);
+        break;
+    case PDEV_SCPI_SET_DVFS_IDX:
+        resp.status = pdev_rpc_scpi_set_dvfs_idx(dev, req->scpi.power_domain,
+                                                 req->scpi.idx);
         break;
     case PDEV_I2C_GET_MAX_TRANSFER:
         resp.status = i2c_impl_get_max_transfer_size(&dev->bus->i2c, req->index,

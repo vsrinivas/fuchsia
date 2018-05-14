@@ -69,13 +69,101 @@ static zx_status_t aml_scpi_execute_cmd(aml_scpi_t* scpi,
     channel.rx_size = rx_size;
 
     status = mailbox_send_cmd(&scpi->mailbox, &channel, &mdata);
-    if (status != ZX_OK) {
+    uint32_t mailbox_status = *(uint32_t*)(rx_buf);
+    if (status != ZX_OK || mailbox_status != 0) {
         SCPI_ERROR("mailbox_send_cmd failed - error status %d\n", status);
         return status;
     }
     return ZX_OK;
 }
 
+static zx_status_t aml_scpi_get_dvfs_info(void* ctx, uint8_t power_domain, scpi_opp_t* opps) {
+    aml_scpi_t* scpi = ctx;
+    struct {
+        uint32_t                status;
+        uint8_t                 reserved;
+        uint8_t                 operating_points;
+        uint16_t                latency;
+        scpi_opp_entry_t        opp[MAX_DVFS_OPPS];
+    } __PACKED aml_dvfs_info;
+
+    if (!opps || power_domain >= MAX_DVFS_DOMAINS) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    zx_status_t status = aml_scpi_execute_cmd(scpi,
+                                              &aml_dvfs_info, sizeof(aml_dvfs_info),
+                                              &power_domain, sizeof(power_domain),
+                                              SCPI_CMD_GET_DVFS_INFO, SCPI_CL_DVFS);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    opps->count         = aml_dvfs_info.operating_points;
+    opps->latency       = aml_dvfs_info.latency;
+
+    if (opps->count > MAX_DVFS_OPPS) {
+        SCPI_ERROR("Number of operating_points greater than MAX_DVFS_OPPS\n");
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    SCPI_INFO("Cluster %u details\n", power_domain);
+    SCPI_INFO("Number of operating_points %u\n", aml_dvfs_info.operating_points);
+    SCPI_INFO("latency %u uS\n", aml_dvfs_info.latency);
+
+    for (uint32_t i=0; i<opps->count; i++) {
+        opps->opp[i].freq_hz = aml_dvfs_info.opp[i].freq_hz;
+        opps->opp[i].volt_mv = aml_dvfs_info.opp[i].volt_mv;
+        SCPI_INFO("Freq %.2f Ghz\n", (opps->opp[i].freq_hz)/(double)1000000000);
+        SCPI_INFO("Voltage %.2f V\n", (opps->opp[i].volt_mv)/(double)1000);
+    }
+    return ZX_OK;
+}
+
+static zx_status_t aml_scpi_get_dvfs_idx(void *ctx, uint8_t power_domain, uint16_t* idx) {
+    aml_scpi_t* scpi = ctx;
+    struct {
+        uint32_t status;
+        uint8_t idx;
+    } __PACKED aml_dvfs_idx_info;
+
+    if (!idx || power_domain >= MAX_DVFS_DOMAINS) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    zx_status_t status = aml_scpi_execute_cmd(scpi,
+                                              &aml_dvfs_idx_info, sizeof(aml_dvfs_idx_info),
+                                              &power_domain, sizeof(power_domain),
+                                              SCPI_CMD_GET_DVFS, SCPI_CL_DVFS);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    *idx = aml_dvfs_idx_info.idx;
+
+    SCPI_ERROR("Current Operation point %x\n", aml_dvfs_idx_info.idx);
+    return ZX_OK;
+}
+
+static zx_status_t aml_scpi_set_dvfs_idx(void *ctx, uint8_t power_domain, uint16_t idx) {
+    aml_scpi_t* scpi = ctx;
+    struct {
+        uint8_t power_domain;
+        uint16_t idx;
+    } __PACKED aml_dvfs_idx_info;
+
+    if (power_domain >= MAX_DVFS_DOMAINS) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    aml_dvfs_idx_info.power_domain  = power_domain;
+    aml_dvfs_idx_info.idx           = idx;
+
+    return aml_scpi_execute_cmd(scpi,
+                                NULL, 0,
+                                &aml_dvfs_idx_info, sizeof(aml_dvfs_idx_info),
+                                SCPI_CMD_SET_DVFS, SCPI_CL_DVFS);
+}
 
 static zx_status_t aml_scpi_get_sensor_value(void* ctx, uint32_t sensor_id,
                                       uint32_t* sensor_value) {
@@ -159,6 +247,9 @@ static zx_protocol_device_t aml_scpi_device_protocol = {
 static scpi_protocol_ops_t scpi_ops = {
     .get_sensor         = aml_scpi_get_sensor,
     .get_sensor_value   = aml_scpi_get_sensor_value,
+    .get_dvfs_info      = aml_scpi_get_dvfs_info,
+    .get_dvfs_idx       = aml_scpi_get_dvfs_idx,
+    .set_dvfs_idx       = aml_scpi_set_dvfs_idx,
 };
 
 static zx_status_t aml_scpi_bind(void* ctx, zx_device_t* parent) {
