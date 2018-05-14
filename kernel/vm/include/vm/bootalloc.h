@@ -7,8 +7,8 @@
 
 #pragma once
 
-#include <zircon/compiler.h>
 #include <sys/types.h>
+#include <zircon/compiler.h>
 
 // simple boot time allocator, used to carve off memory before
 // the VM is completely up and running
@@ -22,4 +22,3 @@ extern paddr_t boot_alloc_start;
 extern paddr_t boot_alloc_end;
 
 } // extern "C"
-

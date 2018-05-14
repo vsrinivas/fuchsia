@@ -454,7 +454,7 @@ bool VmAddressRegion::CheckGapLocked(const ChildList::iterator& prev,
 
     // compute the starting address of the gap
     if (prev.IsValid()) {
-        if (add_overflow(prev->base(),prev->size(), &gap_beg) ||
+        if (add_overflow(prev->base(), prev->size(), &gap_beg) ||
             add_overflow(gap_beg, min_gap, &gap_beg)) {
             goto not_found;
         }

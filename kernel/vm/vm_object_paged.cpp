@@ -479,7 +479,7 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
     // TODO: remove once pmm returns zeroed pages
     ZeroPage(pa);
 
-    // if ARM and not fully cached, clean/invalidate the page after zeroing it
+// if ARM and not fully cached, clean/invalidate the page after zeroing it
 #if ARCH_ARM64
     if (cache_policy_ != ARCH_MMU_FLAG_CACHED) {
         arch_clean_invalidate_cache_range((addr_t)paddr_to_physmap(pa), PAGE_SIZE);
@@ -840,7 +840,7 @@ zx_status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, bool w
 
     // are we uncached? abort in this case
     if (cache_policy_ != ARCH_MMU_FLAG_CACHED)
-        return  ZX_ERR_BAD_STATE;
+        return ZX_ERR_BAD_STATE;
 
     // test if in range
     uint64_t end_offset;

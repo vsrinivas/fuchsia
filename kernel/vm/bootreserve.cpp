@@ -21,7 +21,7 @@ static reserve_range_t res[NUM_RESERVES];
 static size_t res_idx;
 
 void boot_reserve_init() {
-    /* add the kernel to the boot reserve list */
+    // add the kernel to the boot reserve list
     boot_reserve_add_range(get_kernel_base_phys(), get_kernel_size());
 }
 

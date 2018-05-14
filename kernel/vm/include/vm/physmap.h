@@ -37,16 +37,16 @@ static inline bool is_physmap_addr(const void* addr) {
 static inline bool is_physmap_phys_addr(paddr_t pa) {
     return (
 #if PHYSMAP_BASE_PHYS != 0
-            pa >= PHYSMAP_BASE_PHYS &&
+        pa >= PHYSMAP_BASE_PHYS &&
 #endif
-            pa - PHYSMAP_BASE_PHYS < PHYSMAP_SIZE);
+        pa - PHYSMAP_BASE_PHYS < PHYSMAP_SIZE);
 }
 
 // physical to virtual, returning pointer in the big kernel map
 static inline void* paddr_to_physmap(paddr_t pa) {
     DEBUG_ASSERT_MSG(is_physmap_phys_addr(pa), "paddr %#" PRIxPTR "\n", pa);
 
-    return (void *)(pa - PHYSMAP_BASE_PHYS + PHYSMAP_BASE);
+    return (void*)(pa - PHYSMAP_BASE_PHYS + PHYSMAP_BASE);
 }
 
 // given a pointer into the physmap, reverse back to a physical address
@@ -59,4 +59,3 @@ static inline paddr_t physmap_to_paddr(const void* addr) {
 __END_CDECLS
 
 #endif // !__ASSEMBLER__
-

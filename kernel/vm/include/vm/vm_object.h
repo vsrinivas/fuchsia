@@ -34,7 +34,6 @@ public:
     virtual void OnOneChild() = 0;
 };
 
-
 // The base vm object that holds a range of bytes of data
 //
 // Can be created without mapping and used as a container of data, or mappable
@@ -218,7 +217,8 @@ public:
 protected:
     // private constructor (use Create())
     explicit VmObject(fbl::RefPtr<VmObject> parent);
-    VmObject() : VmObject(nullptr) {}
+    VmObject()
+        : VmObject(nullptr) {}
 
     // private destructor, only called from refptr
     virtual ~VmObject();

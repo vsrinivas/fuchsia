@@ -12,9 +12,9 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <trace.h>
-#include <vm/vm.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
+#include <vm/vm.h>
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
@@ -71,4 +71,3 @@ paddr_t boot_alloc_page_phys() {
 
     return ptr;
 }
-

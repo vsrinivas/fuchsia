@@ -30,7 +30,7 @@ typedef struct pmm_arena_info {
 zx_status_t pmm_add_arena(const pmm_arena_info_t* arena);
 
 // flags for allocation routines below
-#define PMM_ALLOC_FLAG_ANY    (0x0) // no restrictions on which arena to allocate from
+#define PMM_ALLOC_FLAG_ANY (0x0)    // no restrictions on which arena to allocate from
 #define PMM_ALLOC_FLAG_LO_MEM (0x1) // allocate only from arenas marked LO_MEM
 
 // Allocate count pages of physical memory, adding to the tail of the passed list.

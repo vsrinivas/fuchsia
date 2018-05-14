@@ -419,6 +419,7 @@ public:
     void Abort() {
         aborted_ = true;
     }
+
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmMappingCoalescer);
 
@@ -430,7 +431,7 @@ private:
 };
 
 VmMappingCoalescer::VmMappingCoalescer(VmMapping* mapping, vaddr_t base)
-    : mapping_(mapping), base_(base), count_(0), aborted_(false) { }
+    : mapping_(mapping), base_(base), count_(0), aborted_(false) {}
 
 VmMappingCoalescer::~VmMappingCoalescer() {
     // Make sure we've flushed or aborted

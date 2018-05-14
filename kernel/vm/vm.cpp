@@ -50,8 +50,8 @@ void MarkPagesInUsePhys(paddr_t pa, size_t len) {
 
     auto allocated = pmm_alloc_range(pa, len / PAGE_SIZE, &list);
     ASSERT_MSG(allocated == len / PAGE_SIZE,
-            "failed to reserve memory range [%#" PRIxPTR ", %#" PRIxPTR "]\n",
-            pa, pa + len - 1);
+               "failed to reserve memory range [%#" PRIxPTR ", %#" PRIxPTR "]\n",
+               pa, pa + len - 1);
 
     // mark all of the pages we allocated as WIRED
     vm_page_t* p;

@@ -70,7 +70,7 @@ size_t pmm_alloc_range(paddr_t address, size_t count, list_node* list) {
 
 size_t pmm_alloc_contiguous(size_t count, uint alloc_flags, uint8_t alignment_log2, paddr_t* pa,
                             list_node* list) {
-    /* if we're called with a single page, just fall through to the regular allocation routine */
+    // if we're called with a single page, just fall through to the regular allocation routine
     if (unlikely(count == 1 && alignment_log2 == PAGE_SIZE_SHIFT)) {
         return pmm_node.AllocPages(count, alloc_flags, list);
     }
