@@ -25,7 +25,6 @@
 
 #ifndef __ASSEMBLER__
 
-#include <arch/spinlock.h>
 #include <arch/x86.h>
 #include <arch/x86/idt.h>
 #include <assert.h>

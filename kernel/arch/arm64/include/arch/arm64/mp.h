@@ -7,7 +7,6 @@
 #pragma once
 
 #include <arch/arm64.h>
-#include <arch/spinlock.h>
 #include <kernel/align.h>
 #include <kernel/cpu.h>
 #include <reg.h>

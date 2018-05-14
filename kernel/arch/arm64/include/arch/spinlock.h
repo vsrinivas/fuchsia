@@ -8,6 +8,7 @@
 #pragma once
 
 #include <arch/arm64/interrupt.h>
+#include <arch/arm64/mp.h>
 #include <stdbool.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
@@ -33,12 +34,12 @@ static inline void arch_spin_lock_init(spin_lock_t* lock) {
     *lock = SPIN_LOCK_INITIAL_VALUE;
 }
 
-static inline bool arch_spin_lock_held(spin_lock_t* lock) {
-    return __atomic_load_n(&lock->value, __ATOMIC_RELAXED) != 0;
-}
-
 static inline uint arch_spin_lock_holder_cpu(spin_lock_t* lock) {
     return (uint)__atomic_load_n(&lock->value, __ATOMIC_RELAXED) - 1;
+}
+
+static inline bool arch_spin_lock_held(spin_lock_t* lock) {
+    return arch_spin_lock_holder_cpu(lock) == arch_curr_cpu_num();
 }
 
 enum {

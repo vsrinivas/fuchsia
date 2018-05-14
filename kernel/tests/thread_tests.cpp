@@ -509,13 +509,31 @@ static void join_test(void) {
     printf("thread_join returns err %d, retval %d (should be 0 and 55)\n", err, ret);
 }
 
+struct lock_pair_t {
+    spin_lock_t first = SPIN_LOCK_INITIAL_VALUE;
+    spin_lock_t second = SPIN_LOCK_INITIAL_VALUE;
+};
+
+// Acquires lock on "second" and holds it until it sees that "first" is released.
+static int hold_and_release(void* arg) {
+    lock_pair_t* pair = reinterpret_cast<lock_pair_t*>(arg);
+    ASSERT(pair != nullptr);
+    spin_lock_saved_state_t state;
+    spin_lock_irqsave(&pair->second, state);
+    while (spin_lock_holder_cpu(&pair->first) != UINT_MAX) {
+        thread_yield();
+    }
+    spin_unlock_irqrestore(&pair->second, state);
+    return 0;
+}
+
 static void spinlock_test(void) {
     spin_lock_saved_state_t state;
     spin_lock_t lock;
 
     spin_lock_init(&lock);
 
-    // verify basic functionality (single core)
+    // Verify basic functionality (single core).
     printf("testing spinlock:\n");
     ASSERT(!spin_lock_held(&lock));
     ASSERT(!arch_ints_disabled());
@@ -526,6 +544,30 @@ static void spinlock_test(void) {
     spin_unlock_irqrestore(&lock, state);
     ASSERT(!spin_lock_held(&lock));
     ASSERT(!arch_ints_disabled());
+
+    // Verify slightly more advanced functionality that requires multiple cores.
+    cpu_mask_t online = mp_get_online_mask();
+    if (!online || ispow2(online)) {
+        printf("skipping rest of spinlock_test, not enough online cpus\n");
+        return;
+    }
+
+    // Hold the first lock, then create a thread and wait for it to acquire the lock.
+    lock_pair_t pair;
+    spin_lock_irqsave(&pair.first, state);
+    thread_t* holder_thread = thread_create("hold_and_release", &hold_and_release, &pair,
+                                            DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
+    ASSERT(holder_thread != nullptr);
+    thread_resume(holder_thread);
+    while (spin_lock_holder_cpu(&pair.second) == UINT_MAX) {
+        thread_yield();
+    }
+
+    // See that from our perspective "second" is not held.
+    ASSERT(!spin_lock_held(&pair.second));
+    spin_unlock_irqrestore(&pair.first, state);
+    thread_join(holder_thread, NULL, ZX_TIME_INFINITE);
+
     printf("seems to work\n");
 }
 
