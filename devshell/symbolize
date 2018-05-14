@@ -10,4 +10,4 @@ fx-config-read
 
 # TODO(jeffbrown): Fix symbolize to support arch other than x64
 exec "${FUCHSIA_DIR}/zircon/scripts/symbolize" \
-      --build-dir "${FUCHSIA_BUILD_DIR}" -- "$@"
+      --build-dir "${FUCHSIA_BUILD_DIR}" "$@"
