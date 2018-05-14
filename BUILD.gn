@@ -27,7 +27,6 @@ group("host_tools") {
 group("host_tests") {
   deps = [
     "bin/zxdb:unittests($host_toolchain)",
-    "lib/overnet:overnet_unittests($host_toolchain)",
   ]
   testonly = true
 }

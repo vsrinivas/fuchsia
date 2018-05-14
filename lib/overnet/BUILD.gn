@@ -26,6 +26,13 @@ source_set("overnet") {
   ]
 }
 
+group("host_tests") {
+  deps = [
+    ":overnet_unittests($host_toolchain)",
+  ]
+  testonly = true
+}
+
 executable("overnet_unittests") {
   testonly = true
 
