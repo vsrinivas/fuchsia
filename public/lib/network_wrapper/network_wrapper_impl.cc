@@ -151,8 +151,7 @@ class NetworkWrapperImpl::RunningRequest {
 };
 
 NetworkWrapperImpl::NetworkWrapperImpl(
-    async_t* async,
-    std::unique_ptr<backoff::Backoff> backoff,
+    async_t* async, std::unique_ptr<backoff::Backoff> backoff,
     std::function<network::NetworkServicePtr()> network_service_factory)
     : backoff_(std::move(backoff)),
       network_service_factory_(std::move(network_service_factory)),

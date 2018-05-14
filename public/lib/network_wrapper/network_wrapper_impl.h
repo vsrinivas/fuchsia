@@ -17,8 +17,7 @@ namespace network_wrapper {
 class NetworkWrapperImpl : public NetworkWrapper {
  public:
   NetworkWrapperImpl(
-      async_t* async,
-      std::unique_ptr<backoff::Backoff> backoff,
+      async_t* async, std::unique_ptr<backoff::Backoff> backoff,
       std::function<network::NetworkServicePtr()> network_service_factory);
   ~NetworkWrapperImpl() override;
 

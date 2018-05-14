@@ -23,9 +23,7 @@ network::URLRequest* FakeNetworkWrapper::GetRequest() {
   return request_received_.get();
 }
 
-void FakeNetworkWrapper::ResetRequest() {
-  request_received_.reset();
-}
+void FakeNetworkWrapper::ResetRequest() { request_received_.reset(); }
 
 void FakeNetworkWrapper::SetResponse(network::URLResponse response) {
   response_to_return_ = fidl::MakeOptional(std::move(response));
