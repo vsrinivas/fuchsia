@@ -30,10 +30,10 @@
 
 #define LOCAL_TRACE 0
 
-/* a global state structure, aligned on cpu cache line to minimize aliasing */
+// a global state structure, aligned on cpu cache line to minimize aliasing
 struct mp_state mp __CPU_ALIGN;
 
-/* Helpers used for implementing mp_sync */
+// Helpers used for implementing mp_sync
 struct mp_sync_context;
 static void mp_sync_task(void* context);
 
@@ -57,14 +57,14 @@ void mp_reschedule(cpu_mask_t mask, uint flags) {
     if (mask == 0)
         return;
 
-    /* mask out cpus that are not active and the local cpu */
+    // mask out cpus that are not active and the local cpu
     mask &= mp.active_cpus;
     mask &= ~cpu_num_to_mask(local_cpu);
 
-    /* this is generally a bad state, though this may be too aggressive */
+    // this is generally a bad state, though this may be too aggressive
     DEBUG_ASSERT(mask != 0);
 
-    /* mask out cpus that are currently running realtime code */
+    // mask out cpus that are currently running realtime code
     if ((flags & MP_RESCHEDULE_FLAG_REALTIME) == 0) {
         mask &= ~mp.realtime_cpus;
     }
@@ -81,15 +81,15 @@ void mp_reschedule(cpu_mask_t mask, uint flags) {
 struct mp_sync_context {
     mp_sync_task_t task;
     void* task_context;
-    /* Mask of which CPUs need to finish the task */
+    // Mask of which CPUs need to finish the task
     volatile cpu_mask_t outstanding_cpus;
 };
 
 static void mp_sync_task(void* raw_context) {
     auto context = reinterpret_cast<mp_sync_context*>(raw_context);
     context->task(context->task_context);
-    /* use seq-cst atomic to ensure this update is not seen before the
-     * side-effects of context->task */
+    // use seq-cst atomic to ensure this update is not seen before the
+    // side-effects of context->task
     atomic_and((int*)&context->outstanding_cpus, ~cpu_num_to_mask(arch_curr_cpu_num()));
     arch_spinloop_signal();
 }
@@ -111,28 +111,28 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
     if (target == MP_IPI_TARGET_ALL) {
         mask = mp_get_online_mask();
     } else if (target == MP_IPI_TARGET_ALL_BUT_LOCAL) {
-        /* targeting all other CPUs but the current one is hazardous
-         * if the local CPU may be changed underneath us */
+        // targeting all other CPUs but the current one is hazardous
+        // if the local CPU may be changed underneath us
         DEBUG_ASSERT(arch_ints_disabled());
         mask = mp_get_online_mask() & ~cpu_num_to_mask(arch_curr_cpu_num());
     }
 
-    /* Mask any offline CPUs from target list */
+    // Mask any offline CPUs from target list
     mask &= mp_get_online_mask();
 
-    /* disable interrupts so our current CPU doesn't change */
+    // disable interrupts so our current CPU doesn't change
     spin_lock_saved_state_t irqstate;
     arch_interrupt_save(&irqstate, SPIN_LOCK_FLAG_INTERRUPTS);
     smp_mb();
 
     const uint local_cpu = arch_curr_cpu_num();
 
-    /* remove self from target lists, since no need to IPI ourselves */
+    // remove self from target lists, since no need to IPI ourselves
     bool targetting_self = !!(mask & cpu_num_to_mask(local_cpu));
     mask &= ~cpu_num_to_mask(local_cpu);
 
-    /* create tasks to enqueue (we need one per target due to each containing
-     * a linked list node */
+    // create tasks to enqueue (we need one per target due to each containing
+    // a linked list node
     struct mp_sync_context sync_context = {
         .task = task,
         .task_context = context,
@@ -145,7 +145,7 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
         sync_tasks[i].context = &sync_context;
     }
 
-    /* enqueue tasks */
+    // enqueue tasks
     spin_lock(&mp.ipi_task_lock);
     cpu_mask_t remaining = mask;
     uint cpu_id = 0;
@@ -158,7 +158,7 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
     }
     spin_unlock(&mp.ipi_task_lock);
 
-    /* let CPUs know to begin executing */
+    // let CPUs know to begin executing
     __UNUSED zx_status_t status = arch_mp_send_ipi(MP_IPI_TARGET_MASK, mask, MP_IPI_GENERIC);
     DEBUG_ASSERT(status == ZX_OK);
 
@@ -170,14 +170,14 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
     }
     smp_mb();
 
-    /* we can take interrupts again once we've executed our task */
+    // we can take interrupts again once we've executed our task
     arch_interrupt_restore(irqstate, SPIN_LOCK_FLAG_INTERRUPTS);
 
     bool ints_disabled = arch_ints_disabled();
-    /* wait for all other CPUs to be done with the context */
+    // wait for all other CPUs to be done with the context
     while (1) {
-        /* See comment in mp_unplug_trampoline about related CPU hotplug
-         * guarantees. */
+        // See comment in mp_unplug_trampoline about related CPU hotplug
+        // guarantees.
         cpu_mask_t outstanding = atomic_load_relaxed(
             (int*)&sync_context.outstanding_cpus);
         cpu_mask_t online = mp_get_online_mask();
@@ -185,11 +185,11 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
             break;
         }
 
-        /* If interrupts are still disabled, we need to attempt to process any
-         * tasks queued for us in order to prevent deadlock. */
+        // If interrupts are still disabled, we need to attempt to process any
+        // tasks queued for us in order to prevent deadlock.
         if (ints_disabled) {
-            /* Optimistically check if our task list has work without the lock.
-             * mp_mbx_generic_irq will take the lock and check again */
+            // Optimistically check if our task list has work without the lock.
+            // mp_mbx_generic_irq will take the lock and check again.
             if (!list_is_empty(&mp.ipi_task_list[local_cpu])) {
                 bool previous_in_int_handler = arch_in_int_handler();
                 arch_set_in_int_handler(true);
@@ -203,11 +203,11 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
     }
     smp_mb();
 
-    /* make sure the sync_tasks aren't in lists anymore, since they're
-     * stack allocated */
+    // make sure the sync_tasks aren't in lists anymore, since they're
+    // stack allocated
     spin_lock_irqsave(&mp.ipi_task_lock, irqstate);
     for (uint i = 0; i < num_cpus; ++i) {
-        /* If a task is still around, it's because the CPU went offline. */
+        // If a task is still around, it's because the CPU went offline.
         if (list_in_list(&sync_tasks[i].node)) {
             list_delete(&sync_tasks[i].node);
         }
@@ -217,8 +217,8 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
 
 static void mp_unplug_trampoline(void) TA_REQ(thread_lock) __NO_RETURN;
 static void mp_unplug_trampoline(void) {
-    /* We're still holding the thread lock from the reschedule that took us
-     * here. */
+    // We're still holding the thread lock from the reschedule that took us
+    // here.
 
     thread_t* ct = get_current_thread();
     auto unplug_done = reinterpret_cast<event_t*>(ct->arg);
@@ -226,28 +226,27 @@ static void mp_unplug_trampoline(void) {
     cpu_num_t cpu_num = arch_curr_cpu_num();
     sched_transition_off_cpu(cpu_num);
 
-    /* Note that before this invocation, but after we stopped accepting
-     * interrupts, we may have received a synchronous task to perform.
-     * Clearing this flag will cause the mp_sync_exec caller to consider
-     * this CPU done.  If this CPU comes back online before other all
-     * of the other CPUs finish their work (very unlikely, since tasks
-     * should be quick), then this CPU may execute the task. */
+    // Note that before this invocation, but after we stopped accepting
+    // interrupts, we may have received a synchronous task to perform.
+    // Clearing this flag will cause the mp_sync_exec caller to consider
+    // this CPU done.  If this CPU comes back online before other all
+    // of the other CPUs finish their work (very unlikely, since tasks
+    // should be quick), then this CPU may execute the task.
     mp_set_curr_cpu_online(false);
 
     spin_unlock(&thread_lock);
 
-    /* do *not* enable interrupts, we want this CPU to never receive another
-     * interrupt */
+    // do *not* enable interrupts, we want this CPU to never receive another
+    // interrupt
 
-    /* flush all of our caches */
+    // flush all of our caches
     arch_flush_state_and_halt(unplug_done);
 }
 
-/* Hotplug the given cpus.  Blocks until the CPUs are up, or a failure is
- * detected.
- *
- * This should be called in a thread context
- */
+// Hotplug the given cpus.  Blocks until the CPUs are up, or a failure is
+// detected.
+//
+// This should be called in a thread context
 zx_status_t mp_hotplug_cpu_mask(cpu_mask_t cpu_mask) {
     DEBUG_ASSERT(!arch_ints_disabled());
 
@@ -277,16 +276,15 @@ cleanup_mutex:
 
 // Unplug a single CPU.  Must be called while hodling the hotplug lock
 static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id) {
-    /* Create a thread for the unplug.  We will cause the target CPU to
-     * context switch to this thread.  After this happens, it should no
-     * longer be accessing system state and can be safely shut down.
-     *
-     * This thread is pinned to the target CPU and set to run with the
-     * highest priority.  This should cause it to pick up the thread
-     * immediately (or very soon, if for some reason there is another
-     * HIGHEST_PRIORITY task scheduled in between when we resume the
-     * thread and when the CPU is woken up).
-     */
+    // Create a thread for the unplug.  We will cause the target CPU to
+    // context switch to this thread.  After this happens, it should no
+    // longer be accessing system state and can be safely shut down.
+    //
+    // This thread is pinned to the target CPU and set to run with the
+    // highest priority.  This should cause it to pick up the thread
+    // immediately (or very soon, if for some reason there is another
+    // HIGHEST_PRIORITY task scheduled in between when we resume the
+    // thread and when the CPU is woken up).
     event_t unplug_done = EVENT_INITIAL_VALUE(unplug_done, false, 0);
     thread_t* t = thread_create_etc(
         NULL,
@@ -305,9 +303,9 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id) {
         return status;
     }
 
-    /* Pin to the target CPU */
+    // Pin to the target CPU
     thread_set_cpu_affinity(t, cpu_num_to_mask(cpu_id));
-    /* Set real time to cancel the pre-emption timer */
+    // Set real time to cancel the pre-emption timer
     thread_set_real_time(t);
 
     status = thread_detach_and_resume(t);
@@ -315,37 +313,36 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id) {
         goto cleanup_thread;
     }
 
-    /* Wait for the unplug thread to get scheduled on the target */
+    // Wait for the unplug thread to get scheduled on the target
     do {
         status = event_wait(&unplug_done);
     } while (status < 0);
 
-    /* Now that the CPU is no longer processing tasks, move all of its timers */
+    // Now that the CPU is no longer processing tasks, move all of its timers
     timer_transition_off_cpu(cpu_id);
-    /* Move the CPU's DPCs to the current CPU. */
+    // Move the CPU's DPCs to the current CPU.
     dpc_transition_off_cpu(cpu_id);
 
     status = platform_mp_cpu_unplug(cpu_id);
     if (status != ZX_OK) {
-        /* Do not cleanup the unplug thread in this case.  We have successfully
-         * unplugged the CPU from the scheduler's perspective, but the platform
-         * may have failed to shut down the CPU */
+        // Do not cleanup the unplug thread in this case.  We have successfully
+        // unplugged the CPU from the scheduler's perspective, but the platform
+        // may have failed to shut down the CPU
         return status;
     }
 
-    /* Fall through.  Since the thread is scheduled, it should not be in any
-     * queues.  Since the CPU running this thread is now shutdown, we can just
-     * erase the thread's existence. */
+    // Fall through.  Since the thread is scheduled, it should not be in any
+    // queues.  Since the CPU running this thread is now shutdown, we can just
+    // erase the thread's existence.
 cleanup_thread:
     thread_forget(t);
     return status;
 }
 
-/* Unplug the given cpus.  Blocks until the CPUs are removed.  Partial
- * failure may occur (in which some CPUs are removed but not others).
- *
- * This should be called in a thread context
- */
+// Unplug the given cpus.  Blocks until the CPUs are removed.  Partial
+// failure may occur (in which some CPUs are removed but not others).
+//
+// This should be called in a thread context
 zx_status_t mp_unplug_cpu_mask(cpu_mask_t cpu_mask) {
     DEBUG_ASSERT(!arch_ints_disabled());
 

@@ -104,7 +104,7 @@ static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags) {
         goto usage;
     }
 
-    /* reschedule to let debuglog potentially run */
+    // reschedule to let debuglog potentially run
     if (!(flags & CMD_FLAG_PANIC))
         thread_reschedule();
 
@@ -143,13 +143,13 @@ static void threadload(timer_t* t, zx_time_t now, void* arg) {
            " ints (hw  tmr tmr_cb)"
            " ipi (rs  gen)\n");
     for (uint i = 0; i < SMP_MAX_CPUS; i++) {
-        /* dont display time for inactive cpus */
+        // dont display time for inactive cpus
         if (!mp_is_cpu_active(i))
             continue;
 
         zx_duration_t idle_time = percpu[i].stats.idle_time;
 
-        /* if the cpu is currently idle, add the time since it went idle up until now to the idle counter */
+        // if the cpu is currently idle, add the time since it went idle up until now to the idle counter
         bool is_idle = !!mp_is_cpu_idle(i);
         if (is_idle) {
             idle_time += current_time() - percpu[i].idle_thread.last_started_running;
@@ -185,7 +185,7 @@ static void threadload(timer_t* t, zx_time_t now, void* arg) {
 
     timer_set(t, now + ZX_SEC(1), TIMER_SLACK_CENTER, ZX_MSEC(10), &threadload, NULL);
 
-    /* reschedule here to allow the debuglog a chance to run */
+    // reschedule here to allow the debuglog a chance to run
     thread_preempt_set_pending();
 }
 

@@ -202,7 +202,7 @@ void timer_set(timer_t* timer, zx_time_t deadline,
 
     bool currently_active = (timer->active_cpu == (int)cpu);
     if (unlikely(currently_active)) {
-        /* the timer is active on our own cpu, we must be inside the callback */
+        // the timer is active on our own cpu, we must be inside the callback
         if (timer->cancel)
             goto out;
     } else if (unlikely(timer->active_cpu >= 0)) {
@@ -221,7 +221,7 @@ void timer_set(timer_t* timer, zx_time_t deadline,
     insert_timer_in_queue(cpu, timer, early_slack, late_slack);
 
     if (list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node) == timer) {
-        /* we just modified the head of the timer queue */
+        // we just modified the head of the timer queue
         LTRACEF("setting new timer for %" PRIu64 " nsecs\n", deadline);
         platform_set_oneshot_timer(deadline);
     }
@@ -230,12 +230,11 @@ out:
     spin_unlock_irqrestore(&timer_lock, state);
 }
 
-/* similar to timer_set_oneshot, with additional features/constraints:
- * - will reset a currently active timer
- * - must be called with interrupts disabled
- * - must be running on the cpu that the timer is set to fire on (if currently set)
- * - cannot be called from the timer itself
- */
+// similar to timer_set_oneshot, with additional features/constraints:
+// - will reset a currently active timer
+// - must be called with interrupts disabled
+// - must be running on the cpu that the timer is set to fire on (if currently set)
+// - cannot be called from the timer itself
 void timer_reset_oneshot_local(timer_t* timer, zx_time_t deadline, timer_callback callback, void* arg) {
     LTRACEF("timer %p, deadline %" PRIu64 ", callback %p, arg %p\n", timer, deadline, callback, arg);
 
@@ -244,18 +243,18 @@ void timer_reset_oneshot_local(timer_t* timer, zx_time_t deadline, timer_callbac
 
     uint cpu = arch_curr_cpu_num();
 
-    /* no need to disable interrupts when acquiring this lock */
+    // no need to disable interrupts when acquiring this lock
     spin_lock(&timer_lock);
 
     if (unlikely(timer->active_cpu >= 0)) {
         panic("timer %p currently active\n", timer);
     }
 
-    /* remove it from the queue if it was present */
+    // remove it from the queue if it was present
     if (list_in_list(&timer->node))
         list_delete(&timer->node);
 
-    /* set up the structure */
+    // set up the structure
     timer->scheduled_time = deadline;
     timer->slack = 0;
     timer->callback = callback;
@@ -268,7 +267,7 @@ void timer_reset_oneshot_local(timer_t* timer, zx_time_t deadline, timer_callbac
     insert_timer_in_queue(cpu, timer, 0u, 0u);
 
     if (list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node) == timer) {
-        /* we just modified the head of the timer queue */
+        // we just modified the head of the timer queue
         LTRACEF("setting new timer for %" PRIu64 " nsecs\n", deadline);
         platform_set_oneshot_timer(deadline);
     }
@@ -284,42 +283,42 @@ bool timer_cancel(timer_t* timer) {
 
     uint cpu = arch_curr_cpu_num();
 
-    /* mark the timer as canceled */
+    // mark the timer as canceled
     timer->cancel = true;
     smp_mb();
 
-    /* wake up any spinners on the cancel signal */
+    // wake up any spinners on the cancel signal
     arch_spinloop_signal();
 
-    /* see if we're trying to cancel the timer we're currently in the middle of handling */
+    // see if we're trying to cancel the timer we're currently in the middle of handling
     if (unlikely(timer->active_cpu == (int)cpu)) {
-        /* zero it out */
+        // zero it out
         timer->callback = NULL;
         timer->arg = NULL;
 
-        /* we're done, so return back to the callback */
+        // we're done, so return back to the callback
         spin_unlock_irqrestore(&timer_lock, state);
         return false;
     }
 
     bool callback_not_running;
 
-    /* if the timer is in a queue, remove it and adjust hardware timers if needed */
+    // if the timer is in a queue, remove it and adjust hardware timers if needed
     if (list_in_list(&timer->node)) {
         callback_not_running = true;
 
-        /* save a copy of the old head of the queue */
+        // save a copy of the old head of the queue
         timer_t* oldhead = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
 
-        /* remove our timer from the queue */
+        // remove our timer from the queue
         list_delete(&timer->node);
 
-        /* TODO(cpu): if  after removing |timer| there is one other single timer with
-           the same scheduled_time and slack non-zero then it is possible to return
-           that timer to the ideal scheduled_time */
+        // TODO(cpu): if  after removing |timer| there is one other single timer with
+        // the same scheduled_time and slack non-zero then it is possible to return
+        // that timer to the ideal scheduled_time.
 
-        /* see if we've just modified the head of this cpu's timer queue */
-        /* if we modified another cpu's queue, we'll just let it fire and sort itself out */
+        // see if we've just modified the head of this cpu's timer queue.
+        // if we modified another cpu's queue, we'll just let it fire and sort itself out
         if (unlikely(oldhead == timer)) {
             timer_t* newhead = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
             if (newhead) {
@@ -336,19 +335,19 @@ bool timer_cancel(timer_t* timer) {
 
     spin_unlock_irqrestore(&timer_lock, state);
 
-    /* wait for the timer to become un-busy in case a callback is currently active on another cpu */
+    // wait for the timer to become un-busy in case a callback is currently active on another cpu
     while (timer->active_cpu >= 0) {
         arch_spinloop_pause();
     }
 
-    /* zero it out */
+    // zero it out
     timer->callback = NULL;
     timer->arg = NULL;
 
     return callback_not_running;
 }
 
-/* called at interrupt time to process any pending timers */
+// called at interrupt time to process any pending timers
 void timer_tick(zx_time_t now) {
     timer_t* timer;
 
@@ -363,7 +362,7 @@ void timer_tick(zx_time_t now) {
     spin_lock(&timer_lock);
 
     for (;;) {
-        /* see if there's an event to process */
+        // see if there's an event to process
         timer = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
         if (likely(timer == 0))
             break;
@@ -372,18 +371,18 @@ void timer_tick(zx_time_t now) {
         if (likely(now < timer->scheduled_time))
             break;
 
-        /* process it */
+        // process it
         LTRACEF("timer %p\n", timer);
         DEBUG_ASSERT_MSG(timer && timer->magic == TIMER_MAGIC,
                          "ASSERT: timer failed magic check: timer %p, magic 0x%x\n",
                          timer, (uint)timer->magic);
         list_delete(&timer->node);
 
-        /* mark the timer busy */
+        // mark the timer busy
         timer->active_cpu = cpu;
-        /* spinlock below acts as a memory barrier */
+        // spinlock below acts as a memory barrier
 
-        /* we pulled it off the list, release the list lock to handle it */
+        // we pulled it off the list, release the list lock to handle it
         spin_unlock(&timer_lock);
 
         LTRACEF("dequeued timer %p, scheduled %" PRIu64 "\n", timer, timer->scheduled_time);
@@ -394,21 +393,21 @@ void timer_tick(zx_time_t now) {
         timer->callback(timer, now, timer->arg);
 
         DEBUG_ASSERT(arch_ints_disabled());
-        /* it may have been requeued, grab the lock so we can safely inspect it */
+        // it may have been requeued, grab the lock so we can safely inspect it
         spin_lock(&timer_lock);
 
-        /* mark it not busy */
+        // mark it not busy
         timer->active_cpu = -1;
         smp_mb();
 
-        /* make sure any spinners wake up */
+        // make sure any spinners wake up
         arch_spinloop_signal();
     }
 
-    /* reset the timer to the next event */
+    // reset the timer to the next event
     timer = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
     if (timer) {
-        /* has to be the case or it would have fired already */
+        // has to be the case or it would have fired already
         DEBUG_ASSERT(timer->scheduled_time > now);
 
         LTRACEF("setting new timer for %" PRIu64 " nsecs for event %p\n", timer->scheduled_time,
@@ -416,21 +415,20 @@ void timer_tick(zx_time_t now) {
         platform_set_oneshot_timer(timer->scheduled_time);
     }
 
-    /* we're done manipulating the timer queue */
+    // we're done manipulating the timer queue
     spin_unlock(&timer_lock);
 }
 
 zx_status_t timer_trylock_or_cancel(timer_t* t, spin_lock_t* lock) {
-    /* spin trylocking on the passed in spinlock either waiting for it
-     * to grab or the passed in timer to be canceled.
-     */
+    // spin trylocking on the passed in spinlock either waiting for it
+    // to grab or the passed in timer to be canceled.
     while (unlikely(spin_trylock(lock))) {
-        /* we failed to grab it, check for cancel */
+        // we failed to grab it, check for cancel
         if (t->cancel) {
-            /* we were canceled, so bail immediately */
+            // we were canceled, so bail immediately
             return ZX_ERR_TIMED_OUT;
         }
-        /* tell the arch to wait */
+        // tell the arch to wait
         arch_spinloop_pause();
     }
 
@@ -445,7 +443,7 @@ void timer_transition_off_cpu(uint old_cpu) {
     timer_t* old_head = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
 
     timer_t *entry = NULL, *tmp_entry = NULL;
-    /* Move all timers from old_cpu to this cpu */
+    // Move all timers from old_cpu to this cpu
     list_for_every_entry_safe (&percpu[old_cpu].timer_queue, entry, tmp_entry, timer_t, node) {
         list_delete(&entry->node);
         // We lost the original asymmetric slack information so when we combine them
@@ -456,7 +454,7 @@ void timer_transition_off_cpu(uint old_cpu) {
 
     timer_t* new_head = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
     if (new_head != NULL && new_head != old_head) {
-        /* we just modified the head of the timer queue */
+        // we just modified the head of the timer queue
         LTRACEF("setting new timer for %" PRIu64 " nsecs\n", new_head->scheduled_time);
         platform_set_oneshot_timer(new_head->scheduled_time);
     }

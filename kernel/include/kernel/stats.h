@@ -11,7 +11,7 @@
 
 __BEGIN_CDECLS
 
-/* per cpu kernel level statistics */
+// per cpu kernel level statistics
 struct cpu_stats {
     zx_duration_t idle_time;
     ulong reschedules;
@@ -20,21 +20,21 @@ struct cpu_stats {
     ulong preempts;
     ulong yields;
 
-    /* cpu level interrupts and exceptions */
-    ulong interrupts;  /* hardware interrupts, minus timer interrupts or inter-processor interrupts */
-    ulong timer_ints;  /* timer interrupts */
-    ulong timers;      /* timer callbacks */
-    ulong perf_ints;   /* performance monitor interrupts */
+    // cpu level interrupts and exceptions
+    ulong interrupts;  // hardware interrupts, minus timer interrupts or inter-processor interrupts
+    ulong timer_ints;  // timer interrupts
+    ulong timers;      // timer callbacks
+    ulong perf_ints;   // performance monitor interrupts
     ulong syscalls;
 
-    /* inter-processor interrupts */
+    // inter-processor interrupts
     ulong reschedule_ipis;
     ulong generic_ipis;
 };
 
 __END_CDECLS
 
-/* include after the cpu_stats definition above, since it is part of the percpu structure */
+// include after the cpu_stats definition above, since it is part of the percpu structure
 #include <kernel/percpu.h>
 
 #define CPU_STATS_INC(name)                                                        \
