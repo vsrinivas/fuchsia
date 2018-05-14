@@ -32,14 +32,14 @@ static zx_status_t aml_scpi_get_mailbox(uint32_t cmd,
     }
 
     for (uint32_t i=0; i<countof(aml_high_priority_cmds); i++) {
-        if (cmd == aml_low_priority_cmds[i]) {
+        if (cmd == aml_high_priority_cmds[i]) {
             *mailbox = AP_NS_HIGH_PRIORITY_MAILBOX;
             return ZX_OK;
         }
     }
 
     for (uint32_t i=0; i<countof(aml_secure_cmds); i++) {
-        if (cmd == aml_low_priority_cmds[i]) {
+        if (cmd == aml_secure_cmds[i]) {
             *mailbox = AP_SECURE_MAILBOX;
             return ZX_OK;
         }
@@ -48,7 +48,36 @@ static zx_status_t aml_scpi_get_mailbox(uint32_t cmd,
     return ZX_ERR_NOT_FOUND;
 }
 
-zx_status_t aml_scpi_get_sensor_value(void* ctx, uint32_t sensor_id,
+static zx_status_t aml_scpi_execute_cmd(aml_scpi_t* scpi,
+                                        void* rx_buf, size_t rx_size,
+                                        void* tx_buf, size_t tx_size,
+                                        uint32_t cmd, uint32_t client_id) {
+
+    mailbox_data_buf_t mdata;
+    mdata.cmd             = PACK_SCPI_CMD(cmd, client_id, 0);
+    mdata.tx_buf          = tx_buf;
+    mdata.tx_size         = tx_size;
+
+    mailbox_channel_t channel;
+    zx_status_t status = aml_scpi_get_mailbox(cmd, &channel.mailbox);
+    if (status != ZX_OK) {
+        SCPI_ERROR("aml_scpi_get_mailbox failed - error status %d\n", status);
+        return status;
+    }
+
+    channel.rx_buf  = rx_buf;
+    channel.rx_size = rx_size;
+
+    status = mailbox_send_cmd(&scpi->mailbox, &channel, &mdata);
+    if (status != ZX_OK) {
+        SCPI_ERROR("mailbox_send_cmd failed - error status %d\n", status);
+        return status;
+    }
+    return ZX_OK;
+}
+
+
+static zx_status_t aml_scpi_get_sensor_value(void* ctx, uint32_t sensor_id,
                                       uint32_t* sensor_value) {
     aml_scpi_t* scpi = ctx;
     struct {
@@ -56,32 +85,22 @@ zx_status_t aml_scpi_get_sensor_value(void* ctx, uint32_t sensor_id,
         uint16_t sensor_value;
     } __PACKED aml_sensor_val;
 
-    mailbox_data_buf_t mdata;
-    mdata.cmd             = PACK_SCPI_CMD(SCPI_CMD_SENSOR_VALUE, SCPI_CL_THERMAL, 0);
-    mdata.tx_buf          = (void*)&sensor_id;
-    mdata.tx_size         = sizeof(sensor_id);
+    if (!sensor_value) {
+        return ZX_ERR_INVALID_ARGS;
+    }
 
-    mailbox_channel_t channel;
-    zx_status_t status = aml_scpi_get_mailbox(SCPI_CMD_SENSOR_VALUE, &channel.mailbox);
+    zx_status_t status = aml_scpi_execute_cmd(scpi,
+                                              &aml_sensor_val, sizeof(aml_sensor_val),
+                                              &sensor_id, sizeof(sensor_id),
+                                              SCPI_CMD_SENSOR_VALUE, SCPI_CL_THERMAL);
     if (status != ZX_OK) {
-        SCPI_ERROR("aml_scpi_get_mailbox failed - error status %d\n", status);
         return status;
     }
-
-    channel.rx_size = sizeof(aml_sensor_val);
-    channel.rx_buf  = (void*)&aml_sensor_val;
-
-    status = mailbox_send_cmd(&scpi->mailbox, &channel, &mdata);
-    if (status != ZX_OK || aml_sensor_val.status != 0) {
-        SCPI_ERROR("mailbox_send_cmd failed - error status %d\n", status);
-        return status;
-    }
-
     *sensor_value = aml_sensor_val.sensor_value;
     return ZX_OK;
 }
 
-zx_status_t aml_scpi_get_sensor(void* ctx, const char* name,
+static zx_status_t aml_scpi_get_sensor(void* ctx, const char* name,
                                 uint32_t* sensor_value) {
     aml_scpi_t* scpi = ctx;
     struct {
@@ -90,7 +109,9 @@ zx_status_t aml_scpi_get_sensor(void* ctx, const char* name,
     } __PACKED aml_sensor_cap;
     struct {
         uint32_t status;
-        uint32_t sensor;
+        uint16_t sensor;
+        uint8_t class;
+        uint8_t trigger;
         char sensor_name[20];
     } __PACKED aml_sensor_info;
 
@@ -98,48 +119,27 @@ zx_status_t aml_scpi_get_sensor(void* ctx, const char* name,
         return ZX_ERR_INVALID_ARGS;
     }
 
-    mailbox_channel_t channel;
-    zx_status_t status = aml_scpi_get_mailbox(SCPI_CMD_SENSOR_CAPABILITIES, &channel.mailbox);
+    // First let's find information about all sensors
+    zx_status_t status = aml_scpi_execute_cmd(scpi,
+                                              &aml_sensor_cap, sizeof(aml_sensor_cap),
+                                              NULL, 0,
+                                              SCPI_CMD_SENSOR_CAPABILITIES, SCPI_CL_THERMAL);
     if (status != ZX_OK) {
-        SCPI_ERROR("aml_scpi_get_mailbox failed \n");
         return status;
     }
-
-    channel.rx_size = sizeof(aml_sensor_cap);
-    channel.rx_buf  = (void *)&aml_sensor_cap;
-
-    mailbox_data_buf_t mdata;
-    mdata.tx_size   = 0;
-    mdata.cmd       = PACK_SCPI_CMD(SCPI_CMD_SENSOR_CAPABILITIES, SCPI_CL_THERMAL, 0);
-
-    // First let's find how many sensors are there on the board
-    status = mailbox_send_cmd(&scpi->mailbox, &channel, &mdata);
-    if (status != ZX_OK || aml_sensor_cap.status != 0) {
-        SCPI_ERROR("mailbox_send_cmd failed\n");
-        return status;
-    }
-
-    status = aml_scpi_get_mailbox(SCPI_CMD_SENSOR_INFO, &channel.mailbox);
-    if (status != ZX_OK) {
-        SCPI_ERROR("aml_scpi_get_mailbox failed \n");
-        return status;
-    }
-    channel.rx_size = sizeof(aml_sensor_info);
-    channel.rx_buf  = (void *)&aml_sensor_info;
-
-    mdata.cmd          = PACK_SCPI_CMD(SCPI_CMD_SENSOR_INFO, SCPI_CL_THERMAL, 0);
 
     // Loop through all the sensors
-    for (uint16_t sensor_id=0; sensor_id<aml_sensor_cap.num_sensors; sensor_id++) {
-        mdata.tx_buf    = (void*)&sensor_id;
-        mdata.tx_size   = sizeof(sensor_id);
-        status = mailbox_send_cmd(&scpi->mailbox, &channel, &mdata);
-        if (status != ZX_OK || aml_sensor_info.status != 0) {
-            SCPI_ERROR("mailbox_send_cmd failed\n");
+    for (uint32_t sensor_id=0; sensor_id<aml_sensor_cap.num_sensors; sensor_id++) {
+
+        status = aml_scpi_execute_cmd(scpi,
+                                      &aml_sensor_info, sizeof(aml_sensor_info),
+                                      &sensor_id, sizeof(sensor_id),
+                                      SCPI_CMD_SENSOR_INFO, SCPI_CL_THERMAL);
+        if (status != ZX_OK) {
             return status;
         }
         if (!strncmp(name, aml_sensor_info.sensor_name, sizeof(aml_sensor_info.sensor_name))) {
-            *sensor_value = aml_sensor_info.sensor;
+            *sensor_value = sensor_id;
             break;
         }
     }

@@ -20,14 +20,14 @@
 #include <ddk/protocol/mailbox.h>
 
 #define READ32_MAILBOX_PL_REG(offset)         readl(io_buffer_virt(&mailbox->mmio_mailbox_payload)\
-                                                    + offset*4)
+                                                    + (offset)*4)
 #define WRITE32_MAILBOX_PL_REG(offset, value) writel(value, \
                                                     io_buffer_virt(&mailbox->mmio_mailbox_payload)\
-                                                    + offset*4)
+                                                    + (offset)*4)
 #define READ32_MAILBOX_REG(offset)            readl(io_buffer_virt(&mailbox->mmio_mailbox) \
-                                                    + offset*4)
+                                                    + (offset)*4)
 #define WRITE32_MAILBOX_REG(offset, value)    writel(value, io_buffer_virt(&mailbox->mmio_mailbox)\
-                                                     + offset*4)
+                                                     + (offset)*4)
 
 static int aml_get_rx_mailbox(uint32_t tx_mailbox) {
     switch(tx_mailbox) {
@@ -47,7 +47,7 @@ static zx_status_t aml_mailbox_send_cmd(void *ctx,
                                  mailbox_data_buf_t* mdata) {
     aml_mailbox_t* mailbox = ctx;
     int rx_mailbox_id;
-    if (!channel || !mdata || !channel->rx_size) {
+    if (!channel || !mdata) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -80,10 +80,12 @@ static zx_status_t aml_mailbox_send_cmd(void *ctx,
     }
 
     // AP reads the Payload to get requested information
-    uint32_t num = GET_NUM_WORDS(channel->rx_size);
-    uint32_t *rx_payload = (uint32_t*)(channel->rx_buf);
-    for (uint32_t i=0; i<num; i++) {
-        rx_payload[i] = READ32_MAILBOX_PL_REG(rx_mailbox->payload_offset + i);
+    if (channel->rx_size != 0) {
+        uint32_t num = GET_NUM_WORDS(channel->rx_size);
+        uint32_t *rx_payload = (uint32_t*)(channel->rx_buf);
+        for (uint32_t i=0; i<num; i++) {
+            rx_payload[i] = READ32_MAILBOX_PL_REG(rx_mailbox->payload_offset + i);
+        }
     }
 
     // AP writes to the Mailbox CLR register

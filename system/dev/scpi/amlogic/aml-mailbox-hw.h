@@ -38,7 +38,7 @@ static aml_mailbox_block_t vim2_mailbox_block[] = {
         .set_offset     = 0xD,
         .stat_offset    = 0xE,
         .clr_offset     = 0xF,
-        .payload_offset = 0x128,
+        .payload_offset = 0x80,
     },
     // Mailbox 5
     {
