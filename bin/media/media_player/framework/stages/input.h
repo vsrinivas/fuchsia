@@ -21,6 +21,8 @@ class Input {
  public:
   Input(StageImpl* stage, size_t index);
 
+  Input(Input&& input);
+
   ~Input();
 
   // The stage of which this input is a part.
@@ -57,7 +59,7 @@ class Input {
   void PutPacket(PacketPtr packet);
 
   // A packet supplied from upstream.
-  const PacketPtr& packet() { return packet_; }
+  const PacketPtr& packet() const { return packet_; }
 
   // Takes ownership of the packet supplied from upstream and sets the demand
   // to the indicated value.

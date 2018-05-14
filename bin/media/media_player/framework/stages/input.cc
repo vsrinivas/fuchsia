@@ -16,6 +16,14 @@ Input::Input(StageImpl* stage, size_t index)
   FXL_DCHECK(stage_);
 }
 
+Input::Input(Input&& input)
+    : stage_(input.stage()),
+      index_(input.index()),
+      mate_(input.mate()),
+      prepared_(input.prepared()),
+      packet_(std::move(input.packet())),
+      state_(input.state_.load()) {}
+
 Input::~Input() {}
 
 void Input::Connect(Output* output) {
@@ -90,8 +98,6 @@ void Input::SetDemand(Demand demand) {
   }
 }
 
-void Input::Flush() {
-  TakePacket(Demand::kNegative);
-}
+void Input::Flush() { TakePacket(Demand::kNegative); }
 
 }  // namespace media_player

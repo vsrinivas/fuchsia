@@ -9,6 +9,7 @@
 
 #include "garnet/bin/media/media_player/framework/engine.h"
 #include "garnet/bin/media/media_player/framework/refs.h"
+#include "garnet/bin/media/media_player/framework/stages/async_node_stage.h"
 #include "garnet/bin/media/media_player/framework/stages/multistream_source_stage.h"
 #include "garnet/bin/media/media_player/framework/stages/sink_stage.h"
 #include "garnet/bin/media/media_player/framework/stages/source_stage.h"
