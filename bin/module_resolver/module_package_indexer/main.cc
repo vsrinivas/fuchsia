@@ -8,6 +8,7 @@
 
 #include <dirent.h>
 #include <fdio/util.h>
+#include <glob.h>
 #include <sys/types.h>
 
 #include <fuchsia/cpp/module_manifest_source.h>
@@ -21,28 +22,25 @@
 // This function finds the ModulePackageIndexer fidl service that the
 // module_resolver runs.
 std::string FindModulePackageIndexerService() {
-  // The ModulePackageIndexer service is run by the module_resolver process
-  // under the "user-*" job name.  The structured path of to this service is:
-  // "/hub/sys/<user job
-  // name>/module_resolver/debug/modular.ModulePackageIndexer"
+  // The ModulePackageIndexer service is run by the module_resolver component
+  // under the "user-*" realm. The structured path of to this service is:
+  // /hub/r/sys/<koid>/r/user-<userid>/<koid>/c/module_resolver/<koid>/out/debug
+  auto glob_str = fxl::StringPrintf(
+      "/hub/r/sys/*/r/user-*/*/c/module_resolver/*/out/"
+      "debug/%s",
+      module_manifest_source::ModulePackageIndexer::Name_);
 
-  // Here, we go through /hub/sys and find the user's job name, which always
-  // begins with 'user-'.
-  DIR* fd = opendir("/hub/sys");
-  struct dirent* dp = NULL;
-  std::string user_env;
-  while ((dp = readdir(fd)) != NULL) {
-    if (strstr(dp->d_name, "user-") == dp->d_name) {
-      user_env = dp->d_name;
-      break;
-    }
+  glob_t globbuf;
+  std::string service_path;
+  FXL_CHECK(glob(glob_str.data(), 0, NULL, &globbuf) == 0);
+  if (globbuf.gl_pathc > 0) {
+    service_path = globbuf.gl_pathv[0];
   }
-  closedir(fd);
-
-  FXL_CHECK(!user_env.empty()) << "Could not find the running user's job.";
-  return fxl::StringPrintf("/hub/sys/%s/module_resolver/out/debug/%s",
-                           user_env.c_str(),
-                           module_manifest_source::ModulePackageIndexer::Name_);
+  if (globbuf.gl_pathc > 1) {
+    FXL_DLOG(WARNING) << "Found more than one module resolver.";
+  }
+  globfree(&globbuf);
+  return service_path;
 }
 
 int main(int argc, const char** argv) {
@@ -58,6 +56,8 @@ int main(int argc, const char** argv) {
   }
 
   auto service_path = FindModulePackageIndexerService();
+  FXL_CHECK(!service_path.empty())
+      << "Could not find a running module resolver. Is the user logged in?";
 
   module_manifest_source::ModulePackageIndexerPtr indexer;
   auto req_handle = indexer.NewRequest().TakeChannel();
