@@ -219,6 +219,10 @@ type Method struct {
 	// Ordinal is the ordinal for this method.
 	Ordinal types.Ordinal
 
+	// OrdinalName is the name of the ordinal for this method, including the interface
+	// name as a prefix.
+	OrdinalName string
+
 	// Name is the name of the Method, including the interface name as a prefix.
 	Name string
 
@@ -627,9 +631,11 @@ func (c *compiler) compileParameter(p types.Parameter) StructMember {
 
 func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val types.Method) Method {
 	methodName := c.compileIdentifier(val.Name, true, "")
+	ordinalName := c.compileCompoundIdentifier(ifaceName, methodName+"Ordinal")
 	r := Method{
 		Name:            methodName,
 		Ordinal:         val.Ordinal,
+		OrdinalName:     ordinalName,
 		EventExpectName: "Expect" + methodName,
 		IsEvent:         !val.HasRequest && val.HasResponse,
 	}

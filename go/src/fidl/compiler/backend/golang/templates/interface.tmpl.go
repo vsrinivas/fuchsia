@@ -7,6 +7,12 @@ package templates
 const Interface = `
 {{- define "InterfaceDefinition" -}}
 
+const (
+{{- range .Methods }}
+	{{ .OrdinalName }} uint32 = {{ .Ordinal }}
+{{- end }}
+)
+
 {{- range .Methods }}
 // Request for {{ .Name }}.
 {{- if .Request }}
@@ -56,13 +62,13 @@ func (p *{{ $.ProxyName }}) {{ if .IsEvent -}}
 	{{- end }}
 	{{- if .Request }}
 		{{- if .Response }}
-	err := ((*_bindings.Proxy)(p)).Call({{ .Ordinal }}, &req_, &resp_)
+	err := ((*_bindings.Proxy)(p)).Call({{ .OrdinalName }}, &req_, &resp_)
 		{{- else }}
-	err := ((*_bindings.Proxy)(p)).Send({{ .Ordinal }}, &req_)
+	err := ((*_bindings.Proxy)(p)).Send({{ .OrdinalName }}, &req_)
 		{{- end }}
 	{{- else }}
 		{{- if .Response }}
-	err := ((*_bindings.Proxy)(p)).Recv({{ .Ordinal }}, &resp_)
+	err := ((*_bindings.Proxy)(p)).Recv({{ .OrdinalName }}, &resp_)
 		{{- else }}
 	err := nil
 		{{- end }}
@@ -122,7 +128,7 @@ func (s *{{ .StubName }}) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bin
 	switch ord {
 	{{- range .Methods }}
 	{{- if not .IsEvent }}
-	case {{ .Ordinal }}:
+	case {{ .OrdinalName }}:
 		{{- if .Request }}
 		in_ := {{ .Request.Name }}{}
 		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
@@ -187,7 +193,7 @@ func (p *{{ $.EventProxyName }}) {{ .Name }}(
 		{{- end }}
 	}
 	{{- end }}
-	return ((*_bindings.Proxy)(p)).Send({{ .Ordinal }}, &event_)
+	return ((*_bindings.Proxy)(p)).Send({{ .OrdinalName }}, &event_)
 }
 {{- end }}
 {{- end }}
