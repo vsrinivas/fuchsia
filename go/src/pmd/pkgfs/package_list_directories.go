@@ -70,7 +70,7 @@ func (pr *packagesRoot) Read() ([]fs.Dirent, error) {
 
 	dirents := make([]fs.Dirent, 0, len(names))
 	for name := range names {
-		dirents = append(dirents, fileDirEnt(name))
+		dirents = append(dirents, dirDirEnt(name))
 	}
 	return dirents, nil
 }
@@ -144,7 +144,7 @@ func (pld *packageListDir) Read() ([]fs.Dirent, error) {
 		versions := pld.fs.static.ListVersions(pld.packageName)
 		dirents := make([]fs.Dirent, len(versions))
 		for i := range versions {
-			dirents[i] = fileDirEnt(versions[i])
+			dirents[i] = dirDirEnt(versions[i])
 		}
 		return dirents, nil
 	}
@@ -155,7 +155,7 @@ func (pld *packageListDir) Read() ([]fs.Dirent, error) {
 	}
 	dirents := make([]fs.Dirent, len(names))
 	for i := range names {
-		dirents[i] = fileDirEnt(filepath.Base(names[i]))
+		dirents[i] = dirDirEnt(filepath.Base(names[i]))
 	}
 	return dirents, nil
 }

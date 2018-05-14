@@ -220,11 +220,18 @@ func TestAddPackage(t *testing.T) {
 		}
 	}
 
-	if _, err = os.Stat(filepath.Join(pkgfsMount, "packages", packageName)); err != nil {
+	var info os.FileInfo
+	if info, err = os.Stat(filepath.Join(pkgfsMount, "packages", packageName)); err != nil {
 		t.Fatalf("package did not appear in the pkgfs package tree: %s", err)
 	}
-	if _, err = os.Stat(filepath.Join(pkgfsMount, "packages", packageName, packageVersion)); err != nil {
+	if !info.IsDir() {
+		t.Errorf("os.Stat on package directory says it's not a directory")
+	}
+	if info, err = os.Stat(filepath.Join(pkgfsMount, "packages", packageName, packageVersion)); err != nil {
 		t.Fatalf("package version did not appear in the pkgfs package tree: %s", err)
+	}
+	if !info.IsDir() {
+		t.Errorf("os.Stat on package version directory says it's not a directory")
 	}
 
 	// put the files into needs and expect the pacakage to be live
