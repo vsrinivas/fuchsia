@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 //trace_macros!(true);
 
+#![allow(dead_code)]
+
 use byteorder::{LittleEndian, WriteBytesExt};
 use std::io;
 
@@ -88,9 +90,9 @@ impl<W: io::Write> MacFrameWriter<W> {
         mut self, header: &MgmtHeader, beacon: &BeaconFields,
     ) -> io::Result<ElementWriter<W>> {
         self.write_mgmt_header(header, MgmtSubtype::Beacon)?;
-        self.w.write_u64::<LittleEndian>(beacon.timestamp);
-        self.w.write_u16::<LittleEndian>(beacon.beacon_interval);
-        self.w.write_u16::<LittleEndian>(beacon.capability_info);
+        self.w.write_u64::<LittleEndian>(beacon.timestamp)?;
+        self.w.write_u16::<LittleEndian>(beacon.beacon_interval)?;
+        self.w.write_u16::<LittleEndian>(beacon.capability_info)?;
         Ok(ElementWriter { w: self.w })
     }
 
@@ -99,7 +101,7 @@ impl<W: io::Write> MacFrameWriter<W> {
         frame_control.set_typ(FrameControlType::Mgmt as u16);
         frame_control.set_subtype(subtype as u16);
         frame_control.set_htc_order(header.ht_control.is_some());
-        self.w.write_u16::<LittleEndian>(frame_control.0);
+        self.w.write_u16::<LittleEndian>(frame_control.0)?;
         self.w.write_u16::<LittleEndian>(header.duration)?;
         self.w.write_all(&header.addr1)?;
         self.w.write_all(&header.addr2)?;

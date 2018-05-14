@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![deny(warnings)]
+
 #[macro_use] extern crate bitfield;
 extern crate byteorder;
 extern crate failure;
@@ -14,9 +16,7 @@ extern crate fidl_wlan_service;
 extern crate fidl_wlantap;
 extern crate futures;
 
-use async::TimeoutExt;
 use futures::prelude::*;
-use futures::future::{self, Either};
 use std::sync::{Arc, Mutex};
 use wlantap_client::Wlantap;
 use zx::prelude::*;
@@ -171,7 +171,8 @@ fn main() -> Result<(), failure::Error> {
         })
         .map(|_| ())
         .recover::<Never, _>(|e| eprintln!("error running beacon timer: {:?}", e));
-    exec.run_singlethreaded(event_listener.join(beacon_timer));
+    // Unwrap is OK since the error type is Never, which doesn't work with '?'
+    exec.run_singlethreaded(event_listener.join(beacon_timer)).unwrap();
     Ok(())
 }
 

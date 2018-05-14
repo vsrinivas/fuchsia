@@ -3,10 +3,8 @@
 // found in the LICENSE file.
 
 use async::{self, TimeoutExt};
-use failure;
 use fidl_wlantap;
 use futures::prelude::*;
-use futures::future;
 use futures::channel::mpsc;
 use std::sync::Arc;
 use wlantap_client::Wlantap;
@@ -16,7 +14,7 @@ use futures::task::Context;
 type EventStream = fidl_wlantap::WlantapPhyEventStream;
 
 pub struct TestHelper {
-    wlantap: Wlantap,
+    _wlantap: Wlantap,
     proxy: Arc<fidl_wlantap::WlantapPhyProxy>,
     event_stream: Option<EventStream>,
 }
@@ -61,7 +59,7 @@ impl TestHelper {
         let proxy = wlantap.create_phy(config).expect("Failed to create wlantap PHY");
         let event_stream = Some(proxy.take_event_stream());
         let mut helper = TestHelper {
-            wlantap,
+            _wlantap: wlantap,
             proxy: Arc::new(proxy),
             event_stream
         };
@@ -75,7 +73,7 @@ impl TestHelper {
             move |event| {
                 match event {
                     fidl_wlantap::WlantapPhyEvent::WlanmacStart{ .. } => {
-                        sender.try_send(());
+                        sender.try_send(()).unwrap();
                     },
                     _ => {}
                 }

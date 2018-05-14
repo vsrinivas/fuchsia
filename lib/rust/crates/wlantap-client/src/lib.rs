@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![feature(conservative_impl_trait)]
+#![deny(warnings)]
 
 extern crate byteorder;
 extern crate failure;
@@ -19,13 +19,10 @@ use failure::Error;
 use fdio::{fdio_sys, ioctl};
 use fidl::encoding2::{Encoder};
 use zx::AsHandleRef;
-use futures::future::{self, FutureResult};
-use futures::prelude::*;
 use std::fs::{File, OpenOptions};
 use std::os::raw;
 use std::mem;
 use std::path::Path;
-use std::sync::Arc;
 
 pub struct Wlantap {
     file: File,
