@@ -22,14 +22,23 @@ __BEGIN_CDECLS
 // The job is passed as |PA_JOB_DEFAULT|.
 #define FDIO_SPAWN_SHARE_JOB ((uint32_t)0x0001u)
 
+// Provides the spawned process with the shared library loader used by this
+// process.
+//
+// The shared library loader is passed as |PA_SVC_LOADER|.
+#define FDIO_SPAWN_CLONE_LDSVC ((uint32_t)0x0002u)
+
 // Clones the filesystem namespace into the spawned process.
-#define FDIO_SPAWN_CLONE_NAMESPACE ((uint32_t)0x0002u)
+#define FDIO_SPAWN_CLONE_NAMESPACE ((uint32_t)0x0004u)
 
 // Clones file descriptors 0, 1, and 2 into the spawned process.
-#define FDIO_SPAWN_CLONE_STDIO ((uint32_t)0x0004u)
+//
+// Skips any of these file descriptors that are closed without generating an
+// error.
+#define FDIO_SPAWN_CLONE_STDIO ((uint32_t)0x0008u)
 
 // Clones the environment into the spawned process.
-#define FDIO_SPAWN_CLONE_ENVIRON ((uint32_t)0x0008u)
+#define FDIO_SPAWN_CLONE_ENVIRON ((uint32_t)0x0010u)
 
 // Clones all of the above into the spawned process.
 #define FDIO_SPAWN_CLONE_ALL ((uint32_t)0xFFFFu)
@@ -43,7 +52,7 @@ __BEGIN_CDECLS
 // The |argv| array must be terminated with a null pointer.
 //
 // If |job| is |ZX_HANDLE_INVALID|, then the process is spawned in
-// |zx_job_default()|.
+// |zx_job_default()|. Does not take ownership of |job|.
 //
 // Upon success, |process_out| will be a handle to the process.
 zx_status_t fdio_spawn(zx_handle_t job,
@@ -85,6 +94,13 @@ zx_status_t fdio_spawn(zx_handle_t job,
 // Uses the |h| entry in the |fdio_spawn_action_t| union.
 #define FDIO_SPAWN_ACTION_ADD_HANDLE ((uint32_t)0x0004u)
 
+// Sets the name of the spawned process to the given name.
+//
+// Overrides the default of use the first argument to name the process.
+//
+// Uses the |name| entry in the |fdio_spawn_action_t| union.
+#define FDIO_SPAWN_ACTION_SET_NAME ((uint32_t)0x0005u)
+
 // Instructs |fdio_spawn_etc| which actions to take.
 typedef struct fdio_spawn_action fdio_spawn_action_t;
 struct fdio_spawn_action {
@@ -119,6 +135,10 @@ struct fdio_spawn_action {
             // The handle to pass to the process on startup.
             zx_handle_t handle;
         } h;
+        struct {
+            // The name to assign to the spawned process.
+            const char* data;
+        } name;
     };
 };
 
@@ -148,6 +168,9 @@ struct fdio_spawn_action {
 // |FDIO_SPAWN_CLONE_STDIO| and |actions| that target any of fds 0, 1, and 2 are
 // specified, then the actions that target those fds will control their
 // semantics in the spawned process.
+//
+// If |job| is |ZX_HANDLE_INVALID|, then the process is spawned in
+// |zx_job_default()|. Does not take ownership of |job|.
 //
 // Upon success, |process_out| will be a handle to the process. Upon failure, if
 // |err_msg_out| is not null, an error message will be we written to
