@@ -29,7 +29,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/zx \
     system/ulib/zxcpp \
 
-MODULE_FIDL_LIBS := system/fidl/device.display-controller
+MODULE_FIDL_LIBS := system/fidl/display
 
 MODULE_LIBS := \
 	system/ulib/zircon \

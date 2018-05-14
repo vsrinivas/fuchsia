@@ -4,13 +4,13 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-MODULE := $(LOCAL_DIR).display-controller
+MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := fidl
 
-MODULE_SRCS := $(LOCAL_DIR)/display-controller.fidl
+MODULE_PACKAGE := fidl
 
-MODULE_STATIC_LIBS += system/ulib/fidl
+MODULE_SRCS := $(LOCAL_DIR)/display-controller.fidl
 
 MODULE_FIDL_LIBRARY := display
 
