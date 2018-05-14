@@ -5,7 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <asm.h>
-#include <zircon/boot/bootdata.h>
+#include <zircon/boot/image.h>
 
 
 // This file lays out the final kernel image seen by the boot loader.
@@ -29,38 +29,28 @@
 
 .text
 
-.balign 8
-// BOOTDATA file header (bootdata_t)
-DATA(_bootdata_file_header)
-    .int BOOTDATA_CONTAINER
-    .int boot_load_end - _bootdata_kernel_header
-    .int BOOTDATA_MAGIC
-    .int BOOTDATA_FLAG_V2
-    .int 0
-    .int 0
-    .int BOOTITEM_MAGIC
-    .int BOOTITEM_NO_CRC32
-END_DATA(_bootdata_file_header)
+// ZBI file header (zbi_header_t)
+ZBI_CONTAINER_HEADER(_zbi_file_header, boot_load_end - _zbi_kernel_header)
 
-// BOOTDATA kernel header (bootdata_t)
-DATA(_bootdata_kernel_header)
-    .int BOOTDATA_KERNEL
-    .int boot_load_end - _bootdata_kernel_payload
+// ZBI kernel header (zbi_header_t)
+DATA(_zbi_kernel_header)
+    .int ZBI_TYPE_KERNEL_X64    // TODO(ZX-2153,gkalsi): Update Bootloaders before switching this to KERNEL_ARM64
+    .int boot_load_end - _zbi_kernel_payload
     .int 0
-    .int BOOTDATA_FLAG_V2
+    .int ZBI_FLAG_VERSION
     .int 0
     .int 0
-    .int BOOTITEM_MAGIC
-    .int BOOTITEM_NO_CRC32
-END_DATA(_bootdata_kernel_header)
+    .int ZBI_ITEM_MAGIC
+    .int ZBI_ITEM_NO_CRC32
+END_DATA(_zbi_kernel_header)
 
-// BOOTDATA_KERNEL payload (bootdata_kernel_t)
-DATA(_bootdata_kernel_payload)
+// ZBI_TYPE_KERNEL payload (zbi_kernel_t)
+DATA(_zbi_kernel_payload)
     // The boot-shim code expects this to be an offset from the beginning
     // of the load image, whatever the kernel's virtual address.
-    .quad IMAGE_ELF_ENTRY - _bootdata_file_header
+    .quad IMAGE_ELF_ENTRY - _zbi_file_header
     .quad 0
-END_DATA(_bootdata_kernel_payload)
+END_DATA(_zbi_kernel_payload)
 
 // Pad out to the header size that was allocated in the kernel image layout.
 // This ensures that the kernel image is aligned correctly in memory.

@@ -157,7 +157,7 @@ unsigned identify_image(void* image, size_t sz) {
             printf("image has invalid bootitem\n");
             return IMAGE_INVALID;
         }
-        if (bd->type == ZBI_TYPE_KERNEL_X64) {
+        if (ZBI_IS_KERNEL_BOOTITEM(bd->type)) {
             if (n != 0) {
                 printf("image has kernel in middle\n");
                 return IMAGE_INVALID;

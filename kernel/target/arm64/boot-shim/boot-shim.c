@@ -156,8 +156,8 @@ boot_shim_return_t boot_shim(void* device_tree) {
     if (kernel->hdr_file.type != ZBI_TYPE_CONTAINER ||
         kernel->hdr_file.extra != ZBI_CONTAINER_MAGIC ||
         kernel->hdr_file.magic != ZBI_ITEM_MAGIC ||
-        // TODO(ZX-2153,gkalsi): Validate that this is an ARM64 kernel and not X64
-        kernel->hdr_kernel.type != ZBI_TYPE_KERNEL_X64 ||
+        // TODO(ZX-2153,gkalsi): Validate that this is specifically an ARM64 kernel
+        !ZBI_IS_KERNEL_BOOTITEM(kernel->hdr_kernel.type) ||
         kernel->hdr_kernel.magic != ZBI_ITEM_MAGIC) {
         fail("zircon_kernel_t sanity check failed\n");
     }

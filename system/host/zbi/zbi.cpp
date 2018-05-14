@@ -1084,7 +1084,7 @@ bool ImportFile(const FileContents& file, const char* filename,
 
 // Returns nullptr if complete, else an explanatory string.
 const char* IncompleteImage(const std::list<std::unique_ptr<Item>>& items) {
-    if (items.front()->type() != ZBI_TYPE_KERNEL_X64) {
+    if (!ZBI_IS_KERNEL_BOOTITEM(items.front()->type())) {
         return "first item not KERNEL";
     }
     auto count =
