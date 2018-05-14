@@ -24,7 +24,7 @@
 // in the zbi_header_t.length value.
 //
 // A "complete" ZBI can be booted by a Zircon-compatible boot loader.
-// It contains one ZBI_TYPE_KERNEL boot item that must come first,
+// It contains one ZBI_TYPE_KERNEL_{ARCH} boot item that must come first,
 // followed by any number of additional boot items, which must include
 // exactly one ZBI_TYPE_STORAGE_BOOTFS item.
 //
@@ -120,7 +120,7 @@ typedef struct {
 // The kernel image.  In a complete ZBI this item must always be first,
 // immediately after the ZBI_TYPE_CONTAINER header.  The contiguous memory
 // image of the kernel is formed from the ZBI_TYPE_CONTAINER header, the
-// ZBI_TYPE_KERNEL header, and the payload.
+// ZBI_TYPE_KERNEL_{ARCH} header, and the payload.
 //
 // The boot loader loads the whole image starting with the container header
 // through to the end of the kernel item's payload into contiguous physical
@@ -159,7 +159,7 @@ typedef struct {
 //  ARM64
 //
 //     zbi_kernel_t.entry is an offset from the beginning of the image
-//     (i.e., the ZBI_TYPE_CONTAINER header before the ZBI_TYPE_KERNEL
+//     (i.e., the ZBI_TYPE_CONTAINER header before the ZBI_TYPE_KERNEL_ARM64
 //     header) to the PC location in the image where the kernel will
 //     start.  The processor is in physical address mode at EL1 or
 //     above.  The kernel image and the bootloader-constructed ZBI each
@@ -167,7 +167,12 @@ typedef struct {
 //     holds the physical address of the bootloader-constructed ZBI.
 //     All other registers are unspecified.
 //
-#define ZBI_TYPE_KERNEL         (0x4c4e524b) // KRNL
+#define ZBI_TYPE_KERNEL_PREFIX     (0x004e524b) // KRN\0
+#define ZBI_TYPE_KERNEL_MASK       (0x00FFFFFF)
+#define ZBI_TYPE_KERNEL_X64        (0x4c4e524b) // KRNL
+#define ZBI_TYPE_KERNEL_ARM64      (0x384e524b) // KRN8
+#define ZBI_IS_KERNEL_BOOTITEM(x)  (((x) & ZBI_TYPE_KERNEL_MASK) ==  \
+                                    ZBI_TYPE_KERNEL_PREFIX)
 
 #ifndef __ASSEMBLER__
 typedef struct {

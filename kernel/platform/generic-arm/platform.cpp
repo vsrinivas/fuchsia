@@ -646,7 +646,8 @@ void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops,
 
     // check to see if the kernel is packaged as a zbi container
     zbi_header_t* header = (zbi_header_t *)paddr_to_physmap(kernel_src_phys);
-    if (header[0].type == ZBI_TYPE_CONTAINER && header[1].type == ZBI_TYPE_KERNEL) {
+    // TODO(gkalsi,ZX-2153): Validate that this is an ARM64 kernel.
+    if (header[0].type == ZBI_TYPE_CONTAINER && header[1].type == ZBI_TYPE_KERNEL_X64) {
         zbi_kernel_t* kernel_header = (zbi_kernel_t *)&header[2];
         // add offset from kernel header to entry point
         kernel_dst_phys += kernel_header->entry;

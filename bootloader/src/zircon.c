@@ -89,7 +89,7 @@ static int header_check(void* image, size_t sz, uint64_t* _entry,
     }
     zircon_kernel_t* kernel = image;
     if ((sz < sizeof(zircon_kernel_t)) ||
-        (kernel->hdr_kernel.type != ZBI_TYPE_KERNEL) ||
+        (kernel->hdr_kernel.type != ZBI_TYPE_KERNEL_X64) ||
         ((kernel->hdr_kernel.flags & ZBI_FLAG_VERSION) == 0)) {
         printf("boot: invalid zircon kernel header\n");
         return -1;
@@ -157,7 +157,7 @@ unsigned identify_image(void* image, size_t sz) {
             printf("image has invalid bootitem\n");
             return IMAGE_INVALID;
         }
-        if (bd->type == ZBI_TYPE_KERNEL) {
+        if (bd->type == ZBI_TYPE_KERNEL_X64) {
             if (n != 0) {
                 printf("image has kernel in middle\n");
                 return IMAGE_INVALID;

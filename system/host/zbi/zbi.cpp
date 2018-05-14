@@ -758,9 +758,10 @@ public:
         ZBI_CASE(EFI_MEMORY_MAP);
         ZBI_CASE(EFI_SYSTEM_TABLE);
         ZBI_CASE(FRAMEBUFFER);
-        ZBI_CASE(KERNEL);
-        ZBI_CASE(NVRAM);
+        ZBI_CASE(KERNEL_ARM64);
+        ZBI_CASE(KERNEL_X64);
         ZBI_CASE(NVRAM_DEPRECATED);
+        ZBI_CASE(NVRAM);
         ZBI_CASE(PLATFORM_ID);
 #undef ZBI_CASE
 
@@ -1083,7 +1084,7 @@ bool ImportFile(const FileContents& file, const char* filename,
 
 // Returns nullptr if complete, else an explanatory string.
 const char* IncompleteImage(const std::list<std::unique_ptr<Item>>& items) {
-    if (items.front()->type() != ZBI_TYPE_KERNEL) {
+    if (items.front()->type() != ZBI_TYPE_KERNEL_X64) {
         return "first item not KERNEL";
     }
     auto count =
