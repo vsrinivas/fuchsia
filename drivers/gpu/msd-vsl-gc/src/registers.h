@@ -74,7 +74,9 @@ public:
 
 class MinorFeatures : public magma::RegisterBase {
 public:
-    static constexpr uint32_t kMoreMinorFeatures = 1 << 21;
+    enum MinorFeatures0 { kMoreMinorFeatures = 1 << 21 };
+    enum MinorFeatures1 { kHasMmu = 1 << 28 };
+    enum MinorFeatures5 { kHalti5 = 1 << 29 };
 
     static auto Get(uint32_t index)
     {
@@ -145,6 +147,16 @@ public:
     bool IsIdle() { return reg_value() == 0x7fffffff; }
 
     static auto Get() { return magma::RegisterAddr<IdleState>(0x4); }
+};
+
+class MmuSecureExceptionAddress : public magma::RegisterBase {
+public:
+    static auto Get() { return magma::RegisterAddr<MmuSecureExceptionAddress>(0x380); }
+};
+
+class MmuSecureStatus : public magma::RegisterBase {
+public:
+    static auto Get() { return magma::RegisterAddr<MmuSecureStatus>(0x384); }
 };
 
 class MmuSecureControl : public magma::RegisterBase {

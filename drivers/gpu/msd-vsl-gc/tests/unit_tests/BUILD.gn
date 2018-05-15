@@ -4,7 +4,7 @@
 
 executable("nonhardware_tests") {
   testonly = true
-  output_name="msd_vsl_gc_nonhardware_tests"
+  output_name = "msd_vsl_gc_nonhardware_tests"
 
   sources = [
     "main.cc",
@@ -25,8 +25,12 @@ executable("nonhardware_tests") {
 source_set("hardware_tests") {
   testonly = true
 
+  include_dirs = [ "//third_party/etnaviv_gpu_tests/src/" ]
+
   sources = [
+    "//third_party/etnaviv_gpu_tests/src/etnaviv_cl_test_gc7000.c",
     "test_device.cc",
+    "test_memory_write.cc",
   ]
 
   deps = [

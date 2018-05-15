@@ -32,6 +32,7 @@ private:
     void Reset();
 
     bool SubmitCommandBufferNoMmu(uint64_t bus_addr, uint32_t length, uint16_t* prefetch_out);
+    bool SubmitCommandBuffer(uint32_t gpu_addr, uint32_t length, uint16_t* prefetch_out);
 
     magma::RegisterIo* register_io() { return register_io_.get(); }
 

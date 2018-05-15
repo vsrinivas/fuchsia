@@ -33,6 +33,9 @@ public:
     registers::Features& features() { return features_; }
 
     uint32_t minor_features(uint32_t index) { return minor_features_[index].reg_value(); }
+    bool halti5() { return minor_features_[5].reg_value() & registers::MinorFeatures::kHalti5; }
+    bool has_mmu() { return minor_features_[1].reg_value() & registers::MinorFeatures::kHasMmu; }
+
     uint32_t register_max() { return 1u << specs1_.log2_register_max().get(); }
     uint32_t thread_count() { return 1u << specs1_.log2_thread_count().get(); }
     uint32_t vertex_output_buffer_size() { return 1u << specs1_.log2_vertex_output_buffer_size().get(); }
