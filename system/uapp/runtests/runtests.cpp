@@ -4,24 +4,20 @@
 
 #include <assert.h>
 #include <errno.h>
-#include <dirent.h>
 #include <fcntl.h>
-#include <glob.h>
 #include <inttypes.h>
 #include <libgen.h>
 #include <limits.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <fbl/string.h>
 #include <fbl/vector.h>
 #include <lib/zx/time.h>
 #include <runtests-utils/runtests-utils.h>
 #include <unittest/unittest.h>
-#include <zircon/listnode.h>
 
 using runtests::Result;
 
@@ -43,287 +39,19 @@ int watchdog_timeout_seconds = -1;
 
 const char* default_test_dirs[] = {
     // zircon builds place everything in ramdisks so tests are located in /boot
-    "/boot/test/core", "/boot/test/libc", "/boot/test/ddk", "/boot/test/sys",
+    "/boot/test/core",
+    "/boot/test/libc",
+    "/boot/test/ddk",
+    "/boot/test/sys",
     "/boot/test/fs",
     // layers above garnet use fs images rather than ramdisks and place tests in /system
-    "/system/test/core", "/system/test/libc", "/system/test/ddk", "/system/test/sys",
+    "/system/test/core",
+    "/system/test/libc",
+    "/system/test/ddk",
+    "/system/test/sys",
     "/system/test/fs",
 };
 constexpr size_t kDefaultNumTestDirs = sizeof(default_test_dirs) / sizeof(default_test_dirs[0]);
-
-bool ParseTestNames(char* input, char*** output, int* output_len) {
-    // Count number of names via delimiter ','.
-    int num_test_names = 0;
-    for (char* tmp = input; tmp != nullptr; tmp = strchr(tmp, ',')) {
-        num_test_names++;
-        tmp++;
-    }
-
-    // Allocate space for names.
-    char** test_names = (char**) malloc(sizeof(char*) * num_test_names);
-    if (test_names == nullptr) {
-        return false;
-    }
-
-    // Tokenize the input string into names.
-    char *next_token;
-    test_names[0] = strtok_r(input, ",", &next_token);
-    for (int i = 1; i < num_test_names; i++) {
-        char* tmp = strtok_r(nullptr, ",", &next_token);
-        if (tmp == nullptr) {
-            free(test_names);
-            return false;
-        }
-        test_names[i] = tmp;
-    }
-    *output = test_names;
-    *output_len = num_test_names;
-    return true;
-}
-
-bool MatchTestNames(const char* dirent_name, const char** filter_names,
-                             const int num_filter_names) {
-    // Always match when there are no test names to filter by.
-    if (num_filter_names <= 0) {
-        return true;
-    }
-    for (int i = 0; i < num_filter_names; i++) {
-        if (!strncmp(filter_names[i], dirent_name, NAME_MAX)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-// Ensures a directory exists by creating it and its parents if it doesn't.
-int MkDirAll(const char* dirn) {
-    char dir[PATH_MAX];
-    size_t bytes_to_copy = strlcpy(dir, dirn, sizeof(dir));
-    if (bytes_to_copy >= sizeof(dir)) {
-        errno = ENAMETOOLONG;
-        return -1;
-    }
-
-    // Fast path: check if the directory already exists.
-    struct stat s;
-    if (!stat(dir, &s)) {
-        return 0;
-    }
-
-    // Slow path: create the directory and its parents.
-    for (size_t slash = 0u; dir[slash]; slash++) {
-        if (slash != 0u && dir[slash] == '/') {
-            dir[slash] = '\0';
-            if (mkdir(dir, 0755) && errno != EEXIST) {
-                return -1;
-            }
-            dir[slash] = '/';
-        }
-    }
-    if (mkdir(dir, 0755) && errno != EEXIST) {
-        return -1;
-    }
-    return 0;
-}
-
-// Sets *out to "parent/child".
-//
-// |parent| is the parent path.
-// |child| is the child path.
-// |out| is the destination for the joined path.
-// |out_len| is the amount of space available at that location.
-//
-// Returns non-zero on failure with errno set.
-int JoinPath(const char* parent, const char* child, char* out, const size_t out_len) {
-    size_t path_len = snprintf(out, out_len, "%s/%s", parent, child);
-    if (path_len >= out_len) {
-        errno = ENAMETOOLONG;
-        return -1;
-    }
-    return 0;
-}
-
-// Opens "parent/child" for writing.
-//
-// |parent| is the parent path.
-// |child| is the child path.
-//
-// Returns nullptr on failure, with errno set.
-FILE* JoinAndOpen(const char* parent, const char* child) {
-    char output_path[PATH_MAX];
-    if (JoinPath(parent, child, output_path, sizeof(output_path))) {
-        return nullptr;
-    }
-    return fopen(output_path, "w");
-}
-
-// Executes all test binaries in a directory (non-recursive).
-//
-// |dirn| is the directory to search.
-// |filter_names| is a list of test names to filter on (i.e. tests whose names
-// don't match are skipped). May be nullptr.
-// |num_filter_names| is the length of |filter_names|.
-// |output_dir| is the output directory for test output, passed in via -o.
-// |num_tests| is an output parameter which will be set to the number of test
-// binaries executed.
-// |num_failed| is an output parameter which will be set to the number of test
-// binaries that failed.
-// |results| is an output paramater to which run results will be appended.
-//
-// Returns false if any test binary failed, true otherwise.
-bool RunTestsInDir(const char* dirn, const char** filter_names, const int num_filter_names,
-                   const char* output_dir, int* num_tests, int* num_failed,
-                   fbl::Vector<Result>* results) {
-    DIR* dir = opendir(dirn);
-    if (dir == nullptr) {
-        return false;
-    }
-
-    // This arithmetic is invalid if verbosity < 0, but in that case by setting argc = 1.
-    const char verbose_opt[] = {'v','=', static_cast<char>(verbosity + '0'), 0};
-    const int argc = verbosity >= 0 ? 2 : 1;
-
-    struct dirent* de;
-    struct stat stat_buf;
-    int test_count = 0;
-    int failed_count = 0;
-
-    // Iterate over the files in dir, setting up the output for test binaries
-    // and executing them via run_test as they're found. Skips over test binaries
-    // whose names aren't in filter_names.
-    //
-    // TODO(mknyszek): Iterate over these dirents (or just discovered test binaries)
-    // in a deterministic order.
-    while ((de = readdir(dir)) != nullptr) {
-        const char* test_name = de->d_name;
-        if (!MatchTestNames(test_name, filter_names, num_filter_names)) {
-            continue;
-        }
-
-        char test_path[PATH_MAX];
-        snprintf(test_path, sizeof(test_path), "%s/%s", dirn, test_name);
-        if (stat(test_path, &stat_buf) != 0 || !S_ISREG(stat_buf.st_mode)) {
-            continue;
-        }
-
-        if (verbosity) {
-            printf(
-                "\n------------------------------------------------\n"
-                "RUNNING TEST: %s\n\n",
-                test_name);
-        }
-
-        // If output_dir was specified, ask run_test to redirect stdout/stderr
-        // to a file whose name is based on the test name.
-        FILE* out = nullptr;
-        if (output_dir != nullptr) {
-            char test_output_dir[PATH_MAX];
-            if (JoinPath(output_dir, test_path, test_output_dir, sizeof(test_output_dir))) {
-              printf("Error: Could not construct output dir for test %s: %s\n", test_name,
-                     strerror(errno));
-              return false;
-            }
-            if (MkDirAll(test_output_dir)) {
-                printf("Error: Could not output directory for test %s: %s\n", test_name,
-                       strerror(errno));
-                return false;
-            }
-            out = JoinAndOpen(test_output_dir, kOutputFileName);
-            if (out == nullptr) {
-                printf("Error: Could not open output file for test %s: %s\n", test_name,
-                       strerror(errno));
-                return false;
-            }
-        }
-
-        // Execute the test binary.
-        const char* argv[] = {test_path, verbose_opt};
-        results->push_back(runtests::RunTest(argv, argc, out));
-        if ((*results)[results->size() - 1].launch_status != runtests::SUCCESS) {
-            failed_count++;
-        }
-
-        // Clean up the output file.
-        if (out != nullptr && fclose(out)) {
-            printf("FAILURE: Failed to close output file for test %s: %s\n", de->d_name,
-                   strerror(errno));
-            continue;
-        }
-
-        test_count++;
-    }
-
-    closedir(dir);
-    *num_failed = failed_count;
-    *num_tests = test_count;
-    return failed_count == 0;
-}
-
-// Writes a JSON summary of test results given a sequence of results.
-//
-// |results| are the run results to summarize.
-// |summary_json| is the file stream to write the JSON summary to.
-//
-// Returns non-zero on failure, with errno set.
-int WriteSummaryJSON(const fbl::Vector<Result>& results, FILE* summary_json) {
-    int test_count = 0;
-    fprintf(summary_json, "{\"tests\":[\n");
-    for (const Result& result : results){
-        if (test_count != 0) {
-            fprintf(summary_json, ",\n");
-        }
-        fprintf(summary_json, "{");
-
-        // Write the name of the test.
-        fprintf(summary_json, "\"name\":\"%s\"", result.name.c_str());
-
-        // Write the path to the output file, relative to the test output root
-        // (i.e. what's passed in via -o). The test name is already a path to
-        // the test binary on the target, so to make this a relative path, we
-        // only have to skip leading '/' characters in the test name.
-        char buf[PATH_MAX];
-        if (JoinPath(result.name.c_str(), kOutputFileName, buf, sizeof(buf))) {
-            return -1;
-        }
-        char *output_file = buf;
-        for (; *output_file == '/'; output_file++);
-        fprintf(summary_json, ",\"output_file\":\"%s\"", output_file);
-
-        // Write the result of the test, which is either PASS or FAIL. We only
-        // have one PASS condition in TestResult, which is SUCCESS.
-        fprintf(summary_json, ",\"result\":\"%s\"",
-                result.launch_status == runtests::SUCCESS ? "PASS" : "FAIL");
-
-        fprintf(summary_json, "}");
-        test_count++;
-    }
-    fprintf(summary_json, "\n]}\n");
-    return 0;
-}
-
-// Resolves a set of globs into the same glob_t.
-//
-// |globs| is an array of glob patterns.
-// |num_globs| is the number of glob patterns in |globs|.
-// |resolved| is the output glob_t.
-//
-// Returns a glob error (see glob.h), but will never return GLOB_NOMATCH. Note
-// also that GLOB_ABORTED will never be returned, because we use the GLOB_ERR
-// flag and thus the only error returned is the fatal GLOB_NOSPACE.
-static int ResolveTestGlobs(const char** globs, const int num_globs, glob_t* resolved) {
-    // Zero out the number of paths found because in the event of a single path
-    // and GLOB_NOMATCH, it may not happen, and we don't return GLOB_NOMATCH.
-    resolved->gl_pathc = 0;
-    for (int i = 0; i < num_globs; i++) {
-        int err = glob(globs[i], i>0 ? GLOB_APPEND : 0, nullptr, resolved);
-
-        // Ignore a lack of matches.
-        if (err && err != GLOB_NOMATCH) {
-            return err;
-        }
-    }
-    return 0;
-}
 
 int Usage(char* name) {
     fprintf(stderr,
@@ -335,7 +63,8 @@ int Usage(char* name) {
             "globs which match directories containing tests to run,\n"
             "non-recursively. Note that non-directories captured by\n"
             "a glob will be silently ignored. If not specified, the\n"
-            "default set of directories is:                        \n", name);
+            "default set of directories is:                        \n",
+            name);
     for (size_t i = 0; i < kDefaultNumTestDirs; i++) {
         fprintf(stderr, "   %s", default_test_dirs[i]);
         if (i < kDefaultNumTestDirs - 1) {
@@ -343,7 +72,6 @@ int Usage(char* name) {
         } else {
             fprintf(stderr, "\n\n");
         }
-
     }
     fprintf(stderr,
             "options:                                              \n"
@@ -380,16 +108,14 @@ int Usage(char* name) {
             "variable.                                             \n"
             "The watchdog timeout option -w only works for tests   \n"
             "that support the RUNTESTS_WATCHDOG_TIMEOUT environment\n"
-            "variable.                                             \n"
-            );
+            "variable.                                             \n");
     return -1;
 }
-}  // namespace
+} // namespace
 
 int main(int argc, char** argv) {
     unsigned int test_types = TEST_DEFAULT;
-    int num_filter_names = 0;
-    const char** filter_names = nullptr;
+    fbl::Vector<fbl::String> filter_names;
     int num_test_globs = 0;
     const char** test_globs = nullptr;
     const char* output_dir = nullptr;
@@ -426,11 +152,8 @@ int main(int argc, char** argv) {
         } else if (strcmp(argv[i], "-t") == 0) {
             if (i + 1 >= argc) {
                 return Usage(argv[0]);
-            } else if (!ParseTestNames(argv[i + 1], (char***)&filter_names,
-                                         &num_filter_names)) {
-                printf("Error: Could not parse test names\n");
-                return -1;
             }
+            runtests::ParseTestNames(argv[i + 1], &filter_names);
             i++;
         } else if (strcmp(argv[i], "-o") == 0) {
             if (i + 1 >= argc) {
@@ -445,12 +168,11 @@ int main(int argc, char** argv) {
             char* timeout_str = argv[++i];
             char* end;
             long timeout = strtol(timeout_str, &end, 0);
-            if (*timeout_str == '\0' || *end != '\0' ||
-                timeout < 0 || timeout > INT_MAX) {
+            if (*timeout_str == '\0' || *end != '\0' || timeout < 0 || timeout > INT_MAX) {
                 fprintf(stderr, "Error: bad timeout\n");
                 return 1;
             }
-            watchdog_timeout_seconds = (int) timeout;
+            watchdog_timeout_seconds = static_cast<int>(timeout);
         } else if (argv[i][0] != '-') {
             // Treat the rest of the argv array as a list of directory globs.
             num_test_globs = argc - i;
@@ -497,16 +219,14 @@ int main(int argc, char** argv) {
     // Takes test_globs and resolves them, putting the result in test_dirs, which
     // is used by the rest of the code. Note that by this point test_globs will
     // not be nullptr.
-    glob_t resolved_globs;
-    if (ResolveTestGlobs(test_globs, num_test_globs, &resolved_globs)) {
-        printf("Error: Failed to resolve globs\n");
+    fbl::Vector<fbl::String> test_dirs;
+    const int error = runtests::ResolveGlobs(test_globs, num_test_globs, &test_dirs);
+    if (error) {
+        printf("Error: Failed to resolve globs, error = %d\n", error);
         return -1;
     }
     // TODO(mknyszek): Sort test_dirs in order to make running tests more
     // deterministic.
-    size_t num_test_dirs = resolved_globs.gl_pathc;
-    const char** test_dirs = (const char**)resolved_globs.gl_pathv;
-
     struct stat st;
     if (output_dir != nullptr && stat(output_dir, &st) < 0 && (st.st_mode & S_IFMT) == S_IFDIR) {
         printf("Error: Could not open %s\n", output_dir);
@@ -514,14 +234,13 @@ int main(int argc, char** argv) {
     }
 
     int failed_count = 0;
-    int total_count = 0;
     fbl::Vector<Result> results;
-    for (size_t i = 0; i < num_test_dirs; i++) {
+    for (const fbl::String& test_dir : test_dirs) {
         // In the event of failures around a directory not existing or being an empty node
         // we will continue to the next entries rather than aborting. This allows us to handle
         // different sets of default test directories.
-        if (stat(test_dirs[i], &st) < 0) {
-            printf("Could not open %s, skipping...\n", test_dirs[i]);
+        if (stat(test_dir.c_str(), &st) < 0) {
+            printf("Could not open %s, skipping...\n", test_dir.c_str());
             continue;
         }
         if (!S_ISDIR(st.st_mode)) {
@@ -533,8 +252,8 @@ int main(int argc, char** argv) {
         // Resolve an absolute path to the test directory to ensure output
         // directory names will never collide.
         char abs_test_dir[PATH_MAX];
-        if (realpath(test_dirs[i], abs_test_dir) == nullptr) {
-            printf("Error: Could not resolve path %s: %s\n", test_dirs[i], strerror(errno));
+        if (realpath(test_dir.c_str(), abs_test_dir) == nullptr) {
+            printf("Error: Could not resolve path %s: %s\n", test_dir.c_str(), strerror(errno));
             continue;
         }
 
@@ -553,21 +272,18 @@ int main(int argc, char** argv) {
                 printf("Error: Output path is too long: %s/%s\n", output_dir, abs_test_dir);
                 return -1;
             }
-            if (MkDirAll(buf)) {
-                printf("Error: Could not create output directory %s: %s\n", buf,
-                       strerror(errno));
+            const int error = runtests::MkDirAll(buf);
+            if (error) {
+                printf("Error: Could not create output directory %s: %s\n", buf, strerror(error));
                 return -1;
             }
         }
 
-        int num_tests = 0;
         int num_failed = 0;
-        RunTestsInDir(test_dirs[i], filter_names, num_filter_names,
-                         output_dir, &num_tests, &num_failed, &results);
-        total_count += num_tests;
+        runtests::RunTestsInDir(test_dir, filter_names, output_dir, kOutputFileName, verbosity,
+                                &num_failed, &results);
         failed_count += num_failed;
     }
-    free(filter_names);
 
     // It's not catastrophic if we can't unset it; we're just trying to clean up
     unsetenv(TEST_ENV_NAME);
@@ -581,8 +297,9 @@ int main(int argc, char** argv) {
             printf("Error: Could not open JSON summary file.\n");
             return -1;
         }
-        if (WriteSummaryJSON(results, summary_json)) {
-            printf("Error: Failed to write JSON summary.\n");
+        const int error = runtests::WriteSummaryJSON(results, kOutputFileName, summary_json);
+        if (error) {
+            printf("Error: Failed to write JSON summary: %s\n", strerror(error));
             return -1;
         }
         if (fclose(summary_json)) {
@@ -627,20 +344,14 @@ int main(int argc, char** argv) {
         }
     }
 
-    // Free the glob structure.
-    if (test_globs != nullptr) {
-        globfree(&resolved_globs);
-    }
-
     // TODO(ZX-2051): Include total duration in summary.json.
     zx::time end_time = zx::clock::get(ZX_CLOCK_MONOTONIC);
     uint64_t time_taken_ms = (end_time - start_time).to_msecs();
 
     // Print this last, since some infra recipes will shut down the fuchsia
     // environment once it appears.
-    printf("\nSUMMARY: Ran %d tests: %d failed (%" PRIu64 ".%03u sec)\n",
-           total_count, failed_count,
-           time_taken_ms / 1000, (unsigned) (time_taken_ms % 1000));
+    printf("\nSUMMARY: Ran %lu tests: %d failed (%" PRIu64 ".%03u sec)\n", results.size(),
+           failed_count, time_taken_ms / 1000, (unsigned)(time_taken_ms % 1000));
 
     return failed_count ? 1 : 0;
 }
