@@ -32,6 +32,7 @@
 # MODULE_STATIC_LIBS : static libraries for a userapp or userlib to depend on
 # MODULE_FIDL_LIBS : fidl libraries for a userapp or userlib to depend on the C bindings of
 # MODULE_FIDL_LIBRARY : the name of the FIDL library being built (for fidl modules)
+# MODULE_FIRMWARE : files under prebuilt/downloads/firmware/ to be installed under /boot/driver/firmware/
 # MODULE_SO_NAME : linkage name for the shared library
 # MODULE_HOST_LIBS: static libraries for a hostapp or hostlib to depend on
 # MODULE_HOST_SYSLIBS: system libraries for a hostapp or hostlib to depend on
@@ -241,6 +242,11 @@ ifeq (,$(filter $(MODULE_TYPE),hostapp hosttest hostlib))
 ALL_TARGET_OBJS += $(MODULE_OBJS)
 endif
 
+USER_MANIFEST_LINES += \
+    $(addprefix $(MODULE_GROUP)$(FIRMWARE_INSTALL_DIR)/,\
+                $(foreach file,$(MODULE_FIRMWARE),\
+                          $(notdir $(file))=$(FIRMWARE_SRC_DIR)/$(file)))
+
 # generate an input linker script for all kernel and user modules
 ifeq (,$(filter $(MODULE_TYPE),hostapp hosttest hostlib))
 MODULE_OBJECT := $(MODULE_OUTNAME).mod.o
@@ -305,6 +311,7 @@ MODULE_GROUP :=
 MODULE_PACKAGE :=
 MODULE_PACKAGE_SRCS :=
 MODULE_PACKAGE_INCS :=
+MODULE_FIRMWARE :=
 
 # Save these before the next module.
 SAVED_EXTRA_BUILDDEPS := $(EXTRA_BUILDDEPS)

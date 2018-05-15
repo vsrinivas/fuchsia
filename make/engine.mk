@@ -392,6 +392,15 @@ USER_MANIFEST_LINES :=
 # The contents of this are derived from BOOTFS_DEBUG_MODULES.
 USER_MANIFEST_DEBUG_INPUTS :=
 
+# Directory in the bootfs where MODULE_FIRMWARE files go.
+FIRMWARE_INSTALL_DIR := driver/firmware
+# Directory in the source tree where MODULE_FIRMWARE files are found.
+FIRMWARE_SRC_DIR := prebuilt/downloads/firmware
+# TODO(mcgrathr): Force an absolute path for this so that every rhs in the
+# manifest either starts with $(BUILDDIR) or is absolute.
+# //scripts/build-zircon.sh needs this.
+FIRMWARE_SRC_DIR := $(shell cd $(FIRMWARE_SRC_DIR) && pwd)
+
 # if someone defines this, the build id will be pulled into lib/version
 BUILDID ?=
 
