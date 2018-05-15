@@ -10,9 +10,7 @@ members =  [
   "bin/xi_core",
   "examples/bluetooth/ble_battery_service",
   "examples/rust/testing",
-  "lib/rust/crates/eapol",
   "lib/rust/crates/fuchsia-bluetooth",
-  "lib/rust/crates/wlan-rsn",
   "lib/rust/crates/wlan-sme",
   "lib/rust/fidl_crates/fidl_bluetooth_host",
   "public/lib/fidl/rust/fidl",
@@ -54,7 +52,6 @@ fidl_mem = { path = "public/rust/fidl_crates/fidl_mem" }
 fidl_power_manager = { path = "public/rust/fidl_crates/fidl_power_manager" }
 fidl_xi = { path = "public/rust/fidl_crates/fidl_xi" }
 fuchsia-ddk = { path = "public/rust/crates/fuchsia-ddk" }
-eapol = { path = "lib/rust/crates/eapol" }
 fdio = { path = "public/rust/crates/fdio" }
 fidl = { path = "public/lib/fidl/rust/fidl" }
 fuchsia-app = { path = "public/rust/crates/fuchsia-app" }
@@ -68,7 +65,6 @@ mio = { path = "../third_party/rust-mirrors/mio" }
 mxruntime = { path = "public/rust/crates/mxruntime" }
 mxruntime-sys = { path = "public/rust/crates/mxruntime/mxruntime-sys" }
 rand = { path = "../third_party/rust-mirrors/rand" }
-wlan-rsn = { path = "lib/rust/crates/wlan-rsn" }
 wlan-sme = { path = "lib/rust/crates/wlan-sme" }
 xi-core-lib = { path = "../third_party/rust-mirrors/xi-editor/rust/core-lib" }
 xi-rope = { path = "../third_party/rust-mirrors/xi-editor/rust/rope" }
