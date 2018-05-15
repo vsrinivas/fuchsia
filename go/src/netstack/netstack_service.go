@@ -149,13 +149,6 @@ func (ni *netstackImpl) GetInterfaces() (out []nsfidl.NetInterface, err error) {
 	return getInterfaces(), nil
 }
 
-func (ni *netstackImpl) GetNodeName() (out string, err error) {
-	ns.mu.Lock()
-	nodename := ns.nodename
-	ns.mu.Unlock()
-	return nodename, nil
-}
-
 func (ni *netstackImpl) GetRouteTable() (out []nsfidl.RouteTableEntry, err error) {
 	ns.mu.Lock()
 	table := ns.stack.GetRouteTable()

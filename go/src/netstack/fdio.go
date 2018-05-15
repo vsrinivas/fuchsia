@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"app/context"
+	"fidl/device_settings"
 
 	"github.com/google/netstack/dns"
 	"github.com/google/netstack/tcpip"
@@ -953,10 +954,29 @@ func (s *socketServer) opIoctl(ios *iostate, msg *zxsocket.Msg) zx.Status {
 		lastIfInfo.info[requestedIndex].Encode(msg)
 		return zx.ErrOk
 	case ioctlNetcGetNodename:
-		s.ns.mu.Lock()
-		nodename := s.ns.nodename
-		s.ns.mu.Unlock()
-
+		nodename, status, err := ns.deviceSettings.GetString(deviceSettingsManagerNodenameKey)
+		if err != nil {
+			log.Printf("ioctlNetcGetNodename: error accessing device settings: %s\n", err)
+			nodename = defaultNodename // defined in netstack.go
+		}
+		if status != device_settings.StatusOk {
+			var reportStatus string
+			switch status {
+			case device_settings.StatusErrNotSet:
+				reportStatus = "key not set"
+			case device_settings.StatusErrInvalidSetting:
+				reportStatus = "invalid setting"
+			case device_settings.StatusErrRead:
+				reportStatus = "error reading key"
+			case device_settings.StatusErrIncorrectType:
+				reportStatus = "value type was incorrect"
+			case device_settings.StatusErrUnknown:
+				reportStatus = "unknown"
+			}
+			log.Println("ioctlNetcGetNodename: falling back to default nodename.")
+			log.Printf("ioctlNetcGetNodename: device settings error: %s\n", reportStatus)
+			nodename = defaultNodename // defined in netstack.go
+		}
 		msg.Datalen = uint32(copy(msg.Data[:msg.Arg], nodename))
 		msg.Data[msg.Datalen] = 0
 		return zx.ErrOk

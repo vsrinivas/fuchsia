@@ -13,7 +13,7 @@ import (
 	"strings"
 	"sync"
 
-	"netstack/deviceid"
+	"fidl/device_settings"
 	"netstack/filter"
 	"netstack/link/eth"
 	"netstack/link/stats"
@@ -30,11 +30,18 @@ import (
 	"github.com/google/netstack/tcpip/stack"
 )
 
+const (
+	deviceSettingsManagerNodenameKey = "DeviceName"
+	defaultNodename                  = "fuchsia-unset-device-name"
+)
+
 // A netstack tracks all of the running state of the network stack.
 type netstack struct {
 	arena      *eth.Arena
 	stack      *stack.Stack
 	dispatcher *socketServer
+
+	deviceSettings *device_settings.DeviceSettingsManagerInterface
 
 	mu       sync.Mutex
 	nodename string
@@ -396,13 +403,7 @@ func (ns *netstack) addEth(path string) error {
 	copy(ifs.nic.Mac[:], ep.LinkAddr)
 
 	nicid := ns.countNIC + 1
-	firstNIC := nicid == 2 && ns.nodename == ""
-	if firstNIC {
-		// This is the first real ethernet device on this host.
-		// No nodename has been configured for the network stack,
-		// so derive it from the MAC address.
-		ns.nodename = deviceid.DeviceID(ifs.nic.Mac)
-	}
+	firstNIC := nicid == 2
 	ifs.nic.ID = nicid
 	ifs.nic.Features = client.Features
 	setNICName(ifs.nic)

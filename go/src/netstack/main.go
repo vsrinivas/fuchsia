@@ -13,6 +13,7 @@ import (
 	"netstack/watcher"
 
 	"fidl/bindings"
+	"fidl/device_settings"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/arp"
@@ -58,14 +59,19 @@ func main() {
 		log.Fatalf("ethernet: %v", err)
 	}
 
-	// TODO: plumb the zircon.nodename environment variable through
-	// initialization, just as devmgr does to netsvc. Set it here
-	// in the ns.nodename field.
+	req, ds, err := device_settings.NewDeviceSettingsManagerInterfaceRequest()
+	if err != nil {
+		log.Printf("could not connect to device settings service: %s", err)
+	}
+
+	ctx.ConnectToEnvService(req)
+
 	ns = &netstack{
-		arena:      arena,
-		stack:      stk,
-		dispatcher: s,
-		ifStates:   make(map[tcpip.NICID]*ifState),
+		arena:          arena,
+		stack:          stk,
+		dispatcher:     s,
+		deviceSettings: ds,
+		ifStates:       make(map[tcpip.NICID]*ifState),
 	}
 	if err := ns.addLoopback(); err != nil {
 		log.Fatalf("loopback: %v", err)
