@@ -11,7 +11,7 @@ namespace async {
 
 // Returns the current time in the dispatcher's timebase.
 // For most loops, this is generally obtained from |ZX_CLOCK_MONOTONIC|
-// but certain loops may use a different tiembase, notably for testing.
+// but certain loops may use a different timebase, notably for testing.
 inline zx::time Now(async_t* async) {
     return zx::time(async_now(async));
 }
