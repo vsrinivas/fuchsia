@@ -93,7 +93,7 @@ RankedSuggestion* NextProcessor::GetSuggestion(
 }
 
 void NextProcessor::UpdateRanking() {
-  suggestions_.Rank(UserInput());
+  suggestions_.Rank();
   NotifyAllOfResults();
   debug_->OnNextUpdate(&suggestions_);
   NotifyOfProcessingChange(false);
