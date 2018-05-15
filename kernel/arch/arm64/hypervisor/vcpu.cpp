@@ -26,6 +26,7 @@
 #include "vmexit_priv.h"
 
 static constexpr uint32_t kGichHcrEn = 1u << 0;
+static constexpr uint32_t kGichHcrUie = 1u << 1;
 static constexpr uint32_t kSpsrDaif = 0b1111 << 6;
 static constexpr uint32_t kSpsrEl1h = 0b0101;
 static constexpr uint32_t kSpsrNzcv = 0b1111 << 28;
@@ -192,10 +193,29 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
         {
             AutoGich auto_gich(&gich_state_);
 
+            // Underflow maintenance interrupt is signalled if there is one or no free LRs.
+            // We use it in case when there is not enough free LRs to inject all pending
+            // interrupts, so when guest finishes processing most of them, a maintenance
+            // interrupt will cause VM exit and will give us a chance to inject the remaining
+            // interrupts. The point of this is to reduce latency when processing interrupts.
+            uint32_t gich_hcr = 0;
+            if (gich_state_.interrupt_tracker.Pending() && gich_state_.num_lrs > 1) {
+                gich_hcr = gic_read_gich_hcr() | kGichHcrUie;
+                gic_write_gich_hcr(gich_hcr);
+            }
+
             ktrace(TAG_VCPU_ENTER, 0, 0, 0, 0);
             running_.store(true);
             status = arm64_el2_resume(vttbr, el2_state_.PhysicalAddress(), curr_hcr);
             running_.store(false);
+
+            // If we enabled underflow interrupt before we entered the guest we disable it
+            // to deassert it in case it is signalled. For details please refer to ARM Generic
+            // Interrupt Controller, Architecture Specification, 5.3.4 Maintenance Interrupt
+            // Status Register, GICH_MISR. Description of U bit in GICH_MISR.
+            if ((gich_hcr & kGichHcrUie) != 0) {
+                gic_write_gich_hcr(gich_hcr & ~kGichHcrUie);
+            }
         }
         bool has_active_interrupt = gich_active_interrupts(&gich_state_);
         if (status == ZX_ERR_NEXT) {
