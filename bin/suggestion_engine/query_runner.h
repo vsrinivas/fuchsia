@@ -9,9 +9,10 @@
 #include <set>
 
 #include "lib/fxl/memory/weak_ptr.h"
-#include "peridot/bin/suggestion_engine/query_handler_record.h"
 
 namespace modular {
+
+struct QueryHandlerRecord;
 
 // QueryRunner is in charge of executing a query and interacting with the query
 // handlers, making sure all of them return or timeout if the query takes too
@@ -59,6 +60,14 @@ class QueryRunner {
   std::function<void()> on_end_request_callback_;
 
   std::multiset<std::string> outstanding_handlers_;
+};
+
+struct QueryHandlerRecord {
+  QueryHandlerRecord(QueryHandlerPtr handler, std::string url)
+      : handler(std::move(handler)), url(std::move(url)) {}
+
+  QueryHandlerPtr handler;
+  std::string url;
 };
 
 }  // namespace modular

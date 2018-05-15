@@ -12,7 +12,6 @@
 
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/suggestion_engine/media_player.h"
-#include "peridot/bin/suggestion_engine/query_handler_record.h"
 #include "peridot/bin/suggestion_engine/query_runner.h"
 #include "peridot/bin/suggestion_engine/ranker.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"

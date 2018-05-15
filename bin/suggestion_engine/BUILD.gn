@@ -46,7 +46,6 @@ source_set("suggestion_engine_impl") {
     "next_processor.h",
     "proposal_publisher_impl.cc",
     "proposal_publisher_impl.h",
-    "query_handler_record.h",
     "query_processor.cc",
     "query_processor.h",
     "query_runner.cc",
@@ -59,7 +58,6 @@ source_set("suggestion_engine_impl") {
 
   deps = [
     ":debug",
-    ":filter",
     ":interruptions",
     ":models",
     ":ranking",
@@ -204,16 +202,6 @@ source_set("timeline_stories_watcher") {
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/public/lib:fidl",
-  ]
-}
-
-source_set("filter") {
-  sources = [
-    "filter.h",
-  ]
-
-  deps = [
     "//peridot/public/lib:fidl",
   ]
 }
