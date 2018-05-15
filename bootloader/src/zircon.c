@@ -6,6 +6,7 @@
 
 #include <efi/protocol/graphics-output.h>
 #include <efi/runtime-services.h>
+#include <efi/zircon.h>
 
 #include <cmdline.h>
 #include <inttypes.h>
@@ -13,7 +14,7 @@
 #include <string.h>
 #include <xefi.h>
 
-#include <zircon/boot/bootdata.h>
+#include <zircon/boot/image.h>
 #include <zircon/pixelformat.h>
 
 
@@ -54,22 +55,22 @@ static void start_zircon(uint64_t entry, void* bootdata) {
 }
 
 static int add_bootdata(void** ptr, size_t* avail,
-                        bootdata_t* bd, void* data) {
-    size_t len = BOOTDATA_ALIGN(bd->length);
-    if ((sizeof(bootdata_t) + len) > *avail) {
+                        zbi_header_t* bd, void* data) {
+    size_t len = ZBI_ALIGN(bd->length);
+    if ((sizeof(zbi_header_t) + len) > *avail) {
         printf("boot: no room for bootdata type=%08x size=%08x\n",
                bd->type, bd->length);
         return -1;
     }
-    bd->flags |= BOOTDATA_FLAG_V2;
+    bd->flags |= ZBI_FLAG_VERSION;
     bd->reserved0 = 0;
     bd->reserved1 = 0;
-    bd->magic = BOOTITEM_MAGIC;
-    bd->crc32 = BOOTITEM_NO_CRC32;
+    bd->magic = ZBI_ITEM_MAGIC;
+    bd->crc32 = ZBI_ITEM_NO_CRC32;
 
-    memcpy(*ptr, bd, sizeof(bootdata_t));
-    memcpy((*ptr) + sizeof(bootdata_t), data, len);
-    len += sizeof(bootdata_t);
+    memcpy(*ptr, bd, sizeof(zbi_header_t));
+    memcpy((*ptr) + sizeof(zbi_header_t), data, len);
+    len += sizeof(zbi_header_t);
     (*ptr) += len;
     (*avail) -= len;
 
@@ -78,30 +79,30 @@ static int add_bootdata(void** ptr, size_t* avail,
 
 static int header_check(void* image, size_t sz, uint64_t* _entry,
                         size_t* _flen, size_t* _klen) {
-    bootdata_t* bd = image;
+    zbi_header_t* bd = image;
     size_t flen, klen;
     uint64_t entry;
 
-    if (!(bd->flags & BOOTDATA_FLAG_V2)) {
+    if (!(bd->flags & ZBI_FLAG_VERSION)) {
         printf("boot: v1 bootdata kernel no longer supported\n");
         return -1;
     }
     zircon_kernel_t* kernel = image;
     if ((sz < sizeof(zircon_kernel_t)) ||
-        (kernel->hdr_kernel.type != BOOTDATA_KERNEL) ||
-        ((kernel->hdr_kernel.flags & BOOTDATA_FLAG_V2) == 0)) {
+        (kernel->hdr_kernel.type != ZBI_TYPE_KERNEL) ||
+        ((kernel->hdr_kernel.flags & ZBI_FLAG_VERSION) == 0)) {
         printf("boot: invalid zircon kernel header\n");
         return -1;
     }
-    flen = BOOTDATA_ALIGN(kernel->hdr_file.length);
-    klen = BOOTDATA_ALIGN(kernel->hdr_kernel.length);
-    entry = kernel->data_kernel.entry64;
-    if (flen > (sz - sizeof(bootdata_t))) {
+    flen = ZBI_ALIGN(kernel->hdr_file.length);
+    klen = ZBI_ALIGN(kernel->hdr_kernel.length);
+    entry = kernel->data_kernel.entry;
+    if (flen > (sz - sizeof(zbi_header_t))) {
         printf("boot: invalid zircon kernel header (bad flen)\n");
         return -1;
     }
 
-    if (klen > (sz - (sizeof(bootdata_t) * 2))) {
+    if (klen > (sz - (sizeof(zbi_header_t) * 2))) {
         printf("boot: invalid zircon kernel header (bad klen)\n");
         return -1;
     }
@@ -116,14 +117,14 @@ static int header_check(void* image, size_t sz, uint64_t* _entry,
     return 0;
 }
 
-static int item_check(bootdata_t* bd, size_t sz) {
+static int item_check(zbi_header_t* bd, size_t sz) {
     if (sz > 0x7FFFFFFF) {
         // disallow 2GB+ items to avoid wrap on align issues
         return -1;
     }
-    if ((bd->magic != BOOTITEM_MAGIC) ||
-        ((bd->flags & BOOTDATA_FLAG_V2) == 0) ||
-        (BOOTDATA_ALIGN(bd->length) > sz)) {
+    if ((bd->magic != ZBI_ITEM_MAGIC) ||
+        ((bd->flags & ZBI_FLAG_VERSION) == 0) ||
+        (ZBI_ALIGN(bd->length) > sz)) {
         return -1;
     } else {
         return 0;
@@ -135,28 +136,28 @@ unsigned identify_image(void* image, size_t sz) {
     if (sz == 0) {
         return IMAGE_EMPTY;
     }
-    if (sz < sizeof(bootdata_t)) {
+    if (sz < sizeof(zbi_header_t)) {
         printf("image is too small\n");
         return IMAGE_INVALID;
     }
-    bootdata_t* bd = image;
-    sz -= sizeof(bootdata_t);
-    if ((bd->type != BOOTDATA_CONTAINER) ||
+    zbi_header_t* bd = image;
+    sz -= sizeof(zbi_header_t);
+    if ((bd->type != ZBI_TYPE_CONTAINER) ||
         item_check(bd, sz)) {
         printf("image has invalid header\n");
         return IMAGE_INVALID;
     }
-    image += sizeof(bootdata_t);
+    image += sizeof(zbi_header_t);
     unsigned n = 0;
     unsigned r = 0;
-    while (sz > sizeof(bootdata_t)) {
+    while (sz > sizeof(zbi_header_t)) {
         bd = image;
-        sz -= sizeof(bootdata_t);
+        sz -= sizeof(zbi_header_t);
         if (item_check(image, sz)) {
             printf("image has invalid bootitem\n");
             return IMAGE_INVALID;
         }
-        if (bd->type == BOOTDATA_KERNEL) {
+        if (bd->type == ZBI_TYPE_KERNEL) {
             if (n != 0) {
                 printf("image has kernel in middle\n");
                 return IMAGE_INVALID;
@@ -164,15 +165,15 @@ unsigned identify_image(void* image, size_t sz) {
                 r = IMAGE_KERNEL;
             }
         }
-        if (bd->type == BOOTDATA_BOOTFS_BOOT) {
+        if (bd->type == ZBI_TYPE_STORAGE_BOOTFS) {
             if ((r == IMAGE_KERNEL) || (r == IMAGE_COMBO)) {
                 r = IMAGE_COMBO;
             } else {
                 r = IMAGE_RAMDISK;
             }
         }
-        image += BOOTDATA_ALIGN(bd->length) + sizeof(bootdata_t);
-        sz -= BOOTDATA_ALIGN(bd->length);
+        image += ZBI_ALIGN(bd->length) + sizeof(zbi_header_t);
+        sz -= ZBI_ALIGN(bd->length);
         n++;
     }
 
@@ -189,45 +190,45 @@ int boot_zircon(efi_handle img, efi_system_table* sys,
     if (header_check(image, isz, &entry, NULL, NULL)) {
         return -1;
     }
-    if ((ramdisk == NULL) || (rsz < sizeof(bootdata_t))) {
+    if ((ramdisk == NULL) || (rsz < sizeof(zbi_header_t))) {
         printf("boot: ramdisk missing or too small\n");
         return -1;
     }
 
-    bootdata_t* hdr0 = ramdisk;
-    if ((hdr0->type != BOOTDATA_CONTAINER) ||
-        (hdr0->extra != BOOTDATA_MAGIC) ||
-        !(hdr0->flags & BOOTDATA_FLAG_V2)) {
+    zbi_header_t* hdr0 = ramdisk;
+    if ((hdr0->type != ZBI_TYPE_CONTAINER) ||
+        (hdr0->extra != ZBI_CONTAINER_MAGIC) ||
+        !(hdr0->flags & ZBI_FLAG_VERSION)) {
         printf("boot: ramdisk has invalid bootdata header\n");
         return -1;
     }
 
-    if ((hdr0->length > (rsz - sizeof(bootdata_t)))) {
+    if ((hdr0->length > (rsz - sizeof(zbi_header_t)))) {
         printf("boot: ramdisk has invalid bootdata length\n");
         return -1;
     }
 
     // osboot ensures we have FRONT_BYTES ahead of the
     // ramdisk to prepend our own bootdata items.
-    bootdata_t hdr;
+    zbi_header_t hdr;
     void* bptr = ramdisk - FRONT_BYTES;
     size_t blen = FRONT_BYTES;
 
     // We create a new container header of the same size
     // as the one at the start of the ramdisk
-    hdr.type = BOOTDATA_CONTAINER;
+    hdr.type = ZBI_TYPE_CONTAINER;
     hdr.length = hdr0->length + FRONT_BYTES;
-    hdr.extra = BOOTDATA_MAGIC;
-    hdr.flags = BOOTDATA_FLAG_V2;
+    hdr.extra = ZBI_CONTAINER_MAGIC;
+    hdr.flags = ZBI_FLAG_VERSION;
     hdr.reserved0 = 0;
     hdr.reserved1 = 0;
-    hdr.magic = BOOTITEM_MAGIC;
-    hdr.crc32 = BOOTITEM_NO_CRC32;
+    hdr.magic = ZBI_ITEM_MAGIC;
+    hdr.crc32 = ZBI_ITEM_NO_CRC32;
     memcpy(bptr, &hdr, sizeof(hdr));
     bptr += sizeof(hdr);
 
     // pass kernel commandline
-    hdr.type = BOOTDATA_CMDLINE;
+    hdr.type = ZBI_TYPE_CMDLINE;
     hdr.length = csz;
     hdr.extra = 0;
     hdr.flags = 0;
@@ -238,7 +239,7 @@ int boot_zircon(efi_handle img, efi_system_table* sys,
     // pass ACPI root pointer
     uint64_t rsdp = find_acpi_root(img, sys);
     if (rsdp != 0) {
-        hdr.type = BOOTDATA_ACPI_RSDP;
+        hdr.type = ZBI_TYPE_ACPI_RSDP;
         hdr.length = sizeof(rsdp);
         if (add_bootdata(&bptr, &blen, &hdr, &rsdp)) {
             return -1;
@@ -248,7 +249,7 @@ int boot_zircon(efi_handle img, efi_system_table* sys,
     // pass SMBIOS entry point pointer
     uint64_t smbios = find_smbios(img, sys);
     if (smbios != 0) {
-        hdr.type = BOOTDATA_SMBIOS;
+        hdr.type = ZBI_TYPE_SMBIOS;
         hdr.length = sizeof(smbios);
         if (add_bootdata(&bptr, &blen, &hdr, &smbios)) {
             return -1;
@@ -257,7 +258,7 @@ int boot_zircon(efi_handle img, efi_system_table* sys,
 
     // pass EFI system table
     uint64_t addr = (uintptr_t) sys;
-    hdr.type = BOOTDATA_EFI_SYSTEM_TABLE;
+    hdr.type = ZBI_TYPE_EFI_SYSTEM_TABLE;
     hdr.length = sizeof(sys);
     if (add_bootdata(&bptr, &blen, &hdr, &addr)) {
         return -1;
@@ -267,14 +268,14 @@ int boot_zircon(efi_handle img, efi_system_table* sys,
     efi_graphics_output_protocol* gop = NULL;
     bs->LocateProtocol(&GraphicsOutputProtocol, NULL, (void**)&gop);
     if (gop) {
-        bootdata_swfb_t fb = {
+        zbi_swfb_t fb = {
             .base = gop->Mode->FrameBufferBase,
             .width = gop->Mode->Info->HorizontalResolution,
             .height = gop->Mode->Info->VerticalResolution,
             .stride = gop->Mode->Info->PixelsPerScanLine,
             .format = get_zx_pixel_format(gop),
         };
-        hdr.type = BOOTDATA_FRAMEBUFFER;
+        hdr.type = ZBI_TYPE_FRAMEBUFFER;
         hdr.length = sizeof(fb);
         if (add_bootdata(&bptr, &blen, &hdr, &fb)) {
             return -1;
@@ -325,7 +326,7 @@ int boot_zircon(efi_handle img, efi_system_table* sys,
     memcpy(scratch, &dsize, sizeof(uint64_t));
 
     // install memory map
-    hdr.type = BOOTDATA_EFI_MEMORY_MAP;
+    hdr.type = ZBI_TYPE_EFI_MEMORY_MAP;
     hdr.length = msize + sizeof(uint64_t);
     if (add_bootdata(&bptr, &blen, &hdr, scratch)) {
         goto fail;
@@ -334,7 +335,7 @@ int boot_zircon(efi_handle img, efi_system_table* sys,
     // obtain the last crashlog if we can
     size_t sz = get_last_crashlog(sys, scratch, 4096);
     if (sz > 0) {
-        hdr.type = BOOTDATA_LAST_CRASHLOG;
+        hdr.type = ZBI_TYPE_CRASHLOG;
         hdr.length = sz;
         add_bootdata(&bptr, &blen, &hdr, scratch);
     }
@@ -343,9 +344,9 @@ int boot_zircon(efi_handle img, efi_system_table* sys,
     if ((blen < sizeof(hdr)) || (blen & 7)) {
         goto fail;
     }
-    hdr.type = BOOTDATA_IGNORE;
+    hdr.type = ZBI_TYPE_DISCARD;
     hdr.length = blen - sizeof(hdr);
-    hdr.flags = BOOTDATA_FLAG_V2;
+    hdr.flags = ZBI_FLAG_VERSION;
     memcpy(bptr, &hdr, sizeof(hdr));
 
     // jump to the kernel
@@ -367,8 +368,8 @@ int zedboot(efi_handle img, efi_system_table* sys,
     }
 
     // ramdisk portion is file - headers - kernel len
-    uint32_t rlen = flen - sizeof(bootdata_t) - klen;
-    uint32_t roff = (sizeof(bootdata_t) * 2) + klen;
+    uint32_t rlen = flen - sizeof(zbi_header_t) - klen;
+    uint32_t roff = (sizeof(zbi_header_t) * 2) + klen;
     if (rlen == 0) {
         printf("zedboot: no ramdisk?!\n");
         return -1;
@@ -376,7 +377,7 @@ int zedboot(efi_handle img, efi_system_table* sys,
 
     // allocate space for the ramdisk
     efi_boot_services* bs = sys->BootServices;
-    size_t rsz = rlen + sizeof(bootdata_t) + FRONT_BYTES;
+    size_t rsz = rlen + sizeof(zbi_header_t) + FRONT_BYTES;
     size_t pages = BYTES_TO_PAGES(rsz);
     void* ramdisk = NULL;
     efi_status r = bs->AllocatePages(AllocateAnyPages, EfiLoaderData, pages,
@@ -387,17 +388,17 @@ int zedboot(efi_handle img, efi_system_table* sys,
     }
 
     ramdisk += FRONT_BYTES;
-    bootdata_t* hdr = ramdisk;
-    hdr->type = BOOTDATA_CONTAINER;
+    zbi_header_t* hdr = ramdisk;
+    hdr->type = ZBI_TYPE_CONTAINER;
     hdr->length = rlen;
-    hdr->extra = BOOTDATA_MAGIC;
-    hdr->flags = BOOTDATA_FLAG_V2;
+    hdr->extra = ZBI_CONTAINER_MAGIC;
+    hdr->flags = ZBI_FLAG_VERSION;
     hdr->reserved0 = 0;
     hdr->reserved1 = 0;
-    hdr->magic = BOOTITEM_MAGIC;
-    hdr->crc32 = BOOTITEM_NO_CRC32;
-    memcpy(ramdisk + sizeof(bootdata_t), image + roff, rlen);
-    rlen += sizeof(bootdata_t);
+    hdr->magic = ZBI_ITEM_MAGIC;
+    hdr->crc32 = ZBI_ITEM_NO_CRC32;
+    memcpy(ramdisk + sizeof(zbi_header_t), image + roff, rlen);
+    rlen += sizeof(zbi_header_t);
 
     printf("ramdisk @ %p\n", ramdisk);
 
@@ -405,7 +406,7 @@ int zedboot(efi_handle img, efi_system_table* sys,
 
     // shrink original image header to include only the kernel
     zircon_kernel_t* kernel = image;
-    kernel->hdr_file.length = sizeof(bootdata_t) + klen;
+    kernel->hdr_file.length = sizeof(zbi_header_t) + klen;
 
     return boot_zircon(img, sys, image, roff, ramdisk, rlen, cmdline, csz);
 }
@@ -416,9 +417,9 @@ int boot_kernel(efi_handle img, efi_system_table* sys,
 
     size_t csz = cmdline_to_string(cmdline, sizeof(cmdline));
 
-    bootdata_t* bd = image;
-    if ((bd->type == BOOTDATA_CONTAINER) &&
-        (bd->extra == BOOTDATA_MAGIC)) {
+    zbi_header_t* bd = image;
+    if ((bd->type == ZBI_TYPE_CONTAINER) &&
+        (bd->extra == ZBI_CONTAINER_MAGIC)) {
         return boot_zircon(img, sys, image, sz, ramdisk, rsz, cmdline, csz);
     } else {
         return -1;
