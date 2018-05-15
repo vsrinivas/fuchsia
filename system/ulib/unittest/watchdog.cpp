@@ -134,11 +134,13 @@ static void* watchdog_thread_func(void* arg) {
         struct timespec delay;
         clock_gettime(CLOCK_REALTIME, &delay);
         delay.tv_sec += WATCHDOG_TICK_SECONDS;
-        auto result = pthread_cond_timedwait(&cond, &mutex, &delay);
+        // If compiled with #define NDEBUG the assert essentially goes away.
+        // Thus we need to protect |result| with __UNUSED lest the compiler
+        // complain and fail the build.
+        auto result __UNUSED = pthread_cond_timedwait(&cond, &mutex, &delay);
         // We can time-out just as watchdog_terminate() is called, and
         // thus we can't make any assumptions based on |result|.
         assert(result == 0 || result == ETIMEDOUT);
-        (void)result; // Used only by the assertion.
 
         struct timespec now;
         clock_gettime(CLOCK_REALTIME, &now);
