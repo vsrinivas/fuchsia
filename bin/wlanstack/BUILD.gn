@@ -15,6 +15,8 @@ rustc_binary("bin") {
     "//garnet/lib/wlan/fidl:fidl-rustc",
     "//garnet/lib/wlan/fidl:service-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/lib/wlan/fidl:mlme-rustc",
+    "//garnet/public/lib/wlan/fidl:service-rustc",
     "//garnet/public/rust/crates/fuchsia-app",
     "//garnet/public/rust/crates/fuchsia-async",
     "//garnet/public/rust/crates/fuchsia-vfs/fuchsia-vfs-watcher",
@@ -27,18 +29,20 @@ rustc_binary("bin") {
 }
 
 package("wlanstack2") {
-
   deps = [
     ":bin",
   ]
 
   binary = "rust_crates/wlanstack2"
 
-  meta = [{
-    path = rebase_path("meta/sandbox")
-    dest = "sandbox"
-  }, {
-    path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
-    dest = "legacy_flat_exported_dir"
-  }]
+  meta = [
+    {
+      path = rebase_path("meta/sandbox")
+      dest = "sandbox"
+    },
+    {
+      path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
+      dest = "legacy_flat_exported_dir"
+    },
+  ]
 }

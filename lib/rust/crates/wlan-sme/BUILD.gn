@@ -7,4 +7,10 @@ import("//build/rust/rustc_library.gni")
 rustc_library("wlan-sme") {
   name = "wlan_sme"
   version = "0.1.0"
+
+  deps = [
+    "//garnet/public/lib/wlan/fidl:mlme-rustc",
+    "//garnet/public/rust/crates/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:futures",
+  ]
 }

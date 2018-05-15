@@ -12,8 +12,10 @@
 
 extern crate failure;
 extern crate fidl;
+extern crate fidl_wlan_mlme as fidl_mlme;
 extern crate fidl_wlan_device as wlan;
 extern crate fidl_wlan_device_service as wlan_service;
+extern crate fidl_wlan_service;
 extern crate fuchsia_app as component;
 extern crate fuchsia_async as async;
 extern crate fuchsia_vfs_watcher as vfs_watcher;
@@ -23,10 +25,12 @@ extern crate futures;
 #[macro_use]
 extern crate log;
 extern crate parking_lot;
+extern crate wlan_sme;
 
 mod device;
 mod logger;
 mod service;
+mod station;
 
 use component::server::ServicesServer;
 use failure::{Error, ResultExt};
