@@ -41,14 +41,16 @@ class FfmpegDemuxImpl : public FfmpegDemux {
 
   void Seek(int64_t position, SeekCallback callback) override;
 
-  // MultistreamSource implementation.
+  // AsyncNode implementation.
   const char* label() const override;
 
   void Dump(std::ostream& os, NodeRef ref) const override;
 
-  size_t stream_count() const override;
+  void GetConfiguration(size_t* input_count, size_t* output_count) override;
 
-  void RequestPacket() override;
+  void FlushOutput(size_t output_index, fxl::Closure callback) override;
+
+  void RequestOutputPacket() override;
 
  private:
   static constexpr int64_t kNotSeeking = std::numeric_limits<int64_t>::max();
@@ -86,9 +88,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
     DemuxPacket(ffmpeg::AvPacketPtr av_packet, media::TimelineRate pts_rate)
         : Packet(
               (av_packet->pts == AV_NOPTS_VALUE) ? kUnknownPts : av_packet->pts,
-              pts_rate,
-              av_packet->flags & AV_PKT_FLAG_KEY,
-              false,
+              pts_rate, av_packet->flags & AV_PKT_FLAG_KEY, false,
               static_cast<size_t>(av_packet->size),
               av_packet->size == 0 ? nullptr : av_packet->data),
           av_packet_(std::move(av_packet)) {
@@ -101,8 +101,9 @@ class FfmpegDemuxImpl : public FfmpegDemux {
 
   // Runs in the ffmpeg thread doing the real work.
   void Worker();
-  bool Wait(bool* packet_requested,
-            int64_t* seek_position,
+
+  // Waits on belaf of |Worker| for work to do.
+  bool Wait(bool* packet_requested, int64_t* seek_position,
             SeekCallback* seek_callback);
 
   // Produces a packet. Called from the ffmpeg thread only.
@@ -193,9 +194,7 @@ void FfmpegDemuxImpl::Seek(int64_t position, SeekCallback callback) {
   condition_variable_.notify_all();
 }
 
-const char* FfmpegDemuxImpl::label() const {
-  return "ffmpeg demux";
-}
+const char* FfmpegDemuxImpl::label() const { return "ffmpeg demux"; }
 
 void FfmpegDemuxImpl::Dump(std::ostream& os, NodeRef ref) const {
   os << label() << indent;
@@ -214,11 +213,19 @@ void FfmpegDemuxImpl::Dump(std::ostream& os, NodeRef ref) const {
   os << outdent;
 }
 
-size_t FfmpegDemuxImpl::stream_count() const {
-  return streams_.size();
+void FfmpegDemuxImpl::GetConfiguration(size_t* input_count,
+                                       size_t* output_count) {
+  FXL_DCHECK(input_count);
+  FXL_DCHECK(output_count);
+  *input_count = 0;
+  *output_count = streams_.size();
 }
 
-void FfmpegDemuxImpl::RequestPacket() {
+void FfmpegDemuxImpl::FlushOutput(size_t output_index, fxl::Closure callback) {
+  callback();
+}
+
+void FfmpegDemuxImpl::RequestOutputPacket() {
   std::lock_guard<std::mutex> locker(mutex_);
   packet_requested_ = true;
   condition_variable_.notify_all();
@@ -310,20 +317,15 @@ void FfmpegDemuxImpl::Worker() {
       PacketPtr packet = PullPacket(&stream_index);
       FXL_DCHECK(packet);
 
-      async::PostTask(
-          async_, fxl::MakeCopyable([this, stream_index,
-                                     packet = std::move(packet)]() mutable {
-            MultistreamSourceStage* stage_ptr = stage();
-            if (stage_ptr) {
-              stage_ptr->SupplyPacket(stream_index, std::move(packet));
-            }
-          }));
+      AsyncNodeStage* stage_ptr = stage();
+      if (stage_ptr) {
+        stage_ptr->PutOutputPacket(std::move(packet), stream_index);
+      }
     }
   }
 }
 
-bool FfmpegDemuxImpl::Wait(bool* packet_requested,
-                           int64_t* seek_position,
+bool FfmpegDemuxImpl::Wait(bool* packet_requested, int64_t* seek_position,
                            SeekCallback* seek_callback)
     // TODO(US-452): Re-enable thread safety analysis once unique_lock
     // has proper annotations.
@@ -437,8 +439,7 @@ void FfmpegDemuxImpl::ReportProblem(const std::string& type,
 }
 
 FfmpegDemuxImpl::FfmpegDemuxStream::FfmpegDemuxStream(
-    const AVFormatContext& format_context,
-    size_t index)
+    const AVFormatContext& format_context, size_t index)
     : stream_(format_context.streams[index]), index_(index) {
   stream_type_ = AvCodecContext::GetStreamType(*stream_);
   pts_rate_ =
@@ -447,9 +448,7 @@ FfmpegDemuxImpl::FfmpegDemuxStream::FfmpegDemuxStream(
 
 FfmpegDemuxImpl::FfmpegDemuxStream::~FfmpegDemuxStream() {}
 
-size_t FfmpegDemuxImpl::FfmpegDemuxStream::index() const {
-  return index_;
-}
+size_t FfmpegDemuxImpl::FfmpegDemuxStream::index() const { return index_; }
 
 std::unique_ptr<StreamType> FfmpegDemuxImpl::FfmpegDemuxStream::stream_type()
     const {

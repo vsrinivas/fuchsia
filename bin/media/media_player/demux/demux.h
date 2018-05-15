@@ -10,7 +10,7 @@
 
 #include "garnet/bin/media/media_player/demux/reader.h"
 #include "garnet/bin/media/media_player/framework/metadata.h"
-#include "garnet/bin/media/media_player/framework/models/multistream_source.h"
+#include "garnet/bin/media/media_player/framework/models/async_node.h"
 #include "garnet/bin/media/media_player/framework/packet.h"
 #include "garnet/bin/media/media_player/framework/result.h"
 #include "garnet/bin/media/media_player/framework/types/stream_type.h"
@@ -19,13 +19,12 @@ namespace media_player {
 
 // Abstract base class for sources that parse input from a reader and
 // produce one or more output streams.
-class Demux : public MultistreamSource {
+class Demux : public AsyncNode {
  public:
   using SeekCallback = std::function<void()>;
-  using StatusCallback =
-      std::function<void(const std::unique_ptr<Metadata>& metadata,
-                         const std::string& problem_type,
-                         const std::string& problem_details)>;
+  using StatusCallback = std::function<void(
+      const std::unique_ptr<Metadata>& metadata,
+      const std::string& problem_type, const std::string& problem_details)>;
 
   // Represents a stream produced by the demux.
   class DemuxStream {

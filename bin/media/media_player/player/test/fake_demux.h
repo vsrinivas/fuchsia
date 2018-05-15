@@ -21,11 +21,18 @@ class FakeDemux : public Demux {
   const char* label() const override { return "FakeDemux"; }
 
   // Demux implementation.
-  void Flush() override{};
+  void GetConfiguration(size_t* input_count, size_t* output_count) override {
+    FXL_DCHECK(input_count);
+    FXL_DCHECK(output_count);
+    *input_count = 0;
+    *output_count = streams_.size();
+  }
 
-  size_t stream_count() const override { return streams_.size(); }
+  void FlushOutput(size_t output_index, fxl::Closure callback) override {
+    callback();
+  }
 
-  void RequestPacket() override {}
+  void RequestOutputPacket() override {}
 
   void SetStatusCallback(StatusCallback callback) override {
     status_callback_ = callback;
@@ -44,8 +51,7 @@ class FakeDemux : public Demux {
  private:
   class DemuxStreamImpl : public DemuxStream {
    public:
-    DemuxStreamImpl(size_t index,
-                    std::unique_ptr<StreamType> stream_type,
+    DemuxStreamImpl(size_t index, std::unique_ptr<StreamType> stream_type,
                     media::TimelineRate pts_rate)
         : index_(index),
           stream_type_(std::move(stream_type)),
