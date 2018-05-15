@@ -6,14 +6,12 @@
 #define GARNET_BIN_APPMGR_APPLICATION_CONTROLLER_IMPL_H_
 
 #include <fs/pseudo-dir.h>
-#include <fuchsia/cpp/component.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/process.h>
 
-#include "garnet/bin/appmgr/component_hub_holder.h"
+#include <fuchsia/cpp/component.h>
 #include "garnet/bin/appmgr/namespace.h"
 #include "garnet/lib/farfs/file_system.h"
-
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -38,16 +36,21 @@ enum class ExportedDirType {
 class ApplicationControllerImpl : public ApplicationController {
  public:
   ApplicationControllerImpl(
-      fidl::InterfaceRequest<ApplicationController> request, Realm* realm,
-      std::unique_ptr<archive::FileSystem> fs, zx::process process,
-      std::string url, std::string args, std::string label,
-      fxl::RefPtr<Namespace> ns, ExportedDirType export_dir_type,
-      zx::channel exported_dir, zx::channel client_request);
+      fidl::InterfaceRequest<ApplicationController> request,
+      Realm* realm,
+      std::unique_ptr<archive::FileSystem> fs,
+      zx::process process,
+      std::string url,
+      std::string label,
+      fxl::RefPtr<Namespace> ns,
+      ExportedDirType export_dir_type,
+      zx::channel exported_dir,
+      zx::channel client_request);
   ~ApplicationControllerImpl() override;
 
   const std::string& label() const { return label_; }
   const std::string& koid() const { return koid_; }
-  const fbl::RefPtr<fs::PseudoDir>& hub_dir() const { return hub_.root_dir(); }
+  const fbl::RefPtr<fs::PseudoDir>& info_dir() const { return info_dir_; }
 
   // |ApplicationController| implementation:
   void Kill() override;
@@ -55,7 +58,9 @@ class ApplicationControllerImpl : public ApplicationController {
   void Wait(WaitCallback callback) override;
 
  private:
-  void Handler(async_t* async, async::WaitBase* wait, zx_status_t status,
+  void Handler(async_t* async,
+               async::WaitBase* wait,
+               zx_status_t status,
                const zx_packet_signal* signal);
 
   bool SendReturnCodeIfTerminated();
@@ -67,7 +72,7 @@ class ApplicationControllerImpl : public ApplicationController {
   std::string label_;
   const std::string koid_;
   std::vector<WaitCallback> wait_callbacks_;
-  ComponentHubHolder hub_;
+  fbl::RefPtr<fs::PseudoDir> info_dir_;
 
   zx::channel exported_dir_;
 

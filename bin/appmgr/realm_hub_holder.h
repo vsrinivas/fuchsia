@@ -5,8 +5,6 @@
 #ifndef GARNET_BIN_APPMGR_REALM_HUB_HOLDER_H_
 #define GARNET_BIN_APPMGR_REALM_HUB_HOLDER_H_
 
-#include "garnet/bin/appmgr/hub_holder.h"
-
 #include "lib/fxl/macros.h"
 
 #include <fbl/ref_ptr.h>
@@ -19,7 +17,7 @@ class Realm;
 class ApplicationControllerImpl;
 
 // TODO: refactor to also create ComponentHubHolder
-class RealmHubHolder : public HubHolder {
+class RealmHubHolder {
  public:
   RealmHubHolder(fbl::RefPtr<fs::PseudoDir> root);
 
@@ -29,9 +27,12 @@ class RealmHubHolder : public HubHolder {
   zx_status_t AddComponent(const ApplicationControllerImpl* application);
   zx_status_t RemoveComponent(const ApplicationControllerImpl* application);
 
-  ~RealmHubHolder();
+  const fbl::RefPtr<fs::PseudoDir>& root_dir() const { return root_dir_; }
+
+  ~RealmHubHolder() = default;
 
  private:
+  fbl::RefPtr<fs::PseudoDir> root_dir_;
   fbl::RefPtr<fs::PseudoDir> realm_dir_;
   fbl::RefPtr<fs::PseudoDir> component_dir_;
 
