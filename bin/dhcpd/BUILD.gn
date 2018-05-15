@@ -8,6 +8,9 @@ import("//build/package.gni")
 rustc_binary("bin") {
   name = "dhcpd"
   with_unit_tests = true
+  deps = [
+    "//third_party/rust-crates/rustc_deps:byteorder",
+  ]
 }
 
 package("dhcpd") {
