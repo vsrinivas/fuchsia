@@ -267,9 +267,12 @@ func compileCamelIdentifier(val types.Identifier) string {
 	return common.ToUpperCamelCase(changeIfReserved(val))
 }
 
-func compileLibraryName(val types.LibraryIdentifier) string {
-	// TODO(FIDL-158) handle more than one library name component
-	return changeIfReserved("fidl_" + val[0])
+func compileLibraryName(library types.LibraryIdentifier) string {
+	parts := []string{"fidl"}
+	for _, part := range library {
+		parts = append(parts, string(part))
+	}
+	return changeIfReserved(types.Identifier(strings.Join(parts, "_")))
 }
 
 func compileSnakeIdentifier(val types.Identifier) string {
