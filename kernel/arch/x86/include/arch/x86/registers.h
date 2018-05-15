@@ -116,19 +116,32 @@
 
 __BEGIN_CDECLS
 
-/* Bit masks for xsave feature states; state components are
+/* Indices of xsave feature states; state components are
  * enumerated in Intel Vol 1 section 13.1 */
-#define X86_XSAVE_STATE_X87                  (1<<0)
-#define X86_XSAVE_STATE_SSE                  (1<<1)
-#define X86_XSAVE_STATE_AVX                  (1<<2)
-#define X86_XSAVE_STATE_MPX_BNDREG           (1<<3)
-#define X86_XSAVE_STATE_MPX_BNDCSR           (1<<4)
-#define X86_XSAVE_STATE_AVX512_OPMASK        (1<<5)
-#define X86_XSAVE_STATE_AVX512_LOWERZMM_HIGH (1<<6)
-#define X86_XSAVE_STATE_AVX512_HIGHERZMM     (1<<7)
-#define X86_XSAVE_STATE_PT                   (1<<8)
-#define X86_XSAVE_STATE_PKRU                 (1<<9)
+#define X86_XSAVE_STATE_INDEX_X87                  0
+#define X86_XSAVE_STATE_INDEX_SSE                  1
+#define X86_XSAVE_STATE_INDEX_AVX                  2
+#define X86_XSAVE_STATE_INDEX_MPX_BNDREG           3
+#define X86_XSAVE_STATE_INDEX_MPX_BNDCSR           4
+#define X86_XSAVE_STATE_INDEX_AVX512_OPMASK        5
+#define X86_XSAVE_STATE_INDEX_AVX512_LOWERZMM_HIGH 6
+#define X86_XSAVE_STATE_INDEX_AVX512_HIGHERZMM     7
+#define X86_XSAVE_STATE_INDEX_PT                   8
+#define X86_XSAVE_STATE_INDEX_PKRU                 9
 
+/* Bit masks for xsave feature states. */
+#define X86_XSAVE_STATE_BIT_X87                  (1 << X86_XSAVE_STATE_INDEX_X87)
+#define X86_XSAVE_STATE_BIT_SSE                  (1 << X86_XSAVE_STATE_INDEX_SSE)
+#define X86_XSAVE_STATE_BIT_AVX                  (1 << X86_XSAVE_STATE_INDEX_AVX)
+#define X86_XSAVE_STATE_BIT_MPX_BNDREG           (1 << X86_XSAVE_STATE_INDEX_MPX_BNDREG)
+#define X86_XSAVE_STATE_BIT_MPX_BNDCSR           (1 << X86_XSAVE_STATE_INDEX_MPX_BNDCSR)
+#define X86_XSAVE_STATE_BIT_AVX512_OPMASK        (1 << X86_XSAVE_STATE_INDEX_AVX512_OPMASK)
+#define X86_XSAVE_STATE_BIT_AVX512_LOWERZMM_HIGH (1 << X86_XSAVE_STATE_INDEX_AVX512_LOWERZMM_HIGH)
+#define X86_XSAVE_STATE_BIT_AVX512_HIGHERZMM     (1 << X86_XSAVE_STATE_INDEX_AVX512_HIGHERZMM)
+#define X86_XSAVE_STATE_BIT_PT                   (1 << X86_XSAVE_STATE_INDEX_PT)
+#define X86_XSAVE_STATE_BIT_PKRU                 (1 << X86_XSAVE_STATE_INDEX_PKRU)
+
+// Maximum buffer size needed for xsave and variants. To allocate, see ...BUFFER_SIZE below.
 #define X86_MAX_EXTENDED_REGISTER_SIZE 1024
 
 enum x86_extended_register_feature {
@@ -151,10 +164,14 @@ void x86_extended_register_init(void);
 bool x86_extended_register_enable_feature(enum x86_extended_register_feature);
 
 size_t x86_extended_register_size(void);
-/* Initialize a state vector */
-void x86_extended_register_init_state(void *register_state);
+
+/* Initialize a state vector. The passed in buffer must be X86_EXTENDED_REGISTER_SIZE big and it
+ * must be 64-byte aligned. This function will initialize it for use in save and restore. */
+void x86_extended_register_init_state(void* buffer);
+
 /* Save current state to state vector */
 void x86_extended_register_save_state(void *register_state);
+
 /* Restore a state created by x86_extended_register_init_state or
  * x86_extended_register_save_state */
 void x86_extended_register_restore_state(void *register_state);
@@ -167,6 +184,48 @@ void x86_set_extended_register_pt_state(bool threads);
 
 uint64_t x86_xgetbv(uint32_t reg);
 void x86_xsetbv(uint32_t reg, uint64_t val);
+
+struct x86_xsave_legacy_area {
+    uint16_t fcw;  /* FPU control word. */
+    uint16_t fsw;  /* FPU status word. */
+    uint8_t ftw;   /* FPU tag word. */
+    uint8_t reserved;
+    uint16_t fop;  /* FPU opcode. */
+    uint64_t fip;  /* FPU instruction pointer. */
+    uint64_t fdp;  /* FPU data pointer. */
+    uint32_t mxcsr;  /* SSE control status register. */
+    uint32_t mxcsr_mask;
+
+    /* The x87/MMX state. For x87 the each "st" entry has the low 80 bits used for the register
+     * contents. For MMX, the low 64 bits are used. The higher bits are unused. */
+    struct {
+        uint64_t low;
+        uint64_t high;
+    } st[8];
+
+    /* SSE registers. */
+    struct {
+        uint64_t low;
+        uint64_t high;
+    } xmm[16];
+} __PACKED;
+
+/* Returns the address within the given xsave area of the requested state component. The state
+ * component indexes formats are described in section 13.4 of the Intel Software Developer's manual.
+ * Use the X86_XSAVE_STATE_INDEX_* macros above for the component indices.
+ *
+ * The given register state must have previously been filled with the variant of XSAVE that the
+ * system is using. Since the save area can be compressed, the offset of each component can vary
+ * depending on the contents.
+ *
+ * The components 0 and 1 are special and refer to the legacy area. In both cases a pointer to the
+ * x86_xsave_legacy_area will be returned.
+ *
+ * The size of the component will be placed in *size.
+ *
+ * This function will return null and fill 0 into *size if the component is not present. */
+void* x86_get_extended_register_state_component(void* register_state, uint32_t component,
+                                                uint32_t* size);
 
 __END_CDECLS
 

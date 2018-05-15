@@ -42,8 +42,6 @@
 /* bits 2 through 62 of state vector can optionally be set */
 #define XSAVE_MAX_EXT_COMPONENTS 61
 #define XSAVE_XCOMP_BV_COMPACT (1ULL << 63)
-#define XSAVE_STATE_PT_BIT 8
-#define XSAVE_STATE_MAX_BIT 62
 
 static void fxsave(void* register_state);
 static void fxrstor(void* register_state);
@@ -92,20 +90,23 @@ static SpinLock state_lock;
 static uint8_t __ALIGNED(64)
     extended_register_init_state[512 + 64] = {0};
 
+static_assert(sizeof(x86_xsave_legacy_area) == 416, "Size of legacy xsave area should match spec.");
+
 /* Format described in Intel 3A section 13.4 */
 struct xsave_area {
-    /* legacy region */
-    uint8_t legacy_region_0[24];
-    uint32_t mxcsr;
-    uint8_t legacy_region_1[484];
+    x86_xsave_legacy_area legacy;
+
+    uint8_t reserved1[96];
 
     /* xsave_header */
     uint64_t xstate_bv;
     uint64_t xcomp_bv;
-    uint8_t reserved[48];
+    uint8_t reserved2[48];
 
     uint8_t extended_region[];
 } __PACKED;
+static_assert(offsetof(xsave_area, extended_region) == XSAVE_EXTENDED_AREA_OFFSET,
+              "xsave_area format should match CPU spec.");
 
 static void x86_extended_register_cpu_init(void) {
     if (likely(xsave_supported)) {
@@ -113,7 +114,7 @@ static void x86_extended_register_cpu_init(void) {
         /* Enable XSAVE feature set */
         x86_set_cr4(cr4 | X86_CR4_OSXSAVE);
         /* Put xcr0 into a known state (X87 must be enabled in this register) */
-        x86_xsetbv(0, X86_XSAVE_STATE_X87);
+        x86_xsetbv(0, X86_XSAVE_STATE_BIT_X87);
     }
 
     /* Enable the FPU */
@@ -149,8 +150,8 @@ void x86_extended_register_init(void) {
                  * SIMD exceptions masked */
                 struct xsave_area* area =
                     (struct xsave_area*)extended_register_init_state;
-                area->xstate_bv |= X86_XSAVE_STATE_SSE;
-                area->mxcsr = 0x3f << 7;
+                area->xstate_bv |= X86_XSAVE_STATE_BIT_SSE;
+                area->legacy.mxcsr = 0x3f << 7;
 
                 /* If xsaves is being used, then make the saved state be in
                  * compact form.  xrstors will GPF if it is not. */
@@ -207,7 +208,7 @@ bool x86_extended_register_enable_feature(
                              : "memory");
 
         if (likely(xsave_supported)) {
-            x86_xsetbv(0, x86_xgetbv(0) | X86_XSAVE_STATE_X87);
+            x86_xsetbv(0, x86_xgetbv(0) | X86_XSAVE_STATE_BIT_X87);
         }
         break;
     }
@@ -235,13 +236,13 @@ bool x86_extended_register_enable_feature(
                              : "m"(mxcsr));
 
         if (likely(xsave_supported)) {
-            x86_xsetbv(0, x86_xgetbv(0) | X86_XSAVE_STATE_SSE);
+            x86_xsetbv(0, x86_xgetbv(0) | X86_XSAVE_STATE_BIT_SSE);
         }
         break;
     }
     case X86_EXTENDED_REGISTER_AVX: {
         if (!xsave_supported ||
-            !(xcr0_component_bitmap & X86_XSAVE_STATE_AVX)) {
+            !(xcr0_component_bitmap & X86_XSAVE_STATE_BIT_AVX)) {
             return false;
         }
 
@@ -250,7 +251,7 @@ bool x86_extended_register_enable_feature(
         cr4 |= X86_CR4_OSXMMEXPT;
         x86_set_cr4(cr4);
 
-        x86_xsetbv(0, x86_xgetbv(0) | X86_XSAVE_STATE_AVX);
+        x86_xsetbv(0, x86_xgetbv(0) | X86_XSAVE_STATE_BIT_AVX);
         break;
     }
     case X86_EXTENDED_REGISTER_MPX: {
@@ -259,9 +260,9 @@ bool x86_extended_register_enable_feature(
     }
     case X86_EXTENDED_REGISTER_AVX512: {
         const uint64_t xsave_avx512 =
-            X86_XSAVE_STATE_AVX512_OPMASK |
-            X86_XSAVE_STATE_AVX512_LOWERZMM_HIGH |
-            X86_XSAVE_STATE_AVX512_HIGHERZMM;
+            X86_XSAVE_STATE_BIT_AVX512_OPMASK |
+            X86_XSAVE_STATE_BIT_AVX512_LOWERZMM_HIGH |
+            X86_XSAVE_STATE_BIT_AVX512_HIGHERZMM;
 
         if (!xsave_supported ||
             (xcr0_component_bitmap & xsave_avx512) != xsave_avx512) {
@@ -272,7 +273,7 @@ bool x86_extended_register_enable_feature(
     }
     case X86_EXTENDED_REGISTER_PT: {
         if (!xsaves_supported ||
-            !(xss_component_bitmap & X86_XSAVE_STATE_PT)) {
+            !(xss_component_bitmap & X86_XSAVE_STATE_BIT_PT)) {
             return false;
         }
         x86_set_extended_register_pt_state(true);
@@ -524,19 +525,71 @@ void x86_xsetbv(uint32_t reg, uint64_t val) {
                      : "memory");
 }
 
+void* x86_get_extended_register_state_component(void* register_state, uint32_t component,
+                                                uint32_t* size) {
+    if (component >= XSAVE_MAX_EXT_COMPONENTS) {
+        *size = 0;
+        return nullptr;
+    }
+
+    xsave_area* area = reinterpret_cast<xsave_area*>(register_state);
+
+    // Components 0 and 1 are special and are always present in the legacy area.
+    if (component <= 1) {
+        *size = sizeof(x86_xsave_legacy_area);
+        return area;
+    }
+
+    if (!(area->xcomp_bv & XSAVE_XCOMP_BV_COMPACT)) {
+        // Standard format. The offset and size are provided by a static CPUID call.
+        cpuid_leaf leaf;
+        x86_get_cpuid_subleaf(X86_CPUID_XSAVE, component, &leaf);
+        *size = leaf.a;
+        if (leaf.a == 0) {
+            return nullptr;
+        }
+        return static_cast<uint8_t*>(register_state) + leaf.b;
+    }
+
+    // Compacted format used. The corresponding bit in xcomp_bv indicates whether the component is
+    // present.
+    if (!(area->xcomp_bv & (1ul << component))) {
+        *size = 0;
+        return nullptr;
+    }
+
+    // Walk all present components and add up their sizes (optionally aligned up) to get the offset.
+    uint32_t offset = XSAVE_EXTENDED_AREA_OFFSET;
+    for (uint32_t i = 2; i < component; i++) {
+        if (!(area->xcomp_bv & (1ul << i))) {
+            continue;
+        }
+        if (state_components[i].align64) {
+            offset = ROUNDUP(offset, 64);
+        }
+        offset += state_components[i].size;
+    }
+    if (state_components[component].align64) {
+        offset = ROUNDUP(offset, 64);
+    }
+
+    *size = state_components[component].size;
+    return static_cast<uint8_t*>(register_state) + offset;
+}
+
 // Set the extended register PT mode to trace either cpus (!threads)
 // or threads.
 // WARNING: All PT MSRs should be set to init values before changing the mode.
 // See x86_ipt_set_mode_task.
 
 void x86_set_extended_register_pt_state(bool threads) {
-    if (!xsaves_supported || !(xss_component_bitmap & X86_XSAVE_STATE_PT))
+    if (!xsaves_supported || !(xss_component_bitmap & X86_XSAVE_STATE_BIT_PT))
         return;
 
     uint64_t xss = read_msr(IA32_XSS_MSR);
     if (threads)
-        xss |= X86_XSAVE_STATE_PT;
+        xss |= X86_XSAVE_STATE_BIT_PT;
     else
-        xss &= ~(0ULL + X86_XSAVE_STATE_PT);
+        xss &= ~(0ULL + X86_XSAVE_STATE_BIT_PT);
     write_msr(IA32_XSS_MSR, xss);
 }

@@ -37,8 +37,8 @@ struct arch_thread {
         x86_iframe_t *iframe;
     } suspended_general_regs;
 
-    /* buffer to save fpu and extended register (e.g., PT) state */
-    vaddr_t *extended_register_state;
+    /* Buffer to save fpu and extended register (e.g., PT) state */
+    void* extended_register_state;
     uint8_t extended_register_buffer[X86_MAX_EXTENDED_REGISTER_SIZE + 64];
 
     /* if non-NULL, address to return to on page fault */

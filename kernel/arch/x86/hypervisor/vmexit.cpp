@@ -935,9 +935,9 @@ static zx_status_t handle_xsetbv(const ExitInfo& exit_info, AutoVmcs* vmcs,
     uint64_t xcr0 = (guest_state->rdx << 32) | (guest_state->rax & UINT32_MAX);
     if (~xcr0_bitmap & xcr0 ||
         // x87 state must be enabled.
-        (xcr0 & X86_XSAVE_STATE_X87) != X86_XSAVE_STATE_X87 ||
+        (xcr0 & X86_XSAVE_STATE_BIT_X87) != X86_XSAVE_STATE_BIT_X87 ||
         // If AVX state is enabled, SSE state must be enabled.
-        (xcr0 & (X86_XSAVE_STATE_AVX | X86_XSAVE_STATE_SSE)) == X86_XSAVE_STATE_AVX)
+        (xcr0 & (X86_XSAVE_STATE_BIT_AVX | X86_XSAVE_STATE_BIT_SSE)) == X86_XSAVE_STATE_BIT_AVX)
         return ZX_ERR_INVALID_ARGS;
 
     guest_state->xcr0 = xcr0;

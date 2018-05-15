@@ -612,7 +612,7 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
 
     if (x86_feature_test(X86_FEATURE_XSAVE)) {
         // Enable x87 state in guest XCR0.
-        vmx_state->guest_state.xcr0 = X86_XSAVE_STATE_X87;
+        vmx_state->guest_state.xcr0 = X86_XSAVE_STATE_BIT_X87;
     }
 
     return ZX_OK;
