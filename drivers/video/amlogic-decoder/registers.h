@@ -76,4 +76,54 @@ class DmcRegisterIo : public hwreg::RegisterIo {
   DmcRegisterIo(volatile void* mmio) : hwreg::RegisterIo(mmio) {}
 };
 
+#define DEFINE_REGISTER(name, type, address)                           \
+  class name : public TypedRegisterBase<type, name, uint32_t> {        \
+   public:                                                             \
+    static auto Get() { return TypedRegisterAddr<name>(address * 4); } \
+  };
+
+#define REGISTER_NAME(name, type, address)                      \
+  class name : public TypedRegisterBase<type, name, uint32_t> { \
+   public:                                                      \
+    static auto Get() { return AddrType(address * 4); }
+
+// clang-format off
+DEFINE_REGISTER(DosSwReset0, DosRegisterIo, 0x3f00);
+DEFINE_REGISTER(DosGclkEn, DosRegisterIo, 0x3f01);
+DEFINE_REGISTER(DosMemPdVdec, DosRegisterIo, 0x3f30);
+DEFINE_REGISTER(DosVdecMcrccStallCtrl, DosRegisterIo, 0x3f40);
+
+DEFINE_REGISTER(AoRtiGenPwrSleep0, AoRegisterIo, 0x3a);
+DEFINE_REGISTER(AoRtiGenPwrIso0, AoRegisterIo, 0x3b);
+
+REGISTER_NAME(HhiGclkMpeg0, HiuRegisterIo, 0x50)
+  DEF_BIT(1, dos);
+};
+
+REGISTER_NAME(HhiGclkMpeg1, HiuRegisterIo, 0x51)
+  DEF_BIT(25, u_parser_top);
+  DEF_FIELD(13, 6, aiu);
+  DEF_BIT(4, demux);
+  DEF_BIT(2, audio_in);
+};
+
+REGISTER_NAME(HhiGclkMpeg2, HiuRegisterIo, 0x52)
+  DEF_BIT(25, vpu_interrupt);
+};
+
+REGISTER_NAME(HhiVdecClkCntl, HiuRegisterIo, 0x78)
+  DEF_BIT(8, vdec_en);
+  DEF_FIELD(11, 9, vdec_sel);
+  DEF_FIELD(6, 0, vdec_div);
+};
+
+REGISTER_NAME(DmcReqCtrl, DmcRegisterIo, 0x0)
+  DEF_BIT(13, vdec);
+};
+
+// clang-format on
+
+#undef REGISTER_NAME
+#undef DEFINE_REGISTER
+
 #endif  // REGISTERS_H_

@@ -66,6 +66,50 @@ AmlogicVideo::~AmlogicVideo() {
   io_buffer_release(&mmio_dmc_);
 }
 
+void AmlogicVideo::EnableClockGate() {
+  HhiGclkMpeg0::Get()
+      .ReadFrom(hiubus_.get())
+      .set_dos(true)
+      .WriteTo(hiubus_.get());
+  HhiGclkMpeg1::Get()
+      .ReadFrom(hiubus_.get())
+      .set_u_parser_top(true)
+      .set_aiu(0xff)
+      .set_demux(true)
+      .set_audio_in(true)
+      .WriteTo(hiubus_.get());
+  HhiGclkMpeg2::Get()
+      .ReadFrom(hiubus_.get())
+      .set_vpu_interrupt(true)
+      .WriteTo(hiubus_.get());
+}
+
+void AmlogicVideo::EnableVideoPower() {
+  {
+    auto temp = AoRtiGenPwrSleep0::Get().ReadFrom(aobus_.get());
+    temp.set_reg_value(temp.reg_value() & ~0xc);
+    temp.WriteTo(aobus_.get());
+  }
+  zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
+
+  DosSwReset0::Get().FromValue(0xfffffffc).WriteTo(dosbus_.get());
+  DosSwReset0::Get().FromValue(0).WriteTo(dosbus_.get());
+
+  EnableClockGate();
+
+  HhiVdecClkCntl::Get().FromValue(0).set_vdec_en(true).set_vdec_sel(3).WriteTo(
+      hiubus_.get());
+  DosGclkEn::Get().FromValue(0x3ff).WriteTo(dosbus_.get());
+  DosMemPdVdec::Get().FromValue(0).WriteTo(dosbus_.get());
+  {
+    auto temp = AoRtiGenPwrIso0::Get().ReadFrom(aobus_.get());
+    temp.set_reg_value(temp.reg_value() & ~0xc0);
+    temp.WriteTo(aobus_.get());
+  }
+  DosVdecMcrccStallCtrl::Get().FromValue(0).WriteTo(dosbus_.get());
+  DmcReqCtrl::Get().ReadFrom(dmc_.get()).set_vdec(true).WriteTo(dmc_.get());
+}
+
 zx_status_t AmlogicVideo::Init(zx_device_t* parent) {
   parent_ = parent;
 
@@ -127,6 +171,8 @@ zx_status_t AmlogicVideo::Init(zx_device_t* parent) {
   hiubus_ = std::make_unique<HiuRegisterIo>(io_buffer_virt(&mmio_hiubus_));
   aobus_ = std::make_unique<AoRegisterIo>(io_buffer_virt(&mmio_aobus_));
   dmc_ = std::make_unique<DmcRegisterIo>(io_buffer_virt(&mmio_dmc_));
+
+  EnableVideoPower();
 
   device_add_args_t vc_video_args = {};
   vc_video_args.version = DEVICE_ADD_ARGS_VERSION;

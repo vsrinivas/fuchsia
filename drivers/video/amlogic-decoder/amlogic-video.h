@@ -26,6 +26,9 @@ class AmlogicVideo {
   zx_status_t Init(zx_device_t* parent);
 
  private:
+  void EnableClockGate();
+  void EnableVideoPower();
+
   zx_device_t* parent_ = nullptr;
   zx_device_t* device_ = nullptr;
   platform_device_protocol_t pdev_;
