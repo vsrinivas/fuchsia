@@ -42,3 +42,15 @@ fidl("media_player") {
     "//garnet/public/lib/ui/views/fidl:view_token",
   ]
 }
+
+fidl("media_codec") {
+  name = "media_codec"
+
+  sdk_category = "partner"
+
+  sources = [
+    "codec_common.fidl",
+    "codec_factory.fidl",
+    "codec.fidl",
+  ]
+}
