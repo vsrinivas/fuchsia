@@ -6,6 +6,8 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <lib/zx/port.h>
+#include <lib/zx/vmar.h>
 #include <unittest/unittest.h>
 #include <zircon/device/sysinfo.h>
 #include <zircon/process.h>
@@ -13,8 +15,6 @@
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
-#include <lib/zx/port.h>
-#include <lib/zx/vmar.h>
 
 #include "constants_priv.h"
 
@@ -292,7 +292,7 @@ static bool vcpu_wfi_aarch32() {
 #if __aarch64__
     EXPECT_EQ(packet.guest_mem.read, false);
     EXPECT_EQ(packet.guest_mem.data, 0);
-#endif  // __aarch64__
+#endif // __aarch64__
 
     ASSERT_TRUE(teardown(&test));
 
@@ -336,7 +336,7 @@ static bool vcpu_fp_aarch32() {
 #if __aarch64__
     EXPECT_EQ(packet.guest_mem.read, false);
     EXPECT_EQ(packet.guest_mem.data, 0);
-#endif  // __aarch64__
+#endif // __aarch64__
 
     ASSERT_TRUE(teardown(&test));
 
@@ -353,38 +353,61 @@ static bool vcpu_read_write_state() {
         return true;
     }
 
-    zx_vcpu_state_t vcpu_state = {
+    zx_vcpu_state_t vcpu_state;
+    ASSERT_EQ(zx_vcpu_read_state(test.vcpu, ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
 #if __aarch64__
-        // clang-format off
-        .x = {
-             0u,  1u,  2u,  3u,  4u,  5u,  6u,  7u,  8u,  9u,
-            10u, 11u, 12u, 13u, 14u, 15u, 16u, 17u, 18u, 19u,
-            20u, 21u, 22u, 23u, 24u, 25u, 26u, 27u, 28u, 29u,
-            30u,
-        },
-        // clang-format on
-        .sp = 64u,
-        .cpsr = 0,
+    vcpu_state.x[0] = 0u;
+    vcpu_state.x[1] = 1u;
+    vcpu_state.x[2] = 2u;
+    vcpu_state.x[3] = 3u;
+    vcpu_state.x[4] = 4u;
+    vcpu_state.x[5] = 5u;
+    vcpu_state.x[6] = 6u;
+    vcpu_state.x[7] = 7u;
+    vcpu_state.x[8] = 8u;
+    vcpu_state.x[9] = 9u;
+    vcpu_state.x[10] = 10u;
+    vcpu_state.x[11] = 11u;
+    vcpu_state.x[12] = 12u;
+    vcpu_state.x[13] = 13u;
+    vcpu_state.x[14] = 14u;
+    vcpu_state.x[15] = 15u;
+    vcpu_state.x[16] = 16u;
+    vcpu_state.x[17] = 17u;
+    vcpu_state.x[18] = 18u;
+    vcpu_state.x[19] = 19u;
+    vcpu_state.x[20] = 20u;
+    vcpu_state.x[21] = 21u;
+    vcpu_state.x[22] = 22u;
+    vcpu_state.x[23] = 23u;
+    vcpu_state.x[24] = 24u;
+    vcpu_state.x[25] = 25u;
+    vcpu_state.x[26] = 26u;
+    vcpu_state.x[27] = 27u;
+    vcpu_state.x[28] = 28u;
+    vcpu_state.x[29] = 29u;
+    vcpu_state.x[30] = 30u;
+    vcpu_state.sp = 64u;
+    vcpu_state.cpsr = 0;
 #elif __x86_64__
-        .rax = 1u,
-        .rcx = 2u,
-        .rdx = 3u,
-        .rbx = 4u,
-        .rsp = 5u,
-        .rbp = 6u,
-        .rsi = 7u,
-        .rdi = 8u,
-        .r8 = 9u,
-        .r9 = 10u,
-        .r10 = 11u,
-        .r11 = 12u,
-        .r12 = 13u,
-        .r13 = 14u,
-        .r14 = 15u,
-        .r15 = 16u,
-        .rflags = 0,
+    vcpu_state.rax = 1u;
+    vcpu_state.rcx = 2u;
+    vcpu_state.rdx = 3u;
+    vcpu_state.rbx = 4u;
+    vcpu_state.rsp = 5u;
+    vcpu_state.rbp = 6u;
+    vcpu_state.rsi = 7u;
+    vcpu_state.rdi = 8u;
+    vcpu_state.r8 = 9u;
+    vcpu_state.r9 = 10u;
+    vcpu_state.r10 = 11u;
+    vcpu_state.r11 = 12u;
+    vcpu_state.r12 = 13u;
+    vcpu_state.r13 = 14u;
+    vcpu_state.r14 = 15u;
+    vcpu_state.r15 = 16u;
+    vcpu_state.rflags = 0;
 #endif
-    };
 
     ASSERT_EQ(zx_vcpu_write_state(test.vcpu, ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)),
               ZX_OK);
@@ -447,7 +470,7 @@ static bool vcpu_read_write_state() {
     EXPECT_EQ(vcpu_state.r13, 28u);
     EXPECT_EQ(vcpu_state.r14, 30u);
     EXPECT_EQ(vcpu_state.r15, 32u);
-    EXPECT_EQ(vcpu_state.rflags, (1u << 0) | (1u << 18));
+    EXPECT_EQ(vcpu_state.default_operand_size, 4);
 #endif // __x86_64__
 
     ASSERT_TRUE(teardown(&test));

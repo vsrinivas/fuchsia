@@ -34,7 +34,7 @@ static constexpr uint16_t kBaseProcessorVpid = 1;
 
 static zx_status_t invept(InvEpt invalidation, uint64_t eptp) {
     uint8_t err;
-    uint64_t descriptor[] = { eptp, 0 };
+    uint64_t descriptor[] = {eptp, 0};
 
     __asm__ volatile(
         "invept %[descriptor], %[invalidation];" VMX_ERR_CHECK(err)
@@ -818,6 +818,21 @@ zx_status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
         AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
         state->rsp = vmcs.Read(VmcsFieldXX::GUEST_RSP);
         state->rflags = vmcs.Read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_USER;
+
+        // See Volume 3, Section 5.2.1.
+        uint64_t efer = vmcs.Read(VmcsField64::GUEST_IA32_EFER);
+        uint32_t cs_access_rights = vmcs.Read(VmcsField32::GUEST_CS_ACCESS_RIGHTS);
+        if ((efer & X86_EFER_LMA) && (cs_access_rights & kGuestXxAccessRightsL)) {
+            // IA32-e 64 bit mode.
+            state->default_operand_size = 4;
+        } else if (cs_access_rights & kGuestXxAccessRightsD) {
+            // CS.D set (and not 64 bit mode).
+            state->default_operand_size = 4;
+        } else {
+            // CS.D clear (and not 64 bit mode).
+            state->default_operand_size = 2;
+        }
+
         return ZX_OK;
     }
     }
