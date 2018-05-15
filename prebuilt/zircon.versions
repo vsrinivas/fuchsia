@@ -7,7 +7,7 @@ gcc/linux-amd64 d1d9edff39e1c206b8d5050116724c10228f6e08
 gcc/mac-amd64 5fbe47110c48b47ccd802b5e4e2686dd5a51432c
 sysroot/linux-amd64 ae0677829357edb199c21e76b1ea31eb8ef62817
 sysroot/linux-arm64 f116a841ddf6d1755bde918b8f07763bdee5e06d
-tools/symbolize/linux-amd64 6fd7dd6919005a12875dc639cfc569c75b368760
-tools/symbolize/mac-amd64 3001d84e872c225bba133a6b6b27a7b248839dde
+tools/symbolize/linux-amd64 65cf179023690da1bbb04ecc485a5851a2dbd03b
+tools/symbolize/mac-amd64 47c0db18d3c656141f1e46c782b0c778c90bd85d
 qemu/linux-amd64 9cc486c5b18a0be515c39a280ca9a309c54cf994
 qemu/mac-amd64 2d3358ae9a569b2d4a474f498b32b202a152134f
