@@ -458,133 +458,6 @@ struct EapolConfirm {
     EapolResultCodes result_code;
 };
 
-// Method ordinals
-// To be replaced by FIDL2 interfaces soon.
-enum Method {
-    // MLME-SCAN.request
-    // Args: ScanRequest
-    SCAN_request = 1;
-
-    // MLME-SCAN.confirm
-    // Args: ScanConfirm
-    SCAN_confirm = 2;
-
-    // MLME-JOIN.request
-    // Args: JoinRequest
-    JOIN_request = 3;
-
-    // MLME-JOIN.confirm
-    // Args: JoinConfirm
-    JOIN_confirm = 4;
-
-    // MLME-AUTHENTICATE.request
-    // Args: AuthenticateRequest
-    AUTHENTICATE_request = 5;
-
-    // MLME-AUTHENTICATE.confirm
-    // Args: AuthenticateConfirm
-    AUTHENTICATE_confirm = 6;
-
-    // MLME-AUTHENTICATE.indication
-    // Args: AuthenticateIndication
-    AUTHENTICATE_indication = 7;
-
-    // MLME-AUTHENTICATE.response
-    // Args: AuthenticateResponse
-    AUTHENTICATE_response = 8;
-
-    // MLME-DEAUTHENTICATE.request
-    // Args: DeauthenticateRequest
-    DEAUTHENTICATE_request = 9;
-
-    // MLME-DEAUTHENTICATE.confirm
-    // Args: DeauthenticateConfirm
-    DEAUTHENTICATE_confirm = 10;
-
-    // MLME-DEAUTHENTICATE.indication
-    // Args: DeauthenticateIndication
-    DEAUTHENTICATE_indication = 11;
-
-    // MLME-ASSOCIATE.request
-    // Args: AssociateRequest
-    ASSOCIATE_request = 12;
-
-    // MLME-ASSOCIATE.confirm
-    // Args: AssociateConfirm
-    ASSOCIATE_confirm = 13;
-
-    // MLME-ASSOCIATE.indication
-    // Args: AssociateIndication
-    ASSOCIATE_indication = 14;
-
-    // MLME-ASSOCIATE.response
-    // Args: AssociateResponse
-    ASSOCIATE_response = 15;
-
-    // MLME-DISASSOCIATE.request
-    // Args: DisassociateRequest
-    DISASSOCIATE_request = 16;
-
-    // MLME-DISASSOCIATE.confirm
-    // Args: DisassociateConfirm
-    DISASSOCIATE_confirm = 17;
-
-    // MLME-DISASSOCIATE.indication
-    // Args: DisassociateIndication
-    DISASSOCIATE_indication = 18;
-
-    // MLME-RESET.request
-    // Args: ResetRequest
-    RESET_request = 19;
-
-    // MLME-START.request
-    // Args: StartRequest
-    START_request = 20;
-
-    // MLME-START.confirm
-    // Args: StartConfirm
-    START_confirm = 21;
-
-    // MLME-STOP.request
-    // Args: StopRequest
-    STOP_request = 22;
-
-    // MLME-STOP.confirm
-    STOP_confirm = 23;
-
-    // MLME-SETKEYS.request
-    // Args: SetKeysRequest
-    SETKEYS_request = 24;
-
-    // MLME-DELETEKEYS.request
-    // Args: DeleteKeysRequest
-    DELETEKEYS_request = 25;
-
-    // MLME-EAPOL.request
-    // Args: EapolRequest
-    EAPOL_request = 26;
-
-    // MLME-EAPOL.confirm
-    // Args: EapolConfirm
-    EAPOL_confirm = 27;
-
-
-    // Custom primitives extending 802.11 MLME SAP interface.
-    // See: wlan_mlme_ext.fidl
-
-    // Args: SignalReportIndication
-    SIGNAL_REPORT_indication = 28;
-
-    // Args: EapolIndication
-    EAPOL_indication = 29;
-
-    // Args: DeviceQueryRequest
-    DEVICE_QUERY_request = 30;
-
-    // Args: DeviceQueryConfirm
-    DEVICE_QUERY_confirm = 31;
-};
-
 // Because these methods rely on an external entity to provide a response, events are used instead
 // of return values.
 interface MLME {
@@ -631,12 +504,13 @@ interface MLME {
     26: EapolReq(EapolRequest req);
     27: -> EapolConf(EapolConfirm resp);
 
+
     // The following are extensions to the 802.11 MLME SAP interface.
 
-    28: -> SignalReport(SignalReportIndication ind);
+    0x1001: -> SignalReport(SignalReportIndication ind);
 
-    29: -> EapolInd(EapolIndication ind);
+    0x1002: -> EapolInd(EapolIndication ind);
 
-    30: DeviceQueryReq(DeviceQueryRequest req);
-    31: -> DeviceQueryConf(DeviceQueryConfirm resp);
+    0x1003: DeviceQueryReq(DeviceQueryRequest req);
+    0x1004: -> DeviceQueryConf(DeviceQueryConfirm resp);
 };
