@@ -71,16 +71,33 @@ zx_status_t CheckFvmConsistency(const blobfs_info_t* info, int block_fd) {
     }
 
     if (response.count != request.count) {
-        FS_TRACE_ERROR("blobfs: Missing slize\n");
+        FS_TRACE_ERROR("blobfs: Missing slice\n");
         return ZX_ERR_BAD_STATE;
     }
 
     for (size_t i = 0; i < request.count; i++) {
-        size_t actual_count = response.vslice_range[i].count;
-        if (!response.vslice_range[i].allocated || expected_count[i] != actual_count) {
-            // TODO(rvargas): Consider modifying the size automatically.
-            FS_TRACE_ERROR("blobfs: Wrong slice size\n");
+        size_t blobfs_count = expected_count[i];
+        size_t fvm_count = response.vslice_range[i].count;
+
+        if (!response.vslice_range[i].allocated || fvm_count < blobfs_count) {
+            // Currently, since Blobfs can only grow new slices, it should not be possible for
+            // the FVM to report a slice size smaller than what is reported by Blobfs. In this
+            // case, automatically fail without trying to resolve the situation, as it is
+            // possible that Blobfs structures are allocated in the slices that have been lost.
+            FS_TRACE_ERROR("blobfs: Mismatched slice count\n");
             return ZX_ERR_IO_DATA_INTEGRITY;
+        }
+
+        if (fvm_count > blobfs_count) {
+            // If FVM reports more slices than we expect, try to free remainder.
+            extend_request_t shrink;
+            shrink.length = fvm_count - blobfs_count;
+            shrink.offset = request.vslice_start[i] + blobfs_count;
+            ssize_t r;
+            if ((r = ioctl_block_fvm_shrink(block_fd, &shrink)) != ZX_OK) {
+                FS_TRACE_ERROR("blobfs: Unable to shrink to expected size, status: %zd\n", r);
+                return ZX_ERR_IO_DATA_INTEGRITY;
+            }
         }
     }
 

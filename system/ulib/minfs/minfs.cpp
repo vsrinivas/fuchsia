@@ -159,37 +159,27 @@ zx_status_t minfs_check_info(const minfs_info_t* info, Bcache* bc) {
         }
 
         for (unsigned i = 0; i < request.count; i++) {
-            size_t expected = expected_count[i];
-            size_t actual = response.vslice_range[i].count;
+            size_t minfs_count = expected_count[i];
+            size_t fvm_count = response.vslice_range[i].count;
 
-            if (!response.vslice_range[i].allocated) {
-                // If we find no allocated slices and expect some, grow to the amount we expect
-                extend_request_t extend;
-                extend.length = expected;
-                extend.offset = request.vslice_start[i];
-                if (bc->FVMExtend(&extend) != ZX_OK) {
-                    FS_TRACE_ERROR("minfs: Unable to grow to expected size\n");
-                    return ZX_ERR_IO_DATA_INTEGRITY;
-                }
-                continue;
+            if (!response.vslice_range[i].allocated || fvm_count < minfs_count) {
+                // Currently, since Minfs can only grow new slices, it should not be possible for
+                // the FVM to report a slice size smaller than what is reported by Minfs. In this
+                // case, automatically fail without trying to resolve the situation, as it is
+                // possible that Minfs structures are allocated in the slices that have been lost.
+                FS_TRACE_ERROR("minfs: Mismatched slice count\n");
+                return ZX_ERR_IO_DATA_INTEGRITY;
             }
 
-            if (actual < expected) {
-                // If FVM doesn't report all slices we expect, try to allocate remainder
-                extend_request_t extend;
-                extend.length = expected - actual;
-                extend.offset = request.vslice_start[i] + actual;
-                if (bc->FVMExtend(&extend) != ZX_OK) {
-                    FS_TRACE_ERROR("minfs: Unable to grow to expected size\n");
-                    return ZX_ERR_IO_DATA_INTEGRITY;
-                }
-            } else if (actual > expected) {
-                // If FVM doesn't report all slices we expect, try to free remainder
+            if (fvm_count > minfs_count) {
+                // If FVM reports more slices than we expect, try to free remainder.
                 extend_request_t shrink;
-                shrink.length = actual - expected;
-                shrink.offset = request.vslice_start[i] + expected;
-                if (bc->FVMShrink(&shrink) != ZX_OK) {
-                    FS_TRACE_ERROR("minfs: Unable to shrink to expected size\n");
+                shrink.length = fvm_count - minfs_count;
+                shrink.offset = request.vslice_start[i] + minfs_count;
+                zx_status_t status;
+                if ((status = bc->FVMShrink(&shrink)) != ZX_OK) {
+                    FS_TRACE_ERROR("minfs: Unable to shrink to expected size, status: %d\n",
+                                   status);
                     return ZX_ERR_IO_DATA_INTEGRITY;
                 }
             }

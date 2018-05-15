@@ -1798,15 +1798,56 @@ static bool CorruptAtMount(void) {
     fbl::unique_fd fd(blobfsTest.GetFd());
     ASSERT_TRUE(fd, "Could not open ramdisk");
 
-    // Manually grow slice so FVM will differ from Blobfs.
+    // Manually shrink slice so FVM will differ from Blobfs.
     extend_request_t extend_request;
-    extend_request.offset = (0x10000 / kBlocksPerSlice) + 1;
+    extend_request.offset = blobfs::kFVMNodeMapStart / kBlocksPerSlice;
     extend_request.length = 1;
-    ASSERT_EQ(ioctl_block_fvm_extend(fd.get(), &extend_request), 0);
+    ASSERT_EQ(ioctl_block_fvm_shrink(fd.get(), &extend_request), 0);
 
-    // Attempt to mount the VPart.
+    // Verify that shrink was successful.
+    query_request_t query_request;
+    query_request.count = 1;
+    query_request.vslice_start[0] = extend_request.offset;
+    query_response_t query_response;
+    ASSERT_EQ(ioctl_block_fvm_vslice_query(fd.get(), &query_request, &query_response),
+              sizeof(query_response_t));
+    ASSERT_EQ(query_request.count, query_response.count);
+    ASSERT_FALSE(query_response.vslice_range[0].allocated);
+    ASSERT_EQ(query_response.vslice_range[0].count,
+              (blobfs::kFVMDataStart - blobfs::kFVMNodeMapStart) / kBlocksPerSlice);
+
+    // Attempt to mount the VPart. This should fail since slices are missing.
     ASSERT_NE(mount(fd.release(), MOUNT_PATH, DISK_FORMAT_BLOBFS, &default_mount_options,
                     launch_stdio_async), ZX_OK);
+
+    fd.reset(blobfsTest.GetFd());
+    ASSERT_TRUE(fd, "Could not open ramdisk");
+
+    // Manually grow slice count to twice what it was initially.
+    extend_request.length = 2;
+    ASSERT_EQ(ioctl_block_fvm_extend(fd.get(), &extend_request), 0);
+
+    // Verify that extend was successful.
+    ASSERT_EQ(ioctl_block_fvm_vslice_query(fd.get(), &query_request, &query_response),
+              sizeof(query_response_t));
+    ASSERT_EQ(query_request.count, query_response.count);
+    ASSERT_TRUE(query_response.vslice_range[0].allocated);
+    ASSERT_EQ(query_response.vslice_range[0].count, 2);
+
+    // Attempt to mount the VPart. This should succeed.
+    ASSERT_EQ(mount(fd.release(), MOUNT_PATH, DISK_FORMAT_BLOBFS, &default_mount_options,
+                    launch_stdio_async), ZX_OK);
+
+    ASSERT_EQ(umount(MOUNT_PATH), ZX_OK);
+    fd.reset(blobfsTest.GetFd());
+    ASSERT_TRUE(fd, "Could not open ramdisk");
+
+    // Verify that mount automatically removed extra slice.
+    ASSERT_EQ(ioctl_block_fvm_vslice_query(fd.get(), &query_request, &query_response),
+              sizeof(query_response_t));
+    ASSERT_EQ(query_request.count, query_response.count);
+    ASSERT_TRUE(query_response.vslice_range[0].allocated);
+    ASSERT_EQ(query_response.vslice_range[0].count, 1);
 
     // Clean up.
     ASSERT_TRUE(blobfsTest.Teardown(true), "unmounting Blobfs");

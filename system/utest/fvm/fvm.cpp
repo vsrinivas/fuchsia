@@ -18,9 +18,11 @@
 #include <unistd.h>
 #include <utime.h>
 
+#include <blobfs/format.h>
 #include <block-client/client.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
+#include <fbl/function.h>
 #include <fbl/limits.h>
 #include <fbl/new.h>
 #include <fbl/ref_counted.h>
@@ -31,16 +33,16 @@
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
 #include <fvm/fvm.h>
-#include <minfs/format.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/zx/vmo.h>
 #include <memfs/memfs.h>
+#include <minfs/format.h>
 #include <zircon/device/block.h>
 #include <zircon/device/device.h>
 #include <zircon/device/ramdisk.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 #include <zircon/thread_annotations.h>
-#include <lib/zx/vmo.h>
 
 #include <unittest/unittest.h>
 
@@ -1878,6 +1880,99 @@ bool TestPersistenceSimple(void) {
     END_TEST;
 }
 
+bool CorruptMountHelper(const char* partition_path, disk_format_t disk_format,
+                        const query_request_t& query_request) {
+    BEGIN_HELPER;
+
+    // Format the VPart as |disk_format|.
+    ASSERT_EQ(mkfs(partition_path, disk_format, launch_stdio_sync,
+                   &default_mkfs_options),
+              ZX_OK);
+
+    int vp_fd = open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr);
+    ASSERT_GT(vp_fd, 0);
+
+    // Check initial slice allocation.
+    query_response_t query_response;
+    ASSERT_EQ(ioctl_block_fvm_vslice_query(vp_fd, &query_request, &query_response),
+              sizeof(query_response_t));
+    ASSERT_EQ(query_request.count, query_response.count);
+
+    for (unsigned i = 0; i < query_request.count; i++) {
+        ASSERT_TRUE(query_response.vslice_range[i].allocated);
+        ASSERT_EQ(query_response.vslice_range[i].count, 1);
+    }
+
+    // Manually shrink slices so FVM will differ from the partition.
+    extend_request_t extend_request;
+    extend_request.length = 1;
+    extend_request.offset = query_request.vslice_start[0];
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &extend_request), 0);
+
+    // Check slice allocation after manual grow/shrink
+    ASSERT_EQ(ioctl_block_fvm_vslice_query(vp_fd, &query_request, &query_response),
+              sizeof(query_response_t));
+    ASSERT_FALSE(query_response.vslice_range[0].allocated);
+    ASSERT_EQ(query_response.vslice_range[0].count,
+              query_request.vslice_start[1] - query_request.vslice_start[0]);
+
+    // Try to mount the VPart.
+    ASSERT_NE(mount(vp_fd, kMountPath, disk_format, &default_mount_options,
+                    launch_stdio_async), ZX_OK);
+
+    vp_fd = open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr);
+    ASSERT_GT(vp_fd, 0);
+
+    // Grow back the slice we shrunk earlier.
+    extend_request.length = 1;
+    extend_request.offset = query_request.vslice_start[0];
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &extend_request), 0);
+
+    // Verify grow was successful.
+    ASSERT_EQ(ioctl_block_fvm_vslice_query(vp_fd, &query_request, &query_response),
+              sizeof(query_response_t));
+    ASSERT_EQ(query_request.count, query_response.count);
+    ASSERT_TRUE(query_response.vslice_range[0].allocated);
+    ASSERT_EQ(query_response.vslice_range[0].count, 1);
+
+    // Now extend all extents by some number of additional slices.
+    for (unsigned i = 0; i < query_request.count; i++) {
+        extend_request_t extend_request;
+        extend_request.length = query_request.count - i;
+        extend_request.offset = query_request.vslice_start[i] + 1;
+        ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &extend_request), 0);
+    }
+
+    // Verify that the extensions were successful.
+    ASSERT_EQ(ioctl_block_fvm_vslice_query(vp_fd, &query_request, &query_response),
+              sizeof(query_response_t));
+    ASSERT_EQ(query_request.count, query_response.count);
+    for (unsigned i = 0; i < query_request.count; i++) {
+        ASSERT_TRUE(query_response.vslice_range[i].allocated);
+        ASSERT_EQ(query_response.vslice_range[i].count, 1 + query_request.count - i);
+    }
+
+    // Try mount again.
+    ASSERT_EQ(mount(vp_fd, kMountPath, disk_format, &default_mount_options,
+                    launch_stdio_async), ZX_OK);
+    ASSERT_EQ(umount(kMountPath), ZX_OK);
+
+    vp_fd = open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr);
+    ASSERT_GT(vp_fd, 0);
+
+    // Verify that slices were fixed on mount.
+    ASSERT_EQ(ioctl_block_fvm_vslice_query(vp_fd, &query_request, &query_response),
+              sizeof(query_response_t));
+    ASSERT_EQ(query_request.count, query_response.count);
+
+    for (unsigned i = 0; i < query_request.count; i++) {
+        ASSERT_TRUE(query_response.vslice_range[i].allocated);
+        ASSERT_EQ(query_response.vslice_range[i].count, 1);
+    }
+
+    END_HELPER;
+}
+
 bool TestCorruptMount(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
@@ -1901,96 +1996,33 @@ bool TestCorruptMount(void) {
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
     int vp_fd = fvm_allocate_partition(fd, &request);
     ASSERT_GT(vp_fd, 0);
+    ASSERT_EQ(close(vp_fd), 0);
 
-    // Format the VPart as minfs
+    ASSERT_EQ(mkdir(kMountPath, 0666), 0);
+
     char partition_path[PATH_MAX];
     snprintf(partition_path, sizeof(partition_path), "%s/%s-p-1/block",
              fvm_driver, kTestPartName1);
-    ASSERT_EQ(mkfs(partition_path, DISK_FORMAT_MINFS, launch_stdio_sync,
-                   &default_mkfs_options),
-              ZX_OK);
 
-    size_t kBlocksPerSlice = (slice_size / 8192);
-    // Check initial slice allocation
+    size_t kMinfsBlocksPerSlice = slice_size / minfs::kMinfsBlockSize;
     query_request_t query_request;
     query_request.count = 4;
-    query_request.vslice_start[0] = minfs::kFVMBlockInodeBmStart / kBlocksPerSlice;
-    query_request.vslice_start[1] = minfs::kFVMBlockDataBmStart / kBlocksPerSlice;
-    query_request.vslice_start[2] = minfs::kFVMBlockInodeStart / kBlocksPerSlice;
-    query_request.vslice_start[3] = minfs::kFVMBlockDataStart / kBlocksPerSlice;
+    query_request.vslice_start[0] = minfs::kFVMBlockInodeBmStart / kMinfsBlocksPerSlice;
+    query_request.vslice_start[1] = minfs::kFVMBlockDataBmStart / kMinfsBlocksPerSlice;
+    query_request.vslice_start[2] = minfs::kFVMBlockInodeStart / kMinfsBlocksPerSlice;
+    query_request.vslice_start[3] = minfs::kFVMBlockDataStart / kMinfsBlocksPerSlice;
 
-    query_response_t query_response;
-    ASSERT_EQ(ioctl_block_fvm_vslice_query(vp_fd, &query_request, &query_response),
-              sizeof(query_response_t));
-    ASSERT_TRUE(query_response.vslice_range[0].allocated);
-    ASSERT_EQ(query_response.vslice_range[0].count, 1);
-    ASSERT_TRUE(query_response.vslice_range[1].allocated);
-    ASSERT_EQ(query_response.vslice_range[1].count, 1);
-    ASSERT_TRUE(query_response.vslice_range[2].allocated);
-    ASSERT_EQ(query_response.vslice_range[2].count, 1);
-    ASSERT_TRUE(query_response.vslice_range[3].allocated);
-    ASSERT_EQ(query_response.vslice_range[3].count, 1);
+    // Run the test for Minfs.
+    ASSERT_TRUE(CorruptMountHelper(partition_path, DISK_FORMAT_MINFS, query_request));
 
-    // Manually grow/shrink slices so FVM will differ from Minfs
-    extend_request_t extend_request;
-    extend_request.offset = (0x10000 / (slice_size / 8192)) + 1;
-    extend_request.length = 1;
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &extend_request), 0);
-    extend_request.offset = (0x20000 / (slice_size / 8192));
-    extend_request.length = 1;
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &extend_request), 0);
+    size_t kBlobfsBlocksPerSlice = slice_size / blobfs::kBlobfsBlockSize;
+    query_request.count = 3;
+    query_request.vslice_start[0] = blobfs::kFVMBlockMapStart / kBlobfsBlocksPerSlice;
+    query_request.vslice_start[1] = blobfs::kFVMNodeMapStart / kBlobfsBlocksPerSlice;
+    query_request.vslice_start[2] = blobfs::kFVMDataStart / kBlobfsBlocksPerSlice;
 
-    // Check slice allocation after manual grow/shrink
-    ASSERT_EQ(ioctl_block_fvm_vslice_query(vp_fd, &query_request, &query_response),
-              sizeof(query_response_t));
-    ASSERT_TRUE(query_response.vslice_range[0].allocated);
-    ASSERT_EQ(query_response.vslice_range[0].count, 2);
-    ASSERT_FALSE(query_response.vslice_range[1].allocated);
-    ASSERT_EQ(query_response.vslice_range[1].count,
-              query_request.vslice_start[2] - query_request.vslice_start[1]);
-
-    // Mount the VPart
-    ASSERT_EQ(mkdir(kMountPath, 0666), 0);
-    ASSERT_EQ(mount(vp_fd, kMountPath, DISK_FORMAT_MINFS, &default_mount_options,
-                    launch_stdio_async), ZX_OK);
-
-    // Create a file large enough to force slice extension
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[slice_size]);
-    ASSERT_TRUE(ac.check());
-    memset(buf.get(), 0, slice_size);
-
-    char fname[128];
-    snprintf(fname, sizeof(fname), "%s/wow", kMountPath);
-    int file_fd = open(fname, O_CREAT | O_RDWR | O_EXCL);
-    ASSERT_GT(file_fd, 0);
-    ASSERT_EQ(write(file_fd, buf.get(), slice_size), (ssize_t)slice_size);
-    ASSERT_EQ(close(file_fd), 0);
-
-    // Clean up
-    ASSERT_EQ(umount(kMountPath), ZX_OK);
-
-    vp_fd = open_partition(kTestUniqueGUID, kTestPartGUIDData, 0, nullptr);
-    ASSERT_GT(vp_fd, 0);
-
-    // Verify that data slices increased and others were fixed on mount
-    ASSERT_EQ(ioctl_block_fvm_vslice_query(vp_fd, &query_request, &query_response),
-              sizeof(query_response_t));
-    ASSERT_TRUE(query_response.vslice_range[0].allocated);
-    ASSERT_EQ(query_response.vslice_range[0].count, 1);
-    ASSERT_TRUE(query_response.vslice_range[1].allocated);
-    ASSERT_EQ(query_response.vslice_range[1].count, 1);
-    ASSERT_TRUE(query_response.vslice_range[3].allocated);
-    ASSERT_EQ(query_response.vslice_range[3].count, 2);
-
-    // Free the slice that was just allocated
-    extend_request.offset = (0x40000 / (slice_size / 8192) + 1);
-    extend_request.length = 1;
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &extend_request), 0);
-
-    ASSERT_EQ(mount(vp_fd, kMountPath, DISK_FORMAT_MINFS, &default_mount_options,
-                    launch_stdio_async), ZX_OK);
-    ASSERT_EQ(umount(kMountPath), ZX_OK);
+    // Run the test for Blobfs.
+    ASSERT_TRUE(CorruptMountHelper(partition_path, DISK_FORMAT_BLOBFS, query_request));
 
     // Clean up
     ASSERT_EQ(rmdir(kMountPath), 0);
