@@ -5,6 +5,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <zircon/compiler.h>
+
 #define GPT_MAGIC (0x5452415020494645ull) // 'EFI PART'
 #define GPT_HEADER_SIZE 0x5c
 #define GPT_ENTRY_SIZE  0x80
@@ -27,7 +29,7 @@ typedef struct gpt_header {
     uint32_t entries_count;
     uint32_t entries_size;
     uint32_t entries_crc;
-} gpt_header_t;
+} __PACKED gpt_header_t;
 
 typedef struct gpt_entry {
     uint8_t type[GPT_GUID_LEN];
@@ -36,7 +38,7 @@ typedef struct gpt_entry {
     uint64_t last;
     uint64_t flags;
     uint8_t name[GPT_NAME_LEN];  // UTF-16 on disk
-} gpt_entry_t;
+} __PACKED gpt_entry_t;
 
 #define GUID_EMPTY_VALUE {                         \
     0x00, 0x00, 0x00, 0x00,                        \

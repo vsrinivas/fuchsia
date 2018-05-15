@@ -26,25 +26,6 @@ void gpt_set_debug_output_enabled(bool enabled) {
     debug_out = enabled;
 }
 
-//TODO: rearrange to use gpt_header_t someday
-typedef struct gpt_hdr_blk {
-    uint64_t magic;
-    uint32_t revision;
-    uint32_t size;
-    uint32_t crc32;
-    uint32_t reserved0;
-    uint64_t current;
-    uint64_t backup;
-    uint64_t first;
-    uint64_t last;
-    uint8_t guid[GPT_GUID_LEN];
-    uint64_t entries;
-    uint32_t entries_count;
-    uint32_t entries_size;
-    uint32_t entries_crc;
-    uint8_t reserved[420]; // for 512-byte block size
-} gpt_hdr_blk_t;
-
 typedef struct mbr_partition {
     uint8_t status;
     uint8_t chs_first[3];
@@ -54,7 +35,7 @@ typedef struct mbr_partition {
     uint32_t sectors;
 } mbr_partition_t;
 
-static_assert(sizeof(gpt_hdr_blk_t) == 512, "unexpected gpt header size");
+static_assert(sizeof(gpt_header_t) == GPT_HEADER_SIZE, "unexpected gpt header size");
 static_assert(sizeof(gpt_partition_t) == GPT_ENTRY_SIZE, "unexpected gpt entry size");
 
 typedef struct gpt_priv {
@@ -71,7 +52,7 @@ typedef struct gpt_priv {
     bool mbr;
 
     // header buffer, should be primary copy
-    gpt_hdr_blk_t header;
+    gpt_header_t header;
 
     // partition table buffer
     gpt_partition_t ptable[PARTITIONS_COUNT];
@@ -205,28 +186,32 @@ int gpt_device_init(int fd, uint64_t blocksize, uint64_t blocks, gpt_device_t** 
     priv->blocksize = blocksize;
     priv->blocks = blocks;
 
-    if (priv->blocksize != 512) {
-        G_PRINTF("blocksize != 512 not supported\n");
+    uint8_t block[blocksize];
+
+    if (priv->blocksize < 512) {
+        G_PRINTF("blocksize < 512 not supported\n");
         goto fail;
     }
 
-    uint8_t mbr[512];
+    // Read protective MBR.
     int rc = lseek(fd, 0, SEEK_SET);
     if (rc < 0) {
         goto fail;
     }
-    rc = read(fd, mbr, blocksize);
+    rc = read(fd, block, blocksize);
     if (rc < 0 || (uint64_t)rc != blocksize) {
         goto fail;
     }
-    priv->mbr = mbr[0x1fe] == 0x55 && mbr[0x1ff] == 0xaa;
+    priv->mbr = block[0x1fe] == 0x55 && block[0x1ff] == 0xaa;
 
     // read the gpt header (lba 1)
-    gpt_hdr_blk_t* header = &priv->header;
-    rc = read(fd, header, blocksize);
+    rc = read(fd, block, blocksize);
     if (rc < 0 || (uint64_t)rc != blocksize) {
         goto fail;
     }
+
+    gpt_header_t* header = &priv->header;
+    memcpy(header, block, sizeof(*header));
 
     // is this a valid gpt header?
     if (header->magic != GPT_MAGIC) {
@@ -303,7 +288,8 @@ void gpt_device_release(gpt_device_t* dev) {
     free(priv);
 }
 
-static int gpt_sync_current(int fd, uint64_t blocksize, gpt_hdr_blk_t* header, gpt_partition_t* ptable) {
+static int gpt_sync_current(int fd, uint64_t blocksize, gpt_header_t* header,
+                            gpt_partition_t* ptable) {
     // write partition table first
     ssize_t rc = lseek(fd, header->entries * blocksize, SEEK_SET);
     if (rc < 0) {
@@ -319,8 +305,12 @@ static int gpt_sync_current(int fd, uint64_t blocksize, gpt_hdr_blk_t* header, g
     if (rc < 0) {
         return -1;
     }
-    rc = write(fd, header, sizeof(gpt_hdr_blk_t));
-    if (rc != sizeof(gpt_hdr_blk_t)) {
+
+    uint8_t block[blocksize];
+    memset(block, 0, sizeof(blocksize));
+    memcpy(block, header, sizeof(*header));
+    rc = write(fd, block, blocksize);
+    if (rc != (ssize_t) blocksize) {
         return -1;
     }
     return 0;
@@ -330,10 +320,10 @@ static int gpt_device_finalize_and_sync(gpt_device_t* dev, bool persist) {
     gpt_priv_t* priv = get_priv(dev);
 
     // write fake mbr if needed
-    uint8_t mbr[512];
+    uint8_t mbr[priv->blocksize];
     int rc;
     if (!priv->mbr) {
-        memset(mbr, 0, 512);
+        memset(mbr, 0, priv->blocksize);
         mbr[0x1fe] = 0x55;
         mbr[0x1ff] = 0xaa;
         mbr_partition_t* mpart = (mbr_partition_t*)(mbr + 0x1be);
@@ -348,16 +338,16 @@ static int gpt_device_finalize_and_sync(gpt_device_t* dev, bool persist) {
         if (rc < 0) {
             return -1;
         }
-        rc = write(priv->fd, mbr, 512);
-        if (rc < 0 || (size_t)rc != 512) {
+        rc = write(priv->fd, mbr, priv->blocksize);
+        if (rc < 0 || (size_t)rc != priv->blocksize) {
             return -1;
         }
         priv->mbr = true;
     }
 
     // fill in the new header fields
-    gpt_hdr_blk_t header;
-    memset(&header, 0, sizeof(gpt_hdr_blk_t));
+    gpt_header_t header;
+    memset(&header, 0, sizeof(header));
     header.magic = GPT_MAGIC;
     header.revision = 0x00010000; // gpt version 1.0
     header.size = GPT_HEADER_SIZE;
@@ -408,7 +398,7 @@ static int gpt_device_finalize_and_sync(gpt_device_t* dev, bool persist) {
     header.crc32 = crc32(0, (const unsigned char*)&header, GPT_HEADER_SIZE);
 
     // the copy cached in priv is the primary copy
-    memcpy(&priv->header, &header, GPT_HEADER_SIZE);
+    memcpy(&priv->header, &header, sizeof(header));
 
     // the header copy on stack is now the backup copy...
     header.current = priv->header.backup;
@@ -605,7 +595,7 @@ void uint8_to_guid_string(char* dst, const uint8_t* src) {
 
 void gpt_device_get_header_guid(gpt_device_t* dev,
                                 uint8_t (*disk_guid_out)[GPT_GUID_LEN]) {
-    gpt_hdr_blk_t* header = &get_priv(dev)->header;
+    gpt_header_t* header = &get_priv(dev)->header;
     memcpy(disk_guid_out, header->guid, GPT_GUID_LEN);
 }
 
