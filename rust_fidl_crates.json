@@ -42,36 +42,6 @@
     "public": true
   },
   {
-    "library_name": "bluetooth",
-    "fidl_target": "//garnet/public/lib/bluetooth/fidl:bluetooth",
-    "library_deps": [],
-    "public": true
-  },
-  {
-    "library_name": "bluetooth_control",
-    "fidl_target": "//garnet/public/lib/bluetooth/fidl:bluetooth_control",
-    "library_deps": ["bluetooth"],
-    "public": true
-  },
-  {
-    "library_name": "bluetooth_host",
-    "fidl_target": "//garnet/lib/bluetooth/fidl:fidl",
-    "library_deps": ["bluetooth_gatt", "bluetooth_control", "bluetooth_low_energy", "bluetooth"],
-    "public": false
-  },
-  {
-    "library_name": "bluetooth_gatt",
-    "fidl_target": "//garnet/public/lib/bluetooth/fidl:bluetooth_gatt",
-    "library_deps": ["bluetooth"],
-    "public": true
-  },
-  {
-    "library_name": "bluetooth_low_energy",
-    "fidl_target": "//garnet/public/lib/bluetooth/fidl:bluetooth_low_energy",
-    "library_deps": ["bluetooth_gatt", "bluetooth"],
-    "public": true
-  },
-  {
     "library_name": "media",
     "fidl_target": "//garnet/public/lib/media/fidl:fidl",
     "library_deps": [],

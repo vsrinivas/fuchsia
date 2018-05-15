@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
+#![feature(rustc_private)]
 
-extern crate failure;
 #[macro_use]
-extern crate failure_derive;
+extern crate failure;
 extern crate fidl;
 extern crate fuchsia_app as app;
 extern crate fuchsia_async as async;

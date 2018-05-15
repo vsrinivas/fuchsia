@@ -24,8 +24,7 @@ fn sleep() -> () {
     thread::sleep(time::Duration::from_millis(SLEEP_MS));
 }
 
-#[test]
-fn bt_host_lifecycle() {
+fn main() {
     let original_hosts = hci::list_host_devices();
     let (hci_device, _) = hci::create_and_bind_device().unwrap();
 

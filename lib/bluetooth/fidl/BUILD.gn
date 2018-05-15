@@ -4,16 +4,15 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fidl") {
-  name = "bluetooth_host"
+fidl("bluetooth_host") {
   sources = [
     "host.fidl",
   ]
 
-  deps = [
-    "//garnet/public/lib/bluetooth/fidl:bluetooth",
-    "//garnet/public/lib/bluetooth/fidl:bluetooth_control",
-    "//garnet/public/lib/bluetooth/fidl:bluetooth_gatt",
-    "//garnet/public/lib/bluetooth/fidl:bluetooth_low_energy",
-  ]
+   public_deps = [
+     "//garnet/public/lib/bluetooth/fidl:bluetooth",
+     "//garnet/public/lib/bluetooth/fidl:bluetooth_control",
+     "//garnet/public/lib/bluetooth/fidl:bluetooth_gatt",
+     "//garnet/public/lib/bluetooth/fidl:bluetooth_low_energy",
+   ]
 }

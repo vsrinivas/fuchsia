@@ -2,17 +2,9 @@
 # Any crate in the Garnet tree must be listed as a member of this
 # workspace.
 members =  [
-  "bin/bluetooth/bt-gap",
-  "bin/bluetooth/tests/integration",
-  "bin/bluetooth/tools/bt-fake-hci",
-  "bin/bluetooth/tools/bt-le-central",
-  "bin/bluetooth/tools/bt-snoop",
   "bin/xi_core",
-  "examples/bluetooth/ble_battery_service",
   "examples/rust/testing",
-  "lib/rust/crates/fuchsia-bluetooth",
   "lib/rust/crates/wlan-sme",
-  "lib/rust/fidl_crates/fidl_bluetooth_host",
   "public/lib/fidl/rust/fidl",
   "public/rust/crates/fuchsia-ddk",
   "public/rust/crates/fuchsia-ddk/examples/ddk_toy",
@@ -28,10 +20,6 @@ members =  [
   "public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys",
   "public/rust/crates/mxruntime",
   "public/rust/crates/mxruntime/mxruntime-sys",
-  "public/rust/fidl_crates/fidl_bluetooth",
-  "public/rust/fidl_crates/fidl_bluetooth_control",
-  "public/rust/fidl_crates/fidl_bluetooth_gatt",
-  "public/rust/fidl_crates/fidl_bluetooth_low_energy",
   "public/rust/fidl_crates/fidl_component",
   "public/rust/fidl_crates/fidl_mem",
   "public/rust/fidl_crates/fidl_power_manager",
@@ -42,11 +30,6 @@ members =  [
 # workspace must have a patch statement here and the version of the crate
 # at the path specified must be compatible with all crates in the tree.
 [patch.crates-io]
-fidl_bluetooth = { path = "public/rust/fidl_crates/fidl_bluetooth" }
-fidl_bluetooth_control = { path = "public/rust/fidl_crates/fidl_bluetooth_control" }
-fidl_bluetooth_gatt = { path = "public/rust/fidl_crates/fidl_bluetooth_gatt" }
-fidl_bluetooth_host = { path = "lib/rust/fidl_crates/fidl_bluetooth_host" }
-fidl_bluetooth_low_energy = { path = "public/rust/fidl_crates/fidl_bluetooth_low_energy" }
 fidl_component = { path = "public/rust/fidl_crates/fidl_component" }
 fidl_mem = { path = "public/rust/fidl_crates/fidl_mem" }
 fidl_power_manager = { path = "public/rust/fidl_crates/fidl_power_manager" }
@@ -57,7 +40,6 @@ fidl = { path = "public/lib/fidl/rust/fidl" }
 fuchsia-app = { path = "public/rust/crates/fuchsia-app" }
 fuchsia-syslog = { path = "public/rust/crates/fuchsia-syslog" }
 fuchsia-async = { path = "public/rust/crates/fuchsia-async" }
-fuchsia-bluetooth = { path = "lib/rust/crates/fuchsia-bluetooth" }
 fuchsia-vfs-watcher = { path = "public/rust/crates/fuchsia-vfs/fuchsia-vfs-watcher" }
 fuchsia-zircon = { path = "public/rust/crates/fuchsia-zircon" }
 fuchsia-zircon-sys = { path = "public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys" }

@@ -21,14 +21,17 @@ package("bluetooth_tests") {
 
   package_name = "bluetooth_tests"
 
-
   deps = [
     ":bt-host-unittests",
-    "//garnet/bin/bluetooth/tests/integration:bt",
+    "//garnet/bin/bluetooth/tests/integration",
   ]
 
   tests = [
-    { name = "bt-host-unittests" },
-    { name = "bt-lifecycle-lib-integration-test" },
+    {
+      name = "bt-host-unittests"
+    },
+    {
+      name = "rust_crates/bt_lifecycle_integration_test"
+    },
   ]
 }

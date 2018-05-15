@@ -13,7 +13,7 @@ package("bt-tools") {
     "bt-hci-tool",
     "bt-intel-tool",
     "bt-le-central",
-    "bt-snoop"
+    "bt-snoop",
   ]
 
   binaries = [
@@ -21,7 +21,8 @@ package("bt-tools") {
       name = "bt-cli"
     },
     {
-      name = "bt-fake-hci"
+      name = "bt_fake_hci"
+      dest = "bt-fake-hci"
     },
     {
       name = "bt-hci-tool"
@@ -30,10 +31,12 @@ package("bt-tools") {
       name = "bt-intel-tool"
     },
     {
-      name = "bt-le-central"
+      name = "bt_le_central"
+      dest = "bt-le-central"
     },
     {
-      name = "bt-snoop"
-    }
+      name = "bt_snoop"
+      dest = "bt-snoop"
+    },
   ]
 }

@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 group("fidl") {
-  deps = [
+  public_deps = [
     ":bluetooth",
     ":bluetooth_control",
     ":bluetooth_gatt",
@@ -14,6 +14,7 @@ group("fidl") {
 }
 
 fidl("bluetooth") {
+
   sources = [
     "common.fidl",
   ]
@@ -23,21 +24,21 @@ fidl("bluetooth_control") {
   sources = [
     "control.fidl",
   ]
-  deps = [ ":bluetooth", ]
+  public_deps = [ ":bluetooth", ]
 }
 
 fidl("bluetooth_gatt") {
   sources = [
     "gatt.fidl",
   ]
-  deps = [ ":bluetooth", ]
+  public_deps = [ ":bluetooth", ]
 }
 
 fidl("bluetooth_low_energy") {
   sources = [
     "low_energy.fidl",
   ]
-  deps = [
+  public_deps = [
     ":bluetooth",
     ":bluetooth_gatt",
   ]
