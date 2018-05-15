@@ -108,6 +108,7 @@ DEFINE_REGISTER(Cpsr, DosRegisterIo, 0x321);
 DEFINE_REGISTER(ImemDmaCtrl, DosRegisterIo, 0x340);
 DEFINE_REGISTER(ImemDmaAdr, DosRegisterIo, 0x341);
 DEFINE_REGISTER(ImemDmaCount, DosRegisterIo, 0x342);
+DEFINE_REGISTER(DcacDmaCtrl, DosRegisterIo, 0x0e12);
 DEFINE_REGISTER(DosSwReset0, DosRegisterIo, 0x3f00);
 DEFINE_REGISTER(DosGclkEn, DosRegisterIo, 0x3f01);
 DEFINE_REGISTER(DosMemPdVdec, DosRegisterIo, 0x3f30);
@@ -139,6 +140,55 @@ DEFINE_REGISTER(VldMemVififoMemCtl, DosRegisterIo, 0x0c52)
 DEFINE_REGISTER(PowerCtlVld, DosRegisterIo, 0x0c08)
 DEFINE_REGISTER(DosGenCtrl0, DosRegisterIo, 0x3f02)
 
+DEFINE_REGISTER(McStatus0, DosRegisterIo, 0x0909)
+DEFINE_REGISTER(McCtrl1, DosRegisterIo, 0x090b)
+DEFINE_REGISTER(DblkCtrl, DosRegisterIo, 0x0951)
+DEFINE_REGISTER(DblkStatus, DosRegisterIo, 0x0953)
+REGISTER_NAME(MdecPicDcCtrl, DosRegisterIo, 0x098e)
+    DEF_BIT(17, nv12_output) // as opposed to 3-plane YUV
+    DEF_BIT(31, bit31)
+};
+DEFINE_REGISTER(MdecPicDcStatus, DosRegisterIo, 0x098f)
+
+DEFINE_REGISTER(MdecSwReset, DosRegisterIo, 0x0984)
+
+// AvScratch registers are used to communicate with the AMRISC coprocessor.
+class AvScratch : public TypedRegisterBase<DosRegisterIo, AvScratch, uint32_t> {
+ public:
+    static auto Get(uint32_t i) { return AddrType((0x09c0 + i) * 4); }
+};
+
+DEFINE_REGISTER(AvScratch0, DosRegisterIo, 0x09c0)
+DEFINE_REGISTER(AvScratch1, DosRegisterIo, 0x09c1)
+DEFINE_REGISTER(AvScratch2, DosRegisterIo, 0x09c2)
+DEFINE_REGISTER(AvScratch3, DosRegisterIo, 0x09c3)
+DEFINE_REGISTER(AvScratch4, DosRegisterIo, 0x09c4)
+DEFINE_REGISTER(AvScratch5, DosRegisterIo, 0x09c5)
+DEFINE_REGISTER(AvScratch6, DosRegisterIo, 0x09c6)
+DEFINE_REGISTER(AvScratch7, DosRegisterIo, 0x09c7)
+DEFINE_REGISTER(AvScratch8, DosRegisterIo, 0x09c8)
+DEFINE_REGISTER(AvScratch9, DosRegisterIo, 0x09c9)
+DEFINE_REGISTER(AvScratchA, DosRegisterIo, 0x09ca)
+DEFINE_REGISTER(AvScratchB, DosRegisterIo, 0x09cb)
+DEFINE_REGISTER(AvScratchC, DosRegisterIo, 0x09cc)
+DEFINE_REGISTER(AvScratchD, DosRegisterIo, 0x09cd)
+DEFINE_REGISTER(AvScratchE, DosRegisterIo, 0x09ce)
+DEFINE_REGISTER(AvScratchF, DosRegisterIo, 0x09cf)
+DEFINE_REGISTER(AvScratchG, DosRegisterIo, 0x09d0)
+DEFINE_REGISTER(AvScratchH, DosRegisterIo, 0x09d1)
+DEFINE_REGISTER(AvScratchI, DosRegisterIo, 0x09d2)
+DEFINE_REGISTER(AvScratchJ, DosRegisterIo, 0x09d3)
+DEFINE_REGISTER(AvScratchK, DosRegisterIo, 0x09d4)
+DEFINE_REGISTER(AvScratchL, DosRegisterIo, 0x09d5)
+DEFINE_REGISTER(AvScratchM, DosRegisterIo, 0x09d6)
+DEFINE_REGISTER(AvScratchN, DosRegisterIo, 0x09d7)
+
+DEFINE_REGISTER(Mpeg12Reg, DosRegisterIo, 0x0c01)
+DEFINE_REGISTER(PscaleCtrl, DosRegisterIo, 0x0911)
+DEFINE_REGISTER(PicHeadInfo, DosRegisterIo, 0x0c03)
+DEFINE_REGISTER(M4ControlReg, DosRegisterIo, 0x0c29)
+DEFINE_REGISTER(VdecAssistMbox1ClrReg, DosRegisterIo, 0x0075)
+
 DEFINE_REGISTER(AoRtiGenPwrSleep0, AoRegisterIo, 0x3a);
 DEFINE_REGISTER(AoRtiGenPwrIso0, AoRegisterIo, 0x3b);
 
@@ -166,6 +216,34 @@ REGISTER_NAME(HhiVdecClkCntl, HiuRegisterIo, 0x78)
 REGISTER_NAME(DmcReqCtrl, DmcRegisterIo, 0x0)
   DEF_BIT(13, vdec);
 };
+
+REGISTER_NAME(DmcCavLutDatal, DmcRegisterIo, 0x12)
+    DEF_FIELD(28, 0, addr) // Shifted down by 3
+    DEF_FIELD(31, 29, width_lower) // Shifted down by 3
+};
+
+REGISTER_NAME(DmcCavLutDatah, DmcRegisterIo, 0x13)
+    DEF_FIELD(8, 0, width_upper) // Shifted down by 6
+    DEF_FIELD(21, 9, height)
+    DEF_BIT(22, wrap_x)
+    DEF_BIT(23, wrap_y)
+    DEF_FIELD(25, 24, block_mode)
+    DEF_FIELD(29, 26, endianness)
+
+    enum {
+        kBlockModeLinear = 0,
+        kBlockMode32x32 = 1
+    };
+};
+
+REGISTER_NAME(DmcCavLutAddr, DmcRegisterIo, 0x14)
+    DEF_BIT(9, wr_en)
+    DEF_BIT(8, rd_en)
+    DEF_FIELD(7, 0, index)
+};
+
+DEFINE_REGISTER(DmcCavLutRdataL, DmcRegisterIo, 0x15)
+DEFINE_REGISTER(DmcCavLutRdataH, DmcRegisterIo, 0x16)
 
 DEFINE_REGISTER(Reset0Register, ResetRegisterIo, 0x1101);
 REGISTER_NAME(Reset1Register, ResetRegisterIo, 0x1102)

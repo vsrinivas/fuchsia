@@ -23,6 +23,7 @@
 #include <thread>
 
 #include "macros.h"
+#include "mpeg12_decoder.h"
 #include "registers.h"
 
 #if ENABLE_DECODER_TESTS
@@ -73,6 +74,12 @@ AmlogicVideo::~AmlogicVideo() {
     if (parser_interrupt_thread_.joinable())
       parser_interrupt_thread_.join();
   }
+  if (vdec1_interrupt_handle_) {
+    zx_interrupt_destroy(vdec1_interrupt_handle_.get());
+    if (vdec1_interrupt_thread_.joinable())
+      vdec1_interrupt_thread_.join();
+  }
+  video_decoder_.reset();
   DisableVideoPower();
   io_buffer_release(&mmio_cbus_);
   io_buffer_release(&mmio_dosbus_);
@@ -142,6 +149,11 @@ void AmlogicVideo::EnableVideoPower() {
   }
   DosVdecMcrccStallCtrl::Get().FromValue(0).WriteTo(dosbus_.get());
   DmcReqCtrl::Get().ReadFrom(dmc_.get()).set_vdec(true).WriteTo(dmc_.get());
+
+  MdecPicDcCtrl::Get()
+      .ReadFrom(dosbus_.get())
+      .set_bit31(false)
+      .WriteTo(dosbus_.get());
   video_power_enabled_ = true;
 }
 
@@ -168,6 +180,22 @@ void AmlogicVideo::DisableVideoPower() {
   DisableClockGate();
 }
 
+// Wait for a condition to become true, with a timeout.
+template <typename DurationType, typename T>
+bool WaitForRegister(DurationType timeout, T condition) {
+  auto start = std::chrono::high_resolution_clock::now();
+  auto cast_timeout =
+      std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(
+          timeout);
+  while (!condition()) {
+    if (std::chrono::high_resolution_clock::now() - start >= cast_timeout) {
+      return false;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+  return true;
+}
+
 zx_status_t AmlogicVideo::LoadDecoderFirmware(uint8_t* data, uint32_t size) {
   Mpsr::Get().FromValue(0).WriteTo(dosbus_.get());
   Cpsr::Get().FromValue(0).WriteTo(dosbus_.get());
@@ -191,17 +219,14 @@ zx_status_t AmlogicVideo::LoadDecoderFirmware(uint8_t* data, uint32_t size) {
       .FromValue(kFirmwareSize / sizeof(uint32_t))
       .WriteTo(dosbus_.get());
   ImemDmaCtrl::Get().FromValue(0x8000 | (7 << 16)).WriteTo(dosbus_.get());
-  auto start = std::chrono::high_resolution_clock::now();
-  auto timeout =
-      std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(
-          std::chrono::seconds(1));
-  while (ImemDmaCtrl::Get().ReadFrom(dosbus_.get()).reg_value() & 0x8000) {
-    if (std::chrono::high_resolution_clock::now() - start >= timeout) {
-      DECODE_ERROR("Failed to load microcode.");
-      return ZX_ERR_TIMED_OUT;
+
+  if (!WaitForRegister(std::chrono::milliseconds(100), [this] {
+        return (ImemDmaCtrl::Get().ReadFrom(dosbus_.get()).reg_value() &
+                0x8000) == 0;
+      })) {
+    DECODE_ERROR("Failed to load microcode.");
+    return ZX_ERR_TIMED_OUT;
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-  }
 
   io_buffer_release(&firmware_buffer);
   return ZX_OK;
@@ -252,6 +277,35 @@ zx_status_t AmlogicVideo::InitializeStreamBuffer() {
       .set_fill_en(true)
       .set_empty_en(true)
       .WriteTo(dosbus_.get());
+
+  return ZX_OK;
+}
+
+zx_status_t AmlogicVideo::ConfigureCanvas(uint32_t id, uint32_t addr,
+                                          uint32_t width, uint32_t height,
+                                          uint32_t wrap, uint32_t blockmode) {
+  // TODO(ZX-2154): Use real canvas driver.
+  assert(width % 8 == 0);
+  assert(addr % 8 == 0);
+  DmcCavLutDatal::Get()
+      .FromValue(0)
+      .set_addr(addr >> 3)
+      .set_width_lower((width / 8) & 7)
+      .WriteTo(dmc_.get());
+
+  uint32_t endianness = 0x7;  // 64-bit big-endian to little-endian conversion.
+  DmcCavLutDatah::Get()
+      .FromValue(0)
+      .set_width_upper((width / 8) >> 3)
+      .set_height(height)
+      .set_block_mode(blockmode)
+      .set_endianness(endianness)
+      .WriteTo(dmc_.get());
+  DmcCavLutAddr::Get().FromValue(0).set_wr_en(true).set_index(id).WriteTo(
+      dmc_.get());
+
+  // Wait for write to go through.
+  DmcCavLutDatah::Get().ReadFrom(dmc_.get());
 
   return ZX_OK;
 }
@@ -393,6 +447,93 @@ zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
   return ZX_OK;
 }
 
+void AmlogicVideo::StartDecoding() {
+  // Delay to ensure previous writes have executed.
+  for (uint32_t i = 0; i < 3; i++) {
+    DosSwReset0::Get().ReadFrom(dosbus_.get());
+  }
+
+  DosSwReset0::Get().FromValue((1 << 12) | (1 << 11)).WriteTo(dosbus_.get());
+  DosSwReset0::Get().FromValue(0).WriteTo(dosbus_.get());
+
+  // Delay to ensure previous writes have executed.
+  for (uint32_t i = 0; i < 3; i++) {
+    DosSwReset0::Get().ReadFrom(dosbus_.get());
+  }
+
+  Mpsr::Get().FromValue(1).WriteTo(dosbus_.get());
+  decoding_started_ = true;
+}
+
+void AmlogicVideo::StopDecoding() {
+  if (!decoding_started_)
+    return;
+  decoding_started_ = false;
+  Mpsr::Get().FromValue(0).WriteTo(dosbus_.get());
+  Cpsr::Get().FromValue(0).WriteTo(dosbus_.get());
+
+  if (!WaitForRegister(std::chrono::milliseconds(100), [this] {
+        return (ImemDmaCtrl::Get().ReadFrom(dosbus_.get()).reg_value() &
+                0x8000) == 0;
+      })) {
+    DECODE_ERROR("Failed to wait for DMA completion");
+    return;
+  }
+  // Delay to ensure previous writes have executed.
+  for (uint32_t i = 0; i < 3; i++) {
+    DosSwReset0::Get().ReadFrom(dosbus_.get());
+  }
+
+  DosSwReset0::Get().FromValue((1 << 12) | (1 << 11)).WriteTo(dosbus_.get());
+  DosSwReset0::Get().FromValue(0).WriteTo(dosbus_.get());
+
+  // Delay to ensure previous write have executed.
+  for (uint32_t i = 0; i < 3; i++) {
+    DosSwReset0::Get().ReadFrom(dosbus_.get());
+  }
+}
+
+void AmlogicVideo::PowerDownDecoder() {
+  auto timeout = std::chrono::milliseconds(100);
+  if (!WaitForRegister(timeout, [this] {
+        return MdecPicDcStatus::Get().ReadFrom(dosbus_.get()).reg_value() == 0;
+      })) {
+    auto temp = MdecPicDcCtrl::Get().ReadFrom(dosbus_.get());
+    temp.set_reg_value(1 | temp.reg_value());
+    temp.WriteTo(dosbus_.get());
+    temp.set_reg_value(~1 & temp.reg_value());
+    temp.WriteTo(dosbus_.get());
+    for (uint32_t i = 0; i < 3; i++) {
+      MdecPicDcStatus::Get().ReadFrom(dosbus_.get());
+    }
+  }
+  if (!WaitForRegister(timeout, [this] {
+        return DblkStatus::Get().ReadFrom(dosbus_.get()).reg_value() == 0;
+      })) {
+    DblkCtrl::Get().FromValue(3).WriteTo(dosbus_.get());
+    DblkCtrl::Get().FromValue(0).WriteTo(dosbus_.get());
+    for (uint32_t i = 0; i < 3; i++) {
+      DblkStatus::Get().ReadFrom(dosbus_.get());
+    }
+  }
+
+  if (!WaitForRegister(timeout, [this] {
+        return McStatus0::Get().ReadFrom(dosbus_.get()).reg_value() == 0;
+      })) {
+    auto temp = McCtrl1::Get().ReadFrom(dosbus_.get());
+    temp.set_reg_value(0x9 | temp.reg_value());
+    temp.WriteTo(dosbus_.get());
+    temp.set_reg_value(~0x9 & temp.reg_value());
+    temp.WriteTo(dosbus_.get());
+    for (uint32_t i = 0; i < 3; i++) {
+      McStatus0::Get().ReadFrom(dosbus_.get());
+    }
+  }
+  WaitForRegister(timeout, [this] {
+    return !(DcacDmaCtrl::Get().ReadFrom(dosbus_.get()).reg_value() & 0x8000);
+  });
+}
+
 zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   parent_ = parent;
 
@@ -514,26 +655,28 @@ zx_status_t AmlogicVideo::Bind() {
   return ZX_OK;
 }
 
+void AmlogicVideo::InitializeInterrupts() {
+  vdec1_interrupt_thread_ = std::thread([this]() {
+    while (true) {
+      zx_time_t time;
+      zx_status_t status =
+          zx_interrupt_wait(vdec1_interrupt_handle_.get(), &time);
+      if (status != ZX_OK)
+        return;
+      video_decoder_->HandleInterrupt();
+    }
+  });
+}
+
 zx_status_t AmlogicVideo::InitDecoder() {
   EnableVideoPower();
   zx_status_t status = InitializeStreamBuffer();
   if (status != ZX_OK) return status;
 
-  {
-    uint8_t* firmware_data;
-    uint32_t firmware_size;
-    status = firmware_->GetFirmwareData(FirmwareBlob::FirmwareType::kMPEG12,
-                                        &firmware_data, &firmware_size);
-    if (status != ZX_OK) {
-      DECODE_ERROR("Failed load firmware\n");
-      return status;
-    }
-    status = LoadDecoderFirmware(firmware_data, firmware_size);
-    if (status != ZX_OK)
-      return status;
-  }
+  InitializeInterrupts();
 
-  return ZX_OK;
+  video_decoder_ = std::make_unique<Mpeg12Decoder>(this);
+  return video_decoder_->Initialize();
 }
 
 zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent) {

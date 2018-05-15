@@ -43,7 +43,10 @@ source_set("sources") {
     "firmware_blob.cc",
     "firmware_blob.h",
     "macros.h",
+    "mpeg12_decoder.cc",
+    "mpeg12_decoder.h",
     "registers.h",
+    "video_decoder.h",
   ]
   public_deps = [
     "//zircon/public/lib/ddk",

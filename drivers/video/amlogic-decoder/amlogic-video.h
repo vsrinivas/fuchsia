@@ -21,8 +21,9 @@
 
 #include "firmware_blob.h"
 #include "registers.h"
+#include "video_decoder.h"
 
-class AmlogicVideo {
+class AmlogicVideo final : public VideoDecoder::Owner {
  public:
   enum class DeviceType {
     kUnknown,
@@ -36,7 +37,17 @@ class AmlogicVideo {
   zx_status_t InitDecoder();
   zx_status_t Bind();
 
-  zx_status_t LoadDecoderFirmware(uint8_t* data, uint32_t size);
+  // VideoDecoder::Owner implementation.
+  DosRegisterIo* dosbus() override { return dosbus_.get(); }
+  zx_handle_t bti() override { return bti_.get(); }
+  FirmwareBlob* firmware_blob() override { return firmware_.get(); }
+  zx_status_t LoadDecoderFirmware(uint8_t* data, uint32_t size) override;
+  zx_status_t ConfigureCanvas(uint32_t id, uint32_t addr, uint32_t width,
+                              uint32_t height, uint32_t wrap,
+                              uint32_t blockmode) override;
+  void StartDecoding() override;
+  void StopDecoding() override;
+  void PowerDownDecoder() override;
 
  private:
   friend class TestMpeg2;
@@ -48,6 +59,7 @@ class AmlogicVideo {
   zx_status_t InitializeStreamBuffer();
   zx_status_t InitializeEsParser();
   zx_status_t ParseVideo(void* data, uint32_t len);
+  void InitializeInterrupts();
 
   zx_device_t* parent_ = nullptr;
   zx_device_t* device_ = nullptr;
@@ -69,6 +81,8 @@ class AmlogicVideo {
 
   std::unique_ptr<FirmwareBlob> firmware_;
 
+  bool decoding_started_ = false;
+
   bool video_power_enabled_ = false;
   // The stream buffer is a FIFO between the parser and the decoder.
   io_buffer_t stream_buffer_ = {};
@@ -81,6 +95,9 @@ class AmlogicVideo {
   zx::handle vdec1_interrupt_handle_;
 
   std::thread parser_interrupt_thread_;
+  std::thread vdec1_interrupt_thread_;
+
+  std::unique_ptr<VideoDecoder> video_decoder_;
 };
 
 #endif  // AMLOGIC_VIDEO_H_
