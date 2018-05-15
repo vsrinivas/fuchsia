@@ -2,6 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Basic target with protocol definitions and no logic, suitable for test
+# emulation.
+source_set("definitions") {
+  sources = [
+    "gatt_defs.cc",
+    "gatt_defs.h",
+  ]
+
+  public_deps = [
+    "//garnet/drivers/bluetooth/lib/att:definitions",
+  ]
+}
+
 static_library("gatt") {
   sources = [
     "client.cc",
@@ -10,8 +23,6 @@ static_library("gatt") {
     "connection.h",
     "gatt.cc",
     "gatt.h",
-    "gatt_defs.cc",
-    "gatt_defs.h",
     "generic_attribute_service.cc",
     "generic_attribute_service.h",
     "local_service_manager.cc",
@@ -29,6 +40,7 @@ static_library("gatt") {
   ]
 
   public_deps = [
+    ":definitions",
     "//garnet/drivers/bluetooth/lib/att",
     "//garnet/public/lib/fidl/cpp",
   ]

@@ -37,12 +37,17 @@ source_set("testing") {
   ]
 
   deps = [
-    # Library dependencies are for the protocol headers only. FakeController
-    # does not depend on any logic from these libraries.
-    "//garnet/drivers/bluetooth/lib/hci",
-    "//garnet/drivers/bluetooth/lib/l2cap",
+    "//garnet/drivers/bluetooth/lib/common",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
     "//third_party/googletest:gtest",
+
+    # Production dependencies are for the protocol headers only. FakeController
+    # does not depend on any logic from these libraries.
+    "//garnet/drivers/bluetooth/lib/att:definitions",
+    "//garnet/drivers/bluetooth/lib/gatt:definitions",
+    "//garnet/drivers/bluetooth/lib/l2cap:definitions",
+    # TODO(armansito): Pull in just the hci:definitions target.
+    "//garnet/drivers/bluetooth/lib/hci",
   ]
 }

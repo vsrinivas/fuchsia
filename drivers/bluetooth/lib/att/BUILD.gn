@@ -2,23 +2,34 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-static_library("att") {
+# Basic target with protocol definitions and no logic, suitable for test
+# emulation.
+source_set("definitions") {
   sources = [
     "att.h",
+    "packet.cc",
+    "packet.h",
+  ]
+
+  public_deps = [
+    "//garnet/drivers/bluetooth/lib/common",
+  ]
+}
+
+static_library("att") {
+  sources = [
     "attribute.cc",
     "attribute.h",
     "bearer.cc",
     "bearer.h",
     "database.cc",
     "database.h",
-    "packet.cc",
-    "packet.h",
     "status.cc",
     "status.h",
   ]
 
   public_deps = [
-    "//garnet/drivers/bluetooth/lib/common",
+    ":definitions",
     "//garnet/drivers/bluetooth/lib/l2cap",
     "//garnet/public/lib/fxl",
   ]

@@ -2,6 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Basic target with protocol definitions and no logic, suitable for test
+# emulation.
+source_set("definitions") {
+  sources = [
+    "l2cap_defs.h",
+  ]
+}
+
 static_library("l2cap") {
   sources = [
     "channel.cc",
@@ -12,7 +20,6 @@ static_library("l2cap") {
     "fragmenter.h",
     "l2cap.cc",
     "l2cap.h",
-    "l2cap_defs.h",
     "le_signaling_channel.cc",
     "le_signaling_channel.h",
     "logical_link.cc",
@@ -29,6 +36,7 @@ static_library("l2cap") {
   ]
 
   public_deps = [
+    ":definitions",
     "//garnet/drivers/bluetooth/lib/hci",
     "//garnet/public/lib/fxl",
   ]
