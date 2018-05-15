@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_DECODE_DECODER_H_
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_DECODE_DECODER_H_
 
-#include "garnet/bin/media/media_player/framework/models/transform.h"
+#include "garnet/bin/media/media_player/framework/models/async_node.h"
 #include "garnet/bin/media/media_player/framework/packet.h"
 #include "garnet/bin/media/media_player/framework/payload_allocator.h"
 #include "garnet/bin/media/media_player/framework/result.h"
@@ -14,7 +14,7 @@
 namespace media_player {
 
 // Abstract base class for transforms that decode compressed media.
-class Decoder : public Transform {
+class Decoder : public AsyncNode {
  public:
   // Creates a Decoder object for a given stream type.
   static Result Create(const StreamType& stream_type,

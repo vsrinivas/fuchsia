@@ -23,14 +23,39 @@ class FakeDecoder : public Decoder {
   const char* label() const override { return "FakeDecoder"; }
 
   // Decoder implementation.
-  void Flush() override {}
-
-  bool TransformPacket(const PacketPtr& input,
-                       bool new_input,
-                       const std::shared_ptr<PayloadAllocator>& allocator,
-                       PacketPtr* output) override {
-    return true;
+  void GetConfiguration(size_t* input_count, size_t* output_count) override {
+    FXL_DCHECK(input_count);
+    FXL_DCHECK(output_count);
+    *input_count = 1;
+    *output_count = 1;
   }
+
+  void FlushInput(bool hold_frame, size_t input_index,
+                  fxl::Closure callback) override {
+    callback();
+  }
+
+  void FlushOutput(size_t output_index, fxl::Closure callback) override {
+    callback();
+  }
+
+  std::shared_ptr<PayloadAllocator> allocator_for_input(
+      size_t input_index) override {
+    return nullptr;
+  }
+
+  void PutInputPacket(PacketPtr packet, size_t input_index) override {
+    stage()->RequestInputPacket();
+  }
+
+  bool can_accept_allocator_for_output(size_t output_index) const override {
+    return false;
+  }
+
+  void SetAllocatorForOutput(std::shared_ptr<PayloadAllocator> allocator,
+                             size_t output_index) override {}
+
+  void RequestOutputPacket() override {}
 
   std::unique_ptr<StreamType> output_stream_type() const override {
     FXL_DCHECK(output_stream_type_);
