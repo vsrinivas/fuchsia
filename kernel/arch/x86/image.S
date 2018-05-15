@@ -46,8 +46,10 @@
 // the bootloader ensures that the bootdata image is nowhere near the end of
 // the kernel load image, so it doesn't need to know how much .bss space the
 // kernel actually needs there.
-#define boot_bss_end (IMAGE_MEMORY_END + (apply_fixups_end - apply_fixups))
+#define boot_bss_end (IMAGE_MEMORY_END + IMAGE_RESERVE_SIZE)
 
+.globl IMAGE_RESERVE_SIZE
+IMAGE_RESERVE_SIZE = apply_fixups_end - apply_fixups
 
 .text
 

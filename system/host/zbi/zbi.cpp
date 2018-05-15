@@ -32,12 +32,12 @@
 #include <fbl/unique_fd.h>
 #include <lib/cksum.h>
 #include <lz4/lz4frame.h>
-#include <zircon/boot/bootdata.h>
+#include <zircon/boot/image.h>
 
 namespace {
 
 bool Aligned(uint32_t length) {
-    return BOOTDATA_ALIGN(length) == length;
+    return length % ZBI_ALIGNMENT == 0;
 }
 
 // It's not clear where this magic number comes from.
@@ -107,7 +107,7 @@ public:
     void Write(const iovec& buffer,
                std::unique_ptr<uint8_t[]> owned = nullptr) {
         assert(buffer.iov_len > 0);
-        if (buffer.iov_len + total_ > UINT32_MAX - sizeof(bootdata_t) + 1) {
+        if (buffer.iov_len + total_ > UINT32_MAX - sizeof(zbi_header_t) + 1) {
             fprintf(stderr, "output size exceeds format maximum\n");
             exit(1);
         }
@@ -147,13 +147,13 @@ public:
     // Emit a placeholder.  The return value will be passed to PatchHeader.
     uint32_t PlaceHeader() {
         uint32_t pos = WritePosition();
-        static const bootdata_t dummy = {};
+        static const zbi_header_t dummy = {};
         Write(Iovec(&dummy));
         return pos;
     }
 
     // Replace a placeholder with a real header.
-    void PatchHeader(const bootdata_t& header, uint32_t place) {
+    void PatchHeader(const zbi_header_t& header, uint32_t place) {
         assert(place < total_);
         assert(total_ - place >= sizeof(header));
 
@@ -240,7 +240,7 @@ public:
                      buffer.iov_len);
     }
 
-    void FinalizeHeader(bootdata_t* header) {
+    void FinalizeHeader(zbi_header_t* header) {
         header->crc32 = 0;
         uint32_t header_crc = crc32(
             0, reinterpret_cast<const uint8_t*>(header), sizeof(*header));
@@ -269,10 +269,10 @@ public:
         return result;                                                  \
     }()
 
-    void Init(OutputStream* out, const bootdata_t& header) {
+    void Init(OutputStream* out, const zbi_header_t& header) {
         header_ = header;
-        assert(header_.flags & BOOTDATA_BOOTFS_FLAG_COMPRESSED);
-        assert(header_.flags & BOOTDATA_FLAG_CRC32);
+        assert(header_.flags & ZBI_FLAG_STORAGE_COMPRESSED);
+        assert(header_.flags & ZBI_FLAG_CRC32);
 
         // Write a place-holder for the header, which we will go back
         // and fill in once we know the payload length and CRC.
@@ -354,7 +354,7 @@ private:
         std::unique_ptr<uint8_t[]> data;
         size_t size = 0;
     } unused_buffer_;
-    bootdata_t header_;
+    zbi_header_t header_;
     Checksummer crc_;
     LZ4F_compressionContext_t ctx_;
     LZ4F_preferences_t prefs_{};
@@ -427,8 +427,8 @@ public:
 
         static size_t pagesize = []() -> size_t {
             size_t pagesize = sysconf(_SC_PAGE_SIZE);
-            assert(pagesize >= BOOTFS_PAGE_SIZE);
-            assert(pagesize % BOOTFS_PAGE_SIZE == 0);
+            assert(pagesize >= ZBI_BOOTFS_PAGE_SIZE);
+            assert(pagesize % ZBI_BOOTFS_PAGE_SIZE == 0);
             return pagesize;
         }();
 
@@ -731,42 +731,38 @@ public:
     }
 
     uint32_t TotalSize() const {
-        return sizeof(header_) + BOOTDATA_ALIGN(PayloadSize());
+        return sizeof(header_) + ZBI_ALIGN(PayloadSize());
     }
 
     void Describe(uint32_t pos) const {
         switch (header_.type) {
-        case BOOTDATA_BOOTFS_BOOT:
-            printf("%08x: %08x BOOTFS @/boot (size=%08x)\n",
+        case ZBI_TYPE_STORAGE_BOOTFS:
+            printf("%08x: %08x BOOTFS (size=%08x)\n",
                    pos, header_.length, header_.extra);
             break;
-        case BOOTDATA_BOOTFS_SYSTEM:
-            printf("%08x: %08x BOOTFS @/system (size=%08x)\n",
-                   pos, header_.length, header_.extra);
-            break;
-        case BOOTDATA_RAMDISK:
+        case ZBI_TYPE_STORAGE_RAMDISK:
             printf("%08x: %08x RAMDISK (size=%08x)\n",
                    pos, header_.length, header_.extra);
             break;
 
-#define BOOTDATA_CASE(type)                                         \
-        case BOOTDATA_##type:                                       \
-            DescribeHeader(pos, header_.length, #type);             \
+#define ZBI_CASE(type)                                         \
+        case ZBI_TYPE_##type:                                  \
+            DescribeHeader(pos, header_.length, #type);        \
             break
-        BOOTDATA_CASE(KERNEL);
-        BOOTDATA_CASE(CMDLINE);
-        BOOTDATA_CASE(ACPI_RSDP);
-        BOOTDATA_CASE(FRAMEBUFFER);
-        BOOTDATA_CASE(DEBUG_UART);
-        BOOTDATA_CASE(PLATFORM_ID);
-        BOOTDATA_CASE(LASTLOG_NVRAM);
-        BOOTDATA_CASE(LASTLOG_NVRAM2);
-        BOOTDATA_CASE(E820_TABLE);
-        BOOTDATA_CASE(EFI_MEMORY_MAP);
-        BOOTDATA_CASE(EFI_SYSTEM_TABLE);
-        BOOTDATA_CASE(LAST_CRASHLOG);
-        BOOTDATA_CASE(IGNORE);
-#undef BOOTDATA_CASE
+        ZBI_CASE(ACPI_RSDP);
+        ZBI_CASE(CMDLINE);
+        ZBI_CASE(CRASHLOG);
+        ZBI_CASE(DEBUG_UART);
+        ZBI_CASE(DISCARD);
+        ZBI_CASE(E820_TABLE);
+        ZBI_CASE(EFI_MEMORY_MAP);
+        ZBI_CASE(EFI_SYSTEM_TABLE);
+        ZBI_CASE(FRAMEBUFFER);
+        ZBI_CASE(KERNEL);
+        ZBI_CASE(NVRAM);
+        ZBI_CASE(NVRAM_DEPRECATED);
+        ZBI_CASE(PLATFORM_ID);
+#undef ZBI_CASE
 
         default:
             printf("%08x: %08x UNKNOWN (type=%08x)\n",
@@ -774,7 +770,7 @@ public:
             break;
         }
 
-        if (header_.flags & BOOTDATA_FLAG_CRC32) {
+        if (header_.flags & ZBI_FLAG_CRC32) {
             printf("        :          MAGIC=%08x CRC=%08x\n",
                    header_.magic, header_.crc32);
 
@@ -782,7 +778,7 @@ public:
             for (const auto& chunk : payload_) {
                 crc.Write(chunk);
             }
-            bootdata_t check_header = header_;
+            zbi_header_t check_header = header_;
             crc.FinalizeHeader(&check_header);
 
             if (check_header.crc32 != header_.crc32) {
@@ -800,11 +796,10 @@ public:
     void Stream(OutputStream* out) {
         assert(Aligned(out->WritePosition()));
         uint32_t wrote = compress_ ? StreamCompressed(out) : StreamRaw(out);
-        assert(out->WritePosition() % BOOTDATA_ALIGN(1) ==
-               wrote % BOOTDATA_ALIGN(1));
-        uint32_t aligned = BOOTDATA_ALIGN(wrote);
+        assert(out->WritePosition() % ZBI_ALIGNMENT == wrote % ZBI_ALIGNMENT);
+        uint32_t aligned = ZBI_ALIGN(wrote);
         if (aligned > wrote) {
-            static const uint8_t padding[BOOTDATA_ALIGN(1)]{};
+            static const uint8_t padding[ZBI_ALIGNMENT]{};
             out->Write(Iovec(padding, aligned - wrote));
         }
         assert(Aligned(out->WritePosition()));
@@ -877,13 +872,13 @@ public:
     static std::unique_ptr<Item> CreateFromItem(const FileContents& file,
                                                 uint32_t offset) {
         if (offset > file.exact_size() ||
-            file.exact_size() - offset < sizeof(bootdata_t)) {
+            file.exact_size() - offset < sizeof(zbi_header_t)) {
             fprintf(stderr, "input file too short for next header\n");
             exit(1);
         }
-        const bootdata_t* header = static_cast<const bootdata_t*>(
-            file.View(offset, sizeof(bootdata_t)).iov_base);
-        offset += sizeof(bootdata_t);
+        const zbi_header_t* header = static_cast<const zbi_header_t*>(
+            file.View(offset, sizeof(zbi_header_t)).iov_base);
+        offset += sizeof(zbi_header_t);
         if (file.exact_size() - offset < header->length) {
             fprintf(stderr, "input file too short for payload of %u bytes\n",
                     header->length);
@@ -910,9 +905,8 @@ public:
         size_t dirsize = 0, bodysize = 0;
         InputFileGenerator::value_type next;
         while (files->Next(opener, filter, &next)) {
-            // Accumulate the space needed for each bootfs_entry_t.
-            dirsize += (sizeof(bootfs_entry_t) +
-                        BOOTFS_ALIGN(next.target.size() + 1));
+            // Accumulate the space needed for each zbi_bootfs_dirent_t.
+            dirsize += ZBI_BOOTFS_DIRENT_SIZE(next.target.size() + 1);
             Entry entry;
             entry.name.swap(next.target);
             entry.data_len = static_cast<uint32_t>(next.file.exact_size());
@@ -920,7 +914,7 @@ public:
                 fprintf(stderr, "input file size exceeds format maximum\n");
                 exit(1);
             }
-            uint32_t size = BOOTFS_PAGE_ALIGN(entry.data_len);
+            uint32_t size = ZBI_BOOTFS_PAGE_ALIGN(entry.data_len);
             bodysize += size;
             item->payload_.emplace_back(next.file.PageRoundedView(0, size));
             entries.push_back(std::move(entry));
@@ -928,13 +922,13 @@ public:
         }
 
         // Now we can calculate the final sizes.
-        const bootfs_header_t header = {
-            BOOTFS_MAGIC,                   // magic
+        const zbi_bootfs_header_t header = {
+            ZBI_BOOTFS_MAGIC,               // magic
             static_cast<uint32_t>(dirsize), // dirsize
             0,                              // reserved0
             0,                              // reserved1
         };
-        size_t header_size = BOOTFS_PAGE_ALIGN(sizeof(header) + dirsize);
+        size_t header_size = ZBI_BOOTFS_PAGE_ALIGN(sizeof(header) + dirsize);
         item->header_.length = static_cast<uint32_t>(header_size + bodysize);
         if (item->header_.length != header_size + bodysize) {
             fprintf(stderr, "BOOTFS image size exceeds format maximum\n");
@@ -947,7 +941,7 @@ public:
         uint32_t data_off = static_cast<uint32_t>(header_size);
         for (const auto& file : item->payload_) {
             const auto& entry = entries.front();
-            const bootfs_entry_t entry_hdr = {
+            const zbi_bootfs_dirent_t entry_hdr = {
                 static_cast<uint32_t>(entry.name.size() + 1), // name_len
                 entry.data_len,                               // data_len
                 data_off,                                     // data_off
@@ -955,7 +949,9 @@ public:
             data_off += static_cast<uint32_t>(file.iov_len);
             buffer.Append(&entry_hdr);
             buffer.Append(entry.name.c_str(), entry_hdr.name_len);
-            buffer.Pad(BOOTFS_ALIGN(entry_hdr.name_len) - entry_hdr.name_len);
+            buffer.Pad(
+                ZBI_BOOTFS_DIRENT_SIZE(entry_hdr.name_len) -
+                offsetof(zbi_bootfs_dirent_t, name[entry_hdr.name_len]));
             entries.pop_front();
         }
         assert(data_off == item->header_.length);
@@ -996,7 +992,7 @@ public:
     }
 
 private:
-    bootdata_t header_;
+    zbi_header_t header_;
     std::list<const iovec> payload_;
     // The payload_ items might point into these buffers.  They're just
     // stored here to own the buffers until the payload is exhausted.
@@ -1004,28 +1000,28 @@ private:
     std::forward_list<std::unique_ptr<uint8_t[]>> buffers_;
     const bool compress_;
 
-    static constexpr bootdata_t NewHeader(uint32_t type, uint32_t size) {
+    static constexpr zbi_header_t NewHeader(uint32_t type, uint32_t size) {
         return {
             type,                                   // type
             size,                                   // length
             0,                                      // extra
-            BOOTDATA_FLAG_V2 | BOOTDATA_FLAG_CRC32, // flags
+            ZBI_FLAG_VERSION | ZBI_FLAG_CRC32,      // flags
             0,                                      // reserved0
             0,                                      // reserved1
-            BOOTITEM_MAGIC,                         // magic
+            ZBI_ITEM_MAGIC,                         // magic
             0,                                      // crc32
         };
     }
 
-    Item(const bootdata_t& header, bool compress) :
+    Item(const zbi_header_t& header, bool compress) :
         header_(header), compress_(compress) {
         if (compress_) {
             // We'll compress and checksum on the way out.
-            header_.flags |= BOOTDATA_BOOTFS_FLAG_COMPRESSED;
+            header_.flags |= ZBI_FLAG_STORAGE_COMPRESSED;
         }
     }
 
-    static std::unique_ptr<Item> MakeItem(const bootdata_t& header,
+    static std::unique_ptr<Item> MakeItem(const zbi_header_t& header,
                                           bool compress = false) {
         return std::unique_ptr<Item>(new Item(header, compress));
     }
@@ -1057,26 +1053,26 @@ private:
 
 bool ImportFile(const FileContents& file, const char* filename,
                 std::list<std::unique_ptr<Item>>* items) {
-    if (file.exact_size() <= (sizeof(bootdata_t) * 2)) {
+    if (file.exact_size() <= (sizeof(zbi_header_t) * 2)) {
         return false;
     }
-    const bootdata_t* header = static_cast<const bootdata_t*>(
-        file.View(0, sizeof(bootdata_t)).iov_base);
-    if (!(header->type == BOOTDATA_CONTAINER &&
-          header->extra == BOOTDATA_MAGIC &&
-          header->magic == BOOTITEM_MAGIC)) {
+    const zbi_header_t* header = static_cast<const zbi_header_t*>(
+        file.View(0, sizeof(zbi_header_t)).iov_base);
+    if (!(header->type == ZBI_TYPE_CONTAINER &&
+          header->extra == ZBI_CONTAINER_MAGIC &&
+          header->magic == ZBI_ITEM_MAGIC)) {
         return false;
     }
-    size_t file_size = file.exact_size() - sizeof(bootdata_t);
+    size_t file_size = file.exact_size() - sizeof(zbi_header_t);
     if (file_size != header->length) {
         fprintf(stderr, "%s: header size doesn't match file size\n", filename);
         exit(1);
     }
     if (!Aligned(header->length)) {
-        fprintf(stderr, "bootdata misaligned\n");
+        fprintf(stderr, "ZBI item misaligned\n");
         exit(1);
     }
-    uint32_t pos = sizeof(bootdata_t);
+    uint32_t pos = sizeof(zbi_header_t);
     do {
         auto item = Item::CreateFromItem(file, pos);
         pos += item->TotalSize();
@@ -1087,14 +1083,19 @@ bool ImportFile(const FileContents& file, const char* filename,
 
 // Returns nullptr if complete, else an explanatory string.
 const char* IncompleteImage(const std::list<std::unique_ptr<Item>>& items) {
-    if (items.front()->type() != BOOTDATA_KERNEL) {
+    if (items.front()->type() != ZBI_TYPE_KERNEL) {
         return "first item not KERNEL";
     }
-    if (std::none_of(items.begin(), items.end(),
-                     [](const std::unique_ptr<Item>& item) {
-                         return item->type() == BOOTDATA_BOOTFS_BOOT;
-                     })) {
+    auto count =
+        std::count_if(items.begin(), items.end(),
+                      [](const std::unique_ptr<Item>& item) {
+                          return item->type() == ZBI_TYPE_STORAGE_BOOTFS;
+                      });
+    if (count == 0) {
         return "no /boot BOOTFS item";
+    }
+    if (count > 1) {
+        return "multiple BOOTFS items";
     }
     return nullptr;
 }
@@ -1123,7 +1124,7 @@ Remaining arguments are interpersed switches and input files:\n\
     --help, -h                     print this message\n\
     --output=FILE, -o FILE         output file name\n\
     --depfile=FILE, -d FILE        makefile dependency output file name\n\
-    --list, -t                     list input BOOTDATA item headers\n\
+    --list, -t                     list input ZBI item headers\n\
     --complete, -B                 verify result is a complete boot image\n\
     --groups=GROUPS, -g GROUPS     comma-separated list of manifest groups\n\
     --compressed, -c               compress BOOTFS/RAMDISK images (default)\n\
@@ -1131,13 +1132,13 @@ Remaining arguments are interpersed switches and input files:\n\
     --target=boot, -T boot         BOOTFS to be unpacked at /boot (default)\n\
     --target=system, -T system     BOOTFS to be unpacked at /system\n\
     --target=ramdisk, -T ramdisk   input files are raw RAMDISK images\n\
-    --target=zbi, -T zbi           input files must be BOOTDATA files\n\
+    --target=zbi, -T zbi           input files must be ZBI files\n\
     @DIRECTORY                     populate BOOTFS from DIRECTORY\n\
-    FILE                           read BOOTDATA file or BOOTFS manifest\n\
+    FILE                           read ZBI file or BOOTFS manifest\n\
 \n\
 Each manifest or directory populates a distinct BOOTFS item, tagged for\n\
 unpacking based on the most recent `--target` switch.  Files with\n\
-BOOTDATA_CONTAINER headers are incomplete boot files; others are manifests.\n\
+ZBI_TYPE_CONTAINER headers are incomplete boot files; others are manifests.\n\
 ",
             progname, progname);
 }
@@ -1149,7 +1150,7 @@ int main(int argc, char** argv) {
     GroupFilter filter;
     const char* outfile = nullptr;
     const char* depfile = nullptr;
-    uint32_t target = BOOTDATA_BOOTFS_BOOT;
+    uint32_t target = ZBI_TYPE_STORAGE_BOOTFS;
     bool compressed = true;
     bool list_contents = false;
     bool verify_complete = false;
@@ -1194,18 +1195,16 @@ int main(int argc, char** argv) {
             continue;
 
         case 'R':
-            target = BOOTDATA_RAMDISK;
+            target = ZBI_TYPE_STORAGE_RAMDISK;
             continue;
 
         case 'T':
             if (!strcmp(optarg, "boot")) {
-                target = BOOTDATA_BOOTFS_BOOT;
-            } else if (!strcmp(optarg, "system")) {
-                target = BOOTDATA_BOOTFS_SYSTEM;
+                target = ZBI_TYPE_STORAGE_BOOTFS;
             } else if (!strcmp(optarg, "ramdisk")) {
-                target = BOOTDATA_RAMDISK;
+                target = ZBI_TYPE_STORAGE_RAMDISK;
             } else if (!strcmp(optarg, "zbi")) {
-                target = BOOTDATA_CONTAINER;
+                target = ZBI_TYPE_CONTAINER;
             } else {
                 fprintf(stderr, "\
 --target requires boot, system, ramdisk, or zbi\n");
@@ -1239,7 +1238,7 @@ int main(int argc, char** argv) {
             RequireRegularFile(st, optarg);
             auto file = FileContents::Map(std::move(fd), st, optarg);
             items.push_back(
-                Item::CreateFromFile(std::move(file), BOOTDATA_CMDLINE,
+                Item::CreateFromFile(std::move(file), ZBI_TYPE_CMDLINE,
                                      false, true));
             continue;
         }
@@ -1252,7 +1251,7 @@ int main(int argc, char** argv) {
         assert(opt == 1);
 
         if (optarg[0] == '@') {
-            if (target == BOOTDATA_RAMDISK) {
+            if (target == ZBI_TYPE_STORAGE_RAMDISK) {
                 fprintf(stderr,
                         "%s: can't import directory to --target=ramdisk\n",
                         &optarg[1]);
@@ -1265,17 +1264,17 @@ int main(int argc, char** argv) {
             auto fd = opener.Open(optarg, &st);
             RequireRegularFile(st, optarg);
             auto file = FileContents::Map(std::move(fd), st, optarg);
-            if (target == BOOTDATA_RAMDISK) {
+            if (target == ZBI_TYPE_STORAGE_RAMDISK) {
                 // Under --target=ramdisk, any input file is a raw image.
                 items.push_back(Item::CreateFromFile(
-                                    std::move(file), BOOTDATA_RAMDISK,
+                                    std::move(file), ZBI_TYPE_STORAGE_RAMDISK,
                                     compressed, false));
             } else if (ImportFile(file, optarg, &items)) {
-                // It's another file in BOOTDATA format.  The last
-                // item will own the file buffer, so it lives until
-                // all earlier items are exhausted.
+                // It's another file in ZBI format.  The last item will own
+                // the file buffer, so it lives until all earlier items are
+                // exhausted.
                 items.back()->OwnFile(std::move(file));
-            } else if (target == BOOTDATA_CONTAINER) {
+            } else if (target == ZBI_TYPE_CONTAINER) {
                 fprintf(stderr, "%s: not a Zircon Boot container\n", optarg);
                 exit(1);
             } else {
@@ -1311,8 +1310,8 @@ int main(int argc, char** argv) {
         } else {
             puts("COMPLETE: bootable image");
         }
-        // Contents start after the BOOTDATA_CONTAINER header.
-        uint32_t pos = sizeof(bootdata_t);
+        // Contents start after the ZBI_TYPE_CONTAINER header.
+        uint32_t pos = sizeof(zbi_header_t);
         do {
             const auto& item = items.front();
             item->Describe(pos);
@@ -1342,15 +1341,15 @@ int main(int argc, char** argv) {
             item->Stream(&out);
             out.OwnItem(std::move(item));
         } while (!items.empty());
-        const bootdata_t header = {
-            BOOTDATA_CONTAINER,                               // type
+        const zbi_header_t header = {
+            ZBI_TYPE_CONTAINER,                               // type
             out.WritePosition() - payload_start,              // length
-            BOOTDATA_MAGIC,                                   // extra
-            BOOTDATA_FLAG_V2,                                 // flags
+            ZBI_CONTAINER_MAGIC,                              // extra
+            ZBI_FLAG_VERSION,                                 // flags
             0,                                                // reserved0
             0,                                                // reserved1
-            BOOTITEM_MAGIC,                                   // magic
-            BOOTITEM_NO_CRC32,                                // crc32
+            ZBI_ITEM_MAGIC,                                   // magic
+            ZBI_ITEM_NO_CRC32,                                // crc32
         };
         assert(Aligned(header.length));
         out.PatchHeader(header, header_start);

@@ -33,6 +33,8 @@ SECTIONS {
         KEEP(*(.text))
     } :load_image
 
+    IMAGE_RESERVE_END = IMAGE_MEMORY_END + IMAGE_RESERVE_SIZE;
+
     /*
      * When a boot loader is actually using the ELF headers, it needs to
      * know how much memory to reserve after the load image (p_filesz is
@@ -40,8 +42,8 @@ SECTIONS {
      * to reserve).  This ensures that the segment has the right p_memsz.
      */
     .bss : {
-        . += ABSOLUTE(IMAGE_MEMORY_END) - ABSOLUTE(.);
-	ASSERT(ABSOLUTE(.) == ABSOLUTE(IMAGE_MEMORY_END), "image layout bad");
+        . += ABSOLUTE(IMAGE_RESERVE_END) - ABSOLUTE(.);
+        ASSERT(ABSOLUTE(.) == ABSOLUTE(IMAGE_RESERVE_END), "image layout bad");
     }
 }
 

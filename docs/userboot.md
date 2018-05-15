@@ -14,8 +14,8 @@ time.  Zircon takes a different approach.
 A boot loader loads the kernel into memory and transfers control to the
 kernel's startup code.  The details of the boot loader protocols are not
 described here.  The boot loaders used with Zircon load both the kernel
-image and a data blob in `BOOTDATA` format.
-The [`BOOTDATA` format](../system/public/zircon/boot/bootdata.h) is a
+image and a data blob in Zircon Boot Image format.
+The [ZBI format](../system/public/zircon/boot/image.h) is a
 simple container format that embeds items passed by the boot loader,
 including hardware-specific information,
 the [kernel "command line"](kernel_cmdline.md) giving boot options, and RAM
@@ -24,7 +24,7 @@ essential information for its own use in the early stages of booting.
 
 ## BOOTFS
 
-One of the items embedded in the `BOOTDATA` blob is an initial RAM disk
+One of the items embedded in the Zircon Boot Image is an initial RAM disk
 filesystem image.  The image is usually compressed using the **LZ4**
 format.  Once decompressed, the image is in **BOOTFS** format.  This is a
 trivial read-only filesystem format that simply lists file names, and for
@@ -110,10 +110,10 @@ location it will appear in memory after the `userboot` image itself.
 The first thing `userboot` does is to read the bootstrap message sent by
 the kernel.  Among the handles it gets from the kernel is one with
 *handle info entry* `PA_HND(PA_VMO_BOOTDATA, 0)`.  This is
-a [VMO](objects/vm_object.md) containing the `BOOTDATA` blob from the
-boot loader.  `userboot` reads the `BOOTDATA` headers from this VMO
-looking for the first item with type `BOOTDATA_BOOTFS_BOOT`.  That
-contains the [BOOTFS](#BOOTFS) image.  The item's `BOOTDATA` header
+a [VMO](objects/vm_object.md) containing the ZBI from the
+boot loader.  `userboot` reads the ZBI headers from this VMO
+looking for the first item with type `ZBI_TYPE_STORAGE_BOOTFS`.  That
+contains the [BOOTFS](#BOOTFS) image.  The item's ZBI header
 indicates if it's compressed, which it usually is.  `userboot` maps in
 this portion of the VMO.  `userboot` contains LZ4 format support code,
 which it uses to decompress the item into a fresh VMO.

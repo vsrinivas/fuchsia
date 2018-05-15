@@ -138,3 +138,7 @@ END_FUNCTION(apply_fixups)
 
 .balign 8
 DATA(boot_load_end)
+
+// We don't use any scratch memory after the kernel's bss.
+.globl IMAGE_RESERVE_SIZE
+IMAGE_RESERVE_SIZE = 0
