@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <zircon/assert.h>
+#include <zircon/thread_annotations.h>
 #include <fbl/auto_lock.h>
 #include <string.h>
 
@@ -11,7 +12,6 @@
 #include "codec-cmd-job.h"
 #include "debug-logging.h"
 #include "intel-hda-controller.h"
-#include "thread-annotations.h"
 
 namespace audio {
 namespace intel_hda {

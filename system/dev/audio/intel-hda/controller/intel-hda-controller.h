@@ -7,6 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
+#include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 #include <fbl/atomic.h>
 #include <fbl/intrusive_single_list.h>
@@ -25,7 +26,6 @@
 #include "codec-cmd-job.h"
 #include "debug-logging.h"
 #include "intel-hda-codec.h"
-#include "thread-annotations.h"
 #include "utils.h"
 
 namespace audio {

@@ -4,11 +4,11 @@
 
 #include <hw/arch_ops.h>
 #include <limits.h>
+#include <zircon/thread_annotations.h>
 
 #include "debug-logging.h"
 #include "intel-hda-controller.h"
 #include "intel-hda-stream.h"
-#include "thread-annotations.h"
 #include "utils.h"
 
 namespace audio {

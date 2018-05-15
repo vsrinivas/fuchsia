@@ -14,6 +14,7 @@
 #include <fbl/unique_ptr.h>
 #include <stdint.h>
 #include <string.h>
+#include <zircon/thread_annotations.h>
 
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <dispatcher-pool/dispatcher-execution-domain.h>
@@ -24,7 +25,6 @@
 #include "codec-cmd-job.h"
 #include "debug-logging.h"
 #include "intel-hda-stream.h"
-#include "thread-annotations.h"
 
 namespace audio {
 namespace intel_hda {

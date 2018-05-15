@@ -11,6 +11,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vmo_mapper.h>
+#include <zircon/thread_annotations.h>
 
 #include <audio-proto/audio-proto.h>
 #include <dispatcher-pool/dispatcher-channel.h>
@@ -18,7 +19,6 @@
 #include <intel-hda/utils/pinned-vmo.h>
 
 #include "debug-logging.h"
-#include "thread-annotations.h"
 #include "utils.h"
 
 namespace audio {
