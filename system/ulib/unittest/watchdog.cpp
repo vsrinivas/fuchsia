@@ -151,6 +151,7 @@ static void* watchdog_thread_func(void* arg) {
         // the timeout has been reached.
         uint64_t timeout_nanos = active_timeout_seconds * NANOSECONDS_PER_SECOND;
         if (elapsed_nanos >= timeout_nanos) {
+            pthread_mutex_unlock(&mutex);
             watchdog_signal_timeout(test_name);
             /* NOTREACHED */
         }
