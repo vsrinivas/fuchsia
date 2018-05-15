@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fcntl.h>
+
 #include "lib/fxl/files/directory.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/files/path.h"
+#include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 
 namespace files {
@@ -33,6 +36,19 @@ TEST(Directory, CreateDirectory) {
   std::string abs_path = dir.path() + "/another/one";
   EXPECT_TRUE(CreateDirectory(abs_path));
   EXPECT_TRUE(IsDirectory(abs_path));
+}
+
+TEST(Directory, CreateDirectoryAt) {
+  std::string cwd = GetCurrentDirectory();
+
+  ScopedTempDir dir;
+  EXPECT_TRUE(IsDirectory(dir.path()));
+  fxl::UniqueFD root(open(dir.path().c_str(), O_PATH));
+  EXPECT_TRUE(root.is_valid());
+  EXPECT_FALSE(IsDirectoryAt(root.get(), "foo/bar/baz"));
+  EXPECT_TRUE(CreateDirectoryAt(root.get(), "foo/bar/baz"));
+  EXPECT_TRUE(IsDirectoryAt(root.get(), "foo/bar/baz"));
+  EXPECT_TRUE(IsDirectory(dir.path() + "/foo/bar/baz"));
 }
 
 }  // namespace
