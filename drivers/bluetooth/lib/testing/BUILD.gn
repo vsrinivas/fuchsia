@@ -28,6 +28,8 @@ source_set("testing") {
     "fake_controller_test.h",
     "fake_device.cc",
     "fake_device.h",
+    "fake_gatt_server.cc",
+    "fake_gatt_server.h",
     "test_controller.cc",
     "test_controller.h",
   ]

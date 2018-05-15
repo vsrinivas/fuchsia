@@ -11,10 +11,13 @@
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection_parameters.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
+#include "garnet/drivers/bluetooth/lib/testing/fake_gatt_server.h"
 #include "lib/fxl/macros.h"
 
 namespace btlib {
 namespace testing {
+
+class FakeController;
 
 // FakeDevice is used to emulate a remote Bluetooth device.
 class FakeDevice {
@@ -118,8 +121,21 @@ class FakeDevice {
   // handles.
   HandleSet Disconnect();
 
+  // Returns the FakeController that has been assigned to this device.
+  FakeController* ctrl() const { return ctrl_; }
+
  private:
+  friend class FakeController;
+
+  // Called by a FakeController when a FakeDevice is registered with it.
+  void set_ctrl(FakeController* ctrl) { ctrl_ = ctrl; }
+
   void WriteScanResponseReport(hci::LEAdvertisingReportData* report) const;
+
+  void OnRxL2CAP(hci::ConnectionHandle conn, const common::ByteBuffer& pdu);
+
+  // The FakeController that this FakeDevice has been assigned to.
+  FakeController* ctrl_;  // weak
 
   common::DeviceAddress address_;
   bool connected_;
@@ -141,6 +157,8 @@ class FakeDevice {
 
   // Class of device
   common::DeviceClass class_of_device_;
+
+  FakeGattServer gatt_server_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeDevice);
 };

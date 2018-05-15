@@ -187,6 +187,9 @@ class FakeController : public FakeControllerBase,
                        uint8_t id,
                        const common::ByteBuffer& payload);
 
+  void SendNumberOfCompletedPacketsEvent(hci::ConnectionHandle conn,
+                                         uint16_t num);
+
   // Sets up a LE link to the device with the given |addr|. FakeController will
   // report a connection event in which it is in the given |role|.
   void ConnectLowEnergy(

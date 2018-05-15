@@ -4,11 +4,17 @@
 
 #include "fake_device.h"
 
+#include <endian.h>
+
 #include "garnet/drivers/bluetooth/lib/common/packet_view.h"
+#include "garnet/drivers/bluetooth/lib/l2cap/l2cap_defs.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/random/rand.h"
 
 namespace btlib {
+
+using common::ByteBuffer;
+
 namespace testing {
 namespace {
 
@@ -25,17 +31,18 @@ void WriteRandomRSSI(int8_t* out_mem) {
 
 }  // namespace
 
-FakeDevice::FakeDevice(const common::DeviceAddress& address,
-                       bool connectable,
+FakeDevice::FakeDevice(const common::DeviceAddress& address, bool connectable,
                        bool scannable)
-    : address_(address),
+    : ctrl_(nullptr),
+      address_(address),
       connected_(false),
       connectable_(connectable),
       scannable_(scannable),
       connect_status_(hci::StatusCode::kSuccess),
       connect_response_(hci::StatusCode::kSuccess),
       force_pending_connect_(false),
-      should_batch_reports_(false) {}
+      should_batch_reports_(false),
+      gatt_server_(this) {}
 
 void FakeDevice::SetAdvertisingData(const common::ByteBuffer& data) {
   FXL_DCHECK(data.size() <= hci::kMaxLEAdvertisingDataLength);
@@ -202,6 +209,34 @@ void FakeDevice::WriteScanResponseReport(
 
   WriteRandomRSSI(
       reinterpret_cast<int8_t*>(report->data + report->length_data));
+}
+
+void FakeDevice::OnRxL2CAP(hci::ConnectionHandle conn,
+                           const common::ByteBuffer& pdu) {
+  if (pdu.size() < sizeof(l2cap::BasicHeader)) {
+    FXL_LOG(WARNING) << "bt-hci (fake): Malformed L2CAP packet!";
+    return;
+  }
+
+  const auto& header = pdu.As<l2cap::BasicHeader>();
+  uint16_t len = le16toh(header.length);
+  l2cap::ChannelId chan_id = le16toh(header.channel_id);
+
+  auto payload = pdu.view(sizeof(l2cap::BasicHeader));
+  if (payload.size() != len) {
+    FXL_LOG(WARNING) << "bt-hci (fake): Malformed L2CAP B-frame header!";
+    return;
+  }
+
+  switch (chan_id) {
+    case l2cap::kATTChannelId:
+      gatt_server_.HandlePdu(conn, payload);
+      break;
+
+    // TODO(armansito): Support other channels
+    default:
+      break;
+  }
 }
 
 }  // namespace testing
