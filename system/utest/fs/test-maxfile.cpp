@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #include <fbl/algorithm.h>
+#include <zircon/syscalls.h>
 
 #include "filesystems.h"
 #include "misc.h"
@@ -34,6 +35,12 @@ bool test_maxfile(void) {
         return true;
     }
 
+    // TODO(ZX-1735): We avoid making files that consume more than half
+    // of physical memory. When we can page out files, this restriction
+    // should be removed.
+    const size_t physmem = zx_system_get_physmem();
+    const size_t max_cap = physmem / 2;
+
     int fd = open("::bigfile", O_CREAT | O_RDWR, 0644);
     ASSERT_GT(fd, 0);
     char data_a[8192];
@@ -42,7 +49,7 @@ bool test_maxfile(void) {
     memset(data_a, 0xaa, sizeof(data_a));
     memset(data_b, 0xbb, sizeof(data_b));
     memset(data_c, 0xcc, sizeof(data_c));
-    ssize_t sz = 0;
+    size_t sz = 0;
     ssize_t r;
 
     auto rotate = [&](const char* data) {
@@ -57,6 +64,12 @@ bool test_maxfile(void) {
 
     const char* data = data_a;
     for (;;) {
+        if (sz >= max_cap) {
+            fprintf(stderr, "Approaching physical memory capacity: %zd bytes\n", sz);
+            r = 0;
+            break;
+        }
+
         if ((r = write(fd, data, sizeof(data_a))) < 0) {
             fprintf(stderr, "bigfile received error: %s\n", strerror(errno));
             if ((errno == EFBIG) || (errno == ENOSPC)) {
@@ -68,23 +81,20 @@ bool test_maxfile(void) {
             break;
         }
         if ((sz + r) % PRINT_SIZE < (sz % PRINT_SIZE)) {
-            fprintf(stderr, "wrote %lu MB\n", static_cast<size_t>((sz + r) / MB));
+            fprintf(stderr, "wrote %lu MB\n", (sz + r) / MB);
         }
         sz += r;
-        if (r < (ssize_t)(sizeof(data_a))) {
-            fprintf(stderr, "bigfile write short write of %ld bytes\n", r);
-            break;
-        }
+        ASSERT_EQ(r, sizeof(data_a));
 
         // Rotate which data buffer we use
         data = rotate(data);
     }
     ASSERT_EQ(r, 0, "Saw an unexpected error from write");
-    fprintf(stderr, "wrote %lu bytes\n", static_cast<size_t>(sz));
+    fprintf(stderr, "wrote %lu bytes\n", sz);
 
     struct stat buf;
     ASSERT_EQ(fstat(fd, &buf), 0, "Couldn't stat max file");
-    ASSERT_EQ(buf.st_size, sz, "Unexpected max file size");
+    ASSERT_EQ(buf.st_size, static_cast<ssize_t>(sz), "Unexpected max file size");
 
     // Try closing, re-opening, and verifying the file
     ASSERT_EQ(close(fd), 0);
@@ -94,13 +104,13 @@ bool test_maxfile(void) {
     fd = open("::bigfile", O_RDWR, 0644);
     ASSERT_GT(fd, 0);
     ASSERT_EQ(fstat(fd, &buf), 0, "Couldn't stat max file");
-    ASSERT_EQ(buf.st_size, sz, "Unexpected max file size");
+    ASSERT_EQ(buf.st_size, static_cast<ssize_t>(sz), "Unexpected max file size");
     char readbuf[8192];
-    ssize_t bytes_read = 0;
+    size_t bytes_read = 0;
     data = data_a;
     while (bytes_read < sz) {
         r = read(fd, readbuf, sizeof(readbuf));
-        ASSERT_EQ(r, fbl::min(sz - bytes_read, static_cast<ssize_t>(sizeof(readbuf))));
+        ASSERT_EQ(r, static_cast<ssize_t>(fbl::min(sz - bytes_read, sizeof(readbuf))));
         ASSERT_EQ(memcmp(readbuf, data, r), 0, "File failed to verify");
         data = rotate(data);
         bytes_read += r;
@@ -126,6 +136,12 @@ bool test_zipped_maxfiles(void) {
         return true;
     }
 
+    // TODO(ZX-1735): We avoid making files that consume more than half
+    // of physical memory. When we can page out files, this restriction
+    // should be removed.
+    const size_t physmem = zx_system_get_physmem();
+    const size_t max_cap = physmem / 4;
+
     int fda = open("::bigfile-A", O_CREAT | O_RDWR, 0644);
     int fdb = open("::bigfile-B", O_CREAT | O_RDWR, 0644);
     ASSERT_GT(fda, 0);
@@ -134,14 +150,20 @@ bool test_zipped_maxfiles(void) {
     char data_b[8192];
     memset(data_a, 0xaa, sizeof(data_a));
     memset(data_b, 0xbb, sizeof(data_b));
-    ssize_t sz_a = 0;
-    ssize_t sz_b = 0;
+    size_t sz_a = 0;
+    size_t sz_b = 0;
     ssize_t r;
 
-    ssize_t* sz = &sz_a;
+    size_t* sz = &sz_a;
     int fd = fda;
     const char* data = data_a;
     for (;;) {
+        if (*sz >= max_cap) {
+            fprintf(stderr, "Approaching physical memory capacity: %zd bytes\n", *sz);
+            r = 0;
+            break;
+        }
+
         if ((r = write(fd, data, sizeof(data_a))) <= 0) {
             fprintf(stderr, "bigfile received error: %s\n", strerror(errno));
             // Either the file should be too big (EFBIG) or the file should
@@ -151,22 +173,23 @@ bool test_zipped_maxfiles(void) {
             break;
         }
         if ((*sz + r) % PRINT_SIZE < (*sz % PRINT_SIZE)) {
-            fprintf(stderr, "wrote %lu MB\n", static_cast<size_t>((*sz + r) / MB));
+            fprintf(stderr, "wrote %lu MB\n", (*sz + r) / MB);
         }
         *sz += r;
+        ASSERT_EQ(r, sizeof(data_a));
 
         fd = (fd == fda) ? fdb : fda;
         data = (data == data_a) ? data_b : data_a;
         sz = (sz == &sz_a) ? &sz_b : &sz_a;
     }
-    fprintf(stderr, "wrote %lu bytes (to A)\n", static_cast<size_t>(sz_a));
-    fprintf(stderr, "wrote %lu bytes (to B)\n", static_cast<size_t>(sz_b));
+    fprintf(stderr, "wrote %lu bytes (to A)\n", sz_a);
+    fprintf(stderr, "wrote %lu bytes (to B)\n", sz_b);
 
     struct stat buf;
     ASSERT_EQ(fstat(fda, &buf), 0, "Couldn't stat max file");
-    ASSERT_EQ(buf.st_size, sz_a, "Unexpected max file size");
+    ASSERT_EQ(buf.st_size, static_cast<ssize_t>(sz_a), "Unexpected max file size");
     ASSERT_EQ(fstat(fdb, &buf), 0, "Couldn't stat max file");
-    ASSERT_EQ(buf.st_size, sz_b, "Unexpected max file size");
+    ASSERT_EQ(buf.st_size, static_cast<ssize_t>(sz_b), "Unexpected max file size");
 
     // Try closing, re-opening, and verifying the file
     ASSERT_EQ(close(fda), 0);
@@ -180,16 +203,16 @@ bool test_zipped_maxfiles(void) {
     ASSERT_GT(fdb, 0);
 
     char readbuf[8192];
-    ssize_t bytes_read_a = 0;
-    ssize_t bytes_read_b = 0;
+    size_t bytes_read_a = 0;
+    size_t bytes_read_b = 0;
 
     fd = fda;
     data = data_a;
     sz = &sz_a;
-    ssize_t* bytes_read = &bytes_read_a;
+    size_t* bytes_read = &bytes_read_a;
     while (*bytes_read < *sz) {
         r = read(fd, readbuf, sizeof(readbuf));
-        ASSERT_EQ(r, fbl::min(*sz - *bytes_read, static_cast<ssize_t>(sizeof(readbuf))));
+        ASSERT_EQ(r, static_cast<ssize_t>(fbl::min(*sz - *bytes_read, sizeof(readbuf))));
         ASSERT_EQ(memcmp(readbuf, data, r), 0, "File failed to verify");
         *bytes_read += r;
 
