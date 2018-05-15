@@ -84,7 +84,7 @@ func (s *startBSSState) run(c *Client) (time.Duration, error) {
 		if debug {
 			log.Printf("start bss req: %v timeout: %v", req, timeout)
 		}
-		err := c.SendMessage(req, uint32(mlme.MethodStartRequest))
+		err := c.SendMessage(req, mlme.MlmeStartReqOrdinal)
 		if err != nil {
 			return 0, err
 		}
@@ -106,7 +106,7 @@ func (s *startBSSState) handleCommand(cmd *commandRequest, c *Client) (state, er
 			if debug {
 				log.Printf("stop bss req: %v", req)
 			}
-			err := c.SendMessage(req, uint32(mlme.MethodStopRequest))
+			err := c.SendMessage(req, mlme.MlmeStopReqOrdinal)
 			if err != nil {
 				res.Err = &wlan_service.Error{wlan_service.ErrCodeInternal, "Could not send MLME request"}
 			} else {
@@ -116,7 +116,7 @@ func (s *startBSSState) handleCommand(cmd *commandRequest, c *Client) (state, er
 					if debug {
 						log.Printf("reset req: %v", req)
 					}
-					err := c.SendMessage(req, uint32(mlme.MethodResetRequest))
+					err := c.SendMessage(req, mlme.MlmeResetReqOrdinal)
 					if err != nil {
 						res.Err = &wlan_service.Error{wlan_service.ErrCodeInternal, "Could not send MLME request"}
 					}
@@ -188,7 +188,7 @@ func (s *queryState) run(c *Client) (time.Duration, error) {
 		log.Printf("query req: %v", req)
 	}
 
-	return InfiniteTimeout, c.SendMessage(req, uint32(mlme.MethodDeviceQueryRequest))
+	return InfiniteTimeout, c.SendMessage(req, mlme.MlmeDeviceQueryReqOrdinal)
 }
 
 func (s *queryState) commandIsDisabled() bool {
@@ -326,7 +326,7 @@ func (s *scanState) run(c *Client) (time.Duration, error) {
 		if debug {
 			log.Printf("scan req: %v timeout: %v", req, timeout)
 		}
-		err := c.SendMessage(req, uint32(mlme.MethodScanRequest))
+		err := c.SendMessage(req, mlme.MlmeScanReqOrdinal)
 		if err != nil {
 			return 0, err
 		}
@@ -389,7 +389,7 @@ func (s *scanState) handleCommand(cmd *commandRequest, c *Client) (state, error)
 				if debug {
 					log.Printf("reset req: %v", req)
 				}
-				err := c.SendMessage(req, uint32(mlme.MethodResetRequest))
+				err := c.SendMessage(req, mlme.MlmeResetReqOrdinal)
 				if err != nil {
 					res.Err = &wlan_service.Error{wlan_service.ErrCodeInternal, "Could not send MLME request"}
 				}
@@ -534,7 +534,7 @@ func (s *joinState) run(c *Client) (time.Duration, error) {
 		log.Printf("join req: %v", req)
 	}
 
-	return InfiniteTimeout, c.SendMessage(req, uint32(mlme.MethodJoinRequest))
+	return InfiniteTimeout, c.SendMessage(req, mlme.MlmeJoinReqOrdinal)
 }
 
 func (s *joinState) commandIsDisabled() bool {
@@ -597,7 +597,7 @@ func (s *authState) run(c *Client) (time.Duration, error) {
 		log.Printf("auth req: %v", req)
 	}
 
-	return InfiniteTimeout, c.SendMessage(req, uint32(mlme.MethodAuthenticateRequest))
+	return InfiniteTimeout, c.SendMessage(req, mlme.MlmeAuthenticateReqOrdinal)
 }
 
 func (s *authState) commandIsDisabled() bool {
@@ -687,7 +687,7 @@ func (s *assocState) run(c *Client) (time.Duration, error) {
 		log.Printf("assoc req: %v", req)
 	}
 
-	return InfiniteTimeout, c.SendMessage(req, uint32(mlme.MethodAssociateRequest))
+	return InfiniteTimeout, c.SendMessage(req, mlme.MlmeAssociateReqOrdinal)
 }
 
 // Creates the RSNE used in MLME-Association.request to announce supported ciphers and AKMs to the
@@ -828,7 +828,7 @@ func (s *associatedState) handleCommand(cmd *commandRequest, c *Client) (state, 
 			log.Printf("deauthenticate req: %v", req)
 		}
 
-		err := c.SendMessage(req, uint32(mlme.MethodDeauthenticateRequest))
+		err := c.SendMessage(req, mlme.MlmeDeauthenticateReqOrdinal)
 		res := &CommandResult{}
 		if err != nil {
 			res.Err = &wlan_service.Error{wlan_service.ErrCodeInternal, "Could not send MLME request"}

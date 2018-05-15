@@ -321,64 +321,64 @@ func parseResponse(buf []byte) (interface{}, error) {
 	}
 	buf = buf[bindings.MessageHeaderSize:]
 	switch header.Ordinal {
-	case uint32(mlme.MethodScanConfirm):
+	case mlme.MlmeScanConfOrdinal:
 		var resp mlme.ScanConfirm
 		if err := bindings.Unmarshal(buf, nil, &resp); err != nil {
 			return nil, fmt.Errorf("could not decode ScanConfirm: %v", err)
 		}
 		return &resp, nil
-	case uint32(mlme.MethodJoinConfirm):
+	case mlme.MlmeJoinConfOrdinal:
 		var resp mlme.JoinConfirm
 		if err := bindings.Unmarshal(buf, nil, &resp); err != nil {
 			return nil, fmt.Errorf("could not decode JoinConfirm: %v", err)
 		}
 		return &resp, nil
-	case uint32(mlme.MethodAuthenticateConfirm):
+	case mlme.MlmeAuthenticateConfOrdinal:
 		var resp mlme.AuthenticateConfirm
 		if err := bindings.Unmarshal(buf, nil, &resp); err != nil {
 			return nil, fmt.Errorf("could not decode AuthenticateConfirm: %v", err)
 		}
 		return &resp, nil
-	case uint32(mlme.MethodDeauthenticateConfirm):
+	case mlme.MlmeDeauthenticateConfOrdinal:
 		var resp mlme.DeauthenticateConfirm
 		if err := bindings.Unmarshal(buf, nil, &resp); err != nil {
 			return nil, fmt.Errorf("could not decode DeauthenticateConfirm: %v", err)
 		}
 		return &resp, nil
-	case uint32(mlme.MethodDeauthenticateIndication):
+	case mlme.MlmeDeauthenticateIndOrdinal:
 		var ind mlme.DeauthenticateIndication
 		if err := bindings.Unmarshal(buf, nil, &ind); err != nil {
 			return nil, fmt.Errorf("could not decode DeauthenticateIndication: %v", err)
 		}
 		return &ind, nil
-	case uint32(mlme.MethodAssociateConfirm):
+	case mlme.MlmeAssociateConfOrdinal:
 		var resp mlme.AssociateConfirm
 		if err := bindings.Unmarshal(buf, nil, &resp); err != nil {
 			return nil, fmt.Errorf("could not decode AssociateConfirm: %v", err)
 		}
 		return &resp, nil
-	case uint32(mlme.MethodDisassociateIndication):
+	case mlme.MlmeDisassociateIndOrdinal:
 		var ind mlme.DisassociateIndication
 		if err := bindings.Unmarshal(buf, nil, &ind); err != nil {
 			return nil, fmt.Errorf("could not decode DisassociateIndication: %v", err)
 		}
 		return &ind, nil
-	case uint32(mlme.MethodSignalReportIndication):
+	case mlme.MlmeSignalReportOrdinal:
 		var ind mlme.SignalReportIndication
 		if err := bindings.Unmarshal(buf, nil, &ind); err != nil {
 			return nil, fmt.Errorf("could not decode SignalReportIndication: %v", err)
 		}
 		return &ind, nil
-	case uint32(mlme.MethodEapolIndication):
+	case mlme.MlmeEapolIndOrdinal:
 		var ind mlme.EapolIndication
 		if err := bindings.Unmarshal(buf, nil, &ind); err != nil {
 			return nil, fmt.Errorf("could not decode EapolIndication: %v", err)
 		}
 		return &ind, nil
-	case uint32(mlme.MethodEapolConfirm):
+	case mlme.MlmeEapolConfOrdinal:
 		var resp mlme.EapolConfirm
 		return &resp, nil
-	case uint32(mlme.MethodDeviceQueryConfirm):
+	case mlme.MlmeDeviceQueryConfOrdinal:
 		var resp mlme.DeviceQueryConfirm
 		if err := bindings.Unmarshal(buf, nil, &resp); err != nil {
 			return nil, fmt.Errorf("could not decode DeviceQueryConfirm: %v", err)
