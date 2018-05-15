@@ -52,6 +52,7 @@ interface StoryPuppetMaster {
 
 enum ExecuteStatus {
   OK = 0;
+
   // Encountered an invalid command.
   INVALID_COMMAND = 1;
 

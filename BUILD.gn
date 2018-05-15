@@ -114,6 +114,7 @@ executable("modular_unittests_bin") {
     "//peridot/bin/device_runner:unittests",
     "//peridot/bin/user_runner/agent_runner:unittests",
     "//peridot/bin/user_runner/entity_provider_runner:unittests",
+    "//peridot/bin/user_runner/puppet_master:unittests",
     "//peridot/bin/user_runner/story_runner:unittests",
     "//peridot/examples/counter_cpp:unittests",
     "//peridot/public/lib:unittests",

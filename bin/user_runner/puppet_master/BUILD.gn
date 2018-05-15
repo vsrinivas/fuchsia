@@ -1,0 +1,41 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("puppet_master_impl") {
+  sources = [
+    "puppet_master_impl.cc",
+    "puppet_master_impl.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+  ]
+
+  public_deps = [
+    "//peridot/public/lib:fidl",
+  ]
+}
+
+group("unittests") {
+  testonly = true
+
+  deps = [
+    ":puppet_master_impl_unittest",
+  ]
+}
+
+source_set("puppet_master_impl_unittest") {
+  testonly = true
+
+  sources = [
+    "puppet_master_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":puppet_master_impl",
+    "//garnet/public/lib/gtest",
+    "//peridot/public/lib:fidl",
+    "//third_party/googletest:gtest",
+  ]
+}
