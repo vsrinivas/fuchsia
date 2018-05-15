@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/package.gni")
+
 # A collection of utilities useful to debuggers and similar programs.
 
 static_library("debugger_utils") {
@@ -27,6 +29,10 @@ static_library("debugger_utils") {
     sources += [
       "dso_list.cc",
       "dso_list.h",
+      "jobs.cc",
+      "jobs.h",
+      "sysinfo.cc",
+      "sysinfo.h",
       "util_zx.cc",
     ]
   }
@@ -45,25 +51,23 @@ static_library("debugger_utils") {
   ]
 
   if (is_fuchsia) {
-    deps += [ "//zircon/public/lib/zx" ]
+    public_deps = [ "//zircon/public/lib/zx" ]
   } else {
     deps += [ "//zircon/system/public" ]
   }
 }
 
-group("tests") {
+executable("tests") {
   testonly = true
-
-  deps = [
-    ":util-unittests",
-  ]
-}
-
-executable("util-unittests") {
-  testonly = true
+  output_name = "debugger_utils_tests"
 
   sources = [
     "run_all_unittests.cc",
+    "jobs.cc",
+    "jobs.h",
+    "jobs_unittest.cc",
+    "sysinfo.cc",
+    "sysinfo.h",
     "util.cc",
     "util.h",
     "util_unittest.cc",
@@ -77,4 +81,19 @@ executable("util-unittests") {
   ]
 
   libs = [ "zircon" ]
+}
+
+package("debugger_utils_tests") {
+  testonly = true
+  deprecated_system_image = true
+
+  deps = [
+    ":tests",
+  ]
+
+  tests = [
+    {
+      name = "debugger_utils_tests"
+    },
+  ]
 }
