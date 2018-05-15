@@ -70,7 +70,8 @@ std::string GetLabelFromURL(const std::string& url) {
 void PushFileDescriptor(component::FileDescriptorPtr fd, int new_fd,
                         std::vector<uint32_t>* ids,
                         std::vector<zx_handle_t>* handles) {
-  if (!fd) return;
+  if (!fd)
+    return;
   if (fd->type0) {
     ids->push_back(PA_HND(PA_HND_TYPE(fd->type0), new_fd));
     handles->push_back(fd->handle0.release());
@@ -90,7 +91,8 @@ zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data,
                           ApplicationLaunchInfo launch_info,
                           zx::channel loader_service,
                           fdio_flat_namespace_t* flat) {
-  if (!data) return zx::process();
+  if (!data)
+    return zx::process();
 
   std::string label = GetLabelFromURL(launch_info.url);
   std::vector<const char*> argv = GetArgv(argv0, launch_info);
@@ -122,8 +124,10 @@ zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data,
 
   launchpad_clone(lp, LP_CLONE_ENVIRON);
   launchpad_clone_fd(lp, STDIN_FILENO, STDIN_FILENO);
-  if (!launch_info.out) launchpad_clone_fd(lp, STDOUT_FILENO, STDOUT_FILENO);
-  if (!launch_info.err) launchpad_clone_fd(lp, STDERR_FILENO, STDERR_FILENO);
+  if (!launch_info.out)
+    launchpad_clone_fd(lp, STDOUT_FILENO, STDOUT_FILENO);
+  if (!launch_info.err)
+    launchpad_clone_fd(lp, STDERR_FILENO, STDERR_FILENO);
   if (loader_service)
     launchpad_use_loader_service(lp, loader_service.release());
   launchpad_set_args(lp, argv.size(), argv.data());
@@ -144,10 +148,12 @@ zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data,
 }
 
 LaunchType Classify(const zx::vmo& data, std::string* runner) {
-  if (!data) return LaunchType::kProcess;
+  if (!data)
+    return LaunchType::kProcess;
   std::string magic(archive::kMagicLength, '\0');
   zx_status_t status = data.read(&magic[0], 0, magic.length());
-  if (status != ZX_OK) return LaunchType::kProcess;
+  if (status != ZX_OK)
+    return LaunchType::kProcess;
   if (memcmp(magic.data(), &archive::kMagic, sizeof(archive::kMagic)) == 0)
     return LaunchType::kArchive;
   return LaunchType::kProcess;
@@ -175,6 +181,19 @@ ExportedDirChannels BindDirectory(ApplicationLaunchInfo* launch_info) {
   auto client_request = std::move(launch_info->directory_request);
   launch_info->directory_request = std::move(exported_dir_server);
   return {std::move(exported_dir_client), std::move(client_request)};
+}
+
+std::string GetArgsString(
+    const ::fidl::VectorPtr<::fidl::StringPtr>& arguments) {
+  std::string args = "";
+  if (!arguments->empty()) {
+    std::ostringstream buf;
+    std::copy(arguments->begin(), arguments->end() - 1,
+              std::ostream_iterator<std::string>(buf, " "));
+    buf << *arguments->rbegin();
+    args = buf.str();
+  }
+  return args;
 }
 
 }  // namespace
@@ -207,6 +226,8 @@ Realm::Realm(Realm* parent, zx::channel host_directory, fidl::StringPtr label)
     label_ = label.get().substr(0, component::kLabelMaxLength);
 
   fsl::SetObjectName(job_.get(), label_);
+  hub_.SetName(label_);
+  hub_.SetJobId(koid_);
 
   default_namespace_->services().set_backing_dir(std::move(host_directory));
 
@@ -352,7 +373,8 @@ void Realm::CreateApplicationWithProcess(
     fidl::InterfaceRequest<ApplicationController> controller,
     fxl::RefPtr<Namespace> ns) {
   zx::channel svc = ns->services().OpenAsDirectory();
-  if (!svc) return;
+  if (!svc)
+    return;
 
   NamespaceBuilder builder;
   builder.AddServices(std::move(svc));
@@ -371,6 +393,7 @@ void Realm::CreateApplicationWithProcess(
   if (!fsl::SizedVmo::FromTransport(std::move(*package->data), &executable))
     return;
 
+  const std::string args = GetArgsString(launch_info.arguments);
   const std::string url = launch_info.url;  // Keep a copy before moving it.
   auto channels = BindDirectory(&launch_info);
   zx::process process =
@@ -380,7 +403,7 @@ void Realm::CreateApplicationWithProcess(
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(
         std::move(controller), this, nullptr, std::move(process), url,
-        GetLabelFromURL(url), std::move(ns),
+        std::move(args), GetLabelFromURL(url), std::move(ns),
         ExportedDirType::kPublicDebugCtrlLayout,
         std::move(channels.exported_dir), std::move(channels.client_request));
     // update hub
@@ -395,7 +418,8 @@ void Realm::CreateApplicationFromPackage(
     fidl::InterfaceRequest<ApplicationController> controller,
     fxl::RefPtr<Namespace> ns) {
   zx::channel svc = ns->services().OpenAsDirectory();
-  if (!svc) return;
+  if (!svc)
+    return;
 
   zx::channel pkg;
   std::unique_ptr<archive::FileSystem> pkg_fs;
@@ -431,7 +455,8 @@ void Realm::CreateApplicationFromPackage(
     if (DynamicLibraryLoader::Start(std::move(fd), &loader_service) != ZX_OK)
       return;
   }
-  if (!pkg) return;
+  if (!pkg)
+    return;
 
   // Note that |builder| is only used in the else block below. It is left here
   // because we would like to use it everywhere once US-313 is fixed.
@@ -450,7 +475,8 @@ void Realm::CreateApplicationFromPackage(
     // If an app has the "shell" feature, then we use the libraries from the
     // system rather than from the package because programs spawned from the
     // shell will need the system-provided libraries to run.
-    if (sandbox.HasFeature("shell")) loader_service.reset();
+    if (sandbox.HasFeature("shell"))
+      loader_service.reset();
 
     builder.AddSandbox(sandbox, [this] { return OpenRootInfoDir(); });
   }
@@ -462,6 +488,7 @@ void Realm::CreateApplicationFromPackage(
   builder.AddFlatNamespace(std::move(launch_info.flat_namespace));
 
   if (app_data) {
+    const std::string args = GetArgsString(launch_info.arguments);
     const std::string url = launch_info.url;  // Keep a copy before moving it.
     auto channels = BindDirectory(&launch_info);
     zx::process process = CreateProcess(
@@ -471,8 +498,9 @@ void Realm::CreateApplicationFromPackage(
     if (process) {
       auto application = std::make_unique<ApplicationControllerImpl>(
           std::move(controller), this, std::move(pkg_fs), std::move(process),
-          url, GetLabelFromURL(url), std::move(ns), exported_dir_layout,
-          std::move(channels.exported_dir), std::move(channels.client_request));
+          url, std::move(args), GetLabelFromURL(url), std::move(ns),
+          exported_dir_layout, std::move(channels.exported_dir),
+          std::move(channels.client_request));
       // update hub
       hub_.AddComponent(application.get());
       ApplicationControllerImpl* key = application.get();

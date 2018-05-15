@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/appmgr/realm_hub_holder.h"
+#include "garnet/bin/appmgr/hub_holder.h"
 
 #include "garnet/bin/appmgr/application_controller_impl.h"
 #include "garnet/bin/appmgr/realm.h"
@@ -14,7 +15,7 @@
 namespace component {
 
 RealmHubHolder::RealmHubHolder(fbl::RefPtr<fs::PseudoDir> root)
-    : root_dir_(root) {}
+    : HubHolder(root) {}
 
 zx_status_t RealmHubHolder::AddRealm(const Realm* realm) {
   bool child_found = false;
@@ -22,7 +23,7 @@ zx_status_t RealmHubHolder::AddRealm(const Realm* realm) {
   fbl::RefPtr<fs::PseudoDir> realm_instance_dir;
   if (!realm_dir_) {
     realm_dir_ = fbl::AdoptRef(new fs::PseudoDir());
-    root_dir_->AddEntry("r", realm_dir_);
+    AddEntry("r", realm_dir_);
   } else {
     zx_status_t status =
         realm_dir_->Lookup(&realm_instance_vnode, realm->label());
@@ -61,7 +62,7 @@ zx_status_t RealmHubHolder::AddComponent(
   fbl::RefPtr<fs::Vnode> component_instance_vnode;
   if (!component_dir_) {
     component_dir_ = fbl::AdoptRef(new fs::PseudoDir());
-    root_dir_->AddEntry("c", component_dir_);
+    AddEntry("c", component_dir_);
   } else {
     zx_status_t status =
         component_dir_->Lookup(&component_instance_vnode, application->label());
@@ -75,7 +76,7 @@ zx_status_t RealmHubHolder::AddComponent(
         static_cast<fs::PseudoDir*>(component_instance_vnode.get()));
   }
   return component_instance_dir->AddEntry(application->koid(),
-                                          application->info_dir());
+                                          application->hub_dir());
 }
 
 zx_status_t RealmHubHolder::RemoveComponent(
@@ -94,5 +95,7 @@ zx_status_t RealmHubHolder::RemoveComponent(
   }
   return ZX_ERR_NOT_FOUND;
 }
+
+RealmHubHolder::~RealmHubHolder() = default;
 
 }  // namespace component
