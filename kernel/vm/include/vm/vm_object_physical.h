@@ -29,10 +29,7 @@ public:
 
     bool is_contiguous() const override { return true; }
 
-    uint64_t size() const override
-        // TODO: Figure out whether it's safe to lock here without causing
-        // any deadlocks.
-        TA_NO_THREAD_SAFETY_ANALYSIS { return size_; }
+    uint64_t size() const override { return size_; }
 
     zx_status_t LookupUser(uint64_t offset, uint64_t len, user_inout_ptr<paddr_t> buffer,
                            size_t buffer_size) override;
@@ -58,7 +55,7 @@ private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmObjectPhysical);
 
     // members
-    const uint64_t size_ TA_GUARDED(lock_) = 0;
-    const paddr_t base_ TA_GUARDED(lock_) = 0;
-    uint32_t mapping_cache_flags_ = 0;
+    const uint64_t size_ = 0;
+    const paddr_t base_ = 0;
+    uint32_t mapping_cache_flags_ TA_GUARDED(lock_) = 0;
 };
