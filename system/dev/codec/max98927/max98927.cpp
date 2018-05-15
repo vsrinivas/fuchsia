@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <zircon/device/audio-codec.h>
 #include <zircon/device/i2c.h>
 #include <zircon/assert.h>
 
@@ -14,7 +15,7 @@
 namespace audio {
 namespace max98927 {
 
-uint8_t MAX98927Device::ReadReg(uint16_t addr) {
+uint8_t Max98927Device::ReadReg(uint16_t addr) {
     uint8_t val = 0;
 
     // segments followed by write data (address)
@@ -48,7 +49,7 @@ uint8_t MAX98927Device::ReadReg(uint16_t addr) {
     return val;
 }
 
-void MAX98927Device::WriteReg(uint16_t addr, uint8_t val) {
+void Max98927Device::WriteReg(uint16_t addr, uint8_t val) {
     // segments followed by write data (address and val)
     struct {
         i2c_slave_ioctl_segment_t segs[2];
@@ -72,7 +73,7 @@ void MAX98927Device::WriteReg(uint16_t addr, uint8_t val) {
     zxlogf(SPEW, "max98927: register 0x%04x write0x%02x\n", addr, val);
 }
 
-void MAX98927Device::DumpRegs() {
+void Max98927Device::DumpRegs() {
     constexpr uint16_t first = INTERRUPT_RAW_1;
     constexpr uint16_t last = GLOBAL_ENABLE;
 
@@ -109,14 +110,31 @@ void MAX98927Device::DumpRegs() {
     }
 }
 
-void MAX98927Device::DdkUnbind() {
+zx_status_t Max98927Device::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
+                                     void* out_buf, size_t out_len, size_t* actual) {
+    if (op != IOCTL_AUDIO_CODEC_ENABLE) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    if (in_len < sizeof(bool)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    const bool* enable = static_cast<const bool*>(in_buf);
+    if (*enable) {
+        Enable();
+    } else {
+        Disable();
+    }
+    return ZX_OK;
 }
 
-void MAX98927Device::DdkRelease() {
+void Max98927Device::DdkUnbind() {
+}
+
+void Max98927Device::DdkRelease() {
     delete this;
 }
 
-void MAX98927Device::Test() {
+void Max98927Device::Test() {
     // PCM config - slave mode
     WriteReg(PCM_MASTER_MODE, 0);
 
@@ -155,7 +173,7 @@ void MAX98927Device::Test() {
     zxlogf(INFO, "max98927: test tone done\n");
 }
 
-void MAX98927Device::Enable() {
+void Max98927Device::Enable() {
     // PCM config - slave mode
     WriteReg(PCM_MASTER_MODE, 0);
 
@@ -178,7 +196,15 @@ void MAX98927Device::Enable() {
     WriteReg(GLOBAL_ENABLE, GLOBAL_ENABLE_EN);
 }
 
-zx_status_t MAX98927Device::Initialize() {
+void Max98927Device::Disable() {
+    // Disable TX channels
+    WriteReg(PCM_RX_EN_A, 0);
+
+    WriteReg(GLOBAL_ENABLE, 0);
+    WriteReg(AMP_ENABLE, 0);
+}
+
+zx_status_t Max98927Device::Initialize() {
     // Reset device
     WriteReg(SOFTWARE_RESET, SOFTWARE_RESET_RST);
 
@@ -232,18 +258,21 @@ zx_status_t MAX98927Device::Initialize() {
     return ZX_OK;
 }
 
-zx_status_t MAX98927Device::Bind() {
+zx_status_t Max98927Device::Bind() {
     zx_status_t st = Initialize();
     if (st != ZX_OK) {
         return st;
     }
 
+    // Power on by default...
+    Enable();
+
     return DdkAdd("max98927");
 }
 
-fbl::unique_ptr<MAX98927Device> MAX98927Device::Create(zx_device_t* parent) {
+fbl::unique_ptr<Max98927Device> Max98927Device::Create(zx_device_t* parent) {
     fbl::AllocChecker ac;
-    fbl::unique_ptr<MAX98927Device> ret(new (&ac) MAX98927Device(parent));
+    fbl::unique_ptr<Max98927Device> ret(new (&ac) Max98927Device(parent));
     if (!ac.check()) {
         zxlogf(ERROR, "max98927: out of memory attempting to allocate device\n");
         return nullptr;
@@ -256,7 +285,7 @@ fbl::unique_ptr<MAX98927Device> MAX98927Device::Create(zx_device_t* parent) {
 
 extern "C" {
 zx_status_t max98927_bind_hook(void* ctx, zx_device_t* parent) {
-    auto dev = audio::max98927::MAX98927Device::Create(parent);
+    auto dev = audio::max98927::Max98927Device::Create(parent);
     if (dev == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
