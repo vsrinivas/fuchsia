@@ -13,11 +13,13 @@
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
-#define ASSERT_EPT_EQ(actual, expected, size, ...)  \
-  do {                                              \
-    int cmp = memcmp(actual, expected, size);       \
-    if (cmp != 0) hexdump_result(actual, expected); \
-    ASSERT_EQ(cmp, 0, ##__VA_ARGS__);               \
+#define ASSERT_EPT_EQ(actual, expected, size, ...) \
+  do {                                             \
+    int cmp = memcmp(actual, expected, size);      \
+    if (cmp != 0) {                                \
+      hexdump_result(actual, expected);            \
+    }                                              \
+    ASSERT_EQ(cmp, 0, ##__VA_ARGS__);              \
   } while (0)
 
 #define INITIALIZE_PAGE_TABLE \
