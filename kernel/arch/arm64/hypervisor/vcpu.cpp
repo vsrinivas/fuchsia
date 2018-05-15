@@ -34,7 +34,7 @@ static uint64_t vmpidr_of(uint8_t vpid, uint64_t mpidr) {
     return (vpid - 1) | (mpidr & 0xffffff00fe000000);
 }
 
-static bool gich_maybe_interrupt(GuestState* guest_state, GichState* gich_state) {
+static bool gich_maybe_interrupt(GichState* gich_state) {
     uint64_t elrs = gich_state->elrs;
     if (elrs == 0) {
         // All list registers are in use, therefore return and indicate that we
@@ -63,7 +63,7 @@ static bool gich_maybe_interrupt(GuestState* guest_state, GichState* gich_state)
         }
         uint32_t lr_index = __builtin_ctzl(elrs);
         uint64_t lr = gic_get_lr_from_vector(vector);
-        gic_write_gich_lr(lr_index, lr);
+        gich_state->lr[lr_index] = lr;
         elrs &= ~(1u << lr_index);
     }
     // If there are pending interrupts, indicate that we should raise an IRQ.
@@ -185,13 +185,13 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     bool force_virtual_interrupt = false;
     zx_status_t status;
     do {
+        uint64_t curr_hcr = hcr_;
+        if (gich_maybe_interrupt(&gich_state_) || force_virtual_interrupt) {
+            curr_hcr |= HCR_EL2_VI;
+            force_virtual_interrupt = false;
+        }
         {
             AutoGich auto_gich(&gich_state_);
-            uint64_t curr_hcr = hcr_;
-            if (gich_maybe_interrupt(guest_state, &gich_state_) || force_virtual_interrupt) {
-                curr_hcr |= HCR_EL2_VI;
-                force_virtual_interrupt = false;
-            }
 
             ktrace(TAG_VCPU_ENTER, 0, 0, 0, 0);
             running_.store(true);
