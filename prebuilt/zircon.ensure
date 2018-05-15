@@ -17,6 +17,11 @@
 # specific instance IDs for each version listed here.  The two files must
 # be kept in lock-step so that scripts/download-prebuilt gets the same
 # contents whether it uses cipd or direct downloads.
+#
+# When adding new packages that are constructed by hand rather than by
+# automated bot builds (e.g. firmware), the CIPD packages must be copied to
+# Google Storage by running scripts/update-prebuilt-versions --upload with
+# appropriate credentials.
 
 # These lines tell scripts/update-prebuilt-versions what to look for.
 $VerifiedPlatform linux-amd64

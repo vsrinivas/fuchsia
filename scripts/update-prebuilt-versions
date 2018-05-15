@@ -11,16 +11,21 @@ readonly ZIRCON_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 readonly PREBUILTS_DIR="$(cd "${ZIRCON_ROOT}/prebuilt" && pwd)"
 readonly ENSURE_FILE="${PREBUILTS_DIR}/zircon.ensure"
 readonly VERSIONS_FILE="${PREBUILTS_DIR}/zircon.versions"
+readonly GSUTIL="gsutil"
+readonly GS_URL_PREFIX="gs://fuchsia"
 
 case "$#:$1" in
-0:)
+0:|1:--update)
   mode=update
   ;;
 1:--verify)
   mode=verify
   ;;
+1:--upload)
+  mode=upload
+  ;;
 *)
-  echo >&2 "Usage: $0 [--verify]"
+  echo >&2 "Usage: $0 [--update | --upload | --verify]"
   exit 1
   ;;
 esac
@@ -92,12 +97,36 @@ resolve_ensure_file() {
   done
 }
 
+do_staged_uploads() {
+  local -r zipfile="$1"
+  while read package instance; do
+    if [[ -z "$package" || "$package" == \#* ]]; then
+      continue
+    fi
+    rm -f "$zipfile"
+    "$CIPD" pkg-fetch "fuchsia/$package" -version "$instance" -out "$zipfile"
+    "$GSUTIL" cp -n "$zipfile" "${GS_URL_PREFIX}/${package}/${instance}"
+  done
+}
+
 NEW_VERSIONS_FILE="$(mktemp "${PREBUILTS_DIR}/tmp.versions.XXXXXX")" || exit
 trap 'rm -f "$NEW_VERSIONS_FILE"' EXIT ERR HUP INT TERM
 
 set -e -o pipefail
 
 resolve_ensure_file < "$ENSURE_FILE" > "$NEW_VERSIONS_FILE"
+
+if [[ "$mode" = upload ]]; then
+  cmp -s "$VERSIONS_FILE" "$NEW_VERSIONS_FILE" || {
+    echo >&2 "Run $0 --update first."
+    exit 1
+  }
+  rm -f "$NEW_VERSIONS_FILE"
+  STAGING_ZIP="$(mktemp "${PREBUILTS_DIR}/tmp.zip.XXXXXX")"
+  trap 'rm -f "$STAGING_ZIP"' EXIT ERR HUP INT TERM
+  do_staged_uploads "$STAGING_ZIP" < "$VERSIONS_FILE"
+  exit
+fi
 
 diff -u "$VERSIONS_FILE" "$NEW_VERSIONS_FILE" && exit 0
 status=$?
