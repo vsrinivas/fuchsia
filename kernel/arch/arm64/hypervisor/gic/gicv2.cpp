@@ -9,7 +9,9 @@
 #include <arch/arm64/hypervisor/gic/gicv2.h>
 #include <dev/interrupt/arm_gicv2_regs.h>
 
-// Representation of GICH registers.
+// Representation of GICH registers. For details please refer to ARM Generic Interrupt
+// Controller Architecture Specification Version 2, 5.3 GIC virtual interface control
+// registers.
 typedef struct Gich {
     uint32_t hcr;
     uint32_t vtr;
@@ -61,6 +63,10 @@ static void gicv2_write_gich_vmcr(uint32_t val) {
     gich->vmcr = val;
 }
 
+static uint32_t gicv2_read_gich_misr() {
+    return gich->misr;
+}
+
 static uint64_t gicv2_read_gich_elrsr() {
     return gich->elrsr;
 }
@@ -101,6 +107,7 @@ static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
     .read_gich_vmcr = gicv2_read_gich_vmcr,
     .write_gich_vmcr = gicv2_write_gich_vmcr,
     .read_gich_elrsr = gicv2_read_gich_elrsr,
+    .read_gich_misr = gicv2_read_gich_misr,
     .read_gich_lr = gicv2_read_gich_lr,
     .write_gich_lr = gicv2_write_gich_lr,
     .get_gicv = gicv2_get_gicv,

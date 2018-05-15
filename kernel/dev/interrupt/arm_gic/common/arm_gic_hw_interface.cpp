@@ -51,6 +51,10 @@ uint64_t gic_read_gich_elrsr() {
     return gic_ops->read_gich_elrsr();
 }
 
+uint32_t gic_read_gich_misr() {
+    return gic_ops->read_gich_misr();
+}
+
 uint64_t gic_read_gich_lr(uint32_t idx) {
     return gic_ops->read_gich_lr(idx);
 }
