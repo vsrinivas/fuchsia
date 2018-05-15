@@ -15,6 +15,10 @@
 #include <zircon/syscalls.h>
 #include <zx/handle.h>
 
+#include <memory>
+
+#include "registers.h"
+
 class AmlogicVideo {
  public:
   ~AmlogicVideo();
@@ -30,6 +34,11 @@ class AmlogicVideo {
   io_buffer_t mmio_hiubus_ = {};
   io_buffer_t mmio_aobus_ = {};
   io_buffer_t mmio_dmc_ = {};
+  std::unique_ptr<CbusRegisterIo> cbus_;
+  std::unique_ptr<DosRegisterIo> dosbus_;
+  std::unique_ptr<HiuRegisterIo> hiubus_;
+  std::unique_ptr<AoRegisterIo> aobus_;
+  std::unique_ptr<DmcRegisterIo> dmc_;
 
   zx::handle bti_;
 

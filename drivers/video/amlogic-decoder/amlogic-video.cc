@@ -20,6 +20,8 @@
 
 #include <memory>
 
+#include "registers.h"
+
 extern "C" {
 zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent);
 }
@@ -120,6 +122,11 @@ zx_status_t AmlogicVideo::Init(zx_device_t* parent) {
     DECODE_ERROR("Failed get bti");
     return ZX_ERR_NO_MEMORY;
   }
+  cbus_ = std::make_unique<CbusRegisterIo>(io_buffer_virt(&mmio_cbus_));
+  dosbus_ = std::make_unique<DosRegisterIo>(io_buffer_virt(&mmio_dosbus_));
+  hiubus_ = std::make_unique<HiuRegisterIo>(io_buffer_virt(&mmio_hiubus_));
+  aobus_ = std::make_unique<AoRegisterIo>(io_buffer_virt(&mmio_aobus_));
+  dmc_ = std::make_unique<DmcRegisterIo>(io_buffer_virt(&mmio_dmc_));
 
   device_add_args_t vc_video_args = {};
   vc_video_args.version = DEVICE_ADD_ARGS_VERSION;
