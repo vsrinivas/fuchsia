@@ -63,7 +63,7 @@ readonly PLATFORM
 update_stamp() {
   local -r package="$1" version="$2" download_file="$3"
   local -r stamp="${DOWNLOAD_DIR}/${download_file%.*}.stamp"
-  echo "$version" > "$stamp"
+  mkdir -p "$(dirname "$stamp")" && echo "$version" > "$stamp"
 }
 
 verify_stamp() {
@@ -90,7 +90,8 @@ verify_stamp() {
 }
 
 list_package() {
-  local -r package="$1" version="$2" download_file="$3"
+  local -r package="$1" version="$2" download_file="$3" single_file="$4"
+  local -r package_suffix="$5"
   local -r stamp="${DOWNLOAD_DIR}/${download_file%.*}.stamp"
   local stamp_version
   if [[ -r "$stamp" ]]; then
@@ -102,7 +103,7 @@ list_package() {
   if [[ "$installed" = "$version" ]]; then
     installed="current"
   fi
-  echo "$package/$PLATFORM" "installed=$installed" "current=$version"
+  echo "$package$package_suffix" "installed=$installed" "current=$version"
 }
 
 verify_file() {
@@ -115,7 +116,8 @@ EOF
 
 download_package() {
   local -r package="$1" version="$2" download_file="$3" single_file="$4"
-  local -r url="${URL_PREFIX}/${package}/${PLATFORM}/${version}"
+  local -r package_suffix="$5"
+  local -r url="${URL_PREFIX}/${package}${package_suffix}/${version}"
   local -r download_file_with_dir="${DOWNLOAD_DIR}/${download_file}"
 
   # If the stamp file says it's already in place, do nothing more.
@@ -149,7 +151,7 @@ download_package() {
 }
 
 for_each_package() {
-  local package version download_file single_file status=0
+  local package version download_file single_file package_suffix status=0
   while read package version; do
     case "$package" in
     ''|\#*)
@@ -160,19 +162,28 @@ for_each_package() {
       package="${package%/*}"
       download_file="${package#tools/}.zip"
       single_file=true
+      package_suffix="/${PLATFORM}"
       ;;
     */${PLATFORM})
       package="${package%/*}"
       # Subdirectories are packed in .zip files.
       download_file="${package}.zip"
       single_file=false
+      package_suffix="/${PLATFORM}"
+      ;;
+    firmware/*)
+      # These are the same for every host platform.
+      download_file="${package}.zip"
+      single_file=false
+      package_suffix=''
       ;;
     *)
       # Skip lines for other platforms.
       continue
       ;;
     esac
-    "$@" "$package" "$version" "$download_file" $single_file || status=$?
+    "$@" "$package" "$version" "$download_file" $single_file "$package_suffix" ||
+      status=$?
   done
   return $status
 }

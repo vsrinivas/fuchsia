@@ -84,6 +84,10 @@ resolve_ensure_file() {
         fi
       done
       ;;
+    fuchsia/*)
+      package="${lhs#fuchsia/}"
+      resolve_one_package "$package" "$rhs" || return
+      ;;
     esac
   done
 }
