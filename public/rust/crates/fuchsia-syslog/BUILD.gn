@@ -2,15 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rust_library.gni")
 import("//build/rust/rustc_library.gni")
-
-rust_library("fuchsia-syslog") {
-  with_unit_tests = true
-  deps = [
-    "//zircon/public/lib/syslog",
-  ]
-}
 
 rustc_library("fuchsia-syslog-rustc") {
   name = "fuchsia_syslog"
