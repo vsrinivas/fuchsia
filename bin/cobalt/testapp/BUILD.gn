@@ -13,7 +13,13 @@ cobalt_config("generate_testapp_config") {
 executable("cobalt_testapp") {
   output_name = "cobalt_testapp"
   sources = [
+    "cobalt_testapp_main.cc",
+    "cobalt_testapp_encoder.h",
+    "cobalt_testapp_encoder.cc",
+    "cobalt_testapp.h",
     "cobalt_testapp.cc",
+    "tests.h",
+    "tests.cc",
   ]
 
   deps = [
