@@ -19,7 +19,7 @@ typedef struct Gich {
     uint32_t reserved1[3];
     uint64_t eisr;
     uint32_t reserved2[2];
-    uint64_t elrs;
+    uint64_t elrsr;
     uint32_t reserved3[46];
     uint32_t apr;
     uint32_t reserved4[3];
@@ -31,7 +31,7 @@ static_assert(__offsetof(Gich, vtr) == 0x04, "");
 static_assert(__offsetof(Gich, vmcr) == 0x08, "");
 static_assert(__offsetof(Gich, misr) == 0x10, "");
 static_assert(__offsetof(Gich, eisr) == 0x20, "");
-static_assert(__offsetof(Gich, elrs) == 0x30, "");
+static_assert(__offsetof(Gich, elrsr) == 0x30, "");
 static_assert(__offsetof(Gich, apr) == 0xf0, "");
 static_assert(__offsetof(Gich, lr) == 0x100, "");
 
@@ -49,10 +49,6 @@ static uint32_t gicv2_read_gich_vtr() {
     return gich->vtr;
 }
 
-static void gicv2_write_gich_vtr(uint32_t val) {
-    gich->vtr = val;
-}
-
 static uint32_t gicv2_default_gich_vmcr() {
     return GICH_VMCR_VPMR_MASK | GICH_VMCR_VENG0;
 }
@@ -65,12 +61,8 @@ static void gicv2_write_gich_vmcr(uint32_t val) {
     gich->vmcr = val;
 }
 
-static uint64_t gicv2_read_gich_elrs() {
-    return gich->elrs;
-}
-
-static void gicv2_write_gich_elrs(uint64_t val) {
-    gich->elrs = val;
+static uint64_t gicv2_read_gich_elrsr() {
+    return gich->elrsr;
 }
 
 static uint64_t gicv2_read_gich_lr(uint32_t idx) {
@@ -105,12 +97,10 @@ static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
     .read_gich_hcr = gicv2_read_gich_hcr,
     .write_gich_hcr = gicv2_write_gich_hcr,
     .read_gich_vtr = gicv2_read_gich_vtr,
-    .write_gich_vtr = gicv2_write_gich_vtr,
     .default_gich_vmcr = gicv2_default_gich_vmcr,
     .read_gich_vmcr = gicv2_read_gich_vmcr,
     .write_gich_vmcr = gicv2_write_gich_vmcr,
-    .read_gich_elrs = gicv2_read_gich_elrs,
-    .write_gich_elrs = gicv2_write_gich_elrs,
+    .read_gich_elrsr = gicv2_read_gich_elrsr,
     .read_gich_lr = gicv2_read_gich_lr,
     .write_gich_lr = gicv2_write_gich_lr,
     .get_gicv = gicv2_get_gicv,

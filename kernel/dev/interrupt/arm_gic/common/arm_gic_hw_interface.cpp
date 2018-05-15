@@ -35,10 +35,6 @@ uint32_t gic_read_gich_vtr() {
     return gic_ops->read_gich_vtr();
 }
 
-void gic_write_gich_vtr(uint32_t val) {
-    return gic_ops->write_gich_vtr(val);
-}
-
 uint32_t gic_default_gich_vmcr() {
     return gic_ops->default_gich_vmcr();
 }
@@ -51,12 +47,8 @@ void gic_write_gich_vmcr(uint32_t val) {
     return gic_ops->write_gich_vmcr(val);
 }
 
-uint64_t gic_read_gich_elrs() {
-    return gic_ops->read_gich_elrs();
-}
-
-void gic_write_gich_elrs(uint64_t val) {
-    return gic_ops->write_gich_elrs(val);
+uint64_t gic_read_gich_elrsr() {
+    return gic_ops->read_gich_elrsr();
 }
 
 uint64_t gic_read_gich_lr(uint32_t idx) {

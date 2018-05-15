@@ -10,13 +10,13 @@
 
 #define ICH_HCR_EL2                     S3_4_C12_C11_0
 #define ICH_VTR_EL2                     S3_4_C12_C11_1
+#define ICH_ELRSR_EL2                   S3_4_C12_C11_5
 #define ICH_VMCR_EL2                    S3_4_C12_C11_7
-#define ICH_ELRS_EL2                    S3_4_C12_C11_5
 
 #define ICH_HCR_EL2_ID                  0
 #define ICH_VTR_EL2_ID                  1
-#define ICH_VMCR_EL2_ID                 2
-#define ICH_ELRS_EL2_ID                 3
+#define ICH_ELRSR_EL2_ID                2
+#define ICH_VMCR_EL2_ID                 3
 #define ICH_LR_EL2_ID                   4
 
 #define LR0_EL2(x)                      S3_4_C12_C12_ ## x
@@ -77,8 +77,8 @@ FUNCTION_LABEL(el2_hvc_sysreg)
 .Lread_sys:
     read_sysreg ICH_HCR_EL2
     read_sysreg ICH_VTR_EL2
+    read_sysreg ICH_ELRSR_EL2
     read_sysreg ICH_VMCR_EL2
-    read_sysreg ICH_ELRS_EL2
     b el2_gicv3_read_lr
 
 .write_sys:
@@ -87,8 +87,8 @@ FUNCTION_LABEL(el2_hvc_sysreg)
 .Lwrite_sys:
     write_sysreg ICH_HCR_EL2
     write_sysreg ICH_VTR_EL2
+    write_sysreg ICH_ELRSR_EL2
     write_sysreg ICH_VMCR_EL2
-    write_sysreg ICH_ELRS_EL2
     b el2_gicv3_write_lr
 
 // uint32_t arm64_el2_gicv3_read_gich_hcr();
@@ -115,14 +115,6 @@ FUNCTION(arm64_el2_gicv3_read_gich_vtr)
     ret
 END_FUNCTION(arm64_el2_gicv3_read_gich_vtr)
 
-// void arm64_el2_gicv3_write_gich_vtr(uint32_t val)
-FUNCTION(arm64_el2_gicv3_write_gich_vtr)
-    mov x2, WRITE_SYSREG_ID
-    mov x3, ICH_VTR_EL2_ID
-    hvc 5
-    ret
-END_FUNCTION(arm64_el2_gicv3_write_gich_vtr)
-
 // uint32_t arm64_el2_gicv3_read_gich_vmcr();
 FUNCTION(arm64_el2_gicv3_read_gich_vmcr)
     mov x2, READ_SYSREG_ID
@@ -139,13 +131,13 @@ FUNCTION(arm64_el2_gicv3_write_gich_vmcr)
     ret
 END_FUNCTION(arm64_el2_gicv3_write_gich_vmcr)
 
-// uint32_t arm64_el2_gicv3_read_gich_elrs();
-FUNCTION(arm64_el2_gicv3_read_gich_elrs)
+// uint32_t arm64_el2_gicv3_read_gich_elrsr();
+FUNCTION(arm64_el2_gicv3_read_gich_elrsr)
     mov x2, READ_SYSREG_ID
-    mov x3, ICH_ELRS_EL2_ID
+    mov x3, ICH_ELRSR_EL2_ID
     hvc 5
     ret
-END_FUNCTION(arm64_el2_gicv3_read_gich_elrs)
+END_FUNCTION(arm64_el2_gicv3_read_gich_elrsr)
 
 // uint64_t arm64_el2_gicv3_read_gich_lr(uint32_t index);
 FUNCTION(arm64_el2_gicv3_read_gich_lr)

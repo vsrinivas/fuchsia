@@ -35,8 +35,8 @@ static uint64_t vmpidr_of(uint8_t vpid, uint64_t mpidr) {
 }
 
 static bool gich_maybe_interrupt(GichState* gich_state) {
-    uint64_t elrs = gich_state->elrs;
-    if (elrs == 0) {
+    uint64_t elrsr = gich_state->elrsr;
+    if (elrsr == 0) {
         // All list registers are in use, therefore return and indicate that we
         // should raise an IRQ.
         return true;
@@ -49,7 +49,7 @@ static bool gich_maybe_interrupt(GichState* gich_state) {
         // timer interrupt is pending, process it first.
         goto has_timer;
     }
-    while (elrs != 0) {
+    while (elrsr != 0) {
         status = gich_state->interrupt_tracker.Pop(&vector);
         if (status != ZX_OK) {
             // There are no more pending interrupts.
@@ -61,10 +61,10 @@ static bool gich_maybe_interrupt(GichState* gich_state) {
             // Skip an interrupt if it was already active.
             continue;
         }
-        uint32_t lr_index = __builtin_ctzl(elrs);
+        uint32_t lr_index = __builtin_ctzl(elrsr);
         uint64_t lr = gic_get_lr_from_vector(vector);
         gich_state->lr[lr_index] = lr;
-        elrs &= ~(1u << lr_index);
+        elrsr &= ~(1u << lr_index);
     }
     // If there are pending interrupts, indicate that we should raise an IRQ.
     return pending > 0;
@@ -72,7 +72,7 @@ static bool gich_maybe_interrupt(GichState* gich_state) {
 
 static bool gich_active_interrupts(GichState* gich_state) {
     gich_state->active_interrupts.ClearAll();
-    const uint32_t lr_limit = __builtin_ctzl(gich_state->elrs);
+    const uint32_t lr_limit = __builtin_ctzl(gich_state->elrsr);
     for (uint32_t i = 0; i < lr_limit; i++) {
         uint32_t vector = gic_get_vector_from_lr(gich_state->lr[i]);
         gich_state->active_interrupts.SetOne(vector);
@@ -87,7 +87,6 @@ AutoGich::AutoGich(GichState* gich_state)
 
     // Load
     gic_write_gich_vmcr(gich_state_->vmcr);
-    gic_write_gich_elrs(gich_state_->elrs);
     for (uint32_t i = 0; i < gich_state_->num_lrs; i++) {
         gic_write_gich_lr(i, gich_state->lr[i]);
     }
@@ -98,7 +97,7 @@ AutoGich::~AutoGich() {
 
     // Save
     gich_state_->vmcr = gic_read_gich_vmcr();
-    gich_state_->elrs = gic_read_gich_elrs();
+    gich_state_->elrsr = gic_read_gich_elrsr();
     for (uint32_t i = 0; i < gich_state_->num_lrs; i++) {
         gich_state_->lr[i] = gic_read_gich_lr(i);
     }
@@ -153,7 +152,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, fbl::unique_ptr<Vcpu>* 
     vcpu->gich_state_.active_interrupts.Reset(kNumInterrupts);
     vcpu->gich_state_.num_lrs = gic_get_num_lrs();
     vcpu->gich_state_.vmcr = gic_default_gich_vmcr();
-    vcpu->gich_state_.elrs = gic_read_gich_elrs();
+    vcpu->gich_state_.elrsr = gic_read_gich_elrsr();
     vcpu->el2_state_->guest_state.system_state.elr_el2 = entry;
     vcpu->el2_state_->guest_state.system_state.spsr_el2 = kSpsrDaif | kSpsrEl1h;
     uint64_t mpidr = ARM64_READ_SYSREG(mpidr_el1);
