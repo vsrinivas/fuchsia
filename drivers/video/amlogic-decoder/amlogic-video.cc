@@ -67,6 +67,7 @@ AmlogicVideo::~AmlogicVideo() {
   io_buffer_release(&mmio_hiubus_);
   io_buffer_release(&mmio_aobus_);
   io_buffer_release(&mmio_dmc_);
+  io_buffer_release(&stream_buffer_);
 }
 
 void AmlogicVideo::EnableClockGate() {
@@ -152,6 +153,56 @@ zx_status_t AmlogicVideo::LoadDecoderFirmware(uint8_t* data, uint32_t size) {
   return ZX_OK;
 }
 
+zx_status_t AmlogicVideo::InitializeStreamBuffer() {
+  uint64_t stream_buffer_size = PAGE_SIZE * 1024;
+  zx_status_t status = io_buffer_init_aligned(
+      &stream_buffer_, bti_.get(), stream_buffer_size, kBufferAlignShift,
+      IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  if (status != ZX_OK) {
+    DECODE_ERROR("Failed to make video fifo");
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  io_buffer_cache_flush(&stream_buffer_, 0, stream_buffer_size);
+  VldMemVififoControl::Get().FromValue(0).WriteTo(dosbus_.get());
+  VldMemVififoWrapCount::Get().FromValue(0).WriteTo(dosbus_.get());
+
+  DosSwReset0::Get().FromValue(1 << 4).WriteTo(dosbus_.get());
+  DosSwReset0::Get().FromValue(0).WriteTo(dosbus_.get());
+
+  Reset0Register::Get().ReadFrom(cbus_.get());
+  PowerCtlVld::Get().FromValue(1 << 4).WriteTo(dosbus_.get());
+  uint32_t buffer_address =
+      static_cast<uint32_t>(io_buffer_phys(&stream_buffer_));
+
+  VldMemVififoStartPtr::Get().FromValue(buffer_address).WriteTo(dosbus_.get());
+  VldMemVififoCurrPtr::Get().FromValue(buffer_address).WriteTo(dosbus_.get());
+  VldMemVififoEndPtr::Get()
+      .FromValue(buffer_address + stream_buffer_size - 8)
+      .WriteTo(dosbus_.get());
+  VldMemVififoControl::Get().FromValue(0).set_init(true).WriteTo(dosbus_.get());
+  VldMemVififoControl::Get().FromValue(0).WriteTo(dosbus_.get());
+  VldMemVififoBufCntl::Get().FromValue(0).set_manual(true).WriteTo(
+      dosbus_.get());
+  VldMemVififoWP::Get().FromValue(buffer_address).WriteTo(dosbus_.get());
+  VldMemVififoBufCntl::Get()
+      .FromValue(0)
+      .set_manual(true)
+      .set_init(true)
+      .WriteTo(dosbus_.get());
+  VldMemVififoBufCntl::Get().FromValue(0).set_manual(true).WriteTo(
+      dosbus_.get());
+  VldMemVififoControl::Get()
+      .FromValue(0)
+      .set_upper(0x11)
+      .set_fill_on_level(true)
+      .set_fill_en(true)
+      .set_empty_en(true)
+      .WriteTo(dosbus_.get());
+
+  return ZX_OK;
+}
+
 zx_status_t AmlogicVideo::Init(zx_device_t* parent) {
   parent_ = parent;
 
@@ -222,6 +273,9 @@ zx_status_t AmlogicVideo::Init(zx_device_t* parent) {
   }
 
   EnableVideoPower();
+  status = InitializeStreamBuffer();
+  if (status != ZX_OK)
+    return status;
 
   {
     uint8_t* firmware_data;

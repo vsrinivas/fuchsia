@@ -31,6 +31,7 @@ class AmlogicVideo {
  private:
   void EnableClockGate();
   void EnableVideoPower();
+  zx_status_t InitializeStreamBuffer();
 
   zx_device_t* parent_ = nullptr;
   zx_device_t* device_ = nullptr;
@@ -47,6 +48,9 @@ class AmlogicVideo {
   std::unique_ptr<DmcRegisterIo> dmc_;
 
   std::unique_ptr<FirmwareBlob> firmware_;
+
+  // The stream buffer is a FIFO between the parser and the decoder.
+  io_buffer_t stream_buffer_ = {};
 
   zx::handle bti_;
 

@@ -98,6 +98,31 @@ DEFINE_REGISTER(DosGclkEn, DosRegisterIo, 0x3f01);
 DEFINE_REGISTER(DosMemPdVdec, DosRegisterIo, 0x3f30);
 DEFINE_REGISTER(DosVdecMcrccStallCtrl, DosRegisterIo, 0x3f40);
 
+DEFINE_REGISTER(VldMemVififoStartPtr, DosRegisterIo, 0x0c40)
+DEFINE_REGISTER(VldMemVififoCurrPtr, DosRegisterIo, 0x0c41)
+DEFINE_REGISTER(VldMemVififoEndPtr, DosRegisterIo, 0x0c42)
+DEFINE_REGISTER(VldMemVififoBytesAvail, DosRegisterIo, 0x0c43)
+
+REGISTER_NAME(VldMemVififoControl, DosRegisterIo, 0x0c44)
+    DEF_FIELD(23, 16, upper)
+    DEF_BIT(10, fill_on_level)
+    DEF_BIT(2, empty_en)
+    DEF_BIT(1, fill_en)
+    DEF_BIT(0, init)
+};
+
+DEFINE_REGISTER(VldMemVififoWP, DosRegisterIo, 0x0c45)
+DEFINE_REGISTER(VldMemVififoRP, DosRegisterIo, 0x0c46)
+DEFINE_REGISTER(VldMemVififoLevel, DosRegisterIo, 0x0c47)
+REGISTER_NAME(VldMemVififoBufCntl, DosRegisterIo, 0x0c48)
+    DEF_BIT(1, manual)
+    DEF_BIT(0, init)
+};
+DEFINE_REGISTER(VldMemVififoWrapCount, DosRegisterIo, 0x0c51)
+DEFINE_REGISTER(VldMemVififoMemCtl, DosRegisterIo, 0x0c52)
+
+DEFINE_REGISTER(PowerCtlVld, DosRegisterIo, 0x0c08)
+
 DEFINE_REGISTER(AoRtiGenPwrSleep0, AoRegisterIo, 0x3a);
 DEFINE_REGISTER(AoRtiGenPwrIso0, AoRegisterIo, 0x3b);
 
@@ -125,6 +150,8 @@ REGISTER_NAME(HhiVdecClkCntl, HiuRegisterIo, 0x78)
 REGISTER_NAME(DmcReqCtrl, DmcRegisterIo, 0x0)
   DEF_BIT(13, vdec);
 };
+
+DEFINE_REGISTER(Reset0Register, CbusRegisterIo, 0x1101);
 
 // clang-format on
 
