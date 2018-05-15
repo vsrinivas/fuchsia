@@ -15,7 +15,9 @@
 #include <zircon/syscalls.h>
 #include <zx/handle.h>
 
+#include <future>
 #include <memory>
+#include <thread>
 
 #include "firmware_blob.h"
 #include "registers.h"
@@ -37,9 +39,13 @@ class AmlogicVideo {
   zx_status_t LoadDecoderFirmware(uint8_t* data, uint32_t size);
 
  private:
+  friend class TestMpeg2;
+
   void EnableClockGate();
   void EnableVideoPower();
   zx_status_t InitializeStreamBuffer();
+  zx_status_t InitializeEsParser();
+  zx_status_t ParseVideo(void* data, uint32_t len);
 
   zx_device_t* parent_ = nullptr;
   zx_device_t* device_ = nullptr;
@@ -56,6 +62,8 @@ class AmlogicVideo {
   std::unique_ptr<AoRegisterIo> aobus_;
   std::unique_ptr<DmcRegisterIo> dmc_;
   std::unique_ptr<ResetRegisterIo> reset_;
+  std::unique_ptr<DemuxRegisterIo> demux_;
+  std::unique_ptr<ParserRegisterIo> parser_;
 
   std::unique_ptr<FirmwareBlob> firmware_;
 
@@ -64,8 +72,12 @@ class AmlogicVideo {
 
   zx::handle bti_;
 
+  std::promise<void> parser_finished_promise_;
+
   zx::handle parser_interrupt_handle_;
   zx::handle vdec1_interrupt_handle_;
+
+  std::thread parser_interrupt_thread_;
 };
 
 #endif  // AMLOGIC_VIDEO_H_

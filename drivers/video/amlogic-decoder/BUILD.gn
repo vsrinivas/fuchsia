@@ -70,6 +70,7 @@ source_set("tests") {
     "//third_party/googletest:gtest",
   ]
   sources = [
+    "tests/integration/test_mpeg2.cc",
     "tests/test_support.cc",
     "tests/unit_tests/test_binding.cc",
   ]

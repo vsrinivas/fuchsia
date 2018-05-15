@@ -81,6 +81,16 @@ class ResetRegisterIo : public hwreg::RegisterIo {
   ResetRegisterIo(volatile void* mmio) : hwreg::RegisterIo(mmio) {}
 };
 
+class ParserRegisterIo : public hwreg::RegisterIo {
+ public:
+  ParserRegisterIo(volatile void* mmio) : hwreg::RegisterIo(mmio) {}
+};
+
+class DemuxRegisterIo : public hwreg::RegisterIo {
+ public:
+  DemuxRegisterIo(volatile void* mmio) : hwreg::RegisterIo(mmio) {}
+};
+
 #define DEFINE_REGISTER(name, type, address)                           \
   class name : public TypedRegisterBase<type, name, uint32_t> {        \
    public:                                                             \
@@ -127,6 +137,7 @@ DEFINE_REGISTER(VldMemVififoWrapCount, DosRegisterIo, 0x0c51)
 DEFINE_REGISTER(VldMemVififoMemCtl, DosRegisterIo, 0x0c52)
 
 DEFINE_REGISTER(PowerCtlVld, DosRegisterIo, 0x0c08)
+DEFINE_REGISTER(DosGenCtrl0, DosRegisterIo, 0x3f02)
 
 DEFINE_REGISTER(AoRtiGenPwrSleep0, AoRegisterIo, 0x3a);
 DEFINE_REGISTER(AoRtiGenPwrIso0, AoRegisterIo, 0x3b);
@@ -157,6 +168,75 @@ REGISTER_NAME(DmcReqCtrl, DmcRegisterIo, 0x0)
 };
 
 DEFINE_REGISTER(Reset0Register, ResetRegisterIo, 0x1101);
+REGISTER_NAME(Reset1Register, ResetRegisterIo, 0x1102)
+  DEF_BIT(8, parser)
+};
+DEFINE_REGISTER(FecInputControl, DemuxRegisterIo, 0x1602)
+
+REGISTER_NAME(TsHiuCtl, DemuxRegisterIo, 0x1625)
+  DEF_BIT(7, use_hi_bsf_interface)
+};
+REGISTER_NAME(TsHiuCtl2, DemuxRegisterIo, 0x1675)
+  DEF_BIT(7, use_hi_bsf_interface)
+};
+REGISTER_NAME(TsHiuCtl3, DemuxRegisterIo, 0x16c5)
+  DEF_BIT(7, use_hi_bsf_interface)
+};
+
+REGISTER_NAME(TsFileConfig, DemuxRegisterIo, 0x16f2)
+  DEF_BIT(5, ts_hiu_enable)
+};
+
+REGISTER_NAME(ParserConfig, ParserRegisterIo, 0x2965)
+  enum {
+    kWidth8 = 0,
+    kWidth16 = 1,
+    kWidth24 = 2,
+    kWidth32 = 3,
+  };
+  DEF_FIELD(23, 16, pfifo_empty_cnt)
+  DEF_FIELD(15, 12, max_es_write_cycle)
+  DEF_FIELD(11, 10, startcode_width)
+  DEF_FIELD(9, 8, pfifo_access_width)
+  DEF_FIELD(7, 0, max_fetch_cycle)
+};
+DEFINE_REGISTER(PfifoWrPtr, ParserRegisterIo, 0x2966)
+DEFINE_REGISTER(PfifoRdPtr, ParserRegisterIo, 0x2967)
+DEFINE_REGISTER(ParserSearchPattern, ParserRegisterIo, 0x2969)
+DEFINE_REGISTER(ParserSearchMask, ParserRegisterIo, 0x296a)
+
+REGISTER_NAME(ParserControl, ParserRegisterIo, 0x2960)
+  enum {
+    kSearch = (1 << 1),
+    kStart = (1 << 0),
+    kAutoSearch = kSearch | kStart,
+  };
+  DEF_FIELD(31, 8, es_pack_size)
+  DEF_FIELD(7, 6, type)
+  DEF_BIT(5, write)
+  DEF_FIELD(4, 0, command)
+};
+
+DEFINE_REGISTER(ParserVideoStartPtr, ParserRegisterIo, 0x2980)
+DEFINE_REGISTER(ParserVideoEndPtr, ParserRegisterIo, 0x2981)
+
+REGISTER_NAME(ParserEsControl, ParserRegisterIo, 0x2977)
+  DEF_BIT(0, video_manual_read_ptr_update)
+};
+
+REGISTER_NAME(ParserIntStatus, ParserRegisterIo, 0x296c)
+  DEF_BIT(7, fetch_complete)
+};
+REGISTER_NAME(ParserIntEnable, ParserRegisterIo, 0x296b)
+  DEF_BIT(8, host_en_start_code_found)
+  DEF_BIT(15, host_en_fetch_complete)
+};
+
+DEFINE_REGISTER(ParserFetchAddr, ParserRegisterIo, 0x2961)
+REGISTER_NAME(ParserFetchCmd, ParserRegisterIo, 0x2962)
+  DEF_FIELD(29, 27, fetch_endian)
+  DEF_FIELD(26, 0, len)
+};
 
 // clang-format on
 

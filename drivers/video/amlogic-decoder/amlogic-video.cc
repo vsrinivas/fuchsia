@@ -29,6 +29,8 @@
 #include "tests/test_support.h"
 #endif
 
+constexpr uint64_t kStreamBufferSize = PAGE_SIZE * 1024;
+
 extern "C" {
 zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent);
 }
@@ -66,6 +68,11 @@ enum Interrupt {
 };
 
 AmlogicVideo::~AmlogicVideo() {
+  if (parser_interrupt_handle_) {
+    zx_interrupt_destroy(parser_interrupt_handle_.get());
+    if (parser_interrupt_thread_.joinable())
+      parser_interrupt_thread_.join();
+  }
   io_buffer_release(&mmio_cbus_);
   io_buffer_release(&mmio_dosbus_);
   io_buffer_release(&mmio_hiubus_);
@@ -158,16 +165,15 @@ zx_status_t AmlogicVideo::LoadDecoderFirmware(uint8_t* data, uint32_t size) {
 }
 
 zx_status_t AmlogicVideo::InitializeStreamBuffer() {
-  uint64_t stream_buffer_size = PAGE_SIZE * 1024;
   zx_status_t status = io_buffer_init_aligned(
-      &stream_buffer_, bti_.get(), stream_buffer_size, kBufferAlignShift,
+      &stream_buffer_, bti_.get(), kStreamBufferSize, kBufferAlignShift,
       IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to make video fifo");
     return ZX_ERR_NO_MEMORY;
   }
 
-  io_buffer_cache_flush(&stream_buffer_, 0, stream_buffer_size);
+  io_buffer_cache_flush(&stream_buffer_, 0, kStreamBufferSize);
   VldMemVififoControl::Get().FromValue(0).WriteTo(dosbus_.get());
   VldMemVififoWrapCount::Get().FromValue(0).WriteTo(dosbus_.get());
 
@@ -182,7 +188,7 @@ zx_status_t AmlogicVideo::InitializeStreamBuffer() {
   VldMemVififoStartPtr::Get().FromValue(buffer_address).WriteTo(dosbus_.get());
   VldMemVififoCurrPtr::Get().FromValue(buffer_address).WriteTo(dosbus_.get());
   VldMemVififoEndPtr::Get()
-      .FromValue(buffer_address + stream_buffer_size - 8)
+      .FromValue(buffer_address + kStreamBufferSize - 8)
       .WriteTo(dosbus_.get());
   VldMemVififoControl::Get().FromValue(0).set_init(true).WriteTo(dosbus_.get());
   VldMemVififoControl::Get().FromValue(0).WriteTo(dosbus_.get());
@@ -203,6 +209,143 @@ zx_status_t AmlogicVideo::InitializeStreamBuffer() {
       .set_fill_en(true)
       .set_empty_en(true)
       .WriteTo(dosbus_.get());
+
+  return ZX_OK;
+}
+
+// This parser handles MPEG elementary streams.
+zx_status_t AmlogicVideo::InitializeEsParser() {
+  Reset1Register::Get().FromValue(0).set_parser(true).WriteTo(reset_.get());
+  FecInputControl::Get().FromValue(0).WriteTo(demux_.get());
+  TsHiuCtl::Get()
+      .ReadFrom(demux_.get())
+      .set_use_hi_bsf_interface(false)
+      .WriteTo(demux_.get());
+  TsHiuCtl2::Get()
+      .ReadFrom(demux_.get())
+      .set_use_hi_bsf_interface(false)
+      .WriteTo(demux_.get());
+  TsHiuCtl3::Get()
+      .ReadFrom(demux_.get())
+      .set_use_hi_bsf_interface(false)
+      .WriteTo(demux_.get());
+  TsFileConfig::Get()
+      .ReadFrom(demux_.get())
+      .set_ts_hiu_enable(false)
+      .WriteTo(demux_.get());
+  ParserConfig::Get()
+      .FromValue(0)
+      .set_pfifo_empty_cnt(10)
+      .set_max_es_write_cycle(1)
+      .set_max_fetch_cycle(16)
+      .WriteTo(parser_.get());
+  PfifoRdPtr::Get().FromValue(0).WriteTo(parser_.get());
+  PfifoWrPtr::Get().FromValue(0).WriteTo(parser_.get());
+  constexpr uint32_t kEsStartCodePattern = 0x00000100;
+  constexpr uint32_t kEsStartCodeMask = 0x0000ff00;
+  ParserSearchPattern::Get()
+      .FromValue(kEsStartCodePattern)
+      .WriteTo(parser_.get());
+  ParserSearchMask::Get().FromValue(kEsStartCodeMask).WriteTo(parser_.get());
+
+  ParserConfig::Get()
+      .FromValue(0)
+      .set_pfifo_empty_cnt(10)
+      .set_max_es_write_cycle(1)
+      .set_max_fetch_cycle(16)
+      .set_startcode_width(ParserConfig::kWidth24)
+      .set_pfifo_access_width(ParserConfig::kWidth8)
+      .WriteTo(parser_.get());
+
+  ParserControl::Get()
+      .FromValue(ParserControl::kAutoSearch)
+      .WriteTo(parser_.get());
+
+  // Set up output fifo.
+  uint32_t buffer_address = truncate_to_32(io_buffer_phys(&stream_buffer_));
+
+  ParserVideoStartPtr::Get().FromValue(buffer_address).WriteTo(parser_.get());
+  ParserVideoEndPtr::Get()
+      .FromValue(buffer_address + kStreamBufferSize - 8)
+      .WriteTo(parser_.get());
+  ParserEsControl::Get()
+      .ReadFrom(parser_.get())
+      .set_video_manual_read_ptr_update(false)
+      .WriteTo(parser_.get());
+  VldMemVififoBufCntl::Get().FromValue(0).set_init(true).WriteTo(dosbus_.get());
+  VldMemVififoBufCntl::Get().FromValue(0).WriteTo(dosbus_.get());
+
+  DosGenCtrl0::Get().FromValue(0).WriteTo(dosbus_.get());
+
+  parser_interrupt_thread_ = std::thread([this]() {
+    DLOG("Starting parser thread\n");
+    while (true) {
+      zx_time_t time;
+      zx_status_t zx_status =
+          zx_interrupt_wait(parser_interrupt_handle_.get(), &time);
+      if (zx_status != ZX_OK)
+        return;
+
+      auto status = ParserIntStatus::Get().ReadFrom(parser_.get());
+      // Clear interrupt.
+      status.WriteTo(parser_.get());
+      DLOG("Got Parser interrupt status %x\n", status.reg_value());
+      if (status.fetch_complete()) {
+        PfifoRdPtr::Get().FromValue(0).WriteTo(parser_.get());
+        PfifoWrPtr::Get().FromValue(0).WriteTo(parser_.get());
+        parser_finished_promise_.set_value();
+      }
+    }
+  });
+
+  ParserIntStatus::Get().FromValue(0xffff).WriteTo(parser_.get());
+  ParserIntEnable::Get().FromValue(0).set_host_en_fetch_complete(true).WriteTo(
+      parser_.get());
+
+  return ZX_OK;
+}
+
+zx_status_t AmlogicVideo::ParseVideo(void* data, uint32_t len) {
+  io_buffer_t input_file;
+  zx_status_t status = io_buffer_init(&input_file, bti_.get(), len,
+                                      IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  if (status != ZX_OK) {
+    DECODE_ERROR("Failed to create input file");
+    return ZX_ERR_NO_MEMORY;
+  }
+  PfifoRdPtr::Get().FromValue(0).WriteTo(parser_.get());
+  PfifoWrPtr::Get().FromValue(0).WriteTo(parser_.get());
+
+  ParserControl::Get()
+      .ReadFrom(parser_.get())
+      .set_es_pack_size(len)
+      .WriteTo(parser_.get());
+  ParserControl::Get()
+      .ReadFrom(parser_.get())
+      .set_type(0)
+      .set_write(true)
+      .set_command(ParserControl::kAutoSearch)
+      .WriteTo(parser_.get());
+
+  memcpy(io_buffer_virt(&input_file), data, len);
+  io_buffer_cache_flush(&input_file, 0, len);
+
+  parser_finished_promise_ = std::promise<void>();
+  ParserFetchAddr::Get()
+      .FromValue(truncate_to_32(io_buffer_phys(&input_file)))
+      .WriteTo(parser_.get());
+  ParserFetchCmd::Get().FromValue(0).set_len(len).set_fetch_endian(7).WriteTo(
+      parser_.get());
+
+  auto future_status =
+      parser_finished_promise_.get_future().wait_for(std::chrono::seconds(1));
+  if (future_status != std::future_status::ready) {
+    DECODE_ERROR("Parser timed out\n");
+    ParserFetchCmd::Get().FromValue(0).WriteTo(parser_.get());
+    io_buffer_release(&input_file);
+    return ZX_ERR_TIMED_OUT;
+  }
+  io_buffer_release(&input_file);
 
   return ZX_OK;
 }
@@ -289,12 +432,19 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   dmc_ = std::make_unique<DmcRegisterIo>(io_buffer_virt(&mmio_dmc_));
 
   int64_t reset_register_offset = 0;
+  int64_t parser_register_offset = 0;
+  int64_t demux_register_offset = 0;
   if (device_type_ == DeviceType::kG12A) {
     // Some portions of the cbus moved in newer versions (TXL and later).
     reset_register_offset = (0x0401 - 0x1101);
+    parser_register_offset = 0x3800 - 0x2900;
+    demux_register_offset = 0x1800 - 0x1600;
   }
   auto cbus_base = static_cast<volatile uint32_t*>(io_buffer_virt(&mmio_cbus_));
   reset_ = std::make_unique<ResetRegisterIo>(cbus_base + reset_register_offset);
+  parser_ =
+      std::make_unique<ParserRegisterIo>(cbus_base + parser_register_offset);
+  demux_ = std::make_unique<DemuxRegisterIo>(cbus_base + demux_register_offset);
 
   firmware_ = std::make_unique<FirmwareBlob>();
   status = firmware_->LoadFirmware(parent_);
@@ -339,6 +489,7 @@ zx_status_t AmlogicVideo::InitDecoder() {
     if (status != ZX_OK)
       return status;
   }
+
   return ZX_OK;
 }
 
