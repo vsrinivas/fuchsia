@@ -248,7 +248,7 @@ int main(int argc, char** argv) {
                     return rc;
                 }
             } else {
-                fprintf(stderr, "spurious thermal event\n");
+                TRACE_COUNTER("thermal", "event", 0, "spurious", to_celsius(temp));
             }
         }
         if (st == ZX_ERR_TIMED_OUT) {
