@@ -20,6 +20,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/zx \
     system/ulib/zxcpp \
     system/ulib/fbl \
+    system/ulib/fs \
 
 MODULE_LIBS := \
     system/ulib/c \

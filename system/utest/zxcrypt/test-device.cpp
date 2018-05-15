@@ -197,7 +197,7 @@ int TestDevice::WakeThread(void* arg) {
     auto cleanup = fbl::MakeAutoCall([&] { ioctl_ramdisk_wake_up(device->ramdisk_.get()); });
 
     // Loop until timeout, |wake_after_| txns received, or error getting counts
-    ramdisk_txn_counts_t counts;
+    ramdisk_blk_counts_t counts;
     ssize_t res;
     do {
         zx::nanosleep(zx::deadline_after(zx::msec(100)));
@@ -206,7 +206,7 @@ int TestDevice::WakeThread(void* arg) {
                    device->wake_after_);
             return ZX_ERR_TIMED_OUT;
         }
-        if ((res = ioctl_ramdisk_get_txn_counts(device->ramdisk_.get(), &counts)) < 0) {
+        if ((res = ioctl_ramdisk_get_blk_counts(device->ramdisk_.get(), &counts)) < 0) {
             return static_cast<zx_status_t>(res);
         }
     } while (counts.received < device->wake_after_);

@@ -46,8 +46,8 @@ typedef struct ramdisk_device {
     zx_handle_t vmo;
 
     bool asleep; // true if the ramdisk is "sleeping"
-    uint64_t sa_txn_count; // number of transactions to sleep after
-    ramdisk_txn_counts_t txn_counts; // current transaction counts
+    uint64_t sa_blk_count; // number of blocks to sleep after
+    ramdisk_blk_counts_t blk_counts; // current block counts
 
     thrd_t worker;
     char name[NAME_MAX];
@@ -64,6 +64,7 @@ static int worker_thread(void* arg) {
     ramdisk_device_t* dev = (ramdisk_device_t*)arg;
     ramdisk_txn_t* txn = NULL;
     bool dead, asleep, defer;
+    size_t blocks = 0;
 
     for (;;) {
         for (;;) {
@@ -72,6 +73,7 @@ static int worker_thread(void* arg) {
             dead = dev->dead;
             asleep = dev->asleep;
             defer = (dev->flags & RAMDISK_FLAG_RESUME_ON_WAKE) != 0;
+            blocks = dev->sa_blk_count;
 
             if (!asleep) {
                 // If we are awake, try grabbing pending transactions from the deferred list.
@@ -98,14 +100,24 @@ static int worker_thread(void* arg) {
             }
         }
 
-        void* addr = (void*) dev->mapped_addr + txn->op.rw.offset_dev;
-        size_t len = txn->op.rw.length * dev->blk_size;
+        size_t txn_blocks = txn->op.rw.length;
+        if (txn->op.command == BLOCK_OP_READ || blocks == 0 || blocks > txn_blocks) {
+            // If the ramdisk is not configured to sleep after x blocks, or the number of blocks in
+            // this transaction does not exceed the sa_blk_count, or we are performing a read
+            // operation, use the current transaction length.
+            blocks = txn_blocks;
+        }
 
-        if (len > MAX_TRANSFER_SIZE) {
+        size_t length = blocks * dev->blk_size;
+        size_t dev_offset = txn->op.rw.offset_dev * dev->blk_size;
+        size_t vmo_offset = txn->op.rw.offset_vmo * dev->blk_size;
+        void* addr = (void*) dev->mapped_addr + dev_offset;
+
+        if (length > MAX_TRANSFER_SIZE) {
             status = ZX_ERR_OUT_OF_RANGE;
         } else if (txn->op.command == BLOCK_OP_READ) {
             // A read operation should always succeed, even if the ramdisk is "asleep".
-            status = zx_vmo_write(txn->op.rw.vmo, addr, txn->op.rw.offset_vmo, len);
+            status = zx_vmo_write(txn->op.rw.vmo, addr, vmo_offset, length);
         } else if (asleep) {
             if (defer) {
                 // If we are asleep but resuming on wake, add txn to the deferred_list.
@@ -116,24 +128,53 @@ static int worker_thread(void* arg) {
                 status = ZX_ERR_UNAVAILABLE;
             }
         } else { // BLOCK_OP_WRITE
-            status = zx_vmo_read(txn->op.rw.vmo, addr, txn->op.rw.offset_vmo, len);
+            status = zx_vmo_read(txn->op.rw.vmo, addr, vmo_offset, length);
+
+            if (status == ZX_OK && blocks < txn->op.rw.length && defer) {
+                // If the first part of the transaction succeeded but the entire transaction is not
+                // complete, we need to address the remainder.
+
+                // If we are deferring after this block count, update the transaction to
+                // reflect the blocks that have already been written, and add it to the
+                // deferred queue.
+                txn->op.rw.length -= blocks;
+                txn->op.rw.offset_vmo += blocks;
+                txn->op.rw.offset_dev += blocks;
+
+                // Add the remaining blocks to the deferred list.
+                list_add_tail(&dev->deferred_list, &txn->node);
+            }
         }
 
         if (txn->op.command == BLOCK_OP_WRITE) {
-            // Since we aren't failing read transactions, only include write transaction counts.
+            // Update the ramdisk block counts. Since we aren't failing read transactions,
+            // only include write transaction counts.
             mtx_lock(&dev->lock);
             // Increment the count based on the result of the last transaction.
             if (status == ZX_OK) {
-                dev->txn_counts.successful++;
+                dev->blk_counts.successful += blocks;
+
+                if (blocks != txn_blocks && !defer) {
+                    // If we are not deferring, then any excess blocks have failed.
+                    dev->blk_counts.failed += txn_blocks - blocks;
+                    status = ZX_ERR_UNAVAILABLE;
+                }
             } else {
-                dev->txn_counts.failed++;
+                dev->blk_counts.failed += txn_blocks;
             }
-            // Put the ramdisk to sleep if we have reached the required # of transactions.
-            if (dev->sa_txn_count != 0) {
-                --dev->sa_txn_count;
-                dev->asleep = (dev->sa_txn_count == 0);
+
+            // Put the ramdisk to sleep if we have reached the required # of blocks.
+            if (dev->sa_blk_count > 0) {
+                dev->sa_blk_count -= blocks;
+                dev->asleep = (dev->sa_blk_count == 0);
             }
             mtx_unlock(&dev->lock);
+
+            if (defer && blocks != txn_blocks && status == ZX_OK) {
+                // If we deferred partway through a transaction, hold off on returning the
+                // result until the remainder of the transaction is completed.
+                continue;
+            }
         }
 
         txn->op.completion_cb(&txn->op, status);
@@ -202,8 +243,8 @@ static zx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd, size_t
         // Reset state and transaction counts
         mtx_lock(&ramdev->lock);
         ramdev->asleep = false;
-        memset(&ramdev->txn_counts, 0, sizeof(ramdev->txn_counts));
-        ramdev->sa_txn_count = 0;
+        memset(&ramdev->blk_counts, 0, sizeof(ramdev->blk_counts));
+        ramdev->sa_blk_count = 0;
         mtx_unlock(&ramdev->lock);
         completion_signal(&ramdev->signal);
         return ZX_OK;
@@ -212,25 +253,26 @@ static zx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd, size_t
         if (cmd_len < sizeof(uint64_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        uint64_t* txn_count = (uint64_t*)cmd;
+        uint64_t* blk_count = (uint64_t*)cmd;
         mtx_lock(&ramdev->lock);
         ramdev->asleep = false;
-        memset(&ramdev->txn_counts, 0, sizeof(ramdev->txn_counts));
-        ramdev->sa_txn_count = *txn_count;
-        if (*txn_count == 0) {
+        memset(&ramdev->blk_counts, 0, sizeof(ramdev->blk_counts));
+        ramdev->sa_blk_count = *blk_count;
+
+        if (*blk_count == 0) {
             ramdev->asleep = true;
         }
         mtx_unlock(&ramdev->lock);
         return ZX_OK;
     }
-    case IOCTL_RAMDISK_GET_TXN_COUNTS: {
-        if (max < sizeof(ramdisk_txn_counts_t)) {
+    case IOCTL_RAMDISK_GET_BLK_COUNTS: {
+        if (max < sizeof(ramdisk_blk_counts_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
         mtx_lock(&ramdev->lock);
-        memcpy(reply, &ramdev->txn_counts, sizeof(ramdisk_txn_counts_t));
+        memcpy(reply, &ramdev->blk_counts, sizeof(ramdisk_blk_counts_t));
         mtx_unlock(&ramdev->lock);
-        *out_actual = sizeof(ramdisk_txn_counts_t);
+        *out_actual = sizeof(ramdisk_blk_counts_t);
         return ZX_OK;
     }
     // Block Protocol
@@ -274,13 +316,11 @@ static void ramdisk_queue(void* ctx, block_op_t* bop) {
             bop->completion_cb(bop, ZX_ERR_OUT_OF_RANGE);
             return;
         }
-        txn->op.rw.offset_dev *= ramdev->blk_size;
-        txn->op.rw.offset_vmo *= ramdev->blk_size;
 
         mtx_lock(&ramdev->lock);
         if (!(dead = ramdev->dead)) {
             if (!read) {
-                ramdev->txn_counts.received++;
+                ramdev->blk_counts.received += txn->op.rw.length;
             }
             list_add_tail(&ramdev->txn_list, &txn->node);
         }

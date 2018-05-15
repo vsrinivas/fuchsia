@@ -21,7 +21,7 @@
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_RAMDISK, 4)
 #define IOCTL_RAMDISK_SLEEP_AFTER \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_RAMDISK, 5)
-#define IOCTL_RAMDISK_GET_TXN_COUNTS \
+#define IOCTL_RAMDISK_GET_BLK_COUNTS \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_RAMDISK, 6)
 
 // Ramdisk-specific flags
@@ -36,11 +36,11 @@ typedef struct ramdisk_ioctl_config_response {
     char name[NAME_MAX + 1];
 } ramdisk_ioctl_config_response_t;
 
-typedef struct ramdisk_txn_counts {
+typedef struct ramdisk_blk_counts {
     uint64_t received;
     uint64_t successful;
     uint64_t failed;
-} ramdisk_txn_counts_t;
+} ramdisk_blk_counts_t;
 
 // ssize_t ioctl_ramdisk_config(int fd, const ramdisk_ioctl_config_t* in,
 //                              ramdisk_ioctl_config_response_t* out);
@@ -68,14 +68,14 @@ IOCTL_WRAPPER_IN(ioctl_ramdisk_set_flags, IOCTL_RAMDISK_SET_FLAGS, uint32_t);
 IOCTL_WRAPPER(ioctl_ramdisk_wake_up, IOCTL_RAMDISK_WAKE_UP);
 
 // ssize_t ioctl_ramdisk_sleep_after(int fd, uint64_t* in);
-// Tell the ramdisk to "sleep" after |in| transactions.
+// Tell the ramdisk to "sleep" after |in| blocks have been written successfully.
 // After this point, all incoming transactions will fail.
-// This will reset the current transaction count.
+// This will reset the current block count.
 // NOTE! Use caution with RAMDISK_FLAG_RESUME_ON_WAKE set; sleeping with this flags will cause I/O
 // to block indefinitely until another call invokes |ioctl_ramdisk_wake_up|.
 IOCTL_WRAPPER_IN(ioctl_ramdisk_sleep_after, IOCTL_RAMDISK_SLEEP_AFTER, uint64_t);
 
-// ssize_t ioctl_ramdisk_get_txn_count(int fd, ramdisk_txn_counts_t* out);
-// Retrieve the number of received, successful, and failed transactions since the last call to
+// ssize_t ioctl_ramdisk_get_blk_counts(int fd, ramdisk_blk_counts_t* out);
+// Retrieve the number of received, successful, and failed block writes since the last call to
 // sleep/wake.
-IOCTL_WRAPPER_OUT(ioctl_ramdisk_get_txn_counts, IOCTL_RAMDISK_GET_TXN_COUNTS, ramdisk_txn_counts_t);
+IOCTL_WRAPPER_OUT(ioctl_ramdisk_get_blk_counts, IOCTL_RAMDISK_GET_BLK_COUNTS, ramdisk_blk_counts_t);

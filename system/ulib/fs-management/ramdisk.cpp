@@ -156,14 +156,14 @@ int create_ramdisk_from_vmo(zx_handle_t vmo, char* out_path) {
                          ioctl_ramdisk_config_vmo(fd.get(), &vmo, &response));
 }
 
-int sleep_ramdisk(const char* ramdisk_path, uint64_t txn_count) {
+int sleep_ramdisk(const char* ramdisk_path, uint64_t block_count) {
     fbl::unique_fd fd(open(ramdisk_path, O_RDWR));
     if (fd.get() < 0) {
         fprintf(stderr, "Could not open ramdisk\n");
         return -1;
     }
 
-    ssize_t r = ioctl_ramdisk_sleep_after(fd.get(), &txn_count);
+    ssize_t r = ioctl_ramdisk_sleep_after(fd.get(), &block_count);
     if (r != ZX_OK) {
         fprintf(stderr, "Could not set ramdisk interrupt on path %s: %ld\n", ramdisk_path, r);
         return -1;
@@ -187,14 +187,14 @@ int wake_ramdisk(const char* ramdisk_path) {
     return 0;
 }
 
-int get_ramdisk_txns(const char* ramdisk_path, ramdisk_txn_counts_t* counts) {
+int get_ramdisk_blocks(const char* ramdisk_path, ramdisk_blk_counts_t* counts) {
     fbl::unique_fd fd(open(ramdisk_path, O_RDWR));
     if (fd.get() < 0) {
         fprintf(stderr, "Could not open ramdisk\n");
         return -1;
     }
-    if (ioctl_ramdisk_get_txn_counts(fd.get(), counts) < 0) {
-        fprintf(stderr, "Could not get txn count\n");
+    if (ioctl_ramdisk_get_blk_counts(fd.get(), counts) < 0) {
+        fprintf(stderr, "Could not get blk counts\n");
         return -1;
     }
     return 0;
