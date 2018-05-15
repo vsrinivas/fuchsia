@@ -7,14 +7,14 @@
 
 #include <limits>
 
-#include "garnet/bin/media/media_player/framework/models/sink.h"
+#include "garnet/bin/media/media_player/framework/models/async_node.h"
 #include "garnet/bin/media/media_player/framework/types/stream_type.h"
 #include "lib/media/timeline/timeline_function.h"
 
 namespace media_player {
 
 // Abstract base class for sinks that render packets.
-class Renderer : public Sink {
+class Renderer : public AsyncNode {
  public:
   Renderer();
 
@@ -30,8 +30,10 @@ class Renderer : public Sink {
   // |Provision|.
   void Deprovision();
 
-  // Sink implementation.
+  // AsyncNode implementation.
   void Dump(std::ostream& os, NodeRef ref) const override;
+
+  void GetConfiguration(size_t* input_count, size_t* output_count) override;
 
   // Returns the types of the streams the renderer is able
   // to consume.

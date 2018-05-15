@@ -36,11 +36,10 @@ class FidlVideoRenderer
 
   void Dump(std::ostream& os, NodeRef ref) const override;
 
-  void Flush(bool hold_frame) override;
+  void FlushInput(bool hold_frame, size_t input_index,
+                  fxl::Closure callback) override;
 
-  std::shared_ptr<PayloadAllocator> allocator() override;
-
-  Demand SupplyPacket(PacketPtr packet) override;
+  void PutInputPacket(PacketPtr packet, size_t input_index) override;
 
   const std::vector<std::unique_ptr<StreamTypeSet>>& GetSupportedStreamTypes()
       override {

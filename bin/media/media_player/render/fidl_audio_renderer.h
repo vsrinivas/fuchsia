@@ -37,13 +37,16 @@ class FidlAudioRenderer
 
   void Dump(std::ostream& os, NodeRef ref) const override;
 
-  void Flush(bool hold_frame) override;
+  void FlushInput(bool hold_frame, size_t input_index,
+                  fxl::Closure callback) override;
 
-  std::shared_ptr<PayloadAllocator> allocator() override {
+  std::shared_ptr<PayloadAllocator> allocator_for_input(
+      size_t input_index) override {
+    FXL_DCHECK(input_index == 0);
     return shared_from_this();
   }
 
-  Demand SupplyPacket(PacketPtr packet) override;
+  void PutInputPacket(PacketPtr packet, size_t input_index) override;
 
   const std::vector<std::unique_ptr<StreamTypeSet>>& GetSupportedStreamTypes()
       override {
@@ -69,12 +72,12 @@ class FidlAudioRenderer
   void OnTimelineTransition() override;
 
  private:
-  // Gets the current demand.
-  Demand GetCurrentDemand();
+  // Determines if more packets are needed.
+  bool NeedMorePackets();
 
-  // Signals current demand via the stage's |SetDemand| method if it's not
-  // negative.
-  void SignalCurrentDemand();
+  // Signals current demand via the stage's |RequestInputPacket| if we need
+  // more packets. Return value indicates whether an input packet was requested.
+  bool SignalCurrentDemand();
 
   // Converts a pts in |pts_rate_| units to ns.
   int64_t to_ns(int64_t pts) {

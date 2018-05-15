@@ -29,9 +29,7 @@ FidlVideoRenderer::FidlVideoRenderer() : arrivals_(true), draws_(true) {
 
 FidlVideoRenderer::~FidlVideoRenderer() {}
 
-const char* FidlVideoRenderer::label() const {
-  return "video renderer";
-}
+const char* FidlVideoRenderer::label() const { return "video renderer"; }
 
 void FidlVideoRenderer::Dump(std::ostream& os, NodeRef ref) const {
   Renderer::Dump(os, ref);
@@ -53,7 +51,11 @@ void FidlVideoRenderer::Dump(std::ostream& os, NodeRef ref) const {
   }
 }
 
-void FidlVideoRenderer::Flush(bool hold_frame) {
+void FidlVideoRenderer::FlushInput(bool hold_frame, size_t input_index,
+                                   fxl::Closure callback) {
+  FXL_DCHECK(input_index == 0);
+  FXL_DCHECK(callback);
+
   flushed_ = true;
 
   if (!packet_queue_.empty()) {
@@ -69,14 +71,13 @@ void FidlVideoRenderer::Flush(bool hold_frame) {
   SetEndOfStreamPts(media::kUnspecifiedTime);
 
   InvalidateViews();
+
+  callback();
 }
 
-std::shared_ptr<PayloadAllocator> FidlVideoRenderer::allocator() {
-  return nullptr;
-}
-
-Demand FidlVideoRenderer::SupplyPacket(PacketPtr packet) {
+void FidlVideoRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
   FXL_DCHECK(packet);
+  FXL_DCHECK(input_index == 0);
 
   int64_t packet_pts_ns = packet->GetPts(media::TimelineRate::NsPerSecond);
 
@@ -102,7 +103,11 @@ Demand FidlVideoRenderer::SupplyPacket(PacketPtr packet) {
   // Discard packets that fall outside the program range.
   if (flushed_ || packet->payload() == nullptr || packet_pts_ns < min_pts(0) ||
       packet_pts_ns > max_pts(0)) {
-    return need_more_packets() ? Demand::kPositive : Demand::kNegative;
+    if (need_more_packets()) {
+      stage()->RequestInputPacket();
+    }
+
+    return;
   }
 
   packet_queue_.push(std::move(packet));
@@ -120,7 +125,8 @@ Demand FidlVideoRenderer::SupplyPacket(PacketPtr packet) {
   }
 
   if (need_more_packets()) {
-    return Demand::kPositive;
+    stage()->RequestInputPacket();
+    return;
   }
 
   // We have enough packets. If we're priming, complete the operation.
@@ -128,8 +134,6 @@ Demand FidlVideoRenderer::SupplyPacket(PacketPtr packet) {
     prime_callback_();
     prime_callback_ = nullptr;
   }
-
-  return Demand::kNegative;
 }
 
 void FidlVideoRenderer::SetStreamType(const StreamType& stream_type) {
@@ -145,7 +149,7 @@ void FidlVideoRenderer::Prime(fxl::Closure callback) {
   }
 
   prime_callback_ = callback;
-  stage()->SetDemand(Demand::kPositive);
+  stage()->RequestInputPacket();
 }
 
 geometry::Size FidlVideoRenderer::video_size() const {
@@ -254,7 +258,7 @@ void FidlVideoRenderer::OnSceneInvalidated(int64_t reference_time) {
   frame_rate_.AddSample(now, Progressing());
 
   if (need_more_packets()) {
-    stage()->SetDemand(Demand::kPositive);
+    stage()->RequestInputPacket();
   }
 }
 
@@ -262,8 +266,7 @@ FidlVideoRenderer::View::View(
     views_v1::ViewManagerPtr view_manager,
     fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
     std::shared_ptr<FidlVideoRenderer> renderer)
-    : mozart::BaseView(std::move(view_manager),
-                       std::move(view_owner_request),
+    : mozart::BaseView(std::move(view_manager), std::move(view_owner_request),
                        "Video Renderer"),
       renderer_(renderer),
       image_cycler_(session()) {

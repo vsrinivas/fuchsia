@@ -11,9 +11,7 @@
 
 namespace media_player {
 
-Renderer::Renderer() {
-  ClearPendingTimelineFunction();
-}
+Renderer::Renderer() { ClearPendingTimelineFunction(); }
 
 Renderer::~Renderer() {}
 
@@ -34,8 +32,14 @@ void Renderer::Dump(std::ostream& os, NodeRef ref) const {
   os << outdent;
 }
 
-void Renderer::SetProgramRange(uint64_t program,
-                               int64_t min_pts,
+void Renderer::GetConfiguration(size_t* input_count, size_t* output_count) {
+  FXL_DCHECK(input_count);
+  FXL_DCHECK(output_count);
+  *input_count = 1;
+  *output_count = 0;
+}
+
+void Renderer::SetProgramRange(uint64_t program, int64_t min_pts,
                                int64_t max_pts) {
   FXL_DCHECK(program == 0) << "Only program 0 is currently supported.";
   program_0_min_pts_ = min_pts;

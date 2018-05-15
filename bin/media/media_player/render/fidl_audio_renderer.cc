@@ -86,18 +86,24 @@ void FidlAudioRenderer::Dump(std::ostream& os, NodeRef ref) const {
   }
 }
 
-void FidlAudioRenderer::Flush(bool hold_frame_not_used) {
+void FidlAudioRenderer::FlushInput(bool hold_frame_not_used, size_t input_index,
+                                   fxl::Closure callback) {
   FXL_DCHECK(async_get_default() == async());
+  FXL_DCHECK(input_index == 0);
+  FXL_DCHECK(callback);
+
   flushed_ = true;
   last_supplied_pts_ns_ = 0;
   last_departed_pts_ns_ = media::kUnspecifiedTime;
   SetEndOfStreamPts(media::kUnspecifiedTime);
   audio_renderer_->FlushNoReply();
+  callback();
 }
 
-Demand FidlAudioRenderer::SupplyPacket(PacketPtr packet) {
+void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
   FXL_DCHECK(async_get_default() == async());
   FXL_DCHECK(packet);
+  FXL_DCHECK(input_index == 0);
   FXL_DCHECK(bytes_per_frame_ != 0);
 
   int64_t now = media::Timeline::local_now();
@@ -109,7 +115,8 @@ Demand FidlAudioRenderer::SupplyPacket(PacketPtr packet) {
 
   if (flushed_ || end_pts_ns < min_pts(0) || start_pts_ns > max_pts(0)) {
     // Discard this packet.
-    return GetCurrentDemand();
+    SignalCurrentDemand();
+    return;
   }
 
   arrivals_.AddSample(now, current_timeline_function()(now), start_pts_ns,
@@ -163,14 +170,16 @@ Demand FidlAudioRenderer::SupplyPacket(PacketPtr packet) {
     });
   }
 
-  Demand demand = GetCurrentDemand();
+  if (SignalCurrentDemand()) {
+    return;
+  }
 
-  if (prime_callback_ && demand == Demand::kNegative) {
+  if (prime_callback_) {
+    // We have all the packets we need and we're priming. Signal that priming
+    // is complete.
     prime_callback_();
     prime_callback_ = nullptr;
   }
-
-  return demand;
 }
 
 void FidlAudioRenderer::SetStreamType(const StreamType& stream_type) {
@@ -219,7 +228,7 @@ void FidlAudioRenderer::Prime(fxl::Closure callback) {
 
   flushed_ = false;
 
-  if (GetCurrentDemand() == Demand::kNegative || end_of_stream_pending()) {
+  if (!NeedMorePackets() || end_of_stream_pending()) {
     callback();
     return;
   }
@@ -278,7 +287,7 @@ void FidlAudioRenderer::OnTimelineTransition() {
   }
 }
 
-Demand FidlAudioRenderer::GetCurrentDemand() {
+bool FidlAudioRenderer::NeedMorePackets() {
   FXL_DCHECK(async_get_default() == async());
 
   demand_task_.Cancel();
@@ -286,7 +295,7 @@ Demand FidlAudioRenderer::GetCurrentDemand() {
   if (flushed_ || end_of_stream_pending()) {
     // If we're flushed or we've seen end of stream, we don't need any more
     // packets.
-    return Demand::kNegative;
+    return false;
   }
 
   int64_t presentation_time_ns =
@@ -305,13 +314,13 @@ Demand FidlAudioRenderer::GetCurrentDemand() {
                        << AsNs(presentation_time_ns - last_departed_pts_ns_);
     }
 
-    return Demand::kPositive;
+    return true;
   }
 
   if (!current_timeline_function().invertable()) {
     // We don't need packets now, and the timeline isn't progressing, so we
     // won't need packets until the timeline starts progressing.
-    return Demand::kNegative;
+    return false;
   }
 
   // We don't need packets now. Predict when we might need the next packet
@@ -320,16 +329,18 @@ Demand FidlAudioRenderer::GetCurrentDemand() {
                            zx::time(current_timeline_function().ApplyInverse(
                                last_supplied_pts_ns_ - min_lead_time_ns_)));
 
-  return Demand::kNegative;
+  return false;
 }
 
-void FidlAudioRenderer::SignalCurrentDemand() {
+bool FidlAudioRenderer::SignalCurrentDemand() {
   FXL_DCHECK(async_get_default() == async());
 
-  Demand demand = GetCurrentDemand();
-  if (demand != Demand::kNegative) {
-    stage()->SetDemand(demand);
+  if (!NeedMorePackets()) {
+    return false;
   }
+
+  stage()->RequestInputPacket();
+  return true;
 }
 
 }  // namespace media_player
