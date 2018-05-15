@@ -52,7 +52,7 @@ wlan_gn_deps = [
   "//garnet/public/lib/netstack/fidl($go_toolchain)",
   "//garnet/public/lib/wlan/fidl:service($go_toolchain)",
   "//garnet/public/lib/app/go/src/app",
-  "//garnet/public/lib/fidl/go/src/fidl",
+  "//garnet/public/lib/fidl/go/src/fidl/bindings",
 ]
 
 go_test("keywrap_test_bin") {
@@ -144,7 +144,7 @@ go_binary("wlantool_bin") {
     "//garnet/public/lib/netstack/fidl($go_toolchain)",
     "//garnet/public/lib/wlan/fidl:service($go_toolchain)",
     "//garnet/public/lib/app/go/src/app",
-    "//garnet/public/lib/fidl/go/src/fidl",
+    "//garnet/public/lib/fidl/go/src/fidl/bindings",
   ]
 }
 

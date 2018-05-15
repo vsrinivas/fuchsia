@@ -28,6 +28,6 @@ go_binary("ifconfig") {
     "//garnet/public/lib/netstack/fidl($go_toolchain)",
     "//garnet/public/lib/wlan/fidl:service($go_toolchain)",
     "//garnet/public/lib/app/go/src/app",
-    "//garnet/public/lib/fidl/go/src/fidl",
+    "//garnet/public/lib/fidl/go/src/fidl/bindings",
   ]
 }

@@ -21,7 +21,7 @@ go_test("go_fidl_bindings_test") {
     },
   ]
   extra_dependencies = [
-    "//garnet/public/lib/fidl/go/src/fidl",
+    "//garnet/public/lib/fidl/go/src/fidl/bindings",
     ":test_fidl($go_toolchain)",
   ]
 }

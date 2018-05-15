@@ -23,7 +23,7 @@ go_binary("netstat") {
   extra_dependencies = [
     "//garnet/public/lib/app/fidl($go_toolchain)",
     "//garnet/public/lib/app/go/src/app",
-    "//garnet/public/lib/fidl/go/src/fidl",
+    "//garnet/public/lib/fidl/go/src/fidl/bindings",
     "//garnet/public/lib/netstack/fidl($go_toolchain)",
   ]
 }
@@ -44,6 +44,6 @@ go_test("netstack_netstat_test") {
     "//garnet/public/lib/app/fidl($go_toolchain)",
     "//garnet/public/lib/netstack/fidl($go_toolchain)",
     "//garnet/public/lib/app/go/src/app",
-    "//garnet/public/lib/fidl/go/src/fidl",
+    "//garnet/public/lib/fidl/go/src/fidl/bindings",
   ]
 }

@@ -41,7 +41,7 @@ go_binary("pkgsvr_bin") {
     "//garnet/public/lib/amber/fidl($go_toolchain)",
     "//garnet/public/lib/app/fidl($go_toolchain)",
     "//garnet/public/lib/app/go/src/app",
-    "//garnet/public/lib/fidl/go/src/fidl",
+    "//garnet/public/lib/fidl/go/src/fidl/bindings",
   ]
   go_dependencies = common_dependencies
 }
@@ -63,7 +63,7 @@ foreach(testpkg, test_packages) {
       "//garnet/public/lib/amber/fidl($go_toolchain)",
       "//garnet/public/lib/app/fidl($go_toolchain)",
       "//garnet/public/lib/app/go/src/app",
-      "//garnet/public/lib/fidl/go/src/fidl",
+      "//garnet/public/lib/fidl/go/src/fidl/bindings",
     ]
     go_dependencies = common_dependencies
   }

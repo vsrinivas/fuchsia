@@ -18,7 +18,7 @@ go_test("power_manager_test") {
     "//garnet/public/lib/power_manager/fidl($go_toolchain)",
     "//garnet/public/lib/syslog/go/src/syslog",
     "//garnet/public/lib/app/go/src/app",
-    "//garnet/public/lib/fidl/go/src/fidl",
+    "//garnet/public/lib/fidl/go/src/fidl/bindings",
   ]
 }
 

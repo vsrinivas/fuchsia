@@ -17,8 +17,8 @@ go_binary("echo2_client_go_bin") {
       package = "echo2_client_go"
     },
     {
-      package = "fidl"
-      source = "//garnet/public/lib/fidl/go/src/fidl"
+      package = "fidl/bindings"
+      source = "//garnet/public/lib/fidl/go/src/fidl/bindings"
     },
     {
       package = "app"
