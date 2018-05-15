@@ -259,6 +259,18 @@ class VirtioVsockTest : public testing::Test, public guest::SocketConnector {
     GuestConnectInvokeCallbacks();
     GuestConnectOnPortResponse(host_port, VIRTIO_VSOCK_OP_RESPONSE, guest_port);
   }
+
+  virtio_vsock_hdr_t* GetCreditUpdate() {
+    DoSend(kVirtioVsockHostPort, kVirtioVsockGuestPort,
+           VIRTIO_VSOCK_TYPE_STREAM, VIRTIO_VSOCK_OP_CREDIT_REQUEST);
+    RxBuffer* rx_buffer = DoReceive();
+    if (rx_buffer == nullptr) {
+      return nullptr;
+    }
+    VerifyHeader(&rx_buffer->header, kVirtioVsockHostPort,
+                 kVirtioVsockGuestPort, 0, VIRTIO_VSOCK_OP_CREDIT_UPDATE, 0);
+    return &rx_buffer->header;
+  }
 };
 
 TEST_F(VirtioVsockTest, Connect) { HostConnectOnPort(kVirtioVsockHostPort); }
@@ -429,6 +441,44 @@ TEST_F(VirtioVsockTest, WriteMultiple) {
   ASSERT_EQ(2u, actual_len);
   ASSERT_EQ('a', actual_data[0]);
   ASSERT_EQ('b', actual_data[1]);
+}
+
+TEST_F(VirtioVsockTest, WriteUpdateCredit) {
+  TestConnection connection;
+  HostConnectOnPortRequest(kVirtioVsockHostPort, connection.callback());
+  HostConnectOnPortResponse(kVirtioVsockHostPort);
+
+  SingleBytePacket p1('a');
+  SingleBytePacket p2('b');
+  HostQueueWriteOnPort(kVirtioVsockHostPort, reinterpret_cast<uint8_t*>(&p1),
+                       sizeof(p1));
+  HostQueueWriteOnPort(kVirtioVsockHostPort, reinterpret_cast<uint8_t*>(&p2),
+                       sizeof(p2));
+  loop_.RunUntilIdle();
+
+  // Request credit update, expect 0 fwd_cnt bytes as the data is still in the
+  // socket.
+  virtio_vsock_hdr_t* header = GetCreditUpdate();
+  EXPECT_EQ(header->op, VIRTIO_VSOCK_OP_CREDIT_UPDATE);
+  EXPECT_GT(header->buf_alloc, 0u);
+  EXPECT_EQ(header->fwd_cnt, 0u);
+
+  // Read from socket.
+  size_t actual_len = 0;
+  uint8_t actual_data[3] = {};
+  ASSERT_EQ(
+      connection.socket.read(0, actual_data, sizeof(actual_data), &actual_len),
+      ZX_OK);
+  ASSERT_EQ(2u, actual_len);
+  ASSERT_EQ('a', actual_data[0]);
+  ASSERT_EQ('b', actual_data[1]);
+
+  // Request credit update, expect 2 fwd_cnt bytes as the data has been
+  // extracted from the socket.
+  header = GetCreditUpdate();
+  EXPECT_EQ(header->op, VIRTIO_VSOCK_OP_CREDIT_UPDATE);
+  EXPECT_GT(header->buf_alloc, 0u);
+  EXPECT_EQ(header->fwd_cnt, 2u);
 }
 
 TEST_F(VirtioVsockTest, WriteSocketFullDropBytes) {

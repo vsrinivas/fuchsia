@@ -76,6 +76,7 @@ class VirtioVsock
 
     uint16_t op = 0;
     uint32_t flags = 0;
+    uint32_t rx_cnt = 0;
     zx::socket socket;
     zx::socket remote_socket;
     async::Wait rx_wait;

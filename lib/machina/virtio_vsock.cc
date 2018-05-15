@@ -289,7 +289,7 @@ void VirtioVsock::OnSocketReady(async_t* async, async::Wait* wait,
   }
 }
 
-static zx_status_t set_credit(virtio_vsock_hdr_t* header,
+static zx_status_t set_credit(virtio_vsock_hdr_t* header, uint32_t rx_cnt,
                               const zx::socket& socket) {
   size_t max = 0;
   zx_status_t status =
@@ -302,8 +302,9 @@ static zx_status_t set_credit(virtio_vsock_hdr_t* header,
   if (status != ZX_OK) {
     return status;
   }
+
   header->buf_alloc = max;
-  header->fwd_cnt = used;
+  header->fwd_cnt = rx_cnt - used;
   return ZX_OK;
 }
 
@@ -334,6 +335,19 @@ void VirtioVsock::Mux(zx_status_t status, uint16_t index) {
   }
 }
 
+static bool op_requires_credit(uint32_t op) {
+  switch (op) {
+    case VIRTIO_VSOCK_OP_REQUEST:
+    case VIRTIO_VSOCK_OP_RESPONSE:
+    case VIRTIO_VSOCK_OP_RW:
+    case VIRTIO_VSOCK_OP_CREDIT_UPDATE:
+    case VIRTIO_VSOCK_OP_CREDIT_REQUEST:
+      return true;
+    default:
+      return false;
+  }
+}
+
 zx_status_t VirtioVsock::SendMessageForConnectionLocked(
     const ConnectionKey& key, Connection* conn, uint16_t index,
     uint32_t* used) {
@@ -361,27 +375,32 @@ zx_status_t VirtioVsock::SendMessageForConnectionLocked(
     FXL_LOG(ERROR) << "Receive was shutdown";
   }
 
+  if (op_requires_credit(conn->op)) {
+    zx_status_t status = set_credit(header, conn->rx_cnt, conn->socket);
+    if (status != ZX_OK) {
+      conn->op = VIRTIO_VSOCK_OP_RST;
+      FXL_LOG(ERROR) << "Failed to set credit";
+    }
+  }
+
   switch (conn->op) {
     case VIRTIO_VSOCK_OP_REQUEST: {
       // We are sending a connection request, therefore we move to waiting
       // for response.
-      zx_status_t status = WaitOnQueueLocked(key, &writable_, &tx_stream_);
-      if (status == ZX_OK) {
-        status = set_credit(header, conn->socket);
-      }
       conn->op = VIRTIO_VSOCK_OP_RESPONSE;
-      return status;
+      return WaitOnQueueLocked(key, &writable_, &tx_stream_);
     }
     case VIRTIO_VSOCK_OP_RESPONSE:
       // We are sending a connection response, therefore we move to ready to
       // read/write.
+      conn->op = VIRTIO_VSOCK_OP_RW;
       WaitOnSocketLocked(ZX_OK, key, &conn->tx_wait);
-      // fallthrough
+      return ZX_OK;
     case VIRTIO_VSOCK_OP_CREDIT_UPDATE: {
       // We are sending a credit update, therefore we move to ready to
       // read/write.
       conn->op = VIRTIO_VSOCK_OP_RW;
-      return set_credit(header, conn->socket);
+      return ZX_OK;
     }
     case VIRTIO_VSOCK_OP_RW: {
       // We are reading from the socket.
@@ -524,6 +543,7 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
           uint32_t len = std::min(desc.len, header->len);
           size_t actual;
           status = conn->socket.write(0, desc.addr, len, &actual);
+          conn->rx_cnt += actual;
           header->len -= actual;
           if (status != ZX_OK) {
             // NOTE: this drops some bytes in this data payload. Since we send
