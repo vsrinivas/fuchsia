@@ -140,7 +140,7 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
   fidl::SynchronousInterfacePtr<ledger_internal::LedgerController> controller_;
 };
 
-TEST_F(LedgerEndToEndTest, PutAndGet) {
+TEST_F(LedgerEndToEndTest, DISABLED_PutAndGet) {
   Init({});
   ledger::Status status;
   fidl::SynchronousInterfacePtr<ledger_internal::LedgerRepository>
