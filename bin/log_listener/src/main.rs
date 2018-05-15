@@ -13,6 +13,7 @@ extern crate futures;
 
 use app::client::connect_to_service;
 use failure::{Error, ResultExt};
+use fidl::encoding2::OutOfLine;
 use futures::future::ok as fok;
 use std::collections::HashMap;
 use std::env;
@@ -232,21 +233,24 @@ where
     }
 }
 
-fn run_log_listener(mut options: Option<Box<LogFilterOptions>>) -> Result<(), Error> {
+fn run_log_listener(options: Option<&mut LogFilterOptions>) -> Result<(), Error> {
     let mut executor = async::Executor::new().context("Error creating executor")?;
     let logger = connect_to_service::<LogMarker>()?;
     let (log_listener_local, log_listener_remote) = zx::Channel::create()?;
     let log_listener_local = async::Channel::from_channel(log_listener_local)?;
-    let mut listener_ptr =
+    let listener_ptr =
         fidl::endpoints2::ClientEnd::<LogListenerMarker>::new(log_listener_remote);
+
+    let options = options.map(OutOfLine);
     logger
-        .listen(&mut listener_ptr, &mut options)
+        .listen(listener_ptr, options)
         .context("failed to register listener")?;
 
     let l = Listener {
         dropped_logs: HashMap::new(),
         writer: stdout(),
     };
+
     let listener_fut = log_listener(l).serve(log_listener_local);
     executor
         .run_singlethreaded(listener_fut)
@@ -259,7 +263,7 @@ fn main() {
         println!("{}\n", help(args[0].as_ref()));
         return;
     }
-    let options = match parse_flags(&args[1..]) {
+    let mut options = match parse_flags(&args[1..]) {
         Err(e) => {
             eprintln!("{}\n{}\n", e, help(args[0].as_ref()));
             return;
@@ -267,7 +271,7 @@ fn main() {
         Ok(o) => o,
     };
 
-    if let Err(e) = run_log_listener(Some(Box::new(options))) {
+    if let Err(e) = run_log_listener(Some(&mut options)) {
         eprintln!("LogListener: Error: {:?}", e);
     }
 }

@@ -60,8 +60,8 @@ fn main_res() -> Result<(), Error> {
     let (s, p) = zx::Channel::create().context("failed to create zx channel")?;
     let proxy = async::Channel::from_channel(p).context("failed to make async channel")?;
 
-    let mut loader_server = fidl::endpoints2::ServerEnd::<netsvc::UrlLoaderMarker>::new(s);
-    net.create_url_loader(&mut loader_server)?;
+    let loader_server = fidl::endpoints2::ServerEnd::<netsvc::UrlLoaderMarker>::new(s);
+    net.create_url_loader(loader_server)?;
 
     // Send the UrlRequest to fetch the webpage
     let mut req = netsvc::UrlRequest {

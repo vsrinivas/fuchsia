@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use async;
+use fidl::encoding2::OutOfLine;
 use fidl_bluetooth;
 use fidl_bluetooth_control::{Control, ControlImpl};
 use futures::{Future, FutureExt, Never};
@@ -58,9 +59,9 @@ pub fn make_control_service(
         get_active_adapter_info: |state, res| {
             let rstate = state.read();
             let mut hd = rstate.host.read();
-            let adap = hd.get_active_adapter_info();
+            let mut adap = hd.get_active_adapter_info();
 
-            res.send(&mut adap.map(|a| Box::new(a)))
+            res.send(adap.as_mut().map(OutOfLine))
                 .into_future()
                 .recover(|e| eprintln!("error sending response: {:?}", e))
         },

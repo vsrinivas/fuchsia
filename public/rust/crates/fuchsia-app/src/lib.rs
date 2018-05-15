@@ -86,7 +86,7 @@ pub mod client {
 
 
             self.app_launcher
-                .create_application(&mut launch_info, &mut Some(controller_server_end.into()))
+                .create_application(&mut launch_info, Some(controller_server_end.into()))
                 .context("Failed to start a new Fuchsia application.")?;
 
             let app_controller = async::Channel::from_channel(app_controller)?;

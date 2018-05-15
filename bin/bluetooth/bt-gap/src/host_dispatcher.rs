@@ -266,7 +266,7 @@ fn add_adapter(
             let host_adapter =
                 AdapterProxy::from_channel(async::Channel::from_channel(host_local).unwrap());
             let mut host_req = HostAdapterPtr::new(host_remote);
-            host.request_adapter(&mut host_req);
+            host.request_adapter(host_req);
 
             let (del_local, del_remote) = zx::Channel::create().unwrap();
             let del_local = async::Channel::from_channel(del_local).unwrap();
@@ -277,7 +277,7 @@ fn add_adapter(
                     None
                 })
             });
-            host_adapter.set_delegate(&mut adap_delegate);
+            host_adapter.set_delegate(adap_delegate);
 
             // Add to the adapters
             let id = adapter_info.identifier.clone();

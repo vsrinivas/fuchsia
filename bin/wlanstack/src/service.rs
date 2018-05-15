@@ -6,6 +6,7 @@ use async;
 use device::{self, DevMgrRef};
 use failure::Error;
 use fidl;
+use fidl::encoding2::OutOfLine;
 use futures::future::{self, FutureResult};
 use futures::{Future, FutureExt, Never, StreamExt};
 use wlan_service::{self, DeviceService, DeviceServiceControlHandle, DeviceServiceImpl};
@@ -56,9 +57,9 @@ pub fn device_service(
                 catch_and_log_err("query_phy", || match res {
                     Ok(info) => c.send(
                         zx::Status::OK.into_raw(),
-                        &mut Some(Box::new(wlan_service::QueryPhyResponse { info })),
+                        Some(OutOfLine(&mut wlan_service::QueryPhyResponse { info })),
                     ),
-                    Err(e) => c.send(e.into_raw(), &mut None),
+                    Err(e) => c.send(e.into_raw(), None),
                 })
             })
         },
@@ -79,11 +80,11 @@ pub fn device_service(
                     catch_and_log_err("create_iface", || match res {
                         Ok(id) => c.send(
                             zx::Status::OK.into_raw(),
-                            &mut Some(Box::new(wlan_service::CreateIfaceResponse { iface_id: id })),
+                            Some(OutOfLine(&mut wlan_service::CreateIfaceResponse { iface_id: id })),
                         ),
                         Err(e) => {
                             error!("could not create iface: {:?}", e);
-                            c.send(e.into_raw(), &mut None)
+                            c.send(e.into_raw(), None)
                         }
                     })
                 })

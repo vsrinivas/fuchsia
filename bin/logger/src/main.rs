@@ -351,6 +351,7 @@ mod tests {
     use super::*;
     use std::sync::atomic::{AtomicBool, Ordering};
 
+    use fidl::encoding2::OutOfLine;
     use fidl_logger::{LogFilterOptions, LogListener, LogListenerImpl, LogListenerMarker, LogProxy,
                       LogSinkProxy};
     use logger::fx_log_packet_t;
@@ -471,18 +472,21 @@ mod tests {
     }
 
     fn setup_listener(
-        ll: LogListenerState, lp: LogProxy, mut filter_options: Option<Box<LogFilterOptions>>,
+        ll: LogListenerState, lp: LogProxy, filter_options: Option<&mut LogFilterOptions>,
         dump_logs: bool,
     ) {
         let (remote, local) = zx::Channel::create().expect("failed to create zx channel");
-        let mut remote_ptr = fidl::endpoints2::ClientEnd::<LogListenerMarker>::new(remote);
+        let remote_ptr = fidl::endpoints2::ClientEnd::<LogListenerMarker>::new(remote);
         let local = async::Channel::from_channel(local).expect("failed to make async channel");
         spawn_log_listener(ll, local);
+
+        let filter_options = filter_options.map(OutOfLine);
+
         if dump_logs {
-            lp.dump_logs(&mut remote_ptr, &mut filter_options)
+            lp.dump_logs(remote_ptr, filter_options)
                 .expect("failed to register listener");
         } else {
-            lp.listen(&mut remote_ptr, &mut filter_options)
+            lp.listen(remote_ptr, filter_options)
                 .expect("failed to register listener");
         }
     }
@@ -533,11 +537,11 @@ mod tests {
     }
 
     fn test_log_manager_helper(test_dump_logs: bool) {
-        let (mut executor, log_proxy, log_sink_proxy, sin, mut sout) = setup_test();
+        let (mut executor, log_proxy, log_sink_proxy, sin, sout) = setup_test();
         let mut p = setup_default_packet();
         sin.write(to_u8_slice(&mut p)).unwrap();
         log_sink_proxy
-            .connect(&mut sout)
+            .connect(sout)
             .expect("unable to connect");
         p.metadata.severity = LogLevelFilter::Info.into_primitive().into();
         sin.write(to_u8_slice(&mut p)).unwrap();
@@ -602,13 +606,13 @@ mod tests {
 
     fn filter_test_helper(
         expected: Vec<LogMessage>, packets: Vec<fx_log_packet_t>,
-        filter_options: Option<Box<LogFilterOptions>>, test_name: &str,
+        filter_options: Option<&mut LogFilterOptions>, test_name: &str,
     ) {
         println!("DEBUG: {}: setup test", test_name);
-        let (mut executor, log_proxy, log_sink_proxy, sin, mut sout) = setup_test();
+        let (mut executor, log_proxy, log_sink_proxy, sin, sout) = setup_test();
         println!("DEBUG: {}: call connect", test_name);
         log_sink_proxy
-            .connect(&mut sout)
+            .connect(sout)
             .expect("unable to connect");
         let done = Arc::new(AtomicBool::new(false));
         let ls = LogListenerState {
@@ -659,7 +663,7 @@ mod tests {
                     msg: String::from("BBBBB"),
                     tags: vec![String::from("AAAAA")],
                 };
-                let options = Box::new(LogFilterOptions {
+                let options = &mut LogFilterOptions {
                     filter_by_pid: true,
                     pid: 1,
                     filter_by_tid: false,
@@ -667,7 +671,7 @@ mod tests {
                     min_severity: LogLevelFilter::None,
                     verbosity: 0,
                     tags: vec![],
-                });
+                };
                 filter_test_helper(vec![lm], vec![p, p2], Some(options), "test_filter_by_pid");
             },
             TEST_TIMEOUT,
@@ -691,7 +695,7 @@ mod tests {
                     msg: String::from("BBBBB"),
                     tags: vec![String::from("AAAAA")],
                 };
-                let options = Box::new(LogFilterOptions {
+                let options = &mut LogFilterOptions {
                     filter_by_pid: false,
                     pid: 1,
                     filter_by_tid: true,
@@ -699,7 +703,7 @@ mod tests {
                     min_severity: LogLevelFilter::None,
                     verbosity: 0,
                     tags: vec![],
-                });
+                };
                 filter_test_helper(vec![lm], vec![p, p2], Some(options), "test_filter_by_tid");
             },
             TEST_TIMEOUT,
@@ -724,7 +728,7 @@ mod tests {
                     msg: String::from("BBBBB"),
                     tags: vec![String::from("AAAAA")],
                 };
-                let options = Box::new(LogFilterOptions {
+                let options = &mut LogFilterOptions {
                     filter_by_pid: false,
                     pid: 1,
                     filter_by_tid: false,
@@ -732,7 +736,7 @@ mod tests {
                     min_severity: LogLevelFilter::Error,
                     verbosity: 0,
                     tags: vec![],
-                });
+                };
                 filter_test_helper(
                     vec![lm],
                     vec![p, p2],
@@ -764,7 +768,7 @@ mod tests {
                     msg: String::from("BBBBB"),
                     tags: vec![String::from("AAAAA")],
                 };
-                let options = Box::new(LogFilterOptions {
+                let options = &mut LogFilterOptions {
                     filter_by_pid: true,
                     pid: 0,
                     filter_by_tid: false,
@@ -772,7 +776,7 @@ mod tests {
                     min_severity: LogLevelFilter::Error,
                     verbosity: 0,
                     tags: vec![],
-                });
+                };
                 filter_test_helper(
                     vec![lm],
                     vec![p, p2, p3],
@@ -818,7 +822,7 @@ mod tests {
                     msg: String::from("CCCCC"),
                     tags: vec![String::from("AAAAA"), String::from("BBBBB")],
                 };
-                let options = Box::new(LogFilterOptions {
+                let options = &mut LogFilterOptions {
                     filter_by_pid: false,
                     pid: 1,
                     filter_by_tid: false,
@@ -826,7 +830,7 @@ mod tests {
                     min_severity: LogLevelFilter::None,
                     verbosity: 0,
                     tags: vec![String::from("BBBBB"), String::from("DDDDD")],
-                });
+                };
                 filter_test_helper(
                     vec![lm1, lm2],
                     vec![p, p2],

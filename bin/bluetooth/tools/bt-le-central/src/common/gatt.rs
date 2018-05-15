@@ -312,8 +312,8 @@ fn do_connect(args: Vec<&str>, client: GattClientPtr) -> impl Future<Item = (), 
             println!("Failed to connect to remote service");
             Left(future::err(BluetoothError::new().into()))
         }
-        Ok((proxy, mut server)) => {
-            if let Err(_) = client.read().proxy.connect_to_service(svc_id, &mut server) {
+        Ok((proxy, server)) => {
+            if let Err(_) = client.read().proxy.connect_to_service(svc_id, server) {
                 println!("Failed to connect to remote service");
                 return Left(future::err(BluetoothError::new().into()));
             }

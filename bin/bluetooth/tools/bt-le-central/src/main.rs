@@ -20,6 +20,7 @@ extern crate parking_lot;
 
 use ble::{CentralDelegateMarker, CentralMarker, CentralProxy, ScanFilter};
 use failure::{Error, Fail, ResultExt};
+use fidl::encoding2::OutOfLine;
 use futures::future;
 use futures::prelude::*;
 use getopts::Options;
@@ -90,21 +91,21 @@ fn do_scan(args: &[String], central: &CentralProxy)
     let name = matches.opt_str("n");
 
     let mut filter = if uuids.is_some() || name.is_some() {
-        Some(Box::new(ScanFilter {
+        Some(ScanFilter {
             service_uuids: uuids,
             service_data_uuids: None,
             manufacturer_identifier: None,
             connectable: None,
             name_substring: name,
             max_path_loss: None,
-        }))
+        })
     } else {
         None
     };
 
     let fut = Box::new(
         central
-            .start_scan(&mut filter)
+            .start_scan(filter.as_mut().map(OutOfLine))
             .map_err(|e| e.context("failed to initiate scan").into())
             .and_then(|status| match status.error {
                 None => Ok(()),
@@ -127,11 +128,11 @@ fn do_connect(args: &[String], central: &CentralProxy) -> Box<Future<Item = (), 
         }
         Ok(x) => x,
     };
-    let mut server_end = fidl::endpoints2::ServerEnd::<gatt::ClientMarker>::new(remote);
+    let server_end = fidl::endpoints2::ServerEnd::<gatt::ClientMarker>::new(remote);
 
     Box::new(
         central
-            .connect_peripheral(&mut args[0].clone(), &mut server_end)
+            .connect_peripheral(&mut args[0].clone(), server_end)
             .map_err(|e| e.context("failed to connect to peripheral").into())
             .and_then(|status| match status.error {
                 None => Ok(()),
@@ -170,8 +171,8 @@ fn main() -> Result<(), Error> {
         "failed to make async channel",
     )?;
 
-    let mut remote_end = fidl::endpoints2::ClientEnd::<CentralDelegateMarker>::new(remote);
-    central_svc.set_delegate(&mut remote_end).context(
+    let remote_end = fidl::endpoints2::ClientEnd::<CentralDelegateMarker>::new(remote);
+    central_svc.set_delegate(remote_end).context(
         "failed to register delegate",
     )?;
 

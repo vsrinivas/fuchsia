@@ -81,9 +81,9 @@ impl App {
         if url.scheme() == "file" {
             let file = File::open(url.path())?;
             let mut channel = channel_from_file(file)?;
-            player.set_file_source(&mut channel)?;
+            player.set_file_source(channel)?;
         } else {
-            player.set_http_source(&mut url.into_string())?;
+            player.set_http_source(url.as_str())?;
         }
         player.play()?;
 

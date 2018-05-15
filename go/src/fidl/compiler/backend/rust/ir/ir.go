@@ -420,17 +420,11 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 		if val.Nullable {
 			r = fmt.Sprintf("Option<%s>", r)
 		}
-		if borrowed {
-			r = fmt.Sprintf("&mut %s", r)
-		}
 	case types.RequestType:
 		r = c.compileCamelCompoundIdentifier(val.RequestSubtype)
 		r = fmt.Sprintf("fidl::endpoints2::ServerEnd<%sMarker>", r)
 		if val.Nullable {
 			r = fmt.Sprintf("Option<%s>", r)
-		}
-		if borrowed {
-			r = fmt.Sprintf("&mut %s", r)
 		}
 	case types.PrimitiveType:
 		// Primitive types are small, simple, and never contain handles,
@@ -454,9 +448,17 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 			fallthrough
 		case types.UnionDeclType:
 			if val.Nullable {
-				r = fmt.Sprintf("Option<Box<%s>>", t)
+				if borrowed {
+					r = fmt.Sprintf("Option<fidl::encoding2::OutOfLine<%s>>", t)
+				} else {
+					r = fmt.Sprintf("Option<Box<%s>>", t)
+				}
 			} else {
-				r = t
+				if borrowed {
+					r = fmt.Sprintf("&mut %s", t)
+				} else {
+					r = t
+				}
 			}
 		case types.InterfaceDeclType:
 			r = fmt.Sprintf("fidl::endpoints2::ClientEnd<%sMarker>", t)
@@ -465,9 +467,6 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 			}
 		default:
 			log.Fatal("Unknown declaration type: ", declType)
-		}
-		if borrowed {
-			r = fmt.Sprintf("&mut %s", r)
 		}
 	default:
 		log.Fatal("Unknown type kind: ", val.Kind)

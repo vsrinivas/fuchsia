@@ -1042,6 +1042,32 @@ handle_based_codable![
 /// implementations for `Option<Box<Self>>`.
 pub trait Autonull: Encodable + Decodable {}
 
+/// A wrapper for FIDL types that will cause them to be encoded
+/// or decoded from the out-of-line buffer rather than inline.
+pub struct OutOfLine<'a, T: 'a>(pub &'a mut T);
+
+impl<'a, T: Autonull> Encodable for Option<OutOfLine<'a, T>> {
+    fn inline_align(&self) -> usize {
+        fidl2_inline_align!(u64)
+    }
+    fn inline_size(&self) -> usize {
+        fidl2_inline_size!(u64)
+    }
+    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+        match self {
+            Some(OutOfLine(inner)) => {
+                ALLOC_PRESENT_U64.encode(encoder)?;
+                encoder.write_out_of_line(
+                    inner.inline_size(),
+                    |encoder| inner.encode(encoder))
+            }
+            None => {
+                ALLOC_ABSENT_U64.encode(encoder)
+            }
+        }
+    }
+}
+
 impl<T: Autonull> Encodable for Option<Box<T>> {
     fn inline_align(&self) -> usize {
         fidl2_inline_align!(u64)

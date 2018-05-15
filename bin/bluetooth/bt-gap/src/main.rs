@@ -69,10 +69,10 @@ fn main() -> Result<(), Error> {
         .add_service((CentralMarker::NAME, move |chan: async::Channel| {
             trace!("Connecting Control Service to Adapter");
             if let Some(adap) = central_hd.write().get_active_adapter() {
-                let mut remote = ServerEnd::<CentralMarker>::new(chan.into());
+                let remote = ServerEnd::<CentralMarker>::new(chan.into());
                 adap.lock()
                     .get_host()
-                    .request_low_energy_central(&mut remote);
+                    .request_low_energy_central(remote);
             }
         }))
         .add_service((PeripheralMarker::NAME, move |chan: async::Channel| {
@@ -81,14 +81,14 @@ fn main() -> Result<(), Error> {
                 let mut remote = ServerEnd::<PeripheralMarker>::new(chan.into());
                 adap.lock()
                     .get_host()
-                    .request_low_energy_peripheral(&mut remote);
+                    .request_low_energy_peripheral(remote);
             }
         }))
         .add_service((Server_Marker::NAME, move |chan: async::Channel| {
             trace!("Connecting Gatt Service to Adapter");
             if let Some(adap) = gatt_hd.write().get_active_adapter() {
-                let mut remote = ServerEnd::<Server_Marker>::new(chan.into());
-                adap.lock().get_host().request_gatt_server_(&mut remote);
+                let remote = ServerEnd::<Server_Marker>::new(chan.into());
+                adap.lock().get_host().request_gatt_server_(remote);
             }
         }))
         .start()
