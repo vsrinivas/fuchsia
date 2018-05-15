@@ -2,8 +2,5 @@
 <manifest>
   <imports>
     <localimport file="minimal"/>
-    <import remote="https://fuchsia.googlesource.com/manifest"
-            manifest="build"
-            name="manifest"/>
   </imports>
 </manifest>
