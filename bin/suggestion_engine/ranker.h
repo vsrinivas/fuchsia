@@ -21,6 +21,9 @@ class Ranker {
   // returns the confidence that would be the new suggestion.confidence.
   virtual double Rank(
       const UserInput& query, const RankedSuggestion& suggestion) = 0;
+
+  // Ranks a suggestion without any query input.
+  double Rank(const RankedSuggestion& suggestion);
 };
 
 }  // namespace modular

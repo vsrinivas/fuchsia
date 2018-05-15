@@ -7,8 +7,8 @@
 
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include <modular/cpp/fidl.h>
-#include "peridot/bin/suggestion_engine/ranked_suggestions_list.h"
-#include "peridot/bin/suggestion_engine/suggestion_prototype.h"
+#include "peridot/bin/suggestion_engine/decision_policy.h"
+#include "peridot/bin/suggestion_engine/ranked_suggestion.h"
 
 namespace modular {
 
@@ -23,15 +23,24 @@ class InterruptionsProcessor {
   InterruptionsProcessor();
   ~InterruptionsProcessor();
 
+  // Ranker that will be used to know if a suggestion should interrupt.
+  void SetDecisionPolicy(
+      std::unique_ptr<DecisionPolicy> ranker);
+
+  // Add listener that will be notified when an interruption comes.
   void RegisterListener(fidl::InterfaceHandle<InterruptionListener> listener);
-  bool ConsiderSuggestion(const SuggestionPrototype& prototype);
+
+  // Based on ranker confidence, dispatch an interruption for the given
+  // suggestion
+  bool MaybeInterrupt(const RankedSuggestion& suggestion);
 
  private:
-  bool IsInterruption(const SuggestionPrototype& prototype);
   void DispatchInterruption(InterruptionListener* const listener,
-                            const SuggestionPrototype& prototype);
+                            const RankedSuggestion& ranked_suggestion);
 
   fidl::InterfacePtrSet<InterruptionListener> listeners_;
+
+  std::unique_ptr<DecisionPolicy> decision_policy_;
 };
 
 }  // namespace modular

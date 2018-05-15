@@ -73,9 +73,11 @@ void RankedSuggestionsList::Rank(const UserInput& query) {
 }
 
 void RankedSuggestionsList::AddSuggestion(SuggestionPrototype* prototype) {
-  std::unique_ptr<RankedSuggestion> ranked_suggestion =
-      std::make_unique<RankedSuggestion>();
-  ranked_suggestion->prototype = prototype;
+  suggestions_.push_back(RankedSuggestion::New(prototype));
+}
+
+void RankedSuggestionsList::AddSuggestion(
+    std::unique_ptr<RankedSuggestion> ranked_suggestion) {
   suggestions_.push_back(std::move(ranked_suggestion));
 }
 

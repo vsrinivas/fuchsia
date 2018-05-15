@@ -32,6 +32,8 @@ class RankedSuggestionsList {
 
   void AddSuggestion(SuggestionPrototype* const prototype);
 
+  void AddSuggestion(std::unique_ptr<RankedSuggestion> ranked_suggestion);
+
   // Returns |true| if and only if the suggestion was present and is removed.
   bool RemoveProposal(const std::string& component_url,
                       const std::string& proposal_id);

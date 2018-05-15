@@ -10,4 +10,8 @@ Ranker::Ranker() = default;
 
 Ranker::~Ranker() = default;
 
+double Ranker::Rank(const RankedSuggestion& suggestion) {
+  return Rank(UserInput(), suggestion);
+}
+
 }  // namespace modular

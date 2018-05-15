@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/suggestion_engine/interruptions_processor.h"
-
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 
 namespace modular {
@@ -16,27 +15,26 @@ void InterruptionsProcessor::RegisterListener(
   listeners_.AddInterfacePtr(listener.Bind());
 }
 
-bool InterruptionsProcessor::ConsiderSuggestion(
-    const SuggestionPrototype& prototype) {
-  // TODO(jwnichols): Implement a real interruption pipeline here
-  if (IsInterruption(prototype)) {
+void InterruptionsProcessor::SetDecisionPolicy(
+    std::unique_ptr<DecisionPolicy> decision_policy) {
+  decision_policy_ = std::move(decision_policy);
+}
+
+bool InterruptionsProcessor::MaybeInterrupt(
+    const RankedSuggestion& suggestion) {
+  if (decision_policy_->Accept(suggestion)) {
     for (auto& listener : listeners_.ptrs()) {
-      DispatchInterruption(listener->get(), prototype);
+      DispatchInterruption(listener->get(), suggestion);
     }
     return true;
   }
   return false;
 }
 
-bool InterruptionsProcessor::IsInterruption(
-    const SuggestionPrototype& prototype) {
-  return prototype.proposal.display.annoyance != AnnoyanceType::NONE;
-}
-
 void InterruptionsProcessor::DispatchInterruption(
     InterruptionListener* const listener,
-    const SuggestionPrototype& prototype) {
-  Suggestion suggestion = CreateSuggestion(prototype);
+    const RankedSuggestion& ranked_suggestion) {
+  Suggestion suggestion = CreateSuggestion(ranked_suggestion);
   suggestion.confidence = kMaxConfidence;
   listener->OnInterrupt(std::move(suggestion));
 }

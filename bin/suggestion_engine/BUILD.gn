@@ -58,6 +58,7 @@ source_set("suggestion_engine_impl") {
 
   deps = [
     ":debug",
+    ":decision_policies",
     ":interruptions",
     ":models",
     ":ranking",
@@ -79,7 +80,22 @@ group("unittests") {
   testonly = true
 
   deps = [
+    ":decision_policy_unittest",
     ":ranking_unittest",
+  ]
+}
+
+source_set("decision_policies") {
+  sources = [
+    "decision_policy.cc",
+    "decision_policy.h",
+    "decision_policies/rank_over_threshold_decision_policy.cc",
+    "decision_policies/rank_over_threshold_decision_policy.h",
+  ]
+
+  deps = [
+    ":models",
+    ":rankers",
   ]
 }
 
@@ -90,9 +106,9 @@ source_set("interruptions") {
   ]
 
   deps = [
+    ":decision_policies",
     ":models",
     ":ranking_features",
-    ":state",
     "//peridot/public/lib:fidl",
   ]
 }
@@ -123,6 +139,8 @@ source_set("ranking_features") {
   sources = [
     "ranking_feature.cc",
     "ranking_feature.h",
+    "ranking_features/annoyance_ranking_feature.cc",
+    "ranking_features/annoyance_ranking_feature.h",
     "ranking_features/focused_story_ranking_feature.cc",
     "ranking_features/focused_story_ranking_feature.h",
     "ranking_features/kronk_ranking_feature.cc",
@@ -224,10 +242,26 @@ source_set("debug") {
   ]
 }
 
+source_set("decision_policy_unittest") {
+  testonly = true
+
+  sources = [
+    "decision_policies/rank_over_threshold_decision_policy_unittest.cc",
+  ]
+
+  deps = [
+    ":rankers",
+    ":decision_policies",
+    "//garnet/public/lib/gtest",
+    "//peridot/public/lib:fidl",
+  ]
+}
+
 source_set("ranking_unittest") {
   testonly = true
 
   sources = [
+    "ranking_features/annoyance_ranking_feature_unittest.cc",
     "ranking_features/focused_story_ranking_feature_unittest.cc",
     "ranking_features/kronk_ranking_feature_unittest.cc",
     "ranking_features/mod_pair_ranking_feature_unittest.cc",

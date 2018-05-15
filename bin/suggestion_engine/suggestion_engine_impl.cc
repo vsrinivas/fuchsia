@@ -15,8 +15,10 @@
 #include "lib/fxl/time/time_point.h"
 
 #include "peridot/bin/suggestion_engine/auto_select_first_query_listener.h"
+#include "peridot/bin/suggestion_engine/decision_policies/rank_over_threshold_decision_policy.h"
 #include "peridot/bin/suggestion_engine/rankers/linear_ranker.h"
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
+#include "peridot/bin/suggestion_engine/ranking_features/annoyance_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/focused_story_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/kronk_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/mod_pair_ranking_feature.h"
@@ -190,6 +192,8 @@ void SuggestionEngineImpl::RegisterRankingFeatures() {
       std::make_shared<QueryMatchRankingFeature>();
   ranking_features["focused_story_rf"] =
       std::make_shared<FocusedStoryRankingFeature>();
+  ranking_features["annoyance_rf"] =
+      std::make_shared<AnnoyanceRankingFeature>();
 
   // Get context updates every time a story is focused to rerank suggestions
   // based on the story that is focused at the moment.
@@ -221,6 +225,13 @@ void SuggestionEngineImpl::RegisterRankingFeatures() {
   query_ranker->AddRankingFeature(0, ranking_features["mod_pairs_rf"]);
   query_ranker->AddRankingFeature(0, ranking_features["query_match_rf"]);
   query_processor_.SetRanker(std::move(query_ranker));
+
+  // Set up the interrupt ranking features
+  auto interrupt_ranker = std::make_unique<LinearRanker>();
+  interrupt_ranker->AddRankingFeature(1.0, ranking_features["annoyance_rf"]);
+  auto decision_policy = std::make_unique<RankOverThresholdDecisionPolicy>(
+      std::move(interrupt_ranker));
+  next_processor_.SetInterruptionDecisionPolicy(std::move(decision_policy));
 }
 
 void SuggestionEngineImpl::PerformActions(

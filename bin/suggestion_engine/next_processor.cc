@@ -42,7 +42,6 @@ void NextProcessor::RegisterInterruptionListener(
   interruptions_processor_.RegisterListener(std::move(listener));
 }
 
-
 void NextProcessor::AddProposal(const std::string& component_url,
                                 Proposal proposal) {
   NotifyOfProcessingChange(true);
@@ -50,16 +49,17 @@ void NextProcessor::AddProposal(const std::string& component_url,
   // If one already exists, remove it before adding the new one.
   RemoveProposal(component_url, proposal.id);
 
-  auto suggestion = CreateSuggestionPrototype(
+  auto prototype = CreateSuggestionPrototype(
       &prototypes_, component_url, std::move(proposal));
+  auto ranked_suggestion = RankedSuggestion::New(prototype);
 
-  // TODO(jwnichols): Think more deeply about the intersection between the
-  // interruption and next pipelines
-  if (interruptions_processor_.ConsiderSuggestion(*suggestion)) {
-    debug_->OnInterrupt(suggestion);
+  // TODO(miguelfrde): Make NextProcessor not depend on InterruptionsProcessor.
+  if (interruptions_processor_.MaybeInterrupt(*ranked_suggestion)) {
+    debug_->OnInterrupt(prototype);
+    return;
   }
 
-  suggestions_.AddSuggestion(suggestion);
+  suggestions_.AddSuggestion(std::move(ranked_suggestion));
   UpdateRanking();
 }
 
@@ -85,6 +85,11 @@ void NextProcessor::RemoveProposalFromList(const std::string& component_url,
 
 void NextProcessor::SetRanker(std::unique_ptr<Ranker> ranker) {
   suggestions_.SetRanker(std::move(ranker));
+}
+
+void NextProcessor::SetInterruptionDecisionPolicy(
+    std::unique_ptr<DecisionPolicy> decision_policy) {
+  interruptions_processor_.SetDecisionPolicy(std::move(decision_policy));
 }
 
 RankedSuggestion* NextProcessor::GetSuggestion(

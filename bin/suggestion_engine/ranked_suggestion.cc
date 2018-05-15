@@ -6,6 +6,14 @@
 
 namespace modular {
 
+std::unique_ptr<RankedSuggestion> RankedSuggestion::New(
+    SuggestionPrototype* prototype) {
+  std::unique_ptr<RankedSuggestion> ranked_suggestion =
+      std::make_unique<RankedSuggestion>();
+  ranked_suggestion->prototype = prototype;
+  return ranked_suggestion;
+}
+
 Suggestion CreateSuggestion(const RankedSuggestion& suggestion_data) {
   Suggestion suggestion = CreateSuggestion(*suggestion_data.prototype);
   suggestion.confidence = suggestion_data.confidence;

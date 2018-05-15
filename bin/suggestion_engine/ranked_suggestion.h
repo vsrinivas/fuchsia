@@ -16,6 +16,8 @@ namespace modular {
 struct RankedSuggestion {
   SuggestionPrototype* prototype;
   double confidence;
+
+  static std::unique_ptr<RankedSuggestion> New(SuggestionPrototype* prototype);
 };
 
 Suggestion CreateSuggestion(const RankedSuggestion& suggestion_data);

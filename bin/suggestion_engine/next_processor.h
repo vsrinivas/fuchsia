@@ -12,6 +12,7 @@
 #include <modular/cpp/fidl.h>
 
 #include "peridot/bin/suggestion_engine/debug.h"
+#include "peridot/bin/suggestion_engine/decision_policy.h"
 #include "peridot/bin/suggestion_engine/interruptions_processor.h"
 #include "peridot/bin/suggestion_engine/proposal_publisher_impl.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestion.h"
@@ -43,6 +44,8 @@ class NextProcessor {
                       const std::string& proposal_id);
 
   void SetRanker(std::unique_ptr<Ranker> ranker);
+
+  void SetInterruptionDecisionPolicy(std::unique_ptr<DecisionPolicy> ranker);
 
   // Gets a suggestion stored in the processor.
   RankedSuggestion* GetSuggestion(const std::string& suggestion_id) const;
