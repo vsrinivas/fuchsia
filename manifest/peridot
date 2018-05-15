@@ -6,6 +6,6 @@
     <import remote="https://fuchsia.googlesource.com/garnet"
             manifest="manifest/garnet"
             name="garnet"
-            revision="5b7a8fac515829fb87fee793a7d863a4fe36f481"/>
+            revision="3ad0c8e83df7bdbea4eea435741a1c6f149f5e26"/>
   </imports>
 </manifest>
