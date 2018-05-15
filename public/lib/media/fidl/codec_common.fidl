@@ -1,0 +1,469 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library media_codec;
+
+// Value
+//
+// Generic "value" for use within generic "Parameter" struct.
+union Value {
+  bool bool_value;
+  uint64 uint64_value;
+  int64 int64_value;
+  string string_value;
+  // Prefer using codec_oob_bytes instead.
+  vector<uint8> bytes_value;
+};
+
+// Parameter
+//
+// Generic parameter.
+//
+// We want to minimize use of this generic "Parameter" structure by natively
+// defining as many codec-specific parameter semantics as we can.
+//
+// TODO: When possible, describe the very limited scenarios in which it would
+// still be reasonable to use a generic Parameter.
+struct Parameter {
+  // Some indication of the scope of applicability of this Parameter.
+  string namespace;
+  // Specific name of this parameter, without the namespace prefix.
+  string name;
+  // The particular value of this parameter.
+  Value value;
+};
+
+// CodecFormatDetails
+//
+// The purpose of CodecFormatDetails is to fill in additional details not
+// conveyed via other means.
+//
+// TODO(dustingreen): Where at all possible, definitions for the concepts
+// within CodecFormatDetails should go in media_types.fidl or another location
+// that's widely shared.  Maybe some encoder settings could remain
+// codec-specific.
+//
+// For decoders input, the format details tend to be fairly sparse, since most
+// compressed formats tend to be mostly self-describing.
+//
+// For decoder output and encoder input, the format details need to include all
+// the out-of-band information regarding the uncompressed data, which tends not
+// to be self-describing.
+//
+// For encoder output, we also include in CodecFormatDetails some additional
+// encoding parameters which are needed to configure the encoder. These are not
+// really needed by any downstream decoder under most circumstances, but these
+// encoder config settings are legitimate optional format details, so we use
+// the same overall structure, but name them "Encoder" to make it more obvious
+// that these are mostly relevant to the encoder.  A downstream consumer could
+// potentially benefit from knowing these settings, but most won't look at them.
+//
+// Settings that are completely redundant with the data in the format itself
+// should not be in a required field here.  Some encoder parameters may also be
+// represented in codec_oob_bytes on the output of an encoder - a downstream
+// consumer can assume the codec_oob_bytes are correct and not check for whether
+// encoder settings are present or consistent.
+//
+// With some exceptions made for encoder settings on output of an encoder, this
+// stuff should be limited to things we need to know to properly process the
+// data which we can't already determine from the data itself, and which isn't
+// already covered by a format's defined OOB binary config blob, which is
+// conveyed in codec_oob_bytes.
+//
+// TODO(dustingreen): Consider whether to split encoder settings into a
+// separate struct - the main counter-argument would be if a consumer
+// immediately downstream of an encoder may have good reason to know encoder
+// settings to help process the data.  For example, the nominal bit-rate.
+
+// Compressed formats tend to be much more self-describing than uncompressed
+// formats.  (The "self" in "self-describing" includes the codec_oob_bytes.)
+//
+// Most decoders can have CodecFormatDetails.domain null.
+
+// AudioCompressedFormat
+//
+// Format details relevant to compressed audio, mostly for encoder settings.
+//
+// Unless otherwise specified in a comment on a field in this structure,
+// CodecFormatDetails.domain is null for a decoder.  A sub-structure whose name
+// ends in "Encoder" is for encoder output settings.
+//
+// TODO(dustingreen): Consider whether splitting encoder settings out separately
+// would be better.
+union AudioCompressedFormat {
+  // For an aac encoder, this field has settings the encoder needs which are
+  // specific to AAC encoding.
+  AudioCompressedFormatAacEncoder aac;
+};
+
+enum AudioBitrateMode {
+  // Used mainly when a client is configuring an encoder's output format.  May
+  // also be present in an OnOutputConfig() message from an encoder, but should
+  // not be relied upon to be present by any consumer downstream of an encoder.
+  UNSPECIFIED = 0;
+  CBR = 1;
+  VBR = 2;
+};
+
+// AudioCompressedFormatAacEncoder
+//
+// Encoder settings for an AAC encoder.
+struct AudioCompressedFormatAacEncoder {
+  // In SetOutputConfig():
+  //
+  // If zero, an encoder should generate 256 kbps, and a consumer should not
+  // assume any particular bitrate.
+  //
+  // If not zero, the encoder should not exceed this bitrate.  In CBR the
+  // encoder should use the highest available bitrate that doesn't exceed this
+  // value, or if there is no such bitrate, the lowest available bitrate.  In
+  // VBR, the encoder should stay at or below this bitrate.
+  //
+  // In VBR it's left up to the encoder to choose a reasonable ratio between
+  // max bits per second and min bits per second, with the aim in VBR being
+  // constant perceived quality.
+  //
+  // In OnOutputConfig():
+  //
+  // In CBR, the nominal bits per second.  In VBR, the nominal max bits per
+  // second.
+  uint32 bits_per_second;
+
+  // In SetOutputConfig():
+  //
+  // If UNSPECIFIED, up to the encoder.  If CBR or VBR, a hint to the encoder
+  // to use that mode.
+  //
+  // In OnOutputConfig():
+  //
+  // Actual mode being used.  UNSPECIFIED means the source is not specifying
+  // which mode.
+  AudioBitrateMode bitrate_mode;
+
+  // TODO(dustingreen): AAC profile settings.
+};
+
+// AudioPcmMode
+//
+// TODO(dustingreen): Keep or discard any non-linear formats for purposes of the
+// Codec interface?
+enum AudioPcmMode {
+  // 16 bit signed int linear or 32 bit float linear, for now
+  // 1-N channels ok, with "A.B" channels designated as A+B channel_count - the
+  // channel map is separately specified.  So 5.1 becomes channel_count 6.
+  LINEAR = 0;
+  // G.711 8 bit format-defined waveform semantics
+  // 1 channel
+  ALAW = 1;
+  // G.711 8 bit format-defined waveform semantics
+  // 1 channel
+  MULAW = 2;
+};
+
+// AudioChannelId
+//
+// Used in specifying which audio channel is for which speaker location / type.
+//
+// TODO(dustingreen): Do we need more channel IDs than this?
+//
+// TODO(dustingreen): Check with mpuryear@ re. naming consistency for "S" vs.
+// "R" as we move these to a common definition.  Also the ordering of LS/RS vs.
+// LR/RR - probably LR/RR being first would make more sense re. how channels
+// get added incrementally, but changing the order would no longer match
+// Android's ordering.
+enum AudioChannelId {
+  SKIP = 0; // unused channel
+  LF = 1;   // left front
+  RF = 2;   // right front
+  CF = 3;   // center front
+  LS = 4;   // left surround
+  RS = 5;   // right surround
+  LFE = 6;  // low frequency effects
+  CS = 7;   // back surround
+  LR = 8;   // left rear
+  RR = 9;   // right rear
+  // This is the last explicitly-defined value + 1.  This name will be
+  // re-defined in future if we add more defined channel IDs above.
+  END_DEFINED = 10;
+  // This is where format-specific (or ad-hoc) channel ID values should go, to
+  // avoid colliding with any additional values allocated above.  The values
+  // here are not guaranteed to avoid collision across different formats.
+  EXTENDED_CHANNEL_ID_BASE = 0x6f000000;
+  // Extended channel IDs should be <= Max.
+  MAX = 0x7fffffff;
+};
+
+// PcmFormat
+//
+// PCM audio format details.
+//
+// TODO(dustingreen): Discuss with mpuryear@ re. where definitions for these
+// details go and make sure the common details can specify at least this much.
+struct PcmFormat {
+  // Implicit details:
+  //   * For bits_per_sample > 8, host-endian is implied.
+  //   * At least for now, for channel_count >= 2, interleaved layout is
+  //     implied.
+
+  AudioPcmMode pcm_mode;
+
+  // bits_per_sample
+  //
+  // A "sample" is for a single channel.
+  //
+  // For example, CD quality is 16.  See PcmMode comments, as the mode
+  // constrains this value.
+  uint32 bits_per_sample;
+
+  // frames_per_second
+  //
+  // A "frame" is one datapoint (one "sample") for each channel.  Each channel
+  // is sampled this many times per second.  For example, CD quality is 44100.
+  uint32 frames_per_second;
+
+  // channel_map
+  //
+  // channel_map.size() is the channel count.  See PcmMode comments, as some
+  // modes constrain the channel count to 1.
+  //
+  // Values from AudioChannelId should be used if they are suitable.
+  //
+  // If a channel has no suitable AudioChannelId, an ad-hoc value can be used in
+  // a range starting from AudioChannel_ExtendedChannelIdBase.
+  vector<AudioChannelId>:16 channel_map;
+
+  // TODO(dustingreen): Add unsigned 8 bit, float 32 bit, maybe others. FWIW,
+  // AOSP appears to support signed 16 bit, unsigned 8 bit, and float 32 bit
+  // under "Pcm", AFAICT based on OMX_NUMERICALDATATYPE and ACodec.cpp code.
+};
+
+// AudioUncompressedFormat
+//
+// Uncompressed audio format details.
+union AudioUncompressedFormat {
+  PcmFormat pcm;
+};
+
+// AudioFormat
+//
+// Audio format details.
+union AudioFormat {
+  AudioCompressedFormat compressed;
+  AudioUncompressedFormat uncompressed;
+};
+
+// VideoCompressedFormat
+//
+// Compressed video format details.
+//
+// Mostly encoder settings will go under here.
+//
+// If a compressed video format is missing any fields here other than encoder
+// settings, it's because it's a good format and is already self-describing
+// given the mime_type + format-defined codec_oob_bytes as appropriate +
+// in-band data.
+union VideoCompressedFormat {
+  // TODO(dustingreen): Any compressed video formats that aren't sufficiently
+  // self-describing to select and create a Codec instance to decode it?
+
+  // TODO(dustingreen): temp field to make the compiler happy until we have at
+  // least one real field.
+  uint32 temp_field_todo_remove;
+};
+
+// VideoUncompressedFormatSpecificDetails
+//
+// Extended format-specific uncompressed video format details.
+union VideoUncompressedFormatSpecificDetails {
+  // TODO(dustingreen): Which formats that we care about really require special
+  // format-specific details here?
+
+  // TODO(dustingreen): temp field to make the compiler happy until we have at
+  // least one real field.
+  uint32 temp_field_todo_remove;
+};
+
+enum VideoColorSpace {
+  // TODO(dustingreen): add to this list
+  INVALID = 0;
+};
+
+// VideoUncompressedFormat
+//
+// Uncompressed video format details.
+//
+// TODO(dustingreen): Integrate with a system-wide structure for this purpose.
+struct VideoUncompressedFormat {
+  // fourcc
+  //
+  // A human-readable fourcc like RGBA should be 0x41424752 in the fourcc field
+  // (regardless of host endian-ness). Note that the R (first character) of the
+  // fourcc is in the low-order byte of this fourcc field.
+  //
+  // There are some fourcc codes that don't format nicely as a string.  While I
+  // don't foresee any use of any of the purely numeric fourcc codes (not
+  // corresponding to packed ascii character values), those would be stored
+  // such that their numeric value has it's low-order byte in the low-order
+  // byte of this fourcc value.  So a fourcc with "hex value" 0x00000001 would
+  // have the numeric value 1 in this field.
+  //
+  // The endian-ness of fourcc values stored in files or in network packets is
+  // outside the scope of these comments, other than to state that regardless
+  // of the source of the fourcc code and the order that storage / transmission
+  // format stores these bytes, a human-readable fourcc should have its
+  // human-read first ascii character value in the low order byte of this
+  // field.
+  uint32 fourcc;
+
+  // For formats with different planes having different resolution, this is the
+  // resolution of the highest-resolution plane(s).  Else it's the resolution
+  // of all the planes.
+  uint32 primary_width_pixels;
+  uint32 primary_height_pixels;
+
+  // For formats where the seconary planes are the same resolution, these fields
+  // will be the same as primary_width_pixels and primary_height_pixels.  For
+  // formats with smaller secondary resolutions, these indicate that resolution.
+  uint32 secondary_width_pixels;
+  uint32 secondary_height_pixels;
+
+  // Planar means the various planes are separately stored in their own chunks
+  // of memory.
+  bool planar;
+
+  // If a format is swizzled, the swizzling parameters are not directly here.
+  bool swizzled;
+
+  uint32 primary_line_stride_bytes;
+  // Formats with the same stride for all planes will have this field equal to
+  // primary_line_stride_bytes.
+  uint32 secondary_line_stride_bytes;
+
+  // R or Y
+  uint32 primary_start_offset;
+  // G or U
+  uint32 secondary_start_offset;
+  // B or V
+  uint32 tertiary_start_offset;
+
+  uint32 primary_pixel_stride;
+  // For formats with the same pixel stride for all planes, this field will be
+  // equal to primary_pixel_stride.
+  uint32 secondary_pixel_stride;
+
+  // TODO(dustingreen): Currently this assumes 8 bits per channel, but we'll
+  // need fields to indicate more bits per pixel such as 10 or 12 bits per
+  // pixel.  Also, potentially a way to indicate different number of bits per
+  // channel for 565 16 bit RGB + packing details.  Also, potentially
+  // endian-ness.
+  //
+  // TODO(dustingreen): Also, an easy way to get a template
+  // VideoUncompressedFormat that's pre-populated with reasonably-plausible
+  // values, based on a fourcc or enum value + maybe primary resolution.
+
+  VideoUncompressedFormatSpecificDetails special_formats;
+};
+
+// VideoFormat
+//
+// Video (compress or uncompressed) format details.
+union VideoFormat {
+  VideoCompressedFormat compressed;
+  VideoUncompressedFormat uncompressed;
+};
+
+// DomainFormat
+//
+// Domain-specific format details (audio or video, compressed or uncompressed).
+union DomainFormat {
+  AudioFormat audio;
+  VideoFormat video;
+};
+
+const uint64 kMaxCodecOobBytesSize = 8192;
+
+// CodecFormatDetails
+//
+// This describes/details the format on input or output of a codec (separate
+// instances for input vs. output).
+struct CodecFormatDetails {
+  // Particular instances of CodecFormatDetails will set this field to make it
+  // easier for a receiver to determine if any part of the format has changed
+  // vs. the last CodecFormatDetails received for the same context.
+  uint64 format_details_version_ordinal;
+
+  // Mime types used by particular decoders / encoders so far:
+  //
+  // AAC decoder:
+  //   * input:
+  //     * audio/aac-adts - ATDS AAC; self-contained
+  //     * audio/aac - AAC ES with AudioSpecificConfig() in codec_oob_bytes.
+  //   * output:
+  //     * audio/raw - stereo linear 16 bit integer PCM
+  //
+  // TODO(dustingreen): avoid requiring codec_oob_bytes when using SoftAAC2.cpp.
+  string mime_type;
+
+  // Some codecs have their own binary codec configuration structure.  For those
+  // codecs we allow that binary structure to be directly conveyed to the codec
+  // here.
+  //
+  // audio/aac - this is an AudioSpecificConfig().
+  // audio/aac-adts - this is not set.
+  // TODO(dustingreen): make the audio/aac-adts statement true soon
+  //
+  // For some formats whose "ES" data format is self-contained, or for which
+  // there is no format-defined binary OOB config, this is null.
+  //
+  // A server can close the channel if the count of bytes is >
+  // kMaxCodecOobBytesSize or is larger than makes any sense for the codec.  If
+  // any codec actually needs more than kMaxCodecOobBytesSize bytes here, we
+  // could potentially increase this restriction some, but this interface isn't
+  // designed to support codec OOB config blobs that approach
+  // ZX_CHANNEL_MAX_MSG_BYTES.
+  vector<uint8>? codec_oob_bytes;
+
+  // Decoder input format:
+  //
+  // If a format is not self-describing given the mime_type and a
+  // format-spec-defined codec_oob_bytes, this domain field can be set to
+  // provide the additional compressed-format-specific details.  This is
+  // expected to be fairly rare, so most compressed input formats will have
+  // only the mime_type and possibly codec_oob_bytes set, with domain typically
+  // null.  If an encoder is upstream however, domain may be set to convey the
+  // encoder settings that were used, but a decoder consumer doesn't need to
+  // look at those.
+  //
+  // Encoder output format:
+  //
+  // The encoder's compressed data output typically needs some configuration
+  // (provided in this field) that's convenient to provide in a form that's not
+  // codec_oob_bytes, and the codec can convert that config to codec_oob_bytes
+  // on encoder output via OnOutputConfig().  We retain these encoder settings
+  // in the output CodecFormatDetails to allow for cases where a downstream
+  // consumer knowing the encoder settings could be useful.
+  //
+  // TODO(dustingreen): Decide if we want to retain this, or if we'd prefer to
+  // split out config settings and maybe only represent a few encoder settings
+  // as best-effort optional aux data, like bitrate.
+  //
+  // Encoder input format / decoder output format:
+  //
+  // This field contains fairly detailed information re. uncompressed data
+  // format details, which tends to _not_ be self-describing in-band.
+  DomainFormat? domain;
+
+  // See comments above on Parameter.  At the time we lock relevant FIDL
+  // interfaces, there should be zero use of this field outside tests, but this
+  // is here in case we need to allow a codec client to convey additional config
+  // parameters to/from a codec which we didn't anticipate before locking.
+  //
+  // If there are any known "official" exceptions to the previous paragraph,
+  // we'll list them here by corresponding mime_type (none so far):
+  //   * "<mime_type>" - <usage_description>
+  //
+  // For codecs that define their own codec-specific config/OOB data, put that
+  // in codec_oob_bytes above instead of this field.
+  vector<Parameter>? pass_through_parameters;
+};
