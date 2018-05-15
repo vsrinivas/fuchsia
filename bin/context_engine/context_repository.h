@@ -97,16 +97,14 @@ class ContextRepository {
 
   // Does not take ownership of |listener|. |listener| must remain valid until
   // RemoveSubscription() is called with the returned Id.
-  Id AddSubscription(ContextQuery query,
-                     ContextListener* listener,
+  Id AddSubscription(ContextQuery query, ContextListener* listener,
                      SubscriptionDebugInfo debug_info);
   void RemoveSubscription(Id id);
 
   // Like AddSubscription above, but takes ownership of the FIDL service proxy
   // object, |listener|. The subscription is automatically removed when
   // |listener| experiences a connection error.
-  void AddSubscription(ContextQuery query,
-                       ContextListenerPtr listener,
+  void AddSubscription(ContextQuery query, ContextListenerPtr listener,
                        SubscriptionDebugInfo debug_info);
 
   ContextDebugImpl* debug();

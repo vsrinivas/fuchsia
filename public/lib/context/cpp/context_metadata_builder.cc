@@ -9,7 +9,8 @@
 namespace maxwell {
 
 ContextMetadataBuilder::ContextMetadataBuilder() {}
-ContextMetadataBuilder::ContextMetadataBuilder(modular::ContextMetadata initial_value)
+ContextMetadataBuilder::ContextMetadataBuilder(
+    modular::ContextMetadata initial_value)
     : m_(std::move(initial_value)) {}
 
 ContextMetadataBuilder& ContextMetadataBuilder::SetStoryId(
@@ -20,8 +21,9 @@ ContextMetadataBuilder& ContextMetadataBuilder::SetStoryId(
 ContextMetadataBuilder& ContextMetadataBuilder::SetStoryFocused(bool focused) {
   auto& story_meta = StoryMetadata();
   story_meta->focused = modular::FocusedState::New();
-  story_meta->focused->state = focused ?
-      modular::FocusedStateState::FOCUSED : modular::FocusedStateState::NOT_FOCUSED;
+  story_meta->focused->state = focused
+                                   ? modular::FocusedStateState::FOCUSED
+                                   : modular::FocusedStateState::NOT_FOCUSED;
   return *this;
 }
 
@@ -69,10 +71,10 @@ modular::ContextMetadataPtr ContextMetadataBuilder::BuildPtr() {
   return meta;
 }
 
-#define ENSURE_MEMBER(field, class_name)    \
-  if (!m_.field) {                          \
-    m_.field = modular::class_name::New();  \
-  }                                         \
+#define ENSURE_MEMBER(field, class_name)   \
+  if (!m_.field) {                         \
+    m_.field = modular::class_name::New(); \
+  }                                        \
   return m_.field;
 
 modular::StoryMetadataPtr& ContextMetadataBuilder::StoryMetadata() {

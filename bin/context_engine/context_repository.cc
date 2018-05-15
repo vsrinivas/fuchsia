@@ -101,8 +101,7 @@ ContextRepository::Id CreateSubscriptionId() {
 }
 
 void LogInvalidAncestorMetadata(const ContextMetadata& from,
-                                ContextMetadata* to,
-                                const char* type) {
+                                ContextMetadata* to, const char* type) {
   FXL_LOG(WARNING) << "Context value and ancestor both have metadata type ("
                    << type
                    << "), which is not allowed. Ignoring value metadata.";
@@ -251,8 +250,7 @@ ContextUpdate ContextRepository::Query(const ContextQuery& query) {
 }
 
 ContextRepository::Id ContextRepository::AddSubscription(
-    ContextQuery query,
-    ContextListener* const listener,
+    ContextQuery query, ContextListener* const listener,
     SubscriptionDebugInfo debug_info) {
   // Add the subscription to our list.
   Subscription subscription;
@@ -275,15 +273,14 @@ ContextRepository::Id ContextRepository::AddSubscription(
 void ContextRepository::AddSubscription(ContextQuery query,
                                         ContextListenerPtr listener,
                                         SubscriptionDebugInfo debug_info) {
-  auto id = AddSubscription(std::move(query), listener.get(), std::move(debug_info));
+  auto id =
+      AddSubscription(std::move(query), listener.get(), std::move(debug_info));
   listener.set_error_handler([this, id] { RemoveSubscription(id); });
   // RemoveSubscription() above is responsible for freeing this memory.
   subscriptions_[id].listener_storage = std::move(listener);
 }
 
-ContextDebugImpl* ContextRepository::debug() {
-  return debug_.get();
-}
+ContextDebugImpl* ContextRepository::debug() { return debug_.get(); }
 
 void ContextRepository::AddDebugBinding(
     fidl::InterfaceRequest<ContextDebug> request) {

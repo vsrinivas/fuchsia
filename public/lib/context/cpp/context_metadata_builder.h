@@ -18,7 +18,8 @@ class ContextMetadataBuilder {
   ContextMetadataBuilder& SetStoryFocused(bool focused);
 
   ContextMetadataBuilder& SetModuleUrl(const fidl::StringPtr& url);
-  ContextMetadataBuilder& SetModulePath(const fidl::VectorPtr<fidl::StringPtr>& path);
+  ContextMetadataBuilder& SetModulePath(
+      const fidl::VectorPtr<fidl::StringPtr>& path);
 
   ContextMetadataBuilder& SetEntityTopic(const fidl::StringPtr& topic);
   ContextMetadataBuilder& AddEntityType(const fidl::StringPtr& type);
