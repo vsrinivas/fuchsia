@@ -4,10 +4,21 @@
     <localimport file="minimal"/>
   </imports>
   <projects>
-    <!-- Third Party -->
+    <project name="third_party/mako"
+             path="third_party/mako"
+             remote="https://fuchsia.googlesource.com/third_party/mako"
+             gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/python/mock"
              path="third_party/python/mock"
              remote="https://fuchsia.googlesource.com/third_party/python/testing-cabal/mock"
+             gerrithost="https://fuchsia-review.googlesource.com"/>
+    <project name="third_party/pytoml"
+             path="third_party/pytoml"
+             remote="https://fuchsia.googlesource.com/third_party/pytoml"
+             gerrithost="https://fuchsia-review.googlesource.com"/>
+    <project name="third_party/pyyaml"
+             path="third_party/pyyaml"
+             remote="https://fuchsia.googlesource.com/third_party/pyyaml"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/rapidjson"
              path="third_party/rapidjson"
