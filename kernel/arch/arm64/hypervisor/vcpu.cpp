@@ -27,6 +27,7 @@
 
 static constexpr uint32_t kGichHcrEn = 1u << 0;
 static constexpr uint32_t kGichHcrUie = 1u << 1;
+static constexpr uint32_t kGichMisrU = 1u << 1;
 static constexpr uint32_t kSpsrDaif = 0b1111 << 6;
 static constexpr uint32_t kSpsrEl1h = 0b0101;
 static constexpr uint32_t kSpsrNzcv = 0b1111 << 28;
@@ -79,6 +80,13 @@ static bool gich_active_interrupts(GichState* gich_state) {
         gich_state->active_interrupts.SetOne(vector);
     }
     return lr_limit > 0;
+}
+
+static VcpuMeta vmexit_interrupt_ktrace_meta(uint32_t misr) {
+    if ((misr & kGichMisrU) != 0) {
+        return VCPU_UNDERFLOW_MAINTENANCE_INTERRUPT;
+    }
+    return VCPU_PHYSICAL_INTERRUPT;
 }
 
 AutoGich::AutoGich(GichState* gich_state)
@@ -186,6 +194,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     zx_status_t status;
     do {
         uint64_t curr_hcr = hcr_;
+        uint32_t misr = 0;
         if (gich_maybe_interrupt(&gich_state_) || force_virtual_interrupt) {
             curr_hcr |= HCR_EL2_VI;
             force_virtual_interrupt = false;
@@ -214,6 +223,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
             // Interrupt Controller, Architecture Specification, 5.3.4 Maintenance Interrupt
             // Status Register, GICH_MISR. Description of U bit in GICH_MISR.
             if ((gich_hcr & kGichHcrUie) != 0) {
+                misr = gic_read_gich_misr();
                 gic_write_gich_hcr(gich_hcr & ~kGichHcrUie);
             }
         }
@@ -222,7 +232,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
             // We received a physical interrupt. If it was due to the thread
             // being killed, then we should exit with an error, otherwise return
             // to the guest.
-            ktrace_vcpu(TAG_VCPU_EXIT, VCPU_PHYSICAL_INTERRUPT);
+            ktrace_vcpu(TAG_VCPU_EXIT, vmexit_interrupt_ktrace_meta(misr));
             status = thread_->signals & THREAD_SIGNAL_KILL ? ZX_ERR_CANCELED : ZX_OK;
             // If there were active interrupts when the physical interrupt
             // occurred, raise a virtual interrupt when we re-enter the guest.

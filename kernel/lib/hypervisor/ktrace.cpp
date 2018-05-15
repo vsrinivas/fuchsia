@@ -10,6 +10,7 @@
 
 static const char* const vcpu_meta[] = {
 #if ARCH_ARM64
+    [VCPU_UNDERFLOW_MAINTENANCE_INTERRUPT] = "exit:underflow_maintenance_interrupt",
     [VCPU_PHYSICAL_INTERRUPT] = "exit:physical_interrupt",
     [VCPU_WFI_WFE_INSTRUCTION] = "exit:wfi_wfe_instruction",
     [VCPU_SMC_INSTRUCTION] = "exit:smc_instruction",
