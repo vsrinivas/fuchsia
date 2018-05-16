@@ -185,10 +185,12 @@ public:
             WriteEvent(&test_run_string,
                        GetTimestamp(run, 0),
                        GetTimestamp(run + 1, 0));
-            for (uint32_t step = 0; step < step_count_; ++step) {
-                WriteEvent(&test_step_string,
-                           GetTimestamp(run, step),
-                           GetTimestamp(run, step + 1));
+            if (step_count_ > 1) {
+                for (uint32_t step = 0; step < step_count_; ++step) {
+                    WriteEvent(&test_step_string,
+                               GetTimestamp(run, step),
+                               GetTimestamp(run, step + 1));
+                }
             }
         }
         WriteEvent(&test_teardown_string,
