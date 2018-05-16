@@ -31,15 +31,15 @@ GuestControllerImpl::GuestControllerImpl(
       });
 }
 
-void GuestControllerImpl::FetchGuestMemory(FetchGuestMemoryCallback callback) {
+void GuestControllerImpl::GetPhysicalMemory(GetPhysicalMemoryCallback callback) {
   callback(duplicate(vmo_, ZX_RIGHT_SAME_RIGHTS));
 }
 
-void GuestControllerImpl::FetchGuestSerial(FetchGuestSerialCallback callback) {
+void GuestControllerImpl::GetSerial(GetSerialCallback callback) {
   callback(duplicate(client_socket_, ZX_RIGHT_SAME_RIGHTS));
 }
 
-void GuestControllerImpl::FetchViewProvider(
+void GuestControllerImpl::GetViewProvider(
     fidl::InterfaceRequest<views_v1::ViewProvider> request) {
   if (view_provider_ != nullptr) {
     view_provider_bindings_.AddBinding(view_provider_, std::move(request));

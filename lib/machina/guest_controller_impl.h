@@ -27,13 +27,13 @@ class GuestControllerImpl : public guest::GuestController {
 
   // Extracts the socket handle to be used for the host end of serial
   // communication. The other end of this socket will be provided to clients
-  // via |FetchGuestSerial|.
+  // via |GetSerial|.
   zx::socket TakeSocket() { return fbl::move(server_socket_); }
 
   // |guest::GuestController|
-  void FetchGuestMemory(FetchGuestMemoryCallback callback) override;
-  void FetchGuestSerial(FetchGuestSerialCallback callback) override;
-  void FetchViewProvider(
+  void GetPhysicalMemory(GetPhysicalMemoryCallback callback) override;
+  void GetSerial(GetSerialCallback callback) override;
+  void GetViewProvider(
       fidl::InterfaceRequest<views_v1::ViewProvider> view_provider) override;
 
  private:

@@ -35,7 +35,7 @@ void handle_launch(int argc, const char* argv[]) {
 
   // Create the framebuffer view.
   views_v1::ViewProviderSyncPtr view_provider;
-  guest_controller->FetchViewProvider(view_provider.NewRequest());
+  guest_controller->GetViewProvider(view_provider.NewRequest());
   fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner;
   view_provider->CreateView(view_owner.NewRequest(), nullptr);
 
@@ -47,7 +47,7 @@ void handle_launch(int argc, const char* argv[]) {
   // Open the serial service of the guest and process IO.
   zx::socket socket;
   SerialConsole console(&loop);
-  guest_controller->FetchGuestSerial(
+  guest_controller->GetSerial(
       [&console](zx::socket socket) { console.Start(std::move(socket)); });
   loop.Run();
 }

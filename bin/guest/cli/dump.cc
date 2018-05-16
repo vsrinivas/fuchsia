@@ -46,7 +46,7 @@ void handle_dump(uint32_t env_id, uint32_t cid, zx_vaddr_t addr, size_t len) {
 
   // Fetch the VMO and dump.
   zx::vmo vmo;
-  guest_controller->FetchGuestMemory(&vmo);
+  guest_controller->GetPhysicalMemory(&vmo);
   if (vmo) {
     dump(std::move(vmo), addr, len);
   }

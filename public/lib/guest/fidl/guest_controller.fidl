@@ -10,13 +10,13 @@ using views_v1;
 [Discoverable]
 interface GuestController {
   // Fetch a read-only VMO that represents the physical memory of the guest.
-  1: FetchGuestMemory() -> (handle<vmo> vmo);
+  1: GetPhysicalMemory() -> (handle<vmo> vmo);
 
   // Fetch a socket for the primary serial device of the guest. The details
   // regarding what output is produced and what input is accepted are determined
   // by each guest.
-  2: FetchGuestSerial() -> (handle<socket> socket);
+  2: GetSerial() -> (handle<socket> socket);
 
   // Fetch the guest display view provider.
-  3: FetchViewProvider(request<views_v1.ViewProvider> view_provider);
+  3: GetViewProvider(request<views_v1.ViewProvider> view_provider);
 };

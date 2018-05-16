@@ -134,7 +134,7 @@ void handle_serial(uint32_t env_id, uint32_t cid) {
 
   // Open the serial service of the guest and process IO.
   zx::socket socket;
-  guest_controller->FetchGuestSerial(&socket);
+  guest_controller->GetSerial(&socket);
   if (!socket) {
     std::cerr << "Failed to open serial port\n";
     return;
