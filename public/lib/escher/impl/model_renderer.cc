@@ -43,16 +43,10 @@ ModelRenderer::ModelRenderer(Escher* escher, ModelDataPtr model_data)
 ModelRenderer::~ModelRenderer() {}
 
 ModelDisplayListPtr ModelRenderer::CreateDisplayList(
-    const Stage& stage,
-    const Model& model,
-    const Camera& camera,
-    const ModelRenderPassPtr& render_pass,
-    ModelDisplayListFlags flags,
-    float scale,
-    const TexturePtr& shadow_texture,
-    const mat4& shadow_matrix,
-    vec3 ambient_light_color,
-    vec3 direct_light_color,
+    const Stage& stage, const Model& model, const Camera& camera,
+    const ModelRenderPassPtr& render_pass, ModelDisplayListFlags flags,
+    float scale, const TexturePtr& shadow_texture, const mat4& shadow_matrix,
+    vec3 ambient_light_color, vec3 direct_light_color,
     CommandBuffer* command_buffer) {
   TRACE_DURATION("gfx", "escher::ModelRenderer::CreateDisplayList",
                  "object_count", model.objects().size());
@@ -129,7 +123,7 @@ void ModelRenderer::Draw(const Stage& stage,
                          const Camera::Viewport& viewport) {
   TRACE_DURATION("gfx", "escher::ModelRenderer::Draw");
 
-  vk::CommandBuffer vk_command_buffer = command_buffer->get();
+  vk::CommandBuffer vk_command_buffer = command_buffer->vk();
 
   for (const TexturePtr& texture : display_list->textures()) {
     // TODO: it would be nice if Resource::TakeWaitSemaphore() were virtual

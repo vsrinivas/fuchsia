@@ -63,9 +63,6 @@ class Image : public WaitableResource {
   // Offset of the Image within its GpuMem.
   vk::DeviceSize memory_offset() const { return mem_offset_; }
 
-  // TODO(ES-44): Deprecated.  Use vk() instead.
-  vk::Image get() const { return image_; }
-
  protected:
   // Constructor.  In some cases it is necessary to wrap an un-owned vk::Image,
   // which should not be destroyed when this Image is destroyed (e.g. when

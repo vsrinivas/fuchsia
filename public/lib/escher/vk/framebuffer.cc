@@ -16,29 +16,19 @@ const ResourceTypeInfo Framebuffer::kTypeInfo("Framebuffer",
                                               ResourceType::kResource,
                                               ResourceType::kFramebuffer);
 
-Framebuffer::Framebuffer(Escher* escher,
-                         ImagePtr color_image,
+Framebuffer::Framebuffer(Escher* escher, ImagePtr color_image,
                          vk::RenderPass render_pass)
-    : Framebuffer(escher,
-                  color_image->width(),
-                  color_image->height(),
-                  std::vector<ImagePtr>{std::move(color_image)},
-                  render_pass) {}
+    : Framebuffer(escher, color_image->width(), color_image->height(),
+                  std::vector<ImagePtr>{std::move(color_image)}, render_pass) {}
 
-Framebuffer::Framebuffer(Escher* escher,
-                         ImagePtr color_image,
-                         ImagePtr depth_image,
-                         vk::RenderPass render_pass)
+Framebuffer::Framebuffer(Escher* escher, ImagePtr color_image,
+                         ImagePtr depth_image, vk::RenderPass render_pass)
     : Framebuffer(
-          escher,
-          color_image->width(),
-          color_image->height(),
+          escher, color_image->width(), color_image->height(),
           std::vector<ImagePtr>{std::move(color_image), std::move(depth_image)},
           render_pass) {}
 
-Framebuffer::Framebuffer(Escher* escher,
-                         uint32_t width,
-                         uint32_t height,
+Framebuffer::Framebuffer(Escher* escher, uint32_t width, uint32_t height,
                          std::vector<ImagePtr> images,
                          vk::RenderPass render_pass)
     : Resource(escher->resource_recycler()),
@@ -60,7 +50,7 @@ Framebuffer::Framebuffer(Escher* escher,
     info.subresourceRange.baseArrayLayer = 0;
     info.subresourceRange.layerCount = 1;
     info.format = im->format();
-    info.image = im->get();
+    info.image = im->vk();
     if (im->has_depth() || im->has_stencil()) {
       if (im->has_depth())
         info.subresourceRange.aspectMask |= vk::ImageAspectFlagBits::eDepth;

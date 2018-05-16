@@ -22,8 +22,6 @@ class PipelineLayout : public fxl::RefCountedThreadSafe<PipelineLayout> {
   ~PipelineLayout();
 
   vk::PipelineLayout vk() const { return layout_; }
-  // TODO(ES-44): Deprecated.  Use vk() instead.
-  vk::PipelineLayout get() const { return layout_; }
 
  private:
   vk::Device device_;

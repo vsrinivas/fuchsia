@@ -19,8 +19,8 @@ MaterialPtr Material::New(vec4 color, TexturePtr texture) {
 void Material::SetTexture(TexturePtr texture) {
   texture_ = texture;
   if (texture) {
-    image_view_ = texture_->image_view();
-    sampler_ = texture_->sampler();
+    image_view_ = texture_->vk_image_view();
+    sampler_ = texture_->vk_sampler();
   } else {
     image_view_ = nullptr;
     sampler_ = nullptr;

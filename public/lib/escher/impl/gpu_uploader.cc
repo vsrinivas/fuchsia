@@ -16,10 +16,8 @@
 namespace escher {
 namespace impl {
 
-GpuUploader::Writer::Writer(BufferPtr buffer,
-                            CommandBuffer* command_buffer,
-                            vk::Queue queue,
-                            vk::DeviceSize size,
+GpuUploader::Writer::Writer(BufferPtr buffer, CommandBuffer* command_buffer,
+                            vk::Queue queue, vk::DeviceSize size,
                             vk::DeviceSize offset)
     : buffer_(std::move(buffer)),
       command_buffer_(command_buffer),
@@ -69,9 +67,7 @@ void GpuUploader::Writer::Submit() {
   has_writes_ = false;
 }
 
-GpuUploader::Writer::~Writer() {
-  FXL_CHECK(!command_buffer_);
-}
+GpuUploader::Writer::~Writer() { FXL_CHECK(!command_buffer_); }
 
 void GpuUploader::Writer::WriteBuffer(const BufferPtr& target,
                                       vk::BufferCopy region,
@@ -83,7 +79,7 @@ void GpuUploader::Writer::WriteBuffer(const BufferPtr& target,
     command_buffer_->AddSignalSemaphore(std::move(semaphore));
   }
   command_buffer_->KeepAlive(target);
-  command_buffer_->get().copyBuffer(buffer_->get(), target->get(), 1, &region);
+  command_buffer_->vk().copyBuffer(buffer_->vk(), target->vk(), 1, &region);
 }
 
 void GpuUploader::Writer::WriteImage(const ImagePtr& target,
@@ -94,9 +90,9 @@ void GpuUploader::Writer::WriteImage(const ImagePtr& target,
 
   command_buffer_->TransitionImageLayout(target, vk::ImageLayout::eUndefined,
                                          vk::ImageLayout::eTransferDstOptimal);
-  command_buffer_->get().copyBufferToImage(buffer_->get(), target->get(),
-                                           vk::ImageLayout::eTransferDstOptimal,
-                                           1, &region);
+  command_buffer_->vk().copyBufferToImage(buffer_->vk(), target->vk(),
+                                          vk::ImageLayout::eTransferDstOptimal,
+                                          1, &region);
   command_buffer_->TransitionImageLayout(
       target, vk::ImageLayout::eTransferDstOptimal,
       vk::ImageLayout::eShaderReadOnlyOptimal);
@@ -112,8 +108,7 @@ void GpuUploader::Writer::WriteImage(const ImagePtr& target,
   command_buffer_->KeepAlive(target);
 }
 
-GpuUploader::GpuUploader(Escher* escher,
-                         CommandBufferPool* command_buffer_pool,
+GpuUploader::GpuUploader(Escher* escher, CommandBufferPool* command_buffer_pool,
                          GpuAllocator* allocator)
     : ResourceRecycler(escher),
       command_buffer_pool_(command_buffer_pool ? command_buffer_pool
@@ -126,9 +121,7 @@ GpuUploader::GpuUploader(Escher* escher,
   FXL_DCHECK(allocator_);
 }
 
-GpuUploader::~GpuUploader() {
-  current_buffer_ = nullptr;
-}
+GpuUploader::~GpuUploader() { current_buffer_ = nullptr; }
 
 GpuUploader::Writer GpuUploader::GetWriter(size_t s) {
   vk::DeviceSize size = s;

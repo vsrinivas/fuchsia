@@ -21,35 +21,24 @@ class Buffer : public WaitableResource {
 
   // Construct an ownerless Buffer.  When the Buffer is destroyed, all resources
   // are immediately freed/destroyed.
-  Buffer(ResourceManager* manager,
-         GpuAllocator* allocator,
-         vk::DeviceSize size,
+  Buffer(ResourceManager* manager, GpuAllocator* allocator, vk::DeviceSize size,
          vk::BufferUsageFlags usage_flags,
          vk::MemoryPropertyFlags memory_property_flags);
 
-  static BufferPtr New(ResourceManager* manager,
-                       GpuAllocator* allocator,
-                       vk::DeviceSize size,
-                       vk::BufferUsageFlags usage_flags,
+  static BufferPtr New(ResourceManager* manager, GpuAllocator* allocator,
+                       vk::DeviceSize size, vk::BufferUsageFlags usage_flags,
                        vk::MemoryPropertyFlags memory_property_flags);
 
-  static BufferPtr New(ResourceManager* manager,
-                       GpuMemPtr mem,
-                       vk::BufferUsageFlags usage_flags,
-                       vk::DeviceSize size,
+  static BufferPtr New(ResourceManager* manager, GpuMemPtr mem,
+                       vk::BufferUsageFlags usage_flags, vk::DeviceSize size,
                        vk::DeviceSize offset = 0);
 
-  Buffer(ResourceManager* manager,
-         GpuMemPtr mem,
-         vk::Buffer buffer,
-         vk::DeviceSize size,
-         vk::DeviceSize offset = 0);
+  Buffer(ResourceManager* manager, GpuMemPtr mem, vk::Buffer buffer,
+         vk::DeviceSize size, vk::DeviceSize offset = 0);
 
   ~Buffer() override;
 
   // Return the underlying Vulkan buffer object.
-  // TODO(ES-44): Deprecated.  Use vk() instead.
-  vk::Buffer get() { return buffer_; }
   vk::Buffer vk() { return buffer_; }
 
   // Return the size of the buffer.

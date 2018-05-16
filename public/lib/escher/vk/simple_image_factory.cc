@@ -18,11 +18,11 @@ SimpleImageFactory::~SimpleImageFactory() {}
 
 ImagePtr SimpleImageFactory::NewImage(const ImageInfo& info) {
   vk::Image image =
-      image_utils::CreateVkImage(resource_manager_->device(), info);
+      image_utils::CreateVkImage(resource_manager_->vk_device(), info);
 
   // Allocate memory and bind it to the image.
   vk::MemoryRequirements reqs =
-      resource_manager_->device().getImageMemoryRequirements(image);
+      resource_manager_->vk_device().getImageMemoryRequirements(image);
   escher::GpuMemPtr memory = allocator_->Allocate(reqs, info.memory_flags);
   ImagePtr escher_image =
       Image::New(resource_manager_, info, image, std::move(memory));

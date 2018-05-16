@@ -10,8 +10,7 @@
 namespace escher {
 namespace impl {
 
-CommandBufferPool::CommandBufferPool(vk::Device device,
-                                     vk::Queue queue,
+CommandBufferPool::CommandBufferPool(vk::Device device, vk::Queue queue,
                                      uint32_t queue_family_index,
                                      CommandBufferSequencer* sequencer,
                                      bool supports_graphics_and_compute)
@@ -65,7 +64,7 @@ CommandBufferPool::~CommandBufferPool() {
     buffers_to_free.reserve(free_buffers_.size());
     while (!free_buffers_.empty()) {
       auto& buf = free_buffers_.front();
-      buffers_to_free.push_back(buf->get());
+      buffers_to_free.push_back(buf->vk());
       device_.destroyFence(buf->fence());
       free_buffers_.pop();
     }

@@ -149,8 +149,8 @@ void WobbleModifierAbsorber::AbsorbWobbleIfAny(Model* model) {
     command_buffer->KeepAlive(compute_buffer);
 
     vk::BufferCopy region(0, 0, vertex_buffer->size());
-    command_buffer->get().copyBuffer(vertex_buffer->get(),
-                                     compute_buffer->get(), 1, &region);
+    command_buffer->vk().copyBuffer(vertex_buffer->vk(), compute_buffer->vk(),
+                                    1, &region);
 
     SemaphorePtr vertex_buffer_ready = vertex_buffer->TakeWaitSemaphore();
     command_buffer->AddWaitSemaphore(vertex_buffer_ready,
@@ -218,17 +218,16 @@ BufferPtr WobbleModifierAbsorber::NewUniformBuffer(vk::DeviceSize size) {
 }
 
 void WobbleModifierAbsorber::ApplyBarrierForUniformBuffer(
-    CommandBuffer* command_buffer,
-    const BufferPtr& buffer_ptr) {
+    CommandBuffer* command_buffer, const BufferPtr& buffer_ptr) {
   vk::BufferMemoryBarrier barrier;
   barrier.srcAccessMask = vk::AccessFlagBits::eHostWrite;
   barrier.dstAccessMask = vk::AccessFlagBits::eUniformRead;
   barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
   barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.buffer = buffer_ptr->get();
+  barrier.buffer = buffer_ptr->vk();
   barrier.offset = 0;
   barrier.size = buffer_ptr->size();
-  command_buffer->get().pipelineBarrier(
+  command_buffer->vk().pipelineBarrier(
       vk::PipelineStageFlagBits::eHost,
       vk::PipelineStageFlagBits::eVertexShader |
           vk::PipelineStageFlagBits::eFragmentShader,

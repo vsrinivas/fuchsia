@@ -19,7 +19,7 @@ ImagePtr Image::New(ResourceManager* image_owner, ImageInfo info,
                     vk::Image vk_image, GpuMemPtr mem,
                     vk::DeviceSize mem_offset, bool bind_image_memory) {
   if (mem && bind_image_memory) {
-    auto bind_result = image_owner->device().bindImageMemory(
+    auto bind_result = image_owner->vk_device().bindImageMemory(
         vk_image, mem->base(), mem->offset() + mem_offset);
     if (bind_result != vk::Result::eSuccess) {
       FXL_DLOG(ERROR) << "vkBindImageMemory failed: "

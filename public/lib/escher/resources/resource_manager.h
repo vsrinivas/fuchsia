@@ -25,7 +25,7 @@ class ResourceManager : public Owner<Resource, ResourceTypeInfo> {
 
   Escher* escher() { return escher_; }
   const VulkanContext& vulkan_context() const { return vulkan_context_; }
-  vk::Device device() const { return vulkan_context_.device; }
+  vk::Device vk_device() const { return vulkan_context_.device; }
 
  private:
   friend class Resource;

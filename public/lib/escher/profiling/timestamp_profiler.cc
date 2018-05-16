@@ -23,7 +23,7 @@ void TimestampProfiler::AddTimestamp(impl::CommandBuffer* cmd_buf,
                                      vk::PipelineStageFlagBits flags,
                                      std::string name) {
   QueryRange* range = ObtainRange(cmd_buf);
-  cmd_buf->get().writeTimestamp(flags, range->pool, current_pool_index_);
+  cmd_buf->vk().writeTimestamp(flags, range->pool, current_pool_index_);
   results_.push_back(Result{0, 0, 0, std::move(name)});
   ++range->count;
   ++current_pool_index_;
@@ -80,7 +80,7 @@ TimestampProfiler::QueryRange* TimestampProfiler::ObtainRange(
     impl::CommandBuffer* cmd_buf) {
   if (ranges_.empty() || current_pool_index_ == kPoolSize) {
     return CreateRangeAndPool(cmd_buf);
-  } else if (ranges_.back().command_buffer != cmd_buf->get()) {
+  } else if (ranges_.back().command_buffer != cmd_buf->vk()) {
     return CreateRange(cmd_buf);
   } else {
     auto range = &ranges_.back();
@@ -104,7 +104,7 @@ TimestampProfiler::QueryRange* TimestampProfiler::CreateRangeAndPool(
 
   QueryRange range;
   range.pool = pool;
-  range.command_buffer = cmd_buf->get();
+  range.command_buffer = cmd_buf->vk();
   range.start_index = 0;
   range.count = 0;
 
@@ -123,7 +123,7 @@ TimestampProfiler::QueryRange* TimestampProfiler::CreateRange(
 
   QueryRange range;
   range.pool = prev.pool;
-  range.command_buffer = cmd_buf->get();
+  range.command_buffer = cmd_buf->vk();
   range.start_index = prev.start_index + prev.count;
   range.count = 0;
   FXL_DCHECK(range.start_index == current_pool_index_);

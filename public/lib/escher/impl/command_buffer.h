@@ -34,8 +34,6 @@ class CommandBuffer {
   ~CommandBuffer();
 
   vk::CommandBuffer vk() const { return command_buffer_; }
-  // TODO(ES-44): Deprecated.  Use vk() instead.
-  vk::CommandBuffer get() const { return command_buffer_; }
 
   // Return true if successful.  The callback will be invoked after all commands
   // have finished executing on the GPU (there is no guarantee about how long
@@ -73,29 +71,24 @@ class CommandBuffer {
 
   // Copy pixels from one image to another.  No image barriers or other
   // synchronization is used.  Retain both images in used_resources.
-  void CopyImage(const ImagePtr& src_image,
-                 const ImagePtr& dst_image,
-                 vk::ImageLayout src_layout,
-                 vk::ImageLayout dst_layout,
+  void CopyImage(const ImagePtr& src_image, const ImagePtr& dst_image,
+                 vk::ImageLayout src_layout, vk::ImageLayout dst_layout,
                  vk::ImageCopy* region);
 
   // Copy memory from one buffer to another.
-  void CopyBuffer(const BufferPtr& src,
-                  const BufferPtr& dst,
+  void CopyBuffer(const BufferPtr& src, const BufferPtr& dst,
                   vk::BufferCopy region);
 
   // Copy the specified region of |src| into |dst| after inserting a
   // memory-barrier to use the memory on the same queue (i.e. the barrier's
   // queue family indices are VK_QUEUE_FAMILY_IGNORED).
-  void CopyBufferAfterBarrier(const BufferPtr& src,
-                              const BufferPtr& dst,
+  void CopyBufferAfterBarrier(const BufferPtr& src, const BufferPtr& dst,
                               vk::BufferCopy region,
                               vk::AccessFlags src_access_mask);
 
   // Transition the image between the two layouts; see section 11.4 of the
   // Vulkan spec.  Retain image in used_resources.
-  void TransitionImageLayout(const ImagePtr& image,
-                             vk::ImageLayout old_layout,
+  void TransitionImageLayout(const ImagePtr& image, vk::ImageLayout old_layout,
                              vk::ImageLayout new_layout);
 
   // Convenient way to begin a render-pass that renders to the whole framebuffer
@@ -132,10 +125,8 @@ class CommandBuffer {
   // Called by CommandBufferPool, which is responsible for eventually destroying
   // the Vulkan command buffer and fence.  Submit() and Retire() use the fence
   // to determine when the command buffer has finished executing on the GPU.
-  CommandBuffer(vk::Device device,
-                vk::CommandBuffer command_buffer,
-                vk::Fence fence,
-                vk::PipelineStageFlags pipeline_stage_mask);
+  CommandBuffer(vk::Device device, vk::CommandBuffer command_buffer,
+                vk::Fence fence, vk::PipelineStageFlags pipeline_stage_mask);
   vk::Fence fence() const { return fence_; }
 
   // Called by CommandBufferPool when this buffer is obtained from it.

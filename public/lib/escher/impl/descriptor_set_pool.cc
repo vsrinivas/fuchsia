@@ -13,13 +13,11 @@ namespace escher {
 namespace impl {
 
 const ResourceTypeInfo DescriptorSetAllocation::kTypeInfo(
-    "DescriptorSetAllocation",
-    ResourceType::kResource,
+    "DescriptorSetAllocation", ResourceType::kResource,
     ResourceType::kImplDescriptorSetAllocation);
 
 DescriptorSetAllocation::DescriptorSetAllocation(
-    DescriptorSetPool* pool,
-    std::vector<vk::DescriptorSet> descriptor_sets)
+    DescriptorSetPool* pool, std::vector<vk::DescriptorSet> descriptor_sets)
     : Resource(pool), sets_(std::move(descriptor_sets)) {}
 
 DescriptorSetAllocation::~DescriptorSetAllocation() {
@@ -29,12 +27,11 @@ DescriptorSetAllocation::~DescriptorSetAllocation() {
 }
 
 DescriptorSetPool::DescriptorSetPool(
-    Escher* escher,
-    const vk::DescriptorSetLayoutCreateInfo& layout_info,
+    Escher* escher, const vk::DescriptorSetLayoutCreateInfo& layout_info,
     uint32_t initial_capacity)
     : ResourceManager(escher),
       layout_(ESCHER_CHECKED_VK_RESULT(
-          device().createDescriptorSetLayout(layout_info))) {
+          vk_device().createDescriptorSetLayout(layout_info))) {
   std::map<vk::DescriptorType, uint32_t> descriptor_type_counts;
   for (uint32_t i = 0; i < layout_info.bindingCount; ++i) {
     descriptor_type_counts[layout_info.pBindings[i].descriptorType] +=
@@ -53,15 +50,14 @@ DescriptorSetPool::DescriptorSetPool(
 
 DescriptorSetPool::~DescriptorSetPool() {
   for (auto pool : pools_) {
-    device().resetDescriptorPool(pool);
-    device().destroyDescriptorPool(pool);
+    vk_device().resetDescriptorPool(pool);
+    vk_device().destroyDescriptorPool(pool);
   }
-  device().destroyDescriptorSetLayout(layout_);
+  vk_device().destroyDescriptorSetLayout(layout_);
 }
 
 DescriptorSetAllocationPtr DescriptorSetPool::Allocate(
-    uint32_t count,
-    CommandBuffer* command_buffer) {
+    uint32_t count, CommandBuffer* command_buffer) {
   // Ensure that enough free sets are available.
   if (free_sets_.size() < count) {
     constexpr uint32_t kGrowthFactor = 2;
@@ -97,7 +93,7 @@ void DescriptorSetPool::InternalAllocate(uint32_t descriptor_set_count) {
   pool_info.pPoolSizes = counts.data();
   pool_info.maxSets = descriptor_set_count;
   auto pool =
-      ESCHER_CHECKED_VK_RESULT(device().createDescriptorPool(pool_info));
+      ESCHER_CHECKED_VK_RESULT(vk_device().createDescriptorPool(pool_info));
   pools_.push_back(pool);
 
   // Allocate the new descriptor sets.
@@ -106,8 +102,8 @@ void DescriptorSetPool::InternalAllocate(uint32_t descriptor_set_count) {
   allocate_info.descriptorSetCount = descriptor_set_count;
   std::vector<vk::DescriptorSetLayout> layouts(descriptor_set_count, layout_);
   allocate_info.pSetLayouts = layouts.data();
-  std::vector<vk::DescriptorSet> new_descriptor_sets(
-      ESCHER_CHECKED_VK_RESULT(device().allocateDescriptorSets(allocate_info)));
+  std::vector<vk::DescriptorSet> new_descriptor_sets(ESCHER_CHECKED_VK_RESULT(
+      vk_device().allocateDescriptorSets(allocate_info)));
 
   // Add the newly-allocated descriptor sets to the free list.
   free_sets_.reserve(free_sets_.capacity() + descriptor_set_count);

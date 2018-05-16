@@ -23,8 +23,7 @@ constexpr vk::DeviceSize kMinUniformBufferOffsetAlignment = 256;
 
 }  // namespace
 
-static mat4 AdjustCameraTransform(const Stage& stage,
-                                  const Camera& camera,
+static mat4 AdjustCameraTransform(const Stage& stage, const Camera& camera,
                                   float scale) {
   // Adjust projection matrix to support downsampled render passes.
   mat4 scale_adjustment(1.0);
@@ -39,20 +38,12 @@ static mat4 AdjustCameraTransform(const Stage& stage,
 ModelDisplayListBuilder::~ModelDisplayListBuilder() = default;
 
 ModelDisplayListBuilder::ModelDisplayListBuilder(
-    vk::Device device,
-    const Stage& stage,
-    const Model& model,
-    const Camera& camera,
-    float scale,
-    const TexturePtr& white_texture,
-    const TexturePtr& shadow_texture,
-    const mat4& shadow_matrix,
-    vec3 ambient_light_intensity,
-    vec3 direct_light_intensity,
-    ModelData* model_data,
-    ModelRenderer* renderer,
-    ModelRenderPassPtr render_pass,
-    ModelDisplayListFlags flags)
+    vk::Device device, const Stage& stage, const Model& model,
+    const Camera& camera, float scale, const TexturePtr& white_texture,
+    const TexturePtr& shadow_texture, const mat4& shadow_matrix,
+    vec3 ambient_light_intensity, vec3 direct_light_intensity,
+    ModelData* model_data, ModelRenderer* renderer,
+    ModelRenderPassPtr render_pass, ModelDisplayListFlags flags)
     : device_(device),
       volume_(stage.viewing_volume()),
       view_transform_(camera.transform()),
@@ -85,8 +76,8 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
 
   if (shadow_texture) {
     textures_.push_back(shadow_texture);
-    per_model->shadow_map_uv_multiplier = vec2(1.f/shadow_texture->width(),
-                                               1.f/shadow_texture->height());
+    per_model->shadow_map_uv_multiplier =
+        vec2(1.f / shadow_texture->width(), 1.f / shadow_texture->height());
   }
 
   // Obtain the single per-Model descriptor set.
@@ -110,7 +101,7 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
   buffer_write.descriptorCount = 1;
   buffer_write.descriptorType = vk::DescriptorType::eUniformBuffer;
   vk::DescriptorBufferInfo buffer_info;
-  buffer_info.buffer = uniform_buffer_->get();
+  buffer_info.buffer = uniform_buffer_->vk();
   buffer_info.range = sizeof(ModelData::PerModel);
   buffer_info.offset = uniform_buffer_write_index_;
   buffer_write.pBufferInfo = &buffer_info;
@@ -158,7 +149,7 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
   vp_buffer_write.descriptorCount = 1;
   vp_buffer_write.descriptorType = vk::DescriptorType::eUniformBuffer;
   vk::DescriptorBufferInfo vp_buffer_info;
-  vp_buffer_info.buffer = vp_uniform_buffer->get();
+  vp_buffer_info.buffer = vp_uniform_buffer->vk();
   vp_buffer_info.range = sizeof(ModelData::ViewProjection);
   vp_buffer_info.offset = vp_uniform_buffer_offset;
   vp_buffer_write.pBufferInfo = &vp_buffer_info;
@@ -298,8 +289,7 @@ void ModelDisplayListBuilder::AddObject(const Object& object) {
 }
 
 void ModelDisplayListBuilder::UpdateDescriptorSetForObject(
-    const Object& object,
-    vk::DescriptorSet descriptor_set) {
+    const Object& object, vk::DescriptorSet descriptor_set) {
   auto per_object = reinterpret_cast<ModelData::PerObject*>(
       &(uniform_buffer_->ptr()[uniform_buffer_write_index_]));
   *per_object = ModelData::PerObject();  // initialize with default values
@@ -318,17 +308,17 @@ void ModelDisplayListBuilder::UpdateDescriptorSetForObject(
   if (auto& texture = mat ? mat->texture() : nullptr) {
     if (!use_material_textures_) {
       // The object's material has a texture, but we choose not to use it.
-      image_view = white_texture_->image_view();
-      sampler = white_texture_->sampler();
+      image_view = white_texture_->vk_image_view();
+      sampler = white_texture_->vk_sampler();
     } else {
-      image_view = object.material()->image_view();
-      sampler = object.material()->sampler();
+      image_view = object.material()->vk_image_view();
+      sampler = object.material()->vk_sampler();
       textures_.push_back(texture);
     }
   } else {
     // No texture available.  Use white texture, so that object's color shows.
-    image_view = white_texture_->image_view();
-    sampler = white_texture_->sampler();
+    image_view = white_texture_->vk_image_view();
+    sampler = white_texture_->vk_sampler();
   }
 
   // TODO: Remove when WobbleModifierAbsorber is stable.
@@ -350,7 +340,7 @@ void ModelDisplayListBuilder::UpdateDescriptorSetForObject(
     buffer_write.descriptorCount = 1;
     buffer_write.descriptorType = vk::DescriptorType::eUniformBuffer;
     vk::DescriptorBufferInfo buffer_info;
-    buffer_info.buffer = uniform_buffer_->get();
+    buffer_info.buffer = uniform_buffer_->vk();
     buffer_info.range = sizeof(ModelData::PerObject);
     buffer_info.offset = uniform_buffer_write_index_;
     buffer_write.pBufferInfo = &buffer_info;
@@ -381,11 +371,11 @@ ModelDisplayListPtr ModelDisplayListBuilder::Build(
     barrier.dstAccessMask = vk::AccessFlagBits::eUniformRead;
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.buffer = uniform_buffer->get();
+    barrier.buffer = uniform_buffer->vk();
     barrier.offset = 0;
     barrier.size = uniform_buffer->size();
 
-    command_buffer->get().pipelineBarrier(
+    command_buffer->vk().pipelineBarrier(
         vk::PipelineStageFlagBits::eHost,
         vk::PipelineStageFlagBits::eVertexShader |
             vk::PipelineStageFlagBits::eFragmentShader,
@@ -425,8 +415,7 @@ vk::DescriptorSet ModelDisplayListBuilder::ObtainPerObjectDescriptorSet() {
 }
 
 void ModelDisplayListBuilder::PrepareUniformBufferForWriteOfSize(
-    size_t size,
-    size_t alignment) {
+    size_t size, size_t alignment) {
   uniform_buffer_write_index_ =
       AlignedToNext(uniform_buffer_write_index_, alignment);
 

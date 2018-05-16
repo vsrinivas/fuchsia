@@ -17,8 +17,7 @@ namespace escher {
 namespace impl {
 
 CommandBuffer::CommandBuffer(vk::Device device,
-                             vk::CommandBuffer command_buffer,
-                             vk::Fence fence,
+                             vk::CommandBuffer command_buffer, vk::Fence fence,
                              vk::PipelineStageFlags pipeline_stage_mask)
     : device_(device),
       command_buffer_(command_buffer),
@@ -140,16 +139,15 @@ void CommandBuffer::CopyImage(const ImagePtr& src_image,
                               vk::ImageLayout src_layout,
                               vk::ImageLayout dst_layout,
                               vk::ImageCopy* region) {
-  command_buffer_.copyImage(src_image->get(), src_layout, dst_image->get(),
+  command_buffer_.copyImage(src_image->vk(), src_layout, dst_image->vk(),
                             dst_layout, 1, region);
   KeepAlive(src_image);
   KeepAlive(dst_image);
 }
 
-void CommandBuffer::CopyBuffer(const BufferPtr& src,
-                               const BufferPtr& dst,
+void CommandBuffer::CopyBuffer(const BufferPtr& src, const BufferPtr& dst,
                                vk::BufferCopy region) {
-  command_buffer_.copyBuffer(src->get(), dst->get(), 1 /* region_count */,
+  command_buffer_.copyBuffer(src->vk(), dst->vk(), 1 /* region_count */,
                              &region);
   KeepAlive(src);
   KeepAlive(dst);
@@ -164,13 +162,13 @@ void CommandBuffer::CopyBufferAfterBarrier(const BufferPtr& src,
   barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
   barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
   barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.buffer = dst->get();
+  barrier.buffer = dst->vk();
   barrier.offset = 0;
   barrier.size = dst->size();
-  command_buffer_.pipelineBarrier(
-      vk::PipelineStageFlagBits::eTransfer,
-      vk::PipelineStageFlagBits::eTransfer,
-      vk::DependencyFlags(), 0, nullptr, 1, &barrier, 0, nullptr);
+  command_buffer_.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
+                                  vk::PipelineStageFlagBits::eTransfer,
+                                  vk::DependencyFlags(), 0, nullptr, 1,
+                                  &barrier, 0, nullptr);
   CopyBuffer(src, dst, region);
 }
 
@@ -187,7 +185,7 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image,
   barrier.newLayout = new_layout;
   barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
   barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.image = image->get();
+  barrier.image = image->vk();
 
   if (image->has_depth() || image->has_stencil()) {
     if (image->has_depth()) {
@@ -334,7 +332,7 @@ void CommandBuffer::BeginRenderPass(vk::RenderPass render_pass,
   info.renderArea = viewport;
   info.clearValueCount = static_cast<uint32_t>(clear_value_count);
   info.pClearValues = clear_values;
-  info.framebuffer = framebuffer->get();
+  info.framebuffer = framebuffer->vk();
 
   command_buffer_.beginRenderPass(&info, vk::SubpassContents::eInline);
 
@@ -356,9 +354,7 @@ void CommandBuffer::BeginRenderPass(vk::RenderPass render_pass,
   command_buffer_.setScissor(0, 1, &scissor);
 }
 
-void CommandBuffer::EndRenderPass() {
-  command_buffer_.endRenderPass();
-}
+void CommandBuffer::EndRenderPass() { command_buffer_.endRenderPass(); }
 
 bool CommandBuffer::Retire() {
   if (!is_active_) {

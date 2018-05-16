@@ -8,27 +8,22 @@
 
 namespace escher {
 
-const ResourceTypeInfo Mesh::kTypeInfo("Mesh",
-                                       ResourceType::kResource,
+const ResourceTypeInfo Mesh::kTypeInfo("Mesh", ResourceType::kResource,
                                        ResourceType::kWaitableResource,
                                        ResourceType::kMesh);
 
-Mesh::Mesh(ResourceRecycler* resource_recycler,
-           MeshSpec spec,
-           BoundingBox bounding_box,
-           uint32_t num_vertices,
-           uint32_t num_indices,
-           BufferPtr vertex_buffer,
-           BufferPtr index_buffer,
-           vk::DeviceSize vertex_buffer_offset,
+Mesh::Mesh(ResourceRecycler* resource_recycler, MeshSpec spec,
+           BoundingBox bounding_box, uint32_t num_vertices,
+           uint32_t num_indices, BufferPtr vertex_buffer,
+           BufferPtr index_buffer, vk::DeviceSize vertex_buffer_offset,
            vk::DeviceSize index_buffer_offset)
     : WaitableResource(resource_recycler),
       spec_(std::move(spec)),
       bounding_box_(bounding_box),
       num_vertices_(num_vertices),
       num_indices_(num_indices),
-      vk_vertex_buffer_(vertex_buffer->get()),
-      vk_index_buffer_(index_buffer->get()),
+      vk_vertex_buffer_(vertex_buffer->vk()),
+      vk_index_buffer_(index_buffer->vk()),
       vertex_buffer_(std::move(vertex_buffer)),
       index_buffer_(std::move(index_buffer)),
       vertex_buffer_offset_(vertex_buffer_offset),

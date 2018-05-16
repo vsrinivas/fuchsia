@@ -111,10 +111,8 @@ escher::Texture* Renderer::GetChannelTexture(const escher::FramePtr& frame,
 }
 
 vk::DescriptorSet Renderer::GetUpdatedDescriptorSet(
-    const escher::FramePtr& frame,
-    escher::Texture* channel0,
-    escher::Texture* channel1,
-    escher::Texture* channel2,
+    const escher::FramePtr& frame, escher::Texture* channel0,
+    escher::Texture* channel1, escher::Texture* channel2,
     escher::Texture* channel3) {
   TRACE_DURATION("gfx", "shadertoy::Renderer::GetUpdatedDescriptorSet");
 
@@ -130,8 +128,8 @@ vk::DescriptorSet Renderer::GetUpdatedDescriptorSet(
     auto channel_texture = GetChannelTexture(frame, textures[i]);
 
     channel_image_info[i].imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-    channel_image_info[i].imageView = channel_texture->image_view();
-    channel_image_info[i].sampler = channel_texture->sampler();
+    channel_image_info[i].imageView = channel_texture->vk_image_view();
+    channel_image_info[i].sampler = channel_texture->vk_sampler();
 
     writes[i].dstSet = descriptor_set;
     writes[i].dstArrayElement = 0;
@@ -147,12 +145,9 @@ vk::DescriptorSet Renderer::GetUpdatedDescriptorSet(
 }
 
 void Renderer::DrawFrame(const escher::FramebufferPtr& framebuffer,
-                         const PipelinePtr& pipeline,
-                         const Params& params,
-                         escher::Texture* channel0,
-                         escher::Texture* channel1,
-                         escher::Texture* channel2,
-                         escher::Texture* channel3,
+                         const PipelinePtr& pipeline, const Params& params,
+                         escher::Texture* channel0, escher::Texture* channel1,
+                         escher::Texture* channel2, escher::Texture* channel3,
                          escher::SemaphorePtr framebuffer_ready,
                          escher::SemaphorePtr frame_done) {
   TRACE_DURATION("gfx", "shadertoy::Renderer::DrawFrame");

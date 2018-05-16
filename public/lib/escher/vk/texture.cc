@@ -11,14 +11,11 @@
 
 namespace escher {
 
-const ResourceTypeInfo Texture::kTypeInfo("Texture",
-                                          ResourceType::kResource,
+const ResourceTypeInfo Texture::kTypeInfo("Texture", ResourceType::kResource,
                                           ResourceType::kTexture);
 
-Texture::Texture(ResourceRecycler* resource_recycler,
-                 ImagePtr image,
-                 vk::Filter filter,
-                 vk::ImageAspectFlags aspect_mask,
+Texture::Texture(ResourceRecycler* resource_recycler, ImagePtr image,
+                 vk::Filter filter, vk::ImageAspectFlags aspect_mask,
                  bool use_unnormalized_coordinates)
     : Resource(resource_recycler),
       image_(std::move(image)),
@@ -34,7 +31,7 @@ Texture::Texture(ResourceRecycler* resource_recycler,
   view_info.subresourceRange.layerCount = 1;
   view_info.subresourceRange.aspectMask = aspect_mask;
   view_info.format = image_->format();
-  view_info.image = image_->get();
+  view_info.image = image_->vk();
   image_view_ = ESCHER_CHECKED_VK_RESULT(device.createImageView(view_info));
 
   vk::SamplerCreateInfo sampler_info = {};
@@ -69,10 +66,8 @@ Texture::~Texture() {
   device.destroyImageView(image_view_);
 }
 
-TexturePtr Texture::New(ResourceRecycler* resource_recycler,
-                        ImagePtr image,
-                        vk::Filter filter,
-                        vk::ImageAspectFlags aspect_mask,
+TexturePtr Texture::New(ResourceRecycler* resource_recycler, ImagePtr image,
+                        vk::Filter filter, vk::ImageAspectFlags aspect_mask,
                         bool use_unnormalized_coordinates) {
   return fxl::MakeRefCounted<Texture>(resource_recycler, std::move(image),
                                       filter, aspect_mask,

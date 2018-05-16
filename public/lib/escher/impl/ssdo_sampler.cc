@@ -246,8 +246,7 @@ constexpr char g_filter_fragment_src[] = R"GLSL(
 
 // TODO: refactor this into a PipelineBuilder class.
 std::pair<PipelinePtr, PipelinePtr> CreatePipelines(
-    vk::Device device,
-    vk::RenderPass render_pass,
+    vk::Device device, vk::RenderPass render_pass,
     const MeshShaderBinding& mesh_shader_binding,
     vk::DescriptorSetLayout descriptor_set_layout,
     GlslToSpirvCompiler* compiler) {
@@ -387,7 +386,7 @@ std::pair<PipelinePtr, PipelinePtr> CreatePipelines(
   pipeline_info.pMultisampleState = &multisampling;
   pipeline_info.pColorBlendState = &color_blending;
   pipeline_info.pDynamicState = &dynamic_state;
-  pipeline_info.layout = pipeline_layout->get();
+  pipeline_info.layout = pipeline_layout->vk();
   pipeline_info.renderPass = render_pass;
   pipeline_info.subpass = 0;
   pipeline_info.basePipelineHandle = vk::Pipeline();
@@ -522,17 +521,14 @@ vk::RenderPass CreateRenderPass(vk::Device device, vk::Format color_format) {
 
 }  // namespace
 
-SsdoSampler::SsdoSampler(Escher* escher,
-                         MeshPtr full_screen,
-                         ImagePtr noise_image,
-                         ModelData* model_data)
+SsdoSampler::SsdoSampler(Escher* escher, MeshPtr full_screen,
+                         ImagePtr noise_image, ModelData* model_data)
     : device_(escher->vulkan_context().device),
       color_format_(ChooseColorFormat(escher->vk_physical_device())),
       pool_(escher, GetDescriptorSetLayoutCreateInfo(), 6),
       full_screen_(full_screen),
-      noise_texture_(fxl::MakeRefCounted<Texture>(escher->resource_recycler(),
-                                                  noise_image,
-                                                  vk::Filter::eNearest)),
+      noise_texture_(fxl::MakeRefCounted<Texture>(
+          escher->resource_recycler(), noise_image, vk::Filter::eNearest)),
       // TODO: VulkanProvider should know the swapchain format and we should use
       // it.
       render_pass_(CreateRenderPass(device_, color_format_)) {
@@ -550,9 +546,7 @@ SsdoSampler::SsdoSampler(Escher* escher,
   filter_pipeline_ = pipelines.second;
 }
 
-SsdoSampler::~SsdoSampler() {
-  device_.destroyRenderPass(render_pass_);
-}
+SsdoSampler::~SsdoSampler() { device_.destroyRenderPass(render_pass_); }
 
 const vk::DescriptorSetLayoutCreateInfo&
 SsdoSampler::GetDescriptorSetLayoutCreateInfo() {
@@ -596,7 +590,7 @@ void SsdoSampler::Sample(CommandBuffer* command_buffer,
                          const TexturePtr& depth_texture,
                          const TexturePtr& accelerator_texture,
                          const SamplerConfig* push_constants) {
-  auto vk_command_buffer = command_buffer->get();
+  auto vk_command_buffer = command_buffer->vk();
   auto descriptor_set = pool_.Allocate(1, command_buffer)->get(0);
 
   vk::Viewport viewport;
@@ -617,8 +611,8 @@ void SsdoSampler::Sample(CommandBuffer* command_buffer,
   // Specific to depth texture.
   vk::DescriptorImageInfo depth_texture_info;
   depth_texture_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-  depth_texture_info.imageView = depth_texture->image_view();
-  depth_texture_info.sampler = depth_texture->sampler();
+  depth_texture_info.imageView = depth_texture->vk_image_view();
+  depth_texture_info.sampler = depth_texture->vk_sampler();
   writes[0].dstBinding = 0;
   writes[0].pImageInfo = &depth_texture_info;
 
@@ -626,16 +620,16 @@ void SsdoSampler::Sample(CommandBuffer* command_buffer,
   vk::DescriptorImageInfo accelerator_texture_info;
   accelerator_texture_info.imageLayout =
       vk::ImageLayout::eShaderReadOnlyOptimal;
-  accelerator_texture_info.imageView = accelerator_texture->image_view();
-  accelerator_texture_info.sampler = accelerator_texture->sampler();
+  accelerator_texture_info.imageView = accelerator_texture->vk_image_view();
+  accelerator_texture_info.sampler = accelerator_texture->vk_sampler();
   writes[1].dstBinding = 1;
   writes[1].pImageInfo = &accelerator_texture_info;
 
   // Specific to noise texture.
   vk::DescriptorImageInfo noise_texture_info;
   noise_texture_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-  noise_texture_info.imageView = noise_texture_->image_view();
-  noise_texture_info.sampler = noise_texture_->sampler();
+  noise_texture_info.imageView = noise_texture_->vk_image_view();
+  noise_texture_info.sampler = noise_texture_->vk_sampler();
   writes[2].dstBinding = 2;
   writes[2].pImageInfo = &noise_texture_info;
 
@@ -648,10 +642,10 @@ void SsdoSampler::Sample(CommandBuffer* command_buffer,
       Camera::Viewport().vk_rect_2d(framebuffer->width(),
                                     framebuffer->height()));
   {
-    auto vk_pipeline_layout = sampler_pipeline_->layout();
+    auto vk_pipeline_layout = sampler_pipeline_->vk_layout();
 
     vk_command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
-                                   sampler_pipeline_->get());
+                                   sampler_pipeline_->vk());
 
     vk_command_buffer.bindDescriptorSets(
         vk::PipelineBindPoint::eGraphics, vk_pipeline_layout,
@@ -671,7 +665,7 @@ void SsdoSampler::Filter(CommandBuffer* command_buffer,
                          const TexturePtr& unfiltered_illumination,
                          const TexturePtr& accelerator_texture,
                          const FilterConfig* push_constants) {
-  auto vk_command_buffer = command_buffer->get();
+  auto vk_command_buffer = command_buffer->vk();
   auto descriptor_set = pool_.Allocate(1, command_buffer)->get(0);
 
   vk::Viewport viewport;
@@ -692,8 +686,8 @@ void SsdoSampler::Filter(CommandBuffer* command_buffer,
   // Specific to illumination texture.
   vk::DescriptorImageInfo light_tex_info;
   light_tex_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-  light_tex_info.imageView = unfiltered_illumination->image_view();
-  light_tex_info.sampler = unfiltered_illumination->sampler();
+  light_tex_info.imageView = unfiltered_illumination->vk_image_view();
+  light_tex_info.sampler = unfiltered_illumination->vk_sampler();
   writes[0].dstBinding = 0;
   writes[0].pImageInfo = &light_tex_info;
 
@@ -701,8 +695,8 @@ void SsdoSampler::Filter(CommandBuffer* command_buffer,
   vk::DescriptorImageInfo accelerator_texture_info;
   accelerator_texture_info.imageLayout =
       vk::ImageLayout::eShaderReadOnlyOptimal;
-  accelerator_texture_info.imageView = accelerator_texture->image_view();
-  accelerator_texture_info.sampler = accelerator_texture->sampler();
+  accelerator_texture_info.imageView = accelerator_texture->vk_image_view();
+  accelerator_texture_info.sampler = accelerator_texture->vk_sampler();
   writes[1].dstBinding = 1;
   writes[1].pImageInfo = &accelerator_texture_info;
 
@@ -711,8 +705,8 @@ void SsdoSampler::Filter(CommandBuffer* command_buffer,
   // use the same pipeline-layout for the sampler and filter pipelines.
   vk::DescriptorImageInfo noise_texture_info;
   noise_texture_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-  noise_texture_info.imageView = noise_texture_->image_view();
-  noise_texture_info.sampler = noise_texture_->sampler();
+  noise_texture_info.imageView = noise_texture_->vk_image_view();
+  noise_texture_info.sampler = noise_texture_->vk_sampler();
   writes[2].dstBinding = 2;
   writes[2].pImageInfo = &noise_texture_info;
 
@@ -725,10 +719,10 @@ void SsdoSampler::Filter(CommandBuffer* command_buffer,
       Camera::Viewport().vk_rect_2d(framebuffer->width(),
                                     framebuffer->height()));
   {
-    auto vk_pipeline_layout = sampler_pipeline_->layout();
+    auto vk_pipeline_layout = sampler_pipeline_->vk_layout();
 
     vk_command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
-                                   filter_pipeline_->get());
+                                   filter_pipeline_->vk());
 
     vk_command_buffer.bindDescriptorSets(
         vk::PipelineBindPoint::eGraphics, vk_pipeline_layout,

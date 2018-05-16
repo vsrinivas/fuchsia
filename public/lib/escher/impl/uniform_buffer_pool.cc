@@ -14,8 +14,7 @@ namespace impl {
 // TODO: obtain max uniform-buffer size from Vulkan.  64kB is typical.
 constexpr vk::DeviceSize kBufferSize = 65536;
 
-UniformBufferPool::UniformBufferPool(Escher* escher,
-                                     GpuAllocator* allocator,
+UniformBufferPool::UniformBufferPool(Escher* escher, GpuAllocator* allocator,
                                      vk::MemoryPropertyFlags additional_flags)
     : ResourceManager(escher),
       allocator_(allocator ? allocator : escher->gpu_allocator()),
@@ -42,12 +41,12 @@ void UniformBufferPool::InternalAllocate() {
   info.usage = vk::BufferUsageFlagBits::eUniformBuffer;
   info.sharingMode = vk::SharingMode::eExclusive;
   for (uint32_t i = 0; i < kBufferBatchSize; ++i) {
-    new_buffers[i] = ESCHER_CHECKED_VK_RESULT(device().createBuffer(info));
+    new_buffers[i] = ESCHER_CHECKED_VK_RESULT(vk_device().createBuffer(info));
   }
 
   // Determine the memory requirements for a single buffer.
   vk::MemoryRequirements reqs =
-      device().getBufferMemoryRequirements(new_buffers[0]);
+      vk_device().getBufferMemoryRequirements(new_buffers[0]);
   // If necessary, we can write the logic to deal with the conditions below.
   FXL_CHECK(buffer_size_ == reqs.size);
   FXL_CHECK(buffer_size_ % reqs.alignment == 0);
@@ -61,7 +60,7 @@ void UniformBufferPool::InternalAllocate() {
     // querying it's memory requirements.  This shouldn't be necessary, since
     // all buffers are identically-configured.
     // TODO: disable this in release mode.
-    device().getBufferMemoryRequirements(new_buffers[i]);
+    vk_device().getBufferMemoryRequirements(new_buffers[i]);
 
     // Sub-allocate memory for each buffer.
     auto mem = batch_mem->Allocate(buffer_size_, i * buffer_size_);
