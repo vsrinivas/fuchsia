@@ -346,25 +346,4 @@ zx_status_t launchpad_load_vdso(launchpad_t* lp, zx_handle_t vmo);
 // Otherwise, the size passed is rounded up to a multiple of the page size.
 size_t launchpad_set_stack_size(launchpad_t* lp, size_t new_size);
 
-
-
-
-// Start a new thread in the process, assuming this was a launchpad
-// created with launchpad_create_with_process and the process has
-// already started.  The new thread runs the launchpad's entry point
-// just like the initial thread does in the launchpad_go case.
-// The given handle is to a channel where the bootstrap
-// messages will be written; the caller retains ownership of this
-// handle.  The other end of this channel must already be
-// present in the target process, with the given handle value in the
-// target process's handle space.
-zx_status_t launchpad_start_injected(launchpad_t* lp, const char* thread_name,
-                                     zx_handle_t to_child,
-                                     uintptr_t bootstrap_handle_in_child);
-
-
-
-
-
-
 __END_CDECLS

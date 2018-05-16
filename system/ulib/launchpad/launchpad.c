@@ -1225,7 +1225,7 @@ static zx_status_t launchpad_start(launchpad_t* lp, zx_handle_t* process_out) {
     zx_handle_t child_bootstrap = channelh[1];
 
     zx_handle_t thread;
-    uintptr_t sp;
+    uintptr_t sp = 0u;
     status = prepare_start(lp, "initial-thread", to_child, &thread, &sp);
     zx_handle_close(to_child);
     if (status != ZX_OK) {
@@ -1245,29 +1245,6 @@ static zx_status_t launchpad_start(launchpad_t* lp, zx_handle_t* process_out) {
 
     zx_handle_close(proc);
     zx_handle_close(child_bootstrap);
-    return status;
-}
-
-zx_status_t launchpad_start_injected(launchpad_t* lp, const char* thread_name,
-                                     zx_handle_t to_child,
-                                     uintptr_t bootstrap_handle_in_child) {
-    if (lp->error)
-        return lp->error;
-
-    zx_handle_t thread;
-    uintptr_t sp;
-    zx_status_t status = prepare_start(lp, thread_name, to_child,
-                                       &thread, &sp);
-    if (status != ZX_OK) {
-        lp_error(lp, status, "start_injected: prepare_start() failed");
-    } else {
-        status = zx_thread_start(thread, lp->entry, sp,
-                                 bootstrap_handle_in_child, lp->vdso_base);
-        if (status != ZX_OK) {
-            lp_error(lp, status, "start_injected: zx_thread_start() failed");
-        }
-        zx_handle_close(thread);
-    }
     return status;
 }
 
