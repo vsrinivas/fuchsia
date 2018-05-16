@@ -760,6 +760,7 @@ zedboot_binary_patterns = [
 
   # These are useful for debugging.
   "bin/dd",
+  "bin/driverctl",
   "bin/fixfs",
   "bin/fsck*",
   "bin/gpt",
