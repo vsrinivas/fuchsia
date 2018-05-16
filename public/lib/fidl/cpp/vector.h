@@ -20,10 +20,8 @@ namespace fidl {
 
 // A representation of a FIDL vector that owns the memory for the vector.
 //
-// A VectorPtr has three states: (1) null, (2) empty, (3) contains data. In
-// the second state, operations that return an std::vector return the empty
-// std::vector. The null and empty states can be distinguished using the
-// is_null| and |operator bool| methods.
+// A VectorPtr has three states: (1) null, (2) empty, (3) contains data.  You
+// can check for the null state using the |is_null| method.
 template <typename T>
 class VectorPtr {
  public:
