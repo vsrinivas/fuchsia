@@ -14,8 +14,26 @@ bool NullTest() {
     return true;
 }
 
+// This is a multi-step test where the steps do nothing.  This is useful
+// for measuring the overhead of the performance testing framework.
+bool Null5StepTest(perftest::RepeatState* state) {
+    state->DeclareStep("step1");
+    state->DeclareStep("step2");
+    state->DeclareStep("step3");
+    state->DeclareStep("step4");
+    state->DeclareStep("step5");
+    while (state->KeepRunning()) {
+        state->NextStep();
+        state->NextStep();
+        state->NextStep();
+        state->NextStep();
+    }
+    return true;
+}
+
 void RegisterTests() {
     perftest::RegisterSimpleTest<NullTest>("Null");
+    perftest::RegisterTest("Null5Step", Null5StepTest);
 }
 PERFTEST_CTOR(RegisterTests);
 

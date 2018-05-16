@@ -11,6 +11,7 @@
 
 #include <fbl/function.h>
 #include <fbl/string.h>
+#include <fbl/string_printf.h>
 #include <fbl/vector.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <trace-engine/context.h>
@@ -31,52 +32,114 @@ internal::TestList* g_tests;
 
 class RepeatStateImpl : public RepeatState {
 public:
-    RepeatStateImpl(uint32_t run_count)
-        : run_count_(run_count) {
-        // Add 1 because we store timestamps for the start of each test run
-        // (which serve as timestamps for the end of the previous test
-        // run), plus one more timestamp for the end of the last test run.
-        size_t array_size = run_count + 1;
-        timestamps_.reset(new uint64_t[array_size]);
-        // Clear the array in order to fault in the pages.  This should
-        // prevent page faults occurring as we cross page boundaries when
-        // writing a test's running times (which would affect the first
-        // test case but not later test cases).
-        memset(timestamps_.get(), 0, sizeof(timestamps_[0]) * array_size);
+    RepeatStateImpl(uint32_t run_count) : run_count_(run_count) {}
+
+    void DeclareStep(const char* name) override {
+        if (started_) {
+            SetError("DeclareStep() was called after KeepRunning()");
+            return;
+        }
+        step_names_.push_back(name);
+    }
+
+    void NextStep() override {
+        if (unlikely(next_idx_ >= end_of_run_idx_)) {
+            SetError("Too many calls to NextStep()");
+            return;
+        }
+        timestamps_[next_idx_] = zx_ticks_get();
+        ++next_idx_;
     }
 
     bool KeepRunning() override {
-        timestamps_[runs_started_] = zx_ticks_get();
-        if (unlikely(runs_started_ == run_count_)) {
-            ++finishing_calls_;
+        uint64_t timestamp = zx_ticks_get();
+        if (unlikely(next_idx_ != end_of_run_idx_)) {
+            // Slow path, including error cases.
+            if (error_) {
+                return false;
+            }
+            if (started_) {
+                SetError("Wrong number of calls to NextStep()");
+                return false;
+            }
+            // First call to KeepRunning().
+            step_count_ = static_cast<uint32_t>(step_names_.size());
+            if (step_count_ == 0) {
+                step_count_ = 1;
+            }
+            // Add 1 because we store timestamps for the start of each test
+            // run (which serve as timestamps for the end of the previous
+            // test run), plus one more timestamp for the end of the last
+            // test run.
+            timestamps_size_ = run_count_ * step_count_ + 1;
+            timestamps_.reset(new uint64_t[timestamps_size_]);
+            // Clear the array in order to fault in the pages.  This should
+            // prevent page faults occurring as we cross page boundaries
+            // when writing a test's running times (which would affect the
+            // first test case but not later test cases).
+            memset(timestamps_.get(), 0,
+                   sizeof(timestamps_[0]) * timestamps_size_);
+            next_idx_ = 1;
+            end_of_run_idx_ = step_count_;
+            started_ = true;
+            timestamps_[0] = zx_ticks_get();
+            return run_count_ != 0;
+        }
+        if (unlikely(next_idx_ == timestamps_size_ - 1)) {
+            // End reached.
+            if (finished_) {
+                SetError("Too many calls to KeepRunning()");
+                return false;
+            }
+            timestamps_[next_idx_] = timestamp;
+            finished_ = true;
             return false;
         }
-        ++runs_started_;
+        timestamps_[next_idx_] = timestamp;
+        ++next_idx_;
+        end_of_run_idx_ += step_count_;
         return true;
     }
 
-    bool RunTestFunc(const internal::NamedTest* test) {
+    // Returns nullptr on success, or an error string on failure.
+    const char* RunTestFunc(const internal::NamedTest* test) {
         TRACE_DURATION("perftest", "test_group", "test_name", test->name);
         overall_start_time_ = zx_ticks_get();
         bool result = test->test_func(this);
         overall_end_time_ = zx_ticks_get();
-        return result;
-    }
-
-    bool Success() const {
-        return runs_started_ == run_count_ && finishing_calls_ == 1;
+        if (error_) {
+            return error_;
+        }
+        if (!finished_) {
+            return "Too few calls to KeepRunning()";
+        }
+        if (!result) {
+            return "Test function returned false";
+        }
+        return nullptr;
     }
 
     void CopyTimeResults(const char* test_name, ResultsSet* dest) const {
         // Copy the timing results, converting timestamps to elapsed times.
         double nanoseconds_per_tick =
             1e9 / static_cast<double>(zx_ticks_per_second());
-        TestCaseResults* results = dest->AddTestCase(test_name, "nanoseconds");
-        results->values()->reserve(run_count_);
-        for (uint32_t idx = 0; idx < run_count_; ++idx) {
-            uint64_t time_taken = timestamps_[idx + 1] - timestamps_[idx];
-            results->AppendValue(
-                static_cast<double>(time_taken) * nanoseconds_per_tick);
+        for (uint32_t step = 0; step < step_count_; ++step) {
+            fbl::String name;
+            if (step_names_.size()) {
+                name = fbl::StringPrintf(
+                    "%s.%s", test_name, step_names_[step].c_str());
+            } else {
+                name = test_name;
+            }
+
+            TestCaseResults* results = dest->AddTestCase(name, "nanoseconds");
+            results->values()->reserve(run_count_);
+            for (uint32_t run = 0; run < run_count_; ++run) {
+                uint64_t time_taken = (GetTimestamp(run, step + 1) -
+                                       GetTimestamp(run, step));
+                results->AppendValue(
+                    static_cast<double>(time_taken) * nanoseconds_per_tick);
+            }
         }
     }
 
@@ -106,38 +169,72 @@ public:
 
         trace_string_ref_t test_setup_string;
         trace_string_ref_t test_run_string;
+        trace_string_ref_t test_step_string;
         trace_string_ref_t test_teardown_string;
         trace_context_register_string_literal(
             context, "test_setup", &test_setup_string);
         trace_context_register_string_literal(
             context, "test_run", &test_run_string);
         trace_context_register_string_literal(
+            context, "test_step", &test_step_string);
+        trace_context_register_string_literal(
             context, "test_teardown", &test_teardown_string);
 
         WriteEvent(&test_setup_string, overall_start_time_, timestamps_[0]);
-        for (uint32_t idx = 0; idx < run_count_; ++idx) {
+        for (uint32_t run = 0; run < run_count_; ++run) {
             WriteEvent(&test_run_string,
-                       timestamps_[idx], timestamps_[idx + 1]);
+                       GetTimestamp(run, 0),
+                       GetTimestamp(run + 1, 0));
+            for (uint32_t step = 0; step < step_count_; ++step) {
+                WriteEvent(&test_step_string,
+                           GetTimestamp(run, step),
+                           GetTimestamp(run, step + 1));
+            }
         }
         WriteEvent(&test_teardown_string,
-                   timestamps_[run_count_], overall_end_time_);
+                   timestamps_[timestamps_size_ - 1], overall_end_time_);
     }
 
 private:
+    void SetError(const char* str) {
+        if (!error_) {
+            error_ = str;
+        }
+    }
+
+    // The start and end times of run R are GetTimestamp(R, 0) and
+    // GetTimestamp(R+1, 0).
+    // The start and end times of step S within run R are GetTimestamp(R,
+    // S) and GetTimestamp(R, S+1).
+    uint64_t GetTimestamp(uint32_t run_number, uint32_t step_number) const {
+        uint32_t index = run_number * step_count_ + step_number;
+        ZX_ASSERT(step_number <= step_count_);
+        ZX_ASSERT(index < timestamps_size_);
+        return timestamps_[index];
+    }
+
     // Number of test runs that we intend to do.
     uint32_t run_count_;
-    // Number of test runs started.
-    uint32_t runs_started_ = 0;
-    // Number of calls to KeepRunning() after the last test run has been
-    // started.  This should be 1 when the test runs have finished.  This
-    // is just used as a sanity check: It will be 0 if the test case failed
-    // to make the final call to KeepRunning() or >1 if it made unnecessary
-    // excess calls.
-    //
-    // Having this separate from runs_started_ removes the need for an
-    // extra comparison in the fast path of KeepRunning().
-    uint32_t finishing_calls_ = 0;
+    // Number of steps per test run.  Once initialized, this is >= 1.
+    uint32_t step_count_;
+    // Names for steps.  May be empty if the test has only one step.
+    fbl::Vector<fbl::String> step_names_;
+    // error_ is set to non-null if an error occurs.
+    const char* error_ = nullptr;
+    // Array of timestamps for the starts and ends of test runs and of
+    // steps within runs.  GetTimestamp() describes the array layout.
     fbl::unique_ptr<uint64_t[]> timestamps_;
+    // Number of elements allocated for timestamps_ array.
+    uint32_t timestamps_size_ = 0;
+    // Whether the first KeepRunning() call has occurred.
+    bool started_ = false;
+    // Whether the last KeepRunning() call has occurred.
+    bool finished_ = false;
+    // Next index in timestamps_ for writing a timestamp to.  The initial
+    // value helps catch invalid NextStep() calls.
+    uint32_t next_idx_ = ~static_cast<uint32_t>(0);
+    // Index in timestamp_ for writing the end of the current run.
+    uint32_t end_of_run_idx_ = 0;
     // Start time, before the test's setup phase.
     uint64_t overall_start_time_;
     // End time, after the test's teardown phase.
@@ -187,15 +284,9 @@ bool RunTests(TestList* test_list, uint32_t run_count, const char* regex_string,
         fprintf(log_stream, "[ RUN      ] %s\n", test_name);
 
         RepeatStateImpl state(run_count);
-        bool result = state.RunTestFunc(&test_case);
-
-        if (!result) {
-            fprintf(log_stream, "[  FAILED  ] %s\n", test_name);
-            ok = false;
-            continue;
-        }
-        if (!state.Success()) {
-            fprintf(log_stream, "Excess or missing calls to KeepRunning()\n");
+        const char* error = state.RunTestFunc(&test_case);
+        if (error) {
+            fprintf(log_stream, "Error: %s\n", error);
             fprintf(log_stream, "[  FAILED  ] %s\n", test_name);
             ok = false;
             continue;

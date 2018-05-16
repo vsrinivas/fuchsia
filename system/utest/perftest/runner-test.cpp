@@ -40,6 +40,17 @@ static bool FailingTest(perftest::RepeatState* state) {
     return false;
 }
 
+// Sanity-check time values.
+static bool check_times(perftest::TestCaseResults* test_case) {
+    for (auto time_taken : *test_case->values()) {
+        EXPECT_GE(time_taken, 0);
+        // Check for unreasonably large values, which suggest that we
+        // subtracted timestamps incorrectly.
+        EXPECT_LT(time_taken, static_cast<double>(1ULL << 60));
+    }
+    return true;
+}
+
 // Test that a successful run of a perf test produces sensible results.
 static bool test_results() {
     BEGIN_TEST;
@@ -59,10 +70,8 @@ static bool test_results() {
     // The output should have time values for the number of runs we requested.
     auto* test_case = &(*test_cases)[0];
     EXPECT_EQ(test_case->values()->size(), kRunCount);
-    // Sanity-check the times.
-    for (auto time_taken : *test_case->values()) {
-        EXPECT_GE(time_taken, 0);
-    }
+    EXPECT_STR_EQ(test_case->label().c_str(), "no_op_example_test");
+    EXPECT_TRUE(check_times(test_case));
 
     END_TEST;
 }
@@ -89,7 +98,7 @@ static bool test_failing_test() {
 // Test that we report a test as failed if it calls KeepRunning() too many
 // or too few times.  Make sure that we don't overrun the array of
 // timestamps or report uninitialized data from that array.
-static bool test_bad_keeprunning_calls() {
+static bool test_bad_keep_running_calls() {
     BEGIN_TEST;
 
     for (int actual_runs = 0; actual_runs < 10; ++actual_runs) {
@@ -118,6 +127,112 @@ static bool test_bad_keeprunning_calls() {
     END_TEST;
 }
 
+static bool MultistepTest(perftest::RepeatState* state) {
+    state->DeclareStep("step1");
+    state->DeclareStep("step2");
+    state->DeclareStep("step3");
+    while (state->KeepRunning()) {
+        // Step 1 would go here.
+        state->NextStep();
+        // Step 2 would go here.
+        state->NextStep();
+        // Step 3 would go here.
+    }
+    return true;
+}
+
+// Test the results for a simple multi-step test.
+static bool test_multistep_test() {
+    BEGIN_TEST;
+
+    perftest::internal::TestList test_list;
+    perftest::internal::NamedTest test{"example_test", MultistepTest};
+    test_list.push_back(fbl::move(test));
+
+    const uint32_t kRunCount = 7;
+    perftest::ResultsSet results;
+    DummyOutputStream out;
+    EXPECT_TRUE(perftest::internal::RunTests(
+                    &test_list, kRunCount, "", out.fp(), &results));
+    ASSERT_EQ(results.results()->size(), 3);
+    EXPECT_STR_EQ((*results.results())[0].label().c_str(), "example_test.step1");
+    EXPECT_STR_EQ((*results.results())[1].label().c_str(), "example_test.step2");
+    EXPECT_STR_EQ((*results.results())[2].label().c_str(), "example_test.step3");
+    for (auto& test_case : *results.results()) {
+        EXPECT_EQ(test_case.values()->size(), kRunCount);
+        EXPECT_TRUE(check_times(&test_case));
+    }
+
+    END_TEST;
+}
+
+// Test that we report a test as failed if it calls NextStep() before
+// KeepRunning(), which is invalid.
+static bool test_next_step_called_before_keep_running() {
+    BEGIN_TEST;
+
+    bool keeprunning_retval = true;
+    // Invalid test function that calls NextStep() at the wrong time,
+    // before calling KeepRunning().
+    auto test_func = [&](perftest::RepeatState* state) {
+        state->NextStep();
+        keeprunning_retval = state->KeepRunning();
+        return true;
+    };
+
+    perftest::internal::TestList test_list;
+    perftest::internal::NamedTest test{"example_bad_test", test_func};
+    test_list.push_back(fbl::move(test));
+    const uint32_t kRunCount = 5;
+    perftest::ResultsSet results;
+    DummyOutputStream out;
+    bool success = perftest::internal::RunTests(
+        &test_list, kRunCount, "", out.fp(), &results);
+    EXPECT_FALSE(success);
+    EXPECT_FALSE(keeprunning_retval);
+
+    END_TEST;
+}
+
+// Test that we report a test as failed if it calls NextStep() too many or
+// too few times.
+static bool test_bad_next_step_calls() {
+    BEGIN_TEST;
+
+    for (int actual_calls = 0; actual_calls < 10; ++actual_calls) {
+        // Example test function which might call NextStep() the wrong
+        // number of times.
+        auto test_func = [=](perftest::RepeatState* state) {
+            state->DeclareStep("step1");
+            state->DeclareStep("step2");
+            state->DeclareStep("step3");
+            while (state->KeepRunning()) {
+                for (int i = 0; i < actual_calls; ++i) {
+                    state->NextStep();
+                }
+            }
+            return true;
+        };
+
+        perftest::internal::TestList test_list;
+        perftest::internal::NamedTest test{"example_bad_test", test_func};
+        test_list.push_back(fbl::move(test));
+
+        const uint32_t kRunCount = 5;
+        perftest::ResultsSet results;
+        DummyOutputStream out;
+        bool success = perftest::internal::RunTests(
+            &test_list, kRunCount, "", out.fp(), &results);
+        const int kCorrectNumberOfCalls = 2;
+        EXPECT_EQ(success, actual_calls == kCorrectNumberOfCalls);
+        EXPECT_EQ(results.results()->size(),
+                  static_cast<size_t>(actual_calls == kCorrectNumberOfCalls
+                                      ? 3 : 0));
+    }
+
+    END_TEST;
+}
+
 static bool test_parsing_command_args() {
     BEGIN_TEST;
 
@@ -139,7 +254,10 @@ static bool test_parsing_command_args() {
 BEGIN_TEST_CASE(perftest_runner_test)
 RUN_TEST(test_results)
 RUN_TEST(test_failing_test)
-RUN_TEST(test_bad_keeprunning_calls)
+RUN_TEST(test_bad_keep_running_calls)
+RUN_TEST(test_multistep_test)
+RUN_TEST(test_next_step_called_before_keep_running)
+RUN_TEST(test_bad_next_step_calls)
 RUN_TEST(test_parsing_command_args)
 END_TEST_CASE(perftest_runner_test)
 
