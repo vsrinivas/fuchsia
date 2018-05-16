@@ -236,7 +236,9 @@ static int completer_thread(void *arg) {
         zx_status_t wait_res;
         wait_res = zx_interrupt_wait(irq_handle, NULL);
         if (wait_res != ZX_OK) {
-            zxlogf(ERROR, "unexpected pci_wait_irq failure (%d)\n", wait_res);
+            if (wait_res != ZX_ERR_CANCELED) {
+                zxlogf(ERROR, "unexpected zx_interrupt_wait failure (%d)\n", wait_res);
+            }
             break;
         }
         if (atomic_load(&completer->xhci->suspended)) {
