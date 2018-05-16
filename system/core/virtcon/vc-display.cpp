@@ -271,7 +271,7 @@ static zx_status_t set_active_image(uint64_t display_id, uint64_t image_id) {
         return status == ZX_ERR_CALL_FAILED ? read_status : status;
     }
 
-    if (!check_rsp.valid) {
+    if (check_rsp.res.count != 0) {
         printf("vc: Config not valid\n");
         return ZX_ERR_INTERNAL;
     }

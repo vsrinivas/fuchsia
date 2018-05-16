@@ -62,6 +62,8 @@ void Controller::OnDisplaysChanged(uint64_t* displays_added, uint32_t added_coun
             zxlogf(INFO, "Out of memory when processing display hotplug\n");
             break;
         }
+        info->pending_layer_change = false;
+        info->layer_count = 0;
 
         info->id = displays_added[i];
         if (ops_.ops->get_display_info(ops_.ctx, info->id, &info->info) != ZX_OK) {
@@ -104,55 +106,184 @@ void Controller::OnDisplaysChanged(uint64_t* displays_added, uint32_t added_coun
 }
 
 void Controller::OnDisplayVsync(uint64_t display_id, void** handles, uint32_t handle_count) {
-    // TODO(stevensd): Support multiple layers
-    if (handle_count != 1) {
-        ZX_DEBUG_ASSERT(handle_count == 0);
-        return;
-    }
     fbl::AutoLock lock(&mtx_);
-    fbl::DoublyLinkedList<fbl::RefPtr<Image>>* images = nullptr;
+    DisplayInfo* info = nullptr;
     for (auto& display_config : displays_) {
         if (display_config.id == display_id) {
-            images = &display_config.images;
+            info = &display_config;
             break;
         }
     }
 
-    if (images) {
-        while (!images->is_empty()) {
-            auto& image = images->front();
-            image.OnPresent();
-            if (image.info().handle == handles[0]) {
+    if (!info) {
+        return;
+    }
+
+    // See ::ApplyConfig for more explaination of how vsync image tracking works.
+    //
+    // If there's a pending layer change, don't process any present/retire actions
+    // until the change is complete.
+    if (info->pending_layer_change) {
+        if (handle_count != info->layer_count) {
+            // There's an unexpected number of layers, so wait until the next vsync.
+            return;
+        } else if (info->images.is_empty()) {
+            // If the images list is empty, then we can't have any pending layers and
+            // the change is done when there are no handles being displayed.
+            ZX_ASSERT(info->layer_count == 0);
+            if (handle_count != 0) {
+                return;
+            }
+        } else {
+            // Otherwise the change is done when the last handle_count==info->layer_count
+            // images match the handles in the correct order.
+            auto iter = --info->images.end();
+            int32_t handle_idx = handle_count - 1;
+            while (handle_idx >= 0 && iter.IsValid()) {
+                if (handles[handle_idx] != iter->info().handle) {
+                    break;
+                }
+                iter--;
+                handle_idx--;
+            }
+            if (handle_idx != -1) {
+                return;
+            }
+        }
+
+        info->pending_layer_change = false;
+
+        if (active_client_ && info->delayed_apply) {
+            active_client_->ReapplyConfig();
+        }
+    }
+
+    // Since we know there are no pending layer changes, we know that every layer (i.e z_index)
+    // has an image. So every image either matches a handle (in which case it's being displayed),
+    // is older than its layer's image (i.e. in front of in the queue) and can be retired, or is
+    // newer than its layer's image (i.e. behind in the queue) and has yet to be presented.
+    uint32_t z_indices[handle_count];
+    for (unsigned i = 0; i < handle_count; i++) {
+        z_indices[i] = UINT32_MAX;
+    }
+    auto iter = info->images.begin();
+    while (iter.IsValid()) {
+        auto cur = iter;
+        iter++;
+
+        bool handle_match = false;
+        bool z_already_matched = false;
+        for (unsigned i = 0; i < handle_count; i++) {
+            if (handles[i] == cur->info().handle) {
+                handle_match = true;
+                z_indices[i] = cur->z_index();
                 break;
-            } else {
-                image.OnRetire();
-                images->pop_front();
+            } else if (z_indices[i] == cur->z_index()) {
+                z_already_matched = true;
+                break;
+            }
+        }
+
+        if (!z_already_matched) {
+            cur->OnPresent();
+            if (!handle_match) {
+                info->images.erase(cur)->OnRetire();
             }
         }
     }
 }
 
-void Controller::OnConfigApplied(DisplayConfig* configs[], int32_t count) {
-    fbl::AutoLock lock(&mtx_);
-    for (int i = 0; i < count; i++) {
-        auto* config = configs[i];
-        if (config->displayed_image) {
-            auto display = displays_.find(config->id);
-            if (display.IsValid()) {
-                // This can happen if we reapply a display's current configuration or if
-                // we switch display owners rapidly. The fact that this is being put back in
-                // the queue means we don't want to retire the image yet. So at worst this
-                // will delay the image's retire by a few frames.
-                if (static_cast<fbl::DoublyLinkedListable<fbl::RefPtr<Image>>*>(
-                            config->displayed_image.get())->InContainer()) {
-                    display->images.erase(*config->displayed_image);
-                } else {
-                    config->displayed_image->StartPresent();
+void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count,
+                             bool is_vc, uint32_t client_stamp) {
+    const display_config_t* display_configs[count];
+    uint32_t display_count = 0;
+    {
+        fbl::AutoLock lock(&mtx_);
+        // The fact that there could already be a vsync waiting to be handled when a config
+        // is applied means that a vsync with no handle for a layer could be interpreted as either
+        // nothing in the layer has been presented or everything in the layer can be retired. To
+        // prevent that ambiguity, we don't allow a layer to be disabled until an image from
+        // it has been displayed.
+        //
+        // Since layers can be moved between displays but the implementation only supports
+        // tracking the image in one display's queue, we need to ensure that the old display is
+        // done with the a migrated image before the new display is done with it. This means
+        // that the new display can't flip until the configuration change is done. However, we
+        // don't want to completely prohibit flips, as that would add latency if the layer's new
+        // image is being waited for when the configuration is applied.
+        //
+        // To handle both of these cases, we force all layer changes to complete before the client
+        // can apply a new configuration. We allow the client to apply a more complete version of
+        // the configuration, although Client::HandleApplyConfig won't migrate a layer's current
+        // image if there is also a pending image.
+        if (vc_applied_ != is_vc || applied_stamp_ != client_stamp) {
+            for (int i = 0; i < count; i++) {
+                auto* config = configs[i];
+                auto display = displays_.find(config->id);
+                if (!display.IsValid()) {
+                    continue;
                 }
-                display->images.push_back(config->displayed_image);
+
+                if (display->pending_layer_change) {
+                    display->delayed_apply = true;
+                    return;
+                }
+            }
+        }
+
+        for (int i = 0; i < count; i++) {
+            auto* config = configs[i];
+            auto display = displays_.find(config->id);
+            if (!display.IsValid()) {
+                continue;
+            }
+
+            display->pending_layer_change = config->apply_layer_change() || is_vc != vc_applied_;
+            display->layer_count = config->current_layer_count();
+            display->delayed_apply = false;
+
+            if (display->layer_count == 0) {
+                continue;
+            }
+
+            display_configs[display_count++] = config->current_config();
+
+            for (auto& layer_node : config->get_current_layers()) {
+                Layer* layer = layer_node.layer;
+                fbl::RefPtr<Image> image = layer->current_image();
+
+                // No need to update tracking if there's no image
+                if (!image) {
+                    continue;
+                }
+
+                // Set the image z index so vsync knows what layer the image is in
+                image->set_z_index(layer->z_order());
+                image->StartPresent();
+
+                // If the image's layer was moved between displays, we need to delete it from the
+                // old display's tracking list. The pending_layer_change logic guarantees that the
+                // the old display will be done with the image before the new one, so deleting the
+                // image won't cause problems.
+                // This is also necessary to maintain the guarantee that the last config->current.
+                // layer_count elements in the queue are the current images.
+                // TODO(stevensd): Convert to list_node_t and use delete
+                for (auto& d : displays_) {
+                    for (auto& i : d.images) {
+                        if (i.info().handle == image->info().handle) {
+                            d.images.erase(i);
+                            break;
+                        }
+                    }
+                }
+                display->images.push_back(fbl::move(image));
             }
         }
     }
+    vc_applied_ = is_vc;
+    applied_stamp_ = client_stamp;
+
+    ops_.ops->apply_configuration(ops_.ctx, display_configs, display_count);
 }
 
 void Controller::ReleaseImage(Image* image) {

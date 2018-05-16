@@ -34,7 +34,20 @@ public:
 
     // TODO(stevensd): extract a list of all valid timings
     edid::timing_params_t preferred_timing;
+
+    // A list of all images which have been sent to display driver. For multiple
+    // images which are displayed at the same time, images with a lower z-order
+    // occur first.
     fbl::DoublyLinkedList<fbl::RefPtr<Image>> images;
+    // The number of layers in the applied configuration.
+    uint32_t layer_count;
+
+    // Set when a layer change occurs on this display and cleared in vsync
+    // when the new layers are all active.
+    bool pending_layer_change;
+    // Flag indicating that a new configuration was delayed during a layer change
+    // and should be reapplied after the layer change completes.
+    bool delayed_apply;
 };
 
 using ControllerParent = ddk::Device<Controller, ddk::Unbindable, ddk::Openable, ddk::OpenAtable>;
@@ -56,7 +69,8 @@ public:
     void SetVcOwner(bool vc_is_owner);
     void ShowActiveDisplay();
 
-    void OnConfigApplied(DisplayConfig* configs[], int32_t count);
+    void ApplyConfig(DisplayConfig* configs[], int32_t count,
+                     bool vc_client, uint32_t apply_stamp);
 
     void ReleaseImage(Image* image);
 
@@ -72,6 +86,8 @@ private:
     mtx_t mtx_;
 
     DisplayInfo::Map displays_ __TA_GUARDED(mtx_);
+    bool vc_applied_;
+    uint32_t applied_stamp_ = UINT32_MAX;
 
     ClientProxy* vc_client_ __TA_GUARDED(mtx_) = nullptr;
     ClientProxy* primary_client_ __TA_GUARDED(mtx_) = nullptr;

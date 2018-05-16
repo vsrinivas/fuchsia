@@ -53,6 +53,68 @@ struct ImageConfig {
 };
 const uint32 typeSimple = 0;
 
+// Rotations are applied counter-clockwise, and are applied before reflections.
+enum Transform : uint8 {
+  IDENTITY = 0;
+  REFLECT_X = 1;
+  REFLECT_Y = 2;
+  ROT_90 = 3;
+  ROT_180 = 4;
+  ROT_270 = 5;
+  ROT_90_REFLECT_X = 6;
+  ROT_90_REFLECT_Y = 7;
+};
+
+struct Frame {
+  // (x_pos, y_pos) specifies the position of the upper-left corner
+  // of the frame.
+  uint32 x_pos;
+  uint32 y_pos;
+  uint32 width;
+  uint32 height;
+};
+
+enum ClientCompositionOp : uint8 {
+  // The client should convert the corresponding layer to a primary layer.
+  CLIENT_USE_PRIMARY = 0;
+  // The client should compose all layers with MERGE_BASE and MERGE_SRC into a new,
+  // single primary layer at the MERGE_BASE layer's z-order. The driver must accept
+  // a fullscreen layer with the default pixel format, but may accept other layer
+  // parameters.
+  //
+  // MERGE_BASE will only be set on one layer per display.
+  CLIENT_MERGE_BASE = 1;
+  // The client should pre-scale the image so that src_frame's dimensions are equal
+  // to dest_frame's dimensions.
+  CLIENT_MERGE_SRC = 2;
+  // The client should pre-clip the image so that src_frame's dimensions are equal to
+  // the image's dimensions.
+  CLIENT_FRAME_SCALE = 3;
+  // The client should pre-clip the image so that src_frame's dimensions are equal to
+  // the image's dimensions.
+  CLIENT_SRC_FRAME = 4;
+  // The client should pre-apply the transformation so TRANSFORM_IDENTITY can be used.
+  CLIENT_TRANSFORM = 5;
+};
+
+enum ConfigError : uint8 {
+  // The requested layer configuration is invalid.
+  INVALID_CONFIG = 0;
+};
+
+struct ConfigResult {
+  uint64 display_id;
+
+  // There was an unrecoverable error with the configuration. If this is set,
+  // then layers and client_ops will be empty.
+  ConfigError error;
+
+  // If present, layers and client_ops are parallel vectors which specify all
+  // (layer, ClientCompositionOp) on the the display specified by display_id.
+  vector<uint64> layers;
+  vector<ClientCompositionOp> client_ops;
+};
+
 // Interface for accessing the display hardware.
 //
 // The driver supports two simultaneous clients - a primary client and a virtcon
@@ -88,7 +150,45 @@ interface Controller {
   // waited up or signaled as appropriate before its resources are released.
   5: ReleaseEvent(uint64 id);
 
-  // Sets the image for the display.
+  // Creates a new layer. Layers are not associated with a particular
+  // display, but they can only be shown on at most one display at any
+  // given time.
+  6: CreateLayer() -> (status res, uint64 layer_id);
+
+  // Destroys the given layer. A layer is considered in use from the time it
+  // is passed to SetDisplayLayers until a subsequent call to SetDisplayLayers
+  // removes it from its display or until its display is removed. It is illegal
+  // to destroy a layer which is in use or in a pending configuration.
+  7: DestroyLayer(uint64 layer_id);
+
+  // Sets which layers are on a display. The list is in increasing z-order.
+  //
+  // It is illegal to use a layer on multiple displays concurrently. If a layer
+  // needs to be moved between displays, it must be removed from the first display's
+  // pending config before being added to the second display's pending config.
+  8: SetDisplayLayers(uint64 display_id, vector<uint64> layer_ids);
+
+  // Configures the layer as a primary layer with no image and the default
+  // config (no src_frame cropping, the identity transform, positioned in the
+  //top-left corner of the composed output, and no scaling).
+  //
+  // If the image configuration changes due to applying this operation, the
+  // image currently being displayed and any pending images will be dropped
+  // before the next frame, regardless of whether or not the layer's new image
+  // is ready to be displayed.
+  9: SetLayerPrimaryConfig(uint64 layer_id, ImageConfig image_config);
+
+  // Sets the layer transform, scaling, and positioning. Calling this on a
+  // non-primary layer is illegal.
+  //
+  // |src_frame| must be non-empty and must fit entirely within the source
+  // image. |dest_frame| must be non-empty and must fit entirely within the
+  // composed output. CheckConfig will return CONFIG_ERROR if any of these
+  // conditions is violated.
+  10: SetLayerPrimaryPosition(uint64 layer_id, Transform transform, Frame src_frame, Frame dest_frame);
+
+  // Sets the image for the layer. It is illegal to call this with an
+  // image which doesn't match the layer's pending ImageConfig.
   //
   // If wait_event_id corresponds to an imported event, the driver will
   // wait for ZX_EVENT_SIGNALED on the object before presenting the image.
@@ -104,41 +204,52 @@ interface Controller {
   // within one vsync period, then only the last image will actually be
   // displayed.
   //
-  //
-  // An image cannot be used for multiple displays simultaneously, nor can an
+  // An image cannot be used for multiple layers simultaneously, nor can an
   // image be given back to the display controller while it is still in use.
   // An image is considered used when it is part of a pending configuration or
   // from when its configuration is applied until its signal_event_id is
   // signaled.
-  6: SetDisplayImage(uint64 display, uint64 image_id, uint64 wait_event_id, uint64 present_event_id, uint64 signal_event_id);
+  11: SetLayerImage(uint64 layer_id, uint64 image_id, uint64 wait_event_id, uint64 present_event_id, uint64 signal_event_id);
 
   // Attempts to validate the current configuration.
   //
+  // When CheckConfig is called, the driver will validate the pending
+  // configuration. Any errors or client configuration will be returned in
+  // the res vector. If the vector is empty, the configuration is valid.
+  //
+  // Most SetX operation require re-validating the configuration. The exception
+  // are SetLayerCursorPosition and SetLayerImage - these operations do not
+  // modify the configuration in a way which requires revalidation.
+  //
   // If discard is true, the pending changes will be discarded after validation.
-  7: CheckConfig(bool discard) -> (bool valid);
+  12: CheckConfig(bool discard) -> (vector<ConfigResult> res);
 
-  // Applies any pending changes to the current configuration.
+  // Applies any pending changes to the current configuration. This will
+  // not apply pending changes to layers which are not on any display.
   //
   // If the pending configuration cannot be applied, this call will silently
   // fail, so the client should ensure its configuration is valid with
   // CheckConfig.
-  8: ApplyConfig();
+  13: ApplyConfig();
 
   // Sets whether or not this client has ownership of the display. This call
   // will silently fail if called from the primary client.
-  9: SetOwnership(bool active);
+  14: SetOwnership(bool active);
 
   // Event fired when the client gains or loses ownership of the displays.
   //
   // New clients should assume they do not have ownership of the display
   // until this event informs them otherwise.
-  10: -> ClientOwnershipChange(bool has_ownership);
+  15: -> ClientOwnershipChange(bool has_ownership);
 
   // Computes the stride (in pixels) necessary for a linear image with the
   // given width and pixel format. Returns 0 on error.
-  11: ComputeLinearImageStride(uint32 width, int32 pixel_format) -> (uint32 stride);
+  16: ComputeLinearImageStride(uint32 width, int32 pixel_format) -> (uint32 stride);
 
   // Allocates a VMO of the requested size which can be used for images.
   // TODO: move this into a seperate video buffer management system.
-  12: AllocateVmo(uint64 size) -> (status res, handle<vmo>? vmo);
+  17: AllocateVmo(uint64 size) -> (status res, handle<vmo>? vmo);
+
+  // TODO(stevensd): Delete this when nothing uses it anymore
+  100: SetDisplayImage(uint64 display, uint64 image_id, uint64 wait_event_id, uint64 present_event_id, uint64 signal_event_id);
 };

@@ -295,7 +295,7 @@ int main(int argc, char* argv[]) {
             return -1;
         }
 
-        if (!check_rsp.valid) {
+        if (check_rsp.res.count != 0) {
             dprintf("Config not valid\n");
             return -1;
         }

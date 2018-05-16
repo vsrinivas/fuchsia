@@ -49,10 +49,24 @@ public:
 
     bool IsReady() const { return wait_fence_ == nullptr; }
 
+    bool HasSameConfig(const image_t& config) const {
+        return info_.width == config.width
+                && info_.height == config.height
+                && info_.pixel_format == config.pixel_format
+                && info_.type == config.type;
+    }
+    bool HasSameConfig(const Image& other) const { return HasSameConfig(other.info_); }
+
     const zx::vmo& vmo() { return vmo_; }
+
+    // The image z_index is set/read by Controller.cpp for layer tracking.
+    void set_z_index(uint32_t z_index) { z_index_ = z_index; }
+    uint32_t z_index() const { return z_index_; }
+
 private:
     image_t info_;
     Controller* controller_;
+    uint32_t z_index_;
 
     fbl::RefPtr<FenceReference> wait_fence_ = nullptr;
     fbl::RefPtr<FenceReference> present_fence_ = nullptr;
