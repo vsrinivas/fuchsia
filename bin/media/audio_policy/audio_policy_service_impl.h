@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include <fuchsia/cpp/audio_policy.h>
+#include <audio_policy/cpp/fidl.h>
 
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/app/cpp/application_context.h"

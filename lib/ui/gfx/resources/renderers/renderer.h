@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_RENDERERS_RENDERER_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_RENDERERS_RENDERER_H_
 
-#include <fuchsia/cpp/gfx.h>
+#include <gfx/cpp/fidl.h>
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "garnet/lib/ui/gfx/resources/resource_visitor.h"
 #include "lib/escher/scene/object.h"

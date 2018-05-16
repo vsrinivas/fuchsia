@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/examples/media/simple_sine_sync/simple_sine_sync.h"
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 #include <math.h>
 #include <zircon/syscalls.h>
 #include "lib/app/cpp/environment_services.h"

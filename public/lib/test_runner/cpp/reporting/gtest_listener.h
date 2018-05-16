@@ -5,7 +5,7 @@
 #ifndef LIB_TEST_RUNNER_CPP_REPORTING_GTEST_LISTENER_H_
 #define LIB_TEST_RUNNER_CPP_REPORTING_GTEST_LISTENER_H_
 
-#include <fuchsia/cpp/test_runner.h>
+#include <test_runner/cpp/fidl.h>
 #include "gtest/gtest.h"
 
 namespace test_runner {

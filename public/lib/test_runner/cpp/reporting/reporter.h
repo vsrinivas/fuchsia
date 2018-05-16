@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "lib/app/cpp/application_context.h"
-#include <fuchsia/cpp/test_runner.h>
+#include <test_runner/cpp/fidl.h>
 
 namespace test_runner {
 

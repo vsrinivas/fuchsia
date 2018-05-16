@@ -8,7 +8,7 @@
 
 #include "garnet/bin/netconnector/message_transceiver.h"
 #include "lib/fxl/files/unique_fd.h"
-#include <fuchsia/cpp/netconnector.h>
+#include <netconnector/cpp/fidl.h>
 
 namespace netconnector {
 

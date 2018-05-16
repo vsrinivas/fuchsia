@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddk/device.h>
-#include <fuchsia/cpp/wlantap.h>
+#include <wlantap/cpp/fidl.h>
 #include <wlan/protocol/mac.h>
 
 namespace wlan {

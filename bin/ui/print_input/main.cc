@@ -4,7 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 
-#include <fuchsia/cpp/input.h>
+#include <input/cpp/fidl.h>
 #include "garnet/bin/ui/input_reader/input_reader.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"

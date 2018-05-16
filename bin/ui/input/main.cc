@@ -6,7 +6,7 @@
 #include <iostream>
 #include <memory>
 
-#include <fuchsia/cpp/input.h>
+#include <input/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>

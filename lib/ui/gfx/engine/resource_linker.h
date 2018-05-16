@@ -11,7 +11,7 @@
 #include <lib/async/cpp/wait.h>
 #include "lib/fsl/handles/object_info.h"
 
-#include <fuchsia/cpp/gfx.h>
+#include <gfx/cpp/fidl.h>
 #include "garnet/lib/ui/gfx/engine/unresolved_imports.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
 

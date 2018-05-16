@@ -5,7 +5,7 @@
 #ifndef LIB_UI_GEOMETRY_CPP_FORMATTING_H_
 #define LIB_UI_GEOMETRY_CPP_FORMATTING_H_
 
-#include <fuchsia/cpp/geometry.h>
+#include <geometry/cpp/fidl.h>
 
 #include <iosfwd>
 

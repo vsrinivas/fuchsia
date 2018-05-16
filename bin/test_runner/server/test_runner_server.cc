@@ -37,7 +37,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include <fuchsia/cpp/test_runner.h>
+#include <test_runner/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/zx/time.h>
 

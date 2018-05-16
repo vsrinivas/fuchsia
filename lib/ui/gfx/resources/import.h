@@ -7,7 +7,7 @@
 
 #include <lib/zx/eventpair.h>
 
-#include <fuchsia/cpp/gfx.h>
+#include <gfx/cpp/fidl.h>
 
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "lib/fxl/macros.h"

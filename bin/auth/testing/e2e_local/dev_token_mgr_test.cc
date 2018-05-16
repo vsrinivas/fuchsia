@@ -7,7 +7,7 @@
 #include <memory>
 #include <string>
 
-#include <fuchsia/cpp/auth.h>
+#include <auth/cpp/fidl.h>
 
 #include "garnet/bin/auth/store/auth_db.h"
 #include "garnet/bin/auth/store/auth_db_file_impl.h"

@@ -10,7 +10,7 @@
 #include <memory>
 #include <string>
 
-#include <fuchsia/cpp/gfx.h>
+#include <gfx/cpp/fidl.h>
 #include "garnet/lib/ui/scenic/event_reporter.h"
 #include "garnet/lib/ui/scenic/forward_declarations.h"
 #include "garnet/lib/ui/scenic/scenic.h"

@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_SYSMGR_DELEGATING_LOADER_H_
 #define GARNET_BIN_SYSMGR_DELEGATING_LOADER_H_
 
-#include <fuchsia/cpp/component.h>
+#include <component/cpp/fidl.h>
 #include "garnet/bin/sysmgr/config.h"
 #include "lib/fxl/macros.h"
 

@@ -6,7 +6,7 @@
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 
 #include <mutex>

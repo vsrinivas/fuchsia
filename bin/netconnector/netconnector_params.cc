@@ -7,7 +7,7 @@
 #include <rapidjson/document.h>
 
 #include "garnet/bin/netconnector/ip_address.h"
-#include <fuchsia/cpp/component.h>
+#include <component/cpp/fidl.h>
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/split_string.h"

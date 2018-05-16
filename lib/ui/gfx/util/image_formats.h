@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_GFX_UTIL_IMAGE_FORMATS_H_
 #define GARNET_LIB_UI_GFX_UTIL_IMAGE_FORMATS_H_
 
-#include <fuchsia/cpp/images.h>
+#include <images/cpp/fidl.h>
 #include "lib/escher/util/image_utils.h"
 
 // Contains utilities for converting from various formats to BGRA_8, which is

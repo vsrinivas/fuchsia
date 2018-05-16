@@ -6,7 +6,7 @@
 
 #include <unordered_map>
 
-#include <fuchsia/cpp/bluetooth_gatt.h>
+#include <bluetooth_gatt/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"

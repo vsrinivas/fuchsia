@@ -6,7 +6,7 @@
 
 #include <lib/zx/vmar.h>
 
-#include <fuchsia/cpp/icu_data.h>
+#include <icu_data/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/icu_data/cpp/constants.h"

@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <fuchsia/cpp/bluetooth.h>
-#include <fuchsia/cpp/bluetooth_control.h>
+#include <bluetooth/cpp/fidl.h>
+#include <bluetooth_control/cpp/fidl.h>
 
 namespace bluetoothcli {
 

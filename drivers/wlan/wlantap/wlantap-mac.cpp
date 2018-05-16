@@ -5,7 +5,7 @@
 #include "wlantap-mac.h"
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <fuchsia/cpp/wlan_device.h>
+#include <wlan_device/cpp/fidl.h>
 #include <lib/fxl/arraysize.h>
 #include <wlan/common/channel.h>
 #include <wlan/wlanmac-ifc-proxy.h>

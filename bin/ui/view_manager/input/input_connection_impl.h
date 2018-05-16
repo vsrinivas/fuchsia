@@ -5,8 +5,8 @@
 #ifndef GARNET_BIN_UI_VIEW_MANAGER_INPUT_INPUT_CONNECTION_IMPL_H_
 #define GARNET_BIN_UI_VIEW_MANAGER_INPUT_INPUT_CONNECTION_IMPL_H_
 
-#include <fuchsia/cpp/input.h>
-#include <fuchsia/cpp/views_v1.h>
+#include <input/cpp/fidl.h>
+#include <views_v1/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"

@@ -7,7 +7,7 @@
 
 #include <lib/zx/vmo.h>
 
-#include <fuchsia/cpp/component.h>
+#include <component/cpp/fidl.h>
 #include "garnet/bin/appmgr/namespace.h"
 #include "garnet/lib/farfs/file_system.h"
 #include "lib/fxl/files/unique_fd.h"

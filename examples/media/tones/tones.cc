@@ -9,7 +9,7 @@
 #include <limits>
 
 #include <fbl/auto_call.h>
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>

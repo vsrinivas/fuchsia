@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/cpp/compatibility_test_service.h>
+#include <compatibility_test_service/cpp/fidl.h>
 #include "garnet/bin/fidl_compatibility_test/echo_client_app.h"
 
 namespace compatibility_test_service {

@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include <fuchsia/cpp/bluetooth_low_energy.h>
+#include <bluetooth_low_energy/cpp/fidl.h>
 
 namespace bt_beacon_reader {
 

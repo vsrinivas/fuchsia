@@ -4,7 +4,7 @@
 
 #include "garnet/lib/ui/gfx/resources/gpu_memory.h"
 
-#include <fuchsia/cpp/images.h>
+#include <images/cpp/fidl.h>
 
 #include "garnet/lib/ui/gfx/engine/session.h"
 

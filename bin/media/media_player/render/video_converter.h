@@ -7,8 +7,8 @@
 
 #include <memory>
 
-#include <fuchsia/cpp/geometry.h>
-#include <fuchsia/cpp/media.h>
+#include <geometry/cpp/fidl.h>
+#include <media/cpp/fidl.h>
 #include "garnet/bin/media/media_player/framework/types/video_stream_type.h"
 
 namespace media_player {

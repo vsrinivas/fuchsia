@@ -9,8 +9,8 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
-#include <fuchsia/cpp/bluetooth_control.h>
-#include <fuchsia/cpp/bluetooth_host.h>
+#include <bluetooth_control/cpp/fidl.h>
+#include <bluetooth_host/cpp/fidl.h>
 
 #include "garnet/drivers/bluetooth/host/fidl/server_base.h"
 

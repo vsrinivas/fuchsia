@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include <fuchsia/cpp/media_player.h>
+#include <media_player/cpp/fidl.h>
 #include "garnet/bin/media/net_media_service/serialization.h"
 
 namespace media_player {

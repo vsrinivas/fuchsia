@@ -9,7 +9,7 @@
 
 #include "garnet/lib/media/client/audio_output_device.h"
 
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 #include "lib/media/c/audio.h"
 
 namespace media_client {

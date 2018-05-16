@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include <fuchsia/cpp/ui.h>
+#include <ui/cpp/fidl.h>
 #include <lib/async/default.h>
 
 #include "lib/fsl/tasks/message_loop.h"

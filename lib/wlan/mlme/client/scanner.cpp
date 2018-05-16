@@ -13,7 +13,7 @@
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/wlan.h>
 
-#include <fuchsia/c/wlan_mlme.h>
+#include <wlan_mlme/c/fidl.h>
 #include "lib/fidl/cpp/vector.h"
 
 #include <fbl/unique_ptr.h>

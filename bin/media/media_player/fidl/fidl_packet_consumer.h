@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_FIDL_FIDL_PACKET_CONSUMER_H_
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_FIDL_FIDL_PACKET_CONSUMER_H_
 
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 #include "garnet/bin/media/media_player/framework/models/source.h"
 #include "lib/media/transport/media_packet_consumer_base.h"
 

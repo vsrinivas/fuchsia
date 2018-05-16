@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_SCENIC_UTIL_PRINT_COMMAND_H_
 #define GARNET_LIB_UI_SCENIC_UTIL_PRINT_COMMAND_H_
 
-#include <fuchsia/cpp/gfx.h>
+#include <gfx/cpp/fidl.h>
 
 #include <ostream>
 

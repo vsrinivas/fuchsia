@@ -4,9 +4,9 @@
 
 #include "garnet/bin/guest/cli/launch.h"
 
-#include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/presentation.h>
-#include <fuchsia/cpp/views_v1.h>
+#include <component/cpp/fidl.h>
+#include <presentation/cpp/fidl.h>
+#include <views_v1/cpp/fidl.h>
 
 #include "garnet/bin/guest/cli/serial.h"
 #include "lib/app/cpp/environment_services.h"

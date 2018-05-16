@@ -7,8 +7,8 @@
 #include <sstream>
 
 #include <fs/pseudo-file.h>
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media_player.h>
+#include <media/cpp/fidl.h>
+#include <media_player/cpp/fidl.h>
 #include <lib/async/default.h>
 
 #include "garnet/bin/media/media_player/demux/fidl_reader.h"

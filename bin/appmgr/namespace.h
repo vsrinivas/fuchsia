@@ -9,7 +9,7 @@
 #include <string>
 #include <unordered_map>
 
-#include <fuchsia/cpp/component.h>
+#include <component/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"

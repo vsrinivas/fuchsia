@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include <fuchsia/cpp/guest.h>
+#include <guest/cpp/fidl.h>
 #include <virtio/virtio_ids.h>
 #include <virtio/vsock.h>
 #include <zx/socket.h>

@@ -13,7 +13,7 @@
 #include <wlan/protocol/mac.h>
 #include <zircon/compiler.h>
 
-#include <fuchsia/cpp/wlan_device.h>
+#include <wlan_device/cpp/fidl.h>
 
 #include <array>
 #include <cstddef>

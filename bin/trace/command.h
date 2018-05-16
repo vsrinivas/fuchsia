@@ -11,7 +11,7 @@
 #include <memory>
 #include <string>
 
-#include <fuchsia/cpp/tracing.h>
+#include <tracing/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/command_line.h"

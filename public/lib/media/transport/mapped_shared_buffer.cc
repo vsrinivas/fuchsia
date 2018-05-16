@@ -8,7 +8,7 @@
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 #include "lib/fxl/logging.h"
 #include "lib/media/transport/fifo_allocator.h"
 

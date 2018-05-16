@@ -5,7 +5,7 @@
 #ifndef LIB_UI_INPUT_INPUT_DEVICE_IMPL_H_
 #define LIB_UI_INPUT_INPUT_DEVICE_IMPL_H_
 
-#include <fuchsia/cpp/input.h>
+#include <input/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 
 namespace mozart {

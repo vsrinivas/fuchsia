@@ -6,7 +6,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include <fuchsia/cpp/audio_policy.h>
+#include <audio_policy/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 

@@ -11,7 +11,7 @@
 #include <fbl/slab_allocator.h>
 #include <fbl/unique_ptr.h>
 
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 #include "garnet/bin/media/audio_server/audio_object.h"
 #include "garnet/bin/media/audio_server/platform/generic/mixer.h"
 #include "garnet/bin/media/audio_server/platform/generic/output_formatter.h"

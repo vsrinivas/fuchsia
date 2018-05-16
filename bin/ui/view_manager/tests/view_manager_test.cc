@@ -9,7 +9,7 @@
 #include "lib/fxl/time/time_delta.h"
 #include "lib/fxl/time/time_point.h"
 
-#include <fuchsia/cpp/views_v1.h>
+#include <views_v1/cpp/fidl.h>
 #include "lib/ui/tests/mocks/mock_view_container_listener.h"
 #include "lib/ui/tests/mocks/mock_view_listener.h"
 #include "lib/ui/tests/mocks/mock_view_tree_listener.h"

@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_GFX_SCREENSHOTTER_H_
 #define GARNET_LIB_UI_GFX_SCREENSHOTTER_H_
 
-#include <fuchsia/cpp/ui.h>
+#include <ui/cpp/fidl.h>
 #include <string>
 
 #include "garnet/lib/ui/gfx/engine/engine.h"

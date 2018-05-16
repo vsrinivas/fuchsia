@@ -8,7 +8,7 @@
 #include <map>
 #include <queue>
 
-#include <fuchsia/cpp/test_runner.h>
+#include <test_runner/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fxl/macros.h"

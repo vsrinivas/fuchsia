@@ -5,7 +5,7 @@
 #ifndef GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_SHADERTOY_IMPL_H_
 #define GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_SHADERTOY_IMPL_H_
 
-#include <fuchsia/cpp/shadertoy.h>
+#include <shadertoy/cpp/fidl.h>
 #include "garnet/examples/ui/shadertoy/service/shadertoy_state.h"
 
 namespace shadertoy {

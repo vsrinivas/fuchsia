@@ -9,7 +9,7 @@
 #include <wlan/mlme/packet.h>
 #include <zircon/fidl.h>
 
-#include <fuchsia/cpp/wlan_mlme.h>
+#include <wlan_mlme/cpp/fidl.h>
 
 #include <lib/fidl/cpp/decoder.h>
 #include <lib/fidl/cpp/message.h>

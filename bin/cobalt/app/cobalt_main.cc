@@ -11,7 +11,7 @@
 #include <thread>
 #include <utility>
 
-#include <fuchsia/cpp/cobalt.h>
+#include <cobalt/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 
 #include "garnet/bin/cobalt/app/cobalt_app.h"

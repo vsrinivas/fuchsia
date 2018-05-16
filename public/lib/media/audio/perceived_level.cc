@@ -8,7 +8,7 @@
 #include <cmath>
 
 #include "lib/fxl/logging.h"
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 
 namespace media {
 namespace {

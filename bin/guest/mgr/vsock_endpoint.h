@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_GUEST_MGR_VSOCK_ENDPOINT_H_
 #define GARNET_BIN_GUEST_MGR_VSOCK_ENDPOINT_H_
 
-#include <fuchsia/cpp/guest.h>
+#include <guest/cpp/fidl.h>
 #include <unordered_map>
 
 #include "lib/fidl/cpp/binding_set.h"

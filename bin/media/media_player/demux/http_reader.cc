@@ -4,7 +4,7 @@
 
 #include "garnet/bin/media/media_player/demux/http_reader.h"
 
-#include <fuchsia/cpp/network.h>
+#include <network/cpp/fidl.h>
 #include <lib/async/default.h>
 
 #include "garnet/bin/network/net_errors.h"

@@ -6,7 +6,7 @@
 
 #include <algorithm>
 
-#include <fuchsia/cpp/input.h>
+#include <input/cpp/fidl.h>
 #include "garnet/bin/ui/ime/ime_impl.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fxl/logging.h"

@@ -16,7 +16,7 @@
 #include <gtest/gtest.h>
 #include <functional>
 
-#include <fuchsia/cpp/wlan_mlme.h>
+#include <wlan_mlme/cpp/fidl.h>
 
 namespace wlan {
 namespace {

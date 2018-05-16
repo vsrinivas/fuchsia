@@ -13,7 +13,7 @@
 #include <zircon/device/device.h>
 #include <zircon/device/sysinfo.h>
 
-#include <fuchsia/cpp/cobalt.h>
+#include <cobalt/cpp/fidl.h>
 #include <lib/zx/resource.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/message_loop.h"

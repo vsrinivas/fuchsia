@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_UI_VIEW_MANAGER_VIEW_MANAGER_IMPL_H_
 #define GARNET_BIN_UI_VIEW_MANAGER_VIEW_MANAGER_IMPL_H_
 
-#include <fuchsia/cpp/views.h>
+#include <views/cpp/fidl.h>
 #include "garnet/bin/ui/view_manager/view_registry.h"
 #include "lib/fxl/macros.h"
 

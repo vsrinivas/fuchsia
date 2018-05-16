@@ -8,7 +8,7 @@
 #include <list>
 #include <queue>
 
-#include <fuchsia/cpp/network.h>
+#include <network/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/zx/channel.h>
 

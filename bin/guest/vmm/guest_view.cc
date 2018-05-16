@@ -6,7 +6,7 @@
 
 #include <semaphore.h>
 
-#include <fuchsia/cpp/views_v1.h>
+#include <views_v1/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 

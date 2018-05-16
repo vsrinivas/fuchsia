@@ -341,6 +341,10 @@ func formatLibraryPrefix(library types.LibraryIdentifier) string {
 	return formatLibrary(library, "_")
 }
 
+func formatLibraryPath(library types.LibraryIdentifier) string {
+	return formatLibrary(library, "/")
+}
+
 func formatDestructor(eci types.EncodedCompoundIdentifier) string {
 	val := types.ParseCompoundIdentifier(eci)
 	return fmt.Sprintf("~%s", changeIfReserved(val.Name, ""))
@@ -684,8 +688,8 @@ func Compile(r types.Root) Root {
 			// We don't need to include our own header.
 			continue
 		}
-		// TODO(abarth): Support dependencies on headers outside the SDK.
-		h := fmt.Sprintf("fuchsia/cpp/%s.h", l.Name)
+		libraryIdent := types.ParseLibraryName(l.Name)
+		h := fmt.Sprintf("%s/cpp/fidl.h", formatLibraryPath(libraryIdent))
 		root.Headers = append(root.Headers, h)
 	}
 

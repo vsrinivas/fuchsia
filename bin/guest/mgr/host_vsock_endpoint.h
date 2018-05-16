@@ -10,7 +10,7 @@
 #include <unordered_map>
 
 #include <bitmap/rle-bitmap.h>
-#include <fuchsia/cpp/guest.h>
+#include <guest/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 
 namespace guestmgr {

@@ -11,7 +11,7 @@
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 
-#include <fuchsia/c/wlan_stats.h>
+#include <wlan_stats/c/fidl.h>
 
 namespace wlan {
 

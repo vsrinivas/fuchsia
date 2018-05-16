@@ -4,8 +4,8 @@
 
 #include <lib/zx/channel.h>
 
-#include <fuchsia/cpp/presentation.h>
-#include <fuchsia/cpp/views_v1.h>
+#include <presentation/cpp/fidl.h>
+#include <views_v1/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"

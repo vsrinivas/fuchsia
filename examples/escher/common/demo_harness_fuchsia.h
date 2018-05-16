@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include <fuchsia/cpp/escher_demo.h>
+#include <escher_demo/cpp/fidl.h>
 #include "garnet/examples/escher/common/demo_harness.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"

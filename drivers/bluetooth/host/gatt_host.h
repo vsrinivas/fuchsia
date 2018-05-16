@@ -9,7 +9,7 @@
 
 #include "garnet/drivers/bluetooth/lib/common/task_domain.h"
 #include "garnet/drivers/bluetooth/lib/gatt/gatt.h"
-#include <fuchsia/cpp/bluetooth_gatt.h>
+#include <bluetooth_gatt/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"

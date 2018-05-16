@@ -5,8 +5,8 @@
 #ifndef GARNET_BIN_GUEST_MGR_GUEST_HOLDER_H_
 #define GARNET_BIN_GUEST_MGR_GUEST_HOLDER_H_
 
-#include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/guest.h>
+#include <component/cpp/fidl.h>
+#include <guest/cpp/fidl.h>
 
 #include "garnet/bin/guest/mgr/remote_vsock_endpoint.h"
 #include "lib/fidl/cpp/binding_set.h"

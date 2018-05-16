@@ -7,7 +7,7 @@
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/frame_handler.h>
 
-#include <fuchsia/cpp/wlan_mlme.h>
+#include <wlan_mlme/cpp/fidl.h>
 
 #include <zircon/types.h>
 

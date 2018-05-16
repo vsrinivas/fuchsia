@@ -10,7 +10,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
 // TODO(MZ-453): Don't support GetDisplayInfo in scenic fidl API.
-#include <fuchsia/cpp/ui.h>
+#include <ui/cpp/fidl.h>
 
 namespace component {
 class ApplicationContext;

@@ -7,7 +7,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include <fuchsia/cpp/input.h>
+#include <input/cpp/fidl.h>
 #include "lib/fxl/strings/string_printf.h"
 
 namespace input {

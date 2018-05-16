@@ -11,7 +11,7 @@
 #include <fstream>
 #include <string>
 
-#include <fuchsia/cpp/cobalt.h>
+#include <cobalt/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 
 #include "garnet/bin/cobalt/app/cobalt_controller_impl.h"

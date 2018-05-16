@@ -7,7 +7,7 @@
 #include <memory>
 #include <unordered_set>
 
-#include <fuchsia/cpp/netconnector.h>
+#include <netconnector/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/logging.h"

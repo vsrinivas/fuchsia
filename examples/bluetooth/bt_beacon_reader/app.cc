@@ -11,8 +11,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include <fuchsia/cpp/bluetooth_control.h>
-#include <fuchsia/cpp/bluetooth_low_energy.h>
+#include <bluetooth_control/cpp/fidl.h>
+#include <bluetooth_low_energy/cpp/fidl.h>
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/logging.h"

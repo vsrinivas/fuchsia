@@ -7,7 +7,7 @@
 #include <fbl/unique_ptr.h>
 #include <fbl/vmo_mapper.h>
 
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 #include "garnet/bin/media/audio_server/audio_object.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
 #include "garnet/bin/media/audio_server/utils.h"

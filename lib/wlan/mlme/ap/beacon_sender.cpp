@@ -11,7 +11,7 @@
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 
-#include <fuchsia/cpp/wlan_mlme.h>
+#include <wlan_mlme/cpp/fidl.h>
 
 #include <zircon/assert.h>
 

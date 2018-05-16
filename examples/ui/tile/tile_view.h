@@ -8,9 +8,9 @@
 #include <map>
 #include <memory>
 
-#include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/presentation.h>
-#include <fuchsia/cpp/views_v1.h>
+#include <component/cpp/fidl.h>
+#include <presentation/cpp/fidl.h>
+#include <views_v1/cpp/fidl.h>
 #include "garnet/examples/ui/tile/tile_params.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"

@@ -7,7 +7,7 @@
 
 #include <set>
 
-#include <fuchsia/cpp/ui.h>
+#include <ui/cpp/fidl.h>
 #include "garnet/lib/ui/scenic/session.h"
 #include "garnet/lib/ui/scenic/system.h"
 #include "lib/fidl/cpp/binding_set.h"

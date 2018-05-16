@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include <fuchsia/cpp/auth.h>
+#include <auth/cpp/fidl.h>
 
 #include "garnet/bin/auth/token_manager/token_manager_impl.h"
 #include "lib/app/cpp/connect.h"

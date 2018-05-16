@@ -7,8 +7,8 @@
 #include <stdio.h>
 
 #include "lib/app/cpp/environment_services.h"
-#include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/component.h>
+#include <component/cpp/fidl.h>
+#include <component/cpp/fidl.h>
 
 static component::FileDescriptorPtr CloneFileDescriptor(int fd) {
   zx_handle_t handles[FDIO_MAX_HANDLES] = { 0, 0, 0 };

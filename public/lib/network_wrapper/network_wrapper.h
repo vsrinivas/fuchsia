@@ -5,7 +5,7 @@
 #ifndef LIB_NETWORK_WRAPPER_NETWORK_WRAPPER_H_
 #define LIB_NETWORK_WRAPPER_NETWORK_WRAPPER_H_
 
-#include <fuchsia/cpp/network.h>
+#include <network/cpp/fidl.h>
 #include "lib/callback/cancellable.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"

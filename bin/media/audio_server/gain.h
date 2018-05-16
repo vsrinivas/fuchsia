@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <atomic>
 
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 
 #include "garnet/bin/media/audio_server/constants.h"
 

@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <fuchsia/cpp/images.h>
+#include <images/cpp/fidl.h>
 
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/logging.h"

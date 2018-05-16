@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include <fuchsia/cpp/mem.h>
+#include <mem/cpp/fidl.h>
 
 #include <lib/zx/vmo.h>
 

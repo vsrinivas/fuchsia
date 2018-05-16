@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_COBALT_APP_COBALT_CONTROLLER_IMPL_H_
 #define GARNET_BIN_COBALT_APP_COBALT_CONTROLLER_IMPL_H_
 
-#include <fuchsia/cpp/cobalt.h>
+#include <cobalt/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 
 #include "third_party/cobalt/encoder/shipping_dispatcher.h"

@@ -9,7 +9,7 @@
 
 #include <iosfwd>
 
-#include <fuchsia/cpp/fuchsia.tracelink.h>
+#include <fuchsia/tracelink/cpp/fidl.h>
 
 namespace tracing {
 

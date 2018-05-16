@@ -6,7 +6,7 @@
 
 #include <cstdio>
 
-#include <fuchsia/cpp/network.h>
+#include <network/cpp/fidl.h>
 #include <lib/async/default.h>
 
 #include "lib/app/cpp/application_context.h"

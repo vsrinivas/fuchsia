@@ -6,7 +6,7 @@
 
 #include <iostream>
 
-#include <fuchsia/cpp/guest.h>
+#include <guest/cpp/fidl.h>
 
 #include "garnet/bin/guest/cli/serial.h"
 #include "lib/app/cpp/environment_services.h"

@@ -6,7 +6,7 @@
 
 #include <iostream>
 
-#include <fuchsia/cpp/guest.h>
+#include <guest/cpp/fidl.h>
 
 #include "lib/app/cpp/environment_services.h"
 #include "lib/fsl/tasks/message_loop.h"

@@ -5,8 +5,8 @@
 #ifndef GARNET_LIB_MACHINA_GUEST_CONTROLLER_IMPL_H_
 #define GARNET_LIB_MACHINA_GUEST_CONTROLLER_IMPL_H_
 
-#include <fuchsia/cpp/guest.h>
-#include <fuchsia/cpp/views_v1.h>
+#include <guest/cpp/fidl.h>
+#include <views_v1/cpp/fidl.h>
 
 #include "garnet/lib/machina/phys_mem.h"
 #include "lib/app/cpp/application_context.h"

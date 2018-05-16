@@ -16,8 +16,8 @@
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
 
-#include <fuchsia/c/wlan_mlme.h>
-#include <fuchsia/c/wlan_stats.h>
+#include <wlan_mlme/c/fidl.h>
+#include <wlan_stats/c/fidl.h>
 
 #include <cstring>
 #include <utility>

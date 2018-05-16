@@ -7,7 +7,7 @@
 
 #include <unordered_set>
 
-#include <fuchsia/cpp/auth.h>
+#include <auth/cpp/fidl.h>
 
 #include "garnet/bin/auth/token_manager/test/dev_auth_provider_impl.h"
 #include "lib/fidl/cpp/binding_set.h"

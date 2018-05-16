@@ -13,7 +13,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#include <fuchsia/cpp/wlan_mlme.h>
+#include <wlan_mlme/cpp/fidl.h>
 
 #include <cstdint>
 

@@ -6,7 +6,7 @@
 
 #include <fdio/util.h>
 
-#include <fuchsia/cpp/views_v1.h>
+#include <views_v1/cpp/fidl.h>
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/logging.h"
 #include "lib/svc/cpp/services.h"

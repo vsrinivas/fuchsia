@@ -10,7 +10,7 @@
 #include <sys/socket.h>
 
 #include "garnet/bin/mdns/service/ip_address.h"
-#include <fuchsia/cpp/netstack.h>
+#include <netstack/cpp/fidl.h>
 
 namespace mdns {
 

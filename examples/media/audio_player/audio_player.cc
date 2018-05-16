@@ -7,7 +7,7 @@
 #include <iomanip>
 
 #include <fcntl.h>
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
 

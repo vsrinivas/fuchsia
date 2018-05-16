@@ -10,7 +10,7 @@
 #include <vector>
 
 #include <fs/managed-vfs.h>
-#include <fuchsia/cpp/component.h>
+#include <component/cpp/fidl.h>
 #include "garnet/bin/sysmgr/delegating_loader.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/macros.h"

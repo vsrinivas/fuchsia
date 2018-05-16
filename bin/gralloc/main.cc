@@ -7,7 +7,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/logging.h"
-#include <fuchsia/cpp/gralloc.h>
+#include <gralloc/cpp/fidl.h>
 
 class GrallocImpl : public gralloc::Gralloc {
  public:

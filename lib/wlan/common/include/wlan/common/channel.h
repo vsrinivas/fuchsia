@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <fuchsia/cpp/wlan_mlme.h>
+#include <wlan_mlme/cpp/fidl.h>
 
 #include <wlan/protocol/mac.h>
 

@@ -4,7 +4,7 @@
 
 #include <trace-provider/provider.h>
 
-#include <fuchsia/cpp/presentation.h>
+#include <presentation/cpp/fidl.h>
 #include "garnet/examples/ui/video_display/view.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"

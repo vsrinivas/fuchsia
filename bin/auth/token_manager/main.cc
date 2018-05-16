@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include <fuchsia/cpp/auth.h>
+#include <auth/cpp/fidl.h>
 #include <trace-provider/provider.h>
 
 #include "garnet/bin/auth/token_manager/token_manager_factory_impl.h"

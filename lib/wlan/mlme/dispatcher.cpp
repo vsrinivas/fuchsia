@@ -18,9 +18,9 @@
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 
-#include <fuchsia/c/wlan_mlme.h>
-#include <fuchsia/cpp/wlan_mlme.h>
-#include <fuchsia/c/wlan_stats.h>
+#include <wlan_mlme/c/fidl.h>
+#include <wlan_mlme/cpp/fidl.h>
+#include <wlan_stats/c/fidl.h>
 
 #include <atomic>
 #include <cinttypes>

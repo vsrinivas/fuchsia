@@ -5,8 +5,8 @@
 #ifndef GARNET_BIN_UI_ROOT_PRESENTER_DISPLAY_USAGE_SWITCHER_H_
 #define GARNET_BIN_UI_ROOT_PRESENTER_DISPLAY_USAGE_SWITCHER_H_
 
-#include <fuchsia/cpp/input.h>
-#include <fuchsia/cpp/presentation.h>
+#include <input/cpp/fidl.h>
+#include <presentation/cpp/fidl.h>
 #include "lib/fxl/macros.h"
 #include "lib/ui/scenic/client/resources.h"
 

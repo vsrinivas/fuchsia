@@ -5,9 +5,9 @@
 #ifndef GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_SHADERTOY_STATE_H_
 #define GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_SHADERTOY_STATE_H_
 
-#include <fuchsia/cpp/images.h>
-#include <fuchsia/cpp/shadertoy.h>
-#include <fuchsia/cpp/views_v1_token.h>
+#include <images/cpp/fidl.h>
+#include <shadertoy/cpp/fidl.h>
+#include <views_v1_token/cpp/fidl.h>
 #include "garnet/examples/ui/shadertoy/service/glm_hack.h"
 #include "lib/escher/escher.h"
 #include "lib/escher/resources/resource.h"

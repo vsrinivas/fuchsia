@@ -5,7 +5,7 @@
 #include "garnet/bin/media/net_media_service/media_player_net_publisher.h"
 
 #include <fcntl.h>
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 
 #include "lib/fxl/logging.h"
 #include "lib/url/gurl.h"

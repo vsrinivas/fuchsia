@@ -19,7 +19,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-#include <fuchsia/cpp/gfx.h>
+#include <gfx/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 
 #include "lib/app/cpp/connect.h"

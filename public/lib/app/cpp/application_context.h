@@ -5,7 +5,7 @@
 #ifndef LIB_APP_CPP_APPLICATION_CONTEXT_H_
 #define LIB_APP_CPP_APPLICATION_CONTEXT_H_
 
-#include <fuchsia/cpp/component.h>
+#include <component/cpp/fidl.h>
 
 #include <memory>
 

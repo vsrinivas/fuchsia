@@ -10,7 +10,7 @@
 #ifndef LIB_APP_CPP_CONNECT_H_
 #define LIB_APP_CPP_CONNECT_H_
 
-#include <fuchsia/cpp/component.h>
+#include <component/cpp/fidl.h>
 #include "lib/fidl/cpp/interface_request.h"
 
 namespace component {

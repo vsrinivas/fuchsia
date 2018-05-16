@@ -7,7 +7,7 @@
 
 #include <unordered_map>
 
-#include <fuchsia/cpp/sketchy.h>
+#include <sketchy/cpp/fidl.h>
 
 #include "garnet/bin/ui/sketchy/buffer/shared_buffer_pool.h"
 #include "garnet/bin/ui/sketchy/resources/resource_map.h"

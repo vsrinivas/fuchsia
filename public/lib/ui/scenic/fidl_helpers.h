@@ -7,9 +7,9 @@
 
 #include <string>
 
-#include <fuchsia/cpp/gfx.h>
-#include <fuchsia/cpp/images.h>
-#include <fuchsia/cpp/ui.h>
+#include <gfx/cpp/fidl.h>
+#include <images/cpp/fidl.h>
+#include <ui/cpp/fidl.h>
 
 namespace scenic_lib {
 

@@ -13,7 +13,7 @@
 #include <string>
 #include <unordered_map>
 
-#include <fuchsia/cpp/component.h>
+#include <component/cpp/fidl.h>
 #include "garnet/bin/appmgr/application_controller_impl.h"
 #include "garnet/bin/appmgr/application_environment_controller_impl.h"
 #include "garnet/bin/appmgr/application_runner_holder.h"

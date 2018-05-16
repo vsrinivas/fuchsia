@@ -7,9 +7,9 @@
 
 #include <array>
 #include <ddk/debug.h>
-#include <fuchsia/cpp/wlan_device.h>
-#include <fuchsia/c/wlan_device.h>
-#include <fuchsia/c/wlantap.h>
+#include <wlan_device/cpp/fidl.h>
+#include <wlan_device/c/fidl.h>
+#include <wlantap/c/fidl.h>
 #include <wlan/async/dispatcher.h>
 #include <wlan/protocol/ioctl.h>
 #include <wlan/protocol/phy.h>

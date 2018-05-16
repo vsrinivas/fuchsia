@@ -23,7 +23,7 @@
 
 #include <trace/event.h>
 
-#include <fuchsia/cpp/input.h>
+#include <input/cpp/fidl.h>
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_point.h"

@@ -8,7 +8,7 @@
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 
 #include "garnet/bin/media/audio_server/audio_device.h"
 #include "garnet/bin/media/audio_server/audio_input.h"

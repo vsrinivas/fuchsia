@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <fuchsia/cpp/bluetooth_low_energy.h>
+#include <bluetooth_low_energy/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/macros.h"
 

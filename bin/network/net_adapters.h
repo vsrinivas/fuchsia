@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_NETWORK_NET_ADAPTERS_H_
 #define GARNET_BIN_NETWORK_NET_ADAPTERS_H_
 
-#include <fuchsia/cpp/network.h>
+#include <network/cpp/fidl.h>
 
 namespace network {
 

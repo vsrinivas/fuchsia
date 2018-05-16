@@ -10,8 +10,8 @@
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/sequence.h>
 
-#include <fuchsia/c/wlan_stats.h>
-#include <fuchsia/cpp/wlan_mlme.h>
+#include <wlan_stats/c/fidl.h>
+#include <wlan_mlme/cpp/fidl.h>
 
 #include <fbl/unique_ptr.h>
 #include <wlan/common/macaddr.h>

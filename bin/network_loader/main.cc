@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/network.h>
+#include <component/cpp/fidl.h>
+#include <network/cpp/fidl.h>
 
 #include <unordered_map>
 

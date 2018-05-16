@@ -8,7 +8,7 @@
 
 #include <endian.h>
 
-#include <fuchsia/cpp/netstack.h>
+#include <netstack/cpp/fidl.h>
 
 namespace netconnector {
 

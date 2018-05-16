@@ -5,8 +5,8 @@
 #ifndef GARNET_BIN_GUEST_MGR_GUEST_ENVIRONMENT_IMPL_H_
 #define GARNET_BIN_GUEST_MGR_GUEST_ENVIRONMENT_IMPL_H_
 
-#include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/guest.h>
+#include <component/cpp/fidl.h>
+#include <guest/cpp/fidl.h>
 #include <unordered_map>
 
 #include "garnet/bin/guest/mgr/guest_holder.h"

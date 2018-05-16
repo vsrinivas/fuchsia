@@ -8,7 +8,7 @@
 #include <map>
 #include <utility>
 
-#include <fuchsia/cpp/input.h>
+#include <input/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include "garnet/bin/ui/input_reader/input_interpreter.h"
 #include "lib/fsl/io/device_watcher.h"

@@ -6,7 +6,7 @@
 
 #include <cstdint>
 
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 
 namespace media {
 

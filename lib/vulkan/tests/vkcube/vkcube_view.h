@@ -5,9 +5,9 @@
 #ifndef VKCUBE_VIEW_H
 #define VKCUBE_VIEW_H
 
-#include <fuchsia/cpp/gfx.h>
-#include <fuchsia/cpp/images.h>
-#include <fuchsia/cpp/views_v1_token.h>
+#include <gfx/cpp/fidl.h>
+#include <images/cpp/fidl.h>
+#include <views_v1_token/cpp/fidl.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/ui/scenic/client/resources.h"

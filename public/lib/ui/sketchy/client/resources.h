@@ -5,7 +5,7 @@
 #ifndef LIB_UI_SKETCHY_CLIENT_RESOURCES_H_
 #define LIB_UI_SKETCHY_CLIENT_RESOURCES_H_
 
-#include <fuchsia/cpp/sketchy.h>
+#include <sketchy/cpp/fidl.h>
 #include <garnet/public/lib/fxl/memory/ref_counted.h>
 
 #include "lib/ui/scenic/client/session.h"

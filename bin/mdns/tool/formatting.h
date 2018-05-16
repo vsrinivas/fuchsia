@@ -7,8 +7,8 @@
 #include <iomanip>
 #include <iostream>
 
-#include <fuchsia/cpp/mdns.h>
-#include <fuchsia/cpp/netstack.h>
+#include <mdns/cpp/fidl.h>
+#include <netstack/cpp/fidl.h>
 
 namespace mdns {
 

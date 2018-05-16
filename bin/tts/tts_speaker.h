@@ -9,8 +9,8 @@
 #include <thread>
 
 #include <fbl/vmo_mapper.h>
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/tts.h>
+#include <media/cpp/fidl.h>
+#include <tts/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <zircon/types.h>
 

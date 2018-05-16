@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <fuchsia/cpp/bluetooth.h>
-#include <fuchsia/cpp/bluetooth_control.h>
-#include <fuchsia/cpp/bluetooth_gatt.h>
-#include <fuchsia/cpp/bluetooth_low_energy.h>
+#include <bluetooth/cpp/fidl.h>
+#include <bluetooth_control/cpp/fidl.h>
+#include <bluetooth_gatt/cpp/fidl.h>
+#include <bluetooth_low_energy/cpp/fidl.h>
 
 #include "lib/fidl/cpp/vector.h"
 #include "lib/fxl/type_converter.h"

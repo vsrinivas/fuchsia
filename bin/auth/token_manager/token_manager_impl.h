@@ -7,7 +7,7 @@
 
 #include <map>
 
-#include <fuchsia/cpp/auth.h>
+#include <auth/cpp/fidl.h>
 
 #include "garnet/bin/auth/cache/token_cache.h"
 #include "garnet/bin/auth/store/auth_db.h"

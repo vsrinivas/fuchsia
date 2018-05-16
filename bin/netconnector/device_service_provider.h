@@ -8,7 +8,7 @@
 #include <string>
 
 #include "garnet/bin/netconnector/socket_address.h"
-#include <fuchsia/cpp/component.h>
+#include <component/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 

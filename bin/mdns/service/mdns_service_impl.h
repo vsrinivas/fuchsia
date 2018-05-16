@@ -11,7 +11,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/mdns.h>
+#include <mdns/cpp/fidl.h>
 
 namespace mdns {
 

@@ -7,7 +7,7 @@
 
 #include "garnet/bin/guest/mgr/vsock_endpoint.h"
 
-#include <fuchsia/cpp/guest.h>
+#include <guest/cpp/fidl.h>
 
 namespace guestmgr {
 

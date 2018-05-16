@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "lib/fidl/cpp/binding_set.h"
-#include <fuchsia/cpp/time_zone.h>
+#include <time_zone/cpp/fidl.h>
 #include "third_party/icu/source/common/unicode/strenum.h"
 
 namespace component {

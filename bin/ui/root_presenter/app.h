@@ -9,9 +9,9 @@
 #include <memory>
 #include <vector>
 
-#include <fuchsia/cpp/input.h>
-#include <fuchsia/cpp/presentation.h>
-#include <fuchsia/cpp/views_v1.h>
+#include <input/cpp/fidl.h>
+#include <presentation/cpp/fidl.h>
+#include <views_v1/cpp/fidl.h>
 #include "garnet/bin/ui/input_reader/input_reader.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"

@@ -6,7 +6,7 @@
 
 #include <hid/usages.h>
 
-#include <fuchsia/cpp/input.h>
+#include <input/cpp/fidl.h>
 #include "garnet/bin/ui/ime/text_input_state_update_functions.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"

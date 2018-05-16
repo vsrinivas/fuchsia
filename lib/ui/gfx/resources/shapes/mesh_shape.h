@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_SHAPES_MESH_SHAPE_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_SHAPES_MESH_SHAPE_H_
 
-#include <fuchsia/cpp/gfx.h>
+#include <gfx/cpp/fidl.h>
 #include "garnet/lib/ui/gfx/resources/buffer.h"
 #include "garnet/lib/ui/gfx/resources/shapes/shape.h"
 

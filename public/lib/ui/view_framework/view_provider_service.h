@@ -8,7 +8,7 @@
 #include <functional>
 #include <vector>
 
-#include <fuchsia/cpp/views_v1.h>
+#include <views_v1/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"

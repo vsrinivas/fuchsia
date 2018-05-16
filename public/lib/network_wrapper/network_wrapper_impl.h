@@ -5,7 +5,7 @@
 #ifndef LIB_NETWORK_WRAPPER_NETWORK_WRAPPER_IMPL_H_
 #define LIB_NETWORK_WRAPPER_NETWORK_WRAPPER_IMPL_H_
 
-#include <fuchsia/cpp/network.h>
+#include <network/cpp/fidl.h>
 
 #include "lib/backoff/backoff.h"
 #include "lib/callback/auto_cleanable.h"

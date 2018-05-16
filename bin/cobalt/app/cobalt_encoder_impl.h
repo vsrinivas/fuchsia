@@ -7,7 +7,7 @@
 
 #include <stdlib.h>
 
-#include <fuchsia/cpp/cobalt.h>
+#include <cobalt/cpp/fidl.h>
 
 #include "garnet/bin/cobalt/app/timer_manager.h"
 #include "third_party/cobalt/config/client_config.h"

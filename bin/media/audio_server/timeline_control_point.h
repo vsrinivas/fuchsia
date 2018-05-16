@@ -6,7 +6,7 @@
 
 #include <mutex>
 
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/fidl/cpp/binding.h"

@@ -7,7 +7,7 @@
 
 #include <unordered_map>
 
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/demux/reader.h"
 #include "garnet/bin/media/media_player/player/player.h"

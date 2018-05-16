@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include <fuchsia/cpp/netconnector.h>
+#include <netconnector/cpp/fidl.h>
 #include <lib/zx/channel.h>
 
 #include "lib/fidl/cpp/clone.h"

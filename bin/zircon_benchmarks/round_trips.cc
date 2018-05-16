@@ -16,7 +16,7 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
-#include <fuchsia/cpp/zircon_benchmarks.h>
+#include <zircon_benchmarks/cpp/fidl.h>
 #include "channels.h"
 #include "round_trips.h"
 #include "test_runner.h"

@@ -7,7 +7,7 @@
 #include <wlan/mlme/client/bss.h>
 #include <wlan/mlme/frame_handler.h>
 
-#include <fuchsia/cpp/wlan_mlme.h>
+#include <wlan_mlme/cpp/fidl.h>
 
 #include <fbl/unique_ptr.h>
 #include <lib/zx/time.h>

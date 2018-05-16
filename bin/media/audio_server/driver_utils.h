@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 #include <zircon/device/audio.h>
 
 namespace media {

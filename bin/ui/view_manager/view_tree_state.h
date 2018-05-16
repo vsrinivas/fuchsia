@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 
-#include <fuchsia/cpp/views.h>
+#include <views/cpp/fidl.h>
 #include "garnet/bin/ui/view_manager/internal/view_inspector.h"
 #include "garnet/bin/ui/view_manager/view_container_state.h"
 #include "lib/fidl/cpp/binding.h"

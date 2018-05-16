@@ -5,8 +5,8 @@
 #ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_FIDL_FIDL_TYPE_CONVERSIONS_H_
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_FIDL_FIDL_TYPE_CONVERSIONS_H_
 
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media_player.h>
+#include <media/cpp/fidl.h>
+#include <media_player/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/framework/metadata.h"
 #include "garnet/bin/media/media_player/framework/result.h"

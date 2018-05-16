@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include <fuchsia/cpp/input.h>
+#include <input/cpp/fidl.h>
 
 namespace ime {
 

@@ -7,8 +7,8 @@
 
 #include <memory>
 
-#include <fuchsia/cpp/fuchsia.tracelink.h>
-#include <fuchsia/cpp/tracing.h>
+#include <fuchsia/tracelink/cpp/fidl.h>
+#include <tracing/cpp/fidl.h>
 
 #include "garnet/bin/trace_manager/trace_manager.h"
 #include "lib/app/cpp/application_context.h"

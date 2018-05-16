@@ -6,7 +6,7 @@
 
 #include <fbl/vmo_mapper.h>
 
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 
 namespace examples {
 

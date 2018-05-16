@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 #include "garnet/bin/media/audio_server/audio_packet_ref.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
 #include "lib/media/transport/media_packet_consumer_base.h"

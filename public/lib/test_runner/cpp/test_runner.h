@@ -9,7 +9,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/test_runner/cpp/scope.h"
 #include "lib/test_runner/cpp/test_runner_store_impl.h"
-#include <fuchsia/cpp/test_runner.h>
+#include <test_runner/cpp/fidl.h>
 #include "lib/fxl/tasks/one_shot_timer.h"
 
 namespace test_runner {

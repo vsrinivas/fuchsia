@@ -5,8 +5,8 @@
 #include <string>
 
 #include <fs/pseudo-file.h>
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media_player.h>
+#include <media/cpp/fidl.h>
+#include <media_player/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <trace-provider/provider.h>

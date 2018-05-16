@@ -5,9 +5,9 @@
 #ifndef LIB_UI_VIEW_FRAMEWORK_BASE_VIEW_H_
 #define LIB_UI_VIEW_FRAMEWORK_BASE_VIEW_H_
 
-#include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/input.h>
-#include <fuchsia/cpp/views_v1.h>
+#include <component/cpp/fidl.h>
+#include <input/cpp/fidl.h>
+#include <views_v1/cpp/fidl.h>
 
 #include <memory>
 #include <string>

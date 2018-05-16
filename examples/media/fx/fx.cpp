@@ -11,7 +11,7 @@
 #include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vmo_mapper.h>
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>

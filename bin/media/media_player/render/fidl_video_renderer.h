@@ -8,7 +8,7 @@
 #include <queue>
 #include <unordered_map>
 
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/metrics/packet_timing_tracker.h"
 #include "garnet/bin/media/media_player/metrics/rate_tracker.h"

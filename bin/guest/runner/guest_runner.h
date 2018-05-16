@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_GUEST_RUNNER_GUEST_RUNNER_H_
 #define GARNET_BIN_GUEST_RUNNER_GUEST_RUNNER_H_
 
-#include <fuchsia/cpp/component.h>
+#include <component/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"

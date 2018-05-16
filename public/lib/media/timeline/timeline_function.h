@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline_rate.h"
 

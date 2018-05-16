@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 
 #include "garnet/bin/media/media_player/framework/graph.h"

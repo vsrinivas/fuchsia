@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <fuchsia/c/wlan_stats.h>
+#include <wlan_stats/c/fidl.h>
 
 #include <atomic>
 #include <string>

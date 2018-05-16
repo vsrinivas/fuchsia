@@ -7,8 +7,8 @@
 
 #include <lib/zx/handle.h>
 
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/network.h>
+#include <media/cpp/fidl.h>
+#include <network/cpp/fidl.h>
 #include "garnet/bin/media/media_player/framework/formatting.h"
 
 using media_player::begl;

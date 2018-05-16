@@ -7,7 +7,7 @@
 
 #include <iosfwd>
 
-#include <fuchsia/cpp/views_v1.h>
+#include <views_v1/cpp/fidl.h>
 #include "lib/ui/geometry/cpp/formatting.h"
 
 namespace views_v1 {

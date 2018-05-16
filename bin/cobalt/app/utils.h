@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string>
 
-#include <fuchsia/cpp/cobalt.h>
+#include <cobalt/cpp/fidl.h>
 
 #include "third_party/cobalt/encoder/shipping_manager.h"
 

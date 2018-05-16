@@ -10,7 +10,7 @@
 
 #include <queue>
 
-#include <fuchsia/cpp/images.h>
+#include <images/cpp/fidl.h>
 #include "garnet/lib/ui/gfx/engine/resource_map.h"
 #include "garnet/lib/ui/gfx/resources/image.h"
 #include "garnet/lib/ui/gfx/resources/image_base.h"

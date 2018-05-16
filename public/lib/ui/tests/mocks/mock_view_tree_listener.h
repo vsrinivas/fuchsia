@@ -5,7 +5,7 @@
 #ifndef LIB_UI_TESTS_MOCKS_MOCK_VIEW_TREE_LISTENER_H_
 #define LIB_UI_TESTS_MOCKS_MOCK_VIEW_TREE_LISTENER_H_
 
-#include <fuchsia/cpp/views_v1.h>
+#include <views_v1/cpp/fidl.h>
 #include "lib/fxl/macros.h"
 
 #include <functional>

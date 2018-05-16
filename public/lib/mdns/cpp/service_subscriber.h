@@ -7,7 +7,7 @@
 #include <functional>
 
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/mdns.h>
+#include <mdns/cpp/fidl.h>
 
 namespace mdns {
 

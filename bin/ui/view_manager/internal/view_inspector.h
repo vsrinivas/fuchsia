@@ -8,10 +8,10 @@
 #include <functional>
 #include <vector>
 
-#include <fuchsia/cpp/geometry.h>
-#include <fuchsia/cpp/input.h>
-#include <fuchsia/cpp/views_v1.h>
-#include <fuchsia/cpp/views_v1_token.h>
+#include <geometry/cpp/fidl.h>
+#include <input/cpp/fidl.h>
+#include <views_v1/cpp/fidl.h>
+#include <views_v1_token/cpp/fidl.h>
 
 namespace view_manager {
 class InputConnectionImpl;

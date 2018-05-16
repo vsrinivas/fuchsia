@@ -9,9 +9,9 @@
 #include <set>
 #include <utility>
 
-#include <fuchsia/cpp/geometry.h>
-#include <fuchsia/cpp/input.h>
-#include <fuchsia/cpp/views_v1.h>
+#include <geometry/cpp/fidl.h>
+#include <input/cpp/fidl.h>
+#include <views_v1/cpp/fidl.h>
 #include "garnet/bin/ui/view_manager/internal/view_inspector.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"

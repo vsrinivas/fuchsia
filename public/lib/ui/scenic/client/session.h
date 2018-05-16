@@ -9,9 +9,9 @@
 
 #include <lib/zx/event.h>
 
-#include <fuchsia/cpp/gfx.h>
-#include <fuchsia/cpp/images.h>
-#include <fuchsia/cpp/ui.h>
+#include <gfx/cpp/fidl.h>
+#include <images/cpp/fidl.h>
+#include <ui/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/functional/closure.h"

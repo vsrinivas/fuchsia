@@ -6,7 +6,7 @@
 
 #include <wlan/mlme/mac_frame.h>
 
-#include <fuchsia/cpp/wlan_mlme.h>
+#include <wlan_mlme/cpp/fidl.h>
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>

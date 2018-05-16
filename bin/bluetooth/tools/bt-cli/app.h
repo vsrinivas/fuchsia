@@ -7,7 +7,7 @@
 #include <memory>
 #include <unordered_map>
 
-#include <fuchsia/cpp/bluetooth_control.h>
+#include <bluetooth_control/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include "garnet/bin/bluetooth/tools/lib/command_dispatcher.h"
 #include "lib/app/cpp/application_context.h"

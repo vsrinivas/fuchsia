@@ -6,7 +6,7 @@
 
 #include "garnet/lib/ui/gfx/resources/nodes/node.h"
 
-#include <fuchsia/cpp/gfx.h>
+#include <gfx/cpp/fidl.h>
 #include "garnet/lib/ui/gfx/resources/import.h"
 #include "garnet/lib/ui/gfx/resources/nodes/traversal.h"
 

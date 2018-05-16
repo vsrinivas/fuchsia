@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 
 namespace media {
 namespace audio {

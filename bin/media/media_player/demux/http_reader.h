@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include <fuchsia/cpp/network.h>
+#include <network/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 
 #include "garnet/bin/media/media_player/demux/reader.h"

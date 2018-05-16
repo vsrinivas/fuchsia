@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_SCENIC_EVENT_REPORTER_H_
 #define GARNET_LIB_UI_SCENIC_EVENT_REPORTER_H_
 
-#include <fuchsia/cpp/ui.h>
+#include <ui/cpp/fidl.h>
 
 namespace scenic {
 

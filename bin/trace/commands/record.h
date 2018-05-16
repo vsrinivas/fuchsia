@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include <fuchsia/cpp/component.h>
+#include <component/cpp/fidl.h>
 #include "garnet/bin/trace/command.h"
 #include "garnet/bin/trace/spec.h"
 #include "garnet/bin/trace/tracer.h"

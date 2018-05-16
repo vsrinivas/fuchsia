@@ -8,7 +8,7 @@
 #include <memory>
 #include <unordered_map>
 
-#include <fuchsia/cpp/input.h>
+#include <input/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/tests/mocks/mock_input_device.h"

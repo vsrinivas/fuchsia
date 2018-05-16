@@ -6,8 +6,8 @@
 #include <map>
 #include <thread>
 
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media_player.h>
+#include <media/cpp/fidl.h>
+#include <media_player/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 

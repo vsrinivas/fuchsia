@@ -8,7 +8,7 @@
 #include <cmath>
 #include <utility>
 
-#include <fuchsia/cpp/input.h>
+#include <input/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 

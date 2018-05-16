@@ -9,7 +9,7 @@
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/tasks/task_runner.h"
 
-#include <fuchsia/cpp/ui.h>
+#include <ui/cpp/fidl.h>
 #include "garnet/lib/ui/gfx/engine/engine.h"
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/scenic/command_dispatcher.h"

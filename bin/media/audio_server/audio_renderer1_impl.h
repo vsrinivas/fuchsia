@@ -8,7 +8,7 @@
 #include <deque>
 #include <set>
 
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 #include "garnet/bin/media/audio_server/audio_link_packet_source.h"
 #include "garnet/bin/media/audio_server/audio_object.h"
 #include "garnet/bin/media/audio_server/audio_packet_ref.h"

@@ -10,7 +10,7 @@
 #include <endian.h>
 #include <lib/zx/channel.h>
 
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 #include "garnet/bin/media/net_media_service/media_player_messages.h"
 #include "lib/fxl/macros.h"
 #include "lib/netconnector/cpp/message_relay.h"

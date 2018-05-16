@@ -8,8 +8,8 @@
 #include <utility>
 #include <vector>
 
-#include <fuchsia/cpp/netstack.h>
-#include <fuchsia/cpp/network.h>
+#include <netstack/cpp/fidl.h>
+#include <network/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/zx/socket.h>
 

@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_MEDIA_NET_MEDIA_SERVICE_MEDIA_PLAYER_NET_PUBLISHER_H_
 #define GARNET_BIN_MEDIA_NET_MEDIA_SERVICE_MEDIA_PLAYER_NET_PUBLISHER_H_
 
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 #include "garnet/bin/media/net_media_service/media_player_net_stub.h"
 #include "garnet/bin/media/net_media_service/net_media_service_impl.h"
 #include "lib/fxl/macros.h"

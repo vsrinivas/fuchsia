@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_UI_SKETCHY_APP_H_
 #define GARNET_BIN_UI_SKETCHY_APP_H_
 
-#include <fuchsia/cpp/sketchy.h>
+#include <sketchy/cpp/fidl.h>
 
 #include "garnet/bin/ui/sketchy/canvas.h"
 #include "lib/app/cpp/application_context.h"

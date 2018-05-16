@@ -6,7 +6,7 @@
 
 #include <algorithm>
 
-#include <fuchsia/cpp/views_v1.h>
+#include <views_v1/cpp/fidl.h>
 #include "garnet/bin/ui/root_presenter/presentation.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/clone.h"

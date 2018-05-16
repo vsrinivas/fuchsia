@@ -11,7 +11,7 @@
 #include <lib/zx/time.h>
 #include <trace/event.h>
 
-#include <fuchsia/cpp/gfx.h>
+#include <gfx/cpp/fidl.h>
 #include "garnet/lib/ui/gfx/engine/hit_tester.h"
 #include "garnet/lib/ui/gfx/engine/session_handler.h"
 #include "garnet/lib/ui/gfx/resources/buffer.h"

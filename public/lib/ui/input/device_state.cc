@@ -4,7 +4,7 @@
 
 #include "lib/ui/input/device_state.h"
 
-#include <fuchsia/cpp/input.h>
+#include <input/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 

@@ -41,7 +41,7 @@
 #include "lib/fxl/log_settings.h"
 #include "lib/fxl/logging.h"
 
-#include <fuchsia/cpp/gfx.h>
+#include <gfx/cpp/fidl.h>
 #include "garnet/public/lib/ui/scenic/fidl_helpers.h"
 #include "garnet/public/lib/ui/scenic/types.h"
 #include "lib/ui/scenic/client/resources.h"

@@ -10,8 +10,8 @@
 #include <utility>
 #include <vector>
 
-#include <fuchsia/cpp/input.h>
-#include <fuchsia/cpp/presentation.h>
+#include <input/cpp/fidl.h>
+#include <presentation/cpp/fidl.h>
 
 namespace presentation_mode {
 

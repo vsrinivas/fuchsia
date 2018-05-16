@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_TEST_FROBINATOR_IMPL_H_
 #define LIB_FIDL_CPP_TEST_FROBINATOR_IMPL_H_
 
-#include <fuchsia/cpp/frobinator.h>
+#include <frobinator/cpp/fidl.h>
 
 #include <string>
 #include <vector>

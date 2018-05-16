@@ -13,7 +13,7 @@
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
 #include "garnet/drivers/bluetooth/lib/gap/gap.h"
 
-#include <fuchsia/cpp/bluetooth_low_energy.h>
+#include <bluetooth_low_energy/cpp/fidl.h>
 
 // The internal library components and the generated FIDL bindings are both
 // declared under the "bluetooth" namespace. We define an alias here to

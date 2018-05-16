@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_GFX_UTIL_WRAP_H_
 #define GARNET_LIB_UI_GFX_UTIL_WRAP_H_
 
-#include <fuchsia/cpp/gfx.h>
+#include <gfx/cpp/fidl.h>
 #include "lib/escher/geometry/transform.h"
 
 namespace scenic {

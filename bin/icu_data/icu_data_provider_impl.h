@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_ICU_DATA_ICU_DATA_PROVIDER_IMPL_H_
 #define GARNET_BIN_ICU_DATA_ICU_DATA_PROVIDER_IMPL_H_
 
-#include <fuchsia/cpp/icu_data.h>
+#include <icu_data/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/macros.h"

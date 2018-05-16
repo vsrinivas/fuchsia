@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 
 #include "garnet/lib/media/wav_writer/wav_writer.h"
 #include "lib/app/cpp/application_context.h"

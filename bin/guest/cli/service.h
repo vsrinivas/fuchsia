@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_GUEST_CLI_SERVICE_H_
 #define GARNET_BIN_GUEST_CLI_SERVICE_H_
 
-#include <fuchsia/cpp/guest.h>
+#include <guest/cpp/fidl.h>
 
 extern guest::GuestControllerPtr g_guest_controller;
 

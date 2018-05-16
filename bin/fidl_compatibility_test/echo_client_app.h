@@ -6,7 +6,7 @@
 // In its own library so that both the C++ server and the compatibility test
 // itself can use it.
 
-#include <fuchsia/cpp/compatibility_test_service.h>
+#include <compatibility_test_service/cpp/fidl.h>
 #include <zx/process.h>
 #include <memory>
 #include <string>

@@ -12,8 +12,8 @@
 
 #include <vector>
 
-#include <fuchsia/cpp/geometry.h>
-#include <fuchsia/cpp/input.h>
+#include <geometry/cpp/fidl.h>
+#include <input/cpp/fidl.h>
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/memory/weak_ptr.h"
 

@@ -6,7 +6,7 @@
 
 #include <regex>
 
-#include <fuchsia/cpp/test_runner.h>
+#include <test_runner/cpp/fidl.h>
 #include "gtest/gtest.h"
 
 namespace test_runner {

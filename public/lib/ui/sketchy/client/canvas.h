@@ -5,7 +5,7 @@
 #ifndef LIB_UI_SKETCHY_CLIENT_CANVAS_H_
 #define LIB_UI_SKETCHY_CLIENT_CANVAS_H_
 
-#include <fuchsia/cpp/sketchy.h>
+#include <sketchy/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/ui/scenic/client/resources.h"

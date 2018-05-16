@@ -8,7 +8,7 @@
 #include <map>
 
 #include <fbl/vmo_mapper.h>
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 
 #include "garnet/examples/media/tones/tone_generator.h"
 #include "lib/app/cpp/application_context.h"

@@ -7,7 +7,7 @@
 
 #include <iosfwd>
 
-#include <fuchsia/cpp/input.h>
+#include <input/cpp/fidl.h>
 
 namespace input {
 

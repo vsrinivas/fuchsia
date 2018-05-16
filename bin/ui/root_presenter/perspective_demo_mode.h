@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_UI_ROOT_PRESENTER_PERSPECTIVE_DEMO_MODE_H_
 #define GARNET_BIN_UI_ROOT_PRESENTER_PERSPECTIVE_DEMO_MODE_H_
 
-#include <fuchsia/cpp/input.h>
+#include <input/cpp/fidl.h>
 #include "lib/fxl/macros.h"
 #include "lib/ui/scenic/client/resources.h"
 

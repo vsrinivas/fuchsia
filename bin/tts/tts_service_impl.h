@@ -8,7 +8,7 @@
 #include <memory>
 #include <set>
 
-#include <fuchsia/cpp/tts.h>
+#include <tts/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 

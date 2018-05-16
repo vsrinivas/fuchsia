@@ -15,7 +15,7 @@
 
 #include "garnet/drivers/bluetooth/host/fidl/server_base.h"
 #include "garnet/drivers/bluetooth/lib/gap/adapter.h"
-#include <fuchsia/cpp/bluetooth_host.h>
+#include <bluetooth_host/cpp/fidl.h>
 
 namespace bthost {
 

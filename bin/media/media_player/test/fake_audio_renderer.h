@@ -9,7 +9,7 @@
 #include <queue>
 #include <vector>
 
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/media/transport/mapped_shared_buffer.h"

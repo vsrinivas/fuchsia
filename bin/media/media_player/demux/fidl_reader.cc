@@ -7,7 +7,7 @@
 #include <limits>
 #include <string>
 
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 

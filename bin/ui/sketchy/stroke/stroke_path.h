@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include <fuchsia/cpp/sketchy.h>
+#include <sketchy/cpp/fidl.h>
 
 #include "garnet/bin/ui/sketchy/stroke/cubic_bezier.h"
 #include "garnet/public/lib/escher/geometry/bounding_box.h"

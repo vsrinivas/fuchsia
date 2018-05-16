@@ -10,7 +10,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <fuchsia/cpp/views_v1.h>
+#include <views_v1/cpp/fidl.h>
 #include "garnet/bin/ui/view_manager/view_stub.h"
 #include "lib/fxl/macros.h"
 

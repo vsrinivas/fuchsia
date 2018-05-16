@@ -16,7 +16,7 @@
 
 #include "garnet/bin/ui/input_reader/hid_decoder.h"
 
-#include <fuchsia/cpp/input.h>
+#include <input/cpp/fidl.h>
 
 namespace mozart {
 

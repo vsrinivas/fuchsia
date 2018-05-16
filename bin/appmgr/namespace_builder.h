@@ -14,7 +14,7 @@
 #include "garnet/bin/appmgr/sandbox_metadata.h"
 #include "lib/fxl/macros.h"
 
-#include <fuchsia/cpp/component.h>
+#include <component/cpp/fidl.h>
 
 namespace component {
 

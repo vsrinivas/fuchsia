@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include <fuchsia/cpp/fonts.h>
+#include <fonts/cpp/fidl.h>
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/macros.h"
 #include "third_party/rapidjson/rapidjson/document.h"

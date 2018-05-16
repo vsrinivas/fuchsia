@@ -8,7 +8,7 @@
 #include <lib/async/dispatcher.h>
 #include <zircon/types.h>
 
-#include <fuchsia/cpp/views_v1.h>
+#include <views_v1/cpp/fidl.h>
 #include "garnet/lib/machina/gpu_scanout.h"
 #include "garnet/lib/machina/input_dispatcher.h"
 #include "garnet/lib/machina/virtio_gpu.h"

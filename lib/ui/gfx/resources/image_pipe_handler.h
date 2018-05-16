@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_IMAGE_PIPE_HANDLER_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_IMAGE_PIPE_HANDLER_H_
 
-#include <fuchsia/cpp/images.h>
+#include <images/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 
 namespace scenic {

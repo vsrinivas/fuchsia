@@ -5,7 +5,7 @@
 #ifndef LIB_UI_SKETCHY_CLIENT_TYPES_H_
 #define LIB_UI_SKETCHY_CLIENT_TYPES_H_
 
-#include <fuchsia/cpp/sketchy.h>
+#include <sketchy/cpp/fidl.h>
 
 #include "lib/ui/sketchy/client/glm_hack.h"
 

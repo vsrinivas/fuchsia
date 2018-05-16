@@ -5,7 +5,7 @@
 #pragma once
 
 #include <fbl/atomic.h>
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 #include <stdint.h>
 #include <zircon/types.h>
 #include <string>

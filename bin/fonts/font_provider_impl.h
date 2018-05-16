@@ -10,7 +10,7 @@
 
 #include <lib/zx/vmo.h>
 
-#include <fuchsia/cpp/fonts.h>
+#include <fonts/cpp/fidl.h>
 #include "garnet/bin/fonts/font_family.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"

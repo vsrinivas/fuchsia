@@ -14,7 +14,7 @@
 #include <string>
 #include <unordered_map>
 
-#include <fuchsia/cpp/cobalt.h>
+#include <cobalt/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fxl/logging.h>
 #include <lib/zx/time.h>

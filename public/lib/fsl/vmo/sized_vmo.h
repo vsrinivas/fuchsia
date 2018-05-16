@@ -5,7 +5,7 @@
 #ifndef LIB_FSL_VMO_SIZED_VMO_H_
 #define LIB_FSL_VMO_SIZED_VMO_H_
 
-#include <fuchsia/cpp/mem.h>
+#include <mem/cpp/fidl.h>
 
 #include <lib/zx/vmo.h>
 

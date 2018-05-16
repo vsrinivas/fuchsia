@@ -12,7 +12,7 @@
 #include "garnet/lib/media/client/audio_output_device.h"
 #include "garnet/lib/media/client/audio_output_manager.h"
 
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 #include "lib/app/cpp/environment_services.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/logging.h"

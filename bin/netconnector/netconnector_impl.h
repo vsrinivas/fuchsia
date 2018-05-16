@@ -9,9 +9,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/mdns.h>
-#include <fuchsia/cpp/netconnector.h>
+#include <component/cpp/fidl.h>
+#include <mdns/cpp/fidl.h>
+#include <netconnector/cpp/fidl.h>
 
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "garnet/bin/netconnector/device_service_provider.h"

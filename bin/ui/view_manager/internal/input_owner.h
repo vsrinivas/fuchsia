@@ -5,8 +5,8 @@
 #ifndef GARNET_BIN_UI_VIEW_MANAGER_INTERNAL_INPUT_OWNER_H_
 #define GARNET_BIN_UI_VIEW_MANAGER_INTERNAL_INPUT_OWNER_H_
 
-#include <fuchsia/cpp/input.h>
-#include <fuchsia/cpp/views_v1_token.h>
+#include <input/cpp/fidl.h>
+#include <views_v1_token/cpp/fidl.h>
 
 namespace view_manager {
 

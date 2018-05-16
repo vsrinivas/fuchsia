@@ -8,10 +8,10 @@
 #include <map>
 #include <memory>
 
-#include <fuchsia/cpp/geometry.h>
-#include <fuchsia/cpp/input.h>
-#include <fuchsia/cpp/presentation.h>
-#include <fuchsia/cpp/views_v1.h>
+#include <geometry/cpp/fidl.h>
+#include <input/cpp/fidl.h>
+#include <presentation/cpp/fidl.h>
+#include <views_v1/cpp/fidl.h>
 
 #include "garnet/bin/ui/presentation_mode/detector.h"
 #include "garnet/bin/ui/root_presenter/display_rotater.h"

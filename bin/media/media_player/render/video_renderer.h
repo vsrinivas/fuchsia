@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_RENDER_VIDEO_RENDERER_H_
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_RENDER_VIDEO_RENDERER_H_
 
-#include <fuchsia/cpp/geometry.h>
+#include <geometry/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/render/renderer.h"
 

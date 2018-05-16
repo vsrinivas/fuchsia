@@ -5,7 +5,7 @@
 #pragma once
 
 #include <fbl/vmo_mapper.h>
-#include <fuchsia/cpp/media.h>
+#include <media/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/functional/closure.h"
 

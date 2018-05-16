@@ -7,7 +7,7 @@
 #include <memory>
 #include <unordered_map>
 
-#include <fuchsia/cpp/bluetooth_low_energy.h>
+#include <bluetooth_low_energy/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"

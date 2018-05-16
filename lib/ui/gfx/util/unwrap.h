@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_GFX_UTIL_UNWRAP_H_
 #define GARNET_LIB_UI_GFX_UTIL_UNWRAP_H_
 
-#include <fuchsia/cpp/gfx.h>
+#include <gfx/cpp/fidl.h>
 #include "lib/escher/geometry/bounding_box.h"
 #include "lib/escher/geometry/transform.h"
 #include "lib/escher/geometry/types.h"

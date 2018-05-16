@@ -5,7 +5,7 @@
 #ifndef GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_APP_H_
 #define GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_APP_H_
 
-#include <fuchsia/cpp/shadertoy.h>
+#include <shadertoy/cpp/fidl.h>
 #include "garnet/examples/ui/shadertoy/service/shadertoy_impl.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/escher/escher.h"

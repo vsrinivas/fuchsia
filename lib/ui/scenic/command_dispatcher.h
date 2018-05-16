@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_SCENIC_COMMAND_DISPATCHER_H_
 #define GARNET_LIB_UI_SCENIC_COMMAND_DISPATCHER_H_
 
-#include <fuchsia/cpp/ui.h>
+#include <ui/cpp/fidl.h>
 #include "garnet/lib/ui/scenic/forward_declarations.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
