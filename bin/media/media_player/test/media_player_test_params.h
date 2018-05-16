@@ -5,38 +5,38 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
 
-namespace examples {
+namespace media_player {
+namespace test {
 
-class MediaPlayerParams {
+class MediaPlayerTestParams {
  public:
-  MediaPlayerParams(const fxl::CommandLine& command_line);
+  MediaPlayerTestParams(const fxl::CommandLine& command_line);
 
   bool is_valid() const { return is_valid_; }
 
-  const std::string& url() const { return url_; }
+  bool unattended() const { return urls_.empty(); }
 
-  const std::string& device_name() const { return device_name_; }
+  bool loop() const { return loop_; }
 
-  const std::string& service_name() const { return service_name_; }
+  bool auto_play() const { return loop_; }
 
-  bool stay() const { return stay_; }
+  const std::vector<std::string>& urls() const { return urls_; }
 
  private:
   void Usage();
 
   bool is_valid_;
 
-  std::string path_;
-  std::string url_;
-  std::string device_name_;
-  std::string service_name_;
-  bool stay_;
+  std::vector<std::string> urls_;
+  bool loop_ = false;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerParams);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerTestParams);
 };
 
-}  // namespace examples
+}  // namespace test
+}  // namespace media_player

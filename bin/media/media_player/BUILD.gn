@@ -55,11 +55,16 @@ executable("tests") {
     "test/main.cc",
     "test/media_player_test_unattended.cc",
     "test/media_player_test_unattended.h",
+    "test/media_player_test_params.cc",
+    "test/media_player_test_params.h",
+    "test/media_player_test_view.cc",
+    "test/media_player_test_view.h",
   ]
 
   deps = [
     ":media_player_bin",
     "//garnet/bin/media/media_player/fidl",
+    "//garnet/bin/media/media_player/framework",
     "//garnet/bin/media/media_player/framework_create",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
@@ -67,5 +72,8 @@ executable("tests") {
     "//garnet/public/lib/media/fidl:media_player",
     "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/media/transport",
+    "//garnet/public/lib/ui/view_framework:view_provider",
+    "//garnet/public/lib/url",
+    "//zircon/public/lib/hid",
   ]
 }

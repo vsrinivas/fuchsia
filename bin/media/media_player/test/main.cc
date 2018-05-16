@@ -4,14 +4,40 @@
 
 #include <lib/async-loop/cpp/loop.h>
 
+#include "garnet/bin/media/media_player/test/media_player_test_params.h"
 #include "garnet/bin/media/media_player/test/media_player_test_unattended.h"
+#include "garnet/bin/media/media_player/test/media_player_test_view.h"
+#include "lib/fxl/command_line.h"
+#include "lib/ui/view_framework/view_provider_app.h"
 
 int main(int argc, const char** argv) {
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  media_player::test::MediaPlayerTestParams params(command_line);
+  if (!params.is_valid()) {
+    return 1;
+  }
+
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  int result;
+  auto quit_callback = [&loop, &result](int exit_code) {
+    result = exit_code;
+    async::PostTask(loop.async(), [&loop]() { loop.Quit(); });
+  };
 
-  media_player::test::MediaPlayerTestUnattended app(
-      [&loop]() { async::PostTask(loop.async(), [&loop]() { loop.Quit(); }); });
+  if (params.unattended()) {
+    media_player::test::MediaPlayerTestUnattended app(quit_callback);
+    loop.Run();
+  } else {
+    mozart::ViewProviderApp app(
+        [&loop, &params, quit_callback](mozart::ViewContext view_context) {
+          return std::make_unique<media_player::test::MediaPlayerTestView>(
+              quit_callback, std::move(view_context.view_manager),
+              std::move(view_context.view_owner_request),
+              view_context.application_context, params);
+        });
 
-  loop.Run();
-  return 0;
+    loop.Run();
+  }
+
+  return result;
 }

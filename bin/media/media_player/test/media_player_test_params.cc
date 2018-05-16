@@ -2,37 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "topaz/examples/media/media_player_skia/media_player_params.h"
+#include "garnet/bin/media/media_player/test/media_player_test_params.h"
 
 #include <iostream>
 
 #include "lib/fxl/strings/split_string.h"
 
-namespace examples {
+namespace media_player {
+namespace test {
 
-MediaPlayerParams::MediaPlayerParams(const fxl::CommandLine& command_line) {
+MediaPlayerTestParams::MediaPlayerTestParams(
+    const fxl::CommandLine& command_line) {
   is_valid_ = false;
 
-  stay_ = command_line.HasOption("stay");
-
-  bool url_found = false;
+  loop_ = command_line.HasOption("loop");
 
   for (const std::string& arg : command_line.positional_args()) {
-    if (url_found) {
-      Usage();
-      std::cerr << "At most one url-or-path allowed\n";
-      return;
-    }
-
     if (arg.compare(0, 1, "/") == 0) {
-      url_ = "file://";
-      url_.append(arg);
-      url_found = true;
+      std::string url = "file://";
+      url.append(arg);
+      urls_.push_back(url);
     } else if (arg.compare(0, 7, "http://") == 0 ||
                arg.compare(0, 8, "https://") == 0 ||
                arg.compare(0, 8, "file:///") == 0) {
-      url_ = arg;
-      url_found = true;
+      urls_.push_back(arg);
     } else {
       Usage();
       std::cerr << "Url-or-path must start with '/' 'http://', 'https://' or "
@@ -41,46 +34,23 @@ MediaPlayerParams::MediaPlayerParams(const fxl::CommandLine& command_line) {
     }
   }
 
-  bool service_found = command_line.GetOptionValue("service", &service_name_);
-
-  std::string remote;
-  if (command_line.GetOptionValue("remote", &remote)) {
-    if (service_found || stay_) {
-      Usage();
-      return;
-    }
-
-    auto split = fxl::SplitString(remote, "#", fxl::kTrimWhitespace,
-                                  fxl::kSplitWantNonEmpty);
-
-    if (split.size() != 2) {
-      Usage();
-      std::cerr << "Invalid --remote value\n";
-      return;
-    }
-
-    device_name_ = split[0].ToString();
-    service_name_ = split[1].ToString();
-  } else if (!url_found && !stay_) {
+  if (urls_.empty() && loop_) {
     Usage();
+    std::cerr << "Urls/paths required for --loop option\n";
     return;
   }
 
   is_valid_ = true;
 }
 
-void MediaPlayerParams::Usage() {
-  std::cerr << "media_player_skia usage:\n";
-  std::cerr << "    launch media_player_skia [ options ] [ url-or-path ]\n";
+void MediaPlayerTestParams::Usage() {
+  std::cerr << "media_player_tests usage:\n";
+  std::cerr
+      << "    set_root_view media_player_tests [ options ] url-or-path*\n";
   std::cerr << "options:\n";
-  std::cerr << "    --service=<service>         set the service name "
-               "(default is media_player_skia)\n";
-  std::cerr << "    --remote=<device>#<service> control a remote player\n";
-  std::cerr << "    --stay                      used to start the player with "
-               "no content for remote control";
-  std::cerr << "The --service and --remote options are mutually exclusive.\n";
-  std::cerr << "A url-or-path (or --stay) is required for local playback, "
-               "optional for remote.\n";
+  std::cerr << "    --loop      play the files in a loop\n";
+  std::cerr << "For CQ test, run with no arguments\n";
 }
 
-}  // namespace examples
+}  // namespace test
+}  // namespace media_player

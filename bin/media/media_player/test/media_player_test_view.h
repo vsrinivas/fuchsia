@@ -1,4 +1,4 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -7,28 +7,29 @@
 #include <memory>
 #include <queue>
 
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media_player.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <media/cpp/fidl.h>
+#include <media_player/cpp/fidl.h>
 
-#include "examples/ui/lib/host_canvas_cycler.h"
+#include "garnet/bin/media/media_player/test/media_player_test_params.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/ui/view_framework/base_view.h"
-#include "topaz/examples/media/media_player_skia/media_player_params.h"
 
-namespace examples {
+namespace media_player {
+namespace test {
 
-class MediaPlayerView : public mozart::BaseView {
+class MediaPlayerTestView : public mozart::BaseView {
  public:
-  MediaPlayerView(async::Loop* loop,
-                  views_v1::ViewManagerPtr view_manager,
-                  fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
-                  component::ApplicationContext* application_context,
-                  const MediaPlayerParams& params);
+  MediaPlayerTestView(
+      std::function<void(int)> quit_callback,
+      views_v1::ViewManagerPtr view_manager,
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+      component::ApplicationContext* application_context,
+      const MediaPlayerTestParams& params);
 
-  ~MediaPlayerView() override;
+  ~MediaPlayerTestView() override;
 
  private:
   enum class State { kPaused, kPlaying, kEnded };
@@ -41,56 +42,49 @@ class MediaPlayerView : public mozart::BaseView {
   void OnChildUnavailable(uint32_t child_key) override;
   bool OnInputEvent(input::InputEvent event) override;
 
+  // Updates the player to read from the specified URL.
+  void SetUrl(const std::string url_as_string);
+
   // Perform a layout of the UI elements.
   void Layout();
 
-  // Draws the progress bar, etc, into the provided canvas.
-  void DrawControls(SkCanvas* canvas, const SkISize& size);
+  // Handles a status changed event from the player.
+  void HandleStatusChanged(const media_player::MediaPlayerStatus& status);
 
-  // Handles a status update from the player. When called with the default
-  // argument values, initiates status updates.
-  void HandlePlayerStatusUpdates(
-      uint64_t version = media::kInitialStatus,
-      media_player::MediaPlayerStatusPtr status = nullptr);
+  // Handle transition to end-of-stream.
+  void OnEndOfStream();
 
   // Toggles between play and pause.
   void TogglePlayPause();
 
+  // Returns progress in ns.
+  int64_t progress_ns() const;
+
   // Returns progress in the range 0.0 to 1.0.
-  float progress() const;
+  float normalized_progress() const;
 
-  // Returns the current frame rate in frames per second.
-  float frame_rate() const {
-    if (frame_time_ == prev_frame_time_) {
-      return 0.0f;
-    }
-
-    return float(1000000000.0 / double(frame_time_ - prev_frame_time_));
-  }
-
-  async::Loop* const loop_;
+  std::function<void(int)> quit_callback_;
+  const MediaPlayerTestParams& params_;
+  size_t current_url_index_ = 0;
 
   scenic_lib::ShapeNode background_node_;
-  scenic_lib::skia::HostCanvasCycler controls_widget_;
+  scenic_lib::ShapeNode progress_bar_node_;
+  scenic_lib::ShapeNode progress_bar_slider_node_;
   std::unique_ptr<scenic_lib::EntityNode> video_host_node_;
 
   media_player::MediaPlayerPtr media_player_;
   geometry::Size video_size_;
   geometry::Size pixel_aspect_ratio_;
-  State previous_state_ = State::kPaused;
   State state_ = State::kPaused;
   media::TimelineFunction timeline_function_;
   media_player::MediaMetadataPtr metadata_;
   geometry::RectF content_rect_;
   geometry::RectF controls_rect_;
-  geometry::RectF progress_bar_rect_;
-  bool metadata_shown_ = false;
   bool problem_shown_ = false;
+  bool was_at_end_of_stream_ = false;
 
-  int64_t frame_time_;
-  int64_t prev_frame_time_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerView);
+  FXL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerTestView);
 };
 
-}  // namespace examples
+}  // namespace test
+}  // namespace media_player
