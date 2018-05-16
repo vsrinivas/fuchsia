@@ -8,7 +8,7 @@
 #include <set>
 #include <string>
 
-#include <fuchsia/cpp/cloud_provider.h>
+#include <cloud_provider/cpp/fidl.h>
 #include "lib/fidl/cpp/array.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"

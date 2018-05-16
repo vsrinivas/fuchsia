@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/cpp/component_context_test.h>
-#include <fuchsia/cpp/modular.h>
+#include <component_context_test/cpp/fidl.h>
+#include <modular/cpp/fidl.h>
 
 #include "lib/app_driver/cpp/agent_driver.h"
 #include "lib/fsl/tasks/message_loop.h"

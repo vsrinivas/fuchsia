@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"

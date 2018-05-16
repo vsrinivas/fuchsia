@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include <fuchsia/cpp/ledger.h>
+#include <ledger/cpp/fidl.h>
 #include "lib/backoff/backoff.h"
 #include "lib/callback/scoped_task_runner.h"
 #include "lib/fxl/functional/closure.h"

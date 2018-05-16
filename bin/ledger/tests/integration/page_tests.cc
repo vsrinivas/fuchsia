@@ -5,8 +5,8 @@
 #include <utility>
 #include <vector>
 
-#include <fuchsia/cpp/ledger.h>
-#include <fuchsia/cpp/ledger_internal.h>
+#include <ledger/cpp/fidl.h>
+#include <ledger_internal/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
 #include "lib/fidl/cpp/binding.h"

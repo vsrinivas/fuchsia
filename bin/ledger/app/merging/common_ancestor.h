@@ -8,7 +8,7 @@
 #include <functional>
 #include <memory>
 
-#include <fuchsia/cpp/ledger.h>
+#include <ledger/cpp/fidl.h>
 #include "lib/fxl/memory/ref_counted.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"

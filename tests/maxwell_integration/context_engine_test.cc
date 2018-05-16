@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 
 #include "lib/context/cpp/context_helper.h"
 #include "lib/context/cpp/context_metadata_builder.h"

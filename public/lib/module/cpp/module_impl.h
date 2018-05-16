@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"

@@ -6,7 +6,7 @@
 
 #include <set>
 
-#include <fuchsia/cpp/test_runner.h>
+#include <test_runner/cpp/fidl.h>
 
 #include "lib/fxl/logging.h"
 

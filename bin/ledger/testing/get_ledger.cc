@@ -6,8 +6,8 @@
 
 #include <utility>
 
-#include <fuchsia/cpp/cloud_provider_firebase.h>
-#include <fuchsia/cpp/ledger_internal.h>
+#include <cloud_provider_firebase/cpp/fidl.h>
+#include <ledger_internal/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 
 #include "lib/callback/capture.h"

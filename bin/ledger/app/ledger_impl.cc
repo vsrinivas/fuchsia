@@ -10,7 +10,7 @@
 
 #include <trace/event.h>
 
-#include <fuchsia/cpp/ledger.h>
+#include <ledger/cpp/fidl.h>
 #include "lib/callback/trace_callback.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/logging.h"

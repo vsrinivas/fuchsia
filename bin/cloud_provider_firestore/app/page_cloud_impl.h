@@ -8,7 +8,7 @@
 #include <memory>
 #include <utility>
 
-#include <fuchsia/cpp/cloud_provider.h>
+#include <cloud_provider/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/vector.h"
 #include "lib/fxl/functional/closure.h"

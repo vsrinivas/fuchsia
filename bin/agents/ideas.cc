@@ -6,7 +6,7 @@
 
 #include <rapidjson/document.h>
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/context/cpp/context_helper.h"

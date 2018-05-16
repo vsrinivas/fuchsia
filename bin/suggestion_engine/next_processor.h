@@ -7,9 +7,9 @@
 
 #include <vector>
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 
 #include "peridot/bin/suggestion_engine/debug.h"
 #include "peridot/bin/suggestion_engine/interruptions_processor.h"

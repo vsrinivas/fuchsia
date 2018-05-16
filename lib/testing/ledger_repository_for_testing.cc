@@ -6,7 +6,7 @@
 
 #include <utility>
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/app_client.h"

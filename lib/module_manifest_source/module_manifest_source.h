@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 
 namespace modular {

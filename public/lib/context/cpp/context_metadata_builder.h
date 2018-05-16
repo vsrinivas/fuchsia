@@ -5,7 +5,7 @@
 #ifndef LIB_CONTEXT_CPP_CONTEXT_METADATA_BUILDER_H_
 #define LIB_CONTEXT_CPP_CONTEXT_METADATA_BUILDER_H_
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 
 namespace maxwell {
 

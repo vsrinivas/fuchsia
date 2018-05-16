@@ -7,7 +7,7 @@
 
 #include <map>
 
-#include <fuchsia/cpp/modular_auth.h>
+#include <modular_auth/cpp/fidl.h>
 #include "lib/callback/cancellable.h"
 #include "lib/network_wrapper/network_wrapper.h"
 

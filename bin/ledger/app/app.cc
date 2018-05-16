@@ -8,7 +8,7 @@
 #include <memory>
 #include <utility>
 
-#include <fuchsia/cpp/ledger_internal.h>
+#include <ledger_internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
 #include <zircon/device/vfs.h>

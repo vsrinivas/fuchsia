@@ -11,7 +11,7 @@
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 #include "peridot/lib/rapidjson/rapidjson.h"
 
 namespace modular_example {

@@ -5,13 +5,13 @@
 // A Module that serves as the recipe in the example story, i.e. that
 // creates other Modules in the story.
 
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular_calculator_example.h>
+#include <modular/cpp/fidl.h>
+#include <modular_calculator_example/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/app_driver.h"
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fsl/tasks/message_loop.h"

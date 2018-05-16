@@ -4,9 +4,9 @@
 
 #include <string.h>
 
-#include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/ledger.h>
-#include <fuchsia/cpp/ledger_internal.h>
+#include <component/cpp/fidl.h>
+#include <ledger/cpp/fidl.h>
+#include <ledger_internal/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/callback/capture.h"

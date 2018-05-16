@@ -6,8 +6,8 @@
 
 #include <set>
 
-#include <fuchsia/cpp/cobalt.h>
-#include <fuchsia/cpp/component.h>
+#include <cobalt/cpp/fidl.h>
+#include <component/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 

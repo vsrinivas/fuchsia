@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/strings/string_view.h"

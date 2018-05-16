@@ -10,7 +10,7 @@
 #include <memory>
 #include <set>
 
-#include <fuchsia/cpp/cloud_provider.h>
+#include <cloud_provider/cpp/fidl.h>
 #include "lib/backoff/backoff.h"
 #include "lib/callback/scoped_task_runner.h"
 #include "lib/fidl/cpp/binding.h"

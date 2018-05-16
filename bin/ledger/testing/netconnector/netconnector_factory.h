@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_TESTING_NETCONNECTOR_NETCONNECTOR_FACTORY_H_
 #define PERIDOT_BIN_LEDGER_TESTING_NETCONNECTOR_NETCONNECTOR_FACTORY_H_
 
-#include <fuchsia/cpp/netconnector.h>
+#include <netconnector/cpp/fidl.h>
 
 #include "lib/callback/auto_cleanable.h"
 #include "lib/fxl/functional/closure.h"

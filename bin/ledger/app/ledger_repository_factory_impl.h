@@ -8,10 +8,10 @@
 #include <memory>
 #include <string>
 
-#include <fuchsia/cpp/cloud_provider.h>
-#include <fuchsia/cpp/ledger_internal.h>
-#include <fuchsia/cpp/modular_auth.h>
-#include <fuchsia/cpp/netconnector.h>
+#include <cloud_provider/cpp/fidl.h>
+#include <ledger_internal/cpp/fidl.h>
+#include <modular_auth/cpp/fidl.h>
+#include <netconnector/cpp/fidl.h>
 #include "lib/callback/auto_cleanable.h"
 #include "lib/callback/cancellable.h"
 #include "lib/callback/managed_container.h"

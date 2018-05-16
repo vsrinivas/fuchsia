@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include <fuchsia/cpp/ledger.h>
+#include <ledger/cpp/fidl.h>
 #include "lib/fsl/vmo/sized_vmo.h"
 
 namespace test {

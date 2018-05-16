@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_MAXWELL_AGENT_LAUNCHER_H_
 #define PERIDOT_BIN_MAXWELL_AGENT_LAUNCHER_H_
 
-#include <fuchsia/cpp/component.h>
+#include <component/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/svc/cpp/services.h"

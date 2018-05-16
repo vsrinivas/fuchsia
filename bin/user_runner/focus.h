@@ -13,8 +13,8 @@
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/string.h"
-#include <fuchsia/cpp/ledger.h>
-#include <fuchsia/cpp/modular.h>
+#include <ledger/cpp/fidl.h>
+#include <modular/cpp/fidl.h>
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"

@@ -7,7 +7,7 @@
 
 #include <map>
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"

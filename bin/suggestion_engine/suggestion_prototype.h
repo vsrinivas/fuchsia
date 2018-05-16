@@ -7,7 +7,7 @@
 
 #include <strstream>
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 #include "lib/fxl/time/time_point.h"
 
 namespace modular {

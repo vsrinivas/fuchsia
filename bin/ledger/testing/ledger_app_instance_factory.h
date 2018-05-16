@@ -8,9 +8,9 @@
 #include <functional>
 #include <memory>
 
-#include <fuchsia/cpp/cloud_provider.h>
-#include <fuchsia/cpp/ledger.h>
-#include <fuchsia/cpp/ledger_internal.h>
+#include <cloud_provider/cpp/fidl.h>
+#include <ledger/cpp/fidl.h>
+#include <ledger_internal/cpp/fidl.h>
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"

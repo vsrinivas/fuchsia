@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include <fuchsia/cpp/ledger.h>
+#include <ledger/cpp/fidl.h>
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
 

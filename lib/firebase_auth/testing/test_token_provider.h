@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include <fuchsia/cpp/modular_auth.h>
+#include <modular_auth/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 
 #include "lib/fxl/functional/make_copyable.h"

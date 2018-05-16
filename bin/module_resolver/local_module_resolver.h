@@ -10,7 +10,7 @@
 #include <set>
 #include <vector>
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/memory/weak_ptr.h"

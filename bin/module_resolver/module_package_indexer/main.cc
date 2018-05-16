@@ -11,7 +11,7 @@
 #include <glob.h>
 #include <sys/types.h>
 
-#include <fuchsia/cpp/module_manifest_source.h>
+#include <module_manifest_source/cpp/fidl.h>
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/file.h"

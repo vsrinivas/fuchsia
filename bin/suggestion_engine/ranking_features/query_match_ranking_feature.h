@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_QUERY_MATCH_RANKING_FEATURE_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_QUERY_MATCH_RANKING_FEATURE_H_
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 

@@ -5,8 +5,8 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_TESTING_SERVER_FAKE_CLOUD_NETWORK_SERVICE_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_TESTING_SERVER_FAKE_CLOUD_NETWORK_SERVICE_H_
 
-#include <fuchsia/cpp/netstack.h>
-#include <fuchsia/cpp/network.h>
+#include <netstack/cpp/fidl.h>
+#include <network/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/testing/server/fake_cloud_url_loader.h"

@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include <fuchsia/cpp/ledger_internal.h>
+#include <ledger_internal/cpp/fidl.h>
 #include "lib/callback/auto_cleanable.h"
 #include "lib/callback/scoped_task_runner.h"
 #include "lib/fidl/cpp/binding_set.h"

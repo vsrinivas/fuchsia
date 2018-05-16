@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include <fuchsia/cpp/ledger.h>
+#include <ledger/cpp/fidl.h>
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/app/page_manager.h"

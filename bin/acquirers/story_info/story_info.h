@@ -8,8 +8,8 @@
 #include <map>
 #include <set>
 
-#include <fuchsia/cpp/maxwell.h>
-#include <fuchsia/cpp/modular.h>
+#include <maxwell/cpp/fidl.h>
+#include <modular/cpp/fidl.h>
 #include "lib/app_driver/cpp/agent_driver.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"

@@ -5,7 +5,7 @@
 #ifndef PERIDOT_LIB_FIDL_EQUALS_H_
 #define PERIDOT_LIB_FIDL_EQUALS_H_
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 
 namespace modular {
 

@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_APP_MERGING_LEDGER_MERGE_MANAGER_H_
 #define PERIDOT_BIN_LEDGER_APP_MERGING_LEDGER_MERGE_MANAGER_H_
 
-#include <fuchsia/cpp/ledger.h>
+#include <ledger/cpp/fidl.h>
 #include <map>
 #include <memory>
 #include "lib/callback/auto_cleanable.h"

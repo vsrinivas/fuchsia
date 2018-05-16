@@ -7,8 +7,8 @@
 #include <iterator>
 #include <utility>
 
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular_calculator_example.h>
+#include <modular/cpp/fidl.h>
+#include <modular_calculator_example/cpp/fidl.h>
 
 #include "lib/fxl/logging.h"
 #include "peridot/lib/rapidjson/rapidjson.h"

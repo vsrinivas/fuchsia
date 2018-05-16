@@ -7,9 +7,9 @@
 
 #include <memory>
 
-#include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/views_v1.h>
-#include <fuchsia/cpp/views_v1_token.h>
+#include <component/cpp/fidl.h>
+#include <views_v1/cpp/fidl.h>
+#include <views_v1_token/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/interface_request.h"

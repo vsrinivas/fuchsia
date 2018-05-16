@@ -9,8 +9,8 @@
 #include <memory>
 #include <vector>
 
-#include <fuchsia/cpp/ledger.h>
-#include <fuchsia/cpp/ledger_internal.h>
+#include <ledger/cpp/fidl.h>
+#include <ledger_internal/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_ptr.h"

@@ -6,7 +6,7 @@
 
 #include <sstream>
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 
 namespace maxwell {
 namespace acquirers {

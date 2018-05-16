@@ -6,7 +6,7 @@
 
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 
-#include <fuchsia/cpp/cloud_provider_firebase.h>
+#include <cloud_provider_firebase/cpp/fidl.h>
 
 #include "gtest/gtest.h"
 #include "lib/app/cpp/application_context.h"

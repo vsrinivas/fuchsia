@@ -7,8 +7,8 @@
 
 #include <set>
 
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/modular.h>
+#include <media/cpp/fidl.h>
+#include <modular/cpp/fidl.h>
 
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/suggestion_engine/media_player.h"

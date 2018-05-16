@@ -8,7 +8,7 @@
 #include <map>
 #include <set>
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 
 namespace modular {

@@ -8,7 +8,7 @@
 #include <map>
 #include <string>
 
-#include <fuchsia/cpp/component.h>
+#include <component/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/tasks/message_loop.h"

@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_QUERY_RUNNER_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_QUERY_RUNNER_H_
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 #include <set>
 
 #include "lib/fxl/memory/weak_ptr.h"

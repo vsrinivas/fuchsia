@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_APP_PAGE_IMPL_H_
 #define PERIDOT_BIN_LEDGER_APP_PAGE_IMPL_H_
 
-#include <fuchsia/cpp/ledger.h>
+#include <ledger/cpp/fidl.h>
 #include "lib/fxl/macros.h"
 
 namespace ledger {

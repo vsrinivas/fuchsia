@@ -8,9 +8,9 @@
 #include <functional>
 #include <string>
 
-#include <fuchsia/cpp/cloud_provider.h>
-#include <fuchsia/cpp/ledger.h>
-#include <fuchsia/cpp/modular_auth.h>
+#include <cloud_provider/cpp/fidl.h>
+#include <ledger/cpp/fidl.h>
+#include <modular_auth/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
 #include "lib/app/cpp/application_context.h"

@@ -7,8 +7,8 @@
 
 #include <vector>
 
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/media.h>
+#include <modular/cpp/fidl.h>
+#include <media/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"

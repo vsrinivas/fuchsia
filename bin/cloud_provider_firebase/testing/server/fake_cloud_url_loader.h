@@ -7,7 +7,7 @@
 
 #include <map>
 
-#include <fuchsia/cpp/network.h>
+#include <network/cpp/fidl.h>
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/testing/server/firebase_server.h"
 #include "peridot/bin/cloud_provider_firebase/testing/server/gcs_server.h"

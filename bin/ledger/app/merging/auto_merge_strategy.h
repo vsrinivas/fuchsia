@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_APP_MERGING_AUTO_MERGE_STRATEGY_H_
 #define PERIDOT_BIN_LEDGER_APP_MERGING_AUTO_MERGE_STRATEGY_H_
 
-#include <fuchsia/cpp/ledger.h>
+#include <ledger/cpp/fidl.h>
 #include <memory>
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/merging/merge_strategy.h"

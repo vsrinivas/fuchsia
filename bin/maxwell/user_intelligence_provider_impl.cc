@@ -4,11 +4,11 @@
 
 #include "peridot/bin/maxwell/user_intelligence_provider_impl.h"
 
-#include <fuchsia/cpp/bluetooth_low_energy.h>
-#include <fuchsia/cpp/cobalt.h>
-#include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/maxwell.h>
-#include <fuchsia/cpp/network.h>
+#include <bluetooth_low_energy/cpp/fidl.h>
+#include <cobalt/cpp/fidl.h>
+#include <component/cpp/fidl.h>
+#include <maxwell/cpp/fidl.h>
+#include <network/cpp/fidl.h>
 #include "lib/app/cpp/connect.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/functional/make_copyable.h"

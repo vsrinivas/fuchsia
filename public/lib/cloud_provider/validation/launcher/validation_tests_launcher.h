@@ -8,8 +8,8 @@
 #include <functional>
 #include <string>
 
-#include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/cloud_provider.h>
+#include <component/cpp/fidl.h>
+#include <cloud_provider/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/service_provider_impl.h"

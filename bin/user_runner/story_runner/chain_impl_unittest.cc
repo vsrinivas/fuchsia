@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/types/type_converters.h"

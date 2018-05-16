@@ -9,7 +9,7 @@
 #include <zircon/fidl.h>
 #include <zircon/types.h>
 
-#include <fuchsia/cpp/ledger.h>
+#include <ledger/cpp/fidl.h>
 
 namespace ledger {
 namespace fidl_serialization {

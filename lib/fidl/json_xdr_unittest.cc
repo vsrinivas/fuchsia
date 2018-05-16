@@ -5,7 +5,7 @@
 #include <map>
 #include <vector>
 
-#include <fuchsia/cpp/json_xdr_unittest.h>
+#include <json_xdr_unittest/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "peridot/lib/fidl/json_xdr.h"
 

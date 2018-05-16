@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include <fuchsia/cpp/ledger.h>
+#include <ledger/cpp/fidl.h>
 #include "lib/callback/operation_serializer.h"
 #include "lib/callback/waiter.h"
 #include "lib/fxl/macros.h"

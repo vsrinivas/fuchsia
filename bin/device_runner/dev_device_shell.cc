@@ -20,8 +20,8 @@
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/views_v1_token.h>
+#include <modular/cpp/fidl.h>
+#include <views_v1_token/cpp/fidl.h>
 
 namespace {
 

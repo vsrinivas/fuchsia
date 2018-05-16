@@ -10,7 +10,7 @@
 
 #include <fcntl.h>
 
-#include <fuchsia/cpp/component.h>
+#include <component/cpp/fidl.h>
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/unique_fd.h"
 

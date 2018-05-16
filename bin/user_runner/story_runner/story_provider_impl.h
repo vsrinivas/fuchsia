@@ -9,10 +9,10 @@
 #include <memory>
 #include <set>
 
-#include <fuchsia/cpp/ledger.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/presentation.h>
-#include <fuchsia/cpp/views_v1_token.h>
+#include <ledger/cpp/fidl.h>
+#include <modular/cpp/fidl.h>
+#include <presentation/cpp/fidl.h>
+#include <views_v1_token/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_ptr.h"

@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include <fuchsia/cpp/cloud_provider.h>
+#include <cloud_provider/cpp/fidl.h>
 #include "lib/callback/cancellable.h"
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding.h"

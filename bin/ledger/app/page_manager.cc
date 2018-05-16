@@ -6,7 +6,7 @@
 
 #include <algorithm>
 
-#include <fuchsia/cpp/ledger.h>
+#include <ledger/cpp/fidl.h>
 #include "lib/callback/trace_callback.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/random/rand.h"

@@ -5,7 +5,7 @@
 #ifndef PERIDOT_EXAMPLES_SWAP_CPP_MODULE_H_
 #define PERIDOT_EXAMPLES_SWAP_CPP_MODULE_H_
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 #include "lib/ui/view_framework/base_view.h"
 #include "peridot/lib/fidl/single_service_app.h"
 

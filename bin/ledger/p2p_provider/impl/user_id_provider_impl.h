@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include <fuchsia/cpp/modular_auth.h>
+#include <modular_auth/cpp/fidl.h>
 
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/p2p_provider/public/user_id_provider.h"

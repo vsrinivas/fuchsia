@@ -7,7 +7,7 @@
 
 #include <functional>
 
-#include <fuchsia/cpp/ledger.h>
+#include <ledger/cpp/fidl.h>
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 

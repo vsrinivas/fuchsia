@@ -9,7 +9,7 @@
 
 #include <string>
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/string.h"

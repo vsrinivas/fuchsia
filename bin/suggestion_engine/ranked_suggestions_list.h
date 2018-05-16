@@ -8,7 +8,7 @@
 #include <functional>
 #include <vector>
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 
 #include "peridot/bin/suggestion_engine/ranker.h"
 #include "peridot/bin/suggestion_engine/ranking_feature.h"

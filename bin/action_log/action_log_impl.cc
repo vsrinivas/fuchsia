@@ -4,7 +4,7 @@
 
 #include "peridot/bin/action_log/action_log_impl.h"
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"

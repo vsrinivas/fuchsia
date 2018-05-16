@@ -7,12 +7,12 @@
 #include <memory>
 #include <string>
 
-#include <fuchsia/cpp/cloud_provider_firebase.h>
-#include <fuchsia/cpp/ledger.h>
-#include <fuchsia/cpp/ledger_internal.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/network.h>
-#include <fuchsia/cpp/views_v1.h>
+#include <cloud_provider_firebase/cpp/fidl.h>
+#include <ledger/cpp/fidl.h>
+#include <ledger_internal/cpp/fidl.h>
+#include <modular/cpp/fidl.h>
+#include <network/cpp/fidl.h>
+#include <views_v1/cpp/fidl.h>
 #include "lib/app/cpp/connect.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/functional/make_copyable.h"

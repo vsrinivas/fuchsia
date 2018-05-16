@@ -4,8 +4,8 @@
 
 #include <iostream>
 
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/views_v1.h>
+#include <modular/cpp/fidl.h>
+#include <views_v1/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 

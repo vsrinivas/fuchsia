@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_AUTO_SELECT_FIRST_QUERY_LISTENER_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_AUTO_SELECT_FIRST_QUERY_LISTENER_H_
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 
 namespace modular {
 

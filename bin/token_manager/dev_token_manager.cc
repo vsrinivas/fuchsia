@@ -4,7 +4,7 @@
 
 #include <trace-provider/provider.h>
 
-#include <fuchsia/cpp/modular_auth.h>
+#include <modular_auth/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/interface_request.h"

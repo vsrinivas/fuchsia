@@ -7,7 +7,7 @@
 
 #include <set>
 
-#include <fuchsia/cpp/cobalt.h>
+#include <cobalt/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/backoff/exponential_backoff.h"

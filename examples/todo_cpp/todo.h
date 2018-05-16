@@ -7,8 +7,8 @@
 
 #include <random>
 
-#include <fuchsia/cpp/ledger.h>
-#include <fuchsia/cpp/modular.h>
+#include <ledger/cpp/fidl.h>
+#include <modular/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/command_line.h"

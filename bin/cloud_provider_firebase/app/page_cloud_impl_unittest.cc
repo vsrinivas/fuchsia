@@ -4,7 +4,7 @@
 
 #include "peridot/bin/cloud_provider_firebase/app/page_cloud_impl.h"
 
-#include <fuchsia/cpp/cloud_provider.h>
+#include <cloud_provider/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 
 #include "lib/callback/capture.h"

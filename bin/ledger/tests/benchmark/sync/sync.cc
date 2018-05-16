@@ -6,7 +6,7 @@
 
 #include <iostream>
 
-#include <fuchsia/cpp/cloud_provider.h>
+#include <cloud_provider/cpp/fidl.h>
 
 #include <lib/zx/time.h>
 #include <trace/event.h>

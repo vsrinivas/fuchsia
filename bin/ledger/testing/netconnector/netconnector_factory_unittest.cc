@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include <fuchsia/cpp/netconnector.h>
+#include <netconnector/cpp/fidl.h>
 
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"

@@ -10,8 +10,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
 
-#include <fuchsia/cpp/ledger.h>
-#include <fuchsia/cpp/ledger_internal.h>
+#include <ledger/cpp/fidl.h>
+#include <ledger_internal/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
 #include "lib/gtest/test_with_message_loop.h"

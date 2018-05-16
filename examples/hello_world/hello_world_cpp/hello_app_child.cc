@@ -5,7 +5,7 @@
 #include <string>
 #include <utility>
 
-#include <fuchsia/cpp/hello_world_module.h>
+#include <hello_world_module/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fidl/cpp/binding_set.h"

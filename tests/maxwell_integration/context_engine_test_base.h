@@ -5,7 +5,7 @@
 #ifndef PERIDOT_TESTS_MAXWELL_INTEGRATION_CONTEXT_ENGINE_TEST_BASE_H_
 #define PERIDOT_TESTS_MAXWELL_INTEGRATION_CONTEXT_ENGINE_TEST_BASE_H_
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 
 #include "peridot/tests/maxwell_integration/test.h"
 

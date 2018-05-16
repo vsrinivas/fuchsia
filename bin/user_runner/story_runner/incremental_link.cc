@@ -5,7 +5,7 @@
 // This file contains functions and Operation classes from LinkImpl that exist
 // solely to implement the history of change operations for Links.
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 #include "peridot/bin/user_runner/story_runner/link_impl.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/clone.h"

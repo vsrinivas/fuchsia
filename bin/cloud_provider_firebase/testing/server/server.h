@@ -7,7 +7,7 @@
 
 #include <map>
 
-#include <fuchsia/cpp/network.h>
+#include <network/cpp/fidl.h>
 #include "lib/fxl/macros.h"
 
 namespace ledger {

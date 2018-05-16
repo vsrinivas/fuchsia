@@ -11,7 +11,7 @@
 
 #include <lib/async/dispatcher.h>
 
-#include <fuchsia/cpp/modular_auth.h>
+#include <modular_auth/cpp/fidl.h>
 #include "lib/backoff/backoff.h"
 #include "lib/callback/scoped_task_runner.h"
 #include "peridot/lib/firebase_auth/firebase_auth.h"

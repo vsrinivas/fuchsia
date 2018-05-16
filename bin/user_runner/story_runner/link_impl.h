@@ -8,8 +8,8 @@
 #include <set>
 #include <vector>
 
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular_private.h>
+#include <modular/cpp/fidl.h>
+#include <modular_private/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/clone.h"

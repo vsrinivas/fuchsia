@@ -4,7 +4,7 @@
 
 #include "peridot/bin/maxwell/intelligence_services_impl.h"
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 
 namespace maxwell {
 

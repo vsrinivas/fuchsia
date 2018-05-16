@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_CONTEXT_ENGINE_DEBUG_H_
 #define PERIDOT_BIN_CONTEXT_ENGINE_DEBUG_H_
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "peridot/bin/context_engine/index.h"

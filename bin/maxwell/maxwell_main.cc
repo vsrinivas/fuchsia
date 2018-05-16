@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"

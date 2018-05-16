@@ -4,11 +4,11 @@
 
 #include <memory>
 
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular_calculator_example.h>
-#include <fuchsia/cpp/images.h>
-#include <fuchsia/cpp/views_v1.h>
-#include <fuchsia/cpp/views_v1_token.h>
+#include <modular/cpp/fidl.h>
+#include <modular_calculator_example/cpp/fidl.h>
+#include <images/cpp/fidl.h>
+#include <views_v1/cpp/fidl.h>
+#include <views_v1_token/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 

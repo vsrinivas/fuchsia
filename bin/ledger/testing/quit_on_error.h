@@ -8,7 +8,7 @@
 #include <functional>
 #include <string>
 
-#include <fuchsia/cpp/ledger.h>
+#include <ledger/cpp/fidl.h>
 
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/strings/string_view.h"

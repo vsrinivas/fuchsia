@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular_test_trigger.h>
+#include <modular/cpp/fidl.h>
+#include <modular_test_trigger/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 

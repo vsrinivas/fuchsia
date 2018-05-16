@@ -4,7 +4,7 @@
 
 #include "peridot/bin/device_runner/user_controller_impl.h"
 
-#include <fuchsia/cpp/component.h>
+#include <component/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/fidl/clone.h"

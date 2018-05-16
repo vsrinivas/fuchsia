@@ -7,9 +7,9 @@
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
 
-#include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular_auth.h>
+#include <component/cpp/fidl.h>
+#include <modular/cpp/fidl.h>
+#include <modular_auth/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "lib/agent/cpp/agent_impl.h"
 #include "lib/app/cpp/connect.h"

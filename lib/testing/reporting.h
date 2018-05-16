@@ -7,7 +7,7 @@
 
 #include <iostream>
 
-#include <fuchsia/cpp/test_runner.h>
+#include <test_runner/cpp/fidl.h>
 
 #include "peridot/lib/testing/testing.h"
 

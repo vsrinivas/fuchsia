@@ -5,7 +5,7 @@
 #ifndef LIB_CONTEXT_CPP_FORMATTING_H_
 #define LIB_CONTEXT_CPP_FORMATTING_H_
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 
 namespace modular {
 

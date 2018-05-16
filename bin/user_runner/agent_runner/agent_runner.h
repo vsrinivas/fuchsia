@@ -10,11 +10,11 @@
 #include <memory>
 #include <string>
 
-#include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/ledger.h>
-#include <fuchsia/cpp/ledger_internal.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular_auth.h>
+#include <component/cpp/fidl.h>
+#include <ledger/cpp/fidl.h>
+#include <ledger_internal/cpp/fidl.h>
+#include <modular/cpp/fidl.h>
+#include <modular_auth/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"

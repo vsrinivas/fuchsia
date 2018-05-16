@@ -7,7 +7,7 @@
 
 #include <grpc++/grpc++.h>
 
-#include <fuchsia/cpp/cloud_provider.h>
+#include <cloud_provider/cpp/fidl.h>
 
 namespace cloud_provider_firestore {
 

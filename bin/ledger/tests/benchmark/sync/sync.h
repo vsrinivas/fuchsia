@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include <fuchsia/cpp/ledger.h>
+#include <ledger/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
 #include "lib/app/cpp/application_context.h"

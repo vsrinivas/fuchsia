@@ -4,8 +4,8 @@
 
 #include <utility>
 
-#include <fuchsia/cpp/component_context_test.h>
-#include <fuchsia/cpp/modular.h>
+#include <component_context_test/cpp/fidl.h>
+#include <modular/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 

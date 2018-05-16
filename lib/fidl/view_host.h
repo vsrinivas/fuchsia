@@ -8,8 +8,8 @@
 #include <map>
 #include <memory>
 
-#include <fuchsia/cpp/views_v1.h>
-#include <fuchsia/cpp/views_v1_token.h>
+#include <views_v1/cpp/fidl.h>
+#include <views_v1_token/cpp/fidl.h>
 #include "lib/fxl/macros.h"
 #include "lib/ui/view_framework/base_view.h"
 

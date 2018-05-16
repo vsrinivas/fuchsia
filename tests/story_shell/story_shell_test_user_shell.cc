@@ -6,10 +6,10 @@
 #include <set>
 #include <utility>
 
-#include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/presentation.h>
-#include <fuchsia/cpp/views_v1_token.h>
+#include <component/cpp/fidl.h>
+#include <modular/cpp/fidl.h>
+#include <presentation/cpp/fidl.h>
+#include <views_v1_token/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 

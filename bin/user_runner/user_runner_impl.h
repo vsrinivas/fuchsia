@@ -9,16 +9,16 @@
 #include <string>
 #include <vector>
 
-#include <fuchsia/cpp/cloud_provider.h>
-#include <fuchsia/cpp/cloud_provider_firebase.h>
-#include <fuchsia/cpp/ledger.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular_auth.h>
-#include <fuchsia/cpp/modular_private.h>
-#include <fuchsia/cpp/presentation.h>
-#include <fuchsia/cpp/speech.h>
-#include <fuchsia/cpp/ui.h>
-#include <fuchsia/cpp/views_v1_token.h>
+#include <cloud_provider/cpp/fidl.h>
+#include <cloud_provider_firebase/cpp/fidl.h>
+#include <ledger/cpp/fidl.h>
+#include <modular/cpp/fidl.h>
+#include <modular_auth/cpp/fidl.h>
+#include <modular_private/cpp/fidl.h>
+#include <presentation/cpp/fidl.h>
+#include <speech/cpp/fidl.h>
+#include <ui/cpp/fidl.h>
+#include <views_v1_token/cpp/fidl.h>
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_ptr.h"

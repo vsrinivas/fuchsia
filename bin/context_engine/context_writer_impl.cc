@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 
 #include "lib/context/cpp/formatting.h"
 #include "lib/entity/cpp/json.h"

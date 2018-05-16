@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include <fuchsia/cpp/test_runner.h>
+#include <test_runner/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 

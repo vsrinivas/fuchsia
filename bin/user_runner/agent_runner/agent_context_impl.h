@@ -7,9 +7,9 @@
 
 #include <string>
 
-#include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular_auth.h>
+#include <component/cpp/fidl.h>
+#include <modular/cpp/fidl.h>
+#include <modular_auth/cpp/fidl.h>
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding.h"

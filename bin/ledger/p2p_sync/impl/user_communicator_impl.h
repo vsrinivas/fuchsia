@@ -9,7 +9,7 @@
 #include <set>
 #include <string>
 
-#include <fuchsia/cpp/netconnector.h>
+#include <netconnector/cpp/fidl.h>
 
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/callback/auto_cleanable.h"

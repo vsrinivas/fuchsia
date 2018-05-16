@@ -7,7 +7,7 @@
 
 #include <deque>
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/svc/cpp/services.h"
 #include "peridot/bin/maxwell/agent_launcher.h"

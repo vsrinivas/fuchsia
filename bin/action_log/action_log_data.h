@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 
 namespace modular {
 

@@ -7,7 +7,7 @@
 #include <functional>
 #include <utility>
 
-#include <fuchsia/cpp/ledger.h>
+#include <ledger/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fsl/vmo/strings.h"
 #include "peridot/lib/fidl/array_to_string.h"

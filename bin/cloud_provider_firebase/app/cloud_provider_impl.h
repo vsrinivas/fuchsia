@@ -5,9 +5,9 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_APP_CLOUD_PROVIDER_IMPL_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_APP_CLOUD_PROVIDER_IMPL_H_
 
-#include <fuchsia/cpp/cloud_provider.h>
-#include <fuchsia/cpp/cloud_provider_firebase.h>
-#include <fuchsia/cpp/modular_auth.h>
+#include <cloud_provider/cpp/fidl.h>
+#include <cloud_provider_firebase/cpp/fidl.h>
+#include <modular_auth/cpp/fidl.h>
 
 #include "lib/callback/auto_cleanable.h"
 #include "lib/callback/cancellable.h"

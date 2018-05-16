@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/context_engine/index.h"
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "lib/context/cpp/formatting.h"
 #include "lib/fidl/cpp/clone.h"

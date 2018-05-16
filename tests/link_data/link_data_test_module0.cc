@@ -5,8 +5,8 @@
 // A Module that serves as the recipe in the example story, i.e. that
 // creates other Modules in the story.
 
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/views_v1.h>
+#include <modular/cpp/fidl.h>
+#include <views_v1/cpp/fidl.h>
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/lib/rapidjson/rapidjson.h"

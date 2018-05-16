@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_TIMELINE_STORIES_FILTER_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_TIMELINE_STORIES_FILTER_H_
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 
 namespace modular {
 

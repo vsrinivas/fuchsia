@@ -7,8 +7,8 @@
 
 #include <memory>
 
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/views_v1_token.h>
+#include <modular/cpp/fidl.h>
+#include <views_v1_token/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fsl/tasks/message_loop.h"

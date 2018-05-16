@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/views_v1.h>
-#include <fuchsia/cpp/views_v1_token.h>
+#include <modular/cpp/fidl.h>
+#include <views_v1/cpp/fidl.h>
+#include <views_v1_token/cpp/fidl.h>
 
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fsl/tasks/message_loop.h"

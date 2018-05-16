@@ -7,8 +7,8 @@
 
 #include <string>
 
-#include <fuchsia/cpp/ledger_internal.h>
-#include <fuchsia/cpp/modular.h>
+#include <ledger_internal/cpp/fidl.h>
+#include <modular/cpp/fidl.h>
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fxl/macros.h"

@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_MAXWELL_INTELLIGENCE_SERVICES_IMPL_H_
 #define PERIDOT_BIN_MAXWELL_INTELLIGENCE_SERVICES_IMPL_H_
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 
 namespace maxwell {
 

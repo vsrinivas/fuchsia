@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include <fuchsia/cpp/modular_private.h>
+#include <modular_private/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 

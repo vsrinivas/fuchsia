@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include <fuchsia/cpp/module_manifest_source.h>
+#include <module_manifest_source/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/module_manifest_source/module_manifest_source.h"

@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_ACQUIRERS_MOCK_MOCK_GPS_H_
 #define PERIDOT_BIN_ACQUIRERS_MOCK_MOCK_GPS_H_
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "peridot/bin/acquirers/gps.h"

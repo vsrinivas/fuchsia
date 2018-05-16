@@ -4,7 +4,7 @@
 
 #include "lib/context/cpp/formatting.h"
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 
 #include "lib/fidl/cpp/vector.h"
 

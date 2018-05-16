@@ -5,8 +5,8 @@
 #include <memory>
 #include <utility>
 
-#include <fuchsia/cpp/modular_private.h>
-#include <fuchsia/cpp/views_v1_token.h>
+#include <modular_private/cpp/fidl.h>
+#include <views_v1_token/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include "lib/app/cpp/application_context.h"

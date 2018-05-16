@@ -4,7 +4,7 @@
 
 #include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 #include <string>
 
 #include "lib/context/cpp/context_helper.h"

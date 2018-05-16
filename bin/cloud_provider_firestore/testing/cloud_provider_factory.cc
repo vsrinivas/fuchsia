@@ -6,7 +6,7 @@
 
 #include <utility>
 
-#include <fuchsia/cpp/network.h>
+#include <network/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 
 #include "lib/backoff/exponential_backoff.h"

@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/macros.h"

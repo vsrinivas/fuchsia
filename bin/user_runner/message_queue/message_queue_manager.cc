@@ -8,7 +8,7 @@
 #include <deque>
 #include <utility>
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/strings/string_printf.h"

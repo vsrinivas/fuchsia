@@ -5,9 +5,9 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_APP_FACTORY_IMPL_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_APP_FACTORY_IMPL_H_
 
-#include <fuchsia/cpp/cloud_provider.h>
-#include <fuchsia/cpp/cloud_provider_firestore.h>
-#include <fuchsia/cpp/modular_auth.h>
+#include <cloud_provider/cpp/fidl.h>
+#include <cloud_provider_firestore/cpp/fidl.h>
+#include <modular_auth/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 
 #include "lib/callback/auto_cleanable.h"

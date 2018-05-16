@@ -6,7 +6,7 @@
 #include <sstream>
 #include <string>
 
-#include <fuchsia/cpp/views_v1_token.h>
+#include <views_v1_token/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/context/cpp/context_helper.h"
 #include "lib/context/cpp/formatting.h"

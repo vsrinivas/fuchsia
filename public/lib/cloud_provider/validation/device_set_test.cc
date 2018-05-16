@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/cpp/cloud_provider.h>
+#include <cloud_provider/cpp/fidl.h>
 
 #include "gtest/gtest.h"
 #include "peridot/public/lib/cloud_provider/validation/convert.h"

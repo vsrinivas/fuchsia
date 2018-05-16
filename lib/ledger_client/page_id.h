@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include <fuchsia/cpp/ledger.h>
+#include <ledger/cpp/fidl.h>
 
 namespace modular {
 

@@ -8,7 +8,7 @@
 #include <list>
 #include <vector>
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestions_list.h"

@@ -5,7 +5,7 @@
 #ifndef PERIDOT_LIB_ENVIRONMENT_HOST_MAXWELL_SERVICE_PROVIDER_BRIDGE_H_
 #define PERIDOT_LIB_ENVIRONMENT_HOST_MAXWELL_SERVICE_PROVIDER_BRIDGE_H_
 
-#include <fuchsia/cpp/component.h>
+#include <component/cpp/fidl.h>
 #include "lib/svc/cpp/service_provider_bridge.h"
 
 namespace maxwell {

@@ -8,7 +8,7 @@
 #include <string>
 #include <utility>
 
-#include <fuchsia/cpp/network.h>
+#include <network/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
 #include "lib/fsl/socket/strings.h"

@@ -14,7 +14,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include <fuchsia/cpp/ledger_internal.h>
+#include <ledger_internal/cpp/fidl.h>
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"

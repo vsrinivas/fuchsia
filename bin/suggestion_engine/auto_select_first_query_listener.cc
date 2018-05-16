@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 #include "peridot/bin/suggestion_engine/auto_select_first_query_listener.h"
 #include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
 

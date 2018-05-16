@@ -8,7 +8,7 @@
 #include <map>
 #include <string>
 
-#include <fuchsia/cpp/modular.h>
+#include <modular/cpp/fidl.h>
 #include "lib/async/cpp/future_value.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/context_engine/context_repository.h"
