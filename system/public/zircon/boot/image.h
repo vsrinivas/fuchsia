@@ -360,7 +360,7 @@ typedef struct {
     uint64_t    length;
     uint32_t    type;
     uint32_t    reserved;
-} zbi__mem_range_t;
+} zbi_mem_range_t;
 #endif
 #define ZBI_MEM_RANGE_RAM               (1)
 #define ZBI_MEM_RANGE_PERIPHERAL        (2)
@@ -394,7 +394,7 @@ typedef struct {
     uint64_t base;
     uint32_t type;
     uint32_t irq;
-} bootdata_uart_t;
+} zbi_uart_t;
 #endif
 #define ZBI_UART_NONE                   (0)
 #define ZBI_UART_PC_PORT                (1)
