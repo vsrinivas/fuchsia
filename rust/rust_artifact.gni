@@ -4,14 +4,11 @@
 
 import("//build/config/clang/clang.gni")
 import("//build/fidl/toolchain.gni")
+import("//build/rust/rust_prefix.gni")
 
 declare_args() {
   # Allows Cargo.lock to be updated when performing local builds.
   use_frozen_with_cargo = true
-
-  # Sets a custom base directory for `rustc` and `cargo`.
-  # This can be used to test custom Rust toolchains.
-  rustc_prefix = "//buildtools/${host_platform}/rust/bin"
 }
 
 # Defines a Rust artifact
