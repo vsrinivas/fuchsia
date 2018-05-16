@@ -26,6 +26,7 @@ typedef struct display_info {
     zx_pixel_format_t format;
 
     uint64_t image_id;
+    uint64_t layer_id;
 
     struct list_node node;
 } display_info_t;
@@ -33,7 +34,6 @@ typedef struct display_info {
 static struct list_node display_list = LIST_INITIAL_VALUE(display_list);
 
 static display_info_t* cur_display = nullptr;
-static uint8_t fidl_buffer[ZX_CHANNEL_MAX_MSG_BYTES];
 
 // remember whether the virtual console controls the display
 bool g_vc_owns_display = false;
@@ -77,6 +77,16 @@ static zx_status_t decode_message(void* bytes, uint32_t num_bytes) {
         res = ZX_ERR_NOT_SUPPORTED;
     }
     return res;
+}
+
+static void destroy_layer(uint64_t layer_id) {
+    fuchsia_display_ControllerDestroyLayerRequest destroy_msg;
+    destroy_msg.hdr.ordinal = fuchsia_display_ControllerDestroyLayerOrdinal;
+    destroy_msg.layer_id = layer_id;
+
+    if (zx_channel_write(dc_ph.handle, 0, &destroy_msg, sizeof(destroy_msg), nullptr, 0) != ZX_OK) {
+        printf("vc: Failed to destroy layer\n");
+    }
 }
 
 static void handle_ownership_change(fuchsia_display_ControllerClientOwnershipChangeEvent* evt) {
@@ -161,6 +171,8 @@ static void handle_display_removed(uint64_t id) {
         if (status != ZX_OK) {
             printf("vc: Failed to release image\n");
         }
+
+        destroy_layer(to_remove->layer_id);
     }
 
     list_delete(&to_remove->node);
@@ -239,13 +251,74 @@ static zx_status_t import_vmo(display_info* display, zx_handle_t vmo, uint64_t* 
     return ZX_OK;
 }
 
-static zx_status_t set_active_image(uint64_t display_id, uint64_t image_id) {
-    zx_status_t status;
+static zx_status_t create_layer(uint64_t* layer_id) {
+    fuchsia_display_ControllerCreateLayerRequest create_layer_msg;
+    create_layer_msg.hdr.ordinal = fuchsia_display_ControllerCreateLayerOrdinal;
 
+    fuchsia_display_ControllerCreateLayerResponse create_layer_rsp;
+    zx_channel_call_args_t call_args = {};
+    call_args.wr_bytes = &create_layer_msg;
+    call_args.rd_bytes = &create_layer_rsp;
+    call_args.wr_num_bytes = sizeof(create_layer_msg);
+    call_args.rd_num_bytes = sizeof(create_layer_rsp);
+    uint32_t actual_bytes, actual_handles;
+    zx_status_t status, read_status;
+    if ((status = zx_channel_call(dc_ph.handle, 0, ZX_TIME_INFINITE, &call_args,
+                                  &actual_bytes, &actual_handles, &read_status)) != ZX_OK) {
+        printf("vc: Create layer call failed %d %d\n", status, read_status);
+        return status;
+    }
+    if (create_layer_rsp.res != ZX_OK) {
+        printf("vc: Failed to create layer %d\n", create_layer_rsp.res);
+        return create_layer_rsp.res;
+    }
+
+    *layer_id = create_layer_rsp.layer_id;
+    return ZX_OK;
+}
+
+static zx_status_t configure_layer(display_info_t* display, uint64_t layer_id) {
+    // Put the layer on the display
+    uint8_t fidl_bytes[sizeof(fuchsia_display_ControllerSetDisplayLayersRequest)
+            + FIDL_ALIGN(sizeof(uint64_t))];
+    auto set_display_layer_request =
+            reinterpret_cast<fuchsia_display_ControllerSetDisplayLayersRequest*>(fidl_bytes);
+
+    set_display_layer_request->hdr.ordinal = fuchsia_display_ControllerSetDisplayLayersOrdinal;
+    set_display_layer_request->display_id = display->id;
+    set_display_layer_request->layer_ids.count = 1;
+    set_display_layer_request->layer_ids.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+    *reinterpret_cast<uint64_t*>(set_display_layer_request + 1) = layer_id;
+
+    zx_status_t status;
+    if ((status = zx_channel_write(dc_ph.handle, 0,
+                                   fidl_bytes, sizeof(fidl_bytes), nullptr, 0)) != ZX_OK) {
+        printf("vc: Failed to set display layers %d\n", status);
+        return status;
+    }
+
+    fuchsia_display_ControllerSetLayerPrimaryConfigRequest layer_cfg_msg;
+    layer_cfg_msg.hdr.ordinal = fuchsia_display_ControllerSetLayerPrimaryConfigOrdinal;
+    layer_cfg_msg.layer_id = layer_id;
+    layer_cfg_msg.image_config.height = display->height;
+    layer_cfg_msg.image_config.width = display->width;
+    layer_cfg_msg.image_config.pixel_format = display->format;
+    layer_cfg_msg.image_config.type = IMAGE_TYPE_SIMPLE;
+    if ((status = zx_channel_write(dc_ph.handle, 0, &layer_cfg_msg,
+                                   sizeof(layer_cfg_msg), nullptr, 0)) != ZX_OK) {
+        printf("vc: Failed to set layer config %d\n", status);
+        return status;
+    }
+
+    return ZX_OK;
+}
+
+static zx_status_t set_active_image(uint64_t layer_id, uint64_t image_id) {
+    zx_status_t status;
     // Set our framebuffer as the active framebuffer
-    fuchsia_display_ControllerSetDisplayImageRequest set_msg;
-    set_msg.hdr.ordinal = fuchsia_display_ControllerSetDisplayImageOrdinal;
-    set_msg.display = display_id;
+    fuchsia_display_ControllerSetLayerImageRequest set_msg;
+    set_msg.hdr.ordinal = fuchsia_display_ControllerSetLayerImageOrdinal;
+    set_msg.layer_id = layer_id;
     set_msg.image_id = image_id;
     if ((status = zx_channel_write(dc_ph.handle, 0,
                                    &set_msg, sizeof(set_msg), nullptr, 0)) != ZX_OK) {
@@ -302,6 +375,7 @@ static zx_status_t rebind_display() {
     zx_status_t status;
     zx_handle_t vmo = ZX_HANDLE_INVALID;
     uint64_t image_id = INVALID_ID;
+    uint64_t layer_id = INVALID_ID;
 
     uint32_t size = display->stride * display->height * ZX_PIXEL_FORMAT_BYTES(display->format);
     if ((status = allocate_vmo(size, &vmo)) != ZX_OK) {
@@ -309,6 +383,14 @@ static zx_status_t rebind_display() {
     }
 
     if ((status = import_vmo(display, vmo, &image_id)) != ZX_OK) {
+        goto fail;
+    }
+
+    if ((status = create_layer(&layer_id)) != ZX_OK) {
+        goto fail;
+    }
+
+    if ((status = configure_layer(display, layer_id)) != ZX_OK) {
         goto fail;
     }
 
@@ -324,6 +406,7 @@ static zx_status_t rebind_display() {
 
     cur_display = display;
     cur_display->image_id = image_id;
+    cur_display->layer_id = layer_id;
 
     // Only listen for logs when we have somewhere to print them. Also,
     // use a repeating wait so that we don't add/remove observers for each
@@ -346,6 +429,9 @@ fail:
                                        sizeof(release_msg), nullptr, 0)) != ZX_OK) {
             printf("vc: Failed to release image\n");
         }
+    }
+    if (layer_id != INVALID_ID) {
+        destroy_layer(layer_id);
     }
     if (vmo != ZX_HANDLE_INVALID) {
         zx_handle_close(vmo);
@@ -389,6 +475,7 @@ static zx_status_t dc_callback_handler(port_handler_t* ph, zx_signals_t signals,
 
     zx_status_t status;
     uint32_t actual_bytes, actual_handles;
+    uint8_t fidl_buffer[ZX_CHANNEL_MAX_MSG_BYTES];
     if ((status = zx_channel_read(dc_ph.handle, 0,
                                   fidl_buffer, nullptr, ZX_CHANNEL_MAX_MSG_BYTES, 0,
                                   &actual_bytes, &actual_handles)) != ZX_OK) {
