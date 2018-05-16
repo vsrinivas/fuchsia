@@ -10,9 +10,16 @@ MODULE_TYPE := userapp
 MODULE_GROUP := misc
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/main.cpp
+    $(LOCAL_DIR)/display.cpp \
+    $(LOCAL_DIR)/image.cpp \
+    $(LOCAL_DIR)/main.cpp \
+    $(LOCAL_DIR)/virtual-layer.cpp \
 
-MODULE_STATIC_LIBS := system/ulib/fidl
+MODULE_STATIC_LIBS := \
+    system/ulib/fbl \
+    system/ulib/fidl \
+    system/ulib/zx \
+    system/ulib/zxcpp \
 
 MODULE_FIDL_LIBS := system/fidl/display
 

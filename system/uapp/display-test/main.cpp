@@ -14,6 +14,8 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <fbl/vector.h>
+#include <fbl/algorithm.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/string_view.h>
 #include <lib/fidl/cpp/vector_view.h>
@@ -21,35 +23,13 @@
 #include <zircon/pixelformat.h>
 #include <zircon/syscalls.h>
 
+#include "display.h"
 #include "fuchsia/display/c/fidl.h"
+#include "virtual-layer.h"
 
-#ifdef DEBUG
-#define dprintf(...) printf(__VA_ARGS__)
-#else
-#define dprintf(...)
-#endif
-
-static int64_t display_id;
 static zx_handle_t dc_handle;
 
-static int32_t width;
-static int32_t height;
-static int32_t stride;
-static zx_pixel_format_t format;
-
-typedef struct image {
-    int64_t id;
-    void* buf;
-    zx_handle_t events[3];
-    int64_t event_ids[3];
-} image_t;
-
-// Indicies into image_t.event and image_t.event_ids
-#define WAIT_EVENT 0
-#define PRESENT_EVENT 1
-#define SIGNAL_EVENT 2
-
-static bool bind_display() {
+static bool bind_display(fbl::Vector<Display>* displays) {
     printf("Opening controller\n");
     int vfd = open("/dev/class/display-controller/000", O_RDWR);
     if (vfd < 0) {
@@ -57,7 +37,6 @@ static bool bind_display() {
         return false;
     }
 
-    printf("Getting handle\n");
     if (ioctl_display_controller_get_handle(vfd, &dc_handle) != sizeof(zx_handle_t)) {
         printf("Failed to get display controller handle\n");
         return false;
@@ -91,241 +70,243 @@ static bool bind_display() {
 
     auto changes = reinterpret_cast<fuchsia_display_ControllerDisplaysChangedEvent*>(
             msg.bytes().data());
-    auto display = reinterpret_cast<fuchsia_display_Info*>(changes->added.data);
-    auto mode = reinterpret_cast<fuchsia_display_Mode*>(display->modes.data);
-    auto pixel_format = reinterpret_cast<int32_t*>(display->pixel_format.data)[0];
+    auto display_info = reinterpret_cast<fuchsia_display_Info*>(changes->added.data);
 
-    printf("Getting stride\n");
-    fuchsia_display_ControllerComputeLinearImageStrideRequest stride_msg;
-    stride_msg.hdr.ordinal = fuchsia_display_ControllerComputeLinearImageStrideOrdinal;
-    stride_msg.width = mode->horizontal_resolution;
-    stride_msg.pixel_format = pixel_format;
-
-    fuchsia_display_ControllerComputeLinearImageStrideResponse stride_rsp;
-    zx_channel_call_args_t stride_call = {};
-    stride_call.wr_bytes = &stride_msg;
-    stride_call.rd_bytes = &stride_rsp;
-    stride_call.wr_num_bytes = sizeof(stride_msg);
-    stride_call.rd_num_bytes = sizeof(stride_rsp);
-    uint32_t actual_bytes, actual_handles;
-    zx_status_t read_status;
-    if (zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE,
-            &stride_call, &actual_bytes, &actual_handles, &read_status) != ZX_OK) {
-        printf("Failed to make stride call\n");
-        return false;
+    for (unsigned i = 0; i < changes->added.count; i++) {
+        displays->push_back(Display(display_info + i));
     }
-
-    display_id = display->id;
-
-    width = mode->horizontal_resolution;
-    height = mode->vertical_resolution;
-    stride = stride_rsp.stride;
-    format = pixel_format;
-
-    printf("Bound to display %dx%d (stride = %d, format=%d)\n", width, height, stride, format);
 
     return true;
 }
 
-static bool create_image(image_t* img) {
-    printf("Creating image\n");
-    for (int i = 0; i < 3; i++) {
-        printf("Creating event %d\n", i);
-
-        zx_handle_t e1, e2;
-        zx_info_handle_basic_t info;
-        if (zx_event_create(0, &e1) != ZX_OK
-                || zx_handle_duplicate(e1, ZX_RIGHT_SAME_RIGHTS, &e2) != ZX_OK
-                || zx_object_get_info(e1, ZX_INFO_HANDLE_BASIC, &info, sizeof(info),
-                                      nullptr, nullptr) != ZX_OK) {
-            printf("Failed to create event\n");
-            return false;
+Display* find_display(fbl::Vector<Display>& displays, const char* id_str) {
+    uint64_t id = strtoul(id_str, nullptr, 10);
+    if (id != 0) { // 0 is the invalid id, and luckily what strtoul returns on failure
+        for (auto& d : displays) {
+            if (d.id() == id) {
+                return &d;
+            }
         }
+    }
+    return nullptr;
+}
 
-        fuchsia_display_ControllerImportEventRequest import_evt_msg;
-        import_evt_msg.hdr.ordinal = fuchsia_display_ControllerImportEventOrdinal;
-        import_evt_msg.id = info.koid;
-        import_evt_msg.event = FIDL_HANDLE_PRESENT;
+bool update_display_layers(const fbl::Vector<VirtualLayer>& layers,
+                           const Display& display, fbl::Vector<uint64_t>* current_layers) {
+    fbl::Vector<uint64_t> new_layers;
 
-        if (zx_channel_write(dc_handle, 0, &import_evt_msg,
-                             sizeof(import_evt_msg), &e2, 1) != ZX_OK) {
-            printf("Failed to send import message\n");
-            return false;
+    for (auto& layer : layers) {
+        uint64_t id = layer.id(display.id());
+        if (id != INVALID_ID) {
+            new_layers.push_back(id);
         }
-
-        img->events[i] = e1;
-        img->event_ids[i] = import_evt_msg.id;
     }
 
-    printf("Creating and mapping vmo\n");
-    zx_handle_t vmo;
-    fuchsia_display_ControllerAllocateVmoRequest alloc_msg;
-    alloc_msg.hdr.ordinal = fuchsia_display_ControllerAllocateVmoOrdinal;
-    alloc_msg.size = stride * height * ZX_PIXEL_FORMAT_BYTES(format);
+    bool layer_change = new_layers.size() != current_layers->size();
+    if (!layer_change) {
+        for (unsigned i = 0; i < new_layers.size(); i++) {
+            if (new_layers[i] != (*current_layers)[i]) {
+                layer_change = true;
+                break;
+            }
+        }
+    }
 
-    fuchsia_display_ControllerAllocateVmoResponse alloc_rsp;
-    zx_channel_call_args_t call_args = {};
-    call_args.wr_bytes = &alloc_msg;
-    call_args.rd_bytes = &alloc_rsp;
-    call_args.rd_handles = &vmo;
-    call_args.wr_num_bytes = sizeof(alloc_msg);
-    call_args.rd_num_bytes = sizeof(alloc_rsp);
-    call_args.rd_num_handles = 1;
+    if (layer_change) {
+        current_layers->swap(new_layers);
+
+        uint32_t size = static_cast<int32_t>(
+                sizeof(fuchsia_display_ControllerSetDisplayLayersRequest) +
+                FIDL_ALIGN(sizeof(uint64_t) * current_layers->size()));
+        uint8_t fidl_bytes[size];
+
+        auto set_layers_msg =
+                reinterpret_cast<fuchsia_display_ControllerSetDisplayLayersRequest*>(fidl_bytes);
+        set_layers_msg->hdr.ordinal = fuchsia_display_ControllerSetDisplayLayersOrdinal;
+        set_layers_msg->layer_ids.count = current_layers->size();
+        set_layers_msg->layer_ids.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+        set_layers_msg->display_id = display.id();
+
+        auto layer_list = reinterpret_cast<uint64_t*>(set_layers_msg + 1);
+        for (auto layer_id : *current_layers) {
+            *(layer_list++) = layer_id;
+        }
+
+        if (zx_channel_write(dc_handle, 0, fidl_bytes, size, nullptr, 0) != ZX_OK) {
+            printf("Failed to set layers\n");
+            return false;
+        }
+    }
+    return true;
+}
+
+bool apply_config() {
+    fuchsia_display_ControllerCheckConfigRequest check_msg;
+    uint8_t check_resp_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+    check_msg.discard = false;
+    check_msg.hdr.ordinal = fuchsia_display_ControllerCheckConfigOrdinal;
+    zx_channel_call_args_t check_call = {};
+    check_call.wr_bytes = &check_msg;
+    check_call.rd_bytes = check_resp_bytes;
+    check_call.wr_num_bytes = sizeof(check_msg);
+    check_call.rd_num_bytes = sizeof(check_resp_bytes);
     uint32_t actual_bytes, actual_handles;
-    zx_status_t read_status;
-    zx_status_t status;
-    if ((status = zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &call_args,
+    zx_status_t read_status, status;
+    if ((status = zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &check_call,
                         &actual_bytes, &actual_handles, &read_status)) != ZX_OK) {
-        printf("Vmo alloc call failed %d %d\n", status, read_status);
-        return false;
-    }
-    if (alloc_rsp.res != ZX_OK) {
-        printf("Failed to alloc vmo %d\n", alloc_rsp.res);
+        printf("Failed to make check call %d %d\n", status, read_status);
         return false;
     }
 
-    uintptr_t addr;
-    uint32_t len = stride * height *  ZX_PIXEL_FORMAT_BYTES(format);
-    uint32_t perms = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
-    if (zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, len, perms, &addr) != ZX_OK) {
-        printf("Failed to map vmar\n");
+    fidl::Message msg(fidl::BytePart(check_resp_bytes, ZX_CHANNEL_MAX_MSG_BYTES, actual_bytes),
+                      fidl::HandlePart());
+    const char* err_msg;
+    if (msg.Decode(&fuchsia_display_ControllerCheckConfigResponseTable, &err_msg) != ZX_OK) {
+        return false;
+    }
+    auto check_rsp =
+            reinterpret_cast<fuchsia_display_ControllerCheckConfigResponse*>(msg.bytes().data());
+
+    if (check_rsp->res.count) {
+        printf("Config not valid\n");
         return false;
     }
 
-    printf("Importing image\n");
-    fuchsia_display_ControllerImportVmoImageRequest import_msg;
-    import_msg.hdr.ordinal = fuchsia_display_ControllerImportVmoImageOrdinal;
-    import_msg.image_config.height = height;
-    import_msg.image_config.width = width;
-    import_msg.image_config.pixel_format = format;
-    import_msg.image_config.type = IMAGE_TYPE_SIMPLE;
-    import_msg.vmo = FIDL_HANDLE_PRESENT;
-    import_msg.offset = 0;
-    zx_handle_t vmo_dup;
-    if (zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &vmo_dup) != ZX_OK) {
-        printf("Failed to dup handle\n");
+    fuchsia_display_ControllerApplyConfigRequest apply_msg;
+    apply_msg.hdr.ordinal = fuchsia_display_ControllerApplyConfigOrdinal;
+    if (zx_channel_write(dc_handle, 0, &apply_msg, sizeof(apply_msg), nullptr, 0) != ZX_OK) {
+        printf("Apply failed\n");
         return false;
     }
-
-    fuchsia_display_ControllerImportVmoImageResponse import_rsp;
-    zx_channel_call_args_t import_call = {};
-    import_call.wr_bytes = &import_msg;
-    import_call.wr_handles = &vmo_dup;
-    import_call.rd_bytes = &import_rsp;
-    import_call.wr_num_bytes = sizeof(import_msg);
-    import_call.wr_num_handles = 1;
-    import_call.rd_num_bytes = sizeof(import_rsp);
-    if (zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &import_call,
-                        &actual_bytes, &actual_handles, &read_status) != ZX_OK) {
-        printf("Failed to make import call\n");
-        return false;
-    }
-
-    if (import_rsp.res != ZX_OK) {
-        printf("Failed to import vmo\n");
-        return false;
-    }
-
-    img->id = import_rsp.image_id;
-    img->buf = reinterpret_cast<void*>(addr);
-
-    printf("Created display\n");
-
     return true;
 }
 
-#define NUM_FRAMES 120
-
-int main(int argc, char* argv[]) {
+int main(int argc, const char* argv[]) {
     printf("Running display test\n");
 
-    if (!bind_display()) {
+    fbl::Vector<Display> displays;
+    fbl::Vector<fbl::Vector<uint64_t>> display_layers;
+    fbl::Vector<VirtualLayer> layers;
+    int32_t num_frames = 120; // default to 120 frames
+
+    if (!bind_display(&displays)) {
         return -1;
     }
 
-    image_t img1, img2;
-
-    if (!create_image(&img1) || !create_image(&img2)) {
-        return -1;
+    if (displays.is_empty()) {
+        printf("No displays available\n");
+        return 0;
     }
 
-    for (int i = 0; i < NUM_FRAMES; i++) {
-        printf("Rendering frame %d\n", i);
-        image_t* img = i % 2 == 0 ? &img1 : &img2;
+    for (unsigned i = 0; i < displays.size(); i++) {
+        display_layers.push_back(fbl::Vector<uint64_t>());
+    }
 
-        // No signals the first iteration
-        if (i / 2 >= 1) {
-            zx_signals_t observed;
-            if (zx_object_wait_one(img->events[SIGNAL_EVENT], ZX_EVENT_SIGNALED,
-                                   zx_deadline_after(ZX_SEC(1)), &observed) != ZX_OK) {
-                dprintf("Buffer failed to become free\n");
+    argc--;
+    argv++;
+
+    while (argc) {
+        if (strcmp(argv[0], "--dump") == 0) {
+            for (auto& display : displays) {
+                display.Dump();
+            }
+            return 0;
+        } else if (strcmp(argv[0], "--mode-set") == 0
+                || strcmp(argv[0], "--format-set") == 0) {
+            Display* display = find_display(displays, argv[1]);
+            if (display) {
+                printf("Invalid display \"%s\" for %s\n", argv[1], argv[0]);
+                return -1;
+            }
+            if (strcmp(argv[0], "--mode-set") == 0) {
+                if (!display->set_mode_idx(atoi(argv[2]))) {
+                    printf("Invalid mode id\n");
+                    return -1;
+                }
+            } else {
+                if (!display->set_format_idx(atoi(argv[2]))) {
+                    printf("Invalid format id\n");
+                    return -1;
+                }
+            }
+            argv += 3;
+            argc -= 3;
+        } else if (strcmp(argv[0], "--num-frames") == 0) {
+            num_frames = atoi(argv[1]);
+            argv += 2;
+            argc -= 2;
+        } else {
+            printf("Unrecognized argument \"%s\"\n", argv[0]);
+            return -1;
+        }
+    }
+
+    // Layer which covers all displays and uses page flipping.
+    VirtualLayer layer1(displays);
+    layer1.SetLayerFlipping(true);
+    layers.push_back(fbl::move(layer1));
+
+    // Layer which covers the left half of the of the first display
+    // and toggles on and off every frame.
+    VirtualLayer layer2(&displays[0]);
+    layer2.SetImageDimens(displays[0].mode().horizontal_resolution / 2,
+                          displays[0].mode().vertical_resolution);
+    layer2.SetLayerToggle(true);
+    layers.push_back(fbl::move(layer2));
+
+    // Layer which is smaller than the display and bigger than its image
+    // and which animates back and forth across all displays and also
+    // its src image.
+    VirtualLayer layer3(displays);
+    layer3.SetImageDimens(displays[0].mode().horizontal_resolution,
+                          displays[0].mode().vertical_resolution / 2);
+    layer3.SetDestFrame(displays[0].mode().horizontal_resolution / 2,
+                        displays[0].mode().vertical_resolution / 2);
+    layer3.SetSrcFrame(displays[0].mode().horizontal_resolution / 2,
+                       displays[0].mode().vertical_resolution / 2);
+    layer3.SetPanDest(true);
+    layer3.SetPanSrc(true);
+    layers.push_back(fbl::move(layer3));
+
+    printf("Initializing layers\n");
+    for (auto& layer : layers) {
+        if (!layer.Init(dc_handle)) {
+            printf("Layer init failed\n");
+            return -1;
+        }
+    }
+
+    printf("Starting rendering\n");
+    for (int i = 0; i < num_frames; i++) {
+        for (auto& layer : layers) {
+            // Step before waiting, since not every layer is used every frame
+            // so we won't necessarily need to wait.
+            layer.StepLayout(i);
+
+            if (!layer.WaitForReady()) {
+                printf("Buffer failed to become free\n");
+                return -1;
+            }
+
+            layer.SendLayout(dc_handle);
+        }
+
+        for (unsigned i = 0; i < displays.size(); i++) {
+            if (!update_display_layers(layers, displays[i], &display_layers[i])) {
                 return -1;
             }
         }
 
-        zx_object_signal(img->events[SIGNAL_EVENT], ZX_EVENT_SIGNALED, 0);
-        zx_object_signal(img->events[PRESENT_EVENT], ZX_EVENT_SIGNALED, 0);
-
-        fuchsia_display_ControllerSetDisplayImageRequest set_msg;
-        set_msg.hdr.ordinal = fuchsia_display_ControllerSetDisplayImageOrdinal;
-        set_msg.display = display_id;
-        set_msg.image_id = img->id;
-        set_msg.wait_event_id = img->event_ids[WAIT_EVENT];
-        set_msg.present_event_id = img->event_ids[PRESENT_EVENT];
-        set_msg.signal_event_id = img->event_ids[SIGNAL_EVENT];
-        if (zx_channel_write(dc_handle, 0, &set_msg, sizeof(set_msg), nullptr, 0) != ZX_OK) {
-            dprintf("Failed to set image\n");
+        if (!apply_config()) {
             return -1;
         }
 
-        fuchsia_display_ControllerCheckConfigRequest check_msg;
-        fuchsia_display_ControllerCheckConfigResponse check_rsp;
-        check_msg.discard = false;
-        check_msg.hdr.ordinal = fuchsia_display_ControllerCheckConfigOrdinal;
-        zx_channel_call_args_t check_call = {};
-        check_call.wr_bytes = &check_msg;
-        check_call.rd_bytes = &check_rsp;
-        check_call.wr_num_bytes = sizeof(check_msg);
-        check_call.rd_num_bytes = sizeof(check_rsp);
-        uint32_t actual_bytes, actual_handles;
-        zx_status_t read_status;
-        if (zx_channel_call(dc_handle, 0, ZX_TIME_INFINITE, &check_call,
-                            &actual_bytes, &actual_handles, &read_status) != ZX_OK) {
-            dprintf("Failed to make check call\n");
-            return -1;
+        for (auto& layer : layers) {
+            layer.Render(i);
         }
 
-        if (check_rsp.res.count != 0) {
-            dprintf("Config not valid\n");
-            return -1;
-        }
-
-        fuchsia_display_ControllerApplyConfigRequest apply_msg;
-        apply_msg.hdr.ordinal = fuchsia_display_ControllerApplyConfigOrdinal;
-        if (zx_channel_write(dc_handle, 0, &apply_msg, sizeof(apply_msg), nullptr, 0) != ZX_OK) {
-            dprintf("Apply failed\n");
-            return -1;
-        }
-
-        for (int y = 0; y < height; y++) {
-            int32_t color =
-                    y < ((((double) height) / NUM_FRAMES) * (i + 1)) ? 0xffff0000 : 0xff00ff00;
-            for (int x = 0; x < width; x++) {
-                *(static_cast<int32_t*>(img->buf) + (y * stride) + x) = color;
-            }
-        }
-        zx_cache_flush(img->buf,
-                       stride * height *  ZX_PIXEL_FORMAT_BYTES(format), ZX_CACHE_FLUSH_DATA);
-
-        dprintf("Signaling wait sem\n");
-        zx_object_signal(img->events[WAIT_EVENT], 0, ZX_EVENT_SIGNALED);
-
-        dprintf("Waiting on present sem %d\n", img->event_ids[PRESENT_EVENT]);
-        zx_signals_t observed;
-        if (zx_object_wait_one(img->events[PRESENT_EVENT], ZX_EVENT_SIGNALED,
-                               zx_deadline_after(ZX_SEC(1)), &observed) != ZX_OK) {
-            dprintf("Buffer failed to become visible\n");
-            return -1;
+        for (auto& layer : layers) {
+            ZX_ASSERT(layer.WaitForPresent());
         }
     }
 
