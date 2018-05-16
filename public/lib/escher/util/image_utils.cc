@@ -106,22 +106,7 @@ vk::Image CreateVkImage(const vk::Device& device, ImageInfo info) {
   create_info.extent = vk::Extent3D{info.width, info.height, 1};
   create_info.mipLevels = 1;
   create_info.arrayLayers = 1;
-  switch (info.sample_count) {
-    case 1:
-      create_info.samples = vk::SampleCountFlagBits::e1;
-      break;
-    case 2:
-      create_info.samples = vk::SampleCountFlagBits::e2;
-      break;
-    case 4:
-      create_info.samples = vk::SampleCountFlagBits::e4;
-      break;
-    case 8:
-      create_info.samples = vk::SampleCountFlagBits::e8;
-      break;
-    default:
-      FXL_DCHECK(false);
-  }
+  create_info.samples = impl::SampleCountFlagBitsFromInt(info.sample_count);
   create_info.tiling = info.tiling;
   create_info.usage = info.usage;
   create_info.sharingMode = vk::SharingMode::eExclusive;

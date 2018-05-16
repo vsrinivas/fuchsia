@@ -7,6 +7,7 @@
 #include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/resources/resource_manager.h"
 #include "lib/escher/util/image_utils.h"
+#include "lib/escher/vk/gpu_allocator.h"
 #include "lib/escher/vk/gpu_mem.h"
 
 namespace escher {
@@ -28,6 +29,15 @@ ImagePtr Image::New(ResourceManager* image_owner, ImageInfo info,
     }
   }
   return fxl::AdoptRef(new Image(image_owner, info, vk_image, mem, mem_offset));
+}
+
+ImagePtr Image::New(ResourceManager* image_owner, const ImageInfo& info,
+                    GpuAllocator* allocator) {
+  auto vk_device = image_owner->vk_device();
+  vk::Image image = image_utils::CreateVkImage(vk_device, info);
+  vk::MemoryRequirements reqs = vk_device.getImageMemoryRequirements(image);
+  return Image::New(image_owner, info, image,
+                    allocator->Allocate(reqs, info.memory_flags));
 }
 
 Image::Image(ResourceManager* image_owner, ImageInfo info, vk::Image vk_image,

@@ -29,8 +29,7 @@ class Escher : public MeshBuilderFactory {
   ~Escher();
 
   // Implement MeshBuilderFactory interface.
-  MeshBuilderPtr NewMeshBuilder(const MeshSpec& spec,
-                                size_t max_vertex_count,
+  MeshBuilderPtr NewMeshBuilder(const MeshSpec& spec, size_t max_vertex_count,
                                 size_t max_index_count) override;
 
   // Return new Image containing the provided pixels.
@@ -51,9 +50,30 @@ class Escher : public MeshBuilderFactory {
   // VkSampler.  |aspect_mask| is used to create the VkImageView, and |filter|
   // and |use_unnormalized_coordinates| are used to create the VkSampler.
   TexturePtr NewTexture(
-      ImagePtr image,
-      vk::Filter filter,
+      ImagePtr image, vk::Filter filter,
       vk::ImageAspectFlags aspect_mask = vk::ImageAspectFlagBits::eColor,
+      bool use_unnormalized_coordinates = false);
+
+  // Construct a new Texture, which encapsulates a newly-created VkImage,
+  // VkImageView and VkSampler.  |aspect_mask| is used to create the
+  // VkImageView, and |filter| and |use_unnormalized_coordinates| are used to
+  // create the VkSampler.
+  TexturePtr NewTexture(vk::Format format, uint32_t width, uint32_t height,
+                        uint32_t sample_count, vk::ImageUsageFlags usage_flags,
+                        vk::Filter filter, vk::ImageAspectFlags aspect_flags,
+                        bool use_unnormalized_coordinates = false);
+
+  // Same as the NewTexture() variant that creates the image, except that it
+  // automatically sets up the vk::ImageAspectFlags, and adds the following to
+  // |additional_usage_flags|:
+  //   - either eColorAttachment or eDepthAttachment, depending on |format|
+  //   - optionally eTransientAttachment, depending on |is_transient|
+  //   - optionally eInputAttachment, depending on |is_input|
+  TexturePtr NewAttachmentTexture(
+      vk::Format format, uint32_t width, uint32_t height, uint32_t sample_count,
+      vk::Filter filter,
+      vk::ImageUsageFlags additional_usage_flags = vk::ImageUsageFlags(),
+      bool is_transient_attachment = false, bool is_input_attachment = false,
       bool use_unnormalized_coordinates = false);
 
   uint64_t GetNumGpuBytesAllocated();

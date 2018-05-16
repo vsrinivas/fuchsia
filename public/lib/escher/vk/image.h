@@ -49,6 +49,9 @@ class Image : public WaitableResource {
                       GpuMemPtr mem, vk::DeviceSize mem_offset = 0,
                       bool bind_image_memory = true);
 
+  static ImagePtr New(ResourceManager* image_owner, const ImageInfo& info,
+                      GpuAllocator* allocator);
+
   // Returns image_ and mem_ to the owner.
   ~Image() override;
 
