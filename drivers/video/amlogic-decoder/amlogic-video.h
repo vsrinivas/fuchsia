@@ -17,6 +17,7 @@
 
 #include <memory>
 
+#include "firmware_blob.h"
 #include "registers.h"
 
 class AmlogicVideo {
@@ -24,6 +25,8 @@ class AmlogicVideo {
   ~AmlogicVideo();
 
   zx_status_t Init(zx_device_t* parent);
+
+  zx_status_t LoadDecoderFirmware(uint8_t* data, uint32_t size);
 
  private:
   void EnableClockGate();
@@ -42,6 +45,8 @@ class AmlogicVideo {
   std::unique_ptr<HiuRegisterIo> hiubus_;
   std::unique_ptr<AoRegisterIo> aobus_;
   std::unique_ptr<DmcRegisterIo> dmc_;
+
+  std::unique_ptr<FirmwareBlob> firmware_;
 
   zx::handle bti_;
 

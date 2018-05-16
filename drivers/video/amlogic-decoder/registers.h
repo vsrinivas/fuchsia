@@ -88,6 +88,11 @@ class DmcRegisterIo : public hwreg::RegisterIo {
     static auto Get() { return AddrType(address * 4); }
 
 // clang-format off
+DEFINE_REGISTER(Mpsr, DosRegisterIo, 0x301);
+DEFINE_REGISTER(Cpsr, DosRegisterIo, 0x321);
+DEFINE_REGISTER(ImemDmaCtrl, DosRegisterIo, 0x340);
+DEFINE_REGISTER(ImemDmaAdr, DosRegisterIo, 0x341);
+DEFINE_REGISTER(ImemDmaCount, DosRegisterIo, 0x342);
 DEFINE_REGISTER(DosSwReset0, DosRegisterIo, 0x3f00);
 DEFINE_REGISTER(DosGclkEn, DosRegisterIo, 0x3f01);
 DEFINE_REGISTER(DosMemPdVdec, DosRegisterIo, 0x3f30);

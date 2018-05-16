@@ -18,6 +18,9 @@ source_set("sources") {
     "amlogic-video.cc",
     "amlogic-video.h",
     "binding.c",
+    "firmware_blob.cc",
+    "firmware_blob.h",
+    "macros.h",
     "registers.h",
   ]
   public_deps = [
@@ -29,15 +32,30 @@ source_set("sources") {
   ]
 }
 
+copy("video-ucode") {
+  sources = [
+    "firmware/video_ucode.bin",
+  ]
+  outputs = [
+    "$root_out_dir/firmware/amlogic_video_ucode.bin",
+  ]
+}
+
 package("amlogic_video_decoder") {
   deprecated_system_image = true
   deps = [
     ":amlogic_decoder",
+    ":video-ucode($shlib_toolchain)",
   ]
 
   drivers = [
     {
       name = "amlogic_video_decoder.so"
+    },
+  ]
+  libraries = [
+    {
+      name = "firmware/amlogic_video_ucode.bin"
     },
   ]
 }
