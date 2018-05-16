@@ -21,21 +21,35 @@ namespace wlan {
 
 class Packet;
 
-template <typename Header, typename Body> struct ImmutableFrame {
+// TODO(hahnr): Remove once frame owns Packet.
+template <typename Header, typename Body> class ImmutableFrame {
+   public:
     ImmutableFrame(const Header* hdr, const Body* body, size_t body_len)
-        : hdr(hdr), body(body), body_len(body_len) {}
+        : hdr_(hdr), body_(body), body_len_(body_len) {}
 
-    const Header* hdr;
-    const Body* body;
-    const size_t body_len;
+    const Header* hdr() const { return hdr_; }
+    const Body* body() const { return body_; }
+    size_t body_len() const { return body_len_; }
+
+   private:
+    const Header* hdr_;
+    const Body* body_;
+    const size_t body_len_;
 };
 
-template <typename Header, typename Body> struct Frame {
-    Frame(Header* hdr, Body* body, size_t body_len) : hdr(hdr), body(body), body_len(body_len) {}
+template <typename Header, typename Body> class Frame {
+   public:
+    Frame(Header* hdr, Body* body, size_t body_len) : hdr_(hdr), body_(body), body_len_(body_len) {}
 
-    Header* hdr;
-    Body* body;
-    size_t body_len;
+    Header* hdr() { return hdr_; }
+    Body* body() { return body_; }
+    size_t body_len() const { return body_len_; }
+    void set_body_len(size_t body_len) { body_len_ = body_len; }
+
+   private:
+    Header* hdr_;
+    Body* body_;
+    size_t body_len_;
 };
 
 using Payload = uint8_t;

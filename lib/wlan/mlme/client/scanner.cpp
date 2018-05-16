@@ -131,7 +131,7 @@ zx_status_t Scanner::HandleBeacon(const ImmutableMgmtFrame<Beacon>& frame,
     // Before processing Beacon, remove stale entries.
     RemoveStaleBss();
 
-    auto hdr = frame.hdr;
+    auto hdr = frame.hdr();
     common::MacAddr bssid(hdr->addr3);
     common::MacAddr src_addr(hdr->addr2);
 
@@ -146,18 +146,18 @@ zx_status_t Scanner::HandleBeacon(const ImmutableMgmtFrame<Beacon>& frame,
     zx_status_t status = ZX_OK;
     auto bss = nbrs_bss_.Lookup(bssid);
     if (bss != nullptr) {
-        status = bss->ProcessBeacon(frame.body, frame.body_len, &rxinfo);
+        status = bss->ProcessBeacon(frame.body(), frame.body_len(), &rxinfo);
     } else if (nbrs_bss_.IsFull()) {
         errorf("error, maximum number of BSS reached: %lu\n", nbrs_bss_.Count());
     } else {
         bss = fbl::AdoptRef(new Bss(bssid));
-        bss->ProcessBeacon(frame.body, frame.body_len, &rxinfo);
+        bss->ProcessBeacon(frame.body(), frame.body_len(), &rxinfo);
         status = nbrs_bss_.Insert(bssid, bss);
     }
 
     if (status != ZX_OK) {
         debugbcn("Failed to handle beacon (err %3d): BSSID %s timestamp: %15" PRIu64 "\n", status,
-                 MACSTR(bssid), frame.body->timestamp);
+                 MACSTR(bssid), frame.body()->timestamp);
     }
 
     return ZX_OK;
@@ -187,8 +187,8 @@ zx_status_t Scanner::HandleProbeResponse(const ImmutableMgmtFrame<ProbeResponse>
     // information for either frame type which we have to process on a per frame type basis in the
     // future. For now, stick with this kind of unification.
     // TODO(hahnr): The should probably moved somehow into the Dispatcher.
-    auto bcn = reinterpret_cast<const Beacon*>(frame.body);
-    auto mgmt_frame = ImmutableMgmtFrame<Beacon>(frame.hdr, bcn, frame.body_len);
+    auto bcn = reinterpret_cast<const Beacon*>(frame.body());
+    auto mgmt_frame = ImmutableMgmtFrame<Beacon>(frame.hdr(), bcn, frame.body_len());
 
     HandleBeacon(mgmt_frame, rxinfo);
     return ZX_OK;
@@ -277,7 +277,7 @@ zx_status_t Scanner::SendProbeRequest() {
 
     if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    auto hdr = frame.hdr;
+    auto hdr = frame.hdr();
     const common::MacAddr& mymac = device_->GetState()->address();
     const common::MacAddr& bssid = common::MacAddr(req_->bssid.data());
 
@@ -289,7 +289,7 @@ zx_status_t Scanner::SendProbeRequest() {
     hdr->sc.set_seq(0);
     FillTxInfo(&packet, *hdr);
 
-    auto body = frame.body;
+    auto body = frame.body();
     ElementWriter w(body->elements, body_payload_len);
 
     if (!w.write<SsidElement>(req_->ssid->data())) {
@@ -318,8 +318,8 @@ zx_status_t Scanner::SendProbeRequest() {
     // Update the length with final values
     body_payload_len = w.size();
     // TODO(porce): implement methods to replace sizeof(ProbeRequest) with body.some_len()
-    frame.body_len = sizeof(ProbeRequest) + body_payload_len;
-    size_t frame_len = hdr->len() + frame.body_len;
+    frame.set_body_len(sizeof(ProbeRequest) + body_payload_len);
+    size_t frame_len = hdr->len() + frame.body_len();
     zx_status_t status = packet->set_len(frame_len);
     if (status != ZX_OK) {
         errorf("could not set packet length to %zu: %d\n", frame_len, status);

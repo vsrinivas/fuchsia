@@ -86,11 +86,11 @@ TEST_F(DispatcherTest, HandleEthPacket) {
     auto packet = CreateEthPacket();
 
     bool handled = HandlePacket<ImmutableBaseFrame<EthernetII>>(fbl::move(packet), [](auto& frame) {
-        EXPECT_EQ(frame.body_len, sizeof(kPayload));
-        EXPECT_EQ(frame.hdr->ether_type, 0xABCD);
-        EXPECT_EQ(frame.hdr->dest, kMacAddr1);
-        EXPECT_EQ(frame.hdr->src, kMacAddr2);
-        EXPECT_EQ(0, std::memcmp(frame.body, kPayload, frame.body_len));
+        EXPECT_EQ(frame.body_len(), sizeof(kPayload));
+        EXPECT_EQ(frame.hdr()->ether_type, 0xABCD);
+        EXPECT_EQ(frame.hdr()->dest, kMacAddr1);
+        EXPECT_EQ(frame.hdr()->src, kMacAddr2);
+        EXPECT_EQ(0, std::memcmp(frame.body(), kPayload, frame.body_len()));
     });
     EXPECT_TRUE(handled);
 }

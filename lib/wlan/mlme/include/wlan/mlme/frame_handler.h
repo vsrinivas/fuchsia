@@ -205,7 +205,7 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     template <typename Body>
     zx_status_t HandleFrameInternal(const ImmutableMgmtFrame<Body>& frame,
                                     const wlan_rx_info_t& info) {
-        auto status = HandleMgmtFrame(*frame.hdr);
+        auto status = HandleMgmtFrame(*frame.hdr());
         if (status != ZX_OK) { return status; }
 
         return HandleMgmtFrameInternal(frame, info);
@@ -230,7 +230,7 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     template <typename Body>
     zx_status_t HandleFrameInternal(const ImmutableDataFrame<Body>& frame,
                                     const wlan_rx_info_t& info) {
-        auto status = HandleDataFrame(*frame.hdr);
+        auto status = HandleDataFrame(*frame.hdr());
         if (status != ZX_OK) { return status; }
 
         return HandleDataFrameInternal(frame, info);
@@ -242,7 +242,7 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     template <typename Body>
     zx_status_t HandleFrameInternal(const ImmutableCtrlFrame<Body>& frame,
                                     const wlan_rx_info_t& info) {
-        auto status = HandleCtrlFrame(frame.hdr->fc);
+        auto status = HandleCtrlFrame(frame.hdr()->fc);
         if (status != ZX_OK) { return status; }
 
         return HandleCtrlFrameInternal(frame, info);
