@@ -514,7 +514,6 @@ zx_status_t zxrio_write_response(zx_handle_t h, zx_status_t status, zxrio_msg_t*
         fprintf(stderr, "zxrio_write_response: Failed to encode response\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
-    msg->op = ZXRIO_STATUS;
 
     // Transmit
     if ((status = zx_channel_write(h, 0, msg, sz, handles, hcount)) != ZX_OK) {

@@ -177,6 +177,7 @@ static zx_status_t zxrio_txn(zxrio_t* rio, zxrio_msg_t* msg) {
     args.wr_num_handles = msg->hcount;
     args.rd_num_bytes = ZXRIO_HDR_SZ + FDIO_CHUNK_SIZE;
     args.rd_num_handles = FDIO_MAX_HANDLES;
+    const uint32_t request_op = ZXRIO_OP(msg->op);
 
     r = zx_channel_call(rio->h, 0, ZX_TIME_INFINITE, &args, &dsize, &msg->hcount, &rs);
     if (r < 0) {
@@ -192,7 +193,7 @@ static zx_status_t zxrio_txn(zxrio_t* rio, zxrio_msg_t* msg) {
 
     // check for protocol errors
     if (!is_rio_message_reply_valid(msg, dsize) ||
-        (ZXRIO_OP(msg->op) != ZXRIO_STATUS)) {
+        (ZXRIO_OP(msg->op) != request_op)) {
         r = ZX_ERR_IO;
         goto fail_discard_handles;
     }

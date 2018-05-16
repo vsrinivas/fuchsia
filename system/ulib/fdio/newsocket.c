@@ -614,6 +614,8 @@ static zx_status_t zxsio_txn(zxsio_t* sio, zxsio_msg_t* msg) {
     zx_status_t r = zxsio_write_control(sio, msg);
     if (r < 0)
         return r;
+
+    const uint32_t request_op = msg->op;
     r = zxsio_read_control(sio, msg, sizeof(*msg));
     if (r < 0)
         return r;
@@ -621,7 +623,7 @@ static zx_status_t zxsio_txn(zxsio_t* sio, zxsio_msg_t* msg) {
     size_t dsize = (size_t)r;
     // check for protocol errors
     if (!is_rio_message_reply_valid(msg, dsize) ||
-        (ZXRIO_OP(msg->op) != ZXRIO_STATUS)) {
+        (ZXRIO_OP(msg->op) != request_op)) {
         return ZX_ERR_IO;
     }
     return msg->arg;
