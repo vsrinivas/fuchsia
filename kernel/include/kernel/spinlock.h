@@ -34,7 +34,8 @@ static inline void spin_lock_init(spin_lock_t* lock) {
     arch_spin_lock_init(lock);
 }
 
-/* returns true if |lock| is held by the current CPU */
+/* returns true if |lock| is held by the current CPU;
+ * interrupts should be disabled before calling */
 static inline bool spin_lock_held(spin_lock_t* lock) {
     return arch_spin_lock_held(lock);
 }
