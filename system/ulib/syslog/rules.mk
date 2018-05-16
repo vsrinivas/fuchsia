@@ -17,12 +17,16 @@ MODULE_SRCS = \
 MODULE_EXPORT := so
 MODULE_SO_NAME := syslog
 
+MODULE_FIDL_LIBS := \
+    system/fidl/logger
+
 MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/zx \
     system/ulib/zxcpp \
 
 MODULE_LIBS := \
+    system/ulib/fdio \
     system/ulib/c \
     system/ulib/zircon
 

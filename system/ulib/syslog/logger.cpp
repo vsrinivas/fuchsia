@@ -2,10 +2,45 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fdio/util.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/socket.h>
 #include <syslog/logger.h>
+
+// TODO: Remove this hack once FIDL-182  is fixed.
+typedef zx_handle_t logger_LogListener;
+#include <logger/c/fidl.h>
 
 #include "fx_logger.h"
 
+namespace {
+
+zx::socket connect_to_logger() {
+    zx::socket invalid;
+    zx::channel logger, logger_request;
+    if (zx::channel::create(0, &logger, &logger_request) != ZX_OK) {
+        return invalid;
+    }
+    if (fdio_service_connect("/svc/logger.LogSink", logger_request.release()) != ZX_OK) {
+        return invalid;
+    }
+    zx::socket local, remote;
+    if (zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote) != ZX_OK) {
+        return invalid;
+    }
+    logger_LogSinkConnectRequest req;
+    memset(&req, 0, sizeof(req));
+    req.hdr.ordinal = logger_LogSinkConnectOrdinal;
+    req.socket = FIDL_HANDLE_PRESENT;
+    zx_handle_t handles[1] = {remote.release()};
+    if (logger.write(0, &req, sizeof(req), handles, 1) != ZX_OK) {
+        close(handles[0]);
+        return invalid;
+    }
+    return local;
+}
+
+} // namespace
 zx_status_t fx_logger_logf(fx_logger_t* logger, fx_log_severity_t severity,
                            const char* tag, const char* format, ...) {
     if (logger == nullptr) {
@@ -59,12 +94,16 @@ zx_status_t fx_logger_create(const fx_logger_config_t* config,
     fx_logger_config_t c = *config;
     if (config->console_fd == -1 &&
         config->log_service_channel == ZX_HANDLE_INVALID) {
-        // TODO: change for socket
-        int newfd = dup(STDERR_FILENO);
-        if (newfd < 0) {
-            return ZX_ERR_INTERNAL;
+        zx::socket sock = connect_to_logger();
+        if (sock.is_valid()) {
+            c.log_service_channel = sock.release();
+        } else {
+            int newfd = dup(STDERR_FILENO);
+            if (newfd < 0) {
+                return ZX_ERR_INTERNAL;
+            }
+            c.console_fd = newfd;
         }
-        c.console_fd = newfd;
     }
     *out_logger = new fx_logger(&c);
     return ZX_OK;
