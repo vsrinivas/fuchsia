@@ -15,34 +15,17 @@
 
 set -eu
 
-func_test_exist() {
-  if [ ! -e "$1" ]; then
-    echo "$1 does not exist! Please check your input. Aborting!"
-    exit -1
-  fi
-}
-
-# Path to clang
-CLANG_PATH=""
-
-# Path to clang++
-CLANGXX_PATH=""
-
 # Path to toolchain
 TOOLCHAIN_PREFIX=""
-
-# Build target
-BUILD_TARGET=""
 
 function func_help {
   echo "USAGE: clang-tidy-zircon <options> [files ...]"
   echo ""
   echo "Make sure that you generate the compile_commands.json file with the "
-  echo "USE_CLANG=true flag."
+  echo "-c flag (or USE_CLANG=true if using make directly)."
   echo "options:"
   echo ""
   echo "-p <toolchain prefix>     : path to the directory containing bin/clang"
-  echo "-t <target>               : build target. Default is x86"
   echo "-h                        : for help"
   exit 1
 }
@@ -62,7 +45,6 @@ ZIRCON_ROOT="$SCRIPT_DIR/.."
 while getopts "p:t:hn" opt; do
   case $opt in
     p) TOOLCHAIN_PREFIX="$OPTARG";;
-    t) BUILD_TARGET="$OPTARG";;
     h) func_help;;
     \?)
       echo "Invalid option"
@@ -75,14 +57,7 @@ shift $((OPTIND -1))
 if [ -z "$TOOLCHAIN_PREFIX" ]; then
   # User did not provide toolchain prefix
   # Assume user prefer prebuilt toolchain
-  PREBUILT_DIR="$ZIRCON_ROOT/prebuilt/downloads"
-  # Determine OS type
-  OS_STR="$(uname)"
-  if [ "$OS_STR" = "Darwin" ]; then
-    PREBUILT_DIR="$PREBUILT_DIR/clang+llvm-x86_64-darwin"
-  elif [ "$OS_STR" = "Linux" ]; then
-    PREBUILT_DIR="$PREBUILT_DIR/clang+llvm-x86_64-linux"
-  fi
+  PREBUILT_DIR="$ZIRCON_ROOT/prebuilt/downloads/clang"
   if [ ! -d "$PREBUILT_DIR" ]; then
     echo "Toolchain prefix is not defined and prebuilt toolchain has not yet been downloaded."
     echo "Abort!"
@@ -90,13 +65,6 @@ if [ -z "$TOOLCHAIN_PREFIX" ]; then
   fi
   TOOLCHAIN_PREFIX="$PREBUILT_DIR"
 fi
-
-CLANG_PATH="$TOOLCHAIN_PREFIX/bin/clang"
-CLANGXX_PATH="$TOOLCHAIN_PREFIX/bin/clang++"
-
-# Check if clang exists
-func_test_exist "$CLANG_PATH"
-func_test_exist "$CLANGXX_PATH"
 
 # Change dir to zircon
 cd "$ZIRCON_ROOT"
