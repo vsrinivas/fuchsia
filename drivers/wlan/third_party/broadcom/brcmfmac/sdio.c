@@ -3791,7 +3791,7 @@ static bool brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
         goto fail;
     }
 
-    reg_val |= (BCMA_CC_PMU_CTL_RES_RELOAD << BCMA_CC_PMU_CTL_RES_SHIFT);
+    reg_val |= (BC_CORE_POWER_CONTROL_RELOAD << BC_CORE_POWER_CONTROL_SHIFT);
 
     brcmf_sdiod_writel(sdiodev, reg_addr, reg_val, &err);
     if (err != ZX_OK) {

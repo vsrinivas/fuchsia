@@ -110,8 +110,9 @@
 #define BRCMF_CHIP_MAX_MEMSIZE (4 * 1024 * 1024)
 
 #define CORE_SB(base, field) (base + SBCONFIGOFF + offsetof(struct sbconfig, field))
-#define SBCOREREV(sbidh) \
-    ((((sbidh)&SSB_IDHIGH_RCHI) >> SSB_IDHIGH_RCHI_SHIFT) | ((sbidh)&SSB_IDHIGH_RCLO))
+#define SBCOREREV(sbidh)                                                                  \
+    ((((sbidh)&BACKPLANE_ID_HIGH_REVCODE_HIGH) >> BACKPLANE_ID_HIGH_REVCODE_HIGH_SHIFT) | \
+      ((sbidh)&BACKPLANE_ID_HIGH_REVCODE_LOW))
 
 struct sbconfig {
     uint32_t PAD[2];
@@ -263,8 +264,9 @@ static bool brcmf_chip_sb_iscoreup(struct brcmf_core_priv* core) {
     ci = core->chip;
     address = CORE_SB(core->pub.base, sbtmstatelow);
     regdata = ci->ops->read32(ci->ctx, address);
-    regdata &= (SSB_TMSLOW_RESET | SSB_TMSLOW_REJECT | SSB_IMSTATE_REJECT | SSB_TMSLOW_CLOCK);
-    return SSB_TMSLOW_CLOCK == regdata;
+    regdata &= (BACKPLANE_TARGET_STATE_LOW_RESET | BACKPLANE_TARGET_STATE_LOW_REJECT |
+        BACKPLANE_INITIATOR_STATE_REJECT | BACKPLANE_TARGET_STATE_LOW_CLOCK);
+    return BACKPLANE_TARGET_STATE_LOW_CLOCK == regdata;
 }
 
 static bool brcmf_chip_ai_iscoreup(struct brcmf_core_priv* core) {
@@ -273,73 +275,79 @@ static bool brcmf_chip_ai_iscoreup(struct brcmf_core_priv* core) {
     bool ret;
 
     ci = core->chip;
-    regdata = ci->ops->read32(ci->ctx, core->wrapbase + BCMA_IOCTL);
-    ret = (regdata & (BCMA_IOCTL_FGC | BCMA_IOCTL_CLK)) == BCMA_IOCTL_CLK;
+    regdata = ci->ops->read32(ci->ctx, core->wrapbase + BC_CORE_CONTROL);
+    ret = (regdata & (BC_CORE_CONTROL_FGC | BC_CORE_CONTROL_CLOCK)) == BC_CORE_CONTROL_CLOCK;
 
-    regdata = ci->ops->read32(ci->ctx, core->wrapbase + BCMA_RESET_CTL);
-    ret = ret && ((regdata & BCMA_RESET_CTL_RESET) == 0);
+    regdata = ci->ops->read32(ci->ctx, core->wrapbase + BC_CORE_RESET_CONTROL);
+    ret = ret && ((regdata & BC_CORE_RESET_CONTROL_RESET) == 0);
 
     return ret;
 }
 
-static void brcmf_chip_sb_coredisable(struct brcmf_core_priv* core, uint32_t prereset, uint32_t reset) {
+static void brcmf_chip_sb_coredisable(struct brcmf_core_priv* core, uint32_t prereset,
+                                      uint32_t reset) {
     struct brcmf_chip_priv* ci;
     uint32_t val, base;
 
     ci = core->chip;
     base = core->pub.base;
     val = ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatelow));
-    if (val & SSB_TMSLOW_RESET) {
+    if (val & BACKPLANE_TARGET_STATE_LOW_RESET) {
         return;
     }
 
     val = ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatelow));
-    if ((val & SSB_TMSLOW_CLOCK) != 0) {
+    if ((val & BACKPLANE_TARGET_STATE_LOW_CLOCK) != 0) {
         /*
          * set target reject and spin until busy is clear
          * (preserve core-specific bits)
          */
         val = ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatelow));
-        ci->ops->write32(ci->ctx, CORE_SB(base, sbtmstatelow), val | SSB_TMSLOW_REJECT);
+        ci->ops->write32(ci->ctx, CORE_SB(base, sbtmstatelow), val |
+            BACKPLANE_TARGET_STATE_LOW_REJECT);
 
         val = ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatelow));
         usleep(1);
-        SPINWAIT((ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatehigh)) & SSB_TMSHIGH_BUSY),
+        SPINWAIT((ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatehigh)) &
+                  BACKPLANE_TARGET_STATE_HIGH_BUSY),
                  100000);
 
         val = ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatehigh));
-        if (val & SSB_TMSHIGH_BUSY) {
+        if (val & BACKPLANE_TARGET_STATE_HIGH_BUSY) {
             brcmf_err("core state still busy\n");
         }
 
         val = ci->ops->read32(ci->ctx, CORE_SB(base, sbidlow));
-        if (val & SSB_IDLOW_INITIATOR) {
+        if (val & BACKPLANE_ID_LOW_INITIATOR) {
             val = ci->ops->read32(ci->ctx, CORE_SB(base, sbimstate));
-            val |= SSB_IMSTATE_REJECT;
+            val |= BACKPLANE_INITIATOR_STATE_REJECT;
             ci->ops->write32(ci->ctx, CORE_SB(base, sbimstate), val);
             val = ci->ops->read32(ci->ctx, CORE_SB(base, sbimstate));
             usleep(1);
-            SPINWAIT((ci->ops->read32(ci->ctx, CORE_SB(base, sbimstate)) & SSB_IMSTATE_BUSY),
+            SPINWAIT((ci->ops->read32(ci->ctx, CORE_SB(base, sbimstate)) &
+                      BACKPLANE_INITIATOR_STATE_BUSY),
                      100000);
         }
 
         /* set reset and reject while enabling the clocks */
-        val = SSB_TMSLOW_FGC | SSB_TMSLOW_CLOCK | SSB_TMSLOW_REJECT | SSB_TMSLOW_RESET;
+        val = BACKPLANE_TARGET_STATE_LOW_GATED_CLOCKS | BACKPLANE_TARGET_STATE_LOW_CLOCK |
+            BACKPLANE_TARGET_STATE_LOW_REJECT | BACKPLANE_TARGET_STATE_LOW_RESET;
         ci->ops->write32(ci->ctx, CORE_SB(base, sbtmstatelow), val);
         val = ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatelow));
         usleep(10);
 
         /* clear the initiator reject bit */
         val = ci->ops->read32(ci->ctx, CORE_SB(base, sbidlow));
-        if (val & SSB_IDLOW_INITIATOR) {
+        if (val & BACKPLANE_ID_LOW_INITIATOR) {
             val = ci->ops->read32(ci->ctx, CORE_SB(base, sbimstate));
-            val &= ~SSB_IMSTATE_REJECT;
+            val &= ~BACKPLANE_INITIATOR_STATE_REJECT;
             ci->ops->write32(ci->ctx, CORE_SB(base, sbimstate), val);
         }
     }
 
     /* leave reset and reject asserted */
-    ci->ops->write32(ci->ctx, CORE_SB(base, sbtmstatelow), (SSB_TMSLOW_REJECT | SSB_TMSLOW_RESET));
+    ci->ops->write32(ci->ctx, CORE_SB(base, sbtmstatelow), (BACKPLANE_TARGET_STATE_LOW_REJECT |
+                                                            BACKPLANE_TARGET_STATE_LOW_RESET));
     usleep(1);
 }
 
@@ -350,28 +358,30 @@ static void brcmf_chip_ai_coredisable(struct brcmf_core_priv* core, uint32_t pre
     ci = core->chip;
 
     /* if core is already in reset, skip reset */
-    regdata = ci->ops->read32(ci->ctx, core->wrapbase + BCMA_RESET_CTL);
-    if ((regdata & BCMA_RESET_CTL_RESET) != 0) {
+    regdata = ci->ops->read32(ci->ctx, core->wrapbase + BC_CORE_RESET_CONTROL);
+    if ((regdata & BC_CORE_RESET_CONTROL_RESET) != 0) {
         goto in_reset_configure;
     }
 
     /* configure reset */
-    ci->ops->write32(ci->ctx, core->wrapbase + BCMA_IOCTL,
-                     prereset | BCMA_IOCTL_FGC | BCMA_IOCTL_CLK);
-    ci->ops->read32(ci->ctx, core->wrapbase + BCMA_IOCTL);
+    ci->ops->write32(ci->ctx, core->wrapbase + BC_CORE_CONTROL,
+                     prereset | BC_CORE_CONTROL_FGC | BC_CORE_CONTROL_CLOCK);
+    ci->ops->read32(ci->ctx, core->wrapbase + BC_CORE_CONTROL);
 
     /* put in reset */
-    ci->ops->write32(ci->ctx, core->wrapbase + BCMA_RESET_CTL, BCMA_RESET_CTL_RESET);
+    ci->ops->write32(ci->ctx, core->wrapbase + BC_CORE_RESET_CONTROL, BC_CORE_RESET_CONTROL_RESET);
     usleep_range(10, 20);
     brcmf_dbg(TEMP, "About to wait");
     /* wait till reset is 1 */
-    SPINWAIT(ci->ops->read32(ci->ctx, core->wrapbase + BCMA_RESET_CTL) != BCMA_RESET_CTL_RESET,
+    SPINWAIT(ci->ops->read32(ci->ctx, core->wrapbase + BC_CORE_RESET_CONTROL) !=
+             BC_CORE_RESET_CONTROL_RESET,
              300);
     brcmf_dbg(TEMP, "Survived wait");
 in_reset_configure:
     /* in-reset configure */
-    ci->ops->write32(ci->ctx, core->wrapbase + BCMA_IOCTL, reset | BCMA_IOCTL_FGC | BCMA_IOCTL_CLK);
-    ci->ops->read32(ci->ctx, core->wrapbase + BCMA_IOCTL);
+    ci->ops->write32(ci->ctx, core->wrapbase + BC_CORE_CONTROL, reset | BC_CORE_CONTROL_FGC |
+                     BC_CORE_CONTROL_CLOCK);
+    ci->ops->read32(ci->ctx, core->wrapbase + BC_CORE_CONTROL);
 }
 
 static void brcmf_chip_sb_resetcore(struct brcmf_core_priv* core, uint32_t prereset, uint32_t reset,
@@ -394,29 +404,31 @@ static void brcmf_chip_sb_resetcore(struct brcmf_core_priv* core, uint32_t prere
      * forcing them on throughout the core
      */
     ci->ops->write32(ci->ctx, CORE_SB(base, sbtmstatelow),
-                     SSB_TMSLOW_FGC | SSB_TMSLOW_CLOCK | SSB_TMSLOW_RESET);
+                     BACKPLANE_TARGET_STATE_LOW_GATED_CLOCKS | BACKPLANE_TARGET_STATE_LOW_CLOCK |
+                     BACKPLANE_TARGET_STATE_LOW_RESET);
     regdata = ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatelow));
     usleep(1);
 
     /* clear any serror */
     regdata = ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatehigh));
-    if (regdata & SSB_TMSHIGH_SERR) {
+    if (regdata & BACKPLANE_TARGET_STATE_HIGH_S_ERROR) {
         ci->ops->write32(ci->ctx, CORE_SB(base, sbtmstatehigh), 0);
     }
 
     regdata = ci->ops->read32(ci->ctx, CORE_SB(base, sbimstate));
-    if (regdata & (SSB_IMSTATE_IBE | SSB_IMSTATE_TO)) {
-        regdata &= ~(SSB_IMSTATE_IBE | SSB_IMSTATE_TO);
+    if (regdata & (BACKPLANE_INITIATOR_STATE_IN_BAND_ERROR | BACKPLANE_INITIATOR_STATE_TIMEOUT)) {
+        regdata &= ~(BACKPLANE_INITIATOR_STATE_IN_BAND_ERROR | BACKPLANE_INITIATOR_STATE_TIMEOUT);
         ci->ops->write32(ci->ctx, CORE_SB(base, sbimstate), regdata);
     }
 
     /* clear reset and allow it to propagate throughout the core */
-    ci->ops->write32(ci->ctx, CORE_SB(base, sbtmstatelow), SSB_TMSLOW_FGC | SSB_TMSLOW_CLOCK);
+    ci->ops->write32(ci->ctx, CORE_SB(base, sbtmstatelow), BACKPLANE_TARGET_STATE_LOW_GATED_CLOCKS |
+                                                           BACKPLANE_TARGET_STATE_LOW_CLOCK);
     regdata = ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatelow));
     usleep(1);
 
     /* leave clock enabled */
-    ci->ops->write32(ci->ctx, CORE_SB(base, sbtmstatelow), SSB_TMSLOW_CLOCK);
+    ci->ops->write32(ci->ctx, CORE_SB(base, sbtmstatelow), BACKPLANE_TARGET_STATE_LOW_CLOCK);
     regdata = ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatelow));
     usleep(1);
 }
@@ -432,8 +444,8 @@ static void brcmf_chip_ai_resetcore(struct brcmf_core_priv* core, uint32_t prere
     brcmf_chip_ai_coredisable(core, prereset, reset);
 
     count = 0;
-    while (ci->ops->read32(ci->ctx, core->wrapbase + BCMA_RESET_CTL) & BCMA_RESET_CTL_RESET) {
-        ci->ops->write32(ci->ctx, core->wrapbase + BCMA_RESET_CTL, 0);
+    while (ci->ops->read32(ci->ctx, core->wrapbase + BC_CORE_RESET_CONTROL) & BC_CORE_RESET_CONTROL_RESET) {
+        ci->ops->write32(ci->ctx, core->wrapbase + BC_CORE_RESET_CONTROL, 0);
         count++;
         if (count > 50) {
             break;
@@ -441,8 +453,8 @@ static void brcmf_chip_ai_resetcore(struct brcmf_core_priv* core, uint32_t prere
         usleep_range(40, 60);
     }
 
-    ci->ops->write32(ci->ctx, core->wrapbase + BCMA_IOCTL, postreset | BCMA_IOCTL_CLK);
-    ci->ops->read32(ci->ctx, core->wrapbase + BCMA_IOCTL);
+    ci->ops->write32(ci->ctx, core->wrapbase + BC_CORE_CONTROL, postreset | BC_CORE_CONTROL_CLOCK);
+    ci->ops->read32(ci->ctx, core->wrapbase + BC_CORE_CONTROL);
 }
 
 static char* brcmf_chip_name(uint chipid, char* buf, uint len) {
@@ -992,7 +1004,7 @@ static void brcmf_chip_disable_arm(struct brcmf_chip_priv* chip, uint16_t id) {
         cpu = container_of(core, struct brcmf_core_priv, pub);
 
         /* clear all IOCTL bits except HALT bit */
-        val = chip->ops->read32(chip->ctx, cpu->wrapbase + BCMA_IOCTL);
+        val = chip->ops->read32(chip->ctx, cpu->wrapbase + BC_CORE_CONTROL);
         val &= ARMCR4_BCMA_IOCTL_CPUHALT;
         brcmf_dbg(TEMP, "About to resetcore, id %d, val %d, CPUHALT", id, val);
         brcmf_chip_resetcore(core, val, ARMCR4_BCMA_IOCTL_CPUHALT, ARMCR4_BCMA_IOCTL_CPUHALT);
@@ -1145,7 +1157,7 @@ struct brcmf_core* brcmf_chip_get_pmu(struct brcmf_chip* pub) {
     struct brcmf_core* pmu;
 
     /* See if there is separated PMU core available */
-    if (cc->rev >= 35 && pub->cc_caps_ext & BCMA_CC_CAP_EXT_AOB_PRESENT) {
+    if (cc->rev >= 35 && pub->cc_caps_ext & BC_CORE_ASYNC_BACKOFF_CAPABILITY_PRESENT) {
         pmu = brcmf_chip_get_core(pub, BCMA_CORE_PMU);
         if (pmu) {
             return pmu;

@@ -604,7 +604,6 @@ static zx_status_t brcmf_usb_tx(struct brcmf_device* dev, struct sk_buff* skb) {
     req->devinfo = devinfo;
     usb_fill_bulk_urb(req->urb, devinfo->usbdev, devinfo->tx_pipe, skb->data, skb->len,
                       brcmf_usb_tx_complete, req);
-    req->urb->transfer_flags |= URB_ZERO_PACKET;
     brcmf_usb_enq(devinfo, &devinfo->tx_postq, req, NULL);
     ret = usb_submit_urb(req->urb, GFP_ATOMIC);
     if (ret != ZX_OK) {
@@ -820,8 +819,6 @@ static bool brcmf_usb_dl_send_bulk(struct brcmf_usbdev_info* devinfo, void* buff
     /* Prepare the URB */
     usb_fill_bulk_urb(devinfo->bulk_urb, devinfo->usbdev, devinfo->tx_pipe, buffer, len,
                       (usb_complete_t)brcmf_usb_sync_complete, devinfo);
-
-    devinfo->bulk_urb->transfer_flags |= URB_ZERO_PACKET;
 
     devinfo->ctl_completed = false;
     ret = usb_submit_urb(devinfo->bulk_urb, GFP_ATOMIC);
@@ -1307,16 +1304,16 @@ static zx_status_t brcmf_usb_probe(struct usb_interface* intf, const struct usb_
         goto fail;
     }
 
-    if ((usb->descriptor.bDeviceClass != USB_CLASS_VENDOR_SPEC) &&
+    if ((usb->descriptor.bDeviceClass != USB_CLASS_VENDOR) &&
             (usb->descriptor.bDeviceClass != USB_CLASS_MISC) &&
-            (usb->descriptor.bDeviceClass != USB_CLASS_WIRELESS_CONTROLLER)) {
+            (usb->descriptor.bDeviceClass != USB_CLASS_WIRELESS)) {
         brcmf_err("Device class: 0x%x not supported\n", usb->descriptor.bDeviceClass);
         ret = ZX_ERR_WRONG_TYPE;
         goto fail;
     }
 
     desc = &intf->altsetting[0].desc;
-    if ((desc->bInterfaceClass != USB_CLASS_VENDOR_SPEC) || (desc->bInterfaceSubClass != 2) ||
+    if ((desc->bInterfaceClass != USB_CLASS_VENDOR) || (desc->bInterfaceSubClass != 2) ||
             (desc->bInterfaceProtocol != 0xff)) {
         brcmf_err("non WLAN interface %d: 0x%x:0x%x:0x%x\n", desc->bInterfaceNumber,
                   desc->bInterfaceClass, desc->bInterfaceSubClass, desc->bInterfaceProtocol);

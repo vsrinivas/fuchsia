@@ -17,6 +17,10 @@
 #ifndef _vendor_h_
 #define _vendor_h_
 
+#include <sys/types.h>
+
+#include "linuxisms.h"
+
 #define BROADCOM_OUI 0x001018
 
 enum brcmf_vndr_cmds { BRCMF_VNDR_CMDS_UNSPEC, BRCMF_VNDR_CMDS_DCMD, BRCMF_VNDR_CMDS_LAST };

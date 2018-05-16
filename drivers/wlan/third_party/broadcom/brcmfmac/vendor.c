@@ -18,7 +18,9 @@
 //#include <net/cfg80211.h>
 //#include <net/netlink.h>
 
-#include "linuxisms.h"
+#include "vendor.h"
+
+#include <limits.h>
 
 #include "brcmu_wifi.h"
 #include "cfg80211.h"
@@ -26,8 +28,8 @@
 #include "debug.h"
 #include "fwil.h"
 #include "fwil_types.h"
+#include "linuxisms.h"
 #include "p2p.h"
-#include "vendor.h"
 
 static zx_status_t brcmf_cfg80211_vndr_cmds_dcmd_handler(struct wiphy* wiphy,
                                                          struct wireless_dev* wdev,
