@@ -40,6 +40,8 @@ constexpr size_t kFVMDataStart      = 0x30000;
 
 constexpr uint64_t kBlobfsDefaultInodeCount = 32768;
 
+constexpr size_t kMinimumDataBlocks = 2;
+
 // Notes:
 // - block 0 is always allocated
 // - inode 0 is never used, should be marked allocated but ignored

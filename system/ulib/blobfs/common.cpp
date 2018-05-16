@@ -200,6 +200,7 @@ int blobfs_mkfs(int fd, uint64_t block_count) {
             return -1;
         }
         request.offset = kFVMDataStart / kBlocksPerSlice;
+        request.length = fbl::round_up(kMinimumDataBlocks, kBlocksPerSlice) / kBlocksPerSlice;
         if (ioctl_block_fvm_extend(fd, &request) < 0) {
             fprintf(stderr, "blobfs mkfs: Failed to allocate data blocks\n");
             return -1;
@@ -207,7 +208,8 @@ int blobfs_mkfs(int fd, uint64_t block_count) {
 
         info.abm_slices = 1;
         info.ino_slices = 1;
-        info.dat_slices = 1;
+        info.dat_slices = static_cast<uint32_t>(request.length);
+
         info.vslice_count = info.abm_slices + info.ino_slices + info.dat_slices + 1;
 
         info.inode_count = static_cast<uint32_t>(info.ino_slices * info.slice_size / kBlobfsInodeSize);
@@ -221,6 +223,11 @@ int blobfs_mkfs(int fd, uint64_t block_count) {
     xprintf("Block Count: %" PRIu64 "\n", TotalBlocks(info));
     xprintf("Inode Count: %" PRIu64 "\n", inodes);
     xprintf("FVM-aware: %s\n", (info.flags & kBlobFlagFVM) ? "YES" : "NO");
+
+    if (info.block_count < kMinimumDataBlocks) {
+        fprintf(stderr, "blobfs mkfs: Not enough space for minimum blobfs size\n");
+        return -1;
+    }
 
     // Determine the number of blocks necessary for the block map and node map.
     uint64_t bbm_blocks = BlockMapBlocks(info);

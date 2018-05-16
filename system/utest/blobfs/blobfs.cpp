@@ -51,7 +51,7 @@ using digest::MerkleTree;
 #define STRLEN(s) sizeof(s) / sizeof((s)[0])
 
 // FVM slice size used for tests
-constexpr size_t kTestFvmSliceSize = 16 * (1 << 10); // 16kb
+constexpr size_t kTestFvmSliceSize = 8 * (1 << 10); // 8kb
 // Minimum blobfs size required by CreateUmountRemountLargeMultithreaded test
 constexpr size_t kBytesNormalMinimum = 5 * (1 << 20); // 5mb
 // Minimum blobfs size required by ResizePartition test
@@ -90,12 +90,18 @@ static_assert(fbl::is_pod<real_disk_info>::value, "Global variables should conta
                                                   "data");
 
 BlobfsTest::~BlobfsTest() {
-    if (state_ == FsTestState::kError || state_ == FsTestState::kRunning) {
-        EXPECT_EQ(Teardown(true /* minimal */), 0);
+    switch (state_) {
+    case FsTestState::kMinimal:
+    case FsTestState::kRunning:
+    case FsTestState::kError:
+        EXPECT_EQ(Teardown(FsTestState::kMinimal), 0);
+        break;
+    default:
+        break;
     }
 }
 
-bool BlobfsTest::Init() {
+bool BlobfsTest::Init(FsTestState state) {
     BEGIN_HELPER;
     ASSERT_EQ(state_, FsTestState::kInit);
     auto error = fbl::MakeAutoCall([this](){ state_ = FsTestState::kError; });
@@ -150,19 +156,15 @@ bool BlobfsTest::Init() {
         fd.reset();
     }
 
-    ASSERT_EQ(mkfs(ramdisk_path_, DISK_FORMAT_BLOBFS, launch_stdio_sync, &default_mkfs_options),
-              ZX_OK, "Could not mkfs blobfs");
-    zx_status_t status;
-    if ((status = mkfs(ramdisk_path_, DISK_FORMAT_BLOBFS, launch_stdio_sync,
-                       &default_mkfs_options)) != ZX_OK) {
-        fprintf(stderr, "Could not mkfs blobfs: %d", status);
-        destroy_ramdisk(ramdisk_path_);
-        ASSERT_TRUE(false);
+    if (state != FsTestState::kMinimal) {
+        ASSERT_EQ(state, FsTestState::kRunning);
+        ASSERT_EQ(mkfs(ramdisk_path_, DISK_FORMAT_BLOBFS, launch_stdio_sync, &default_mkfs_options),
+                  ZX_OK);
+        ASSERT_TRUE(MountInternal());
     }
 
-    ASSERT_TRUE(MountInternal());
     error.cancel();
-    state_ = FsTestState::kRunning;
+    state_ = state;
     END_HELPER;
 }
 
@@ -176,12 +178,13 @@ bool BlobfsTest::Remount() {
     END_HELPER;
 }
 
-bool BlobfsTest::Teardown(bool minimal) {
+bool BlobfsTest::Teardown(FsTestState state) {
     BEGIN_HELPER;
     ASSERT_NE(state_, FsTestState::kComplete);
     auto error = fbl::MakeAutoCall([this](){ state_ = FsTestState::kError; });
 
-    if (!minimal) {
+    if (state != FsTestState::kMinimal) {
+        ASSERT_EQ(state, FsTestState::kRunning);
         ASSERT_TRUE(CheckInfo(MOUNT_PATH));
         ASSERT_EQ(umount(MOUNT_PATH), ZX_OK, "Failed to unmount filesystem");
         ASSERT_EQ(fsck(ramdisk_path_, DISK_FORMAT_BLOBFS, &test_fsck_options, launch_stdio_sync),
@@ -667,6 +670,68 @@ static bool TestReaddir(void) {
 
     ASSERT_EQ(closedir(dir), 0);
     ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
+    END_TEST;
+}
+
+
+template <FsTestType TestType>
+static bool TestDiskTooSmall(void) {
+    BEGIN_TEST;
+
+    if (gUseRealDisk) {
+        fprintf(stderr, "Ramdisk required; skipping test\n");
+        return true;
+    }
+
+    uint64_t minimum_size = 0;
+    if (TestType == FsTestType::kFvm) {
+        size_t blocks_per_slice = kTestFvmSliceSize / blobfs::kBlobfsBlockSize;
+
+        // Calculate slices required for data blocks based on minimum requirement and slice size.
+        uint64_t required_data_slices = fbl::round_up(blobfs::kMinimumDataBlocks, blocks_per_slice)
+                                        / blocks_per_slice;
+        // Require an additional 1 slice each for super, inode, and block bitmaps.
+        uint64_t blobfs_size = (required_data_slices + 3) * kTestFvmSliceSize;
+        minimum_size = blobfs_size;
+        uint64_t metadata_size = fvm::MetadataSize(blobfs_size, kTestFvmSliceSize);
+
+        // Re-calculate minimum size until the metadata size stops growing.
+        while (minimum_size - blobfs_size != metadata_size * 2) {
+            minimum_size = blobfs_size + metadata_size * 2;
+            metadata_size = fvm::MetadataSize(minimum_size, kTestFvmSliceSize);
+        }
+
+        ASSERT_EQ(minimum_size - blobfs_size,
+                  fvm::MetadataSize(minimum_size, kTestFvmSliceSize) * 2);
+    } else {
+        blobfs::blobfs_info_t info;
+        info.inode_count = blobfs::kBlobfsDefaultInodeCount;
+        info.block_count = blobfs::kMinimumDataBlocks;
+        info.flags = 0;
+
+        minimum_size = (blobfs::DataBlocks(info) + blobfs::DataStartBlock(info)) *
+                       blobfs::kBlobfsBlockSize;
+    }
+
+    // Create disk with minimum possible size, make sure init passes.
+    BlobfsTest blobfsTest(TestType);
+    ASSERT_GE(minimum_size, blobfsTest.GetBlockSize());
+    uint64_t disk_blocks = minimum_size / blobfsTest.GetBlockSize();
+    ASSERT_TRUE(blobfsTest.SetBlockCount(disk_blocks));
+    ASSERT_TRUE(blobfsTest.Init());
+    ASSERT_TRUE(blobfsTest.Teardown());
+
+    // Reset the disk size and test state.
+    ASSERT_TRUE(blobfsTest.Reset());
+    ASSERT_TRUE(blobfsTest.SetBlockCount(disk_blocks - 1));
+
+    // Create disk with smaller than minimum size, make sure mkfs fails.
+    ASSERT_TRUE(blobfsTest.Init(FsTestState::kMinimal));
+    char device_path[PATH_MAX];
+    ASSERT_TRUE(blobfsTest.GetDevicePath(device_path, PATH_MAX));
+    ASSERT_NE(mkfs(device_path, DISK_FORMAT_BLOBFS, launch_stdio_sync, &default_mkfs_options),
+              ZX_OK);
+    ASSERT_TRUE(blobfsTest.Teardown(FsTestState::kMinimal));
     END_TEST;
 }
 
@@ -1909,7 +1974,7 @@ static bool CorruptAtMount(void) {
     ASSERT_EQ(query_response.vslice_range[0].count, 1);
 
     // Clean up.
-    ASSERT_TRUE(blobfsTest.Teardown(true), "unmounting Blobfs");
+    ASSERT_TRUE(blobfsTest.Teardown(FsTestState::kMinimal), "unmounting Blobfs");
     END_TEST;
 }
 
@@ -2063,6 +2128,7 @@ RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestNullBlob)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestMmap)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestMmapUseAfterClose)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestReaddir)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestDiskTooSmall)
 RUN_TEST_MEDIUM(TestQueryInfo<FsTestType::kFvm>)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, UseAfterUnlink)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, WriteAfterRead)

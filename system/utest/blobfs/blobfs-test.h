@@ -18,10 +18,11 @@ enum class FsTestType {
 };
 
 enum class FsTestState {
-    kInit,
-    kRunning,
-    kComplete,
-    kError,
+    kInit, // Just created, waiting to be initialized.
+    kMinimal, // Initialized in a minimal state, i.e. ramdisk only.
+    kRunning, // Initialized and ready to start testing.
+    kComplete, // Indicates that the test has completed.
+    kError, // Indicates that an error has occurred.
 };
 
 class BlobfsTest {
@@ -30,14 +31,19 @@ public:
     ~BlobfsTest();
 
     // Creates a ramdisk, formats it, and mounts it at a mount point.
-    bool Init();
+    // |state| indicates the intended state once initialization is complete.
+    // This value must be either kMinimal or kRunning.
+    // If |state| is kMinimal, the mkfs and mount methods will be skipped.
+    bool Init(FsTestState state = FsTestState::kRunning);
 
     // Unmounts and remounts the blobfs partition.
     bool Remount();
 
-    // Unmounts a blobfs and removes the backing ramdisk device.
-    // With |minimal| set, the umount and verification (e.g. fsck) methods will be excluded.
-    bool Teardown(bool minimal = false);
+    // Unmounts a blobfs, runs fsck, and removes the backing ramdisk device.
+    // |state| indicates the expected state before teardown begins.
+    // This value must be either kMinimal or kRunning.
+    // If |state| is kMinimal, the umount and fsck methods will be skipped.
+    bool Teardown(FsTestState state = FsTestState::kRunning);
 
     int GetFd() const {
         return open(ramdisk_path_, O_RDWR);
@@ -47,12 +53,32 @@ public:
         return blk_size_ * blk_count_;
     }
 
+    uint64_t GetBlockSize() const {
+        return blk_size_;
+    }
+
     // Returns the full device path of blobfs.
     bool GetDevicePath(char* path, size_t len) const;
+
+    // Given a new disk size, updates the block count. Block size doesn't change.
+    bool SetBlockCount(uint64_t block_count) {
+        BEGIN_HELPER;
+        ASSERT_EQ(state_, FsTestState::kInit);
+        blk_count_ = block_count;
+        END_HELPER;
+    }
 
     // Sets readonly to |readonly|, defaulting to true.
     void SetReadOnly(bool read_only) {
         read_only_ = read_only;
+    }
+
+    // Reset to initial state, given that the test was successfully torn down.
+    bool Reset() {
+        BEGIN_HELPER;
+        ASSERT_EQ(state_, FsTestState::kComplete);
+        state_ = FsTestState::kInit;
+        END_HELPER;
     }
 
     // Sleeps or wakes the ramdisk underlying the blobfs partition, depending on its current state.
