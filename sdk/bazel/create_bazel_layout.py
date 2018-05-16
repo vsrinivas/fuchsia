@@ -20,6 +20,8 @@ sys.path += [os.path.join(FUCHSIA_ROOT, "scripts", "sdk")]
 
 from layout_builder import Builder, process_manifest
 from mako.template import Template
+from os import chmod
+import stat
 
 
 class Library(object):
@@ -180,6 +182,8 @@ class CppBuilder(Builder):
         destination = os.path.join(self.output, 'tools', file.destination)
         self.make_dir(destination)
         shutil.copyfile(file.source, destination)
+        st = os.stat(destination)
+        os.chmod(destination, st.st_mode | stat.S_IXUSR | stat.S_IXGRP)
 
     def install_fidl_atom(self, atom): pass
 
