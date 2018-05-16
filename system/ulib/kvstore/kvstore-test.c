@@ -5,6 +5,7 @@
 #include <unittest/unittest.h>
 #include <kvstore/kvstore.h>
 #include <pretty/hexdump.h>
+#include <lib/cksum.h>
 
 static bool kvs_bad_args(void) {
     BEGIN_TEST;
@@ -112,6 +113,26 @@ static bool kvs_wire_format(void) {
     kvstore_t kvs;
     uint8_t buffer[1024];
 
+    hdr.crc = crc32(0, (const void*) &hdr, sizeof(hdr) - sizeof(uint32_t));
+    hdr.crc = crc32(hdr.crc, content, sizeof(content));
+    memcpy(buffer, &hdr, sizeof(hdr));
+    memcpy(buffer + sizeof(hdr), content, sizeof(hdr) + sizeof(content));
+
+    // Create a new kvs with the same content, save it, compare raw data
+    uint8_t buffer2[1024];
+    kvs_init(&kvs, buffer2, sizeof(buffer2));
+    ASSERT_EQ(kvs_add(&kvs, "key1", "aaaa"), KVS_OK, "");
+    ASSERT_EQ(kvs_add(&kvs, "key2", "abcdefgh"), KVS_OK, "");
+    ASSERT_EQ(kvs_add(&kvs, "keykey", ""), KVS_OK, "");
+    ASSERT_EQ(kvs_add(&kvs, "key4", "bbbb"), KVS_OK, "");
+    ASSERT_EQ(kvs_save(&kvs), KVS_OK, "");
+    ASSERT_EQ(kvs.datalen, sizeof(hdr) + sizeof(content), "");
+    ASSERT_EQ(memcmp(buffer, buffer2, kvs.datalen), 0, "");
+
+    // mutated data should fail due to crc check
+    buffer[sizeof(hdr) + 8] = 0x42;
+    ASSERT_EQ(kvs_load(&kvs, buffer, sizeof(hdr) + sizeof(content)), KVS_ERR_PARSE_CRC, "");
+
     // exactly sized should parse
     memcpy(buffer, &hdr, sizeof(hdr));
     memcpy(buffer + sizeof(hdr), content, sizeof(hdr) + sizeof(content));
@@ -137,6 +158,8 @@ static bool kvs_wire_format(void) {
 
     const uint8_t newcontent[] =
         "\x09\x09key000000\0val000000\0\x09\x09key000001\0val000001";
+    hdr.crc = crc32(0, (const void*) &hdr, sizeof(hdr) - sizeof(uint32_t));
+    hdr.crc = crc32(hdr.crc, content, sizeof(content));
 
     uint8_t checkbuf[sizeof(content) + sizeof(newcontent)];
     memcpy(checkbuf, content, sizeof(content));
@@ -152,6 +175,8 @@ static bool kvs_wire_format(void) {
 
     // truncated records should fail
     hdr.length -= 3;
+    hdr.crc = crc32(0, (const void*) &hdr, sizeof(hdr) - sizeof(uint32_t));
+    hdr.crc = crc32(hdr.crc, content, sizeof(content) - 3);
     memcpy(buffer, &hdr, sizeof(hdr));
     memcpy(buffer + sizeof(hdr), content, sizeof(hdr) + sizeof(content));
     ASSERT_EQ(kvs_load(&kvs, buffer, sizeof(hdr) + sizeof(content) - 3), KVS_ERR_PARSE_REC, "");

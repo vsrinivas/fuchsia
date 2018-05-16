@@ -26,7 +26,7 @@ MODULE_NAME := kvstore-test
 
 MODULE_SRCS := $(LOCAL_DIR)/kvstore-test.c
 
-MODULE_STATIC_LIBS := system/ulib/kvstore system/ulib/pretty
+MODULE_STATIC_LIBS := system/ulib/kvstore system/ulib/pretty third_party/ulib/cksum
 
 MODULE_LIBS := system/ulib/unittest system/ulib/fdio system/ulib/c
 

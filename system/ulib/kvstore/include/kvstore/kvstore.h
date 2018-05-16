@@ -12,13 +12,14 @@ __BEGIN_CDECLS
 
 typedef struct kvstore kvstore_t;
 
-#define KVS_OK 0
-#define KVS_ERR_INTERNAL -1
-#define KVS_ERR_PARSE_HDR -2
-#define KVS_ERR_PARSE_REC -3
-#define KVS_ERR_BAD_PARAM -4
-#define KVS_ERR_OUT_OF_SPACE -5
-#define KVS_ERR_NOT_FOUND -6
+#define KVS_OK                0
+#define KVS_ERR_INTERNAL     -1
+#define KVS_ERR_BAD_PARAM    -2
+#define KVS_ERR_OUT_OF_SPACE -3
+#define KVS_ERR_NOT_FOUND    -4
+#define KVS_ERR_PARSE_HDR    -5
+#define KVS_ERR_PARSE_REC    -6
+#define KVS_ERR_PARSE_CRC    -7
 
 // KVStore API
 // -----------
@@ -74,8 +75,7 @@ int kvs_foreach(kvstore_t* kvs, void *cookie,
 // echo -n "kvstore-version-1" | sha256sum (LSB)
 #define KVSTORE_VERSION 0x540f19caa7bf19dcUL
 
-#define KVSTORE_FLAG_CRC32  1
-#define KVSTORE_FLAG_SIGNED 2
+#define KVSTORE_FLAG_SIGNED 1
 
 struct kvstore {
     void* data;
@@ -88,8 +88,8 @@ typedef struct kvshdr {
     uint64_t version;
     uint32_t flags;
     uint32_t length;
-    uint32_t crc;
     uint32_t reserved;
+    uint32_t crc;
 } kvshdr_t;
 
 __END_CDECLS

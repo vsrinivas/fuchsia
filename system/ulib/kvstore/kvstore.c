@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include <kvstore/kvstore.h>
+#include <lib/cksum.h>
 
 // header, key, zero, value, zero
 #define RECLEN(ksz, vsz) (2 + (ksz) + 1 + (vsz) + 1)
@@ -47,8 +48,14 @@ int kvs_load(kvstore_t* kvs, void* buffer, size_t buflen) {
     if (hdr.flags != 0) {
         return KVS_ERR_PARSE_HDR;
     }
-    if ((hdr.crc != 0) || (hdr.reserved != 0)) {
+    if (hdr.reserved != 0) {
         return KVS_ERR_PARSE_HDR;
+    }
+
+    uint32_t crc = crc32(0, buffer, sizeof(hdr) - sizeof(uint32_t));
+    crc = crc32(crc, buffer + sizeof(hdr), hdr.length - sizeof(hdr));
+    if (crc != hdr.crc) {
+        return KVS_ERR_PARSE_CRC;
     }
 
     size_t count = 0;
@@ -89,8 +96,9 @@ int kvs_save(kvstore_t* kvs) {
     hdr.version = KVSTORE_VERSION;
     hdr.flags = 0;
     hdr.length = kvs->datalen;
-    hdr.crc = 0;
     hdr.reserved = 0;
+    hdr.crc = crc32(0, (const void*) &hdr, sizeof(hdr) - sizeof(uint32_t));
+    hdr.crc = crc32(hdr.crc, kvs->data + sizeof(hdr), hdr.length - sizeof(hdr));
     memcpy(kvs->data, &hdr, sizeof(hdr));
     return KVS_OK;
 }
