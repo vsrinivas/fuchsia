@@ -4,13 +4,9 @@
 
 #include "peridot/bin/suggestion_engine/suggestion_engine_helper.h"
 
-namespace modular {
+#include "lib/fxl/random/uuid.h"
 
-std::string RandomUuid() {
-  static uint64_t id = 0;
-  // TODO(rosswang): real UUIDs
-  return std::to_string(id++);
-}
+namespace modular {
 
 SuggestionPrototype* CreateSuggestionPrototype(
     SuggestionPrototypeMap* owner,
@@ -19,7 +15,7 @@ SuggestionPrototype* CreateSuggestionPrototype(
   auto prototype_pair = owner->emplace(std::make_pair(source_url, proposal.id),
                                        std::make_unique<SuggestionPrototype>());
   auto suggestion_prototype = prototype_pair.first->second.get();
-  suggestion_prototype->suggestion_id = RandomUuid();
+  suggestion_prototype->suggestion_id = fxl::GenerateUUID();
   suggestion_prototype->source_url = source_url;
   suggestion_prototype->timestamp = fxl::TimePoint::Now();
   suggestion_prototype->proposal = std::move(proposal);
