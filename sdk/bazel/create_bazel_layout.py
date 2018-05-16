@@ -8,8 +8,30 @@ import os
 import shutil
 import sys
 
-from layout_builder import Builder, process_manifest
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+FUCHSIA_ROOT = os.path.dirname(  # $root
+    os.path.dirname(             # scripts
+    os.path.dirname(             # bazel
+    SCRIPT_DIR)))                # sdk
+
+sys.path += [os.path.join(FUCHSIA_ROOT, "third_party", "mako")]
+sys.path += [os.path.join(FUCHSIA_ROOT, "scripts", "sdk")]
+
+from layout_builder import Builder, process_manifest
+from mako.template import Template
+
+
+class Library(object):
+    '''Represents a C/C++ library.
+       Convenience storage object to be consumed by Mako templates.
+       '''
+    def __init__(self, name):
+        self.name = name
+        self.srcs = []
+        self.hdrs = []
+        self.deps = []
+        self.includes = []
 
 def remove_dashes(name):
     return name.replace("-", "_")
@@ -40,62 +62,23 @@ class CppBuilder(Builder):
             print('Atom type "%s" not handled, skipping %s.' % (type, atom.id))
 
 
-    def write_build_file(self, name, type, hdrs, srcs, deps):
+    def write_build_file(self, library, type):
 
         if self.is_debug and type != 'sysroot':
-            hdrs.append("//pkg/system:compile")
-            srcs.append("//pkg/system:link")
+            library.deps.append("//pkg/system:system")
 
-        path = os.path.join(self.output, 'pkg', name, 'BUILD')
+        path = os.path.join(self.output, 'pkg', library.name, 'BUILD')
         build_file = open(path,"w+")
-        build_file.write("package(default_visibility = [\"//visibility:public\"])\n")
-        build_file.write("licenses([\"unencumbered\"])\n")
-        if type == 'sysroot':
-            build_file.write("\nfilegroup(\n")
-            build_file.write("    name = \"everything\",\n")
-            build_file.write("    srcs = [\n")
-            build_file.write("        \":compile\",\n")
-            build_file.write("        \":link\",\n")
-            build_file.write("    ],\n")
-            build_file.write(")\n\n")
-            build_file.write("filegroup(\n")
-            build_file.write("    name = \"compile\",\n")
-            build_file.write("    srcs = [\n")
-            for hdr in hdrs:
-                build_file.write("        \"%s\",\n" % hdr)
-            build_file.write("    ],\n")
-            build_file.write(")\n\n")
-            build_file.write("filegroup(\n")
-            build_file.write("    name = \"link\",\n")
-            build_file.write("    srcs = [\n")
-            for src in srcs:
-                build_file.write("        \"%s\",\n" % src)
-            build_file.write("    ],\n")
-            build_file.write(")\n")
-        else:
-            includes = []
-            includes.append(".")
-            includes.append("./include")
-            build_file.write("cc_library(\n")
-            build_file.write("    name = \"%s\",\n" % name)
-            build_file.write("    hdrs = [\n")
-            for hdr in hdrs:
-                build_file.write("        \"%s\",\n" % hdr)
-            build_file.write("    ],\n")
-            build_file.write("    srcs = [\n")
-            for src in srcs:
-                build_file.write("        \"%s\",\n" % src)
-            build_file.write("    ],\n")
-            build_file.write("    deps = [\n")
-            for dep in deps:
-                build_file.write("        \"%s\",\n" % dep)
-            build_file.write("    ],\n")
-            build_file.write("    includes = [\n")
-            for include in includes:
-                build_file.write("        \"%s\",\n" % include)
-            build_file.write("    ],\n")
-            build_file.write(")\n")
 
+        # in debug mode we just make the sysroot another cc_library
+        if type == 'sysroot' and not self.is_debug:
+            template = Template(filename=os.path.join(SCRIPT_DIR, 'sysroot.mako'))
+            build_file.write(template.render(data=library))
+        else:
+            library.includes.append(".")
+            library.includes.append("./include")
+            template = Template(filename=os.path.join(SCRIPT_DIR, 'cc_library.mako'))
+            build_file.write(template.render(data=library))
 
 
     def install_cpp_prebuilt_atom(self, atom, check_arch=True):
@@ -107,9 +90,7 @@ class CppBuilder(Builder):
 
         atom_name = remove_dashes(atom.id.name)
 
-        hdrs = []
-        srcs = []
-        deps = []
+        library = Library(atom_name)
 
         for file in atom.files:
             destination = file.destination
@@ -122,7 +103,7 @@ class CppBuilder(Builder):
                 self.make_dir(dest)
                 shutil.copyfile(file.source, dest)
                 if extension == 'so' and destination.startswith("lib"):
-                    srcs.append(os.path.join('arch',
+                    library.srcs.append(os.path.join('arch',
                                     self.metadata.target_arch, destination))
 
             elif self.is_overlay:
@@ -135,16 +116,16 @@ class CppBuilder(Builder):
                 self.make_dir(dest)
                 shutil.copyfile(file.source, dest)
                 if extension == 'h':
-                    hdrs.append(destination)
+                    library.hdrs.append(destination)
             else:
                 raise Exception('Error: unknow file extension "%s" for %s.' %
                                 (extension, atom.id))
         for dep_id in atom.deps:
             dep_name = remove_dashes(dep_id.name)
             dep = os.path.join("//pkg/", dep_name)
-            deps.append(dep)
+            library.deps.append(dep)
 
-        self.write_build_file(atom_name, atom.tags['type'], hdrs, srcs, deps)
+        self.write_build_file(library, atom.tags['type'])
 
 
     def install_cpp_source_atom(self, atom):
@@ -152,9 +133,8 @@ class CppBuilder(Builder):
 
         atom_name = remove_dashes(atom.id.name)
 
-        hdrs = []
-        srcs = []
-        deps = []
+        library = Library(atom_name)
+
         if self.is_overlay:
             return
         for file in atom.files:
@@ -165,19 +145,19 @@ class CppBuilder(Builder):
 
             extension = os.path.splitext(file.destination)[1][1:]
             if extension == 'h':
-                hdrs.append(file.destination)
+                library.hdrs.append(file.destination)
             elif extension == 'c' or extension == 'cc' or extension == 'cpp':
-                srcs.append(file.destination)
+                library.srcs.append(file.destination)
             else:
                 raise Exception('Error: unknow file extension "%s" for %s.' %
                                 (extension, atom.id))
 
         for dep_id in atom.deps:
             dep = os.path.join("//pkg/", dep_id.name)
-            deps.append(dep)
+            library.deps.append(dep)
 
 
-        self.write_build_file(atom_name, atom.tags['type'], hdrs, srcs, deps)
+        self.write_build_file(library, atom.tags['type'])
 
 
     def install_sysroot_atom(self, atom):
