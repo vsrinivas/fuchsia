@@ -112,6 +112,7 @@ typedef struct {
         .int 0;                                 \
         .int 0;                                 \
         .int ZBI_ITEM_MAGIC;                    \
+        .int ZBI_ITEM_NO_CRC32;                 \
     .size symbol, . - symbol;                   \
     .type symbol, %object
 #endif
