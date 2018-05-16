@@ -66,6 +66,8 @@ namespace fxl {
 template <typename T>
 class RefPtr final {
  public:
+  using element_type = T;
+
   RefPtr() : ptr_(nullptr) {}
   RefPtr(std::nullptr_t) : ptr_(nullptr) {}
 
