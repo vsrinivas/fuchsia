@@ -12,6 +12,11 @@
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/serial.h>
 
+#define BIG_CLUSTER_POWER_DOMAIN     0
+#define LITTLE_CLUSTER_POWER_DOMAIN  1
+#define BIG_CLUSTER_CPU_FREQ_MAX     1200000000
+#define LITTLE_CLUSTER_CPU_FREQ_MAX  1000000000
+
 // BTI IDs for our devices
 enum {
     BTI_BOARD,

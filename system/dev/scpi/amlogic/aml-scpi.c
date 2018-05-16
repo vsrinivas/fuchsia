@@ -52,7 +52,7 @@ static zx_status_t aml_scpi_execute_cmd(aml_scpi_t* scpi,
                                         void* rx_buf, size_t rx_size,
                                         void* tx_buf, size_t tx_size,
                                         uint32_t cmd, uint32_t client_id) {
-
+    uint32_t mailbox_status = 0;
     mailbox_data_buf_t mdata;
     mdata.cmd             = PACK_SCPI_CMD(cmd, client_id, 0);
     mdata.tx_buf          = tx_buf;
@@ -69,7 +69,9 @@ static zx_status_t aml_scpi_execute_cmd(aml_scpi_t* scpi,
     channel.rx_size = rx_size;
 
     status = mailbox_send_cmd(&scpi->mailbox, &channel, &mdata);
-    uint32_t mailbox_status = *(uint32_t*)(rx_buf);
+    if (rx_buf) {
+        mailbox_status = *(uint32_t*)(rx_buf);
+    }
     if (status != ZX_OK || mailbox_status != 0) {
         SCPI_ERROR("mailbox_send_cmd failed - error status %d\n", status);
         return status;

@@ -301,16 +301,52 @@ static scpi_protocol_ops_t scpi_ops = {
 static zx_status_t pdev_mailbox_send_cmd(void* ctx, mailbox_channel_t* channel,
                                          mailbox_data_buf_t* mdata) {
     platform_proxy_t* proxy = ctx;
+    zx_status_t status = ZX_OK;
     pdev_req_t req = {
         .op = PDEV_MAILBOX_SEND_CMD,
     };
-    memcpy(&req.mailbox.channel, channel, sizeof(*channel));
-    memcpy(&req.mailbox.mdata, mdata, sizeof(*mdata));
+
+    if (!channel || !mdata) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    req.mailbox.channel.mailbox         = channel->mailbox;
+    req.mailbox.channel.rx_size         = channel->rx_size;
+    if (channel->rx_size) {
+        req.mailbox.channel.rx_buf = calloc(1, sizeof(channel->rx_size));
+        if (!req.mailbox.channel.rx_buf) {
+            status = ZX_ERR_NO_MEMORY;
+            goto fail;
+        }
+    }
+
+    req.mailbox.mdata.cmd           = mdata->cmd;
+    req.mailbox.mdata.tx_size       = mdata->tx_size;
+    if (mdata->tx_size) {
+        if (!mdata->tx_buf) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        req.mailbox.mdata.tx_buf = calloc(1, sizeof(mdata->tx_size));
+        if (!req.mailbox.mdata.tx_buf) {
+            status = ZX_ERR_NO_MEMORY;
+            goto fail;
+        }
+        memcpy(&req.mailbox.mdata.tx_buf, mdata->tx_buf, mdata->tx_size);
+    }
+
     pdev_resp_t resp;
 
-    zx_status_t status =  platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp),
+    status =  platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp),
                                            NULL, 0, NULL);
-    memcpy(channel, &resp.mailbox.channel, sizeof(*channel));
+    memcpy(channel->rx_buf, &resp.mailbox.channel.rx_buf, channel->rx_size);
+
+fail:
+    if (req.mailbox.channel.rx_buf) {
+        free(req.mailbox.channel.rx_buf);
+    }
+    if (req.mailbox.mdata.tx_buf) {
+        free(req.mailbox.mdata.tx_buf);
+    }
     return status;
 }
 
