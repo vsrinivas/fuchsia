@@ -44,6 +44,7 @@ DDK_PROTOCOL_DEF(USB_DBC,        'pUDB', "usb-dbc", 0) // Debug Capability
 DDK_PROTOCOL_DEF(BT_HCI,         'pBHC', "bt-hci", 0)
 DDK_PROTOCOL_DEF(BT_TRANSPORT,   'pBTR', "bt-transport", 0)
 DDK_PROTOCOL_DEF(BT_HOST,        'pBTH', "bt-host", 0)
+DDK_PROTOCOL_DEF(BT_GATT_SVC,    'pBGS', "bt-gatt-svc", 0)
 DDK_PROTOCOL_DEF(AUDIO,          'pAUD', "audio", 0)
 DDK_PROTOCOL_DEF(MIDI,           'pMID', "midi", 0)
 DDK_PROTOCOL_DEF(SDHCI,          'pSDH', "sdhci", 0)
