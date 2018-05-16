@@ -7,11 +7,11 @@
 
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/resources/resource.h"
-#include "lib/escher/vk/image.h"
+#include "lib/escher/vk/image_view.h"
 
 namespace escher {
 
-class Texture : public Resource {
+class Texture : public ImageView {
  public:
   static const ResourceTypeInfo kTypeInfo;
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
@@ -32,21 +32,12 @@ class Texture : public Resource {
       vk::ImageAspectFlags aspect_mask = vk::ImageAspectFlagBits::eColor,
       bool use_unnormalized_coordinates = false);
 
-  const ImagePtr& image() const { return image_; }
-  vk::Image vk_image() const { return image_->vk(); }
-  vk::ImageView vk_image_view() const { return image_view_; }
+  vk::Image vk_image() const { return image()->vk(); }
+  vk::ImageView vk_image_view() const { return vk(); }
   vk::Sampler vk_sampler() const { return sampler_; }
 
-  uint32_t width() const { return width_; }
-  uint32_t height() const { return height_; }
-
  private:
-  ImagePtr image_;
-  vk::Device device_;
-  vk::ImageView image_view_;
   vk::Sampler sampler_;
-  uint32_t width_;
-  uint32_t height_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Texture);
 };

@@ -17,11 +17,12 @@ enum class ResourceType {
 
   // Concrete subclasses.
   kImage = 1 << 2,
-  kTexture = 1 << 3,
-  kFramebuffer = 1 << 4,
-  kBuffer = 1 << 5,
-  kMesh = 1 << 6,
-  kRenderPass = 1 << 7,
+  kImageView = 1 << 3,
+  kTexture = 1 << 4,
+  kFramebuffer = 1 << 5,
+  kBuffer = 1 << 6,
+  kMesh = 1 << 7,
+  kRenderPass = 1 << 8,
 
   // Resources defined in escher::impl namespace.
   kImplModelPipelineCache = 1 << 29,

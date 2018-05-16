@@ -12,28 +12,13 @@
 namespace escher {
 
 const ResourceTypeInfo Texture::kTypeInfo("Texture", ResourceType::kResource,
+                                          ResourceType::kImageView,
                                           ResourceType::kTexture);
 
 Texture::Texture(ResourceRecycler* resource_recycler, ImagePtr image,
                  vk::Filter filter, vk::ImageAspectFlags aspect_mask,
                  bool use_unnormalized_coordinates)
-    : Resource(resource_recycler),
-      image_(std::move(image)),
-      width_(image_->width()),
-      height_(image_->height()) {
-  vk::Device device = vulkan_context().device;
-
-  vk::ImageViewCreateInfo view_info;
-  view_info.viewType = vk::ImageViewType::e2D;
-  view_info.subresourceRange.baseMipLevel = 0;
-  view_info.subresourceRange.levelCount = 1;
-  view_info.subresourceRange.baseArrayLayer = 0;
-  view_info.subresourceRange.layerCount = 1;
-  view_info.subresourceRange.aspectMask = aspect_mask;
-  view_info.format = image_->format();
-  view_info.image = image_->vk();
-  image_view_ = ESCHER_CHECKED_VK_RESULT(device.createImageView(view_info));
-
+    : ImageView(resource_recycler, std::move(image), aspect_mask) {
   vk::SamplerCreateInfo sampler_info = {};
   sampler_info.magFilter = filter;
   sampler_info.minFilter = filter;
@@ -57,14 +42,10 @@ Texture::Texture(ResourceRecycler* resource_recycler, ImagePtr image,
     sampler_info.addressModeV = vk::SamplerAddressMode::eRepeat;
     sampler_info.addressModeW = vk::SamplerAddressMode::eRepeat;
   }
-  sampler_ = ESCHER_CHECKED_VK_RESULT(device.createSampler(sampler_info));
+  sampler_ = ESCHER_CHECKED_VK_RESULT(vk_device().createSampler(sampler_info));
 }
 
-Texture::~Texture() {
-  vk::Device device = vulkan_context().device;
-  device.destroySampler(sampler_);
-  device.destroyImageView(image_view_);
-}
+Texture::~Texture() { vk_device().destroySampler(sampler_); }
 
 TexturePtr Texture::New(ResourceRecycler* resource_recycler, ImagePtr image,
                         vk::Filter filter, vk::ImageAspectFlags aspect_mask,

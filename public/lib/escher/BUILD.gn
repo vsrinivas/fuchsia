@@ -296,6 +296,8 @@ source_set("escher") {
     "vk/gpu_mem.h",
     "vk/image.cc",
     "vk/image.h",
+    "vk/image_view.cc",
+    "vk/image_view.h",
     "vk/naive_gpu_allocator.cc",
     "vk/naive_gpu_allocator.h",
     "vk/render_pass.cc",
