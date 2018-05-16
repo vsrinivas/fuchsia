@@ -5,7 +5,6 @@
 import("//build/config/clang/clang.gni")
 import("//build/config/fuchsia/zircon.gni")
 import("//build/config/sysroot.gni")
-import("//build/gn/config.gni")
 import("//build/toolchain/ccache.gni")
 
 assert(current_os == "fuchsia")

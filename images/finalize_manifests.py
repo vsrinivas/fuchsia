@@ -38,7 +38,6 @@ import fnmatch
 import itertools
 import manifest
 import os
-import shlex
 import sys
 import variant
 
@@ -54,14 +53,6 @@ binary_context = namedtuple('binary_context', [
     'variant',
     'soname_map',
     'root_dependent',
-])
-
-# Each --manifest argument yields an input_manifest tuple.
-input_manifest = namedtuple('input_manifest', [
-    'file',
-    'cwd',
-    'groups',
-    'output_group',
 ])
 
 # Each --output argument yields an output_manifest tuple.
@@ -157,7 +148,7 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
                                      binary)
 
         binaries[binary.entry.target] = binary
-        assert binary.entry.group is not None
+        assert binary.entry.group is not None, binary
 
         if binary.info.soname:
             # This binary has a SONAME, so record it in the map.
@@ -291,12 +282,7 @@ def strip_binary_manifest(manifest, stripped_dir, examined):
     # update the manifest entry to point to the stripped file.
     def make_debug_file(entry, info):
         debug = info
-        # TODO(TO-842): After TO-842, stripped_dir will a place dedicated
-        # to this one output manifest, and using entry.target will be right
-        # again.  For now, multiple manifests use the same entry.target value
-        # for different files, and they clobber each other in stripped_dir.
-        #stripped = os.path.join(stripped_dir, entry.target)
-        stripped = os.path.join(stripped_dir, os.path.basename(entry.source))
+        stripped = os.path.join(stripped_dir, entry.target)
         dir = os.path.dirname(stripped)
         if not os.path.isdir(dir):
             os.makedirs(dir)
@@ -331,8 +317,7 @@ def strip_binary_manifest(manifest, stripped_dir, examined):
     return stripped_manifest, debug_list
 
 
-def emit_manifests(args, selected, unselected, input_binaries,
-                   standalone_output):
+def emit_manifests(args, selected, unselected, input_binaries):
     def update_file(file, contents):
         if os.path.exists(file) and os.path.getsize(file) == len(contents):
             with open(file, 'r') as f:
@@ -342,86 +327,52 @@ def emit_manifests(args, selected, unselected, input_binaries,
             f.write(contents)
 
     # The name of every file we examine to make decisions goes into this set.
-    examined = set(input.file for input in args.manifest)
+    examined = set(args.manifest)
 
     # Collect all the inputs and reify.
     aux_binaries = collect_auxiliaries(unselected, examined)
     binaries, nonbinaries = collect_binaries(selected, input_binaries,
                                              aux_binaries, examined)
 
+    # Prepare to collate groups.  outputs[group] is None for a dummy
+    # manifest whose entries all get elided from the output.
+    outputs = [None if file is None else output_manifest(file, [])
+               for file in args.output]
+
+    # Now filter out the binaries going to any dummy outputs.  We used
+    # those to resolve SONAME references presuming they'll be available
+    # at runtime, but we won't include them in our final set of binaries
+    # for either the manifest or the build ID map.
+    def dummy_entry(entry):
+        return entry.group is not None and outputs[entry.group] is not None
+    nonbinaries = filter(dummy_entry, nonbinaries)
+    binaries = filter(lambda binary: dummy_entry(binary.entry), binaries)
+
     # Finalize the output binaries.
-    binaries, debug_files = strip_binary_manifest(binaries, 'stripped',
+    binaries, debug_files = strip_binary_manifest(binaries,
+                                                  args.stripped_dir,
                                                   examined)
 
     # Collate groups.
-    outputs = [output_manifest(file, []) for file in args.output]
     for entry in itertools.chain((binary.entry for binary in binaries),
                                  nonbinaries):
-        if entry.group is not None:
-            outputs[entry.group].manifest.append(entry._replace(group=None))
+        outputs[entry.group].manifest.append(entry._replace(group=None))
 
     all_binaries = {binary.info.build_id: binary.entry for binary in binaries}
     all_debug_files = {info.build_id: info for info in debug_files}
 
-    # TODO(US-390): As a stopgap until there is a smarter loader service,
-    # we'll toss every shared library used by any package into the system
-    # manifest.  Drop this behavior when it's no longer needed.
-    global_soname = set(binary.info.soname
-                        for binary in binaries if binary.info.soname)
-
-    # Now handle the standalone outputs.  These reuse the same
-    # aux_binaries, but ignore all the work done for the system image
-    # manifests.  For some shared libraries it will be repeating the work
-    # already done, but doing so lets it get different results for
-    # variants, which can be fine in different standalone manifests,
-    # whereas everything in the system image has to agree about the
-    # shared library variants to install.
-    for output, selected in standalone_output.iteritems():
-        binaries, nonbinaries = collect_binaries(selected, [],
-                                                 aux_binaries, examined)
-        # Partition into binaries that have already been used in other
-        # output manifests and new binaries.  For the reused binaries,
-        # we can reuse the debug file discovery/stripping already done.
-        reused_binaries = []
-        new_binaries = []
-        for binary in binaries:
-            reused = all_binaries.get(binary.info.build_id, None)
-            if reused is None:
-                new_binaries.append(binary)
-            else:
-                reused_binaries.append(reused)
-
-        # Find (or make) debug files for new binaries and update
-        # the sets of binaries and debug files already processed.
-        binaries, debug_files = strip_binary_manifest(
-            new_binaries, 'stripped', examined)
-        all_binaries.update(
-            {binary.info.build_id: binary.entry for binary in binaries})
-        all_debug_files.update(
-            {info.build_id: info for info in debug_files})
-
-        # TODO(US-390): Remove this later; see comment above.
-        for binary in binaries:
-            if binary.info.soname and binary.info.soname not in global_soname:
-                outputs[-1].manifest.append(binary.entry._replace(group=None))
-                global_soname.add(binary.info.soname)
-
-        # Finally, emit the standalone manifest.
-        # Sort so that functionally identical output is textually identical.
-        update_file(output,
-                    manifest.format_manifest_file(sorted(
-                        (entry._replace(group=None) for entry in
-                         itertools.chain(reused_binaries,
-                                         (binary.entry for binary in binaries),
-                                         nonbinaries)),
-                        key=lambda entry: entry.target)))
-
     # Emit each primary manifest.
-    # Sort so that functionally identical output is textually identical.
+    depfile_output = None
     for output in outputs:
-        output.manifest.sort(key=lambda entry: entry.target)
-        update_file(output.file,
-                    manifest.format_manifest_file(output.manifest))
+        # Skip dummy manifests.
+        if output is not None:
+            if depfile_output is None:
+                depfile_output = output.file
+            # Sort so that functionally identical output is textually
+            # identical.
+            output.manifest.sort(key=lambda entry: entry.target)
+            update_file(output.file,
+                        manifest.format_manifest_file(output.manifest))
 
     # Emit the build ID list.
     # Sort so that functionally identical output is textually identical.
@@ -434,44 +385,10 @@ def emit_manifests(args, selected, unselected, input_binaries,
     # Emit the depfile.
     if args.depfile:
         with open(args.depfile, 'w') as f:
-            f.write(outputs[0].file + ':')
+            f.write(depfile_output + ':')
             for file in sorted(examined):
                 f.write(' ' + file)
             f.write('\n')
-
-
-class input_manifest_action(argparse.Action):
-    def __init__(self, *args, **kwargs):
-        super(input_manifest_action, self).__init__(*args, **kwargs)
-        self.optional = False
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        inputs = getattr(namespace, self.dest, None)
-        if inputs is None:
-            inputs = []
-            setattr(namespace, self.dest, inputs)
-        outputs = getattr(namespace, 'output', None)
-        standalone_output = getattr(namespace, 'standalone_output', None)
-
-        file = values
-        if namespace.groups is None:
-            groups = False
-        elif namespace.groups == 'all':
-            groups = True
-        else:
-            groups = set(group if group else None
-                         for group in namespace.groups.split(','))
-
-        cwd = getattr(namespace, 'cwd', '')
-        if standalone_output is not None:
-            output_group = standalone_output[-1]
-        elif outputs is not None:
-            output_group = len(outputs) - 1
-        else:
-            output_group = None
-
-        if not self.optional or os.path.exists(file):
-            inputs.append(input_manifest(file, cwd, groups, output_group))
 
 
 class input_binary_action(argparse.Action):
@@ -490,71 +407,34 @@ def parse_args():
 Massage manifest files from the build to produce images.
 ''',
         epilog='''
-The --cwd and --group options apply to subsequent --manifest arguments.  Each
-input --manifest is assigned to the preceding --output/-standalone-output
-argument file.  Any input --manifest that precedes all --output arguments just
-supplies auxiliary files implicitly required by other (later) input manifests,
-but does not add all its files to any --output manifest.  This is used for
-shared libraries and the like.
+The --cwd and --group options apply to subsequent --manifest arguments.
+Each input --manifest is assigned to the preceding --dummy or --output
+argument file.  Any input --manifest that precedes all --output arguments
+just supplies auxiliary files implicitly required by other (later) input
+manifests, but does not add all its files to any --output manifest.  This
+is used for shared libraries and the like.
 ''')
     parser.add_argument('--build-id-file', required=True,
+                        metavar='FILE',
                         help='Output build ID list')
     parser.add_argument('--depfile',
+                        metavar='DEPFILE',
                         help='Ninja depfile to write')
-    parser.add_argument('--output', action='append', required=True,
-                        help='Output manifest file')
-    parser.add_argument('--standalone-output', action='append',
-                        help='Standalone (archive) output manifest file')
-    parser.add_argument('--cwd',
-                        help='Input entries are relative to this directory')
-    parser.add_argument('--groups',
-                        help='"all" or comma-separated groups to include')
-    parser.add_argument('--manifest', action=input_manifest_action,
-                        help='Input manifest file (must exist)')
+    parser.add_argument('--dummy', dest='output',
+                        action='append_const', const=None,
+                        help='Treat following manifests as given')
     parser.add_argument('--binary', action=input_binary_action, default=[],
+                        metavar='PATH',
                         help='Take matching binaries from auxiliary manifests')
-    if len(sys.argv) == 2 and sys.argv[1][0] == '@':
-        with open(sys.argv[1][1:]) as rsp_file:
-            argv = shlex.split(rsp_file)
-    else:
-        argv = sys.argv[1:]
-    return parser.parse_args(argv)
+    parser.add_argument('--stripped-dir', required=True,
+                        metavar='STRIPPED_DIR',
+                        help='Directory to hold stripped copies when needed')
+    return manifest.common_parse_args(parser)
 
 
 def main():
     args = parse_args()
-
-    all_selected = []
-    all_unselected = []
-    standalone_output = {}
-    standalone_unselected = {}
-    for input in args.manifest:
-        selected, unselected, groups_seen = manifest.ingest_manifest_file(
-            input.file, input.cwd, input.groups, '.', input.output_group)
-
-        if not isinstance(input.groups, bool):
-            unused_groups = input.groups - groups_seen - set([None])
-            if unused_groups:
-                raise Exception(
-                    '%s not found in %r; try one of: %s' %
-                    (', '.join(map(repr, unused_groups)), input.file,
-                     ', '.join(map(repr, groups_seen - input.groups))))
-
-        if isinstance(input.output_group, str):
-            standalone_output[input.output_group] = selected
-            standalone_unselected[input.output_group] = unselected
-        else:
-            all_selected += selected
-            all_unselected += unselected
-
-    for input in sorted(standalone_unselected.iterkeys()):
-        if standalone_unselected[input]:
-            print 'NOTE: unused files from %s' % input
-            for entry in standalone_unselected[input]:
-                print '\t' + repr(entry)
-
-    emit_manifests(args, all_selected, all_unselected, args.binary,
-                   standalone_output)
+    emit_manifests(args, args.selected, args.unselected, args.binary)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,137 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/bootdata.gni")
+import("//build/images/boot.gni")
+import("//build/images/manifest.gni")
+
+declare_args() {
+  # File containing kernel command line arguments to roll into the
+  # bootdata image used for zedboot.
+  zedboot_cmdline_file = ""
+}
+
+bootdata_cmdline("zedboot_cmdline") {
+  visibility = [ ":*" ]
+  inputs = [
+    "cmdline.txt",
+  ]
+}
+
+# Let the build configuration choose some extra fixed command-line arguments
+# for zedboot.
+if (zedboot_cmdline_file != "") {
+  bootdata_cmdline("extra_zedboot_cmdline") {
+    visibility = [ ":*" ]
+    inputs = [
+      zedboot_cmdline_file,
+    ]
+  }
+}
+
+# Construct a minimal manifest containing only the few user binaries
+# that constitute zedboot, and the libraries they depend on.
+# TODO(mcgrathr): This could be made smaller by constraining the drivers
+# included, but we don't currently have a good way to determine the
+# subset that is useful to Zedboot.
+zedboot_binary_patterns = [
+  # These are the core things needed for booting (local and netboot).
+  "bin/crashlogger",
+  "bin/devmgr",
+  "bin/dlog",
+  "bin/fshost",
+  "bin/netsvc",
+  "bin/virtual-console",
+  "driver/*",  # Drivers automagically cause devhost to be brought in.
+
+  # These are needed for installer runs.
+  "bin/blobfs",
+  "bin/install-disk-image",
+  "bin/minfs",
+  "bin/mount",
+
+  # These are useful for debugging.
+  "bin/dd",
+  "bin/driverctl",
+  "bin/fixfs",
+  "bin/fsck*",
+  "bin/gpt",
+  "bin/killall",
+  "bin/lsblk",
+  "bin/lsdev",
+  "bin/lsusb",
+  "bin/mkfs*",
+  "bin/netdump",
+  "bin/ping",
+  "bin/ps",
+  "bin/sh",
+  "bin/umount",
+]
+
+generate_manifest("zedboot.manifest") {
+  visibility = [ ":*" ]
+  args = []
+  foreach(pattern, zedboot_binary_patterns) {
+    args += [ "--binary=" + pattern ]
+  }
+}
+
+# zedboot-data.bin is a Zircon BOOTDATA file containing the
+# command line and BOOTFS pieces necessary to make Zircon be Zedboot.
+bootdata("zedboot-data") {
+  boot = true
+  deps = [
+    ":zedboot.manifest",
+  ]
+  manifest_outputs = get_target_outputs(":zedboot.manifest")
+  inputs = [
+    manifest_outputs[0],
+  ]
+  bootdata_deps = [ ":zedboot_cmdline" ]
+  if (zedboot_cmdline_file != "") {
+    bootdata_deps += [ ":extra_zedboot_cmdline" ]
+  }
+  deps += bootdata_deps
+  foreach(label, bootdata_deps) {
+    inputs += get_target_outputs(label)
+  }
+}
+
+# images/zedboot.bin combines the kernel image itself with
+# the BOOTDATA bits.  This single file can be booted by Gigaboot.
+bootdata("zedboot.bin") {
+  output_name = "images/zedboot.bin"
+  deps = [
+    ":zedboot-data",
+  ]
+  inputs = [
+    "$zircon_build_dir/zircon.bin",
+  ]
+  foreach(label, deps) {
+    inputs += get_target_outputs(label)
+  }
+}
+
+vboot("zedboot") {
+  deps = [
+    ":zedboot.bin",
+  ]
+}
+
+if (target_cpu != "arm64") {
+  esp("zedboot") {
+    cmdline = "efi_cmdline.txt"
+    zedboot = ":zedboot.bin"
+  }
+}
+
+group("zedboot") {
+  deps = [
+    ":zedboot.bin",
+    ":zedboot.vboot",
+  ]
+  if (target_cpu != "arm64") {
+    deps += [ ":zedboot.esp.blk" ]
+  }
+}

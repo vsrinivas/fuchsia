@@ -1,0 +1,179 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/config/clang/clang.gni")
+import("//build/config/fuchsia/zircon.gni")
+
+# Keep the following in sync with the values in
+#   //scripts/devshell/lib/image_build_vars.sh
+images_dir = "$root_out_dir/images"
+
+# Used by //scripts/devshell/run.
+fvm_image_path = "$images_dir/fvm.blk"
+
+# Used by //scripts/devshell/boot.
+fvm_sparse_image_path = "$images_dir/fvm.sparse.blk"
+fvm_data_sparse_image_path = "$images_dir/fvm.data.sparse.blk"
+
+# Build a "kernel partition" target for ChromeOS targets.
+#
+# Parameters
+#
+#   deps (required)
+#     [list of labels] Must be bootdata labels defined earlier in the file.
+#
+template("vboot") {
+  output_name = "${target_name}.vboot"
+  compiled_action(output_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    tool = "//garnet/tools/vboot_reference:futility"
+    vboot_dir = "//third_party/vboot_reference"
+    kernel_keyblock = "$vboot_dir/tests/devkeys/kernel.keyblock"
+    private_keyblock = "$vboot_dir/tests/devkeys/kernel_data_key.vbprivk"
+    inputs = [
+      kernel_keyblock,
+      private_keyblock,
+    ]
+
+    deps = invoker.deps
+
+    bootdata_bins = []
+    foreach(bootdata_label, deps) {
+      bootdata_bins += get_target_outputs(bootdata_label)
+    }
+    inputs += bootdata_bins
+
+    bootdata_bin = bootdata_bins[0]
+    assert([ bootdata_bin ] == bootdata_bins)
+
+    zircon_bin = "${zircon_build_dir}/zircon.bin"
+    inputs += [ zircon_bin ]
+
+    output = "$images_dir/$output_name"
+    outputs = [
+      output,
+    ]
+
+    args = [
+      "vbutil_kernel",
+      "--pack",
+      rebase_path(output),
+      "--keyblock",
+      rebase_path(kernel_keyblock),
+      "--signprivate",
+      rebase_path(private_keyblock),
+      "--bootloader",
+      rebase_path(bootdata_bin),
+      "--vmlinuz",
+      rebase_path(zircon_bin),
+      "--version",
+      "1",
+      "--flags",
+      "0x2",
+    ]
+  }
+}
+
+# Build an "EFI System Partition" target for EFI targets.
+#
+# Parameters
+#
+#   deps (optional)
+#     [list of labels] Must be bootdata labels defined earlier in the file.
+#
+#   zircon_bin (optional)
+#     [path] A zircon kernel.
+#
+#   zedboot (optional)
+#     [label] A Zedboot bootdata label defined earlier in the file.
+#
+#   cmdline (optional)
+#     [path] A bootloader (Gigaboot) cmdline file to include in the EFI root.
+#
+template("esp") {
+  output_name = "${target_name}.esp.blk"
+  compiled_action(output_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    tool = "//garnet/go/src/make-efi"
+    tool_output_name = "make-efi"
+
+    efi_image_path = "$images_dir/$output_name"
+    mkfs_msdosfs_bin = "$zircon_tools_dir/mkfs-msdosfs"
+
+    outputs = [
+      efi_image_path,
+    ]
+    inputs = [
+      mkfs_msdosfs_bin,
+    ]
+    args = [
+      "--output",
+      rebase_path(efi_image_path),
+      "--mkfs",
+      rebase_path(mkfs_msdosfs_bin),
+    ]
+
+    if (defined(invoker.zircon_bin)) {
+      args += [
+        "--zircon",
+        rebase_path(invoker.zircon_bin),
+      ]
+    }
+
+    deps = []
+    if (defined(invoker.deps)) {
+      bootdata_bins = []
+      foreach(bootdata_label, invoker.deps) {
+        bootdata_bins += get_target_outputs(bootdata_label)
+      }
+      deps += invoker.deps
+
+      bootdata_bin = bootdata_bins[0]
+      assert([ bootdata_bin ] == bootdata_bins)
+
+      args += [
+        "--bootdata",
+        rebase_path(bootdata_bin),
+      ]
+    }
+
+    if (defined(invoker.zedboot)) {
+      zedboot_label = invoker.zedboot
+      zedboot_name = get_label_info(zedboot_label, "name")
+      zedboot_bin = "$images_dir/${zedboot_name}.bin"
+      args += [
+        "--zedboot",
+        rebase_path(zedboot_bin),
+      ]
+      deps += [ zedboot_label ]
+    }
+
+    if (defined(invoker.cmdline)) {
+      args += [
+        "--cmdline",
+        rebase_path(invoker.cmdline),
+      ]
+    }
+
+    if (target_cpu == "x64") {
+      gigaboot_bin = "${zircon_build_dir}/bootloader/bootx64.efi"
+      args += [
+        "--efi-bootloader",
+        rebase_path(gigaboot_bin),
+      ]
+      inputs += [ gigaboot_bin ]
+    }
+  }
+}

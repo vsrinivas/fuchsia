@@ -1,6 +1,5 @@
 <%include file="header.mako" />
 
-import("//build/gn/config.gni")
 import("//build/sdk/sdk_atom.gni")
 
 config("${data.name}_config") {

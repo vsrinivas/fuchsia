@@ -1,6 +1,5 @@
 <%include file="header.mako" />
 
-import("//build/gn/config.gni")
 import("//build/sdk/sdk_atom.gni")
 
 if (current_toolchain != host_toolchain) {

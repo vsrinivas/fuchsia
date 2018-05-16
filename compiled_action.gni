@@ -17,8 +17,8 @@ import("//build/config/clang/clang.gni")
 #       host compile of this tool will be used.
 #
 #   tool_output_name (optional)
-#       [string] the `output_name` in the `executable()` for `tool`.
-#       This defaults to the `tool` target's name.
+#       [string] The `output_name` in the `executable()` for `tool`.
+#       This default's to the `tool` target's name.
 #
 #   outputs (required)
 #       [list of files] Like the outputs of action (if using "compiled_action",
@@ -30,15 +30,17 @@ import("//build/config/clang/clang.gni")
 #       [list of strings] Same meaning as action/action_foreach.
 #
 #   inputs (optional)
+#   sources (optional)
 #       Files the binary takes as input. The step will be re-run whenever any
 #       of these change. If inputs is empty, the step will run only when the
 #       binary itself changes.
 #
-#   visibility
+#   args (all optional)
+#   depfile
 #   deps
-#   args   (all optional)
+#   testonly
+#   visibility
 #       Same meaning as action/action_foreach.
-#
 #
 # Example of usage:
 #
@@ -50,7 +52,7 @@ import("//build/config/clang/clang.gni")
 #     ]
 #
 #     # The tool takes this input.
-#     inputs = [ "my_input_file.idl" ]
+#     sources = [ "my_input_file.idl" ]
 #
 #     # In this case, the tool takes as arguments the input file and the output
 #     # build dir (both relative to the "cd" that the script will be run in)
@@ -72,20 +74,19 @@ import("//build/config/clang/clang.gni")
 # about this target in the host toolchain". Usually this is what you want, and
 # saves unnecessarily compiling your tool for the target platform. But if you
 # need a target build of your tool as well, just leave off the if statement.
-template("compiled_action") {
+template("_compiled_action_target") {
   assert(defined(invoker.tool), "tool must be defined for $target_name")
   assert(defined(invoker.outputs), "outputs must be defined for $target_name")
   assert(defined(invoker.args), "args must be defined for $target_name")
 
-  assert(!defined(invoker.sources),
-         "compiled_action doesn't take a sources arg. Use inputs instead.")
-
-  action(target_name) {
+  target(invoker._target_type, target_name) {
     forward_variables_from(invoker,
                            [
+                             "depfile",
                              "deps",
                              "inputs",
                              "outputs",
+                             "sources",
                              "testonly",
                              "tool_output_name",
                              "visibility",
@@ -100,18 +101,14 @@ template("compiled_action") {
     script = "//build/gn_run_binary.sh"
 
     # Constuct the host toolchain version of the tool.
-    host_tool = invoker.tool + "($host_toolchain)"
+    host_tool = "${invoker.tool}($host_toolchain)"
 
-    # Get the path to the executable. Currently, this assumes that the tool
-    # does not specify output_name so that the target name is the name to use.
-    # If that's not the case, we'll need another argument to the script to
-    # specify this, since we can't know what the output name is (it might be in
-    # another file not processed yet).
+    # Get the path to the executable.
     if (!defined(tool_output_name)) {
       tool_output_name = get_label_info(host_tool, "name")
     }
-    tool_output_dir = get_label_info(host_tool, "root_out_dir")
-    host_executable = "$tool_output_dir/$tool_output_name"
+    tool_out_dir = get_label_info(host_tool, "root_out_dir")
+    host_executable = "$tool_out_dir/$tool_output_name"
 
     # Add the executable itself as an input.
     inputs += [ host_executable ]
@@ -128,53 +125,20 @@ template("compiled_action") {
   }
 }
 
+# See _compiled_action_target().
+template("compiled_action") {
+  _compiled_action_target(target_name) {
+    _target_type = "action"
+    forward_variables_from(invoker, [ "visibility" ])
+    forward_variables_from(invoker, "*", [ "visibility" ])
+  }
+}
+
+# See _compiled_action_target().
 template("compiled_action_foreach") {
-  assert(defined(invoker.sources), "sources must be defined for $target_name")
-  assert(defined(invoker.tool), "tool must be defined for $target_name")
-  assert(defined(invoker.outputs), "outputs must be defined for $target_name")
-  assert(defined(invoker.args), "args must be defined for $target_name")
-
-  action_foreach(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "inputs",
-                             "outputs",
-                             "sources",
-                             "testonly",
-                             "visibility",
-                           ])
-    if (!defined(deps)) {
-      deps = []
-    }
-    if (!defined(inputs)) {
-      inputs = []
-    }
-
-    script = "//build/gn_run_binary.sh"
-
-    # Constuct the host toolchain version of the tool.
-    host_tool = invoker.tool + "($host_toolchain)"
-
-    # Get the path to the executable. Currently, this assumes that the tool
-    # does not specify output_name so that the target name is the name to use.
-    # If that's not the case, we'll need another argument to the script to
-    # specify this, since we can't know what the output name is (it might be in
-    # another file not processed yet).
-    host_executable = get_label_info(host_tool, "root_out_dir") + "/" +
-                      get_label_info(host_tool, "name")
-
-    # Add the executable itself as an input.
-    inputs += [ host_executable ]
-
-    deps += [ host_tool ]
-
-    # The script takes as arguments Clang bin directory (for passing
-    # llvm-symbolizer to runtimes), the binary to run, and then the
-    # arguments to pass it.
-    args = [
-             clang_prefix,
-             rebase_path(host_executable, root_build_dir),
-           ] + invoker.args
+  _compiled_action_target(target_name) {
+    _target_type = "action_foreach"
+    forward_variables_from(invoker, [ "visibility" ])
+    forward_variables_from(invoker, "*", [ "visibility" ])
   }
 }

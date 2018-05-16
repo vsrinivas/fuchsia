@@ -1,6 +1,5 @@
 <%include file="header.mako" />
 
-import("//build/gn/config.gni")
 import("//build/sdk/sdk_atom.gni")
 
 _out_dir = get_label_info(":bogus", "target_out_dir")

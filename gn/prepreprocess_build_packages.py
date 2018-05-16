@@ -11,36 +11,34 @@ from package_imports_resolver import PackageImportsResolver
 
 class PackageLabelObserver:
     def __init__(self):
-        self.labels = []
+        self.json_result = {
+            'targets': [],
+            'data_deps': [],
+        }
 
     def import_resolved(self, config, config_path):
-        for label in config.get("labels", []):
-            self.labels.append(label)
+        self.json_result['targets'] += config.get('packages', {}).values()
+        self.json_result['data_deps'] += config.get('labels', [])
 
-
-def get_dep_from_package_name(package_name):
-    if package_name[0] == '/':
-        return '"%s"' % package_name
-    return '"//%s"' % package_name
 
 def main():
-    parser = argparse.ArgumentParser(description="Determine labels and Fuchsia "
-                                     "packages included in the current build")
-    parser.add_argument("--packages", help="list of packages", required=True)
+    parser = argparse.ArgumentParser(description='''
+Determine labels and Fuchsia packages included in the current build.
+''')
+    parser.add_argument('--packages',
+                        help='JSON list of packages',
+                        required=True)
     args = parser.parse_args()
 
     observer = PackageLabelObserver()
     imports_resolver = PackageImportsResolver(observer)
     imported = imports_resolver.resolve_imports(json.loads(args.packages))
-    labels = observer.labels
 
     if imported == None:
         return 1
 
-    sys.stdout.write("imported = [%s]\n" %
-                     ",".join(map(get_dep_from_package_name, imported)))
-    sys.stdout.write("labels = [%s]\n" %
-                     ",".join(['"%s"' % label for label in labels]))
+    json.dump(observer.json_result, sys.stdout, sort_keys=True)
+
     return 0
 
 if __name__ == "__main__":
