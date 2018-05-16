@@ -104,6 +104,16 @@ class Status {
             .c_str());
   }
 
+  bool LogIfError(fxl::LogSeverity severity, const char* file, int line,
+                  std::string msg) {
+    if (!is_success()) {
+      FXL_LAZY_STREAM(fxl::LogMessage(severity, file, line, nullptr).stream(),
+                      fxl::ShouldCreateLogMessage(severity))
+          << msg << ": " << ToString();
+    }
+    return !is_success();
+  }
+
  private:
   HostError error_;
   ProtocolErrorCode protocol_error_;
@@ -111,3 +121,24 @@ class Status {
 
 }  // namespace common
 }  // namespace btlib
+
+// Macros to check and log any non-Success status of an event.
+// Use these like:
+// if (BT_TEST_ERR(status, WARNING, "gap: failed set event mask")) {
+//   // cleanup or callback with error, or don't, I'm a coment, not a cop.
+//   return;
+// }
+// or
+// BT_TEST_WARN(status, "gap (BR/EDR): failed set page scan");
+//
+// It will log with the string prepended to the stringified status if it
+// is not success.
+//
+// Evaluates to true if the event status is not success.
+
+#define BT_TEST_LOG(status, severity, msg) \
+  (status.LogIfError(fxl::LOG_##severity, __FILE__, __LINE__, msg))
+#define BT_TEST_ERR(status, msg) BT_TEST_LOG(status, ERROR, msg)
+#define BT_TEST_WARN(status, msg) BT_TEST_LOG(status, WARNING, msg)
+#define BT_TEST_VLOG(status, level, msg) \
+  (status.LogIfError(-level, __FILE__, __LINE__, msg))

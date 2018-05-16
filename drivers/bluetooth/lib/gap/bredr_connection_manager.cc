@@ -21,14 +21,11 @@ void SetPageScanEnabled(bool enabled, fxl::RefPtr<hci::Transport> hci,
   auto read_enable = hci::CommandPacket::New(hci::kReadScanEnable);
   auto finish_enable_cb = [enabled, dispatcher, hci, finish_cb = std::move(cb)](
                               auto, const hci::EventPacket& event) mutable {
-    auto status = event.ToStatus();
-    if (!status) {
-      FXL_LOG(WARNING)
-          << "gap: BrEdrConnectionManager: Read Scan Enable failed: "
-          << status.ToString();
-      finish_cb(status);
+    if (BTEV_TEST_WARN(event, "gap (BR/EDR): Read Scan Enable failed")) {
+      finish_cb(event.ToStatus());
       return;
     }
+
     auto params = event.return_params<hci::ReadScanEnableReturnParams>();
     uint8_t scan_type = params->scan_enable;
     if (enabled) {
@@ -130,8 +127,7 @@ void BrEdrConnectionManager::SetConnectable(bool connectable,
       hci::kPageScanR1Interval, hci::kPageScanR1Window, use_interlaced_scan_,
       [self, cb = std::move(status_cb)](const auto& status) mutable {
         if (!status) {
-          FXL_LOG(WARNING) << "gap: BrEdrConnectionManager: Writing Page Scan "
-                              "Settings Failed: "
+          FXL_LOG(WARNING) << "gap (BR/EDR): Write Page Scan Settings failed: "
                            << status.ToString();
           cb(status);
           return;
@@ -167,22 +163,17 @@ void BrEdrConnectionManager::WritePageScanSettings(uint16_t interval,
 
   hci_cmd_runner_->QueueCommand(
       std::move(write_activity),
-      [self, cb = cb.share(), interval, window](const hci::EventPacket& event) {
-        auto status = event.ToStatus();
-        if (!status) {
-          FXL_LOG(WARNING) << "gap: BrEdrConnectionManager: write page scan "
-                              "activity failure: "
-                           << status.ToString();
+      [self, interval, window](const hci::EventPacket& event) {
+        if (BTEV_TEST_WARN(event,
+                           "gap (BR/EDR): write page scan activity failed")) {
           return;
         }
         if (!self) {
-          cb(hci::Status(common::HostError::kFailed));
           return;
         }
         self->page_scan_interval_ = interval;
         self->page_scan_window_ = window;
-        FXL_VLOG(2)
-            << "gap: BrEdrConnectionManager: page scan activity updated";
+        FXL_VLOG(2) << "gap (BR/EDR): page scan activity updated";
       });
 
   auto write_type = hci::CommandPacket::New(
@@ -194,22 +185,17 @@ void BrEdrConnectionManager::WritePageScanSettings(uint16_t interval,
                                             : hci::PageScanType::kStandardScan);
 
   hci_cmd_runner_->QueueCommand(
-      std::move(write_type),
-      [self, cb = cb.share(), interlaced](const hci::EventPacket& event) {
-        auto status = event.ToStatus();
-        if (!status) {
-          FXL_LOG(WARNING)
-              << "gap: BrEdrConnectionManager: write page scan type failure: "
-              << status.ToString();
+      std::move(write_type), [self, interlaced](const hci::EventPacket& event) {
+        if (BTEV_TEST_WARN(event,
+                           "gap (BR/EDR): write page scan type failed")) {
           return;
         }
         if (!self) {
-          cb(hci::Status(common::HostError::kFailed));
           return;
         }
         self->page_scan_type_ = (interlaced ? hci::PageScanType::kInterlacedScan
                                             : hci::PageScanType::kStandardScan);
-        FXL_VLOG(2) << "gap: BrEdrConnectionManager: page scan type updated";
+        FXL_VLOG(2) << "gap (BR/EDR): page scan type updated";
       });
 
   hci_cmd_runner_->RunCommands(std::move(cb));
@@ -222,14 +208,14 @@ void BrEdrConnectionManager::OnConnectionRequest(
       event.view().payload<hci::ConnectionRequestEventParams>();
   std::string link_type_str =
       params.link_type == hci::LinkType::kACL ? "ACL" : "(e)SCO";
-  FXL_VLOG(1) << "gap: BrEdrConnectionManager: " << link_type_str
-              << " conn request from " << params.bd_addr.ToString() << "("
+  FXL_VLOG(1) << "gap (BR/EDR): " << link_type_str << " conn request from "
+              << params.bd_addr.ToString() << "("
               << params.class_of_device.ToString() << ")";
   if (params.link_type == hci::LinkType::kACL) {
     // Accept the connection, performing a role switch. We receive a
     // Connection Complete event when the connection is complete, and finish
     // the link then.
-    FXL_LOG(INFO) << "gap: BrEdrConnectionManager: accept incoming connection";
+    FXL_LOG(INFO) << "gap (BR/EDR): accept incoming connection";
 
     auto accept = hci::CommandPacket::New(
         hci::kAcceptConnectionRequest,
@@ -246,7 +232,7 @@ void BrEdrConnectionManager::OnConnectionRequest(
   }
 
   // Reject this connection.
-  FXL_LOG(INFO) << "gap: BrEdrConnectionManager: reject unsupported connection";
+  FXL_LOG(INFO) << "gap (BR/EDR): reject unsupported connection";
 
   auto reject = hci::CommandPacket::New(
       hci::kRejectConnectionRequest,
@@ -266,17 +252,13 @@ void BrEdrConnectionManager::OnConnectionComplete(
   FXL_DCHECK(event.event_code() == hci::kConnectionCompleteEventCode);
   const auto& params =
       event.view().payload<hci::ConnectionCompleteEventParams>();
-  FXL_VLOG(1) << "gap: BrEdrConnectionManager: " << params.bd_addr.ToString()
+  FXL_VLOG(1) << "gap (BR/EDR): " << params.bd_addr.ToString()
               << fxl::StringPrintf(
                      " connection complete (status: 0x%02x handle: 0x%04x)",
                      params.status, params.connection_handle);
-  auto status = event.ToStatus();
-  if (!status) {
-    FXL_LOG(WARNING) << "Connection Complete event with error received: "
-                     << status.ToString();
+  if (BTEV_TEST_WARN(event, "gap (BR/EDR):  connection error")) {
     return;
   }
-
   common::DeviceAddress addr(common::DeviceAddress::Type::kBREDR,
                              params.bd_addr);
 
@@ -298,9 +280,9 @@ void BrEdrConnectionManager::OnConnectionComplete(
       device->identifier(), std::move(conn_ptr),
       [device, self = weak_ptr_factory_.GetWeakPtr()](auto status,
                                                       auto conn_ptr) {
-        if (!status) {
-          FXL_LOG(WARNING) << "gap: BrEdrConnectionManager: interrogation "
-                              "failed, dropping connection";
+        if (BT_TEST_WARN(
+                status,
+                "gap (BR/EDR): interrogate failed, dropping connection")) {
           return;
         }
 
@@ -317,12 +299,10 @@ void BrEdrConnectionManager::OnDisconnectionComplete(
       event.view().payload<hci::DisconnectionCompleteEventParams>();
 
   hci::ConnectionHandle handle = le16toh(params.connection_handle);
-  auto status = event.ToStatus();
-  if (!status) {
-    FXL_VLOG(1) << fxl::StringPrintf(
-        "gap: BrEdrConnectionManager: HCI disconnection error received "
-        "(status: \"%s\", handle: 0x%04x)",
-        status.ToString().c_str(), handle);
+  if (BTEV_TEST_WARN(
+          event,
+          fxl::StringPrintf(
+              "gap (BR/EDR): HCI disconnection error handle 0x%04x", handle))) {
     return;
   }
 
@@ -332,8 +312,7 @@ void BrEdrConnectionManager::OnDisconnectionComplete(
 
   if (it == connections_.end()) {
     FXL_VLOG(1) << fxl::StringPrintf(
-        "gap: BrEdrConnectionManager: disconnect from unknown handle 0x%04x",
-        handle);
+        "gap (BR/EDR): disconnect from unknown handle 0x%04x", handle);
     return;
   }
   std::string device = it->first;
@@ -341,9 +320,9 @@ void BrEdrConnectionManager::OnDisconnectionComplete(
   connections_.erase(it);
 
   FXL_LOG(INFO) << fxl::StringPrintf(
-      "gap: BrEdrConnectionManager: %s disconnected - "
-      "status: %s, handle: 0x%04x, reason: 0x%02x",
-      device.c_str(), status.ToString().c_str(), handle, params.reason);
+      "gap (BR/EDR): %s disconnected - %s, handle: 0x%04x, reason: 0x%02x",
+      device.c_str(), event.ToStatus().ToString().c_str(), handle,
+      params.reason);
 
   // TODO(NET-406): Inform L2CAP that the connection has been disconnected.
 

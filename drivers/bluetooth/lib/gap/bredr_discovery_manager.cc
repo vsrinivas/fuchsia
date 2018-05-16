@@ -73,20 +73,19 @@ void BrEdrDiscoveryManager::RequestDiscovery(DiscoveryCallback callback) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(callback);
 
-  FXL_LOG(INFO) << "gap: BrEdrDiscoveryManager: RequestDiscovery";
+  FXL_LOG(INFO) << "gap (BR/EDR): RequestDiscovery";
 
   // If we're already waiting on a callback, then scanning is already starting.
   // Queue this to create a session when the scanning starts.
   if (!pending_discovery_.empty()) {
-    FXL_VLOG(1)
-        << "gap: BrEdrDiscoveryManager: discovery starting, add to pending";
+    FXL_VLOG(1) << "gap (BR/EDR): discovery starting, add to pending";
     pending_discovery_.push(std::move(callback));
     return;
   }
 
   // If we're already scanning, just add a session.
   if (!discovering_.empty()) {
-    FXL_VLOG(1) << "gap: BrEdrDiscoveryManager: add to active sessions";
+    FXL_VLOG(1) << "gap (BR/EDR): add to active sessions";
     auto session = AddDiscoverySession();
     callback(hci::Status(), std::move(session));
     return;
@@ -99,11 +98,10 @@ void BrEdrDiscoveryManager::RequestDiscovery(DiscoveryCallback callback) {
 // Starts the inquiry procedure if any sessions exist or are waiting to start.
 void BrEdrDiscoveryManager::MaybeStartInquiry() {
   if (pending_discovery_.empty() && discovering_.empty()) {
-    FXL_VLOG(1)
-        << "gap: BrEdrDiscoveryManager: no sessions, not starting inquiry";
+    FXL_VLOG(1) << "gap (BR/EDR): no sessions, not starting inquiry";
     return;
   }
-  FXL_VLOG(1) << "gap: BrEdrDiscoveryManager: starting inqiury";
+  FXL_VLOG(1) << "gap (BR/EDR): starting inqiury";
 
   auto inquiry =
       hci::CommandPacket::New(hci::kInquiry, sizeof(hci::InquiryCommandParams));
@@ -119,10 +117,8 @@ void BrEdrDiscoveryManager::MaybeStartInquiry() {
           return;
         }
         auto status = event.ToStatus();
-        if (!status) {
+        if (BT_TEST_WARN(status, "gap (BR/EDR): inquiry failure")) {
           // Failure of some kind, signal error to the sessions.
-          FXL_LOG(WARNING) << "gap: BrEdrDiscoveryManager: inquiry failure: "
-                           << status.ToString();
           self->InvalidateDiscoverySessions();
           // Fallthrough for callback to pending sessions.
         }
@@ -144,12 +140,11 @@ void BrEdrDiscoveryManager::MaybeStartInquiry() {
 
         FXL_DCHECK(event.event_code() == hci::kInquiryCompleteEventCode);
 
-        if (!status) {
-          FXL_VLOG(1) << "gap: inquiry complete failure: " << status.ToString();
+        if (BT_TEST_VLOG(status, 2, "gap: inquiry complete failure")) {
           return;
         }
 
-        FXL_VLOG(1) << "gap: BrEdrDiscoveryManager: inquiry complete, restart";
+        FXL_VLOG(1) << "gap (BR/EDR): inquiry complete, restart";
         // We've stopped scanning because we timed out.
         self->MaybeStartInquiry();
       },
@@ -159,17 +154,12 @@ void BrEdrDiscoveryManager::MaybeStartInquiry() {
 // Stops the inquiry procedure.
 void BrEdrDiscoveryManager::StopInquiry() {
   FXL_DCHECK(result_handler_id_);
-  FXL_VLOG(2) << "gap: BrEdrDiscoveryManager: cancelling inquiry";
+  FXL_VLOG(2) << "gap (BR/EDR): cancelling inquiry";
 
   auto inq_cancel = hci::CommandPacket::New(hci::kInquiryCancel);
   hci_->command_channel()->SendCommand(
       std::move(inq_cancel), dispatcher_, [](long, const auto& event) {
-        auto status = event.ToStatus();
-        if (!status) {
-          FXL_LOG(WARNING)
-              << "gap: BrEdrDiscoveryManager: InquiryCancel failed: "
-              << status.ToString();
-        }
+        BTEV_TEST_WARN(event, "gap (BR/EDR): InquiryCancel failed");
       });
 }
 
@@ -181,7 +171,7 @@ void BrEdrDiscoveryManager::InquiryResult(const hci::EventPacket& event) {
   if ((event.view().payload_size() - sizeof(hci::InquiryResultEventParams)) %
           sizeof(hci::InquiryResult) !=
       0) {
-    FXL_LOG(INFO) << "gap: BrEdrDiscoveryManager: ignoring malformed result ("
+    FXL_LOG(INFO) << "gap (BR/EDR): ignoring malformed result ("
                   << event.view().payload_size() << " bytes)";
     return;
   }
@@ -207,7 +197,7 @@ void BrEdrDiscoveryManager::RequestDiscoverable(DiscoverableCallback callback) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(callback);
 
-  FXL_LOG(INFO) << "gap: BrEdrDiscoveryManager: RequestDiscoverable";
+  FXL_LOG(INFO) << "gap (BR/EDR): RequestDiscoverable";
 
   auto self = weak_ptr_factory_.GetWeakPtr();
   auto status_cb = [self, cb = callback.share()](const auto& status) {
@@ -215,15 +205,14 @@ void BrEdrDiscoveryManager::RequestDiscoverable(DiscoverableCallback callback) {
   };
 
   if (!pending_discoverable_.empty()) {
-    FXL_VLOG(1)
-        << "gap: BrEdrDiscoveryManager: discovering starting, add to pending";
+    FXL_VLOG(1) << "gap (BR/EDR): discovering starting, add to pending";
     pending_discoverable_.push(std::move(status_cb));
     return;
   }
 
   // If we're already discoverable, just add a session.
   if (!discoverable_.empty()) {
-    FXL_VLOG(1) << "gap: BrEdrDiscoveryManager: add to active discoverable";
+    FXL_VLOG(1) << "gap (BR/EDR): add to active discoverable";
     auto session = AddDiscoverableSession();
     callback(hci::Status(), std::move(session));
     return;
@@ -235,8 +224,8 @@ void BrEdrDiscoveryManager::RequestDiscoverable(DiscoverableCallback callback) {
 
 void BrEdrDiscoveryManager::SetInquiryScan() {
   bool enable = !discoverable_.empty() || !pending_discoverable_.empty();
-  FXL_VLOG(2) << "gap: BrEdrDiscoveryManager: "
-              << (enable ? "enabling" : "disabling") << " inquiry scan ";
+  FXL_VLOG(2) << "gap (BR/EDR): " << (enable ? "enabling" : "disabling")
+              << " inquiry scan ";
 
   auto self = weak_ptr_factory_.GetWeakPtr();
   auto scan_enable_cb = [self](auto, const hci::EventPacket& event) {
@@ -253,10 +242,7 @@ void BrEdrDiscoveryManager::SetInquiryScan() {
       }
     });
 
-    if (!status) {
-      FXL_LOG(WARNING)
-          << "gap: BrEdrDiscoveryManager: Read Scan Enable failed: "
-          << status.ToString();
+    if (BT_TEST_WARN(status, "gap (BR/EDR): Read Scan Enable failed: ")) {
       return;
     }
     bool enable =
@@ -267,7 +253,7 @@ void BrEdrDiscoveryManager::SetInquiryScan() {
         scan_type & static_cast<uint8_t>(hci::ScanEnableBit::kInquiry);
 
     if (enable == enabled) {
-      FXL_LOG(INFO) << "gap: BrEdrDiscoveryManager: inquiry scan already "
+      FXL_LOG(INFO) << "gap (BR/EDR): inquiry scan already "
                     << (enable ? "enabled" : "disabled");
       return;
     }
@@ -289,16 +275,11 @@ void BrEdrDiscoveryManager::SetInquiryScan() {
           if (!self) {
             return;
           }
-          auto status = event.ToStatus();
-          if (!status) {
-            FXL_LOG(WARNING)
-                << "gap: BrEdrDiscoveryManager: Write Scan Enable failed: "
-                << status.ToString();
-          }
+          BTEV_TEST_WARN(event, "gap (BR/EDR): Write Scan Enable failed");
           while (!self->pending_discoverable_.empty()) {
             auto cb = std::move(self->pending_discoverable_.front());
             self->pending_discoverable_.pop();
-            cb(status);
+            cb(event.ToStatus());
           }
         });
   };
@@ -310,7 +291,7 @@ void BrEdrDiscoveryManager::SetInquiryScan() {
 
 std::unique_ptr<BrEdrDiscoverySession>
 BrEdrDiscoveryManager::AddDiscoverySession() {
-  FXL_VLOG(2) << "gap: BrEdrDiscoveryManager: adding discovery session";
+  FXL_VLOG(2) << "gap (BR/EDR): adding discovery session";
   // Cannot use make_unique here since BrEdrDiscoverySession has a private
   // constructor.
   std::unique_ptr<BrEdrDiscoverySession> session(
@@ -322,7 +303,7 @@ BrEdrDiscoveryManager::AddDiscoverySession() {
 
 void BrEdrDiscoveryManager::RemoveDiscoverySession(
     BrEdrDiscoverySession* session) {
-  FXL_VLOG(2) << "gap: BrEdrDiscoveryManager: removing discovery session";
+  FXL_VLOG(2) << "gap (BR/EDR): removing discovery session";
   discovering_.erase(session);
   // TODO(jamuraa): When NET-619 is finished, cancel the running inquiry
   // With StopInquiry();
@@ -330,7 +311,7 @@ void BrEdrDiscoveryManager::RemoveDiscoverySession(
 
 std::unique_ptr<BrEdrDiscoverableSession>
 BrEdrDiscoveryManager::AddDiscoverableSession() {
-  FXL_VLOG(2) << "gap: BrEdrDiscoveryManager: adding discoverable session";
+  FXL_VLOG(2) << "gap (BR/EDR): adding discoverable session";
   // Cannot use make_unique here since BrEdrDiscoverableSession has a private
   // constructor.
   std::unique_ptr<BrEdrDiscoverableSession> session(
@@ -342,7 +323,7 @@ BrEdrDiscoveryManager::AddDiscoverableSession() {
 
 void BrEdrDiscoveryManager::RemoveDiscoverableSession(
     BrEdrDiscoverableSession* session) {
-  FXL_VLOG(2) << "gap: BrEdrDiscoveryManager: removing discoverable session";
+  FXL_VLOG(2) << "gap (BR/EDR): removing discoverable session";
   discoverable_.erase(session);
   if (discoverable_.empty()) {
     SetInquiryScan();

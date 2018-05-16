@@ -170,11 +170,8 @@ void BrEdrInterrogator::MakeRemoteNameRequest(const std::string& device_id) {
   it->second->callbacks.emplace_back(
       [device_id, self = weak_ptr_factory_.GetWeakPtr()](auto,
                                                          const auto& event) {
-        auto status = event.ToStatus();
-        if (!status) {
-          FXL_LOG(INFO)
-              << "hci: BrEdrInterrogator: falied retrieving remote name: "
-              << status.ToString();
+        if (BTEV_TEST_LOG(event, INFO,
+                          "gap (BR/EDR): RemoteNameRequest failed")) {
           self->Complete(device_id, event.ToStatus());
           return;
         }
@@ -227,10 +224,8 @@ void BrEdrInterrogator::ReadRemoteVersionInformation(
   it->second->callbacks.emplace_back([device_id,
                                       self = weak_ptr_factory_.GetWeakPtr()](
                                          auto, const auto& event) {
-    auto status = event.ToStatus();
-    if (!status) {
-      FXL_LOG(INFO) << "hci: BrEdrInterrogator: ReadRemoteVersionInfo failed: "
-                    << status.ToString();
+    if (BTEV_TEST_LOG(event, INFO,
+                      "gap (BR/EDR): ReadRemoteVersionInfo failed")) {
       self->Complete(device_id, event.ToStatus());
       return;
     }
@@ -277,11 +272,8 @@ void BrEdrInterrogator::ReadRemoteFeatures(const std::string& device_id,
   it->second->callbacks.emplace_back(
       [device_id, handle, self = weak_ptr_factory_.GetWeakPtr()](
           auto, const auto& event) {
-        auto status = event.ToStatus();
-        if (!status) {
-          FXL_LOG(INFO)
-              << "hci: BrEdrInterrogator: ReadRemoteSupportedFeatures failed: "
-              << status.ToString();
+        if (BTEV_TEST_LOG(event, INFO,
+                          "gap (BR/EDR): ReadRemoteSupportedFeatures failed")) {
           self->Complete(device_id, event.ToStatus());
           return;
         }
@@ -337,11 +329,8 @@ void BrEdrInterrogator::ReadRemoteExtendedFeatures(const std::string& device_id,
   it->second->callbacks.emplace_back(
       [device_id, self = weak_ptr_factory_.GetWeakPtr()](auto,
                                                          const auto& event) {
-        auto status = event.ToStatus();
-        if (!status) {
-          FXL_LOG(INFO)
-              << "hci: BrEdrInterrogator: ReadRemoteExtendedFeatures failed: "
-              << status.ToString();
+        if (BTEV_TEST_LOG(event, INFO,
+                          "gap (BR/EDR): ReadRemoteExtendedFeatures failed")) {
           self->Complete(device_id, event.ToStatus());
           return;
         }
