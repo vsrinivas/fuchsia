@@ -473,10 +473,12 @@ def main():
 
             prefix = "bt#%s: 0x%x => " % (frame_num, addr)
             call_loc = run_addr2line(arch, dso_full_path, "0x%x" % offset)
-            # In the case of inlined methods, it is more readable if the
-            # inlined lines are aligned to be to the right of "=>".
-            processed_lines.append(prefix +
-                    call_loc.replace("(inlined", (" " * len(prefix)) + "(inlined"))
+            if call_loc:
+              # In the case of inlined methods, it is more readable if the
+              # inlined lines are aligned to be to the right of "=>".
+              processed_lines.append(
+                  prefix + call_loc.replace("(inlined",
+                                            (" " * len(prefix)) + "(inlined"))
 
 if __name__ == '__main__':
     sys.exit(main())
