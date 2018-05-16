@@ -54,7 +54,7 @@ zx_status_t BlobfsChecker::CheckAllocatedCounts() const {
 
     if (inode_blocks_ + kStartBlockMinimum != alloc_blocks_) {
         FS_TRACE_ERROR("check: bitmap allocated blocks (%u) do not match inode allocated blocks "
-                       "(%lu)\n", alloc_blocks_, inode_blocks_ + kStartBlockMinimum);
+                       "(%" PRIu64 ")\n", alloc_blocks_, inode_blocks_ + kStartBlockMinimum);
         status = ZX_ERR_BAD_STATE;
     }
 
