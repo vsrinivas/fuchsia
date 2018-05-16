@@ -223,4 +223,8 @@ extern const char *unw_strerror (int);
 
 extern int unw_set_debug_level(int);
 
+// Avoid unw_* names for global variables because LLVM libunwind uses those
+// names too, and sanitizer ODR violation checks complain about the two
+// unrelated uses of the same name.
+#define unw_local_addr_space ngunwind_local_addr_space
 extern unw_addr_space_t unw_local_addr_space;
