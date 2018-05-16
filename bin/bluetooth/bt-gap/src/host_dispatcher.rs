@@ -125,7 +125,6 @@ impl HostDispatcher {
         Item = (fidl_bluetooth::Status, Option<Arc<DiscoveryRequestToken>>),
         Error = fidl::Error,
     > {
-        println!("Starting discovery");
         let strong_current_token = match hd.read().discovery {
             Some(ref token) => token.upgrade(),
             None => None,
@@ -133,8 +132,8 @@ impl HostDispatcher {
         if let Some(token) = strong_current_token {
             return Left(fok((bt_fidl_status!(), Some(Arc::clone(&token)))));
         }
-
-        match hd.write().get_active_id() {
+        let id = hd.write().get_active_id();
+        match id {
             Some(ref id) => {
                 let hdr = hd.read();
                 let adap = hdr.host_devices.get(id).unwrap();
@@ -176,7 +175,8 @@ impl HostDispatcher {
             return Left(fok((bt_fidl_status!(), Some(Arc::clone(&token)))));
         }
 
-        match hd.write().get_active_id() {
+        let id = hd.write().get_active_id();
+        match id {
             Some(ref id) => {
                 let hdr = hd.read();
                 let adap = hdr.host_devices.get(id).unwrap();
