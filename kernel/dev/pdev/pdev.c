@@ -10,7 +10,7 @@
 #include <pdev/pdev.h>
 #include <lk/init.h>
 
-static const bootdata_t* driver_bootdata = NULL;
+static const zbi_header_t* driver_zbi = NULL;
 
 extern const struct lk_pdev_init_struct __start_lk_pdev_init[];
 extern const struct lk_pdev_init_struct __stop_lk_pdev_init[];
@@ -26,29 +26,29 @@ static void pdev_init_driver(uint32_t type, const void* driver_data, uint32_t le
 }
 
 static void pdev_run_hooks(uint level) {
-    if (!driver_bootdata) return;
+    if (!driver_zbi) return;
 
-    const bootdata_t* bootdata = driver_bootdata;
-    DEBUG_ASSERT(bootdata->type == BOOTDATA_CONTAINER);
-    DEBUG_ASSERT(bootdata->extra == BOOTDATA_MAGIC);
+    const zbi_header_t* item = driver_zbi;
+    DEBUG_ASSERT(item->type == ZBI_TYPE_CONTAINER);
+    DEBUG_ASSERT(item->extra == ZBI_CONTAINER_MAGIC);
 
-    const uint8_t* start = (uint8_t*)bootdata + sizeof(bootdata_t);
-    const uint8_t* end = start + bootdata->length;
+    const uint8_t* start = (uint8_t*)item + sizeof(zbi_header_t);
+    const uint8_t* end = start + item->length;
 
-    while ((uint32_t)(end - start) > sizeof(bootdata_t)) {
-        bootdata = (const bootdata_t*)start;
-        if (bootdata->type == BOOTDATA_KERNEL_DRIVER) {
-            // kernel driver type is in bootdata extra
-            // driver data follows bootdata
-            pdev_init_driver(bootdata->extra, &bootdata[1], bootdata->length, level);
+    while ((uint32_t)(end - start) > sizeof(zbi_header_t)) {
+        item = (const zbi_header_t*)start;
+        if (item->type == ZBI_TYPE_KERNEL_DRIVER) {
+            // kernel driver type is in boot item extra
+            // driver data follows boot item
+            pdev_init_driver(item->extra, &item[1], item->length, level);
         }
-        start += BOOTDATA_ALIGN(sizeof(bootdata_t) + bootdata->length);
+        start += ZBI_ALIGN(sizeof(zbi_header_t) + item->length);
     }
 }
 
-void pdev_init(const bootdata_t* bootdata) {
-    ASSERT(bootdata);
-    driver_bootdata = bootdata;
+void pdev_init(const zbi_header_t* zbi) {
+    ASSERT(zbi);
+    driver_zbi = zbi;
 
     pdev_run_hooks(LK_INIT_LEVEL_PLATFORM_EARLY);
 }

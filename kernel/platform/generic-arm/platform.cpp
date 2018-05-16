@@ -50,12 +50,12 @@
 #endif
 
 #include <pdev/pdev.h>
-#include <zircon/boot/bootdata.h>
+#include <zircon/boot/image.h>
 #include <zircon/types.h>
 
 // Defined in start.S.
 extern paddr_t kernel_entry_paddr;
-extern paddr_t bootdata_paddr;
+extern paddr_t zbi_paddr;
 
 static void* ramdisk_base;
 static size_t ramdisk_size;
@@ -66,20 +66,20 @@ static uint cpu_cluster_cpus[SMP_CPU_MAX_CLUSTERS] = {0};
 static bool halt_on_panic = false;
 static bool uart_disabled = false;
 
-// all of the configured memory arenas from the bootdata
+// all of the configured memory arenas from the zbi
 // at the moment, only support 1 arena
 static pmm_arena_info_t mem_arena = {
     /* .name */ "sdram",
     /* .flags */ 0,
     /* .priority */ 0,
-    /* .base */ 0, // filled in by bootdata
-    /* .size */ 0, // filled in by bootdata
+    /* .base */ 0, // filled in by zbi
+    /* .size */ 0, // filled in by zbi
 };
 
-// bootdata to save for mexec
+// boot items to save for mexec
 // TODO(voydanoff): more generic way of doing this that can be shared with PC platform
-static uint8_t mexec_bootdata[4096];
-static size_t mexec_bootdata_length = 0;
+static uint8_t mexec_zbi[4096];
+static size_t mexec_zbi_length = 0;
 
 static volatile int panic_started;
 
@@ -245,25 +245,24 @@ static void platform_cpu_init(void) {
     }
 }
 
-static inline bool is_bootdata_container(void* addr) {
+static inline bool is_zbi_container(void* addr) {
     DEBUG_ASSERT(addr);
 
-    bootdata_t* header = (bootdata_t*)addr;
-
-    return header->type == BOOTDATA_CONTAINER;
+    zbi_header_t* item = (zbi_header_t*)addr;
+    return item->type == ZBI_TYPE_CONTAINER;
 }
 
-static void save_mexec_bootdata(bootdata_t* section) {
-    size_t length = BOOTDATA_ALIGN(section->length + sizeof(bootdata_t));
-    ASSERT(sizeof(mexec_bootdata) - mexec_bootdata_length >= length);
+static void save_mexec_zbi(zbi_header_t* item) {
+    size_t length = ZBI_ALIGN(item->length + sizeof(zbi_header_t));
+    ASSERT(sizeof(mexec_zbi) - mexec_zbi_length >= length);
 
-    memcpy(&mexec_bootdata[mexec_bootdata_length], section, length);
-    mexec_bootdata_length += length;
+    memcpy(&mexec_zbi[mexec_zbi_length], item, length);
+    mexec_zbi_length += length;
 }
 
-static void process_mem_range(const bootdata_mem_range_t* mem_range) {
+static void process_mem_range(const zbi_mem_range_t* mem_range) {
     switch (mem_range->type) {
-    case BOOTDATA_MEM_RANGE_RAM:
+    case ZBI_MEM_RANGE_RAM:
         if (mem_arena.size == 0) {
             mem_arena.base = mem_range->paddr;
             mem_arena.size = mem_range->length;
@@ -279,12 +278,12 @@ static void process_mem_range(const bootdata_mem_range_t* mem_range) {
             dprintf(INFO, "overriding mem arena 0 size from FDT: %#zx\n", mem_arena.size);
         }
         break;
-    case BOOTDATA_MEM_RANGE_PERIPHERAL: {
+    case ZBI_MEM_RANGE_PERIPHERAL: {
         auto status = add_periph_range(mem_range->paddr, mem_range->length);
         ASSERT(status == ZX_OK);
         break;
     }
-    case BOOTDATA_MEM_RANGE_RESERVED:
+    case ZBI_MEM_RANGE_RESERVED:
         dprintf(INFO, "boot reserve mem range: phys base %#" PRIx64 " length %#" PRIx64 "\n",
                 mem_range->paddr, mem_range->length);
         boot_reserve_add_range(mem_range->paddr, mem_range->length);
@@ -295,91 +294,91 @@ static void process_mem_range(const bootdata_mem_range_t* mem_range) {
     }
 }
 
-static void process_bootsection(bootdata_t* section) {
-    if (bootdata_is_metadata(section->type)) {
-        save_mexec_bootdata(section);
+static void process_boot_item(zbi_header_t* item) {
+    if (ZBI_TYPE_DRV_METADATA(item->type)) {
+        save_mexec_zbi(item);
         return;
     }
-    switch (section->type) {
-    case BOOTDATA_KERNEL_DRIVER:
-    case BOOTDATA_PLATFORM_ID:
+    switch (item->type) {
+    case ZBI_TYPE_KERNEL_DRIVER:
+    case ZBI_TYPE_PLATFORM_ID:
         // we don't process these here, but we need to save them for mexec
-        save_mexec_bootdata(section);
+        save_mexec_zbi(item);
         break;
-    case BOOTDATA_CMDLINE: {
-        if (section->length < 1) {
+    case ZBI_TYPE_CMDLINE: {
+        if (item->length < 1) {
             break;
         }
-        char* contents = reinterpret_cast<char*>(section) + sizeof(bootdata_t);
-        contents[section->length - 1] = '\0';
+        char* contents = reinterpret_cast<char*>(item) + sizeof(zbi_header_t);
+        contents[item->length - 1] = '\0';
         cmdline_append(contents);
         break;
     }
-    case BOOTDATA_MEM_CONFIG: {
-        bootdata_mem_range_t* mem_range = reinterpret_cast<bootdata_mem_range_t*>(section + 1);
-        uint32_t count = section->length / (uint32_t)sizeof(bootdata_mem_range_t);
+    case ZBI_TYPE_MEM_CONFIG: {
+        zbi_mem_range_t* mem_range = reinterpret_cast<zbi_mem_range_t*>(item + 1);
+        uint32_t count = item->length / (uint32_t)sizeof(zbi_mem_range_t);
         for (uint32_t i = 0; i < count; i++) {
             process_mem_range(mem_range++);
         }
-        save_mexec_bootdata(section);
+        save_mexec_zbi(item);
         break;
     }
-    case BOOTDATA_CPU_CONFIG: {
-        bootdata_cpu_config_t* cpu_config = reinterpret_cast<bootdata_cpu_config_t*>(section + 1);
+    case ZBI_TYPE_CPU_CONFIG: {
+        zbi_cpu_config_t* cpu_config = reinterpret_cast<zbi_cpu_config_t*>(item + 1);
         cpu_cluster_count = cpu_config->cluster_count;
         for (uint32_t i = 0; i < cpu_cluster_count; i++) {
             cpu_cluster_cpus[i] = cpu_config->clusters[i].cpu_count;
         }
         arch_init_cpu_map(cpu_cluster_count, cpu_cluster_cpus);
-        save_mexec_bootdata(section);
+        save_mexec_zbi(item);
         break;
     }
     }
 }
 
-static void process_bootdata(bootdata_t* root) {
+static void process_zbi(zbi_header_t* root) {
     DEBUG_ASSERT(root);
 
-    if (root->type != BOOTDATA_CONTAINER) {
+    if (root->type != ZBI_TYPE_CONTAINER) {
         printf("bootdata: invalid type = %08x\n", root->type);
         return;
     }
 
-    if (root->extra != BOOTDATA_MAGIC) {
-        printf("bootdata: invalid magic = %08x\n", root->extra);
+    if (root->extra != ZBI_CONTAINER_MAGIC) {
+        printf("ZBI: invalid magic = %08x\n", root->extra);
         return;
     }
 
-    size_t offset = sizeof(bootdata_t);
+    size_t offset = sizeof(zbi_header_t);
     const size_t length = (root->length);
 
-    if (!(root->flags & BOOTDATA_FLAG_V2)) {
-        printf("bootdata: v1 no longer supported\n");
+    if (!(root->flags & ZBI_FLAG_VERSION)) {
+        printf("ZBI: v1 no longer supported\n");
     }
 
     while (offset < length) {
         uintptr_t ptr = reinterpret_cast<const uintptr_t>(root);
-        bootdata_t* section = reinterpret_cast<bootdata_t*>(ptr + offset);
+        zbi_header_t* item = reinterpret_cast<zbi_header_t*>(ptr + offset);
 
-        process_bootsection(section);
-        offset += BOOTDATA_ALIGN(sizeof(bootdata_t) + section->length);
+        process_boot_item(item);
+        offset += ZBI_ALIGN(sizeof(zbi_header_t) + item->length);
     }
 }
 
 void platform_early_init(void) {
-    // if the bootdata_paddr variable is -1, it was not set
+    // if the zbi_paddr variable is -1, it was not set
     // in start.S, so we are in a bad place.
-    if (bootdata_paddr == -1UL) {
-        panic("no bootdata_paddr!\n");
+    if (zbi_paddr == -1UL) {
+        panic("no zbi_paddr!\n");
     }
 
-    void* bootdata_vaddr = paddr_to_physmap(bootdata_paddr);
+    void* zbi_vaddr = paddr_to_physmap(zbi_paddr);
 
     // initialize the boot memory reservation system
     boot_reserve_init();
 
-    if (bootdata_vaddr && is_bootdata_container(bootdata_vaddr)) {
-        bootdata_t* header = (bootdata_t*)bootdata_vaddr;
+    if (zbi_vaddr && is_zbi_container(zbi_vaddr)) {
+        zbi_header_t* header = (zbi_header_t*)zbi_vaddr;
 
         ramdisk_base = header;
         ramdisk_size = ROUNDUP(header->length + sizeof(*header), PAGE_SIZE);
@@ -391,16 +390,16 @@ void platform_early_init(void) {
         panic("no ramdisk!\n");
     }
 
-    bootdata_t* bootdata = reinterpret_cast<bootdata_t*>(ramdisk_base);
-    // walk the bootdata structure and process all the entries
-    process_bootdata(bootdata);
+    zbi_header_t* zbi = reinterpret_cast<zbi_header_t*>(ramdisk_base);
+    // walk the zbi structure and process all the items
+    process_zbi(zbi);
 
     // bring up kernel drivers after we have mapped our peripheral ranges
-    pdev_init(bootdata);
+    pdev_init(zbi);
 
     // Serial port should be active now
 
-    // Read cmdline after processing bootdata, which may contain cmdline data.
+    // Read cmdline after processing zbi, which may contain cmdline data.
     halt_on_panic = cmdline_get_bool("kernel.halt-on-panic", false);
 
     // Check if serial should be enabled
@@ -554,20 +553,19 @@ size_t platform_recover_crashlog(size_t len, void* cookie,
     return 0;
 }
 
-zx_status_t platform_mexec_patch_bootdata(uint8_t* bootdata, const size_t len) {
+zx_status_t platform_mexec_patch_bootdata(uint8_t* zbi, const size_t len) {
     size_t offset = 0;
 
-    // copy certain bootdata sections provided by the bootloader or boot shim
-    // to the mexec bootdata
-    while (offset < mexec_bootdata_length) {
-        bootdata_t* section = reinterpret_cast<bootdata_t*>(mexec_bootdata + offset);
+    // copy certain boot items provided by the bootloader or boot shim
+    // to the mexec zbi
+    while (offset < mexec_zbi_length) {
+        zbi_header_t* item = reinterpret_cast<zbi_header_t*>(mexec_zbi + offset);
         zx_status_t status;
-        status = bootdata_append_section(bootdata, len, reinterpret_cast<uint8_t*>(section + 1),
-                                         section->length, section->type, section->extra,
-                                         section->flags);
+        status = bootdata_append_section(zbi, len, reinterpret_cast<uint8_t*>(item + 1),
+                                         item->length, item->type, item->extra, item->flags);
         if (status != ZX_OK) return status;
 
-        offset += BOOTDATA_ALIGN(sizeof(bootdata_t) + section->length);
+        offset += ZBI_ALIGN(sizeof(zbi_header_t) + item->length);
     }
 
     return ZX_OK;
@@ -579,12 +577,12 @@ void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops,
     paddr_t kernel_src_phys = (paddr_t)ops[0].src;
     paddr_t kernel_dst_phys = (paddr_t)ops[0].dst;
 
-    // check to see if the kernel is packaged as a bootdata container
-    bootdata_t* header = (bootdata_t *)paddr_to_physmap(kernel_src_phys);
-    if (header[0].type == BOOTDATA_CONTAINER && header[1].type == BOOTDATA_KERNEL) {
-        bootdata_kernel_t* kernel_header = (bootdata_kernel_t *)&header[2];
+    // check to see if the kernel is packaged as a zbi container
+    zbi_header_t* header = (zbi_header_t *)paddr_to_physmap(kernel_src_phys);
+    if (header[0].type == ZBI_TYPE_CONTAINER && header[1].type == ZBI_TYPE_KERNEL) {
+        zbi_kernel_t* kernel_header = (zbi_kernel_t *)&header[2];
         // add offset from kernel header to entry point
-        kernel_dst_phys += kernel_header->entry64;
+        kernel_dst_phys += kernel_header->entry;
     }
     // else just jump to beginning of kernel image
 
