@@ -40,7 +40,7 @@ zx_status_t fb_alloc_image_buffer(zx_handle_t* vmo_out);
 //
 // If |type| is 0, the imported image has a linear memory layout. For any other
 // values, it is the responsibility of the image producer and display driver to
-// coordinate the meaning of |type|.
+// coordinate the meaning of |type|. All imported images must have the same type.
 zx_status_t fb_import_image(zx_handle_t handle, uint32_t type, uint64_t *id_out);
 void fb_release_image(uint64_t id);
 
