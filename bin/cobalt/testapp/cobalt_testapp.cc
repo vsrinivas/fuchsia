@@ -121,8 +121,7 @@ std::string StatusToString(cobalt::Status status) {
 
 class CobaltTestApp {
  public:
-  CobaltTestApp(bool use_network,
-                bool do_environment_test,
+  CobaltTestApp(bool use_network, bool do_environment_test,
                 int num_observations_per_batch)
       : use_network_(use_network),
         do_environment_test_(do_environment_test),
@@ -189,52 +188,39 @@ class CobaltTestApp {
 
   // Synchronously invokes AddStringObservation() |num_observations_per_batch_|
   // times using the given parameters. Then invokes CheckForSuccessfulSend().
-  bool EncodeStringAndSend(uint32_t metric_id,
-                           uint32_t encoding_config_id,
-                           std::string val,
-                           bool use_request_send_soon);
+  bool EncodeStringAndSend(uint32_t metric_id, uint32_t encoding_config_id,
+                           std::string val, bool use_request_send_soon);
 
   // Synchronously invokes AddIntObservation() |num_observations_per_batch_|
   // times using the given parameters.Then invokes CheckForSuccessfulSend().
-  bool EncodeIntAndSend(uint32_t metric_id,
-                        uint32_t encoding_config_id,
-                        int32_t val,
-                        bool use_request_send_soon);
+  bool EncodeIntAndSend(uint32_t metric_id, uint32_t encoding_config_id,
+                        int32_t val, bool use_request_send_soon);
 
   // Synchronously invokes AddIntBucketDistribution()
   // |num_observations_per_batch_| times using the given parameters. Then
   // invokes CheckForSuccessfulSend().
   bool EncodeIntDistributionAndSend(
-      uint32_t metric_id,
-      uint32_t encoding_config_id,
+      uint32_t metric_id, uint32_t encoding_config_id,
       std::map<uint32_t, uint64_t> distribution_map,
       bool use_request_send_soon);
 
   // Synchronously invokes AddDoubleObservation() |num_observations_per_batch_|
   // times using the given parameters.Then invokes CheckForSuccessfulSend().
-  bool EncodeDoubleAndSend(uint32_t metric_id,
-                           uint32_t encoding_config_id,
-                           double val,
-                           bool use_request_send_soon);
+  bool EncodeDoubleAndSend(uint32_t metric_id, uint32_t encoding_config_id,
+                           double val, bool use_request_send_soon);
 
   // Synchronously invokes AddIndexObservation() |num_observations_per_batch_|
   // times using the given parameters. Then invokes CheckForSuccessfulSend().
-  bool EncodeIndexAndSend(uint32_t metric_id,
-                          uint32_t encoding_config_id,
-                          uint32_t index,
-                          bool use_request_send_soon);
+  bool EncodeIndexAndSend(uint32_t metric_id, uint32_t encoding_config_id,
+                          uint32_t index, bool use_request_send_soon);
 
   // Synchronously invokes AddMultipartObservation() for an observation with
   // two string parts, |num_observations_per_batch_| times, using the given
   // parameters. Then invokes CheckForSuccessfulSend().
-  bool EncodeStringPairAndSend(uint32_t metric_id,
-                               std::string part0,
-                               uint32_t encoding_id0,
-                               std::string val0,
-                               std::string part1,
-                               uint32_t encoding_id1,
-                               std::string val1,
-                               bool use_request_send_soon);
+  bool EncodeStringPairAndSend(uint32_t metric_id, std::string part0,
+                               uint32_t encoding_id0, std::string val0,
+                               std::string part1, uint32_t encoding_id1,
+                               std::string val1, bool use_request_send_soon);
 
   bool EncodeTimerAndSend(uint32_t metric_id, uint32_t encoding_config_id,
                           uint32_t start_time, uint32_t end_time,
@@ -578,8 +564,7 @@ bool CobaltTestApp::EncodeStringAndSend(uint32_t metric_id,
 }
 
 bool CobaltTestApp::EncodeIntAndSend(uint32_t metric_id,
-                                     uint32_t encoding_config_id,
-                                     int32_t val,
+                                     uint32_t encoding_config_id, int32_t val,
                                      bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
     cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
@@ -603,10 +588,8 @@ bool CobaltTestApp::EncodeIntAndSend(uint32_t metric_id,
 }
 
 bool CobaltTestApp::EncodeIntDistributionAndSend(
-    uint32_t metric_id,
-    uint32_t encoding_config_id,
-    std::map<uint32_t, uint64_t> distribution_map,
-    bool use_request_send_soon) {
+    uint32_t metric_id, uint32_t encoding_config_id,
+    std::map<uint32_t, uint64_t> distribution_map, bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
     cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
     fidl::VectorPtr<cobalt::BucketDistributionEntry> distribution;
@@ -640,8 +623,7 @@ bool CobaltTestApp::EncodeIntDistributionAndSend(
 }
 
 bool CobaltTestApp::EncodeDoubleAndSend(uint32_t metric_id,
-                                        uint32_t encoding_config_id,
-                                        double val,
+                                        uint32_t encoding_config_id, double val,
                                         bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
     cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
@@ -746,14 +728,10 @@ bool CobaltTestApp::EncodeMultipartTimerAndSend(
   return CheckForSuccessfulSend(use_request_send_soon);
 }
 
-bool CobaltTestApp::EncodeStringPairAndSend(uint32_t metric_id,
-                                            std::string part0,
-                                            uint32_t encoding_id0,
-                                            std::string val0,
-                                            std::string part1,
-                                            uint32_t encoding_id1,
-                                            std::string val1,
-                                            bool use_request_send_soon) {
+bool CobaltTestApp::EncodeStringPairAndSend(
+    uint32_t metric_id, std::string part0, uint32_t encoding_id0,
+    std::string val0, std::string part1, uint32_t encoding_id1,
+    std::string val1, bool use_request_send_soon) {
   for (int i = 0; i < num_observations_per_batch_; i++) {
     cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
     fidl::VectorPtr<ObservationValue> parts(2);

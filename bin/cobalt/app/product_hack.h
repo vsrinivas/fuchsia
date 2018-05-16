@@ -11,6 +11,9 @@
 //
 // Do not deploy to production ever!!!!!!!
 
+#ifndef GARNET_BIN_COBALT_APP_PRODUCT_HACK_H_
+#define GARNET_BIN_COBALT_APP_PRODUCT_HACK_H_
+
 namespace cobalt {
 namespace hack {
 
@@ -40,3 +43,5 @@ std::string GetLayer() {
 
 }  // namespace hack
 }  // namespace cobalt
+
+#endif  // GARNET_BIN_COBALT_APP_PRODUCT_HACK_H_

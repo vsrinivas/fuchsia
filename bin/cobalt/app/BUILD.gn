@@ -18,8 +18,8 @@ source_set("lib") {
     "product_hack.h",
     "timer_manager.cc",
     "timer_manager.h",
-    "utils.h",
     "utils.cc",
+    "utils.h",
   ]
 
   public_deps = [
@@ -35,14 +35,13 @@ source_set("lib") {
     "//third_party/grpc:grpc++",
     "//third_party/protobuf:protobuf_lite",
   ]
-
 }
 
 executable("app") {
   output_name = "cobalt"
 
   sources = [
-   "cobalt_main.cc",
+    "cobalt_main.cc",
   ]
 
   deps = [
@@ -102,4 +101,3 @@ executable("cobalt_app_unittests") {
     "//garnet/public/lib/gtest",
   ]
 }
-

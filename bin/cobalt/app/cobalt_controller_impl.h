@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_COBALT_APP_COBALT_CONTROLLER_IMPL_H
-#define GARNET_BIN_COBALT_APP_COBALT_CONTROLLER_IMPL_H
+#ifndef GARNET_BIN_COBALT_APP_COBALT_CONTROLLER_IMPL_H_
+#define GARNET_BIN_COBALT_APP_COBALT_CONTROLLER_IMPL_H_
 
 #include <fuchsia/cpp/cobalt.h>
 #include <lib/async/cpp/task.h>
@@ -35,4 +35,4 @@ class CobaltControllerImpl : public CobaltController {
 };
 }  // namespace cobalt
 
-#endif  // GARNET_BIN_COBALT_APP_COBALT_CONTROLLER_IMPL_H
+#endif  // GARNET_BIN_COBALT_APP_COBALT_CONTROLLER_IMPL_H_

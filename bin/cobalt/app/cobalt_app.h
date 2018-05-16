@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_COBALT_APP_COBALT_APP_H
-#define GARNET_BIN_COBALT_APP_COBALT_APP_H
+#ifndef GARNET_BIN_COBALT_APP_COBALT_APP_H_
+#define GARNET_BIN_COBALT_APP_COBALT_APP_H_
 
 #include <stdlib.h>
 
@@ -56,4 +56,4 @@ class CobaltApp {
 
 }  // namespace cobalt
 
-#endif  // GARNET_BIN_COBALT_APP_COBALT_APP_H
+#endif  // GARNET_BIN_COBALT_APP_COBALT_APP_H_

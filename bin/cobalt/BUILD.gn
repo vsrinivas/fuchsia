@@ -55,4 +55,3 @@ package("cobalt_tests") {
     },
   ]
 }
-

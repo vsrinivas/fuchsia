@@ -13,10 +13,10 @@
 #include <zircon/device/device.h>
 #include <zircon/device/sysinfo.h>
 
-#include "lib/app/cpp/application_context.h"
 #include <fuchsia/cpp/cobalt.h>
-#include "lib/fsl/tasks/message_loop.h"
 #include <lib/zx/resource.h>
+#include "lib/app/cpp/application_context.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 const uint32_t kSystemMetricsProjectId = 102;
 const uint32_t kUptimeMetricId = 1;

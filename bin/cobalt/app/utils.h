@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_COBALT_APP_UTILS_H
-#define GARNET_BIN_COBALT_APP_UTILS_H
+#ifndef GARNET_BIN_COBALT_APP_UTILS_H_
+#define GARNET_BIN_COBALT_APP_UTILS_H_
 
 #include <stdlib.h>
 #include <string>
@@ -23,4 +23,4 @@ std::string ReadPublicKeyPem(const std::string& pem_file_path);
 
 }  // namespace cobalt
 
-#endif  // GARNET_BIN_COBALT_APP_UTILS_H
+#endif  // GARNET_BIN_COBALT_APP_UTILS_H_

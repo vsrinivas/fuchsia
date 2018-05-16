@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_COBALT_APP_TIMER_MANAGER_H
-#define GARNET_BIN_COBALT_APP_TIMER_MANAGER_H
+#ifndef GARNET_BIN_COBALT_APP_TIMER_MANAGER_H_
+#define GARNET_BIN_COBALT_APP_TIMER_MANAGER_H_
 
 #include <stdlib.h>
 
@@ -139,4 +139,4 @@ class TimerManager {
 
 }  // namespace cobalt
 
-#endif  // GARNET_BIN_COBALT_APP_TIMER_MANAGER_H
+#endif  // GARNET_BIN_COBALT_APP_TIMER_MANAGER_H_
