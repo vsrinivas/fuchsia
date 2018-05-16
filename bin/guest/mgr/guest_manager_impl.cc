@@ -26,6 +26,7 @@ void GuestManagerImpl::CreateEnvironment(
   uint32_t env_id = g_next_env_id++;
   auto env = std::make_unique<GuestEnvironmentImpl>(
       env_id, label, context_.get(), std::move(request));
+  env->set_unbound_handler([this, env_id]() { environments_.erase(env_id); });
   environments_.insert({env_id, std::move(env)});
 }
 

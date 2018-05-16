@@ -28,6 +28,10 @@ void GuestEnvironmentImpl::AddBinding(
   bindings_.AddBinding(this, std::move(request));
 }
 
+void GuestEnvironmentImpl::set_unbound_handler(std::function<void()> handler) {
+  bindings_.set_empty_set_handler(std::move(handler));
+}
+
 void GuestEnvironmentImpl::LaunchGuest(
     guest::GuestLaunchInfo launch_info,
     fidl::InterfaceRequest<guest::GuestController> controller,
@@ -56,11 +60,11 @@ void GuestEnvironmentImpl::LaunchGuest(
   guest_services.ConnectToService(remote_endpoint.NewRequest());
   vsock_endpoint->BindSocketEndpoint(std::move(remote_endpoint));
 
+  guest_app_controller.set_error_handler([this, cid] { guests_.erase(cid); });
   auto& label = launch_info.label ? launch_info.label : launch_info.url;
   auto holder = std::make_unique<GuestHolder>(
       cid, label, std::move(vsock_endpoint), std::move(guest_services),
       std::move(guest_app_controller));
-  guest_app_controller.set_error_handler([this, cid] { guests_.erase(cid); });
   holder->AddBinding(std::move(controller));
   guests_.insert({cid, std::move(holder)});
 

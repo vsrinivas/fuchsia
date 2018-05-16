@@ -13,12 +13,13 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/svc/cpp/services.h"
 
+static guest::GuestEnvironmentSyncPtr g_guest_env;
+
 void handle_launch(int argc, const char* argv[]) {
   // Create environment.
   guest::GuestManagerSyncPtr guestmgr;
   component::ConnectToEnvironmentService(guestmgr.NewRequest());
-  guest::GuestEnvironmentSyncPtr guest_env;
-  guestmgr->CreateEnvironment(argv[0], guest_env.NewRequest());
+  guestmgr->CreateEnvironment(argv[0], g_guest_env.NewRequest());
 
   // Launch guest.
   guest::GuestLaunchInfo launch_info;
@@ -27,8 +28,10 @@ void handle_launch(int argc, const char* argv[]) {
     launch_info.vmm_args.push_back(argv[i + 1]);
   }
   guest::GuestInfo guest_info;
-  guest_env->LaunchGuest(std::move(launch_info),
-                         g_guest_controller.NewRequest(), &guest_info);
+  g_guest_env->LaunchGuest(std::move(launch_info),
+                           g_guest_controller.NewRequest(), &guest_info);
+  g_guest_controller.set_error_handler(
+      [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
 
   // Create the framebuffer view.
   views_v1::ViewProviderSyncPtr view_provider;
