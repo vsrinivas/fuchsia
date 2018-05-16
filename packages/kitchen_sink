@@ -1,7 +1,6 @@
 {
     "imports": [
         "garnet/packages/kitchen_sink",
-        "peridot/packages/all",
-        "peridot/packages/config/device_runner"
+        "peridot/packages/all"
     ]
 }
