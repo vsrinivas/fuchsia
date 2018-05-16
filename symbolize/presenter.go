@@ -32,7 +32,7 @@ func (b *BasicPresenter) WriteLine(res OutputLine) {
 		}()
 	}
 	if hdr, ok := res.header.(logHeader); ok {
-		fmt.Fprintf(b.output, "[%.3f] %d.%d> ", hdr.time, hdr.process, hdr.thread)
+		fmt.Fprintf(b.output, "[%.3f] %05d.%05d> ", hdr.time, hdr.process, hdr.thread)
 	}
 	res.line.Accept(b)
 	fmt.Fprint(b.output, "\n")
