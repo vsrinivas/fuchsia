@@ -29,7 +29,14 @@ static const pbus_dev_t fanctl_dev = {
 };
 
 zx_status_t vim2_fanctl_init(vim_bus_t* bus) {
-    zx_status_t status = pbus_device_add(&bus->pbus, &fanctl_dev, 0);
+
+    zx_status_t status = pbus_wait_protocol(&bus->pbus, ZX_PROTOCOL_SCPI);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "vim_gpio_init: pbus_wait_protocol failed: %d\n", status);
+        return status;
+    }
+
+    status = pbus_device_add(&bus->pbus, &fanctl_dev, 0);
     if (status != ZX_OK) {
         zxlogf(ERROR, "vim2_fanctl_init: pbus_device_add failed: %d\n", status);
         return status;

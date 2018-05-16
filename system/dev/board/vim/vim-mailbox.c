@@ -75,6 +75,12 @@ zx_status_t vim2_mailbox_init(vim_bus_t* bus) {
         return status;
     }
 
+    status = pbus_wait_protocol(&bus->pbus, ZX_PROTOCOL_MAILBOX);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "vim_gpio_init: pbus_wait_protocol failed: %d\n", status);
+        return status;
+    }
+
     status = pbus_device_add(&bus->pbus, &scpi_dev, PDEV_ADD_PBUS_DEVHOST);
     if (status != ZX_OK) {
         zxlogf(ERROR, "vim2_mailbox_init: pbus_device_add SCPI failed: %d\n", status);

@@ -107,15 +107,16 @@ static zx_status_t aml_scpi_get_dvfs_info(void* ctx, uint8_t power_domain, scpi_
         return ZX_ERR_INVALID_ARGS;
     }
 
-    SCPI_INFO("Cluster %u details\n", power_domain);
-    SCPI_INFO("Number of operating_points %u\n", aml_dvfs_info.operating_points);
-    SCPI_INFO("latency %u uS\n", aml_dvfs_info.latency);
+    zxlogf(INFO, "Cluster %u details\n", power_domain);
+    zxlogf(INFO, "Number of operating_points %u\n", aml_dvfs_info.operating_points);
+    zxlogf(INFO, "latency %u uS\n", aml_dvfs_info.latency);
 
     for (uint32_t i=0; i<opps->count; i++) {
         opps->opp[i].freq_hz = aml_dvfs_info.opp[i].freq_hz;
         opps->opp[i].volt_mv = aml_dvfs_info.opp[i].volt_mv;
-        SCPI_INFO("Freq %.2f Ghz\n", (opps->opp[i].freq_hz)/(double)1000000000);
-        SCPI_INFO("Voltage %.2f V\n", (opps->opp[i].volt_mv)/(double)1000);
+        zxlogf(INFO, "Operating point %d - ", i);
+        zxlogf(INFO, "Freq %.4f Ghz ", (opps->opp[i].freq_hz)/(double)1000000000);
+        zxlogf(INFO, "Voltage %.4f V\n", (opps->opp[i].volt_mv)/(double)1000);
     }
     return ZX_OK;
 }
