@@ -3,19 +3,20 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/guest/cli/socat.h"
-
 #include <iostream>
 
 #include <guest/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/bin/guest/cli/serial.h"
 #include "lib/app/cpp/environment_services.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/logging.h"
 
 class SocketAcceptor : public guest::SocketAcceptor {
  public:
-  SocketAcceptor(uint32_t port) : port_(port) {}
+  SocketAcceptor(uint32_t port, async::Loop* loop)
+      : port_(port), console_(loop) {}
 
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
               AcceptCallback callback) {
@@ -27,14 +28,17 @@ class SocketAcceptor : public guest::SocketAcceptor {
       return;
     }
     callback(ZX_OK, std::move(h2));
-    handle_serial(std::move(h1));
+    console_.Start(std::move(h2));
   }
 
  private:
   uint32_t port_;
+  SerialConsole console_;
 };
 
 void handle_socat_listen(uint32_t env_id, uint32_t port) {
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+
   guest::GuestManagerSyncPtr guestmgr;
   component::ConnectToEnvironmentService(guestmgr.NewRequest());
   guest::GuestEnvironmentSyncPtr guest_env;
@@ -43,17 +47,21 @@ void handle_socat_listen(uint32_t env_id, uint32_t port) {
   guest::ManagedSocketEndpointSyncPtr vsock_endpoint;
   guest_env->GetHostSocketEndpoint(vsock_endpoint.NewRequest());
 
-  static SocketAcceptor acceptor(port);
-  static fidl::Binding<guest::SocketAcceptor> binding(&acceptor);
+  SocketAcceptor acceptor(port, &loop);
+  fidl::Binding<guest::SocketAcceptor> binding(&acceptor);
   zx_status_t status;
   vsock_endpoint->Listen(port, binding.NewBinding(), &status);
   if (status != ZX_OK) {
     std::cerr << "Failed to listen on port " << port << "\n";
-    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+    return;
   }
+
+  loop.Run();
 }
 
 void handle_socat_connect(uint32_t env_id, uint32_t cid, uint32_t port) {
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+
   guest::GuestManagerSyncPtr guestmgr;
   component::ConnectToEnvironmentService(guestmgr.NewRequest());
   guest::GuestEnvironmentSyncPtr guest_env;
@@ -67,8 +75,10 @@ void handle_socat_connect(uint32_t env_id, uint32_t cid, uint32_t port) {
   vsock_endpoint->Connect(cid, port, &status, &socket);
   if (status != ZX_OK) {
     std::cerr << "Failed to connect " << status << "\n";
-    fsl::MessageLoop::GetCurrent()->PostQuitTask();
     return;
   }
-  handle_serial(std::move(socket));
+
+  SerialConsole console(&loop);
+  console.Start(std::move(socket));
+  loop.Run();
 }

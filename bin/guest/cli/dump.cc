@@ -4,11 +4,11 @@
 
 #include "garnet/bin/guest/cli/dump.h"
 
+#include <guest/cpp/fidl.h>
 #include <pretty/hexdump.h>
 #include <iostream>
 
-#include "garnet/bin/guest/cli/service.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/app/cpp/environment_services.h"
 
 static void dump(zx::vmo vmo, zx_vaddr_t addr, size_t len) {
   uint64_t vmo_size;
@@ -35,13 +35,19 @@ static void dump(zx::vmo vmo, zx_vaddr_t addr, size_t len) {
 }
 
 void handle_dump(uint32_t env_id, uint32_t cid, zx_vaddr_t addr, size_t len) {
-  guest::GuestController* controller = connect(env_id, cid);
-  if (controller == nullptr) {
-    fsl::MessageLoop::GetCurrent()->PostQuitTask();
-    return;
-  }
-  controller->FetchGuestMemory([addr, len](zx::vmo vmo) {
+  // Connect to environment.
+  guest::GuestManagerSyncPtr guestmgr;
+  component::ConnectToEnvironmentService(guestmgr.NewRequest());
+  guest::GuestEnvironmentSyncPtr env_ptr;
+  guestmgr->ConnectToEnvironment(env_id, env_ptr.NewRequest());
+
+  guest::GuestControllerSyncPtr guest_controller;
+  env_ptr->ConnectToGuest(cid, guest_controller.NewRequest());
+
+  // Fetch the VMO and dump.
+  zx::vmo vmo;
+  guest_controller->FetchGuestMemory(&vmo);
+  if (vmo) {
     dump(std::move(vmo), addr, len);
-    fsl::MessageLoop::GetCurrent()->PostQuitTask();
-  });
+  }
 }

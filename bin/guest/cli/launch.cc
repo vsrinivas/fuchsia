@@ -10,32 +10,32 @@
 
 #include "garnet/bin/guest/cli/serial.h"
 #include "lib/app/cpp/environment_services.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/svc/cpp/services.h"
 
-static guest::GuestEnvironmentSyncPtr g_guest_env;
-
 void handle_launch(int argc, const char* argv[]) {
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+
   // Create environment.
   guest::GuestManagerSyncPtr guestmgr;
   component::ConnectToEnvironmentService(guestmgr.NewRequest());
-  guestmgr->CreateEnvironment(argv[0], g_guest_env.NewRequest());
+  guest::GuestEnvironmentSyncPtr guest_env;
+  guestmgr->CreateEnvironment(argv[0], guest_env.NewRequest());
 
   // Launch guest.
+  guest::GuestControllerPtr guest_controller;
   guest::GuestLaunchInfo launch_info;
   launch_info.url = argv[0];
   for (int i = 0; i < argc - 1; ++i) {
     launch_info.vmm_args.push_back(argv[i + 1]);
   }
   guest::GuestInfo guest_info;
-  g_guest_env->LaunchGuest(std::move(launch_info),
-                           g_guest_controller.NewRequest(), &guest_info);
-  g_guest_controller.set_error_handler(
-      [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+  guest_env->LaunchGuest(std::move(launch_info), guest_controller.NewRequest(),
+                         &guest_info);
+  guest_controller.set_error_handler([&loop] { loop.Shutdown(); });
 
   // Create the framebuffer view.
   views_v1::ViewProviderSyncPtr view_provider;
-  g_guest_controller->FetchViewProvider(view_provider.NewRequest());
+  guest_controller->FetchViewProvider(view_provider.NewRequest());
   fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner;
   view_provider->CreateView(view_owner.NewRequest(), nullptr);
 
@@ -45,5 +45,9 @@ void handle_launch(int argc, const char* argv[]) {
   presenter->Present(std::move(view_owner), nullptr);
 
   // Open the serial service of the guest and process IO.
-  handle_serial(g_guest_controller.get());
+  zx::socket socket;
+  SerialConsole console(&loop);
+  guest_controller->FetchGuestSerial(
+      [&console](zx::socket socket) { console.Start(std::move(socket)); });
+  loop.Run();
 }

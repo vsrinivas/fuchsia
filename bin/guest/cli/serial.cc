@@ -10,10 +10,10 @@
 #include <fdio/util.h>
 #include <lib/async/cpp/wait.h>
 
-#include "garnet/bin/guest/cli/service.h"
+#include "lib/app/cpp/environment_services.h"
 #include "lib/fsl/socket/socket_drainer.h"
 #include "lib/fsl/tasks/fd_waiter.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/logging.h"
 
 // Reads bytes from stdin and writes them to a socket provided by the guest.
 // These bytes are generally delivered to emulated serial devices (ex:
@@ -84,7 +84,7 @@ class InputReader {
 // virtio-console).
 class OutputWriter : public fsl::SocketDrainer::Client {
  public:
-  OutputWriter() : socket_drainer_(this) {}
+  OutputWriter(async::Loop* loop) : loop_(loop), socket_drainer_(this) {}
 
   void Start(zx::socket socket) { socket_drainer_.Start(std::move(socket)); }
 
@@ -95,30 +95,51 @@ class OutputWriter : public fsl::SocketDrainer::Client {
   }
 
   void OnDataComplete() override {
-    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+    loop_->Shutdown();
   }
 
  private:
+  async::Loop* loop_;
   fsl::SocketDrainer socket_drainer_;
 };
 
-// Watch stdin for new input.
-static fbl::unique_ptr<InputReader> input_reader;
-// Write socket output to stdout.
-static fbl::unique_ptr<OutputWriter> output_writer;
+SerialConsole::SerialConsole(async::Loop* loop)
+    : loop_(loop),
+      input_reader_(std::make_unique<InputReader>()),
+      output_writer_(std::make_unique<OutputWriter>(loop)) {}
+
+SerialConsole::SerialConsole(SerialConsole&& o)
+    : loop_(o.loop_),
+      input_reader_(std::move(o.input_reader_)),
+      output_writer_(std::move(o.output_writer_)) {}
+
+SerialConsole::~SerialConsole() = default;
+
+void SerialConsole::Start(zx::socket socket) {
+  input_reader_->Start(socket.get());
+  output_writer_->Start(std::move(socket));
+}
 
 void handle_serial(uint32_t env_id, uint32_t cid) {
-  handle_serial(connect(env_id, cid));
-}
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-void handle_serial(guest::GuestController* guest_controller) {
-  guest_controller->FetchGuestSerial(
-      static_cast<void (*)(zx::socket)>(handle_serial));
-}
+  // Connect to environment.
+  guest::GuestManagerSyncPtr guestmgr;
+  component::ConnectToEnvironmentService(guestmgr.NewRequest());
+  guest::GuestEnvironmentSyncPtr env_ptr;
+  guestmgr->ConnectToEnvironment(env_id, env_ptr.NewRequest());
 
-void handle_serial(zx::socket socket) {
-  input_reader.reset(new InputReader);
-  output_writer.reset(new OutputWriter);
-  input_reader->Start(socket.get());
-  output_writer->Start(std::move(socket));
+  guest::GuestControllerSyncPtr guest_controller;
+  env_ptr->ConnectToGuest(cid, guest_controller.NewRequest());
+
+  // Open the serial service of the guest and process IO.
+  zx::socket socket;
+  guest_controller->FetchGuestSerial(&socket);
+  if (!socket) {
+    std::cerr << "Failed to open serial port\n";
+    return;
+  }
+  SerialConsole console(&loop);
+  console.Start(std::move(socket));
+  loop.Run();
 }

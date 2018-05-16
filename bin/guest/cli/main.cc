@@ -11,7 +11,6 @@
 #include "garnet/bin/guest/cli/list.h"
 #include "garnet/bin/guest/cli/serial.h"
 #include "garnet/bin/guest/cli/socat.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -44,7 +43,7 @@ static bool parse_args(int argc, const char** argv, CommandFunc* func) {
     return false;
   }
   fxl::StringView cmd_view(argv[1]);
-  if (cmd_view == "dump" && argc == 5) {
+  if (cmd_view == "dump" && argc == 6) {
     uint32_t env_id;
     if (!parse_id(argv[2], &env_id)) {
       return false;
@@ -124,7 +123,6 @@ static bool parse_args(int argc, const char** argv, CommandFunc* func) {
 }
 
 int main(int argc, const char** argv) {
-  fsl::MessageLoop loop;
   CommandFunc func;
   if (!parse_args(argc, argv, &func)) {
     usage();
@@ -132,6 +130,5 @@ int main(int argc, const char** argv) {
   }
 
   func();
-  loop.Run();
   return 0;
 }
