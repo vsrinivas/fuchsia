@@ -6,6 +6,12 @@ declare_args() {
   # List of packages (a comma-separated string).  If unset, guessed based
   # on which layer is found in the //.jiri_manifest file.
   fuchsia_packages = []
+
+  # TODO(BLD-19): This is ignored for now so that bot recipes can be
+  # updated to start using it before
+  # https://fuchsia-review.googlesource.com/c/build/+/143920 lands to
+  # actually implement it.
+  synthesize_packages = []
 }
 
 if (fuchsia_packages == []) {
