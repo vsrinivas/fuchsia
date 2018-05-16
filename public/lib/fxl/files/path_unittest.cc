@@ -3,9 +3,13 @@
 // found in the LICENSE file.
 
 #include "lib/fxl/files/path.h"
+
+#include <fcntl.h>
+
 #include "gtest/gtest.h"
 #include "lib/fxl/build_config.h"
 #include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 
 namespace files {
@@ -209,6 +213,18 @@ TEST(Path, DeletePath) {
   EXPECT_FALSE(IsDirectory(sub_dir));
 }
 
+TEST(Path, DeletePathAt) {
+  ScopedTempDir dir;
+  fxl::UniqueFD root(open(dir.path().c_str(), O_PATH));
+  ASSERT_TRUE(root.is_valid());
+
+  std::string sub_dir = "dir";
+  CreateDirectoryAt(root.get(), sub_dir);
+  EXPECT_TRUE(IsDirectoryAt(root.get(), sub_dir));
+  EXPECT_TRUE(DeletePathAt(root.get(), sub_dir, false));
+  EXPECT_FALSE(IsDirectoryAt(root.get(), sub_dir));
+}
+
 TEST(Path, DeletePathRecursively) {
   ScopedTempDir dir;
 
@@ -230,6 +246,31 @@ TEST(Path, DeletePathRecursively) {
   EXPECT_TRUE(DeletePath(sub_dir, true));
   EXPECT_FALSE(IsDirectory(sub_dir));
   EXPECT_FALSE(IsDirectory(sub_sub_dir1));
+}
+
+TEST(Path, DeletePathRecursivelyAt) {
+  ScopedTempDir dir;
+  fxl::UniqueFD root(open(dir.path().c_str(), O_PATH));
+  ASSERT_TRUE(root.is_valid());
+
+  std::string sub_dir = "dir";
+  CreateDirectoryAt(root.get(), sub_dir);
+  EXPECT_TRUE(IsDirectoryAt(root.get(), sub_dir));
+
+  std::string sub_sub_dir1 = sub_dir + "/dir1";
+  CreateDirectoryAt(root.get(), sub_sub_dir1);
+  EXPECT_TRUE(IsDirectoryAt(root.get(), sub_sub_dir1));
+  std::string sub_sub_dir2 = sub_dir + "/dir2";
+  CreateDirectoryAt(root.get(), sub_sub_dir2);
+  EXPECT_TRUE(IsDirectoryAt(root.get(), sub_sub_dir2));
+
+  EXPECT_FALSE(DeletePathAt(root.get(), sub_dir, false));
+  EXPECT_TRUE(IsDirectoryAt(root.get(), sub_dir));
+  EXPECT_TRUE(IsDirectoryAt(root.get(), sub_sub_dir1));
+
+  EXPECT_TRUE(DeletePathAt(root.get(), sub_dir, true));
+  EXPECT_FALSE(IsDirectoryAt(root.get(), sub_dir));
+  EXPECT_FALSE(IsDirectoryAt(root.get(), sub_sub_dir1));
 }
 
 }  // namespace

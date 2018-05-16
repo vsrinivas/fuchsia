@@ -20,6 +20,7 @@
 #include <memory>
 
 #include "lib/fxl/files/directory.h"
+#include "lib/fxl/logging.h"
 
 namespace files {
 namespace {
@@ -226,6 +227,11 @@ bool DeletePath(const std::string& path, bool recursive) {
                              ""};
   int a = SHFileOperationA(&file_op);
   return (a == 0);
+}
+
+bool DeletePath(int root_fd, const std::string& path, bool recursive) {
+  FXL_NOTIMPLEMENTED();
+  return false;
 }
 
 }  // namespace files
