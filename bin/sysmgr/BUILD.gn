@@ -37,8 +37,8 @@ package("sysmgr") {
 
   meta = [
     {
-      path = rebase_path("meta/sandbox")
-      dest = "sandbox"
+      path = rebase_path("meta/sysmgr.cmx")
+      dest = "sysmgr.cmx"
     },
   ]
 }

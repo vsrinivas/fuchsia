@@ -17,10 +17,12 @@
 
 #include <utility>
 
+#include "garnet/bin/appmgr/cmx_metadata.h"
 #include "garnet/bin/appmgr/dynamic_library_loader.h"
 #include "garnet/bin/appmgr/hub/realm_hub.h"
 #include "garnet/bin/appmgr/namespace_builder.h"
 #include "garnet/bin/appmgr/runtime_metadata.h"
+#include "garnet/bin/appmgr/sandbox_metadata.h"
 #include "garnet/bin/appmgr/url_resolver.h"
 #include "garnet/lib/far/format.h"
 #include "lib/app/cpp/connect.h"
@@ -427,6 +429,8 @@ void Realm::CreateApplicationFromPackage(
 
   zx::channel pkg;
   std::unique_ptr<archive::FileSystem> pkg_fs;
+  std::string cmx_data;
+  std::string cmx_path = CmxMetadata::GetCmxPath(package->resolved_url.get());
   std::string sandbox_data;
   std::string runtime_data;
   ExportedDirType exported_dir_layout(ExportedDirType::kPublicDebugCtrlLayout);
@@ -437,6 +441,7 @@ void Realm::CreateApplicationFromPackage(
     pkg_fs =
         std::make_unique<archive::FileSystem>(std::move(package->data->vmo));
     pkg = pkg_fs->OpenAsDirectory();
+    pkg_fs->GetFileAsString(cmx_path, &cmx_data);
     pkg_fs->GetFileAsString(kSandboxPath, &sandbox_data);
     if (!pkg_fs->GetFileAsString(kRuntimePath, &runtime_data))
       app_data = pkg_fs->GetFileAsVMO(kAppPath);
@@ -446,6 +451,9 @@ void Realm::CreateApplicationFromPackage(
   } else if (package->directory) {
     fxl::UniqueFD fd =
         fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
+    if (!cmx_path.empty()) {
+      files::ReadFileToStringAt(fd.get(), cmx_path, &cmx_data);
+    }
     files::ReadFileToStringAt(fd.get(), kSandboxPath, &sandbox_data);
     if (!files::ReadFileToStringAt(fd.get(), kRuntimePath, &runtime_data))
       VmoFromFilenameAt(fd.get(), kAppPath, &app_data);
@@ -468,12 +476,20 @@ void Realm::CreateApplicationFromPackage(
   builder.AddPackage(std::move(pkg));
   builder.AddServices(std::move(svc));
 
-  if (!sandbox_data.empty()) {
+  // If meta/*.cmx exists, read sandbox data from it, instead of meta/sandbox.
+  // TODO(CP-37): Remove meta/sandbox once completely migrated.
+  if (!sandbox_data.empty() || !cmx_data.empty()) {
     SandboxMetadata sandbox;
-    if (!sandbox.Parse(sandbox_data)) {
-      FXL_LOG(ERROR) << "Failed to parse sandbox metadata for "
-                     << launch_info.url;
-      return;
+
+    CmxMetadata cmx;
+    if (!cmx_data.empty()) {
+      sandbox.Parse(cmx.ParseSandboxMetadata(cmx_data));
+    } else {
+      if (!sandbox.Parse(sandbox_data)) {
+        FXL_LOG(ERROR) << "Failed to parse sandbox metadata for "
+                       << launch_info.url;
+        return;
+      }
     }
 
     // If an app has the "shell" feature, then we use the libraries from the
