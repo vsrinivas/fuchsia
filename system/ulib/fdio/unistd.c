@@ -1769,12 +1769,20 @@ struct dirent* readdir(DIR* dir) {
             if (dir->size >= vde->size) {
                 dir->ptr += vde->size;
                 dir->size -= vde->size;
-                if (vde->name[0]) {
-                    de->d_ino = 0;
+                if (vde->name[0] != '\0') {
+                    size_t namelen = strlen(vde->name) + 1;
+                    // Traditionally d_ino==0 indicates a deleted entry that
+                    // should be ignored.  No standard requires that d_ino
+                    // be nonzero, but it's good to avoid tripping up old
+                    // code that checks for d_ino==0.
+                    de->d_ino = 42;
                     de->d_off = 0;
-                    de->d_reclen = 0;
+                    // The d_reclen field is nonstandard, but existing code
+                    // may expect it to be useful as an upper bound on the
+                    // length of the name.
+                    de->d_reclen = offsetof(struct dirent, d_name) + namelen;
                     de->d_type = vde->type;
-                    strcpy(de->d_name, vde->name);
+                    memcpy(de->d_name, vde->name, namelen);
                     break;
                 } else {
                     // skip nameless entries.
