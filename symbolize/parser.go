@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"regexp"
 	"strings"
 )
 
@@ -188,6 +189,7 @@ func StartParsing(ctx context.Context, reader io.Reader) <-chan InputLine {
 	out := make(chan InputLine)
 	// This is not used for demuxing. It is a human readable line number.
 	var lineno uint64 = 1
+	re := regexp.MustCompile(`\[[0-9]+\.[0-9]+\] [0-9]+\.[0-9]+>`)
 	go func() {
 		defer close(out)
 		scanner := bufio.NewScanner(reader)
@@ -199,9 +201,24 @@ func StartParsing(ctx context.Context, reader io.Reader) <-chan InputLine {
 			}
 			text := ParserState(scanner.Text())
 			b := &text
-			// If there is some stuff at the start, make it into a dummy line.
-			dummyText, err := b.onlyBefore("[")
-			if err == nil && dummyText != "" {
+			// Get the dummyText and needed text.
+			locs := re.FindStringIndex(string(text))
+			if locs == nil {
+				// This means the whole thing is dummy text.
+				var line InputLine
+				line.source = dummySource{}
+				line.msg = string(text)
+				line.lineno = lineno
+				// Make sure to increase the lineno
+				lineno++
+				out <- line
+				// Read next line
+				continue
+			}
+			// Check for dummy text
+			if locs[0] > 0 {
+				// This means we found a match but there was some junk at the start.
+				dummyText := string(text[:locs[0]])
 				var line InputLine
 				line.source = dummySource{}
 				line.msg = dummyText
@@ -209,6 +226,8 @@ func StartParsing(ctx context.Context, reader io.Reader) <-chan InputLine {
 				line.lineno = lineno
 				out <- line
 			}
+			// Advance b to the correct start
+			*b = (*b)[locs[0]:]
 			// Now attempt to parse the log line
 			line, err := ParseLogLine(b)
 			line.lineno = lineno
