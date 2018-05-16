@@ -71,6 +71,12 @@ class FakeLayer final : public L2CAP {
     LEConnectionParameterUpdateCallback le_conn_param_cb;
   };
 
+  LinkData* RegisterInternal(hci::ConnectionHandle handle,
+                             hci::Connection::Role role,
+                             hci::Connection::LinkType link_type,
+                             LinkErrorCallback link_error_callback,
+                             async_t* dispatcher);
+
   bool initialized_ = false;
   std::unordered_map<hci::ConnectionHandle, LinkData> links_;
   ChannelCallback chan_cb_;

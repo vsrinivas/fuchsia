@@ -41,17 +41,8 @@ void FakeLayer::RegisterACL(hci::ConnectionHandle handle,
   if (!initialized_)
     return;
 
-  FXL_DCHECK(links_.find(handle) == links_.end())
-      << "l2cap: Connection handle re-used!";
-
-  LinkData data;
-  data.handle = handle;
-  data.role = role;
-  data.type = hci::Connection::LinkType::kACL;
-  data.link_error_cb = std::move(link_error_cb);
-  data.dispatcher = dispatcher;
-
-  links_.emplace(handle, std::move(data));
+  RegisterInternal(handle, role, hci::Connection::LinkType::kACL,
+                   std::move(link_error_cb), dispatcher);
 }
 
 void FakeLayer::RegisterLE(hci::ConnectionHandle handle,
@@ -62,18 +53,10 @@ void FakeLayer::RegisterLE(hci::ConnectionHandle handle,
   if (!initialized_)
     return;
 
-  FXL_DCHECK(links_.find(handle) == links_.end())
-      << "l2cap: Connection handle re-used!";
-
-  LinkData data;
-  data.handle = handle;
-  data.role = role;
-  data.type = hci::Connection::LinkType::kLE;
-  data.le_conn_param_cb = std::move(conn_param_cb);
-  data.link_error_cb = std::move(link_error_cb);
-  data.dispatcher = dispatcher;
-
-  links_.emplace(handle, std::move(data));
+  LinkData* data = RegisterInternal(handle, role,
+                                    hci::Connection::LinkType::kLE,
+                                    std::move(link_error_cb), dispatcher);
+  data->le_conn_param_cb = std::move(conn_param_cb);
 }
 
 void FakeLayer::Unregister(hci::ConnectionHandle handle) {
@@ -100,6 +83,26 @@ void FakeLayer::OpenFixedChannel(hci::ConnectionHandle handle,
 
   if (chan_cb_)
     chan_cb_(chan);
+}
+
+FakeLayer::LinkData* FakeLayer::RegisterInternal(
+    hci::ConnectionHandle handle,
+    hci::Connection::Role role,
+    hci::Connection::LinkType link_type,
+    LinkErrorCallback link_error_cb,
+    async_t* dispatcher) {
+  FXL_DCHECK(links_.find(handle) == links_.end())
+      << "l2cap: Connection handle re-used!";
+
+  LinkData data;
+  data.handle = handle;
+  data.role = role;
+  data.type = link_type;
+  data.link_error_cb = std::move(link_error_cb);
+  data.dispatcher = dispatcher;
+
+  auto insert_res = links_.emplace(handle, std::move(data));
+  return &insert_res.first->second;
 }
 
 }  // namespace testing
