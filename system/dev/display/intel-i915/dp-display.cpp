@@ -843,7 +843,7 @@ static registers::Trans select_trans(registers::Ddi ddi, registers::Pipe pipe) {
 
 namespace i915 {
 
-DpDisplay::DpDisplay(Controller* controller, int32_t id, registers::Ddi ddi, registers::Pipe pipe)
+DpDisplay::DpDisplay(Controller* controller, uint64_t id, registers::Ddi ddi, registers::Pipe pipe)
         : DisplayDevice(controller, id, ddi, select_trans(ddi, pipe), pipe) { }
 
 bool DpDisplay::QueryDevice(edid::Edid* edid, zx_display_info* info) {

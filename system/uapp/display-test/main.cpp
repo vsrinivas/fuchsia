@@ -29,7 +29,7 @@
 #define dprintf(...)
 #endif
 
-static int32_t display_id;
+static int64_t display_id;
 static zx_handle_t dc_handle;
 
 static int32_t width;
@@ -38,10 +38,10 @@ static int32_t stride;
 static zx_pixel_format_t format;
 
 typedef struct image {
-    int32_t id;
+    int64_t id;
     void* buf;
     zx_handle_t events[3];
-    int32_t event_ids[3];
+    int64_t event_ids[3];
 } image_t;
 
 // Indicies into image_t.event and image_t.event_ids
@@ -130,19 +130,21 @@ static bool bind_display() {
 static bool create_image(image_t* img) {
     printf("Creating image\n");
     for (int i = 0; i < 3; i++) {
-        static int event_id = 1;
-        printf("Creating event %d (%d)\n", i, event_id);
+        printf("Creating event %d\n", i);
 
         zx_handle_t e1, e2;
+        zx_info_handle_basic_t info;
         if (zx_event_create(0, &e1) != ZX_OK
-                || zx_handle_duplicate(e1, ZX_RIGHT_SAME_RIGHTS, &e2) != ZX_OK) {
+                || zx_handle_duplicate(e1, ZX_RIGHT_SAME_RIGHTS, &e2) != ZX_OK
+                || zx_object_get_info(e1, ZX_INFO_HANDLE_BASIC, &info, sizeof(info),
+                                      nullptr, nullptr) != ZX_OK) {
             printf("Failed to create event\n");
             return false;
         }
 
         display_ControllerImportEventRequest import_evt_msg;
         import_evt_msg.hdr.ordinal = display_ControllerImportEventOrdinal;
-        import_evt_msg.id = event_id++;
+        import_evt_msg.id = info.koid;
         import_evt_msg.event = FIDL_HANDLE_PRESENT;
 
         if (zx_channel_write(dc_handle, 0, &import_evt_msg,

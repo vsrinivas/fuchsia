@@ -9,7 +9,7 @@
 
 namespace i915 {
 
-BootloaderDisplay::BootloaderDisplay(Controller* controller, int32_t id,
+BootloaderDisplay::BootloaderDisplay(Controller* controller, uint64_t id,
                                      registers::Ddi ddi, registers::Pipe pipe)
         : DisplayDevice(controller, id, ddi, registers::TRANS_A, pipe) {}
 

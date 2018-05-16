@@ -43,7 +43,7 @@ public:
     zx_status_t Bind(fbl::unique_ptr<i915::Controller>* controller_ptr);
 
     void SetDisplayControllerCb(void* cb_ctx, display_controller_cb_t* cb);
-    zx_status_t GetDisplayInfo(int32_t display_id, display_info_t* info);
+    zx_status_t GetDisplayInfo(uint64_t display_id, display_info_t* info);
     zx_status_t ImportVmoImage(image_t* image, const zx::vmo& vmo, size_t offset);
     void ReleaseImage(image_t* image);
     bool CheckConfiguration(display_config_t** display_config, uint32_t display_count);
@@ -89,7 +89,7 @@ private:
     zx_status_t AddDisplay(fbl::unique_ptr<DisplayDevice>&& display) __TA_REQUIRES(display_lock_);
     bool BringUpDisplayEngine(bool resume);
     void AllocDisplayBuffers();
-    DisplayDevice* FindDevice(int32_t display_id) __TA_REQUIRES(display_lock_);
+    DisplayDevice* FindDevice(uint64_t display_id) __TA_REQUIRES(display_lock_);
 
     zx_device_t* zx_gpu_dev_;
     bool gpu_released_ = false;
@@ -137,7 +137,7 @@ private:
     // References to displays. References are owned by devmgr, but will always
     // be valid while they are in this vector.
     fbl::Vector<DisplayDevice*> display_devices_ __TA_GUARDED(display_lock_);
-    int32_t next_id_ __TA_GUARDED(display_lock_) = 0;
+    uint64_t next_id_ __TA_GUARDED(display_lock_) = 1; // id can't be INVALID_DISPLAY_ID == 0
     mtx_t display_lock_;
 
     Power power_;

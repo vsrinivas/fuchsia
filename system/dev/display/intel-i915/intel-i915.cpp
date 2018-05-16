@@ -157,8 +157,8 @@ void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
     zxlogf(TRACE, "i915: hotplug detected %d %d\n", ddi, long_pulse);
     DisplayDevice* device = nullptr;
     bool was_kernel_framebuffer = false;
-    int32_t display_added = -1;
-    int32_t display_removed = -1;
+    uint64_t display_added = INVALID_DISPLAY_ID;
+    uint64_t display_removed = INVALID_DISPLAY_ID;
 
     acquire_dc_cb_lock();
     {
@@ -197,7 +197,7 @@ void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
             if (!device) {
                 zxlogf(INFO, "i915: failed to init hotplug display\n");
             } else {
-                int id = device->id();
+                uint64_t id = device->id();
                 if (AddDisplay(fbl::move(device)) == ZX_OK) {
                     zxlogf(SPEW, "Display connected\n");
                     display_added = id;
@@ -207,10 +207,10 @@ void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
             }
         }
     }
-    if (dc_cb() && (display_added >= 0 || display_removed >= 0)) {
+    if (dc_cb() && (display_added != INVALID_DISPLAY_ID || display_removed != INVALID_DISPLAY_ID)) {
         dc_cb()->on_displays_changed(dc_cb_ctx_,
-                                     &display_added, display_added >= 0,
-                                     &display_removed, display_removed >= 0);
+                                     &display_added, display_added != INVALID_DISPLAY_ID,
+                                     &display_removed, display_removed != INVALID_DISPLAY_ID);
     }
     release_dc_cb_lock();
 }
@@ -223,7 +223,7 @@ void Controller::HandlePipeVsync(registers::Pipe pipe) {
         return;
     }
 
-    int32_t id = -1;
+    uint64_t id = INVALID_DISPLAY_ID;
     void* handle = nullptr;
     {
         fbl::AutoLock lock(&display_lock_);
@@ -239,13 +239,13 @@ void Controller::HandlePipeVsync(registers::Pipe pipe) {
         }
     }
 
-    if (id >= 0) {
+    if (id != INVALID_DISPLAY_ID) {
         dc_cb()->on_display_vsync(dc_cb_ctx_, id, handle);
     }
     release_dc_cb_lock();
 }
 
-DisplayDevice* Controller::FindDevice(int32_t display_id) {
+DisplayDevice* Controller::FindDevice(uint64_t display_id) {
     for (auto d : display_devices_) {
         if (d->id() == display_id) {
             return d;
@@ -553,12 +553,6 @@ fbl::unique_ptr<DisplayDevice> Controller::InitDisplay(registers::Ddi ddi) {
         zxlogf(INFO, "i915: Could not allocate pipe for ddi %d\n", ddi);
         return nullptr;
     }
-    // It'd be possible to handle this by looking for an id which isn't currently in use. But
-    // a lot of clients probably assume that display ids are completely unique, so just fail. It's
-    // unlikely that we'd ever run into a system with >2 billion hotplug events.
-    if (next_id_ < 0) {
-        return nullptr;
-    }
 
     fbl::AllocChecker ac;
     if (igd_opregion_.SupportsDp(ddi)) {
@@ -584,7 +578,7 @@ zx_status_t Controller::InitDisplays() {
         BringUpDisplayEngine(false);
 
         acquire_dc_cb_lock();
-        int displays[registers::kDdiCount];
+        uint64_t displays[registers::kDdiCount];
         uint32_t display_count;
         {
             fbl::AutoLock lock(&display_lock_);
@@ -663,7 +657,7 @@ void Controller::SetDisplayControllerCb(void* cb_ctx, display_controller_cb_t* c
     dc_cb_ctx_ = cb_ctx;
     _dc_cb_ = cb;
 
-    int displays[registers::kDdiCount];
+    uint64_t displays[registers::kDdiCount];
     uint32_t size;
     {
         fbl::AutoLock lock(&display_lock_);
@@ -677,7 +671,7 @@ void Controller::SetDisplayControllerCb(void* cb_ctx, display_controller_cb_t* c
     release_dc_cb_lock();
 }
 
-zx_status_t Controller::GetDisplayInfo(int32_t display_id, display_info_t* info) {
+zx_status_t Controller::GetDisplayInfo(uint64_t display_id, display_info_t* info) {
     DisplayDevice* device;
     fbl::AutoLock lock(&display_lock_);
     if ((device = FindDevice(display_id)) == nullptr) {

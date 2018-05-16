@@ -10,7 +10,7 @@ namespace i915 {
 
 class BootloaderDisplay : public DisplayDevice {
 public:
-    BootloaderDisplay(Controller* controller, int32_t id, registers::Ddi ddi, registers::Pipe pipe);
+    BootloaderDisplay(Controller* controller, uint64_t id, registers::Ddi ddi, registers::Pipe pipe);
 
 private:
     bool QueryDevice(edid::Edid* edid, zx_display_info_t* info) final;

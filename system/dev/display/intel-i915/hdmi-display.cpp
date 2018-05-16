@@ -164,7 +164,7 @@ bool i2c_send_byte(hwreg::RegisterIo* mmio_space, registers::Ddi ddi, uint8_t by
 
 namespace i915 {
 
-HdmiDisplay::HdmiDisplay(Controller* controller, int32_t id,
+HdmiDisplay::HdmiDisplay(Controller* controller, uint64_t id,
                          registers::Ddi ddi, registers::Pipe pipe)
         : DisplayDevice(controller, id, ddi, static_cast<registers::Trans>(pipe), pipe) { }
 

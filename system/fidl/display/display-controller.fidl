@@ -4,6 +4,9 @@
 
 library display;
 
+// Invalid id for displays, images, and events.
+const uint64 invalidId = 0;
+
 // A display mode configuration.
 struct Mode {
   // Resolution in pixels.
@@ -23,7 +26,7 @@ const int32 modeInterlaced = 0x1;
 
 // Info contains the information about a particular attached display.
 struct Info {
-  int32 id;
+  uint64 id;
 
   // Modes supported by the attached display. The first entry is the
   // preferred mode.
@@ -59,31 +62,31 @@ const uint32 typeSimple = 0;
 interface Controller {
   // Event fired when displays are added or removed. This event will be fired
   // when the callback is registered if there are any connected displays.
-  1: -> DisplaysChanged(vector<Info> added, vector<int32> removed);
+  1: -> DisplaysChanged(vector<Info> added, vector<uint64> removed);
 
   // Imports a VMO backed image. If tiling is not typeSimple, it is up to
   // the driver and client to agree on its meaning through some mechanism
   // outside the scope of this API.
-  2: ImportVmoImage(ImageConfig image_config, handle<vmo> vmo, int32 offset) -> (status res, int32 image_id);
+  2: ImportVmoImage(ImageConfig image_config, handle<vmo> vmo, int32 offset) -> (status res, uint64 image_id);
 
   // Releases an image. It is safe to call this on an image which is currently
   // in use, but the resources associated with such an image will not be
   // released until the image is no longer in use.
-  3: ReleaseImage(int32 image_id);
+  3: ReleaseImage(uint64 image_id);
 
   // Imports an event into the driver and associates it with the given id.
   //
-  // Passing an id which is less than 0 will cause the connection to close. Ids
-  // must uniquely identify the underlying event. It is not well defined to
-  // import one event with two different ids or to import two different events
-  // with the same id.
-  4: ImportEvent(handle<event> event, int32 id);
+  // Id must not be equal to invalidId and must uniquely identify the underlying
+  // event. It is not well defined to import one event with two different ids or
+  // to import two different events with the same id. Note that ids map well to
+  // koids.
+  4: ImportEvent(handle<event> event, uint64 id);
 
   // Releases the event imported with the given id.
   //
   // If any images are currently using the given event, the event will still be
   // waited up or signaled as appropriate before its resources are released.
-  5: ReleaseEvent(int32 id);
+  5: ReleaseEvent(uint64 id);
 
   // Sets the image for the display.
   //
@@ -107,7 +110,7 @@ interface Controller {
   // An image is considered used when it is part of a pending configuration or
   // from when its configuration is applied until its signal_event_id is
   // signaled.
-  6: SetDisplayImage(int32 display, int32 image_id, int32 wait_event_id, int32 present_event_id, int32 signal_event_id);
+  6: SetDisplayImage(uint64 display, uint64 image_id, uint64 wait_event_id, uint64 present_event_id, uint64 signal_event_id);
 
   // Attempts to validate the current configuration.
   //

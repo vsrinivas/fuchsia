@@ -21,7 +21,7 @@
 
 namespace i915 {
 
-DisplayDevice::DisplayDevice(Controller* controller, int32_t id,
+DisplayDevice::DisplayDevice(Controller* controller, uint64_t id,
                              registers::Ddi ddi, registers::Trans trans, registers::Pipe pipe)
         : DisplayDeviceType(controller->zxdev()), controller_(controller), id_(id)
         , ddi_(ddi), trans_(trans), pipe_(pipe) {}

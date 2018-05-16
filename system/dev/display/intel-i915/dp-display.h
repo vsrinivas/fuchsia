@@ -13,7 +13,7 @@ class DpAuxMessage;
 
 class DpDisplay : public DisplayDevice, private edid::EdidDdcSource {
 public:
-    DpDisplay(Controller* controller, int32_t id, registers::Ddi ddi, registers::Pipe pipe);
+    DpDisplay(Controller* controller, uint64_t id, registers::Ddi ddi, registers::Pipe pipe);
 
 private:
     bool QueryDevice(edid::Edid* edid, zx_display_info_t* info) final;

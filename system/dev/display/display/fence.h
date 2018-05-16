@@ -29,7 +29,7 @@ public:
 // imported/released (i.e. can be released while still in use).
 class Fence : public fbl::RefCounted<Fence>, public IdMappable<fbl::RefPtr<Fence>> {
 public:
-    Fence(FenceCallback* cb, async_t* async, int32_t id, zx::event&& event);
+    Fence(FenceCallback* cb, async_t* async, uint64_t id, zx::event&& event);
     ~Fence();
 
     // Creates a new FenceReference when an event is imported.

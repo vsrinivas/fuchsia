@@ -37,7 +37,7 @@ class DisplayControllerProtocol : public internal::base_protocol {
         static_cast<D*>(ctx)->SetDisplayControllerCb(cb_ctx, cb);
     }
 
-    static zx_status_t GetDisplayInfo(void* ctx, int32_t display_id, display_info_t* info) {
+    static zx_status_t GetDisplayInfo(void* ctx, uint64_t display_id, display_info_t* info) {
         return static_cast<D*>(ctx)->GetDisplayInfo(display_id, info);
     }
 

@@ -132,13 +132,6 @@ void Client::HandleImportVmoImage(const display_ControllerImportVmoImageRequest*
 
     zx::vmo vmo(req->vmo);
 
-    // Clients are probably doing something horribly wrong if we've overflowed image
-    // ids, so just fail when that happens.
-    if (next_image_id_ < 0) {
-        resp->res = ZX_ERR_NO_RESOURCES;
-        return;
-    }
-
     image_t dc_image;
     dc_image.height = req->image_config.height;
     dc_image.width = req->image_config.width;
@@ -209,7 +202,7 @@ void Client::HandleImportEvent(const display_ControllerImportEventRequest* req,
     fbl::AutoLock lock(&fence_mtx_);
 
     // TODO(stevensd): it would be good for this not to be able to fail due to allocation failures
-    if (req->id >= 0) {
+    if (req->id != INVALID_ID) {
         auto fence = fences_.find(req->id);
         if (!fence.IsValid()) {
             fbl::AllocChecker ac;
@@ -225,7 +218,7 @@ void Client::HandleImportEvent(const display_ControllerImportEventRequest* req,
     }
 
     if (!success) {
-        zxlogf(ERROR, "Failed to import event#%d (%d)\n", req->id, status);
+        zxlogf(ERROR, "Failed to import event#%ld (%d)\n", req->id, status);
         TearDown();
     }
 }
@@ -247,7 +240,7 @@ void Client::HandleSetDisplayImage(const display_ControllerSetDisplayImageReques
         zxlogf(INFO, "SetDisplayImage ordinal with invalid display\n");
         return;
     }
-    if (req->image_id < 0) {
+    if (req->image_id == INVALID_ID) {
         config->has_pending_image = true;
         config->pending_image = nullptr;
         pending_config_valid_ = false;
@@ -380,7 +373,7 @@ void Client::ApplyConfig() {
     int idx = 0;
     for (auto& display_config : configs_) {
         // Find the newest image which is ready
-        int32_t new_image = -1;
+        uint64_t new_image = INVALID_ID;
         if (!display_config.waiting_images.is_empty()) {
             for (auto iter = --display_config.waiting_images.cend(); iter.IsValid(); --iter) {
                 if (iter->IsReady()) {
@@ -389,7 +382,7 @@ void Client::ApplyConfig() {
                 }
             }
         }
-        if (new_image != -1) {
+        if (new_image != INVALID_ID) {
             if (display_config.displayed_image != nullptr) {
                 fbl::AutoLock lock(controller_->mtx());
                 display_config.displayed_image->StartRetire();
@@ -439,12 +432,11 @@ void Client::SetOwnership(bool is_owner) {
     }
 
     ApplyConfig();
-
 }
 
 void Client::OnDisplaysChanged(fbl::unique_ptr<DisplayConfig>* displays_added,
                                uint32_t added_count,
-                               int32_t* displays_removed, uint32_t removed_count) {
+                               uint64_t* displays_removed, uint32_t removed_count) {
     ZX_DEBUG_ASSERT(controller_->current_thread_is_loop());
 
     uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
@@ -467,7 +459,7 @@ void Client::OnDisplaysChanged(fbl::unique_ptr<DisplayConfig>* displays_added,
     }
 
     for (unsigned i = 0; i < added_count; i++) {
-        int32_t id = displays_added[i]->id;
+        uint64_t id = displays_added[i]->id;
         configs_.insert(fbl::move(displays_added[i]));
         auto config = configs_.find(id);
 
@@ -507,8 +499,8 @@ void Client::OnDisplaysChanged(fbl::unique_ptr<DisplayConfig>* displays_added,
     }
 }
 
-fbl::RefPtr<FenceReference> Client::GetFence(int32_t id) {
-    if (id < 0) {
+fbl::RefPtr<FenceReference> Client::GetFence(uint64_t id) {
+    if (id == INVALID_ID) {
         return nullptr;
     }
     fbl::AutoLock lock(&fence_mtx_);
@@ -627,10 +619,10 @@ void ClientProxy::SetOwnership(bool is_owner) {
 }
 
 zx_status_t ClientProxy::OnDisplaysChanged(const DisplayInfo** displays_added,
-                                           uint32_t added_count, const int32_t* displays_removed,
+                                           uint32_t added_count, const uint64_t* displays_removed,
                                            uint32_t removed_count) {
     fbl::unique_ptr<fbl::unique_ptr<DisplayConfig>[]> added;
-    fbl::unique_ptr<int32_t[]> removed;
+    fbl::unique_ptr<uint64_t[]> removed;
 
     fbl::AllocChecker ac;
     if (added_count) {
@@ -641,7 +633,7 @@ zx_status_t ClientProxy::OnDisplaysChanged(const DisplayInfo** displays_added,
         }
     }
     if (removed_count) {
-        removed = fbl::unique_ptr<int32_t[]>(new (&ac) int32_t[removed_count]);
+        removed = fbl::unique_ptr<uint64_t[]>(new (&ac) uint64_t[removed_count]);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }

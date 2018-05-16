@@ -14,6 +14,8 @@ __BEGIN_CDECLS;
  * protocol/display-controller.h - display controller protocol definitions
  */
 
+#define INVALID_DISPLAY_ID 0
+
 // a structure containing information a connected display
 typedef struct display_info {
     // the display's edid
@@ -57,10 +59,10 @@ typedef struct display_controller_cb {
     // The driver should call this function when the callback is registered if any displays
     // are present.
     void (*on_displays_changed)(void* ctx,
-                                int32_t* displays_added, uint32_t added_count,
-                                int32_t* displays_removed, uint32_t removed_count);
+                                uint64_t* displays_added, uint32_t added_count,
+                                uint64_t* displays_removed, uint32_t removed_count);
 
-    void (*on_display_vsync)(void* ctx, int32_t display_id, void* handle);
+    void (*on_display_vsync)(void* ctx, uint64_t display_id, void* handle);
 } display_controller_cb_t;
 
 // constants for display_config's mode_flags field
@@ -70,7 +72,7 @@ typedef struct display_controller_cb {
 
 typedef struct display_config {
     // the display id to which the configuration applies
-    int32_t display_id;
+    uint64_t display_id;
 
     // The video parameters which specify the display mode. The client guarantees that
     // these values match some timing advertised by the display's EDID.
@@ -96,7 +98,7 @@ typedef struct display_controller_protocol_ops {
     // Gets all information about the display. Pointers returned in |info| must remain
     // valid until the the display is removed with on_displays_changed or the device's
     // release device-op is invoked.
-    zx_status_t (*get_display_info)(void* ctx, int32_t display_id, display_info_t* info);
+    zx_status_t (*get_display_info)(void* ctx, uint64_t display_id, display_info_t* info);
 
     // Imports a VMO backed image into the driver. The driver should set image->handle. The
     // driver does not own the vmo handle passed to this function.

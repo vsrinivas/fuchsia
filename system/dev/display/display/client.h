@@ -32,9 +32,9 @@ public:
     display_config_t current;
     display_config_t pending;
 
-    int32_t pending_wait_event_id;
-    int32_t pending_present_event_id;
-    int32_t pending_signal_event_id;
+    uint64_t pending_wait_event_id;
+    uint64_t pending_present_event_id;
+    uint64_t pending_signal_event_id;
 
     // The image given to SetDisplayImage which hasn't been applied yet.
     bool has_pending_image;
@@ -60,7 +60,7 @@ public:
 
     void OnDisplaysChanged(fbl::unique_ptr<DisplayConfig>* displays_added,
                            uint32_t added_count,
-                           int32_t* displays_removed,
+                           uint64_t* displays_removed,
                            uint32_t removed_count);
     void SetOwnership(bool is_owner);
 
@@ -100,7 +100,7 @@ private:
     bool is_vc_;
 
     zx::channel server_handle_;
-    int32_t next_image_id_ = 0x0;
+    uint64_t next_image_id_ = 1; // Only INVALID_ID == 0 is invalid
 
     Image::Map images_;
     DisplayConfig::Map configs_;
@@ -121,7 +121,7 @@ private:
     void ApplyConfig();
     bool CheckConfig();
 
-    fbl::RefPtr<FenceReference> GetFence(int32_t id);
+    fbl::RefPtr<FenceReference> GetFence(uint64_t id);
 };
 
 // ClientProxy manages interactions between its Client instance and the ddk and the
@@ -139,7 +139,7 @@ public:
     void DdkRelease();
 
     zx_status_t OnDisplaysChanged(const DisplayInfo** displays_added, uint32_t added_count,
-                                  const int32_t* displays_removed, uint32_t removed_count);
+                                  const uint64_t* displays_removed, uint32_t removed_count);
     void SetOwnership(bool is_owner);
 
     void OnClientDead();

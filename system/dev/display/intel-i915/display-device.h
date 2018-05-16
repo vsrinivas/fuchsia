@@ -27,7 +27,7 @@ using DisplayDeviceType = ddk::Device<DisplayDevice>;
 
 class DisplayDevice : public DisplayDeviceType, public ddk::DisplayProtocol<DisplayDevice> {
 public:
-    DisplayDevice(Controller* device, int32_t id,
+    DisplayDevice(Controller* device, uint64_t id,
                   registers::Ddi ddi, registers::Trans trans, registers::Pipe pipe);
     virtual ~DisplayDevice();
 
@@ -47,7 +47,7 @@ public:
     // the device will be removed.
     virtual bool HandleHotplug(bool long_pulse) { return false; }
 
-    int32_t id() const { return id_; }
+    uint64_t id() const { return id_; }
     const zx::vmo& framebuffer_vmo() const { return framebuffer_vmo_; }
     uint32_t framebuffer_size() const { return framebuffer_size_; }
     const zx_display_info_t& info() const { return info_; }
@@ -73,7 +73,7 @@ private:
     // Borrowed reference to Controller instance
     Controller* controller_;
 
-    int32_t id_;
+    uint64_t id_;
     registers::Ddi ddi_;
     registers::Trans trans_;
     registers::Pipe pipe_;

@@ -13,13 +13,13 @@
 
 namespace {
 
-void on_displays_changed(void* ctx, int32_t* displays_added, uint32_t added_count,
-                         int32_t* displays_removed, uint32_t removed_count) {
+void on_displays_changed(void* ctx, uint64_t* displays_added, uint32_t added_count,
+                         uint64_t* displays_removed, uint32_t removed_count) {
     static_cast<display::Controller*>(ctx)->OnDisplaysChanged(
             displays_added, added_count, displays_removed, removed_count);
 }
 
-void on_display_vsync(void* ctx, int32_t display, void* handle) {
+void on_display_vsync(void* ctx, uint64_t display, void* handle) {
     static_cast<display::Controller*>(ctx)->OnDisplayVsync(display, handle);
 }
 
@@ -32,11 +32,11 @@ display_controller_cb_t dc_cb = {
 
 namespace display {
 
-void Controller::OnDisplaysChanged(int32_t* displays_added, uint32_t added_count,
-                                   int32_t* displays_removed, uint32_t removed_count) {
+void Controller::OnDisplaysChanged(uint64_t* displays_added, uint32_t added_count,
+                                   uint64_t* displays_removed, uint32_t removed_count) {
     const DisplayInfo* added_success[added_count];
     int32_t added_success_count = 0;
-    int32_t removed_success[removed_count];
+    uint64_t removed_success[removed_count];
     int32_t removed_success_count = 0;
 
     fbl::AutoLock lock(&mtx_);
@@ -51,7 +51,7 @@ void Controller::OnDisplaysChanged(int32_t* displays_added, uint32_t added_count
                 image->OnRetire();
             }
         } else {
-            zxlogf(TRACE, "Unknown display %d removed\n", displays_removed[i]);
+            zxlogf(TRACE, "Unknown display %ld removed\n", displays_removed[i]);
         }
     }
 
@@ -65,7 +65,7 @@ void Controller::OnDisplaysChanged(int32_t* displays_added, uint32_t added_count
 
         info->id = displays_added[i];
         if (ops_.ops->get_display_info(ops_.ctx, info->id, &info->info) != ZX_OK) {
-            zxlogf(TRACE, "Error getting display info for %d\n", info->id);
+            zxlogf(TRACE, "Error getting display info for %ld\n", info->id);
             continue;
         }
         edid::Edid edid;
@@ -101,7 +101,7 @@ void Controller::OnDisplaysChanged(int32_t* displays_added, uint32_t added_count
     }
 }
 
-void Controller::OnDisplayVsync(int32_t display_id, void* handle) {
+void Controller::OnDisplayVsync(uint64_t display_id, void* handle) {
     fbl::AutoLock lock(&mtx_);
     fbl::DoublyLinkedList<fbl::RefPtr<Image>>* images = nullptr;
     for (auto& display_config : displays_) {

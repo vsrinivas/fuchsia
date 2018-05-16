@@ -75,7 +75,7 @@ void Fence::Reset() {
     cur_ref_ = nullptr;
 }
 
-Fence::Fence(FenceCallback* cb, async_t* async, int32_t fence_id, zx::event&& event)
+Fence::Fence(FenceCallback* cb, async_t* async, uint64_t fence_id, zx::event&& event)
         : cb_(cb), async_(async), event_(fbl::move(event)) {
     id = fence_id;
 }
