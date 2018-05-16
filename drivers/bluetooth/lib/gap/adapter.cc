@@ -94,6 +94,12 @@ bool Adapter::Initialize(InitializeCallback callback,
   init_seq_runner_->QueueCommand(
       hci::CommandPacket::New(hci::kReadLocalVersionInfo),
       [this](const hci::EventPacket& cmd_complete) {
+        auto status = cmd_complete.ToStatus();
+        if (!status) {
+          FXL_LOG(WARNING) << "gap: Adapter: read local version info failure: "
+                           << status.ToString();
+          return;
+        }
         auto params =
             cmd_complete.return_params<hci::ReadLocalVersionInfoReturnParams>();
         state_.hci_version_ = params->hci_version;
@@ -103,6 +109,13 @@ bool Adapter::Initialize(InitializeCallback callback,
   init_seq_runner_->QueueCommand(
       hci::CommandPacket::New(hci::kReadLocalSupportedCommands),
       [this](const hci::EventPacket& cmd_complete) {
+        auto status = cmd_complete.ToStatus();
+        if (!status) {
+          FXL_LOG(WARNING)
+              << "gap: Adapter: read local supported commands failure: "
+              << status.ToString();
+          return;
+        }
         auto params =
             cmd_complete
                 .return_params<hci::ReadLocalSupportedCommandsReturnParams>();
@@ -114,6 +127,13 @@ bool Adapter::Initialize(InitializeCallback callback,
   init_seq_runner_->QueueCommand(
       hci::CommandPacket::New(hci::kReadLocalSupportedFeatures),
       [this](const hci::EventPacket& cmd_complete) {
+        auto status = cmd_complete.ToStatus();
+        if (!status) {
+          FXL_LOG(WARNING)
+              << "gap: Adapter: read local supported features failure: "
+              << status.ToString();
+          return;
+        }
         auto params =
             cmd_complete
                 .return_params<hci::ReadLocalSupportedFeaturesReturnParams>();
@@ -124,6 +144,12 @@ bool Adapter::Initialize(InitializeCallback callback,
   init_seq_runner_->QueueCommand(
       hci::CommandPacket::New(hci::kReadBDADDR),
       [this](const hci::EventPacket& cmd_complete) {
+        auto status = cmd_complete.ToStatus();
+        if (!status) {
+          FXL_LOG(WARNING) << "gap: Adapter: read BD_ADDR failure: "
+                           << status.ToString();
+          return;
+        }
         auto params = cmd_complete.return_params<hci::ReadBDADDRReturnParams>();
         state_.controller_address_ = params->bd_addr;
       });
@@ -220,6 +246,12 @@ void Adapter::InitializeStep2(InitializeCallback callback) {
     init_seq_runner_->QueueCommand(
         hci::CommandPacket::New(hci::kReadBufferSize),
         [this](const hci::EventPacket& cmd_complete) {
+          auto status = cmd_complete.ToStatus();
+          if (!status) {
+            FXL_LOG(WARNING) << "gap: Adapter: read buffer size failure: "
+                             << status.ToString();
+            return;
+          }
           auto params =
               cmd_complete.return_params<hci::ReadBufferSizeReturnParams>();
           uint16_t mtu = le16toh(params->hc_acl_data_packet_length);
@@ -235,6 +267,13 @@ void Adapter::InitializeStep2(InitializeCallback callback) {
   init_seq_runner_->QueueCommand(
       hci::CommandPacket::New(hci::kLEReadLocalSupportedFeatures),
       [this](const hci::EventPacket& cmd_complete) {
+        auto status = cmd_complete.ToStatus();
+        if (!status) {
+          FXL_LOG(WARNING)
+              << "gap: Adapter: LE read local supported features failure: "
+              << status.ToString();
+          return;
+        }
         auto params =
             cmd_complete
                 .return_params<hci::LEReadLocalSupportedFeaturesReturnParams>();
@@ -245,6 +284,12 @@ void Adapter::InitializeStep2(InitializeCallback callback) {
   init_seq_runner_->QueueCommand(
       hci::CommandPacket::New(hci::kLEReadSupportedStates),
       [this](const hci::EventPacket& cmd_complete) {
+        auto status = cmd_complete.ToStatus();
+        if (!status) {
+          FXL_LOG(WARNING) << "gap: Adapter: LE read supported states failure: "
+                           << status.ToString();
+          return;
+        }
         auto params =
             cmd_complete
                 .return_params<hci::LEReadSupportedStatesReturnParams>();
@@ -255,6 +300,12 @@ void Adapter::InitializeStep2(InitializeCallback callback) {
   init_seq_runner_->QueueCommand(
       hci::CommandPacket::New(hci::kLEReadBufferSize),
       [this](const hci::EventPacket& cmd_complete) {
+        auto status = cmd_complete.ToStatus();
+        if (!status) {
+          FXL_LOG(WARNING) << "gap: Adapter: LE read buffer size failure: "
+                           << status.ToString();
+          return;
+        }
         auto params =
             cmd_complete.return_params<hci::LEReadBufferSizeReturnParams>();
         uint16_t mtu = le16toh(params->hc_le_acl_data_packet_length);
@@ -300,6 +351,12 @@ void Adapter::InitializeStep2(InitializeCallback callback) {
 
     init_seq_runner_->QueueCommand(
         std::move(cmd_packet), [this](const hci::EventPacket& cmd_complete) {
+          auto status = cmd_complete.ToStatus();
+          if (!status) {
+            FXL_LOG(WARNING) << "gap: Adapter: read extended features failure: "
+                             << status.ToString();
+            return;
+          }
           auto params =
               cmd_complete
                   .return_params<hci::ReadLocalExtendedFeaturesReturnParams>();
@@ -358,7 +415,14 @@ void Adapter::InitializeStep3(InitializeCallback callback) {
     cmd_packet->mutable_view()
         ->mutable_payload<hci::SetEventMaskCommandParams>()
         ->event_mask = htole64(event_mask);
-    init_seq_runner_->QueueCommand(std::move(cmd_packet));
+    init_seq_runner_->QueueCommand(
+        std::move(cmd_packet), [](const auto& event) {
+          auto status = event.ToStatus();
+          if (!status) {
+            FXL_LOG(WARNING) << "gap: Adapter: set event mask failure: "
+                             << status.ToString();
+          }
+        });
   }
 
   // HCI_LE_Set_Event_Mask
@@ -369,7 +433,14 @@ void Adapter::InitializeStep3(InitializeCallback callback) {
     cmd_packet->mutable_view()
         ->mutable_payload<hci::LESetEventMaskCommandParams>()
         ->le_event_mask = htole64(event_mask);
-    init_seq_runner_->QueueCommand(std::move(cmd_packet));
+    init_seq_runner_->QueueCommand(
+        std::move(cmd_packet), [](const auto& event) {
+          auto status = event.ToStatus();
+          if (!status) {
+            FXL_LOG(WARNING) << "gap: Adapter: set LE event mask failure: "
+                             << status.ToString();
+          }
+        });
   }
 
   // HCI_Write_LE_Host_Support if the appropriate feature bit is not set AND if
@@ -383,7 +454,14 @@ void Adapter::InitializeStep3(InitializeCallback callback) {
                       ->mutable_payload<hci::WriteLEHostSupportCommandParams>();
     params->le_supported_host = hci::GenericEnableParam::kEnable;
     params->simultaneous_le_host = 0x00;
-    init_seq_runner_->QueueCommand(std::move(cmd_packet));
+    init_seq_runner_->QueueCommand(
+        std::move(cmd_packet), [](const auto& event) {
+          auto status = event.ToStatus();
+          if (!status) {
+            FXL_LOG(WARNING) << "gap: Adapter: write LE host support failure: "
+                             << status.ToString();
+          }
+        });
   }
 
   // If we know that Page 2 of the extended features bitfield is available, then
@@ -401,6 +479,12 @@ void Adapter::InitializeStep3(InitializeCallback callback) {
     // HCI_Read_Local_Extended_Features
     init_seq_runner_->QueueCommand(
         std::move(cmd_packet), [this](const hci::EventPacket& cmd_complete) {
+          auto status = cmd_complete.ToStatus();
+          if (!status) {
+            FXL_LOG(WARNING) << "gap: Adapter: read extended features failure: "
+                             << status.ToString();
+            return;
+          }
           auto params =
               cmd_complete
                   .return_params<hci::ReadLocalExtendedFeaturesReturnParams>();

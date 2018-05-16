@@ -121,7 +121,14 @@ bool LegacyLowEnergyScanner::StartScan(bool active,
     FXL_DCHECK(state() == State::kInitiating);
 
     if (!status) {
+      if (status.error() == common::HostError::kCanceled) {
+        FXL_VLOG(1) << "gap: LegacyLowEnergyScanner: canceled";
+        return;
+      }
+
       auto cb = std::move(scan_cb_);
+
+      FXL_DCHECK(!scan_cb_);
       set_state(State::kIdle);
 
       FXL_LOG(ERROR) << "gap: LegacyLowEnergyScanner: failed to start scan: "

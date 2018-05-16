@@ -168,6 +168,13 @@ void BrEdrConnectionManager::WritePageScanSettings(uint16_t interval,
   hci_cmd_runner_->QueueCommand(
       std::move(write_activity),
       [self, cb = cb.share(), interval, window](const hci::EventPacket& event) {
+        auto status = event.ToStatus();
+        if (!status) {
+          FXL_LOG(WARNING) << "gap: BrEdrConnectionManager: write page scan "
+                              "activity failure: "
+                           << status.ToString();
+          return;
+        }
         if (!self) {
           cb(hci::Status(common::HostError::kFailed));
           return;
@@ -189,6 +196,13 @@ void BrEdrConnectionManager::WritePageScanSettings(uint16_t interval,
   hci_cmd_runner_->QueueCommand(
       std::move(write_type),
       [self, cb = cb.share(), interlaced](const hci::EventPacket& event) {
+        auto status = event.ToStatus();
+        if (!status) {
+          FXL_LOG(WARNING)
+              << "gap: BrEdrConnectionManager: write page scan type failure: "
+              << status.ToString();
+          return;
+        }
         if (!self) {
           cb(hci::Status(common::HostError::kFailed));
           return;
