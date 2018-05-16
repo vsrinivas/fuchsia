@@ -36,6 +36,8 @@ import '{{ .Url }}' as {{ .LocalName }};
 // ignore_for_file: unused_local_variable
 // ignore_for_file: non_constant_identifier_names
 // ignore_for_file: library_prefixes
+// ignore_for_file: prefer_typing_uninitialized_variables
+// ignore_for_file: avoid_js_rounded_ints
 
 {{ range $const := .Consts -}}
 {{ template "ConstDeclaration" $const }}
