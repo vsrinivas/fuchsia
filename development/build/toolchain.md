@@ -15,37 +15,67 @@ Setting up these compilers requires a lot of options. To simplify the
 configuration the Fuchsia Clang build settings are contained in CMake cache
 files which are part of the Clang codebase.
 
-The example commands below use `${LLVM_SRCDIR}` to refer to the root of your
-LLVM source tree checkout, and assume that the additional repositories are
-checked out into their canonical subdirectories of the main LLVM checkout
-(Clang in `tools/clang`, `compiler-rt` in `runtimes/compiler-rt`, etc.).  You
-can cut & paste these commands into a shell after setting the `LLVM_SRCDIR`
-variable, e.g.:
+The example commands below use `${LLVM_SRCDIR}` to refer to the root of
+your LLVM source tree checkout and assume the [monorepo
+layout](https://llvm.org/docs/Proposals/GitHubMove.html#monorepo-variant).
+When using this layout, each sub-project has its own top-level
+directory.
+
+The
+[https://fuchsia.googlesource.com/third_party/llvm-project](https://fuchsia.googlesource.com/third_party/llvm-project)
+repository emulates this layout via Git submodules and is updated
+automatically by Gerrit. You can use the following command to download
+this repository including all the submodules after setting the
+`${LLVM_SRCDIR}` variable:
 
 ```bash
-LLVM_SRCDIR=${HOME}/llvm
+LLVM_SRCDIR=${HOME}/llvm-project
+git clone --recurse-submodules https://fuchsia.googlesource.com/third_party/llvm-project ${LLVM_SRCDIR}
+```
+
+To update the repository including all the submodules, you can use:
+
+```bash
+git pull --recurse-submodules
+```
+
+Alternatively, you can use the semi-official monorepo
+[https://github.com/llvm-project/llvm-project-20170507](https://github.com/llvm-project/llvm-project-20170507)
+maintained by the LLVM community. This repository does not use
+submodules which means you can use the standard Git workflow:
+
+```bash
+git clone https://github.com/llvm-project/llvm-project-20170507 ${LLVM_SRCDIR}
 ```
 
 Before building the runtime libraries that are built along with the
-compiler, you need a Zircon `sysroot` built.  This comes from the Garnet
-build and sits in the `sysroot` subdirectory of the Garnet SDK build
-directory (e.g. `.../debug-x64/sdks/zircon_sysroot/sysroot`). To build
-it, you need to include the `garnet/packages/sdk/base` package manifest.
-In the following commands, the string `${FUCHSIA_${arch}_SYSROOT}`
-stands in for this absolute directory name.  You can cut & paste these
-commands into a shell after setting the `FUCHSIA_${arch}_SYSROOT`
-variable, e.g.:
+toolchain, you need a Garnet SDK. We expect that the SDK is located in
+the directory pointed to by the `${SDK_DIR}` variable:
+
+```bash
+SDK_DIR=${HOME}/sdk/garnet
+```
+
+To download the latest SDK, you can use the following:
+
+```bash
+./buildtools/cipd install fuchsia/sdk/linux-amd64 -version latest -root ${SDK_DIR}
+```
+
+Alternatively, you can build the Garnet SDK from source using the
+following commands:
 
 ```bash
 ./scripts/build-zircon.sh
 
-gn gen --args='target_cpu="x64" fuchsia_packages=["garnet/packages/sdk/base"]' out/x64
-ninja -C out/x64 zircon_sysroot
-FUCHSIA_x86_64_SYSROOT=`pwd`/out/x64/sdks/zircon_sysroot/sysroot
+gn gen --args='target_cpu="x64" fuchsia_packages=["garnet/packages/sdk/garnet"]' out/x64
+ninja -C out/x64
 
-gn gen --args='target_cpu="arm64" fuchsia_packages=["garnet/packages/sdk/base"]' out/arm64
-ninja -C out/arm64 zircon_sysroot
-FUCHSIA_aarch64_SYSROOT=`pwd`/out/arm64/sdks/zircon_sysroot/sysroot
+gn gen --args='target_cpu="arm64" fuchsia_packages=["garnet/packages/sdk/garnet"]' out/arm64
+ninja -C out/arm64
+
+./scripts/sdk/create_layout.py --manifest out/x64/gen/garnet/public/sdk/garnet_molecule.sdk --output ${SDK_DIR}
+./scripts/sdk/create_layout.py --manifest out/arm64/gen/garnet/public/sdk/garnet_molecule.sdk --output ${SDK_DIR} --overlay
 ```
 
 You can build a Fuchsia Clang compiler using the following commands.
@@ -58,7 +88,19 @@ You need CMake version 3.8.0 and newer to execute these commands.
 This was the first version to support Fuchsia.
 
 ```bash
-cmake -G Ninja -DFUCHSIA_x86_64_SYSROOT=${FUCHSIA_x86_64_SYSROOT} -DFUCHSIA_aarch64_SYSROOT=${FUCHSIA_aarch64_SYSROOT} -C ${LLVM_SRCDIR}/tools/clang/cmake/caches/Fuchsia.cmake ${LLVM_SRCDIR}
+cmake -GNinja \
+  -DLLVM_ENABLE_PROJECTS=clang\;lldb\;lld \
+  -DLLVM_ENABLE_RUNTIMES=compiler-rt\;libcxx\;libcxxabi\;libunwind \
+  -DSTAGE2_FUCHSIA_x86_64_SYSROOT=${SDK_DIR}/arch/x64/sysroot \
+  -DSTAGE2_FUCHSIA_x86_64_C_FLAGS=-I${SDK_DIR}/pkg/launchpad/include \
+  -DSTAGE2_FUCHSIA_x86_64_CXX_FLAGS=-I${SDK_DIR}/pkg/launchpad/include \
+  -DSTAGE2_FUCHSIA_x86_64_LINKER_FLAGS=-I${SDK_DIR}/arch/x64/lib \
+  -DSTAGE2_FUCHSIA_aarch64_SYSROOT=${SDK_DIR}/arch/arm64/sysroot \
+  -DSTAGE2_FUCHSIA_aarch64_C_FLAGS=-I${SDK_DIR}/pkg/launchpad/include \
+  -DSTAGE2_FUCHSIA_aarch64_CXX_FLAGS=-I${SDK_DIR}/pkg/launchpad/include \
+  -DSTAGE2_FUCHSIA_aarch64_LINKER_FLAGS=-I${SDK_DIR}/arch/arm64/lib \
+  -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia.cmake \
+  ${LLVM_SRCDIR}/llvm
 ninja stage2-distribution
 ```
 
@@ -72,53 +114,15 @@ ninja stage2-install-distribution
 To use the compiler just built without installing it into a system-wide
 shared location, you can just refer to its build directory explicitly as
 `${LLVM_OBJDIR}/tools/clang/stage2-bins/bin/` (where `LLVM_OBJDIR` is
-your LLVM build directory).  For example, in a Zircon build, you can
-pass the argument:
+your LLVM build directory). See the [instructions](#building-fuchsia)
+on how to use the just built Clang to build Fuchsia.
 
-```bash
-CLANG_TOOLCHAIN_PREFIX=${LLVM_OBJDIR}/tools/clang/stage2-bins/bin/
-```
-
-(Note: that trailing slash is important.)
-
-Note that the second stage build uses LTO (Link Time Optimization) to achieve
-better runtime performance of the final compiler. LTO often requires a large
-amount of memory and is very slow. Therefore it may not be very practical for
-day-to-day development.
-
-### Using Monorepo Layout
-
-Alternatively, it is also possible to use the new [monorepo layout](https://llvm.org/docs/Proposals/GitHubMove.html#monorepo-variant).
-When using this layout, each sub-project has its own top-level directory.
-
-The [https://fuchsia.googlesource.com/third_party/llvm-project](https://fuchsia.googlesource.com/third_party/llvm-project)
-repository emulates this layout via Git submodules and is updated
-automatically by Gerrit. You can use the following command to download
-this repository including all the submodules after setting the
-`LLVM_MONOREPO` variable.
-
-```bash
-LLVM_MONOREPO=${HOME}/llvm-project
-git clone --recursive https://fuchsia.googlesource.com/third_party/llvm-project ${LLVM_MONOREPO}
-```
-
-To update the repository including all the submodules, you can use:
-
-```bash
-git pull --recurse-submodules
-git submodule update
-```
-
-To build the Fuchsia Clang compiler using the monorepo layout, you can
-use the following commands:
-
-```bash
-cmake -G Ninja -DLLVM_ENABLE_PROJECTS=clang\;lldb\;lld -DLLVM_ENABLE_RUNTIMES=compiler-rt\;libcxx\;libcxxabi\;libunwind -DFUCHSIA_x86_64_SYSROOT=${FUCHSIA_x86_64_SYSROOT} -DFUCHSIA_aarch64_SYSROOT=${FUCHSIA_aarch64_SYSROOT} -C ${LLVM_MONOREPO}/clang/cmake/caches/Fuchsia.cmake ${LLVM_MONOREPO}/llvm
-ninja stage2-distribution
-```
-
-Everything else is the same as in the case of standard layout described
-above.
+*** note
+**Note:** the second stage build uses LTO (Link Time Optimization) to
+achieve better runtime performance of the final compiler. LTO often
+requires a large amount of memory and is very slow. Therefore it may not
+be very practical for day-to-day development.
+***
 
 ## Developing Clang
 
@@ -137,7 +141,11 @@ the low-level target-specific routines) for Fuchsia, you need a few additional
 flags:
 
 ```bash
--DLLVM_BUILTIN_TARGETS=x86_64-fuchsia\;aarch64-fuchsia -DBUILTINS_x86_64-fuchsia_CMAKE_SYSROOT=${FUCHSIA_x86_64_SYSROOT} -DBUILTINS_x86_64-fuchsia_CMAKE_SYSTEM_NAME=Fuchsia -DBUILTINS_aarch64-fuchsia_CMAKE_SYSROOT=${FUCHSIA_aarch64_SYSROOT} -DBUILTINS_aarch64-fuchsia_CMAKE_SYSTEM_NAME=Fuchsia
+-DLLVM_BUILTIN_TARGETS=x86_64-fuchsia\;aarch64-fuchsia \
+-DBUILTINS_x86_64-fuchsia_CMAKE_SYSROOT=${FUCHSIA_x86_64_SYSROOT} \
+-DBUILTINS_x86_64-fuchsia_CMAKE_SYSTEM_NAME=Fuchsia \
+-DBUILTINS_aarch64-fuchsia_CMAKE_SYSROOT=${FUCHSIA_aarch64_SYSROOT} \
+-DBUILTINS_aarch64-fuchsia_CMAKE_SYSTEM_NAME=Fuchsia
 ```
 
 For this kind of build, the `bin` directory immediate under your main LLVM
@@ -153,7 +161,9 @@ for best possible performance also using Profile-Guided Optimizations (PGO).
 To set the host compiler, you can use the following extra flags:
 
 ```bash
--DCMAKE_C_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang -DCMAKE_CXX_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang++ -DLLVM_ENABLE_LLD=ON
+-DCMAKE_C_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang \
+-DCMAKE_CXX_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang++ \
+-DLLVM_ENABLE_LLD=ON
 ```
 
 This assumes that `${CLANG_TOOLCHAIN_PREFIX}` points to the `bin` directory
@@ -172,10 +182,26 @@ for incremental development, without having to manually specify all
 options:
 
 ```bash
-cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang -DCMAKE_CXX_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang++ -DLLVM_ENABLE_LTO=OFF -DFUCHSIA_x86_64_SYSROOT=${FUCHSIA_x86_64_SYSROOT} -DFUCHSIA_aarch64_SYSROOT=${FUCHSIA_aarch64_SYSROOT} -C ${LLVM_SRCDIR}/tools/clang/cmake/caches/Fuchsia-stage2.cmake ${LLVM_SRCDIR}
+cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_C_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang \
+  -DCMAKE_CXX_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang++ \
+  -DLLVM_ENABLE_LTO=OFF \
+  -DLLVM_ENABLE_PROJECTS=clang\;lldb\;lld \
+  -DLLVM_ENABLE_RUNTIMES=compiler-rt\;libcxx\;libcxxabi\;libunwind \
+  -DFUCHSIA_x86_64_SYSROOT=${SDK_DIR}/arch/x64/sysroot \
+  -DFUCHSIA_x86_64_C_FLAGS=-I${SDK_DIR}/pkg/launchpad/include \
+  -DFUCHSIA_x86_64_CXX_FLAGS=-I${SDK_DIR}/pkg/launchpad/include \
+  -DFUCHSIA_x86_64_LINKER_FLAGS=-I${SDK_DIR}/arch/x64/lib \
+  -DFUCHSIA_aarch64_SYSROOT=${SDK_DIR}/arch/arm64/sysroot \
+  -DFUCHSIA_aarch64_C_FLAGS=-I${SDK_DIR}/pkg/launchpad/include \
+  -DFUCHSIA_aarch64_CXX_FLAGS=-I${SDK_DIR}/pkg/launchpad/include \
+  -DFUCHSIA_aarch64_LINKER_FLAGS=-I${SDK_DIR}/arch/arm64/lib \
+  -C ${LLVM_SRCDIR}/tools/clang/cmake/caches/Fuchsia-stage2.cmake \
+  ${LLVM_SRCDIR}
+ninja distribution
 ```
 
-## Building Fuchsia with your custom Clang
+## Building Fuchsia with your custom Clang {#building-fuchsia}
 
 You can start building test binaries right away by using the Clang in
 `${LLVM_OBJDIR}/bin/`, or in `${LLVM_OBJDIR}/tools/clang/stage2-bins/bin/`
@@ -186,14 +212,16 @@ your Clang to build Fuchsia, you'll need to set some more arguments/variables.
 If you're only interested in building Zircon, set the following environment
 variables:
 
-```
-export USE_CLANG=true
-export CLANG_TOOLCHAIN_PREFIX=${CLANG_DIR}
+```bash
+export USE_CLANG=true CLANG_TOOLCHAIN_PREFIX=${CLANG_DIR}
 ```
 
-...where CLANG_DIR is the path to the "bin" directory for your Clang build,
-e.g. `${LLVM_OBJDIR}/bin/`.  Note that *it is important you include the trailing
-slash*.
+`${CLANG_DIR}` is the path to the `bin` directory for your Clang build,
+e.g. `${LLVM_OBJDIR}/bin/`.
+
+*** note
+**Note:** that trailing slash is important.
+***
 
 Then run `fx build-zircon` as usual.
 
@@ -207,7 +235,7 @@ To ensure the environment variables are set every time you build, you may want
 to run `fx set`, and then manually edit your `${FUCHSIA_SOURCE}/.config` file,
 adding the following line:
 
-```
+```bash
 export USE_CLANG=true CLANG_TOOLCHAIN_PREFIX=${LLVM_OBJDIR}/bin/
 ```
 
@@ -258,3 +286,4 @@ Documentation:
 
 Talks:
 * [2016 LLVM Developers’ Meeting: C. Bieneman "Developing and Shipping LLVM and Clang with CMake"](https://www.youtube.com/watch?v=StF77Cx7pz8)
+* [2017 LLVM Developers’ Meeting: Petr Hosek "Compiling cross-toolchains with CMake and runtimes build"](https://www.youtube.com/watch?v=OCQGpUzXDsY)
