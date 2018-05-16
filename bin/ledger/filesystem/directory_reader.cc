@@ -8,6 +8,7 @@
 #include <memory>
 
 #include <dirent.h>
+#include <fcntl.h>
 
 #include "lib/fxl/strings/string_view.h"
 
@@ -22,9 +23,19 @@ void SafeCloseDir(DIR* dir) {
 }  // namespace
 
 bool DirectoryReader::GetDirectoryEntries(
-    fxl::StringView directory,
-    std::function<bool(fxl::StringView)> callback) {
-  std::unique_ptr<DIR, decltype(&SafeCloseDir)> dir(opendir(directory.data()),
+    const std::string& directory,
+    const std::function<bool(fxl::StringView)>& callback) {
+  return GetDirectoryEntriesAt(AT_FDCWD, directory, callback);
+}
+
+bool DirectoryReader::GetDirectoryEntriesAt(
+    int root_fd, const std::string& directory,
+    const std::function<bool(fxl::StringView)>& callback) {
+  int dir_fd = openat(root_fd, directory.c_str(), O_RDONLY);
+  if (dir_fd == -1) {
+    return false;
+  }
+  std::unique_ptr<DIR, decltype(&SafeCloseDir)> dir(fdopendir(dir_fd),
                                                     SafeCloseDir);
   if (!dir.get())
     return false;
@@ -46,4 +57,4 @@ bool DirectoryReader::GetDirectoryEntries(
   return true;
 }
 
-};  // namespace ledger
+}  // namespace ledger
