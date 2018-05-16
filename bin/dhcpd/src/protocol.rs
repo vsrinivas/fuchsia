@@ -4,8 +4,6 @@
 #![deny(warnings)]
 #![allow(unused)] // TODO(atait): Remove once there are non-test clients
 
-extern crate byteorder;
-
 const IPV4_ADDR_LEN: usize = 4;
 const MAC_ADDR_LEN: usize = 6;
 
@@ -33,8 +31,6 @@ const UNUSED_CHADDR_BYTES: usize = 10;
 
 const SNAME_LEN: usize = 64;
 const FILE_LEN: usize = 128;
-
-const END_OP: u8 = 255;
 
 const ONE_BYTE_LEN: usize = 8;
 const TWO_BYTE_LEN: usize = 16;
@@ -82,8 +78,8 @@ impl Message {
             siaddr: [0; IPV4_ADDR_LEN],
             giaddr: [0; IPV4_ADDR_LEN],
             chaddr: [0; MAC_ADDR_LEN],
-            sname: String::from(""),
-            file: String::from(""),
+            sname: String::new(),
+            file: String::new(),
             options: Vec::new(),
         };
         msg
@@ -94,7 +90,7 @@ impl Message {
     /// Any malformed configuration options will be skipped over, leaving only
     /// well formed `ConfigOption`s in the final `Message`.
     pub fn from_buffer(buf: &[u8]) -> Option<Self> {
-        use self::byteorder::{BigEndian, ByteOrder};
+        use byteorder::{BigEndian, ByteOrder};
 
         if buf.len() < OPTIONS_START_IDX {
             return None;
@@ -133,10 +129,13 @@ impl Message {
 
     fn buf_into_options(buf: &[u8], options: &mut Vec<ConfigOption>) {
         let mut opt_idx = 0;
-        while opt_idx < buf.len() && buf[opt_idx] != END_OP {
+        while opt_idx < buf.len()
+            && OptionCode::option_code_from_u8(buf[opt_idx]) != Some(OptionCode::End)
+        {
             let opt_code = buf[opt_idx];
-            let opt_len: usize = match opt_code {
-                0 | END_OP => 1, // fixed length option
+            let opt_len: usize = match OptionCode::option_code_from_u8(opt_code) {
+                None => continue,                                   // invalid option
+                Some(OptionCode::Pad) | Some(OptionCode::End) => 1, // fixed length option
                 _ => match buf.get(opt_idx + 1) {
                     // variable length option
                     Some(len) => (len + 2) as usize,
@@ -202,7 +201,7 @@ impl Message {
         for option in &self.options {
             option.serialize_to(&mut bytes);
         }
-        bytes.push(END_OP);
+        bytes.push(OptionCode::End as u8);
         bytes
     }
 }
@@ -216,7 +215,7 @@ fn test_serialize_returns_correct_bytes() {
     msg.sname = String::from("relay.example.com");
     msg.file = String::from("boot.img");
     msg.options.push(ConfigOption {
-        code: 1u8,
+        code: OptionCode::SubnetMask,
         value: vec![255, 255, 255, 0],
     });
 
@@ -271,26 +270,26 @@ fn test_message_from_buffer_returns_correct_message() {
     buf.extend_from_slice(b"\x01\x04\xFF\xFF\xFF\x00");
     buf.extend_from_slice(b"\x00");
     buf.extend_from_slice(b"\x00");
-    buf.extend_from_slice(b"\x0D\x02\xAA\xBB");
+    buf.extend_from_slice(b"\x36\x04\xAA\xBB\xCC\xDD");
     buf.extend_from_slice(b"\xFF");
 
     let got = Message::from_buffer(&buf).unwrap();
 
     let opt_want1 = ConfigOption {
-        code: 1,
+        code: OptionCode::SubnetMask,
         value: vec![255, 255, 255, 0],
     };
     let opt_want2 = ConfigOption {
-        code: 0,
+        code: OptionCode::Pad,
         value: vec![],
     };
     let opt_want3 = ConfigOption {
-        code: 0,
+        code: OptionCode::Pad,
         value: vec![],
     };
     let opt_want4 = ConfigOption {
-        code: 13,
-        value: vec![0xAA, 0xBB],
+        code: OptionCode::ServerId,
+        value: vec![0xAA, 0xBB, 0xCC, 0xDD],
     };
     let want = Message {
         op: OpCode::BOOTREQUEST,
@@ -321,6 +320,10 @@ fn test_message_from_too_short_buffer_returns_none() {
 
 /// A DHCP protocol op-code as defined in RFC 2131.
 ///
+/// Note that this type corresponds to the first field of a DHCP message,
+/// opcode, and is distinct from the OptionCode type. In this case, "Op"
+/// is an abbreviation for Operator, not Option.
+///
 /// `OpCode::BOOTREQUEST` should only appear in protocol messages from the
 /// client, and conversely `OpCode::BOOTREPLY` should only appear in messages
 /// from the server.
@@ -349,7 +352,7 @@ impl OpCode {
 /// length field.
 #[derive(Debug, PartialEq)]
 pub struct ConfigOption {
-    pub code: u8,
+    pub code: OptionCode,
     pub value: Vec<u8>,
 }
 
@@ -358,10 +361,8 @@ impl ConfigOption {
         if buf.len() <= 0 {
             return None;
         }
-        let code = buf[0];
-        if !ConfigOption::is_valid_code(code) {
-            return None;
-        }
+        let raw_code = buf[0];
+        let code = OptionCode::option_code_from_u8(raw_code)?;
         let len: usize = match buf.get(1) {
             Some(l) => *l as usize,
             None => 0,
@@ -384,32 +385,19 @@ impl ConfigOption {
     }
 
     fn serialize_to(&self, output: &mut Vec<u8>) {
-        if !self.has_valid_code() {
-            return;
-        }
-        output.push(self.code);
+        output.push(self.code as u8);
         let len = self.value.len() as u8;
         if len > 0 {
             output.push(len);
         }
         output.extend(&self.value);
     }
-
-    fn has_valid_code(&self) -> bool {
-        // code is between 0 and 61, inclusive, or is 255
-        self.code <= 61 || self.code == 255
-    }
-
-    fn is_valid_code(code: u8) -> bool {
-        // code is between 0 and 61, inclusive, or is 255
-        code <= 61 || code == 255
-    }
 }
 
 #[test]
 fn test_serialize_with_valid_option_returns_correct_bytes() {
     let opt = ConfigOption {
-        code: 1,
+        code: OptionCode::SubnetMask,
         value: vec![255, 255, 255, 0],
     };
     let mut bytes = Vec::new();
@@ -424,20 +412,9 @@ fn test_serialize_with_valid_option_returns_correct_bytes() {
 }
 
 #[test]
-fn test_serialize_with_invalid_code_returns_none() {
-    let opt = ConfigOption {
-        code: 100,
-        value: vec![42],
-    };
-    let mut bytes = Vec::new();
-    opt.serialize_to(&mut bytes);
-    assert!(bytes.is_empty());
-}
-
-#[test]
 fn test_serialize_with_fixed_len_option_returns_correct_bytes() {
     let opt = ConfigOption {
-        code: 255,
+        code: OptionCode::End,
         value: vec![],
     };
     let mut bytes = Vec::new();
@@ -452,7 +429,7 @@ fn test_option_from_valid_buffer_has_correct_values() {
     let result = ConfigOption::from_buffer(&buf);
     match result {
         Some(opt) => {
-            assert_eq!(opt.code, 1);
+            assert_eq!(opt.code as u8, 1);
             assert_eq!(opt.value, vec![255, 255, 255, 0]);
         }
         None => assert!(false), // test failure
@@ -465,7 +442,7 @@ fn test_option_from_valid_buffer_with_fixed_length_has_correct_values() {
     let result = ConfigOption::from_buffer(&buf);
     match result {
         Some(opt) => {
-            assert_eq!(opt.code, 255);
+            assert_eq!(opt.code as u8, 255);
             assert!(opt.value.is_empty());
         }
         None => assert!(false), // test failure
@@ -489,5 +466,53 @@ fn test_option_from_buffer_with_invalid_length_returns_none() {
     match result {
         Some(opt) => assert!(false), // test failure
         None => assert!(true),       // test success
+    }
+}
+
+/// A DHCP Message Type.
+///
+/// This enum corresponds to the DHCP Message Type option values
+/// defined in section 9.4 of RFC 1533.
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum MessageType {
+    DHCPDISCOVER = 1,
+    DHCPOFFER = 2,
+    DHCPREQUEST = 3,
+    DHCPDECLINE = 4,
+    DHCPACK = 5,
+    DHCPNAK = 6,
+    DHCPRELEASE = 7,
+}
+
+/// A DHCP option code.
+///
+/// This enum corresponds to the codes for DHCP options as defined in
+/// RFC 1533. Note that not all options defined in the RFC are represented
+/// here; options which are not in this type are not currently supported. Supported
+/// options appear in this type in the order in which they are defined in the RFC.
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum OptionCode {
+    Pad = 0,
+    End = 255,
+    SubnetMask = 1,
+    RequestedIpAddr = 50,
+    IpAddrLeaseTime = 51,
+    DhcpMessageType = 53,
+    ServerId = 54,
+}
+
+impl OptionCode {
+    /// Returns an OptionCode value when given a valid and supported code value, else None.
+    pub fn option_code_from_u8(n: u8) -> Option<OptionCode> {
+        match n {
+            0 => Some(OptionCode::Pad),
+            255 => Some(OptionCode::End),
+            1 => Some(OptionCode::SubnetMask),
+            50 => Some(OptionCode::RequestedIpAddr),
+            51 => Some(OptionCode::IpAddrLeaseTime),
+            53 => Some(OptionCode::DhcpMessageType),
+            54 => Some(OptionCode::ServerId),
+            _ => None,
+        }
     }
 }
