@@ -5,10 +5,15 @@
 #include "peridot/bin/user_runner/puppet_master/puppet_master_impl.h"
 
 #include "lib/fxl/logging.h"
+#include "peridot/bin/user_runner/puppet_master/story_puppet_master_impl.h"
 
 namespace modular {
 
-PuppetMasterImpl::PuppetMasterImpl() = default;
+PuppetMasterImpl::PuppetMasterImpl(StoryCommandExecutor* const executor)
+    : executor_(executor) {
+  FXL_DCHECK(executor_ != nullptr);
+}
+
 PuppetMasterImpl::~PuppetMasterImpl() = default;
 
 void PuppetMasterImpl::Connect(fidl::InterfaceRequest<PuppetMaster> request) {
@@ -18,7 +23,9 @@ void PuppetMasterImpl::Connect(fidl::InterfaceRequest<PuppetMaster> request) {
 void PuppetMasterImpl::ControlStory(
     fidl::StringPtr story_id,
     fidl::InterfaceRequest<StoryPuppetMaster> request) {
-  FXL_NOTIMPLEMENTED();
+  auto controller =
+      std::make_unique<StoryPuppetMasterImpl>(story_id, executor_);
+  story_puppet_masters_.AddBinding(std::move(controller), std::move(request));
 }
 
 void PuppetMasterImpl::WatchSession(

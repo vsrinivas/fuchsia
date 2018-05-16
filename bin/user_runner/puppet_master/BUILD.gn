@@ -6,10 +6,23 @@ source_set("puppet_master_impl") {
   sources = [
     "puppet_master_impl.cc",
     "puppet_master_impl.h",
+    "story_puppet_master_impl.cc",
+    "story_puppet_master_impl.h",
   ]
 
   deps = [
+    ":story_command_executor",
     "//garnet/public/lib/fxl",
+  ]
+
+  public_deps = [
+    "//peridot/public/lib:fidl",
+  ]
+}
+
+source_set("story_command_executor") {
+  sources = [
+    "story_command_executor.h",
   ]
 
   public_deps = [
@@ -34,6 +47,7 @@ source_set("puppet_master_impl_unittest") {
 
   deps = [
     ":puppet_master_impl",
+    ":story_command_executor",
     "//garnet/public/lib/gtest",
     "//peridot/public/lib:fidl",
     "//third_party/googletest:gtest",
