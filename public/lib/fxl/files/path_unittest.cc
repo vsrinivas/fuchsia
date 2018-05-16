@@ -215,7 +215,7 @@ TEST(Path, DeletePath) {
 
 TEST(Path, DeletePathAt) {
   ScopedTempDir dir;
-  fxl::UniqueFD root(open(dir.path().c_str(), O_PATH));
+  fxl::UniqueFD root(open(dir.path().c_str(), O_RDONLY));
   ASSERT_TRUE(root.is_valid());
 
   std::string sub_dir = "dir";
@@ -250,7 +250,7 @@ TEST(Path, DeletePathRecursively) {
 
 TEST(Path, DeletePathRecursivelyAt) {
   ScopedTempDir dir;
-  fxl::UniqueFD root(open(dir.path().c_str(), O_PATH));
+  fxl::UniqueFD root(open(dir.path().c_str(), O_RDONLY));
   ASSERT_TRUE(root.is_valid());
 
   std::string sub_dir = "dir";

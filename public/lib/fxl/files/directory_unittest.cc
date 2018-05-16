@@ -43,7 +43,7 @@ TEST(Directory, CreateDirectoryAt) {
 
   ScopedTempDir dir;
   EXPECT_TRUE(IsDirectory(dir.path()));
-  fxl::UniqueFD root(open(dir.path().c_str(), O_PATH));
+  fxl::UniqueFD root(open(dir.path().c_str(), O_RDONLY));
   EXPECT_TRUE(root.is_valid());
   EXPECT_FALSE(IsDirectoryAt(root.get(), "foo/bar/baz"));
   EXPECT_TRUE(CreateDirectoryAt(root.get(), "foo/bar/baz"));
