@@ -1082,11 +1082,20 @@ bool ImportFile(const FileContents& file, const char* filename,
     return true;
 }
 
+const uint32_t kImageArchUndefined = ZBI_TYPE_DISCARD;
+
 // Returns nullptr if complete, else an explanatory string.
-const char* IncompleteImage(const std::list<std::unique_ptr<Item>>& items) {
+const char* IncompleteImage(const std::list<std::unique_ptr<Item>>& items,
+                            const uint32_t image_arch) {
     if (!ZBI_IS_KERNEL_BOOTITEM(items.front()->type())) {
         return "first item not KERNEL";
     }
+
+    if (items.front()->type() != image_arch &&
+        image_arch != kImageArchUndefined) {
+        return "kernel arch mismatch";
+    }
+
     auto count =
         std::count_if(items.begin(), items.end(),
                       [](const std::unique_ptr<Item>& item) {
@@ -1109,7 +1118,7 @@ constexpr const option kLongOpts[] = {
     {"target", required_argument, nullptr, 'T'},
     {"groups", required_argument, nullptr, 'g'},
     {"list", no_argument, nullptr, 't'},
-    {"complete", no_argument, nullptr, 'B'},
+    {"complete", required_argument, nullptr, 'B'},
     {"compressed", no_argument, nullptr, 'c'},
     {"uncompressed", no_argument, nullptr, 'u'},
     {"cmdline", required_argument, nullptr, 'C'},
@@ -1126,7 +1135,7 @@ Remaining arguments are interpersed switches and input files:\n\
     --output=FILE, -o FILE         output file name\n\
     --depfile=FILE, -d FILE        makefile dependency output file name\n\
     --list, -t                     list input ZBI item headers\n\
-    --complete, -B                 verify result is a complete boot image\n\
+    --complete=ARCH, -B ARCH       verify result is a complete boot image\n\
     --groups=GROUPS, -g GROUPS     comma-separated list of manifest groups\n\
     --compressed, -c               compress BOOTFS/RAMDISK images (default)\n\
     --uncompressed, -u             do not compress BOOTFS/RAMDISK images\n\
@@ -1151,10 +1160,10 @@ int main(int argc, char** argv) {
     GroupFilter filter;
     const char* outfile = nullptr;
     const char* depfile = nullptr;
+    uint32_t complete_arch = kImageArchUndefined;
     uint32_t target = ZBI_TYPE_STORAGE_BOOTFS;
     bool compressed = true;
     bool list_contents = false;
-    bool verify_complete = false;
     std::list<std::unique_ptr<Item>> items;
 
     int opt;
@@ -1222,9 +1231,16 @@ int main(int argc, char** argv) {
             continue;
 
         case 'B':
-            verify_complete = true;
+            if (!strcmp(optarg, "x64")) {
+                complete_arch = ZBI_TYPE_KERNEL_X64;
+            } else if (!strcmp(optarg, "arm64")) {
+                complete_arch = ZBI_TYPE_KERNEL_ARM64;
+            } else {
+                fprintf(stderr, "--complete architecture argument must be one"
+                                " of: x64, arm64\n");
+                exit(1);
+            }
             continue;
-
         case 'c':
             compressed = true;
             continue;
@@ -1292,8 +1308,8 @@ int main(int argc, char** argv) {
         exit(1);
     }
 
-    if (verify_complete) {
-        const char* incomplete = IncompleteImage(items);
+    if (complete_arch != kImageArchUndefined) {
+        const char* incomplete = IncompleteImage(items, complete_arch);
         if (incomplete) {
             fprintf(stderr, "incomplete image: %s\n", incomplete);
             exit(1);
@@ -1305,7 +1321,7 @@ int main(int argc, char** argv) {
             fprintf(stderr, "no output file or depfile with --list or -t\n");
             exit(1);
         }
-        const char* incomplete = IncompleteImage(items);
+        const char* incomplete = IncompleteImage(items, complete_arch);
         if (incomplete) {
             printf("INCOMPLETE: %s\n", incomplete);
         } else {
