@@ -42,25 +42,27 @@ static uint8_t displacement_size(uint8_t mod_rm, uint8_t sib) {
   }
 }
 
-static uint8_t operand_size(bool h66, bool rex_w, bool w) {
+static uint8_t operand_size(bool h66, bool rex_w, bool w,
+                            uint8_t default_operand_size) {
   if (!w) {
     return 1;
   } else if (rex_w) {
     return 8;
-  } else if (!h66) {
-    return 4;
+  }
+  if (!h66) {
+    return default_operand_size;
   } else {
-    return 2;
+    return default_operand_size == 2 ? 4 : 2;
   }
 }
 
-static uint8_t immediate_size(bool h66, bool w) {
+static uint8_t immediate_size(bool h66, bool w, uint8_t default_operand_size) {
   if (!w) {
     return 1;
   } else if (!h66) {
-    return 4;
+    return default_operand_size;
   } else {
-    return 2;
+    return default_operand_size == 2 ? 4 : 2;
   }
 }
 
@@ -176,12 +178,19 @@ namespace machina {
 // as a source or destination. There's no need to decode memory operands because
 // the faulting address is already known.
 zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len,
+                        uint8_t default_operand_size,
                         zx_vcpu_state_t* vcpu_state, Instruction* inst) {
   if (inst_len == 0) {
     return ZX_ERR_BAD_STATE;
   }
   if (inst_len > X86_MAX_INST_LEN) {
     return ZX_ERR_OUT_OF_RANGE;
+  }
+  if (default_operand_size != 2 && default_operand_size != 4) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (vcpu_state == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
   }
 
   // Parse 66H prefix.
@@ -234,7 +243,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len,
       }
       const bool w = opcode & kWMask;
       inst->type = INST_MOV_WRITE;
-      inst->access_size = operand_size(h66, rex_w, w);
+      inst->access_size = operand_size(h66, rex_w, w, default_operand_size);
       inst->imm = 0;
       inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r),
                                   inst->access_size, rex);
@@ -250,7 +259,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len,
       }
       const bool w = opcode & kWMask;
       inst->type = INST_MOV_READ;
-      inst->access_size = operand_size(h66, rex_w, w);
+      inst->access_size = operand_size(h66, rex_w, w, default_operand_size);
       inst->imm = 0;
       inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r),
                                   inst->access_size, rex);
@@ -262,7 +271,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len,
     case 0xc6:
     case 0xc7: {
       const bool w = opcode & kWMask;
-      const uint8_t imm_size = immediate_size(h66, w);
+      const uint8_t imm_size = immediate_size(h66, w, default_operand_size);
       if (inst_len != sib_size + disp_size + imm_size + 2u) {
         return ZX_ERR_OUT_OF_RANGE;
       }
@@ -270,7 +279,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len,
         return ZX_ERR_INVALID_ARGS;
       }
       inst->type = INST_MOV_WRITE;
-      inst->access_size = operand_size(h66, rex_w, w);
+      inst->access_size = operand_size(h66, rex_w, w, default_operand_size);
       inst->imm = 0;
       inst->reg = NULL;
       inst->flags = NULL;
@@ -291,10 +300,11 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len,
 
       // We'll be operating with different sized operands due to the zero-
       // extend. The 'w' bit determines if we're reading 8 or 16 bits out of
-      // memory while the h66/rex_w bits are used to select the destination
-      // register size.
+      // memory while the h66/rex_w bits and default operand size are used to
+      // select the destination register size.
       const uint8_t access_size = w ? 2 : 1;
-      const uint8_t reg_size = operand_size(h66, rex_w, true);
+      const uint8_t reg_size =
+          operand_size(h66, rex_w, true, default_operand_size);
       inst->type = INST_MOV_READ;
       inst->access_size = access_size;
       inst->imm = 0;

@@ -36,6 +36,7 @@ struct Instruction {
 };
 
 zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len,
+                        uint8_t default_operand_size,
                         zx_vcpu_state_t* vcpu_state, Instruction* inst);
 
 #define DEFINE_INST_VAL(size)                                            \

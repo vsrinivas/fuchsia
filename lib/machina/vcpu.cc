@@ -302,7 +302,8 @@ zx_status_t Vcpu::HandleMem(const zx_packet_guest_mem_t& mem,
   status = HandleMmioArm(mem, trap_key, &vcpu_state.x[mem.xt]);
 #elif __x86_64__
   Instruction inst;
-  status = inst_decode(mem.inst_buf, mem.inst_len, &vcpu_state, &inst);
+  status = inst_decode(mem.inst_buf, mem.inst_len, mem.default_operand_size,
+                       &vcpu_state, &inst);
   if (status != ZX_OK) {
     fbl::StringBuffer<LINE_MAX> buffer;
     for (uint8_t i = 0; i < mem.inst_len; i++) {
