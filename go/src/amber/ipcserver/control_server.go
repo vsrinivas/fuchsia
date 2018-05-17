@@ -33,6 +33,8 @@ type ControlSrvr struct {
 	writeReqs   chan<- *startUpdateRequest
 }
 
+const ZXSIO_DAEMON_ERROR = zx.SignalUser0
+
 func NewControlSrvr(d *daemon.DaemonProvider, r *source.TickGenerator) *ControlSrvr {
 	go bindings.Serve()
 	a := make(chan string, 5)
@@ -75,7 +77,13 @@ func (c *ControlSrvr) ListSrcs() ([]string, error) {
 func (c *ControlSrvr) getAndWaitForUpdate(name string, version, merkle *string, ch *zx.Channel) {
 	res, err := c.downloadPkgMeta(name, version, merkle)
 	if err != nil {
-		ch.Close()
+		signalErr := ch.Handle().SignalPeer(0, zx.SignalUser0)
+		if signalErr != nil {
+			lg.Log.Printf("signal failed: %s", signalErr)
+			ch.Close()
+		} else {
+			ch.Write([]byte(err.Error()), []zx.Handle{}, 0)
+		}
 		return
 	}
 	lg.Log.Println("Package metadata retrieved, sending for additional processing")

@@ -5,6 +5,7 @@
 package main
 
 import (
+	"amber/ipcserver"
 	"app/context"
 	"flag"
 	"fmt"
@@ -116,20 +117,37 @@ func main() {
 			if err == nil {
 				defer c.Close()
 				b := make([]byte, 1024)
+				daemonErr := false
 				for {
-					sigs, err := zxwait.Wait(*c.Handle(),
-						zx.SignalChannelPeerClosed|zx.SignalChannelReadable,
+					var err error
+					var sigs zx.Signals
+					sigs, err = zxwait.Wait(*c.Handle(),
+						zx.SignalChannelPeerClosed|zx.SignalChannelReadable|ipcserver.ZXSIO_DAEMON_ERROR,
 						zx.Sys_deadline_after(zx.Duration((3 * time.Second).Nanoseconds())))
+
+					// If the daemon signaled an error, wait for the error message to
+					// become available. daemonErr could be true if the daemon signaled
+					// but the read timed out.
+					daemonErr = daemonErr ||
+						err == nil && sigs&ipcserver.ZXSIO_DAEMON_ERROR == ipcserver.ZXSIO_DAEMON_ERROR
+					if daemonErr {
+						sigs, err = zxwait.Wait(*c.Handle(),
+							zx.SignalChannelPeerClosed|zx.SignalChannelReadable,
+							zx.Sys_deadline_after(zx.Duration((3 * time.Second).Nanoseconds())))
+					}
+
 					if sigs&zx.SignalChannelReadable == zx.SignalChannelReadable {
 						bs, _, err := c.Read(b, []zx.Handle{}, 0)
-						if err == nil {
-							fmt.Printf("Wrote update to blob %s\n", string(b[0:bs]))
-							break
-						} else {
+						if err != nil {
 							fmt.Printf("Error reading response from channel: %s\n", err)
-							break
+						} else if daemonErr {
+							fmt.Printf("%s\n", string(b[0:bs]))
+						} else {
+							fmt.Printf("Wrote update to blob %s\n", string(b[0:bs]))
 						}
+						break
 					}
+
 					if sigs&zx.SignalChannelPeerClosed == zx.SignalChannelPeerClosed {
 						fmt.Println("Error: response channel closed unexpectedly.")
 						break
