@@ -189,13 +189,14 @@ void AudioRenderer2Impl::SetPcmFormat(AudioPcmFormat format) {
     return;
   }
 
-  // Everything checks out.  Discard any existing links we are holding
-  // onto.  New links need to be created with our new format.
+  // Everything checks out.  Discard any existing links we hold (including
+  // throttle output).  New links need to be created with our new format.
   Unlink();
+  throttle_output_link_ = nullptr;
 
   // Create a new format info object so we can create links to outputs.
   // TODO(johngro): Look into eliminating most of the format_info class when we
-  // finish removing the old audio renererer interface.  At the very least,
+  // finish removing the old audio renderer interface.  At the very least,
   // switch to using the AudioPcmFormat struct instead of AudioMediaTypeDetails
   AudioMediaTypeDetails cfg;
   cfg.sample_format = format.sample_format;
@@ -205,7 +206,7 @@ void AudioRenderer2Impl::SetPcmFormat(AudioPcmFormat format) {
 
   // Have the audio output manager initialize our set of outputs.  Note; there
   // is currently no need for a lock here.  Methods called from our user-facing
-  // interfaces are seriailzed by nature of the fidl framework, and none of the
+  // interfaces are serialzed by nature of the fidl framework, and none of the
   // output manager's threads should ever need to manipulate the set.  Cleanup
   // of outputs which have gone away is currently handled in a lazy fashion when
   // the renderer fails to promote its weak reference during an operation

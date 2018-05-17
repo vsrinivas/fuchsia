@@ -214,9 +214,10 @@ void AudioRenderer1Impl::SetMediaType(MediaType media_type) {
     return;
   }
 
-  // Everything checks out.  Discard any existing links we are holding
-  // onto.  New links need to be created with our new format.
+  // Everything checks out.  Discard any existing links we hold (including
+  // throttle output).  New links need to be created with our new format.
   Unlink();
+  throttle_output_link_ = nullptr;
 
   pipe_.SetPtsRate(TimelineRate(cfg.frames_per_second, 1));
 
@@ -225,7 +226,7 @@ void AudioRenderer1Impl::SetMediaType(MediaType media_type) {
 
   // Have the audio output manager initialize our set of outputs.  Note; there
   // is currently no need for a lock here.  Methods called from our user-facing
-  // interfaces are seriailzed by nature of the fidl framework, and none of the
+  // interfaces are serialized by nature of the fidl framework, and none of the
   // output manager's threads should ever need to manipulate the set.  Cleanup
   // of outputs which have gone away is currently handled in a lazy fashion when
   // the renderer fails to promote its weak reference during an operation
