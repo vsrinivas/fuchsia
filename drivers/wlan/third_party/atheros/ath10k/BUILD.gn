@@ -47,3 +47,34 @@ package("ath10k") {
         name = "ath10k.so"
       } ]
 }
+
+executable("sparse_array_tests") {
+  output_name = "sparse_array_tests"
+  testonly = true
+  sources = [
+    "sparse_array.c",
+    "sparse_array.h",
+    "sparse_array_tests.cc",
+  ]
+
+  deps = [
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+package("ath10k_test") {
+  testonly = true
+  deprecated_system_image = true
+
+  package_name = "ath10k_test"
+
+  deps = [
+    ":sparse_array_tests",
+  ]
+
+  tests = [
+    {
+      name = "sparse_array_tests"
+    },
+  ]
+}

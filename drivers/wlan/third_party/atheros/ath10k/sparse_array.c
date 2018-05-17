@@ -44,7 +44,7 @@ struct sparse_array {
 
 void sa_init(sparse_array_t* psa, size_t size) {
     ZX_DEBUG_ASSERT(size > 0);
-    size_t total_size = sizeof(sparse_array_t) + (sizeof(struct sa_elem) * size);
+    size_t total_size = sizeof(struct sparse_array) + (sizeof(struct sa_elem) * size);
     *psa = calloc(1, total_size);
     if (*psa == NULL) {
         return;
@@ -91,9 +91,12 @@ ssize_t sa_add(sparse_array_t sa, void* payload) {
     elem->next_ndx = sa->used;
     if (sa->used != -1) {
         RANGE_CHECK(sa, sa->used);
-        sa->elems[sa->used].next_ndx = elem_ndx;
+        sa->elems[sa->used].prev_ndx = elem_ndx;
     }
     sa->used = elem_ndx;
+
+    ZX_DEBUG_ASSERT(elem->ptr == NULL);
+    elem->ptr = payload;
 
     return elem_ndx;
 }
@@ -127,6 +130,7 @@ void sa_remove(sparse_array_t sa, ssize_t ndx) {
     next_ndx = sa->free;
     elem->prev_ndx = -1;
     elem->next_ndx = next_ndx;
+    elem->ptr = NULL;
     sa->free = ndx;
     if (next_ndx != -1) {
         RANGE_CHECK(sa, next_ndx);

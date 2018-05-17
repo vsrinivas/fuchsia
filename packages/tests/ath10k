@@ -1,0 +1,5 @@
+{
+    "packages": {
+        "ath10k_test" : "//garnet/drivers/wlan/third_party/atheros/ath10k:ath10k_test"
+    }
+}
