@@ -5,7 +5,7 @@
 #ifndef LIB_FSL_VMO_SIZED_VMO_H_
 #define LIB_FSL_VMO_SIZED_VMO_H_
 
-#include <mem/cpp/fidl.h>
+#include <fuchsia/mem/cpp/fidl.h>
 
 #include <lib/zx/vmo.h>
 
@@ -21,11 +21,11 @@ class SizedVmo {
   SizedVmo(SizedVmo&& other);
   ~SizedVmo();
 
-  // Builds a SizedVmo from a mem::Buffer. Returns false if the transport
+  // Builds a SizedVmo from a fuchsia::mem::Buffer. Returns false if the transport
   // is not valid. For the object to be valid, it must either be null, or the
   // vmo must be valid and the size must be inferior or equal to the physical
   // size of the vmo.
-  static bool FromTransport(mem::Buffer transport, SizedVmo* out);
+  static bool FromTransport(fuchsia::mem::Buffer transport, SizedVmo* out);
 
   static bool IsSizeValid(const zx::vmo& vmo, uint64_t size);
 
@@ -38,9 +38,9 @@ class SizedVmo {
 
   uint64_t size() const { return size_; }
 
-  // Builds a mem::Buffer from this object. This will null this object
+  // Builds a fuchsia::mem::Buffer from this object. This will null this object
   // vmo.
-  mem::Buffer ToTransport() &&;
+  fuchsia::mem::Buffer ToTransport() &&;
 
   zx_status_t Duplicate(zx_rights_t rights, SizedVmo* output) const;
 

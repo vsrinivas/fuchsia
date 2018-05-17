@@ -4,7 +4,7 @@
 
 library http;
 
-using mem;
+using fuchsia.mem;
 
 // An error occurred during the HTTP transaction.
 struct Error {
@@ -30,7 +30,7 @@ struct Header {
 // The body of either an HTTP request or an HTTP response.
 union Body {
   // A buffer that will contain the complete request or response body.
-  mem.Buffer buffer;
+  fuchsia.mem.Buffer buffer;
 
   // A socket that will contain the streaming request or response body.
   handle<socket> stream;

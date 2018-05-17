@@ -15,7 +15,7 @@ SizedVmo::SizedVmo(zx::vmo vmo, uint64_t size)
   FXL_DCHECK(vmo_ && IsSizeValid(vmo_, size_));
 }
 
-bool SizedVmo::FromTransport(mem::Buffer transport, SizedVmo* out) {
+bool SizedVmo::FromTransport(fuchsia::mem::Buffer transport, SizedVmo* out) {
   FXL_DCHECK(transport.vmo);
 
   if (!IsSizeValid(transport.vmo, transport.size)) {
@@ -50,8 +50,8 @@ SizedVmo& SizedVmo::operator=(SizedVmo&& other) {
   return *this;
 }
 
-mem::Buffer SizedVmo::ToTransport() && {
-  mem::Buffer result;
+fuchsia::mem::Buffer SizedVmo::ToTransport() && {
+  fuchsia::mem::Buffer result;
   if (!vmo_) {
     return result;
   }

@@ -4,10 +4,10 @@
 
 library icu_data;
 
-using mem;
+using fuchsia.mem;
 
 struct ICUData {
-  mem.Buffer vmo;
+  fuchsia.mem.Buffer vmo;
 };
 
 [Discoverable]

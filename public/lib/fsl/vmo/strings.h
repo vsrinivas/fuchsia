@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include <mem/cpp/fidl.h>
+#include <fuchsia/mem/cpp/fidl.h>
 
 #include <lib/zx/vmo.h>
 
@@ -25,7 +25,7 @@ FXL_EXPORT bool VmoFromString(const fxl::StringView& string,
 FXL_EXPORT bool StringFromVmo(const SizedVmo& handle, std::string* string_ptr);
 
 // Copy the contents of a shared buffer into a string.
-FXL_EXPORT bool StringFromVmo(const mem::Buffer& handle,
+FXL_EXPORT bool StringFromVmo(const fuchsia::mem::Buffer& handle,
                               std::string* string_ptr);
 
 }  // namespace fsl

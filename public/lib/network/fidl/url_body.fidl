@@ -4,7 +4,7 @@
 
 library network;
 
-using mem;
+using fuchsia.mem;
 
 union URLBody {
   // A socket that will contain the streaming request or response body.
@@ -12,5 +12,5 @@ union URLBody {
   // A shared buffer that will contain the complete request or response body.
   handle<vmo> buffer;
   // A sized shared buffer that will contain the complete request or response body.
-  mem.Buffer sized_buffer;
+  fuchsia.mem.Buffer sized_buffer;
 };

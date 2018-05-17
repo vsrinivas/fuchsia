@@ -4,7 +4,7 @@
 
 library fonts;
 
-using mem;
+using fuchsia.mem;
 
 enum FontSlant {
   UPRIGHT = 1;
@@ -27,7 +27,7 @@ struct FontRequest {
 };
 
 struct FontData {
-  mem.Buffer buffer;
+  fuchsia.mem.Buffer buffer;
 };
 
 struct FontResponse {
