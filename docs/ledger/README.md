@@ -51,6 +51,7 @@ Design documentation:
 
  - [Architecture](architecture.md)
  - [Conflict Resolution](conflict_resolution.md)
+ - [Data in Storage](data_in_storage.md)
  - [Life of a Put](life_of_a_put.md)
 
 
