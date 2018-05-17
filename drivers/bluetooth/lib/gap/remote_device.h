@@ -83,9 +83,15 @@ class RemoteDevice final {
   void SetLEAdvertisingData(int8_t rssi,
                             const common::ByteBuffer& advertising_data);
 
+  // Updates the device based on extended inquiry response data.
+  // |bytes| contains the data from an ExtendedInquiryResponse event.
+  void SetExtendedInquiryResponse(const common::ByteBuffer& bytes);
+
   // Updates the device based on inquiry result data obtained through a
   // BR/EDR discovery procedure.
   void SetInquiryData(const hci::InquiryResult& result);
+  void SetInquiryData(const hci::InquiryResultRSSI& result);
+  void SetInquiryData(const hci::ExtendedInquiryResultEventParams& result);
 
   // Updates the name of this device.
   // If Advertising Data has been set, this must match any local name advertised
@@ -218,6 +224,9 @@ class RemoteDevice final {
   // payload.
   size_t advertising_data_length_;
   common::DynamicByteBuffer advertising_data_buffer_;
+
+  // TODO(jamuraa): Parse more of the Extended Inquiry Response fields
+  common::DynamicByteBuffer extended_inquiry_response_;
 
   // Most recently used LE connection parameters. Has no value if this device
   // has never been connected.

@@ -76,6 +76,8 @@ void FakeController::Settings::ApplyDualModeDefaults() {
   SetBit(&lmp_features_page0, hci::LMPFeature::kLESupported);
   SetBit(&lmp_features_page0, hci::LMPFeature::kSimultaneousLEAndBREDR);
   SetBit(&lmp_features_page0, hci::LMPFeature::kExtendedFeatures);
+  SetBit(&lmp_features_page0, hci::LMPFeature::kRSSIwithInquiryResults);
+  SetBit(&lmp_features_page0, hci::LMPFeature::kExtendedInquiryResponse);
 
   AddBREDRSupportedCommands();
   AddLESupportedCommands();
@@ -98,6 +100,8 @@ void FakeController::Settings::AddBREDRSupportedCommands() {
   SetBit(supported_commands + 7, hci::SupportedCommand::kWriteScanEnable);
   SetBit(supported_commands + 8, hci::SupportedCommand::kReadPageScanActivity);
   SetBit(supported_commands + 8, hci::SupportedCommand::kWritePageScanActivity);
+  SetBit(supported_commands + 12, hci::SupportedCommand::kReadInquiryMode);
+  SetBit(supported_commands + 12, hci::SupportedCommand::kWriteInquiryMode);
   SetBit(supported_commands + 13, hci::SupportedCommand::kReadPageScanType);
   SetBit(supported_commands + 13, hci::SupportedCommand::kWritePageScanType);
   SetBit(supported_commands + 14, hci::SupportedCommand::kReadBufferSize);
@@ -509,7 +513,7 @@ void FakeController::SendInquiryResponses() {
       continue;
     }
 
-    SendCommandChannelPacket(device->CreateInquiryResponseEvent());
+    SendCommandChannelPacket(device->CreateInquiryResponseEvent(inquiry_mode_));
     inquiry_num_responses_left_--;
     if (inquiry_num_responses_left_ == 0) {
       break;
@@ -928,6 +932,21 @@ void FakeController::OnCommandPacketReceived(
       RespondWithSuccess(opcode);
       break;
     }
+    case hci::kReadInquiryMode: {
+      hci::ReadInquiryModeReturnParams params;
+      params.status = hci::StatusCode::kSuccess;
+      params.inquiry_mode = inquiry_mode_;
+      RespondWithCommandComplete(hci::kReadInquiryMode,
+                                 common::BufferView(&params, sizeof(params)));
+      break;
+    }
+    case hci::kWriteInquiryMode: {
+      const auto& in_params =
+          command_packet.payload<hci::WriteInquiryModeCommandParams>();
+      inquiry_mode_ = in_params.inquiry_mode;
+      RespondWithSuccess(opcode);
+      break;
+    };
     case hci::kReadPageScanType: {
       hci::ReadPageScanTypeReturnParams params;
       params.status = hci::StatusCode::kSuccess;

@@ -14,6 +14,37 @@
 namespace btlib {
 namespace gap {
 
+namespace {
+
+template <typename EventParamType, typename ResultType>
+std::unordered_set<RemoteDevice*> ProcessInquiryResult(
+    RemoteDeviceCache* cache, const hci::EventPacket& event) {
+  std::unordered_set<RemoteDevice*> updated;
+  FXL_VLOG(2) << "gap (BR/EDR): InquiryResult received";
+  size_t result_size = event.view().payload_size() - sizeof(EventParamType);
+  if ((result_size % sizeof(ResultType)) != 0) {
+    FXL_LOG(INFO) << "gap (BR/EDR): ignoring malformed result ("
+                  << event.view().payload_size() << " bytes)";
+    return updated;
+  }
+  const auto& result = event.view().payload<EventParamType>();
+  for (int i = 0; i < result.num_responses; i++) {
+    common::DeviceAddress addr(common::DeviceAddress::Type::kBREDR,
+                               result.responses[i].bd_addr);
+    RemoteDevice* device = cache->FindDeviceByAddress(addr);
+    if (!device) {
+      device = cache->NewDevice(addr, true);
+    }
+    FXL_DCHECK(device);
+
+    device->SetInquiryData(result.responses[i]);
+    updated.insert(device);
+  }
+  return updated;
+}
+
+}  // namespace
+
 BrEdrDiscoverySession::BrEdrDiscoverySession(
     fxl::WeakPtr<BrEdrDiscoveryManager> manager)
     : manager_(manager) {}
@@ -46,11 +77,14 @@ BrEdrDiscoverableSession::~BrEdrDiscoverableSession() {
 }
 
 BrEdrDiscoveryManager::BrEdrDiscoveryManager(fxl::RefPtr<hci::Transport> hci,
+                                             hci::InquiryMode mode,
                                              RemoteDeviceCache* device_cache)
     : hci_(hci),
       dispatcher_(async_get_default()),
       cache_(device_cache),
       result_handler_id_(0u),
+      desired_inquiry_mode_(mode),
+      current_inquiry_mode_(hci::InquiryMode::kStandard),
       weak_ptr_factory_(this) {
   FXL_DCHECK(cache_);
   FXL_DCHECK(hci_);
@@ -61,10 +95,22 @@ BrEdrDiscoveryManager::BrEdrDiscoveryManager(fxl::RefPtr<hci::Transport> hci,
       fit::bind_member(this, &BrEdrDiscoveryManager::InquiryResult),
       dispatcher_);
   FXL_DCHECK(result_handler_id_);
+  rssi_handler_id_ = hci_->command_channel()->AddEventHandler(
+      hci::kInquiryResultWithRSSIEventCode,
+      fbl::BindMember(this, &BrEdrDiscoveryManager::InquiryResult),
+      dispatcher_);
+  FXL_DCHECK(rssi_handler_id_);
   // TODO(NET-729): add event handlers for the other inquiry modes
+  eir_handler_id_ = hci_->command_channel()->AddEventHandler(
+      hci::kExtendedInquiryResultEventCode,
+      fbl::BindMember(this, &BrEdrDiscoveryManager::ExtendedInquiryResult),
+      dispatcher_);
+  FXL_DCHECK(eir_handler_id_);
 }
 
 BrEdrDiscoveryManager::~BrEdrDiscoveryManager() {
+  hci_->command_channel()->RemoveEventHandler(eir_handler_id_);
+  hci_->command_channel()->RemoveEventHandler(rssi_handler_id_);
   hci_->command_channel()->RemoveEventHandler(result_handler_id_);
   InvalidateDiscoverySessions();
 }
@@ -103,6 +149,26 @@ void BrEdrDiscoveryManager::MaybeStartInquiry() {
   }
   FXL_VLOG(1) << "gap (BR/EDR): starting inqiury";
 
+  auto self = weak_ptr_factory_.GetWeakPtr();
+  if (desired_inquiry_mode_ != current_inquiry_mode_) {
+    auto packet = hci::CommandPacket::New(
+        hci::kWriteInquiryMode, sizeof(hci::WriteInquiryModeCommandParams));
+    packet->mutable_view()
+        ->mutable_payload<hci::WriteInquiryModeCommandParams>()
+        ->inquiry_mode = desired_inquiry_mode_;
+    hci_->command_channel()->SendCommand(
+        std::move(packet), dispatcher_,
+        [self, mode = desired_inquiry_mode_](auto, const auto& event) {
+          if (!self) {
+            return;
+          }
+          if (!BTEV_TEST_LOG(event, INFO,
+                             "gap (BR/EDR): write inquiry mode failed")) {
+            self->current_inquiry_mode_ = mode;
+          }
+        });
+  }
+
   auto inquiry =
       hci::CommandPacket::New(hci::kInquiry, sizeof(hci::InquiryCommandParams));
   auto params =
@@ -112,7 +178,7 @@ void BrEdrDiscoveryManager::MaybeStartInquiry() {
   params->num_responses = 0;
   hci_->command_channel()->SendCommand(
       std::move(inquiry), dispatcher_,
-      [self = weak_ptr_factory_.GetWeakPtr()](auto, const auto& event) {
+      [self](auto, const auto& event) {
         if (!self) {
           return;
         }
@@ -164,32 +230,52 @@ void BrEdrDiscoveryManager::StopInquiry() {
 }
 
 void BrEdrDiscoveryManager::InquiryResult(const hci::EventPacket& event) {
-  FXL_DCHECK(event.event_code() == hci::kInquiryResultEventCode);
+  std::unordered_set<RemoteDevice*> devices;
+  if (event.event_code() == hci::kInquiryResultEventCode) {
+    devices =
+        ProcessInquiryResult<hci::InquiryResultEventParams, hci::InquiryResult>(
+            cache_, event);
+  } else if (event.event_code() == hci::kInquiryResultWithRSSIEventCode) {
+    devices = ProcessInquiryResult<hci::InquiryResultWithRSSIEventParams,
+                                   hci::InquiryResultRSSI>(cache_, event);
+  } else {
+    FXL_NOTREACHED() << "Unsupported Inquiry result type";
+    return;
+  }
 
-  FXL_VLOG(2) << "gap: BrEdrDiscoveryManager: InquiryResult received";
+  for (RemoteDevice* device : devices) {
+    for (const auto& session : discovering_) {
+      session->NotifyDiscoveryResult(*device);
+    }
+  }
+}
 
-  if ((event.view().payload_size() - sizeof(hci::InquiryResultEventParams)) %
-          sizeof(hci::InquiryResult) !=
-      0) {
+void BrEdrDiscoveryManager::ExtendedInquiryResult(
+    const hci::EventPacket& event) {
+  FXL_DCHECK(event.event_code() == hci::kExtendedInquiryResultEventCode);
+
+  FXL_VLOG(2) << "gap (BR/EDR): ExtendedInquiryResult received";
+  if (event.view().payload_size() !=
+      sizeof(hci::ExtendedInquiryResultEventParams)) {
     FXL_LOG(INFO) << "gap (BR/EDR): ignoring malformed result ("
                   << event.view().payload_size() << " bytes)";
     return;
   }
-  const auto& result = event.view().payload<hci::InquiryResultEventParams>();
-  for (int i = 0; i < result.num_responses; i++) {
-    common::DeviceAddress addr(common::DeviceAddress::Type::kBREDR,
-                               result.responses[i].bd_addr);
-    RemoteDevice* device = cache_->FindDeviceByAddress(addr);
-    if (!device) {
-      device = cache_->NewDevice(addr, true);
-    }
-    FXL_DCHECK(device);
+  const auto& result =
+      event.view().payload<hci::ExtendedInquiryResultEventParams>();
 
-    device->SetInquiryData(result.responses[i]);
+  common::DeviceAddress addr(common::DeviceAddress::Type::kBREDR,
+                             result.bd_addr);
+  RemoteDevice* device = cache_->FindDeviceByAddress(addr);
+  if (!device) {
+    device = cache_->NewDevice(addr, true);
+  }
+  FXL_DCHECK(device);
 
-    for (const auto& session : discovering_) {
-      session->NotifyDiscoveryResult(*device);
-    }
+  device->SetInquiryData(result);
+
+  for (const auto& session : discovering_) {
+    session->NotifyDiscoveryResult(*device);
   }
 }
 

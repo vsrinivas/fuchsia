@@ -61,7 +61,8 @@ class FakeDevice {
 
   // Generates a Inquiry Response Event payload containing a inquiry result
   // response.
-  common::DynamicByteBuffer CreateInquiryResponseEvent() const;
+  common::DynamicByteBuffer CreateInquiryResponseEvent(
+      hci::InquiryMode mode) const;
 
   const common::DeviceAddress& address() const { return address_; }
 

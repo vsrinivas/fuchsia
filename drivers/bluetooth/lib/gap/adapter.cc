@@ -495,8 +495,17 @@ void Adapter::InitializeStep4(InitializeCallback callback) {
   bredr_connection_manager_ = std::make_unique<BrEdrConnectionManager>(
       hci_, &device_cache_,
       state_.features().HasBit(0, hci::LMPFeature::kInterlacedPageScan));
+
+  hci::InquiryMode mode = hci::InquiryMode::kStandard;
+  if (state_.features().HasBit(0, hci::LMPFeature::kExtendedInquiryResponse)) {
+    mode = hci::InquiryMode::kExtended;
+  } else if (state_.features().HasBit(
+                 0, hci::LMPFeature::kRSSIwithInquiryResults)) {
+    mode = hci::InquiryMode::kRSSI;
+  }
+
   bredr_discovery_manager_ =
-      std::make_unique<BrEdrDiscoveryManager>(hci_, &device_cache_);
+      std::make_unique<BrEdrDiscoveryManager>(hci_, mode, &device_cache_);
 
   // This completes the initialization sequence.
   self->init_state_ = State::kInitialized;

@@ -4,6 +4,7 @@
 
 #include "remote_device.h"
 
+#include "garnet/drivers/bluetooth/lib/gap/advertising_data.h"
 #include "garnet/drivers/bluetooth/lib/hci/low_energy_scanner.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -108,6 +109,25 @@ void RemoteDevice::SetLEAdvertisingData(
   }
 }
 
+void RemoteDevice::SetExtendedInquiryResponse(const common::ByteBuffer& bytes) {
+  FXL_DCHECK(bytes.size() <= hci::kExtendedInquiryResponseBytes);
+  if (extended_inquiry_response_.size() < bytes.size()) {
+    extended_inquiry_response_ = common::DynamicByteBuffer(bytes.size());
+  }
+  bytes.Copy(&extended_inquiry_response_);
+
+  // TODO(jamuraa): maybe rename this class?
+  AdvertisingDataReader reader(extended_inquiry_response_);
+
+  gap::DataType type;
+  common::BufferView data;
+  while (reader.GetNextField(&type, &data)) {
+    if (type == gap::DataType::kCompleteLocalName) {
+      SetName(std::string(data.ToString()));
+    }
+  }
+}
+
 void RemoteDevice::SetInquiryData(const hci::InquiryResult& result) {
   FXL_DCHECK(address_.value() == result.bd_addr);
 
@@ -120,6 +140,28 @@ void RemoteDevice::SetInquiryData(const hci::InquiryResult& result) {
   if (significant_change) {
     updated_callback_(this);
   }
+}
+
+void RemoteDevice::SetInquiryData(const hci::InquiryResultRSSI& result) {
+  FXL_DCHECK(address_.value() == result.bd_addr);
+
+  clock_offset_ = le16toh(kClockOffsetValidBitMask | result.clock_offset);
+  page_scan_repetition_mode_ = result.page_scan_repetition_mode;
+  device_class_ = result.class_of_device;
+  rssi_ = result.rssi;
+}
+
+void RemoteDevice::SetInquiryData(
+    const hci::ExtendedInquiryResultEventParams& result) {
+  FXL_DCHECK(address_.value() == result.bd_addr);
+
+  clock_offset_ = le16toh(kClockOffsetValidBitMask | result.clock_offset);
+  page_scan_repetition_mode_ = result.page_scan_repetition_mode;
+  device_class_ = result.class_of_device;
+  rssi_ = result.rssi;
+
+  SetExtendedInquiryResponse(common::BufferView(
+      result.extended_inquiry_response, hci::kExtendedInquiryResponseBytes));
 }
 
 void RemoteDevice::SetName(const std::string& name) {

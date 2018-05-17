@@ -1287,6 +1287,14 @@ enum class LinkType : uint8_t {
   kExtendedSCO = 0x02, // eSCO
 };
 
+enum class InquiryMode : uint8_t {
+  kStandard = 0x00, // Standard Inquiry Result format (default)
+  kRSSI = 0x01, // Inquiry Result format with RSSI
+  kExtended = 0x02, // Inquiry Result format with RSSI or EIR format
+};
+
+// Length of the Extended Inquiry Response data. (Vol 3, Part C, Section 8)
+constexpr size_t kExtendedInquiryResponseBytes = 240;
 
 // Bitmask values for supported Packet Types
 // Used for HCI_Create_Connection and HCI_Change_Connection_Packet_Type

@@ -483,6 +483,27 @@ struct ReadTransmitPowerLevelReturnParams {
   int8_t tx_power_level;
 } __PACKED;
 
+// =================================
+// Read Inquiry Mode (v1.2) (BR/EDR)
+constexpr OpCode kReadInquiryMode = ControllerAndBasebandOpCode(0x0044);
+
+struct ReadInquiryModeReturnParams {
+  // See enum StatusCode in hci_constants.h.
+  StatusCode status;
+
+  // See enum InquiryMode in hci_constants.h
+  InquiryMode inquiry_mode;
+} __PACKED;
+
+// ==================================
+// Write Inquiry Mode (v1.2) (BR/EDR)
+constexpr OpCode kWriteInquiryMode = ControllerAndBasebandOpCode(0x0045);
+
+struct WriteInquiryModeCommandParams {
+  // See enum InquiryMode in hci_constants.h
+  InquiryMode inquiry_mode;
+} __PACKED;
+
 // ===================================
 // Read Page Scan Type (v1.2) (BR/EDR)
 constexpr OpCode kReadPageScanType = ControllerAndBasebandOpCode(0x0046);
@@ -782,7 +803,9 @@ struct InquiryResult {
   // Class of device
   common::DeviceClass class_of_device;
 
-  // 15 MSB of the Clock Offset
+  // Clock Offset
+  // the 15 lower bits represent bits 16-2 of CLKNslave-CLK
+  // the most significant bit is reserved
   uint16_t clock_offset;
 } __PACKED;
 
@@ -992,6 +1015,45 @@ struct NumberOfCompletedPacketsEventParams {
   NumberOfCompletedPacketsEventData data[];
 } __PACKED;
 
+// ==============================================
+// Inquiry Result with RSSI Event (v1.2) (BR/EDR)
+constexpr EventCode kInquiryResultWithRSSIEventCode = 0x22;
+
+struct InquiryResultRSSI {
+  // The address for the device which responded.
+  common::DeviceAddressBytes bd_addr;
+
+  // The Page Scan Repetition Mode being used by the remote device.
+  PageScanRepetitionMode page_scan_repetition_mode;
+
+  // Reserved (no meaning as of v1.2)
+  uint8_t page_scan_period_mode;
+
+  // Reserved (no meaning as of v1.2)
+  uint8_t page_scan_mode;
+
+  // Class of device
+  common::DeviceClass class_of_device;
+
+  // Clock Offset
+  // the 15 lower bits represent bits 16-2 of CLKNslave-CLK
+  // the most significant bit is reserved
+  uint16_t clock_offset;
+
+  // RSSI
+  // Valid range: -127 to +20
+  uint8_t rssi;
+} __PACKED;
+
+struct InquiryResultWithRSSIEventParams {
+  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(InquiryResultWithRSSIEventParams);
+
+  // The number of responses included.
+  uint8_t num_responses;
+
+  InquiryResultRSSI responses[];
+} __PACKED;
+
 // =============================================================
 // Read Remote Extended Features Complete Event (v1.1) (BR/EDR)
 constexpr EventCode kReadRemoteExtendedFeaturesCompleteEventCode = 0x23;
@@ -1015,6 +1077,41 @@ struct ReadRemoteExtendedFeaturesCompleteEventParams {
   // Bit Mask List of LMP features. See enum class LMPFeature in hci_constants.h
   // for how to interpret this bitfield.
   uint64_t lmp_features;
+} __PACKED;
+
+// =============================================
+// Extended Inquiry Result Event (v1.2) (BR/EDR)
+constexpr EventCode kExtendedInquiryResultEventCode = 0x2F;
+
+struct ExtendedInquiryResultEventParams {
+  // Num_Responses
+  // The number of responses from the inquiry.
+  // Must be 1.
+  uint8_t num_responses;
+
+  // BD_ADDR of the device that responded.
+  common::DeviceAddressBytes bd_addr;
+
+  // The Page Scna Repetition Mode being used by the remote device.
+  PageScanRepetitionMode page_scan_repetition_mode;
+
+  // Reserved for future use
+  uint8_t reserved;
+
+  // Class of device
+  common::DeviceClass class_of_device;
+
+  // Clock offset
+  // the 15 lower bits represent bits 16-2 of CLKNslave-CLK
+  // the most significant bit is reserved
+  uint16_t clock_offset;
+
+  // RSSI in dBm.
+  // Valid range: -127 to +20
+  int8_t rssi;
+
+  // Extended inquiey response data as defined in Vol 3, Part C, Sec 8
+  uint8_t extended_inquiry_response[kExtendedInquiryResponseBytes];
 } __PACKED;
 
 // ================================================================

@@ -106,7 +106,7 @@ class BrEdrDiscoverableSession final {
 class BrEdrDiscoveryManager final {
  public:
   // |device_cache| MUST out-live this BrEdrDiscoveryManager.
-  BrEdrDiscoveryManager(fxl::RefPtr<hci::Transport> hci,
+  BrEdrDiscoveryManager(fxl::RefPtr<hci::Transport> hci, hci::InquiryMode mode,
                         RemoteDeviceCache* device_cache);
 
   ~BrEdrDiscoveryManager();
@@ -143,6 +143,9 @@ class BrEdrDiscoveryManager final {
 
   // Used to receive Inquiry Results.
   void InquiryResult(const hci::EventPacket& event);
+
+  // Used to receive Inquiry Results.
+  void ExtendedInquiryResult(const hci::EventPacket& event);
 
   // Creates and stores a new session object and returns it.
   std::unique_ptr<BrEdrDiscoverySession> AddDiscoverySession();
@@ -193,8 +196,15 @@ class BrEdrDiscoveryManager final {
   // The set of callbacks that are waiting on inquiry to start.
   std::queue<hci::StatusCallback> pending_discoverable_;
 
-  // The Handler ID of the event handler if we are scanning.
+  // The Handler IDs of the event handlers for inquiry results.
   hci::CommandChannel::EventHandlerId result_handler_id_;
+  hci::CommandChannel::EventHandlerId rssi_handler_id_;
+  hci::CommandChannel::EventHandlerId eir_handler_id_;
+
+  // The inquiry mode that we should use.
+  hci::InquiryMode desired_inquiry_mode_;
+  // The current inquiry mode.
+  hci::InquiryMode current_inquiry_mode_;
 
   fxl::ThreadChecker thread_checker_;
 

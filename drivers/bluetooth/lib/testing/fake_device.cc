@@ -57,52 +57,68 @@ void FakeDevice::SetScanResponse(bool should_batch_reports,
   should_batch_reports_ = should_batch_reports;
 }
 
-common::DynamicByteBuffer FakeDevice::CreateInquiryResponseEvent() const {
+common::DynamicByteBuffer FakeDevice::CreateInquiryResponseEvent(
+    hci::InquiryMode mode) const {
   FXL_DCHECK(address_.type() == common::DeviceAddress::Type::kBREDR);
 
-  size_t event_size = sizeof(hci::EventHeader) +
-                      sizeof(hci::InquiryResultEventParams) +
-                      sizeof(hci::InquiryResult);
-  common::DynamicByteBuffer buffer(event_size);
+  size_t param_size;
+  if (mode == hci::InquiryMode::kStandard) {
+    param_size =
+        sizeof(hci::InquiryResultEventParams) + sizeof(hci::InquiryResult);
+  } else {
+    param_size = sizeof(hci::InquiryResultWithRSSIEventParams) +
+                 sizeof(hci::InquiryResultRSSI);
+  }
 
-  common::MutablePacketView<hci::EventHeader> event(
-      &buffer, event_size - sizeof(hci::EventHeader));
+  common::DynamicByteBuffer buffer(sizeof(hci::EventHeader) + param_size);
+  common::MutablePacketView<hci::EventHeader> event(&buffer, param_size);
+  event.mutable_header()->parameter_total_size = param_size;
 
-  event.mutable_header()->event_code = hci::kInquiryResultEventCode;
-  event.mutable_header()->parameter_total_size =
-      event_size - sizeof(hci::EventHeader);
+  // TODO(jamuraa): simultate clock offset and RSSI
+  if (mode == hci::InquiryMode::kStandard) {
+    event.mutable_header()->event_code = hci::kInquiryResultEventCode;
+    auto payload = event.mutable_payload<hci::InquiryResultEventParams>();
+    payload->num_responses = 1u;
 
-  auto payload = event.mutable_payload<hci::InquiryResultEventParams>();
-  payload->num_responses = 1u;
+    auto inq_result = reinterpret_cast<hci::InquiryResult*>(payload->responses);
+    inq_result->bd_addr = address_.value();
+    inq_result->page_scan_repetition_mode = hci::PageScanRepetitionMode::kR0;
+    inq_result->class_of_device = class_of_device_;
+    inq_result->clock_offset = 0;
+  } else {
+    event.mutable_header()->event_code = hci::kInquiryResultWithRSSIEventCode;
+    auto payload =
+        event.mutable_payload<hci::InquiryResultWithRSSIEventParams>();
+    payload->num_responses = 1u;
 
-  auto inq_result = reinterpret_cast<hci::InquiryResult*>(payload->responses);
-  inq_result->bd_addr = address_.value();
-  inq_result->page_scan_repetition_mode = hci::PageScanRepetitionMode::kR0;
-  inq_result->class_of_device = class_of_device_;
-  // TODO(jamuraa): simultate devices with an actual clock offset?
-  inq_result->clock_offset = 0;
+    auto inq_result =
+        reinterpret_cast<hci::InquiryResultRSSI*>(payload->responses);
+    inq_result->bd_addr = address_.value();
+    inq_result->page_scan_repetition_mode = hci::PageScanRepetitionMode::kR0;
+    inq_result->class_of_device = class_of_device_;
+    inq_result->clock_offset = 0;
+    inq_result->rssi = -30;
+  }
 
   return buffer;
 }
 
 common::DynamicByteBuffer FakeDevice::CreateAdvertisingReportEvent(
     bool include_scan_rsp) const {
-  size_t event_size =
-      sizeof(hci::EventHeader) + sizeof(hci::LEMetaEventParams) +
-      sizeof(hci::LEAdvertisingReportSubeventParams) +
-      sizeof(hci::LEAdvertisingReportData) + adv_data_.size() + sizeof(int8_t);
+  size_t param_size = sizeof(hci::LEMetaEventParams) +
+                      sizeof(hci::LEAdvertisingReportSubeventParams) +
+                      sizeof(hci::LEAdvertisingReportData) + adv_data_.size() +
+                      sizeof(int8_t);
   if (include_scan_rsp) {
     FXL_DCHECK(scannable_);
-    event_size += sizeof(hci::LEAdvertisingReportData) + scan_rsp_.size() +
+    param_size += sizeof(hci::LEAdvertisingReportData) + scan_rsp_.size() +
                   sizeof(int8_t);
   }
 
-  common::DynamicByteBuffer buffer(event_size);
-  common::MutablePacketView<hci::EventHeader> event(
-      &buffer, event_size - sizeof(hci::EventHeader));
+  common::DynamicByteBuffer buffer(sizeof(hci::EventHeader) + param_size);
+  common::MutablePacketView<hci::EventHeader> event(&buffer, param_size);
   event.mutable_header()->event_code = hci::kLEMetaEventCode;
-  event.mutable_header()->parameter_total_size =
-      event_size - sizeof(hci::EventHeader);
+  event.mutable_header()->parameter_total_size = param_size;
 
   auto payload = event.mutable_payload<hci::LEMetaEventParams>();
   payload->subevent_code = hci::kLEAdvertisingReportSubeventCode;
@@ -144,17 +160,15 @@ common::DynamicByteBuffer FakeDevice::CreateAdvertisingReportEvent(
 
 common::DynamicByteBuffer FakeDevice::CreateScanResponseReportEvent() const {
   FXL_DCHECK(scannable_);
-  size_t event_size =
-      sizeof(hci::EventHeader) + sizeof(hci::LEMetaEventParams) +
-      sizeof(hci::LEAdvertisingReportSubeventParams) +
-      sizeof(hci::LEAdvertisingReportData) + scan_rsp_.size() + sizeof(int8_t);
+  size_t param_size = sizeof(hci::LEMetaEventParams) +
+                      sizeof(hci::LEAdvertisingReportSubeventParams) +
+                      sizeof(hci::LEAdvertisingReportData) + scan_rsp_.size() +
+                      sizeof(int8_t);
 
-  common::DynamicByteBuffer buffer(event_size);
-  common::MutablePacketView<hci::EventHeader> event(
-      &buffer, event_size - sizeof(hci::EventHeader));
+  common::DynamicByteBuffer buffer(sizeof(hci::EventHeader) + param_size);
+  common::MutablePacketView<hci::EventHeader> event(&buffer, param_size);
   event.mutable_header()->event_code = hci::kLEMetaEventCode;
-  event.mutable_header()->parameter_total_size =
-      event_size - sizeof(hci::EventHeader);
+  event.mutable_header()->parameter_total_size = param_size;
 
   auto payload = event.mutable_payload<hci::LEMetaEventParams>();
   payload->subevent_code = hci::kLEAdvertisingReportSubeventCode;

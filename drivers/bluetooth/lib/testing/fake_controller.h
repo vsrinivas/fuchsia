@@ -300,6 +300,10 @@ class FakeController : public FakeControllerBase,
   // ID used for L2CAP LE signaling channel commands.
   uint8_t next_le_sig_id_;
 
+  // The Inquiry Mode that the controller is in.  Determines what types of
+  // events are faked when a kInquiry is started.
+  hci::InquiryMode inquiry_mode_;
+
   // The number of results left in Inquiry Mode operation.
   // If negative, no limit has been set.
   int16_t inquiry_num_responses_left_;
