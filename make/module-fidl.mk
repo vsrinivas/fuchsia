@@ -32,7 +32,7 @@ MODULE_EXP_FILE := $(BUILDDIR)/export/$(MODULE_NAME).pkg
 
 MODULE_PKG_SRCS := $(MODULE_SRCS)
 
-ifneq ($(strip $(MODULE_PACKAGE)),)
+ifneq ($(strip $(MODULE_PKG_SRCS)),)
 MODULE_PKG_SRCS := $(foreach src,$(MODULE_PKG_SRCS),$(patsubst $(MODULE_SRCDIR)/%,%,$(src))=SOURCE/$(src))
 MODULE_PKG_TAG := "[fidl]"
 endif
