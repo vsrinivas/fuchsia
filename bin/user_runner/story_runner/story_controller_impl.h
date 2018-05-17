@@ -267,12 +267,6 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // The second ingredient of a story: Links. They connect Modules.
   std::vector<std::unique_ptr<LinkImpl>> links_;
 
-  // A dummy service that allows applications that can run both as modules in a
-  // story and standalone from the shell to determine whether they are in a
-  // story. See story_marker.fidl for more details.
-  class StoryMarkerImpl;
-  std::unique_ptr<StoryMarkerImpl> story_marker_impl_;
-
   // A collection of services, scoped to this Story, for use by intelligent
   // Modules.
   IntelligenceServicesPtr intelligence_services_;

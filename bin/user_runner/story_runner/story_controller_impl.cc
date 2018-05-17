@@ -232,20 +232,6 @@ void XdrPerDeviceStoryInfo(XdrContext* const xdr,
 
 }  // namespace
 
-class StoryControllerImpl::StoryMarkerImpl : StoryMarker {
- public:
-  StoryMarkerImpl() = default;
-  ~StoryMarkerImpl() override = default;
-
-  void Connect(fidl::InterfaceRequest<StoryMarker> request) {
-    bindings_.AddBinding(this, std::move(request));
-  }
-
- private:
-  fidl::BindingSet<StoryMarker> bindings_;
-  FXL_DISALLOW_COPY_AND_ASSIGN(StoryMarkerImpl);
-};
-
 class StoryControllerImpl::BlockingModuleDataWriteCall : public Operation<> {
  public:
   BlockingModuleDataWriteCall(StoryControllerImpl* const story_controller_impl,
@@ -1572,13 +1558,7 @@ StoryControllerImpl::StoryControllerImpl(
       story_page_id_(std::move(story_page_id)),
       story_scope_(story_provider_impl_->user_scope(),
                    kStoryScopeLabelPrefix + story_id_.get()),
-      story_context_binding_(this),
-      story_marker_impl_(new StoryMarkerImpl) {
-  story_scope_.AddService<StoryMarker>(
-      [this](fidl::InterfaceRequest<StoryMarker> request) {
-        story_marker_impl_->Connect(std::move(request));
-      });
-
+      story_context_binding_(this) {
   auto story_scope = StoryScope::New();
   story_scope->story_id = story_id;
   auto scope = ComponentScope::New();

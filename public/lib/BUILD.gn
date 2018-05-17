@@ -75,7 +75,6 @@ fidl("fidl") {
     "story/fidl/story_command.fidl",
     "story/fidl/story_controller.fidl",
     "story/fidl/story_info.fidl",
-    "story/fidl/story_marker.fidl",
     "story/fidl/story_provider.fidl",
     "story/fidl/story_shell.fidl",
     "story/fidl/story_state.fidl",
