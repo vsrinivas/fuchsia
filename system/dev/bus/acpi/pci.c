@@ -24,6 +24,23 @@
 
 #define PANIC_UNIMPLEMENTED __builtin_trap()
 
+ACPI_STATUS pci_get_bbn(ACPI_HANDLE object, int* out_bbn) {
+    ACPI_OBJECT out = {
+        .Type = ACPI_TYPE_INTEGER,
+    };
+    ACPI_BUFFER buf = {
+        .Length = sizeof(out),
+        .Pointer = &out,
+    };
+    ACPI_STATUS acpi_status = AcpiEvaluateObject(object, (char*)"_BBN", NULL, &buf);
+    if (acpi_status != AE_OK) {
+        return acpi_status;
+    }
+    // Lower 8 bits of _BBN returned integer is the PCI base bus number.
+    *out_bbn = out.Integer.Value & 0xFF;
+    return ZX_OK;
+}
+
 /* Helper routine for translating IRQ routing tables into usable form
  *
  * @param port_dev_id The device ID on the root bus of this root port or

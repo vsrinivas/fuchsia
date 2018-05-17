@@ -5,6 +5,9 @@
 #pragma once
 
 #include <zircon/syscalls/pci.h>
+#include <acpica/acpi.h>
+
+ACPI_STATUS pci_get_bbn(ACPI_HANDLE object, int* out_bbn);
 
 zx_status_t get_pci_init_arg(zx_pci_init_arg_t** arg, uint32_t* size);
 zx_status_t pci_report_current_resources(zx_handle_t root_resource_handle);

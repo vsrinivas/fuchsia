@@ -6,8 +6,12 @@
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+#include <zircon/syscalls/pci.h>
 
 __BEGIN_CDECLS;
+
+// Key to get NHLT metadata
+#define MD_KEY_NHLT 'NHLT'
 
 typedef void (ihda_dsp_irq_callback_t)(void* cookie);
 
