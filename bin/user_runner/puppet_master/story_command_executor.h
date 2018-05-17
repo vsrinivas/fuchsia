@@ -13,6 +13,8 @@ namespace modular {
 
 class StoryCommandExecutor {
  public:
+  virtual ~StoryCommandExecutor();
+
   // Executes |commands| on story identified by |story_id| and calls |done| when
   // complete. If |story_id| is null, a new story will be created. In either
   // case, ExecuteResult.story_id will be set to the id of the story on which

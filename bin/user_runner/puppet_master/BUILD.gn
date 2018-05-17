@@ -2,6 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("unittests") {
+  testonly = true
+
+  deps = [
+    ":puppet_master_impl_unittest",
+    ":dispatch_story_command_executor_unittest",
+  ]
+}
+
 source_set("puppet_master_impl") {
   sources = [
     "puppet_master_impl.cc",
@@ -20,24 +29,6 @@ source_set("puppet_master_impl") {
   ]
 }
 
-source_set("story_command_executor") {
-  sources = [
-    "story_command_executor.h",
-  ]
-
-  public_deps = [
-    "//peridot/public/lib:fidl",
-  ]
-}
-
-group("unittests") {
-  testonly = true
-
-  deps = [
-    ":puppet_master_impl_unittest",
-  ]
-}
-
 source_set("puppet_master_impl_unittest") {
   testonly = true
 
@@ -48,6 +39,45 @@ source_set("puppet_master_impl_unittest") {
   deps = [
     ":puppet_master_impl",
     ":story_command_executor",
+    "//garnet/public/lib/gtest",
+    "//peridot/public/lib:fidl",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+source_set("story_command_executor") {
+  sources = [
+    "story_command_executor.cc",
+    "story_command_executor.h",
+  ]
+
+  public_deps = [
+    "//peridot/public/lib:fidl",
+  ]
+}
+
+source_set("dispatch_story_command_executor") {
+  sources = [
+    "dispatch_story_command_executor.cc",
+    "dispatch_story_command_executor.h",
+  ]
+
+  public_deps = [
+    ":story_command_executor",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib/async/cpp:operation",
+  ]
+}
+
+source_set("dispatch_story_command_executor_unittest") {
+  testonly = true
+
+  sources = [
+    "dispatch_story_command_executor_unittest.cc",
+  ]
+
+  deps = [
+    ":dispatch_story_command_executor",
     "//garnet/public/lib/gtest",
     "//peridot/public/lib:fidl",
     "//third_party/googletest:gtest",
