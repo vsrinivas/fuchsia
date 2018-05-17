@@ -32,7 +32,7 @@ fidl::VectorPtr<uint8_t> DoubleToArray(double dbl) {
   return array;
 }
 
-::testing::AssertionResult VmoToDouble(const mem::BufferPtr& vmo, double* dbl) {
+::testing::AssertionResult VmoToDouble(const fuchsia::mem::BufferPtr& vmo, double* dbl) {
   if (vmo->size != sizeof(double)) {
     return ::testing::AssertionFailure()
            << "VMO has the wrong size: " << vmo->size << " instead of "

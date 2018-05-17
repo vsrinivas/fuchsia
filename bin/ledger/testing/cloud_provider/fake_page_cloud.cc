@@ -205,7 +205,7 @@ void FakePageCloud::GetCommits(fidl::VectorPtr<uint8_t> min_position_token,
 }
 
 void FakePageCloud::AddObject(fidl::VectorPtr<uint8_t> id,
-                              mem::Buffer data,
+                              fuchsia::mem::Buffer data,
                               AddObjectCallback callback) {
   if (MustReturnError(GetVectorSignature(id, kAddObjectSeed))) {
     callback(cloud_provider::Status::NETWORK_ERROR);

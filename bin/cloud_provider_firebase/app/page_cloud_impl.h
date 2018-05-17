@@ -50,7 +50,7 @@ class PageCloudImpl : public cloud_provider::PageCloud, CommitWatcher {
   void GetCommits(fidl::VectorPtr<uint8_t> min_position_token,
                   GetCommitsCallback callback) override;
   void AddObject(fidl::VectorPtr<uint8_t> id,
-                 mem::Buffer data,
+                 fuchsia::mem::Buffer data,
                  AddObjectCallback callback) override;
   void GetObject(fidl::VectorPtr<uint8_t> id, GetObjectCallback) override;
   void SetWatcher(

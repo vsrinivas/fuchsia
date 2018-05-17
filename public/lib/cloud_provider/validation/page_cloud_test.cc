@@ -129,7 +129,7 @@ class PageCloudTest : public ValidationTest, public PageCloudWatcher {
   }
 
   void OnNewObject(fidl::VectorPtr<uint8_t> /*id*/,
-                   mem::Buffer /*data*/,
+                   fuchsia::mem::Buffer /*data*/,
                    OnNewObjectCallback /*callback*/) override {
     // We don't have any implementations yet that support this API.
     // TODO(ppi): add tests for the OnNewObject notifications.

@@ -199,7 +199,7 @@ void PageCloudImpl::GetCommits(fidl::VectorPtr<uint8_t> min_position_token,
 }
 
 void PageCloudImpl::AddObject(fidl::VectorPtr<uint8_t> id,
-                              mem::Buffer data,
+                              fuchsia::mem::Buffer data,
                               AddObjectCallback callback) {
   std::string data_str;
   fsl::SizedVmo vmo;

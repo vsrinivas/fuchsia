@@ -154,9 +154,9 @@ TEST_F(SerializationSizeTest, Get) {
   std::string object_data = GetValue(0, value_size);
   fsl::SizedVmo vmo;
   ASSERT_TRUE(fsl::VmoFromString(object_data, &vmo));
-  mem::BufferPtr value = fidl::MakeOptional(std::move(vmo).ToTransport());
+  fuchsia::mem::BufferPtr value = fidl::MakeOptional(std::move(vmo).ToTransport());
 
-  auto client_callback = [](Status /*status*/, mem::BufferPtr /*value*/) {};
+  auto client_callback = [](Status /*status*/, fuchsia::mem::BufferPtr /*value*/) {};
   // FakeSnapshot saves the callback instead of running it.
   snapshot_proxy->Get(std::move(key), std::move(client_callback));
   RunLoopUntilIdle();

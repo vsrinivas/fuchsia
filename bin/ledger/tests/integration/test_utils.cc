@@ -143,14 +143,14 @@ fidl::VectorPtr<ledger::Entry> SnapshotGetEntries(
   return result;
 }
 
-std::string ToString(const mem::BufferPtr& vmo) {
+std::string ToString(const fuchsia::mem::BufferPtr& vmo) {
   std::string value;
   bool status = fsl::StringFromVmo(*vmo, &value);
   FXL_DCHECK(status);
   return value;
 }
 
-fidl::VectorPtr<uint8_t> ToArray(const mem::BufferPtr& vmo) {
+fidl::VectorPtr<uint8_t> ToArray(const fuchsia::mem::BufferPtr& vmo) {
   return convert::ToArray(ToString(vmo));
 }
 
@@ -161,7 +161,7 @@ std::string SnapshotFetchPartial(ledger::PageSnapshotPtr* snapshot,
   std::string result;
   (*snapshot)->FetchPartial(
       std::move(key), offset, max_size,
-      [&result](ledger::Status status, mem::BufferPtr buffer) {
+      [&result](ledger::Status status, fuchsia::mem::BufferPtr buffer) {
         EXPECT_EQ(ledger::Status::OK, status);
         EXPECT_TRUE(fsl::StringFromVmo(*buffer, &result));
       });

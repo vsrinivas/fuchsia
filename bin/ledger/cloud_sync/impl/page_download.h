@@ -54,7 +54,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
                     fidl::VectorPtr<uint8_t> position_token,
                     OnNewCommitsCallback callback) override;
 
-  void OnNewObject(fidl::VectorPtr<uint8_t> id, mem::Buffer data,
+  void OnNewObject(fidl::VectorPtr<uint8_t> id, fuchsia::mem::Buffer data,
                    OnNewObjectCallback callback) override;
 
   void OnError(cloud_provider::Status status) override;

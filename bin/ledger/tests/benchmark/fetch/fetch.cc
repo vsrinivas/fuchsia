@@ -202,7 +202,7 @@ void FetchBenchmark::FetchValues(ledger::PageSnapshotPtr snapshot, size_t i) {
       std::move(keys_[i]),
       fxl::MakeCopyable(
           [this, snapshot = std::move(snapshot), i](
-              ledger::Status status, mem::BufferPtr value) mutable {
+              ledger::Status status, fuchsia::mem::BufferPtr value) mutable {
             if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,
                                        "PageSnapshot::Fetch")) {
               return;
@@ -227,7 +227,7 @@ void FetchBenchmark::FetchPart(ledger::PageSnapshotPtr snapshot,
       keys_[i].Clone(), part * part_size_, part_size_,
       fxl::MakeCopyable(
           [this, snapshot = std::move(snapshot), i, part, trace_event_id](
-              ledger::Status status, mem::BufferPtr value) mutable {
+              ledger::Status status, fuchsia::mem::BufferPtr value) mutable {
             if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,
                                        "PageSnapshot::FetchPartial")) {
               return;

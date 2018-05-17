@@ -27,7 +27,7 @@ namespace {
 
 // Transform a SizedVmo to an optional Buffer. Returns null when
 // status is not OK, or a not-null transport otherwise.
-mem::BufferPtr ToOptionalTransport(Status status, fsl::SizedVmo vmo) {
+fuchsia::mem::BufferPtr ToOptionalTransport(Status status, fsl::SizedVmo vmo) {
   if (status != Status::OK) {
     return nullptr;
   }

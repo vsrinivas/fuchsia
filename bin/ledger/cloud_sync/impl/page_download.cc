@@ -213,7 +213,7 @@ void PageDownload::OnNewCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
 }
 
 void PageDownload::OnNewObject(fidl::VectorPtr<uint8_t> /*id*/,
-                               mem::Buffer /*data*/,
+                               fuchsia::mem::Buffer /*data*/,
                                OnNewObjectCallback /*callback*/) {
   // No known cloud provider implementations use this method.
   // TODO(ppi): implement this method when we have such cloud provider

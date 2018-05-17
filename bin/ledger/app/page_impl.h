@@ -47,7 +47,7 @@ class PageImpl : public Page {
       zx::socket data,
       CreateReferenceFromSocketCallback callback) override;
 
-  void CreateReferenceFromVmo(mem::Buffer data,
+  void CreateReferenceFromVmo(fuchsia::mem::Buffer data,
                               CreateReferenceFromVmoCallback callback) override;
 
   void StartTransaction(StartTransactionCallback callback) override;

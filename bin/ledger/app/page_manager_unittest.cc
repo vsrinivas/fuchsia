@@ -37,7 +37,7 @@ std::unique_ptr<MergeResolver> GetDummyResolver(Environment* environment,
                                                     zx::sec(0)));
 }
 
-std::string ToString(const mem::BufferPtr& vmo) {
+std::string ToString(const fuchsia::mem::BufferPtr& vmo) {
   std::string value;
   bool status = fsl::StringFromVmo(*vmo, &value);
   FXL_DCHECK(status);
