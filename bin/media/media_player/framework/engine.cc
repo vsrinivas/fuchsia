@@ -32,6 +32,7 @@ void Engine::UnprepareInput(Input* input) {
     FXL_DCHECK(output);
     FXL_DCHECK(input->prepared());
     input->stage()->UnprepareInput(input->index());
+    input->set_prepared(false);
     output->stage()->UnprepareOutput(output->index(), callback);
   });
 }
@@ -46,7 +47,10 @@ void Engine::VisitUpstream(Input* input, const UpstreamVisitor& visitor) {
     Input* input = backlog.front();
     backlog.pop();
     FXL_DCHECK(input);
-    FXL_DCHECK(input->connected());
+
+    if (!input->connected()) {
+      continue;
+    }
 
     Output* output = input->mate();
     StageImpl* output_stage = output->stage();
