@@ -15,18 +15,9 @@
 #include <functional>
 
 #include "registers.h"
+#include "video_frame.h"
 
 class FirmwareBlob;
-
-struct VideoFrame {
-  ~VideoFrame() { io_buffer_release(&buffer); }
-
-  io_buffer_t buffer = {};
-  uint32_t stride = 0;
-  uint32_t width = 0;
-  uint32_t height = 0;
-  uint32_t uv_plane_offset = 0;
-};
 
 class VideoDecoder {
  public:

@@ -108,6 +108,7 @@ DEFINE_REGISTER(Cpsr, DosRegisterIo, 0x321);
 DEFINE_REGISTER(ImemDmaCtrl, DosRegisterIo, 0x340);
 DEFINE_REGISTER(ImemDmaAdr, DosRegisterIo, 0x341);
 DEFINE_REGISTER(ImemDmaCount, DosRegisterIo, 0x342);
+DEFINE_REGISTER(LmemDmaCtrl, DosRegisterIo, 0x0350);
 DEFINE_REGISTER(DcacDmaCtrl, DosRegisterIo, 0x0e12);
 DEFINE_REGISTER(DosSwReset0, DosRegisterIo, 0x3f00);
 DEFINE_REGISTER(DosGclkEn, DosRegisterIo, 0x3f01);
@@ -152,6 +153,7 @@ REGISTER_NAME(MdecPicDcCtrl, DosRegisterIo, 0x098e)
 DEFINE_REGISTER(MdecPicDcStatus, DosRegisterIo, 0x098f)
 
 DEFINE_REGISTER(MdecSwReset, DosRegisterIo, 0x0984)
+DEFINE_REGISTER(MdecPicDcThresh, DosRegisterIo, 0x9b8)
 
 // AvScratch registers are used to communicate with the AMRISC coprocessor.
 class AvScratch : public TypedRegisterBase<DosRegisterIo, AvScratch, uint32_t> {
@@ -189,6 +191,12 @@ DEFINE_REGISTER(PscaleCtrl, DosRegisterIo, 0x0911)
 DEFINE_REGISTER(PicHeadInfo, DosRegisterIo, 0x0c03)
 DEFINE_REGISTER(M4ControlReg, DosRegisterIo, 0x0c29)
 DEFINE_REGISTER(VdecAssistMbox1ClrReg, DosRegisterIo, 0x0075)
+DEFINE_REGISTER(VdecAssistMbox1Mask, DosRegisterIo, 0x0076)
+
+class AncNCanvasAddr : public TypedRegisterBase<DosRegisterIo, AncNCanvasAddr, uint32_t> {
+ public:
+    static auto Get(uint32_t i) { return AddrType((0x0990 + i) * 4); }
+};
 
 DEFINE_REGISTER(AoRtiGenPwrSleep0, AoRegisterIo, 0x3a);
 DEFINE_REGISTER(AoRtiGenPwrIso0, AoRegisterIo, 0x3b);

@@ -204,22 +204,6 @@ void AmlogicVideo::DisableVideoPower() {
   DisableClockGate();
 }
 
-// Wait for a condition to become true, with a timeout.
-template <typename DurationType, typename T>
-bool WaitForRegister(DurationType timeout, T condition) {
-  auto start = std::chrono::high_resolution_clock::now();
-  auto cast_timeout =
-      std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(
-          timeout);
-  while (!condition()) {
-    if (std::chrono::high_resolution_clock::now() - start >= cast_timeout) {
-      return false;
-    }
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-  }
-  return true;
-}
-
 zx_status_t AmlogicVideo::LoadDecoderFirmware(uint8_t* data, uint32_t size) {
   Mpsr::Get().FromValue(0).WriteTo(dosbus_.get());
   Cpsr::Get().FromValue(0).WriteTo(dosbus_.get());
@@ -757,8 +741,7 @@ zx_status_t AmlogicVideo::InitDecoder() {
 
   InitializeInterrupts();
 
-  video_decoder_ = std::make_unique<Mpeg12Decoder>(this);
-  return video_decoder_->Initialize();
+  return ZX_OK;
 }
 
 extern zx_status_t amlogic_video_init(void** out_ctx) {

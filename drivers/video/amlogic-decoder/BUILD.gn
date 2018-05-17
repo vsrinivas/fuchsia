@@ -49,11 +49,15 @@ source_set("sources") {
     "binding.c",
     "firmware_blob.cc",
     "firmware_blob.h",
+    "h264_decoder.cc",
+    "h264_decoder.h",
     "macros.h",
     "mpeg12_decoder.cc",
     "mpeg12_decoder.h",
     "registers.h",
     "video_decoder.h",
+    "video_frame.cc",
+    "video_frame.h",
 
     # CodecFactory+Codec interface handling:
     "codec_impl.cc",
@@ -92,6 +96,7 @@ source_set("tests") {
     "//third_party/googletest:gtest",
   ]
   sources = [
+    "tests/integration/test_h264.cc",
     "tests/integration/test_mpeg2.cc",
     "tests/test_support.cc",
     "tests/unit_tests/test_binding.cc",

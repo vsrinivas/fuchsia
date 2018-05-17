@@ -50,6 +50,7 @@ class AmlogicVideo final : public VideoDecoder::Owner {
   void PowerDownDecoder() override;
 
  private:
+  friend class TestH264;
   friend class TestMpeg2;
 
   void EnableClockGate();

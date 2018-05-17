@@ -2,44 +2,45 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <future>
-
 #include "amlogic-video.h"
 #include "gtest/gtest.h"
+#include "h264_decoder.h"
 #include "tests/test_support.h"
 
-#include "bear.mpeg2.h"
-#include "mpeg12_decoder.h"
+#include "bear.h264.h"
+#include "macros.h"
 
-class TestMpeg2 {
+class TestH264 {
  public:
   static void Decode() {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
 
-    EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
+    zx_status_t status = video->InitRegisters(TestSupport::parent_device());
+    EXPECT_EQ(ZX_OK, status);
 
     video->EnableVideoPower();
-    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(true));
-
+    status = video->InitializeStreamBuffer(true);
     video->InitializeInterrupts();
-    video->video_decoder_ = std::make_unique<Mpeg12Decoder>(video.get());
+    EXPECT_EQ(ZX_OK, status);
+    video->video_decoder_ = std::make_unique<H264Decoder>(video.get());
+    EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
 
     uint32_t frame_count = 0;
     std::promise<void> wait_valid;
     video->video_decoder_->SetFrameReadyNotifier(
         [&frame_count, &wait_valid](VideoFrame* frame) {
-#if DUMP_VIDEO_TO_FILE
-          DumpVideoFrameToFile(frame, "/tmp/bearmpeg2.yuv");
-#endif
           ++frame_count;
-          if (frame_count == 28)
+          DLOG("Got frame %d\n", frame_count);
+#if DUMP_VIDEO_TO_FILE
+          DumpVideoFrameToFile(frame, "/tmp/bearh264.yuv");
+#endif
+          if (frame_count == 26)
             wait_valid.set_value();
         });
-    EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
 
     EXPECT_EQ(ZX_OK, video->InitializeEsParser());
-    EXPECT_EQ(ZX_OK, video->ParseVideo(bear_mpeg2, bear_mpeg2_len));
+    EXPECT_EQ(ZX_OK, video->ParseVideo(bear_h264, bear_h264_len));
 
     EXPECT_EQ(std::future_status::ready,
               wait_valid.get_future().wait_for(std::chrono::seconds(1)));
@@ -51,29 +52,31 @@ class TestMpeg2 {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
 
-    EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
+    zx_status_t status = video->InitRegisters(TestSupport::parent_device());
+    EXPECT_EQ(ZX_OK, status);
 
     video->EnableVideoPower();
-    EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(false));
-
+    status = video->InitializeStreamBuffer(false);
     video->InitializeInterrupts();
-    video->video_decoder_ = std::make_unique<Mpeg12Decoder>(video.get());
+    EXPECT_EQ(ZX_OK, status);
+    video->video_decoder_ = std::make_unique<H264Decoder>(video.get());
+    EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
 
     uint32_t frame_count = 0;
     std::promise<void> wait_valid;
     video->video_decoder_->SetFrameReadyNotifier(
         [&frame_count, &wait_valid](VideoFrame* frame) {
-#if DUMP_VIDEO_TO_FILE
-          DumpVideoFrameToFile(frame, "/tmp/bearmpeg2noparser.yuv");
-#endif
           ++frame_count;
-          if (frame_count == 28)
+          DLOG("Got frame %d\n", frame_count);
+#if DUMP_VIDEO_TO_FILE
+          DumpVideoFrameToFile(frame, "/tmp/bearh264noparser.yuv");
+#endif
+          if (frame_count == 26)
             wait_valid.set_value();
         });
-    EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
 
     video->InitializeDecoderInput();
-    EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(bear_mpeg2, bear_mpeg2_len));
+    video->ProcessVideoNoParser(bear_h264, bear_h264_len);
 
     EXPECT_EQ(std::future_status::ready,
               wait_valid.get_future().wait_for(std::chrono::seconds(1)));
@@ -82,6 +85,6 @@ class TestMpeg2 {
   }
 };
 
-TEST(MPEG2, Decode) { TestMpeg2::Decode(); }
+TEST(H264, Decode) { TestH264::Decode(); }
 
-TEST(MPEG2, DecodeNoParser) { TestMpeg2::DecodeNoParser(); }
+TEST(H264, DecodeNoParser) { TestH264::DecodeNoParser(); }
