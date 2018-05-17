@@ -90,7 +90,9 @@ void RendererSinkSegment::Unprepare() {
   FXL_DCHECK(renderer_node_);
   FXL_DCHECK(connected_output_);
 
-  graph().UnprepareInput(renderer_node_.input());
+  if (renderer_node_.input().prepared()) {
+    graph().UnprepareInput(renderer_node_.input());
+  }
 }
 
 void RendererSinkSegment::Prime(fxl::Closure callback) {
