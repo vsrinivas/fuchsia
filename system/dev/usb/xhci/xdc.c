@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <zircon/device/debug.h>
 #include <zircon/hw/usb.h>
 #include <assert.h>
 #include <string.h>
@@ -37,6 +38,25 @@
 
 #define MAX_REQS               10
 #define MAX_REQ_SIZE           4096
+
+typedef struct xdc_instance {
+    zx_device_t* zxdev;
+    xdc_t* parent;
+    // ID of stream that this instance is reading and writing from.
+    uint32_t stream_id;
+    atomic_bool dead;
+
+    // For storing this instance in the parent's instance_list.
+    list_node_t node;
+} xdc_instance_t;
+
+typedef struct {
+    uint32_t stream_id;
+    size_t total_length;
+} xdc_transfer_header_t;
+
+static zx_status_t xdc_write(void* ctx, uint32_t stream_id, const void* buf, size_t count,
+                             size_t* actual);
 
 static void xdc_wait_bits(volatile uint32_t* ptr, uint32_t bits, uint32_t expected) {
     uint32_t value = XHCI_READ32(ptr);
@@ -221,6 +241,101 @@ static zx_status_t xdc_init_debug_cap(xdc_t* xdc) {
     return ZX_OK;
 }
 
+static zx_status_t xdc_write_instance(void* ctx, const void* buf, size_t count,
+                                      zx_off_t off, size_t* actual) {
+    xdc_instance_t* inst = ctx;
+
+    if (atomic_load(&inst->dead)) {
+        return ZX_ERR_PEER_CLOSED;
+    }
+    return xdc_write(inst->parent, inst->stream_id, buf, count, actual);
+}
+
+ static zx_status_t xdc_ioctl_instance(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
+                                       void* out_buf, size_t out_len, size_t* out_actual) {
+    xdc_instance_t* inst = ctx;
+
+    switch (op) {
+    case IOCTL_DEBUG_SET_STREAM:
+        if (in_len != sizeof(uint32_t)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        uint32_t stream_id = *((int *)in_buf);
+        inst->stream_id = stream_id;
+        return ZX_OK;
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
+
+static zx_status_t xdc_close_instance(void* ctx, uint32_t flags) {
+    xdc_instance_t* inst = ctx;
+    atomic_store(&inst->dead, true);
+
+    mtx_lock(&inst->parent->instance_list_lock);
+    list_delete(&inst->node);
+    mtx_unlock(&inst->parent->instance_list_lock);
+    return ZX_OK;
+}
+
+static void xdc_release_instance(void* ctx) {
+    xdc_instance_t* inst = ctx;
+    free(inst);
+}
+
+zx_protocol_device_t xdc_instance_proto = {
+    .version = DEVICE_OPS_VERSION,
+    .write = xdc_write_instance,
+    .ioctl = xdc_ioctl_instance,
+    .close = xdc_close_instance,
+    .release = xdc_release_instance,
+};
+
+static zx_status_t xdc_open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
+    xdc_t* xdc = ctx;
+
+    xdc_instance_t* inst = calloc(1, sizeof(xdc_instance_t));
+    if (inst == NULL) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "xdc",
+        .ctx = inst,
+        .ops = &xdc_instance_proto,
+        .proto_id = ZX_PROTOCOL_USB_DBC,
+        .flags = DEVICE_ADD_INSTANCE,
+    };
+
+    zx_status_t status = status = device_add(xdc->zxdev, &args, &inst->zxdev);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "xdc: error creating instance %d\n", status);
+        free(inst);
+        return status;
+    }
+
+    inst->parent = xdc;
+
+    mtx_lock(&xdc->write_lock);
+    mtx_lock(&xdc->instance_list_lock);
+
+    list_add_tail(&xdc->instance_list, &inst->node);
+
+    if (xdc->writable) {
+        device_state_set(inst->zxdev, DEV_STATE_WRITABLE);
+    } else {
+        device_state_clr(inst->zxdev, DEV_STATE_WRITABLE);
+    }
+
+    mtx_unlock(&xdc->instance_list_lock);
+    mtx_unlock(&xdc->write_lock);
+
+    *dev_out = inst->zxdev;
+    return ZX_OK;
+
+}
+
 static void xdc_shutdown(xdc_t* xdc) {
     zxlogf(TRACE, "xdc_shutdown\n");
 
@@ -299,6 +414,16 @@ static void xdc_unbind(void* ctx) {
     zxlogf(INFO, "xdc_unbind\n");
     xdc_t* xdc = ctx;
     xdc_shutdown(xdc);
+
+    mtx_lock(&xdc->instance_list_lock);
+    xdc_instance_t* inst;
+    list_for_every_entry(&xdc->instance_list, inst, xdc_instance_t, node) {
+        atomic_store(&inst->dead, true);
+        // Signal any waiting instances to wake up, so they will close the instance.
+        device_state_set(inst->zxdev, DEV_STATE_WRITABLE | DEV_STATE_READABLE);
+    }
+    mtx_unlock(&xdc->instance_list_lock);
+
     device_remove(xdc->zxdev);
 }
 
@@ -311,11 +436,20 @@ static void xdc_release(void* ctx) {
 static void xdc_update_write_signal_locked(xdc_t* xdc, bool online)
                                            __TA_REQUIRES(xdc->write_lock) {
     xdc->writable = online && xdc_has_free_trbs(xdc, false /* in */);
-    if (xdc->writable) {
-        device_state_set(xdc->zxdev, DEV_STATE_WRITABLE);
-    } else {
-        device_state_clr(xdc->zxdev, DEV_STATE_WRITABLE);
+
+    mtx_lock(&xdc->instance_list_lock);
+    xdc_instance_t* inst;
+    list_for_every_entry(&xdc->instance_list, inst, xdc_instance_t, node) {
+        if (atomic_load(&inst->dead)) {
+            continue;
+        }
+        if (xdc->writable) {
+            device_state_set(inst->zxdev, DEV_STATE_WRITABLE);
+        } else {
+            device_state_clr(inst->zxdev, DEV_STATE_WRITABLE);
+        }
     }
+    mtx_unlock(&xdc->instance_list_lock);
 }
 
 static void xdc_write_complete(usb_request_t* req, void* cookie) {
@@ -332,7 +466,8 @@ static void xdc_write_complete(usb_request_t* req, void* cookie) {
     mtx_unlock(&xdc->write_lock);
 }
 
-zx_status_t xdc_write(void* ctx, const void* buf, size_t count, zx_off_t off, size_t* actual) {
+static zx_status_t xdc_write(void* ctx, uint32_t stream_id, const void* buf, size_t count,
+                             size_t* actual) {
     xdc_t* xdc = ctx;
 
     // TODO(jocelyndang): we should check for requests that are too big to fit on the transfer ring.
@@ -347,15 +482,24 @@ zx_status_t xdc_write(void* ctx, const void* buf, size_t count, zx_off_t off, si
         return ZX_ERR_SHOULD_WAIT;
     }
 
-    usb_request_t* req = usb_request_pool_get(&xdc->free_write_reqs, count);
+    size_t header_len = sizeof(xdc_transfer_header_t);
+    xdc_transfer_header_t header = {
+        .stream_id = stream_id,
+        .total_length = header_len + count
+    };
+    usb_request_t* req = usb_request_pool_get(&xdc->free_write_reqs, header.total_length);
     if (!req) {
-        zx_status_t status = usb_request_alloc(&req, xdc->bti_handle, count, OUT_EP_ADDR);
+        zx_status_t status = usb_request_alloc(&req, xdc->bti_handle,
+                                               header.total_length, OUT_EP_ADDR);
         if (status != ZX_OK) {
             goto out;
         }
     }
-    usb_request_copyto(req, buf, count, 0);
-    req->header.length = count;
+
+    usb_request_copyto(req, &header, header_len, 0);
+    usb_request_copyto(req, buf, count, header_len /* offset */);
+    req->header.length = header.total_length;
+
 
     status = xdc_queue_transfer(xdc, req, false /* in */);
     if (status != ZX_OK) {
@@ -443,7 +587,6 @@ static zx_protocol_device_t xdc_proto = {
     .unbind = xdc_unbind,
     .release = xdc_release,
     .read = xdc_read,
-    .write = xdc_write
 };
 
 static void xdc_handle_port_status_change(xdc_t* xdc) {
@@ -680,6 +823,9 @@ static int xdc_start_thread(void* arg) {
 // This should only be called once in xdc_bind.
 static zx_status_t xdc_init_internal(xdc_t* xdc) {
     mtx_init(&xdc->lock, mtx_plain);
+
+    list_initialize(&xdc->instance_list);
+    mtx_init(&xdc->instance_list_lock, mtx_plain);
 
     usb_request_pool_init(&xdc->free_write_reqs);
     mtx_init(&xdc->write_lock, mtx_plain);

@@ -73,6 +73,7 @@
 #define IOCTL_FAMILY_SERIAL         0x35
 #define IOCTL_FAMILY_WLANTAP        0x36
 #define IOCTL_FAMILY_DISPLAY_CONTROLLER 0x37
+#define IOCTL_FAMILY_DEBUG          0x38
 
 // IOCTL constructor
 // --K-FFNN

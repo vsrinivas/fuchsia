@@ -106,6 +106,9 @@ typedef struct {
     list_node_t free_read_reqs;
     list_node_t completed_reads;
     mtx_t read_lock;
+
+    struct list_node instance_list;
+    mtx_t instance_list_lock;
 } xdc_t;
 
 // TODO(jocelyndang): we should get our own handles rather than borrowing them from XHCI.
