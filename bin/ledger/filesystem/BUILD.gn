@@ -21,13 +21,13 @@ source_set("unittests") {
   testonly = true
 
   sources = [
-    "filesystem_unittest.cc",
+    "directory_reader_unittest.cc",
+    "get_directory_content_size_unittest.cc",
   ]
 
   deps = [
     ":filesystem",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest",
   ]
 
