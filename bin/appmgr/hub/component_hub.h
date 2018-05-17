@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_APPMGR_COMPONENT_HUB_HOLDER_H_
-#define GARNET_BIN_APPMGR_COMPONENT_HUB_HOLDER_H_
+#ifndef GARNET_BIN_APPMGR_HUB_COMPONENT_HUB_H_
+#define GARNET_BIN_APPMGR_HUB_COMPONENT_HUB_H_
 
-#include "garnet/bin/appmgr/hub_holder.h"
+#include "garnet/bin/appmgr/hub/hub.h"
 
 #include "lib/fxl/macros.h"
 
@@ -15,9 +15,9 @@
 
 namespace component {
 
-class ComponentHubHolder : public HubHolder {
+class ComponentHub : public Hub {
  public:
-  ComponentHubHolder(fbl::RefPtr<fs::PseudoDir> root);
+  ComponentHub(fbl::RefPtr<fs::PseudoDir> root);
 
   zx_status_t SetProcessId(fbl::String koid) {
     return AddEntry("process-id", fbl::move(koid));
@@ -31,14 +31,14 @@ class ComponentHubHolder : public HubHolder {
     return AddEntry("out", fbl::move(vn));
   }
 
-  ~ComponentHubHolder();
+  ~ComponentHub();
 
  private:
-  ComponentHubHolder();
+  ComponentHub();
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(ComponentHubHolder);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ComponentHub);
 };
 
 }  // namespace component
 
-#endif  // GARNET_BIN_APPMGR_COMPONENT_HUB_HOLDER_H_
+#endif  // GARNET_BIN_APPMGR_HUB_COMPONENT_HUB_H_

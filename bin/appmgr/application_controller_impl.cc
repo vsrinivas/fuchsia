@@ -81,6 +81,10 @@ ApplicationControllerImpl::~ApplicationControllerImpl() {
     process_.kill();
 }
 
+HubInfo ApplicationControllerImpl::HubInfo() {
+  return component::HubInfo(label_, koid_, hub_.dir());
+}
+
 void ApplicationControllerImpl::Kill() { process_.kill(); }
 
 void ApplicationControllerImpl::Detach() {

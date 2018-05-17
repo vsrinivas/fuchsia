@@ -18,8 +18,8 @@
 #include <utility>
 
 #include "garnet/bin/appmgr/dynamic_library_loader.h"
+#include "garnet/bin/appmgr/hub/realm_hub.h"
 #include "garnet/bin/appmgr/namespace_builder.h"
-#include "garnet/bin/appmgr/realm_hub_holder.h"
 #include "garnet/bin/appmgr/runtime_metadata.h"
 #include "garnet/bin/appmgr/url_resolver.h"
 #include "garnet/lib/far/format.h"
@@ -255,6 +255,10 @@ zx::channel Realm::OpenRootInfoDir() {
   return h2;
 }
 
+HubInfo Realm::HubInfo() {
+  return component::HubInfo(label_, koid_, hub_.dir());
+}
+
 void Realm::CreateNestedJob(
     zx::channel host_directory,
     fidl::InterfaceRequest<ApplicationEnvironment> environment,
@@ -267,7 +271,7 @@ void Realm::CreateNestedJob(
   child->AddBinding(std::move(environment));
 
   // update hub
-  hub_.AddRealm(child);
+  hub_.AddRealm(child->HubInfo());
 
   children_.emplace(child, std::move(controller));
 
@@ -342,7 +346,7 @@ std::unique_ptr<ApplicationEnvironmentControllerImpl> Realm::ExtractChild(
   auto controller = std::move(it->second);
 
   // update hub
-  hub_.RemoveRealm(child);
+  hub_.RemoveRealm(child->HubInfo());
 
   children_.erase(it);
   return controller;
@@ -357,7 +361,7 @@ std::unique_ptr<ApplicationControllerImpl> Realm::ExtractApplication(
   auto application = std::move(it->second);
 
   // update hub
-  hub_.RemoveComponent(application.get());
+  hub_.RemoveComponent(application->HubInfo());
 
   applications_.erase(it);
   return application;
@@ -407,7 +411,7 @@ void Realm::CreateApplicationWithProcess(
         ExportedDirType::kPublicDebugCtrlLayout,
         std::move(channels.exported_dir), std::move(channels.client_request));
     // update hub
-    hub_.AddComponent(application.get());
+    hub_.AddComponent(application->HubInfo());
     ApplicationControllerImpl* key = application.get();
     applications_.emplace(key, std::move(application));
   }
@@ -502,7 +506,7 @@ void Realm::CreateApplicationFromPackage(
           exported_dir_layout, std::move(channels.exported_dir),
           std::move(channels.client_request));
       // update hub
-      hub_.AddComponent(application.get());
+      hub_.AddComponent(application->HubInfo());
       ApplicationControllerImpl* key = application.get();
       applications_.emplace(key, std::move(application));
     }

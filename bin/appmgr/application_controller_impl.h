@@ -5,12 +5,13 @@
 #ifndef GARNET_BIN_APPMGR_APPLICATION_CONTROLLER_IMPL_H_
 #define GARNET_BIN_APPMGR_APPLICATION_CONTROLLER_IMPL_H_
 
-#include <fs/pseudo-dir.h>
 #include <component/cpp/fidl.h>
+#include <fs/pseudo-dir.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/process.h>
 
-#include "garnet/bin/appmgr/component_hub_holder.h"
+#include "garnet/bin/appmgr/hub/component_hub.h"
+#include "garnet/bin/appmgr/hub/hub_info.h"
 #include "garnet/bin/appmgr/namespace.h"
 #include "garnet/lib/farfs/file_system.h"
 
@@ -45,9 +46,11 @@ class ApplicationControllerImpl : public ApplicationController {
       zx::channel exported_dir, zx::channel client_request);
   ~ApplicationControllerImpl() override;
 
+  HubInfo HubInfo();
+
   const std::string& label() const { return label_; }
   const std::string& koid() const { return koid_; }
-  const fbl::RefPtr<fs::PseudoDir>& hub_dir() const { return hub_.root_dir(); }
+  const fbl::RefPtr<fs::PseudoDir>& hub_dir() const { return hub_.dir(); }
 
   // |ApplicationController| implementation:
   void Kill() override;
@@ -67,7 +70,7 @@ class ApplicationControllerImpl : public ApplicationController {
   std::string label_;
   const std::string koid_;
   std::vector<WaitCallback> wait_callbacks_;
-  ComponentHubHolder hub_;
+  ComponentHub hub_;
 
   zx::channel exported_dir_;
 

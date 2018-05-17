@@ -17,8 +17,9 @@
 #include "garnet/bin/appmgr/application_controller_impl.h"
 #include "garnet/bin/appmgr/application_environment_controller_impl.h"
 #include "garnet/bin/appmgr/application_runner_holder.h"
+#include "garnet/bin/appmgr/hub/hub_info.h"
+#include "garnet/bin/appmgr/hub/realm_hub.h"
 #include "garnet/bin/appmgr/namespace.h"
-#include "garnet/bin/appmgr/realm_hub_holder.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -36,7 +37,9 @@ class Realm {
   const std::string& label() const { return label_; }
   const std::string& koid() const { return koid_; }
 
-  const fbl::RefPtr<fs::PseudoDir>& hub_dir() const { return hub_.root_dir(); }
+  const fbl::RefPtr<fs::PseudoDir>& hub_dir() const { return hub_.dir(); }
+
+  HubInfo HubInfo();
 
   void CreateNestedJob(
       zx::channel host_directory,
@@ -92,7 +95,7 @@ class Realm {
 
   fxl::RefPtr<Namespace> default_namespace_;
 
-  RealmHubHolder hub_;
+  RealmHub hub_;
   fs::SynchronousVfs info_vfs_;
 
   std::unordered_map<Realm*,

@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_APPMGR_HUB_HOLDER_H_
-#define GARNET_BIN_APPMGR_HUB_HOLDER_H_
+#ifndef GARNET_BIN_APPMGR_HUB_HUB_H_
+#define GARNET_BIN_APPMGR_HUB_HUB_H_
+
+#include "garnet/bin/appmgr/hub/hub_info.h"
 
 #include "lib/fxl/macros.h"
 
@@ -13,11 +15,11 @@
 
 namespace component {
 
-class HubHolder {
+class Hub {
  public:
-  HubHolder(fbl::RefPtr<fs::PseudoDir> root);
+  Hub(fbl::RefPtr<fs::PseudoDir> root);
 
-  const fbl::RefPtr<fs::PseudoDir>& root_dir() const { return root_dir_; }
+  const fbl::RefPtr<fs::PseudoDir>& dir() const { return dir_; }
 
   zx_status_t AddEntry(fbl::String name, fbl::RefPtr<fs::Vnode> vn);
 
@@ -31,12 +33,18 @@ class HubHolder {
     return AddEntry("job-id", fbl::move(koid));
   }
 
+  zx_status_t AddComponent(const HubInfo& hub_info);
+  zx_status_t RemoveComponent(const HubInfo& hub_info);
+
  protected:
-  fbl::RefPtr<fs::PseudoDir> root_dir_;
+  zx_status_t CreateComponentDir();
+
+  fbl::RefPtr<fs::PseudoDir> dir_;
+  fbl::RefPtr<fs::PseudoDir> component_dir_;
 
  private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(HubHolder);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Hub);
 };
 }  // namespace component
 
-#endif  // GARNET_BIN_APPMGR_HUB_HOLDER_H_
+#endif  // GARNET_BIN_APPMGR_HUB_HUB_H_

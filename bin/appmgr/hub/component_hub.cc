@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/appmgr/component_hub_holder.h"
-#include "garnet/bin/appmgr/hub_holder.h"
+#include "garnet/bin/appmgr/hub/component_hub.h"
+#include "garnet/bin/appmgr/hub/hub.h"
 
 #include "garnet/bin/appmgr/application_controller_impl.h"
 #include "garnet/bin/appmgr/realm.h"
@@ -14,9 +14,8 @@
 
 namespace component {
 
-ComponentHubHolder::ComponentHubHolder(fbl::RefPtr<fs::PseudoDir> root)
-    : HubHolder(root) {}
+ComponentHub::ComponentHub(fbl::RefPtr<fs::PseudoDir> root) : Hub(root) {}
 
-ComponentHubHolder::~ComponentHubHolder() = default;
+ComponentHub::~ComponentHub() = default;
 
 }  // namespace component
