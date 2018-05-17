@@ -390,6 +390,8 @@ class FrameControl : public common::BitField<uint16_t> {
     bool IsData() const { return type() == FrameType::kData; }
 
     bool HasHtCtrl() const { return htc_order() != 0; }
+
+    constexpr uint16_t len() const { return sizeof(FrameControl); }
 };
 
 // IEEE Std 802.11-2016, 9.3.3.2
@@ -617,12 +619,19 @@ struct DataFrameHeader {
     const DataFrameHeader* const_this() { return const_cast<const DataFrameHeader*>(this); }
 } __PACKED;
 
+// IEEE Std 802.11-2016, 9.3.1.1
+// Officially control frames share no common header .
+class CtrlFrameIdentifier {
+} __PACKED;
+
 // IEEE Std 802.11-2016, 9.3.1.5
-struct PsPollFrame {
+struct PsPollFrame : CtrlFrameIdentifier {
     FrameControl fc;
     uint16_t aid;
     common::MacAddr bssid;
     common::MacAddr ta;
+
+    constexpr uint16_t len() const { return sizeof(FrameControl); }
 } __PACKED;
 
 // IEEE Std 802.2, 1998 Edition, 3.2
@@ -716,6 +725,8 @@ struct EthernetII {
     common::MacAddr src;
     uint16_t ether_type;
     uint8_t payload[];
+
+    constexpr uint16_t len() const { return sizeof(EthernetII); }
 } __PACKED;
 
 // IEEE Std 802.1X-2010, 11.3, Figure 11-1

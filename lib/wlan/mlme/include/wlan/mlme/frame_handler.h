@@ -222,13 +222,13 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     WLAN_DECL_FUNC_INTERNAL_HANDLE_MGMT(AddBaResponseFrame)
 
     // Internal Ethernet frame handlers.
-    zx_status_t HandleFrameInternal(const ImmutableBaseFrame<EthernetII>& frame) {
+    zx_status_t HandleFrameInternal(const ImmutableFrame<EthernetII, NilHeader>& frame) {
         return HandleEthFrame(frame);
     }
 
     // Internal Data frame handlers.
     template <typename Body>
-    zx_status_t HandleFrameInternal(const ImmutableDataFrame<Body>& frame,
+    zx_status_t HandleFrameInternal(const ImmutableFrame<DataFrameHeader, Body>& frame,
                                     const wlan_rx_info_t& info) {
         auto status = HandleDataFrame(*frame.hdr());
         if (status != ZX_OK) { return status; }
@@ -239,9 +239,11 @@ class FrameHandler : public fbl::RefCounted<FrameHandler> {
     WLAN_DECL_FUNC_INTERNAL_HANDLE_DATA(DataFrame, LlcHeader)
 
     // Internal Control frame handlers.
-    template <typename Body>
-    zx_status_t HandleFrameInternal(const ImmutableCtrlFrame<Body>& frame,
-                                    const wlan_rx_info_t& info) {
+    // Note: Null Data frames hold no body and thus also match this method. As a result, this case
+    // is caught.
+    template <typename Header>
+    typename std::enable_if<!std::is_same<Header, DataFrameHeader>::value, zx_status_t>::type
+    HandleFrameInternal(const ImmutableCtrlFrame<Header>& frame, const wlan_rx_info_t& info) {
         auto status = HandleCtrlFrame(frame.hdr()->fc);
         if (status != ZX_OK) { return status; }
 

@@ -210,9 +210,10 @@ TEST_F(ScannerTest, ScanResponse) {
     info.rssi_dbm = -75;
     info.snr_dbh = 30;
 
-    auto hdr = reinterpret_cast<const MgmtFrameHeader*>(kBeacon);
-    auto bcn = reinterpret_cast<const Beacon*>(kBeacon + hdr->len());
-    auto beacon = ImmutableMgmtFrame<Beacon>(hdr, bcn, sizeof(kBeacon) - hdr->len());
+    auto buffer = GetBuffer(sizeof(kBeacon));
+    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), sizeof(kBeacon));
+    memcpy(packet->mut_field<uint8_t*>(0), kBeacon, sizeof(kBeacon));
+    auto beacon = ImmutableMgmtFrame<Beacon>(fbl::move(packet));
 
     EXPECT_EQ(ZX_OK, scanner_.HandleBeacon(beacon, info));
     mock_dev_.SetTime(zx::time(1));

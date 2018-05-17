@@ -31,7 +31,7 @@ class Bss : public fbl::RefCounted<Bss> {
         supported_rates_.reserve(SupportedRatesElement::kMaxLen);
     }
 
-    zx_status_t ProcessBeacon(const Beacon* beacon, size_t len, const wlan_rx_info_t* rx_info);
+    zx_status_t ProcessBeacon(const Beacon& beacon, size_t len, const wlan_rx_info_t* rx_info);
 
     std::string ToString() const;
 
@@ -60,19 +60,18 @@ class Bss : public fbl::RefCounted<Bss> {
     zx::time ts_refreshed() { return ts_refreshed_; }
 
    private:
-    bool IsBeaconValid(const Beacon* beacon, size_t len) const;
+    bool IsBeaconValid(const Beacon& beacon) const;
 
     // Refreshes timestamp and signal strength.
-    void Renew(const Beacon* beacon, const wlan_rx_info_t* rx_info);
-    bool HasBeaconChanged(const Beacon* beacon, size_t len) const;
+    void Renew(const Beacon& beacon, const wlan_rx_info_t* rx_info);
+    bool HasBeaconChanged(const Beacon& beacon, size_t len) const;
 
     // Update content such as IEs.
-    zx_status_t Update(const Beacon* beacon, size_t len);
-    zx_status_t Update(const ProbeResponse* proberesp, size_t len);
+    zx_status_t Update(const Beacon& beacon, size_t len);
     zx_status_t ParseIE(const uint8_t* ie_chains, size_t ie_chains_len);
 
     // TODO(porce): Move Beacon method into Beacon class.
-    uint32_t GetBeaconSignature(const Beacon* beacon, size_t len) const;
+    uint32_t GetBeaconSignature(const Beacon& beacon, size_t len) const;
 
     common::MacAddr bssid_;  // From Addr3 of Mgmt Header.
     zx::time ts_refreshed_;  // Last time of Bss object update.

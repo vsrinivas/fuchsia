@@ -44,8 +44,8 @@ class Dispatcher {
     zx_status_t HandleSvcPacket(fbl::unique_ptr<Packet> packet);
     template <typename Message>
     zx_status_t HandleMlmeMethod(fbl::unique_ptr<Packet> packet, uint32_t ordinal);
-    zx_status_t HandleActionPacket(fbl::unique_ptr<Packet> packet, const MgmtFrameHeader* hdr,
-                                   const ActionFrame* action, const wlan_rx_info_t* rxinfo);
+    zx_status_t HandleActionPacket(ImmutableMgmtFrame<ActionFrame> action,
+                                   const wlan_rx_info_t* rxinfo);
 
     DeviceInterface* device_;
     // The MLME that will handle requests for this dispatcher. This field will be set upon querying

@@ -60,6 +60,8 @@ class Scanner : public FrameHandler {
     // kBssPruneDelay seconds, and hence, multiple calls to this method in a short time frame have
     // no effect.
     void RemoveStaleBss();
+    zx_status_t ProcessBeacon(const common::MacAddr& bssid, const Beacon& bcn, uint16_t body_ie_len,
+                              const wlan_rx_info_t& rxinfo);
 
     static constexpr size_t kMaxBssEntries = 20;  // Limited by zx.Channel buffer size.
     static constexpr zx::duration kBssExpiry = zx::sec(60);

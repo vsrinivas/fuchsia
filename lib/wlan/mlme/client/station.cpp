@@ -620,9 +620,8 @@ zx_status_t Station::HandleAddBaResponseFrame(
     const ImmutableMgmtFrame<AddBaResponseFrame>& rx_frame, const wlan_rx_info& rxinfo) {
     debugfn();
 
-    auto hdr = rx_frame.hdr();
     auto addba_resp = rx_frame.body();
-    finspect("Inbound ADDBA Resp frame: len %zu\n", hdr->len() + rx_frame.body_len());
+    finspect("Inbound ADDBA Resp frame: len %zu\n", rx_frame.body_len());
     finspect("  addba resp: %s\n", debug::Describe(*addba_resp).c_str());
 
     // TODO(porce): Keep the result of negotiation.
@@ -687,13 +686,14 @@ zx_status_t Station::HandleDataFrame(const ImmutableDataFrame<LlcHeader>& frame,
     auto llc = frame.body();
 
     // Forward EAPOL frames to SME.
+    size_t payload_len = frame.body_len() - sizeof(LlcHeader);
     if (be16toh(llc->protocol_id) == kEapolProtocolId) {
-        if (frame.body_len() < sizeof(EapolFrame)) {
-            warnf("short EAPOL frame; len = %zu", frame.body_len());
+        if (payload_len < sizeof(EapolFrame)) {
+            warnf("short EAPOL frame; len = %zu", payload_len);
             return ZX_OK;
         }
         auto eapol = reinterpret_cast<const EapolFrame*>(llc->payload);
-        uint16_t actual_body_len = frame.body_len();
+        uint16_t actual_body_len = payload_len;
         uint16_t expected_body_len = be16toh(eapol->packet_body_length);
         if (actual_body_len >= expected_body_len) {
             return service::SendEapolIndication(device_, *eapol, hdr->addr3, hdr->addr1);
@@ -1151,13 +1151,13 @@ void Station::DumpDataFrame(const ImmutableDataFrame<LlcHeader>& frame) {
 
     if (!is_interesting) { return; }
 
+    size_t payload_len = frame.body_len() - sizeof(LlcHeader);
     auto llc = frame.body();
-    auto frame_len = hdr->len() + frame.body_len();
 
-    finspect("Inbound data frame: len %zu\n", frame_len);
+    finspect("Inbound data frame: len %zu\n", frame.len());
     finspect("  wlan hdr: %s\n", debug::Describe(*hdr).c_str());
     finspect("  llc  hdr: %s\n", debug::Describe(*llc).c_str());
-    finspect("  payload : %s\n", debug::HexDump(llc->payload, frame.body_len()).c_str());
+    finspect("  payload : %s\n", debug::HexDump(llc->payload, payload_len).c_str());
 }
 
 zx_status_t Station::SetPowerManagementMode(bool ps_mode) {
@@ -1213,7 +1213,6 @@ zx_status_t Station::SendPsPoll() {
     frame->fc.set_type(FrameType::kControl);
     frame->fc.set_subtype(ControlSubtype::kPsPoll);
     frame->aid = aid_;
-
     frame->bssid = common::MacAddr(bss_->bssid.data());
     frame->ta = mymac;
 

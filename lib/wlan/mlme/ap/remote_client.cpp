@@ -358,14 +358,15 @@ zx_status_t AssociatedState::HandleDataFrame(const ImmutableDataFrame<LlcHeader>
     auto llc = frame.body();
 
     // Forward EAPOL frames to SME.
+    size_t payload_len = frame.body_len() - sizeof(LlcHeader);
     if (be16toh(llc->protocol_id) == kEapolProtocolId) {
-        if (frame.body_len() < sizeof(EapolFrame)) {
-            warnf("short EAPOL frame; len = %zu", frame.body_len());
+        if (payload_len < sizeof(EapolFrame)) {
+            warnf("short EAPOL frame; len = %zu", payload_len);
             return ZX_OK;
         }
 
         auto eapol = reinterpret_cast<const EapolFrame*>(llc->payload);
-        uint16_t actual_body_len = frame.body_len();
+        uint16_t actual_body_len = payload_len;
         uint16_t expected_body_len = be16toh(eapol->packet_body_length);
         if (actual_body_len != expected_body_len) {
             return service::SendEapolIndication(client_->device(), *eapol, hdr->addr2, hdr->addr3);
@@ -377,7 +378,7 @@ zx_status_t AssociatedState::HandleDataFrame(const ImmutableDataFrame<LlcHeader>
     // yet.
     if (eapol_controlled_port_ != eapol::PortState::kOpen) { return ZX_OK; }
 
-    const size_t eth_len = frame.body_len() + sizeof(EthernetII) - sizeof(LlcHeader);
+    const size_t eth_len = sizeof(EthernetII) + payload_len;
     auto buffer = GetBuffer(eth_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
@@ -389,7 +390,7 @@ zx_status_t AssociatedState::HandleDataFrame(const ImmutableDataFrame<LlcHeader>
     eth->dest = hdr->addr3;
     eth->src = hdr->addr2;
     eth->ether_type = llc->protocol_id;
-    std::memcpy(eth->payload, llc->payload, frame.body_len() - sizeof(LlcHeader));
+    std::memcpy(eth->payload, llc->payload, payload_len - sizeof(LlcHeader));
 
     auto status = client_->bss()->SendEthFrame(std::move(eth_packet));
     if (status != ZX_OK) {
@@ -526,13 +527,8 @@ zx_status_t AssociatedState::SendNextBu() {
         return status;
     }
 
-    // Treat Packet as Ethernet frame.
-    auto hdr = packet->field<EthernetII>(0);
-    auto payload = packet->field<uint8_t>(sizeof(EthernetII));
-    size_t payload_len = packet->len() - sizeof(EthernetII);
-    auto eth_frame = ImmutableBaseFrame<EthernetII>(hdr, payload, payload_len);
-
-    // Convert Ethernet to Data frame.
+    // Treat Packet as Ethernet frame and convert Ethernet to Data frame.
+    ImmutableBaseFrame<EthernetII> eth_frame(fbl::move(packet));
     fbl::unique_ptr<Packet> data_packet;
     status = client_->bss()->EthToDataFrame(eth_frame, &data_packet);
     if (status != ZX_OK) {
@@ -779,14 +775,13 @@ zx_status_t RemoteClient::EnqueueEthernetFrame(const ImmutableBaseFrame<Ethernet
 
     debugps("[client] [%s] client is dozing; buffer outbound frame\n", addr().ToString().c_str());
 
-    size_t hdr_len = sizeof(EthernetII);
-    size_t frame_len = hdr_len + frame.body_len();
-    auto buffer = GetBuffer(frame_len);
+    size_t eth_len = frame.len();
+    auto buffer = GetBuffer(eth_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
     // Copy ethernet frame into buffer acquired from the BSS.
-    auto packet = fbl::make_unique<Packet>(std::move(buffer), frame_len);
-    memcpy(packet->mut_data(), frame.hdr(), frame_len);
+    auto packet = fbl::make_unique<Packet>(std::move(buffer), eth_len);
+    memcpy(packet->mut_data(), frame.hdr(), eth_len);
 
     bu_queue_.Enqueue(fbl::move(packet));
     ReportBuChange(bu_queue_.size());

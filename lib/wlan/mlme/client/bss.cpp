@@ -10,12 +10,15 @@
 
 namespace wlan {
 
-zx_status_t Bss::ProcessBeacon(const Beacon* beacon, size_t len, const wlan_rx_info_t* rx_info) {
-    if (!IsBeaconValid(beacon, len)) { return ZX_ERR_INTERNAL; }
+// TODO(NET-500): This file needs some clean-up.
+
+zx_status_t Bss::ProcessBeacon(const Beacon& beacon, size_t frame_len,
+                               const wlan_rx_info_t* rx_info) {
+    if (!IsBeaconValid(beacon)) { return ZX_ERR_INTERNAL; }
 
     Renew(beacon, rx_info);
 
-    if (!HasBeaconChanged(beacon, len)) {
+    if (!HasBeaconChanged(beacon, frame_len)) {
         // If unchanged, it is sufficient to renew the BSS. Bail out.
         return ZX_OK;
     }
@@ -25,10 +28,10 @@ zx_status_t Bss::ProcessBeacon(const Beacon* beacon, size_t len, const wlan_rx_i
         // BSS had been discovered, but the beacon changed.
         // Suspicious situation. Consider Deauth if in assoc.
         debugbcn("BSSID %s beacon change detected. (len %zu -> %zu)\n", bssid_.ToString().c_str(),
-                 bcn_len_, len);
+                 bcn_len_, frame_len);
     }
 
-    auto status = Update(beacon, len);
+    auto status = Update(beacon, frame_len);
     if (status != ZX_OK) {
         debugbcn("BSSID %s failed to update its BSS object: (%d)\n", bssid_.ToString().c_str(),
                  status);
@@ -50,10 +53,10 @@ std::string Bss::ToString() const {
     return std::string(buf);
 }
 
-bool Bss::IsBeaconValid(const Beacon* beacon, size_t len) const {
+bool Bss::IsBeaconValid(const Beacon& beacon) const {
     // TODO(porce): Place holder. Add sanity logics.
 
-    if (timestamp_ > beacon->timestamp) {
+    if (timestamp_ > beacon.timestamp) {
         // Suspicious. Wrap around?
         // TODO(porce): deauth if the client was in association.
     }
@@ -64,8 +67,8 @@ bool Bss::IsBeaconValid(const Beacon* beacon, size_t len) const {
     return true;
 }
 
-void Bss::Renew(const Beacon* beacon, const wlan_rx_info_t* rx_info) {
-    timestamp_ = beacon->timestamp;
+void Bss::Renew(const Beacon& beacon, const wlan_rx_info_t* rx_info) {
+    timestamp_ = beacon.timestamp;
 
     // TODO(porce): Take a deep look. Which resolution do we want to track?
     ts_refreshed_ = zx::clock::get(ZX_CLOCK_UTC);
@@ -82,35 +85,30 @@ void Bss::Renew(const Beacon* beacon, const wlan_rx_info_t* rx_info) {
     if (rx_info->valid_fields & WLAN_RX_INFO_VALID_SNR) { rsni_dbh_.val = rx_info->snr_dbh; }
 }
 
-bool Bss::HasBeaconChanged(const Beacon* beacon, size_t len) const {
+bool Bss::HasBeaconChanged(const Beacon& beacon, size_t frame_len) const {
     // Test changes in beacon, except for the timestamp field.
-    if (len != bcn_len_) { return true; }
-    auto sig = GetBeaconSignature(beacon, len);
+    if (frame_len != bcn_len_) { return true; }
+    auto sig = GetBeaconSignature(beacon, frame_len);
     if (sig != bcn_hash_) { return true; }
     return false;
 }
 
-zx_status_t Bss::Update(const Beacon* beacon, size_t len) {
+zx_status_t Bss::Update(const Beacon& beacon, size_t frame_len) {
     // To be used to detect a change in Beacon.
-    bcn_len_ = len;
-    bcn_hash_ = GetBeaconSignature(beacon, len);
+    bcn_len_ = frame_len;
+    bcn_hash_ = GetBeaconSignature(beacon, frame_len);
 
     // Fields that are always present.
-    bcn_interval_ = beacon->beacon_interval;
-    cap_ = beacon->cap;
+    bcn_interval_ = beacon.beacon_interval;
+    cap_ = beacon.cap;
 
     // IE's.
-    auto ie_chains = beacon->elements;
-    auto ie_chains_len = len - sizeof(Beacon);  // Subtract the beacon header len.
+    auto ie_chains = beacon.elements;
+    auto ie_chains_len = frame_len - sizeof(Beacon);  // Subtract the beacon header len.
 
     ZX_DEBUG_ASSERT(ie_chains != nullptr);
-    ZX_DEBUG_ASSERT(ie_chains_len <= len);
+    ZX_DEBUG_ASSERT(ie_chains_len <= frame_len);
     return ParseIE(ie_chains, ie_chains_len);
-}
-
-zx_status_t Bss::Update(const ProbeResponse* proberesp, size_t len) {
-    // TODO(porce): Give distinctions.
-    return Update(reinterpret_cast<const Beacon*>(proberesp), len);
 }
 
 zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
@@ -210,16 +208,16 @@ zx_status_t Bss::ParseIE(const uint8_t* ie_chains, size_t ie_chains_len) {
     return ZX_OK;
 }
 
-BeaconHash Bss::GetBeaconSignature(const Beacon* beacon, size_t len) const {
-    auto arr = reinterpret_cast<const uint8_t*>(beacon);
+BeaconHash Bss::GetBeaconSignature(const Beacon& beacon, size_t frame_len) const {
+    auto arr = reinterpret_cast<const uint8_t*>(&beacon);
 
     // Get a hash of the beacon except for its first field: timestamp.
-    arr += sizeof(beacon->timestamp);
-    len -= sizeof(beacon->timestamp);
+    arr += sizeof(beacon.timestamp);
+    frame_len -= sizeof(beacon.timestamp);
 
     BeaconHash hash = 0;
     // TODO(porce): Change to a less humble version.
-    for (size_t idx = 0; idx < len; idx++) {
+    for (size_t idx = 0; idx < frame_len; idx++) {
         hash += *(arr + idx);
     }
     return hash;
