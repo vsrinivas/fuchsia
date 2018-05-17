@@ -170,7 +170,6 @@ typedef struct {
 //
 #define ZBI_TYPE_KERNEL_PREFIX     (0x004e524b) // KRN\0
 #define ZBI_TYPE_KERNEL_MASK       (0x00FFFFFF)
-#define ZBI_TYPE_KERNEL            (0x4c4e524b) // KRNL
 #define ZBI_TYPE_KERNEL_X64        (0x4c4e524b) // KRNL
 #define ZBI_TYPE_KERNEL_ARM64      (0x384e524b) // KRN8
 #define ZBI_IS_KERNEL_BOOTITEM(x)  (((x) & ZBI_TYPE_KERNEL_MASK) ==  \
