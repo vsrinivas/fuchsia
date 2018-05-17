@@ -718,23 +718,23 @@ func Compile(fidlData types.Root) Root {
 		)
 		godeps[path] = alias
 		libs = append(libs, Library{
-			Path: path,
+			Path:  path,
 			Alias: alias,
 		})
 	}
 
 	// Instantiate a compiler context.
 	c := compiler{
-		decls: fidlData.Decls,
-		library: libraryName,
+		decls:       fidlData.Decls,
+		library:     libraryName,
 		libraryDeps: godeps,
 	}
 
 	// Compile fidlData into r.
 	r := Root{
-		Name: string(fidlData.Name),
+		Name:        string(libraryName[len(libraryName)-1]),
 		PackageName: libraryPath,
-		Libraries: libs,
+		Libraries:   libs,
 	}
 	for _, v := range fidlData.Consts {
 		r.Consts = append(r.Consts, c.compileConst(v))
