@@ -229,9 +229,9 @@ struct WlantapMacImpl : WlantapMac {
                     .secondary80 = rx_info.chan.secondary80
                 },
                 .mcs = rx_info.mcs,
-                .rssi = rx_info.rssi,
-                .rcpi = rx_info.rcpi,
-                .snr = rx_info.snr
+                .rssi_dbm = rx_info.rssi_dbm,
+                .rcpi_dbmh = rx_info.rcpi_dbmh,
+                .snr_dbh = rx_info.snr_dbh
             };
             ifc_.Recv(0, &data[0], data.size(), &converted_info);
         }

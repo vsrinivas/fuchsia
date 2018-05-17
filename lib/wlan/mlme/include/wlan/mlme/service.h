@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <wlan/common/energy.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
@@ -89,7 +90,7 @@ zx_status_t SendAssocConfirm(DeviceInterface* device, wlan_mlme::AssociateResult
 zx_status_t SendDisassociateIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
                                        uint16_t code);
 
-zx_status_t SendSignalReportIndication(DeviceInterface* device, uint8_t rssi);
+zx_status_t SendSignalReportIndication(DeviceInterface* device, common::dBm rssi_dbm);
 
 zx_status_t SendEapolConfirm(DeviceInterface* device, wlan_mlme::EapolResultCodes result_code);
 zx_status_t SendEapolIndication(DeviceInterface* device, const EapolFrame& eapol,

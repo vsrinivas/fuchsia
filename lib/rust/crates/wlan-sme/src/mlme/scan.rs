@@ -45,7 +45,7 @@ pub struct Request {
 /// Extension - Specific interpretation of certain attributes of a BSSDescription
 pub struct Extension {
     pub primary: ChannelNumber,
-    pub rssi_measurement: i8, // in dBm
+    pub rssi_dbm: i8,
 }
 
 pub struct BssDescription {
@@ -69,9 +69,9 @@ pub struct BssDescription {
     /// A description of the cipher suites and AKM suites supported in the BSS.
     pub rsn: Option<Vec<u8>>,
     /// The RCPI of the received frame.
-    pub rcpi_measurement: u8,
+    pub rcpi_dbmh: i16,
     /// The RSNI of the received frame.
-    pub rsni_measurement: u8,
+    pub rsni_dbh: i16,
 
     // Not in the standard
     pub extension: Extension,

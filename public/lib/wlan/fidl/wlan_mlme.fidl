@@ -83,9 +83,9 @@ struct BSSDescription {
     WlanChan chan;
 
     // For the following measurements, 255 means measurement not available.
-    uint8 rssi_measurement;  // not in the standard
-    uint8 rcpi_measurement;
-    uint8 rsni_measurement;
+    int8 rssi_dbm;   // dBm. This field is not in the standard
+    int16 rcpi_dbmh; // 0.5 step dBm. Do not use encoding from IEEE Std 802.11-2016 9.4.2.38.
+    int16 rsni_dbh;  // 0.5 step dB.  Do not use encoding from IEEE Std 802.11-2016 9.4.2.41.
     // etc
 };
 

@@ -412,7 +412,7 @@ func sortAndDedupeAPs(aps []AP) []AP {
 	var aps_map = make(map[string]AP)
 	for _, ap := range aps[:] {
 		if val, ok := aps_map[ap.SSID]; ok {
-			if val.LastRSSI > ap.LastRSSI {
+			if val.RssiDbm > ap.RssiDbm {
 				aps_map[ap.SSID] = ap
 			}
 		} else {
@@ -879,7 +879,7 @@ func (s *associatedState) handleMLMEMsg(msg interface{}, c *Client) (state, erro
 		if debug {
 			PrintSignalReportIndication(v)
 		}
-		c.ap.LastRSSI = v.Rssi
+		c.ap.RssiDbm = v.RssiDbm
 		return s, nil
 	case *mlme.EapolIndication:
 		if c.eapolC != nil {

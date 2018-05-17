@@ -12,7 +12,7 @@ library wlan_mlme;
 // SIGNAL_REPORT.indication
 
 struct SignalReportIndication {
-    uint8 rssi;
+    int8 rssi_dbm;
 };
 
 // EAPOL.indication

@@ -5,8 +5,8 @@
 package wlan
 
 import (
-	"fmt"
 	mlme "fidl/wlan_mlme"
+	"fmt"
 	"log"
 )
 
@@ -34,25 +34,9 @@ func PrintBssDescription(bss *mlme.BssDescription) {
 	log.Print("    Local time: ", bss.LocalTime)
 	// TODO(porce): Stringfy CBW
 	log.Printf("    Channel: %u CBW: %u", bss.Chan.Primary, bss.Chan.Cbw)
-	if bss.RssiMeasurement != 0xff {
-		log.Printf("    RSSI: %d dBm", int8(bss.RssiMeasurement))
-	}
-	if bss.RcpiMeasurement != 0xff {
-		var rcpiStr string
-		if bss.RcpiMeasurement == 0 {
-			rcpiStr = "RCPI: < -109.5 dBm"
-		} else if bss.RcpiMeasurement == 220 {
-			rcpiStr = "RCPI: >= 0 dBm"
-		} else if bss.RcpiMeasurement > 220 {
-			rcpiStr = "RCPI: invalid"
-		} else {
-			rcpiStr = fmt.Sprintf("RCPI: %.1f dBm", float32(bss.RcpiMeasurement)/2-110)
-		}
-		log.Print("    ", rcpiStr)
-	}
-	if bss.RsniMeasurement != 0xff {
-		log.Printf("    RSNI: %.1f dBm", float32(int8(bss.RsniMeasurement))/2-10)
-	}
+	log.Printf("    RSSI: %d dBm", bss.RssiDbm)
+	log.Printf("    RCPI: %.1f dBm", float32(bss.RcpiDbmh)/2.0)
+	log.Printf("    RSNI: %.1f dB", float32(bss.RsniDbh)/2.0)
 }
 
 func PrintScanConfirm(resp *mlme.ScanConfirm) {
@@ -170,7 +154,7 @@ func PrintDeauthenticateIndication(ind *mlme.DeauthenticateIndication) {
 
 func PrintSignalReportIndication(ind *mlme.SignalReportIndication) {
 	log.Print("SignalReportIndication")
-	log.Printf("  RSSI: %d", int8(ind.Rssi))
+	log.Printf("  RSSI: %d", int8(ind.RssiDbm))
 }
 
 func PrintDeviceQueryConfirm(resp *mlme.DeviceQueryConfirm) {

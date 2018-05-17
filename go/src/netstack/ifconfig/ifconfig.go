@@ -199,7 +199,7 @@ func (a *netstackClientApp) wlanStatus() string {
 				isSecureStr = "*"
 			}
 			status += fmt.Sprintf(" BSSID: %x SSID: %q Security: %v RSSI: %d",
-				ap.Bssid, ap.Ssid, isSecureStr, ap.LastRssi)
+				ap.Bssid, ap.Ssid, isSecureStr, ap.RssiDbm)
 		}
 		return status
 	}

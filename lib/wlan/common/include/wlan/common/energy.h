@@ -37,32 +37,38 @@ template <typename Storage, typename Unit> struct EnergyType {
 
 // Below operators are defined only for the operands with matching template types.
 template <typename Storage, typename Unit>
-constexpr bool operator==(const EnergyType<Storage, Unit>& lhs, const EnergyType<Storage, Unit>& rhs) {
+constexpr bool operator==(const EnergyType<Storage, Unit>& lhs,
+                          const EnergyType<Storage, Unit>& rhs) {
     return lhs.val == rhs.val;
 }
 
 template <typename Storage, typename Unit>
-constexpr bool operator!=(const EnergyType<Storage, Unit>& lhs, const EnergyType<Storage, Unit>& rhs) {
+constexpr bool operator!=(const EnergyType<Storage, Unit>& lhs,
+                          const EnergyType<Storage, Unit>& rhs) {
     return lhs.val != rhs.val;
 }
 
 template <typename Storage, typename Unit>
-constexpr bool operator>(const EnergyType<Storage, Unit>& lhs, const EnergyType<Storage, Unit>& rhs) {
+constexpr bool operator>(const EnergyType<Storage, Unit>& lhs,
+                         const EnergyType<Storage, Unit>& rhs) {
     return lhs.val > rhs.val;
 }
 
 template <typename Storage, typename Unit>
-constexpr bool operator<(const EnergyType<Storage, Unit>& lhs, const EnergyType<Storage, Unit>& rhs) {
+constexpr bool operator<(const EnergyType<Storage, Unit>& lhs,
+                         const EnergyType<Storage, Unit>& rhs) {
     return lhs.val < rhs.val;
 }
 
 template <typename Storage, typename Unit>
-constexpr bool operator>=(const EnergyType<Storage, Unit>& lhs, const EnergyType<Storage, Unit>& rhs) {
+constexpr bool operator>=(const EnergyType<Storage, Unit>& lhs,
+                          const EnergyType<Storage, Unit>& rhs) {
     return lhs.val >= rhs.val;
 }
 
 template <typename Storage, typename Unit>
-constexpr bool operator<=(const EnergyType<Storage, Unit>& lhs, const EnergyType<Storage, Unit>& rhs) {
+constexpr bool operator<=(const EnergyType<Storage, Unit>& lhs,
+                          const EnergyType<Storage, Unit>& rhs) {
     return lhs.val <= rhs.val;
 }
 
@@ -76,16 +82,17 @@ struct FemtoWatt : EnergyType<uint64_t, FemtoWatt> {
     explicit constexpr FemtoWatt(uint64_t v = 0) : EnergyType<uint64_t, FemtoWatt>(v) {}
 };
 
-constexpr FemtoWatt& operator+= (FemtoWatt& lhs, FemtoWatt rhs) {
+constexpr FemtoWatt& operator+=(FemtoWatt& lhs, FemtoWatt rhs) {
     lhs.val += rhs.val;
     return lhs;
 }
 
-constexpr FemtoWatt& operator-= (FemtoWatt& lhs, FemtoWatt rhs) {
+constexpr FemtoWatt& operator-=(FemtoWatt& lhs, FemtoWatt rhs) {
     lhs.val -= rhs.val;
     return lhs;
 }
 
+// LINT.IfChange
 // IEEE Std 802.11-2016, Table 9-60, 9-71
 // For the use for SNR or relative comparison.
 // For precision of 1 dB step, See IEEE 802.11-2016, Table 6-7, 9-18, etc.
@@ -111,13 +118,14 @@ struct dBh : EnergyType<int16_t, dBh> {
 // For Transmit Power
 // See dot11MaximumTransmitPowerLevel, defined as int32_t
 struct dBm : EnergyType<int8_t, dBm> {
-    explicit constexpr dBm(int8_t v = 0) : EnergyType<int8_t, dBm>(v) { }
+    explicit constexpr dBm(int8_t v = 0) : EnergyType<int8_t, dBm>(v) {}
 };
 
 // IEEE Std 802.11-2016, 9.4.2.21.7, 9.4.2.38, 9.6.8.30, etc.
 struct dBmh : EnergyType<int16_t, dBmh> {
     explicit dBmh(int16_t v = 0);
 };
+// LINT.ThenChange(//garnet/lib/wlan/protocol/include/wlan/protocol/mac.h)
 
 dB to_dB(dBh u);
 dBh to_dBh(dB u);

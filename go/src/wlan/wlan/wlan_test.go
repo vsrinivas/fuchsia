@@ -10,7 +10,7 @@ import (
 	. "wlan/wlan"
 )
 
-func addBss(index int, ssid string, channel uint8, cbw mlme.Cbw, rssi uint8, resp *mlme.ScanConfirm) {
+func addBss(index int, ssid string, channel uint8, cbw mlme.Cbw, rssi int8, resp *mlme.ScanConfirm) {
 	bssDesc := mlme.BssDescription{
 		Bssid:   [6]uint8{uint8(index), 1, 2, 3, 4, 5},
 		Ssid:    ssid,
@@ -19,23 +19,23 @@ func addBss(index int, ssid string, channel uint8, cbw mlme.Cbw, rssi uint8, res
 			Primary: channel,
 			Cbw:     cbw,
 		},
-		RssiMeasurement: rssi,
+		RssiDbm: rssi,
 	}
 	resp.BssDescriptionSet = append(resp.BssDescriptionSet, bssDesc)
 }
 
 func TestCollectResults(t *testing.T) {
 	resp := &mlme.ScanConfirm{}
-	addBss(0, "abc", 1, mlme.CbwCbw20, 0x80, resp)
-	addBss(1, "def", 1, mlme.CbwCbw20, 0x80, resp)
-	addBss(2, "abc", 6, mlme.CbwCbw20, 0x85, resp)
+	addBss(0, "abc", 1, mlme.CbwCbw20, -60, resp)
+	addBss(1, "def", 1, mlme.CbwCbw20, -60, resp)
+	addBss(2, "abc", 6, mlme.CbwCbw20, -65, resp)
 
 	aps := CollectScanResults(resp, "abc", "")
 	if len(aps) != 2 {
 		t.Fatalf("Failed to collect 2 results for SSID \"abc\" (found %d)", len(aps))
 	}
 	ap := aps[0]
-	if ap.LastRSSI != 0x85 {
+	if ap.RssiDbm != -60 {
 		t.Fatalf("Failed to find AP with best RSSI")
 	}
 

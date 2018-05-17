@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <wlan/common/energy.h>
 #include <wlan/common/logging.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/mac_frame.h>
@@ -77,9 +78,9 @@ class Bss : public fbl::RefCounted<Bss> {
     zx::time ts_refreshed_;  // Last time of Bss object update.
 
     // TODO(porce): Don't trust instantaneous values. Keep history.
-    uint8_t rssi_{0};
-    uint8_t rcpi_{0};
-    uint8_t rsni_{0};
+    common::dBm rssi_dbm_{0};
+    common::dBmh rcpi_dbmh_{0};
+    common::dBh rsni_dbh_{0};
 
     // TODO(porce): Separate into class BeaconTracker.
     BeaconHash bcn_hash_{0};

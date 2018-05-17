@@ -19,9 +19,9 @@ struct WlanRxInfo {
   uint32 data_rate;
   wlan_device.Channel chan;
   uint8 mcs;
-  uint8 rssi;
-  uint8 rcpi;
-  uint8 snr;
+  int8 rssi_dbm;
+  int16 rcpi_dbmh;
+  int16 snr_dbh;
 };
 
 // See wlan_tx_info_t

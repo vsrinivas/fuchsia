@@ -127,9 +127,9 @@ fn send_beacon(frame_buf: &mut Vec<u8>, channel: &fidl_wlan_device::Channel, bss
             secondary80: channel.secondary80
         },
         mcs: 0,
-        rssi: 0,
-        rcpi: 0,
-        snr: 0,
+        rssi_dbm: 0,
+        rcpi_dbmh: 0,
+        snr_dbh: 0,
     };
     proxy.rx(0, &mut frame_buf.iter().cloned(), rx_info)?;
     Ok(())

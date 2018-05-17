@@ -3177,14 +3177,14 @@ static void fill_rx_info(wlan_rx_info_t* info, RxDesc rx_desc, Rxwi1 rxwi1, Rxwi
     if (rxwi2.rssi0() > 0) {
         info->valid_fields |= WLAN_RX_INFO_VALID_RSSI;
         // Use rssi offsets from the EEPROM to convert to RSSI
-        info->rssi = static_cast<uint8_t>(-12 - rssi_offsets[0] - lna_gain - rxwi2.rssi0());
+        info->rssi_dbm = static_cast<int8_t>(-12 - rssi_offsets[0] - lna_gain - rxwi2.rssi0());
     }
 
     // TODO(tkilbourn): check snr1 and figure out what to do with it
     if (rxwi1.phy_mode() != PhyMode::kLegacyCck && rxwi3.snr0() > 0) {
         info->valid_fields |= WLAN_RX_INFO_VALID_SNR;
         // Convert to SNR
-        info->snr = ((rxwi3.snr0() * 3 / 16) + 10) * 2;
+        info->snr_dbh = ((rxwi3.snr0() * 3 / 16) + 10) * 2;
     }
 }
 

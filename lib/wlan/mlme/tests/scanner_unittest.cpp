@@ -16,8 +16,8 @@
 
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <wlan_mlme/c/fidl.h>
 #include <gtest/gtest.h>
+#include <wlan_mlme/c/fidl.h>
 #include <cstring>
 
 #include <wlan_mlme/cpp/fidl.h>
@@ -46,9 +46,7 @@ class ScannerTest : public ::testing::Test {
 
     void SetActive() { req_->scan_type = wlan_mlme::ScanTypes::ACTIVE; }
 
-    zx_status_t Start() {
-        return scanner_.Start(*req_);
-    }
+    zx_status_t Start() { return scanner_.Start(*req_); }
 
     zx_status_t DeserializeScanResponse() {
         return mock_dev_.GetQueuedServiceMsg(wlan_mlme_MLMEScanConfOrdinal, &resp_);
@@ -208,8 +206,8 @@ TEST_F(ScannerTest, ScanResponse) {
     info.chan = {
         .primary = 1,
     };
-    info.rssi = 10;
-    info.snr = 60;
+    info.rssi_dbm = -75;
+    info.snr_dbh = 30;
 
     auto hdr = reinterpret_cast<const MgmtFrameHeader*>(kBeacon);
     auto bcn = reinterpret_cast<const Beacon*>(kBeacon + hdr->len());
@@ -230,9 +228,9 @@ TEST_F(ScannerTest, ScanResponse) {
     EXPECT_EQ(100u, bss.beacon_period);
     EXPECT_EQ(1024u, bss.timestamp);
     // EXPECT_EQ(1u, bss->channel);  // IE missing. info.chan != bss->channel.
-    EXPECT_EQ(10u, bss.rssi_measurement);
-    EXPECT_EQ(0, bss.rcpi_measurement);  // Not reported. Default at 0.
-    EXPECT_EQ(60u, bss.rsni_measurement);
+    EXPECT_EQ(-75, bss.rssi_dbm);
+    EXPECT_EQ(0, bss.rcpi_dbmh);  // Not reported. Default at 0.
+    EXPECT_EQ(30, bss.rsni_dbh);
 }
 
 // TODO(hahnr): add test for active scanning

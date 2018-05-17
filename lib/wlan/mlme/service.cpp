@@ -4,8 +4,8 @@
 
 #include <wlan/mlme/service.h>
 
-#include <wlan_mlme/c/fidl.h>
 #include <wlan/mlme/device_interface.h>
+#include <wlan_mlme/c/fidl.h>
 
 namespace wlan {
 
@@ -53,7 +53,8 @@ zx_status_t SendAuthConfirm(DeviceInterface* device, const common::MacAddr& peer
 
     auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
     packet->set_peer(Packet::Peer::kService);
-    auto status = SerializeServiceMsg(packet.get(), wlan_mlme_MLMEAuthenticateConfOrdinal, resp.get());
+    auto status =
+        SerializeServiceMsg(packet.get(), wlan_mlme_MLMEAuthenticateConfOrdinal, resp.get());
     if (status != ZX_OK) {
         errorf("could not serialize AuthenticateConfirm: %d\n", status);
     } else {
@@ -77,7 +78,8 @@ zx_status_t SendDeauthConfirm(DeviceInterface* device, const common::MacAddr& pe
 
     auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
     packet->set_peer(Packet::Peer::kService);
-    auto status = SerializeServiceMsg(packet.get(), wlan_mlme_MLMEDeauthenticateConfOrdinal, resp.get());
+    auto status =
+        SerializeServiceMsg(packet.get(), wlan_mlme_MLMEDeauthenticateConfOrdinal, resp.get());
     if (status != ZX_OK) {
         errorf("could not serialize DeauthenticateConfirm: %d\n", status);
     } else {
@@ -103,7 +105,8 @@ zx_status_t SendDeauthIndication(DeviceInterface* device, const common::MacAddr&
 
     auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
     packet->set_peer(Packet::Peer::kService);
-    auto status = SerializeServiceMsg(packet.get(), wlan_mlme_MLMEDeauthenticateIndOrdinal, ind.get());
+    auto status =
+        SerializeServiceMsg(packet.get(), wlan_mlme_MLMEDeauthenticateIndOrdinal, ind.get());
     if (status != ZX_OK) {
         errorf("could not serialize DeauthenticateIndication: %d\n", status);
     } else {
@@ -156,7 +159,8 @@ zx_status_t SendDisassociateIndication(DeviceInterface* device, const common::Ma
 
     auto packet = fbl::make_unique<Packet>(fbl::move(buffer), buf_len);
     packet->set_peer(Packet::Peer::kService);
-    auto status = SerializeServiceMsg(packet.get(), wlan_mlme_MLMEDisassociateIndOrdinal, ind.get());
+    auto status =
+        SerializeServiceMsg(packet.get(), wlan_mlme_MLMEDisassociateIndOrdinal, ind.get());
     if (status != ZX_OK) {
         errorf("could not serialize DisassociateIndication: %d\n", status);
     } else {
@@ -166,11 +170,11 @@ zx_status_t SendDisassociateIndication(DeviceInterface* device, const common::Ma
     return status;
 }
 
-zx_status_t SendSignalReportIndication(DeviceInterface* device, uint8_t rssi) {
+zx_status_t SendSignalReportIndication(DeviceInterface* device, common::dBm rssi_dbm) {
     debugfn();
 
     auto ind = wlan_mlme::SignalReportIndication::New();
-    ind->rssi = rssi;
+    ind->rssi_dbm = rssi_dbm.val;
 
     // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
     // everyone.

@@ -42,11 +42,11 @@ zx_status_t Bss::ProcessBeacon(const Beacon* beacon, size_t len, const wlan_rx_i
 std::string Bss::ToString() const {
     // TODO(porce): Convert to finspect Describe()
     char buf[1024];
-    snprintf(buf, sizeof(buf),
-             "BSSID %s Infra %s  RSSI %3d  Country %3s Channel %4s Cap %04x SSID [%s]",
-             bssid_.ToString().c_str(), GetBssType() == wlan_mlme::BSSTypes::INFRASTRUCTURE ? "Y" : "N", rssi_,
-             country_.c_str(), common::ChanStr(bcn_rx_chan_).c_str(), cap_.val(),
-             SsidToString().c_str());
+    snprintf(
+        buf, sizeof(buf), "BSSID %s Infra %s  RSSI %3d  Country %3s Channel %4s Cap %04x SSID [%s]",
+        bssid_.ToString().c_str(), GetBssType() == wlan_mlme::BSSTypes::INFRASTRUCTURE ? "Y" : "N",
+        rssi_dbm_.val, country_.c_str(), common::ChanStr(bcn_rx_chan_).c_str(), cap_.val(),
+        SsidToString().c_str());
     return std::string(buf);
 }
 
@@ -76,9 +76,10 @@ void Bss::Renew(const Beacon* beacon, const wlan_rx_info_t* rx_info) {
     bcn_rx_chan_ = rx_info->chan;
 
     // If the latest beacons lack measurements, keep the last report.
-    if (rx_info->valid_fields & WLAN_RX_INFO_VALID_RSSI) { rssi_ = rx_info->rssi; }
-    if (rx_info->valid_fields & WLAN_RX_INFO_VALID_RCPI) { rcpi_ = rx_info->rcpi; }
-    if (rx_info->valid_fields & WLAN_RX_INFO_VALID_SNR) { rsni_ = rx_info->snr; }
+    // TODO(NET-856): Change DDK wlan_rx_info_t and do translation in the vendor device driver.
+    if (rx_info->valid_fields & WLAN_RX_INFO_VALID_RSSI) { rssi_dbm_.val = rx_info->rssi_dbm; }
+    if (rx_info->valid_fields & WLAN_RX_INFO_VALID_RCPI) { rcpi_dbmh_.val = rx_info->rcpi_dbmh; }
+    if (rx_info->valid_fields & WLAN_RX_INFO_VALID_SNR) { rsni_dbh_.val = rx_info->snr_dbh; }
 }
 
 bool Bss::HasBeaconChanged(const Beacon* beacon, size_t len) const {
@@ -247,9 +248,9 @@ wlan_mlme::BSSDescription Bss::ToFidl() {
     fidl.chan.cbw = static_cast<wlan_mlme::CBW>(bcn_rx_chan_.cbw);
 
     // Stats
-    fidl.rssi_measurement = rssi_;
-    fidl.rcpi_measurement = rcpi_;
-    fidl.rsni_measurement = rsni_;
+    fidl.rssi_dbm = rssi_dbm_.val;
+    fidl.rcpi_dbmh = rcpi_dbmh_.val;
+    fidl.rsni_dbh = rsni_dbh_.val;
 
     // RSN
     fidl.rsn.reset();

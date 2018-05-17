@@ -55,7 +55,7 @@ func (a *ToolApp) Scan(seconds uint8) {
 					compatStr = ""
 				}
 				fmt.Printf("%12s %x (RSSI: %d) %v %q\n",
-					compatStr, ap.Bssid, ap.LastRssi, prot, ap.Ssid)
+					compatStr, ap.Bssid, ap.RssiDbm, prot, ap.Ssid)
 			}
 		}
 		rxed <- struct{}{}
@@ -158,7 +158,7 @@ func (a *ToolApp) Status() {
 			}
 
 			fmt.Printf("%12s %x (RSSI: %d) %v %q\n",
-				compatStr, ap.Bssid, ap.LastRssi, prot, ap.Ssid)
+				compatStr, ap.Bssid, ap.RssiDbm, prot, ap.Ssid)
 		}
 	}
 }

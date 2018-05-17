@@ -6,9 +6,9 @@ package wlan
 
 import (
 	bindings "fidl/bindings"
-	"fmt"
 	mlme "fidl/wlan_mlme"
 	"fidl/wlan_service"
+	"fmt"
 	"log"
 	"os"
 	"syscall"
@@ -101,10 +101,8 @@ func ConvertWapToAp(ap AP) wlan_service.Ap {
 	// Currently we indicate the AP is secure if it supports RSN.
 	// TODO: Check if AP supports other types of security mechanism (e.g. WEP)
 	is_secure := ap.BSSDesc.Rsn != nil
-	// TODO: Revisit this RSSI conversion.
-	last_rssi := int8(ap.LastRSSI)
 	is_compatible := ap.IsCompatible
-	return wlan_service.Ap{bssid, ap.SSID, int32(last_rssi), is_secure, is_compatible}
+	return wlan_service.Ap{bssid, ap.SSID, ap.RssiDbm, is_secure, is_compatible}
 }
 
 func (c *Client) Status() wlan_service.WlanStatus {

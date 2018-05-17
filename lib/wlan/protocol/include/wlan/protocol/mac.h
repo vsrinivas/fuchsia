@@ -165,6 +165,14 @@ enum {
     // Bits 2-31 reserved
 };
 
+
+// LINT.IfChange
+typedef int8_t wlan_dBm_t;
+typedef int16_t wlan_dBmh_t;
+typedef int8_t wlan_dB_t;
+typedef int16_t wlan_dBh_t;
+// LINT.ThenChange(//garnet/lib/wlan/common/include/wlan/common/energy.h)
+
 typedef struct wlan_rx_info {
     // Receive flags. These represent boolean flags as opposed to enums or value-based info which
     // are represented below. Values should be taken from the WLAN_RX_INFO_FLAGS_* enum.
@@ -182,12 +190,14 @@ typedef struct wlan_rx_info {
     // The modulation and coding scheme index of the device at the time of the operation. Depends
     // on the PHY format and channel width.
     uint8_t mcs;
-    // The RSSI measured by the device. No units.
-    uint8_t rssi;
-    // The RCPI (IEEE Std 802.11-2016, 17.3.10.7) measured by the device.
-    uint8_t rcpi;
-    // The SNR measured by the device, in 0.5 dBm
-    uint8_t snr;
+
+    // Received Signal Strength Indicator.
+    wlan_dBm_t rssi_dbm;
+    // Received Channel Power Indicator, in 0.5 dBm. IEEE Std 802.11-2016, 17.3.10.7.
+    // Do not use encoding in 15.4.6.6
+    wlan_dBmh_t rcpi_dbmh;
+    // Signal-to-Noise Ratio, in 0.5 dB.
+    wlan_dBh_t snr_dbh;
 } wlan_rx_info_t;
 
 enum {

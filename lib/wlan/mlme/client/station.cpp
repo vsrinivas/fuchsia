@@ -379,7 +379,7 @@ zx_status_t Station::HandleBeacon(const ImmutableMgmtFrame<Beacon>& frame,
     ZX_DEBUG_ASSERT(frame.hdr()->fc.subtype() == ManagementSubtype::kBeacon);
     ZX_DEBUG_ASSERT(frame.hdr()->addr3 == common::MacAddr(bss_->bssid.data()));
 
-    avg_rssi_.add(rxinfo.rssi);
+    avg_rssi_dbm_.add(rxinfo.rssi_dbm);
 
     // TODO(tkilbourn): update any other info (like rolling average of rssi)
     last_seen_ = timer_->Now();
@@ -513,9 +513,9 @@ zx_status_t Station::HandleAssociationResponse(const ImmutableMgmtFrame<Associat
 
     signal_report_timeout_ = deadline_after_bcn_period(kSignalReportBcnCountTimeout);
     timer_->SetTimer(signal_report_timeout_);
-    avg_rssi_.reset();
-    avg_rssi_.add(rxinfo.rssi);
-    service::SendSignalReportIndication(device_, rxinfo.rssi);
+    avg_rssi_dbm_.reset();
+    avg_rssi_dbm_.add(rxinfo.rssi_dbm);
+    service::SendSignalReportIndication(device_, common::dBm(rxinfo.rssi_dbm));
 
     // Open port if user connected to an open network.
     if (bss_->rsn.is_null()) {
@@ -663,7 +663,7 @@ zx_status_t Station::HandleNullDataFrame(const ImmutableDataFrame<NilHeader>& fr
     ZX_DEBUG_ASSERT(state_ == WlanState::kAssociated);
 
     // Take signal strength into account.
-    avg_rssi_.add(rxinfo.rssi);
+    avg_rssi_dbm_.add(rxinfo.rssi_dbm);
 
     // Some AP's such as Netgear Routers send periodic NULL data frames to test whether a client
     // timed out. The client must respond with a NULL data frame itself to not get
@@ -698,7 +698,7 @@ zx_status_t Station::HandleDataFrame(const ImmutableDataFrame<LlcHeader>& frame,
     }
 
     // Take signal strength into account.
-    avg_rssi_.add(rxinfo.rssi);
+    avg_rssi_dbm_.add(rxinfo.rssi_dbm);
 
     auto hdr = frame.hdr();
     auto llc = frame.body();
@@ -879,7 +879,7 @@ zx_status_t Station::HandleTimeout() {
         state_ == WlanState::kAssociated) {
         signal_report_timeout_ = deadline_after_bcn_period(kSignalReportBcnCountTimeout);
         timer_->SetTimer(signal_report_timeout_);
-        service::SendSignalReportIndication(device_, avg_rssi_.avg());
+        service::SendSignalReportIndication(device_, common::dBm(avg_rssi_dbm_.avg()));
     }
 
     return ZX_OK;
