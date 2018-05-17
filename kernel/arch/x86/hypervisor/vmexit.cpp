@@ -870,15 +870,29 @@ static zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs* vmcs, bool r
         if (!trap->HasPort())
             return ZX_ERR_BAD_STATE;
         return trap->Queue(*packet, vmcs);
-    case ZX_GUEST_TRAP_MEM:
+    case ZX_GUEST_TRAP_MEM: {
         *packet = {};
         packet->key = trap->key();
         packet->type = ZX_PKT_TYPE_GUEST_MEM;
         packet->guest_mem.addr = guest_paddr;
         packet->guest_mem.inst_len = exit_info.exit_instruction_length & UINT8_MAX;
+        // See Volume 3, Section 5.2.1.
+        uint64_t efer = vmcs->Read(VmcsField64::GUEST_IA32_EFER);
+        uint32_t cs_access_rights = vmcs->Read(VmcsField32::GUEST_CS_ACCESS_RIGHTS);
+        if ((efer & X86_EFER_LMA) && (cs_access_rights & kGuestXxAccessRightsL)) {
+            // IA32-e 64 bit mode.
+            packet->guest_mem.default_operand_size = 4;
+        } else if (cs_access_rights & kGuestXxAccessRightsD) {
+            // CS.D set (and not 64 bit mode).
+            packet->guest_mem.default_operand_size = 4;
+        } else {
+            // CS.D clear (and not 64 bit mode).
+            packet->guest_mem.default_operand_size = 2;
+        }
         status = fetch_data(*vmcs, gpas, exit_info.guest_rip, packet->guest_mem.inst_buf,
                             packet->guest_mem.inst_len);
         return status == ZX_OK ? ZX_ERR_NEXT : status;
+    }
     default:
         return ZX_ERR_BAD_STATE;
     }
@@ -1005,9 +1019,9 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
         LTRACEF("handling PAUSE\n\n");
         ktrace_vcpu(TAG_VCPU_EXIT, VCPU_PAUSE);
         return handle_pause(exit_info, vmcs);
+    // Currently all exceptions except NMI delivered to guest directly. NMI causes vmexit
+    // and handled by host via IDT as any other interrupt/exception.
     case ExitReason::EXCEPTION:
-        // Currently all exceptions except NMI delivered to guest directly. NMI causes vmexit
-        // and handled by host via IDT as any other interrupt/exception.
     default:
         dprintf(CRITICAL, "Unhandled VM exit %u (%s)\n", static_cast<uint32_t>(exit_info.exit_reason),
                 exit_reason_name(exit_info.exit_reason));

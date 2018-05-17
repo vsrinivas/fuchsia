@@ -50,8 +50,6 @@ typedef struct zx_vcpu_state {
     uint64_t r15;
     // Contains only the user-controllable lower 32-bits.
     uint64_t rflags;
-    // Default operand size in bytes (read only).
-    uint8_t default_operand_size;
 #endif
 } zx_vcpu_state_t;
 

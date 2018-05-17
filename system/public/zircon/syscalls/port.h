@@ -8,6 +8,8 @@
 
 __BEGIN_CDECLS
 
+// clang-format off
+
 // zx_object_wait_async() options
 #define ZX_WAIT_ASYNC_ONCE          0u
 #define ZX_WAIT_ASYNC_REPEATING     1u
@@ -38,13 +40,14 @@ __BEGIN_CDECLS
 
 #define ZX_PKT_GUEST_VCPU_INTERRUPT  0
 #define ZX_PKT_GUEST_VCPU_STARTUP    1
+// clang-format on
 
 // port_packet_t::type ZX_PKT_TYPE_USER.
 typedef union zx_packet_user {
     uint64_t u64[4];
     uint32_t u32[8];
     uint16_t u16[16];
-    uint8_t   c8[32];
+    uint8_t c8[32];
 } zx_packet_user_t;
 
 // port_packet_t::type ZX_PKT_TYPE_SIGNAL_ONE and ZX_PKT_TYPE_SIGNAL_REP.
@@ -78,13 +81,15 @@ typedef struct zx_packet_guest_mem {
     uint8_t xt;
     bool read;
     uint64_t data;
+    uint64_t reserved;
 #elif __x86_64__
 // NOTE: x86 instructions are guaranteed to be 15 bytes or fewer.
 #define X86_MAX_INST_LEN 15u
     uint8_t inst_len;
     uint8_t inst_buf[X86_MAX_INST_LEN];
+    uint8_t default_operand_size;
+    uint8_t reserved[7];
 #endif
-    uint64_t reserved;
 } zx_packet_guest_mem_t;
 
 typedef struct zx_packet_guest_io {
