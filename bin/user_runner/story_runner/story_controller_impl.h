@@ -90,10 +90,6 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
                   const std::function<void()>& done);
 
   // Called by ModuleControllerImpl.
-  void OnModuleStateChange(const fidl::VectorPtr<fidl::StringPtr>& module_path,
-                           ModuleState state);
-
-  // Called by ModuleControllerImpl.
   //
   // Releases ownership of |controller|, which deletes itself after return.
   void ReleaseModule(ModuleControllerImpl* module_controller_impl);
@@ -186,7 +182,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
       fidl::InterfaceRequest<views_v1_token::ViewOwner> request);
 
   // Misc internal helpers.
-  void NotifyStateChange();
+  void SetState(StoryState new_state);
   void DisposeLink(LinkImpl* link);
   void AddModuleWatcher(ModuleControllerPtr module_controller,
                         const fidl::VectorPtr<fidl::StringPtr>& module_path);
@@ -202,11 +198,6 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // This is the canonical source for state. The value in the ledger is just a
   // write-behind copy of this value.
   StoryState state_{StoryState::STOPPED};
-
-  // Story state is determined by external module state, but only until the
-  // story gets stopped or deleted. This flag blocks processing of state
-  // notifications from modules while the story winds down.
-  bool track_root_module_state_{true};
 
   StoryProviderImpl* const story_provider_impl_;
 
@@ -275,11 +266,6 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
 
   // The second ingredient of a story: Links. They connect Modules.
   std::vector<std::unique_ptr<LinkImpl>> links_;
-
-  // Module state is used to inform Story state (see OnModuleStateChange() and
-  // MaybeUpdateStoryState()). We keep track of the first Module to start in
-  // this Story as a proxy 'root' Module.
-  fidl::VectorPtr<fidl::StringPtr> first_module_path_;
 
   // A dummy service that allows applications that can run both as modules in a
   // story and standalone from the shell to determine whether they are in a

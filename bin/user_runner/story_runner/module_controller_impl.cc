@@ -63,13 +63,6 @@ ModuleControllerImpl::ModuleControllerImpl(
                               std::move(incoming_services));
 
   app_client_.services().ConnectToService(std::move(view_provider_request));
-
-  // Push the initial module state to story controller. TODO(mesch): This is
-  // only needed for the root module to transition the story state to STARTING
-  // and get IsRunning() to true. This could be handled inside
-  // StoryControllerImpl too.
-  story_controller_impl_->OnModuleStateChange(module_data_->module_path,
-                                              state_);
 }
 
 ModuleControllerImpl::~ModuleControllerImpl() {}
@@ -106,9 +99,6 @@ void ModuleControllerImpl::SetState(const ModuleState new_state) {
   for (const auto& i : watchers_.ptrs()) {
     (*i)->OnStateChange(state_);
   }
-
-  story_controller_impl_->OnModuleStateChange(module_data_->module_path,
-                                              state_);
 }
 
 void ModuleControllerImpl::Teardown(std::function<void()> done) {

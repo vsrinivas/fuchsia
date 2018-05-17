@@ -791,11 +791,6 @@ class StoryControllerImpl::StopCall : public Operation<> {
  private:
   // StopCall may be run even on a story impl that is not running.
   void Run() override {
-    // At this point, we don't need to monitor the root modules for state
-    // changes anymore, because the next state change of the story is triggered
-    // by the Cleanup() call below.
-    story_controller_impl_->track_root_module_state_ = false;
-
     // At this point, we don't need notifications from disconnected
     // Links anymore, as they will all be disposed soon anyway.
     for (auto& link : story_controller_impl_->links_) {
@@ -877,13 +872,13 @@ class StoryControllerImpl::StopCall : public Operation<> {
     story_controller_impl_->links_.clear();
     story_controller_impl_->connections_.clear();
 
-    story_controller_impl_->state_ = StoryState::STOPPED;
-
     // If this StopCall is part of a DeleteCall, then we don't notify story
     // state changes; the pertinent state change will be the delete notification
     // instead.
     if (notify_) {
-      story_controller_impl_->NotifyStateChange();
+      story_controller_impl_->SetState(StoryState::STOPPED);
+    } else {
+      story_controller_impl_->state_ = StoryState::STOPPED;
     }
 
     Done();
@@ -1530,7 +1525,6 @@ class StoryControllerImpl::StartCall : public Operation<> {
       return;
     }
 
-    story_controller_impl_->track_root_module_state_ = true;
     story_controller_impl_->StartStoryShell(std::move(request_));
 
     // Start *all* the root modules, not just the first one, with their
@@ -1556,8 +1550,7 @@ class StoryControllerImpl::StartCall : public Operation<> {
       }
     }
 
-    story_controller_impl_->state_ = StoryState::RUNNING;
-    story_controller_impl_->NotifyStateChange();
+    story_controller_impl_->SetState(StoryState::RUNNING);
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
@@ -1992,7 +1985,13 @@ void StoryControllerImpl::StartStoryShell(
   story_shell_->Initialize(story_context_binding_.NewBinding());
 }
 
-void StoryControllerImpl::NotifyStateChange() {
+void StoryControllerImpl::SetState(const StoryState new_state) {
+  if (new_state == state_) {
+    return;
+  }
+
+  state_ = new_state;
+
   for (auto& i : watchers_.ptrs()) {
     (*i)->OnStateChange(state_);
   }
@@ -2005,7 +2004,7 @@ void StoryControllerImpl::NotifyStateChange() {
   // Operation gets scheduled after the delete of the story is completed, and it
   // will not execute because its queue is deleted beforehand.
   //
-  // TODO(mesch): Maybe we should execute this inside the containing Operation.
+  // TODO(mesch): We should execute this inside the containing Operation.
 
   modular_private::PerDeviceStoryInfoPtr data =
       modular_private::PerDeviceStoryInfo::New();
@@ -2037,45 +2036,6 @@ bool StoryControllerImpl::IsExternalModule(
   }
 
   return i->module_data->module_source == ModuleSource::EXTERNAL;
-}
-
-void StoryControllerImpl::OnModuleStateChange(
-    const fidl::VectorPtr<fidl::StringPtr>& module_path,
-    const ModuleState state) {
-  if (!track_root_module_state_) {
-    return;
-  }
-
-  if (first_module_path_.is_null()) {
-    first_module_path_ = module_path.Clone();
-  }
-  if (first_module_path_ == module_path) {
-    UpdateStoryState(state);
-  }
-}
-
-void StoryControllerImpl::UpdateStoryState(const ModuleState state) {
-  switch (state) {
-    case ModuleState::RUNNING:
-    case ModuleState::UNLINKED:
-      state_ = StoryState::RUNNING;
-      break;
-    case ModuleState::STOPPED:
-    case ModuleState::ERROR:
-      // TODO(mesch): The story should only be marked STOPPED after
-      // StoryContoller.Stop() is executed, and no modules are left running. In
-      // this state here, there may be modules other than the root module left
-      // running. These modules may even request more modules to start or make
-      // suggestions to start more modules, which would be shown to the
-      // user. However, the calls to run the modules would silently not result
-      // in modules running, just in the modules to be added to the story
-      // record, because actually starting newly added modules is gated by the
-      // story to be running. This makes little sense. FW-334
-      state_ = StoryState::STOPPED;
-      break;
-  }
-
-  NotifyStateChange();
 }
 
 StoryControllerImpl::Connection* StoryControllerImpl::FindConnection(
