@@ -8,15 +8,10 @@
 #include "garnet/public/lib/fxl/macros.h"
 
 namespace debug_ipc {
-class Frame;
 struct Module;
-struct StackFrame;
 }
 
 namespace zxdb {
-
-class ProcessSymbols;
-class SystemSymbolsProxy;
 
 // Main client interface for querying process symbol information.
 //
@@ -27,7 +22,7 @@ class SystemSymbolsProxy;
 class SymbolsImpl : public Symbols {
  public:
   // The SystemSymbolsProxy must outlive this class.
-  SymbolsImpl(Session* session, SystemSymbolsProxy* system_symbols);
+  SymbolsImpl(Session* session);
   ~SymbolsImpl();
 
   // Adds the given module to the process. The callback will be executed with
@@ -39,20 +34,7 @@ class SymbolsImpl : public Symbols {
   // Replaces all modules with the given list.
   void SetModules(const std::vector<debug_ipc::Module>& modules);
 
-  // Symbols implementation.
-  void ResolveAddress(uint64_t address,
-                      std::function<void(Location)> callback) override;
-  void ResolveAddresses(
-      std::vector<uint64_t> addresses,
-      std::function<void(std::vector<Location>)> callback) override;
-  void GetModuleInfo(
-      std::function<void(std::vector<ModuleSymbolRecord> records)> callback)
-    override;
-
  private:
-  SystemSymbolsProxy* system_proxy_;  // Non-owning.
-  std::unique_ptr<ProcessSymbols> symbols_;
-
   FXL_DISALLOW_COPY_AND_ASSIGN(SymbolsImpl);
 };
 

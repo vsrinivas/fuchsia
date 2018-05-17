@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "garnet/bin/zxdb/client/system.h"
-#include "garnet/bin/zxdb/client/system_symbols_proxy.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/memory/weak_ptr.h"
 
@@ -24,8 +23,6 @@ class SystemImpl : public System {
   explicit SystemImpl(Session* session);
   ~SystemImpl() override;
 
-  SystemSymbolsProxy* symbols_proxy() { return &symbols_proxy_; }
-
   ProcessImpl* ProcessImplFromKoid(uint64_t koid) const;
 
   // System implementation:
@@ -40,11 +37,7 @@ class SystemImpl : public System {
   void Continue() override;
 
  private:
-  friend SystemSymbolsProxy;
-
   void AddNewTarget(std::unique_ptr<TargetImpl> target);
-
-  SystemSymbolsProxy symbols_proxy_;
 
   std::vector<std::unique_ptr<TargetImpl>> targets_;
   std::vector<std::unique_ptr<BreakpointImpl>> breakpoints_;

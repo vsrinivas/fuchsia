@@ -21,7 +21,7 @@ ProcessImpl::ProcessImpl(TargetImpl* target,
       target_(target),
       koid_(koid),
       name_(name),
-      symbols_(target->session(), target->system()->symbols_proxy()),
+      symbols_(target->session()),
       weak_factory_(this) {}
 
 ProcessImpl::~ProcessImpl() {

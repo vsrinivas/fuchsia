@@ -11,8 +11,7 @@
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/symbols.h"
-#include "garnet/bin/zxdb/client/symbols/module_records.h"
-#include "garnet/bin/zxdb/client/symbols/location.h"
+#include "garnet/bin/zxdb/client/location.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
@@ -39,49 +38,7 @@ Example
 )";
 
 Err DoSymInfo(ConsoleContext* context, const Command& cmd) {
-  Err err = cmd.ValidateNouns({Noun::kProcess});
-  if (err.has_error())
-    return err;
-  err = AssertRunningTarget(context, "sym-info", cmd.target());
-  if (err.has_error())
-    return err;
-
-  if (!cmd.args().empty())
-    return Err("\"sym-info\" takes no arguments.");
-
-  cmd.target()->GetProcess()->GetSymbols()->GetModuleInfo(
-      [](std::vector<ModuleSymbolRecord> records) {
-        std::string load_tip(
-            "Tip: Use \"libs\" to refresh the module list from the process.\n");
-
-        Console* console = Console::get();
-        if (records.empty()) {
-          console->Output("No known modules.\n" + load_tip);
-          return;
-        }
-
-        // Sort by target module name.
-        std::sort(records.begin(), records.end(),
-                  [](const ModuleSymbolRecord& a, const ModuleSymbolRecord& b) {
-                    return a.module_name < b.module_name;
-                  });
-
-        OutputBuffer out;
-        for (const auto& module : records) {
-          out.Append(Syntax::kHeading, module.module_name + "\n");
-          out.Append(fxl::StringPrintf("  Base: 0x%" PRIx64 "\n", module.base));
-          out.Append("  Build ID: " + module.build_id + "\n");
-          out.Append("  Local file: ");
-          if (module.local_path.empty())
-            out.Append(Syntax::kError, "Not found.");
-          else
-            out.Append(module.local_path);
-          out.Append("\n\n");
-        }
-        out.Append(std::move(load_tip));
-        console->Output(std::move(out));
-      });
-  return Err();
+  return Err("Unimplemented");
 }
 
 // sym-near --------------------------------------------------------------------
@@ -102,28 +59,7 @@ Example
 )";
 
 Err DoSymNear(ConsoleContext* context, const Command& cmd) {
-  Err err = cmd.ValidateNouns({Noun::kProcess});
-  if (err.has_error())
-    return err;
-  err = AssertRunningTarget(context, "sym-near", cmd.target());
-  if (err.has_error())
-    return err;
-
-  if (cmd.args().size() != 1u) {
-    return Err(
-        ErrType::kInput,
-        "\"sym-near\" needs exactly one arg that's the address to lookup.");
-  }
-
-  uint64_t address = 0;
-  err = StringToUint64(cmd.args()[0], &address);
-  if (err.has_error())
-    return err;
-
-  cmd.target()->GetProcess()->GetSymbols()->ResolveAddress(
-      address,
-      [](Location loc) { Console::get()->Output(DescribeLocation(loc)); });
-  return Err();
+  return Err("Unimplemented");
 }
 
 }  // namespace

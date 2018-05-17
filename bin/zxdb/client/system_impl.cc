@@ -8,7 +8,6 @@
 #include "garnet/bin/zxdb/client/process_impl.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/system_observer.h"
-#include "garnet/bin/zxdb/client/system_symbols_proxy.h"
 #include "garnet/bin/zxdb/client/target_impl.h"
 
 namespace zxdb {
@@ -16,14 +15,6 @@ namespace zxdb {
 SystemImpl::SystemImpl(Session* session)
     : System(session), weak_factory_(this) {
   AddNewTarget(std::make_unique<TargetImpl>(this));
-
-  symbols_proxy_.Init([weak_system = weak_factory_.GetWeakPtr()](
-                          bool ids_loaded, const std::string& msg) {
-    if (weak_system) {
-      for (auto& observer : weak_system->observers())
-        observer.DidTryToLoadSymbolMapping(ids_loaded, msg);
-    }
-  });
 }
 
 SystemImpl::~SystemImpl() {

@@ -22,21 +22,13 @@ ThreadImpl::ThreadImpl(ProcessImpl* process,
 
 ThreadImpl::~ThreadImpl() = default;
 
-Process* ThreadImpl::GetProcess() const {
-  return process_;
-}
+Process* ThreadImpl::GetProcess() const { return process_; }
 
-uint64_t ThreadImpl::GetKoid() const {
-  return koid_;
-}
+uint64_t ThreadImpl::GetKoid() const { return koid_; }
 
-const std::string& ThreadImpl::GetName() const {
-  return name_;
-}
+const std::string& ThreadImpl::GetName() const { return name_; }
 
-debug_ipc::ThreadRecord::State ThreadImpl::GetState() const {
-  return state_;
-}
+debug_ipc::ThreadRecord::State ThreadImpl::GetState() const { return state_; }
 
 void ThreadImpl::Pause() {
   debug_ipc::PauseRequest request;
@@ -68,9 +60,7 @@ const std::vector<std::unique_ptr<Frame>>& ThreadImpl::GetFrames() const {
   return frames_;
 }
 
-bool ThreadImpl::HasAllFrames() const {
-  return has_all_frames_;
-}
+bool ThreadImpl::HasAllFrames() const { return has_all_frames_; }
 
 void ThreadImpl::SyncFrames(std::function<void()> callback) {
   debug_ipc::BacktraceRequest request;
@@ -113,7 +103,6 @@ void ThreadImpl::SetMetadata(const debug_ipc::ThreadRecord& record) {
 }
 
 void ThreadImpl::OnException(const debug_ipc::NotifyException& notify) {
-
   // Symbolize the stack frame before broadcasting the state change.
   std::vector<debug_ipc::StackFrame> frame;
   frame.push_back(notify.frame);
@@ -125,7 +114,8 @@ void ThreadImpl::OnException(const debug_ipc::NotifyException& notify) {
     // After an exception the thread should be blocked.
     FXL_DCHECK(thread->state_ == debug_ipc::ThreadRecord::State::kBlocked);
 
-    thread->has_all_frames_ = false;;
+    thread->has_all_frames_ = false;
+    ;
     for (auto& observer : thread->observers())
       observer.OnThreadStopped(thread, notify.type);
   });
@@ -138,23 +128,14 @@ void ThreadImpl::HaveFrames(const std::vector<debug_ipc::StackFrame>& frames,
   for (const auto& frame : frames)
     addresses.push_back(frame.ip);
 
-  process_->GetSymbols()->ResolveAddresses(addresses, [
-    frames, callback, thread = weak_factory_.GetWeakPtr()
-  ](std::vector<Location> locs) {
-    if (!thread)
-      return;  // Thread destryed during symbol lookup.
-    thread->frames_.clear();
-    FXL_DCHECK(locs.size() == frames.size());
+  frames_.clear();
+  for (size_t i = 0; i < frames.size(); i++) {
+    frames_.push_back(
+        std::make_unique<FrameImpl>(this, frames[i], Location(frames[i].ip)));
+  }
 
-    // Combine the original StackFrame and the generated Location objects
-    // to make the Frame objects.
-    for (size_t i = 0; i < locs.size(); i++) {
-      thread->frames_.push_back(
-          std::make_unique<FrameImpl>(thread.get(), frames[i], std::move(locs[i])));
-    }
-    if (callback)
-      callback();
-  });
+  if (callback)
+    callback();
 }
 
 void ThreadImpl::ClearFrames() {

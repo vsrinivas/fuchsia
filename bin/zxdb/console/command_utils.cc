@@ -10,9 +10,9 @@
 
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/frame.h"
+#include "garnet/bin/zxdb/client/location.h"
 #include "garnet/bin/zxdb/client/process.h"
-#include "garnet/bin/zxdb/client/symbols/location.h"
-#include "garnet/bin/zxdb/client/symbols/symbol.h"
+#include "garnet/bin/zxdb/client/symbol.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/command.h"

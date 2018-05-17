@@ -13,10 +13,12 @@ static_library("client") {
     "disassembler.h",
     "err.h",
     "frame.h",
+    "location.h",
     "memory_dump.h",
     "process.h",
     "process_observer.h",
     "session.h",
+    "symbol.h",
     "symbols.h",
     "system.h",
     "system_observer.h",
@@ -48,8 +50,6 @@ static_library("client") {
     "system.cc",
     "system_impl.cc",
     "system_impl.h",
-    "system_symbols_proxy.cc",
-    "system_symbols_proxy.h",
     "target.cc",
     "target_impl.cc",
     "target_impl.h",
@@ -59,7 +59,6 @@ static_library("client") {
   ]
 
   public_deps = [
-    "symbols",
     "//garnet/lib/debug_ipc:client",
     "//garnet/lib/debug_ipc/helper",
     "//garnet/public/lib/fxl",
@@ -77,7 +76,6 @@ source_set("tests") {
 
   deps = [
     ":client",
-    "symbols:tests",
     "//third_party/googletest:gtest",
   ]
 }
