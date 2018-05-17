@@ -439,11 +439,11 @@ size_t SocketDispatcher::ReceiveBufferSize() const {
 size_t SocketDispatcher::TransmitBufferMax() const TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
     AutoLock lock(get_lock());
-    return peer_->data_.max_size();
+    return peer_ ? peer_->data_.max_size() : 0;
 }
 
 size_t SocketDispatcher::TransmitBufferSize() const TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
     AutoLock lock(get_lock());
-    return peer_->data_.size();
+    return peer_ ? peer_->data_.size() : 0;
 }

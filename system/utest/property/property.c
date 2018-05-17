@@ -387,6 +387,15 @@ static bool socket_buffer_test(void) {
               ZX_OK, "");
     EXPECT_EQ(value, sizeof(buf), "");
 
+    // Check TX buf goes to zero on peer closed.
+    zx_handle_close(sockets[0]);
+    ASSERT_EQ(zx_object_get_property(sockets[1], ZX_PROP_SOCKET_TX_BUF_SIZE, &value, sizeof(value)),
+              ZX_OK, "");
+    EXPECT_EQ(value, 0u, "");
+    ASSERT_EQ(zx_object_get_property(sockets[1], ZX_PROP_SOCKET_TX_BUF_MAX, &value, sizeof(value)),
+              ZX_OK, "");
+    EXPECT_EQ(value, 0u, "");
+
     END_TEST;
 }
 
