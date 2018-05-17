@@ -131,11 +131,15 @@ void Graph::RemoveNodesConnectedToNode(NodeRef node) {
     to_remove.pop_front();
 
     for (size_t i = 0; i < node.input_count(); ++i) {
-      to_remove.push_back(node.input(i).node());
+      if (node.input(i).connected()) {
+        to_remove.push_back(node.input(i).mate().node());
+      }
     }
 
     for (size_t i = 0; i < node.output_count(); ++i) {
-      to_remove.push_back(node.output(i).node());
+      if (node.output(i).connected()) {
+        to_remove.push_back(node.output(i).mate().node());
+      }
     }
 
     RemoveNode(node);
