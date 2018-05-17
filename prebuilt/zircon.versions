@@ -11,3 +11,4 @@ tools/symbolize/linux-amd64 65cf179023690da1bbb04ecc485a5851a2dbd03b
 tools/symbolize/mac-amd64 47c0db18d3c656141f1e46c782b0c778c90bd85d
 qemu/linux-amd64 9cc486c5b18a0be515c39a280ca9a309c54cf994
 qemu/mac-amd64 2d3358ae9a569b2d4a474f498b32b202a152134f
+firmware/intel-adsp-sst 1652dc1c96d6f10c5cd552ac84223766795f5aaf
