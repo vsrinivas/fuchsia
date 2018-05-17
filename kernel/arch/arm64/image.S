@@ -34,7 +34,7 @@ ZBI_CONTAINER_HEADER(_zbi_file_header, boot_load_end - _zbi_kernel_header)
 
 // ZBI kernel header (zbi_header_t)
 DATA(_zbi_kernel_header)
-    .int ZBI_TYPE_KERNEL_X64    // TODO(ZX-2153,gkalsi): Update Bootloaders before switching this to KERNEL_ARM64
+    .int ZBI_TYPE_KERNEL_ARM64
     .int boot_load_end - _zbi_kernel_payload
     .int 0
     .int ZBI_FLAG_VERSION
