@@ -82,7 +82,13 @@ void AsyncNodeStageImpl::UnprepareOutput(size_t output_index,
                                          UpstreamCallback callback) {
   FXL_DCHECK(output_index < outputs_.size());
 
-  node_->SetAllocatorForOutput(nullptr, output_index);
+  if (node_->can_accept_allocator_for_output(output_index)) {
+    // Outputs for which |can_accept_allocator_for_output| returns false will
+    // typically DCHECK if asked to |SetAllocatorForOutput|, hence the check
+    // above.
+    node_->SetAllocatorForOutput(nullptr, output_index);
+  }
+
   outputs_[output_index].SetCopyAllocator(nullptr);
 
   // Indicate all inputs should be unprepared.
