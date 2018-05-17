@@ -4,6 +4,8 @@
 
 #include "garnet/bin/media/media_player/framework/engine.h"
 
+#include "garnet/bin/media/media_player/framework/formatting.h"
+
 namespace media_player {
 
 Engine::Engine() {}
@@ -16,7 +18,7 @@ void Engine::PrepareInput(Input* input) {
                           StageImpl::UpstreamCallback callback) {
     FXL_DCHECK(input);
     FXL_DCHECK(output);
-    FXL_DCHECK(!input->prepared());
+    FXL_DCHECK(!input->prepared()) << *input << " already prepared.";
     std::shared_ptr<PayloadAllocator> allocator =
         input->stage()->PrepareInput(input->index());
     input->set_prepared(true);
@@ -30,7 +32,7 @@ void Engine::UnprepareInput(Input* input) {
                           StageImpl::UpstreamCallback callback) {
     FXL_DCHECK(input);
     FXL_DCHECK(output);
-    FXL_DCHECK(input->prepared());
+    FXL_DCHECK(input->prepared()) << *input << " already unprepared.";
     input->stage()->UnprepareInput(input->index());
     input->set_prepared(false);
     output->stage()->UnprepareOutput(output->index(), callback);

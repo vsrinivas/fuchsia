@@ -4,6 +4,7 @@
 
 #include "garnet/bin/media/media_player/framework/graph.h"
 
+#include "garnet/bin/media/media_player/framework/formatting.h"
 #include "garnet/bin/media/media_player/util/callback_joiner.h"
 #include "garnet/bin/media/media_player/util/threadsafe_callback_joiner.h"
 
@@ -295,7 +296,8 @@ void Graph::FlushOutputs(std::queue<Output*>* backlog, bool hold_frame,
 
     Input* input = output->mate();
     FXL_DCHECK(input);
-    FXL_DCHECK(input->prepared());
+    FXL_DCHECK(input->prepared())
+        << "Attempt to flush unprepared input " << *input;
     StageImpl* input_stage = input->stage();
 
     output->stage()->FlushOutput(output->index(),

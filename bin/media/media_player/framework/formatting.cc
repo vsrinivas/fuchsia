@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/media/media_player/framework/formatting.h"
+
 #include <iomanip>
 #include <iostream>
 
-#include "garnet/bin/media/media_player/framework/formatting.h"
+#include "garnet/bin/media/media_player/framework/stages/stage_impl.h"
 
 namespace media_player {
 
@@ -22,9 +24,7 @@ std::ostream& begl(std::ostream& os) {
   return os;
 }
 
-std::ostream& newl(std::ostream& os) {
-  return os << "\n" << begl;
-}
+std::ostream& newl(std::ostream& os) { return os << "\n" << begl; }
 
 // Prints an ns value in 0.124,456,789 format.
 std::ostream& operator<<(std::ostream& os, AsNs value) {
@@ -295,6 +295,28 @@ std::ostream& operator<<(std::ostream& os, Demand value) {
       return os << "positive";
   }
   return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const GenericNode& value) {
+  return os << value.label();
+}
+
+std::ostream& operator<<(std::ostream& os, const StageImpl& value) {
+  FXL_DCHECK(value.GetGenericNode());
+
+  return os << *value.GetGenericNode();
+}
+
+std::ostream& operator<<(std::ostream& os, const Input& value) {
+  FXL_DCHECK(value.stage());
+
+  return os << *value.stage() << ".input#" << value.index();
+}
+
+std::ostream& operator<<(std::ostream& os, const Output& value) {
+  FXL_DCHECK(value.stage());
+
+  return os << *value.stage() << ".output#" << value.index();
 }
 
 }  // namespace media_player
