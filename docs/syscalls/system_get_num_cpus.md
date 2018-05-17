@@ -2,7 +2,7 @@
 
 ## NAME
 
-system_num_cpus - get number of logical processors on the system
+system_get_num_cpus - get number of logical processors on the system
 
 ## SYNOPSIS
 
