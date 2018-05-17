@@ -37,15 +37,13 @@
 // .bss, which the kernel needs to zero before it's ready to run the fixup
 // code.  So move_fixups_and_zero_bss (in start.S) copies the fixup code to
 // scratch memory starting at IMAGE_MEMORY_END (i.e., right after the
-// kernel's .bss).  The "end of .bss" address in the multiboot header is
+// kernel's .bss).  The "end of .bss" address the multiboot header is
 // the only way to reserve some space that the boot loader won't use for
 // something like the kernel command like or the initial RAM disk.  So add
 // the fixup code size.
 //
-// The zbi header doesn't record this.  But the zbi protocol from
-// the bootloader ensures that the zbi image is nowhere near the end of
-// the kernel load image, so it doesn't need to know how much .bss space the
-// kernel actually needs there.
+// The zbi_kernel_t header records this as a number of bytes after the
+// image, rather than as an address.
 #define boot_bss_end (IMAGE_MEMORY_END + IMAGE_RESERVE_SIZE)
 
 .globl IMAGE_RESERVE_SIZE
@@ -71,7 +69,7 @@ END_DATA(_zbi_kernel_header)
 // ZBI_TYPE_KERNEL payload (zbi_kernel_t)
 DATA(_zbi_kernel_payload)
     .quad PHYS(IMAGE_ELF_ENTRY)
-    .quad 0
+    .quad boot_bss_end - boot_load_end
 END_DATA(_zbi_kernel_payload)
 
 .balign 8

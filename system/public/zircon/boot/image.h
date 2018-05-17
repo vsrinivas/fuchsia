@@ -131,18 +131,14 @@ typedef struct {
 // loader to describe the machine.  The precise protocol for transferring
 // control to the kernel's entry point varies by machine.
 //
-// TODO(mcgrathr): On all machines, the kernel requires some amount of
-// scratch memory to be available immediately after the kernel image at
-// boot.  It needs this space for early setup work before it has a chance
-// to read any memory-map information from the boot loader.  Currently, the
-// kernel simply assumes that enough space is available and clobbers some
-// memory after its load image.  (In zircon-image.elf, the IMAGE_RESERVE_END
-// symbol indicates the end of the address range that will be clobbered.)
-// If the boot loader happened to place its constructed ZBI or other reserved
-// areas immediately after the kernel image, things would go badly.
-// We should amend the protocol with the boot loader so that it knows how
-// much space to reserve after the kernel image.  Either zbi_header_t.extra
-// or zbi_kernel_t.reserved could be repurposed for this.
+// On all machines, the kernel requires some amount of scratch memory to be
+// available immediately after the kernel image at boot.  It needs this
+// space for early setup work before it has a chance to read any memory-map
+// information from the boot loader.  The `reserve_memory_size` field tells
+// the boot loader how much space after the kernel's load image it must
+// leave available for the kernel's use.  The boot loader must place its
+// constructed ZBI or other reserved areas at least this many bytes after
+// the kernel image.
 //
 // x86-64
 //
@@ -179,8 +175,9 @@ typedef struct {
 typedef struct {
     // Entry-point address.  The interpretation of this differs by machine.
     uint64_t entry;
-    // Reserved for future use.
-    uint64_t reserved;
+    // Minimum amount (in bytes) of scratch memory that the kernel requires
+    // immediately after its load image.
+    uint64_t reserve_memory_size;
 } zbi_kernel_t;
 
 // The whole contiguous image loaded into memory by the boot loader.
