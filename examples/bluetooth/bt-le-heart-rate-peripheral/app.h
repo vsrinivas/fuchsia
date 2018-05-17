@@ -8,8 +8,8 @@
 #include <memory>
 #include <unordered_map>
 
-#include <fuchsia/cpp/bluetooth_gatt.h>
-#include <fuchsia/cpp/bluetooth_low_energy.h>
+#include <bluetooth_gatt/cpp/fidl.h>
+#include <bluetooth_low_energy/cpp/fidl.h>
 #include <lib/app/cpp/application_context.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/string.h>
