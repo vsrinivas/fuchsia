@@ -50,9 +50,13 @@ while True:
         print '  m.Pull();'
     else:
         offset = next_short()
-        blk = next_block(op-2)
+        length = op - 2
+        eom = length & 1
+        length >>= 1
+        blk = next_block(length)
         print '  static const uint8_t block%d[] = {%s};' % (
             block_idx, ','.join('0x%02x' % b for b in blk))
-        print '  m.Push(%d, %d, block%d);' % (offset, len(blk), block_idx)
+        print '  m.Push(%d, %d, %s, block%d);' % (
+            offset, len(blk), 'true' if eom else 'false', block_idx)
         block_idx += 1
 print '}'

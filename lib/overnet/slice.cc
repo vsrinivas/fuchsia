@@ -20,4 +20,8 @@ std::ostream& operator<<(std::ostream& out, const Slice& slice) {
   return out << '[' << temp.str() << ']';
 }
 
+std::ostream& operator<<(std::ostream& out, const Chunk& chunk) {
+  return out << "@" << chunk.offset << chunk.slice;
+}
+
 }  // namespace overnet

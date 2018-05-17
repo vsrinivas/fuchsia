@@ -191,7 +191,10 @@ def mapdep(n):
     return m[n]
 
 
-FUZZERS = ['linearizer', 'receive_mode', 'routing_header']
+FUZZERS = ['bbr', 'internal_list', 'linearizer',
+           'packet_protocol', 'receive_mode', 'routing_header']
+
+assert FUZZERS == sorted(FUZZERS)
 
 
 with open('BUILD.bazel', 'w') as o:
@@ -202,6 +205,9 @@ with open('BUILD.bazel', 'w') as o:
                 print >>o, '  name="%s",' % bundle.name
                 print >>o, '  srcs=[%s],' % ','.join(
                     '"%s"' % s for s in bundle.values['sources'])
+                if 'deps' in bundle.values:
+                    print >>o, '  deps=[%s],' % ','.join(
+                        '"%s"' % mapdep(s) for s in bundle.values['deps'] if mapdep(s) is not None)
                 print >>o, ')'
             if bundle.rule == 'executable':
                 if bundle.values.get('testonly', False):
@@ -222,7 +228,7 @@ with open('BUILD.bazel', 'w') as o:
         if os.path.exists(helpers_h):
             srcs.append(helpers_h)
         print >>o, '  srcs=[%s],' % ', '.join('"%s"' % s for s in srcs)
-        print >>o, '  deps=[":overnet"],'
+        print >>o, '  deps=[":overnet", ":test_util"],'
         print >>o, ')'
 
 WORKSPACE = """

@@ -15,9 +15,13 @@ class Fuzzer {
   explicit Fuzzer(uint8_t type)
       : receive_mode_(static_cast<ReliabilityAndOrdering>(type)) {}
 
-  void Step() { receive_mode_.GenerateAck(); }
+  void Step() { iteration_++; }
 
   bool Begin(uint64_t seq) {
+    if (seq > max_seen_seq_) {
+      max_seen_seq_ = seq;
+      when_max_seen_ = iteration_;
+    }
     if (begun_seqs_.count(seq) == 1) {
       bool saw_immediate_error = false;
       receive_mode_.Begin(
@@ -48,6 +52,9 @@ class Fuzzer {
   }
 
  private:
+  uint64_t iteration_ = 0;
+  uint64_t max_seen_seq_ = 0;
+  uint64_t when_max_seen_ = 0;
   ParameterizedReceiveMode receive_mode_;
   std::unordered_set<uint64_t> begun_seqs_;
 };

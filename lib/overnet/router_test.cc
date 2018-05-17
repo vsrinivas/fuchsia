@@ -18,25 +18,24 @@ using testing::StrictMock;
 namespace overnet {
 namespace router_test {
 
-typedef std::function<void(const StatusOr<Sink<Chunk>*>&)> ReadyCallback;
+static constexpr TimeStamp kDummyTimestamp123 =
+    TimeStamp::AfterEpoch(TimeDelta::FromMicroseconds(123));
+
+typedef std::function<void(const Status&)> StatusFunc;
 
 class MockStreamHandler : public Router::StreamHandler {
  public:
-  MOCK_METHOD5(HandleMessageMock, void(SeqNum, uint64_t, bool,
-                                       ReliabilityAndOrdering, ReadyCallback));
+  MOCK_METHOD4(HandleMessageMock,
+               void(Optional<SeqNum>, TimeStamp, Slice, StatusFunc));
   // Since gmock has a hard time with move-only types, we provide this override
   // directly, and use HandleMessageMock as the mock method (which takes a
   // function that wraps ready_for_data).
-  void HandleMessage(SeqNum seq_num, uint64_t payload_length, bool is_control,
-                     ReliabilityAndOrdering reliability_and_ordering,
-                     StatusOrCallback<Sink<Chunk>*> ready_for_data) override {
-    auto ready_cb_ptr = std::make_shared<StatusOrCallback<Sink<Chunk>*>>(
-        std::move(ready_for_data));
-    auto ready_cb = [ready_cb_ptr](const StatusOr<Sink<Chunk>*>& status) {
-      (*ready_cb_ptr)(status);
-    };
-    this->HandleMessageMock(seq_num, payload_length, is_control,
-                            reliability_and_ordering, ready_cb);
+  void HandleMessage(Optional<SeqNum> seq_num, TimeStamp received, Slice data,
+                     StatusCallback done) override {
+    assert(!done.empty());
+    auto cb_ptr = std::make_shared<StatusCallback>(std::move(done));
+    auto done_cb = [cb_ptr](const Status& status) { (*cb_ptr)(status); };
+    this->HandleMessageMock(seq_num, received, data, done_cb);
   }
 };
 
@@ -44,34 +43,17 @@ class MockLink : public Link {
  public:
   MOCK_METHOD1(ForwardMock, void(std::shared_ptr<Message>));
   virtual void Forward(Message message) {
+    assert(!message.done.empty());
     ForwardMock(std::make_shared<Message>(std::move(message)));
   }
 };
 
-class MockSinkCB {
+class MockDoneCB {
  public:
-  MOCK_METHOD1(Callback, void(const StatusOr<Sink<Chunk>*>&));
+  MOCK_METHOD1(Callback, void(const Status&));
 
-  StatusOrCallback<Sink<Chunk>*> MakeCallback() {
-    return StatusOrCallback<Sink<Chunk>*>(
-        [this](const StatusOr<Sink<Chunk>*>& status) {
-          this->Callback(status);
-        });
-  }
-};
-
-class MockSink : public Sink<Chunk> {
- public:
-  MOCK_METHOD1(Close, void(const Status&));
-  MOCK_METHOD2(Pushed, void(const Chunk& item,
-                            std::function<void(const Status&)> done));
-  // Since gmock has a hard time with move-only types, we provide this override
-  // directly, and use Pushed as the mock method (which takes a function that
-  // wraps done).
-  void Push(Chunk item, StatusCallback done) override {
-    auto done_ptr = std::make_shared<StatusCallback>(std::move(done));
-    this->Pushed(item,
-                 [done_ptr](const Status& status) { (*done_ptr)(status); });
+  StatusCallback MakeCallback() {
+    return [this](const Status& status) { this->Callback(status); };
   }
 };
 
@@ -82,12 +64,10 @@ TEST(Router, ForwardToSelf) {
   Router router(NodeId(1));
 
   StrictMock<MockStreamHandler> mock_stream_handler;
-  StrictMock<MockSinkCB> ready_sink;
-  StrictMock<MockSink> mock_sink;
+  StrictMock<MockDoneCB> done;
   auto expect_all_done = [&]() {
     EXPECT_TRUE(Mock::VerifyAndClearExpectations(&mock_stream_handler));
-    EXPECT_TRUE(Mock::VerifyAndClearExpectations(&ready_sink));
-    EXPECT_TRUE(Mock::VerifyAndClearExpectations(&mock_sink));
+    EXPECT_TRUE(Mock::VerifyAndClearExpectations(&done));
   };
 
   // Establish that there's a stream.
@@ -96,25 +76,24 @@ TEST(Router, ForwardToSelf) {
           .is_ok());
 
   // Forward a message: we should see HandleMessage on the stream.
-  ReadyCallback ready_cb;
-  EXPECT_CALL(
-      mock_stream_handler,
-      HandleMessageMock(Property(&SeqNum::ReconstructFromZero_TestOnly, 1), 3,
-                        false, ReliabilityAndOrdering::ReliableOrdered, _))
-      .WillOnce(SaveArg<4>(&ready_cb));
+  StatusFunc done_cb;
+  EXPECT_CALL(mock_stream_handler,
+              HandleMessageMock(
+                  Pointee(Property(&SeqNum::ReconstructFromZero_TestOnly, 1)),
+                  kDummyTimestamp123, Slice::FromContainer({1, 2, 3}), _))
+      .WillOnce(SaveArg<3>(&done_cb));
 
   router.Forward(Message{
       std::move(
-          RoutingHeader(NodeId(2), 3, ReliabilityAndOrdering::ReliableOrdered)
+          RoutableMessage(NodeId(2), false, Slice::FromContainer({1, 2, 3}))
               .AddDestination(NodeId(1), StreamId(1), SeqNum(1, 1))),
-      ready_sink.MakeCallback()});
+      kDummyTimestamp123, done.MakeCallback()});
 
   expect_all_done();
 
   // Readying the message for data should propagate back.
-  EXPECT_CALL(ready_sink, Callback(Property(&StatusOr<Sink<Chunk>*>::get,
-                                            Pointee(&mock_sink))));
-  ready_cb(&mock_sink);
+  EXPECT_CALL(done, Callback(Property(&Status::is_ok, true)));
+  done_cb(Status::Ok());
 }
 
 // We should be able to forward messages to ourselves even if the stream isn't
@@ -123,29 +102,27 @@ TEST(Router, ForwardToSelfDelayed) {
   Router router(NodeId(1));
 
   StrictMock<MockStreamHandler> mock_stream_handler;
-  StrictMock<MockSinkCB> ready_sink;
-  StrictMock<MockSink> mock_sink;
+  StrictMock<MockDoneCB> done;
   auto expect_all_done = [&]() {
     EXPECT_TRUE(Mock::VerifyAndClearExpectations(&mock_stream_handler));
-    EXPECT_TRUE(Mock::VerifyAndClearExpectations(&ready_sink));
-    EXPECT_TRUE(Mock::VerifyAndClearExpectations(&mock_sink));
+    EXPECT_TRUE(Mock::VerifyAndClearExpectations(&done));
   };
 
-  ReadyCallback ready_cb;
+  StatusFunc done_cb;
 
   // Forward a message: nothing should happen.
   router.Forward(Message{
       std::move(
-          RoutingHeader(NodeId(2), 3, ReliabilityAndOrdering::ReliableOrdered)
+          RoutableMessage(NodeId(2), false, Slice::FromContainer({1, 2, 3}))
               .AddDestination(NodeId(1), StreamId(1), SeqNum(1, 1))),
-      ready_sink.MakeCallback()});
+      kDummyTimestamp123, done.MakeCallback()});
 
   // Establish that there's a stream: we should see HandleMessage on the stream.
-  EXPECT_CALL(
-      mock_stream_handler,
-      HandleMessageMock(Property(&SeqNum::ReconstructFromZero_TestOnly, 1), 3,
-                        false, ReliabilityAndOrdering::ReliableOrdered, _))
-      .WillOnce(SaveArg<4>(&ready_cb));
+  EXPECT_CALL(mock_stream_handler,
+              HandleMessageMock(
+                  Pointee(Property(&SeqNum::ReconstructFromZero_TestOnly, 1)),
+                  kDummyTimestamp123, Slice::FromContainer({1, 2, 3}), _))
+      .WillOnce(SaveArg<3>(&done_cb));
   EXPECT_TRUE(
       router.RegisterStream(NodeId(2), StreamId(1), &mock_stream_handler)
           .is_ok());
@@ -153,9 +130,8 @@ TEST(Router, ForwardToSelfDelayed) {
   expect_all_done();
 
   // Readying the message for data should propagate back.
-  EXPECT_CALL(ready_sink, Callback(Property(&StatusOr<Sink<Chunk>*>::get,
-                                            Pointee(&mock_sink))));
-  ready_cb(&mock_sink);
+  EXPECT_CALL(done, Callback(Property(&Status::is_ok, true)));
+  done_cb(Status::Ok());
 }
 
 // We should be able to forward messages to others.
@@ -163,12 +139,10 @@ TEST(Router, ForwardToLink) {
   Router router(NodeId(1));
 
   StrictMock<MockLink> mock_link;
-  StrictMock<MockSinkCB> ready_sink;
-  StrictMock<MockSink> mock_sink;
+  StrictMock<MockDoneCB> done;
   auto expect_all_done = [&]() {
     EXPECT_TRUE(Mock::VerifyAndClearExpectations(&mock_link));
-    EXPECT_TRUE(Mock::VerifyAndClearExpectations(&ready_sink));
-    EXPECT_TRUE(Mock::VerifyAndClearExpectations(&mock_sink));
+    EXPECT_TRUE(Mock::VerifyAndClearExpectations(&done));
   };
 
   // Establish that there's a link.
@@ -181,16 +155,15 @@ TEST(Router, ForwardToLink) {
 
   router.Forward(Message{
       std::move(
-          RoutingHeader(NodeId(1), 3, ReliabilityAndOrdering::ReliableOrdered)
+          RoutableMessage(NodeId(1), false, Slice::FromContainer({1, 2, 3}))
               .AddDestination(NodeId(2), StreamId(1), SeqNum(1, 1))),
-      ready_sink.MakeCallback()});
+      kDummyTimestamp123, done.MakeCallback()});
 
   expect_all_done();
 
   // Readying the message for data should propagate back.
-  EXPECT_CALL(ready_sink, Callback(Property(&StatusOr<Sink<Chunk>*>::get,
-                                            Pointee(&mock_sink))));
-  forwarded_message->ready_for_data(&mock_sink);
+  EXPECT_CALL(done, Callback(Property(&Status::is_ok, true)));
+  forwarded_message->done(Status::Ok());
 }
 
 // We should be able to forward messages to others even if the link isn't ready
@@ -199,12 +172,10 @@ TEST(Router, ForwardToLinkDelayed) {
   Router router(NodeId(1));
 
   StrictMock<MockLink> mock_link;
-  StrictMock<MockSinkCB> ready_sink;
-  StrictMock<MockSink> mock_sink;
+  StrictMock<MockDoneCB> done;
   auto expect_all_done = [&]() {
     EXPECT_TRUE(Mock::VerifyAndClearExpectations(&mock_link));
-    EXPECT_TRUE(Mock::VerifyAndClearExpectations(&ready_sink));
-    EXPECT_TRUE(Mock::VerifyAndClearExpectations(&mock_sink));
+    EXPECT_TRUE(Mock::VerifyAndClearExpectations(&done));
   };
 
   std::shared_ptr<Message> forwarded_message;
@@ -212,9 +183,9 @@ TEST(Router, ForwardToLinkDelayed) {
   // Forward a message: nothing should happen.
   router.Forward(Message{
       std::move(
-          RoutingHeader(NodeId(1), 3, ReliabilityAndOrdering::ReliableOrdered)
+          RoutableMessage(NodeId(1), false, Slice::FromContainer({1, 2, 3}))
               .AddDestination(NodeId(2), StreamId(1), SeqNum(1, 1))),
-      ready_sink.MakeCallback()});
+      kDummyTimestamp123, done.MakeCallback()});
 
   // Ready a link: we should see a message forwarded to the link.
   EXPECT_CALL(mock_link, ForwardMock(_))
@@ -224,9 +195,8 @@ TEST(Router, ForwardToLinkDelayed) {
   expect_all_done();
 
   // Readying the message for data should propagate back.
-  EXPECT_CALL(ready_sink, Callback(Property(&StatusOr<Sink<Chunk>*>::get,
-                                            Pointee(&mock_sink))));
-  forwarded_message->ready_for_data(&mock_sink);
+  EXPECT_CALL(done, Callback(Property(&Status::is_ok, true)));
+  forwarded_message->done(Status::Ok());
 }
 
 // We should be able to multicast messages to ourselves and links.
@@ -235,16 +205,11 @@ TEST(Router, ForwardToSelfAndLink) {
 
   StrictMock<MockStreamHandler> mock_stream_handler;
   StrictMock<MockLink> mock_link;
-  StrictMock<MockSinkCB> ready_sink;
-  StrictMock<MockSink> mock_sink_from_stream_handler;
-  StrictMock<MockSink> mock_sink_from_link;
+  StrictMock<MockDoneCB> done;
   auto expect_all_done = [&]() {
     EXPECT_TRUE(Mock::VerifyAndClearExpectations(&mock_stream_handler));
     EXPECT_TRUE(Mock::VerifyAndClearExpectations(&mock_link));
-    EXPECT_TRUE(Mock::VerifyAndClearExpectations(&ready_sink));
-    EXPECT_TRUE(
-        Mock::VerifyAndClearExpectations(&mock_sink_from_stream_handler));
-    EXPECT_TRUE(Mock::VerifyAndClearExpectations(&mock_sink_from_link));
+    EXPECT_TRUE(Mock::VerifyAndClearExpectations(&done));
   };
 
   // Ready both link & stream.
@@ -254,45 +219,32 @@ TEST(Router, ForwardToSelfAndLink) {
   EXPECT_TRUE(router.RegisterLink(NodeId(2), &mock_link).is_ok());
 
   // Forward a message: link and stream should see the message.
-  ReadyCallback ready_cb_stream;
+  StatusFunc done_cb_stream;
   std::shared_ptr<Message> forwarded_message;
-  EXPECT_CALL(
-      mock_stream_handler,
-      HandleMessageMock(Property(&SeqNum::ReconstructFromZero_TestOnly, 1), 3,
-                        false, ReliabilityAndOrdering::ReliableOrdered, _))
-      .WillOnce(SaveArg<4>(&ready_cb_stream));
+  EXPECT_CALL(mock_stream_handler,
+              HandleMessageMock(
+                  Pointee(Property(&SeqNum::ReconstructFromZero_TestOnly, 1)),
+                  kDummyTimestamp123, Slice::FromContainer({1, 2, 3}), _))
+      .WillOnce(SaveArg<3>(&done_cb_stream));
   EXPECT_CALL(mock_link, ForwardMock(_))
       .WillOnce(SaveArg<0>(&forwarded_message));
 
   router.Forward(Message{
       std::move(
-          RoutingHeader(NodeId(3), 3, ReliabilityAndOrdering::ReliableOrdered)
+          RoutableMessage(NodeId(3), false, Slice::FromContainer({1, 2, 3}))
               .AddDestination(NodeId(1), StreamId(1), SeqNum(1, 1))
               .AddDestination(NodeId(2), StreamId(1), SeqNum(1, 1))),
-      ready_sink.MakeCallback()});
+      kDummyTimestamp123, done.MakeCallback()});
 
   expect_all_done();
 
   // Readying one for data should do nothing.
-  ready_cb_stream(&mock_sink_from_stream_handler);
+  done_cb_stream(Status::Ok());
 
   // Readying the other should back-propagate.
-  Sink<Chunk>* broadcast_sink;
-  EXPECT_CALL(ready_sink,
-              Callback(Property(&StatusOr<Sink<Chunk>*>::is_ok, true)))
-      .WillOnce(Invoke([&broadcast_sink](StatusOr<Sink<Chunk>*> s) {
-        broadcast_sink = *s.get();
-      }));
+  EXPECT_CALL(done, Callback(Property(&Status::is_ok, true)));
 
-  forwarded_message->ready_for_data(&mock_sink_from_link);
-
-  expect_all_done();
-
-  // Closing should broadcast (needed to cleanup the internal BroadcastSink).
-  EXPECT_CALL(mock_sink_from_stream_handler,
-              Close(Property(&Status::is_ok, true)));
-  EXPECT_CALL(mock_sink_from_link, Close(Property(&Status::is_ok, true)));
-  broadcast_sink->Close(Status::Ok());
+  forwarded_message->done(Status::Ok());
 }
 
 // Forwarding a message to two nodes across the same link should multicast.
@@ -300,12 +252,10 @@ TEST(Router, ForwardingClumpsStayClumped) {
   Router router(NodeId(1));
 
   StrictMock<MockLink> mock_link;
-  StrictMock<MockSinkCB> ready_sink;
-  StrictMock<MockSink> mock_sink;
+  StrictMock<MockDoneCB> done;
   auto expect_all_done = [&]() {
     EXPECT_TRUE(Mock::VerifyAndClearExpectations(&mock_link));
-    EXPECT_TRUE(Mock::VerifyAndClearExpectations(&ready_sink));
-    EXPECT_TRUE(Mock::VerifyAndClearExpectations(&mock_sink));
+    EXPECT_TRUE(Mock::VerifyAndClearExpectations(&done));
   };
 
   // Ready the links.
@@ -319,30 +269,19 @@ TEST(Router, ForwardingClumpsStayClumped) {
 
   router.Forward(Message{
       std::move(
-          RoutingHeader(NodeId(1), 3, ReliabilityAndOrdering::ReliableOrdered)
+          RoutableMessage(NodeId(1), false, Slice::FromContainer({1, 2, 3}))
               .AddDestination(NodeId(2), StreamId(1), SeqNum(1, 1))
               .AddDestination(NodeId(3), StreamId(1), SeqNum(1, 1))),
-      ready_sink.MakeCallback()});
+      kDummyTimestamp123, done.MakeCallback()});
 
   expect_all_done();
 
   // Check the message has the shape we want.
-  EXPECT_EQ(2u, forwarded_message->routing_header.destinations().size());
+  EXPECT_EQ(2u, forwarded_message->wire.destinations().size());
 
   // Readying should back-propagate.
-  Sink<Chunk>* broadcast_sink;
-  EXPECT_CALL(ready_sink,
-              Callback(Property(&StatusOr<Sink<Chunk>*>::is_ok, true)))
-      .WillOnce(Invoke([&broadcast_sink](StatusOr<Sink<Chunk>*> s) {
-        broadcast_sink = *s.get();
-      }));
-  forwarded_message->ready_for_data(&mock_sink);
-
-  expect_all_done();
-
-  // Closing should broadcast (needed to cleanup the internal BroadcastSink).
-  EXPECT_CALL(mock_sink, Close(Property(&Status::is_ok, true)));
-  broadcast_sink->Close(Status::Ok());
+  EXPECT_CALL(done, Callback(Property(&Status::is_ok, true)));
+  forwarded_message->done(Status::Ok());
 }
 
 }  // namespace router_test

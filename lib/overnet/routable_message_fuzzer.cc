@@ -24,7 +24,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     assert(new_data == encoded.data() + encoded.size());
     // Should parse ok, and get the same result.
     assert(status2.is_ok());
-    assert(*status.get() == *status2.get());
+    assert(*status == *status2);
   }
   return 0;  // Non-zero return values are reserved for future use.
 }

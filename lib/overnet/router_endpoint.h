@@ -5,6 +5,9 @@
 #pragma once
 
 #include <queue>
+#include "datagram_stream.h"
+#include "fork_frame.h"
+#include "manual_constructor.h"
 #include "receive_mode.h"
 #include "reliability_and_ordering.h"
 #include "router.h"
@@ -36,6 +39,12 @@ class RouterEndpoint final {
       return *this;
     }
 
+    friend std::ostream& operator<<(std::ostream& out, const NewStream& s) {
+      return out << "NewStream{node=" << s.peer_ << ",reliability_and_ordering="
+                 << ReliabilityAndOrderingString(s.reliability_and_ordering_)
+                 << ",stream_id=" << s.stream_id_ << "}";
+    }
+
    private:
     friend class RouterEndpoint;
     NewStream(RouterEndpoint* creator, NodeId peer,
@@ -57,36 +66,15 @@ class RouterEndpoint final {
     Slice introduction;
   };
 
-  class Stream final : private Router::StreamHandler {
+  class Stream final : public DatagramStream {
    public:
     Stream(NewStream introduction);
-
-    Stream(const Stream&) = delete;
-    Stream& operator=(const Stream&) = delete;
-    Stream(Stream&&) = delete;
-    Stream& operator=(Stream&&) = delete;
-
-    void Send(size_t payload_length,
-              StatusOrCallback<Sink<Slice>*> ready_for_data);
-    void Recv(StatusOrCallback<Source<Slice>*> ready_to_read);
-
-   private:
-    void HandleMessage(SeqNum seq, uint64_t payload_length, bool is_control,
-                       ReliabilityAndOrdering reliability_and_ordering,
-                       StatusOrCallback<Sink<Chunk>*> ready_for_data) override;
-
-    Router* const router_;
-    const ReliabilityAndOrdering reliability_and_ordering_;
-    const NodeId peer_;
-    const StreamId stream_id_;
-    uint64_t next_seq_ = 1;
-    receive_mode::ParameterizedReceiveMode recv_mode_;
-    // TODO(ctiller): do we need a back-pressure strategy here?
-    std::queue<StatusOrCallback<Source<Slice>*>> pending_recvs_;
-    std::queue<Source<Slice>*> incoming_messages_;
   };
 
-  explicit RouterEndpoint(NodeId node_id);
+  using SendOp = Stream::SendOp;
+  using ReceiveOp = Stream::ReceiveOp;
+
+  explicit RouterEndpoint(Timer* timer, NodeId node_id);
 
   void RegisterPeer(NodeId peer);
 
@@ -94,46 +82,46 @@ class RouterEndpoint final {
   NodeId node_id() const { return router_.node_id(); }
 
   void RecvIntro(StatusOrCallback<ReceivedIntroduction> ready);
-  void SendIntro(NodeId peer, ReliabilityAndOrdering reliability_and_ordering,
-                 Slice introduction, StatusOrCallback<NewStream> ready);
+  StatusOr<NewStream> SendIntro(NodeId peer,
+                                ReliabilityAndOrdering reliability_and_ordering,
+                                Slice introduction);
 
  private:
   void MaybeContinueIncomingForks();
 
-  class ConnectionStream final : private Router::StreamHandler {
+  class ConnectionStream final : public DatagramStream {
+    friend class RouterEndpoint;
+
    public:
     ConnectionStream(RouterEndpoint* endpoint, NodeId peer);
+    ~ConnectionStream();
 
-    ConnectionStream(const ConnectionStream&) = delete;
-    ConnectionStream& operator=(const ConnectionStream&) = delete;
-    ConnectionStream(ConnectionStream&&) = delete;
-    ConnectionStream& operator=(ConnectionStream&&) = delete;
-
-    void Fork(ReliabilityAndOrdering reliability_and_ordering,
-              Slice introduction, StatusOrCallback<NewStream> ready);
+    StatusOr<NewStream> Fork(ReliabilityAndOrdering reliability_and_ordering,
+                             Slice introduction);
 
    private:
-    void HandleMessage(SeqNum seq, uint64_t payload_length, bool is_control,
-                       ReliabilityAndOrdering reliability_and_ordering,
-                       StatusOrCallback<Sink<Chunk>*> ready_for_data) override;
+    void BeginRead();
 
-    Router* const router_;
+    enum class ForkReadState {
+      Reading,
+      Waiting,
+      Stopped,
+    };
+
     RouterEndpoint* const endpoint_;
-    const NodeId peer_;
     uint64_t next_stream_id_;
-    uint64_t next_seq_ = 1;
-    receive_mode::ReliableOrdered recv_mode_;
+
+    ForkReadState fork_read_state_;
+    ManualConstructor<ReceiveOp> fork_read_;
+    InternalListNode<ConnectionStream> forking_ready_;
+    ManualConstructor<ForkFrame> fork_frame_;
   };
 
+  Timer* const timer_;
   Router router_;
   std::unordered_map<NodeId, ConnectionStream> connection_streams_;
-
-  struct IncomingFork {
-    StatusOrCallback<Sink<Chunk>*> ready_for_data;
-    uint64_t payload_length;
-    NodeId peer;
-  };
-  std::queue<IncomingFork> incoming_forks_;
+  InternalList<ConnectionStream, &ConnectionStream::forking_ready_>
+      incoming_forks_;
   StatusOrCallback<ReceivedIntroduction> recv_intro_ready_;
 };
 

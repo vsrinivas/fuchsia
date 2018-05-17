@@ -21,6 +21,13 @@ uint8_t WireSizeFor(uint64_t x) {
   return 10;
 }
 
+uint64_t MaximumLengthWithPrefix(uint64_t x) {
+  assert(x > 0);
+  uint64_t r = x - WireSizeFor(x);
+  while (r + 1 + WireSizeFor(r + 1) < x) r++;
+  return r;
+}
+
 // Write varint based on pre-calculated length, returns dst + wire_length as a
 // convenience
 uint8_t* Write(uint64_t x, uint8_t wire_length, uint8_t* dst) {

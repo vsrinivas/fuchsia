@@ -17,14 +17,13 @@ class ParameterizedWrapper final : public ReceiveMode {
  public:
   ParameterizedWrapper() : mode_(reliability_and_ordering) {}
 
-  bool Begin(uint64_t seq, StatusCallback ready) override {
-    return mode_.Begin(seq, std::move(ready));
+  void Begin(uint64_t seq, BeginCallback ready) override {
+    mode_.Begin(seq, std::move(ready));
   }
-  bool Completed(uint64_t seq, const Status& status) override {
-    return mode_.Completed(seq, status);
+  void Completed(uint64_t seq, const Status& status) override {
+    mode_.Completed(seq, status);
   }
-  AckFrame GenerateAck() const override { return mode_.GenerateAck(); }
-  uint64_t WindowBase() const override { return mode_.WindowBase(); }
+  void Close(const Status& status) override { mode_.Close(status); }
 
  private:
   ParameterizedReceiveMode mode_;
@@ -33,7 +32,7 @@ class ParameterizedWrapper final : public ReceiveMode {
 template <class Type>
 class ReceiveModeTest : public ::testing::Test {
  public:
-  bool Begin(uint64_t seq) {
+  void Begin(uint64_t seq) {
     auto cb = StatusCallback(ALLOCATED_CALLBACK, [=](const Status& status) {
       auto it = expected_begin_cbs_.find(seq);
       if (it == expected_begin_cbs_.end()) {
@@ -47,7 +46,7 @@ class ReceiveModeTest : public ::testing::Test {
       }
       expected_begin_cbs_.erase(it);
     });
-    return type_.Begin(seq, std::move(cb));
+    type_.Begin(seq, std::move(cb));
   }
 
   void ExpectBegin(uint64_t seq, StatusCode expect) {
@@ -55,11 +54,9 @@ class ReceiveModeTest : public ::testing::Test {
     expected_begin_cbs_[seq] = expect;
   }
 
-  bool Completed(uint64_t seq, const Status& status) {
-    return type_.Completed(seq, status);
+  void Completed(uint64_t seq, const Status& status) {
+    type_.Completed(seq, status);
   }
-
-  AckFrame GenerateAck() { return type_.GenerateAck(); }
 
   ~ReceiveModeTest() {
     for (auto exp : expected_begin_cbs_) {
@@ -88,17 +85,12 @@ typedef ::testing::Types<
     ReceiveModeTypes;
 TYPED_TEST_CASE(ReceiveModeTest, ReceiveModeTypes);
 
-TYPED_TEST(ReceiveModeTest, InitialAck) {
-  EXPECT_EQ(AckFrame(1, 0, 0, {}), this->GenerateAck());
-}
-
 TYPED_TEST(ReceiveModeTest, SimpleInSeq) {
   for (uint64_t i = 1u; i <= 10u; i++) {
     this->ExpectBegin(i, StatusCode::OK);
     this->Begin(i);
     this->Completed(i, Status::Ok());
   }
-  EXPECT_EQ(AckFrame(11, 0, 0, {}), this->GenerateAck());
 }
 
 TYPED_TEST(ReceiveModeTest, SmallBatchInSeq) {
@@ -145,8 +137,7 @@ typedef ::testing::Types<
 TYPED_TEST_CASE(ReliableOrderedTest, ReliableOrderedTypes);
 
 TYPED_TEST(ReliableOrderedTest, MissedOneThenGotIt) {
-  EXPECT_TRUE(this->Begin(2));
-  EXPECT_EQ(AckFrame(1, 0, 0, {1}), this->GenerateAck());
+  this->Begin(2);
   this->ExpectBegin(1, StatusCode::OK);
   this->Begin(1);
   this->ExpectBegin(2, StatusCode::OK);
@@ -167,8 +158,7 @@ TYPED_TEST_CASE(ReliableUnorderedTest, ReliableUnorderedTypes);
 
 TYPED_TEST(ReliableUnorderedTest, MissedOneThenGotIt) {
   this->ExpectBegin(2, StatusCode::OK);
-  EXPECT_TRUE(this->Begin(2));
-  EXPECT_EQ(AckFrame(1, 0, 0, {1}), this->GenerateAck());
+  this->Begin(2);
   this->ExpectBegin(1, StatusCode::OK);
   this->Begin(1);
   this->Completed(1, Status::Ok());
@@ -246,10 +236,6 @@ TYPED_TEST(ErrorTest, BeginAlwaysFails) {
   }
 }
 
-TYPED_TEST(ErrorTest, ErrorInitialAck) {
-  EXPECT_EQ(AckFrame(1, 0, 0, {}), this->GenerateAck());
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 // Fuzzer found failures
 //
@@ -262,35 +248,25 @@ TYPED_TEST(ErrorTest, ErrorInitialAck) {
 TEST(ReceiveModeFuzzed, _18dd797d7734fe115b89e72e79a26713c480096c) {
   receive_mode::ParameterizedReceiveMode m(
       static_cast<ReliabilityAndOrdering>(1));
-  m.GenerateAck();
   m.Begin(112ull, StatusCallback([](const Status&) {}));
-  m.GenerateAck();
   m.Begin(1125899905794047ull, StatusCallback([](const Status&) {}));
-  m.GenerateAck();
 }
 
 // Originally led to an out of range index into a bitset
 TEST(ReceiveModeFuzzed, _0ea3e010446b0d18d1a08efc4e7f028372140b81) {
   receive_mode::ParameterizedReceiveMode m(
       static_cast<ReliabilityAndOrdering>(3));
-  m.GenerateAck();
   m.Begin(450ull, StatusCallback([](const Status&) {}));
-  m.GenerateAck();
 }
 
 // Originally led to an OOM generating nacks
 TEST(ReceiveModeFuzzed, _feac8b7a55c39b0d70f86f40d340888a25ea69b8) {
   receive_mode::ParameterizedReceiveMode m(
       static_cast<ReliabilityAndOrdering>(4));
-  m.GenerateAck();
   m.Begin(1ull, StatusCallback([](const Status&) {}));
-  m.GenerateAck();
   m.Begin(143547839805374333ull, StatusCallback([](const Status&) {}));
-  m.GenerateAck();
   m.Begin(139044205818265471ull, StatusCallback([](const Status&) {}));
-  m.GenerateAck();
   m.Begin(0ull, StatusCallback([](const Status&) {}));
-  m.GenerateAck();
 }
 
 // Originally led to a crash

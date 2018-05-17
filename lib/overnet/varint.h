@@ -30,6 +30,11 @@ inline bool Read(const uint8_t** bytes, const uint8_t* end, uint64_t* result) {
   return impl::ReadFallback(bytes, end, result);
 }
 
+// What is the maximum number of bytes that could be written in the form:
+// (varint_length_prefix) ++ (bytes)
+// such that the total length does not exceed fit_to?
+uint64_t MaximumLengthWithPrefix(uint64_t fit_to);
+
 }  // namespace varint
 
 }  // namespace overnet

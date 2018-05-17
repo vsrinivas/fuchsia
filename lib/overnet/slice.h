@@ -84,10 +84,27 @@ class Slice final {
   void TrimBegin(size_t trim_bytes) { vtable_->trim(&data_, trim_bytes, 0); }
   void TrimEnd(size_t trim_bytes) { vtable_->trim(&data_, 0, trim_bytes); }
 
-  Slice FromOffset(size_t offset) {
+  Slice FromOffset(size_t offset) const {
     Slice out(*this);
     out.TrimBegin(offset);
     return out;
+  }
+
+  Slice FromPointer(const uint8_t* internal_pointer) const {
+    assert(internal_pointer >= begin() && internal_pointer <= end());
+    return FromOffset(internal_pointer - begin());
+  }
+
+  Slice TakeUntilOffset(size_t offset) {
+    Slice out(*this);
+    out.TrimEnd(length() - offset);
+    TrimBegin(offset);
+    return out;
+  }
+
+  Slice TakeUntilPointer(const uint8_t* internal_pointer) {
+    assert(internal_pointer >= begin() && internal_pointer <= end());
+    return TakeUntilOffset(internal_pointer - begin());
   }
 
   static Slice Join(std::initializer_list<Slice> slices) {
@@ -153,19 +170,48 @@ class Slice final {
         length, [data, length](void* p) { memcpy(p, data, length); });
   }
 
+  template <class C>
+  static Slice FromContainer(const C& c) {
+    auto begin = c.begin();
+    auto end = c.end();
+    return WithInitializer(end - begin, [begin, end](uint8_t* p) {
+      for (auto i = begin; i != end; ++i) {
+        *p++ = *i;
+      }
+    });
+  }
+
+  static Slice FromContainer(std::initializer_list<uint8_t> c) {
+    auto begin = c.begin();
+    auto end = c.end();
+    return WithInitializer(end - begin, [begin, end](uint8_t* p) {
+      for (auto i = begin; i != end; ++i) {
+        *p++ = *i;
+      }
+    });
+  }
+
   template <class F>
-  static Slice WithInitializer(size_t length, F&& initializer) {
+  static Slice WithInitializerAndPrefix(size_t length, size_t prefix,
+                                        F&& initializer) {
     if (length <= kSmallSliceMaxLength) {
+      // Ignore prefix request if this is small enough (we'll maybe allocate
+      // later, but that's ok - we didn't here).
       Slice s(&Static<>::small_vtable_);
       s.data_.small.length = length;
       std::forward<F>(initializer)(s.data_.small.bytes);
       return s;
     } else {
-      auto* block = BHNew(length);
-      std::forward<F>(initializer)(block->bytes);
-      return Slice(&Static<>::block_vtable_, block, block->bytes,
-                   block->bytes + length);
+      auto* block = BHNew(length + prefix);
+      std::forward<F>(initializer)(block->bytes + prefix);
+      return Slice(&Static<>::block_vtable_, block, block->bytes + prefix,
+                   block->bytes + prefix + length);
     }
+  }
+
+  template <class F>
+  static Slice WithInitializer(size_t length, F&& initializer) {
+    return WithInitializerAndPrefix(length, 0, std::forward<F>(initializer));
   }
 
   // Given an object that conforms to the Writer interface (has size_t
@@ -175,11 +221,18 @@ class Slice final {
   static Slice FromWriters(const W&... w) {
     uint64_t total_length = 0;
     (void)std::initializer_list<int>{(total_length += w.wire_length(), 0)...};
-    return WithInitializer([total_length, &w...](uint8_t* bytes) {
+    return WithInitializer(total_length, [total_length, &w...](uint8_t* bytes) {
       uint8_t* p = bytes;
       (void)std::initializer_list<int>{(p = w.Write(p), 0)...};
       assert(p == bytes + total_length);
     });
+  }
+
+  // Given an object of type T that has a T::Writer interface, generate a slice
+  template <class T>
+  static Slice FromWritable(const T& t) {
+    typename T::Writer writer(&t);
+    return FromWriters(writer);
   }
 
  private:
@@ -334,6 +387,7 @@ const Slice::VTable Slice::Static<I>::block_vtable_ = {
 
 struct Chunk final {
   uint64_t offset;
+  bool end_of_message;
   Slice slice;
 
   void TrimBegin(size_t trim_bytes) {
@@ -341,7 +395,16 @@ struct Chunk final {
     offset += trim_bytes;
   }
 
-  void TrimEnd(size_t trim_bytes) { slice.TrimEnd(trim_bytes); }
+  void TrimEnd(size_t trim_bytes) {
+    slice.TrimEnd(trim_bytes);
+    if (trim_bytes != 0) end_of_message = false;
+  }
+
+  Chunk TakeUntilSliceOffset(size_t slice_offset) {
+    Chunk out{offset, false, slice.TakeUntilOffset(slice_offset)};
+    offset += slice_offset;
+    return out;
+  }
 };
 
 inline bool operator==(const Slice& a, const Slice& b) {
@@ -349,6 +412,11 @@ inline bool operator==(const Slice& a, const Slice& b) {
   return 0 == memcmp(a.begin(), b.begin(), a.length());
 }
 
+inline bool operator==(const Chunk& a, const Chunk& b) {
+  return a.offset == b.offset && a.slice == b.slice;
+}
+
 std::ostream& operator<<(std::ostream& out, const Slice& slice);
+std::ostream& operator<<(std::ostream& out, const Chunk& chunk);
 
 }  // namespace overnet

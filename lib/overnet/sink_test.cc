@@ -38,7 +38,7 @@ class MockCallbacks {
 
 class MockSink : public Sink<int> {
  public:
-  MOCK_METHOD1(Close, void(const Status&));
+  MOCK_METHOD2(Closed, void(const Status&, std::function<void()> quiesced));
   MOCK_METHOD2(Pushed, void(int item, std::function<void(const Status&)> done));
   // Since gmock has a hard time with move-only types, we provide this override
   // directly, and use Pushed as the mock method (which takes a function that
@@ -47,6 +47,10 @@ class MockSink : public Sink<int> {
     auto done_ptr = std::make_shared<StatusCallback>(std::move(done));
     this->Pushed(item,
                  [done_ptr](const Status& status) { (*done_ptr)(status); });
+  }
+  void Close(const Status& status, Callback<void> done) override {
+    auto done_ptr = std::make_shared<Callback<void>>(std::move(done));
+    this->Closed(status, [done_ptr]() { (*done_ptr)(); });
   }
 };
 
@@ -105,7 +109,7 @@ TEST(Source, PullAllHappy) {
   EXPECT_CALL(source, Close(Property(&Status::is_ok, true)));
   source.PullAll([](StatusOr<std::vector<int>> status) {
     ASSERT_TRUE(status.is_ok());
-    EXPECT_EQ(*status.get(), (std::vector<int>{1, 2, 3}));
+    EXPECT_EQ(*status, (std::vector<int>{1, 2, 3}));
   });
 }
 
@@ -124,7 +128,7 @@ TEST(Source, PullAllFail) {
   EXPECT_CALL(source, Close(Property(&Status::code, StatusCode::CANCELLED)));
   source.PullAll([](StatusOr<std::vector<int>> status) {
     ASSERT_TRUE(status.is_ok());
-    EXPECT_EQ(*status.get(), (std::vector<int>{1, 2, 3}));
+    EXPECT_EQ(*status, (std::vector<int>{1, 2, 3}));
   });
 }
 

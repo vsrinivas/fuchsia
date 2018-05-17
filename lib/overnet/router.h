@@ -5,11 +5,11 @@
 #pragma once
 
 #include <unordered_map>
-#include "broadcast_sink.h"
 #include "callback.h"
-#include "routing_header.h"
+#include "routable_message.h"
 #include "sink.h"
 #include "slice.h"
+#include "timer.h"
 
 namespace overnet {
 namespace router_impl {
@@ -36,8 +36,9 @@ struct hash<overnet::router_impl::LocalStreamId> {
 namespace overnet {
 
 struct Message final {
-  RoutingHeader routing_header;
-  StatusOrCallback<Sink<Chunk>*> ready_for_data;
+  RoutableMessage wire;
+  TimeStamp received;
+  StatusCallback done;
 };
 
 class Link {
@@ -51,10 +52,8 @@ class Router final {
   class StreamHandler {
    public:
     virtual ~StreamHandler() {}
-    virtual void HandleMessage(
-        SeqNum seq, uint64_t payload_length, bool is_control,
-        ReliabilityAndOrdering reliability_and_ordering,
-        StatusOrCallback<Sink<Chunk>*> ready_for_data) = 0;
+    virtual void HandleMessage(Optional<SeqNum> seq, TimeStamp received,
+                               Slice data, StatusCallback done) = 0;
   };
 
   Router(NodeId node_id) : node_id_(node_id) {}
@@ -74,18 +73,16 @@ class Router final {
 
   class StreamHolder {
    public:
-    void HandleMessage(SeqNum seq, uint64_t payload_length, bool is_control,
-                       ReliabilityAndOrdering reliability_and_ordering,
-                       StatusOrCallback<Sink<Chunk>*> ready_for_data);
+    void HandleMessage(Optional<SeqNum> seq, TimeStamp received, Slice data,
+                       StatusCallback done);
     Status SetHandler(StreamHandler* handler);
 
    private:
     struct Pending {
-      SeqNum seq;
-      uint64_t length;
-      bool is_control;
-      ReliabilityAndOrdering reliability_and_ordering;
-      StatusOrCallback<Sink<Chunk>*> ready_for_data;
+      Optional<SeqNum> seq;
+      TimeStamp received;
+      Slice data;
+      StatusCallback done;
     };
 
     StreamHandler* handler_ = nullptr;

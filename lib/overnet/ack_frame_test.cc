@@ -26,22 +26,22 @@ void RoundTrip(const AckFrame& h, const std::vector<uint8_t>& expect) {
 }
 
 TEST(AckFrame, NoNack) {
-  AckFrame h(1, 0, 0);
-  RoundTrip(h, {1, 0, 0});
+  AckFrame h(1, 0);
+  RoundTrip(h, {1, 0});
 }
 
 TEST(AckFrame, OneNack) {
-  AckFrame h(1, 0, 0);
+  AckFrame h(5, 10);
   h.AddNack(2);
-  RoundTrip(h, {1, 0, 0, 1});
+  RoundTrip(h, {5, 10, 3});
 }
 
 TEST(AckFrame, ThreeNacks) {
-  AckFrame h(1, 0, 0);
-  h.AddNack(2);
-  h.AddNack(3);
+  AckFrame h(5, 42);
   h.AddNack(4);
-  RoundTrip(h, {1, 0, 0, 1, 1, 1});
+  h.AddNack(3);
+  h.AddNack(2);
+  RoundTrip(h, {5, 42, 1, 1, 1});
 }
 
 }  // namespace ack_frame_test

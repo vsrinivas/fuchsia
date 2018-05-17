@@ -11,15 +11,12 @@ namespace overnet {
 AckFrame::Writer::Writer(const AckFrame* ack_frame)
     : ack_frame_(ack_frame),
       ack_to_seq_length_(varint::WireSizeFor(ack_frame_->ack_to_seq_)),
-      ack_delay_us_length_(varint::WireSizeFor(ack_frame_->ack_delay_us_)),
-      window_grant_bytes_length_(
-          varint::WireSizeFor(ack_frame_->window_grant_bytes_)) {
-  wire_length_ =
-      ack_to_seq_length_ + ack_delay_us_length_ + window_grant_bytes_length_;
+      ack_delay_us_length_(varint::WireSizeFor(ack_frame_->ack_delay_us_)) {
+  wire_length_ = ack_to_seq_length_ + ack_delay_us_length_;
   nack_length_.reserve(ack_frame_->nack_seqs_.size());
   uint64_t base = ack_frame_->ack_to_seq_;
   for (auto n : ack_frame_->nack_seqs_) {
-    auto enc = n - base;
+    auto enc = base - n;
     auto l = varint::WireSizeFor(enc);
     wire_length_ += l;
     nack_length_.push_back(l);
@@ -31,12 +28,10 @@ uint8_t* AckFrame::Writer::Write(uint8_t* out) const {
   uint8_t* p = out;
   p = varint::Write(ack_frame_->ack_to_seq_, ack_to_seq_length_, p);
   p = varint::Write(ack_frame_->ack_delay_us_, ack_delay_us_length_, p);
-  p = varint::Write(ack_frame_->window_grant_bytes_, window_grant_bytes_length_,
-                    p);
   uint64_t base = ack_frame_->ack_to_seq_;
   for (size_t i = 0; i < nack_length_.size(); i++) {
     auto n = ack_frame_->nack_seqs_[i];
-    auto enc = n - base;
+    auto enc = base - n;
     p = varint::Write(enc, nack_length_[i], p);
     base = n;
   }
@@ -61,13 +56,7 @@ StatusOr<AckFrame> AckFrame::Parse(Slice slice) {
     return StatusOr<AckFrame>(StatusCode::INVALID_ARGUMENT,
                               "Failed to parse ack_delay_us from ack frame");
   }
-  uint64_t window_grant_bytes;
-  if (!varint::Read(&bytes, end, &window_grant_bytes)) {
-    return StatusOr<AckFrame>(
-        StatusCode::INVALID_ARGUMENT,
-        "Failed to parse window_grant_bytes from ack frame");
-  }
-  AckFrame frame(ack_to_seq, ack_delay_us, window_grant_bytes);
+  AckFrame frame(ack_to_seq, ack_delay_us);
   uint64_t base = ack_to_seq;
   while (bytes != end) {
     uint64_t offset;
@@ -75,11 +64,11 @@ StatusOr<AckFrame> AckFrame::Parse(Slice slice) {
       return StatusOr<AckFrame>(StatusCode::INVALID_ARGUMENT,
                                 "Failed to read nack offset from ack frame");
     }
-    uint64_t seq = base + offset;
-    if (seq < base) {
+    if (offset >= base) {
       return StatusOr<AckFrame>(StatusCode::INVALID_ARGUMENT,
-                                "Corrupt data in ack frame");
+                                "Failed to read nack");
     }
+    const uint64_t seq = base - offset;
     frame.AddNack(seq);
     base = seq;
   }
@@ -88,8 +77,7 @@ StatusOr<AckFrame> AckFrame::Parse(Slice slice) {
 
 std::ostream& operator<<(std::ostream& out, const AckFrame& ack_frame) {
   out << "ACK{to:" << ack_frame.ack_to_seq()
-      << ", delay_us:" << ack_frame.ack_delay_us()
-      << ", window_grant:" << ack_frame.window_grant_bytes() << ", nack=[";
+      << ", delay:" << ack_frame.ack_delay_us() << "us, nack=[";
   for (auto n : ack_frame.nack_seqs()) {
     out << n << ",";
   }

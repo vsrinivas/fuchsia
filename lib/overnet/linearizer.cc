@@ -37,11 +37,19 @@ void Linearizer::ValidateInternals() const {
 }
 
 void Linearizer::Close(const Status& status) {
+  Close(status, Callback<void>::Ignored());
+}
+
+void Linearizer::Close(const Status& status, Callback<void> quiesced) {
   if (closed_) return;
   closed_ = true;
-  closed_error_ = status;
+  if (!pending_push_.empty() && status.is_ok()) {
+    closed_error_ = Status(StatusCode::CANCELLED, "Gaps existed at close time");
+  } else {
+    closed_error_ = status;
+  }
   if (!ready_.empty()) {
-    if (status.is_ok()) {
+    if (closed_error_.is_ok()) {
       ready_(Optional<Slice>());
     } else {
       ready_(closed_error_);
@@ -56,30 +64,66 @@ void Linearizer::Close(const Status& status) {
 void Linearizer::Push(Chunk chunk, StatusCallback done) {
   ValidateInternals();
 
+  uint64_t chunk_start = chunk.offset;
+  const uint64_t chunk_end = chunk_start + chunk.slice.length();
+
+  // Check whether the chunk is within our buffering limits
+  // (if not we can reject and hope for a resend.)
+  if (chunk_end > offset_ + max_buffer_) {
+    done(Status(StatusCode::RESOURCE_EXHAUSTED,
+                "Linearizer max buffer exceeded"));
+    return;
+  }
+
+  if (length_) {
+    if (chunk_end > *length_) {
+      Close(Status(StatusCode::INVALID_ARGUMENT,
+                   "Received chunk past end of message"));
+    } else if (chunk.end_of_message && *length_ != chunk_end) {
+      Close(Status(StatusCode::INVALID_ARGUMENT,
+                   "Received ambiguous end of message point"));
+    }
+  } else if (chunk.end_of_message) {
+    if (offset_ > chunk_end) {
+      Close(Status(StatusCode::INVALID_ARGUMENT,
+                   "Already read past end of message"));
+    }
+    if (!pending_push_.empty()) {
+      const auto it = pending_push_.rbegin();
+      const auto end = it->first + it->second.first.length();
+      if (end > chunk_end) {
+        Close(Status(StatusCode::INVALID_ARGUMENT,
+                     "Already received bytes past end of message"));
+      }
+    }
+    if (offset_ == chunk_end) {
+      Close(Status::Ok());
+    }
+  }
+
   if (closed_) {
     done(closed_error_);
     return;
   }
 
-  size_t chunk_start = chunk.offset;
-  size_t chunk_end = chunk_start + chunk.slice.length();
+  if (chunk.end_of_message && !length_) {
+    length_ = chunk_end;
+  }
 
   // Fast path: already a pending read ready, this chunk is at the head of what
   // we're waiting for, and overlaps with nothing.
   if (!ready_.empty() && chunk_start == offset_ &&
       (pending_push_.empty() || pending_push_.begin()->first > chunk_end)) {
     offset_ += chunk.slice.length();
-    ready_(std::move(chunk.slice));
+    auto ready = std::move(ready_);
+    if (length_) {
+      assert(offset_ <= *length_);
+      if (offset_ == *length_) {
+        Close(Status::Ok());
+      }
+    }
+    ready(std::move(chunk.slice));
     done(Status::Ok());
-    return;
-  }
-
-  // Check whether the chunk is within our buffering limits
-  // (if not we can reject and hope for a resend.)
-  if (chunk_end > offset_ + max_buffer_) {
-    Close(Status(StatusCode::RESOURCE_EXHAUSTED,
-                 "Linearizer max buffer exceeded"));
-    done(closed_error_);
     return;
   }
 
@@ -150,7 +194,7 @@ void Linearizer::IntegratePush(Chunk chunk, StatusCallback done) {
       // Prior chunk overlaps with this one.
       // First check whether the common bytes are the same.
       const size_t common_length =
-          std::min(before_end - chunk.offset, chunk.slice.length());
+          std::min(before_end - chunk.offset, uint64_t(chunk.slice.length()));
       if (0 !=
           memcmp(before->second.first.begin() + (chunk.offset - before->first),
                  chunk.slice.begin(), common_length)) {
@@ -178,7 +222,7 @@ void Linearizer::IntegratePush(Chunk chunk, StatusCallback done) {
     if (after->first < chunk.offset + chunk.slice.length()) {
       const size_t common_length =
           std::min(chunk.offset + chunk.slice.length() - after->first,
-                   after->second.first.length());
+                   uint64_t(after->second.first.length()));
       if (0 != memcmp(after->second.first.begin(),
                       chunk.slice.begin() + (after->first - chunk.offset),
                       common_length)) {
@@ -250,6 +294,12 @@ void Linearizer::Pull(StatusOrCallback<Optional<Slice>> ready) {
     Slice slice = std::move(it->second.first);
     pending_push_.erase(it);
     offset_ += slice.length();
+    if (length_) {
+      assert(offset_ <= *length_);
+      if (offset_ == *length_) {
+        Close(Status::Ok());
+      }
+    }
     ready(std::move(slice));
     done(Status::Ok());
     return;

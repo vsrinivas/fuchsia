@@ -143,5 +143,19 @@ TEST(Optional, CopyConstructorWithBox) {
   EXPECT_EQ(**y, 123);
 }
 
+TEST(Optional, EqualityTest) {
+  Optional<int> a;
+  Optional<int> b(1);
+  Optional<int> c(1);
+  Optional<int> d(2);
+  Optional<int> e;
+
+  EXPECT_EQ(a, e);
+  EXPECT_EQ(b, c);
+  EXPECT_NE(a, b);
+  EXPECT_NE(b, a);
+  EXPECT_NE(c, d);
+}
+
 }  // namespace optional_test
 }  // namespace overnet

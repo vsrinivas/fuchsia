@@ -10,13 +10,14 @@ namespace overnet {
 
 // Reliability and ordering mode for a stream
 enum class ReliabilityAndOrdering : uint8_t {
-  ReliableOrdered = 0,
-  UnreliableOrdered = 1,
-  ReliableUnordered = 2,
-  UnreliableUnordered = 3,
+  // 0 is reserved for control messages
+  ReliableOrdered = 1,
+  UnreliableOrdered = 2,
+  ReliableUnordered = 3,
+  UnreliableUnordered = 4,
   // The last sent message in a stream is reliable, and sending a message makes
   // all previous messages in the stream unreliable.
-  TailReliable = 4,
+  TailReliable = 5,
 };
 
 const char* ReliabilityAndOrderingString(

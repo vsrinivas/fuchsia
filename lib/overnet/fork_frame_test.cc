@@ -20,7 +20,7 @@ void RoundTrip(const ForkFrame& h, const std::vector<uint8_t>& expect) {
 TEST(ForkFrame, SomeFrame) {
   RoundTrip(ForkFrame(StreamId(1), ReliabilityAndOrdering::ReliableOrdered,
                       Slice::FromStaticString("ABC")),
-            std::vector<uint8_t>{1, 0, 'A', 'B', 'C'});
+            std::vector<uint8_t>{1, 1, 'A', 'B', 'C'});
 }
 
 }  // namespace fork_frame_test

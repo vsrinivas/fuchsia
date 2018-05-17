@@ -16,11 +16,11 @@ template <class T>
 class Sink {
  public:
   virtual ~Sink() {}
-  virtual void Close(const Status& status) = 0;
-  virtual void Push(T item, StatusCallback done) = 0;
+  virtual void Close(const Status& status, Callback<void> quiesced) = 0;
+  virtual void Push(T item, StatusCallback sent) = 0;
   // Default implementation of multi-push.
   // Derived types are encouraged but not required to replace this.
-  virtual void PushMany(T* items, size_t count, StatusCallback done);
+  virtual void PushMany(T* items, size_t count, StatusCallback sent);
 };
 
 template <class T>
@@ -93,9 +93,9 @@ void Source<T>::PullAll(StatusOrCallback<std::vector<T>> ready) {
     void Next() {
       source_->Pull(
           StatusOrCallback<Optional<T>>([this](StatusOr<Optional<T>>&& status) {
-            if (status.is_error() || !status.get()->has_value()) {
-              ready_(std::move(so_far_));
+            if (status.is_error() || !status->has_value()) {
               source_->Close(status.AsStatus());
+              ready_(std::move(so_far_));
               delete this;
               return;
             }
