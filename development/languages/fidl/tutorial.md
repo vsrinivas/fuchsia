@@ -124,8 +124,8 @@ Let's go through it line by line.
 **Line 1:** The library definition is used to define the namespace. FIDL
 interfaces in different libraries can have the same name.
 
-**Line 2:** The `Discoverable` attribute provides a name that can be used to
-discover the service.
+**Line 2:** The `Discoverable` attribute automatically generates a name that
+clients can use to discover and connect to the service.
 
 **Line 3:** The name of the interface.
 
@@ -144,12 +144,12 @@ discover the service.
 When you [build the tree](#getting-and-building-the-fidl-source-code), the FIDL
 compiler is run automatically. It writes the glue code that allows the
 interfaces to be used from different languages. Below are the implementation
-files created for C++, assuming that your build flavor is `debug-x64`.
+files created for C++, assuming that your build flavor is `x64`.
 
 ```
-./out/debug-x64/fidling/gen/garnet/examples/fidl2/services/echo2.fidl.cc
-./out/debug-x64/fidling/gen/garnet/examples/fidl2/services/echo2.fidl.cc.h
-./out/debug-x64/fidling/gen/garnet/examples/fidl2/services/echo2.fidl.rs
+./out/x64/fidling/gen/garnet/examples/fidl2/services/echo2.fidl.cc
+./out/x64/fidling/gen/garnet/examples/fidl2/services/echo2.fidl.cc.h
+./out/x64/fidling/gen/garnet/examples/fidl2/services/echo2.fidl.rs
 ```
 
 ## `Echo` server in C++
