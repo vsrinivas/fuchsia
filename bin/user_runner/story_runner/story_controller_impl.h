@@ -310,7 +310,6 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   class ResolveParameterCall;
   class StartCall;
   class StartContainerInShellCall;
-  class StartModuleCall;  // TODO(thatguy): Get rid of this call.
   class StopCall;
   class StopModuleCall;
 
