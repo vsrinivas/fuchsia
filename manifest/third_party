@@ -4,8 +4,7 @@
     <localimport file="minimal"/>
     <import remote="https://fuchsia.googlesource.com/build"
             manifest="manifest/build"
-            name="build"
-            revision="79ad946a02d11e664ad95871fdf661e512c263ca"/>
+            name="build"/>
     <import remote="https://fuchsia.googlesource.com/third_party/boringssl"
             manifest="manifest"
             name="third_party/boringssl"
