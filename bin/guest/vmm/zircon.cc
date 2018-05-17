@@ -283,7 +283,7 @@ static zx_status_t create_zbi(const machina::PhysMem& phys_mem,
 static zx_status_t read_zbi(const machina::PhysMem& phys_mem,
                             uintptr_t* guest_ip) {
   auto kernel_hdr = phys_mem.as<zircon_kernel_t>(kKernelOffset);
-  if (kernel_hdr->hdr_kernel.type != ZBI_TYPE_KERNEL) {
+  if (!ZBI_IS_KERNEL_BOOTITEM(kernel_hdr->hdr_kernel.type)) {
     FXL_LOG(ERROR) << "Invalid Zircon kernel header";
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
