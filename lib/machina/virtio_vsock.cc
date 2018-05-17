@@ -235,17 +235,16 @@ void VirtioVsock::OnSocketReady(async_t* async, async::Wait* wait,
   }
 
   fbl::AutoLock lock(&mutex_);
+  Connection* conn = GetConnectionLocked(key);
+  if (conn == nullptr) {
+    FXL_LOG(ERROR) << "Socket does not exist";
+    return;
+  }
 
   // If the socket has been partially or fully closed, wait on the Virtio
   // receive queue.
   if (signal->observed & (ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_READ_DISABLED |
                           ZX_SOCKET_WRITE_DISABLED)) {
-    Connection* conn = GetConnectionLocked(key);
-    if (conn == nullptr) {
-      FXL_LOG(ERROR) << "Socket does not exist";
-      return;
-    }
-
     zx_signals_t signals = conn->rx_wait.trigger();
     if (signal->observed & ZX_SOCKET_PEER_CLOSED) {
       // The peer closed the socket, therefore we move to sending a full
@@ -274,8 +273,9 @@ void VirtioVsock::OnSocketReady(async_t* async, async::Wait* wait,
     status = WaitOnQueueLocked(key, &readable_, &rx_stream_);
   }
 
-  // If the socket is readable, wait on the Virtio receive queue.
-  if (signal->observed & ZX_SOCKET_READABLE) {
+  // If the socket is readable and our peer has buffer space, wait on the
+  // Virtio receive queue.
+  if (signal->observed & ZX_SOCKET_READABLE && conn->peer_free() > 0) {
     status = WaitOnQueueLocked(key, &readable_, &rx_stream_);
   }
 
@@ -406,9 +406,15 @@ zx_status_t VirtioVsock::SendMessageForConnectionLocked(
       zx_status_t status;
       do {
         size_t actual;
-        status = conn->socket.read(0, desc.addr, desc.len, &actual);
+        size_t peer_free = conn->peer_free();
+        size_t len = desc.len < peer_free ? desc.len : peer_free;
+        status = conn->socket.read(0, desc.addr, len, &actual);
         if (status == ZX_OK) {
           *used += actual;
+          conn->tx_cnt += actual;
+          if (conn->peer_free() == 0) {
+            break;
+          }
         }
         if (status != ZX_OK || !desc.has_next || actual < desc.len) {
           break;
@@ -496,6 +502,11 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
       }
     }
 
+    if (conn && op_requires_credit(header->op)) {
+      conn->peer_fwd_cnt = header->fwd_cnt;
+      conn->peer_buf_alloc = header->buf_alloc;
+    }
+
     switch (header->op) {
       case VIRTIO_VSOCK_OP_REQUEST: {
         // We received a request for the guest to connect to an external CID.
@@ -569,7 +580,7 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
         } while (status == ZX_OK);
         break;
       case VIRTIO_VSOCK_OP_CREDIT_UPDATE:
-        // We received a credit update, which we ignore.
+        // Credit update is handled by common code above.
         break;
       case VIRTIO_VSOCK_OP_CREDIT_REQUEST:
         // We received a credit request, therefore we move to sending a credit

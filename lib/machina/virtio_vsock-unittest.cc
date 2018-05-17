@@ -93,6 +93,12 @@ class VirtioVsockTest : public testing::Test, public guest::SocketConnector {
   std::vector<ConnectionRequest> connections_established_;
   RxBuffer rx_buffers[kVirtioVsockRxBuffers] = {};
 
+  // Set some default credit parameters that should suffice for most tests.
+  // Tests of the credit system will want to assign a more reasonable buf_alloc
+  // value.
+  uint32_t buf_alloc = UINT32_MAX;
+  uint32_t fwd_cnt = 0;
+
   // |guest::SocketConnector|
   void Connect(uint32_t src_port, uint32_t cid, uint32_t port,
                guest::SocketConnector::ConnectCallback callback) override {
@@ -131,6 +137,8 @@ class VirtioVsockTest : public testing::Test, public guest::SocketConnector {
         .dst_port = host_port,
         .type = type,
         .op = op,
+        .buf_alloc = this->buf_alloc,
+        .fwd_cnt = this->fwd_cnt,
     };
     ASSERT_EQ(tx_queue_.BuildDescriptor()
                   .AppendReadable(&tx_header, sizeof(tx_header))
@@ -299,6 +307,11 @@ class VirtioVsockTest : public testing::Test, public guest::SocketConnector {
                  kVirtioVsockGuestPort, 0, VIRTIO_VSOCK_OP_CREDIT_UPDATE, 0);
     return &rx_buffer->header;
   }
+
+  void SendCreditUpdate(uint32_t host_port, uint32_t guest_port) {
+    DoSend(host_port, guest_port, VIRTIO_VSOCK_TYPE_STREAM,
+           VIRTIO_VSOCK_OP_CREDIT_UPDATE);
+  }
 };
 
 TEST_F(VirtioVsockTest, Connect) { HostConnectOnPort(kVirtioVsockHostPort); }
@@ -447,6 +460,43 @@ TEST_F(VirtioVsockTest, ReadChained) {
   HostConnectOnPortResponse(kVirtioVsockHostPort);
   HostReadOnPort(kVirtioVsockHostPort, &connection.socket, data);
   HostReadOnPort(kVirtioVsockHostPort, &connection.socket, data);
+}
+
+TEST_F(VirtioVsockTest, ReadNoBuffer) {
+  // Set the guest buf_alloc to something smaller than our data transfer.
+  buf_alloc = 2;
+  std::vector<uint8_t> expected = {1, 2, 3, 4};
+  ASSERT_EQ(expected.size(), 2 * buf_alloc);
+
+  // Setup connection.
+  TestConnection connection;
+  HostConnectOnPortRequest(kVirtioVsockHostPort, connection.callback());
+  HostConnectOnPortResponse(kVirtioVsockHostPort);
+
+  // Write data to socket.
+  size_t actual;
+  ASSERT_EQ(
+      connection.socket.write(0, expected.data(), expected.size(), &actual),
+      ZX_OK);
+  EXPECT_EQ(actual, expected.size());
+
+  // Expect the guest to pull off |buf_alloc| bytes.
+  RxBuffer* rx_buffer = DoReceive();
+  ASSERT_NE(nullptr, rx_buffer);
+  VerifyHeader(&rx_buffer->header, kVirtioVsockHostPort, kVirtioVsockGuestPort,
+               buf_alloc, VIRTIO_VSOCK_OP_RW, 0);
+  EXPECT_EQ(memcmp(rx_buffer->data, expected.data(), buf_alloc), 0);
+
+  // Update credit to indicate the in-flight bytes have been free'd.
+  fwd_cnt += buf_alloc;
+  SendCreditUpdate(kVirtioVsockHostPort, kVirtioVsockGuestPort);
+
+  // Expect to receive the remaining bytes
+  rx_buffer = DoReceive();
+  ASSERT_NE(nullptr, rx_buffer);
+  VerifyHeader(&rx_buffer->header, kVirtioVsockHostPort, kVirtioVsockGuestPort,
+               buf_alloc, VIRTIO_VSOCK_OP_RW, 0);
+  EXPECT_EQ(memcmp(rx_buffer->data, expected.data() + buf_alloc, buf_alloc), 0);
 }
 
 TEST_F(VirtioVsockTest, Write) {

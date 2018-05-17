@@ -77,11 +77,18 @@ class VirtioVsock
     uint16_t op = 0;
     uint32_t flags = 0;
     uint32_t rx_cnt = 0;
+    uint32_t tx_cnt = 0;
+    uint32_t peer_buf_alloc = 0;
+    uint32_t peer_fwd_cnt = 0;
     zx::socket socket;
     zx::socket remote_socket;
     async::Wait rx_wait;
     async::Wait tx_wait;
     guest::SocketAcceptor::AcceptCallback acceptor;
+
+    uint32_t peer_free() const {
+      return peer_buf_alloc - (tx_cnt - peer_fwd_cnt);
+    }
   };
   using ConnectionMap =
       std::unordered_map<ConnectionKey, fbl::unique_ptr<Connection>,
