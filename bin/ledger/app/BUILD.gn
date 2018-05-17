@@ -95,6 +95,7 @@ source_set("lib") {
     "//peridot/bin/ledger/environment",
     "//peridot/bin/ledger/fidl",
     "//peridot/bin/ledger/fidl_helpers",
+    "//peridot/bin/ledger/filesystem",
     "//peridot/bin/ledger/p2p_provider/impl",
     "//peridot/bin/ledger/p2p_sync/impl",
     "//peridot/bin/ledger/p2p_sync/public",
@@ -146,6 +147,7 @@ source_set("unittests") {
     "//peridot/bin/ledger/sync_coordinator/testing",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/convert",
+    "//peridot/lib/scoped_tmpfs",
     "//peridot/public/lib/auth/fidl",
     "//third_party/googletest:gtest",
   ]

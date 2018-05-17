@@ -9,11 +9,11 @@
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "lib/gtest/test_with_message_loop.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
+#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace storage {
 namespace {
@@ -23,12 +23,13 @@ class LedgerStorageTest : public gtest::TestWithMessageLoop {
   LedgerStorageTest()
       : encryption_service_(message_loop_.async()),
         storage_(message_loop_.async(), &coroutine_service_,
-                 &encryption_service_, tmp_dir_.path(), "test_app") {}
+                 &encryption_service_, ledger::DetachedPath(tmpfs_.root_fd()),
+                 "test_app") {}
 
   ~LedgerStorageTest() override {}
 
  private:
-  files::ScopedTempDir tmp_dir_;
+  ledger::ScopedTmpFS tmpfs_;
   coroutine::CoroutineServiceImpl coroutine_service_;
   encryption::FakeEncryptionService encryption_service_;
 

@@ -53,7 +53,7 @@ using coroutine::CoroutineHandler;
 
 namespace {
 
-const char kLevelDbDir[] = "/leveldb";
+const char kLevelDbDir[] = "leveldb";
 
 struct StringPointerComparator {
   using is_transparent = std::true_type;
@@ -75,11 +75,11 @@ struct StringPointerComparator {
 
 PageStorageImpl::PageStorageImpl(
     async_t* async, coroutine::CoroutineService* coroutine_service,
-    encryption::EncryptionService* encryption_service, std::string page_dir,
-    PageId page_id)
+    encryption::EncryptionService* encryption_service,
+    ledger::DetachedPath page_dir, PageId page_id)
     : PageStorageImpl(
           async, coroutine_service, encryption_service,
-          std::make_unique<PageDbImpl>(async, page_dir + kLevelDbDir),
+          std::make_unique<PageDbImpl>(async, page_dir.SubPath(kLevelDbDir)),
           std::move(page_id)) {}
 
 PageStorageImpl::PageStorageImpl(

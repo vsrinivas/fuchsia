@@ -51,7 +51,7 @@ class LedgerRepositoryFactoryImpl
       std::unique_ptr<PageEvictionManager> page_eviction_manager);
   std::unique_ptr<p2p_sync::UserCommunicator> CreateP2PSync(
       const RepositoryInformation& repository_information);
-  void OnVersionMismatch(RepositoryInformation repository_information);
+  void OnVersionMismatch(const RepositoryInformation& repository_information);
 
   Status DeleteRepositoryDirectory(
       const RepositoryInformation& repository_information);

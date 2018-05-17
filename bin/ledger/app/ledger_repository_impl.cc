@@ -15,11 +15,11 @@
 namespace ledger {
 
 LedgerRepositoryImpl::LedgerRepositoryImpl(
-    std::string base_storage_dir, Environment* environment,
+    DetachedPath content_path, Environment* environment,
     std::unique_ptr<SyncWatcherSet> watchers,
     std::unique_ptr<sync_coordinator::UserSync> user_sync,
     std::unique_ptr<PageEvictionManager> page_eviction_manager)
-    : base_storage_dir_(std::move(base_storage_dir)),
+    : content_path_(std::move(content_path)),
       environment_(environment),
       encryption_service_factory_(environment->async()),
       watchers_(std::move(watchers)),
@@ -68,7 +68,7 @@ void LedgerRepositoryImpl::GetLedger(
     std::unique_ptr<storage::LedgerStorage> ledger_storage =
         std::make_unique<storage::LedgerStorageImpl>(
             environment_->async(), environment_->coroutine_service(),
-            encryption_service.get(), base_storage_dir_, name_as_string);
+            encryption_service.get(), content_path_, name_as_string);
     std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync;
     if (user_sync_) {
       ledger_sync = user_sync_->CreateLedgerSync(name_as_string,

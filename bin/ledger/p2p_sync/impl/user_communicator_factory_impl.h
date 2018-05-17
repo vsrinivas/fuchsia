@@ -20,7 +20,7 @@ class UserCommunicatorFactoryImpl : public UserCommunicatorFactory {
   ~UserCommunicatorFactoryImpl() override;
 
   std::unique_ptr<UserCommunicator> GetUserCommunicator(
-      std::string user_directory) override;
+      ledger::DetachedPath user_directory) override;
 
  private:
   ledger::Environment* const environment_;

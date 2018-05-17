@@ -13,12 +13,13 @@
 
 #include "leveldb/db.h"
 #include "leveldb/write_batch.h"
+#include "peridot/bin/ledger/filesystem/detached_path.h"
 
 namespace storage {
 
 class LevelDb : public Db {
  public:
-  explicit LevelDb(async_t* async, std::string db_path);
+  explicit LevelDb(async_t* async, ledger::DetachedPath db_path);
 
   ~LevelDb() override;
 
@@ -49,7 +50,8 @@ class LevelDb : public Db {
 
  private:
   async_t* const async_;
-  const std::string db_path_;
+  const ledger::DetachedPath db_path_;
+  std::unique_ptr<leveldb::Env> env_;
   std::unique_ptr<leveldb::DB> db_;
 
   const leveldb::WriteOptions write_options_;

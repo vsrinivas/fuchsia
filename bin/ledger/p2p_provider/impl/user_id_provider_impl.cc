@@ -12,10 +12,12 @@
 
 namespace p2p_provider {
 
+constexpr fxl::StringView user_id_filename = "p2p_user_id";
+
 UserIdProviderImpl::UserIdProviderImpl(
-    ledger::Environment* environment, std::string user_directory,
+    ledger::Environment* environment, ledger::DetachedPath user_directory,
     modular_auth::TokenProviderPtr token_provider_ptr)
-    : user_directory_(std::move(user_directory)) {
+    : user_id_path_(user_directory.SubPath(user_id_filename)) {
   firebase_auth_ = std::make_unique<firebase_auth::FirebaseAuthImpl>(
       environment->async(), fuchsia::modular::kFirebaseApiKey,
       std::move(token_provider_ptr), environment->MakeBackoff());
@@ -47,27 +49,23 @@ void UserIdProviderImpl::GetUserId(
   });
 }
 
-std::string UserIdProviderImpl::GetUserIdPath() {
-  return user_directory_ + "/p2p_user_id";
-}
-
 bool UserIdProviderImpl::LoadUserIdFromFile(std::string* id) {
-  std::string id_path = GetUserIdPath();
-  if (!files::IsFile(id_path)) {
+  if (!files::IsFileAt(user_id_path_.root_fd(), user_id_path_.path())) {
     return false;
   }
 
-  if (!files::ReadFileToString(id_path, id)) {
-    FXL_LOG(ERROR) << "Unable to read the id file at: " << id_path;
+  if (!files::ReadFileToStringAt(user_id_path_.root_fd(), user_id_path_.path(),
+                                 id)) {
+    FXL_LOG(ERROR) << "Unable to read the id file at: " << user_id_path_.path();
     return false;
   }
   return true;
 }
 
 bool UserIdProviderImpl::WriteUserIdToFile(std::string id) {
-  std::string id_path = GetUserIdPath();
-  if (!files::WriteFile(id_path, id.data(), id.size())) {
-    FXL_LOG(ERROR) << "Failed to persist the id at " << id_path;
+  if (!files::WriteFileAt(user_id_path_.root_fd(), user_id_path_.path(),
+                          id.data(), id.size())) {
+    FXL_LOG(ERROR) << "Failed to persist the id at " << user_id_path_.path();
     return false;
   }
   return true;

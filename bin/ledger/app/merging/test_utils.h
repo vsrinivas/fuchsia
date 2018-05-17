@@ -10,13 +10,13 @@
 
 #include "gtest/gtest.h"
 #include "lib/backoff/backoff.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/gtest/test_with_loop.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/public/journal.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/types.h"
+#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace ledger {
 namespace test {
@@ -61,7 +61,7 @@ class TestWithPageStorage : public gtest::TestWithLoop {
   fxl::Closure MakeQuitTaskOnce();
 
  private:
-  files::ScopedTempDir tmp_dir_;
+  ScopedTmpFS tmpfs_;
   coroutine::CoroutineServiceImpl coroutine_service_;
   encryption::FakeEncryptionService encryption_service_;
 };

@@ -15,7 +15,6 @@
 
 #include "gtest/gtest.h"
 #include "lib/callback/set_when_called.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/random/rand.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
@@ -27,6 +26,7 @@
 #include "peridot/bin/ledger/storage/impl/storage_test_utils.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/bin/ledger/testing/test_with_coroutines.h"
+#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace storage {
 namespace {
@@ -47,8 +47,10 @@ class PageDbTest : public ::test::TestWithCoroutines {
   PageDbTest()
       : encryption_service_(message_loop_.async()),
         page_storage_(message_loop_.async(), &coroutine_service_,
-                      &encryption_service_, tmp_dir_.path(), "page_id"),
-        page_db_(message_loop_.async(), tmp_dir_.path()) {}
+                      &encryption_service_,
+                      ledger::DetachedPath(tmpfs_.root_fd()), "page_id"),
+        page_db_(message_loop_.async(),
+                 ledger::DetachedPath(tmpfs_.root_fd())) {}
 
   ~PageDbTest() override {}
 
@@ -68,7 +70,7 @@ class PageDbTest : public ::test::TestWithCoroutines {
   }
 
  protected:
-  files::ScopedTempDir tmp_dir_;
+  ledger::ScopedTmpFS tmpfs_;
   encryption::FakeEncryptionService encryption_service_;
   PageStorageImpl page_storage_;
   PageDbImpl page_db_;

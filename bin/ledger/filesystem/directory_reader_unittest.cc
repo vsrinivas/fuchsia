@@ -54,7 +54,7 @@ TEST(DirectoryReaderTest, GetDirectoryEntriesAt) {
   int root_fd = open(temp_dir.path().c_str(), O_PATH);
 
   EXPECT_TRUE(DirectoryReader::GetDirectoryEntriesAt(
-      root_fd, ".", [&expected_entries](fxl::StringView entry) {
+      DetachedPath(root_fd), [&expected_entries](fxl::StringView entry) {
         auto entry_iterator = expected_entries.find(entry.ToString());
         EXPECT_NE(entry_iterator, expected_entries.end());
         expected_entries.erase(entry_iterator);

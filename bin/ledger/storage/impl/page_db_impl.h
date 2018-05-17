@@ -13,6 +13,7 @@
 
 #include "lib/fxl/functional/auto_call.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
+#include "peridot/bin/ledger/filesystem/detached_path.h"
 #include "peridot/bin/ledger/storage/impl/leveldb.h"
 #include "peridot/bin/ledger/storage/impl/page_db.h"
 
@@ -24,7 +25,7 @@ class PageStorageImpl;
 // TRANSIENT objects.
 class PageDbImpl : public PageDb {
  public:
-  PageDbImpl(async_t* async, std::string db_path);
+  PageDbImpl(async_t* async, ledger::DetachedPath db_path);
   ~PageDbImpl() override;
 
   Status Init() override;

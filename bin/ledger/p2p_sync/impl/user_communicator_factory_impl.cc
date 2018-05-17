@@ -20,7 +20,8 @@ UserCommunicatorFactoryImpl::UserCommunicatorFactoryImpl(
 UserCommunicatorFactoryImpl::~UserCommunicatorFactoryImpl() {}
 
 std::unique_ptr<UserCommunicator>
-UserCommunicatorFactoryImpl::GetUserCommunicator(std::string user_directory) {
+UserCommunicatorFactoryImpl::GetUserCommunicator(
+    ledger::DetachedPath user_directory) {
   char host_name_buffer[HOST_NAME_MAX + 1];
   int result = gethostname(host_name_buffer, sizeof(host_name_buffer));
   if (result < 0) {

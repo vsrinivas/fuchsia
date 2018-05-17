@@ -43,9 +43,9 @@ namespace benchmark {
 // Instances needed to control the Ledger process associated with a device and
 // interact with it.
 struct ConvergenceBenchmark::DeviceContext {
+  std::unique_ptr<files::ScopedTempDir> storage_directory;
   fuchsia::sys::ComponentControllerPtr controller;
   ledger::LedgerPtr ledger;
-  std::unique_ptr<files::ScopedTempDir> storage_directory;
   ledger::PagePtr page_connection;
   std::unique_ptr<fidl::Binding<ledger::PageWatcher>> page_watcher;
 };

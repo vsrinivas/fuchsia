@@ -15,6 +15,7 @@
 #include "peridot/bin/ledger/cobalt/cobalt.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/storage/impl/object_impl.h"
+#include "util/env_fuchsia.h"
 
 namespace storage {
 
@@ -170,7 +171,7 @@ class RowIterator
 
 }  // namespace
 
-LevelDb::LevelDb(async_t* async, std::string db_path)
+LevelDb::LevelDb(async_t* async, ledger::DetachedPath db_path)
     : async_(async), db_path_(std::move(db_path)) {}
 
 LevelDb::~LevelDb() {
@@ -180,34 +181,37 @@ LevelDb::~LevelDb() {
 
 Status LevelDb::Init() {
   TRACE_DURATION("ledger", "leveldb_init");
-  if (!files::CreateDirectory(db_path_)) {
-    FXL_LOG(ERROR) << "Failed to create directory under " << db_path_;
+  if (!files::CreateDirectoryAt(db_path_.root_fd(), db_path_.path())) {
+    FXL_LOG(ERROR) << "Failed to create directory under " << db_path_.path();
     return Status::INTERNAL_IO_ERROR;
   }
-  leveldb::DB* db = nullptr;
+  env_ = leveldb::MakeFuchsiaEnv(db_path_.root_fd());
   leveldb::Options options;
+  options.env = env_.get();
   options.create_if_missing = true;
-  leveldb::Status status = leveldb::DB::Open(options, db_path_, &db);
+  leveldb::DB* db = nullptr;
+  leveldb::Status status = leveldb::DB::Open(options, db_path_.path(), &db);
   if (status.IsCorruption()) {
-    FXL_LOG(ERROR) << "Ledger state corrupted at " << db_path_
+    FXL_LOG(ERROR) << "Ledger state corrupted at " << db_path_.path()
                    << " with leveldb status: " << status.ToString();
     FXL_LOG(WARNING) << "Trying to recover by erasing the local state.";
     FXL_LOG(WARNING)
         << "***** ALL LOCAL CHANGES IN THIS PAGE WILL BE LOST *****";
     ledger::ReportEvent(ledger::CobaltEvent::LEDGER_LEVELDB_STATE_CORRUPTED);
 
-    if (!files::DeletePath(db_path_, true)) {
-      FXL_LOG(ERROR) << "Failed to delete corrupted ledger at " << db_path_;
+    if (!files::DeletePathAt(db_path_.root_fd(), db_path_.path(), true)) {
+      FXL_LOG(ERROR) << "Failed to delete corrupted ledger at "
+                     << db_path_.path();
       return Status::INTERNAL_IO_ERROR;
     }
-    leveldb::Status status = leveldb::DB::Open(options, db_path_, &db);
+    leveldb::Status status = leveldb::DB::Open(options, db_path_.path(), &db);
     if (!status.ok()) {
-      FXL_LOG(ERROR) << "Failed to create a new LevelDB at " << db_path_
+      FXL_LOG(ERROR) << "Failed to create a new LevelDB at " << db_path_.path()
                      << " with leveldb status: " << status.ToString();
       return Status::INTERNAL_IO_ERROR;
     }
   } else if (!status.ok()) {
-    FXL_LOG(ERROR) << "Failed to open ledger at " << db_path_
+    FXL_LOG(ERROR) << "Failed to open ledger at " << db_path_.path()
                    << " with leveldb status: " << status.ToString();
     return Status::INTERNAL_IO_ERROR;
   }

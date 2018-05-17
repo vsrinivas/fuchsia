@@ -38,7 +38,7 @@ class UserSyncImpl : public UserSync, cloud_provider::DeviceSetWatcher {
       encryption::EncryptionService* encryption_service) override;
 
   // Returns the path where the device fingerprint is stored.
-  std::string GetFingerprintPath();
+  ledger::DetachedPath GetFingerprintPath();
 
  private:
   // cloud_provider::DeviceSetWatcher:

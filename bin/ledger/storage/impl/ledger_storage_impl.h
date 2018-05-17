@@ -11,6 +11,7 @@
 
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
+#include "peridot/bin/ledger/filesystem/detached_path.h"
 #include "peridot/bin/ledger/storage/public/ledger_storage.h"
 
 namespace storage {
@@ -20,7 +21,7 @@ class LedgerStorageImpl : public LedgerStorage {
   LedgerStorageImpl(async_t* async,
                     coroutine::CoroutineService* coroutine_service,
                     encryption::EncryptionService* encryption_service,
-                    const std::string& base_storage_dir,
+                    ledger::DetachedPath content_dir,
                     const std::string& ledger_name);
   ~LedgerStorageImpl() override;
 
@@ -39,12 +40,12 @@ class LedgerStorageImpl : public LedgerStorage {
   std::vector<PageId> ListLocalPages();
 
  private:
-  std::string GetPathFor(PageIdView page_id);
+  ledger::DetachedPath GetPathFor(PageIdView page_id);
 
   async_t* const async_;
   coroutine::CoroutineService* const coroutine_service_;
   encryption::EncryptionService* const encryption_service_;
-  std::string storage_dir_;
+  ledger::DetachedPath storage_dir_;
 };
 
 }  // namespace storage

@@ -56,8 +56,8 @@ std::unique_ptr<LedgerSync> UserSyncImpl::CreateLedgerSync(
   return result;
 }
 
-std::string UserSyncImpl::GetFingerprintPath() {
-  return fxl::Concatenate({user_config_.user_directory, "/fingerprint"});
+ledger::DetachedPath UserSyncImpl::GetFingerprintPath() {
+  return user_config_.user_directory.SubPath("fingerprint");
 }
 
 void UserSyncImpl::OnCloudErased() {
@@ -90,15 +90,16 @@ void UserSyncImpl::Start() {
 void UserSyncImpl::CheckCloudNotErased() {
   FXL_DCHECK(device_set_);
 
-  std::string fingerprint_path = GetFingerprintPath();
-  if (!files::IsFile(fingerprint_path)) {
+  ledger::DetachedPath fingerprint_path = GetFingerprintPath();
+  if (!files::IsFileAt(fingerprint_path.root_fd(), fingerprint_path.path())) {
     CreateFingerprint();
     return;
   }
 
-  if (!files::ReadFileToString(fingerprint_path, &fingerprint_)) {
+  if (!files::ReadFileToStringAt(fingerprint_path.root_fd(),
+                                 fingerprint_path.path(), &fingerprint_)) {
     FXL_LOG(ERROR) << "Unable to read the fingerprint file at: "
-                   << fingerprint_path << ", sync upload will not work.";
+                   << fingerprint_path.path() << ", sync upload will not work.";
     return;
   }
 
@@ -119,10 +120,13 @@ void UserSyncImpl::CreateFingerprint() {
         if (status == cloud_provider::Status::OK) {
           // Persist the new fingerprint.
           FXL_DCHECK(!fingerprint_.empty());
-          if (!files::WriteFile(GetFingerprintPath(), fingerprint_.data(),
-                                fingerprint_.size())) {
-            FXL_LOG(ERROR) << "Failed to persist the fingerprint, "
-                           << "sync upload will not work.";
+          ledger::DetachedPath fingerprint_path = GetFingerprintPath();
+          if (!files::WriteFileAt(fingerprint_path.root_fd(),
+                                  fingerprint_path.path(), fingerprint_.data(),
+                                  fingerprint_.size())) {
+            FXL_LOG(ERROR) << "Failed to persist the fingerprint at: "
+                           << fingerprint_path.path()
+                           << ", sync upload will not work.";
             return;
           }
         }

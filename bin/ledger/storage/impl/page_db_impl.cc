@@ -111,7 +111,7 @@ class JournalEntryIterator final : public Iterator<const EntryChange> {
 
 }  // namespace
 
-PageDbImpl::PageDbImpl(async_t* async, std::string db_path)
+PageDbImpl::PageDbImpl(async_t* async, ledger::DetachedPath db_path)
     : db_(async, std::move(db_path)) {}
 
 PageDbImpl::~PageDbImpl() {}

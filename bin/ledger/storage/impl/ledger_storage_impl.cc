@@ -43,13 +43,12 @@ std::string GetId(fxl::StringView bytes) {
 LedgerStorageImpl::LedgerStorageImpl(
     async_t* async, coroutine::CoroutineService* coroutine_service,
     encryption::EncryptionService* encryption_service,
-    const std::string& base_storage_dir, const std::string& ledger_name)
+    ledger::DetachedPath content_dir, const std::string& ledger_name)
     : async_(async),
       coroutine_service_(coroutine_service),
-      encryption_service_(encryption_service) {
-  storage_dir_ = fxl::Concatenate({base_storage_dir, "/", kSerializationVersion,
-                                   "/", GetDirectoryName(ledger_name)});
-}
+      encryption_service_(encryption_service),
+      storage_dir_(content_dir.SubPath(
+          {kSerializationVersion, GetDirectoryName(ledger_name)})) {}
 
 LedgerStorageImpl::~LedgerStorageImpl() {}
 
@@ -58,15 +57,16 @@ void LedgerStorageImpl::CreatePageStorage(
     std::function<void(Status, std::unique_ptr<PageStorage>)> callback) {
   auto timed_callback = TRACE_CALLBACK(std::move(callback), "ledger",
                                        "ledger_storage_create_page_storage");
-  std::string path = GetPathFor(page_id);
-  if (!files::CreateDirectory(path)) {
-    FXL_LOG(ERROR) << "Failed to create the storage directory in " << path;
+  ledger::DetachedPath path = GetPathFor(page_id);
+  if (!files::CreateDirectoryAt(path.root_fd(), path.path())) {
+    FXL_LOG(ERROR) << "Failed to create the storage directory in "
+                   << path.path();
     timed_callback(Status::INTERNAL_IO_ERROR, nullptr);
     return;
   }
-  auto result = std::make_unique<PageStorageImpl>(async_, coroutine_service_,
-                                                  encryption_service_, path,
-                                                  std::move(page_id));
+  auto result = std::make_unique<PageStorageImpl>(
+      async_, coroutine_service_, encryption_service_, std::move(path),
+      std::move(page_id));
   result->Init(
       fxl::MakeCopyable([callback = std::move(timed_callback),
                          result = std::move(result)](Status status) mutable {
@@ -85,15 +85,15 @@ void LedgerStorageImpl::GetPageStorage(
     std::function<void(Status, std::unique_ptr<PageStorage>)> callback) {
   auto timed_callback = TRACE_CALLBACK(std::move(callback), "ledger",
                                        "ledger_storage_get_page_storage");
-  std::string path = GetPathFor(page_id);
-  if (!files::IsDirectory(path)) {
+  ledger::DetachedPath path = GetPathFor(page_id);
+  if (!files::IsDirectoryAt(path.root_fd(), path.path())) {
     timed_callback(Status::NOT_FOUND, nullptr);
     return;
   }
 
-  auto result = std::make_unique<PageStorageImpl>(async_, coroutine_service_,
-                                                  encryption_service_, path,
-                                                  std::move(page_id));
+  auto result = std::make_unique<PageStorageImpl>(
+      async_, coroutine_service_, encryption_service_, std::move(path),
+      std::move(page_id));
   result->Init(
       fxl::MakeCopyable([callback = std::move(timed_callback),
                          result = std::move(result)](Status status) mutable {
@@ -107,12 +107,12 @@ void LedgerStorageImpl::GetPageStorage(
 
 bool LedgerStorageImpl::DeletePageStorage(PageIdView page_id) {
   // TODO(nellyv): We need to synchronize the page deletion with the cloud.
-  std::string path = GetPathFor(page_id);
-  if (!files::IsDirectory(path)) {
+  ledger::DetachedPath path = GetPathFor(page_id);
+  if (!files::IsDirectoryAt(path.root_fd(), path.path())) {
     return false;
   }
-  if (!files::DeletePath(path, true)) {
-    FXL_LOG(ERROR) << "Unable to delete: " << path;
+  if (!files::DeletePathAt(path.root_fd(), path.path(), true)) {
+    FXL_LOG(ERROR) << "Unable to delete: " << path.path();
     return false;
   }
   return true;
@@ -120,7 +120,7 @@ bool LedgerStorageImpl::DeletePageStorage(PageIdView page_id) {
 
 std::vector<PageId> LedgerStorageImpl::ListLocalPages() {
   std::vector<PageId> local_pages;
-  ledger::DirectoryReader::GetDirectoryEntries(
+  ledger::DirectoryReader::GetDirectoryEntriesAt(
       storage_dir_, [&local_pages](fxl::StringView encoded_page_id) {
         local_pages.emplace_back(GetId(encoded_page_id));
         return true;
@@ -128,9 +128,9 @@ std::vector<PageId> LedgerStorageImpl::ListLocalPages() {
   return local_pages;
 }
 
-std::string LedgerStorageImpl::GetPathFor(PageIdView page_id) {
+ledger::DetachedPath LedgerStorageImpl::GetPathFor(PageIdView page_id) {
   FXL_DCHECK(!page_id.empty());
-  return fxl::Concatenate({storage_dir_, "/", GetDirectoryName(page_id)});
+  return storage_dir_.SubPath(GetDirectoryName(page_id));
 }
 
 }  // namespace storage

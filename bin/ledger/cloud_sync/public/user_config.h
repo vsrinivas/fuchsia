@@ -10,12 +10,14 @@
 
 #include <cloud_provider/cpp/fidl.h>
 
+#include "peridot/bin/ledger/filesystem/detached_path.h"
+
 namespace cloud_sync {
 
 // Sync configuration for a particular user.
 struct UserConfig {
   // The directory for the user persistent data.
-  std::string user_directory;
+  ledger::DetachedPath user_directory;
   // The provider of the auth data for the user.
   cloud_provider::CloudProviderPtr cloud_provider;
 };

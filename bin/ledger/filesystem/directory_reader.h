@@ -8,6 +8,7 @@
 #include <functional>
 
 #include "lib/fxl/strings/string_view.h"
+#include "peridot/bin/ledger/filesystem/detached_path.h"
 
 namespace ledger {
 
@@ -18,11 +19,9 @@ class DirectoryReader {
       const std::string& directory,
       const std::function<bool(fxl::StringView)>& callback);
 
-  // Returns the list of directories and files inside the provided directory. If
-  // |directory| is relative, resolve it with |root_fd| as reference. See
-  // |openat(2)|.
+  // Returns the list of directories and files inside the provided directory.
   static bool GetDirectoryEntriesAt(
-      int root_fd, const std::string& directory,
+      const DetachedPath& directory,
       const std::function<bool(fxl::StringView)>& callback);
 };
 

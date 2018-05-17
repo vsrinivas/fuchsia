@@ -25,13 +25,13 @@ void SafeCloseDir(DIR* dir) {
 bool DirectoryReader::GetDirectoryEntries(
     const std::string& directory,
     const std::function<bool(fxl::StringView)>& callback) {
-  return GetDirectoryEntriesAt(AT_FDCWD, directory, callback);
+  return GetDirectoryEntriesAt(DetachedPath(AT_FDCWD, directory), callback);
 }
 
 bool DirectoryReader::GetDirectoryEntriesAt(
-    int root_fd, const std::string& directory,
+    const DetachedPath& directory,
     const std::function<bool(fxl::StringView)>& callback) {
-  int dir_fd = openat(root_fd, directory.c_str(), O_RDONLY);
+  int dir_fd = openat(directory.root_fd(), directory.path().c_str(), O_RDONLY);
   if (dir_fd == -1) {
     return false;
   }

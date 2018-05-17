@@ -33,7 +33,7 @@ class PageStorageImpl : public PageStorage {
   PageStorageImpl(async_t* async,
                   coroutine::CoroutineService* coroutine_service,
                   encryption::EncryptionService* encryption_service,
-                  std::string page_dir, PageId page_id);
+                  ledger::DetachedPath page_dir, PageId page_id);
   ~PageStorageImpl() override;
 
   // Initializes this PageStorageImpl. This includes initializing the underlying

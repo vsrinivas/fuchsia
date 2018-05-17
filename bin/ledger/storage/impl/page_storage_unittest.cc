@@ -21,7 +21,6 @@
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -42,6 +41,7 @@
 #include "peridot/bin/ledger/storage/public/commit_watcher.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
 #include "peridot/bin/ledger/testing/test_with_coroutines.h"
+#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace storage {
 
@@ -183,11 +183,11 @@ class PageStorageTest : public ::test::TestWithCoroutines {
       storage_->SetSyncDelegate(nullptr);
       storage_.reset();
     }
-    tmp_dir_ = std::make_unique<files::ScopedTempDir>();
+    tmpfs_ = std::make_unique<ledger::ScopedTmpFS>();
     PageId id = RandomString(10);
     storage_ = std::make_unique<PageStorageImpl>(
         message_loop_.async(), &coroutine_service_, &encryption_service_,
-        tmp_dir_->path(), id);
+        ledger::DetachedPath(tmpfs_->root_fd()), id);
 
     bool called;
     Status status;
@@ -539,7 +539,7 @@ class PageStorageTest : public ::test::TestWithCoroutines {
   }
 
   coroutine::CoroutineServiceImpl coroutine_service_;
-  std::unique_ptr<files::ScopedTempDir> tmp_dir_;
+  std::unique_ptr<ledger::ScopedTmpFS> tmpfs_;
   encryption::FakeEncryptionService encryption_service_;
   std::unique_ptr<PageStorageImpl> storage_;
 

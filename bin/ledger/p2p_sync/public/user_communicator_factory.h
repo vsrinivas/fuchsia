@@ -7,6 +7,8 @@
 
 #include "peridot/bin/ledger/p2p_sync/public/user_communicator.h"
 
+#include "peridot/bin/ledger/filesystem/detached_path.h"
+
 namespace p2p_sync {
 // Factory for creating UserCommunicators with default configuration.
 class UserCommunicatorFactory {
@@ -15,7 +17,7 @@ class UserCommunicatorFactory {
   virtual ~UserCommunicatorFactory() {}
 
   virtual std::unique_ptr<UserCommunicator> GetUserCommunicator(
-      std::string user_directory) = 0;
+      ledger::DetachedPath user_directory) = 0;
 };
 
 }  // namespace p2p_sync

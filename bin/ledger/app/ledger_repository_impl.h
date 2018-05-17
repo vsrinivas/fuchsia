@@ -11,12 +11,14 @@
 #include "lib/callback/auto_cleanable.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
+#include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/ledger_manager.h"
 #include "peridot/bin/ledger/app/page_eviction_manager.h"
 #include "peridot/bin/ledger/app/sync_watcher_set.h"
 #include "peridot/bin/ledger/encryption/impl/encryption_service_factory_impl.h"
 #include "peridot/bin/ledger/environment/environment.h"
+#include "peridot/bin/ledger/filesystem/detached_path.h"
 #include "peridot/bin/ledger/p2p_sync/public/user_communicator.h"
 #include "peridot/bin/ledger/sync_coordinator/public/user_sync.h"
 #include "peridot/lib/convert/convert.h"
@@ -27,7 +29,7 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
                              public ledger_internal::LedgerRepositoryDebug {
  public:
   LedgerRepositoryImpl(
-      std::string base_storage_dir, Environment* environment,
+      DetachedPath content_path, Environment* environment,
       std::unique_ptr<SyncWatcherSet> watchers,
       std::unique_ptr<sync_coordinator::UserSync> user_sync,
       std::unique_ptr<PageEvictionManager> page_eviction_manager);
@@ -70,7 +72,7 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
       fidl::InterfaceRequest<ledger_internal::LedgerDebug> request,
       GetLedgerDebugCallback callback) override;
 
-  const std::string base_storage_dir_;
+  const DetachedPath content_path_;
   Environment* const environment_;
   encryption::EncryptionServiceFactoryImpl encryption_service_factory_;
   std::unique_ptr<SyncWatcherSet> watchers_;

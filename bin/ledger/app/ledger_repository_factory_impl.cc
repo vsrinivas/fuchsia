@@ -4,11 +4,14 @@
 
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 
+#include <fcntl.h>
+#include <stdio.h>
 #include <trace/event.h>
 #include <unistd.h>
 
 #include "lib/backoff/exponential_backoff.h"
 #include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/eintr_wrapper.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
@@ -28,25 +31,27 @@ namespace ledger {
 
 namespace {
 
-constexpr fxl::StringView kContentPath = "/content";
-constexpr fxl::StringView kStagingPath = "/staging";
+constexpr fxl::StringView kContentPath = "content";
+constexpr fxl::StringView kStagingPath = "staging";
+constexpr fxl::StringView kNamePath = "name";
 
-bool GetRepositoryName(fidl::StringPtr repository_path, std::string* name) {
-  std::string name_path = repository_path.get() + "/name";
+bool GetRepositoryName(const DetachedPath& base_path, std::string* name) {
+  DetachedPath name_path = base_path.SubPath(kNamePath);
 
-  if (files::ReadFileToString(name_path, name)) {
+  if (files::ReadFileToStringAt(name_path.root_fd(), name_path.path(), name)) {
     return true;
   }
 
-  if (!files::CreateDirectory(repository_path.get())) {
+  if (!files::CreateDirectoryAt(base_path.root_fd(), base_path.path())) {
     return false;
   }
 
   std::string new_name;
   new_name.resize(16);
   fxl::RandBytes(&new_name[0], new_name.size());
-  if (!files::WriteFile(name_path, new_name.c_str(), new_name.size())) {
-    FXL_LOG(ERROR) << "Unable to write file at: " << name_path;
+  if (!files::WriteFileAt(name_path.root_fd(), name_path.path(),
+                          new_name.c_str(), new_name.size())) {
+    FXL_LOG(ERROR) << "Unable to write file at: " << name_path.path();
     return false;
   }
 
@@ -60,7 +65,8 @@ bool GetRepositoryName(fidl::StringPtr repository_path, std::string* name) {
 // requests and callbacks and fires them when the repository is available.
 class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
  public:
-  explicit LedgerRepositoryContainer() {}
+  explicit LedgerRepositoryContainer(fxl::UniqueFD root_fd)
+      : root_fd_(std::move(root_fd)) {}
   ~LedgerRepositoryContainer() {
     for (const auto& request : requests_) {
       request.second(Status::INTERNAL_ERROR);
@@ -132,6 +138,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
   }
 
  private:
+  fxl::UniqueFD root_fd_;
   std::unique_ptr<LedgerRepositoryImpl> ledger_repository_;
   Status status_ = Status::OK;
   std::vector<
@@ -147,19 +154,19 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
 
 struct LedgerRepositoryFactoryImpl::RepositoryInformation {
  public:
-  explicit RepositoryInformation(fidl::StringPtr repository_path)
-      : base_path(files::SimplifyPath(repository_path.get())),
-        content_path(fxl::Concatenate({base_path, kContentPath})),
-        staging_path(fxl::Concatenate({base_path, kStagingPath})) {}
+  explicit RepositoryInformation(int root_fd)
+      : base_path(root_fd),
+        content_path(base_path.SubPath(kContentPath)),
+        staging_path(base_path.SubPath(kStagingPath)) {}
 
   RepositoryInformation(const RepositoryInformation& other) = default;
   RepositoryInformation(RepositoryInformation&& other) = default;
 
   bool Init() { return GetRepositoryName(content_path, &name); }
 
-  const std::string base_path;
-  const std::string content_path;
-  const std::string staging_path;
+  DetachedPath base_path;
+  DetachedPath content_path;
+  DetachedPath staging_path;
   std::string name;
 };
 
@@ -179,7 +186,12 @@ void LedgerRepositoryFactoryImpl::GetRepository(
         repository_request,
     GetRepositoryCallback callback) {
   TRACE_DURATION("ledger", "repository_factory_get_repository");
-  RepositoryInformation repository_information(repository_path);
+  fxl::UniqueFD root_fd(HANDLE_EINTR(open((*repository_path).c_str(), O_PATH)));
+  if (!root_fd.is_valid()) {
+    callback(Status::IO_ERROR);
+    return;
+  }
+  RepositoryInformation repository_information(root_fd.get());
   if (!repository_information.Init()) {
     callback(Status::IO_ERROR);
     return;
@@ -204,7 +216,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     auto ret = repositories_.emplace(
         std::piecewise_construct,
         std::forward_as_tuple(repository_information.name),
-        std::forward_as_tuple());
+        std::forward_as_tuple(std::move(root_fd)));
     LedgerRepositoryContainer* container = &ret.first->second;
     container->BindRepository(std::move(repository_request), callback);
     std::unique_ptr<SyncWatcherSet> watchers =
@@ -229,7 +241,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
   auto ret =
       repositories_.emplace(std::piecewise_construct,
                             std::forward_as_tuple(repository_information.name),
-                            std::forward_as_tuple());
+                            std::forward_as_tuple(std::move(root_fd)));
   LedgerRepositoryContainer* container = &ret.first->second;
   container->BindRepository(std::move(repository_request), callback);
 
@@ -277,7 +289,7 @@ LedgerRepositoryFactoryImpl::CreateP2PSync(
 }
 
 void LedgerRepositoryFactoryImpl::OnVersionMismatch(
-    RepositoryInformation repository_information) {
+    const RepositoryInformation& repository_information) {
   FXL_LOG(WARNING)
       << "Data in the cloud was wiped out, erasing local state. "
       << "This should log you out, log back in to start syncing again.";
@@ -293,17 +305,19 @@ void LedgerRepositoryFactoryImpl::OnVersionMismatch(
 
 Status LedgerRepositoryFactoryImpl::DeleteRepositoryDirectory(
     const RepositoryInformation& repository_information) {
-  files::ScopedTempDir tmp_directory(repository_information.staging_path);
+  files::ScopedTempDirAt tmp_directory(
+      repository_information.staging_path.root_fd(),
+      repository_information.staging_path.path());
   std::string destination = tmp_directory.path() + "/content";
 
-  if (rename(repository_information.content_path.c_str(),
-             destination.c_str()) != 0) {
-    FXL_LOG(ERROR) << "Unable to move repository local storage at "
-                   << repository_information.content_path << " to "
+  if (renameat(repository_information.content_path.root_fd(),
+               repository_information.content_path.path().c_str(),
+               tmp_directory.root_fd(), destination.c_str()) != 0) {
+    FXL_LOG(ERROR) << "Unable to move repository local storage to "
                    << destination << ". Error: " << strerror(errno);
     return Status::IO_ERROR;
   }
-  if (!files::DeletePath(destination, true)) {
+  if (!files::DeletePathAt(tmp_directory.root_fd(), destination, true)) {
     FXL_LOG(ERROR) << "Unable to delete repository staging storage at "
                    << destination;
     return Status::IO_ERROR;
