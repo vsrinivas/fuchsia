@@ -15,7 +15,10 @@ source_set("definitions") {
 }
 
 static_library("sm") {
-  # TODO(armansito): sources
+  sources = [
+    "util.cc",
+    "util.h",
+  ]
 
   public_deps = [
     ":definitions",
@@ -25,7 +28,9 @@ static_library("sm") {
 source_set("tests") {
   testonly = true
 
-  # TODO(armansito): sources
+  sources = [
+    "util_unittest.cc",
+  ]
 
   deps = [
     ":sm",

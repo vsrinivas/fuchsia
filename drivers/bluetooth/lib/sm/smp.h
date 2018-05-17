@@ -24,6 +24,21 @@ struct Header {
   Code code;
 } __PACKED;
 
+// Supported pairing methods.
+enum class PairingMethod {
+  // Unauthenticated
+  kJustWorks,
+
+  // Authenticated
+  kPasskeyEntry,
+
+  // Authenticated, LE Secure Connections only.
+  kNumericComparison,
+
+  // Authenticated depending on OOB mechanism
+  kOutOfBand,
+};
+
 enum class IOCapability : uint8_t {
   kDisplayOnly = 0x00,
   kDisplayYesNo = 0x01,
