@@ -29,7 +29,12 @@ template("fidl_rust_library") {
   file_stem = "$fidl_target_gen_dir/$library_name.fidl"
 
   rustc_library(rustc_target_name) {
-    name = "fidl_$library_name"
+    name = exec_script("//build/rust/fidl_crate_from_library.py",
+        [
+          "--name",
+          library_name,
+        ],
+        "trim string")
     version = "0.1.0"
     forward_variables_from(invoker, [ "testonly" ])
     deps = [
