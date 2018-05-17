@@ -56,6 +56,14 @@ function fx-config-read {
     echo >& 2 "error: Cannot read config from ${FUCHSIA_CONFIG}. Did you run \"fx set\"?"
     exit 1
   fi
+
+  # The user may have done "rm -rf out".
+  local -r args_gn_file="${FUCHSIA_BUILD_DIR}/args.gn"
+  if [[ ! -f "$args_gn_file" ]]; then
+    echo >&2 "Build directory problem, args.gn is missing."
+    echo >&2 "Did you \"rm -rf out\" and not rerun \"fx set\"?"
+    exit 1
+  fi
 }
 
 function fx-config-glean-arch {
