@@ -11,18 +11,18 @@ RemoteVsockEndpoint::RemoteVsockEndpoint(uint32_t cid) : VsockEndpoint(cid) {}
 RemoteVsockEndpoint::~RemoteVsockEndpoint() = default;
 
 void RemoteVsockEndpoint::BindSocketEndpoint(
-    guest::SocketEndpointPtr endpoint) {
+    fuchsia::guest::SocketEndpointPtr endpoint) {
   endpoint->SetContextId(cid(), connector_bindings_.AddBinding(this),
                          remote_acceptor_.NewRequest());
 }
 
 void RemoteVsockEndpoint::GetSocketConnector(
-    fidl::InterfaceRequest<guest::SocketConnector> request) {
+    fidl::InterfaceRequest<fuchsia::guest::SocketConnector> request) {
   connector_bindings_.AddBinding(this, std::move(request));
 }
 
 void RemoteVsockEndpoint::SetSocketAcceptor(
-    fidl::InterfaceHandle<guest::SocketAcceptor> handle) {
+    fidl::InterfaceHandle<fuchsia::guest::SocketAcceptor> handle) {
   remote_acceptor_ = handle.Bind();
 }
 

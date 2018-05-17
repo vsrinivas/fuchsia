@@ -12,8 +12,8 @@ static uint32_t g_next_env_id = 0;
 
 GuestManagerImpl::GuestManagerImpl()
     : context_(component::ApplicationContext::CreateFromStartupInfo()) {
-  context_->outgoing().AddPublicService<guest::GuestManager>(
-      [this](fidl::InterfaceRequest<guest::GuestManager> request) {
+  context_->outgoing().AddPublicService<fuchsia::guest::GuestManager>(
+      [this](fidl::InterfaceRequest<fuchsia::guest::GuestManager> request) {
         bindings_.AddBinding(this, std::move(request));
       });
 }
@@ -22,7 +22,7 @@ GuestManagerImpl::~GuestManagerImpl() = default;
 
 void GuestManagerImpl::CreateEnvironment(
     fidl::StringPtr label,
-    fidl::InterfaceRequest<guest::GuestEnvironment> request) {
+    fidl::InterfaceRequest<fuchsia::guest::GuestEnvironment> request) {
   uint32_t env_id = g_next_env_id++;
   auto env = std::make_unique<GuestEnvironmentImpl>(
       env_id, label, context_.get(), std::move(request));
@@ -31,12 +31,12 @@ void GuestManagerImpl::CreateEnvironment(
 }
 
 void GuestManagerImpl::ListEnvironments(ListEnvironmentsCallback callback) {
-  fidl::VectorPtr<guest::GuestEnvironmentInfo> env_infos =
-      fidl::VectorPtr<guest::GuestEnvironmentInfo>::New(0);
+  fidl::VectorPtr<fuchsia::guest::GuestEnvironmentInfo> env_infos =
+      fidl::VectorPtr<fuchsia::guest::GuestEnvironmentInfo>::New(0);
   for (const auto& env : environments_) {
-    fidl::VectorPtr<guest::GuestInfo> guest_infos =
-        fidl::VectorPtr<guest::GuestInfo>::New(0);
-    guest::GuestEnvironmentInfo env_info;
+    fidl::VectorPtr<fuchsia::guest::GuestInfo> guest_infos =
+        fidl::VectorPtr<fuchsia::guest::GuestInfo>::New(0);
+    fuchsia::guest::GuestEnvironmentInfo env_info;
     env_info.id = env.first;
     env_info.label = env.second->label();
     env_info.guests = env.second->ListGuests();
@@ -46,7 +46,8 @@ void GuestManagerImpl::ListEnvironments(ListEnvironmentsCallback callback) {
 }
 
 void GuestManagerImpl::ConnectToEnvironment(
-    uint32_t id, fidl::InterfaceRequest<guest::GuestEnvironment> request) {
+    uint32_t id,
+    fidl::InterfaceRequest<fuchsia::guest::GuestEnvironment> request) {
   const auto& it = environments_.find(id);
   if (it == environments_.end()) {
     return;

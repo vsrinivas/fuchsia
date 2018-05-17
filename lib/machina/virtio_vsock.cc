@@ -32,8 +32,8 @@ VirtioVsock::VirtioVsock(component::ApplicationContext* context,
       tx_stream_(async, tx_queue(), this) {
   config_.guest_cid = 0;
   if (context) {
-    context->outgoing().AddPublicService<guest::SocketEndpoint>(
-        [this](fidl::InterfaceRequest<guest::SocketEndpoint> request) {
+    context->outgoing().AddPublicService<fuchsia::guest::SocketEndpoint>(
+        [this](fidl::InterfaceRequest<fuchsia::guest::SocketEndpoint> request) {
           endpoint_bindings_.AddBinding(this, std::move(request));
         });
   }
@@ -52,8 +52,9 @@ bool VirtioVsock::HasConnection(uint32_t src_cid, uint32_t src_port,
 }
 
 void VirtioVsock::SetContextId(
-    uint32_t cid, fidl::InterfaceHandle<guest::SocketConnector> connector,
-    fidl::InterfaceRequest<guest::SocketAcceptor> acceptor) {
+    uint32_t cid,
+    fidl::InterfaceHandle<fuchsia::guest::SocketConnector> connector,
+    fidl::InterfaceRequest<fuchsia::guest::SocketAcceptor> acceptor) {
   {
     fbl::AutoLock lock(&config_mutex_);
     config_.guest_cid = cid;

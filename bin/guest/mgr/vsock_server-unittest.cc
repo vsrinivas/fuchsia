@@ -26,7 +26,7 @@ struct TestConnection {
   zx::socket socket;
   zx_status_t status = ZX_ERR_BAD_STATE;
 
-  guest::SocketConnector::ConnectCallback callback() {
+  fuchsia::guest::SocketConnector::ConnectCallback callback() {
     return [this](zx_status_t status, zx::socket socket) {
       this->status = status;
       this->socket = std::move(socket);
@@ -36,9 +36,9 @@ struct TestConnection {
 
 static void NoOpConnectCallback(zx_status_t status, zx::socket socket) {}
 
-// A simple |guest::SocketAcceptor| that just retains a list of all connection
-// requests.
-class TestSocketAcceptor : public guest::SocketAcceptor {
+// A simple |fuchsia::guest::SocketAcceptor| that just retains a list of all
+// connection requests.
+class TestSocketAcceptor : public fuchsia::guest::SocketAcceptor {
  public:
   struct ConnectionRequest {
     uint32_t src_cid;
@@ -53,11 +53,11 @@ class TestSocketAcceptor : public guest::SocketAcceptor {
     return std::move(connection_requests_);
   }
 
-  fidl::InterfaceHandle<guest::SocketAcceptor> NewBinding() {
+  fidl::InterfaceHandle<fuchsia::guest::SocketAcceptor> NewBinding() {
     return binding_.NewBinding();
   }
 
-  // |guest::SocketAcceptor|
+  // |fuchsia::guest::SocketAcceptor|
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
               AcceptCallback callback) override {
     connection_requests_.emplace_back(
@@ -66,14 +66,14 @@ class TestSocketAcceptor : public guest::SocketAcceptor {
 
  private:
   std::vector<ConnectionRequest> connection_requests_;
-  fidl::Binding<guest::SocketAcceptor> binding_{this};
+  fidl::Binding<fuchsia::guest::SocketAcceptor> binding_{this};
 };
 
 class TestVsockEndpoint : public VsockEndpoint, public TestSocketAcceptor {
  public:
   TestVsockEndpoint(uint32_t cid) : VsockEndpoint(cid) {}
 
-  // |guest::SocketAcceptor|
+  // |fuchsia::guest::SocketAcceptor|
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
               AcceptCallback callback) override {
     TestSocketAcceptor::Accept(src_cid, src_port, port, std::move(callback));

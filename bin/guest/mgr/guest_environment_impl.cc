@@ -11,11 +11,11 @@ namespace guestmgr {
 GuestEnvironmentImpl::GuestEnvironmentImpl(
     uint32_t id, const std::string& label,
     component::ApplicationContext* context,
-    fidl::InterfaceRequest<guest::GuestEnvironment> request)
+    fidl::InterfaceRequest<fuchsia::guest::GuestEnvironment> request)
     : id_(id),
       label_(label),
       context_(context),
-      host_socket_endpoint_(guest::kHostCid) {
+      host_socket_endpoint_(fuchsia::guest::kHostCid) {
   CreateApplicationEnvironment(label);
   AddBinding(std::move(request));
   FXL_CHECK(socket_server_.AddEndpoint(&host_socket_endpoint_) == ZX_OK);
@@ -33,8 +33,8 @@ void GuestEnvironmentImpl::set_unbound_handler(std::function<void()> handler) {
 }
 
 void GuestEnvironmentImpl::LaunchGuest(
-    guest::GuestLaunchInfo launch_info,
-    fidl::InterfaceRequest<guest::GuestController> controller,
+    fuchsia::guest::GuestLaunchInfo launch_info,
+    fidl::InterfaceRequest<fuchsia::guest::GuestController> controller,
     LaunchGuestCallback callback) {
   component::Services guest_services;
   component::ApplicationControllerPtr guest_app_controller;
@@ -53,10 +53,10 @@ void GuestEnvironmentImpl::LaunchGuest(
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to allocate socked endpoint on CID " << cid
                    << ": " << status;
-    callback(guest::GuestInfo());
+    callback(fuchsia::guest::GuestInfo());
     return;
   }
-  guest::SocketEndpointPtr remote_endpoint;
+  fuchsia::guest::SocketEndpointPtr remote_endpoint;
   guest_services.ConnectToService(remote_endpoint.NewRequest());
   vsock_endpoint->BindSocketEndpoint(std::move(remote_endpoint));
 
@@ -68,22 +68,22 @@ void GuestEnvironmentImpl::LaunchGuest(
   holder->AddBinding(std::move(controller));
   guests_.insert({cid, std::move(holder)});
 
-  guest::GuestInfo info;
+  fuchsia::guest::GuestInfo info;
   info.cid = cid;
   info.label = label;
   callback(std::move(info));
 }
 
 void GuestEnvironmentImpl::GetHostSocketEndpoint(
-    fidl::InterfaceRequest<guest::ManagedSocketEndpoint> request) {
+    fidl::InterfaceRequest<fuchsia::guest::ManagedSocketEndpoint> request) {
   host_socket_endpoint_.AddBinding(std::move(request));
 }
 
-fidl::VectorPtr<guest::GuestInfo> GuestEnvironmentImpl::ListGuests() {
-  fidl::VectorPtr<guest::GuestInfo> guest_infos =
-      fidl::VectorPtr<guest::GuestInfo>::New(0);
+fidl::VectorPtr<fuchsia::guest::GuestInfo> GuestEnvironmentImpl::ListGuests() {
+  fidl::VectorPtr<fuchsia::guest::GuestInfo> guest_infos =
+      fidl::VectorPtr<fuchsia::guest::GuestInfo>::New(0);
   for (const auto& it : guests_) {
-    guest::GuestInfo guest_info;
+    fuchsia::guest::GuestInfo guest_info;
     guest_info.cid = it.first;
     guest_info.label = it.second->label();
     guest_infos.push_back(std::move(guest_info));
@@ -96,7 +96,8 @@ void GuestEnvironmentImpl::ListGuests(ListGuestsCallback callback) {
 }
 
 void GuestEnvironmentImpl::ConnectToGuest(
-    uint32_t id, fidl::InterfaceRequest<guest::GuestController> request) {
+    uint32_t id,
+    fidl::InterfaceRequest<fuchsia::guest::GuestController> request) {
   const auto& it = guests_.find(id);
   if (it == guests_.end()) {
     return;

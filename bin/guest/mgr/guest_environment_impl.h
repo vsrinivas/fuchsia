@@ -6,7 +6,7 @@
 #define GARNET_BIN_GUEST_MGR_GUEST_ENVIRONMENT_IMPL_H_
 
 #include <component/cpp/fidl.h>
-#include <guest/cpp/fidl.h>
+#include <fuchsia/guest/cpp/fidl.h>
 #include <unordered_map>
 
 #include "garnet/bin/guest/mgr/guest_holder.h"
@@ -24,16 +24,17 @@ namespace guestmgr {
 // guest in the environment.
 static constexpr uint32_t kFirstGuestCid = 3;
 
-class GuestEnvironmentImpl : public guest::GuestEnvironment {
+class GuestEnvironmentImpl : public fuchsia::guest::GuestEnvironment {
  public:
-  GuestEnvironmentImpl(uint32_t id, const std::string& label,
-                       component::ApplicationContext* context,
-                       fidl::InterfaceRequest<guest::GuestEnvironment> request);
+  GuestEnvironmentImpl(
+      uint32_t id, const std::string& label,
+      component::ApplicationContext* context,
+      fidl::InterfaceRequest<fuchsia::guest::GuestEnvironment> request);
   ~GuestEnvironmentImpl() override;
 
   void AddBinding(fidl::InterfaceRequest<GuestEnvironment> request);
 
-  fidl::VectorPtr<guest::GuestInfo> ListGuests();
+  fidl::VectorPtr<fuchsia::guest::GuestInfo> ListGuests();
   uint32_t id() const { return id_; }
   const std::string& label() const { return label_; }
 
@@ -42,16 +43,18 @@ class GuestEnvironmentImpl : public guest::GuestEnvironment {
   void set_unbound_handler(std::function<void()> handler);
 
  private:
-  // |guest::GuestEnvironment|
-  void LaunchGuest(guest::GuestLaunchInfo launch_info,
-                   fidl::InterfaceRequest<guest::GuestController> controller,
-                   LaunchGuestCallback callback) override;
+  // |fuchsia::guest::GuestEnvironment|
+  void LaunchGuest(
+      fuchsia::guest::GuestLaunchInfo launch_info,
+      fidl::InterfaceRequest<fuchsia::guest::GuestController> controller,
+      LaunchGuestCallback callback) override;
   void ListGuests(ListGuestsCallback callback) override;
-  void ConnectToGuest(
-      uint32_t id,
-      fidl::InterfaceRequest<guest::GuestController> controller) override;
+  void ConnectToGuest(uint32_t id,
+                      fidl::InterfaceRequest<fuchsia::guest::GuestController>
+                          controller) override;
   void GetHostSocketEndpoint(
-      fidl::InterfaceRequest<guest::ManagedSocketEndpoint> endpoint) override;
+      fidl::InterfaceRequest<fuchsia::guest::ManagedSocketEndpoint> endpoint)
+      override;
 
   void CreateApplicationEnvironment(const std::string& label);
 
@@ -59,7 +62,7 @@ class GuestEnvironmentImpl : public guest::GuestEnvironment {
   const std::string label_;
 
   component::ApplicationContext* context_;
-  fidl::BindingSet<guest::GuestEnvironment> bindings_;
+  fidl::BindingSet<fuchsia::guest::GuestEnvironment> bindings_;
 
   component::ApplicationEnvironmentPtr env_;
   component::ApplicationEnvironmentControllerPtr env_controller_;

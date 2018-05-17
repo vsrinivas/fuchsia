@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_GUEST_MGR_VSOCK_ENDPOINT_H_
 #define GARNET_BIN_GUEST_MGR_VSOCK_ENDPOINT_H_
 
-#include <guest/cpp/fidl.h>
+#include <fuchsia/guest/cpp/fidl.h>
 #include <unordered_map>
 
 #include "lib/fidl/cpp/binding_set.h"
@@ -28,8 +28,8 @@ class VsockServer;
 // For both cases, we provide an implementation of |SocketConnector| that can
 // be used for those components to establish out-bound socket connections. In
 // both cases the provided |SocketConnector| is bound to the endpoints CID.
-class VsockEndpoint : public guest::SocketConnector,
-                      public guest::SocketAcceptor {
+class VsockEndpoint : public fuchsia::guest::SocketConnector,
+                      public fuchsia::guest::SocketAcceptor {
  public:
   VsockEndpoint(uint32_t cid);
   ~VsockEndpoint() override;
@@ -38,7 +38,7 @@ class VsockEndpoint : public guest::SocketConnector,
 
   void set_vsock_server(VsockServer* server) { vsock_server_ = server; }
 
-  // |guest::SocketConnector|
+  // |fuchsia::guest::SocketConnector|
   void Connect(uint32_t port, uint32_t dest_cid, uint32_t dest_port,
                ConnectCallback callback) override;
 

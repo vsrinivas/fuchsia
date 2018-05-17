@@ -8,6 +8,7 @@
 #include <iostream>
 
 #include <fdio/util.h>
+#include <fuchsia/guest/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 
 #include "lib/app/cpp/environment_services.h"
@@ -94,9 +95,7 @@ class OutputWriter : public fsl::SocketDrainer::Client {
     std::cout.flush();
   }
 
-  void OnDataComplete() override {
-    loop_->Shutdown();
-  }
+  void OnDataComplete() override { loop_->Shutdown(); }
 
  private:
   async::Loop* loop_;
@@ -124,12 +123,12 @@ void handle_serial(uint32_t env_id, uint32_t cid) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   // Connect to environment.
-  guest::GuestManagerSyncPtr guestmgr;
+  fuchsia::guest::GuestManagerSyncPtr guestmgr;
   component::ConnectToEnvironmentService(guestmgr.NewRequest());
-  guest::GuestEnvironmentSyncPtr env_ptr;
+  fuchsia::guest::GuestEnvironmentSyncPtr env_ptr;
   guestmgr->ConnectToEnvironment(env_id, env_ptr.NewRequest());
 
-  guest::GuestControllerSyncPtr guest_controller;
+  fuchsia::guest::GuestControllerSyncPtr guest_controller;
   env_ptr->ConnectToGuest(cid, guest_controller.NewRequest());
 
   // Open the serial service of the guest and process IO.

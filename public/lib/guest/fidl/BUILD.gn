@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
-  name = "guest"
+  name = "fuchsia.guest"
 
   sources = [
     "guest_controller.fidl",

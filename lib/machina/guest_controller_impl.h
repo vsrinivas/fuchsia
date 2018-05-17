@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_MACHINA_GUEST_CONTROLLER_IMPL_H_
 #define GARNET_LIB_MACHINA_GUEST_CONTROLLER_IMPL_H_
 
-#include <guest/cpp/fidl.h>
+#include <fuchsia/guest/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 
 #include "garnet/lib/machina/phys_mem.h"
@@ -14,9 +14,9 @@
 
 namespace machina {
 
-// Provides an implementation of the |guest::GuestController| interface. This
-// exposes some guest services over FIDL.
-class GuestControllerImpl : public guest::GuestController {
+// Provides an implementation of the |fuchsi::guest::GuestController| interface.
+// This exposes some guest services over FIDL.
+class GuestControllerImpl : public fuchsia::guest::GuestController {
  public:
   GuestControllerImpl(component::ApplicationContext* application_context,
                       const PhysMem& phys_mem);
@@ -30,14 +30,14 @@ class GuestControllerImpl : public guest::GuestController {
   // via |GetSerial|.
   zx::socket TakeSocket() { return fbl::move(server_socket_); }
 
-  // |guest::GuestController|
+  // |fuchsia::guest::GuestController|
   void GetPhysicalMemory(GetPhysicalMemoryCallback callback) override;
   void GetSerial(GetSerialCallback callback) override;
   void GetViewProvider(
       fidl::InterfaceRequest<views_v1::ViewProvider> view_provider) override;
 
  private:
-  fidl::BindingSet<guest::GuestController> bindings_;
+  fidl::BindingSet<fuchsia::guest::GuestController> bindings_;
   fidl::BindingSet<views_v1::ViewProvider> view_provider_bindings_;
 
   const zx::vmo vmo_;

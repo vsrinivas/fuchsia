@@ -5,7 +5,7 @@
 #include "garnet/bin/guest/cli/socat.h"
 #include <iostream>
 
-#include <guest/cpp/fidl.h>
+#include <fuchsia/guest/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/bin/guest/cli/serial.h"
@@ -13,7 +13,7 @@
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/logging.h"
 
-class SocketAcceptor : public guest::SocketAcceptor {
+class SocketAcceptor : public fuchsia::guest::SocketAcceptor {
  public:
   SocketAcceptor(uint32_t port, async::Loop* loop)
       : port_(port), console_(loop) {}
@@ -39,16 +39,16 @@ class SocketAcceptor : public guest::SocketAcceptor {
 void handle_socat_listen(uint32_t env_id, uint32_t port) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  guest::GuestManagerSyncPtr guestmgr;
+  fuchsia::guest::GuestManagerSyncPtr guestmgr;
   component::ConnectToEnvironmentService(guestmgr.NewRequest());
-  guest::GuestEnvironmentSyncPtr guest_env;
+  fuchsia::guest::GuestEnvironmentSyncPtr guest_env;
   guestmgr->ConnectToEnvironment(env_id, guest_env.NewRequest());
 
-  guest::ManagedSocketEndpointSyncPtr vsock_endpoint;
+  fuchsia::guest::ManagedSocketEndpointSyncPtr vsock_endpoint;
   guest_env->GetHostSocketEndpoint(vsock_endpoint.NewRequest());
 
   SocketAcceptor acceptor(port, &loop);
-  fidl::Binding<guest::SocketAcceptor> binding(&acceptor);
+  fidl::Binding<fuchsia::guest::SocketAcceptor> binding(&acceptor);
   zx_status_t status;
   vsock_endpoint->Listen(port, binding.NewBinding(), &status);
   if (status != ZX_OK) {
@@ -62,14 +62,14 @@ void handle_socat_listen(uint32_t env_id, uint32_t port) {
 void handle_socat_connect(uint32_t env_id, uint32_t cid, uint32_t port) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  guest::GuestManagerSyncPtr guestmgr;
+  fuchsia::guest::GuestManagerSyncPtr guestmgr;
   component::ConnectToEnvironmentService(guestmgr.NewRequest());
-  guest::GuestEnvironmentSyncPtr guest_env;
+  fuchsia::guest::GuestEnvironmentSyncPtr guest_env;
   guestmgr->ConnectToEnvironment(env_id, guest_env.NewRequest());
 
   zx_status_t status;
   zx::socket socket;
-  guest::ManagedSocketEndpointSyncPtr vsock_endpoint;
+  fuchsia::guest::ManagedSocketEndpointSyncPtr vsock_endpoint;
   guest_env->GetHostSocketEndpoint(vsock_endpoint.NewRequest());
 
   vsock_endpoint->Connect(cid, port, &status, &socket);

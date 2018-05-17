@@ -16,7 +16,7 @@ HostVsockEndpoint::HostVsockEndpoint(uint32_t cid) : VsockEndpoint(cid) {}
 HostVsockEndpoint::~HostVsockEndpoint() = default;
 
 void HostVsockEndpoint::AddBinding(
-    fidl::InterfaceRequest<guest::ManagedSocketEndpoint> request) {
+    fidl::InterfaceRequest<fuchsia::guest::ManagedSocketEndpoint> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
@@ -55,7 +55,7 @@ void HostVsockEndpoint::Listen(uint32_t port,
 
 void HostVsockEndpoint::Connect(
     uint32_t cid, uint32_t port,
-    guest::ManagedSocketEndpoint::ConnectCallback callback) {
+    fuchsia::guest::ManagedSocketEndpoint::ConnectCallback callback) {
   uint32_t src_port;
   zx_status_t status = FindEphemeralPort(&src_port);
   if (status != ZX_OK) {
@@ -72,7 +72,7 @@ void HostVsockEndpoint::Connect(
 
 void HostVsockEndpoint::ConnectCallback(
     zx_status_t status, zx::socket socket, uint32_t src_port,
-    guest::ManagedSocketEndpoint::ConnectCallback callback) {
+    fuchsia::guest::ManagedSocketEndpoint::ConnectCallback callback) {
   auto free_port =
       fbl::MakeAutoCall([this, src_port]() { FreePort(src_port); });
   if (status != ZX_OK) {

@@ -4,7 +4,7 @@
 
 #include "garnet/bin/guest/cli/dump.h"
 
-#include <guest/cpp/fidl.h>
+#include <fuchsia/guest/cpp/fidl.h>
 #include <pretty/hexdump.h>
 #include <iostream>
 
@@ -36,12 +36,12 @@ static void dump(zx::vmo vmo, zx_vaddr_t addr, size_t len) {
 
 void handle_dump(uint32_t env_id, uint32_t cid, zx_vaddr_t addr, size_t len) {
   // Connect to environment.
-  guest::GuestManagerSyncPtr guestmgr;
+  fuchsia::guest::GuestManagerSyncPtr guestmgr;
   component::ConnectToEnvironmentService(guestmgr.NewRequest());
-  guest::GuestEnvironmentSyncPtr env_ptr;
+  fuchsia::guest::GuestEnvironmentSyncPtr env_ptr;
   guestmgr->ConnectToEnvironment(env_id, env_ptr.NewRequest());
 
-  guest::GuestControllerSyncPtr guest_controller;
+  fuchsia::guest::GuestControllerSyncPtr guest_controller;
   env_ptr->ConnectToGuest(cid, guest_controller.NewRequest());
 
   // Fetch the VMO and dump.

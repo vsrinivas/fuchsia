@@ -7,14 +7,14 @@
 
 #include "garnet/bin/guest/mgr/vsock_endpoint.h"
 
-#include <guest/cpp/fidl.h>
+#include <fuchsia/guest/cpp/fidl.h>
 
 namespace guestmgr {
 
 // A |VsockEndpoint| that delegates most work to a remote endpoint using the
-// |guest::SocketAcceptor| and |guest::SocketConnector| interfaces.
-// Specifically the remote component is responsible for the allocation of out-
-// bound ports and accepting all in-bound connections.
+// |fuchsia::guest::SocketAcceptor| and |fuchsia::guest::SocketConnector|
+// interfaces. Specifically the remote component is responsible for the
+// allocation of out-bound ports and accepting all in-bound connections.
 //
 // For example, a guest vsock driver will maintain state around what ports are
 // being listened on and track ephemeral port usage for out-bound connections.
@@ -25,22 +25,23 @@ class RemoteVsockEndpoint : public VsockEndpoint {
 
   // Called to bind both the |SocketConnector| and |SocketAcceptor| to a single
   // |SocketEndpoint|.
-  void BindSocketEndpoint(guest::SocketEndpointPtr endpoint);
+  void BindSocketEndpoint(fuchsia::guest::SocketEndpointPtr endpoint);
 
   // Binds |request| to a |SocketConnector| for this endpoint.
   void GetSocketConnector(
-      fidl::InterfaceRequest<guest::SocketConnector> request);
+      fidl::InterfaceRequest<fuchsia::guest::SocketConnector> request);
 
   // Sets the |SocketAcceptor| to use for requests to this endpoint's |CID|.
-  void SetSocketAcceptor(fidl::InterfaceHandle<guest::SocketAcceptor> handle);
+  void SetSocketAcceptor(
+      fidl::InterfaceHandle<fuchsia::guest::SocketAcceptor> handle);
 
-  // |guest::SocketAcceptor|
+  // |fuchsia::guest::SocketAcceptor|
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
               AcceptCallback callback) override;
 
  private:
-  fidl::BindingSet<guest::SocketConnector> connector_bindings_;
-  guest::SocketAcceptorPtr remote_acceptor_;
+  fidl::BindingSet<fuchsia::guest::SocketConnector> connector_bindings_;
+  fuchsia::guest::SocketAcceptorPtr remote_acceptor_;
 };
 
 }  // namespace guestmgr

@@ -20,7 +20,7 @@ GuestHolder::GuestHolder(
 }
 
 void GuestHolder::AddBinding(
-    fidl::InterfaceRequest<guest::GuestController> request) {
+    fidl::InterfaceRequest<fuchsia::guest::GuestController> request) {
   bindings_.AddBinding(guest_controller_.get(), std::move(request));
 }
 

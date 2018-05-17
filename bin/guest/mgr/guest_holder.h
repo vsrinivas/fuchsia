@@ -6,7 +6,7 @@
 #define GARNET_BIN_GUEST_MGR_GUEST_HOLDER_H_
 
 #include <component/cpp/fidl.h>
-#include <guest/cpp/fidl.h>
+#include <fuchsia/guest/cpp/fidl.h>
 
 #include "garnet/bin/guest/mgr/remote_vsock_endpoint.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -27,7 +27,8 @@ class GuestHolder {
   uint32_t cid() const { return cid_; }
   const std::string& label() const { return label_; }
 
-  void AddBinding(fidl::InterfaceRequest<guest::GuestController> controller);
+  void AddBinding(
+      fidl::InterfaceRequest<fuchsia::guest::GuestController> controller);
 
  private:
   const uint32_t cid_;
@@ -35,9 +36,9 @@ class GuestHolder {
   std::unique_ptr<RemoteVsockEndpoint> socket_endpoint_;
   component::Services guest_services_;
   component::ApplicationControllerPtr guest_app_controller_;
-  guest::GuestControllerPtr guest_controller_;
+  fuchsia::guest::GuestControllerPtr guest_controller_;
 
-  fidl::BindingSet<guest::GuestController> bindings_;
+  fidl::BindingSet<fuchsia::guest::GuestController> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GuestHolder);
 };

@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include <guest/cpp/fidl.h>
+#include <fuchsia/guest/cpp/fidl.h>
 #include <virtio/virtio_ids.h>
 #include <virtio/vsock.h>
 #include <zx/socket.h>
@@ -25,8 +25,8 @@ static constexpr uint16_t kVirtioVsockNumQueues = 3;
 class VirtioVsock
     : public VirtioDeviceBase<VIRTIO_ID_VSOCK, kVirtioVsockNumQueues,
                               virtio_vsock_config_t>,
-      public guest::SocketEndpoint,
-      public guest::SocketAcceptor {
+      public fuchsia::guest::SocketEndpoint,
+      public fuchsia::guest::SocketAcceptor {
  public:
   VirtioVsock(component::ApplicationContext* context, const PhysMem&,
               async_t* async);
@@ -44,11 +44,12 @@ class VirtioVsock
   VirtioQueue* tx_queue() { return queue(1); }
 
  private:
-  // |guest::SocketEndpoint|
+  // |fuchsia::guest::SocketEndpoint|
   void SetContextId(
-      uint32_t cid, fidl::InterfaceHandle<guest::SocketConnector> connector,
-      fidl::InterfaceRequest<guest::SocketAcceptor> acceptor) override;
-  // |guest::SocketAcceptor|
+      uint32_t cid,
+      fidl::InterfaceHandle<fuchsia::guest::SocketConnector> connector,
+      fidl::InterfaceRequest<fuchsia::guest::SocketAcceptor> acceptor) override;
+  // |fuchsia::guest::SocketAcceptor|
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
               AcceptCallback callback) override;
 
@@ -84,7 +85,7 @@ class VirtioVsock
     zx::socket remote_socket;
     async::Wait rx_wait;
     async::Wait tx_wait;
-    guest::SocketAcceptor::AcceptCallback acceptor;
+    fuchsia::guest::SocketAcceptor::AcceptCallback acceptor;
 
     uint32_t peer_free() const {
       return peer_buf_alloc - (tx_cnt - peer_fwd_cnt);
@@ -145,9 +146,9 @@ class VirtioVsock
   ConnectionSet writable_ __TA_GUARDED(mutex_);
   // NOTE(abdulla): We ignore the event queue, as we don't support VM migration.
 
-  fidl::BindingSet<guest::SocketAcceptor> acceptor_bindings_;
-  fidl::BindingSet<guest::SocketEndpoint> endpoint_bindings_;
-  guest::SocketConnectorPtr connector_;
+  fidl::BindingSet<fuchsia::guest::SocketAcceptor> acceptor_bindings_;
+  fidl::BindingSet<fuchsia::guest::SocketEndpoint> endpoint_bindings_;
+  fuchsia::guest::SocketConnectorPtr connector_;
 };
 
 }  // namespace machina

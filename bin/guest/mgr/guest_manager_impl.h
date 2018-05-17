@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_GUEST_MGR_GUEST_MANAGER_IMPL_H_
 #define GARNET_BIN_GUEST_MGR_GUEST_MANAGER_IMPL_H_
 
-#include <guest/cpp/fidl.h>
+#include <fuchsia/guest/cpp/fidl.h>
 
 #include <unordered_map>
 
@@ -16,23 +16,23 @@
 
 namespace guestmgr {
 
-class GuestManagerImpl : public guest::GuestManager {
+class GuestManagerImpl : public fuchsia::guest::GuestManager {
  public:
   GuestManagerImpl();
   ~GuestManagerImpl() override;
 
  private:
-  // |guest::GuestManager|
+  // |fuchsia::guest::GuestManager|
   void CreateEnvironment(
       fidl::StringPtr label,
-      fidl::InterfaceRequest<guest::GuestEnvironment> env) override;
+      fidl::InterfaceRequest<fuchsia::guest::GuestEnvironment> env) override;
   void ListEnvironments(ListEnvironmentsCallback callback) override;
   void ConnectToEnvironment(
       uint32_t id,
-      fidl::InterfaceRequest<guest::GuestEnvironment> env) override;
+      fidl::InterfaceRequest<fuchsia::guest::GuestEnvironment> env) override;
 
   std::unique_ptr<component::ApplicationContext> context_;
-  fidl::BindingSet<guest::GuestManager> bindings_;
+  fidl::BindingSet<fuchsia::guest::GuestManager> bindings_;
   std::unordered_map<uint32_t, std::unique_ptr<GuestEnvironmentImpl>>
       environments_;
 
