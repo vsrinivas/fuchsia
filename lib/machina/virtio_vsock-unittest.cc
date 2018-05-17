@@ -14,15 +14,30 @@ namespace {
 static constexpr size_t kDataSize = 4;
 
 struct RxBuffer {
+  // The number of virtio descriptors to use for this buffer.
+  static constexpr size_t kNumDescriptors = 3;
+
   virtio_vsock_hdr_t header;
-  uint8_t data[kDataSize];
-} __PACKED;
+  uint8_t data[kDataSize] __ALIGNED(16);
+  uint8_t data2[kDataSize] __ALIGNED(16);
+};
+
+// Ensure we have padding bytes in our structure so we don't have contiguous
+// descriptors.
+static_assert(offsetof(RxBuffer, data) > sizeof(RxBuffer::header),
+              "RxBuffer::data is adjacent to RxBuffer::header");
+static_assert(offsetof(RxBuffer, data2) >
+                  offsetof(RxBuffer, data) + sizeof(RxBuffer::data),
+              "RxBuffer::data2 is adjacent to RxBuffer::data");
 
 static constexpr uint32_t kVirtioVsockHostPort = 22;
 static constexpr uint32_t kVirtioVsockGuestCid = 3;
 static constexpr uint32_t kVirtioVsockGuestPort = 23;
 static constexpr uint32_t kVirtioVsockGuestEphemeralPort = 1024;
-static constexpr uint16_t kVirtioVsockQueueSize = 32;
+static constexpr uint16_t kVirtioVsockRxBuffers = 8;
+static constexpr uint16_t kVirtioVsockQueueSize =
+    kVirtioVsockRxBuffers * RxBuffer::kNumDescriptors;
+static const std::vector<uint8_t> kDefaultData = {1, 9, 8, 5};
 
 struct ConnectionRequest {
   uint32_t src_port;
@@ -76,7 +91,7 @@ class VirtioVsockTest : public testing::Test, public guest::SocketConnector {
   std::vector<zx::socket> remote_sockets_;
   std::vector<ConnectionRequest> connection_requests_;
   std::vector<ConnectionRequest> connections_established_;
-  RxBuffer rx_buffers[kVirtioVsockQueueSize] = {};
+  RxBuffer rx_buffers[kVirtioVsockRxBuffers] = {};
 
   // |guest::SocketConnector|
   void Connect(uint32_t src_port, uint32_t cid, uint32_t port,
@@ -104,7 +119,7 @@ class VirtioVsockTest : public testing::Test, public guest::SocketConnector {
       return nullptr;
     }
     vring_used_elem used_elem = rx_queue_.NextUsed();
-    return &rx_buffers[used_elem.id];
+    return &rx_buffers[used_elem.id / RxBuffer::kNumDescriptors];
   }
 
   void DoSend(uint32_t host_port, uint32_t guest_port, uint16_t type,
@@ -143,25 +158,38 @@ class VirtioVsockTest : public testing::Test, public guest::SocketConnector {
 
   void FillRxQueue() {
     for (size_t i = 0; i < countof(rx_buffers); ++i) {
-      ASSERT_EQ(rx_queue_.BuildDescriptor()
-                    .AppendWritable(&rx_buffers[i], sizeof(rx_buffers[i]))
-                    .Build(),
-                ZX_OK);
+      ASSERT_EQ(
+          rx_queue_.BuildDescriptor()
+              .AppendWritable(&rx_buffers[i].header,
+                              sizeof(rx_buffers[i].header))
+              .AppendWritable(&rx_buffers[i].data, sizeof(rx_buffers[i].data))
+              .AppendWritable(&rx_buffers[i].data2, sizeof(rx_buffers[i].data2))
+              .Build(),
+          ZX_OK);
     }
   }
 
-  void HostReadOnPort(uint32_t host_port, zx::socket* socket) {
-    uint8_t expected_data[kDataSize] = {1, 9, 8, 5};
+  void HostReadOnPort(uint32_t host_port, zx::socket* socket,
+                      std::vector<uint8_t> expected = kDefaultData) {
     size_t actual;
-    ASSERT_EQ(socket->write(0, expected_data, sizeof(expected_data), &actual),
+    ASSERT_EQ(socket->write(0, expected.data(), expected.size(), &actual),
               ZX_OK);
-    EXPECT_EQ(actual, kDataSize);
+    EXPECT_EQ(actual, expected.size());
 
     RxBuffer* rx_buffer = DoReceive();
     ASSERT_NE(nullptr, rx_buffer);
-    VerifyHeader(&rx_buffer->header, host_port, kVirtioVsockGuestPort, 4,
-                 VIRTIO_VSOCK_OP_RW, 0);
-    EXPECT_EQ(memcmp(rx_buffer->data, expected_data, kDataSize), 0);
+    VerifyHeader(&rx_buffer->header, host_port, kVirtioVsockGuestPort,
+                 expected.size(), VIRTIO_VSOCK_OP_RW, 0);
+
+    // Verify the data, which may be spread across multiple descriptors.
+    EXPECT_EQ(memcmp(rx_buffer->data, expected.data(),
+                     expected.size() > kDataSize ? kDataSize : expected.size()),
+              0);
+    if (expected.size() > kDataSize) {
+      EXPECT_EQ(memcmp(rx_buffer->data2, expected.data() + kDataSize,
+                       expected.size() - kDataSize),
+                0);
+    }
   }
 
   void HostQueueWriteOnPort(uint32_t host_port, uint8_t* tx_buffer,
@@ -398,11 +426,27 @@ TEST_F(VirtioVsockTest, WriteAfterShutdown) {
 }
 
 TEST_F(VirtioVsockTest, Read) {
+  // Fill a single data buffer in the RxBuffer.
+  std::vector<uint8_t> data = {1, 2, 3, 4};
+  ASSERT_EQ(data.size(), kDataSize);
+
   TestConnection connection;
   HostConnectOnPortRequest(kVirtioVsockHostPort, connection.callback());
   HostConnectOnPortResponse(kVirtioVsockHostPort);
-  HostReadOnPort(kVirtioVsockHostPort, &connection.socket);
-  HostReadOnPort(kVirtioVsockHostPort, &connection.socket);
+  HostReadOnPort(kVirtioVsockHostPort, &connection.socket, data);
+  HostReadOnPort(kVirtioVsockHostPort, &connection.socket, data);
+}
+
+TEST_F(VirtioVsockTest, ReadChained) {
+  // Fill both data buffers in the RxBuffer.
+  std::vector<uint8_t> data = {1, 2, 3, 4, 5, 6, 7, 8};
+  ASSERT_EQ(data.size(), 2 * kDataSize);
+
+  TestConnection connection;
+  HostConnectOnPortRequest(kVirtioVsockHostPort, connection.callback());
+  HostConnectOnPortResponse(kVirtioVsockHostPort);
+  HostReadOnPort(kVirtioVsockHostPort, &connection.socket, data);
+  HostReadOnPort(kVirtioVsockHostPort, &connection.socket, data);
 }
 
 TEST_F(VirtioVsockTest, Write) {
@@ -528,7 +572,7 @@ TEST_F(VirtioVsockTest, MultipleConnections) {
                            b_connection.callback());
   HostConnectOnPortResponse(kVirtioVsockHostPort + 2000);
 
-  for (auto i = 0; i < (kVirtioVsockQueueSize / 4); i++) {
+  for (auto i = 0; i < (kVirtioVsockRxBuffers / 4); i++) {
     HostReadOnPort(kVirtioVsockHostPort + 1000, &a_connection.socket);
     HostReadOnPort(kVirtioVsockHostPort + 2000, &b_connection.socket);
     HostWriteOnPort(kVirtioVsockHostPort + 1000, &a_connection.socket);

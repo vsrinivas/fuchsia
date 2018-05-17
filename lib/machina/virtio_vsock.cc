@@ -208,6 +208,9 @@ zx_status_t VirtioVsock::WaitOnQueueLocked(ConnectionKey key,
 
 void VirtioVsock::WaitOnSocketLocked(zx_status_t status, ConnectionKey key,
                                      async::Wait* wait) {
+  if (status == ZX_ERR_SHOULD_WAIT) {
+    status = ZX_OK;
+  }
   if (status == ZX_OK && !wait->is_pending()) {
     status = wait->Begin(async_);
   }
@@ -391,17 +394,11 @@ zx_status_t VirtioVsock::SendMessageForConnectionLocked(
       return WaitOnQueueLocked(key, &writable_, &tx_stream_);
     }
     case VIRTIO_VSOCK_OP_RESPONSE:
-      // We are sending a connection response, therefore we move to ready to
-      // read/write.
-      conn->op = VIRTIO_VSOCK_OP_RW;
-      WaitOnSocketLocked(ZX_OK, key, &conn->tx_wait);
-      return ZX_OK;
-    case VIRTIO_VSOCK_OP_CREDIT_UPDATE: {
-      // We are sending a credit update, therefore we move to ready to
-      // read/write.
+    case VIRTIO_VSOCK_OP_CREDIT_UPDATE:
+      // We are sending a response or credit update, therefore we move to ready
+      // to read/write.
       conn->op = VIRTIO_VSOCK_OP_RW;
       return ZX_OK;
-    }
     case VIRTIO_VSOCK_OP_RW: {
       // We are reading from the socket.
       desc.addr = header + 1;
@@ -410,7 +407,9 @@ zx_status_t VirtioVsock::SendMessageForConnectionLocked(
       do {
         size_t actual;
         status = conn->socket.read(0, desc.addr, desc.len, &actual);
-        *used += actual;
+        if (status == ZX_OK) {
+          *used += actual;
+        }
         if (status != ZX_OK || !desc.has_next || actual < desc.len) {
           break;
         }
