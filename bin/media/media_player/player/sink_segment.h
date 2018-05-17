@@ -6,6 +6,7 @@
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_PLAYER_SINK_SEGMENT_H_
 
 #include "garnet/bin/media/media_player/framework/graph.h"
+#include "garnet/bin/media/media_player/framework/result.h"
 #include "garnet/bin/media/media_player/framework/types/stream_type.h"
 #include "garnet/bin/media/media_player/player/segment.h"
 #include "lib/media/timeline/timeline_function.h"
@@ -19,6 +20,8 @@ namespace media_player {
 // notify of changes to the value returned by end_of_stream().
 class SinkSegment : public Segment {
  public:
+  using ConnectCallback = std::function<void(Result)>;
+
   SinkSegment();
 
   ~SinkSegment() override;
@@ -26,9 +29,8 @@ class SinkSegment : public Segment {
   // Connects (or reconnects) this sink segment to the specified output and
   // sets the stream type. After the callback is called, success can be
   // determined by calling |connected|.
-  virtual void Connect(const StreamType& type,
-                       OutputRef output,
-                       fxl::Closure callback) = 0;
+  virtual void Connect(const StreamType& type, OutputRef output,
+                       ConnectCallback callback) = 0;
 
   // Disconnects this sink segment.
   virtual void Disconnect() = 0;
@@ -54,8 +56,7 @@ class SinkSegment : public Segment {
                                    fxl::Closure callback) = 0;
 
   // Sets a program range for this sink segment.
-  virtual void SetProgramRange(uint64_t program,
-                               int64_t min_pts,
+  virtual void SetProgramRange(uint64_t program, int64_t min_pts,
                                int64_t max_pts) = 0;
 
   // Indicates whether this sink segment has reached end of stream.

@@ -29,9 +29,8 @@ class FakeSinkSegment : public SinkSegment {
 
   void WillDeprovision() override { will_deprovision_called_ = true; }
 
-  void Connect(const StreamType& type,
-               OutputRef output,
-               fxl::Closure callback) override {
+  void Connect(const StreamType& type, OutputRef output,
+               ConnectCallback callback) override {
     connect_called_ = true;
     connect_call_param_type_ = &type;
     connect_call_param_output_ = output;
@@ -58,8 +57,7 @@ class FakeSinkSegment : public SinkSegment {
     set_timeline_function_call_param_callback_ = callback;
   }
 
-  void SetProgramRange(uint64_t program,
-                       int64_t min_pts,
+  void SetProgramRange(uint64_t program, int64_t min_pts,
                        int64_t max_pts) override {
     set_program_range_called_ = true;
     set_program_range_call_param_program_ = program;
@@ -95,7 +93,7 @@ class FakeSinkSegment : public SinkSegment {
   bool connect_called_ = false;
   const StreamType* connect_call_param_type_;
   OutputRef connect_call_param_output_;
-  fxl::Closure connect_call_param_callback_;
+  ConnectCallback connect_call_param_callback_;
 
   bool disconnect_called_ = false;
 

@@ -296,7 +296,7 @@ TEST(PlayerTest, FakeSegments) {
   EXPECT_NE(nullptr, audio_sink_segment_raw->connect_call_param_callback_);
 
   audio_sink_segment_raw->connected_ = true;
-  audio_sink_segment_raw->connect_call_param_callback_();
+  audio_sink_segment_raw->connect_call_param_callback_(Result::kOk);
   EXPECT_TRUE(audio_sink_segment_raw->prepare_called_);
   audio_sink_segment_raw->prepare_called_ = false;
 
@@ -354,7 +354,7 @@ TEST(PlayerTest, FakeSegments) {
   EXPECT_NE(nullptr, video_sink_segment_raw->connect_call_param_callback_);
 
   video_sink_segment_raw->connected_ = true;
-  video_sink_segment_raw->connect_call_param_callback_();
+  video_sink_segment_raw->connect_call_param_callback_(Result::kOk);
   EXPECT_TRUE(video_sink_segment_raw->prepare_called_);
   video_sink_segment_raw->prepare_called_ = false;
 

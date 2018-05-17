@@ -7,7 +7,10 @@ library media_player;
 const string kProblemInternal = "ProblemInternal";
 const string kProblemAssetNotFound = "ProblemAssetNotFound";
 const string kProblemContainerNotSupported = "ProblemContainerNotSupported";
-const string kProblemMediaTypeNotSupported = "ProblemMediaTypeNotSupported";
+const string kProblemAudioEncodingNotSupported =
+    "ProblemAudioEncodingNotSupported";
+const string kProblemVideoEncodingNotSupported =
+    "ProblemVideoEncodingNotSupported";
 const string kProblemConnectionFailed = "ProblemConnectionFailed";
 
 // Models a problem preventing intended operation.

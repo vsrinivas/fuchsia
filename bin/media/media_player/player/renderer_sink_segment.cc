@@ -39,9 +39,8 @@ void RendererSinkSegment::WillDeprovision() {
   }
 }
 
-void RendererSinkSegment::Connect(const StreamType& type,
-                                  OutputRef output,
-                                  fxl::Closure callback) {
+void RendererSinkSegment::Connect(const StreamType& type, OutputRef output,
+                                  ConnectCallback callback) {
   FXL_DCHECK(provisioned());
   FXL_DCHECK(renderer_);
   FXL_DCHECK(renderer_node_);
@@ -52,7 +51,11 @@ void RendererSinkSegment::Connect(const StreamType& type,
   OutputRef output_in_out = output;
   if (!BuildConversionPipeline(type, supported_stream_types, &graph(),
                                &output_in_out, &out_type)) {
-    callback();
+    ReportProblem(type.medium() == StreamType::Medium::kAudio
+                      ? kProblemAudioEncodingNotSupported
+                      : kProblemVideoEncodingNotSupported,
+                  "");
+    callback(Result::kUnsupportedOperation);
     return;
   }
 
@@ -60,7 +63,7 @@ void RendererSinkSegment::Connect(const StreamType& type,
   graph().ConnectOutputToNode(output_in_out, renderer_node_);
   renderer_->SetStreamType(*out_type);
 
-  callback();
+  callback(Result::kOk);
 }
 
 void RendererSinkSegment::Disconnect() {

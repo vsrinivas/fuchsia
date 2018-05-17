@@ -25,9 +25,8 @@ class RendererSinkSegment : public SinkSegment {
 
   void WillDeprovision() override;
 
-  void Connect(const StreamType& type,
-               OutputRef output,
-               fxl::Closure callback) override;
+  void Connect(const StreamType& type, OutputRef output,
+               ConnectCallback callback) override;
 
   void Disconnect() override;
 
@@ -42,8 +41,7 @@ class RendererSinkSegment : public SinkSegment {
   void SetTimelineFunction(media::TimelineFunction timeline_function,
                            fxl::Closure callback) override;
 
-  void SetProgramRange(uint64_t program,
-                       int64_t min_pts,
+  void SetProgramRange(uint64_t program, int64_t min_pts,
                        int64_t max_pts) override;
 
   bool end_of_stream() const override { return renderer_->end_of_stream(); }
