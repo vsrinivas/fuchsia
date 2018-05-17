@@ -70,19 +70,26 @@ impl<R: FifoEntry, W: FifoEntry> Fifo<R, W> {
                 ::std::mem::size_of::<R>(),
             )
         };
-        let result = self.as_ref().read(::std::mem::size_of::<R>(), elembuf);
 
-        if result == Err(zx::Status::SHOULD_WAIT) {
-            self.handle.need_read(cx)?;
-            return Ok(Async::Pending);
+        match self.as_ref().read(::std::mem::size_of::<R>(), elembuf) {
+            Err(e) => {
+                // Ensure `drop` isn't called on uninitialized memory.
+                ::std::mem::forget(element);
+                if e == zx::Status::SHOULD_WAIT {
+                    self.handle.need_read(cx)?;
+                    return Ok(Async::Pending);
+                }
+                if e == zx::Status::PEER_CLOSED {
+                    return Ok(Async::Ready(None));
+                }
+                return Err(e);
+            }
+            Ok(count) => {
+                debug_assert_eq!(1, count);
+                return Ok(Async::Ready(Some(element)));
+            }
+
         }
-        if result == Err(zx::Status::PEER_CLOSED) {
-            return Ok(Async::Ready(None));
-        }
-        result.map(|count| {
-            debug_assert_eq!(1, count);
-            Async::Ready(Some(element))
-        })
     }
 
     /// Creates a future that receives an entry to be written to the element
