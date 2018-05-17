@@ -1,0 +1,35 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("definitions") {
+  sources = [
+    "packet.cc",
+    "packet.h",
+    "smp.h",
+  ]
+
+  public_deps = [
+    "//garnet/drivers/bluetooth/lib/common",
+  ]
+}
+
+static_library("sm") {
+  # TODO(armansito): sources
+
+  public_deps = [
+    ":definitions",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+
+  # TODO(armansito): sources
+
+  deps = [
+    ":sm",
+    "//garnet/drivers/bluetooth/lib/l2cap:testing",
+    "//third_party/googletest:gtest",
+  ]
+}
