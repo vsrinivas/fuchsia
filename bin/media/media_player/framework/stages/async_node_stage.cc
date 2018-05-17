@@ -98,7 +98,7 @@ void AsyncNodeStageImpl::UnprepareOutput(size_t output_index,
   }
 }
 
-GenericNode* AsyncNodeStageImpl::GetGenericNode() { return node_.get(); }
+GenericNode* AsyncNodeStageImpl::GetGenericNode() const { return node_.get(); }
 
 void AsyncNodeStageImpl::Update() {
   FXL_DCHECK(node_);

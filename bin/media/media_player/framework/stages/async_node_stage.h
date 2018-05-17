@@ -47,7 +47,7 @@ class AsyncNodeStageImpl : public AsyncNodeStage, public StageImpl {
 
  protected:
   // StageImpl implementation.
-  GenericNode* GetGenericNode() override;
+  GenericNode* GetGenericNode() const override;
 
   void Update() override;
 

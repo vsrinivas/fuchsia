@@ -46,7 +46,7 @@ class SourceStageImpl : public StageImpl, public SourceStage {
 
  protected:
   // StageImpl implementation.
-  GenericNode* GetGenericNode() override;
+  GenericNode* GetGenericNode() const override;
 
   void Update() override;
 

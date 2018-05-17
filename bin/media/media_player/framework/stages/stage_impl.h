@@ -99,7 +99,7 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
   virtual void FlushOutput(size_t index, fxl::Closure callback) = 0;
 
   // Gets the generic node.
-  virtual GenericNode* GetGenericNode() = 0;
+  virtual GenericNode* GetGenericNode() const = 0;
 
   // Shuts down the stage.
   void ShutDown();

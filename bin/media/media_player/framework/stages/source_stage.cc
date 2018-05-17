@@ -64,7 +64,7 @@ void SourceStageImpl::UnprepareOutput(size_t index, UpstreamCallback callback) {
   output_.SetCopyAllocator(nullptr);
 }
 
-GenericNode* SourceStageImpl::GetGenericNode() {
+GenericNode* SourceStageImpl::GetGenericNode() const {
   return source_.get();
 }
 

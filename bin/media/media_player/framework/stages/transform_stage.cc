@@ -63,7 +63,7 @@ void TransformStageImpl::UnprepareOutput(size_t index,
   callback(0);
 }
 
-GenericNode* TransformStageImpl::GetGenericNode() {
+GenericNode* TransformStageImpl::GetGenericNode() const {
   return transform_.get();
 }
 

@@ -64,7 +64,7 @@ void MultistreamSourceStageImpl::UnprepareOutput(size_t index,
   outputs_[index].SetCopyAllocator(nullptr);
 }
 
-GenericNode* MultistreamSourceStageImpl::GetGenericNode() {
+GenericNode* MultistreamSourceStageImpl::GetGenericNode() const {
   return source_.get();
 }
 

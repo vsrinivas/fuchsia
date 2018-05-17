@@ -50,7 +50,7 @@ void MultistreamSinkStageImpl::PrepareOutput(
   FXL_CHECK(false) << "PrepareOutput called on sink";
 }
 
-GenericNode* MultistreamSinkStageImpl::GetGenericNode() {
+GenericNode* MultistreamSinkStageImpl::GetGenericNode() const {
   return sink_.get();
 }
 

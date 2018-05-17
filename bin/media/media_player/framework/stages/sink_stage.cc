@@ -39,7 +39,7 @@ void SinkStageImpl::PrepareOutput(size_t index,
   FXL_CHECK(false) << "PrepareOutput called on sink";
 }
 
-GenericNode* SinkStageImpl::GetGenericNode() { return sink_.get(); }
+GenericNode* SinkStageImpl::GetGenericNode() const { return sink_.get(); }
 
 void SinkStageImpl::Update() {
   FXL_DCHECK(sink_);
