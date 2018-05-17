@@ -12,8 +12,6 @@ std::string StoryStateToString(modular::StoryState state) {
       return "RUNNING";
     case modular::StoryState::STOPPED:
       return "STOPPED";
-    case modular::StoryState::ERROR:
-      return "ERROR";
   }
 }
 

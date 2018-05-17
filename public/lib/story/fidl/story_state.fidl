@@ -4,22 +4,19 @@
 
 library modular;
 
-// State of a Story. It mostly, but not entirely, mirrors (for now)
-// the ModuleState of the root module in the story. Cf. ModuleState in
-// module.fidl. The values are, in fact, the same. However, we keep
-// the two separate because we expect them to diverge more.
+// State of a Story. A story is either running or not, separately on every
+// device of the user. If it's running, it can also be focused, but that's
+// tracked in a separate service, cf. FocusProvider in focus.fidl.
 //
-// Currently possible state transitions are:
+// Possible state transitions are:
 //
 //   STOPPED  -> RUNNING
 //   RUNNING  -> STOPPED
-//   RUNNING  -> ERROR
 //
 enum StoryState {
-  // Story was started.
+  // Story was started using StoryController.Start().
   RUNNING = 2;
-  // Story was not yet run, or Story stopped after Story.Stop() was called.
+  // Story was not yet run, or Story was stopped after StoryController.Stop()
+  // was called.
   STOPPED = 4;
-  // The application of the root module could not be started.
-  ERROR = 5;
 };

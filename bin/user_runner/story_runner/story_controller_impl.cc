@@ -1612,7 +1612,6 @@ bool StoryControllerImpl::IsRunning() {
     case StoryState::RUNNING:
       return true;
     case StoryState::STOPPED:
-    case StoryState::ERROR:
       return false;
   }
 }
@@ -2062,6 +2061,7 @@ void StoryControllerImpl::UpdateStoryState(const ModuleState state) {
       state_ = StoryState::RUNNING;
       break;
     case ModuleState::STOPPED:
+    case ModuleState::ERROR:
       // TODO(mesch): The story should only be marked STOPPED after
       // StoryContoller.Stop() is executed, and no modules are left running. In
       // this state here, there may be modules other than the root module left
@@ -2072,9 +2072,6 @@ void StoryControllerImpl::UpdateStoryState(const ModuleState state) {
       // record, because actually starting newly added modules is gated by the
       // story to be running. This makes little sense. FW-334
       state_ = StoryState::STOPPED;
-      break;
-    case ModuleState::ERROR:
-      state_ = StoryState::ERROR;
       break;
   }
 
