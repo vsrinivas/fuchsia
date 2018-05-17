@@ -25,20 +25,11 @@ Player::~Player() {}
 void Player::SetSourceSegment(std::unique_ptr<SourceSegment> source_segment,
                               fxl::Closure callback) {
   if (source_segment_) {
-    source_segment_->Deprovision();
-
     while (!streams_.empty()) {
       OnStreamRemoval(streams_.size() - 1);
     }
 
-    for (auto& stream : streams_) {
-      if (stream.sink_segment_) {
-        if (stream.sink_segment_->connected()) {
-          stream.sink_segment_->Unprepare();
-          stream.sink_segment_->Disconnect();
-        }
-      }
-    }
+    source_segment_->Deprovision();
   }
 
   source_segment_ = std::move(source_segment);
