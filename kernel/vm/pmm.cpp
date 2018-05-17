@@ -72,7 +72,14 @@ size_t pmm_alloc_contiguous(size_t count, uint alloc_flags, uint8_t alignment_lo
                             list_node* list) {
     // if we're called with a single page, just fall through to the regular allocation routine
     if (unlikely(count == 1 && alignment_log2 == PAGE_SIZE_SHIFT)) {
-        return pmm_node.AllocPages(count, alloc_flags, list);
+        vm_page_t* page = pmm_node.AllocPage(alloc_flags, pa);
+        if (page == nullptr) {
+            return 0;
+        }
+        if (list != nullptr) {
+            list_add_tail(list, &page->queue_node);
+        }
+        return 1;
     }
 
     return pmm_node.AllocContiguous(count, alloc_flags, alignment_log2, pa, list);

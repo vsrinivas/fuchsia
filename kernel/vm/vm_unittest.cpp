@@ -9,6 +9,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <lib/unittest/unittest.h>
+#include <vm/physmap.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
@@ -69,6 +70,22 @@ static bool pmm_oversized_alloc_test() {
 
     auto ret = pmm_free(&list);
     EXPECT_EQ(count, ret, "pmm_free_page on a list of pages");
+    END_TEST;
+}
+
+// Allocates one page and frees it.
+static bool pmm_alloc_contiguous_one_test() {
+    BEGIN_TEST;
+    list_node list = LIST_INITIAL_VALUE(list);
+    paddr_t pa;
+    size_t count = 1U;
+    size_t num_allocated = pmm_alloc_contiguous(count, 0, PAGE_SIZE_SHIFT, &pa, &list);
+    ASSERT_EQ(num_allocated, count, "pmm_alloc_contiguous wrong number allocated");
+    ASSERT_EQ(num_allocated, list_length(&list),
+              "pmm_alloc_contiguous list size is wrong");
+    ASSERT_NE(nullptr, paddr_to_physmap(pa), "");
+    auto ret = pmm_free(&list);
+    ASSERT_EQ(num_allocated, ret, "pmm_free wrong number");
     END_TEST;
 }
 
@@ -1020,6 +1037,7 @@ VM_UNITTEST(pmm_smoke_test)
 // runs the system out of memory, uncomment for debugging
 //VM_UNITTEST(pmm_large_alloc_test)
 //VM_UNITTEST(pmm_oversized_alloc_test)
+VM_UNITTEST(pmm_alloc_contiguous_one_test)
 VM_UNITTEST(vmm_alloc_smoke_test)
 VM_UNITTEST(vmm_alloc_contiguous_smoke_test)
 VM_UNITTEST(multiple_regions_test)
