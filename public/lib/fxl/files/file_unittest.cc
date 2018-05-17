@@ -53,6 +53,20 @@ TEST(File, IsFileAt) {
   ASSERT_TRUE(dirfd.get() != -1);
   EXPECT_TRUE(IsFileAt(dirfd.get(), GetBaseName(path)));
 }
+
+TEST(File, ReadWriteFileAt) {
+  ScopedTempDir dir;
+  std::string filename = "bar";
+  std::string content = "content";
+  fxl::UniqueFD dirfd(open(dir.path().c_str(), O_RDONLY));
+
+  EXPECT_TRUE(files::WriteFileAt(dirfd.get(), filename, content.c_str(),
+                                 content.size()));
+
+  std::string read_content;
+  EXPECT_TRUE(files::ReadFileToStringAt(dirfd.get(), filename, &read_content));
+  EXPECT_EQ(content, read_content);
+}
 #endif
 
 }  // namespace

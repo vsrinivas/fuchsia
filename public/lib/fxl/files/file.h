@@ -19,6 +19,10 @@ namespace files {
 FXL_EXPORT bool WriteFile(const std::string& path,
                           const char* data,
                           ssize_t size);
+#if defined(OS_LINUX) || defined(OS_FUCHSIA)
+FXL_EXPORT bool WriteFileAt(int dirfd, const std::string& path,
+                            const char* data, ssize_t size);
+#endif
 
 // Writes the given data a temporary file under |temp_root| and then moves the
 // temporary file to |path|, ensuring write atomicity. Returns true if the data

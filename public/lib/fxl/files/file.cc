@@ -61,6 +61,17 @@ bool WriteFile(const std::string& path, const char* data, ssize_t size) {
   return fxl::WriteFileDescriptor(fd.get(), data, size);
 }
 
+#if defined(OS_LINUX) || defined(OS_FUCHSIA)
+bool WriteFileAt(int dirfd, const std::string& path, const char* data,
+                 ssize_t size) {
+  fxl::UniqueFD fd(HANDLE_EINTR(openat(
+      dirfd, path.c_str(), O_CREAT | O_TRUNC | O_WRONLY, FILE_CREATE_MODE)));
+  if (!fd.is_valid())
+    return false;
+  return fxl::WriteFileDescriptor(fd.get(), data, size);
+}
+#endif
+
 bool WriteFileInTwoPhases(const std::string& path,
                           fxl::StringView data,
                           const std::string& temp_root) {
