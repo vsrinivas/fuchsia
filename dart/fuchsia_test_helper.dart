@@ -6,6 +6,7 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'package:fuchsia/fuchsia.dart' as fuchsia;
 import 'package:test/src/backend/declarer.dart';
 import 'package:test/src/backend/group.dart';
 import 'package:test/src/backend/suite_platform.dart';
@@ -50,4 +51,8 @@ Future<bool> runFuchsiaTests(List<MainFunction> mainFunctions) async {
       color: false, printPath: false, printPlatform: false);
 
   return engine.run();
+}
+
+void exitFuchsiaTest(int returnCode) {
+  fuchsia.exit(returnCode);
 }

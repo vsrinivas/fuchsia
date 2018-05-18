@@ -38,7 +38,6 @@ def main():
     // ignore_for_file: directives_ordering
 
     import 'dart:async';
-    import 'dart:isolate';
     import '%s';
     ''' % os.path.relpath(args.helper, out_dir))
 
@@ -56,7 +55,7 @@ def main():
     outfile.write(''']);
 
       // Quit.
-      Isolate.current.kill();
+      exitFuchsiaTest(0);
       return 0;
     }
     ''')
