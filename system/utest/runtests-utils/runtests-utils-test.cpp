@@ -233,13 +233,16 @@ bool WriteSummaryJSONSucceeds() {
     FILE* buf_file = fmemopen(buf.get(), kOneMegabyte, "w");
     const fbl::Vector<Result> results = {Result("/a", SUCCESS, 0),
                                          Result("b", FAILED_TO_LAUNCH, 0)};
-    ASSERT_EQ(0, WriteSummaryJSON(results, kOutputFileName, buf_file));
+    ASSERT_EQ(0, WriteSummaryJSON(results, kOutputFileName, "/tmp/file_path", buf_file));
     fclose(buf_file);
     // We don't have a JSON parser in zircon right now, so just hard-code the expected output.
     const char kExpectedJSONOutput[] = R"({"tests":[
 {"name":"/a","output_file":"a/output.txt","result":"PASS"},
 {"name":"b","output_file":"b/output.txt","result":"FAIL"}
-]}
+],
+"outputs": {
+"syslog_file":"/tmp/file_path"
+}}
 )";
     EXPECT_STR_EQ(kExpectedJSONOutput, buf.get());
     END_TEST;
@@ -252,7 +255,7 @@ bool WriteSummaryJSONBadTestName() {
     // A test name and output file consisting entirely of slashes should trigger an error.
     const fbl::Vector<Result> results = {Result("///", SUCCESS, 0),
                                          Result("b", FAILED_TO_LAUNCH, 0)};
-    ASSERT_NE(0, WriteSummaryJSON(results, "///", buf_file));
+    ASSERT_NE(0, WriteSummaryJSON(results, /*output_file_basename=*/"///", /*syslog_path=*/"/", buf_file));
     fclose(buf_file);
     END_TEST;
 }

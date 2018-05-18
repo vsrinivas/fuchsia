@@ -8,9 +8,16 @@
             "items": {
                 "$ref": "#/definitions/test"
             }
+        },
+        "outputs": {
+            "type": "object",
+            "properties": {
+                "syslog_file": { "type": "string" }
+            },
+            "required": [ "syslog_file" ]
         }
     },
-    "required": [ "tests" ],
+    "required": [ "tests", "outputs"],
 
     "definitions": {
         "test": {

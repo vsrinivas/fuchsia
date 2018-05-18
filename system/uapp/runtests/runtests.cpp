@@ -16,6 +16,7 @@
 #include <fbl/string.h>
 #include <fbl/vector.h>
 #include <lib/zx/time.h>
+#include <runtests-utils/log-exporter.h>
 #include <runtests-utils/runtests-utils.h>
 #include <unittest/unittest.h>
 
@@ -233,6 +234,28 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+    // Start Log Listener.
+    fbl::unique_ptr<runtests::LogExporter> log_exporter_ptr;
+    fbl::String syslog_path;
+    if (output_dir != nullptr) {
+        int error = runtests::MkDirAll(output_dir);
+        if (error) {
+            printf("Error: Could not create output directory: %s, %s\n", output_dir,
+                   strerror(error));
+            return -1;
+        }
+
+        syslog_path = runtests::JoinPath(output_dir, "syslogs");
+        runtests::ExporterLaunchError exporter_error;
+        log_exporter_ptr = runtests::LaunchLogExporter(syslog_path, &exporter_error);
+        // Don't fail if logger service is not available because it is only
+        // available in garnet layer and above.
+        if (!log_exporter_ptr && exporter_error != runtests::CONNECT_TO_LOGGER_SERVICE) {
+            printf("Error: Failed to launch log listener: %d", exporter_error);
+            return -1;
+        }
+    }
+
     int failed_count = 0;
     fbl::Vector<Result> results;
     for (const fbl::String& test_dir : test_dirs) {
@@ -297,7 +320,8 @@ int main(int argc, char** argv) {
             printf("Error: Could not open JSON summary file.\n");
             return -1;
         }
-        const int error = runtests::WriteSummaryJSON(results, kOutputFileName, summary_json);
+        const int error = runtests::WriteSummaryJSON(results, kOutputFileName,
+                                                     syslog_path, summary_json);
         if (error) {
             printf("Error: Failed to write JSON summary: %s\n", strerror(error));
             return -1;
@@ -337,7 +361,7 @@ int main(int argc, char** argv) {
             break;
         case runtests::FAILED_NONZERO_RETURN_CODE:
             printf("%s: returned nonzero: %" PRId64 "\n",
-                result.name.c_str(), result.return_code);
+                   result.name.c_str(), result.return_code);
             break;
         default:
             printf("%s: unknown result\n", result.name.c_str());

@@ -6,8 +6,8 @@
 
 #include <dirent.h>
 #include <errno.h>
-#include <inttypes.h>
 #include <glob.h>
+#include <inttypes.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,15 +17,20 @@
 
 #include <fbl/auto_call.h>
 #include <fbl/string.h>
+#include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
+#include <fdio/util.h>
 #include <launchpad/launchpad.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
+#include <runtests-utils/log-exporter.h>
 #include <zircon/listnode.h>
 #include <zircon/process.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 
@@ -121,7 +126,7 @@ Result RunTest(const char* argv[], int argc, FILE* out) {
 
     if (proc_info.return_code != 0) {
         printf("FAILURE: %s exited with nonzero status: %" PRId64 "\n",
-            path, proc_info.return_code);
+               path, proc_info.return_code);
         return Result(path, FAILED_NONZERO_RETURN_CODE, proc_info.return_code);
     }
 
@@ -154,11 +159,12 @@ bool IsInWhitelist(const fbl::StringPiece name, const fbl::Vector<fbl::String>& 
 }
 
 int MkDirAll(const fbl::StringPiece dir_name) {
-    char dir[PATH_MAX];
-    size_t bytes_to_copy = strlcpy(dir, dir_name.data(), sizeof(dir));
-    if (bytes_to_copy >= sizeof(dir)) {
+    fbl::StringBuffer<PATH_MAX> dir_buf;
+    if (dir_name.length() > dir_buf.capacity()) {
         return ENAMETOOLONG;
     }
+    dir_buf.Append(dir_name);
+    char* dir = dir_buf.data();
 
     // Fast path: check if the directory already exists.
     struct stat s;
@@ -199,7 +205,9 @@ fbl::String JoinPath(const fbl::StringPiece parent, const fbl::StringPiece child
 }
 
 int WriteSummaryJSON(const fbl::Vector<Result>& results,
-                     const fbl::StringPiece output_file_basename, FILE* summary_json) {
+                     const fbl::StringPiece output_file_basename,
+                     const fbl::StringPiece syslog_path,
+                     FILE* summary_json) {
     int test_count = 0;
     fprintf(summary_json, "{\"tests\":[\n");
     for (const Result& result : results) {
@@ -233,7 +241,10 @@ int WriteSummaryJSON(const fbl::Vector<Result>& results,
         fprintf(summary_json, "}");
         test_count++;
     }
-    fprintf(summary_json, "\n]}\n");
+    fprintf(summary_json, "\n],\n\"outputs\": {\n");
+    fprintf(summary_json, "\"syslog_file\":\"%.*s\"", static_cast<int>(syslog_path.length()),
+            syslog_path.data());
+    fprintf(summary_json, "\n}}\n");
     return 0;
 }
 
@@ -264,9 +275,10 @@ bool RunTestsInDir(const fbl::StringPiece dir_path, const fbl::Vector<fbl::Strin
         printf("Error: output_file_basename is not null, but output_dir is.\n");
         return false;
     }
-    DIR* dir = opendir(dir_path.data());
+    fbl::String dir_path_str = fbl::String(dir_path.data());
+    DIR* dir = opendir(dir_path_str.c_str());
     if (dir == nullptr) {
-        printf("Error: Could not open test dir %s\n", dir_path.data());
+        printf("Error: Could not open test dir %s\n", dir_path_str.c_str());
         return false;
     }
 
@@ -340,6 +352,82 @@ bool RunTestsInDir(const fbl::StringPiece dir_path, const fbl::Vector<fbl::Strin
     closedir(dir);
     *num_failed = failed_count;
     return failed_count == 0;
+}
+
+fbl::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_path,
+                                               ExporterLaunchError* error) {
+    *error = NO_ERROR;
+    fbl::String syslog_path_str = fbl::String(syslog_path.data());
+    FILE* syslog_file = fopen(syslog_path_str.c_str(), "w");
+    if (syslog_file == nullptr) {
+        printf("Error: Could not open syslog file: %s.\n", syslog_path_str.c_str());
+        *error = OPEN_FILE;
+        return nullptr;
+    }
+
+    // Try and connect to logger service if available. It would be only
+    // available in garnet and above layer
+    zx::channel logger, logger_request;
+    zx_status_t status;
+
+    status = zx::channel::create(0, &logger, &logger_request);
+    if (status != ZX_OK) {
+        printf("LaunchLogExporter: cannot create channel for logger service: %d (%s).\n",
+               status, zx_status_get_string(status));
+        *error = CREATE_CHANNEL;
+        return nullptr;
+    }
+
+    status = fdio_service_connect("/svc/logger.Log", logger_request.release());
+    if (status != ZX_OK) {
+        printf("LaunchLogExporter: cannot connect to logger service: %d (%s).\n",
+               status, zx_status_get_string(status));
+        *error = CONNECT_TO_LOGGER_SERVICE;
+        return nullptr;
+    }
+
+    // Create a log exporter channel and pass it to logger service.
+    zx::channel listener, listener_request;
+    status = zx::channel::create(0, &listener, &listener_request);
+    if (status != ZX_OK) {
+        printf("LaunchLogExporter: cannot create channel for listener: %d (%s).\n",
+               status, zx_status_get_string(status));
+        *error = CREATE_CHANNEL;
+        return nullptr;
+    }
+    logger_LogListenRequest req = {};
+    req.hdr.ordinal = logger_LogListenOrdinal;
+    req.log_listener = FIDL_HANDLE_PRESENT;
+    zx_handle_t listener_handle = listener.release();
+    status = logger.write(0, &req, sizeof(req), &listener_handle, 1);
+    if (status != ZX_OK) {
+        printf("LaunchLogExporter: cannot pass listener to logger service: %d (%s).\n",
+               status, zx_status_get_string(status));
+        close(listener_handle);
+        *error = FIDL_ERROR;
+        return nullptr;
+    }
+
+    // Connect log exporter channel to object and start message loop on it.
+    auto log_exporter = fbl::make_unique<LogExporter>(fbl::move(listener_request),
+                                                      syslog_file);
+    log_exporter->set_error_handler([](zx_status_t status) {
+        if (status != ZX_ERR_CANCELED) {
+            printf("log exporter: Failed: %d (%s).\n",
+                   status, zx_status_get_string(status));
+        }
+    });
+    log_exporter->set_file_error_handler([](const char* error) {
+        printf("log exporter: Error writing to file: %s.\n", error);
+    });
+    status = log_exporter->StartThread();
+    if (status != ZX_OK) {
+        printf("LaunchLogExporter: Failed to start log exporter: %d (%s).\n",
+               status, zx_status_get_string(status));
+        *error = START_LISTENER;
+        return nullptr;
+    }
+    return log_exporter;
 }
 
 } // namespace runtests

@@ -7,9 +7,12 @@
 #ifndef ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_RUNTESTS_UTILS_H_
 #define ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_RUNTESTS_UTILS_H_
 
+#include "log-exporter.h"
+
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
 #include <fbl/vector.h>
+#include <lib/async-loop/cpp/loop.h>
 
 namespace runtests {
 
@@ -20,6 +23,16 @@ enum LaunchStatus {
     FAILED_TO_WAIT,
     FAILED_TO_RETURN_CODE,
     FAILED_NONZERO_RETURN_CODE,
+};
+
+// Error while launching Listener.
+enum ExporterLaunchError {
+    OPEN_FILE,
+    CREATE_CHANNEL,
+    FIDL_ERROR,
+    CONNECT_TO_LOGGER_SERVICE,
+    START_LISTENER,
+    NO_ERROR,
 };
 
 // Represents the result of a single test run.
@@ -65,12 +78,15 @@ fbl::String JoinPath(fbl::StringPiece parent, fbl::StringPiece child);
 // Writes a JSON summary of test results given a sequence of results.
 //
 // |results| are the run results to summarize.
-// |output_file_basename| is the name of the
+// |output_file_basename| is base name of output file.
+// |syslog_path| is the file path where syslogs are written.
 // |summary_json| is the file stream to write the JSON summary to.
 //
 // Returns 0 on success, else an error code compatible with errno.
 int WriteSummaryJSON(const fbl::Vector<Result>& results,
-                     const fbl::StringPiece output_file_basename, FILE* summary_json);
+                     const fbl::StringPiece output_file_basename,
+                     const fbl::StringPiece syslog_path,
+                     FILE* summary_json);
 
 // Resolves a set of globs.
 //
@@ -103,6 +119,17 @@ int ResolveGlobs(const char* const* globs, int num_globs, fbl::Vector<fbl::Strin
 bool RunTestsInDir(const fbl::StringPiece dir_path, const fbl::Vector<fbl::String>& filter_names,
                    const char* output_dir, const char* output_file_basename, signed char verbosity,
                    int* num_failed, fbl::Vector<Result>* results);
+
+// Launches Log Exporter.
+//
+// Starts message loop on a seperate thread.
+//
+// |syslog_path| file path where to write logs.
+// |error| error to set in case of failure.
+//
+// Returns nullptr if it is not possible to launch Log Exporter.
+fbl::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_path,
+                                               ExporterLaunchError* error);
 
 } // namespace runtests
 

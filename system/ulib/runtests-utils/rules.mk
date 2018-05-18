@@ -11,11 +11,20 @@ MODULE_TYPE := userlib
 MODULE_GROUP := test
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/log-exporter.cpp \
     $(LOCAL_DIR)/runtests-utils.cpp \
+
+MODULE_FIDL_LIBS := \
+    system/fidl/logger
 
 # zxcpp required for fbl to work.
 MODULE_STATIC_LIBS := \
+    system/ulib/async \
+    system/ulib/async-loop \
+    system/ulib/async-loop.cpp \
+    system/ulib/async.cpp \
     system/ulib/fbl \
+    system/ulib/fidl \
     system/ulib/zx \
     system/ulib/zxcpp \
 

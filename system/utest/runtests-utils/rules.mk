@@ -10,13 +10,20 @@ MODULE_TYPE := usertest
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/runtests-utils-test.cpp \
+    $(LOCAL_DIR)/log-exporter-test.cpp \
+
+# We have to include this from runtests-utils because transitive dependencies don't
+# get linked in automatically.
+MODULE_FIDL_LIBS := \
+    system/fidl/logger
 
 MODULE_STATIC_LIBS := \
-    system/ulib/async.cpp \
     system/ulib/async \
-    system/ulib/async-loop.cpp \
     system/ulib/async-loop \
+    system/ulib/async-loop.cpp \
+    system/ulib/async.cpp \
     system/ulib/fbl \
+    system/ulib/fidl \
     system/ulib/fs \
     system/ulib/memfs \
     system/ulib/runtests-utils \
@@ -26,7 +33,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/zxcpp \
 
 # We have to include all MODULE_LIBS from runtests-utils because transitive dependencies don't
-# get linked in automatically :-(.
+# get linked in automatically.
 MODULE_LIBS := \
     system/ulib/async.default \
     system/ulib/c \
