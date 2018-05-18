@@ -26,9 +26,12 @@ bool TestInitZero(void) {
     EXPECT_NONNULL(bytes.get());
     EXPECT_TRUE(AllEqual(bytes.get(), 0, 0, kSize));
 
+#if !__has_feature(address_sanitizer)
+    // The ASan allocator reports errors for unreasonable allocation sizes.
     EXPECT_ZX(bytes.InitZero(size_t(-1)), ZX_ERR_NO_MEMORY);
     EXPECT_EQ(bytes.len(), 0U);
     EXPECT_NULL(bytes.get());
+#endif
 
     EXPECT_OK(bytes.InitZero(0));
     EXPECT_EQ(bytes.len(), 0U);
@@ -91,10 +94,13 @@ bool TestResize(void) {
     EXPECT_EQ(bytes.len(), kSize);
     EXPECT_NONNULL(bytes.get());
 
+#if !__has_feature(address_sanitizer)
+    // The ASan allocator reports errors for unreasonable allocation sizes.
     EXPECT_ZX(bytes.Resize(size_t(-1)), ZX_ERR_NO_MEMORY);
     EXPECT_EQ(bytes.len(), kSize);
     EXPECT_NONNULL(bytes.get());
     EXPECT_TRUE(AllEqual(bytes.get(), 0xff, 0, kSize));
+#endif
 
     EXPECT_OK(bytes.Resize(kSize));
     EXPECT_EQ(bytes.len(), kSize);
