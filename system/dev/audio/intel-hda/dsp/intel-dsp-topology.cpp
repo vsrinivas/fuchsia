@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 
 #include "intel-audio-dsp.h"
+#include <pretty/hexdump.h>
 
 namespace audio {
 namespace intel_hda {
 
 namespace {
-constexpr const char* I2S_CFG_PATH       = "/boot/lib/firmware/max98927-render-2ch-48khz-16b.bin";
-
 // Module config parameters extracted from kbl_i2s_chrome.conf
 
 // Set up 2 pipelines for system playback:
@@ -182,6 +181,8 @@ const CopierCfg HOST_IN_COPIER_CFG = {
     },
 };
 
+constexpr uint8_t I2S_OUT_INSTANCE_ID = 0;
+
 const CopierCfg I2S_OUT_COPIER_CFG = {
     .base_cfg = {
         .cpc = 100000,
@@ -213,11 +214,13 @@ const CopierCfg I2S_OUT_COPIER_CFG = {
     },
     .copier_feature_mask = 0,
     .gtw_cfg = {
-        .node_id = I2S_GATEWAY_CFG_NODE_ID(DMA_TYPE_I2S_LINK_OUTPUT, 0, 0),
+        .node_id = I2S_GATEWAY_CFG_NODE_ID(DMA_TYPE_I2S_LINK_OUTPUT, I2S_OUT_INSTANCE_ID, 0),
         .dma_buffer_size = 2 * 384,
         .config_length = 0,
     },
 };
+
+constexpr uint8_t I2S_IN_INSTANCE_ID = 0;
 
 const CopierCfg I2S_IN_COPIER_CFG = {
     .base_cfg = {
@@ -250,7 +253,7 @@ const CopierCfg I2S_IN_COPIER_CFG = {
     },
     .copier_feature_mask = 0,
     .gtw_cfg = {
-        .node_id = I2S_GATEWAY_CFG_NODE_ID(DMA_TYPE_I2S_LINK_INPUT, 0, 0),
+        .node_id = I2S_GATEWAY_CFG_NODE_ID(DMA_TYPE_I2S_LINK_INPUT, I2S_IN_INSTANCE_ID, 0),
         .dma_buffer_size = 2 * 384,
         .config_length = 0,
     },
@@ -276,6 +279,38 @@ const BaseModuleCfg MIXER_CFG = {
 
 }  // anon namespace
 
+zx_status_t IntelAudioDsp::GetI2SBlob(uint8_t bus_id, uint8_t direction,
+                                      const AudioDataFormat& format,
+                                      const void** out_blob, size_t* out_size) {
+    zx_status_t st = ZX_ERR_NOT_FOUND;
+    for (const auto& cfg : i2s_configs_) {
+        if (!cfg.valid) {
+            break;
+        }
+        if ((cfg.bus_id != bus_id) || (cfg.direction != direction)) {
+            continue;
+        }
+        // TODO better matching here
+        const formats_config_t* formats = cfg.formats;
+        const format_config_t* f = &formats->format_configs[0];
+        for (size_t j = 0; j < formats->format_config_count; j++) {
+            if (format.valid_bit_depth != f->valid_bits_per_sample) {
+                f = reinterpret_cast<const format_config_t*>(
+                        reinterpret_cast<const uint8_t*>(f) +
+                        sizeof(*f) +
+                        f->config.capabilities_size
+                    );
+                continue;
+            }
+            *out_blob = reinterpret_cast<const void*>(f->config.capabilities);
+            *out_size = static_cast<size_t>(f->config.capabilities_size);
+            st = ZX_OK;
+            break;
+        }
+    }
+    return st;
+}
+
 zx_status_t IntelAudioDsp::CreateHostDmaModule(uint8_t instance_id, uint8_t pipeline_id,
                                                const CopierCfg& cfg) {
     return ipc_.InitInstance(module_ids_[Module::COPIER],
@@ -288,9 +323,22 @@ zx_status_t IntelAudioDsp::CreateHostDmaModule(uint8_t instance_id, uint8_t pipe
 }
 
 zx_status_t IntelAudioDsp::CreateI2SModule(uint8_t instance_id, uint8_t pipeline_id,
-                                           const CopierCfg& cfg, const zx::vmo& i2s_cfg,
-                                           size_t i2s_cfg_size) {
-    size_t cfg_size = sizeof(cfg) + i2s_cfg_size;
+                                           uint8_t i2s_instance_id, uint8_t direction,
+                                           const CopierCfg& cfg) {
+    const void* blob;
+    size_t blob_size;
+    zx_status_t st = GetI2SBlob(i2s_instance_id, direction,
+                                (direction == NHLT_DIRECTION_RENDER) ? cfg.out_fmt :
+                                                                       cfg.base_cfg.audio_fmt,
+                                &blob, &blob_size);
+    if (st != ZX_OK) {
+        LOG(ERROR, "I2S config (instance %u direction %u) not found\n",
+                   i2s_instance_id, direction);
+        return st;
+    }
+
+    // Copy the I2S config blob
+    size_t cfg_size = sizeof(cfg) + blob_size;
     ZX_DEBUG_ASSERT(cfg_size <= UINT16_MAX);
 
     fbl::AllocChecker ac;
@@ -299,15 +347,12 @@ zx_status_t IntelAudioDsp::CreateI2SModule(uint8_t instance_id, uint8_t pipeline
         LOG(ERROR, "out of memory while attempting to allocate copier config buffer\n");
         return ZX_ERR_NO_MEMORY;
     }
-    zx_status_t st = i2s_cfg.read(cfg_buf.get() + sizeof(cfg), 0, i2s_cfg_size);
-    if (st != ZX_OK) {
-        LOG(ERROR, "Error reading I2S config blob VMO (err %d)\n", st);
-        return st;
-    }
+    memcpy(cfg_buf.get() + sizeof(cfg), blob, blob_size);
 
+    // Copy the copier config
     memcpy(cfg_buf.get(), &cfg, sizeof(cfg));
     auto copier_cfg = reinterpret_cast<CopierCfg*>(cfg_buf.get());
-    copier_cfg->gtw_cfg.config_length = static_cast<uint32_t>(i2s_cfg_size);
+    copier_cfg->gtw_cfg.config_length = static_cast<uint32_t>(blob_size);
 
     return ipc_.InitInstance(module_ids_[Module::COPIER],
                              instance_id,
@@ -379,17 +424,9 @@ zx_status_t IntelAudioDsp::SetupPipelines() {
         return st;
     }
 
-    // Get the VMO containing the I2S config blob
-    // TODO(yky): this should come from ACPI (NHLT table)
-    zx::vmo blob_vmo;
-    size_t blob_size;
-    st = load_firmware(codec_device(), I2S_CFG_PATH, blob_vmo.reset_and_get_address(), &blob_size);
-    if (st != ZX_OK) {
-        LOG(ERROR, "Error getting I2S config blob (err %d)\n", st);
-        return st;
-    }
-
-    st = CreateI2SModule(I2S0_OUT_COPIER_ID, PIPELINE1_ID, I2S_OUT_COPIER_CFG, blob_vmo, blob_size);
+    st = CreateI2SModule(I2S0_OUT_COPIER_ID, PIPELINE1_ID,
+                         I2S_OUT_INSTANCE_ID, NHLT_DIRECTION_RENDER,
+                         I2S_OUT_COPIER_CFG);
     if (st != ZX_OK) {
         return st;
     }
@@ -402,7 +439,9 @@ zx_status_t IntelAudioDsp::SetupPipelines() {
     }
 
     // Create pipeline 2 modules. I2S DMA -> mixin
-    st = CreateI2SModule(I2S0_IN_COPIER_ID, PIPELINE2_ID, I2S_IN_COPIER_CFG, blob_vmo, blob_size);
+    st = CreateI2SModule(I2S0_IN_COPIER_ID, PIPELINE2_ID,
+                         I2S_IN_INSTANCE_ID, NHLT_DIRECTION_CAPTURE,
+                         I2S_IN_COPIER_CFG);
     if (st != ZX_OK) {
         return st;
     }

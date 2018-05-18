@@ -12,6 +12,7 @@
 #include <fbl/vmo_mapper.h>
 
 #include <sync/completion.h>
+#include <limits.h>
 #include <stdint.h>
 #include <string.h>
 #include <threads.h>
@@ -20,6 +21,7 @@
 #include <intel-hda/codec-utils/codec-driver-base.h>
 #include <intel-hda/utils/intel-audio-dsp-ipc.h>
 #include <intel-hda/utils/intel-hda-registers.h>
+#include <intel-hda/utils/nhlt.h>
 #include <intel-hda/utils/utils.h>
 
 #include "debug-logging.h"
@@ -70,17 +72,22 @@ private:
     adsp_fw_registers_t* fw_regs() const;
 
     zx_status_t SetupDspDevice();
+    zx_status_t ParseNhlt();
 
     int InitThread();
 
     zx_status_t Boot();
     zx_status_t LoadFirmware();
 
+    zx_status_t GetI2SBlob(uint8_t bus_id, uint8_t direction, const AudioDataFormat& format,
+                           const void** out_blob, size_t* out_size);
+
     zx_status_t GetModulesInfo();
     zx_status_t CreateHostDmaModule(uint8_t instance_id, uint8_t pipeline_id,
                                     const CopierCfg& cfg);
     zx_status_t CreateI2SModule(uint8_t instance_id, uint8_t pipeline_id,
-                                const CopierCfg& cfg, const zx::vmo& i2s_cfg, size_t i2s_cfg_size);
+                                uint8_t i2s_instance_id, uint8_t direction,
+                                const CopierCfg& cfg);
     zx_status_t CreateMixinModule(uint8_t instance_id, uint8_t pipeline_id,
                                   const BaseModuleCfg& cfg);
     zx_status_t CreateMixoutModule(uint8_t instance_id, uint8_t pipeline_id,
@@ -104,6 +111,7 @@ private:
     zx_status_t CreateAndStartStreams();
 
     // Debug
+    void DumpNhlt(const nhlt_table_t* nhlt, size_t length);
     void DumpFirmwareConfig(const TLVHeader* config, size_t length);
     void DumpHardwareConfig(const TLVHeader* config, size_t length);
     void DumpModulesInfo(const ModuleEntry* info, uint32_t count);
@@ -148,6 +156,24 @@ private:
     };
     Mailbox mailbox_in_;
     Mailbox mailbox_out_;
+
+    // NHLT buffer.
+    uint8_t nhlt_buf_[PAGE_SIZE];
+
+    // I2S config
+    struct I2SConfig {
+        I2SConfig(uint8_t bid, uint8_t dir, const formats_config_t* f)
+            : valid(true), bus_id(bid), direction(dir), formats(f) { }
+        I2SConfig() = default;
+
+        bool    valid     = false;
+        uint8_t bus_id    = 0;
+        uint8_t direction = 0;
+
+        const formats_config_t* formats = nullptr;
+    };
+    static constexpr size_t I2S_CONFIG_MAX = 8;
+    I2SConfig i2s_configs_[I2S_CONFIG_MAX];
 
     // Module IDs
     enum Module {

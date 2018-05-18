@@ -7,8 +7,6 @@
 #include <fbl/auto_lock.h>
 #include <string.h>
 
-#include <pretty/hexdump.h>
-
 #include "intel-audio-dsp.h"
 #include "intel-dsp-code-loader.h"
 
@@ -63,6 +61,11 @@ zx_status_t IntelAudioDsp::DriverBind(zx_device_t* hda_dev) {
         return res;
     }
 
+    res = ParseNhlt();
+    if (res != ZX_OK) {
+        return res;
+    }
+
     state_ = State::INITIALIZING;
 
     // Perform hardware initializastion in a thread.
@@ -101,7 +104,7 @@ zx_status_t IntelAudioDsp::SetupDspDevice() {
     size_t bar_size;
     res = ihda_dsp_get_mmio(&ihda_dsp_, bar_vmo.reset_and_get_address(), &bar_size);
     if (res != ZX_OK) {
-        LOG(ERROR, "Failed to fetch DSP register VMO (err %d)\n", res);
+        LOG(ERROR, "Failed to fetch DSP register VMO (err %u)\n", res);
         return res;
     }
 
@@ -160,6 +163,106 @@ zx_status_t IntelAudioDsp::SetupDspDevice() {
         LOG(ERROR, "Failed to set DSP interrupt callback (res %d)\n", res);
         return res;
     }
+
+    return ZX_OK;
+}
+
+zx_status_t IntelAudioDsp::ParseNhlt() {
+    size_t size = 0;
+    zx_status_t res = device_get_metadata(codec_device(), MD_KEY_NHLT,
+                                          nhlt_buf_, sizeof(nhlt_buf_), &size);
+    if (res != ZX_OK) {
+        LOG(ERROR, "Failed to fetch NHLT (res %d)\n", res);
+        return res;
+    }
+
+    nhlt_table_t* nhlt = reinterpret_cast<nhlt_table_t*>(nhlt_buf_);
+
+    // Sanity check
+    if (size < sizeof(*nhlt)) {
+        LOG(ERROR, "NHLT too small (%zu bytes)\n", size);
+        return ZX_ERR_INTERNAL;
+    }
+
+    static_assert(sizeof(nhlt->header.signature) >= ACPI_NAME_SIZE, "");
+    static_assert(sizeof(ACPI_NHLT_SIGNATURE) >= ACPI_NAME_SIZE, "");
+
+    if (memcmp(nhlt->header.signature, ACPI_NHLT_SIGNATURE, ACPI_NAME_SIZE)) {
+        LOG(ERROR, "Invalid NHLT signature\n");
+        return ZX_ERR_INTERNAL;
+    }
+
+    uint8_t count = nhlt->endpoint_desc_count;
+    if (count > I2S_CONFIG_MAX) {
+        LOG(INFO, "Too many NHLT endpoints (max %zu, got %u), "
+                  "only the first %zu will be processed\n",
+                  I2S_CONFIG_MAX, count, I2S_CONFIG_MAX);
+        count = I2S_CONFIG_MAX;
+    }
+
+    // Extract the PCM formats and I2S config blob
+    size_t i = 0;
+    size_t desc_offset = reinterpret_cast<uint8_t*>(nhlt->endpoints) - nhlt_buf_;
+    while (count--) {
+        auto desc = reinterpret_cast<nhlt_descriptor_t*>(nhlt_buf_ + desc_offset);
+
+        // Sanity check
+        if ((desc_offset + desc->length) > size) {
+            LOG(ERROR, "NHLT endpoint descriptor out of bounds\n");
+            return ZX_ERR_INTERNAL;
+        }
+
+        size_t length = static_cast<size_t>(desc->length);
+        if (length < sizeof(*desc)) {
+            LOG(ERROR, "Short NHLT descriptor\n");
+            return ZX_ERR_INTERNAL;
+        }
+        length -= sizeof(*desc);
+
+        // Only care about SSP endpoints
+        if (desc->link_type != NHLT_LINK_TYPE_SSP) {
+            continue;
+        }
+
+        // Make sure there is enough room for formats_configs
+        if (length < desc->config.capabilities_size + sizeof(formats_config_t)) {
+            LOG(ERROR, "NHLT endpoint descriptor too short (specific_config too long)\n");
+            return ZX_ERR_INTERNAL;
+        }
+        length -= desc->config.capabilities_size + sizeof(formats_config_t);
+
+        // Must have at least one format
+        auto formats = reinterpret_cast<const formats_config_t*>(
+                nhlt_buf_ + desc_offset + sizeof(*desc) + desc->config.capabilities_size
+        );
+        if (formats->format_config_count == 0) {
+            continue;
+        }
+
+        // Iterate the formats and check lengths
+        const format_config_t* format = formats->format_configs;
+        for (uint8_t j = 0; j < formats->format_config_count; j++) {
+            size_t format_length = sizeof(*format) + format->config.capabilities_size;
+            if (length < format_length) {
+                LOG(ERROR, "Invalid NHLT endpoint desciptor format too short\n");
+                return ZX_ERR_INTERNAL;
+            }
+            length -= format_length;
+            format = reinterpret_cast<const format_config_t*>(
+                    reinterpret_cast<const uint8_t*>(format) + format_length
+            );
+        }
+        if (length != 0) {
+            LOG(ERROR, "Invalid NHLT endpoint descriptor length\n");
+            return ZX_ERR_INTERNAL;
+        }
+
+        i2s_configs_[i++] = { desc->virtual_bus_id, desc->direction, formats };
+
+        desc_offset += desc->length;
+    }
+
+    LOG(INFO, "parse success, found %zu formats\n", i);
 
     return ZX_OK;
 }
@@ -469,10 +572,10 @@ void IntelAudioDsp::ProcessIrq() {
     if (message.primary & ADSP_REG_HIPCT_BUSY) {
         if (state_ != State::OPERATING) {
             LOG(WARN, "Got IRQ when device is not operating (state %u)\n", to_underlying(state_));
+        } else {
+            // Process the incoming message
+            ipc_.ProcessIpc(message);
         }
-
-        // Process the incoming message
-        ipc_.ProcessIpc(message);
 
         // Ack the IRQ after reading mailboxes.
         REG_SET_BITS(&regs()->hipct, ADSP_REG_HIPCT_BUSY);
