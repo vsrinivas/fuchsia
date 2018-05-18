@@ -264,16 +264,15 @@ action("blob.manifest") {
     system_manifest,
   ]
   script = "manifest.py"
-  args = [
+  args = [ "@{{response_file_name}}" ]
+  response_file_contents = [
     "--sources",
     "--output=" + rebase_path(blob_manifest, root_build_dir),
     "--manifest=" + rebase_path(system_manifest, root_build_dir),
     "--entry=system_image/meta.far=" +
         rebase_path("$target_out_dir/system_image.meta/meta.far",
                     root_build_dir),
-    "@{{response_file_name}}",
   ]
-  response_file_contents = []
   foreach(pkg_label, package_targets) {
     pkg_target_name = get_label_info(pkg_label, "name")
     pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
