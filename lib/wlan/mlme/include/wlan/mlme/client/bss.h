@@ -78,9 +78,9 @@ class Bss : public fbl::RefCounted<Bss> {
     zx::time ts_refreshed_;  // Last time of Bss object update.
 
     // TODO(porce): Don't trust instantaneous values. Keep history.
-    common::dBm rssi_dbm_{0};
-    common::dBmh rcpi_dbmh_{0};
-    common::dBh rsni_dbh_{0};
+    common::dBm rssi_dbm_{WLAN_RSSI_DBM_INVALID};
+    common::dBmh rcpi_dbmh_{WLAN_RCPI_DBMH_INVALID};
+    common::dBh rsni_dbh_{WLAN_RSNI_DBH_INVALID};
 
     // TODO(porce): Separate into class BeaconTracker.
     BeaconHash bcn_hash_{0};

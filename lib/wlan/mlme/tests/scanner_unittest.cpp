@@ -13,6 +13,7 @@
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
+#include <wlan/protocol/mac.h>
 
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
@@ -229,7 +230,7 @@ TEST_F(ScannerTest, ScanResponse) {
     EXPECT_EQ(1024u, bss.timestamp);
     // EXPECT_EQ(1u, bss->channel);  // IE missing. info.chan != bss->channel.
     EXPECT_EQ(-75, bss.rssi_dbm);
-    EXPECT_EQ(0, bss.rcpi_dbmh);  // Not reported. Default at 0.
+    EXPECT_EQ(WLAN_RCPI_DBMH_INVALID, bss.rcpi_dbmh);
     EXPECT_EQ(30, bss.rsni_dbh);
 }
 

@@ -14,20 +14,20 @@ enum CBW {
     // Channel Bandwidth. See IEEE 802.11-2016 21.2.4 Table 21-2
     // VHT notation
 
-    CBW20 = 0, // Default. Corresponds to SecondaryChannelOffset-None
+    CBW20 = 0,  // Default. Corresponds to SecondaryChannelOffset-None
     CBW40 = 1,
-    CBW40ABOVE = CBW40, // Corresponds to SecondaryChannelOffset-Above
-    CBW40BELOW = 2,     // Corresponds to SecondaryChannelOffset-Below
+    CBW40ABOVE = CBW40,  // Corresponds to SecondaryChannelOffset-Above
+    CBW40BELOW = 2,      // Corresponds to SecondaryChannelOffset-Below
     CBW80 = 3,
     CBW160 = 4,
-    CBW80P80 = 5, // Non-contiguous frequency segments
+    CBW80P80 = 5,  // Non-contiguous frequency segments
 
     CBW_COUNT,
 };
 
 typedef struct wlan_channel {
     uint8_t primary;
-    uint8_t cbw; // Channel Bandwidth
+    uint8_t cbw;  // Channel Bandwidth
     uint8_t secondary80;
 } wlan_channel_t;
 
@@ -165,12 +165,22 @@ enum {
     // Bits 2-31 reserved
 };
 
-
 // LINT.IfChange
 typedef int8_t wlan_dBm_t;
 typedef int16_t wlan_dBmh_t;
 typedef int8_t wlan_dB_t;
 typedef int16_t wlan_dBh_t;
+
+#define WLAN_RSSI_DBM_MIN (-97)
+#define WLAN_RSSI_DBM_MAX (-10)
+#define WLAN_RCPI_DBMH_MIN (-97 * 2)
+#define WLAN_RCPI_DBMH_MAX (-10 * 2)
+#define WLAN_RSNI_DBH_MIN (1)
+#define WLAN_RSNI_DBH_MAX (60 * 2)
+
+#define WLAN_RSSI_DBM_INVALID (0)
+#define WLAN_RCPI_DBMH_INVALID (0)
+#define WLAN_RSNI_DBH_INVALID (0)
 // LINT.ThenChange(//garnet/lib/wlan/common/include/wlan/common/energy.h)
 
 typedef struct wlan_rx_info {
