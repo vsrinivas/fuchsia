@@ -18,6 +18,8 @@
 #include "aml-scpi.h"
 #include "aml-mailbox.h"
 
+static scpi_opp_t *scpi_opp[MAX_DVFS_DOMAINS];
+
 static zx_status_t aml_scpi_get_mailbox(uint32_t cmd,
                                     uint32_t *mailbox) {
     if (!mailbox || !VALID_CMD(cmd)) {
@@ -93,6 +95,12 @@ static zx_status_t aml_scpi_get_dvfs_info(void* ctx, uint8_t power_domain, scpi_
         return ZX_ERR_INVALID_ARGS;
     }
 
+    // dvfs info already populated
+    if (scpi_opp[power_domain]) {
+        memcpy(opps, scpi_opp[power_domain], sizeof(scpi_opp_t));
+        return ZX_OK;
+    }
+
     zx_status_t status = aml_scpi_execute_cmd(scpi,
                                               &aml_dvfs_info, sizeof(aml_dvfs_info),
                                               &power_domain, sizeof(power_domain),
@@ -120,6 +128,13 @@ static zx_status_t aml_scpi_get_dvfs_info(void* ctx, uint8_t power_domain, scpi_
         zxlogf(INFO, "Freq %.4f Ghz ", (opps->opp[i].freq_hz)/(double)1000000000);
         zxlogf(INFO, "Voltage %.4f V\n", (opps->opp[i].volt_mv)/(double)1000);
     }
+
+    scpi_opp[power_domain] = calloc(1, sizeof(scpi_opp_t));
+    if (!scpi_opp[power_domain]) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    memcpy(scpi_opp[power_domain], opps, sizeof(scpi_opp_t));
     return ZX_OK;
 }
 
