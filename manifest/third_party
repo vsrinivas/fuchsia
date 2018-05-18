@@ -217,6 +217,10 @@
              path="third_party/rust-mirrors/rand"
              remote="https://fuchsia.googlesource.com/third_party/rust-mirrors/rand"
              gerrithost="https://fuchsia-review.googlesource.com"/>
+    <project name="third_party/rust-mirrors/rustyline"
+             path="third_party/rust-mirrors/rustyline"
+             remote="https://fuchsia.googlesource.com/third_party/rust-mirrors/rustyline"
+             gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/sbase"
              path="third_party/sbase"
              remote="https://fuchsia.googlesource.com/third_party/sbase"
