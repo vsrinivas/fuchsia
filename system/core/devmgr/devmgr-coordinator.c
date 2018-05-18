@@ -288,6 +288,13 @@ static zx_status_t libname_to_vmo(const char* libname, zx_handle_t* out) {
     if (r < 0) {
         log(ERROR, "devcoord: cannot get driver vmo '%s'\n", libname);
     }
+    const char* vmo_name = strrchr(libname, '/');
+    if (vmo_name != NULL) {
+        ++vmo_name;
+    } else {
+        vmo_name = libname;
+    }
+    zx_object_set_property(*out, ZX_PROP_NAME, vmo_name, strlen(vmo_name));
     return r;
 }
 
