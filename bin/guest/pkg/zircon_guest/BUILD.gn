@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/bootdata.gni")
 import("//build/config/fuchsia/zircon.gni")
-import("//build/gn/config.gni")
 import("//garnet/bin/guest/pkg/guest_package.gni")
 
 action("gpt_image") {
