@@ -91,6 +91,9 @@ zx_status_t MessageReader::Bind(zx::channel channel, async_t* async) {
   } else {
     async_ = async_get_default();
   }
+  ZX_ASSERT_MSG(async_ != nullptr,
+                "either |async| must be non-null, or |async_get_default| must "
+                "be configured to return a non-null vaule");
   wait_.object = channel_.get();
   zx_status_t status = async_begin_wait(async_, &wait_);
   if (status != ZX_OK) Unbind();
