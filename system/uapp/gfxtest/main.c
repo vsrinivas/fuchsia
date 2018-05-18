@@ -17,7 +17,7 @@
 #include <gfx/gfx.h>
 
 int main(int argc, char* argv[]) {
-    int vfd = open("/dev/class/framebuffer/000", O_RDWR);
+    int vfd = open("/dev/class/framebuffer/000/virtcon", O_RDWR);
     if (vfd < 0) {
         printf("failed to open fb (%d)\n", errno);
         return -1;
