@@ -226,30 +226,3 @@ template("generate_manifest") {
     response_file_contents += [ "--cwd=." ] + invoker.args
   }
 }
-
-template("sorted_unique_lines") {
-  forward_variables_from(invoker,
-                         [
-                           "deps",
-                           "output_name",
-                           "testonly",
-                           "visibility",
-                         ])
-  if (!defined(output_name)) {
-    output_name = target_name
-  }
-  output_file = "$target_out_dir/$output_name"
-  action(target_name) {
-    script = "/usr/bin/sort"
-    outputs = [
-      output_file,
-    ]
-    args = [
-      "-u",
-      "-o",
-      rebase_path(output_file, root_build_dir),
-    ]
-    sources = invoker.inputs
-    args += rebase_path(sources, root_build_dir)
-  }
-}

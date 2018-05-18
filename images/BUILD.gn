@@ -357,25 +357,35 @@ bootdata_cmdline("system_image_cmdline") {
 }
 
 # Combine the /boot, /system, and package build ID maps into one.
-sorted_unique_lines("ids.txt") {
+action("ids.txt") {
   testonly = true
-  output_name = "$root_out_dir/ids.txt"
+
   deps = [
     ":boot.manifest",
     ":system_image.manifest",
   ]
-  inputs = [
+  sources = [
     boot_build_id_map,
     system_build_id_map,
   ]
+
   foreach(pkg_label, package_targets) {
     # Find the ids.txt file written by package().
     manifest = get_label_info(pkg_label, "label_no_toolchain") + ".manifest"
     manifest_target_name = get_label_info(manifest, "name")
     manifest_target_out_dir = get_label_info(manifest, "target_out_dir")
     deps += [ manifest ]
-    inputs += [ "$manifest_target_out_dir/${manifest_target_name}.ids.txt" ]
+    sources += [ "$manifest_target_out_dir/${manifest_target_name}.ids.txt" ]
   }
+
+  script = "/usr/bin/sort"
+  outputs = [
+    "$root_out_dir/ids.txt",
+  ]
+  args = [
+           "-u",
+           "-o",
+         ] + rebase_path(outputs + sources, root_build_dir)
 }
 
 ###
@@ -703,6 +713,7 @@ group("images") {
     ":fvm.blk",
     ":fvm.data.sparse.blk",
     ":fvm.sparse.blk",
+    ":ids.txt",
     ":legacy-images",
     ":zircon-boot-blob",
     ":zircon.vboot",
@@ -789,5 +800,6 @@ group("updates") {
   deps = [
     ":amber_publish_blobs",
     ":amber_publish_index",
+    ":ids.txt",
   ]
 }
