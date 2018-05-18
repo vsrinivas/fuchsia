@@ -138,7 +138,7 @@ struct brcmf_p2p_info {
     uint8_t dev_addr[ETH_ALEN];
     uint8_t int_addr[ETH_ALEN];
     struct p2p_bss bss_idx[P2PAPI_BSSCFG_MAX];
-    struct timer_list listen_timer;
+    brcmf_timer_info_t listen_timer;
     uint8_t listen_channel;
     struct ieee80211_channel remain_on_channel;
     uint32_t remain_on_channel_cookie;

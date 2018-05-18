@@ -302,10 +302,6 @@ LINUX_FUNCX(in_interrupt)
 LINUX_FUNCVI(sdio_f0_readb)
 LINUX_FUNCII(allow_signal)
 LINUX_FUNCX(kthread_should_stop)
-LINUX_FUNCVI(mod_timer)
-LINUX_FUNCVI(add_timer)
-LINUX_FUNCVI(timer_setup)
-LINUX_FUNCVI(timer_pending)
 LINUX_FUNCII(__ffs)
 LINUX_FUNCVS(kthread_run)
 static inline const char* dev_name(void* dev) {
@@ -313,10 +309,8 @@ static inline const char* dev_name(void* dev) {
 }
 LINUX_FUNCVI(init_waitqueue_head)
 LINUX_FUNCVI(device_release_driver)
-LINUX_FUNCVI(del_timer_sync)
 LINUX_FUNCVV(strnchr)
 LINUX_FUNCVI(request_firmware)
-#define from_timer(a, b, c) ((void*)0)
 #define module_param_string(a, b, c, d)
 #define module_exit(a) \
     void* __modexit() { return a; }
@@ -1023,10 +1017,6 @@ struct brcmfmac_sdio_pd {
 
 struct seq_file {
     void* private;
-};
-
-struct timer_list {
-    zx_time_t expires;
 };
 
 struct asdf {

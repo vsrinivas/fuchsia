@@ -327,7 +327,7 @@ struct brcmf_cfg80211_info {
     uint8_t* extra_buf;
     struct dentry* debugfsdir;
     struct escan_info escan_info;
-    struct timer_list escan_timeout;
+    brcmf_timer_info_t escan_timeout;
     struct work_struct escan_timeout_work;
     struct list_head vif_list;
     struct brcmf_cfg80211_vif_event vif_event;

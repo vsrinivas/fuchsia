@@ -711,9 +711,8 @@ zx_status_t brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct 
     scan_request = cfg->scan_request;
     cfg->scan_request = NULL;
 
-    if (timer_pending(&cfg->escan_timeout)) {
-        del_timer_sync(&cfg->escan_timeout);
-    }
+    // Canceling if it's inactive is OK. Checking if it's active just invites race conditions.
+    brcmf_timer_stop(&cfg->escan_timeout);
 
     if (fw_abort) {
         /* Do a scan abort to stop the driver's scan engine */
@@ -1119,8 +1118,7 @@ static zx_status_t brcmf_cfg80211_scan(struct wiphy* wiphy, struct cfg80211_scan
     }
 
     /* Arm scan timeout timer */
-    mod_timer(&cfg->escan_timeout,
-              zx_clock_get(ZX_CLOCK_MONOTONIC) + ZX_MSEC(BRCMF_ESCAN_TIMER_INTERVAL_MS));
+    brcmf_timer_set(&cfg->escan_timeout, ZX_MSEC(BRCMF_ESCAN_TIMER_INTERVAL_MS));
 
     return ZX_OK;
 
@@ -2942,9 +2940,9 @@ static void brcmf_cfg80211_escan_timeout_worker(struct work_struct* work) {
     brcmf_notify_escan_complete(cfg, cfg->escan_info.ifp, true, true);
 }
 
-static void brcmf_escan_timeout(struct timer_list* t) {
+static void brcmf_escan_timeout(void* data) {
     pthread_mutex_lock(&irq_callback_lock);
-    struct brcmf_cfg80211_info* cfg = from_timer(cfg, t, escan_timeout);
+    struct brcmf_cfg80211_info* cfg = data;
 
     if (cfg->int_escan_map || cfg->scan_request) {
         brcmf_err("timer expired\n");
@@ -3097,7 +3095,7 @@ static void brcmf_init_escan(struct brcmf_cfg80211_info* cfg) {
     brcmf_fweh_register(cfg->pub, BRCMF_E_ESCAN_RESULT, brcmf_cfg80211_escan_handler);
     cfg->escan_info.escan_state = WL_ESCAN_STATE_IDLE;
     /* Init scan_timeout timer */
-    timer_setup(&cfg->escan_timeout, brcmf_escan_timeout, 0);
+    brcmf_timer_init(&cfg->escan_timeout, brcmf_escan_timeout);
     workqueue_init_work(&cfg->escan_timeout_work, brcmf_cfg80211_escan_timeout_worker);
 }
 

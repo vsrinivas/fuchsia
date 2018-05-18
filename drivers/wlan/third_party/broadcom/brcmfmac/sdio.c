@@ -514,7 +514,7 @@ struct brcmf_sdio {
     wait_queue_head_t ctrl_wait;
     wait_queue_head_t dcmd_resp_wait;
 
-    struct timer_list timer;
+    brcmf_timer_info_t timer;
     completion_t watchdog_wait;
     struct task_struct* watchdog_tsk;
     bool wd_active;
@@ -3851,15 +3851,15 @@ static zx_status_t brcmf_sdio_watchdog_thread(void* data) {
     return ZX_OK;
 }
 
-static void brcmf_sdio_watchdog(struct timer_list* t) {
+static void brcmf_sdio_watchdog(void* data) {
     pthread_mutex_lock(&irq_callback_lock);
-    struct brcmf_sdio* bus = from_timer(bus, t, timer);
+    struct brcmf_sdio* bus = data;
 
     if (bus->watchdog_tsk) {
         completion_signal(&bus->watchdog_wait);
         /* Reschedule the watchdog */
         if (bus->wd_active) {
-            mod_timer(&bus->timer, zx_clock_get(ZX_CLOCK_MONOTONIC) + ZX_MSEC(BRCMF_WD_POLL_MSEC));
+            brcmf_timer_set(&bus->timer, ZX_MSEC(BRCMF_WD_POLL_MSEC));
         }
     }
     pthread_mutex_unlock(&irq_callback_lock);
@@ -4048,7 +4048,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     init_waitqueue_head(&bus->dcmd_resp_wait);
 
     /* Set up the watchdog timer */
-    timer_setup(&bus->timer, brcmf_sdio_watchdog, 0);
+    brcmf_timer_init(&bus->timer, brcmf_sdio_watchdog);
     /* Initialize watchdog thread */
     bus->watchdog_wait = COMPLETION_INIT;
     ret = kthread_run(brcmf_sdio_watchdog_thread, bus, "brcmf_wdog/%s",
@@ -4183,7 +4183,7 @@ void brcmf_sdio_remove(struct brcmf_sdio* bus) {
 void brcmf_sdio_wd_timer(struct brcmf_sdio* bus, bool active) {
     /* Totally stop the timer */
     if (!active && bus->wd_active) {
-        del_timer_sync(&bus->timer);
+        brcmf_timer_stop(&bus->timer);
         bus->wd_active = false;
         return;
     }
@@ -4198,12 +4198,11 @@ void brcmf_sdio_wd_timer(struct brcmf_sdio* bus, bool active) {
             /* Create timer again when watchdog period is
                dynamically changed or in the first instance
              */
-            bus->timer.expires = zx_clock_get(ZX_CLOCK_MONOTONIC) + ZX_MSEC(BRCMF_WD_POLL_MSEC);
-            add_timer(&bus->timer);
+            brcmf_timer_set(&bus->timer, ZX_MSEC(BRCMF_WD_POLL_MSEC));
             bus->wd_active = true;
         } else {
             /* Re arm the timer, at last watchdog period */
-            mod_timer(&bus->timer, zx_clock_get(ZX_CLOCK_MONOTONIC) + ZX_MSEC(BRCMF_WD_POLL_MSEC));
+            brcmf_timer_set(&bus->timer, ZX_MSEC(BRCMF_WD_POLL_MSEC));
         }
     }
 }

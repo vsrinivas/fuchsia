@@ -94,6 +94,7 @@ driver_module("brcmfmac_driver") {
     "//zircon/public/lib/driver",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/async-loop",
   ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
@@ -127,6 +128,9 @@ executable("workqueue_test") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/fbl",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/async-loop",
   ]
 }
 

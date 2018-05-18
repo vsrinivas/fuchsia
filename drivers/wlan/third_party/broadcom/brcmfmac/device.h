@@ -19,8 +19,15 @@
 
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
+#include <lib/async-loop/loop.h> // to start the worker thread
+#include <lib/async/default.h>  // for async_get_default()
+#include <lib/async/task.h>     // for async_post_task()
+#include <lib/async/time.h>     // for async_now()
 #include <pthread.h>
+#include <string.h>
+#include <sync/completion.h>
 #include <threads.h>
+#include <zircon/listnode.h>
 #include <zircon/types.h>
 
 #define BACKPLANE_ID_HIGH_REVCODE_HIGH 0x7000
@@ -48,6 +55,26 @@
 #define BC_CORE_ASYNC_BACKOFF_CAPABILITY_PRESENT 0x40
 #define BC_CORE_POWER_CONTROL_RELOAD 0x2
 #define BC_CORE_POWER_CONTROL_SHIFT 13
+
+extern async_t* default_async;
+
+// This is the function that timer users write to receive callbacks.
+typedef void (brcmf_timer_callback_t)(void* data);
+
+typedef struct brcmf_timer_info {
+    async_task_t task;
+    void* data;
+    brcmf_timer_callback_t* callback_function;
+    bool scheduled;
+    completion_t finished;
+    mtx_t lock;
+} brcmf_timer_info_t;
+
+void brcmf_timer_init(brcmf_timer_info_t* timer, brcmf_timer_callback_t* callback);
+
+void brcmf_timer_set(brcmf_timer_info_t* timer, zx_duration_t delay);
+
+void brcmf_timer_stop(brcmf_timer_info_t* timer);
 
 struct brcmf_device {
     void* of_node;

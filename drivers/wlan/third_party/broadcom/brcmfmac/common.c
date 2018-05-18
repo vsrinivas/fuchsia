@@ -500,11 +500,26 @@ static struct platform_driver brcmf_pd = {
     }
 };
 
+static async_loop_t* async_loop;
+
 zx_status_t brcmfmac_module_init(zx_device_t* device) {
     zx_status_t err;
 
     /* Initialize debug system first */
     brcmf_debugfs_init();
+
+    async_loop_config_t async_config;
+    memset(&async_config, 0, sizeof(async_config));
+    err = async_loop_create(&async_config, &async_loop);
+    if (err != ZX_OK) {
+        return err;
+    }
+    err = async_loop_start_thread(async_loop, "async_thread", NULL);
+    if (err != ZX_OK) {
+        async_loop_destroy(async_loop);
+        return err;
+    }
+    default_async = async_loop_get_dispatcher(async_loop);
 
     /* Get the platform data (if available) for our devices */
     err = platform_driver_probe(&brcmf_pd, brcmf_common_pd_probe);
@@ -531,6 +546,9 @@ static void brcmfmac_module_exit(void) {
     brcmf_core_exit();
     if (brcmfmac_pdata) {
         platform_driver_unregister(&brcmf_pd);
+    }
+    if (default_async != NULL) {
+        async_loop_destroy(async_loop);
     }
     brcmf_debugfs_exit();
 }
