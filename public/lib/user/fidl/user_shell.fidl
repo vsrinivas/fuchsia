@@ -54,4 +54,8 @@ interface UserShellPresentationProvider {
   // When a StoryShell calls StoryContext.GetPresentation(), this request
   // arrives here.
   1: GetPresentation(string story_id, request<presentation.Presentation> @request);
+
+  // When a StoryShell calls StoryContext.WatchVisualState(), this request
+  // arrives here.
+  2: WatchVisualState(string story_id, StoryVisualStateWatcher watcher);
 };

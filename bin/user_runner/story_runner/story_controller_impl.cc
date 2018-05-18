@@ -2059,4 +2059,9 @@ void StoryControllerImpl::GetPresentation(
   story_provider_impl_->GetPresentation(story_id_, std::move(request));
 }
 
+void StoryControllerImpl::WatchVisualState(
+    fidl::InterfaceHandle<StoryVisualStateWatcher> watcher) {
+  story_provider_impl_->WatchVisualState(story_id_, std::move(watcher));
+}
+
 }  // namespace modular

@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef PERIDOT_BIN_USER_RUNNER_PRESENTATION_PROVIDER_H_
+#define PERIDOT_BIN_USER_RUNNER_PRESENTATION_PROVIDER_H_
 
+#include <modular/cpp/fidl.h>
 #include <presentation/cpp/fidl.h>
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
@@ -20,6 +22,12 @@ class PresentationProvider {
   virtual void GetPresentation(
       fidl::StringPtr story_id,
       fidl::InterfaceRequest<presentation::Presentation> request) = 0;
+
+  virtual void WatchVisualState(
+      fidl::StringPtr story_id,
+      fidl::InterfaceHandle<StoryVisualStateWatcher> watcher) = 0;
 };
 
 }  // namespace modular
+
+#endif  // PERIDOT_BIN_USER_RUNNER_PRESENTATION_PROVIDER_H_

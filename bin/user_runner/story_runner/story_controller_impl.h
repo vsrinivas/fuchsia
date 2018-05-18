@@ -176,6 +176,8 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // |StoryContext|
   void GetPresentation(
       fidl::InterfaceRequest<presentation::Presentation> request) override;
+  void WatchVisualState(
+      fidl::InterfaceHandle<StoryVisualStateWatcher> watcher) override;
 
   // Phases of Start() broken out into separate methods.
   void StartStoryShell(

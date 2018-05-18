@@ -890,4 +890,11 @@ void StoryProviderImpl::GetPresentation(
                                           std::move(request));
 }
 
+void StoryProviderImpl::WatchVisualState(
+      fidl::StringPtr story_id,
+      fidl::InterfaceHandle<StoryVisualStateWatcher> watcher) {
+  presentation_provider_->WatchVisualState(std::move(story_id),
+                                           std::move(watcher));
+}
+
 }  // namespace modular

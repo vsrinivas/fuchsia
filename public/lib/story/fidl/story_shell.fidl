@@ -62,4 +62,19 @@ interface StoryContext {
   // Requests a Presentation connection from the UserShell. See
   // UserShellPresenationProvider in user_shell.fidl.
   1: GetPresentation(request<presentation.Presentation> @request);
+
+  // Starts watching Story shell's visual state.
+  2: WatchVisualState(StoryVisualStateWatcher watcher);
+};
+
+// Implemented by StoryShell to get notified about visual state changes.
+interface StoryVisualStateWatcher {
+  1: OnVisualStateChange(StoryVisualState visual_state);
+};
+
+// Defines the visual state of the Story shell.
+enum StoryVisualState {
+  MINIMIZED = 0;
+  MAXIMIZED = 1;
+  MAXIMIZED_OVERLAYED = 2;
 };

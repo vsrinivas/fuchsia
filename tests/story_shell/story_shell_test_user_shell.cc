@@ -81,6 +81,13 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell>,
     MaybeLogout();
   }
 
+  // |UserShellPresentationProvider|
+  void WatchVisualState(
+      fidl::StringPtr story_id,
+      fidl::InterfaceHandle<modular::StoryVisualStateWatcher> watcher) override
+  {
+  }
+
   TestPoint create_view_{"CreateView()"};
 
   // |SingleServiceApp|

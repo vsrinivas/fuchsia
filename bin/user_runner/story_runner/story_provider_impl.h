@@ -105,6 +105,9 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   void GetPresentation(
       fidl::StringPtr story_id,
       fidl::InterfaceRequest<presentation::Presentation> request);
+  void WatchVisualState(
+      fidl::StringPtr story_id,
+      fidl::InterfaceHandle<StoryVisualStateWatcher> watcher);
 
   void DumpState(const std::function<void(const std::string&)>& callback);
 

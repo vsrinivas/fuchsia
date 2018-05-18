@@ -136,6 +136,18 @@ class UserRunnerImpl::PresentationProviderImpl : public PresentationProvider {
     }
   }
 
+  void WatchVisualState(
+      fidl::StringPtr story_id,
+      fidl::InterfaceHandle<StoryVisualStateWatcher> watcher) override
+  {
+    if (impl_->user_shell_app_) {
+      UserShellPresentationProviderPtr provider;
+      impl_->user_shell_app_->services().ConnectToService(
+          provider.NewRequest());
+      provider->WatchVisualState(std::move(story_id), std::move(watcher));
+    }
+  }
+
   UserRunnerImpl* const impl_;
 };
 
