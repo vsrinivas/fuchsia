@@ -584,7 +584,12 @@ TEST_F(VirtioVsockTest, WriteUpdateCredit) {
   EXPECT_EQ(header->fwd_cnt, 2u);
 }
 
-TEST_F(VirtioVsockTest, WriteSocketFullDropBytes) {
+TEST_F(VirtioVsockTest, WriteSocketFullReset) {
+  // If the guest writes enough bytes to overflow our socket buffer then we
+  // must reset the connection as we would lose data.
+  //
+  // 5.7.6.3.1: VIRTIO_VSOCK_OP_RW data packets MUST only be transmitted when
+  // the peer has sufficient free buffer space for the payload.
   TestConnection connection;
   HostConnectOnPortRequest(kVirtioVsockHostPort, connection.callback());
   HostConnectOnPortResponse(kVirtioVsockHostPort);
@@ -598,26 +603,14 @@ TEST_F(VirtioVsockTest, WriteSocketFullDropBytes) {
   memset(buf.get(), 'a', buf_size);
 
   // Queue one descriptor that will completely fill the socket (and then some),
-  // and a second descriptor with a single byte. We'll verify everything that
-  // comes after the socket is full gets dropped.
-  SingleBytePacket p1('z');
+  // We'll verify that this resets the connection.
   HostQueueWriteOnPort(kVirtioVsockHostPort, buf.get(), buf_size);
-  HostQueueWriteOnPort(kVirtioVsockHostPort, reinterpret_cast<uint8_t*>(&p1),
-                       sizeof(p1));
   loop_.RunUntilIdle();
 
-  memset(buf.get(), 0, buf_size);
-  size_t actual_len = 0;
-  ASSERT_EQ(connection.socket.read(0, buf.get(), buf_size, &actual_len), ZX_OK);
-  ASSERT_EQ(socket_size, actual_len);
-  for (size_t i = 0; i < actual_len; ++i) {
-    ASSERT_EQ('a', buf[i]);
-  }
-
-  // Verify nothing more gets written now that the socket is wriable again.
-  loop_.RunUntilIdle();
-  ASSERT_EQ(ZX_ERR_SHOULD_WAIT,
-            connection.socket.read(0, buf.get(), buf_size, &actual_len));
+  RxBuffer* reset = DoReceive();
+  ASSERT_NE(nullptr, reset);
+  VerifyHeader(&reset->header, kVirtioVsockHostPort, kVirtioVsockGuestPort, 0,
+               VIRTIO_VSOCK_OP_RST, 0);
 }
 
 TEST_F(VirtioVsockTest, SendCreditUpdateWhenSocketIsDrained) {

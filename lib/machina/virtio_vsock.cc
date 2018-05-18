@@ -560,22 +560,34 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
         header->src_port,
     };
 
-    Connection* conn = nullptr;
-    if (header->op != VIRTIO_VSOCK_OP_REQUEST) {
-      conn = GetConnectionLocked(key);
-      if (conn == nullptr) {
-        // Build a connection to send a connection reset.
-        auto new_conn = fbl::make_unique<Connection>();
-        conn = new_conn.get();
-        status = AddConnectionLocked(key, std::move(new_conn));
-        set_shutdown(header);
-        FXL_LOG(ERROR) << "Connection does not exist";
-      } else if (conn->op() == VIRTIO_VSOCK_OP_RW &&
-                 conn->flags & VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND) {
-        // We are receiving a write, but send was shutdown.
-        set_shutdown(header);
-        FXL_LOG(ERROR) << "Send was shutdown";
+    Connection* conn = GetConnectionLocked(key);
+    if (header->op == VIRTIO_VSOCK_OP_REQUEST) {
+      // We received a request for the guest to connect to an external CID.
+      // If we don't have a socket connector then implicitly just refuse any
+      // outbound connections. Otherwise send out a request for a socket
+      // connection to the remote CID.
+      if (connector_) {
+        connector_->Connect(
+            header->src_port, header->dst_cid, header->dst_port,
+            [this, key](zx_status_t status, zx::socket socket) {
+              ConnectCallback(key, status, std::move(socket));
+            });
+        continue;
       }
+    }
+
+    if (conn == nullptr) {
+      // Build a connection to send a connection reset.
+      auto new_conn = fbl::make_unique<Connection>();
+      conn = new_conn.get();
+      status = AddConnectionLocked(key, std::move(new_conn));
+      set_shutdown(header);
+      FXL_LOG(ERROR) << "Connection does not exist";
+    } else if (conn->op() == VIRTIO_VSOCK_OP_RW &&
+               conn->flags & VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND) {
+      // We are receiving a write, but send was shutdown.
+      set_shutdown(header);
+      FXL_LOG(ERROR) << "Send was shutdown";
     }
 
     if (conn && op_requires_credit(header->op)) {
@@ -584,25 +596,6 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
     }
 
     switch (header->op) {
-      case VIRTIO_VSOCK_OP_REQUEST: {
-        // We received a request for the guest to connect to an external CID.
-        // If we don't have a socket connector then implicitly just refuse any
-        // outbound connections. Otherwise send out a request for a socket
-        // connection to the remote CID.
-        if (connector_) {
-          connector_->Connect(
-              header->src_port, header->dst_cid, header->dst_port,
-              [this, key](zx_status_t status, zx::socket socket) {
-                ConnectCallback(key, status, std::move(socket));
-              });
-        } else {
-          auto new_conn = fbl::make_unique<Connection>();
-          conn = new_conn.get();
-          status = AddConnectionLocked(key, std::move(new_conn));
-          set_shutdown(header);
-        }
-        break;
-      }
       case VIRTIO_VSOCK_OP_RESPONSE: {
         // The guest has accepted the connection request. Move the connection
         // into the RW state and let the connector know that the socket is
@@ -631,21 +624,13 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
           status = conn->socket.write(0, desc.addr, len, &actual);
           conn->rx_cnt += actual;
           header->len -= actual;
-          if (status != ZX_OK || actual > conn->reported_buf_avail) {
-            // NOTE: this drops some bytes in this data payload. Since we send
-            // credit update messages that inform that guest about available
-            // buffer space in the socket we don't expect this to happen in
-            // practice.
-            //
-            // It's possible we've hit other error conditions here (ex:
-            // PEER_CLOSED) so we'll just remove the connection and update
-            // status accordingly.
-            FXL_LOG(ERROR) << "Failed to write to connection socket " << status
-                           << ". Attempted to write  " << len
-                           << "b but only wrote " << actual << "b.";
-            if (status == ZX_ERR_SHOULD_WAIT) {
-              status = ZX_OK;
-            }
+          if (status != ZX_OK || actual < len) {
+            // If we've failed to write just reset the connection. Note that it
+            // should not be possible to receive a ZX_ERR_SHOULD_WAIT here if
+            // the guest is honoring our credit messages that describe socket
+            // buffer space.
+            FXL_LOG(ERROR) << "Failed to write to connection socket " << status;
+            conn->UpdateOp(VIRTIO_VSOCK_OP_RST);
             break;
           }
 
@@ -687,7 +672,12 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
         break;
     }
 
-    if (conn != nullptr && conn->socket.is_valid()) {
+    if (conn->op() == VIRTIO_VSOCK_OP_RST) {
+      status = WaitOnQueueLocked(key, &readable_, &rx_stream_);
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to wait on queue to send connection reset";
+      }
+    } else if (conn->socket.is_valid()) {
       WaitOnSocketLocked(status, key, &conn->tx_wait);
     }
   } while (tx_queue()->NextAvail(&index) == ZX_OK);
