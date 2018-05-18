@@ -44,7 +44,7 @@ typedef struct usb_hub {
     completion_t completion;
 
     thrd_t thread;
-    bool thread_done;
+    atomic_bool thread_done;
 
     // port status values for our ports
     // length is num_ports
@@ -270,6 +270,11 @@ static void usb_hub_unbind(void* ctx) {
             usb_hub_port_disconnected(hub, port);
         }
     }
+
+    atomic_store(&hub->thread_done, true);
+    completion_signal(&hub->completion);
+    thrd_join(hub->thread, NULL);
+
     device_remove(hub->zxdev);
 }
 
@@ -282,10 +287,6 @@ static zx_status_t usb_hub_free(usb_hub_t* hub) {
 
 static void usb_hub_release(void* ctx) {
     usb_hub_t* hub = ctx;
-
-    hub->thread_done = true;
-    completion_signal(&hub->completion);
-    thrd_join(hub->thread, NULL);
     usb_hub_free(hub);
 }
 
@@ -356,7 +357,7 @@ static int usb_hub_thread(void* arg) {
         completion_reset(&hub->completion);
         usb_request_queue(&hub->usb, req);
         completion_wait(&hub->completion, ZX_TIME_INFINITE);
-        if (req->response.status != ZX_OK || hub->thread_done) {
+        if (req->response.status != ZX_OK || atomic_load(&hub->thread_done)) {
             break;
         }
 
@@ -445,6 +446,7 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device) {
         zxlogf(ERROR, "Not enough memory for usb_hub_t.\n");
         return ZX_ERR_NO_MEMORY;
     }
+    atomic_init(&hub->thread_done, false);
 
     hub->usb_device = device;
     hub->hub_speed = usb_get_speed(&usb);
