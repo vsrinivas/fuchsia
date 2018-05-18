@@ -50,10 +50,10 @@ int handle_argument(char** argv, const char* arg,
             return 1;
         }
         while (!feof(rspfile) && !ferror(rspfile)) {
-            char* filename = nullptr;
-            if (fscanf(rspfile, " %ms", &filename) == 1) {
+            // 2018 macOS hasn't caught up with C99 yet, so can't use %ms here.
+            char filename[4096];
+            if (fscanf(rspfile, " %4095s", filename) == 1) {
                 handle_argument(argv, filename, entries);
-                free(filename);
             }
         }
         int result = ferror(rspfile);
