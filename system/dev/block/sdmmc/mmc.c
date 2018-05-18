@@ -354,8 +354,8 @@ zx_status_t sdmmc_probe_mmc(sdmmc_device_t* dev) {
         dev->timing = SDMMC_TIMING_LEGACY;
     }
 
-    zxlogf(INFO, "mmc: initialized mmc @ %u mhz, bus width %d, timing %d\n",
-            dev->clock_rate, dev->bus_width, dev->timing);
+    zxlogf(INFO, "mmc: initialized mmc @ %u MHz, bus width %d, timing %d\n",
+            dev->clock_rate / 1000000, dev->bus_width, dev->timing);
 
 err:
     return st;
