@@ -45,7 +45,7 @@ class ApplicationContext {
   static std::unique_ptr<ApplicationContext> CreateFromStartupInfoNotChecked();
 
   static std::unique_ptr<ApplicationContext> CreateFrom(
-      ApplicationStartupInfo startup_info);
+      StartupInfo startup_info);
 
   // Gets the application's environment.
   //

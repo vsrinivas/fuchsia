@@ -22,7 +22,7 @@ class GuestRunner : public component::ApplicationRunner {
   // |component::ApplicationRunner|
   void StartApplication(
       component::ApplicationPackage application,
-      component::ApplicationStartupInfo startup_info,
+      component::StartupInfo startup_info,
       ::fidl::InterfaceRequest<component::ApplicationController> controller)
       override;
 

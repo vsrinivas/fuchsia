@@ -18,7 +18,7 @@ interface ApplicationEnvironment {
   // When applications are created inside the nested environment using the
   // environment's |ApplicationLauncher|, the environment requests the
   // environment services from |host_directory| before passing those services to
-  // the newly created application in its |ApplicationStartupInfo|.
+  // the newly created application in its |StartupInfo|.
   //
   // Typically the |host_directory| will make the newly created |environment|
   // available in the environment services, giving child applications to launch

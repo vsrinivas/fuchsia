@@ -49,7 +49,7 @@ ApplicationContext::CreateFromStartupInfoNotChecked() {
 }
 
 std::unique_ptr<ApplicationContext> ApplicationContext::CreateFrom(
-    ApplicationStartupInfo startup_info) {
+    StartupInfo startup_info) {
   FlatNamespace& flat = startup_info.flat_namespace;
   if (flat.paths->size() != flat.directories->size()) return nullptr;
 

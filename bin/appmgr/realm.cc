@@ -521,7 +521,7 @@ void Realm::CreateApplicationFromPackage(
     ApplicationPackage inner_package;
     inner_package.resolved_url = package->resolved_url;
 
-    ApplicationStartupInfo startup_info;
+    StartupInfo startup_info;
     startup_info.launch_info = std::move(launch_info);
     startup_info.flat_namespace = builder.BuildForRunner();
 
