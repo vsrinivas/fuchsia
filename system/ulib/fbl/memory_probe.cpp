@@ -19,6 +19,9 @@ enum class ProbeOperation {
     kWrite
 };
 
+#if __has_feature(address_sanitizer)
+[[clang::no_sanitize("address")]]
+#endif
 void except_thread_func(uintptr_t op, void* address) {
     volatile char* ch_address = static_cast<char*>(address);
 
