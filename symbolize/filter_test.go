@@ -111,9 +111,9 @@ func ExampleBasic() {
 func TestMalformed(t *testing.T) {
 	// Parse a bad line
 	line := ParseLine("\033[1m Error at {{{pc:0x123879c0")
-
-	if line != nil {
-		t.Error("expected", nil, "got", line)
+	// Malformed lines should still parse
+	if line == nil {
+		t.Error("expected", "not nil", "got", line)
 	}
 }
 

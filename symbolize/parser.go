@@ -10,11 +10,9 @@ import (
 	"fmt"
 	"io"
 	"regexp"
-	"strings"
 )
 
 const (
-	elemPrefix   string = "{{{"
 	elemSuffix   string = "}}}"
 	colorPrefix  string = "\033["
 	modulePrefix string = "{{{module:"
@@ -23,21 +21,18 @@ const (
 	btPrefix     string = "{{{bt:"
 )
 
-func findIndex(s ParserState, sub string) int {
-	idx := strings.Index(string(s), sub)
-	if idx == -1 {
-		return len(s)
-	}
-	return idx
-}
+var (
+	endTextRegex      = regexp.MustCompile("({{{.*}}})|(\033\\[[0-9]+m)")
+	beginLogLineRegex = regexp.MustCompile(`\[[0-9]+\.[0-9]+\] [0-9]+\.[0-9]+>`)
+)
 
 func ParseText(b *ParserState) interface{} {
-	idx := findIndex(*b, elemPrefix)
-	idx2 := findIndex(*b, colorPrefix)
-	if idx2 < idx {
-		idx = idx2
+	var idx int
+	if loc := endTextRegex.FindStringIndex(string(*b)); loc != nil {
+		idx = loc[0]
+	} else {
+		idx = len(*b)
 	}
-
 	if idx == 0 {
 		return nil
 	}
@@ -189,7 +184,6 @@ func StartParsing(ctx context.Context, reader io.Reader) <-chan InputLine {
 	out := make(chan InputLine)
 	// This is not used for demuxing. It is a human readable line number.
 	var lineno uint64 = 1
-	re := regexp.MustCompile(`\[[0-9]+\.[0-9]+\] [0-9]+\.[0-9]+>`)
 	go func() {
 		defer close(out)
 		scanner := bufio.NewScanner(reader)
@@ -202,7 +196,7 @@ func StartParsing(ctx context.Context, reader io.Reader) <-chan InputLine {
 			text := ParserState(scanner.Text())
 			b := &text
 			// Get the dummyText and needed text.
-			locs := re.FindStringIndex(string(text))
+			locs := beginLogLineRegex.FindStringIndex(string(text))
 			if locs == nil {
 				// This means the whole thing is dummy text.
 				var line InputLine
