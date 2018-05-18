@@ -22,6 +22,13 @@
       "additionalProperties": {
         "$ref": "#/definitions/gnLabel"
       }
+    },
+    "host_tests": {
+      "description": "A list of GN labels to build, each representing a host test",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/gnLabel"
+      }
     }
   },
   "minProperties": 1,
