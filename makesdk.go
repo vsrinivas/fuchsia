@@ -6,9 +6,12 @@
 package main
 
 import (
+	"archive/tar"
 	"bufio"
+	"compress/gzip"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -50,7 +53,7 @@ type component struct {
 	srcPrefix string // Source path prefix relative to the fuchsia root
 	dstPrefix string // Destination path prefix relative to the SDK root
 	t         compType
-	f         func(src, dst string) // When t is 'custom', function to run to copy
+	f         func(src, dst string) error // When t is 'custom', function to run to copy
 }
 
 type dir struct {
@@ -115,16 +118,6 @@ func init() {
 			tools,
 			"out/build-zircon/tools",
 			"tools",
-		},
-		{
-			tools,
-			path.Join(x64BuildDir, "host_x64/far"),
-			"tools/far",
-		},
-		{
-			tools,
-			path.Join(x64BuildDir, "host_x64/pm"),
-			"tools/pm",
 		},
 		{
 			toolchain,
@@ -236,6 +229,16 @@ func init() {
 			path.Join(armBuildDir, "stripped/libunwind.so.1"),
 			"arch/arm64/dist/libunwind.so.1",
 		},
+		{
+			tools,
+			path.Join(x64BuildDir, "host_x64/far"),
+			"tools/far",
+		},
+		{
+			tools,
+			path.Join(x64BuildDir, "host_x64/pm"),
+			"tools/pm",
+		},
 	}
 
 	components = []component{
@@ -300,39 +303,39 @@ func createLayout(manifest, fuchsiaRoot, outDir string) {
 		if *dryRun {
 			return
 		}
-		out, err := exec.Command(cmd, args...).Output()
+		out, err := exec.Command(cmd, args...).CombinedOutput()
 		if err != nil {
 			log.Fatal("create_layout.py failed with output", string(out), "error", err)
 		}
 	}
 }
 
-func copyKernelDebugObjs(src, dstPrefix string) {
+func copyKernelDebugObjs(src, dstPrefix string) error {
 	// The kernel debug information lives in many .elf files in the out directory
-	filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
 		if !info.IsDir() && filepath.Ext(path) == ".elf" {
-			dst := filepath.Join(dstPrefix, path[len(src):])
-			mkdir(filepath.Dir(dst))
-			cp(path, dst)
+			if err := copyFile(path, filepath.Join(dstPrefix, path[len(src):])); err != nil {
+				return err
+			}
 		}
 		return nil
 	})
 }
 
-func copyIdsTxt(src, dstPrefix string) {
+func copyIdsTxt(src, dstPrefix string) error {
 	// The ids.txt file has absolute paths but relative paths within the SDK are
 	// more useful to users.
 	srcIds, err := os.Open(filepath.Join(src, "ids.txt"))
 	if err != nil {
-		log.Fatal("could not open ids.txt", err)
+		return fmt.Errorf("could not open ids.txt", err)
 	}
 	defer srcIds.Close()
 	if *dryRun {
-		return
+		return nil
 	}
 	dstIds, err := os.Create(filepath.Join(dstPrefix, "ids.txt"))
 	if err != nil {
-		log.Fatal("could not create ids.txt", err)
+		return fmt.Errorf("could not create ids.txt", err)
 	}
 	defer dstIds.Close()
 	scanner := bufio.NewScanner(srcIds)
@@ -348,55 +351,121 @@ func copyIdsTxt(src, dstPrefix string) {
 			fmt.Fprintln(dstIds, id, relPath)
 		}
 	}
+	return nil
 }
 
-func mkdir(d string) {
-	if *verbose || *dryRun {
-		fmt.Println("Making directory", d)
-	}
+func copyFile(src, dst string) error {
 	if *dryRun {
-		return
+		return nil
 	}
-	_, err := exec.Command("mkdir", "-p", d).Output()
+
+	if err := os.MkdirAll(filepath.Dir(dst), os.ModePerm); err != nil {
+		return err
+	}
+
+	in, err := os.Open(src)
 	if err != nil {
-		log.Fatal("could not create directory", d)
+		return err
 	}
+	defer in.Close()
+
+	fi, err := in.Stat()
+	if err != nil {
+		return err
+	}
+
+	out, err := os.OpenFile(dst, os.O_RDWR|os.O_CREATE, fi.Mode())
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, in)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func cp(args ...string) {
-	if *verbose || *dryRun {
-		fmt.Println("Copying", args)
-	}
+func copyDir(src, dst string) error {
 	if *dryRun {
-		return
+		return nil
 	}
-	out, err := exec.Command("cp", args...).CombinedOutput()
+
+	if err := os.MkdirAll(dst, os.ModePerm); err != nil {
+		return err
+	}
+
+	infos, err := ioutil.ReadDir(src)
 	if err != nil {
-		log.Fatal("cp failed with output ", string(out), " error ", err, args)
+		return err
 	}
+
+	for _, info := range infos {
+		var err error
+		if info.IsDir() {
+			err = copyDir(filepath.Join(src, info.Name()), filepath.Join(dst, info.Name()))
+
+		} else {
+			err = copyFile(filepath.Join(src, info.Name()), filepath.Join(dst, info.Name()))
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
-func copyFile(src, dst string) {
-	mkdir(filepath.Dir(dst))
-	cp(src, dst)
-}
-
-func copyDir(src, dst string) {
-	mkdir(filepath.Dir(dst))
-	cp("-r", src, "-T", dst)
-}
-
-func tar(src, dst string) {
+func createTar(src, dst string) error {
 	if *verbose || *dryRun {
 		fmt.Println("Archiving", src, "to", dst)
 	}
 	if *dryRun {
-		return
+		return nil
 	}
-	out, err := exec.Command("tar", "cvzf", dst, "-C", src, ".").Output()
+
+	file, err := os.Create(dst)
 	if err != nil {
-		log.Fatal("tar failed with output", string(out), "error", err)
+		return err
 	}
+	defer file.Close()
+
+	gw := gzip.NewWriter(file)
+	defer gw.Close()
+	tw := tar.NewWriter(gw)
+	defer tw.Close()
+
+	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		header, err := tar.FileInfoHeader(info, info.Name())
+		if err != nil {
+			return err
+		}
+
+		name, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		header.Name = name
+		if err := tw.WriteHeader(header); err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+
+		file, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		_, err = io.Copy(tw, file)
+		return err
+	})
 }
 
 func main() {
@@ -423,8 +492,10 @@ only module.
 			log.Fatal("Could not create temporary directory: ", err)
 		}
 		defer os.RemoveAll(*outDir)
-	} else if _, err := os.Stat(fuchsiaRoot); os.IsNotExist(err) {
-		mkdir(filepath.Dir(*outDir))
+	} else if _, err := os.Stat(*outDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(*outDir, os.ModePerm); err != nil {
+			log.Fatalf("Could not create directory %s: %v", *outDir, err)
+		}
 	}
 
 	createLayout("garnet", fuchsiaRoot, *outDir)
@@ -435,15 +506,23 @@ only module.
 			dst := filepath.Join(*outDir, c.dstPrefix)
 			switch c.t {
 			case dirType:
-				copyDir(src, dst)
+				if err := copyDir(src, dst); err != nil {
+					log.Fatalf("failed to copy directory %s to %s: %v", src, dst, err)
+				}
 			case fileType:
-				copyFile(src, dst)
+				if err := copyFile(src, dst); err != nil {
+					log.Fatalf("failed to copy file %s to %s: %v", src, dst, err)
+				}
 			case customType:
-				c.f(src, dst)
+				if err := c.f(src, dst); err != nil {
+					log.Fatalf("failed to copy %s to %s: %v", src, dst, err)
+				}
 			}
 		}
 	}
 	if *archive {
-		tar(*outDir, *output)
+		if err := createTar(*outDir, *output); err != nil {
+			log.Fatalf("failed to compress %s: %v", *outDir, err)
+		}
 	}
 }
