@@ -261,6 +261,7 @@ source_set("ranking_unittest") {
   testonly = true
 
   sources = [
+    "rankers/linear_ranker_unittest.cc",
     "ranking_features/annoyance_ranking_feature_unittest.cc",
     "ranking_features/focused_story_ranking_feature_unittest.cc",
     "ranking_features/kronk_ranking_feature_unittest.cc",
@@ -270,7 +271,7 @@ source_set("ranking_unittest") {
   ]
 
   deps = [
-    ":ranking_features",
+    ":ranking",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest",
