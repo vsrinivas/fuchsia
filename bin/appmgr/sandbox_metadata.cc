@@ -35,34 +35,37 @@ SandboxMetadata::SandboxMetadata() = default;
 SandboxMetadata::~SandboxMetadata() = default;
 
 bool SandboxMetadata::Parse(const std::string& data) {
-  dev_.clear();
-  features_.clear();
-
   rapidjson::Document document;
   document.Parse(data);
   if (!document.IsObject())
     return false;
+  return Parse(document);
+}
 
-  auto dev = document.FindMember(kDev);
-  if (dev != document.MemberEnd()) {
+bool SandboxMetadata::Parse(const rapidjson::Value& sandbox_value) {
+  dev_.clear();
+  features_.clear();
+
+  auto dev = sandbox_value.FindMember(kDev);
+  if (dev != sandbox_value.MemberEnd()) {
     if (!CopyArrayToVector(dev->value, &dev_))
       return false;
   }
 
-  auto system = document.FindMember(kSystem);
-  if (system != document.MemberEnd()) {
+  auto system = sandbox_value.FindMember(kSystem);
+  if (system != sandbox_value.MemberEnd()) {
     if (!CopyArrayToVector(system->value, &system_))
       return false;
   }
 
-  auto pkgfs = document.FindMember(kPkgfs);
-  if (pkgfs != document.MemberEnd()) {
+  auto pkgfs = sandbox_value.FindMember(kPkgfs);
+  if (pkgfs != sandbox_value.MemberEnd()) {
     if (!CopyArrayToVector(pkgfs->value, &pkgfs_))
       return false;
   }
 
-  auto features = document.FindMember(kFeatures);
-  if (features != document.MemberEnd()) {
+  auto features = sandbox_value.FindMember(kFeatures);
+  if (features != sandbox_value.MemberEnd()) {
     if (!CopyArrayToVector(features->value, &features_))
       return false;
   }
