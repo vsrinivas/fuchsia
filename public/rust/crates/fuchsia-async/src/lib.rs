@@ -7,10 +7,13 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
+extern crate bytes;
 extern crate crossbeam;
 #[macro_use]
 extern crate futures;
 extern crate fuchsia_zircon as zx;
+extern crate libc;
+extern crate net2;
 extern crate parking_lot;
 extern crate slab;
 
@@ -31,6 +34,7 @@ mod executor;
 pub use executor::{Executor, EHandle, spawn};
 mod fifo;
 pub use fifo::{Fifo, FifoEntry};
+pub mod net;
 
 #[macro_export]
 macro_rules! many_futures {
