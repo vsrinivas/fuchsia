@@ -96,5 +96,11 @@ int main(int argc, char** argv) {
         return -2;
     }
     zx_log_write(log_handle, 4, "TEST", 0);
+
+    if (get_root_resource() == ZX_HANDLE_INVALID) {
+        fprintf(stderr, "Cannot access root resource, refusing to run tests.\n");
+        fprintf(stderr, "core-tests must be invoked by userboot (e.g. userboot=bin/core-tests).\n");
+        return -1;
+    }
     return unittest_run_all_tests(argc, argv) ? 0 : -1;
 }
