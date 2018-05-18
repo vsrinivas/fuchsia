@@ -25,6 +25,9 @@ class FramebufferScanout : public GpuScanout {
   // | GpuScanout|
   void InvalidateRegion(const GpuRect& rect) override;
 
+  void SetResource(GpuResource* res,
+                   const virtio_gpu_set_scanout_t* request) override;
+
  private:
   FramebufferScanout(GpuBitmap surface, uint8_t* buf);
 
