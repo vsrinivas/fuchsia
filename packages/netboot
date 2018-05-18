@@ -1,5 +1,5 @@
 {
     "labels": [
-        "//build/gn:netboot"
+        "//build/images:netboot"
     ]
 }
