@@ -39,7 +39,6 @@ source_set("lib") {
   sources = [
     "channels.cc",
     "events.cc",
-    "fifos.cc",
     "filesystem.cc",
     "mmu.cc",
     "null.cc",

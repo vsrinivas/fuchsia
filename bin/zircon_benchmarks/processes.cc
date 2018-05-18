@@ -204,22 +204,6 @@ bool Process::CloseHandles(benchmark::State& state) {
   return true;
 }
 
-// This benchmark measures zx_create_process(). Note, the process is not started.
-BENCHMARK_F(Process, Create)(benchmark::State& state) {
-  zx_handle_t job = zx_job_default();
-  while (state.KeepRunning()) {
-    if (zx_process_create(job, pname, sizeof(pname), 0, &proc_handle, &vmar_handle) != ZX_OK) {
-      state.SkipWithError("Failed to create process");
-      return;
-    }
-    state.PauseTiming();
-    if (!CloseHandles(state)) {
-      return;
-    }
-    state.ResumeTiming();
-  }
-}
-
 // This benchmark measures zx_start_process().
 BENCHMARK_F(Process, Start)(benchmark::State& state) {
   zx_handle_t job = zx_job_default();

@@ -8,20 +8,6 @@
 
 class Thread : public benchmark::Fixture {};
 
-BENCHMARK_F(Thread, Create)(benchmark::State& state) {
-  zx_handle_t out;
-  constexpr char tname[] = "test thread";
-  while (state.KeepRunning()) {
-    if (zx_thread_create(zx_process_self(), tname, sizeof(tname), 0, &out) != ZX_OK) {
-      state.SkipWithError("Failed to create thread");
-      return;
-    }
-    state.PauseTiming();
-    zx_handle_close(out);
-    state.ResumeTiming();
-  }
-}
-
 BENCHMARK_F(Thread, CreateAndJoin)(benchmark::State& state) {
   zx_handle_t thread;
   constexpr char tname[] = "test thread";

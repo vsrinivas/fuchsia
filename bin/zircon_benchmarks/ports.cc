@@ -23,22 +23,6 @@ class Port : public benchmark::Fixture {
   static constexpr size_t packet_count = 1u;
 };
 
-BENCHMARK_DEFINE_F(Port, Create)(benchmark::State& state) {
-  zx_handle_t out;
-  while (state.KeepRunning()) {
-    if (zx_port_create(state.range(0), &out) != ZX_OK) {
-      state.SkipWithError("Failed to create port");
-      return;
-    }
-    state.PauseTiming();
-    zx_handle_close(out);
-    state.ResumeTiming();
-  }
-}
-
-BENCHMARK_REGISTER_F(Port, Create)
-    ->Arg(0);
-
 BENCHMARK_F(Port, Queue)(benchmark::State& state) {
   zx_port_packet out_packet;
   zx_port_packet in_packet;
