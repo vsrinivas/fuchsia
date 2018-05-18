@@ -373,7 +373,7 @@ class EventPortTest {
     zx::eventpair event1;
     zx::eventpair event2;
     FXL_CHECK(zx::eventpair::create(0, &event1, &event2) == ZX_OK);
-    helper_.set_event(std::move(event1));
+    signaler_.set_event(std::move(event1));
 
     zx_handle_t event_arg = event2.release();
     thread_or_process_.Launch("EventPortTest::ThreadFunc", &event_arg,
@@ -383,21 +383,21 @@ class EventPortTest {
   static void ThreadFunc(std::vector<zx_handle_t> handles) {
     FXL_CHECK(handles.size() == 1);
 
-    EventPortSignaler helper;
-    helper.set_event(zx::eventpair(handles[0]));
-    while (helper.Wait()) {
-      helper.Signal();
+    EventPortSignaler signaler;
+    signaler.set_event(zx::eventpair(handles[0]));
+    while (signaler.Wait()) {
+      signaler.Signal();
     }
   }
 
   void Run() {
-    helper_.Signal();
-    FXL_CHECK(helper_.Wait());
+    signaler_.Signal();
+    FXL_CHECK(signaler_.Wait());
   }
 
  private:
   ThreadOrProcess thread_or_process_;
-  EventPortSignaler helper_;
+  EventPortSignaler signaler_;
 };
 
 // Helper object for signaling and waiting on a Zircon socket object.  This
