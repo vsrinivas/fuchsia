@@ -61,7 +61,7 @@ private:
     zx::vmo scratch_buffer_;
     zx::bti bti_;
     zx::pmt scratch_buffer_pmt_;
-    zx_paddr_t scratch_buffer_paddr_;
+    zx_paddr_t scratch_buffer_paddr_ = 0;
     uint64_t min_contiguity_;
 
     friend class GttRegion;

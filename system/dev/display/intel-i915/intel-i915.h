@@ -91,12 +91,12 @@ private:
     void AllocDisplayBuffers();
     DisplayDevice* FindDevice(uint64_t display_id) __TA_REQUIRES(display_lock_);
 
-    zx_device_t* zx_gpu_dev_;
+    zx_device_t* zx_gpu_dev_ = nullptr;
     bool gpu_released_ = false;
     bool display_released_ = false;
 
     void* dc_cb_ctx_ __TA_GUARDED(_dc_cb_lock_);
-    display_controller_cb_t* _dc_cb_ __TA_GUARDED(_dc_cb_lock_);
+    display_controller_cb_t* _dc_cb_ __TA_GUARDED(_dc_cb_lock_) = nullptr;
     mtx_t _dc_cb_lock_;
 
     // To prevent deadlocks, require that only the callback lock is held when making
@@ -127,7 +127,7 @@ private:
         void* base;
         uint64_t size;
         zx_handle_t vmo;
-        int32_t count;
+        int32_t count = 0;
     } mapped_bars_[PCI_MAX_BAR_COUNT] __TA_GUARDED(bar_lock_);
     mtx_t bar_lock_;
     // The mmio_space_ unique_ptr is read only. The internal registers are
@@ -143,7 +143,7 @@ private:
     Power power_;
     PowerWellRef cd_clk_power_well_;
     struct {
-        uint8_t use_count;
+        uint8_t use_count = 0;
         bool is_hdmi;
         uint32_t rate;
     } dplls_[registers::kDpllCount] = {};

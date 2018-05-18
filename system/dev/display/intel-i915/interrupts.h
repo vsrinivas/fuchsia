@@ -42,7 +42,7 @@ private:
 
     zx_intel_gpu_core_interrupt_callback_t interrupt_cb_ __TA_GUARDED(lock_);
     void* interrupt_cb_data_ __TA_GUARDED(lock_);
-    uint32_t interrupt_mask_ __TA_GUARDED(lock_);
+    uint32_t interrupt_mask_ __TA_GUARDED(lock_) = 0;
 
     mtx_t lock_;
 

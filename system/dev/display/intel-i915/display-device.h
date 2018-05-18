@@ -73,8 +73,9 @@ private:
     PowerWellRef ddi_power_;
     PowerWellRef pipe_power_;
 
-    bool inited_;
+    bool inited_ = false;
     display_mode_t info_;
+
     uint32_t image_type_;
     edid::Edid edid_;
     bool is_enabled_;
