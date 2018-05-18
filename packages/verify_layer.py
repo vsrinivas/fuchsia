@@ -20,6 +20,11 @@ ROOT_CANONICAL_PACKAGES = [
     'kitchen_sink',
 ]
 
+# Standard names for optional root packages in a layer.
+ROOT_OPTIONAL_PACKAGES = [
+    'buildbot',
+]
+
 # Standard names for packages in a layer.
 CANONICAL_PACKAGES = [
     'all',
@@ -100,7 +105,7 @@ def check_all(directory, dep_map, layer, is_root=True):
                 return False
             return True
         for file in filenames:
-            if is_root and (file in ROOT_CANONICAL_PACKAGES or file == layer):
+            if is_root and (file in ROOT_CANONICAL_PACKAGES or file in ROOT_OPTIONAL_PACKAGES or file == layer):
                 continue
             if file in CANONICAL_PACKAGES or file in NON_PACKAGE_FILES:
                 continue
