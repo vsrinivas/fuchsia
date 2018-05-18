@@ -4,7 +4,8 @@
 
 // Code for running other binaries as tests and recording their results.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_RUNTESTS_UTILS_H_
+#define ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_RUNTESTS_UTILS_H_
 
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
@@ -104,3 +105,5 @@ bool RunTestsInDir(const fbl::StringPiece dir_path, const fbl::Vector<fbl::Strin
                    int* num_failed, fbl::Vector<Result>* results);
 
 } // namespace runtests
+
+#endif // ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_RUNTESTS_UTILS_H_

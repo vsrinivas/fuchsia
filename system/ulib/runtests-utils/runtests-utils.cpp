@@ -215,7 +215,8 @@ int WriteSummaryJSON(const fbl::Vector<Result>& results,
         // only have to skip leading '/' characters in the test name.
         fbl::String output_file = runtests::JoinPath(result.name, output_file_basename);
         size_t i;
-        for (i = 0; i < output_file.size() && output_file[i] == '/'; i++) {}
+        for (i = 0; i < output_file.size() && output_file[i] == '/'; i++) {
+        }
         if (i == output_file.size()) {
             printf("Error: output_file was empty or all slashes: %s\n", output_file.c_str());
             return EINVAL;
@@ -295,7 +296,8 @@ bool RunTestsInDir(const fbl::StringPiece dir_path, const fbl::Vector<fbl::Strin
 
         if (verbosity > 0) {
             printf("\n------------------------------------------------\n"
-                   "RUNNING TEST: %s\n\n", test_name);
+                   "RUNNING TEST: %s\n\n",
+                   test_name);
         }
 
         // If output_dir was specified, ask run_test to redirect stdout/stderr

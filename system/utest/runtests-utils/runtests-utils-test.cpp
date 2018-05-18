@@ -34,12 +34,14 @@ public:
     ScopedScriptFile(const fbl::StringPiece path, const fbl::StringPiece contents);
     ~ScopedScriptFile();
     fbl::StringPiece path() const;
+
 private:
     const fbl::StringPiece path_;
 };
 
 ScopedScriptFile::ScopedScriptFile(
-        const fbl::StringPiece path, const fbl::StringPiece contents) : path_(path) {
+    const fbl::StringPiece path, const fbl::StringPiece contents)
+    : path_(path) {
     const int fd = open(path_.data(), O_CREAT | O_WRONLY, S_IRWXU);
     ZX_ASSERT_MSG(-1 != fd, "%s", strerror(errno));
     const char she_bang[] = "#!/boot/bin/sh\n\n";
