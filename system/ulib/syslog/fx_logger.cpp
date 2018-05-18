@@ -109,8 +109,11 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity,
         constexpr size_t kEllipsisSize = sizeof(kEllipsis) - 1;
         memcpy(packet.data + kDataSize - 1 - kEllipsisSize, kEllipsis,
                kEllipsisSize);
+        count = n - 1;
     }
-    auto status = socket_.write(0, &packet, sizeof(packet), nullptr);
+    auto size = sizeof(packet.metadata) + msg_pos + count + 1;
+    ZX_DEBUG_ASSERT(size <= sizeof(packet));
+    auto status = socket_.write(0, &packet, size, nullptr);
     if (status == ZX_ERR_BAD_STATE || status == ZX_ERR_PEER_CLOSED) {
         ActivateFallback(-1);
         return VLogWriteToFd(logger_fd_.load(fbl::memory_order_relaxed),
