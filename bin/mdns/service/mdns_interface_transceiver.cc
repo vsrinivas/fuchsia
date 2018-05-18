@@ -28,9 +28,7 @@ namespace mdns {
 
 // static
 std::unique_ptr<MdnsInterfaceTransceiver> MdnsInterfaceTransceiver::Create(
-    IpAddress address,
-    const std::string& name,
-    uint32_t index) {
+    IpAddress address, const std::string& name, uint32_t index) {
   MdnsInterfaceTransceiver* interface_transceiver;
 
   if (address.is_v4()) {
@@ -190,6 +188,12 @@ void MdnsInterfaceTransceiver::InboundReady(zx_status_t status,
 
   ReplyAddress reply_address(source_address_storage, index_);
 
+  if (reply_address.socket_address().address() == address_) {
+    // This is an outgoing message that's bounced back to us. Drop it.
+    WaitForInbound();
+    return;
+  }
+
   PacketReader reader(inbound_buffer_);
   reader.SetBytesRemaining(static_cast<size_t>(result));
   std::unique_ptr<DnsMessage> message = std::make_unique<DnsMessage>();
@@ -235,8 +239,7 @@ MdnsInterfaceTransceiver::GetAlternateAddressResource(
 }
 
 std::shared_ptr<DnsResource> MdnsInterfaceTransceiver::MakeAddressResource(
-    const std::string& host_full_name,
-    const IpAddress& address) {
+    const std::string& host_full_name, const IpAddress& address) {
   std::shared_ptr<DnsResource> resource;
 
   if (address.is_v4()) {
