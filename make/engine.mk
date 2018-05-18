@@ -393,7 +393,7 @@ USER_MANIFEST_LINES :=
 USER_MANIFEST_DEBUG_INPUTS :=
 
 # Directory in the bootfs where MODULE_FIRMWARE files go.
-FIRMWARE_INSTALL_DIR := driver/firmware
+FIRMWARE_INSTALL_DIR := lib/firmware
 # Directory in the source tree where MODULE_FIRMWARE files are found.
 FIRMWARE_SRC_DIR := prebuilt/downloads/firmware
 # TODO(mcgrathr): Force an absolute path for this so that every rhs in the
