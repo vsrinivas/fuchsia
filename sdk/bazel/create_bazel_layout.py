@@ -47,10 +47,28 @@ class CppBuilder(Builder):
         self.is_overlay = overlay
         self.is_debug = debug
         self.tools = []
+
+        package_bzl_src = os.path.join(SCRIPT_DIR, 'package.bzl')
+        package_bzl_dest = os.path.join(self.output, 'build_defs', 'package.bzl')
+        self.make_dir(package_bzl_dest)
+        shutil.copyfile(package_bzl_src, package_bzl_dest)
+        open(os.path.join(self.output, 'build_defs', 'BUILD'),'w+')
+
+
+        shutil.copytree(os.path.join(SCRIPT_DIR, 'examples'), os.path.join(self.output, 'examples'))
+
         if self.is_debug:
             workspace_filename = os.path.join(self.output, 'WORKSPACE')
             self.make_dir(workspace_filename)
-            open(workspace_filename,"w+")
+            open(workspace_filename,'w+')
+            fuchsia_bzl_src = os.path.join(SCRIPT_DIR, 'fuchsia.bzl')
+            fuchsia_bzl_dest = os.path.join(self.output, 'fuchsia', 'fuchsia.bzl')
+            self.make_dir(fuchsia_bzl_dest)
+            shutil.copyfile(fuchsia_bzl_src, fuchsia_bzl_dest)
+            open(os.path.join(self.output, 'fuchsia', 'BUILD'),'w+')
+
+
+
 
     def finalize(self):
         self.write_tools_build_file()
