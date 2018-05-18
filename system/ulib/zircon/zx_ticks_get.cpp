@@ -6,6 +6,10 @@
 
 #include "private.h"
 
+#ifdef __x86_64__
+#include <x86intrin.h>
+#endif
+
 zx_ticks_t _zx_ticks_get(void) {
 #if __aarch64__
     // read the virtual counter
@@ -13,10 +17,7 @@ zx_ticks_t _zx_ticks_get(void) {
     __asm__ volatile("mrs %0, cntvct_el0" : "=r" (ticks));
     return ticks;
 #elif __x86_64__
-    uint32_t ticks_low;
-    uint32_t ticks_high;
-    __asm__ volatile("rdtsc" : "=a" (ticks_low), "=d" (ticks_high));
-    return ((zx_ticks_t)ticks_high << 32) | ticks_low;
+    return __rdtsc();
 #else
 #error Unsupported architecture
 #endif
