@@ -89,8 +89,6 @@ void LedgerStorageImpl::GetPageStorage(
                                        "ledger_storage_get_page_storage");
   std::string path = GetPathFor(page_id);
   if (!files::IsDirectory(path)) {
-    // TODO(nellyv): Maybe the page exists but is not synchronized, yet. We need
-    // to check in the cloud.
     timed_callback(Status::NOT_FOUND, nullptr);
     return;
   }
