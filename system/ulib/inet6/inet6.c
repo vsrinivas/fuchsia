@@ -576,10 +576,11 @@ middle_zeros:
         out += sprintf(out, ":");
         return _out;
     }
-    while (x < end) {
-        out += sprintf(out, ":%x", n);
+    out += sprintf(out, ":%x", n);
+    while (x < (end - 2)) {
         x += 2;
         n = (x[0] << 8) | x[1];
+        out += sprintf(out, ":%x", n);
     }
     return _out;
 }
