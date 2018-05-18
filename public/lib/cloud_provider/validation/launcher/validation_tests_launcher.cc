@@ -27,7 +27,7 @@ ValidationTestsLauncher::ValidationTestsLauncher(
 void ValidationTestsLauncher::Run(const std::vector<std::string>& arguments,
                                   std::function<void(int32_t)> callback) {
   callback_ = std::move(callback);
-  component::ApplicationLaunchInfo launch_info;
+  component::LaunchInfo launch_info;
   launch_info.url = kValidationTestsUrl;
   component::ServiceList service_list;
   service_list.names.push_back(cloud_provider::CloudProvider::Name_);

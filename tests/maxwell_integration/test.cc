@@ -21,7 +21,7 @@ MaxwellTestBase::MaxwellTestBase() {
 
 component::Services MaxwellTestBase::StartServices(const std::string& url) {
   component::Services services;
-  component::ApplicationLaunchInfo launch_info;
+  component::LaunchInfo launch_info;
   launch_info.url = url;
   launch_info.directory_request = services.NewRequest();
 

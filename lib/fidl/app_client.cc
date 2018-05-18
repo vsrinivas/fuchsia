@@ -48,7 +48,7 @@ AppClientBase::AppClientBase(component::ApplicationLauncher* const launcher,
                              std::string data_origin,
                              component::ServiceListPtr additional_services)
     : AsyncHolderBase(config.url) {
-  component::ApplicationLaunchInfo launch_info;
+  component::LaunchInfo launch_info;
   launch_info.directory_request = services_.NewRequest();
   launch_info.url = config.url;
   fidl::VectorPtr<fidl::StringPtr> args;

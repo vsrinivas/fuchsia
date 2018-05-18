@@ -69,7 +69,7 @@ CloudProviderFactory::~CloudProviderFactory() {
 void CloudProviderFactory::Init() {
   services_loop_.StartThread();
   component::Services child_services;
-  component::ApplicationLaunchInfo launch_info;
+  component::LaunchInfo launch_info;
   launch_info.url = kAppUrl;
   launch_info.directory_request = child_services.NewRequest();
   application_context_->launcher()->CreateApplication(

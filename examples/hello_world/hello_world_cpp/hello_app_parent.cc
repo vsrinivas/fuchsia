@@ -21,7 +21,7 @@ class HelloAppParent {
  public:
   explicit HelloAppParent(component::ApplicationContext* app_context,
                           fxl::CommandLine command_line) {
-    component::ApplicationLaunchInfo launch_info;
+    component::LaunchInfo launch_info;
     const std::vector<std::string>& args = command_line.positional_args();
     if (args.empty()) {
       launch_info.url = "hello_app_child";

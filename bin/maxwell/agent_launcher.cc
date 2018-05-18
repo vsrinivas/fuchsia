@@ -25,7 +25,7 @@ component::Services AgentLauncher::StartAgent(
   component::ApplicationLauncherPtr agent_launcher;
   agent_env->GetApplicationLauncher(agent_launcher.NewRequest());
 
-  component::ApplicationLaunchInfo launch_info;
+  component::LaunchInfo launch_info;
   launch_info.url = url;
   component::Services services;
   launch_info.directory_request = services.NewRequest();

@@ -8,7 +8,7 @@ namespace modular {
 namespace testing {
 
 void FakeApplicationLauncher::CreateApplication(
-    component::ApplicationLaunchInfo launch_info,
+    component::LaunchInfo launch_info,
     fidl::InterfaceRequest<component::ApplicationController> controller) {
   auto it = connectors_.find(launch_info.url);
   if (it != connectors_.end()) {

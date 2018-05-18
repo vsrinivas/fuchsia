@@ -100,7 +100,7 @@ class MyEntityProvider : AgentImpl::Delegate,
                          public testing::MockBase {
  public:
   MyEntityProvider(
-      component::ApplicationLaunchInfo launch_info,
+      component::LaunchInfo launch_info,
       fidl::InterfaceRequest<component::ApplicationController> ctrl)
       : vfs_(async_get_default()),
         outgoing_directory_(fbl::AdoptRef(new fs::PseudoDir())),
@@ -176,7 +176,7 @@ class MyEntityProvider : AgentImpl::Delegate,
   EntityResolverPtr entity_resolver_;
   fidl::Binding<component::ApplicationController> app_controller_;
   fidl::Binding<modular::EntityProvider> entity_provider_binding_;
-  component::ApplicationLaunchInfo launch_info_;
+  component::LaunchInfo launch_info_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MyEntityProvider);
 };
@@ -187,7 +187,7 @@ TEST_F(EntityProviderRunnerTest, Basic) {
   launcher()->RegisterApplication(
       kMyAgentUrl,
       [&dummy_agent](
-          component::ApplicationLaunchInfo launch_info,
+          component::LaunchInfo launch_info,
           fidl::InterfaceRequest<component::ApplicationController> ctrl) {
         dummy_agent = std::make_unique<MyEntityProvider>(std::move(launch_info),
                                                          std::move(ctrl));

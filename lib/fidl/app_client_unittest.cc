@@ -57,7 +57,7 @@ TEST_F(AppClientTest, BaseRun_Success) {
   launcher.RegisterApplication(
       kTestUrl,
       [&callback_called](
-          component::ApplicationLaunchInfo launch_info,
+          component::LaunchInfo launch_info,
           fidl::InterfaceRequest<component::ApplicationController> ctrl) {
         EXPECT_EQ(kTestUrl, launch_info.url);
         callback_called = true;
@@ -74,7 +74,7 @@ TEST_F(AppClientTest, BaseTerminate_Success) {
   launcher.RegisterApplication(
       kTestUrl,
       [&callback_called, &controller](
-          component::ApplicationLaunchInfo launch_info,
+          component::LaunchInfo launch_info,
           fidl::InterfaceRequest<component::ApplicationController> ctrl) {
         EXPECT_EQ(kTestUrl, launch_info.url);
         callback_called = true;
@@ -104,7 +104,7 @@ TEST_F(AppClientTest, Run_Success) {
   launcher.RegisterApplication(
       kTestUrl,
       [&callback_called](
-          component::ApplicationLaunchInfo launch_info,
+          component::LaunchInfo launch_info,
           fidl::InterfaceRequest<component::ApplicationController> ctrl) {
         EXPECT_EQ(kTestUrl, launch_info.url);
         callback_called = true;
@@ -127,7 +127,7 @@ TEST_F(AppClientTest, RunWithParams_Success) {
   launcher.RegisterApplication(
       kTestUrl,
       [&callback_called](
-          component::ApplicationLaunchInfo launch_info,
+          component::LaunchInfo launch_info,
           fidl::InterfaceRequest<component::ApplicationController> ctrl) {
         EXPECT_EQ(kTestUrl, launch_info.url);
         auto additional_services = std::move(launch_info.additional_services);

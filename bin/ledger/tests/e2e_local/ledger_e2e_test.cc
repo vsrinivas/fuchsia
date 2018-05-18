@@ -50,7 +50,7 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
  protected:
   void Init(std::vector<std::string> additional_args) {
     component::Services child_services;
-    component::ApplicationLaunchInfo launch_info;
+    component::LaunchInfo launch_info;
     launch_info.url = "ledger";
     launch_info.directory_request = child_services.NewRequest();
     launch_info.arguments.push_back("--no_minfs_wait");

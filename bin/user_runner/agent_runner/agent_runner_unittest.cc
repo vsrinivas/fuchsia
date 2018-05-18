@@ -137,7 +137,7 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
   launcher()->RegisterApplication(
       kMyAgentUrl,
       [&dummy_agent, &agent_launch_count](
-          component::ApplicationLaunchInfo launch_info,
+          component::LaunchInfo launch_info,
           fidl::InterfaceRequest<component::ApplicationController> ctrl) {
         dummy_agent = std::make_unique<MyDummyAgent>(
             std::move(launch_info.directory_request), std::move(ctrl));
@@ -183,7 +183,7 @@ TEST_F(AgentRunnerTest, AgentController) {
   launcher()->RegisterApplication(
       kMyAgentUrl,
       [&dummy_agent](
-          component::ApplicationLaunchInfo launch_info,
+          component::LaunchInfo launch_info,
           fidl::InterfaceRequest<component::ApplicationController> ctrl) {
         dummy_agent = std::make_unique<MyDummyAgent>(
             std::move(launch_info.directory_request), std::move(ctrl));

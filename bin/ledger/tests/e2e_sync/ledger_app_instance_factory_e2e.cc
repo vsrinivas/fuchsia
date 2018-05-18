@@ -94,7 +94,7 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   component::ApplicationControllerPtr controller;
   ledger_internal::LedgerRepositoryFactoryPtr repository_factory;
   component::Services child_services;
-  component::ApplicationLaunchInfo launch_info;
+  component::LaunchInfo launch_info;
   launch_info.url = "ledger";
   launch_info.directory_request = child_services.NewRequest();
   launch_info.arguments.push_back("--no_minfs_wait");

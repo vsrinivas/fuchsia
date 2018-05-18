@@ -27,7 +27,7 @@ CloudProviderFirebaseFactory::~CloudProviderFirebaseFactory() {
 void CloudProviderFirebaseFactory::Init() {
   loop_.StartThread();
   component::Services child_services;
-  component::ApplicationLaunchInfo launch_info;
+  component::LaunchInfo launch_info;
   launch_info.url = kCloudProviderFirebaseAppUrl;
   launch_info.directory_request = child_services.NewRequest();
   application_context_->launcher()->CreateApplication(

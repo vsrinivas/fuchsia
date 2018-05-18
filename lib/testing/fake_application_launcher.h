@@ -20,14 +20,14 @@ namespace testing {
 class FakeApplicationLauncher : public component::ApplicationLauncher {
  public:
   using ApplicationConnectorFn = std::function<void(
-      component::ApplicationLaunchInfo,
+      component::LaunchInfo,
       fidl::InterfaceRequest<component::ApplicationController>)>;
 
   // Registers an application located at "url" with a connector. When someone
   // tries to CreateApplication() with this |url|, the supplied |connector| is
-  // called with the the ApplicationLaunchInfo and associated
+  // called with the the LaunchInfo and associated
   // ApplicationController request. The connector may implement the
-  // |ApplicationLaunchInfo.services| and |ApplicationController| interfaces to
+  // |LaunchInfo.services| and |ApplicationController| interfaces to
   // communicate with its connector and listen for application closing signals
   void RegisterApplication(std::string url, ApplicationConnectorFn connector);
 
@@ -37,7 +37,7 @@ class FakeApplicationLauncher : public component::ApplicationLauncher {
   // this call is dropped.
   // |ApplicationLauncher|
   void CreateApplication(
-      component::ApplicationLaunchInfo launch_info,
+      component::LaunchInfo launch_info,
       fidl::InterfaceRequest<component::ApplicationController> controller)
       override;
 
