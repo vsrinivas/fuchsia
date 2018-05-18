@@ -108,3 +108,22 @@ executable("audio_server") {
     "//zircon/public/lib/zx",
   ]
 }
+
+test("tests") {
+  testonly = true
+  output_name = "audio_server_tests"
+
+  sources = [
+    "test/audio_renderer2_tests.cc",
+    "test/main.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/media/fidl",
+    "//third_party/googletest:gtest_main",
+  ]
+}
