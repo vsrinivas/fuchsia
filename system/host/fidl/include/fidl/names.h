@@ -15,10 +15,13 @@
 
 namespace fidl {
 
+std::string StringJoin(const std::vector<StringView>& strings, StringView separator);
+
 std::string NameIdentifier(SourceLocation name);
 std::string NameName(const flat::Name& name, StringView library_separator, StringView separator);
 
 std::string NameLibrary(const std::vector<StringView>& library_name);
+std::string NameLibraryCHeader(const std::vector<StringView>& library_name);
 
 std::string NamePrimitiveCType(types::PrimitiveSubtype subtype);
 std::string NamePrimitiveSubtype(types::PrimitiveSubtype subtype);

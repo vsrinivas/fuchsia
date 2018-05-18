@@ -20,7 +20,8 @@ namespace flat {
 
 namespace {
 
-template <typename T> class Scope {
+template <typename T>
+class Scope {
 public:
     bool Insert(const T& t) {
         auto iter = scope_.insert(t);
@@ -141,18 +142,10 @@ TypeShape PrimitiveTypeShape(types::PrimitiveSubtype type) {
 // so on.
 
 std::string LibraryName(const Library* library, StringView separator) {
-    std::string name;
     if (library != nullptr) {
-        bool first = true;
-        for (const auto& part : library->name()) {
-            if (!first) {
-                name += separator;
-            }
-            name += part;
-            first = false;
-        }
+        return StringJoin(library->name(), separator);
     }
-    return name;
+    return std::string();
 }
 
 bool Library::Fail(StringView message) {

@@ -27,6 +27,19 @@ std::string NameSize(uint64_t size) {
 
 } // namespace
 
+std::string StringJoin(const std::vector<StringView>& strings, StringView separator) {
+    std::string result;
+    bool first = true;
+    for (const auto& part : strings) {
+        if (!first) {
+            result += separator;
+        }
+        first = false;
+        result += part;
+    }
+    return result;
+}
+
 std::string NamePrimitiveCType(types::PrimitiveSubtype subtype) {
     switch (subtype) {
     case types::PrimitiveSubtype::kInt8:
@@ -285,16 +298,11 @@ std::string NameName(const flat::Name& name, StringView library_separator, Strin
 }
 
 std::string NameLibrary(const std::vector<StringView>& library_name) {
-    std::string name;
-    bool first = true;
-    for (const auto& part : library_name) {
-        if (!first ) {
-            name += ".";
-        }
-        first = false;
-        name += part;
-    }
-    return name;
+    return StringJoin(library_name, ".");
+}
+
+std::string NameLibraryCHeader(const std::vector<StringView>& library_name) {
+    return StringJoin(library_name, "/") + "/c/fidl.h";
 }
 
 std::string NameInterface(const flat::Interface& interface) {

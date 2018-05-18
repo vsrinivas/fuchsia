@@ -192,6 +192,11 @@ void CGenerator::GeneratePrologues() {
     EmitIncludeHeader(&header_file_, "<zircon/fidl.h>");
     EmitIncludeHeader(&header_file_, "<zircon/syscalls/object.h>");
     EmitIncludeHeader(&header_file_, "<zircon/types.h>");
+    for (const auto& pair : *library_->dependencies_) {
+        if (pair.second.get() == library_)
+            continue;
+        EmitIncludeHeader(&header_file_, "<" + NameLibraryCHeader(pair.first) + ">");
+    }
     EmitBlank(&header_file_);
     EmitBeginExternC(&header_file_);
     EmitBlank(&header_file_);
