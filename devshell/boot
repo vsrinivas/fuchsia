@@ -134,12 +134,12 @@ case "${machine_type}" in
     usage
   ;;
   zedboot)
-    ramdisk="${fuchsia_dir}/images/zedboot-${board}.bin"
+    ramdisk="${fuchsia_dir}/images/zedboot.bin"
     disks=()
     add_fvm=false
   ;;
   ram|netboot|--netboot)
-    ramdisk="${fuchsia_dir}/netboot-${board}.bin"
+    ramdisk="${fuchsia_dir}/netboot.bin"
     disks=()
     add_fvm=false
   ;;
@@ -163,7 +163,7 @@ case "${machine_type}" in
         --kernc "${fuchsia_dir}/${kernc_vboot}")
     else
       # For now ARM64 imples netboot.
-      ramdisk="${fuchsia_dir}/netboot-${board}.bin"
+      ramdisk="${fuchsia_dir}/netboot.bin"
       disks=()
       add_fvm=false
     fi
