@@ -730,7 +730,7 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
     }
 
     auto manifest_clone = ModuleManifest::New();
-    module_data_->module_manifest->Clone(manifest_clone.get());
+    fidl::Clone(module_data_->module_manifest, &manifest_clone);
     auto surface_relation_clone = SurfaceRelation::New();
     module_data_->surface_relation->Clone(surface_relation_clone.get());
     story_controller_impl_->pending_views_.emplace(
@@ -1651,11 +1651,18 @@ LinkPathPtr StoryControllerImpl::GetLinkPathForChainKey(
                         [&module_path](const std::unique_ptr<ChainImpl>& ptr) {
                           return ptr->chain_path() == module_path;
                         });
-  // We expect a Chain for each Module to have been created during Module
-  // initialization.
-  FXL_CHECK(i != chains_.end()) << PathString(module_path);
 
-  auto link_path = (*i)->GetLinkPathForKey(key);
+  LinkPathPtr link_path = nullptr;
+  if (i != chains_.end()) {
+    link_path = (*i)->GetLinkPathForKey(key);
+  } else {
+    // TODO(MI4-993): It should be an error that is returned to the client for
+    // that client to be able to make a request that results in this code path.
+    FXL_LOG(WARNING)
+        << "Looking for module params on module that doesn't exist: "
+        << PathString(module_path);
+  }
+
   if (!link_path) {
     link_path = LinkPath::New();
     link_path->module_path = module_path.Clone();
