@@ -508,32 +508,33 @@ static int i8042_irq_thread(void* arg) {
 
     for (;;) {
         status = zx_interrupt_wait(device->irq, NULL);
-        if (status == ZX_OK) {
-            // keep handling status on the controller until no bits are set we care about
-            bool retry;
-            do {
-                retry = false;
-
-                uint8_t str = i8042_read_status();
-
-                // check for incoming data from the controller
-                // TODO: deal with potential race between IRQ1 and IRQ12
-                if (str & I8042_STR_OBF) {
-                    uint8_t data = i8042_read_data();
-                    // TODO: should we check (str & I8042_STR_AUXDATA) before
-                    // handling this byte?
-                    if (device->type == INPUT_PROTO_KBD) {
-                        i8042_process_scode(device, data,
-                                            ((str & I8042_STR_PARITY) ? I8042_STR_PARITY : 0) |
-                                                ((str & I8042_STR_TIMEOUT) ? I8042_STR_TIMEOUT : 0));
-                    } else if (device->type == INPUT_PROTO_MOUSE) {
-                        i8042_process_mouse(device, data, 0);
-                    }
-                    retry = true;
-                }
-                // TODO check other status bits here
-            } while (retry);
+        if (status != ZX_OK) {
+            break;
         }
+        // keep handling status on the controller until no bits are set we care about
+        bool retry;
+        do {
+            retry = false;
+
+            uint8_t str = i8042_read_status();
+
+            // check for incoming data from the controller
+            // TODO: deal with potential race between IRQ1 and IRQ12
+            if (str & I8042_STR_OBF) {
+                uint8_t data = i8042_read_data();
+                // TODO: should we check (str & I8042_STR_AUXDATA) before
+                // handling this byte?
+                if (device->type == INPUT_PROTO_KBD) {
+                    i8042_process_scode(device, data,
+                                        ((str & I8042_STR_PARITY) ? I8042_STR_PARITY : 0) |
+                                        ((str & I8042_STR_TIMEOUT) ? I8042_STR_TIMEOUT : 0));
+                } else if (device->type == INPUT_PROTO_MOUSE) {
+                    i8042_process_mouse(device, data, 0);
+                }
+                retry = true;
+            }
+            // TODO check other status bits here
+        } while (retry);
     }
     return 0;
 }
@@ -707,14 +708,21 @@ static hidbus_protocol_ops_t hidbus_ops = {
     .set_protocol = i8042_set_protocol,
 };
 
+static void i8042_cleanup_irq_thread(i8042_device_t* dev) {
+    zx_interrupt_destroy(dev->irq);
+    thrd_join(dev->irq_thread, NULL);
+    zx_handle_close(dev->irq);
+}
+
 static void i8042_release(void* ctx) {
     i8042_device_t* i8042 = ctx;
+    i8042_cleanup_irq_thread(i8042);
     free(i8042);
 }
 
 static zx_protocol_device_t i8042_dev_proto = {
-     .version = DEVICE_OPS_VERSION,
-   .release = i8042_release,
+    .version = DEVICE_OPS_VERSION,
+    .release = i8042_release,
 };
 
 static zx_status_t i8042_dev_init(i8042_device_t* dev, const char* name, zx_device_t* parent) {
@@ -736,7 +744,7 @@ static zx_status_t i8042_dev_init(i8042_device_t* dev, const char* name, zx_devi
         ISA_IRQ_KEYBOARD : ISA_IRQ_MOUSE;
 
     zx_status_t status = zx_interrupt_create(get_root_resource(), interrupt,
-                        ZX_INTERRUPT_REMAP_IRQ, &(dev->irq));
+                        ZX_INTERRUPT_REMAP_IRQ, &dev->irq);
     if (status != ZX_OK) {
         return status;
     }
@@ -746,6 +754,7 @@ static zx_status_t i8042_dev_init(i8042_device_t* dev, const char* name, zx_devi
         "i8042-kbd-irq" : "i8042-mouse-irq";
     int ret = thrd_create_with_name(&dev->irq_thread, i8042_irq_thread, dev, tname);
     if (ret != thrd_success) {
+        zx_handle_close(dev->irq);
         return ZX_ERR_BAD_STATE;
     }
 
@@ -758,7 +767,11 @@ static zx_status_t i8042_dev_init(i8042_device_t* dev, const char* name, zx_devi
         .proto_ops = &hidbus_ops,
     };
 
-    return device_add(parent, &args, NULL);
+    status = device_add(parent, &args, NULL);
+    if (status != ZX_OK) {
+        i8042_cleanup_irq_thread(dev);
+    }
+    return status;
 }
 
 static int i8042_init_thread(void* arg) {
