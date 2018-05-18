@@ -116,7 +116,7 @@ static bool kvs_wire_format(void) {
     hdr.crc = crc32(0, (const void*) &hdr, sizeof(hdr) - sizeof(uint32_t));
     hdr.crc = crc32(hdr.crc, content, sizeof(content));
     memcpy(buffer, &hdr, sizeof(hdr));
-    memcpy(buffer + sizeof(hdr), content, sizeof(hdr) + sizeof(content));
+    memcpy(buffer + sizeof(hdr), content, sizeof(content));
 
     // Create a new kvs with the same content, save it, compare raw data
     uint8_t buffer2[1024];
@@ -135,7 +135,7 @@ static bool kvs_wire_format(void) {
 
     // exactly sized should parse
     memcpy(buffer, &hdr, sizeof(hdr));
-    memcpy(buffer + sizeof(hdr), content, sizeof(hdr) + sizeof(content));
+    memcpy(buffer + sizeof(hdr), content, sizeof(content));
     ASSERT_EQ(kvs_load(&kvs, buffer, sizeof(hdr) + sizeof(content)), KVS_OK, "");
 
     // verify we can find all the keys
@@ -149,7 +149,7 @@ static bool kvs_wire_format(void) {
 
     // larger buffer should allow keys to be added
     memcpy(buffer, &hdr, sizeof(hdr));
-    memcpy(buffer + sizeof(hdr), content, sizeof(hdr) + sizeof(content));
+    memcpy(buffer + sizeof(hdr), content, sizeof(content));
     ASSERT_EQ(kvs_load(&kvs, buffer, sizeof(buffer)), KVS_OK, "");
 
     // add additional keys
@@ -170,7 +170,7 @@ static bool kvs_wire_format(void) {
 
     // truncated buffer should fail
     memcpy(buffer, &hdr, sizeof(hdr));
-    memcpy(buffer + sizeof(hdr), content, sizeof(hdr) + sizeof(content));
+    memcpy(buffer + sizeof(hdr), content, sizeof(content));
     ASSERT_EQ(kvs_load(&kvs, buffer, sizeof(hdr) + sizeof(content) - 1), KVS_ERR_PARSE_HDR, "");
 
     // truncated records should fail
@@ -178,7 +178,7 @@ static bool kvs_wire_format(void) {
     hdr.crc = crc32(0, (const void*) &hdr, sizeof(hdr) - sizeof(uint32_t));
     hdr.crc = crc32(hdr.crc, content, sizeof(content) - 3);
     memcpy(buffer, &hdr, sizeof(hdr));
-    memcpy(buffer + sizeof(hdr), content, sizeof(hdr) + sizeof(content));
+    memcpy(buffer + sizeof(hdr), content, sizeof(content));
     ASSERT_EQ(kvs_load(&kvs, buffer, sizeof(hdr) + sizeof(content) - 3), KVS_ERR_PARSE_REC, "");
 
     END_TEST;
