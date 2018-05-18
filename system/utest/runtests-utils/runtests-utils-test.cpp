@@ -229,7 +229,7 @@ bool MkDirAllParentDoesNotExist() {
 bool WriteSummaryJSONSucceeds() {
     BEGIN_TEST;
     // A reasonable guess that the function won't output more than this.
-    fbl::unique_ptr<char> buf(static_cast<char*>(malloc(kOneMegabyte)));
+    fbl::unique_ptr<char[]> buf(new char[kOneMegabyte]);
     FILE* buf_file = fmemopen(buf.get(), kOneMegabyte, "w");
     const fbl::Vector<Result> results = {Result("/a", SUCCESS, 0),
                                          Result("b", FAILED_TO_LAUNCH, 0)};
@@ -247,7 +247,7 @@ bool WriteSummaryJSONSucceeds() {
 bool WriteSummaryJSONBadTestName() {
     BEGIN_TEST;
     // A reasonable guess that the function won't output more than this.
-    fbl::unique_ptr<char> buf(static_cast<char*>(malloc(kOneMegabyte)));
+    fbl::unique_ptr<char[]> buf(new char[kOneMegabyte]);
     FILE* buf_file = fmemopen(buf.get(), kOneMegabyte, "w");
     // A test name and output file consisting entirely of slashes should trigger an error.
     const fbl::Vector<Result> results = {Result("///", SUCCESS, 0),
