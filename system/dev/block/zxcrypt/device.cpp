@@ -339,8 +339,9 @@ void Device::BlockComplete(block_op_t* block, zx_status_t rc) {
 void Device::BlockRelease(block_op_t* block, zx_status_t rc) {
     extra_op_t* extra = BlockToExtra(block, info_->op_size);
     block->cookie = extra->cookie;
-    extra->completion_cb(block, rc);
+    block->completion_cb = extra->completion_cb;
     ReleaseBlock(extra);
+    block->completion_cb(block, rc);
 
     // Try to re-visit any requests we had to defer.
     while (true) {
