@@ -21,22 +21,22 @@ struct StartupInfo {
   // environment identity.
 };
 
-// A binary representation of an application.
+// A binary representation of a component.
 //
-// Typically provided to |ApplicationRunner.StartApplication| when starting an
-// application.
-struct ApplicationPackage {
-  // A read-only binary representation of the application. For example, if the
-  // application is intended to run in the Dart virtual machine, this data might
+// Typically provided to |ApplicationRunner.StartApplication| when starting a
+// component.
+struct Package {
+  // A read-only binary representation of the component. For example, if the
+  // component is intended to run in the Dart virtual machine, this data might
   // contain a dartx package.
   fuchsia.mem.Buffer? data;
 
   // A directory containing the contents of the package. For example, if the
-  // application is stored in pkgfs, this directory will be the pkgfs directory
+  // component is stored in pkgfs, this directory will be the pkgfs directory
   // containing the package.
   handle<channel>? directory;
 
-  // Resolved URL of the application. This is the url specified in startup_info
+  // Resolved URL of the component. This is the url specified in startup_info
   // after following redirects and resolving relative paths.
   string resolved_url;
 };
@@ -57,7 +57,7 @@ interface ApplicationRunner {
   // The |controller| interface request typically originates from the
   // |ApplicationLauncher.CreateApplication| message that caused this
   // application to be started.
-  1: StartApplication(ApplicationPackage application,
+  1: StartApplication(Package package,
                      StartupInfo startup_info,
                      request<ApplicationController>? controller);
 };

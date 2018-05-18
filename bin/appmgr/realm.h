@@ -75,11 +75,11 @@ class Realm {
   ApplicationRunnerHolder* GetOrCreateRunner(const std::string& runner);
 
   void CreateApplicationWithProcess(
-      ApplicationPackagePtr package, LaunchInfo launch_info,
+      PackagePtr package, LaunchInfo launch_info,
       fidl::InterfaceRequest<ApplicationController> controller,
       fxl::RefPtr<Namespace> ns);
   void CreateApplicationFromPackage(
-      ApplicationPackagePtr package, LaunchInfo launch_info,
+      PackagePtr package, LaunchInfo launch_info,
       fidl::InterfaceRequest<ApplicationController> controller,
       fxl::RefPtr<Namespace> ns);
 

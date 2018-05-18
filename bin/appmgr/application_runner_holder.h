@@ -24,7 +24,7 @@ class ApplicationRunnerHolder {
   ~ApplicationRunnerHolder();
 
   void StartApplication(
-      ApplicationPackage package, StartupInfo startup_info,
+      Package package, StartupInfo startup_info,
       std::unique_ptr<archive::FileSystem> file_system,
       fxl::RefPtr<Namespace> ns,
       fidl::InterfaceRequest<ApplicationController> controller);

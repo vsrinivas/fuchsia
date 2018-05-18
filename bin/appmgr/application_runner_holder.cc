@@ -24,7 +24,7 @@ ApplicationRunnerHolder::ApplicationRunnerHolder(
 ApplicationRunnerHolder::~ApplicationRunnerHolder() = default;
 
 void ApplicationRunnerHolder::StartApplication(
-    ApplicationPackage package, StartupInfo startup_info,
+    Package package, StartupInfo startup_info,
     std::unique_ptr<archive::FileSystem> file_system, fxl::RefPtr<Namespace> ns,
     fidl::InterfaceRequest<ApplicationController> controller) {
   file_systems_.push_back(std::move(file_system));

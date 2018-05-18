@@ -23,7 +23,7 @@ GuestRunner::GuestRunner()
 GuestRunner::~GuestRunner() = default;
 
 void GuestRunner::StartApplication(
-    component::ApplicationPackage application,
+    component::Package application,
     component::StartupInfo startup_info,
     ::fidl::InterfaceRequest<component::ApplicationController> controller) {
   component::LaunchInfo launch_info;

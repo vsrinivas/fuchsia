@@ -42,7 +42,7 @@ void RootLoader::LoadComponent(fidl::StringPtr url,
         if (fd.is_valid()) {
           zx::channel directory = fsl::CloneChannelFromFileDescriptor(fd.get());
           if (directory) {
-            ApplicationPackage package;
+            Package package;
             package.directory = std::move(directory);
             package.resolved_url = fxl::Concatenate({"file://", pkg_path});
             callback(fidl::MakeOptional(std::move(package)));
@@ -62,7 +62,7 @@ void RootLoader::LoadComponent(fidl::StringPtr url,
     }
     fsl::SizedVmo data;
     if (fd.is_valid() && fsl::VmoFromFd(std::move(fd), &data)) {
-      ApplicationPackage package;
+      Package package;
       package.data = fidl::MakeOptional(std::move(data).ToTransport());
       package.resolved_url = fxl::Concatenate({"file://", path});
       callback(fidl::MakeOptional(std::move(package)));

@@ -304,7 +304,7 @@ void Realm::CreateApplication(
   loader_->LoadComponent(
       url, fxl::MakeCopyable([this, launch_info = std::move(launch_info),
                               controller = std::move(controller)](
-                                 ApplicationPackagePtr package) mutable {
+                                 PackagePtr package) mutable {
         fxl::RefPtr<Namespace> ns = default_namespace_;
         if (launch_info.additional_services) {
           ns = fxl::MakeRefCounted<Namespace>(
@@ -373,7 +373,7 @@ void Realm::AddBinding(
 }
 
 void Realm::CreateApplicationWithProcess(
-    ApplicationPackagePtr package, LaunchInfo launch_info,
+    PackagePtr package, LaunchInfo launch_info,
     fidl::InterfaceRequest<ApplicationController> controller,
     fxl::RefPtr<Namespace> ns) {
   zx::channel svc = ns->services().OpenAsDirectory();
@@ -418,7 +418,7 @@ void Realm::CreateApplicationWithProcess(
 }
 
 void Realm::CreateApplicationFromPackage(
-    ApplicationPackagePtr package, LaunchInfo launch_info,
+    PackagePtr package, LaunchInfo launch_info,
     fidl::InterfaceRequest<ApplicationController> controller,
     fxl::RefPtr<Namespace> ns) {
   zx::channel svc = ns->services().OpenAsDirectory();
@@ -518,7 +518,7 @@ void Realm::CreateApplicationFromPackage(
       return;
     }
 
-    ApplicationPackage inner_package;
+    Package inner_package;
     inner_package.resolved_url = package->resolved_url;
 
     StartupInfo startup_info;

@@ -59,7 +59,7 @@ class RetryingLoader {
 
   void ProcessResponse(const network::URLResponse& response) {
     if (response.status_code == 200) {
-      auto package = component::ApplicationPackage::New();
+      auto package = component::Package::New();
       package->data =
           fidl::MakeOptional(std::move(response.body->sized_buffer()));
       package->resolved_url = std::move(response.url);
@@ -102,7 +102,7 @@ class RetryingLoader {
     }
   }
 
-  void SendResponse(component::ApplicationPackagePtr package) {
+  void SendResponse(component::PackagePtr package) {
     FXL_DCHECK(!package || package->resolved_url);
     callback_(std::move(package));
     deleter_();

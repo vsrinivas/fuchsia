@@ -8,5 +8,5 @@ library component;
 [Discoverable]
 interface Loader {
   // Load a components's package.
-  1: LoadComponent(string url) -> (ApplicationPackage? package);
+  1: LoadComponent(string url) -> (Package? package);
 };
