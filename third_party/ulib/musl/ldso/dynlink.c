@@ -1330,10 +1330,10 @@ __NO_SAFESTACK static zx_status_t load_library_vmo(zx_handle_t vmo,
         } else {
             if (vmo_name[0] == '\0') {
                 snprintf(synthetic_name, sizeof(synthetic_name),
-                         "<VMO:%" PRIu64 ">", info.koid);
+                         "<VMO#%" PRIu64 ">", info.koid);
             } else {
                 snprintf(synthetic_name, sizeof(synthetic_name),
-                         "<VMO:%" PRIu64 ":%s>", info.koid, vmo_name);
+                         "<VMO#%" PRIu64 "=%s>", info.koid, vmo_name);
             }
             name = synthetic_name;
         }
