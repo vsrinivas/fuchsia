@@ -106,7 +106,7 @@ public:
     }
 
     static void Free(void* mem) {
-        delete reinterpret_cast<char*>(mem);
+        delete[] reinterpret_cast<char*>(mem);
     }
 
     ParseState()
