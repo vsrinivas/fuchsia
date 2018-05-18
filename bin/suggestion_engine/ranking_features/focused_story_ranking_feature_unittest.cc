@@ -26,9 +26,9 @@ void SetFocusedStoryContextUpdate(
 
 TEST_F(FocusedStoryRankingFeatureTest, ComputeFeatureFocusedStory) {
   Proposal proposal;
-  proposal.story_id = "focused_story";
   proposal.story_affinity = true;
   SuggestionPrototype prototype;
+  prototype.story_id = "focused_story";
   prototype.proposal = std::move(proposal);
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
@@ -45,6 +45,7 @@ TEST_F(FocusedStoryRankingFeatureTest, ComputeFeatureNonFocusedStory) {
   proposal.story_id = "other_story";
   proposal.story_affinity = true;
   SuggestionPrototype prototype;
+  prototype.story_id = "other_story";
   prototype.proposal = std::move(proposal);
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;
@@ -62,6 +63,7 @@ TEST_F(FocusedStoryRankingFeatureTest,
   proposal.story_id = "other_story";
   proposal.story_affinity = false;
   SuggestionPrototype prototype;
+  prototype.story_id = "other_story";
   prototype.proposal = std::move(proposal);
   RankedSuggestion suggestion;
   suggestion.prototype = &prototype;

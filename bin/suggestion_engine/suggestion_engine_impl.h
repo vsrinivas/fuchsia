@@ -150,14 +150,21 @@ class SuggestionEngineImpl : public ContextListener,
   // |listener| is the listener to be notified when the actions have been
   // performed.
   // |proposal_id| is the id of the proposal that was the source of the actions.
+  // |story_name| is the external id for the story that the client chooses.
   // |source_url| is the url of the source of the proposal containing
   // the provided actions.
   void PerformActions(fidl::VectorPtr<Action> actions,
                       fidl::InterfaceHandle<ProposalListener> listener,
                       const std::string& proposal_id,
-                      const std::string& override_story_id,
+                      const std::string& story_name,
                       const std::string& source_url,
                       SuggestionDisplay suggestion_display);
+
+  void ExecuteActions(fidl::VectorPtr<Action> actions,
+                      fidl::InterfaceHandle<ProposalListener> listener,
+                      const std::string& proposal_id,
+                      SuggestionDisplay suggestion_display,
+                      const std::string& override_story_id);
 
   // Performs an action that creates a story.
   //
@@ -167,7 +174,8 @@ class SuggestionEngineImpl : public ContextListener,
       const Action& action, fidl::InterfaceHandle<ProposalListener> listener,
       const std::string& proposal_id, SuggestionDisplay suggestion_display);
 
-  void PerformFocusStoryAction(const Action& action);
+  void PerformFocusStoryAction(const Action& action,
+                               const std::string& override_story_id);
 
   void PerformAddModuleAction(const Action& action,
                               const std::string& override_story_id);
@@ -177,17 +185,25 @@ class SuggestionEngineImpl : public ContextListener,
 
   void PerformQueryAction(const Action& action);
 
-  void PerformCustomAction(Action* action, const std::string& source_url,
-                           SuggestionDisplay suggestion_display);
+  void PerformCustomAction(Action* action,
+                           SuggestionDisplay suggestion_display,
+                           const std::string& story_id);
 
   void RegisterRankingFeatures();
 
   // |ContextListener|
   void OnContextUpdate(ContextUpdate update) override;
 
+  std::string StoryIdFromName(const std::string& source_url,
+                              const std::string& story_name);
+
   fidl::BindingSet<SuggestionEngine> bindings_;
   fidl::BindingSet<SuggestionProvider> suggestion_provider_bindings_;
   fidl::BindingSet<SuggestionDebug> debug_bindings_;
+
+  // Maps a story name (external id) to its framework id.
+  // TODO(miguelfrde): move this into the framework.
+  std::map<std::string, std::string> story_name_mapping_;
 
   // Both story_provider_ and focus_provider_ptr are used exclusively during
   // Action execution (in the PerformActions call inside NotifyInteraction).

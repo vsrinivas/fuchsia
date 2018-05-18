@@ -109,7 +109,9 @@ void QueryProcessor::AddProposal(const std::string& source_url,
   suggestions_.RemoveProposal(source_url, proposal.id);
 
   auto suggestion = CreateSuggestionPrototype(
-      &query_prototypes_, source_url, std::move(proposal));
+      &query_prototypes_, source_url,
+      "" /* Emtpy story_id */,
+      std::move(proposal));
   suggestions_.AddSuggestion(std::move(suggestion));
 }
 

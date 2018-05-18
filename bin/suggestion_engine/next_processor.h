@@ -39,7 +39,8 @@ class NextProcessor {
       fidl::InterfaceHandle<InterruptionListener> listener);
 
   // Add and remove proposals
-  void AddProposal(const std::string& component_url, Proposal proposal);
+  void AddProposal(const std::string& component_url,
+                   const std::string& story_id, Proposal proposal);
   void RemoveProposal(const std::string& component_url,
                       const std::string& proposal_id);
 

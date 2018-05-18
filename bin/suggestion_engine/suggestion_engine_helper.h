@@ -15,6 +15,7 @@ using SuggestionPrototypeMap = std::map<std::pair<std::string, std::string>,
 // Creates a suggestion prototype owned by the given |SuggestionPrototypeMap|.
 SuggestionPrototype* CreateSuggestionPrototype(SuggestionPrototypeMap* owner,
                                                const std::string& source_url,
+                                               const std::string& story_id,
                                                Proposal proposal);
 
 } // namespace modular

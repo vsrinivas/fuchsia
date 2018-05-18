@@ -9,12 +9,20 @@ struct Proposal {
   // proposal channel (Query or Next/Interruption).
   string id;
 
-  // Id of the story from which the proposal originates.
-  string? source_story;
+  // A client-assigned name for the story to which the actions in |on_selected|
+  // apply. If a story with the given name already exists (ie, because a past
+  // Proposal with the same |story_name| was executed), the actions in
+  // |on_selected| will apply to the existing story. Otherwise, a new story is
+  // created.
+  // If |story_name| is null, a new story is always created.
+  // This name is namespaced to the agent that submitted the proposal.
+  // NOTE(thatguy): Deprecate all story_id fields on Actions.
+  string? story_name;
 
   // The story ID this proposal applies to. A null story_id will create a new
   // story.
-  // NOTE(thatguy): Deprecate all story_id fields on Actions.
+  // TODO(miguelfrde): remove.
+  // DEPRECATED
   string? story_id;
 
   // If set to true, this proposal will only show up when |story_id| is in the
@@ -53,14 +61,18 @@ interface ProposalListener {
 };
 
 union Action {
-  CreateStory create_story;
   FocusStory focus_story;
   AddModule add_module;
   SetLinkValueAction set_link_value_action;
   CustomAction custom_action;
   QueryAction query_action;
+
+  // DEPRECATED
+  // Instead, use the story_name field in Proposal and AddModule instead.
+  CreateStory create_story;
 };
 
+// DEPRECATED
 // Creates a new story with the specified module
 struct CreateStory {
   // The intent used to add the first module to the created story.

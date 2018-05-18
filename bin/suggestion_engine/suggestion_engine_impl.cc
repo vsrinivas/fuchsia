@@ -28,6 +28,11 @@
 
 namespace modular {
 
+std::string StoryNameKey(
+    const std::string& source_url, const std::string& story_name) {
+  return source_url + story_name;
+}
+
 namespace {
 
 constexpr int kQueryActionMaxResults = 1;
@@ -51,7 +56,9 @@ fxl::WeakPtr<SuggestionDebugImpl> SuggestionEngineImpl::debug() {
 
 void SuggestionEngineImpl::AddNextProposal(ProposalPublisherImpl* source,
                                            Proposal proposal) {
-  next_processor_.AddProposal(source->component_url(), std::move(proposal));
+  auto story_id = StoryIdFromName(source->component_url(), proposal.story_name);
+  next_processor_.AddProposal(source->component_url(), story_id,
+                              std::move(proposal));
 }
 
 void SuggestionEngineImpl::RemoveNextProposal(const std::string& component_url,
@@ -130,7 +137,8 @@ void SuggestionEngineImpl::NotifyInteraction(fidl::StringPtr suggestion_uuid,
     if (interaction.type == InteractionType::SELECTED) {
       PerformActions(std::move(proposal.on_selected),
                      std::move(proposal.listener), proposal.id,
-                     proposal.story_id, suggestion->prototype->source_url,
+                     proposal.story_name,
+                     suggestion->prototype->source_url,
                      std::move(proposal.display));
     }
 
@@ -237,14 +245,48 @@ void SuggestionEngineImpl::RegisterRankingFeatures() {
 void SuggestionEngineImpl::PerformActions(
     fidl::VectorPtr<Action> actions,
     fidl::InterfaceHandle<ProposalListener> listener,
-    const std::string& proposal_id, const std::string& override_story_id,
-    const std::string& source_url, SuggestionDisplay suggestion_display) {
-  // TODO(rosswang): If we're asked to add multiple modules, we probably
-  // want to add them to the same story. We can't do that yet, but we need
-  // to receive a StoryController anyway (not optional atm.).
+    const std::string& proposal_id,
+    const std::string& story_name,
+    const std::string& source_url,
+    SuggestionDisplay suggestion_display) {
+  if (story_name.empty()) {
+    ExecuteActions(std::move(actions), std::move(listener), proposal_id,
+                   std::move(suggestion_display), "" /* override_story_id */);
+    return;
+  }
+  const std::string key = StoryNameKey(source_url, story_name);
+  auto it = story_name_mapping_.find(key);
+  if (it == story_name_mapping_.end()) {
+    story_provider_->CreateStory(
+        nullptr /* module_url */,
+        fxl::MakeCopyable(
+            [this, actions = std::move(actions), listener = std::move(listener),
+             proposal_id, suggestion_display = std::move(suggestion_display),
+             story_name, source_url](const fidl::StringPtr& story_id) mutable {
+              story_name_mapping_[StoryNameKey(source_url, story_name)] =
+                  story_id;
+              // TODO(miguelfrde): better expect clients to send focus action?
+              focus_provider_ptr_->Request(story_id);
+              ExecuteActions(std::move(actions), std::move(listener),
+                             proposal_id, std::move(suggestion_display),
+                             story_id);
+             }));
+  } else {
+    ExecuteActions(std::move(actions), std::move(listener), proposal_id,
+                   std::move(suggestion_display), it->second);
+  }
+}
+
+void SuggestionEngineImpl::ExecuteActions(
+    fidl::VectorPtr<Action> actions,
+    fidl::InterfaceHandle<ProposalListener> listener,
+    const std::string& proposal_id,
+    SuggestionDisplay suggestion_display,
+    const std::string& override_story_id) {
   for (auto& action : *actions) {
     switch (action.Which()) {
       case Action::Tag::kCreateStory: {
+        // TODO(miguelfrde): deprecated, remove.
         SuggestionDisplay cloned_display;
         suggestion_display.Clone(&cloned_display);
         PerformCreateStoryAction(action, std::move(listener), proposal_id,
@@ -252,7 +294,7 @@ void SuggestionEngineImpl::PerformActions(
         break;
       }
       case Action::Tag::kFocusStory: {
-        PerformFocusStoryAction(action);
+        PerformFocusStoryAction(action, override_story_id);
         break;
       }
       case Action::Tag::kAddModule: {
@@ -270,7 +312,8 @@ void SuggestionEngineImpl::PerformActions(
       case Action::Tag::kCustomAction: {
         SuggestionDisplay cloned_display;
         suggestion_display.Clone(&cloned_display);
-        PerformCustomAction(&action, source_url, std::move(cloned_display));
+        PerformCustomAction(&action, std::move(cloned_display),
+                            override_story_id);
         break;
       }
       default:
@@ -344,10 +387,21 @@ void SuggestionEngineImpl::PerformCreateStoryAction(
       }));
 }
 
-void SuggestionEngineImpl::PerformFocusStoryAction(const Action& action) {
+void SuggestionEngineImpl::PerformFocusStoryAction(
+    const Action& action, const std::string& override_story_id) {
   const auto& focus_story = action.focus_story();
-  FXL_LOG(INFO) << "Requesting focus for story_id " << focus_story.story_id;
-  focus_provider_ptr_->Request(focus_story.story_id);
+  std::string story_id = focus_story.story_id;
+  if (!override_story_id.empty()) {
+    story_id = override_story_id;
+    if (override_story_id != focus_story.story_id) {
+      FXL_LOG(WARNING) << "story_id provided on Proposal (" << override_story_id
+                       << ") does not match that on FocusStory action ("
+                       << focus_story.story_id << "). Using "
+                       << override_story_id << ".";
+    }
+  }
+  FXL_LOG(INFO) << "Requesting focus for story_id " << story_id;
+  focus_provider_ptr_->Request(story_id);
 }
 
 void SuggestionEngineImpl::PerformAddModuleAction(
@@ -359,6 +413,7 @@ void SuggestionEngineImpl::PerformAddModuleAction(
   const auto& add_module = action.add_module();
   const auto& module_name = add_module.module_name;
   std::string story_id = add_module.story_id;
+
   if (!override_story_id.empty()) {
     story_id = override_story_id;
     if (override_story_id != add_module.story_id) {
@@ -378,27 +433,29 @@ void SuggestionEngineImpl::PerformAddModuleAction(
 }
 
 void SuggestionEngineImpl::PerformCustomAction(
-    Action* action, const std::string& source_url,
-    SuggestionDisplay suggestion_display) {
+      Action* action,
+      SuggestionDisplay suggestion_display,
+      const std::string& override_story_id) {
   auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
   auto custom_action = action->custom_action().Bind();
   custom_action->Execute(fxl::MakeCopyable(
       [this, activity, custom_action = std::move(custom_action),
        suggestion_display = std::move(suggestion_display),
-       source_url](fidl::VectorPtr<ActionPtr> actions) {
-        if (actions) {
-          fidl::VectorPtr<Action> non_null_actions;
-          for (auto& action : *actions) {
-            if (action)
-              non_null_actions.push_back(std::move(*action));
-          }
-          // Since there is no listener provided to PerformActions, it is fine
-          // to use an empty proposal id here.
-          SuggestionDisplay display_clone;
-          suggestion_display.Clone(&display_clone);
-          PerformActions(std::move(non_null_actions), nullptr /* listener */,
-                         "", "", source_url, std::move(display_clone));
-        }
+       override_story_id](fidl::VectorPtr<ActionPtr> actions) {
+         if (actions) {
+           fidl::VectorPtr<Action> non_null_actions;
+           for (auto& action : *actions) {
+             if (action) {
+               non_null_actions.push_back(std::move(*action));
+             }
+           }
+           // Since there is no listener provided to PerformActions, it is fine
+           // to use an empty proposal id here.
+           SuggestionDisplay display_clone;
+           suggestion_display.Clone(&display_clone);
+           ExecuteActions(std::move(non_null_actions), nullptr /* listener */,
+                          "", std::move(display_clone), override_story_id);
+         }
       }));
 }
 
@@ -436,6 +493,15 @@ void SuggestionEngineImpl::OnContextUpdate(ContextUpdate update) {
     }
   }
   next_processor_.UpdateRanking();
+}
+
+std::string SuggestionEngineImpl::StoryIdFromName(
+        const std::string& source_url, const std::string& story_name) {
+  auto it = story_name_mapping_.find(StoryNameKey(source_url, story_name));
+  if (it != story_name_mapping_.end()) {
+      return it->second;
+    }
+  return "";
 }
 
 }  // namespace modular
