@@ -160,7 +160,8 @@ class AgentRunnerStorageImpl::DeleteTaskCall : public Operation<bool> {
 
 AgentRunnerStorageImpl::AgentRunnerStorageImpl(LedgerClient* ledger_client,
                                                ledger::PageId page_id)
-    : PageClient("AgentRunnerStorageImpl", ledger_client, std::move(page_id)) {}
+    : PageClient("AgentRunnerStorageImpl", ledger_client, std::move(page_id)), delegate_(nullptr) {
+    }
 
 AgentRunnerStorageImpl::~AgentRunnerStorageImpl() = default;
 
