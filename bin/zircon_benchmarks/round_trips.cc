@@ -400,6 +400,86 @@ class EventPortTest {
   EventPortSignaler helper_;
 };
 
+// Helper object for signaling and waiting on a Zircon socket object.  This
+// uses a port for waiting on the socket object.
+class SocketPortSignaler {
+ public:
+  SocketPortSignaler() {
+    FXL_CHECK(zx::port::create(0, &port_) == ZX_OK);
+  }
+
+  void set_socket(zx::socket&& socket) {
+    socket_ = std::move(socket);
+  }
+
+  // Waits for the socket to be signaled: reads a byte from the socket.
+  // Returns true if it was signaled by Signal() and false if it was
+  // signaled by SignalExit().
+  bool Wait() {
+    FXL_CHECK(socket_.wait_async(port_, 0,
+                                 ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
+                                 ZX_WAIT_ASYNC_ONCE) == ZX_OK);
+    zx_port_packet_t packet;
+    FXL_CHECK(port_.wait(zx::time::infinite(), &packet, 1) == ZX_OK);
+    if (packet.signal.observed & ZX_SOCKET_PEER_CLOSED)
+      return false;
+    uint8_t message;
+    size_t bytes_read = 0;
+    FXL_CHECK(socket_.read(0, &message, 1, &bytes_read) == ZX_OK);
+    FXL_CHECK(bytes_read == 1);
+    return true;
+  }
+
+  // Signal the socket by writing a byte to it.
+  void Signal() {
+    uint8_t message = 0;
+    size_t bytes_written = 0;
+    FXL_CHECK(socket_.write(0, &message, 1, &bytes_written) == ZX_OK);
+    FXL_CHECK(bytes_written == 1);
+  }
+
+ private:
+  zx::socket socket_;
+  zx::port port_;
+};
+
+// Test the round trip time for waking up threads by reading and writing
+// bytes on Zircon socket objects.  This uses ports for waiting on the
+// sockets (rather than zx_object_wait_one()), because ports are the most
+// general way to wait.
+class SocketPortTest {
+ public:
+  explicit SocketPortTest(MultiProc multiproc) {
+    zx::socket socket1;
+    zx::socket socket2;
+    FXL_CHECK(zx::socket::create(0, &socket1, &socket2) == ZX_OK);
+    signaler_.set_socket(std::move(socket1));
+
+    zx_handle_t socket_arg = socket2.release();
+    thread_or_process_.Launch("SocketPortTest::ThreadFunc", &socket_arg,
+                              1, multiproc);
+  }
+
+  static void ThreadFunc(std::vector<zx_handle_t> handles) {
+    FXL_CHECK(handles.size() == 1);
+
+    SocketPortSignaler signaler;
+    signaler.set_socket(zx::socket(handles[0]));
+    while (signaler.Wait()) {
+      signaler.Signal();
+    }
+  }
+
+  void Run() {
+    signaler_.Signal();
+    FXL_CHECK(signaler_.Wait());
+  }
+
+ private:
+  ThreadOrProcess thread_or_process_;
+  SocketPortSignaler signaler_;
+};
+
 // Implementation of FIDL interface for testing round trip IPCs.
 class RoundTripServiceImpl : public zircon_benchmarks::RoundTripService {
  public:
@@ -569,6 +649,7 @@ const ThreadFuncEntry thread_funcs[] = {
   DEF_FUNC(ChannelCallTest::ThreadFunc)
   DEF_FUNC(PortTest::ThreadFunc)
   DEF_FUNC(EventPortTest::ThreadFunc)
+  DEF_FUNC(SocketPortTest::ThreadFunc)
   DEF_FUNC(FidlTest::ThreadFunc)
 #undef DEF_FUNC
 };
@@ -598,6 +679,7 @@ __attribute__((constructor)) void RegisterTests() {
   RegisterTestMultiProc<ChannelCallTest>("RoundTrip_ChannelCall");
   RegisterTestMultiProc<PortTest>("RoundTrip_Port");
   RegisterTestMultiProc<EventPortTest>("RoundTrip_EventPort");
+  RegisterTestMultiProc<SocketPortTest>("RoundTrip_SocketPort");
   RegisterTestMultiProc<FidlTest>("RoundTrip_Fidl");
   fbenchmark::RegisterTest<FutexTest>("RoundTrip_Futex_SingleProcess");
   fbenchmark::RegisterTest<PthreadCondvarTest>(
