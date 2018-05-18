@@ -8,11 +8,11 @@ executable("bin") {
   output_name = "time"
 
   sources = [
-    "time.cc",
+    "time.c",
   ]
 
   deps = [
-    "//zircon/public/lib/launchpad",
+    "//zircon/public/lib/fdio",
   ]
 
   libs = [
