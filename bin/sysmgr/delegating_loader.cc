@@ -52,7 +52,7 @@ void DelegatingLoader::LoadComponent(fidl::StringPtr url,
 
 void DelegatingLoader::StartDelegate(LoaderRecord* record) {
   component::Services services;
-  component::ApplicationLaunchInfo dup_launch_info;
+  component::LaunchInfo dup_launch_info;
   dup_launch_info.url = record->launch_info->url;
   fidl::Clone(record->launch_info->arguments, &dup_launch_info.arguments);
   dup_launch_info.directory_request = services.NewRequest();

@@ -83,7 +83,7 @@ class GoogleTokenManagerApp : auth::AuthenticationContextProvider {
 
   void Initialize() {
     component::Services services;
-    component::ApplicationLaunchInfo launch_info;
+    component::LaunchInfo launch_info;
     launch_info.url = "token_manager";
     launch_info.directory_request = services.NewRequest();
     {

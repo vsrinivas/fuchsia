@@ -45,7 +45,7 @@ class Namespace : public ApplicationEnvironment,
   // ApplicationLauncher implementation:
 
   void CreateApplication(
-      ApplicationLaunchInfo launch_info,
+      LaunchInfo launch_info,
       fidl::InterfaceRequest<ApplicationController> controller) override;
 
  private:

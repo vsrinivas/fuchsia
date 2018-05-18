@@ -38,7 +38,7 @@ void GuestEnvironmentImpl::LaunchGuest(
     LaunchGuestCallback callback) {
   component::Services guest_services;
   component::ApplicationControllerPtr guest_app_controller;
-  component::ApplicationLaunchInfo guest_launch_info;
+  component::LaunchInfo guest_launch_info;
   guest_launch_info.url = launch_info.url;
   guest_launch_info.arguments = std::move(launch_info.vmm_args);
   guest_launch_info.directory_request = guest_services.NewRequest();

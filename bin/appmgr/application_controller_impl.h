@@ -25,11 +25,11 @@ class Realm;
 enum class ExportedDirType {
   // Legacy exported directory layout where each file / service is exposed at
   // the top level. Appmgr forwards a client's
-  // |ApplicationLaunchInfo.directory_request| to the top level directory.
+  // |LaunchInfo.directory_request| to the top level directory.
   kLegacyFlatLayout,
 
   // A nested directory structure where appmgr expects 3 sub-directories-
-  // (1) public - A client's |ApplicationLaunchInfo.directory_request| is
+  // (1) public - A client's |LaunchInfo.directory_request| is
   // forwarded to this directory.
   // (2) debug - This directory is used to expose debug files.
   // (3) ctrl - This deirectory is used to expose files to the system.

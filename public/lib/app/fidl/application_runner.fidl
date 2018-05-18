@@ -12,7 +12,7 @@ using fuchsia.mem;
 // given to libc by launchpad.
 struct StartupInfo {
   // The launch info for the to start.
-  ApplicationLaunchInfo launch_info;
+  LaunchInfo launch_info;
 
   // The namespace in which to run the component.
   FlatNamespace flat_namespace;

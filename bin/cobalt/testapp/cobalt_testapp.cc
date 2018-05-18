@@ -280,7 +280,7 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
                             uint32_t min_interval_seconds) {
   app_controller_.Unbind();
   component::Services services;
-  component::ApplicationLaunchInfo launch_info;
+  component::LaunchInfo launch_info;
   launch_info.url = "cobalt";
   launch_info.directory_request = services.NewRequest();
   {

@@ -58,7 +58,7 @@ TokenManagerImpl::TokenManagerImpl(
       continue;
     }
 
-    component::ApplicationLaunchInfo launch_info;
+    component::LaunchInfo launch_info;
     launch_info.url = config.url;
     component::Services services;
     launch_info.directory_request = services.NewRequest();

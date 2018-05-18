@@ -31,7 +31,7 @@ class DelegatingLoader : public component::Loader {
 
  private:
   struct LoaderRecord {
-    component::ApplicationLaunchInfoPtr launch_info;
+    component::LaunchInfoPtr launch_info;
     component::LoaderPtr loader;
     component::ApplicationControllerPtr controller;
   };

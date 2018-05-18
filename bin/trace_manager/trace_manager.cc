@@ -119,7 +119,7 @@ void TraceManager::LaunchConfiguredProviders() {
       }
       FXL_VLOG(2) << "Args:" << args;
     }
-    component::ApplicationLaunchInfo launch_info;
+    component::LaunchInfo launch_info;
     launch_info.url = pair.second->url;
     fidl::Clone(pair.second->arguments, &launch_info.arguments);
     context_->launcher()->CreateApplication(std::move(launch_info), nullptr);

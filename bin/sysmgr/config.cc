@@ -16,9 +16,9 @@ constexpr char kAppLoaders[] = "loaders";
 constexpr char kApps[] = "apps";
 constexpr char kServices[] = "services";
 
-component::ApplicationLaunchInfoPtr GetLaunchInfo(
+component::LaunchInfoPtr GetLaunchInfo(
     const rapidjson::Document::ValueType& value) {
-  auto launch_info = component::ApplicationLaunchInfo::New();
+  auto launch_info = component::LaunchInfo::New();
   if (value.IsString()) {
     launch_info->url = value.GetString();
   } else if (value.IsArray()) {

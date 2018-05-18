@@ -22,7 +22,7 @@ const std::string kIsolateArgument = "--transient";
 template <typename Interface>
 void ConnectToIsolate(fidl::InterfaceRequest<Interface> request,
                       component::ApplicationLauncher* launcher) {
-  component::ApplicationLaunchInfo launch_info;
+  component::LaunchInfo launch_info;
   launch_info.url = kIsolateUrl;
   launch_info.arguments.push_back(kIsolateArgument);
   component::Services services;

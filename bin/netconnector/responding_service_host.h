@@ -24,7 +24,7 @@ class RespondingServiceHost {
 
   // Registers a singleton service.
   void RegisterSingleton(const std::string& service_name,
-                         component::ApplicationLaunchInfoPtr launch_info);
+                         component::LaunchInfoPtr launch_info);
 
   // Registers a provider for a singleton service.
   void RegisterProvider(

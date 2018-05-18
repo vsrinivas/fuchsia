@@ -35,7 +35,7 @@ int main(int argc, const char** argv) {
     fprintf(stderr, "Usage: run <program> <args>*\n");
     return 1;
   }
-  component::ApplicationLaunchInfo launch_info;
+  component::LaunchInfo launch_info;
   launch_info.url = argv[1];
   for (int i = 0; i < argc - 2; ++i) {
     launch_info.arguments.push_back(argv[2 + i]);

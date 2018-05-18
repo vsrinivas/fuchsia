@@ -21,7 +21,7 @@ RespondingServiceHost::~RespondingServiceHost() {}
 
 void RespondingServiceHost::RegisterSingleton(
     const std::string& service_name,
-    component::ApplicationLaunchInfoPtr launch_info) {
+    component::LaunchInfoPtr launch_info) {
   service_namespace_.AddServiceForName(
       fxl::MakeCopyable([
         this, service_name, launch_info = std::move(launch_info)
@@ -39,7 +39,7 @@ void RespondingServiceHost::RegisterSingleton(
           // the constructor. Instead, we should be launching it in a new
           // environment that is restricted based on app permissions.
 
-          component::ApplicationLaunchInfo dup_launch_info;
+          component::LaunchInfo dup_launch_info;
           dup_launch_info.url = launch_info->url;
           fidl::Clone(launch_info->arguments, &dup_launch_info.arguments);
           component::Services services;

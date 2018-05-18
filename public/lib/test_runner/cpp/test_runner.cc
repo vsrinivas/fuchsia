@@ -179,7 +179,7 @@ TestRunContext::TestRunContext(
   child_env_scope_->environment()->GetApplicationLauncher(
       launcher.NewRequest());
 
-  component::ApplicationLaunchInfo info;
+  component::LaunchInfo info;
   info.url = url;
   info.arguments = fxl::To<fidl::VectorPtr<fidl::StringPtr>>(args);
   launcher->CreateApplication(std::move(info),

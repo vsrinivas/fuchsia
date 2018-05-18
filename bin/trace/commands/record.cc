@@ -380,7 +380,7 @@ void Record::DoneTrace() {
 }
 
 void Record::LaunchApp() {
-  component::ApplicationLaunchInfo launch_info;
+  component::LaunchInfo launch_info;
   launch_info.url = fidl::StringPtr(options_.app);
   launch_info.arguments =
       fxl::To<fidl::VectorPtr<fidl::StringPtr>>(options_.args);

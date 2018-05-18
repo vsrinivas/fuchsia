@@ -33,7 +33,7 @@ func (a *echoClientApp) startApplication(serverURL string) (li *component.Applic
 		}
 	}()
 
-	launchInfo := component.ApplicationLaunchInfo{
+	launchInfo := component.LaunchInfo{
 		Url:              serverURL,
 		DirectoryRequest: pr,
 	}

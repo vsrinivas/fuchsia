@@ -51,7 +51,7 @@ enum class LaunchType {
 };
 
 std::vector<const char*> GetArgv(const std::string& argv0,
-                                 const ApplicationLaunchInfo& launch_info) {
+                                 const LaunchInfo& launch_info) {
   std::vector<const char*> argv;
   argv.reserve(launch_info.arguments->size() + 1);
   argv.push_back(argv0.c_str());
@@ -88,7 +88,7 @@ void PushFileDescriptor(component::FileDescriptorPtr fd, int new_fd,
 
 zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data,
                           const std::string& argv0,
-                          ApplicationLaunchInfo launch_info,
+                          LaunchInfo launch_info,
                           zx::channel loader_service,
                           fdio_flat_namespace_t* flat) {
   if (!data)
@@ -164,11 +164,11 @@ struct ExportedDirChannels {
   // dir.
   zx::channel exported_dir;
 
-  // The server side of our client's |ApplicationLaunchInfo.directory_request|.
+  // The server side of our client's |LaunchInfo.directory_request|.
   zx::channel client_request;
 };
 
-ExportedDirChannels BindDirectory(ApplicationLaunchInfo* launch_info) {
+ExportedDirChannels BindDirectory(LaunchInfo* launch_info) {
   zx::channel exported_dir_server, exported_dir_client;
   zx_status_t status =
       zx::channel::create(0u, &exported_dir_server, &exported_dir_client);
@@ -284,7 +284,7 @@ void Realm::CreateNestedJob(
 }
 
 void Realm::CreateApplication(
-    ApplicationLaunchInfo launch_info,
+    LaunchInfo launch_info,
     fidl::InterfaceRequest<ApplicationController> controller) {
   if (launch_info.url.get().empty()) {
     FXL_LOG(ERROR) << "Cannot create application because launch_info contains"
@@ -373,7 +373,7 @@ void Realm::AddBinding(
 }
 
 void Realm::CreateApplicationWithProcess(
-    ApplicationPackagePtr package, ApplicationLaunchInfo launch_info,
+    ApplicationPackagePtr package, LaunchInfo launch_info,
     fidl::InterfaceRequest<ApplicationController> controller,
     fxl::RefPtr<Namespace> ns) {
   zx::channel svc = ns->services().OpenAsDirectory();
@@ -418,7 +418,7 @@ void Realm::CreateApplicationWithProcess(
 }
 
 void Realm::CreateApplicationFromPackage(
-    ApplicationPackagePtr package, ApplicationLaunchInfo launch_info,
+    ApplicationPackagePtr package, LaunchInfo launch_info,
     fidl::InterfaceRequest<ApplicationController> controller,
     fxl::RefPtr<Namespace> ns) {
   zx::channel svc = ns->services().OpenAsDirectory();
@@ -544,7 +544,7 @@ ApplicationRunnerHolder* Realm::GetOrCreateRunner(const std::string& runner) {
   if (result.second) {
     Services runner_services;
     ApplicationControllerPtr runner_controller;
-    ApplicationLaunchInfo runner_launch_info;
+    LaunchInfo runner_launch_info;
     runner_launch_info.url = runner;
     runner_launch_info.directory_request = runner_services.NewRequest();
     CreateApplication(std::move(runner_launch_info),

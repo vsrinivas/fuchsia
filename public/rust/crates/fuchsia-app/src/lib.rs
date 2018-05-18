@@ -22,7 +22,7 @@ use fidl_component::{
     ApplicationControllerProxy,
     ApplicationLauncherMarker,
     ApplicationLauncherProxy,
-    ApplicationLaunchInfo,
+    LaunchInfo,
 };
 #[allow(unused_imports)]
 use fidl::endpoints2::{ServiceMarker, Proxy};
@@ -74,7 +74,7 @@ pub mod client {
             let (app_controller, controller_server_end) = zx::Channel::create()?;
             let (directory_request, directory_server_chan) = zx::Channel::create()?;
 
-            let mut launch_info = ApplicationLaunchInfo {
+            let mut launch_info = LaunchInfo {
                 url,
                 arguments,
                 out: None,

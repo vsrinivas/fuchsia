@@ -48,7 +48,7 @@ class Realm {
       fidl::StringPtr label);
 
   void CreateApplication(
-      ApplicationLaunchInfo launch_info,
+      LaunchInfo launch_info,
       fidl::InterfaceRequest<ApplicationController> controller);
 
   // Removes the child realm from this realm and returns the owning
@@ -75,11 +75,11 @@ class Realm {
   ApplicationRunnerHolder* GetOrCreateRunner(const std::string& runner);
 
   void CreateApplicationWithProcess(
-      ApplicationPackagePtr package, ApplicationLaunchInfo launch_info,
+      ApplicationPackagePtr package, LaunchInfo launch_info,
       fidl::InterfaceRequest<ApplicationController> controller,
       fxl::RefPtr<Namespace> ns);
   void CreateApplicationFromPackage(
-      ApplicationPackagePtr package, ApplicationLaunchInfo launch_info,
+      ApplicationPackagePtr package, LaunchInfo launch_info,
       fidl::InterfaceRequest<ApplicationController> controller,
       fxl::RefPtr<Namespace> ns);
 

@@ -37,10 +37,10 @@ class App {
   void LaunchWlanstack();
 
   void RegisterSingleton(std::string service_name,
-                         component::ApplicationLaunchInfoPtr launch_info);
+                         component::LaunchInfoPtr launch_info);
   void RegisterDefaultServiceConnector();
   void RegisterAppLoaders(Config::ServiceMap app_loaders);
-  void LaunchApplication(component::ApplicationLaunchInfo launch_info);
+  void LaunchApplication(component::LaunchInfo launch_info);
 
   std::unique_ptr<component::ApplicationContext> application_context_;
 

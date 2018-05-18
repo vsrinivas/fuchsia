@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
 
   component::ApplicationControllerPtr sysmgr;
   auto run_sysmgr = [&root_realm, &sysmgr] {
-    component::ApplicationLaunchInfo launch_info;
+    component::LaunchInfo launch_info;
     launch_info.url = "sysmgr";
     root_realm.CreateApplication(std::move(launch_info), sysmgr.NewRequest());
   };

@@ -43,7 +43,7 @@ void TileView::ConnectViews() {
     component::Services services;
     component::ApplicationControllerPtr controller;
 
-    component::ApplicationLaunchInfo launch_info;
+    component::LaunchInfo launch_info;
     launch_info.url = url;
     launch_info.directory_request = services.NewRequest();
 

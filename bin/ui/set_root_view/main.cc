@@ -43,7 +43,7 @@ int main(int argc, const char** argv) {
 
   // Launch application.
   component::Services services;
-  component::ApplicationLaunchInfo launch_info;
+  component::LaunchInfo launch_info;
   launch_info.url = positional_args[0];
   for (size_t i = 1; i < positional_args.size(); ++i)
     launch_info.arguments.push_back(positional_args[i]);

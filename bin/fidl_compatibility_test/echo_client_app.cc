@@ -13,7 +13,7 @@ EchoClientApp::EchoClientApp()
 EchoPtr& EchoClientApp::echo() { return echo_; }
 
 void EchoClientApp::Start(std::string server_url) {
-  component::ApplicationLaunchInfo launch_info;
+  component::LaunchInfo launch_info;
   launch_info.url = server_url;
   launch_info.directory_request = echo_provider_.NewRequest();
   context_->launcher()->CreateApplication(std::move(launch_info),
