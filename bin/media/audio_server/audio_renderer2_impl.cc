@@ -206,7 +206,7 @@ void AudioRenderer2Impl::SetPcmFormat(AudioPcmFormat format) {
 
   // Have the audio output manager initialize our set of outputs.  Note; there
   // is currently no need for a lock here.  Methods called from our user-facing
-  // interfaces are serialzed by nature of the fidl framework, and none of the
+  // interfaces are serialized by nature of the fidl framework, and none of the
   // output manager's threads should ever need to manipulate the set.  Cleanup
   // of outputs which have gone away is currently handled in a lazy fashion when
   // the renderer fails to promote its weak reference during an operation

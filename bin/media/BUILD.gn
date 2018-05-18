@@ -54,7 +54,7 @@ package("tests") {
   package_name = "media_tests"
 
   deps = [
-    "//garnet/bin/media/audio_server:tests",
+    "//garnet/bin/media/audio_server/mixer:tests",
     "//garnet/bin/media/media_player:tests",
     "//garnet/bin/media/media_player/demux:tests",
     "//garnet/bin/media/media_player/player:tests",

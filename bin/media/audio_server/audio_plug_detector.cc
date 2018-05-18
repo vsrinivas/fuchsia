@@ -20,7 +20,7 @@
 #include "garnet/bin/media/audio_server/audio_device_manager.h"
 #include "garnet/bin/media/audio_server/audio_input.h"
 #include "garnet/bin/media/audio_server/audio_output.h"
-#include "garnet/bin/media/audio_server/platform/driver_output.h"
+#include "garnet/bin/media/audio_server/driver_output.h"
 #include "lib/fxl/files/unique_fd.h"
 
 namespace media {
@@ -84,7 +84,8 @@ void AudioPlugDetector::Stop() {
 
 void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name,
                                        bool is_input) {
-  if (manager_ == nullptr) return;
+  if (manager_ == nullptr)
+    return;
 
   // Open the device node.
   fxl::UniqueFD dev_node(::openat(dir_fd, name.c_str(), O_RDONLY));

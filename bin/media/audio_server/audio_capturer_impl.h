@@ -13,8 +13,8 @@
 
 #include <media/cpp/fidl.h>
 #include "garnet/bin/media/audio_server/audio_object.h"
-#include "garnet/bin/media/audio_server/platform/generic/mixer.h"
-#include "garnet/bin/media/audio_server/platform/generic/output_formatter.h"
+#include "garnet/bin/media/audio_server/mixer/mixer.h"
+#include "garnet/bin/media/audio_server/mixer/output_formatter.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/media/timeline/timeline_rate.h"

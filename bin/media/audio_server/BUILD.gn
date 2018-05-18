@@ -9,17 +9,17 @@ source_set("audio_mixer_lib") {
     "constants.h",
     "gain.cc",
     "gain.h",
-    "platform/generic/mixer.cc",
-    "platform/generic/mixer.h",
-    "platform/generic/mixers/linear_sampler.cc",
-    "platform/generic/mixers/linear_sampler.h",
-    "platform/generic/mixers/mixer_utils.h",
-    "platform/generic/mixers/no_op.cc",
-    "platform/generic/mixers/no_op.h",
-    "platform/generic/mixers/point_sampler.cc",
-    "platform/generic/mixers/point_sampler.h",
-    "platform/generic/output_formatter.cc",
-    "platform/generic/output_formatter.h",
+    "mixer/linear_sampler.cc",
+    "mixer/linear_sampler.h",
+    "mixer/mixer.cc",
+    "mixer/mixer.h",
+    "mixer/mixer_utils.h",
+    "mixer/no_op.cc",
+    "mixer/no_op.h",
+    "mixer/output_formatter.cc",
+    "mixer/output_formatter.h",
+    "mixer/point_sampler.cc",
+    "mixer/point_sampler.h",
   ]
 
   public_deps = [
@@ -71,6 +71,8 @@ executable("audio_server") {
     "audio_renderer2_impl.h",
     "audio_server_impl.cc",
     "audio_server_impl.h",
+    "driver_output.cc",
+    "driver_output.h",
     "driver_ring_buffer.cc",
     "driver_ring_buffer.h",
     "driver_utils.cc",
@@ -79,12 +81,10 @@ executable("audio_server") {
     "main.cc",
     "pending_flush_token.cc",
     "pending_flush_token.h",
-    "platform/driver_output.cc",
-    "platform/driver_output.h",
-    "platform/generic/standard_output_base.cc",
-    "platform/generic/standard_output_base.h",
-    "platform/generic/throttle_output.cc",
-    "platform/generic/throttle_output.h",
+    "standard_output_base.cc",
+    "standard_output_base.h",
+    "throttle_output.cc",
+    "throttle_output.h",
     "timeline_control_point.cc",
     "timeline_control_point.h",
     "utils.cc",
@@ -106,38 +106,5 @@ executable("audio_server") {
     "//zircon/public/lib/dispatcher-pool",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
-  ]
-}
-
-test("tests") {
-  testonly = true
-  output_name = "audio_mixer_tests"
-
-  sources = [
-    "test/main.cc",
-    "test/audio_analysis.h",
-    "test/audio_analysis.cc",
-    "test/audio_analysis_tests.cc",
-    "test/audio_result.h",
-    "test/audio_result.cc",
-    "test/frequency_set.h",
-    "test/frequency_set.cc",
-    "test/mixer_tests_shared.h",
-    "test/mixer_tests_shared.cc",
-    "test/mixer_transparency_tests.cc",
-    "test/mixer_gain_tests.cc",
-    "test/mixer_resampler_tests.cc",
-    "test/mixer_frequency_tests.cc",
-    "test/mixer_dynamic_range_tests.cc",
-    "test/audio_performance.cc",
-    "test/audio_performance.h",
-    "test/mixer_tests_recap.cc",
-  ]
-
-  deps = [
-    "//garnet/bin/media/audio_server:audio_mixer_lib",
-    "//third_party/googletest:gtest_main",
-    "//garnet/public/lib/fxl",
-    "//zircon/public/lib/fbl",
   ]
 }

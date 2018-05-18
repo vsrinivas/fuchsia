@@ -351,7 +351,7 @@ void AudioCapturerImpl::SetPayloadBuffer(zx::vmo payload_buf_vmo) {
     }
   }
 
-  // Select mixers for each of our active links here.
+  // Select a mixer for each active link here.
   //
   // TODO(johngro): We should probably just stop doing this here.  It would be
   // best if had an invariant which said that source and destination objects

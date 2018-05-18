@@ -12,7 +12,7 @@
 #include "garnet/bin/media/audio_server/audio_output.h"
 #include "garnet/bin/media/audio_server/audio_plug_detector.h"
 #include "garnet/bin/media/audio_server/audio_server_impl.h"
-#include "garnet/bin/media/audio_server/platform/generic/throttle_output.h"
+#include "garnet/bin/media/audio_server/throttle_output.h"
 
 namespace media {
 namespace audio {
@@ -197,7 +197,8 @@ void AudioDeviceManager::LinkOutputToRenderer(AudioOutput* output,
   // Do not create any links if the renderer's output format has not been set.
   // Links will be created during SelectOutputsForRenderer when the renderer
   // finally has its format set via AudioRendererImpl::SetMediaType
-  if (!renderer->format_info_valid()) return;
+  if (!renderer->format_info_valid())
+    return;
 
   std::shared_ptr<AudioLink> link = AudioObject::LinkObjects(
       fbl::WrapRefPtr(renderer), fbl::WrapRefPtr(output));
@@ -269,7 +270,8 @@ fbl::RefPtr<AudioDevice> AudioDeviceManager::FindLastPlugged(
   }
 
   FXL_DCHECK((best == nullptr) || (best->type() == type));
-  if (!allow_unplugged && best && !best->plugged()) return nullptr;
+  if (!allow_unplugged && best && !best->plugged())
+    return nullptr;
 
   return fbl::WrapRefPtr(best);
 }
