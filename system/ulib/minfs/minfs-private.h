@@ -44,12 +44,6 @@
 
 #define EXTENT_COUNT 5
 
-#define panic(fmt...)         \
-    do {                      \
-        fprintf(stderr, fmt); \
-        __builtin_trap();     \
-    } while (0)
-
 // A compile-time debug check, which, if enabled, causes
 // inline functions to be expanded to error checking code.
 // Since this may be expensive, it is typically turned

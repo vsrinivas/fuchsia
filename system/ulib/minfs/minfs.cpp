@@ -571,15 +571,6 @@ zx_status_t Minfs::InoNew(WritebackWork* wb, const minfs_inode_t* inode, ino_t* 
     info_.alloc_inode_count++;
     ino_t ino = static_cast<ino_t>(bitoff_start);
 
-    // locate data and block offset of bitmap
-    void* bmdata;
-    ZX_DEBUG_ASSERT(ino <= inode_map_.size());
-    blk_t ibm_relative_bno = (ino / kMinfsBlockBits);
-    if ((bmdata = fs::GetBlock<kMinfsBlockSize>(inode_map_.StorageUnsafe()->GetData(),
-        ibm_relative_bno)) == nullptr) {
-        panic("inode not in bitmap");
-    }
-
     // TODO(smklein): optional sanity check of both blocks
 
     // Write the inode back
@@ -589,7 +580,7 @@ zx_status_t Minfs::InoNew(WritebackWork* wb, const minfs_inode_t* inode, ino_t* 
         return status;
     }
 
-// Commit blocks to disk
+    // Commit blocks to disk
     WriteInodeBitmap(wb, ino, 1);
     WriteInfo(wb);
     *ino_out = ino;
