@@ -201,32 +201,32 @@ func init() {
 		},
 		{
 			sysroot,
-			path.Join(x64BuildDir, "stripped/libc++.so.2"),
+			path.Join(x64BuildDir, "obj/build/images/system_image.manifest.stripped/lib/libc++.so.2"),
 			"arch/x64/dist/libc++.so.2",
 		},
 		{
 			sysroot,
-			path.Join(armBuildDir, "stripped/libc++.so.2"),
+			path.Join(armBuildDir, "obj/build/images/system_image.manifest.stripped/lib/libc++.so.2"),
 			"arch/arm64/dist/libc++.so.2",
 		},
 		{
 			sysroot,
-			path.Join(x64BuildDir, "stripped/libc++abi.so.1"),
+			path.Join(x64BuildDir, "obj/build/images/system_image.manifest.stripped/lib/libc++abi.so.1"),
 			"arch/x64/dist/libc++abi.so.1",
 		},
 		{
 			sysroot,
-			path.Join(armBuildDir, "stripped/libc++abi.so.1"),
+			path.Join(armBuildDir, "obj/build/images/system_image.manifest.stripped/lib/libc++abi.so.1"),
 			"arch/arm64/dist/libc++abi.so.1",
 		},
 		{
 			sysroot,
-			path.Join(x64BuildDir, "stripped/libunwind.so.1"),
+			path.Join(x64BuildDir, "obj/build/images/system_image.manifest.stripped/lib/libunwind.so.1"),
 			"arch/x64/dist/libunwind.so.1",
 		},
 		{
 			sysroot,
-			path.Join(armBuildDir, "stripped/libunwind.so.1"),
+			path.Join(armBuildDir, "obj/build/images/system_image.manifest.stripped/lib/libunwind.so.1"),
 			"arch/arm64/dist/libunwind.so.1",
 		},
 		{
