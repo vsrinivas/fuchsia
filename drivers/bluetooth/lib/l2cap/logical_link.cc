@@ -20,7 +20,7 @@ constexpr bool IsValidLEFixedChannel(ChannelId id) {
   switch (id) {
     case kATTChannelId:
     case kLESignalingChannelId:
-    case kSMPChannelId:
+    case kLESMPChannelId:
       return true;
     default:
       break;
@@ -32,7 +32,7 @@ constexpr bool IsValidBREDRFixedChannel(ChannelId id) {
   switch (id) {
     case kSignalingChannelId:
     case kConnectionlessChannelId:
-    case kSMChannelId:
+    case kSMPChannelId:
       return true;
     default:
       break;

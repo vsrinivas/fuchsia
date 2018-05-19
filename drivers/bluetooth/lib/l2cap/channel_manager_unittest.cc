@@ -99,8 +99,8 @@ TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelErrorDisallowedId) {
   chanmgr()->RegisterACL(kTestHandle2, hci::Connection::Role::kMaster,
                          DoNothing, dispatcher());
 
-  // This should fail as kSMChannelId is ACL-U only.
-  EXPECT_EQ(nullptr, ActivateNewFixedChannel(kSMChannelId, kTestHandle1));
+  // This should fail as kSMPChannelId is ACL-U only.
+  EXPECT_EQ(nullptr, ActivateNewFixedChannel(kSMPChannelId, kTestHandle1));
 
   // This should fail as kATTChannelId is LE-U only.
   EXPECT_EQ(nullptr, ActivateNewFixedChannel(kATTChannelId, kTestHandle2));
@@ -176,7 +176,7 @@ TEST_F(L2CAP_ChannelManagerTest, OpenAndCloseMultipleFixedChannels) {
   ASSERT_TRUE(att_chan);
 
   auto smp_chan =
-      ActivateNewFixedChannel(kSMPChannelId, kTestHandle1, smp_closed_cb);
+      ActivateNewFixedChannel(kLESMPChannelId, kTestHandle1, smp_closed_cb);
   ASSERT_TRUE(smp_chan);
 
   smp_chan->Deactivate();
@@ -212,7 +212,7 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveData) {
   auto att_chan =
       ActivateNewFixedChannel(kATTChannelId, kTestHandle1, [] {}, att_rx_cb);
   auto smp_chan =
-      ActivateNewFixedChannel(kSMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
+      ActivateNewFixedChannel(kLESMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
   ASSERT_TRUE(att_chan);
   ASSERT_TRUE(smp_chan);
 
@@ -299,7 +299,7 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeRegisteringLink) {
   FXL_DCHECK(att_chan);
 
   smp_chan =
-      ActivateNewFixedChannel(kSMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
+      ActivateNewFixedChannel(kLESMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
   FXL_DCHECK(smp_chan);
 
   RunUntilIdle();
@@ -355,7 +355,7 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeCreatingChannel) {
   FXL_DCHECK(att_chan);
 
   smp_chan =
-      ActivateNewFixedChannel(kSMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
+      ActivateNewFixedChannel(kLESMPChannelId, kTestHandle1, [] {}, smp_rx_cb);
   FXL_DCHECK(smp_chan);
 
   RunUntilIdle();
@@ -374,7 +374,7 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeSettingRxHandler) {
   auto att_chan = chanmgr()->OpenFixedChannel(kTestHandle1, kATTChannelId);
   FXL_DCHECK(att_chan);
 
-  auto smp_chan = chanmgr()->OpenFixedChannel(kTestHandle1, kSMPChannelId);
+  auto smp_chan = chanmgr()->OpenFixedChannel(kTestHandle1, kLESMPChannelId);
   FXL_DCHECK(smp_chan);
 
   common::StaticByteBuffer<255> buffer;
@@ -497,7 +497,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdus) {
 
   // We use the ATT fixed-channel for LE and the SM fixed-channel for ACL.
   auto att_chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1);
-  auto sm_chan = ActivateNewFixedChannel(kSMChannelId, kTestHandle2);
+  auto sm_chan = ActivateNewFixedChannel(kSMPChannelId, kTestHandle2);
   ASSERT_TRUE(att_chan);
   ASSERT_TRUE(sm_chan);
 
@@ -597,7 +597,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdusDifferentBuffers) {
 
   // We use the ATT fixed-channel for LE and the SM fixed-channel for ACL.
   auto att_chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1);
-  auto sm_chan = ActivateNewFixedChannel(kSMChannelId, kTestHandle2);
+  auto sm_chan = ActivateNewFixedChannel(kSMPChannelId, kTestHandle2);
   ASSERT_TRUE(att_chan);
   ASSERT_TRUE(sm_chan);
 
@@ -670,7 +670,7 @@ TEST_F(L2CAP_ChannelManagerTest, ACLChannelSignalLinkError) {
                          link_error_cb, dispatcher());
 
   // Activate a new Security Manager channel to signal the error.
-  auto chan = ActivateNewFixedChannel(kSMChannelId, kTestHandle1);
+  auto chan = ActivateNewFixedChannel(kSMPChannelId, kTestHandle1);
   chan->SignalLinkError();
 
   // The event will run asynchronously.

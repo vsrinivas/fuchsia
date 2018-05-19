@@ -22,14 +22,14 @@ using ChannelId = uint16_t;
 constexpr ChannelId kSignalingChannelId = 0x0001;
 constexpr ChannelId kConnectionlessChannelId = 0x0002;
 constexpr ChannelId kAMPManagerChannelId = 0x0003;
-constexpr ChannelId kSMChannelId = 0x0007;
+constexpr ChannelId kSMPChannelId = 0x0007;
 constexpr ChannelId kAMPTestManagerChannelId = 0x003F;
 
 // Fixed channel identifiers used in LE
 // (see Core Spec v5.0, Vol 3, Part A, Section 2.1)
 constexpr ChannelId kATTChannelId = 0x0004;
 constexpr ChannelId kLESignalingChannelId = 0x0005;
-constexpr ChannelId kSMPChannelId = 0x0006;
+constexpr ChannelId kLESMPChannelId = 0x0006;
 
 // Basic L2CAP header. This corresponds to the header used in a B-frame (Basic Information Frame)
 // and is the basis of all other frame types.

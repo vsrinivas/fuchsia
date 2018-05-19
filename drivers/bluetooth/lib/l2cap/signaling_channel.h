@@ -64,7 +64,7 @@ class SignalingChannel {
     return thread_checker_.IsCreationThreadCurrent();
   }
 
-  // Returns the logicak link that signaling channel is operating on.
+  // Returns the logical link that signaling channel is operating on.
   hci::Connection::Role role() const { return role_; }
 
  private:
