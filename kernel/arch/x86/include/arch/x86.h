@@ -9,16 +9,16 @@
 
 #pragma once
 
-#include <sys/types.h>
-#include <stdlib.h>
+#include <cpuid.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #include <arch/x86/general_regs.h>
 #include <arch/x86/registers.h>
 #include <syscalls/syscalls.h>
-#include <zircon/compiler.h>
 
 __BEGIN_CDECLS
 
@@ -206,22 +206,13 @@ static inline uint64_t rdtsc(void)
 
 static inline void cpuid(uint32_t sel, uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d)
 {
-    *a = sel;
-
-    __asm__ __volatile__("cpuid"
-                         : "+a" (*a), "=c" (*c), "=d" (*d), "=b"(*b)
-                        );
+    __cpuid(sel, *a, *b, *c, *d);
 }
 
 /* cpuid wrapper with ecx set to a second argument */
 static inline void cpuid_c(uint32_t sel, uint32_t sel_c, uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d)
 {
-    *a = sel;
-    *c = sel_c;
-
-    __asm__ __volatile__("cpuid"
-                         : "+a" (*a), "+c" (*c), "=d" (*d), "=b"(*b)
-                        );
+    __cpuid_count(sel, sel_c, *a, *b, *c, *d);
 }
 
 static inline void set_in_cr0(ulong mask)

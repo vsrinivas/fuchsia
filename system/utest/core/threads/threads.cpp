@@ -1012,14 +1012,14 @@ static bool test_writing_register_state() {
 
 #if defined(__x86_64__)
 
+#include <cpuid.h>
+
 // This is based on code from kernel/ which isn't usable by code in system/.
 enum { X86_CPUID_ADDR_WIDTH = 0x80000008 };
 
 static uint32_t x86_linear_address_width() {
     uint32_t eax, ebx, ecx, edx;
-    __asm__("cpuid"
-            : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
-            : "a"(X86_CPUID_ADDR_WIDTH), "c"(0));
+    __cpuid(X86_CPUID_ADDR_WIDTH, eax, ebx, ecx, edx);
     return (eax >> 8) & 0xff;
 }
 

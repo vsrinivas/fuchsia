@@ -10,6 +10,7 @@
 
 #if defined(__x86_64__)
 
+#include <cpuid.h>
 #include <x86intrin.h>
 
 static pthread_barrier_t g_barrier;
@@ -17,10 +18,8 @@ static pthread_barrier_t g_barrier;
 // Returns whether the CPU supports the {rd,wr}{fs,gs}base instructions.
 static bool x86_feature_fsgsbase() {
     uint32_t eax, ebx, ecx, edx;
-    __asm__("cpuid"
-            : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
-            : "a"(7), "c"(0));
-    return ebx & 1;
+    __cpuid(7, eax, ebx, ecx, edx);
+    return ebx & bit_FSGSBASE;
 }
 
 __attribute__((target("fsgsbase")))
