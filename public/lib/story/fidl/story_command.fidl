@@ -24,9 +24,6 @@ union StoryCommand {
 
   // Sets the value of a Link.
   SetLinkValue set_link_value;
-
-  // Sends a command to a specified Mod.
-  SendModCommand send_mod_command;
 };
 
 struct SetFocusState {
@@ -52,7 +49,6 @@ struct AddMod {
 
 // Removes the mod under |mod_name| from the story.
 struct RemoveMod {
-  // |mod_name|, although a vector of strings, makes up a single mod name.
   vector<string> mod_name;
 };
 
@@ -60,14 +56,4 @@ struct RemoveMod {
 struct SetLinkValue {
   LinkPath path;
   vector<uint8>? value;
-};
-
-// Sends the mod specified by |mod_name| a command encoded in |intent|.  The
-// mod will receive an OnModCommand() FIDL event on its ModContext along with a
-// snapshot of the data provided in |intent.parameters|.
-struct SendModCommand {
-  vector<string> mod_name;
-  // |intent.action.name| is required and specifies the command for the mod to
-  // run, and |intent.action.handler| is ignored.
-  Intent intent;
 };
