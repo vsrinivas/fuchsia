@@ -20,7 +20,6 @@
 
 namespace modular {
 
-class ModuleControllerImpl;
 class StoryControllerImpl;
 
 // The parameters of module context that do not vary by instance.
