@@ -27,6 +27,8 @@ std::string HostErrorToString(HostError error) {
       return "not supported";
     case HostError::kPacketMalformed:
       return "packet malformed";
+    case HostError::kLinkDisconnected:
+      return "link disconnected";
     case HostError::kOutOfMemory:
       return "out of memory";
     case HostError::kProtocolError:

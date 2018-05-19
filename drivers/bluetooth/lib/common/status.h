@@ -41,6 +41,9 @@ enum class HostError : uint8_t {
   // Received an invalid packet from the controller.
   kPacketMalformed,
 
+  // Link was disconnected during operation.
+  kLinkDisconnected,
+
   // Ran out of resources.
   kOutOfMemory,
 

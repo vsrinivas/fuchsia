@@ -16,12 +16,17 @@ source_set("definitions") {
 
 static_library("sm") {
   sources = [
+    "bearer.cc",
+    "bearer.h",
+    "status.cc",
+    "status.h",
     "util.cc",
     "util.h",
   ]
 
   public_deps = [
     ":definitions",
+    "//garnet/drivers/bluetooth/lib/l2cap",
   ]
 }
 
@@ -29,6 +34,7 @@ source_set("tests") {
   testonly = true
 
   sources = [
+    "bearer_unittest.cc",
     "util_unittest.cc",
   ]
 
