@@ -34,6 +34,19 @@ package("oauth_examples") {
   ]
 }
 
+package("rust_tests") {
+  testonly = true
+  deprecated_system_image = true
+
+  deps = [
+    "rust/cache:cache"
+  ]
+
+  tests = [
+    { name = "auth_cache_lib_test_rustc" },
+  ]
+}
+
 package("tests") {
   testonly = true
   deprecated_system_image = true

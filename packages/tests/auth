@@ -3,6 +3,7 @@
         "garnet/packages/prod/auth"
     ],
     "packages": {
-        "token_manager_tests": "//garnet/bin/auth:tests"
+        "token_manager_tests": "//garnet/bin/auth:tests",
+        "rust_tests" : "//garnet/bin/auth:rust_tests"
     }
 }
