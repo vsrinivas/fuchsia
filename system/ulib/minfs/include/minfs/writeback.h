@@ -17,69 +17,17 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 
-#include <fs/block-txn.h>
 #include <fs/mapped-vmo.h>
 #include <fs/queue.h>
 #include <fs/vfs.h>
 
 #include <minfs/bcache.h>
+#include <minfs/block-txn.h>
 #include <minfs/format.h>
 
 namespace minfs {
 
 class VnodeMinfs;
-
-using ReadTxn = fs::ReadTxn<kMinfsBlockSize, Bcache>;
-
-#ifdef __Fuchsia__
-
-typedef struct {
-    zx_handle_t vmo;
-    size_t vmo_offset;
-    size_t dev_offset;
-    size_t length;
-} write_request_t;
-
-class WritebackBuffer;
-
-// A transaction consisting of enqueued VMOs to be written
-// out to disk at specified locations.
-//
-// TODO(smklein): Rename to LogWriteTxn, or something similar, to imply
-// that this write transaction acts fundamentally different from the
-// ulib/fs WriteTxn under the hood.
-class WriteTxn {
-public:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(WriteTxn);
-    explicit WriteTxn(Bcache* bc) : bc_(bc) {}
-    ~WriteTxn() {
-        ZX_DEBUG_ASSERT_MSG(requests_.size() == 0, "WriteTxn still has pending requests");
-    }
-
-    // Identify that a block should be written to disk at a later point in time.
-    void Enqueue(zx_handle_t vmo, uint64_t vmo_offset, uint64_t dev_offset, uint64_t nblocks);
-
-    fbl::Vector<write_request_t>& Requests() { return requests_; }
-
-    size_t BlkCount() const;
-
-protected:
-    // Activate the transaction, writing it out to disk.
-    //
-    // Each transaction uses the |vmo| / |vmoid| pair supplied, since the
-    // transactions should be all reading from a single in-memory buffer.
-    zx_status_t Flush(zx_handle_t vmo, vmoid_t vmoid);
-
-private:
-    Bcache* bc_;
-    fbl::Vector<write_request_t> requests_;
-};
-
-#else
-
-using WriteTxn = fs::WriteTxn<kMinfsBlockSize, Bcache>;
-
-#endif
 
 // A wrapper around a WriteTxn, holding references to the underlying Vnodes
 // corresponding to the txn, so their Vnodes (and VMOs) are not released

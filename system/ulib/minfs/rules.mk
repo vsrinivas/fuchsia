@@ -9,6 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 COMMON_SRCS := \
+    $(LOCAL_DIR)/allocator.cpp \
     $(LOCAL_DIR)/bcache.cpp \
     $(LOCAL_DIR)/minfs.cpp \
     $(LOCAL_DIR)/vnode.cpp \

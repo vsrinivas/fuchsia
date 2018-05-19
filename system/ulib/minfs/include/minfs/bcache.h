@@ -51,7 +51,7 @@ public:
     uint32_t BlockSize() const { return info_.block_size; }
 
     ssize_t GetDevicePath(char* out, size_t out_len);
-    zx_status_t AttachVmo(zx_handle_t vmo, vmoid_t* out);
+    zx_status_t AttachVmo(zx_handle_t vmo, vmoid_t* out) const;
     zx_status_t Txn(block_fifo_request_t* requests, size_t count) {
         return block_fifo_txn(fifo_client_, requests, count);
     }

@@ -98,7 +98,7 @@ ssize_t Bcache::GetDevicePath(char* out, size_t out_len) {
     return ioctl_device_get_topo_path(fd_.get(), out, out_len);
 }
 
-zx_status_t Bcache::AttachVmo(zx_handle_t vmo, vmoid_t* out) {
+zx_status_t Bcache::AttachVmo(zx_handle_t vmo, vmoid_t* out) const {
     zx_handle_t xfer_vmo;
     zx_status_t status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &xfer_vmo);
     if (status != ZX_OK) {
