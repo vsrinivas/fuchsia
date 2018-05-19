@@ -106,6 +106,8 @@ class Station : public FrameHandler {
                                 const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleLlcFrame(const LlcHeader& llc_frame, size_t llc_frame_len,
                                const common::MacAddr& dest, const common::MacAddr& src);
+    zx_status_t HandleAmsduFrame(const ImmutableDataFrame<LlcHeader>& frame,
+                                 const wlan_rx_info_t& rxinfo);
 
     zx_status_t HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame) override;
     zx_status_t HandleTimeout();

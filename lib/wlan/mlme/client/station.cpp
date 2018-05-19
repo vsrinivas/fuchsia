@@ -689,8 +689,10 @@ zx_status_t Station::HandleDataFrame(const ImmutableDataFrame<LlcHeader>& frame,
 
     switch (frame.hdr()->fc.subtype()) {
     case DataSubtype::kDataSubtype:
-        // Fall-through
+        break;
     case DataSubtype::kQosdata:  // For data frames within BlockAck session.
+        ZX_DEBUG_ASSERT(frame.hdr()->HasQosCtrl());
+        ZX_DEBUG_ASSERT(frame.hdr()->qos_ctrl() != nullptr);
         break;
     default:
         warnf("unsupported data subtype %02x\n", frame.hdr()->fc.subtype());
@@ -754,6 +756,63 @@ zx_status_t Station::HandleLlcFrame(const LlcHeader& llc_frame, size_t llc_frame
     zx_status_t status = device_->SendEthernet(std::move(eth_packet));
     if (status != ZX_OK) { errorf("could not send ethernet data: %d\n", status); }
     return status;
+}
+
+zx_status_t Station::HandleAmsduFrame(const ImmutableDataFrame<LlcHeader>& frame,
+                                      const wlan_rx_info_t& rxinfo) {
+    debugfn();
+
+    ZX_DEBUG_ASSERT(frame.hdr()->fc.subtype() >= DataSubtype::kQosdata);
+    ZX_DEBUG_ASSERT(frame.hdr()->fc.subtype() <= DataSubtype::kQosdataCfackCfpoll);
+
+    // TODO(porce): Branch if Short A-MSDU subframe format should be used.
+    auto amsdu_len = frame.body_len();
+    if (amsdu_len == 0) { return ZX_OK; }
+
+    if (amsdu_len < sizeof(AmsduSubframeHeader)) {
+        errorf("dropping malformed A-MSDU of len %zu\n", amsdu_len);
+        return ZX_ERR_STOP;
+    }
+
+    auto amsdu = reinterpret_cast<const uint8_t*>(frame.body());
+
+    size_t offset = 0;        // Tracks up to which point of byte stream is parsed.
+    size_t offset_prev = -1;  // For debugging. Catch buggy situation
+
+    while (offset < amsdu_len) {
+        ZX_DEBUG_ASSERT(offset > offset_prev);  // Otherwise infinite loop
+        offset_prev = offset;
+
+        auto subframe = reinterpret_cast<const AmsduSubframe*>(amsdu + offset);
+
+        if (!(offset + sizeof(AmsduSubframeHeader) <= amsdu_len)) {
+            errorf("malformed A-MSDU subframe: amsdu_len %zu offset %zu offset_prev %zu AmsduSubframeHeader size: %zu\n", amsdu_len, offset, offset_prev, sizeof(AmsduSubframeHeader));
+            return ZX_ERR_STOP;
+        }
+        offset += sizeof(AmsduSubframeHeader);
+        auto msdu_len = subframe->hdr.msdu_len;
+
+        // Note: msdu_len == 0 is valid
+
+        if (msdu_len > 0) {
+            if (!(offset + msdu_len <= amsdu_len && msdu_len >= sizeof(LlcHeader))) {
+                errorf("malformed A-MSDU subframe: amsdu_len %zu offset %zu msdu_len %u\n", amsdu_len, offset, msdu_len);
+                return ZX_ERR_STOP;
+            }
+
+            offset += msdu_len;
+
+            // TODO(porce): Process MSDU - Construct an Ethernet frame and send up
+            auto llc_frame = subframe->get_msdu();
+            HandleLlcFrame(*llc_frame, msdu_len, subframe->hdr.da, subframe->hdr.sa);
+        }
+
+        // Skip by zero-padding
+        bool is_last_subframe = (offset == amsdu_len);
+        offset += subframe->PaddingLen(is_last_subframe);
+    }
+
+    return ZX_OK;
 }
 
 zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame) {
