@@ -49,8 +49,13 @@ def read_manifest_lines(lines, title, manifest_cwd, result_cwd):
         # Make it relative to the cwd we want to work from.
         build_file = os.path.relpath(build_file, result_cwd)
 
-        if 'prebuilt' not in build_file:
-            yield manifest_entry(group, target_file, build_file, title)
+        # TODO(mcgrathr): Dismal kludge to avoid pulling in asan runtime
+        # libraries from the zircon ulib bootfs.manifest because their source
+        # file names don't match the ones in the toolchain manifest.
+        if 'prebuilt/downloads/clang/lib/' in build_file:
+            continue
+
+        yield manifest_entry(group, target_file, build_file, title)
 
 
 def partition_manifest(manifest, select, selected_group, unselected_group):

@@ -75,7 +75,7 @@ def collect_auxiliaries(manifest, examined):
             if binary.entry.source != new_binary.entry.source:
                 raise Exception(
                     "'%s' in both %r and %r" %
-                    (entry.target, binary.entry.manifest, entry.manifest))
+                    (entry.target, binary.entry, entry))
     return aux_binaries
 
 
