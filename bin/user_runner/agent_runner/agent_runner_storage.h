@@ -64,6 +64,8 @@ class AgentRunnerStorage {
   // Loads up all tasks (across all agents) from storage. |NotifcationDelegate|
   // is notified of each added task, and also for any added and deleted tasks in
   // the future.
+  //
+  // Ownership of |delegate| is not taken and it must out-live *this.
   virtual void Initialize(NotificationDelegate* delegate,
                           std::function<void()> done) = 0;
 

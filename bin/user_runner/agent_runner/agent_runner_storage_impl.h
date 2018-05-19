@@ -48,7 +48,7 @@ class AgentRunnerStorageImpl : public AgentRunnerStorage, PageClient {
   void OnPageDelete(const std::string& key) override;
 
   // Only valid after |Initialize()| is called.
-  NotificationDelegate* delegate_;
+  NotificationDelegate* delegate_;  // Not owned.
 
   OperationQueue operation_queue_;
 
