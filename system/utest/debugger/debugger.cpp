@@ -573,9 +573,7 @@ int reg_access_thread_func(void* arg_) {
 
 #ifdef __x86_64__
     __asm__("\
-        call 1f\n\
-      1:\n\
-        pop %[pc]\n\
+        lea .(%%rip), %[pc]\n\
         mov %%rsp, %[sp]\n\
         mov %[initial_value], %%" REG_ACCESS_TEST_REG_NAME "\n\
       2:\n\
@@ -583,7 +581,7 @@ int reg_access_thread_func(void* arg_) {
         cmp %[initial_value], %%" REG_ACCESS_TEST_REG_NAME "\n\
         je 2b\n\
         mov %%" REG_ACCESS_TEST_REG_NAME ", %[result]"
-            : [result] "=r"(result), [pc] "=r"(pc), [sp] "=r"(sp)
+            : [result] "=r"(result), [pc] "=&r"(pc), [sp] "=&r"(sp)
             : [initial_value] "r"(initial_value)
             : REG_ACCESS_TEST_REG_NAME);
 #endif
@@ -598,7 +596,7 @@ int reg_access_thread_func(void* arg_) {
         cmp %[initial_value], " REG_ACCESS_TEST_REG_NAME "\n\
         b.eq 1b\n\
         mov %[result], " REG_ACCESS_TEST_REG_NAME
-            : [result] "=r"(result), [pc] "=r"(pc), [sp] "=r"(sp)
+            : [result] "=r"(result), [pc] "=&r"(pc), [sp] "=&r"(sp)
             : [initial_value] "r"(initial_value)
             : REG_ACCESS_TEST_REG_NAME);
 #endif
