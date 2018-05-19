@@ -132,8 +132,10 @@ void TraceSession::CheckAllProvidersStarted() {
         return value && ready;
       });
 
-  if (all_started)
+  if (all_started) {
+    FXL_VLOG(2) << "All providers reporting started";
     NotifyStarted();
+  }
 }
 
 void TraceSession::FinishProvider(TraceProviderBundle* bundle) {

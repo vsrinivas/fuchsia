@@ -32,6 +32,8 @@ int main(int argc, char** argv) {
     exit(1);
   }
 
+  FXL_LOG(INFO) << "Trace Manager starting with config: " << config_file;
+
   fsl::MessageLoop loop;
   TraceManagerApp trace_manager_app(config);
   loop.Run();
