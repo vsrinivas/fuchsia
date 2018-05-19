@@ -128,40 +128,55 @@ bool mmap_offset_test() {
     END_TEST;
 }
 
-static __attribute__ ((noinline)) int add(int a, int b) {
-    return a+b;
-}
+// Define a little fragment of code that we can copy.
+extern "C" const uint8_t begin_add[], end_add[];
+__asm__(".pushsection .rodata.add_code\n"
+        ".globl begin_add\n"
+        "begin_add:"
+#ifdef __x86_64__
+        "mov %rdi, %rax\n"
+        "add %rsi, %rax\n"
+        "ret\n"
+#elif defined(__aarch64__)
+        "add x0, x0, x1\n"
+        "ret\n"
+#else
+# error "what machine?"
+#endif
+        ".globl end_add\n"
+        "end_add:"
+        ".popsection");
 
 bool mmap_PROT_EXEC_test() {
     BEGIN_TEST;
 
-    // allocate 2 pages worth of memory which we will eventually execute
-    int PAGE_SZ = getpagesize();
-    void *addr = mmap(NULL, PAGE_SZ * 2, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
-    EXPECT_NE(MAP_FAILED, addr, "mmap should have succeeded for PROT_READ|PROT_WRITE");
+    // Allocate a page that will later be made executable.
+    size_t page_size = getpagesize();
+    void* addr = mmap(NULL, page_size, PROT_READ|PROT_WRITE,
+                      MAP_PRIVATE|MAP_ANON, -1, 0);
+    EXPECT_NE(MAP_FAILED, addr,
+              "mmap should have succeeded for PROT_READ|PROT_WRITE");
 
     // Copy over code from our address space into the newly allocated memory.
-    // We assume our add function will never cover more than 2 pages of memory
-    // and that the two pages will be readable in memory.
-    uintptr_t fp = (uintptr_t) &add;
-    uintptr_t page_start = fp & ~(PAGE_SZ - 1);
-    memcpy(addr, (void *) page_start, PAGE_SZ * 2);
+    ASSERT_LE(static_cast<size_t>(end_add - begin_add), page_size);
+    memcpy(addr, begin_add, end_add - begin_add);
 
     // mark the code executable
-    int result = mprotect(addr, PAGE_SZ * 2, PROT_READ|PROT_EXEC);
+    int result = mprotect(addr, page_size, PROT_READ|PROT_EXEC);
     EXPECT_EQ(0, result, "Unable to mark pages PROT_READ|PROT_EXEC");
 
-    // Execute the code from our new location
-    uintptr_t offset = fp - page_start;
-    int (*add_func)(int, int) = (int (*)(int, int))((uintptr_t) addr + offset);
+    // Execute the code from our new location.
+    auto add_func = reinterpret_cast<int (*)(int, int)>(
+        reinterpret_cast<uintptr_t>(addr));
     int add_result = add_func(1, 2);
 
     // Check that the result of adding 1+2 is 3.
     EXPECT_EQ(3, add_result);
 
     // Deallocate pages
-    result = munmap(addr, PAGE_SZ * 2);
+    result = munmap(addr, page_size);
     EXPECT_EQ(0, result, "munmap unexpectedly failed");
+
     END_TEST;
 }
 
