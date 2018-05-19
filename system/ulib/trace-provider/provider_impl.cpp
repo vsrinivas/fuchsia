@@ -161,7 +161,7 @@ trace_provider_t* trace_provider_create(async_t* async) {
     if (status != ZX_OK)
         return nullptr;
 
-    status = fdio_service_connect("/svc/tracelink.Registry",
+    status = fdio_service_connect("/svc/fuchsia.tracelink.Registry",
                                   registry_service.release()); // takes ownership
     if (status != ZX_OK)
         return nullptr;
