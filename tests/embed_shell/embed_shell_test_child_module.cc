@@ -36,7 +36,7 @@ class TestApp : modular::ModuleWatcher {
     modular::Intent intent;
     intent.action.handler = kCommonNullModule;
     module_host_->module_context()->StartModule(
-        kChildModuleName, std::move(intent), nullptr /* incoming_services */,
+        kChildModuleName, std::move(intent),
         child_module_.NewRequest(), nullptr /* surface_relation */,
         [](const modular::StartModuleStatus) {});
 

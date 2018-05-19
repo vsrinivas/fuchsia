@@ -57,7 +57,7 @@ class TestApp {
     intent_parameter.data.set_link_name("module1link");
     intent.parameters.push_back(std::move(intent_parameter));
     module_host_->module_context()->StartModule(
-        kChildModuleName, std::move(intent), nullptr,
+        kChildModuleName, std::move(intent),
         child_module_.NewRequest(), nullptr,
         [](const modular::StartModuleStatus) {});
 
@@ -75,7 +75,7 @@ class TestApp {
         intent_parameter.data.set_link_name("module2link");
         intent.parameters.push_back(std::move(intent_parameter));
         module_host_->module_context()->StartModule(
-            kChildModuleName, std::move(intent), nullptr,
+            kChildModuleName, std::move(intent),
             child_module2_.NewRequest(), nullptr,
             [](const modular::StartModuleStatus) {});
       });

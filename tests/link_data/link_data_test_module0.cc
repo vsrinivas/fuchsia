@@ -86,7 +86,6 @@ class TestApp {
     intent.parameters.push_back(std::move(parameter));
 
     module_context_->StartModule("module1", std::move(intent),
-                                 nullptr /* services */,
                                  module1_.NewRequest(), nullptr,
                                  [](modular::StartModuleStatus) {});
 
@@ -101,7 +100,7 @@ class TestApp {
     intent.action.handler = kModule2Url;
     intent.parameters.push_back(std::move(parameter));
 
-    module_context_->StartModule("module2", std::move(intent), nullptr,
+    module_context_->StartModule("module2", std::move(intent),
                                  module2_.NewRequest(), nullptr,
                                  [](modular::StartModuleStatus) {});
 

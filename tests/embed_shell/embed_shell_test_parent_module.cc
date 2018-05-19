@@ -55,7 +55,7 @@ class TestApp {
     modular::Intent intent;
     intent.action.handler = kChildModuleUrl;
     module_host_->module_context()->EmbedModule(
-        kChildModuleName, std::move(intent), nullptr /* incoming_services */,
+        kChildModuleName, std::move(intent),
         child_module_.NewRequest(), child_view_.NewRequest(),
         [](const modular::StartModuleStatus) {});
   }

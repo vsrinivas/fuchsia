@@ -106,7 +106,7 @@ class TestApp {
     link_one_->Sync([this] {
       link_two_->Sync([this] {
         module_context_->EmbedModule(
-            "my child", std::move(intent_), nullptr, child_module_.NewRequest(),
+            "my child", std::move(intent_), child_module_.NewRequest(),
             child_view_.NewRequest(), [this](modular::StartModuleStatus status) {
               if (status == modular::StartModuleStatus::SUCCESS) {
                 start_intent_.Pass();

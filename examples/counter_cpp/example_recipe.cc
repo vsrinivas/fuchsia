@@ -143,7 +143,6 @@ class RecipeApp : public modular::ViewApp {
     parameter.data = std::move(parameter_data);
     intent.parameters.push_back(std::move(parameter));
     module_context_->StartModule("module1", std::move(intent),
-                                 nullptr,
                                  module1_.NewRequest(), nullptr,
                                  [](const modular::StartModuleStatus&) {});
 
@@ -156,7 +155,7 @@ class RecipeApp : public modular::ViewApp {
     parameter.data = std::move(parameter_data);
     intent.parameters.push_back(std::move(parameter));
     component::ServiceProviderPtr services_from_module2;
-    module_context_->StartModule("module2", std::move(intent), nullptr,
+    module_context_->StartModule("module2", std::move(intent),
                                  module2_.NewRequest(), nullptr,
                                  [](const modular::StartModuleStatus&) {});
 

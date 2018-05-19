@@ -55,7 +55,6 @@ class ModuleContextImpl : ModuleContext {
   void EmbedModule(
       fidl::StringPtr name,
       Intent intent,
-      fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner,
       EmbedModuleCallback callback) override;
@@ -63,7 +62,6 @@ class ModuleContextImpl : ModuleContext {
   void StartModule(
       fidl::StringPtr name,
       Intent intent,
-      fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller,
       SurfaceRelationPtr surface_relation,
       StartModuleCallback callback) override;

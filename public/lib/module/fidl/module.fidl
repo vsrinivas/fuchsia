@@ -4,14 +4,14 @@
 
 library modular;
 
-// An application that is meant to be run under a ModuleContext in a Story just
-// requests the ModuleContext service from its service namespace. It should
-// implement the ViewProvider and the Lifecycle services, but if it doesn't it
-// can still be run in a story.
+// An application that is meant to be run as a Module in a Story just requests
+// the ModuleContext service from its service namespace. It should implement the
+// ViewProvider and the Lifecycle services, but if it doesn't it can still be
+// run in a story.
 //
-// When ModuleContext.StartModule() is invoked, the Module instance is requested
-// from its component and its dependent services and parameters are passed to it
-// by Initialize().
+// When ModuleContext.StartModule() is invoked, the Module component is
+// instantiated and can start running. The story runner will request its
+// ViewProvider service in order to display its UI.
 //
 // If a Module component implements the |Lifecycle| interface, then invocation
 // of the Terminate() method on its |Lifecycle| service is a signal that it
@@ -21,13 +21,12 @@ library modular;
 // A Module instance may be stopped for the following reasons:
 //
 // (1) StoryController.Stop() is called to stop the whole story. A plausible
-//     occasion for this to happen is that the root module in the story has
-//     signalled that it's Done(), that the UserShell dismisses the story, or
+//     occasion for this to happen is that the UserShell dismisses the story, or
 //     that the user logs out.
 //
 // (2) ModuleController.Stop() is called by the caller that started this Module
-//     instance. A plausible occasion for this to happen is that the Module
-//     instance has signalled that it's Done().
+//     instance. A plausible occasion for this to happen is that the StoryShell
+//     dismisses the module or that the parent module wants it to stop.
 //
 // Other connections the Module instance may hold, such as to Link, LinkWatcher,
 // ModuleController of other Module instances, are closed after

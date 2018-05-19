@@ -53,7 +53,6 @@ class TestApp : modular::LinkWatcher {
 
     module_host_->module_context()->StartModule(
         "two", std::move(intent),
-        nullptr /* incoming_services */,
         module_controller_.NewRequest(),
         nullptr /* surface_relation */,
         [](modular::StartModuleStatus){});

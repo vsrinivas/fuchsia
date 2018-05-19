@@ -35,12 +35,7 @@ interface ModuleContext {
   // arguments), the existing Module instance is restarted with the changed
   // arguments. If the other arguments don't change, just an additional
   // ModuleController connection is made.
-  //
-  // The calling Module instance and the new Module instance may also interact
-  // by exchanging ServiceProviders. The new Module instance may implement
-  // |incoming_services|, if an interface request is supplied.
   2: StartModule(string name, Intent intent,
-                request<component.ServiceProvider>? incoming_services,
                 request<ModuleController> module_controller,
                 SurfaceRelation? surface_relation)
                 -> (StartModuleStatus @status);
@@ -51,7 +46,6 @@ interface ModuleContext {
   // instance with the same |name| and |intent| is already running, |view_owner|
   // is just closed.
   3: EmbedModule(string name, Intent intent,
-                request<component.ServiceProvider>? incoming_services,
                 request<ModuleController> module_controller,
                 request<views_v1_token.ViewOwner> view_owner) -> (StartModuleStatus @status);
 

@@ -1655,7 +1655,6 @@ LinkPathPtr StoryControllerImpl::GetLinkPathForChainKey(
 void StoryControllerImpl::EmbedModule(
     const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
     fidl::StringPtr module_name, IntentPtr intent,
-    fidl::InterfaceRequest<component::ServiceProvider> /* incoming_services */,
     fidl::InterfaceRequest<ModuleController> module_controller_request,
     fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
     ModuleSource module_source,
@@ -1670,7 +1669,6 @@ void StoryControllerImpl::EmbedModule(
 void StoryControllerImpl::StartModule(
     const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
     fidl::StringPtr module_name, IntentPtr intent,
-    fidl::InterfaceRequest<component::ServiceProvider> /* incoming_services */,
     fidl::InterfaceRequest<ModuleController> module_controller_request,
     SurfaceRelationPtr surface_relation, ModuleSource module_source,
     std::function<void(StartModuleStatus)> callback) {

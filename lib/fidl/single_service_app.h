@@ -62,9 +62,9 @@ class SingleServiceApp : protected Service, private views_v1::ViewProvider {
   FXL_DISALLOW_COPY_AND_ASSIGN(SingleServiceApp);
 };
 
-// Base class for a simple application which provides a single instance of a
-// single service and the ViewProvider service. It also implements a Terminate()
-// method that makes it suitable to be used as an Impl class of AppDriver.
+// Base class for a simple application which only provides the ViewProvider
+// service. It also implements a Terminate() method that makes it suitable to be
+// used as an Impl class of AppDriver.
 class ViewApp : private views_v1::ViewProvider {
  public:
   ViewApp(component::ApplicationContext* const application_context)

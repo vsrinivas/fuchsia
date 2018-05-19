@@ -111,7 +111,7 @@ class RecipeApp : public modular::ViewApp {
     modular::Intent intent;
     intent.action.handler = module_query;
     module_context_->EmbedModule(
-        module_query, std::move(intent), nullptr, module_.NewRequest(),
+        module_query, std::move(intent), module_.NewRequest(),
         module_view_.NewRequest(), [](const modular::StartModuleStatus&) {});
     SetChild();
   }
