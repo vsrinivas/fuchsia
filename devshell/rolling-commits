@@ -40,7 +40,8 @@ def http_get(url):
         target = urllib2.urlopen(url)
         return target.read()
     finally:
-        target.close()
+        if target:
+            target.close()
 
 
 def get_lower_layer(layer):
