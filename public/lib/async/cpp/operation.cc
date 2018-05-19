@@ -29,9 +29,7 @@ void OperationContainer::Add(OperationBase* const o) {
   Hold(o);  // Takes ownership.
 }
 
-void OperationContainer::Schedule(OperationBase* const o) {
-  o->Schedule();
-}
+void OperationContainer::Schedule(OperationBase* const o) { o->Schedule(); }
 
 void OperationContainer::InvalidateWeakPtrs(OperationBase* const o) {
   o->InvalidateWeakPtrs();
@@ -110,12 +108,10 @@ void OperationQueue::Cont() {
 }
 
 OperationBase::OperationBase(const char* const trace_name,
-                             OperationContainer* const c,
                              std::string trace_info)
     // While we transition all operations to be explicitly added to containers
     // with OperationContainer::Add(), some |c|'s are going to be null.
-    : container_(c != nullptr ? c->GetWeakPtr() : fxl::WeakPtr<OperationContainer>()),
-      weak_ptr_factory_(this),
+    : weak_ptr_factory_(this),
       trace_name_(trace_name),
       trace_id_(TRACE_NONCE()),
       trace_info_(std::move(trace_info)) {}
@@ -134,13 +130,12 @@ void OperationBase::SetOwner(OperationContainer* c) {
 void OperationBase::Schedule() {
   TraceAsyncBegin();
 
-  async::PostTask(
-      async_get_default(),
-      [this, weak = weak_ptr_factory_.GetWeakPtr()] {
-        if (weak) {
-          Run();
-        }
-      });
+  async::PostTask(async_get_default(),
+                  [this, weak = weak_ptr_factory_.GetWeakPtr()] {
+                    if (weak) {
+                      Run();
+                    }
+                  });
 }
 
 void OperationBase::InvalidateWeakPtrs() {

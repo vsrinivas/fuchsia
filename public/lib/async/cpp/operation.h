@@ -158,13 +158,9 @@ class OperationBase {
   }
 
  protected:
-  // Derived classes pass the OperationContainer here. The constructor adds the
-  // instance to the container. The trace_name and trace_info parameters are
-  // used to annotate performance traces. The trace_name argument should point
-  // to a string literal. The trace_info argument is moved into the operation.
-  OperationBase(const char* trace_name,
-                OperationContainer* c,
-                std::string trace_info);
+  // |trace_name| and |trace_info| are used to annotate performance traces.
+  // |trace_name| must outlive *this.
+  OperationBase(const char* trace_name, std::string trace_info);
 
   // Useful in log messages.
   const char* trace_name() const { return trace_name_; }
@@ -258,10 +254,9 @@ class Operation : public OperationBase {
   using ResultCall = std::function<void(Args...)>;
 
  protected:
-  Operation(const char* const trace_name,
-            ResultCall result_call,
+  Operation(const char* const trace_name, ResultCall result_call,
             const std::string& trace_info = "")
-      : OperationBase(trace_name, nullptr, trace_info),
+      : OperationBase(trace_name, trace_info),
         result_call_(std::move(result_call)) {}
 
   // Derived classes call this when they are prepared to be removed from the
