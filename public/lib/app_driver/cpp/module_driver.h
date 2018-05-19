@@ -19,7 +19,6 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/lifecycle/cpp/lifecycle_impl.h"
-#include "lib/module/cpp/module_impl.h"
 
 namespace modular {
 
@@ -40,12 +39,7 @@ class ModuleHost {
 //      // A constructor with the following signature:
 //      Constructor(
 //           modular::ModuleHost* module_host,
-//           fidl::InterfaceRequest<views_v1::ViewProvider> view_provider_request,
-//           fidl::InterfaceRequest<component::ServiceProvider>
-//           outgoing_services);
-//
-//   |outgoing_services| must contain the services that this module wants to
-//   expose to the module that created it.
+//           fidl::InterfaceRequest<views_v1::ViewProvider> view_provider_request);
 //
 //       // Called by ModuleDriver. Call |done| once shutdown sequence is
 //       // complete, at which point |this| will be deleted.
@@ -57,8 +51,7 @@ class ModuleHost {
 //  public:
 //   HelloWorldModule(
 //      modular::ModuleHost* module_host,
-//      fidl::InterfaceRequest<views_v1::ViewProvider> view_provider_request,
-//      fidl::InterfaceRequest<component::ServiceProvider> outgoing_services) {}
+//      fidl::InterfaceRequest<views_v1::ViewProvider> view_provider_request) {}
 //
 //   // Called by ModuleDriver.
 //   void Terminate(const std::function<void()>& done) { done(); }
@@ -73,23 +66,22 @@ class ModuleHost {
 //   return 0;
 // }
 template <typename Impl>
-class ModuleDriver : LifecycleImpl::Delegate, ModuleImpl::Delegate, ModuleHost {
+class ModuleDriver : LifecycleImpl::Delegate, ModuleHost {
  public:
   ModuleDriver(component::ApplicationContext* const app_context,
                std::function<void()> on_terminated)
       : app_context_(app_context),
         lifecycle_impl_(app_context->outgoing().deprecated_services(), this),
-        module_impl_(std::make_unique<ModuleImpl>(
-            app_context->outgoing().deprecated_services(),
-            static_cast<ModuleImpl::Delegate*>(this))),
         on_terminated_(std::move(on_terminated)) {
+    app_context_->ConnectToEnvironmentService(module_context_.NewRequest());
+
     // There is no guarantee that |ViewProvider| will be requested from us
     // before ModuleHost.set_view_provider_handler() is called from |Impl|, so
     // we buffer both events until they are both satisfied.
     app_context_->outgoing().AddPublicService<views_v1::ViewProvider>(
         [this](fidl::InterfaceRequest<views_v1::ViewProvider> request) {
           view_provider_request_ = std::move(request);
-          MaybeInstantiateImpl();
+          InstantiateImpl();
         });
   }
 
@@ -105,22 +97,12 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleImpl::Delegate, ModuleHost {
     return module_context_.get();
   }
 
-  // |ModuleImpl::Delegate|
-  void ModuleInit(fidl::InterfaceHandle<ModuleContext> module_context,
-                  fidl::InterfaceRequest<component::ServiceProvider>
-                      outgoing_services) override {
-    module_context_.Bind(std::move(module_context));
-    outgoing_module_services_ = std::move(outgoing_services);
-    MaybeInstantiateImpl();
-  }
-
   // |LifecycleImpl::Delegate|
   void Terminate() override {
     // It's possible that we process the |Lifecycle.Terminate| message before
     // the |Module.Initialize| message, even when both messages are ready to be
     // processed at the same time. In this case, because |impl_| hasn't been
     // instantiated yet, we cannot delegate the |Lifecycle.Terminate| message.
-    module_impl_.reset();
     if (impl_) {
       impl_->Terminate([this] {
         // Cf. AppDriver::Terminate().
@@ -134,23 +116,18 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleImpl::Delegate, ModuleHost {
     }
   }
 
-  void MaybeInstantiateImpl() {
-    if (view_provider_request_ && module_context_) {
-      impl_ = std::make_unique<Impl>(static_cast<ModuleHost*>(this),
-                                     std::move(view_provider_request_),
-                                     std::move(outgoing_module_services_));
-    }
+  void InstantiateImpl() {
+    impl_ = std::make_unique<Impl>(static_cast<ModuleHost*>(this),
+                                   std::move(view_provider_request_));
   }
 
   component::ApplicationContext* const app_context_;
   LifecycleImpl lifecycle_impl_;
-  std::unique_ptr<ModuleImpl> module_impl_;
   std::function<void()> on_terminated_;
   ModuleContextPtr module_context_;
 
-  // The following are only valid until |impl_| is instantiated.
+  // Only valid until |impl_| is instantiated.
   fidl::InterfaceRequest<views_v1::ViewProvider> view_provider_request_;
-  fidl::InterfaceRequest<component::ServiceProvider> outgoing_module_services_;
 
   std::unique_ptr<Impl> impl_;
 

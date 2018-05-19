@@ -19,16 +19,10 @@ namespace todo {
 
 using Key = fidl::VectorPtr<uint8_t>;
 
-class TodoApp : public modular::Module,
-                public ledger::PageWatcher,
+class TodoApp : public ledger::PageWatcher,
                 modular::Lifecycle {
  public:
   TodoApp();
-
-  // modular::Module:
-  void Initialize(fidl::InterfaceHandle<modular::ModuleContext> module_context,
-                  fidl::InterfaceRequest<component::ServiceProvider>
-                      outgoing_services) override;
 
   // ledger::PageWatcher:
   void OnChange(ledger::PageChange page_change,
@@ -54,7 +48,6 @@ class TodoApp : public modular::Module,
   std::uniform_int_distribution<> delay_distribution_;
   Generator generator_;
   std::unique_ptr<component::ApplicationContext> context_;
-  fidl::Binding<modular::Module> module_binding_;
   fidl::InterfacePtr<modular::ModuleContext> module_context_;
   modular::ComponentContextPtr component_context_;
   ledger::LedgerPtr ledger_;

@@ -58,6 +58,5 @@ source_set("module_driver") {
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/lifecycle/cpp",
-    "//peridot/public/lib/module/cpp",
   ]
 }

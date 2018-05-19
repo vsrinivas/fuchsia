@@ -62,6 +62,43 @@ class SingleServiceApp : protected Service, private views_v1::ViewProvider {
   FXL_DISALLOW_COPY_AND_ASSIGN(SingleServiceApp);
 };
 
+// Base class for a simple application which provides a single instance of a
+// single service and the ViewProvider service. It also implements a Terminate()
+// method that makes it suitable to be used as an Impl class of AppDriver.
+class ViewApp : private views_v1::ViewProvider {
+ public:
+  ViewApp(component::ApplicationContext* const application_context)
+      : application_context_(application_context),
+        view_provider_binding_(this) {
+    application_context_->outgoing().AddPublicService<views_v1::ViewProvider>(
+        [this](fidl::InterfaceRequest<views_v1::ViewProvider> request) {
+          FXL_DCHECK(!view_provider_binding_.is_bound());
+          view_provider_binding_.Bind(std::move(request));
+        });
+  }
+
+  ~ViewApp() override = default;
+
+  virtual void Terminate(std::function<void()> done) { done(); }
+
+ protected:
+  component::ApplicationContext* application_context() const {
+    return application_context_;
+  }
+
+ private:
+  // |ViewProvider| -- Derived classes may override this method.
+  void CreateView(
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> /*view_owner_request*/,
+      fidl::InterfaceRequest<component::ServiceProvider> /*services*/)
+      override {}
+
+  component::ApplicationContext* const application_context_;
+  fidl::Binding<views_v1::ViewProvider> view_provider_binding_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(ViewApp);
+};
+
 }  // namespace modular
 
 #endif  // PERIDOT_LIB_FIDL_SINGLE_SERVICE_APP_H_

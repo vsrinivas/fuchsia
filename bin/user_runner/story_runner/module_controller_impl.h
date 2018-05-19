@@ -34,9 +34,7 @@ class ModuleControllerImpl : ModuleController {
       AppConfig module_config,
       const ModuleData* module_data,
       component::ServiceListPtr service_list,
-      fidl::InterfaceHandle<ModuleContext> module_context,
-      fidl::InterfaceRequest<views_v1::ViewProvider> view_provider_request,
-      fidl::InterfaceRequest<component::ServiceProvider> incoming_services);
+      fidl::InterfaceRequest<views_v1::ViewProvider> view_provider_request);
 
   ~ModuleControllerImpl() override;
 
@@ -75,7 +73,6 @@ class ModuleControllerImpl : ModuleController {
   StoryControllerImpl* const story_controller_impl_;
 
   AppClient<Lifecycle> app_client_;
-  ModulePtr module_service_;
 
   // The Module path and other information about the module instance.
   const ModuleData* const module_data_;

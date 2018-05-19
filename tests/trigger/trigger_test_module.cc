@@ -27,9 +27,7 @@ class TestApp {
 
   TestApp(
       modular::ModuleHost* const module_host,
-      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
-      fidl::InterfaceRequest<
-          component::ServiceProvider> /*outgoing_services*/) {
+      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();
 

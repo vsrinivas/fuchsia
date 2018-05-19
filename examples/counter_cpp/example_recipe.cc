@@ -6,7 +6,6 @@
 // creates other Modules in the story.
 
 #include <modular/cpp/fidl.h>
-#include <modular_calculator_example/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
@@ -25,7 +24,6 @@
 
 namespace {
 
-using modular_calculator_example::Adder;
 using modular::to_array;
 
 // JSON data
@@ -108,36 +106,14 @@ class DeviceMapMonitor : modular::DeviceMapWatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceMapMonitor);
 };
 
-class AdderImpl : public modular_calculator_example::Adder {
- public:
-  AdderImpl() = default;
-
- private:
-  // |Adder| impl:
-  void Add(int32_t a, int32_t b, AddCallback result) override {
-    result(a + b);
-  }
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(AdderImpl);
-};
-
 // Module implementation that acts as a recipe. There is one instance
 // per application; the story runner creates new application instances
 // to run more module instances.
-class RecipeApp : public modular::SingleServiceApp<modular::Module> {
+class RecipeApp : public modular::ViewApp {
  public:
   RecipeApp(component::ApplicationContext* const application_context)
-      : SingleServiceApp(application_context) {}
-
-  ~RecipeApp() override = default;
-
- private:
-  // |Module|
-  void Initialize(
-      fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
-      override {
-    module_context_.Bind(std::move(module_context));
+      : ViewApp(application_context) {
+    application_context->ConnectToEnvironmentService(module_context_.NewRequest());
     module_context_->GetLink(nullptr, link_.NewRequest());
 
     // Read initial Link data. We expect the shell to tell us what it
@@ -166,27 +142,10 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
     parameter.name = "theOneLink";
     parameter.data = std::move(parameter_data);
     intent.parameters.push_back(std::move(parameter));
-    component::ServiceProviderPtr services_from_module1;
     module_context_->StartModule("module1", std::move(intent),
-                                 services_from_module1.NewRequest(),
+                                 nullptr,
                                  module1_.NewRequest(), nullptr,
                                  [](const modular::StartModuleStatus&) {});
-
-    // Consume services from Module 1.
-    auto multiplier_service =
-        component::ConnectToService<modular_calculator_example::Multiplier>(
-            services_from_module1.get());
-    multiplier_service.set_error_handler([] {
-      FXL_CHECK(false)
-          << "Uh oh, Connection to Multiplier closed by the module 1.";
-    });
-    multiplier_service->Multiply(
-        4, 4,
-        fxl::MakeCopyable([multiplier_service =
-                               std::move(multiplier_service)](int32_t result) {
-          FXL_CHECK(result == 16);
-          FXL_LOG(INFO) << "Incoming Multiplier service: 4 * 4 is 16.";
-        }));
 
     intent = modular::Intent();
     intent.action.handler = "example_module2";
@@ -294,9 +253,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
               });
         });
 
-    device_map_ = application_context()
-                      ->ConnectToEnvironmentService<modular::DeviceMap>();
-
+    application_context->ConnectToEnvironmentService(device_map_.NewRequest());
     device_map_->Query([this](fidl::VectorPtr<modular::DeviceMapEntry> devices) {
       FXL_LOG(INFO) << "Devices from device_map_->Query():";
       for (modular::DeviceMapEntry device : devices.take()) {
@@ -310,14 +267,11 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
     });
   }
 
+  ~RecipeApp() override = default;
+
+ private:
   modular::LinkPtr link_;
   modular::ModuleContextPtr module_context_;
-
-  // This is a ServiceProvider we expose to one of our child modules, to
-  // demonstrate the use of a service exchange.
-  fidl::BindingSet<modular_calculator_example::Adder> adder_clients_;
-  AdderImpl adder_service_;
-  component::ServiceNamespace outgoing_services_;
 
   // The following ledger interfaces are stored here to make life-time
   // management easier when chaining together lambda callbacks.

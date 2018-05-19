@@ -94,10 +94,10 @@ class Module2View : public mozart::BaseView {
 };
 
 // Module implementation that acts as a leaf module. It implements Module.
-class Module2App : public modular::SingleServiceApp<modular::Module> {
+class Module2App : public modular::ViewApp {
  public:
   explicit Module2App(component::ApplicationContext* const application_context)
-      : SingleServiceApp(application_context),
+      : ViewApp(application_context),
         store_(kModuleName),
         weak_ptr_factory_(this) {
     store_.AddCallback([this] {
@@ -106,6 +106,11 @@ class Module2App : public modular::SingleServiceApp<modular::Module> {
       }
     });
     store_.AddCallback([this] { IncrementCounterAction(); });
+
+    application_context->ConnectToEnvironmentService(module_context_.NewRequest());
+    modular::LinkPtr link;
+    module_context_->GetLink("theOneLink", link.NewRequest());
+    store_.Initialize(std::move(link));
   }
 
   ~Module2App() override = default;
@@ -127,17 +132,6 @@ class Module2App : public modular::SingleServiceApp<modular::Module> {
         application_context()
             ->ConnectToEnvironmentService<views_v1::ViewManager>(),
         std::move(view_owner_request));
-  }
-
-  // |Module|
-  void Initialize(
-      fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
-      override {
-    module_context_.Bind(std::move(module_context));
-    modular::LinkPtr link;
-    module_context_->GetLink("theOneLink", link.NewRequest());
-    store_.Initialize(std::move(link));
   }
 
   void IncrementCounterAction() {

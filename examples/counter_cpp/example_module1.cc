@@ -5,7 +5,6 @@
 #include <memory>
 
 #include <modular/cpp/fidl.h>
-#include <modular_calculator_example/cpp/fidl.h>
 #include <images/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 #include <views_v1_token/cpp/fidl.h>
@@ -97,24 +96,11 @@ class Module1View : public mozart::BaseView {
   FXL_DISALLOW_COPY_AND_ASSIGN(Module1View);
 };
 
-class MultiplierImpl : public modular_calculator_example::Multiplier {
- public:
-  MultiplierImpl() = default;
-
- private:
-  // |Multiplier|
-  void Multiply(int32_t a, int32_t b, MultiplyCallback result) override {
-    result(a * b);
-  }
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(MultiplierImpl);
-};
-
 // Module implementation that acts as a leaf module. It implements Module.
-class Module1App : modular::SingleServiceApp<modular::Module> {
+class Module1App : modular::ViewApp {
  public:
   explicit Module1App(component::ApplicationContext* const application_context)
-      : SingleServiceApp(application_context),
+      : ViewApp(application_context),
         store_(kModuleName),
         weak_ptr_factory_(this) {
     // TODO(mesch): The callbacks seem to have a sequential relationship.
@@ -128,6 +114,11 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
       }
     });
     store_.AddCallback([this] { IncrementCounterAction(); });
+
+    application_context->ConnectToEnvironmentService(module_context_.NewRequest());
+    modular::LinkPtr link;
+    module_context_->GetLink("theOneLink", link.NewRequest());
+    store_.Initialize(std::move(link));
   }
 
   ~Module1App() override = default;
@@ -149,25 +140,6 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
         application_context()
             ->ConnectToEnvironmentService<views_v1::ViewManager>(),
         std::move(view_owner_request));
-  }
-
-  // |Module|
-  void Initialize(fidl::InterfaceHandle<modular::ModuleContext> module_context,
-                  fidl::InterfaceRequest<component::ServiceProvider>
-                      outgoing_services) override {
-    FXL_CHECK(outgoing_services.is_valid());
-
-    module_context_.Bind(std::move(module_context));
-    modular::LinkPtr link;
-    module_context_->GetLink("theOneLink", link.NewRequest());
-    store_.Initialize(std::move(link));
-
-    // Provide services to the recipe module.
-    outgoing_services_.AddBinding(std::move(outgoing_services));
-    outgoing_services_.AddService<modular_calculator_example::Multiplier>(
-        [this](fidl::InterfaceRequest<modular_calculator_example::Multiplier> req) {
-          multiplier_clients_.AddBinding(&multiplier_service_, std::move(req));
-        });
   }
 
   void IncrementCounterAction() {
@@ -193,12 +165,6 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
         },
         zx::msec(kAnimationDelayInMs));
   }
-
-  // This is a ServiceProvider we expose to our parent (recipe) module, to
-  // demonstrate the use of a service exchange.
-  fidl::BindingSet<modular_calculator_example::Multiplier> multiplier_clients_;
-  MultiplierImpl multiplier_service_;
-  component::ServiceNamespace outgoing_services_;
 
   std::unique_ptr<Module1View> view_;
   modular::ModuleContextPtr module_context_;

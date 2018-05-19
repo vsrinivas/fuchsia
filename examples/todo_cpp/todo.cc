@@ -101,19 +101,8 @@ TodoApp::TodoApp()
       delay_distribution_(kMinDelaySeconds, kMaxDelaySeconds),
       generator_(&rng_),
       context_(component::ApplicationContext::CreateFromStartupInfo()),
-      module_binding_(this),
       page_watcher_binding_(this) {
-  context_->outgoing().AddPublicService<modular::Module>(
-      [this](fidl::InterfaceRequest<modular::Module> request) {
-        FXL_DCHECK(!module_binding_.is_bound());
-        module_binding_.Bind(std::move(request));
-      });
-}
-
-void TodoApp::Initialize(
-    fidl::InterfaceHandle<modular::ModuleContext> module_context,
-    fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/) {
-  module_context_.Bind(std::move(module_context));
+  context_->ConnectToEnvironmentService(module_context_.NewRequest());
   module_context_->GetComponentContext(component_context_.NewRequest());
   component_context_->GetLedger(ledger_.NewRequest(),
                                 HandleResponse("GetLedger"));

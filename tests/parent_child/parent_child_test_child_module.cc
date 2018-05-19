@@ -21,9 +21,7 @@ class TestApp {
  public:
   TestApp(
       modular::ModuleHost* module_host,
-      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
-      fidl::InterfaceRequest<
-          component::ServiceProvider> /*outgoing_services*/) {
+      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     Signal("child_module_init");
   }

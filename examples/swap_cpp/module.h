@@ -27,7 +27,7 @@ class ModuleView : public mozart::BaseView {
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleView);
 };
 
-class ModuleApp : public modular::SingleServiceApp<modular::Module> {
+class ModuleApp : public modular::ViewApp {
  public:
   using CreateViewCallback = std::function<mozart::BaseView*(
       views_v1::ViewManagerPtr,
@@ -41,11 +41,6 @@ class ModuleApp : public modular::SingleServiceApp<modular::Module> {
   void CreateView(
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<component::ServiceProvider> services) override;
-
-  // |Module|
-  void Initialize(fidl::InterfaceHandle<modular::ModuleContext> moduleContext,
-                  fidl::InterfaceRequest<component::ServiceProvider>
-                      outgoing_services) override;
 
   CreateViewCallback create_;
   std::unique_ptr<mozart::BaseView> view_;

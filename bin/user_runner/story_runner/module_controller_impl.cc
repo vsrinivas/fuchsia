@@ -43,9 +43,7 @@ ModuleControllerImpl::ModuleControllerImpl(
     AppConfig module_config,
     const ModuleData* const module_data,
     component::ServiceListPtr service_list,
-    fidl::InterfaceHandle<ModuleContext> module_context,
-    fidl::InterfaceRequest<views_v1::ViewProvider> view_provider_request,
-    fidl::InterfaceRequest<component::ServiceProvider> incoming_services)
+    fidl::InterfaceRequest<views_v1::ViewProvider> view_provider_request)
     : story_controller_impl_(story_controller_impl),
       app_client_(
           application_launcher,
@@ -54,14 +52,6 @@ ModuleControllerImpl::ModuleControllerImpl(
           std::move(service_list)),
       module_data_(module_data) {
   app_client_.SetAppErrorHandler([this] { OnAppConnectionError(); });
-
-  app_client_.services().ConnectToService(module_service_.NewRequest());
-
-  module_service_.set_error_handler([this] { OnModuleConnectionError(); });
-
-  module_service_->Initialize(std::move(module_context),
-                              std::move(incoming_services));
-
   app_client_.services().ConnectToService(std::move(view_provider_request));
 }
 
@@ -110,7 +100,6 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
   }
 
   auto cont = [this] {
-    module_service_.Unbind();
     SetState(ModuleState::STOPPED);
 
     // ReleaseModule() must be called before the callbacks, because
@@ -134,7 +123,6 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
   // At this point, it's no longer an error if the module closes its
   // connection, or the application exits.
   app_client_.SetAppErrorHandler(nullptr);
-  module_service_.set_error_handler(nullptr);
 
   // If the module was UNLINKED, stop it without a delay. Otherwise
   // call Module.Stop(), but also schedule a timeout in case it

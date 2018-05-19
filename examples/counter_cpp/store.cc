@@ -8,7 +8,6 @@
 #include <utility>
 
 #include <modular/cpp/fidl.h>
-#include <modular_calculator_example/cpp/fidl.h>
 
 #include "lib/fxl/logging.h"
 #include "peridot/lib/rapidjson/rapidjson.h"

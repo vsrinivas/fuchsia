@@ -27,8 +27,7 @@ class TestApp {
 
   TestApp(
       modular::ModuleHost* module_host,
-      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
-      fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
+      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/)
       : module_context_(module_host->module_context()) {
     module_context_->GetComponentContext(component_context_.NewRequest());
     component_context_->GetEntityResolver(entity_resolver_.NewRequest());

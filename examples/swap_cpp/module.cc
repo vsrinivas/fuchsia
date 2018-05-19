@@ -36,7 +36,7 @@ void ModuleView::OnPropertiesChanged(views_v1::ViewProperties) {
 
 ModuleApp::ModuleApp(component::ApplicationContext* const application_context,
                      CreateViewCallback create)
-    : SingleServiceApp(application_context), create_(std::move(create)) {}
+    : ViewApp(application_context), create_(std::move(create)) {}
 
 void ModuleApp::CreateView(
     fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
@@ -46,9 +46,5 @@ void ModuleApp::CreateView(
                   ->ConnectToEnvironmentService<views_v1::ViewManager>(),
               std::move(view_owner_request)));
 }
-
-void ModuleApp::Initialize(
-    fidl::InterfaceHandle<modular::ModuleContext> /*moduleContext*/,
-    fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/) {}
 
 }  // namespace modular_example

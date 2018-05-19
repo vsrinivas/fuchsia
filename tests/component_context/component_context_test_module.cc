@@ -71,8 +71,7 @@ class TestApp {
 
   TestApp(
       modular::ModuleHost* module_host,
-      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
-      fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
+      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/)
       : steps_(kTotalSimultaneousTests,
                [this, module_host] { Signal(modular::testing::kTestShutdown); }),
         weak_ptr_factory_(this) {

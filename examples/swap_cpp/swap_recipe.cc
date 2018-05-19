@@ -66,10 +66,13 @@ class RecipeView : public mozart::BaseView {
   std::unique_ptr<scenic_lib::EntityNode> host_node_;
 };
 
-class RecipeApp : public modular::SingleServiceApp<modular::Module> {
+class RecipeApp : public modular::ViewApp {
  public:
   RecipeApp(component::ApplicationContext* const application_context)
-      : SingleServiceApp(application_context) {}
+      : ViewApp(application_context) {
+    application_context->ConnectToEnvironmentService(module_context_.NewRequest());
+    SwapModule();
+  }
 
   ~RecipeApp() override = default;
 
@@ -84,15 +87,6 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
             ->ConnectToEnvironmentService<views_v1::ViewManager>(),
         std::move(view_owner_request));
     SetChild();
-  }
-
-  // |Module|
-  void Initialize(
-      fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
-      override {
-    module_context_.Bind(std::move(module_context));
-    SwapModule();
   }
 
   void SwapModule() {

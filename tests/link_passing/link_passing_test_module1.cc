@@ -21,9 +21,7 @@ class TestApp : modular::LinkWatcher {
  public:
   TestApp(
       modular::ModuleHost* const module_host,
-      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
-      fidl::InterfaceRequest<
-      component::ServiceProvider> /*outgoing_services*/)
+      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host),
         link1_watcher_binding_(this),
         link2_watcher_binding_(this) {
