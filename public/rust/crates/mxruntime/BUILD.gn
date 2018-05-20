@@ -7,7 +7,7 @@ import("//build/rust/rustc_library.gni")
 rustc_library("mxruntime") {
   deps = [
     "mxruntime-sys",
-    "//garnet/public/rust/crates/fuchsia-zircon:fuchsia-zircon-rustc",
-    "//garnet/public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys:fuchsia-zircon-sys-rustc",
+    "//garnet/public/rust/crates/fuchsia-zircon",
+    "//garnet/public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys",
   ]
 }

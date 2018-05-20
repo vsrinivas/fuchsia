@@ -9,7 +9,7 @@ rustc_library("fuchsia-vfs") {
   deps = [
     "//garnet/public/rust/crates/fdio:fdio-rustc",
     "//garnet/public/rust/crates/fuchsia-async:fuchsia-async-rustc",
-    "//garnet/public/rust/crates/fuchsia-zircon:fuchsia-zircon-rustc",
+    "//garnet/public/rust/crates/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:bytes",
     "//third_party/rust-crates/rustc_deps:futures",
     "//third_party/rust-crates/rustc_deps:libc",

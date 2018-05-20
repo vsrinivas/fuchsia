@@ -10,13 +10,13 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl:fidl-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/lib/device_settings/fidl:fidl-rustc",
     "//garnet/public/rust/crates/fdio",
     "//garnet/public/rust/crates/fuchsia-app",
-    "//garnet/public/rust/crates/fuchsia-async:fuchsia-async-rustc",
+    "//garnet/public/rust/crates/fuchsia-async",
     "//garnet/public/rust/crates/fuchsia-syslog",
-    "//garnet/public/rust/crates/fuchsia-zircon:fuchsia-zircon-rustc",
+    "//garnet/public/rust/crates/fuchsia-zircon",
     "//garnet/public/rust/crates/mxruntime",
     "//garnet/public/rust/crates/mxruntime/mxruntime-sys",
     "//third_party/rust-crates/rustc_deps:bytes",

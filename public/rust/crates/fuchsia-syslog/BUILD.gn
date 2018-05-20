@@ -9,7 +9,7 @@ rustc_library("fuchsia-syslog") {
   version = "0.1.0"
   with_unit_tests = true
   deps = [
-    "//garnet/public/rust/crates/fuchsia-zircon:fuchsia-zircon-rustc",
+    "//garnet/public/rust/crates/fuchsia-zircon",
     "//garnet/public/rust/crates/mxruntime",
     "//third_party/rust-crates/rustc_deps:lazy_static",
     "//third_party/rust-crates/rustc_deps:log",

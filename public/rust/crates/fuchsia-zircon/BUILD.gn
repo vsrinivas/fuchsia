@@ -4,12 +4,12 @@
 
 import("//build/rust/rustc_library.gni")
 
-rustc_library("fuchsia-zircon-rustc") {
+rustc_library("fuchsia-zircon") {
   name = "fuchsia_zircon"
   version = "0.3.4"
   with_unit_tests = true
   deps = [
-    "fuchsia-zircon-sys:fuchsia-zircon-sys-rustc",
+    "fuchsia-zircon-sys",
     "//third_party/rust-crates/rustc_deps:bitflags",
     "//third_party/rust-crates/rustc_deps:failure",
   ]

@@ -21,7 +21,7 @@ rustc_binary("bt_lifecycle_integration_test") {
     "//garnet/public/lib/bluetooth/fidl:bluetooth_gatt-rustc",
     "//garnet/public/lib/bluetooth/fidl:bluetooth_low_energy-rustc",
     "//garnet/public/rust/crates/fdio",
-    "//garnet/public/rust/crates/fuchsia-async:fuchsia-async-rustc",
+    "//garnet/public/rust/crates/fuchsia-async",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures",
     "//third_party/rust-crates/rustc_deps:parking_lot",

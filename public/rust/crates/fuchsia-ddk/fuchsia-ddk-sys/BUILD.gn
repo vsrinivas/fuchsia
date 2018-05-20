@@ -6,6 +6,6 @@ import("//build/rust/rustc_library.gni")
 
 rustc_library("fuchsia-ddk-sys") {
   deps = [
-    "//garnet/public/rust/crates/fuchsia-zircon-rustc",
+    "//garnet/public/rust/crates/fuchsia-zircon",
   ]
 }

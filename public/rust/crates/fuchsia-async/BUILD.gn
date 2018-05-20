@@ -4,12 +4,12 @@
 
 import("//build/rust/rustc_library.gni")
 
-rustc_library("fuchsia-async-rustc") {
+rustc_library("fuchsia-async") {
   name = "fuchsia_async"
   version = "0.1.0"
   with_unit_tests = true
   deps = [
-    "//garnet/public/rust/crates/fuchsia-zircon:fuchsia-zircon-rustc",
+    "//garnet/public/rust/crates/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:crossbeam",
     "//third_party/rust-crates/rustc_deps:futures",
     "//third_party/rust-crates/rustc_deps:parking_lot",
