@@ -10,7 +10,7 @@ rustc_library("fuchsia-syslog-rustc") {
   with_unit_tests = true
   deps = [
     "//garnet/public/rust/crates/fuchsia-zircon:fuchsia-zircon-rustc",
-    "//garnet/public/rust/crates/mxruntime:mxruntime-rustc",
+    "//garnet/public/rust/crates/mxruntime",
     "//third_party/rust-crates/rustc_deps:lazy_static",
     "//third_party/rust-crates/rustc_deps:log",
     "//third_party/rust-crates/rustc_deps:tempdir",
