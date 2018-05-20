@@ -456,6 +456,13 @@ public:
         owned_(false) {
     }
 
+    // Get unowned file contents from a string.
+    // This object won't support PageRoundedView.
+    FileContents(const char* buffer, bool null_terminate) :
+        mapped_(const_cast<char*>(buffer)), mapped_size_(strlen(buffer) + 1),
+        exact_size_(mapped_size_ - (null_terminate ? 0 : 1)), owned_(false) {
+    }
+
     FileContents(FileContents&& other) {
         *this = std::move(other);
     }
@@ -643,13 +650,12 @@ public:
         while (read_ptr_ != eof_) {
             auto eol = static_cast<const char*>(
                 memchr(read_ptr_, '\n', eof_ - read_ptr_));
-            if (!eol) {
-                fprintf(stderr, "manifest file does not end with newline\n");
-                exit(1);
-            }
             auto line = read_ptr_;
-            read_ptr_ = eol + 1;
-
+            if (eol) {
+                read_ptr_ = eol + 1;
+            } else {
+                read_ptr_ = eol = eof_;
+            }
             auto eq = static_cast<const char*>(memchr(line, '=', eol - line));
             if (!eq) {
                 fprintf(stderr, "manifest entry has no '=' separator: %.*s\n",
@@ -1485,11 +1491,12 @@ const char* IncompleteImage(const ItemList& items, const uint32_t image_arch) {
     return nullptr;
 }
 
-constexpr const char kOptString[] = "-B:cd:xX:R:g:hto:p:T:uv";
+constexpr const char kOptString[] = "-B:cd:e:xX:R:g:hto:p:T:uv";
 constexpr const option kLongOpts[] = {
     {"complete", required_argument, nullptr, 'B'},
     {"compressed", no_argument, nullptr, 'c'},
     {"depfile", required_argument, nullptr, 'd'},
+    {"entry", required_argument, nullptr, 'e'},
     {"extract", no_argument, nullptr, 'x'},
     {"extract-item", required_argument, nullptr, 'X'},
     {"extract-raw", required_argument, nullptr, 'R'},
@@ -1527,6 +1534,7 @@ Remaining arguments are interpersed switches and input files:\n\
     --target=ramdisk, -T ramdisk   input files are raw RAMDISK images\n\
     --target=zbi, -T zbi           input files must be ZBI files\n\
     --prefix=PREFIX, -p PREFIX     prepend PREFIX/ to target file names\n\
+    --entry=LINE, -e LINE          like an input file containing only LINE\n\
     FILE                           input or manifest file\n\
     DIRECTORY                      directory tree goes into BOOTFS at PREFIX/\n\
 \n\
@@ -1707,6 +1715,26 @@ only one --extract (-x), --extract-item (-X), --extract-raw (-R)\n");
         case 'x':
             check_extract_switch();
             extract_files = true;
+            continue;
+
+        case 'e':
+            switch (target) {
+            case  ZBI_TYPE_CONTAINER:
+                fprintf(stderr, "cannot use --entry (-e) with --target=zbi\n");
+                exit(1);
+            case ZBI_TYPE_STORAGE_BOOTFS:
+                bootfs_input.emplace_back(
+                    new ManifestInputFileGenerator(FileContents(optarg, false),
+                                                   prefix, &filter));
+                break;
+            default:
+                items.push_back(
+                    Item::CreateFromFile(
+                        FileContents(optarg, target == ZBI_TYPE_CMDLINE),
+                        target,
+                        compressed && target == ZBI_TYPE_STORAGE_RAMDISK));
+                break;
+            }
             continue;
 
         case 'h':
