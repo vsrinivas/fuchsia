@@ -396,6 +396,7 @@ const struct ath10k_hw_clk_params qca6174_clk[ATH10K_HW_REFCLK_COUNT] = {
     },
 };
 
+#if 0 // NEEDS PORTING
 void ath10k_hw_fill_survey_time(struct ath10k* ar, struct survey_info* survey,
                                 uint32_t cc, uint32_t rcc, uint32_t cc_prev, uint32_t rcc_prev) {
     uint32_t cc_fix = 0;
@@ -435,6 +436,7 @@ void ath10k_hw_fill_survey_time(struct ath10k* ar, struct survey_info* survey,
     survey->time = CCNT_TO_MSEC(ar, cc);
     survey->time_busy = CCNT_TO_MSEC(ar, rcc);
 }
+#endif // NEEDS PORTING
 
 /* The firmware does not support setting the coverage class. Instead this
  * function monitors and modifies the corresponding MAC registers.
