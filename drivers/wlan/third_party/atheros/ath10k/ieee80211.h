@@ -68,16 +68,33 @@ enum ieee80211_frame_subtype {
 
 static inline enum ieee80211_frame_type
 ieee80211_get_frame_type(const struct ieee80211_frame_header* fh) {
-    return fh->frame_control & IEEE80211_FRAME_TYPE_MASK;
+    return fh->frame_ctrl & IEEE80211_FRAME_TYPE_MASK;
 }
 
 static inline enum ieee80211_frame_subtype
 ieee80211_get_frame_subtype(const struct ieee80211_frame_header* fh) {
-    return fh->frame_control & IEEE80211_FRAME_SUBTYPE_MASK;
+    return fh->frame_ctrl & IEEE80211_FRAME_SUBTYPE_MASK;
 }
 
 static inline bool ieee80211_pkt_is_protected(const struct ieee80211_frame_header* fh) {
-    return fh->frame_control & IEEE80211_FRAME_PROTECTED_MASK;
+    return fh->frame_ctrl & IEEE80211_FRAME_PROTECTED_MASK;
+}
+
+// Caveat: for now the get_*_addr functions below only support management frames.
+// We can expand this if we need additional frame parsing ability at the driver level.
+static inline uint8_t* ieee80211_get_dst_addr(struct ieee80211_frame_header* fh) {
+    ZX_ASSERT(ieee80211_get_frame_type(fh) == IEEE80211_FRAME_TYPE_MGMT);
+    return fh->addr1;
+}
+
+static inline uint8_t* ieee80211_get_src_addr(struct ieee80211_frame_header* fh) {
+    ZX_ASSERT(ieee80211_get_frame_type(fh) == IEEE80211_FRAME_TYPE_MGMT);
+    return fh->addr2;
+}
+
+static inline uint8_t* ieee80211_get_bssid(struct ieee80211_frame_header* fh) {
+    ZX_ASSERT(ieee80211_get_frame_type(fh) == IEEE80211_FRAME_TYPE_MGMT);
+    return fh->addr3;
 }
 
 enum ieee80211_assoc_tags {
@@ -112,5 +129,57 @@ enum ieee80211_a_mpdu_params {
 
 #define IEEE80211_CCMP_MIC_LEN 8
 #define IEEE80211_QOS_CTL_LEN 2
+
+#define IEEE_MSDU_SIZE_MAX 2304
+
+// IEEE Std 802.11-2016, 9.4.2.25.2, Table 9-131
+enum ieee80211_cipher_suite {
+    IEEE80211_CIPHER_SUITE_GROUP    = 0,
+    IEEE80211_CIPHER_SUITE_WEP_40   = 1,
+    IEEE80211_CIPHER_SUITE_TKIP     = 2,
+    IEEE80211_CIPHER_SUITE_CCMP_128 = 4,
+    IEEE80211_CIPHER_SUITE_WEP_104  = 5,
+    IEEE80211_CIPHER_SUITE_CMAC_128 = 6,
+    IEEE80211_CIPHER_SUITE_GCMP_128 = 8,
+    IEEE80211_CIPHER_SUITE_GCMP_256 = 9,
+    IEEE80211_CIPHER_SUITE_CCMP_256 = 10,
+    IEEE80211_CIPHER_SUITE_GMAC_128 = 11,
+    IEEE80211_CIPHER_SUITE_GMAC_256 = 12,
+    IEEE80211_CIPHER_SUITE_CMAC_256 = 13
+};
+
+static inline const char* ieee80211_cipher_str(uint8_t* oui, uint8_t cipher_type) {
+    if (oui[0] != 0 || oui[1] != 0x0f || oui[2] != 0xac) {
+        return "vendor-specific OUI\n";
+    }
+    switch (cipher_type) {
+    case IEEE80211_CIPHER_SUITE_GROUP:
+        return "group";
+    case IEEE80211_CIPHER_SUITE_WEP_40:
+        return "WEP40";
+    case IEEE80211_CIPHER_SUITE_TKIP:
+        return "TKIP";
+    case IEEE80211_CIPHER_SUITE_CCMP_128:
+        return "CCMP128";
+    case IEEE80211_CIPHER_SUITE_WEP_104:
+        return "WEP104";
+    case IEEE80211_CIPHER_SUITE_CMAC_128:
+        return "CMAC_128";
+    case IEEE80211_CIPHER_SUITE_GCMP_128:
+        return "GCMP128";
+    case IEEE80211_CIPHER_SUITE_GCMP_256:
+        return "GCMP256";
+    case IEEE80211_CIPHER_SUITE_CCMP_256:
+        return "CCMP256";
+    case IEEE80211_CIPHER_SUITE_GMAC_128:
+        return "GMAC128";
+    case IEEE80211_CIPHER_SUITE_GMAC_256:
+        return "GMAC256";
+    case IEEE80211_CIPHER_SUITE_CMAC_256:
+        return "CMAC256";
+    default:
+        return "reserved CID value\n";
+    }
+}
 
 #endif /* _IEEE80211_H_ */
