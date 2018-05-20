@@ -1663,6 +1663,7 @@ struct wmi_tlv_tx_pause_ev {
     WMI_TLV_MSG(VDEV_CREATE,        wmi_vdev_create_cmd),        \
     WMI_TLV_MSG(VDEV_DELETE,        wmi_vdev_delete_cmd),        \
     WMI_TLV_MSG(VDEV_DOWN,          wmi_vdev_down_cmd),          \
+    WMI_TLV_MSG(VDEV_INSTALL_KEY,   wmi_vdev_install_key_cmd),   \
     WMI_TLV_MSG(VDEV_SET_PARAM,     wmi_vdev_set_param_cmd),     \
     WMI_TLV_MSG(VDEV_SET_WMM,       wmi_tlv_vdev_set_wmm_cmd),   \
     WMI_TLV_MSG(VDEV_START,         wmi_tlv_vdev_start_cmd),     \

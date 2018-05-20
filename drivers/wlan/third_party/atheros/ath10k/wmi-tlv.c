@@ -562,8 +562,7 @@ static void ath10k_wmi_tlv_op_rx(struct ath10k* ar, struct ath10k_msg_buf* msg_b
         // ath10k_wmi_event_addba_complete(ar, skb);
         break;
     case WMI_TLV_VDEV_INSTALL_KEY_COMPLETE_EVENTID:
-        ath10k_err("WMI_TLV_VDEV_INSTALL_KEY_COMPLETE_EVENTID unimplemented\n");
-        // ath10k_wmi_event_vdev_install_key_complete(ar, skb);
+        ath10k_wmi_event_vdev_install_key_complete(ar, msg_buf);
         break;
     case WMI_TLV_SERVICE_READY_EVENTID:
         ath10k_wmi_event_service_ready(ar, msg_buf);
@@ -1555,7 +1554,7 @@ ath10k_wmi_tlv_op_gen_start_scan(struct ath10k* ar,
      */
     cmd->common.scan_ctrl_flags ^= WMI_SCAN_FILTER_PROBE_REQ;
 
-    void* ptr = ath10k_msg_buf_get_payload(msg_buf); 
+    void* ptr = ath10k_msg_buf_get_payload(msg_buf);
 
     tlv = ptr;
     tlv->tag = WMI_TLV_TAG_ARRAY_UINT32;
@@ -1882,35 +1881,33 @@ ath10k_wmi_tlv_op_gen_vdev_set_param(struct ath10k* ar, struct ath10k_msg_buf** 
     return ZX_OK;
 }
 
-#if 0 // NEEDS PORTING
-static struct sk_buff*
+static zx_status_t
 ath10k_wmi_tlv_op_gen_vdev_install_key(struct ath10k* ar,
+                                       struct ath10k_msg_buf** msg_buf_ptr,
                                        const struct wmi_vdev_install_key_arg* arg) {
     struct wmi_vdev_install_key_cmd* cmd;
     struct wmi_tlv* tlv;
-    struct sk_buff* skb;
-    size_t len;
+    zx_status_t status;
+    struct ath10k_msg_buf* msg_buf;
     void* ptr;
 
     if (arg->key_cipher == WMI_CIPHER_NONE && arg->key_data != NULL) {
-        return ERR_PTR(-EINVAL);
+        return ZX_ERR_INVALID_ARGS;
     }
     if (arg->key_cipher != WMI_CIPHER_NONE && arg->key_data == NULL) {
-        return ERR_PTR(-EINVAL);
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    len = sizeof(*tlv) + sizeof(*cmd) +
-          sizeof(*tlv) + roundup(arg->key_len, sizeof(uint32_t));
-    skb = ath10k_wmi_alloc_skb(ar, len);
-    if (!skb) {
-        return ERR_PTR(-ENOMEM);
+    size_t len = sizeof(*tlv) + roundup(arg->key_len, sizeof(uint32_t));
+    status = ath10k_msg_buf_alloc(ar, &msg_buf, ATH10K_MSG_TYPE_WMI_TLV_VDEV_INSTALL_KEY, len);
+    if (status != ZX_OK) {
+        return status;
     }
 
-    ptr = (void*)skb->data;
-    tlv = ptr;
+    tlv = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_WMI_TLV);
     tlv->tag = WMI_TLV_TAG_STRUCT_VDEV_INSTALL_KEY_CMD;
     tlv->len = sizeof(*cmd);
-    cmd = (void*)tlv->value;
+    cmd = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_WMI_TLV_VDEV_INSTALL_KEY);
     cmd->vdev_id = arg->vdev_id;
     cmd->key_idx = arg->key_idx;
     cmd->key_flags = arg->key_flags;
@@ -1923,9 +1920,7 @@ ath10k_wmi_tlv_op_gen_vdev_install_key(struct ath10k* ar,
         ether_addr_copy(cmd->peer_macaddr.addr, arg->macaddr);
     }
 
-    ptr += sizeof(*tlv);
-    ptr += sizeof(*cmd);
-
+    ptr = ath10k_msg_buf_get_payload(msg_buf);
     tlv = ptr;
     tlv->tag = WMI_TLV_TAG_ARRAY_BYTE;
     tlv->len = roundup(arg->key_len, sizeof(uint32_t));
@@ -1937,9 +1932,11 @@ ath10k_wmi_tlv_op_gen_vdev_install_key(struct ath10k* ar,
     ptr += roundup(arg->key_len, sizeof(uint32_t));
 
     ath10k_dbg(ar, ATH10K_DBG_WMI, "wmi tlv vdev install key\n");
-    return skb;
+    *msg_buf_ptr = msg_buf;
+    return ZX_OK;
 }
 
+#if 0 // NEEDS PORTING
 static void* ath10k_wmi_tlv_put_uapsd_ac(struct ath10k* ar, void* ptr,
         const struct wmi_sta_uapsd_auto_trig_arg* arg) {
     struct wmi_sta_uapsd_auto_trig_param* ac;
@@ -3686,9 +3683,7 @@ static const struct wmi_ops wmi_tlv_ops = {
     .gen_vdev_up = ath10k_wmi_tlv_op_gen_vdev_up,
     .gen_vdev_down = ath10k_wmi_tlv_op_gen_vdev_down,
     .gen_vdev_set_param = ath10k_wmi_tlv_op_gen_vdev_set_param,
-#if 0 // NEEDS PORTING
     .gen_vdev_install_key = ath10k_wmi_tlv_op_gen_vdev_install_key,
-#endif // NEEDS PORTING
     .gen_vdev_wmm_conf = ath10k_wmi_tlv_op_gen_vdev_wmm_conf,
     .gen_peer_create = ath10k_wmi_tlv_op_gen_peer_create,
     .gen_peer_delete = ath10k_wmi_tlv_op_gen_peer_delete,
