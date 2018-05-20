@@ -11,7 +11,7 @@ package("rust-crates-tests") {
   deps = [
     "fdio",
     "fuchsia-async:fuchsia-async-rustc",
-    "fuchsia-syslog:fuchsia-syslog-rustc",
+    "fuchsia-syslog",
     "fuchsia-trace",
     "fuchsia-zircon:fuchsia-zircon-rustc",
     "//garnet/public/lib/fidl/rust/fidl:fidl-rustc",
