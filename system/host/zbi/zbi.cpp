@@ -837,18 +837,19 @@ public:
         return (header_.flags & ZBI_FLAG_STORAGE_COMPRESSED) && !compress_;
     }
 
-    void Show() const {
+    int Show() const {
         if (header_.length > 0) {
             if (AlreadyCompressed()) {
-                CreateFromCompressed(*this)->Show();
-                return;
+                return CreateFromCompressed(*this)->Show();
             }
             switch (header_.type) {
+            case ZBI_TYPE_STORAGE_BOOTFS:
+                return ShowBootFS();
             case ZBI_TYPE_CMDLINE:
-                ShowCmdline();
-                break;
+                return ShowCmdline();
             }
         }
+        return 0;
     }
 
     // Streaming exhausts the item's payload.  The OutputStream will now
@@ -1127,7 +1128,7 @@ private:
         return compressor.Finish(out);
     }
 
-    void ShowCmdline() const {
+    int ShowCmdline() const {
         std::string cmdline = std::accumulate(
             payload_.begin(), payload_.end(), std::string(),
             [](std::string cmdline, const iovec& iov) {
@@ -1151,6 +1152,106 @@ private:
             }
             start = word_end + 1;
         }
+        return 0;
+    }
+
+    class BootFSDirectoryIterator {
+    public:
+        operator bool() const {
+            return left_ > 0;
+        }
+
+        const zbi_bootfs_dirent_t& operator*() const {
+            auto entry = reinterpret_cast<const zbi_bootfs_dirent_t*>(next_);
+            assert(left_ >= sizeof(*entry));
+            return *entry;
+        }
+
+        const zbi_bootfs_dirent_t* operator->() const {
+            return &**this;
+        }
+
+        BootFSDirectoryIterator& operator++() {
+            assert(left_ > 0);
+            if (left_ < sizeof(zbi_bootfs_dirent_t)) {
+                fprintf(stderr, "BOOTFS directory truncated\n");
+                left_ = 0;
+            } else {
+                size_t size = ZBI_BOOTFS_DIRENT_SIZE((*this)->name_len);
+                if (size > left_) {
+                    fprintf(stderr,
+                            "BOOTFS directory truncated or bad name_len\n");
+                    left_ = 0;
+                } else {
+                    next_ += size;
+                    left_ -= size;
+                }
+            }
+            return *this;
+        }
+
+        // The iterator itself is a container enough to use range-based for.
+        const BootFSDirectoryIterator& begin() {
+            return *this;
+        }
+
+        BootFSDirectoryIterator end() {
+            return BootFSDirectoryIterator();
+        }
+
+        static int Create(const Item* item, BootFSDirectoryIterator* it) {
+            zbi_bootfs_header_t superblock;
+            const uint32_t length = item->header_.length;
+            if (length < sizeof(superblock)) {
+                fprintf(stderr, "payload too short for BOOTFS header\n");
+                return 1;
+            }
+            assert(item->payload_.size() == 1);
+            auto contents = static_cast<const uint8_t*>(
+                item->payload_.front().iov_base);
+            memcpy(&superblock, contents, sizeof(superblock));
+            if (superblock.magic != ZBI_BOOTFS_MAGIC) {
+                fprintf(stderr, "BOOTFS header magic %#x should be %#x\n",
+                        superblock.magic, ZBI_BOOTFS_MAGIC);
+                return 1;
+            }
+            if (superblock.dirsize > length - sizeof(superblock)) {
+                fprintf(stderr,
+                        "BOOTFS header dirsize %u > payload size %zu\n",
+                        superblock.dirsize, length - sizeof(superblock));
+                return 1;
+            }
+            it->next_ = contents + sizeof(superblock);
+            it->left_ = superblock.dirsize;
+            return 0;
+        }
+
+    private:
+        const uint8_t* next_ = nullptr;
+        uint32_t left_ = 0;
+    };
+
+    int ShowBootFS() const {
+        assert(!AlreadyCompressed());
+        BootFSDirectoryIterator dir;
+        int status = BootFSDirectoryIterator::Create(this, &dir);
+        for (const auto& entry : dir) {
+            const char* align_check =
+                entry.data_off % ZBI_BOOTFS_PAGE_SIZE == 0 ? "" :
+                "[ERROR: misaligned offset] ";
+            const char* size_check =
+                (entry.data_off < header_.length &&
+                 header_.length - entry.data_off >= entry.data_len) ? "" :
+                "[ERROR: offset+size too large] ";
+            if (align_check[0] != '\0' || size_check[0] != '\0') {
+                status = 1;
+            }
+            printf("        : %08x %08x %s%s%.*s\n",
+                   entry.data_off, entry.data_len,
+                   align_check, size_check,
+                   static_cast<int>(entry.name_len), entry.name);
+        }
+        return status;
     }
 };
 
@@ -1529,12 +1630,16 @@ int main(int argc, char** argv) {
         }
         // Contents start after the ZBI_TYPE_CONTAINER header.
         uint32_t pos = sizeof(zbi_header_t);
+        int status = 0;
         for (const auto& item : items) {
             item->Describe(pos);
             pos += item->TotalSize();
             if (verbose) {
-                item->Show();
+                status |= item->Show();
             }
+        }
+        if (status) {
+            exit(status);
         }
     }
 
