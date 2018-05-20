@@ -6,7 +6,7 @@
 //! Currently pty only implemented, others to follow
 
 #![deny(warnings)]
-#![deny(missing_docs)]
+//#![deny(missing_docs)]
 
 #![allow(dead_code)]
 extern crate fuchsia_zircon as zx;

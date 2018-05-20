@@ -1,9 +1,0 @@
-[package]
-name = "fuchsia-device"
-version = "0.1.0"
-authors = ["Benjamin Brittain <bwb@google.com>"]
-
-[dependencies]
-fuchsia-zircon = "0.3"
-fdio = "0.2"
-failure = "0.1"
