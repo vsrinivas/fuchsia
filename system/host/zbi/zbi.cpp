@@ -784,6 +784,16 @@ public:
         }
     }
 
+    void Show() const {
+        if (header_.length > 0) {
+            switch (header_.type) {
+            case ZBI_TYPE_CMDLINE:
+                ShowCmdline();
+                break;
+            }
+        }
+    }
+
     // Streaming exhausts the item's payload.  The OutputStream will now
     // have pointers into buffers owned by this Item, so this Item must be
     // kept alive until out->Flush() runs (while *this is alive, to be safe).
@@ -1033,6 +1043,32 @@ private:
         // This writes the final header as well as the last of the payload.
         return compressor.Finish(out);
     }
+
+    void ShowCmdline() const {
+        std::string cmdline = std::accumulate(
+            payload_.begin(), payload_.end(), std::string(),
+            [](std::string cmdline, const iovec& iov) {
+                return cmdline.append(
+                    static_cast<const char*>(iov.iov_base),
+                    iov.iov_len);
+            });
+        size_t start = 0;
+        while (start < cmdline.size()) {
+            size_t word_end = cmdline.find_first_of(" \t\r\n", start);
+            if (word_end == std::string::npos) {
+                if (cmdline[start] != '\0') {
+                    printf("        : %s\n", cmdline.c_str() + start);
+                }
+                break;
+            }
+            if (word_end > start) {
+                printf("        : %.*s\n",
+                       static_cast<int>(word_end - start),
+                       cmdline.c_str() + start);
+            }
+            start = word_end + 1;
+        }
+    }
 };
 
 using ItemList = std::vector<std::unique_ptr<Item>>;
@@ -1094,7 +1130,7 @@ const char* IncompleteImage(const ItemList& items, const uint32_t image_arch) {
     return nullptr;
 }
 
-constexpr const char kOptString[] = "-ho:d:T:g:tBcuC:";
+constexpr const char kOptString[] = "-ho:d:T:g:tBcuC:v";
 constexpr const option kLongOpts[] = {
     {"complete", required_argument, nullptr, 'B'},
     {"compressed", no_argument, nullptr, 'c'},
@@ -1106,19 +1142,21 @@ constexpr const option kLongOpts[] = {
     {"prefix", required_argument, nullptr, 'p'},
     {"target", required_argument, nullptr, 'T'},
     {"uncompressed", no_argument, nullptr, 'u'},
+    {"verbose", no_argument, nullptr, 'v'},
     {nullptr, no_argument, nullptr, 0},
 };
 
 void usage(const char* progname) {
     fprintf(stderr, "\
 Usage: %s {--output=FILE | -o FILE} [--depfile=FILE | -d FILE] ...\n\
-       %s {--list | -t} ...\n\
+       %s {--list | -t} [--verbose | -v] ...\n\
 \n\
 Remaining arguments are interpersed switches and input files:\n\
     --help, -h                     print this message\n\
     --output=FILE, -o FILE         output file name\n\
     --depfile=FILE, -d FILE        makefile dependency output file name\n\
     --list, -t                     list input ZBI item headers\n\
+    --verbose, -v                  show item contents\n\
     --complete=ARCH, -B ARCH       verify result is a complete boot image\n\
     --groups=GROUPS, -g GROUPS     comma-separated list of manifest groups\n\
     --compressed, -c               compress BOOTFS/RAMDISK images (default)\n\
@@ -1157,6 +1195,7 @@ int main(int argc, char** argv) {
     uint32_t target = ZBI_TYPE_STORAGE_BOOTFS;
     bool compressed = true;
     bool list_contents = false;
+    bool verbose = false;
     ItemList items;
     InputFileGeneratorList bootfs_input;
     std::string prefix;
@@ -1247,6 +1286,10 @@ int main(int argc, char** argv) {
             list_contents = true;
             continue;
 
+        case 'v':
+            verbose = true;
+            continue;
+
         case 'B':
             if (!strcmp(optarg, "x64")) {
                 complete_arch = ZBI_TYPE_KERNEL_X64;
@@ -1308,7 +1351,20 @@ int main(int argc, char** argv) {
         } else {
             // It must be a manifest file.
             bootfs_input.emplace_back(
-                new ManifestInputFileGenerator(std::move(file), prefix, &filter));
+                new ManifestInputFileGenerator(std::move(file),
+                                               prefix, &filter));
+        }
+    }
+
+    if (list_contents) {
+        if (outfile || depfile) {
+            fprintf(stderr, "no output file or depfile with --list or -t\n");
+            exit(1);
+        }
+    } else {
+        if (!outfile) {
+            fprintf(stderr, "no output file\n");
+            exit(1);
         }
     }
 
@@ -1350,11 +1406,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    if (list_contents) {
-        if (outfile || depfile) {
-            fprintf(stderr, "no output file or depfile with --list or -t\n");
-            exit(1);
-        }
+    if (list_contents || verbose) {
         const char* incomplete = IncompleteImage(items, complete_arch);
         if (incomplete) {
             printf("INCOMPLETE: %s\n", incomplete);
@@ -1366,12 +1418,13 @@ int main(int argc, char** argv) {
         for (const auto& item : items) {
             item->Describe(pos);
             pos += item->TotalSize();
+            if (verbose) {
+                item->Show();
+            }
         }
-    } else {
-        if (!outfile) {
-            fprintf(stderr, "no output file\n");
-            exit(1);
-        }
+    }
+
+    if (outfile) {
         fbl::unique_fd fd(open(outfile, O_WRONLY | O_CREAT | O_TRUNC, 0666));
         if (!fd) {
             perror(outfile);
