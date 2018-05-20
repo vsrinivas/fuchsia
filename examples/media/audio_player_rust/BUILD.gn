@@ -12,7 +12,7 @@ rustc_binary("audio_player_rust") {
     "//garnet/public/lib/fidl/rust/fidl:fidl-rustc",
     "//garnet/public/lib/media/fidl:media_player-rustc",
     "//garnet/public/lib/ui/geometry/fidl:fidl-rustc",
-    "//garnet/public/rust/crates/fdio:fdio-rustc",
+    "//garnet/public/rust/crates/fdio",
     "//garnet/public/rust/crates/fuchsia-app:fuchsia-app-rustc",
     "//garnet/public/rust/crates/fuchsia-async:fuchsia-async-rustc",
     "//garnet/public/rust/crates/fuchsia-zircon:fuchsia-zircon-rustc",

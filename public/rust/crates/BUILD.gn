@@ -9,7 +9,7 @@ package("rust-crates-tests") {
   deprecated_system_image = true
 
   deps = [
-    "fdio:fdio-rustc",
+    "fdio",
     "fuchsia-async:fuchsia-async-rustc",
     "fuchsia-syslog:fuchsia-syslog-rustc",
     "fuchsia-trace",

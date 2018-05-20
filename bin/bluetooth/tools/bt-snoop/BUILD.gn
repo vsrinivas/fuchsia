@@ -10,7 +10,7 @@ rustc_binary("bt-snoop") {
 
   deps = [
     "//garnet/lib/rust/crates/fuchsia-bluetooth",
-    "//garnet/public/rust/crates/fdio:fdio-rustc",
+    "//garnet/public/rust/crates/fdio",
     "//garnet/public/rust/crates/fuchsia-async:fuchsia-async-rustc",
     "//garnet/public/rust/crates/fuchsia-vfs/fuchsia-vfs-watcher:fuchsia-vfs-watcher-rustc",
     "//garnet/public/rust/crates/fuchsia-zircon:fuchsia-zircon-rustc",

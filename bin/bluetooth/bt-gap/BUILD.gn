@@ -16,7 +16,7 @@ rustc_binary("bin") {
     "//garnet/public/lib/bluetooth/fidl:bluetooth_gatt-rustc",
     "//garnet/public/lib/bluetooth/fidl:bluetooth_low_energy-rustc",
     "//garnet/public/lib/fidl/rust/fidl:fidl-rustc",
-    "//garnet/public/rust/crates/fdio:fdio-rustc",
+    "//garnet/public/rust/crates/fdio",
     "//garnet/public/rust/crates/fuchsia-app:fuchsia-app-rustc",
     "//garnet/public/rust/crates/fuchsia-async:fuchsia-async-rustc",
     "//garnet/public/rust/crates/fuchsia-vfs/fuchsia-vfs-watcher:fuchsia-vfs-watcher-rustc",

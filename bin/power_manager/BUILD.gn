@@ -12,7 +12,7 @@ rustc_binary("bin") {
   deps = [
     "//garnet/public/lib/fidl/rust/fidl:fidl-rustc",
     "//garnet/public/lib/power_manager/fidl:fidl-rustc",
-    "//garnet/public/rust/crates/fdio:fdio-rustc",
+    "//garnet/public/rust/crates/fdio",
     "//garnet/public/rust/crates/fuchsia-app:fuchsia-app-rustc",
     "//garnet/public/rust/crates/fuchsia-async:fuchsia-async-rustc",
     "//garnet/public/rust/crates/fuchsia-syslog:fuchsia-syslog-rustc",
