@@ -20,9 +20,7 @@
 
 #include <stdbool.h>
 
-#if 0 // NEEDS PORTING
 #include "targaddrs.h"
-#endif // NEEDS PORTING
 
 #define ATHEROS_VID    (0x168c)
 #define ETH_ALEN       6  // Bytes in an ethernet address
