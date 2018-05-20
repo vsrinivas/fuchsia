@@ -189,9 +189,13 @@ public:
     // Print information about filesystem metrics.
     void DumpMetrics() const;
 
+    // Return an immutable reference to a copy of the internal info.
+    const minfs_info_t& Info() const {
+        return info_;
+    }
+
     // TODO(rvargas): Make private.
     fbl::unique_ptr<Bcache> bc_;
-    minfs_info_t info_{};
 
 private:
     // Fsck can introspect Minfs
@@ -228,7 +232,8 @@ private:
     fbl::unique_ptr<MappedVmo> inode_table_{};
     vmoid_t inode_table_vmoid_{};
 
-    // Info
+    // Global information about the filesystem.
+    minfs_info_t info_{};
     fbl::unique_ptr<MappedVmo> info_vmo_{};
     vmoid_t info_vmoid_{};
 

@@ -123,7 +123,7 @@ zx_status_t VnodeMinfs::LoadIndirectBlocks(blk_t* iarray, uint32_t count, uint32
         blk_t ibno;
         if ((ibno = iarray[i]) != 0) {
             fs_->ValidateBno(ibno);
-            txn.Enqueue(vmoid_indirect_, offset + i, ibno + fs_->info_.dat_block, 1);
+            txn.Enqueue(vmoid_indirect_, offset + i, ibno + fs_->Info().dat_block, 1);
         }
     }
 
@@ -217,7 +217,7 @@ zx_status_t VnodeMinfs::InitVmo() {
         if ((bno = inode_.dnum[d]) != 0) {
             fs_->ValidateBno(bno);
             dnum_count++;
-            txn.Enqueue(vmoid_, d, bno + fs_->info_.dat_block, 1);
+            txn.Enqueue(vmoid_, d, bno + fs_->Info().dat_block, 1);
         }
     }
 
@@ -241,7 +241,7 @@ zx_status_t VnodeMinfs::InitVmo() {
                 if ((bno = ientry[j]) != 0) {
                     fs_->ValidateBno(bno);
                     uint32_t n = kMinfsDirect + i * kMinfsDirectPerIndirect + j;
-                    txn.Enqueue(vmoid_, n, bno + fs_->info_.dat_block, 1);
+                    txn.Enqueue(vmoid_, n, bno + fs_->Info().dat_block, 1);
                 }
             }
         }
@@ -283,7 +283,7 @@ zx_status_t VnodeMinfs::InitVmo() {
                             fs_->ValidateBno(bno);
                             uint32_t n = kMinfsDirect + kMinfsIndirect * kMinfsDirectPerIndirect
                                          + j * kMinfsDirectPerIndirect + k;
-                            txn.Enqueue(vmoid_, n, bno + fs_->info_.dat_block, 1);
+                            txn.Enqueue(vmoid_, n, bno + fs_->Info().dat_block, 1);
                         }
                     }
                 }
@@ -407,9 +407,9 @@ zx_status_t VnodeMinfs::BlockOpIndirect(WritebackWork* wb, IndirectArgs* params)
         if (dirty || direct_params.IsDirty()) {
 #ifdef __Fuchsia__
             wb->Enqueue(vmo_indirect_->GetVmo(), params->GetOffset() + i,
-                         params->GetBno(i) + fs_->info_.dat_block, 1);
+                        params->GetBno(i) + fs_->Info().dat_block, 1);
 #else
-            fs_->bc_->Writeblk(params->GetBno(i) + fs_->info_.dat_block, entry);
+            fs_->bc_->Writeblk(params->GetBno(i) + fs_->Info().dat_block, entry);
 #endif
             params->SetDirty();
         }
@@ -473,9 +473,9 @@ zx_status_t VnodeMinfs::BlockOpDindirect(WritebackWork* wb, DindirectArgs* param
         if (dirty || indirect_params.IsDirty()) {
 #ifdef __Fuchsia__
             wb->Enqueue(vmo_indirect_->GetVmo(), params->GetOffset() + i, params->GetBno(i) +
-                         fs_->info_.dat_block, 1);
+                        fs_->Info().dat_block, 1);
 #else
-            fs_->bc_->Writeblk(params->GetBno(i) + fs_->info_.dat_block, dientry);
+            fs_->bc_->Writeblk(params->GetBno(i) + fs_->Info().dat_block, dientry);
 #endif
             params->SetDirty();
         }
@@ -509,13 +509,13 @@ void VnodeMinfs::ClearIndirectVmoBlock(uint32_t offset) {
 }
 #else
 void VnodeMinfs::ReadIndirectBlock(blk_t bno, uint32_t* entry) {
-    fs_->bc_->Readblk(bno + fs_->info_.dat_block, entry);
+    fs_->bc_->Readblk(bno + fs_->Info().dat_block, entry);
 }
 
 void VnodeMinfs::ClearIndirectBlock(blk_t bno) {
     uint32_t data[kMinfsBlockSize];
     memset(data, 0, kMinfsBlockSize);
-    fs_->bc_->Writeblk(bno + fs_->info_.dat_block, data);
+    fs_->bc_->Writeblk(bno + fs_->Info().dat_block, data);
 }
 #endif
 
@@ -1288,7 +1288,7 @@ zx_status_t VnodeMinfs::WriteInternal(WritebackWork* wb, const void* data,
             goto done;
         }
         ZX_DEBUG_ASSERT(bno != 0);
-        wb->Enqueue(vmo_.get(), n, bno + fs_->info_.dat_block, 1);
+        wb->Enqueue(vmo_.get(), n, bno + fs_->Info().dat_block, 1);
 #else
         blk_t bno;
         if ((status = BlockGet(wb, n, &bno))) {
@@ -1296,14 +1296,14 @@ zx_status_t VnodeMinfs::WriteInternal(WritebackWork* wb, const void* data,
         }
         ZX_DEBUG_ASSERT(bno != 0);
         char wdata[kMinfsBlockSize];
-        if (fs_->bc_->Readblk(bno + fs_->info_.dat_block, wdata)) {
+        if (fs_->bc_->Readblk(bno + fs_->Info().dat_block, wdata)) {
             goto done;
         }
         memcpy(wdata + adjust, data, xfer);
         if (len < kMinfsBlockSize && max_size >= inode_.size) {
             memset(wdata + adjust + xfer, 0, kMinfsBlockSize - (adjust + xfer));
         }
-        if (fs_->bc_->Writeblk(bno + fs_->info_.dat_block, wdata)) {
+        if (fs_->bc_->Writeblk(bno + fs_->Info().dat_block, wdata)) {
             goto done;
         }
 #endif
@@ -1624,10 +1624,10 @@ zx_status_t VnodeMinfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len, vo
 #ifdef __Fuchsia__
             info->fs_id = fs_->GetFsId();
 #endif
-            info->total_bytes = fs_->info_.block_count * fs_->info_.block_size;
-            info->used_bytes = fs_->info_.alloc_block_count * fs_->info_.block_size;
-            info->total_nodes = fs_->info_.inode_count;
-            info->used_nodes = fs_->info_.alloc_inode_count;
+            info->total_bytes = fs_->Info().block_count * fs_->Info().block_size;
+            info->used_bytes = fs_->Info().alloc_block_count * fs_->Info().block_size;
+            info->total_nodes = fs_->Info().inode_count;
+            info->used_nodes = fs_->Info().alloc_inode_count;
             memcpy(info->name, kFsName, strlen(kFsName));
             *out_actual = sizeof(vfs_query_info_t) + strlen(kFsName);
             return ZX_OK;
@@ -1757,13 +1757,13 @@ zx_status_t VnodeMinfs::TruncateInternal(WritebackWork* wb, size_t len) {
                     FS_TRACE_ERROR("minfs: Truncate failed to write last block: %d\n", r);
                     return ZX_ERR_IO;
                 }
-                wb->Enqueue(vmo_.get(), rel_bno, bno + fs_->info_.dat_block, 1);
+                wb->Enqueue(vmo_.get(), rel_bno, bno + fs_->Info().dat_block, 1);
 #else
-                if (fs_->bc_->Readblk(bno + fs_->info_.dat_block, bdata)) {
+                if (fs_->bc_->Readblk(bno + fs_->Info().dat_block, bdata)) {
                     return ZX_ERR_IO;
                 }
                 memset(bdata + adjust, 0, kMinfsBlockSize - adjust);
-                if (fs_->bc_->Writeblk(bno + fs_->info_.dat_block, bdata)) {
+                if (fs_->bc_->Writeblk(bno + fs_->Info().dat_block, bdata)) {
                     return ZX_ERR_IO;
                 }
 #endif
