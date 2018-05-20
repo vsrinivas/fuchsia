@@ -4,7 +4,7 @@
 
 import("//build/rust/rustc_library.gni")
 
-rustc_library("fuchsia-vfs-watcher-rustc") {
+rustc_library("fuchsia-vfs-watcher") {
   name = "fuchsia_vfs_watcher"
   version = "0.1.0"
   with_unit_tests = true

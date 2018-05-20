@@ -12,7 +12,7 @@ rustc_binary("bt-fake-hci") {
     "//garnet/lib/rust/crates/fuchsia-bluetooth",
     "//garnet/public/rust/crates/fdio",
     "//garnet/public/rust/crates/fuchsia-async:fuchsia-async-rustc",
-    "//garnet/public/rust/crates/fuchsia-vfs/fuchsia-vfs-watcher:fuchsia-vfs-watcher-rustc",
+    "//garnet/public/rust/crates/fuchsia-vfs/fuchsia-vfs-watcher",
     "//garnet/public/rust/crates/fuchsia-zircon:fuchsia-zircon-rustc",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures",
