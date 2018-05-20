@@ -1045,10 +1045,7 @@ void VnodeMinfs::fbl_recycle() {
         // hash map. If it has been purged; it will already be absent
         // from the map (and may have already been replaced with a new
         // node, if the inode has been re-used).
-#ifdef __Fuchsia__
-        fbl::AutoLock lock(&fs_->hash_lock_);
-#endif
-        fs_->VnodeReleaseLocked(this);
+        fs_->VnodeRelease(this);
     }
     delete this;
 }
@@ -1097,11 +1094,8 @@ zx_status_t VnodeMinfs::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
 void VnodeMinfs::Purge(WritebackWork* wb) {
     ZX_DEBUG_ASSERT(fd_count_ == 0);
     ZX_DEBUG_ASSERT(IsUnlinked());
+    fs_->VnodeRelease(this);
 #ifdef __Fuchsia__
-    {
-        fbl::AutoLock lock(&fs_->hash_lock_);
-        fs_->VnodeReleaseLocked(this);
-    }
     // TODO(smklein): Only init indirect vmo if it's needed
     if (InitIndirectVmo() == ZX_OK) {
         fs_->InoFree(this, wb);
@@ -1109,7 +1103,6 @@ void VnodeMinfs::Purge(WritebackWork* wb) {
         fprintf(stderr, "minfs: Failed to Init Indirect VMO while purging %u\n", ino_);
     }
 #else
-    fs_->VnodeReleaseLocked(this);
     fs_->InoFree(this, wb);
 #endif
 }

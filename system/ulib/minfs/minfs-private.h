@@ -109,10 +109,10 @@ public:
     // instantiate a vnode with a new inode
     zx_status_t VnodeNew(WritebackWork* wb, fbl::RefPtr<VnodeMinfs>* out, uint32_t type);
 
-    // Insert, lookup, and remove vnode from hash map
+    // Insert, lookup, and remove vnode from hash map.
     void VnodeInsert(VnodeMinfs* vn) __TA_EXCLUDES(hash_lock_);
     fbl::RefPtr<VnodeMinfs> VnodeLookup(uint32_t ino) __TA_EXCLUDES(hash_lock_);
-    void VnodeReleaseLocked(VnodeMinfs* vn) __TA_REQUIRES(hash_lock_);
+    void VnodeRelease(VnodeMinfs* vn) __TA_EXCLUDES(hash_lock_);
 
     // Allocate a new data block.
     zx_status_t BlockNew(WriteTxn* txn, blk_t hint, blk_t* out_bno);
@@ -192,9 +192,6 @@ public:
     // TODO(rvargas): Make private.
     fbl::unique_ptr<Bcache> bc_;
     minfs_info_t info_{};
-#ifdef __Fuchsia__
-    fbl::Mutex hash_lock_;
-#endif
 
 private:
     // Fsck can introspect Minfs
@@ -237,6 +234,9 @@ private:
 
     // Vnodes exist in the hash table as long as one or more reference exists;
     // when the Vnode is deleted, it is immediately removed from the map.
+#ifdef __Fuchsia__
+    fbl::Mutex hash_lock_;
+#endif
     HashTable vnode_hash_ __TA_GUARDED(hash_lock_){};
 
     bool collecting_metrics_ = false;

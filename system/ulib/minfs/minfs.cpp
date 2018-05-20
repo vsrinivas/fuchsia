@@ -579,7 +579,7 @@ fbl::RefPtr<VnodeMinfs> Minfs::VnodeLookup(uint32_t ino) {
             // Remove it (by key) so the next person doesn't trip on it,
             // and so we can insert another node with the same key into the hash
             // map.
-            // Notably, VnodeReleaseLocked erases the vnode by object, not key,
+            // Notably, VnodeRelease erases the vnode by object, not key,
             // so it will not attempt to replace any distinct Vnodes that happen
             // to be re-using the same inode.
             vnode_hash_.erase(ino);
@@ -594,7 +594,10 @@ fbl::RefPtr<VnodeMinfs> Minfs::VnodeLookup(uint32_t ino) {
 #endif
 }
 
-void Minfs::VnodeReleaseLocked(VnodeMinfs* vn) {
+void Minfs::VnodeRelease(VnodeMinfs* vn) {
+#ifdef __Fuchsia__
+    fbl::AutoLock lock(&hash_lock_);
+#endif
     vnode_hash_.erase(*vn);
 }
 
