@@ -1058,6 +1058,7 @@ public:
     // Create a BOOTFS item.
     static ItemPtr CreateBootFS(FileOpener* opener,
                                 const InputFileGeneratorList& input,
+                                bool sort,
                                 const std::string& prefix,
                                 bool compress) {
         auto item = MakeItem(NewHeader(ZBI_TYPE_STORAGE_BOOTFS, 0), compress);
@@ -1089,6 +1090,13 @@ public:
                 entries.push_back(std::move(entry));
                 item->OwnFile(std::move(next.file));
             }
+        }
+
+        if (sort) {
+            std::sort(entries.begin(), entries.end(),
+                      [](const Entry& a, const Entry& b) {
+                          return a.name < b.name;
+                      });
         }
 
         // Now we can calculate the final sizes.
@@ -1491,7 +1499,7 @@ const char* IncompleteImage(const ItemList& items, const uint32_t image_arch) {
     return nullptr;
 }
 
-constexpr const char kOptString[] = "-B:cd:e:xX:R:g:hto:p:T:uv";
+constexpr const char kOptString[] = "-B:cd:e:xX:R:g:hto:p:sT:uv";
 constexpr const option kLongOpts[] = {
     {"complete", required_argument, nullptr, 'B'},
     {"compressed", no_argument, nullptr, 'c'},
@@ -1505,6 +1513,7 @@ constexpr const option kLongOpts[] = {
     {"list", no_argument, nullptr, 't'},
     {"output", required_argument, nullptr, 'o'},
     {"prefix", required_argument, nullptr, 'p'},
+    {"sort", no_argument, nullptr, 's'},
     {"target", required_argument, nullptr, 'T'},
     {"uncompressed", no_argument, nullptr, 'u'},
     {"verbose", no_argument, nullptr, 'v'},
@@ -1529,6 +1538,7 @@ Remaining arguments are interpersed switches and input files:\n\
     --groups=GROUPS, -g GROUPS     comma-separated list of manifest groups\n\
     --compressed, -c               compress BOOTFS/RAMDISK images (default)\n\
     --uncompressed, -u             do not compress BOOTFS/RAMDISK images\n\
+    --sort, -s                     sort BOOTFS entries by name\n\
     --target=boot, -T boot         BOOTFS to be unpacked at /boot (default)\n\
     --target=cmdline, -T cmdline   input files are kernel command line text\n\
     --target=ramdisk, -T ramdisk   input files are raw RAMDISK images\n\
@@ -1574,6 +1584,7 @@ int main(int argc, char** argv) {
     uint32_t target = ZBI_TYPE_STORAGE_BOOTFS;
     bool compressed = true;
     bool list_contents = false;
+    bool sort = false;
     bool verbose = false;
     ItemList items;
     InputFileGeneratorList bootfs_input;
@@ -1692,6 +1703,10 @@ only one --extract (-x), --extract-item (-X), --extract-raw (-R)\n");
 
         case 'u':
             compressed = false;
+            continue;
+
+        case 's':
+            sort = true;
             continue;
 
         case 'X':;
@@ -1875,7 +1890,8 @@ no output file or depfile with --list (-t) or --extract (-x)\n");
     if (!bootfs_input.empty()) {
         // Pack up the BOOTFS.
         items.push_back(
-            Item::CreateBootFS(&opener, bootfs_input, prefix, compressed));
+            Item::CreateBootFS(&opener, bootfs_input, sort,
+                               prefix, compressed));
     }
 
     if (items.empty()) {
