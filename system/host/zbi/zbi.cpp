@@ -202,7 +202,11 @@ private:
             exit(1);
         }
         flushed_ += wrote;
-        assert(static_cast<off_t>(flushed_) == lseek(fd_.get(), 0, SEEK_CUR));
+#ifndef NDEBUG
+        off_t pos = lseek(fd_.get(), 0, SEEK_CUR);
+#endif
+        assert(static_cast<off_t>(flushed_) == pos ||
+               (pos == -1 && errno == ESPIPE));
         // Skip all the buffers that were wholly written.
         while (wrote >= read_pos->iov_len) {
             wrote -= read_pos->iov_len;
@@ -375,11 +379,56 @@ private:
             unused_buffer_ = std::move(buffer);
         }
     }
-
-#undef LZ4F_CALL
 };
 
 const size_t Compressor::kMinBufferSize;
+
+constexpr const LZ4F_decompressOptions_t kDecompressOpt{};
+
+std::unique_ptr<uint8_t[]> Decompress(const std::list<const iovec>& payload,
+                                      uint32_t decompressed_length) {
+    auto buffer = std::make_unique<uint8_t[]>(decompressed_length);
+
+    LZ4F_decompressionContext_t ctx;
+    LZ4F_CALL(LZ4F_createDecompressionContext, &ctx, LZ4F_VERSION);
+
+    uint8_t* dst = buffer.get();
+    size_t dst_size = decompressed_length;
+    for (const auto& iov : payload) {
+        auto src = static_cast<const uint8_t*>(iov.iov_base);
+        size_t src_size = iov.iov_len;
+        do {
+            if (dst_size == 0) {
+                fprintf(stderr, "decompression produced too much data\n");
+                exit(1);
+            }
+
+            size_t nwritten = dst_size, nread = src_size;
+            LZ4F_CALL(LZ4F_decompress, ctx, dst, &nwritten, src, &nread,
+                      &kDecompressOpt);
+
+            assert(nread <= src_size);
+            src += nread;
+            src_size -= nread;
+
+            assert(nwritten <= dst_size);
+            dst += nwritten;
+            dst_size -= nwritten;
+        } while (src_size > 0);
+    }
+    if (dst_size > 0) {
+        fprintf(stderr,
+                "decompression produced too little data by %zu bytes\n",
+                dst_size);
+        exit(1);
+    }
+
+    LZ4F_CALL(LZ4F_freeDecompressionContext, ctx);
+
+    return buffer;
+}
+
+#undef LZ4F_CALL
 
 class FileContents {
 public:
@@ -784,8 +833,16 @@ public:
         }
     }
 
+    bool AlreadyCompressed() const {
+        return (header_.flags & ZBI_FLAG_STORAGE_COMPRESSED) && !compress_;
+    }
+
     void Show() const {
         if (header_.length > 0) {
+            if (AlreadyCompressed()) {
+                CreateFromCompressed(*this)->Show();
+                return;
+            }
             switch (header_.type) {
             case ZBI_TYPE_CMDLINE:
                 ShowCmdline();
@@ -807,6 +864,14 @@ public:
             out->Write(Iovec(padding, aligned - wrote));
         }
         assert(Aligned(out->WritePosition()));
+    }
+
+    void StreamPayload(OutputStream* out) {
+        if (AlreadyCompressed()) {
+            CreateFromCompressed(*this)->StreamRawPayload(out);
+        } else {
+            StreamRawPayload(out);
+        }
     }
 
     // The buffer will be released when this Item is destroyed.  This item
@@ -892,6 +957,20 @@ public:
         }
         auto item = MakeItem(*header);
         item->payload_.emplace_front(file.View(offset, header->length));
+        return item;
+    }
+
+    // Create by decompressing a fully-baked item that is compressed.
+    static std::unique_ptr<Item> CreateFromCompressed(const Item& compressed) {
+        assert(compressed.header_.flags & ZBI_FLAG_STORAGE_COMPRESSED);
+        assert(!compressed.compress_);
+        auto item = MakeItem(compressed.header_);
+        item->header_.flags &= ~ZBI_FLAG_STORAGE_COMPRESSED;
+        item->header_.length = item->header_.extra;
+        auto buffer = Decompress(compressed.payload_, item->header_.length);
+        item->payload_.emplace_front(
+            Iovec(buffer.get(), item->header_.length));
+        item->OwnBuffer(std::move(buffer));
         return item;
     }
 
@@ -1020,14 +1099,18 @@ private:
         return std::unique_ptr<Item>(new Item(header, compress));
     }
 
-    uint32_t StreamRaw(OutputStream* out) {
-        // The header is already fully baked.
-        out->Write(Iovec(&header_, sizeof(header_)));
-        // The payload goes out as is.
+    void StreamRawPayload(OutputStream* out) {
         do {
             out->Write(payload_.front());
             payload_.pop_front();
         } while (!payload_.empty());
+    }
+
+    uint32_t StreamRaw(OutputStream* out) {
+        // The header is already fully baked.
+        out->Write(Iovec(&header_, sizeof(header_)));
+        // The payload goes out as is.
+        StreamRawPayload(out);
         return sizeof(header_) + header_.length;
     }
 
@@ -1130,11 +1213,13 @@ const char* IncompleteImage(const ItemList& items, const uint32_t image_arch) {
     return nullptr;
 }
 
-constexpr const char kOptString[] = "-ho:d:T:g:tBcuC:v";
+constexpr const char kOptString[] = "-B:cd:X:R:g:hto:p:T:uv";
 constexpr const option kLongOpts[] = {
     {"complete", required_argument, nullptr, 'B'},
     {"compressed", no_argument, nullptr, 'c'},
     {"depfile", required_argument, nullptr, 'd'},
+    {"extract-item", required_argument, nullptr, 'X'},
+    {"extract-raw", required_argument, nullptr, 'R'},
     {"groups", required_argument, nullptr, 'g'},
     {"help", no_argument, nullptr, 'h'},
     {"list", no_argument, nullptr, 't'},
@@ -1149,7 +1234,9 @@ constexpr const option kLongOpts[] = {
 void usage(const char* progname) {
     fprintf(stderr, "\
 Usage: %s {--output=FILE | -o FILE} [--depfile=FILE | -d FILE] ...\n\
-       %s {--list | -t} [--verbose | -v] ...\n\
+       %s {--list | -t} ...\n\
+       %s {--extract-item=N | -X N} ...\n\
+       %s {--extract-raw=N | -R N} ...\n\
 \n\
 Remaining arguments are interpersed switches and input files:\n\
     --help, -h                     print this message\n\
@@ -1180,8 +1267,12 @@ All the BOOTFS files from all manifest entries and directories go into a\n\
 single BOOTFS item and only the last `--compressed` or `--uncompressed`\n\
 switch affects that, but `--target=ramdisk` input files are affected by\n\
 the most recently preceding `--compressed` or `--uncompressed` switch.\n\
+\n\
+With `--extract-item` or `-X`, skip the first N items and then write out the\n\
+next item alone into a fresh ZBI file.\n\
+With `--extract-raw` or `-R`, write decompressed payload with no header.\n\
 ",
-            progname, progname);
+            progname, progname, progname, progname);
 }
 
 }  // anonymous namespace
@@ -1195,6 +1286,7 @@ int main(int argc, char** argv) {
     uint32_t target = ZBI_TYPE_STORAGE_BOOTFS;
     bool compressed = true;
     bool list_contents = false;
+    int extract_item = -1, extract_raw = -1;
     bool verbose = false;
     ItemList items;
     InputFileGeneratorList bootfs_input;
@@ -1236,10 +1328,6 @@ int main(int argc, char** argv) {
                 exit(1);
             }
             opener.Init(outfile, depfile);
-            continue;
-
-        case 'R':
-            target = ZBI_TYPE_STORAGE_RAMDISK;
             continue;
 
         case 'T':
@@ -1309,6 +1397,32 @@ int main(int argc, char** argv) {
             compressed = false;
             continue;
 
+        case 'X':
+            if (extract_item != -1 || extract_raw != -1) {
+                fprintf(stderr,
+                        "only one --extract-item, --extract-raw, -X, or -R\n");
+                exit(1);
+            }
+            extract_item = atoi(optarg);
+            if (extract_item < 0) {
+                fprintf(stderr, "item number must be nonnegative\n");
+                exit(1);
+            }
+            continue;
+
+        case 'R':
+            if (extract_item != -1 || extract_raw != -1) {
+                fprintf(stderr,
+                        "only one --extract-item, --extract-raw, -X, or -R\n");
+                exit(1);
+            }
+            extract_raw = atoi(optarg);
+            if (extract_raw < 0) {
+                fprintf(stderr, "item number must be nonnegative\n");
+                exit(1);
+            }
+            continue;
+
         case 'h':
         default:
             usage(argv[0]);
@@ -1362,7 +1476,7 @@ int main(int argc, char** argv) {
             exit(1);
         }
     } else {
-        if (!outfile) {
+        if (!outfile && extract_item == -1 && extract_raw == -1) {
             fprintf(stderr, "no output file\n");
             exit(1);
         }
@@ -1424,34 +1538,56 @@ int main(int argc, char** argv) {
         }
     }
 
+    auto extract_index = std::max(extract_item, extract_raw);
+    if (extract_index != -1 &&
+        static_cast<size_t>(extract_index) >= items.size()) {
+        fprintf(stderr, "cannot extract item %d of %zu\n",
+                std::max(extract_item, extract_raw), items.size());
+        exit(1);
+    }
+
+    fbl::unique_fd outfd;
     if (outfile) {
-        fbl::unique_fd fd(open(outfile, O_WRONLY | O_CREAT | O_TRUNC, 0666));
-        if (!fd) {
+        outfd.reset(open(outfile, O_WRONLY | O_CREAT | O_TRUNC, 0666));
+        if (!outfd) {
             perror(outfile);
             exit(1);
         }
-        OutputStream out(std::move(fd));
-        uint32_t header_start = out.PlaceHeader();
-        uint32_t payload_start = out.WritePosition();
-        assert(Aligned(payload_start));
-        for (const auto& item : items) {
-            // The OutputStream stores pointers into Item buffers in
-            // its write queue until it goes out of scope below.
-            // The ItemList keeps all the items alive past then.
-            item->Stream(&out);
+    } else if (extract_index != -1) {
+        outfd.reset(STDOUT_FILENO);
+    }
+
+    if (outfd) {
+        OutputStream out(std::move(outfd));
+        if (extract_raw == -1) {
+            uint32_t header_start = out.PlaceHeader();
+            uint32_t payload_start = out.WritePosition();
+            assert(Aligned(payload_start));
+            if (extract_item == -1) {
+                for (const auto& item : items) {
+                    // The OutputStream stores pointers into Item buffers in
+                    // its write queue until it goes out of scope below.
+                    // The ItemList keeps all the items alive past then.
+                    item->Stream(&out);
+                }
+            } else {
+                items[extract_item]->Stream(&out);
+            }
+            const zbi_header_t header = {
+                ZBI_TYPE_CONTAINER,                               // type
+                out.WritePosition() - payload_start,              // length
+                ZBI_CONTAINER_MAGIC,                              // extra
+                ZBI_FLAG_VERSION,                                 // flags
+                0,                                                // reserved0
+                0,                                                // reserved1
+                ZBI_ITEM_MAGIC,                                   // magic
+                ZBI_ITEM_NO_CRC32,                                // crc32
+            };
+            assert(Aligned(header.length));
+            out.PatchHeader(header, header_start);
+        } else {
+            items[extract_raw]->StreamPayload(&out);
         }
-        const zbi_header_t header = {
-            ZBI_TYPE_CONTAINER,                               // type
-            out.WritePosition() - payload_start,              // length
-            ZBI_CONTAINER_MAGIC,                              // extra
-            ZBI_FLAG_VERSION,                                 // flags
-            0,                                                // reserved0
-            0,                                                // reserved1
-            ZBI_ITEM_MAGIC,                                   // magic
-            ZBI_ITEM_NO_CRC32,                                // crc32
-        };
-        assert(Aligned(header.length));
-        out.PatchHeader(header, header_start);
     }
 
     return 0;
