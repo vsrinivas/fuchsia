@@ -286,7 +286,7 @@ void Process::CloseDebugHandle() {
 }
 
 bool Process::BindExceptionPort() {
-  ExceptionPort::Key key = server_->exception_port()->Bind(
+  ExceptionPort::Key key = server_->exception_port().Bind(
       handle_, std::bind(&Process::OnExceptionOrSignal, this,
                          std::placeholders::_1, std::placeholders::_2));
   if (!key) return false;
@@ -296,7 +296,7 @@ bool Process::BindExceptionPort() {
 
 void Process::UnbindExceptionPort() {
   FXL_DCHECK(eport_key_);
-  if (!server_->exception_port()->Unbind(eport_key_))
+  if (!server_->exception_port().Unbind(eport_key_))
     FXL_LOG(WARNING) << "Failed to unbind exception port; ignoring";
   eport_key_ = 0;
 }

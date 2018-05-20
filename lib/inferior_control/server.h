@@ -55,11 +55,11 @@ class Server : public IOLoop::Delegate, public Process::Delegate {
 
   // Returns a mutable reference to the main message loop. The returned instance
   // is owned by this Server instance and should not be deleted.
-  async::Loop* message_loop() { return &message_loop_; }
+  async::Loop& message_loop() { return message_loop_; }
 
   // Returns a mutable reference to the exception port. The returned instance is
   // owned by this Server instance and should not be deleted.
-  ExceptionPort* exception_port() { return &exception_port_; }
+  ExceptionPort& exception_port() { return exception_port_; }
 
   // Call this to schedule termination of gdbserver.
   // Any outstanding messages will be sent first.
