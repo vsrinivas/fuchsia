@@ -27,6 +27,7 @@
 #include <sys/uio.h>
 #include <unistd.h>
 #include <utility>
+#include <vector>
 
 #include <fbl/macros.h>
 #include <fbl/unique_fd.h>
@@ -120,16 +121,6 @@ public:
         }
     }
 
-    // Take ownership of the Item after it has called this->Write
-    // repeatedly, using pointers into buffers owned by the Item.
-    void OwnItem(std::unique_ptr<Item> item) {
-        if (Buffering()) {
-            // Keep the Item alive as long as we might be buffering pointers
-            // into memory it owns.
-            owned_items_.push_front(std::move(item));
-        }
-    }
-
     uint32_t WritePosition() const {
         return total_;
     }
@@ -141,7 +132,6 @@ public:
         }
         write_pos_ = iov_.begin();
         owned_buffers_.clear();
-        owned_items_.clear();
     }
 
     // Emit a placeholder.  The return value will be passed to PatchHeader.
@@ -196,7 +186,6 @@ private:
     // iov_[n].iov_base might point into these buffers.  They're just
     // stored here to own the buffers until iov_ is flushed.
     std::forward_list<std::unique_ptr<uint8_t[]>> owned_buffers_;
-    std::forward_list<std::unique_ptr<Item>> owned_items_;
     fbl::unique_fd fd_;
     uint32_t flushed_ = 0;
     uint32_t total_ = 0;
@@ -559,13 +548,16 @@ struct InputFileGenerator {
         FileContents file;
     };
     virtual ~InputFileGenerator() = default;
-    virtual bool Next(FileOpener*, const GroupFilter&, value_type*) = 0;
+    virtual bool Next(FileOpener*, const std::string& prefix, value_type*) = 0;
 };
+
+using InputFileGeneratorList = std::list<std::unique_ptr<InputFileGenerator>>;
 
 class ManifestInputFileGenerator : public InputFileGenerator {
 public:
-    explicit ManifestInputFileGenerator(FileContents file) :
-        file_(std::move(file)) {
+    ManifestInputFileGenerator(FileContents file, std::string prefix,
+                               const GroupFilter* filter) :
+        file_(std::move(file)), prefix_(std::move(prefix)), filter_(filter) {
         read_ptr_ = static_cast<const char*>(
             file_.View(0, file_.exact_size()).iov_base);
         eof_ = read_ptr_ + file_.exact_size();
@@ -573,7 +565,7 @@ public:
 
     ~ManifestInputFileGenerator() override = default;
 
-    bool Next(FileOpener* opener, const GroupFilter& filter,
+    bool Next(FileOpener* opener, const std::string& prefix,
               value_type* value) override {
         while (read_ptr_ != eof_) {
             auto eol = static_cast<const char*>(
@@ -592,7 +584,7 @@ public:
                 exit(1);
             }
 
-            line = AllowEntry(filter, line, eq, eol);
+            line = AllowEntry(line, eq, eol);
             if (line) {
                 std::string target(line, eq - line);
                 std::string source(eq + 1, eol - (eq + 1));
@@ -600,7 +592,7 @@ public:
                 auto fd = opener->Open(source, &st);
                 RequireRegularFile(st, source.c_str());
                 auto file = FileContents::Map(fd, st, source.c_str());
-                *value = value_type{std::move(target), std::move(file)};
+                *value = value_type{prefix + target, std::move(file)};
                 return true;
             }
         }
@@ -609,16 +601,17 @@ public:
 
 private:
     FileContents file_;
+    const std::string prefix_;
+    const GroupFilter* filter_ = nullptr;
     const char* read_ptr_ = nullptr;
     const char* eof_ = nullptr;
 
     // Returns the beginning of the `target=source` portion of the entry
     // if the entry is allowed by the filter, otherwise nullptr.
-    static const char* AllowEntry(const GroupFilter& filter, const char* start,
-                                  const char* eq, const char* eol) {
+    const char* AllowEntry(const char* start, const char* eq, const char* eol) {
         if (*start != '{') {
             // This entry doesn't specify a group.
-            return filter.AllowsAll() ? start : nullptr;
+            return filter_->AllowsAll() ? start : nullptr;
         }
         auto end_group = static_cast<const char*>(
             memchr(start + 1, '}', eq - start));
@@ -629,7 +622,7 @@ private:
             exit(1);
         }
         std::string group(start, end_group - start);
-        return filter.Allows(group) ? end_group + 1 : nullptr;
+        return filter_->Allows(group) ? end_group + 1 : nullptr;
     }
 };
 
@@ -642,7 +635,7 @@ public:
 
     ~DirectoryInputFileGenerator() override = default;
 
-    bool Next(FileOpener* opener, const GroupFilter&,
+    bool Next(FileOpener* opener, const std::string& prefix,
               value_type* value) override {
         do {
             const dirent* d = readdir(walk_pos_.front().dir.get());
@@ -653,8 +646,8 @@ public:
             if (!strcmp(d->d_name, ".") || !strcmp(d->d_name, "..")) {
                 continue;
             }
-            std::string target = walk_prefix_ + d->d_name;
-            std::string source = source_prefix_ + target;
+            std::string target = prefix + walk_prefix_ + d->d_name;
+            std::string source = source_prefix_ + walk_prefix_ + d->d_name;
             struct stat st;
             auto fd = opener->Open(source, &st);
             if (S_ISDIR(st.st_mode)) {
@@ -793,7 +786,7 @@ public:
 
     // Streaming exhausts the item's payload.  The OutputStream will now
     // have pointers into buffers owned by this Item, so this Item must be
-    // kept alive until out->Flush() runs (e.g. via OutputStream::OwnItem).
+    // kept alive until out->Flush() runs (while *this is alive, to be safe).
     void Stream(OutputStream* out) {
         assert(Aligned(out->WritePosition()));
         uint32_t wrote = compress_ ? StreamCompressed(out) : StreamRaw(out);
@@ -837,7 +830,8 @@ public:
 
     // Create from raw file contents.
     static std::unique_ptr<Item> CreateFromFile(
-        FileContents file, uint32_t type, bool compress, bool null_terminate) {
+        FileContents file, uint32_t type, bool compress) {
+        bool null_terminate = type == ZBI_TYPE_CMDLINE;
         size_t size = file.exact_size() + (null_terminate ? 1 : 0);
         auto item = MakeItem(NewHeader(type, size), compress);
 
@@ -861,6 +855,7 @@ public:
             if (null_terminate) {
                 crc.Write(Iovec("", 1));
             }
+            crc.FinalizeHeader(&item->header_);
         }
 
         // The item now owns the file mapping that its payload points into.
@@ -892,8 +887,8 @@ public:
 
     // Create a BOOTFS item.
     static std::unique_ptr<Item> CreateBootFS(FileOpener* opener,
-                                              const GroupFilter& filter,
-                                              InputFileGenerator* files,
+                                              InputFileGeneratorList input,
+                                              const std::string& prefix,
                                               uint32_t type, bool compress) {
         auto item = MakeItem(NewHeader(type, 0), compress);
 
@@ -904,22 +899,26 @@ public:
         };
         std::deque<Entry> entries;
         size_t dirsize = 0, bodysize = 0;
-        InputFileGenerator::value_type next;
-        while (files->Next(opener, filter, &next)) {
-            // Accumulate the space needed for each zbi_bootfs_dirent_t.
-            dirsize += ZBI_BOOTFS_DIRENT_SIZE(next.target.size() + 1);
-            Entry entry;
-            entry.name.swap(next.target);
-            entry.data_len = static_cast<uint32_t>(next.file.exact_size());
-            if (entry.data_len != next.file.exact_size()) {
-                fprintf(stderr, "input file size exceeds format maximum\n");
-                exit(1);
+        while (!input.empty()) {
+            auto generator = std::move(input.front());
+            input.pop_front();
+            InputFileGenerator::value_type next;
+            while (generator->Next(opener, prefix, &next)) {
+                // Accumulate the space needed for each zbi_bootfs_dirent_t.
+                dirsize += ZBI_BOOTFS_DIRENT_SIZE(next.target.size() + 1);
+                Entry entry;
+                entry.name.swap(next.target);
+                entry.data_len = static_cast<uint32_t>(next.file.exact_size());
+                if (entry.data_len != next.file.exact_size()) {
+                    fprintf(stderr, "input file size exceeds format maximum\n");
+                    exit(1);
+                }
+                uint32_t size = ZBI_BOOTFS_PAGE_ALIGN(entry.data_len);
+                bodysize += size;
+                item->payload_.emplace_back(next.file.PageRoundedView(0, size));
+                entries.push_back(std::move(entry));
+                item->OwnFile(std::move(next.file));
             }
-            uint32_t size = ZBI_BOOTFS_PAGE_ALIGN(entry.data_len);
-            bodysize += size;
-            item->payload_.emplace_back(next.file.PageRoundedView(0, size));
-            entries.push_back(std::move(entry));
-            item->OwnFile(std::move(next.file));
         }
 
         // Now we can calculate the final sizes.
@@ -974,22 +973,6 @@ public:
         item->OwnBuffer(buffer.release());
 
         return item;
-    }
-
-    // Create a BOOTFS item from a directory tree.
-    static std::unique_ptr<Item> ImportDirectory(
-        FileOpener* opener, const char* dirname,
-        uint32_t type, bool compress) {
-        DirectoryInputFileGenerator files(opener->Open(dirname), dirname);
-        return CreateBootFS(opener, GroupFilter(), &files, type, compress);
-    }
-
-    // Create a BOOTFS item from a manifest file.
-    static std::unique_ptr<Item> ImportManifest(
-        FileOpener* opener, FileContents file, const GroupFilter& filter,
-        uint32_t type, bool compress) {
-        ManifestInputFileGenerator files(std::move(file));
-        return CreateBootFS(opener, filter, &files, type, compress);
     }
 
 private:
@@ -1052,8 +1035,10 @@ private:
     }
 };
 
+using ItemList = std::vector<std::unique_ptr<Item>>;
+
 bool ImportFile(const FileContents& file, const char* filename,
-                std::list<std::unique_ptr<Item>>* items) {
+                ItemList* items) {
     if (file.exact_size() <= (sizeof(zbi_header_t) * 2)) {
         return false;
     }
@@ -1085,8 +1070,7 @@ bool ImportFile(const FileContents& file, const char* filename,
 const uint32_t kImageArchUndefined = ZBI_TYPE_DISCARD;
 
 // Returns nullptr if complete, else an explanatory string.
-const char* IncompleteImage(const std::list<std::unique_ptr<Item>>& items,
-                            const uint32_t image_arch) {
+const char* IncompleteImage(const ItemList& items, const uint32_t image_arch) {
     if (!ZBI_IS_KERNEL_BOOTITEM(items.front()->type())) {
         return "first item not KERNEL";
     }
@@ -1112,16 +1096,16 @@ const char* IncompleteImage(const std::list<std::unique_ptr<Item>>& items,
 
 constexpr const char kOptString[] = "-ho:d:T:g:tBcuC:";
 constexpr const option kLongOpts[] = {
-    {"help", no_argument, nullptr, 'h'},
-    {"output", required_argument, nullptr, 'o'},
-    {"depfile", required_argument, nullptr, 'd'},
-    {"target", required_argument, nullptr, 'T'},
-    {"groups", required_argument, nullptr, 'g'},
-    {"list", no_argument, nullptr, 't'},
     {"complete", required_argument, nullptr, 'B'},
     {"compressed", no_argument, nullptr, 'c'},
+    {"depfile", required_argument, nullptr, 'd'},
+    {"groups", required_argument, nullptr, 'g'},
+    {"help", no_argument, nullptr, 'h'},
+    {"list", no_argument, nullptr, 't'},
+    {"output", required_argument, nullptr, 'o'},
+    {"prefix", required_argument, nullptr, 'p'},
+    {"target", required_argument, nullptr, 'T'},
     {"uncompressed", no_argument, nullptr, 'u'},
-    {"cmdline", required_argument, nullptr, 'C'},
     {nullptr, no_argument, nullptr, 0},
 };
 
@@ -1140,15 +1124,24 @@ Remaining arguments are interpersed switches and input files:\n\
     --compressed, -c               compress BOOTFS/RAMDISK images (default)\n\
     --uncompressed, -u             do not compress BOOTFS/RAMDISK images\n\
     --target=boot, -T boot         BOOTFS to be unpacked at /boot (default)\n\
-    --target=system, -T system     BOOTFS to be unpacked at /system\n\
+    --target=cmdline, -T cmdline   input files are kernel command line text\n\
     --target=ramdisk, -T ramdisk   input files are raw RAMDISK images\n\
     --target=zbi, -T zbi           input files must be ZBI files\n\
-    @DIRECTORY                     populate BOOTFS from DIRECTORY\n\
-    FILE                           read ZBI file or BOOTFS manifest\n\
+    --prefix=PREFIX, -p PREFIX     prepend PREFIX/ to target file names\n\
+    FILE                           input or manifest file\n\
+    DIRECTORY                      directory tree goes into BOOTFS at PREFIX/\n\
 \n\
-Each manifest or directory populates a distinct BOOTFS item, tagged for\n\
-unpacking based on the most recent `--target` switch.  Files with\n\
-ZBI_TYPE_CONTAINER headers are incomplete boot files; others are manifests.\n\
+Each `--target` or `-T` switch affects subsequent FILE arguments.\n\
+With `--target=boot` (or no switch), files with ZBI_TYPE_CONTAINER headers\n\
+are incomplete boot files; other files are taken to be manifest files.\n\
+Each DIRECTORY is listed recursively and handled just like a manifest file\n\
+using the path relative to DIRECTORY as the target name (before any PREFIX).\n\
+Each `--group`, `--prefix`, `-g`, or `-p` switch affects each file from a\n\
+manifest or directory in subsequent FILE or DIRECTORY arguments.\n\
+All the BOOTFS files from all manifest entries and directories go into a\n\
+single BOOTFS item and only the last `--compressed` or `--uncompressed`\n\
+switch affects that, but `--target=ramdisk` input files are affected by\n\
+the most recently preceding `--compressed` or `--uncompressed` switch.\n\
 ",
             progname, progname);
 }
@@ -1164,7 +1157,9 @@ int main(int argc, char** argv) {
     uint32_t target = ZBI_TYPE_STORAGE_BOOTFS;
     bool compressed = true;
     bool list_contents = false;
-    std::list<std::unique_ptr<Item>> items;
+    ItemList items;
+    InputFileGeneratorList bootfs_input;
+    std::string prefix;
 
     int opt;
     while ((opt = getopt_long(argc, argv,
@@ -1211,6 +1206,8 @@ int main(int argc, char** argv) {
         case 'T':
             if (!strcmp(optarg, "boot")) {
                 target = ZBI_TYPE_STORAGE_BOOTFS;
+            } else if (!strcmp(optarg, "cmdline")) {
+                target = ZBI_TYPE_CMDLINE;
             } else if (!strcmp(optarg, "ramdisk")) {
                 target = ZBI_TYPE_STORAGE_RAMDISK;
             } else if (!strcmp(optarg, "zbi")) {
@@ -1219,6 +1216,26 @@ int main(int argc, char** argv) {
                 fprintf(stderr, "\
 --target requires boot, system, ramdisk, or zbi\n");
                 exit(1);
+            }
+            continue;
+
+        case 'p':
+            // A nonempty prefix should have no leading slashes and
+            // exactly one trailing slash.
+            prefix = optarg;
+            while (!prefix.empty() && prefix.front() == '/') {
+                prefix.erase(0, 1);
+            }
+            if (!prefix.empty() && prefix.back() == '/') {
+                prefix.pop_back();
+            }
+            if (prefix.empty() && optarg[0] != '\0') {
+                fprintf(stderr, "\
+--prefix cannot be /; use --prefix= (empty) instead\n");
+                exit(1);
+            }
+            if (!prefix.empty()) {
+                prefix.push_back('/');
             }
             continue;
 
@@ -1237,7 +1254,7 @@ int main(int argc, char** argv) {
                 complete_arch = ZBI_TYPE_KERNEL_ARM64;
             } else {
                 fprintf(stderr, "--complete architecture argument must be one"
-                                " of: x64, arm64\n");
+                        " of: x64, arm64\n");
                 exit(1);
             }
             continue;
@@ -1249,17 +1266,6 @@ int main(int argc, char** argv) {
             compressed = false;
             continue;
 
-        case 'C': {
-            struct stat st;
-            auto fd = opener.Open(optarg, &st);
-            RequireRegularFile(st, optarg);
-            auto file = FileContents::Map(std::move(fd), st, optarg);
-            items.push_back(
-                Item::CreateFromFile(std::move(file), ZBI_TYPE_CMDLINE,
-                                     false, true));
-            continue;
-        }
-
         case 'h':
         default:
             usage(argv[0]);
@@ -1267,45 +1273,73 @@ int main(int argc, char** argv) {
         }
         assert(opt == 1);
 
-        if (optarg[0] == '@') {
-            if (target == ZBI_TYPE_STORAGE_RAMDISK) {
-                fprintf(stderr,
-                        "%s: can't import directory to --target=ramdisk\n",
-                        &optarg[1]);
-                exit(1);
-            }
-            items.push_back(Item::ImportDirectory(&opener, &optarg[1],
-                                                  target, compressed));
-        } else {
-            struct stat st;
-            auto fd = opener.Open(optarg, &st);
-            RequireRegularFile(st, optarg);
-            auto file = FileContents::Map(std::move(fd), st, optarg);
-            if (target == ZBI_TYPE_STORAGE_RAMDISK) {
-                // Under --target=ramdisk, any input file is a raw image.
-                items.push_back(Item::CreateFromFile(
-                                    std::move(file), ZBI_TYPE_STORAGE_RAMDISK,
-                                    compressed, false));
-            } else if (ImportFile(file, optarg, &items)) {
-                // It's another file in ZBI format.  The last item will own
-                // the file buffer, so it lives until all earlier items are
-                // exhausted.
-                items.back()->OwnFile(std::move(file));
-            } else if (target == ZBI_TYPE_CONTAINER) {
-                fprintf(stderr, "%s: not a Zircon Boot container\n", optarg);
-                exit(1);
-            } else {
-                // It must be a manifest file.
-                items.push_back(Item::ImportManifest(
-                                    &opener, std::move(file),
-                                    filter, target, compressed));
-            }
+        struct stat st;
+        auto fd = opener.Open(optarg, &st);
+
+        // A directory populates the BOOTFS according to --prefix.
+        if (target == ZBI_TYPE_STORAGE_BOOTFS && S_ISDIR(st.st_mode)) {
+            bootfs_input.emplace_back(
+                new DirectoryInputFileGenerator(std::move(fd), optarg));
+            continue;
         }
+
+        // Anything else must be a regular file.
+        RequireRegularFile(st, optarg);
+        auto file = FileContents::Map(std::move(fd), st, optarg);
+
+        if (target == ZBI_TYPE_STORAGE_RAMDISK) {
+            // Under --target=ramdisk, any input file is a raw image.
+            items.push_back(Item::CreateFromFile(std::move(file),
+                                                 ZBI_TYPE_STORAGE_RAMDISK,
+                                                 compressed));
+        } else if (target == ZBI_TYPE_CMDLINE) {
+            // Under --target=cmdline, any input file is a cmdline fragment.
+            items.push_back(Item::CreateFromFile(std::move(file),
+                                                 ZBI_TYPE_CMDLINE,
+                                                 false));
+        } else if (ImportFile(file, optarg, &items)) {
+            // It's another file in ZBI format.  The last item will own
+            // the file buffer, so it lives until all earlier items are
+            // exhausted.
+            items.back()->OwnFile(std::move(file));
+        } else if (target == ZBI_TYPE_CONTAINER) {
+            fprintf(stderr, "%s: not a Zircon Boot container\n", optarg);
+            exit(1);
+        } else {
+            // It must be a manifest file.
+            bootfs_input.emplace_back(
+                new ManifestInputFileGenerator(std::move(file), prefix, &filter));
+        }
+    }
+
+    if (!bootfs_input.empty()) {
+        // Pack up the BOOTFS.
+        items.emplace_back(
+            Item::CreateBootFS(&opener, std::move(bootfs_input),
+                               std::move(prefix), target, compressed));
     }
 
     if (items.empty()) {
         fprintf(stderr, "no inputs\n");
         exit(1);
+    }
+
+    if (!list_contents && complete_arch != kImageArchUndefined) {
+        // The only hard requirement is that the kernel be first.
+        // But it seems most orderly to put the BOOTFS second,
+        // other storage in the middle, and CMDLINE last.
+        std::stable_sort(
+            items.begin(), items.end(),
+            [](const std::unique_ptr<Item>& a,
+               const std::unique_ptr<Item>& b) {
+                auto item_rank = [](uint32_t type) {
+                    return (ZBI_IS_KERNEL_BOOTITEM(type) ? 0 :
+                            type == ZBI_TYPE_STORAGE_BOOTFS ? 1 :
+                            type == ZBI_TYPE_CMDLINE ? 9 :
+                            5);
+                };
+                return item_rank(a->type()) < item_rank(b->type());
+            });
     }
 
     if (complete_arch != kImageArchUndefined) {
@@ -1329,12 +1363,10 @@ int main(int argc, char** argv) {
         }
         // Contents start after the ZBI_TYPE_CONTAINER header.
         uint32_t pos = sizeof(zbi_header_t);
-        do {
-            const auto& item = items.front();
+        for (const auto& item : items) {
             item->Describe(pos);
             pos += item->TotalSize();
-            items.pop_front();
-        } while (!items.empty());
+        }
     } else {
         if (!outfile) {
             fprintf(stderr, "no output file\n");
@@ -1349,15 +1381,12 @@ int main(int argc, char** argv) {
         uint32_t header_start = out.PlaceHeader();
         uint32_t payload_start = out.WritePosition();
         assert(Aligned(payload_start));
-        do {
-            // Pop an item off and stream it out.  Then transfer the
-            // item's ownership to the OutputStream while it stores
-            // pointers into Item buffers in its write queue.
-            auto item = std::move(items.front());
-            items.pop_front();
+        for (const auto& item : items) {
+            // The OutputStream stores pointers into Item buffers in
+            // its write queue until it goes out of scope below.
+            // The ItemList keeps all the items alive past then.
             item->Stream(&out);
-            out.OwnItem(std::move(item));
-        } while (!items.empty());
+        }
         const zbi_header_t header = {
             ZBI_TYPE_CONTAINER,                               // type
             out.WritePosition() - payload_start,              // length
