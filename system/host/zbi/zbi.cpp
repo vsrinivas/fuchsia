@@ -38,6 +38,8 @@
 
 namespace {
 
+const char* const kCmdlineWS = " \t\r\n";
+
 bool Aligned(uint32_t length) {
     return length % ZBI_ALIGNMENT == 0;
 }
@@ -89,6 +91,7 @@ private:
 };
 
 class Item;
+using ItemPtr = std::unique_ptr<Item>;
 
 class OutputStream {
 public:
@@ -232,6 +235,12 @@ public:
     void Write(const iovec& buffer) {
         crc_ = crc32(crc_, static_cast<const uint8_t*>(buffer.iov_base),
                      buffer.iov_len);
+    }
+
+    void Write(const std::list<const iovec>& list) {
+        for (const auto& buffer : list) {
+            Write(buffer);
+        }
     }
 
     void FinalizeHeader(zbi_header_t* header) {
@@ -436,6 +445,17 @@ public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(FileContents);
     FileContents() = default;
 
+    // Get unowned file contents from a BOOTFS image.
+    // The entry has been validated against the payload size.
+    FileContents(const zbi_bootfs_dirent_t& entry,
+                 const uint8_t* bootfs_payload) :
+        mapped_(const_cast<void*>(static_cast<const void*>(bootfs_payload +
+                                                           entry.data_off))),
+        mapped_size_(ZBI_BOOTFS_PAGE_ALIGN(entry.data_len)),
+        exact_size_(entry.data_len),
+        owned_(false) {
+    }
+
     FileContents(FileContents&& other) {
         *this = std::move(other);
     }
@@ -444,11 +464,12 @@ public:
         std::swap(mapped_, other.mapped_);
         std::swap(mapped_size_, other.mapped_size_);
         std::swap(exact_size_, other.exact_size_);
+        std::swap(owned_, other.owned_);
         return *this;
     }
 
     ~FileContents() {
-        if (mapped_) {
+        if (owned_ && mapped_) {
             munmap(mapped_, mapped_size_);
         }
     }
@@ -504,6 +525,7 @@ private:
     void* mapped_ = nullptr;
     size_t mapped_size_ = 0;
     size_t exact_size_ = 0;
+    bool owned_ = true;
 };
 
 class FileOpener {
@@ -601,7 +623,8 @@ struct InputFileGenerator {
     virtual bool Next(FileOpener*, const std::string& prefix, value_type*) = 0;
 };
 
-using InputFileGeneratorList = std::list<std::unique_ptr<InputFileGenerator>>;
+using InputFileGeneratorList =
+    std::deque<std::unique_ptr<InputFileGenerator>>;
 
 class ManifestInputFileGenerator : public InputFileGenerator {
 public:
@@ -678,8 +701,8 @@ private:
 
 class DirectoryInputFileGenerator : public InputFileGenerator {
 public:
-    DirectoryInputFileGenerator(fbl::unique_fd fd, const char* dirname) :
-        source_prefix_(dirname) {
+    DirectoryInputFileGenerator(fbl::unique_fd fd, std::string prefix) :
+        source_prefix_(std::move(prefix)) {
         walk_pos_.emplace_front(MakeUniqueDir(std::move(fd)), 0);
     }
 
@@ -837,19 +860,26 @@ public:
         }
 
         if (header_.flags & ZBI_FLAG_CRC32) {
-            printf("        :          MAGIC=%08x CRC=%08x\n",
-                   header_.magic, header_.crc32);
+            auto print_crc = [](const zbi_header_t& header) {
+                printf("        :          MAGIC=%08x CRC=%08x\n",
+                       header.magic, header.crc32);
+            };
 
             Checksummer crc;
-            for (const auto& chunk : payload_) {
-                crc.Write(chunk);
-            }
+            crc.Write(payload_);
             zbi_header_t check_header = header_;
             crc.FinalizeHeader(&check_header);
 
-            if (check_header.crc32 != header_.crc32) {
-                fprintf(stderr, "error: CRC %08x does not match header\n",
-                        check_header.crc32);
+            if (compress_) {
+                // We won't compute it until StreamCompressed, so
+                // write out the computation we just did to check.
+                print_crc(check_header);
+            } else {
+                print_crc(header_);
+                if (check_header.crc32 != header_.crc32) {
+                    fprintf(stderr, "error: CRC %08x does not match header\n",
+                            check_header.crc32);
+                }
             }
         } else {
             printf("        :          MAGIC=%08x NO CRC\n", header_.magic);
@@ -909,6 +939,17 @@ public:
         }
     }
 
+    void AppendPayload(std::string* buffer) const {
+        if (AlreadyCompressed()) {
+            CreateFromCompressed(*this)->AppendPayload(buffer);
+        } else {
+            for (const auto& iov : payload_) {
+                buffer->append(static_cast<const char*>(iov.iov_base),
+                               iov.iov_len);
+            }
+        }
+    }
+
     // The buffer will be released when this Item is destroyed.  This item
     // and items earlier on the list can hold pointers into the buffer.
     void OwnBuffer(std::unique_ptr<uint8_t[]> buffer) {
@@ -919,27 +960,27 @@ public:
     }
 
     // Create from in-core data.
-    static std::unique_ptr<Item> CreateFromBuffer(
+    static ItemPtr CreateFromBuffer(
         uint32_t type, std::unique_ptr<uint8_t[]> payload, size_t size) {
         auto item = MakeItem(NewHeader(type, size));
         item->payload_.emplace_front(Iovec(payload.get(), size));
         item->OwnBuffer(std::move(payload));
         Checksummer crc;
-        crc.Write(Iovec(payload.get(), size));
+        crc.Write(item->payload_);
         crc.FinalizeHeader(&item->header_);
         return item;
     }
 
     // Create from local scratch data.
     template<typename T>
-    static std::unique_ptr<Item> Create(uint32_t type, const T& payload) {
+    static ItemPtr Create(uint32_t type, const T& payload) {
         auto buffer = std::make_unique<uint8_t[]>(sizeof(payload));
         memcpy(buffer.get(), &payload, sizeof(payload));
         return CreateFromBuffer(type, std::move(buffer), sizeof(payload));
     }
 
     // Create from raw file contents.
-    static std::unique_ptr<Item> CreateFromFile(
+    static ItemPtr CreateFromFile(
         FileContents file, uint32_t type, bool compress) {
         bool null_terminate = type == ZBI_TYPE_CMDLINE;
         size_t size = file.exact_size() + (null_terminate ? 1 : 0);
@@ -975,7 +1016,7 @@ public:
     }
 
     // Create from an existing fully-baked item in an input file.
-    static std::unique_ptr<Item> CreateFromItem(const FileContents& file,
+    static ItemPtr CreateFromItem(const FileContents& file,
                                                 uint32_t offset) {
         if (offset > file.exact_size() ||
             file.exact_size() - offset < sizeof(zbi_header_t)) {
@@ -996,9 +1037,8 @@ public:
     }
 
     // Create by decompressing a fully-baked item that is compressed.
-    static std::unique_ptr<Item> CreateFromCompressed(const Item& compressed) {
-        assert(compressed.header_.flags & ZBI_FLAG_STORAGE_COMPRESSED);
-        assert(!compressed.compress_);
+    static ItemPtr CreateFromCompressed(const Item& compressed) {
+        assert(compressed.AlreadyCompressed());
         auto item = MakeItem(compressed.header_);
         item->header_.flags &= ~ZBI_FLAG_STORAGE_COMPRESSED;
         item->header_.length = item->header_.extra;
@@ -1010,11 +1050,11 @@ public:
     }
 
     // Create a BOOTFS item.
-    static std::unique_ptr<Item> CreateBootFS(FileOpener* opener,
-                                              InputFileGeneratorList input,
-                                              const std::string& prefix,
-                                              uint32_t type, bool compress) {
-        auto item = MakeItem(NewHeader(type, 0), compress);
+    static ItemPtr CreateBootFS(FileOpener* opener,
+                                const InputFileGeneratorList& input,
+                                const std::string& prefix,
+                                bool compress) {
+        auto item = MakeItem(NewHeader(ZBI_TYPE_STORAGE_BOOTFS, 0), compress);
 
         // Collect the names and exact sizes here and the contents in payload_.
         struct Entry {
@@ -1023,9 +1063,7 @@ public:
         };
         std::deque<Entry> entries;
         size_t dirsize = 0, bodysize = 0;
-        while (!input.empty()) {
-            auto generator = std::move(input.front());
-            input.pop_front();
+        for (const auto& generator : input) {
             InputFileGenerator::value_type next;
             while (generator->Next(opener, prefix, &next)) {
                 // Accumulate the space needed for each zbi_bootfs_dirent_t.
@@ -1034,12 +1072,14 @@ public:
                 entry.name.swap(next.target);
                 entry.data_len = static_cast<uint32_t>(next.file.exact_size());
                 if (entry.data_len != next.file.exact_size()) {
-                    fprintf(stderr, "input file size exceeds format maximum\n");
+                    fprintf(stderr,
+                            "input file size exceeds format maximum\n");
                     exit(1);
                 }
                 uint32_t size = ZBI_BOOTFS_PAGE_ALIGN(entry.data_len);
                 bodysize += size;
-                item->payload_.emplace_back(next.file.PageRoundedView(0, size));
+                item->payload_.emplace_back(
+                    next.file.PageRoundedView(0, size));
                 entries.push_back(std::move(entry));
                 item->OwnFile(std::move(next.file));
             }
@@ -1086,9 +1126,7 @@ public:
             // Checksum the BOOTFS image right now: header and then payload.
             Checksummer crc;
             crc.Write(buffer.get());
-            for (const auto& file : item->payload_) {
-                crc.Write(file);
-            }
+            crc.Write(item->payload_);
             crc.FinalizeHeader(&item->header_);
         }
 
@@ -1097,6 +1135,14 @@ public:
         item->OwnBuffer(buffer.release());
 
         return item;
+    }
+
+    // The generator consumes the Item.  The FileContents it generates
+    // point into the Item's storage, so the generator must be kept
+    // alive as long as any of those FileContents is alive.
+    static auto ReadBootFS(ItemPtr item) {
+        return std::unique_ptr<InputFileGenerator>(
+            new BootFSInputFileGenerator(std::move(item)));
     }
 
 private:
@@ -1129,9 +1175,9 @@ private:
         }
     }
 
-    static std::unique_ptr<Item> MakeItem(const zbi_header_t& header,
-                                          bool compress = false) {
-        return std::unique_ptr<Item>(new Item(header, compress));
+    static ItemPtr MakeItem(const zbi_header_t& header,
+                            bool compress = false) {
+        return ItemPtr(new Item(header, compress));
     }
 
     void StreamRawPayload(OutputStream* out) {
@@ -1172,7 +1218,7 @@ private:
             });
         size_t start = 0;
         while (start < cmdline.size()) {
-            size_t word_end = cmdline.find_first_of(" \t\r\n", start);
+            size_t word_end = cmdline.find_first_of(kCmdlineWS, start);
             if (word_end == std::string::npos) {
                 if (cmdline[start] != '\0') {
                     printf("        : %s\n", cmdline.c_str() + start);
@@ -1193,7 +1239,6 @@ private:
         assert(payload_.size() == 1);
         return static_cast<const uint8_t*>(payload_.front().iov_base);
     }
-
 
     class BootFSDirectoryIterator {
     public:
@@ -1344,9 +1389,44 @@ private:
             }
         }
     }
+
+    class BootFSInputFileGenerator : public InputFileGenerator {
+    public:
+        explicit BootFSInputFileGenerator(ItemPtr item) :
+            item_(std::move(item)) {
+            if (item_->AlreadyCompressed()) {
+                item_ = CreateFromCompressed(*item_);
+            }
+            int status = BootFSDirectoryIterator::Create(item_.get(), &dir_);
+            if (status != 0) {
+                exit(status);
+            }
+        }
+
+        ~BootFSInputFileGenerator() override = default;
+
+        // Copying from an existing BOOTFS ignores the --prefix setting.
+        bool Next(FileOpener*, const std::string&,
+                  value_type* value) override {
+            if (!dir_) {
+                return false;
+            }
+            if (!item_->CheckBootFSDirent(*dir_, false)) {
+                exit(1);
+            }
+            value->target = dir_->name;
+            value->file = FileContents(*dir_, item_->payload_data());
+            ++dir_;
+            return true;
+        }
+
+    private:
+        ItemPtr item_;
+        BootFSDirectoryIterator dir_;
+    };
 };
 
-using ItemList = std::vector<std::unique_ptr<Item>>;
+using ItemList = std::vector<ItemPtr>;
 
 bool ImportFile(const FileContents& file, const char* filename,
                 ItemList* items) {
@@ -1393,7 +1473,7 @@ const char* IncompleteImage(const ItemList& items, const uint32_t image_arch) {
 
     auto count =
         std::count_if(items.begin(), items.end(),
-                      [](const std::unique_ptr<Item>& item) {
+                      [](const ItemPtr& item) {
                           return item->type() == ZBI_TYPE_STORAGE_BOOTFS;
                       });
     if (count == 0) {
@@ -1641,8 +1721,13 @@ only one --extract (-x), --extract-item (-X), --extract-raw (-R)\n");
 
         // A directory populates the BOOTFS according to --prefix.
         if (target == ZBI_TYPE_STORAGE_BOOTFS && S_ISDIR(st.st_mode)) {
+            std::string prefix(optarg);
+            if (prefix.back() != '/') {
+                prefix.push_back('/');
+            }
             bootfs_input.emplace_back(
-                new DirectoryInputFileGenerator(std::move(fd), optarg));
+                new DirectoryInputFileGenerator(std::move(fd),
+                                                std::move(prefix)));
             continue;
         }
 
@@ -1676,6 +1761,14 @@ only one --extract (-x), --extract-item (-X), --extract-raw (-R)\n");
         }
     }
 
+    auto extract_index = std::max(extract_item, extract_raw);
+    if (extract_index != -1 &&
+        static_cast<size_t>(extract_index) >= items.size()) {
+        fprintf(stderr, "cannot extract item %d of %zu\n",
+                std::max(extract_item, extract_raw), items.size());
+        exit(1);
+    }
+
     if (optind < argc && !extract_files) {
         fprintf(stderr,
                 "arguments after -- only apply to --extract (-x)\n");
@@ -1695,11 +1788,66 @@ no output file or depfile with --list (-t) or --extract (-x)\n");
         }
     }
 
+    // Don't merge incoming items when only listing or extracting.
+    const bool merge = !list_contents && !extract_files && extract_index == -1;
+
+    if (!bootfs_input.empty() || merge) {
+        // If there are multiple BOOTFS input items, or any BOOTFS items when
+        // we're also creating a fresh BOOTFS, merge them all into the new one.
+        auto is_bootfs = [](const ItemPtr& item) {
+            return item->type() == ZBI_TYPE_STORAGE_BOOTFS;
+        };
+        auto bootfs_count =
+            (bootfs_input.empty() ? 0 : 1) +
+            std::count_if(items.begin(), items.end(), is_bootfs);
+        if (bootfs_count > 1) {
+            for (auto& item : items) {
+                if (is_bootfs(item)) {
+                    // Null out the list entry.
+                    ItemPtr old;
+                    item.swap(old);
+                    // The generator consumes the old item.
+                    bootfs_input.push_back(Item::ReadBootFS(std::move(old)));
+                }
+            }
+        }
+    }
+
+    if (merge) {
+        // Merge multiple CMDLINE input items with spaces in between.
+        std::string cmdline;
+        for (auto& item : items) {
+            if (item && item->type() == ZBI_TYPE_CMDLINE) {
+                // Null out the list entry.
+                ItemPtr old;
+                item.swap(old);
+                cmdline.append({' '});
+                old->AppendPayload(&cmdline);
+                // Trim leading whitespace.
+                cmdline.erase(0, cmdline.find_first_not_of(kCmdlineWS));
+                // Trim trailing NULs and whitespace.
+                while (!cmdline.empty() && cmdline.back() == '\0') {
+                    cmdline.pop_back();
+                }
+                cmdline.erase(cmdline.find_last_not_of(kCmdlineWS) + 1);
+            }
+        }
+        if (!cmdline.empty()) {
+            size_t size = cmdline.size() + 1;
+            auto buffer = std::make_unique<uint8_t[]>(size);
+            memcpy(buffer.get(), cmdline.c_str(), size);
+            items.push_back(Item::CreateFromBuffer(ZBI_TYPE_CMDLINE,
+                                                   std::move(buffer), size));
+        }
+    }
+
+    // Compact out the null entries.
+    items.erase(std::remove(items.begin(), items.end(), nullptr), items.end());
+
     if (!bootfs_input.empty()) {
         // Pack up the BOOTFS.
-        items.emplace_back(
-            Item::CreateBootFS(&opener, std::move(bootfs_input),
-                               std::move(prefix), target, compressed));
+        items.push_back(
+            Item::CreateBootFS(&opener, bootfs_input, prefix, compressed));
     }
 
     if (items.empty()) {
@@ -1713,8 +1861,7 @@ no output file or depfile with --list (-t) or --extract (-x)\n");
         // other storage in the middle, and CMDLINE last.
         std::stable_sort(
             items.begin(), items.end(),
-            [](const std::unique_ptr<Item>& a,
-               const std::unique_ptr<Item>& b) {
+            [](const ItemPtr& a, const ItemPtr& b) {
                 auto item_rank = [](uint32_t type) {
                     return (ZBI_IS_KERNEL_BOOTITEM(type) ? 0 :
                             type == ZBI_TYPE_STORAGE_BOOTFS ? 1 :
@@ -1784,14 +1931,6 @@ no output file or depfile with --list (-t) or --extract (-x)\n");
         }
     } else {
         // Now stream the output.
-
-        auto extract_index = std::max(extract_item, extract_raw);
-        if (extract_index != -1 &&
-            static_cast<size_t>(extract_index) >= items.size()) {
-            fprintf(stderr, "cannot extract item %d of %zu\n",
-                    std::max(extract_item, extract_raw), items.size());
-            exit(1);
-        }
 
         fbl::unique_fd outfd;
         if (outfile) {
