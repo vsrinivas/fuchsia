@@ -13,7 +13,7 @@ rustc_binary("bin") {
     "//garnet/public/lib/fidl/rust/fidl:fidl-rustc",
     "//garnet/public/lib/power_manager/fidl:fidl-rustc",
     "//garnet/public/rust/crates/fdio",
-    "//garnet/public/rust/crates/fuchsia-app:fuchsia-app-rustc",
+    "//garnet/public/rust/crates/fuchsia-app",
     "//garnet/public/rust/crates/fuchsia-async:fuchsia-async-rustc",
     "//garnet/public/rust/crates/fuchsia-syslog",
     "//garnet/public/rust/crates/fuchsia-vfs/fuchsia-vfs-watcher",

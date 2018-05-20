@@ -12,7 +12,7 @@ rustc_binary("bin") {
     "//garnet/public/lib/fidl/rust/fidl:fidl-rustc",
     "//garnet/public/lib/mem/fidl:fidl-rustc",
     "//garnet/public/lib/network/fidl:fidl-rustc",
-    "//garnet/public/rust/crates/fuchsia-app:fuchsia-app-rustc",
+    "//garnet/public/rust/crates/fuchsia-app",
     "//garnet/public/rust/crates/fuchsia-async:fuchsia-async-rustc",
     "//garnet/public/rust/crates/fuchsia-zircon:fuchsia-zircon-rustc",
     "//third_party/rust-crates/rustc_deps:failure",
