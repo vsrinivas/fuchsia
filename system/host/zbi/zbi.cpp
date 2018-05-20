@@ -13,6 +13,7 @@
 #include <deque>
 #include <dirent.h>
 #include <fcntl.h>
+#include <fnmatch.h>
 #include <forward_list>
 #include <functional>
 #include <getopt.h>
@@ -757,6 +758,28 @@ void DescribeHeader(uint32_t pos, uint32_t length, const char* type) {
     printf("%08x: %08x %s\n", pos, length, type);
 }
 
+void MakeDirs(const std::string& name) {
+    auto lastslash = name.rfind('/');
+    if (lastslash == std::string::npos) {
+        return;
+    }
+    auto dir = name.substr(0, lastslash);
+    if (mkdir(dir.c_str(), 0777) == 0) {
+        return;
+    }
+    if (errno == ENOENT) {
+        MakeDirs(dir);
+        if (mkdir(dir.c_str(), 0777) == 0) {
+            return;
+        }
+    }
+    if (errno != EEXIST) {
+        fprintf(stderr, "mkdir: %s: %s\n",
+                dir.c_str(), strerror(errno));
+        exit(1);
+    }
+}
+
 class Item {
 public:
     // Only the static methods below can create an Item.
@@ -850,6 +873,17 @@ public:
             }
         }
         return 0;
+    }
+
+    template<typename... T>
+    void ExtractFiles(T&&... args) const {
+        if (type() == ZBI_TYPE_STORAGE_BOOTFS) {
+            if (AlreadyCompressed()) {
+                CreateFromCompressed(*this)->ExtractBootFS(args...);
+            } else {
+                ExtractBootFS(args...);
+            }
+        }
     }
 
     // Streaming exhausts the item's payload.  The OutputStream will now
@@ -1155,6 +1189,12 @@ private:
         return 0;
     }
 
+    const uint8_t* payload_data() const {
+        assert(payload_.size() == 1);
+        return static_cast<const uint8_t*>(payload_.front().iov_base);
+    }
+
+
     class BootFSDirectoryIterator {
     public:
         operator bool() const {
@@ -1206,10 +1246,7 @@ private:
                 fprintf(stderr, "payload too short for BOOTFS header\n");
                 return 1;
             }
-            assert(item->payload_.size() == 1);
-            auto contents = static_cast<const uint8_t*>(
-                item->payload_.front().iov_base);
-            memcpy(&superblock, contents, sizeof(superblock));
+            memcpy(&superblock, item->payload_data(), sizeof(superblock));
             if (superblock.magic != ZBI_BOOTFS_MAGIC) {
                 fprintf(stderr, "BOOTFS header magic %#x should be %#x\n",
                         superblock.magic, ZBI_BOOTFS_MAGIC);
@@ -1221,7 +1258,7 @@ private:
                         superblock.dirsize, length - sizeof(superblock));
                 return 1;
             }
-            it->next_ = contents + sizeof(superblock);
+            it->next_ = item->payload_data() + sizeof(superblock);
             it->left_ = superblock.dirsize;
             return 0;
         }
@@ -1231,27 +1268,81 @@ private:
         uint32_t left_ = 0;
     };
 
+    bool CheckBootFSDirent(const zbi_bootfs_dirent_t& entry,
+                           bool always_print) const {
+        const char* align_check =
+            entry.data_off % ZBI_BOOTFS_PAGE_SIZE == 0 ? "" :
+            "[ERROR: misaligned offset] ";
+        const char* size_check =
+            (entry.data_off < header_.length &&
+             header_.length - entry.data_off >= entry.data_len) ? "" :
+            "[ERROR: offset+size too large] ";
+        bool ok = align_check[0] == '\0' && size_check[0] == '\0';
+        if (always_print || !ok) {
+            fprintf(always_print ? stdout : stderr,
+                    "        : %08x %08x %s%s%.*s\n",
+                    entry.data_off, entry.data_len,
+                    align_check, size_check,
+                    static_cast<int>(entry.name_len), entry.name);
+        }
+        return ok;
+    }
+
     int ShowBootFS() const {
         assert(!AlreadyCompressed());
         BootFSDirectoryIterator dir;
         int status = BootFSDirectoryIterator::Create(this, &dir);
         for (const auto& entry : dir) {
-            const char* align_check =
-                entry.data_off % ZBI_BOOTFS_PAGE_SIZE == 0 ? "" :
-                "[ERROR: misaligned offset] ";
-            const char* size_check =
-                (entry.data_off < header_.length &&
-                 header_.length - entry.data_off >= entry.data_len) ? "" :
-                "[ERROR: offset+size too large] ";
-            if (align_check[0] != '\0' || size_check[0] != '\0') {
+            if (!CheckBootFSDirent(entry, true)) {
                 status = 1;
             }
-            printf("        : %08x %08x %s%s%.*s\n",
-                   entry.data_off, entry.data_len,
-                   align_check, size_check,
-                   static_cast<int>(entry.name_len), entry.name);
         }
         return status;
+    }
+
+    template<typename Iterator>
+    void ExtractBootFS(Iterator start, Iterator stop,
+                       const std::string& prefix,
+                       unsigned int *files_count,
+                       unsigned int *extract_count) const {
+        auto matches = [start, stop](const char* name) {
+            if (start == stop) {
+                return true;
+            } else {
+                auto matches_pattern = [name](const char* pattern) {
+                    return fnmatch(pattern, name, 0) == 0;
+                };
+                return std::any_of(start, stop, matches_pattern);
+            }
+        };
+
+        assert(!AlreadyCompressed());
+        BootFSDirectoryIterator dir;
+        int status = BootFSDirectoryIterator::Create(this, &dir);
+        if (status != 0) {
+            exit(status);
+        }
+        for (const auto& entry : dir) {
+            ++*files_count;
+            if (!CheckBootFSDirent(entry, false)) {
+                exit(1);
+            } else if (matches(entry.name)) {
+                ++*extract_count;
+                auto name = prefix + entry.name;
+                MakeDirs(name);
+                fbl::unique_fd fd(open(name.c_str(),
+                                       O_WRONLY | O_CREAT | O_TRUNC, 0666));
+                if (!fd) {
+                    fprintf(stderr, "cannot create %s: %s\n",
+                            name.c_str(), strerror(errno));
+                    exit(1);
+                } else {
+                    OutputStream out(std::move(fd));
+                    out.Write(Iovec(payload_data() + entry.data_off,
+                                    entry.data_len));
+                }
+            }
+        }
     }
 };
 
@@ -1314,11 +1405,12 @@ const char* IncompleteImage(const ItemList& items, const uint32_t image_arch) {
     return nullptr;
 }
 
-constexpr const char kOptString[] = "-B:cd:X:R:g:hto:p:T:uv";
+constexpr const char kOptString[] = "-B:cd:xX:R:g:hto:p:T:uv";
 constexpr const option kLongOpts[] = {
     {"complete", required_argument, nullptr, 'B'},
     {"compressed", no_argument, nullptr, 'c'},
     {"depfile", required_argument, nullptr, 'd'},
+    {"extract", no_argument, nullptr, 'x'},
     {"extract-item", required_argument, nullptr, 'X'},
     {"extract-raw", required_argument, nullptr, 'R'},
     {"groups", required_argument, nullptr, 'g'},
@@ -1336,6 +1428,7 @@ void usage(const char* progname) {
     fprintf(stderr, "\
 Usage: %s {--output=FILE | -o FILE} [--depfile=FILE | -d FILE] ...\n\
        %s {--list | -t} ...\n\
+       %s {--extract | -x} ... [-- PATTERN...]\n\
        %s {--extract-item=N | -X N} ...\n\
        %s {--extract-raw=N | -R N} ...\n\
 \n\
@@ -1372,8 +1465,14 @@ the most recently preceding `--compressed` or `--uncompressed` switch.\n\
 With `--extract-item` or `-X`, skip the first N items and then write out the\n\
 next item alone into a fresh ZBI file.\n\
 With `--extract-raw` or `-R`, write decompressed payload with no header.\n\
+\n\
+With `--extract` or `-x`, extract files from BOOTFS images into local files\n\
+named by prepending PREFIX/ to each target file name.  By default\n\
+all files are extracted.  If one or more PATTERN arguments appear after\n\
+-- then only files matching a PATTERN are extracted; PATTERN is a shell\n\
+filename pattern where * matches regardless of / characters.\n\
 ",
-            progname, progname, progname, progname);
+            progname, progname, progname, progname, progname);
 }
 
 }  // anonymous namespace
@@ -1387,11 +1486,20 @@ int main(int argc, char** argv) {
     uint32_t target = ZBI_TYPE_STORAGE_BOOTFS;
     bool compressed = true;
     bool list_contents = false;
-    int extract_item = -1, extract_raw = -1;
     bool verbose = false;
     ItemList items;
     InputFileGeneratorList bootfs_input;
     std::string prefix;
+
+    bool extract_files = false;
+    int extract_item = -1, extract_raw = -1;
+    auto check_extract_switch = [&]() {
+        if (extract_files || extract_item != -1 || extract_raw != -1) {
+            fprintf(stderr, "\
+only one --extract (-x), --extract-item (-X), --extract-raw (-R)\n");
+            exit(1);
+        }
+    };
 
     int opt;
     while ((opt = getopt_long(argc, argv,
@@ -1498,12 +1606,8 @@ int main(int argc, char** argv) {
             compressed = false;
             continue;
 
-        case 'X':
-            if (extract_item != -1 || extract_raw != -1) {
-                fprintf(stderr,
-                        "only one --extract-item, --extract-raw, -X, or -R\n");
-                exit(1);
-            }
+        case 'X':;
+            check_extract_switch();
             extract_item = atoi(optarg);
             if (extract_item < 0) {
                 fprintf(stderr, "item number must be nonnegative\n");
@@ -1512,16 +1616,17 @@ int main(int argc, char** argv) {
             continue;
 
         case 'R':
-            if (extract_item != -1 || extract_raw != -1) {
-                fprintf(stderr,
-                        "only one --extract-item, --extract-raw, -X, or -R\n");
-                exit(1);
-            }
+            check_extract_switch();
             extract_raw = atoi(optarg);
             if (extract_raw < 0) {
                 fprintf(stderr, "item number must be nonnegative\n");
                 exit(1);
             }
+            continue;
+
+        case 'x':
+            check_extract_switch();
+            extract_files = true;
             continue;
 
         case 'h':
@@ -1571,9 +1676,16 @@ int main(int argc, char** argv) {
         }
     }
 
-    if (list_contents) {
+    if (optind < argc && !extract_files) {
+        fprintf(stderr,
+                "arguments after -- only apply to --extract (-x)\n");
+        exit(1);
+    }
+
+    if (list_contents || extract_files) {
         if (outfile || depfile) {
-            fprintf(stderr, "no output file or depfile with --list or -t\n");
+            fprintf(stderr, "\
+no output file or depfile with --list (-t) or --extract (-x)\n");
             exit(1);
         }
     } else {
@@ -1621,6 +1733,12 @@ int main(int argc, char** argv) {
         }
     }
 
+    unsigned int file_count = 0, extract_count = 0;
+    auto do_extract = [&](const Item& item) {
+        item.ExtractFiles(&argv[optind], &argv[argc], prefix,
+                          &file_count, &extract_count);
+    };
+
     if (list_contents || verbose) {
         const char* incomplete = IncompleteImage(items, complete_arch);
         if (incomplete) {
@@ -1637,61 +1755,88 @@ int main(int argc, char** argv) {
             if (verbose) {
                 status |= item->Show();
             }
+            // If being verbose, extract files after listing each item.
+            if (extract_files) {
+                do_extract(*item);
+            }
         }
         if (status) {
             exit(status);
         }
+    } else if (extract_files) {
+        // If not being verbose, just extract BOOTFS files.
+        for (const auto& item : items) {
+            do_extract(*item);
+        }
     }
 
-    auto extract_index = std::max(extract_item, extract_raw);
-    if (extract_index != -1 &&
-        static_cast<size_t>(extract_index) >= items.size()) {
-        fprintf(stderr, "cannot extract item %d of %zu\n",
-                std::max(extract_item, extract_raw), items.size());
-        exit(1);
-    }
+    if (extract_files) {
+        // All done except for the gloating.
+        if (file_count == 0) {
+            fprintf(stderr, "no BOOTFS files found\n");
+            exit(1);
+        } else if (extract_count == 0) {
+            fprintf(stderr, "no BOOTFS files matched\n");
+            exit(1);
+        } else if (verbose) {
+            printf("extracted %u of %u BOOTFS files\n",
+                   extract_count, file_count);
+        }
+    } else {
+        // Now stream the output.
 
-    fbl::unique_fd outfd;
-    if (outfile) {
-        outfd.reset(open(outfile, O_WRONLY | O_CREAT | O_TRUNC, 0666));
-        if (!outfd) {
-            perror(outfile);
+        auto extract_index = std::max(extract_item, extract_raw);
+        if (extract_index != -1 &&
+            static_cast<size_t>(extract_index) >= items.size()) {
+            fprintf(stderr, "cannot extract item %d of %zu\n",
+                    std::max(extract_item, extract_raw), items.size());
             exit(1);
         }
-    } else if (extract_index != -1) {
-        outfd.reset(STDOUT_FILENO);
-    }
 
-    if (outfd) {
-        OutputStream out(std::move(outfd));
-        if (extract_raw == -1) {
-            uint32_t header_start = out.PlaceHeader();
-            uint32_t payload_start = out.WritePosition();
-            assert(Aligned(payload_start));
-            if (extract_item == -1) {
-                for (const auto& item : items) {
-                    // The OutputStream stores pointers into Item buffers in
-                    // its write queue until it goes out of scope below.
-                    // The ItemList keeps all the items alive past then.
-                    item->Stream(&out);
-                }
-            } else {
-                items[extract_item]->Stream(&out);
+        fbl::unique_fd outfd;
+        if (outfile) {
+            outfd.reset(open(outfile, O_WRONLY | O_CREAT | O_TRUNC, 0666));
+            if (!outfd) {
+                perror(outfile);
+                exit(1);
             }
-            const zbi_header_t header = {
-                ZBI_TYPE_CONTAINER,                               // type
-                out.WritePosition() - payload_start,              // length
-                ZBI_CONTAINER_MAGIC,                              // extra
-                ZBI_FLAG_VERSION,                                 // flags
-                0,                                                // reserved0
-                0,                                                // reserved1
-                ZBI_ITEM_MAGIC,                                   // magic
-                ZBI_ITEM_NO_CRC32,                                // crc32
-            };
-            assert(Aligned(header.length));
-            out.PatchHeader(header, header_start);
-        } else {
-            items[extract_raw]->StreamPayload(&out);
+        } else if (extract_index != -1) {
+            // --extract-item or --extract-raw with no --output goes to stdout.
+            outfd.reset(STDOUT_FILENO);
+        }
+
+        if (outfd) {
+            OutputStream out(std::move(outfd));
+            if (extract_raw == -1) {
+                uint32_t header_start = out.PlaceHeader();
+                uint32_t payload_start = out.WritePosition();
+                assert(Aligned(payload_start));
+                if (extract_item == -1) {
+                    for (const auto& item : items) {
+                        // The OutputStream stores pointers into Item
+                        // buffers in its write queue until it goes out of
+                        // scope below.  The ItemList keeps all the items
+                        // alive past then.
+                        item->Stream(&out);
+                    }
+                } else {
+                    items[extract_item]->Stream(&out);
+                }
+                const zbi_header_t header = {
+                    ZBI_TYPE_CONTAINER,                  // type
+                    out.WritePosition() - payload_start, // length
+                    ZBI_CONTAINER_MAGIC,                 // extra
+                    ZBI_FLAG_VERSION,                    // flags
+                    0,                                   // reserved0
+                    0,                                   // reserved1
+                    ZBI_ITEM_MAGIC,                      // magic
+                    ZBI_ITEM_NO_CRC32,                   // crc32
+                };
+                assert(Aligned(header.length));
+                out.PatchHeader(header, header_start);
+            } else {
+                items[extract_raw]->StreamPayload(&out);
+            }
         }
     }
 
