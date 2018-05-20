@@ -4,3 +4,4 @@
 * [Device Ops](device-ops.md)
 * [Driver Development](driver-development.md)
 * [Platform Bus](platform-bus.md)
+* [Device Firmware](firmware.md)
