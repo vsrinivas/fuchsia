@@ -126,7 +126,7 @@ struct ath10k_sdio_bus_request {
     /* Completion that (if set) will be invoked for non HTC requests
      * (htc_msg == false) when the request has been processed.
      */
-    struct completion* comp;
+    completion_t* comp;
 };
 
 struct ath10k_sdio_rx_data {
