@@ -39,6 +39,7 @@
 #include <minfs/writeback.h>
 
 #include "allocator.h"
+#include "inode-manager.h"
 
 #ifdef __Fuchsia__
 #include "metrics.h"
@@ -125,7 +126,14 @@ public:
 
     // Writes back an inode into the inode table on persistent storage.
     // Does not modify inode bitmap.
-    void InodeSync(WriteTxn* txn, ino_t ino, const minfs_inode_t* inode);
+    void InodeUpdate(WriteTxn* txn, ino_t ino, const minfs_inode_t* inode) {
+        inodes_.Update(txn, ino, inode);
+    }
+
+    // Reads an inode from the inode table into memory.
+    void InodeLoad(ino_t ino, minfs_inode_t* out) const {
+        inodes_.Load(ino, out);
+    }
 
     void ValidateBno(blk_t bno) const {
         ZX_DEBUG_ASSERT(bno != 0);
@@ -160,7 +168,6 @@ public:
     // |data| is an out parameter that must be a block in size, provided by the caller
     // These functions are single-block and synchronous. On Fuchsia, using the batched read
     // functions is preferred.
-    zx_status_t ReadIno(blk_t bno, void* data);
     zx_status_t ReadDat(blk_t bno, void* data);
 
     void SetMetrics(bool enable) { collecting_metrics_ = enable; }
@@ -226,11 +233,7 @@ private:
 
     Allocator block_allocator_;
     Allocator inode_allocator_;
-
-    // Inode Map
-    uint32_t inoblks_{};
-    fbl::unique_ptr<MappedVmo> inode_table_{};
-    vmoid_t inode_table_vmoid_{};
+    InodeManager inodes_;
 
     // Global information about the filesystem.
     minfs_info_t info_{};
@@ -295,11 +298,10 @@ public:
     // Does not allocate an inode number for the Vnode.
     static zx_status_t Allocate(Minfs* fs, uint32_t type, fbl::RefPtr<VnodeMinfs>* out);
 
-    // Allocates a Vnode, backed by the information stored in |inode|.
+    // Allocates a Vnode, loading |ino| from storage.
     //
     // Doesn't update create / modify times of the node.
-    static zx_status_t Recreate(Minfs* fs, ino_t ino, const minfs_inode_t* inode,
-                                fbl::RefPtr<VnodeMinfs>* out);
+    static zx_status_t Recreate(Minfs* fs, ino_t ino, fbl::RefPtr<VnodeMinfs>* out);
 
     bool IsDirectory() const { return inode_.magic == kMinfsMagicDir; }
     bool IsUnlinked() const { return inode_.link_count == 0; }

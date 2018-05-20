@@ -21,6 +21,9 @@ blk_t blocksForSize(size_t size) {
 
 }  // namespace
 
+Allocator::Allocator() = default;
+Allocator::~Allocator() = default;
+
 zx_status_t Allocator::Initialize(const Bcache* bc, ReadTxn* txn, GrowHandler grow_cb,
                                   UsageHandler usage_cb, blk_t start_block,
                                   size_t pool_used, size_t pool_size) {

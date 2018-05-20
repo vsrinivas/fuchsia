@@ -62,7 +62,7 @@ void VnodeMinfs::InodeSync(WritebackWork* wb, uint32_t flags) {
         }
     }
 
-    fs_->InodeSync(wb, ino_, &inode_);
+    fs_->InodeUpdate(wb, ino_, &inode_);
 }
 
 // Delete all blocks (relative to a file) from "start" (inclusive) to the end of
@@ -1523,14 +1523,13 @@ zx_status_t VnodeMinfs::Allocate(Minfs* fs, uint32_t type, fbl::RefPtr<VnodeMinf
     return ZX_OK;
 }
 
-zx_status_t VnodeMinfs::Recreate(Minfs* fs, ino_t ino, const minfs_inode_t* inode,
-                                 fbl::RefPtr<VnodeMinfs>* out) {
+zx_status_t VnodeMinfs::Recreate(Minfs* fs, ino_t ino, fbl::RefPtr<VnodeMinfs>* out) {
     fbl::AllocChecker ac;
     *out = fbl::AdoptRef(new (&ac) VnodeMinfs(fs));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-    memcpy(&(*out)->inode_, inode, kMinfsInodeSize);
+    fs->InodeLoad(ino, &(*out)->inode_);
     (*out)->ino_ = ino;
     return ZX_OK;
 }

@@ -232,27 +232,6 @@ zx_status_t minfs_check_info(const minfs_info_t* info, Bcache* bc) {
     return 0;
 }
 
-void Minfs::InodeSync(WriteTxn* txn, ino_t ino, const minfs_inode_t* inode) {
-    // Obtain the offset of the inode within its containing block
-    const uint32_t off_of_ino = (ino % kMinfsInodesPerBlock) * kMinfsInodeSize;
-    const blk_t inoblock_rel = ino / kMinfsInodesPerBlock;
-    const blk_t inoblock_abs = inoblock_rel + Info().ino_block;
-    assert(inoblock_abs < kFVMBlockDataStart);
-#ifdef __Fuchsia__
-    void* inodata = (void*)((uintptr_t)(inode_table_->GetData()) +
-                            (uintptr_t)(inoblock_rel * kMinfsBlockSize));
-    memcpy((void*)((uintptr_t)inodata + off_of_ino), inode, kMinfsInodeSize);
-    txn->Enqueue(inode_table_->GetVmo(), inoblock_rel, inoblock_abs, 1);
-#else
-    // Since host-side tools don't have "mapped vmos", just read / update /
-    // write the single absolute indoe block.
-    uint8_t inodata[kMinfsBlockSize];
-    bc_->Readblk(inoblock_abs, inodata);
-    memcpy((void*)((uintptr_t)inodata + off_of_ino), inode, kMinfsInodeSize);
-    bc_->Writeblk(inoblock_abs, inodata);
-#endif
-}
-
 zx_status_t Minfs::CreateWork(fbl::unique_ptr<WritebackWork>* out) {
     fbl::AllocChecker ac;
     out->reset(new (&ac) WritebackWork(bc_.get()));
@@ -443,10 +422,7 @@ zx_status_t Minfs::AddInodes(WriteTxn* txn, size_t* out_inodes) {
     }
 
     // Update the inode table
-    uint32_t inoblks = (inodes + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
-    if (inode_table_->Grow(inoblks * kMinfsBlockSize) != ZX_OK) {
-        return ZX_ERR_NO_SPACE;
-    }
+    inodes_.Grow(inodes);
 
     info_.ino_slices += static_cast<uint32_t>(request.length);
     info_.inode_count = inodes;
@@ -524,7 +500,7 @@ zx_status_t Minfs::InoNew(WriteTxn* txn, const minfs_inode_t* inode, ino_t* out_
     }
     *out_ino = static_cast<ino_t>(allocated_ino);
     // Write the inode back to storage.
-    InodeSync(txn, *out_ino, inode);
+    InodeUpdate(txn, *out_ino, inode);
     return ZX_OK;
 }
 
@@ -616,19 +592,8 @@ zx_status_t Minfs::VnodeGet(fbl::RefPtr<VnodeMinfs>* out, ino_t ino) {
         return ZX_OK;
     }
 
-    // obtain the block of the inode table we need
-    uint32_t off_of_ino = (ino % kMinfsInodesPerBlock) * kMinfsInodeSize;
-#ifdef __Fuchsia__
-    void* inodata = (void*)((uintptr_t)(inode_table_->GetData()) +
-                            (uintptr_t)((ino / kMinfsInodesPerBlock) * kMinfsBlockSize));
-#else
-    uint8_t inodata[kMinfsBlockSize];
-    bc_->Readblk(Info().ino_block + (ino / kMinfsInodesPerBlock), inodata);
-#endif
-    const minfs_inode_t* inode = reinterpret_cast<const minfs_inode_t*>((uintptr_t)inodata +
-                                                                        off_of_ino);
     zx_status_t status;
-    if ((status = VnodeMinfs::Recreate(this, ino, inode, &vn)) != ZX_OK) {
+    if ((status = VnodeMinfs::Recreate(this, ino, &vn)) != ZX_OK) {
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -707,10 +672,6 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info,
 #endif
     auto fs = fbl::unique_ptr<Minfs>(new Minfs(fbl::move(bc), info));
     Minfs* raw_fs = fs.get();
-    // determine how many blocks of inodes, allocation bitmaps,
-    // and inode bitmaps there are
-    uint32_t inodes = info->inode_count;
-    fs->inoblks_ = (inodes + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
 
     ReadTxn txn(fs->bc_.get());
 
@@ -749,20 +710,15 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info,
                                                   inodes_used, total_inodes)) != ZX_OK) {
         return status;
     }
+
+    uint32_t inodes = info->inode_count;
+    if ((status = fs->inodes_.Initialize(fs->bc_.get(), &txn,
+                                         fs->Info().ino_block, inodes)) != ZX_OK) {
+        FS_TRACE_ERROR("Minfs::Create failed to initialize inodes: %d\n", status);
+        return status;
+    }
+
 #ifdef __Fuchsia__
-    // Create the inode table.
-    uint32_t inoblks = (inodes + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
-    if ((status = MappedVmo::Create(inoblks * kMinfsBlockSize, "minfs-inode-table",
-                                    &fs->inode_table_)) != ZX_OK) {
-        return status;
-    }
-
-    if ((status = fs->bc_->AttachVmo(fs->inode_table_->GetVmo(),
-                                     &fs->inode_table_vmoid_)) != ZX_OK) {
-        FS_TRACE_ERROR("Minfs::Create failed to attach inode table VMO: %d\n", status);
-        return status;
-    }
-
     // Create the info vmo
     if ((status = MappedVmo::Create(kMinfsBlockSize, "minfs-superblock",
                                     &fs->info_vmo_)) != ZX_OK) {
@@ -774,7 +730,6 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info,
         return status;
     }
 
-    txn.Enqueue(fs->inode_table_vmoid_, 0, fs->Info().ino_block, inoblks);
     txn.Enqueue(fs->info_vmoid_, 0, 0, 1);
     if ((status = txn.Flush()) != ZX_OK) {
         FS_TRACE_ERROR("Minfs::Create failed to read initial blocks: %d\n", status);
@@ -801,7 +756,6 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info,
         FS_TRACE_ERROR("minfs: failed to create fs_id:%d\n", status);
         return status;
     }
-
 #endif
 
     *out = fbl::move(fs);
@@ -1075,14 +1029,6 @@ zx_status_t Mkfs(fbl::unique_ptr<Bcache> bc) {
     return ZX_OK;
 }
 
-zx_status_t Minfs::ReadIno(blk_t bno, void* data) {
-#ifdef __Fuchsia__
-    return bc_->Readblk(Info().ino_block + bno, data);
-#else
-    return ReadBlk(bno, ino_start_block_, ino_block_count_, inoblks_, data);
-#endif
-}
-
 zx_status_t Minfs::ReadDat(blk_t bno, void* data) {
 #ifdef __Fuchsia__
     return bc_->Readblk(Info().dat_block + bno, data);
@@ -1139,7 +1085,6 @@ zx_status_t minfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
     return minfs_check(fbl::move(bc));
 }
 #endif
-
 
 void Minfs::UpdateInitMetrics(uint32_t dnum_count, uint32_t inum_count,
                               uint32_t dinum_count, uint64_t user_data_size,

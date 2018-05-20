@@ -8,6 +8,7 @@
 #pragma once
 
 #include <fbl/function.h>
+#include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
 #include <fs/block-txn.h>
 #include <fs/mapped-vmo.h>
@@ -32,6 +33,10 @@ public:
     // Callback used to update callers about global allocation
     // stats.
     using UsageHandler = fbl::Function<void(WriteTxn* txn, size_t used)>;
+
+    Allocator();
+    ~Allocator();
+    DISALLOW_COPY_ASSIGN_AND_MOVE(Allocator);
 
     zx_status_t Initialize(const Bcache* bc, ReadTxn* txn, GrowHandler grow_cb,
                            UsageHandler usage_cb, blk_t start_block,

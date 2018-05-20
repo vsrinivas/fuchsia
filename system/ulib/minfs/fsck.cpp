@@ -72,22 +72,8 @@ zx_status_t MinfsChecker::GetInode(minfs_inode_t* inode, ino_t ino) {
               ino, fs_->info_.inode_count);
         return ZX_ERR_OUT_OF_RANGE;
     }
-    blk_t bno_of_ino = ino / kMinfsInodesPerBlock;
-    uint32_t off_of_ino = (ino % kMinfsInodesPerBlock) * kMinfsInodeSize;
 
-#ifdef __Fuchsia__
-    uintptr_t iaddr = reinterpret_cast<uintptr_t>(fs_->inode_table_->GetData()) +
-                      bno_of_ino * kMinfsBlockSize + off_of_ino;
-#else
-    char data[kMinfsBlockSize];
-    zx_status_t status;
-
-    if ((status = fs_->ReadIno(bno_of_ino, data)) != ZX_OK) {
-        return status;
-    }
-    uintptr_t iaddr = reinterpret_cast<uintptr_t>(data + off_of_ino);
-#endif
-    memcpy(inode, reinterpret_cast<void*>(iaddr), kMinfsInodeSize);
+    fs_->inodes_.Load(ino, inode);
     if ((inode->magic != kMinfsMagicFile) && (inode->magic != kMinfsMagicDir)) {
         FS_TRACE_ERROR("check: ino %u has bad magic %#x\n", ino, inode->magic);
         return ZX_ERR_IO_DATA_INTEGRITY;
@@ -190,7 +176,7 @@ zx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, ino_t ino,
 
     zx_status_t status;
     fbl::RefPtr<VnodeMinfs> vn;
-    if ((status = VnodeMinfs::Recreate(fs_.get(), ino, inode, &vn)) != ZX_OK) {
+    if ((status = VnodeMinfs::Recreate(fs_.get(), ino, &vn)) != ZX_OK) {
         return status;
     }
 
