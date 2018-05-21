@@ -139,7 +139,8 @@ int kvs_add(kvstore_t* kvs, const char* key, const char* value) {
 int kvs_getn(kvstore_t* kvs, const void* key, size_t klen,
              const void** val, size_t* vlen) {
     uint8_t* rec = kvs->data + sizeof(kvshdr_t);
-    for (size_t count = 0; count < kvs->kvcount; count++) {
+    size_t count;
+    for (count = 0; count < kvs->kvcount; count++) {
         size_t ksz = rec[0];
         size_t vsz = rec[1];
         if ((klen == ksz) && !memcmp(key, rec + 2, klen)) {
@@ -166,7 +167,8 @@ const char* kvs_get(kvstore_t* kvs, const char* key, const char* fallback) {
 int kvs_foreach(kvstore_t* kvs, void *cookie,
                 int (*func)(void *cookie, const char* key, const char* val)) {
     uint8_t* rec = kvs->data + sizeof(kvshdr_t);
-    for (size_t count = 0; count < kvs->kvcount; count++) {
+    size_t count;
+    for (count = 0; count < kvs->kvcount; count++) {
         size_t ksz = rec[0];
         size_t vsz = rec[1];
         int r = func(cookie, (const char*) (rec + 2), (const char*) (rec + 2 + ksz + 1));
