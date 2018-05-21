@@ -244,11 +244,10 @@ FfmpegDecoderBase::DecoderPacket::~DecoderPacket() {
                   });
 }
 
-void FfmpegDecoderBase::Dump(std::ostream& os, NodeRef ref) const {
+void FfmpegDecoderBase::Dump(std::ostream& os) const {
   os << label() << indent;
   os << newl << "output stream type: " << output_stream_type();
-  os << newl << "output: ";
-  DumpDownstreamNodes(os, ref);
+  stage()->Dump(os);
   os << outdent;
 }
 

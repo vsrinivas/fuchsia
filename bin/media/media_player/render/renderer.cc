@@ -25,11 +25,13 @@ void Renderer::Deprovision() {
   update_callback_ = nullptr;
 }
 
-void Renderer::Dump(std::ostream& os, NodeRef ref) const {
-  os << label() << indent;
-  os << newl << "timeline:         " << current_timeline_function();
-  os << newl << "end of stream:    " << end_of_stream();
-  os << outdent;
+void Renderer::Dump(std::ostream& os) const {
+  os << label();
+  os << newl << "timeline:              " << current_timeline_function();
+  os << newl << "end of stream:         " << end_of_stream();
+  os << newl << "end of stream pts:     " << AsNs(end_of_stream_pts());
+  os << newl << "minimum pts:           " << AsNs(program_0_min_pts_);
+  os << newl << "maximum pts:           " << AsNs(program_0_max_pts_);
 }
 
 void Renderer::GetConfiguration(size_t* input_count, size_t* output_count) {

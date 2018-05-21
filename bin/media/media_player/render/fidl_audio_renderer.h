@@ -35,7 +35,7 @@ class FidlAudioRenderer
   // AudioRendererInProc implementation.
   const char* label() const override;
 
-  void Dump(std::ostream& os, NodeRef ref) const override;
+  void Dump(std::ostream& os) const override;
 
   void FlushInput(bool hold_frame, size_t input_index,
                   fxl::Closure callback) override;

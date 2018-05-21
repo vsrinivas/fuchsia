@@ -171,6 +171,6 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(
   }
 }
 
-const char* FfmpegAudioDecoder::label() const { return "audio decoder"; }
+const char* FfmpegAudioDecoder::label() const { return "audio_decoder"; }
 
 }  // namespace media_player

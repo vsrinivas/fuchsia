@@ -31,7 +31,7 @@ class Renderer : public AsyncNode {
   void Deprovision();
 
   // AsyncNode implementation.
-  void Dump(std::ostream& os, NodeRef ref) const override;
+  void Dump(std::ostream& os) const override;
 
   void GetConfiguration(size_t* input_count, size_t* output_count) override;
 
@@ -100,7 +100,9 @@ class Renderer : public AsyncNode {
     return end_of_stream_pts_ != media::kUnspecifiedTime;
   }
 
-  int64_t end_of_stream_pts() { return end_of_stream_pts_; }
+  // PTS at which end-of-stream is to occur or |kUnspecifiedTime| if an end-
+  // of-stream packet has not yet been encountered.
+  int64_t end_of_stream_pts() const { return end_of_stream_pts_; }
 
   // Returns the minimum PTS for the specified program.
   int64_t min_pts(uint64_t program) {

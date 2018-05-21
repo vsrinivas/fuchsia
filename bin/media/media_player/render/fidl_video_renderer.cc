@@ -29,17 +29,40 @@ FidlVideoRenderer::FidlVideoRenderer() : arrivals_(true), draws_(true) {
 
 FidlVideoRenderer::~FidlVideoRenderer() {}
 
-const char* FidlVideoRenderer::label() const { return "video renderer"; }
+const char* FidlVideoRenderer::label() const { return "video_renderer"; }
 
-void FidlVideoRenderer::Dump(std::ostream& os, NodeRef ref) const {
-  Renderer::Dump(os, ref);
+void FidlVideoRenderer::Dump(std::ostream& os) const {
+  Renderer::Dump(os);
+
+  os << newl << "priming:               " << !!prime_callback_;
+  os << newl << "flushed:               " << flushed_;
+  os << newl << "presentation time:     " << AsNs(pts_ns_);
+  os << newl << "video size:            " << video_size().width << "x"
+     << video_size().height;
+  os << newl << "pixel aspect ratio:    " << pixel_aspect_ratio().width << "x"
+     << pixel_aspect_ratio().height;
+
+  if (held_packet_) {
+    os << newl << "held packet:           " << held_packet_;
+  }
+
+  if (!packet_queue_.empty()) {
+    os << newl << "queued packets:" << indent;
+
+    for (auto& packet : packet_queue_) {
+      os << newl << packet;
+    }
+
+    os << outdent;
+  }
 
   if (arrivals_.count() != 0) {
     os << newl << "video packet arrivals: " << indent << arrivals_ << outdent;
   }
 
   if (scenic_lead_.count() != 0) {
-    os << newl << "packet availabiliy on draw: " << indent << draws_ << outdent;
+    os << newl << "packet availability on draw: " << indent << draws_
+       << outdent;
     os << newl << "scenic lead times:";
     os << newl << "    minimum           " << AsNs(scenic_lead_.min());
     os << newl << "    average           " << AsNs(scenic_lead_.average());
@@ -49,6 +72,8 @@ void FidlVideoRenderer::Dump(std::ostream& os, NodeRef ref) const {
   if (frame_rate_.progress_interval_count()) {
     os << newl << "scenic frame rate: " << indent << frame_rate_ << outdent;
   }
+
+  stage()->Dump(os);
 }
 
 void FidlVideoRenderer::FlushInput(bool hold_frame, size_t input_index,
@@ -64,7 +89,7 @@ void FidlVideoRenderer::FlushInput(bool hold_frame, size_t input_index,
     }
 
     while (!packet_queue_.empty()) {
-      packet_queue_.pop();
+      packet_queue_.pop_front();
     }
   }
 
@@ -110,7 +135,9 @@ void FidlVideoRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
     return;
   }
 
-  packet_queue_.push(std::move(packet));
+  held_packet_.reset();
+
+  packet_queue_.push_back(std::move(packet));
 
   int64_t now = media::Timeline::local_now();
   AdvanceReferenceTime(now);
@@ -213,7 +240,7 @@ void FidlVideoRenderer::DiscardOldPackets() {
          packet_queue_.front()->GetPts(media::TimelineRate::NsPerSecond) <
              pts_ns_) {
     // TODO(dalesat): Add hysteresis.
-    packet_queue_.pop();
+    packet_queue_.pop_front();
     // Make sure the front of the queue has been checked for revised media
     // type.
     CheckForRevisedStreamType(packet_queue_.front());

@@ -32,6 +32,10 @@ std::ostream& operator<<(std::ostream& os, AsNs value) {
     return os << "<unspecified>";
   }
 
+  if (value.value_ == media::kMaxTime) {
+    return os << "<maximum>";
+  }
+
   if (value.value_ == 0) {
     return os << "0";
   }
@@ -81,12 +85,18 @@ std::ostream& operator<<(std::ostream& os, const PacketPtr& value) {
     return os << "<null>";
   }
 
-  os << "&" << std::hex << uint64_t(value.get()) << std::dec;
-  os << "/pts:" << value->pts() << "(" << value->pts_rate() << ")";
-  os << "/key:" << (value->keyframe() ? "t" : "f");
-  os << "/eos:" << (value->end_of_stream() ? "t" : "f");
-  os << "/size:" << value->size();
-  os << "/payload:" << std::hex << uint64_t(value->payload()) << std::dec;
+  os << AsNs(value->GetPts(media::TimelineRate::NsPerSecond)) << " ("
+     << value->pts() << "@" << value->pts_rate() << ")"
+     << " " << value->size() << " bytes";
+
+  if (value->keyframe()) {
+    os << " keyframe";
+  }
+
+  if (value->end_of_stream()) {
+    os << " eos";
+  }
+
   return os;
 }
 

@@ -31,7 +31,7 @@ class FfmpegDecoderBase : public Decoder {
   std::unique_ptr<StreamType> output_stream_type() const override;
 
   // AsyncNode implementation.
-  void Dump(std::ostream& os, NodeRef ref) const override;
+  void Dump(std::ostream& os) const override;
 
   void GetConfiguration(size_t* input_count, size_t* output_count) override;
 

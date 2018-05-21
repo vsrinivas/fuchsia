@@ -32,6 +32,75 @@ AsyncNodeStageImpl::AsyncNodeStageImpl(std::shared_ptr<AsyncNode> node)
 
 AsyncNodeStageImpl::~AsyncNodeStageImpl() {}
 
+void AsyncNodeStageImpl::Dump(std::ostream& os) const {
+  if (inputs_.size() == 1) {
+    os << newl << "input:";
+    DumpInputDetail(os, inputs_[0]);
+  } else if (inputs_.size() > 1) {
+    os << newl << "inputs:";
+    int index = 0;
+    for (auto& input : inputs_) {
+      os << newl << "[" << index++ << "] ";
+      DumpInputDetail(os, input);
+    }
+  }
+
+  if (outputs_.size() == 1) {
+    os << newl << "output:";
+    DumpOutputDetail(os, outputs_[0]);
+  } else if (outputs_.size() > 1) {
+    os << newl << "outputs:";
+    int index = 0;
+    for (auto& output : outputs_) {
+      os << newl << "[" << index++ << "] ";
+      DumpOutputDetail(os, output);
+    }
+  }
+}
+
+void AsyncNodeStageImpl::DumpInputDetail(std::ostream& os,
+                                         const Input& input) const {
+  os << indent;
+  if (input.connected()) {
+    os << newl << "connected to:  " << *input.mate();
+  } else {
+    os << newl << "connected to:  <nothing>";
+  }
+
+  os << newl << "prepared:      " << input.prepared();
+  os << newl << "needs packet:  " << input.needs_packet();
+  os << newl << "packet:        " << input.packet();
+  os << outdent;
+}
+
+void AsyncNodeStageImpl::DumpOutputDetail(std::ostream& os,
+                                          const Output& output) const {
+  os << indent;
+  os << newl << "needs packet:  " << output.needs_packet();
+
+  std::lock_guard<std::mutex> locker(packets_per_output_mutex_);
+  auto& packets = packets_per_output_[output.index()];
+  if (!packets.empty()) {
+    os << newl << "queued packets:" << indent;
+
+    for (auto& packet : packets) {
+      os << newl << packet;
+    }
+
+    os << outdent;
+  }
+
+  if (output.connected()) {
+    os << newl << "connected to:  " << *output.mate() << newl;
+    // TODO(dalesat): Handle fan-in, e.g. muxes.
+    output.mate()->stage()->GetGenericNode()->Dump(os);
+  } else {
+    os << newl << "connected to:  <nothing>";
+  }
+
+  os << outdent;
+}
+
 void AsyncNodeStageImpl::OnShutDown() {}
 
 size_t AsyncNodeStageImpl::input_count() const { return inputs_.size(); };
@@ -128,7 +197,7 @@ bool AsyncNodeStageImpl::MaybeTakePacketForOutput(const Output& output,
   bool request_packet = false;
 
   std::lock_guard<std::mutex> locker(packets_per_output_mutex_);
-  std::queue<PacketPtr>& packets = packets_per_output_[output.index()];
+  std::deque<PacketPtr>& packets = packets_per_output_[output.index()];
 
   if (packets.empty()) {
     // The output needs a packet and has no packets queued. Request another
@@ -137,7 +206,7 @@ bool AsyncNodeStageImpl::MaybeTakePacketForOutput(const Output& output,
   } else {
     // The output has demand and packets queued.
     *packet_out = std::move(packets.front());
-    packets.pop();
+    packets.pop_front();
   }
 
   return request_packet;
@@ -162,7 +231,7 @@ void AsyncNodeStageImpl::FlushOutput(size_t output_index,
       std::lock_guard<std::mutex> locker(packets_per_output_mutex_);
       auto& packets = packets_per_output_[output_index];
       while (!packets.empty()) {
-        packets.pop();
+        packets.pop_front();
       }
     }
 
@@ -192,7 +261,7 @@ void AsyncNodeStageImpl::PutOutputPacket(PacketPtr packet,
   // packet.
   if (outputs_[output_index].connected()) {
     std::lock_guard<std::mutex> locker(packets_per_output_mutex_);
-    packets_per_output_[output_index].push(std::move(packet));
+    packets_per_output_[output_index].push_back(std::move(packet));
   }
 
   NeedsUpdate();

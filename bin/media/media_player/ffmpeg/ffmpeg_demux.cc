@@ -6,10 +6,10 @@
 #include <map>
 #include <thread>
 
-#include <media/cpp/fidl.h>
-#include <media_player/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <media/cpp/fidl.h>
+#include <media_player/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/ffmpeg/av_codec_context.h"
 #include "garnet/bin/media/media_player/ffmpeg/av_format_context.h"
@@ -44,7 +44,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
   // AsyncNode implementation.
   const char* label() const override;
 
-  void Dump(std::ostream& os, NodeRef ref) const override;
+  void Dump(std::ostream& os) const override;
 
   void GetConfiguration(size_t* input_count, size_t* output_count) override;
 
@@ -102,7 +102,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
   // Runs in the ffmpeg thread doing the real work.
   void Worker();
 
-  // Waits on belaf of |Worker| for work to do.
+  // Waits on behalf of |Worker| for work to do.
   bool Wait(bool* packet_requested, int64_t* seek_position,
             SeekCallback* seek_callback);
 
@@ -194,9 +194,9 @@ void FfmpegDemuxImpl::Seek(int64_t position, SeekCallback callback) {
   condition_variable_.notify_all();
 }
 
-const char* FfmpegDemuxImpl::label() const { return "ffmpeg demux"; }
+const char* FfmpegDemuxImpl::label() const { return "demux"; }
 
-void FfmpegDemuxImpl::Dump(std::ostream& os, NodeRef ref) const {
+void FfmpegDemuxImpl::Dump(std::ostream& os) const {
   os << label() << indent;
   os << newl << "stream types per output:";
 
@@ -208,8 +208,7 @@ void FfmpegDemuxImpl::Dump(std::ostream& os, NodeRef ref) const {
     }
   }
 
-  os << newl << "outputs:";
-  DumpDownstreamNodes(os, ref);
+  stage()->Dump(os);
   os << outdent;
 }
 

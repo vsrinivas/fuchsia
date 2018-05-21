@@ -71,11 +71,21 @@ FidlAudioRenderer::~FidlAudioRenderer() {
   FXL_DCHECK(async_get_default() == async());
 }
 
-const char* FidlAudioRenderer::label() const { return "audio renderer"; }
+const char* FidlAudioRenderer::label() const { return "audio_renderer"; }
 
-void FidlAudioRenderer::Dump(std::ostream& os, NodeRef ref) const {
+void FidlAudioRenderer::Dump(std::ostream& os) const {
   FXL_DCHECK(async_get_default() == async());
-  Renderer::Dump(os, ref);
+  Renderer::Dump(os);
+
+  os << newl << "priming:               " << !!prime_callback_;
+  os << newl << "flushed:               " << flushed_;
+  os << newl << "presentation time:     "
+     << AsNs(current_timeline_function()(media::Timeline::local_now()));
+  os << newl << "last supplied pts:     " << AsNs(last_supplied_pts_ns_);
+  os << newl << "last departed pts:     " << AsNs(last_departed_pts_ns_);
+  os << newl << "supplied - departed:   "
+     << AsNs(last_supplied_pts_ns_ - last_departed_pts_ns_);
+  os << newl << "minimum lead time:     " << AsNs(min_lead_time_ns_);
 
   if (arrivals_.count() != 0) {
     os << newl << "packet arrivals: " << indent << arrivals_ << outdent;
@@ -84,6 +94,8 @@ void FidlAudioRenderer::Dump(std::ostream& os, NodeRef ref) const {
   if (departures_.count() != 0) {
     os << newl << "packet departures: " << indent << departures_ << outdent;
   }
+
+  stage()->Dump(os);
 }
 
 void FidlAudioRenderer::FlushInput(bool hold_frame_not_used, size_t input_index,

@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_RENDER_FIDL_VIDEO_RENDERER_H_
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_RENDER_FIDL_VIDEO_RENDERER_H_
 
-#include <queue>
+#include <deque>
 #include <unordered_map>
 
 #include <media/cpp/fidl.h>
@@ -34,7 +34,7 @@ class FidlVideoRenderer
   // VideoRendererInProc implementation.
   const char* label() const override;
 
-  void Dump(std::ostream& os, NodeRef ref) const override;
+  void Dump(std::ostream& os) const override;
 
   void FlushInput(bool hold_frame, size_t input_index,
                   fxl::Closure callback) override;
@@ -115,7 +115,7 @@ class FidlVideoRenderer
   }
 
   std::vector<std::unique_ptr<StreamTypeSet>> supported_stream_types_;
-  std::queue<PacketPtr> packet_queue_;
+  std::deque<PacketPtr> packet_queue_;
   bool flushed_ = true;
   PacketPtr held_packet_;
   int64_t pts_ns_ = Packet::kUnknownPts;

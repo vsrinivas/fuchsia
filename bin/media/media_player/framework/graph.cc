@@ -93,7 +93,7 @@ void Graph::DisconnectOutput(const OutputRef& output) {
   FXL_DCHECK(mate);
 
   if (mate->prepared()) {
-    FXL_CHECK(false) << "attempt to disconnect prepared output";
+    FXL_CHECK(false) << "attempt to disconnect prepared input " << *mate;
     return;
   }
 
@@ -114,7 +114,8 @@ void Graph::DisconnectInput(const InputRef& input) {
   FXL_DCHECK(mate);
 
   if (actual_input->prepared()) {
-    FXL_CHECK(false) << "attempt to disconnect prepared input";
+    FXL_CHECK(false) << "attempt to disconnect prepared input "
+                     << *actual_input;
     return;
   }
 

@@ -17,6 +17,8 @@ class Stage {
   // Posts a task to run as soon as possible. A Task posted with this method is
   // run exclusive of any other such tasks.
   virtual void PostTask(const fxl::Closure& task) = 0;
+
+  virtual void Dump(std::ostream& os) const {}
 };
 
 }  // namespace media_player

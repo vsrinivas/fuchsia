@@ -131,7 +131,7 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
 
   int index = 0;
   for (const T& element : value) {
-    os << "\n" << begl << "[" << index++ << "] " << element;
+    os << newl << "[" << index++ << "] " << element;
   }
 
   return os;

@@ -59,6 +59,35 @@ MediaPlayerImpl::MediaPlayerImpl(
       fbl::AdoptRef(new fs::BufferedPseudoFile([this](fbl::String* out) {
         std::ostringstream os;
 
+        if (status_.metadata) {
+          os << newl
+             << "duration:           " << AsNs(status_.metadata->duration);
+
+          if (status_.metadata->title) {
+            os << newl << "title:              " << status_.metadata->title;
+          }
+
+          if (status_.metadata->artist) {
+            os << newl << "artist:             " << status_.metadata->artist;
+          }
+
+          if (status_.metadata->album) {
+            os << newl << "album:              " << status_.metadata->album;
+          }
+
+          if (status_.metadata->publisher) {
+            os << newl << "publisher:          " << status_.metadata->publisher;
+          }
+
+          if (status_.metadata->genre) {
+            os << newl << "genre:              " << status_.metadata->genre;
+          }
+
+          if (status_.metadata->composer) {
+            os << newl << "composer:           " << status_.metadata->composer;
+          }
+        }
+
         os << newl << "state:              " << ToString(state_);
         if (state_ == State::kWaiting) {
           os << " " << waiting_reason_;
