@@ -21,6 +21,9 @@ typedef struct fx_log_metadata {
     zx_koid_t tid;
     zx_time_t time;
     fx_log_severity_t severity;
+
+    // Increment this field whenever there is a socket write error and client
+    // drops the log and send it with next log msg.
     uint32_t dropped_logs;
 } fx_log_metadata_t;
 

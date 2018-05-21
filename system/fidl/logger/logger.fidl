@@ -46,6 +46,10 @@ struct LogMessage {
   // https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/clock_get.md#supported-clock-ids
   uint64 time;
   int32 severity;
+
+  // See //zircon/system/ulib/syslog/include/syslog/wire_format.h. As messages
+  // can be served out of order, this should only be logged if more than last
+  // count.
   uint32 dropped_logs;
   vector<string>:5 tags;
   string msg;
