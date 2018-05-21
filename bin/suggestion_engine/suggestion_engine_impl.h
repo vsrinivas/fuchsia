@@ -157,17 +157,15 @@ class SuggestionEngineImpl : public ContextListener,
                       const std::string& proposal_id,
                       const std::string& override_story_id,
                       const std::string& source_url,
-                      uint32_t story_color);
+                      SuggestionDisplay suggestion_display);
 
   // Performs an action that creates a story.
   //
   // |proposal| is the proposal that initiated the action, and its listener will
   // be notified with the created story id.
   void PerformCreateStoryAction(
-      const Action& action,
-      fidl::InterfaceHandle<ProposalListener> listener,
-      const std::string& proposal_id,
-      uint32_t story_color);
+      const Action& action, fidl::InterfaceHandle<ProposalListener> listener,
+      const std::string& proposal_id, SuggestionDisplay suggestion_display);
 
   void PerformFocusStoryAction(const Action& action);
 
@@ -179,9 +177,8 @@ class SuggestionEngineImpl : public ContextListener,
 
   void PerformQueryAction(const Action& action);
 
-  void PerformCustomAction(Action* action,
-                           const std::string& source_url,
-                           uint32_t story_color);
+  void PerformCustomAction(Action* action, const std::string& source_url,
+                           SuggestionDisplay suggestion_display);
 
   void RegisterRankingFeatures();
 

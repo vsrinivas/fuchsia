@@ -130,8 +130,8 @@ void SuggestionEngineImpl::NotifyInteraction(fidl::StringPtr suggestion_uuid,
     if (interaction.type == InteractionType::SELECTED) {
       PerformActions(std::move(proposal.on_selected),
                      std::move(proposal.listener), proposal.id,
-                     proposal.story_id,
-                     suggestion->prototype->source_url, proposal.display.color);
+                     proposal.story_id, suggestion->prototype->source_url,
+                     std::move(proposal.display));
     }
 
     if (suggestion_in_ask) {
@@ -237,18 +237,18 @@ void SuggestionEngineImpl::RegisterRankingFeatures() {
 void SuggestionEngineImpl::PerformActions(
     fidl::VectorPtr<Action> actions,
     fidl::InterfaceHandle<ProposalListener> listener,
-    const std::string& proposal_id,
-    const std::string& override_story_id,
-    const std::string& source_url,
-    uint32_t story_color) {
+    const std::string& proposal_id, const std::string& override_story_id,
+    const std::string& source_url, SuggestionDisplay suggestion_display) {
   // TODO(rosswang): If we're asked to add multiple modules, we probably
   // want to add them to the same story. We can't do that yet, but we need
   // to receive a StoryController anyway (not optional atm.).
   for (auto& action : *actions) {
     switch (action.Which()) {
       case Action::Tag::kCreateStory: {
+        SuggestionDisplay cloned_display;
+        suggestion_display.Clone(&cloned_display);
         PerformCreateStoryAction(action, std::move(listener), proposal_id,
-                                 story_color);
+                                 std::move(cloned_display));
         break;
       }
       case Action::Tag::kFocusStory: {
@@ -268,7 +268,9 @@ void SuggestionEngineImpl::PerformActions(
         break;
       }
       case Action::Tag::kCustomAction: {
-        PerformCustomAction(&action, source_url, story_color);
+        SuggestionDisplay cloned_display;
+        suggestion_display.Clone(&cloned_display);
+        PerformCustomAction(&action, source_url, std::move(cloned_display));
         break;
       }
       default:
@@ -283,10 +285,8 @@ void SuggestionEngineImpl::PerformActions(
 }
 
 void SuggestionEngineImpl::PerformCreateStoryAction(
-    const Action& action,
-    fidl::InterfaceHandle<ProposalListener> listener,
-    const std::string& proposal_id,
-    uint32_t story_color) {
+    const Action& action, fidl::InterfaceHandle<ProposalListener> listener,
+    const std::string& proposal_id, SuggestionDisplay suggestion_display) {
   auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
   auto& create_story = action.create_story();
 
@@ -314,8 +314,26 @@ void SuggestionEngineImpl::PerformCreateStoryAction(
     FXL_LOG(INFO) << "Creating story with action " << intent.action.name;
   }
 
-  story_provider_->CreateStory(
-      nullptr,
+  // TODO(MI4-997): Use a separate enum for internal ranking vs. what is exposed
+  // to the user shell for display purposes.
+  StoryInfoExtraEntry extra_entry;
+  extra_entry.key = "annoyance_type";
+  switch (suggestion_display.annoyance) {
+    case AnnoyanceType::NONE:
+      extra_entry.value = "none";
+      break;
+    case AnnoyanceType::PEEK:
+      extra_entry.value = "peek";
+      break;
+    case AnnoyanceType::INTERRUPT:
+      extra_entry.value = "interrupt";
+      break;
+  }
+  fidl::VectorPtr<StoryInfoExtraEntry> extra_info;
+  extra_info.push_back(std::move(extra_entry));
+
+  story_provider_->CreateStoryWithInfo(
+      nullptr /* module_url */, std::move(extra_info), nullptr /* root_json */,
       fxl::MakeCopyable([this, listener = std::move(listener), proposal_id,
                          intent = std::move(intent),
                          activity](const fidl::StringPtr& story_id) mutable {
@@ -369,14 +387,15 @@ void SuggestionEngineImpl::PerformAddModuleAction(
       std::move(intent), fidl::MakeOptional(add_module.surface_relation));
 }
 
-void SuggestionEngineImpl::PerformCustomAction(Action* action,
-                                               const std::string& source_url,
-                                               uint32_t story_color) {
+void SuggestionEngineImpl::PerformCustomAction(
+    Action* action, const std::string& source_url,
+    SuggestionDisplay suggestion_display) {
   auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
   auto custom_action = action->custom_action().Bind();
   custom_action->Execute(fxl::MakeCopyable(
-      [this, activity, custom_action = std::move(custom_action), source_url,
-       story_color](fidl::VectorPtr<ActionPtr> actions) {
+      [this, activity, custom_action = std::move(custom_action),
+       suggestion_display = std::move(suggestion_display),
+       source_url](fidl::VectorPtr<ActionPtr> actions) {
         if (actions) {
           fidl::VectorPtr<Action> non_null_actions;
           for (auto& action : *actions) {
@@ -385,8 +404,10 @@ void SuggestionEngineImpl::PerformCustomAction(Action* action,
           }
           // Since there is no listener provided to PerformActions, it is fine
           // to use an empty proposal id here.
+          SuggestionDisplay display_clone;
+          suggestion_display.Clone(&display_clone);
           PerformActions(std::move(non_null_actions), nullptr /* listener */,
-                         "", "", source_url, story_color);
+                         "", "", source_url, std::move(display_clone));
         }
       }));
 }
