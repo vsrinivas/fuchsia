@@ -5,7 +5,6 @@
 #ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_STAGES_OUTPUT_H_
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_STAGES_OUTPUT_H_
 
-#include "garnet/bin/media/media_player/framework/models/demand.h"
 #include "garnet/bin/media/media_player/framework/packet.h"
 #include "garnet/bin/media/media_player/framework/payload_allocator.h"
 
@@ -45,9 +44,9 @@ class Output {
   // allocator be used, but the stage can't use it.
   void SetCopyAllocator(std::shared_ptr<PayloadAllocator> copy_allocator);
 
-  // Demand signalled from downstream, or kNegative if the downstream input
-  // is currently holding a packet.
-  Demand demand() const;
+  // Need for a packet signalled from downstream, or false if the downstream
+  // input is currently holding a packet.
+  bool needs_packet() const;
 
   // Supplies a packet to mate. Called only by StageImpl::Update
   // implementations.

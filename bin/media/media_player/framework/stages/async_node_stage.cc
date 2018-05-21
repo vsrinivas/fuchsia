@@ -105,7 +105,7 @@ void AsyncNodeStageImpl::Update() {
 
   for (auto& input : inputs_) {
     if (input.packet()) {
-      node_->PutInputPacket(input.TakePacket(Demand::kNegative), input.index());
+      node_->PutInputPacket(input.TakePacket(false), input.index());
     }
   }
 
@@ -135,20 +135,21 @@ bool AsyncNodeStageImpl::MaybeTakePacketForOutput(const Output& output,
                                                   PacketPtr* packet_out) {
   FXL_DCHECK(packet_out);
 
-  Demand output_demand = output.demand();
+  if (!output.needs_packet()) {
+    return false;
+  }
+
   bool request_packet = false;
 
   std::lock_guard<std::mutex> locker(packets_per_output_mutex_);
   std::queue<PacketPtr>& packets = packets_per_output_[output.index()];
 
   if (packets.empty()) {
-    if (output_demand == Demand::kPositive) {
-      // The output has positive demand and no packets queued. Request
-      // another packet so we can meet the demand.
-      request_packet = true;
-    }
-  } else if (output_demand != Demand::kNegative) {
-    // The output has non-negative demand and packets queued.
+    // The output needs a packet and has no packets queued. Request another
+    // packet so we can meet the demand.
+    request_packet = true;
+  } else {
+    // The output has demand and packets queued.
     *packet_out = std::move(packets.front());
     packets.pop();
   }
@@ -192,7 +193,7 @@ void AsyncNodeStageImpl::RequestInputPacket(size_t input_index) {
   // This method runs on an arbitrary thread.
   FXL_DCHECK(input_index < inputs_.size());
 
-  inputs_[input_index].SetDemand(Demand::kPositive);
+  inputs_[input_index].RequestPacket();
 }
 
 void AsyncNodeStageImpl::PutOutputPacket(PacketPtr packet,

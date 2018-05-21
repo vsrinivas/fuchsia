@@ -25,15 +25,15 @@ void Output::SetCopyAllocator(
   copy_allocator_ = copy_allocator;
 }
 
-Demand Output::demand() const {
+bool Output::needs_packet() const {
   FXL_DCHECK(mate_);
-  return mate_->demand();
+  return mate_->needs_packet();
 }
 
 void Output::SupplyPacket(PacketPtr packet) const {
   FXL_DCHECK(packet);
   FXL_DCHECK(mate_);
-  FXL_DCHECK(demand() != Demand::kNegative);
+  FXL_DCHECK(needs_packet());
 
   if (copy_allocator_ != nullptr) {
     // Need to copy the packet due to an allocation conflict.

@@ -60,8 +60,8 @@ class AsyncNodeStageImpl : public AsyncNodeStage, public StageImpl {
   void PutOutputPacket(PacketPtr packet, size_t output_index = 0) override;
 
   // Takes a packet from the queue for |output| if that queue isn't empty and
-  // the output's demand is |kPositive|. Returns true if and only if the queue
-  // is empty and the output's demand is |kPositive|.
+  // the output needs a packet. Returns true if and only if the queue is empty
+  // and the output needs a packet.
   bool MaybeTakePacketForOutput(const Output& output, PacketPtr* packet_out);
 
   // The fields below are not changed between the completion of the constructor

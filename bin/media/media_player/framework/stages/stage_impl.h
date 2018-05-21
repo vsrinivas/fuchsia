@@ -83,8 +83,8 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
   // and may be called synchronously.
   //
   // The input in question must be flushed (|Input.Flush|) synchronously with
-  // this call to eject the queued packet (if there is one) and to set the
-  // input's demand to |kNegative|. The callback is provided in case the node
+  // this call to eject the queued packet (if there is one) and clear the
+  // input's need for a packet. The callback is provided in case the node
   // has additional flushing business that can't be completed synchronously.
   virtual void FlushInput(size_t index, bool hold_frame,
                           fxl::Closure callback) = 0;
@@ -95,7 +95,7 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
   // additional flushing business that can't be completed synchronously.
   //
   // The output in question must not produce any packets after this method is
-  // called and before new demand is signalled.
+  // called and before the need for a packet is signalled.
   virtual void FlushOutput(size_t index, fxl::Closure callback) = 0;
 
   // Gets the generic node.

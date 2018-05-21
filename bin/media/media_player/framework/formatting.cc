@@ -285,18 +285,6 @@ std::ostream& operator<<(std::ostream& os, media::TimelineFunction value) {
             << "::" << AsNs(value.reference_time()) << "@" << value.rate();
 }
 
-std::ostream& operator<<(std::ostream& os, Demand value) {
-  switch (value) {
-    case Demand::kNegative:
-      return os << "negative";
-    case Demand::kNeutral:
-      return os << "=neutral";
-    case Demand::kPositive:
-      return os << "positive";
-  }
-  return os;
-}
-
 std::ostream& operator<<(std::ostream& os, const GenericNode& value) {
   return os << value.label();
 }

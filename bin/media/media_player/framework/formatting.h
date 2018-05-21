@@ -7,7 +7,6 @@
 
 #include <ostream>
 
-#include "garnet/bin/media/media_player/framework/models/demand.h"
 #include "garnet/bin/media/media_player/framework/packet.h"
 #include "garnet/bin/media/media_player/framework/result.h"
 #include "garnet/bin/media/media_player/framework/stages/input.h"
@@ -63,7 +62,6 @@ std::ostream& operator<<(std::ostream& os, VideoStreamType::ColorSpace value);
 std::ostream& operator<<(std::ostream& os, const Bytes& value);
 std::ostream& operator<<(std::ostream& os, media::TimelineRate value);
 std::ostream& operator<<(std::ostream& os, media::TimelineFunction value);
-std::ostream& operator<<(std::ostream& os, Demand value);
 std::ostream& operator<<(std::ostream& os, const GenericNode& value);
 std::ostream& operator<<(std::ostream& os, const StageImpl& value);
 std::ostream& operator<<(std::ostream& os, const Input& value);
