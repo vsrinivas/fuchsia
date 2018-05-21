@@ -4,7 +4,6 @@
 
 #include "garnet/bin/media/media_player/framework/stages/output.h"
 
-#include "garnet/bin/media/media_player/framework/engine.h"
 #include "garnet/bin/media/media_player/framework/stages/stage_impl.h"
 
 namespace media_player {

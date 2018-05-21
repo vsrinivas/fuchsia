@@ -193,27 +193,27 @@ void Graph::Reset() {
 void Graph::Prepare() {
   for (StageImpl* sink : sinks_) {
     for (size_t i = 0; i < sink->input_count(); ++i) {
-      engine_.PrepareInput(&sink->input(i));
+      PrepareInput(&sink->input(i));
     }
   }
 }
 
 void Graph::PrepareInput(const InputRef& input) {
   FXL_DCHECK(input);
-  engine_.PrepareInput(input.actual());
+  PrepareInput(input.actual());
 }
 
 void Graph::Unprepare() {
   for (StageImpl* sink : sinks_) {
     for (size_t i = 0; i < sink->input_count(); ++i) {
-      engine_.UnprepareInput(&sink->input(i));
+      UnprepareInput(&sink->input(i));
     }
   }
 }
 
 void Graph::UnprepareInput(const InputRef& input) {
   FXL_DCHECK(input);
-  engine_.UnprepareInput(input.actual());
+  UnprepareInput(input.actual());
 }
 
 void Graph::FlushOutput(const OutputRef& output, bool hold_frame,
@@ -313,6 +313,58 @@ void Graph::FlushOutputs(std::queue<Output*>* backlog, bool hold_frame,
   }
 
   callback_joiner->WhenJoined(callback);
+}
+
+void Graph::PrepareInput(Input* input) {
+  FXL_DCHECK(input);
+  VisitUpstream(input, [](Input* input, Output* output) {
+    FXL_DCHECK(input);
+    FXL_DCHECK(output);
+    FXL_DCHECK(!input->prepared()) << *input << " already prepared.";
+    std::shared_ptr<PayloadAllocator> allocator =
+        input->stage()->PrepareInput(input->index());
+    input->set_prepared(true);
+    output->stage()->PrepareOutput(output->index(), allocator);
+  });
+}
+
+void Graph::UnprepareInput(Input* input) {
+  FXL_DCHECK(input);
+  VisitUpstream(input, [](Input* input, Output* output) {
+    FXL_DCHECK(input);
+    FXL_DCHECK(output);
+    FXL_DCHECK(input->prepared()) << *input << " already unprepared.";
+    input->stage()->UnprepareInput(input->index());
+    input->set_prepared(false);
+    output->stage()->UnprepareOutput(output->index());
+  });
+}
+
+void Graph::VisitUpstream(Input* input, const Visitor& visitor) {
+  FXL_DCHECK(input);
+
+  std::queue<Input*> backlog;
+  backlog.push(input);
+
+  while (!backlog.empty()) {
+    Input* input = backlog.front();
+    backlog.pop();
+    FXL_DCHECK(input);
+
+    if (!input->connected()) {
+      continue;
+    }
+
+    Output* output = input->mate();
+    StageImpl* output_stage = output->stage();
+
+    visitor(input, output);
+
+    for (size_t input_index = 0; input_index < output_stage->input_count();
+         ++input_index) {
+      backlog.push(&output_stage->input(input_index));
+    }
+  }
 }
 
 }  // namespace media_player

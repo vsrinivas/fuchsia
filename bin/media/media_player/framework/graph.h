@@ -7,7 +7,6 @@
 
 #include <list>
 
-#include "garnet/bin/media/media_player/framework/engine.h"
 #include "garnet/bin/media/media_player/framework/refs.h"
 #include "garnet/bin/media/media_player/framework/stages/async_node_stage.h"
 #include "garnet/bin/media/media_player/framework/stages/stage_impl.h"
@@ -31,9 +30,9 @@ namespace media_player {
 //
 // The graph prevents the disconnection of prepared inputs and outputs. Once
 // a connected input/output pair is prepared, it must be unprepared before
-// disconnection. This allows the engine to operate freely over prepared
+// disconnection. This allows the graph to operate freely over prepared
 // portions of the graph (prepare and unprepare are synchronized with the
-// engine).
+// graph).
 //
 // Nodes added to the graph are referenced using shared pointers. The graph
 // holds pointers to the nodes it contains, and the application, in many cases,
@@ -159,6 +158,8 @@ class Graph {
   void PostTask(const fxl::Closure& task, std::initializer_list<NodeRef> nodes);
 
  private:
+  using Visitor = std::function<void(Input* input, Output* output)>;
+
   // Adds a stage to the graph.
   NodeRef AddStage(std::shared_ptr<StageImpl> stage);
 
@@ -168,13 +169,26 @@ class Graph {
   void FlushOutputs(std::queue<Output*>* backlog, bool hold_frame,
                     fxl::Closure callback);
 
+  // Prepares the input and the subgraph upstream of it.
+  void PrepareInput(Input* input);
+
+  // Unprepares the input and the subgraph upstream of it.
+  void UnprepareInput(Input* input);
+
+  // Flushes the output and the subgraph downstream of it. |hold_frame|
+  // indicates whether a video renderer should hold and display the newest
+  // frame. |callback| is used to signal completion.
+  void FlushOutput(Output* output, bool hold_frame, fxl::Closure callback);
+
+  // Visits |input| and all inputs upstream of it (breadth first), calling
+  // |visitor| for each connected input.
+  void VisitUpstream(Input* input, const Visitor& visitor);
+
   async_t* async_;
 
   std::list<std::shared_ptr<StageImpl>> stages_;
   std::list<StageImpl*> sources_;
   std::list<StageImpl*> sinks_;
-
-  Engine engine_;
 };
 
 }  // namespace media_player

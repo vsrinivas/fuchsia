@@ -33,9 +33,6 @@ namespace media_player {
 // be edited.
 class StageImpl : public std::enable_shared_from_this<StageImpl> {
  public:
-  using UpstreamCallback = std::function<void(size_t input_index)>;
-  using DownstreamCallback = std::function<void(size_t output_index)>;
-
   StageImpl();
 
   virtual ~StageImpl();
@@ -62,20 +59,15 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
   virtual std::shared_ptr<PayloadAllocator> PrepareInput(size_t index) = 0;
 
   // Prepares the output for operation, passing an allocator that must be used
-  // by the output or nullptr if there is no such requirement. The callback is
-  // used to indicate what inputs are ready to be prepared as a consequence of
-  // preparing the output.
+  // by the output or nullptr if there is no such requirement.
   virtual void PrepareOutput(size_t index,
-                             std::shared_ptr<PayloadAllocator> allocator,
-                             UpstreamCallback callback) = 0;
+                             std::shared_ptr<PayloadAllocator> allocator) = 0;
 
   // Unprepares the input. The default implementation does nothing.
   virtual void UnprepareInput(size_t index);
 
-  // Unprepares the output. The default implementation does nothing. The
-  // the callback is used to indicate what inputs are ready to be unprepared as
-  // a consequence of unpreparing the output.
-  virtual void UnprepareOutput(size_t index, UpstreamCallback callback);
+  // Unprepares the output. The default implementation does nothing.
+  virtual void UnprepareOutput(size_t index);
 
   // Flushes an input. |hold_frame| indicates whether a video renderer should
   // hold and display the newest frame. The callback is used to indicate that

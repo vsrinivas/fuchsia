@@ -35,10 +35,9 @@ class AsyncNodeStageImpl : public AsyncNodeStage, public StageImpl {
   std::shared_ptr<PayloadAllocator> PrepareInput(size_t input_index) override;
 
   void PrepareOutput(size_t output_index,
-                     std::shared_ptr<PayloadAllocator> allocator,
-                     UpstreamCallback callback) override;
+                     std::shared_ptr<PayloadAllocator> allocator) override;
 
-  void UnprepareOutput(size_t output_index, UpstreamCallback callback) override;
+  void UnprepareOutput(size_t output_index) override;
 
   void FlushInput(size_t input_index, bool hold_frame,
                   fxl::Closure callback) override;

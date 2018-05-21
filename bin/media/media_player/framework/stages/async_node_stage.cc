@@ -55,8 +55,7 @@ std::shared_ptr<PayloadAllocator> AsyncNodeStageImpl::PrepareInput(
 }
 
 void AsyncNodeStageImpl::PrepareOutput(
-    size_t output_index, std::shared_ptr<PayloadAllocator> allocator,
-    UpstreamCallback callback) {
+    size_t output_index, std::shared_ptr<PayloadAllocator> allocator) {
   FXL_DCHECK(output_index < outputs_.size());
 
   if (node_->can_accept_allocator_for_output(output_index)) {
@@ -70,16 +69,9 @@ void AsyncNodeStageImpl::PrepareOutput(
     // packets.
     outputs_[output_index].SetCopyAllocator(allocator);
   }
-
-  // Indicate all inputs should be prepared.
-  // TODO(dalesat): Make the graph figure this out itself.
-  for (size_t input_index = 0; input_index < inputs_.size(); ++input_index) {
-    callback(input_index);
-  }
 }
 
-void AsyncNodeStageImpl::UnprepareOutput(size_t output_index,
-                                         UpstreamCallback callback) {
+void AsyncNodeStageImpl::UnprepareOutput(size_t output_index) {
   FXL_DCHECK(output_index < outputs_.size());
 
   if (node_->can_accept_allocator_for_output(output_index)) {
@@ -90,12 +82,6 @@ void AsyncNodeStageImpl::UnprepareOutput(size_t output_index,
   }
 
   outputs_[output_index].SetCopyAllocator(nullptr);
-
-  // Indicate all inputs should be unprepared.
-  // TODO(dalesat): Make the graph figure this out itself.
-  for (size_t input_index = 0; input_index < inputs_.size(); ++input_index) {
-    callback(input_index);
-  }
 }
 
 GenericNode* AsyncNodeStageImpl::GetGenericNode() const { return node_.get(); }

@@ -4,8 +4,6 @@
 
 source_set("framework") {
   sources = [
-    "engine.cc",
-    "engine.h",
     "formatting.cc",
     "formatting.h",
     "graph.cc",

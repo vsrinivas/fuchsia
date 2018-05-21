@@ -6,7 +6,6 @@
 
 #include "garnet/bin/media/media_player/framework/stages/input.h"
 
-#include "garnet/bin/media/media_player/framework/engine.h"
 #include "garnet/bin/media/media_player/framework/stages/stage_impl.h"
 
 namespace media_player {

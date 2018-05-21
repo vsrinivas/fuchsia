@@ -18,7 +18,7 @@ void StageImpl::OnShutDown() {}
 
 void StageImpl::UnprepareInput(size_t index) {}
 
-void StageImpl::UnprepareOutput(size_t index, UpstreamCallback callback) {}
+void StageImpl::UnprepareOutput(size_t index) {}
 
 void StageImpl::ShutDown() {
   {
