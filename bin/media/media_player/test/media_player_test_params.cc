@@ -1,4 +1,4 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -16,6 +16,7 @@ MediaPlayerTestParams::MediaPlayerTestParams(
   is_valid_ = false;
 
   loop_ = command_line.HasOption("loop");
+  test_seek_ = command_line.HasOption("test-seek");
 
   for (const std::string& arg : command_line.positional_args()) {
     if (arg.compare(0, 1, "/") == 0) {
@@ -34,10 +35,20 @@ MediaPlayerTestParams::MediaPlayerTestParams(
     }
   }
 
-  if (urls_.empty() && loop_) {
+  if (urls_.empty() && (loop_ || test_seek_)) {
     Usage();
-    std::cerr << "Urls/paths required for --loop option\n";
+    std::cerr << "Urls/paths required for --loop and --test-seek options\n";
     return;
+  }
+
+  if (urls_.size() > 1 && test_seek_) {
+    Usage();
+    std::cerr << "--test-seek only works with a single url-or-path\n";
+    return;
+  }
+
+  if (loop_ && test_seek_) {
+    std::cerr << "--loop and --test-seek are mutually exclusive\n";
   }
 
   is_valid_ = true;
@@ -48,7 +59,8 @@ void MediaPlayerTestParams::Usage() {
   std::cerr
       << "    set_root_view media_player_tests [ options ] url-or-path*\n";
   std::cerr << "options:\n";
-  std::cerr << "    --loop      play the files in a loop\n";
+  std::cerr << "    --loop       play the files in a loop\n";
+  std::cerr << "    --test-seek  play random segments of one file\n";
   std::cerr << "For CQ test, run with no arguments\n";
 }
 

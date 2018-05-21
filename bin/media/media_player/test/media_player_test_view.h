@@ -63,6 +63,9 @@ class MediaPlayerTestView : public mozart::BaseView {
   // Returns progress in the range 0.0 to 1.0.
   float normalized_progress() const;
 
+  // Seeks to a new position and sets |seek_interval_end_|.
+  void StartNewSeekInterval();
+
   std::function<void(int)> quit_callback_;
   const MediaPlayerTestParams& params_;
   size_t current_url_index_ = 0;
@@ -82,6 +85,10 @@ class MediaPlayerTestView : public mozart::BaseView {
   fuchsia::math::RectF controls_rect_;
   bool problem_shown_ = false;
   bool was_at_end_of_stream_ = false;
+
+  int64_t seek_interval_start_ = media::kUnspecifiedTime;
+  int64_t seek_interval_end_ = media::kUnspecifiedTime;
+  bool in_current_seek_interval_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerTestView);
 };
