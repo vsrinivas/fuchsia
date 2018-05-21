@@ -10,6 +10,7 @@ MODULE_TYPE := usertest
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/clock-test.cpp \
+    $(LOCAL_DIR)/handle-creation-test.cpp \
     $(LOCAL_DIR)/malloc-test.cpp \
     $(LOCAL_DIR)/mutex-test.cpp \
     $(LOCAL_DIR)/null-test.cpp \
