@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include <hid/acer12.h>
+#include <hid/ft3x27.h>
 #include <hid/egalax.h>
 #include <hid/paradise.h>
 #include <hid/usages.h>
@@ -24,7 +25,7 @@
 #include <zircon/types.h>
 
 #define DEV_INPUT       "/dev/class/input"
-#define FRAMEBUFFER     "/dev/class/framebuffer/000"
+#define FRAMEBUFFER     "/dev/class/framebuffer/000/virtcon"
 #define CLEAR_BTN_SIZE 50
 #define I2C_HID_DEBUG 0
 
@@ -34,6 +35,7 @@ enum touch_panel_type {
     TOUCH_PANEL_PARADISE,
     TOUCH_PANEL_PARADISEv2,
     TOUCH_PANEL_EGALAX,
+    TOUCH_PANEL_FT3X27,
 };
 
 // Array of colors for each finger
@@ -50,6 +52,21 @@ static uint32_t colors[] = {
     0x000ff000,
 };
 
+static uint16_t colors16[] = {
+    0x003f,
+    0x03c0,
+    0xfc00,
+    0xe00f,
+    0xeff3,
+    0x003f,
+    0x03c0,
+    0x1c00,
+    0xe000,
+    0xe003,
+};
+
+static bool run = false;
+
 static void acer12_touch_dump(acer12_touch_t* rpt) {
     printf("report id: %u\n", rpt->rpt_id);
     for (int i = 0; i < 5; i++) {
@@ -63,6 +80,19 @@ static void acer12_touch_dump(acer12_touch_t* rpt) {
         printf("  y:      %u\n", rpt->fingers[i].y);
     }
     printf("scan_time: %u\n", rpt->scan_time);
+    printf("contact count: %u\n", rpt->contact_count);
+}
+
+static void ft3x27_touch_dump(ft3x27_touch_t* rpt) {
+    printf("report id: %u\n", rpt->rpt_id);
+    for (int i = 0; i < 5; i++) {
+        printf("finger %d\n", i);
+        printf("  finger_id: %u\n", rpt->fingers[i].finger_id);
+        printf("    tswitch: %u\n", ft3x27_finger_id_tswitch(rpt->fingers[i].finger_id));
+        printf("    contact: %u\n", ft3x27_finger_id_contact(rpt->fingers[i].finger_id));
+        printf("  x:      %u\n", rpt->fingers[i].x);
+        printf("  y:      %u\n", rpt->fingers[i].y);
+    }
     printf("contact count: %u\n", rpt->contact_count);
 }
 
@@ -128,19 +158,59 @@ static void draw_points(uint32_t* pixels, uint32_t color, uint32_t x, uint32_t y
         }
     }
 }
+static uint8_t is_exit(uint32_t x, uint32_t y, ioctl_display_get_fb_t* fb) {
+        return (((y + CLEAR_BTN_SIZE) > fb->info.height) &&
+             (x < CLEAR_BTN_SIZE));
+}
+
+static void draw_points16(uint32_t* pixels, uint16_t color, uint32_t x, uint32_t y, uint8_t width, uint8_t height, uint32_t fbwidth, uint32_t fbheight) {
+
+    uint16_t* pixels16 = (uint16_t*)pixels;
+    uint32_t xrad = (width + 1) / 2;
+    uint32_t yrad = (height + 1) / 2;
+
+    uint32_t xmin = (xrad > x) ? 0 : x - xrad;
+    uint32_t xmax = (xrad > fbwidth - x) ? fbwidth : x + xrad;
+    uint32_t ymin = (yrad > y) ? 0 : y - yrad;
+    uint32_t ymax = (yrad > fbheight - y) ? fbheight : y + yrad;
+
+    for (uint32_t px = xmin; px < xmax; px++) {
+        for (uint32_t py = ymin; py < ymax; py++) {
+            pixels16[py*fbwidth + px] = color;
+        }
+    }
+}
 
 static uint32_t get_color(uint8_t c) {
     return colors[c];
 }
 
-static void clear_screen(void* buf, ioctl_display_get_fb_t* fb) {
-    memset(buf, 0xff, fb->info.pixelsize * fb->info.stride * fb->info.height);
-    draw_points((uint32_t*)buf, 0xff00ff, fb->info.stride - (CLEAR_BTN_SIZE / 2), (CLEAR_BTN_SIZE / 2),
-            CLEAR_BTN_SIZE, CLEAR_BTN_SIZE, fb->info.stride, fb->info.height);
+static uint32_t get_color16(uint8_t c) {
+    return colors16[c];
 }
 
-static void process_acer12_touchscreen_input(void* buf, size_t len, int vcfd, uint32_t* pixels,
-        ioctl_display_get_fb_t* fb) {
+static void clear_screen(void* buf, ioctl_display_get_fb_t* fb) {
+    memset(buf, 0xff, fb->info.pixelsize * fb->info.stride * fb->info.height);
+    if (fb->info.pixelsize == 4) {
+        draw_points((uint32_t*)buf, 0xff00ff, fb->info.stride - (CLEAR_BTN_SIZE / 2),
+            (CLEAR_BTN_SIZE / 2), CLEAR_BTN_SIZE, CLEAR_BTN_SIZE, fb->info.stride,
+            fb->info.height);
+        draw_points((uint32_t*)buf, 0x0000ff, (CLEAR_BTN_SIZE / 2),
+            fb->info.height - (CLEAR_BTN_SIZE / 2), CLEAR_BTN_SIZE, CLEAR_BTN_SIZE, fb->info.stride, 
+            fb->info.height);
+    } else if (fb->info.pixelsize == 2) {
+        draw_points16((uint32_t*)buf, 0xf00f, fb->info.stride - (CLEAR_BTN_SIZE / 2),
+            (CLEAR_BTN_SIZE / 2), CLEAR_BTN_SIZE, CLEAR_BTN_SIZE, fb->info.stride,
+            fb->info.height);
+        draw_points16((uint32_t*)buf, 0x001f, (CLEAR_BTN_SIZE / 2),
+            fb->info.height - (CLEAR_BTN_SIZE / 2), CLEAR_BTN_SIZE, CLEAR_BTN_SIZE, fb->info.stride, 
+            fb->info.height);
+    }
+}
+
+static void process_acer12_touchscreen_input(void* buf, size_t len, int vcfd,
+                uint32_t* pixels, ioctl_display_get_fb_t* fb) {
+
     acer12_touch_t* rpt = buf;
     if (len < sizeof(*rpt)) {
         printf("bad report size: %zd < %zd\n", len, sizeof(*rpt));
@@ -165,6 +235,42 @@ static void process_acer12_touchscreen_input(void* buf, size_t len, int vcfd, ui
         if (x + CLEAR_BTN_SIZE > fb->info.width && y < CLEAR_BTN_SIZE) {
             clear_screen(pixels, fb);
         }
+        run = !is_exit(x, y, fb);
+    }
+    ssize_t ret = ioctl_display_flush_fb(vcfd);
+    if (ret < 0) {
+        printf("failed to flush: %zd\n", ret);
+    }
+}
+
+
+static void process_ft3x27_touchscreen_input(void* buf, size_t len, int vcfd, uint32_t* pixels,
+        ioctl_display_get_fb_t* fb) {
+    ft3x27_touch_t* rpt = buf;
+    if (len < sizeof(*rpt)) {
+        printf("bad report size: %zd < %zd\n", len, sizeof(*rpt));
+        return;
+    }
+#if I2C_HID_DEBUG
+    ft3x27_touch_dump(rpt);
+#endif
+    for (uint8_t c = 0; c < 5; c++) {
+        if (!ft3x27_finger_id_tswitch(rpt->fingers[c].finger_id)) continue;
+        uint32_t x = scale32(rpt->fingers[c].x, fb->info.width, FT3X27_X_MAX);
+        uint32_t y = scale32(rpt->fingers[c].y, fb->info.height, FT3X27_Y_MAX);
+        uint32_t width = 10;//2 * rpt->fingers[c].width;
+        uint32_t height = 10;//2 * rpt->fingers[c].height;
+        uint16_t color = get_color16(ft3x27_finger_id_contact(rpt->fingers[c].finger_id));
+        draw_points16(pixels, color, x, y, width, height, fb->info.stride, fb->info.height);
+    }
+
+    if (ft3x27_finger_id_tswitch(rpt->fingers[0].finger_id)) {
+        uint32_t x = scale32(rpt->fingers[0].x, fb->info.width, FT3X27_X_MAX);
+        uint32_t y = scale32(rpt->fingers[0].y, fb->info.height, FT3X27_Y_MAX);
+        if (x + CLEAR_BTN_SIZE > fb->info.width && y < CLEAR_BTN_SIZE) {
+            clear_screen(pixels, fb);
+        }
+        run = !is_exit(x, y, fb);
     }
     ssize_t ret = ioctl_display_flush_fb(vcfd);
     if (ret < 0) {
@@ -195,6 +301,7 @@ static void process_egalax_touchscreen_input(void* buf, size_t len, int vcfd, ui
         if (x + CLEAR_BTN_SIZE > fb->info.width && y < CLEAR_BTN_SIZE) {
             clear_screen(pixels, fb);
         }
+        run = !is_exit(x, y, fb);
     }
     ssize_t ret = ioctl_display_flush_fb(vcfd);
     if (ret < 0) {
@@ -228,6 +335,7 @@ static void process_paradise_touchscreen_input(void* buf, size_t len, int vcfd, 
         if (x + CLEAR_BTN_SIZE > fb->info.width && y < CLEAR_BTN_SIZE) {
             clear_screen(pixels, fb);
         }
+        run = !is_exit(x, y, fb);
     }
     ssize_t ret = ioctl_display_flush_fb(vcfd);
     if (ret < 0) {
@@ -261,6 +369,7 @@ static void process_paradise_touchscreen_v2_input(void* buf, size_t len, int vcf
         if (x + CLEAR_BTN_SIZE > fb->info.width && y < CLEAR_BTN_SIZE) {
             clear_screen(pixels, fb);
         }
+        run = !is_exit(x, y, fb);
     }
     ssize_t ret = ioctl_display_flush_fb(vcfd);
     if (ret < 0) {
@@ -286,6 +395,7 @@ static void process_acer12_stylus_input(void* buf, size_t len, int vcfd, uint32_
             clear_screen(pixels, fb);
             goto flush;
         }
+        run = !is_exit(x, y, fb);
     }
     uint32_t size, color;
     size = acer12_stylus_status_tswitch(rpt->status) ? rpt->pressure >> 4 : 4;
@@ -334,10 +444,6 @@ int main(int argc, char* argv[]) {
         printf("failed to get FB: %zd\n", ret);
         return -1;
     }
-    if (fb.info.pixelsize != 4) {
-        printf("only 32-bit framebuffers are supported for now!\n");
-        return -1;
-    }
 
     printf("format = %d\n", fb.info.format);
     printf("width = %d\n", fb.info.width);
@@ -345,7 +451,6 @@ int main(int argc, char* argv[]) {
     printf("stride = %d\n", fb.info.stride);
     printf("pixelsize = %d\n", fb.info.pixelsize);
     printf("flags = 0x%x\n", fb.info.flags);
-
 
     size_t size = fb.info.stride * fb.info.pixelsize * fb.info.height;
     uintptr_t fbo;
@@ -429,6 +534,12 @@ int main(int argc, char* argv[]) {
             break;
         }
 
+        if (is_ft3x27_touch_report_desc(rpt_desc, rpt_desc_len)) {
+            panel = TOUCH_PANEL_FT3X27;
+            printf("touchscreen: %s is ft3x27\n", devname);
+            break;
+        }
+
 next_node:
         rpt_desc_len = 0;
 
@@ -457,6 +568,7 @@ next_node:
         printf("failed to get max report size: %zd\n", ret);
         return -1;
     }
+    printf("Max report size is %u\n",max_rpt_sz);
     void* buf = malloc(max_rpt_sz);
     if (buf == NULL) {
         printf("no memory!\n");
@@ -464,7 +576,9 @@ next_node:
     }
 
     clear_screen((void*)fbo, &fb);
-    while (1) {
+    ioctl_display_flush_fb(vcfd);
+    run = true;
+    while (run) {
         ssize_t r = read(touchfd, buf, max_rpt_sz);
         if (r < 0) {
             printf("touchscreen read error: %zd (errno=%d)\n", r, errno);
@@ -488,8 +602,14 @@ next_node:
             if (*(uint8_t*)buf == EGALAX_RPT_ID_TOUCH) {
                 process_egalax_touchscreen_input(buf, r, vcfd, pixels32, &fb);
             }
+        } else if (panel == TOUCH_PANEL_FT3X27) {
+            if (*(uint8_t*)buf == FT3X27_RPT_ID_TOUCH) {
+                process_ft3x27_touchscreen_input(buf, r, vcfd, pixels32, &fb);
+            }
         }
     }
+    memset(pixels32, 0x00, fb.info.pixelsize * fb.info.stride * fb.info.height);
+    ioctl_display_flush_fb(vcfd);
 
     free(buf);
     free(rpt_desc);
