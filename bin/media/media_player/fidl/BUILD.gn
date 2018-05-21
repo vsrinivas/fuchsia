@@ -4,12 +4,6 @@
 
 source_set("fidl") {
   sources = [
-    "fidl_formatting.cc",
-    "fidl_formatting.h",
-    "fidl_packet_consumer.cc",
-    "fidl_packet_consumer.h",
-    "fidl_packet_producer.cc",
-    "fidl_packet_producer.h",
     "fidl_type_conversions.cc",
     "fidl_type_conversions.h",
   ]
@@ -23,6 +17,5 @@ source_set("fidl") {
     "//garnet/public/lib/media/fidl:media_player",
     "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/media/transport",
-    "//garnet/public/lib/network/fidl",
   ]
 }

@@ -10,7 +10,6 @@
 #include <lib/async/cpp/task.h>
 #include <media/cpp/fidl.h>
 
-#include "garnet/bin/media/media_player/fidl/fidl_formatting.h"
 #include "garnet/bin/media/media_player/test/fake_audio_renderer.h"
 #include "garnet/bin/media/media_player/test/fake_wav_reader.h"
 #include "lib/app/cpp/application_context.h"

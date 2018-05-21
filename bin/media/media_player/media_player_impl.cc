@@ -7,16 +7,16 @@
 #include <sstream>
 
 #include <fs/pseudo-file.h>
+#include <lib/async/default.h>
 #include <media/cpp/fidl.h>
 #include <media_player/cpp/fidl.h>
-#include <lib/async/default.h>
 
 #include "garnet/bin/media/media_player/demux/fidl_reader.h"
 #include "garnet/bin/media/media_player/demux/file_reader.h"
 #include "garnet/bin/media/media_player/demux/http_reader.h"
 #include "garnet/bin/media/media_player/demux/reader_cache.h"
-#include "garnet/bin/media/media_player/fidl/fidl_formatting.h"
 #include "garnet/bin/media/media_player/fidl/fidl_type_conversions.h"
+#include "garnet/bin/media/media_player/framework/formatting.h"
 #include "garnet/bin/media/media_player/player/demux_source_segment.h"
 #include "garnet/bin/media/media_player/player/renderer_sink_segment.h"
 #include "garnet/bin/media/media_player/render/fidl_audio_renderer.h"

@@ -4,11 +4,10 @@
 
 #pragma once
 
-#include <media/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
+#include <media/cpp/fidl.h>
 
-#include "garnet/bin/media/media_player/fidl/fidl_formatting.h"
 #include "garnet/bin/media/media_player/test/fake_audio_renderer.h"
 #include "garnet/bin/media/media_player/test/fake_wav_reader.h"
 #include "lib/app/cpp/application_context.h"

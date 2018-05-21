@@ -28,6 +28,7 @@ source_set("demux") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/network/fidl",
   ]
 }
 
