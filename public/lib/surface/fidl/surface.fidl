@@ -32,6 +32,10 @@ enum SurfaceArrangement {
   // (The child may still become part of a simultaneous presentation depending
   // on the relationships between it and subsequently added surfaces).
   SEQUENTIAL = 2;
+
+  // Place this surface on top of and obscuring the parent surface. This is a
+  // complete replacement, not a modal or inset presentation.
+  ONTOP = 3;
 };
 
 // Links surface dismissal.
