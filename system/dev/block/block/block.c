@@ -47,14 +47,14 @@ typedef struct blkdev {
     block_op_t* iobop;
 } blkdev_t;
 
-static int blockserver_thread_serve(blkdev_t* bdev) TA_REL(bdev->lock) {
-    BlockServer* bs = bdev->bs;
-    bdev->threadcount++;
-    mtx_unlock(&bdev->lock);
-
-    blockserver_serve(bs);
-
+static int blockserver_thread_serve(blkdev_t* bdev) {
     mtx_lock(&bdev->lock);
+    BlockServer* bs = bdev->bs;
+    if (!bdev->dead && (bs != NULL)) {
+        mtx_unlock(&bdev->lock);
+        blockserver_serve(bs);
+        mtx_lock(&bdev->lock);
+    }
     if (bdev->bs == bs) {
         // Only nullify 'bs' if no one has replaced it yet. This is the
         // case when the blockserver shuts itself down because the fifo
@@ -62,11 +62,12 @@ static int blockserver_thread_serve(blkdev_t* bdev) TA_REL(bdev->lock) {
         bdev->bs = NULL;
     }
     bdev->threadcount--;
-    bool cleanup = bdev->dead & (bdev->threadcount == 0);
+    bool cleanup = bdev->dead && (bdev->threadcount == 0);
     mtx_unlock(&bdev->lock);
 
-    blockserver_free(bs);
-
+    if (bs != NULL) {
+        blockserver_free(bs);
+    }
     if (cleanup) {
         zx_handle_close(bdev->iovmo);
         free(bdev->iobop);
@@ -75,15 +76,11 @@ static int blockserver_thread_serve(blkdev_t* bdev) TA_REL(bdev->lock) {
     return 0;
 }
 
-static int blockserver_thread(void* arg) TA_REL(((blkdev_t*)arg)->lock) {
+static int blockserver_thread(void* arg) {
     return blockserver_thread_serve((blkdev_t*)arg);
 }
 
-// This function conditionally acquires bdev->lock, and the code
-// responsible for unlocking in the success case is on another
-// thread. The analysis is not up to reasoning about this.
-static zx_status_t blkdev_get_fifos(blkdev_t* bdev, void* out_buf, size_t out_len)
-    TA_NO_THREAD_SAFETY_ANALYSIS {
+static zx_status_t blkdev_get_fifos(blkdev_t* bdev, void* out_buf, size_t out_len) {
     if (out_len < sizeof(zx_handle_t)) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -91,29 +88,34 @@ static zx_status_t blkdev_get_fifos(blkdev_t* bdev, void* out_buf, size_t out_le
     mtx_lock(&bdev->lock);
     if (bdev->bs != NULL) {
         status = ZX_ERR_ALREADY_BOUND;
-        goto done;
+        goto unlock_exit;
     }
 
     BlockServer* bs;
     if ((status = blockserver_create(bdev->parent, &bdev->bp, out_buf, &bs)) != ZX_OK) {
-        goto done;
+        goto unlock_exit;
     }
-
-    // As soon as we launch a thread, the background thread is responsible
-    // for the blockserver in the bdev->bs field.
     bdev->bs = bs;
-    thrd_t thread;
-    if (thrd_create(&thread, blockserver_thread, bdev) != thrd_success) {
-        blockserver_free(bs);
-        bdev->bs = NULL;
-        status = ZX_ERR_NO_MEMORY;
-        goto done;
-    }
-    thrd_detach(thread);
 
-    // On success, the blockserver thread holds the lock.
-    return sizeof(zx_handle_t);
-done:
+    // Bump the thread count for the thread to be created
+    bdev->threadcount++;
+    mtx_unlock(&bdev->lock);
+
+    thrd_t thread;
+    if (thrd_create(&thread, blockserver_thread, bdev) == thrd_success) {
+        thrd_detach(thread);
+        return sizeof(zx_handle_t);
+    }
+
+    mtx_lock(&bdev->lock);
+    bdev->threadcount--;
+    bdev->bs = NULL;
+    mtx_unlock(&bdev->lock);
+
+    blockserver_free(bs);
+    return ZX_ERR_NO_MEMORY;
+
+unlock_exit:
     mtx_unlock(&bdev->lock);
     return status;
 }
