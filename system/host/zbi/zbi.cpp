@@ -896,7 +896,7 @@ public:
         return (header_.flags & ZBI_FLAG_STORAGE_COMPRESSED) && !compress_;
     }
 
-    int Show() const {
+    int Show() {
         if (header_.length > 0) {
             if (AlreadyCompressed()) {
                 return CreateFromCompressed(*this)->Show();
@@ -911,15 +911,22 @@ public:
         return 0;
     }
 
-    template<typename... T>
-    void ExtractFiles(T&&... args) const {
+    // If extract holds pointers to the FileContents after it returns,
+    // then it must return true and then both this and the ItemPtr
+    // returned here must outlive those held pointers.
+    template<typename Extractor>
+    [[nodiscard]] ItemPtr ExtractFiles(Extractor& extract) {
         if (type() == ZBI_TYPE_STORAGE_BOOTFS) {
             if (AlreadyCompressed()) {
-                CreateFromCompressed(*this)->ExtractBootFS(args...);
+                auto uncompressed = CreateFromCompressed(*this);
+                if (uncompressed->ExtractBootFS(extract)) {
+                    return uncompressed;
+                }
             } else {
-                ExtractBootFS(args...);
+                ExtractBootFS(extract);
             }
         }
+        return nullptr;
     }
 
     // Streaming exhausts the item's payload.  The OutputStream will now
@@ -1055,9 +1062,26 @@ public:
         return item;
     }
 
+    // Same, but consumes the compressed item while keeping its
+    // owned buffers alive in the new uncompressed item.
+    static ItemPtr CreateFromCompressed(ItemPtr compressed) {
+        auto uncompressed = CreateFromCompressed(*compressed);
+        while (!compressed->files_.empty()) {
+            uncompressed->OwnFile(std::move(compressed->files_.front()));
+            compressed->files_.pop_front();
+        }
+        while (!compressed->buffers_.empty()) {
+            uncompressed->OwnBuffer(std::move(compressed->buffers_.front()));
+            compressed->buffers_.pop_front();
+        }
+        return uncompressed;
+    }
+
     // Create a BOOTFS item.
+    template<typename Filter>
     static ItemPtr CreateBootFS(FileOpener* opener,
                                 const InputFileGeneratorList& input,
+                                const Filter& include_file,
                                 bool sort,
                                 const std::string& prefix,
                                 bool compress) {
@@ -1073,6 +1097,9 @@ public:
         for (const auto& generator : input) {
             InputFileGenerator::value_type next;
             while (generator->Next(opener, prefix, &next)) {
+                if (!include_file(next.target.c_str())) {
+                    continue;
+                }
                 // Accumulate the space needed for each zbi_bootfs_dirent_t.
                 dirsize += ZBI_BOOTFS_DIRENT_SIZE(next.target.size() + 1);
                 Entry entry;
@@ -1249,7 +1276,16 @@ private:
         return 0;
     }
 
-    const uint8_t* payload_data() const {
+    const uint8_t* payload_data() {
+        if (payload_.size() > 1) {
+            AppendBuffer buffer(PayloadSize());
+            for (const auto& iov : payload_) {
+                buffer.Append(iov.iov_base, iov.iov_len);
+            }
+            payload_.clear();
+            payload_.push_front(buffer.get());
+            OwnBuffer(buffer.release());
+        }
         assert(payload_.size() == 1);
         return static_cast<const uint8_t*>(payload_.front().iov_base);
     }
@@ -1298,7 +1334,7 @@ private:
             return BootFSDirectoryIterator();
         }
 
-        static int Create(const Item* item, BootFSDirectoryIterator* it) {
+        static int Create(Item* item, BootFSDirectoryIterator* it) {
             zbi_bootfs_header_t superblock;
             const uint32_t length = item->header_.length;
             if (length < sizeof(superblock)) {
@@ -1347,7 +1383,7 @@ private:
         return ok;
     }
 
-    int ShowBootFS() const {
+    int ShowBootFS() {
         assert(!AlreadyCompressed());
         BootFSDirectoryIterator dir;
         int status = BootFSDirectoryIterator::Create(this, &dir);
@@ -1359,49 +1395,25 @@ private:
         return status;
     }
 
-    template<typename Iterator>
-    void ExtractBootFS(Iterator start, Iterator stop,
-                       const std::string& prefix,
-                       unsigned int *files_count,
-                       unsigned int *extract_count) const {
-        auto matches = [start, stop](const char* name) {
-            if (start == stop) {
-                return true;
-            } else {
-                auto matches_pattern = [name](const char* pattern) {
-                    return fnmatch(pattern, name, 0) == 0;
-                };
-                return std::any_of(start, stop, matches_pattern);
-            }
-        };
-
+    template<typename Extractor>
+    bool ExtractBootFS(Extractor& extract) {
         assert(!AlreadyCompressed());
         BootFSDirectoryIterator dir;
         int status = BootFSDirectoryIterator::Create(this, &dir);
         if (status != 0) {
             exit(status);
         }
+        bool keepalive = false;
         for (const auto& entry : dir) {
-            ++*files_count;
             if (!CheckBootFSDirent(entry, false)) {
                 exit(1);
-            } else if (matches(entry.name)) {
-                ++*extract_count;
-                auto name = prefix + entry.name;
-                MakeDirs(name);
-                fbl::unique_fd fd(open(name.c_str(),
-                                       O_WRONLY | O_CREAT | O_TRUNC, 0666));
-                if (!fd) {
-                    fprintf(stderr, "cannot create %s: %s\n",
-                            name.c_str(), strerror(errno));
-                    exit(1);
-                } else {
-                    OutputStream out(std::move(fd));
-                    out.Write(Iovec(payload_data() + entry.data_off,
-                                    entry.data_len));
-                }
+            }
+            const FileContents file(entry, payload_data());
+            if (extract(entry.name, &file)) {
+                keepalive = true;
             }
         }
+        return keepalive;
     }
 
     class BootFSInputFileGenerator : public InputFileGenerator {
@@ -1409,7 +1421,7 @@ private:
         explicit BootFSInputFileGenerator(ItemPtr item) :
             item_(std::move(item)) {
             if (item_->AlreadyCompressed()) {
-                item_ = CreateFromCompressed(*item_);
+                item_ = CreateFromCompressed(std::move(item_));
             }
             int status = BootFSDirectoryIterator::Create(item_.get(), &dir_);
             if (status != 0) {
@@ -1524,7 +1536,7 @@ void usage(const char* progname) {
     fprintf(stderr, "\
 Usage: %s {--output=FILE | -o FILE} [--depfile=FILE | -d FILE] ...\n\
        %s {--list | -t} ...\n\
-       %s {--extract | -x} ... [-- PATTERN...]\n\
+       %s {--extract | -x} ...\n\
        %s {--extract-item=N | -X N} ...\n\
        %s {--extract-raw=N | -R N} ...\n\
 \n\
@@ -1546,7 +1558,11 @@ Remaining arguments are interpersed switches and input files:\n\
     --prefix=PREFIX, -p PREFIX     prepend PREFIX/ to target file names\n\
     --entry=LINE, -e LINE          like an input file containing only LINE\n\
     FILE                           input or manifest file\n\
-    DIRECTORY                      directory tree goes into BOOTFS at PREFIX/\n\
+    DIRECTORY                      directory tree into BOOTFS at PREFIX/\n\
+\n\
+The first three forms can be followed by -- PATTERN... to restrict the\n\
+BOOTFS to a subset of the files in the input, matched by target name.\n\
+PATTERN is a shell filename pattern where * matches regardless of /.\n\
 \n\
 Each `--target` or `-T` switch affects subsequent FILE arguments.\n\
 With `--target=boot` (or no switch), files with ZBI_TYPE_CONTAINER headers\n\
@@ -1566,9 +1582,7 @@ With `--extract-raw` or `-R`, write decompressed payload with no header.\n\
 \n\
 With `--extract` or `-x`, extract files from BOOTFS images into local files\n\
 named by prepending PREFIX/ to each target file name.  By default\n\
-all files are extracted.  If one or more PATTERN arguments appear after\n\
--- then only files matching a PATTERN are extracted; PATTERN is a shell\n\
-filename pattern where * matches regardless of / characters.\n\
+all files are extracted.\n\
 ",
             progname, progname, progname, progname, progname);
 }
@@ -1812,11 +1826,30 @@ only one --extract (-x), --extract-item (-X), --extract-raw (-R)\n");
         exit(1);
     }
 
-    if (optind < argc && !extract_files) {
-        fprintf(stderr,
-                "arguments after -- only apply to --extract (-x)\n");
+    if (optind < argc && extract_index != -1) {
+        fprintf(stderr, "\
+arguments after -- unused with --extract-item (-X) or --extract-raw (-R)\n");
         exit(1);
     }
+
+    // Predicate to apply the -- PATTERN... filter.
+    unsigned int file_count = 0, extract_count = 0;
+    const auto file_matches = [&file_count, &extract_count,
+                               start=&argv[optind],
+                               stop=&argv[argc]](const char* name) {
+        ++file_count;
+        bool extract = start == stop;
+        if (!extract) {
+            auto matches_pattern = [name](const char* pattern) {
+                return fnmatch(pattern, name, 0) == 0;
+            };
+            extract = std::any_of(start, stop, matches_pattern);
+        }
+        if (extract) {
+            ++extract_count;
+        }
+        return extract;
+    };
 
     if (list_contents || extract_files) {
         if (outfile || depfile) {
@@ -1834,24 +1867,29 @@ no output file or depfile with --list (-t) or --extract (-x)\n");
     // Don't merge incoming items when only listing or extracting.
     const bool merge = !list_contents && !extract_files && extract_index == -1;
 
-    if (!bootfs_input.empty() || merge) {
-        // If there are multiple BOOTFS input items, or any BOOTFS items when
-        // we're also creating a fresh BOOTFS, merge them all into the new one.
-        auto is_bootfs = [](const ItemPtr& item) {
-            return item->type() == ZBI_TYPE_STORAGE_BOOTFS;
-        };
-        auto bootfs_count =
-            (bootfs_input.empty() ? 0 : 1) +
-            std::count_if(items.begin(), items.end(), is_bootfs);
-        if (bootfs_count > 1) {
-            for (auto& item : items) {
-                if (is_bootfs(item)) {
-                    // Null out the list entry.
-                    ItemPtr old;
-                    item.swap(old);
-                    // The generator consumes the old item.
-                    bootfs_input.push_back(Item::ReadBootFS(std::move(old)));
-                }
+    auto is_bootfs = [](const ItemPtr& item) {
+        return item->type() == ZBI_TYPE_STORAGE_BOOTFS;
+    };
+
+    // If there are multiple BOOTFS input items, or any BOOTFS items when
+    // we're also creating a fresh BOOTFS, merge them all into the new one.
+    const bool merge_bootfs =
+        (optind < argc ||
+         ((merge || !bootfs_input.empty()) &&
+          ((bootfs_input.empty() ? 0 : 1) +
+           std::count_if(items.begin(), items.end(), is_bootfs)) > 1));
+
+    // These items need to be kept alive until the BOOTFS is packed.
+    std::forward_list<ItemPtr> bootfs_keepalive;
+
+    if (merge_bootfs) {
+        for (auto& item : items) {
+            if (is_bootfs(item)) {
+                // Null out the list entry.
+                ItemPtr old;
+                item.swap(old);
+                // The generator consumes the old item.
+                bootfs_input.push_back(Item::ReadBootFS(std::move(old)));
             }
         }
     }
@@ -1890,8 +1928,8 @@ no output file or depfile with --list (-t) or --extract (-x)\n");
     if (!bootfs_input.empty()) {
         // Pack up the BOOTFS.
         items.push_back(
-            Item::CreateBootFS(&opener, bootfs_input, sort,
-                               prefix, compressed));
+            Item::CreateBootFS(&opener, bootfs_input, file_matches,
+                               sort, prefix, compressed));
     }
 
     if (items.empty()) {
@@ -1924,10 +1962,28 @@ no output file or depfile with --list (-t) or --extract (-x)\n");
         }
     }
 
-    unsigned int file_count = 0, extract_count = 0;
-    auto do_extract = [&](const Item& item) {
-        item.ExtractFiles(&argv[optind], &argv[argc], prefix,
-                          &file_count, &extract_count);
+    // Write an extracted file out to disk.
+    auto extract_file = [&](const char* target, const FileContents* file) {
+        if (file_matches(target)) {
+            auto name = prefix + target;
+            MakeDirs(name);
+            fbl::unique_fd fd(open(name.c_str(),
+                                   O_WRONLY | O_CREAT | O_TRUNC, 0666));
+            if (!fd) {
+                fprintf(stderr, "cannot create %s: %s\n",
+                        name.c_str(), strerror(errno));
+                exit(1);
+            } else {
+                OutputStream out(std::move(fd));
+                out.Write(file->View(0, file->exact_size()));
+            }
+        }
+        return false;
+    };
+
+    auto do_extract = [&](Item& item) {
+        auto keepalive = item.ExtractFiles(extract_file);
+        assert(!keepalive);
     };
 
     if (list_contents || verbose) {
@@ -1940,7 +1996,7 @@ no output file or depfile with --list (-t) or --extract (-x)\n");
         // Contents start after the ZBI_TYPE_CONTAINER header.
         uint32_t pos = sizeof(zbi_header_t);
         int status = 0;
-        for (const auto& item : items) {
+        for (auto& item : items) {
             item->Describe(pos);
             pos += item->TotalSize();
             if (verbose) {
@@ -1956,12 +2012,12 @@ no output file or depfile with --list (-t) or --extract (-x)\n");
         }
     } else if (extract_files) {
         // If not being verbose, just extract BOOTFS files.
-        for (const auto& item : items) {
+        for (auto& item : items) {
             do_extract(*item);
         }
     }
 
-    if (extract_files) {
+    if (extract_files || optind < argc) {
         // All done except for the gloating.
         if (file_count == 0) {
             fprintf(stderr, "no BOOTFS files found\n");
@@ -1973,7 +2029,9 @@ no output file or depfile with --list (-t) or --extract (-x)\n");
             printf("extracted %u of %u BOOTFS files\n",
                    extract_count, file_count);
         }
-    } else {
+    }
+
+    if (!extract_files) {
         // Now stream the output.
 
         fbl::unique_fd outfd;
