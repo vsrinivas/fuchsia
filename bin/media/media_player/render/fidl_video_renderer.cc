@@ -94,6 +94,10 @@ void FidlVideoRenderer::FlushInput(bool hold_frame, size_t input_index,
     }
   }
 
+  if (!hold_frame) {
+    held_packet_.reset();
+  }
+
   SetEndOfStreamPts(media::kUnspecifiedTime);
 
   InvalidateViews();

@@ -7,6 +7,7 @@
 
 #include <unordered_map>
 
+#include <lib/async/default.h>
 #include <media/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/demux/reader.h"
@@ -74,8 +75,12 @@ class MediaPlayerImpl : public MediaPlayer {
 
   static const char* ToString(State value);
 
-  // Sets the current reader.
-  void SetReader(std::shared_ptr<Reader> reader);
+  // Begins the process of setting the reader.
+  void BeginSetReader(std::shared_ptr<Reader> reader);
+
+  // Finishes the process of setting the reader, assuming we're in |kIdle|
+  // state and have no source segment.
+  void FinishSetReader();
 
   // Creates the renderer for |medium| if it doesn't exist already.
   void MaybeCreateRenderer(StreamType::Medium medium);
@@ -90,6 +95,17 @@ class MediaPlayerImpl : public MediaPlayer {
   // Takes action based on current state.
   void Update();
 
+  // Determines whether we need to flush.
+  bool NeedToFlush() const {
+    return setting_reader_ || target_position_ != media::kUnspecifiedTime ||
+           target_state_ == State::kFlushed;
+  }
+
+  // Determines whether we should hold a frame when flushing.
+  bool ShouldHoldFrame() const {
+    return !setting_reader_ && target_state_ != State::kFlushed;
+  }
+
   // Sets the timeline function.
   void SetTimelineFunction(float rate, int64_t reference_time,
                            fxl::Closure callback);
@@ -100,6 +116,7 @@ class MediaPlayerImpl : public MediaPlayer {
   // Updates |status_|.
   void UpdateStatus();
 
+  async_t* async_;
   component::ApplicationContext* application_context_;
   fxl::Closure quit_callback_;
   fidl::BindingSet<MediaPlayer> bindings_;
@@ -128,6 +145,17 @@ class MediaPlayerImpl : public MediaPlayer {
 
   // The minimum program range PTS to be used for SetProgramRange.
   int64_t program_range_min_pts_ = media::kMinTime;
+
+  // Whether we need to set the reader, possibly with nothing. When this is
+  // true, the state machine will transition to |kIdle|, removing an existing
+  // reader if there is one, then call |FinishSetReader| to set up the new
+  // reader |new_reader_|.
+  bool setting_reader_ = false;
+
+  // Reader that needs to be used once we're ready to use it. If this field is
+  // null when |setting_reader_| is true, we're waiting to remove the existing
+  // reader and transition to kInactive.
+  std::shared_ptr<Reader> new_reader_;
 
   MediaPlayerStatus status_;
 };

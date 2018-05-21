@@ -7,6 +7,7 @@
 #include <sstream>
 
 #include <fs/pseudo-file.h>
+#include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <media/cpp/fidl.h>
 #include <media_player/cpp/fidl.h>
@@ -47,9 +48,10 @@ MediaPlayerImpl::MediaPlayerImpl(
     fidl::InterfaceRequest<MediaPlayer> request,
     component::ApplicationContext* application_context,
     fxl::Closure quit_callback)
-    : application_context_(application_context),
+    : async_(async_get_default()),
+      application_context_(application_context),
       quit_callback_(quit_callback),
-      player_(async_get_default()) {
+      player_(async_) {
   FXL_DCHECK(request);
   FXL_DCHECK(application_context_);
   FXL_DCHECK(quit_callback_);
@@ -203,9 +205,22 @@ void MediaPlayerImpl::Update() {
   while (true) {
     switch (state_) {
       case State::kInactive:
+        if (setting_reader_) {
+          // Need to set the reader. |FinishSetReader| will set the reader and
+          // post another call to |Update|.
+          FinishSetReader();
+        }
         return;
 
       case State::kFlushed:
+        if (setting_reader_) {
+          // We have a new reader. Get rid of the current reader and transition
+          // to inactive state. From there, we'll set up the new reader.
+          player_.SetSourceSegment(nullptr, nullptr);
+          state_ = State::kInactive;
+          break;
+        }
+
         // Presentation time is not progressing, and the pipeline is clear of
         // packets.
         if (target_position_ != media::kUnspecifiedTime) {
@@ -221,10 +236,10 @@ void MediaPlayerImpl::Update() {
           int64_t target_position = target_position_;
           target_position_ = media::kUnspecifiedTime;
 
-          // |program_range_min_pts_| will be delivered in the |SetProgramRange|
-          // call, ensuring that the renderers discard packets with PTS values
-          // less than the target position. |transform_subject_time_| is used
-          // when setting the timeline.
+          // |program_range_min_pts_| will be delivered in the
+          // |SetProgramRange| call, ensuring that the renderers discard
+          // packets with PTS values less than the target position.
+          // |transform_subject_time_| is used when setting the timeline.
           transform_subject_time_ = target_position;
           program_range_min_pts_ = target_position;
 
@@ -248,8 +263,8 @@ void MediaPlayerImpl::Update() {
                 });
               });
 
-          // Done for now. We're in kWaiting, and the callback will call Update
-          // when the Seek call is complete.
+          // Done for now. We're in kWaiting, and the callback will call
+          // Update when the Seek call is complete.
           return;
         }
 
@@ -279,13 +294,13 @@ void MediaPlayerImpl::Update() {
       case State::kPrimed:
         // Presentation time is not progressing, and the pipeline is primed with
         // packets.
-        if (target_position_ != media::kUnspecifiedTime ||
-            target_state_ == State::kFlushed) {
-          // Either we want to seek, or we otherwise want to flush.
+        if (NeedToFlush()) {
+          // Either we have a new reader, want to seek, or we otherwise want to
+          // flush.
           state_ = State::kWaiting;
           waiting_reason_ = "for flushing to complete";
 
-          player_.Flush(target_state_ != State::kFlushed, [this]() {
+          player_.Flush(ShouldHoldFrame(), [this]() {
             state_ = State::kFlushed;
             Update();
           });
@@ -316,13 +331,11 @@ void MediaPlayerImpl::Update() {
       case State::kPlaying:
         // Presentation time is progressing, and packets are moving through
         // the pipeline.
-        if (target_position_ != media::kUnspecifiedTime ||
-            target_state_ == State::kFlushed ||
-            target_state_ == State::kPrimed) {
-          // Either we want to seek or we want to stop playback, possibly
-          // because a reader transition is pending. In either case, we need
-          // to enter |kWaiting|, stop the presentation timeline and transition
-          // to |kPrimed| when the operation completes.
+        if (NeedToFlush() || target_state_ == State::kPrimed) {
+          // Either we have a new reader, we want to seek or we want to stop
+          // playback. In any case, we need to enter |kWaiting|, stop the
+          // presentation timeline and transition to |kPrimed| when the
+          // operation completes.
           state_ = State::kWaiting;
           waiting_reason_ = "for renderers to stop progressing";
           SetTimelineFunction(
@@ -332,7 +345,7 @@ void MediaPlayerImpl::Update() {
               });
 
           // Done for now. We're in |kWaiting|, and the callback will call
-          // |Update| when the flush is complete.
+          // |Update| when the timeline is set.
           return;
         }
 
@@ -366,34 +379,58 @@ void MediaPlayerImpl::SetTimelineFunction(float rate, int64_t reference_time,
 }
 
 void MediaPlayerImpl::SetHttpSource(fidl::StringPtr http_url) {
-  SetReader(HttpReader::Create(application_context_, http_url));
+  BeginSetReader(HttpReader::Create(application_context_, http_url));
 }
 
 void MediaPlayerImpl::SetFileSource(zx::channel file_channel) {
-  SetReader(FileReader::Create(std::move(file_channel)));
+  BeginSetReader(FileReader::Create(std::move(file_channel)));
 }
 
 void MediaPlayerImpl::SetReaderSource(
     fidl::InterfaceHandle<SeekingReader> reader_handle) {
   if (!reader_handle) {
-    player_.SetSourceSegment(nullptr, nullptr);
+    BeginSetReader(nullptr);
     return;
   }
 
-  SetReader(FidlReader::Create(reader_handle.Bind()));
+  BeginSetReader(FidlReader::Create(reader_handle.Bind()));
 }
 
-void MediaPlayerImpl::SetReader(std::shared_ptr<Reader> reader) {
+void MediaPlayerImpl::BeginSetReader(std::shared_ptr<Reader> reader) {
+  // Note the pending reader change and advance the state machine. When the
+  // old reader (if any) is shut down, the state machine will call
+  // |FinishSetReader|.
+  setting_reader_ = true;
+  new_reader_ = reader;
+  target_position_ = 0;
+  async::PostTask(async_, [this]() { Update(); });
+}
+
+void MediaPlayerImpl::FinishSetReader() {
+  FXL_DCHECK(setting_reader_);
+  FXL_DCHECK(state_ == State::kInactive);
+  FXL_DCHECK(!player_.has_source_segment());
+
+  setting_reader_ = false;
+
+  if (!new_reader_) {
+    // We were asked to clear the reader, which was already done by the state
+    // machine. We're done.
+    return;
+  }
+
   state_ = State::kWaiting;
   waiting_reason_ = "for the source to initialize";
-  target_position_ = media::kUnspecifiedTime;
   program_range_min_pts_ = 0;
   transform_subject_time_ = 0;
 
   MaybeCreateRenderer(StreamType::Medium::kAudio);
 
-  std::shared_ptr<Demux> demux = Demux::Create(ReaderCache::Create(reader));
+  std::shared_ptr<Demux> demux =
+      Demux::Create(ReaderCache::Create(new_reader_));
   FXL_DCHECK(demux);
+
+  new_reader_ = nullptr;
 
   player_.SetSourceSegment(DemuxSourceSegment::Create(demux), [this]() {
     state_ = State::kFlushed;
