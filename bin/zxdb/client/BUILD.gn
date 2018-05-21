@@ -13,6 +13,7 @@ static_library("client") {
     "disassembler.h",
     "err.h",
     "frame.h",
+    "host_utils.h",
     "location.h",
     "memory_dump.h",
     "process.h",
@@ -39,11 +40,18 @@ static_library("client") {
     "frame.cc",
     "frame_impl.cc",
     "frame_impl.h",
+    "host_utils.cc",
     "memory_dump.cc",
     "process.cc",
     "process_impl.cc",
     "process_impl.h",
     "session.cc",
+    "symbols/dwarf_die_decoder.cc",
+    "symbols/dwarf_die_decoder.h",
+    "symbols/module_symbol_index.cc",
+    "symbols/module_symbol_index.h",
+    "symbols/module_symbol_index_node.cc",
+    "symbols/module_symbol_index_node.h",
     "symbols.cc",
     "symbols_impl.cc",
     "symbols_impl.h",
@@ -65,6 +73,11 @@ static_library("client") {
     "//third_party/llvm/lib/Target/AArch64/Disassembler",
     "//third_party/llvm/lib/Target/X86/Disassembler",
   ]
+
+  deps = [
+    "//third_party/llvm/lib/MC",
+    "//third_party/llvm/lib/Object",
+  ]
 }
 
 source_set("tests") {
@@ -72,10 +85,19 @@ source_set("tests") {
   sources = [
     "disassembler_unittest.cc",
     "memory_dump_unittest.cc",
+    "symbols/module_symbol_index_unittest.cc",
+    "symbols/module_symbol_index_node_unittest.cc",
+    "symbols/test_symbol_module.cc",
   ]
 
   deps = [
     ":client",
     "//third_party/googletest:gtest",
+    "//third_party/llvm/lib/MC",
+    "//third_party/llvm/lib/Object",
+  ]
+
+  data_deps = [
+    "//garnet/bin/zxdb/client/test_data:copy_test_so(${default_toolchain}-shared)",
   ]
 }

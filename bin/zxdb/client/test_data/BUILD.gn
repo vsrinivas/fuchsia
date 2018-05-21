@@ -1,0 +1,41 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This file is compiled for the target. It is not actually used for the
+# devide, but is read by the zxdb tests on the host to test the symbol handling
+# code.
+
+# This should be the shared library toolchain only. Normally one could
+# reference this in the default toolchain and that will redirect to the shared
+# one. But our write_so_dir target needs to write out the correct file for
+# the corresponding toolchain so they need to match. write_so_dir must only
+# be referenced once to generate the correct file.
+assert(current_toolchain == "${default_toolchain}-shared")
+
+shared_library("zxdb_symbol_test") {
+  sources = [
+    "zxdb_symbol_test.cc",
+  ]
+}
+
+# Copies the test library to 
+copy("copy_test_so") {
+  sources = [
+    "$root_out_dir/lib.unstripped/libzxdb_symbol_test.so",
+  ]
+
+  # Use "host_x64" for the output directory since all hosts are currently
+  # x64 so this name is consistent across platforms, and this avoids polluting
+  # the root toolchain with this test file.
+  #
+  # Use a ".targetso" extension because this isn't a library that can actually
+  # loaded on the host platform.
+  outputs = [
+    "$root_build_dir/host_x64/libzxdb_symbol_test.targetso",
+  ]
+
+  deps = [
+    ":zxdb_symbol_test",
+  ]
+}
