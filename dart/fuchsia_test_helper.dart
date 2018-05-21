@@ -18,7 +18,7 @@ import 'package:test/src/runner/engine.dart';
 import 'package:test/src/runner/plugin/environment.dart';
 import 'package:test/src/runner/reporter/expanded.dart';
 
-typedef void MainFunction();
+typedef MainFunction = void Function();
 
 /// Use `package:test` internals to run test functions.
 ///
@@ -36,13 +36,11 @@ Future<bool> runFuchsiaTests(List<MainFunction> mainFunctions) async {
 
   final Group group = declarer.build();
 
-  final SuitePlatform platform = new SuitePlatform(
-      Runtime.vm,
+  final SuitePlatform platform = new SuitePlatform(Runtime.vm,
       os: OperatingSystem.findByIoName(Platform.operatingSystem),
       inGoogle: false);
   final RunnerSuite suite = new RunnerSuite(
-      const PluginEnvironment(), SuiteConfiguration.empty, group,
-      platform);
+      const PluginEnvironment(), SuiteConfiguration.empty, group, platform);
 
   final Engine engine = new Engine();
   engine.suiteSink.add(suite);
