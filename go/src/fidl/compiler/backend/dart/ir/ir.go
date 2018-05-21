@@ -191,7 +191,6 @@ var declForPrimitiveType = map[types.PrimitiveSubtype]string{
 }
 
 var typedDataDecl = map[types.PrimitiveSubtype]string{
-	types.Bool:    "Uint8List",
 	types.Status:  "Int32List",
 	types.Int8:    "Int8List",
 	types.Int16:   "Int16List",
