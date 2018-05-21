@@ -18,6 +18,7 @@
 
 #include <arch/x86/general_regs.h>
 #include <arch/x86/registers.h>
+#include <arch/x86/x86intrin.h>
 #include <syscalls/syscalls.h>
 
 __BEGIN_CDECLS
@@ -192,16 +193,7 @@ static inline void outpd(uint16_t _port, uint32_t _data)
 
 static inline uint64_t rdtsc(void)
 {
-    uint64_t tsc;
-
-    uint32_t tsc_low;
-    uint32_t tsc_hi;
-
-    __asm__ __volatile__("rdtsc" : "=a" (tsc_low), "=d" (tsc_hi));
-
-    tsc = ((uint64_t)tsc_hi << 32) | tsc_low;
-
-     return tsc;
+    return __rdtsc();
 }
 
 static inline void cpuid(uint32_t sel, uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d)
