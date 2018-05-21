@@ -14,6 +14,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/astro-i2c.c \
     $(LOCAL_DIR)/astro-usb.c \
     $(LOCAL_DIR)/astro-display.c \
+    $(LOCAL_DIR)/astro-touch.c \
 
 MODULE_STATIC_LIBS := \
     system/dev/soc/amlogic \
