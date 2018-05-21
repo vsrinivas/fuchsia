@@ -4,13 +4,8 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fidl") {
-  name = "cobalt"
-
-  sdk_category = "partner"
-
-  sources = [
-    "cobalt.fidl",
-    "cobalt_controller.fidl",
+group("fidl") {
+  deps = [
+    "//zircon/public/fidl/cobalt:cobalt"
   ]
 }
