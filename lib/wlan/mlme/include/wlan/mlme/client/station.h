@@ -10,8 +10,8 @@
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/sequence.h>
 
-#include <wlan_stats/c/fidl.h>
 #include <wlan_mlme/cpp/fidl.h>
+#include <wlan_stats/c/fidl.h>
 
 #include <fbl/unique_ptr.h>
 #include <wlan/common/macaddr.h>
@@ -104,6 +104,8 @@ class Station : public FrameHandler {
                                     const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleDataFrame(const ImmutableDataFrame<LlcHeader>& frame,
                                 const wlan_rx_info_t& rxinfo) override;
+    zx_status_t HandleLlcFrame(const LlcHeader& llc_frame, size_t llc_frame_len,
+                               const common::MacAddr& dest, const common::MacAddr& src);
 
     zx_status_t HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame) override;
     zx_status_t HandleTimeout();

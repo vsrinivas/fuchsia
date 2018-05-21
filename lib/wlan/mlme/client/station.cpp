@@ -724,21 +724,33 @@ zx_status_t Station::HandleDataFrame(const ImmutableDataFrame<LlcHeader>& frame,
     // PS-POLL if there are more buffered unicast frames.
     if (hdr->fc.more_data() && hdr->addr1.IsUcast()) { SendPsPoll(); }
 
-    const size_t eth_len = frame.body_len() + sizeof(EthernetII) - sizeof(LlcHeader);
+    ZX_DEBUG_ASSERT(frame.body_len() >= sizeof(LlcHeader));
+    if (frame.body_len() < sizeof(LlcHeader)) {
+        errorf("Inbound LLC frame too short (%zu bytes). Drop.", frame.body_len());
+        return ZX_ERR_STOP;
+    }
+    return HandleLlcFrame(*llc, frame.body_len(), hdr->addr1, hdr->addr3);
+}
+
+zx_status_t Station::HandleLlcFrame(const LlcHeader& llc_frame, size_t llc_frame_len,
+                                    const common::MacAddr& dest, const common::MacAddr& src) {
+    auto llc_payload_len = llc_frame_len - sizeof(LlcHeader);
+
+    // Prepare a packet
+    const size_t eth_len = llc_payload_len + sizeof(EthernetII);
     auto buffer = GetBuffer(eth_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
     auto eth_packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), eth_len));
-    // no need to clear the packet since every byte is overwritten
     eth_packet->set_peer(Packet::Peer::kEthernet);
+
+    // Construct an Ethernet frame
     auto eth = eth_packet->mut_field<EthernetII>(0);
+    eth->dest = dest;
+    eth->src = src;
+    eth->ether_type = llc_frame.protocol_id;
+    std::memcpy(eth->payload, llc_frame.payload, llc_payload_len);
 
-    eth->dest = hdr->addr1;
-    eth->src = hdr->addr3;
-
-    eth->ether_type = llc->protocol_id;
-    std::memcpy(eth->payload, llc->payload, frame.body_len() - sizeof(LlcHeader));
-
+    // Send up
     zx_status_t status = device_->SendEthernet(std::move(eth_packet));
     if (status != ZX_OK) { errorf("could not send ethernet data: %d\n", status); }
     return status;
