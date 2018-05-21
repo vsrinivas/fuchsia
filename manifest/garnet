@@ -5,10 +5,12 @@
     <localimport file="third_party"/>
     <import remote="https://fuchsia.googlesource.com/build"
             manifest="manifest/build"
-            name="build"/>
+            name="build"
+            revision="ce9099f009f01dfbabdc213564fe74d7ed994019"/>
     <import remote="https://fuchsia.googlesource.com/scripts"
             manifest="manifest/scripts"
-            name="scripts"/>
+            name="scripts"
+            revision="1750a30abb632e112896f5bea9361765b3e5b7d5"/>
     <import remote="https://fuchsia.googlesource.com/zircon"
             manifest="manifest/zircon"
             name="zircon"
