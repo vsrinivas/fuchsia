@@ -7,6 +7,12 @@
   <imports>
     <localimport file="minimal"/>
     <localimport file="third_party"/>
+    <import remote="https://fuchsia.googlesource.com/build"
+            manifest="manifest/build"
+            name="build"/>
+    <import remote="https://fuchsia.googlesource.com/scripts"
+            manifest="manifest/scripts"
+            name="scripts"/>
     <import remote="https://fuchsia.googlesource.com/zircon"
             manifest="manifest/zircon"
             name="zircon"/>
