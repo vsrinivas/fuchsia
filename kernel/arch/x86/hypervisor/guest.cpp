@@ -63,6 +63,9 @@ zx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>*
     ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_IA32_FMASK);
     ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_IA32_TSC_ADJUST);
     ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_IA32_TSC_AUX);
+    ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_IA32_SYSENTER_CS);
+    ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_IA32_SYSENTER_ESP);
+    ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_IA32_SYSENTER_EIP);
 
     // Setup VPID allocator
     fbl::AutoLock lock(&guest->vcpu_mutex_);

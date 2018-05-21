@@ -210,8 +210,8 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
             guest_state->rcx &= ~(1u << X86_FEATURE_PDCM.bit);
             // Disable MONITOR/MWAIT.
             guest_state->rcx &= ~(1u << X86_FEATURE_MON.bit);
-            // Disable the SEP (SYSENTER support).
-            guest_state->rdx &= ~(1u << X86_FEATURE_SEP.bit);
+            // Enable the SEP (SYSENTER support).
+            guest_state->rdx |= 1u << X86_FEATURE_SEP.bit;
             // Disable the Thermal Monitor bit.
             guest_state->rdx &= ~(1u << X86_FEATURE_TM.bit);
             break;
@@ -510,6 +510,7 @@ static zx_status_t handle_apic_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
 
 static zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
                                 GuestState* guest_state, LocalApicState* local_apic_state) {
+    // On execution of rdmsr, rcx specifies the MSR and the value is loaded into edx:eax.
     switch (guest_state->rcx) {
     case X86_MSR_IA32_APIC_BASE:
         next_rip(exit_info, vmcs);
@@ -728,6 +729,7 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
                                 LocalApicState* local_apic_state, PvClockState* pvclock,
                                 hypervisor::GuestPhysicalAddressSpace* gpas,
                                 zx_port_packet* packet) {
+    // On execution of wrmsr, rcx specifies the MSR and edx:eax contains the value to be written.
     switch (guest_state->rcx) {
     case X86_MSR_IA32_APIC_BASE:
         if (guest_state->rdx != 0)
@@ -753,7 +755,7 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
         if ((local_apic_state->lvt_timer & LVT_TIMER_MODE_MASK) != LVT_TIMER_MODE_TSC_DEADLINE)
             return ZX_ERR_INVALID_ARGS;
         next_rip(exit_info, vmcs);
-        uint64_t tsc_deadline = guest_state->rdx << 32 | (guest_state->rax & UINT32_MAX);
+        uint64_t tsc_deadline = (guest_state->rdx << 32) | (guest_state->rax & UINT32_MAX);
         update_timer(local_apic_state, ticks_to_nanos(tsc_deadline));
         return ZX_OK;
     }
@@ -766,12 +768,6 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
         return handle_kvm_wrmsr(exit_info, vmcs, guest_state, local_apic_state, pvclock, gpas);
     default:
         dprintf(INFO, "Unhandled wrmsr %#lx\n", guest_state->rcx);
-        __FALLTHROUGH;
-    // For these MSRs, we intentionally inject a general protection fault to
-    // indicate to the guest that they are unsupported.
-    case X86_MSR_IA32_SYSENTER_CS:
-    case X86_MSR_IA32_SYSENTER_ESP:
-    case X86_MSR_IA32_SYSENTER_EIP:
         return local_apic_state->interrupt_tracker.Interrupt(X86_INT_GP_FAULT, nullptr);
     }
 }
