@@ -28,7 +28,7 @@ func NewTUFClient(url string, path string) (*tuf.Client, tuf.LocalStore, error) 
 		return nil, nil, IOError{fmt.Errorf("amber: couldn't open datastore %s\n", err)}
 	}
 
-	server, err := tuf.HTTPRemoteStore(url, nil)
+	server, err := tuf.HTTPRemoteStore(url, nil, nil)
 	if err != nil {
 		return nil, nil, RemoteStoreError{fmt.Errorf("amber: server address not understood %s\n", err)}
 	}
