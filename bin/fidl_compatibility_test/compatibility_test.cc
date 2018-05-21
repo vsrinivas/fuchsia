@@ -18,6 +18,7 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/files/path.h"
+#include "lib/fxl/strings/utf_codecs.h"
 
 using fidl::VectorPtr;
 using std::string;
@@ -444,6 +445,43 @@ void ExpectEq(const compatibility_test_service::Struct& a,
   EXPECT_EQ(a.b, b.b);
 }
 
+std::string RandomUTF8(size_t count) {
+  // Prepare randomness.
+  std::default_random_engine rand_engine;
+  // Using randomness to avoid having to come up with varied values by hand.
+  // Seed deterministically so that this function's outputs are predictable.
+  rand_engine.seed(count);
+  std::uniform_int_distribution<uint32_t> uint32_distribution;
+
+  std::string random_string;
+  random_string.reserve(count);
+  do {
+    // Generate a random 32 bit unsigned int to use a the code point.
+    uint32_t code_point = uint32_distribution(rand_engine);
+    // Mask the random number so that it can be encoded into the number of bytes
+    // remaining.
+    size_t remaining = count - random_string.size();
+    if (remaining == 1) {
+      code_point &= 0x7F;
+    } else if (remaining == 2) {
+      code_point &= 0x7FF;
+    } else if (remaining == 3) {
+      code_point &= 0xFFFF;
+    } else {
+      // Mask to fall within the general range of code points.
+      code_point &= 0x1FFFFF;
+    }
+    // Check that it's really a valid code point, otherwise try again.
+    if (!fxl::IsValidCodepoint(code_point)) {
+      continue;
+    }
+    // Add the character to the random string.
+    fxl::WriteUnicodeCharacter(code_point, &random_string);
+    FXL_CHECK(random_string.size() <= count);
+  } while (random_string.size() < count);
+  return random_string;
+}
+
 void Initialize(compatibility_test_service::Struct* s) {
   // Prepare randomness.
   std::default_random_engine rand_engine;
@@ -461,10 +499,9 @@ void Initialize(compatibility_test_service::Struct* s) {
   std::uniform_int_distribution<uint64_t> uint64_distribution;
   std::uniform_real_distribution<float> float_distribution;
   std::uniform_real_distribution<double> double_distribution;
-  char random_chars[compatibility_test_service::strings_size];
-  for (uint32_t i = 0; i < compatibility_test_service::strings_size; ++i) {
-    random_chars[i] = uint8_distribution(rand_engine);
-  }
+  std::string random_string =
+      RandomUTF8(compatibility_test_service::strings_size);
+  std::string random_short_string = RandomUTF8(kArbitraryConstant);
 
   // primitive_types
   s->primitive_types.b = bool_distribution(rand_engine);
@@ -845,13 +882,10 @@ void Initialize(compatibility_test_service::Struct* s) {
   s->handles.nullable_handle_handle = Handle();
 
   // strings
-  s->strings.s =
-      fidl::StringPtr(random_chars, compatibility_test_service::strings_size);
-  s->strings.size_0_s = fidl::StringPtr(random_chars, kArbitraryConstant);
-  s->strings.size_1_s =
-      fidl::StringPtr(random_chars, compatibility_test_service::strings_size);
-  s->strings.nullable_size_0_s =
-      fidl::StringPtr(random_chars, kArbitraryConstant);
+  s->strings.s = fidl::StringPtr(random_string);
+  s->strings.size_0_s = fidl::StringPtr(random_short_string);
+  s->strings.size_1_s = fidl::StringPtr(random_string);
+  s->strings.nullable_size_0_s = fidl::StringPtr(random_short_string);
 
   // enums
   s->default_enum = compatibility_test_service::default_enum::kOne;
@@ -865,12 +899,10 @@ void Initialize(compatibility_test_service::Struct* s) {
   s->u64_enum = compatibility_test_service::u64_enum::kFour;
 
   // structs
-  s->structs.s.s =
-      fidl::StringPtr(random_chars, compatibility_test_service::strings_size);
+  s->structs.s.s = fidl::StringPtr(random_string);
 
   // unions
-  s->unions.u.set_s(
-      fidl::StringPtr(random_chars, compatibility_test_service::strings_size));
+  s->unions.u.set_s(fidl::StringPtr(random_string));
   s->unions.nullable_u = compatibility_test_service::this_is_a_union::New();
   s->unions.nullable_u->set_b(bool_distribution(rand_engine));
 
