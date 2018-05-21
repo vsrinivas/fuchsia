@@ -377,7 +377,7 @@ zx_status_t AssociatedState::HandleDataFrame(const ImmutableDataFrame<LlcHeader>
     // yet.
     if (eapol_controlled_port_ != eapol::PortState::kOpen) { return ZX_OK; }
 
-    const size_t eth_len = frame.body_len() + sizeof(EthernetII);
+    const size_t eth_len = frame.body_len() + sizeof(EthernetII) - sizeof(LlcHeader);
     auto buffer = GetBuffer(eth_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
