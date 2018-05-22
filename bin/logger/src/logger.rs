@@ -29,7 +29,7 @@ pub struct fx_log_metadata_t {
     pub dropped_logs: uint32_t,
 }
 
-const METADATA_SIZE: usize = mem::size_of::<fx_log_metadata_t>();
+pub const METADATA_SIZE: usize = mem::size_of::<fx_log_metadata_t>();
 
 #[repr(C)]
 #[derive(Clone)]

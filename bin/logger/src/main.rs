@@ -33,7 +33,8 @@ use std::sync::Arc;
 use fidl_logger::{Log, LogFilterOptions, LogImpl, LogLevelFilter, LogListenerMarker,
                   LogListenerProxy, LogMarker, LogMessage, LogSink, LogSinkImpl, LogSinkMarker};
 
-pub mod logger;
+mod klogger;
+mod logger;
 
 // Store 4 MB of log messages and delete on FIFO basis.
 const OLD_MSGS_BUF_SIZE: usize = 4 * 1024 * 1024;
@@ -274,6 +275,12 @@ fn spawn_log_manager(state: LogManager, chan: async::Channel) {
     )
 }
 
+fn process_log(shared_members: Arc<Mutex<LogManagerShared>>, mut log_msg: LogMessage, size: usize) {
+    let mut shared_members = shared_members.lock();
+    run_listeners(&mut shared_members.listeners, &mut log_msg);
+    shared_members.log_msg_buffer.push(log_msg, size);
+}
+
 fn spawn_log_sink(state: LogManager, chan: async::Channel) {
     async::spawn(
         LogSinkImpl {
@@ -290,10 +297,8 @@ fn spawn_log_sink(state: LogManager, chan: async::Channel) {
                 };
 
                 let shared_members = state.shared_members.clone();
-                let f = ls.for_each(move |(mut log_msg, size)| {
-                    let mut shared_members = shared_members.lock();
-                    run_listeners(&mut shared_members.listeners, &mut log_msg);
-                    shared_members.log_msg_buffer.push(log_msg, size);
+                let f = ls.for_each(move |(log_msg, size)| {
+                    process_log(shared_members.clone(), log_msg, size);
                     Ok(())
                 }).map(|_s| ());
 
@@ -321,6 +326,10 @@ fn main_wrapper() -> Result<(), Error> {
         log_msg_buffer: MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
     }));
     let shared_members_clone = shared_members.clone();
+    let shared_members_clone2 = shared_members.clone();
+    klogger::add_listener(move |log_msg, size| {
+        process_log(shared_members_clone2.clone(), log_msg, size);
+    }).context("failed to read kernel logs")?;
     let server_fut = ServicesServer::new()
         .add_service((LogMarker::NAME, move |chan| {
             let ls = LogManager {
@@ -338,9 +347,9 @@ fn main_wrapper() -> Result<(), Error> {
         .map_err(|e| e.context("error starting service server"))?;
 
     Ok(executor
-        .run(server_fut, 2)
+        .run(server_fut, 3)
         .context("running server")
-        .map(|_| ())?) // 2 threads
+        .map(|_| ())?) // 3 threads
 }
 
 #[cfg(test)]
@@ -451,7 +460,7 @@ mod tests {
         async::spawn(
             LogListenerImpl {
                 state: ll,
-                on_open: |_,_| fok(()),
+                on_open: |_, _| fok(()),
                 done: |ll, _| {
                     ll.closed.store(true, Ordering::Relaxed);
                     fok(())
@@ -540,9 +549,7 @@ mod tests {
         let (mut executor, log_proxy, log_sink_proxy, sin, sout) = setup_test();
         let mut p = setup_default_packet();
         sin.write(to_u8_slice(&mut p)).unwrap();
-        log_sink_proxy
-            .connect(sout)
-            .expect("unable to connect");
+        log_sink_proxy.connect(sout).expect("unable to connect");
         p.metadata.severity = LogLevelFilter::Info.into_primitive().into();
         sin.write(to_u8_slice(&mut p)).unwrap();
 
@@ -611,9 +618,7 @@ mod tests {
         println!("DEBUG: {}: setup test", test_name);
         let (mut executor, log_proxy, log_sink_proxy, sin, sout) = setup_test();
         println!("DEBUG: {}: call connect", test_name);
-        log_sink_proxy
-            .connect(sout)
-            .expect("unable to connect");
+        log_sink_proxy.connect(sout).expect("unable to connect");
         let done = Arc::new(AtomicBool::new(false));
         let ls = LogListenerState {
             expected: expected,
