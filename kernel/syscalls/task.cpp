@@ -425,8 +425,8 @@ zx_status_t sys_process_start(zx_handle_t process_handle, zx_handle_t thread_han
     return ZX_OK;
 }
 
-void sys_process_exit(int retcode) {
-    LTRACEF("retcode %d\n", retcode);
+void sys_process_exit(int64_t retcode) {
+    LTRACEF("retcode %" PRId64 "\n", retcode);
     ProcessDispatcher::GetCurrent()->Exit(retcode);
 }
 

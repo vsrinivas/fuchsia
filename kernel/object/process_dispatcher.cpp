@@ -168,7 +168,7 @@ zx_status_t ProcessDispatcher::Initialize() {
     return ZX_OK;
 }
 
-void ProcessDispatcher::Exit(int retcode) {
+void ProcessDispatcher::Exit(int64_t retcode) {
     LTRACE_ENTRY_OBJ;
 
     DEBUG_ASSERT(ProcessDispatcher::GetCurrent() == this);
@@ -481,19 +481,19 @@ zx_status_t ProcessDispatcher::GetDispatcherWithRightsInternal(zx_handle_t handl
 zx_status_t ProcessDispatcher::GetInfo(zx_info_process_t* info) {
     memset(info, 0, sizeof(*info));
 
+    State state;
     // retcode_ depends on the state: make sure they're consistent.
-    state_lock_.Acquire();
-    int retcode = retcode_;
-    State state = state_;
-    if (debugger_exception_port_) {  // TODO: Protect with rights if necessary.
-        info->debugger_attached = true;
+    {
+        AutoLock lock(&state_lock_);
+        state = state_;
+        info->return_code = retcode_;
+        // TODO: Protect with rights if necessary.
+        info->debugger_attached = debugger_exception_port_ != nullptr;
     }
-    state_lock_.Release();
 
     switch (state) {
     case State::DEAD:
     case State::DYING:
-        info->return_code = retcode;
         info->exited = true;
         __FALLTHROUGH;
     case State::RUNNING:

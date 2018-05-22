@@ -185,7 +185,7 @@ public:
     void get_name(char out_name[ZX_MAX_NAME_LEN]) const final;
     zx_status_t set_name(const char* name, size_t len) final;
 
-    void Exit(int retcode) __NO_RETURN;
+    void Exit(int64_t retcode) __NO_RETURN;
     void Kill();
 
     // Syscall helpers
@@ -322,7 +322,7 @@ private:
     bool completely_dead_ = false;
 
     // process return code
-    int retcode_ = 0;
+    int64_t retcode_ = 0;
 
     // Exception ports bound to the process.
     fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(state_lock_);

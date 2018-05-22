@@ -26,12 +26,12 @@ enum LaunchStatus {
 struct Result {
     fbl::String name; // argv[0].
     LaunchStatus launch_status;
-    int return_code; // Only valid if launch_stauts == SUCCESS or FAILED_NONZERO_RETURN_CODE.
+    int64_t return_code; // Only valid if launch_stauts == SUCCESS or FAILED_NONZERO_RETURN_CODE.
     // TODO(ZX-2050): Track duration of test binary.
 
     // Constructor really only needed until we have C++14, which will allow call-sites to use
     // aggregate initializer syntax.
-    Result(const char* name_arg, LaunchStatus launch_status_arg, int return_code_arg)
+    Result(const char* name_arg, LaunchStatus launch_status_arg, int64_t return_code_arg)
         : name(name_arg), launch_status(launch_status_arg), return_code(return_code_arg) {}
 };
 

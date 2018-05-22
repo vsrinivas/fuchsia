@@ -336,7 +336,8 @@ int main(int argc, char** argv) {
             printf("%s: failed to return exit code\n", result.name.c_str());
             break;
         case runtests::FAILED_NONZERO_RETURN_CODE:
-            printf("%s: returned nonzero: %d\n", result.name.c_str(), result.return_code);
+            printf("%s: returned nonzero: %" PRId64 "\n",
+                result.name.c_str(), result.return_code);
             break;
         default:
             printf("%s: unknown result\n", result.name.c_str());

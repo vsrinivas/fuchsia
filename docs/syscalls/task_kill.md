@@ -28,6 +28,11 @@ will no longer succeed.
 On success, **zx_task_kill**() returns **ZX_OK**. If a process or thread uses
 this syscall to kill itself, this syscall does not return.
 
+## NOTES
+
+When using this syscall on a process, the return code for the process
+is -1 as reported by **object_get_info**() via the ZX_INFO_PROCESS topic.
+
 ## ERRORS
 
 **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.

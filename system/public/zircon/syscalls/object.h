@@ -79,7 +79,7 @@ typedef struct zx_info_process_handle_stats {
 typedef struct zx_info_process {
     // The process's return code; only valid if |exited| is true.
     // Guaranteed to be non-zero if the process was killed by |zx_task_kill|.
-    int return_code;
+    int64_t return_code;
 
     // True if the process has ever left the initial creation state,
     // even if it has exited as well.

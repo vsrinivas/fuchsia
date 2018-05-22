@@ -2,16 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <inttypes.h>
 #include <fcntl.h>
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
 #include <limits.h>
-#include <zircon/process.h>
-#include <zircon/processargs.h>
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/object.h>
-#include <zircon/types.h>
 #include <math.h>
 #include <fdio/io.h>
 #include <fbl/algorithm.h>
@@ -24,6 +19,13 @@
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#include <zircon/process.h>
+#include <zircon/processargs.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/types.h>
 
 struct ReportInfo {
     uintptr_t exec_addr = 0;
@@ -43,7 +45,7 @@ unsigned int AnalyzeField(const fbl::Array<ReportInfo>& reports,
 double ApproxBinomialCdf(double p, double N, double n);
 int TestRunMain(int argc, char** argv);
 zx_status_t LaunchTestRun(const char* bin, zx_handle_t h, zx_handle_t* out);
-int JoinProcess(zx_handle_t proc);
+int64_t JoinProcess(zx_handle_t proc);
 } // namespace
 
 int main(int argc, char** argv) {
@@ -169,12 +171,12 @@ int GatherReports(const char* test_bin, fbl::Array<ReportInfo>* reports) {
             return -1;
         }
 
-        int ret = JoinProcess(proc);
+        int64_t ret = JoinProcess(proc);
         zx_handle_close(proc);
 
         if (ret != 0) {
             zx_handle_close(handles[0]);
-            printf("Failed to join testrun: %d\n", ret);
+            printf("Failed to join testrun: %" PRId64 "\n", ret);
             return -1;
         }
 
@@ -248,7 +250,7 @@ zx_status_t LaunchTestRun(const char* bin, zx_handle_t h, zx_handle_t* out) {
     return ZX_OK;
 }
 
-int JoinProcess(zx_handle_t proc) {
+int64_t JoinProcess(zx_handle_t proc) {
     zx_status_t status =
         zx_object_wait_one(proc, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, NULL);
     if (status != ZX_OK) {

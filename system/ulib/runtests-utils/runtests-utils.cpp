@@ -6,6 +6,7 @@
 
 #include <dirent.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <glob.h>
 #include <limits.h>
 #include <stdio.h>
@@ -119,7 +120,8 @@ Result RunTest(const char* argv[], int argc, FILE* out) {
     }
 
     if (proc_info.return_code != 0) {
-        printf("FAILURE: %s exited with nonzero status: %d\n", path, proc_info.return_code);
+        printf("FAILURE: %s exited with nonzero status: %" PRId64 "\n",
+            path, proc_info.return_code);
         return Result(path, FAILED_NONZERO_RETURN_CODE, proc_info.return_code);
     }
 

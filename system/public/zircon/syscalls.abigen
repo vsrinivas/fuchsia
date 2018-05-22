@@ -269,7 +269,7 @@ syscall thread_set_priority
 # Processes
 
 syscall process_exit noreturn
-    (retcode: int);
+    (retcode: int64_t);
 
 syscall process_create
     (job: zx_handle_t, name: char[name_len] IN, name_len: uint32_t, options: uint32_t)
