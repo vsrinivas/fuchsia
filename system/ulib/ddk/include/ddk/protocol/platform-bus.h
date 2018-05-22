@@ -45,6 +45,8 @@ typedef struct {
 typedef struct {
     uint32_t    type;   // matching bootdata_t.type
     uint32_t    extra;  // matching bootdata_t.extra
+    void*       data;   // used to pass device specific data (optional)
+    size_t      len;    // number of bytes of data
 } pbus_boot_metadata_t;
 
 typedef struct {

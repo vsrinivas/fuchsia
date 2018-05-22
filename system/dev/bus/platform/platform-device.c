@@ -6,6 +6,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
+#include <ddk/metadata.h>
 #include <ddk/protocol/platform-defs.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -687,7 +688,8 @@ zx_status_t platform_device_enable(platform_dev_t* dev, bool enable) {
             .props = props,
             .prop_count = countof(props),
             .proxy_args = (new_devhost ? argstr : NULL),
-            .flags = (new_devhost ? DEVICE_ADD_MUST_ISOLATE : 0),
+            .flags = (new_devhost ? DEVICE_ADD_MUST_ISOLATE : 0) |
+                     (dev->boot_metadata_count ? DEVICE_ADD_INVISIBLE : 0),
         };
         // add PCI root at top level
         zx_device_t* parent = dev->bus->zxdev;
@@ -706,7 +708,12 @@ zx_status_t platform_device_enable(platform_dev_t* dev, bool enable) {
 
         if (dev->boot_metadata_count) {
             for (uint32_t i = 0; i < dev->boot_metadata_count; i++) {
-                platform_device_add_metadata(dev, i);
+                pbus_boot_metadata_t* pbm = &dev->boot_metadata[i];
+                if (pbm->data && pbm->len && is_driver_meta(pbm->type)) {
+                    device_add_metadata(dev->zxdev, pbm->type, pbm->data, pbm->len);
+                } else {
+                    platform_device_add_metadata(dev, i);
+                }
             }
             device_make_visible(dev->zxdev);
         }
