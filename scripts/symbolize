@@ -174,7 +174,7 @@ def run_tool(path, *args):
 # |addr_as_hex_string| must already be PIE-adjusted.
 def run_addr2line(arch, elf_path, addr_as_hex_string):
     path = tool_path(arch, "addr2line", addr2line_tool_path)
-    return run_tool(arch, "addr2line", "-Cipfe", elf_path, addr_as_hex_string)
+    return run_tool(path, "-Cipfe", elf_path, addr_as_hex_string)
 
 
 def run_gdb(arch, *args):
