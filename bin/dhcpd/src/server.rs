@@ -40,12 +40,12 @@ impl Server {
         let mut offer_msg = disc_msg;
         offer_msg.op = OpCode::BOOTREPLY;
         offer_msg.secs = 0;
-        offer_msg.ciaddr = [0; 4];
-        offer_msg.siaddr = [0; 4];
+        offer_msg.ciaddr = Ipv4Addr::new(0, 0, 0, 0);
+        offer_msg.siaddr = Ipv4Addr::new(0, 0, 0, 0);
         offer_msg.sname = String::new();
         offer_msg.file = String::new();
         let next_addr = self.addr_pool.get_next_available_addr()?;
-        offer_msg.yiaddr = next_addr.octets();
+        offer_msg.yiaddr = next_addr;
         self.add_required_options_to(&mut offer_msg);
         Some(offer_msg)
     }
@@ -99,7 +99,7 @@ fn test_handle_discover_returns_correct_response() {
     let mut want = Message::new();
     want.op = OpCode::BOOTREPLY;
     want.xid = 42;
-    want.yiaddr = [192, 168, 1, 2];
+    want.yiaddr = Ipv4Addr::new(192, 168, 1, 2);
     want.chaddr = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
     want.options.push(ConfigOption {
         code: OptionCode::IpAddrLeaseTime,

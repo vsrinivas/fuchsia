@@ -4,7 +4,8 @@
 #![deny(warnings)]
 #![allow(unused)] // TODO(atait): Remove once there are non-test clients
 
-const IPV4_ADDR_LEN: usize = 4;
+use std::net::Ipv4Addr;
+
 const MAC_ADDR_LEN: usize = 6;
 
 const OP_IDX: usize = 0;
@@ -48,13 +49,13 @@ pub struct Message {
     pub secs: u16,
     pub bdcast_flag: bool,
     /// `ciaddr` should be stored in Big-Endian order, e.g `[192, 168, 1, 1]`.
-    pub ciaddr: [u8; IPV4_ADDR_LEN],
+    pub ciaddr: Ipv4Addr,
     /// `yiaddr` should be stored in Big-Endian order, e.g `[192, 168, 1, 1]`.
-    pub yiaddr: [u8; IPV4_ADDR_LEN],
+    pub yiaddr: Ipv4Addr,
     /// `siaddr` should be stored in Big-Endian order, e.g `[192, 168, 1, 1]`.
-    pub siaddr: [u8; IPV4_ADDR_LEN],
+    pub siaddr: Ipv4Addr,
     /// `giaddr` should be stored in Big-Endian order, e.g `[192, 168, 1, 1]`.
-    pub giaddr: [u8; IPV4_ADDR_LEN],
+    pub giaddr: Ipv4Addr,
     /// `chaddr` should be stored in Big-Endian order,
     /// e.g `[0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF]`.
     pub chaddr: [u8; MAC_ADDR_LEN],
@@ -73,10 +74,10 @@ impl Message {
             xid: 0,
             secs: 0,
             bdcast_flag: false,
-            ciaddr: [0; IPV4_ADDR_LEN],
-            yiaddr: [0; IPV4_ADDR_LEN],
-            siaddr: [0; IPV4_ADDR_LEN],
-            giaddr: [0; IPV4_ADDR_LEN],
+            ciaddr: Ipv4Addr::new(0, 0, 0, 0),
+            yiaddr: Ipv4Addr::new(0, 0, 0, 0),
+            siaddr: Ipv4Addr::new(0, 0, 0, 0),
+            giaddr: Ipv4Addr::new(0, 0, 0, 0),
             chaddr: [0; MAC_ADDR_LEN],
             sname: String::new(),
             file: String::new(),
@@ -102,54 +103,16 @@ impl Message {
         msg.xid = BigEndian::read_u32(&buf[XID_IDX..SECS_IDX]);
         msg.secs = BigEndian::read_u16(&buf[SECS_IDX..FLAGS_IDX]);
         msg.bdcast_flag = buf[FLAGS_IDX] > 0;
-        Message::buf_into_addr(&buf[CIADDR_IDX..YIADDR_IDX], &mut msg.ciaddr);
-        Message::buf_into_addr(&buf[YIADDR_IDX..SIADDR_IDX], &mut msg.yiaddr);
-        Message::buf_into_addr(&buf[SIADDR_IDX..GIADDR_IDX], &mut msg.siaddr);
-        Message::buf_into_addr(&buf[GIADDR_IDX..CHADDR_IDX], &mut msg.giaddr);
-        Message::buf_into_addr(&buf[CHADDR_IDX..CHADDR_IDX + 6], &mut msg.chaddr);
-        msg.sname = Message::buf_to_msg_string(&buf[SNAME_IDX..FILE_IDX])?;
-        msg.file = Message::buf_to_msg_string(&buf[FILE_IDX..OPTIONS_START_IDX])?;
-        Message::buf_into_options(&buf[OPTIONS_START_IDX..], &mut msg.options);
+        msg.ciaddr = buf_to_ip_addr(buf, CIADDR_IDX);
+        msg.yiaddr = buf_to_ip_addr(buf, YIADDR_IDX);
+        msg.siaddr = buf_to_ip_addr(buf, SIADDR_IDX);
+        msg.giaddr = buf_to_ip_addr(buf, GIADDR_IDX);
+        buf_into_addr(&buf[CHADDR_IDX..CHADDR_IDX + 6], &mut msg.chaddr);
+        msg.sname = buf_to_msg_string(&buf[SNAME_IDX..FILE_IDX])?;
+        msg.file = buf_to_msg_string(&buf[FILE_IDX..OPTIONS_START_IDX])?;
+        buf_into_options(&buf[OPTIONS_START_IDX..], &mut msg.options);
 
         Some(msg)
-    }
-
-    fn buf_into_addr(buf: &[u8], addr: &mut [u8]) {
-        addr.copy_from_slice(buf);
-    }
-
-    fn buf_to_msg_string(buf: &[u8]) -> Option<String> {
-        use std::str;
-        let maybe_string = str::from_utf8(buf);
-        match maybe_string.ok() {
-            Some(string) => Some(string.trim_right_matches('\x00').to_string()),
-            None => None,
-        }
-    }
-
-    fn buf_into_options(buf: &[u8], options: &mut Vec<ConfigOption>) {
-        let mut opt_idx = 0;
-        while opt_idx < buf.len()
-            && OptionCode::option_code_from_u8(buf[opt_idx]) != Some(OptionCode::End)
-        {
-            let opt_code = buf[opt_idx];
-            let opt_len: usize = match OptionCode::option_code_from_u8(opt_code) {
-                None => continue,                                   // invalid option
-                Some(OptionCode::Pad) | Some(OptionCode::End) => 1, // fixed length option
-                _ => match buf.get(opt_idx + 1) {
-                    // variable length option
-                    Some(len) => (len + 2) as usize,
-                    None => 1 as usize,
-                },
-            };
-            let maybe_opt = ConfigOption::from_buffer(&buf[opt_idx..opt_idx + opt_len]);
-            opt_idx += opt_len;
-            let opt = match maybe_opt {
-                Some(opt) => opt,
-                None => continue,
-            };
-            options.push(opt);
-        }
     }
 
     /// Consumes the calling `Message` to serialize it into a buffer of bytes.
@@ -172,10 +135,10 @@ impl Message {
             buffer.push(0u8);
         }
         buffer.push(0u8);
-        buffer.extend_from_slice(&self.ciaddr);
-        buffer.extend_from_slice(&self.yiaddr);
-        buffer.extend_from_slice(&self.siaddr);
-        buffer.extend_from_slice(&self.giaddr);
+        buffer.extend_from_slice(&self.ciaddr.octets());
+        buffer.extend_from_slice(&self.yiaddr.octets());
+        buffer.extend_from_slice(&self.siaddr.octets());
+        buffer.extend_from_slice(&self.giaddr.octets());
         buffer.extend_from_slice(&self.chaddr);
         buffer.extend_from_slice(&[0u8; UNUSED_CHADDR_BYTES]);
         self.trunc_string_to_n_and_push(&self.sname, SNAME_LEN, &mut buffer);
@@ -206,12 +169,54 @@ impl Message {
     }
 }
 
+fn buf_to_ip_addr(buf: &[u8], start: usize) -> Ipv4Addr {
+    Ipv4Addr::new(buf[start], buf[start + 1], buf[start + 2], buf[start + 3])
+}
+
+fn buf_into_addr(buf: &[u8], addr: &mut [u8]) {
+    addr.copy_from_slice(buf);
+}
+
+fn buf_to_msg_string(buf: &[u8]) -> Option<String> {
+    use std::str;
+    let maybe_string = str::from_utf8(buf);
+    match maybe_string.ok() {
+        Some(string) => Some(string.trim_right_matches('\x00').to_string()),
+        None => None,
+    }
+}
+
+fn buf_into_options(buf: &[u8], options: &mut Vec<ConfigOption>) {
+    let mut opt_idx = 0;
+    while opt_idx < buf.len()
+        && OptionCode::option_code_from_u8(buf[opt_idx]) != Some(OptionCode::End)
+    {
+        let opt_code = buf[opt_idx];
+        let opt_len: usize = match OptionCode::option_code_from_u8(opt_code) {
+            None => continue,                                   // invalid option
+            Some(OptionCode::Pad) | Some(OptionCode::End) => 1, // fixed length option
+            _ => match buf.get(opt_idx + 1) {
+                // variable length option
+                Some(len) => (len + 2) as usize,
+                None => 1 as usize,
+            },
+        };
+        let maybe_opt = ConfigOption::from_buffer(&buf[opt_idx..opt_idx + opt_len]);
+        opt_idx += opt_len;
+        let opt = match maybe_opt {
+            Some(opt) => opt,
+            None => continue,
+        };
+        options.push(opt);
+    }
+}
+
 #[test]
 fn test_serialize_returns_correct_bytes() {
     let mut msg = Message::new();
     msg.xid = 42;
     msg.secs = 1024;
-    msg.yiaddr = [192, 168, 1, 1];
+    msg.yiaddr = Ipv4Addr::new(192, 168, 1, 1);
     msg.sname = String::from("relay.example.com");
     msg.file = String::from("boot.img");
     msg.options.push(ConfigOption {
@@ -296,10 +301,10 @@ fn test_message_from_buffer_returns_correct_message() {
         xid: 42,
         secs: 1024,
         bdcast_flag: false,
-        ciaddr: [0, 0, 0, 0],
-        yiaddr: [192, 168, 1, 1],
-        siaddr: [0, 0, 0, 0],
-        giaddr: [0, 0, 0, 0],
+        ciaddr: Ipv4Addr::new(0, 0, 0, 0),
+        yiaddr: Ipv4Addr::new(192, 168, 1, 1),
+        siaddr: Ipv4Addr::new(0, 0, 0, 0),
+        giaddr: Ipv4Addr::new(0, 0, 0, 0),
         chaddr: [0, 0, 0, 0, 0, 0],
         sname: "relay.example.com".to_string(),
         file: "boot.img".to_string(),
