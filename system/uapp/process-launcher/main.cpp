@@ -4,7 +4,7 @@
 
 #include "launcher_impl.h"
 
-#include <fbl/intrusive_wavl_tree.h>
+#include <fbl/intrusive_hash_table.h>
 #include <fbl/unique_ptr.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/svc/outgoing.h>
@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    fbl::WAVLTree<process::LauncherImpl*, fbl::unique_ptr<process::LauncherImpl>> launchers;
+    fbl::HashTable<process::LauncherImpl*, fbl::unique_ptr<process::LauncherImpl>> launchers;
 
     outgoing.public_dir()->AddEntry(
         "fuchsia.process.Launcher",

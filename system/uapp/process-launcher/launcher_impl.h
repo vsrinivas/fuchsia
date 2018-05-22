@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <fbl/intrusive_wavl_tree.h>
+#include <fbl/intrusive_single_list.h>
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
@@ -15,7 +15,7 @@
 
 namespace process {
 
-class LauncherImpl : public fbl::WAVLTreeContainable<fbl::unique_ptr<LauncherImpl>> {
+class LauncherImpl : public fbl::SinglyLinkedListable<fbl::unique_ptr<LauncherImpl>> {
 public:
     using ErrorCallback = fbl::Function<void(zx_status_t)>;
 
@@ -29,6 +29,7 @@ public:
     }
 
     LauncherImpl* GetKey() const { return const_cast<LauncherImpl*>(this); }
+    static size_t GetHash(const LauncherImpl* impl) { return reinterpret_cast<uintptr_t>(impl); }
 
 private:
     void OnHandleReady(async_t* async, async::WaitBase* wait, zx_status_t status,
