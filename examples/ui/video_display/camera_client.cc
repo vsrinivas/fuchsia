@@ -38,6 +38,34 @@ CameraClient::~CameraClient() {
 }
 
 zx_status_t CameraClient::Open(uint32_t dev_id) {
+  char dev_path[64] = {0};
+  snprintf(dev_path, sizeof(dev_path), "/dev/class/camera/%03u", dev_id);
+
+  fxl::UniqueFD dev_node(::open(dev_path, O_RDONLY));
+  if (!dev_node.is_valid()) {
+    FXL_LOG(ERROR) << "CameraClient failed to open device node at \""
+                     << dev_path << "\". (" << strerror(errno) << " : "
+                     << errno << ")";
+    return ZX_ERR_IO;
+  }
+
+  return OpenChannel(std::move(dev_node));
+}
+
+zx_status_t CameraClient::Open(int dir_fd, const std::string& name) {
+  // Open the device node.
+  fxl::UniqueFD dev_node(::openat(dir_fd, name.c_str(), O_RDONLY));
+  if (!dev_node.is_valid()) {
+    FXL_LOG(WARNING) << "CameraClient failed to open device node at \""
+                     << name << "\". (" << strerror(errno) << " : " << errno
+                     << ")";
+    return ZX_ERR_BAD_STATE;
+  }
+
+  return OpenChannel(std::move(dev_node));
+}
+
+zx_status_t CameraClient::OpenChannel(fxl::UniqueFD dev_node) {
   if (!IsClosed()) {
     FXL_LOG(ERROR) << "Bad State";
     return ZX_ERR_BAD_STATE;
@@ -47,19 +75,8 @@ zx_status_t CameraClient::Open(uint32_t dev_id) {
     return ZX_ERR_BAD_STATE;
   }
 
-  char dev_path[64] = {0};
-  snprintf(dev_path, sizeof(dev_path), "/dev/class/camera/%03u", dev_id);
-
-  int fd = ::open(dev_path, O_RDONLY);
-  if (fd < 0) {
-    FXL_LOG(ERROR) << "Failed to open \"" << dev_path << "\" (res " << fd
-                   << ")";
-    return ZX_ERR_IO;
-  }
-
-  ssize_t res = ::fdio_ioctl(fd, CAMERA_IOCTL_GET_CHANNEL, nullptr, 0,
-                             &stream_ch_, sizeof(stream_ch_));
-  ::close(fd);
+  ssize_t res = ::fdio_ioctl(dev_node.get(), CAMERA_IOCTL_GET_CHANNEL, nullptr,
+          0, &stream_ch_, sizeof(stream_ch_));
 
   if (res != sizeof(stream_ch_)) {
     FXL_LOG(ERROR) << "Failed to obtain channel (res " << res << ")";

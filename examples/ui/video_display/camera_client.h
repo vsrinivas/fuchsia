@@ -11,6 +11,7 @@
 #include <fbl/vector.h>
 #include <garnet/examples/ui/video_display/camera_interface_base.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/fxl/files/unique_fd.h>
 #include <lib/fxl/logging.h>
 #include <zircon/device/camera-proto.h>
 #include <zircon/device/camera.h>
@@ -78,6 +79,9 @@ class CameraClient : public CameraInterfaceBase {
   // Open a device in /dev/class/camera/ with the ID of dev_id.
   zx_status_t Open(uint32_t dev_id);
 
+  // Open a device in by folder decriptor and filename.
+  zx_status_t Open(int dir_fd, const std::string& name);
+
   // Close the stream in a hackish sort of way.
   // TODO(garratt): Add OnShutdown() callback and ShutdownChannels()
   // to handle the asyncronous dance of shutting down properly.
@@ -116,6 +120,9 @@ class CameraClient : public CameraInterfaceBase {
                           zx_status_t status,
                           const zx_packet_signal* signal);
   zx_status_t ProcessBufferChannel();
+
+  // Opens the channel to the device
+  zx_status_t OpenChannel(fxl::UniqueFD dev_node);
 
   // Send the stop command to the driver.  This differs from the public Stop()
   // which deals with the state of the driver.
