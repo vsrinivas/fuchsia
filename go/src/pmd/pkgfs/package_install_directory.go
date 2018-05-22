@@ -215,25 +215,29 @@ func (f *installFile) Write(p []byte, off int64, whence int) (int, error) {
 	}
 
 	n, err := f.blob.Write(p)
-
 	f.written += uint64(n)
-
-	if f.written >= f.size && err == nil {
-		pkgs := f.fs.index.Fulfill(f.name)
-
-		if f.isPkg {
-			// TODO(raggi): use already open file instead of re-opening the file
-			importPackage(f.fs, f.name)
-		} else {
-			notifyActivation(f.fs, pkgs)
-		}
-	}
 
 	return n, goErrToFSErr(err)
 }
 
 func (f *installFile) Close() error {
-	return goErrToFSErr(f.blob.Close())
+	if err := f.blob.Close(); err != nil {
+		log.Printf("error closing file: %s\n", err)
+		return goErrToFSErr(err)
+	}
+
+	// Wait until after the file is closed before importing the package in
+	// case there is a merkle error.
+	pkgs := f.fs.index.Fulfill(f.name)
+
+	if f.isPkg {
+		// TODO(raggi): use already open file instead of re-opening the file
+		importPackage(f.fs, f.name)
+	} else {
+		notifyActivation(f.fs, pkgs)
+	}
+
+	return nil
 }
 
 func (f *installFile) Stat() (int64, time.Time, time.Time, error) {
