@@ -23,32 +23,34 @@ void IntelDspIpc::SetLogPrefix(const char* new_prefix) {
     snprintf(log_prefix_, sizeof(log_prefix_), "%s IPC", new_prefix);
 }
 
-zx_status_t IntelDspIpc::SendIpc(Txn* txn) {
-    {
-        fbl::AutoLock ipc_lock(&ipc_lock_);
-        // 1 at a time
-        ZX_DEBUG_ASSERT(pending_txn_ == nullptr);
-        if (pending_txn_ != nullptr) {
-            return ZX_ERR_BAD_STATE;
-        }
-        pending_txn_ = txn;
+void IntelDspIpc::Shutdown() {
+    fbl::AutoLock ipc_lock(&ipc_lock_);
+    // Fail all pending IPCs
+    while (!ipc_queue_.is_empty()) {
+        completion_signal(&ipc_queue_.pop_front()->completion);
     }
+}
 
+void IntelDspIpc::SendIpc(const Txn& txn) {
     // Copy tx data to outbox
-    if (txn->tx_size > 0) {
-        dsp_.IpcMailboxWrite(txn->tx_data, txn->tx_size);
+    if (txn.tx_size > 0) {
+        dsp_.IpcMailboxWrite(txn.tx_data, txn.tx_size);
     }
-    dsp_.SendIpcMessage(txn->request);
-    return ZX_OK;
+    dsp_.SendIpcMessage(txn.request);
 }
 
 zx_status_t IntelDspIpc::SendIpcWait(Txn* txn) {
-    zx_status_t res = SendIpc(txn);
-    if (res != ZX_OK) {
-        return res;
+    {
+        // Add to the pending queue and start the ipc if necessary
+        fbl::AutoLock ipc_lock(&ipc_lock_);
+        bool needs_start = ipc_queue_.is_empty();
+        ipc_queue_.push_back(txn);
+        if (needs_start) {
+            SendIpc(ipc_queue_.front());
+        }
     }
     // Wait for completion
-    res = completion_wait(&txn->completion, ZX_MSEC(300));
+    zx_status_t res = completion_wait(&txn->completion, ZX_MSEC(300));
     if (res != ZX_OK) {
         dsp_.DeviceShutdown();
     }
@@ -212,37 +214,45 @@ void IntelDspIpc::ProcessIpcNotification(const IpcMessage& notif) {
 
 void IntelDspIpc::ProcessIpcReply(const IpcMessage& reply) {
     fbl::AutoLock ipc_lock(&ipc_lock_);
-    if (pending_txn_ == nullptr) {
+    if (ipc_queue_.is_empty()) {
         LOG(INFO, "got spurious reply message\n");
         return;
     }
+    Txn& pending = ipc_queue_.front();
 
     // Check if the reply matches the pending request.
-    IpcMessage* pending = &pending_txn_->request;
-    if ((pending->msg_tgt() != reply.msg_tgt()) || (pending->type() != reply.type())) {
+    IpcMessage* req = &pending.request;
+    if ((req->msg_tgt() != reply.msg_tgt()) || (req->type() != reply.type())) {
         LOG(INFO, "reply msg mismatch, got pri 0x%08x ext 0x%08x, expect pri 0x%08x ext 0x%08x\n",
-            reply.primary, reply.extension, pending->primary, pending->extension);
+            reply.primary, reply.extension, req->primary, req->extension);
         return;
     }
 
+    // The pending txn is done
+    ipc_queue_.pop_front();
+    pending.reply = reply;
+    pending.done = true;
+
     LOG(INFO, "got reply (status %u) for pending msg, pri 0x%08x ext 0x%08x\n",
               to_underlying(reply.status()), reply.primary, reply.extension);
-
-    pending_txn_->reply = reply;
 
     if (reply.msg_tgt() == MsgTarget::MODULE_MSG) {
         ModuleMsgType type = static_cast<ModuleMsgType>(reply.type());
         switch (type) {
         case ModuleMsgType::LARGE_CONFIG_GET:
-            ProcessLargeConfigGetReply(pending_txn_);
+            ProcessLargeConfigGetReply(&pending);
             break;
         default:
             break;
         }
     }
 
-    completion_signal(&pending_txn_->completion);
-    pending_txn_ = nullptr;
+    completion_signal(&pending.completion);
+
+    // Send the next ipc in the queue
+    if (!ipc_queue_.is_empty()) {
+        SendIpc(ipc_queue_.front());
+    }
 }
 
 void IntelDspIpc::ProcessLargeConfigGetReply(Txn* txn) {

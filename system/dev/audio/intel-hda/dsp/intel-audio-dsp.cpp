@@ -277,9 +277,12 @@ void IntelAudioDsp::DeviceShutdown() {
     ihda_dsp_irq_disable(&ihda_dsp_);
     ihda_dsp_disable(&ihda_dsp_);
 
+
     // Reset and power down the DSP.
     ResetCore(ADSP_REG_ADSPCS_CORE0_MASK);
     PowerDownCore(ADSP_REG_ADSPCS_CORE0_MASK);
+
+    ipc_.Shutdown();
 
     state_ = State::SHUT_DOWN;
 }

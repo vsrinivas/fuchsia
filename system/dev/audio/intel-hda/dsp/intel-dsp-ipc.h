@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <fbl/intrusive_double_list.h>
 #include <sync/completion.h>
 #include <zircon/thread_annotations.h>
 
@@ -22,18 +23,23 @@ public:
 
     const char*  log_prefix() const { return log_prefix_; }
 
-    struct Txn {
+    class Txn : public fbl::DoublyLinkedListable<Txn*> {
+    public:
         Txn(const void* tx, size_t txs, void* rx, size_t rxs)
             : tx_data(tx), tx_size(txs), rx_data(rx), rx_size(rxs) { }
         Txn(uint32_t pri, uint32_t ext, const void* tx, size_t txs, void* rx, size_t rxs)
             : request(pri, ext), tx_data(tx), tx_size(txs), rx_data(rx), rx_size(rxs) { }
 
+        DISALLOW_NEW;
+
         bool success() {
-            return reply.status() == MsgStatus::IPC_SUCCESS;
+            return done && reply.status() == MsgStatus::IPC_SUCCESS;
         }
 
         IpcMessage request;
         IpcMessage reply;
+
+        bool done = false;
 
         const void* tx_data = nullptr;
         size_t      tx_size = 0;
@@ -45,6 +51,8 @@ public:
     };
 
     void SetLogPrefix(const char* new_prefix);
+
+    void Shutdown();
 
     // Library & Module Management IPC
     zx_status_t InitInstance(uint16_t module_id, uint8_t instance_id, ProcDomain proc_domain,
@@ -67,11 +75,10 @@ public:
     void ProcessLargeConfigGetReply(Txn* txn);
 
 private:
-    // Send an IPC message
-    zx_status_t SendIpc(Txn* txn);
-
     // Send an IPC message and wait for response
     zx_status_t SendIpcWait(Txn* txn);
+
+    void SendIpc(const Txn& txn);
 
     zx_status_t dsp_to_zx_status(MsgStatus status) {
         return (status == MsgStatus::IPC_SUCCESS) ? ZX_OK : ZX_ERR_INTERNAL;
@@ -82,7 +89,7 @@ private:
 
     // Pending IPC
     fbl::Mutex ipc_lock_;
-    Txn* pending_txn_ TA_GUARDED(ipc_lock_) = nullptr;
+    fbl::DoublyLinkedList<Txn*> ipc_queue_ TA_GUARDED(ipc_lock_);
 
     // A reference to the owning DSP
     IntelAudioDsp& dsp_;
