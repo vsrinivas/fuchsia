@@ -611,9 +611,15 @@ zx_status_t sys_job_create(zx_handle_t parent_job, uint32_t options,
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<JobDispatcher> parent;
-    zx_status_t status = up->GetDispatcherWithRights(parent_job, ZX_RIGHT_WRITE, &parent);
-    if (status != ZX_OK)
-        return status;
+    zx_status_t status = up->GetDispatcherWithRights(parent_job, ZX_RIGHT_MANAGE_JOB, &parent);
+    if (status != ZX_OK) {
+        // Try again, but with the WRITE right.
+        // TODO(kulakowski) Remove this when all callers are using MANAGE_JOB.
+        status = up->GetDispatcherWithRights(parent_job, ZX_RIGHT_WRITE, &parent);
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
 
     fbl::RefPtr<Dispatcher> job;
     zx_rights_t rights;

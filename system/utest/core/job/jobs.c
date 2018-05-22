@@ -8,6 +8,7 @@
 #include <stdlib.h>
 
 #include <zircon/process.h>
+#include <zircon/rights.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/policy.h>
 
@@ -64,6 +65,22 @@ static bool create_test(void) {
     ASSERT_EQ(zx_handle_close(process2), ZX_OK, "");
     ASSERT_EQ(zx_handle_close(vmar1), ZX_OK, "");
     ASSERT_EQ(zx_handle_close(vmar2), ZX_OK, "");
+
+    END_TEST;
+}
+
+static bool create_missing_rights_test(void) {
+    BEGIN_TEST;
+
+    zx_rights_t rights = ZX_DEFAULT_JOB_RIGHTS & ~ZX_RIGHT_WRITE & ~ZX_RIGHT_MANAGE_JOB;
+    zx_handle_t job_parent;
+    zx_status_t status = zx_handle_duplicate(zx_job_default(), rights, &job_parent);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx_handle_t job_child;
+    ASSERT_EQ(zx_job_create(job_parent, 0u, &job_child), ZX_ERR_ACCESS_DENIED, "");
+
+    zx_handle_close(job_parent);
 
     END_TEST;
 }
@@ -225,6 +242,7 @@ static bool max_height_smoke(void) {
 
 BEGIN_TEST_CASE(job_tests)
 RUN_TEST(basic_test)
+RUN_TEST(create_missing_rights_test)
 RUN_TEST(policy_basic_test)
 RUN_TEST(create_test)
 RUN_TEST(kill_test)
