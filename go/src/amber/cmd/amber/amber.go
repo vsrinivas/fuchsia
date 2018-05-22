@@ -87,13 +87,9 @@ func startFIDLSvr(d *daemon.DaemonProvider, t *source.TickGenerator) {
 func startupDaemon(srvAddr, store string, keys []*tuf_data.Key,
 	ticker *source.TickGenerator, dp *daemon.DaemonProvider) *daemon.Daemon {
 	client, _, err := source.InitNewTUFClient(srvAddr, store, keys, ticker)
-	if err != nil {
-		log.Printf("client initialization failed: %s\n", err)
-	}
 
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(2)
+		log.Fatal("client initialization failed: %s\n", err)
 	}
 
 	files := []string{"/pkg/bin/app"}
