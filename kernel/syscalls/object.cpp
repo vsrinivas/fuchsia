@@ -838,32 +838,9 @@ zx_status_t sys_object_signal_peer(zx_handle_t handle_value, uint32_t clear_mask
 
 // Given a kernel object with children objects, obtain a handle to the
 // child specified by the provided kernel object id.
-//
-// ZX_HANDLE_INVALID is currently treated as a "magic" handle used to
-// obtain a process from "the system".
 zx_status_t sys_object_get_child(zx_handle_t handle, uint64_t koid,
                                  zx_rights_t rights, user_out_handle* out) {
     auto up = ProcessDispatcher::GetCurrent();
-
-    if (handle == ZX_HANDLE_INVALID) {
-        //TODO: lookup process from job instead of treating INVALID as magic
-        // TODO(ZX-923): Rights handling for debug purposes.
-        const auto kDebugRights =
-            ZX_RIGHTS_BASIC | ZX_RIGHTS_IO |
-            ZX_RIGHTS_PROPERTY | ZX_RIGHT_ENUMERATE;
-
-        if (rights == ZX_RIGHT_SAME_RIGHTS) {
-            rights = kDebugRights;
-        } else if ((kDebugRights & rights) != rights) {
-            return ZX_ERR_ACCESS_DENIED;
-        }
-
-        auto process = ProcessDispatcher::LookupProcessById(koid);
-        if (!process)
-            return ZX_ERR_NOT_FOUND;
-
-        return out->make(fbl::move(process), rights);
-    }
 
     fbl::RefPtr<Dispatcher> dispatcher;
     uint32_t parent_rights;
