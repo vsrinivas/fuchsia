@@ -435,7 +435,11 @@ static void xdc_release(void* ctx) {
 
 static void xdc_update_write_signal_locked(xdc_t* xdc, bool online)
                                            __TA_REQUIRES(xdc->write_lock) {
+    bool was_writable = xdc->writable;
     xdc->writable = online && xdc_has_free_trbs(xdc, false /* in */);
+    if (was_writable == xdc->writable) {
+        return;
+    }
 
     mtx_lock(&xdc->instance_list_lock);
     xdc_instance_t* inst;
