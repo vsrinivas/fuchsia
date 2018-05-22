@@ -91,28 +91,12 @@ func startFIDLSvr(d *daemon.DaemonProvider, t *source.TickGenerator) {
 func startupDaemon(srvUrl *url.URL, store string, keys []*tuf_data.Key,
 	ticker *source.TickGenerator, dp *daemon.DaemonProvider) *daemon.Daemon {
 
-
 	client, _, err := source.InitNewTUFClient(srvUrl.String(), store, keys, ticker)
 	if err != nil {
 		log.Fatal("client initialization failed: %s\n", err)
 	}
 
-	files := []string{"/pkg/bin/app"}
-	reqSet := pkg.NewPackageSet()
-
-	d := sha512.New()
-	// get the current SHA512 hash of the file
-	for _, name := range files {
-		sha, err := digest(name, d)
-		d.Reset()
-		if err != nil {
-			continue
-		}
-
-		hexStr := hex.EncodeToString(sha)
-		pkg := pkg.Package{Name: name, Version: hexStr}
-		reqSet.Add(&pkg)
-	}
+	reqSet := newPackageSet([]string{"/pkg/bin/app"})
 
 	// create source with an average 10qps over 5 seconds and a possible burst
 	// of up to 50 queries
@@ -133,6 +117,26 @@ func startupDaemon(srvUrl *url.URL, store string, keys []*tuf_data.Key,
 	dp.SetDaemon(checker)
 	log.Println("amber: monitoring for updates")
 	return checker
+}
+
+func newPackageSet(files []string) *pkg.PackageSet {
+	reqSet := pkg.NewPackageSet()
+
+	d := sha512.New()
+	// get the current SHA512 hash of the file
+	for _, name := range files {
+		sha, err := digest(name, d)
+		d.Reset()
+		if err != nil {
+			continue
+		}
+
+		hexStr := hex.EncodeToString(sha)
+		pkg := pkg.Package{Name: name, Version: hexStr}
+		reqSet.Add(&pkg)
+	}
+
+	return reqSet
 }
 
 func digest(name string, hash hash.Hash) ([]byte, error) {
