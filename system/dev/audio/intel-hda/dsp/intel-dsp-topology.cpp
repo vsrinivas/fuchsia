@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "intel-audio-dsp.h"
-#include <pretty/hexdump.h>
+#include "intel-dsp-topology.h"
 
 namespace audio {
 namespace intel_hda {
@@ -491,32 +491,70 @@ zx_status_t IntelAudioDsp::SetupPipelines() {
     return ZX_OK;
 }
 
-zx_status_t IntelAudioDsp::StartPipelines() {
-    zx_status_t st = RunPipeline(PIPELINE1_ID);
+zx_status_t IntelAudioDsp::StartPipeline(const DspPipeline& pipeline) {
+    // Sink first and then source
+    zx_status_t st = RunPipeline(pipeline.pl_sink);
     if (st != ZX_OK) {
         return st;
     }
-    return RunPipeline(PIPELINE0_ID);
+    return RunPipeline(pipeline.pl_source);
     // TODO Error recovery
 }
 
-zx_status_t IntelAudioDsp::PausePipelines() {
-    zx_status_t st = ipc_.SetPipelineState(PIPELINE0_ID, PipelineState::PAUSED, true);
+zx_status_t IntelAudioDsp::PausePipeline(const DspPipeline& pipeline) {
+    zx_status_t st = ipc_.SetPipelineState(pipeline.pl_source, PipelineState::PAUSED, true);
     if (st != ZX_OK) {
         return st;
     }
-    st = ipc_.SetPipelineState(PIPELINE1_ID, PipelineState::PAUSED, true);
+    st = ipc_.SetPipelineState(pipeline.pl_sink, PipelineState::PAUSED, true);
     if (st != ZX_OK) {
         return st;
     }
     // Reset DSP DMA
-    st = ipc_.SetPipelineState(PIPELINE0_ID, PipelineState::RESET, true);
+    st = ipc_.SetPipelineState(pipeline.pl_source, PipelineState::RESET, true);
     if (st != ZX_OK) {
         return st;
     }
-    return ipc_.SetPipelineState(PIPELINE1_ID, PipelineState::RESET, true);
+    return ipc_.SetPipelineState(pipeline.pl_sink, PipelineState::RESET, true);
     // TODO Error recovery
 }
+
+zx_status_t IntelAudioDsp::CreateAndStartStreams() {
+    zx_status_t res = ZX_OK;
+
+    // Create and publish the streams we will use.
+    static struct {
+        uint32_t stream_id;
+        bool is_input;
+        struct DspPipeline pipeline;
+    } STREAMS[] = {
+        // Speakers
+        {
+            .stream_id = 1,
+            .is_input = false,
+            .pipeline = {
+                .pl_source = PIPELINE0_ID,
+                .pl_sink = PIPELINE1_ID,
+            },
+        },
+    };
+
+    for (const auto& stream_def : STREAMS) {
+        auto stream = fbl::AdoptRef(new IntelDspStream(stream_def.stream_id,
+                                                       stream_def.is_input,
+                                                       stream_def.pipeline));
+
+        res = ActivateStream(stream);
+        if (res != ZX_OK) {
+            LOG(ERROR, "Failed to activate %s stream id #%u (res %d)!",
+                       stream_def.is_input ? "input" : "output", stream_def.stream_id, res);
+            return res;
+        }
+    }
+
+    return ZX_OK;
+}
+
 
 }  // namespace intel_hda
 }  // namespace audio

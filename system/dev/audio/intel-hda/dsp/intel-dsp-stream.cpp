@@ -15,8 +15,8 @@
 namespace audio {
 namespace intel_hda {
 
-IntelDspStream::IntelDspStream(uint32_t id, bool is_input)
-    : IntelHDAStreamBase(id, is_input) {
+IntelDspStream::IntelDspStream(uint32_t id, bool is_input, const DspPipeline& pipeline)
+    : IntelHDAStreamBase(id, is_input), pipeline_(pipeline) {
     snprintf(log_prefix_, sizeof(log_prefix_), "IHDA DSP %cStream #%u", is_input ? 'I' : 'O', id);
 }
 
@@ -184,7 +184,7 @@ zx_status_t IntelDspStream::ProcessRbRequest(dispatcher::Channel* channel) {
     case AUDIO_RB_CMD_START:
     {
         auto dsp = fbl::RefPtr<IntelAudioDsp>::Downcast(parent_codec());
-        zx_status_t st = dsp->StartPipelines();
+        zx_status_t st = dsp->StartPipeline(pipeline_);
         if (st != ZX_OK) {
             audio_proto::RingBufStartResp resp = { };
             resp.hdr = req.hdr;
@@ -248,7 +248,7 @@ zx_status_t IntelDspStream::ProcessClientRbRequest(dispatcher::Channel* channel)
     case AUDIO_RB_CMD_STOP:
     {
         auto dsp = fbl::RefPtr<IntelAudioDsp>::Downcast(parent_codec());
-        zx_status_t st = dsp->PausePipelines();
+        zx_status_t st = dsp->PausePipeline(pipeline_);
         if (st != ZX_OK) {
             audio_proto::RingBufStopResp resp = { };
             resp.hdr = req.hdr;

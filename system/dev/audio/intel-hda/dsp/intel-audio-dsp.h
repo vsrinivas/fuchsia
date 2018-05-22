@@ -27,6 +27,7 @@
 #include "debug-logging.h"
 #include "intel-dsp-ipc.h"
 #include "intel-dsp-stream.h"
+#include "intel-dsp-topology.h"
 
 namespace audio {
 namespace intel_hda {
@@ -53,8 +54,8 @@ public:
         mailbox_in_.Read(data, size);
     }
 
-    zx_status_t StartPipelines();
-    zx_status_t PausePipelines();
+    zx_status_t StartPipeline(const DspPipeline& pipeline);
+    zx_status_t PausePipeline(const DspPipeline& pipeline);
 
     zx_status_t DriverBind(zx_device_t* hda_dev) __WARN_UNUSED_RESULT;
     void        DeviceShutdown();

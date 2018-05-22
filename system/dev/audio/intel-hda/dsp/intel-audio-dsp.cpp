@@ -352,36 +352,6 @@ int IntelAudioDsp::InitThread() {
     return 0;
 }
 
-zx_status_t IntelAudioDsp::CreateAndStartStreams() {
-    zx_status_t res = ZX_OK;
-
-    // Create and publish the streams we will use.
-    static struct {
-        uint32_t stream_id;
-        bool is_input;
-    } STREAMS[] = {
-        // Speakers
-        {
-            .stream_id = 1,
-            .is_input = false,
-        },
-    };
-
-    for (size_t i = 0; i < countof(STREAMS); ++i) {
-        const auto& stream_def = STREAMS[i];
-        auto stream = fbl::AdoptRef(new IntelDspStream(stream_def.stream_id, stream_def.is_input));
-
-        res = ActivateStream(stream);
-        if (res != ZX_OK) {
-            LOG(ERROR, "Failed to activate %s stream id #%u (res %d)!",
-                       stream_def.is_input ? "input" : "output", stream_def.stream_id, res);
-            return res;
-        }
-    }
-
-    return ZX_OK;
-}
-
 zx_status_t IntelAudioDsp::Boot() {
     zx_status_t st = ZX_OK;
 

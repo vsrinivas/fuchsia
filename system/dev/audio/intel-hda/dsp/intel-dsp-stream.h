@@ -8,6 +8,7 @@
 
 #include <intel-hda/codec-utils/stream-base.h>
 
+#include "intel-dsp-topology.h"
 #include "debug-logging.h"
 
 namespace audio {
@@ -17,7 +18,7 @@ class IntelAudioDsp;
 
 class IntelDspStream : public codecs::IntelHDAStreamBase {
 public:
-    IntelDspStream(uint32_t id, bool is_input);
+    IntelDspStream(uint32_t id, bool is_input, const DspPipeline& pipeline);
 
     // Overloaded
     zx_status_t ProcessSetStreamFmt(const ihda_proto::SetStreamFmtResp& resp,
@@ -65,6 +66,8 @@ private:
 
     // Log prefix storage
     char log_prefix_[LOG_PREFIX_STORAGE] = { 0 };
+
+    const DspPipeline pipeline_;
 
     fbl::RefPtr<dispatcher::Channel> rb_channel_ __TA_GUARDED(obj_lock());
     fbl::RefPtr<dispatcher::Channel> client_rb_channel_ __TA_GUARDED(obj_lock());
