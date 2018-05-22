@@ -31,6 +31,7 @@ FfmpegAudioDecoder::FfmpegAudioDecoder(AvCodecContextPtr av_codec_context)
     // Prepare for interleaving.
     stream_type_ = std::move(stream_type);
     lpcm_util_ = LpcmUtil::Create(*stream_type_->audio());
+    default_allocator_ = PayloadAllocator::CreateDefault();
   }
 }
 
@@ -59,8 +60,8 @@ int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
   // case use the default allocator. We'll interleave into a buffer from the
   // provided allocator in CreateOutputPacket.
   PayloadAllocator* allocator_to_use =
-      (lpcm_util_ == nullptr) ? allocator
-                              : PayloadAllocator::GetDefault().get();
+      (lpcm_util_ == nullptr) ? allocator : default_allocator_.get();
+  FXL_DCHECK(allocator_to_use);
 
   AVSampleFormat av_sample_format =
       static_cast<AVSampleFormat>(av_frame->format);

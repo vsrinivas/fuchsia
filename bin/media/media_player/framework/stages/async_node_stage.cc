@@ -59,10 +59,10 @@ void AsyncNodeStageImpl::PrepareOutput(
   FXL_DCHECK(output_index < outputs_.size());
 
   if (node_->can_accept_allocator_for_output(output_index)) {
-    // Give the node the provided allocator or the default if none was
+    // Give the node the provided allocator or a default allocator if none was
     // provided.
     node_->SetAllocatorForOutput(
-        allocator == nullptr ? PayloadAllocator::GetDefault() : allocator,
+        allocator == nullptr ? PayloadAllocator::CreateDefault() : allocator,
         output_index);
   } else if (allocator) {
     // The node can't use the provided allocator, so the output must copy

@@ -14,8 +14,8 @@ namespace media_player {
 // Abstract base class for objects that allocate buffers for packets.
 class PayloadAllocator {
  public:
-  // Gets the default allocator, which allocates vanilla memory from the heap.
-  static std::shared_ptr<PayloadAllocator> GetDefault();
+  // Creates a default allocator, which allocates vanilla memory from the heap.
+  static std::shared_ptr<PayloadAllocator> CreateDefault();
 
   virtual ~PayloadAllocator(){};
 

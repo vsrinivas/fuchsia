@@ -45,6 +45,7 @@ class FfmpegAudioDecoder : public FfmpegDecoderBase {
 
   // For interleaving, if needed.
   std::unique_ptr<LpcmUtil> lpcm_util_;
+  std::shared_ptr<PayloadAllocator> default_allocator_;
 
   // For interleaving, if needed.
   std::unique_ptr<StreamType> stream_type_;

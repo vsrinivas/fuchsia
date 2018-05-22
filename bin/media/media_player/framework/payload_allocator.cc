@@ -36,14 +36,11 @@ void DefaultAllocator::ReleasePayloadBuffer(void* buffer) {
   std::free(buffer);
 }
 
-static const std::shared_ptr<PayloadAllocator> default_allocator =
-    std::make_shared<DefaultAllocator>();
-
 }  // namespace
 
 // static
-std::shared_ptr<PayloadAllocator> PayloadAllocator::GetDefault() {
-  return default_allocator;
+std::shared_ptr<PayloadAllocator> PayloadAllocator::CreateDefault() {
+  return std::make_shared<DefaultAllocator>();
 }
 
 }  // namespace media_player
