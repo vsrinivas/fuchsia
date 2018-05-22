@@ -59,8 +59,7 @@ class CommonAncestorTest : public test::TestWithPageStorage {
   }
 
   std::unique_ptr<const storage::Commit> CreateMergeCommit(
-      storage::CommitIdView left,
-      storage::CommitIdView right,
+      storage::CommitIdView left, storage::CommitIdView right,
       std::function<void(storage::Journal*)> contents) {
     bool called;
     storage::Status status;

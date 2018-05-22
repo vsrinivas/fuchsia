@@ -52,8 +52,7 @@ Status SynchronousStorage::TreeNodesFromIdentifiers(
 }
 
 Status SynchronousStorage::TreeNodeFromEntries(
-    uint8_t level,
-    const std::vector<Entry>& entries,
+    uint8_t level, const std::vector<Entry>& entries,
     const std::map<size_t, ObjectIdentifier>& children,
     ObjectIdentifier* result) {
   Status status;

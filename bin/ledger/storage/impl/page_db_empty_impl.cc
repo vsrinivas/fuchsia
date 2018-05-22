@@ -8,9 +8,7 @@ namespace storage {
 
 using coroutine::CoroutineHandler;
 
-Status PageDbEmptyImpl::Init() {
-  return Status::NOT_IMPLEMENTED;
-}
+Status PageDbEmptyImpl::Init() { return Status::NOT_IMPLEMENTED; }
 Status PageDbEmptyImpl::StartBatch(CoroutineHandler* /*handler*/,
                                    std::unique_ptr<PageDb::Batch>* /*batch*/) {
   return Status::NOT_IMPLEMENTED;
@@ -25,8 +23,7 @@ Status PageDbEmptyImpl::GetCommitStorageBytes(CoroutineHandler* /*handler*/,
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::GetImplicitJournalIds(
-    CoroutineHandler* /*handler*/,
-    std::vector<JournalId>* /*journal_ids*/) {
+    CoroutineHandler* /*handler*/, std::vector<JournalId>* /*journal_ids*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::GetBaseCommitForJournal(CoroutineHandler* /*handler*/,
@@ -35,8 +32,7 @@ Status PageDbEmptyImpl::GetBaseCommitForJournal(CoroutineHandler* /*handler*/,
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::GetJournalEntries(
-    CoroutineHandler* /*handler*/,
-    const JournalId& /*journal_id*/,
+    CoroutineHandler* /*handler*/, const JournalId& /*journal_id*/,
     std::unique_ptr<Iterator<const EntryChange>>* /*entries*/) {
   return Status::NOT_IMPLEMENTED;
 }
@@ -56,8 +52,7 @@ Status PageDbEmptyImpl::GetObjectStatus(CoroutineHandler* /*handler*/,
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::GetUnsyncedCommitIds(
-    CoroutineHandler* /*handler*/,
-    std::vector<CommitId>* /*commit_ids*/) {
+    CoroutineHandler* /*handler*/, std::vector<CommitId>* /*commit_ids*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::IsCommitSynced(CoroutineHandler* /*handler*/,
@@ -76,8 +71,7 @@ Status PageDbEmptyImpl::GetSyncMetadata(CoroutineHandler* /*handler*/,
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::AddHead(CoroutineHandler* /*handler*/,
-                                CommitIdView /*head*/,
-                                int64_t /*timestamp*/) {
+                                CommitIdView /*head*/, int64_t /*timestamp*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::RemoveHead(CoroutineHandler* /*handler*/,
@@ -85,8 +79,7 @@ Status PageDbEmptyImpl::RemoveHead(CoroutineHandler* /*handler*/,
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::AddCommitStorageBytes(
-    CoroutineHandler* /*handler*/,
-    const CommitId& /*commit_id*/,
+    CoroutineHandler* /*handler*/, const CommitId& /*commit_id*/,
     fxl::StringView /*storage_bytes*/) {
   return Status::NOT_IMPLEMENTED;
 }
@@ -108,22 +101,18 @@ Status PageDbEmptyImpl::RemoveJournal(CoroutineHandler* /*handler*/,
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::AddJournalEntry(
-    CoroutineHandler* /*handler*/,
-    const JournalId& /*journal_id*/,
-    fxl::StringView /*key*/,
-    const ObjectIdentifier& /*object_identifier*/,
+    CoroutineHandler* /*handler*/, const JournalId& /*journal_id*/,
+    fxl::StringView /*key*/, const ObjectIdentifier& /*object_identifier*/,
     KeyPriority /*priority*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::RemoveJournalEntry(
-    CoroutineHandler* /*handler*/,
-    const JournalId& /*journal_id*/,
+    CoroutineHandler* /*handler*/, const JournalId& /*journal_id*/,
     convert::ExtendedStringView /*key*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::WriteObject(
-    CoroutineHandler* /*handler*/,
-    ObjectIdentifier /*object_identifier*/,
+    CoroutineHandler* /*handler*/, ObjectIdentifier /*object_identifier*/,
     std::unique_ptr<DataSource::DataChunk> /*content*/,
     PageDbObjectStatus /*object_status*/) {
   return Status::NOT_IMPLEMENTED;

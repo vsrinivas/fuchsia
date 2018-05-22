@@ -27,8 +27,7 @@ enum class IterationStatus {
 // use to reference the given content.
 void SplitDataSource(
     DataSource* source,
-    std::function<ObjectIdentifier(IterationStatus,
-                                   ObjectDigest,
+    std::function<ObjectIdentifier(IterationStatus, ObjectDigest,
                                    std::unique_ptr<DataSource::DataChunk>)>
         callback);
 

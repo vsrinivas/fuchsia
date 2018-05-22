@@ -105,18 +105,15 @@ EncryptionServiceImpl::EncryptionServiceImpl(async_t* async,
                                              std::string namespace_id)
     : namespace_id_(std::move(namespace_id)),
       key_service_(std::make_unique<KeyService>(async)),
-      master_keys_(kKeyIndexCacheSize,
-                   Status::OK,
+      master_keys_(kKeyIndexCacheSize, Status::OK,
                    [this](auto k, auto c) {
                      FetchMasterKey(std::move(k), std::move(c));
                    }),
-      namespace_keys_(kKeyIndexCacheSize,
-                      Status::OK,
+      namespace_keys_(kKeyIndexCacheSize, Status::OK,
                       [this](auto k, auto c) {
                         FetchNamespaceKey(std::move(k), std::move(c));
                       }),
-      reference_keys_(kReferenceKeysCacheSize,
-                      Status::OK,
+      reference_keys_(kReferenceKeysCacheSize, Status::OK,
                       [this](auto k, auto c) {
                         FetchReferenceKey(std::move(k), std::move(c));
                       }) {}
@@ -185,8 +182,7 @@ void EncryptionServiceImpl::GetObjectName(
 }
 
 void EncryptionServiceImpl::EncryptObject(
-    storage::ObjectIdentifier object_identifier,
-    fsl::SizedVmo content,
+    storage::ObjectIdentifier object_identifier, fsl::SizedVmo content,
     std::function<void(Status, std::string)> callback) {
   std::string data;
   if (!fsl::StringFromVmo(content, &data)) {
@@ -197,8 +193,7 @@ void EncryptionServiceImpl::EncryptObject(
 }
 
 void EncryptionServiceImpl::DecryptObject(
-    storage::ObjectIdentifier object_identifier,
-    std::string encrypted_data,
+    storage::ObjectIdentifier object_identifier, std::string encrypted_data,
     std::function<void(Status, std::string)> callback) {
   Decrypt(object_identifier.key_index, std::move(encrypted_data),
           std::move(callback));
@@ -228,8 +223,7 @@ void EncryptionServiceImpl::GetReferenceKey(
 }
 
 void EncryptionServiceImpl::Encrypt(
-    size_t key_index,
-    std::string data,
+    size_t key_index, std::string data,
     std::function<void(Status, std::string)> callback) {
   master_keys_.Get(key_index,
                    [data = std::move(data), callback = std::move(callback)](
@@ -248,8 +242,7 @@ void EncryptionServiceImpl::Encrypt(
 }
 
 void EncryptionServiceImpl::Decrypt(
-    size_t key_index,
-    std::string encrypted_data,
+    size_t key_index, std::string encrypted_data,
     std::function<void(Status, std::string)> callback) {
   master_keys_.Get(key_index, [encrypted_data = std::move(encrypted_data),
                                callback = std::move(callback)](
@@ -268,8 +261,7 @@ void EncryptionServiceImpl::Decrypt(
 }
 
 void EncryptionServiceImpl::FetchMasterKey(
-    size_t key_index,
-    std::function<void(Status, std::string)> callback) {
+    size_t key_index, std::function<void(Status, std::string)> callback) {
   key_service_->GetMasterKey(
       key_index, [callback = std::move(callback)](std::string master_key) {
         callback(Status::OK, std::move(master_key));
@@ -277,8 +269,7 @@ void EncryptionServiceImpl::FetchMasterKey(
 }
 
 void EncryptionServiceImpl::FetchNamespaceKey(
-    size_t key_index,
-    std::function<void(Status, std::string)> callback) {
+    size_t key_index, std::function<void(Status, std::string)> callback) {
   master_keys_.Get(
       key_index, [this, callback = std::move(callback)](
                      Status status, const std::string& master_key) {

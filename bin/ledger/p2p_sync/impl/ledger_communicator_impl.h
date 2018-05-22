@@ -31,13 +31,11 @@ class LedgerCommunicatorImpl : public LedgerCommunicator {
                       p2p_provider::DeviceChangeType change_type);
 
   // Called when a new request arrived for this ledger from device |source|.
-  void OnNewRequest(fxl::StringView source,
-                    fxl::StringView page_id,
+  void OnNewRequest(fxl::StringView source, fxl::StringView page_id,
                     const Request* message);
 
   // Called when a new response arrived for this ledger from device |source|.
-  void OnNewResponse(fxl::StringView source,
-                     fxl::StringView page_id,
+  void OnNewResponse(fxl::StringView source, fxl::StringView page_id,
                      const Response* message);
 
   // LedgerCommunicator:

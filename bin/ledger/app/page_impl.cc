@@ -24,15 +24,13 @@ void PageImpl::GetId(GetIdCallback callback) {
 void PageImpl::GetSnapshot(
     fidl::InterfaceRequest<PageSnapshot> snapshot_request,
     fidl::VectorPtr<uint8_t> key_prefix,
-    fidl::InterfaceHandle<PageWatcher> watcher,
-    GetSnapshotCallback callback) {
+    fidl::InterfaceHandle<PageWatcher> watcher, GetSnapshotCallback callback) {
   auto timed_callback = TRACE_CALLBACK(callback, "ledger", "page_get_snapshot");
   delegate_->GetSnapshot(std::move(snapshot_request), std::move(key_prefix),
                          std::move(watcher), std::move(timed_callback));
 }
 
-void PageImpl::Put(fidl::VectorPtr<uint8_t> key,
-                   fidl::VectorPtr<uint8_t> value,
+void PageImpl::Put(fidl::VectorPtr<uint8_t> key, fidl::VectorPtr<uint8_t> value,
                    PutCallback callback) {
   PutWithPriority(std::move(key), std::move(value), Priority::EAGER, callback);
 }
@@ -47,8 +45,7 @@ void PageImpl::PutWithPriority(fidl::VectorPtr<uint8_t> key,
                              std::move(timed_callback));
 }
 
-void PageImpl::PutReference(fidl::VectorPtr<uint8_t> key,
-                            Reference reference,
+void PageImpl::PutReference(fidl::VectorPtr<uint8_t> key, Reference reference,
                             Priority priority,
                             const PutReferenceCallback callback) {
   auto timed_callback =
@@ -63,8 +60,7 @@ void PageImpl::Delete(fidl::VectorPtr<uint8_t> key, DeleteCallback callback) {
 }
 
 void PageImpl::CreateReferenceFromSocket(
-    uint64_t size,
-    zx::socket data,
+    uint64_t size, zx::socket data,
     CreateReferenceFromSocketCallback callback) {
   auto timed_callback =
       TRACE_CALLBACK(callback, "ledger", "page_create_reference_from_socket");
@@ -73,8 +69,7 @@ void PageImpl::CreateReferenceFromSocket(
 }
 
 void PageImpl::CreateReferenceFromVmo(
-    fuchsia::mem::Buffer data,
-    CreateReferenceFromSocketCallback callback) {
+    fuchsia::mem::Buffer data, CreateReferenceFromSocketCallback callback) {
   auto timed_callback =
       TRACE_CALLBACK(callback, "ledger", "page_create_reference_from_vmo");
   fsl::SizedVmo vmo;

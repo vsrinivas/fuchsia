@@ -33,17 +33,14 @@ UserSyncImpl::UserSyncImpl(ledger::Environment* environment,
   FXL_DCHECK(on_version_mismatch_);
 }
 
-UserSyncImpl::~UserSyncImpl() {
-  FXL_DCHECK(active_ledger_syncs_.empty());
-}
+UserSyncImpl::~UserSyncImpl() { FXL_DCHECK(active_ledger_syncs_.empty()); }
 
 void UserSyncImpl::SetSyncWatcher(SyncStateWatcher* watcher) {
   aggregator_.SetBaseWatcher(watcher);
 }
 
 std::unique_ptr<LedgerSync> UserSyncImpl::CreateLedgerSync(
-    fxl::StringView app_id,
-    encryption::EncryptionService* encryption_service) {
+    fxl::StringView app_id, encryption::EncryptionService* encryption_service) {
   FXL_DCHECK(started_);
 
   auto result = std::make_unique<LedgerSyncImpl>(

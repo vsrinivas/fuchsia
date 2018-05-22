@@ -29,8 +29,7 @@ class PageUtils {
   static void ResolveObjectIdentifierAsStringView(
       storage::PageStorage* storage,
       storage::ObjectIdentifier object_identifier,
-      storage::PageStorage::Location location,
-      Status not_found_status,
+      storage::PageStorage::Location location, Status not_found_status,
       std::function<void(Status, fxl::StringView)> callback);
 
   // Retrieves the data referenced by the given identifier and returns a subset
@@ -38,10 +37,8 @@ class PageUtils {
   // offset is understood as starting from the end of the contents.
   static void ResolveObjectIdentifierAsBuffer(
       storage::PageStorage* storage,
-      storage::ObjectIdentifier object_identifier,
-      int64_t offset,
-      int64_t max_size,
-      storage::PageStorage::Location location,
+      storage::ObjectIdentifier object_identifier, int64_t offset,
+      int64_t max_size, storage::PageStorage::Location location,
       Status not_found_status,
       std::function<void(Status, fsl::SizedVmo)> callback);
 

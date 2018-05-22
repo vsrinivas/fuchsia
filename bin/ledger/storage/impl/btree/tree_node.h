@@ -24,8 +24,7 @@ class TreeNode {
   // Creates a |TreeNode| object for an existing node and calls the given
   // |callback| with the returned status and node.
   static void FromIdentifier(
-      PageStorage* page_storage,
-      ObjectIdentifier identifier,
+      PageStorage* page_storage, ObjectIdentifier identifier,
       std::function<void(Status, std::unique_ptr<const TreeNode>)> callback);
 
   // Creates a |TreeNode| object with the given entries and children. |children|
@@ -34,8 +33,7 @@ class TreeNode {
   // between |0| and |size(entries)| (included). The |callback| will be called
   // with the success or error status and the id of the new node.
   static void FromEntries(
-      PageStorage* page_storage,
-      uint8_t level,
+      PageStorage* page_storage, uint8_t level,
       const std::vector<Entry>& entries,
       const std::map<size_t, ObjectIdentifier>& children,
       std::function<void(Status, ObjectIdentifier)> callback);
@@ -77,10 +75,8 @@ class TreeNode {
   }
 
  private:
-  TreeNode(PageStorage* page_storage,
-           ObjectIdentifier identifier,
-           uint8_t level,
-           std::vector<Entry> entries,
+  TreeNode(PageStorage* page_storage, ObjectIdentifier identifier,
+           uint8_t level, std::vector<Entry> entries,
            std::map<size_t, ObjectIdentifier> children);
 
   // Creates a |TreeNode| object for an existing |object| and stores it in the

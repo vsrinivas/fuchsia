@@ -29,9 +29,7 @@ class Aggregator::Listener : public SyncStateWatcher {
 Aggregator::Listener::Listener(Aggregator* aggregator)
     : aggregator_(aggregator) {}
 
-Aggregator::Listener::~Listener() {
-  aggregator_->UnregisterListener(this);
-}
+Aggregator::Listener::~Listener() { aggregator_->UnregisterListener(this); }
 
 void Aggregator::Listener::Notify(
     SyncStateWatcher::SyncStateContainer sync_state) {

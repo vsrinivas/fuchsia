@@ -23,8 +23,7 @@ class LastOneWinsMergeStrategy : public MergeStrategy {
 
   void SetOnError(std::function<void()> on_error) override;
 
-  void Merge(storage::PageStorage* storage,
-             PageManager* page_manager,
+  void Merge(storage::PageStorage* storage, PageManager* page_manager,
              std::unique_ptr<const storage::Commit> head_1,
              std::unique_ptr<const storage::Commit> head_2,
              std::unique_ptr<const storage::Commit> ancestor,

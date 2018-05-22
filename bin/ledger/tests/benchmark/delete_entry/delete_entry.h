@@ -28,10 +28,8 @@ namespace benchmark {
 //   --value-size=<int> the size of a single value in bytes
 class DeleteEntryBenchmark {
  public:
-  DeleteEntryBenchmark(async::Loop* loop,
-                       size_t entry_count,
-                       size_t transaction_size,
-                       size_t key_size,
+  DeleteEntryBenchmark(async::Loop* loop, size_t entry_count,
+                       size_t transaction_size, size_t key_size,
                        size_t value_size);
 
   void Run();

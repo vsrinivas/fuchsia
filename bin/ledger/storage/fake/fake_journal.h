@@ -29,10 +29,8 @@ class FakeJournal : public Journal {
   Status Rollback();
 
   // Journal:
-  void Put(convert::ExtendedStringView key,
-           ObjectIdentifier object_identifier,
-           KeyPriority priority,
-           std::function<void(Status)> callback) override;
+  void Put(convert::ExtendedStringView key, ObjectIdentifier object_identifier,
+           KeyPriority priority, std::function<void(Status)> callback) override;
   void Delete(convert::ExtendedStringView key,
               std::function<void(Status)> callback) override;
   const JournalId& GetId() const override;

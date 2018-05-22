@@ -74,24 +74,18 @@ struct StringPointerComparator {
 }  // namespace
 
 PageStorageImpl::PageStorageImpl(
-    async_t* async,
-    coroutine::CoroutineService* coroutine_service,
-    encryption::EncryptionService* encryption_service,
-    std::string page_dir,
+    async_t* async, coroutine::CoroutineService* coroutine_service,
+    encryption::EncryptionService* encryption_service, std::string page_dir,
     PageId page_id)
     : PageStorageImpl(
-          async,
-          coroutine_service,
-          encryption_service,
+          async, coroutine_service, encryption_service,
           std::make_unique<PageDbImpl>(async, page_dir + kLevelDbDir),
           std::move(page_id)) {}
 
 PageStorageImpl::PageStorageImpl(
-    async_t* async,
-    coroutine::CoroutineService* coroutine_service,
+    async_t* async, coroutine::CoroutineService* coroutine_service,
     encryption::EncryptionService* encryption_service,
-    std::unique_ptr<PageDb> page_db,
-    PageId page_id)
+    std::unique_ptr<PageDb> page_db, PageId page_id)
     : async_(async),
       coroutine_service_(coroutine_service),
       encryption_service_(encryption_service),
@@ -117,9 +111,7 @@ void PageStorageImpl::Init(std::function<void(Status)> callback) {
       });
 }
 
-PageId PageStorageImpl::GetId() {
-  return page_id_;
-}
+PageId PageStorageImpl::GetId() { return page_id_; }
 
 void PageStorageImpl::SetSyncDelegate(PageSyncDelegate* page_sync) {
   page_sync_ = page_sync;
@@ -188,8 +180,7 @@ void PageStorageImpl::AddCommitsFromSync(
 }
 
 void PageStorageImpl::StartCommit(
-    const CommitId& commit_id,
-    JournalType journal_type,
+    const CommitId& commit_id, JournalType journal_type,
     std::function<void(Status, std::unique_ptr<Journal>)> callback) {
   coroutine_service_->StartCoroutine(
       [this, commit_id, journal_type, final_callback = std::move(callback)](
@@ -212,8 +203,7 @@ void PageStorageImpl::StartCommit(
 }
 
 void PageStorageImpl::StartMergeCommit(
-    const CommitId& left,
-    const CommitId& right,
+    const CommitId& left, const CommitId& right,
     std::function<void(Status, std::unique_ptr<Journal>)> callback) {
   coroutine_service_->StartCoroutine([this, left, right,
                                       final_callback = std::move(callback)](
@@ -389,8 +379,7 @@ void PageStorageImpl::AddObjectFromLocal(
 }
 
 void PageStorageImpl::GetObject(
-    ObjectIdentifier object_identifier,
-    Location location,
+    ObjectIdentifier object_identifier, Location location,
     std::function<void(Status, std::unique_ptr<const Object>)> callback) {
   FXL_DCHECK(IsDigestValid(object_identifier.object_digest));
   GetPiece(
@@ -523,8 +512,7 @@ void PageStorageImpl::SetSyncMetadata(fxl::StringView key,
 }
 
 void PageStorageImpl::GetSyncMetadata(
-    fxl::StringView key,
-    std::function<void(Status, std::string)> callback) {
+    fxl::StringView key, std::function<void(Status, std::string)> callback) {
   coroutine_service_->StartCoroutine(
       [this, key = key.ToString(), final_callback = std::move(callback)](
           CoroutineHandler* handler) mutable {
@@ -550,8 +538,7 @@ void PageStorageImpl::GetCommitContents(const Commit& commit,
 }
 
 void PageStorageImpl::GetEntryFromCommit(
-    const Commit& commit,
-    std::string key,
+    const Commit& commit, std::string key,
     std::function<void(Status, Entry)> callback) {
   std::unique_ptr<bool> key_found = std::make_unique<bool>(false);
   auto on_next = [key, key_found = key_found.get(),
@@ -580,9 +567,7 @@ void PageStorageImpl::GetEntryFromCommit(
 }
 
 void PageStorageImpl::GetCommitContentsDiff(
-    const Commit& base_commit,
-    const Commit& other_commit,
-    std::string min_key,
+    const Commit& base_commit, const Commit& other_commit, std::string min_key,
     std::function<bool(EntryChange)> on_next_diff,
     std::function<void(Status)> on_done) {
   btree::ForEachDiff(coroutine_service_, this, base_commit.GetRootIdentifier(),
@@ -591,10 +576,8 @@ void PageStorageImpl::GetCommitContentsDiff(
 }
 
 void PageStorageImpl::GetThreeWayContentsDiff(
-    const Commit& base_commit,
-    const Commit& left_commit,
-    const Commit& right_commit,
-    std::string min_key,
+    const Commit& base_commit, const Commit& left_commit,
+    const Commit& right_commit, std::string min_key,
     std::function<bool(ThreeWayChange)> on_next_diff,
     std::function<void(Status)> on_done) {
   btree::ForEachThreeWayDiff(
@@ -673,8 +656,7 @@ void PageStorageImpl::NotifyWatchers() {
 }
 
 Status PageStorageImpl::MarkAllPiecesLocal(
-    CoroutineHandler* handler,
-    PageDb::Batch* batch,
+    CoroutineHandler* handler, PageDb::Batch* batch,
     std::vector<ObjectIdentifier> object_identifiers) {
   std::set<ObjectIdentifier> seen_identifiers;
   while (!object_identifiers.empty()) {
@@ -879,11 +861,8 @@ void PageStorageImpl::ObjectIsUntracked(
 }
 
 void PageStorageImpl::FillBufferWithObjectContent(
-    ObjectIdentifier object_identifier,
-    fsl::SizedVmo vmo,
-    size_t offset,
-    size_t size,
-    std::function<void(Status)> callback) {
+    ObjectIdentifier object_identifier, fsl::SizedVmo vmo, size_t offset,
+    size_t size, std::function<void(Status)> callback) {
   GetPiece(object_identifier,
            fxl::MakeCopyable([this, vmo = std::move(vmo), offset, size,
                               callback = std::move(callback)](
@@ -1038,8 +1017,7 @@ Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
 }
 
 Status PageStorageImpl::SynchronousGetCommit(
-    CoroutineHandler* handler,
-    CommitId commit_id,
+    CoroutineHandler* handler, CommitId commit_id,
     std::unique_ptr<const Commit>* commit) {
   if (IsFirstCommit(commit_id)) {
     Status s;
@@ -1064,8 +1042,7 @@ Status PageStorageImpl::SynchronousGetCommit(
 }
 
 Status PageStorageImpl::SynchronousAddCommitFromLocal(
-    CoroutineHandler* handler,
-    std::unique_ptr<const Commit> commit,
+    CoroutineHandler* handler, std::unique_ptr<const Commit> commit,
     std::vector<ObjectIdentifier> new_objects) {
   std::vector<std::unique_ptr<const Commit>> commits;
   commits.reserve(1);
@@ -1076,8 +1053,7 @@ Status PageStorageImpl::SynchronousAddCommitFromLocal(
 }
 
 Status PageStorageImpl::SynchronousAddCommitsFromSync(
-    CoroutineHandler* handler,
-    std::vector<CommitIdAndBytes> ids_and_bytes) {
+    CoroutineHandler* handler, std::vector<CommitIdAndBytes> ids_and_bytes) {
   std::vector<std::unique_ptr<const Commit>> commits;
 
   std::map<const CommitId*, const Commit*, StringPointerComparator> leaves;
@@ -1199,8 +1175,7 @@ Status PageStorageImpl::SynchronousMarkCommitSynced(CoroutineHandler* handler,
 
 Status PageStorageImpl::SynchronousAddCommits(
     CoroutineHandler* handler,
-    std::vector<std::unique_ptr<const Commit>> commits,
-    ChangeSource source,
+    std::vector<std::unique_ptr<const Commit>> commits, ChangeSource source,
     std::vector<ObjectIdentifier> new_objects) {
   // Make sure that only one AddCommits operation is executed at a time.
   // Otherwise, if db_ operations are asynchronous, ContainsCommit (below) may
@@ -1360,10 +1335,8 @@ Status PageStorageImpl::SynchronousAddCommits(
 }
 
 Status PageStorageImpl::SynchronousAddPiece(
-    CoroutineHandler* handler,
-    ObjectIdentifier object_identifier,
-    std::unique_ptr<DataSource::DataChunk> data,
-    ChangeSource source) {
+    CoroutineHandler* handler, ObjectIdentifier object_identifier,
+    std::unique_ptr<DataSource::DataChunk> data, ChangeSource source) {
   FXL_DCHECK(GetObjectDigestType(object_identifier.object_digest) !=
              ObjectDigestType::INLINE);
   FXL_DCHECK(object_identifier.object_digest ==

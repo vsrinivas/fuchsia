@@ -117,9 +117,7 @@ TEST(Context, ThreadLocal) {
 #if __has_feature(safe_stack)
 // Force to set the pointed address to 1. This must be no-inline to prevent the
 // compiler to optimize away the set.
-FXL_NOINLINE void ForceSet(volatile char* addr) {
-  *addr = 1;
-}
+FXL_NOINLINE void ForceSet(volatile char* addr) { *addr = 1; }
 
 // Write some data to the unsafe stack.
 void TrashStack(void* context) {

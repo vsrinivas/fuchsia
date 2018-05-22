@@ -19,13 +19,10 @@ void FakeJournal::Commit(
   delegate_->Commit(callback);
 }
 
-Status FakeJournal::Rollback() {
-  return delegate_->Rollback();
-}
+Status FakeJournal::Rollback() { return delegate_->Rollback(); }
 
 void FakeJournal::Put(convert::ExtendedStringView key,
-                      ObjectIdentifier object_identifier,
-                      KeyPriority priority,
+                      ObjectIdentifier object_identifier, KeyPriority priority,
                       std::function<void(Status)> callback) {
   callback(delegate_->SetValue(key, std::move(object_identifier), priority));
 }
@@ -35,9 +32,7 @@ void FakeJournal::Delete(convert::ExtendedStringView key,
   callback(delegate_->Delete(key));
 }
 
-const JournalId& FakeJournal::GetId() const {
-  return delegate_->GetId();
-}
+const JournalId& FakeJournal::GetId() const { return delegate_->GetId(); }
 
 }  // namespace fake
 }  // namespace storage

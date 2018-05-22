@@ -22,8 +22,7 @@ namespace btree {
 void ForEachDiff(coroutine::CoroutineService* coroutine_service,
                  PageStorage* page_storage,
                  ObjectIdentifier base_root_identifier,
-                 ObjectIdentifier other_root_identifier,
-                 std::string min_key,
+                 ObjectIdentifier other_root_identifier, std::string min_key,
                  std::function<bool(EntryChange)> on_next,
                  std::function<void(Status)> on_done);
 

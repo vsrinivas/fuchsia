@@ -36,10 +36,8 @@ class PageSnapshotImpl : public PageSnapshot {
   void GetInline(fidl::VectorPtr<uint8_t> key,
                  GetInlineCallback callback) override;
   void Fetch(fidl::VectorPtr<uint8_t> key, FetchCallback callback) override;
-  void FetchPartial(fidl::VectorPtr<uint8_t> key,
-                    int64_t offset,
-                    int64_t max_size,
-                    FetchPartialCallback callback) override;
+  void FetchPartial(fidl::VectorPtr<uint8_t> key, int64_t offset,
+                    int64_t max_size, FetchPartialCallback callback) override;
 
   storage::PageStorage* page_storage_;
   std::unique_ptr<const storage::Commit> commit_;

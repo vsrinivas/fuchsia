@@ -30,8 +30,7 @@ class MergeStrategy {
   // Merge the given commits. head_1.timesteamp must be less or equals to
   // head_2.timestamp. MergeStrategy should not be deleted while merges are in
   // progress.
-  virtual void Merge(storage::PageStorage* storage,
-                     PageManager* page_manager,
+  virtual void Merge(storage::PageStorage* storage, PageManager* page_manager,
                      std::unique_ptr<const storage::Commit> head_1,
                      std::unique_ptr<const storage::Commit> head_2,
                      std::unique_ptr<const storage::Commit> ancestor,

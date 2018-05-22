@@ -40,8 +40,7 @@ namespace p2p_provider {
 class P2PProviderImpl : public P2PProvider {
  public:
   P2PProviderImpl(
-      std::string host_name,
-      netconnector::NetConnectorPtr net_connector,
+      std::string host_name, netconnector::NetConnectorPtr net_connector,
       std::unique_ptr<p2p_provider::UserIdProvider> user_id_provider);
   ~P2PProviderImpl() override;
 
@@ -55,8 +54,7 @@ class P2PProviderImpl : public P2PProvider {
   // Processes the first message on a new connection. If
   // |should_send_handshake|, a handshake is also sent back on the connection;
   // this happens when the connection was established by the other side.
-  void ProcessHandshake(RemoteConnection* connection,
-                        std::vector<uint8_t> data,
+  void ProcessHandshake(RemoteConnection* connection, std::vector<uint8_t> data,
                         bool should_send_handshake,
                         fxl::StringView network_remote_name);
   // Retrieves and processes the current devices list

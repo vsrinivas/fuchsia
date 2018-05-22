@@ -24,14 +24,9 @@ namespace test {
 namespace benchmark {
 
 PutBenchmark::PutBenchmark(
-    async::Loop* loop,
-    int entry_count,
-    int transaction_size,
-    int key_size,
-    int value_size,
-    bool update,
-    PageDataGenerator::ReferenceStrategy reference_strategy,
-    uint64_t seed)
+    async::Loop* loop, int entry_count, int transaction_size, int key_size,
+    int value_size, bool update,
+    PageDataGenerator::ReferenceStrategy reference_strategy, uint64_t seed)
     : loop_(loop),
       generator_(seed),
       tmp_dir_(kStoragePath),
@@ -228,9 +223,7 @@ void PutBenchmark::PutEntry(fidl::VectorPtr<uint8_t> key,
 }
 
 void PutBenchmark::CommitAndRunNext(
-    int i,
-    size_t key_number,
-    std::vector<fidl::VectorPtr<uint8_t>> keys) {
+    int i, size_t key_number, std::vector<fidl::VectorPtr<uint8_t>> keys) {
   TRACE_ASYNC_BEGIN("benchmark", "local_change_notification", key_number);
   TRACE_ASYNC_BEGIN("benchmark", "commit", i / transaction_size_);
   page_->Commit(fxl::MakeCopyable([this, i, keys = std::move(keys)](

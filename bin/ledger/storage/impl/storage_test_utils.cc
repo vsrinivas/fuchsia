@@ -107,9 +107,7 @@ std::string RandomString(size_t size) {
   return value;
 }
 
-CommitId RandomCommitId() {
-  return RandomString(kCommitIdSize);
-}
+CommitId RandomCommitId() { return RandomString(kCommitIdSize); }
 
 ObjectDigest RandomObjectDigest() {
   ObjectData data(RandomString(16), InlineBehavior::PREVENT);
@@ -120,8 +118,7 @@ ObjectIdentifier RandomObjectIdentifier() {
   return encryption::MakeDefaultObjectIdentifier(RandomObjectDigest());
 }
 
-EntryChange NewEntryChange(std::string key,
-                           std::string object_digest,
+EntryChange NewEntryChange(std::string key, std::string object_digest,
                            KeyPriority priority) {
   return EntryChange{
       Entry{std::move(key), MakeObjectIdentifier(std::move(object_digest)),
@@ -140,8 +137,7 @@ StorageTest::StorageTest(){};
 StorageTest::~StorageTest(){};
 
 ::testing::AssertionResult StorageTest::AddObject(
-    std::string value,
-    std::unique_ptr<const Object>* object) {
+    std::string value, std::unique_ptr<const Object>* object) {
   Status status;
   ObjectIdentifier object_identifier;
   GetStorage()->AddObjectFromLocal(
@@ -168,14 +164,12 @@ StorageTest::~StorageTest(){};
 }
 
 ::testing::AssertionResult StorageTest::CreateEntries(
-    size_t size,
-    std::vector<Entry>* entries) {
+    size_t size, std::vector<Entry>* entries) {
   return CreateEntries(GetEnumeration(size), entries);
 }
 
 ::testing::AssertionResult StorageTest::CreateEntries(
-    std::vector<size_t> values,
-    std::vector<Entry>* entries) {
+    std::vector<size_t> values, std::vector<Entry>* entries) {
   std::vector<Entry> result;
   for (auto i : values) {
     FXL_DCHECK(i < 100);
@@ -193,14 +187,12 @@ StorageTest::~StorageTest(){};
 }
 
 ::testing::AssertionResult StorageTest::CreateEntryChanges(
-    size_t size,
-    std::vector<EntryChange>* changes) {
+    size_t size, std::vector<EntryChange>* changes) {
   return CreateEntryChanges(GetEnumeration(size), changes, false);
 }
 
 ::testing::AssertionResult StorageTest::CreateEntryChanges(
-    std::vector<size_t> values,
-    std::vector<EntryChange>* changes,
+    std::vector<size_t> values, std::vector<EntryChange>* changes,
     bool deletion) {
   std::vector<Entry> entries;
   ::testing::AssertionResult assertion_result =
@@ -233,8 +225,7 @@ StorageTest::~StorageTest(){};
 }
 
 ::testing::AssertionResult StorageTest::CreateNodeFromIdentifier(
-    ObjectIdentifier identifier,
-    std::unique_ptr<const btree::TreeNode>* node) {
+    ObjectIdentifier identifier, std::unique_ptr<const btree::TreeNode>* node) {
   Status status;
   std::unique_ptr<const btree::TreeNode> result;
   btree::TreeNode::FromIdentifier(

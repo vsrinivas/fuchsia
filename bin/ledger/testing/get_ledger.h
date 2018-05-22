@@ -10,8 +10,8 @@
 
 #include <cloud_provider/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
-#include <modular_auth/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <modular_auth/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/functional/closure.h"

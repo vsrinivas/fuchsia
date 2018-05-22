@@ -18,9 +18,9 @@ bool QuitOnError(fxl::Closure quit_callback, ledger::Status status,
 }
 
 std::function<void(ledger::Status)> QuitOnErrorCallback(
-    fxl::Closure quit_callback,
-    std::string description) {
-  return [quit_callback = std::move(quit_callback), description](ledger::Status status) {
+    fxl::Closure quit_callback, std::string description) {
+  return [quit_callback = std::move(quit_callback),
+          description](ledger::Status status) {
     QuitOnError(quit_callback, status, description);
   };
 }

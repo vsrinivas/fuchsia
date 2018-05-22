@@ -39,8 +39,7 @@ class RecordingTestStrategy : public MergeStrategy {
 
   void SetOnMerge(fxl::Closure on_merge) { on_merge_ = on_merge; }
 
-  void Merge(storage::PageStorage* /*storage*/,
-             PageManager* /*page_manager*/,
+  void Merge(storage::PageStorage* /*storage*/, PageManager* /*page_manager*/,
              std::unique_ptr<const storage::Commit> /*head_1*/,
              std::unique_ptr<const storage::Commit> /*head_2*/,
              std::unique_ptr<const storage::Commit> /*ancestor*/,
@@ -67,8 +66,7 @@ class RecordingTestStrategy : public MergeStrategy {
 class MergeResolverTest : public test::TestWithPageStorage {
  public:
   MergeResolverTest()
-      : environment_(
-            EnvironmentBuilder().SetAsync(dispatcher()).Build()) {}
+      : environment_(EnvironmentBuilder().SetAsync(dispatcher()).Build()) {}
   ~MergeResolverTest() override {}
 
  protected:
@@ -86,8 +84,7 @@ class MergeResolverTest : public test::TestWithPageStorage {
   }
 
   storage::CommitId CreateCommit(
-      storage::PageStorage* storage,
-      storage::CommitIdView parent_id,
+      storage::PageStorage* storage, storage::CommitIdView parent_id,
       std::function<void(storage::Journal*)> contents) {
     bool called;
     storage::Status status;
@@ -111,16 +108,14 @@ class MergeResolverTest : public test::TestWithPageStorage {
   }
 
   storage::CommitId CreateMergeCommit(
-      storage::CommitIdView parent_id1,
-      storage::CommitIdView parent_id2,
+      storage::CommitIdView parent_id1, storage::CommitIdView parent_id2,
       std::function<void(storage::Journal*)> contents) {
     return CreateMergeCommit(page_storage_.get(), parent_id1, parent_id2,
                              std::move(contents));
   }
 
   storage::CommitId CreateMergeCommit(
-      storage::PageStorage* storage,
-      storage::CommitIdView parent_id1,
+      storage::PageStorage* storage, storage::CommitIdView parent_id1,
       storage::CommitIdView parent_id2,
       std::function<void(storage::Journal*)> contents) {
     bool called;
@@ -204,10 +199,8 @@ TEST_F(MergeResolverTest, Empty) {
 
 class VerifyingMergeStrategy : public MergeStrategy {
  public:
-  VerifyingMergeStrategy(async_t* async,
-                         storage::CommitId head1,
-                         storage::CommitId head2,
-                         storage::CommitId ancestor)
+  VerifyingMergeStrategy(async_t* async, storage::CommitId head1,
+                         storage::CommitId head2, storage::CommitId ancestor)
       : async_(async),
         head1_(std::move(head1)),
         head2_(std::move(head2)),
@@ -216,8 +209,7 @@ class VerifyingMergeStrategy : public MergeStrategy {
 
   void SetOnError(std::function<void()> /*on_error*/) override {}
 
-  void Merge(storage::PageStorage* /*storage*/,
-             PageManager* /*page_manager*/,
+  void Merge(storage::PageStorage* /*storage*/, PageManager* /*page_manager*/,
              std::unique_ptr<const storage::Commit> head_1,
              std::unique_ptr<const storage::Commit> head_2,
              std::unique_ptr<const storage::Commit> ancestor,
@@ -276,8 +268,8 @@ TEST_F(MergeResolverTest, CommonAncestor) {
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_5));
 
   std::unique_ptr<VerifyingMergeStrategy> strategy =
-      std::make_unique<VerifyingMergeStrategy>(dispatcher(),
-                                               commit_5, commit_3, commit_2);
+      std::make_unique<VerifyingMergeStrategy>(dispatcher(), commit_5, commit_3,
+                                               commit_2);
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<test::TestBackoff>(nullptr));
   resolver.SetMergeStrategy(std::move(strategy));

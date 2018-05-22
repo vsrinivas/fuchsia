@@ -53,8 +53,7 @@ class BatchUpload {
               encryption::EncryptionService* encryption_service,
               cloud_provider::PageCloudPtr* page_cloud,
               std::vector<std::unique_ptr<const storage::Commit>> commits,
-              fxl::Closure on_done,
-              std::function<void(ErrorType)> on_error,
+              fxl::Closure on_done, std::function<void(ErrorType)> on_error,
               unsigned int max_concurrent_uploads = 10);
   ~BatchUpload();
 
@@ -82,8 +81,7 @@ class BatchUpload {
 
   // Uploads the given object.
   void UploadEncryptedObject(storage::ObjectIdentifier object_identifier,
-                             std::string object_name,
-                             std::string content);
+                             std::string object_name, std::string content);
 
   // Filters already synced commits.
   void FilterAndUploadCommits();

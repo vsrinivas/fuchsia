@@ -9,8 +9,7 @@
 
 namespace encryption {
 
-bool AES128GCMSIVEncrypt(fxl::StringView key,
-                         fxl::StringView data,
+bool AES128GCMSIVEncrypt(fxl::StringView key, fxl::StringView data,
                          std::string* output) {
   if (key.size() != 16) {
     return false;
@@ -52,8 +51,7 @@ bool AES128GCMSIVEncrypt(fxl::StringView key,
   return true;
 }
 
-bool AES128GCMSIVDecrypt(fxl::StringView key,
-                         fxl::StringView encrypted_data,
+bool AES128GCMSIVDecrypt(fxl::StringView key, fxl::StringView encrypted_data,
                          std::string* output) {
   if (key.size() != 16) {
     return false;

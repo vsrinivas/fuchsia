@@ -115,8 +115,7 @@ std::string JournalEntryRow::GetKeyFor(const JournalId& id,
 }
 
 std::string JournalEntryRow::GetValueFor(
-    const ObjectIdentifier& object_identifier,
-    KeyPriority priority) {
+    const ObjectIdentifier& object_identifier, KeyPriority priority) {
   char priority_byte =
       (priority == KeyPriority::EAGER) ? kEagerPrefix : kLazyPrefix;
   return fxl::Concatenate({{&kAddPrefix, 1},
@@ -125,8 +124,7 @@ std::string JournalEntryRow::GetValueFor(
 }
 
 Status JournalEntryRow::ExtractObjectIdentifier(
-    fxl::StringView db_value,
-    ObjectIdentifier* object_identifier) {
+    fxl::StringView db_value, ObjectIdentifier* object_identifier) {
   if (db_value[0] == kDeletePrefix[0]) {
     return Status::NOT_FOUND;
   }

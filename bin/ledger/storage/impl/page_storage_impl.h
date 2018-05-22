@@ -33,8 +33,7 @@ class PageStorageImpl : public PageStorage {
   PageStorageImpl(async_t* async,
                   coroutine::CoroutineService* coroutine_service,
                   encryption::EncryptionService* encryption_service,
-                  std::string page_dir,
-                  PageId page_id);
+                  std::string page_dir, PageId page_id);
   ~PageStorageImpl() override;
 
   // Initializes this PageStorageImpl. This includes initializing the underlying
@@ -65,12 +64,10 @@ class PageStorageImpl : public PageStorage {
   void AddCommitsFromSync(std::vector<CommitIdAndBytes> ids_and_bytes,
                           std::function<void(Status)> callback) override;
   void StartCommit(
-      const CommitId& commit_id,
-      JournalType journal_type,
+      const CommitId& commit_id, JournalType journal_type,
       std::function<void(Status, std::unique_ptr<Journal>)> callback) override;
   void StartMergeCommit(
-      const CommitId& left,
-      const CommitId& right,
+      const CommitId& left, const CommitId& right,
       std::function<void(Status, std::unique_ptr<Journal>)> callback) override;
   void CommitJournal(std::unique_ptr<Journal> journal,
                      std::function<void(Status, std::unique_ptr<const Commit>)>
@@ -92,15 +89,13 @@ class PageStorageImpl : public PageStorage {
   void AddObjectFromLocal(
       std::unique_ptr<DataSource> data_source,
       std::function<void(Status, ObjectIdentifier)> callback) override;
-  void GetObject(ObjectIdentifier object_identifier,
-                 Location location,
+  void GetObject(ObjectIdentifier object_identifier, Location location,
                  std::function<void(Status, std::unique_ptr<const Object>)>
                      callback) override;
   void GetPiece(ObjectIdentifier object_identifier,
                 std::function<void(Status, std::unique_ptr<const Object>)>
                     callback) override;
-  void SetSyncMetadata(fxl::StringView key,
-                       fxl::StringView value,
+  void SetSyncMetadata(fxl::StringView key, fxl::StringView value,
                        std::function<void(Status)> callback) override;
   void GetSyncMetadata(
       fxl::StringView key,
@@ -112,10 +107,8 @@ class PageStorageImpl : public PageStorage {
       std::function<void(Status, std::unique_ptr<Iterator<const EntryChange>>)>
           callback);
 
-  void AddJournalEntry(const JournalId& journal_id,
-                       fxl::StringView key,
-                       ObjectIdentifier object_identifier,
-                       KeyPriority priority,
+  void AddJournalEntry(const JournalId& journal_id, fxl::StringView key,
+                       ObjectIdentifier object_identifier, KeyPriority priority,
                        std::function<void(Status)> callback);
 
   void RemoveJournalEntry(const JournalId& journal_id,
@@ -126,22 +119,18 @@ class PageStorageImpl : public PageStorage {
                      std::function<void(Status)> callback);
 
   // Commit contents.
-  void GetCommitContents(const Commit& commit,
-                         std::string min_key,
+  void GetCommitContents(const Commit& commit, std::string min_key,
                          std::function<bool(Entry)> on_next,
                          std::function<void(Status)> on_done) override;
-  void GetEntryFromCommit(const Commit& commit,
-                          std::string key,
+  void GetEntryFromCommit(const Commit& commit, std::string key,
                           std::function<void(Status, Entry)> callback) override;
   void GetCommitContentsDiff(const Commit& base_commit,
-                             const Commit& other_commit,
-                             std::string min_key,
+                             const Commit& other_commit, std::string min_key,
                              std::function<bool(EntryChange)> on_next_diff,
                              std::function<void(Status)> on_done) override;
   void GetThreeWayContentsDiff(const Commit& base_commit,
                                const Commit& left_commit,
-                               const Commit& right_commit,
-                               std::string min_key,
+                               const Commit& right_commit, std::string min_key,
                                std::function<bool(ThreeWayChange)> on_next_diff,
                                std::function<void(Status)> on_done) override;
 
@@ -151,13 +140,11 @@ class PageStorageImpl : public PageStorage {
   PageStorageImpl(async_t* async,
                   coroutine::CoroutineService* coroutine_service,
                   encryption::EncryptionService* encryption_service,
-                  std::unique_ptr<PageDb> page_db,
-                  PageId page_id);
+                  std::unique_ptr<PageDb> page_db, PageId page_id);
 
   // Marks all pieces needed for the given objects as local.
   FXL_WARN_UNUSED_RESULT Status
-  MarkAllPiecesLocal(coroutine::CoroutineHandler* handler,
-                     PageDb::Batch* batch,
+  MarkAllPiecesLocal(coroutine::CoroutineHandler* handler, PageDb::Batch* batch,
                      std::vector<ObjectIdentifier> object_identifiers);
 
   FXL_WARN_UNUSED_RESULT Status
@@ -170,8 +157,7 @@ class PageStorageImpl : public PageStorage {
   // will be returned in case of missmatch.
   void AddPiece(ObjectIdentifier object_identifier,
                 std::unique_ptr<DataSource::DataChunk> data,
-                ChangeSource source,
-                std::function<void(Status)> callback);
+                ChangeSource source, std::function<void(Status)> callback);
 
   // Download all the chunks of the object with the given id.
   void DownloadFullObject(ObjectIdentifier object_identifier,
@@ -182,8 +168,7 @@ class PageStorageImpl : public PageStorage {
       std::function<void(Status, std::unique_ptr<const Object>)> callback);
 
   void FillBufferWithObjectContent(ObjectIdentifier object_identifier,
-                                   fsl::SizedVmo vmo,
-                                   size_t offset,
+                                   fsl::SizedVmo vmo, size_t offset,
                                    size_t size,
                                    std::function<void(Status)> callback);
 
@@ -212,8 +197,7 @@ class PageStorageImpl : public PageStorage {
   SynchronousInit(coroutine::CoroutineHandler* handler);
 
   FXL_WARN_UNUSED_RESULT Status
-  SynchronousGetCommit(coroutine::CoroutineHandler* handler,
-                       CommitId commit_id,
+  SynchronousGetCommit(coroutine::CoroutineHandler* handler, CommitId commit_id,
                        std::unique_ptr<const Commit>* commit);
 
   FXL_WARN_UNUSED_RESULT Status
@@ -229,21 +213,17 @@ class PageStorageImpl : public PageStorage {
       coroutine::CoroutineHandler* handler,
       std::vector<std::unique_ptr<const Commit>>* unsynced_commits);
 
-  FXL_WARN_UNUSED_RESULT Status
-  SynchronousMarkCommitSynced(coroutine::CoroutineHandler* handler,
-                              const CommitId& commit_id);
+  FXL_WARN_UNUSED_RESULT Status SynchronousMarkCommitSynced(
+      coroutine::CoroutineHandler* handler, const CommitId& commit_id);
 
-  FXL_WARN_UNUSED_RESULT Status
-  SynchronousAddCommits(coroutine::CoroutineHandler* handler,
-                        std::vector<std::unique_ptr<const Commit>> commits,
-                        ChangeSource source,
-                        std::vector<ObjectIdentifier> new_objects);
+  FXL_WARN_UNUSED_RESULT Status SynchronousAddCommits(
+      coroutine::CoroutineHandler* handler,
+      std::vector<std::unique_ptr<const Commit>> commits, ChangeSource source,
+      std::vector<ObjectIdentifier> new_objects);
 
-  FXL_WARN_UNUSED_RESULT Status
-  SynchronousAddPiece(coroutine::CoroutineHandler* handler,
-                      ObjectIdentifier object_identifier,
-                      std::unique_ptr<DataSource::DataChunk> data,
-                      ChangeSource source);
+  FXL_WARN_UNUSED_RESULT Status SynchronousAddPiece(
+      coroutine::CoroutineHandler* handler, ObjectIdentifier object_identifier,
+      std::unique_ptr<DataSource::DataChunk> data, ChangeSource source);
 
   async_t* const async_;
   coroutine::CoroutineService* const coroutine_service_;

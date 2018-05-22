@@ -81,8 +81,7 @@ void PageDataGenerator::PutEntry(ledger::PagePtr* page,
 
 void PageDataGenerator::Populate(ledger::PagePtr* page,
                                  std::vector<fidl::VectorPtr<uint8_t>> keys,
-                                 size_t value_size,
-                                 size_t transaction_size,
+                                 size_t value_size, size_t transaction_size,
                                  ReferenceStrategy ref_strategy,
                                  ledger::Priority priority,
                                  std::function<void(ledger::Status)> callback) {
@@ -96,13 +95,9 @@ void PageDataGenerator::Populate(ledger::PagePtr* page,
 }
 
 void PageDataGenerator::PutInTransaction(
-    ledger::PagePtr* page,
-    std::vector<fidl::VectorPtr<uint8_t>> keys,
-    size_t current_key_index,
-    size_t value_size,
-    size_t transaction_size,
-    ReferenceStrategy ref_strategy,
-    ledger::Priority priority,
+    ledger::PagePtr* page, std::vector<fidl::VectorPtr<uint8_t>> keys,
+    size_t current_key_index, size_t value_size, size_t transaction_size,
+    ReferenceStrategy ref_strategy, ledger::Priority priority,
     std::function<void(ledger::Status)> callback) {
   if (current_key_index >= keys.size()) {
     callback(ledger::Status::OK);
@@ -154,12 +149,9 @@ void PageDataGenerator::PutInTransaction(
 }
 
 void PageDataGenerator::PutMultipleEntries(
-    ledger::PagePtr* page,
-    std::vector<fidl::VectorPtr<uint8_t>> keys,
-    size_t value_size,
-    ReferenceStrategy ref_strategy,
-    ledger::Priority priority,
-    std::function<void(ledger::Status)> callback) {
+    ledger::PagePtr* page, std::vector<fidl::VectorPtr<uint8_t>> keys,
+    size_t value_size, ReferenceStrategy ref_strategy,
+    ledger::Priority priority, std::function<void(ledger::Status)> callback) {
   auto waiter =
       callback::StatusWaiter<ledger::Status>::Create(ledger::Status::OK);
   for (size_t i = 0; i < keys.size(); i++) {

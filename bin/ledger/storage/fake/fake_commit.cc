@@ -23,21 +23,15 @@ std::unique_ptr<Commit> FakeCommit::Clone() const {
   return std::make_unique<FakeCommit>(journal_);
 }
 
-const CommitId& FakeCommit::GetId() const {
-  return journal_->GetId();
-}
+const CommitId& FakeCommit::GetId() const { return journal_->GetId(); }
 
 std::vector<CommitIdView> FakeCommit::GetParentIds() const {
   return journal_->GetParentIds();
 }
 
-int64_t FakeCommit::GetTimestamp() const {
-  return 0;
-}
+int64_t FakeCommit::GetTimestamp() const { return 0; }
 
-uint64_t FakeCommit::GetGeneration() const {
-  return journal_->GetGeneration();
-}
+uint64_t FakeCommit::GetGeneration() const { return journal_->GetGeneration(); }
 
 ObjectIdentifier FakeCommit::GetRootIdentifier() const {
   return encryption::MakeDefaultObjectIdentifier(journal_->GetId());

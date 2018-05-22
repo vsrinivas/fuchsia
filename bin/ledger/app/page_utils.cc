@@ -15,10 +15,8 @@
 
 namespace ledger {
 namespace {
-Status ToBuffer(convert::ExtendedStringView value,
-                int64_t offset,
-                int64_t max_size,
-                fsl::SizedVmo* buffer) {
+Status ToBuffer(convert::ExtendedStringView value, int64_t offset,
+                int64_t max_size, fsl::SizedVmo* buffer) {
   size_t start = value.size();
   // Valid indices are between -N and N-1.
   if (offset >= -static_cast<int64_t>(value.size()) &&
@@ -34,10 +32,8 @@ Status ToBuffer(convert::ExtendedStringView value,
 }  // namespace
 
 void PageUtils::ResolveObjectIdentifierAsStringView(
-    storage::PageStorage* storage,
-    storage::ObjectIdentifier object_identifier,
-    storage::PageStorage::Location location,
-    Status not_found_status,
+    storage::PageStorage* storage, storage::ObjectIdentifier object_identifier,
+    storage::PageStorage::Location location, Status not_found_status,
     std::function<void(Status, fxl::StringView)> callback) {
   storage->GetObject(
       object_identifier, location,
@@ -83,11 +79,8 @@ Status PageUtils::ConvertStatus(storage::Status status,
 }
 
 void PageUtils::ResolveObjectIdentifierAsBuffer(
-    storage::PageStorage* storage,
-    storage::ObjectIdentifier object_identifier,
-    int64_t offset,
-    int64_t max_size,
-    storage::PageStorage::Location location,
+    storage::PageStorage* storage, storage::ObjectIdentifier object_identifier,
+    int64_t offset, int64_t max_size, storage::PageStorage::Location location,
     Status not_found_status,
     std::function<void(Status, fsl::SizedVmo)> callback) {
   ResolveObjectIdentifierAsStringView(

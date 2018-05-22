@@ -25,8 +25,7 @@ class MergeStrategy;
 // provided merge strategy.
 class MergeResolver : public storage::CommitWatcher {
  public:
-  MergeResolver(fxl::Closure on_destroyed,
-                Environment* environment,
+  MergeResolver(fxl::Closure on_destroyed, Environment* environment,
                 storage::PageStorage* storage,
                 std::unique_ptr<backoff::Backoff> backoff);
   ~MergeResolver() override;

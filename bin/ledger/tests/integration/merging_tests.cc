@@ -104,28 +104,28 @@ class ConflictResolverImpl : public ledger::ConflictResolver {
     // least |min_queries| of partial results are returned before retrieving the
     // complete result for the left and for the right changes.
     ::testing::AssertionResult GetFullDiff(
-        fidl::VectorPtr<ledger::DiffEntry>* entries,
-        int min_queries = 0) {
+        fidl::VectorPtr<ledger::DiffEntry>* entries, int min_queries = 0) {
       return GetDiff(
           nullptr,
           [this](fidl::VectorPtr<uint8_t> token,
-                 std::function<void(
-                     ledger::Status, fidl::VectorPtr<ledger::DiffEntry>,
-                     fidl::VectorPtr<uint8_t>)> callback) mutable {
+                 std::function<void(ledger::Status,
+                                    fidl::VectorPtr<ledger::DiffEntry>,
+                                    fidl::VectorPtr<uint8_t>)>
+                     callback) mutable {
             result_provider->GetFullDiff(std::move(token), callback);
           },
           entries, 0, min_queries);
     }
 
     ::testing::AssertionResult GetConflictingDiff(
-        fidl::VectorPtr<ledger::DiffEntry>* entries,
-        int min_queries = 0) {
+        fidl::VectorPtr<ledger::DiffEntry>* entries, int min_queries = 0) {
       return GetDiff(
           nullptr,
           [this](fidl::VectorPtr<uint8_t> token,
-                 std::function<void(
-                     ledger::Status, fidl::VectorPtr<ledger::DiffEntry>,
-                     fidl::VectorPtr<uint8_t>)> callback) mutable {
+                 std::function<void(ledger::Status,
+                                    fidl::VectorPtr<ledger::DiffEntry>,
+                                    fidl::VectorPtr<uint8_t>)>
+                     callback) mutable {
             result_provider->GetConflictingDiff(std::move(token), callback);
           },
           entries, 0, min_queries);
@@ -198,9 +198,9 @@ class ConflictResolverImpl : public ledger::ConflictResolver {
             void(fidl::VectorPtr<uint8_t>,
                  std::function<void(ledger::Status,
                                     fidl::VectorPtr<ledger::DiffEntry>,
-                                    fidl::VectorPtr<uint8_t>)>)> get_diff,
-        fidl::VectorPtr<ledger::DiffEntry>* entries,
-        int num_queries,
+                                    fidl::VectorPtr<uint8_t>)>)>
+            get_diff,
+        fidl::VectorPtr<ledger::DiffEntry>* entries, int num_queries,
         int min_queries) {
       ledger::Status status;
       fidl::VectorPtr<uint8_t> next_token;
@@ -1898,8 +1898,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
   EXPECT_EQ("0123456789", ToString(final_entries[2].value));
 }
 
-INSTANTIATE_TEST_CASE_P(MergingIntegrationTest,
-                        MergingIntegrationTest,
+INSTANTIATE_TEST_CASE_P(MergingIntegrationTest, MergingIntegrationTest,
                         ::testing::ValuesIn(GetLedgerAppInstanceFactories()));
 
 }  // namespace

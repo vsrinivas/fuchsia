@@ -34,17 +34,17 @@ int RunWithTracing(async::Loop* loop, std::function<void()> runnable) {
 
   int err = 0;
   async::TaskClosure quit_task([&started, loop, &err] {
-      if (!started) {
-        // To avoid running the runnable if the tracing state changes to
-        // started in the immediate next task on the queue (before the quit
-        // task executes).
-        started = true;
-        FXL_LOG(ERROR)
-            << "Timed out waiting for the tracing to start; Did you run the "
-               "binary with the trace tool enabled?";
-        err = -1;
-        loop->Quit();
-      }
+    if (!started) {
+      // To avoid running the runnable if the tracing state changes to
+      // started in the immediate next task on the queue (before the quit
+      // task executes).
+      started = true;
+      FXL_LOG(ERROR)
+          << "Timed out waiting for the tracing to start; Did you run the "
+             "binary with the trace tool enabled?";
+      err = -1;
+      loop->Quit();
+    }
   });
   quit_task.PostDelayed(loop->async(), zx::sec(5));
 

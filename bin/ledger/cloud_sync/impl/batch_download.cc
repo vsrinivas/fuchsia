@@ -18,8 +18,7 @@ BatchDownload::BatchDownload(storage::PageStorage* storage,
                              encryption::EncryptionService* encryption_service,
                              fidl::VectorPtr<cloud_provider::Commit> commits,
                              fidl::VectorPtr<uint8_t> position_token,
-                             fxl::Closure on_done,
-                             fxl::Closure on_error)
+                             fxl::Closure on_done, fxl::Closure on_error)
     : storage_(storage),
       encryption_service_(encryption_service),
       commits_(std::move(commits)),

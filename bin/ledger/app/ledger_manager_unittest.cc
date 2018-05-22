@@ -43,8 +43,8 @@ class FakeLedgerStorage : public storage::LedgerStorage {
   void CreatePageStorage(
       storage::PageId page_id,
       std::function<void(storage::Status,
-                         std::unique_ptr<storage::PageStorage>)> callback)
-      override {
+                         std::unique_ptr<storage::PageStorage>)>
+          callback) override {
     create_page_calls.push_back(std::move(page_id));
     callback(storage::Status::IO_ERROR, nullptr);
   }

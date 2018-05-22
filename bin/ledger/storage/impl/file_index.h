@@ -31,8 +31,7 @@ class FileIndexSerialization {
   // Builds the |FileIndex| representing the given children.
   static void BuildFileIndex(
       const std::vector<ObjectIdentifierAndSize>& children,
-      std::unique_ptr<DataSource::DataChunk>* output,
-      size_t* total_size);
+      std::unique_ptr<DataSource::DataChunk>* output, size_t* total_size);
 
  private:
   FileIndexSerialization() {}

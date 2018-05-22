@@ -46,18 +46,15 @@ namespace benchmark {
 //   --server-id=<string> the ID of the Firebase instance to use for syncing
 class BacklogBenchmark : public ledger::SyncWatcher {
  public:
-  BacklogBenchmark(async::Loop* loop,
-                   size_t unique_key_count,
-                   size_t value_size,
-                   size_t commit_count,
+  BacklogBenchmark(async::Loop* loop, size_t unique_key_count,
+                   size_t value_size, size_t commit_count,
                    PageDataGenerator::ReferenceStrategy reference_strategy,
                    std::string server_id);
 
   void Run();
 
   // ledger::SyncWatcher:
-  void SyncStateChanged(ledger::SyncState download,
-                        ledger::SyncState upload,
+  void SyncStateChanged(ledger::SyncState download, ledger::SyncState upload,
                         SyncStateChangedCallback callback) override;
 
  private:
@@ -68,8 +65,7 @@ class BacklogBenchmark : public ledger::SyncWatcher {
 
   void GetReaderSnapshot();
   void GetEntriesStep(fidl::VectorPtr<uint8_t> token, size_t entries_left);
-  void CheckStatusAndGetMore(ledger::Status status,
-                             size_t entries_read,
+  void CheckStatusAndGetMore(ledger::Status status, size_t entries_read,
                              fidl::VectorPtr<uint8_t> next_token);
 
   void ShutDown();

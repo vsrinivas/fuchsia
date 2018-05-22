@@ -35,12 +35,8 @@ namespace benchmark {
 //   --seed=<int> (optional) the seed for key and value generation
 class PutBenchmark : public ledger::PageWatcher {
  public:
-  PutBenchmark(async::Loop* loop,
-               int entry_count,
-               int transaction_size,
-               int key_size,
-               int value_size,
-               bool update,
+  PutBenchmark(async::Loop* loop, int entry_count, int transaction_size,
+               int key_size, int value_size, bool update,
                PageDataGenerator::ReferenceStrategy reference_strategy,
                uint64_t seed);
 
@@ -60,11 +56,9 @@ class PutBenchmark : public ledger::PageWatcher {
 
   void BindWatcher(std::vector<fidl::VectorPtr<uint8_t>> keys);
   void RunSingle(int i, std::vector<fidl::VectorPtr<uint8_t>> keys);
-  void CommitAndRunNext(int i,
-                        size_t key_number,
+  void CommitAndRunNext(int i, size_t key_number,
                         std::vector<fidl::VectorPtr<uint8_t>> keys);
-  void PutEntry(fidl::VectorPtr<uint8_t> key,
-                fidl::VectorPtr<uint8_t> value,
+  void PutEntry(fidl::VectorPtr<uint8_t> key, fidl::VectorPtr<uint8_t> value,
                 std::function<void()> on_done);
 
   void ShutDown();

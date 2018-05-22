@@ -32,9 +32,7 @@ std::unique_ptr<TestCommit> TestPageStorage::NewCommit(std::string id,
   return commit;
 }
 
-storage::PageId TestPageStorage::GetId() {
-  return page_id_to_return;
-}
+storage::PageId TestPageStorage::GetId() { return page_id_to_return; }
 
 void TestPageStorage::SetSyncDelegate(
     storage::PageSyncDelegate* page_sync_delegate) {
@@ -167,8 +165,7 @@ void TestPageStorage::MarkCommitSynced(
 }
 
 void TestPageStorage::SetSyncMetadata(
-    fxl::StringView key,
-    fxl::StringView value,
+    fxl::StringView key, fxl::StringView value,
     std::function<void(storage::Status)> callback) {
   sync_metadata[key.ToString()] = value.ToString();
   async::PostTask(async_, [callback = std::move(callback)] {

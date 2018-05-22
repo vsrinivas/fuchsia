@@ -56,8 +56,7 @@ class PageSyncImpl : public PageSync,
                      public PageDownload::Delegate,
                      public PageUpload::Delegate {
  public:
-  PageSyncImpl(async_t* async,
-               storage::PageStorage* storage,
+  PageSyncImpl(async_t* async, storage::PageStorage* storage,
                storage::PageSyncClient* sync_client,
                encryption::EncryptionService* encryption_service,
                cloud_provider::PageCloudPtr page_cloud,

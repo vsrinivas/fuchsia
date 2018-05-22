@@ -41,9 +41,7 @@ extern void SetContext(Context* context);
 // NOLINT suppresses false-positive redundant declaration check due to a
 // friend declaration in stack.h.
 void MakeContext(Context* context,  // NOLINT
-                 Stack* stack,
-                 void (*func)(void*),
-                 void* data);
+                 Stack* stack, void (*func)(void*), void* data);
 
 // Saves the current execution context in |old_context| and activates the
 // execution context pointed by |in_context|.

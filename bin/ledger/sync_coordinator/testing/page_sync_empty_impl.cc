@@ -8,9 +8,7 @@
 
 namespace sync_coordinator {
 
-void PageSyncEmptyImpl::Start() {
-  FXL_NOTIMPLEMENTED();
-}
+void PageSyncEmptyImpl::Start() { FXL_NOTIMPLEMENTED(); }
 
 void PageSyncEmptyImpl::SetOnIdle(fxl::Closure /*on_idle_callback*/) {
   FXL_NOTIMPLEMENTED();

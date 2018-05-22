@@ -49,8 +49,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
         }));
   }
 
-  void SetSyncMetadata(fxl::StringView key,
-                       fxl::StringView value,
+  void SetSyncMetadata(fxl::StringView key, fxl::StringView value,
                        std::function<void(storage::Status)> callback) override {
     sync_metadata[key.ToString()] = value.ToString();
     async::PostTask(async_, [callback]() { callback(storage::Status::OK); });

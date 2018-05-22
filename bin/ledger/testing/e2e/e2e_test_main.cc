@@ -4,6 +4,4 @@
 
 #include "peridot/bin/ledger/testing/e2e/e2e_test.h"
 
-int main(int argc, char** argv) {
-  return test::TestMain(argc, argv);
-}
+int main(int argc, char** argv) { return test::TestMain(argc, argv); }

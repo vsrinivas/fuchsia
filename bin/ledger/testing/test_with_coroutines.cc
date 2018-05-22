@@ -56,13 +56,13 @@ void TestWithCoroutines::RunInCoroutine(
   volatile bool ended = false;
   fxl::Closure quit_callback = [this] { message_loop_.QuitNow(); };
   coroutine_service_.StartCoroutine(
-      [&, quit_callback = std::move(quit_callback)] (
-          coroutine::CoroutineHandler* handler) {
-    test_handler = std::make_unique<TestCoroutineHandler>(
-        handler, quit_callback);
-    run_test(test_handler.get());
-    ended = true;
-  });
+      [&, quit_callback =
+              std::move(quit_callback)](coroutine::CoroutineHandler* handler) {
+        test_handler =
+            std::make_unique<TestCoroutineHandler>(handler, quit_callback);
+        run_test(test_handler.get());
+        ended = true;
+      });
   while (!ended) {
     test_handler->ContinueIfNeeded();
     RunLoopUntilIdle();

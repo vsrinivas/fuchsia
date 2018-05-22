@@ -16,9 +16,7 @@ size_t Fact(size_t n) {
   return Fact(n - 1) * n;
 }
 
-void UseStack() {
-  EXPECT_EQ(120u, Fact(5));
-}
+void UseStack() { EXPECT_EQ(120u, Fact(5)); }
 
 TEST(Lock, OneLock) {
   coroutine::CoroutineServiceImpl coroutine_service;

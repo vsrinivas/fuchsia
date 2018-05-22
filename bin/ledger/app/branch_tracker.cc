@@ -19,8 +19,7 @@ namespace ledger {
 class BranchTracker::PageWatcherContainer {
  public:
   PageWatcherContainer(coroutine::CoroutineService* coroutine_service,
-                       PageWatcherPtr watcher,
-                       PageManager* page_manager,
+                       PageWatcherPtr watcher, PageManager* page_manager,
                        storage::PageStorage* storage,
                        std::unique_ptr<const storage::Commit> base_commit,
                        std::string key_prefix)
@@ -136,8 +135,7 @@ class BranchTracker::PageWatcherContainer {
     return changes;
   }
 
-  void SendChange(PageChange page_change,
-                  ResultState state,
+  void SendChange(PageChange page_change, ResultState state,
                   std::unique_ptr<const storage::Commit> new_commit,
                   fxl::Closure on_done) {
     interface_->OnChange(
@@ -281,9 +279,7 @@ BranchTracker::BranchTracker(coroutine::CoroutineService* coroutine_service,
   watchers_.set_on_empty([this] { CheckEmpty(); });
 }
 
-BranchTracker::~BranchTracker() {
-  storage_->RemoveCommitWatcher(this);
-}
+BranchTracker::~BranchTracker() { storage_->RemoveCommitWatcher(this); }
 
 void BranchTracker::Init(std::function<void(Status)> on_done) {
   storage_->GetHeadCommitIds(callback::MakeScoped(
@@ -388,9 +384,7 @@ void BranchTracker::RegisterPageWatcher(
                     storage_, std::move(base_commit), std::move(key_prefix));
 }
 
-bool BranchTracker::IsEmpty() {
-  return watchers_.empty();
-}
+bool BranchTracker::IsEmpty() { return watchers_.empty(); }
 
 void BranchTracker::InitCommitAndSetWatcher(storage::CommitId commit_id) {
   // current_commit_ will be updated to have a correct value after the first

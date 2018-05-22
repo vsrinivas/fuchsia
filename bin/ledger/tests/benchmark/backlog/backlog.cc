@@ -51,9 +51,7 @@ namespace test {
 namespace benchmark {
 
 BacklogBenchmark::BacklogBenchmark(
-    async::Loop* loop,
-    size_t unique_key_count,
-    size_t value_size,
+    async::Loop* loop, size_t unique_key_count, size_t value_size,
     size_t commit_count,
     PageDataGenerator::ReferenceStrategy reference_strategy,
     std::string server_id)
@@ -206,8 +204,7 @@ void BacklogBenchmark::GetReaderSnapshot() {
 }
 
 void BacklogBenchmark::CheckStatusAndGetMore(
-    ledger::Status status,
-    size_t entries_left,
+    ledger::Status status, size_t entries_left,
     fidl::VectorPtr<uint8_t> next_token) {
   if ((status != ledger::Status::OK) &&
       (status != ledger::Status::PARTIAL_RESULT)) {

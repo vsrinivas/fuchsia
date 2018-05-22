@@ -19,8 +19,7 @@ namespace storage {
 
 JournalImpl::JournalImpl(JournalType type,
                          coroutine::CoroutineService* coroutine_service,
-                         PageStorageImpl* page_storage,
-                         JournalId id,
+                         PageStorageImpl* page_storage, JournalId id,
                          CommitId base)
     : type_(type),
       coroutine_service_(coroutine_service),
@@ -38,20 +37,15 @@ JournalImpl::~JournalImpl() {
 }
 
 std::unique_ptr<Journal> JournalImpl::Simple(
-    JournalType type,
-    coroutine::CoroutineService* coroutine_service,
-    PageStorageImpl* page_storage,
-    const JournalId& id,
-    const CommitId& base) {
+    JournalType type, coroutine::CoroutineService* coroutine_service,
+    PageStorageImpl* page_storage, const JournalId& id, const CommitId& base) {
   return std::unique_ptr<Journal>(
       new JournalImpl(type, coroutine_service, page_storage, id, base));
 }
 
 std::unique_ptr<Journal> JournalImpl::Merge(
     coroutine::CoroutineService* coroutine_service,
-    PageStorageImpl* page_storage,
-    const JournalId& id,
-    const CommitId& base,
+    PageStorageImpl* page_storage, const JournalId& id, const CommitId& base,
     const CommitId& other) {
   JournalImpl* db_journal = new JournalImpl(
       JournalType::EXPLICIT, coroutine_service, page_storage, id, base);
@@ -60,9 +54,7 @@ std::unique_ptr<Journal> JournalImpl::Merge(
   return journal;
 }
 
-const JournalId& JournalImpl::GetId() const {
-  return id_;
-}
+const JournalId& JournalImpl::GetId() const { return id_; }
 
 void JournalImpl::Commit(
     std::function<void(Status, std::unique_ptr<const storage::Commit>)>
@@ -110,8 +102,7 @@ void JournalImpl::Rollback(std::function<void(Status)> callback) {
 }
 
 void JournalImpl::Put(convert::ExtendedStringView key,
-                      ObjectIdentifier object_identifier,
-                      KeyPriority priority,
+                      ObjectIdentifier object_identifier, KeyPriority priority,
                       std::function<void(Status)> callback) {
   serializer_.Serialize<Status>(
       std::move(callback),

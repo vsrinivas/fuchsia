@@ -74,8 +74,7 @@ bool CheckValidSerialization(fxl::StringView storage_bytes) {
 }
 
 std::string SerializeCommit(
-    uint64_t generation,
-    int64_t timestamp,
+    uint64_t generation, int64_t timestamp,
     const ObjectIdentifier& root_node_identifier,
     std::vector<std::unique_ptr<const Commit>> parent_commits) {
   flatbuffers::FlatBufferBuilder builder;
@@ -97,10 +96,8 @@ std::string SerializeCommit(
 }
 }  // namespace
 
-CommitImpl::CommitImpl(PageStorage* page_storage,
-                       CommitId id,
-                       int64_t timestamp,
-                       uint64_t generation,
+CommitImpl::CommitImpl(PageStorage* page_storage, CommitId id,
+                       int64_t timestamp, uint64_t generation,
                        ObjectIdentifier root_node_identifier,
                        std::vector<CommitIdView> parent_ids,
                        fxl::RefPtr<SharedStorageBytes> storage_bytes)
@@ -118,8 +115,7 @@ CommitImpl::CommitImpl(PageStorage* page_storage,
 
 CommitImpl::~CommitImpl() {}
 
-Status CommitImpl::FromStorageBytes(PageStorage* page_storage,
-                                    CommitId id,
+Status CommitImpl::FromStorageBytes(PageStorage* page_storage, CommitId id,
                                     std::string storage_bytes,
                                     std::unique_ptr<const Commit>* commit) {
   FXL_DCHECK(id != kFirstPageCommitId);
@@ -149,8 +145,7 @@ Status CommitImpl::FromStorageBytes(PageStorage* page_storage,
 }
 
 std::unique_ptr<const Commit> CommitImpl::FromContentAndParents(
-    PageStorage* page_storage,
-    ObjectIdentifier root_node_identifier,
+    PageStorage* page_storage, ObjectIdentifier root_node_identifier,
     std::vector<std::unique_ptr<const Commit>> parent_commits) {
   FXL_DCHECK(parent_commits.size() == 1 || parent_commits.size() == 2);
 
@@ -220,21 +215,15 @@ std::unique_ptr<Commit> CommitImpl::Clone() const {
                      root_node_identifier_, parent_ids_, storage_bytes_));
 }
 
-const CommitId& CommitImpl::GetId() const {
-  return id_;
-}
+const CommitId& CommitImpl::GetId() const { return id_; }
 
 std::vector<CommitIdView> CommitImpl::GetParentIds() const {
   return parent_ids_;
 }
 
-int64_t CommitImpl::GetTimestamp() const {
-  return timestamp_;
-}
+int64_t CommitImpl::GetTimestamp() const { return timestamp_; }
 
-uint64_t CommitImpl::GetGeneration() const {
-  return generation_;
-}
+uint64_t CommitImpl::GetGeneration() const { return generation_; }
 
 ObjectIdentifier CommitImpl::GetRootIdentifier() const {
   return root_node_identifier_;

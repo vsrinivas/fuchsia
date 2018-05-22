@@ -23,8 +23,7 @@ bool QuitOnError(fxl::Closure quit_callback, ledger::Status status,
                  fxl::StringView description);
 
 std::function<void(ledger::Status)> QuitOnErrorCallback(
-    fxl::Closure quit_callback,
-    std::string description);
+    fxl::Closure quit_callback, std::string description);
 
 }  // namespace benchmark
 }  // namespace test

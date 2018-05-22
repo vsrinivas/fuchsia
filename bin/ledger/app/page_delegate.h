@@ -38,11 +38,9 @@ class PageManager;
 class PageDelegate {
  public:
   PageDelegate(coroutine::CoroutineService* coroutine_service,
-               PageManager* manager,
-               storage::PageStorage* storage,
+               PageManager* manager, storage::PageStorage* storage,
                MergeResolver* merge_resolver,
-               fidl::InterfaceRequest<Page> request,
-               SyncWatcherSet* watchers);
+               fidl::InterfaceRequest<Page> request, SyncWatcherSet* watchers);
   ~PageDelegate();
 
   void Init(std::function<void(Status)> on_done);
@@ -59,19 +57,15 @@ class PageDelegate {
                    fidl::InterfaceHandle<PageWatcher> watcher,
                    Page::GetSnapshotCallback callback);
 
-  void Put(fidl::VectorPtr<uint8_t> key,
-           fidl::VectorPtr<uint8_t> value,
+  void Put(fidl::VectorPtr<uint8_t> key, fidl::VectorPtr<uint8_t> value,
            Page::PutCallback callback);
 
   void PutWithPriority(fidl::VectorPtr<uint8_t> key,
-                       fidl::VectorPtr<uint8_t> value,
-                       Priority priority,
+                       fidl::VectorPtr<uint8_t> value, Priority priority,
                        Page::PutWithPriorityCallback callback);
 
-  void PutReference(fidl::VectorPtr<uint8_t> key,
-                    Reference reference,
-                    Priority priority,
-                    Page::PutReferenceCallback callback);
+  void PutReference(fidl::VectorPtr<uint8_t> key, Reference reference,
+                    Priority priority, Page::PutReferenceCallback callback);
 
   void Delete(fidl::VectorPtr<uint8_t> key, Page::DeleteCallback callback);
 
@@ -97,8 +91,7 @@ class PageDelegate {
 
   void PutInCommit(fidl::VectorPtr<uint8_t> key,
                    storage::ObjectIdentifier object_identifier,
-                   storage::KeyPriority priority,
-                   StatusCallback callback);
+                   storage::KeyPriority priority, StatusCallback callback);
 
   // Runs |runnable| in a transaction, and notifies |callback| of the result. If
   // a transaction is currently in progress, it reuses it, otherwise creates a

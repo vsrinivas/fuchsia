@@ -24,8 +24,7 @@
 namespace ledger {
 
 PageDelegate::PageDelegate(coroutine::CoroutineService* coroutine_service,
-                           PageManager* manager,
-                           storage::PageStorage* storage,
+                           PageManager* manager, storage::PageStorage* storage,
                            MergeResolver* merge_resolver,
                            fidl::InterfaceRequest<Page> request,
                            SyncWatcherSet* watchers)
@@ -151,8 +150,7 @@ void PageDelegate::PutWithPriority(fidl::VectorPtr<uint8_t> key,
 }
 
 void PageDelegate::PutReference(fidl::VectorPtr<uint8_t> key,
-                                Reference reference,
-                                Priority priority,
+                                Reference reference, Priority priority,
                                 Page::PutReferenceCallback callback) {
   FXL_DCHECK(key->size() <= kMaxKeySize);
   storage::ObjectIdentifier object_identifier;

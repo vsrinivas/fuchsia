@@ -12,9 +12,7 @@ FakeObject::FakeObject(ObjectIdentifier identifier, fxl::StringView content)
 
 FakeObject::~FakeObject() {}
 
-ObjectIdentifier FakeObject::GetIdentifier() const {
-  return identifier_;
-}
+ObjectIdentifier FakeObject::GetIdentifier() const { return identifier_; }
 
 Status FakeObject::GetData(fxl::StringView* data) const {
   *data = content_;

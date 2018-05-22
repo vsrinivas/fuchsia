@@ -16,8 +16,7 @@ namespace {
 class SyncIntegrationTest : public IntegrationTest {
  protected:
   ::testing::AssertionResult GetEntries(
-      ledger::Page* page,
-      fidl::VectorPtr<ledger::Entry>* entries) {
+      ledger::Page* page, fidl::VectorPtr<ledger::Entry>* entries) {
     ledger::PageSnapshotPtr snapshot;
     ledger::Status status;
     page->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr,
@@ -120,8 +119,7 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   ASSERT_EQ("World", convert::ToString(value));
 }
 
-INSTANTIATE_TEST_CASE_P(SyncIntegrationTest,
-                        SyncIntegrationTest,
+INSTANTIATE_TEST_CASE_P(SyncIntegrationTest, SyncIntegrationTest,
                         ::testing::ValuesIn(GetLedgerAppInstanceFactories()));
 
 }  // namespace

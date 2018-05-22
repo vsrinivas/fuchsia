@@ -114,8 +114,7 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     std::unique_ptr<p2p_sync::UserCommunicatorFactory>
         user_communicator_factory)
     : test::LedgerAppInstanceFactory::LedgerAppInstance(
-          integration::RandomArray(1),
-          std::move(repository_factory_ptr)),
+          integration::RandomArray(1), std::move(repository_factory_ptr)),
       services_dispatcher_(services_dispatcher),
       cloud_provider_(cloud_provider) {
   loop_.StartThread();
@@ -212,9 +211,7 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
   const EnableP2PMesh enable_p2p_mesh_;
 };
 
-void LedgerAppInstanceFactoryImpl::Init() {
-  services_loop_.StartThread();
-}
+void LedgerAppInstanceFactoryImpl::Init() { services_loop_.StartThread(); }
 
 LedgerAppInstanceFactoryImpl::~LedgerAppInstanceFactoryImpl() {
   services_loop_.Quit();

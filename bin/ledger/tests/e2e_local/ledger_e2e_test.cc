@@ -77,8 +77,7 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
 
   ::testing::AssertionResult GetRootPage(
       ledger_internal::LedgerRepositoryPtr* ledger_repository,
-      fidl::VectorPtr<uint8_t> ledger_name,
-      ledger::PagePtr* page) {
+      fidl::VectorPtr<uint8_t> ledger_name, ledger::PagePtr* page) {
     ledger::Status status;
     ledger::LedgerPtr ledger;
     (*ledger_repository)

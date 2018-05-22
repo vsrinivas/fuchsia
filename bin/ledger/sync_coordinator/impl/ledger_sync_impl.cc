@@ -17,8 +17,7 @@ LedgerSyncImpl::~LedgerSyncImpl() {}
 
 std::unique_ptr<PageSync> LedgerSyncImpl::CreatePageSync(
     storage::PageStorage* page_storage,
-    storage::PageSyncClient* page_sync_client,
-    fxl::Closure error_callback) {
+    storage::PageSyncClient* page_sync_client, fxl::Closure error_callback) {
   auto combined_sync =
       std::make_unique<PageSyncImpl>(page_storage, page_sync_client);
 

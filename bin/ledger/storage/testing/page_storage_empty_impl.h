@@ -36,13 +36,11 @@ class PageStorageEmptyImpl : public PageStorage {
                           std::function<void(Status)> callback) override;
 
   void StartCommit(
-      const CommitId& commit_id,
-      JournalType journal_type,
+      const CommitId& commit_id, JournalType journal_type,
       std::function<void(Status, std::unique_ptr<Journal>)> callback) override;
 
   void StartMergeCommit(
-      const CommitId& left,
-      const CommitId& right,
+      const CommitId& left, const CommitId& right,
       std::function<void(Status, std::unique_ptr<Journal>)> callback) override;
 
   void CommitJournal(
@@ -75,8 +73,7 @@ class PageStorageEmptyImpl : public PageStorage {
       std::unique_ptr<DataSource> data_source,
       std::function<void(Status, ObjectIdentifier)> callback) override;
 
-  void GetObject(ObjectIdentifier object_identifier,
-                 Location location,
+  void GetObject(ObjectIdentifier object_identifier, Location location,
                  std::function<void(Status, std::unique_ptr<const Object>)>
                      callback) override;
 
@@ -84,33 +81,28 @@ class PageStorageEmptyImpl : public PageStorage {
                 std::function<void(Status, std::unique_ptr<const Object>)>
                     callback) override;
 
-  void SetSyncMetadata(fxl::StringView key,
-                       fxl::StringView value,
+  void SetSyncMetadata(fxl::StringView key, fxl::StringView value,
                        std::function<void(Status)> callback) override;
 
   void GetSyncMetadata(
       fxl::StringView key,
       std::function<void(Status, std::string)> callback) override;
 
-  void GetCommitContents(const Commit& commit,
-                         std::string min_key,
+  void GetCommitContents(const Commit& commit, std::string min_key,
                          std::function<bool(Entry)> on_next,
                          std::function<void(Status)> on_done) override;
 
-  void GetEntryFromCommit(const Commit& commit,
-                          std::string key,
+  void GetEntryFromCommit(const Commit& commit, std::string key,
                           std::function<void(Status, Entry)> callback) override;
 
   void GetCommitContentsDiff(const Commit& base_commit,
-                             const Commit& other_commit,
-                             std::string min_key,
+                             const Commit& other_commit, std::string min_key,
                              std::function<bool(EntryChange)> on_next_diff,
                              std::function<void(Status)> on_done) override;
 
   void GetThreeWayContentsDiff(const Commit& base_commit,
                                const Commit& left_commit,
-                               const Commit& right_commit,
-                               std::string min_key,
+                               const Commit& right_commit, std::string min_key,
                                std::function<bool(ThreeWayChange)> on_next_diff,
                                std::function<void(Status)> on_done) override;
 };

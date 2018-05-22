@@ -11,14 +11,12 @@ namespace encryption {
 
 // Encrypt the given |data| with the given |key| using AES128-GCM-SIV. The key
 // size must be 128 bits.
-bool AES128GCMSIVEncrypt(fxl::StringView key,
-                         fxl::StringView data,
+bool AES128GCMSIVEncrypt(fxl::StringView key, fxl::StringView data,
                          std::string* output);
 
 // Descript the given |encrypteddata| with the given |key| using AES128-GCM-SIV.
 // The key size must be 128 bits.
-bool AES128GCMSIVDecrypt(fxl::StringView key,
-                         fxl::StringView encrypted_data,
+bool AES128GCMSIVDecrypt(fxl::StringView key, fxl::StringView encrypted_data,
                          std::string* output);
 
 }  // namespace encryption

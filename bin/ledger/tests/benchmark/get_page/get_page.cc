@@ -33,8 +33,7 @@ void PrintUsage(const char* executable_name) {
 namespace test {
 namespace benchmark {
 
-GetPageBenchmark::GetPageBenchmark(async::Loop* loop,
-                                   size_t requests_count,
+GetPageBenchmark::GetPageBenchmark(async::Loop* loop, size_t requests_count,
                                    bool reuse)
     : loop_(loop),
       tmp_dir_(kStoragePath),

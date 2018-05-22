@@ -73,8 +73,7 @@ class NodeBuilder {
 
   // Apply the given mutation on |node_builder|.
   Status Apply(const NodeLevelCalculator* node_level_calculator,
-               SynchronousStorage* page_storage,
-               EntryChange change,
+               SynchronousStorage* page_storage, EntryChange change,
                bool* did_mutate);
 
   // Build the tree node represented by the builder |node_builder| in the
@@ -96,8 +95,7 @@ class NodeBuilder {
                        std::move(object_identifier), {}, {});
   }
 
-  static NodeBuilder CreateNewBuilder(uint8_t level,
-                                      std::vector<Entry> entries,
+  static NodeBuilder CreateNewBuilder(uint8_t level, std::vector<Entry> entries,
                                       std::vector<NodeBuilder> children) {
     if (entries.empty() && !children[0]) {
       return NodeBuilder();
@@ -106,10 +104,8 @@ class NodeBuilder {
                        std::move(children));
   }
 
-  NodeBuilder(BuilderType type,
-              uint8_t level,
-              ObjectIdentifier object_identifier,
-              std::vector<Entry> entries,
+  NodeBuilder(BuilderType type, uint8_t level,
+              ObjectIdentifier object_identifier, std::vector<Entry> entries,
               std::vector<NodeBuilder> children)
       : type_(type),
         level_(level),
@@ -124,24 +120,19 @@ class NodeBuilder {
 
   // Delete the value with the given |key| from the builder. |key_level| must be
   // greater or equal then the node level.
-  Status Delete(SynchronousStorage* page_storage,
-                uint8_t key_level,
-                std::string key,
-                bool* did_mutate);
+  Status Delete(SynchronousStorage* page_storage, uint8_t key_level,
+                std::string key, bool* did_mutate);
 
   // Update the tree by adding |entry| (or modifying the value associated to
   // |entry.key| with |entry.value| if |key| is already in the tree).
   // |change_level| must be greater or equal than the node level.
-  Status Update(SynchronousStorage* page_storage,
-                uint8_t change_level,
-                Entry entry,
-                bool* did_mutate);
+  Status Update(SynchronousStorage* page_storage, uint8_t change_level,
+                Entry entry, bool* did_mutate);
 
   // Split the current tree in 2 according to |key|. This method expects that
   // |key| is not in the tree. After the call, the left tree will be in the
   // current builder, and the right tree in |right|.
-  Status Split(SynchronousStorage* page_storage,
-               std::string key,
+  Status Split(SynchronousStorage* page_storage, std::string key,
                NodeBuilder* right);
 
   // Merge this tree with |other|. This expects all elements of |other| to be
@@ -149,8 +140,7 @@ class NodeBuilder {
   Status Merge(SynchronousStorage* page_storage, NodeBuilder other);
 
   // Extract the entries and children from a TreeNode.
-  static void ExtractContent(const TreeNode& node,
-                             std::vector<Entry>* entries,
+  static void ExtractContent(const TreeNode& node, std::vector<Entry>* entries,
                              std::vector<NodeBuilder>* children);
 
   // Validate that the content of this builder follows the expected constraints.
@@ -236,8 +226,7 @@ Status NodeBuilder::FromIdentifier(SynchronousStorage* page_storage,
 }
 
 Status NodeBuilder::Apply(const NodeLevelCalculator* node_level_calculator,
-                          SynchronousStorage* page_storage,
-                          EntryChange change,
+                          SynchronousStorage* page_storage, EntryChange change,
                           bool* did_mutate) {
   if (!*this) {
     // If the change is a deletion, and the tree is null, the result is still
@@ -375,10 +364,8 @@ Status NodeBuilder::ComputeContent(SynchronousStorage* page_storage) {
   return Status::OK;
 }
 
-Status NodeBuilder::Delete(SynchronousStorage* page_storage,
-                           uint8_t key_level,
-                           std::string key,
-                           bool* did_mutate) {
+Status NodeBuilder::Delete(SynchronousStorage* page_storage, uint8_t key_level,
+                           std::string key, bool* did_mutate) {
   FXL_DCHECK(*this);
   FXL_DCHECK(key_level >= level_);
 
@@ -416,8 +403,7 @@ Status NodeBuilder::Delete(SynchronousStorage* page_storage,
 }
 
 Status NodeBuilder::Update(SynchronousStorage* page_storage,
-                           uint8_t change_level,
-                           Entry entry,
+                           uint8_t change_level, Entry entry,
                            bool* did_mutate) {
   FXL_DCHECK(*this);
   FXL_DCHECK(change_level >= level_);
@@ -480,8 +466,7 @@ Status NodeBuilder::Update(SynchronousStorage* page_storage,
   return Status::OK;
 }
 
-Status NodeBuilder::Split(SynchronousStorage* page_storage,
-                          std::string key,
+Status NodeBuilder::Split(SynchronousStorage* page_storage, std::string key,
                           NodeBuilder* right) {
   if (!*this) {
     *right = NodeBuilder();
@@ -606,8 +591,7 @@ void NodeBuilder::ExtractContent(const TreeNode& node,
 // Apply |changes| on |root|. This is called recursively until |changes| is not
 // valid anymore. At this point, build is called on |root|.
 Status ApplyChangesOnRoot(const NodeLevelCalculator* node_level_calculator,
-                          SynchronousStorage* page_storage,
-                          NodeBuilder root,
+                          SynchronousStorage* page_storage, NodeBuilder root,
                           std::unique_ptr<Iterator<const EntryChange>> changes,
                           ObjectIdentifier* object_identifier,
                           std::set<ObjectIdentifier>* new_identifiers) {
@@ -637,8 +621,7 @@ const NodeLevelCalculator* GetDefaultNodeLevelCalculator() {
 }
 
 void ApplyChanges(
-    coroutine::CoroutineService* coroutine_service,
-    PageStorage* page_storage,
+    coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
     ObjectIdentifier root_identifier,
     std::unique_ptr<Iterator<const EntryChange>> changes,
     std::function<void(Status, ObjectIdentifier, std::set<ObjectIdentifier>)>

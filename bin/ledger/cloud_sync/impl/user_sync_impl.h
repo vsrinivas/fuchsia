@@ -25,8 +25,7 @@ class UserSyncImpl : public UserSync, cloud_provider::DeviceSetWatcher {
   // Parameters:
   //   |on_version_mismatch| is called when the local state is detected to be
   //     incompatible with the state in the cloud and has to be erased.
-  UserSyncImpl(ledger::Environment* environment,
-               UserConfig user_config,
+  UserSyncImpl(ledger::Environment* environment, UserConfig user_config,
                std::unique_ptr<backoff::Backoff> backoff,
                fxl::Closure on_version_mismatch);
   ~UserSyncImpl() override;

@@ -44,10 +44,8 @@ void PrintUsage(const char* executable_name) {
 namespace test {
 namespace benchmark {
 
-FetchBenchmark::FetchBenchmark(async::Loop* loop,
-                               size_t entry_count,
-                               size_t value_size,
-                               size_t part_size,
+FetchBenchmark::FetchBenchmark(async::Loop* loop, size_t entry_count,
+                               size_t value_size, size_t part_size,
                                std::string server_id)
     : loop_(loop),
       application_context_(
@@ -212,8 +210,7 @@ void FetchBenchmark::FetchValues(ledger::PageSnapshotPtr snapshot, size_t i) {
           }));
 }
 
-void FetchBenchmark::FetchPart(ledger::PageSnapshotPtr snapshot,
-                               size_t i,
+void FetchBenchmark::FetchPart(ledger::PageSnapshotPtr snapshot, size_t i,
                                size_t part) {
   if (part * part_size_ >= value_size_) {
     TRACE_ASYNC_END("benchmark", "Fetch (cumulative)", i);

@@ -23,8 +23,7 @@
 namespace ledger {
 
 ConflictResolverClient::ConflictResolverClient(
-    storage::PageStorage* storage,
-    PageManager* page_manager,
+    storage::PageStorage* storage, PageManager* page_manager,
     ConflictResolver* conflict_resolver,
     std::unique_ptr<const storage::Commit> left,
     std::unique_ptr<const storage::Commit> right,
@@ -164,16 +163,13 @@ void ConflictResolverClient::GetFullDiff(fidl::VectorPtr<uint8_t> token,
 }
 
 void ConflictResolverClient::GetConflictingDiff(
-    fidl::VectorPtr<uint8_t> token,
-    GetConflictingDiffCallback callback) {
+    fidl::VectorPtr<uint8_t> token, GetConflictingDiffCallback callback) {
   GetDiff(diff_utils::DiffType::CONFLICTING, std::move(token), callback);
 }
 
 void ConflictResolverClient::GetDiff(
-    diff_utils::DiffType type,
-    fidl::VectorPtr<uint8_t> token,
-    const std::function<void(Status,
-                             fidl::VectorPtr<DiffEntry>,
+    diff_utils::DiffType type, fidl::VectorPtr<uint8_t> token,
+    const std::function<void(Status, fidl::VectorPtr<DiffEntry>,
                              fidl::VectorPtr<uint8_t>)>& callback) {
   diff_utils::ComputeThreeWayDiff(
       storage_, *ancestor_, *left_, *right_, "", convert::ToString(token), type,

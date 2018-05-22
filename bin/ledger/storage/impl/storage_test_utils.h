@@ -61,8 +61,7 @@ ObjectIdentifier RandomObjectIdentifier();
 
 // Creates and returns a new EntryChange adding or updating the entry with the
 // given information.
-EntryChange NewEntryChange(std::string key,
-                           std::string object_digest,
+EntryChange NewEntryChange(std::string key, std::string object_digest,
                            KeyPriority priority);
 
 // Creates and returns a new EntryChange removing the entry with the given key.
@@ -107,16 +106,14 @@ class StorageTest : public ::test::TestWithCoroutines {
   // entries. See |CreateEntries| for information on the created entries.
   // |changes| vector will be swapped with the result.
   ::testing::AssertionResult CreateEntryChanges(
-      size_t size,
-      std::vector<EntryChange>* changes);
+      size_t size, std::vector<EntryChange>* changes);
 
   // Creates a vector of entry changes adding or updating the given number of
   // entries. See |CreateEntries| for information on the created entries.
   // |changes| vector will be swapped with the result. If |deletion| is true,
   // the changes will be deletions, otherwise the changes will be updates.
   ::testing::AssertionResult CreateEntryChanges(
-      std::vector<size_t> values,
-      std::vector<EntryChange>* changes,
+      std::vector<size_t> values, std::vector<EntryChange>* changes,
       bool deletion = false);
 
   // Creates an empty tree node and updates |empty_node_identifier| with the

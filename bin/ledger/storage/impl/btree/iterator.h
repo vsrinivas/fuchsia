@@ -99,8 +99,7 @@ class BTreeIterator {
 // entries in the tree. After a successfull call, |callback| will be called
 // with the set of results.
 void GetObjectIdentifiers(
-    coroutine::CoroutineService* coroutine_service,
-    PageStorage* page_storage,
+    coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
     ObjectIdentifier root_identifier,
     std::function<void(Status, std::set<ObjectIdentifier>)> callback);
 
@@ -119,8 +118,7 @@ void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service,
 // made. |on_done| is called once, upon successfull completion, i.e. when there
 // are no more elements or iteration was interrupted, or if an error occurs.
 void ForEachEntry(coroutine::CoroutineService* coroutine_service,
-                  PageStorage* page_storage,
-                  ObjectIdentifier root_identifier,
+                  PageStorage* page_storage, ObjectIdentifier root_identifier,
                   std::string min_key,
                   std::function<bool(EntryAndNodeIdentifier)> on_next,
                   std::function<void(Status)> on_done);

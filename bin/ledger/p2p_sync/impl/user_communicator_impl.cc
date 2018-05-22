@@ -17,9 +17,7 @@ UserCommunicatorImpl::UserCommunicatorImpl(
     std::unique_ptr<p2p_provider::P2PProvider> provider)
     : p2p_provider_(std::move(provider)) {}
 
-UserCommunicatorImpl::~UserCommunicatorImpl() {
-  FXL_DCHECK(ledgers_.empty());
-}
+UserCommunicatorImpl::~UserCommunicatorImpl() { FXL_DCHECK(ledgers_.empty()); }
 
 void UserCommunicatorImpl::Start() {
   FXL_DCHECK(!started_);
@@ -106,8 +104,7 @@ void UserCommunicatorImpl::OnNewMessage(fxl::StringView source,
 }
 
 void UserCommunicatorImpl::OnDeviceChange(
-    fxl::StringView remote_device,
-    p2p_provider::DeviceChangeType change_type) {
+    fxl::StringView remote_device, p2p_provider::DeviceChangeType change_type) {
   switch (change_type) {
     case p2p_provider::DeviceChangeType::NEW:
       devices_.insert(remote_device.ToString());

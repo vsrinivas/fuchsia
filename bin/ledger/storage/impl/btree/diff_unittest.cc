@@ -28,9 +28,7 @@ std::unique_ptr<Entry> CreateEntryPtr(std::string key,
   return e;
 }
 
-std::unique_ptr<Entry> CreateEntryPtr() {
-  return std::unique_ptr<Entry>();
-}
+std::unique_ptr<Entry> CreateEntryPtr() { return std::unique_ptr<Entry>(); }
 
 class DiffTest : public StorageTest {
  public:

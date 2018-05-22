@@ -47,18 +47,20 @@ bool TokenToPosition(const fidl::VectorPtr<uint8_t>& token, size_t* result) {
   return true;
 }
 
-uint64_t GetVectorSignature(const fidl::VectorPtr<uint8_t>& vector, uint32_t seed) {
-  return murmurhash(reinterpret_cast<const char*>(vector.get().data()), vector.get().size(), seed);
+uint64_t GetVectorSignature(const fidl::VectorPtr<uint8_t>& vector,
+                            uint32_t seed) {
+  return murmurhash(reinterpret_cast<const char*>(vector.get().data()),
+                    vector.get().size(), seed);
 }
 
-uint64_t GetCommitsSignature(const fidl::VectorPtr<cloud_provider::Commit>& commits) {
+uint64_t GetCommitsSignature(
+    const fidl::VectorPtr<cloud_provider::Commit>& commits) {
   uint64_t result = 0;
   for (const auto& commit : commits.get()) {
     result = result ^ GetVectorSignature(commit.id, kAddCommitsSeed);
   }
   return result;
 }
-
 
 }  // namespace
 
@@ -68,8 +70,7 @@ class FakePageCloud::WatcherContainer {
                    size_t next_commit_index);
 
   void SendCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
-                   size_t next_commit_index,
-                   fxl::Closure on_ack);
+                   size_t next_commit_index, fxl::Closure on_ack);
 
   size_t NextCommitIndex() { return next_commit_index_; }
 
@@ -92,13 +93,11 @@ class FakePageCloud::WatcherContainer {
 };
 
 FakePageCloud::WatcherContainer::WatcherContainer(
-    cloud_provider::PageCloudWatcherPtr watcher,
-    size_t next_commit_index)
+    cloud_provider::PageCloudWatcherPtr watcher, size_t next_commit_index)
     : watcher_(std::move(watcher)), next_commit_index_(next_commit_index) {}
 
 void FakePageCloud::WatcherContainer::SendCommits(
-    fidl::VectorPtr<cloud_provider::Commit> commits,
-    size_t next_commit_index,
+    fidl::VectorPtr<cloud_provider::Commit> commits, size_t next_commit_index,
     fxl::Closure on_ack) {
   FXL_DCHECK(watcher_.is_bound());
   FXL_DCHECK(!waiting_for_watcher_ack_);
@@ -153,7 +152,8 @@ bool FakePageCloud::MustReturnError(uint64_t request_signature) {
     case InjectNetworkError::YES:
       auto it = remaining_errors_to_inject_.find(request_signature);
       if (it == remaining_errors_to_inject_.end()) {
-        remaining_errors_to_inject_[request_signature] = kInitialRemainingErrorsToInject;
+        remaining_errors_to_inject_[request_signature] =
+            kInitialRemainingErrorsToInject;
         it = remaining_errors_to_inject_.find(request_signature);
       }
       if (it->second) {
@@ -180,7 +180,8 @@ void FakePageCloud::AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
 
 void FakePageCloud::GetCommits(fidl::VectorPtr<uint8_t> min_position_token,
                                GetCommitsCallback callback) {
-  if (MustReturnError(GetVectorSignature(min_position_token, kGetCommitsSeed))) {
+  if (MustReturnError(
+          GetVectorSignature(min_position_token, kGetCommitsSeed))) {
     callback(cloud_provider::Status::NETWORK_ERROR, nullptr, nullptr);
     return;
   }

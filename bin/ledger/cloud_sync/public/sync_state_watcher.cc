@@ -9,8 +9,7 @@
 namespace cloud_sync {
 
 SyncStateWatcher::SyncStateContainer::SyncStateContainer(
-    DownloadSyncState download,
-    UploadSyncState upload)
+    DownloadSyncState download, UploadSyncState upload)
     : download(download), upload(upload) {}
 
 SyncStateWatcher::SyncStateContainer::SyncStateContainer() {}

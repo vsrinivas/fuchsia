@@ -18,9 +18,7 @@ InlinedObject::InlinedObject(ObjectIdentifier identifier)
     : identifier_(std::move(identifier)) {}
 InlinedObject::~InlinedObject() {}
 
-ObjectIdentifier InlinedObject::GetIdentifier() const {
-  return identifier_;
-}
+ObjectIdentifier InlinedObject::GetIdentifier() const { return identifier_; }
 
 Status InlinedObject::GetData(fxl::StringView* data) const {
   *data = identifier_.object_digest;
@@ -32,9 +30,7 @@ StringObject::StringObject(ObjectIdentifier identifier, std::string content)
 
 StringObject::~StringObject() {}
 
-ObjectIdentifier StringObject::GetIdentifier() const {
-  return identifier_;
-}
+ObjectIdentifier StringObject::GetIdentifier() const { return identifier_; }
 
 Status StringObject::GetData(fxl::StringView* data) const {
   *data = content_;
@@ -47,9 +43,7 @@ LevelDBObject::LevelDBObject(ObjectIdentifier identifier,
 
 LevelDBObject::~LevelDBObject() {}
 
-ObjectIdentifier LevelDBObject::GetIdentifier() const {
-  return identifier_;
-}
+ObjectIdentifier LevelDBObject::GetIdentifier() const { return identifier_; }
 
 Status LevelDBObject::GetData(fxl::StringView* data) const {
   *data = convert::ExtendedStringView(iterator_->value());
@@ -65,9 +59,7 @@ VmoObject::~VmoObject() {
   }
 }
 
-ObjectIdentifier VmoObject::GetIdentifier() const {
-  return identifier_;
-}
+ObjectIdentifier VmoObject::GetIdentifier() const { return identifier_; }
 
 Status VmoObject::GetData(fxl::StringView* data) const {
   Status status = Initialize();

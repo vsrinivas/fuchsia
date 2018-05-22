@@ -27,8 +27,7 @@ class Lock {
 // stack must be unwound immediately (see coroutine::SyncCall for this case).
 FXL_WARN_UNUSED_RESULT coroutine::ContinuationStatus AcquireLock(
     coroutine::CoroutineHandler* handler,
-    callback::OperationSerializer* serializer,
-    std::unique_ptr<Lock>* lock);
+    callback::OperationSerializer* serializer, std::unique_ptr<Lock>* lock);
 
 }  // namespace lock
 

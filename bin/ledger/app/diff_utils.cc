@@ -68,11 +68,8 @@ bool IsMergeable(const storage::ThreeWayChange& change) {
 }  // namespace
 
 void ComputePageChange(
-    storage::PageStorage* storage,
-    const storage::Commit& base,
-    const storage::Commit& other,
-    std::string prefix_key,
-    std::string min_key,
+    storage::PageStorage* storage, const storage::Commit& base,
+    const storage::Commit& other, std::string prefix_key, std::string min_key,
     PaginationBehavior pagination_behavior,
     std::function<void(Status, std::pair<PageChangePtr, std::string>)>
         callback) {
@@ -194,13 +191,9 @@ void ComputePageChange(
 }
 
 void ComputeThreeWayDiff(
-    storage::PageStorage* storage,
-    const storage::Commit& base,
-    const storage::Commit& left,
-    const storage::Commit& right,
-    std::string prefix_key,
-    std::string min_key,
-    DiffType diff_type,
+    storage::PageStorage* storage, const storage::Commit& base,
+    const storage::Commit& left, const storage::Commit& right,
+    std::string prefix_key, std::string min_key, DiffType diff_type,
     std::function<void(Status,
                        std::pair<fidl::VectorPtr<DiffEntry>, std::string>)>
         callback) {

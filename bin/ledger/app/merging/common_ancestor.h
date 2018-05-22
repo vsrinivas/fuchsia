@@ -17,8 +17,7 @@ namespace ledger {
 
 void FindCommonAncestor(
     coroutine::CoroutineService* coroutine_service,
-    storage::PageStorage* storage,
-    std::unique_ptr<const storage::Commit> head1,
+    storage::PageStorage* storage, std::unique_ptr<const storage::Commit> head1,
     std::unique_ptr<const storage::Commit> head2,
     std::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback);

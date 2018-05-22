@@ -47,9 +47,7 @@ void MergeResolver::set_on_empty(fxl::Closure on_empty_callback) {
   on_empty_callback_ = std::move(on_empty_callback);
 }
 
-bool MergeResolver::IsEmpty() {
-  return !merge_in_progress_;
-}
+bool MergeResolver::IsEmpty() { return !merge_in_progress_; }
 
 bool MergeResolver::HasUnfinishedMerges() {
   return merge_in_progress_ || check_conflicts_in_progress_ ||

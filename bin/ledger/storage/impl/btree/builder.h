@@ -30,8 +30,7 @@ const NodeLevelCalculator* GetDefaultNodeLevelCalculator();
 // their key. The callback will provide the status of the operation, the id of
 // the new root and the list of ids of all new nodes created after the changes.
 void ApplyChanges(
-    coroutine::CoroutineService* coroutine_service,
-    PageStorage* page_storage,
+    coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
     ObjectIdentifier root_identifier,
     std::unique_ptr<Iterator<const EntryChange>> changes,
     std::function<void(Status, ObjectIdentifier, std::set<ObjectIdentifier>)>

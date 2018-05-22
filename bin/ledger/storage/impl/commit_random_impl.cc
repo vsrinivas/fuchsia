@@ -33,21 +33,15 @@ std::unique_ptr<Commit> CommitRandomImpl::Clone() const {
   return std::unique_ptr<Commit>(new CommitRandomImpl(*this));
 }
 
-const CommitId& CommitRandomImpl::GetId() const {
-  return id_;
-}
+const CommitId& CommitRandomImpl::GetId() const { return id_; }
 
 std::vector<CommitIdView> CommitRandomImpl::GetParentIds() const {
   return parent_ids_views_;
 }
 
-int64_t CommitRandomImpl::GetTimestamp() const {
-  return timestamp_;
-}
+int64_t CommitRandomImpl::GetTimestamp() const { return timestamp_; }
 
-uint64_t CommitRandomImpl::GetGeneration() const {
-  return generation_;
-}
+uint64_t CommitRandomImpl::GetGeneration() const { return generation_; }
 
 ObjectIdentifier CommitRandomImpl::GetRootIdentifier() const {
   return root_node_identifier_;

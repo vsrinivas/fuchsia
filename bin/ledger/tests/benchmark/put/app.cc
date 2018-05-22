@@ -32,8 +32,7 @@ void PrintUsage(const char* executable_name) {
 }
 
 bool GetPositiveIntValue(const fxl::CommandLine& command_line,
-                         fxl::StringView flag,
-                         int* value) {
+                         fxl::StringView flag, int* value) {
   std::string value_str;
   int found_value;
   if (!command_line.GetOptionValue(flag.ToString(), &value_str) ||

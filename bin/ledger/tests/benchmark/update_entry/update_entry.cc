@@ -40,8 +40,7 @@ void PrintUsage(const char* executable_name) {
 namespace test {
 namespace benchmark {
 
-UpdateEntryBenchmark::UpdateEntryBenchmark(async::Loop* loop,
-                                           int entry_count,
+UpdateEntryBenchmark::UpdateEntryBenchmark(async::Loop* loop, int entry_count,
                                            int transaction_size)
     : loop_(loop),
       tmp_dir_(kStoragePath),

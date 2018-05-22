@@ -28,10 +28,10 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
 
   storage::PageId GetId() override { return page_id_; }
 
-  void GetPiece(
-      storage::ObjectIdentifier object_identifier,
-      std::function<void(storage::Status,
-                         std::unique_ptr<const storage::Object>)> callback) {
+  void GetPiece(storage::ObjectIdentifier object_identifier,
+                std::function<void(storage::Status,
+                                   std::unique_ptr<const storage::Object>)>
+                    callback) {
     async::PostTask(async_, [this, object_identifier, callback]() {
       const auto& it = objects_.find(object_identifier);
       if (it == objects_.end()) {
@@ -85,8 +85,7 @@ void BuildWatchStartBuffer(flatbuffers::FlatBufferBuilder* buffer,
 }
 
 void BuildObjectRequestBuffer(
-    flatbuffers::FlatBufferBuilder* buffer,
-    fxl::StringView namespace_id,
+    flatbuffers::FlatBufferBuilder* buffer, fxl::StringView namespace_id,
     fxl::StringView page_id,
     std::vector<storage::ObjectIdentifier> object_ids) {
   flatbuffers::Offset<NamespacePageId> namespace_page_id =
@@ -110,8 +109,7 @@ void BuildObjectRequestBuffer(
 }
 
 void BuildObjectResponseBuffer(
-    flatbuffers::FlatBufferBuilder* buffer,
-    fxl::StringView namespace_id,
+    flatbuffers::FlatBufferBuilder* buffer, fxl::StringView namespace_id,
     fxl::StringView page_id,
     std::map<storage::ObjectIdentifier, std::string> data) {
   flatbuffers::Offset<NamespacePageId> namespace_page_id =

@@ -40,10 +40,8 @@ constexpr size_t kKeySize = 100;
 namespace test {
 namespace benchmark {
 
-ConvergenceBenchmark::ConvergenceBenchmark(async::Loop* loop,
-                                           int entry_count,
-                                           int value_size,
-                                           int device_count,
+ConvergenceBenchmark::ConvergenceBenchmark(async::Loop* loop, int entry_count,
+                                           int value_size, int device_count,
                                            std::string server_id)
     : loop_(loop),
       application_context_(

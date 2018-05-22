@@ -50,9 +50,7 @@ namespace test {
 namespace benchmark {
 
 SyncBenchmark::SyncBenchmark(
-    async::Loop* loop,
-    size_t change_count,
-    size_t value_size,
+    async::Loop* loop, size_t change_count, size_t value_size,
     size_t entries_per_change,
     PageDataGenerator::ReferenceStrategy reference_strategy,
     std::string server_id)

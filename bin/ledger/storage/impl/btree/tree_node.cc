@@ -21,10 +21,8 @@
 namespace storage {
 namespace btree {
 
-TreeNode::TreeNode(PageStorage* page_storage,
-                   ObjectIdentifier identifier,
-                   uint8_t level,
-                   std::vector<Entry> entries,
+TreeNode::TreeNode(PageStorage* page_storage, ObjectIdentifier identifier,
+                   uint8_t level, std::vector<Entry> entries,
                    std::map<size_t, ObjectIdentifier> children)
     : page_storage_(page_storage),
       identifier_(std::move(identifier)),
@@ -37,8 +35,7 @@ TreeNode::TreeNode(PageStorage* page_storage,
 TreeNode::~TreeNode() {}
 
 void TreeNode::FromIdentifier(
-    PageStorage* page_storage,
-    ObjectIdentifier identifier,
+    PageStorage* page_storage, ObjectIdentifier identifier,
     std::function<void(Status, std::unique_ptr<const TreeNode>)> callback) {
   page_storage->GetObject(
       identifier, PageStorage::Location::NETWORK,
@@ -62,9 +59,7 @@ void TreeNode::Empty(PageStorage* page_storage,
 }
 
 void TreeNode::FromEntries(
-    PageStorage* page_storage,
-    uint8_t level,
-    const std::vector<Entry>& entries,
+    PageStorage* page_storage, uint8_t level, const std::vector<Entry>& entries,
     const std::map<size_t, ObjectIdentifier>& children,
     std::function<void(Status, ObjectIdentifier)> callback) {
   FXL_DCHECK(children.begin() == children.end() ||
@@ -79,9 +74,7 @@ void TreeNode::FromEntries(
       storage::DataSource::Create(std::move(encoding)), std::move(callback));
 }
 
-int TreeNode::GetKeyCount() const {
-  return entries_.size();
-}
+int TreeNode::GetKeyCount() const { return entries_.size(); }
 
 Status TreeNode::GetEntry(int index, Entry* entry) const {
   FXL_DCHECK(index >= 0 && index < GetKeyCount());
@@ -125,9 +118,7 @@ Status TreeNode::FindKeyOrChild(convert::ExtendedStringView key,
   return Status::NOT_FOUND;
 }
 
-const ObjectIdentifier& TreeNode::GetIdentifier() const {
-  return identifier_;
-}
+const ObjectIdentifier& TreeNode::GetIdentifier() const { return identifier_; }
 
 Status TreeNode::FromObject(PageStorage* page_storage,
                             ObjectIdentifier identifier,

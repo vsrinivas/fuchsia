@@ -27,18 +27,13 @@ class JournalImpl : public Journal {
 
   // Creates a new Journal for a simple commit.
   static std::unique_ptr<Journal> Simple(
-      JournalType type,
-      coroutine::CoroutineService* coroutine_service,
-      PageStorageImpl* page_storage,
-      const JournalId& id,
-      const CommitId& base);
+      JournalType type, coroutine::CoroutineService* coroutine_service,
+      PageStorageImpl* page_storage, const JournalId& id, const CommitId& base);
 
   // Creates a new Journal for a merge commit.
   static std::unique_ptr<Journal> Merge(
       coroutine::CoroutineService* coroutine_service,
-      PageStorageImpl* page_storage,
-      const JournalId& id,
-      const CommitId& base,
+      PageStorageImpl* page_storage, const JournalId& id, const CommitId& base,
       const CommitId& other);
 
   // Commits the changes of this |Journal|. Trying to update entries or rollback
@@ -55,20 +50,15 @@ class JournalImpl : public Journal {
   void Rollback(std::function<void(Status)> callback);
 
   // Journal:
-  void Put(convert::ExtendedStringView key,
-           ObjectIdentifier object_identifier,
-           KeyPriority priority,
-           std::function<void(Status)> callback) override;
+  void Put(convert::ExtendedStringView key, ObjectIdentifier object_identifier,
+           KeyPriority priority, std::function<void(Status)> callback) override;
   void Delete(convert::ExtendedStringView key,
               std::function<void(Status)> callback) override;
   const JournalId& GetId() const override;
 
  private:
-  JournalImpl(JournalType type,
-              coroutine::CoroutineService* coroutine_service,
-              PageStorageImpl* page_storage,
-              JournalId id,
-              CommitId base);
+  JournalImpl(JournalType type, coroutine::CoroutineService* coroutine_service,
+              PageStorageImpl* page_storage, JournalId id, CommitId base);
 
   void GetParents(
       std::function<void(Status,

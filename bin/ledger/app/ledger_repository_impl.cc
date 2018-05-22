@@ -15,8 +15,7 @@
 namespace ledger {
 
 LedgerRepositoryImpl::LedgerRepositoryImpl(
-    std::string base_storage_dir,
-    Environment* environment,
+    std::string base_storage_dir, Environment* environment,
     std::unique_ptr<SyncWatcherSet> watchers,
     std::unique_ptr<sync_coordinator::UserSync> user_sync)
     : base_storage_dir_(std::move(base_storage_dir)),
@@ -51,8 +50,7 @@ LedgerRepositoryImpl::Unbind() {
 
 void LedgerRepositoryImpl::GetLedger(
     fidl::VectorPtr<uint8_t> ledger_name,
-    fidl::InterfaceRequest<Ledger> ledger_request,
-    GetLedgerCallback callback) {
+    fidl::InterfaceRequest<Ledger> ledger_request, GetLedgerCallback callback) {
   TRACE_DURATION("ledger", "repository_get_ledger");
 
   if (ledger_name->empty()) {

@@ -132,8 +132,7 @@ void PageCommunicatorImpl::set_on_delete(fxl::Closure on_delete) {
 }
 
 void PageCommunicatorImpl::OnDeviceChange(
-    fxl::StringView remote_device,
-    p2p_provider::DeviceChangeType change_type) {
+    fxl::StringView remote_device, p2p_provider::DeviceChangeType change_type) {
   if (!started_ || in_destructor_) {
     return;
   }
@@ -349,7 +348,8 @@ void PageCommunicatorImpl::ProcessObjectRequest(fxl::StringView source,
 void PageCommunicatorImpl::BuildObjectResponseBuffer(
     flatbuffers::FlatBufferBuilder* buffer,
     std::vector<std::pair<storage::ObjectIdentifier,
-                          std::unique_ptr<const storage::Object>>> results) {
+                          std::unique_ptr<const storage::Object>>>
+        results) {
   flatbuffers::Offset<NamespacePageId> namespace_page_id =
       CreateNamespacePageId(*buffer,
                             convert::ToFlatBufferVector(buffer, namespace_id_),
@@ -378,8 +378,8 @@ void PageCommunicatorImpl::BuildObjectResponseBuffer(
           CreateObject(*buffer, fb_object_id, ObjectStatus_UNKNOWN_OBJECT));
     }
   }
-  flatbuffers::Offset<ObjectResponse> object_response = CreateObjectResponse(
-      *buffer, buffer->CreateVector(fb_objects));
+  flatbuffers::Offset<ObjectResponse> object_response =
+      CreateObjectResponse(*buffer, buffer->CreateVector(fb_objects));
   flatbuffers::Offset<Response> response =
       CreateResponse(*buffer, ResponseStatus_OK, namespace_page_id,
                      ResponseMessage_ObjectResponse, object_response.Union());

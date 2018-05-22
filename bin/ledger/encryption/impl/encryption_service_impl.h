@@ -35,12 +35,10 @@ class EncryptionServiceImpl : public EncryptionService {
       storage::ObjectIdentifier object_identifier,
       std::function<void(Status, std::string)> callback) override;
   void EncryptObject(
-      storage::ObjectIdentifier object_identifier,
-      fsl::SizedVmo content,
+      storage::ObjectIdentifier object_identifier, fsl::SizedVmo content,
       std::function<void(Status, std::string)> callback) override;
   void DecryptObject(
-      storage::ObjectIdentifier object_identifier,
-      std::string encrypted_data,
+      storage::ObjectIdentifier object_identifier, std::string encrypted_data,
       std::function<void(Status, std::string)> callback) override;
 
  private:
@@ -51,11 +49,9 @@ class EncryptionServiceImpl : public EncryptionService {
   void GetReferenceKey(storage::ObjectIdentifier object_identifier,
                        const std::function<void(const std::string&)>& callback);
 
-  void Encrypt(size_t key_index,
-               std::string data,
+  void Encrypt(size_t key_index, std::string data,
                std::function<void(Status, std::string)> callback);
-  void Decrypt(size_t key_index,
-               std::string encrypted_data,
+  void Decrypt(size_t key_index, std::string encrypted_data,
                std::function<void(Status, std::string)> callback);
 
   void FetchMasterKey(size_t key_index,

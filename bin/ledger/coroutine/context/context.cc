@@ -18,9 +18,7 @@ void SwapContext(Context* out_context, Context* in_context) {
   FXL_NOTREACHED() << "SetContext should not return.";
 }
 
-void MakeContext(Context* context,
-                 Stack* stack,
-                 void (*func)(void*),
+void MakeContext(Context* context, Stack* stack, void (*func)(void*),
                  void* data) {
   memset(context, 0, sizeof(Context));
 

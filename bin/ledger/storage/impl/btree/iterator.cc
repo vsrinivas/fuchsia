@@ -14,8 +14,7 @@ namespace btree {
 namespace {
 
 Status ForEachEntryInternal(
-    SynchronousStorage* storage,
-    ObjectIdentifier root_identifier,
+    SynchronousStorage* storage, ObjectIdentifier root_identifier,
     fxl::StringView min_key,
     const std::function<bool(EntryAndNodeIdentifier)>& on_next) {
   BTreeIterator iterator(storage);
@@ -87,9 +86,7 @@ bool BTreeIterator::HasValue() const {
          CurrentIndex() < CurrentNode().entries().size();
 }
 
-bool BTreeIterator::Finished() const {
-  return stack_.empty();
-}
+bool BTreeIterator::Finished() const { return stack_.empty(); }
 
 const Entry& BTreeIterator::CurrentEntry() const {
   FXL_DCHECK(HasValue());
@@ -100,9 +97,7 @@ const ObjectIdentifier& BTreeIterator::GetIdentifier() const {
   return CurrentNode().GetIdentifier();
 }
 
-uint8_t BTreeIterator::GetLevel() const {
-  return CurrentNode().level();
-}
+uint8_t BTreeIterator::GetLevel() const { return CurrentNode().level(); }
 
 Status BTreeIterator::Advance() {
   if (descending_) {
@@ -140,13 +135,9 @@ void BTreeIterator::SkipNextSubTree() {
   }
 }
 
-size_t& BTreeIterator::CurrentIndex() {
-  return stack_.back().second;
-}
+size_t& BTreeIterator::CurrentIndex() { return stack_.back().second; }
 
-size_t BTreeIterator::CurrentIndex() const {
-  return stack_.back().second;
-}
+size_t BTreeIterator::CurrentIndex() const { return stack_.back().second; }
 
 const TreeNode& BTreeIterator::CurrentNode() const {
   return *stack_.back().first;
@@ -161,8 +152,7 @@ Status BTreeIterator::Descend(const ObjectIdentifier& node_identifier) {
 }
 
 void GetObjectIdentifiers(
-    coroutine::CoroutineService* coroutine_service,
-    PageStorage* page_storage,
+    coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
     ObjectIdentifier root_identifier,
     std::function<void(Status, std::set<ObjectIdentifier>)> callback) {
   FXL_DCHECK(!root_identifier.object_digest.empty());
@@ -220,8 +210,7 @@ void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service,
 }
 
 void ForEachEntry(coroutine::CoroutineService* coroutine_service,
-                  PageStorage* page_storage,
-                  ObjectIdentifier root_identifier,
+                  PageStorage* page_storage, ObjectIdentifier root_identifier,
                   std::string min_key,
                   std::function<bool(EntryAndNodeIdentifier)> on_next,
                   std::function<void(Status)> on_done) {

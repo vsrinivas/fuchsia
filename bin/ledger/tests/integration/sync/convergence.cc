@@ -32,7 +32,8 @@ fidl::VectorPtr<uint8_t> DoubleToArray(double dbl) {
   return array;
 }
 
-::testing::AssertionResult VmoToDouble(const fuchsia::mem::BufferPtr& vmo, double* dbl) {
+::testing::AssertionResult VmoToDouble(const fuchsia::mem::BufferPtr& vmo,
+                                       double* dbl) {
   if (vmo->size != sizeof(double)) {
     return ::testing::AssertionFailure()
            << "VMO has the wrong size: " << vmo->size << " instead of "
@@ -110,8 +111,7 @@ class SyncWatcherImpl : public ledger::SyncWatcher {
 
  private:
   // SyncWatcher
-  void SyncStateChanged(ledger::SyncState download,
-                        ledger::SyncState upload,
+  void SyncStateChanged(ledger::SyncState download, ledger::SyncState upload,
                         SyncStateChangedCallback callback) override {
     this->download = download;
     this->upload = upload;
@@ -469,8 +469,7 @@ TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
 }
 
 INSTANTIATE_TEST_CASE_P(
-    ManyLedgersConvergenceTest,
-    ConvergenceTest,
+    ManyLedgersConvergenceTest, ConvergenceTest,
     ::testing::Combine(::testing::Values(MergeType::LAST_ONE_WINS,
                                          MergeType::NON_ASSOCIATIVE_CUSTOM),
                        ::testing::Range(2, 6),

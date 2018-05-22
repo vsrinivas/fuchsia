@@ -22,28 +22,22 @@ fidl::VectorPtr<uint8_t> RandomArray(int size);
 ledger::PageId PageGetId(ledger::PagePtr* page);
 
 ledger::PageSnapshotPtr PageGetSnapshot(
-    ledger::PagePtr* page,
-    fidl::VectorPtr<uint8_t> prefix = nullptr);
+    ledger::PagePtr* page, fidl::VectorPtr<uint8_t> prefix = nullptr);
 
 fidl::VectorPtr<fidl::VectorPtr<uint8_t>> SnapshotGetKeys(
-    ledger::PageSnapshotPtr* snapshot,
-    fidl::VectorPtr<uint8_t> start);
+    ledger::PageSnapshotPtr* snapshot, fidl::VectorPtr<uint8_t> start);
 fidl::VectorPtr<fidl::VectorPtr<uint8_t>> SnapshotGetKeys(
-    ledger::PageSnapshotPtr* snapshot,
-    fidl::VectorPtr<uint8_t> start,
+    ledger::PageSnapshotPtr* snapshot, fidl::VectorPtr<uint8_t> start,
     int* num_queries);
 
 fidl::VectorPtr<ledger::Entry> SnapshotGetEntries(
-    ledger::PageSnapshotPtr* snapshot,
-    fidl::VectorPtr<uint8_t> start);
+    ledger::PageSnapshotPtr* snapshot, fidl::VectorPtr<uint8_t> start);
 fidl::VectorPtr<ledger::Entry> SnapshotGetEntries(
-    ledger::PageSnapshotPtr* snapshot,
-    fidl::VectorPtr<uint8_t> start,
+    ledger::PageSnapshotPtr* snapshot, fidl::VectorPtr<uint8_t> start,
     int* num_queries);
 
 std::string SnapshotFetchPartial(ledger::PageSnapshotPtr* snapshot,
-                                 fidl::VectorPtr<uint8_t> key,
-                                 int64_t offset,
+                                 fidl::VectorPtr<uint8_t> key, int64_t offset,
                                  int64_t max_size);
 
 std::string ToString(const fuchsia::mem::BufferPtr& vmo);

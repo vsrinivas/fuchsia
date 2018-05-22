@@ -30,8 +30,7 @@ void UserSyncImpl::SetWatcher(SyncStateWatcher* watcher) {
 }
 
 std::unique_ptr<LedgerSync> UserSyncImpl::CreateLedgerSync(
-    fxl::StringView app_id,
-    encryption::EncryptionService* encryption_service) {
+    fxl::StringView app_id, encryption::EncryptionService* encryption_service) {
   FXL_DCHECK(started_);
   std::unique_ptr<cloud_sync::LedgerSync> cloud_ledger_sync;
   if (cloud_sync_) {

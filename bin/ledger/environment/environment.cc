@@ -23,8 +23,7 @@ Environment::Environment(
 }
 
 Environment::Environment(Environment&& other)
-    : Environment(other.async_,
-                  std::move(other.coroutine_service_),
+    : Environment(other.async_, std::move(other.coroutine_service_),
                   std::move(other.backoff_factory_)) {}
 
 Environment& Environment::operator=(Environment&& other) {

@@ -116,9 +116,7 @@ PageDbImpl::PageDbImpl(async_t* async, std::string db_path)
 
 PageDbImpl::~PageDbImpl() {}
 
-Status PageDbImpl::Init() {
-  return db_.Init();
-}
+Status PageDbImpl::Init() { return db_.Init(); }
 
 Status PageDbImpl::StartBatch(coroutine::CoroutineHandler* handler,
                               std::unique_ptr<Batch>* batch) {
@@ -160,8 +158,7 @@ Status PageDbImpl::GetBaseCommitForJournal(CoroutineHandler* handler,
 }
 
 Status PageDbImpl::GetJournalEntries(
-    CoroutineHandler* handler,
-    const JournalId& journal_id,
+    CoroutineHandler* handler, const JournalId& journal_id,
     std::unique_ptr<Iterator<const EntryChange>>* entries) {
   std::unique_ptr<Iterator<const std::pair<convert::ExtendedStringView,
                                            convert::ExtendedStringView>>>
@@ -182,8 +179,7 @@ Status PageDbImpl::ReadObject(CoroutineHandler* handler,
 }
 
 Status PageDbImpl::HasObject(CoroutineHandler* handler,
-                             ObjectDigestView object_digest,
-                             bool* has_object) {
+                             ObjectDigestView object_digest, bool* has_object) {
   return db_.HasKey(handler, ObjectRow::GetKeyFor(object_digest), has_object);
 }
 
@@ -225,8 +221,7 @@ Status PageDbImpl::GetUnsyncedCommitIds(CoroutineHandler* handler,
 }
 
 Status PageDbImpl::IsCommitSynced(CoroutineHandler* handler,
-                                  const CommitId& commit_id,
-                                  bool* is_synced) {
+                                  const CommitId& commit_id, bool* is_synced) {
   bool has_key;
   RETURN_ON_ERROR(
       db_.HasKey(handler, UnsyncedCommitRow::GetKeyFor(commit_id), &has_key));
@@ -258,13 +253,11 @@ Status PageDbImpl::GetUnsyncedPieces(
 }
 
 Status PageDbImpl::GetSyncMetadata(CoroutineHandler* handler,
-                                   fxl::StringView key,
-                                   std::string* value) {
+                                   fxl::StringView key, std::string* value) {
   return db_.Get(handler, SyncMetadataRow::GetKeyFor(key), value);
 }
 
-Status PageDbImpl::AddHead(CoroutineHandler* handler,
-                           CommitIdView head,
+Status PageDbImpl::AddHead(CoroutineHandler* handler, CommitIdView head,
                            int64_t timestamp) {
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
@@ -383,8 +376,7 @@ Status PageDbImpl::MarkCommitIdUnsynced(CoroutineHandler* handler,
 }
 
 Status PageDbImpl::SetSyncMetadata(CoroutineHandler* handler,
-                                   fxl::StringView key,
-                                   fxl::StringView value) {
+                                   fxl::StringView key, fxl::StringView value) {
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
   RETURN_ON_ERROR(batch->SetSyncMetadata(handler, key, value));

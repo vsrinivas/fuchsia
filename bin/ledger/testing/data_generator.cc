@@ -44,9 +44,7 @@ fidl::VectorPtr<uint8_t> DataGenerator::MakeValue(size_t size) {
 }
 
 std::vector<fidl::VectorPtr<uint8_t>> DataGenerator::MakeKeys(
-    size_t key_count,
-    size_t key_size,
-    size_t unique_key_count) {
+    size_t key_count, size_t key_size, size_t unique_key_count) {
   FXL_DCHECK(unique_key_count <= key_count);
   std::vector<fidl::VectorPtr<uint8_t>> keys(key_count);
   for (size_t i = 0; i < unique_key_count; i++) {

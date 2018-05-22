@@ -17,14 +17,12 @@ class CommitImpl : public Commit {
 
   // Factory method for creating a |CommitImpl| object given its storage
   // representation. If the format is incorrect, |nullptr| will be returned.
-  static Status FromStorageBytes(PageStorage* page_storage,
-                                 CommitId id,
+  static Status FromStorageBytes(PageStorage* page_storage, CommitId id,
                                  std::string storage_bytes,
                                  std::unique_ptr<const Commit>* commit);
 
   static std::unique_ptr<const Commit> FromContentAndParents(
-      PageStorage* page_storage,
-      ObjectIdentifier root_node_identifier,
+      PageStorage* page_storage, ObjectIdentifier root_node_identifier,
       std::vector<std::unique_ptr<const Commit>> parent_commits);
 
   // Factory method for creating an empty |CommitImpl| object, i.e. without
@@ -47,11 +45,8 @@ class CommitImpl : public Commit {
 
   // Creates a new |CommitImpl| object with the given contents. |timestamp| is
   // the number of nanoseconds since epoch.
-  CommitImpl(PageStorage* page_storage,
-             CommitId id,
-             int64_t timestamp,
-             uint64_t generation,
-             ObjectIdentifier root_node_identifier,
+  CommitImpl(PageStorage* page_storage, CommitId id, int64_t timestamp,
+             uint64_t generation, ObjectIdentifier root_node_identifier,
              std::vector<CommitIdView> parent_ids,
              fxl::RefPtr<SharedStorageBytes> storage_bytes);
 

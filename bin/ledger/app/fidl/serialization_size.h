@@ -27,9 +27,7 @@ const size_t kVectorHeaderSize = sizeof(fidl_vector_t);
 const size_t kPriorityEnumSize = sizeof(int32_t);
 const size_t kMessageHeaderSize = sizeof(fidl_message_header_t);
 
-inline size_t Align(size_t n) {
-  return FIDL_ALIGN(n);
-}
+inline size_t Align(size_t n) { return FIDL_ALIGN(n); }
 
 // The overhead for storing the pointer, the timestamp (int64) and the two
 // arrays.

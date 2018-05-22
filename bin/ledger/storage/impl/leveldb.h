@@ -28,11 +28,9 @@ class LevelDb : public Db {
   Status StartBatch(coroutine::CoroutineHandler* handler,
                     std::unique_ptr<Batch>* batch) override;
   Status Get(coroutine::CoroutineHandler* handler,
-             convert::ExtendedStringView key,
-             std::string* value) override;
+             convert::ExtendedStringView key, std::string* value) override;
   Status HasKey(coroutine::CoroutineHandler* handler,
-                convert::ExtendedStringView key,
-                bool* has_key) override;
+                convert::ExtendedStringView key, bool* has_key) override;
   Status GetObject(coroutine::CoroutineHandler* handler,
                    convert::ExtendedStringView key,
                    ObjectIdentifier object_identifier,
@@ -41,12 +39,10 @@ class LevelDb : public Db {
                      convert::ExtendedStringView prefix,
                      std::vector<std::string>* key_suffixes) override;
   Status GetEntriesByPrefix(
-      coroutine::CoroutineHandler* handler,
-      convert::ExtendedStringView prefix,
+      coroutine::CoroutineHandler* handler, convert::ExtendedStringView prefix,
       std::vector<std::pair<std::string, std::string>>* entries) override;
   Status GetIteratorAtPrefix(
-      coroutine::CoroutineHandler* handler,
-      convert::ExtendedStringView prefix,
+      coroutine::CoroutineHandler* handler, convert::ExtendedStringView prefix,
       std::unique_ptr<Iterator<const std::pair<convert::ExtendedStringView,
                                                convert::ExtendedStringView>>>*
           iterator) override;

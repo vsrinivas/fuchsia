@@ -25,11 +25,8 @@ size_t ToFullPages(size_t value) {
   return (value + PAGE_SIZE - 1) & (~(PAGE_SIZE - 1));
 }
 
-void AllocateStack(const zx::vmo& vmo,
-                   size_t vmo_offset,
-                   size_t stack_size,
-                   zx::vmar* vmar,
-                   uintptr_t* addr) {
+void AllocateStack(const zx::vmo& vmo, size_t vmo_offset, size_t stack_size,
+                   zx::vmar* vmar, uintptr_t* addr) {
   uintptr_t allocate_address;
   zx_status_t status = zx::vmar::root_self().allocate(
       0, stack_size + 2 * kStackGuardSize,

@@ -12,8 +12,7 @@ namespace cloud_sync {
 
 cloud_provider::Commit MakeTestCommit(
     encryption::FakeEncryptionService* encryption_service,
-    const std::string& id,
-    const std::string& data) {
+    const std::string& id, const std::string& data) {
   cloud_provider::Commit commit;
   commit.id = convert::ToArray(id);
   commit.data =

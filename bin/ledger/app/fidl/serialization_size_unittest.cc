@@ -94,8 +94,7 @@ class FakeSnapshotImpl : public PageSnapshot {
     FXL_NOTIMPLEMENTED();
   }
 
-  void FetchPartial(fidl::VectorPtr<uint8_t> /*key*/,
-                    int64_t /*offset*/,
+  void FetchPartial(fidl::VectorPtr<uint8_t> /*key*/, int64_t /*offset*/,
                     int64_t /*max_size*/,
                     FetchPartialCallback /*callback*/) override {
     FXL_NOTIMPLEMENTED();
@@ -154,9 +153,11 @@ TEST_F(SerializationSizeTest, Get) {
   std::string object_data = GetValue(0, value_size);
   fsl::SizedVmo vmo;
   ASSERT_TRUE(fsl::VmoFromString(object_data, &vmo));
-  fuchsia::mem::BufferPtr value = fidl::MakeOptional(std::move(vmo).ToTransport());
+  fuchsia::mem::BufferPtr value =
+      fidl::MakeOptional(std::move(vmo).ToTransport());
 
-  auto client_callback = [](Status /*status*/, fuchsia::mem::BufferPtr /*value*/) {};
+  auto client_callback = [](Status /*status*/,
+                            fuchsia::mem::BufferPtr /*value*/) {};
   // FakeSnapshot saves the callback instead of running it.
   snapshot_proxy->Get(std::move(key), std::move(client_callback));
   RunLoopUntilIdle();

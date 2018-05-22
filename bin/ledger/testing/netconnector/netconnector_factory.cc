@@ -11,8 +11,7 @@ class NetConnectorFactory::Holder {
  public:
   Holder(FakeNetConnector::Delegate* delegate,
          fidl::InterfaceRequest<netconnector::NetConnector> request,
-         std::string device_name,
-         fxl::Closure on_disconnect);
+         std::string device_name, fxl::Closure on_disconnect);
 
   void set_on_empty(fxl::Closure on_empty);
 
@@ -32,8 +31,7 @@ class NetConnectorFactory::Holder {
 NetConnectorFactory::Holder::Holder(
     FakeNetConnector::Delegate* delegate,
     fidl::InterfaceRequest<netconnector::NetConnector> request,
-    std::string device_name,
-    fxl::Closure on_disconnect)
+    std::string device_name, fxl::Closure on_disconnect)
     : device_name_(std::move(device_name)),
       interface_(std::move(request), delegate),
       on_disconnect_(std::move(on_disconnect)) {

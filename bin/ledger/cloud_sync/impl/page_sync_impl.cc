@@ -17,8 +17,7 @@
 
 namespace cloud_sync {
 
-PageSyncImpl::PageSyncImpl(async_t* async,
-                           storage::PageStorage* storage,
+PageSyncImpl::PageSyncImpl(async_t* async, storage::PageStorage* storage,
                            storage::PageSyncClient* sync_client,
                            encryption::EncryptionService* encryption_service,
                            cloud_provider::PageCloudPtr page_cloud,
@@ -160,8 +159,6 @@ void PageSyncImpl::SetUploadState(UploadSyncState next_upload_state) {
   NotifyStateWatcher();
 }
 
-bool PageSyncImpl::IsDownloadIdle() {
-  return page_download_->IsIdle();
-}
+bool PageSyncImpl::IsDownloadIdle() { return page_download_->IsIdle(); }
 
 }  // namespace cloud_sync

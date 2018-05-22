@@ -36,26 +36,25 @@ TestWithPageStorage::~TestWithPageStorage() {}
 std::function<void(storage::Journal*)>
 TestWithPageStorage::AddKeyValueToJournal(const std::string& key,
                                           std::string value) {
-  return
-      [this, key, value = std::move(value)](storage::Journal* journal) mutable {
-        storage::Status status;
-        storage::ObjectIdentifier object_identifier;
-        bool called;
-        page_storage()->AddObjectFromLocal(
-            storage::DataSource::Create(std::move(value)),
-            callback::Capture(callback::SetWhenCalled(&called), &status,
-                              &object_identifier));
-        RunLoopUntilIdle();
-        EXPECT_TRUE(called);
-        EXPECT_EQ(storage::Status::OK, status);
+  return [this, key,
+          value = std::move(value)](storage::Journal* journal) mutable {
+    storage::Status status;
+    storage::ObjectIdentifier object_identifier;
+    bool called;
+    page_storage()->AddObjectFromLocal(
+        storage::DataSource::Create(std::move(value)),
+        callback::Capture(callback::SetWhenCalled(&called), &status,
+                          &object_identifier));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
+    EXPECT_EQ(storage::Status::OK, status);
 
-        journal->Put(
-            key, object_identifier, storage::KeyPriority::EAGER,
-            callback::Capture(callback::SetWhenCalled(&called), &status));
-        RunLoopUntilIdle();
-        EXPECT_TRUE(called);
-        EXPECT_EQ(storage::Status::OK, status);
-      };
+    journal->Put(key, object_identifier, storage::KeyPriority::EAGER,
+                 callback::Capture(callback::SetWhenCalled(&called), &status));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
+    EXPECT_EQ(storage::Status::OK, status);
+  };
 }
 
 std::function<void(storage::Journal*)>
@@ -72,8 +71,7 @@ TestWithPageStorage::DeleteKeyFromJournal(const std::string& key) {
 }
 
 ::testing::AssertionResult TestWithPageStorage::GetValue(
-    storage::ObjectIdentifier object_identifier,
-    std::string* value) {
+    storage::ObjectIdentifier object_identifier, std::string* value) {
   storage::Status status;
   std::unique_ptr<const storage::Object> object;
   bool called;
@@ -105,8 +103,8 @@ TestWithPageStorage::DeleteKeyFromJournal(const std::string& key) {
     std::unique_ptr<storage::PageStorage>* page_storage) {
   std::unique_ptr<storage::PageStorageImpl> local_page_storage =
       std::make_unique<storage::PageStorageImpl>(
-          dispatcher(), &coroutine_service_,
-          &encryption_service_, tmp_dir_.path(), kRootPageId.ToString());
+          dispatcher(), &coroutine_service_, &encryption_service_,
+          tmp_dir_.path(), kRootPageId.ToString());
   storage::Status status;
   bool called;
   local_page_storage->Init(

@@ -44,8 +44,7 @@ namespace benchmark {
 DeleteEntryBenchmark::DeleteEntryBenchmark(async::Loop* loop,
                                            size_t entry_count,
                                            size_t transaction_size,
-                                           size_t key_size,
-                                           size_t value_size)
+                                           size_t key_size, size_t value_size)
     : loop_(loop),
       tmp_dir_(kStoragePath),
       application_context_(

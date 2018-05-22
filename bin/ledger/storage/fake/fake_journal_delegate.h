@@ -29,16 +29,13 @@ class FakeJournalDelegate {
   // Regular commit.
   FakeJournalDelegate(CommitId parent_id, bool autocommit, uint64_t generation);
   // Merge commit.
-  FakeJournalDelegate(CommitId parent_id,
-                      CommitId other_id,
-                      bool autocommit,
+  FakeJournalDelegate(CommitId parent_id, CommitId other_id, bool autocommit,
                       uint64_t generation);
   ~FakeJournalDelegate();
 
   const CommitId& GetId() const { return id_; }
 
-  Status SetValue(convert::ExtendedStringView key,
-                  ObjectIdentifier value,
+  Status SetValue(convert::ExtendedStringView key, ObjectIdentifier value,
                   KeyPriority priority);
   Status Delete(convert::ExtendedStringView key);
 

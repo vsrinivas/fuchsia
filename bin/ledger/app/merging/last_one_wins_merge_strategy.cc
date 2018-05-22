@@ -47,8 +47,7 @@ class LastOneWinsMergeStrategy::LastOneWinsMerger {
 };
 
 LastOneWinsMergeStrategy::LastOneWinsMerger::LastOneWinsMerger(
-    storage::PageStorage* storage,
-    std::unique_ptr<const storage::Commit> left,
+    storage::PageStorage* storage, std::unique_ptr<const storage::Commit> left,
     std::unique_ptr<const storage::Commit> right,
     std::unique_ptr<const storage::Commit> ancestor,
     std::function<void(Status)> callback)
@@ -170,8 +169,7 @@ LastOneWinsMergeStrategy::~LastOneWinsMergeStrategy() {}
 void LastOneWinsMergeStrategy::SetOnError(std::function<void()> /*on_error*/) {}
 
 void LastOneWinsMergeStrategy::Merge(
-    storage::PageStorage* storage,
-    PageManager* /*page_manager*/,
+    storage::PageStorage* storage, PageManager* /*page_manager*/,
     std::unique_ptr<const storage::Commit> head_1,
     std::unique_ptr<const storage::Commit> head_2,
     std::unique_ptr<const storage::Commit> ancestor,

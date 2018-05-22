@@ -12,10 +12,8 @@
 namespace cloud_sync {
 
 LedgerSyncImpl::LedgerSyncImpl(
-    ledger::Environment* environment,
-    const UserConfig* user_config,
-    encryption::EncryptionService* encryption_service,
-    fxl::StringView app_id,
+    ledger::Environment* environment, const UserConfig* user_config,
+    encryption::EncryptionService* encryption_service, fxl::StringView app_id,
     std::unique_ptr<SyncStateWatcher> watcher)
     : environment_(environment),
       user_config_(user_config),
@@ -36,8 +34,7 @@ LedgerSyncImpl::~LedgerSyncImpl() {
 
 std::unique_ptr<PageSync> LedgerSyncImpl::CreatePageSync(
     storage::PageStorage* page_storage,
-    storage::PageSyncClient* page_sync_client,
-    fxl::Closure error_callback) {
+    storage::PageSyncClient* page_sync_client, fxl::Closure error_callback) {
   FXL_DCHECK(page_storage);
 
   cloud_provider::PageCloudPtr page_cloud;

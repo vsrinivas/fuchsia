@@ -45,8 +45,7 @@ class TestWithPageStorage : public gtest::TestWithLoop {
   // Returns a function that, when executed, adds the provided key and object to
   // a journal.
   std::function<void(storage::Journal*)> AddKeyValueToJournal(
-      const std::string& key,
-      std::string value);
+      const std::string& key, std::string value);
 
   // Returns a function that, when executed, deleted the provided key from a
   // journal.
@@ -54,8 +53,7 @@ class TestWithPageStorage : public gtest::TestWithLoop {
       const std::string& key);
 
   ::testing::AssertionResult GetValue(
-      storage::ObjectIdentifier object_identifier,
-      std::string* value);
+      storage::ObjectIdentifier object_identifier, std::string* value);
 
   ::testing::AssertionResult CreatePageStorage(
       std::unique_ptr<storage::PageStorage>* page_storage);

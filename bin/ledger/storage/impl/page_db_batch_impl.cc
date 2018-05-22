@@ -28,8 +28,7 @@ PageDbBatchImpl::PageDbBatchImpl(std::unique_ptr<Db::Batch> batch, PageDb* db)
 
 PageDbBatchImpl::~PageDbBatchImpl() {}
 
-Status PageDbBatchImpl::AddHead(CoroutineHandler* handler,
-                                CommitIdView head,
+Status PageDbBatchImpl::AddHead(CoroutineHandler* handler, CommitIdView head,
                                 int64_t timestamp) {
   return batch_->Put(handler, HeadRow::GetKeyFor(head),
                      SerializeNumber(timestamp));
@@ -87,10 +86,8 @@ Status PageDbBatchImpl::RemoveJournal(CoroutineHandler* handler,
 }
 
 Status PageDbBatchImpl::AddJournalEntry(
-    coroutine::CoroutineHandler* handler,
-    const JournalId& journal_id,
-    fxl::StringView key,
-    const ObjectIdentifier& object_identifier,
+    coroutine::CoroutineHandler* handler, const JournalId& journal_id,
+    fxl::StringView key, const ObjectIdentifier& object_identifier,
     KeyPriority priority) {
   return batch_->Put(handler, JournalEntryRow::GetKeyFor(journal_id, key),
                      JournalEntryRow::GetValueFor(object_identifier, priority));
@@ -104,8 +101,7 @@ Status PageDbBatchImpl::RemoveJournalEntry(coroutine::CoroutineHandler* handler,
 }
 
 Status PageDbBatchImpl::WriteObject(
-    CoroutineHandler* handler,
-    ObjectIdentifier object_identifier,
+    CoroutineHandler* handler, ObjectIdentifier object_identifier,
     std::unique_ptr<DataSource::DataChunk> content,
     PageDbObjectStatus object_status) {
   FXL_DCHECK(object_status > PageDbObjectStatus::UNKNOWN);

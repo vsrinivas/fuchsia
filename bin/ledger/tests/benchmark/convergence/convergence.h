@@ -42,11 +42,8 @@ struct DeviceContext {
 //   --server-id=<string> the ID of the Firebase instance to use for syncing
 class ConvergenceBenchmark : public ledger::PageWatcher {
  public:
-  ConvergenceBenchmark(async::Loop* loop,
-                       int entry_count,
-                       int value_size,
-                       int device_count,
-                       std::string server_id);
+  ConvergenceBenchmark(async::Loop* loop, int entry_count, int value_size,
+                       int device_count, std::string server_id);
 
   void Run();
 

@@ -42,8 +42,7 @@ struct AppParams {
 };
 
 fxl::AutoCall<fxl::Closure> SetupCobalt(
-    bool disable_statistics,
-    async_t* async,
+    bool disable_statistics, async_t* async,
     component::ApplicationContext* application_context) {
   if (disable_statistics) {
     return fxl::MakeAutoCall<fxl::Closure>([] {});

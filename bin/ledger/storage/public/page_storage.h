@@ -68,8 +68,7 @@ class PageStorage : public PageSyncClient {
   // |EXPLICIT|, all changes will be lost after a crash. Otherwise, changes to
   // implicit journals will be committed on system restart.
   virtual void StartCommit(
-      const CommitId& commit_id,
-      JournalType journal_type,
+      const CommitId& commit_id, JournalType journal_type,
       std::function<void(Status, std::unique_ptr<Journal>)> callback) = 0;
   // Starts a new journal for a merge commit, based on the given commits.
   // |left| and |right| must both be in the set of head commits. All
@@ -77,8 +76,7 @@ class PageStorage : public PageSyncClient {
   // commit. Merge commits are always explicit, that is in case of a crash all
   // changes to the journal will be lost.
   virtual void StartMergeCommit(
-      const CommitId& left,
-      const CommitId& right,
+      const CommitId& left, const CommitId& right,
       std::function<void(Status, std::unique_ptr<Journal>)> callback) = 0;
 
   // Commits the given |journal| and when finished, returns the success/failure
@@ -124,8 +122,7 @@ class PageStorage : public PageSyncClient {
   // then a network request may be made if the requested object is not present
   // locally.
   virtual void GetObject(
-      ObjectIdentifier object_identifier,
-      Location location,
+      ObjectIdentifier object_identifier, Location location,
       std::function<void(Status, std::unique_ptr<const Object>)> callback) = 0;
   // Finds the piece associated with the given |object_identifier|. The result
   // or an error will be returned through the given |callback|. Only local
@@ -138,8 +135,7 @@ class PageStorage : public PageSyncClient {
   // Sets the opaque sync metadata associated with this page associated with the
   // given |key|. This state is persisted through restarts and can be retrieved
   // using |GetSyncMetadata()|.
-  virtual void SetSyncMetadata(fxl::StringView key,
-                               fxl::StringView value,
+  virtual void SetSyncMetadata(fxl::StringView key, fxl::StringView value,
                                std::function<void(Status)> callback) = 0;
 
   // Retrieves the opaque sync metadata associated with this page and the given
@@ -155,8 +151,7 @@ class PageStorage : public PageSyncClient {
   // false from |on_next| will immediately stop the iteration. |on_done| is
   // called once, upon successfull completion, i.e. when there are no more
   // elements or iteration was interrupted, or if an error occurs.
-  virtual void GetCommitContents(const Commit& commit,
-                                 std::string min_key,
+  virtual void GetCommitContents(const Commit& commit, std::string min_key,
                                  std::function<bool(Entry)> on_next,
                                  std::function<void(Status)> on_done) = 0;
 
@@ -164,8 +159,7 @@ class PageStorage : public PageSyncClient {
   // result. The status of |on_done| will be |OK| on success, |NOT_FOUND| if
   // there is no such key in the given commit or an error status on failure.
   virtual void GetEntryFromCommit(
-      const Commit& commit,
-      std::string key,
+      const Commit& commit, std::string key,
       std::function<void(Status, Entry)> on_done) = 0;
 
   // Iterates over the difference between the contents of two commits and calls
@@ -174,10 +168,8 @@ class PageStorage : public PageSyncClient {
   // once, upon successfull completion, i.e. when there are no more differences
   // or iteration was interrupted, or if an error occurs.
   virtual void GetCommitContentsDiff(
-      const Commit& base_commit,
-      const Commit& other_commit,
-      std::string min_key,
-      std::function<bool(EntryChange)> on_next_diff,
+      const Commit& base_commit, const Commit& other_commit,
+      std::string min_key, std::function<bool(EntryChange)> on_next_diff,
       std::function<void(Status)> on_done) = 0;
 
   // Computes the 3-way diff between a base commit and two other commits. Calls
@@ -186,10 +178,8 @@ class PageStorage : public PageSyncClient {
   // once, upon successfull completion, i.e. when there are no more differences
   // or iteration was interrupted, or if an error occurs.
   virtual void GetThreeWayContentsDiff(
-      const Commit& base_commit,
-      const Commit& left_commit,
-      const Commit& right_commit,
-      std::string min_key,
+      const Commit& base_commit, const Commit& left_commit,
+      const Commit& right_commit, std::string min_key,
       std::function<bool(ThreeWayChange)> on_next_diff,
       std::function<void(Status)> on_done) = 0;
 

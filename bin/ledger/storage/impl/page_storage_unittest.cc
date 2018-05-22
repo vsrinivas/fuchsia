@@ -61,11 +61,9 @@ class PageStorageImplAccessorForTest {
   }
 
   static std::unique_ptr<PageStorageImpl> CreateStorage(
-      async_t* async,
-      coroutine::CoroutineService* coroutine_service,
+      async_t* async, coroutine::CoroutineService* coroutine_service,
       encryption::EncryptionService* encryption_service,
-      std::unique_ptr<PageDb> page_db,
-      PageId page_id) {
+      std::unique_ptr<PageDb> page_db, PageId page_id) {
     return std::unique_ptr<PageStorageImpl>(
         new PageStorageImpl(async, coroutine_service, encryption_service,
                             std::move(page_db), std::move(page_id)));
@@ -157,8 +155,7 @@ class FakePageDbImpl : public PageDbEmptyImpl {
 
   Status Init() override { return Status::OK; }
   Status CreateJournalId(CoroutineHandler* /*handler*/,
-                         JournalType /*journal_type*/,
-                         const CommitId& /*base*/,
+                         JournalType /*journal_type*/, const CommitId& /*base*/,
                          JournalId* journal_id) override {
     *journal_id = RandomString(10);
     return Status::OK;
@@ -296,8 +293,7 @@ class PageStorageTest : public ::test::TestWithCoroutines {
 
   // Returns an empty pointer if |CommitJournal| times out.
   FXL_WARN_UNUSED_RESULT std::unique_ptr<const Commit> TryCommitJournal(
-      std::unique_ptr<Journal> journal,
-      Status expected_status) {
+      std::unique_ptr<Journal> journal, Status expected_status) {
     bool called;
     Status status;
     std::unique_ptr<const Commit> commit;
@@ -314,8 +310,8 @@ class PageStorageTest : public ::test::TestWithCoroutines {
   }
 
   // Returns an empty pointer if |TryCommitJournal| failed.
-  FXL_WARN_UNUSED_RESULT std::unique_ptr<const Commit>
-  TryCommitFromLocal(JournalType type, int keys, size_t min_key_size = 0) {
+  FXL_WARN_UNUSED_RESULT std::unique_ptr<const Commit> TryCommitFromLocal(
+      JournalType type, int keys, size_t min_key_size = 0) {
     bool called;
     Status status;
     std::unique_ptr<Journal> journal;
@@ -374,8 +370,7 @@ class PageStorageTest : public ::test::TestWithCoroutines {
   }
 
   std::unique_ptr<const Object> TryGetObject(
-      const ObjectIdentifier& object_identifier,
-      PageStorage::Location location,
+      const ObjectIdentifier& object_identifier, PageStorage::Location location,
       Status expected_status = Status::OK) {
     bool called;
     Status status;
@@ -434,8 +429,7 @@ class PageStorageTest : public ::test::TestWithCoroutines {
   }
 
   Status WriteObject(
-      CoroutineHandler* handler,
-      ObjectData* data,
+      CoroutineHandler* handler, ObjectData* data,
       PageDbObjectStatus object_status = PageDbObjectStatus::TRANSIENT) {
     return PageStorageImplAccessorForTest::GetDb(storage_).WriteObject(
         handler, data->object_identifier, data->ToChunk(), object_status);
@@ -449,8 +443,7 @@ class PageStorageTest : public ::test::TestWithCoroutines {
   }
 
   ::testing::AssertionResult ObjectIsUntracked(
-      ObjectIdentifier object_identifier,
-      bool expected_untracked) {
+      ObjectIdentifier object_identifier, bool expected_untracked) {
     bool called;
     Status status;
     bool is_untracked;

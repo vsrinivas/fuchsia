@@ -49,11 +49,12 @@ void BaseIntegrationTest::TearDown() {
 
 zx::socket BaseIntegrationTest::StreamDataToSocket(std::string data) {
   socket::SocketPair sockets;
-  async::PostTask(loop_.async(), fxl::MakeCopyable(
-      [socket = std::move(sockets.socket1), data = std::move(data)]() mutable {
-        auto writer = new socket::StringSocketWriter();
-        writer->Start(std::move(data), std::move(socket));
-      }));
+  async::PostTask(loop_.async(),
+                  fxl::MakeCopyable([socket = std::move(sockets.socket1),
+                                     data = std::move(data)]() mutable {
+                    auto writer = new socket::StringSocketWriter();
+                    writer->Start(std::move(data), std::move(socket));
+                  }));
   return std::move(sockets.socket2);
 }
 

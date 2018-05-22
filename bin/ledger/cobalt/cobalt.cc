@@ -17,10 +17,9 @@ cobalt::CobaltContext* g_cobalt_context = nullptr;
 }  // namespace
 
 fxl::AutoCall<fxl::Closure> InitializeCobalt(
-    async_t* async,
-    component::ApplicationContext* app_context) {
-  return cobalt::InitializeCobalt(async, app_context,
-                                  kLedgerCobaltProjectId, &g_cobalt_context);
+    async_t* async, component::ApplicationContext* app_context) {
+  return cobalt::InitializeCobalt(async, app_context, kLedgerCobaltProjectId,
+                                  &g_cobalt_context);
 }
 
 void ReportEvent(CobaltEvent event) {

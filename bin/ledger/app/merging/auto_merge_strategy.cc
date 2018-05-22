@@ -18,8 +18,7 @@
 namespace ledger {
 class AutoMergeStrategy::AutoMerger {
  public:
-  AutoMerger(storage::PageStorage* storage,
-             PageManager* page_manager,
+  AutoMerger(storage::PageStorage* storage, PageManager* page_manager,
              ConflictResolver* conflict_resolver,
              std::unique_ptr<const storage::Commit> left,
              std::unique_ptr<const storage::Commit> right,
@@ -62,8 +61,7 @@ class AutoMergeStrategy::AutoMerger {
 };
 
 AutoMergeStrategy::AutoMerger::AutoMerger(
-    storage::PageStorage* storage,
-    PageManager* page_manager,
+    storage::PageStorage* storage, PageManager* page_manager,
     ConflictResolver* conflict_resolver,
     std::unique_ptr<const storage::Commit> left,
     std::unique_ptr<const storage::Commit> right,

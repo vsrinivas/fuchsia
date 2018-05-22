@@ -119,8 +119,7 @@ class PageImplTest : public gtest::TestWithMessageLoop {
     return result;
   }
 
-  void AddEntries(int entry_count,
-                  size_t min_key_size = 0u,
+  void AddEntries(int entry_count, size_t min_key_size = 0u,
                   size_t min_value_size = 0u) {
     FXL_DCHECK(entry_count <= 10000);
     auto callback_statusok = [this](Status status) {
@@ -1361,7 +1360,8 @@ TEST_F(PageImplTest, ParallelPut) {
 
   std::string actual_value1;
   auto callback_getvalue1 = [this, &actual_value1](
-                                Status status, fuchsia::mem::BufferPtr returned_value) {
+                                Status status,
+                                fuchsia::mem::BufferPtr returned_value) {
     EXPECT_EQ(Status::OK, status);
     actual_value1 = ToString(returned_value);
     message_loop_.PostQuitTask();
@@ -1371,7 +1371,8 @@ TEST_F(PageImplTest, ParallelPut) {
 
   std::string actual_value2;
   auto callback_getvalue2 = [this, &actual_value2](
-                                Status status, fuchsia::mem::BufferPtr returned_value) {
+                                Status status,
+                                fuchsia::mem::BufferPtr returned_value) {
     EXPECT_EQ(Status::OK, status);
     actual_value2 = ToString(returned_value);
     message_loop_.PostQuitTask();

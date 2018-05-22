@@ -27,8 +27,7 @@ namespace {
 class ConflictResolverClientTest : public test::TestWithPageStorage {
  public:
   ConflictResolverClientTest()
-      : environment_(
-            EnvironmentBuilder().SetAsync(dispatcher()).Build()) {}
+      : environment_(EnvironmentBuilder().SetAsync(dispatcher()).Build()) {}
   ~ConflictResolverClientTest() override {}
 
  protected:

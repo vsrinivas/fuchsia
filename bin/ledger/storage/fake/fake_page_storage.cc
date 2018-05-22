@@ -48,9 +48,7 @@ FakePageStorage::FakePageStorage(async_t* async, PageId page_id)
 
 FakePageStorage::~FakePageStorage() {}
 
-PageId FakePageStorage::GetId() {
-  return page_id_;
-}
+PageId FakePageStorage::GetId() { return page_id_; }
 
 void FakePageStorage::GetHeadCommitIds(
     std::function<void(Status, std::vector<CommitId>)> callback) {
@@ -80,8 +78,7 @@ void FakePageStorage::GetCommit(
 }
 
 void FakePageStorage::StartCommit(
-    const CommitId& commit_id,
-    JournalType /*journal_type*/,
+    const CommitId& commit_id, JournalType /*journal_type*/,
     std::function<void(Status, std::unique_ptr<Journal>)> callback) {
   uint64_t next_generation = 0;
   if (journals_.find(commit_id) != journals_.end()) {
@@ -95,8 +92,7 @@ void FakePageStorage::StartCommit(
 }
 
 void FakePageStorage::StartMergeCommit(
-    const CommitId& left,
-    const CommitId& right,
+    const CommitId& left, const CommitId& right,
     std::function<void(Status, std::unique_ptr<Journal>)> callback) {
   auto delegate = std::make_unique<FakeJournalDelegate>(
       left, right, autocommit_,
@@ -125,13 +121,12 @@ void FakePageStorage::CommitJournal(
         if (!drop_commit_notifications_) {
           for (CommitWatcher* watcher : watchers_) {
             async::PostTask(
-                async_,
-                fxl::MakeCopyable(
-                    [watcher, commit = commit->Clone()]() mutable {
-                      std::vector<std::unique_ptr<const Commit>> commits;
-                      commits.push_back(std::move(commit));
-                      watcher->OnNewCommits(commits, ChangeSource::LOCAL);
-                    }));
+                async_, fxl::MakeCopyable([watcher,
+                                           commit = commit->Clone()]() mutable {
+                  std::vector<std::unique_ptr<const Commit>> commits;
+                  commits.push_back(std::move(commit));
+                  watcher->OnNewCommits(commits, ChangeSource::LOCAL);
+                }));
           }
         }
         callback(status, std::move(commit));
@@ -182,8 +177,7 @@ void FakePageStorage::AddObjectFromLocal(
 }
 
 void FakePageStorage::GetObject(
-    ObjectIdentifier object_identifier,
-    Location /*location*/,
+    ObjectIdentifier object_identifier, Location /*location*/,
     std::function<void(Status, std::unique_ptr<const Object>)> callback) {
   GetPiece(object_identifier, std::move(callback));
 }
@@ -203,8 +197,7 @@ void FakePageStorage::GetPiece(
         callback(Status::OK,
                  std::make_unique<FakeObject>(object_identifier, it->second));
       });
-  async::PostDelayedTask(async_, [this] { SendNextObject(); },
-                         kTaskDelay);
+  async::PostDelayedTask(async_, [this] { SendNextObject(); }, kTaskDelay);
 }
 
 void FakePageStorage::GetCommitContents(const Commit& commit,
@@ -243,8 +236,7 @@ void FakePageStorage::GetCommitContents(const Commit& commit,
 }
 
 void FakePageStorage::GetEntryFromCommit(
-    const Commit& commit,
-    std::string key,
+    const Commit& commit, std::string key,
     std::function<void(Status, Entry)> callback) {
   FakeJournalDelegate* journal = journals_[commit.GetId()].get();
   if (!journal) {

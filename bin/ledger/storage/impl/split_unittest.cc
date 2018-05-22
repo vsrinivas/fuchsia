@@ -107,8 +107,7 @@ void DoSplit(DataSource* source, std::function<void(SplitResult)> callback) {
 ::testing::AssertionResult ReadFile(
     const ObjectDigest& digest,
     const std::map<ObjectDigest, std::unique_ptr<DataSource::DataChunk>>& data,
-    std::string* result,
-    size_t expected_size) {
+    std::string* result, size_t expected_size) {
   size_t start_size = result->size();
   switch (GetObjectDigestType(digest)) {
     case ObjectDigestType::INLINE: {
@@ -205,18 +204,12 @@ TEST_P(SplitBigValueTest, BigValues) {
   EXPECT_EQ(content, found_content);
 }
 
-INSTANTIATE_TEST_CASE_P(SplitTest,
-                        SplitSmallValueTest,
-                        ::testing::Values(0,
-                                          12,
-                                          kStorageHashSize,
-                                          kStorageHashSize + 1,
-                                          100,
-                                          1024,
+INSTANTIATE_TEST_CASE_P(SplitTest, SplitSmallValueTest,
+                        ::testing::Values(0, 12, kStorageHashSize,
+                                          kStorageHashSize + 1, 100, 1024,
                                           kMinChunkSize));
 
-INSTANTIATE_TEST_CASE_P(SplitTest,
-                        SplitBigValueTest,
+INSTANTIATE_TEST_CASE_P(SplitTest, SplitBigValueTest,
                         ::testing::Values(kMaxChunkSize + 1,
                                           32 * kMaxChunkSize));
 

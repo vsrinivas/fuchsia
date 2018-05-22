@@ -24,12 +24,8 @@ std::unique_ptr<storage::Commit> TestCommit::Clone() const {
   return std::make_unique<TestCommit>(id, content);
 }
 
-const storage::CommitId& TestCommit::GetId() const {
-  return id;
-}
+const storage::CommitId& TestCommit::GetId() const { return id; }
 
-fxl::StringView TestCommit::GetStorageBytes() const {
-  return content;
-}
+fxl::StringView TestCommit::GetStorageBytes() const { return content; }
 
 }  // namespace cloud_sync

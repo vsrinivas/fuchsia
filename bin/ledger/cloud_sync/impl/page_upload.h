@@ -37,8 +37,7 @@ class PageUpload : public storage::CommitWatcher {
   PageUpload(callback::ScopedTaskRunner* task_runner,
              storage::PageStorage* storage,
              encryption::EncryptionService* encryption_service,
-             cloud_provider::PageCloudPtr* page_cloud,
-             Delegate* delegate,
+             cloud_provider::PageCloudPtr* page_cloud, Delegate* delegate,
              std::unique_ptr<backoff::Backoff> backoff);
 
   ~PageUpload() override;

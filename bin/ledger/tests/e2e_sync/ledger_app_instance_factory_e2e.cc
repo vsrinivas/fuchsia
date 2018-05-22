@@ -47,8 +47,7 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     CloudProviderFirebaseFactory* cloud_provider_firebase_factory,
     std::string server_id)
     : test::LedgerAppInstanceFactory::LedgerAppInstance(
-          convert::ToArray(kLedgerName),
-          std::move(ledger_repository_factory)),
+          convert::ToArray(kLedgerName), std::move(ledger_repository_factory)),
       controller_(std::move(controller)),
       cloud_provider_firebase_factory_(cloud_provider_firebase_factory),
       server_id_(std::move(server_id)) {}

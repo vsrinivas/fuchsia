@@ -98,13 +98,10 @@ storage::Status FillSingleEntry(const storage::Object& object,
 // the provided object.
 template <typename EntryType>
 void FillEntries(
-    storage::PageStorage* page_storage,
-    const std::string& key_prefix,
-    const storage::Commit* commit,
-    fidl::VectorPtr<uint8_t> key_start,
+    storage::PageStorage* page_storage, const std::string& key_prefix,
+    const storage::Commit* commit, fidl::VectorPtr<uint8_t> key_start,
     fidl::VectorPtr<uint8_t> token,
-    const std::function<void(Status,
-                             fidl::VectorPtr<EntryType>,
+    const std::function<void(Status, fidl::VectorPtr<EntryType>,
                              fidl::VectorPtr<uint8_t>)>& callback) {
   // |token| represents the first key to be returned in the list of entries.
   // Initially, all entries starting from |token| are requested from storage.
@@ -256,8 +253,7 @@ void FillEntries(
 
 PageSnapshotImpl::PageSnapshotImpl(
     storage::PageStorage* page_storage,
-    std::unique_ptr<const storage::Commit> commit,
-    std::string key_prefix)
+    std::unique_ptr<const storage::Commit> commit, std::string key_prefix)
     : page_storage_(page_storage),
       commit_(std::move(commit)),
       key_prefix_(std::move(key_prefix)) {}
@@ -414,8 +410,7 @@ void PageSnapshotImpl::Fetch(fidl::VectorPtr<uint8_t> key,
 }
 
 void PageSnapshotImpl::FetchPartial(fidl::VectorPtr<uint8_t> key,
-                                    int64_t offset,
-                                    int64_t max_size,
+                                    int64_t offset, int64_t max_size,
                                     FetchPartialCallback callback) {
   auto timed_callback =
       TRACE_CALLBACK(callback, "ledger", "snapshot_fetch_partial");

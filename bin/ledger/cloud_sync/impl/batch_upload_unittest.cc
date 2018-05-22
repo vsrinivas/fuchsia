@@ -91,8 +91,8 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
 
   void GetUnsyncedPieces(
       std::function<void(storage::Status,
-                         std::vector<storage::ObjectIdentifier>)> callback)
-      override {
+                         std::vector<storage::ObjectIdentifier>)>
+          callback) override {
     std::vector<storage::ObjectIdentifier> object_identifiers;
     for (auto& digest_object_pair : unsynced_objects_to_return) {
       object_identifiers.push_back(digest_object_pair.first);

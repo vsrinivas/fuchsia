@@ -25,8 +25,7 @@ namespace ledger {
 class ConflictResolverClient : public MergeResultProvider {
  public:
   explicit ConflictResolverClient(
-      storage::PageStorage* storage,
-      PageManager* page_manager,
+      storage::PageStorage* storage, PageManager* page_manager,
       ConflictResolver* conflict_resolver,
       std::unique_ptr<const storage::Commit> left,
       std::unique_ptr<const storage::Commit> right,
@@ -45,10 +44,8 @@ class ConflictResolverClient : public MergeResultProvider {
   void Finalize(Status status);
 
   // Performs a diff of the given type on the conflict.
-  void GetDiff(diff_utils::DiffType type,
-               fidl::VectorPtr<uint8_t> token,
-               const std::function<void(Status,
-                                        fidl::VectorPtr<DiffEntry>,
+  void GetDiff(diff_utils::DiffType type, fidl::VectorPtr<uint8_t> token,
+               const std::function<void(Status, fidl::VectorPtr<DiffEntry>,
                                         fidl::VectorPtr<uint8_t>)>& callback);
 
   // MergeResultProvider:

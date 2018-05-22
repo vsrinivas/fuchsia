@@ -38,12 +38,10 @@ class FakePageStorage : public PageStorageEmptyImpl {
                  std::function<void(Status, std::unique_ptr<const Commit>)>
                      callback) override;
   void StartCommit(
-      const CommitId& commit_id,
-      JournalType journal_type,
+      const CommitId& commit_id, JournalType journal_type,
       std::function<void(Status, std::unique_ptr<Journal>)> callback) override;
   void StartMergeCommit(
-      const CommitId& left,
-      const CommitId& right,
+      const CommitId& left, const CommitId& right,
       std::function<void(Status, std::unique_ptr<Journal>)> callback) override;
   void CommitJournal(
       std::unique_ptr<Journal> journal,
@@ -56,19 +54,16 @@ class FakePageStorage : public PageStorageEmptyImpl {
   void AddObjectFromLocal(
       std::unique_ptr<DataSource> data_source,
       std::function<void(Status, ObjectIdentifier)> callback) override;
-  void GetObject(ObjectIdentifier object_identifier,
-                 Location location,
+  void GetObject(ObjectIdentifier object_identifier, Location location,
                  std::function<void(Status, std::unique_ptr<const Object>)>
                      callback) override;
   void GetPiece(ObjectIdentifier object_identifier,
                 std::function<void(Status, std::unique_ptr<const Object>)>
                     callback) override;
-  void GetCommitContents(const Commit& commit,
-                         std::string min_key,
+  void GetCommitContents(const Commit& commit, std::string min_key,
                          std::function<bool(Entry)> on_next,
                          std::function<void(Status)> on_done) override;
-  void GetEntryFromCommit(const Commit& commit,
-                          std::string key,
+  void GetEntryFromCommit(const Commit& commit, std::string key,
                           std::function<void(Status, Entry)> callback) override;
 
   // For testing:

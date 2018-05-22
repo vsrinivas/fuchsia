@@ -37,8 +37,7 @@ struct GenerationComparator {
 // At each step of the iteration we request the parent commits of all commits
 // with the same generation.
 storage::Status FindCommonAncestorSync(
-    coroutine::CoroutineHandler* handler,
-    storage::PageStorage* storage,
+    coroutine::CoroutineHandler* handler, storage::PageStorage* storage,
     std::unique_ptr<const storage::Commit> head1,
     std::unique_ptr<const storage::Commit> head2,
     std::unique_ptr<const storage::Commit>* result) {

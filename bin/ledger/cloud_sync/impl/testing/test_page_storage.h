@@ -28,8 +28,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
  public:
   explicit TestPageStorage(async_t* async);
 
-  std::unique_ptr<TestCommit> NewCommit(std::string id,
-                                        std::string content,
+  std::unique_ptr<TestCommit> NewCommit(std::string id, std::string content,
                                         bool unsynced = true);
 
   storage::PageId GetId() override;
@@ -51,8 +50,8 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
 
   void GetUnsyncedPieces(
       std::function<void(storage::Status,
-                         std::vector<storage::ObjectIdentifier>)> callback)
-      override;
+                         std::vector<storage::ObjectIdentifier>)>
+          callback) override;
 
   storage::Status AddCommitWatcher(storage::CommitWatcher* watcher) override;
 
@@ -66,8 +65,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   void MarkCommitSynced(const storage::CommitId& commit_id,
                         std::function<void(storage::Status)> callback) override;
 
-  void SetSyncMetadata(fxl::StringView key,
-                       fxl::StringView value,
+  void SetSyncMetadata(fxl::StringView key, fxl::StringView value,
                        std::function<void(storage::Status)> callback) override;
 
   void GetSyncMetadata(

@@ -34,8 +34,7 @@ class LRUCache {
   //   callback to returns its result. It must return |ok_status| as a status
   //   when the request is successful. Any other return value is considered a
   //   failure.
-  LRUCache(size_t size,
-           S ok_status,
+  LRUCache(size_t size, S ok_status,
            std::function<void(K, std::function<void(S, V)>)> generator)
       : size_(size), ok_status_(ok_status), generator_(std::move(generator)) {}
 

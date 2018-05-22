@@ -68,8 +68,7 @@ void FakeEncryptionService::GetObjectName(
 }
 
 void FakeEncryptionService::EncryptObject(
-    storage::ObjectIdentifier /*object_identifier*/,
-    fsl::SizedVmo content,
+    storage::ObjectIdentifier /*object_identifier*/, fsl::SizedVmo content,
     std::function<void(Status, std::string)> callback) {
   std::string content_as_string;
   if (!fsl::StringFromVmo(content, &content_as_string)) {
@@ -84,8 +83,7 @@ void FakeEncryptionService::EncryptObject(
 }
 
 void FakeEncryptionService::DecryptObject(
-    storage::ObjectIdentifier /*object_identifier*/,
-    std::string encrypted_data,
+    storage::ObjectIdentifier /*object_identifier*/, std::string encrypted_data,
     std::function<void(Status, std::string)> callback) {
   std::string result = DecryptObjectSynchronous(encrypted_data);
   async::PostTask(async_, [callback = std::move(callback),

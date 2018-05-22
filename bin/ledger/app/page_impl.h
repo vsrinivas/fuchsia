@@ -26,25 +26,20 @@ class PageImpl : public Page {
                    fidl::InterfaceHandle<PageWatcher> watcher,
                    GetSnapshotCallback callback) override;
 
-  void Put(fidl::VectorPtr<uint8_t> key,
-           fidl::VectorPtr<uint8_t> value,
+  void Put(fidl::VectorPtr<uint8_t> key, fidl::VectorPtr<uint8_t> value,
            PutCallback callback) override;
 
   void PutWithPriority(fidl::VectorPtr<uint8_t> key,
-                       fidl::VectorPtr<uint8_t> value,
-                       Priority priority,
+                       fidl::VectorPtr<uint8_t> value, Priority priority,
                        PutWithPriorityCallback callback) override;
 
-  void PutReference(fidl::VectorPtr<uint8_t> key,
-                    Reference reference,
-                    Priority priority,
-                    PutReferenceCallback callback) override;
+  void PutReference(fidl::VectorPtr<uint8_t> key, Reference reference,
+                    Priority priority, PutReferenceCallback callback) override;
 
   void Delete(fidl::VectorPtr<uint8_t> key, DeleteCallback callback) override;
 
   void CreateReferenceFromSocket(
-      uint64_t size,
-      zx::socket data,
+      uint64_t size, zx::socket data,
       CreateReferenceFromSocketCallback callback) override;
 
   void CreateReferenceFromVmo(fuchsia::mem::Buffer data,

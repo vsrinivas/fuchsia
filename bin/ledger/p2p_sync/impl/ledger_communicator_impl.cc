@@ -26,8 +26,7 @@ void LedgerCommunicatorImpl::set_on_delete(fxl::Closure on_delete) {
 }
 
 void LedgerCommunicatorImpl::OnDeviceChange(
-    fxl::StringView remote_device,
-    p2p_provider::DeviceChangeType change_type) {
+    fxl::StringView remote_device, p2p_provider::DeviceChangeType change_type) {
   for (const auto& page : pages_) {
     page.second->OnDeviceChange(remote_device, change_type);
   }
@@ -62,8 +61,7 @@ void LedgerCommunicatorImpl::OnNewResponse(fxl::StringView source,
 }
 
 std::unique_ptr<PageCommunicator> LedgerCommunicatorImpl::GetPageCommunicator(
-    storage::PageStorage* storage,
-    storage::PageSyncClient* sync_client) {
+    storage::PageStorage* storage, storage::PageSyncClient* sync_client) {
   storage::PageId page_id = storage->GetId();
 
   FXL_DCHECK(pages_.find(page_id) == pages_.end());

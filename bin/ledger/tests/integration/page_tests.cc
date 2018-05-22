@@ -136,8 +136,7 @@ TEST_P(PageIntegrationTest, MultipleLedgerConnections) {
   EXPECT_EQ(ledger::Status::OK, status);
 }
 
-INSTANTIATE_TEST_CASE_P(PageIntegrationTest,
-                        PageIntegrationTest,
+INSTANTIATE_TEST_CASE_P(PageIntegrationTest, PageIntegrationTest,
                         ::testing::ValuesIn(GetLedgerAppInstanceFactories()));
 
 }  // namespace

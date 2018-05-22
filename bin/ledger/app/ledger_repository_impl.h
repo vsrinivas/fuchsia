@@ -25,8 +25,7 @@ namespace ledger {
 class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
                              public ledger_internal::LedgerRepositoryDebug {
  public:
-  LedgerRepositoryImpl(std::string base_storage_dir,
-                       Environment* environment,
+  LedgerRepositoryImpl(std::string base_storage_dir, Environment* environment,
                        std::unique_ptr<SyncWatcherSet> watchers,
                        std::unique_ptr<sync_coordinator::UserSync> user_sync);
   ~LedgerRepositoryImpl() override;
@@ -71,8 +70,7 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
   encryption::EncryptionServiceFactoryImpl encryption_service_factory_;
   std::unique_ptr<SyncWatcherSet> watchers_;
   std::unique_ptr<sync_coordinator::UserSync> user_sync_;
-  callback::AutoCleanableMap<std::string,
-                             LedgerManager,
+  callback::AutoCleanableMap<std::string, LedgerManager,
                              convert::StringViewComparator>
       ledger_managers_;
   fidl::BindingSet<ledger_internal::LedgerRepository> bindings_;

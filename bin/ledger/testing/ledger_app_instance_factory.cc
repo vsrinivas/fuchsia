@@ -64,8 +64,7 @@ ledger::PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestPage() {
 }
 
 ledger::PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetPage(
-    const ledger::PageIdPtr& page_id,
-    ledger::Status expected_status) {
+    const ledger::PageIdPtr& page_id, ledger::Status expected_status) {
   ledger::PagePtr page_ptr;
   ledger::Status status;
   ledger::LedgerPtr ledger = GetTestLedger();
@@ -78,8 +77,7 @@ ledger::PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetPage(
 }
 
 void LedgerAppInstanceFactory::LedgerAppInstance::DeletePage(
-    const ledger::PageId& page_id,
-    ledger::Status expected_status) {
+    const ledger::PageId& page_id, ledger::Status expected_status) {
   fidl::InterfaceHandle<ledger::Page> page;
   ledger::Status status;
   ledger::LedgerPtr ledger = GetTestLedger();

@@ -18,8 +18,7 @@ class EncryptionServiceTest : public gtest::TestWithLoop {
   EncryptionServiceTest() : encryption_service_(dispatcher(), "namespace_id") {}
 
  protected:
-  void EncryptCommit(std::string commit_storage,
-                     Status* status,
+  void EncryptCommit(std::string commit_storage, Status* status,
                      std::string* result) {
     bool called;
     encryption_service_.EncryptCommit(
@@ -30,8 +29,7 @@ class EncryptionServiceTest : public gtest::TestWithLoop {
   }
 
   void DecryptCommit(convert::ExtendedStringView encrypted_commit_storage,
-                     Status* status,
-                     std::string* result) {
+                     Status* status, std::string* result) {
     bool called;
     encryption_service_.DecryptCommit(
         encrypted_commit_storage,
@@ -41,8 +39,7 @@ class EncryptionServiceTest : public gtest::TestWithLoop {
   }
 
   void GetObjectName(storage::ObjectIdentifier object_identifier,
-                     Status* status,
-                     std::string* result) {
+                     Status* status, std::string* result) {
     bool called;
     encryption_service_.GetObjectName(
         std::move(object_identifier),
@@ -52,8 +49,7 @@ class EncryptionServiceTest : public gtest::TestWithLoop {
   }
 
   void EncryptObject(storage::ObjectIdentifier object_identifier,
-                     fsl::SizedVmo content,
-                     Status* status,
+                     fsl::SizedVmo content, Status* status,
                      std::string* result) {
     bool called;
     encryption_service_.EncryptObject(
@@ -64,8 +60,7 @@ class EncryptionServiceTest : public gtest::TestWithLoop {
   }
 
   void DecryptObject(storage::ObjectIdentifier object_identifier,
-                     std::string encrypted_data,
-                     Status* status,
+                     std::string encrypted_data, Status* status,
                      std::string* result) {
     bool called;
     encryption_service_.DecryptObject(

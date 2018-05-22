@@ -18,15 +18,15 @@ namespace {
 // to compute the diff. |on_next| will be called for each diff entry.
 class IteratorPair {
  public:
-  IteratorPair(SynchronousStorage* storage,
-               std::function<bool(std::unique_ptr<Entry>,
-                                  std::unique_ptr<Entry>)> on_next)
+  IteratorPair(
+      SynchronousStorage* storage,
+      std::function<bool(std::unique_ptr<Entry>, std::unique_ptr<Entry>)>
+          on_next)
       : on_next_(std::move(on_next)), left_(storage), right_(storage) {}
 
   // Initialize the pair with the ids of both roots.
   Status Init(ObjectIdentifier left_node_identifier,
-              ObjectIdentifier right_node_identifier,
-              fxl::StringView min_key) {
+              ObjectIdentifier right_node_identifier, fxl::StringView min_key) {
     RETURN_ON_ERROR(left_.Init(left_node_identifier));
     RETURN_ON_ERROR(right_.Init(right_node_identifier));
     if (!min_key.empty()) {
@@ -339,8 +339,7 @@ class ThreeWayIterator {
 
   Status Init(ObjectIdentifier base_node_identifier,
               ObjectIdentifier left_node_identifier,
-              ObjectIdentifier right_node_identifier,
-              fxl::StringView min_key) {
+              ObjectIdentifier right_node_identifier, fxl::StringView min_key) {
     RETURN_ON_ERROR(base_left_iterators_->Init(base_node_identifier,
                                                left_node_identifier, min_key));
     RETURN_ON_ERROR(base_right_iterators_->Init(
@@ -521,11 +520,9 @@ Status ForEachDiffInternal(SynchronousStorage* storage,
 }  // namespace
 
 Status ForEachThreeWayDiffInternal(
-    SynchronousStorage* storage,
-    ObjectIdentifier base_node_identifier,
+    SynchronousStorage* storage, ObjectIdentifier base_node_identifier,
     ObjectIdentifier left_node_identifier,
-    ObjectIdentifier right_node_identifier,
-    std::string min_key,
+    ObjectIdentifier right_node_identifier, std::string min_key,
     const std::function<bool(ThreeWayChange)>& on_next) {
   FXL_DCHECK(IsDigestValid(base_node_identifier.object_digest));
   FXL_DCHECK(IsDigestValid(left_node_identifier.object_digest));
@@ -554,8 +551,7 @@ Status ForEachThreeWayDiffInternal(
 void ForEachDiff(coroutine::CoroutineService* coroutine_service,
                  PageStorage* page_storage,
                  ObjectIdentifier base_root_identifier,
-                 ObjectIdentifier other_root_identifier,
-                 std::string min_key,
+                 ObjectIdentifier other_root_identifier, std::string min_key,
                  std::function<bool(EntryChange)> on_next,
                  std::function<void(Status)> on_done) {
   FXL_DCHECK(storage::IsDigestValid(base_root_identifier.object_digest));

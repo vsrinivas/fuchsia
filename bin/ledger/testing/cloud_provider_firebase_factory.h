@@ -31,8 +31,7 @@ class CloudProviderFirebaseFactory {
   void Init();
 
   void MakeCloudProvider(
-      std::string server_id,
-      std::string api_key,
+      std::string server_id, std::string api_key,
       fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
 
  private:

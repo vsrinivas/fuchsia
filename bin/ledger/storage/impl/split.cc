@@ -60,8 +60,7 @@ struct ChunkAndSize {
 class SplitContext {
  public:
   explicit SplitContext(
-      std::function<ObjectIdentifier(IterationStatus,
-                                     ObjectDigest,
+      std::function<ObjectIdentifier(IterationStatus, ObjectDigest,
                                      std::unique_ptr<DataSource::DataChunk>)>
           callback)
       : callback_(std::move(callback)),
@@ -270,8 +269,7 @@ class SplitContext {
     return DataSource::DataChunk::Create(std::move(data));
   }
 
-  std::function<ObjectIdentifier(IterationStatus,
-                                 ObjectDigest,
+  std::function<ObjectIdentifier(IterationStatus, ObjectDigest,
                                  std::unique_ptr<DataSource::DataChunk>)>
       callback_;
   bup::RollSumSplit roll_sum_split_;
@@ -345,8 +343,7 @@ void CollectPiecesInternal(ObjectIdentifier root,
 
 void SplitDataSource(
     DataSource* source,
-    std::function<ObjectIdentifier(IterationStatus,
-                                   ObjectDigest,
+    std::function<ObjectIdentifier(IterationStatus, ObjectDigest,
                                    std::unique_ptr<DataSource::DataChunk>)>
         callback) {
   SplitContext context(std::move(callback));

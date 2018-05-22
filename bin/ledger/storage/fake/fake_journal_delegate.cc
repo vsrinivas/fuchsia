@@ -23,16 +23,14 @@ storage::CommitId RandomCommitId() {
 
 }  // namespace
 
-FakeJournalDelegate::FakeJournalDelegate(CommitId parent_id,
-                                         bool autocommit,
+FakeJournalDelegate::FakeJournalDelegate(CommitId parent_id, bool autocommit,
                                          uint64_t generation = 0)
     : autocommit_(autocommit),
       id_(RandomCommitId()),
       parent_id_(std::move(parent_id)),
       generation_(generation) {}
 
-FakeJournalDelegate::FakeJournalDelegate(CommitId parent_id,
-                                         CommitId other_id,
+FakeJournalDelegate::FakeJournalDelegate(CommitId parent_id, CommitId other_id,
                                          bool autocommit,
                                          uint64_t generation = 0)
     : autocommit_(autocommit),
@@ -77,9 +75,7 @@ void FakeJournalDelegate::Commit(
   }
 }
 
-bool FakeJournalDelegate::IsCommitted() const {
-  return is_committed_;
-}
+bool FakeJournalDelegate::IsCommitted() const { return is_committed_; }
 
 Status FakeJournalDelegate::Rollback() {
   if (is_committed_ || is_rolled_back_) {
@@ -89,9 +85,7 @@ Status FakeJournalDelegate::Rollback() {
   return Status::OK;
 }
 
-bool FakeJournalDelegate::IsRolledBack() const {
-  return is_rolled_back_;
-}
+bool FakeJournalDelegate::IsRolledBack() const { return is_rolled_back_; }
 
 std::vector<CommitIdView> FakeJournalDelegate::GetParentIds() const {
   if (other_id_.empty()) {
@@ -111,9 +105,9 @@ void FakeJournalDelegate::ResolvePendingCommit(Status /*status*/) {
   callback(Status::OK, std::make_unique<const FakeCommit>(this));
 }
 
-const std::
-    map<std::string, FakeJournalDelegate::Entry, convert::StringViewComparator>&
-    FakeJournalDelegate::GetData() const {
+const std::map<std::string, FakeJournalDelegate::Entry,
+               convert::StringViewComparator>&
+FakeJournalDelegate::GetData() const {
   return data_;
 }
 

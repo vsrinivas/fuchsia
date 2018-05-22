@@ -23,8 +23,7 @@ class LedgerCommunicator {
   // All |PageCommunicator| objects obtained through this method must be
   // destroyed before |LedgerCommunicator|.
   virtual std::unique_ptr<PageCommunicator> GetPageCommunicator(
-      storage::PageStorage* storage,
-      storage::PageSyncClient* sync_client) = 0;
+      storage::PageStorage* storage, storage::PageSyncClient* sync_client) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerCommunicator);

@@ -31,17 +31,13 @@ namespace benchmark {
 //   values.
 class FetchBenchmark : public ledger::SyncWatcher {
  public:
-  FetchBenchmark(async::Loop* loop,
-                 size_t entry_count,
-                 size_t value_size,
-                 size_t part_size,
-                 std::string server_id);
+  FetchBenchmark(async::Loop* loop, size_t entry_count, size_t value_size,
+                 size_t part_size, std::string server_id);
 
   void Run();
 
   // ledger::SyncWatcher:
-  void SyncStateChanged(ledger::SyncState download,
-                        ledger::SyncState upload,
+  void SyncStateChanged(ledger::SyncState download, ledger::SyncState upload,
                         SyncStateChangedCallback callback) override;
 
  private:

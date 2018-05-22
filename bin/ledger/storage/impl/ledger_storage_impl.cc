@@ -41,11 +41,9 @@ std::string GetId(fxl::StringView bytes) {
 }  // namespace
 
 LedgerStorageImpl::LedgerStorageImpl(
-    async_t* async,
-    coroutine::CoroutineService* coroutine_service,
+    async_t* async, coroutine::CoroutineService* coroutine_service,
     encryption::EncryptionService* encryption_service,
-    const std::string& base_storage_dir,
-    const std::string& ledger_name)
+    const std::string& base_storage_dir, const std::string& ledger_name)
     : async_(async),
       coroutine_service_(coroutine_service),
       encryption_service_(encryption_service) {

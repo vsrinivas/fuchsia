@@ -57,8 +57,7 @@ class LedgerImpl : public Ledger {
   // Ledger:
   void GetRootPage(fidl::InterfaceRequest<Page> page_request,
                    GetRootPageCallback callback) override;
-  void GetPage(PageIdPtr id,
-               fidl::InterfaceRequest<Page> page_request,
+  void GetPage(PageIdPtr id, fidl::InterfaceRequest<Page> page_request,
                GetPageCallback callback) override;
   void DeletePage(PageId id, DeletePageCallback callback) override;
 

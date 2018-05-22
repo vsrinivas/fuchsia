@@ -41,9 +41,7 @@ bool operator==(const Entry& lhs, const Entry& rhs) {
          std::tie(rhs.key, rhs.object_identifier, rhs.priority);
 }
 
-bool operator!=(const Entry& lhs, const Entry& rhs) {
-  return !(lhs == rhs);
-}
+bool operator!=(const Entry& lhs, const Entry& rhs) { return !(lhs == rhs); }
 
 std::ostream& operator<<(std::ostream& os, const Entry& e) {
   return os << "Entry{key: " << e.key << ", value: " << e.object_identifier

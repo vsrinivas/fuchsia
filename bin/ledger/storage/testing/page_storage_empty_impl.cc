@@ -38,16 +38,14 @@ void PageStorageEmptyImpl::AddCommitsFromSync(
 }
 
 void PageStorageEmptyImpl::StartCommit(
-    const CommitId& /*commit_id*/,
-    JournalType /*journal_type*/,
+    const CommitId& /*commit_id*/, JournalType /*journal_type*/,
     std::function<void(Status, std::unique_ptr<Journal>)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, nullptr);
 }
 
 void PageStorageEmptyImpl::StartMergeCommit(
-    const CommitId& /*left*/,
-    const CommitId& /*right*/,
+    const CommitId& /*left*/, const CommitId& /*right*/,
     std::function<void(Status, std::unique_ptr<Journal>)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, nullptr);
@@ -86,8 +84,7 @@ void PageStorageEmptyImpl::GetUnsyncedCommits(
 }
 
 void PageStorageEmptyImpl::MarkCommitSynced(
-    const CommitId& /*commit_id*/,
-    std::function<void(Status)> callback) {
+    const CommitId& /*commit_id*/, std::function<void(Status)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED);
 }
@@ -113,8 +110,7 @@ void PageStorageEmptyImpl::AddObjectFromLocal(
 }
 
 void PageStorageEmptyImpl::GetObject(
-    ObjectIdentifier /*object_identifier*/,
-    Location /*location*/,
+    ObjectIdentifier /*object_identifier*/, Location /*location*/,
     std::function<void(Status, std::unique_ptr<const Object>)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, nullptr);
@@ -127,8 +123,7 @@ void PageStorageEmptyImpl::GetPiece(
 }
 
 void PageStorageEmptyImpl::SetSyncMetadata(
-    fxl::StringView /*key*/,
-    fxl::StringView /*value*/,
+    fxl::StringView /*key*/, fxl::StringView /*value*/,
     std::function<void(Status)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED);
@@ -142,8 +137,7 @@ void PageStorageEmptyImpl::GetSyncMetadata(
 }
 
 void PageStorageEmptyImpl::GetCommitContents(
-    const Commit& /*commit*/,
-    std::string /*min_key*/,
+    const Commit& /*commit*/, std::string /*min_key*/,
     std::function<bool(Entry)> /*on_next*/,
     std::function<void(Status)> on_done) {
   FXL_NOTIMPLEMENTED();
@@ -151,28 +145,23 @@ void PageStorageEmptyImpl::GetCommitContents(
 }
 
 void PageStorageEmptyImpl::GetEntryFromCommit(
-    const Commit& /*commit*/,
-    std::string /*key*/,
+    const Commit& /*commit*/, std::string /*key*/,
     std::function<void(Status, Entry)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, Entry());
 }
 
 void PageStorageEmptyImpl::GetCommitContentsDiff(
-    const Commit& /*base_commit*/,
-    const Commit& /*other_commit*/,
-    std::string /*min_key*/,
-    std::function<bool(EntryChange)> /*on_next_diff*/,
+    const Commit& /*base_commit*/, const Commit& /*other_commit*/,
+    std::string /*min_key*/, std::function<bool(EntryChange)> /*on_next_diff*/,
     std::function<void(Status)> on_done) {
   FXL_NOTIMPLEMENTED();
   on_done(Status::NOT_IMPLEMENTED);
 }
 
 void PageStorageEmptyImpl::GetThreeWayContentsDiff(
-    const Commit& /*base_commit*/,
-    const Commit& /*left_commit*/,
-    const Commit& /*right_commit*/,
-    std::string /*min_key*/,
+    const Commit& /*base_commit*/, const Commit& /*left_commit*/,
+    const Commit& /*right_commit*/, std::string /*min_key*/,
     std::function<bool(ThreeWayChange)> /*on_next_diff*/,
     std::function<void(Status)> on_done) {
   FXL_NOTIMPLEMENTED();

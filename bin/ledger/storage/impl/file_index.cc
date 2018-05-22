@@ -26,8 +26,7 @@ Status FileIndexSerialization::ParseFileIndex(fxl::StringView content,
 
 void FileIndexSerialization::BuildFileIndex(
     const std::vector<ObjectIdentifierAndSize>& children,
-    std::unique_ptr<DataSource::DataChunk>* output,
-    size_t* total_size) {
+    std::unique_ptr<DataSource::DataChunk>* output, size_t* total_size) {
   auto builder = std::make_unique<flatbuffers::FlatBufferBuilder>();
   size_t local_total_size = 0u;
 

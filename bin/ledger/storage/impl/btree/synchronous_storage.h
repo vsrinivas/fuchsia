@@ -34,8 +34,7 @@ class SynchronousStorage {
       std::vector<ObjectIdentifier> object_identifiers,
       std::vector<std::unique_ptr<const TreeNode>>* result);
 
-  Status TreeNodeFromEntries(uint8_t level,
-                             const std::vector<Entry>& entries,
+  Status TreeNodeFromEntries(uint8_t level, const std::vector<Entry>& entries,
                              const std::map<size_t, ObjectIdentifier>& children,
                              ObjectIdentifier* result);
 

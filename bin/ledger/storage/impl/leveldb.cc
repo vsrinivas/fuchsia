@@ -22,9 +22,8 @@ using coroutine::CoroutineHandler;
 
 namespace {
 
-Status MakeEmptySyncCallAndCheck(
-    async_t* async,
-    coroutine::CoroutineHandler* handler) {
+Status MakeEmptySyncCallAndCheck(async_t* async,
+                                 coroutine::CoroutineHandler* handler) {
   if (coroutine::SyncCall(handler, [&async](fxl::Closure on_done) {
         async::PostTask(async, std::move(on_done));
       }) == coroutine::ContinuationStatus::INTERRUPTED) {
@@ -51,8 +50,7 @@ class BatchImpl : public Db::Batch {
   // leveldb. If the destructor is called without a previous execution of the
   // batch, |callback| will be called with a |nullptr|.
   BatchImpl(
-      async_t* async,
-      std::unique_ptr<leveldb::WriteBatch> batch,
+      async_t* async, std::unique_ptr<leveldb::WriteBatch> batch,
       leveldb::DB* db,
       std::function<Status(std::unique_ptr<leveldb::WriteBatch>)> callback)
       : async_(async),
@@ -65,12 +63,10 @@ class BatchImpl : public Db::Batch {
       callback_(nullptr);
   }
 
-  Status Put(CoroutineHandler* handler,
-             convert::ExtendedStringView key,
+  Status Put(CoroutineHandler* handler, convert::ExtendedStringView key,
              fxl::StringView value) override {
     FXL_DCHECK(batch_);
-    if (MakeEmptySyncCallAndCheck(async_, handler) ==
-        Status::INTERRUPTED) {
+    if (MakeEmptySyncCallAndCheck(async_, handler) == Status::INTERRUPTED) {
       return Status::INTERRUPTED;
     }
     batch_->Put(key, convert::ToSlice(value));
@@ -92,8 +88,7 @@ class BatchImpl : public Db::Batch {
          it->Next()) {
       batch_->Delete(it->key());
     }
-    if (MakeEmptySyncCallAndCheck(async_, handler) ==
-        Status::INTERRUPTED) {
+    if (MakeEmptySyncCallAndCheck(async_, handler) == Status::INTERRUPTED) {
       return Status::INTERRUPTED;
     }
     return ConvertStatus(it->status());
@@ -101,8 +96,7 @@ class BatchImpl : public Db::Batch {
 
   Status Execute(CoroutineHandler* handler) override {
     FXL_DCHECK(batch_);
-    if (MakeEmptySyncCallAndCheck(async_, handler) ==
-        Status::INTERRUPTED) {
+    if (MakeEmptySyncCallAndCheck(async_, handler) == Status::INTERRUPTED) {
       return Status::INTERRUPTED;
     }
     return callback_(std::move(batch_));
@@ -242,8 +236,7 @@ Status LevelDb::StartBatch(CoroutineHandler* handler,
   return MakeEmptySyncCallAndCheck(async_, handler);
 }
 
-Status LevelDb::Get(CoroutineHandler* handler,
-                    convert::ExtendedStringView key,
+Status LevelDb::Get(CoroutineHandler* handler, convert::ExtendedStringView key,
                     std::string* value) {
   if (MakeEmptySyncCallAndCheck(async_, handler) == Status::INTERRUPTED) {
     return Status::INTERRUPTED;
@@ -252,8 +245,7 @@ Status LevelDb::Get(CoroutineHandler* handler,
 }
 
 Status LevelDb::HasKey(CoroutineHandler* handler,
-                       convert::ExtendedStringView key,
-                       bool* has_key) {
+                       convert::ExtendedStringView key, bool* has_key) {
   std::unique_ptr<leveldb::Iterator> iterator(db_->NewIterator(read_options_));
   iterator->Seek(key);
 
@@ -298,8 +290,7 @@ Status LevelDb::GetByPrefix(CoroutineHandler* handler,
 }
 
 Status LevelDb::GetEntriesByPrefix(
-    CoroutineHandler* handler,
-    convert::ExtendedStringView prefix,
+    CoroutineHandler* handler, convert::ExtendedStringView prefix,
     std::vector<std::pair<std::string, std::string>>* entries) {
   std::vector<std::pair<std::string, std::string>> result;
   std::unique_ptr<leveldb::Iterator> it(db_->NewIterator(read_options_));
@@ -317,11 +308,9 @@ Status LevelDb::GetEntriesByPrefix(
 }
 
 Status LevelDb::GetIteratorAtPrefix(
-    CoroutineHandler* handler,
-    convert::ExtendedStringView prefix,
-    std::unique_ptr<Iterator<const std::pair<convert::ExtendedStringView,
-                                             convert::ExtendedStringView>>>*
-        iterator) {
+    CoroutineHandler* handler, convert::ExtendedStringView prefix,
+    std::unique_ptr<Iterator<const std::pair<
+        convert::ExtendedStringView, convert::ExtendedStringView>>>* iterator) {
   std::unique_ptr<leveldb::Iterator> local_iterator(
       db_->NewIterator(read_options_));
   local_iterator->Seek(prefix);

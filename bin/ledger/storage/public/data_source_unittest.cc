@@ -16,8 +16,7 @@ namespace {
 class DataSourceTest : public gtest::TestWithLoop {
  protected:
   ::testing::AssertionResult TestDataSource(
-      std::string expected,
-      std::unique_ptr<DataSource> source) {
+      std::string expected, std::unique_ptr<DataSource> source) {
     std::string result;
     DataSource::Status status;
 

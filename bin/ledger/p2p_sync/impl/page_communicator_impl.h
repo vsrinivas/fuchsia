@@ -30,8 +30,7 @@ class PageCommunicatorImpl : public PageCommunicator,
  public:
   PageCommunicatorImpl(storage::PageStorage* storage,
                        storage::PageSyncClient* sync_client,
-                       std::string namespace_id,
-                       std::string page_id,
+                       std::string namespace_id, std::string page_id,
                        DeviceMesh* mesh);
   ~PageCommunicatorImpl() override;
 
@@ -69,7 +68,8 @@ class PageCommunicatorImpl : public PageCommunicator,
   void BuildObjectResponseBuffer(
       flatbuffers::FlatBufferBuilder* buffer,
       std::vector<std::pair<storage::ObjectIdentifier,
-                            std::unique_ptr<const storage::Object>>> results);
+                            std::unique_ptr<const storage::Object>>>
+          results);
 
   // Processes an incoming ObjectRequest object.
   void ProcessObjectRequest(fxl::StringView source,

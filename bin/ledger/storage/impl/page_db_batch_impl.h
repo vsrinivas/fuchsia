@@ -17,8 +17,7 @@ class PageDbBatchImpl : public PageDb::Batch {
   ~PageDbBatchImpl() override;
 
   // Heads.
-  Status AddHead(coroutine::CoroutineHandler* handler,
-                 CommitIdView head,
+  Status AddHead(coroutine::CoroutineHandler* handler, CommitIdView head,
                  int64_t timestamp) override;
   Status RemoveHead(coroutine::CoroutineHandler* handler,
                     CommitIdView head) override;
@@ -32,8 +31,7 @@ class PageDbBatchImpl : public PageDb::Batch {
 
   // Journals.
   Status CreateJournalId(coroutine::CoroutineHandler* handler,
-                         JournalType journal_type,
-                         const CommitId& base,
+                         JournalType journal_type, const CommitId& base,
                          JournalId* journal_id) override;
   Status RemoveExplicitJournals(coroutine::CoroutineHandler* handler) override;
   Status RemoveJournal(coroutine::CoroutineHandler* handler,
@@ -41,8 +39,7 @@ class PageDbBatchImpl : public PageDb::Batch {
 
   // Journal entries.
   Status AddJournalEntry(coroutine::CoroutineHandler* handler,
-                         const JournalId& journal_id,
-                         fxl::StringView key,
+                         const JournalId& journal_id, fxl::StringView key,
                          const ObjectIdentifier& object_identifier,
                          KeyPriority priority) override;
   Status RemoveJournalEntry(coroutine::CoroutineHandler* handler,
@@ -67,8 +64,7 @@ class PageDbBatchImpl : public PageDb::Batch {
 
   // Object sync metadata.
   Status SetSyncMetadata(coroutine::CoroutineHandler* handler,
-                         fxl::StringView key,
-                         fxl::StringView value) override;
+                         fxl::StringView key, fxl::StringView value) override;
 
   Status Execute(coroutine::CoroutineHandler* handler) override;
 

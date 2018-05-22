@@ -28,8 +28,7 @@ enum class CobaltEvent : uint32_t {
 // Cobalt initialization. When cobalt is not need, the returned object must be
 // deleted. This method must not be called again until then.
 fxl::AutoCall<fxl::Closure> InitializeCobalt(
-    async_t* async,
-    component::ApplicationContext* app_context);
+    async_t* async, component::ApplicationContext* app_context);
 
 // Report an event to Cobalt.
 void ReportEvent(CobaltEvent event);
