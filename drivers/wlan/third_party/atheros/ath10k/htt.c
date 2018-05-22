@@ -158,7 +158,7 @@ zx_status_t ath10k_htt_connect(struct ath10k_htt* htt) {
     status = ath10k_htc_connect_service(&htt->ar->htc, &conn_req,
                                         &conn_resp);
 
-    if (status) {
+    if (status != ZX_OK) {
         return status;
     }
 
