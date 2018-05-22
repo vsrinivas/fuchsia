@@ -19,8 +19,7 @@
 
 #include "htt.h"
 
-int ath10k_txrx_tx_unref(struct ath10k_htt* htt,
-                         const struct htt_tx_done* tx_done);
+zx_status_t ath10k_txrx_tx_unref(struct ath10k_htt* htt, const struct htt_tx_done* tx_done);
 
 struct ath10k_peer* ath10k_peer_find(struct ath10k* ar, int vdev_id,
                                      const uint8_t* addr);
