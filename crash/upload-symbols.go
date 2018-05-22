@@ -24,6 +24,8 @@ var symbolDir = flag.String("symbol-dir", "", "Location for the symbol files")
 var upload = flag.Bool("upload", true, "Whether to upload the dumped symbols")
 var url = flag.String("url", "https://clients2.google.com/cr/symbol", "Endpoint to use")
 var verbose = flag.Bool("v", false, "Verbose output")
+var x64Symbols = flag.Bool("x64-symbols", true, "Include symbols from x64 build")
+var armSymbols = flag.Bool("arm-symbols", true, "Include symbols from arm64 build")
 
 func getBinariesFromIds(idsFilename string) sort.StringSlice {
 	var binaries []string
@@ -163,15 +165,20 @@ crash server and then optionally uploads them.
 		mkdir(*symbolDir)
 	}
 
-	x64BuildDir := "out/release-x64"
-	armBuildDir := "out/release-arm64"
+	var binaries sort.StringSlice
 	zxBuildDir := "out/build-zircon"
-	x64ZxBuildDir := path.Join(zxBuildDir, "build-x64")
-	armZxBuildDir := path.Join(zxBuildDir, "build-arm64")
-	binaries := getBinariesFromIds(path.Join(fuchsiaRoot, x64BuildDir, "ids.txt"))
-	binaries = append(binaries, getBinariesFromIds(path.Join(fuchsiaRoot, armBuildDir, "ids.txt"))...)
-	binaries = append(binaries, getBinariesFromIds(path.Join(fuchsiaRoot, x64ZxBuildDir, "ids.txt"))...)
-	binaries = append(binaries, getBinariesFromIds(path.Join(fuchsiaRoot, armZxBuildDir, "ids.txt"))...)
+	if *x64Symbols {
+		x64BuildDir := "out/release-x64"
+		x64ZxBuildDir := path.Join(zxBuildDir, "build-x64")
+		binaries = append(binaries, getBinariesFromIds(path.Join(fuchsiaRoot, x64BuildDir, "ids.txt"))...)
+		binaries = append(binaries, getBinariesFromIds(path.Join(fuchsiaRoot, x64ZxBuildDir, "ids.txt"))...)
+	}
+	if *armSymbols {
+		armBuildDir := "out/release-arm64"
+		armZxBuildDir := path.Join(zxBuildDir, "build-arm64")
+		binaries = append(binaries, getBinariesFromIds(path.Join(fuchsiaRoot, armBuildDir, "ids.txt"))...)
+		binaries = append(binaries, getBinariesFromIds(path.Join(fuchsiaRoot, armZxBuildDir, "ids.txt"))...)
+	}
 	sort.Sort(binaries)
 	binaries = uniq(binaries)
 	for i, v := range binaries {
