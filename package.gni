@@ -458,7 +458,8 @@ template("package") {
       pm_build_package("${pkg_target_name}.meta") {
         visibility = [
           ":${pkg_target_name}.blob.rsp",
-          ":${pkg_target_name}.pkgsvr.rsp",
+          ":${pkg_target_name}.pkgsvr_index.rsp",
+          ":${pkg_target_name}.amber_index.rsp",
         ]
         manifest = ":${pkg_target_name}.manifest"
       }
@@ -504,23 +505,38 @@ template("package") {
       }
     }
 
-    generate_response_file("${pkg_target_name}.pkgsvr.rsp") {
-      if (pkg.deprecated_system_image) {
-        # A system_image package has no pkgsvr index entry.
-        response_file_contents = []
-      } else {
-        # A real package needs has a pkgsvr index entry mapping its package
-        # name and version to its meta.far file's merkleroot.
-        deps = [
-          ":${pkg_target_name}.meta",
-        ]
-        response_file_contents = [
-          "--entry-manifest=${pkg_label}",
-          "--entry=${pkg.package_name}/${pkg.package_version}=" +
-              rebase_path("${pkg_target_name}.meta/meta.far.merkle",
-                          root_build_dir,
-                          target_out_dir),
-        ]
+    foreach(index,
+            [
+              {
+                name = "pkgsvr_index"
+                file = "meta.far.merkle"
+              },
+              {
+                name = "amber_index"
+                file = "meta.far"
+              },
+            ]) {
+      generate_response_file("${pkg_target_name}.${index.name}.rsp") {
+        if (pkg.deprecated_system_image) {
+          # A system_image package has no index entry.
+          response_file_contents = []
+        } else {
+          # A real package needs has a pkgsvr index entry mapping its package
+          # name and version to its meta.far file's merkleroot.
+          # The amber index is the same, but needs the meta.far filename
+          # in the build, rather than its merkleroot.
+          # TODO(mcgrathr): Make amber publish use pkgsvr index directly.
+          deps = [
+            ":${pkg_target_name}.meta",
+          ]
+          response_file_contents = [
+            "--entry-manifest=${pkg_label}",
+            "--entry=${pkg.package_name}/${pkg.package_version}=" +
+                rebase_path("${pkg_target_name}.meta/${index.file}",
+                            root_build_dir,
+                            target_out_dir),
+          ]
+        }
       }
     }
   } else {

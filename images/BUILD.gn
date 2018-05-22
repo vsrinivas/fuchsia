@@ -179,10 +179,10 @@ foreach(index,
       # Find the response file written by package().
       pkg_target_name = get_label_info(pkg_label, "name")
       pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
-      pkg_pkgsvr_rsp = "$pkg_target_out_dir/${pkg_target_name}.pkgsvr.rsp"
-      deps += [ "${pkg_label}.pkgsvr.rsp" ]
-      sources += [ pkg_pkgsvr_rsp ]
-      args += [ "@" + rebase_path(pkg_pkgsvr_rsp, root_build_dir) ]
+      pkg_rspfile = "$pkg_target_out_dir/${pkg_target_name}.${index.name}.rsp"
+      deps += [ "${pkg_label}.${index.name}.rsp" ]
+      sources += [ pkg_rspfile ]
+      args += [ "@" + rebase_path(pkg_rspfile, root_build_dir) ]
     }
   }
 }
