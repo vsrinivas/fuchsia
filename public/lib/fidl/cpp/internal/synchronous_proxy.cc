@@ -39,7 +39,8 @@ zx_status_t SynchronousProxy::Call(const fidl_type_t* request_type,
     return status;
   }
   status = request.Call(channel_.get(), 0, ZX_TIME_INFINITE, nullptr, response);
-  if (status != ZX_OK) return status;
+  if (status != ZX_OK)
+    return status;
   status = response->Decode(response_type, &error_msg);
   if (status != ZX_OK) {
     FIDL_REPORT_DECODING_ERROR(*response, response_type, error_msg);

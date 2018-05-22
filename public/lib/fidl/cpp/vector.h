@@ -103,7 +103,8 @@ class VectorPtr {
   // Unlike fidl::Clone, this function can never fail. However, this function
   // works only if T is copiable.
   VectorPtr Clone() const {
-    if (is_null()) return VectorPtr();
+    if (is_null())
+      return VectorPtr();
     return VectorPtr(vec_);
   }
 

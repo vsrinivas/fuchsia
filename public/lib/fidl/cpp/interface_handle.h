@@ -81,7 +81,8 @@ class InterfaceHandle {
   // |InterfaceRequest| will return false from |is_valid()|.
   InterfaceRequest<Interface> NewRequest() {
     zx::channel h1, h2;
-    if (zx::channel::create(0, &h1, &h2) != ZX_OK) return nullptr;
+    if (zx::channel::create(0, &h1, &h2) != ZX_OK)
+      return nullptr;
     channel_ = std::move(h1);
     return InterfaceRequest<Interface>(std::move(h2));
   }

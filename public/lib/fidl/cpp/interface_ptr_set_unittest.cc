@@ -44,7 +44,8 @@ TEST(InterfacePtrSet, Control) {
     ptr_set.AddInterfacePtr(std::move(ptrs[i]));
   EXPECT_EQ(kCount, ptr_set.size());
 
-  for (const auto& impl : impls) EXPECT_TRUE(impl.frobs.empty());
+  for (const auto& impl : impls)
+    EXPECT_TRUE(impl.frobs.empty());
 
   size_t iter_count = 0;
   for (const auto& ptr : ptr_set.ptrs()) {
@@ -56,15 +57,18 @@ TEST(InterfacePtrSet, Control) {
 
   loop.RunUntilIdle();
 
-  for (const auto& impl : impls) EXPECT_EQ(1u, impl.frobs.size());
+  for (const auto& impl : impls)
+    EXPECT_EQ(1u, impl.frobs.size());
 
-  for (size_t i = 0; i < kCount / 2; ++i) impls[i].binding().Unbind();
+  for (size_t i = 0; i < kCount / 2; ++i)
+    impls[i].binding().Unbind();
 
   EXPECT_EQ(kCount, ptr_set.size());
   loop.RunUntilIdle();
   EXPECT_EQ(kCount / 2, ptr_set.size());
 
-  for (const auto& ptr : ptr_set.ptrs()) (*ptr)->Frob("two");
+  for (const auto& ptr : ptr_set.ptrs())
+    (*ptr)->Frob("two");
 
   loop.RunUntilIdle();
 
@@ -77,7 +81,8 @@ TEST(InterfacePtrSet, Control) {
 
   EXPECT_EQ(0u, ptr_set.size());
 
-  for (const auto& ptr : ptr_set.ptrs()) (*ptr)->Frob("three");
+  for (const auto& ptr : ptr_set.ptrs())
+    (*ptr)->Frob("three");
 
   loop.RunUntilIdle();
 

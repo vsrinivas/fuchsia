@@ -77,7 +77,8 @@ struct CodingTraits<std::unique_ptr<T>> {
   static void Decode(Decoder* decoder, std::unique_ptr<T>* value,
                      size_t offset) {
     uintptr_t ptr = *decoder->GetPtr<uintptr_t>(offset);
-    if (!ptr) return value->reset();
+    if (!ptr)
+      return value->reset();
     *value = std::make_unique<T>();
     CodingTraits<T>::Decode(decoder, value->get(), decoder->GetOffset(ptr));
   }
@@ -90,7 +91,8 @@ template <typename T>
 struct CodingTraits<VectorPtr<T>> {
   static constexpr size_t encoded_size = sizeof(fidl_vector_t);
   static void Encode(Encoder* encoder, VectorPtr<T>* value, size_t offset) {
-    if (value->is_null()) return EncodeNullVector(encoder, offset);
+    if (value->is_null())
+      return EncodeNullVector(encoder, offset);
     size_t count = (*value)->size();
     EncodeVectorPointer(encoder, count, offset);
     size_t stride = CodingTraits<T>::encoded_size;

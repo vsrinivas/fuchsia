@@ -53,7 +53,8 @@ class DestructionCounter {
   DestructionCounter(int* counter) : counter_(counter) {}
 
   ~DestructionCounter() {
-    if (counter_) ++(*counter_);
+    if (counter_)
+      ++(*counter_);
   }
 
  private:

@@ -78,7 +78,8 @@ class BindingSet {
   InterfaceHandle<Interface> AddBinding(ImplPtr impl) {
     InterfaceHandle<Interface> handle;
     InterfaceRequest<Interface> request = handle.NewRequest();
-    if (!request) return nullptr;
+    if (!request)
+      return nullptr;
     AddBinding(std::forward<ImplPtr>(impl), std::move(request));
     return handle;
   }
@@ -93,7 +94,8 @@ class BindingSet {
   void CloseAndCheckForEmpty(const_iterator iterator) {
     (*iterator)->set_error_handler(nullptr);
     bindings_.erase(iterator);
-    if (bindings_.empty() && empty_set_handler_) empty_set_handler_();
+    if (bindings_.empty() && empty_set_handler_)
+      empty_set_handler_();
   }
 
   // The number of bindings in this |BindingSet|.

@@ -16,22 +16,27 @@ PendingResponse::PendingResponse() : txid_(0), weak_controller_(nullptr) {}
 PendingResponse::PendingResponse(zx_txid_t txid,
                                  WeakStubController* weak_controller)
     : txid_(txid), weak_controller_(weak_controller) {
-  if (weak_controller_) weak_controller_->AddRef();
+  if (weak_controller_)
+    weak_controller_->AddRef();
 }
 
 PendingResponse::~PendingResponse() {
-  if (weak_controller_) weak_controller_->Release();
+  if (weak_controller_)
+    weak_controller_->Release();
 }
 
 PendingResponse::PendingResponse(const PendingResponse& other)
     : PendingResponse(other.txid_, other.weak_controller_) {}
 
 PendingResponse& PendingResponse::operator=(const PendingResponse& other) {
-  if (this == &other) return *this;
+  if (this == &other)
+    return *this;
   txid_ = other.txid_;
-  if (weak_controller_) weak_controller_->Release();
+  if (weak_controller_)
+    weak_controller_->Release();
   weak_controller_ = other.weak_controller_;
-  if (weak_controller_) weak_controller_->AddRef();
+  if (weak_controller_)
+    weak_controller_->AddRef();
   return *this;
 }
 
@@ -41,18 +46,22 @@ PendingResponse::PendingResponse(PendingResponse&& other)
 }
 
 PendingResponse& PendingResponse::operator=(PendingResponse&& other) {
-  if (this == &other) return *this;
+  if (this == &other)
+    return *this;
   txid_ = other.txid_;
-  if (weak_controller_) weak_controller_->Release();
+  if (weak_controller_)
+    weak_controller_->Release();
   weak_controller_ = other.weak_controller_;
   other.weak_controller_ = nullptr;
   return *this;
 }
 
 zx_status_t PendingResponse::Send(const fidl_type_t* type, Message message) {
-  if (!weak_controller_) return ZX_ERR_BAD_STATE;
+  if (!weak_controller_)
+    return ZX_ERR_BAD_STATE;
   StubController* controller = weak_controller_->controller();
-  if (!controller) return ZX_ERR_BAD_STATE;
+  if (!controller)
+    return ZX_ERR_BAD_STATE;
   message.set_txid(txid_);
   const char* error_msg = nullptr;
   zx_status_t status = message.Validate(type, &error_msg);

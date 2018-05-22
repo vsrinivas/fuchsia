@@ -20,7 +20,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   fidl::Parser parser(&lexer, &error_reporter);
 
   auto raw_ast = parser.Parse();
-  if (!parser.Ok()) return 1;
+  if (!parser.Ok())
+    return 1;
 
   return 0;
 }

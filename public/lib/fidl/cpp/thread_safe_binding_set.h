@@ -90,7 +90,8 @@ class ThreadSafeBindingSet {
   InterfaceHandle<Interface> AddBinding(ImplPtr impl, async_t* async) {
     InterfaceHandle<Interface> handle;
     InterfaceRequest<Interface> request = handle.NewRequest();
-    if (!request) return nullptr;
+    if (!request)
+      return nullptr;
     AddBinding(std::forward<ImplPtr>(impl), std::move(request), async);
     return handle;
   }
