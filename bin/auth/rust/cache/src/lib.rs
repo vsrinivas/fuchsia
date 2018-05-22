@@ -5,7 +5,6 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
-
 /// Constant offset for the cache expiry. Tokens will only be returned from
 /// the cache if they have at least this much life remaining.
 const PADDING_FOR_TOKEN_EXPIRY: Duration = Duration::from_secs(600);
@@ -50,7 +49,7 @@ impl TokenSet {
         let current_time = Instant::now();
         let is_token_expired = |token: &Option<OAuthToken>| match token {
             Some(t) if current_time > (t.expiry_time - PADDING_FOR_TOKEN_EXPIRY) => true,
-            _ => false
+            _ => false,
         };
 
         if is_token_expired(&self.id_token) {
@@ -59,8 +58,8 @@ impl TokenSet {
         if is_token_expired(&self.access_token) {
             self.access_token = None;
         }
-        self.firebase_token_map.retain(
-            |_, v| current_time <= (v.expiry_time - PADDING_FOR_TOKEN_EXPIRY));
+        self.firebase_token_map
+            .retain(|_, v| current_time <= (v.expiry_time - PADDING_FOR_TOKEN_EXPIRY));
         !self.is_valid()
     }
 
@@ -74,17 +73,20 @@ impl TokenSet {
 #[derive(Clone, Hash, PartialEq, Eq)]
 pub struct CacheKey {
     idp_provider: String,
-    idp_credential_id: String
+    idp_credential_id: String,
 }
 
 impl CacheKey {
     /// Create a new cache key from the supplied non-empty slices.
     pub fn new(idp_provider: &str, idp_credential_id: &str) -> CacheKey {
         assert!(!idp_provider.is_empty(), "idp_provider must not be empty");
-        assert!(!idp_credential_id.is_empty(), "idp_credential_id must not be empty");
+        assert!(
+            !idp_credential_id.is_empty(),
+            "idp_credential_id must not be empty"
+        );
         CacheKey {
             idp_provider: idp_provider.to_string(),
-            idp_credential_id: idp_credential_id.to_string()
+            idp_credential_id: idp_credential_id.to_string(),
         }
     }
 }
@@ -98,10 +100,11 @@ pub struct TokenCache {
 }
 
 impl TokenCache {
-
     /// Creates a new TokenCache with the specified initial size.
     pub fn new(size: usize) -> TokenCache {
-        TokenCache{map: HashMap::with_capacity(size)}
+        TokenCache {
+            map: HashMap::with_capacity(size),
+        }
     }
 
     /// Returns all unexpired tokens stored in the cache for the given key.
@@ -122,7 +125,7 @@ impl TokenCache {
         // Any remaining key is now valid
         match self.map.get(cache_key) {
             Some(token_set) => Ok(token_set),
-            None => Err(Error::KeyNotFound)
+            None => Err(Error::KeyNotFound),
         }
     }
 
@@ -150,16 +153,19 @@ impl TokenCache {
     /// Add a new firebase auth token to the supplied key, returning an error
     /// if the key is not found.
     pub fn add_firebase_token(
-            &mut self,
-            cache_key: &CacheKey,
-            firebase_api_key: &str,
-            firebase_token: FirebaseAuthToken) -> Result<(), Error> {
+        &mut self,
+        cache_key: &CacheKey,
+        firebase_api_key: &str,
+        firebase_token: FirebaseAuthToken,
+    ) -> Result<(), Error> {
         match self.map.get_mut(cache_key) {
             Some(token_set) => {
-                token_set.firebase_token_map.insert(firebase_api_key.to_owned(), firebase_token);
+                token_set
+                    .firebase_token_map
+                    .insert(firebase_api_key.to_owned(), firebase_token);
                 Ok(())
-            },
-            None => Err(Error::KeyNotFound)
+            }
+            None => Err(Error::KeyNotFound),
         }
     }
 
@@ -188,8 +194,8 @@ mod tests {
 
     fn build_test_cache_key(suffix: &str) -> CacheKey {
         CacheKey {
-             idp_provider: TEST_IDP.to_string(),
-             idp_credential_id: TEST_CREDENTIAL_ID.to_string() + suffix
+            idp_provider: TEST_IDP.to_string(),
+            idp_credential_id: TEST_CREDENTIAL_ID.to_string() + suffix,
         }
     }
 
@@ -198,13 +204,13 @@ mod tests {
         TokenSet {
             id_token: Some(OAuthToken {
                 expiry_time,
-                token: TEST_ID_TOKEN.to_string() + suffix
+                token: TEST_ID_TOKEN.to_string() + suffix,
             }),
             access_token: Some(OAuthToken {
                 expiry_time,
-                token: TEST_ACCESS_TOKEN.to_string() + suffix
+                token: TEST_ACCESS_TOKEN.to_string() + suffix,
             }),
-            firebase_token_map: HashMap::new()
+            firebase_token_map: HashMap::new(),
         }
     }
 
@@ -213,7 +219,7 @@ mod tests {
             expiry_time: Instant::now() + time_until_expiry,
             id_token: TEST_FIREBASE_ID_TOKEN.to_string() + suffix,
             local_id: TEST_FIREBASE_LOCAL_ID.to_string() + suffix,
-            email: TEST_EMAIL.to_string()
+            email: TEST_EMAIL.to_string(),
         }
     }
 
@@ -236,7 +242,10 @@ mod tests {
         let mut token_cache = TokenCache::new(CACHE_SIZE);
         let key = CacheKey::new(TEST_IDP, TEST_CREDENTIAL_ID);
         assert_eq!(token_cache.has_key(&key), false);
-        assert_eq!(token_cache.put(key.clone(), build_test_token_set(LONG_EXPIRY, "")), Ok(()));
+        assert_eq!(
+            token_cache.put(key.clone(), build_test_token_set(LONG_EXPIRY, "")),
+            Ok(())
+        );
         assert_eq!(token_cache.has_key(&key), true);
     }
 
@@ -245,7 +254,10 @@ mod tests {
         let mut token_cache = TokenCache::new(CACHE_SIZE);
         let key = CacheKey::new(TEST_IDP, TEST_CREDENTIAL_ID);
         assert_eq!(token_cache.delete(&key), Err(Error::KeyNotFound));
-        assert_eq!(token_cache.put(key.clone(), build_test_token_set(LONG_EXPIRY, "")), Ok(()));
+        assert_eq!(
+            token_cache.put(key.clone(), build_test_token_set(LONG_EXPIRY, "")),
+            Ok(())
+        );
         assert_eq!(token_cache.has_key(&key), true);
         assert_eq!(token_cache.delete(&key), Ok(()));
         assert_eq!(token_cache.has_key(&key), false);
@@ -287,15 +299,19 @@ mod tests {
         let firebase_token = build_test_firebase_token(LONG_EXPIRY, "");
         assert_eq!(
             token_cache.add_firebase_token(&key_1, TEST_API_KEY, firebase_token.clone()),
-            Ok(()));
-        token_set.firebase_token_map.insert(TEST_API_KEY.to_string(), firebase_token.clone());
+            Ok(())
+        );
+        token_set
+            .firebase_token_map
+            .insert(TEST_API_KEY.to_string(), firebase_token.clone());
         assert_eq!(token_cache.get(&key_1), Ok(&token_set));
 
         // Very we can't add a firebase token on a non-existant key.
         let key_2 = build_test_cache_key("2");
         assert_eq!(
             token_cache.add_firebase_token(&key_2, TEST_API_KEY, firebase_token.clone()),
-            Err(Error::KeyNotFound));
+            Err(Error::KeyNotFound)
+        );
     }
 
     #[test]
@@ -311,20 +327,26 @@ mod tests {
         let firebase_token_1 = build_test_firebase_token(LONG_EXPIRY, "1");
         assert_eq!(
             token_cache.add_firebase_token(
-                &key, &(TEST_API_KEY.to_string() + "1"),
-                firebase_token_1.clone()),
-            Ok(()));
+                &key,
+                &(TEST_API_KEY.to_string() + "1"),
+                firebase_token_1.clone()
+            ),
+            Ok(())
+        );
         let firebase_token_2 = build_test_firebase_token(ALREADY_EXPIRED, "2");
         assert_eq!(
             token_cache.add_firebase_token(
-                &key, &(TEST_API_KEY.to_string() + "2"),
-                firebase_token_2.clone()),
-            Ok(()));
+                &key,
+                &(TEST_API_KEY.to_string() + "2"),
+                firebase_token_2.clone()
+            ),
+            Ok(())
+        );
 
         // Verify only the not expired token is present when we retrieve the token set.
-        token_set.firebase_token_map.insert(
-            TEST_API_KEY.to_string() + "1",
-            firebase_token_1.clone());
+        token_set
+            .firebase_token_map
+            .insert(TEST_API_KEY.to_string() + "1", firebase_token_1.clone());
         assert_eq!(token_cache.get(&key), Ok(&token_set));
     }
 }
