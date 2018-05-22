@@ -397,6 +397,277 @@ $ run echo2_client_cpp
 You do not need to specifically run the server because the call to
 `CreateApplication()` in the client will automatically launch the server.
 
+## `Echo` server in Rust
+
+The echo server implementation in Rust can be found at:
+[garnet/examples/fidl/echo2_server_rust/src/main.rs](https://fuchsia.googlesource.com/garnet/+/master/examples/fidl/echo2_server_rust/src/main.rs)
+
+This file has two functions: `main()`, and `spawn_echo_server`:
+
+-   The `main()` function starts creates an asynchronous task executor
+    and a `ServicesServer` and runs the `ServicesServer` to completion on
+    the executor.
+-   `spawn_echo_server` creates a new instance of a server which implements the
+    `Echo` service, attaches it to a channel, and spawns it as a new task on
+    the global asynchronous task executor.
+
+To understand how the code works, here's a summary of what happens in the server
+to execute an IPC call. We will dig into what each of these lines means, so it's
+not necessary to understand all of this before you move on.
+
+1.  **Services Server:** The `ServicesServer` is the main top-level future
+    being run on the executor. It binds itself to the startup handle of the
+    current process and listens for incoming service requests.
+1.  **Service Request:** When another application needs to access an "Echo"
+    server, it sends a request to the `ServicesServer` containing the name of
+    the service to connect to ("Echo") and a channel to connect.
+1.  **Service Lookup:** The incoming service request wakes up the
+    `async::Executor` executor and tells it that the `ServicesServer` task
+    can now make progress and should be run. The `ServicesServer` wakes up,
+    sees the request available on the startup handle of the process, and looks
+    up the name of the requested service in the list of
+    `(service_name, service_startup_func)` provided through calls to
+    `add_service`. If a matching `service_name` exists, it calls
+    `service_startup_func` with the channel to connect to the new service.
+1.  **Server Creation:**  At this point in our example,
+    `|chan| spawn_echo_server(chan)` is called with the channel that wants to
+    be connected to an `Echo` service. `spawn_echo_server` creates a new
+    `Echo` service instance and spawns it onto the global executor, at which
+    point the `on_open` function is called.
+1.  **API Request:** An `echo_string` request is sent on the channel.
+    This makes the channel the `Echo` service is running on readable, which
+    wakes up the `Echo` service. The `Echo` service reads the request off of
+    the channel and passes it to the `echo_string` function.
+1.  **API Response:** The `echo_string` function calls `res.send`, which
+    causes a response to be written back into the channel.
+
+Now let's go through the code and see how this works.
+
+### File headers
+
+Here are the import declarations in the Rust server implementation:
+
+```rust
+extern crate fidl;
+extern crate failure;
+extern crate fuchsia_app as component;
+extern crate fuchsia_async as async;
+extern crate fuchsia_zircon as zx;
+extern crate futures;
+extern crate fidl_echo2;
+
+use component::server::ServicesServer;
+use failure::{Error, ResultExt};
+use futures::future;
+use futures::prelude::*;
+use fidl::endpoints2::ServiceMarker;
+use fidl_echo2::{Echo, EchoMarker, EchoImpl};
+```
+
+-   `ServicesServer` links service requests to service launcher functions.
+-   `failure` provides conveniences for error handling, including a standard
+    dynamically-dispatched `Error` type as well as a extension trait that adds
+    the `context` method to `Result` for providing extra information about
+    where the error occurred.
+-   `futures` is a crate for working with asynchronous tasks. These tasks are
+    composed of asynchronous units of work that may produce a single value
+    (a `Future`) or many values (a `Stream`). For the echo server, we use the
+    `future` module for the `future::ok(())` function to create an immediately
+    ready future that requires no asynchronous operations. We also import the
+    prelude, which provides a number of useful extension traits with functions
+    like `IntoFuture::into_future()`, `FutureExt::map`, and
+    `FutureExt::recover`. For more about futures, see
+    [the crate's documentation][docs]. To understand more about how futures
+    are structured internally, see [this post][Tokio internals] on how futures
+    connect to system waiting primitives like `epoll` and Fuchsia's ports.
+    Note that Fuchsia does not use Tokio, but employs a very similar strategy
+    for managing asynchronous tasks.
+-   `fidl::endpoints2::ServiceMarker` is the trait implemented by `XXXMarker`
+    types. It provides the associated string `NAME`.
+-   `fidl_echo2` contains bindings for the `Echo` interface. This file is
+    generated from the interface defined in `echo2.fidl`. These bindings
+    include:
+    -   The `Echo` trait, an interface which is implemented by all types
+        that can serve `Echo` requests
+    -   The `EchoMarker` type, a [zero-sized type] used to hold compile-time
+        metadata about the `Echo` service (such as `NAME`)
+    -   The `EchoImpl` struct, which implements the `Echo` trait by delegating
+        methods to its members.
+
+[docs]: https://docs.rs/futures/*/futures/
+[Tokio internals]: https://cafbit.com/post/tokio_internals/
+[zero-sized type]: https://doc.rust-lang.org/nomicon/exotic-sizes.html#zero-sized-types-zsts
+
+### `fn main`
+
+Everything starts with main():
+
+```rust
+fn main() -> Result<(), Error> {
+    let mut executor = async::Executor::new().context("Error creating executor")?;
+
+    let fut = ServicesServer::new()
+                .add_service((EchoMarker::NAME, |chan| spawn_echo_server(chan)))
+                .start()
+                .context("Error starting echo services server")?;
+
+    executor.run_singlethreaded(fut).context("failed to execute echo future")?;
+    Ok(())
+}
+```
+
+`main` creates an asynchronous task executor and a `ServicesServer` and runs the
+`ServicesServer` to completion on the executor. You may notice that `main`
+returns a `Result` type: if an `Error` is returned from `main` as a result of
+one of the `?` lines, the error will be `Debug` printed and the program will
+return with a status code indicating failure. Functions that return `Result`,
+such as `async::Executor::new()`, can have extra information appended to their
+error message via the `context` function provided by `failure::ResultExt`.
+
+The `ServicesServer` represents a collection of services that can be provided.
+`add_service` takes a tuple of `service_name` and `service_start_fn`. We pass
+it the name of our `Echo` service, `EchoMarker::NAME`, and a function which
+takes a channel and spawns the echo server onto that channel. We then attempt
+to `start` the `ServicesServer`, which binds it to the startup handle of the
+current application. If that binding fails, the
+"Error starting echo services server" occurs. Otherwise, we get back a `Future`
+which, when run on the executor, will process and delegate incoming service
+requests until a protocol error occurs or the startup handle is closed.
+
+### `fn spawn_echo_server`
+
+```rust
+fn spawn_echo_server(chan: async::Channel) {
+    async::spawn(EchoImpl {
+        state: (),
+        on_open: |_,_| future::ok(()),
+        echo_string: |_, s, res| {
+            println!("Received echo request for string {:?}", s);
+            res.send(s.as_ref().map(|s| &**s))
+               .into_future()
+               .map(|_| println!("echo response sent successfully"))
+               .recover(|e| eprintln!("error sending response: {:?}", e))
+       }
+    }
+    .serve(chan)
+    .recover(|e| eprintln!("error running echo server: {:?}", e)))
+}
+```
+
+When a request for an echo service is received, `spawn_echo_server` is called
+with the channel to host the `Echo` service on. This function creates a new
+implementation of the `Echo` trait by using the `EchoImpl` struct which
+delegates methods of the `Echo` trait to fields. Persistent state between
+requests can be stored in the `state` field, which is passed as the first
+argument to every function. The last argument to every function is a control
+handle which can be used to send FIDL events or to control behavior of the
+currently running service. In the case of methods with responses, this
+control handle also allows sending responses back on the channel.
+
+For the echo service, we have no persistent state, so the `state` value is
+`()`, the "unit" type. We don't have any special behavior that has to happen
+when the echo service is started, so our `on_open` function returns
+`futures::ok(())`, a `Future` which resolves immediately to `()`. When an
+`echo_string` request is received, we get three arguments: the state
+(which we ignore), an optional string, and a control handle with a `send`
+method for sending a response. We log the request using `println!`, and
+then do a bit of complicated-looking nonsense. :)
+The `as_ref().map(|s| &**s)` trick isn't related to FIDL, but is a specific
+issue with converting `Option<String>` into `Option<&str>`. If you're not
+interested in the details of this conversion, feel free to skip the following
+paragraph.
+
+`s` is an `Option<String>`, but our `send` method takes back an
+`Option<&str>` to allow sending back non-heap-allocated strings. To convert between
+the two, we use `.as_ref()` to go from `Option<String>` to `Option<&String>`,
+and then `.map(|s| &**s)` to get `Option<&str>` using the `Deref<Target=str>`
+implementation for `String`. The first `*` goes from `&String` to `String`,
+the next goes from `String` to `str`, and the last goes from `str` to `&str`.
+You might well ask why we used `as_ref` at all, since we immediately dereference
+the resulting `&String`. This necessary in order to make sure that we're still
+borrowing from the initial `Option<String>` value. `Option::map` takes `self`
+by value and so consumes its input, but we want to instead create a *reference*
+to its input.
+
+Once we've done the conversion from `Option<String>` to `Option<&str>`, we call
+`send`, which returns a `Result<(), Error>`, which we convert into a
+`Future<Item = (), Error = Error>` using the `into_future` method. We map the
+success case to one log message, and `recover` from error cases by logging a
+different message. At last, we have a complete `EchoImpl` struct which can
+handle `Echo` service requests.
+
+In order to run our handlers on the provided channel, we `serve` the server
+on the provided channel, and `recover` from any errors in serving by printing
+an error message.
+
+All of this put together gives us our `Future` for handling incoming requests
+on `chan`. We call `async::spawn` to run this future on the `Executor` until
+either the channel is closed or a protocol error occurs.
+
+## `Echo` client in Rust
+
+The echo client implementation in Rust can be found at:
+
+[garnet/examples/fidl/echo2_client_rust/src/main.rs](https://fuchsia.googlesource.com/garnet/+/master/examples/fidl/echo2_client_rust/src/main.rs)
+
+Our simple client does everything in `main()`.
+
+**Note:** an application can be a client, a service, or both, or many. The
+distinction in this example between Client and Server is purely for
+demonstration purposes.
+
+Here is the summary of how the client makes a connection to the echo service.
+
+1.  **Launch:** The server application is specified, and we request for it to
+    be launched if it wasn't already. Note that this step isn't included in
+    most production FIDL-using applications: generally you're connecting with
+    an already-running server application.
+1.  **Connect:** We call `connect_to_service` on the launched server
+    application and get back a proxy with methods for making IPC calls to
+    the remote server.
+1.  **Call:** We call the `echo_string` method with the desired value to
+    echo, get back a `Future` of the response, and `map` the future so that
+    the response will be logged once it is received.
+1.  **Run:** We run the future to completion on an asynchronous task executor.
+
+```rust
+fn main() -> Result<(), Error> {
+    let mut executor = async::Executor::new().context("Error creating executor")?;
+
+    #[derive(StructOpt, Debug)]
+    #[structopt(name = "echo_client_rust")]
+    struct Opt {
+        #[structopt(long = "server", help = "URL of echo server",
+                    default_value = "echo2_server_rust")]
+        server_url: String,
+    }
+
+    // Launch the server and connect to the echo service.
+    let Opt { server_url } = Opt::from_args();
+
+    let launcher = Launcher::new().context("Failed to open launcher service")?;
+    let app = launcher.launch(server_url, None)
+                      .context("Failed to launch echo service")?;
+
+    let echo = app.connect_to_service(EchoMarker)
+       .context("Failed to connect to echo service")?;
+
+    let fut = echo.echo_string(Some("hello world!"))
+        .map(|res| println!("response: {:?}", res));
+
+    executor.run_singlethreaded(fut).context("failed to execute echo future")?;
+    Ok(())
+}
+```
+
+### Run the sample
+
+You can run the echo example like this:
+
+```sh
+$ ./echo_client_rust
+```
+
 ## `Echo` server in Dart
 
 The echo server implementation in Dart can be found at:
