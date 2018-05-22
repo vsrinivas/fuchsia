@@ -5,11 +5,33 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 
+declare_args() {
+  amlogic_decoder_tests = false
+}
+
 driver_module("amlogic_decoder") {
   output_name = "amlogic_video_decoder"
 
   deps = [
     ":sources",
+  ]
+  if (amlogic_decoder_tests) {
+    testonly = true
+    deps += [ ":tests" ]
+  }
+}
+
+config("sources_include_config") {
+  include_dirs = [ "." ]
+}
+
+source_set("test_support") {
+  deps = [
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/driver",
+  ]
+  sources = [
+    "tests/test_support.h",
   ]
 }
 
@@ -30,6 +52,27 @@ source_set("sources") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/zx",
   ]
+  deps = [
+    ":test_support",
+  ]
+  if (amlogic_decoder_tests) {
+    testonly = true
+    defines = [ "ENABLE_DECODER_TESTS" ]
+  }
+  public_configs = [ ":sources_include_config" ]
+}
+
+source_set("tests") {
+  testonly = true
+  deps = [
+    ":test_support",
+    ":sources",
+    "//third_party/googletest:gtest",
+  ]
+  sources = [
+    "tests/test_support.cc",
+    "tests/unit_tests/test_binding.cc",
+  ]
 }
 
 copy("video-ucode") {
@@ -43,6 +86,11 @@ copy("video-ucode") {
 
 package("amlogic_video_decoder") {
   deprecated_system_image = true
+
+  if (amlogic_decoder_tests) {
+    testonly = true
+  }
+
   deps = [
     ":amlogic_decoder",
     ":video-ucode($shlib_toolchain)",

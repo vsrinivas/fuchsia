@@ -25,6 +25,10 @@
 #include "macros.h"
 #include "registers.h"
 
+#if ENABLE_DECODER_TESTS
+#include "tests/test_support.h"
+#endif
+
 extern "C" {
 zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent);
 }
@@ -203,7 +207,7 @@ zx_status_t AmlogicVideo::InitializeStreamBuffer() {
   return ZX_OK;
 }
 
-zx_status_t AmlogicVideo::Init(zx_device_t* parent) {
+zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   parent_ = parent;
 
   zx_status_t status =
@@ -272,10 +276,28 @@ zx_status_t AmlogicVideo::Init(zx_device_t* parent) {
     return status;
   }
 
+  return ZX_OK;
+}
+
+zx_status_t AmlogicVideo::Bind() {
+  device_add_args_t vc_video_args = {};
+  vc_video_args.version = DEVICE_ADD_ARGS_VERSION;
+  vc_video_args.name = "amlogic_video";
+  vc_video_args.ctx = this;
+  vc_video_args.ops = &amlogic_video_device_ops;
+
+  zx_status_t status = device_add(parent_, &vc_video_args, &device_);
+  if (status != ZX_OK) {
+    DECODE_ERROR("Failed to bind device");
+    return ZX_ERR_NO_MEMORY;
+  }
+  return ZX_OK;
+}
+
+zx_status_t AmlogicVideo::InitDecoder() {
   EnableVideoPower();
-  status = InitializeStreamBuffer();
-  if (status != ZX_OK)
-    return status;
+  zx_status_t status = InitializeStreamBuffer();
+  if (status != ZX_OK) return status;
 
   {
     uint8_t* firmware_data;
@@ -290,31 +312,37 @@ zx_status_t AmlogicVideo::Init(zx_device_t* parent) {
     if (status != ZX_OK)
       return status;
   }
-  device_add_args_t vc_video_args = {};
-  vc_video_args.version = DEVICE_ADD_ARGS_VERSION;
-  vc_video_args.name = "amlogic_video";
-  vc_video_args.ctx = this;
-  vc_video_args.ops = &amlogic_video_device_ops;
-
-  status = device_add(parent_, &vc_video_args, &device_);
-  if (status != ZX_OK) {
-    DECODE_ERROR("Failed to bind device");
-    return ZX_ERR_NO_MEMORY;
-  }
   return ZX_OK;
 }
 
 zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent) {
+#if ENABLE_DECODER_TESTS
+  TestSupport::set_parent_device(parent);
+  TestSupport::RunAllTests();
+#endif
+
   auto video = std::make_unique<AmlogicVideo>();
   if (!video) {
     DECODE_ERROR("Failed to create AmlogicVideo");
     return ZX_ERR_NO_MEMORY;
   }
 
-  zx_status_t status = video->Init(parent);
+  zx_status_t status = video->InitRegisters(parent);
   if (status != ZX_OK) {
-    DECODE_ERROR("Failed to initialize AmlogicVideo");
-    return ZX_ERR_NO_MEMORY;
+    DECODE_ERROR("Failed to initialize registers");
+    return status;
+  }
+
+  status = video->InitDecoder();
+  if (status != ZX_OK) {
+    DECODE_ERROR("Failed to initialize decoder");
+    return status;
+  }
+
+  status = video->Bind();
+  if (status != ZX_OK) {
+    DECODE_ERROR("Failed to bind device");
+    return status;
   }
 
   video.release();

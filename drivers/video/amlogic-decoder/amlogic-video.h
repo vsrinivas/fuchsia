@@ -24,7 +24,9 @@ class AmlogicVideo {
  public:
   ~AmlogicVideo();
 
-  zx_status_t Init(zx_device_t* parent);
+  zx_status_t InitRegisters(zx_device_t* parent);
+  zx_status_t InitDecoder();
+  zx_status_t Bind();
 
   zx_status_t LoadDecoderFirmware(uint8_t* data, uint32_t size);
 
