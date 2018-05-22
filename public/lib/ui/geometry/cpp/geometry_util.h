@@ -5,44 +5,46 @@
 #ifndef LIB_UI_GEOMETRY_CPP_GEOMETRY_UTIL_H_
 #define LIB_UI_GEOMETRY_CPP_GEOMETRY_UTIL_H_
 
-#include <geometry/cpp/fidl.h>
+#include <fuchsia/math/cpp/fidl.h>
 
-namespace geometry {
+namespace fuchsia {
+namespace math {
 
-void SetIdentityTransform(geometry::Transform* transform);
-void SetTranslationTransform(geometry::Transform* transform,
+void SetIdentityTransform(fuchsia::math::Transform* transform);
+void SetTranslationTransform(fuchsia::math::Transform* transform,
                              float x,
                              float y,
                              float z = 0.0f);
-void SetScaleTransform(geometry::Transform* transform,
+void SetScaleTransform(fuchsia::math::Transform* transform,
                        float x,
                        float y,
                        float z = 1.0f);
 
-void Translate(geometry::Transform* transform,
+void Translate(fuchsia::math::Transform* transform,
                float x,
                float y,
                float z = 0.0f);
-void Scale(geometry::Transform* transform, float x, float y, float z = 1.0f);
+void Scale(fuchsia::math::Transform* transform, float x, float y, float z = 1.0f);
 
-geometry::TransformPtr CreateIdentityTransform();
-geometry::TransformPtr CreateTranslationTransform(float x,
+fuchsia::math::TransformPtr CreateIdentityTransform();
+fuchsia::math::TransformPtr CreateTranslationTransform(float x,
                                                   float y,
                                                   float z = 0.0f);
-geometry::TransformPtr CreateScaleTransform(float x, float y, float z = 1.0f);
+fuchsia::math::TransformPtr CreateScaleTransform(float x, float y, float z = 1.0f);
 
-geometry::TransformPtr Translate(geometry::TransformPtr transform,
+fuchsia::math::TransformPtr Translate(fuchsia::math::TransformPtr transform,
                                  float x,
                                  float y,
                                  float z = 0.0f);
-geometry::TransformPtr Scale(geometry::TransformPtr transform,
+fuchsia::math::TransformPtr Scale(fuchsia::math::TransformPtr transform,
                              float x,
                              float y,
                              float z = 1.0f);
 
-geometry::PointF TransformPoint(const geometry::Transform& transform,
-                                const geometry::PointF& point);
+fuchsia::math::PointF TransformPoint(const fuchsia::math::Transform& transform,
+                                const fuchsia::math::PointF& point);
 
-}  // namespace geometry
+}  // namespace math
+}  // namespace fuchsia
 
 #endif  // LIB_UI_GEOMETRY_CPP_GEOMETRY_UTIL_H_

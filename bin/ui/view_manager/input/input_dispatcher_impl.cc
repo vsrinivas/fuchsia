@@ -24,20 +24,20 @@ namespace {
 // Returns a pair of points representing a ray's origin and direction, in that
 // order. The ray is constructed to point directly into the scene at the
 // provided device coordinate.
-std::pair<geometry::Point3F, geometry::Point3F>
-DefaultRayForHitTestingScreenPoint(const geometry::PointF& point) {
-  geometry::Point3F origin;
+std::pair<fuchsia::math::Point3F, fuchsia::math::Point3F>
+DefaultRayForHitTestingScreenPoint(const fuchsia::math::PointF& point) {
+  fuchsia::math::Point3F origin;
   origin.x = point.x;
   origin.y = point.y;
   origin.z = -1.f;
-  geometry::Point3F direction;
+  fuchsia::math::Point3F direction;
   direction.z = 1.f;
   return {origin, direction};
 }
 
-// Converts a geometry::Transform into a escher::mat4 suitable for use in
+// Converts a fuchsia::math::Transform into a escher::mat4 suitable for use in
 // mathematical operations.
-escher::mat4 Unwrap(const geometry::Transform& matrix) {
+escher::mat4 Unwrap(const fuchsia::math::Transform& matrix) {
   const auto& in = matrix.matrix;
   return {in[0], in[4], in[8],  in[12], in[1], in[5], in[9],  in[13],
           in[2], in[6], in[10], in[14], in[3], in[7], in[11], in[15]};
@@ -59,9 +59,10 @@ escher::mat4 Unwrap(const geometry::Transform& matrix) {
 // the coordinate space of the ray.
 // |distance| is the distance along the ray that the original hit occured.
 // |event| is the event to transform.
-void TransformPointerEvent(const geometry::Point3F& ray_origin,
-                           const geometry::Point3F& ray_direction,
-                           const geometry::Transform& transform, float distance,
+void TransformPointerEvent(const fuchsia::math::Point3F& ray_origin,
+                           const fuchsia::math::Point3F& ray_direction,
+                           const fuchsia::math::Transform& transform,
+                           float distance,
                            input::InputEvent* event) {
   if (!event->is_pointer())
     return;
@@ -147,11 +148,11 @@ void InputDispatcherImpl::ProcessNextEvent() {
       }
 
       if (pointer.phase == input::PointerEventPhase::DOWN) {
-        geometry::PointF point;
+        fuchsia::math::PointF point;
         point.x = pointer.x;
         point.y = pointer.y;
         FXL_VLOG(1) << "HitTest: point=" << point;
-        std::pair<geometry::Point3F, geometry::Point3F> ray =
+        std::pair<fuchsia::math::Point3F, fuchsia::math::Point3F> ray =
             DefaultRayForHitTestingScreenPoint(point);
 
         ViewInspector::HitTestCallback callback =
@@ -195,10 +196,10 @@ void InputDispatcherImpl::DeliverEvent(uint64_t event_path_propagation_id,
   // boolean on the callback anymore.
   const ViewHit& view_hit = event_path_[index];
   const input::PointerEvent& pointer = event.pointer();
-  geometry::PointF point;
+  fuchsia::math::PointF point;
   point.x = pointer.x;
   point.y = pointer.y;
-  std::pair<geometry::Point3F, geometry::Point3F> ray =
+  std::pair<fuchsia::math::Point3F, fuchsia::math::Point3F> ray =
       DefaultRayForHitTestingScreenPoint(point);
   TransformPointerEvent(ray.first, ray.second, view_hit.inverse_transform,
                         view_hit.distance, &event);
@@ -281,7 +282,7 @@ void InputDispatcherImpl::OnFocusResult(
   PopAndScheduleNextEvent();
 }
 
-void InputDispatcherImpl::OnHitTestResult(const geometry::PointF& point,
+void InputDispatcherImpl::OnHitTestResult(const fuchsia::math::PointF& point,
                                           std::vector<ViewHit> view_hits) {
   FXL_DCHECK(!pending_events_.empty());
 

@@ -35,7 +35,7 @@ constexpr float kControlsGap = 12.0f;
 constexpr float kControlsHeight = 36.0f;
 
 // Determines whether the rectangle contains the point x,y.
-bool Contains(const geometry::RectF& rect, float x, float y) {
+bool Contains(const fuchsia::math::RectF& rect, float x, float y) {
   return rect.x <= x && rect.y <= y && rect.x + rect.width >= x &&
          rect.y + rect.height >= y;
 }
@@ -183,7 +183,7 @@ void MediaPlayerTestView::Layout() {
 
   // Compute maximum size of video content after reserving space
   // for decorations.
-  geometry::SizeF max_content_size;
+  fuchsia::math::SizeF max_content_size;
   max_content_size.width = logical_size().width;
   max_content_size.height =
       logical_size().height - kControlsHeight - kControlsGap;

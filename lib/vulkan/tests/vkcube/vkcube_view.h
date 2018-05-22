@@ -28,8 +28,8 @@ class VkCubeView : public mozart::BaseView {
   // |BaseView|:
   void OnSceneInvalidated(images::PresentationInfo presentation_info) override;
 
-  geometry::SizeF size_;
-  geometry::Size physical_size_;
+  fuchsia::math::SizeF size_;
+  fuchsia::math::Size physical_size_;
   scenic_lib::ShapeNode pane_node_;
   std::function<void(
       float width, float height,

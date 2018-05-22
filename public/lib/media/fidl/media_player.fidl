@@ -4,6 +4,7 @@
 
 library media_player;
 
+using fuchsia.math;
 using media;
 using views_v1_token;
 
@@ -76,10 +77,10 @@ struct MediaPlayerStatus {
   bool video_connected;
 
   // Size of the video currently being displayed.
-  geometry.Size? video_size;
+  fuchsia.math.Size? video_size;
 
   // Relative dimensions of a video pixel.
-  geometry.Size? pixel_aspect_ratio;
+  fuchsia.math.Size? pixel_aspect_ratio;
 
   // Describes the media.
   MediaMetadata? metadata;

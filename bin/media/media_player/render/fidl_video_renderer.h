@@ -50,9 +50,9 @@ class FidlVideoRenderer
 
   void Prime(fxl::Closure callback) override;
 
-  geometry::Size video_size() const override;
+  fuchsia::math::Size video_size() const override;
 
-  geometry::Size pixel_aspect_ratio() const override;
+  fuchsia::math::Size pixel_aspect_ratio() const override;
 
   // Registers a callback that's called when the values returned by |video_size|
   // or |pixel_aspect_ratio| change.
@@ -94,7 +94,7 @@ class FidlVideoRenderer
   void AdvanceReferenceTime(int64_t reference_time);
 
   void GetRgbaFrame(uint8_t* rgba_buffer,
-                    const geometry::Size& rgba_buffer_size);
+                    const fuchsia::math::Size& rgba_buffer_size);
 
   // Discards packets that are older than pts_ns_.
   void DiscardOldPackets();

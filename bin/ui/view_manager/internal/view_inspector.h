@@ -8,7 +8,7 @@
 #include <functional>
 #include <vector>
 
-#include <geometry/cpp/fidl.h>
+#include <fuchsia/math/cpp/fidl.h>
 #include <input/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 #include <views_v1_token/cpp/fidl.h>
@@ -34,18 +34,18 @@ struct ViewHit {
 
   // The origin of the ray that was used for the hit test, in device
   // coordinates.
-  geometry::Point3F ray_origin;
+  fuchsia::math::Point3F ray_origin;
 
   // The direction of the ray that was used for the hit test, in device
   // coordinates.
-  geometry::Point3F ray_direction;
+  fuchsia::math::Point3F ray_direction;
 
   // The distance along the ray that was passed in to the hit test, in the
   // coordinate system of the view.
   float distance;
 
   // Transforms the view tree coordinate system to the view's coordinate system.
-  geometry::Transform inverse_transform;
+  fuchsia::math::Transform inverse_transform;
 };
 
 // Provides a view associate with the ability to inspect and perform operations
@@ -65,8 +65,8 @@ class ViewInspector {
   // Performs a hit test using a vector with the provided ray, and returns the
   // list of views which were hit.
   virtual void HitTest(views_v1::ViewTreeToken view_tree_token,
-                       const geometry::Point3F& ray_origin,
-                       const geometry::Point3F& ray_direction,
+                       const fuchsia::math::Point3F& ray_origin,
+                       const fuchsia::math::Point3F& ray_direction,
                        HitTestCallback callback) = 0;
 
   // Given a token for a view tree, retrieve the current active focus chain for

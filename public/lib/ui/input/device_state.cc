@@ -202,7 +202,7 @@ void MouseState::SendEvent(float rel_x,
 }
 
 void MouseState::Update(input::InputReport input_report,
-                        geometry::Size display_size) {
+                        fuchsia::math::Size display_size) {
   FXL_DCHECK(input_report.mouse);
   uint64_t now = input_report.event_time;
   uint8_t pressed = (input_report.mouse->pressed_buttons ^ buttons_) &
@@ -260,7 +260,7 @@ void StylusState::SendEvent(int64_t timestamp,
 }
 
 void StylusState::Update(input::InputReport input_report,
-                         geometry::Size display_size) {
+                         fuchsia::math::Size display_size) {
   FXL_DCHECK(input_report.stylus);
 
   input::StylusDescriptor* descriptor = device_state_->stylus_descriptor();
@@ -334,7 +334,7 @@ void StylusState::Update(input::InputReport input_report,
 }
 
 void TouchscreenState::Update(input::InputReport input_report,
-                              geometry::Size display_size) {
+                              fuchsia::math::Size display_size) {
   FXL_DCHECK(input_report.touchscreen);
   input::TouchscreenDescriptor* descriptor =
       device_state_->touchscreen_descriptor();
@@ -494,7 +494,7 @@ void DeviceState::OnUnregistered() {
 }
 
 void DeviceState::Update(input::InputReport input_report,
-                         geometry::Size display_size) {
+                         fuchsia::math::Size display_size) {
   if (input_report.keyboard && descriptor_->keyboard) {
     keyboard_.Update(std::move(input_report));
   } else if (input_report.mouse && descriptor_->mouse) {

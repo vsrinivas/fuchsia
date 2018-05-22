@@ -78,9 +78,9 @@ std::unique_ptr<FocusChain> CopyFocusChain(const FocusChain* chain) {
   return new_chain;
 }
 
-geometry::Transform ToTransform(const gfx::mat4& matrix) {
+fuchsia::math::Transform ToTransform(const gfx::mat4& matrix) {
   // Note: mat4 is column-major but transform is row-major
-  geometry::Transform transform;
+  fuchsia::math::Transform transform;
   const auto& in = matrix.matrix;
   auto& out = transform.matrix;
   out[0] = in[0];
@@ -718,8 +718,8 @@ void ViewRegistry::ConnectToViewTreeService(ViewTreeState* tree_state,
 // VIEW INSPECTOR
 
 void ViewRegistry::HitTest(views_v1::ViewTreeToken view_tree_token,
-                           const geometry::Point3F& ray_origin,
-                           const geometry::Point3F& ray_direction,
+                           const fuchsia::math::Point3F& ray_origin,
+                           const fuchsia::math::Point3F& ray_direction,
                            HitTestCallback callback) {
   FXL_VLOG(1) << "HitTest: tree=" << view_tree_token;
 

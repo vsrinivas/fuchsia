@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_RENDER_VIDEO_RENDERER_H_
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_RENDER_VIDEO_RENDERER_H_
 
-#include <geometry/cpp/fidl.h>
+#include <fuchsia/math/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/render/renderer.h"
 
@@ -20,10 +20,10 @@ class VideoRendererInProc : public Renderer {
   ~VideoRendererInProc() override {}
 
   // Returns the current size of the video in pixels.
-  virtual geometry::Size video_size() const = 0;
+  virtual fuchsia::math::Size video_size() const = 0;
 
   // Returns the current pixel aspect ratio of the video.
-  virtual geometry::Size pixel_aspect_ratio() const = 0;
+  virtual fuchsia::math::Size pixel_aspect_ratio() const = 0;
 };
 
 }  // namespace media_player

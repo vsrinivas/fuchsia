@@ -4,6 +4,8 @@
 
 library views_v1;
 
+using fuchsia.math;
+
 // Parameters and contextual information for a view provided by its container.
 //
 // When a container sets properties for its children, any properties which
@@ -29,9 +31,9 @@ struct DisplayMetrics {
 struct ViewLayout {
   // The size of the view in logical pixels.
   // Must be non-negative.
-  geometry.SizeF size;
+  fuchsia.math.SizeF size;
 
   // The inset of the view in logical pixels.
   // Must be non-negative.
-  geometry.InsetF inset;
+  fuchsia.math.InsetF inset;
 };

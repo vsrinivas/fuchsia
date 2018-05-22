@@ -106,8 +106,8 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   // VIEW INSPECTOR REQUESTS
 
   void HitTest(views_v1::ViewTreeToken view_tree_token,
-               const geometry::Point3F& ray_origin,
-               const geometry::Point3F& ray_direction,
+               const fuchsia::math::Point3F& ray_origin,
+               const fuchsia::math::Point3F& ray_direction,
                HitTestCallback callback) override;
   void ResolveFocusChain(views_v1::ViewTreeToken view_tree_token,
                          const ResolveFocusChainCallback& callback) override;

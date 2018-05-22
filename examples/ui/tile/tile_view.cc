@@ -147,7 +147,7 @@ void TileView::OnSceneInvalidated(images::PresentationInfo presentation_info) {
       excess--;
     }
 
-    geometry::RectF layout_bounds;
+    fuchsia::math::RectF layout_bounds;
     if (vertical) {
       layout_bounds.x = 0;
       layout_bounds.y = offset;

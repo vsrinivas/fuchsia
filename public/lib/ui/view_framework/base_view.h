@@ -67,7 +67,7 @@ class BaseView : private views_v1::ViewListener,
 
   // Gets the size of the view in logical pixels.
   // This value is zero until the view receives a layout from its parent.
-  const geometry::SizeF& logical_size() const { return logical_size_; }
+  const fuchsia::math::SizeF& logical_size() const { return logical_size_; }
 
   // Returns true if the view has a non-empty size in physical pixels.
   bool has_physical_size() const {
@@ -77,7 +77,7 @@ class BaseView : private views_v1::ViewListener,
   // Gets the size of the view in physical pixels.
   // This value is zero until the view receives a layout from its parent
   // and metrics from its session.
-  const geometry::Size& physical_size() const { return physical_size_; }
+  const fuchsia::math::Size& physical_size() const { return physical_size_; }
 
   // When true, the session provided metrics are adjusted such that the
   // X and Y scale factors are made equal before computing the physical size.
@@ -177,8 +177,8 @@ class BaseView : private views_v1::ViewListener,
   views_v1::ViewContainerPtr view_container_;
   input::InputConnectionPtr input_connection_;
   views_v1::ViewProperties properties_;
-  geometry::SizeF logical_size_;
-  geometry::Size physical_size_;
+  fuchsia::math::SizeF logical_size_;
+  fuchsia::math::Size physical_size_;
   bool need_square_metrics_ = false;
   gfx::Metrics original_metrics_;
   gfx::Metrics adjusted_metrics_;

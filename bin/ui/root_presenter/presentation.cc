@@ -441,7 +441,7 @@ void Presentation::OnReport(uint32_t device_id,
     return;
 
   mozart::DeviceState* state = device_states_by_id_[device_id].second.get();
-  geometry::Size size;
+  fuchsia::math::Size size;
   size.width = display_model_actual_.display_info().width_in_px;
   size.height = display_model_actual_.display_info().height_in_px;
   state->Update(std::move(input_report), size);

@@ -8,7 +8,8 @@
 
 #include "gtest/gtest.h"
 
-namespace geometry {
+namespace fuchsia {
+namespace math {
 namespace {
 
 Transform CreateTransformFromData(const std::array<float, 16>& data) {
@@ -193,4 +194,5 @@ TEST(TransformFunctionsTest, CreateScaleTransform) {
 }
 
 }  // namespace
-}  // namespace geometry
+}  // namespace math
+}  // namespace fuchsia

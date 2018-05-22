@@ -171,7 +171,7 @@ TEST_F(ViewManagerTest, SetChildProperties) {
   parent_view_properties->display_metrics = views_v1::DisplayMetrics::New();
   parent_view_properties->display_metrics->device_pixel_ratio = 1.0;
   parent_view_properties->view_layout = views_v1::ViewLayout::New();
-  parent_view_properties->view_layout->size = geometry::Size::New();
+  parent_view_properties->view_layout->size = fuchsia::math::Size::New();
   parent_view_properties->view_layout->size->width = parent_view_width;
   parent_view_properties->view_layout->size->height = parent_view_height;
   parent_view_properties->view_layout->inset = mozart::Inset::New();
@@ -210,7 +210,7 @@ TEST_F(ViewManagerTest, SetChildProperties) {
   view_properties->view_layout = views_v1::ViewLayout::New();
   view_properties->display_metrics = views_v1::DisplayMetrics::New();
   view_properties->display_metrics->device_pixel_ratio = 1.0;
-  view_properties->view_layout->size = geometry::Size::New();
+  view_properties->view_layout->size = fuchsia::math::Size::New();
   view_properties->view_layout->size->width = child_view_width;
   view_properties->view_layout->size->height = child_view_height;
   view_properties->view_layout->inset = mozart::Inset::New();

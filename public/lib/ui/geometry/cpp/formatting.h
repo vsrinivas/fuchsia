@@ -5,23 +5,25 @@
 #ifndef LIB_UI_GEOMETRY_CPP_FORMATTING_H_
 #define LIB_UI_GEOMETRY_CPP_FORMATTING_H_
 
-#include <geometry/cpp/fidl.h>
+#include <fuchsia/math/cpp/fidl.h>
 
 #include <iosfwd>
 
-namespace geometry {
+namespace fuchsia {
+namespace math {
 
-std::ostream& operator<<(std::ostream& os, const geometry::Point& value);
-std::ostream& operator<<(std::ostream& os, const geometry::PointF& value);
-std::ostream& operator<<(std::ostream& os, const geometry::Rect& value);
-std::ostream& operator<<(std::ostream& os, const geometry::RectF& value);
-std::ostream& operator<<(std::ostream& os, const geometry::RRectF& value);
-std::ostream& operator<<(std::ostream& os, const geometry::Size& value);
-std::ostream& operator<<(std::ostream& os, const geometry::SizeF& value);
-std::ostream& operator<<(std::ostream& os, const geometry::Inset& value);
-std::ostream& operator<<(std::ostream& os, const geometry::InsetF& value);
-std::ostream& operator<<(std::ostream& os, const geometry::Transform& value);
+std::ostream& operator<<(std::ostream& os, const Point& value);
+std::ostream& operator<<(std::ostream& os, const PointF& value);
+std::ostream& operator<<(std::ostream& os, const Rect& value);
+std::ostream& operator<<(std::ostream& os, const RectF& value);
+std::ostream& operator<<(std::ostream& os, const RRectF& value);
+std::ostream& operator<<(std::ostream& os, const Size& value);
+std::ostream& operator<<(std::ostream& os, const SizeF& value);
+std::ostream& operator<<(std::ostream& os, const Inset& value);
+std::ostream& operator<<(std::ostream& os, const InsetF& value);
+std::ostream& operator<<(std::ostream& os, const Transform& value);
 
-}  // namespace geometry
+}  // namespace math
+}  // namespace fuchsia
 
 #endif  // LIB_UI_GEOMETRY_CPP_FORMATTING_H_

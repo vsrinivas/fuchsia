@@ -17,8 +17,8 @@ void Capture(const fxl::Closure& quit, T* out, T value) {
   quit();
 }
 
-inline geometry::PointFPtr MakePointF(float x, float y) {
-  auto result = geometry::PointF::New();
+inline fuchsia::math::PointFPtr MakePointF(float x, float y) {
+  auto result = fuchsia::math::PointF::New();
   result->x = x;
   result->y = y;
   return result.Pass();

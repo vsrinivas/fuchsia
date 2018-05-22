@@ -40,7 +40,7 @@ class App : public input::InputDeviceRegistry,
       return;
     }
 
-    geometry::Size size;
+    fuchsia::math::Size size;
     size.width = 100.0;
     size.height = 100.0;
 

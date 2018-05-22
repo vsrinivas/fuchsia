@@ -9,7 +9,7 @@
 #include <set>
 #include <utility>
 
-#include <geometry/cpp/fidl.h>
+#include <fuchsia/math/cpp/fidl.h>
 #include <input/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 #include "garnet/bin/ui/view_manager/internal/view_inspector.h"
@@ -51,7 +51,7 @@ class InputDispatcherImpl : public input::InputDispatcher {
   void PopAndScheduleNextEvent();
 
   void OnFocusResult(std::unique_ptr<FocusChain> focus_chain);
-  void OnHitTestResult(const geometry::PointF& point,
+  void OnHitTestResult(const fuchsia::math::PointF& point,
                        std::vector<ViewHit> view_hits);
 
   ViewInspector* const inspector_;

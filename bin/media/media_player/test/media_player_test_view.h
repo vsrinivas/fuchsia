@@ -73,13 +73,13 @@ class MediaPlayerTestView : public mozart::BaseView {
   std::unique_ptr<scenic_lib::EntityNode> video_host_node_;
 
   media_player::MediaPlayerPtr media_player_;
-  geometry::Size video_size_;
-  geometry::Size pixel_aspect_ratio_;
+  fuchsia::math::Size video_size_;
+  fuchsia::math::Size pixel_aspect_ratio_;
   State state_ = State::kPaused;
   media::TimelineFunction timeline_function_;
   media_player::MediaMetadataPtr metadata_;
-  geometry::RectF content_rect_;
-  geometry::RectF controls_rect_;
+  fuchsia::math::RectF content_rect_;
+  fuchsia::math::RectF controls_rect_;
   bool problem_shown_ = false;
   bool was_at_end_of_stream_ = false;
 

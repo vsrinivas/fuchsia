@@ -74,8 +74,8 @@ void VideoConverter::SetStreamType(std::unique_ptr<StreamType> stream_type) {
       << "only YV12 video conversion is currently implemented";
 }
 
-geometry::Size VideoConverter::GetSize() const {
-  geometry::Size size;
+fuchsia::math::Size VideoConverter::GetSize() const {
+  fuchsia::math::Size size;
 
   if (video_stream_type_ != nullptr) {
     size.width = video_stream_type_->width();
@@ -88,8 +88,8 @@ geometry::Size VideoConverter::GetSize() const {
   return size;
 }
 
-geometry::Size VideoConverter::GetPixelAspectRatio() const {
-  geometry::Size pixel_aspect_ratio;
+fuchsia::math::Size VideoConverter::GetPixelAspectRatio() const {
+  fuchsia::math::Size pixel_aspect_ratio;
 
   if (video_stream_type_ != nullptr) {
     pixel_aspect_ratio.width = video_stream_type_->pixel_aspect_ratio_width();

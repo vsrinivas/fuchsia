@@ -152,11 +152,11 @@ void FidlVideoRenderer::Prime(fxl::Closure callback) {
   stage()->RequestInputPacket();
 }
 
-geometry::Size FidlVideoRenderer::video_size() const {
+fuchsia::math::Size FidlVideoRenderer::video_size() const {
   return converter_.GetSize();
 }
 
-geometry::Size FidlVideoRenderer::pixel_aspect_ratio() const {
+fuchsia::math::Size FidlVideoRenderer::pixel_aspect_ratio() const {
   return converter_.GetPixelAspectRatio();
 }
 
@@ -186,7 +186,7 @@ void FidlVideoRenderer::AdvanceReferenceTime(int64_t reference_time) {
 }
 
 void FidlVideoRenderer::GetRgbaFrame(uint8_t* rgba_buffer,
-                                     const geometry::Size& rgba_buffer_size) {
+                                     const fuchsia::math::Size& rgba_buffer_size) {
   if (held_packet_) {
     converter_.ConvertFrame(rgba_buffer, rgba_buffer_size.width,
                             rgba_buffer_size.height, held_packet_->payload(),
@@ -283,7 +283,7 @@ void FidlVideoRenderer::View::OnSceneInvalidated(
 
   renderer_->OnSceneInvalidated(presentation_info.presentation_time);
 
-  geometry::Size video_size = renderer_->video_size();
+  fuchsia::math::Size video_size = renderer_->video_size();
   if (!has_logical_size() || video_size.width == 0 || video_size.height == 0) {
     return;
   }

@@ -8,27 +8,28 @@
 
 #include <ostream>
 
-namespace geometry {
+namespace fuchsia {
+namespace math {
 
-std::ostream& operator<<(std::ostream& os, const geometry::Point& value) {
+std::ostream& operator<<(std::ostream& os, const Point& value) {
   return os << "{x=" << value.x << ", y=" << value.y << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const geometry::PointF& value) {
+std::ostream& operator<<(std::ostream& os, const PointF& value) {
   return os << "{x=" << value.x << ", y=" << value.y << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const geometry::Rect& value) {
+std::ostream& operator<<(std::ostream& os, const Rect& value) {
   return os << "{x=" << value.x << ", y=" << value.y
             << ", width=" << value.width << ", height=" << value.height << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const geometry::RectF& value) {
+std::ostream& operator<<(std::ostream& os, const RectF& value) {
   return os << "{x=" << value.x << ", y=" << value.y
             << ", width=" << value.width << ", height=" << value.height << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const geometry::RRectF& value) {
+std::ostream& operator<<(std::ostream& os, const RRectF& value) {
   return os << "{x=" << value.x << ", y=" << value.y
             << ", width=" << value.width << ", height=" << value.height
             << ", top_left_radius_x=" << value.top_left_radius_x
@@ -41,25 +42,25 @@ std::ostream& operator<<(std::ostream& os, const geometry::RRectF& value) {
             << ", bottom_right_radius_y=" << value.bottom_right_radius_y << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const geometry::Size& value) {
+std::ostream& operator<<(std::ostream& os, const Size& value) {
   return os << "{width=" << value.width << ", height=" << value.height << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const geometry::SizeF& value) {
+std::ostream& operator<<(std::ostream& os, const SizeF& value) {
   return os << "{width=" << value.width << ", height=" << value.height << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const geometry::Inset& value) {
+std::ostream& operator<<(std::ostream& os, const Inset& value) {
   return os << "{left=" << value.left << ", top=" << value.top
             << ", right=" << value.right << ", bottom=" << value.bottom << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const geometry::InsetF& value) {
+std::ostream& operator<<(std::ostream& os, const InsetF& value) {
   return os << "{left=" << value.left << ", top=" << value.top
             << ", right=" << value.right << ", bottom=" << value.bottom << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const geometry::Transform& value) {
+std::ostream& operator<<(std::ostream& os, const Transform& value) {
   ZX_DEBUG_ASSERT(value.matrix.count() == 16);
   os << "[";
   for (size_t i = 0; i < 4; i++) {
@@ -77,4 +78,5 @@ std::ostream& operator<<(std::ostream& os, const geometry::Transform& value) {
   return os;
 }
 
-}  // namespace geometry
+}  // namespace math
+}  // namespace fuchsia

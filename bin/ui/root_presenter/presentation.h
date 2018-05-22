@@ -8,7 +8,7 @@
 #include <map>
 #include <memory>
 
-#include <geometry/cpp/fidl.h>
+#include <fuchsia/math/cpp/fidl.h>
 #include <input/cpp/fidl.h>
 #include <presentation/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
@@ -211,7 +211,7 @@ class Presentation : private views_v1::ViewTreeListener,
   YieldCallback yield_callback_;
   ShutdownCallback shutdown_callback_;
 
-  geometry::PointF mouse_coordinates_;
+  fuchsia::math::PointF mouse_coordinates_;
 
   fidl::Binding<presentation::Presentation> presentation_binding_;
   fidl::Binding<views_v1::ViewTreeListener> tree_listener_binding_;
@@ -246,7 +246,7 @@ class Presentation : private views_v1::ViewTreeListener,
   struct CursorState {
     bool created;
     bool visible;
-    geometry::PointF position;
+    fuchsia::math::PointF position;
     std::unique_ptr<scenic_lib::ShapeNode> node;
   };
 
