@@ -784,11 +784,6 @@ amber_publish("amber_publish_index") {
   testonly = true
   deps = [
     ":amber_index",
-
-    # amber_publish_blobs clears amber_repository_dir before populating it.
-    # amber_publish() writes more output into amber_repository_dir, so it
-    # must come after the clearing has finished.
-    ":amber_publish_blobs",
   ]
   inputs = [
     amber_index,
