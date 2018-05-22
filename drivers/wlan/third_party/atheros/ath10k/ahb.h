@@ -18,6 +18,8 @@
 #ifndef _AHB_H_
 #define _AHB_H_
 
+#if 0 // NEEDS PORTING
+
 #include <linux/platform_device.h>
 
 struct ath10k_ahb {
@@ -81,5 +83,7 @@ static inline void ath10k_ahb_exit(void) {
 }
 
 #endif /* CONFIG_ATH10K_AHB */
+
+#endif // NEEDS PORTING
 
 #endif /* _AHB_H_ */
