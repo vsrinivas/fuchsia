@@ -802,7 +802,7 @@ zx_status_t xdc_poll(xdc_t* xdc) {
         // TODO(jocelyndang): might want a separate thread for this.
         usb_request_t* req;
         for (int i = 0; i < NUM_EPS; i++) {
-            while ((req = list_remove_tail_type(&completed[i], usb_request_t, node)) != NULL) {
+            while ((req = list_remove_head_type(&completed[i], usb_request_t, node)) != NULL) {
                 usb_request_complete(req, req->response.status, req->response.actual);
             }
         }
