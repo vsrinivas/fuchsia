@@ -17,8 +17,7 @@ class DisplayMetrics {
  public:
   constexpr DisplayMetrics() {}
 
-  constexpr DisplayMetrics(uint32_t width_in_px,
-                           uint32_t height_in_px,
+  constexpr DisplayMetrics(uint32_t width_in_px, uint32_t height_in_px,
                            float x_scale_in_px_per_pp,
                            float y_scale_in_px_per_pp,
                            float density_in_pp_per_mm)

@@ -31,20 +31,15 @@ class ImagePipe : public ImageBase {
   static const ResourceTypeInfo kTypeInfo;
 
   ImagePipe(Session* session, scenic::ResourceId id);
-  ImagePipe(Session* session,
-            scenic::ResourceId id,
+  ImagePipe(Session* session, scenic::ResourceId id,
             ::fidl::InterfaceRequest<images::ImagePipe> request);
 
   // Called by |ImagePipeHandler|, part of |ImagePipe| interface.
-  void AddImage(uint32_t image_id,
-                images::ImageInfo image_info,
-                zx::vmo memory,
-                images::MemoryType memory_type,
-                uint64_t memory_offset);
+  void AddImage(uint32_t image_id, images::ImageInfo image_info, zx::vmo memory,
+                images::MemoryType memory_type, uint64_t memory_offset);
   void RemoveImage(uint32_t image_id);
 
-  void PresentImage(uint32_t image_id,
-                    uint64_t presentation_time,
+  void PresentImage(uint32_t image_id, uint64_t presentation_time,
                     ::fidl::VectorPtr<zx::event> acquire_fences,
                     ::fidl::VectorPtr<zx::event> release_fences,
                     images::ImagePipe::PresentImageCallback callback);
@@ -75,8 +70,7 @@ class ImagePipe : public ImageBase {
   void CloseConnectionAndCleanUp();
 
   // Virtual so that test subclasses can override.
-  virtual ImagePtr CreateImage(Session* session,
-                               MemoryPtr memory,
+  virtual ImagePtr CreateImage(Session* session, MemoryPtr memory,
                                const images::ImageInfo& image_info,
                                uint64_t memory_offset,
                                ErrorReporter* error_reporter);

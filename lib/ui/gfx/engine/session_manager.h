@@ -42,8 +42,7 @@ class SessionManager {
   // Returns a SessionHandler, which is casted as a CommandDispatcher. Used by
   // ScenicSystem.
   std::unique_ptr<CommandDispatcher> CreateCommandDispatcher(
-      CommandDispatcherContext context,
-      Engine* engine);
+      CommandDispatcherContext context, Engine* engine);
 
   // Tell the UpdateScheduler to schedule a frame, and remember the Session so
   // that we can tell it to apply updates in ApplyScheduledSessionUpdates().
@@ -64,11 +63,8 @@ class SessionManager {
   void TearDownSession(SessionId id);
 
   virtual std::unique_ptr<SessionHandler> CreateSessionHandler(
-      CommandDispatcherContext context,
-      Engine* engine,
-      SessionId session_id,
-      EventReporter* event_reporter,
-      ErrorReporter* error_reporter) const;
+      CommandDispatcherContext context, Engine* engine, SessionId session_id,
+      EventReporter* event_reporter, ErrorReporter* error_reporter) const;
 
   // Map of all the sessions.
   std::unordered_map<SessionId, SessionHandler*> session_manager_;

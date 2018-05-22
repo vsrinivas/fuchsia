@@ -25,8 +25,7 @@ constexpr float kPixelsPerDivision = 4;
 
 namespace sketchy_service {
 
-const ResourceTypeInfo Stroke::kTypeInfo("Stroke",
-                                         ResourceType::kStroke,
+const ResourceTypeInfo Stroke::kTypeInfo("Stroke", ResourceType::kStroke,
                                          ResourceType::kResource);
 
 Stroke::Stroke(StrokeTessellator* tessellator,
@@ -35,8 +34,7 @@ Stroke::Stroke(StrokeTessellator* tessellator,
       path_(kStrokeHalfWidth, kPixelsPerDivision),
       delta_path_(kStrokeHalfWidth, kPixelsPerDivision),
       stroke_info_buffer_(buffer_factory->NewBuffer(
-          sizeof(StrokeInfo),
-          vk::BufferUsageFlagBits::eUniformBuffer,
+          sizeof(StrokeInfo), vk::BufferUsageFlagBits::eUniformBuffer,
           vk::MemoryPropertyFlagBits::eHostVisible |
               vk::MemoryPropertyFlagBits::eHostCoherent)),
       control_points_buffer_(buffer_factory),

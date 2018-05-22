@@ -91,8 +91,7 @@ class Node : public Resource {
                                float* out_distance) const;
 
  protected:
-  Node(Session* session,
-       scenic::ResourceId node_id,
+  Node(Session* session, scenic::ResourceId node_id,
        const ResourceTypeInfo& type_info);
 
  private:

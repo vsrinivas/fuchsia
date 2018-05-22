@@ -38,8 +38,7 @@ int8_t signed_bit_cast(uint8_t src) {
 // Extracts an int8_t sign extended to int32_t from a byte vector |v|.
 // Both |begin| and |count| are in bits units. This function does not
 // check for the vector being long enough.
-int32_t extract_int(const std::vector<uint8_t>& v,
-                    uint32_t begin,
+int32_t extract_int(const std::vector<uint8_t>& v, uint32_t begin,
                     uint32_t count) {
   uint8_t val = v[begin / 8u] >> (begin % 8u);
   val = (count < 8) ? (val & ~(1u << count)) : val;

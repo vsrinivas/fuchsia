@@ -7,8 +7,7 @@
 namespace scenic {
 namespace gfx {
 
-PlanarShape::PlanarShape(Session* session,
-                         scenic::ResourceId id,
+PlanarShape::PlanarShape(Session* session, scenic::ResourceId id,
                          const ResourceTypeInfo& type_info)
     : Shape(session, id, type_info) {}
 

@@ -119,8 +119,7 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
   void RemoveCompositor(Compositor* compositor);
 
   // |FrameSchedulerDelegate|:
-  bool RenderFrame(const FrameTimingsPtr& frame,
-                   uint64_t presentation_time,
+  bool RenderFrame(const FrameTimingsPtr& frame, uint64_t presentation_time,
                    uint64_t presentation_interval) override;
 
   void InitializeFrameScheduler();
@@ -130,8 +129,7 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
 
   // Update reported metrics for nodes which subscribe to metrics events.
   // If anything changed, append the node to |updated_nodes|.
-  void UpdateMetrics(Node* node,
-                     const ::gfx::Metrics& parent_metrics,
+  void UpdateMetrics(Node* node, const ::gfx::Metrics& parent_metrics,
                      std::vector<Node*>* updated_nodes);
 
   // Invoke Escher::Cleanup().  If more work remains afterward, post a delayed

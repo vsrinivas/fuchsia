@@ -16,11 +16,8 @@ class Buffer : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Buffer(Session* session,
-         scenic::ResourceId id,
-         GpuMemoryPtr memory,
-         uint32_t size,
-         uint32_t offset);
+  Buffer(Session* session, scenic::ResourceId id, GpuMemoryPtr memory,
+         uint32_t size, uint32_t offset);
 
   void Accept(class ResourceVisitor* visitor) override;
 

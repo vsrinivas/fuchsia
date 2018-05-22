@@ -14,9 +14,7 @@ class RectangleShape final : public PlanarShape {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  RectangleShape(Session* session,
-                 scenic::ResourceId id,
-                 float initial_width,
+  RectangleShape(Session* session, scenic::ResourceId id, float initial_width,
                  float initial_height);
 
   float width() const { return width_; }

@@ -19,8 +19,7 @@ std::vector<Hit> HitTester::HitTest(Node* node, const escher::ray4& ray) {
   return HitTest(node, ray, node->session());
 }
 
-std::vector<Hit> HitTester::HitTest(Node* node,
-                                    const escher::ray4& ray,
+std::vector<Hit> HitTester::HitTest(Node* node, const escher::ray4& ray,
                                     Session* session) {
   FXL_DCHECK(node);
   FXL_DCHECK(session_ == nullptr);

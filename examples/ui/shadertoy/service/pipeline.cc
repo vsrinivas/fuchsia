@@ -6,8 +6,7 @@
 
 namespace shadertoy {
 
-Pipeline::Pipeline(vk::Device device,
-                   vk::Pipeline pipeline,
+Pipeline::Pipeline(vk::Device device, vk::Pipeline pipeline,
                    vk::PipelineLayout pipeline_layout)
     : device_(device), pipeline_(pipeline), pipeline_layout_(pipeline_layout) {}
 

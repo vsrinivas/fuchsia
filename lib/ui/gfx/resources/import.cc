@@ -10,8 +10,7 @@
 namespace scenic {
 namespace gfx {
 namespace {
-ResourcePtr CreateDelegate(Session* session,
-                           scenic::ResourceId id,
+ResourcePtr CreateDelegate(Session* session, scenic::ResourceId id,
                            ::gfx::ImportSpec spec) {
   switch (spec) {
     case ::gfx::ImportSpec::NODE:

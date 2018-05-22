@@ -57,8 +57,7 @@ class ResourceLinker {
   // yet, the binding is not guaranteed to happen immediately.
   //
   // Returns true if there are no errors.
-  bool ImportResource(Import* import,
-                      ::gfx::ImportSpec spec,
+  bool ImportResource(Import* import, ::gfx::ImportSpec spec,
                       zx::eventpair import_token);
 
   size_t NumExports() const;
@@ -114,12 +113,10 @@ class ResourceLinker {
   // A callback that informs us when an import has been destroyed.
   void OnImportDestroyed(Import* import);
 
-  void OnImportResolvedForResource(Import* import,
-                                   Resource* actual,
+  void OnImportResolvedForResource(Import* import, Resource* actual,
                                    ImportResolutionResult resolution_result);
 
-  void OnTokenPeerDeath(zx_koid_t import_koid,
-                        zx_status_t status,
+  void OnTokenPeerDeath(zx_koid_t import_koid, zx_status_t status,
                         const zx_packet_signal* signal);
 
   void InvokeExpirationCallback(Resource* resource, ExpirationCause cause);

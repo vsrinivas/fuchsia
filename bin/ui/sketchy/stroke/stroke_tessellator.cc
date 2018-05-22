@@ -147,8 +147,7 @@ void main() {
 namespace sketchy_service {
 
 StrokeTessellator::StrokeTessellator(escher::Escher* escher)
-    : kernel_(escher,
-              std::vector<vk::ImageLayout>{},
+    : kernel_(escher, std::vector<vk::ImageLayout>{},
               std::vector<vk::DescriptorType>{
                   // Binding 0: |stroke_info_buffer|
                   vk::DescriptorType::eUniformBuffer,
@@ -166,20 +165,16 @@ StrokeTessellator::StrokeTessellator(escher::Escher* escher)
                   vk::DescriptorType::eStorageBuffer,
                   // Binding 7: output index buffer
                   vk::DescriptorType::eStorageBuffer},
-              /* push_constants_size= */ 0,
-              kShaderCode) {}
+              /* push_constants_size= */ 0, kShaderCode) {}
 
 void StrokeTessellator::Dispatch(
     escher::BufferPtr stroke_info_buffer,
-    escher::BufferPtr control_points_buffer,
-    escher::BufferPtr re_params_buffer,
+    escher::BufferPtr control_points_buffer, escher::BufferPtr re_params_buffer,
     escher::BufferPtr division_counts_buffer,
     escher::BufferPtr cumulative_division_counts_buffer,
     escher::BufferPtr division_segment_index_buffer,
-    escher::BufferPtr vertex_buffer,
-    escher::BufferPtr index_buffer,
-    escher::impl::CommandBuffer* command,
-    escher::TimestampProfiler* profiler,
+    escher::BufferPtr vertex_buffer, escher::BufferPtr index_buffer,
+    escher::impl::CommandBuffer* command, escher::TimestampProfiler* profiler,
     uint32_t division_count) {
   if (profiler) {
     profiler->AddTimestamp(command, vk::PipelineStageFlagBits::eBottomOfPipe,

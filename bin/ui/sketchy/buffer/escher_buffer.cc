@@ -40,13 +40,11 @@ escher::BufferPtr GetStagingBuffer(escher::BufferFactory* factory,
 namespace sketchy_service {
 
 EscherBuffer::EscherBuffer(escher::BufferFactory* factory)
-    : buffer_(factory->NewBuffer(kDefaultCapacity,
-                                 kBufferUsageFlags,
+    : buffer_(factory->NewBuffer(kDefaultCapacity, kBufferUsageFlags,
                                  kMemoryPropertyFlags)) {}
 
 void EscherBuffer::SetData(escher::impl::CommandBuffer* command,
-                           escher::BufferFactory* factory,
-                           const void* data,
+                           escher::BufferFactory* factory, const void* data,
                            size_t size) {
   if (size == 0) {
     size_ = 0;
@@ -63,8 +61,7 @@ void EscherBuffer::SetData(escher::impl::CommandBuffer* command,
 }
 
 void EscherBuffer::AppendData(escher::impl::CommandBuffer* command,
-                              escher::BufferFactory* factory,
-                              const void* data,
+                              escher::BufferFactory* factory, const void* data,
                               size_t size) {
   if (size == 0) {
     return;

@@ -27,9 +27,7 @@ class StrokeFitter final {
   const StrokePath* path() const { return path_.get(); }
 
  private:
-  void FitSampleRange(int start_index,
-                      int end_index,
-                      glm::vec2 left_tangent,
+  void FitSampleRange(int start_index, int end_index, glm::vec2 left_tangent,
                       glm::vec2 right_tangent);
 
   std::unique_ptr<StrokePath> path_;

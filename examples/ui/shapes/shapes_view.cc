@@ -19,8 +19,7 @@ constexpr float kCircleRadius = 40.f;
 ShapesView::ShapesView(
     views_v1::ViewManagerPtr view_manager,
     fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request)
-    : BaseView(std::move(view_manager),
-               std::move(view_owner_request),
+    : BaseView(std::move(view_manager), std::move(view_owner_request),
                "Shapes"),
       background_node_(session()),
       card_node_(session()),

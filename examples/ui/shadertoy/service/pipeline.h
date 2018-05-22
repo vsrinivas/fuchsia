@@ -16,8 +16,7 @@ using PipelinePtr = fxl::RefPtr<Pipeline>;
 
 class Pipeline : public fxl::RefCountedThreadSafe<Pipeline> {
  public:
-  explicit Pipeline(vk::Device device,
-                    vk::Pipeline pipeline,
+  explicit Pipeline(vk::Device device, vk::Pipeline pipeline,
                     vk::PipelineLayout layout);
   ~Pipeline();
 

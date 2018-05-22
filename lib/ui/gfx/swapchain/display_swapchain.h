@@ -32,8 +32,7 @@ class EventTimestamper;
 // swapchain to present images to a physical display using the Magma API.
 class DisplaySwapchain : public Swapchain {
  public:
-  DisplaySwapchain(Display* display,
-                   EventTimestamper* timestamper,
+  DisplaySwapchain(Display* display, EventTimestamper* timestamper,
                    escher::Escher* escher);
   ~DisplaySwapchain() override;
 

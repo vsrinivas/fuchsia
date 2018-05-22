@@ -141,10 +141,8 @@ class InputApp {
     return input_device;
   }
 
-  void TapEventCommand(const std::vector<std::string>& args,
-                       uint32_t width,
-                       uint32_t height,
-                       uint32_t duration_ms) {
+  void TapEventCommand(const std::vector<std::string>& args, uint32_t width,
+                       uint32_t height, uint32_t duration_ms) {
     if (args.size() != 3) {
       Usage();
       return;
@@ -204,10 +202,8 @@ class InputApp {
     SendKeyPress(std::move(input_device), usage, duration_ms);
   }
 
-  void SwipeEventCommand(const std::vector<std::string>& args,
-                         uint32_t width,
-                         uint32_t height,
-                         uint32_t duration) {
+  void SwipeEventCommand(const std::vector<std::string>& args, uint32_t width,
+                         uint32_t height, uint32_t duration) {
     if (args.size() != 5) {
       Usage();
       return;
@@ -239,9 +235,7 @@ class InputApp {
     SendSwipe(std::move(input_device), x0, y0, x1, y1, duration);
   }
 
-  void SendTap(input::InputDevicePtr input_device,
-               uint32_t x,
-               uint32_t y,
+  void SendTap(input::InputDevicePtr input_device, uint32_t x, uint32_t y,
                uint32_t duration_ms) {
     // DOWN
     input::Touch touch;
@@ -278,8 +272,7 @@ class InputApp {
         delta);
   }
 
-  void SendKeyPress(input::InputDevicePtr input_device,
-                    uint32_t usage,
+  void SendKeyPress(input::InputDevicePtr input_device, uint32_t usage,
                     uint32_t duration_ms) {
     // PRESSED
     input::KeyboardReportPtr keyboard = input::KeyboardReport::New();
@@ -309,12 +302,8 @@ class InputApp {
         delta);
   }
 
-  void SendSwipe(input::InputDevicePtr input_device,
-                 uint32_t x0,
-                 uint32_t y0,
-                 uint32_t x1,
-                 uint32_t y1,
-                 uint32_t duration_ms) {
+  void SendSwipe(input::InputDevicePtr input_device, uint32_t x0, uint32_t y0,
+                 uint32_t x1, uint32_t y1, uint32_t duration_ms) {
     // DOWN
     input::Touch touch;
     touch.finger_id = 1;

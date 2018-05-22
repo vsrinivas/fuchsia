@@ -17,18 +17,14 @@ namespace gfx {
 const ResourceTypeInfo Image::kTypeInfo = {
     ResourceType::kImage | ResourceType::kImageBase, "Image"};
 
-Image::Image(Session* session,
-             scenic::ResourceId id,
+Image::Image(Session* session, scenic::ResourceId id,
              const ResourceTypeInfo& type_info)
     : ImageBase(session, id, Image::kTypeInfo) {
   FXL_DCHECK(type_info.IsKindOf(Image::kTypeInfo));
 }
 
-ImagePtr Image::New(Session* session,
-                    scenic::ResourceId id,
-                    MemoryPtr memory,
-                    const images::ImageInfo& image_info,
-                    uint64_t memory_offset,
+ImagePtr Image::New(Session* session, scenic::ResourceId id, MemoryPtr memory,
+                    const images::ImageInfo& image_info, uint64_t memory_offset,
                     ErrorReporter* error_reporter) {
   // Create from host memory.
   if (memory->IsKindOf<HostMemory>()) {

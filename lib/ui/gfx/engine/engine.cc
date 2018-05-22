@@ -60,20 +60,17 @@ Engine::Engine(DisplayManager* display_manager, escher::Escher* escher)
       escher_(escher),
       paper_renderer_(escher::PaperRenderer::New(escher)),
       shadow_renderer_(
-          escher::ShadowMapRenderer::New(escher,
-                                         paper_renderer_->model_data(),
+          escher::ShadowMapRenderer::New(escher, paper_renderer_->model_data(),
                                          paper_renderer_->model_renderer())),
       image_factory_(std::make_unique<escher::SimpleImageFactory>(
-          escher->resource_recycler(),
-          escher->gpu_allocator())),
+          escher->resource_recycler(), escher->gpu_allocator())),
       rounded_rect_factory_(
           std::make_unique<escher::RoundedRectFactory>(escher)),
       release_fence_signaller_(std::make_unique<escher::ReleaseFenceSignaller>(
           escher->command_buffer_sequencer())),
       session_manager_(std::make_unique<SessionManager>()),
-      imported_memory_type_index_(
-          GetImportedMemoryTypeIndex(escher->vk_physical_device(),
-                                     escher->vk_device())),
+      imported_memory_type_index_(GetImportedMemoryTypeIndex(
+          escher->vk_physical_device(), escher->vk_device())),
       weak_factory_(this) {
   FXL_DCHECK(display_manager_);
   FXL_DCHECK(escher_);
@@ -222,8 +219,7 @@ bool MetricsEquals(const ::gfx::Metrics& a, const ::gfx::Metrics& b) {
          a.scale_z == b.scale_z;
 }
 
-void Engine::UpdateMetrics(Node* node,
-                           const ::gfx::Metrics& parent_metrics,
+void Engine::UpdateMetrics(Node* node, const ::gfx::Metrics& parent_metrics,
                            std::vector<Node*>* updated_nodes) {
   ::gfx::Metrics local_metrics;
   local_metrics.scale_x = parent_metrics.scale_x * node->scale().x;

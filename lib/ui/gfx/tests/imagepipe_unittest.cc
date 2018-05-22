@@ -36,8 +36,7 @@ class ImagePipeTest : public SessionTest, public escher::ResourceManager {
 };
 
 fxl::RefPtr<fsl::SharedVmo> CreateVmoWithBuffer(
-    size_t buffer_size,
-    std::unique_ptr<uint8_t[]> buffer_pixels) {
+    size_t buffer_size, std::unique_ptr<uint8_t[]> buffer_pixels) {
   auto shared_vmo = CreateSharedVmo(buffer_size);
 
   memcpy(shared_vmo->Map(), buffer_pixels.get(), buffer_size);
@@ -70,15 +69,13 @@ fxl::RefPtr<fsl::SharedVmo> CreateVmoWithGradientPixels(size_t w, size_t h) {
 class ImagePipeThatCreatesDummyImages : public ImagePipe {
  public:
   ImagePipeThatCreatesDummyImages(
-      Session* session,
-      escher::ResourceManager* dummy_resource_manager)
+      Session* session, escher::ResourceManager* dummy_resource_manager)
       : ImagePipe(session, 0u),
         dummy_resource_manager_(dummy_resource_manager) {}
 
  private:
   // Override to create an Image without a backing escher::Image.
-  ImagePtr CreateImage(Session* session,
-                       MemoryPtr memory,
+  ImagePtr CreateImage(Session* session, MemoryPtr memory,
                        const images::ImageInfo& image_info,
                        uint64_t memory_offset,
                        ErrorReporter* error_reporter) override {

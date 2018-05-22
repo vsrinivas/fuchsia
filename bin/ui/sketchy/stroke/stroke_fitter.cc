@@ -48,8 +48,7 @@ void StrokeFitter::Extend(const std::vector<glm::vec2>& sampled_pts) {
   FitSampleRange(0, static_cast<int>(end_index), left_tangent, right_tangent);
 }
 
-void StrokeFitter::FitSampleRange(int start_index,
-                                  int end_index,
+void StrokeFitter::FitSampleRange(int start_index, int end_index,
                                   glm::vec2 left_tangent,
                                   glm::vec2 right_tangent) {
   FXL_DCHECK(glm::length(left_tangent) > 0 && glm::length(right_tangent))

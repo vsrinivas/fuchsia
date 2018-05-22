@@ -49,12 +49,10 @@ class GfxSystem : public TempSystemDelegate {
   // Redirect to instance method.
   static VkBool32 RedirectDebugReport(VkDebugReportFlagsEXT flags,
                                       VkDebugReportObjectTypeEXT objectType,
-                                      uint64_t object,
-                                      size_t location,
+                                      uint64_t object, size_t location,
                                       int32_t messageCode,
                                       const char* pLayerPrefix,
-                                      const char* pMessage,
-                                      void* pUserData) {
+                                      const char* pMessage, void* pUserData) {
     return reinterpret_cast<GfxSystem*>(pUserData)->HandleDebugReport(
         flags, objectType, object, location, messageCode, pLayerPrefix,
         pMessage);
@@ -62,10 +60,8 @@ class GfxSystem : public TempSystemDelegate {
 
   VkBool32 HandleDebugReport(VkDebugReportFlagsEXT flags,
                              VkDebugReportObjectTypeEXT objectType,
-                             uint64_t object,
-                             size_t location,
-                             int32_t messageCode,
-                             const char* pLayerPrefix,
+                             uint64_t object, size_t location,
+                             int32_t messageCode, const char* pLayerPrefix,
                              const char* pMessage);
 
   // TODO(MZ-452): Remove this when we externalize Displays.

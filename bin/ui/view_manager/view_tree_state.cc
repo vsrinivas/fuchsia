@@ -14,11 +14,9 @@
 namespace view_manager {
 
 ViewTreeState::ViewTreeState(
-    ViewRegistry* registry,
-    views_v1::ViewTreeToken view_tree_token,
+    ViewRegistry* registry, views_v1::ViewTreeToken view_tree_token,
     fidl::InterfaceRequest<views_v1::ViewTree> view_tree_request,
-    views_v1::ViewTreeListenerPtr view_tree_listener,
-    const std::string& label)
+    views_v1::ViewTreeListenerPtr view_tree_listener, const std::string& label)
     : view_tree_token_(std::move(view_tree_token)),
       view_tree_listener_(std::move(view_tree_listener)),
       label_(label),
@@ -43,9 +41,7 @@ ViewStub* ViewTreeState::GetRoot() const {
   return children().cbegin()->second.get();
 }
 
-ViewTreeState* ViewTreeState::AsViewTreeState() {
-  return this;
-}
+ViewTreeState* ViewTreeState::AsViewTreeState() { return this; }
 
 void ViewTreeState::RequestFocus(ViewStub* child_stub) {
   FXL_DCHECK(child_stub != nullptr);

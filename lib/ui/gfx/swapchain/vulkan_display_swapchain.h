@@ -24,8 +24,7 @@ class EventTimestamper;
 // purposes.
 class VulkanDisplaySwapchain : public Swapchain {
  public:
-  VulkanDisplaySwapchain(Display* display,
-                         EventTimestamper* timestamper,
+  VulkanDisplaySwapchain(Display* display, EventTimestamper* timestamper,
                          escher::Escher* escher);
   ~VulkanDisplaySwapchain() override;
 

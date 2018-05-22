@@ -19,8 +19,7 @@ namespace ime {
 
 class ImeImpl : public input::InputMethodEditor {
  public:
-  ImeImpl(input::KeyboardType keyboard_type,
-          input::InputMethodAction action,
+  ImeImpl(input::KeyboardType keyboard_type, input::InputMethodAction action,
           input::TextInputState initial_state,
           fidl::InterfaceHandle<input::InputMethodEditorClient> client,
           fidl::InterfaceRequest<input::InputMethodEditor> editor_request);

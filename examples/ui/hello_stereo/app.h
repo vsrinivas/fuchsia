@@ -43,6 +43,6 @@ class App {
   uint64_t start_time_ = 0;
 };
 
-}  // namespace hello_pose_buffer
+}  // namespace hello_stereo
 
-#endif  // GARNET_EXAMPLES_UI_HELLO_POSE_BUFFER_APP_H_
+#endif  // GARNET_EXAMPLES_UI_HELLO_STEREO_APP_H_

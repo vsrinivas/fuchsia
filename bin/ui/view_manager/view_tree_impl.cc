@@ -49,8 +49,7 @@ void ViewTreeImpl::RemoveChild(uint32_t child_key,
 }
 
 void ViewTreeImpl::SetChildProperties(
-    uint32_t child_key,
-    views_v1::ViewPropertiesPtr child_view_properties) {
+    uint32_t child_key, views_v1::ViewPropertiesPtr child_view_properties) {
   registry_->SetChildProperties(state_, child_key,
                                 std::move(child_view_properties));
 }

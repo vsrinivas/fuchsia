@@ -41,17 +41,14 @@ class ViewRegistry : public ViewInspector, public InputOwner {
       fidl::InterfaceRequest<views_v1::View> view_request,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
       views_v1::ViewListenerPtr view_listener,
-      zx::eventpair parent_export_token,
-      fidl::StringPtr label);
+      zx::eventpair parent_export_token, fidl::StringPtr label);
   void CreateViewTree(
       fidl::InterfaceRequest<views_v1::ViewTree> view_tree_request,
-      views_v1::ViewTreeListenerPtr view_tree_listener,
-      fidl::StringPtr label);
+      views_v1::ViewTreeListenerPtr view_tree_listener, fidl::StringPtr label);
 
   // VIEW STUB REQUESTS
 
-  void OnViewResolved(ViewStub* view_stub,
-                      views_v1_token::ViewToken view_token,
+  void OnViewResolved(ViewStub* view_stub, views_v1_token::ViewToken view_token,
                       bool success);
   void TransferViewOwner(views_v1_token::ViewToken view_token,
                          fidl::InterfaceRequest<views_v1_token::ViewOwner>
@@ -72,15 +69,13 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   // Adds a child, reparenting it if necessary.
   // Destroys |container_state| if an error occurs.
   void AddChild(
-      ViewContainerState* container_state,
-      uint32_t child_key,
+      ViewContainerState* container_state, uint32_t child_key,
       fidl::InterfaceHandle<views_v1_token::ViewOwner> child_view_owner,
       zx::eventpair host_import_token);
 
   // Removes a child.
   // Destroys |container_state| if an error occurs.
-  void RemoveChild(ViewContainerState* container_state,
-                   uint32_t child_key,
+  void RemoveChild(ViewContainerState* container_state, uint32_t child_key,
                    fidl::InterfaceRequest<views_v1_token::ViewOwner>
                        transferred_view_owner_request);
 

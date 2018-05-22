@@ -28,8 +28,7 @@ namespace shadertoy {
 class Compiler final {
  public:
   // |render_pass| is not owned by us; we don't need to destroy it.
-  explicit Compiler(escher::Escher* escher,
-                    vk::RenderPass render_pass,
+  explicit Compiler(escher::Escher* escher, vk::RenderPass render_pass,
                     vk::DescriptorSetLayout descriptor_set_layout);
   ~Compiler();
 

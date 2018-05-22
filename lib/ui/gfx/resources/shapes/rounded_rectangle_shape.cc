@@ -15,10 +15,8 @@ const ResourceTypeInfo RoundedRectangleShape::kTypeInfo = {
     "RoundedRectangleShape"};
 
 RoundedRectangleShape::RoundedRectangleShape(
-    Session* session,
-    scenic::ResourceId id,
-    const escher::RoundedRectSpec& spec,
-    escher::MeshPtr mesh)
+    Session* session, scenic::ResourceId id,
+    const escher::RoundedRectSpec& spec, escher::MeshPtr mesh)
     : PlanarShape(session, id, RoundedRectangleShape::kTypeInfo),
       spec_(spec),
       mesh_(std::move(mesh)) {}
@@ -28,8 +26,7 @@ bool RoundedRectangleShape::ContainsPoint(const escher::vec2& point) const {
 }
 
 escher::Object RoundedRectangleShape::GenerateRenderObject(
-    const escher::mat4& transform,
-    const escher::MaterialPtr& material) {
+    const escher::mat4& transform, const escher::MaterialPtr& material) {
   return escher::Object(transform, mesh_, material);
 }
 

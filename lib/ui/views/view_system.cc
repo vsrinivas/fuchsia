@@ -19,8 +19,7 @@ std::unique_ptr<CommandDispatcher> ViewSystem::CreateCommandDispatcher(
 }
 
 ViewCommandDispatcher::ViewCommandDispatcher(
-    CommandDispatcherContext context,
-    scenic::gfx::GfxSystem* scenic_system)
+    CommandDispatcherContext context, scenic::gfx::GfxSystem* scenic_system)
     : CommandDispatcher(std::move(context)), scenic_system_(scenic_system) {
   FXL_DCHECK(scenic_system_);
 }

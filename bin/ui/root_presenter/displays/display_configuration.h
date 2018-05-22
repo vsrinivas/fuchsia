@@ -19,8 +19,7 @@ namespace display_configuration {
 //
 // TODO(MZ-16): This is a placeholder for more sophisticated configuration
 // mechanisms we'll need in the future.
-void InitializeModelForDisplay(uint32_t width_in_px,
-                               uint32_t height_in_px,
+void InitializeModelForDisplay(uint32_t width_in_px, uint32_t height_in_px,
                                DisplayModel* model);
 
 // Log the display metrics in debug mode.

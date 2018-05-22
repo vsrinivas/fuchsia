@@ -96,8 +96,7 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
   virtual bool Detach();
 
  protected:
-  Resource(Session* session,
-           scenic::ResourceId id,
+  Resource(Session* session, scenic::ResourceId id,
            const ResourceTypeInfo& type_info);
 
   friend class ResourceLinker;

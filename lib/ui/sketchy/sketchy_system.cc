@@ -18,8 +18,7 @@ std::unique_ptr<CommandDispatcher> SketchySystem::CreateCommandDispatcher(
 }
 
 SketchyCommandDispatcher::SketchyCommandDispatcher(
-    CommandDispatcherContext context,
-    gfx::GfxSystem* gfx_system)
+    CommandDispatcherContext context, gfx::GfxSystem* gfx_system)
     : CommandDispatcher(std::move(context)), gfx_system_(gfx_system) {
   FXL_DCHECK(gfx_system_);
 }

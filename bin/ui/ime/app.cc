@@ -27,8 +27,7 @@ App::App(const fxl::CommandLine& command_line)
 App::~App() {}
 
 void App::GetInputMethodEditor(
-    input::KeyboardType keyboard_type,
-    input::InputMethodAction action,
+    input::KeyboardType keyboard_type, input::InputMethodAction action,
     input::TextInputState initial_state,
     fidl::InterfaceHandle<input::InputMethodEditorClient> client,
     fidl::InterfaceRequest<input::InputMethodEditor> editor_request) {

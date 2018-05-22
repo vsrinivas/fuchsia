@@ -26,8 +26,7 @@ class App : public input::ImeService {
  private:
   // |input::ImeService|
   void GetInputMethodEditor(
-      input::KeyboardType keyboard_type,
-      input::InputMethodAction action,
+      input::KeyboardType keyboard_type, input::InputMethodAction action,
       input::TextInputState initial_state,
       fidl::InterfaceHandle<input::InputMethodEditorClient> client,
       fidl::InterfaceRequest<input::InputMethodEditor> editor) override;

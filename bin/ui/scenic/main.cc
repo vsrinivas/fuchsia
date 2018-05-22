@@ -7,11 +7,11 @@
 #include <trace-provider/provider.h>
 
 #include "lib/app/cpp/application_context.h"
+#include "lib/fsl/syslogger/init.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
-#include "lib/fsl/syslogger/init.h"
 
 #include "garnet/bin/ui/scenic/app.h"
 

@@ -44,9 +44,7 @@ class EventTimestamper {
   class Watch {
    public:
     Watch();
-    Watch(EventTimestamper* ts,
-          zx::event event,
-          zx_status_t trigger,
+    Watch(EventTimestamper* ts, zx::event event, zx_status_t trigger,
           Callback callback);
     Watch(Watch&& rhs);
     Watch& operator=(Watch&& rhs);
@@ -76,10 +74,8 @@ class EventTimestamper {
    public:
     enum class State { STARTED, STOPPED, ABANDONED };
 
-    Waiter(const fxl::RefPtr<fxl::TaskRunner>& task_runner,
-           zx::event event,
-           zx_status_t trigger,
-           Callback callback);
+    Waiter(const fxl::RefPtr<fxl::TaskRunner>& task_runner, zx::event event,
+           zx_status_t trigger, Callback callback);
     ~Waiter();
 
     void set_state(State state) { state_ = state; }
@@ -89,9 +85,7 @@ class EventTimestamper {
     const zx::event& event() const { return event_; }
 
    private:
-    void Handle(async_t* async,
-                async::WaitBase* wait,
-                zx_status_t status,
+    void Handle(async_t* async, async::WaitBase* wait, zx_status_t status,
                 const zx_packet_signal_t* signal);
 
     fxl::RefPtr<fxl::TaskRunner> task_runner_;

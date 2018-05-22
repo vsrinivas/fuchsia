@@ -30,14 +30,13 @@ class Session final : public ui::Session,
                       public EventReporter,
                       public ErrorReporter {
  public:
-  Session(Scenic* owner,
-          SessionId id,
+  Session(Scenic* owner, SessionId id,
           ::fidl::InterfaceHandle<ui::SessionListener> listener);
   ~Session() override;
 
-  void SetCommandDispatchers(
-      std::array<std::unique_ptr<CommandDispatcher>,
-                 System::TypeId::kMaxSystems> dispatchers);
+  void SetCommandDispatchers(std::array<std::unique_ptr<CommandDispatcher>,
+                                        System::TypeId::kMaxSystems>
+                                 dispatchers);
 
   // |ui::Session|
   void Enqueue(::fidl::VectorPtr<ui::Command> cmds) override;
@@ -50,15 +49,12 @@ class Session final : public ui::Session,
 
   // |ui::Session|
   // TODO(MZ-422): Remove this after it's removed from session.fidl.
-  void HitTest(uint32_t node_id,
-               ::gfx::vec3 ray_origin,
-               ::gfx::vec3 ray_direction,
-               HitTestCallback callback) override;
+  void HitTest(uint32_t node_id, ::gfx::vec3 ray_origin,
+               ::gfx::vec3 ray_direction, HitTestCallback callback) override;
 
   // |ui::Session|
   // TODO(MZ-422): Remove this after it's removed from session.fidl.
-  void HitTestDeviceRay(::gfx::vec3 ray_origin,
-                        ::gfx::vec3 ray_direction,
+  void HitTestDeviceRay(::gfx::vec3 ray_origin, ::gfx::vec3 ray_direction,
                         HitTestCallback callback) override;
 
   // |EventReporter|

@@ -53,8 +53,7 @@ class TempSessionDelegate : public CommandDispatcher {
                        ::fidl::VectorPtr<zx::event> release_fences,
                        ui::Session::PresentCallback callback) = 0;
 
-  virtual void HitTest(uint32_t node_id,
-                       ::gfx::vec3 ray_origin,
+  virtual void HitTest(uint32_t node_id, ::gfx::vec3 ray_origin,
                        ::gfx::vec3 ray_direction,
                        ui::Session::HitTestCallback callback) = 0;
 

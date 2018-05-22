@@ -11,9 +11,7 @@ ShadertoyImpl::ShadertoyImpl(fxl::RefPtr<ShadertoyState> state)
 
 ShadertoyImpl::~ShadertoyImpl() = default;
 
-void ShadertoyImpl::SetPaused(bool paused) {
-  state_->SetPaused(paused);
-}
+void ShadertoyImpl::SetPaused(bool paused) { state_->SetPaused(paused); }
 
 void ShadertoyImpl::SetShaderCode(::fidl::StringPtr glsl,
                                   Shadertoy::SetShaderCodeCallback callback) {
@@ -29,8 +27,7 @@ void ShadertoyImpl::SetMouse(gfx::vec4 i_mouse) {
 }
 
 void ShadertoyImpl::SetImage(
-    uint32_t channel,
-    ::fidl::InterfaceRequest<images::ImagePipe> request) {
+    uint32_t channel, ::fidl::InterfaceRequest<images::ImagePipe> request) {
   state_->SetImage(channel, std::move(request));
 }
 

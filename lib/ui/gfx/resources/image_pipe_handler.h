@@ -19,15 +19,12 @@ class ImagePipeHandler : public images::ImagePipe {
                    scenic::gfx::ImagePipe* image_pipe);
 
  private:
-  void AddImage(uint32_t image_id,
-                images::ImageInfo image_info,
-                zx::vmo memory,
+  void AddImage(uint32_t image_id, images::ImageInfo image_info, zx::vmo memory,
                 images::MemoryType memory_type,
                 uint64_t memory_offset) override;
   void RemoveImage(uint32_t image_id) override;
 
-  void PresentImage(uint32_t image_id,
-                    uint64_t presentation_time,
+  void PresentImage(uint32_t image_id, uint64_t presentation_time,
                     ::fidl::VectorPtr<zx::event> acquire_fences,
                     ::fidl::VectorPtr<zx::event> release_fences,
                     PresentImageCallback callback) override;

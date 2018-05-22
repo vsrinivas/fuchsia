@@ -21,8 +21,7 @@ constexpr auto kMeshIndexFormat = gfx::MeshIndexFormat::kUint32;
 
 namespace sketchy_service {
 
-void MeshBuffer::Prepare(Frame* frame,
-                         bool from_scratch,
+void MeshBuffer::Prepare(Frame* frame, bool from_scratch,
                          uint32_t delta_vertex_count,
                          uint32_t delta_index_count) {
   from_scratch |= !vertex_buffer_ || !index_buffer_;
@@ -47,9 +46,7 @@ void MeshBuffer::Prepare(Frame* frame,
 }
 
 std::pair<escher::BufferPtr, escher::BufferPtr> MeshBuffer::Preserve(
-    Frame* frame,
-    uint32_t vertex_count,
-    uint32_t index_count,
+    Frame* frame, uint32_t vertex_count, uint32_t index_count,
     const escher::BoundingBox& bbox) {
   vertex_count_ += vertex_count;
   index_count_ += index_count;
@@ -87,10 +84,8 @@ void MeshBuffer::ProvideBuffersToScenicMesh(scenic_lib::Mesh* scenic_mesh) {
       /* vertex_offset= */ 0, vertex_count_, bb_min_arr, bb_max_arr);
 }
 
-void MeshBuffer::ReplaceBuffer(Frame* frame,
-                               SharedBufferPtr& shared_buffer,
-                               vk::DeviceSize capacity_req,
-                               bool keep_content) {
+void MeshBuffer::ReplaceBuffer(Frame* frame, SharedBufferPtr& shared_buffer,
+                               vk::DeviceSize capacity_req, bool keep_content) {
   auto shared_buffer_pool = frame->shared_buffer_pool();
   if (!shared_buffer) {
     shared_buffer = shared_buffer_pool->GetBuffer(capacity_req);

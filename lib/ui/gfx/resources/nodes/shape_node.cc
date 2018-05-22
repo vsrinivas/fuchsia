@@ -19,9 +19,7 @@ void ShapeNode::SetMaterial(MaterialPtr material) {
   material_ = std::move(material);
 }
 
-void ShapeNode::SetShape(ShapePtr shape) {
-  shape_ = std::move(shape);
-}
+void ShapeNode::SetShape(ShapePtr shape) { shape_ = std::move(shape); }
 
 bool ShapeNode::GetIntersection(const escher::ray4& ray,
                                 float* out_distance) const {

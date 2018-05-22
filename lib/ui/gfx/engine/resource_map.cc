@@ -12,9 +12,7 @@ ResourceMap::ResourceMap(ErrorReporter* error_reporter)
 
 ResourceMap::~ResourceMap() {}
 
-void ResourceMap::Clear() {
-  resources_.clear();
-}
+void ResourceMap::Clear() { resources_.clear(); }
 
 bool ResourceMap::AddResource(scenic::ResourceId id, ResourcePtr resource) {
   FXL_DCHECK(resource);

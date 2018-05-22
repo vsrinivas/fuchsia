@@ -25,8 +25,7 @@ void ViewManagerImpl::CreateView(
     fidl::InterfaceRequest<views_v1::View> view_request,
     fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
     fidl::InterfaceHandle<views_v1::ViewListener> view_listener,
-    zx::eventpair parent_export_token,
-    fidl::StringPtr label) {
+    zx::eventpair parent_export_token, fidl::StringPtr label) {
   registry_->CreateView(std::move(view_request), std::move(view_owner_request),
                         view_listener.Bind(), std::move(parent_export_token),
                         label);

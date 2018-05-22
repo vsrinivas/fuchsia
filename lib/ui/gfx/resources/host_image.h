@@ -38,15 +38,12 @@ class HostImage : public Image {
   // the caller.
   //
   // Returns the created Image, or nullptr if there was an error.
-  static ImagePtr New(Session* session,
-                      scenic::ResourceId id,
+  static ImagePtr New(Session* session, scenic::ResourceId id,
                       HostMemoryPtr memory,
                       const images::ImageInfo& host_image_info,
-                      uint64_t memory_offset,
-                      ErrorReporter* error_reporter);
+                      uint64_t memory_offset, ErrorReporter* error_reporter);
 
-  static ImagePtr NewForTesting(Session* session,
-                                scenic::ResourceId id,
+  static ImagePtr NewForTesting(Session* session, scenic::ResourceId id,
                                 escher::ResourceManager* image_owner,
                                 HostMemoryPtr host_memory);
 
@@ -64,11 +61,8 @@ class HostImage : public Image {
   // |image| is the escher::Image that is being wrapped.
   // |host_memory_offset| specifies the offset into |memory| where the image is
   // stored.
-  HostImage(Session* session,
-            scenic::ResourceId id,
-            HostMemoryPtr memory,
-            escher::ImagePtr image,
-            uint64_t host_memory_offset,
+  HostImage(Session* session, scenic::ResourceId id, HostMemoryPtr memory,
+            escher::ImagePtr image, uint64_t host_memory_offset,
             images::ImageInfo host_image_format);
 
   HostMemoryPtr memory_;

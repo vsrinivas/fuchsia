@@ -21,8 +21,7 @@ class UnresolvedImports {
 
   // Adds an entry for an unresolved import. |import_koid| must be the koid
   // for |import_token|.
-  void AddUnresolvedImport(Import* import,
-                           zx::eventpair import_token,
+  void AddUnresolvedImport(Import* import, zx::eventpair import_token,
                            zx_koid_t import_koid);
 
   // Listen for the death of the corresponding export token and removes any
@@ -50,8 +49,7 @@ class UnresolvedImports {
     std::unique_ptr<async::Wait> token_peer_death_waiter;
   };
 
-  void OnTokenPeerDeath(zx_koid_t import_koid,
-                        zx_status_t status,
+  void OnTokenPeerDeath(zx_koid_t import_koid, zx_status_t status,
                         const zx_packet_signal* signal);
 
   std::vector<Import*> RemoveUnresolvedImportsForKoid(zx_koid_t import_koid);

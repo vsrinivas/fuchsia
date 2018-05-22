@@ -16,10 +16,8 @@ const ResourceTypeInfo HostImage::kTypeInfo = {
     ResourceType::kHostImage | ResourceType::kImage | ResourceType::kImageBase,
     "HostImage"};
 
-HostImage::HostImage(Session* session,
-                     scenic::ResourceId id,
-                     HostMemoryPtr memory,
-                     escher::ImagePtr image,
+HostImage::HostImage(Session* session, scenic::ResourceId id,
+                     HostMemoryPtr memory, escher::ImagePtr image,
                      uint64_t host_memory_offset,
                      images::ImageInfo host_image_format)
     : Image(session, id, HostImage::kTypeInfo),
@@ -31,12 +29,10 @@ HostImage::HostImage(Session* session,
       image_formats::GetFunctionToConvertToBgra8(host_image_format);
 }
 
-ImagePtr HostImage::New(Session* session,
-                        scenic::ResourceId id,
+ImagePtr HostImage::New(Session* session, scenic::ResourceId id,
                         HostMemoryPtr host_memory,
                         const images::ImageInfo& host_image_info,
-                        uint64_t memory_offset,
-                        ErrorReporter* error_reporter) {
+                        uint64_t memory_offset, ErrorReporter* error_reporter) {
   // No matter what the incoming format, the gpu format will be BGRA:
   vk::Format gpu_image_pixel_format = vk::Format::eB8G8R8A8Unorm;
   size_t bytes_per_pixel =
@@ -130,8 +126,7 @@ bool HostImage::UpdatePixels() {
   return false;
 }
 
-ImagePtr HostImage::NewForTesting(Session* session,
-                                  scenic::ResourceId id,
+ImagePtr HostImage::NewForTesting(Session* session, scenic::ResourceId id,
                                   escher::ResourceManager* image_owner,
                                   HostMemoryPtr host_memory) {
   escher::ImagePtr escher_image = escher::Image::New(

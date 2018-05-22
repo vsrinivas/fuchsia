@@ -53,19 +53,13 @@ typedef CubicBezier<float> CubicBezier1f;
 typedef CubicBezier<vec2> CubicBezier2f;
 
 template <typename VecT>
-CubicBezier<VecT> FitCubicBezier(const VecT* pts,
-                                 int count,
-                                 const float* params,
-                                 float param_shift,
-                                 float param_scale,
-                                 VecT endpoint_tangent_0,
+CubicBezier<VecT> FitCubicBezier(const VecT* pts, int count,
+                                 const float* params, float param_shift,
+                                 float param_scale, VecT endpoint_tangent_0,
                                  VecT endpoint_tangent_1);
 
-CubicBezier2f FitCubicBezier2f(const vec2* pts,
-                               int count,
-                               const float* params,
-                               float param_shift,
-                               float param_scale,
+CubicBezier2f FitCubicBezier2f(const vec2* pts, int count, const float* params,
+                               float param_shift, float param_scale,
                                vec2 endpoint_tangent_0,
                                vec2 endpoint_tangent_1);
 

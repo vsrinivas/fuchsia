@@ -43,13 +43,9 @@ std::vector<std::unique_ptr<ViewStub>> ViewContainerState::UnlinkAllChildren() {
   return stubs;
 }
 
-ViewState* ViewContainerState::AsViewState() {
-  return nullptr;
-}
+ViewState* ViewContainerState::AsViewState() { return nullptr; }
 
-ViewTreeState* ViewContainerState::AsViewTreeState() {
-  return nullptr;
-}
+ViewTreeState* ViewContainerState::AsViewTreeState() { return nullptr; }
 
 std::ostream& operator<<(std::ostream& os, ViewContainerState* state) {
   if (!state)

@@ -19,8 +19,7 @@ constexpr zx_status_t kFenceSignalled = ZX_EVENT_SIGNALED;
 namespace shadertoy {
 
 ShadertoyStateForImagePipe::ShadertoyStateForImagePipe(
-    App* app,
-    ::fidl::InterfaceHandle<images::ImagePipe> image_pipe)
+    App* app, ::fidl::InterfaceHandle<images::ImagePipe> image_pipe)
     : ShadertoyState(app), image_pipe_(image_pipe.Bind()) {
   image_pipe_.set_error_handler([this] { this->Close(); });
 }

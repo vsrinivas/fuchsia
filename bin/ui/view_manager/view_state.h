@@ -45,12 +45,10 @@ class ViewState : public ViewContainerState {
     INVALIDATION_STALLED = 1u << 4,
   };
 
-  ViewState(ViewRegistry* registry,
-            views_v1_token::ViewToken view_token,
+  ViewState(ViewRegistry* registry, views_v1_token::ViewToken view_token,
             fidl::InterfaceRequest<views_v1::View> view_request,
             views_v1::ViewListenerPtr view_listener,
-            scenic_lib::Session* session,
-            const std::string& label);
+            scenic_lib::Session* session, const std::string& label);
   ~ViewState() override;
 
   fxl::WeakPtr<ViewState> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }

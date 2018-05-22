@@ -31,12 +31,9 @@ class Image : public ImageBase {
   // caller.
   //
   // Returns the created Image, or nullptr if there was an error.
-  static ImagePtr New(Session* session,
-                      scenic::ResourceId id,
-                      MemoryPtr memory,
+  static ImagePtr New(Session* session, scenic::ResourceId id, MemoryPtr memory,
                       const images::ImageInfo& image_info,
-                      uint64_t memory_offset,
-                      ErrorReporter* error_reporter);
+                      uint64_t memory_offset, ErrorReporter* error_reporter);
 
   // Updates pixels before rendering, if needed. Returns true if contents were
   // updated.
@@ -45,8 +42,7 @@ class Image : public ImageBase {
   const escher::ImagePtr& GetEscherImage() override { return image_; }
 
  protected:
-  Image(Session* session,
-        scenic::ResourceId id,
+  Image(Session* session, scenic::ResourceId id,
         const ResourceTypeInfo& type_info);
 
   // GPU memory-backed image.

@@ -9,8 +9,7 @@
 
 namespace scenic {
 
-Session::Session(Scenic* owner,
-                 SessionId id,
+Session::Session(Scenic* owner, SessionId id,
                  ::fidl::InterfaceHandle<ui::SessionListener> listener)
     : scenic_(owner), id_(id), listener_(listener.Bind()), weak_factory_(this) {
   FXL_DCHECK(scenic_);
@@ -57,10 +56,8 @@ void Session::SetCommandDispatchers(
   }
 }
 
-void Session::HitTest(uint32_t node_id,
-                      ::gfx::vec3 ray_origin,
-                      ::gfx::vec3 ray_direction,
-                      HitTestCallback callback) {
+void Session::HitTest(uint32_t node_id, ::gfx::vec3 ray_origin,
+                      ::gfx::vec3 ray_direction, HitTestCallback callback) {
   auto& dispatcher = dispatchers_[System::TypeId::kGfx];
   FXL_DCHECK(dispatcher);
   TempSessionDelegate* delegate =

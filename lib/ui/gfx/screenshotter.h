@@ -24,11 +24,8 @@ class Screenshotter {
 
  private:
   static void OnCommandBufferDone(
-      const std::string& filename,
-      const escher::ImagePtr& image,
-      uint32_t width,
-      uint32_t height,
-      vk::Device device,
+      const std::string& filename, const escher::ImagePtr& image,
+      uint32_t width, uint32_t height, vk::Device device,
       ui::Scenic::TakeScreenshotCallback done_callback);
 
   Engine* const engine_;  // Not owned.

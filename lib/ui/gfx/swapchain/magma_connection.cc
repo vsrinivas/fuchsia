@@ -97,10 +97,8 @@ void MagmaConnection::ResetSemaphore(magma_semaphore_t sem) {
 }
 
 bool MagmaConnection::DisplayPageFlip(
-    magma_buffer_t buffer,
-    uint32_t wait_semaphore_count,
-    const magma_semaphore_t* wait_semaphores,
-    uint32_t signal_semaphore_count,
+    magma_buffer_t buffer, uint32_t wait_semaphore_count,
+    const magma_semaphore_t* wait_semaphores, uint32_t signal_semaphore_count,
     const magma_semaphore_t* signal_semaphores,
     magma_semaphore_t buffer_presented_semaphore) {
   magma_status_t status = magma_display_page_flip(

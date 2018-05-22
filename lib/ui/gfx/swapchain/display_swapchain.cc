@@ -191,9 +191,7 @@ bool DisplaySwapchain::InitializeFramebuffers(
   return true;
 }
 
-DisplaySwapchain::~DisplaySwapchain() {
-  display_->Unclaim();
-}
+DisplaySwapchain::~DisplaySwapchain() { display_->Unclaim(); }
 
 std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
     const FrameTimingsPtr& frame_timings) {

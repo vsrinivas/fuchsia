@@ -71,10 +71,8 @@ class Presentation : private views_v1::ViewTreeListener,
   // Callback when the presentation is shut down.
   using ShutdownCallback = std::function<void()>;
 
-  Presentation(views_v1::ViewManager* view_manager,
-               ui::Scenic* scenic,
-               scenic_lib::Session* session,
-               RendererParams renderer_params);
+  Presentation(views_v1::ViewManager* view_manager, ui::Scenic* scenic,
+               scenic_lib::Session* session, RendererParams renderer_params);
 
   ~Presentation() override;
 
@@ -85,8 +83,7 @@ class Presentation : private views_v1::ViewTreeListener,
   void Present(
       views_v1_token::ViewOwnerPtr view_owner,
       fidl::InterfaceRequest<presentation::Presentation> presentation_request,
-      YieldCallback yield_callback,
-      ShutdownCallback shutdown_callback);
+      YieldCallback yield_callback, ShutdownCallback shutdown_callback);
 
   void OnReport(uint32_t device_id, input::InputReport report);
   void OnDeviceAdded(mozart::InputDeviceImpl* input_device);
@@ -107,8 +104,7 @@ class Presentation : private views_v1::ViewTreeListener,
   bool ApplyDisplayModelChanges(bool print_log);
 
   // |ViewContainerListener|:
-  void OnChildAttached(uint32_t child_key,
-                       views_v1::ViewInfo child_view_info,
+  void OnChildAttached(uint32_t child_key, views_v1::ViewInfo child_view_info,
                        OnChildAttachedCallback callback) override;
   void OnChildUnavailable(uint32_t child_key,
                           OnChildUnavailableCallback callback) override;
@@ -255,9 +251,8 @@ class Presentation : private views_v1::ViewTreeListener,
   };
 
   std::map<uint32_t, CursorState> cursors_;
-  std::map<
-      uint32_t,
-      std::pair<mozart::InputDeviceImpl*, std::unique_ptr<mozart::DeviceState>>>
+  std::map<uint32_t, std::pair<mozart::InputDeviceImpl*,
+                               std::unique_ptr<mozart::DeviceState>>>
       device_states_by_id_;
 
   // A registry of listeners who want to be notified when their keyboard

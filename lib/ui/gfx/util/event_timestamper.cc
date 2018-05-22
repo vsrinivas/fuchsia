@@ -31,13 +31,10 @@ void EventTimestamper::IncreaseBackgroundThreadPriority() {
 
 EventTimestamper::Watch::Watch() : waiter_(nullptr), timestamper_(nullptr) {}
 
-EventTimestamper::Watch::Watch(EventTimestamper* ts,
-                               zx::event event,
-                               zx_status_t trigger,
-                               Callback callback)
+EventTimestamper::Watch::Watch(EventTimestamper* ts, zx::event event,
+                               zx_status_t trigger, Callback callback)
     : waiter_(new EventTimestamper::Waiter(ts->main_loop_->task_runner(),
-                                           std::move(event),
-                                           trigger,
+                                           std::move(event), trigger,
                                            std::move(callback))),
       timestamper_(ts) {
   FXL_DCHECK(timestamper_);
@@ -105,10 +102,8 @@ const zx::event& EventTimestamper::Watch::event() const {
 }
 
 EventTimestamper::Waiter::Waiter(
-    const fxl::RefPtr<fxl::TaskRunner>& task_runner,
-    zx::event event,
-    zx_status_t trigger,
-    Callback callback)
+    const fxl::RefPtr<fxl::TaskRunner>& task_runner, zx::event event,
+    zx_status_t trigger, Callback callback)
     : task_runner_(task_runner),
       event_(std::move(event)),
       callback_(std::move(callback)),
@@ -118,8 +113,7 @@ EventTimestamper::Waiter::~Waiter() {
   FXL_DCHECK(state_ == State::STOPPED || state_ == State::ABANDONED);
 }
 
-void EventTimestamper::Waiter::Handle(async_t* async,
-                                      async::WaitBase* wait,
+void EventTimestamper::Waiter::Handle(async_t* async, async::WaitBase* wait,
                                       zx_status_t status,
                                       const zx_packet_signal_t* signal) {
   zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);

@@ -24,8 +24,7 @@ class InputConnectionImpl : public input::InputConnection,
                             input::InputMethodEditor,
                             input::InputMethodEditorClient {
  public:
-  InputConnectionImpl(ViewInspector* inspector,
-                      InputOwner* owner,
+  InputConnectionImpl(ViewInspector* inspector, InputOwner* owner,
                       views_v1_token::ViewToken view_token,
                       fidl::InterfaceRequest<input::InputConnection> request);
   ~InputConnectionImpl() override;
@@ -39,8 +38,7 @@ class InputConnectionImpl : public input::InputConnection,
   void SetEventListener(
       fidl::InterfaceHandle<input::InputListener> listener) override;
   void GetInputMethodEditor(
-      input::KeyboardType keyboard_type,
-      input::InputMethodAction action,
+      input::KeyboardType keyboard_type, input::InputMethodAction action,
       input::TextInputState initial_state,
       fidl::InterfaceHandle<input::InputMethodEditorClient> client,
       fidl::InterfaceRequest<input::InputMethodEditor> editor) override;

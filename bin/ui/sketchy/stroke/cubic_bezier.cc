@@ -114,12 +114,9 @@ std::pair<CubicBezier1f, float> CubicBezier<VecT>::ArcLengthParameterization()
 }
 
 template <typename VecT>
-CubicBezier<VecT> FitCubicBezier(const VecT* pts,
-                                 int count,
-                                 const float* params,
-                                 float param_shift,
-                                 float param_scale,
-                                 VecT endpoint_tangent_0,
+CubicBezier<VecT> FitCubicBezier(const VecT* pts, int count,
+                                 const float* params, float param_shift,
+                                 float param_scale, VecT endpoint_tangent_0,
                                  VecT endpoint_tangent_1) {
   float c00, c01, c10, c11;
   c00 = c01 = c10 = c11 = 0.f;
@@ -174,11 +171,8 @@ CubicBezier<VecT> FitCubicBezier(const VecT* pts,
   return fit;
 }
 
-CubicBezier2f FitCubicBezier2f(const vec2* pts,
-                               int count,
-                               const float* params,
-                               float param_shift,
-                               float param_scale,
+CubicBezier2f FitCubicBezier2f(const vec2* pts, int count, const float* params,
+                               float param_shift, float param_scale,
                                vec2 endpoint_tangent_0,
                                vec2 endpoint_tangent_1) {
 // TODO: consider using vectorized version

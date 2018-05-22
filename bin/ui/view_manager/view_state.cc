@@ -15,8 +15,7 @@ ViewState::ViewState(ViewRegistry* registry,
                      views_v1_token::ViewToken view_token,
                      fidl::InterfaceRequest<views_v1::View> view_request,
                      views_v1::ViewListenerPtr view_listener,
-                     scenic_lib::Session* session,
-                     const std::string& label)
+                     scenic_lib::Session* session, const std::string& label)
     : view_token_(std::move(view_token)),
       view_listener_(std::move(view_listener)),
       top_node_(session),
@@ -55,9 +54,7 @@ void ViewState::ReleaseOwner() {
   owner_binding_.Unbind();
 }
 
-ViewState* ViewState::AsViewState() {
-  return this;
-}
+ViewState* ViewState::AsViewState() { return this; }
 
 const std::string& ViewState::FormattedLabel() const {
   if (formatted_label_cache_.empty()) {

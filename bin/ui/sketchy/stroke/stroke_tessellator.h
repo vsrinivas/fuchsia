@@ -19,11 +19,9 @@ class StrokeTessellator final {
                 escher::BufferPtr division_counts_buffer,
                 escher::BufferPtr cumulative_division_counts_buffer,
                 escher::BufferPtr division_segment_index_buffer,
-                escher::BufferPtr vertex_buffer,
-                escher::BufferPtr index_buffer,
+                escher::BufferPtr vertex_buffer, escher::BufferPtr index_buffer,
                 escher::impl::CommandBuffer* command,
-                escher::TimestampProfiler* profiler,
-                uint32_t division_count);
+                escher::TimestampProfiler* profiler, uint32_t division_count);
 
  private:
   escher::impl::ComputeShader kernel_;

@@ -80,8 +80,7 @@ class Compositor : public Resource {
 
   escher::Escher* escher() const { return escher_; }
 
-  Compositor(Session* session,
-             scenic::ResourceId id,
+  Compositor(Session* session, scenic::ResourceId id,
              const ResourceTypeInfo& type_info,
              std::unique_ptr<Swapchain> swapchain);
 
@@ -89,8 +88,7 @@ class Compositor : public Resource {
   // Draws all the overlays to textures, which are then drawn using the
   // returned model. "Overlays" are all the layers except the bottom one.
   std::unique_ptr<escher::Model> DrawOverlaysToModel(
-      const std::vector<Layer*>& drawable_layers,
-      const escher::FramePtr& frame,
+      const std::vector<Layer*>& drawable_layers, const escher::FramePtr& frame,
       const FrameTimingsPtr& frame_timings,
       escher::PaperRenderer* escher_renderer,
       escher::ShadowMapRenderer* shadow_renderer);
@@ -99,8 +97,7 @@ class Compositor : public Resource {
   void DrawLayer(const escher::FramePtr& frame,
                  const FrameTimingsPtr& frame_timings,
                  escher::PaperRenderer* escher_renderer,
-                 escher::ShadowMapRenderer* shadow_renderer,
-                 Layer* layer,
+                 escher::ShadowMapRenderer* shadow_renderer, Layer* layer,
                  const escher::ImagePtr& output_image,
                  const escher::Model* overlay_model);
 

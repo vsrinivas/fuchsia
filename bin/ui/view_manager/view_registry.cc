@@ -144,8 +144,7 @@ void ViewRegistry::GetScenic(
 void ViewRegistry::CreateView(
     fidl::InterfaceRequest<views_v1::View> view_request,
     fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
-    views_v1::ViewListenerPtr view_listener,
-    zx::eventpair parent_export_token,
+    views_v1::ViewListenerPtr view_listener, zx::eventpair parent_export_token,
     fidl::StringPtr label) {
   FXL_DCHECK(view_request.is_valid());
   FXL_DCHECK(view_owner_request.is_valid());
@@ -206,8 +205,7 @@ void ViewRegistry::UnregisterView(ViewState* view_state) {
 
 void ViewRegistry::CreateViewTree(
     fidl::InterfaceRequest<views_v1::ViewTree> view_tree_request,
-    views_v1::ViewTreeListenerPtr view_tree_listener,
-    fidl::StringPtr label) {
+    views_v1::ViewTreeListenerPtr view_tree_listener, fidl::StringPtr label) {
   FXL_DCHECK(view_tree_request.is_valid());
   FXL_DCHECK(view_tree_listener);
 
@@ -285,8 +283,7 @@ void ViewRegistry::ReleaseViewStubChildHost(ViewStub* view_stub) {
 // TREE MANIPULATION
 
 void ViewRegistry::AddChild(
-    ViewContainerState* container_state,
-    uint32_t child_key,
+    ViewContainerState* container_state, uint32_t child_key,
     fidl::InterfaceHandle<views_v1_token::ViewOwner> child_view_owner,
     zx::eventpair host_import_token) {
   FXL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
@@ -347,8 +344,7 @@ void ViewRegistry::RemoveChild(ViewContainerState* container_state,
 }
 
 void ViewRegistry::SetChildProperties(
-    ViewContainerState* container_state,
-    uint32_t child_key,
+    ViewContainerState* container_state, uint32_t child_key,
     views_v1::ViewPropertiesPtr child_properties) {
   FXL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
   FXL_VLOG(1) << "SetChildProperties: container=" << container_state
@@ -807,8 +803,7 @@ void ViewRegistry::HasFocus(views_v1_token::ViewToken view_token,
 }
 
 component::ServiceProvider* ViewRegistry::FindViewServiceProvider(
-    uint32_t view_token,
-    std::string service_name) {
+    uint32_t view_token, std::string service_name) {
   ViewState* view_state = FindView(view_token);
   if (!view_state) {
     return nullptr;

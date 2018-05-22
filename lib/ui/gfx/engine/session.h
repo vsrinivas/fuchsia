@@ -40,9 +40,7 @@ class SessionHandler;
 // guarantees that this is safe).
 class Session : public fxl::RefCountedThreadSafe<Session> {
  public:
-  Session(SessionId id,
-          Engine* engine,
-          EventReporter* event_reporter = nullptr,
+  Session(SessionId id, Engine* engine, EventReporter* event_reporter = nullptr,
           ErrorReporter* error_reporter = ErrorReporter::Default());
   virtual ~Session();
 
@@ -95,14 +93,12 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   void EnqueueEvent(::gfx::Event event);
 
   // Called by SessionHandler::HitTest().
-  void HitTest(uint32_t node_id,
-               ::gfx::vec3 ray_origin,
+  void HitTest(uint32_t node_id, ::gfx::vec3 ray_origin,
                ::gfx::vec3 ray_direction,
                ui::Session::HitTestCallback callback);
 
   // Called by SessionHandler::HitTestDeviceRay().
-  void HitTestDeviceRay(::gfx::vec3 ray_origin,
-                        ::gfx::vec3 ray_direction,
+  void HitTestDeviceRay(::gfx::vec3 ray_origin, ::gfx::vec3 ray_direction,
                         ui::Session::HitTestCallback callback);
 
  protected:
@@ -206,13 +202,10 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
 
   // Actually create resources.
   ResourcePtr CreateMemory(scenic::ResourceId id, ::gfx::MemoryArgs args);
-  ResourcePtr CreateImage(scenic::ResourceId id,
-                          MemoryPtr memory,
+  ResourcePtr CreateImage(scenic::ResourceId id, MemoryPtr memory,
                           ::gfx::ImageArgs args);
-  ResourcePtr CreateBuffer(scenic::ResourceId id,
-                           MemoryPtr memory,
-                           uint32_t memory_offset,
-                           uint32_t num_bytes);
+  ResourcePtr CreateBuffer(scenic::ResourceId id, MemoryPtr memory,
+                           uint32_t memory_offset, uint32_t num_bytes);
 
   ResourcePtr CreateScene(scenic::ResourceId id, ::gfx::SceneArgs args);
   ResourcePtr CreateCamera(scenic::ResourceId id, ::gfx::CameraArgs args);
@@ -235,10 +228,8 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   ResourcePtr CreateLayer(scenic::ResourceId id, ::gfx::LayerArgs args);
   ResourcePtr CreateCircle(scenic::ResourceId id, float initial_radius);
   ResourcePtr CreateRectangle(scenic::ResourceId id, float width, float height);
-  ResourcePtr CreateRoundedRectangle(scenic::ResourceId id,
-                                     float width,
-                                     float height,
-                                     float top_left_radius,
+  ResourcePtr CreateRoundedRectangle(scenic::ResourceId id, float width,
+                                     float height, float top_left_radius,
                                      float top_right_radius,
                                      float bottom_right_radius,
                                      float bottom_left_radius);
@@ -251,8 +242,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   // indicate client error, and will be used by the caller to tear down the
   // Session.
   bool AssertValueIsOfType(const ::gfx::Value& value,
-                           const ::gfx::Value::Tag* tags,
-                           size_t tag_count);
+                           const ::gfx::Value::Tag* tags, size_t tag_count);
   template <size_t N>
   bool AssertValueIsOfType(const ::gfx::Value& value,
                            const std::array<::gfx::Value::Tag, N>& tags) {

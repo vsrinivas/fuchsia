@@ -25,18 +25,14 @@ class MeshBuffer final {
   // pool, and the original content will be copied to the new one. This is
   // MUST be called for multi-buffering purpose. Delta vertex/index count is
   // more of optimization; they won't affect correctness.
-  void Prepare(Frame* frame,
-               bool from_scratch,
-               uint32_t delta_vertex_count = 0,
+  void Prepare(Frame* frame, bool from_scratch, uint32_t delta_vertex_count = 0,
                uint32_t delta_index_count = 0);
 
   // Preserve a pair of vertex/index buffer for use. The underlying buffers will
   // grow dynamically if it's not enough.
   // TODO(ES-45): Return ranges to avoid sub-buffering.
   std::pair<escher::BufferPtr, escher::BufferPtr> Preserve(
-      Frame* frame,
-      uint32_t vertex_count,
-      uint32_t index_count,
+      Frame* frame, uint32_t vertex_count, uint32_t index_count,
       const escher::BoundingBox& bbox);
 
   // Provide all the necessary parameters to gfx::Mesh::BindBuffers().
@@ -48,10 +44,8 @@ class MeshBuffer final {
   // Replace the buffer with one that is large enough for |capacity_req|. If
   // |keep_content| is true, the original content will be copied. A fence
   // listener will be implicitly setup to monitor the scenic release event.
-  void ReplaceBuffer(Frame* frame,
-                     SharedBufferPtr& shared_buffer,
-                     vk::DeviceSize capacity_req,
-                     bool keep_content);
+  void ReplaceBuffer(Frame* frame, SharedBufferPtr& shared_buffer,
+                     vk::DeviceSize capacity_req, bool keep_content);
 
   SharedBufferPtr vertex_buffer_;
   SharedBufferPtr index_buffer_;

@@ -38,8 +38,8 @@ class InputInterpreter {
 
   using OnReportCallback = std::function<void(ReportType type)>;
 
-  static std::unique_ptr<InputInterpreter>
-  Open(int dirfd, std::string filename, input::InputDeviceRegistry* registry);
+  static std::unique_ptr<InputInterpreter> Open(
+      int dirfd, std::string filename, input::InputDeviceRegistry* registry);
   ~InputInterpreter();
 
   bool Initialize();
@@ -68,8 +68,7 @@ class InputInterpreter {
     PARADISE,
   };
 
-  InputInterpreter(std::string name,
-                   int fd,
+  InputInterpreter(std::string name, int fd,
                    input::InputDeviceRegistry* registry);
 
   void NotifyRegistry();

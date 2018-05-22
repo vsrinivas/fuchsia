@@ -30,9 +30,9 @@ class Swapchain {
   // - the framebuffer to render into.
   // - the semaphore to wait upon before rendering into the framebuffer
   // - the semaphore to signal when rendering is complete.
-  using DrawCallback = std::function<void(const escher::ImagePtr&,
-                                          const escher::SemaphorePtr&,
-                                          const escher::SemaphorePtr&)>;
+  using DrawCallback =
+      std::function<void(const escher::ImagePtr&, const escher::SemaphorePtr&,
+                         const escher::SemaphorePtr&)>;
 
   // Returns false if the frame could not be drawn.  Otherwise,
   //   1. Registers itself with |frame_timings| using

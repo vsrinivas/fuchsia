@@ -13,9 +13,7 @@
 namespace scenic {
 namespace gfx {
 
-inline escher::vec2 Unwrap(::gfx::vec2 args) {
-  return {args.x, args.y};
-}
+inline escher::vec2 Unwrap(::gfx::vec2 args) { return {args.x, args.y}; }
 
 inline escher::vec3 Unwrap(::gfx::vec3 args) {
   return {args.x, args.y, args.z};

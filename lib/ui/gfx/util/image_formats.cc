@@ -34,8 +34,7 @@ void Yuy2ToBgra(uint8_t* yuy2, uint8_t* bgra1, uint8_t* bgra2) {
   bgra2[3] = 0xff;                                          // alpha
 }
 
-void ConvertYuy2ToBgra(uint8_t* out_ptr,
-                       uint8_t* in_ptr,
+void ConvertYuy2ToBgra(uint8_t* out_ptr, uint8_t* in_ptr,
                        uint64_t buffer_size) {
   // converts to BGRA
   // uint8_t addresses:
@@ -51,10 +50,8 @@ void ConvertYuy2ToBgra(uint8_t* out_ptr,
   }
 }
 
-void ConvertYuy2ToBgraAndMirror(uint8_t* out_ptr,
-                                uint8_t* in_ptr,
-                                uint32_t out_width,
-                                uint32_t out_height) {
+void ConvertYuy2ToBgraAndMirror(uint8_t* out_ptr, uint8_t* in_ptr,
+                                uint32_t out_width, uint32_t out_height) {
   uint32_t double_pixels_per_row = out_width / 2;
   uint32_t in_stride = out_width * 2;
   uint32_t out_stride = out_width * 4;
@@ -68,9 +65,7 @@ void ConvertYuy2ToBgraAndMirror(uint8_t* out_ptr,
   }
 }
 
-void MirrorBgra(uint32_t* out_ptr,
-                uint32_t* in_ptr,
-                uint32_t width,
+void MirrorBgra(uint32_t* out_ptr, uint32_t* in_ptr, uint32_t width,
                 uint32_t height) {
   // converts to BGRA and mirrors left-right
   for (uint32_t y = 0; y < height; ++y) {

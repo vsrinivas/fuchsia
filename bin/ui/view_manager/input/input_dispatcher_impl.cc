@@ -61,8 +61,7 @@ escher::mat4 Unwrap(const geometry::Transform& matrix) {
 // |event| is the event to transform.
 void TransformPointerEvent(const geometry::Point3F& ray_origin,
                            const geometry::Point3F& ray_direction,
-                           const geometry::Transform& transform,
-                           float distance,
+                           const geometry::Transform& transform, float distance,
                            input::InputEvent* event) {
   if (!event->is_pointer())
     return;
@@ -88,8 +87,7 @@ int64_t InputEventTimestampNow() {
 }  // namespace
 
 InputDispatcherImpl::InputDispatcherImpl(
-    ViewInspector* inspector,
-    InputOwner* owner,
+    ViewInspector* inspector, InputOwner* owner,
     views_v1::ViewTreeToken view_tree_token,
     fidl::InterfaceRequest<input::InputDispatcher> request)
     : inspector_(inspector),
@@ -186,8 +184,7 @@ void InputDispatcherImpl::ProcessNextEvent() {
 }
 
 void InputDispatcherImpl::DeliverEvent(uint64_t event_path_propagation_id,
-                                       size_t index,
-                                       input::InputEvent event) {
+                                       size_t index, input::InputEvent event) {
   // TODO(MZ-164) when the chain is changed, we might need to cancel events
   // that have not progagated fully through the chain.
   if (index >= event_path_.size() ||
@@ -224,8 +221,7 @@ void InputDispatcherImpl::DeliverEvent(input::InputEvent event) {
 }
 
 void InputDispatcherImpl::DeliverKeyEvent(
-    std::unique_ptr<FocusChain> focus_chain,
-    uint64_t propagation_index,
+    std::unique_ptr<FocusChain> focus_chain, uint64_t propagation_index,
     input::InputEvent event) {
   FXL_DCHECK(propagation_index < focus_chain->chain.size());
   FXL_VLOG(1) << "DeliverKeyEvent " << focus_chain->version << " "

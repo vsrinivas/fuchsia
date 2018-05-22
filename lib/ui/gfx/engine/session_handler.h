@@ -29,10 +29,8 @@ class SceneManagerImpl;
 // TODO(SCN-709): Unify SessionHandler and Session.
 class SessionHandler : public TempSessionDelegate {
  public:
-  SessionHandler(CommandDispatcherContext context,
-                 Engine* engine,
-                 SessionId session_id,
-                 EventReporter* event_reporter,
+  SessionHandler(CommandDispatcherContext context, Engine* engine,
+                 SessionId session_id, EventReporter* event_reporter,
                  ErrorReporter* error_reporter);
   virtual ~SessionHandler();
 
@@ -46,14 +44,12 @@ class SessionHandler : public TempSessionDelegate {
                ui::Session::PresentCallback callback) override;
 
   // |ui::Session / scenic::TempSessionDelegate|
-  void HitTest(uint32_t node_id,
-               ::gfx::vec3 ray_origin,
+  void HitTest(uint32_t node_id, ::gfx::vec3 ray_origin,
                ::gfx::vec3 ray_direction,
                ui::Session::HitTestCallback callback) override;
 
   // |ui::Session / scenic::TempSessionDelegate|
-  void HitTestDeviceRay(::gfx::vec3 ray_origin,
-                        ::gfx::vec3 ray_direction,
+  void HitTestDeviceRay(::gfx::vec3 ray_origin, ::gfx::vec3 ray_direction,
                         ui::Session::HitTestCallback callback) override;
 
   // |scenic::CommandDispatcher|

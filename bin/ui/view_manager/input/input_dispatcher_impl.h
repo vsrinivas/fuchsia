@@ -27,8 +27,7 @@ class InputOwner;
 // Binds incoming requests to the relevant view token.
 class InputDispatcherImpl : public input::InputDispatcher {
  public:
-  InputDispatcherImpl(ViewInspector* inspector,
-                      InputOwner* owner,
+  InputDispatcherImpl(ViewInspector* inspector, InputOwner* owner,
                       views_v1::ViewTreeToken view_tree_token,
                       fidl::InterfaceRequest<input::InputDispatcher> request);
   ~InputDispatcherImpl() override;
@@ -42,14 +41,12 @@ class InputDispatcherImpl : public input::InputDispatcher {
   void ProcessNextEvent();
   // Used for located events (touch, stylus)
   void DeliverEvent(input::InputEvent event);
-  void DeliverEvent(uint64_t event_path_propagation_id,
-                    size_t index,
+  void DeliverEvent(uint64_t event_path_propagation_id, size_t index,
                     input::InputEvent event);
   // Used for key events (keyboard)
   // |propagation_index| is the current index in the |focus_chain|
   void DeliverKeyEvent(std::unique_ptr<FocusChain> focus_chain,
-                       uint64_t propagation_index,
-                       input::InputEvent event);
+                       uint64_t propagation_index, input::InputEvent event);
   // Used to post as task and schedule the next call to |DispatchEvent|
   void PopAndScheduleNextEvent();
 

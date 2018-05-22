@@ -46,8 +46,7 @@ class SharedBuffer final : public fxl::RefCountedThreadSafe<SharedBuffer> {
  private:
   friend class SharedBufferPool;
 
-  SharedBuffer(scenic_lib::Session* session,
-               escher::BufferFactory* factory,
+  SharedBuffer(scenic_lib::Session* session, escher::BufferFactory* factory,
                vk::DeviceSize capacity);
 
   scenic_lib::Session* const session_;

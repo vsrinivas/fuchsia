@@ -18,9 +18,7 @@ class DisplayCompositor : public Compositor {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  DisplayCompositor(Session* session,
-                    scenic::ResourceId id,
-                    Display* display,
+  DisplayCompositor(Session* session, scenic::ResourceId id, Display* display,
                     std::unique_ptr<Swapchain> swapchain);
 
   ~DisplayCompositor() override;

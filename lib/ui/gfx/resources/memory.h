@@ -21,8 +21,7 @@ class Memory : public Resource {
   static const ResourceTypeInfo kTypeInfo;
 
  protected:
-  Memory(Session* session,
-         scenic::ResourceId id,
+  Memory(Session* session, scenic::ResourceId id,
          const ResourceTypeInfo& type_info);
 };
 

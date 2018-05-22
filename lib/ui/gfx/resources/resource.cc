@@ -15,8 +15,7 @@ namespace gfx {
 
 const ResourceTypeInfo Resource::kTypeInfo = {0, "Resource"};
 
-Resource::Resource(Session* session,
-                   scenic::ResourceId id,
+Resource::Resource(Session* session, scenic::ResourceId id,
                    const ResourceTypeInfo& type_info)
     : session_(session), id_(id), type_info_(type_info) {
   FXL_DCHECK(session);
@@ -77,9 +76,7 @@ Resource* Resource::GetDelegate(const ResourceTypeInfo& type_info) {
   return type_info_.IsKindOf(type_info) ? this : nullptr;
 }
 
-void Resource::SetExported(bool exported) {
-  exported_ = exported;
-}
+void Resource::SetExported(bool exported) { exported_ = exported; }
 
 }  // namespace gfx
 }  // namespace scenic

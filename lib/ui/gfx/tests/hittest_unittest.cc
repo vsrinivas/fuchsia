@@ -112,8 +112,7 @@ class HitTestTest : public SessionTest {
     float d;  // distance
   };
 
-  void ExpectHits(uint32_t node_id,
-                  const vec3& ray_origin,
+  void ExpectHits(uint32_t node_id, const vec3& ray_origin,
                   const vec3& ray_direction,
                   std::vector<ExpectedHit> expected_hits,
                   bool expected_null = false) {

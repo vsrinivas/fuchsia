@@ -20,8 +20,7 @@ class ImageBase : public Resource {
   virtual const escher::ImagePtr& GetEscherImage() = 0;
 
  protected:
-  ImageBase(Session* session,
-            scenic::ResourceId id,
+  ImageBase(Session* session, scenic::ResourceId id,
             const ResourceTypeInfo& type_info);
 };
 

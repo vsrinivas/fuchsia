@@ -47,8 +47,7 @@ constexpr float kCursorElevation = 800;
 }  // namespace
 
 Presentation::Presentation(views_v1::ViewManager* view_manager,
-                           ui::Scenic* scenic,
-                           scenic_lib::Session* session,
+                           ui::Scenic* scenic, scenic_lib::Session* session,
                            RendererParams renderer_params)
     : view_manager_(view_manager),
       scenic_(scenic),
@@ -62,13 +61,8 @@ Presentation::Presentation(views_v1::ViewManager* view_manager,
       root_view_host_node_(session_),
       root_view_parent_node_(session_),
       content_view_host_node_(session_),
-      cursor_shape_(session_,
-                    kCursorWidth,
-                    kCursorHeight,
-                    0u,
-                    kCursorRadius,
-                    kCursorRadius,
-                    kCursorRadius),
+      cursor_shape_(session_, kCursorWidth, kCursorHeight, 0u, kCursorRadius,
+                    kCursorRadius, kCursorRadius),
       cursor_material_(session_),
       presentation_binding_(this),
       tree_listener_binding_(this),
@@ -118,8 +112,7 @@ Presentation::~Presentation() {}
 void Presentation::Present(
     views_v1_token::ViewOwnerPtr view_owner,
     fidl::InterfaceRequest<presentation::Presentation> presentation_request,
-    YieldCallback yield_callback,
-    ShutdownCallback shutdown_callback) {
+    YieldCallback yield_callback, ShutdownCallback shutdown_callback) {
   FXL_DCHECK(view_owner);
   FXL_DCHECK(!display_model_initialized_);
 
@@ -476,12 +469,12 @@ void Presentation::CaptureKeyboardEventHACK(
 }
 
 void Presentation::CapturePointerEventsHACK(
-  fidl::InterfaceHandle<presentation::PointerCaptureListenerHACK>
-      listener_handle) {
+    fidl::InterfaceHandle<presentation::PointerCaptureListenerHACK>
+        listener_handle) {
   presentation::PointerCaptureListenerHACKPtr listener;
   listener.Bind(std::move(listener_handle));
   // Auto-remove listeners if the interface closes.
-  listener.set_error_handler([ this, listener = listener.get() ] {
+  listener.set_error_handler([this, listener = listener.get()] {
     captured_pointerbindings_.erase(
         std::remove_if(captured_pointerbindings_.begin(),
                        captured_pointerbindings_.end(),
@@ -491,8 +484,7 @@ void Presentation::CapturePointerEventsHACK(
         captured_pointerbindings_.end());
   });
 
-  captured_pointerbindings_.push_back(
-      PointerCaptureItem{std::move(listener)});
+  captured_pointerbindings_.push_back(PointerCaptureItem{std::move(listener)});
 }
 
 void Presentation::GetPresentationMode(GetPresentationModeCallback callback) {
@@ -571,11 +563,11 @@ void Presentation::OnEvent(input::InputEvent event) {
 
         // Adjust pointer origin with simulated screen offset.
         clone.x -= (display_model_actual_.display_info().width_in_px -
-                      display_metrics_.width_in_px()) /
-                      2;
+                    display_metrics_.width_in_px()) /
+                   2;
         clone.y -= (display_model_actual_.display_info().height_in_px -
-                      display_metrics_.height_in_px()) /
-                      2;
+                    display_metrics_.height_in_px()) /
+                   2;
 
         // Scale by device pixel density.
         clone.x *= display_metrics_.x_scale_in_pp_per_px();
@@ -722,9 +714,7 @@ void Presentation::PresentScene() {
       });
 }
 
-void Presentation::Shutdown() {
-  shutdown_callback_();
-}
+void Presentation::Shutdown() { shutdown_callback_(); }
 
 void Presentation::SetRendererParams(
     ::fidl::VectorPtr<gfx::RendererParam> params) {

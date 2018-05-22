@@ -16,8 +16,7 @@ MeshShape::MeshShape(Session* session, scenic::ResourceId id)
     : Shape(session, id, MeshShape::kTypeInfo) {}
 
 escher::Object MeshShape::GenerateRenderObject(
-    const escher::mat4& transform,
-    const escher::MaterialPtr& material) {
+    const escher::mat4& transform, const escher::MaterialPtr& material) {
   return escher::Object(transform, mesh_, material);
 }
 
@@ -29,12 +28,10 @@ bool MeshShape::GetIntersection(const escher::ray4& ray,
 
 bool MeshShape::BindBuffers(BufferPtr index_buffer,
                             ::gfx::MeshIndexFormat index_format,
-                            uint64_t index_offset,
-                            uint32_t index_count,
+                            uint64_t index_offset, uint32_t index_count,
                             BufferPtr vertex_buffer,
                             const ::gfx::MeshVertexFormat& vertex_format,
-                            uint64_t vertex_offset,
-                            uint32_t vertex_count,
+                            uint64_t vertex_offset, uint32_t vertex_count,
                             escher::BoundingBox bounding_box) {
   if (index_format != ::gfx::MeshIndexFormat::kUint32) {
     // TODO(MZ-275): only 32-bit indices are supported.

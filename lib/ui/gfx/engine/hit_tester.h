@@ -35,8 +35,7 @@ class HitTester {
   // tree depth.
   //
   // Only returns hits for Nodes within |session|.
-  std::vector<Hit> HitTest(Node* node,
-                           const escher::ray4& ray,
+  std::vector<Hit> HitTest(Node* node, const escher::ray4& ray,
                            Session* session);
 
  private:

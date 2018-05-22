@@ -38,8 +38,7 @@ void DisplayWatcher::WaitForDisplay(DisplayReadyCallback callback) {
 #endif
 }
 
-void DisplayWatcher::HandleDevice(bool display,
-                                  int dir_fd,
+void DisplayWatcher::HandleDevice(bool display, int dir_fd,
                                   std::string filename) {
   if (display) {
     display_watcher_.reset();

@@ -7,8 +7,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include <ui/cpp/fidl.h>
 #include <lib/async/default.h>
+#include <ui/cpp/fidl.h>
 
 #include "lib/fsl/tasks/message_loop.h"
 
@@ -74,8 +74,7 @@ void InputReader::DeviceAdded(std::unique_ptr<InputInterpreter> interpreter) {
                    new DeviceInfo{std::move(interpreter), std::move(wait)});
 }
 
-void InputReader::OnDeviceHandleReady(async_t* async,
-                                      async::WaitBase* wait,
+void InputReader::OnDeviceHandleReady(async_t* async, async::WaitBase* wait,
                                       zx_status_t status,
                                       const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
@@ -103,8 +102,7 @@ void InputReader::OnDeviceHandleReady(async_t* async,
   }
 }
 
-void InputReader::OnDisplayHandleReady(async_t* async,
-                                       async::WaitBase* wait,
+void InputReader::OnDisplayHandleReady(async_t* async, async::WaitBase* wait,
                                        zx_status_t status,
                                        const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {

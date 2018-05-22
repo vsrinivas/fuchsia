@@ -24,8 +24,7 @@ class Light : public Resource {
   const glm::vec3& color() const { return color_; }
 
  protected:
-  Light(Session* session,
-        scenic::ResourceId node_id,
+  Light(Session* session, scenic::ResourceId node_id,
         const ResourceTypeInfo& type_info);
 
   // |Resource|.

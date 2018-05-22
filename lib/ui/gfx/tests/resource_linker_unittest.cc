@@ -493,9 +493,8 @@ TEST_F(ResourceLinkerTest, ImportAfterReleasedExportedResourceFails) {
   linker->ImportResource(import.get(),
                          ::gfx::ImportSpec::NODE,  // import spec
                          std::move(destination));  // import handle
-  ASSERT_TRUE(RunLoopUntilWithTimeout([&did_resolve]() -> bool {
-    return did_resolve;
-  }));
+  ASSERT_TRUE(RunLoopUntilWithTimeout(
+      [&did_resolve]() -> bool { return did_resolve; }));
   ASSERT_TRUE(did_resolve);
   ASSERT_EQ(0u, linker->NumUnresolvedImports());
 }

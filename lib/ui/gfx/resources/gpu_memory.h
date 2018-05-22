@@ -23,11 +23,8 @@ class GpuMemory : public Memory {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  GpuMemory(Session* session,
-            scenic::ResourceId id,
-            vk::Device device,
-            vk::DeviceMemory mem,
-            vk::DeviceSize size,
+  GpuMemory(Session* session, scenic::ResourceId id, vk::Device device,
+            vk::DeviceMemory mem, vk::DeviceSize size,
             uint32_t memory_type_index);
 
   // Helper method for creating GpuMemory object from a ::gfx::Memory.
@@ -35,18 +32,14 @@ class GpuMemory : public Memory {
   // VkDeviceMemory. Releases the VMO.
   //
   // Returns the created GpuMemory object or nullptr if there was an error.
-  static GpuMemoryPtr New(Session* session,
-                          scenic::ResourceId id,
-                          vk::Device device,
-                          zx::vmo vmo,
+  static GpuMemoryPtr New(Session* session, scenic::ResourceId id,
+                          vk::Device device, zx::vmo vmo,
                           ErrorReporter* error_reporter);
 
   // Helper method that calls the above method with the VMO from |args|. Also
   // checks the memory type in debug mode.
-  static GpuMemoryPtr New(Session* session,
-                          scenic::ResourceId id,
-                          vk::Device device,
-                          ::gfx::MemoryArgs args,
+  static GpuMemoryPtr New(Session* session, scenic::ResourceId id,
+                          vk::Device device, ::gfx::MemoryArgs args,
                           ErrorReporter* error_reporter);
 
   void Accept(class ResourceVisitor* visitor) override;

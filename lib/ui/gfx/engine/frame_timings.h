@@ -25,8 +25,7 @@ using FrameTimingsPtr = fxl::RefPtr<FrameTimings>;
 class FrameTimings : public escher::Reffable {
  public:
   FrameTimings();
-  FrameTimings(FrameScheduler* frame_scheduler,
-               uint64_t frame_number,
+  FrameTimings(FrameScheduler* frame_scheduler, uint64_t frame_number,
                zx_time_t target_presentation_time);
 
   // Add a swapchain that is used as a render target this frame.  Return an

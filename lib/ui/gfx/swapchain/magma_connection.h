@@ -38,8 +38,7 @@ class MagmaConnection {
   // |buffer_presented_semaphore| is signaled.  When |buffer| is eventually
   // replaced by the next framebuffer, all of |signal_semaphores| will be
   // signaled.
-  bool DisplayPageFlip(magma_buffer_t buffer,
-                       uint32_t wait_semaphore_count,
+  bool DisplayPageFlip(magma_buffer_t buffer, uint32_t wait_semaphore_count,
                        const magma_semaphore_t* wait_semaphores,
                        uint32_t signal_semaphore_count,
                        const magma_semaphore_t* signal_semaphores,

@@ -32,8 +32,7 @@ class ViewTreeState : public ViewContainerState {
     INVALIDATION_VIEWS_INVALIDATED = 1u << 0,
   };
 
-  ViewTreeState(ViewRegistry* registry,
-                views_v1::ViewTreeToken view_tree_token,
+  ViewTreeState(ViewRegistry* registry, views_v1::ViewTreeToken view_tree_token,
                 fidl::InterfaceRequest<views_v1::ViewTree> view_tree_request,
                 views_v1::ViewTreeListenerPtr view_tree_listener,
                 const std::string& label);

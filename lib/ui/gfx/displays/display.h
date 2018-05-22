@@ -18,8 +18,7 @@ namespace gfx {
 // resolution, vsync interval, last vsync time, etc.
 class Display {
  public:
-  Display(uint32_t width_in_px,
-          uint32_t height_in_px,
+  Display(uint32_t width_in_px, uint32_t height_in_px,
           zx::event ownership_event);
 
   // Obtain the time of the last Vsync, in nanoseconds.

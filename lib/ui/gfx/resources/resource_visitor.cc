@@ -34,97 +34,57 @@
 namespace scenic {
 namespace gfx {
 
-void GpuMemory::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
+void GpuMemory::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
-void HostMemory::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
+void HostMemory::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
-void GpuImage::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
+void GpuImage::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
-void HostImage::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
+void HostImage::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
-void ImagePipe::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
+void ImagePipe::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
-void Buffer::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
+void Buffer::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
-void EntityNode::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
+void EntityNode::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
-void ShapeNode::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
+void ShapeNode::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
-void CircleShape::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
+void CircleShape::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
-void RectangleShape::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
+void RectangleShape::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
 void RoundedRectangleShape::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
 
-void MeshShape::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
+void MeshShape::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
-void Material::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
+void Material::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
 void DisplayCompositor::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
 
-void LayerStack::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
+void LayerStack::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
-void Layer::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
+void Layer::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
-void Scene::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
+void Scene::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
-void Camera::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
+void Camera::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
-void Renderer::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
+void Renderer::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
-void Light::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
+void Light::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
-void AmbientLight::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
+void AmbientLight::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
 void DirectionalLight::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
 
-void Import::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
+void Import::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
 }  // namespace gfx
 }  // namespace scenic

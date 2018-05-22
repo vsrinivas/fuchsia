@@ -20,8 +20,7 @@ Detector::Detector(size_t history_size)
 }
 
 std::pair<bool, presentation::PresentationMode> Detector::Update(
-    const input::SensorDescriptor& sensor,
-    input::InputReport event) {
+    const input::SensorDescriptor& sensor, input::InputReport event) {
   FXL_CHECK(sensor.type == input::SensorType::ACCELEROMETER);
   FXL_CHECK(event.sensor);
   FXL_CHECK(event.sensor->is_vector());

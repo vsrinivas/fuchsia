@@ -25,18 +25,14 @@ SessionHandler* SessionManager::FindSession(SessionId id) {
 }
 
 std::unique_ptr<SessionHandler> SessionManager::CreateSessionHandler(
-    CommandDispatcherContext context,
-    Engine* engine,
-    SessionId session_id,
-    EventReporter* event_reporter,
-    ErrorReporter* error_reporter) const {
+    CommandDispatcherContext context, Engine* engine, SessionId session_id,
+    EventReporter* event_reporter, ErrorReporter* error_reporter) const {
   return std::make_unique<SessionHandler>(
       std::move(context), engine, session_id, event_reporter, error_reporter);
 }
 
 std::unique_ptr<CommandDispatcher> SessionManager::CreateCommandDispatcher(
-    CommandDispatcherContext context,
-    Engine* engine) {
+    CommandDispatcherContext context, Engine* engine) {
   SessionId session_id = next_session_id_++;
 
   scenic::Session* session = context.session();
@@ -59,8 +55,7 @@ void SessionManager::ScheduleUpdateForSession(UpdateScheduler* update_scheduler,
 }
 
 bool SessionManager::ApplyScheduledSessionUpdates(
-    uint64_t presentation_time,
-    uint64_t presentation_interval) {
+    uint64_t presentation_time, uint64_t presentation_interval) {
   TRACE_DURATION("gfx", "ApplyScheduledSessionUpdates", "time",
                  presentation_time, "interval", presentation_interval);
 

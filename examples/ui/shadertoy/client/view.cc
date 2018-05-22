@@ -30,8 +30,7 @@ constexpr uint32_t kShapeHeight = 288;
 View::View(component::ApplicationContext* application_context,
            views_v1::ViewManagerPtr view_manager,
            fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request)
-    : BaseView(std::move(view_manager),
-               std::move(view_owner_request),
+    : BaseView(std::move(view_manager), std::move(view_owner_request),
                "Shadertoy Example"),
       application_context_(application_context),
       loop_(fsl::MessageLoop::GetCurrent()),

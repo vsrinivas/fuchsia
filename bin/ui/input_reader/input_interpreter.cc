@@ -49,9 +49,7 @@ const size_t kParadiseAccBase = 1;
 namespace mozart {
 
 std::unique_ptr<InputInterpreter> InputInterpreter::Open(
-    int dirfd,
-    std::string filename,
-    input::InputDeviceRegistry* registry) {
+    int dirfd, std::string filename, input::InputDeviceRegistry* registry) {
   int fd = openat(dirfd, filename.c_str(), O_RDONLY);
   if (fd < 0) {
     FXL_LOG(ERROR) << "Failed to open device " << filename;
@@ -67,8 +65,7 @@ std::unique_ptr<InputInterpreter> InputInterpreter::Open(
   return device;
 }
 
-InputInterpreter::InputInterpreter(std::string name,
-                                   int fd,
+InputInterpreter::InputInterpreter(std::string name, int fd,
                                    input::InputDeviceRegistry* registry)
     : registry_(registry), hid_decoder_(std::move(name), fd) {
   memset(acer12_touch_reports_, 0, 2 * sizeof(acer12_touch_t));

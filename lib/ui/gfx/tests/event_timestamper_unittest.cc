@@ -48,7 +48,7 @@ TEST_F(EventTimestamperTest, DISABLED_SmokeTest) {
   }
 
   for (size_t i = 0; i < kEventCount; ++i) {
-    ASSERT_TRUE(RunLoopUntilWithTimeout([&target_callback_times,&i]() -> bool {
+    ASSERT_TRUE(RunLoopUntilWithTimeout([&target_callback_times, &i]() -> bool {
       return target_callback_times[i] == 0u;
     }));
   }

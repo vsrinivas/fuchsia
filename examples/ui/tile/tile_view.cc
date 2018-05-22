@@ -178,8 +178,7 @@ void TileView::OnSceneInvalidated(images::PresentationInfo presentation_info) {
   }
 }
 
-TileView::ViewData::ViewData(const std::string& url,
-                             uint32_t key,
+TileView::ViewData::ViewData(const std::string& url, uint32_t key,
                              component::ApplicationControllerPtr controller,
                              scenic_lib::Session* session)
     : url(url),

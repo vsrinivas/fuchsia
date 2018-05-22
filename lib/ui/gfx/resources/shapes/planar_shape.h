@@ -23,8 +23,7 @@ class PlanarShape : public Shape {
   virtual bool ContainsPoint(const escher::vec2& point) const = 0;
 
  protected:
-  PlanarShape(Session* session,
-              scenic::ResourceId id,
+  PlanarShape(Session* session, scenic::ResourceId id,
               const ResourceTypeInfo& type_info);
 };
 

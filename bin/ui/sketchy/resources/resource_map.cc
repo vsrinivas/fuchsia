@@ -29,9 +29,7 @@ bool ResourceMap::RemoveResource(ResourceId id) {
   return true;
 }
 
-void ResourceMap::Clear() {
-  resources_.clear();
-}
+void ResourceMap::Clear() { resources_.clear(); }
 
 template <class ResourceT>
 fxl::RefPtr<ResourceT> ResourceMap::FindResource(ResourceId id) {

@@ -12,9 +12,7 @@ namespace root_presenter {
 namespace {
 
 // Returns true if two non-zero values are within 1% of each other.
-bool WithinOnePercent(float a, float b) {
-  return fabs((a - b) / b) < 0.01f;
-}
+bool WithinOnePercent(float a, float b) { return fabs((a - b) / b) < 0.01f; }
 
 // Quantizes the specified floating point number to 8 significant bits of
 // precision in its mantissa (including the implicit leading 1 bit).

@@ -22,18 +22,15 @@ ImagePipe::ImagePipe(Session* session, scenic::ResourceId id)
       weak_ptr_factory_(this),
       images_(session->error_reporter()) {}
 
-ImagePipe::ImagePipe(Session* session,
-                     scenic::ResourceId id,
+ImagePipe::ImagePipe(Session* session, scenic::ResourceId id,
                      ::fidl::InterfaceRequest<images::ImagePipe> request)
     : ImageBase(session, id, ImagePipe::kTypeInfo),
       weak_ptr_factory_(this),
       handler_(std::make_unique<ImagePipeHandler>(std::move(request), this)),
       images_(session->error_reporter()) {}
 
-void ImagePipe::AddImage(uint32_t image_id,
-                         images::ImageInfo image_info,
-                         zx::vmo vmo,
-                         images::MemoryType memory_type,
+void ImagePipe::AddImage(uint32_t image_id, images::ImageInfo image_info,
+                         zx::vmo vmo, images::MemoryType memory_type,
                          uint64_t memory_offset) {
   if (image_id == 0) {
     session()->error_reporter()->ERROR()
@@ -80,12 +77,9 @@ void ImagePipe::CloseConnectionAndCleanUp() {
   session()->engine()->ScheduleUpdate(0);
 }
 
-void ImagePipe::OnConnectionError() {
-  CloseConnectionAndCleanUp();
-}
+void ImagePipe::OnConnectionError() { CloseConnectionAndCleanUp(); }
 
-ImagePtr ImagePipe::CreateImage(Session* session,
-                                MemoryPtr memory,
+ImagePtr ImagePipe::CreateImage(Session* session, MemoryPtr memory,
                                 const images::ImageInfo& image_info,
                                 uint64_t memory_offset,
                                 ErrorReporter* error_reporter) {
@@ -103,8 +97,7 @@ void ImagePipe::RemoveImage(uint32_t image_id) {
   }
 };
 
-void ImagePipe::PresentImage(uint32_t image_id,
-                             uint64_t presentation_time,
+void ImagePipe::PresentImage(uint32_t image_id, uint64_t presentation_time,
                              ::fidl::VectorPtr<zx::event> acquire_fences,
                              ::fidl::VectorPtr<zx::event> release_fences,
                              images::ImagePipe::PresentImageCallback callback) {

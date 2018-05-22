@@ -14,20 +14,15 @@ namespace gfx {
 const ResourceTypeInfo GpuMemory::kTypeInfo = {
     ResourceType::kMemory | ResourceType::kGpuMemory, "GpuMemory"};
 
-GpuMemory::GpuMemory(Session* session,
-                     scenic::ResourceId id,
-                     vk::Device device,
-                     vk::DeviceMemory mem,
-                     vk::DeviceSize size,
+GpuMemory::GpuMemory(Session* session, scenic::ResourceId id, vk::Device device,
+                     vk::DeviceMemory mem, vk::DeviceSize size,
                      uint32_t memory_type_index)
     : Memory(session, id, GpuMemory::kTypeInfo),
       escher_gpu_mem_(
           escher::GpuMem::New(device, mem, size, memory_type_index)) {}
 
-GpuMemoryPtr GpuMemory::New(Session* session,
-                            scenic::ResourceId id,
-                            vk::Device device,
-                            ::gfx::MemoryArgs args,
+GpuMemoryPtr GpuMemory::New(Session* session, scenic::ResourceId id,
+                            vk::Device device, ::gfx::MemoryArgs args,
                             ErrorReporter* error_reporter) {
   if (args.memory_type != images::MemoryType::VK_DEVICE_MEMORY) {
     error_reporter->ERROR() << "scenic::gfx::GpuMemory::New(): "
@@ -38,10 +33,8 @@ GpuMemoryPtr GpuMemory::New(Session* session,
   return New(session, id, device, std::move(args.vmo), error_reporter);
 }
 
-GpuMemoryPtr GpuMemory::New(Session* session,
-                            scenic::ResourceId id,
-                            vk::Device device,
-                            zx::vmo vmo,
+GpuMemoryPtr GpuMemory::New(Session* session, scenic::ResourceId id,
+                            vk::Device device, zx::vmo vmo,
                             ErrorReporter* error_reporter) {
   // TODO: Need to change driver semantics so that you can import a VMO twice.
 

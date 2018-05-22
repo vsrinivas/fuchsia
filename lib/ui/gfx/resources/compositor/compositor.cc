@@ -34,8 +34,7 @@ namespace gfx {
 const ResourceTypeInfo Compositor::kTypeInfo = {ResourceType::kCompositor,
                                                 "Compositor"};
 
-Compositor::Compositor(Session* session,
-                       scenic::ResourceId id,
+Compositor::Compositor(Session* session, scenic::ResourceId id,
                        const ResourceTypeInfo& type_info,
                        std::unique_ptr<Swapchain> swapchain)
     : Resource(session, id, type_info),
@@ -48,9 +47,7 @@ Compositor::Compositor(Session* session,
   session->engine()->AddCompositor(this);
 }
 
-Compositor::~Compositor() {
-  session()->engine()->RemoveCompositor(this);
-}
+Compositor::~Compositor() { session()->engine()->RemoveCompositor(this); }
 
 void Compositor::CollectScenes(std::set<Scene*>* scenes_out) {
   if (layer_stack_) {
@@ -67,8 +64,7 @@ bool Compositor::SetLayerStack(LayerStackPtr layer_stack) {
 
 // Helper function for DrawLayer().
 static void InitEscherStage(
-    escher::Stage* stage,
-    const escher::ViewingVolume& viewing_volume,
+    escher::Stage* stage, const escher::ViewingVolume& viewing_volume,
     const std::vector<AmbientLightPtr>& ambient_lights,
     const std::vector<DirectionalLightPtr>& directional_lights) {
   stage->set_viewing_volume(viewing_volume);
@@ -145,8 +141,7 @@ std::vector<Layer*> Compositor::GetDrawableLayers() const {
 }
 
 std::unique_ptr<escher::Model> Compositor::DrawOverlaysToModel(
-    const std::vector<Layer*>& drawable_layers,
-    const escher::FramePtr& frame,
+    const std::vector<Layer*>& drawable_layers, const escher::FramePtr& frame,
     const FrameTimingsPtr& frame_timings,
     escher::PaperRenderer* escher_renderer,
     escher::ShadowMapRenderer* shadow_renderer) {
@@ -189,8 +184,7 @@ void Compositor::DrawLayer(const escher::FramePtr& frame,
                            const FrameTimingsPtr& frame_timings,
                            escher::PaperRenderer* escher_renderer,
                            escher::ShadowMapRenderer* shadow_map_renderer,
-                           Layer* layer,
-                           const escher::ImagePtr& output_image,
+                           Layer* layer, const escher::ImagePtr& output_image,
                            const escher::Model* overlay_model) {
   TRACE_DURATION("gfx", "Compositor::DrawLayer");
   FXL_DCHECK(layer->IsDrawable());
@@ -272,13 +266,15 @@ bool Compositor::DrawFrame(const FrameTimingsPtr& frame_timings,
   TRACE_DURATION("gfx", "Compositor::DrawFrame");
 
   std::vector<Layer*> drawable_layers = GetDrawableLayers();
-  if (drawable_layers.empty()) return false;
+  if (drawable_layers.empty())
+    return false;
 
   escher::FramePtr frame = escher()->NewFrame("Scenic Compositor");
 
   auto overlay_model = DrawOverlaysToModel(
       drawable_layers, frame, frame_timings, escher_renderer, shadow_renderer);
-  if (overlay_model == nullptr) return false;
+  if (overlay_model == nullptr)
+    return false;
 
   bool success = swapchain_->DrawAndPresentFrame(
       frame_timings,

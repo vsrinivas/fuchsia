@@ -103,8 +103,7 @@ void main() {
 
 namespace shadertoy {
 
-Compiler::Compiler(escher::Escher* escher,
-                   vk::RenderPass render_pass,
+Compiler::Compiler(escher::Escher* escher, vk::RenderPass render_pass,
                    vk::DescriptorSetLayout descriptor_set_layout)
     : loop_(fsl::MessageLoop::GetCurrent()),
       escher_(escher),

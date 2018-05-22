@@ -16,11 +16,8 @@ const ResourceTypeInfo GpuImage::kTypeInfo = {
     ResourceType::kGpuImage | ResourceType::kImage | ResourceType::kImageBase,
     "GpuImage"};
 
-GpuImage::GpuImage(Session* session,
-                   scenic::ResourceId id,
-                   GpuMemoryPtr memory,
-                   uint64_t memory_offset,
-                   escher::ImageInfo image_info,
+GpuImage::GpuImage(Session* session, scenic::ResourceId id, GpuMemoryPtr memory,
+                   uint64_t memory_offset, escher::ImageInfo image_info,
                    vk::Image vk_image)
     : Image(session, id, GpuImage::kTypeInfo), memory_(std::move(memory)) {
   image_ = escher::Image::New(session->engine()->escher_resource_recycler(),
@@ -29,8 +26,7 @@ GpuImage::GpuImage(Session* session,
   FXL_CHECK(image_);
 }
 
-GpuImagePtr GpuImage::New(Session* session,
-                          scenic::ResourceId id,
+GpuImagePtr GpuImage::New(Session* session, scenic::ResourceId id,
                           GpuMemoryPtr memory,
                           const images::ImageInfo& image_info,
                           uint64_t memory_offset,
@@ -111,9 +107,7 @@ GpuImagePtr GpuImage::New(Session* session,
                                     vk_image));
 }
 
-bool GpuImage::UpdatePixels() {
-  return false;
-}
+bool GpuImage::UpdatePixels() { return false; }
 
 }  // namespace gfx
 }  // namespace scenic

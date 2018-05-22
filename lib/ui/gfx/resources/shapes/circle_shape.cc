@@ -10,8 +10,7 @@ namespace gfx {
 const ResourceTypeInfo CircleShape::kTypeInfo = {
     ResourceType::kShape | ResourceType::kCircle, "CircleShape"};
 
-CircleShape::CircleShape(Session* session,
-                         scenic::ResourceId id,
+CircleShape::CircleShape(Session* session, scenic::ResourceId id,
                          float initial_radius)
     : PlanarShape(session, id, CircleShape::kTypeInfo),
       radius_(initial_radius) {}
@@ -21,8 +20,7 @@ bool CircleShape::ContainsPoint(const escher::vec2& point) const {
 }
 
 escher::Object CircleShape::GenerateRenderObject(
-    const escher::mat4& transform,
-    const escher::MaterialPtr& material) {
+    const escher::mat4& transform, const escher::MaterialPtr& material) {
   return escher::Object::NewCircle(transform, radius_, material);
 }
 

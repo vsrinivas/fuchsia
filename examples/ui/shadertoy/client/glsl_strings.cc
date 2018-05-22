@@ -228,12 +228,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 }
 )GLSL";
 
-std::string GetSeascapeSourceCode() {
-  return kSeascapeSrc;
-}
+std::string GetSeascapeSourceCode() { return kSeascapeSrc; }
 
-std::string GetMouseInputSourceCode() {
-  return kMouseInputSrc;
-}
+std::string GetMouseInputSourceCode() { return kMouseInputSrc; }
 
 }  // namespace shadertoy_client

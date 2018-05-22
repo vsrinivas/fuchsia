@@ -24,13 +24,11 @@ TEST_F(GfxSystemTest, DISABLED_CreateAndDestroySession) {
 
   scenic()->CreateSession(session.NewRequest(), nullptr);
 
-  ASSERT_TRUE(RunLoopUntilWithTimeout([this]() -> bool {
-    return scenic()->num_sessions() == 1;
-  }));
+  ASSERT_TRUE(RunLoopUntilWithTimeout(
+      [this]() -> bool { return scenic()->num_sessions() == 1; }));
   session = nullptr;
-  ASSERT_TRUE(RunLoopUntilWithTimeout([this]() -> bool {
-    return scenic()->num_sessions() == 0;
-  }));
+  ASSERT_TRUE(RunLoopUntilWithTimeout(
+      [this]() -> bool { return scenic()->num_sessions() == 0; }));
 }
 
 TEST_F(GfxSystemTest, DISABLED_ScheduleUpdateInOrder) {
@@ -38,24 +36,21 @@ TEST_F(GfxSystemTest, DISABLED_ScheduleUpdateInOrder) {
   ui::SessionPtr session;
   EXPECT_EQ(0U, scenic()->num_sessions());
   scenic()->CreateSession(session.NewRequest(), nullptr);
-  ASSERT_TRUE(RunLoopUntilWithTimeout([this]() -> bool {
-    return scenic()->num_sessions() == 1;
-  }));
+  ASSERT_TRUE(RunLoopUntilWithTimeout(
+      [this]() -> bool { return scenic()->num_sessions() == 1; }));
   // Present on the session with presentation_time = 1.
   ui::Session::PresentCallback callback = [](auto) {};
   session->Present(1, CreateEventArray(1), CreateEventArray(1), callback);
   // Briefly pump the message loop. Expect that the session is not destroyed.
   RunLoopWithTimeout(kPumpMessageLoopDuration);
-  ASSERT_TRUE(RunLoopUntilWithTimeout([this]() -> bool {
-    return scenic()->num_sessions() == 1;
-  }));
+  ASSERT_TRUE(RunLoopUntilWithTimeout(
+      [this]() -> bool { return scenic()->num_sessions() == 1; }));
   // Present with the same presentation time.
   session->Present(1, CreateEventArray(1), CreateEventArray(1), callback);
   // Briefly pump the message loop. Expect that the session is not destroyed.
   RunLoopWithTimeout(kPumpMessageLoopDuration);
-  ASSERT_TRUE(RunLoopUntilWithTimeout([this]() -> bool {
-    return scenic()->num_sessions() == 1;
-  }));
+  ASSERT_TRUE(RunLoopUntilWithTimeout(
+      [this]() -> bool { return scenic()->num_sessions() == 1; }));
 }
 
 bool IsFenceSignalled(const zx::event& fence) {
@@ -72,9 +67,8 @@ TEST_F(GfxSystemTest, DISABLED_ReleaseFences) {
   ui::SessionPtr session;
   EXPECT_EQ(0U, scenic()->num_sessions());
   scenic()->CreateSession(session.NewRequest(), nullptr);
-  ASSERT_TRUE(RunLoopUntilWithTimeout([this]() -> bool {
-    return scenic()->num_sessions() == 1;
-  }));
+  ASSERT_TRUE(RunLoopUntilWithTimeout(
+      [this]() -> bool { return scenic()->num_sessions() == 1; }));
   auto handler = static_cast<SessionHandlerForTest*>(
       gfx_system()->engine()->session_manager()->FindSession(1));
   {
@@ -86,9 +80,8 @@ TEST_F(GfxSystemTest, DISABLED_ReleaseFences) {
 
     session->Enqueue(std::move(commands));
   }
-  ASSERT_TRUE(RunLoopUntilWithTimeout([&handler]() -> bool {
-    return handler->command_count() == 2;
-  }));
+  ASSERT_TRUE(RunLoopUntilWithTimeout(
+      [&handler]() -> bool { return handler->command_count() == 2; }));
   EXPECT_EQ(2u, handler->command_count());
   // Create release fences
   ::fidl::VectorPtr<zx::event> release_fences = CreateEventArray(2);
@@ -100,9 +93,8 @@ TEST_F(GfxSystemTest, DISABLED_ReleaseFences) {
   session->Present(0u, ::fidl::VectorPtr<zx::event>::New(0),
                    std::move(release_fences),
                    [](images::PresentationInfo info) {});
-  ASSERT_TRUE(RunLoopUntilWithTimeout([&handler]() -> bool {
-    return handler->present_count() == 1;
-  }));
+  ASSERT_TRUE(RunLoopUntilWithTimeout(
+      [&handler]() -> bool { return handler->present_count() == 1; }));
   EXPECT_EQ(1u, handler->present_count());
   EXPECT_FALSE(IsFenceSignalled(release_fence1));
   EXPECT_FALSE(IsFenceSignalled(release_fence2));
@@ -110,9 +102,8 @@ TEST_F(GfxSystemTest, DISABLED_ReleaseFences) {
   session->Present(0u, ::fidl::VectorPtr<zx::event>::New(0),
                    ::fidl::VectorPtr<zx::event>::New(0),
                    [](images::PresentationInfo info) {});
-  ASSERT_TRUE(RunLoopUntilWithTimeout([&handler]() -> bool {
-    return handler->present_count() == 2;
-  }));
+  ASSERT_TRUE(RunLoopUntilWithTimeout(
+      [&handler]() -> bool { return handler->present_count() == 2; }));
   EXPECT_EQ(2u, handler->present_count());
   ASSERT_TRUE(RunLoopUntilWithTimeout([&release_fence1]() -> bool {
     return IsFenceSignalled(release_fence1);
@@ -127,9 +118,8 @@ TEST_F(GfxSystemTest, DISABLED_AcquireAndReleaseFences) {
   ui::SessionPtr session;
   EXPECT_EQ(0U, scenic()->num_sessions());
   scenic()->CreateSession(session.NewRequest(), nullptr);
-  ASSERT_TRUE(RunLoopUntilWithTimeout([this]() -> bool {
-    return scenic()->num_sessions() == 1;
-  }));
+  ASSERT_TRUE(RunLoopUntilWithTimeout(
+      [this]() -> bool { return scenic()->num_sessions() == 1; }));
   auto handler = static_cast<SessionHandlerForTest*>(
       gfx_system()->engine()->session_manager()->FindSession(1));
   {
@@ -141,9 +131,8 @@ TEST_F(GfxSystemTest, DISABLED_AcquireAndReleaseFences) {
 
     session->Enqueue(std::move(commands));
   }
-  ASSERT_TRUE(RunLoopUntilWithTimeout([&handler]() -> bool {
-    return handler->command_count() == 2;
-  }));
+  ASSERT_TRUE(RunLoopUntilWithTimeout(
+      [&handler]() -> bool { return handler->command_count() == 2; }));
   EXPECT_EQ(2u, handler->command_count());
   // Create acquire and release fences
   zx::event acquire_fence;
@@ -157,26 +146,23 @@ TEST_F(GfxSystemTest, DISABLED_AcquireAndReleaseFences) {
   // Call Present with both the acquire and release fences.
   session->Present(0u, std::move(acquire_fences), std::move(release_fences),
                    [](images::PresentationInfo info) {});
-  ASSERT_TRUE(RunLoopUntilWithTimeout([&handler]() -> bool {
-    return handler->present_count() == 1;
-  }));
+  ASSERT_TRUE(RunLoopUntilWithTimeout(
+      [&handler]() -> bool { return handler->present_count() == 1; }));
   EXPECT_EQ(1u, handler->present_count());
   EXPECT_FALSE(IsFenceSignalled(release_fence));
   // Call Present again with no fences.
   session->Present(0u, ::fidl::VectorPtr<zx::event>::New(0),
                    ::fidl::VectorPtr<zx::event>::New(0),
                    [](images::PresentationInfo info) {});
-  ASSERT_TRUE(RunLoopUntilWithTimeout([&handler]() -> bool {
-    return handler->present_count() == 2;
-  }));
+  ASSERT_TRUE(RunLoopUntilWithTimeout(
+      [&handler]() -> bool { return handler->present_count() == 2; }));
   EXPECT_FALSE(IsFenceSignalled(release_fence));
   // Now signal the acquire fence.
   acquire_fence.signal(0u, escher::kFenceSignalled);
   // Now expect that the first frame was presented, and its release fence was
   // signalled.
-  ASSERT_TRUE(RunLoopUntilWithTimeout([&release_fence]() -> bool {
-    return IsFenceSignalled(release_fence);
-  }));
+  ASSERT_TRUE(RunLoopUntilWithTimeout(
+      [&release_fence]() -> bool { return IsFenceSignalled(release_fence); }));
 }
 
 }  // namespace test

@@ -11,8 +11,7 @@ namespace gfx {
 
 const ResourceTypeInfo Light::kTypeInfo = {ResourceType::kLight, "Light"};
 
-Light::Light(Session* session,
-             scenic::ResourceId node_id,
+Light::Light(Session* session, scenic::ResourceId node_id,
              const ResourceTypeInfo& type_info)
     : Resource(session, node_id, type_info) {
   FXL_DCHECK(type_info.IsKindOf(Light::kTypeInfo));

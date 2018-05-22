@@ -15,8 +15,7 @@ float LookupPixelDensityForDisplay(uint32_t width_in_px, uint32_t height_in_px);
 presentation::DisplayUsage LookupDisplayUsageForDisplay(uint32_t width_in_px,
                                                         uint32_t height_in_px);
 
-void InitializeModelForDisplay(uint32_t width_in_px,
-                               uint32_t height_in_px,
+void InitializeModelForDisplay(uint32_t width_in_px, uint32_t height_in_px,
                                DisplayModel* model) {
   FXL_DCHECK(width_in_px != 0u);
   FXL_DCHECK(height_in_px != 0u);

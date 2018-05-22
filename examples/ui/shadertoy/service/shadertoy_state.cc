@@ -14,8 +14,7 @@
 namespace shadertoy {
 
 fxl::RefPtr<ShadertoyState> ShadertoyState::NewForImagePipe(
-    App* app,
-    ::fidl::InterfaceHandle<images::ImagePipe> image_pipe) {
+    App* app, ::fidl::InterfaceHandle<images::ImagePipe> image_pipe) {
   return fxl::AdoptRef(
       new ShadertoyStateForImagePipe(app, std::move(image_pipe)));
 }
@@ -105,8 +104,7 @@ void ShadertoyState::SetMouse(glm::vec4 i_mouse) {
 }
 
 void ShadertoyState::SetImage(
-    uint32_t channel,
-    ::fidl::InterfaceRequest<images::ImagePipe> request) {
+    uint32_t channel, ::fidl::InterfaceRequest<images::ImagePipe> request) {
   FXL_CHECK(false) << "unimplemented";
 }
 

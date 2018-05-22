@@ -12,24 +12,19 @@ namespace scenic {
 namespace gfx {
 
 SessionHandler::SessionHandler(CommandDispatcherContext dispatcher_context,
-                               Engine* engine,
-                               SessionId session_id,
+                               Engine* engine, SessionId session_id,
                                EventReporter* event_reporter,
                                ErrorReporter* error_reporter)
     : TempSessionDelegate(std::move(dispatcher_context)),
       session_manager_(engine->session_manager()),
       event_reporter_(event_reporter),
       error_reporter_(error_reporter),
-      session_(::fxl::MakeRefCounted<scenic::gfx::Session>(session_id,
-                                                           engine,
-                                                           event_reporter,
-                                                           error_reporter)) {
+      session_(::fxl::MakeRefCounted<scenic::gfx::Session>(
+          session_id, engine, event_reporter, error_reporter)) {
   FXL_DCHECK(engine);
 }
 
-SessionHandler::~SessionHandler() {
-  TearDown();
-}
+SessionHandler::~SessionHandler() { TearDown(); }
 
 void SessionHandler::Present(uint64_t presentation_time,
                              ::fidl::VectorPtr<zx::event> acquire_fences,
@@ -43,8 +38,7 @@ void SessionHandler::Present(uint64_t presentation_time,
   buffered_commands_.clear();
 }
 
-void SessionHandler::HitTest(uint32_t node_id,
-                             ::gfx::vec3 ray_origin,
+void SessionHandler::HitTest(uint32_t node_id, ::gfx::vec3 ray_origin,
                              ::gfx::vec3 ray_direction,
                              ui::Session::HitTestCallback callback) {
   session_->HitTest(node_id, std::move(ray_origin), std::move(ray_direction),
@@ -52,8 +46,7 @@ void SessionHandler::HitTest(uint32_t node_id,
 }
 
 void SessionHandler::HitTestDeviceRay(
-    ::gfx::vec3 ray_origin,
-    ::gfx::vec3 ray_direction,
+    ::gfx::vec3 ray_origin, ::gfx::vec3 ray_direction,
     ui::Session::HitTestDeviceRayCallback callback) {
   session_->HitTestDeviceRay(std::move(ray_origin), std::move(ray_direction),
                              callback);

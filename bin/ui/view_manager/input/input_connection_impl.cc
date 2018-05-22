@@ -13,8 +13,7 @@
 namespace view_manager {
 
 InputConnectionImpl::InputConnectionImpl(
-    ViewInspector* inspector,
-    InputOwner* owner,
+    ViewInspector* inspector, InputOwner* owner,
     views_v1_token::ViewToken view_token,
     fidl::InterfaceRequest<input::InputConnection> request)
     : inspector_(inspector),
@@ -53,8 +52,7 @@ void InputConnectionImpl::SetEventListener(
 }
 
 void InputConnectionImpl::GetInputMethodEditor(
-    input::KeyboardType keyboard_type,
-    input::InputMethodAction action,
+    input::KeyboardType keyboard_type, input::InputMethodAction action,
     input::TextInputState initial_state,
     fidl::InterfaceHandle<input::InputMethodEditorClient> client,
     fidl::InterfaceRequest<input::InputMethodEditor> editor_request) {
@@ -119,8 +117,7 @@ void InputConnectionImpl::InjectInput(input::InputEvent event) {
 }
 
 void InputConnectionImpl::ConnectWithImeService(
-    input::KeyboardType keyboard_type,
-    input::InputMethodAction action,
+    input::KeyboardType keyboard_type, input::InputMethodAction action,
     input::TextInputState state) {
   FXL_VLOG(1) << "ConnectWithImeService: view_token=" << view_token_
               << ", keyboard_type=" << keyboard_type << ", action=" << action

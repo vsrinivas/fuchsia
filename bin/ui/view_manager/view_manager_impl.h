@@ -24,8 +24,7 @@ class ViewManagerImpl : public views_v1::ViewManager {
       fidl::InterfaceRequest<views_v1::View> view_request,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
       fidl::InterfaceHandle<views_v1::ViewListener> view_listener,
-      zx::eventpair parent_export_token,
-      fidl::StringPtr label) override;
+      zx::eventpair parent_export_token, fidl::StringPtr label) override;
   void CreateViewTree(
       fidl::InterfaceRequest<views_v1::ViewTree> view_tree_request,
       fidl::InterfaceHandle<views_v1::ViewTreeListener> view_tree_listener,

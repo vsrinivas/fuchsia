@@ -26,14 +26,10 @@ void Camera::SetTransform(const glm::vec3& eye_position,
   eye_up_ = eye_up;
 }
 
-void Camera::SetProjection(const float fovy) {
-  fovy_ = fovy;
-}
+void Camera::SetProjection(const float fovy) { fovy_ = fovy; }
 
-void Camera::SetPoseBuffer(fxl::RefPtr<Buffer> buffer,
-                           uint32_t num_entries,
-                           uint64_t base_time,
-                           uint64_t time_interval) {
+void Camera::SetPoseBuffer(fxl::RefPtr<Buffer> buffer, uint32_t num_entries,
+                           uint64_t base_time, uint64_t time_interval) {
   pose_buffer_ = buffer;
   num_entries_ = num_entries;
   base_time_ = base_time;

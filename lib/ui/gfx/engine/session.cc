@@ -77,9 +77,7 @@ fidl::VectorPtr<::gfx::Hit> WrapHits(const std::vector<Hit>& hits) {
 
 }  // anonymous namespace
 
-Session::Session(SessionId id,
-                 Engine* engine,
-                 EventReporter* event_reporter,
+Session::Session(SessionId id, Engine* engine, EventReporter* event_reporter,
                  ErrorReporter* error_reporter)
     : id_(id),
       engine_(engine),
@@ -91,9 +89,7 @@ Session::Session(SessionId id,
   FXL_DCHECK(error_reporter);
 }
 
-Session::~Session() {
-  FXL_DCHECK(!is_valid_);
-}
+Session::~Session() { FXL_DCHECK(!is_valid_); }
 
 bool Session::ApplyCommand(::gfx::Command command) {
   switch (command.Which()) {
@@ -956,8 +952,7 @@ bool Session::ApplyCreateDisplayCompositor(scenic::ResourceId id,
 }
 
 bool Session::ApplyCreateImagePipeCompositor(
-    scenic::ResourceId id,
-    ::gfx::ImagePipeCompositorArgs args) {
+    scenic::ResourceId id, ::gfx::ImagePipeCompositorArgs args) {
   auto compositor = CreateImagePipeCompositor(id, std::move(args));
   return compositor ? resources_.AddResource(id, std::move(compositor)) : false;
 }
@@ -992,17 +987,14 @@ ResourcePtr Session::CreateMemory(scenic::ResourceId id,
   }
 }
 
-ResourcePtr Session::CreateImage(scenic::ResourceId id,
-                                 MemoryPtr memory,
+ResourcePtr Session::CreateImage(scenic::ResourceId id, MemoryPtr memory,
                                  ::gfx::ImageArgs args) {
   return Image::New(this, id, memory, args.info, args.memory_offset,
                     error_reporter_);
 }
 
-ResourcePtr Session::CreateBuffer(scenic::ResourceId id,
-                                  MemoryPtr memory,
-                                  uint32_t memory_offset,
-                                  uint32_t num_bytes) {
+ResourcePtr Session::CreateBuffer(scenic::ResourceId id, MemoryPtr memory,
+                                  uint32_t memory_offset, uint32_t num_bytes) {
   if (!memory->IsKindOf<GpuMemory>()) {
     // TODO(MZ-273): host memory should also be supported.
     error_reporter_->ERROR() << "scenic::gfx::Session::CreateBuffer(): "
@@ -1076,8 +1068,7 @@ ResourcePtr Session::CreateShapeNode(scenic::ResourceId id,
 }
 
 ResourcePtr Session::CreateDisplayCompositor(
-    scenic::ResourceId id,
-    ::gfx::DisplayCompositorArgs args) {
+    scenic::ResourceId id, ::gfx::DisplayCompositorArgs args) {
   Display* display = engine()->display_manager()->default_display();
   if (!display) {
     error_reporter_->ERROR() << "There is no default display available.";
@@ -1094,8 +1085,7 @@ ResourcePtr Session::CreateDisplayCompositor(
 }
 
 ResourcePtr Session::CreateImagePipeCompositor(
-    scenic::ResourceId id,
-    ::gfx::ImagePipeCompositorArgs args) {
+    scenic::ResourceId id, ::gfx::ImagePipeCompositorArgs args) {
   // TODO(MZ-179)
   error_reporter_->ERROR()
       << "scenic::gfx::Session::ApplyCreateImagePipeCompositor() "
@@ -1159,16 +1149,13 @@ ResourcePtr Session::CreateCircle(scenic::ResourceId id, float initial_radius) {
   return fxl::MakeRefCounted<CircleShape>(this, id, initial_radius);
 }
 
-ResourcePtr Session::CreateRectangle(scenic::ResourceId id,
-                                     float width,
+ResourcePtr Session::CreateRectangle(scenic::ResourceId id, float width,
                                      float height) {
   return fxl::MakeRefCounted<RectangleShape>(this, id, width, height);
 }
 
-ResourcePtr Session::CreateRoundedRectangle(scenic::ResourceId id,
-                                            float width,
-                                            float height,
-                                            float top_left_radius,
+ResourcePtr Session::CreateRoundedRectangle(scenic::ResourceId id, float width,
+                                            float height, float top_left_radius,
                                             float top_right_radius,
                                             float bottom_right_radius,
                                             float bottom_left_radius) {
@@ -1421,8 +1408,7 @@ bool Session::ApplyUpdate(std::vector<::gfx::Command> commands) {
   // consumed by the FrameScheduler.
 }
 
-void Session::HitTest(uint32_t node_id,
-                      ::gfx::vec3 ray_origin,
+void Session::HitTest(uint32_t node_id, ::gfx::vec3 ray_origin,
                       ::gfx::vec3 ray_direction,
                       ui::Session::HitTestCallback callback) {
   if (auto node = resources_.FindResource<Node>(node_id)) {

@@ -17,9 +17,7 @@ namespace test {
 
 class SessionForTest : public Session {
  public:
-  SessionForTest(SessionId id,
-                 Engine* engine,
-                 EventReporter* event_reporter,
+  SessionForTest(SessionId id, Engine* engine, EventReporter* event_reporter,
                  ErrorReporter* error_reporter);
 
   virtual void TearDown() override;
@@ -27,10 +25,8 @@ class SessionForTest : public Session {
 
 class SessionHandlerForTest : public SessionHandler {
  public:
-  SessionHandlerForTest(CommandDispatcherContext context,
-                        Engine* engine,
-                        SessionId session_id,
-                        EventReporter* event_reporter,
+  SessionHandlerForTest(CommandDispatcherContext context, Engine* engine,
+                        SessionId session_id, EventReporter* event_reporter,
                         ErrorReporter* error_reporter);
 
   // |scenic::CommandDispatcher|
@@ -74,9 +70,7 @@ class SessionManagerForTest : public SessionManager {
 
  private:
   std::unique_ptr<SessionHandler> CreateSessionHandler(
-      CommandDispatcherContext context,
-      Engine* engine,
-      SessionId session_id,
+      CommandDispatcherContext context, Engine* engine, SessionId session_id,
       EventReporter* event_reporter,
       ErrorReporter* error_reporter) const override;
 };

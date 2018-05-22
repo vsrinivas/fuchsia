@@ -44,8 +44,7 @@ inline views_v1_token::ViewTokenPtr MakeDummyViewToken(uint32_t value) {
 }
 
 inline mozart::HitTestResultPtr MakeSimpleHitTestResult(
-    mozart::SceneTokenPtr scene_token,
-    mozart::TransformPtr transform) {
+    mozart::SceneTokenPtr scene_token, mozart::TransformPtr transform) {
   auto result = mozart::HitTestResult::New();
   result->root = mozart::SceneHit::New();
   result->root->scene_token = scene_token.Pass();

@@ -32,8 +32,7 @@ class TileView : public mozart::BaseView, public presentation::Presenter {
 
  private:
   struct ViewData {
-    explicit ViewData(const std::string& url,
-                      uint32_t key,
+    explicit ViewData(const std::string& url, uint32_t key,
                       component::ApplicationControllerPtr controller,
                       scenic_lib::Session* session);
     ~ViewData();

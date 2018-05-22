@@ -67,8 +67,7 @@ VulkanDisplaySwapchain::~VulkanDisplaySwapchain() {
 }
 
 void VulkanDisplaySwapchain::InitializeVulkanSwapchain(
-    Display* display,
-    escher::VulkanDeviceQueues* device_queues,
+    Display* display, escher::VulkanDeviceQueues* device_queues,
     escher::ResourceRecycler* recycler) {
   vk::PhysicalDevice physical_device = device_queues->vk_physical_device();
   vk::SurfaceKHR surface = device_queues->vk_surface();
@@ -225,8 +224,7 @@ void VulkanDisplaySwapchain::InitializeVulkanSwapchain(
 }
 
 bool VulkanDisplaySwapchain::DrawAndPresentFrame(
-    const FrameTimingsPtr& frame_timings,
-    DrawCallback draw_callback) {
+    const FrameTimingsPtr& frame_timings, DrawCallback draw_callback) {
   // TODO(MZ-260): replace Vulkan swapchain with Magma C ABI calls, and use
   // EventTimestamper::Wait to notify |frame| when the frame is finished
   // rendering, and when it is presented.

@@ -36,12 +36,9 @@ class Renderer : public escher::Renderer {
   explicit Renderer(escher::Escher* escher, vk::Format color_format);
 
   void DrawFrame(const escher::FramebufferPtr& framebuffer,
-                 const PipelinePtr& pipeline,
-                 const Params& params,
-                 escher::Texture* channel0,
-                 escher::Texture* channel1,
-                 escher::Texture* channel2,
-                 escher::Texture* channel3,
+                 const PipelinePtr& pipeline, const Params& params,
+                 escher::Texture* channel0, escher::Texture* channel1,
+                 escher::Texture* channel2, escher::Texture* channel3,
                  escher::SemaphorePtr framebuffer_ready,
                  escher::SemaphorePtr frame_done);
 

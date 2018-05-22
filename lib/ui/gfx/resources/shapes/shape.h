@@ -29,12 +29,10 @@ class Shape : public Resource {
 
   // Generate an object to add to an escher::Model.
   virtual escher::Object GenerateRenderObject(
-      const escher::mat4& transform,
-      const escher::MaterialPtr& material) = 0;
+      const escher::mat4& transform, const escher::MaterialPtr& material) = 0;
 
  protected:
-  Shape(Session* session,
-        scenic::ResourceId id,
+  Shape(Session* session, scenic::ResourceId id,
         const ResourceTypeInfo& type_info);
 };
 
