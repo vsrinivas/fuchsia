@@ -14,16 +14,19 @@ dart_library("analyzer") {
   deps = [
     "//third_party/dart-pkg/pub/args",
     "//third_party/dart-pkg/pub/charcode",
+    "//third_party/dart-pkg/pub/collection",
+    "//third_party/dart-pkg/pub/convert",
     "//third_party/dart-pkg/pub/crypto",
     "//third_party/dart-pkg/pub/glob",
     "//third_party/dart-pkg/pub/html",
-    "//third_party/dart-pkg/pub/isolate",
     "//third_party/dart-pkg/pub/meta",
     "//third_party/dart-pkg/pub/package_config",
     "//third_party/dart-pkg/pub/path",
     "//third_party/dart-pkg/pub/plugin",
+    "//third_party/dart-pkg/pub/source_span",
     "//third_party/dart-pkg/pub/watcher",
     "//third_party/dart-pkg/pub/yaml",
     "//third_party/dart/pkg/front_end",
+    "//third_party/dart/pkg/kernel",
   ]
 }
