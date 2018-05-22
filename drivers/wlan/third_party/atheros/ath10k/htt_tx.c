@@ -935,11 +935,11 @@ zx_status_t ath10k_htt_tx(struct ath10k_htt* htt,
         && ((ieee80211_get_frame_subtype(hdr) == IEEE80211_FRAME_SUBTYPE_ACTION)
             || (ieee80211_get_frame_subtype(hdr) == IEEE80211_FRAME_SUBTYPE_DEAUTH)
             || (ieee80211_get_frame_subtype(hdr) == IEEE80211_FRAME_SUBTYPE_DISASSOC))
-        && (hdr->frame_control & IEEE80211_FRAME_PROTECTED_MASK)) {
+        && (hdr->frame_ctrl & IEEE80211_FRAME_PROTECTED_MASK)) {
         msdu->used += IEEE80211_CCMP_MIC_LEN;
-    } else if (!(msdu->tx.flags & ATH10K_TX_BUF_NO_HWCRYPT) &&
+    } else if ((msdu->tx.flags & ATH10K_TX_BUF_PROTECTED) &&
                txmode == ATH10K_HW_TXRX_RAW &&
-               (hdr->frame_control & IEEE80211_FRAME_PROTECTED_MASK)) {
+               (hdr->frame_ctrl & IEEE80211_FRAME_PROTECTED_MASK)) {
         msdu->used += IEEE80211_CCMP_MIC_LEN;
     }
 
@@ -1010,7 +1010,7 @@ zx_status_t ath10k_htt_tx(struct ath10k_htt* htt,
     txbuf->htc_hdr.len = sizeof(txbuf->cmd_hdr) + sizeof(txbuf->cmd_tx) + prefetch_len;
     txbuf->htc_hdr.flags = 0;
 
-    if (msdu->tx.flags & ATH10K_TX_BUF_NO_HWCRYPT) {
+    if (!(msdu->tx.flags & ATH10K_TX_BUF_PROTECTED)) {
         flags0 |= HTT_DATA_TX_DESC_FLAGS0_NO_ENCRYPT;
     }
 
