@@ -20,6 +20,8 @@
 
 #include <stdint.h>
 
+#include <ddk/debug.h>
+
 enum ath10k_debug_mask {
     ATH10K_DBG_PCI          = 0x00000001,
     ATH10K_DBG_WMI          = 0x00000002,
@@ -63,6 +65,7 @@ enum ath10k_dbg_aggr_mode {
 extern unsigned int ath10k_debug_mask;
 
 #define ath10k_trace(fmt, ...) zxlogf(TRACE, "ath10k: " fmt, ##__VA_ARGS__)
+#define ath10k_info(fmt, ...) zxlogf(INFO, "ath10k: " fmt, ##__VA_ARGS__)
 #define ath10k_warn(fmt, ...) zxlogf(WARN, "ath10k: " fmt, ##__VA_ARGS__)
 #define ath10k_err(fmt, ...) zxlogf(ERROR, "ath10k: " fmt, ##__VA_ARGS__)
 
@@ -78,9 +81,11 @@ int ath10k_debug_create(struct ath10k* ar);
 void ath10k_debug_destroy(struct ath10k* ar);
 int ath10k_debug_register(struct ath10k* ar);
 void ath10k_debug_unregister(struct ath10k* ar);
+#if 0 // NEEDS PORTING
 void ath10k_debug_fw_stats_process(struct ath10k* ar, struct sk_buff* skb);
 void ath10k_debug_tpc_stats_process(struct ath10k* ar,
                                     struct ath10k_tpc_stats* tpc_stats);
+#endif // NEEDS PORTING
 struct ath10k_fw_crash_data*
 ath10k_debug_get_new_fw_crash_data(struct ath10k* ar);
 
@@ -130,6 +135,7 @@ static inline int ath10k_debug_register(struct ath10k* ar) {
 static inline void ath10k_debug_unregister(struct ath10k* ar) {
 }
 
+#if 0 // NEEDS PORTING
 static inline void ath10k_debug_fw_stats_process(struct ath10k* ar,
         struct sk_buff* skb) {
 }
@@ -138,6 +144,7 @@ static inline void ath10k_debug_tpc_stats_process(struct ath10k* ar,
         struct ath10k_tpc_stats* tpc_stats) {
     kfree(tpc_stats);
 }
+#endif // NEEDS PORTING
 
 static inline void ath10k_debug_dbglog_add(struct ath10k* ar, uint8_t* buffer,
         int len) {
@@ -176,10 +183,12 @@ void ath10k_sta_statistics(struct ieee80211_hw* hw, struct ieee80211_vif* vif,
                            struct ieee80211_sta* sta,
                            struct station_info* sinfo);
 #else
+#if 0 // NEEDS PORTING
 static inline
 void ath10k_sta_update_rx_duration(struct ath10k* ar,
                                    struct ath10k_fw_stats* stats) {
 }
+#endif // NEEDS PORTING
 #endif /* CONFIG_MAC80211_DEBUGFS */
 
 #ifdef CONFIG_ATH10K_DEBUG
