@@ -12,7 +12,6 @@
 
 namespace zxcrypt {
 
-// Translates |block_op_t|s to |extra_op_t|s and vice versa.
 extra_op_t* BlockToExtra(block_op_t* block, size_t op_size) {
     ZX_DEBUG_ASSERT(block);
     uint8_t* ptr = reinterpret_cast<uint8_t*>(block);
