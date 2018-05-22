@@ -84,7 +84,7 @@ void ViewHost::UpdateScene() {
       excess--;
     }
 
-    geometry::RectF layout_bounds;
+    fuchsia::math::RectF layout_bounds;
     layout_bounds.x = offset;
     layout_bounds.y = 0;
     layout_bounds.width = extent;
@@ -93,10 +93,10 @@ void ViewHost::UpdateScene() {
 
     auto view_properties = views_v1::ViewProperties::New();
     view_properties->view_layout = views_v1::ViewLayout::New();
-    view_properties->view_layout->size = geometry::SizeF();
+    view_properties->view_layout->size = fuchsia::math::SizeF();
     view_properties->view_layout->size.width = layout_bounds.width;
     view_properties->view_layout->size.height = layout_bounds.height;
-    view_properties->view_layout->inset = geometry::InsetF();
+    view_properties->view_layout->inset = fuchsia::math::InsetF();
     GetViewContainer()->SetChildProperties(it->first,
                                            std::move(view_properties));
 
