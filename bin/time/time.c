@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
   }
   if (proc_info.return_code != 0) {
     fprintf(stderr, "error: %s exited with nonzero return code: %d\n", argv[1],
-            proc_info.return_code);
+            (int)proc_info.return_code);
   }
 
   zx_duration_t delta = stop - start;
