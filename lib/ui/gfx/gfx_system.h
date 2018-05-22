@@ -24,11 +24,13 @@ class GfxSystem : public TempSystemDelegate {
       CommandDispatcherContext context) override;
 
   // TODO(MZ-452): Remove this when we externalize Displays.
-  void GetDisplayInfo(ui::Scenic::GetDisplayInfoCallback callback) override;
-  void TakeScreenshot(fidl::StringPtr filename,
-                      ui::Scenic::TakeScreenshotCallback callback) override;
+  void GetDisplayInfo(
+      fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) override;
+  void TakeScreenshot(
+      fidl::StringPtr filename,
+      fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) override;
   void GetOwnershipEvent(
-      ui::Scenic::GetOwnershipEventCallback callback) override;
+      fuchsia::ui::scenic::Scenic::GetOwnershipEventCallback callback) override;
 
  protected:
   // Protected so test classes can expose.
@@ -42,9 +44,10 @@ class GfxSystem : public TempSystemDelegate {
   DisplayManager display_manager_;
 
   // TODO(MZ-452): Remove this when we externalize Displays.
-  void GetDisplayInfoImmediately(ui::Scenic::GetDisplayInfoCallback callback);
+  void GetDisplayInfoImmediately(
+      fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback);
   void GetOwnershipEventImmediately(
-      ui::Scenic::GetOwnershipEventCallback callback);
+      fuchsia::ui::scenic::Scenic::GetOwnershipEventCallback callback);
 
   // Redirect to instance method.
   static VkBool32 RedirectDebugReport(VkDebugReportFlagsEXT flags,

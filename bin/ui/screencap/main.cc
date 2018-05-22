@@ -32,7 +32,7 @@ int main(int argc, const char** argv) {
   std::unique_ptr<component::ApplicationContext> app_context(
       component::ApplicationContext::CreateFromStartupInfo());
   // Connect to the SceneManager service.
-  auto scenic = app_context->ConnectToEnvironmentService<ui::Scenic>();
+  auto scenic = app_context->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
   scenic.set_error_handler([&loop] {
     FXL_LOG(ERROR) << "Lost connection to Scenic service.";
     loop.QuitNow();

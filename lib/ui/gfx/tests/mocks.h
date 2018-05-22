@@ -30,13 +30,13 @@ class SessionHandlerForTest : public SessionHandler {
                         ErrorReporter* error_reporter);
 
   // |scenic::CommandDispatcher|
-  void DispatchCommand(ui::Command command) override;
+  void DispatchCommand(fuchsia::ui::scenic::Command command) override;
 
-  // |ui::Session / scenic::TempSessionDelegate|
+  // |fuchsia::ui::scenic::Session / scenic::TempSessionDelegate|
   void Present(uint64_t presentation_time,
                ::fidl::VectorPtr<zx::event> acquire_fences,
                ::fidl::VectorPtr<zx::event> release_fences,
-               ui::Session::PresentCallback callback) override;
+               fuchsia::ui::scenic::Session::PresentCallback callback) override;
 
   // Return the number of commands that have been enqueued.
   uint32_t command_count() const { return command_count_; }

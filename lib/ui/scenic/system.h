@@ -10,7 +10,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
 // TODO(MZ-453): Don't support GetDisplayInfo in scenic fidl API.
-#include <ui/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 
 namespace component {
 class ApplicationContext;
@@ -96,20 +96,22 @@ class TempSystemDelegate : public System {
  public:
   explicit TempSystemDelegate(SystemContext context,
                               bool initialized_after_construction);
-  virtual void GetDisplayInfo(ui::Scenic::GetDisplayInfoCallback callback) = 0;
-  virtual void TakeScreenshot(fidl::StringPtr filename,
-                              ui::Scenic::TakeScreenshotCallback callback) = 0;
+  virtual void GetDisplayInfo(
+      fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) = 0;
+  virtual void TakeScreenshot(
+      fidl::StringPtr filename,
+      fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) = 0;
   virtual void GetOwnershipEvent(
-      ui::Scenic::GetOwnershipEventCallback callback) = 0;
+      fuchsia::ui::scenic::Scenic::GetOwnershipEventCallback callback) = 0;
 };
 
 // Return the system type that knows how to handle the specified command.
 // Used by Session to choose a CommandDispatcher.
-inline System::TypeId SystemTypeForCommand(const ui::Command& command) {
+inline System::TypeId SystemTypeForCommand(const fuchsia::ui::scenic::Command& command) {
   switch (command.Which()) {
-    case ui::Command::Tag::kGfx:
+    case fuchsia::ui::scenic::Command::Tag::kGfx:
       return System::TypeId::kGfx;
-    case ui::Command::Tag::kViews:
+    case fuchsia::ui::scenic::Command::Tag::kViews:
       return System::TypeId::kViews;
     default:
       return System::TypeId::kInvalid;

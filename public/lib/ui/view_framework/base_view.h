@@ -127,7 +127,8 @@ class BaseView : private views_v1::ViewListener,
   // Called when session events are received.
   //
   // The default implementation does nothing.
-  virtual void OnSessionEvent(fidl::VectorPtr<ui::Event> events);
+  virtual void OnSessionEvent(
+      fidl::VectorPtr<fuchsia::ui::scenic::Event> events);
 
   // Called to handle an input event.
   // Returns true if the view will handle the event, false if the event
@@ -163,7 +164,7 @@ class BaseView : private views_v1::ViewListener,
   void OnEvent(input::InputEvent event, OnEventCallback callback) override;
 
   void PresentScene(zx_time_t presentation_time);
-  void HandleSessionEvents(fidl::VectorPtr<ui::Event> events);
+  void HandleSessionEvents(fidl::VectorPtr<fuchsia::ui::scenic::Event> events);
   void AdjustMetricsAndPhysicalSize();
 
   views_v1::ViewManagerPtr view_manager_;

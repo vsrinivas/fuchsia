@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_SCENIC_EVENT_REPORTER_H_
 #define GARNET_LIB_UI_SCENIC_EVENT_REPORTER_H_
 
-#include <ui/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 
 namespace scenic {
 
@@ -14,7 +14,7 @@ class EventReporter {
  public:
   // Add an event to our queue, which will be scheduled to be flushed and sent
   // to the event reporter later.
-  virtual void EnqueueEvent(ui::Event event) = 0;
+  virtual void EnqueueEvent(fuchsia::ui::scenic::Event event) = 0;
 };
 
 }  // namespace scenic

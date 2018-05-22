@@ -8,8 +8,8 @@
 #include <string>
 #include <unordered_map>
 
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <gfx/cpp/fidl.h>
-#include <ui/cpp/fidl.h>
 #include <views/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 #include "garnet/bin/ui/view_manager/input/input_connection_impl.h"
@@ -36,7 +36,7 @@ class ViewRegistry : public ViewInspector, public InputOwner {
 
   // VIEW MANAGER REQUESTS
 
-  void GetScenic(fidl::InterfaceRequest<ui::Scenic> scenic_request);
+  void GetScenic(fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> scenic_request);
   void CreateView(
       fidl::InterfaceRequest<views_v1::View> view_request,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
@@ -222,7 +222,7 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   }
 
   component::ApplicationContext* application_context_;
-  ui::ScenicPtr scenic_;
+  fuchsia::ui::scenic::ScenicPtr scenic_;
   scenic_lib::Session session_;
 
   bool traversal_scheduled_ = false;

@@ -7,7 +7,7 @@
 
 #include <set>
 
-#include <ui/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include "garnet/lib/ui/scenic/session.h"
 #include "garnet/lib/ui/scenic/system.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -21,7 +21,7 @@ class Clock;
 // A Scenic instance has two main areas of responsibility:
 //   - manage Session lifecycles
 //   - provide a host environment for Services
-class Scenic : public ui::Scenic {
+class Scenic : public fuchsia::ui::scenic::Scenic {
  public:
   explicit Scenic(component::ApplicationContext* app_context);
   ~Scenic();
@@ -34,10 +34,10 @@ class Scenic : public ui::Scenic {
   // Called by Session when it needs to close itself.
   void CloseSession(Session* session);
 
-  // |ui::Scenic|
+  // |fuchsia::ui::scenic::Scenic|
   void CreateSession(
-      ::fidl::InterfaceRequest<ui::Session> session,
-      ::fidl::InterfaceHandle<ui::SessionListener> listener) override;
+      ::fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
+      ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) override;
 
   component::ApplicationContext* app_context() const { return app_context_; }
 
@@ -46,8 +46,8 @@ class Scenic : public ui::Scenic {
  private:
   component::ApplicationContext* const app_context_;
 
-  fidl::BindingSet<ui::Session, std::unique_ptr<Session>> session_bindings_;
-  fidl::BindingSet<ui::Scenic> scenic_bindings_;
+  fidl::BindingSet<fuchsia::ui::scenic::Session, std::unique_ptr<Session>> session_bindings_;
+  fidl::BindingSet<fuchsia::ui::scenic::Scenic> scenic_bindings_;
 
   // Registered systems, indexed by their TypeId. These slots could be null,
   // indicating the System is not available or supported.
@@ -61,19 +61,19 @@ class Scenic : public ui::Scenic {
   std::vector<fxl::Closure> run_after_all_systems_initialized_;
 
   void CreateSessionImmediately(
-      ::fidl::InterfaceRequest<ui::Session> session_request,
-      ::fidl::InterfaceHandle<ui::SessionListener> listener);
+      ::fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
+      ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener);
 
   // If a System is not initially initialized, this method will be called when
   // it is ready.
   void OnSystemInitialized(System* system);
 
-  void GetDisplayInfo(ui::Scenic::GetDisplayInfoCallback callback) override;
+  void GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) override;
   void TakeScreenshot(fidl::StringPtr filename,
-                      ui::Scenic::TakeScreenshotCallback callback) override;
+                      fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) override;
 
   void GetOwnershipEvent(
-      ui::Scenic::GetOwnershipEventCallback callback) override;
+      fuchsia::ui::scenic::Scenic::GetOwnershipEventCallback callback) override;
 
   size_t next_session_id_ = 1;
 

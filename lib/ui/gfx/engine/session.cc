@@ -1264,7 +1264,7 @@ bool Session::ScheduleUpdate(uint64_t presentation_time,
                              std::vector<::gfx::Command> commands,
                              ::fidl::VectorPtr<zx::event> acquire_fences,
                              ::fidl::VectorPtr<zx::event> release_events,
-                             ui::Session::PresentCallback callback) {
+                             fuchsia::ui::scenic::Session::PresentCallback callback) {
   if (is_valid()) {
     uint64_t last_scheduled_presentation_time =
         last_applied_update_presentation_time_;
@@ -1385,7 +1385,7 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
 
 void Session::EnqueueEvent(::gfx::Event event) {
   if (is_valid() && event_reporter_) {
-    ui::Event scenic_event;
+    fuchsia::ui::scenic::Event scenic_event;
     scenic_event.set_gfx(std::move(event));
     event_reporter_->EnqueueEvent(std::move(scenic_event));
   }
@@ -1410,7 +1410,7 @@ bool Session::ApplyUpdate(std::vector<::gfx::Command> commands) {
 
 void Session::HitTest(uint32_t node_id, ::gfx::vec3 ray_origin,
                       ::gfx::vec3 ray_direction,
-                      ui::Session::HitTestCallback callback) {
+                      fuchsia::ui::scenic::Session::HitTestCallback callback) {
   if (auto node = resources_.FindResource<Node>(node_id)) {
     HitTester hit_tester;
     std::vector<Hit> hits = hit_tester.HitTest(
@@ -1430,7 +1430,7 @@ void Session::HitTest(uint32_t node_id, ::gfx::vec3 ray_origin,
 
 void Session::HitTestDeviceRay(::gfx::vec3 ray_origin,
                                ::gfx::vec3 ray_direction,
-                               ui::Session::HitTestCallback callback) {
+                               fuchsia::ui::scenic::Session::HitTestCallback callback) {
   escher::ray4 ray =
       escher::ray4{{Unwrap(ray_origin), 1.f}, {Unwrap(ray_direction), 0.f}};
 

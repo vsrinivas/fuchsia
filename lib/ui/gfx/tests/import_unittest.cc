@@ -197,8 +197,8 @@ TEST_F(ImportTest, DestroyingExportedResourceSendsEvent) {
 
   // Verify that we got an ImportUnboundEvent.
   EXPECT_EQ(1u, events_.size());
-  ui::Event event = std::move(events_[0]);
-  EXPECT_EQ(ui::Event::Tag::kGfx, event.Which());
+  fuchsia::ui::scenic::Event event = std::move(events_[0]);
+  EXPECT_EQ(fuchsia::ui::scenic::Event::Tag::kGfx, event.Which());
   EXPECT_EQ(::gfx::Event::Tag::kImportUnbound, event.gfx().Which());
   ASSERT_EQ(import_node, event.gfx().import_unbound().resource_id);
 }
@@ -228,8 +228,8 @@ TEST_F(ImportTest, ImportingNodeAfterDestroyingExportedResourceSendsEvent) {
 
   // Verify that we got an ImportUnboundEvent.
   EXPECT_EQ(1u, events_.size());
-  ui::Event event = std::move(events_[0]);
-  EXPECT_EQ(ui::Event::Tag::kGfx, event.Which());
+  fuchsia::ui::scenic::Event event = std::move(events_[0]);
+  EXPECT_EQ(fuchsia::ui::scenic::Event::Tag::kGfx, event.Which());
   EXPECT_EQ(::gfx::Event::Tag::kImportUnbound, event.gfx().Which());
   ASSERT_EQ(import_node, event.gfx().import_unbound().resource_id);
 }

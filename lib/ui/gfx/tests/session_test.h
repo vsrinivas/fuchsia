@@ -36,7 +36,7 @@ class SessionTest : public ::gtest::TestWithMessageLoop,
                    std::string error_string) override;
 
   // |EventReporter|
-  void EnqueueEvent(ui::Event event) override;
+  void EnqueueEvent(fuchsia::ui::scenic::Event event) override;
 
   // Apply the specified Command, and verify that it succeeds.
   bool Apply(::gfx::Command command) {
@@ -62,7 +62,7 @@ class SessionTest : public ::gtest::TestWithMessageLoop,
   std::unique_ptr<Engine> engine_;
   fxl::RefPtr<SessionForTest> session_;
   std::vector<std::string> reported_errors_;
-  std::vector<ui::Event> events_;
+  std::vector<fuchsia::ui::scenic::Event> events_;
 };
 
 class SessionThreadedTest : public SessionTest {

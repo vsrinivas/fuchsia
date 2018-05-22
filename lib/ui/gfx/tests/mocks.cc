@@ -27,15 +27,15 @@ SessionHandlerForTest::SessionHandlerForTest(CommandDispatcherContext context,
       command_count_(0),
       present_count_(0) {}
 
-void SessionHandlerForTest::DispatchCommand(ui::Command command) {
+void SessionHandlerForTest::DispatchCommand(fuchsia::ui::scenic::Command command) {
   SessionHandler::DispatchCommand(std::move(command));
   ++command_count_;
 }
 
-void SessionHandlerForTest::Present(uint64_t presentation_time,
-                                    ::fidl::VectorPtr<zx::event> acquire_fences,
-                                    ::fidl::VectorPtr<zx::event> release_fences,
-                                    ui::Session::PresentCallback callback) {
+void SessionHandlerForTest::Present(
+    uint64_t presentation_time, ::fidl::VectorPtr<zx::event> acquire_fences,
+    ::fidl::VectorPtr<zx::event> release_fences,
+    fuchsia::ui::scenic::Session::PresentCallback callback) {
   SessionHandler::Present(presentation_time, std::move(acquire_fences),
                           std::move(release_fences), callback);
   ++present_count_;

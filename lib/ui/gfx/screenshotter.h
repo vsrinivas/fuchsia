@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_GFX_SCREENSHOTTER_H_
 #define GARNET_LIB_UI_GFX_SCREENSHOTTER_H_
 
-#include <ui/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <string>
 
 #include "garnet/lib/ui/gfx/engine/engine.h"
@@ -20,13 +20,13 @@ class Screenshotter {
   explicit Screenshotter(Engine* engine) : engine_(engine) {}
 
   void TakeScreenshot(const std::string& filename,
-                      ui::Scenic::TakeScreenshotCallback callback);
+                      fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback);
 
  private:
   static void OnCommandBufferDone(
       const std::string& filename, const escher::ImagePtr& image,
       uint32_t width, uint32_t height, vk::Device device,
-      ui::Scenic::TakeScreenshotCallback done_callback);
+      fuchsia::ui::scenic::Scenic::TakeScreenshotCallback done_callback);
 
   Engine* const engine_;  // Not owned.
 };

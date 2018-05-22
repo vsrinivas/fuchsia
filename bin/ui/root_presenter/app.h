@@ -71,7 +71,7 @@ class App : public presentation::Presenter,
   mozart::InputReader input_reader_;
 
   views_v1::ViewManagerPtr view_manager_;
-  ui::ScenicPtr scenic_;
+  fuchsia::ui::scenic::ScenicPtr scenic_;
 
   std::unique_ptr<scenic_lib::Session> session_;
   std::unique_ptr<scenic_lib::DisplayCompositor> compositor_;

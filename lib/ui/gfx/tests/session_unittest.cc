@@ -15,7 +15,7 @@ namespace gfx {
 namespace test {
 
 TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
-  ui::Session::PresentCallback callback = [](auto) {};
+  fuchsia::ui::scenic::Session::PresentCallback callback = [](auto) {};
   EXPECT_TRUE(session_->ScheduleUpdate(
       1, std::vector<::gfx::Command>(), ::fidl::VectorPtr<zx::event>(),
       ::fidl::VectorPtr<zx::event>(), callback));
@@ -28,7 +28,7 @@ TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
 }
 
 TEST_F(SessionTest, ScheduleUpdateInOrder) {
-  ui::Session::PresentCallback callback = [](auto) {};
+  fuchsia::ui::scenic::Session::PresentCallback callback = [](auto) {};
   EXPECT_TRUE(session_->ScheduleUpdate(
       1, std::vector<::gfx::Command>(), ::fidl::VectorPtr<zx::event>(),
       ::fidl::VectorPtr<zx::event>(), callback));

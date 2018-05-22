@@ -53,7 +53,7 @@ void SessionTest::ReportError(fxl::LogSeverity severity,
   reported_errors_.push_back(error_string);
 }
 
-void SessionTest::EnqueueEvent(ui::Event event) {
+void SessionTest::EnqueueEvent(fuchsia::ui::scenic::Event event) {
   events_.push_back(std::move(event));
 }
 

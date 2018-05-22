@@ -30,7 +30,7 @@ class DummyCommandDispatcher : public CommandDispatcher {
   ~DummyCommandDispatcher() override;
 
   // |CommandDispatcher|
-  void DispatchCommand(const ui::Command command) override;
+  void DispatchCommand(const fuchsia::ui::scenic::Command command) override;
 };
 
 }  // namespace test

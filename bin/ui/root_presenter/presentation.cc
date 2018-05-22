@@ -47,7 +47,8 @@ constexpr float kCursorElevation = 800;
 }  // namespace
 
 Presentation::Presentation(views_v1::ViewManager* view_manager,
-                           ui::Scenic* scenic, scenic_lib::Session* session,
+                           fuchsia::ui::scenic::Scenic* scenic,
+                           scenic_lib::Session* session,
                            RendererParams renderer_params)
     : view_manager_(view_manager),
       scenic_(scenic),

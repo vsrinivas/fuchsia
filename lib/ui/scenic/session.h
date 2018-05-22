@@ -26,40 +26,40 @@ class Scenic;
 
 using SessionId = uint64_t;
 
-class Session final : public ui::Session,
+class Session final : public fuchsia::ui::scenic::Session,
                       public EventReporter,
                       public ErrorReporter {
  public:
   Session(Scenic* owner, SessionId id,
-          ::fidl::InterfaceHandle<ui::SessionListener> listener);
+          ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener);
   ~Session() override;
 
   void SetCommandDispatchers(std::array<std::unique_ptr<CommandDispatcher>,
                                         System::TypeId::kMaxSystems>
                                  dispatchers);
 
-  // |ui::Session|
-  void Enqueue(::fidl::VectorPtr<ui::Command> cmds) override;
+  // |fuchsia::ui::scenic::Session|
+  void Enqueue(::fidl::VectorPtr<fuchsia::ui::scenic::Command> cmds) override;
 
-  // |ui::Session|
+  // |fuchsia::ui::scenic::Session|
   void Present(uint64_t presentation_time,
                ::fidl::VectorPtr<zx::event> acquire_fences,
                ::fidl::VectorPtr<zx::event> release_fences,
                PresentCallback callback) override;
 
-  // |ui::Session|
+  // |fuchsia::ui::scenic::Session|
   // TODO(MZ-422): Remove this after it's removed from session.fidl.
   void HitTest(uint32_t node_id, ::gfx::vec3 ray_origin,
                ::gfx::vec3 ray_direction, HitTestCallback callback) override;
 
-  // |ui::Session|
+  // |fuchsia::ui::scenic::Session|
   // TODO(MZ-422): Remove this after it's removed from session.fidl.
   void HitTestDeviceRay(::gfx::vec3 ray_origin, ::gfx::vec3 ray_direction,
                         HitTestCallback callback) override;
 
   // |EventReporter|
   // Enqueues the event and manages scheduling of call to FlushEvents().
-  void EnqueueEvent(ui::Event event) override;
+  void EnqueueEvent(fuchsia::ui::scenic::Event event) override;
 
   // |ErrorReporter|
   // Customize behavior of ErrorReporter::ReportError().
@@ -71,7 +71,7 @@ class Session final : public ui::Session,
   ErrorReporter* error_reporter() { return this; }
 
   // For tests.  See FlushEvents() below.
-  void set_event_callback(std::function<void(ui::Event)> callback) {
+  void set_event_callback(std::function<void(fuchsia::ui::scenic::Event)> callback) {
     event_callback_ = callback;
   }
 
@@ -88,16 +88,16 @@ class Session final : public ui::Session,
 
   Scenic* const scenic_;
   const SessionId id_;
-  ::fidl::InterfacePtr<ui::SessionListener> listener_;
+  ::fidl::InterfacePtr<fuchsia::ui::scenic::SessionListener> listener_;
 
   std::array<std::unique_ptr<CommandDispatcher>, System::TypeId::kMaxSystems>
       dispatchers_;
 
   // Holds events from EnqueueEvent() until they are flushed by FlushEvents().
-  fidl::VectorPtr<ui::Event> buffered_events_;
+  fidl::VectorPtr<fuchsia::ui::scenic::Event> buffered_events_;
 
   // Callbacks for testing.
-  std::function<void(ui::Event)> event_callback_;
+  std::function<void(fuchsia::ui::scenic::Event)> event_callback_;
   std::function<void(std::string)> error_callback_;
 
   fxl::WeakPtrFactory<Session> weak_factory_;

@@ -7,8 +7,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/default.h>
-#include <ui/cpp/fidl.h>
 
 #include "lib/fsl/tasks/message_loop.h"
 
@@ -43,7 +43,8 @@ void InputReader::SetOwnershipEvent(zx::event event) {
   display_ownership_event_ = event.release();
 
   // Add handler to listen for signals on this event
-  zx_signals_t signals = ui::displayOwnedSignal | ui::displayNotOwnedSignal;
+  zx_signals_t signals =
+      fuchsia::ui::scenic::displayOwnedSignal | fuchsia::ui::scenic::displayNotOwnedSignal;
   display_ownership_waiter_.set_object(display_ownership_event_);
   display_ownership_waiter_.set_trigger(signals);
   zx_status_t status = display_ownership_waiter_.Begin(async_get_default());
@@ -113,14 +114,14 @@ void InputReader::OnDisplayHandleReady(async_t* async, async::WaitBase* wait,
   }
 
   zx_signals_t pending = signal->observed;
-  if (pending & ui::displayNotOwnedSignal) {
+  if (pending & fuchsia::ui::scenic::displayNotOwnedSignal) {
     display_owned_ = false;
-    display_ownership_waiter_.set_trigger(ui::displayOwnedSignal);
+    display_ownership_waiter_.set_trigger(fuchsia::ui::scenic::displayOwnedSignal);
     auto waiter_status = display_ownership_waiter_.Begin(async);
     FXL_CHECK(waiter_status == ZX_OK);
-  } else if (pending & ui::displayOwnedSignal) {
+  } else if (pending & fuchsia::ui::scenic::displayOwnedSignal) {
     display_owned_ = true;
-    display_ownership_waiter_.set_trigger(ui::displayNotOwnedSignal);
+    display_ownership_waiter_.set_trigger(fuchsia::ui::scenic::displayNotOwnedSignal);
     auto waiter_status = display_ownership_waiter_.Begin(async);
     FXL_CHECK(waiter_status == ZX_OK);
   }

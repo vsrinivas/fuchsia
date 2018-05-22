@@ -33,7 +33,7 @@ class SketchyCommandDispatcher : public CommandDispatcher {
   ~SketchyCommandDispatcher() override;
 
   // |CommandDispatcher|
-  void DispatchCommand(const ui::Command command) override;
+  void DispatchCommand(const fuchsia::ui::scenic::Command command) override;
 
  private:
   gfx::GfxSystem* const gfx_system_;

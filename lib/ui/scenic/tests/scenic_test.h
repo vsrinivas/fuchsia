@@ -40,7 +40,7 @@ class ScenicTest : public ::gtest::TestWithMessageLoop,
                    std::string error_string) override;
 
   // |EventReporter|
-  void EnqueueEvent(ui::Event event) override;
+  void EnqueueEvent(fuchsia::ui::scenic::Event event) override;
 
   // Verify that the last reported error is as expected.  If no error is
   // expected, use nullptr as |expected_error_string|.
@@ -55,7 +55,7 @@ class ScenicTest : public ::gtest::TestWithMessageLoop,
   static std::unique_ptr<component::ApplicationContext> app_context_;
   std::unique_ptr<Scenic> scenic_;
   std::vector<std::string> reported_errors_;
-  std::vector<ui::Event> events_;
+  std::vector<fuchsia::ui::scenic::Event> events_;
 };
 
 }  // namespace test

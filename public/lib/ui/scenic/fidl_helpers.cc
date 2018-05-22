@@ -17,8 +17,9 @@ bool ImageInfoEquals(const images::ImageInfo& a, const images::ImageInfo& b) {
          a.pixel_format == b.pixel_format && a.color_space == b.color_space &&
          a.tiling == b.tiling && a.alpha_format == b.alpha_format;
 }
-ui::Command NewCommand(gfx::Command command) {
-  ui::Command scenic_command;
+
+fuchsia::ui::scenic::Command NewCommand(gfx::Command command) {
+  fuchsia::ui::scenic::Command scenic_command;
   scenic_command.set_gfx(std::move(command));
   return scenic_command;
 }

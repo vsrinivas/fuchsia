@@ -25,6 +25,6 @@ SketchyCommandDispatcher::SketchyCommandDispatcher(
 
 SketchyCommandDispatcher::~SketchyCommandDispatcher() = default;
 
-void SketchyCommandDispatcher::DispatchCommand(ui::Command command) {}
+void SketchyCommandDispatcher::DispatchCommand(fuchsia::ui::scenic::Command command) {}
 
 }  // namespace scenic

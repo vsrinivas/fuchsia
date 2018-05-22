@@ -13,8 +13,8 @@ Scenic::Scenic(component::ApplicationContext* app_context)
     : app_context_(app_context) {
   FXL_DCHECK(app_context_);
 
-  app_context->outgoing().AddPublicService<ui::Scenic>(
-      [this](fidl::InterfaceRequest<ui::Scenic> request) {
+  app_context->outgoing().AddPublicService<fuchsia::ui::scenic::Scenic>(
+      [this](fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> request) {
         FXL_VLOG(1) << "Accepting connection to Scenic";
         scenic_bindings_.AddBinding(this, std::move(request));
       });
@@ -46,8 +46,8 @@ void Scenic::CloseSession(Session* session) {
 }
 
 void Scenic::CreateSession(
-    ::fidl::InterfaceRequest<ui::Session> session_request,
-    ::fidl::InterfaceHandle<ui::SessionListener> listener) {
+    ::fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
+    ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) {
   if (uninitialized_systems_.empty()) {
     CreateSessionImmediately(std::move(session_request), std::move(listener));
   } else {
@@ -61,8 +61,8 @@ void Scenic::CreateSession(
 }
 
 void Scenic::CreateSessionImmediately(
-    ::fidl::InterfaceRequest<ui::Session> session_request,
-    ::fidl::InterfaceHandle<ui::SessionListener> listener) {
+    ::fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
+    ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) {
   auto session =
       std::make_unique<Session>(this, next_session_id_++, std::move(listener));
 
@@ -81,22 +81,25 @@ void Scenic::CreateSessionImmediately(
   session_bindings_.AddBinding(std::move(session), std::move(session_request));
 }
 
-void Scenic::GetDisplayInfo(ui::Scenic::GetDisplayInfoCallback callback) {
+void Scenic::GetDisplayInfo(
+    fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) {
   FXL_DCHECK(systems_[System::kGfx]);
   TempSystemDelegate* delegate =
       reinterpret_cast<TempSystemDelegate*>(systems_[System::kGfx].get());
   delegate->GetDisplayInfo(callback);
 }
 
-void Scenic::TakeScreenshot(fidl::StringPtr filename,
-                            ui::Scenic::TakeScreenshotCallback callback) {
+void Scenic::TakeScreenshot(
+    fidl::StringPtr filename,
+    fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) {
   FXL_DCHECK(systems_[System::kGfx]);
   TempSystemDelegate* delegate =
       reinterpret_cast<TempSystemDelegate*>(systems_[System::kGfx].get());
   delegate->TakeScreenshot(filename, callback);
 }
 
-void Scenic::GetOwnershipEvent(ui::Scenic::GetOwnershipEventCallback callback) {
+void Scenic::GetOwnershipEvent(
+    fuchsia::ui::scenic::Scenic::GetOwnershipEventCallback callback) {
   FXL_DCHECK(systems_[System::kGfx]);
   TempSystemDelegate* delegate =
       reinterpret_cast<TempSystemDelegate*>(systems_[System::kGfx].get());

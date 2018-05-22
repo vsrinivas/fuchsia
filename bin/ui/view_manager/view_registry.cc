@@ -113,7 +113,8 @@ bool Equals(const views_v1::ViewPropertiesPtr& a,
 
 ViewRegistry::ViewRegistry(component::ApplicationContext* application_context)
     : application_context_(application_context),
-      scenic_(application_context_->ConnectToEnvironmentService<ui::Scenic>()),
+      scenic_(application_context_
+                  ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>()),
       session_(scenic_.get()),
       weak_factory_(this) {
   // TODO(MZ-128): Register session listener and destroy views if their
@@ -133,7 +134,7 @@ ViewRegistry::ViewRegistry(component::ApplicationContext* application_context)
 ViewRegistry::~ViewRegistry() {}
 
 void ViewRegistry::GetScenic(
-    fidl::InterfaceRequest<ui::Scenic> scenic_request) {
+    fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> scenic_request) {
   // TODO(jeffbrown): We should have a better way to duplicate the
   // SceneManager connection without going back out through the environment.
   application_context_->ConnectToEnvironmentService(std::move(scenic_request));

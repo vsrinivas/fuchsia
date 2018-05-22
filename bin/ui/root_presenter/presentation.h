@@ -71,7 +71,7 @@ class Presentation : private views_v1::ViewTreeListener,
   // Callback when the presentation is shut down.
   using ShutdownCallback = std::function<void()>;
 
-  Presentation(views_v1::ViewManager* view_manager, ui::Scenic* scenic,
+  Presentation(views_v1::ViewManager* view_manager, fuchsia::ui::scenic::Scenic* scenic,
                scenic_lib::Session* session, RendererParams renderer_params);
 
   ~Presentation() override;
@@ -175,7 +175,7 @@ class Presentation : private views_v1::ViewTreeListener,
   void Shutdown();
 
   views_v1::ViewManager* const view_manager_;
-  ui::Scenic* const scenic_;
+  fuchsia::ui::scenic::Scenic* const scenic_;
   scenic_lib::Session* const session_;
 
   scenic_lib::Layer layer_;

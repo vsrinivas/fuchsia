@@ -29,7 +29,7 @@ TEST_F(ScenicTest, SessionCreatedAfterAllSystemsInitialized) {
 
   // Request session creation, which doesn't occur yet because system isn't
   // initialized.
-  ui::SessionPtr session;
+  fuchsia::ui::scenic::SessionPtr session;
   scenic()->CreateSession(session.NewRequest(), nullptr);
   EXPECT_EQ(0U, scenic()->num_sessions());
 

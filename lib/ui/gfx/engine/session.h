@@ -75,7 +75,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
                       std::vector<::gfx::Command> commands,
                       ::fidl::VectorPtr<zx::event> acquire_fences,
                       ::fidl::VectorPtr<zx::event> release_fences,
-                      ui::Session::PresentCallback callback);
+                      fuchsia::ui::scenic::Session::PresentCallback callback);
 
   // Called by ImagePipe::PresentImage().  Stashes the arguments without
   // applying them; they will later be applied by ApplyScheduledUpdates().
@@ -88,18 +88,18 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   bool ApplyScheduledUpdates(uint64_t presentation_time,
                              uint64_t presentation_interval);
 
-  // Convenience.  Wraps a ::gfx::Event in a ui::Event, then forwards it to
-  // the EventReporter.
+  // Convenience.  Wraps a ::gfx::Event in a fuchsia::ui::scenic::Event, then forwards
+  // it to the EventReporter.
   void EnqueueEvent(::gfx::Event event);
 
   // Called by SessionHandler::HitTest().
   void HitTest(uint32_t node_id, ::gfx::vec3 ray_origin,
                ::gfx::vec3 ray_direction,
-               ui::Session::HitTestCallback callback);
+               fuchsia::ui::scenic::Session::HitTestCallback callback);
 
   // Called by SessionHandler::HitTestDeviceRay().
   void HitTestDeviceRay(::gfx::vec3 ray_origin, ::gfx::vec3 ray_direction,
-                        ui::Session::HitTestCallback callback);
+                        fuchsia::ui::scenic::Session::HitTestCallback callback);
 
  protected:
   friend class SessionHandler;
@@ -262,7 +262,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
 
     // Callback to report when the update has been applied in response to
     // an invocation of |Session.Present()|.
-    ui::Session::PresentCallback present_callback;
+    fuchsia::ui::scenic::Session::PresentCallback present_callback;
   };
   bool ApplyUpdate(std::vector<::gfx::Command> commands);
   std::queue<Update> scheduled_updates_;

@@ -7,9 +7,9 @@
 
 #include <string>
 
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <gfx/cpp/fidl.h>
 #include <images/cpp/fidl.h>
-#include <ui/cpp/fidl.h>
 
 namespace scenic_lib {
 
@@ -21,7 +21,7 @@ constexpr float kQuaternionDefault[4] = {0.f, 0.f, 0.f, 1.f};
 bool ImageInfoEquals(const images::ImageInfo& a, const images::ImageInfo& b);
 
 // Helper function for wrapping Scenic ops as Mozart commands.
-ui::Command NewCommand(gfx::Command command);
+fuchsia::ui::scenic::Command NewCommand(gfx::Command command);
 
 // Resource creation.
 gfx::Command NewCreateMemoryCommand(uint32_t id,

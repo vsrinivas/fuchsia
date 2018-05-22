@@ -130,7 +130,7 @@ void GfxSystem::Initialize() {
 };
 
 void GfxSystem::GetDisplayInfoImmediately(
-    ui::Scenic::GetDisplayInfoCallback callback) {
+    fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) {
   FXL_DCHECK(initialized_);
   Display* display = engine_->display_manager()->default_display();
   FXL_CHECK(display) << "There must be a default display.";
@@ -142,7 +142,8 @@ void GfxSystem::GetDisplayInfoImmediately(
   callback(std::move(info));
 }
 
-void GfxSystem::GetDisplayInfo(ui::Scenic::GetDisplayInfoCallback callback) {
+void GfxSystem::GetDisplayInfo(
+    fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) {
   if (initialized_) {
     GetDisplayInfoImmediately(callback);
   } else {
@@ -151,21 +152,24 @@ void GfxSystem::GetDisplayInfo(ui::Scenic::GetDisplayInfoCallback callback) {
   }
 };
 
-void GfxSystem::TakeScreenshot(fidl::StringPtr filename,
-                               ui::Scenic::TakeScreenshotCallback callback) {
+void GfxSystem::TakeScreenshot(
+    fidl::StringPtr filename,
+    fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) {
   FXL_CHECK(initialized_);
   Screenshotter screenshotter(engine_.get());
   screenshotter.TakeScreenshot(filename.get(), callback);
 }
 
 void GfxSystem::GetOwnershipEventImmediately(
-    ui::Scenic::GetOwnershipEventCallback callback) {
+    fuchsia::ui::scenic::Scenic::GetOwnershipEventCallback callback) {
   FXL_DCHECK(initialized_);
   Display* display = engine_->display_manager()->default_display();
   FXL_CHECK(display) << "There must be a default display.";
 
-  static_assert(ui::displayNotOwnedSignal == ZX_USER_SIGNAL_0, "Bad constant");
-  static_assert(ui::displayOwnedSignal == ZX_USER_SIGNAL_1, "Bad constant");
+  static_assert(fuchsia::ui::scenic::displayNotOwnedSignal == ZX_USER_SIGNAL_0,
+                "Bad constant");
+  static_assert(fuchsia::ui::scenic::displayOwnedSignal == ZX_USER_SIGNAL_1,
+                "Bad constant");
 
   zx::event dup;
   display->ownership_event().duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ, &dup);
@@ -173,7 +177,7 @@ void GfxSystem::GetOwnershipEventImmediately(
 }
 
 void GfxSystem::GetOwnershipEvent(
-    ui::Scenic::GetOwnershipEventCallback callback) {
+    fuchsia::ui::scenic::Scenic::GetOwnershipEventCallback callback) {
   if (initialized_) {
     GetOwnershipEventImmediately(callback);
   } else {

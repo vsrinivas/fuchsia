@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_SCENIC_COMMAND_DISPATCHER_H_
 #define GARNET_LIB_UI_SCENIC_COMMAND_DISPATCHER_H_
 
-#include <ui/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include "garnet/lib/ui/scenic/forward_declarations.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
@@ -34,7 +34,7 @@ class CommandDispatcher {
   explicit CommandDispatcher(CommandDispatcherContext context);
   virtual ~CommandDispatcher();
 
-  virtual void DispatchCommand(ui::Command command) = 0;
+  virtual void DispatchCommand(fuchsia::ui::scenic::Command command) = 0;
 
   CommandDispatcherContext* context() { return &context_; }
 
@@ -51,15 +51,15 @@ class TempSessionDelegate : public CommandDispatcher {
   virtual void Present(uint64_t presentation_time,
                        ::fidl::VectorPtr<zx::event> acquire_fences,
                        ::fidl::VectorPtr<zx::event> release_fences,
-                       ui::Session::PresentCallback callback) = 0;
+                       fuchsia::ui::scenic::Session::PresentCallback callback) = 0;
 
   virtual void HitTest(uint32_t node_id, ::gfx::vec3 ray_origin,
                        ::gfx::vec3 ray_direction,
-                       ui::Session::HitTestCallback callback) = 0;
+                       fuchsia::ui::scenic::Session::HitTestCallback callback) = 0;
 
   virtual void HitTestDeviceRay(::gfx::vec3 ray_origin,
                                 ::gfx::vec3 ray_direction,
-                                ui::Session::HitTestCallback callback) = 0;
+                                fuchsia::ui::scenic::Session::HitTestCallback callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(TempSessionDelegate);

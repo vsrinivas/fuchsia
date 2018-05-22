@@ -9,7 +9,7 @@
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/tasks/task_runner.h"
 
-#include <ui/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include "garnet/lib/ui/gfx/engine/engine.h"
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/scenic/command_dispatcher.h"
@@ -37,23 +37,23 @@ class SessionHandler : public TempSessionDelegate {
   scenic::gfx::Session* session() const { return session_.get(); }
 
  protected:
-  // |ui::Session / scenic::TempSessionDelegate|
+  // |fuchsia::ui::scenic::Session / scenic::TempSessionDelegate|
   void Present(uint64_t presentation_time,
                ::fidl::VectorPtr<zx::event> acquire_fences,
                ::fidl::VectorPtr<zx::event> release_fences,
-               ui::Session::PresentCallback callback) override;
+               fuchsia::ui::scenic::Session::PresentCallback callback) override;
 
-  // |ui::Session / scenic::TempSessionDelegate|
+  // |fuchsia::ui::scenic::Session / scenic::TempSessionDelegate|
   void HitTest(uint32_t node_id, ::gfx::vec3 ray_origin,
                ::gfx::vec3 ray_direction,
-               ui::Session::HitTestCallback callback) override;
+               fuchsia::ui::scenic::Session::HitTestCallback callback) override;
 
-  // |ui::Session / scenic::TempSessionDelegate|
+  // |fuchsia::ui::scenic::Session / scenic::TempSessionDelegate|
   void HitTestDeviceRay(::gfx::vec3 ray_origin, ::gfx::vec3 ray_direction,
-                        ui::Session::HitTestCallback callback) override;
+                        fuchsia::ui::scenic::Session::HitTestCallback callback) override;
 
   // |scenic::CommandDispatcher|
-  void DispatchCommand(ui::Command command) override;
+  void DispatchCommand(fuchsia::ui::scenic::Command command) override;
 
  private:
   friend class SessionManager;

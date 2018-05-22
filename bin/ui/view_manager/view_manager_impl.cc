@@ -17,7 +17,7 @@ ViewManagerImpl::ViewManagerImpl(ViewRegistry* registry)
 ViewManagerImpl::~ViewManagerImpl() {}
 
 void ViewManagerImpl::GetScenic(
-    fidl::InterfaceRequest<ui::Scenic> scenic_request) {
+    fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> scenic_request) {
   registry_->GetScenic(std::move(scenic_request));
 }
 

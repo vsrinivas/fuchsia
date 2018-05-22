@@ -50,7 +50,7 @@ void ScenicTest::ReportError(fxl::LogSeverity severity,
   reported_errors_.push_back(error_string);
 }
 
-void ScenicTest::EnqueueEvent(ui::Event event) {
+void ScenicTest::EnqueueEvent(fuchsia::ui::scenic::Event event) {
   events_.push_back(std::move(event));
 }
 

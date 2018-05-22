@@ -29,7 +29,7 @@ SessionHandler::~SessionHandler() { TearDown(); }
 void SessionHandler::Present(uint64_t presentation_time,
                              ::fidl::VectorPtr<zx::event> acquire_fences,
                              ::fidl::VectorPtr<zx::event> release_fences,
-                             ui::Session::PresentCallback callback) {
+                             fuchsia::ui::scenic::Session::PresentCallback callback) {
   if (!session_->ScheduleUpdate(
           presentation_time, std::move(buffered_commands_),
           std::move(acquire_fences), std::move(release_fences), callback)) {
@@ -40,20 +40,20 @@ void SessionHandler::Present(uint64_t presentation_time,
 
 void SessionHandler::HitTest(uint32_t node_id, ::gfx::vec3 ray_origin,
                              ::gfx::vec3 ray_direction,
-                             ui::Session::HitTestCallback callback) {
+                             fuchsia::ui::scenic::Session::HitTestCallback callback) {
   session_->HitTest(node_id, std::move(ray_origin), std::move(ray_direction),
                     callback);
 }
 
 void SessionHandler::HitTestDeviceRay(
     ::gfx::vec3 ray_origin, ::gfx::vec3 ray_direction,
-    ui::Session::HitTestDeviceRayCallback callback) {
+    fuchsia::ui::scenic::Session::HitTestDeviceRayCallback callback) {
   session_->HitTestDeviceRay(std::move(ray_origin), std::move(ray_direction),
                              callback);
 }
 
-void SessionHandler::DispatchCommand(ui::Command command) {
-  FXL_DCHECK(command.Which() == ui::Command::Tag::kGfx);
+void SessionHandler::DispatchCommand(fuchsia::ui::scenic::Command command) {
+  FXL_DCHECK(command.Which() == fuchsia::ui::scenic::Command::Tag::kGfx);
   buffered_commands_.emplace_back(std::move(command.gfx()));
 }
 

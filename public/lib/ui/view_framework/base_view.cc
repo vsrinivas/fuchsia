@@ -14,8 +14,8 @@
 namespace mozart {
 namespace {
 
-ui::ScenicPtr GetScenic(views_v1::ViewManager* view_manager) {
-  ui::ScenicPtr scenic;
+fuchsia::ui::scenic::ScenicPtr GetScenic(views_v1::ViewManager* view_manager) {
+  fuchsia::ui::scenic::ScenicPtr scenic;
   view_manager->GetScenic(scenic.NewRequest());
   return scenic;
 }
@@ -115,7 +115,7 @@ void BaseView::PresentScene(zx_time_t presentation_time) {
   });
 }
 
-void BaseView::HandleSessionEvents(fidl::VectorPtr<ui::Event> events) {
+void BaseView::HandleSessionEvents(fidl::VectorPtr<fuchsia::ui::scenic::Event> events) {
   const gfx::Metrics* new_metrics = nullptr;
   for (const auto& event : *events) {
     if (event.is_gfx()) {
@@ -159,7 +159,7 @@ void BaseView::OnPropertiesChanged(views_v1::ViewProperties old_properties) {}
 
 void BaseView::OnSceneInvalidated(images::PresentationInfo presentation_info) {}
 
-void BaseView::OnSessionEvent(fidl::VectorPtr<ui::Event> events) {}
+void BaseView::OnSessionEvent(fidl::VectorPtr<fuchsia::ui::scenic::Event> events) {}
 
 bool BaseView::OnInputEvent(input::InputEvent event) {
   return false;

@@ -4,6 +4,8 @@
 
 library views_v1;
 
+using fuchsia.ui.scenic;
+
 // Maximum length for a view or view tree label.
 const uint32 kLabelMaxLength = 32;
 
@@ -23,7 +25,7 @@ interface ViewManager {
   // Gets the scenic instance associated with this view manager.
   // All graphical content for this view manager's views and view trees
   // must come from sessions created by this |scenic| instance.
-  1: GetScenic(request<ui.Scenic> scenic);
+  1: GetScenic(request<fuchsia.ui.scenic.Scenic> scenic);
 
   // Creates a view.
   //
