@@ -24,7 +24,8 @@ namespace {
 size_t ResolveParentDirectoryTraversal(const std::string& path, size_t put) {
   if (put >= 2) {
     size_t previous_separator = path.rfind('/', put - 2);
-    if (previous_separator != std::string::npos) return previous_separator + 1;
+    if (previous_separator != std::string::npos)
+      return previous_separator + 1;
   }
   if (put == 1 && path[0] == '/') {
     return put;
@@ -33,7 +34,8 @@ size_t ResolveParentDirectoryTraversal(const std::string& path, size_t put) {
 }
 
 void SafeCloseDir(DIR* dir) {
-  if (dir) closedir(dir);
+  if (dir)
+    closedir(dir);
 }
 
 bool ForEachEntry(int root_fd, const std::string& path,
@@ -44,7 +46,8 @@ bool ForEachEntry(int root_fd, const std::string& path,
   }
   std::unique_ptr<DIR, decltype(&SafeCloseDir)> dir(fdopendir(dir_fd),
                                                     SafeCloseDir);
-  if (!dir.get()) return false;
+  if (!dir.get())
+    return false;
   for (struct dirent* entry = readdir(dir.get()); entry != nullptr;
        entry = readdir(dir.get())) {
     char* name = entry->d_name;
@@ -55,7 +58,8 @@ bool ForEachEntry(int root_fd, const std::string& path,
           continue;
         }
       }
-      if (!callback(path + "/" + name)) return false;
+      if (!callback(path + "/" + name))
+        return false;
     }
   }
   return true;
@@ -64,7 +68,8 @@ bool ForEachEntry(int root_fd, const std::string& path,
 }  // namespace
 
 std::string SimplifyPath(std::string path) {
-  if (path.empty()) return ".";
+  if (path.empty())
+    return ".";
 
   size_t put = 0;
   size_t get = 0;
@@ -176,14 +181,17 @@ std::string AbsolutePath(const std::string& path) {
 
 std::string GetDirectoryName(const std::string& path) {
   size_t separator = path.rfind('/');
-  if (separator == 0u) return "/";
-  if (separator == std::string::npos) return std::string();
+  if (separator == 0u)
+    return "/";
+  if (separator == std::string::npos)
+    return std::string();
   return path.substr(0, separator);
 }
 
 std::string GetBaseName(const std::string& path) {
   size_t separator = path.rfind('/');
-  if (separator == std::string::npos) return path;
+  if (separator == std::string::npos)
+    return path;
   return path.substr(separator + 1);
 }
 
@@ -195,8 +203,10 @@ bool DeletePathAt(int root_fd, const std::string& path, bool recursive) {
   struct stat stat_buffer;
   if (fstatat(root_fd, path.c_str(), &stat_buffer, AT_SYMLINK_NOFOLLOW) != 0)
     return (errno == ENOENT || errno == ENOTDIR);
-  if (!S_ISDIR(stat_buffer.st_mode)) return (unlinkat(root_fd, path.c_str(), 0) == 0);
-  if (!recursive) return (unlinkat(root_fd, path.c_str(), AT_REMOVEDIR) == 0);
+  if (!S_ISDIR(stat_buffer.st_mode))
+    return (unlinkat(root_fd, path.c_str(), 0) == 0);
+  if (!recursive)
+    return (unlinkat(root_fd, path.c_str(), AT_REMOVEDIR) == 0);
 
   // Use std::list, as ForEachEntry callback will modify the container. If the
   // container is a vector, this will invalidate the reference to the content.
@@ -208,7 +218,8 @@ bool DeletePathAt(int root_fd, const std::string& path, bool recursive) {
                         if (IsDirectoryAt(root_fd, child)) {
                           directories.push_back(child);
                         } else {
-                          if (unlinkat(root_fd, child.c_str(), 0) != 0) return false;
+                          if (unlinkat(root_fd, child.c_str(), 0) != 0)
+                            return false;
                         }
                         return true;
                       })) {
@@ -216,7 +227,8 @@ bool DeletePathAt(int root_fd, const std::string& path, bool recursive) {
     }
   }
   for (auto it = directories.rbegin(); it != directories.rend(); ++it) {
-    if (unlinkat(root_fd, it->c_str(), AT_REMOVEDIR) != 0) return false;
+    if (unlinkat(root_fd, it->c_str(), AT_REMOVEDIR) != 0)
+      return false;
   }
   return true;
 }

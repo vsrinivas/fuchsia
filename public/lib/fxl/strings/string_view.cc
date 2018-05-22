@@ -57,13 +57,9 @@ bool operator!=(StringView lhs, StringView rhs) {
   return lhs.compare(rhs) != 0;
 }
 
-bool operator<(StringView lhs, StringView rhs) {
-  return lhs.compare(rhs) < 0;
-}
+bool operator<(StringView lhs, StringView rhs) { return lhs.compare(rhs) < 0; }
 
-bool operator>(StringView lhs, StringView rhs) {
-  return lhs.compare(rhs) > 0;
-}
+bool operator>(StringView lhs, StringView rhs) { return lhs.compare(rhs) > 0; }
 
 bool operator<=(StringView lhs, StringView rhs) {
   return lhs.compare(rhs) <= 0;

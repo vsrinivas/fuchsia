@@ -26,7 +26,8 @@ constexpr TimeDelta kTinyTimeout = TimeDelta::FromMilliseconds(100);
 constexpr TimeDelta kActionTimeout = TimeDelta::FromMilliseconds(10000);
 
 inline void SleepFor(TimeDelta duration) {
-  std::this_thread::sleep_for(std::chrono::nanoseconds(duration.ToNanoseconds()));
+  std::this_thread::sleep_for(
+      std::chrono::nanoseconds(duration.ToNanoseconds()));
 }
 
 // Sleeps for a "very small" amount of time.

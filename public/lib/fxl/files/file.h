@@ -16,8 +16,7 @@ namespace files {
 
 // Writes the given data to the file at the given path. Returns true if the data
 // was successfully written, otherwise returns false.
-FXL_EXPORT bool WriteFile(const std::string& path,
-                          const char* data,
+FXL_EXPORT bool WriteFile(const std::string& path, const char* data,
                           ssize_t size);
 #if defined(OS_LINUX) || defined(OS_FUCHSIA)
 FXL_EXPORT bool WriteFileAt(int dirfd, const std::string& path,
@@ -42,7 +41,8 @@ FXL_EXPORT bool WriteFileInTwoPhases(const std::string& path,
 FXL_EXPORT bool ReadFileToString(const std::string& path, std::string* result);
 FXL_EXPORT bool ReadFileDescriptorToString(int fd, std::string* result);
 #if defined(OS_LINUX) || defined(OS_FUCHSIA)
-FXL_EXPORT bool ReadFileToStringAt(int dirfd, const std::string& path, std::string* result);
+FXL_EXPORT bool ReadFileToStringAt(int dirfd, const std::string& path,
+                                   std::string* result);
 #endif
 
 // Reads the contents of the file at the given path and stores the data in
@@ -54,7 +54,8 @@ FXL_EXPORT bool ReadFileToVector(const std::string& path,
 // Reads the contents of the file at the given path and if successful, returns
 // pair of read allocated bytes with data and size of the data if succesful.
 // pair of <nullptr, -1> if read failed.
-FXL_EXPORT std::pair<uint8_t*, intptr_t> ReadFileToBytes(const std::string& path);
+FXL_EXPORT std::pair<uint8_t*, intptr_t> ReadFileToBytes(
+    const std::string& path);
 FXL_EXPORT std::pair<uint8_t*, intptr_t> ReadFileDescriptorToBytes(int fd);
 
 // Returns whether the given path is a file.

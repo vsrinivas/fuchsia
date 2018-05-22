@@ -11,9 +11,9 @@
 #include <zircon/syscalls.h>
 
 #elif defined(OS_WIN)
-#include <windows.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <windows.h>
 // #define needed to link in RtlGenRandom(), a.k.a. SystemFunction036.  See the
 // "Community Additions" comment on MSDN here:
 // http://msdn.microsoft.com/en-us/library/windows/desktop/aa387694.aspx
@@ -36,8 +36,7 @@ namespace fxl {
 
 uint64_t RandUint64() {
   uint64_t number;
-  bool success =
-    RandBytes(&number, sizeof(number));
+  bool success = RandBytes(&number, sizeof(number));
 
   FXL_CHECK(success);
   return number;
@@ -71,9 +70,8 @@ bool RandBytes(void* output, size_t output_length) {
   bool success = true;
   while (output_length > 0) {
     const ULONG output_bytes_this_pass = std::min(
-    static_cast<ULONG>(output_length), std::numeric_limits<ULONG>::max());
-    success =
-        RtlGenRandom(offset, output_bytes_this_pass) != FALSE;
+        static_cast<ULONG>(output_length), std::numeric_limits<ULONG>::max());
+    success = RtlGenRandom(offset, output_bytes_this_pass) != FALSE;
     if (!success)
       return false;
     output_length -= output_bytes_this_pass;
@@ -86,7 +84,7 @@ bool RandBytes(void* output, size_t output_length) {
     return false;
 
   const bool success =
-    ReadFileDescriptor(fd.get(), static_cast<char*>(output), output_length);
+      ReadFileDescriptor(fd.get(), static_cast<char*>(output), output_length);
 
   FXL_DCHECK(success);
   return success;

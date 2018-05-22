@@ -13,16 +13,15 @@ namespace fxl {
 Thread::Thread(std::function<void(void)> runnable)
     : runnable_(std::move(runnable)), running_(false) {}
 
-Thread::~Thread() {
-  Join();
-}
+Thread::~Thread() { Join(); }
 
 bool Thread::Run(size_t stack_size) {
   if (running_) {
     return false;
   }
 #if defined(OS_WIN)
-  thread_ = CreateThread(NULL, stack_size, (LPTHREAD_START_ROUTINE)&Thread::Entry, this, 0, NULL);
+  thread_ = CreateThread(NULL, stack_size,
+                         (LPTHREAD_START_ROUTINE)&Thread::Entry, this, 0, NULL);
   if (thread_ != NULL) {
     running_ = true;
   }
@@ -51,13 +50,9 @@ bool Thread::Run(size_t stack_size) {
   return running_;
 }
 
-bool Thread::IsRunning() const {
-  return running_;
-}
+bool Thread::IsRunning() const { return running_; }
 
-void Thread::Main(void) {
-  runnable_();
-}
+void Thread::Main(void) { runnable_(); }
 
 void* Thread::Entry(void* context) {
   ((Thread*)context)->Main();

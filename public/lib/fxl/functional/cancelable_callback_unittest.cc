@@ -11,9 +11,7 @@
 namespace fxl {
 namespace {
 
-void AddBToA(int* a, int b) {
-  (*a) += b;
-}
+void AddBToA(int* a, int b) { (*a) += b; }
 
 TEST(CancelableCallbackTest, Cancel) {
   int count = 0;

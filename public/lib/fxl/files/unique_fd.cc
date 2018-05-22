@@ -9,9 +9,7 @@
 namespace fxl {
 namespace internal {
 
-void UniqueFDTraits::Free(int fd) {
-  close(fd);
-}
+void UniqueFDTraits::Free(int fd) { close(fd); }
 
 }  // namespace internal
 }  // namespace fxl

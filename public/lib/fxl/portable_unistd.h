@@ -8,15 +8,15 @@
 #include "lib/fxl/build_config.h"
 
 #if defined(OS_WIN)
-#include <io.h>
 #include <direct.h>
+#include <io.h>
 #include <stdlib.h>
 
 #define STDERR_FILENO _fileno(stderr)
 #define PATH_MAX _MAX_PATH
 
-#define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
-#define S_ISREG(m) (((m) & S_IFMT) == S_IFREG)
+#define S_ISDIR(m) (((m)&S_IFMT) == S_IFDIR)
+#define S_ISREG(m) (((m)&S_IFMT) == S_IFREG)
 #define R_OK 4
 
 #define mkdir(path, mode) _mkdir(path)

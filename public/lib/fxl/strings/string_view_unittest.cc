@@ -15,13 +15,12 @@ namespace {
 #define TEST_STRING_LENGTH 5u
 
 // Loops over all substrings of |needles|, and calls |callback| for each.
-void LoopOverSubstrings(StringView haystack,
-                        StringView needles,
-                        std::function<void(std::string haystack_str,
-                                           StringView haystack_sw,
-                                           std::string to_find_str,
-                                           StringView to_find_sw,
-                                           int start_index)> callback) {
+void LoopOverSubstrings(
+    StringView haystack, StringView needles,
+    std::function<void(std::string haystack_str, StringView haystack_sw,
+                       std::string to_find_str, StringView to_find_sw,
+                       int start_index)>
+        callback) {
   std::string haystack_str = haystack.ToString();
   for (size_t substring_size = 0; substring_size < needles.size();
        ++substring_size) {
@@ -36,12 +35,11 @@ void LoopOverSubstrings(StringView haystack,
 };
 
 // Loops over all characters in |needles|, and calls |callback| for each.
-void LoopOverChars(StringView haystack,
-                   StringView needles,
-                   std::function<void(std::string haystack_str,
-                                      StringView haystack_sw,
-                                      char c,
-                                      int start_index)> callback) {
+void LoopOverChars(
+    StringView haystack, StringView needles,
+    std::function<void(std::string haystack_str, StringView haystack_sw, char c,
+                       int start_index)>
+        callback) {
   std::string haystack_str = haystack.ToString();
   for (size_t index = 0; index < needles.size(); ++index) {
     for (size_t start_index = 0; start_index <= haystack.size();
@@ -53,12 +51,11 @@ void LoopOverChars(StringView haystack,
 
 // Loops over all combinations of characters present in |needles|, and calls
 // |callback| for each.
-void LoopOverCharCombinations(StringView haystack,
-                              StringView needles,
-                              std::function<void(std::string haystack_str,
-                                                 StringView haystack_sw,
-                                                 std::string current_chars,
-                                                 size_t pos)> callback) {
+void LoopOverCharCombinations(
+    StringView haystack, StringView needles,
+    std::function<void(std::string haystack_str, StringView haystack_sw,
+                       std::string current_chars, size_t pos)>
+        callback) {
   // Look for all chars combinations, and compare with string.
   std::set<char> chars(needles.begin(), needles.end());
   std::string haystack_str = haystack.ToString();

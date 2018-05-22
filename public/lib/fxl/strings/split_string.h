@@ -29,9 +29,7 @@ enum SplitResult {
 // Split the given string on ANY of the given separators, returning copies of
 // the result
 FXL_EXPORT std::vector<std::string> SplitStringCopy(
-    StringView input,
-    StringView separators,
-    WhiteSpaceHandling whitespace,
+    StringView input, StringView separators, WhiteSpaceHandling whitespace,
     SplitResult result_type);
 
 // Like SplitStringCopy above except it returns a vector of StringViews which

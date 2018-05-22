@@ -55,6 +55,6 @@
     eintr_wrapper_result;                                 \
   })
 
-#endif // defined(OS_WIN)
+#endif  // defined(OS_WIN)
 
 #endif  // LIB_FXL_FILES_EINTR_WRAPPER_H_

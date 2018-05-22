@@ -44,9 +44,7 @@ const char* StripPath(const char* path) {
 
 }  // namespace
 
-LogMessage::LogMessage(LogSeverity severity,
-                       const char* file,
-                       int line,
+LogMessage::LogMessage(LogSeverity severity, const char* file, int line,
                        const char* condition)
     : severity_(severity), file_(file), line_(line) {
   stream_ << "[";
@@ -93,9 +91,7 @@ LogMessage::~LogMessage() {
     BreakDebugger();
 }
 
-int GetVlogVerbosity() {
-  return std::max(-1, LOG_INFO - GetMinLogLevel());
-}
+int GetVlogVerbosity() { return std::max(-1, LOG_INFO - GetMinLogLevel()); }
 
 bool ShouldCreateLogMessage(LogSeverity severity) {
   return severity >= GetMinLogLevel();

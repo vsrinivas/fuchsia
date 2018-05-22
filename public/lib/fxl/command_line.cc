@@ -64,8 +64,7 @@ std::vector<fxl::StringView> CommandLine::GetOptionValues(
 }
 
 std::string CommandLine::GetOptionValueWithDefault(
-    StringView name,
-    StringView default_value) const {
+    StringView name, StringView default_value) const {
   size_t index;
   if (!HasOption(name, &index))
     return default_value.ToString();

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
 #include "lib/fxl/strings/split_string.h"
+#include "gtest/gtest.h"
 #include "lib/fxl/strings/string_view.h"
 
 namespace fxl {

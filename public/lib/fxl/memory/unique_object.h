@@ -8,8 +8,8 @@
 #include <utility>
 
 #include "lib/fxl/compiler_specific.h"
-#include "lib/fxl/macros.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/macros.h"
 
 namespace fxl {
 

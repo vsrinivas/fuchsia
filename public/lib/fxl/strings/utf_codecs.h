@@ -43,8 +43,7 @@ FXL_EXPORT bool IsStringUTF8(fxl::StringView str);
 // (as in a for loop) will take the reader to the next character.
 //
 // Returns true on success. On false, |*code_point| will be invalid.
-FXL_EXPORT bool ReadUnicodeCharacter(const char* src,
-                                     size_t src_len,
+FXL_EXPORT bool ReadUnicodeCharacter(const char* src, size_t src_len,
                                      size_t* char_index,
                                      uint32_t* code_point_out);
 

@@ -4,9 +4,9 @@
 
 #include <thread>
 
+#include "gtest/gtest.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/fxl/time/time_point.h"
-#include "gtest/gtest.h"
 
 namespace fxl {
 namespace {

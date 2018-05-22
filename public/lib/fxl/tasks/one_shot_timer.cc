@@ -10,12 +10,9 @@ namespace fxl {
 
 OneShotTimer::OneShotTimer() : weak_ptr_factory_(this) {}
 
-OneShotTimer::~OneShotTimer() {
-  Stop();
-}
+OneShotTimer::~OneShotTimer() { Stop(); }
 
-void OneShotTimer::Start(TaskRunner* task_runner,
-                         const Closure& task,
+void OneShotTimer::Start(TaskRunner* task_runner, const Closure& task,
                          TimeDelta delay) {
   FXL_DCHECK(task_runner);
   FXL_DCHECK(task);

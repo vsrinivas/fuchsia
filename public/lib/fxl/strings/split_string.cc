@@ -29,8 +29,7 @@ size_t FindFirstOf(StringView view, StringView one_of, size_t pos) {
 }
 
 template <typename Str, typename OutputStringType, typename DelimiterType>
-std::vector<OutputStringType> SplitStringT(Str src,
-                                           DelimiterType delimiter,
+std::vector<OutputStringType> SplitStringT(Str src, DelimiterType delimiter,
                                            WhiteSpaceHandling whitespace,
                                            SplitResult result_type) {
   std::vector<OutputStringType> result;
@@ -72,8 +71,7 @@ std::vector<std::string> SplitStringCopy(StringView input,
   return SplitStringT<StringView, std::string, StringView>(
       input, separators, whitespace, result_type);
 }
-std::vector<StringView> SplitString(StringView input,
-                                    StringView separators,
+std::vector<StringView> SplitString(StringView input, StringView separators,
                                     WhiteSpaceHandling whitespace,
                                     SplitResult result_type) {
   if (separators.size() == 1) {

@@ -322,8 +322,7 @@ TEST(CommandLineTest, MultipleOccurrencesOfOption) {
 }
 
 // |cl1| and |cl2| should be not equal.
-void ExpectNotEqual(const char* message,
-                    std::initializer_list<std::string> c1,
+void ExpectNotEqual(const char* message, std::initializer_list<std::string> c1,
                     std::initializer_list<std::string> c2) {
   SCOPED_TRACE(message);
 
@@ -343,8 +342,7 @@ void ExpectNotEqual(const char* message,
   EXPECT_TRUE(cl2 != cl1);
 }
 
-void ExpectEqual(const char* message,
-                 std::initializer_list<std::string> c1,
+void ExpectEqual(const char* message, std::initializer_list<std::string> c1,
                  std::initializer_list<std::string> c2) {
   SCOPED_TRACE(message);
 

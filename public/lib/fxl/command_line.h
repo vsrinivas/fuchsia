@@ -181,8 +181,7 @@ class FXL_EXPORT CommandLineBuilder final {
 // |last| if none are seen). This is useful for processing "subcommands".
 template <typename InputIterator>
 inline CommandLine CommandLineFromIteratorsFindFirstPositionalArg(
-    InputIterator first,
-    InputIterator last,
+    InputIterator first, InputIterator last,
     InputIterator* first_positional_arg) {
   if (first_positional_arg)
     *first_positional_arg = last;

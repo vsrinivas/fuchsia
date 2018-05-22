@@ -18,8 +18,7 @@ namespace fxl {
 // (and will always be called with |*mutex| held).
 template <typename ConditionFn>
 bool WaitWithTimeoutImpl(std::unique_lock<std::mutex>* locker,
-                         std::condition_variable* cv,
-                         ConditionFn condition,
+                         std::condition_variable* cv, ConditionFn condition,
                          TimeDelta timeout) {
   FXL_DCHECK(locker->owns_lock());
 

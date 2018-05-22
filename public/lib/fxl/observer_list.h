@@ -223,7 +223,7 @@ bool ObserverListBase<ObserverType>::Iter<ContainerType>::operator!=(
 template <class ObserverType>
 template <class ContainerType>
 typename ObserverListBase<ObserverType>::template Iter<ContainerType>&
-    ObserverListBase<ObserverType>::Iter<ContainerType>::operator++() {
+ObserverListBase<ObserverType>::Iter<ContainerType>::operator++() {
   if (list_) {
     ++index_;
     EnsureValidIndex();

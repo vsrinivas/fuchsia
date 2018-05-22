@@ -20,9 +20,7 @@ class LogMessageVoidify {
 
 class FXL_EXPORT LogMessage {
  public:
-  LogMessage(LogSeverity severity,
-             const char* file,
-             int line,
+  LogMessage(LogSeverity severity, const char* file, int line,
              const char* condition);
   ~LogMessage();
 

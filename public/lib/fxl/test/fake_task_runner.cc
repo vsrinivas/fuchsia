@@ -22,9 +22,7 @@ void FakeTaskRunner::PostDelayedTask(Closure task, TimeDelta delay) {
   FXL_LOG(ERROR) << "Not implemented in: FakeTaskRunner::PostDelayedTask";
 }
 
-bool FakeTaskRunner::RunsTasksOnCurrentThread() {
-  return true;
-}
+bool FakeTaskRunner::RunsTasksOnCurrentThread() { return true; }
 
 void FakeTaskRunner::Run() {
   FXL_DCHECK(!running_);
@@ -39,8 +37,6 @@ void FakeTaskRunner::Run() {
   running_ = false;
 }
 
-void FakeTaskRunner::QuitNow() {
-  should_quit_ = true;
-}
+void FakeTaskRunner::QuitNow() { should_quit_ = true; }
 
 }  // namespace fxl

@@ -9,7 +9,7 @@
 namespace fxl {
 
 bool IsStringUTF8(fxl::StringView str) {
-  const char *src = str.data();
+  const char* src = str.data();
   size_t src_len = str.size();
   size_t char_index = 0;
 
@@ -24,9 +24,7 @@ bool IsStringUTF8(fxl::StringView str) {
 
 // ReadUnicodeCharacter --------------------------------------------------------
 
-bool ReadUnicodeCharacter(const char* src,
-                          size_t src_len,
-                          size_t* char_index,
+bool ReadUnicodeCharacter(const char* src, size_t src_len, size_t* char_index,
                           uint32_t* code_point_out) {
   // U8_NEXT expects to be able to use -1 to signal an error, so we must
   // use a signed type for code_point.  But this function returns false

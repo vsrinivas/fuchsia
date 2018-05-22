@@ -64,7 +64,6 @@
 #define FXL_WARN_UNUSED_RESULT
 #endif
 
-
 // Tell the compiler a function is using a printf-style format string.
 // |format_param| is the one-based index of the format string parameter;
 // |dots_param| is the one-based index of the "..." parameter.
@@ -72,7 +71,7 @@
 // (This is undocumented but matches what the system C headers do.)
 #if defined(__GNUC__) || defined(__clang__)
 #define FXL_PRINTF_FORMAT(format_param, dots_param) \
-    __attribute__((format(printf, format_param, dots_param)))
+  __attribute__((format(printf, format_param, dots_param)))
 #else
 #define FXL_PRINTF_FORMAT(format_param, dots_param)
 #endif

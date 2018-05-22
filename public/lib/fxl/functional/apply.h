@@ -13,8 +13,7 @@ namespace fxl {
 
 namespace internal {
 template <class F, class Tuple, size_t... I>
-constexpr decltype(auto) ApplyImpl(F&& f,
-                                   Tuple&& t,
+constexpr decltype(auto) ApplyImpl(F&& f, Tuple&& t,
                                    std::integer_sequence<size_t, I...>) {
   return std::forward<F>(f)(std::get<I>(std::forward<Tuple>(t))...);
 }

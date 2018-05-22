@@ -9,12 +9,8 @@
 
 namespace fxl {
 
-void Stopwatch::Start() {
-  start_time_ = TimePoint::Now();
-}
+void Stopwatch::Start() { start_time_ = TimePoint::Now(); }
 
-TimeDelta Stopwatch::Elapsed() {
-  return TimePoint::Now() - start_time_;
-}
+TimeDelta Stopwatch::Elapsed() { return TimePoint::Now() - start_time_; }
 
 }  // namespace fxl

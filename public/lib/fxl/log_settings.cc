@@ -45,9 +45,7 @@ void SetLogSettings(const LogSettings& settings) {
   }
 }
 
-LogSettings GetLogSettings() {
-  return state::g_log_settings;
-}
+LogSettings GetLogSettings() { return state::g_log_settings; }
 
 int GetMinLogLevel() {
   return std::min(state::g_log_settings.min_log_level, LOG_FATAL);

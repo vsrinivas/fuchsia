@@ -8,8 +8,8 @@
 
 #include "lib/fxl/memory/ref_counted.h"
 
-#include "lib/fxl/macros.h"
 #include "gtest/gtest.h"
+#include "lib/fxl/macros.h"
 
 #if defined(__clang__)
 #define ALLOW_PESSIMIZING_MOVE(code_line)                                   \

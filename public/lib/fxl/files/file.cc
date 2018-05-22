@@ -72,8 +72,7 @@ bool WriteFileAt(int dirfd, const std::string& path, const char* data,
 }
 #endif
 
-bool WriteFileInTwoPhases(const std::string& path,
-                          fxl::StringView data,
+bool WriteFileInTwoPhases(const std::string& path, fxl::StringView data,
                           const std::string& temp_root) {
   ScopedTempDir temp_dir(temp_root);
 
@@ -103,7 +102,8 @@ bool ReadFileDescriptorToString(int fd, std::string* result) {
 }
 
 #if defined(OS_LINUX) || defined(OS_FUCHSIA)
-bool ReadFileToStringAt(int dirfd, const std::string& path, std::string* result) {
+bool ReadFileToStringAt(int dirfd, const std::string& path,
+                        std::string* result) {
   fxl::UniqueFD fd(openat(dirfd, path.c_str(), O_RDONLY));
   return ReadFileDescriptor(fd.get(), result);
 }
@@ -115,7 +115,7 @@ bool ReadFileToVector(const std::string& path, std::vector<uint8_t>* result) {
 }
 
 std::pair<uint8_t*, intptr_t> ReadFileToBytes(const std::string& path) {
-  std::pair<uint8_t*, intptr_t> failure_pair {nullptr, -1};
+  std::pair<uint8_t*, intptr_t> failure_pair{nullptr, -1};
   fxl::UniqueFD fd(open(path.c_str(), O_RDONLY | BINARY_MODE));
   if (!fd.is_valid())
     return failure_pair;
@@ -123,7 +123,7 @@ std::pair<uint8_t*, intptr_t> ReadFileToBytes(const std::string& path) {
 }
 
 std::pair<uint8_t*, intptr_t> ReadFileDescriptorToBytes(int fd) {
-  std::pair<uint8_t*, intptr_t> failure_pair {nullptr, -1};
+  std::pair<uint8_t*, intptr_t> failure_pair{nullptr, -1};
   struct stat st;
   if (fstat(fd, &st) != 0) {
     return failure_pair;
@@ -154,7 +154,7 @@ bool IsFile(const std::string& path) {
 #if defined(OS_LINUX) || defined(OS_FUCHSIA)
 bool IsFileAt(int dirfd, const std::string& path) {
   struct stat buf;
-  if (fstatat(dirfd, path.c_str(), &buf, 0  /* flags */) != 0)
+  if (fstatat(dirfd, path.c_str(), &buf, 0 /* flags */) != 0)
     return false;
   return S_ISREG(buf.st_mode);
 }

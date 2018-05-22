@@ -11,12 +11,10 @@
 namespace fxl {
 namespace {
 
-void reset_arg(int* p) {
-  *p = 0;
-}
+void reset_arg(int* p) { *p = 0; }
 
-void helper_basic (int* var_ptr) {
-  auto reset = fxl::MakeAutoCall([var_ptr](){ reset_arg(var_ptr); });
+void helper_basic(int* var_ptr) {
+  auto reset = fxl::MakeAutoCall([var_ptr]() { reset_arg(var_ptr); });
 }
 
 TEST(AutoCallTest, Basic) {
@@ -25,8 +23,8 @@ TEST(AutoCallTest, Basic) {
   EXPECT_EQ(var, 0);
 }
 
-void helper_cancel (int* var_ptr) {
-  auto reset = fxl::MakeAutoCall([var_ptr](){ reset_arg(var_ptr); });
+void helper_cancel(int* var_ptr) {
+  auto reset = fxl::MakeAutoCall([var_ptr]() { reset_arg(var_ptr); });
   reset.cancel();
 }
 
@@ -36,8 +34,8 @@ TEST(AutoCallTest, Cancel) {
   EXPECT_EQ(var, 42);
 }
 
-void helper_call (int* var_ptr) {
-  auto reset = fxl::MakeAutoCall([var_ptr](){ reset_arg(var_ptr); });
+void helper_call(int* var_ptr) {
+  auto reset = fxl::MakeAutoCall([var_ptr]() { reset_arg(var_ptr); });
   reset.call();
 }
 

@@ -29,11 +29,9 @@ namespace fxl {
 
 template <typename T>
 class AutoCall {
-public:
+ public:
   constexpr explicit AutoCall(T c) : call_(std::move(c)) {}
-  ~AutoCall() {
-    call();
-  }
+  ~AutoCall() { call(); }
 
   // move semantics
   AutoCall(AutoCall&& c) : call_(std::move(c.call_)), active_(c.active_) {
@@ -49,9 +47,7 @@ public:
   FXL_DISALLOW_COPY_AND_ASSIGN(AutoCall);
 
   // cancel the eventual call
-  void cancel() {
-    active_ = false;
-  }
+  void cancel() { active_ = false; }
 
   // call it immediately
   void call() {
@@ -59,10 +55,11 @@ public:
     // should happen).
     bool active = active_;
     cancel();
-    if (active) (call_)();
+    if (active)
+      (call_)();
   }
 
-private:
+ private:
   T call_;
   bool active_ = true;
 };

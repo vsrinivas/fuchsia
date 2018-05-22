@@ -12,8 +12,8 @@
 #elif defined(OS_WIN)
 #include <windows.h>
 #undef CreateDirectory
-#include "lib/fxl/random/uuid.h"
 #include "lib/fxl/files/file.h"
+#include "lib/fxl/random/uuid.h"
 #else
 #include <stdlib.h>
 #endif
@@ -66,9 +66,7 @@ ScopedTempDir::~ScopedTempDir() {
   }
 }
 
-const std::string& ScopedTempDir::path() {
-  return directory_path_;
-}
+const std::string& ScopedTempDir::path() { return directory_path_; }
 
 bool ScopedTempDir::NewTempFile(std::string* output) {
 #if defined(OS_WIN)

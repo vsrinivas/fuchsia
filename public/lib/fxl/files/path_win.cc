@@ -54,9 +54,7 @@ size_t RootLength(const std::string& path) {
   return 0;
 }
 
-size_t IsSeparator(const char sep) {
-  return sep == '/' || sep == '\\';
-}
+size_t IsSeparator(const char sep) { return sep == '/' || sep == '\\'; }
 
 size_t LastSeparator(const std::string& path) {
   return path.find_last_of("/\\");
@@ -70,8 +68,7 @@ size_t FirstSeparator(const std::string& path, size_t pos) {
   return path.find_first_of("/\\", pos);
 }
 
-size_t ResolveParentDirectoryTraversal(const std::string& path,
-                                       size_t put,
+size_t ResolveParentDirectoryTraversal(const std::string& path, size_t put,
                                        size_t root_length) {
   if (put <= root_length) {
     return root_length;

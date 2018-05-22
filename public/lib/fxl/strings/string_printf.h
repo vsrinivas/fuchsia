@@ -30,8 +30,7 @@ FXL_EXPORT void StringAppendf(std::string* dest, const char* format, ...)
     FXL_PRINTF_FORMAT(2, 3);
 
 // Formats |vprintf()|-like input and appends it to |*dest|.
-FXL_EXPORT void StringVAppendf(std::string* dest,
-                               const char* format,
+FXL_EXPORT void StringVAppendf(std::string* dest, const char* format,
                                va_list ap);
 
 }  // namespace fxl

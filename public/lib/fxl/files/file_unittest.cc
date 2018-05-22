@@ -35,8 +35,7 @@ TEST(File, WriteFileInTwoPhases) {
   std::string path = dir.path() + "/destination";
 
   std::string content = "Hello World";
-  ASSERT_TRUE(
-      WriteFileInTwoPhases(path, content, dir.path()));
+  ASSERT_TRUE(WriteFileInTwoPhases(path, content, dir.path()));
   std::string read_content;
   ASSERT_TRUE(ReadFileToString(path, &read_content));
   EXPECT_EQ(read_content, content);

@@ -16,14 +16,12 @@ namespace fxl {
 namespace {
 
 inline bool IsHexDigit(char c) {
-  return (c >= '0' && c <= '9') ||
-         (c >= 'A' && c <= 'F') ||
+  return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') ||
          (c >= 'a' && c <= 'f');
 }
 
 inline bool IsLowerHexDigit(char c) {
-  return (c >= '0' && c <= '9') ||
-         (c >= 'a' && c <= 'f');
+  return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
 }
 
 bool IsValidUUIDInternal(const std::string& guid, bool strict) {

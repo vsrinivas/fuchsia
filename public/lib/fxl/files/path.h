@@ -26,14 +26,15 @@ FXL_EXPORT std::string GetDirectoryName(const std::string& path);
 // to and including the last slash.
 FXL_EXPORT std::string GetBaseName(const std::string& path);
 
-// Delete the file or directory at the given path. If recursive is true, and path
-// is a directory, also delete the directory's content.
+// Delete the file or directory at the given path. If recursive is true, and
+// path is a directory, also delete the directory's content.
 FXL_EXPORT bool DeletePath(const std::string& path, bool recursive);
 
-// Delete the file or directory at the given path. If recursive is true, and path
-// is a directory, also delete the directory's content. If |path| is relative,
-// resolve it with |root_fd| as reference. See |openat(2)|.
-FXL_EXPORT bool DeletePathAt(int root_fd, const std::string& path, bool recursive);
+// Delete the file or directory at the given path. If recursive is true, and
+// path is a directory, also delete the directory's content. If |path| is
+// relative, resolve it with |root_fd| as reference. See |openat(2)|.
+FXL_EXPORT bool DeletePathAt(int root_fd, const std::string& path,
+                             bool recursive);
 
 }  // namespace files
 

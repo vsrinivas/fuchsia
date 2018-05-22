@@ -31,7 +31,7 @@ TEST(MakeCopyableTest, Mutable) {
   *src = 42;
   std::unique_ptr<int> dest;
   std::function<void()> mutable_func = fxl::MakeCopyable(
-      [&dest, src = std::move(src) ]() mutable { dest = std::move(src); });
+      [&dest, src = std::move(src)]() mutable { dest = std::move(src); });
   mutable_func();
   EXPECT_EQ(42, *dest);
 }
