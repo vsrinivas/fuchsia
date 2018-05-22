@@ -282,9 +282,7 @@ func (c *Client) Send(b Buffer) error {
 		return err
 	}
 	c.sendbuf = append(c.sendbuf, c.arena.entry(b))
-	entries, entriesSize := fifoEntries(c.sendbuf)
-	var count uint32
-	status := zx.Sys_fifo_write_old(c.tx, entries, entriesSize, &count)
+	status, count := fifoWrite(c.tx, c.sendbuf)
 	copy(c.sendbuf, c.sendbuf[count:])
 	c.sendbuf = c.sendbuf[:len(c.sendbuf)-int(count)]
 	if status != zx.ErrOk && status != zx.ErrShouldWait {
@@ -304,15 +302,21 @@ func (c *Client) Free(b Buffer) {
 	c.arena.free(c, b)
 }
 
-func fifoEntries(b []bufferEntry) (unsafe.Pointer, uint) {
-	return unsafe.Pointer(&b[0]), uint(unsafe.Sizeof(b[0])) * uint(len(b))
+func fifoWrite(handle zx.Handle, b []bufferEntry) (zx.Status, uint) {
+    var actual uint
+    status := zx.Sys_fifo_write(handle, uint(unsafe.Sizeof(b[0])), unsafe.Pointer(&b[0]), uint(len(b)), &actual)
+    return status, actual
+}
+
+func fifoRead(handle zx.Handle, b []bufferEntry) (zx.Status, uint) {
+    var actual uint
+    status := zx.Sys_fifo_read(handle, uint(unsafe.Sizeof(b[0])), unsafe.Pointer(&b[0]), uint(len(b)), &actual)
+    return status, actual
 }
 
 func (c *Client) txCompleteLocked() (bool, error) {
 	buf := c.tmpbuf[:c.txDepth]
-	entries, entriesSize := fifoEntries(buf)
-	var count uint32
-	status := zx.Sys_fifo_read_old(c.tx, entries, entriesSize, &count)
+	status, count := fifoRead(c.tx, buf)
 	n := int(count)
 
 	c.txInFlight -= n
@@ -347,9 +351,7 @@ func (c *Client) Recv() (b Buffer, err error) {
 	if len(c.recvbuf) > 0 {
 		return c.popRecvLocked(), nil
 	}
-	entries, entriesSize := fifoEntries(c.recvbuf[:cap(c.recvbuf)])
-	var count uint32
-	status := zx.Sys_fifo_read_old(c.rx, entries, entriesSize, &count)
+	status, count := fifoRead(c.rx, c.recvbuf[:cap(c.recvbuf)])
 	n := int(count)
 	c.recvbuf = c.recvbuf[:n]
 	c.rxInFlight -= n
@@ -371,9 +373,7 @@ func (c *Client) rxCompleteLocked() error {
 	if len(buf) == 0 {
 		return nil // nothing to do
 	}
-	entries, entriesSize := fifoEntries(buf)
-	var count uint32
-	status := zx.Sys_fifo_write_old(c.rx, entries, entriesSize, &count)
+	status, count := fifoWrite(c.rx, buf)
 	for _, entry := range buf[count:] {
 		b := c.arena.bufferFromEntry(entry)
 		c.arena.free(c, b)
