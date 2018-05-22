@@ -42,9 +42,15 @@
 typedef struct xdc_instance {
     zx_device_t* zxdev;
     xdc_t* parent;
+
+    // Whether the instance has registered a stream ID.
+    bool has_stream_id;
     // ID of stream that this instance is reading and writing from.
+    // Only valid if has_stream_id is true.
     uint32_t stream_id;
-    atomic_bool dead;
+    bool dead;
+    // Needs to be acquired before accessing the stream_id or dead members.
+    mtx_t lock;
 
     // For storing this instance in the parent's instance_list.
     list_node_t node;
@@ -245,14 +251,64 @@ static zx_status_t xdc_write_instance(void* ctx, const void* buf, size_t count,
                                       zx_off_t off, size_t* actual) {
     xdc_instance_t* inst = ctx;
 
-    if (atomic_load(&inst->dead)) {
+    mtx_lock(&inst->lock);
+
+    if (inst->dead) {
+        mtx_unlock(&inst->lock);
         return ZX_ERR_PEER_CLOSED;
     }
-    return xdc_write(inst->parent, inst->stream_id, buf, count, actual);
+    if (!inst->has_stream_id) {
+        zxlogf(ERROR, "write failed, instance %p did not register for a stream id\n", inst);
+        mtx_unlock(&inst->lock);
+        return ZX_ERR_BAD_STATE;
+    }
+    uint32_t stream_id = inst->stream_id;
+
+    mtx_unlock(&inst->lock);
+
+    return xdc_write(inst->parent, stream_id, buf, count, actual);
 }
 
- static zx_status_t xdc_ioctl_instance(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                                       void* out_buf, size_t out_len, size_t* out_actual) {
+// Sets the stream id for the device instance.
+// Returns ZX_OK if successful, or ZX_ERR_INVALID_ARGS if the stream id is unavailable.
+static zx_status_t xdc_register_stream(xdc_instance_t* inst, uint32_t stream_id) {
+    xdc_t* xdc = inst->parent;
+
+    if (stream_id == DEBUG_STREAM_ID_RESERVED) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    mtx_lock(&xdc->instance_list_lock);
+
+    xdc_instance_t* test_inst;
+    list_for_every_entry(&xdc->instance_list, test_inst, xdc_instance_t, node) {
+        mtx_lock(&test_inst->lock);
+        // We can only register the stream id if no one else already has.
+        if (test_inst->stream_id == stream_id) {
+            zxlogf(ERROR, "stream id %u was already registered\n", stream_id);
+            mtx_unlock(&test_inst->lock);
+            mtx_unlock(&xdc->instance_list_lock);
+            return ZX_ERR_INVALID_ARGS;
+        }
+        mtx_unlock(&test_inst->lock);
+    }
+
+    mtx_lock(&inst->lock);
+    inst->stream_id = stream_id;
+    inst->has_stream_id = true;
+    mtx_unlock(&inst->lock);
+
+    mtx_unlock(&xdc->instance_list_lock);
+
+    // TODO(jocelyndang): set instance as writable if / when we are notified that the
+    // stream id has been registered on the host side.
+
+    zxlogf(TRACE, "registered stream id %u\n", stream_id);
+    return ZX_OK;
+}
+
+static zx_status_t xdc_ioctl_instance(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
+                                      void* out_buf, size_t out_len, size_t* out_actual) {
     xdc_instance_t* inst = ctx;
 
     switch (op) {
@@ -261,8 +317,7 @@ static zx_status_t xdc_write_instance(void* ctx, const void* buf, size_t count,
             return ZX_ERR_INVALID_ARGS;
         }
         uint32_t stream_id = *((int *)in_buf);
-        inst->stream_id = stream_id;
-        return ZX_OK;
+        return xdc_register_stream(inst, stream_id);
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -270,7 +325,9 @@ static zx_status_t xdc_write_instance(void* ctx, const void* buf, size_t count,
 
 static zx_status_t xdc_close_instance(void* ctx, uint32_t flags) {
     xdc_instance_t* inst = ctx;
-    atomic_store(&inst->dead, true);
+    mtx_lock(&inst->lock);
+    inst->dead = true;
+    mtx_unlock(&inst->lock);
 
     mtx_lock(&inst->parent->instance_list_lock);
     list_delete(&inst->node);
@@ -317,19 +374,9 @@ static zx_status_t xdc_open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
 
     inst->parent = xdc;
 
-    mtx_lock(&xdc->write_lock);
     mtx_lock(&xdc->instance_list_lock);
-
     list_add_tail(&xdc->instance_list, &inst->node);
-
-    if (xdc->writable) {
-        device_state_set(inst->zxdev, DEV_STATE_WRITABLE);
-    } else {
-        device_state_clr(inst->zxdev, DEV_STATE_WRITABLE);
-    }
-
     mtx_unlock(&xdc->instance_list_lock);
-    mtx_unlock(&xdc->write_lock);
 
     *dev_out = inst->zxdev;
     return ZX_OK;
@@ -418,9 +465,13 @@ static void xdc_unbind(void* ctx) {
     mtx_lock(&xdc->instance_list_lock);
     xdc_instance_t* inst;
     list_for_every_entry(&xdc->instance_list, inst, xdc_instance_t, node) {
-        atomic_store(&inst->dead, true);
+        mtx_lock(&inst->lock);
+
+        inst->dead = true;
         // Signal any waiting instances to wake up, so they will close the instance.
         device_state_set(inst->zxdev, DEV_STATE_WRITABLE | DEV_STATE_READABLE);
+
+        mtx_unlock(&inst->lock);
     }
     mtx_unlock(&xdc->instance_list_lock);
 
@@ -444,7 +495,12 @@ static void xdc_update_write_signal_locked(xdc_t* xdc, bool online)
     mtx_lock(&xdc->instance_list_lock);
     xdc_instance_t* inst;
     list_for_every_entry(&xdc->instance_list, inst, xdc_instance_t, node) {
-        if (atomic_load(&inst->dead)) {
+        mtx_lock(&inst->lock);
+
+        // TODO(jocelyndang): we should also check that the stream id
+        // has been registered on the host side.
+        if (inst->dead || !inst->has_stream_id) {
+            mtx_unlock(&inst->lock);
             continue;
         }
         if (xdc->writable) {
@@ -452,6 +508,8 @@ static void xdc_update_write_signal_locked(xdc_t* xdc, bool online)
         } else {
             device_state_clr(inst->zxdev, DEV_STATE_WRITABLE);
         }
+
+        mtx_unlock(&inst->lock);
     }
     mtx_unlock(&xdc->instance_list_lock);
 }
