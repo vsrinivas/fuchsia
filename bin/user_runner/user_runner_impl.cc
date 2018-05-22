@@ -577,7 +577,7 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
       session_storage_.get(), std::move(story_shell), component_context_info,
       std::move(focus_provider_story_provider),
       user_intelligence_provider_.get(), module_resolver_service_.get(),
-      presentation_provider_impl_.get(), test_));
+      entity_provider_runner_.get(), presentation_provider_impl_.get(), test_));
   story_provider_impl_->Connect(std::move(story_provider_request));
 
   AtEnd(Teardown(kStoryProviderTimeout, "fuchsia::modular::StoryProvider",

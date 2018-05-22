@@ -13,6 +13,7 @@
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/command_line.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/module_resolver/local_module_resolver.h"
@@ -34,15 +35,11 @@ class ModuleResolverApp : fuchsia::modular::ContextListener {
     fuchsia::modular::ComponentContextPtr component_context;
     context_->ConnectToEnvironmentService<fuchsia::modular::ComponentContext>(
         component_context.NewRequest());
-    fuchsia::modular::EntityResolverPtr entity_resolver;
-    component_context->GetEntityResolver(entity_resolver.NewRequest());
-
     context->ConnectToEnvironmentService(intelligence_services_.NewRequest());
 
     intelligence_services_->GetContextReader(context_reader_.NewRequest());
 
-    resolver_impl_ =
-        std::make_unique<LocalModuleResolver>(std::move(entity_resolver));
+    resolver_impl_ = std::make_unique<LocalModuleResolver>();
     // Set up |resolver_impl_|.
     resolver_impl_->AddSource("module_package",
                               std::make_unique<ModulePackageSource>(context));
@@ -88,6 +85,10 @@ class ModuleResolverApp : fuchsia::modular::ContextListener {
 
   void Terminate(const std::function<void()>& done) { done(); }
 
+ private:
+  using QueryParamName = std::string;
+
+  // |ContextListener|
   void OnContextUpdate(fuchsia::modular::ContextUpdate update) override {
     fidl::VectorPtr<fuchsia::modular::ContextValue> values;
     for (auto& entry : *update.values) {
@@ -100,64 +101,59 @@ class ModuleResolverApp : fuchsia::modular::ContextListener {
       return;
     }
 
-    fuchsia::modular::ResolverQuery query;
+    fuchsia::modular::FindModulesByTypesQuery query;
     // The story id to be extracted from the context update.
     std::string story_id;
 
+    std::map<QueryParamName, fuchsia::modular::LinkMetadata> remember;
     for (const auto& value : *values) {
       if (!value.meta.story || !value.meta.link || !value.meta.entity) {
         continue;
       }
       story_id = value.meta.story->id;
-
+      value.meta.link->Clone(&remember[value.meta.link->name]);
+      query.parameter_constraints.resize(0);
       query.parameter_constraints.push_back(
-          CreateResolverParameterConstraintFromContextValue(value));
+          CreateParameterConstraintFromContextValue(value));
     }
 
-    resolver_impl_->FindModules(
+    resolver_impl_->FindModulesByTypes(
         std::move(query),
-        [this, story_id](const fuchsia::modular::FindModulesResult& result) {
-          std::vector<fuchsia::modular::Proposal> new_proposals;
-          std::vector<fuchsia::modular::Intent>
-              new_intents;  // Only for comparison.
-          int proposal_count = 0;
-          for (const auto& module : *result.modules) {
-            fuchsia::modular::Intent intent;
-            new_proposals.push_back(CreateProposalFromModuleResolverResult(
-                module, story_id, proposal_count++, &intent));
-            new_intents.push_back(std::move(intent));
-          }
-
-          // Compare the old intents and the new intents. This is a proxy
-          // for comparing the set of proposals themselves, because proposals
-          // cannot be cloned, which makes it hard to compare them.
-          bool push_new_proposals = true;
-          if (new_intents.size() == current_proposal_intents_.size()) {
-            push_new_proposals = false;
-            for (uint32_t i = 0; i < new_intents.size(); ++i) {
-              if (new_intents[i] != current_proposal_intents_[i]) {
-                push_new_proposals = true;
-                break;
+        fxl::MakeCopyable(
+            [this, story_id, remember = std::move(remember)](
+                const fuchsia::modular::FindModulesByTypesResponse&
+                    response) mutable {
+              std::vector<fuchsia::modular::Proposal> new_proposals;
+              std::vector<fuchsia::modular::Intent>
+                  new_intents;  // Only for comparison.
+              int proposal_count = 0;
+              for (const auto& module_result : *response.results) {
+                fuchsia::modular::Intent intent;
+                new_proposals.push_back(CreateProposalFromModuleResolverResult(
+                    module_result, story_id, proposal_count++, remember,
+                    &intent));
+                new_intents.push_back(std::move(intent));
               }
-            }
-          }
 
-          if (push_new_proposals) {
-            // Make sure to remove any existing proposal before creating new
-            // ones. This
-            // is outside the find call to make sure that stale suggestions are
-            // cleared regardless of the resolver results.
-            for (const auto& proposal_id : current_proposal_ids_) {
-              proposal_publisher_->Remove(proposal_id);
-            }
-            current_proposal_ids_.clear();
-            for (uint32_t i = 0; i < new_proposals.size(); ++i) {
-              current_proposal_ids_.push_back(new_proposals[i].id);
-              proposal_publisher_->Propose(std::move(new_proposals[i]));
-            }
-            current_proposal_intents_ = std::move(new_intents);
-          }
-        });
+              // This is a proxy for comparing the set of proposals themselves,
+              // because proposals cannot be cloned, which makes it hard to
+              // compare them.
+              if (new_intents == current_proposal_intents_) {
+                return;
+              }
+              // Make sure to remove any existing proposal before creating new
+              // ones. This is outside the find call to make sure that stale
+              // suggestions are cleared regardless of the resolver results.
+              for (const auto& proposal_id : current_proposal_ids_) {
+                proposal_publisher_->Remove(proposal_id);
+              }
+              current_proposal_ids_.clear();
+              for (uint32_t i = 0; i < new_proposals.size(); ++i) {
+                current_proposal_ids_.push_back(new_proposals[i].id);
+                proposal_publisher_->Propose(std::move(new_proposals[i]));
+              }
+              current_proposal_intents_ = std::move(new_intents);
+            }));
   }
 
   // Creates a new proposal from the contents of the provided module resolver
@@ -167,44 +163,41 @@ class ModuleResolverApp : fuchsia::modular::ContextListener {
   // |proposal_id| is the id of the created proposal, which will also be cached
   // in |current_proposal_ids_|.
   fuchsia::modular::Proposal CreateProposalFromModuleResolverResult(
-      const fuchsia::modular::ModuleResolverResult& module_result,
+      const fuchsia::modular::FindModulesByTypesResult& module_result,
       const std::string& story_id, int proposal_id,
+      const std::map<QueryParamName, fuchsia::modular::LinkMetadata>& remember,
       fuchsia::modular::Intent* intent_out) {
     fuchsia::modular::Intent intent;
     intent.action.handler = module_result.module_id;
     fidl::VectorPtr<fuchsia::modular::IntentParameter> parameters;
     fidl::VectorPtr<fidl::StringPtr> parent_mod_path;
 
-    for (const fuchsia::modular::CreateModuleParameterMapEntry& entry :
-         *module_result.create_parameter_map_info.property_info) {
+    for (const auto& mapping : *module_result.parameter_mappings) {
       fuchsia::modular::IntentParameter parameter;
-      parameter.name = entry.key;
-      fuchsia::modular::IntentParameterData parameter_data;
-      const auto& create_param_info = entry.value;
-      if (create_param_info.is_link_path()) {
-        fuchsia::modular::LinkPath link_path;
-        fidl::Clone(create_param_info.link_path(), &link_path);
-        parameter_data.set_link_path(std::move(link_path));
-        if (!parent_mod_path) {
-          // TODO(thatguy): Mod parent-child relationships are critical for the
-          // story shell, and right now the Framework only guarantees mod
-          // startup ordering based only on Module parent-child relationships:
-          // parent mods are always restarted before child mods. The Story
-          // Shell relies on this ordering to be deterministic: if we added
-          // modA before modB the first time around when creating the story,
-          // modB *must* be a descendant of modA. This method of using the
-          // link's module_path of the first link-based parameter we find
-          // expresses, in short "use the owner of the first shared link
-          // between this mod and another mod as the parent".
-          // MS-1473
-          parent_mod_path = parameter_data.link_path().module_path.Clone();
-        }
-      } else if (create_param_info.is_create_link()) {
-        parameter_data.set_entity_reference(
-            create_param_info.create_link().initial_data);
-      }
-      parameter.data = std::move(parameter_data);
+      parameter.name = mapping.result_param_name;
+
+      const auto& metadata = remember.at(mapping.query_constraint_name.get());
+      fuchsia::modular::LinkPath link_path;
+      link_path.module_path = metadata.module_path.Clone();
+      link_path.link_name = metadata.name;
+
+      parameter.data.set_link_path(std::move(link_path));
       parameters.push_back(std::move(parameter));
+
+      if (!parent_mod_path) {
+        // TODO(thatguy): Mod parent-child relationships are critical for the
+        // story shell, and right now the Framework only guarantees mod
+        // startup ordering based only on Module parent-child relationships:
+        // parent mods are always restarted before child mods. The Story
+        // Shell relies on this ordering to be deterministic: if we added
+        // modA before modB the first time around when creating the story,
+        // modB *must* be a descendant of modA. This method of using the
+        // link's module_path of the first link-based parameter we find
+        // expresses, in short "use the owner of the first shared link
+        // between this mod and another mod as the parent".
+        // MS-1473
+        parent_mod_path = metadata.module_path.Clone();
+      }
     }
     intent.parameters = std::move(parameters);
 
@@ -240,31 +233,13 @@ class ModuleResolverApp : fuchsia::modular::ContextListener {
   //
   // |value| must contain |entity| and |link| in its |meta|. This is to ensure
   // that link_info can be constructed for the parameter constraint.
-  fuchsia::modular::ResolverParameterConstraintEntry
-  CreateResolverParameterConstraintFromContextValue(
+  fuchsia::modular::FindModulesByTypesParameterConstraint
+  CreateParameterConstraintFromContextValue(
       const fuchsia::modular::ContextValue& value) {
-    fidl::VectorPtr<fidl::StringPtr> entity_types =
-        value.meta.entity->type.Clone();
-    const fuchsia::modular::LinkMetadataPtr& link_metadata = value.meta.link;
-
-    fuchsia::modular::ResolverLinkInfo link_info;
-    fuchsia::modular::LinkPath link_path;
-    link_path.module_path = link_metadata->module_path.Clone();
-    link_path.link_name = link_metadata->name;
-    link_info.path = std::move(link_path);
-
-    fuchsia::modular::LinkAllowedTypes link_allowed_types;
-    link_allowed_types.allowed_entity_types = std::move(entity_types);
-    link_info.allowed_types = fidl::MakeOptional(std::move(link_allowed_types));
-
-    fuchsia::modular::ResolverParameterConstraint parameter_constraint;
-    parameter_constraint.set_link_info(std::move(link_info));
-
-    fuchsia::modular::ResolverParameterConstraintEntry
-        parameter_constraint_entry;
-    parameter_constraint_entry.key = link_metadata->name;
-    parameter_constraint_entry.constraint = std::move(parameter_constraint);
-    return parameter_constraint_entry;
+    fuchsia::modular::FindModulesByTypesParameterConstraint entry;
+    entry.constraint_name = value.meta.link->name;
+    entry.param_types = value.meta.entity->type.Clone();
+    return entry;
   }
 
  private:

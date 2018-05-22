@@ -5,6 +5,7 @@
 #include "peridot/bin/module_resolver/local_module_resolver.h"
 
 #include "lib/entity/cpp/json.h"
+#include "lib/fsl/types/type_converters.h"
 #include "lib/fxl/files/file.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "lib/module_resolver/cpp/formatting.h"
@@ -12,150 +13,6 @@
 
 namespace modular {
 namespace {
-
-// Returns pair<true, ..> if key found, else <false, nullptr>.
-std::pair<bool, const fuchsia::modular::CreateModuleParameterInfo*> GetProperty(
-    const fuchsia::modular::CreateModuleParameterMapInfo& map_info,
-    const std::string& key) {
-  for (auto& it : *map_info.property_info) {
-    if (it.key == key) {
-      return std::make_pair<bool,
-                            const fuchsia::modular::CreateModuleParameterInfo*>(
-          true, &it.value);
-    }
-  }
-
-  return std::make_pair<bool, fuchsia::modular::CreateModuleParameterInfo*>(
-      false, nullptr);
-}
-
-class QueryBuilder {
- public:
-  QueryBuilder() : query(fuchsia::modular::ResolverQuery()) {}
-  QueryBuilder(std::string action) : query(fuchsia::modular::ResolverQuery()) {
-    SetAction(action);
-  }
-
-  fuchsia::modular::ResolverQuery build() { return std::move(query); }
-
-  QueryBuilder& SetHandler(std::string handler) {
-    query.handler = handler;
-    return *this;
-  }
-
-  QueryBuilder& SetAction(std::string action) {
-    query.action = action;
-    return *this;
-  }
-
-  // Creates a parameter that's just fuchsia::modular::Entity types.
-  QueryBuilder& AddParameterTypes(std::string name,
-                                  std::vector<std::string> types) {
-    fuchsia::modular::ResolverParameterConstraint parameter;
-    fidl::VectorPtr<fidl::StringPtr> types_array;
-    types_array->reserve(types.size());
-    for (auto& type : types) {
-      types_array->emplace_back(std::move(type));
-    }
-    parameter.set_entity_type(std::move(types_array));
-    fuchsia::modular::ResolverParameterConstraintEntry
-        resolver_parameter_constraint_entry;
-    resolver_parameter_constraint_entry.key = name;
-    resolver_parameter_constraint_entry.constraint = std::move(parameter);
-    query.parameter_constraints.push_back(
-        std::move(resolver_parameter_constraint_entry));
-    return *this;
-  }
-
-  QueryBuilder& AddEntityParameter(std::string name,
-                                   std::string entity_reference) {
-    fuchsia::modular::ResolverParameterConstraint parameter;
-    parameter.set_entity_reference(entity_reference);
-    fuchsia::modular::ResolverParameterConstraintEntry
-        resolver_parameter_constraint_entry;
-    resolver_parameter_constraint_entry.key = name;
-    resolver_parameter_constraint_entry.constraint = std::move(parameter);
-    query.parameter_constraints.push_back(
-        std::move(resolver_parameter_constraint_entry));
-    return *this;
-  }
-
-  // Creates a parameter that's made of JSON content.
-  QueryBuilder& AddJsonParameter(std::string name, std::string json) {
-    fuchsia::modular::ResolverParameterConstraint parameter;
-    parameter.set_json(json);
-    fuchsia::modular::ResolverParameterConstraintEntry
-        resolver_parameter_constraint_entry;
-    resolver_parameter_constraint_entry.key = name;
-    resolver_parameter_constraint_entry.constraint = std::move(parameter);
-    query.parameter_constraints.push_back(
-        std::move(resolver_parameter_constraint_entry));
-    return *this;
-  }
-
-  // |path_parts| is a pair of { module path array, link name }.
-  QueryBuilder& AddLinkInfoParameterWithContent(
-      std::string name,
-      std::pair<std::vector<std::string>, std::string> path_parts,
-      std::string entity_reference) {
-    fuchsia::modular::LinkPath link_path;
-    link_path.module_path->reserve(path_parts.first.size());
-    for (auto& part : path_parts.first) {
-      link_path.module_path->emplace_back(std::move(part));
-    }
-    link_path.link_name = path_parts.second;
-
-    fuchsia::modular::ResolverLinkInfo link_info;
-    link_info.path = std::move(link_path);
-    link_info.content_snapshot = EntityReferenceToJson(entity_reference);
-
-    fuchsia::modular::ResolverParameterConstraint parameter;
-    parameter.set_link_info(std::move(link_info));
-    fuchsia::modular::ResolverParameterConstraintEntry
-        resolver_parameter_constraint_entry;
-    resolver_parameter_constraint_entry.key = name;
-    resolver_parameter_constraint_entry.constraint = std::move(parameter);
-    query.parameter_constraints.push_back(
-        std::move(resolver_parameter_constraint_entry));
-    return *this;
-  }
-
-  // |path_parts| is a pair of { module path array, link name }.
-  QueryBuilder& AddLinkInfoParameterWithTypeConstraints(
-      std::string name,
-      std::pair<std::vector<std::string>, std::string> path_parts,
-      std::vector<std::string> allowed_types) {
-    fuchsia::modular::LinkPath link_path;
-    link_path.module_path->reserve(path_parts.first.size());
-    for (auto& part : path_parts.first) {
-      link_path.module_path->emplace_back(std::move(part));
-    }
-    link_path.link_name = path_parts.second;
-
-    fuchsia::modular::ResolverLinkInfo link_info;
-    link_info.path = std::move(link_path);
-    link_info.allowed_types = fuchsia::modular::LinkAllowedTypes::New();
-    link_info.allowed_types->allowed_entity_types->reserve(
-        allowed_types.size());
-    for (auto& type : allowed_types) {
-      link_info.allowed_types->allowed_entity_types->emplace_back(
-          std::move(type));
-    }
-
-    fuchsia::modular::ResolverParameterConstraint parameter;
-    parameter.set_link_info(std::move(link_info));
-    fuchsia::modular::ResolverParameterConstraintEntry
-        resolver_parameter_constraint_entry;
-    resolver_parameter_constraint_entry.key = name;
-    resolver_parameter_constraint_entry.constraint = std::move(parameter);
-    query.parameter_constraints.push_back(
-        std::move(resolver_parameter_constraint_entry));
-    return *this;
-  }
-
- private:
-  fuchsia::modular::ResolverQuery query;
-};
 
 class TestManifestSource : public ModuleManifestSource {
  public:
@@ -172,15 +29,12 @@ class TestManifestSource : public ModuleManifestSource {
   }
 };
 
-class LocalModuleResolverTest : public gtest::TestLoopFixture {
+class FindModulesTest : public gtest::TestLoopFixture {
  protected:
   void ResetResolver() {
-    fuchsia::modular::EntityResolverPtr entity_resolver_ptr;
-    entity_resolver_.reset(new EntityResolverFake());
-    entity_resolver_->Connect(entity_resolver_ptr.NewRequest());
     // TODO: |impl_| will fail to resolve any queries whose parameters are
     // entity references.
-    impl_.reset(new LocalModuleResolver(std::move(entity_resolver_ptr)));
+    impl_.reset(new LocalModuleResolver());
     for (auto entry : test_sources_) {
       impl_->AddSource(entry.first,
                        std::unique_ptr<ModuleManifestSource>(entry.second));
@@ -196,40 +50,134 @@ class LocalModuleResolverTest : public gtest::TestLoopFixture {
     return ptr;
   }
 
-  fidl::StringPtr AddEntity(std::map<std::string, std::string> entity_data) {
-    return entity_resolver_->AddEntity(std::move(entity_data));
-  }
-
-  void FindModules(fuchsia::modular::ResolverQuery query) {
-    auto scoring_info = fuchsia::modular::ResolverScoringInfo::New();
-
+  void FindModules(fuchsia::modular::FindModulesQuery query) {
     bool got_response = false;
     resolver_->FindModules(
-        std::move(query), nullptr /* scoring_info */,
-        [this,
-         &got_response](const fuchsia::modular::FindModulesResult& result) {
+        std::move(query),
+        [this, &got_response](fuchsia::modular::FindModulesResponse response) {
           got_response = true;
-          result.Clone(&result_);
+          response.Clone(&response_);
         });
-        RunLoopUntilIdle();
-        ASSERT_TRUE(got_response);
+    RunLoopUntilIdle();
+    ASSERT_TRUE(got_response);
   }
 
-  const fidl::VectorPtr<fuchsia::modular::ModuleResolverResult>& results()
-      const {
-    return result_.modules;
+  const fidl::VectorPtr<fuchsia::modular::FindModulesResult>& results() const {
+    return response_.results;
   }
+
+  class QueryBuilder {
+   public:
+    QueryBuilder() = delete;
+
+    QueryBuilder(std::string action)
+        : query(fuchsia::modular::FindModulesQuery()) {
+      query.action = action;
+      query.parameter_constraints.resize(0);
+    }
+
+    fuchsia::modular::FindModulesQuery build() { return std::move(query); }
+
+    QueryBuilder& AddParameter(std::string name,
+                               std::vector<std::string> types) {
+      fuchsia::modular::FindModulesParameterConstraint constraint;
+      constraint.param_name = name;
+      constraint.param_types = fxl::To<fidl::VectorPtr<fidl::StringPtr>>(types);
+      query.parameter_constraints.push_back(std::move(constraint));
+      return *this;
+    }
+
+   private:
+    fuchsia::modular::FindModulesQuery query;
+  };
 
   std::unique_ptr<LocalModuleResolver> impl_;
-  std::unique_ptr<EntityResolverFake> entity_resolver_;
 
   std::map<std::string, ModuleManifestSource*> test_sources_;
   fuchsia::modular::ModuleResolverPtr resolver_;
 
-  fuchsia::modular::FindModulesResult result_;
+  fuchsia::modular::FindModulesResponse response_;
 };
 
-TEST_F(LocalModuleResolverTest, Null) {
+class FindModulesByTypesTest : public gtest::TestLoopFixture {
+ protected:
+  void ResetResolver() {
+    // TODO: |impl_| will fail to resolve any queries whose parameters are
+    // entity references.
+    impl_.reset(new LocalModuleResolver());
+    for (auto entry : test_sources_) {
+      impl_->AddSource(entry.first,
+                       std::unique_ptr<ModuleManifestSource>(entry.second));
+    }
+    test_sources_.clear();
+    impl_->Connect(resolver_.NewRequest());
+  }
+
+  TestManifestSource* AddSource(std::string name) {
+    // Ownership given to |impl_| in ResetResolver().
+    auto ptr = new TestManifestSource;
+    test_sources_.emplace(name, ptr);
+    return ptr;
+  }
+
+  void FindModulesByTypes(fuchsia::modular::FindModulesByTypesQuery query) {
+    bool got_response = false;
+    resolver_->FindModulesByTypes(
+        std::move(query),
+        [this,
+         &got_response](fuchsia::modular::FindModulesByTypesResponse response) {
+          got_response = true;
+          response.Clone(&response_);
+        });
+    RunLoopUntilIdle();
+    ASSERT_TRUE(got_response);
+  }
+
+  const fidl::VectorPtr<fuchsia::modular::FindModulesByTypesResult>& results()
+      const {
+    return response_.results;
+  }
+
+  class QueryBuilder {
+   public:
+    fuchsia::modular::FindModulesByTypesQuery build() {
+      return std::move(query);
+    }
+
+    QueryBuilder& AddParameter(std::string name,
+                               std::vector<std::string> types) {
+      fuchsia::modular::FindModulesByTypesParameterConstraint constraint;
+      constraint.constraint_name = name;
+      constraint.param_types = fxl::To<fidl::VectorPtr<fidl::StringPtr>>(types);
+      query.parameter_constraints.push_back(std::move(constraint));
+      return *this;
+    }
+
+   private:
+    fuchsia::modular::FindModulesByTypesQuery query;
+  };
+
+  std::string GetMappingFromQuery(
+      const fidl::VectorPtr<
+          fuchsia::modular::FindModulesByTypesParameterMapping>& mapping,
+      std::string query_constraint_name) {
+    for (auto& item : *mapping) {
+      if (item.query_constraint_name == query_constraint_name) {
+        return item.result_param_name;
+      }
+    }
+    return "";
+  }
+
+  std::unique_ptr<LocalModuleResolver> impl_;
+
+  std::map<std::string, ModuleManifestSource*> test_sources_;
+  fuchsia::modular::ModuleResolverPtr resolver_;
+
+  fuchsia::modular::FindModulesByTypesResponse response_;
+};
+
+TEST_F(FindModulesTest, Null) {
   auto source = AddSource("test");
   ResetResolver();
 
@@ -239,36 +187,13 @@ TEST_F(LocalModuleResolverTest, Null) {
   source->add("1", std::move(entry));
   source->idle();
 
-  auto query = QueryBuilder("no matchy!").build();
-
-  FindModules(std::move(query));
+  FindModules(QueryBuilder("no matchy!").build());
 
   // The Resolver returns an empty candidate list
   ASSERT_EQ(0lu, results()->size());
 }
 
-TEST_F(LocalModuleResolverTest, ExplicitUrl) {
-  auto source = AddSource("test");
-  ResetResolver();
-
-  fuchsia::modular::ModuleManifest entry;
-  entry.binary = "no see this";
-  entry.action = "verb";
-  source->add("1", std::move(entry));
-  source->idle();
-
-  auto query = QueryBuilder("action").SetHandler("another URL").build();
-
-  FindModules(std::move(query));
-
-  // Even though the query has a action set that matches another Module, we
-  // ignore it and prefer only the one URL. It's OK that the referenced Module
-  // ("another URL") doesn't have a manifest entry.
-  ASSERT_EQ(1u, results()->size());
-  EXPECT_EQ("another URL", results()->at(0).module_id);
-}
-
-TEST_F(LocalModuleResolverTest, Simpleaction) {
+TEST_F(FindModulesTest, Simpleaction) {
   // Also add Modules from multiple different sources.
   auto source1 = AddSource("test1");
   auto source2 = AddSource("test2");
@@ -295,18 +220,17 @@ TEST_F(LocalModuleResolverTest, Simpleaction) {
 
   source1->idle();
 
-  auto query = QueryBuilder("com.google.fuchsia.navigate.v1").build();
   // This is mostly the contents of the FindModules() convenience function
   // above.  It's copied here so that we can call source2->idle() before
   // RunLoopUntilIdle() for this case only.
-  auto scoring_info = fuchsia::modular::ResolverScoringInfo::New();
   bool got_response = false;
   resolver_->FindModules(
-      std::move(query), nullptr /* scoring_info */,
-      [this, &got_response](const fuchsia::modular::FindModulesResult& result) {
+      QueryBuilder("com.google.fuchsia.navigate.v1").build(),
+      [this, &got_response](fuchsia::modular::FindModulesResponse response) {
         got_response = true;
-        result.Clone(&result_);
+        response.Clone(&response_);
       });
+
   // Waiting until here to set |source2| as idle shows that FindModules() is
   // effectively delayed until all sources have indicated idle ("module2" is in
   // |source2|).
@@ -328,7 +252,7 @@ TEST_F(LocalModuleResolverTest, Simpleaction) {
   ASSERT_EQ(0lu, results()->size());
 }
 
-TEST_F(LocalModuleResolverTest, SimpleParameterTypes) {
+TEST_F(FindModulesTest, SimpleParameterTypes) {
   auto source = AddSource("test");
   ResetResolver();
 
@@ -374,182 +298,31 @@ TEST_F(LocalModuleResolverTest, SimpleParameterTypes) {
 
   // Either 'foo' or 'tangoTown' would be acceptible types. Only 'foo' will
   // actually match.
-  auto query = QueryBuilder("com.google.fuchsia.navigate.v1")
-                   .AddParameterTypes("start", {"foo", "tangoTown"})
-                   .build();
-  FindModules(std::move(query));
+  FindModules(QueryBuilder("com.google.fuchsia.navigate.v1")
+                  .AddParameter("start", {"foo", "tangoTown"})
+                  .build());
   ASSERT_EQ(1lu, results()->size());
   EXPECT_EQ("module1", results()->at(0).module_id);
 
   // This one will match one of the two parameter constraints on module1, but
   // not both, so no match at all is expected.
-  query = QueryBuilder("com.google.fuchsia.navigate.v1")
-              .AddParameterTypes("start", {"foo", "tangoTown"})
-              .AddParameterTypes("destination", {"notbaz"})
-              .build();
-  FindModules(std::move(query));
+  FindModules(QueryBuilder("com.google.fuchsia.navigate.v1")
+                  .AddParameter("start", {"foo", "tangoTown"})
+                  .AddParameter("destination", {"notbaz"})
+                  .build());
   ASSERT_EQ(0lu, results()->size());
 
-  // Given an entity of type "frob", find a module with action
+  // Given parameter of type "frob", find a module with action
   // com.google.fuchsia.navigate.v1.
-  fidl::StringPtr location_entity = AddEntity({{"frob", ""}});
-  ASSERT_TRUE(!location_entity->empty());
-
-  query = QueryBuilder("com.google.fuchsia.navigate.v1")
-              .AddEntityParameter("start", location_entity)
-              .build();
-  FindModules(std::move(query));
+  FindModules(QueryBuilder("com.google.fuchsia.navigate.v1")
+                  .AddParameter("start", {"frob"})
+                  .build());
   ASSERT_EQ(1u, results()->size());
   auto& res = results()->at(0);
   EXPECT_EQ("module2", res.module_id);
-
-  // Verify that |create_parameter_map_info| is set up correctly.
-  EXPECT_EQ(1lu, res.create_parameter_map_info.property_info->size());
-  ASSERT_TRUE(GetProperty(res.create_parameter_map_info, "start").first);
-  auto start = GetProperty(res.create_parameter_map_info, "start").second;
-  ASSERT_TRUE(start->is_create_link());
-  EXPECT_EQ(EntityReferenceToJson(location_entity),
-            start->create_link().initial_data);
-  // TODO(thatguy): Populate |allowed_types| correctly.
-  EXPECT_FALSE(start->create_link().allowed_types);
 }
 
-TEST_F(LocalModuleResolverTest, SimpleJsonParameters) {
-  auto source = AddSource("test");
-  ResetResolver();
-
-  {
-    fuchsia::modular::ModuleManifest entry;
-    entry.binary = "module1";
-    entry.action = "com.google.fuchsia.navigate.v1";
-    fuchsia::modular::ParameterConstraint parameter1;
-    parameter1.name = "start";
-    parameter1.type = "foo";
-    fuchsia::modular::ParameterConstraint parameter2;
-    parameter2.name = "destination";
-    parameter2.type = "baz";
-    entry.parameter_constraints.push_back(std::move(parameter1));
-    entry.parameter_constraints.push_back(std::move(parameter2));
-    source->add("1", std::move(entry));
-  }
-  {
-    fuchsia::modular::ModuleManifest entry;
-    entry.binary = "module2";
-    entry.action = "com.google.fuchsia.navigate.v1";
-    fuchsia::modular::ParameterConstraint parameter1;
-    parameter1.name = "start";
-    parameter1.type = "frob";
-    fuchsia::modular::ParameterConstraint parameter2;
-    parameter2.name = "destination";
-    parameter2.type = "froozle";
-    entry.parameter_constraints.push_back(std::move(parameter1));
-    entry.parameter_constraints.push_back(std::move(parameter2));
-    source->add("2", std::move(entry));
-  }
-  {
-    fuchsia::modular::ModuleManifest entry;
-    entry.binary = "module3";
-    entry.action = "com.google.fuchsia.exist.vinfinity";
-    fuchsia::modular::ParameterConstraint parameter;
-    parameter.name = "with";
-    parameter.type = "compantionCube";
-    entry.parameter_constraints.push_back(std::move(parameter));
-    source->add("3", std::move(entry));
-  }
-  source->idle();
-
-  // Same thing as above, but we'll use JSON with embedded type information and
-  // should see the same exactly results.
-  const auto startJson = R"({
-        "@type": [ "foo", "tangoTown" ],
-        "thecake": "is a lie"
-      })";
-  const auto destinationJson = R"({
-        "@type": "baz",
-        "really": "it is"
-      })";
-  auto query = QueryBuilder("com.google.fuchsia.navigate.v1")
-                   .AddJsonParameter("start", startJson)
-                   .AddJsonParameter("destination", destinationJson)
-                   .build();
-  FindModules(std::move(query));
-  ASSERT_EQ(1lu, results()->size());
-  auto& res = results()->at(0);
-  EXPECT_EQ("module1", res.module_id);
-
-  // Verify that |create_parameter_map_info| is set up correctly.
-  EXPECT_EQ(2lu, res.create_parameter_map_info.property_info->size());
-  ASSERT_TRUE(GetProperty(res.create_parameter_map_info, "start").first);
-  auto start = GetProperty(res.create_parameter_map_info, "start").second;
-  ASSERT_TRUE(start->is_create_link());
-  EXPECT_EQ(startJson, start->create_link().initial_data);
-  // TODO(thatguy): Populate |allowed_types| correctly.
-  EXPECT_FALSE(start->create_link().allowed_types);
-
-  ASSERT_TRUE(GetProperty(res.create_parameter_map_info, "destination").first);
-  auto destination =
-      GetProperty(res.create_parameter_map_info, "destination").second;
-  ASSERT_TRUE(destination->is_create_link());
-  EXPECT_EQ(destinationJson, destination->create_link().initial_data);
-  // TODO(thatguy): Populate |allowed_types| correctly.
-  EXPECT_FALSE(destination->create_link().allowed_types);
-}
-
-TEST_F(LocalModuleResolverTest, LinkInfoParameterType) {
-  auto source = AddSource("test");
-  ResetResolver();
-
-  {
-    fuchsia::modular::ModuleManifest entry;
-    entry.binary = "module1";
-    entry.action = "com.google.fuchsia.navigate.v1";
-    fuchsia::modular::ParameterConstraint parameter1;
-    parameter1.name = "start";
-    parameter1.type = "foo";
-    fuchsia::modular::ParameterConstraint parameter2;
-    parameter2.name = "destination";
-    parameter2.type = "baz";
-    entry.parameter_constraints.push_back(std::move(parameter1));
-    entry.parameter_constraints.push_back(std::move(parameter2));
-    source->add("1", std::move(entry));
-  }
-  source->idle();
-
-  // First try matching "module1" for a query that describes a
-  // fuchsia::modular::Link that already allows "foo" in the
-  // fuchsia::modular::Link.
-  auto query = QueryBuilder("com.google.fuchsia.navigate.v1")
-                   .AddLinkInfoParameterWithTypeConstraints(
-                       "start", {{"a", "b"}, "c"}, {"foo"})
-                   .build();
-  FindModules(std::move(query));
-  ASSERT_EQ(1lu, results()->size());
-  EXPECT_EQ("module1", results()->at(0).module_id);
-
-  // Same thing should happen if there aren't any allowed types, but the
-  // fuchsia::modular::Link's content encodes an fuchsia::modular::Entity
-  // reference.
-  fidl::StringPtr entity_reference = AddEntity({{"foo", ""}});
-  query = QueryBuilder("com.google.fuchsia.navigate.v1")
-              .AddLinkInfoParameterWithContent("start", {{"a", "b"}, "c"},
-                                               entity_reference)
-              .build();
-  FindModules(std::move(query));
-  ASSERT_EQ(1lu, results()->size());
-  auto& res = results()->at(0);
-  EXPECT_EQ("module1", res.module_id);
-
-  // Verify that |create_parameter_map_info| is set up correctly.
-  EXPECT_EQ(1lu, res.create_parameter_map_info.property_info->size());
-  ASSERT_TRUE(GetProperty(res.create_parameter_map_info, "start").first);
-  auto start = GetProperty(res.create_parameter_map_info, "start").second;
-  ASSERT_TRUE(start->is_link_path());
-  EXPECT_EQ("a", start->link_path().module_path->at(0));
-  EXPECT_EQ("b", start->link_path().module_path->at(1));
-  EXPECT_EQ("c", start->link_path().link_name);
-}
-
-TEST_F(LocalModuleResolverTest, ReAddExistingEntries) {
+TEST_F(FindModulesTest, ReAddExistingEntries) {
   // Add the same entry twice, to simulate what could happen during a network
   // reconnect, and show that the Module is still available.
   auto source = AddSource("test1");
@@ -577,7 +350,7 @@ TEST_F(LocalModuleResolverTest, ReAddExistingEntries) {
 
 // Tests that a query that does not contain a action or a URL matches a
 // parameter with the correct types.
-TEST_F(LocalModuleResolverTest, MatchingParameterWithNoactionOrUrl) {
+TEST_F(FindModulesByTypesTest, MatchingParameterWithNoactionOrUrl) {
   auto source = AddSource("test");
   ResetResolver();
 
@@ -594,10 +367,8 @@ TEST_F(LocalModuleResolverTest, MatchingParameterWithNoactionOrUrl) {
 
   source->idle();
 
-  auto query =
-      QueryBuilder().AddParameterTypes("start", {"foo", "bar"}).build();
-
-  FindModules(std::move(query));
+  FindModulesByTypes(
+      QueryBuilder().AddParameter("start", {"foo", "bar"}).build());
 
   ASSERT_EQ(1lu, results()->size());
   EXPECT_EQ("module1", results()->at(0).module_id);
@@ -605,7 +376,7 @@ TEST_F(LocalModuleResolverTest, MatchingParameterWithNoactionOrUrl) {
 
 // Tests that a query that does not contain a action or a URL matches when the
 // parameter types do, even if the parameter name does not.
-TEST_F(LocalModuleResolverTest, CorrectParameterTypeWithNoactionOrUrl) {
+TEST_F(FindModulesByTypesTest, CorrectParameterTypeWithNoactionOrUrl) {
   auto source = AddSource("test");
   ResetResolver();
 
@@ -622,10 +393,8 @@ TEST_F(LocalModuleResolverTest, CorrectParameterTypeWithNoactionOrUrl) {
 
   source->idle();
 
-  auto query =
-      QueryBuilder().AddParameterTypes("start", {"foo", "bar"}).build();
-
-  FindModules(std::move(query));
+  FindModulesByTypes(
+      QueryBuilder().AddParameter("start", {"foo", "bar"}).build());
 
   ASSERT_EQ(1lu, results()->size());
   EXPECT_EQ("module1", results()->at(0).module_id);
@@ -633,7 +402,7 @@ TEST_F(LocalModuleResolverTest, CorrectParameterTypeWithNoactionOrUrl) {
 
 // Tests that a query that does not contain a action or a URL returns results
 // for multiple matching entries.
-TEST_F(LocalModuleResolverTest,
+TEST_F(FindModulesByTypesTest,
        CorrectParameterTypeWithNoactionOrUrlMultipleMatches) {
   auto source = AddSource("test");
   ResetResolver();
@@ -661,10 +430,8 @@ TEST_F(LocalModuleResolverTest,
 
   source->idle();
 
-  auto query =
-      QueryBuilder().AddParameterTypes("start", {"foo", "bar"}).build();
-
-  FindModules(std::move(query));
+  FindModulesByTypes(
+      QueryBuilder().AddParameter("start", {"foo", "bar"}).build());
 
   ASSERT_EQ(2lu, results()->size());
   EXPECT_EQ("module1", results()->at(0).module_id);
@@ -673,7 +440,7 @@ TEST_F(LocalModuleResolverTest,
 
 // Tests that a query that does not contain a action or a URL does not match
 // when the parameter types don't match.
-TEST_F(LocalModuleResolverTest, IncorrectParameterTypeWithNoactionOrUrl) {
+TEST_F(FindModulesByTypesTest, IncorrectParameterTypeWithNoactionOrUrl) {
   auto source = AddSource("test");
   ResetResolver();
 
@@ -690,17 +457,15 @@ TEST_F(LocalModuleResolverTest, IncorrectParameterTypeWithNoactionOrUrl) {
 
   source->idle();
 
-  auto query =
-      QueryBuilder().AddParameterTypes("start", {"foo", "bar"}).build();
-
-  FindModules(std::move(query));
+  FindModulesByTypes(
+      QueryBuilder().AddParameter("start", {"foo", "bar"}).build());
 
   EXPECT_EQ(0lu, results()->size());
 }
 
 // Tests that a query without a action or url, that contains more parameters
 // than the potential result, still returns that result.
-TEST_F(LocalModuleResolverTest, QueryWithMoreParametersThanEntry) {
+TEST_F(FindModulesByTypesTest, QueryWithMoreParametersThanEntry) {
   auto source = AddSource("test");
   ResetResolver();
 
@@ -717,19 +482,17 @@ TEST_F(LocalModuleResolverTest, QueryWithMoreParametersThanEntry) {
 
   source->idle();
 
-  auto query = QueryBuilder()
-                   .AddParameterTypes("start", {"gps", "bar"})
-                   .AddParameterTypes("end", {"foo", "bar"})
-                   .build();
-
-  FindModules(std::move(query));
+  FindModulesByTypes(QueryBuilder()
+                         .AddParameter("start", {"gps", "bar"})
+                         .AddParameter("end", {"foo", "bar"})
+                         .build());
 
   EXPECT_EQ(1lu, results()->size());
 }
 
 // Tests that for a query with multiple parameters, each parameter gets assigned
 // to the correct module parameters.
-TEST_F(LocalModuleResolverTest, QueryWithoutActionAndMultipleParameters) {
+TEST_F(FindModulesByTypesTest, QueryWithoutActionAndMultipleParameters) {
   auto source = AddSource("test");
   ResetResolver();
 
@@ -750,35 +513,23 @@ TEST_F(LocalModuleResolverTest, QueryWithoutActionAndMultipleParameters) {
 
   source->idle();
 
-  fidl::StringPtr start_entity = AddEntity({{"gps", "gps data"}});
-  ASSERT_TRUE(!start_entity->empty());
-
-  fidl::StringPtr end_entity = AddEntity({{"not_gps", "not gps data"}});
-  ASSERT_TRUE(!end_entity->empty());
-
-  auto query = QueryBuilder()
-                   .AddEntityParameter("parameter1", start_entity)
-                   .AddEntityParameter("parameter2", end_entity)
-                   .build();
-
-  FindModules(std::move(query));
+  FindModulesByTypes(QueryBuilder()
+                         .AddParameter("parameter1", {"gps"})
+                         .AddParameter("parameter2", {"not_gps"})
+                         .build());
 
   ASSERT_EQ(1lu, results()->size());
   auto& result = results()->at(0);
 
-  EXPECT_EQ(GetProperty(result.create_parameter_map_info, "start")
-                .second->create_link()
-                .initial_data,
-            EntityReferenceToJson(start_entity));
-  EXPECT_EQ(GetProperty(result.create_parameter_map_info, "end")
-                .second->create_link()
-                .initial_data,
-            EntityReferenceToJson(end_entity));
+  EXPECT_EQ("start",
+            GetMappingFromQuery(result.parameter_mappings, "parameter1"));
+  EXPECT_EQ("end",
+            GetMappingFromQuery(result.parameter_mappings, "parameter2"));
 }
 
 // Tests that when there are multiple valid mappings of query parameter types to
 // entities, all such combinations are returned.
-TEST_F(LocalModuleResolverTest, QueryWithoutActionAndTwoParametersOfSameType) {
+TEST_F(FindModulesByTypesTest, FindModulesByTypeWithTwoParametersOfSameType) {
   auto source = AddSource("test");
   ResetResolver();
 
@@ -799,18 +550,10 @@ TEST_F(LocalModuleResolverTest, QueryWithoutActionAndTwoParametersOfSameType) {
 
   source->idle();
 
-  fidl::StringPtr start_entity = AddEntity({{"gps", "gps data one"}});
-  ASSERT_TRUE(!start_entity->empty());
-
-  fidl::StringPtr end_entity = AddEntity({{"gps", "gps data two"}});
-  ASSERT_TRUE(!end_entity->empty());
-
-  auto query = QueryBuilder()
-                   .AddEntityParameter("parameter1", start_entity)
-                   .AddEntityParameter("parameter2", end_entity)
-                   .build();
-
-  FindModules(std::move(query));
+  FindModulesByTypes(QueryBuilder()
+                         .AddParameter("parameter1", {"gps"})
+                         .AddParameter("parameter2", {"gps"})
+                         .build());
 
   EXPECT_EQ(2lu, results()->size());
 
@@ -818,24 +561,20 @@ TEST_F(LocalModuleResolverTest, QueryWithoutActionAndTwoParametersOfSameType) {
   bool found_second_mapping = false;
 
   for (const auto& result : *results()) {
-    bool start_mapped_to_start =
-        GetProperty(result.create_parameter_map_info, "start")
-            .second->create_link()
-            .initial_data == EntityReferenceToJson(start_entity);
-    bool start_mapped_to_end =
-        GetProperty(result.create_parameter_map_info, "start")
-            .second->create_link()
-            .initial_data == EntityReferenceToJson(end_entity);
-    bool end_mapped_to_end =
-        GetProperty(result.create_parameter_map_info, "end")
-            .second->create_link()
-            .initial_data == EntityReferenceToJson(end_entity);
-    bool end_mapped_to_start =
-        GetProperty(result.create_parameter_map_info, "end")
-            .second->create_link()
-            .initial_data == EntityReferenceToJson(start_entity);
-    found_first_mapping |= start_mapped_to_start && end_mapped_to_end;
-    found_second_mapping |= start_mapped_to_end && end_mapped_to_start;
+    bool start_mapped_to_p1 =
+        GetMappingFromQuery(result.parameter_mappings, "parameter1") == "start";
+
+    bool start_mapped_to_p2 =
+        GetMappingFromQuery(result.parameter_mappings, "parameter2") == "start";
+
+    bool end_mapped_to_p1 =
+        GetMappingFromQuery(result.parameter_mappings, "parameter1") == "end";
+
+    bool end_mapped_to_p2 =
+        GetMappingFromQuery(result.parameter_mappings, "parameter2") == "end";
+
+    found_first_mapping |= start_mapped_to_p1 && end_mapped_to_p2;
+    found_second_mapping |= start_mapped_to_p2 && end_mapped_to_p1;
   }
 
   EXPECT_TRUE(found_first_mapping);
@@ -844,8 +583,7 @@ TEST_F(LocalModuleResolverTest, QueryWithoutActionAndTwoParametersOfSameType) {
 
 // Tests that a query with three parameters of the same type matches an entry
 // with three expected parameters in 6 different ways.
-TEST_F(LocalModuleResolverTest,
-       QueryWithoutActionAndThreeParametersOfSameType) {
+TEST_F(FindModulesByTypesTest, QueryWithoutActionAndThreeParametersOfSameType) {
   auto source = AddSource("test");
   ResetResolver();
 
@@ -870,29 +608,18 @@ TEST_F(LocalModuleResolverTest,
 
   source->idle();
 
-  fidl::StringPtr start_entity = AddEntity({{"gps", "gps data one"}});
-  ASSERT_TRUE(!start_entity->empty());
-
-  fidl::StringPtr end_entity = AddEntity({{"gps", "gps data two"}});
-  ASSERT_TRUE(!end_entity->empty());
-
-  fidl::StringPtr middle_entity = AddEntity({{"gps", "gps data three"}});
-  ASSERT_TRUE(!middle_entity->empty());
-
-  auto query = QueryBuilder()
-                   .AddEntityParameter("parameter1", start_entity)
-                   .AddEntityParameter("parameter2", end_entity)
-                   .AddEntityParameter("parameter3", middle_entity)
-                   .build();
-
-  FindModules(std::move(query));
+  FindModulesByTypes(QueryBuilder()
+                         .AddParameter("parameter1", {"gps"})
+                         .AddParameter("parameter2", {"gps"})
+                         .AddParameter("parameter3", {"gps"})
+                         .build());
 
   EXPECT_EQ(6lu, results()->size());
 }
 
 // Tests that a query with three parameters of the same type matches an entry
 // with two expected parameters in 6 different ways.
-TEST_F(LocalModuleResolverTest,
+TEST_F(FindModulesByTypesTest,
        QueryWithoutActionAndDifferentNumberOfParametersInQueryVsEntry) {
   auto source = AddSource("test");
   ResetResolver();
@@ -914,29 +641,18 @@ TEST_F(LocalModuleResolverTest,
 
   source->idle();
 
-  fidl::StringPtr start_entity = AddEntity({{"gps", "gps data one"}});
-  ASSERT_TRUE(!start_entity->empty());
-
-  fidl::StringPtr end_entity = AddEntity({{"gps", "gps data two"}});
-  ASSERT_TRUE(!end_entity->empty());
-
-  fidl::StringPtr middle_entity = AddEntity({{"gps", "gps data three"}});
-  ASSERT_TRUE(!middle_entity->empty());
-
-  auto query = QueryBuilder()
-                   .AddEntityParameter("parameter1", start_entity)
-                   .AddEntityParameter("parameter2", end_entity)
-                   .AddEntityParameter("parameter3", middle_entity)
-                   .build();
-
-  FindModules(std::move(query));
+  FindModulesByTypes(QueryBuilder()
+                         .AddParameter("parameter1", {"gps"})
+                         .AddParameter("parameter2", {"gps"})
+                         .AddParameter("parameter3", {"gps"})
+                         .build());
 
   EXPECT_EQ(6lu, results()->size());
 }
 
 // Tests that a query without a action does not match a module that requires a
 // proper superset of the query parameters.
-TEST_F(LocalModuleResolverTest,
+TEST_F(FindModulesByTypesTest,
        QueryWithoutActionWithEntryContainingProperSuperset) {
   auto source = AddSource("test");
   ResetResolver();
@@ -958,22 +674,17 @@ TEST_F(LocalModuleResolverTest,
 
   source->idle();
 
-  fidl::StringPtr start_entity = AddEntity({{"gps", "gps data"}});
-  ASSERT_TRUE(!start_entity->empty());
-
   // The query only contains an fuchsia::modular::Entity for "parameter1", but
   // the module manifest requires two parameters of type "gps."
-  auto query =
-      QueryBuilder().AddEntityParameter("parameter1", start_entity).build();
-
-  FindModules(std::move(query));
+  FindModulesByTypes(
+      QueryBuilder().AddParameter("parameter1", {"gps"}).build());
 
   EXPECT_EQ(0lu, results()->size());
 }
 
 // Tests that a query without a action does not match an entry where the
 // parameter types are incompatible.
-TEST_F(LocalModuleResolverTest, QueryWithoutActionIncompatibleParameterTypes) {
+TEST_F(FindModulesByTypesTest, QueryWithoutActionIncompatibleParameterTypes) {
   auto source = AddSource("test");
   ResetResolver();
 
@@ -990,15 +701,10 @@ TEST_F(LocalModuleResolverTest, QueryWithoutActionIncompatibleParameterTypes) {
 
   source->idle();
 
-  fidl::StringPtr start_entity = AddEntity({{"not_gps", "not gps data"}});
-  ASSERT_TRUE(!start_entity->empty());
-
   // The query only contains an fuchsia::modular::Entity for "parameter1", but
   // the module manifest requires two parameters of type "gps."
-  auto query =
-      QueryBuilder().AddEntityParameter("parameter1", start_entity).build();
-
-  FindModules(std::move(query));
+  FindModulesByTypes(
+      QueryBuilder().AddParameter("parameter1", {"not_gps"}).build());
 
   EXPECT_EQ(0lu, results()->size());
 }
@@ -1006,8 +712,7 @@ TEST_F(LocalModuleResolverTest, QueryWithoutActionIncompatibleParameterTypes) {
 // Tests that a query with a action requires parameter name and type to match
 // (i.e. does not behave like action-less matching where the parameter names are
 // disregarded).
-TEST_F(LocalModuleResolverTest,
-       QueryWithActionMatchesBothParameterNamesAndTypes) {
+TEST_F(FindModulesTest, QueryWithActionMatchesBothParameterNamesAndTypes) {
   auto source = AddSource("test");
   ResetResolver();
 
@@ -1024,11 +729,9 @@ TEST_F(LocalModuleResolverTest,
 
   source->idle();
 
-  auto query = QueryBuilder("com.google.fuchsia.navigate.v1")
-                   .AddParameterTypes("start", {"foo", "baz"})
-                   .build();
-
-  FindModules(std::move(query));
+  FindModules(QueryBuilder("com.google.fuchsia.navigate.v1")
+                  .AddParameter("start", {"foo", "baz"})
+                  .build());
 
   EXPECT_EQ(0lu, results()->size());
 }

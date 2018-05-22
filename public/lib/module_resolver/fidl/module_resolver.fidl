@@ -7,18 +7,33 @@ library fuchsia.modular;
 [Discoverable]
 interface ModuleResolver {
   // Finds Modules (contained in Fuchsia packages) that satisfy the constraints
-  // specified in |query|. Results are returned in order according to scoring
-  // configuration and signals given in |scoring_info|.
+  // specified in |query|. Module resolution is done by matching the requested
+  // |query.action| and |query.parameter_constraints| (with both names and
+  // types) against actions and constraints specified in module manifests.
   //
-  // If no results could be found, |modules| will be empty.
-  // TODO(thatguy): Offer some kind of fallback instruction/option to clients
-  // in the case of no results.
+  // If no results could be found, |response.results| will be empty.
   //
   // For detailed information on the resolution process, see
-  // docs/module_resolution.md.
-  // TODO(thatguy): Make |scoring_info| required, when we do ranking.
-  1: FindModules(ResolverQuery query, ResolverScoringInfo? scoring_info) ->
-      (FindModulesResult result);
+  // docs/modular/module_resolution.md.
+  //
+  // TODO(thatguy): Offer some kind of fallback instruction/option to clients
+  // in the case of no results.
+  1: FindModules(FindModulesQuery query) -> (FindModulesResponse response);
+
+  // Find modules that satisfy the constraints specified in |query|. Module
+  // resolution for this method is done by matching only the requested types
+  // specified in |query.parameter_constriants|. This type of query is useful
+  // for finding possible actions that satisfy a set of parameter types.
+  //
+  // Each module result in the response will provide a mapping from the
+  // constraint names in |query| to the parameter names of a module result. If
+  // no results could be found, |response.results| will be empty.
+  2: FindModulesByTypes(FindModulesByTypesQuery query)
+      -> (FindModulesByTypesResponse response);
+
+  // If |module_id| could not be found or does not have a manifest, returns a
+  // null |contents|.
+  3: GetModuleManifest(string module_id) -> (ModuleManifest? contents);
 };
 
 // Mirrors the information present in a Intent. Where a Intent is meant to
@@ -27,89 +42,70 @@ interface ModuleResolver {
 //
 // In that role, it has references to structures and concepts that are only
 // visible within the abstraction layer of the Framework.
-struct ResolverQuery {
-  // Ignored if |handler| is set.
-  string? action;
-
-  // Set to the URL of the specific Module you wish to launch. If set, |action|
-  // is ignored.
-  // TODO(thatguy): Replace with a package ID, whenever we've landed on what
-  // exactly that looks like.
-  string? handler;
-
-  vector<ResolverParameterConstraintEntry>? parameter_constraints;
+// TODO(thatguy): Add scoring info here.
+struct FindModulesQuery {
+  string action;
+  vector<FindModulesParameterConstraint> parameter_constraints;
 };
 
-struct ResolverParameterConstraintEntry {
-  // A null key is allowed for backwards compatibility reasons, and is only
-  // allowed if |ResolverQuery.handler| is given.
-  // TODO(thatguy); When no modules use null link names any more, make this
-  // required.
-  string? key;
-  ResolverParameterConstraint constraint;
+struct FindModulesParameterConstraint {
+  string param_name;
+  vector<string> param_types;
 };
 
-union ResolverParameterConstraint {
-  // An Entity reference from which type constraints will be derived.
-  // TODO(thatguy): Have callers populate |entity_type| directly, and remove
-  // this.
-  string entity_reference;
-
-  // DEPRECATED: Use |entity_reference|.
-  string json;
-
-  // A list of Entity types.
-  vector<string> entity_type;
-
-  // Information about the state of a Link at the time this query is made.
-  // TODO(thatguy): Collapse the contents of this into |entity_type| as well,
-  // and add any other fields necessary for constraint matching.
-  ResolverLinkInfo link_info;
-};
-
-struct ResolverLinkInfo {
-  LinkPath path;
-
-  // In the cases that a Link already has type constraints on it, those are
-  // used directly instead of inferring them from an Entity value on the Link.
-  LinkAllowedTypes? allowed_types;
-
-  // If |allowed_types| is not available, an Entity reference in the Link's value
-  // can be used to get type constraint information.
-  string? content_snapshot;
-
-  // TODO(thatguy): May want to include LinkPermissions for further matching
-  // and constraint generation.
-};
-
-// TODO(thatguy): Placeholder to define the exact data (either directly contain
-// or reference) used to support scoring of returned results.  It is in support
-// of making |FindModules()| above a deterministic function.
-// The method above, as written, would not be deterministic with respect to the
-// Module Index, as that would be injected as a dependency at initialization
-// time and may change asynchronously.
-//
-// This may become a service in the future.
-struct ResolverScoringInfo {
-  uint32 dummy; // FIDL does not allow empty structs
+struct FindModulesResponse {
+  vector<FindModulesResult> results;
 };
 
 struct FindModulesResult {
-  vector<ModuleResolverResult> modules;
-};
-
-struct ModuleResolverResult {
   // The ID of the Module. For now, this is the URL of the Module binary.
   string module_id;
 
   // The Module's manifest file (see docs/manifests/module.md)
   ModuleManifest? manifest;
-
-  CreateModuleParameterMapInfo create_parameter_map_info;
-
-  ResolutionDebugInfo? debug_info;
+  // TODO(thatguy): Add debug info.
 };
 
-struct ResolutionDebugInfo {
-  uint32 dummy; // FIDL does not allow empty structs
+struct FindModulesByTypesQuery {
+  // Even though only |param_types| are used to search for possible modules,
+  // each module result comes with a mapping from constraint_name =>
+  // param_name.
+  vector<FindModulesByTypesParameterConstraint> parameter_constraints;
+};
+
+struct FindModulesByTypesParameterConstraint {
+  // This |constraint_name| is associated with a module result's |param_name|; 
+  string constraint_name;
+  vector<string> param_types;
+};
+
+struct FindModulesByTypesResponse {
+  // One result per (module_id, action, param mapping) tuple.
+  // TODO(vardhan): For efficiency, consider grouping the results differently so
+  // there aren't repeated transmissions of a manifest.
+  vector<FindModulesByTypesResult> results;
+};
+
+struct FindModulesByTypesResult {
+  float64 score;
+
+  // The ID of the Module. For now, this is the URL of the Module package.
+  string module_id;
+  string action;
+
+  // The Module's manifest file (see docs/manifests/module.md)
+  ModuleManifest? manifest;
+
+  // A list of mappings from query_constraint_name => result_param_name
+  vector<FindModulesByTypesParameterMapping> parameter_mappings;
+};
+
+// Defines a single mapping entry from a specified constraint name to a module
+// result's parameter name.
+struct FindModulesByTypesParameterMapping {
+  // This is the constraint name as specified in
+  // |FindModulesByTypesParameterConstraint.constraint_name|.
+  string query_constraint_name;
+  // This is the associated parameter name from a module result.
+  string result_param_name;
 };

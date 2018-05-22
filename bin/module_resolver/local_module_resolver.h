@@ -15,7 +15,6 @@
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "peridot/bin/module_resolver/type_inference.h"
 #include "peridot/lib/module_manifest_source/module_manifest_source.h"
 
 namespace modular {
@@ -23,7 +22,7 @@ namespace modular {
 class LocalModuleResolver : fuchsia::modular::ModuleResolver,
                             fuchsia::modular::QueryHandler {
  public:
-  LocalModuleResolver(fuchsia::modular::EntityResolverPtr entity_resolver);
+  LocalModuleResolver();
   ~LocalModuleResolver() override;
 
   // Adds a source of Module manifests to index. It is not allowed to call
@@ -36,24 +35,27 @@ class LocalModuleResolver : fuchsia::modular::ModuleResolver,
   void BindQueryHandler(
       fidl::InterfaceRequest<fuchsia::modular::QueryHandler> request);
 
-  // Finds modules matching |query|.
-  void FindModules(fuchsia::modular::ResolverQuery query,
-                   FindModulesCallback done);
+  // |ModuleResolver|
+  void FindModules(fuchsia::modular::FindModulesQuery query,
+                   FindModulesCallback callback) override;
+  // |ModuleResolver|
+  void FindModulesByTypes(fuchsia::modular::FindModulesByTypesQuery query,
+                          FindModulesByTypesCallback callback) override;
+  // |ModuleResolver|
+  void GetModuleManifest(fidl::StringPtr module_id,
+                         GetModuleManifestCallback callback) override;
 
  private:
   class FindModulesCall;
+  class FindModulesByTypesCall;
 
-  // repo name, module manifest ID
-  using EntryId = std::pair<std::string, std::string>;
+  using RepoName = std::string;
+  using ModuleId = std::string;
+  using EntryId = std::pair<RepoName, ModuleId>;
 
   // |fuchsia::modular::QueryHandler|
   void OnQuery(fuchsia::modular::UserInput query,
                OnQueryCallback done) override;
-
-  // |fuchsia::modular::ModuleResolver|
-  void FindModules(fuchsia::modular::ResolverQuery query,
-                   fuchsia::modular::ResolverScoringInfoPtr scoring_info,
-                   FindModulesCallback done) override;
 
   void OnSourceIdle(const std::string& source_name);
   void OnNewManifestEntry(const std::string& source_name, std::string id,
@@ -78,10 +80,10 @@ class LocalModuleResolver : fuchsia::modular::ModuleResolver,
 
   // action -> key in |entries_|
   std::map<std::string, std::set<EntryId>> action_to_entries_;
-  // (type, parameter name) -> key in |entries_|
+  // (parameter type, parameter name) -> key in |entries_|
   std::map<std::pair<std::string, std::string>, std::set<EntryId>>
       parameter_type_and_name_to_entries_;
-  //  (type) -> key in |entries_|.
+  //  (parameter type) -> keys in |entries_|.
   std::map<std::string, std::set<EntryId>> parameter_type_to_entries_;
 
   fidl::BindingSet<fuchsia::modular::ModuleResolver> bindings_;
@@ -91,7 +93,6 @@ class LocalModuleResolver : fuchsia::modular::ModuleResolver,
       pending_bindings_;
 
   bool already_checking_if_sources_are_ready_;
-  ParameterTypeInferenceHelper type_helper_;
 
   OperationCollection operations_;
 

@@ -50,6 +50,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
       fuchsia::modular::FocusProviderPtr focus_provider,
       fuchsia::modular::UserIntelligenceProvider* user_intelligence_provider,
       fuchsia::modular::ModuleResolver* module_resolver,
+      fuchsia::modular::EntityResolver* entity_resolver,
       PresentationProvider* presentation_provider, bool test);
 
   ~StoryProviderImpl() override;
@@ -81,6 +82,10 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   // Called by StoryControllerImpl.
   fuchsia::modular::ModuleResolver* module_resolver() {
     return module_resolver_;
+  }
+
+  fuchsia::modular::EntityResolver* entity_resolver() {
+    return entity_resolver_;
   }
 
   // Called by StoryControllerImpl.
@@ -240,6 +245,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   fuchsia::modular::UserIntelligenceProvider* const
       user_intelligence_provider_;                           // Not owned.
   fuchsia::modular::ModuleResolver* const module_resolver_;  // Not owned.
+  fuchsia::modular::EntityResolver* const entity_resolver_;  // Not owned.
   PresentationProvider* const presentation_provider_;        // Not owned.
 
   // When a story gets created, or when it gets focused on this device, we write

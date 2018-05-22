@@ -303,16 +303,16 @@ class StoryControllerImpl : fuchsia::modular::StoryController,
 
   // Operations implemented here.
   class AddIntentCall;
-  class ConnectLinkCall;
   class DefocusCall;
   class DeleteCall;
+  class FindModulesCall;
   class FocusCall;
+  class GetTypesFromEntityCall;
   class InitializeChainCall;
   class KillModuleCall;
   class LaunchModuleCall;
   class LaunchModuleInShellCall;
   class OnModuleDataUpdatedCall;
-  class ResolveModulesCall;
   class ResolveParameterCall;
   class StartCall;
   class StartContainerInShellCall;

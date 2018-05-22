@@ -384,6 +384,7 @@ StoryProviderImpl::StoryProviderImpl(
     fuchsia::modular::UserIntelligenceProvider* const
         user_intelligence_provider,
     fuchsia::modular::ModuleResolver* const module_resolver,
+    fuchsia::modular::EntityResolver* const entity_resolver,
     PresentationProvider* const presentation_provider, const bool test)
     : user_scope_(user_scope),
       session_storage_(session_storage),
@@ -393,6 +394,7 @@ StoryProviderImpl::StoryProviderImpl(
       component_context_info_(component_context_info),
       user_intelligence_provider_(user_intelligence_provider),
       module_resolver_(module_resolver),
+      entity_resolver_(entity_resolver),
       presentation_provider_(presentation_provider),
       focus_provider_(std::move(focus_provider)),
       focus_watcher_binding_(this),

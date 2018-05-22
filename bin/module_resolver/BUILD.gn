@@ -42,12 +42,11 @@ source_set("local_module_resolver") {
   sources = [
     "local_module_resolver.cc",
     "local_module_resolver.h",
-    "type_inference.cc",
-    "type_inference.h",
   ]
 
   deps = [
     "//garnet/public/lib/fxl",
+    "//peridot/lib/fidl:clone",
     "//peridot/lib/module_manifest_source",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/async/cpp:operation",

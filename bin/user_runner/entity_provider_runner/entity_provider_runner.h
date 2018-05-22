@@ -26,7 +26,7 @@ class EntityProviderLauncher;
 // services all |fuchsia::modular::EntityResolver| interfaces, and there is one
 // |EntityReferenceFactoryImpl| for each
 // |fuchsia::modular::EntityReferenceFactory| interface.
-class EntityProviderRunner : fuchsia::modular::EntityResolver {
+class EntityProviderRunner : public fuchsia::modular::EntityResolver {
  public:
   EntityProviderRunner(EntityProviderLauncher* entity_provider_launcher);
   ~EntityProviderRunner() override;
