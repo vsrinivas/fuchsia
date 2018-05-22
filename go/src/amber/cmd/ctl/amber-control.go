@@ -7,9 +7,9 @@ package main
 import (
 	"amber/ipcserver"
 	"app/context"
+	"fidl/amber"
 	"flag"
 	"fmt"
-	"fidl/amber"
 	"os"
 	"strings"
 	"time"
@@ -150,9 +150,6 @@ func main() {
 
 					if sigs&zx.SignalChannelPeerClosed == zx.SignalChannelPeerClosed {
 						fmt.Println("Error: response channel closed unexpectedly.")
-						break
-					} else if err != nil && err.(zx.Error).Status != zx.ErrTimedOut {
-						fmt.Printf("Error awaiting response from channel: %s\n", err)
 						break
 					} else if err != nil && err.(zx.Error).Status != zx.ErrTimedOut {
 						fmt.Printf("Error awaiting response from channel: %s\n", err)
