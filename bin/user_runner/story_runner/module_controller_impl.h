@@ -66,9 +66,6 @@ class ModuleControllerImpl : ModuleController {
   // Used as application error handler on the Module app client.
   void OnAppConnectionError();
 
-  // Used as connection error handler on the Module connection.
-  void OnModuleConnectionError();
-
   // The story this Module instance runs in.
   StoryControllerImpl* const story_controller_impl_;
 

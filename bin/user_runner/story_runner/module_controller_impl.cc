@@ -68,18 +68,6 @@ void ModuleControllerImpl::OnAppConnectionError() {
   SetState(ModuleState::ERROR);
 }
 
-// If the Module connection closes, it means the module doesn't implement the
-// Module service and doesn't fully participate in the story, especially it
-// doesn't have access to links. We indicate this by the UNLINKED state.
-//
-// If the module cannot run at all, it also cannot keep its Module connection
-// open, but that's already covered by the ERROR state, cf. above.
-void ModuleControllerImpl::OnModuleConnectionError() {
-  if (state_ != ModuleState::ERROR) {
-    SetState(ModuleState::UNLINKED);
-  }
-}
-
 void ModuleControllerImpl::SetState(const ModuleState new_state) {
   if (state_ == new_state) {
     return;
@@ -124,14 +112,8 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
   // connection, or the application exits.
   app_client_.SetAppErrorHandler(nullptr);
 
-  // If the module was UNLINKED, stop it without a delay. Otherwise
-  // call Module.Stop(), but also schedule a timeout in case it
-  // doesn't return from Stop().
-  if (state_ == ModuleState::UNLINKED) {
-    async::PostTask(async_get_default(), cont);
-  } else {
-    app_client_.Teardown(kBasicTimeout, cont);
-  }
+  // Tear down the module application through the normal procedure with timeout.
+  app_client_.Teardown(kBasicTimeout, cont);
 }
 
 void ModuleControllerImpl::Watch(fidl::InterfaceHandle<ModuleWatcher> watcher) {
