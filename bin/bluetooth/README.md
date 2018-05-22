@@ -6,7 +6,7 @@ Bluetooth Host Subsystem (5.0+) supporting a framework for developing Low Energy
 and Traditional profiles.
 
 - [Public API](../../public/lib/bluetooth/fidl)
-- [Tools](../bluetooth_tools)
+- [Tools](tools/)
 - [System Architecture](../../docs/bluetooth_architecture.md)
 - [Host Library](../../drivers/bluetooth/lib)
 - [Host Bus Driver](../../drivers/bluetooth/host)
