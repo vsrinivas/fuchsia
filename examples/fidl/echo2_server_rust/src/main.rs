@@ -33,13 +33,7 @@ fn spawn_echo_server(chan: async::Channel) {
     .recover(|e| eprintln!("error running echo server: {:?}", e)))
 }
 
-fn main() {
-    if let Err(e) = main_res() {
-        println!("Error: {:?}", e);
-    }
-}
-
-fn main_res() -> Result<(), Error> {
+fn main() -> Result<(), Error> {
     let mut executor = async::Executor::new().context("Error creating executor")?;
 
     let fut = ServicesServer::new()
