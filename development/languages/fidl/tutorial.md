@@ -404,7 +404,7 @@ The echo server implementation in Rust can be found at:
 
 This file has two functions: `main()`, and `spawn_echo_server`:
 
--   The `main()` function starts creates an asynchronous task executor
+-   The `main()` function creates an asynchronous task executor
     and a `ServicesServer` and runs the `ServicesServer` to completion on
     the executor.
 -   `spawn_echo_server` creates a new instance of a server which implements the
@@ -665,7 +665,7 @@ fn main() -> Result<(), Error> {
 You can run the echo example like this:
 
 ```sh
-$ ./echo_client_rust
+$ run echo2_client_rust
 ```
 
 ## `Echo` server in Dart
