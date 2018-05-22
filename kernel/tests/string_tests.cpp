@@ -6,11 +6,14 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
+#include <fbl/auto_call.h>
 #include <kernel/thread.h>
 #include <malloc.h>
 #include <platform.h>
 #include <stdio.h>
 #include <string.h>
+#include <vm/physmap.h>
+#include <vm/pmm.h>
 #include <zircon/types.h>
 
 static uint8_t* src;
@@ -44,7 +47,7 @@ typedef long word;
 static void* c_memmove(void* dest, void const* src, size_t count) {
     char* d = (char*)dest;
     const char* s = (const char*)src;
-    int len;
+    size_t len;
 
     if (count == 0 || dest == src)
         return dest;
@@ -108,7 +111,7 @@ static void* c_memset(void* s, int c, size_t count) {
 
         // write to non-aligned memory byte-wise
         for (; len > 0; len--)
-            *xs++ = c;
+            *xs++ = (char)c;
 
         // write to aligned memory dword-wise
         for (len = count / lsize; len > 0; len--) {
@@ -121,7 +124,7 @@ static void* c_memset(void* s, int c, size_t count) {
 
     // write remaining bytes
     for (; count > 0; count--)
-        *xs++ = c;
+        *xs++ = (char)c;
 
     return s;
 }
@@ -180,9 +183,10 @@ static void bench_memcpy(void) {
 
 static void fillbuf(void* ptr, size_t len, uint32_t seed) {
     size_t i;
+    uint8_t* cptr = (uint8_t*)ptr;
 
     for (i = 0; i < len; i++) {
-        ((char*)ptr)[i] = seed;
+        cptr[i] = (uint8_t)seed;
         seed *= 0x1234567;
     }
 }
@@ -289,25 +293,40 @@ static void validate_memset(void) {
 #include <lib/console.h>
 
 static int string_tests(int argc, const cmd_args* argv, uint32_t flags) {
-    src = memalign(64, BUFFER_SIZE + 256);
-    dst = memalign(64, BUFFER_SIZE + 256);
-    src2 = memalign(64, BUFFER_SIZE + 256);
-    dst2 = memalign(64, BUFFER_SIZE + 256);
+    list_node list;
+    list_initialize(&list);
+
+    // free the physical pages on exit
+    auto free_pages = fbl::MakeAutoCall([&list]() {
+        pmm_free(&list);
+        src = dst = src2 = dst2 = nullptr;
+    });
+
+    // allocate a large run of physically contiguous pages and get the address out
+    // of the physmap
+    size_t total_size = (BUFFER_SIZE + 256) * 4;
+    size_t page_count = ROUNDUP(total_size, PAGE_SIZE) / PAGE_SIZE;
+    paddr_t pa;
+    if (pmm_alloc_contiguous(page_count, 0, PAGE_SIZE_SHIFT, &pa, &list) != page_count) {
+        printf("failed to allocate %zu bytes of contiguous memory for test\n", total_size);
+        return -1;
+    }
+
+    uint8_t* base = (uint8_t *)paddr_to_physmap(pa);
+    src = base;
+    dst = base + BUFFER_SIZE + 256;
+    src2 = base + (BUFFER_SIZE + 256) * 2;
+    dst2 = base + (BUFFER_SIZE + 256) * 3;
 
     printf("src %p, dst %p\n", src, dst);
     printf("src2 %p, dst2 %p\n", src2, dst2);
-
-    if (!src || !dst || !src2 || !dst2) {
-        printf("failed to allocate all the buffers\n");
-        goto out;
-    }
 
     if (argc < 3) {
         printf("not enough arguments:\n");
     usage:
         printf("%s validate <routine>\n", argv[0].str);
         printf("%s bench <routine>\n", argv[0].str);
-        goto out;
+        return -1;
     }
 
     if (!strcmp(argv[1].str, "validate")) {
@@ -325,12 +344,6 @@ static int string_tests(int argc, const cmd_args* argv, uint32_t flags) {
     } else {
         goto usage;
     }
-
-out:
-    free(src);
-    free(dst);
-    free(src2);
-    free(dst2);
 
     return 0;
 }
