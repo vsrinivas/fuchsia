@@ -7,11 +7,20 @@
 #include "constants_priv.h"
 
 #define IA32_GS_BASE              0xc0000101
+#define X86_MSR_IA32_STAR         0xc0000081
+#define X86_MSR_IA32_LSTAR        0xc0000082
+#define X86_MSR_IA32_SYSENTER_CS  0x00000174
+#define X86_MSR_IA32_SYSENTER_ESP 0x00000175
+#define X86_MSR_IA32_SYSENTER_EIP 0x00000176
+#define X86_MSR_IA32_EFER         0xc0000080
 #define ABSOLUTE_ADDR(base, x)    (x - base + GUEST_ENTRY)
-#define CODE_64_SELECTOR          (1<<3)
-#define CODE_32_SELECTOR          (2<<3)
-#define CODE_16_SELECTOR          (3<<3)
-#define DATA_SELECTOR             (4<<3)
+#define CODE_32_SELECTOR          (1<<3)
+#define CODE_64_SELECTOR          (2<<3)
+#define DATA_SELECTOR             (3<<3)
+#define USER_CODE_32_SELECTOR     (4<<3)
+#define USER_DATA_SELECTOR        (5<<3)
+#define USER_CODE_64_SELECTOR     (6<<3)
+#define CODE_16_SELECTOR          (8<<3)
 
 .text
 
@@ -33,13 +42,6 @@
 gdt_for_\start:
     // Null entry.
     .8byte 0
-    // CODE_64_SELECTOR
-    .2byte 0xffff                                   // Limit 15:00
-    .2byte 0x0000                                   // Base 15:00
-    .byte  0x00                                     // Base 23:16
-    .byte  0b10011010                               // P(1) DPL(00) S(1) 1 C(0) R(1) A(0)
-    .byte  0b10101111                               // G(1) D(0) L(1) AVL(0) Limit 19:16
-    .byte  0x0                                      // Base 31:24
     // CODE_32_SELECTOR
     .2byte 0xffff                                   // Limit 15:00
     .2byte 0x0000                                   // Base 15:00
@@ -47,12 +49,12 @@ gdt_for_\start:
     .byte  0b10011010                               // P(1) DPL(00) S(1) 1 C(0) R(1) A(0)
     .byte  0b11001111                               // G(1) D(1) L(0) AVL(0) Limit 19:16
     .byte  0x0                                      // Base 31:24
-    // CODE_16_SELECTOR
+    // CODE_64_SELECTOR
     .2byte 0xffff                                   // Limit 15:00
     .2byte 0x0000                                   // Base 15:00
     .byte  0x00                                     // Base 23:16
     .byte  0b10011010                               // P(1) DPL(00) S(1) 1 C(0) R(1) A(0)
-    .byte  0b10001111                               // G(1) D(0) L(0) AVL(0) Limit 19:16
+    .byte  0b10101111                               // G(1) D(0) L(1) AVL(0) Limit 19:16
     .byte  0x0                                      // Base 31:24
     // DATA_SELECTOR
     .2byte 0xffff                                   // Limit 15:00
@@ -60,6 +62,41 @@ gdt_for_\start:
     .byte  0x00                                     // Base 23:16
     .byte  0b10010010                               // P(1) DPL(00) S(1) 0 E(0) W(1) A(0)
     .byte  0b11001111                               // G(1) B(1) L(0) AVL(0) Limit 19:16
+    .byte  0x0                                      // Base 31:24
+    // USER_CODE_32_SELECTOR
+    .2byte 0xffff                                   // Limit 15:00
+    .2byte 0x0000                                   // Base 15:00
+    .byte  0x00                                     // Base 23:16
+    .byte  0b11111010                               // P(1) DPL(11) S(1) 1 C(0) R(1) A(0)
+    .byte  0b11001111                               // G(1) D(1) L(0) AVL(0) Limit 19:16
+    .byte  0x0                                      // Base 31:24
+    // USER_DATA_SELECTOR
+    .2byte 0xffff                                   // Limit 15:00
+    .2byte 0x0000                                   // Base 15:00
+    .byte  0x00                                     // Base 23:16
+    .byte  0b11110010                               // P(1) DPL(11) S(1) 0 E(0) W(1) A(0)
+    .byte  0b11001111                               // G(1) B(1) 0 0 limit 19:16
+    .byte  0x0                                      // Base 31:24
+    // USER_CODE_64_SELECTOR
+    .2byte 0xffff                                   // Limit 15:00
+    .2byte 0x0000                                   // Base 15:00
+    .byte  0x00                                     // Base 23:16
+    .byte  0b11111010                               // P(1) DPL(11) S(1) 1 C(0) R(1) A(0)
+    .byte  0b10101111                               // G(1) D(0) L(1) AVL(0) Limit 19:16
+    .byte  0x0                                      // Base 31:24
+    // USER_DATA_SELECTOR duplicate for sysexit
+    .2byte 0xffff                                   // Limit 15:00
+    .2byte 0x0000                                   // Base 15:00
+    .byte  0x00                                     // Base 23:16
+    .byte  0b11110010                               // P(1) DPL(11) S(1) 0 E(0) W(1) A(0)
+    .byte  0b11001111                               // G(1) B(1) 0 0 limit 19:16
+    .byte  0x0                                      // Base 31:24
+    // CODE_16_SELECTOR
+    .2byte 0xffff                                   // Limit 15:00
+    .2byte 0x0000                                   // Base 15:00
+    .byte  0x00                                     // Base 23:16
+    .byte  0b10011010                               // P(1) DPL(00) S(1) 1 C(0) R(1) A(0)
+    .byte  0b10001111                               // G(1) D(0) L(0) AVL(0) Limit 19:16
     .byte  0x0                                      // Base 31:24
 gdtr_for_\start:
     .2byte gdtr_for_\start - gdt_for_\start - 1
@@ -72,7 +109,7 @@ int_\n\()_for_\start:
     mov $\n, %rax
     popq %rbx // Error code
     popq %rcx // RIP
-    movq $0, (EXIT_TEST_ADDR)
+    movq $-1, (EXIT_TEST_ADDR)
 .endm
 
 .macro debug_idt start, n
@@ -269,6 +306,88 @@ vcpu_compat_mode_done:
 vcpu_compat_mode_exit:
     movq $0, (EXIT_TEST_ADDR)
 FUNCTION vcpu_compat_mode_end
+
+FUNCTION vcpu_syscall_start
+    init_interrupt_handling vcpu_syscall_start
+
+    xor %eax, %eax
+    mov $((USER_CODE_32_SELECTOR << 16) | CODE_64_SELECTOR), %edx
+    mov $X86_MSR_IA32_STAR, %ecx
+    wrmsr
+
+    xor %edx, %edx
+    mov $ABSOLUTE_ADDR(vcpu_syscall_start, vcpu_syscall_done), %eax
+    mov $X86_MSR_IA32_LSTAR, %ecx
+    wrmsr
+
+    pushfq
+    pop %r11
+    mov $ABSOLUTE_ADDR(vcpu_syscall_start, vcpu_syscall_ring3), %rcx
+    sysretq
+
+vcpu_syscall_ring3:
+    syscall
+
+vcpu_syscall_done:
+    movq $0, (EXIT_TEST_ADDR)
+FUNCTION vcpu_syscall_end
+
+FUNCTION vcpu_sysenter_start
+    init_interrupt_handling vcpu_sysenter_start
+
+    xor %edx, %edx
+    mov $CODE_64_SELECTOR, %eax
+    mov $X86_MSR_IA32_SYSENTER_CS, %ecx
+    wrmsr
+
+    mov $ABSOLUTE_ADDR(vcpu_sysenter_start, vcpu_sysenter_done), %eax
+    mov $X86_MSR_IA32_SYSENTER_EIP, %ecx
+    wrmsr
+
+    mov %esp, %eax
+    mov $X86_MSR_IA32_SYSENTER_ESP, %ecx
+    wrmsr
+
+    mov %rsp, %rdx
+    mov $ABSOLUTE_ADDR(vcpu_sysenter_start, vcpu_sysenter_ring3), %rdx
+    .byte 0x48 // rex.W
+    sysexit
+
+vcpu_sysenter_ring3:
+    sysenter
+
+vcpu_sysenter_done:
+    movq $0, (EXIT_TEST_ADDR)
+FUNCTION vcpu_sysenter_end
+
+FUNCTION vcpu_sysenter_compat_start
+    init_interrupt_handling vcpu_sysenter_compat_start
+
+    xor %edx, %edx
+    mov $CODE_64_SELECTOR, %eax
+    mov $X86_MSR_IA32_SYSENTER_CS, %ecx
+    wrmsr
+
+    mov $ABSOLUTE_ADDR(vcpu_sysenter_compat_start, vcpu_sysenter_compat_done), %eax
+    mov $X86_MSR_IA32_SYSENTER_EIP, %ecx
+    wrmsr
+
+    mov %esp, %eax
+    mov $X86_MSR_IA32_SYSENTER_ESP, %ecx
+    wrmsr
+
+    mov %rsp, %rdx
+    mov $ABSOLUTE_ADDR(vcpu_sysenter_compat_start, vcpu_sysenter_compat_ring3), %rdx
+    sysexit
+
+.code32
+vcpu_sysenter_compat_ring3:
+    sysenter
+.code64
+
+vcpu_sysenter_compat_done:
+    movq $0, (EXIT_TEST_ADDR)
+FUNCTION vcpu_sysenter_compat_end
 
 // Test guest_set_trap using a memory-based trap.
 FUNCTION guest_set_trap_start

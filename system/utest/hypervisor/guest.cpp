@@ -44,6 +44,12 @@ extern const char vcpu_read_write_state_start[];
 extern const char vcpu_read_write_state_end[];
 extern const char vcpu_compat_mode_start[];
 extern const char vcpu_compat_mode_end[];
+extern const char vcpu_syscall_start[];
+extern const char vcpu_syscall_end[];
+extern const char vcpu_sysenter_start[];
+extern const char vcpu_sysenter_end[];
+extern const char vcpu_sysenter_compat_start[];
+extern const char vcpu_sysenter_compat_end[];
 extern const char guest_set_trap_start[];
 extern const char guest_set_trap_end[];
 extern const char guest_set_trap_with_io_start[];
@@ -52,11 +58,13 @@ extern const char guest_set_trap_with_io_end[];
 enum {
     X86_PTE_P = 0x01,  // P    Valid
     X86_PTE_RW = 0x02, // R/W  Read/Write
+    X86_PTE_U = 0x04,  // U    Page is user accessible
     X86_PTE_PS = 0x80, // PS   Page size
 };
 
 typedef struct test {
     bool supported = false;
+    bool interrupts_enabled = false;
 
     zx::vmo vmo;
     uintptr_t addr;
@@ -65,10 +73,12 @@ typedef struct test {
 } test_t;
 
 static bool teardown(test_t* test) {
+    BEGIN_HELPER;
     ASSERT_EQ(zx_handle_close(test->vcpu), ZX_OK);
     ASSERT_EQ(zx_handle_close(test->guest), ZX_OK);
     ASSERT_EQ(zx::vmar::root_self().unmap(test->addr, VMO_SIZE), ZX_OK);
     return true;
+    END_HELPER;
 }
 
 static zx_status_t guest_get_resource(zx_handle_t* resource) {
@@ -110,10 +120,10 @@ static bool setup(test_t* test, const char* start, const char* end) {
 #if __x86_64__
     // PML4 entry pointing to (addr + 0x1000)
     uint64_t* pte_off = reinterpret_cast<uint64_t*>(test->addr);
-    *pte_off = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
+    *pte_off = PAGE_SIZE | X86_PTE_P | X86_PTE_U | X86_PTE_RW;
     // PDP entry with 1GB page.
     pte_off = reinterpret_cast<uint64_t*>(test->addr + PAGE_SIZE);
-    *pte_off = X86_PTE_PS | X86_PTE_P | X86_PTE_RW;
+    *pte_off = X86_PTE_PS | X86_PTE_P | X86_PTE_U | X86_PTE_RW;
     entry = GUEST_ENTRY;
 #endif // __x86_64__
     memcpy((void*)(test->addr + entry), start, end - start);
@@ -135,6 +145,7 @@ static bool setup_and_interrupt(test_t* test, const char* start, const char* end
         // The hypervisor isn't supported, so don't run the test.
         return true;
     }
+    test->interrupts_enabled = true;
 
     thrd_t thread;
     int ret = thrd_create(&thread, [](void* ctx) -> int {
@@ -177,6 +188,22 @@ static inline bool exception_thrown(const zx_packet_guest_mem_t& guest_mem,
 #endif
 }
 
+static inline bool resume_and_clean_exit(test_t* test) {
+    BEGIN_HELPER;
+    zx_port_packet_t packet = {};
+    ASSERT_EQ(zx_vcpu_resume(test->vcpu, &packet), ZX_OK);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
+    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
+#if __x86_64__
+    EXPECT_EQ(packet.guest_mem.default_operand_size, 4u);
+#endif
+    if (test->interrupts_enabled) {
+        ASSERT_FALSE(exception_thrown(packet.guest_mem, test->vcpu));
+    }
+    return true;
+    END_HELPER;
+}
+
 static bool vcpu_resume() {
     BEGIN_TEST;
 
@@ -187,14 +214,7 @@ static bool vcpu_resume() {
         return true;
     }
 
-    zx_port_packet_t packet = {};
-    ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
-    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
-#if __x86_64__
-    EXPECT_EQ(packet.guest_mem.default_operand_size, 4u);
-#endif
-
+    ASSERT_TRUE(resume_and_clean_exit(&test));
     ASSERT_TRUE(teardown(&test));
 
     END_TEST;
@@ -210,12 +230,7 @@ static bool vcpu_interrupt() {
         return true;
     }
 
-    zx_port_packet_t packet = {};
-    ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
-    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
-    ASSERT_FALSE(exception_thrown(packet.guest_mem, test.vcpu));
-
+    ASSERT_TRUE(resume_and_clean_exit(&test));
     ASSERT_TRUE(teardown(&test));
 
     END_TEST;
@@ -231,12 +246,7 @@ static bool vcpu_hlt() {
         return true;
     }
 
-    zx_port_packet_t packet = {};
-    ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
-    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
-    ASSERT_FALSE(exception_thrown(packet.guest_mem, test.vcpu));
-
+    ASSERT_TRUE(resume_and_clean_exit(&test));
     ASSERT_TRUE(teardown(&test));
 
     END_TEST;
@@ -252,11 +262,7 @@ static bool vcpu_pause() {
         return true;
     }
 
-    zx_port_packet_t packet = {};
-    ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
-    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
-
+    ASSERT_TRUE(resume_and_clean_exit(&test));
     ASSERT_TRUE(teardown(&test));
 
     END_TEST;
@@ -272,10 +278,7 @@ static bool vcpu_write_cr0() {
         return true;
     }
 
-    zx_port_packet_t packet = {};
-    ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
-    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
+    ASSERT_TRUE(resume_and_clean_exit(&test));
 
 #if __x86_64__
     zx_vcpu_state_t vcpu_state;
@@ -299,11 +302,7 @@ static bool vcpu_wfi() {
         return true;
     }
 
-    zx_port_packet_t packet = {};
-    ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
-    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
-
+    ASSERT_TRUE(resume_and_clean_exit(&test));
     ASSERT_TRUE(teardown(&test));
 
     END_TEST;
@@ -343,11 +342,7 @@ static bool vcpu_fp() {
         return true;
     }
 
-    zx_port_packet_t packet = {};
-    ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
-    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
-
+    ASSERT_TRUE(resume_and_clean_exit(&test));
     ASSERT_TRUE(teardown(&test));
 
     END_TEST;
@@ -423,10 +418,7 @@ static bool vcpu_read_write_state() {
     ASSERT_EQ(zx_vcpu_write_state(test.vcpu, ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)),
               ZX_OK);
 
-    zx_port_packet_t packet = {};
-    ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
-    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
+    ASSERT_TRUE(resume_and_clean_exit(&test));
 
     ASSERT_EQ(zx_vcpu_read_state(test.vcpu, ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
 
@@ -499,10 +491,7 @@ static bool vcpu_compat_mode() {
         return true;
     }
 
-    zx_port_packet_t packet = {};
-    ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
-    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
+    ASSERT_TRUE(resume_and_clean_exit(&test));
 
     zx_vcpu_state_t vcpu_state;
     ASSERT_EQ(zx_vcpu_read_state(test.vcpu, ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
@@ -511,6 +500,54 @@ static bool vcpu_compat_mode() {
     EXPECT_EQ(vcpu_state.rcx, 2u);
 #endif
 
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
+static bool vcpu_syscall() {
+    BEGIN_TEST;
+
+    test_t test;
+    ASSERT_TRUE(setup(&test, vcpu_syscall_start, vcpu_syscall_end));
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+
+    ASSERT_TRUE(resume_and_clean_exit(&test));
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
+static bool vcpu_sysenter() {
+    BEGIN_TEST;
+
+    test_t test;
+    ASSERT_TRUE(setup(&test, vcpu_sysenter_start, vcpu_sysenter_end));
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+
+    ASSERT_TRUE(resume_and_clean_exit(&test));
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
+static bool vcpu_sysenter_compat() {
+    BEGIN_TEST;
+
+    test_t test;
+    ASSERT_TRUE(setup(&test, vcpu_sysenter_compat_start, vcpu_sysenter_compat_end));
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+
+    ASSERT_TRUE(resume_and_clean_exit(&test));
     ASSERT_TRUE(teardown(&test));
 
     END_TEST;
@@ -536,10 +573,7 @@ static bool guest_set_trap_with_mem() {
     EXPECT_EQ(packet.key, kTrapKey);
     EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
 
-    ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
-    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
-
+    ASSERT_TRUE(resume_and_clean_exit(&test));
     ASSERT_TRUE(teardown(&test));
 
     END_TEST;
@@ -599,10 +633,7 @@ static bool guest_set_trap_with_io() {
     EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_IO);
     EXPECT_EQ(packet.guest_io.port, TRAP_PORT);
 
-    ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
-    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
-    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
-
+    ASSERT_TRUE(resume_and_clean_exit(&test));
     ASSERT_TRUE(teardown(&test));
 
     END_TEST;
@@ -625,5 +656,8 @@ RUN_TEST(vcpu_hlt)
 RUN_TEST(vcpu_pause)
 RUN_TEST(vcpu_write_cr0)
 RUN_TEST(vcpu_compat_mode)
+RUN_TEST(vcpu_syscall)
+RUN_TEST(vcpu_sysenter)
+RUN_TEST(vcpu_sysenter_compat)
 #endif
 END_TEST_CASE(guest)
