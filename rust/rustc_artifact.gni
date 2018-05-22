@@ -4,7 +4,12 @@
 
 import("//build/config/clang/clang.gni")
 import("//build/fidl/toolchain.gni")
-import("//build/rust/rust_prefix.gni")
+
+declare_args() {
+  # Sets a custom base directory for `rustc` and `cargo`.
+  # This can be used to test custom Rust toolchains.
+  rustc_prefix = "//buildtools/${host_platform}/rust/bin"
+}
 
 template("rustc_third_party_artifact") {
   # Dummy build target to match the one in rustc_artifact
