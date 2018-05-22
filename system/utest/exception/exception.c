@@ -1788,11 +1788,6 @@ int main(int argc, char **argv)
         }
     }
 
-    tu_watchdog_start();
-
     bool success = unittest_run_all_tests(argc, argv);
-
-    tu_watchdog_cancel();
-
     return success ? 0 : -1;
 }

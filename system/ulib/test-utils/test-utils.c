@@ -16,11 +16,8 @@
 #include <unittest/unittest.h>
 
 #define TU_FAIL_ERRCODE 10
-#define TU_WATCHDOG_ERRCODE 5
 
 static int timeout_scale = 1;
-
-static thrd_t watchdog_thread;
 
 void* tu_malloc(size_t size)
 {
@@ -427,40 +424,4 @@ int tu_set_timeout_scale(int scale)
     if (scale != 0)
         timeout_scale = scale;
     return prev;
-}
-
-// Setting to true when done turns off the watchdog timer. This
-// must be an atomic so that the compiler does not assume anything
-// about when it can be touched. Otherwise, since the compiler
-// knows that vDSO calls don't make direct callbacks, it assumes
-// that nothing can happen inside the watchdog loop that would touch
-// this variable. In fact, it will be touched in parallel by another thread.
-static volatile atomic_bool done_tests;
-
-static int watchdog_thread_func(void* arg)
-{
-    for (int i = 0; i < TU_WATCHDOG_TIMEOUT_TICKS * timeout_scale; ++i) {
-        zx_nanosleep(zx_deadline_after(TU_WATCHDOG_TICK_DURATION));
-        if (atomic_load(&done_tests))
-            return 0;
-    }
-    unittest_printf_critical("\n\n*** WATCHDOG TIMER FIRED ***\n");
-    // This should *cleanly* kill the entire process, not just this thread.
-    // TODO(dbort): Figure out why the shell sometimes reports a zero
-    // exit status when we expect to see '5'.
-    exit(TU_WATCHDOG_ERRCODE);
-}
-
-void tu_watchdog_start(void)
-{
-    atomic_store(&done_tests, false);
-    tu_thread_create_c11(&watchdog_thread, watchdog_thread_func, NULL, "watchdog-thread");
-}
-
-void tu_watchdog_cancel(void)
-{
-    atomic_store(&done_tests, true);
-
-    // TODO: Add an alarm as thrd_join doesn't provide a timeout.
-    thrd_join(watchdog_thread, NULL);
 }

@@ -22,19 +22,6 @@
 
 __BEGIN_CDECLS
 
-// Sleep interval in the watchdog thread. Make this short so we don't need to
-// wait too long when tearing down in the success case.  This is especially
-// helpful when running "while /boot/test/sys/debugger-test; do true; done".
-#define TU_WATCHDOG_TICK_DURATION ((int64_t)ZX_MSEC(50))  // 0.05 seconds
-
-// Number of sleep intervals until the watchdog fires.
-// Note: There is a tension here between not wanting to block a complete test
-// run because of a hung test for too long, vs not wanting to introduce
-// flakyness into a test run because of a loaded machine (not uncommon on
-// bots). One solution would be a runtime determination of what a good value
-// is.
-#define TU_WATCHDOG_TIMEOUT_TICKS 100  // 5 seconds
-
 // These malloc-using calls will terminate the process on ENOMEM.
 void* tu_malloc(size_t size);
 void* tu_calloc(size_t nmemb, size_t size);
@@ -202,15 +189,5 @@ int tu_run_command(const char* progname, const char* cmd);
 // Returns the previous value.
 
 int tu_set_timeout_scale(int scale);
-
-// Start the watchdog thread.
-// If the watchdog timer expires before it is canceled with
-// tu_watchdog_cancel() then the test fails and the process is terminated.
-
-void tu_watchdog_start(void);
-
-// Cancel the watchdog and "join" the watchdog thread.
-
-void tu_watchdog_cancel(void);
 
 __END_CDECLS
