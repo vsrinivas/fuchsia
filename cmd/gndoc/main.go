@@ -7,8 +7,8 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"io"
+	"log"
 	"os"
 	"strings"
 
@@ -44,18 +44,16 @@ func main() {
 	flag.Parse()
 	if flag.NArg() != 0 {
 		flag.PrintDefaults()
-		os.Exit(2)
 	}
 
 	if sourcesFile == "" {
-		fmt.Printf("Error: no Jiri project reference file specified.\nTo generate, use jiri project -json-output=<file>.\n")
-		os.Exit(1)
+		log.Fatalf("Error: no Jiri project reference file specified.\nTo generate, use jiri project -json-output=<file>.\n")
 	}
 
 	// Open the json file.
 	sources, err := os.Open(sourcesFile)
 	if err != nil {
-		os.Exit(1)
+		log.Fatalf("Error: unable to open %s", sourcesFile)
 	}
 	defer sources.Close()
 
@@ -66,8 +64,7 @@ func main() {
 	args, keys, errs := gndoc.ParseGNArgs(ctx, inputFiles, keyArgs)
 	argMap.AddArgs(args, keys)
 	if err := <-errs; err != nil {
-		fmt.Printf("Error: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("Error: %s\n", err)
 	}
 
 	var out io.Writer
@@ -75,8 +72,7 @@ func main() {
 		var err error
 		out, err = os.Create(outFile)
 		if err != nil {
-			fmt.Printf("Error opening file: %s", err)
-			os.Exit(1)
+			log.Fatalf("Error opening file: %s", err)
 		}
 	} else {
 		out = os.Stdout
