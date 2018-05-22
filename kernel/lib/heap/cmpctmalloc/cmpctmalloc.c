@@ -962,9 +962,15 @@ void* cmpct_memalign(size_t size, size_t alignment) {
     if (alignment < 8) {
         return cmpct_alloc(size);
     }
+
     size_t padded_size =
         size + alignment + sizeof(free_t) + sizeof(header_t);
+
     char* unaligned = (char*)cmpct_alloc(padded_size);
+    if (unaligned == NULL) {
+        return NULL;
+    }
+
     lock();
     size_t mask = alignment - 1;
     uintptr_t payload_int = (uintptr_t)unaligned + sizeof(free_t) +
@@ -1033,7 +1039,12 @@ void* cmpct_realloc(void* payload, size_t size) {
     }
     header_t* header = (header_t*)payload - 1;
     size_t old_size = header->size - sizeof(header_t);
+
     void* new_payload = cmpct_alloc(size);
+    if (new_payload == NULL) {
+        return NULL;
+    }
+
     memcpy(new_payload, payload, MIN(size, old_size));
     cmpct_free(payload);
     return new_payload;
