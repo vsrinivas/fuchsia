@@ -30,8 +30,7 @@ class RemoteDevice;
 // to support more complex features such as LE private address resolution.
 class RemoteDeviceCache final {
  public:
-  // TODO(armansito): Add an Observer interface to notify higher layers of
-  // device property changes (e.g. temporary, connected, etc).
+  using DeviceUpdatedCallback = fit::function<void(const RemoteDevice& device)>;
 
   RemoteDeviceCache() = default;
 
@@ -50,12 +49,23 @@ class RemoteDeviceCache final {
   // LE privacy.
   RemoteDevice* FindDeviceByAddress(const common::DeviceAddress& address) const;
 
+  // When this callback is set, |callback| will be invoked whenever a
+  // device is added or updated. Caller must ensure that |callback| outlives
+  // |this|.
+  void set_device_updated_callback(DeviceUpdatedCallback callback) {
+    device_updated_callback_ = std::move(callback);
+  }
+
  private:
   // Maps unique device IDs to the corresponding RemoteDevice entry.
   using RemoteDeviceMap =
       std::unordered_map<std::string, std::unique_ptr<RemoteDevice>>;
 
-  // TODO(armansito): Periodically clear temporary devices.
+  // TODO(NET-893): Periodically clear temporary devices.
+
+  // Notifies interested parties that |device| has seen a significant change.
+  // |device| must already exist in the cache.
+  void NotifyDeviceUpdated(const RemoteDevice* device);
 
   // Stores all known remote devices.
   RemoteDeviceMap devices_;
@@ -68,6 +78,8 @@ class RemoteDeviceCache final {
   // TODO(armansito): Replace this with an implementation that can resolve
   // device identity, to handle bonded LE devices that use privacy.
   std::unordered_map<common::DeviceAddress, std::string> address_map_;
+
+  DeviceUpdatedCallback device_updated_callback_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RemoteDeviceCache);
 };

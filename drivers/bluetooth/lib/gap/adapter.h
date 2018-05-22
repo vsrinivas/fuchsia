@@ -129,6 +129,11 @@ class Adapter final {
     return le_advertising_manager_.get();
   }
 
+  // Returns this Adapter's remote device cache.
+  RemoteDeviceCache* remote_device_cache() {
+    return &device_cache_;
+  }
+
   // Returns true if any discovery process (LE or BR/EDR) is running on this
   // adapter.
   bool IsDiscovering() const;

@@ -31,6 +31,12 @@ HostServer::HostServer(zx::channel channel,
       gatt_host_(gatt_host),
       weak_ptr_factory_(this) {
   FXL_DCHECK(gatt_host_);
+  adapter->remote_device_cache()->set_device_updated_callback(
+      [self = weak_ptr_factory_.GetWeakPtr()](const auto& device) {
+        if (self) {
+          self->OnRemoteDeviceUpdated(device);
+        }
+      });
 }
 
 void HostServer::GetInfo(GetInfoCallback callback) {
@@ -76,12 +82,6 @@ void HostServer::StartDiscovery(StartDiscoveryCallback callback) {
       return;
     }
 
-    session->set_result_callback([self](const auto& device) {
-      if (self) {
-        self->OnDiscoveryResult(device);
-      }
-    });
-
     self->bredr_discovery_session_ = std::move(session);
 
     auto le_manager = self->adapter()->le_discovery_manager();
@@ -106,11 +106,6 @@ void HostServer::StartDiscovery(StartDiscoveryCallback callback) {
       // Set up a general-discovery filter for connectable devices.
       session->filter()->set_connectable(true);
       session->filter()->SetGeneralDiscoveryFlags();
-      session->SetResultCallback([self](const auto& device) {
-        if (self) {
-          self->OnDiscoveryResult(device);
-        }
-      });
 
       self->le_discovery_session_ = std::move(session);
       self->requesting_discovery_ = false;
@@ -201,17 +196,6 @@ void HostServer::SetDiscoverable(bool discoverable,
       });
 }
 
-void HostServer::OnDiscoveryResult(
-    const ::btlib::gap::RemoteDevice& remote_device) {
-  auto fidl_device = fidl_helpers::NewRemoteDevice(remote_device);
-  if (!fidl_device) {
-    FXL_VLOG(1) << "Ignoring malformed discovery result";
-    return;
-  }
-
-  this->binding()->events().OnDeviceDiscovered(std::move(*fidl_device));
-}
-
 void HostServer::RequestLowEnergyCentral(
     fidl::InterfaceRequest<fuchsia::bluetooth::le::Central> request) {
   BindServer<LowEnergyCentralServer>(std::move(request), gatt_host_);
@@ -239,6 +223,17 @@ void HostServer::Close() {
 void HostServer::OnConnectionError(Server* server) {
   FXL_DCHECK(server);
   servers_.erase(server);
+}
+
+void HostServer::OnRemoteDeviceUpdated(
+    const ::btlib::gap::RemoteDevice& remote_device) {
+  auto fidl_device = fidl_helpers::NewRemoteDevice(remote_device);
+  if (!fidl_device) {
+    FXL_VLOG(1) << "Ignoring malformed device update";
+    return;
+  }
+
+  this->binding()->events().OnDeviceUpdated(std::move(*fidl_device));
 }
 
 }  // namespace bthost

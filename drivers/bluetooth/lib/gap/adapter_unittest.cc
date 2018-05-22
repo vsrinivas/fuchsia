@@ -253,6 +253,10 @@ TEST_F(GAP_AdapterTest, SetNameSuccess) {
   }
 }
 
+TEST_F(GAP_AdapterTest, RemoteDeviceCacheReturnsNonNull) {
+  EXPECT_TRUE(adapter()->remote_device_cache());
+}
+
 }  // namespace
 }  // namespace gap
 }  // namespace btlib

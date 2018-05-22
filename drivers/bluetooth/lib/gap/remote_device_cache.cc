@@ -18,10 +18,22 @@ RemoteDevice* RemoteDeviceCache::NewDevice(const common::DeviceAddress& address,
   if (address_map_.find(address) != address_map_.end())
     return nullptr;
 
-  auto* device = new RemoteDevice(fxl::GenerateUUID(), address, connectable);
+  auto* device = new RemoteDevice(
+      fit::bind_member(this, &RemoteDeviceCache::NotifyDeviceUpdated),
+      fxl::GenerateUUID(), address, connectable);
   devices_[device->identifier()] = std::unique_ptr<RemoteDevice>(device);
   address_map_[device->address()] = device->identifier();
+  NotifyDeviceUpdated(device);
+
   return device;
+}
+
+void RemoteDeviceCache::NotifyDeviceUpdated(const RemoteDevice* device) {
+  FXL_DCHECK(device);
+  FXL_DCHECK(devices_.find(device->identifier()) != devices_.end());
+  FXL_DCHECK(devices_[device->identifier()].get() == device);
+  if (device_updated_callback_)
+    device_updated_callback_(*device);
 }
 
 RemoteDevice* RemoteDeviceCache::FindDeviceById(

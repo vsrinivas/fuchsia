@@ -47,8 +47,8 @@ class HostServer : public AdapterServerBase<fuchsia::bluetooth::host::Host> {
   void SetDiscoverable(bool discoverable,
                        SetDiscoverableCallback callback) override;
 
-  // Called by |le_discovery_session_| when devices are discovered.
-  void OnDiscoveryResult(const ::btlib::gap::RemoteDevice& remote_device);
+  // Called by |adapter()->remote_device_cache()| when a remote device is updated.
+  void OnRemoteDeviceUpdated(const ::btlib::gap::RemoteDevice& remote_device);
 
   void RequestLowEnergyCentral(
       ::fidl::InterfaceRequest<fuchsia::bluetooth::le::Central> central)

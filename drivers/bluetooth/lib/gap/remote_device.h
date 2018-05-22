@@ -15,6 +15,8 @@
 #include "garnet/drivers/bluetooth/lib/hci/lmp_feature_set.h"
 #include "lib/fxl/macros.h"
 
+#include "remote_device_cache.h"
+
 namespace btlib {
 namespace gap {
 
@@ -26,6 +28,8 @@ namespace gap {
 // RemoteDeviceCache.
 class RemoteDevice final {
  public:
+  using UpdatedCallback = fit::function<void(RemoteDevice*)>;
+
   // TODO(armansito): Probably keep separate states for LE and BR/EDR.
   enum class ConnectionState {
     // No link exists between the local adapter and this device.
@@ -185,15 +189,16 @@ class RemoteDevice final {
 
   // TODO(armansito): Add constructor from persistent storage format.
 
-  RemoteDevice(const std::string& identifier,
-               const common::DeviceAddress& address,
-               bool connectable);
+  // Caller must ensure that |callback| is non-emtpy, and outlives |this|.
+  RemoteDevice(UpdatedCallback callback, const std::string& identifier,
+               const common::DeviceAddress& address, bool connectable);
 
-  std::string identifier_;
-  TechnologyType technology_;
+  UpdatedCallback updated_callback_;
+  const std::string identifier_;
+  const common::DeviceAddress address_;
+  const TechnologyType technology_;
   ConnectionState le_connection_state_;
   ConnectionState bredr_connection_state_;
-  common::DeviceAddress address_;
   common::Optional<std::string> name_;
   bool connectable_;
   bool temporary_;

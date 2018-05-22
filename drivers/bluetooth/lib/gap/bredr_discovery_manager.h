@@ -52,7 +52,7 @@ class BrEdrDiscoverySession final {
   // Set a result callback that will be notified whenever a result is returned
   // from the controller.  You will get duplicate results when using this
   // method.
-  // Prefer RemoteDeviceCache.OnleviceUpdateCallback() instead.
+  // Prefer RemoteDeviceCache.set_device_updated_callback() instead.
   using DeviceFoundCallback = fit::function<void(const RemoteDevice& device)>;
   void set_result_callback(DeviceFoundCallback callback) {
     device_found_callback_ = std::move(callback);

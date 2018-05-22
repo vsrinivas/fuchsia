@@ -73,11 +73,12 @@ pub fn run(
                 HostEvent::OnHostStateChanged { ref state } => {
                     host.write().info.state = Some(Box::new(clone_host_state(&state)));
                 }
-                HostEvent::OnDeviceDiscovered { mut device } => {
+                // TODO(NET-968): Add integration test for this.
+                HostEvent::OnDeviceUpdated { mut device } => {
                     if let Some(ref events) = hd.write().events {
                         let _res = events
                             .send_on_device_updated(&mut device)
-                            .map_err(|e| error!("Failed to send device discovery event: {:?}", e));
+                            .map_err(|e| error!("Failed to send device updated event: {:?}", e));
                     }
                 }
             };

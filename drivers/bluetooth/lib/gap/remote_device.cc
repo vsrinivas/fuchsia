@@ -8,6 +8,8 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
+#include "advertising_data.h"
+
 namespace btlib {
 namespace gap {
 namespace {
@@ -34,20 +36,23 @@ constexpr uint16_t kClockOffsetValidBitMask = 0x8000;
 
 }  // namespace
 
-RemoteDevice::RemoteDevice(const std::string& identifier,
+RemoteDevice::RemoteDevice(UpdatedCallback callback,
+                           const std::string& identifier,
                            const common::DeviceAddress& address,
                            bool connectable)
-    : identifier_(identifier),
+    : updated_callback_(std::move(callback)),
+      identifier_(identifier),
+      address_(address),
       technology_((address.type() == common::DeviceAddress::Type::kBREDR)
                       ? TechnologyType::kClassic
                       : TechnologyType::kLowEnergy),
       le_connection_state_(ConnectionState::kNotConnected),
       bredr_connection_state_(ConnectionState::kNotConnected),
-      address_(address),
       connectable_(connectable),
       temporary_(true),
       rssi_(hci::kRSSIInvalid),
       advertising_data_length_(0u) {
+  FXL_DCHECK(updated_callback_);
   FXL_DCHECK(!identifier_.empty());
   // TODO(armansito): Add a mechanism for assigning "dual-mode" for technology.
 }
@@ -58,9 +63,8 @@ void RemoteDevice::set_le_connection_state(ConnectionState state) {
               << ConnectionStateToString(le_connection_state_) << "\" to \""
               << ConnectionStateToString(state) << "\"";
 
-  // TODO(armansito): This should notify observers once there is an Observer
-  // interface for state updates.
   le_connection_state_ = state;
+  updated_callback_(this);
 }
 
 void RemoteDevice::set_bredr_connection_state(ConnectionState state) {
@@ -69,40 +73,58 @@ void RemoteDevice::set_bredr_connection_state(ConnectionState state) {
               << ConnectionStateToString(bredr_connection_state_) << "\" to \""
               << ConnectionStateToString(state) << "\"";
 
-  // TODO(armansito): This should notify observers once there is an Observer
-  // interface for state updates.
   bredr_connection_state_ = state;
+  updated_callback_(this);
 }
 
 void RemoteDevice::SetLEAdvertisingData(
-    int8_t rssi,
-    const common::ByteBuffer& advertising_data) {
+    int8_t rssi, const common::ByteBuffer& advertising_data) {
   FXL_DCHECK(technology() == TechnologyType::kLowEnergy);
   FXL_DCHECK(address_.type() != common::DeviceAddress::Type::kBREDR);
-
-  rssi_ = rssi;
-  advertising_data_length_ = advertising_data.size();
 
   // Reallocate the advertising data buffer only if we need more space.
   // TODO(armansito): Revisit this strategy while addressing NET-209
   if (advertising_data_buffer_.size() < advertising_data.size()) {
     advertising_data_buffer_ =
-        common::DynamicByteBuffer(advertising_data_length_);
+        common::DynamicByteBuffer(advertising_data.size());
   }
 
+  AdvertisingData old_parsed_ad;
+  if (!AdvertisingData::FromBytes(advertising_data_buffer_, &old_parsed_ad)) {
+    old_parsed_ad = AdvertisingData();
+  }
+
+  AdvertisingData new_parsed_ad;
+  if (!AdvertisingData::FromBytes(advertising_data, &new_parsed_ad)) {
+    new_parsed_ad = AdvertisingData();
+  }
+
+  rssi_ = rssi;
+  advertising_data_length_ = advertising_data.size();
   advertising_data.Copy(&advertising_data_buffer_);
+
+  if (old_parsed_ad.local_name() != new_parsed_ad.local_name()) {
+    updated_callback_(this);
+  }
 }
 
 void RemoteDevice::SetInquiryData(const hci::InquiryResult& result) {
   FXL_DCHECK(address_.value() == result.bd_addr);
 
+  bool significant_change =
+      !device_class_ ||
+      (device_class_->major_class() != result.class_of_device.major_class());
   clock_offset_ = le16toh(kClockOffsetValidBitMask | result.clock_offset);
   page_scan_repetition_mode_ = result.page_scan_repetition_mode;
   device_class_ = result.class_of_device;
+  if (significant_change) {
+    updated_callback_(this);
+  }
 }
 
 void RemoteDevice::SetName(const std::string& name) {
   name_ = name;
+  updated_callback_(this);
 }
 
 bool RemoteDevice::TryMakeNonTemporary() {
@@ -115,7 +137,11 @@ bool RemoteDevice::TryMakeNonTemporary() {
     return false;
   }
 
-  temporary_ = false;
+  if (temporary_) {
+    temporary_ = false;
+    updated_callback_(this);
+  }
+
   return true;
 }
 
