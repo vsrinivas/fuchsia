@@ -376,8 +376,6 @@ zx_status_t Station::HandleBeacon(const ImmutableMgmtFrame<Beacon>& frame,
                                   const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(bss_ != nullptr);
-    ZX_DEBUG_ASSERT(frame.hdr()->fc.subtype() == ManagementSubtype::kBeacon);
-    ZX_DEBUG_ASSERT(frame.hdr()->addr3 == common::MacAddr(bss_->bssid.data()));
 
     avg_rssi_dbm_.add(rxinfo.rssi_dbm);
 
@@ -402,6 +400,10 @@ zx_status_t Station::HandleBeacon(const ImmutableMgmtFrame<Beacon>& frame,
         case element_id::kTim: {
             auto tim = reader.read<TimElement>();
             if (tim == nullptr) goto done_iter;
+
+            // Do not process the Beacon's TIM element unless the client is associated.
+            if (state_ != WlanState::kAssociated) { continue; }
+
             if (tim->traffic_buffered(aid_)) { SendPsPoll(); }
             break;
         }
@@ -418,8 +420,6 @@ done_iter:
 zx_status_t Station::HandleAuthentication(const ImmutableMgmtFrame<Authentication>& frame,
                                           const wlan_rx_info_t& rxinfo) {
     debugfn();
-    ZX_DEBUG_ASSERT(frame.hdr()->fc.subtype() == ManagementSubtype::kAuthentication);
-    ZX_DEBUG_ASSERT(frame.hdr()->addr3 == common::MacAddr(bss_->bssid.data()));
 
     if (state_ != WlanState::kUnauthenticated) {
         // TODO(tkilbourn): should we process this Authentication packet anyway? The spec is
@@ -463,8 +463,6 @@ zx_status_t Station::HandleAuthentication(const ImmutableMgmtFrame<Authenticatio
 zx_status_t Station::HandleDeauthentication(const ImmutableMgmtFrame<Deauthentication>& frame,
                                             const wlan_rx_info_t& rxinfo) {
     debugfn();
-    ZX_DEBUG_ASSERT(frame.hdr()->fc.subtype() == ManagementSubtype::kDeauthentication);
-    ZX_DEBUG_ASSERT(frame.hdr()->addr3 == common::MacAddr(bss_->bssid.data()));
 
     if (state_ != WlanState::kAssociated && state_ != WlanState::kAuthenticated) {
         debugjoin("got spurious deauthenticate; ignoring\n");
@@ -485,8 +483,6 @@ zx_status_t Station::HandleDeauthentication(const ImmutableMgmtFrame<Deauthentic
 zx_status_t Station::HandleAssociationResponse(const ImmutableMgmtFrame<AssociationResponse>& frame,
                                                const wlan_rx_info_t& rxinfo) {
     debugfn();
-    ZX_DEBUG_ASSERT(frame.hdr()->fc.subtype() == ManagementSubtype::kAssociationResponse);
-    ZX_DEBUG_ASSERT(frame.hdr()->addr3 == common::MacAddr(bss_->bssid.data()));
 
     if (state_ != WlanState::kAuthenticated) {
         // TODO(tkilbourn): should we process this Association response packet anyway? The spec is
@@ -540,8 +536,6 @@ zx_status_t Station::HandleAssociationResponse(const ImmutableMgmtFrame<Associat
 zx_status_t Station::HandleDisassociation(const ImmutableMgmtFrame<Disassociation>& frame,
                                           const wlan_rx_info_t& rxinfo) {
     debugfn();
-    ZX_DEBUG_ASSERT(frame.hdr()->fc.subtype() == ManagementSubtype::kDisassociation);
-    ZX_DEBUG_ASSERT(frame.hdr()->addr3 == common::MacAddr(bss_->bssid.data()));
 
     if (state_ != WlanState::kAssociated) {
         debugjoin("got spurious disassociate; ignoring\n");
@@ -566,10 +560,6 @@ zx_status_t Station::HandleDisassociation(const ImmutableMgmtFrame<Disassociatio
 zx_status_t Station::HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaRequestFrame>& rx_frame,
                                              const wlan_rx_info_t& rxinfo) {
     debugfn();
-    ZX_DEBUG_ASSERT(rx_frame.hdr()->fc.subtype() == ManagementSubtype::kAction);
-    ZX_DEBUG_ASSERT(rx_frame.hdr()->addr3 == common::MacAddr(bss_->bssid.data()));
-    ZX_DEBUG_ASSERT(rx_frame.body()->category == action::Category::kBlockAck);
-    ZX_DEBUG_ASSERT(rx_frame.body()->action == action::BaAction::kAddBaRequest);
 
     auto addbar = rx_frame.body();
     finspect("Inbound ADDBA Req frame: len %zu\n", rx_frame.body_len());
@@ -629,12 +619,6 @@ zx_status_t Station::HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaReque
 zx_status_t Station::HandleAddBaResponseFrame(
     const ImmutableMgmtFrame<AddBaResponseFrame>& rx_frame, const wlan_rx_info& rxinfo) {
     debugfn();
-    ZX_DEBUG_ASSERT(rx_frame.hdr() != nullptr);
-    ZX_DEBUG_ASSERT(rx_frame.body() != nullptr);
-    ZX_DEBUG_ASSERT(rx_frame.hdr()->fc.subtype() == ManagementSubtype::kAction);
-    ZX_DEBUG_ASSERT(rx_frame.hdr()->addr3 == common::MacAddr(bss_->bssid.data()));
-    ZX_DEBUG_ASSERT(rx_frame.body()->category == action::Category::kBlockAck);
-    ZX_DEBUG_ASSERT(rx_frame.body()->action == action::BaAction::kAddBaResponse);
 
     auto hdr = rx_frame.hdr();
     auto addba_resp = rx_frame.body();
@@ -657,9 +641,7 @@ zx_status_t Station::HandleDataFrame(const DataFrameHeader& hdr) {
 zx_status_t Station::HandleNullDataFrame(const ImmutableDataFrame<NilHeader>& frame,
                                          const wlan_rx_info_t& rxinfo) {
     debugfn();
-    ZX_DEBUG_ASSERT(frame.hdr()->fc.subtype() == DataSubtype::kNull);
     ZX_DEBUG_ASSERT(bssid() != nullptr);
-    ZX_DEBUG_ASSERT(frame.hdr()->addr2 == common::MacAddr(bss_->bssid.data()));
     ZX_DEBUG_ASSERT(state_ == WlanState::kAssociated);
 
     // Take signal strength into account.
@@ -684,7 +666,6 @@ zx_status_t Station::HandleDataFrame(const ImmutableDataFrame<LlcHeader>& frame,
     }
 
     ZX_DEBUG_ASSERT(bssid() != nullptr);
-    ZX_DEBUG_ASSERT(frame.hdr()->addr2 == common::MacAddr(bss_->bssid.data()));
     ZX_DEBUG_ASSERT(state_ == WlanState::kAssociated);
 
     switch (frame.hdr()->fc.subtype()) {
