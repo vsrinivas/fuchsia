@@ -44,9 +44,18 @@ impl Server {
         offer_msg.siaddr = Ipv4Addr::new(0, 0, 0, 0);
         offer_msg.sname = String::new();
         offer_msg.file = String::new();
-        let next_addr = self.addr_pool.get_next_available_addr()?;
-        offer_msg.yiaddr = next_addr;
         self.add_required_options_to(&mut offer_msg);
+
+        if let Some(config) = self.client_configs_cache.get(&offer_msg.chaddr) {
+            if !config.expired {
+                offer_msg.yiaddr = config.client_addr;
+            } else {
+                return None;
+            }
+        } else {
+            let next_addr = self.addr_pool.get_next_available_addr()?;
+            offer_msg.yiaddr = next_addr;
+        }
         Some(offer_msg)
     }
 
@@ -79,47 +88,6 @@ impl Server {
         self.client_configs_cache.insert(client_mac, config);
         self.addr_pool.allocate_addr(client_addr);
     }
-}
-
-#[test]
-fn test_handle_discover_returns_correct_response() {
-    let mut disc_msg = Message::new();
-    disc_msg.xid = 42;
-    disc_msg.chaddr = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
-
-    let mut server = Server::new();
-    server.server_config.server_ip = Ipv4Addr::new(192, 168, 1, 1);
-    server.server_config.default_lease_time = 42;
-    server
-        .addr_pool
-        .available_addrs
-        .insert(Ipv4Addr::from([192, 168, 1, 2]));
-    let got = server.handle_discover_message(disc_msg).unwrap();
-
-    let mut want = Message::new();
-    want.op = OpCode::BOOTREPLY;
-    want.xid = 42;
-    want.yiaddr = Ipv4Addr::new(192, 168, 1, 2);
-    want.chaddr = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
-    want.options.push(ConfigOption {
-        code: OptionCode::IpAddrLeaseTime,
-        value: vec![0, 0, 0, 42],
-    });
-    want.options.push(ConfigOption {
-        code: OptionCode::DhcpMessageType,
-        value: vec![MessageType::DHCPOFFER as u8],
-    });
-    want.options.push(ConfigOption {
-        code: OptionCode::ServerId,
-        value: vec![192, 168, 1, 1],
-    });
-
-    assert_eq!(got, want);
-    assert_eq!(server.addr_pool.available_addrs.len(), 0);
-    assert_eq!(server.addr_pool.allocated_addrs.len(), 1);
-    assert_eq!(server.client_configs_cache.len(), 1);
-    let want_config = server.client_configs_cache.get(&want.chaddr).unwrap();
-    assert_eq!(want_config.client_addr, Ipv4Addr::new(192, 168, 1, 2));
 }
 
 type MacAddr = [u8; 6];
@@ -183,5 +151,96 @@ impl ServerConfig {
             server_ip: Ipv4Addr::new(0, 0, 0, 0),
             default_lease_time: 0,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::{CachedConfig, Server};
+    use protocol::{ConfigOption, Message, MessageType, OpCode, OptionCode};
+    use std::net::Ipv4Addr;
+
+    fn new_test_client_msg() -> Message {
+        let mut client_msg = Message::new();
+        client_msg.xid = 42;
+        client_msg.chaddr = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
+        client_msg
+    }
+
+    fn new_test_server() -> Server {
+        let mut server = Server::new();
+        server.server_config.server_ip = Ipv4Addr::new(192, 168, 1, 1);
+        server.server_config.default_lease_time = 42;
+        server
+            .addr_pool
+            .available_addrs
+            .insert(Ipv4Addr::from([192, 168, 1, 2]));
+        server
+    }
+
+    fn new_test_server_msg() -> Message {
+        let mut server_msg = Message::new();
+        server_msg.op = OpCode::BOOTREPLY;
+        server_msg.xid = 42;
+        server_msg.yiaddr = Ipv4Addr::new(192, 168, 1, 2);
+        server_msg.chaddr = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
+        server_msg.options.push(ConfigOption {
+            code: OptionCode::IpAddrLeaseTime,
+            value: vec![0, 0, 0, 42],
+        });
+        server_msg.options.push(ConfigOption {
+            code: OptionCode::DhcpMessageType,
+            value: vec![MessageType::DHCPOFFER as u8],
+        });
+        server_msg.options.push(ConfigOption {
+            code: OptionCode::ServerId,
+            value: vec![192, 168, 1, 1],
+        });
+        server_msg
+    }
+
+    #[test]
+    fn test_handle_discover_returns_correct_response() {
+        let disc_msg = new_test_client_msg();
+
+        let mut server = new_test_server();
+        let got = server.handle_discover_message(disc_msg).unwrap();
+
+        let want = new_test_server_msg();
+
+        assert_eq!(got, want);
+    }
+
+    #[test]
+    fn test_handle_discover_updates_server_state() {
+        let disc_msg = new_test_client_msg();
+        let mac_addr = disc_msg.chaddr;
+        let mut server = new_test_server();
+        let got = server.handle_discover_message(disc_msg).unwrap();
+
+        assert_eq!(server.addr_pool.available_addrs.len(), 0);
+        assert_eq!(server.addr_pool.allocated_addrs.len(), 1);
+        assert_eq!(server.client_configs_cache.len(), 1);
+        let want_config = server.client_configs_cache.get(&mac_addr).unwrap();
+        assert_eq!(want_config.client_addr, Ipv4Addr::new(192, 168, 1, 2));
+    }
+
+    #[test]
+    fn test_handle_discover_with_client_binding_returns_bound_addr() {
+        let disc_msg = new_test_client_msg();
+        let mut server = new_test_server();
+        let mut client_config = CachedConfig::new();
+        client_config.client_addr = Ipv4Addr::new(192, 168, 1, 42);
+        server
+            .client_configs_cache
+            .insert(disc_msg.chaddr, client_config);
+
+        let got = server.handle_discover_message(disc_msg).unwrap();
+
+        let mut want = new_test_server_msg();
+        want.yiaddr = Ipv4Addr::new(192, 168, 1, 42);
+
+        assert_eq!(got, want);
     }
 }
