@@ -361,7 +361,7 @@
              path="third_party/golibs/github.com/flynn/go-tuf"
              remote="https://fuchsia.googlesource.com/third_party/go-tuf"
              gerrithost="https://fuchsia-review.googlesource.com"
-             revision="ccc55922bf6167995aabc750be433b9f408fd572"/>
+             revision="9a90537f4958d10dcaabf34fb85628274e7de328"/>
     <project name="go-cmp"
              path="third_party/golibs/github.com/google/go-cmp"
              remote="https://fuchsia.googlesource.com/third_party/github.com/google/go-cmp"
