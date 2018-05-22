@@ -2,11 +2,14 @@
 
 ## Overview
 
-An `Agent` is a Peridot component that runs as a background process without
-any direct user interaction. The lifetime of a single Agent instance is bounded by its session.
-It can be shared by mods across many stories. In addition to the capabilities provided to all
+An `Agent` is a Peridot component that runs without any direct user interaction.
+The lifetime of a single Agent instance is bounded by its session.  It can be
+shared by mods across many stories. In addition to the capabilities provided to all
 Peridot components via `ComponentContext`, an `Agent` is given additional
 capabilities via its `AgentContext`.
+
+See [the SimpleAgent directory](../simple_agent/) for a complete implementation of
+the `Agent` described here.
 
 ## SimpleAgent
 
@@ -98,19 +101,17 @@ to the `SimpleInterface` and call methods on it. Those method calls will be
 delegated to the `simple_impl_` per the callback given to `AddService()`.
 
 ```c++
-class SimpleImpl {
- public:
-  void Connect(fidl::InterfaceRequest<Simple> request) {
-    bindings_.AddBinding(this, std::move(request));
-  }
+class SimpleImpl : Simple {
+  SimpleImpl();
+  ~SimpleImpl();
+
+  void Connect(fidl::InterfaceRequest<Simple> request);
 
   std::string message_queue_token() const { return token_; }
 
  private:
   // |Simple| interface method.
-  void SetMessageQueue(fidl::StringPtr queue_token) {
-    token_ = queue_token;
-  }
+  void SetMessageQueue(fidl::StringPtr queue_token);
 
   // The bindings to the Simple service.
   fidl::BindingSet<Simple> bindings_;
@@ -121,7 +122,8 @@ class SimpleImpl {
 ```
 
 The `SimpleImpl` could be part of the `SimpleAgent` class, but it's good practice
-to separate out the implementation of the interface from the main `Agent` code.
+to separate out the implementation of an `Agent` from the implementation(s) of the
+interface(s) it provides.
 
 ## Running the Agent
 
@@ -129,7 +131,7 @@ to separate out the implementation of the interface from the main `Agent` code.
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::AgentDriver<modular::SimpleAgent> driver(
+  modular::AgentDriver<simple_agent::SimpleAgent> driver(
       app_context.get(), [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
@@ -178,7 +180,7 @@ Here the component context is asked to connect to the Agent at `agent_url`, and 
 given a request for the services that the `SimpleAgent` will provide via `agent_services`,
 and a controller for the `Agent` via `agent_controller`.
 
-Then the client connects to the `Simple` interface by providing `ConnectToService` with
+Then the client connects to the `Simple` interface by invoking `ConnectToService` with
 a request for a new `SimpleServicePtr`. This interface pointer can be used immediately
 to provide the agent with the token for the `MessageQueue` to send messages to.
 

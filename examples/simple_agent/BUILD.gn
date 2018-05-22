@@ -1,0 +1,28 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+executable("simple_agent") {
+  deps = [
+    ":interfaces",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fsl",
+    "//peridot/public/lib/app_driver/cpp",
+  ]
+
+  sources = [
+    "simple_agent.cc",
+    "simple_impl.cc",
+    "simple_impl.h",
+  ]
+}
+
+fidl("interfaces") {
+  name = "simple_agent"
+
+  sources = [
+    "simple.fidl",
+  ]
+}
