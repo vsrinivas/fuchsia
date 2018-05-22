@@ -41,6 +41,8 @@ class FocusHandler;
 class LedgerClient;
 class LinkImpl;
 class MessageQueueManager;
+class PuppetMasterImpl;
+class StoryCommandExecutor;
 class StoryProviderImpl;
 class VisibleStoriesHandler;
 
@@ -59,8 +61,7 @@ class UserRunnerImpl : modular_private::UserRunner,
  private:
   // |UserRunner|
   void Initialize(
-      modular_auth::AccountPtr account,
-      AppConfig user_shell,
+      modular_auth::AccountPtr account, AppConfig user_shell,
       AppConfig story_shell,
       fidl::InterfaceHandle<modular_auth::TokenProviderFactory>
           token_provider_factory,
@@ -83,8 +84,8 @@ class UserRunnerImpl : modular_private::UserRunner,
   void InitializeDeviceMap();
   void InitializeClipboard();
   void InitializeMessageQueueManager();
-  void InitializeMaxwell(const fidl::StringPtr& user_shell_url,
-                         AppConfig story_shell);
+  void InitializeMaxwellAndModular(const fidl::StringPtr& user_shell_url,
+                                   AppConfig story_shell);
   void InitializeUserShell(
       AppConfig user_shell,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
@@ -194,6 +195,9 @@ class UserRunnerImpl : modular_private::UserRunner,
   AsyncHolder<AgentRunner> agent_runner_;
   std::unique_ptr<DeviceMapImpl> device_map_impl_;
   std::string device_name_;
+
+  std::unique_ptr<StoryCommandExecutor> story_command_executor_;
+  std::unique_ptr<PuppetMasterImpl> puppet_master_impl_;
 
   // Services we provide to |context_engine_app_|.
   component::ServiceProviderImpl context_engine_ns_services_;

@@ -24,6 +24,9 @@
 #include "peridot/bin/user_runner/focus.h"
 #include "peridot/bin/user_runner/message_queue/message_queue_manager.h"
 #include "peridot/bin/user_runner/presentation_provider.h"
+#include "peridot/bin/user_runner/puppet_master/puppet_master_impl.h"
+#include "peridot/bin/user_runner/puppet_master/story_command_executor.h"
+#include "peridot/bin/user_runner/puppet_master/make_production_impl.h"
 #include "peridot/bin/user_runner/story_runner/link_impl.h"
 #include "peridot/bin/user_runner/story_runner/story_provider_impl.h"
 #include "peridot/lib/common/names.h"
@@ -188,7 +191,7 @@ void UserRunnerImpl::Initialize(
   InitializeLedgerDashboard();
   InitializeDeviceMap();
   InitializeMessageQueueManager();
-  InitializeMaxwell(user_shell.url, std::move(story_shell));
+  InitializeMaxwellAndModular(user_shell.url, std::move(story_shell));
   InitializeClipboard();
   InitializeUserShell(std::move(user_shell), std::move(view_owner_request));
 
@@ -291,7 +294,8 @@ void UserRunnerImpl::InitializeLedger() {
 }
 
 void UserRunnerImpl::InitializeLedgerDashboard() {
-  if (test_) return;
+  if (test_)
+    return;
   ledger_dashboard_scope_ = std::make_unique<Scope>(
       user_scope_->environment(), std::string(kLedgerDashboardEnvLabel));
   AtEnd(Reset(&ledger_dashboard_scope_));
@@ -369,8 +373,8 @@ void UserRunnerImpl::InitializeMessageQueueManager() {
   AtEnd(Reset(&message_queue_manager_));
 }
 
-void UserRunnerImpl::InitializeMaxwell(const fidl::StringPtr& user_shell_url,
-                                       AppConfig story_shell) {
+void UserRunnerImpl::InitializeMaxwellAndModular(
+    const fidl::StringPtr& user_shell_url, AppConfig story_shell) {
   // NOTE: There is an awkward service exchange here between
   // UserIntelligenceProvider, AgentRunner, StoryProviderImpl,
   // FocusHandler, VisibleStoriesHandler.
@@ -543,10 +547,10 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::StringPtr& user_shell_url,
   AtEnd(Reset(&presentation_provider_impl_));
 
   // We create |story_provider_impl_| after |agent_runner_| so
-  // story_provider_impl_ is termiated before agent_runner_ because the modules
-  // running in a story might freak out if agents they are connected to go away
-  // while they are still running. On the other hand agents are meant to outlive
-  // story lifetimes.
+  // story_provider_impl_ is termiated before agent_runner_, which will cause
+  // all modules to be terminated before agents are terminated. Agents must
+  // outlive the stories which contain modules that are connected to those
+  // agents.
   story_provider_impl_.reset(new StoryProviderImpl(
       user_scope_.get(), device_map_impl_->current_device_id(),
       ledger_client_.get(), ledger::PageId(), std::move(story_shell),
@@ -557,6 +561,13 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::StringPtr& user_shell_url,
 
   AtEnd(
       Teardown(kStoryProviderTimeout, "StoryProvider", &story_provider_impl_));
+
+  // Initialize the PuppetMaster.
+  story_command_executor_ = MakeProductionStoryCommandExecutor(nullptr);
+  puppet_master_impl_.reset(new PuppetMasterImpl(story_command_executor_.get()));
+
+  AtEnd(Reset(&story_command_executor_));
+  AtEnd(Reset(&puppet_master_impl_));
 
   focus_handler_ =
       std::make_unique<FocusHandler>(device_map_impl_->current_device_id(),

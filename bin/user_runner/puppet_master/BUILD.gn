@@ -83,3 +83,15 @@ source_set("dispatch_story_command_executor_unittest") {
     "//third_party/googletest:gtest",
   ]
 }
+
+source_set("make_production_impl") {
+  sources = [
+    "make_production_impl.h",
+    "make_production_impl.cc",
+  ]
+
+  deps = [
+    ":puppet_master_impl",
+    ":dispatch_story_command_executor",
+  ]
+}
