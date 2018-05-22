@@ -8,7 +8,7 @@ shared by mods across many stories. In addition to the capabilities provided to 
 Peridot components via `ComponentContext`, an `Agent` is given additional
 capabilities via its `AgentContext`.
 
-See [the SimpleAgent directory](../simple_agent/) for a complete implementation of
+See [the simple directory](../simple/) for a complete implementation of
 the `Agent` described here.
 
 ## SimpleAgent
@@ -20,7 +20,7 @@ a `MessageQueue` (a common communication channel).
 ability to control which `MessageQueue` the messages will be sent to.
 
 ```
-library simple_agent;
+library simple;
 
 [Discoverable]
 interface Simple {
@@ -131,7 +131,7 @@ interface(s) it provides.
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::AgentDriver<simple_agent::SimpleAgent> driver(
+  modular::AgentDriver<simple::SimpleAgent> driver(
       app_context.get(), [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;

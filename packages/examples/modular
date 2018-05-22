@@ -1,5 +1,6 @@
 {
     "packages": {
-        "modular_examples": "//peridot/examples:modular_examples"
+        "modular_examples": "//peridot/examples:modular_examples",
+        "simple_module": "//peridot/examples/simple:simple_module"
     }
 }

@@ -1,0 +1,53 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/package.gni")
+
+executable("simple_agent") {
+  sources = [
+    "simple_agent.cc",
+    "simple_impl.cc",
+    "simple_impl.h",
+  ]
+
+  deps = [
+    ":interfaces",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fsl",
+    "//peridot/public/lib/app_driver/cpp",
+  ]
+
+}
+
+package("simple_module") {
+  deps = [
+    ":simple_module_bin",
+  ]
+
+  binary = "simple_module"
+}
+
+executable("simple_module_bin") {
+  output_name = "simple_module"
+
+  sources = [
+    "simple_module.cc",
+  ]
+
+  deps = [
+    ":interfaces",
+    "//garnet/public/lib/app/cpp",
+    "//peridot/lib/fidl:message_receiver_client",
+    "//peridot/public/lib/app_driver/cpp:module_driver",
+  ]
+}
+
+fidl("interfaces") {
+  name = "simple"
+
+  sources = [
+    "simple.fidl",
+  ]
+}

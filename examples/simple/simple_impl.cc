@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/examples/simple_agent/simple_impl.h"
+#include "peridot/examples/simple/simple_impl.h"
 
-namespace simple_agent {
+namespace simple {
 
 SimpleImpl::SimpleImpl() {}
 
@@ -18,4 +18,4 @@ void SimpleImpl::SetMessageQueue(fidl::StringPtr queue_token) {
   token_ = queue_token;
 }
 
-}  // namespace simple_agent
+}  // namespace simple

@@ -10,7 +10,8 @@ package("modular_examples") {
   deps = [
     "counter_cpp",
     "hello_world",
-    "simple_agent",
+    "simple:simple_agent",
+    "simple:simple_module",
     "swap_cpp",
     "todo_cpp",
   ]
@@ -39,6 +40,9 @@ package("modular_examples") {
     },
     {
       name = "simple_agent"
+    },
+    {
+      name = "simple_module"
     },
     {
       name = "swap_module1"

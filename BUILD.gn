@@ -98,6 +98,8 @@ group("modular_all") {
     "bin/user_runner:dev_user_shell",
     "bin/user_runner/story_runner:dev_story_shell",
     "examples:modular_examples",
+    "examples/simple:simple_agent",
+    "examples/simple:simple_module_bin",
     "tests:modular_tests",
     "tests/benchmark:modular_benchmarks",
   ]

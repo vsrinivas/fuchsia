@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include "lib/app_driver/cpp/agent_driver.h"
-#include "peridot/examples/simple_agent/simple_impl.h"
+#include "peridot/examples/simple/simple_impl.h"
 
-namespace simple_agent {
+namespace simple {
 
 class SimpleAgent {
  public:
@@ -40,13 +40,13 @@ class SimpleAgent {
   std::unique_ptr<SimpleImpl> simple_impl_;
 };
 
-}  // namespace simple_agent
+}  // namespace simple
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::AgentDriver<simple_agent::SimpleAgent> driver(
-      app_context.get(), [&loop] { loop.QuitNow(); });
+  modular::AgentDriver<simple::SimpleAgent> driver(app_context.get(),
+                                                   [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

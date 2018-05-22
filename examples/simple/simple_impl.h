@@ -7,11 +7,11 @@
 
 #include <string>
 
-#include <simple_agent/cpp/fidl.h>
+#include <simple/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 
-namespace simple_agent {
+namespace simple {
 
 // An implementation of the Simple interface exposed by |SimpleAgent|.
 class SimpleImpl : Simple {
@@ -34,6 +34,6 @@ class SimpleImpl : Simple {
   std::string token_;
 };
 
-}  // namespace simple_agent
+}  // namespace simple
 
 #endif // PERIDOT_EXAMPLES_SIMPLE_AGENT_SIMPLE_IMPL_H_
