@@ -65,7 +65,8 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::Create(std::string directory_path,
 void DeviceWatcher::Handler(async_t* async, async::WaitBase* wait,
                             zx_status_t status,
                             const zx_packet_signal* signal) {
-  if (status != ZX_OK) return;
+  if (status != ZX_OK)
+    return;
 
   if (signal->observed & ZX_CHANNEL_READABLE) {
     uint32_t size;

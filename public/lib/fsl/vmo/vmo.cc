@@ -70,7 +70,8 @@ bool StringFromVmo(const SizedVmo& shared_buffer, std::string* string_ptr) {
                                        shared_buffer.size(), string_ptr);
 }
 
-bool StringFromVmo(const fuchsia::mem::Buffer& vmo_transport, std::string* string_ptr) {
+bool StringFromVmo(const fuchsia::mem::Buffer& vmo_transport,
+                   std::string* string_ptr) {
   if (!SizedVmo::IsSizeValid(vmo_transport.vmo, vmo_transport.size)) {
     return false;
   }

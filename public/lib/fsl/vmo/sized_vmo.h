@@ -21,10 +21,10 @@ class SizedVmo {
   SizedVmo(SizedVmo&& other);
   ~SizedVmo();
 
-  // Builds a SizedVmo from a fuchsia::mem::Buffer. Returns false if the transport
-  // is not valid. For the object to be valid, it must either be null, or the
-  // vmo must be valid and the size must be inferior or equal to the physical
-  // size of the vmo.
+  // Builds a SizedVmo from a fuchsia::mem::Buffer. Returns false if the
+  // transport is not valid. For the object to be valid, it must either be null,
+  // or the vmo must be valid and the size must be inferior or equal to the
+  // physical size of the vmo.
   static bool FromTransport(fuchsia::mem::Buffer transport, SizedVmo* out);
 
   static bool IsSizeValid(const zx::vmo& vmo, uint64_t size);

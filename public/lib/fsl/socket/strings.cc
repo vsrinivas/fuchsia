@@ -29,7 +29,8 @@ bool BlockingCopyFromString(fxl::StringView source,
     size_t written;
     zx_status_t result = destination.write(0, ptr, to_write, &written);
     if (result == ZX_OK) {
-      if (written == to_write) return true;
+      if (written == to_write)
+        return true;
       to_write -= written;
       ptr += written;
     } else if (result == ZX_ERR_SHOULD_WAIT) {

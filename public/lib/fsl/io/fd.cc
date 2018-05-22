@@ -15,7 +15,8 @@ zx::channel CloneChannelFromFileDescriptor(int fd) {
   uint32_t type[FDIO_MAX_HANDLES];
 
   zx_status_t r = fdio_clone_fd(fd, 0, handle, type);
-  if (r < 0 || r == 0) return zx::channel();
+  if (r < 0 || r == 0)
+    return zx::channel();
 
   if (type[0] != PA_FDIO_REMOTE) {
     for (int i = 0; i < r; ++i) {

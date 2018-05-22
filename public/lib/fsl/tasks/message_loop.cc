@@ -80,7 +80,8 @@ void MessageLoop::RunUntilIdle() { Run(true); }
 void MessageLoop::QuitNow() {
   FXL_DCHECK(g_current == this);
 
-  if (is_running_) loop_.Quit();
+  if (is_running_)
+    loop_.Quit();
 }
 
 void MessageLoop::PostQuitTask() {
@@ -103,7 +104,8 @@ void MessageLoop::ClearAfterTaskCallback() {
 
 void MessageLoop::Epilogue(async_loop_t*, void* data) {
   auto loop = static_cast<MessageLoop*>(data);
-  if (loop->after_task_callback_) loop->after_task_callback_();
+  if (loop->after_task_callback_)
+    loop->after_task_callback_();
 }
 
 }  // namespace fsl

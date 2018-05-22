@@ -21,7 +21,8 @@ SocketDrainer::SocketDrainer(Client* client, async_t* async)
 
 SocketDrainer::~SocketDrainer() {
   wait_.Cancel();
-  if (destruction_sentinel_) *destruction_sentinel_ = true;
+  if (destruction_sentinel_)
+    *destruction_sentinel_ = true;
 }
 
 void SocketDrainer::Start(zx::socket source) {
@@ -49,7 +50,8 @@ void SocketDrainer::OnHandleReady(async_t* async, async::WaitBase* wait,
     bool is_destroyed = false;
     destruction_sentinel_ = &is_destroyed;
     client_->OnDataAvailable(buffer.data(), num_bytes);
-    if (is_destroyed) return;
+    if (is_destroyed)
+      return;
     destruction_sentinel_ = nullptr;
     status = ZX_ERR_SHOULD_WAIT;
   }
