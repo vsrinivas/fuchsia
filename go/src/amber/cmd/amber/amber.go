@@ -55,8 +55,12 @@ func main() {
 	log.SetFlags(log.Ltime)
 	time.Sleep(*delay)
 
-	keys, err := source.LoadKeys(*keys)
+	srvUrl, err := url.Parse(*addr)
+	if err != nil {
+		log.Fatal("amber: bad address for update server %s\n", err)
+	}
 
+	keys, err := source.LoadKeys(*keys)
 	if err != nil {
 		log.Printf("loading root keys failed %s\n", err)
 		return
@@ -68,7 +72,7 @@ func main() {
 
 	startFIDLSvr(dp, ticker)
 
-	go startupDaemon(*addr, *store, keys, ticker, dp)
+	go startupDaemon(srvUrl, *store, keys, ticker, dp)
 	defer dp.Daemon().CancelAll()
 
 	//block forever
@@ -84,10 +88,11 @@ func startFIDLSvr(d *daemon.DaemonProvider, t *source.TickGenerator) {
 	cxt.Serve()
 }
 
-func startupDaemon(srvAddr, store string, keys []*tuf_data.Key,
+func startupDaemon(srvUrl *url.URL, store string, keys []*tuf_data.Key,
 	ticker *source.TickGenerator, dp *daemon.DaemonProvider) *daemon.Daemon {
-	client, _, err := source.InitNewTUFClient(srvAddr, store, keys, ticker)
 
+
+	client, _, err := source.InitNewTUFClient(srvUrl.String(), store, keys, ticker)
 	if err != nil {
 		log.Fatal("client initialization failed: %s\n", err)
 	}
@@ -117,13 +122,14 @@ func startupDaemon(srvAddr, store string, keys []*tuf_data.Key,
 		Limit:    50,
 	}
 	checker := daemon.NewDaemon(reqSet, daemon.ProcessPackage, []source.Source{fetcher})
-	u, err := url.Parse(srvAddr)
-	if err == nil {
-		u.Path = filepath.Join(u.Path, "blobs")
-		checker.AddBlobRepo(daemon.BlobRepo{Address: u.String(), Interval: time.Second * 5})
-	} else {
-		log.Printf("amber: bad blob repo address %s\n", err)
-	}
+
+	blobUrl := srvUrl
+	blobUrl.Path = filepath.Join(blobUrl.Path, "blobs")
+	checker.AddBlobRepo(daemon.BlobRepo{
+		Address: blobUrl.String(),
+		Interval: time.Second * 5,
+	})
+
 	dp.SetDaemon(checker)
 	log.Println("amber: monitoring for updates")
 	return checker
