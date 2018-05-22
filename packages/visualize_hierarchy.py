@@ -15,7 +15,9 @@ def get_package_id(package):
 
 
 def get_package_nick(package):
-    return package.split('/', 2)[2]
+    parts = package.split('/')
+    base = parts.index('packages')
+    return '/'.join(parts[base+1:])
 
 
 def main():
@@ -41,10 +43,13 @@ def main():
 
     layers = {}
     for package in deps:
-        parts = package.split('/', 2)
-        if len(parts) != 3 or parts[1] != 'packages':
+        parts = package.split('/')
+        try:
+            package_base = parts.index('packages')
+        except:
             raise Exception('Unexpected directory structure for %s' % package)
-        layers.setdefault(parts[0], []).append(package)
+        layer = '/'.join(parts[0:package_base])
+        layers.setdefault(layer, []).append(package)
 
     with open(args.output, 'w') as out:
         out.write('digraph fuchsia {\n')
