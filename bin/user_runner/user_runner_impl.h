@@ -17,7 +17,6 @@
 #include <modular_private/cpp/fidl.h>
 #include <presentation/cpp/fidl.h>
 #include <speech/cpp/fidl.h>
-#include <ui/cpp/fidl.h>
 #include <views_v1_token/cpp/fidl.h>
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/fidl/cpp/binding.h"
