@@ -13,10 +13,9 @@
 #include <fs/block-txn.h>
 #include <lib/fzl/mapped-vmo.h>
 
-#include <minfs/format.h>
 #include <minfs/block-txn.h>
-
-#include "superblock.h"
+#include <minfs/format.h>
+#include <minfs/superblock.h>
 
 namespace minfs {
 
@@ -25,6 +24,35 @@ using RawBitmap = bitmap::RawBitmapGeneric<bitmap::VmoStorage>;
 #else
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
 #endif
+
+class Allocator;
+
+// This class represents a promise from an Allocator to save a particular number of reserved
+// elements for later allocation. Allocation for reserved elements must be done through the
+// AllocatorPromise class.
+// This class is thread-compatible.
+// This class is not assignable, copyable, or moveable.
+class AllocatorPromise {
+public:
+    DISALLOW_COPY_ASSIGN_AND_MOVE(AllocatorPromise);
+
+    AllocatorPromise() = delete;
+    ~AllocatorPromise();
+
+    // Allocate a new item in allocator_. Return the index of the newly allocated item.
+    size_t Allocate(WriteTxn* txn);
+private:
+    friend class Allocator;
+
+    // Constructor which only allows creation through an Allocator.
+    AllocatorPromise(Allocator* allocator, size_t reserved) : allocator_(allocator),
+                                                              reserved_(reserved) {
+        ZX_DEBUG_ASSERT(allocator != nullptr);
+    }
+
+    Allocator* allocator_ = nullptr;
+    size_t reserved_ = 0;
+};
 
 // Represents the FVM-related information for the allocator, including
 // slice usage and a mechanism to grow the allocation pool.
@@ -110,6 +138,11 @@ public:
         return *pool_used_;
     }
 
+    // Return the number of elements which are still available for allocation/reservation.
+    uint32_t PoolAvailable() const {
+        return *pool_total_ - *pool_used_;
+    }
+
     void PoolAllocate(uint32_t units) {
         *pool_used_ += units;
     }
@@ -163,22 +196,38 @@ public:
                               size_t unit_size, GrowHandler grow_cb,
                               AllocatorMetadata metadata, fbl::unique_ptr<Allocator>* out);
 
-    // Allocate a new item.
-    zx_status_t Allocate(WriteTxn* txn, size_t* out_index);
+    // Reserve |count| elements. This is required in order to later allocate them.
+    // Outputs a |promise| which contains reservation details.
+    zx_status_t Reserve(WriteTxn* txn, size_t count, fbl::unique_ptr<AllocatorPromise>* promise);
 
     // Free an item from the allocator.
     void Free(WriteTxn* txn, size_t index);
 
 private:
     friend class MinfsChecker;
+    friend class AllocatorPromise;
 
     Allocator(Bcache* bc, Superblock* sb, size_t unit_size, GrowHandler grow_cb,
               AllocatorMetadata metadata);
 
+    // Extend the on-disk extent containing map_.
     zx_status_t Extend(WriteTxn* txn);
+
+    // Allocate an element and return the newly allocated index.
+    size_t Allocate(WriteTxn* txn);
 
     // Write back the allocation of the following items to disk.
     void Persist(WriteTxn* txn, size_t index, size_t count);
+
+    // Unreserve |count| elements. This may be called in the event of failure, or if we
+    // over-reserved initially.
+    void Unreserve(size_t count);
+
+    // Return the number of total available elements, after taking reservations into account.
+    size_t GetAvailable() {
+        ZX_DEBUG_ASSERT(metadata_.PoolAvailable() >= reserved_);
+        return metadata_.PoolAvailable() - reserved_;
+    }
 
     Bcache* bc_;
     Superblock* sb_;
@@ -187,8 +236,8 @@ private:
     AllocatorMetadata metadata_;
     RawBitmap map_;
 
-    // TODO(smklein): Keep a counter of the "reserved but not allocated" blocks
-    // here when implementing delayed allocation.
+    size_t reserved_;
+    size_t hint_;
 };
 
 } // namespace minfs

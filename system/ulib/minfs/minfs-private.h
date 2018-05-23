@@ -35,12 +35,11 @@
 
 #include <zircon/misc/fnv1hash.h>
 
+#include <minfs/allocator.h>
 #include <minfs/format.h>
+#include <minfs/inode-manager.h>
+#include <minfs/superblock.h>
 #include <minfs/writeback.h>
-
-#include "allocator.h"
-#include "inode-manager.h"
-#include "superblock.h"
 
 #ifdef __Fuchsia__
 #include "metrics.h"
@@ -143,7 +142,7 @@ public:
     zx_status_t VnodeGet(fbl::RefPtr<VnodeMinfs>* out, ino_t ino);
 
     // instantiate a vnode with a new inode
-    zx_status_t VnodeNew(WritebackWork* wb, fbl::RefPtr<VnodeMinfs>* out, uint32_t type);
+    zx_status_t VnodeNew(Transaction* state, fbl::RefPtr<VnodeMinfs>* out, uint32_t type);
 
     // Insert, lookup, and remove vnode from hash map.
     void VnodeInsert(VnodeMinfs* vn) __TA_EXCLUDES(hash_lock_);
@@ -151,7 +150,7 @@ public:
     void VnodeRelease(VnodeMinfs* vn) __TA_EXCLUDES(hash_lock_);
 
     // Allocate a new data block.
-    zx_status_t BlockNew(WriteTxn* txn, blk_t* out_bno);
+    void BlockNew(Transaction* state, blk_t* out_bno);
 
     // Free a data block.
     void BlockFree(WriteTxn* txn, blk_t bno);
@@ -175,13 +174,15 @@ public:
         ZX_DEBUG_ASSERT(bno < Info().block_count);
     }
 
-    zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out);
+    zx_status_t BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
+                                 fbl::unique_ptr<Transaction>* out);
 
-    void EnqueueWork(fbl::unique_ptr<WritebackWork> work) {
+    void CommitTransaction(fbl::unique_ptr<Transaction> state) {
+        // On enqueue, unreserve any remaining reserved blocks/inodes tracked by work.
 #ifdef __Fuchsia__
-        writeback_->Enqueue(fbl::move(work));
+        writeback_->Enqueue(state->RemoveWork());
 #else
-        work->Complete();
+        state->GetWork()->Complete();
 #endif
     }
 
@@ -257,7 +258,7 @@ private:
 #endif
 
     // Find a free inode, allocate it in the inode bitmap, and write it back to disk
-    zx_status_t InoNew(WriteTxn* txn, const minfs_inode_t* inode, ino_t* out_ino);
+    void InoNew(Transaction* state, const minfs_inode_t* inode, ino_t* out_ino);
 
     // Enqueues an update to the super block.
     void WriteInfo(WriteTxn* txn);
@@ -295,17 +296,18 @@ private:
 #endif
 };
 
+struct DirectoryOffset {
+    size_t off = 0;      // Offset in directory of current record
+    size_t off_prev = 0; // Offset in directory of previous record
+};
+
 struct DirArgs {
     fbl::StringPiece name;
     ino_t ino;
     uint32_t type;
     uint32_t reclen;
-    WritebackWork* wb;
-};
-
-struct DirectoryOffset {
-    size_t off;      // Offset in directory of current record
-    size_t off_prev; // Offset in directory of previous record
+    Transaction* state;
+    DirectoryOffset offs;
 };
 
 class VnodeMinfs final : public fs::Vnode,
@@ -321,7 +323,7 @@ public:
     //
     // Sets create / modify times of the new node.
     // Does not allocate an inode number for the Vnode.
-    static zx_status_t Allocate(Minfs* fs, uint32_t type, fbl::RefPtr<VnodeMinfs>* out);
+    static void Allocate(Minfs* fs, uint32_t type, fbl::RefPtr<VnodeMinfs>* out);
 
     // Allocates a Vnode, loading |ino| from storage.
     //
@@ -382,11 +384,11 @@ private:
     // Internal functions
     zx_status_t ReadInternal(void* data, size_t len, size_t off, size_t* actual);
     zx_status_t ReadExactInternal(void* data, size_t len, size_t off);
-    zx_status_t WriteInternal(WritebackWork* wb, const void* data, size_t len,
+    zx_status_t WriteInternal(Transaction* state, const void* data, size_t len,
                               size_t off, size_t* actual);
-    zx_status_t WriteExactInternal(WritebackWork* wb, const void* data, size_t len,
+    zx_status_t WriteExactInternal(Transaction* state, const void* data, size_t len,
                                    size_t off);
-    zx_status_t TruncateInternal(WritebackWork* wb, size_t len);
+    zx_status_t TruncateInternal(Transaction* state, size_t len);
     // Lookup which can traverse '..'
     zx_status_t LookupInternal(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name);
 
@@ -395,8 +397,7 @@ private:
     zx_status_t CheckNotSubdirectory(fbl::RefPtr<VnodeMinfs> newdir);
 
     using DirentCallback = zx_status_t (*)(fbl::RefPtr<VnodeMinfs>,
-                                           minfs_dirent_t*, DirArgs*,
-                                           DirectoryOffset*);
+                                           minfs_dirent_t*, DirArgs*);
 
     // Enumerates directories.
     zx_status_t ForEachDirent(DirArgs* args, const DirentCallback func);
@@ -406,20 +407,22 @@ private:
     // The following functions are passable to |ForEachDirent|, which reads the parent directory,
     // one dirent at a time, and passes each entry to the callback function, along with the DirArgs
     // information passed to the initial call of |ForEachDirent|.
-    static zx_status_t DirentCallbackFind(fbl::RefPtr<VnodeMinfs>, minfs_dirent_t*, DirArgs*,
-                                          DirectoryOffset*);
-    static zx_status_t DirentCallbackUnlink(fbl::RefPtr<VnodeMinfs>, minfs_dirent_t*, DirArgs*,
-                                            DirectoryOffset*);
-    static zx_status_t DirentCallbackForceUnlink(fbl::RefPtr<VnodeMinfs>, minfs_dirent_t*, DirArgs*,
-                                                 DirectoryOffset*);
+    static zx_status_t DirentCallbackFind(fbl::RefPtr<VnodeMinfs>, minfs_dirent_t*, DirArgs*);
+    static zx_status_t DirentCallbackUnlink(fbl::RefPtr<VnodeMinfs>, minfs_dirent_t*, DirArgs*);
+    static zx_status_t DirentCallbackForceUnlink(fbl::RefPtr<VnodeMinfs>, minfs_dirent_t*,
+                                                 DirArgs*);
     static zx_status_t DirentCallbackAttemptRename(fbl::RefPtr<VnodeMinfs>, minfs_dirent_t*,
-                                                   DirArgs*, DirectoryOffset*);
-    static zx_status_t DirentCallbackUpdateInode(fbl::RefPtr<VnodeMinfs>, minfs_dirent_t*, DirArgs*,
-                                                 DirectoryOffset*);
-    static zx_status_t DirentCallbackAppend(fbl::RefPtr<VnodeMinfs>, minfs_dirent_t*, DirArgs*,
-                                            DirectoryOffset*);
+                                                   DirArgs*);
+    static zx_status_t DirentCallbackUpdateInode(fbl::RefPtr<VnodeMinfs>, minfs_dirent_t*,
+                                                 DirArgs*);
+    static zx_status_t DirentCallbackFindSpace(fbl::RefPtr<VnodeMinfs>, minfs_dirent_t*, DirArgs*);
 
-    zx_status_t UnlinkChild(WritebackWork* wb, fbl::RefPtr<VnodeMinfs> child,
+    // Appends a new directory at the specified offset within |args|. This requires a prior call to
+    // DirentCallbackFindSpace to find an offset where there is space for the direntry. It takes
+    // the same |args| that were passed into DirentCallbackFindSpace.
+    zx_status_t AppendDirent(DirArgs* args);
+
+    zx_status_t UnlinkChild(Transaction* state, fbl::RefPtr<VnodeMinfs> child,
                             minfs_dirent_t* de, DirectoryOffset* offs);
     // Remove the link to a vnode (referring to inodes exclusively).
     // Has no impact on direntries (or parent inode).
@@ -561,25 +564,25 @@ private:
     // Allocate an indirect or doubly indirect block at |offset| within the indirect vmo and clear
     // the in-memory block array
     // Assumes that vmo_indirect_ has already been initialized
-    zx_status_t AllocateIndirect(WritebackWork* wb, blk_t index, IndirectArgs* args);
+    void AllocateIndirect(Transaction* state, blk_t index, IndirectArgs* args);
 
     // Perform operation |op| on blocks as specified by |params|
     // The BlockOp methods should not be called directly
     // All BlockOp methods assume that vmo_indirect_ has been grown to the required size
-    zx_status_t BlockOp(WritebackWork* wb, blk_op_t op, bop_params_t* params);
-    zx_status_t BlockOpDirect(WritebackWork* wb, DirectArgs* params);
-    zx_status_t BlockOpIndirect(WritebackWork* wb, IndirectArgs* params);
-    zx_status_t BlockOpDindirect(WritebackWork* wb, DindirectArgs* params);
+    zx_status_t BlockOp(Transaction* state, blk_op_t op, bop_params_t* params);
+    zx_status_t BlockOpDirect(Transaction* state, DirectArgs* params);
+    zx_status_t BlockOpIndirect(Transaction* state, IndirectArgs* params);
+    zx_status_t BlockOpDindirect(Transaction* state, DindirectArgs* params);
 
     // Get the disk block 'bno' corresponding to the 'n' block
     // If 'txn' is non-null, new blocks are allocated for all un-allocated bnos.
     // This can be extended to retrieve multiple contiguous blocks in one call
-    zx_status_t BlockGet(WritebackWork* wb, blk_t n, blk_t* bno);
+    zx_status_t BlockGet(Transaction* state, blk_t n, blk_t* bno);
     // Deletes all blocks (relative to a file) from "start" (inclusive) to the end
     // of the file. Does not update mtime/atime.
     // This can be extended to return indices of deleted bnos, or to delete a specific number of
     // bnos
-    zx_status_t BlocksShrink(WritebackWork* wb, blk_t start);
+    zx_status_t BlocksShrink(Transaction* state, blk_t start);
 
     // Update the vnode's inode and write it to disk.
     void InodeSync(WritebackWork* wb, uint32_t flags);
@@ -686,6 +689,10 @@ constexpr uint32_t GetVmoOffsetForDoublyIndirect(uint32_t dibindex) {
 constexpr size_t GetVmoSizeForDoublyIndirect() {
     return (kMinfsIndirect + kMinfsDoublyIndirect) * kMinfsBlockSize;
 }
+
+// Tries to calculate the required number of blocks into |num_req_blocks|
+// for a write at the given |offset| and |length|.
+zx_status_t GetRequiredBlockCount(size_t offset, size_t length, uint32_t* num_req_blocks);
 
 // write the inode data of this vnode to disk (default does not update time values)
 void minfs_sync_vnode(fbl::RefPtr<VnodeMinfs> vn, uint32_t flags);

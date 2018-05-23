@@ -5,8 +5,7 @@
 #include <stdlib.h>
 
 #include <minfs/block-txn.h>
-
-#include "inode-manager.h"
+#include <minfs/inode-manager.h>
 
 namespace minfs {
 

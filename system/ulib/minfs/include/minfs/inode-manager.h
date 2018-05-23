@@ -12,10 +12,9 @@
 #include <fs/block-txn.h>
 #include <lib/fzl/mapped-vmo.h>
 
-#include <minfs/format.h>
+#include <minfs/allocator.h>
 #include <minfs/block-txn.h>
-
-#include "allocator.h"
+#include <minfs/format.h>
 
 namespace minfs {
 
@@ -34,9 +33,10 @@ public:
                               blk_t start_block, size_t inodes,
                               fbl::unique_ptr<InodeManager>* out);
 
-    // Allocate a new inode.
-    zx_status_t Allocate(WriteTxn* txn, size_t* out_index) {
-        return inode_allocator_->Allocate(txn, out_index);
+    // Reserve |inodes| inodes in the allocator.
+    zx_status_t Reserve(WriteTxn* txn, size_t inodes,
+                        fbl::unique_ptr<AllocatorPromise>* out) {
+        return inode_allocator_->Reserve(txn, inodes, out);
     }
 
     // Free an inode.

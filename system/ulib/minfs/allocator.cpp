@@ -6,9 +6,9 @@
 #include <string.h>
 
 #include <bitmap/raw-bitmap.h>
-#include <minfs/block-txn.h>
 
-#include "allocator.h"
+#include <minfs/allocator.h>
+#include <minfs/block-txn.h>
 
 namespace minfs {
 namespace {
@@ -20,6 +20,20 @@ blk_t BitmapBlocksForSize(size_t size) {
 }
 
 }  // namespace
+
+AllocatorPromise::~AllocatorPromise() {
+    if (reserved_ > 0) {
+        ZX_DEBUG_ASSERT(allocator_ != nullptr);
+        allocator_->Unreserve(reserved_);
+    }
+}
+
+size_t AllocatorPromise::Allocate(WriteTxn* txn) {
+    ZX_DEBUG_ASSERT(allocator_ != nullptr);
+    ZX_DEBUG_ASSERT(reserved_ > 0);
+    reserved_--;
+    return allocator_->Allocate(txn);
+}
 
 AllocatorFvmMetadata::AllocatorFvmMetadata() = default;
 AllocatorFvmMetadata::AllocatorFvmMetadata(uint32_t* data_slices,
@@ -52,16 +66,17 @@ AllocatorMetadata::AllocatorMetadata(blk_t data_start_block,
                                      blk_t metadata_start_block, bool using_fvm,
                                      AllocatorFvmMetadata fvm,
                                      uint32_t* pool_used, uint32_t* pool_total) :
-    data_start_block_(data_start_block),
-    metadata_start_block_(metadata_start_block), using_fvm_(using_fvm),
-    fvm_(fbl::move(fvm)), pool_used_(pool_used), pool_total_(pool_total) {}
+    data_start_block_(data_start_block), metadata_start_block_(metadata_start_block),
+    using_fvm_(using_fvm), fvm_(fbl::move(fvm)),
+    pool_used_(pool_used), pool_total_(pool_total) {}
 AllocatorMetadata::AllocatorMetadata(AllocatorMetadata&&) = default;
 AllocatorMetadata& AllocatorMetadata::operator=(AllocatorMetadata&&) = default;
 AllocatorMetadata::~AllocatorMetadata() = default;
+
 Allocator::Allocator(Bcache* bc, Superblock* sb, size_t unit_size, GrowHandler grow_cb,
                      AllocatorMetadata metadata) :
     bc_(bc), sb_(sb), unit_size_(unit_size), grow_cb_(fbl::move(grow_cb)),
-    metadata_(fbl::move(metadata)) {}
+    metadata_(fbl::move(metadata)), reserved_(0), hint_(0) {}
 Allocator::~Allocator() = default;
 
 zx_status_t Allocator::Create(Bcache* bc, Superblock* sb, ReadTxn* txn, size_t unit_size,
@@ -93,26 +108,44 @@ zx_status_t Allocator::Create(Bcache* bc, Superblock* sb, ReadTxn* txn, size_t u
     return ZX_OK;
 }
 
-zx_status_t Allocator::Allocate(WriteTxn* txn, size_t* out_index) {
-    size_t bitoff_start;
-    zx_status_t status;
-    if ((status = map_.Find(false, 0, map_.size(), 1, &bitoff_start)) != ZX_OK) {
-        size_t old_size = map_.size();
+zx_status_t Allocator::Reserve(WriteTxn* txn, size_t count,
+                               fbl::unique_ptr<AllocatorPromise>* out_promise) {
+    if (GetAvailable() < count) {
+        // If we do not have enough free elements, attempt to extend the partition.
+        zx_status_t status;
+        //TODO(planders): Allow Extend to take in count.
         if ((status = Extend(txn)) != ZX_OK) {
             return status;
         }
-        if ((status = map_.Find(false, old_size, map_.size(), 1,
-                                       &bitoff_start)) != ZX_OK) {
-            return status;
-        }
+
+        ZX_DEBUG_ASSERT(GetAvailable() >= count);
+    }
+
+    reserved_ += count;
+    (*out_promise).reset(new AllocatorPromise(this, count));
+    return ZX_OK;
+}
+
+void Allocator::Unreserve(size_t count) {
+    ZX_DEBUG_ASSERT(reserved_ >= count);
+    reserved_ -= count;
+}
+
+size_t Allocator::Allocate(WriteTxn* txn) {
+    ZX_DEBUG_ASSERT(reserved_ > 0);
+    size_t bitoff_start;
+    if (map_.Find(false, hint_, map_.size(), 1, &bitoff_start) != ZX_OK) {
+        ZX_ASSERT(map_.Find(false, 0, hint_, 1, &bitoff_start) == ZX_OK);
     }
 
     ZX_ASSERT(map_.Set(bitoff_start, bitoff_start + 1) == ZX_OK);
+
     Persist(txn, bitoff_start, 1);
     metadata_.PoolAllocate(1);
+    reserved_ -= 1;
     sb_->Write(txn);
-    *out_index = bitoff_start;
-    return ZX_OK;
+    hint_ = bitoff_start + 1;
+    return bitoff_start;
 }
 
 void Allocator::Free(WriteTxn* txn, size_t index) {
@@ -121,6 +154,10 @@ void Allocator::Free(WriteTxn* txn, size_t index) {
     Persist(txn, index, 1);
     metadata_.PoolRelease(1);
     sb_->Write(txn);
+
+    if (index < hint_) {
+        hint_ = index;
+    }
 }
 
 zx_status_t Allocator::Extend(WriteTxn* txn) {

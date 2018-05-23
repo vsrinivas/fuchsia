@@ -7,9 +7,9 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <lib/fzl/mapped-vmo.h>
-#include <minfs/block-txn.h>
 
-#include "superblock.h"
+#include <minfs/block-txn.h>
+#include <minfs/superblock.h>
 
 namespace minfs {
 

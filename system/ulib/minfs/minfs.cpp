@@ -232,7 +232,6 @@ zx_status_t minfs_check_info(const minfs_info_t* info, Bcache* bc) {
     return 0;
 }
 
-
 #ifndef __Fuchsia__
 BlockOffsets::BlockOffsets(const Bcache* bc, const Superblock* sb) {
     if (bc->extent_lengths_.size() > 0) {
@@ -260,20 +259,35 @@ BlockOffsets::BlockOffsets(const Bcache* bc, const Superblock* sb) {
 }
 #endif
 
-zx_status_t Minfs::CreateWork(fbl::unique_ptr<WritebackWork>* out) {
-    fbl::AllocChecker ac;
-    out->reset(new (&ac) WritebackWork(bc_.get()));
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
+zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
+                                    fbl::unique_ptr<Transaction>* out) {
+    fbl::unique_ptr<WritebackWork> work(new WritebackWork(bc_.get()));
+    fbl::unique_ptr<AllocatorPromise> inode_promise;
+    fbl::unique_ptr<AllocatorPromise> block_promise;
+
+    // Reserve blocks from allocators before returning WritebackWork to client.
+    zx_status_t status;
+    if (reserve_inodes && (status = inodes_->Reserve(work.get(), reserve_inodes,
+                                                     &inode_promise)) != ZX_OK) {
+        return status;
     }
+
+    if (reserve_blocks && (status = block_allocator_->Reserve(work.get(), reserve_blocks,
+                                                              &block_promise)) != ZX_OK) {
+        return status;
+    }
+
+    (*out).reset(new Transaction(fbl::move(work), fbl::move(inode_promise),
+                                 fbl::move(block_promise)));
     return ZX_OK;
 }
 
 #ifdef __Fuchsia__
 void Minfs::Sync(SyncCallback closure) {
-    fbl::unique_ptr<WritebackWork> wb(new WritebackWork(bc_.get()));
-    wb->SetClosure(fbl::move(closure));
-    EnqueueWork(fbl::move(wb));
+    fbl::unique_ptr<Transaction> state;
+    ZX_ASSERT(BeginTransaction(0, 0, &state) == ZX_OK);
+    state->GetWork()->SetClosure(fbl::move(closure));
+    CommitTransaction(fbl::move(state));
 }
 #endif
 
@@ -426,41 +440,31 @@ zx_status_t Minfs::CreateFsId(uint64_t* out) {
 }
 #endif
 
-zx_status_t Minfs::InoNew(WriteTxn* txn, const minfs_inode_t* inode, ino_t* out_ino) {
-    zx_status_t status;
-    size_t allocated_ino;
-    if ((status = inodes_->Allocate(txn, &allocated_ino)) != ZX_OK) {
-        return status;
-    }
+void Minfs::InoNew(Transaction* state, const minfs_inode_t* inode, ino_t* out_ino) {
+    size_t allocated_ino = state->AllocateInode();
     *out_ino = static_cast<ino_t>(allocated_ino);
     // Write the inode back to storage.
-    InodeUpdate(txn, *out_ino, inode);
-    return ZX_OK;
+    InodeUpdate(state->GetWork(), *out_ino, inode);
 }
 
-zx_status_t Minfs::VnodeNew(WritebackWork* wb, fbl::RefPtr<VnodeMinfs>* out, uint32_t type) {
+zx_status_t Minfs::VnodeNew(Transaction* state, fbl::RefPtr<VnodeMinfs>* out, uint32_t type) {
     TRACE_DURATION("minfs", "Minfs::VnodeNew");
     if ((type != kMinfsTypeFile) && (type != kMinfsTypeDir)) {
         return ZX_ERR_INVALID_ARGS;
     }
 
     fbl::RefPtr<VnodeMinfs> vn;
-    zx_status_t status;
 
     // Allocate the in-memory vnode
-    if ((status = VnodeMinfs::Allocate(this, type, &vn)) != ZX_OK) {
-        return status;
-    }
+    VnodeMinfs::Allocate(this, type, &vn);
 
     // Allocate the on-disk inode
     ino_t ino;
-    if ((status = InoNew(wb, vn->GetInode(), &ino)) != ZX_OK) {
-        return status;
-    }
+    InoNew(state, vn->GetInode(), &ino);
     vn->SetIno(ino);
     VnodeInsert(vn.get());
     *out = fbl::move(vn);
-    return 0;
+    return ZX_OK;
 }
 
 void Minfs::VnodeInsert(VnodeMinfs* vn) {
@@ -539,14 +543,9 @@ zx_status_t Minfs::VnodeGet(fbl::RefPtr<VnodeMinfs>* out, ino_t ino) {
 }
 
 // Allocate a new data block from the block bitmap.
-zx_status_t Minfs::BlockNew(WriteTxn* txn, blk_t* out_bno) {
-    zx_status_t status;
-    size_t allocated_bno;
-    if ((status = block_allocator_->Allocate(txn, &allocated_bno)) != ZX_OK) {
-        return status;
-    }
+void Minfs::BlockNew(Transaction* state, blk_t* out_bno) {
+    size_t allocated_bno = state->AllocateBlock();
     *out_bno = static_cast<blk_t>(allocated_bno);
-    return ZX_OK;
 }
 
 void Minfs::BlockFree(WriteTxn* txn, blk_t bno) {
@@ -692,6 +691,51 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info,
 
 
     *out = fbl::move(fs);
+    return ZX_OK;
+}
+
+zx_status_t GetRequiredBlockCount(size_t offset, size_t length, blk_t* num_req_blocks) {
+    if (length == 0) {
+        // Return early if no data needs to be written.
+        *num_req_blocks = 0;
+        return ZX_OK;
+    }
+
+    // Determine which range of direct blocks will be accessed given offset and length,
+    // and add to total.
+    blk_t first_direct = static_cast<blk_t>(offset / kMinfsBlockSize);
+    blk_t last_direct = static_cast<blk_t>((offset + length - 1) / kMinfsBlockSize);
+    blk_t reserve_blocks = last_direct - first_direct + 1;
+
+    if (last_direct >= kMinfsDirect) {
+        // If direct blocks go into indirect range, adjust the indices accordingly.
+        first_direct = fbl::max(first_direct, kMinfsDirect) - kMinfsDirect;
+        last_direct -= kMinfsDirect;
+
+        // Calculate indirect blocks containing first and last direct blocks, and add to total.
+        blk_t first_indirect = first_direct / kMinfsDirectPerIndirect;
+        blk_t last_indirect = last_direct / kMinfsDirectPerIndirect;
+        reserve_blocks += last_indirect - first_indirect + 1;
+
+        if (last_indirect >= kMinfsIndirect) {
+            // If indirect blocks go into doubly indirect range, adjust the indices accordingly.
+            first_indirect = fbl::max(first_indirect, kMinfsIndirect) - kMinfsIndirect;
+            last_indirect -= kMinfsIndirect;
+
+            // Calculate doubly indirect blocks containing first/last indirect blocks,
+            // and add to total
+            blk_t first_dindirect = first_indirect / kMinfsDirectPerIndirect;
+            blk_t last_dindirect = last_indirect / kMinfsDirectPerIndirect;
+            reserve_blocks += last_dindirect - first_dindirect + 1;
+
+            if (last_dindirect >= kMinfsDoublyIndirect) {
+                // We cannot allocate blocks which exceed the doubly indirect range.
+                return ZX_ERR_OUT_OF_RANGE;
+            }
+        }
+    }
+
+    *num_req_blocks = reserve_blocks;
     return ZX_OK;
 }
 

@@ -21,6 +21,7 @@
 #include <fs/vfs.h>
 #include <lib/fzl/mapped-vmo.h>
 
+#include <minfs/allocator.h>
 #include <minfs/bcache.h>
 #include <minfs/block-txn.h>
 #include <minfs/format.h>
@@ -77,6 +78,47 @@ private:
     // single unit of writeback work, which occurs during a cross-directory
     // rename operation.
     fbl::RefPtr<VnodeMinfs> vn_[4];
+};
+
+// Tracks the current transaction, including any enqueued writes, and reserved blocks
+// and inodes. Also handles allocation of previously reserved blocks/inodes.
+class Transaction {
+public:
+    Transaction(fbl::unique_ptr<WritebackWork> work,
+                fbl::unique_ptr<AllocatorPromise> inode_promise,
+                fbl::unique_ptr<AllocatorPromise> block_promise)
+        : work_(fbl::move(work)),
+          inode_promise_(fbl::move(inode_promise)),
+          block_promise_(fbl::move(block_promise)) {}
+
+    size_t AllocateInode() {
+        ZX_DEBUG_ASSERT(inode_promise_ != nullptr);
+        return inode_promise_->Allocate(work_.get());
+    }
+
+    size_t AllocateBlock() {
+        ZX_DEBUG_ASSERT(block_promise_ != nullptr);
+        return block_promise_->Allocate(work_.get());
+    }
+
+    void SetWork(fbl::unique_ptr<WritebackWork> work) {
+        work_ = fbl::move(work);
+    }
+
+    WritebackWork* GetWork() {
+        ZX_DEBUG_ASSERT(work_ != nullptr);
+        return work_.get();
+    }
+
+    fbl::unique_ptr<WritebackWork> RemoveWork() {
+        ZX_DEBUG_ASSERT(work_ != nullptr);
+        return fbl::move(work_);
+    }
+
+private:
+    fbl::unique_ptr<WritebackWork> work_;
+    fbl::unique_ptr<AllocatorPromise> inode_promise_;
+    fbl::unique_ptr<AllocatorPromise> block_promise_;
 };
 
 #ifdef __Fuchsia__
