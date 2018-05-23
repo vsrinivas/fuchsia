@@ -18,7 +18,7 @@ enum AnnoyanceType {
 // Information for the main image of the Suggestion.
 struct SuggestionDisplayImage {
   // The image as a vmo.
-  images.EncodedImage image;
+  fuchsia.images.EncodedImage image;
 
   // Information about the content contained in the image
   SuggestionImageType image_type;

@@ -5,7 +5,7 @@
 #include <memory>
 
 #include <modular/cpp/fidl.h>
-#include <images/cpp/fidl.h>
+#include <fuchsia/images/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 #include <views_v1_token/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -60,7 +60,7 @@ class Module2View : public mozart::BaseView {
   // https://fuchsia.googlesource.com/garnet/+/master/examples/ui/spinning_square/spinning_square_view.cc
   // |BaseView|:
   void OnSceneInvalidated(
-      images::PresentationInfo /*presentation_info*/) override {
+      fuchsia::images::PresentationInfo /*presentation_info*/) override {
     if (!has_logical_size()) {
       return;
     }
