@@ -23,7 +23,7 @@ bool TimelineStoriesFilter::operator()(const Proposal& proposal) {
     const auto& action = proposal.on_selected->at(i);
     if (action.is_create_story()) {
       const auto& create_story = action.create_story();
-      const auto& module_url = create_story.module_id.get();
+      const auto& module_url = create_story.intent.action.handler;
       if (timeline_stories_watcher_->StoryUrls().count(module_url) > 0) {
         return false;
       }

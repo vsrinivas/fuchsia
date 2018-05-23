@@ -21,11 +21,20 @@ const std::string kGmailUrlPrefix =
 Proposal MkUrlProposal(const std::string& query) {
   Proposal p;
   p.id = "launch web_view";
-  CreateStory create_story;
-  create_story.module_id = kWebViewUrl;
 
-  create_story.initial_data =
-      "{\"view\": {\"uri\": \"" + kGmailUrlPrefix + query + "\" } }";
+  IntentParameterData data;
+  data.set_json("{\"uri\": \"" + kGmailUrlPrefix + query + "\" }");
+
+  IntentParameter parameter;
+  parameter.name = "view";
+  parameter.data = std::move(data);
+
+  Intent intent;
+  intent.action.handler = kWebViewUrl;
+  intent.parameters.push_back(std::move(parameter));
+
+  CreateStory create_story;
+  create_story.intent = std::move(intent);
 
   Action action;
   action.set_create_story(std::move(create_story));

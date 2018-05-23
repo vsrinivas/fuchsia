@@ -707,9 +707,13 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion) {
   StartListening(10);
 
   modular::CreateStory create_story;
-  create_story.module_id = "foo://bar";
+  modular::Intent intent;
+  intent.action.handler = "foo://bar";
+  create_story.intent = std::move(intent);
+
   modular::Action action;
   action.set_create_story(std::move(create_story));
+
   fidl::VectorPtr<modular::Action> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
@@ -728,7 +732,10 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestionCallback) {
   StartListening(10);
 
   modular::CreateStory create_story;
-  create_story.module_id = "foo://bar";
+  modular::Intent intent;
+  intent.action.handler = "foo://bar";
+  create_story.intent = std::move(intent);
+
   modular::Action action;
   action.set_create_story(std::move(create_story));
   fidl::VectorPtr<modular::Action> actions;
@@ -752,7 +759,9 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestionToCreateStory) {
   StartListening(10);
 
   modular::CreateStory create_story;
-  create_story.module_id = "foo://bar";
+  modular::Intent intent;
+  intent.action.handler = "foo://bar";
+  create_story.intent = std::move(intent);
 
   modular::Action action;
   action.set_create_story(std::move(create_story));
@@ -779,7 +788,9 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestionToCreateMultipleStories) {
   StartListening(10);
 
   modular::CreateStory create_story;
-  create_story.module_id = "foo://bar";
+  modular::Intent intent;
+  intent.action.handler = "foo://bar";
+  create_story.intent = std::move(intent);
 
   modular::Action action;
   action.set_create_story(std::move(create_story));
@@ -806,42 +817,17 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_CreateStoryIntent) {
   Proposinator p(suggestion_engine());
   StartListening(10);
 
-  auto intent = std::make_unique<modular::Intent>();
-  intent->action.handler = "foo://bar";
+  modular::Intent intent;
+  intent.action.handler = "foo://bar";
   modular::CreateStory create_story;
   create_story.intent = std::move(intent);
+
   modular::Action action;
   action.set_create_story(std::move(create_story));
   fidl::VectorPtr<modular::Action> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   WaitUntilIdle();
-
-  auto suggestion_id = GetOnlySuggestion()->uuid;
-  AcceptSuggestion(suggestion_id);
-  WaitUntilIdle();
-  EXPECT_EQ("foo://bar",
-            story_provider()->story_controller().last_added_module());
-}
-
-TEST_F(SuggestionInteractionTest, AcceptSuggestion_WithInitialData) {
-  Proposinator p(suggestion_engine());
-  StartListening(10);
-
-  modular::CreateStory create_story;
-  create_story.module_id = "foo://bar";
-  modular::Action action;
-
-  rapidjson::Document doc;
-  rapidjson::Pointer("/foo/bar").Set(doc, "some_data");
-  create_story.initial_data = modular::JsonValueToString(doc);
-
-  action.set_create_story(std::move(create_story));
-  fidl::VectorPtr<modular::Action> actions;
-  actions.push_back(std::move(action));
-  p.Propose("1", std::move(actions));
-  WaitUntilIdle();
-  EXPECT_EQ(1, suggestion_count());
 
   auto suggestion_id = GetOnlySuggestion()->uuid;
   AcceptSuggestion(suggestion_id);
@@ -907,7 +893,10 @@ TEST_F(SuggestionInteractionTest, AcceptSugestion_QueryAction) {
 
   // Response from QueryHandler.
   modular::CreateStory create_story;
-  create_story.module_id = "foo://bar";
+  modular::Intent intent;
+  intent.action.handler = "foo://bar";
+  create_story.intent = std::move(intent);
+
   modular::Action action2;
   action2.set_create_story(std::move(create_story));
   fidl::VectorPtr<modular::Action> suggested_actions;
@@ -1098,7 +1087,10 @@ TEST_F(SuggestionFilteringTest, Baseline) {
   StartListening(10);
 
   modular::CreateStory create_story;
-  create_story.module_id = "foo://bar";
+  modular::Intent intent;
+  intent.action.handler = "foo://bar";
+  create_story.intent = std::move(intent);
+
   modular::Action action;
   action.set_create_story(std::move(create_story));
   fidl::VectorPtr<modular::Action> actions;
@@ -1123,7 +1115,10 @@ TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
                                        modular::StoryState::STOPPED);
 
   modular::CreateStory create_story;
-  create_story.module_id = "foo://bar";
+  modular::Intent intent;
+  intent.action.handler = "foo://bar";
+  create_story.intent = std::move(intent);
+
   modular::Action action;
   action.set_create_story(std::move(create_story));
   fidl::VectorPtr<modular::Action> actions;

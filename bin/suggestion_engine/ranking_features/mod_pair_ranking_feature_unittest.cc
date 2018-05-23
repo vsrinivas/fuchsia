@@ -59,10 +59,15 @@ void AddValueToContextUpdate(fidl::VectorPtr<ContextValue>& context_update,
 }
 
 TEST_F(ModPairRankingFeatureTest, ComputeFeatureCreateStoryAction) {
+  Intent intent;
+  intent.action.handler = "mod3";
+
   CreateStory create_story;
-  create_story.module_id = "mod3";
+  create_story.intent = std::move(intent);
+
   Action action;
   action.set_create_story(std::move(create_story));
+
   Proposal proposal;
   proposal.on_selected.push_back(std::move(action));
   SuggestionPrototype prototype;

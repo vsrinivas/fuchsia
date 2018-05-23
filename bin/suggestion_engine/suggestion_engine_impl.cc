@@ -296,17 +296,7 @@ void SuggestionEngineImpl::PerformCreateStoryAction(
   }
 
   Intent intent;
-  if (create_story.intent) {
-    intent = std::move(*create_story.intent);
-  } else {
-    intent.action.handler = create_story.module_id;
-    if (create_story.initial_data) {
-      IntentParameter root_parameter;
-      root_parameter.name = nullptr;
-      root_parameter.data.set_json(create_story.initial_data);
-      intent.parameters.push_back(std::move(root_parameter));
-    }
-  }
+  create_story.intent.Clone(&intent);
 
   if (intent.action.handler) {
     FXL_LOG(INFO) << "Creating story with module " << intent.action.handler;

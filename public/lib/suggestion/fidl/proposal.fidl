@@ -63,15 +63,8 @@ union Action {
 
 // Creates a new story with the specified module
 struct CreateStory {
-  // Deprecated. These are left in for backwards compatibility. Internally,
-  // an appropriate Intent is constructed with equivalent semantics.
-  // TODO(thatguy): Remove all clients.
-  string? module_id;
-  string? initial_data;
-
   // The intent used to add the first module to the created story.
-  // If set, the |module_id| and |initial_data| is disregarded.
-  Intent? intent;
+  Intent intent;
 };
 
 // Brings an existing story into focus.

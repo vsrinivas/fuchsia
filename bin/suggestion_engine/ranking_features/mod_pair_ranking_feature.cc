@@ -52,7 +52,7 @@ double ModPairRankingFeature::ComputeFeatureInternal(
     fidl::StringPtr module_url;
     switch (action.Which()) {
       case Action::Tag::kCreateStory: {
-        module_url = action.create_story().module_id;
+        module_url = action.create_story().intent.action.handler;
         break;
       }
       case Action::Tag::kAddModule: {

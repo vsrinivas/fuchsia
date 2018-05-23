@@ -535,8 +535,12 @@ void LocalModuleResolver::OnQuery(UserInput query, OnQueryCallback done) {
         StringStartsWith(last_part.ToString(), query.text)) {
       Proposal proposal;
       proposal.id = entry.binary;
+
       CreateStory create_story;
-      create_story.module_id = entry.binary;
+      Intent intent;
+      intent.action.handler = entry.binary;
+      create_story.intent = std::move(intent);
+
       Action action;
       action.set_create_story(std::move(create_story));
       proposal.on_selected.push_back(std::move(action));
