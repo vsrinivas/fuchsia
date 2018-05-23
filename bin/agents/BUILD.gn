@@ -7,7 +7,6 @@ group("agents") {
     "basic_text_listener",
     "clipboard",
     "entity_selector",
-    "proposal_maker",
   ]
 }
 

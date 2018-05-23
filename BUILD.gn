@@ -42,9 +42,6 @@ package("maxwell_agents") {
     {
       name = "agents/maxwell_entity_selector"
     },
-    {
-      name = "agents/maxwell_proposal_maker"
-    },
   ]
 }
 

@@ -4,7 +4,6 @@
     "eddystone_agent",
     "agents/maxwell_btl",
     "agents/maxwell_entity_selector",
-    "agents/maxwell_proposal_maker",
     "usage_log"
   ],
   "kronk": "kronk",
