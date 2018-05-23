@@ -53,7 +53,7 @@ CMDLINE_FILE="${BUILD_DIR}/${BOARD}-cmdline.txt"
 OUT_IMAGE="${BUILD_DIR}/${BOARD}-boot.img"
 
 echo ${CMDLINE} > ${CMDLINE_FILE}
-${ZBI} -o ${OUT_IMAGE} ${BOOTDATA_BIN} -C ${CMDLINE_FILE}
+${ZBI} -o ${OUT_IMAGE} ${BOOTDATA_BIN} -T cmdline ${CMDLINE_FILE}
 
 fastboot flash "${BOOT_PART}" "${OUT_IMAGE}"
 fastboot reboot
