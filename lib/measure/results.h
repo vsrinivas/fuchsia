@@ -30,10 +30,10 @@ struct Result {
 };
 
 // Computes the results of a benchmark from the measurement spec and the raw
-// ticks.
+// recorded values.
 std::vector<Result> ComputeResults(
     const Measurements& measurements,
-    const std::unordered_map<uint64_t, std::vector<trace_ticks_t>>& ticks,
+    const std::unordered_map<uint64_t, std::vector<uint64_t>>& recorded_values,
     uint64_t ticks_per_second);
 
 }  // namespace measure

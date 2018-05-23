@@ -37,7 +37,7 @@ class MeasureDuration {
   // Returns the results of the measurements. The results are represented as a
   // map of measurement ids to lists of time deltas representing the durations
   // of the matching trace events.
-  const std::unordered_map<uint64_t, std::vector<trace_ticks_t>>& results() {
+  const std::unordered_map<uint64_t, std::vector<uint64_t>>& results() {
     return results_;
   }
 
@@ -65,7 +65,7 @@ class MeasureDuration {
   void AddResult(uint64_t spec_id, trace_ticks_t from, trace_ticks_t to);
 
   std::vector<DurationSpec> specs_;
-  std::unordered_map<uint64_t, std::vector<trace_ticks_t>> results_;
+  std::unordered_map<uint64_t, std::vector<uint64_t>> results_;
 
   std::map<PendingBeginKey, trace_ticks_t> pending_begins_;
 

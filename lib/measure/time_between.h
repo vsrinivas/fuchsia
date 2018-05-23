@@ -47,7 +47,7 @@ class MeasureTimeBetween {
   // For each pair of a first event occurence followed by a second event
   // occurence (with no other occurences of either event in between), the
   // results contain the duration between the two.
-  const std::unordered_map<uint64_t, std::vector<trace_ticks_t>>& results() {
+  const std::unordered_map<uint64_t, std::vector<uint64_t>>& results() {
     return results_;
   }
 
@@ -57,7 +57,7 @@ class MeasureTimeBetween {
   void AddResult(uint64_t spec_id, trace_ticks_t from, trace_ticks_t to);
 
   std::vector<TimeBetweenSpec> specs_;
-  std::unordered_map<uint64_t, std::vector<trace_ticks_t>> results_;
+  std::unordered_map<uint64_t, std::vector<uint64_t>> results_;
 
   // Maps ids of "time between" measurements to the timestamp of the most recent
   // occurence of the first event.
