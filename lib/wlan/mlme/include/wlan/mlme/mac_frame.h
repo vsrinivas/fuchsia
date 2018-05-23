@@ -96,8 +96,8 @@ template <typename Header, typename Body> class ImmutableFrame {
         ZX_DEBUG_ASSERT(!IsTaken());
         if (IsTaken()) { return false; }
 
-        if (hdr() == nullptr) { return false; }
-        return body() != nullptr;
+        if (pkt_->field<Header>(0) == nullptr) { return false; }
+        return pkt_->field<Body>(body_offset<Header>()) != nullptr;
     }
 
     // Returns the Frame's underlying Packet. The Frame will no longer own the Packet and
