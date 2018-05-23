@@ -264,6 +264,14 @@ pub struct {{ $interface.Name }}Server<T: {{ $interface.Name }}> {
 	{{- end }}
 }
 
+impl<T: {{ $interface.Name }}> {{ $interface.Name }}Server<T> {
+	pub fn control_handle(&self) -> {{ $interface.Name }}ControlHandle {
+		{{ $interface.Name }}ControlHandle {
+			channel: self.channel.clone(),
+		}
+	}
+}
+
 impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T> {
 	type Item = ();
 	type Error = fidl::Error;
