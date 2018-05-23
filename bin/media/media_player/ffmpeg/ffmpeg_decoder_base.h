@@ -121,6 +121,8 @@ class FfmpegDecoderBase : public Decoder {
   }
 
  private:
+  enum class State { kIdle, kOutputPacketRequested, kEndOfStream };
+
   // Callback used by the ffmpeg decoder to acquire a buffer.
   static int AllocateBufferForAvFrame(AVCodecContext* av_codec_context,
                                       AVFrame* av_frame, int flags);
@@ -139,7 +141,7 @@ class FfmpegDecoderBase : public Decoder {
   ffmpeg::AvFramePtr av_frame_ptr_;
   int64_t next_pts_ = Packet::kUnknownPts;
   media::TimelineRate pts_rate_;
-  std::atomic_bool output_packet_requested_;
+  std::atomic<State> state_;
   bool flushing_ = false;
 
   // The allocator used by avcodec_send_packet and avcodec_receive_frame to

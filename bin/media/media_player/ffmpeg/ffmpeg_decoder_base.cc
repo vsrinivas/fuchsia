@@ -18,7 +18,7 @@ FfmpegDecoderBase::FfmpegDecoderBase(AvCodecContextPtr av_codec_context)
       av_frame_ptr_(ffmpeg::AvFrame::Create()) {
   FXL_DCHECK(av_codec_context_);
 
-  output_packet_requested_ = false;
+  state_ = State::kIdle;
 
   av_codec_context_->opaque = this;
   av_codec_context_->get_buffer2 = AllocateBufferForAvFrame;
@@ -62,7 +62,7 @@ void FfmpegDecoderBase::FlushOutput(size_t output_index,
     FXL_DCHECK(av_codec_context_);
     avcodec_flush_buffers(av_codec_context_.get());
     next_pts_ = Packet::kUnknownPts;
-    output_packet_requested_ = false;
+    state_ = State::kIdle;
     callback();
   });
 }
@@ -94,18 +94,20 @@ void FfmpegDecoderBase::SetAllocatorForOutput(
 void FfmpegDecoderBase::RequestOutputPacket() {
   flushing_ = false;
 
-  if (output_packet_requested_) {
-    return;
+  State expected = State::kIdle;
+  if (state_.compare_exchange_strong(expected, State::kOutputPacketRequested)) {
+    stage()->RequestInputPacket();
   }
-
-  output_packet_requested_ = true;
-  stage()->RequestInputPacket();
 }
 
 void FfmpegDecoderBase::TransformPacket(PacketPtr input) {
   if (flushing_) {
     // We got a flush request. Throw away the packet.
     return;
+  }
+
+  if (input->end_of_stream()) {
+    state_ = State::kEndOfStream;
   }
 
   TRACE_DURATION("motown", (av_codec_context_->codec_type == AVMEDIA_TYPE_VIDEO
@@ -157,7 +159,14 @@ void FfmpegDecoderBase::TransformPacket(PacketPtr input) {
         {
           PacketPtr packet = CreateOutputPacket(*av_frame_ptr_, allocator_);
           av_frame_unref(av_frame_ptr_.get());
-          output_packet_requested_ = false;
+
+          // If the state is still |kOutputPacketRequested|, set it to |kIdle|.
+          // It could be |kIdle| already if a flush occurred or |kEndOfStream|
+          // if we got an end-of-stream packet. In either of those cases, we
+          // want to leave the state unchanged.
+          State expected = State::kOutputPacketRequested;
+          state_.compare_exchange_strong(expected, State::kIdle);
+
           stage()->PutOutputPacket(packet);
         }
 
@@ -166,10 +175,13 @@ void FfmpegDecoderBase::TransformPacket(PacketPtr input) {
 
       case AVERROR(EAGAIN):
         // Succeeded, no frame produced, need another input packet.
-        if (!input->end_of_stream() || input->size() == 0) {
-          if (output_packet_requested_) {
+        FXL_DCHECK(input->size() != 0);
+
+        if (!input->end_of_stream()) {
+          if (state_ == State::kOutputPacketRequested) {
             stage()->RequestInputPacket();
           }
+
           return;
         }
 
