@@ -653,6 +653,7 @@ struct AmsduSubframeHeader {
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.2.2.3
+// Non-DMG stations do not transmit in this form.
 struct AmsduSubframeHeaderShort {
     uint16_t msdu_len;
 } __PACKED;

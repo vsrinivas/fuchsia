@@ -591,7 +591,7 @@ zx_status_t Station::HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaReque
 
     // TODO(porce): Query the radio chipset capability to build the response.
     // TODO(NET-567): Use the outcome of the association negotiation
-    resp->params.set_amsdu(0);  // For Aruba
+    resp->params.set_amsdu(addbar->params.amsdu() == 1 && IsAmsduRxReady());
     resp->params.set_policy(BlockAckParameters::kImmediate);
     resp->params.set_tid(addbar->params.tid());
 
@@ -746,9 +746,12 @@ zx_status_t Station::HandleAmsduFrame(const ImmutableDataFrame<LlcHeader>& frame
     ZX_DEBUG_ASSERT(frame.hdr()->fc.subtype() >= DataSubtype::kQosdata);
     ZX_DEBUG_ASSERT(frame.hdr()->fc.subtype() <= DataSubtype::kQosdataCfackCfpoll);
 
-    // TODO(porce): Branch if Short A-MSDU subframe format should be used.
+    // Non-DMG stations use basic subframe format only.
     auto amsdu_len = frame.body_len();
     if (amsdu_len == 0) { return ZX_OK; }
+
+    // TODO(porce): The received AMSDU should not be greater than max_amsdu_len, specified in
+    // HtCapabilities IE of Association. Warn or discard if violated.
 
     if (amsdu_len < sizeof(AmsduSubframeHeader)) {
         errorf("dropping malformed A-MSDU of len %zu\n", amsdu_len);
@@ -767,7 +770,10 @@ zx_status_t Station::HandleAmsduFrame(const ImmutableDataFrame<LlcHeader>& frame
         auto subframe = reinterpret_cast<const AmsduSubframe*>(amsdu + offset);
 
         if (!(offset + sizeof(AmsduSubframeHeader) <= amsdu_len)) {
-            errorf("malformed A-MSDU subframe: amsdu_len %zu offset %zu offset_prev %zu AmsduSubframeHeader size: %zu\n", amsdu_len, offset, offset_prev, sizeof(AmsduSubframeHeader));
+            errorf(
+                "malformed A-MSDU subframe: amsdu_len %zu offset %zu offset_prev %zu "
+                "AmsduSubframeHeader size: %zu\n",
+                amsdu_len, offset, offset_prev, sizeof(AmsduSubframeHeader));
             return ZX_ERR_STOP;
         }
         offset += sizeof(AmsduSubframeHeader);
@@ -777,7 +783,8 @@ zx_status_t Station::HandleAmsduFrame(const ImmutableDataFrame<LlcHeader>& frame
 
         if (msdu_len > 0) {
             if (!(offset + msdu_len <= amsdu_len && msdu_len >= sizeof(LlcHeader))) {
-                errorf("malformed A-MSDU subframe: amsdu_len %zu offset %zu msdu_len %u\n", amsdu_len, offset, msdu_len);
+                errorf("malformed A-MSDU subframe: amsdu_len %zu offset %zu msdu_len %u\n",
+                       amsdu_len, offset, msdu_len);
                 return ZX_ERR_STOP;
             }
 
@@ -865,6 +872,8 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
         qos_ctrl->set_tid(GetTid(frame));
         qos_ctrl->set_eosp(0);
         qos_ctrl->set_ack_policy(ack_policy::kNormalAck);
+
+        // AMSDU: set_amsdu_present(1) requires dot11HighthroughputOptionImplemented should be true.
         qos_ctrl->set_amsdu_present(0);
         qos_ctrl->set_byte(0);
     }
@@ -997,7 +1006,7 @@ zx_status_t Station::SendAddBaRequestFrame() {
     // It appears there is no particular rule to choose the value for
     // dialog_token. See IEEE Std 802.11-2016, 9.6.5.2.
     req->dialog_token = 0x01;
-    req->params.set_amsdu(0);  // Aruba
+    req->params.set_amsdu(IsAmsduRxReady());
     req->params.set_policy(BlockAckParameters::BlockAckPolicy::kImmediate);
     req->params.set_tid(GetTid());  // TODO(porce): Communicate this with lower MAC.
     // TODO(porce): Fix the discrepancy of this value from the Ralink's TXWI ba_win_size setting
@@ -1252,6 +1261,20 @@ bool Station::IsQosReady() const {
 
     // Aruba / Ubiquiti are confirmed to be compatible with QoS field for the BlockAck session,
     // independently of 40MHz operation.
+    return true;
+}
+
+bool Station::IsAmsduRxReady() const {
+    // [Interop]
+    // IEEE Std 802.11-2016 9.4.1.14's wording is ambiguous, and it can cause interop issue.
+    // In particular, a peer may tear off BlockAck session if interpretation of the field
+    // "A-MSDU Supported" in Block Ack Parameter set of ADDBA Request and Response is different.
+    // Declare such that Fuchsia "can do" AMSDU. This hints the peer that
+    // peer may assume that this Fuchsia device can process inbound A-MSDU data frame.
+    // Since the presence of A-MSDU frame is indicated in the "amsdu_present" field of
+    // QoS field in MPDU header, and the use of A-MSDU frame is optional in flight-time,
+    // setting "A-MSDU Supported" both in ADDBA Request and Response is deemed to be most
+    // interoperable way.
     return true;
 }
 

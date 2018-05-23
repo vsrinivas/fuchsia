@@ -131,6 +131,7 @@ class Station : public FrameHandler {
     bool IsCbw40RxReady() const;
     bool IsCbw40TxReady() const;
     bool IsQosReady() const;
+    bool IsAmsduRxReady() const;
     HtCapabilities BuildHtCapabilities() const;
     uint8_t GetTid();
     uint8_t GetTid(const ImmutableBaseFrame<EthernetII>& frame);
