@@ -5,6 +5,7 @@
 #![allow(unused)] // TODO(atait): Remove once there are non-test clients
 
 use byteorder::{BigEndian, ByteOrder};
+use protocol;
 use protocol::{ConfigOption, Message, MessageType, OpCode, OptionCode};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::net::Ipv4Addr;
@@ -36,8 +37,8 @@ impl Server {
         Some(offer_msg)
     }
 
-    fn generate_offer_message(&mut self, disc_msg: Message) -> Option<Message> {
-        let mut offer_msg = disc_msg;
+    fn generate_offer_message(&mut self, client_msg: Message) -> Option<Message> {
+        let mut offer_msg = client_msg.clone();
         offer_msg.op = OpCode::BOOTREPLY;
         offer_msg.secs = 0;
         offer_msg.ciaddr = Ipv4Addr::new(0, 0, 0, 0);
@@ -45,7 +46,7 @@ impl Server {
         offer_msg.sname = String::new();
         offer_msg.file = String::new();
         self.add_required_options_to(&mut offer_msg);
-        offer_msg.yiaddr = self.get_addr_for(offer_msg.chaddr)?;
+        offer_msg.yiaddr = self.get_addr_for_msg(client_msg)?;
 
         Some(offer_msg)
     }
@@ -68,13 +69,23 @@ impl Server {
         });
     }
 
-    fn get_addr_for(&mut self, client_mac_addr: [u8; 6]) -> Option<Ipv4Addr> {
-        if let Some(config) = self.client_configs_cache.get(&client_mac_addr) {
+    fn get_addr_for_msg(&mut self, client_msg: Message) -> Option<Ipv4Addr> {
+        if let Some(config) = self.client_configs_cache.get(&client_msg.chaddr) {
             if !config.expired {
                 return Some(config.client_addr);
             } else if self.addr_pool.addr_is_available(config.client_addr) {
                 self.addr_pool.allocate_addr(config.client_addr);
                 return Some(config.client_addr);
+            }
+        }
+        if let Some(opt) = client_msg.get_config_option_with(OptionCode::RequestedIpAddr) {
+            if opt.value.len() >= 4 {
+                let requested_addr = protocol::ip_addr_from_buf_at(&opt.value, 0)
+                    .expect("out of range indexing on opt.value");
+                if self.addr_pool.addr_is_available(requested_addr) {
+                    self.addr_pool.allocate_addr(requested_addr);
+                    return Some(requested_addr);
+                }
             }
         }
         self.addr_pool.get_next_available_addr()
@@ -298,6 +309,58 @@ mod tests {
         let mut want = new_test_server_msg();
         want.yiaddr = Ipv4Addr::new(192, 168, 1, 2);
 
+        assert_eq!(got, want);
+    }
+
+    #[test]
+    fn test_handle_discover_with_available_requested_addr_returns_requested_addr() {
+        let mut disc_msg = new_test_client_msg();
+        disc_msg.options.push(ConfigOption {
+            code: OptionCode::RequestedIpAddr,
+            value: vec![192, 168, 1, 3],
+        });
+
+        let mut server = new_test_server();
+        server
+            .addr_pool
+            .available_addrs
+            .insert(Ipv4Addr::new(192, 168, 1, 2));
+        server
+            .addr_pool
+            .available_addrs
+            .insert(Ipv4Addr::new(192, 168, 1, 3));
+        let got = server.handle_discover_message(disc_msg).unwrap();
+
+        let mut want = new_test_server_msg();
+        want.yiaddr = Ipv4Addr::new(192, 168, 1, 3);
+        assert_eq!(got, want);
+    }
+
+    #[test]
+    fn test_handle_discover_with_unavailable_requested_addr_returns_next_addr() {
+        let mut disc_msg = new_test_client_msg();
+        disc_msg.options.push(ConfigOption {
+            code: OptionCode::RequestedIpAddr,
+            value: vec![192, 168, 1, 42],
+        });
+
+        let mut server = new_test_server();
+        server
+            .addr_pool
+            .available_addrs
+            .insert(Ipv4Addr::new(192, 168, 1, 2));
+        server
+            .addr_pool
+            .available_addrs
+            .insert(Ipv4Addr::new(192, 168, 1, 3));
+        server
+            .addr_pool
+            .allocated_addrs
+            .insert(Ipv4Addr::new(192, 168, 1, 42));
+        let got = server.handle_discover_message(disc_msg).unwrap();
+
+        let mut want = new_test_server_msg();
+        want.yiaddr = Ipv4Addr::new(192, 168, 1, 2);
         assert_eq!(got, want);
     }
 }

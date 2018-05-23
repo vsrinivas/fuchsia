@@ -42,7 +42,7 @@ const THREE_BYTE_LEN: usize = 24;
 /// All fields in `Message` follow the naming conventions outlined in the RFC.
 /// Note that `Message` does not expose `htype`, `hlen`, or `hops` fields, as
 /// these fields are effectively constants.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Message {
     pub op: OpCode,
     pub xid: u32,
@@ -58,7 +58,7 @@ pub struct Message {
     pub giaddr: Ipv4Addr,
     /// `chaddr` should be stored in Big-Endian order,
     /// e.g `[0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF]`.
-    pub chaddr: [u8; MAC_ADDR_LEN],
+    pub chaddr: MacAddr,
     /// `sname` should not exceed 64 characters.
     pub sname: String,
     /// `file` should not exceed 128 characters.
@@ -103,11 +103,13 @@ impl Message {
         msg.xid = BigEndian::read_u32(&buf[XID_IDX..SECS_IDX]);
         msg.secs = BigEndian::read_u16(&buf[SECS_IDX..FLAGS_IDX]);
         msg.bdcast_flag = buf[FLAGS_IDX] > 0;
-        msg.ciaddr = buf_to_ip_addr(buf, CIADDR_IDX);
-        msg.yiaddr = buf_to_ip_addr(buf, YIADDR_IDX);
-        msg.siaddr = buf_to_ip_addr(buf, SIADDR_IDX);
-        msg.giaddr = buf_to_ip_addr(buf, GIADDR_IDX);
-        buf_into_addr(&buf[CHADDR_IDX..CHADDR_IDX + 6], &mut msg.chaddr);
+        // The conditional earlier in this function ensures that buf is long enough
+        // for the following 4 calls to always succeed.
+        msg.ciaddr = ip_addr_from_buf_at(buf, CIADDR_IDX).expect("out of range indexing on buf");
+        msg.yiaddr = ip_addr_from_buf_at(buf, YIADDR_IDX).expect("out of range indexing on buf");
+        msg.siaddr = ip_addr_from_buf_at(buf, SIADDR_IDX).expect("out of range indexing on buf");
+        msg.giaddr = ip_addr_from_buf_at(buf, GIADDR_IDX).expect("out of range indexing on buf");
+        copy_buf_into_mac_addr(&buf[CHADDR_IDX..CHADDR_IDX + 6], &mut msg.chaddr);
         msg.sname = buf_to_msg_string(&buf[SNAME_IDX..FILE_IDX])?;
         msg.file = buf_to_msg_string(&buf[FILE_IDX..OPTIONS_START_IDX])?;
         buf_into_options(&buf[OPTIONS_START_IDX..], &mut msg.options);
@@ -167,13 +169,38 @@ impl Message {
         bytes.push(OptionCode::End as u8);
         bytes
     }
+
+    /// Returns a reference to the `Message`'s `ConfigOption` with `code`, or `None`
+    /// if `Message` does not have the specified `ConfigOption`.
+    pub fn get_config_option_with(&self, code: OptionCode) -> Option<&ConfigOption> {
+        // There should generally be few (~0 - 10) options attached to a message
+        // so the linear search should not be unreasonably costly.
+        for opt in &self.options {
+            if opt.code == code {
+                return Some(opt);
+            }
+        }
+        None
+    }
 }
 
-fn buf_to_ip_addr(buf: &[u8], start: usize) -> Ipv4Addr {
-    Ipv4Addr::new(buf[start], buf[start + 1], buf[start + 2], buf[start + 3])
+/// A 48-bit network hardware MAC address.
+pub type MacAddr = [u8; MAC_ADDR_LEN];
+
+// Returns an Ipv4Addr when given a byte buffer in network order whose len >= start + 4.
+pub fn ip_addr_from_buf_at(buf: &[u8], start: usize) -> Option<Ipv4Addr> {
+    if buf.len() < start + 4 {
+        return None;
+    }
+    Some(Ipv4Addr::new(
+        buf[start],
+        buf[start + 1],
+        buf[start + 2],
+        buf[start + 3],
+    ))
 }
 
-fn buf_into_addr(buf: &[u8], addr: &mut [u8]) {
+fn copy_buf_into_mac_addr(buf: &[u8], addr: &mut MacAddr) {
     addr.copy_from_slice(buf);
 }
 
@@ -355,7 +382,7 @@ impl OpCode {
 /// `ConfigOption`s can be fixed or variable length per RFC 1533. When
 /// `value` is left empty, the `ConfigOption` will be treated as a fixed
 /// length field.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ConfigOption {
     pub code: OptionCode,
     pub value: Vec<u8>,
