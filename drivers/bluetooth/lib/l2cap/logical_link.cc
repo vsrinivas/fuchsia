@@ -8,6 +8,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
+#include "bredr_signaling_channel.h"
 #include "channel.h"
 #include "le_signaling_channel.h"
 
@@ -44,8 +45,7 @@ constexpr bool IsValidBREDRFixedChannel(ChannelId id) {
 
 LogicalLink::LogicalLink(hci::ConnectionHandle handle,
                          hci::Connection::LinkType type,
-                         hci::Connection::Role role,
-                         async_t* dispatcher,
+                         hci::Connection::Role role, async_t* dispatcher,
                          fxl::RefPtr<hci::Transport> hci)
     : hci_(hci),
       dispatcher_(dispatcher),
@@ -74,14 +74,12 @@ LogicalLink::LogicalLink(hci::ConnectionHandle handle,
     signaling_channel_ = std::make_unique<LESignalingChannel>(
         OpenFixedChannel(kLESignalingChannelId), role_);
   } else {
-    FXL_LOG(WARNING)
-        << "l2cap: BR/EDR signaling channel currently not supported";
+    signaling_channel_ = std::make_unique<BrEdrSignalingChannel>(
+        OpenFixedChannel(kSignalingChannelId), role_);
   }
 }
 
-LogicalLink::~LogicalLink() {
-  Close();
-}
+LogicalLink::~LogicalLink() { Close(); }
 
 fbl::RefPtr<Channel> LogicalLink::OpenFixedChannel(ChannelId id) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());

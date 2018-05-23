@@ -47,6 +47,67 @@ using L2CAP_LESignalingChannelTest = LESignalingChannelTest<>;
 using L2CAP_LESignalingChannelSlaveTest =
     LESignalingChannelTest<hci::Connection::Role::kSlave>;
 
+TEST_F(L2CAP_LESignalingChannelTest, IgnoreEmptyFrame) {
+  bool send_cb_called = false;
+  auto send_cb = [&send_cb_called](auto) { send_cb_called = true; };
+
+  fake_chan()->SetSendCallback(std::move(send_cb), dispatcher());
+  fake_chan()->Receive(common::BufferView());
+
+  RunUntilIdle();
+  EXPECT_FALSE(send_cb_called);
+}
+
+TEST_F(L2CAP_LESignalingChannelTest, RejectMalformedTooLarge) {
+  // Command Reject packet.
+  // clang-format off
+  auto expected = common::CreateStaticByteBuffer(
+      // Command header
+      0x01, kTestCmdId, 0x02, 0x00,
+
+      // Reason (Command not understood)
+      0x00, 0x00);
+
+  // Header-encoded length is less than the otherwise-valid Connection Parameter
+  // Update packet's payload size.
+  auto cmd_with_oversize_payload = common::CreateStaticByteBuffer(
+      0x12, kTestCmdId, 0x07, 0x00,
+
+      // Valid connection parameters
+      0x06, 0x00,
+      0x80, 0x0C,
+      0xF3, 0x01,
+      0x80, 0x0C);
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(cmd_with_oversize_payload, expected));
+}
+
+TEST_F(L2CAP_LESignalingChannelTest, RejectMalformedTooSmall) {
+  // Command Reject packet.
+  // clang-format off
+  auto expected = common::CreateStaticByteBuffer(
+      // Command header
+      0x01, kTestCmdId, 0x02, 0x00,
+
+      // Reason (Command not understood)
+      0x00, 0x00);
+
+  // Header-encoded length is more than the otherwise-valid Connection Parameter
+  // Update packet's payload size.
+  auto cmd_with_undersize_payload = common::CreateStaticByteBuffer(
+      0x12, kTestCmdId, 0x09, 0x00,
+
+      // Valid connection parameters
+      0x06, 0x00,
+      0x80, 0x0C,
+      0xF3, 0x01,
+      0x80, 0x0C);
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(cmd_with_undersize_payload, expected));
+}
+
 TEST_F(L2CAP_LESignalingChannelTest, DefaultMTU) {
   constexpr size_t kCommandSize = kMinLEMTU + 1;
 

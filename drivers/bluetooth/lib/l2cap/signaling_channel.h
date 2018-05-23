@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_SIGNALING_CHANNEL_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_SIGNALING_CHANNEL_H_
 
 #include <memory>
 
@@ -41,10 +42,20 @@ class SignalingChannel {
   void set_mtu(uint16_t mtu) { mtu_ = mtu; }
 
  protected:
+  using PacketDispatchCallback =
+      fit::function<void(const SignalingPacket& packet)>;
+
   // Sends out a single signaling packet using the given parameters.
-  bool SendPacket(CommandCode code,
-                  uint8_t identifier,
+  bool SendPacket(CommandCode code, uint8_t identifier,
                   const common::ByteBuffer& data);
+
+  // Called when a frame is received to decode into L2CAP signaling command
+  // packets. The derived implementation should invoke |cb| for each packet with
+  // a valid payload length, send a Command Reject packet for each packet with
+  // an intact ID in its header but invalid payload length, and drop any other
+  // incoming data.
+  virtual void DecodeRxUnit(const SDU& sdu,
+                            const PacketDispatchCallback& cb) = 0;
 
   // Called when a new signaling packet has been received. Returns false if
   // |packet| is rejected. Otherwise returns true and sends a response packet.
@@ -54,8 +65,7 @@ class SignalingChannel {
   virtual bool HandlePacket(const SignalingPacket& packet) = 0;
 
   // Sends out a command reject packet with the given parameters.
-  bool SendCommandReject(uint8_t identifier,
-                         RejectReason reason,
+  bool SendCommandReject(uint8_t identifier, RejectReason reason,
                          const common::ByteBuffer& data);
 
   // Returns true if called on this SignalingChannel's creation thread. Mainly
@@ -81,17 +91,16 @@ class SignalingChannel {
   // Builds a signaling packet with the given parameters and payload. The
   // backing buffer is slab allocated.
   std::unique_ptr<common::ByteBuffer> BuildPacket(
-      CommandCode code,
-      uint8_t identifier,
-      const common::ByteBuffer& data);
+      CommandCode code, uint8_t identifier, const common::ByteBuffer& data);
 
   // Channel callbacks:
   void OnChannelClosed();
   void OnRxBFrame(const SDU& sdu);
 
-  void ProcessLeSigSdu(const SDU& sdu);
-  void ProcessBrEdrSigSdu(const SDU& sdu);
-  void ProcessPacket(const SignalingPacket& packet);
+  // Invoke the abstract packet handler |HandlePacket| for well-formed command
+  // packets and send responses for command packets that exceed this host's MTU
+  // or can't be handled by this host.
+  void CheckAndDispatchPacket(const SignalingPacket& packet);
 
   // Destroy all other members prior to this so they can use this for checking.
   fxl::ThreadChecker thread_checker_;
@@ -109,3 +118,5 @@ class SignalingChannel {
 }  // namespace internal
 }  // namespace l2cap
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_SIGNALING_CHANNEL_H_

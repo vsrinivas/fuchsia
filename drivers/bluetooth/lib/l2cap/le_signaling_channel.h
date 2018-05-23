@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_LE_SIGNALING_CHANNEL_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_LE_SIGNALING_CHANNEL_H_
 
 #include "garnet/drivers/bluetooth/lib/hci/connection_parameters.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/signaling_channel.h"
@@ -14,7 +15,7 @@ namespace l2cap {
 namespace internal {
 
 // Implements the L2CAP LE signaling fixed channel.
-class LESignalingChannel : public SignalingChannel {
+class LESignalingChannel final : public SignalingChannel {
  public:
   using ConnectionParameterUpdateCallback =
       fit::function<void(const hci::LEPreferredConnectionParameters& params)>;
@@ -29,8 +30,7 @@ class LESignalingChannel : public SignalingChannel {
   //
   // This task will be posted onto the given |dispatcher|.
   void set_conn_param_update_callback(
-      ConnectionParameterUpdateCallback callback,
-      async_t* dispatcher) {
+      ConnectionParameterUpdateCallback callback, async_t* dispatcher) {
     FXL_DCHECK(IsCreationThreadCurrent());
     FXL_DCHECK(static_cast<bool>(callback) == static_cast<bool>(dispatcher));
     conn_param_update_cb_ = std::move(callback);
@@ -41,6 +41,8 @@ class LESignalingChannel : public SignalingChannel {
   void OnConnParamUpdateReceived(const SignalingPacket& packet);
 
   // SignalingChannel override
+  void DecodeRxUnit(const SDU& sdu, const PacketDispatchCallback& cb) override;
+
   bool HandlePacket(const SignalingPacket& packet) override;
 
   ConnectionParameterUpdateCallback conn_param_update_cb_;
@@ -52,3 +54,5 @@ class LESignalingChannel : public SignalingChannel {
 }  // namespace internal
 }  // namespace l2cap
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_LE_SIGNALING_CHANNEL_H_

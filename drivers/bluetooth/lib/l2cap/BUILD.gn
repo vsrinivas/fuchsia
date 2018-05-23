@@ -12,6 +12,8 @@ source_set("definitions") {
 
 static_library("l2cap") {
   sources = [
+    "bredr_signaling_channel.cc",
+    "bredr_signaling_channel.h",
     "channel.cc",
     "channel.h",
     "channel_manager.cc",
@@ -70,6 +72,7 @@ source_set("tests") {
   testonly = true
 
   sources = [
+    "bredr_signaling_channel_unittest.cc",
     "channel_manager_unittest.cc",
     "fragmenter_unittest.cc",
     "le_signaling_channel_unittest.cc",

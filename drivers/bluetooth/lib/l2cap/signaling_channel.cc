@@ -18,7 +18,9 @@ namespace internal {
 
 SignalingChannel::SignalingChannel(fbl::RefPtr<Channel> chan,
                                    hci::Connection::Role role)
-    : is_open_(true), chan_(std::move(chan)), role_(role),
+    : is_open_(true),
+      chan_(std::move(chan)),
+      role_(role),
       weak_ptr_factory_(this) {
   FXL_DCHECK(chan_);
   FXL_DCHECK(chan_->id() == kSignalingChannelId ||
@@ -27,17 +29,21 @@ SignalingChannel::SignalingChannel(fbl::RefPtr<Channel> chan,
   // Note: No need to guard against out-of-thread access as these callbacks are
   // called on the L2CAP thread.
   auto self = weak_ptr_factory_.GetWeakPtr();
-  chan_->Activate([self](const SDU& sdu) { if (self) self->OnRxBFrame(sdu); },
-                  [self] { if (self) self->OnChannelClosed(); },
-                  async_get_default());
+  chan_->Activate(
+      [self](const SDU& sdu) {
+        if (self)
+          self->OnRxBFrame(sdu);
+      },
+      [self] {
+        if (self)
+          self->OnChannelClosed();
+      },
+      async_get_default());
 }
 
-SignalingChannel::~SignalingChannel() {
-  FXL_DCHECK(IsCreationThreadCurrent());
-}
+SignalingChannel::~SignalingChannel() { FXL_DCHECK(IsCreationThreadCurrent()); }
 
-bool SignalingChannel::SendPacket(CommandCode code,
-                                  uint8_t identifier,
+bool SignalingChannel::SendPacket(CommandCode code, uint8_t identifier,
                                   const common::ByteBuffer& data) {
   FXL_DCHECK(IsCreationThreadCurrent());
   return Send(BuildPacket(code, identifier, data));
@@ -65,10 +71,7 @@ bool SignalingChannel::Send(std::unique_ptr<const common::ByteBuffer> packet) {
 }
 
 std::unique_ptr<common::ByteBuffer> SignalingChannel::BuildPacket(
-    CommandCode code,
-    uint8_t identifier,
-    const common::ByteBuffer& data) {
-  FXL_DCHECK(data.size());
+    CommandCode code, uint8_t identifier, const common::ByteBuffer& data) {
   FXL_DCHECK(data.size() <= std::numeric_limits<uint16_t>::max());
 
   auto buffer = common::NewSlabBuffer(sizeof(CommandHeader) + data.size());
@@ -115,51 +118,11 @@ void SignalingChannel::OnRxBFrame(const SDU& sdu) {
   if (!is_open())
     return;
 
-  if (chan_->id() == kSignalingChannelId)
-    ProcessBrEdrSigSdu(sdu);
-  else
-    ProcessLeSigSdu(sdu);
+  DecodeRxUnit(
+      sdu, fit::bind_member(this, &SignalingChannel::CheckAndDispatchPacket));
 }
 
-void SignalingChannel::ProcessLeSigSdu(const SDU& sdu) {
-  // "[O]nly one command per C-frame shall be sent over [the LE] Fixed Channel"
-  // (v5.0, Vol 3, Part A, Section 4).
-  if (sdu.length() < sizeof(CommandHeader)) {
-    FXL_VLOG(1)
-        << "l2cap: SignalingChannel: dropped malformed LE signaling packet";
-    return;
-  }
-
-  SDU::Reader reader(&sdu);
-
-  auto func = [this](const auto& data) {
-    SignalingPacket packet(&data);
-
-    uint16_t cmd_length = le16toh(packet.header().length);
-    if (cmd_length != data.size() - sizeof(CommandHeader)) {
-      FXL_VLOG(1)
-          << "l2cap: SignalingChannel: packet length mismatch (expected: "
-          << cmd_length << ", recv: " << (data.size() - sizeof(CommandHeader))
-          << "); drop";
-      SendCommandReject(packet.header().id, RejectReason::kNotUnderstood,
-                        common::BufferView());
-      return;
-    }
-
-    ProcessPacket(SignalingPacket(&data, cmd_length));
-  };
-
-  // Performing a single read for the entire length of |sdu| can never fail.
-  FXL_CHECK(reader.ReadNext(sdu.length(), func));
-}
-
-void SignalingChannel::ProcessBrEdrSigSdu(const SDU& sdu) {
-  // "Multiple commands may be sent in a single C-frame over Fixed Channel CID
-  // 0x0001 (ACL-U) (v5.0, Vol 3, Part A, Section 4)"
-  // TODO(armansito): Implement.
-}
-
-void SignalingChannel::ProcessPacket(const SignalingPacket& packet) {
+void SignalingChannel::CheckAndDispatchPacket(const SignalingPacket& packet) {
   if (packet.size() > mtu()) {
     // Respond with our signaling MTU.
     uint16_t rsp_mtu = htole16(mtu());

@@ -94,6 +94,39 @@ void LESignalingChannel::OnConnParamUpdateReceived(
   }
 }
 
+void LESignalingChannel::DecodeRxUnit(const SDU& sdu,
+                                      const PacketDispatchCallback& cb) {
+  // "[O]nly one command per C-frame shall be sent over [the LE] Fixed Channel"
+  // (v5.0, Vol 3, Part A, Section 4).
+  if (sdu.length() < sizeof(CommandHeader)) {
+    FXL_VLOG(1)
+        << "l2cap: SignalingChannel: dropped malformed LE signaling packet";
+    return;
+  }
+
+  SDU::Reader reader(&sdu);
+
+  auto process_sdu_as_packet = [this, &cb](const auto& data) {
+    SignalingPacket packet(&data);
+
+    uint16_t expected_payload_length = le16toh(packet.header().length);
+    if (expected_payload_length != data.size() - sizeof(CommandHeader)) {
+      FXL_VLOG(1)
+          << "l2cap: SignalingChannel: packet length mismatch (expected: "
+          << expected_payload_length
+          << ", recv: " << (data.size() - sizeof(CommandHeader)) << "); drop";
+      SendCommandReject(packet.header().id, RejectReason::kNotUnderstood,
+                        common::BufferView());
+      return;
+    }
+
+    cb(SignalingPacket(&data, expected_payload_length));
+  };
+
+  // Performing a single read for the entire length of an SDU can never fail.
+  FXL_CHECK(reader.ReadNext(sdu.length(), process_sdu_as_packet));
+}
+
 bool LESignalingChannel::HandlePacket(const SignalingPacket& packet) {
   switch (packet.header().code) {
     case kConnectionParameterUpdateRequest:

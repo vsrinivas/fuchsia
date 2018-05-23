@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_L2CAP_DEFS_H_
+#define GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_L2CAP_DEFS_H_
 
 // clang-format off
 
@@ -114,6 +115,12 @@ struct DisconnectResponsePayload {
   ChannelId src_cid;
 } __PACKED;
 
+// ACL-U
+constexpr CommandCode kEchoRequest = 0x08;
+
+// ACL-U
+constexpr CommandCode kEchoResponse = 0x09;
+
 // LE-U
 constexpr CommandCode kConnectionParameterUpdateRequest = 0x12;
 struct ConnectionParameterUpdateRequestPayload {
@@ -158,3 +165,5 @@ struct LEFlowControlCreditParams {
 
 }  // namespace l2cap
 }  // namespace btlib
+
+#endif  // GARNET_DRIVERS_BLUETOOTH_LIB_L2CAP_L2CAP_DEFS_H_

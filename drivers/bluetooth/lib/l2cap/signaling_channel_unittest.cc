@@ -30,7 +30,17 @@ class TestSignalingChannel : public SignalingChannel {
   void set_packet_callback(PacketCallback cb) { packet_cb_ = std::move(cb); }
 
  private:
-  // SignalingChannel override
+  // SignalingChannel overrides
+  void DecodeRxUnit(const SDU& sdu, const PacketDispatchCallback& cb) override {
+    SDU::Reader sdu_reader(&sdu);
+
+    // Callback dumbly re-casts read data as a command packet and forwards it to
+    // the dispatch function.
+    sdu_reader.ReadNext(sdu.length(), [&cb](const common::ByteBuffer& data) {
+      cb(SignalingPacket(&data, data.size() - sizeof(CommandHeader)));
+    });
+  }
+
   bool HandlePacket(const SignalingPacket& packet) override {
     if (packet.header().code == kUnknownCommandCode)
       return false;
@@ -78,6 +88,17 @@ class L2CAP_SignalingChannelTest : public testing::FakeChannelTest {
   FXL_DISALLOW_COPY_AND_ASSIGN(L2CAP_SignalingChannelTest);
 };
 
+TEST_F(L2CAP_SignalingChannelTest, IgnoreEmptyFrame) {
+  bool send_cb_called = false;
+  auto send_cb = [&send_cb_called](auto) { send_cb_called = true; };
+
+  fake_chan()->SetSendCallback(std::move(send_cb), dispatcher());
+  fake_chan()->Receive(common::BufferView());
+
+  RunUntilIdle();
+  EXPECT_FALSE(send_cb_called);
+}
+
 TEST_F(L2CAP_SignalingChannelTest, Reject) {
   constexpr uint8_t kTestId = 14;
 
@@ -115,50 +136,6 @@ TEST_F(L2CAP_SignalingChannelTest, RejectCommandCodeZero) {
   auto cmd = common::CreateStaticByteBuffer(
       // header
       0x00, kTestId, 0x04, 0x00,
-
-      // data
-      'L', 'O', 'L', 'Z');
-
-  EXPECT_TRUE(ReceiveAndExpect(cmd, expected));
-}
-
-TEST_F(L2CAP_SignalingChannelTest, RejectMalformedTooLarge) {
-  constexpr uint8_t kTestId = 14;
-
-  // Command Reject packet.
-  auto expected = common::CreateStaticByteBuffer(
-      // Command header
-      0x01, kTestId, 0x02, 0x00,
-
-      // Reason (Command not understood)
-      0x00, 0x00);
-
-  // A length and payload do not match
-  auto cmd = common::CreateStaticByteBuffer(
-      // header
-      kUnknownCommandCode, kTestId, 0x03, 0x00,
-
-      // data
-      'L', 'O', 'L', 'Z');
-
-  EXPECT_TRUE(ReceiveAndExpect(cmd, expected));
-}
-
-TEST_F(L2CAP_SignalingChannelTest, RejectMalformedTooSmall) {
-  constexpr uint8_t kTestId = 14;
-
-  // Command Reject packet.
-  auto expected = common::CreateStaticByteBuffer(
-      // Command header
-      0x01, kTestId, 0x02, 0x00,
-
-      // Reason (Command not understood)
-      0x00, 0x00);
-
-  // A length and payload do not match
-  auto cmd = common::CreateStaticByteBuffer(
-      // header
-      kUnknownCommandCode, kTestId, 0x05, 0x00,
 
       // data
       'L', 'O', 'L', 'Z');
