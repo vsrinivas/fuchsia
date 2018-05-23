@@ -47,10 +47,8 @@ source_set("lib") {
     "pthreads.cc",
     "round_trips.cc",
     "sockets.cc",
-    "syscalls.cc",
     "test_runner.cc",
     "threads.cc",
-    "time_get.cc",
     "vmo.cc",
   ]
   deps = [
