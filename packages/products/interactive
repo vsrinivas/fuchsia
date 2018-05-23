@@ -20,6 +20,7 @@
         "garnet/packages/prod/network",
         "garnet/packages/prod/network_time",
         "garnet/packages/prod/power_manager",
+        "garnet/packages/prod/scenic_tools",
         "garnet/packages/prod/thermd",
         "garnet/packages/prod/timezone",
         "garnet/packages/prod/vboot_reference"
