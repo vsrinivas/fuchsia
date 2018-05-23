@@ -3,9 +3,14 @@
 // found in the LICENSE file.
 
 #include "lib/fxl/files/scoped_temp_dir.h"
+
+#include <fcntl.h>
+
 #include "gtest/gtest.h"
 #include "lib/fxl/files/directory.h"
+#include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"
+#include "lib/fxl/files/unique_fd.h"
 
 namespace files {
 namespace {
@@ -14,6 +19,7 @@ TEST(ScopedTempDir, Creation) {
   ScopedTempDir dir;
 
   EXPECT_TRUE(IsDirectory(dir.path()));
+  EXPECT_NE("temp_dir_XXXXXX", GetBaseName(dir.path()));
 }
 
 TEST(ScopedTempDir, Deletion) {
@@ -31,6 +37,7 @@ TEST(ScopedTempDir, NewTempFile) {
   std::string path;
   EXPECT_TRUE(dir.NewTempFile(&path));
   EXPECT_FALSE(path.empty());
+  EXPECT_TRUE(IsFile(path));
 }
 
 TEST(ScopedTempDir, CustomParent) {
@@ -42,7 +49,6 @@ TEST(ScopedTempDir, CustomParent) {
     path = dir.path();
     EXPECT_TRUE(IsDirectory(path));
     EXPECT_EQ(path.substr(0, parent.size()), parent);
-    EXPECT_NE("temp_dir_XXXXXX", GetBaseName(path));
 
     // Regression test - don't create temp_dir_XXXXXX dir next to the temp one.
     EXPECT_FALSE(
@@ -52,6 +58,60 @@ TEST(ScopedTempDir, CustomParent) {
   // Verify that the tmp directory itself was deleted, but not the parent.
   EXPECT_FALSE(IsDirectory(path));
   EXPECT_TRUE(IsDirectory(parent));
+}
+
+TEST(ScopedTempDirAt, Creation) {
+  ScopedTempDir named_dir;
+  fxl::UniqueFD root_fd(open(named_dir.path().c_str(), O_RDONLY));
+  ASSERT_TRUE(root_fd.is_valid());
+
+  ScopedTempDirAt dir(root_fd.get());
+
+  EXPECT_TRUE(IsDirectoryAt(root_fd.get(), dir.path()));
+  EXPECT_NE("temp_dir_XXXXXX", GetBaseName(dir.path()));
+}
+
+TEST(ScopedTempDirAt, Deletion) {
+  ScopedTempDir named_dir;
+  fxl::UniqueFD root_fd(open(named_dir.path().c_str(), O_RDONLY));
+  ASSERT_TRUE(root_fd.is_valid());
+
+  std::string path;
+  {
+    ScopedTempDirAt dir(root_fd.get());
+    path = dir.path();
+  }
+
+  EXPECT_FALSE(IsDirectoryAt(root_fd.get(), path));
+}
+
+TEST(ScopedTempDirAt, NewTempFile) {
+  ScopedTempDir named_dir;
+  fxl::UniqueFD root_fd(open(named_dir.path().c_str(), O_RDONLY));
+  ASSERT_TRUE(root_fd.is_valid());
+
+  ScopedTempDirAt dir(root_fd.get());
+  std::string path;
+  EXPECT_TRUE(dir.NewTempFile(&path));
+  EXPECT_FALSE(path.empty());
+  EXPECT_TRUE(IsFileAt(root_fd.get(), path));
+}
+
+TEST(ScopedTempDirAt, CustomParent) {
+  ScopedTempDir named_dir;
+  fxl::UniqueFD root_fd(open(named_dir.path().c_str(), O_RDONLY));
+  std::string parent = "a/b/c";
+  std::string path;
+  {
+    ScopedTempDirAt dir(root_fd.get(), parent);
+    path = dir.path();
+    EXPECT_TRUE(IsDirectoryAt(root_fd.get(), path));
+    EXPECT_EQ(path.substr(0, parent.size()), parent);
+  }
+
+  // Verify that the tmp directory itself was deleted, but not the parent.
+  EXPECT_FALSE(IsDirectoryAt(root_fd.get(), path));
+  EXPECT_TRUE(IsDirectoryAt(root_fd.get(), parent));
 }
 
 }  // namespace
