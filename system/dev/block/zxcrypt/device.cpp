@@ -237,14 +237,16 @@ void Device::DdkUnbind() {
     xprintf("zxcrypt device %p unbinding\n", this);
     fbl::AutoLock lock(&mtx_);
     active_ = false;
-    zx_port_packet_t packet;
-    packet.key = 0;
-    packet.type = ZX_PKT_TYPE_USER;
-    packet.status = ZX_ERR_STOP;
-    for (size_t i = 0; i < kNumWorkers; ++i) {
-        port_.queue(&packet, 1);
+    if (port_.is_valid()) {
+        zx_port_packet_t packet;
+        packet.key = 0;
+        packet.type = ZX_PKT_TYPE_USER;
+        packet.status = ZX_ERR_STOP;
+        for (size_t i = 0; i < kNumWorkers; ++i) {
+            port_.queue(&packet, 1);
+        }
+        port_.reset();
     }
-    port_.reset();
     // See |Init|; this is the "extra" call to |FinishTask|.
     FinishTaskLocked();
 }
