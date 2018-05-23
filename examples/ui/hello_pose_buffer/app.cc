@@ -144,7 +144,7 @@ void App::CreateExampleScene(float display_width, float display_height) {
   uint64_t time_interval = 1024 * 1024 * 60 / 3.0;  // 16.67 ms
   uint32_t num_entries = 1;
 
-  Memory mem(session, std::move(vmo), images::MemoryType::VK_DEVICE_MEMORY);
+  Memory mem(session, std::move(vmo), fuchsia::images::MemoryType::VK_DEVICE_MEMORY);
   Buffer pose_buffer(mem, 0, vmo_size);
 
   camera_->SetPoseBuffer(pose_buffer, num_entries, base_time, time_interval);
@@ -191,7 +191,7 @@ void App::Update(uint64_t next_presentation_time) {
 
   // Present
   session_->Present(
-      next_presentation_time, [this](images::PresentationInfo info) {
+      next_presentation_time, [this](fuchsia::images::PresentationInfo info) {
         Update(info.presentation_time + info.presentation_interval);
       });
 }

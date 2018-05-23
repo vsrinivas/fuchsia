@@ -979,9 +979,9 @@ ResourcePtr Session::CreateMemory(scenic::ResourceId id,
                                   ::gfx::MemoryArgs args) {
   vk::Device device = engine()->vk_device();
   switch (args.memory_type) {
-    case images::MemoryType::VK_DEVICE_MEMORY:
+    case fuchsia::images::MemoryType::VK_DEVICE_MEMORY:
       return GpuMemory::New(this, id, device, std::move(args), error_reporter_);
-    case images::MemoryType::HOST_MEMORY:
+    case fuchsia::images::MemoryType::HOST_MEMORY:
       return HostMemory::New(this, id, device, std::move(args),
                              error_reporter_);
   }
@@ -1366,7 +1366,7 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
     }
     if (ApplyUpdate(std::move(scheduled_updates_.front().commands))) {
       needs_render = true;
-      auto info = images::PresentationInfo();
+      auto info = fuchsia::images::PresentationInfo();
       info.presentation_time = presentation_time;
       info.presentation_interval = presentation_interval;
       scheduled_updates_.front().present_callback(std::move(info));

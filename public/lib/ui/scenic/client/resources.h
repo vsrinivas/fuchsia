@@ -60,12 +60,12 @@ class Resource {
 // TODO(MZ-268): Make this class final, and add public move constructor.
 class Memory : public Resource {
  public:
-  Memory(Session* session, zx::vmo vmo, images::MemoryType memory_type);
+  Memory(Session* session, zx::vmo vmo, fuchsia::images::MemoryType memory_type);
   ~Memory();
 
   // Gets the underlying VMO's memory type, indicating whether it represents
   // host or GPU memory.
-  images::MemoryType memory_type() const { return memory_type_; }
+  fuchsia::images::MemoryType memory_type() const { return memory_type_; }
 
  protected:
   Memory(Memory&& moved);
@@ -73,7 +73,7 @@ class Memory : public Resource {
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Memory);
 
-  images::MemoryType const memory_type_;
+  fuchsia::images::MemoryType const memory_type_;
 };
 
 // Represents an abstract shape resource in a session.
@@ -132,28 +132,28 @@ class RoundedRectangle final : public Shape {
 class Image : public Resource {
  public:
   // Creates an image resource bound to a session.
-  Image(const Memory& memory, off_t memory_offset, images::ImageInfo info);
+  Image(const Memory& memory, off_t memory_offset, fuchsia::images::ImageInfo info);
   Image(Session* session,
         uint32_t memory_id,
         off_t memory_offset,
-        images::ImageInfo info);
+        fuchsia::images::ImageInfo info);
   ~Image();
 
   // Returns the number of bytes needed to represent an image.
-  static size_t ComputeSize(const images::ImageInfo& image_info);
+  static size_t ComputeSize(const fuchsia::images::ImageInfo& image_info);
 
   // Gets the byte offset of the image within its memory resource.
   off_t memory_offset() const { return memory_offset_; }
 
   // Gets information about the image's layout.
-  const images::ImageInfo& info() const { return info_; }
+  const fuchsia::images::ImageInfo& info() const { return info_; }
 
  protected:
   Image(Image&& moved);
 
  private:
   off_t const memory_offset_;
-  images::ImageInfo const info_;
+  fuchsia::images::ImageInfo const info_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Image);
 };

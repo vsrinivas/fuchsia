@@ -5,8 +5,8 @@
 #ifndef VKCUBE_VIEW_H
 #define VKCUBE_VIEW_H
 
+#include <fuchsia/images/cpp/fidl.h>
 #include <gfx/cpp/fidl.h>
-#include <images/cpp/fidl.h>
 #include <views_v1_token/cpp/fidl.h>
 
 #include "lib/fxl/macros.h"
@@ -20,20 +20,20 @@ class VkCubeView : public mozart::BaseView {
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
       std::function<
           void(float width, float height,
-               fidl::InterfaceHandle<images::ImagePipe> interface_request)>
+               fidl::InterfaceHandle<fuchsia::images::ImagePipe> interface_request)>
           resize_callback);
   ~VkCubeView() override;
 
  private:
   // |BaseView|:
-  void OnSceneInvalidated(images::PresentationInfo presentation_info) override;
+  void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
 
   fuchsia::math::SizeF size_;
   fuchsia::math::Size physical_size_;
   scenic_lib::ShapeNode pane_node_;
   std::function<void(
       float width, float height,
-      fidl::InterfaceHandle<images::ImagePipe> interface_request)>
+      fidl::InterfaceHandle<fuchsia::images::ImagePipe> interface_request)>
       resize_callback_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(VkCubeView);

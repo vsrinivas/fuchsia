@@ -122,7 +122,7 @@ class BaseView : private views_v1::ViewListener,
   // invalidation.  The new contents are presented once this function returns.
   //
   // The default implementation does nothing.
-  virtual void OnSceneInvalidated(images::PresentationInfo presentation_info);
+  virtual void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info);
 
   // Called when session events are received.
   //

@@ -4,6 +4,8 @@
 
 library shadertoy;
 
+using fuchsia.images;
+
 // Shadertoy (www.shadertoy.com) is an online community and tool for creating
 // and sharing GLSL shaders.  The genius of Shadertoy is that it side-steps the
 // need for tedious glue code to bind assets such and meshs to GPU shader code.
@@ -42,5 +44,5 @@ interface Shadertoy {
   // Corresponds to Shadertoy's 'iChannel0..3' parameters.  Currently only 2D
   // samplers are supported (no cubemaps).  |channel| must be one of 0, 1, 2, 3.
   // TODO: implement cubemap support.
-  5: SetImage(uint32 channel, request<images.ImagePipe> image_pipe);
+  5: SetImage(uint32 channel, request<fuchsia.images.ImagePipe> image_pipe);
 };

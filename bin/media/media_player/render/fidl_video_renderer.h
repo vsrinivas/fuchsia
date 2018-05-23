@@ -80,7 +80,7 @@ class FidlVideoRenderer
    private:
     // |BaseView|:
     void OnSceneInvalidated(
-        images::PresentationInfo presentation_info) override;
+        fuchsia::images::PresentationInfo presentation_info) override;
 
     std::shared_ptr<FidlVideoRenderer> renderer_;
     scenic_lib::HostImageCycler image_cycler_;

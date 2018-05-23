@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <images/cpp/fidl.h>
+#include <fuchsia/images/cpp/fidl.h>
 
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/logging.h"
@@ -64,7 +64,7 @@ struct SupportedImageProperties {
 };
 
 struct ImagePipeSurface {
-  images::ImagePipeSyncPtr image_pipe;
+  fuchsia::images::ImagePipeSyncPtr image_pipe;
   SupportedImageProperties supported_properties;
 };
 
@@ -76,7 +76,7 @@ struct PendingImageInfo {
 class ImagePipeSwapchain {
  public:
   ImagePipeSwapchain(SupportedImageProperties supported_properties,
-                     images::ImagePipeSyncPtr image_pipe)
+                     fuchsia::images::ImagePipeSyncPtr image_pipe)
       : supported_properties_(supported_properties),
         image_pipe_(std::move(image_pipe)),
         image_pipe_closed_(false),
@@ -96,7 +96,7 @@ class ImagePipeSwapchain {
 
  private:
   SupportedImageProperties supported_properties_;
-  images::ImagePipeSyncPtr image_pipe_;
+  fuchsia::images::ImagePipeSyncPtr image_pipe_;
   std::vector<VkImage> images_;
   std::vector<zx::event> acquire_events_;
   std::vector<VkDeviceMemory> memories_;
@@ -265,16 +265,16 @@ VkResult ImagePipeSwapchain::Initialize(
 
     zx::vmo vmo(vmo_handle);
 
-    images::ImageInfo image_info;
+    fuchsia::images::ImageInfo image_info;
     image_info.width = width;
     image_info.height = height;
     image_info.stride = 0;  // Meaningless for optimal tiling.
-    image_info.pixel_format = images::PixelFormat::BGRA_8;
-    image_info.color_space = images::ColorSpace::SRGB;
-    image_info.tiling = images::Tiling::GPU_OPTIMAL;
+    image_info.pixel_format = fuchsia::images::PixelFormat::BGRA_8;
+    image_info.color_space = fuchsia::images::ColorSpace::SRGB;
+    image_info.tiling = fuchsia::images::Tiling::GPU_OPTIMAL;
 
     image_pipe_->AddImage(ImageIdFromIndex(i), std::move(image_info),
-                          std::move(vmo), images::MemoryType::VK_DEVICE_MEMORY,
+                          std::move(vmo), fuchsia::images::MemoryType::VK_DEVICE_MEMORY,
                           0);
 
     available_ids_.push_back(i);
@@ -512,7 +512,7 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index,
   fidl::VectorPtr<zx::event> release_fences;
   release_fences.push_back(std::move(release_fence));
 
-  images::PresentationInfo info;
+  fuchsia::images::PresentationInfo info;
   image_pipe_->PresentImage(ImageIdFromIndex(index), 0,
                             std::move(acquire_fences),
                             std::move(release_fences), &info);

@@ -92,7 +92,7 @@ TEST_F(GfxSystemTest, DISABLED_ReleaseFences) {
   // Call Present with release fences.
   session->Present(0u, ::fidl::VectorPtr<zx::event>::New(0),
                    std::move(release_fences),
-                   [](images::PresentationInfo info) {});
+                   [](fuchsia::images::PresentationInfo info) {});
   ASSERT_TRUE(RunLoopUntilWithTimeout(
       [&handler]() -> bool { return handler->present_count() == 1; }));
   EXPECT_EQ(1u, handler->present_count());
@@ -101,7 +101,7 @@ TEST_F(GfxSystemTest, DISABLED_ReleaseFences) {
   // Call Present again with no release fences.
   session->Present(0u, ::fidl::VectorPtr<zx::event>::New(0),
                    ::fidl::VectorPtr<zx::event>::New(0),
-                   [](images::PresentationInfo info) {});
+                   [](fuchsia::images::PresentationInfo info) {});
   ASSERT_TRUE(RunLoopUntilWithTimeout(
       [&handler]() -> bool { return handler->present_count() == 2; }));
   EXPECT_EQ(2u, handler->present_count());
@@ -145,7 +145,7 @@ TEST_F(GfxSystemTest, DISABLED_AcquireAndReleaseFences) {
   release_fences.push_back(CopyEvent(release_fence));
   // Call Present with both the acquire and release fences.
   session->Present(0u, std::move(acquire_fences), std::move(release_fences),
-                   [](images::PresentationInfo info) {});
+                   [](fuchsia::images::PresentationInfo info) {});
   ASSERT_TRUE(RunLoopUntilWithTimeout(
       [&handler]() -> bool { return handler->present_count() == 1; }));
   EXPECT_EQ(1u, handler->present_count());
@@ -153,7 +153,7 @@ TEST_F(GfxSystemTest, DISABLED_AcquireAndReleaseFences) {
   // Call Present again with no fences.
   session->Present(0u, ::fidl::VectorPtr<zx::event>::New(0),
                    ::fidl::VectorPtr<zx::event>::New(0),
-                   [](images::PresentationInfo info) {});
+                   [](fuchsia::images::PresentationInfo info) {});
   ASSERT_TRUE(RunLoopUntilWithTimeout(
       [&handler]() -> bool { return handler->present_count() == 2; }));
   EXPECT_FALSE(IsFenceSignalled(release_fence));

@@ -703,7 +703,7 @@ void Presentation::PresentScene() {
   }
 
   session_->Present(
-      0, [weak = weak_factory_.GetWeakPtr()](images::PresentationInfo info) {
+      0, [weak = weak_factory_.GetWeakPtr()](fuchsia::images::PresentationInfo info) {
         if (auto self = weak.get()) {
           uint64_t next_presentation_time =
               info.presentation_time + info.presentation_interval;
@@ -742,7 +742,7 @@ void Presentation::SetRendererParams(
     }
     renderer_.SetParam(std::move(params->at(i)));
   }
-  session_->Present(0, [](images::PresentationInfo info) {});
+  session_->Present(0, [](fuchsia::images::PresentationInfo info) {});
 }
 
 }  // namespace root_presenter

@@ -7,9 +7,9 @@
 
 #include <string>
 
+#include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <gfx/cpp/fidl.h>
-#include <images/cpp/fidl.h>
 
 namespace scenic_lib {
 
@@ -18,7 +18,7 @@ constexpr float kOnesFloat3[3] = {1.f, 1.f, 1.f};
 // A quaterion that has no rotation.
 constexpr float kQuaternionDefault[4] = {0.f, 0.f, 0.f, 1.f};
 
-bool ImageInfoEquals(const images::ImageInfo& a, const images::ImageInfo& b);
+bool ImageInfoEquals(const fuchsia::images::ImageInfo& a, const fuchsia::images::ImageInfo& b);
 
 // Helper function for wrapping Scenic ops as Mozart commands.
 fuchsia::ui::scenic::Command NewCommand(gfx::Command command);
@@ -26,23 +26,23 @@ fuchsia::ui::scenic::Command NewCommand(gfx::Command command);
 // Resource creation.
 gfx::Command NewCreateMemoryCommand(uint32_t id,
                                     zx::vmo vmo,
-                                    images::MemoryType memory_type);
+                                    fuchsia::images::MemoryType memory_type);
 gfx::Command NewCreateImageCommand(uint32_t id,
                                    uint32_t memory_id,
                                    uint32_t memory_offset,
-                                   images::ImageInfo info);
+                                   fuchsia::images::ImageInfo info);
 gfx::Command NewCreateImageCommand(uint32_t id,
                                    uint32_t memory_id,
                                    uint32_t memory_offset,
-                                   images::PixelFormat format,
-                                   images::ColorSpace color_space,
-                                   images::Tiling tiling,
+                                   fuchsia::images::PixelFormat format,
+                                   fuchsia::images::ColorSpace color_space,
+                                   fuchsia::images::Tiling tiling,
                                    uint32_t width,
                                    uint32_t height,
                                    uint32_t stride);
 gfx::Command NewCreateImagePipeCommand(
     uint32_t id,
-    ::fidl::InterfaceRequest<images::ImagePipe> request);
+    ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request);
 gfx::Command NewCreateBufferCommand(uint32_t id,
                                     uint32_t memory_id,
                                     uint32_t memory_offset,

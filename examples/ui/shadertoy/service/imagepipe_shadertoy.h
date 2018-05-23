@@ -13,7 +13,7 @@ namespace shadertoy {
 class ShadertoyStateForImagePipe : public ShadertoyState {
  public:
   ShadertoyStateForImagePipe(
-      App* app, ::fidl::InterfaceHandle<images::ImagePipe> image_pipe);
+      App* app, ::fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe);
   ~ShadertoyStateForImagePipe();
 
  private:
@@ -41,7 +41,7 @@ class ShadertoyStateForImagePipe : public ShadertoyState {
   Framebuffer framebuffers_[kNumFramebuffers];
 
   // ImagePipe that we produce images for.
-  images::ImagePipePtr image_pipe_;
+  fuchsia::images::ImagePipePtr image_pipe_;
   // Next ID to use when calling ImagePipe.AddImage().
   uint32_t next_image_pipe_id_ = 1;
   // Index of framebuffer to use the next time OnDrawFrame() is called.

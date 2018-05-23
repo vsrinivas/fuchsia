@@ -9,9 +9,9 @@
 
 #include <lib/zx/event.h>
 
+#include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <gfx/cpp/fidl.h>
-#include <images/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/functional/closure.h"
@@ -26,7 +26,7 @@ class Session : private fuchsia::ui::scenic::SessionListener {
  public:
   // Provides timing information about a presentation request which has
   // been applied by the scene manager.
-  using PresentCallback = std::function<void(images::PresentationInfo info)>;
+  using PresentCallback = std::function<void(fuchsia::images::PresentationInfo info)>;
 
   // Provide information about hits.
   using HitTestCallback = std::function<void(fidl::VectorPtr<gfx::Hit> hits)>;

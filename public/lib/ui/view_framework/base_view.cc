@@ -96,7 +96,7 @@ void BaseView::PresentScene(zx_time_t presentation_time) {
   // Session.Present(), for use in InvalidateScene().
   last_presentation_time_ = presentation_time;
 
-  session()->Present(presentation_time, [this](images::PresentationInfo info) {
+  session()->Present(presentation_time, [this](fuchsia::images::PresentationInfo info) {
     FXL_DCHECK(present_pending_);
 
     zx_time_t next_presentation_time =
@@ -157,7 +157,7 @@ void BaseView::AdjustMetricsAndPhysicalSize() {
 
 void BaseView::OnPropertiesChanged(views_v1::ViewProperties old_properties) {}
 
-void BaseView::OnSceneInvalidated(images::PresentationInfo presentation_info) {}
+void BaseView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) {}
 
 void BaseView::OnSessionEvent(fidl::VectorPtr<fuchsia::ui::scenic::Event> events) {}
 

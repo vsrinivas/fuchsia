@@ -5,7 +5,7 @@
 #ifndef GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_SHADERTOY_STATE_H_
 #define GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_SHADERTOY_STATE_H_
 
-#include <images/cpp/fidl.h>
+#include <fuchsia/images/cpp/fidl.h>
 #include <shadertoy/cpp/fidl.h>
 #include <views_v1_token/cpp/fidl.h>
 #include "garnet/examples/ui/shadertoy/service/glm_hack.h"
@@ -29,7 +29,7 @@ class ShadertoyState : public escher::Resource {
  public:
   // Factory constructor.
   static fxl::RefPtr<ShadertoyState> NewForImagePipe(
-      App* app, ::fidl::InterfaceHandle<images::ImagePipe> image_pipe);
+      App* app, ::fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe);
 
   // Factory constructor.
   static fxl::RefPtr<ShadertoyState> NewForView(
@@ -49,7 +49,7 @@ class ShadertoyState : public escher::Resource {
   void SetMouse(glm::vec4 i_mouse);
 
   void SetImage(uint32_t channel,
-                ::fidl::InterfaceRequest<images::ImagePipe> request);
+                ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request);
 
  protected:
   explicit ShadertoyState(App* app);
@@ -58,7 +58,7 @@ class ShadertoyState : public escher::Resource {
   void Close();
 
   // Subclasses must call this from DrawFrame().
-  void OnFramePresented(images::PresentationInfo info);
+  void OnFramePresented(fuchsia::images::PresentationInfo info);
 
   uint32_t width() const { return width_; }
   uint32_t height() const { return height_; }

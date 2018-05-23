@@ -36,7 +36,7 @@ class MediaPlayerTestView : public mozart::BaseView {
 
   // |BaseView|:
   void OnPropertiesChanged(views_v1::ViewProperties old_properties) override;
-  void OnSceneInvalidated(images::PresentationInfo presentation_info) override;
+  void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
   void OnChildAttached(uint32_t child_key,
                        views_v1::ViewInfo child_view_info) override;
   void OnChildUnavailable(uint32_t child_key) override;

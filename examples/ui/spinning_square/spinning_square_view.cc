@@ -40,7 +40,7 @@ SpinningSquareView::SpinningSquareView(
 SpinningSquareView::~SpinningSquareView() {}
 
 void SpinningSquareView::OnSceneInvalidated(
-    images::PresentationInfo presentation_info) {
+    fuchsia::images::PresentationInfo presentation_info) {
   if (!has_logical_size())
     return;
 

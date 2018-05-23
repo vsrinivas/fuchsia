@@ -278,7 +278,7 @@ FidlVideoRenderer::View::View(
 FidlVideoRenderer::View::~View() {}
 
 void FidlVideoRenderer::View::OnSceneInvalidated(
-    images::PresentationInfo presentation_info) {
+    fuchsia::images::PresentationInfo presentation_info) {
   TRACE_DURATION("motown", "OnSceneInvalidated");
 
   renderer_->OnSceneInvalidated(presentation_info.presentation_time);
@@ -291,7 +291,7 @@ void FidlVideoRenderer::View::OnSceneInvalidated(
   // Update the image.
   const scenic_lib::HostImage* image = image_cycler_.AcquireImage(
       video_size.width, video_size.height, video_size.width * 4u,
-      images::PixelFormat::BGRA_8, images::ColorSpace::SRGB);
+      fuchsia::images::PixelFormat::BGRA_8, fuchsia::images::ColorSpace::SRGB);
   FXL_DCHECK(image);
   renderer_->GetRgbaFrame(static_cast<uint8_t*>(image->image_ptr()),
                           video_size);

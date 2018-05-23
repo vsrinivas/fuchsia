@@ -159,7 +159,7 @@ void App::Init(gfx::DisplayInfo display_info) {
 void App::Update(uint64_t next_presentation_time) {
   // Present
   session_->Present(
-      next_presentation_time, [this](images::PresentationInfo info) {
+      next_presentation_time, [this](fuchsia::images::PresentationInfo info) {
         Update(info.presentation_time + info.presentation_interval);
       });
 }

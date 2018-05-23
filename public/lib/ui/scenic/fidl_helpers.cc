@@ -11,7 +11,7 @@
 namespace scenic_lib {
 
 // TODO(mikejurka): this should be in an images util file
-bool ImageInfoEquals(const images::ImageInfo& a, const images::ImageInfo& b) {
+bool ImageInfoEquals(const fuchsia::images::ImageInfo& a, const fuchsia::images::ImageInfo& b) {
   return a.transform == b.transform && a.width == b.width &&
          a.height == b.height && a.stride == b.stride &&
          a.pixel_format == b.pixel_format && a.color_space == b.color_space &&
@@ -39,7 +39,7 @@ static gfx::Command NewCreateResourceCommand(uint32_t id,
 
 gfx::Command NewCreateMemoryCommand(uint32_t id,
                                     zx::vmo vmo,
-                                    images::MemoryType memory_type) {
+                                    fuchsia::images::MemoryType memory_type) {
   gfx::MemoryArgs memory;
   memory.vmo = std::move(vmo);
   memory.memory_type = memory_type;
@@ -53,7 +53,7 @@ gfx::Command NewCreateMemoryCommand(uint32_t id,
 gfx::Command NewCreateImageCommand(uint32_t id,
                                    uint32_t memory_id,
                                    uint32_t memory_offset,
-                                   images::ImageInfo info) {
+                                   fuchsia::images::ImageInfo info) {
   gfx::ImageArgs image;
   image.memory_id = memory_id;
   image.memory_offset = memory_offset;
@@ -67,7 +67,7 @@ gfx::Command NewCreateImageCommand(uint32_t id,
 
 gfx::Command NewCreateImagePipeCommand(
     uint32_t id,
-    ::fidl::InterfaceRequest<images::ImagePipe> request) {
+    ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request) {
   gfx::ImagePipeArgs image_pipe;
   image_pipe.image_pipe_request = std::move(request);
 
@@ -79,13 +79,13 @@ gfx::Command NewCreateImagePipeCommand(
 gfx::Command NewCreateImageCommand(uint32_t id,
                                    uint32_t memory_id,
                                    uint32_t memory_offset,
-                                   images::PixelFormat format,
-                                   images::ColorSpace color_space,
-                                   images::Tiling tiling,
+                                   fuchsia::images::PixelFormat format,
+                                   fuchsia::images::ColorSpace color_space,
+                                   fuchsia::images::Tiling tiling,
                                    uint32_t width,
                                    uint32_t height,
                                    uint32_t stride) {
-  images::ImageInfo info;
+  fuchsia::images::ImageInfo info;
   info.pixel_format = format;
   info.color_space = color_space;
   info.tiling = tiling;

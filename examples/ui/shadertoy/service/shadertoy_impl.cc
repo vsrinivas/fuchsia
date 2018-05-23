@@ -27,7 +27,7 @@ void ShadertoyImpl::SetMouse(gfx::vec4 i_mouse) {
 }
 
 void ShadertoyImpl::SetImage(
-    uint32_t channel, ::fidl::InterfaceRequest<images::ImagePipe> request) {
+    uint32_t channel, ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request) {
   state_->SetImage(channel, std::move(request));
 }
 

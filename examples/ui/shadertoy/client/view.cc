@@ -47,7 +47,7 @@ View::View(component::ApplicationContext* application_context,
 
   // Create an ImagePipe and pass one end of it to the ShadertoyFactory in
   // order to obtain a Shadertoy.
-  fidl::InterfaceHandle<images::ImagePipe> image_pipe_handle;
+  fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe_handle;
   auto image_pipe_request = image_pipe_handle.NewRequest();
   shadertoy_factory_->NewImagePipeShadertoy(shadertoy_.NewRequest(),
                                             std::move(image_pipe_handle));
@@ -120,7 +120,7 @@ float View::UpdateTransition(zx_time_t presentation_time) {
   return glm::smoothstep(0.f, 1.f, transition_param);
 }
 
-void View::OnSceneInvalidated(images::PresentationInfo presentation_info) {
+void View::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) {
   if (!has_logical_size())
     return;
 

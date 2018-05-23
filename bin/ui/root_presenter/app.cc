@@ -125,7 +125,7 @@ void App::SwitchToPresentation(const size_t presentation_idx) {
   active_presentation_idx_ = presentation_idx;
   layer_stack_->RemoveAllLayers();
   layer_stack_->AddLayer(presentations_[presentation_idx]->layer());
-  session_->Present(0, [](images::PresentationInfo info) {});
+  session_->Present(0, [](fuchsia::images::PresentationInfo info) {});
 }
 
 void App::SwitchToNextPresentation() {
@@ -207,7 +207,7 @@ void App::InitializeServices() {
         std::make_unique<scenic_lib::DisplayCompositor>(session_.get());
     layer_stack_ = std::make_unique<scenic_lib::LayerStack>(session_.get());
     compositor_->SetLayerStack(*layer_stack_.get());
-    session_->Present(0, [](images::PresentationInfo info) {});
+    session_->Present(0, [](fuchsia::images::PresentationInfo info) {});
 
     scenic_->GetOwnershipEvent([this](zx::event event) {
       input_reader_.SetOwnershipEvent(std::move(event));

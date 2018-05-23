@@ -4,6 +4,8 @@
 
 library fuchsia.ui.scenic;
 
+using fuchsia.images;
+
 // Client use Sessions to interact with a Mozart instance by enqueuing commands
 // that create or modify resources.
 interface Session {
@@ -122,7 +124,7 @@ interface Session {
   // content?
   2: Present(uint64 presentation_time,
       vector<handle<event>> acquire_fences, vector<handle<event>> release_fences) ->
-      (images.PresentationInfo presentation_info);
+      (fuchsia.images.PresentationInfo presentation_info);
 
   // TODO(MZ-422) Remove these methods from the FIDL; they should just be
   // exposed to View Manager directly using a C++ interface.

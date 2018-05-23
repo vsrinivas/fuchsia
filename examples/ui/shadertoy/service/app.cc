@@ -26,7 +26,7 @@ App::~App() = default;
 
 void App::NewImagePipeShadertoy(
     ::fidl::InterfaceRequest<shadertoy::Shadertoy> toy_request,
-    ::fidl::InterfaceHandle<images::ImagePipe> image_pipe) {
+    ::fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe) {
   shadertoy_bindings_.AddBinding(
       std::make_unique<ShadertoyImpl>(
           ShadertoyState::NewForImagePipe(this, std::move(image_pipe))),

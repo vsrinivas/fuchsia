@@ -72,7 +72,7 @@ GuestView::GuestView(
   image_info_.width = kGuestViewDisplayWidth;
   image_info_.height = kGuestViewDisplayHeight;
   image_info_.stride = kGuestViewDisplayWidth * 4;
-  image_info_.pixel_format = images::PixelFormat::BGRA_8;
+  image_info_.pixel_format = fuchsia::images::PixelFormat::BGRA_8;
 
   // Allocate a framebuffer and attach it as a GPU scanout.
   memory_ = fbl::make_unique<scenic_lib::HostMemory>(
@@ -85,7 +85,7 @@ GuestView::GuestView(
 
 GuestView::~GuestView() = default;
 
-void GuestView::OnSceneInvalidated(images::PresentationInfo presentation_info) {
+void GuestView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) {
   if (!has_logical_size()) {
     return;
   }

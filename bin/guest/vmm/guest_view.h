@@ -66,12 +66,12 @@ class GuestView : public mozart::BaseView {
 
  private:
   // |BaseView|:
-  void OnSceneInvalidated(images::PresentationInfo presentation_info) override;
+  void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
   bool OnInputEvent(input::InputEvent event) override;
 
   scenic_lib::ShapeNode background_node_;
   scenic_lib::Material material_;
-  images::ImageInfo image_info_;
+  fuchsia::images::ImageInfo image_info_;
   fbl::unique_ptr<scenic_lib::HostMemory> memory_;
 
   machina::InputDispatcher* input_dispatcher_;

@@ -35,7 +35,7 @@ void View::OnPropertiesChanged(views_v1::ViewProperties old_properties) {
   background_node_.SetShape(background_shape);
   background_node_.SetTranslation(width * .5f, height * .5f, .1f);
   canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
-                  [](images::PresentationInfo info) {});
+                  [](fuchsia::images::PresentationInfo info) {});
 }
 
 bool View::OnInputEvent(input::InputEvent event) {
@@ -48,7 +48,7 @@ bool View::OnInputEvent(input::InputEvent event) {
         scratch_group_.AddStroke(*stroke);
         stroke->Begin({pointer.x, pointer.y});
         canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
-                        [](images::PresentationInfo info) {});
+                        [](fuchsia::images::PresentationInfo info) {});
         return true;
       }
       case input::PointerEventPhase::MOVE: {
@@ -61,7 +61,7 @@ bool View::OnInputEvent(input::InputEvent event) {
         // TODO(MZ-269): The current stroke fitter would simply connect the
         // point if Canvas::Present() is called after extending with one point.
         canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
-                        [](images::PresentationInfo info) {});
+                        [](fuchsia::images::PresentationInfo info) {});
         return true;
       }
       case input::PointerEventPhase::UP: {
@@ -75,7 +75,7 @@ bool View::OnInputEvent(input::InputEvent event) {
         stable_group_.AddStroke(*stroke);
         pointer_id_to_stroke_map_.erase(it);
         canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
-                        [](images::PresentationInfo info) {});
+                        [](fuchsia::images::PresentationInfo info) {});
         return true;
       }
       default:
@@ -89,7 +89,7 @@ bool View::OnInputEvent(input::InputEvent event) {
         keyboard.hid_usage == 6 /* c */) {
       stable_group_.Clear();
       canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
-                      [](images::PresentationInfo info) {});
+                      [](fuchsia::images::PresentationInfo info) {});
       return true;
     }
   }

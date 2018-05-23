@@ -689,7 +689,7 @@ void ViewRegistry::PresentSession() {
   FXL_DCHECK(present_session_scheduled_);
 
   present_session_scheduled_ = false;
-  session_.Present(0, [this](images::PresentationInfo info) {});
+  session_.Present(0, [this](fuchsia::images::PresentationInfo info) {});
 }
 
 // VIEW AND VIEW TREE SERVICE PROVIDERS

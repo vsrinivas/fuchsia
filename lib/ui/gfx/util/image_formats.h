@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_GFX_UTIL_IMAGE_FORMATS_H_
 #define GARNET_LIB_UI_GFX_UTIL_IMAGE_FORMATS_H_
 
-#include <images/cpp/fidl.h>
+#include <fuchsia/images/cpp/fidl.h>
 #include "lib/escher/util/image_utils.h"
 
 // Contains utilities for converting from various formats to BGRA_8, which is
@@ -18,15 +18,15 @@ namespace gfx {
 namespace image_formats {
 
 // Returns the number of bytes per pixel for the given format.
-size_t BytesPerPixel(const images::PixelFormat& pixel_format);
+size_t BytesPerPixel(const fuchsia::images::PixelFormat& pixel_format);
 
 // Returns the pixel alignment for the given format.
-size_t PixelAlignment(const images::PixelFormat& pixel_format);
+size_t PixelAlignment(const fuchsia::images::PixelFormat& pixel_format);
 
 // Returns a function that can be used to convert any format supported in
 // ImageInfo into a BGRA_8 image.
 escher::image_utils::ImageConversionFunction GetFunctionToConvertToBgra8(
-    const ::images::ImageInfo& image_info);
+    const ::fuchsia::images::ImageInfo& image_info);
 
 }  // namespace image_formats
 }  // namespace gfx

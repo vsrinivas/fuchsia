@@ -20,7 +20,7 @@ HostMemory::HostMemory(Session* session, scenic::ResourceId id, zx::vmo vmo,
 HostMemoryPtr HostMemory::New(Session* session, scenic::ResourceId id,
                               vk::Device device, ::gfx::MemoryArgs args,
                               ErrorReporter* error_reporter) {
-  if (args.memory_type != images::MemoryType::HOST_MEMORY) {
+  if (args.memory_type != fuchsia::images::MemoryType::HOST_MEMORY) {
     error_reporter->ERROR() << "scenic::gfx::HostMemory::New(): "
                                "Memory must be of type HOST_MEMORY.";
     return nullptr;

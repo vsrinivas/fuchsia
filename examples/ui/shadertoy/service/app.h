@@ -41,7 +41,7 @@ class App : public shadertoy::ShadertoyFactory {
   // |ShadertoyFactory|
   void NewImagePipeShadertoy(
       ::fidl::InterfaceRequest<shadertoy::Shadertoy> toy_request,
-      ::fidl::InterfaceHandle<images::ImagePipe> image_pipe) override;
+      ::fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe) override;
 
   // |ShadertoyFactory|
   void NewViewShadertoy(

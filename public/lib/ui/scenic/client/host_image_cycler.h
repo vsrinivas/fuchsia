@@ -23,8 +23,8 @@ class HostImageCycler : public scenic_lib::EntityNode {
       uint32_t width,
       uint32_t height,
       uint32_t stride,
-      images::PixelFormat pixel_format = images::PixelFormat::BGRA_8,
-      images::ColorSpace color_space = images::ColorSpace::SRGB);
+      fuchsia::images::PixelFormat pixel_format = fuchsia::images::PixelFormat::BGRA_8,
+      fuchsia::images::ColorSpace color_space = fuchsia::images::ColorSpace::SRGB);
 
   // Releases the image most recently acquired using |AcquireImage()|.
   // Sets the content node's texture to be backed by the image.

@@ -73,14 +73,14 @@ void App::InitCheckerboardMaterial(Material* uninitialized_material) {
          checkerboard_pixels_size);
 
   // Create an Image to wrap the checkerboard.
-  images::ImageInfo checkerboard_image_info;
+  fuchsia::images::ImageInfo checkerboard_image_info;
   checkerboard_image_info.width = checkerboard_width;
   checkerboard_image_info.height = checkerboard_height;
   const size_t kBytesPerPixel = 4u;
   checkerboard_image_info.stride = checkerboard_width * kBytesPerPixel;
-  checkerboard_image_info.pixel_format = images::PixelFormat::BGRA_8;
-  checkerboard_image_info.color_space = images::ColorSpace::SRGB;
-  checkerboard_image_info.tiling = images::Tiling::LINEAR;
+  checkerboard_image_info.pixel_format = fuchsia::images::PixelFormat::BGRA_8;
+  checkerboard_image_info.color_space = fuchsia::images::ColorSpace::SRGB;
+  checkerboard_image_info.tiling = fuchsia::images::Tiling::LINEAR;
 
   HostImage checkerboard_image(checkerboard_memory, 0,
                                std::move(checkerboard_image_info));
@@ -280,7 +280,7 @@ void App::Update(uint64_t next_presentation_time) {
 
   // Present
   session_->Present(
-      next_presentation_time, [this](images::PresentationInfo info) {
+      next_presentation_time, [this](fuchsia::images::PresentationInfo info) {
         Update(info.presentation_time + info.presentation_interval);
       });
 }

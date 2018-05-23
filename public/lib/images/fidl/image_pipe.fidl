@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library images;
+library fuchsia.images;
 
 // ImagePipe is a mechanism for streaming shared images between a producer
 // and a consumer which may be running in different processes.

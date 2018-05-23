@@ -4,6 +4,8 @@
 
 library gfx;
 
+using fuchsia.images;
+
 // These are all of the types of resources that can be created within a
 // |Session|.
 union ResourceArgs {
@@ -50,7 +52,7 @@ union ResourceArgs {
 };
 
 struct ImagePipeArgs {
-  request<images.ImagePipe> image_pipe_request;
+  request<fuchsia.images.ImagePipe> image_pipe_request;
 };
 
 // |Memory| is a |Resource| that wraps a client-provided Zircon vmo to register
@@ -62,13 +64,13 @@ struct MemoryArgs {
 
   // The type of memory stored in the VMO, namely whether it's GPU memory or
   // host memory.
-  images.MemoryType memory_type;
+  fuchsia.images.MemoryType memory_type;
 };
 
 // An image mapped to a range of a |Memory| resource.
 // TODO: more precise and extensive docs.
 struct ImageArgs {
-  images.ImageInfo info;
+  fuchsia.images.ImageInfo info;
 
   uint32 memory_id;      // id of a |Memory| resource
   uint32 memory_offset;  // byte offset of image within |Memory| resource
@@ -91,7 +93,7 @@ struct DisplayCompositorArgs {
 // An ImagePipeCompositor draws its attached |LayerStack| into an image that is
 // presented on an image-pipe.
 struct ImagePipeCompositorArgs {
-  images.ImagePipe target;
+  fuchsia.images.ImagePipe target;
 };
 
 // A LayerStack is a stack of layers that are attached to a Compositor, which

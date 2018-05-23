@@ -19,7 +19,7 @@ const ResourceTypeInfo HostImage::kTypeInfo = {
 HostImage::HostImage(Session* session, scenic::ResourceId id,
                      HostMemoryPtr memory, escher::ImagePtr image,
                      uint64_t host_memory_offset,
-                     images::ImageInfo host_image_format)
+                     fuchsia::images::ImageInfo host_image_format)
     : Image(session, id, HostImage::kTypeInfo),
       memory_(std::move(memory)),
       memory_offset_(host_memory_offset),
@@ -31,7 +31,7 @@ HostImage::HostImage(Session* session, scenic::ResourceId id,
 
 ImagePtr HostImage::New(Session* session, scenic::ResourceId id,
                         HostMemoryPtr host_memory,
-                        const images::ImageInfo& host_image_info,
+                        const fuchsia::images::ImageInfo& host_image_info,
                         uint64_t memory_offset, ErrorReporter* error_reporter) {
   // No matter what the incoming format, the gpu format will be BGRA:
   vk::Format gpu_image_pixel_format = vk::Format::eB8G8R8A8Unorm;
@@ -75,7 +75,7 @@ ImagePtr HostImage::New(Session* session, scenic::ResourceId id,
         << "Image::CreateFromMemory(): stride must preserve pixel alignment.";
     return nullptr;
   }
-  if (host_image_info.tiling != images::Tiling::LINEAR) {
+  if (host_image_info.tiling != fuchsia::images::Tiling::LINEAR) {
     error_reporter->ERROR()
         << "Image::CreateFromMemory(): tiling must be LINEAR for images "
         << "created using host memory.";
@@ -132,8 +132,8 @@ ImagePtr HostImage::NewForTesting(Session* session, scenic::ResourceId id,
   escher::ImagePtr escher_image = escher::Image::New(
       image_owner, escher::ImageInfo(), vk::Image(), nullptr);
   FXL_CHECK(escher_image);
-  images::ImageInfo host_image_format;
-  host_image_format.pixel_format = images::PixelFormat::BGRA_8;
+  fuchsia::images::ImageInfo host_image_format;
+  host_image_format.pixel_format = fuchsia::images::PixelFormat::BGRA_8;
   return fxl::AdoptRef(new HostImage(session, id, host_memory, escher_image, 0,
                                      host_image_format));
 }

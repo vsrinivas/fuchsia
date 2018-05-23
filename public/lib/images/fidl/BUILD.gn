@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
-  name = "images"
+  name = "fuchsia.images"
 
   sdk_category = "partner"
 

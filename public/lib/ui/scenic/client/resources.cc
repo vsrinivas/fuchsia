@@ -83,13 +83,13 @@ RoundedRectangle::RoundedRectangle(RoundedRectangle&& moved)
 
 RoundedRectangle::~RoundedRectangle() = default;
 
-Image::Image(const Memory& memory, off_t memory_offset, images::ImageInfo info)
+Image::Image(const Memory& memory, off_t memory_offset, fuchsia::images::ImageInfo info)
     : Image(memory.session(), memory.id(), memory_offset, std::move(info)) {}
 
 Image::Image(Session* session,
              uint32_t memory_id,
              off_t memory_offset,
-             images::ImageInfo info)
+             fuchsia::images::ImageInfo info)
     : Resource(session), memory_offset_(memory_offset), info_(info) {
   session->Enqueue(
       NewCreateImageCommand(id(), memory_id, memory_offset_, std::move(info)));
@@ -102,13 +102,13 @@ Image::Image(Image&& moved)
 
 Image::~Image() = default;
 
-size_t Image::ComputeSize(const images::ImageInfo& image_info) {
-  FXL_DCHECK(image_info.tiling == images::Tiling::LINEAR);
+size_t Image::ComputeSize(const fuchsia::images::ImageInfo& image_info) {
+  FXL_DCHECK(image_info.tiling == fuchsia::images::Tiling::LINEAR);
 
   switch (image_info.pixel_format) {
-    case images::PixelFormat::BGRA_8:
+    case fuchsia::images::PixelFormat::BGRA_8:
       return image_info.height * image_info.stride;
-    case images::PixelFormat::YUY2:
+    case fuchsia::images::PixelFormat::YUY2:
       return image_info.height * image_info.stride;
   }
 
@@ -131,7 +131,7 @@ Buffer::Buffer(Buffer&& moved) : Resource(std::move(moved)) {}
 
 Buffer::~Buffer() = default;
 
-Memory::Memory(Session* session, zx::vmo vmo, images::MemoryType memory_type)
+Memory::Memory(Session* session, zx::vmo vmo, fuchsia::images::MemoryType memory_type)
     : Resource(session), memory_type_(memory_type) {
   session->Enqueue(NewCreateMemoryCommand(id(), std::move(vmo), memory_type));
 }

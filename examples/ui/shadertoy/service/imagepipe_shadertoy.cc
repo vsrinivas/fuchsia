@@ -19,7 +19,7 @@ constexpr zx_status_t kFenceSignalled = ZX_EVENT_SIGNALED;
 namespace shadertoy {
 
 ShadertoyStateForImagePipe::ShadertoyStateForImagePipe(
-    App* app, ::fidl::InterfaceHandle<images::ImagePipe> image_pipe)
+    App* app, ::fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe)
     : ShadertoyState(app), image_pipe_(image_pipe.Bind()) {
   image_pipe_.set_error_handler([this] { this->Close(); });
 }
@@ -92,14 +92,14 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
     fb.release_fence = std::move(release_semaphore_pair.second);
     fb.image_pipe_id = next_image_pipe_id_++;
 
-    images::ImageInfo image_info;
+    fuchsia::images::ImageInfo image_info;
     image_info.width = width();
     image_info.height = height();
     image_info.stride = 0;  // inapplicable to GPU_OPTIMAL tiling.
-    image_info.tiling = images::Tiling::GPU_OPTIMAL;
+    image_info.tiling = fuchsia::images::Tiling::GPU_OPTIMAL;
 
     image_pipe_->AddImage(fb.image_pipe_id, std::move(image_info),
-                          std::move(vmo), images::MemoryType::VK_DEVICE_MEMORY,
+                          std::move(vmo), fuchsia::images::MemoryType::VK_DEVICE_MEMORY,
                           image->memory_offset());
   }
 }
@@ -143,7 +143,7 @@ void ShadertoyStateForImagePipe::DrawFrame(uint64_t presentation_time,
 
   // Present the image and request another frame.
   auto present_image_callback =
-      [weak = weak_ptr_factory()->GetWeakPtr()](images::PresentationInfo info) {
+      [weak = weak_ptr_factory()->GetWeakPtr()](fuchsia::images::PresentationInfo info) {
         // Need this cast in order to call protected member of superclass.
         if (auto self = static_cast<ShadertoyStateForImagePipe*>(weak.get())) {
           self->OnFramePresented(std::move(info));

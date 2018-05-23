@@ -27,7 +27,7 @@ class View : public mozart::BaseView {
 
  private:
   // |BaseView|.
-  void OnSceneInvalidated(images::PresentationInfo presentation_info) override;
+  void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
 
   component::ApplicationContext* const application_context_;
   fsl::MessageLoop* loop_;

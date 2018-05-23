@@ -124,7 +124,7 @@ void TileView::RemoveChildView(uint32_t child_key) {
   InvalidateScene();
 }
 
-void TileView::OnSceneInvalidated(images::PresentationInfo presentation_info) {
+void TileView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) {
   if (!has_logical_size() || views_.empty())
     return;
 

@@ -22,7 +22,7 @@ class Image : public ImageBase {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  // Create Image given a MemoryPtr, images::ImageInfoPtr, and memory_offset.
+  // Create Image given a MemoryPtr, fuchsia::images::ImageInfoPtr, and memory_offset.
   //
   // |session| is the Session that this image can be referenced from.
   // |memory| is the memory that is associated with this image.
@@ -32,7 +32,7 @@ class Image : public ImageBase {
   //
   // Returns the created Image, or nullptr if there was an error.
   static ImagePtr New(Session* session, scenic::ResourceId id, MemoryPtr memory,
-                      const images::ImageInfo& image_info,
+                      const fuchsia::images::ImageInfo& image_info,
                       uint64_t memory_offset, ErrorReporter* error_reporter);
 
   // Updates pixels before rendering, if needed. Returns true if contents were
