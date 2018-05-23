@@ -4,17 +4,17 @@
 
 #include <numeric>
 
+#include <lib/async/default.h>
+
 #include "garnet/bin/trace_manager/trace_session.h"
 #include "lib/fidl/cpp/clone.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
 namespace tracing {
 
 TraceSession::TraceSession(zx::socket destination,
                            fidl::VectorPtr<fidl::StringPtr> categories,
-                           size_t trace_buffer_size,
-                           fxl::Closure abort_handler)
+                           size_t trace_buffer_size, fxl::Closure abort_handler)
     : destination_(std::move(destination)),
       categories_(std::move(categories)),
       trace_buffer_size_(trace_buffer_size),
@@ -23,21 +23,15 @@ TraceSession::TraceSession(zx::socket destination,
       weak_ptr_factory_(this) {}
 
 TraceSession::~TraceSession() {
+  session_start_timeout_.Cancel();
+  session_finalize_timeout_.Cancel();
   destination_.reset();
 }
 
 void TraceSession::WaitForProvidersToStart(fxl::Closure callback,
-                                           fxl::TimeDelta timeout) {
+                                           zx::duration timeout) {
   start_callback_ = std::move(callback);
-  session_start_timeout_.Start(
-      fsl::MessageLoop::GetCurrent()->task_runner().get(),
-      [weak = weak_ptr_factory_.GetWeakPtr()]() {
-        if (weak) {
-          FXL_LOG(WARNING) << "Waiting for start timed out.";
-          weak->NotifyStarted();
-        }
-      },
-      std::move(timeout));
+  session_start_timeout_.PostDelayed(async_get_default(), timeout);
 }
 
 void TraceSession::AddProvider(TraceProviderBundle* bundle) {
@@ -51,11 +45,11 @@ void TraceSession::AddProvider(TraceProviderBundle* bundle) {
   fidl::Clone(categories_, &categories_clone);
   if (!tracees_.back()->Start(
           trace_buffer_size_, std::move(categories_clone),
-          [ weak = weak_ptr_factory_.GetWeakPtr(), bundle ]() {
+          [weak = weak_ptr_factory_.GetWeakPtr(), bundle]() {
             if (weak)
               weak->CheckAllProvidersStarted();
           },
-          [ weak = weak_ptr_factory_.GetWeakPtr(), bundle ]() {
+          [weak = weak_ptr_factory_.GetWeakPtr(), bundle]() {
             if (weak)
               weak->FinishProvider(bundle);
           })) {
@@ -74,8 +68,7 @@ void TraceSession::RemoveDeadProvider(TraceProviderBundle* bundle) {
   FinishProvider(bundle);
 }
 
-void TraceSession::Stop(fxl::Closure done_callback,
-                        const fxl::TimeDelta& timeout) {
+void TraceSession::Stop(fxl::Closure done_callback, zx::duration timeout) {
   if (!(state_ == State::kReady || state_ == State::kStarted))
     return;
 
@@ -88,21 +81,14 @@ void TraceSession::Stop(fxl::Closure done_callback,
   for (const auto& tracee : tracees_)
     tracee->Stop();
 
-  session_finalize_timeout_.Start(
-      fsl::MessageLoop::GetCurrent()->task_runner().get(),
-      [weak = weak_ptr_factory_.GetWeakPtr()]() {
-        if (weak)
-          weak->FinishSessionDueToTimeout();
-      },
-      timeout);
-
+  session_finalize_timeout_.PostDelayed(async_get_default(), timeout);
   FinishSessionIfEmpty();
 }
 
 void TraceSession::NotifyStarted() {
   if (start_callback_) {
     FXL_VLOG(1) << "Marking session as having started";
-    session_start_timeout_.Stop();
+    session_start_timeout_.Cancel();
     auto start_callback = std::move(start_callback_);
     start_callback();
   }
@@ -178,7 +164,7 @@ void TraceSession::FinishSessionIfEmpty() {
   if (state_ == State::kStopping && tracees_.empty()) {
     FXL_VLOG(1) << "Marking session as stopped, no more tracees";
     TransitionToState(State::kStopped);
-    session_finalize_timeout_.Stop();
+    session_finalize_timeout_.Cancel();
     done_callback_();
   }
 }
@@ -202,6 +188,17 @@ void TraceSession::FinishSessionDueToTimeout() {
 void TraceSession::TransitionToState(State new_state) {
   FXL_VLOG(2) << "Transitioning from " << state_ << " to " << new_state;
   state_ = new_state;
+}
+
+void TraceSession::SessionStartTimeout(async_t* async, async::TaskBase* task,
+                                       zx_status_t status) {
+  FXL_LOG(WARNING) << "Waiting for start timed out.";
+  NotifyStarted();
+}
+
+void TraceSession::SessionFinalizeTimeout(async_t* async, async::TaskBase* task,
+                                          zx_status_t status) {
+  FinishSessionDueToTimeout();
 }
 
 std::ostream& operator<<(std::ostream& out, TraceSession::State state) {

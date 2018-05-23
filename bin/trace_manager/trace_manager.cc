@@ -5,16 +5,17 @@
 #include <algorithm>
 #include <iostream>
 
+#include <lib/zx/time.h>
+
 #include "garnet/bin/trace_manager/trace_manager.h"
 #include "lib/fidl/cpp/clone.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace tracing {
 namespace {
 
 // For large traces or when verbosity is on it can take awhile to write out
 // all the records. E.g., ipm_provider can take 40 seconds with --verbose=2
-const fxl::TimeDelta kStopTimeout = fxl::TimeDelta::FromSeconds(60);
+constexpr zx::duration kStopTimeout = zx::sec(60);
 static constexpr uint32_t kMinBufferSizeMegabytes = 1;
 static constexpr uint32_t kMaxBufferSizeMegabytes = 64;
 
@@ -54,8 +55,7 @@ void TraceManager::StartTracing(TraceOptions options, zx::socket output,
   }
 
   session_->WaitForProvidersToStart(
-      start_callback,
-      fxl::TimeDelta::FromMilliseconds(options.start_timeout_milliseconds));
+      start_callback, zx::msec(options.start_timeout_milliseconds));
 }
 
 void TraceManager::StopTracing() {

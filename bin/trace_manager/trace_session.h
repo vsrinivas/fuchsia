@@ -11,7 +11,9 @@
 #include <vector>
 
 #include <fuchsia/tracelink/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
 #include <lib/zx/socket.h>
+#include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 
 #include "garnet/bin/trace_manager/trace_provider_bundle.h"
@@ -23,7 +25,6 @@
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/fxl/tasks/one_shot_timer.h"
 
 namespace tracing {
 
@@ -47,7 +48,7 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
 
   // Invokes |callback| when all providers in this session have acknowledged
   // the start request, or after |timeout| has elapsed.
-  void WaitForProvidersToStart(fxl::Closure callback, fxl::TimeDelta timeout);
+  void WaitForProvidersToStart(fxl::Closure callback, zx::duration timeout);
 
   // Starts |provider| and adds it to this session.
   void AddProvider(TraceProviderBundle* provider);
@@ -58,7 +59,7 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   //
   // If stopping providers takes longer than |timeout|, we forcefully
   // shutdown operations and invoke |done_callback|.
-  void Stop(fxl::Closure done_callback, const fxl::TimeDelta& timeout);
+  void Stop(fxl::Closure done_callback, zx::duration timeout);
 
  private:
   enum class State { kReady, kStarted, kStopping, kStopped };
@@ -74,14 +75,21 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
 
   void TransitionToState(State state);
 
+  void SessionStartTimeout(async_t* async, async::TaskBase* task,
+                           zx_status_t status);
+  void SessionFinalizeTimeout(async_t* async, async::TaskBase* task,
+                              zx_status_t status);
+
   State state_ = State::kReady;
   zx::socket destination_;
   fidl::VectorPtr<fidl::StringPtr> categories_;
   size_t trace_buffer_size_;
   std::vector<uint8_t> buffer_;
   std::list<std::unique_ptr<Tracee>> tracees_;
-  fxl::OneShotTimer session_start_timeout_;
-  fxl::OneShotTimer session_finalize_timeout_;
+  async::TaskMethod<TraceSession, &TraceSession::SessionStartTimeout>
+      session_start_timeout_{this};
+  async::TaskMethod<TraceSession, &TraceSession::SessionFinalizeTimeout>
+      session_finalize_timeout_{this};
   fxl::Closure start_callback_;
   fxl::Closure done_callback_;
   fxl::Closure abort_handler_;
