@@ -363,7 +363,7 @@ bool Controller::BringUpDisplayEngine(bool resume) {
     constexpr uint16_t kSequencerData = 0x3c5;
     constexpr uint8_t kClockingModeIdx = 1;
     constexpr uint8_t kClockingModeScreenOff = (1 << 5);
-    zx_status_t status = zx_mmap_device_io(get_root_resource(), kSequencerIdx, 2);
+    zx_status_t status = zx_ioports_request(get_root_resource(), kSequencerIdx, 2);
     if (status != ZX_OK) {
         LOG_ERROR("Failed to map vga ports\n");
         return false;

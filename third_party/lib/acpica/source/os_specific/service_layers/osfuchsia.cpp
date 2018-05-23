@@ -183,7 +183,7 @@ ACPI_STATUS AcpiOsInitialize() {
         return status;
     }
     /* TODO(teisenbe): be less permissive */
-    zx_mmap_device_io(root_resource_handle, 0, 65536);
+    zx_ioports_request(root_resource_handle, 0, 65536);
     return AE_OK;
 }
 

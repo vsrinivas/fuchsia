@@ -224,8 +224,7 @@ zx_status_t sys_iommu_create(zx_handle_t rsrc_handle, uint32_t type,
 #include <arch/x86/descriptor.h>
 #include <arch/x86/ioport.h>
 
-zx_status_t sys_mmap_device_io(zx_handle_t hrsrc, uint32_t io_addr, uint32_t len) {
-    // TODO(ZX-971): finer grained validation
+zx_status_t sys_ioports_request(zx_handle_t hrsrc, uint16_t io_addr, uint32_t len) {
     zx_status_t status;
     if ((status = validate_resource(hrsrc, ZX_RSRC_KIND_ROOT)) < 0) {
         return status;
@@ -236,7 +235,7 @@ zx_status_t sys_mmap_device_io(zx_handle_t hrsrc, uint32_t io_addr, uint32_t len
     return IoBitmap::GetCurrent().SetIoBitmap(io_addr, len, 1);
 }
 #else
-zx_status_t sys_mmap_device_io(zx_handle_t hrsrc, uint32_t io_addr, uint32_t len) {
+zx_status_t sys_ioports_request(zx_handle_t hrsrc, uint16_t io_addr, uint32_t len) {
     // doesn't make sense on non-x86
     return ZX_ERR_NOT_SUPPORTED;
 }

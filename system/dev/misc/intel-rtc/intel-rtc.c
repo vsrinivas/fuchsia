@@ -248,7 +248,7 @@ static zx_status_t intel_rtc_bind(void* ctx, zx_device_t* parent) {
     // TODO(teisenbe): This should be probed via the ACPI pseudo bus whenever it
     // exists.
 
-    zx_status_t status = zx_mmap_device_io(get_root_resource(), RTC_IO_BASE, RTC_NUM_IO_REGISTERS);
+    zx_status_t status = zx_ioports_request(get_root_resource(), RTC_IO_BASE, RTC_NUM_IO_REGISTERS);
     if (status != ZX_OK) {
         return status;
     }

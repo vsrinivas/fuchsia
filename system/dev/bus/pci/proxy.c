@@ -178,7 +178,7 @@ static zx_status_t pci_op_get_bar(void* ctx, uint32_t bar_id, zx_pci_bar_t* out_
 #if __x86_64__
             // x86 PIO space access requires permission in the I/O bitmap
             // TODO: this is the last remaining use of get_root_resource in pci
-            st = zx_mmap_device_io(get_root_resource(), out_bar->addr, out_bar->size);
+            st = zx_ioports_request(get_root_resource(), out_bar->addr, out_bar->size);
             if (st != ZX_OK) {
                 zxlogf(ERROR, "Failed to map IO window for bar into process: %d\n", st);
                 return st;

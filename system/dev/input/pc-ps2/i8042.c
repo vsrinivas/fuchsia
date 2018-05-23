@@ -499,10 +499,10 @@ static int i8042_irq_thread(void* arg) {
     // enable I/O port access
     // TODO
     zx_status_t status;
-    status = zx_mmap_device_io(get_root_resource(), I8042_COMMAND_REG, 1);
+    status = zx_ioports_request(get_root_resource(), I8042_COMMAND_REG, 1);
     if (status)
         return 0;
-    status = zx_mmap_device_io(get_root_resource(), I8042_DATA_REG, 1);
+    status = zx_ioports_request(get_root_resource(), I8042_DATA_REG, 1);
     if (status)
         return 0;
 
@@ -541,10 +541,10 @@ static int i8042_irq_thread(void* arg) {
 
 static zx_status_t i8042_setup(uint8_t* ctr) {
     // enable I/O port access
-    zx_status_t status = zx_mmap_device_io(get_root_resource(), I8042_COMMAND_REG, 1);
+    zx_status_t status = zx_ioports_request(get_root_resource(), I8042_COMMAND_REG, 1);
     if (status)
         return status;
-    status = zx_mmap_device_io(get_root_resource(), I8042_DATA_REG, 1);
+    status = zx_ioports_request(get_root_resource(), I8042_DATA_REG, 1);
     if (status)
         return status;
 

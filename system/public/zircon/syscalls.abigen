@@ -599,10 +599,10 @@ syscall interrupt_trigger
     (handle: zx_handle_t, options: uint32_t, timestamp: zx_time_t)
     returns (zx_status_t);
 
-# DDK Syscalls: MMIO and Ports
+# DDK Syscalls: MMIO and IoPorts
 
-syscall mmap_device_io
-    (handle: zx_handle_t, io_addr: uint32_t, len: uint32_t)
+syscall ioports_request
+    (resource: zx_handle_t, io_addr: uint16_t, len: uint32_t)
     returns (zx_status_t);
 
 syscall vmo_create_contiguous
