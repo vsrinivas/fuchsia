@@ -148,6 +148,35 @@ static bool setup_and_interrupt(test_t* test, const char* start, const char* end
     return true;
 }
 
+static inline bool exception_thrown(const zx_packet_guest_mem_t& guest_mem,
+                                    zx_handle_t vcpu) {
+#if __x86_64__
+    if (guest_mem.inst_len != 12) {
+        // Not the expected mov imm, (EXIT_TEST_ADDR) size.
+        return true;
+    }
+    if (guest_mem.inst_buf[8] == 0 &&
+        guest_mem.inst_buf[9] == 0 &&
+        guest_mem.inst_buf[10] == 0 &&
+        guest_mem.inst_buf[11] == 0) {
+        return false;
+    }
+    zx_vcpu_state_t vcpu_state;
+    if (zx_vcpu_read_state(vcpu, ZX_VCPU_STATE, &vcpu_state,
+                           sizeof(vcpu_state)) != ZX_OK) {
+        return true;
+    }
+    // Print out debug values from the exception handler.
+    fprintf(stderr, "Unexpected exception in guest\n");
+    fprintf(stderr, "vector = %lu\n", vcpu_state.rax);
+    fprintf(stderr, "error code = %lu\n", vcpu_state.rbx);
+    fprintf(stderr, "rip = 0x%lx\n", vcpu_state.rcx);
+    return true;
+#else
+    return false;
+#endif
+}
+
 static bool vcpu_resume() {
     BEGIN_TEST;
 
@@ -185,6 +214,7 @@ static bool vcpu_interrupt() {
     ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
     EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
     EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
+    ASSERT_FALSE(exception_thrown(packet.guest_mem, test.vcpu));
 
     ASSERT_TRUE(teardown(&test));
 
@@ -205,6 +235,7 @@ static bool vcpu_hlt() {
     ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
     EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
     EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
+    ASSERT_FALSE(exception_thrown(packet.guest_mem, test.vcpu));
 
     ASSERT_TRUE(teardown(&test));
 

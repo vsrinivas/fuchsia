@@ -67,18 +67,46 @@ gdtr_for_\start:
 end_of_init_gdt_for_\start:
 .endm
 
+.macro debug_isr start, n
+int_\n\()_for_\start:
+    mov $\n, %rax
+    popq %rbx // Error code
+    popq %rcx // RIP
+    movq $0, (EXIT_TEST_ADDR)
+.endm
+
+.macro debug_idt start, n
+    .2byte ABSOLUTE_ADDR(\start, \
+                         int_\n\()_for_\start)      // Offset 15:00
+    .2byte CODE_64_SELECTOR                         // Segment selector
+    .byte  0                                        // IST(000)
+    .byte  0b10001110                               // P(1) DPL(00) 0 Type(1110)
+    .2byte 0                                        // Offset 31:16
+    .4byte 0                                        // Offset 63:32
+    .4byte 0                                        // Reserved
+.endm
+
 .macro init_interrupt_handling start
     init_gdt \start
     lidt ABSOLUTE_ADDR(\start, idtr_for_\start)
     mov $GUEST_ENTRY + 0x1000, %rsp
     jmp end_of_\start
 
+.irp n, 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, \
+       16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+    debug_isr \start \n
+.endr
+
 int32_for_\start:
     movq $0, (EXIT_TEST_ADDR)
 
 .align 8
 idt_for_\start:
-    .fill 64, 8, 0                                  // 32 null entries
+.irp n, 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, \
+       16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+    debug_idt \start \n
+.endr
+
     .2byte ABSOLUTE_ADDR(\start, int32_for_\start)  // Offset 15:00
     .2byte CODE_64_SELECTOR                         // Segment selector
     .byte  0                                        // IST(000)
