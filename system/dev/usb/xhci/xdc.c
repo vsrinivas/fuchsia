@@ -583,6 +583,7 @@ out:
 
 static zx_protocol_device_t xdc_proto = {
     .version = DEVICE_OPS_VERSION,
+    .open = xdc_open,
     .suspend = xdc_suspend,
     .unbind = xdc_unbind,
     .release = xdc_release,
