@@ -514,6 +514,8 @@ zx_status_t display_get_info(struct display_info* info) {
 }
 
 void platform_halt(platform_halt_action suggested_action, platform_halt_reason reason) {
+    thread_migrate_to_cpu(BOOT_CPU_ID);
+    platform_halt_secondary_cpus();
 
     if (suggested_action == HALT_ACTION_REBOOT) {
         power_reboot(REBOOT_NORMAL);
