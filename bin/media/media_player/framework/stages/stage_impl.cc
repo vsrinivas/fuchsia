@@ -37,15 +37,13 @@ void StageImpl::ShutDown() {
 }
 
 void StageImpl::NeedsUpdate() {
+  // Atomically preincrement the update counter. If we get the value 1, that
+  // means the counter was zero, and we need to post an update. If we get
+  // anything else, |UpdateUntilDone| is already running. In that case, we know
+  // |UpdateUntilDone| will run |Update| after the increment occurred.
   if (++update_counter_ == 1) {
     // This stage has no update pending in the task queue or running.
     PostTask([this]() { UpdateUntilDone(); });
-  } else {
-    // This stage already has an update either pending in the task queue or
-    // running. Set the counter to 2 so it will never go out of range. We
-    // don't set it to 1, because, if we're in |UpdateUntilDone|, that would
-    // indicate we no longer need to update.
-    update_counter_ = 2;
   }
 }
 
