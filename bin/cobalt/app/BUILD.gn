@@ -59,8 +59,8 @@ package("cobalt") {
 
   meta = [
     {
-      path = rebase_path("meta/sandbox")
-      dest = "sandbox"
+      path = rebase_path("meta/cobalt.cmx")
+      dest = "cobalt.cmx"
     },
   ]
 

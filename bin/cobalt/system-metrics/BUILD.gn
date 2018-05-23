@@ -26,8 +26,8 @@ package("cobalt_system_metrics") {
 
   meta = [
     {
-      path = rebase_path("meta/sandbox")
-      dest = "sandbox"
+      path = rebase_path("meta/cobalt_system_metrics.cmx")
+      dest = "cobalt_system_metrics.cmx"
     },
   ]
 

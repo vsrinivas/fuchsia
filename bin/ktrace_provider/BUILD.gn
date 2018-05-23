@@ -37,7 +37,7 @@ package("ktrace_provider") {
   binary = "ktrace_provider"
 
   meta = [ {
-        path = rebase_path("meta/sandbox")
-        dest = "sandbox"
+        path = rebase_path("meta/ktrace_provider.cmx")
+        dest = "ktrace_provider.cmx"
       } ]
 }

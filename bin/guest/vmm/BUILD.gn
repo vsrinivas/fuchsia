@@ -57,8 +57,8 @@ package("vmm") {
 
   meta = [
     {
-      path = rebase_path("//garnet/bin/guest/vmm/meta/sandbox")
-      dest = "sandbox"
+      path = rebase_path("//garnet/bin/guest/vmm/meta/vmm.cmx")
+      dest = "vmm.cmx"
     },
   ]
 

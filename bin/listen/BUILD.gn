@@ -28,7 +28,7 @@ package("listen") {
   binary = "listen"
 
   meta = [{
-    path = rebase_path("meta/sandbox")
-    dest = "sandbox"
+    path = rebase_path("meta/listen.cmx")
+    dest = "listen.cmx"
   }]
 }

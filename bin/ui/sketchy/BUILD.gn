@@ -69,8 +69,8 @@ package("sketchy_service") {
 
   meta = [
     {
-      path = rebase_path("meta/sandbox")
-      dest = "sandbox"
+      path = rebase_path("meta/sketchy_service.cmx")
+      dest = "sketchy_service.cmx"
     },
   ]
 }

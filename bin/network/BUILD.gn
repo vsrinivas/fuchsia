@@ -74,8 +74,8 @@ package("network") {
 
   meta = [
     {
-      path = rebase_path("meta/sandbox")
-      dest = "sandbox"
+      path = rebase_path("meta/network.cmx")
+      dest = "network.cmx"
     },
   ]
 }

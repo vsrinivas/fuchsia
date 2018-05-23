@@ -41,8 +41,8 @@ package("bt-gap") {
       dest = "legacy_flat_exported_dir"
     },
     {
-      path = rebase_path("meta/sandbox")
-      dest = "sandbox"
+      path = rebase_path("meta/bt-gap.cmx")
+      dest = "bt-gap.cmx"
     },
   ]
 }

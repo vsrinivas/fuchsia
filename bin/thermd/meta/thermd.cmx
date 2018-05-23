@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "dev": [ "misc", "class/thermal" ]
+    }
+}

@@ -16,8 +16,8 @@ package("netstack") {
 
   meta = [
     {
-      path = rebase_path("meta/sandbox")
-      dest = "sandbox"
+      path = rebase_path("meta/netstack.cmx")
+      dest = "netstack.cmx"
     },
     {
       path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")

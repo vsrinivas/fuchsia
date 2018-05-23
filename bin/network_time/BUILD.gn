@@ -20,8 +20,8 @@ package("network_time") {
 
   meta = [
     {
-      path = rebase_path("meta/sandbox")
-      dest = "sandbox"
+      path = rebase_path("meta/network_time.cmx")
+      dest = "network_time.cmx"
     },
   ]
 }

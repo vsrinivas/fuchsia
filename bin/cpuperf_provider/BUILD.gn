@@ -44,8 +44,8 @@ package("cpuperf_provider") {
   binary = "cpuperf_provider"
 
   meta = [ {
-        path = rebase_path("meta/sandbox")
-        dest = "sandbox"
+        path = rebase_path("meta/cpuperf_provider.cmx")
+        dest = "cpuperf_provider.cmx"
       } ]
 }
 

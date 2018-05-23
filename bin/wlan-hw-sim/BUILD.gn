@@ -33,8 +33,8 @@ package("wlan-hw-sim") {
 
   meta = [
     {
-      path = rebase_path("meta/sandbox")
-      dest = "sandbox"
+      path = rebase_path("meta/wlan-hw-sim.cmx")
+      dest = "wlan-hw-sim.cmx"
     }
   ]
 }

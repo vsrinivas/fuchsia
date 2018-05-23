@@ -34,8 +34,8 @@ package("thermd") {
 
     meta = [
       {
-        path = rebase_path("meta/sandbox")
-        dest = "sandbox"
+        path = rebase_path("meta/thermd.cmx")
+        dest = "thermd.cmx"
       },
     ]
   } else {

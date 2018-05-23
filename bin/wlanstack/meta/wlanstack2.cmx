@@ -1,0 +1,9 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "dev": [ "class/wlanphy", "class/wlanif" ],
+        "system": [ "data/wlanstack2" ]
+    }
+}

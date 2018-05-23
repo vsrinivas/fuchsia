@@ -32,8 +32,8 @@ package("fonts") {
 
   meta = [
     {
-      path = rebase_path("meta/sandbox")
-      dest = "sandbox"
+      path = rebase_path("meta/fonts.cmx")
+      dest = "fonts.cmx"
     }
   ]
 

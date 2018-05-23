@@ -32,7 +32,7 @@ package("timezone") {
   binary = "timezone"
 
   meta = [{
-    path = rebase_path("meta/sandbox")
-    dest = "sandbox"
+    path = rebase_path("meta/timezone.cmx")
+    dest = "timezone.cmx"
   }]
 }

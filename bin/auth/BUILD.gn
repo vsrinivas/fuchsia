@@ -13,8 +13,8 @@ package("token_manager") {
 
   meta = [
     {
-      path = rebase_path("meta/sandbox")
-      dest = "sandbox"
+      path = rebase_path("meta/token_manager.cmx")
+      dest = "token_manager.cmx"
     },
   ]
 }

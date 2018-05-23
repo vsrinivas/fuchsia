@@ -46,7 +46,7 @@ package("vkcube_image_pipe_swapchain") {
         dest = "bbb_frame.yuv"
     } ]
   meta = [ {
-        path = rebase_path("meta/sandbox")
-        dest = "sandbox"
+        path = rebase_path("meta/image-pipe-swapchain.cmx")
+        dest = "image-pipe-swapchain.cmx"
       } ]
 }
