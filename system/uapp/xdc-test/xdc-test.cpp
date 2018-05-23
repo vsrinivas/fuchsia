@@ -41,7 +41,7 @@ static zx_status_t configure_xdc_device(const uint32_t stream_id, fbl::unique_fd
         if (fd < 0) {
             continue;
         }
-        zx_status_t status = static_cast<zx_status_t>(ioctl_usb_set_stream_id(fd, &stream_id));
+        zx_status_t status = static_cast<zx_status_t>(ioctl_debug_set_stream_id(fd, &stream_id));
         if (status != ZX_OK) {
             fprintf(stderr, "Failed to set stream id %u for device \"%s/%s\", err: %d\n",
                     stream_id, DEV_XDC_DIR, de->d_name, status);
