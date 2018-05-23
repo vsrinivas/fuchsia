@@ -13,15 +13,24 @@ fidl("fidl") {
   ]
 }
 
+fidl("sme") {
+  name = "wlan_sme"
+
+  sources = [
+    "sme.fidl"
+  ]
+}
+
 fidl("service") {
   name = "wlan_device_service"
 
   sources = [
-    "service.fidl",
+    "service.fidl"
   ]
 
   public_deps = [
     ":fidl",
+    ":sme"
   ]
 }
 

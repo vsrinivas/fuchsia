@@ -12,6 +12,8 @@ use std::collections::VecDeque;
 use super::MlmeRequest;
 use futures::channel::mpsc;
 
+pub use self::scan::{DiscoveryError, DiscoveryResult, DiscoveredEss};
+
 // A token is an opaque value that identifies a particular request from a user.
 // To avoid parameterizing over many different token types, we introduce a helper
 // trait that enables us to group them into a single generic parameter.
@@ -54,7 +56,7 @@ pub struct ClientSme<T: Tokens> {
 pub enum UserEvent<T: Tokens> {
     ScanFinished {
         token: T::ScanToken,
-        result: fidl_mlme::ScanConfirm,
+        result: scan::DiscoveryResult,
     }
 }
 

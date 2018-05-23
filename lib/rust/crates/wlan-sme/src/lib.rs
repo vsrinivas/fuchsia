@@ -4,6 +4,7 @@
 
 extern crate fidl_wlan_mlme as fidl_mlme;
 extern crate fuchsia_zircon as zx;
+#[macro_use] extern crate failure;
 extern crate futures;
 
 pub mod client;

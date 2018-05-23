@@ -3,13 +3,16 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
+#![feature(custom_attribute)]
 
 #[macro_use]
 extern crate clap;
+#[macro_use]
 extern crate failure;
 extern crate fidl;
 extern crate fidl_wlan_device as wlan;
 extern crate fidl_wlan_device_service as wlan_service;
+extern crate fidl_wlan_sme as fidl_sme;
 extern crate fuchsia_app as component;
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
@@ -19,6 +22,8 @@ extern crate structopt;
 
 use component::client::connect_to_service;
 use failure::{Error, Fail, ResultExt};
+use fidl::endpoints2::{ClientEnd, ServerEnd, ServiceMarker};
+use fidl_sme::ScanTransactionEvent;
 use futures::prelude::*;
 use structopt::StructOpt;
 use wlan_service::{DeviceServiceMarker, DeviceServiceProxy};
@@ -36,12 +41,11 @@ fn main() -> Result<(), Error> {
     let wlan_svc =
         connect_to_service::<DeviceServiceMarker>().context("failed to connect to device service")?;
 
-    let fut = match opt {
-        Opt::Phy(cmd) => do_phy(cmd, wlan_svc).left_future(),
-        Opt::Iface(cmd) => do_iface(cmd, wlan_svc).right_future(),
-    };
-
-    exec.run_singlethreaded(fut)
+    match opt {
+        Opt::Phy(cmd) => exec.run_singlethreaded(do_phy(cmd, wlan_svc)),
+        Opt::Iface(cmd) => exec.run_singlethreaded(do_iface(cmd, wlan_svc)),
+        Opt::Client(cmd) => exec.run_singlethreaded(do_client(cmd, wlan_svc)),
+    }
 }
 
 fn do_phy(cmd: opts::PhyCmd, wlan_svc: WlanSvc) -> impl Future<Item = (), Error = Error> {
@@ -104,3 +108,74 @@ fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> impl Future<Item = (), Er
         }
     }
 }
+
+fn do_client(cmd: opts::ClientCmd, wlan_svc: WlanSvc) -> impl Future<Item = (), Error = Error> {
+    match cmd {
+        opts::ClientCmd::Scan { iface_id } => get_client_sme(wlan_svc, iface_id)
+            .and_then(|sme| {
+                let (local, remote) = create_endpoints()?;
+                let mut req = fidl_sme::ScanRequest {
+                    timeout: 10
+                };
+                sme.scan(&mut req, remote)
+                    .map_err(|e| e.context("error sending scan request"))?;
+                Ok(local)
+            })
+            .and_then(handle_scan_transaction)
+            .map_err(|e| e.into()),
+    }
+}
+
+fn handle_scan_transaction(scan_txn: fidl_sme::ScanTransactionProxy)
+    -> impl Future<Item = (), Error = Error>
+{
+    scan_txn.take_event_stream()
+        .map(|e| {
+            match e {
+                ScanTransactionEvent::OnResult { aps } => {
+                    for ap in aps {
+                        println!("{}", String::from_utf8_lossy(&ap.ssid));
+                    }
+                    false
+                },
+                ScanTransactionEvent::OnFinished { } => true,
+                ScanTransactionEvent::OnError { error } => {
+                    eprintln!("Error: {}", error.message);
+                    true
+                },
+            }
+        })
+        .fold(false, |_prev, done| Ok(done))
+        .err_into::<Error>()
+        .and_then(|done| {
+            if !done {
+                bail!("Failed to fetch all results before the channel was closed");
+            }
+            Ok(())
+        })
+}
+
+fn get_client_sme(wlan_svc: WlanSvc, iface_id: u16)
+    -> impl Future<Item = fidl_sme::ClientSmeProxy, Error = Error>
+{
+    create_endpoints()
+        .into_future()
+        .and_then(move |(proxy, remote)| {
+            wlan_svc.get_client_sme(iface_id, remote)
+                .map_err(|e| e.context("error sending GetClientSme request").into())
+                .and_then(move |ok| {
+                    if ok {
+                        Ok(proxy)
+                    } else {
+                        Err(format_err!("Invalid interface id {}", iface_id))
+                    }
+                })
+        })
+}
+
+// This should probably be in endpoints2
+fn create_endpoints<T: ServiceMarker>() -> Result<(T::Proxy, ServerEnd<T>), Error> {
+    let (client, server) = zx::Channel::create()?;
+    Ok((ClientEnd::<T>::new(client).into_proxy()?, ServerEnd::new(server)))
+}
+

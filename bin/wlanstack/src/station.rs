@@ -3,27 +3,32 @@
 // found in the LICENSE file.
 
 #![allow(dead_code)]
+#![allow(unused_variables)]
 
+use fidl;
 use wlan_sme::{client, Station, MlmeRequest, MlmeStream};
-use fidl_mlme::{self, MlmeProxy};
-use fidl_wlan_service::{self, Wlan};
+use wlan_sme::client::{DiscoveryError, DiscoveryResult, DiscoveredEss};
+use fidl_mlme::MlmeProxy;
+use fidl_sme::{self, ClientSme, ScanTransaction};
 use std::sync::{Arc, Mutex};
+use failure;
 use futures::{future, prelude::*};
+use futures::channel::mpsc;
 use async;
+use zx;
 
 struct ClientTokens;
 
 impl client::Tokens for ClientTokens {
-    type ScanToken = fidl_wlan_service::WlanScanResponder;
+    type ScanToken = fidl_sme::ScanTransactionControlHandle;
 }
 
-type ClientSme = client::ClientSme<ClientTokens>;
+type Client = client::ClientSme<ClientTokens>;
 
-pub fn serve_client<T>(proxy: MlmeProxy, new_fidl_clients: T)
+pub fn serve_client_sme(proxy: MlmeProxy, new_fidl_clients: mpsc::UnboundedReceiver<async::Channel>)
     -> impl Future<Item = (), Error = ::fidl::Error>
-    where T: Stream<Item = async::Channel, Error = ::fidl::Error>
 {
-    let (client, mlme_stream, user_stream) = ClientSme::new();
+    let (client, mlme_stream, user_stream) = Client::new();
     let client_arc = Arc::new(Mutex::new(client));
 
     // A future that handles MLME interactions
@@ -34,10 +39,10 @@ pub fn serve_client<T>(proxy: MlmeProxy, new_fidl_clients: T)
         .map_err(|_| panic!("'Never' should never happen"));
     // A future that handles requests from FIDL clients
     let wlan_server = new_fidl_clients.for_each_concurrent(move |channel| {
-        new_wlan_service(client_arc.clone(), channel).recover(
+        new_client_service(client_arc.clone(), channel).recover(
             |e| eprintln!("Error handling a FIDL request from user: {:?}", e)
         )
-    });
+    }).map_err(|e| e.never_into());
     station_server.join3(user_stream_server, wlan_server).map(|_| ())
 }
 
@@ -63,36 +68,40 @@ fn serve_station<S: Station>(proxy: MlmeProxy, station: Arc<Mutex<S>>, mlme_stre
     event_handler.join(mlme_sender).map(|_| ())
 }
 
-fn new_wlan_service(client_arc: Arc<Mutex<ClientSme>>, channel: async::Channel)
+fn new_client_service(client_arc: Arc<Mutex<Client>>, channel: async::Channel)
     -> impl Future<Item = (), Error = ::fidl::Error>
 {
-    // TODO(gbonik): Use a proper "Client Iface" FIDL interface instead of WlanService
-    fidl_wlan_service::WlanImpl {
+    fidl_sme::ClientSmeImpl {
         state: client_arc.clone(),
         on_open: |_, _| {
             future::ok(())
         },
-        scan: |state, _req, resp| {
-            state.lock().unwrap().on_scan_command(resp);
+        scan: |state, _req, txn, c| {
+            match new_scan_transaction(txn.into_channel()) {
+                Ok(token) => {
+                    state.lock().unwrap().on_scan_command(token);
+                },
+                Err(e) => {
+                    eprintln!("Error starting a scan transaction: {:?}", e);
+                }
+            }
             future::ok(())
         },
-        connect: |state, req, _resp| {
-            state.lock().unwrap().on_connect_command(req.ssid);
-            future::ok(())
-        },
-        disconnect: |_state, _resp| {
-            future::ok(())
-        },
-        status: |_state, _resp| {
-            future::ok(())
-        },
-        start_bss: |_state, _req, _resp| {
-            future::ok(())
-        },
-        stop_bss: |_state, _resp| {
+    }.serve(channel)
+}
+
+
+fn new_scan_transaction(channel: zx::Channel)
+    -> Result<fidl_sme::ScanTransactionControlHandle, failure::Error>
+{
+    let local = async::Channel::from_channel(channel)?;
+    let server_future = fidl_sme::ScanTransactionImpl {
+        state: (),
+        on_open: |_, _| {
             future::ok(())
         }
-    }.serve(channel)
+    }.serve(local);
+    Ok(server_future.control_handle())
 }
 
 fn serve_user_stream(stream: client::UserStream<ClientTokens>)
@@ -102,8 +111,7 @@ fn serve_user_stream(stream: client::UserStream<ClientTokens>)
         .for_each(|e| {
             match e {
                 client::UserEvent::ScanFinished{ token, result } => {
-                    token.send(&mut convert_scan_result(result)).unwrap_or_else(|e| {
-                        // TODO(gbonik): stop serving the channel?
+                    send_scan_results(token, result).unwrap_or_else(|e| {
                         eprintln!("Error sending scan results to user: {:?}", e);
                     })
                 }
@@ -113,14 +121,31 @@ fn serve_user_stream(stream: client::UserStream<ClientTokens>)
         .map(|_| ())
 }
 
-fn convert_scan_result(_sc: fidl_mlme::ScanConfirm) -> fidl_wlan_service::ScanResult {
-    // TODO(gbonik): actually convert the result. Also figure out the appropriate place
-    // to hold this logic.
-    fidl_wlan_service::ScanResult {
-        error: fidl_wlan_service::Error {
-            code: fidl_wlan_service::ErrCode::Ok,
-            description: "".to_string(),
+fn send_scan_results(token: fidl_sme::ScanTransactionControlHandle,
+                     result: DiscoveryResult)
+    -> Result<(), fidl::Error>
+{
+    match result {
+        Ok(ess_list) => {
+            let mut results = ess_list.into_iter().map(convert_scan_result).collect::<Vec<_>>();
+            token.send_on_result(&mut results.iter_mut())?;
+            token.send_on_finished()?;
         },
-        aps: Some(vec![])
+        Err(e) => {
+            token.send_on_error(&mut fidl_sme::ScanError {
+                code: match &e {
+                    DiscoveryError::NotSupported => fidl_sme::ScanErrorCode::NotSupported,
+                },
+                message: e.to_string()
+            })?;
+        }
+    }
+    Ok(())
+}
+
+fn convert_scan_result(ess: DiscoveredEss) -> fidl_sme::ScanResult {
+    fidl_sme::ScanResult {
+        bssid: ess.best_bss,
+        ssid: ess.ssid,
     }
 }

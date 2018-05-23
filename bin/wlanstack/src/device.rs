@@ -4,8 +4,10 @@
 
 use async;
 use failure::Error;
+use fidl_mlme;
 use futures::prelude::*;
 use futures::{future, stream};
+use futures::channel::mpsc;
 use parking_lot::Mutex;
 use vfs_watcher;
 use wlan;
@@ -33,22 +35,17 @@ impl PhyDevice {
     }
 }
 
+pub type ClientSmeServer = mpsc::UnboundedSender<async::Channel>;
+
 struct IfaceDevice {
-    id: u16,
-    _proxy: async::Channel,
+    client_sme_server: Option<ClientSmeServer>,
     _dev: wlan_dev::Device,
 }
 
-impl IfaceDevice {
-    fn new<P: AsRef<Path>>(id: u16, path: P) -> Result<Self, zx::Status> {
-        let dev = wlan_dev::Device::new(path)?;
-        let proxy = wlan_dev::connect_wlan_iface(&dev)?;
-        Ok(IfaceDevice {
-            id,
-            _proxy: proxy,
-            _dev: dev,
-        })
-    }
+fn open_iface_device<P: AsRef<Path>>(path: P) -> Result<(async::Channel, wlan_dev::Device), zx::Status> {
+    let dev = wlan_dev::Device::new(path)?;
+    let channel = wlan_dev::connect_wlan_iface(&dev)?;
+    Ok((channel, dev))
 }
 
 /// Called by the `DeviceManager` in response to device events.
@@ -102,9 +99,18 @@ impl DeviceManager {
             .retain(|listener| listener.on_phy_removed(id).is_ok());
     }
 
-    fn add_iface(&mut self, iface: IfaceDevice) {
-        let id = iface.id;
-        self.ifaces.insert(iface.id, iface);
+    fn add_iface(&mut self, id: u16, channel: async::Channel, device: wlan_dev::Device) {
+        let proxy = fidl_mlme::MlmeProxy::new(channel);
+        // TODO(gbonik): move this code outside of DeviceManager
+        let (sender, receiver) = mpsc::unbounded();
+        // TODO(gbonik): check the role of the interface instead of assuming it is a station
+        async::spawn(super::station::serve_client_sme(proxy, receiver).recover::<Never, _>(|e| {
+            eprintln!("Error serving client station: {:?}", e);
+        }));
+        self.ifaces.insert(id, IfaceDevice {
+            client_sme_server: Some(sender),
+            _dev: device,
+        });
         self.listeners
             .retain(|listener| listener.on_iface_added(id).is_ok());
     }
@@ -207,6 +213,10 @@ impl DeviceManager {
             self.listeners.push(listener);
         }
     }
+
+    pub fn get_client_sme(&mut self, iface_id: u16) -> Option<ClientSmeServer> {
+        self.ifaces.get(&iface_id).and_then(|dev| dev.client_sme_server.clone())
+    }
 }
 
 fn new_watcher<P, OnAdd, OnRm>(
@@ -293,8 +303,8 @@ pub fn new_iface_watcher<P: AsRef<Path>>(
             let open_delay = time::Duration::from_millis(100);
             thread::sleep(open_delay);
 
-            match IfaceDevice::new(id, path) {
-                Ok(dev) => devmgr.lock().add_iface(dev),
+            match open_iface_device(path) {
+                Ok((channel, dev)) => devmgr.lock().add_iface(id, channel, dev),
                 Err(zx::Status::ALREADY_BOUND) => info!("iface already open, deferring"),
                 Err(e) => error!("could not open iface: {:?}", e),
             }

@@ -11,6 +11,7 @@ rustc_library("wlan-sme") {
   deps = [
     "//garnet/public/lib/wlan/fidl:mlme-rustc",
     "//garnet/public/rust/crates/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures",
   ]
 }

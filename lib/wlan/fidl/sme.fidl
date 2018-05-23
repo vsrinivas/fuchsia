@@ -1,0 +1,30 @@
+library wlan_sme;
+
+struct ScanResult {
+    array<uint8>:6 bssid;
+    vector<uint8>:32 ssid;
+};
+
+enum ScanErrorCode {
+    NOT_SUPPORTED = 1;
+};
+
+struct ScanError {
+    ScanErrorCode code;
+    string message;
+};
+
+interface ScanTransaction {
+    // Can be called several times to deliver incremental scan results
+    1: -> OnResult(vector<ScanResult> aps);
+    2: -> OnFinished();
+    3: -> OnError(ScanError error);
+};
+
+struct ScanRequest {
+    uint8 timeout; // seconds
+};
+
+interface ClientSme {
+    1: Scan(ScanRequest req, request<ScanTransaction> txn);
+};

@@ -32,6 +32,10 @@ pub enum Opt {
     #[structopt(name = "iface")]
     /// commands for wlan iface devices
     Iface(IfaceCmd),
+
+    #[structopt(name = "client")]
+    /// commands for client stations
+    Client(ClientCmd),
 }
 
 #[derive(StructOpt, Copy, Clone, Debug)]
@@ -75,3 +79,13 @@ pub enum IfaceCmd {
         iface_id: u16,
     },
 }
+
+#[derive(StructOpt, Copy, Clone, Debug)]
+pub enum ClientCmd {
+    #[structopt(name = "scan")]
+    Scan {
+        #[structopt(raw(required = "true"))]
+        iface_id: u16
+    }
+}
+

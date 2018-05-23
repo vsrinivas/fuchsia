@@ -50,6 +50,7 @@ interface DeviceService {
   // 19: reserved for StartIface
   // 20: reserved for StopIface
   21: DestroyIface(DestroyIfaceRequest req) -> (int32 @status);
+  22: GetClientSme(uint16 iface_id, request<wlan_sme.ClientSme> sme) -> (bool ok);
 
   // Device events
   0x1000: -> OnPhyAdded(uint16 id);

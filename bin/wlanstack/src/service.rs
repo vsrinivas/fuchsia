@@ -26,6 +26,7 @@ where
 pub fn device_service(
     devmgr: DevMgrRef, channel: async::Channel,
 ) -> impl Future<Item = (), Error = Never> {
+
     DeviceServiceImpl {
         state: devmgr,
         on_open: |state, control_handle| {
@@ -102,8 +103,29 @@ pub fn device_service(
                     })
                 })
         },
+
+        get_client_sme: |state, iface_id, server_end, c| {
+            let server = state.lock().get_client_sme(iface_id);
+            if let Err(e) = connect_client_sme(server, server_end.into_channel(), &c) {
+                eprintln!("get_client_sme: unexpected error: {:?}", e);
+                c.control_handle().shutdown();
+            }
+            future::ok(())
+        }
+
     }.serve(channel)
         .recover(|e| eprintln!("error running wlan device service: {:?}", e))
+}
+
+fn connect_client_sme(server: Option<super::device::ClientSmeServer>, channel: zx::Channel,
+                      c: &wlan_service::DeviceServiceGetClientSmeResponder)
+    -> Result<(), Error>
+{
+    if let Some(ref s) = &server {
+        s.unbounded_send(async::Channel::from_channel(channel)?)?;
+    }
+    c.send(server.is_some())?;
+    Ok(())
 }
 
 impl device::EventListener for DeviceServiceControlHandle {

@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use fidl_mlme::{self, MlmeEvent, BssDescription, ScanResultCodes, ScanRequest};
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
+use std::collections::hash_map::Entry;
+use std::cmp::Ordering;
 use super::super::MlmeRequest;
 
 // Scans can be performed for two different purposes:
@@ -69,8 +71,21 @@ pub enum ScanResult<T> {
     // SME is expected to forward the result to the user.
     DiscoveryFinished {
         token: T,
-        result: fidl_mlme::ScanConfirm,
+        result: DiscoveryResult,
     },
+}
+
+pub type DiscoveryResult = Result<Vec<DiscoveredEss>, DiscoveryError>;
+
+pub struct DiscoveredEss {
+    pub ssid: Vec<u8>,
+    pub best_bss: [u8; 6],
+}
+
+#[derive(Debug, Fail)]
+pub enum DiscoveryError {
+    #[fail(display = "Scanning not supported by device")]
+    NotSupported,
 }
 
 impl<T> ScanScheduler<T> {
@@ -132,7 +147,7 @@ impl<T> ScanScheduler<T> {
             ScanState::ScanningToDiscover(discover_scan) => {
                 ScanResult::DiscoveryFinished {
                     token: discover_scan.token,
-                    result: msg,
+                    result: convert_discovery_result(msg),
                 }
             }
         };
@@ -184,15 +199,56 @@ fn new_discovery_scan_request<T>(discovery_scan: &DiscoveryScan<T>) -> ScanReque
         ssid: String::new(),
         scan_type: fidl_mlme::ScanTypes::Passive,
         probe_delay: 0,
-        channel_list: None,
+        // TODO(gbonik): get channel list from device caps
+        channel_list: Some(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]),
         min_channel_time: 100,
         max_channel_time: 300,
         ssid_list: None
     }
 }
 
+fn convert_discovery_result(msg: fidl_mlme::ScanConfirm) -> DiscoveryResult {
+    match msg.result_code {
+        ScanResultCodes::Success => Ok(group_networks(msg.bss_description_set)),
+        ScanResultCodes::NotSupported => Err(DiscoveryError::NotSupported)
+    }
+}
+
+fn group_networks(bss_set: Vec<BssDescription>) -> Vec<DiscoveredEss> {
+    let mut best_bss_by_ssid = HashMap::new();
+    for bss in bss_set {
+        match best_bss_by_ssid.entry(bss.ssid.bytes().collect()) {
+            Entry::Vacant(e) => { e.insert(bss); },
+            Entry::Occupied(mut e) =>
+                if compare_bss(e.get(), &bss) == Ordering::Less {
+                    e.insert(bss);
+                }
+        };
+    }
+    best_bss_by_ssid.into_iter()
+        .map(|(ssid, bss)| DiscoveredEss {
+                ssid,
+                best_bss: bss.bssid.clone()
+            })
+        .collect()
+}
+
 fn best_bss_to_join(bss_set: Vec<BssDescription>, ssid: &String) -> Option<BssDescription> {
     bss_set.into_iter()
         .filter(|bss_desc| &bss_desc.ssid == ssid)
-        .max_by_key(|bss_desc| bss_desc.rcpi_dbmh)
+        .max_by(compare_bss)
+}
+
+fn compare_bss(left: &BssDescription, right: &BssDescription) -> Ordering {
+    get_dbmh(left).cmp(&get_dbmh(right))
+}
+
+fn get_dbmh(bss: &BssDescription) -> i16 {
+    if bss.rcpi_dbmh != 0 {
+        bss.rcpi_dbmh
+    } else if bss.rssi_dbm != 0 {
+        (bss.rssi_dbm as i16) * 2
+    } else {
+        ::std::i16::MIN
+    }
 }
