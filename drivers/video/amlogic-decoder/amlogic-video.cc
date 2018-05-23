@@ -73,6 +73,7 @@ AmlogicVideo::~AmlogicVideo() {
     if (parser_interrupt_thread_.joinable())
       parser_interrupt_thread_.join();
   }
+  DisableVideoPower();
   io_buffer_release(&mmio_cbus_);
   io_buffer_release(&mmio_dosbus_);
   io_buffer_release(&mmio_hiubus_);
@@ -96,6 +97,24 @@ void AmlogicVideo::EnableClockGate() {
   HhiGclkMpeg2::Get()
       .ReadFrom(hiubus_.get())
       .set_vpu_interrupt(true)
+      .WriteTo(hiubus_.get());
+}
+
+void AmlogicVideo::DisableClockGate() {
+  HhiGclkMpeg2::Get()
+      .ReadFrom(hiubus_.get())
+      .set_vpu_interrupt(false)
+      .WriteTo(hiubus_.get());
+  HhiGclkMpeg1::Get()
+      .ReadFrom(hiubus_.get())
+      .set_u_parser_top(false)
+      .set_aiu(0)
+      .set_demux(false)
+      .set_audio_in(false)
+      .WriteTo(hiubus_.get());
+  HhiGclkMpeg0::Get()
+      .ReadFrom(hiubus_.get())
+      .set_dos(false)
       .WriteTo(hiubus_.get());
 }
 
@@ -123,6 +142,30 @@ void AmlogicVideo::EnableVideoPower() {
   }
   DosVdecMcrccStallCtrl::Get().FromValue(0).WriteTo(dosbus_.get());
   DmcReqCtrl::Get().ReadFrom(dmc_.get()).set_vdec(true).WriteTo(dmc_.get());
+  video_power_enabled_ = true;
+}
+
+void AmlogicVideo::DisableVideoPower() {
+  if (!video_power_enabled_)
+    return;
+  video_power_enabled_ = false;
+  DmcReqCtrl::Get().ReadFrom(dmc_.get()).set_vdec(false).WriteTo(dmc_.get());
+  zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
+  {
+    auto temp = AoRtiGenPwrIso0::Get().ReadFrom(aobus_.get());
+    temp.set_reg_value(temp.reg_value() | 0xc0);
+    temp.WriteTo(aobus_.get());
+  }
+  DosMemPdVdec::Get().FromValue(~0u).WriteTo(dosbus_.get());
+  HhiVdecClkCntl::Get().FromValue(0).set_vdec_en(false).set_vdec_sel(3).WriteTo(
+      hiubus_.get());
+
+  {
+    auto temp = AoRtiGenPwrSleep0::Get().ReadFrom(aobus_.get());
+    temp.set_reg_value(temp.reg_value() | 0xc);
+    temp.WriteTo(aobus_.get());
+  }
+  DisableClockGate();
 }
 
 zx_status_t AmlogicVideo::LoadDecoderFirmware(uint8_t* data, uint32_t size) {

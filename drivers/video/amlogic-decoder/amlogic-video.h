@@ -42,7 +42,9 @@ class AmlogicVideo {
   friend class TestMpeg2;
 
   void EnableClockGate();
+  void DisableClockGate();
   void EnableVideoPower();
+  void DisableVideoPower();
   zx_status_t InitializeStreamBuffer();
   zx_status_t InitializeEsParser();
   zx_status_t ParseVideo(void* data, uint32_t len);
@@ -67,6 +69,7 @@ class AmlogicVideo {
 
   std::unique_ptr<FirmwareBlob> firmware_;
 
+  bool video_power_enabled_ = false;
   // The stream buffer is a FIFO between the parser and the decoder.
   io_buffer_t stream_buffer_ = {};
 
