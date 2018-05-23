@@ -45,10 +45,18 @@ class BlobStats {
     }
   }
 
+  Future<String> computeHash(String path) async {
+    return (await Process.run("shasum", [path])).stdout.substring(0, 40);
+  }
+
   Future computeBlobs() async {
     while (!pendingFiles.isEmpty) {
       var file = pendingFiles.removeLast();
       var path = file.path;
+
+      if (path.endsWith("meta.far")) {
+        pendingPackages.add(file);
+      }
 
       if (suffix != null && !path.endsWith(suffix)) {
         continue;
@@ -61,9 +69,7 @@ class BlobStats {
       }
 
       var size = stat.size;
-      var hash = (await Process.run("shasum", [path])).stdout.substring(0, 40);
-
-      duplicatedSize += size;
+      var hash = await computeHash(path);
 
       var blob = blobsByHash[hash];
       if (blob == null) {
@@ -71,11 +77,8 @@ class BlobStats {
         blob.hash = hash;
         blob.path = path;
         blob.size = size;
-        blob.count = 1;
+        blob.count = 0;
         blobsByHash[hash] = blob;
-        deduplicatedSize += size;
-      } else {
-        blob.count++;
       }
     }
   }
@@ -133,16 +136,19 @@ class BlobStats {
     print("   $percent% $deduplicatedSize / $duplicatedSize");
   }
 
-  void computePackagesInParallel(int jobs) async {
-    var manifests = await buildDir
-        .list(recursive: true)
-        .where((manifest) => manifest.path.endsWith("final_package_manifest"))
-        .toList();
-    pendingPackages.addAll(manifests);
+  String farToManifest(String farPath) {
+    // Assumes details of //build/package.gni, namely that it generates
+    //   <build-dir>/.../<package>.manifest
+    //   <build-dir>/.../<package>.meta/meta.far
+    // and puts meta.far into
+    //   <build-dir>/blobs.manifest
+    if (!farPath.endsWith(".meta/meta.far")) {
+      throw "Build details have changed";
+    }
+    return farPath.substring(0, farPath.length - ".meta/meta.far".length) + ".manifest";
+  }
 
-    // The part of the system not yet in packages:
-    pendingPackages.add(new File(buildDir.path + "blob.manifest"));
-
+  Future computePackagesInParallel(int jobs) async {
     var tasks = new List<Future>();
     for (var i = 0; i < jobs; i++) {
       tasks.add(computePackages());
@@ -152,46 +158,61 @@ class BlobStats {
 
   void computePackages() async {
     while (!pendingPackages.isEmpty) {
-      var manifest = pendingPackages.removeLast();
+      File far = pendingPackages.removeLast();
 
-      var pkg = new Package();
-      pkg.name = manifest.path.substring(buildDir.path.length);
-      pkg.size = 0;
-      pkg.proportional = 0;
-      pkg.private = 0;
-      pkg.blobCount = 0;
-      pkg.blobsByPath = new Map<String, Blob>();
+      var package = new Package();
+      package.name = far.path.substring(buildDir.path.length);
+      package.size = 0;
+      package.proportional = 0;
+      package.private = 0;
+      package.blobCount = 0;
+      package.blobsByPath = new Map<String, Blob>();
 
-      for (var line in await manifest.readAsLines()) {
-        var file = new File(buildDir.path + line.split("=").last);
-        var path = file.path;
+      for (var line in await new File(farToManifest(far.path)).readAsLines()) {
+        var path = line.split("=").last;
 
         if (suffix != null && !path.endsWith(suffix)) {
           continue;
         }
 
-        if (path.contains("/meta/") ||
-            path.endsWith("legacy_flat_exported_dir")) {
-          // Why are these in the package manifests but not the final manifest?
-          continue;
-        }
-
-        var hash = (await Process.run("shasum", [path])).stdout.substring(0, 40);
+        var hash = await computeHash(path);
         var blob = blobsByHash[hash];
         if (blob == null) {
           print("$path is in a package manifest but not the final manifest");
           continue;
         }
-        pkg.size += blob.size;
-        pkg.proportional += blob.proportional;
-        if (blob.count == 1) {
-          pkg.private += blob.size;
-        }
-        pkg.blobCount++;
-        pkg.blobsByPath[path] = blob;
+
+        blob.count++;
+        package.blobsByPath[path] = blob;
       }
-      if (pkg.size != 0) {
-        packages.add(pkg);
+      packages.add(package);
+    }
+  }
+
+  void computeStats() {
+    var filteredBlobs = new Map<String, Blob>();
+    blobsByHash.forEach((hash, blob) {
+      if (blob.count == 0) {
+        print("${blob.path} is in the final manifest but not any package manifest");
+      } else {
+        filteredBlobs[hash] = blob;
+      }
+    });
+    blobsByHash = filteredBlobs;
+
+    for (var blob in blobsByHash.values) {
+      duplicatedSize += (blob.size * blob.count);
+      deduplicatedSize += blob.size;
+    }
+
+    for (var package in packages) {
+      for (var blob in package.blobsByPath.values) {
+        package.size += blob.size;
+        package.proportional += blob.proportional;
+        if (blob.count == 1) {
+          package.private += blob.size;
+        }
+        package.blobCount++;
       }
     }
   }
@@ -201,15 +222,15 @@ class BlobStats {
     print("");
     print("Packages by proportional (${packages.length})");
     print("     Size      Prop   Private Path");
-    for (var pkg in packages) {
+    for (var package in packages) {
       var sb = new StringBuffer();
-      sb.write(pkg.size.toString().padLeft(9));
+      sb.write(package.size.toString().padLeft(9));
       sb.write(" ");
-      sb.write(pkg.proportional.toString().padLeft(9));
+      sb.write(package.proportional.toString().padLeft(9));
       sb.write(" ");
-      sb.write(pkg.private.toString().padLeft(9));
+      sb.write(package.private.toString().padLeft(9));
       sb.write(" ");
-      sb.write(pkg.name);
+      sb.write(package.name);
       print(sb);
     }
   }
@@ -272,12 +293,11 @@ Future main(List<String> args) async {
   }
 
   var stats = new BlobStats(await getBuildDir(), suffix);
-  await stats.addManifest("packages_blobs.manifest");
   await stats.addManifest("blob.manifest");
   await stats.computeBlobsInParallel(Platform.numberOfProcessors);
-  stats.printBlobs(40);
-
   await stats.computePackagesInParallel(Platform.numberOfProcessors);
+  stats.computeStats();
+  stats.printBlobs(40);
   stats.printPackages();
   await stats.packagesToChromiumBinarySizeTree();
 }
