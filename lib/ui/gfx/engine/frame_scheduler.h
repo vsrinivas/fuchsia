@@ -40,7 +40,8 @@ class FrameSchedulerDelegate {
   // frames are in flight and back off.
   virtual bool RenderFrame(const FrameTimingsPtr& frame_timings,
                            uint64_t presentation_time,
-                           uint64_t presentation_interval) = 0;
+                           uint64_t presentation_interval,
+                           bool force_render) = 0;
 };
 
 // The FrameScheduler is responsible for scheduling frames to be drawn in

@@ -114,7 +114,7 @@ void Engine::ScheduleUpdate(uint64_t presentation_time) {
     // Apply update immediately.  This is done for tests.
     FXL_LOG(WARNING)
         << "No FrameScheduler available; applying update immediately";
-    RenderFrame(FrameTimingsPtr(), presentation_time, 0);
+    RenderFrame(FrameTimingsPtr(), presentation_time, 0, false);
   }
 }
 
@@ -131,13 +131,15 @@ std::unique_ptr<Swapchain> Engine::CreateDisplaySwapchain(Display* display) {
 
 bool Engine::RenderFrame(const FrameTimingsPtr& timings,
                          uint64_t presentation_time,
-                         uint64_t presentation_interval) {
+                         uint64_t presentation_interval, bool force_render) {
   TRACE_DURATION("gfx", "RenderFrame", "frame_number", timings->frame_number(),
                  "time", presentation_time, "interval", presentation_interval);
 
   if (!session_manager_->ApplyScheduledSessionUpdates(presentation_time,
-                                                      presentation_interval))
+                                                      presentation_interval) &&
+      !force_render) {
     return false;
+  }
 
   UpdateAndDeliverMetrics(presentation_time);
 

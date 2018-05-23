@@ -1,0 +1,40 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/toolchain.gni")
+import("//build/package.gni")
+
+package("scenic_benchmarks") {
+  testonly = true
+  deprecated_system_image = true
+
+  deps = [
+    ":process_scenic_trace",
+  ]
+  binaries = [
+    {
+      name = "process_scenic_trace"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("hello_scenic_benchmark.sh")
+      dest = "scenic_benchmarks/hello_scenic_benchmark.sh"
+    },
+  ]
+}
+
+go_binary("process_scenic_trace") {
+  output_name = "process_scenic_trace"
+
+  gopackage = "process_scenic_trace"
+
+  go_dependencies = [
+    {
+      package = "process_scenic_trace"
+    },
+  ]
+}

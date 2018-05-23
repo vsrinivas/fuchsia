@@ -120,7 +120,7 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
 
   // |FrameSchedulerDelegate|:
   bool RenderFrame(const FrameTimingsPtr& frame, uint64_t presentation_time,
-                   uint64_t presentation_interval) override;
+                   uint64_t presentation_interval, bool force_render) override;
 
   void InitializeFrameScheduler();
 

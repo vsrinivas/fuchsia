@@ -35,5 +35,8 @@ runbench_exec "${OUT_DIR}/zircon.perf_test.json" \
 runbench_exec "${OUT_DIR}/zircon_benchmarks.json" \
     /system/bin/zircon_benchmarks -p --out="${OUT_DIR}/zircon_benchmarks.json"
 
+# Scenic performance tests.
+runbench_exec "${OUT_DIR}/benchmark_hello_scenic.json" \
+    /system/data/scenic_benchmarks/hello_scenic_benchmark.sh "${OUT_DIR}" "${OUT_DIR}/benchmark_hello_scenic.json"
 # Exit with a code indicating whether any errors occurred.
 runbench_finish "${OUT_DIR}"

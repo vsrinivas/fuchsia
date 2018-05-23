@@ -192,7 +192,8 @@ void FrameScheduler::MaybeRenderFrame(zx_time_t presentation_time,
     auto frame_timings = fxl::MakeRefCounted<FrameTimings>(
         this, ++frame_number_, presentation_time);
     if (delegate_->RenderFrame(frame_timings, presentation_time,
-                               display_->GetVsyncInterval())) {
+                               display_->GetVsyncInterval(),
+                               render_continuously_)) {
       outstanding_frames_.push_back(frame_timings);
     }
   }
@@ -212,10 +213,6 @@ void FrameScheduler::OnFramePresented(FrameTimings* timings) {
 
   // TODO(MZ-400): This needs to be generalized for multi-display support.
   display_->set_last_vsync_time(timings->actual_presentation_time());
-
-  if (render_continuously_) {
-    RequestFrame(0);
-  }
 
   // Log trace data.
   // TODO(MZ-400): just pass the whole Frame to a listener.
@@ -251,6 +248,10 @@ void FrameScheduler::OnFramePresented(FrameTimings* timings) {
     if (!requested_presentation_times_.empty()) {
       ScheduleFrame();
     }
+  }
+
+  if (render_continuously_) {
+    RequestFrame(0);
   }
 }
 
