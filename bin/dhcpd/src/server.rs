@@ -45,17 +45,8 @@ impl Server {
         offer_msg.sname = String::new();
         offer_msg.file = String::new();
         self.add_required_options_to(&mut offer_msg);
+        offer_msg.yiaddr = self.get_addr_for(offer_msg.chaddr)?;
 
-        if let Some(config) = self.client_configs_cache.get(&offer_msg.chaddr) {
-            if !config.expired {
-                offer_msg.yiaddr = config.client_addr;
-            } else {
-                return None;
-            }
-        } else {
-            let next_addr = self.addr_pool.get_next_available_addr()?;
-            offer_msg.yiaddr = next_addr;
-        }
         Some(offer_msg)
     }
 
@@ -75,6 +66,18 @@ impl Server {
             code: OptionCode::ServerId,
             value: self.server_config.server_ip.octets().to_vec(),
         });
+    }
+
+    fn get_addr_for(&mut self, client_mac_addr: [u8; 6]) -> Option<Ipv4Addr> {
+        if let Some(config) = self.client_configs_cache.get(&client_mac_addr) {
+            if !config.expired {
+                return Some(config.client_addr);
+            } else if self.addr_pool.addr_is_available(config.client_addr) {
+                self.addr_pool.allocate_addr(config.client_addr);
+                return Some(config.client_addr);
+            }
+        }
+        self.addr_pool.get_next_available_addr()
     }
 
     fn update_server_cache(
@@ -136,6 +139,10 @@ impl AddressPool {
     fn allocate_addr(&mut self, addr: Ipv4Addr) {
         self.available_addrs.remove(&addr);
         self.allocated_addrs.insert(addr);
+    }
+
+    fn addr_is_available(&self, addr: Ipv4Addr) -> bool {
+        self.available_addrs.contains(&addr) && !self.allocated_addrs.contains(&addr)
     }
 }
 
@@ -240,6 +247,56 @@ mod tests {
 
         let mut want = new_test_server_msg();
         want.yiaddr = Ipv4Addr::new(192, 168, 1, 42);
+
+        assert_eq!(got, want);
+    }
+
+    #[test]
+    fn test_handle_discover_with_expired_client_binding_returns_available_old_addr() {
+        let disc_msg = new_test_client_msg();
+        let mut server = new_test_server();
+        let mut client_config = CachedConfig::new();
+        client_config.client_addr = Ipv4Addr::new(192, 168, 1, 42);
+        client_config.expired = true;
+        server
+            .client_configs_cache
+            .insert(disc_msg.chaddr, client_config);
+        server
+            .addr_pool
+            .available_addrs
+            .insert(Ipv4Addr::new(192, 168, 1, 42));
+
+        let got = server.handle_discover_message(disc_msg).unwrap();
+
+        let mut want = new_test_server_msg();
+        want.yiaddr = Ipv4Addr::new(192, 168, 1, 42);
+
+        assert_eq!(got, want);
+    }
+
+    #[test]
+    fn test_handle_discover_with_unavailable_expired_client_binding_returns_new_addr() {
+        let disc_msg = new_test_client_msg();
+        let mut server = new_test_server();
+        let mut client_config = CachedConfig::new();
+        client_config.client_addr = Ipv4Addr::new(192, 168, 1, 42);
+        client_config.expired = true;
+        server
+            .client_configs_cache
+            .insert(disc_msg.chaddr, client_config);
+        server
+            .addr_pool
+            .available_addrs
+            .insert(Ipv4Addr::new(192, 168, 1, 2));
+        server
+            .addr_pool
+            .allocated_addrs
+            .insert(Ipv4Addr::new(192, 168, 1, 42));
+
+        let got = server.handle_discover_message(disc_msg).unwrap();
+
+        let mut want = new_test_server_msg();
+        want.yiaddr = Ipv4Addr::new(192, 168, 1, 2);
 
         assert_eq!(got, want);
     }
