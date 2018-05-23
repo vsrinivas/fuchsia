@@ -15,7 +15,6 @@
         "garnet/packages/tests/dhcpd",
         "garnet/packages/tests/escher",
         "garnet/packages/tests/fidl",
-        "garnet/packages/tests/fidl_compatibility_test",
         "garnet/packages/tests/fidl_compatibility_test_server_cpp",
         "garnet/packages/tests/fsl",
         "garnet/packages/tests/fxl",

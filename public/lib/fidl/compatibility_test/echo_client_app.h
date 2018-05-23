@@ -6,6 +6,9 @@
 // In its own library so that both the C++ server and the compatibility test
 // itself can use it.
 
+#ifndef LIB_FIDL_COMPATIBILITY_TEST_ECHO_CLIENT_APP_H_
+#define LIB_FIDL_COMPATIBILITY_TEST_ECHO_CLIENT_APP_H_
+
 #include <compatibility_test_service/cpp/fidl.h>
 #include <zx/process.h>
 #include <memory>
@@ -35,3 +38,5 @@ class EchoClientApp {
 };
 
 }  // namespace compatibility_test_service
+
+#endif  // LIB_FIDL_COMPATIBILITY_TEST_ECHO_CLIENT_APP_H_

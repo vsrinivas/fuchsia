@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cstdlib>
-#include <string>
 #include <compatibility_test_service/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <zx/channel.h>
+#include <cstdlib>
+#include <string>
 
-#include "garnet/bin/fidl_compatibility_test/echo_client_app.h"
+#include "garnet/public/lib/fidl/compatibility_test/echo_client_app.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"

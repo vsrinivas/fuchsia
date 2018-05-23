@@ -2,6 +2,12 @@
 
 An integration test for compatability of different FIDL bindings.
 
+The test runner is at `//topaz/bin/fidl_compatibility_test` and can be invoked
+on device with:
+```sh
+run /pkgfs/packages/fidl_compatibility_test/0/test/fidl_compatibility_test
+```
+
 The basic logic is along the lines of:
 
 ```python
