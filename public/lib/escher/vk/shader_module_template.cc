@@ -117,6 +117,8 @@ ShaderModuleTemplate::ShaderModuleTemplate(vk::Device device,
       path_(path),
       filesystem_(std::move(filesystem)) {}
 
+ShaderModuleTemplate::~ShaderModuleTemplate() { FXL_DCHECK(variants_.empty()); }
+
 ShaderModulePtr ShaderModuleTemplate::GetShaderModuleVariant(
     const ShaderModuleVariantArgs& args) {
   if (Variant* variant = variants_[args]) {
@@ -137,7 +139,8 @@ void ShaderModuleTemplate::RegisterVariant(Variant* variant) {
 
 void ShaderModuleTemplate::UnregisterVariant(Variant* variant) {
   auto it = variants_.find(variant->args());
-  FXL_DCHECK(it != variants_.end() && it->second == variant);
+  FXL_DCHECK(it != variants_.end());
+  FXL_DCHECK(it->second == variant);
   variants_.erase(it);
 }
 
@@ -162,12 +165,12 @@ ShaderModuleTemplate::Variant::Variant(ShaderModuleTemplate* tmplate,
   // been initialized, and weak_factory_ must be initialized last (at least if
   // we don't want to invite trouble).
   auto& fs = template_->filesystem_;
-  filesystem_watcher_ = fs->RegisterWatcher([weak = weak_factory_.GetWeakPtr()](
-      HackFilePath changed_path) {
-    if (weak) {
-      weak->template_->ScheduleVariantCompilation(weak);
-    }
-  });
+  filesystem_watcher_ = fs->RegisterWatcher(
+      [weak = weak_factory_.GetWeakPtr()](HackFilePath changed_path) {
+        if (weak) {
+          weak->template_->ScheduleVariantCompilation(weak);
+        }
+      });
 }
 
 ShaderModuleTemplate::Variant::~Variant() {
