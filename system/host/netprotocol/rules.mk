@@ -50,4 +50,6 @@ MODULE_SRCS += $(LOCAL_DIR)/netaddr.c $(LOCAL_DIR)/netprotocol.c
 
 MODULE_NAME := netaddr
 
+MODULE_PACKAGE := bin
+
 include make/module.mk

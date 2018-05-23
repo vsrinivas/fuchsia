@@ -22,4 +22,6 @@ MODULE_SRCS += \
 
 MODULE_CFLAGS := -I$(LZ4_DIR)/include/lz4 -I$(CKSUM_DIR)/include
 
+MODULE_PACKAGE := bin
+
 include make/module.mk

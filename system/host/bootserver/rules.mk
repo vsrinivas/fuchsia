@@ -14,4 +14,6 @@ MODULE_SRCS += $(LOCAL_DIR)/tftp.c
 
 MODULE_HOST_LIBS := system/ulib/tftp
 
+MODULE_PACKAGE := bin
+
 include make/module.mk

@@ -17,4 +17,6 @@ MODULE_SRCS += \
 	$(MKMSDOS_DIR)/mkfs_msdos.h \
 	$(MKMSDOS_DIR)/newfs_msdos.c
 
+MODULE_PACKAGE := bin
+
 include make/module.mk

@@ -22,4 +22,6 @@ MODULE_HOST_LIBS := \
 	system/ulib/digest.hostlib \
 	system/ulib/fbl.hostlib \
 
+MODULE_PACKAGE := bin
+
 include make/module.mk
