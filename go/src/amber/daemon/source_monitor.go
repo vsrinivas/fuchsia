@@ -24,6 +24,7 @@ type SourceMonitor struct {
 	d         *Daemon
 	pkgs      *pkg.PackageSet
 	i         time.Duration
+	chkReq    chan time.Time
 }
 
 // NewSourceMonitor creates a new SourceMonitor object that manages periodic and
@@ -37,6 +38,7 @@ func NewSourceMonitor(d *Daemon, pkgs *pkg.PackageSet,
 		pkgs:      pkgs,
 		processor: proc,
 		i:         interval,
+		chkReq:    make(chan time.Time),
 	}
 }
 
@@ -52,6 +54,8 @@ func (sm *SourceMonitor) Run() {
 		select {
 		case t, _ := <-sm.ticker.C:
 			sm.check(t, sm.pkgs)
+		case t, _ := <-sm.chkReq:
+			sm.check(t, sm.pkgs)
 		case _, ok := <-sm.done:
 			if ok {
 				sm.stop()
@@ -59,6 +63,10 @@ func (sm *SourceMonitor) Run() {
 			return
 		}
 	}
+}
+
+func (sm *SourceMonitor) SourcesAdded() {
+	sm.chkReq <- time.Now()
 }
 
 func (sm *SourceMonitor) stop() {

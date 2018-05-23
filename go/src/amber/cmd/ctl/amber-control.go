@@ -62,6 +62,16 @@ var (
 	merkle     = fs.String("m", "", "Merkle root of the desired update.")
 )
 
+type ErrDaemon string
+
+func NewErrDaemon(str string) ErrDaemon {
+	return ErrDaemon(fmt.Sprintf("amber_ctl: daemon error: %s", str))
+}
+
+func (e ErrDaemon) Error() string {
+	return string(e)
+}
+
 func doTest(pxy *amber.ControlInterface) {
 	v := int32(42)
 	resp, err := pxy.DoTest(v)
@@ -113,53 +123,13 @@ func main() {
 				fmt.Printf("Error getting update %s\n", err)
 			}
 		} else {
-			c, err := proxy.GetUpdateComplete(*pkgName, nil, merkle)
-			if err == nil {
-				defer c.Close()
-				b := make([]byte, 1024)
-				daemonErr := false
-				for {
-					var err error
-					var sigs zx.Signals
-					sigs, err = zxwait.Wait(*c.Handle(),
-						zx.SignalChannelPeerClosed|zx.SignalChannelReadable|ipcserver.ZXSIO_DAEMON_ERROR,
-						zx.Sys_deadline_after(zx.Duration((3 * time.Second).Nanoseconds())))
-
-					// If the daemon signaled an error, wait for the error message to
-					// become available. daemonErr could be true if the daemon signaled
-					// but the read timed out.
-					daemonErr = daemonErr ||
-						err == nil && sigs&ipcserver.ZXSIO_DAEMON_ERROR == ipcserver.ZXSIO_DAEMON_ERROR
-					if daemonErr {
-						sigs, err = zxwait.Wait(*c.Handle(),
-							zx.SignalChannelPeerClosed|zx.SignalChannelReadable,
-							zx.Sys_deadline_after(zx.Duration((3 * time.Second).Nanoseconds())))
-					}
-
-					if sigs&zx.SignalChannelReadable == zx.SignalChannelReadable {
-						bs, _, err := c.Read(b, []zx.Handle{}, 0)
-						if err != nil {
-							fmt.Printf("Error reading response from channel: %s\n", err)
-						} else if daemonErr {
-							fmt.Printf("%s\n", string(b[0:bs]))
-						} else {
-							fmt.Printf("Wrote update to blob %s\n", string(b[0:bs]))
-						}
-						break
-					}
-
-					if sigs&zx.SignalChannelPeerClosed == zx.SignalChannelPeerClosed {
-						fmt.Println("Error: response channel closed unexpectedly.")
-						break
-					} else if err != nil && err.(zx.Error).Status != zx.ErrTimedOut {
-						fmt.Printf("Error awaiting response from channel: %s\n", err)
-						break
-					} else if err != nil && err.(zx.Error).Status == zx.ErrTimedOut {
-						fmt.Println("Awaiting response...")
-					}
+			for i := 0; i < 3; i++ {
+				err := getUpdateComplete(proxy, pkgName, merkle)
+				if err == nil {
+					break
 				}
-			} else {
-				fmt.Printf("Error requesting update: %s\n", err)
+				fmt.Printf("Update failed with error %s, retrying...\n", err)
+				time.Sleep(2 * time.Second)
 			}
 		}
 	case "get_blob":
@@ -183,4 +153,55 @@ func main() {
 	}
 
 	proxy.Close()
+}
+
+func getUpdateComplete(proxy *amber.ControlInterface, pkgName, merkle *string) error {
+	c, err := proxy.GetUpdateComplete(*pkgName, nil, merkle)
+	if err == nil {
+		defer c.Close()
+		b := make([]byte, 1024)
+		daemonErr := false
+		for {
+			var err error
+			var sigs zx.Signals
+			sigs, err = zxwait.Wait(*c.Handle(),
+				zx.SignalChannelPeerClosed|zx.SignalChannelReadable|ipcserver.ZXSIO_DAEMON_ERROR,
+				zx.Sys_deadline_after(zx.Duration((3 * time.Second).Nanoseconds())))
+
+			// If the daemon signaled an error, wait for the error message to
+			// become available. daemonErr could be true if the daemon signaled
+			// but the read timed out.
+			daemonErr = daemonErr ||
+				err == nil && sigs&ipcserver.ZXSIO_DAEMON_ERROR == ipcserver.ZXSIO_DAEMON_ERROR
+			if daemonErr {
+				sigs, err = zxwait.Wait(*c.Handle(),
+					zx.SignalChannelPeerClosed|zx.SignalChannelReadable,
+					zx.Sys_deadline_after(zx.Duration((3 * time.Second).Nanoseconds())))
+			}
+
+			if sigs&zx.SignalChannelReadable == zx.SignalChannelReadable {
+				bs, _, err := c.Read(b, []zx.Handle{}, 0)
+				if err != nil {
+					return NewErrDaemon(
+						fmt.Sprintf("error reading response from channel: %s", err))
+				} else if daemonErr {
+					return NewErrDaemon(string(b[0:bs]))
+				} else {
+					fmt.Printf("Wrote update to blob %s\n", string(b[0:bs]))
+					return nil
+				}
+			}
+
+			if sigs&zx.SignalChannelPeerClosed == zx.SignalChannelPeerClosed {
+				return NewErrDaemon("response channel closed unexpectedly.")
+			} else if err != nil && err.(zx.Error).Status != zx.ErrTimedOut {
+				return NewErrDaemon(
+					fmt.Sprintf("unknown error while waiting for response from channel: %s", err))
+			} else if err != nil && err.(zx.Error).Status == zx.ErrTimedOut {
+				fmt.Println("Awaiting response...")
+			}
+		}
+	} else {
+		return NewErrDaemon(fmt.Sprintf("error making FIDL request: %s", err))
+	}
 }

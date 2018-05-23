@@ -38,6 +38,7 @@ const CheckInterval = 5 * time.Minute
 // to all calls into the Daemon.
 type Daemon struct {
 	srcMons  []*SourceMonitor
+	muSrcs   sync.Mutex
 	srcs     []source.Source
 	pkgs     *pkg.PackageSet
 	runCount sync.WaitGroup
@@ -69,7 +70,7 @@ func NewDaemon(r *pkg.PackageSet, f func(*GetResult, *pkg.PackageSet) error,
 	d.runCount.Add(1)
 	d.srcMons = append(d.srcMons, mon)
 	for k := range s {
-		d.AddSource(s[k])
+		d.addSrc(s[k])
 	}
 	go func() {
 		mon.Run()
@@ -78,13 +79,23 @@ func NewDaemon(r *pkg.PackageSet, f func(*GetResult, *pkg.PackageSet) error,
 	return d
 }
 
+func (d *Daemon) addSrc(s source.Source) {
+	d.muSrcs.Lock()
+	defer d.muSrcs.Unlock()
+	s = NewSourceKeeper(s)
+	d.srcs = append(d.srcs, s)
+}
+
 // AddSource is called to add a Source that can be used to get updates. When the
 // Source is added, the Daemon will start polling it at the interval from
 // Source.GetInterval()
 func (d *Daemon) AddSource(s source.Source) {
-	// TODO(jmatt) make GetUpdates thread-safe with respect to sources
-	s = NewSourceKeeper(s)
-	d.srcs = append(d.srcs, s)
+	d.addSrc(s)
+	// after the source is added, let the monitor(s) know so they can decide if they
+	// want to look again for updates
+	for _, m := range d.srcMons {
+		m.SourcesAdded()
+	}
 }
 
 func (d *Daemon) blobRepos() []BlobRepo {
@@ -279,10 +290,15 @@ func (d *Daemon) GetUpdates(pkgs *pkg.PackageSet) map[pkg.Package]*GetResult {
 func (d *Daemon) getUpdates(rec *upRec) map[pkg.Package]*GetResult {
 	fetchRecs := []*pkgSrcPair{}
 
+	d.muSrcs.Lock()
+	srcs := make([]source.Source, len(d.srcs))
+	copy(srcs, d.srcs)
+	d.muSrcs.Unlock()
+
 	unfoundPkgs := rec.pkgs
 	// TODO thread-safe access for sources?
-	for i := 0; i < len(d.srcs) && len(unfoundPkgs) > 0; i++ {
-		updates, err := d.srcs[i].AvailableUpdates(unfoundPkgs)
+	for i := 0; i < len(srcs) && len(unfoundPkgs) > 0; i++ {
+		updates, err := srcs[i].AvailableUpdates(unfoundPkgs)
 		if len(updates) == 0 || err != nil {
 			if err == ErrRateExceeded {
 				log.Printf("daemon: source rate limit exceeded\n")
@@ -296,7 +312,7 @@ func (d *Daemon) getUpdates(rec *upRec) map[pkg.Package]*GetResult {
 
 		pkgsToSrc := pkgSrcPair{
 			pkgs: make(map[pkg.Package]pkg.Package),
-			src:  d.srcs[i],
+			src:  srcs[i],
 		}
 		fetchRecs = append(fetchRecs, &pkgsToSrc)
 
@@ -333,7 +349,7 @@ func (d *Daemon) getUpdates(rec *upRec) map[pkg.Package]*GetResult {
 	}
 
 	if len(unfoundPkgs) > 0 {
-		log.Printf("daemon: While getting updates, the following packages were not found:\n")
+		log.Println("daemon: While getting updates, the following packages were not found")
 	}
 
 	for _, pkg := range unfoundPkgs {
@@ -342,7 +358,7 @@ func (d *Daemon) getUpdates(rec *upRec) map[pkg.Package]*GetResult {
 			File: nil,
 			Err:  NewErrProcessPackage("update not found"),
 		}
-		log.Printf("daemon:     %s\n", pkg)
+		log.Printf("daemon: %s\n", pkg)
 		results[*pkg] = &res
 	}
 	return results
@@ -361,6 +377,8 @@ func cleanupFiles(files []*os.File) {
 // on the Source to complete. This method returns ErrSrcNotFound if the supplied
 // Source is not know to this Daemon.
 func (d *Daemon) RemoveSource(src source.Source) error {
+	d.muSrcs.Lock()
+	defer d.muSrcs.Unlock()
 	for i, m := range d.srcs {
 		if m.Equals(src) {
 			d.srcs = append(d.srcs[:i], d.srcs[i+1:]...)

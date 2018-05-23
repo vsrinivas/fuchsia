@@ -22,7 +22,6 @@ import (
 )
 
 type ControlSrvr struct {
-	daemonSrc   *daemon.DaemonProvider
 	daemonGate  sync.Once
 	daemon      *daemon.Daemon
 	pinger      *source.TickGenerator
@@ -35,7 +34,7 @@ type ControlSrvr struct {
 
 const ZXSIO_DAEMON_ERROR = zx.SignalUser0
 
-func NewControlSrvr(d *daemon.DaemonProvider, r *source.TickGenerator) *ControlSrvr {
+func NewControlSrvr(d *daemon.Daemon, r *source.TickGenerator) *ControlSrvr {
 	go bindings.Serve()
 	a := make(chan string, 5)
 	c := make(chan *completeUpdateRequest, 1)
@@ -44,7 +43,7 @@ func NewControlSrvr(d *daemon.DaemonProvider, r *source.TickGenerator) *ControlS
 	go m.Do()
 
 	return &ControlSrvr{
-		daemonSrc:   d,
+		daemon:      d,
 		pinger:      r,
 		actMon:      m,
 		activations: a,
@@ -92,12 +91,12 @@ func (c *ControlSrvr) getAndWaitForUpdate(name string, version, merkle *string, 
 }
 
 func (c *ControlSrvr) GetUpdateComplete(name string, version, merkle *string) (zx.Channel, error) {
+	c.initSource()
 	r, w, e := zx.NewChannel(0)
 	if e != nil {
 		lg.Log.Printf("Could not create channel")
 		return 0, e
 	}
-
 	go c.getAndWaitForUpdate(name, version, merkle, &w)
 	return r, nil
 }
@@ -132,7 +131,6 @@ func (c *ControlSrvr) downloadPkgMeta(name string, version, merkle *string) (*da
 	pkg := pkg.Package{Name: name, Version: *version, Merkle: *merkle}
 	ps.Add(&pkg)
 
-	c.initDaemon()
 	updates := c.daemon.GetUpdates(ps)
 	result, ok := updates[pkg]
 	if !ok {
@@ -148,6 +146,7 @@ func (c *ControlSrvr) downloadPkgMeta(name string, version, merkle *string) (*da
 }
 
 func (c *ControlSrvr) GetUpdate(name string, version, merkle *string) (*string, error) {
+	c.initSource()
 	result, err := c.downloadPkgMeta(name, version, merkle)
 	if err != nil {
 		return nil, err
@@ -166,7 +165,6 @@ func (c *ControlSrvr) GetBlob(merkle string) error {
 		return fmt.Errorf("Supplied merkle root is empty")
 	}
 
-	c.initDaemon()
 	return c.daemon.GetBlob(merkle)
 }
 
@@ -183,10 +181,11 @@ func (c *ControlSrvr) Bind(ch zx.Channel) error {
 	return err
 }
 
-func (c *ControlSrvr) initDaemon() {
+// initDaemon makes a single attempt per ControlSrvr instance to ping the source used by the daemon
+// to tell it to try to initialize again
+func (c *ControlSrvr) initSource() {
 	c.daemonGate.Do(func() {
 		c.pinger.GenerateTick()
-		c.daemon = c.daemonSrc.Daemon()
 		c.pinger = nil
 	})
 }

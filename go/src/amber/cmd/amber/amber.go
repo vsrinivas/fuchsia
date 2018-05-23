@@ -67,19 +67,17 @@ func main() {
 	}
 
 	ticker := source.NewTickGenerator(source.InitBackoff)
-	dp := daemon.NewDaemonProvider()
 	go ticker.Run()
 
-	startFIDLSvr(dp, ticker)
-
-	go startupDaemon(srvUrl, *store, keys, ticker, dp)
-	defer dp.Daemon().CancelAll()
+	daemon := startupDaemon(srvUrl, *store, keys, ticker)
+	startFIDLSvr(daemon, ticker)
+	defer daemon.CancelAll()
 
 	//block forever
 	select {}
 }
 
-func startFIDLSvr(d *daemon.DaemonProvider, t *source.TickGenerator) {
+func startFIDLSvr(d *daemon.Daemon, t *source.TickGenerator) {
 	cxt := context.CreateFromStartupInfo()
 	apiSrvr := ipcserver.NewControlSrvr(d, t)
 	cxt.OutgoingService.AddService(amber_fidl.ControlName, func(c zx.Channel) error {
@@ -88,34 +86,35 @@ func startFIDLSvr(d *daemon.DaemonProvider, t *source.TickGenerator) {
 	cxt.Serve()
 }
 
-func startupDaemon(srvUrl *url.URL, store string, keys []*tuf_data.Key,
-	ticker *source.TickGenerator, dp *daemon.DaemonProvider) *daemon.Daemon {
-
-	client, _, err := source.InitNewTUFClient(srvUrl.String(), store, keys, ticker)
-	if err != nil {
-		log.Fatal("client initialization failed: %s\n", err)
-	}
+func startupDaemon(srvURL *url.URL, store string, keys []*tuf_data.Key,
+	ticker *source.TickGenerator) *daemon.Daemon {
 
 	reqSet := newPackageSet([]string{"/pkg/bin/app"})
 
-	// create source with an average 10qps over 5 seconds and a possible burst
-	// of up to 50 queries
-	fetcher := &source.TUFSource{
-		Client:   client,
-		Interval: time.Second * 5,
-		Limit:    50,
-	}
-	checker := daemon.NewDaemon(reqSet, daemon.ProcessPackage, []source.Source{fetcher})
+	checker := daemon.NewDaemon(reqSet, daemon.ProcessPackage, []source.Source{})
 
-	blobUrl := srvUrl
-	blobUrl.Path = filepath.Join(blobUrl.Path, "blobs")
-	checker.AddBlobRepo(daemon.BlobRepo{
-		Address: blobUrl.String(),
-		Interval: time.Second * 5,
-	})
+	blobURL := *srvURL
+	blobURL.Path = filepath.Join(blobURL.Path, "blobs")
+	checker.AddBlobRepo(daemon.BlobRepo{Address: blobURL.String(), Interval: time.Second * 5})
 
-	dp.SetDaemon(checker)
 	log.Println("amber: monitoring for updates")
+
+	go func() {
+		client, _, err := source.InitNewTUFClient(srvURL.String(), store, keys, ticker)
+		if err != nil {
+			log.Printf("client initialization failed: %s\n", err)
+			return
+		}
+
+		// create source with an average 10qps over 5 seconds and a possible burst
+		// of up to 50 queries
+		fetcher := &source.TUFSource{
+			Client:   client,
+			Interval: time.Second * 5,
+			Limit:    50,
+		}
+		checker.AddSource(fetcher)
+	}()
 	return checker
 }
 
