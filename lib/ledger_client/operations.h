@@ -111,7 +111,7 @@ class LedgerOperation : public Operation<Args...> {
 };
 
 template <typename Data, typename DataPtr = std::unique_ptr<Data>,
-          typename DataFilter = XdrFilterType<Data>>
+          typename DataFilter = XdrFilterList<Data>>
 class ReadDataCall : public PageOperation<DataPtr> {
  public:
   using ResultCall = std::function<void(DataPtr)>;
@@ -185,7 +185,7 @@ class ReadDataCall : public PageOperation<DataPtr> {
 };
 
 template <typename Data, typename DataArray = fidl::VectorPtr<Data>,
-          typename DataFilter = XdrFilterType<Data>>
+          typename DataFilter = XdrFilterList<Data>>
 class ReadAllDataCall : public PageOperation<DataArray> {
  public:
   using ResultCall = std::function<void(DataArray)>;
@@ -258,7 +258,7 @@ class ReadAllDataCall : public PageOperation<DataArray> {
 };
 
 template <typename Data, typename DataPtr = std::unique_ptr<Data>,
-          typename DataFilter = XdrFilterType<Data>>
+          typename DataFilter = XdrFilterList<Data>>
 class WriteDataCall : public PageOperation<> {
  public:
   WriteDataCall(ledger::Page* const page, const std::string& key,

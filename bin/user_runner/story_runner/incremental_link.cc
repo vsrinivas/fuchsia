@@ -17,15 +17,6 @@
 
 namespace modular {
 
-// Not in anonymous namespace; needs extern linkage for use by test.
-void XdrLinkChange(XdrContext* const xdr,
-                   modular_private::LinkChange* const data) {
-  xdr->Field("key", &data->key);
-  xdr->Field("op", &data->op);
-  xdr->Field("path", &data->pointer);
-  xdr->Field("json", &data->json);
-}
-
 namespace {
 
 std::string MakeSequencedLinkKey(const LinkPath& link_path,
@@ -38,7 +29,21 @@ std::string MakeSequencedLinkKeyPrefix(const LinkPath& link_path) {
   return MakeLinkKey(link_path) + kSeparator;
 }
 
+void XdrLinkChange_v1(XdrContext* const xdr,
+                      modular_private::LinkChange* const data) {
+  xdr->Field("key", &data->key);
+  xdr->Field("op", &data->op);
+  xdr->Field("path", &data->pointer);
+  xdr->Field("json", &data->json);
+}
+
 }  // namespace
+
+// Not in anonymous namespace; needs extern linkage for use by test.
+extern const XdrFilterType<modular_private::LinkChange> XdrLinkChange[] = {
+  XdrLinkChange_v1,
+  nullptr,
+};
 
 // Reload needs to run if:
 // 1. LinkImpl was just constructed

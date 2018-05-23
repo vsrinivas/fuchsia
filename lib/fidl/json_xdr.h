@@ -67,6 +67,34 @@ namespace modular {
 // between e.g. STL or FIDL data structures, we might instead define
 // XDR filters for them, translate all values to JSON, apply conflict
 // resolution to JSON, and translate the result back.
+//
+// SCHEMA VERSION BACK COMPATIBILITY:
+//
+// The schema of the persistent data is defined in terms of filter functions. In
+// order to support new versions of the code reading versions of the data
+// written by old versions of the code, filter functions are always defined by
+// the client at the top level entry points as lists, never as single functions.
+//
+// The lists contain the filter for the current version of the schema at the
+// top, and filters for reading previous versions into the current version of
+// the code below.
+//
+// Whenever the storage schema changes, a new version of the filter is created
+// and add it to the version list.
+//
+// If the memory schema changes, filters of all versions are adjusted as
+// necessary.
+//
+// Filters that don't change can be reused between versions. If a filter does
+// not change, but the ones that it uses do change, templates can be used to
+// save on code duplication.
+//
+// TODO(mesch): Right now there is no way to ensure that old versions of the
+// code will never read new versions of the data. Support for this is expected
+// from the Ledger, and partially from an upcoming API for explicit version
+// numbers.
+//
+// See comments on XdrFilterType, XdrRead(), and XdrWrite() for details.
 
 class XdrContext;
 
@@ -76,13 +104,36 @@ enum class XdrOp {
   FROM_JSON = 1,
 };
 
-// Custom types are serialized by passing a function of this type to a
-// method on XdrContext. Note this is a pointer type that points to a
-// const (an existing function). So we will never use a reference or a
-// const of it. However, argument values of such will still be defined
-// const.
+// Custom types are serialized by passing a function of this type to a method on
+// XdrContext. Note this is a pointer type that points to a const (an existing
+// function). So we will never use a reference or a const of it. However,
+// argument values of such will still be defined const.
+//
+// The top level entry functions used by clients never pass a single filter
+// function alone, but always a list of filters for different versions of the
+// data, such that the reading code can fall back to functions reading
+// previously written versions. Such lists can (and should) be defined
+// statically as constexpr:
+//
+//   void XdrFoo_v1(XdrContext* const xdr, Foo* const data) { ... }
+//   void XdrFoo_v2(XdrContext* const xdr, Foo* const data) { ... }
+//
+//   constexpr XdrFilterType<Foo> XdrFoo[] = {
+//     XdrFoo_v1,
+//     XdrFoo_v2,
+//     nullptr,
+//   };
+//
+//   Foo foo;
+//   XdrRead(json, &foo, XdrFoo);
+//
+// XdrRead and XdrWrite are defined to take an XdrFilterList<> argument, which
+// that constexpr can be passed to. See Definition of XdrRead(), below.
 template <typename T>
 using XdrFilterType = void (*)(XdrContext*, T*);
+
+template <typename T>
+using XdrFilterList = void (* const *)(XdrContext*, T*);
 
 // A generic implementation of such a filter, which works for simple
 // types. (The implementation uses XdrContext, so it's below.)
@@ -318,6 +369,48 @@ class XdrContext {
     Value(data, XdrFilter<V>);
   }
 
+  // A fidl array is mapped to JSON null and JSON Array with a custom
+  // filter for the elements.
+  template <typename D, size_t N, typename V>
+  void Value(fidl::Array<D, N>* const data, const XdrFilterType<V> filter) {
+    switch (op_) {
+      case XdrOp::TO_JSON: {
+        value_->SetArray();
+        value_->Reserve(N, allocator());
+
+        for (size_t i = 0; i < N; ++i) {
+          Element(i).Value(&data->at(i), filter);
+        }
+        break;
+      }
+
+      case XdrOp::FROM_JSON: {
+        if (!value_->IsArray()) {
+          AddError("Array type expected.");
+          return;
+        }
+
+        if (value_->Size() != N) {
+          AddError(std::string("Array size unexpected: found ")
+                   + std::to_string(value_->Size())
+                   + " expected " + std::to_string(N));
+          return;
+        }
+
+        for (size_t i = 0; i < N; ++i) {
+          Element(i).Value(&data->at(i), filter);
+        }
+      }
+    }
+  }
+
+  // A fidl array with a simple element type can infer its element
+  // value filter from the type parameters of the array.
+  template <typename V, size_t N>
+  void Value(fidl::Array<V, N>* const data) {
+    Value(data, XdrFilter<V>);
+  }
+
   // An STL vector is mapped to JSON Array with a custom filter for the
   // elements.
   template <typename D, typename V>
@@ -502,48 +595,58 @@ class XdrContext {
   FXL_DISALLOW_COPY_AND_ASSIGN(XdrContext);
 };
 
-// This filter function works for all types that have a Value() method
-// defined.
+// This filter function works for all types for which XdrContext has a Value()
+// method defined.
 template <typename V>
 void XdrFilter(XdrContext* const xdr, V* const value) {
   xdr->Value(value);
 }
 
-// Clients mostly use the following functions as entry points.
+// Clients use the following functions as entry points.
 
 // A wrapper function to read data from a JSON document. This may fail if the
-// JSON document doesn't match the structure required by the filter. In that
-// case it logs an error and returns false. Clients are expected to either crash
-// or recover e.g. by ignoring the value.
+// JSON document doesn't match the structure required by any of the filter
+// versions. In that case it logs an error and returns false. Clients are
+// expected to either crash or recover e.g. by ignoring the value.
+//
+// The items in the filter versions list are tried in turn until one succeeds.
+// The filter versions list must end with a nullptr entry to mark the end.
 template <typename D, typename V>
-bool XdrRead(JsonDoc* const doc, D* const data, XdrFilterType<V> const filter) {
-  std::string error;
-  XdrContext xdr(XdrOp::FROM_JSON, doc, &error);
-  xdr.Value(data, filter);
+bool XdrRead(JsonDoc* const doc,
+             D* const data,
+             XdrFilterList<V> filter_versions) {
+  std::vector<std::string> errors;
+  for (XdrFilterList<V> filter = filter_versions; *filter; ++filter) {
+    std::string error;
+    XdrContext xdr(XdrOp::FROM_JSON, doc, &error);
+    xdr.Value(data, *filter);
 
-  if (!error.empty()) {
-    FXL_LOG(ERROR) << "XdrRead: Unable to extract data from JSON: " << std::endl
-                   << error << std::endl
-                   << JsonValueToPrettyString(*doc) << std::endl;
-    // This DCHECK is usually caused by adding a field to an XDR filter function
-    // when there's already existing data in the Ledger.
-    FXL_DCHECK(false)
-        << "This indicates a structure version mismatch in the "
-           "Framework. Please submit a high priority bug in JIRA under MI4.";
-    return false;
+    if (error.empty()) {
+      return true;
+    }
+
+    FXL_LOG(INFO) << "Filter failed, trying previous version.";
+    errors.emplace_back(std::move(error));
   }
 
-  return true;
+  FXL_LOG(ERROR) << "XdrRead: No filter version succeeded"
+                 << " to extract data from JSON: "
+                 << JsonValueToPrettyString(*doc) << std::endl;
+  for (const std::string& error : errors) {
+    FXL_LOG(INFO) << "XdrRead error message: " << error;
+  }
+
+  return false;
 }
 
 // A wrapper function to read data from a JSON string. This may fail if the JSON
-// doesn't parse or doesn't match the structure required by the filter. In that
-// case it logs an error and returns false. Clients are expected to either crash
-// or recover e.g. by ignoring the value.
+// doesn't parse or doesn't match the structure required by the filter version
+// list. In that case it logs an error and returns false. Clients are expected
+// to either crash or recover e.g. by ignoring the value.
 template <typename D, typename V>
 bool XdrRead(const std::string& json,
              D* const data,
-             XdrFilterType<V> const filter) {
+             XdrFilterList<V> filter_versions) {
   JsonDoc doc;
   doc.Parse(json);
   if (doc.HasParseError()) {
@@ -551,17 +654,20 @@ bool XdrRead(const std::string& json,
     return false;
   }
 
-  return XdrRead(&doc, data, filter);
+  return XdrRead(&doc, data, filter_versions);
 }
 
-// A wrapper function to write data as JSON doc. This never fails.
+// A wrapper function to write data as JSON doc. This never fails. It always
+// only uses the first version of the filter. It takes a filter version list
+// anyway for symmetry with XdrRead(), so that the same filter version list
+// constant can be passed to both XdrRead and XdrWrite.
 template <typename D, typename V>
 void XdrWrite(JsonDoc* const doc,
               D* const data,
-              XdrFilterType<V> const filter) {
+              XdrFilterList<V> filter_versions) {
   std::string error;
   XdrContext xdr(XdrOp::TO_JSON, doc, &error);
-  xdr.Value(data, filter);
+  xdr.Value(data, filter_versions[0]);
   FXL_DCHECK(error.empty())
       << "There are no errors possible in XdrOp::TO_JSON: " << std::endl
       << error << std::endl
@@ -572,18 +678,18 @@ void XdrWrite(JsonDoc* const doc,
 template <typename D, typename V>
 void XdrWrite(std::string* const json,
               D* const data,
-              XdrFilterType<V> const filter) {
+              XdrFilterList<V> filter_versions) {
   JsonDoc doc;
-  XdrWrite(&doc, data, filter);
+  XdrWrite(&doc, data, filter_versions);
   *json = JsonValueToString(doc);
 }
 
 // A wrapper function to return data as a JSON string. This never fails.
 template <typename D, typename V>
 std::string XdrWrite(D* const data,
-                     XdrFilterType<V> const filter) {
+                     XdrFilterList<V> filter_versions) {
   std::string json;
-  XdrWrite(&json, data, filter);
+  XdrWrite(&json, data, filter_versions);
   return json;
 }
 

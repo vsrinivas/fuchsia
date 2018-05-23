@@ -22,6 +22,12 @@ namespace {
 constexpr char kEntityReferencePrefix[] = "EntityRef";
 constexpr char kEntityDataReferencePrefix[] = "EntityData";
 
+using StringMap = std::map<std::string, std::string>;
+constexpr XdrFilterType<StringMap> XdrStringMap[] = {
+  XdrFilter<StringMap>,
+  nullptr,
+};
+
 // Given an agent_url and a cookie, encodes it into an entity reference.
 std::string EncodeEntityReference(const std::string& agent_url,
                                   fidl::StringPtr cookie) {
@@ -54,8 +60,7 @@ bool DecodeEntityDataReference(const std::string& entity_reference,
     return false;
   }
 
-  return XdrRead(StringUnescape(parts[1].ToString()), data,
-                 XdrFilter<std::map<std::string, std::string>>);
+  return XdrRead(StringUnescape(parts[1].ToString()), data, XdrStringMap);
 }
 
 }  // namespace
@@ -168,11 +173,11 @@ void EntityProviderRunner::OnEntityProviderFinished(
 
 std::string EntityProviderRunner::CreateReferenceFromData(
     std::map<std::string, std::string> type_to_data) {
+
   // TODO(rosswang): Several of these heap allocations are unnecessary but this
   // code is only temporary.
   std::string encoded;
-  XdrWrite(&encoded, &type_to_data,
-           XdrFilter<std::map<std::string, std::string>>);
+  XdrWrite(&encoded, &type_to_data, XdrStringMap);
 
   std::vector<std::string> parts(2);
   parts[0] = kEntityDataReferencePrefix;

@@ -21,6 +21,39 @@
 
 namespace modular {
 
+struct MessageQueueInfo {
+  std::string component_namespace;
+  std::string component_instance_id;
+  std::string queue_name;
+  std::string queue_token;
+
+  bool is_complete() const {
+    return !component_instance_id.empty() && !queue_name.empty();
+  }
+
+  bool operator==(const MessageQueueInfo& a) const {
+    return component_namespace == a.component_namespace &&
+           component_instance_id == a.component_instance_id &&
+           queue_name == a.queue_name && queue_token == a.queue_token;
+  }
+};
+
+namespace {
+
+void XdrMessageQueueInfo_v1(XdrContext* const xdr, MessageQueueInfo* const data) {
+  xdr->Field("component_namespace", &data->component_namespace);
+  xdr->Field("component_instance_id", &data->component_instance_id);
+  xdr->Field("queue_name", &data->queue_name);
+  xdr->Field("queue_token", &data->queue_token);
+}
+
+constexpr XdrFilterType<MessageQueueInfo> XdrMessageQueueInfo[] = {
+  XdrMessageQueueInfo_v1,
+  nullptr,
+};
+
+}  // namespace
+
 class MessageQueueStorage;
 
 // This class implements the |MessageQueue| fidl interface, and is owned by
@@ -175,23 +208,6 @@ std::string GenerateQueueToken() {
 }
 
 }  // namespace
-
-struct MessageQueueManager::MessageQueueInfo {
-  std::string component_namespace;
-  std::string component_instance_id;
-  std::string queue_name;
-  std::string queue_token;
-
-  bool is_complete() const {
-    return !component_instance_id.empty() && !queue_name.empty();
-  }
-
-  bool operator==(const MessageQueueManager::MessageQueueInfo& a) const {
-    return component_namespace == a.component_namespace &&
-           component_instance_id == a.component_instance_id &&
-           queue_name == a.queue_name && queue_token == a.queue_token;
-  }
-};
 
 class MessageQueueManager::GetQueueTokenCall
     : public PageOperation<fidl::StringPtr> {
@@ -855,14 +871,6 @@ void MessageQueueManager::DropDeletionWatcher(
                     [queue_info.component_instance_id][queue_info.queue_name]
                     [watcher_namespace]
                         .erase(watcher_instance_id);
-}
-
-void MessageQueueManager::XdrMessageQueueInfo(XdrContext* const xdr,
-                                              MessageQueueInfo* const data) {
-  xdr->Field("component_namespace", &data->component_namespace);
-  xdr->Field("component_instance_id", &data->component_instance_id);
-  xdr->Field("queue_name", &data->queue_name);
-  xdr->Field("queue_token", &data->queue_token);
 }
 
 }  // namespace modular

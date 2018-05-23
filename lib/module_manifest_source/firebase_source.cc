@@ -19,34 +19,10 @@
 #include "lib/network_wrapper/network_wrapper_impl.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/firebase/firebase_impl.h"
+#include "peridot/lib/module_manifest_source/xdr.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
 namespace modular {
-
-namespace {
-
-// TODO(thatguy): This is duplicated from json.cc. Put into a shared
-// file.
-void XdrParameterConstraint(modular::XdrContext* const xdr,
-                            modular::ParameterConstraint* const data) {
-  xdr->Field("name", &data->name);
-  xdr->Field("type", &data->type);
-}
-
-void XdrEntry(modular::XdrContext* const xdr,
-              modular::ModuleManifest* const data) {
-  xdr->Field("binary", &data->binary);
-  xdr->Field("suggestion_headline", &data->suggestion_headline);
-  xdr->ReadErrorHandler([data] { data->action = ""; })
-      ->Field("action", &data->action);
-  xdr->ReadErrorHandler([data] { data->composition_pattern = ""; })
-      ->Field("composition_pattern", &data->composition_pattern);
-  xdr->ReadErrorHandler([data] { data->parameter_constraints = nullptr; })
-      ->Field("parameters", &data->parameter_constraints,
-              XdrParameterConstraint);
-}
-
-}  // namespace
 
 class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
  public:
@@ -147,7 +123,7 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
     }
 
     modular::ModuleManifest entry;
-    if (!modular::XdrRead(&doc, &entry, XdrEntry)) {
+    if (!modular::XdrRead(&doc, &entry, XdrModuleManifest)) {
       FXL_LOG(WARNING) << "Could not parse Module manifest from: " << name;
       return;
     }

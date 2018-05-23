@@ -43,13 +43,13 @@ struct RequiredRepeatedRequiredData {
   vector<float64> @float64;
   vector<Struct> @struct;
   vector<Enum> @enum;
-  vector<Union>? @union;
+  vector<Union> @union;
 };
 
 struct RequiredRepeatedOptionalData {
   vector<string?> @string;
   vector<Struct?> @struct;
-  vector<Union?>? @union;
+  vector<Union?> @union;
 };
 
 // NOTE(mesch): According to jeffbrown, optional vector typed fields are going
@@ -77,6 +77,24 @@ struct OptionalRepeatedOptionalData {
   vector<string?>? @string;
   vector<Struct?>? @struct;
   vector<Union?>? @union;
+};
+
+struct ArrayData {
+  array<string>:10 @string;
+  array<bool>:10 @bool;
+  array<int8>:10 @int8;
+  array<int16>:10 @int16;
+  array<int32>:10 @int32;
+  array<int64>:10 @int64;
+  array<uint8>:10 @uint8;
+  array<uint16>:10 @uint16;
+  array<uint32>:10 @uint32;
+  array<uint64>:10 @uint64;
+  array<float32>:10 @float32;
+  array<float64>:10 @float64;
+  array<Struct>:10 @struct;
+  array<Enum>:10 @enum;
+  array<Union>:10 @union;
 };
 
 // The purpose of this struct is coverage for struct valued fields above. The

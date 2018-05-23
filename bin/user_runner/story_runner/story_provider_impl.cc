@@ -40,26 +40,32 @@ namespace modular {
 
 namespace {
 
-// Serialization and deserialization of modular_private::StoryData and StoryInfo
-// to and from JSON.
+using ReadStoryDataCall = ReadDataCall<modular_private::StoryData>;
+using ReadAllStoryDataCall = ReadAllDataCall<modular_private::StoryData>;
+using WriteStoryDataCall = WriteDataCall<modular_private::StoryData>;
 
-void XdrStoryInfoExtraEntry(XdrContext* const xdr,
-                            StoryInfoExtraEntry* const data) {
+// Serialization and deserialization of modular_private::StoryData and StoryInfo
+// to and from JSON. We have different versions for backwards compatibilty.
+//
+// Version 1: During FIDL2 conversion. ExtraInfo fields are stored as "key"
+// and "value", page ids are stored as base64 string.
+void XdrStoryInfoExtraEntry_v1(XdrContext* const xdr,
+                             StoryInfoExtraEntry* const data) {
   xdr->Field("key", &data->key);
   xdr->Field("value", &data->value);
 }
 
-void XdrStoryInfo(XdrContext* const xdr, StoryInfo* const data) {
+void XdrStoryInfo_v1(XdrContext* const xdr, StoryInfo* const data) {
   xdr->Field("last_focus_time", &data->last_focus_time);
   xdr->Field("url", &data->url);
   xdr->Field("id", &data->id);
-  xdr->Field("extra", &data->extra, XdrStoryInfoExtraEntry);
+  xdr->Field("extra", &data->extra, XdrStoryInfoExtraEntry_v1);
 }
 
-void XdrStoryData(XdrContext* const xdr,
-                  modular_private::StoryData* const data) {
+void XdrStoryData_v1(XdrContext* const xdr,
+                     modular_private::StoryData* const data) {
   static constexpr char kStoryPageId[] = "story_page_id";
-  xdr->Field("story_info", &data->story_info, XdrStoryInfo);
+  xdr->Field("story_info", &data->story_info, XdrStoryInfo_v1);
   switch (xdr->op()) {
     case XdrOp::FROM_JSON: {
       std::string page_id;
@@ -83,10 +89,42 @@ void XdrStoryData(XdrContext* const xdr,
   }
 }
 
+// Version 2: Before FIDL2 conversion, and again after FIDL2 conversion was
+// complete. ExtraInfo fields are stored as @k and @v, page ids are stored as
+// array.
+void XdrStoryInfoExtraEntry_v2(XdrContext* const xdr,
+                               StoryInfoExtraEntry* const data) {
+  xdr->Field("@k", &data->key);
+  xdr->Field("@v", &data->value);
+}
+
+void XdrStoryInfo_v2(XdrContext* const xdr, StoryInfo* const data) {
+  xdr->Field("last_focus_time", &data->last_focus_time);
+  xdr->Field("url", &data->url);
+  xdr->Field("id", &data->id);
+  xdr->Field("extra", &data->extra, XdrStoryInfoExtraEntry_v2);
+}
+
+void XdrPageId_v2(XdrContext* const xdr, ledger::PageId* const data) {
+  xdr->Field("id", &data->id);
+}
+
+void XdrStoryData_v2(XdrContext* const xdr,
+                     modular_private::StoryData* const data) {
+  xdr->Field("story_info", &data->story_info, XdrStoryInfo_v2);
+  xdr->Field("story_page_id", &data->story_page_id, XdrPageId_v2);
+}
+
+XdrFilterType<modular_private::StoryData> XdrStoryData[] = {
+  XdrStoryData_v2,
+  XdrStoryData_v1,
+  nullptr,
+};
+
 OperationBase* MakeGetStoryDataCall(
     ledger::Page* const page, fidl::StringPtr story_id,
     std::function<void(modular_private::StoryDataPtr)> result_call) {
-  return new ReadDataCall<modular_private::StoryData>(
+  return new ReadStoryDataCall(
       page, MakeStoryKey(story_id), true /* not_found_is_ok */, XdrStoryData,
       std::move(result_call));
 };
@@ -94,7 +132,7 @@ OperationBase* MakeGetStoryDataCall(
 OperationBase* MakeWriteStoryDataCall(ledger::Page* const page,
                                       modular_private::StoryDataPtr story_data,
                                       std::function<void()> result_call) {
-  return new WriteDataCall<modular_private::StoryData>(
+  return new WriteStoryDataCall(
       page, MakeStoryKey(story_data->story_info.id), XdrStoryData,
       std::move(story_data), std::move(result_call));
 };
@@ -714,7 +752,7 @@ void StoryProviderImpl::GetController(
 
 // |StoryProvider|
 void StoryProviderImpl::PreviousStories(PreviousStoriesCallback callback) {
-  operation_queue_.Add(new ReadAllDataCall<modular_private::StoryData>(
+  operation_queue_.Add(new ReadAllStoryDataCall(
       page(), kStoryKeyPrefix, XdrStoryData,
       [callback](fidl::VectorPtr<modular_private::StoryData> data) {
         auto result = fidl::VectorPtr<modular::StoryInfo>::New(0);

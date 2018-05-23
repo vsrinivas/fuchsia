@@ -19,13 +19,36 @@ namespace modular {
 
 namespace {
 
-void XdrDeviceData(XdrContext* const xdr, DeviceMapEntry* const data) {
+using ReadDeviceDataCall = ReadDataCall<DeviceMapEntry>;
+using ReadAllDeviceDataCall = ReadAllDataCall<DeviceMapEntry>;
+using WriteDeviceDataCall = WriteDataCall<DeviceMapEntry>;
+
+// Reads old versions of device data, which are missing a timestamp.
+void XdrDeviceMapEntry_v1(XdrContext* const xdr, DeviceMapEntry* const data) {
+  xdr->Field("name", &data->name);
+  xdr->Field("device_id", &data->device_id);
+  xdr->Field("profile", &data->profile);
+  xdr->Field("hostname", &data->hostname);
+
+  // The time below is 26 Sep 2017 17:44:40 GMT, just to mark the entry as old.
+  // Since this filter is not the latest, it is only ever used FROM_JSON, never
+  // TO_JSON.
+  data->last_change_timestamp = 1506447879;
+}
+
+void XdrDeviceMapEntry_v2(XdrContext* const xdr, DeviceMapEntry* const data) {
   xdr->Field("name", &data->name);
   xdr->Field("device_id", &data->device_id);
   xdr->Field("profile", &data->profile);
   xdr->Field("hostname", &data->hostname);
   xdr->Field("last_change_timestamp", &data->last_change_timestamp);
 }
+
+constexpr XdrFilterType<DeviceMapEntry> XdrDeviceMapEntry[] = {
+  XdrDeviceMapEntry_v2,
+  XdrDeviceMapEntry_v1,
+  nullptr,
+};
 
 std::string LoadHostname() {
   char host_name_buffer[HOST_NAME_MAX + 1];
@@ -68,8 +91,8 @@ void DeviceMapImpl::Connect(fidl::InterfaceRequest<DeviceMap> request) {
 }
 
 void DeviceMapImpl::Query(QueryCallback callback) {
-  operation_queue_.Add(new ReadAllDataCall<DeviceMapEntry>(
-      page(), kDeviceKeyPrefix, XdrDeviceData, callback));
+  operation_queue_.Add(new ReadAllDeviceDataCall(
+      page(), kDeviceKeyPrefix, XdrDeviceMapEntry, callback));
 }
 
 void DeviceMapImpl::GetCurrentDevice(GetCurrentDeviceCallback callback) {
@@ -86,8 +109,8 @@ void DeviceMapImpl::SaveCurrentDevice() {
   auto& device = devices_[current_device_id_];
   device.last_change_timestamp = time(nullptr);
 
-  operation_queue_.Add(new WriteDataCall<DeviceMapEntry>(
-      page(), MakeDeviceKey(current_device_id_), XdrDeviceData,
+  operation_queue_.Add(new WriteDeviceDataCall(
+      page(), MakeDeviceKey(current_device_id_), XdrDeviceMapEntry,
       fidl::MakeOptional(device), [] {}));
 }
 
@@ -113,7 +136,7 @@ void DeviceMapImpl::OnPageChange(const std::string& key,
   FXL_LOG(INFO) << "Updated Device: " << key << " value=" << value;
 
   DeviceMapEntry device;
-  if (!XdrRead(value, &device, XdrDeviceData)) {
+  if (!XdrRead(value, &device, XdrDeviceMapEntry)) {
     FXL_DCHECK(false);
     return;
   }

@@ -55,10 +55,12 @@ source_set("teardown") {
 
 source_set("xdr") {
   sources = [
+    "xdr.cc",
     "xdr.h",
   ]
 
   public_deps = [
     "//peridot/lib/fidl:json_xdr",
+    "//peridot/public/lib/auth/fidl",
   ]
 }

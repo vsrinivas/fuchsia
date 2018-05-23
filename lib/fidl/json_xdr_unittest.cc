@@ -26,7 +26,7 @@ struct T {
   std::map<bool, bool> mb;
 };
 
-void XdrT(XdrContext* const xdr, T* const data) {
+void XdrT_v1(XdrContext* const xdr, T* const data) {
   xdr->Field("i", &data->i);
   xdr->Field("s", &data->s);
   xdr->Field("b", &data->b);
@@ -37,6 +37,11 @@ void XdrT(XdrContext* const xdr, T* const data) {
   xdr->Field("ms", &data->ms);
   xdr->Field("mb", &data->mb);
 }
+
+constexpr XdrFilterType<T> XdrT[] = {
+  XdrT_v1,
+  nullptr,
+};
 
 TEST(Xdr, Struct) {
   std::string json;
@@ -65,6 +70,51 @@ TEST(Xdr, Struct) {
   EXPECT_EQ(t1.mi, t0.mi);
   EXPECT_EQ(t1.ms, t0.ms);
   EXPECT_EQ(t1.mb, t0.mb);
+}
+
+void XdrT_v2(XdrContext* const xdr, T* const data) {
+  xdr->Field("i", &data->i);
+  xdr->Field("s", &data->s);
+  xdr->Field("b", &data->b);
+  xdr->Field("vi", &data->vi);
+  xdr->Field("vs_v2", &data->vs);
+  xdr->Field("vb", &data->vb);
+  xdr->Field("mi", &data->mi);
+  xdr->Field("ms", &data->ms);
+  xdr->Field("mb", &data->mb);
+}
+
+TEST(Xdr, StructVersions) {
+  std::string json;
+
+  T t0;
+  t0.i = 1;
+  t0.s = "2";
+  t0.b = true;
+  t0.vi.push_back(3);
+  t0.vs.push_back("4");
+  t0.vb.push_back(true);
+  t0.mi[5] = 6;
+  t0.ms["7"] = 8;
+  t0.mb[true] = false;
+  XdrWrite(&json, &t0, XdrT);
+
+  T t1;
+
+  constexpr XdrFilterType<T> filter_versions_v2_only[] = {
+    XdrT_v2,
+    nullptr,
+  };
+
+  EXPECT_FALSE(XdrRead(json, &t1, filter_versions_v2_only));
+
+  constexpr XdrFilterType<T> filter_versions_all[] = {
+    XdrT_v2,
+    XdrT_v1,
+    nullptr,
+  };
+
+  EXPECT_TRUE(XdrRead(json, &t1, filter_versions_all));
 }
 
 void XdrStruct(XdrContext* const xdr, json_xdr_unittest::Struct* const data) {
@@ -137,7 +187,7 @@ void XdrUnion(XdrContext* const xdr, json_xdr_unittest::Union* const data) {
 // Data can be any of RequiredData, RequiredRepeatedRequiredData,
 // OptionalRepeatedRequiredData.
 template <typename Data>
-void XdrRequiredData(XdrContext* const xdr, Data* const data) {
+void XdrRequiredData_v1(XdrContext* const xdr, Data* const data) {
   xdr->Field("string", &data->string);
   xdr->Field("bool", &data->bool_);
   xdr->Field("int8", &data->int8);
@@ -158,11 +208,16 @@ void XdrRequiredData(XdrContext* const xdr, Data* const data) {
 // Data can be any of OptionalData, RequiredRepeatedOptionalData,
 // OptionalRepeatedOptionalData.
 template <typename Data>
-void XdrOptionalData(XdrContext* const xdr, Data* const data) {
+void XdrOptionalData_v1(XdrContext* const xdr, Data* const data) {
   xdr->Field("string", &data->string);
   xdr->Field("struct", &data->struct_, XdrStruct);
   xdr->Field("union", &data->union_, XdrUnion);
 }
+
+constexpr XdrFilterType<json_xdr_unittest::RequiredData> XdrRequiredData[] = {
+  XdrRequiredData_v1<json_xdr_unittest::RequiredData>,
+  nullptr,
+};
 
 TEST(Xdr, FidlRequired) {
   std::string json;
@@ -185,10 +240,10 @@ TEST(Xdr, FidlRequired) {
   t0.enum_ = json_xdr_unittest::Enum::ONE;
   t0.union_.set_int32(13);
 
-  XdrWrite(&json, &t0, XdrRequiredData<json_xdr_unittest::RequiredData>);
+  XdrWrite(&json, &t0, XdrRequiredData);
 
   json_xdr_unittest::RequiredData t1;
-  EXPECT_TRUE(XdrRead(json, &t1, XdrRequiredData<json_xdr_unittest::RequiredData>));
+  EXPECT_TRUE(XdrRead(json, &t1, XdrRequiredData));
 
   EXPECT_EQ(t1, t0) << json;
 
@@ -212,6 +267,11 @@ TEST(Xdr, FidlRequired) {
   EXPECT_EQ(13, t1.union_.int32());
 }
 
+constexpr XdrFilterType<json_xdr_unittest::OptionalData> XdrOptionalData[] = {
+  XdrOptionalData_v1<json_xdr_unittest::OptionalData>,
+  nullptr,
+};
+
 TEST(Xdr, FidlOptional) {
   std::string json;
 
@@ -223,10 +283,10 @@ TEST(Xdr, FidlOptional) {
   t0.union_ = json_xdr_unittest::Union::New();
   t0.union_->set_int32(13);
 
-  XdrWrite(&json, &t0, XdrOptionalData<json_xdr_unittest::OptionalData>);
+  XdrWrite(&json, &t0, XdrOptionalData);
 
   json_xdr_unittest::OptionalData t1;
-  EXPECT_TRUE(XdrRead(json, &t1, XdrOptionalData<json_xdr_unittest::OptionalData>));
+  EXPECT_TRUE(XdrRead(json, &t1, XdrOptionalData));
 
   EXPECT_EQ(t1, t0) << json;
 
@@ -245,10 +305,10 @@ TEST(Xdr, FidlOptional) {
   t1.struct_.reset();
   t1.union_.reset();
 
-  XdrWrite(&json, &t1, XdrOptionalData<json_xdr_unittest::OptionalData>);
+  XdrWrite(&json, &t1, XdrOptionalData);
 
   json_xdr_unittest::OptionalData t2;
-  EXPECT_TRUE(XdrRead(json, &t2, XdrOptionalData<json_xdr_unittest::OptionalData>));
+  EXPECT_TRUE(XdrRead(json, &t2, XdrOptionalData));
 
   EXPECT_EQ(t2, t1) << json;
 
@@ -257,6 +317,12 @@ TEST(Xdr, FidlOptional) {
   EXPECT_TRUE(nullptr == t2.struct_);
   EXPECT_TRUE(nullptr == t2.union_);
 }
+
+constexpr XdrFilterType<json_xdr_unittest::RequiredRepeatedRequiredData>
+    XdrRequiredRepeatedRequiredData[] = {
+  XdrRequiredData_v1<json_xdr_unittest::RequiredRepeatedRequiredData>,
+  nullptr,
+};
 
 TEST(Xdr, FidlRequiredRepeatedRequired) {
   std::string json;
@@ -282,10 +348,10 @@ TEST(Xdr, FidlRequiredRepeatedRequired) {
   u.set_int32(13);
   t0.union_.push_back(std::move(u));
 
-  XdrWrite(&json, &t0, XdrRequiredData<json_xdr_unittest::RequiredRepeatedRequiredData>);
+  XdrWrite(&json, &t0, XdrRequiredRepeatedRequiredData);
 
   json_xdr_unittest::RequiredRepeatedRequiredData t1;
-  EXPECT_TRUE(XdrRead(json, &t1, XdrRequiredData<json_xdr_unittest::RequiredRepeatedRequiredData>));
+  EXPECT_TRUE(XdrRead(json, &t1, XdrRequiredRepeatedRequiredData));
 
   EXPECT_EQ(t1, t0) << json;
 
@@ -323,6 +389,12 @@ TEST(Xdr, FidlRequiredRepeatedRequired) {
   EXPECT_EQ(13, t1.union_->at(0).int32());
 }
 
+constexpr XdrFilterType<json_xdr_unittest::RequiredRepeatedOptionalData>
+    XdrRequiredRepeatedOptionalData[] = {
+  XdrOptionalData_v1<json_xdr_unittest::RequiredRepeatedOptionalData>,
+  nullptr,
+};
+
 TEST(Xdr, FidlRequiredRepeatedOptional) {
   std::string json;
 
@@ -337,10 +409,10 @@ TEST(Xdr, FidlRequiredRepeatedOptional) {
   u->set_int32(13);
   t0.union_.push_back(std::move(u));
 
-  XdrWrite(&json, &t0, XdrOptionalData<json_xdr_unittest::RequiredRepeatedOptionalData>);
+  XdrWrite(&json, &t0, XdrRequiredRepeatedOptionalData);
 
   json_xdr_unittest::RequiredRepeatedOptionalData t1;
-  EXPECT_TRUE(XdrRead(json, &t1, XdrOptionalData<json_xdr_unittest::RequiredRepeatedOptionalData>));
+  EXPECT_TRUE(XdrRead(json, &t1, XdrRequiredRepeatedOptionalData));
 
   EXPECT_EQ(t1, t0) << json;
 
@@ -363,10 +435,10 @@ TEST(Xdr, FidlRequiredRepeatedOptional) {
   t1.struct_->at(0).reset();
   t1.union_->at(0).reset();
 
-  XdrWrite(&json, &t1, XdrOptionalData<json_xdr_unittest::RequiredRepeatedOptionalData>);
+  XdrWrite(&json, &t1, XdrRequiredRepeatedOptionalData);
 
   json_xdr_unittest::RequiredRepeatedOptionalData t2;
-  EXPECT_TRUE(XdrRead(json, &t2, XdrOptionalData<json_xdr_unittest::RequiredRepeatedOptionalData>));
+  EXPECT_TRUE(XdrRead(json, &t2, XdrRequiredRepeatedOptionalData));
 
   EXPECT_EQ(t2, t1) << json;
 
@@ -379,6 +451,12 @@ TEST(Xdr, FidlRequiredRepeatedOptional) {
   EXPECT_TRUE(nullptr == t2.struct_->at(0));
   EXPECT_TRUE(nullptr == t2.union_->at(0));
 }
+
+constexpr XdrFilterType<json_xdr_unittest::OptionalRepeatedRequiredData>
+    XdrOptionalRepeatedRequiredData[] = {
+  XdrRequiredData_v1<json_xdr_unittest::OptionalRepeatedRequiredData>,
+  nullptr,
+};
 
 TEST(Xdr, FidlOptionalRepeatedRequired) {
   std::string json;
@@ -403,10 +481,10 @@ TEST(Xdr, FidlOptionalRepeatedRequired) {
   u.set_int32(13);
   t0.union_.push_back(std::move(u));
 
-  XdrWrite(&json, &t0, XdrRequiredData<json_xdr_unittest::OptionalRepeatedRequiredData>);
+  XdrWrite(&json, &t0, XdrOptionalRepeatedRequiredData);
 
   json_xdr_unittest::OptionalRepeatedRequiredData t1;
-  EXPECT_TRUE(XdrRead(json, &t1, XdrRequiredData<json_xdr_unittest::OptionalRepeatedRequiredData>));
+  EXPECT_TRUE(XdrRead(json, &t1, XdrOptionalRepeatedRequiredData));
 
   EXPECT_EQ(t1, t0) << json;
 
@@ -475,10 +553,10 @@ TEST(Xdr, FidlOptionalRepeatedRequired) {
   t1.enum_.reset();
   t1.union_.reset();
 
-  XdrWrite(&json, &t1, XdrRequiredData<json_xdr_unittest::OptionalRepeatedRequiredData>);
+  XdrWrite(&json, &t1, XdrOptionalRepeatedRequiredData);
 
   json_xdr_unittest::OptionalRepeatedRequiredData t2;
-  EXPECT_TRUE(XdrRead(json, &t2, XdrRequiredData<json_xdr_unittest::OptionalRepeatedRequiredData>));
+  EXPECT_TRUE(XdrRead(json, &t2, XdrOptionalRepeatedRequiredData));
 
   EXPECT_EQ(t2, t1) << json;
 
@@ -515,6 +593,12 @@ TEST(Xdr, FidlOptionalRepeatedRequired) {
   EXPECT_EQ(0u, t2.union_->size());
 }
 
+constexpr XdrFilterType<json_xdr_unittest::OptionalRepeatedOptionalData>
+    XdrOptionalRepeatedOptionalData[] = {
+  XdrOptionalData_v1<json_xdr_unittest::OptionalRepeatedOptionalData>,
+  nullptr,
+};
+
 TEST(Xdr, FidlOptionalRepeatedOptional) {
   std::string json;
 
@@ -529,10 +613,10 @@ TEST(Xdr, FidlOptionalRepeatedOptional) {
   u->set_int32(13);
   t0.union_.push_back(std::move(u));
 
-  XdrWrite(&json, &t0, XdrOptionalData<json_xdr_unittest::OptionalRepeatedOptionalData>);
+  XdrWrite(&json, &t0, XdrOptionalRepeatedOptionalData);
 
   json_xdr_unittest::OptionalRepeatedOptionalData t1;
-  EXPECT_TRUE(XdrRead(json, &t1, XdrOptionalData<json_xdr_unittest::OptionalRepeatedOptionalData>));
+  EXPECT_TRUE(XdrRead(json, &t1, XdrOptionalRepeatedOptionalData));
 
   EXPECT_EQ(t1, t0) << json;
 
@@ -559,10 +643,10 @@ TEST(Xdr, FidlOptionalRepeatedOptional) {
   t1.struct_->at(0).reset();
   t1.union_->at(0).reset();
 
-  XdrWrite(&json, &t1, XdrOptionalData<json_xdr_unittest::OptionalRepeatedOptionalData>);
+  XdrWrite(&json, &t1, XdrOptionalRepeatedOptionalData);
 
   json_xdr_unittest::OptionalRepeatedOptionalData t2;
-  EXPECT_TRUE(XdrRead(json, &t2, XdrOptionalData<json_xdr_unittest::OptionalRepeatedOptionalData>));
+  EXPECT_TRUE(XdrRead(json, &t2, XdrOptionalRepeatedOptionalData));
 
   EXPECT_EQ(t2, t1) << json;
 
@@ -583,10 +667,10 @@ TEST(Xdr, FidlOptionalRepeatedOptional) {
   t2.struct_.reset();
   t2.union_.reset();
 
-  XdrWrite(&json, &t2, XdrOptionalData<json_xdr_unittest::OptionalRepeatedOptionalData>);
+  XdrWrite(&json, &t2, XdrOptionalRepeatedOptionalData);
 
   json_xdr_unittest::OptionalRepeatedOptionalData t3;
-  EXPECT_TRUE(XdrRead(json, &t3, XdrOptionalData<json_xdr_unittest::OptionalRepeatedOptionalData>));
+  EXPECT_TRUE(XdrRead(json, &t3, XdrOptionalRepeatedOptionalData));
 
   EXPECT_EQ(t3, t2) << json;
 
@@ -598,6 +682,59 @@ TEST(Xdr, FidlOptionalRepeatedOptional) {
   EXPECT_EQ(0u, t3.string->size());
   EXPECT_EQ(0u, t3.struct_->size());
   EXPECT_EQ(0u, t3.union_->size());
+}
+
+constexpr XdrFilterType<json_xdr_unittest::ArrayData> XdrArrayData[] = {
+  XdrRequiredData_v1<json_xdr_unittest::ArrayData>,
+  nullptr,
+};
+
+TEST(Xdr, FidlArray) {
+  std::string json;
+
+  json_xdr_unittest::ArrayData t0;
+
+  t0.string.at(0) = "1";
+  t0.bool_.at(0) = true;
+  t0.int8.at(0) = 2;
+  t0.int16.at(0) = 3;
+  t0.int32.at(0) = 4;
+  t0.int64.at(0) = 5;
+  t0.uint8.at(0) = 6;
+  t0.uint16.at(0) = 7;
+  t0.uint32.at(0) = 8;
+  t0.uint64.at(0) = 9;
+  t0.float32.at(0) = 10;
+  t0.float64.at(0) = 11;
+  t0.struct_.at(0).item = 12;
+  t0.enum_.at(0) = json_xdr_unittest::Enum::ONE;
+  t0.union_.at(0).set_int32(13);
+
+  XdrWrite(&json, &t0, XdrArrayData);
+
+  json_xdr_unittest::ArrayData t1;
+  EXPECT_TRUE(XdrRead(json, &t1, XdrArrayData));
+
+  EXPECT_EQ(t1, t0) << json;
+
+  // Technically not needed because the equality should cover this, but makes it
+  // more transparent what's going on.
+  EXPECT_EQ("1", t1.string.at(0));
+  EXPECT_TRUE(t1.bool_.at(0));
+  EXPECT_EQ(2, t1.int8.at(0));
+  EXPECT_EQ(3, t1.int16.at(0));
+  EXPECT_EQ(4, t1.int32.at(0));
+  EXPECT_EQ(5, t1.int64.at(0));
+  EXPECT_EQ(6u, t1.uint8.at(0));
+  EXPECT_EQ(7u, t1.uint16.at(0));
+  EXPECT_EQ(8u, t1.uint32.at(0));
+  EXPECT_EQ(9u, t1.uint64.at(0));
+  EXPECT_EQ(10.0f, t1.float32.at(0));
+  EXPECT_EQ(11.0, t1.float64.at(0));
+  EXPECT_EQ(12, t1.struct_.at(0).item);
+  EXPECT_EQ(json_xdr_unittest::Enum::ONE, t1.enum_.at(0));
+  EXPECT_TRUE(t1.union_.at(0).is_int32());
+  EXPECT_EQ(13, t1.union_.at(0).int32());
 }
 
 }  // namespace

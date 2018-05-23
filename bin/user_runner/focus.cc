@@ -19,11 +19,16 @@ namespace modular {
 namespace {
 
 // Serialization and deserialization of FocusInfo to and from JSON.
-void XdrFocusInfo(XdrContext* const xdr, FocusInfo* const data) {
+void XdrFocusInfo_v1(XdrContext* const xdr, FocusInfo* const data) {
   xdr->Field("device_id", &data->device_id);
   xdr->Field("focused_story_id", &data->focused_story_id);
   xdr->Field("last_focus_timestamp", &data->last_focus_change_timestamp);
 }
+
+constexpr XdrFilterType<FocusInfo> XdrFocusInfo[] = {
+  XdrFocusInfo_v1,
+  nullptr,
+};
 
 }  // namespace
 

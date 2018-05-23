@@ -18,14 +18,18 @@
 #include "peridot/lib/testing/test_with_ledger.h"
 #include "peridot/public/lib/entity/cpp/json.h"
 
+namespace modular_private {
+class LinkChange;
+}  // namespace modular_auth
+
 namespace modular {
+
+// Defined in incremental_link.cc.
+extern const XdrFilterType<modular_private::LinkChange> XdrLinkChange[];
 
 namespace {
 const char kInitialLinkValue[] = "{}";
 }  // namespace
-
-// Defined in incremental_link.cc.
-void XdrLinkChange(XdrContext* xdr, modular_private::LinkChange* data);
 
 namespace {
 
@@ -64,6 +68,7 @@ class PageClientPeer : modular::PageClient {
     EXPECT_TRUE(HasPrefix(key, expected_prefix_))
         << " key=" << key << " expected_prefix=" << expected_prefix_;
     changes.push_back(std::make_pair(key, value));
+
     EXPECT_TRUE(XdrRead(value, &last_change, XdrLinkChange))
         << key << " " << value;
     FXL_LOG(INFO) << "PageChange " << key << " = " << value;

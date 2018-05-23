@@ -35,15 +35,25 @@ struct Source {
   fidl::StringPtr link_name;
 };
 
-void XdrContext(modular::XdrContext* const xdr, Context* const data) {
+void XdrContext_v1(modular::XdrContext* const xdr, Context* const data) {
   xdr->Field("topic", &data->topic);
 }
 
-void XdrSource(modular::XdrContext* const xdr, Source* const data) {
+constexpr modular::XdrFilterType<Context> XdrContext[] = {
+  XdrContext_v1,
+  nullptr,
+};
+
+void XdrSource_v1(modular::XdrContext* const xdr, Source* const data) {
   xdr->Field("story_id", &data->story_id);
   xdr->Field("module_path", &data->module_path);
   xdr->Field("link_name", &data->link_name);
 }
+
+constexpr modular::XdrFilterType<Source> XdrSource[] = {
+  XdrSource_v1,
+  nullptr,
+};
 
 std::string MakeLinkTopic(const fidl::StringPtr& base_topic) {
   std::stringstream s;

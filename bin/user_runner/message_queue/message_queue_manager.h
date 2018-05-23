@@ -27,6 +27,7 @@ namespace modular {
 
 class MessageQueueStorage;
 class XdrContext;
+struct MessageQueueInfo;
 
 // Manages message queues for components. One MessageQueueManager
 // instance is used by all ComponentContextImpl instances, and manages
@@ -114,7 +115,6 @@ class MessageQueueManager : PageClient {
                            const std::string& queue_token);
 
  private:
-  struct MessageQueueInfo;
   using ComponentNamespace = std::string;
   using ComponentInstanceId = std::string;
   using ComponentQueueName = std::string;
@@ -125,8 +125,6 @@ class MessageQueueManager : PageClient {
 
   using DeletionWatchers =
       std::map<std::string, std::map<std::string, std::function<void()>>>;
-
-  static void XdrMessageQueueInfo(XdrContext* xdr, MessageQueueInfo* data);
 
   // Returns the |MessageQueueStorage| for the queue_token. Creates it
   // if it doesn't exist yet.

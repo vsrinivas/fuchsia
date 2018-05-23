@@ -56,7 +56,13 @@ void QueryProcessor::ExecuteQuery(
   if (!query.empty() && context_writer_.is_bound()) {
     // Update context engine
     std::string formattedQuery;
-    modular::XdrWrite(&formattedQuery, &query, modular::XdrFilter<std::string>);
+
+    modular::XdrFilterType<std::string> filter_list[] = {
+      modular::XdrFilter<std::string>,
+      nullptr,
+    };
+
+    modular::XdrWrite(&formattedQuery, &query, filter_list);
     context_writer_->WriteEntityTopic(kQueryContextKey, formattedQuery);
 
     // Update suggestion engine debug interface

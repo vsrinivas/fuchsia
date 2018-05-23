@@ -23,6 +23,7 @@ source_set("json") {
 
   deps = [
     ":module_manifest_source",
+    ":xdr",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/rapidjson",
     "//third_party/rapidjson",
@@ -37,6 +38,7 @@ source_set("firebase_source") {
 
   public_deps = [
     ":module_manifest_source",
+    ":xdr",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/network/fidl",
@@ -54,6 +56,18 @@ source_set("package_util") {
 
   deps = [
     "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("xdr") {
+  sources = [
+    "xdr.cc",
+    "xdr.h",
+  ]
+
+  deps = [
+    "//peridot/lib/fidl:json_xdr",
+    "//peridot/public/lib:fidl",
   ]
 }
 
