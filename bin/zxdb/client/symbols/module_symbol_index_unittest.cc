@@ -36,6 +36,10 @@ TEST(ModuleSymbolIndex, FindFunctionExact) {
   result = index.FindFunctionExact("my_ns::MyClass::MyMemberOne");
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
+  // Same but in the 2nd compilation unit (tests unit-relative addressing).
+  result = index.FindFunctionExact("ClassInTest2::FunctionInTest2");
+  EXPECT_EQ(1u, result.size()) << "Symbol not found.";
+
   // Namespace + class + struct with static member function search.
   result = index.FindFunctionExact("my_ns::MyClass::Inner::MyMemberTwo");
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";

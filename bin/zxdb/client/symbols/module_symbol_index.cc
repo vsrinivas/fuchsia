@@ -57,7 +57,7 @@ namespace {
 // implementation, and the offset will refer to the offset of the DIE for the
 // definition.
 //
-// Some functions have separate definitions, and some don't If the definition
+// Some functions have separate definitions, and some don't. If the definition
 // and implementation is the same, the offset will just point to the entry.
 // This makes slightly more work, but this simplified the control flow and
 // we're optimizing for most functions having definitions.
@@ -71,6 +71,16 @@ struct FunctionImpl {
 
 // Index used to indicate there is no parent.
 constexpr unsigned kNoParent = std::numeric_limits<unsigned>::max();
+
+// Returns true if the given abbreviation defines a PC range.
+bool AbbrevHasCode(const llvm::DWARFAbbreviationDeclaration* abbrev) {
+  for (const auto spec : abbrev->attributes()) {
+    if (spec.Attr == llvm::dwarf::DW_AT_low_pc ||
+        spec.Attr == llvm::dwarf::DW_AT_high_pc)
+      return true;
+  }
+  return false;
+}
 
 // Step 1 of the algorithm above. Fills the function_impls array with the
 // information for all function implementations (ones with addresses). Fills
@@ -95,12 +105,6 @@ void ExtractUnitFunctionImplsAndParents(
   decoder.AddReference(llvm::dwarf::DW_AT_specification,
                        &decl_unit_offset, &decl_global_offset);
 
-  // This flag will be set for any function that has code.
-  bool has_code = false;
-  decoder.AddPresenceCheck(llvm::dwarf::DW_AT_low_pc, &has_code);
-  decoder.AddPresenceCheck(llvm::dwarf::DW_AT_high_pc, &has_code);
-  decoder.AddPresenceCheck(llvm::dwarf::DW_AT_ranges, &has_code);
-
   // Stores the index of the parent DIE for each one we encounter. The root
   // DIE with no parent will be set to kNoParent.
   unsigned die_count = unit->getNumDIEs();
@@ -124,19 +128,27 @@ void ExtractUnitFunctionImplsAndParents(
     // by the current DIE.
     decl_unit_offset.reset();
     decl_global_offset.reset();
-    has_code = false;
 
-    // Decode.
+    // Decode. Decode is the slowest part of the indexing so try to avoid it.
+    // Here we check the tag and whether the abbreviation entry has a code
+    // PC range before doing decode since this will eliminate the majority of
+    // DIEs in typical programs.
+    //
+    // Trying to cache whether the abbreviation declaration is of the right
+    // type (there are a limited number of types of these) doesn't help.
+    // Checking the abbreviation array is ~6-12 comparisons, which is roughly
+    // equivalent to [unordered_]map lookup.
     const llvm::DWARFDebugInfoEntry* die =
         unit->getDIEAtIndex(i).getDebugInfoEntry();
-    if (decoder.Decode(*die) &&
-        die->getAbbreviationDeclarationPtr()->getTag() ==
-            llvm::dwarf::DW_TAG_subprogram &&
-        has_code) {
+    const llvm::DWARFAbbreviationDeclaration* abbrev =
+        die->getAbbreviationDeclarationPtr();
+    if (abbrev && abbrev->getTag() == llvm::dwarf::DW_TAG_subprogram &&
+        AbbrevHasCode(abbrev)) {
+      decoder.Decode(*die);
       // Found a function implementation.
       if (decl_unit_offset) {
         // Save the declaration for indexing.
-        function_impls->emplace_back(die, *decl_unit_offset);
+        function_impls->emplace_back(die, unit->getOffset() + *decl_unit_offset);
       } else if (decl_global_offset) {
         FXL_NOTREACHED() << "Implement DW_FORM_ref_addr for references.";
       } else {
@@ -271,8 +283,8 @@ const std::vector<llvm::DWARFDie>& ModuleSymbolIndex::FindFunctionExact(
     const std::string& input) const {
   // Split the input on "::" which we'll traverse the tree with.
   //
-  // TODO(brettw) this doesn't handle a lot of things, like handle templates.
-  // By blindly splitting on "::" we'll never find functions like
+  // TODO(brettw) this doesn't handle a lot of things like templates. By
+  // blindly splitting on "::" we'll never find functions like
   // "std::vector<Foo::Bar>::insert".
   std::string separator("::");
 

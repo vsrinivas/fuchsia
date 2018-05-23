@@ -5,9 +5,7 @@
 // This file is compiled into a library and used in zxdb tests to query
 // symbol information. The actual code is not run.
 
-// Mark the symbols as exported to prevent the linker from stripping them.
-#define EXPORT __attribute__((visibility("default")))
-#define NOINLINE __attribute__ ((noinline))
+#include "garnet/bin/zxdb/client/test_data/zxdb_symbol_test.h"
 
 // DW_TAG_namespace
 //   DW_AT_name = "my_ns"
