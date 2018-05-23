@@ -12,7 +12,8 @@
 # access point to the Internet, which makes testing performed in
 # uncontrolled environment.
 
-TEST_LOG="/tmp/wlan-doctor.log"
+TEST_LOG="$1"
+[ -z ${TEST_LOG} ] && TEST_LOG="/tmp/wlan-doctor.log"
 
 log () {
   msg="$*"
@@ -33,12 +34,12 @@ log_fail() {
 
 ping_dst() {
   dst="$1"
+  shift
   cmd="ping -c 2 ${dst}"
   ${cmd} > /dev/null 2>&1
 
   if [ "$?" -ne 0 ]; then
     log_fail "${cmd}"
-    test_teardown
     return 1
   else
     log_pass "${cmd}"
@@ -48,10 +49,10 @@ ping_dst() {
 
 test_ping() {
   # Google Public DNS server
-  ping_dst 8.8.8.8
+  ping_dst 8.8.8.8 "$@"
 
   # OpenDNS
-  ping_dst 208.67.222.222
+  ping_dst 208.67.222.222 "$@"
 }
 
 test_dns() {
@@ -110,7 +111,6 @@ wlan_disconnect() {
     sleep ${WLAN_STATUS_QUERY_PERIOD}
   done
   log_fail "fails to disconnect"
-  test_teardown
   return 1
 }
 
@@ -119,6 +119,7 @@ wlan_connect() {
   WLAN_STATUS_QUERY_RETRY_MAX=10
 
   ssid=$1
+  shift
   for i in $(seq 1 ${WLAN_STATUS_QUERY_RETRY_MAX}); do
     status=$(check_wlan_status)
     if [ "${status}" = "associated" ]; then
@@ -127,34 +128,35 @@ wlan_connect() {
     fi
 
     log "attempting to connect to ${ssid} (${i} / ${WLAN_STATUS_QUERY_RETRY_MAX})"
-    wlan connect ${ssid} > /dev/null
+    wlan connect "${ssid}" > /dev/null
     sleep ${WLAN_STATUS_QUERY_PERIOD}
   done
 
   log_fail "fails to connect to ${ssid}"
-  test_teardown
   return 1
 }
 
+wait_for_dhcp() {
+  DHCP_WAIT_PERIOD=3
+  sleep "${DHCP_WAIT_PERIOD}"
+}
+
 get_eth_iface_list() {
-  # The delimiter used in ifconfig is a single tab character
-  # TODO(eyw): Verify the behavior of pipe vs file regarding tab vs spaces
-  return $(ifconfig | grep ^en | cut -f1 -d$'\t')
+  iface_list=$(ifconfig | grep ^en | cut -f1 -d'\t')
+  echo "${iface_list}"
 }
 
 test_setup() {
   rm -rf "${TEST_LOG}" > /dev/null
-  eth_iface_setup=("$@")
-  for eth_iface in "${eth_iface_setup[@]}"
+  for eth_iface in "$@"
   do
     ifconfig "${eth_iface}" down
   done
 }
 
 test_teardown() {
-  eth_iface_teardown=("$@")
   # Restore to the original state
-  for eth_iface in "${eth_iface_teardown[@]}"
+  for eth_iface in "$@"
   do
     ifconfig "${eth_iface}" up
   done
@@ -162,29 +164,28 @@ test_teardown() {
 
 run() {
   cmd="$*"
-  set -e
+  shift
   ${cmd}
   if [ "$?" -ne 0 ]; then
     log_fail "failed in ${cmd}"
-    test_teardown
     return 1
   fi
-  set +e
 }
 
 main() {
   log "Start"
   eth_iface_list=$(get_eth_iface_list)
-  run test_setup "${eth_iface_list[@]}"
-  run wlan_disconnect
-  run wlan_connect GoogleGuest
+  run test_setup "${eth_iface_list}"
+  run wlan_disconnect "${eth_iface_list}"
+  run wlan_connect GoogleGuest "${eth_iface_list}"
+  run wait_for_dhcp
   log "Starting traffic tests"
-  run test_ping
+  run test_ping "${eth_iface_list}"
   run test_dns
   run test_wget
   log "Ending traffic tests"
-  run wlan_disconnect
-  run test_teardown "${eth_iface_list[@]}"
+  run wlan_disconnect "${eth_iface_list}"
+  run test_teardown "${eth_iface_list}"
   log "End"
 }
 
