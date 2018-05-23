@@ -54,30 +54,39 @@ def make_variant(name, info):
     return variant(tc, libprefix, runtime, aux)
 
 
-def find_variant(info, build_dir=''):
-    dir, file = os.path.split(info.filename)
+def find_variant(info, build_dir=os.path.curdir):
     variant = None
     variant_file = None
-    if dir == build_dir:
+    abs_build_dir = os.path.abspath(build_dir)
+    abs_filename = os.path.abspath(info.filename)
+    if abs_filename.startswith(os.path.join(abs_build_dir, '')):
         # It's in the build directory.  If it's a variant, it's a hard link
         # into the variant toolchain root_out_dir.
         file_stat = os.stat(info.filename)
         if file_stat.st_nlink > 1:
-            # Figure out which variant it's linked to.
+            # Figure out which variant it's linked to.  Non-variant drivers
+            # are linked to the -shared toolchain.  We match those as well
+            # as actual variants so we'll replace the unadorned filename
+            # with its -shared/ version, which is where the lib.unstripped/
+            # subdirectory is found.  Below, we'll change the name but not
+            # call it a variant.
+            rel_filename = os.path.relpath(abs_filename, abs_build_dir)
             variant_prefix = info.cpu.gn + '-'
-            files = filter(
-                lambda file: os.path.samestat(os.stat(file), file_stat),
-                glob.glob(os.path.join(build_dir, variant_prefix + '*', file)))
+            subdirs = [subdir
+                       for subdir in os.listdir(build_dir)
+                       if (subdir.startswith(variant_prefix) and
+                           os.path.exists(os.path.join(subdir, rel_filename)))]
+            files = [os.path.join(subdir, rel_filename) for subdir in subdirs]
+            assert all(os.path.samestat(os.stat(file), file_stat)
+                       for file in files), (
+                "Not all %r matches are hard links: %r" % (info, files))
             # Rust binaries have multiple links but are not variants.
             # So just ignore a multiply-linked file with no matches.
             if files:
                 assert len(files) == 1, (
                     "Multiple hard links to %r: %r" % (info, files))
                 variant_file = os.path.relpath(files[0], build_dir)
-                dir = os.path.basename(os.path.dirname(files[0]))
-                name = dir[len(variant_prefix):]
-                # Nonvariant drivers are linked to the -shared toolchain,
-                # but that's not a variant.
+                name = subdirs[0][len(variant_prefix):]
                 if name != 'shared':
                     # Drivers are linked to the variant-shared toolchain.
                     if name[-7:] == '-shared':

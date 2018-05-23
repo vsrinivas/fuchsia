@@ -267,6 +267,14 @@ def strip_binary_manifest(manifest, stripped_dir, examined):
             else:
                 subdir = 'exe.unstripped'
             debugfile = os.path.join(dir, subdir, file)
+            while not os.path.exists(debugfile):
+                # For dir/foo/bar, if dir/foo/exe.unstripped/bar
+                # didn't exist, try dir/exe.unstripped/foo/bar.
+                parent, dir = os.path.split(dir)
+                if not parent or not dir:
+                    return None
+                dir, file = parent, os.path.join(dir, file)
+                debugfile = os.path.join(dir, subdir, file)
             if not os.path.exists(debugfile):
                 debugfile = os.path.join(subdir, filename)
                 if not os.path.exists(debugfile):
