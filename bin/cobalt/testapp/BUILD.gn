@@ -13,10 +13,10 @@ executable("cobalt_testapp") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/cobalt/fidl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
+    "//zircon/public/fidl/cobalt:cobalt",
   ]
 }
 

@@ -14,8 +14,8 @@ executable("system-metrics") {
 
   deps = [
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/cobalt/fidl:fidl",
     "//garnet/public/lib/fsl",
+    "//zircon/public/fidl/cobalt:cobalt",
   ]
 }
 

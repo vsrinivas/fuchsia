@@ -25,7 +25,6 @@ source_set("lib") {
   public_deps = [
     "//garnet/lib/wlan/mlme:mlme",
     "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/cobalt/fidl:fidl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//third_party/cobalt/config:client_config",
@@ -34,6 +33,7 @@ source_set("lib") {
     "//third_party/cobalt/util:pem_util",
     "//third_party/grpc:grpc++",
     "//third_party/protobuf:protobuf_lite",
+    "//zircon/public/fidl/cobalt:cobalt",
   ]
 }
 
@@ -95,9 +95,9 @@ executable("cobalt_app_unittests") {
 
   deps = [
     "//garnet/lib/wlan/mlme:mlme",
-    "//garnet/public/lib/cobalt/fidl:fidl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
+    "//zircon/public/fidl/cobalt:cobalt",
   ]
 }
