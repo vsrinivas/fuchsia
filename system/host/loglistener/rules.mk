@@ -10,4 +10,6 @@ MODULE_TYPE := hostapp
 
 MODULE_SRCS += $(LOCAL_DIR)/loglistener.c
 
+MODULE_PACKAGE := bin
+
 include make/module.mk
