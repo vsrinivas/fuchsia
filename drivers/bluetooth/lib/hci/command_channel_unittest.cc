@@ -20,17 +20,11 @@ namespace hci {
 namespace {
 
 using ::btlib::testing::CommandTransaction;
+using ::btlib::common::UpperBits;
+using ::btlib::common::LowerBits;
 
 using TestingBase =
     ::btlib::testing::FakeControllerTest<::btlib::testing::TestController>;
-
-constexpr uint8_t UpperBits(const OpCode opcode) {
-  return opcode >> 8;
-}
-
-constexpr uint8_t LowerBits(const OpCode opcode) {
-  return opcode & 0x00FF;
-}
 
 // A reference counted object used to verify that HCI command completion and
 // status callbacks are properly cleaned up after the end of a transaction.

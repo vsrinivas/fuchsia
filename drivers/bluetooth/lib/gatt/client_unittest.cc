@@ -15,6 +15,9 @@ namespace {
 using common::ByteBuffer;
 using common::HostError;
 
+using common::UpperBits;
+using common::LowerBits;
+
 constexpr common::UUID kTestUuid1((uint16_t)0xDEAD);
 constexpr common::UUID kTestUuid2((uint16_t)0xBEEF);
 constexpr common::UUID kTestUuid3({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
@@ -32,14 +35,6 @@ const auto kDiscoverAllPrimaryRequest = common::CreateStaticByteBuffer(
 void NopSvcCallback(const gatt::ServiceData&) {}
 void NopChrcCallback(const gatt::CharacteristicData&) {}
 void NopDescCallback(const gatt::DescriptorData&) {}
-
-constexpr uint8_t UpperBits(uint16_t val) {
-  return val >> 8;
-}
-
-constexpr uint8_t LowerBits(uint16_t val) {
-  return val & 0x00FF;
-}
 
 class GATT_ClientTest : public l2cap::testing::FakeChannelTest {
  public:

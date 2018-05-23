@@ -55,5 +55,14 @@ common::MutableByteBufferPtr NewBuffer(T... bytes) {
       std::forward<T>(bytes)...);
 }
 
+// Returns the Lower/Upper bits of a uint16_t
+constexpr uint8_t UpperBits(const uint16_t x) {
+  return x >> 8;
+}
+
+constexpr uint8_t LowerBits(const uint16_t x) {
+  return x & 0x00FF;
+}
+
 }  // namespace common
 }  // namespace btlib

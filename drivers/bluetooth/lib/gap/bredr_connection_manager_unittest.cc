@@ -4,6 +4,7 @@
 
 #include "garnet/drivers/bluetooth/lib/gap/bredr_connection_manager.h"
 
+#include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
@@ -15,16 +16,11 @@ namespace {
 
 using ::btlib::testing::CommandTransaction;
 
+using common::UpperBits;
+using common::LowerBits;
+
 using TestingBase =
     ::btlib::testing::FakeControllerTest<::btlib::testing::TestController>;
-
-constexpr uint8_t UpperBits(const hci::OpCode opcode) {
-  return opcode >> 8;
-}
-
-constexpr uint8_t LowerBits(const hci::OpCode opcode) {
-  return opcode & 0x00FF;
-}
 
 // clang-format off
 
