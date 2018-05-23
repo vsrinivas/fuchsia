@@ -1072,6 +1072,14 @@ Extracted items use the file names shown below:\n\
         files_.push_front(std::move(file));
     }
 
+    // Consume another Item while keeping its owned buffers and files alive.
+    void TakeOwned(ItemPtr other) {
+        if (other) {
+            buffers_.splice_after(buffers_.before_begin(), other->buffers_);
+            files_.splice_after(files_.before_begin(), other->files_);
+        }
+    }
+
     // Create from in-core data.
     static ItemPtr CreateFromBuffer(
         uint32_t type, std::unique_ptr<uint8_t[]> payload, size_t size) {
@@ -1168,14 +1176,7 @@ Extracted items use the file names shown below:\n\
     // owned buffers alive in the new uncompressed item.
     static ItemPtr CreateFromCompressed(ItemPtr compressed) {
         auto uncompressed = CreateFromCompressed(*compressed);
-        while (!compressed->files_.empty()) {
-            uncompressed->OwnFile(std::move(compressed->files_.front()));
-            compressed->files_.pop_front();
-        }
-        while (!compressed->buffers_.empty()) {
-            uncompressed->OwnBuffer(std::move(compressed->buffers_.front()));
-            compressed->buffers_.pop_front();
-        }
+        uncompressed->TakeOwned(std::move(compressed));
         return uncompressed;
     }
 
@@ -2025,9 +2026,6 @@ int main(int argc, char** argv) {
           ((bootfs_input.empty() ? 0 : 1) +
            std::count_if(items.begin(), items.end(), is_bootfs)) > 1));
 
-    // These items need to be kept alive until the BOOTFS is packed.
-    std::forward_list<ItemPtr> bootfs_keepalive;
-
     if (merge_bootfs) {
         for (auto& item : items) {
             if (is_bootfs(item)) {
@@ -2040,6 +2038,7 @@ int main(int argc, char** argv) {
         }
     }
 
+    ItemPtr keepalive;
     if (merge) {
         // Merge multiple CMDLINE input items with spaces in between.
         std::string cmdline;
@@ -2057,6 +2056,10 @@ int main(int argc, char** argv) {
                     cmdline.pop_back();
                 }
                 cmdline.erase(cmdline.find_last_not_of(kCmdlineWS) + 1);
+                // Keep alive all the owned files from the old item,
+                // since it might have owned files used by other items.
+                old->TakeOwned(std::move(keepalive));
+                keepalive.swap(old);
             }
         }
         if (!cmdline.empty()) {
@@ -2083,6 +2086,8 @@ int main(int argc, char** argv) {
         fprintf(stderr, "no inputs\n");
         exit(1);
     }
+
+    items.back()->TakeOwned(std::move(keepalive));
 
     if (!list_contents && complete_arch != kImageArchUndefined) {
         // The only hard requirement is that the kernel be first.
