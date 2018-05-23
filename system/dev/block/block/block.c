@@ -28,6 +28,8 @@ typedef struct blkdev {
     zx_device_t* parent;
 
     mtx_t lock;
+    completion_t lock_signal;
+
     uint32_t threadcount;
 
     block_protocol_t bp;
@@ -49,12 +51,16 @@ typedef struct blkdev {
 
 static int blockserver_thread_serve(blkdev_t* bdev) {
     mtx_lock(&bdev->lock);
+    // Signal when the blockserver_thread has successfully acquired the lock.
+    completion_signal(&bdev->lock_signal);
+
     BlockServer* bs = bdev->bs;
     if (!bdev->dead && (bs != NULL)) {
         mtx_unlock(&bdev->lock);
         blockserver_serve(bs);
         mtx_lock(&bdev->lock);
     }
+
     if (bdev->bs == bs) {
         // Only nullify 'bs' if no one has replaced it yet. This is the
         // case when the blockserver shuts itself down because the fifo
@@ -101,9 +107,14 @@ static zx_status_t blkdev_get_fifos(blkdev_t* bdev, void* out_buf, size_t out_le
     bdev->threadcount++;
     mtx_unlock(&bdev->lock);
 
+    // Use this completion to ensure the block server doesn't race initializing
+    // with a call to teardown.
+    completion_reset(&bdev->lock_signal);
+
     thrd_t thread;
     if (thrd_create(&thread, blockserver_thread, bdev) == thrd_success) {
         thrd_detach(thread);
+        completion_wait(&bdev->lock_signal, ZX_TIME_INFINITE);
         return sizeof(zx_handle_t);
     }
 
