@@ -6,36 +6,30 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userapp
-MODULE_GROUP := core
+MODULE_TYPE := userlib
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/launcher_impl.cpp \
-    $(LOCAL_DIR)/main.cpp
+    $(LOCAL_DIR)/launcher.cpp \
+    $(LOCAL_DIR)/provider.cpp
 
 MODULE_FIDL_LIBS := \
     system/fidl/process
 
-MODULE_STATIC_LIBS := \
+MODULE_HEADER_DEPS := \
     system/ulib/svc \
-    system/ulib/fs \
+
+MODULE_STATIC_LIBS := \
     system/ulib/async \
     system/ulib/async.cpp \
-    system/ulib/async-loop.cpp \
-    system/ulib/async-loop \
-    system/ulib/trace \
     system/ulib/fbl \
     system/ulib/fidl \
-    system/ulib/runtime \
     system/ulib/zxcpp \
     system/ulib/zx
 
 MODULE_LIBS := \
-    system/ulib/async.default \
     system/ulib/launchpad \
     system/ulib/fdio \
     system/ulib/c \
-    system/ulib/trace-engine \
     system/ulib/zircon
 
 include make/module.mk

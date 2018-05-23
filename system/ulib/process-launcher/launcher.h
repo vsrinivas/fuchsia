@@ -13,7 +13,7 @@
 #include <lib/zx/channel.h>
 #include <stdint.h>
 
-namespace process {
+namespace launcher {
 
 class LauncherImpl : public fbl::SinglyLinkedListable<fbl::unique_ptr<LauncherImpl>> {
 public:
@@ -58,4 +58,4 @@ private:
     zx::handle ldsvc_;
 };
 
-} // namespace process
+} // namespace launcher

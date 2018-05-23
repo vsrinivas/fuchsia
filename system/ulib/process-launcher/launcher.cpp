@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "launcher_impl.h"
+#include "launcher.h"
 
 #include <fbl/string.h>
 #include <fbl/vector.h>
@@ -16,7 +16,7 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
-namespace process {
+namespace launcher {
 namespace {
 
 fbl::String GetString(fidl_string_t string) {
@@ -100,7 +100,7 @@ zx_status_t LauncherImpl::ReadAndDispatchMessage(fidl::MessageBuffer* buffer) {
     case fuchsia_process_LauncherAddHandlesOrdinal:
         return AddHandles(fbl::move(message));
     default:
-        fprintf(stderr, "process-launcher: error: Unknown message ordinal: %d\n", message.ordinal());
+        fprintf(stderr, "launcher: error: Unknown message ordinal: %d\n", message.ordinal());
         return ZX_ERR_NOT_SUPPORTED;
     }
 }
@@ -109,7 +109,7 @@ zx_status_t LauncherImpl::Launch(fidl::MessageBuffer* buffer, fidl::Message mess
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(&fuchsia_process_LauncherLaunchRequestTable, &error_msg);
     if (status != ZX_OK) {
-        fprintf(stderr, "process-launcher: error: Launch: %s\n", error_msg);
+        fprintf(stderr, "launcher: error: Launch: %s\n", error_msg);
         return status;
     }
 
@@ -135,7 +135,7 @@ zx_status_t LauncherImpl::Launch(fidl::MessageBuffer* buffer, fidl::Message mess
     // There's a subtle issue at this point. The problem is that launchpad will
     // make a synchronous call into the loader service to read the PT_INTERP,
     // but this handle was provided by our client, which means our client can
-    // hang the process-launcher.
+    // hang the launcher.
     zx::channel old_ldsvc(launchpad_use_loader_service(lp, ldsvc_.release()));
 
     launchpad_load_from_vmo(lp, info->executable);
@@ -173,7 +173,7 @@ zx_status_t LauncherImpl::Launch(fidl::MessageBuffer* buffer, fidl::Message mess
 
     status = message.Encode(&fuchsia_process_LauncherLaunchResponseTable, &error_msg);
     if (status != ZX_OK) {
-        fprintf(stderr, "process-launcher: error: Launch: %s\n", error_msg);
+        fprintf(stderr, "launcher: error: Launch: %s\n", error_msg);
         return status;
     }
     return message.Write(channel_.get(), 0);
@@ -183,7 +183,7 @@ zx_status_t LauncherImpl::AddArgs(fidl::Message message) {
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(&fuchsia_process_LauncherAddArgsRequestTable, &error_msg);
     if (status != ZX_OK) {
-        fprintf(stderr, "process-launcher: error: AddArgs: %s\n", error_msg);
+        fprintf(stderr, "launcher: error: AddArgs: %s\n", error_msg);
         return status;
     }
     PushStrings(message.GetPayloadAs<fidl_vector_t>(), &args_);
@@ -194,7 +194,7 @@ zx_status_t LauncherImpl::AddEnvirons(fidl::Message message) {
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(&fuchsia_process_LauncherAddEnvironsRequestTable, &error_msg);
     if (status != ZX_OK) {
-        fprintf(stderr, "process-launcher: error: AddEnvirons: %s\n", error_msg);
+        fprintf(stderr, "launcher: error: AddEnvirons: %s\n", error_msg);
         return status;
     }
     PushStrings(message.GetPayloadAs<fidl_vector_t>(), &environs_);
@@ -205,7 +205,7 @@ zx_status_t LauncherImpl::AddNames(fidl::Message message) {
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(&fuchsia_process_LauncherAddNamesRequestTable, &error_msg);
     if (status != ZX_OK) {
-        fprintf(stderr, "process-launcher: error: AddNames: %s\n", error_msg);
+        fprintf(stderr, "launcher: error: AddNames: %s\n", error_msg);
         return status;
     }
     fidl_vector_t* payload = message.GetPayloadAs<fidl_vector_t>();
@@ -222,7 +222,7 @@ zx_status_t LauncherImpl::AddHandles(fidl::Message message) {
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(&fuchsia_process_LauncherAddHandlesRequestTable, &error_msg);
     if (status != ZX_OK) {
-        fprintf(stderr, "process-launcher: error: AddHandles: %s\n", error_msg);
+        fprintf(stderr, "launcher: error: AddHandles: %s\n", error_msg);
         return status;
     }
     fidl_vector_t* payload = message.GetPayloadAs<fidl_vector_t>();
@@ -256,4 +256,4 @@ void LauncherImpl::NotifyError(zx_status_t error) {
     // We might be deleted now.
 }
 
-} // namespace process
+} // namespace launcher
