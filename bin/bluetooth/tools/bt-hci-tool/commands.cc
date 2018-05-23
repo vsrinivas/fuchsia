@@ -880,6 +880,322 @@ bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
   return true;
 }
 
+bool HandleWritePageScanActivity(const CommandData* cmd_data,
+                                 const fxl::CommandLine& cmd_line,
+                                 const fxl::Closure& complete_cb) {
+  if (cmd_line.positional_args().size()) {
+    std::cout << "  Usage: write-page-scan-activity [--help\n"
+                 "                                   |--interval=<interval>\n"
+                 "                                   |--window=<window>]"
+              << std::endl;
+    return false;
+  }
+
+  if (cmd_line.HasOption("help")) {
+    std::cout << "  Options:\n"
+                 "    --help - Display this help message\n"
+                 "    --mode=R0|R1|R2 - Use a specific scanning mode\n"
+                 "    --interval=<interval> - Set page scan interval (in hex)\n"
+                 "    --window=<window> - Set page scan window (in hex)\n";
+    std::cout << std::endl;
+    return false;
+  }
+
+  uint16_t page_scan_interval = ::btlib::hci::kPageScanR1Interval;
+  uint16_t page_scan_window = ::btlib::hci::kPageScanR1Window;
+
+  std::string mode_str;
+  if (cmd_line.GetOptionValue("mode", &mode_str)) {
+    if (mode_str == "R0") {
+      page_scan_interval = ::btlib::hci::kPageScanR0Interval;
+      page_scan_window = ::btlib::hci::kPageScanR0Window;
+    } else if (mode_str == "R1") {
+      page_scan_interval = ::btlib::hci::kPageScanR1Interval;
+      page_scan_window = ::btlib::hci::kPageScanR1Window;
+    } else if (mode_str == "R2") {
+      page_scan_interval = ::btlib::hci::kPageScanR2Interval;
+      page_scan_window = ::btlib::hci::kPageScanR2Window;
+    } else {
+      std::cout << "  Unrecognized mode value: " << mode_str << std::endl;
+      return false;
+    }
+  }
+
+  // Check for manual settings.
+  std::string interval_str;
+  if (cmd_line.GetOptionValue("interval", &interval_str)) {
+    uint16_t parsed_interval;
+    if (!fxl::StringToNumberWithError(interval_str, &parsed_interval,
+                                      fxl::Base::k16)) {
+      std::cout << "  Malformed interval value: " << interval_str << std::endl;
+      return false;
+    }
+    if (parsed_interval < ::btlib::hci::kPageScanIntervalMin ||
+        parsed_interval > ::btlib::hci::kPageScanIntervalMax) {
+      std::cout << "  Interval value is out of the allowed range." << std::endl;
+      return false;
+    }
+    if (parsed_interval % 2 != 0) {
+      std::cout << "  Interval value must be even." << std::endl;
+      return false;
+    }
+
+    page_scan_interval = parsed_interval;
+  }
+
+  std::string window_str;
+  if (cmd_line.GetOptionValue("window", &window_str)) {
+    uint16_t parsed_window;
+    if (!fxl::StringToNumberWithError(window_str, &parsed_window,
+                                      fxl::Base::k16)) {
+      std::cout << "  Malformed window value: " << window_str << std::endl;
+      return false;
+    }
+    if (parsed_window < ::btlib::hci::kPageScanWindowMin ||
+        parsed_window > ::btlib::hci::kPageScanWindowMax) {
+      std::cout << "  Window value is out of the allowed range." << std::endl;
+      return false;
+    }
+    if (parsed_window > page_scan_interval) {
+      std::cout
+          << "  Window value must be less than or equal to interval value."
+          << std::endl;
+      return false;
+    }
+
+    page_scan_window = parsed_window;
+  }
+
+  constexpr size_t kPayloadSize =
+      sizeof(::btlib::hci::WritePageScanActivityCommandParams);
+  auto packet = ::btlib::hci::CommandPacket::New(
+      ::btlib::hci::kWritePageScanActivity, kPayloadSize);
+  auto params =
+      packet->mutable_view()
+          ->mutable_payload<::btlib::hci::WritePageScanActivityCommandParams>();
+  params->page_scan_interval = page_scan_interval;
+  params->page_scan_window = page_scan_window;
+
+  auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
+
+  std::cout << "  Sent HCI_Write_Page_Scan_Activity (id=" << id << ")"
+            << std::endl;
+
+  return true;
+}
+
+bool HandleReadPageScanActivity(const CommandData* cmd_data,
+                                const fxl::CommandLine& cmd_line,
+                                const fxl::Closure& complete_cb) {
+  if (cmd_line.positional_args().size() || cmd_line.options().size()) {
+    std::cout << "  Usage: read-page-scan-activity" << std::endl;
+    return false;
+  }
+
+  auto cb = [complete_cb](::btlib::hci::CommandChannel::TransactionId id,
+                          const ::btlib::hci::EventPacket& event) {
+    auto return_params =
+        event.return_params<::btlib::hci::ReadPageScanActivityReturnParams>();
+    LogCommandResult(return_params->status, id);
+    if (return_params->status != ::btlib::hci::StatusCode::kSuccess) {
+      complete_cb();
+      return;
+    }
+
+    std::cout << "  Interval: " << return_params->page_scan_interval
+              << std::endl;
+    std::cout << "  Window: " << return_params->page_scan_window << std::endl;
+
+    complete_cb();
+  };
+
+  auto packet =
+      ::btlib::hci::CommandPacket::New(::btlib::hci::kReadPageScanActivity);
+  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
+  std::cout << "  Sent HCI_Read_Page_Scan_Activity (id=" << id << ")"
+            << std::endl;
+
+  return true;
+}
+
+bool HandleWritePageScanType(const CommandData* cmd_data,
+                             const fxl::CommandLine& cmd_line,
+                             const fxl::Closure& complete_cb) {
+  if (cmd_line.positional_args().size()) {
+    std::cout
+        << "  Usage: write-page-scan-type [--help|--standard|--interlaced]"
+        << std::endl;
+    return false;
+  }
+
+  if (cmd_line.HasOption("help")) {
+    std::cout << "  Options:\n"
+                 "    --help - Display this help message\n"
+                 "    --type=standard|interlaced - Choose scanning type";
+    std::cout << std::endl;
+    return false;
+  }
+
+  ::btlib::hci::PageScanType page_scan_type =
+      ::btlib::hci::PageScanType::kStandardScan;
+  std::string type_str;
+  if (cmd_line.GetOptionValue("type", &type_str)) {
+    if (type_str == "standard") {
+      page_scan_type = ::btlib::hci::PageScanType::kStandardScan;
+    } else if (type_str == "interlaced") {
+      page_scan_type = ::btlib::hci::PageScanType::kInterlacedScan;
+    } else {
+      std::cout << "  Unrecognized type: " << type_str << std::endl;
+    }
+  }
+
+  constexpr size_t kPayloadSize =
+      sizeof(::btlib::hci::WritePageScanTypeCommandParams);
+  auto packet = ::btlib::hci::CommandPacket::New(
+      ::btlib::hci::kWritePageScanType, kPayloadSize);
+
+  packet->mutable_view()
+      ->mutable_payload<::btlib::hci::WritePageScanTypeCommandParams>()
+      ->page_scan_type = page_scan_type;
+
+  auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
+
+  std::cout << "  Sent HCI_Write_Page_Scan_Type (id=" << id << ")" << std::endl;
+
+  return true;
+}
+
+bool HandleReadPageScanType(const CommandData* cmd_data,
+                            const fxl::CommandLine& cmd_line,
+                            const fxl::Closure& complete_cb) {
+  if (cmd_line.positional_args().size() || cmd_line.options().size()) {
+    std::cout << "  Usage: read-page-scan-type" << std::endl;
+    return false;
+  }
+
+  auto cb = [complete_cb](::btlib::hci::CommandChannel::TransactionId id,
+                          const ::btlib::hci::EventPacket& event) {
+    auto return_params =
+        event.return_params<::btlib::hci::ReadPageScanTypeReturnParams>();
+    LogCommandResult(return_params->status, id);
+    if (return_params->status != ::btlib::hci::StatusCode::kSuccess) {
+      complete_cb();
+      return;
+    }
+
+    if (return_params->page_scan_type ==
+        ::btlib::hci::PageScanType::kStandardScan) {
+      std::cout << "  Type: standard" << std::endl;
+    } else if (return_params->page_scan_type ==
+               ::btlib::hci::PageScanType::kInterlacedScan) {
+      std::cout << "  Type: interlaced" << std::endl;
+    } else {
+      std::cout << "  Type: unknown" << std::endl;
+    }
+
+    complete_cb();
+  };
+
+  auto packet =
+      ::btlib::hci::CommandPacket::New(::btlib::hci::kReadPageScanType);
+  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
+  std::cout << "  Sent HCI_Read_Page_Scan_Type (id=" << id << ")" << std::endl;
+
+  return true;
+}
+
+bool HandleWriteScanEnable(const CommandData* cmd_data,
+                           const fxl::CommandLine& cmd_line,
+                           const fxl::Closure& complete_cb) {
+  if (cmd_line.positional_args().size() > 2) {
+    std::cout << "  Usage: write-scan-enable [--help] [page] [inquiry]"
+              << std::endl;
+    return false;
+  }
+
+  if (cmd_line.HasOption("help")) {
+    std::cout << "  Arguments:\n"
+                 "    include \"page\" to enable page scan\n"
+                 "    include \"inquiry\" to enable inquiry scan\n"
+                 "  Options:\n"
+                 "    --help - Display this help message";
+    std::cout << std::endl;
+    return false;
+  }
+
+  ::btlib::hci::ScanEnableType scan_enable = 0x00;
+  for (std::string positional_arg : cmd_line.positional_args()) {
+    if (positional_arg == "inquiry") {
+      scan_enable |=
+          (::btlib::hci::ScanEnableType)::btlib::hci::ScanEnableBit::kInquiry;
+    } else if (positional_arg == "page") {
+      scan_enable |=
+          (::btlib::hci::ScanEnableType)::btlib::hci::ScanEnableBit::kPage;
+    } else {
+      std::cout << "  Unrecognized positional argument: " << positional_arg
+                << std::endl;
+      return false;
+    }
+  }
+
+  constexpr size_t kPayloadSize =
+      sizeof(::btlib::hci::WriteScanEnableCommandParams);
+  auto packet = ::btlib::hci::CommandPacket::New(::btlib::hci::kWriteScanEnable,
+                                                 kPayloadSize);
+
+  packet->mutable_view()
+      ->mutable_payload<::btlib::hci::WriteScanEnableCommandParams>()
+      ->scan_enable = scan_enable;
+
+  auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
+
+  std::cout << "  Sent HCI_Write_Scan_Enable (id=" << id << ")" << std::endl;
+
+  return true;
+}
+
+bool HandleReadScanEnable(const CommandData* cmd_data,
+                          const fxl::CommandLine& cmd_line,
+                          const fxl::Closure& complete_cb) {
+  if (cmd_line.positional_args().size() || cmd_line.options().size()) {
+    std::cout << "  Usage: read-scan-enable" << std::endl;
+    return false;
+  }
+
+  auto cb = [complete_cb](::btlib::hci::CommandChannel::TransactionId id,
+                          const ::btlib::hci::EventPacket& event) {
+    auto return_params =
+        event.return_params<::btlib::hci::ReadScanEnableReturnParams>();
+    LogCommandResult(return_params->status, id);
+    if (return_params->status != ::btlib::hci::StatusCode::kSuccess) {
+      complete_cb();
+      return;
+    }
+
+    if (return_params->scan_enable &
+        (::btlib::hci::ScanEnableType)::btlib::hci::ScanEnableBit::kInquiry) {
+      std::cout << "  Inquiry scan: enabled" << std::endl;
+    } else {
+      std::cout << "  Inquiry scan: disabled" << std::endl;
+    }
+
+    if (return_params->scan_enable &
+        (::btlib::hci::ScanEnableType)::btlib::hci::ScanEnableBit::kPage) {
+      std::cout << "  Page scan: enabled" << std::endl;
+    } else {
+      std::cout << "  Page scan: disabled" << std::endl;
+    }
+
+    complete_cb();
+  };
+
+  auto packet = ::btlib::hci::CommandPacket::New(::btlib::hci::kReadScanEnable);
+  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
+  std::cout << "  Sent HCI_Read_Scan_Enable (id=" << id << ")" << std::endl;
+
+  return true;
+}
+
 }  // namespace
 
 void RegisterCommands(const CommandData* cmd_data,
@@ -919,7 +1235,22 @@ void RegisterCommands(const CommandData* cmd_data,
   dispatcher->RegisterHandler("scan",
                               "Perform a device scan for a limited duration",
                               BIND(HandleBRScan));
-
+  dispatcher->RegisterHandler("write-page-scan-activity",
+                              "Send HCI_Write_Page_Scan_Activity",
+                              BIND(HandleWritePageScanActivity));
+  dispatcher->RegisterHandler("read-page-scan-activity",
+                              "Send HCI_Read_Page_Scan_Activity",
+                              BIND(HandleReadPageScanActivity));
+  dispatcher->RegisterHandler("write-page-scan-type",
+                              "Send HCI_Write_Page_Scan_Type",
+                              BIND(HandleWritePageScanType));
+  dispatcher->RegisterHandler("read-page-scan-type",
+                              "Send HCI_Read_Page_Scan_Type",
+                              BIND(HandleReadPageScanType));
+  dispatcher->RegisterHandler("write-scan-enable", "Send HCI_Write_Scan_Enable",
+                              BIND(HandleWriteScanEnable));
+  dispatcher->RegisterHandler("read-scan-enable", "Send HCI_Read_Scan_Enable",
+                              BIND(HandleReadScanEnable));
 #undef BIND
 }
 
