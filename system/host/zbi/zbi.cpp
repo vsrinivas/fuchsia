@@ -98,6 +98,7 @@ public:
     OutputStream() = delete;
 
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(OutputStream);
+    OutputStream(OutputStream&&) = default;
 
     explicit OutputStream(fbl::unique_fd fd) : fd_(std::move(fd)) {
     }
@@ -227,6 +228,139 @@ private:
                 static_cast<uint8_t*>(read_pos->iov_base) + wrote);
         }
         return read_pos;
+    }
+};
+
+class FileWriter {
+public:
+    FileWriter(const char* outfile, std::string prefix) :
+        prefix_(std::move(prefix)), outfile_(outfile) {
+    }
+
+    unsigned int NextFileNumber() const {
+        return files_ + 1;
+    }
+
+    OutputStream RawFile(const char* name) {
+        ++files_;
+        if (outfile_) {
+            if (files_ > 1) {
+                fprintf(stderr,
+                        "--output (-o) cannot write second file %s\n", name);
+                exit(1);
+            } else {
+                return CreateFile(outfile_);
+            }
+        } else {
+            auto file = prefix_ + name;
+            return CreateFile(file.c_str());
+        }
+    }
+
+private:
+    std::string prefix_;
+    const char* outfile_ = nullptr;
+    unsigned int files_ = 0;
+
+    OutputStream CreateFile(const char* outfile) {
+        // Remove the file in case it exists.  This makes it safe to
+        // to do e.g. `zbi -o boot.zbi boot.zbi --entry=bin/foo=mybuild/foo`
+        // to modify a file "in-place" because the input `boot.zbi` will
+        // already have been opened before the new `boot.zbi` is created.
+        remove(outfile);
+
+        fbl::unique_fd fd(open(outfile, O_WRONLY | O_CREAT | O_TRUNC, 0666));
+        if (!fd && errno == ENOENT) {
+            MakeDirs(outfile);
+            fd.reset(open(outfile, O_WRONLY | O_CREAT | O_TRUNC, 0666));
+        }
+        if (!fd) {
+            fprintf(stderr, "cannot create %s: %s\n",
+                    outfile, strerror(errno));
+            exit(1);
+        }
+
+        return OutputStream(std::move(fd));
+    }
+
+    static void MakeDirs(const std::string& name) {
+        auto lastslash = name.rfind('/');
+        if (lastslash == std::string::npos) {
+            return;
+        }
+        auto dir = name.substr(0, lastslash);
+        if (mkdir(dir.c_str(), 0777) == 0) {
+            return;
+        }
+        if (errno == ENOENT) {
+            MakeDirs(dir);
+            if (mkdir(dir.c_str(), 0777) == 0) {
+                return;
+            }
+        }
+        if (errno != EEXIST) {
+            fprintf(stderr, "mkdir: %s: %s\n",
+                    dir.c_str(), strerror(errno));
+            exit(1);
+        }
+    }
+};
+
+class NameMatcher {
+public:
+    NameMatcher(const char* const* patterns, int count) :
+        begin_(patterns), end_(&patterns[count]) {
+        assert(count >= 0);
+        assert(!patterns[count]);
+    }
+    NameMatcher(char** argv, int argi, int argc) :
+        NameMatcher(&argv[argi], argc - argi) {
+    }
+
+    unsigned int names_checked() const { return names_checked_; }
+    unsigned int names_matched() const { return names_matched_; }
+
+    bool MatchesAll(void) const { return begin_ == end_; }
+
+    // Not const because it keeps stats.
+    bool Matches(const char* name, bool casefold = false) {
+        ++names_checked_;
+        if (MatchesAll() || PatternMatch(name, casefold)) {
+            ++names_matched_;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    void Summary(const char* verbed, const char* items, bool verbose) {
+        if (!MatchesAll()) {
+            if (names_checked() == 0) {
+                fprintf(stderr, "no %s\n", items);
+                exit(1);
+            } else if (names_matched() == 0) {
+                fprintf(stderr, "no matching %s\n", items);
+                exit(1);
+            } else if (verbose) {
+                printf("%s %u of %u %s\n",
+                       verbed, names_matched(), names_checked(), items);
+            }
+        }
+    }
+
+private:
+    const char* const* const begin_ = nullptr;
+    const char* const* const end_ = nullptr;
+    unsigned int names_checked_ = 0;
+    unsigned int names_matched_ = 0;
+
+    bool PatternMatch(const char* name, bool casefold) const {
+        for (auto next = begin_; next != end_; ++next) {
+            if (fnmatch(*next, name, casefold ? FNM_CASEFOLD : 0) == 0) {
+                return true;
+            }
+        }
+        return false;
     }
 };
 
@@ -783,38 +917,66 @@ private:
     }
 };
 
-void DescribeHeader(uint32_t pos, uint32_t length, const char* type) {
-    printf("%08x: %08x %s\n", pos, length, type);
-}
-
-void MakeDirs(const std::string& name) {
-    auto lastslash = name.rfind('/');
-    if (lastslash == std::string::npos) {
-        return;
-    }
-    auto dir = name.substr(0, lastslash);
-    if (mkdir(dir.c_str(), 0777) == 0) {
-        return;
-    }
-    if (errno == ENOENT) {
-        MakeDirs(dir);
-        if (mkdir(dir.c_str(), 0777) == 0) {
-            return;
-        }
-    }
-    if (errno != EEXIST) {
-        fprintf(stderr, "mkdir: %s: %s\n",
-                dir.c_str(), strerror(errno));
-        exit(1);
-    }
-}
-
 class Item {
 public:
     // Only the static methods below can create an Item.
     Item() = delete;
 
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Item);
+
+    static const char* TypeName(uint32_t zbi_type) {
+        return ItemTypeInfo(zbi_type).name;
+    }
+
+    static bool ParseTypeName(const char* name, uint32_t* abi_type) {
+        for (const auto& t : kItemTypes_) {
+            if (!strcasecmp(t.name, name)) {
+                *abi_type = t.type;
+                return true;
+            }
+        }
+        int i = 0;
+        return sscanf(name, "%x%n", abi_type, &i) == 1 && name[i] == '\0';
+    }
+
+    static std::string ExtractedFileName(unsigned int n, uint32_t zbi_type,
+                                         bool raw) {
+        std::string name;
+        char buf[32];
+        const auto info = ItemTypeInfo(zbi_type);
+        if (info.name) {
+            snprintf(buf, sizeof(buf), "%03u.", n);
+            name = buf;
+            name += info.name;
+            for (auto& c : name) {
+                c = std::tolower(c);
+            }
+        } else {
+            snprintf(buf, sizeof(buf), "%03u.%08x", n, zbi_type);
+            name = buf;
+        }
+        name += (raw && info.extension) ? info.extension : ".zbi";
+        return name;
+    }
+
+    static void PrintTypeUsage(FILE* out) {
+        fprintf(out, "\
+TYPE can be hexadecimal or a name string (case-insensitive).\n\
+Extracted items use the file names shown below:\n\
+    --type               --extract-item             --extract-raw\n\
+");
+        for (const auto& t : kItemTypes_) {
+            const auto zbi_name = ExtractedFileName(1, t.type, false);
+            const auto raw_name = ExtractedFileName(1, t.type, true);
+            fprintf(out, "    %-20s %-26s %s\n",
+                    t.name, zbi_name.c_str(), raw_name.c_str());
+        }
+    }
+
+    static bool TypeIsStorage(uint32_t zbi_type) {
+        return (zbi_type == ZBI_TYPE_STORAGE_BOOTFS ||
+                zbi_type == ZBI_TYPE_STORAGE_RAMDISK);
+    }
 
     uint32_t type() const {
         return header_.type;
@@ -829,42 +991,17 @@ public:
     }
 
     void Describe(uint32_t pos) const {
-        switch (header_.type) {
-        case ZBI_TYPE_STORAGE_BOOTFS:
-            printf("%08x: %08x BOOTFS (size=%08x)\n",
-                   pos, header_.length, header_.extra);
-            break;
-        case ZBI_TYPE_STORAGE_RAMDISK:
-            printf("%08x: %08x RAMDISK (size=%08x)\n",
-                   pos, header_.length, header_.extra);
-            break;
-
-#define ZBI_CASE(type)                                         \
-        case ZBI_TYPE_##type:                                  \
-            DescribeHeader(pos, header_.length, #type);        \
-            break
-        ZBI_CASE(ACPI_RSDP);
-        ZBI_CASE(CMDLINE);
-        ZBI_CASE(CRASHLOG);
-        ZBI_CASE(DEBUG_UART);
-        ZBI_CASE(DISCARD);
-        ZBI_CASE(E820_TABLE);
-        ZBI_CASE(EFI_MEMORY_MAP);
-        ZBI_CASE(EFI_SYSTEM_TABLE);
-        ZBI_CASE(FRAMEBUFFER);
-        ZBI_CASE(KERNEL_ARM64);
-        ZBI_CASE(KERNEL_X64);
-        ZBI_CASE(NVRAM_DEPRECATED);
-        ZBI_CASE(NVRAM);
-        ZBI_CASE(PLATFORM_ID);
-#undef ZBI_CASE
-
-        default:
+        const char* type_name = TypeName(type());
+        if (!type_name) {
             printf("%08x: %08x UNKNOWN (type=%08x)\n",
                    pos, header_.length, header_.type);
-            break;
+        } else if (TypeIsStorage(type())) {
+            printf("%08x: %08x %s (size=%08x)\n",
+                   pos, header_.length, type_name, header_.extra);
+        } else {
+            printf("%08x: %08x %s\n",
+                   pos, header_.length, type_name);
         }
-
         if (header_.flags & ZBI_FLAG_CRC32) {
             auto print_crc = [](const zbi_header_t& header) {
                 printf("        :          MAGIC=%08x CRC=%08x\n",
@@ -911,24 +1048,6 @@ public:
         return 0;
     }
 
-    // If extract holds pointers to the FileContents after it returns,
-    // then it must return true and then both this and the ItemPtr
-    // returned here must outlive those held pointers.
-    template<typename Extractor>
-    [[nodiscard]] ItemPtr ExtractFiles(Extractor& extract) {
-        if (type() == ZBI_TYPE_STORAGE_BOOTFS) {
-            if (AlreadyCompressed()) {
-                auto uncompressed = CreateFromCompressed(*this);
-                if (uncompressed->ExtractBootFS(extract)) {
-                    return uncompressed;
-                }
-            } else {
-                ExtractBootFS(extract);
-            }
-        }
-        return nullptr;
-    }
-
     // Streaming exhausts the item's payload.  The OutputStream will now
     // have pointers into buffers owned by this Item, so this Item must be
     // kept alive until out->Flush() runs (while *this is alive, to be safe).
@@ -942,25 +1061,6 @@ public:
             out->Write(Iovec(padding, aligned - wrote));
         }
         assert(Aligned(out->WritePosition()));
-    }
-
-    void StreamPayload(OutputStream* out) {
-        if (AlreadyCompressed()) {
-            CreateFromCompressed(*this)->StreamRawPayload(out);
-        } else {
-            StreamRawPayload(out);
-        }
-    }
-
-    void AppendPayload(std::string* buffer) const {
-        if (AlreadyCompressed()) {
-            CreateFromCompressed(*this)->AppendPayload(buffer);
-        } else {
-            for (const auto& iov : payload_) {
-                buffer->append(static_cast<const char*>(iov.iov_base),
-                               iov.iov_len);
-            }
-        }
     }
 
     // The buffer will be released when this Item is destroyed.  This item
@@ -996,6 +1096,8 @@ public:
     static ItemPtr CreateFromFile(
         FileContents file, uint32_t type, bool compress) {
         bool null_terminate = type == ZBI_TYPE_CMDLINE;
+        compress = compress && TypeIsStorage(type);
+
         size_t size = file.exact_size() + (null_terminate ? 1 : 0);
         auto item = MakeItem(NewHeader(type, size), compress);
 
@@ -1186,6 +1288,83 @@ public:
             new BootFSInputFileGenerator(std::move(item)));
     }
 
+    void ExtractItem(FileWriter* writer, NameMatcher* matcher) {
+        std::string namestr = ExtractedFileName(writer->NextFileNumber(),
+                                                type(), false);
+        auto name = namestr.c_str();
+        if (matcher->Matches(name, true)) {
+            WriteZBI(writer, name, (Item*const[]){this});
+        }
+    }
+
+    void ExtractRaw(FileWriter* writer, NameMatcher* matcher) {
+        std::string namestr = ExtractedFileName(writer->NextFileNumber(),
+                                                type(), true);
+        auto name = namestr.c_str();
+        if (matcher->Matches(name, true)) {
+            if (type() == ZBI_TYPE_CMDLINE) {
+                // Drop a trailing NUL.
+                iovec iov = payload_.back();
+                auto str = static_cast<const char*>(iov.iov_base);
+                if (str[iov.iov_len - 1] == '\0') {
+                    payload_.pop_back();
+                    --iov.iov_len;
+                    payload_.push_back(iov);
+                }
+            }
+            if (AlreadyCompressed()) {
+                auto uncompressed = CreateFromCompressed(*this);
+                // The uncompressed item must outlive the OutputStream.
+                auto out = writer->RawFile(name);
+                uncompressed->StreamRawPayload(&out);
+            } else {
+                auto out = writer->RawFile(name);
+                StreamRawPayload(&out);
+            }
+        }
+    }
+
+    template<typename ItemList>
+    static void WriteZBI(FileWriter* writer, const char* name,
+                         const ItemList& items) {
+        auto out = writer->RawFile(name);
+
+        uint32_t header_start = out.PlaceHeader();
+        uint32_t payload_start = out.WritePosition();
+        assert(Aligned(payload_start));
+
+        for (const auto& item : items) {
+            // The OutputStream stores pointers into Item buffers in its write
+            // queue until it goes out of scope below.  The ItemList keeps all
+            // the items alive past then.
+            item->Stream(&out);
+        }
+
+        const zbi_header_t header = {
+            ZBI_TYPE_CONTAINER,                  // type
+            out.WritePosition() - payload_start, // length
+            ZBI_CONTAINER_MAGIC,                 // extra
+            ZBI_FLAG_VERSION,                    // flags
+            0,                                   // reserved0
+            0,                                   // reserved1
+            ZBI_ITEM_MAGIC,                      // magic
+            ZBI_ITEM_NO_CRC32,                   // crc32
+        };
+        assert(Aligned(header.length));
+        out.PatchHeader(header, header_start);
+    }
+
+    void AppendPayload(std::string* buffer) const {
+        if (AlreadyCompressed()) {
+            CreateFromCompressed(*this)->AppendPayload(buffer);
+        } else {
+            for (const auto& iov : payload_) {
+                buffer->append(static_cast<const char*>(iov.iov_base),
+                               iov.iov_len);
+            }
+        }
+    }
+
 private:
     zbi_header_t header_;
     std::list<const iovec> payload_;
@@ -1194,6 +1373,26 @@ private:
     std::forward_list<FileContents> files_;
     std::forward_list<std::unique_ptr<uint8_t[]>> buffers_;
     const bool compress_;
+
+    struct ItemTypeInfo {
+        uint32_t type;
+        const char* name;
+        const char* extension;
+    };
+    static constexpr const ItemTypeInfo kItemTypes_[] = {
+#define kITemTypes_Element(type, name, extension) {type, name, extension},
+    ZBI_ALL_TYPES(kITemTypes_Element)
+#undef kitemtypes_element
+};;
+
+    static constexpr ItemTypeInfo ItemTypeInfo(uint32_t zbi_type) {
+        for (const auto& t : kItemTypes_) {
+            if (t.type == zbi_type) {
+                return t;
+            }
+        }
+        return {};
+    }
 
     static constexpr zbi_header_t NewHeader(uint32_t type, uint32_t size) {
         return {
@@ -1395,27 +1594,6 @@ private:
         return status;
     }
 
-    template<typename Extractor>
-    bool ExtractBootFS(Extractor& extract) {
-        assert(!AlreadyCompressed());
-        BootFSDirectoryIterator dir;
-        int status = BootFSDirectoryIterator::Create(this, &dir);
-        if (status != 0) {
-            exit(status);
-        }
-        bool keepalive = false;
-        for (const auto& entry : dir) {
-            if (!CheckBootFSDirent(entry, false)) {
-                exit(1);
-            }
-            const FileContents file(entry, payload_data());
-            if (extract(entry.name, &file)) {
-                keepalive = true;
-            }
-        }
-        return keepalive;
-    }
-
     class BootFSInputFileGenerator : public InputFileGenerator {
     public:
         explicit BootFSInputFileGenerator(ItemPtr item) :
@@ -1451,6 +1629,8 @@ private:
         BootFSDirectoryIterator dir_;
     };
 };
+
+constexpr decltype(Item::kItemTypes_) Item::kItemTypes_;
 
 using ItemList = std::vector<ItemPtr>;
 
@@ -1511,80 +1691,100 @@ const char* IncompleteImage(const ItemList& items, const uint32_t image_arch) {
     return nullptr;
 }
 
-constexpr const char kOptString[] = "-B:cd:e:xX:R:g:hto:p:sT:uv";
+constexpr const char kOptString[] = "-B:cd:e:FxXRg:hto:p:sT:uv";
 constexpr const option kLongOpts[] = {
     {"complete", required_argument, nullptr, 'B'},
     {"compressed", no_argument, nullptr, 'c'},
     {"depfile", required_argument, nullptr, 'd'},
     {"entry", required_argument, nullptr, 'e'},
+    {"files", no_argument, nullptr, 'F'},
     {"extract", no_argument, nullptr, 'x'},
-    {"extract-item", required_argument, nullptr, 'X'},
-    {"extract-raw", required_argument, nullptr, 'R'},
+    {"extract-items", no_argument, nullptr, 'X'},
+    {"extract-raw", no_argument, nullptr, 'R'},
     {"groups", required_argument, nullptr, 'g'},
     {"help", no_argument, nullptr, 'h'},
     {"list", no_argument, nullptr, 't'},
     {"output", required_argument, nullptr, 'o'},
     {"prefix", required_argument, nullptr, 'p'},
     {"sort", no_argument, nullptr, 's'},
-    {"target", required_argument, nullptr, 'T'},
+    {"type", required_argument, nullptr, 'T'},
     {"uncompressed", no_argument, nullptr, 'u'},
     {"verbose", no_argument, nullptr, 'v'},
     {nullptr, no_argument, nullptr, 0},
 };
 
-void usage(const char* progname) {
-    fprintf(stderr, "\
-Usage: %s {--output=FILE | -o FILE} [--depfile=FILE | -d FILE] ...\n\
-       %s {--list | -t} ...\n\
-       %s {--extract | -x} ...\n\
-       %s {--extract-item=N | -X N} ...\n\
-       %s {--extract-raw=N | -R N} ...\n\
+constexpr const char kUsageFormatString[] = "\
+Usage: %s [OUTPUT...] INPUT... [-- PATTERN...]\n\
 \n\
-Remaining arguments are interpersed switches and input files:\n\
+Diagnostic switches:\n\
     --help, -h                     print this message\n\
+    --list, -t                     list input ZBI item headers; no --output\n\
+    --verbose, -v                  show contents (e.g. BOOTFS file names)\n\
+    --extract, -x                  extract BOOTFS files\n\
+    --extract-items, -X            extract items as pseudo-files (see below)\n\
+    --extract-raw, -R              extract original payloads, not ZBI format\n\
+\n\
+Output file switches must come before input arguments:\n\
     --output=FILE, -o FILE         output file name\n\
     --depfile=FILE, -d FILE        makefile dependency output file name\n\
-    --list, -t                     list input ZBI item headers\n\
-    --verbose, -v                  show item contents\n\
-    --complete=ARCH, -B ARCH       verify result is a complete boot image\n\
+\n\
+The `--output` FILE is always removed and created fresh after all input\n\
+files have been opened.  So it is safe to use the same file name as an input\n\
+file and the `--output` FILE, to append more items.\n\
+\n\
+Input control switches apply to subsequent input arguments:\n\
+    --files, -F                    read BOOTFS manifest files (default)\n\
     --groups=GROUPS, -g GROUPS     comma-separated list of manifest groups\n\
-    --compressed, -c               compress BOOTFS/RAMDISK images (default)\n\
-    --uncompressed, -u             do not compress BOOTFS/RAMDISK images\n\
-    --sort, -s                     sort BOOTFS entries by name\n\
-    --target=boot, -T boot         BOOTFS to be unpacked at /boot (default)\n\
-    --target=cmdline, -T cmdline   input files are kernel command line text\n\
-    --target=ramdisk, -T ramdisk   input files are raw RAMDISK images\n\
-    --target=zbi, -T zbi           input files must be ZBI files\n\
     --prefix=PREFIX, -p PREFIX     prepend PREFIX/ to target file names\n\
-    --entry=LINE, -e LINE          like an input file containing only LINE\n\
+    --type=TYPE, -T TYPE           input files are TYPE items (see below)\n\
+    --compressed, -c               compress RAMDISK images (default)\n\
+    --uncompressed, -u             do not compress RAMDISK images\n\
+\n\
+Input arguments:\n\
+    --entry=TEXT, -e  TEXT         like an input file containing only TEXT\n\
     FILE                           input or manifest file\n\
-    DIRECTORY                      directory tree into BOOTFS at PREFIX/\n\
+    DIRECTORY                      directory tree copied to BOOTFS PREFIX/\n\
 \n\
-The first three forms can be followed by -- PATTERN... to restrict the\n\
-BOOTFS to a subset of the files in the input, matched by target name.\n\
-PATTERN is a shell filename pattern where * matches regardless of /.\n\
-\n\
-Each `--target` or `-T` switch affects subsequent FILE arguments.\n\
-With `--target=boot` (or no switch), files with ZBI_TYPE_CONTAINER headers\n\
-are incomplete boot files; other files are taken to be manifest files.\n\
+With `--files` or `-F` (the default state), files with ZBI_TYPE_CONTAINER\n\
+headers are incomplete boot files and other files are BOOTFS manifest files.\n\
 Each DIRECTORY is listed recursively and handled just like a manifest file\n\
 using the path relative to DIRECTORY as the target name (before any PREFIX).\n\
 Each `--group`, `--prefix`, `-g`, or `-p` switch affects each file from a\n\
 manifest or directory in subsequent FILE or DIRECTORY arguments.\n\
-All the BOOTFS files from all manifest entries and directories go into a\n\
-single BOOTFS item and only the last `--compressed` or `--uncompressed`\n\
-switch affects that, but `--target=ramdisk` input files are affected by\n\
-the most recently preceding `--compressed` or `--uncompressed` switch.\n\
 \n\
-With `--extract-item` or `-X`, skip the first N items and then write out the\n\
-next item alone into a fresh ZBI file.\n\
-With `--extract-raw` or `-R`, write decompressed payload with no header.\n\
+With `--type` or `-T`, input files are treated as TYPE instead of manifest\n\
+files, and directories are not permitted.  See below for the TYPE strings.\n\
 \n\
-With `--extract` or `-x`, extract files from BOOTFS images into local files\n\
-named by prepending PREFIX/ to each target file name.  By default\n\
-all files are extracted.\n\
-",
-            progname, progname, progname, progname, progname);
+Format control switches (last switch affects all output):\n\
+    --complete=ARCH, -B ARCH       verify result is a complete boot image\n\
+    --compressed, -c               compress BOOTFS images (default)\n\
+    --uncompressed, -u             do not compress BOOTFS images\n\
+    --sort, -s                     sort BOOTFS entries by name\n\
+\n\
+In all cases there is only a single BOOTFS item (if any) written out.\n\
+The BOOTFS image contains all files from BOOTFS items in ZBI input files,\n\
+manifest files, directories, and `--entry` switches (in input order unless\n\
+`--sort` was specified).\n\
+\n\
+Arguments after -- are shell filename patterns (* matches even /)\n\
+to filter the files that will be packed into BOOTFS, extracted, or listed.\n\
+\n\
+When extracting a single file, `--output` or `-o` can be used.\n\
+Otherwise multiple files are created with their BOOTFS file names\n\
+relative to PREFIX (default empty, so in the current directory).\n\
+\n\
+With `--extract-items` or `-X`, instead of BOOTFS files the names are\n\
+synthesized as shown below, numbered in the order items appear in the input\n\
+starting with 001.  Output files are ZBI files that can be input later.\n\
+\n\
+With `--extract-raw` or `-R`, each file is written with just the\n\
+uncompressed payload of the item and no ZBI headers.\n\
+\n\
+";
+
+void usage(const char* progname) {
+    fprintf(stderr, kUsageFormatString, progname);
+    Item::PrintTypeUsage(stderr);
 }
 
 }  // anonymous namespace
@@ -1595,25 +1795,18 @@ int main(int argc, char** argv) {
     const char* outfile = nullptr;
     const char* depfile = nullptr;
     uint32_t complete_arch = kImageArchUndefined;
-    uint32_t target = ZBI_TYPE_STORAGE_BOOTFS;
+    bool input_manifest = true;
+    uint32_t input_type = ZBI_TYPE_DISCARD;
     bool compressed = true;
+    bool extract = false;
+    bool extract_items = false;
+    bool extract_raw = false;
     bool list_contents = false;
     bool sort = false;
     bool verbose = false;
     ItemList items;
     InputFileGeneratorList bootfs_input;
     std::string prefix;
-
-    bool extract_files = false;
-    int extract_item = -1, extract_raw = -1;
-    auto check_extract_switch = [&]() {
-        if (extract_files || extract_item != -1 || extract_raw != -1) {
-            fprintf(stderr, "\
-only one --extract (-x), --extract-item (-X), --extract-raw (-R)\n");
-            exit(1);
-        }
-    };
-
     int opt;
     while ((opt = getopt_long(argc, argv,
                               kOptString, kLongOpts, nullptr)) != -1) {
@@ -1652,18 +1845,15 @@ only one --extract (-x), --extract-item (-X), --extract-raw (-R)\n");
             opener.Init(outfile, depfile);
             continue;
 
+        case 'F':
+            input_manifest = true;
+            continue;
+
         case 'T':
-            if (!strcmp(optarg, "boot")) {
-                target = ZBI_TYPE_STORAGE_BOOTFS;
-            } else if (!strcmp(optarg, "cmdline")) {
-                target = ZBI_TYPE_CMDLINE;
-            } else if (!strcmp(optarg, "ramdisk")) {
-                target = ZBI_TYPE_STORAGE_RAMDISK;
-            } else if (!strcmp(optarg, "zbi")) {
-                target = ZBI_TYPE_CONTAINER;
+            if (Item::ParseTypeName(optarg, &input_type)) {
+                input_manifest = false;
             } else {
-                fprintf(stderr, "\
---target requires boot, system, ramdisk, or zbi\n");
+                fprintf(stderr, "unrecognized type: %s\n", optarg);
                 exit(1);
             }
             continue;
@@ -1723,46 +1913,35 @@ only one --extract (-x), --extract-item (-X), --extract-raw (-R)\n");
             sort = true;
             continue;
 
-        case 'X':;
-            check_extract_switch();
-            extract_item = atoi(optarg);
-            if (extract_item < 0) {
-                fprintf(stderr, "item number must be nonnegative\n");
-                exit(1);
-            }
+        case 'x':
+            extract = true;
+            continue;
+
+        case 'X':
+            extract = true;
+            extract_items = true;
             continue;
 
         case 'R':
-            check_extract_switch();
-            extract_raw = atoi(optarg);
-            if (extract_raw < 0) {
-                fprintf(stderr, "item number must be nonnegative\n");
-                exit(1);
-            }
-            continue;
-
-        case 'x':
-            check_extract_switch();
-            extract_files = true;
+            extract = true;
+            extract_items = true;
+            extract_raw = true;
             continue;
 
         case 'e':
-            switch (target) {
-            case  ZBI_TYPE_CONTAINER:
-                fprintf(stderr, "cannot use --entry (-e) with --target=zbi\n");
-                exit(1);
-            case ZBI_TYPE_STORAGE_BOOTFS:
+            if (input_manifest) {
                 bootfs_input.emplace_back(
                     new ManifestInputFileGenerator(FileContents(optarg, false),
                                                    prefix, &filter));
-                break;
-            default:
+            } else if (input_type == ZBI_TYPE_CONTAINER) {
+                fprintf(stderr,
+                        "cannot use --entry (-e) with --target=CONTAINER\n");
+                exit(1);
+            } else {
                 items.push_back(
                     Item::CreateFromFile(
-                        FileContents(optarg, target == ZBI_TYPE_CMDLINE),
-                        target,
-                        compressed && target == ZBI_TYPE_STORAGE_RAMDISK));
-                break;
+                        FileContents(optarg, input_type == ZBI_TYPE_CMDLINE),
+                        input_type, compressed));
             }
             continue;
 
@@ -1776,15 +1955,17 @@ only one --extract (-x), --extract-item (-X), --extract-raw (-R)\n");
         struct stat st;
         auto fd = opener.Open(optarg, &st);
 
-        // A directory populates the BOOTFS according to --prefix.
-        if (target == ZBI_TYPE_STORAGE_BOOTFS && S_ISDIR(st.st_mode)) {
-            std::string prefix(optarg);
-            if (prefix.back() != '/') {
-                prefix.push_back('/');
+        // A directory populates the BOOTFS.
+        if (input_manifest && S_ISDIR(st.st_mode)) {
+            // Calculate the prefix for opening files within the directory.
+            // This won't be part of the BOOTFS file name.
+            std::string dir_prefix(optarg);
+            if (dir_prefix.back() != '/') {
+                dir_prefix.push_back('/');
             }
             bootfs_input.emplace_back(
                 new DirectoryInputFileGenerator(std::move(fd),
-                                                std::move(prefix)));
+                                                std::move(dir_prefix)));
             continue;
         }
 
@@ -1792,80 +1973,45 @@ only one --extract (-x), --extract-item (-X), --extract-raw (-R)\n");
         RequireRegularFile(st, optarg);
         auto file = FileContents::Map(std::move(fd), st, optarg);
 
-        if (target == ZBI_TYPE_STORAGE_RAMDISK) {
-            // Under --target=ramdisk, any input file is a raw image.
-            items.push_back(Item::CreateFromFile(std::move(file),
-                                                 ZBI_TYPE_STORAGE_RAMDISK,
-                                                 compressed));
-        } else if (target == ZBI_TYPE_CMDLINE) {
-            // Under --target=cmdline, any input file is a cmdline fragment.
-            items.push_back(Item::CreateFromFile(std::move(file),
-                                                 ZBI_TYPE_CMDLINE,
-                                                 false));
-        } else if (ImportFile(file, optarg, &items)) {
-            // It's another file in ZBI format.  The last item will own
-            // the file buffer, so it lives until all earlier items are
-            // exhausted.
-            items.back()->OwnFile(std::move(file));
-        } else if (target == ZBI_TYPE_CONTAINER) {
-            fprintf(stderr, "%s: not a Zircon Boot container\n", optarg);
-            exit(1);
+        if (input_manifest || input_type == ZBI_TYPE_CONTAINER) {
+            if (ImportFile(file, optarg, &items)) {
+                // It's another file in ZBI format.  The last item will own
+                // the file buffer, so it lives until all earlier items are
+                // exhausted.
+                items.back()->OwnFile(std::move(file));
+            } else if (input_manifest) {
+                // It must be a manifest file.
+                bootfs_input.emplace_back(
+                    new ManifestInputFileGenerator(std::move(file),
+                                                   prefix, &filter));
+            } else {
+                fprintf(stderr, "%s: not a Zircon Boot container\n", optarg);
+                exit(1);
+            }
         } else {
-            // It must be a manifest file.
-            bootfs_input.emplace_back(
-                new ManifestInputFileGenerator(std::move(file),
-                                               prefix, &filter));
+            items.push_back(Item::CreateFromFile(std::move(file),
+                                                 input_type, compressed));
         }
     }
 
-    auto extract_index = std::max(extract_item, extract_raw);
-    if (extract_index != -1 &&
-        static_cast<size_t>(extract_index) >= items.size()) {
-        fprintf(stderr, "cannot extract item %d of %zu\n",
-                std::max(extract_item, extract_raw), items.size());
-        exit(1);
-    }
+    // Remaining arguments (after --) are patterns for matching file names.
+    NameMatcher name_matcher(argv, optind, argc);
 
-    if (optind < argc && extract_index != -1) {
-        fprintf(stderr, "\
-arguments after -- unused with --extract-item (-X) or --extract-raw (-R)\n");
-        exit(1);
-    }
-
-    // Predicate to apply the -- PATTERN... filter.
-    unsigned int file_count = 0, extract_count = 0;
-    const auto file_matches = [&file_count, &extract_count,
-                               start=&argv[optind],
-                               stop=&argv[argc]](const char* name) {
-        ++file_count;
-        bool extract = start == stop;
-        if (!extract) {
-            auto matches_pattern = [name](const char* pattern) {
-                return fnmatch(pattern, name, 0) == 0;
-            };
-            extract = std::any_of(start, stop, matches_pattern);
-        }
-        if (extract) {
-            ++extract_count;
-        }
-        return extract;
-    };
-
-    if (list_contents || extract_files) {
+    if (list_contents) {
         if (outfile || depfile) {
             fprintf(stderr, "\
-no output file or depfile with --list (-t) or --extract (-x)\n");
+--output (-o) and --depfile (-d) are incompatible with --list (-t)\n");
             exit(1);
         }
     } else {
-        if (!outfile && extract_item == -1 && extract_raw == -1) {
+        if (!outfile && !extract) {
             fprintf(stderr, "no output file\n");
             exit(1);
         }
     }
 
     // Don't merge incoming items when only listing or extracting.
-    const bool merge = !list_contents && !extract_files && extract_index == -1;
+    const bool merge = !list_contents && !extract;
 
     auto is_bootfs = [](const ItemPtr& item) {
         return item->type() == ZBI_TYPE_STORAGE_BOOTFS;
@@ -1874,7 +2020,7 @@ no output file or depfile with --list (-t) or --extract (-x)\n");
     // If there are multiple BOOTFS input items, or any BOOTFS items when
     // we're also creating a fresh BOOTFS, merge them all into the new one.
     const bool merge_bootfs =
-        (optind < argc ||
+        ((!extract_items && !name_matcher.MatchesAll()) ||
          ((merge || !bootfs_input.empty()) &&
           ((bootfs_input.empty() ? 0 : 1) +
            std::count_if(items.begin(), items.end(), is_bootfs)) > 1));
@@ -1928,8 +2074,9 @@ no output file or depfile with --list (-t) or --extract (-x)\n");
     if (!bootfs_input.empty()) {
         // Pack up the BOOTFS.
         items.push_back(
-            Item::CreateBootFS(&opener, bootfs_input, file_matches,
-                               sort, prefix, compressed));
+            Item::CreateBootFS(&opener, bootfs_input, [&](const char* name) {
+                    return extract_items || name_matcher.Matches(name);
+                }, sort, prefix, compressed));
     }
 
     if (items.empty()) {
@@ -1962,124 +2109,57 @@ no output file or depfile with --list (-t) or --extract (-x)\n");
         }
     }
 
-    // Write an extracted file out to disk.
-    auto extract_file = [&](const char* target, const FileContents* file) {
-        if (file_matches(target)) {
-            auto name = prefix + target;
-            MakeDirs(name);
-            fbl::unique_fd fd(open(name.c_str(),
-                                   O_WRONLY | O_CREAT | O_TRUNC, 0666));
-            if (!fd) {
-                fprintf(stderr, "cannot create %s: %s\n",
-                        name.c_str(), strerror(errno));
-                exit(1);
+    // Now we're ready to start writing output!
+    FileWriter writer(outfile, std::move(prefix));
+
+    if (list_contents || verbose || extract) {
+        if (list_contents || verbose) {
+            const char* incomplete = IncompleteImage(items, complete_arch);
+            if (incomplete) {
+                printf("INCOMPLETE: %s\n", incomplete);
             } else {
-                OutputStream out(std::move(fd));
-                out.Write(file->View(0, file->exact_size()));
+                puts("COMPLETE: bootable image");
             }
         }
-        return false;
-    };
 
-    auto do_extract = [&](Item& item) {
-        auto keepalive = item.ExtractFiles(extract_file);
-        assert(!keepalive);
-    };
-
-    if (list_contents || verbose) {
-        const char* incomplete = IncompleteImage(items, complete_arch);
-        if (incomplete) {
-            printf("INCOMPLETE: %s\n", incomplete);
-        } else {
-            puts("COMPLETE: bootable image");
-        }
         // Contents start after the ZBI_TYPE_CONTAINER header.
         uint32_t pos = sizeof(zbi_header_t);
         int status = 0;
         for (auto& item : items) {
-            item->Describe(pos);
-            pos += item->TotalSize();
+            if (list_contents || verbose) {
+                item->Describe(pos);
+            }
             if (verbose) {
                 status |= item->Show();
             }
-            // If being verbose, extract files after listing each item.
-            if (extract_files) {
-                do_extract(*item);
+            pos += item->TotalSize();
+            if (extract_items) {
+                if (extract_raw) {
+                    item->ExtractRaw(&writer, &name_matcher);
+                } else {
+                    item->ExtractItem(&writer, &name_matcher);
+                }
+            } else if (extract && is_bootfs(item)) {
+                auto generator = Item::ReadBootFS(std::move(item));
+                InputFileGenerator::value_type next;
+                while (generator->Next(&opener, prefix, &next)) {
+                    if (name_matcher.Matches(next.target.c_str())) {
+                        writer.RawFile(next.target.c_str())
+                            .Write(next.file.View(0, next.file.exact_size()));
+                    }
+                }
             }
         }
         if (status) {
             exit(status);
         }
-    } else if (extract_files) {
-        // If not being verbose, just extract BOOTFS files.
-        for (auto& item : items) {
-            do_extract(*item);
-        }
+    } else {
+        Item::WriteZBI(&writer, "boot.zbi", items);
     }
 
-    if (extract_files || optind < argc) {
-        // All done except for the gloating.
-        if (file_count == 0) {
-            fprintf(stderr, "no BOOTFS files found\n");
-            exit(1);
-        } else if (extract_count == 0) {
-            fprintf(stderr, "no BOOTFS files matched\n");
-            exit(1);
-        } else if (verbose) {
-            printf("extracted %u of %u BOOTFS files\n",
-                   extract_count, file_count);
-        }
-    }
-
-    if (!extract_files) {
-        // Now stream the output.
-
-        fbl::unique_fd outfd;
-        if (outfile) {
-            outfd.reset(open(outfile, O_WRONLY | O_CREAT | O_TRUNC, 0666));
-            if (!outfd) {
-                perror(outfile);
-                exit(1);
-            }
-        } else if (extract_index != -1) {
-            // --extract-item or --extract-raw with no --output goes to stdout.
-            outfd.reset(STDOUT_FILENO);
-        }
-
-        if (outfd) {
-            OutputStream out(std::move(outfd));
-            if (extract_raw == -1) {
-                uint32_t header_start = out.PlaceHeader();
-                uint32_t payload_start = out.WritePosition();
-                assert(Aligned(payload_start));
-                if (extract_item == -1) {
-                    for (const auto& item : items) {
-                        // The OutputStream stores pointers into Item
-                        // buffers in its write queue until it goes out of
-                        // scope below.  The ItemList keeps all the items
-                        // alive past then.
-                        item->Stream(&out);
-                    }
-                } else {
-                    items[extract_item]->Stream(&out);
-                }
-                const zbi_header_t header = {
-                    ZBI_TYPE_CONTAINER,                  // type
-                    out.WritePosition() - payload_start, // length
-                    ZBI_CONTAINER_MAGIC,                 // extra
-                    ZBI_FLAG_VERSION,                    // flags
-                    0,                                   // reserved0
-                    0,                                   // reserved1
-                    ZBI_ITEM_MAGIC,                      // magic
-                    ZBI_ITEM_NO_CRC32,                   // crc32
-                };
-                assert(Aligned(header.length));
-                out.PatchHeader(header, header_start);
-            } else {
-                items[extract_raw]->StreamPayload(&out);
-            }
-        }
-    }
+    name_matcher.Summary(extract ? "extracted" : "matched",
+                         extract_items ? "boot items" : "BOOTFS files",
+                         verbose);
 
     return 0;
 }
