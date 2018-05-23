@@ -9,10 +9,13 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/aml-fanctl.c \
+    $(LOCAL_DIR)/aml-thermal.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 
 MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
+
+MODULE_HEADER_DEPS := \
+    system/dev/lib/amlogic
 
 include make/module.mk
