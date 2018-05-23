@@ -33,8 +33,8 @@ void Resource::EnqueueCreateResourceCommand(ResourceId resource_id,
 
 void Resource::EnqueueImportResourceCommand(ResourceId resource_id,
                                             zx::eventpair token,
-                                            gfx::ImportSpec spec) const {
-  gfx::ImportResourceCommand import_resource;
+                                            fuchsia::ui::gfx::ImportSpec spec) const {
+  fuchsia::ui::gfx::ImportResourceCommand import_resource;
   import_resource.id = resource_id;
   import_resource.token = std::move(token);
   import_resource.spec = spec;
@@ -137,11 +137,11 @@ ImportNode::ImportNode(Canvas* canvas, scenic_lib::EntityNode& export_node)
     : Resource(canvas) {
   zx::eventpair token;
   export_node.ExportAsRequest(&token);
-  EnqueueImportResourceCommand(id(), std::move(token), gfx::ImportSpec::NODE);
+  EnqueueImportResourceCommand(id(), std::move(token), fuchsia::ui::gfx::ImportSpec::NODE);
 }
 
 void ImportNode::AddChild(const Resource& child) const {
-  gfx::AddChildCommand add_child;
+  fuchsia::ui::gfx::AddChildCommand add_child;
   add_child.child_id = child.id();
   add_child.node_id = id();
   sketchy::Command command;

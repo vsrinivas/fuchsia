@@ -44,7 +44,7 @@ class Node : public Resource {
   bool SetAnchor(const escher::vec3& anchor);
   bool SetAnchor(Vector3VariablePtr anchor);
   bool SetClipToSelf(bool clip_to_self);
-  bool SetHitTestBehavior(::gfx::HitTestBehavior behavior);
+  bool SetHitTestBehavior(::fuchsia::ui::gfx::HitTestBehavior behavior);
 
   const escher::mat4& GetGlobalTransform() const;
 
@@ -54,13 +54,13 @@ class Node : public Resource {
   const escher::quat& rotation() const { return transform_.rotation; }
   const escher::vec3& anchor() const { return transform_.anchor; }
   bool clip_to_self() const { return clip_to_self_; }
-  ::gfx::HitTestBehavior hit_test_behavior() const {
+  ::fuchsia::ui::gfx::HitTestBehavior hit_test_behavior() const {
     return hit_test_behavior_;
   }
 
   // The node's metrics as reported to the session listener.
-  ::gfx::Metrics reported_metrics() const { return reported_metrics_; }
-  void set_reported_metrics(::gfx::Metrics metrics) {
+  ::fuchsia::ui::gfx::Metrics reported_metrics() const { return reported_metrics_; }
+  void set_reported_metrics(::fuchsia::ui::gfx::Metrics metrics) {
     reported_metrics_ = metrics;
   }
 
@@ -120,8 +120,8 @@ class Node : public Resource {
   mutable escher::mat4 global_transform_;
   mutable bool global_transform_dirty_ = true;
   bool clip_to_self_ = false;
-  ::gfx::HitTestBehavior hit_test_behavior_ = ::gfx::HitTestBehavior::kDefault;
-  ::gfx::Metrics reported_metrics_;
+  ::fuchsia::ui::gfx::HitTestBehavior hit_test_behavior_ = ::fuchsia::ui::gfx::HitTestBehavior::kDefault;
+  ::fuchsia::ui::gfx::Metrics reported_metrics_;
 };
 
 // Inline functions.

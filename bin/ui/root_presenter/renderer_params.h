@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_UI_ROOT_PRESENTER_RENDERER_PARAMS_H_
 #define GARNET_BIN_UI_ROOT_PRESENTER_RENDERER_PARAMS_H_
 
-#include <gfx/cpp/fidl.h>
+#include <fuchsia/ui/gfx/cpp/fidl.h>
 
 #include "lib/fxl/command_line.h"
 
@@ -33,8 +33,8 @@ struct RendererParams {
     T value_;
   };
 
-  OptionalValue<gfx::RenderFrequency> render_frequency;
-  OptionalValue<gfx::ShadowTechnique> shadow_technique;
+  OptionalValue<fuchsia::ui::gfx::RenderFrequency> render_frequency;
+  OptionalValue<fuchsia::ui::gfx::ShadowTechnique> shadow_technique;
   OptionalValue<bool> clipping_enabled;
 };
 

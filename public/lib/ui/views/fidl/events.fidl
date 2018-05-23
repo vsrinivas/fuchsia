@@ -4,6 +4,8 @@
 
 library views;
 
+using fuchsia.ui.gfx;
+
 union Event {
   ViewPropertiesChangedEvent view_properties_changed;
   ChildViewAttachedEvent child_view_attached;
@@ -25,11 +27,11 @@ struct ViewPropertiesChangedEvent {
 
   // The size of the view in logical pixels.
   // Must be non-negative.
-  gfx.BoundingBox size;
+  fuchsia.ui.gfx.BoundingBox size;
 
   // The inset of the view in logical pixels.
   // Must be non-negative.
-  gfx.vec3 inset;
+  fuchsia.ui.gfx.vec3 inset;
 };
 
 // Called when a child view is attached.

@@ -123,9 +123,9 @@ class Presentation : private views_v1::ViewTreeListener,
   void UsePerspectiveView() override;
 
   // |Presentation|
-  void SetRendererParams(::fidl::VectorPtr<gfx::RendererParam> params) override;
+  void SetRendererParams(::fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> params) override;
 
-  void InitializeDisplayModel(gfx::DisplayInfo display_info);
+  void InitializeDisplayModel(fuchsia::ui::gfx::DisplayInfo display_info);
 
   // |Presentation|
   void SetDisplayUsage(presentation::DisplayUsage usage) override;
@@ -163,7 +163,7 @@ class Presentation : private views_v1::ViewTreeListener,
   void CreateViewTree(
       views_v1_token::ViewOwnerPtr view_owner,
       fidl::InterfaceRequest<presentation::Presentation> presentation_request,
-      gfx::DisplayInfo display_info);
+      fuchsia::ui::gfx::DisplayInfo display_info);
 
   // Returns true if the event was consumed and the scene is to be invalidated.
   bool GlobalHooksHandleEvent(const input::InputEvent& event);

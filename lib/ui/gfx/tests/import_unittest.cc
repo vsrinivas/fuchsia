@@ -48,7 +48,7 @@ TEST_F(ImportTest, ImportsUnlinkedImportViaCommand) {
 
   // Apply the import command.
   ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCommand(
-      1 /* import resource ID */, ::gfx::ImportSpec::NODE, /* spec */
+      1 /* import resource ID */, ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
       std::move(destination))                              /* endpoint */
                     ));
 
@@ -65,7 +65,7 @@ TEST_F(ImportTest, ImportsUnlinkedImportViaCommand) {
   ASSERT_EQ(nullptr, import_node->imported_resource());
 
   // Import specs should match.
-  ASSERT_EQ(::gfx::ImportSpec::NODE, import_node->import_spec());
+  ASSERT_EQ(::fuchsia::ui::gfx::ImportSpec::NODE, import_node->import_spec());
 }
 
 TEST_F(ImportTest, PerformsFullLinking) {
@@ -77,7 +77,7 @@ TEST_F(ImportTest, PerformsFullLinking) {
   {
     // Apply the import command.
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCommand(
-        1 /* import resource ID */, ::gfx::ImportSpec::NODE, /* spec */
+        1 /* import resource ID */, ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
         std::move(destination))                              /* endpoint */
                       ));
 
@@ -97,7 +97,7 @@ TEST_F(ImportTest, PerformsFullLinking) {
     ASSERT_EQ(nullptr, import_node->imported_resource());
 
     // Import specs should match.
-    ASSERT_EQ(::gfx::ImportSpec::NODE, import_node->import_spec());
+    ASSERT_EQ(::fuchsia::ui::gfx::ImportSpec::NODE, import_node->import_spec());
   }
 
   // Perform the export
@@ -124,7 +124,7 @@ TEST_F(ImportTest, PerformsFullLinking) {
     ASSERT_NE(nullptr, import_node->imported_resource());
 
     // Import specs should match.
-    ASSERT_EQ(::gfx::ImportSpec::NODE, import_node->import_spec());
+    ASSERT_EQ(::fuchsia::ui::gfx::ImportSpec::NODE, import_node->import_spec());
 
     // Check that it was bound to the right object.
     ASSERT_NE(nullptr, import_node->imported_resource());
@@ -170,7 +170,7 @@ TEST_F(ImportTest, HandlesDeadDestinationHandle) {
   // Import an entity node with a dead handle.
   ASSERT_TRUE(Apply(scenic_lib::NewCreateEntityNodeCommand(1)));
   EXPECT_FALSE(Apply(scenic_lib::NewImportResourceCommand(
-      1 /* resource id */, ::gfx::ImportSpec::NODE,
+      1 /* resource id */, ::fuchsia::ui::gfx::ImportSpec::NODE,
       std::move(destination_out))));
 }
 
@@ -186,7 +186,7 @@ TEST_F(ImportTest, DestroyingExportedResourceSendsEvent) {
   EXPECT_TRUE(
       Apply(scenic_lib::NewExportResourceCommand(node_id, std::move(source))));
   EXPECT_TRUE(Apply(scenic_lib::NewImportResourceCommand(
-      import_node, ::gfx::ImportSpec::NODE, std::move(destination))));
+      import_node, ::fuchsia::ui::gfx::ImportSpec::NODE, std::move(destination))));
 
   // Release the entity node.
   EXPECT_TRUE(Apply(scenic_lib::NewReleaseResourceCommand(node_id)));
@@ -199,7 +199,7 @@ TEST_F(ImportTest, DestroyingExportedResourceSendsEvent) {
   EXPECT_EQ(1u, events_.size());
   fuchsia::ui::scenic::Event event = std::move(events_[0]);
   EXPECT_EQ(fuchsia::ui::scenic::Event::Tag::kGfx, event.Which());
-  EXPECT_EQ(::gfx::Event::Tag::kImportUnbound, event.gfx().Which());
+  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kImportUnbound, event.gfx().Which());
   ASSERT_EQ(import_node, event.gfx().import_unbound().resource_id);
 }
 
@@ -220,7 +220,7 @@ TEST_F(ImportTest, ImportingNodeAfterDestroyingExportedResourceSendsEvent) {
 
   // Try to import after the entity node has been released.
   EXPECT_TRUE(Apply(scenic_lib::NewImportResourceCommand(
-      import_node, ::gfx::ImportSpec::NODE, std::move(destination))));
+      import_node, ::fuchsia::ui::gfx::ImportSpec::NODE, std::move(destination))));
 
   // Run the message loop until we get an event.
   ASSERT_TRUE(
@@ -230,7 +230,7 @@ TEST_F(ImportTest, ImportingNodeAfterDestroyingExportedResourceSendsEvent) {
   EXPECT_EQ(1u, events_.size());
   fuchsia::ui::scenic::Event event = std::move(events_[0]);
   EXPECT_EQ(fuchsia::ui::scenic::Event::Tag::kGfx, event.Which());
-  EXPECT_EQ(::gfx::Event::Tag::kImportUnbound, event.gfx().Which());
+  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kImportUnbound, event.gfx().Which());
   ASSERT_EQ(import_node, event.gfx().import_unbound().resource_id);
 }
 
@@ -253,7 +253,7 @@ TEST_F(ImportThreadedTest, KillingImportedResourceEvictsFromResourceLinker) {
 
     // Apply the import command.
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCommand(
-        1 /* import resource ID */, ::gfx::ImportSpec::NODE, /* spec */
+        1 /* import resource ID */, ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
         std::move(destination))                              /* endpoint */
                       ));
 
@@ -274,7 +274,7 @@ TEST_F(ImportThreadedTest, KillingImportedResourceEvictsFromResourceLinker) {
     ASSERT_EQ(nullptr, import_node->imported_resource());
 
     // Import specs should match.
-    ASSERT_EQ(::gfx::ImportSpec::NODE, import_node->import_spec());
+    ASSERT_EQ(::fuchsia::ui::gfx::ImportSpec::NODE, import_node->import_spec());
 
     // Release the import resource.
     ASSERT_TRUE(Apply(
@@ -343,7 +343,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie1) {
 
     // Apply the import command.
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCommand(
-        import_node_id, ::gfx::ImportSpec::NODE, /* spec */
+        import_node_id, ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
         CopyEventPair(destination))              /* endpoint */
                       ));
     auto import_node = FindResource<Import>(import_node_id);
@@ -448,7 +448,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie2) {
 
     // Apply the import command.
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCommand(
-        import_node_id, ::gfx::ImportSpec::NODE, /* spec */
+        import_node_id, ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
         CopyEventPair(destination))              /* endpoint */
                       ));
     auto import_node = FindResource<Import>(import_node_id);
@@ -555,7 +555,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie3) {
 
     // Apply the import command.
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCommand(
-        import_node_id, ::gfx::ImportSpec::NODE, /* spec */
+        import_node_id, ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
         CopyEventPair(destination1))             /* endpoint */
                       ));
     auto import_node = FindResource<Import>(import_node_id);
@@ -681,11 +681,11 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
 
     // Apply the import commands.
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCommand(
-        import_node_id1, ::gfx::ImportSpec::NODE, /* spec */
+        import_node_id1, ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
         CopyEventPair(destination1))              /* endpoint */
                       ));
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCommand(
-        import_node_id2, ::gfx::ImportSpec::NODE, /* spec */
+        import_node_id2, ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
         CopyEventPair(destination1))              /* endpoint */
                       ));
     auto import_node1 = FindResource<Import>(import_node_id1);
@@ -776,7 +776,7 @@ TEST_F(ImportTest,
 
   // Apply the import command.
   ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCommand(
-      1 /* import resource ID */, ::gfx::ImportSpec::NODE, /* spec */
+      1 /* import resource ID */, ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
       std::move(destination))                              /* endpoint */
                     ));
 
@@ -796,7 +796,7 @@ TEST_F(ImportTest,
     ASSERT_EQ(nullptr, import_node->imported_resource());
 
     // Import specs should match.
-    ASSERT_EQ(::gfx::ImportSpec::NODE, import_node->import_spec());
+    ASSERT_EQ(::fuchsia::ui::gfx::ImportSpec::NODE, import_node->import_spec());
   }
 
   // Resolve by the resource owned by the import container.
@@ -820,7 +820,7 @@ TEST_F(ImportTest, UnlinkedImportedResourceCanAcceptCommands) {
 
     // Apply the import command.
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCommand(
-        1 /* import resource ID */, ::gfx::ImportSpec::NODE, /* spec */
+        1 /* import resource ID */, ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
         std::move(destination))                              /* endpoint */
                       ));
 
@@ -837,7 +837,7 @@ TEST_F(ImportTest, UnlinkedImportedResourceCanAcceptCommands) {
     ASSERT_EQ(import_node->imported_resource(), nullptr);
 
     // Import specs should match.
-    ASSERT_EQ(::gfx::ImportSpec::NODE, import_node->import_spec());
+    ASSERT_EQ(::fuchsia::ui::gfx::ImportSpec::NODE, import_node->import_spec());
   }
 
   // Attempt to add an entity node as a child to an unlinked resource.
@@ -861,7 +861,7 @@ TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptCommands) {
   {
     // Apply the import command.
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCommand(
-        1 /* import resource ID */, ::gfx::ImportSpec::NODE, /* spec */
+        1 /* import resource ID */, ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
         std::move(destination))                              /* endpoint */
                       ));
 
@@ -881,7 +881,7 @@ TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptCommands) {
     ASSERT_EQ(nullptr, import_node->imported_resource());
 
     // Import specs should match.
-    ASSERT_EQ(::gfx::ImportSpec::NODE, import_node->import_spec());
+    ASSERT_EQ(::fuchsia::ui::gfx::ImportSpec::NODE, import_node->import_spec());
   }
 
   // Perform the export
@@ -908,7 +908,7 @@ TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptCommands) {
     ASSERT_NE(import_node->imported_resource(), nullptr);
 
     // Import specs should match.
-    ASSERT_EQ(import_node->import_spec(), ::gfx::ImportSpec::NODE);
+    ASSERT_EQ(import_node->import_spec(), ::fuchsia::ui::gfx::ImportSpec::NODE);
   }
 
   // Attempt to add an entity node as a child to an linked resource.
@@ -978,7 +978,7 @@ TEST_F(ImportTest, EmbedderCanEmbedNodesFromElsewhere) {
 
     // Import.
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceCommand(
-        500, ::gfx::ImportSpec::NODE, std::move(import_token))));
+        500, ::fuchsia::ui::gfx::ImportSpec::NODE, std::move(import_token))));
     ASSERT_TRUE(Apply(scenic_lib::NewAddChildCommand(500, 1001)));
   }
 

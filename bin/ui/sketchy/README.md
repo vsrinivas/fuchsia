@@ -21,7 +21,7 @@ This package contains implementation for FIDLs in `//garnet/public/lib/ui/sketch
 To support dynamic sizing, `capacity` is introduced to describe the total size of the buffer, and `size` is used to describe the actual size that is used. Various buffers are introduced to support different use cases:
 
 * `EscherBuffer` wraps around an `escher::Buffer` and is able to grow dynamically when the content grows. It's used to hold data in `StrokePath` as input to `StrokeTessellator`.
-* `SharedBuffer` is shared between `sketchy` and `scenic`: it wraps around an `escher::Buffer` and the corresponding `gfx::Buffer`. It does NOT change size once created.
+* `SharedBuffer` is shared between `sketchy` and `scenic`: it wraps around an `escher::Buffer` and the corresponding `fuchsia::ui::gfx::Buffer`. It does NOT change size once created.
 * `MeshBuffer` wraps around two `ShardBuffer`'s: one for vertex and the other for index. Dynamic sizing is handled here, rather than `SharedBuffer`, to avoid duplicate semantics.
 
 ### Mesh Buffer

@@ -4,7 +4,7 @@
 
 library sketchy;
 
-using gfx;
+using fuchsia.ui.gfx;
 
 union Command {
   // Resource creation and lifecycle.
@@ -31,20 +31,20 @@ union Command {
 
   // Import the specified Scenic resource.  Currently only the following
   // resource types are supported:
-  // - NODE: imported nodes enable the use of ui.gfx.AddChildCommand to insert
+  // - NODE: imported nodes enable the use of ui.fuchsia.ui.gfx.AddChildCommand to insert
   //         stroke-groups into a Scenic scene-graph.
   // - MATERIAL: imported materials can be applied to a stroke-style.
-  gfx.ImportResourceCommand scenic_import_resource;
+  fuchsia.ui.gfx.ImportResourceCommand scenic_import_resource;
 
   // Attach a stroke-group as a child of the specified imported Scenic node.
-  gfx.AddChildCommand scenic_add_child;
+  fuchsia.ui.gfx.AddChildCommand scenic_add_child;
 
   // Detach a stroke-group from the Scenic node that it is attached to, if any.
-  gfx.DetachCommand scenic_detach;
+  fuchsia.ui.gfx.DetachCommand scenic_detach;
 
   // Set the material of a stroke-style.  This material will be applied to any
   // strokes/stroke-groups that use this style.
-  gfx.SetMaterialCommand scenic_set_material;
+  fuchsia.ui.gfx.SetMaterialCommand scenic_set_material;
 };
 
 // Instantiates a new resource.

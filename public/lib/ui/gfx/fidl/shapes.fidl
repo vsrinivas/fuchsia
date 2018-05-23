@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library gfx;
+library fuchsia.ui.gfx;
 
 // The shapes defined in this file can be used to define the rendered shape of
 // an |ObjectNode|, and to define the clip region of a |ClipNode|.

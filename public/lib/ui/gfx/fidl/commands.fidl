@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library gfx;
+library fuchsia.ui.gfx;
 
 // Commands that are used to modify the state of a |Session|.
 // TODO(SCN-237): reorder Command definitions to match the order in this union.

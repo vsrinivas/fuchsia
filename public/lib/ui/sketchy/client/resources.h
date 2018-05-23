@@ -50,7 +50,7 @@ class Resource {
   // |spec| Type of the resource.
   void EnqueueImportResourceCommand(ResourceId resource_id,
                                     zx::eventpair token,
-                                    gfx::ImportSpec spec) const;
+                                    fuchsia::ui::gfx::ImportSpec spec) const;
 
   // Enqueue an op in canvas.
   void EnqueueCommand(sketchy::Command command) const;

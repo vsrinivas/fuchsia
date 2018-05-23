@@ -45,7 +45,7 @@ void Session::ReleaseResource(uint32_t resource_id) {
   Enqueue(NewReleaseResourceCommand(resource_id));
 }
 
-void Session::Enqueue(gfx::Command command) {
+void Session::Enqueue(fuchsia::ui::gfx::Command command) {
   commands_.push_back(NewCommand(std::move(command)));
   if (commands_->size() >= kCommandsPerMessage)
     Flush();
@@ -88,12 +88,12 @@ void Session::HitTest(uint32_t node_id,
                       const float ray_origin[3],
                       const float ray_direction[3],
                       HitTestCallback callback) {
-  gfx::vec3 ray_origin_vec;
+  fuchsia::ui::gfx::vec3 ray_origin_vec;
   ray_origin_vec.x = ray_origin[0];
   ray_origin_vec.y = ray_origin[1];
   ray_origin_vec.z = ray_origin[2];
 
-  gfx::vec3 ray_direction_vec;
+  fuchsia::ui::gfx::vec3 ray_direction_vec;
   ray_direction_vec.x = ray_direction[0];
   ray_direction_vec.y = ray_direction[1];
   ray_direction_vec.z = ray_direction[2];
@@ -106,12 +106,12 @@ void Session::HitTestDeviceRay(
     const float ray_origin[3],
     const float ray_direction[3],
     const fuchsia::ui::scenic::Session::HitTestDeviceRayCallback& callback) {
-  gfx::vec3 ray_origin_vec;
+  fuchsia::ui::gfx::vec3 ray_origin_vec;
   ray_origin_vec.x = ray_origin[0];
   ray_origin_vec.y = ray_origin[1];
   ray_origin_vec.z = ray_origin[2];
 
-  gfx::vec3 ray_direction_vec;
+  fuchsia::ui::gfx::vec3 ray_direction_vec;
   ray_direction_vec.x = ray_direction[0];
   ray_direction_vec.y = ray_direction[1];
   ray_direction_vec.z = ray_direction[2];

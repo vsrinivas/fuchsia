@@ -20,7 +20,7 @@ class VariableBinding {
   virtual ~VariableBinding(){};
 };
 
-template <::gfx::Value::Tag VT, typename T>
+template <::fuchsia::ui::gfx::Value::Tag VT, typename T>
 class TypedVariableBinding : public VariableBinding,
                              public OnVariableValueChangedListener<VT, T> {
  public:
@@ -36,9 +36,9 @@ class TypedVariableBinding : public VariableBinding,
 };
 
 using Vector3VariableBinding =
-    TypedVariableBinding<::gfx::Value::Tag::kVector3, escher::vec3>;
+    TypedVariableBinding<::fuchsia::ui::gfx::Value::Tag::kVector3, escher::vec3>;
 using QuaternionVariableBinding =
-    TypedVariableBinding<::gfx::Value::Tag::kQuaternion, escher::quat>;
+    TypedVariableBinding<::fuchsia::ui::gfx::Value::Tag::kQuaternion, escher::quat>;
 
 }  // namespace gfx
 }  // namespace scenic

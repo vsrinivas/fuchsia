@@ -11,9 +11,9 @@ namespace scenic {
 namespace gfx {
 namespace {
 ResourcePtr CreateDelegate(Session* session, scenic::ResourceId id,
-                           ::gfx::ImportSpec spec) {
+                           ::fuchsia::ui::gfx::ImportSpec spec) {
   switch (spec) {
-    case ::gfx::ImportSpec::NODE:
+    case ::fuchsia::ui::gfx::ImportSpec::NODE:
       return fxl::MakeRefCounted<EntityNode>(session, id);
   }
   return nullptr;
@@ -23,7 +23,7 @@ ResourcePtr CreateDelegate(Session* session, scenic::ResourceId id,
 constexpr ResourceTypeInfo Import::kTypeInfo = {ResourceType::kImport,
                                                 "Import"};
 
-Import::Import(Session* session, scenic::ResourceId id, ::gfx::ImportSpec spec)
+Import::Import(Session* session, scenic::ResourceId id, ::fuchsia::ui::gfx::ImportSpec spec)
     : Resource(session, id, Import::kTypeInfo),
       import_spec_(spec),
       delegate_(CreateDelegate(session, id, spec)) {
@@ -53,8 +53,8 @@ void Import::UnbindImportedResource() {
   imported_resource_ = nullptr;
 
   // Send a ImportUnboundEvent to the SessionListener.
-  auto event = ::gfx::Event();
-  event.set_import_unbound(::gfx::ImportUnboundEvent());
+  auto event = ::fuchsia::ui::gfx::Event();
+  event.set_import_unbound(::fuchsia::ui::gfx::ImportUnboundEvent());
   event.import_unbound().resource_id = id();
   session()->EnqueueEvent(std::move(event));
 }

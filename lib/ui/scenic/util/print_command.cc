@@ -6,14 +6,14 @@
 
 #include "lib/fxl/logging.h"
 
-using gfx::Command;
-using gfx::CommandPtr;
-using gfx::RendererParam;
-using gfx::ResourceArgs;
-using gfx::ShadowTechnique;
-using gfx::Value;
+using fuchsia::ui::gfx::Command;
+using fuchsia::ui::gfx::CommandPtr;
+using fuchsia::ui::gfx::RendererParam;
+using fuchsia::ui::gfx::ResourceArgs;
+using fuchsia::ui::gfx::ShadowTechnique;
+using fuchsia::ui::gfx::Value;
 
-std::ostream& operator<<(std::ostream& stream, const gfx::Command& command) {
+std::ostream& operator<<(std::ostream& stream, const fuchsia::ui::gfx::Command& command) {
   switch (command.Which()) {
     case Command::Tag::kCreateResource:
       return stream << command.create_resource();
@@ -61,7 +61,7 @@ std::ostream& operator<<(std::ostream& stream, const gfx::Command& command) {
       return stream << "SetStereoCameraProjection";
     case Command::Tag::kSetCameraProjection:
       return stream << "SetCameraProjection";
-    case gfx::Command::Tag::kSetCameraPoseBuffer:
+    case fuchsia::ui::gfx::Command::Tag::kSetCameraPoseBuffer:
       return stream << "SetCameraPoseBuffer";
     case Command::Tag::kSetLightColor:
       return stream << "SetLightColor";
@@ -103,7 +103,7 @@ std::ostream& operator<<(std::ostream& stream, const gfx::Command& command) {
 }
 
 std::ostream& operator<<(std::ostream& stream,
-                         const gfx::CreateResourceCommand& command) {
+                         const fuchsia::ui::gfx::CreateResourceCommand& command) {
   stream << "CreateResourceCommand(id:" << command.id << " ";
   switch (command.resource.Which()) {
     case ResourceArgs::Tag::kMemory:
@@ -189,7 +189,7 @@ std::ostream& operator<<(std::ostream& stream,
 }
 
 std::ostream& operator<<(std::ostream& stream,
-                         const gfx::SetRendererParamCommand& command) {
+                         const fuchsia::ui::gfx::SetRendererParamCommand& command) {
   stream << "SetRendererParamCommand(id=" << command.renderer_id << " ";
   switch (command.param.Which()) {
     case RendererParam::Tag::kShadowTechnique:
@@ -212,10 +212,10 @@ std::ostream& operator<<(std::ostream& stream,
     case RendererParam::Tag::kRenderFrequency:
       stream << "render_frequency=";
       switch (command.param.render_frequency()) {
-        case gfx::RenderFrequency::WHEN_REQUESTED:
+        case fuchsia::ui::gfx::RenderFrequency::WHEN_REQUESTED:
           stream << "WhenRequested";
           break;
-        case gfx::RenderFrequency::CONTINUOUSLY:
+        case fuchsia::ui::gfx::RenderFrequency::CONTINUOUSLY:
           stream << "Continuous";
           break;
       }
@@ -227,19 +227,19 @@ std::ostream& operator<<(std::ostream& stream,
 }
 
 std::ostream& operator<<(std::ostream& stream,
-                         const gfx::SetTextureCommand& command) {
+                         const fuchsia::ui::gfx::SetTextureCommand& command) {
   stream << "SetTextureCommand(id:" << command.material_id
          << " texture: " << command.texture_id;
   return stream << ")";
 }
 
 std::ostream& operator<<(std::ostream& stream,
-                         const gfx::SetColorCommand& command) {
+                         const fuchsia::ui::gfx::SetColorCommand& command) {
   stream << "SetColorCommand(id:" << command.material_id;
   return stream << ")";
 }
 
-std::ostream& operator<<(std::ostream& stream, const gfx::Value::Tag& tag) {
+std::ostream& operator<<(std::ostream& stream, const fuchsia::ui::gfx::Value::Tag& tag) {
   switch (tag) {
     case Value::Tag::kVector1:
       return stream << "vec1";

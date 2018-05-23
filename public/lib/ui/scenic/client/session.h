@@ -10,8 +10,8 @@
 #include <lib/zx/event.h>
 
 #include <fuchsia/images/cpp/fidl.h>
+#include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <gfx/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/functional/closure.h"
@@ -29,7 +29,7 @@ class Session : private fuchsia::ui::scenic::SessionListener {
   using PresentCallback = std::function<void(fuchsia::images::PresentationInfo info)>;
 
   // Provide information about hits.
-  using HitTestCallback = std::function<void(fidl::VectorPtr<gfx::Hit> hits)>;
+  using HitTestCallback = std::function<void(fidl::VectorPtr<fuchsia::ui::gfx::Hit> hits)>;
 
   // Called when session events are received.
   using EventHandler = std::function<void(fidl::VectorPtr<fuchsia::ui::scenic::Event>)>;
@@ -71,7 +71,7 @@ class Session : private fuchsia::ui::scenic::SessionListener {
   // Enqueues an operation.
   // The session will queue operations locally to batch submission of operations
   // until |Flush()| or |Present()| is called.
-  void Enqueue(gfx::Command command);
+  void Enqueue(fuchsia::ui::gfx::Command command);
 
   // Registers an acquire fence to be submitted during the subsequent call to
   // |Present()|.

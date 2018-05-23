@@ -19,7 +19,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-#include <gfx/cpp/fidl.h>
+#include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <zx/time.h>
 
@@ -52,7 +52,7 @@ App::App()
     loop_->QuitNow();
   });
   scenic_->GetDisplayInfo(
-      [this](gfx::DisplayInfo display_info) { Init(std::move(display_info)); });
+      [this](fuchsia::ui::gfx::DisplayInfo display_info) { Init(std::move(display_info)); });
 }
 
 void App::InitCheckerboardMaterial(Material* uninitialized_material) {
@@ -196,7 +196,7 @@ void App::CreateExampleScene(float display_width, float display_height) {
   pane_2_contents.SetTranslation(0, 0, 10);
 }
 
-void App::Init(gfx::DisplayInfo display_info) {
+void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
   FXL_LOG(INFO) << "Creating new Session";
 
   // TODO: set up SessionListener.

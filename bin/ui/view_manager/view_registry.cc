@@ -78,7 +78,7 @@ std::unique_ptr<FocusChain> CopyFocusChain(const FocusChain* chain) {
   return new_chain;
 }
 
-fuchsia::math::Transform ToTransform(const gfx::mat4& matrix) {
+fuchsia::math::Transform ToTransform(const fuchsia::ui::gfx::mat4& matrix) {
   // Note: mat4 is column-major but transform is row-major
   fuchsia::math::Transform transform;
   const auto& in = matrix.matrix;
@@ -735,7 +735,7 @@ void ViewRegistry::HitTest(views_v1::ViewTreeToken view_tree_token,
       (float[3]){ray_origin.x, ray_origin.y, ray_origin.z},
       (float[3]){ray_direction.x, ray_direction.y, ray_direction.z},
       [this, callback = std::move(callback), ray_origin,
-       ray_direction](fidl::VectorPtr<gfx::Hit> hits) {
+       ray_direction](fidl::VectorPtr<fuchsia::ui::gfx::Hit> hits) {
         auto view_hits = fidl::VectorPtr<ViewHit>::New(0);
         for (auto& hit : *hits) {
           auto it = views_by_token_.find(hit.tag_value);

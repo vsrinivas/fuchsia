@@ -30,15 +30,15 @@ int main(int argc, const char** argv) {
     clipping_enabled = presenter_renderer_params.clipping_enabled.value();
   }
 
-  fidl::VectorPtr<gfx::RendererParam> renderer_params;
+  fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> renderer_params;
   if (presenter_renderer_params.render_frequency.has_value()) {
-    gfx::RendererParam param;
+    fuchsia::ui::gfx::RendererParam param;
     param.set_render_frequency(
         presenter_renderer_params.render_frequency.value());
     renderer_params.push_back(std::move(param));
   }
   if (presenter_renderer_params.shadow_technique.has_value()) {
-    gfx::RendererParam param;
+    fuchsia::ui::gfx::RendererParam param;
     param.set_shadow_technique(
         presenter_renderer_params.shadow_technique.value());
     renderer_params.push_back(std::move(param));

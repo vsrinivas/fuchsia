@@ -56,8 +56,8 @@ void Session::SetCommandDispatchers(
   }
 }
 
-void Session::HitTest(uint32_t node_id, ::gfx::vec3 ray_origin,
-                      ::gfx::vec3 ray_direction, HitTestCallback callback) {
+void Session::HitTest(uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
+                      ::fuchsia::ui::gfx::vec3 ray_direction, HitTestCallback callback) {
   auto& dispatcher = dispatchers_[System::TypeId::kGfx];
   FXL_DCHECK(dispatcher);
   TempSessionDelegate* delegate =
@@ -66,8 +66,8 @@ void Session::HitTest(uint32_t node_id, ::gfx::vec3 ray_origin,
                     callback);
 }
 
-void Session::HitTestDeviceRay(::gfx::vec3 ray_origin,
-                               ::gfx::vec3 ray_direction,
+void Session::HitTestDeviceRay(::fuchsia::ui::gfx::vec3 ray_origin,
+                               ::fuchsia::ui::gfx::vec3 ray_direction,
                                HitTestCallback callback) {
   auto& dispatcher = dispatchers_[System::TypeId::kGfx];
   FXL_DCHECK(dispatcher);

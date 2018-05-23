@@ -22,7 +22,7 @@ void ShadertoyImpl::SetResolution(uint32_t width, uint32_t height) {
   state_->SetResolution(width, height);
 }
 
-void ShadertoyImpl::SetMouse(gfx::vec4 i_mouse) {
+void ShadertoyImpl::SetMouse(fuchsia::ui::gfx::vec4 i_mouse) {
   state_->SetMouse(glm::vec4(i_mouse.x, i_mouse.y, i_mouse.z, i_mouse.w));
 }
 

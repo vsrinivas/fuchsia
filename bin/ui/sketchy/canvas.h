@@ -49,7 +49,7 @@ class CanvasImpl final : public sketchy::Canvas {
   bool ApplyClearGroupCommand(sketchy::ClearGroupCommand command);
 
   bool ApplyScenicImportResourceCommand(
-      gfx::ImportResourceCommand import_resource);
+      fuchsia::ui::gfx::ImportResourceCommand import_resource);
 
   // Imports an exported ScenicNode that can be used as an
   // attachment point for a StrokeGroup.
@@ -60,7 +60,7 @@ class CanvasImpl final : public sketchy::Canvas {
   //     to the SceneManager to import the node.
   bool ScenicImportNode(ResourceId id, zx::eventpair token);
 
-  bool ApplyScenicAddChildCommand(gfx::AddChildCommand add_child);
+  bool ApplyScenicAddChildCommand(fuchsia::ui::gfx::AddChildCommand add_child);
 
   scenic_lib::Session* const session_;
   SharedBufferPool shared_buffer_pool_;

@@ -4,7 +4,7 @@
 
 library presentation;
 
-using gfx;
+using fuchsia.ui.gfx;
 using input;
 
 // |Presentation.CaptureKeyboardEvent| will consume this listener interface and
@@ -31,7 +31,7 @@ interface Presentation {
 
   // Set parameters such as the shadow algorithm used to render the scene.
   // NOTE: a single param would be better than an array; see TO-529.
-  4: SetRendererParams(vector<gfx.RendererParam> params);
+  4: SetRendererParams(vector<fuchsia.ui.gfx.RendererParam> params);
 
   // Override the intended usage of the display.
   5: SetDisplayUsage(DisplayUsage usage);

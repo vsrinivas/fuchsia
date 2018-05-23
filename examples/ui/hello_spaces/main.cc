@@ -20,7 +20,7 @@ class App {
 
  private:
   // Called asynchronously by constructor.
-  void Init(gfx::DisplayInfo display_info);
+  void Init(fuchsia::ui::gfx::DisplayInfo display_info);
 
   // Updates and presents the scene.  Called first by Init().  Each invocation
   // schedules another call to Update() when the result of the previous
@@ -49,10 +49,10 @@ App::App()
     loop_->QuitNow();
   });
   scenic_->GetDisplayInfo(
-      [this](gfx::DisplayInfo display_info) { Init(std::move(display_info)); });
+      [this](fuchsia::ui::gfx::DisplayInfo display_info) { Init(std::move(display_info)); });
 }
 
-void App::Init(gfx::DisplayInfo display_info) {
+void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
   FXL_LOG(INFO) << "Creating new Session";
 
   // TODO: set up SessionListener.

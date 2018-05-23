@@ -121,7 +121,7 @@ void DumpVisitor::VisitNode(Node* r) {
   if (r->tag_value()) {
     WriteProperty("tag_value") << r->tag_value();
   }
-  if (r->hit_test_behavior() != ::gfx::HitTestBehavior::kDefault) {
+  if (r->hit_test_behavior() != ::fuchsia::ui::gfx::HitTestBehavior::kDefault) {
     WriteProperty("hit_test_behavior")
         << static_cast<int>(r->hit_test_behavior());
   }

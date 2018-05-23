@@ -128,10 +128,10 @@ interface Session {
 
   // TODO(MZ-422) Remove these methods from the FIDL; they should just be
   // exposed to View Manager directly using a C++ interface.
-  3: HitTest(uint32 node_id, gfx.vec3 ray_origin, gfx.vec3 ray_direction) ->
-      (vector<gfx.Hit>? hits);
-  4: HitTestDeviceRay(gfx.vec3 ray_origin, gfx.vec3 ray_direction) ->
-      (vector<gfx.Hit>? hits);
+  3: HitTest(uint32 node_id, fuchsia.ui.gfx.vec3 ray_origin, fuchsia.ui.gfx.vec3 ray_direction) ->
+      (vector<fuchsia.ui.gfx.Hit>? hits);
+  4: HitTestDeviceRay(fuchsia.ui.gfx.vec3 ray_origin, fuchsia.ui.gfx.vec3 ray_direction) ->
+      (vector<fuchsia.ui.gfx.Hit>? hits);
 };
 
 // Listens for events which occur within the session.

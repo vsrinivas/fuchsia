@@ -7,7 +7,7 @@
 
 #include <lib/zx/eventpair.h>
 
-#include <gfx/cpp/fidl.h>
+#include <fuchsia/ui/gfx/cpp/fidl.h>
 
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "lib/fxl/macros.h"
@@ -40,7 +40,7 @@ class Import final : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Import(Session* session, scenic::ResourceId id, ::gfx::ImportSpec spec);
+  Import(Session* session, scenic::ResourceId id, ::fuchsia::ui::gfx::ImportSpec spec);
 
   ~Import() override;
 
@@ -56,7 +56,7 @@ class Import final : public Resource {
 
   /// The specification used to represent the underlying type of the resource
   /// being bound to the import.
-  ::gfx::ImportSpec import_spec() const { return import_spec_; }
+  ::fuchsia::ui::gfx::ImportSpec import_spec() const { return import_spec_; }
 
   /// If an active binding exists between this import and an imported resource,
   // returns that resource. If no binding exists, returns nullptr.
@@ -66,7 +66,7 @@ class Import final : public Resource {
   bool is_bound() const { return imported_resource_ != nullptr; }
 
  private:
-  const ::gfx::ImportSpec import_spec_;
+  const ::fuchsia::ui::gfx::ImportSpec import_spec_;
   const ResourcePtr delegate_;
   Resource* imported_resource_ = nullptr;
 

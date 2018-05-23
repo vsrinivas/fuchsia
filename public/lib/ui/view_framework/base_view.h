@@ -93,7 +93,7 @@ class BaseView : private views_v1::ViewListener,
 
   // Gets the view's metrics.
   // This value is zero until the view receives metrics from its session.
-  const gfx::Metrics& metrics() const { return adjusted_metrics_; }
+  const fuchsia::ui::gfx::Metrics& metrics() const { return adjusted_metrics_; }
 
   // Gets the input connection.
   input::InputConnection* input_connection() { return input_connection_.get(); }
@@ -181,8 +181,8 @@ class BaseView : private views_v1::ViewListener,
   fuchsia::math::SizeF logical_size_;
   fuchsia::math::Size physical_size_;
   bool need_square_metrics_ = false;
-  gfx::Metrics original_metrics_;
-  gfx::Metrics adjusted_metrics_;
+  fuchsia::ui::gfx::Metrics original_metrics_;
+  fuchsia::ui::gfx::Metrics adjusted_metrics_;
   scenic_lib::Session session_;
   scenic_lib::ImportNode parent_node_;
 

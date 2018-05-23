@@ -10,11 +10,11 @@ RendererParams RendererParams::FromCommandLine(
     const fxl::CommandLine& command_line) {
   RendererParams params;
 
-  std::pair<std::string, gfx::ShadowTechnique> shadow_args[] = {
-      {"unshadowed", gfx::ShadowTechnique::UNSHADOWED},
-      {"screen_space_shadows", gfx::ShadowTechnique::SCREEN_SPACE},
-      {"shadow_map", gfx::ShadowTechnique::SHADOW_MAP},
-      {"moment_shadow_map", gfx::ShadowTechnique::MOMENT_SHADOW_MAP}};
+  std::pair<std::string, fuchsia::ui::gfx::ShadowTechnique> shadow_args[] = {
+      {"unshadowed", fuchsia::ui::gfx::ShadowTechnique::UNSHADOWED},
+      {"screen_space_shadows", fuchsia::ui::gfx::ShadowTechnique::SCREEN_SPACE},
+      {"shadow_map", fuchsia::ui::gfx::ShadowTechnique::SHADOW_MAP},
+      {"moment_shadow_map", fuchsia::ui::gfx::ShadowTechnique::MOMENT_SHADOW_MAP}};
   for (auto& arg : shadow_args) {
     if (command_line.HasOption(arg.first)) {
       FXL_CHECK(!params.shadow_technique.has_value())
@@ -30,11 +30,11 @@ RendererParams RendererParams::FromCommandLine(
     params.clipping_enabled.set_value(false);
   }
   if (command_line.HasOption("render_continuously")) {
-    params.render_frequency.set_value(gfx::RenderFrequency::CONTINUOUSLY);
+    params.render_frequency.set_value(fuchsia::ui::gfx::RenderFrequency::CONTINUOUSLY);
   } else if (command_line.HasOption("render_when_requested")) {
     FXL_CHECK(!params.render_frequency.has_value())
         << "Cannot use both -render_continuously and -render_when_requested.";
-    params.render_frequency.set_value(gfx::RenderFrequency::WHEN_REQUESTED);
+    params.render_frequency.set_value(fuchsia::ui::gfx::RenderFrequency::WHEN_REQUESTED);
   }
   return params;
 }

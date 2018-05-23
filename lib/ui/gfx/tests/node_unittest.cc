@@ -93,11 +93,11 @@ TEST_F(NodeTest, SettingHitTestBehavior) {
   EXPECT_TRUE(Apply(scenic_lib::NewCreateShapeNodeCommand(kNodeId)));
 
   auto shape_node = FindResource<ShapeNode>(kNodeId);
-  EXPECT_EQ(::gfx::HitTestBehavior::kDefault, shape_node->hit_test_behavior());
+  EXPECT_EQ(::fuchsia::ui::gfx::HitTestBehavior::kDefault, shape_node->hit_test_behavior());
 
   EXPECT_TRUE(Apply(scenic_lib::NewSetHitTestBehaviorCommand(
-      kNodeId, ::gfx::HitTestBehavior::kSuppress)));
-  EXPECT_EQ(::gfx::HitTestBehavior::kSuppress, shape_node->hit_test_behavior());
+      kNodeId, ::fuchsia::ui::gfx::HitTestBehavior::kSuppress)));
+  EXPECT_EQ(::fuchsia::ui::gfx::HitTestBehavior::kSuppress, shape_node->hit_test_behavior());
 }
 
 }  // namespace test

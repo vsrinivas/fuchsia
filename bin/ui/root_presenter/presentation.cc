@@ -95,13 +95,13 @@ Presentation::Presentation(views_v1::ViewManager* view_manager,
         renderer_params_override_.clipping_enabled.value();
   }
   if (renderer_params_override_.render_frequency.has_value()) {
-    gfx::RendererParam param;
+    fuchsia::ui::gfx::RendererParam param;
     param.set_render_frequency(
         renderer_params_override_.render_frequency.value());
     renderer_.SetParam(std::move(param));
   }
   if (renderer_params_override_.shadow_technique.has_value()) {
-    gfx::RendererParam param;
+    fuchsia::ui::gfx::RendererParam param;
     param.set_shadow_technique(
         renderer_params_override_.shadow_technique.value());
     renderer_.SetParam(std::move(param));
@@ -123,7 +123,7 @@ void Presentation::Present(
   scenic_->GetDisplayInfo(fxl::MakeCopyable(
       [weak = weak_factory_.GetWeakPtr(), view_owner = std::move(view_owner),
        presentation_request = std::move(presentation_request)](
-          gfx::DisplayInfo display_info) mutable {
+          fuchsia::ui::gfx::DisplayInfo display_info) mutable {
         if (weak)
           weak->CreateViewTree(std::move(view_owner),
                                std::move(presentation_request),
@@ -134,7 +134,7 @@ void Presentation::Present(
 void Presentation::CreateViewTree(
     views_v1_token::ViewOwnerPtr view_owner,
     fidl::InterfaceRequest<presentation::Presentation> presentation_request,
-    gfx::DisplayInfo display_info) {
+    fuchsia::ui::gfx::DisplayInfo display_info) {
   if (presentation_request) {
     presentation_binding_.Bind(std::move(presentation_request));
   }
@@ -202,7 +202,7 @@ void Presentation::CreateViewTree(
   PresentScene();
 }
 
-void Presentation::InitializeDisplayModel(gfx::DisplayInfo display_info) {
+void Presentation::InitializeDisplayModel(fuchsia::ui::gfx::DisplayInfo display_info) {
   FXL_DCHECK(!display_model_initialized_);
 
   // Save previous display values. These could have been overriden by earlier
@@ -718,10 +718,10 @@ void Presentation::PresentScene() {
 void Presentation::Shutdown() { shutdown_callback_(); }
 
 void Presentation::SetRendererParams(
-    ::fidl::VectorPtr<gfx::RendererParam> params) {
+    ::fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> params) {
   for (size_t i = 0; i < params->size(); ++i) {
     switch (params->at(i).Which()) {
-      case ::gfx::RendererParam::Tag::kShadowTechnique:
+      case ::fuchsia::ui::gfx::RendererParam::Tag::kShadowTechnique:
         if (renderer_params_override_.shadow_technique.has_value()) {
           FXL_LOG(WARNING)
               << "Presentation::SetRendererParams: Cannot change "
@@ -729,7 +729,7 @@ void Presentation::SetRendererParams(
           continue;
         }
         break;
-      case gfx::RendererParam::Tag::kRenderFrequency:
+      case fuchsia::ui::gfx::RendererParam::Tag::kRenderFrequency:
         if (renderer_params_override_.render_frequency.has_value()) {
           FXL_LOG(WARNING)
               << "Presentation::SetRendererParams: Cannot change "
@@ -737,7 +737,7 @@ void Presentation::SetRendererParams(
           continue;
         }
         break;
-      case gfx::RendererParam::Tag::Invalid:
+      case fuchsia::ui::gfx::RendererParam::Tag::Invalid:
         continue;
     }
     renderer_.SetParam(std::move(params->at(i)));

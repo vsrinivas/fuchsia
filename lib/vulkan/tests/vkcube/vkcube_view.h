@@ -6,7 +6,7 @@
 #define VKCUBE_VIEW_H
 
 #include <fuchsia/images/cpp/fidl.h>
-#include <gfx/cpp/fidl.h>
+#include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <views_v1_token/cpp/fidl.h>
 
 #include "lib/fxl/macros.h"

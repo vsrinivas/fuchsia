@@ -223,9 +223,9 @@ bool CanvasImpl::ApplyClearGroupCommand(sketchy::ClearGroupCommand command) {
 }
 
 bool CanvasImpl::ApplyScenicImportResourceCommand(
-    gfx::ImportResourceCommand import_resource) {
+    fuchsia::ui::gfx::ImportResourceCommand import_resource) {
   switch (import_resource.spec) {
-    case gfx::ImportSpec::NODE:
+    case fuchsia::ui::gfx::ImportSpec::NODE:
       return ScenicImportNode(import_resource.id,
                               std::move(import_resource.token));
   }
@@ -238,7 +238,7 @@ bool CanvasImpl::ScenicImportNode(ResourceId id, zx::eventpair token) {
   return true;
 }
 
-bool CanvasImpl::ApplyScenicAddChildCommand(gfx::AddChildCommand add_child) {
+bool CanvasImpl::ApplyScenicAddChildCommand(fuchsia::ui::gfx::AddChildCommand add_child) {
   auto import_node = resource_map_.FindResource<ImportNode>(add_child.node_id);
   auto stroke_group =
       resource_map_.FindResource<StrokeGroup>(add_child.child_id);

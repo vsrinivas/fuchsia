@@ -7,7 +7,7 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include <gfx/cpp/fidl.h>
+#include <fuchsia/ui/gfx/cpp/fidl.h>
 #include "garnet/lib/ui/gfx/resources/memory.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "lib/escher/vk/gpu_mem.h"
@@ -28,7 +28,7 @@ class HostMemory : public Memory {
   HostMemory(Session* session, scenic::ResourceId id, zx::vmo vmo,
              uint64_t vmo_size);
 
-  // Helper method for creating HostMemory object from a ::gfx::Memory.
+  // Helper method for creating HostMemory object from a ::fuchsia::ui::gfx::Memory.
   // Create a HostMemory resource object from a CPU host memory-backed VMO.
   //
   // Returns the created HostMemory object or nullptr if there was an error.
@@ -39,7 +39,7 @@ class HostMemory : public Memory {
   // Helper method that calls the above method with the VMO from |args|. Also
   // checks the memory type in debug mode.
   static HostMemoryPtr New(Session* session, scenic::ResourceId id,
-                           vk::Device device, ::gfx::MemoryArgs args,
+                           vk::Device device, ::fuchsia::ui::gfx::MemoryArgs args,
                            ErrorReporter* error_reporter);
 
   void Accept(class ResourceVisitor* visitor) override;

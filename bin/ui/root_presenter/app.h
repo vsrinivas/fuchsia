@@ -51,7 +51,7 @@ class App : public presentation::Presenter,
 
   void HACK_SetRendererParams(
       bool enable_clipping,
-      ::fidl::VectorPtr<gfx::RendererParam> params) override;
+      ::fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> params) override;
 
   // |InputDeviceRegistry|:
   void RegisterDevice(

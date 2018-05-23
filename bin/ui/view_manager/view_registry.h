@@ -8,8 +8,8 @@
 #include <string>
 #include <unordered_map>
 
+#include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <gfx/cpp/fidl.h>
 #include <views/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 #include "garnet/bin/ui/view_manager/input/input_connection_impl.h"

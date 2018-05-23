@@ -4,19 +4,19 @@
 
 library sketchy;
 
-using gfx;
+using fuchsia.ui.gfx;
 
 struct Touch {
-  gfx.vec2 position;
+  fuchsia.ui.gfx.vec2 position;
   uint32 nanoseconds;
   float32 pressure;
 };
 
 struct CubicBezier2 {
-  gfx.vec2 pt0;
-  gfx.vec2 pt1;
-  gfx.vec2 pt2;
-  gfx.vec2 pt3;
+  fuchsia.ui.gfx.vec2 pt0;
+  fuchsia.ui.gfx.vec2 pt1;
+  fuchsia.ui.gfx.vec2 pt2;
+  fuchsia.ui.gfx.vec2 pt3;
 };
 
 struct StrokePath {

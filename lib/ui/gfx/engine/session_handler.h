@@ -44,12 +44,12 @@ class SessionHandler : public TempSessionDelegate {
                fuchsia::ui::scenic::Session::PresentCallback callback) override;
 
   // |fuchsia::ui::scenic::Session / scenic::TempSessionDelegate|
-  void HitTest(uint32_t node_id, ::gfx::vec3 ray_origin,
-               ::gfx::vec3 ray_direction,
+  void HitTest(uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
+               ::fuchsia::ui::gfx::vec3 ray_direction,
                fuchsia::ui::scenic::Session::HitTestCallback callback) override;
 
   // |fuchsia::ui::scenic::Session / scenic::TempSessionDelegate|
-  void HitTestDeviceRay(::gfx::vec3 ray_origin, ::gfx::vec3 ray_direction,
+  void HitTestDeviceRay(::fuchsia::ui::gfx::vec3 ray_origin, ::fuchsia::ui::gfx::vec3 ray_direction,
                         fuchsia::ui::scenic::Session::HitTestCallback callback) override;
 
   // |scenic::CommandDispatcher|
@@ -74,7 +74,7 @@ class SessionHandler : public TempSessionDelegate {
 
   // TODO(SCN-710): We reallocate this everytime we std::move it into
   // ScheduleUpdate().  The bug has some ideas about how to do better.
-  std::vector<::gfx::Command> buffered_commands_;
+  std::vector<::fuchsia::ui::gfx::Command> buffered_commands_;
 };
 
 }  // namespace gfx

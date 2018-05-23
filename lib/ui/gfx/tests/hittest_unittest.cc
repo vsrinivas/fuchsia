@@ -116,19 +116,19 @@ class HitTestTest : public SessionTest {
                   const vec3& ray_direction,
                   std::vector<ExpectedHit> expected_hits,
                   bool expected_null = false) {
-    ::gfx::vec3 wrapped_ray_origin;
+    ::fuchsia::ui::gfx::vec3 wrapped_ray_origin;
     wrapped_ray_origin.x = ray_origin.x;
     wrapped_ray_origin.y = ray_origin.y;
     wrapped_ray_origin.z = ray_origin.z;
 
-    ::gfx::vec3 wrapped_ray_direction;
+    ::fuchsia::ui::gfx::vec3 wrapped_ray_direction;
     wrapped_ray_direction.x = ray_direction.x;
     wrapped_ray_direction.y = ray_direction.y;
     wrapped_ray_direction.z = ray_direction.z;
 
-    fidl::VectorPtr<::gfx::Hit> actual_hits;
+    fidl::VectorPtr<::fuchsia::ui::gfx::Hit> actual_hits;
     session_->HitTest(node_id, wrapped_ray_origin, wrapped_ray_direction,
-                      [&actual_hits](fidl::VectorPtr<::gfx::Hit> hits) {
+                      [&actual_hits](fidl::VectorPtr<::fuchsia::ui::gfx::Hit> hits) {
                         actual_hits = std::move(hits);
                       });
 
@@ -252,7 +252,7 @@ TEST_F(HitTestTest, HitBoth20And30FromNode1) {
 
 TEST_F(HitTestTest, SuppressNode25FromNode1) {
   Apply(scenic_lib::NewSetHitTestBehaviorCommand(
-      3, ::gfx::HitTestBehavior::kSuppress));
+      3, ::fuchsia::ui::gfx::HitTestBehavior::kSuppress));
 
   // While we would have hit 20 and 25, we suppressed node 3 so neither appears.
   ExpectHits(1, vec3(12.f, 6.f, 10.f), kDownVector,

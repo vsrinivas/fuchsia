@@ -11,7 +11,7 @@
 #include <lib/async/cpp/wait.h>
 #include "lib/fsl/handles/object_info.h"
 
-#include <gfx/cpp/fidl.h>
+#include <fuchsia/ui/gfx/cpp/fidl.h>
 #include "garnet/lib/ui/gfx/engine/unresolved_imports.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
 
@@ -57,7 +57,7 @@ class ResourceLinker {
   // yet, the binding is not guaranteed to happen immediately.
   //
   // Returns true if there are no errors.
-  bool ImportResource(Import* import, ::gfx::ImportSpec spec,
+  bool ImportResource(Import* import, ::fuchsia::ui::gfx::ImportSpec spec,
                       zx::eventpair import_token);
 
   size_t NumExports() const;

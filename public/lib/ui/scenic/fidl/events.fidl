@@ -5,6 +5,6 @@
 library fuchsia.ui.scenic;
 
 union Event {
-  gfx.Event gfx;
+  fuchsia.ui.gfx.Event gfx;
   Command unhandled;
 };

@@ -5,14 +5,14 @@
 #ifndef GARNET_LIB_UI_GFX_UTIL_WRAP_H_
 #define GARNET_LIB_UI_GFX_UTIL_WRAP_H_
 
-#include <gfx/cpp/fidl.h>
+#include <fuchsia/ui/gfx/cpp/fidl.h>
 #include "lib/escher/geometry/transform.h"
 
 namespace scenic {
 namespace gfx {
 
-inline ::gfx::mat4 Wrap(const escher::mat4& args) {
-  ::gfx::mat4 value;
+inline ::fuchsia::ui::gfx::mat4 Wrap(const escher::mat4& args) {
+  ::fuchsia::ui::gfx::mat4 value;
   FXL_DCHECK(value.matrix.count() == 16);
   float* m = value.matrix.mutable_data();
   m[0] = args[0][0];
@@ -34,8 +34,8 @@ inline ::gfx::mat4 Wrap(const escher::mat4& args) {
   return value;
 }
 
-inline ::gfx::vec4 Wrap(const escher::vec4& p) {
-  ::gfx::vec4 result;
+inline ::fuchsia::ui::gfx::vec4 Wrap(const escher::vec4& p) {
+  ::fuchsia::ui::gfx::vec4 result;
   result.x = p[0];
   result.y = p[1];
   result.z = p[2];

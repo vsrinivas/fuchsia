@@ -17,12 +17,12 @@ namespace scenic {
 namespace gfx {
 
 class Variable;
-template <::gfx::Value::Tag VT, typename T>
+template <::fuchsia::ui::gfx::Value::Tag VT, typename T>
 class TypedVariable;
 
 // Callback for watchers of Variable. Any class implementing this interface must
 // hold a strong reference to Variable.
-template <::gfx::Value::Tag VT, typename T>
+template <::fuchsia::ui::gfx::Value::Tag VT, typename T>
 class OnVariableValueChangedListener {
  public:
   virtual void OnVariableValueChanged(TypedVariable<VT, T>* v) = 0;
@@ -34,23 +34,23 @@ class Variable : public Resource {
   virtual ~Variable();
 
   static const ResourceTypeInfo kTypeInfo;
-  virtual ::gfx::Value::Tag value_type() = 0;
+  virtual ::fuchsia::ui::gfx::Value::Tag value_type() = 0;
 
-  virtual bool SetValue(const ::gfx::Value& value) = 0;
+  virtual bool SetValue(const ::fuchsia::ui::gfx::Value& value) = 0;
 };
 
 // Represents a variable whose value can change, usually via animations.
-template <::gfx::Value::Tag VT, typename T>
+template <::fuchsia::ui::gfx::Value::Tag VT, typename T>
 class TypedVariable : public Variable {
  public:
   TypedVariable(Session* session, scenic::ResourceId id);
 
-  static constexpr ::gfx::Value::Tag ValueType() { return VT; }
-  ::gfx::Value::Tag value_type() override { return VT; }
+  static constexpr ::fuchsia::ui::gfx::Value::Tag ValueType() { return VT; }
+  ::fuchsia::ui::gfx::Value::Tag value_type() override { return VT; }
 
   T value() { return value_; }
   void SetValue(T value);
-  bool SetValue(const ::gfx::Value& value) override;
+  bool SetValue(const ::fuchsia::ui::gfx::Value& value) override;
 
   void AddListener(OnVariableValueChangedListener<VT, T>* listener) {
     listeners_.insert(listener);
@@ -70,19 +70,19 @@ class TypedVariable : public Variable {
   std::set<OnVariableValueChangedListener<VT, T>*> listeners_;
 };
 
-using FloatVariable = TypedVariable<::gfx::Value::Tag::kVector1, float>;
+using FloatVariable = TypedVariable<::fuchsia::ui::gfx::Value::Tag::kVector1, float>;
 using Vector2Variable =
-    TypedVariable<::gfx::Value::Tag::kVector2, escher::vec2>;
+    TypedVariable<::fuchsia::ui::gfx::Value::Tag::kVector2, escher::vec2>;
 using Vector3Variable =
-    TypedVariable<::gfx::Value::Tag::kVector3, escher::vec3>;
+    TypedVariable<::fuchsia::ui::gfx::Value::Tag::kVector3, escher::vec3>;
 using Vector4Variable =
-    TypedVariable<::gfx::Value::Tag::kVector4, escher::vec4>;
+    TypedVariable<::fuchsia::ui::gfx::Value::Tag::kVector4, escher::vec4>;
 using Matrix4x4Variable =
-    TypedVariable<::gfx::Value::Tag::kMatrix4x4, escher::mat4>;
+    TypedVariable<::fuchsia::ui::gfx::Value::Tag::kMatrix4x4, escher::mat4>;
 using QuaternionVariable =
-    TypedVariable<::gfx::Value::Tag::kQuaternion, escher::quat>;
+    TypedVariable<::fuchsia::ui::gfx::Value::Tag::kQuaternion, escher::quat>;
 // using TransformVariable =
-//    TypedVariable<::gfx::Value::Tag::kTransform, escher::Transform>;
+//    TypedVariable<::fuchsia::ui::gfx::Value::Tag::kTransform, escher::Transform>;
 
 using FloatVariablePtr = fxl::RefPtr<FloatVariable>;
 using Vector2VariablePtr = fxl::RefPtr<Vector2Variable>;

@@ -38,15 +38,15 @@ void SessionHandler::Present(uint64_t presentation_time,
   buffered_commands_.clear();
 }
 
-void SessionHandler::HitTest(uint32_t node_id, ::gfx::vec3 ray_origin,
-                             ::gfx::vec3 ray_direction,
+void SessionHandler::HitTest(uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
+                             ::fuchsia::ui::gfx::vec3 ray_direction,
                              fuchsia::ui::scenic::Session::HitTestCallback callback) {
   session_->HitTest(node_id, std::move(ray_origin), std::move(ray_direction),
                     callback);
 }
 
 void SessionHandler::HitTestDeviceRay(
-    ::gfx::vec3 ray_origin, ::gfx::vec3 ray_direction,
+    ::fuchsia::ui::gfx::vec3 ray_origin, ::fuchsia::ui::gfx::vec3 ray_direction,
     fuchsia::ui::scenic::Session::HitTestDeviceRayCallback callback) {
   session_->HitTestDeviceRay(std::move(ray_origin), std::move(ray_direction),
                              callback);

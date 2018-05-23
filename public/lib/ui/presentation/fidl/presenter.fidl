@@ -4,7 +4,7 @@
 
 library presentation;
 
-using gfx;
+using fuchsia.ui.gfx;
 
 // The Presenter service provides a way for applications to ask that a
 // specified view be added to a view tree, leaving any window management
@@ -16,5 +16,5 @@ interface Presenter {
   // Sets new default renderer params and forces them on for the duration of the
   // presenter's lifetime. Only applies to any subsequent calls to Present().
   // Used for testing.
-  2: HACK_SetRendererParams(bool enable_clipping, vector<gfx.RendererParam> params);
+  2: HACK_SetRendererParams(bool enable_clipping, vector<fuchsia.ui.gfx.RendererParam> params);
 };

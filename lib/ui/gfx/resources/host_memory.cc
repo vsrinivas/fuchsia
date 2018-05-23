@@ -18,7 +18,7 @@ HostMemory::HostMemory(Session* session, scenic::ResourceId id, zx::vmo vmo,
       size_(vmo_size) {}
 
 HostMemoryPtr HostMemory::New(Session* session, scenic::ResourceId id,
-                              vk::Device device, ::gfx::MemoryArgs args,
+                              vk::Device device, ::fuchsia::ui::gfx::MemoryArgs args,
                               ErrorReporter* error_reporter) {
   if (args.memory_type != fuchsia::images::MemoryType::HOST_MEMORY) {
     error_reporter->ERROR() << "scenic::gfx::HostMemory::New(): "

@@ -184,11 +184,11 @@ class Mesh final : public Shape {
   // These arguments are documented in commands.fidl; see
   // BindMeshBuffersCommand.
   void BindBuffers(const Buffer& index_buffer,
-                   gfx::MeshIndexFormat index_format,
+                   fuchsia::ui::gfx::MeshIndexFormat index_format,
                    uint64_t index_offset,
                    uint32_t index_count,
                    const Buffer& vertex_buffer,
-                   gfx::MeshVertexFormat vertex_format,
+                   fuchsia::ui::gfx::MeshVertexFormat vertex_format,
                    uint64_t vertex_offset,
                    uint32_t vertex_count,
                    const float bounding_box_min[3],
@@ -249,7 +249,7 @@ class Node : public Resource {
   void SetTag(uint32_t tag_value);
 
   // Sets the node's hit test behavior.
-  void SetHitTestBehavior(gfx::HitTestBehavior hit_test_behavior);
+  void SetHitTestBehavior(fuchsia::ui::gfx::HitTestBehavior hit_test_behavior);
 
   // Detaches the node from its parent.
   void Detach();
@@ -384,7 +384,7 @@ class OpacityNode final : public ContainerNode {
 // A value that can be used in place of a constant value.
 class Variable final : public Resource {
  public:
-  explicit Variable(Session* session, gfx::Value initial_value);
+  explicit Variable(Session* session, fuchsia::ui::gfx::Value initial_value);
   Variable(Variable&& moved);
   ~Variable();
 
@@ -528,10 +528,10 @@ class Renderer final : public Resource {
   }
   void SetCamera(uint32_t camera_id);
 
-  void SetParam(gfx::RendererParam param);
+  void SetParam(fuchsia::ui::gfx::RendererParam param);
 
   // Convenient wrapper for SetParam().
-  void SetShadowTechnique(gfx::ShadowTechnique technique);
+  void SetShadowTechnique(fuchsia::ui::gfx::ShadowTechnique technique);
 
   // Set whether clipping is disabled for this renderer.
   // NOTE: disabling clipping only has a visual effect; hit-testing is not

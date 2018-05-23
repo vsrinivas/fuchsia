@@ -18,21 +18,21 @@ Variable::Variable(Session* session, scenic::ResourceId id)
 
 Variable::~Variable() {}
 
-template <::gfx::Value::Tag VT, typename T>
+template <::fuchsia::ui::gfx::Value::Tag VT, typename T>
 TypedVariable<VT, T>::TypedVariable(Session* session, scenic::ResourceId id)
     : Variable(session, id),
       value_()  // Initialize |value_| to its type's default value.
 {}
 
-template <::gfx::Value::Tag VT, typename T>
+template <::fuchsia::ui::gfx::Value::Tag VT, typename T>
 void TypedVariable<VT, T>::SetValue(T value) {
   value_ = value;
   for (auto listener : listeners_)
     listener->OnVariableValueChanged(this);
 }
 
-template <::gfx::Value::Tag VT, typename T>
-bool TypedVariable<VT, T>::SetValue(const ::gfx::Value& value) {
+template <::fuchsia::ui::gfx::Value::Tag VT, typename T>
+bool TypedVariable<VT, T>::SetValue(const ::fuchsia::ui::gfx::Value& value) {
   bool success = Unwrap(value, &value_);
   FXL_DCHECK(success);
   for (auto listener : listeners_)
@@ -40,18 +40,18 @@ bool TypedVariable<VT, T>::SetValue(const ::gfx::Value& value) {
   return success;
 }
 
-template <::gfx::Value::Tag VT, typename T>
+template <::fuchsia::ui::gfx::Value::Tag VT, typename T>
 void TypedVariable<VT, T>::Accept(class ResourceVisitor* visitor){};
 
 // Explicitly instantiate all the classes in Scenic that use the Variable<>
 // template.
-template class TypedVariable<::gfx::Value::Tag::kVector1, float>;
-template class TypedVariable<::gfx::Value::Tag::kVector2, escher::vec2>;
-template class TypedVariable<::gfx::Value::Tag::kVector3, escher::vec3>;
-template class TypedVariable<::gfx::Value::Tag::kVector4, escher::vec4>;
-template class TypedVariable<::gfx::Value::Tag::kMatrix4x4, escher::mat4>;
-template class TypedVariable<::gfx::Value::Tag::kQuaternion, escher::quat>;
-// template class TypedVariable<::gfx::Value::Tag::kTransform,
+template class TypedVariable<::fuchsia::ui::gfx::Value::Tag::kVector1, float>;
+template class TypedVariable<::fuchsia::ui::gfx::Value::Tag::kVector2, escher::vec2>;
+template class TypedVariable<::fuchsia::ui::gfx::Value::Tag::kVector3, escher::vec3>;
+template class TypedVariable<::fuchsia::ui::gfx::Value::Tag::kVector4, escher::vec4>;
+template class TypedVariable<::fuchsia::ui::gfx::Value::Tag::kMatrix4x4, escher::mat4>;
+template class TypedVariable<::fuchsia::ui::gfx::Value::Tag::kQuaternion, escher::quat>;
+// template class TypedVariable<::fuchsia::ui::gfx::Value::Tag::kTransform,
 // escher::Transform>;
 
 }  // namespace gfx

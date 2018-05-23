@@ -38,7 +38,7 @@ ErrorReporter* Resource::error_reporter() const {
 }
 
 bool Resource::SetLabel(const std::string& label) {
-  label_ = label.substr(0, ::gfx::kLabelMaxLength);
+  label_ = label.substr(0, ::fuchsia::ui::gfx::kLabelMaxLength);
   return true;
 }
 

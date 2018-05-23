@@ -135,7 +135,7 @@ void GfxSystem::GetDisplayInfoImmediately(
   Display* display = engine_->display_manager()->default_display();
   FXL_CHECK(display) << "There must be a default display.";
 
-  auto info = ::gfx::DisplayInfo();
+  auto info = ::fuchsia::ui::gfx::DisplayInfo();
   info.width_in_px = display->width_in_px();
   info.height_in_px = display->height_in_px();
 

@@ -39,7 +39,7 @@ class SessionTest : public ::gtest::TestWithMessageLoop,
   void EnqueueEvent(fuchsia::ui::scenic::Event event) override;
 
   // Apply the specified Command, and verify that it succeeds.
-  bool Apply(::gfx::Command command) {
+  bool Apply(::fuchsia::ui::gfx::Command command) {
     return session_->ApplyCommand(std::move(command));
   }
 

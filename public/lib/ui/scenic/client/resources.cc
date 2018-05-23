@@ -150,11 +150,11 @@ Mesh::Mesh(Mesh&& moved) : Shape(std::move(moved)) {}
 Mesh::~Mesh() = default;
 
 void Mesh::BindBuffers(const Buffer& index_buffer,
-                       gfx::MeshIndexFormat index_format,
+                       fuchsia::ui::gfx::MeshIndexFormat index_format,
                        uint64_t index_offset,
                        uint32_t index_count,
                        const Buffer& vertex_buffer,
-                       gfx::MeshVertexFormat vertex_format,
+                       fuchsia::ui::gfx::MeshVertexFormat vertex_format,
                        uint64_t vertex_offset,
                        uint32_t vertex_count,
                        const float bounding_box_min[3],
@@ -228,7 +228,7 @@ void Node::SetTag(uint32_t tag_value) {
   session()->Enqueue(NewSetTagCommand(id(), tag_value));
 }
 
-void Node::SetHitTestBehavior(gfx::HitTestBehavior hit_test_behavior) {
+void Node::SetHitTestBehavior(fuchsia::ui::gfx::HitTestBehavior hit_test_behavior) {
   session()->Enqueue(NewSetHitTestBehaviorCommand(id(), hit_test_behavior));
 }
 
@@ -290,7 +290,7 @@ ImportNode::~ImportNode() {
 
 void ImportNode::Bind(zx::eventpair import_token) {
   FXL_DCHECK(!is_bound_);
-  session()->Enqueue(NewImportResourceCommand(id(), gfx::ImportSpec::NODE,
+  session()->Enqueue(NewImportResourceCommand(id(), fuchsia::ui::gfx::ImportSpec::NODE,
                                               std::move(import_token)));
   is_bound_ = true;
 }
@@ -298,7 +298,7 @@ void ImportNode::Bind(zx::eventpair import_token) {
 void ImportNode::BindAsRequest(zx::eventpair* out_export_token) {
   FXL_DCHECK(!is_bound_);
   session()->Enqueue(NewImportResourceCommandAsRequest(
-      id(), gfx::ImportSpec::NODE, out_export_token));
+      id(), fuchsia::ui::gfx::ImportSpec::NODE, out_export_token));
   is_bound_ = true;
 }
 
@@ -330,7 +330,7 @@ void OpacityNode::SetOpacity(double opacity) {
   // TODO(MZ-139): Opacities are not currently implemented.
 }
 
-Variable::Variable(Session* session, gfx::Value initial_value)
+Variable::Variable(Session* session, fuchsia::ui::gfx::Value initial_value)
     : Resource(session) {
   session->Enqueue(NewCreateVariableCommand(id(), std::move(initial_value)));
 }
@@ -413,12 +413,12 @@ void Renderer::SetCamera(uint32_t camera_id) {
   session()->Enqueue(NewSetCameraCommand(id(), camera_id));
 }
 
-void Renderer::SetParam(gfx::RendererParam param) {
+void Renderer::SetParam(fuchsia::ui::gfx::RendererParam param) {
   session()->Enqueue(NewSetRendererParamCommand(id(), std::move(param)));
 }
 
-void Renderer::SetShadowTechnique(gfx::ShadowTechnique technique) {
-  auto param = gfx::RendererParam();
+void Renderer::SetShadowTechnique(fuchsia::ui::gfx::ShadowTechnique technique) {
+  auto param = fuchsia::ui::gfx::RendererParam();
   param.set_shadow_technique(technique);
   SetParam(std::move(param));
 }
