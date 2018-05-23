@@ -83,12 +83,23 @@ def find_variant(info, build_dir=os.path.curdir):
             # Rust binaries have multiple links but are not variants.
             # So just ignore a multiply-linked file with no matches.
             if files:
-                assert len(files) == 1, (
-                    "Multiple hard links to %r: %r" % (info, files))
-                variant_file = os.path.relpath(files[0], build_dir)
-                name = subdirs[0][len(variant_prefix):]
+                # A variant loadable_module (or driver_module) is actually
+                # built in the variant's -shared toolchain but is also
+                # linked to other variant toolchains.
+                if (len(subdirs) > 1 and
+                    sum(subdir.endswith('-shared') for subdir in subdirs) == 1):
+                    [subdir] = [subdir for subdir in subdirs
+                                if subdir.endswith('-shared')]
+                else:
+                    assert len(files) == 1, (
+                        "Multiple hard links to %r: %r" % (info, files))
+                    [subdir] = subdirs
+                name = subdir[len(variant_prefix):]
+                variant_file = os.path.relpath(
+                    os.path.join(subdir, rel_filename), build_dir)
                 if name != 'shared':
-                    # Drivers are linked to the variant-shared toolchain.
+                    # loadable_module and driver_module targets are linked
+                    # to the variant-shared toolchain.
                     if name[-7:] == '-shared':
                         name = name[:-7]
                     variant = make_variant(name, info)

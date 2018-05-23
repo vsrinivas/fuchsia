@@ -116,7 +116,7 @@ template("pm_build_package") {
 #
 #   binary (optional)
 #     [string] The path to the the primary binary for the package, relative to
-#     `$root_build_dir`. The binary will be placed in the assembled package at
+#     `$root_out_dir`. The binary will be placed in the assembled package at
 #     `bin/app` and will be executed by default when running the package.
 #
 #     Requires `deprecated_system_image` to be `false`.
@@ -133,7 +133,7 @@ template("pm_build_package") {
 #
 #       source (optional)
 #         [path] Location of the binary in the build directory if it is not
-#         at `$root_build_dir/$name`.
+#         at `$root_out_dir/$name`.
 #
 #       dest (optional)
 #         [path] Location the binary will be placed within `bin/`.
@@ -158,7 +158,7 @@ template("pm_build_package") {
 #         the `runtests` command.
 #
 #   drivers (optional)
-#     [list of scopes] Defins the drivers in the package. A driver is
+#     [list of scopes] Defines the drivers in the package. A driver is
 #     typically produced by the build system and is placed in the `driver/`
 #     directory of the assembled package.
 #
@@ -168,6 +168,19 @@ template("pm_build_package") {
 #
 #       name (required)
 #         [string] Name of the driver.
+#
+#   loadable_modules (optional)
+#     [list of scopes] Defines the loadable modules in the package.  These
+#     are produced by `loadable_module()` GN targets, and are typically
+#     placed in the `lib/` directory of the assembled packaged.
+#
+#     Entries in a scope in the loadable_modules list:
+#
+#       name (required)
+#         [string] Name of the loadable_module.
+#
+#       dest (optional, default: "lib")
+#         [string] Location the binary will be placed in the package.
 #
 #   libraries (optional, *DEPRECATED*)
 #     [list of scopes] Defines the (shared) libraries in the package. A library
@@ -184,7 +197,7 @@ template("pm_build_package") {
 #
 #       source (optional)
 #         [path] Location of the binary in the build directory if it is not at
-#         `$root_build_dir/$name`
+#         `$root_out_dir/$name`
 #
 #       dest (optional)
 #         [path] Location the binary will be placed within `lib/`
@@ -233,6 +246,7 @@ template("package") {
                                "drivers",
                                "extra",
                                "libraries",
+                               "loadable_modules",
                                "meta",
                                "package_name",
                                "resources",
@@ -256,6 +270,9 @@ template("package") {
       }
       if (!defined(drivers)) {
         drivers = []
+      }
+      if (!defined(loadable_modules)) {
+        loadable_modules = []
       }
       if (!defined(libraries)) {
         libraries = []
@@ -322,7 +339,7 @@ template("package") {
           } else {
             source = binary.name
           }
-          source = rebase_path(source, "", root_build_dir)
+          source = rebase_path(source, "", root_out_dir)
         },
       ]
     }
@@ -338,7 +355,20 @@ template("package") {
             dest = "disabled/${dest}"
           }
           dest = "test/${dest}"
-          source = rebase_path(test.name, "", root_build_dir)
+          source = rebase_path(test.name, "", root_out_dir)
+        },
+      ]
+    }
+    foreach(module, pkg.loadable_modules) {
+      pkg_manifest += [
+        {
+          if (defined(module.dest)) {
+            dest = module.dest
+          } else {
+            dest = "lib"
+          }
+          dest += "/${module.name}"
+          source = rebase_path(module.name, "", root_out_dir)
         },
       ]
     }
@@ -346,7 +376,7 @@ template("package") {
       pkg_manifest += [
         {
           dest = "driver/${driver.name}"
-          source = rebase_path(driver.name, "", root_build_dir)
+          source = rebase_path(driver.name, "", root_out_dir)
         },
       ]
     }
@@ -378,7 +408,7 @@ template("package") {
             source = get_label_info(shlib_toolchain, "name")
             source += "/${library.name}"
           }
-          source = rebase_path(source, "", root_build_dir)
+          source = rebase_path(source, "", root_out_dir)
         },
       ]
     }
