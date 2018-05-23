@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"fuchsia.googlesource.com/tools/gndoc"
@@ -70,6 +71,9 @@ func main() {
 	var out io.Writer
 	if outFile != "" {
 		var err error
+		if dirErr := os.MkdirAll(filepath.Dir(outFile), os.ModePerm); dirErr != nil {
+			log.Fatalf("Error creating directories: %s", dirErr)
+		}
 		out, err = os.Create(outFile)
 		if err != nil {
 			log.Fatalf("Error opening file: %s", err)
