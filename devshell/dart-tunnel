@@ -1,0 +1,87 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### forward local ports to Dart VMs on the device.
+
+## usage: fx dart-tunnel
+##            [-h|--help] [-d|--device <device>] [-v|--verbose] [<isolate>]
+##
+## Creates an SSH tunnel with the device's running Dart VM(s) and leaves it open
+## until the user chooses to close it. Supplying an Isolate name will attempt to
+## connect to all isolates whose name match.
+##
+## The verbose flag is strongly discouraged unless you are debugging.
+##
+## This command requires Topaz in order to run.
+##
+## Arguments:
+##   -h|--help    Print out this message.
+##   -d|--device  Fuchsia link-local name of the device. If not
+##                specified, will connect to the only available
+##                device on the link-local network.
+
+DEVSHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VERBOSE=false
+source "${DEVSHELL_DIR}"/lib/vars.sh
+fx-config-read
+
+case $1 in
+  -h|--help)
+  fx-command-help
+  exit 0
+  ;;
+  -d|--device)
+  shift  # name
+  if [[ -z "$1" ]]; then
+      echo "Missing parameter: <device>" >&2
+      fx-command-help
+      exit 1
+  fi
+  device="$1"
+  shift  # value
+  ;;
+  -v|--verbose)
+  shift # name
+  VERBOSE=true
+  ;;
+esac
+
+case "$(uname -s)" in
+    Linux)
+        PREBUILT_DART="${DEVSHELL_DIR}/../../topaz/tools/prebuilt-dart-sdk/linux-x64/bin/dart"
+        ;;
+    Darwin)
+        PREBUILT_DART="${DEVSHELL_DIR}/../../topaz/tools/prebuilt-dart-sdk/mac-x64/bin/dart"
+        ;;
+esac
+IP_ADDR_LINK_LOCAL="$(fx-command-run netaddr --fuchsia "${device}")"
+
+# Strips the back of the string the longest match of '%' followed by
+# any characters (the first two '%' characters are just the bash syntax).
+IP_ADDR="${IP_ADDR_LINK_LOCAL%%%*}"
+# Splits from the front of the string the longest match of any character
+# followed by '%'.
+IP_IFACE="${IP_ADDR_LINK_LOCAL##*%}"
+SSH_CONFIG="${FUCHSIA_BUILD_DIR}/ssh-keys/ssh_config"
+# Just compress the rest of the args to an array here.
+ARGS="$(echo "$@")"
+DART_TUNNEL_LIB_DIR="${DEVSHELL_DIR}/dart-tunnel-lib"
+DART_TUNNEL_PACKAGES="${DART_TUNNEL_LIB_DIR}/dart-tunnel.packages"
+DART_BIN="${DART_TUNNEL_LIB_DIR}/dart-tunnel.dart"
+
+# Conditionally prints the --verbose flag.
+function _verbose_flag() {
+  if [ "${VERBOSE}" = true ]; then
+    echo "--verbose"
+  fi
+}
+
+"${PREBUILT_DART}" --packages="${DART_TUNNEL_PACKAGES}" \
+  "${DART_BIN}" \
+  --ssh-config="${SSH_CONFIG}" \
+  --ip-address="${IP_ADDR}" \
+  --network-interface="${IP_IFACE}" \
+  --isolate="$ARGS" \
+  "$(_verbose_flag)"
