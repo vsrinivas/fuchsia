@@ -30,6 +30,6 @@ MODULE_LIBS := \
     system/ulib/zircon
 
 MODULE_HEADER_DEPS := \
-    system/dev/soc/amlogic
+    system/dev/lib/amlogic
 
 include make/module.mk

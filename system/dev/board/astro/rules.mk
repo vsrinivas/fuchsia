@@ -17,7 +17,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/astro-touch.c \
 
 MODULE_STATIC_LIBS := \
-    system/dev/soc/amlogic \
+    system/dev/lib/amlogic \
     system/ulib/ddk \
     system/ulib/sync
 
@@ -25,8 +25,5 @@ MODULE_LIBS := \
     system/ulib/driver \
     system/ulib/c \
     system/ulib/zircon
-
-MODULE_HEADER_DEPS := \
-    system/dev/soc/amlogic
 
 include make/module.mk

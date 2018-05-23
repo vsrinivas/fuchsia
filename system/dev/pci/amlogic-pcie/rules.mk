@@ -24,6 +24,6 @@ MODULE_LIBS := \
     system/ulib/driver \
     system/ulib/zircon \
 
-MODULE_HEADER_DEPS := system/dev/soc/amlogic
+MODULE_HEADER_DEPS := system/dev/lib/amlogic
 
 include make/module.mk

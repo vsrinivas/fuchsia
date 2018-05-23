@@ -16,7 +16,7 @@ MODULE_SRCS := \
 
 
 MODULE_HEADER_DEPS := \
-    system/dev/soc/amlogic
+    system/dev/lib/amlogic
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \

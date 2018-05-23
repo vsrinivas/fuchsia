@@ -18,7 +18,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/gauss-usb.c \
 
 MODULE_STATIC_LIBS := \
-    system/dev/soc/amlogic \
+    system/dev/lib/amlogic \
     system/ulib/ddk \
     system/ulib/sync
 

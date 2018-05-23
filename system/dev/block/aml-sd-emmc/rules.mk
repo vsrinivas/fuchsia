@@ -15,6 +15,6 @@ MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
-MODULE_HEADER_DEPS := $(LOCAL_DIR) system/dev/soc/amlogic
+MODULE_HEADER_DEPS := $(LOCAL_DIR) system/dev/lib/amlogic
 
 include make/module.mk

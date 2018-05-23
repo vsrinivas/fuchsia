@@ -29,6 +29,6 @@ MODULE_STATIC_LIBS := \
   system/ulib/zx \
   system/ulib/zxcpp \
 
-MODULE_HEADER_DEPS := system/dev/soc/amlogic
+MODULE_HEADER_DEPS := system/dev/lib/amlogic
 
 include make/module.mk
