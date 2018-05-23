@@ -84,7 +84,6 @@ class TraceSession : public fxl::RefCountedThreadSafe<TraceSession> {
   zx::socket destination_;
   fidl::VectorPtr<fidl::StringPtr> categories_;
   size_t trace_buffer_size_;
-  std::vector<uint8_t> buffer_;
   std::list<std::unique_ptr<Tracee>> tracees_;
   async::TaskMethod<TraceSession, &TraceSession::SessionStartTimeout>
       session_start_timeout_{this};

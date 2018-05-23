@@ -18,7 +18,6 @@ TraceSession::TraceSession(zx::socket destination,
     : destination_(std::move(destination)),
       categories_(std::move(categories)),
       trace_buffer_size_(trace_buffer_size),
-      buffer_(trace_buffer_size_),
       abort_handler_(std::move(abort_handler)),
       weak_ptr_factory_(this) {}
 
