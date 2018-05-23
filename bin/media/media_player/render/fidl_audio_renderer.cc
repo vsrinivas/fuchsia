@@ -105,11 +105,13 @@ void FidlAudioRenderer::FlushInput(bool hold_frame_not_used, size_t input_index,
   FXL_DCHECK(callback);
 
   flushed_ = true;
-  last_supplied_pts_ns_ = 0;
-  last_departed_pts_ns_ = media::kUnspecifiedTime;
   SetEndOfStreamPts(media::kUnspecifiedTime);
-  audio_renderer_->FlushNoReply();
-  callback();
+
+  audio_renderer_->Flush([this, callback]() {
+    last_supplied_pts_ns_ = 0;
+    last_departed_pts_ns_ = media::kUnspecifiedTime;
+    callback();
+  });
 }
 
 void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
