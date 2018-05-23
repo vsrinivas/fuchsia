@@ -14,10 +14,8 @@
 
 namespace modular {
 
-PageClient::PageClient(std::string context,
-                       LedgerClient* ledger_client,
-                       LedgerPageId page_id,
-                       std::string prefix)
+PageClient::PageClient(std::string context, LedgerClient* ledger_client,
+                       LedgerPageId page_id, std::string prefix)
     : binding_(this),
       context_(std::move(context)),
       ledger_client_(ledger_client),
@@ -48,7 +46,7 @@ fidl::InterfaceRequest<ledger::PageSnapshot> PageClient::NewRequest() {
   return ret;
 }
 
-fidl::InterfaceRequest<ledger::PageSnapshot> PageClient::Update(
+fidl::InterfaceRequest<ledger::PageSnapshot> PageClient::MaybeUpdateSnapshot(
     const ledger::ResultState result_state) {
   switch (result_state) {
     case ledger::ResultState::PARTIAL_CONTINUED:
@@ -92,7 +90,7 @@ void PageClient::OnChange(ledger::PageChange page,
   //
   // For continued updates, we only request the snapshot once, in the last
   // OnChange() notification.
-  callback(Update(result_state));
+  callback(MaybeUpdateSnapshot(result_state));
 }
 
 void PageClient::OnPageChange(const std::string& /*key*/,
@@ -111,15 +109,15 @@ namespace {
 void GetEntriesRecursive(ledger::PageSnapshot* const snapshot,
                          std::vector<ledger::Entry>* const entries,
                          fidl::VectorPtr<uint8_t> next_token,
-                         std::function<void(ledger::Status)> callback) {
+                         std::function<void(ledger::Status)> done) {
   snapshot->GetEntries(
       nullptr /* key_start */, std::move(next_token),
-      fxl::MakeCopyable([snapshot, entries, callback = std::move(callback)](
+      fxl::MakeCopyable([snapshot, entries, done = std::move(done)](
                             ledger::Status status, auto new_entries,
                             auto next_token) mutable {
         if (status != ledger::Status::OK &&
             status != ledger::Status::PARTIAL_RESULT) {
-          callback(status);
+          done(status);
           return;
         }
 
@@ -128,12 +126,12 @@ void GetEntriesRecursive(ledger::PageSnapshot* const snapshot,
         }
 
         if (status == ledger::Status::OK) {
-          callback(ledger::Status::OK);
+          done(ledger::Status::OK);
           return;
         }
 
         GetEntriesRecursive(snapshot, entries, std::move(next_token),
-                            std::move(callback));
+                            std::move(done));
       }));
 }
 
@@ -141,9 +139,9 @@ void GetEntriesRecursive(ledger::PageSnapshot* const snapshot,
 
 void GetEntries(ledger::PageSnapshot* const snapshot,
                 std::vector<ledger::Entry>* const entries,
-                std::function<void(ledger::Status)> callback) {
+                std::function<void(ledger::Status)> done) {
   GetEntriesRecursive(snapshot, entries, nullptr /* next_token */,
-                      std::move(callback));
+                      std::move(done));
 }
 
 }  // namespace modular

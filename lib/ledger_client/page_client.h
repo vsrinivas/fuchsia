@@ -5,13 +5,13 @@
 #ifndef PERIDOT_LIB_LEDGER_CLIENT_PAGE_CLIENT_H_
 #define PERIDOT_LIB_LEDGER_CLIENT_PAGE_CLIENT_H_
 
-#include <string>
 #include <array>
+#include <string>
 
+#include <ledger/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
-#include <ledger/cpp/fidl.h>
 #include "peridot/lib/ledger_client/types.h"
 
 namespace modular {
@@ -45,12 +45,16 @@ class LedgerClient;
 // one, but PageSnapshot doesn't have a duplicate method.
 class PageClient : ledger::PageWatcher {
  public:
-  // Takes a context name as a label for the error messages it logs. The ledger
-  // client reference is to receive conflicts from the ledger.
-  explicit PageClient(std::string context,
-                      LedgerClient* ledger_client,
-                      LedgerPageId page_id,
-                      std::string prefix = "");
+  // |context| is used as a string prefix on log messages.  |ledger_client| is
+  // used to retrieve a handle to the page specified in |page_id|, and to
+  // listen for conflicts from the ledger. If |prefix| is provided, the
+  // resulting page snapshot and change notifications are limited to only keys
+  // with that prefix. However, OnPageChange()'s |key| will include the full
+  // key, including the prefix.
+  //
+  // |ledger_client| must outlive *this.
+  PageClient(std::string context, LedgerClient* ledger_client,
+             LedgerPageId page_id, std::string prefix = "");
   ~PageClient() override;
 
   // Returns the current page snapshot. It is returned as a shared_ptr, so that
@@ -129,12 +133,11 @@ class PageClient : ledger::PageWatcher {
   // Possibly replaces the previous page snapshot with a new one
   // requested through the result callback of a PageWatcher, depending
   // on the continuation code of the watcher notification.
-  fidl::InterfaceRequest<ledger::PageSnapshot> Update(
+  fidl::InterfaceRequest<ledger::PageSnapshot> MaybeUpdateSnapshot(
       ledger::ResultState result_state);
 
   // |PageWatcher|
-  void OnChange(ledger::PageChange page,
-                ledger::ResultState result_state,
+  void OnChange(ledger::PageChange page, ledger::ResultState result_state,
                 OnChangeCallback callback) override;
 
   fidl::Binding<ledger::PageWatcher> binding_;
