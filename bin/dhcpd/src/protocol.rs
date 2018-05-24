@@ -143,22 +143,10 @@ impl Message {
         buffer.extend_from_slice(&self.giaddr.octets());
         buffer.extend_from_slice(&self.chaddr);
         buffer.extend_from_slice(&[0u8; UNUSED_CHADDR_BYTES]);
-        self.trunc_string_to_n_and_push(&self.sname, SNAME_LEN, &mut buffer);
-        self.trunc_string_to_n_and_push(&self.file, FILE_LEN, &mut buffer);
+        trunc_string_to_n_and_push(&self.sname, SNAME_LEN, &mut buffer);
+        trunc_string_to_n_and_push(&self.file, FILE_LEN, &mut buffer);
         buffer.extend_from_slice(&self.serialize_options());
         buffer
-    }
-
-    fn trunc_string_to_n_and_push(&self, s: &str, n: usize, buffer: &mut Vec<u8>) {
-        if s.len() > n {
-            let truncated = s.split_at(n);
-            buffer.extend(truncated.0.as_bytes());
-            return;
-        }
-        buffer.extend(s.as_bytes());
-        let unused_bytes = n - s.len();
-        let old_len = buffer.len();
-        buffer.resize(old_len + unused_bytes, 0);
     }
 
     fn serialize_options(&self) -> Vec<u8> {
@@ -184,8 +172,132 @@ impl Message {
     }
 }
 
+/// A DHCP protocol op-code as defined in RFC 2131.
+///
+/// Note that this type corresponds to the first field of a DHCP message,
+/// opcode, and is distinct from the OptionCode type. In this case, "Op"
+/// is an abbreviation for Operator, not Option.
+///
+/// `OpCode::BOOTREQUEST` should only appear in protocol messages from the
+/// client, and conversely `OpCode::BOOTREPLY` should only appear in messages
+/// from the server.
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum OpCode {
+    BOOTREQUEST = 1,
+    BOOTREPLY = 2,
+}
+
+impl OpCode {
+    /// Instantiates an `OpCode` from its `u8` raw value. Returns None for an
+    /// invalid `OpCode` raw value.
+    pub fn from(val: u8) -> Option<Self> {
+        match val {
+            1 => Some(OpCode::BOOTREQUEST),
+            2 => Some(OpCode::BOOTREPLY),
+            _ => None,
+        }
+    }
+}
+
 /// A 48-bit network hardware MAC address.
 pub type MacAddr = [u8; MAC_ADDR_LEN];
+
+/// A vendor extension/configuration option for DHCP protocol messages.
+///
+/// `ConfigOption`s can be fixed or variable length per RFC 1533. When
+/// `value` is left empty, the `ConfigOption` will be treated as a fixed
+/// length field.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ConfigOption {
+    pub code: OptionCode,
+    pub value: Vec<u8>,
+}
+
+impl ConfigOption {
+    fn from_buffer(buf: &[u8]) -> Option<ConfigOption> {
+        if buf.len() <= 0 {
+            return None;
+        }
+        let raw_code = buf[0];
+        let code = OptionCode::option_code_from_u8(raw_code)?;
+        let len: usize = match buf.get(1) {
+            Some(l) => *l as usize,
+            None => 0,
+        };
+        let mut value = Vec::new();
+        let mut i: usize = 2;
+        while i < len + 2 {
+            let v = match buf.get(i) {
+                Some(val) => *val,
+                None => return None,
+            };
+            value.push(v);
+            i += 1;
+        }
+        if len != value.len() {
+            return None;
+        }
+        let opt = ConfigOption { code, value };
+        Some(opt)
+    }
+
+    fn serialize_to(&self, output: &mut Vec<u8>) {
+        output.push(self.code as u8);
+        let len = self.value.len() as u8;
+        if len > 0 {
+            output.push(len);
+        }
+        output.extend(&self.value);
+    }
+}
+
+/// A DHCP option code.
+///
+/// This enum corresponds to the codes for DHCP options as defined in
+/// RFC 1533. Note that not all options defined in the RFC are represented
+/// here; options which are not in this type are not currently supported. Supported
+/// options appear in this type in the order in which they are defined in the RFC.
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum OptionCode {
+    Pad = 0,
+    End = 255,
+    SubnetMask = 1,
+    RequestedIpAddr = 50,
+    IpAddrLeaseTime = 51,
+    DhcpMessageType = 53,
+    ServerId = 54,
+}
+
+impl OptionCode {
+    /// Returns an OptionCode value when given a valid and supported code value, else None.
+    pub fn option_code_from_u8(n: u8) -> Option<OptionCode> {
+        match n {
+            0 => Some(OptionCode::Pad),
+            255 => Some(OptionCode::End),
+            1 => Some(OptionCode::SubnetMask),
+            50 => Some(OptionCode::RequestedIpAddr),
+            51 => Some(OptionCode::IpAddrLeaseTime),
+            53 => Some(OptionCode::DhcpMessageType),
+            54 => Some(OptionCode::ServerId),
+            _ => None,
+        }
+    }
+}
+
+/// A DHCP Message Type.
+///
+/// This enum corresponds to the DHCP Message Type option values
+/// defined in section 9.4 of RFC 1533.
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum MessageType {
+    DHCPDISCOVER = 1,
+    DHCPOFFER = 2,
+    DHCPREQUEST = 3,
+    DHCPDECLINE = 4,
+    DHCPACK = 5,
+    DHCPNAK = 6,
+    DHCPRELEASE = 7,
+}
 
 // Returns an Ipv4Addr when given a byte buffer in network order whose len >= start + 4.
 pub fn ip_addr_from_buf_at(buf: &[u8], start: usize) -> Option<Ipv4Addr> {
@@ -238,313 +350,208 @@ fn buf_into_options(buf: &[u8], options: &mut Vec<ConfigOption>) {
     }
 }
 
-#[test]
-fn test_serialize_returns_correct_bytes() {
-    let mut msg = Message::new();
-    msg.xid = 42;
-    msg.secs = 1024;
-    msg.yiaddr = Ipv4Addr::new(192, 168, 1, 1);
-    msg.sname = String::from("relay.example.com");
-    msg.file = String::from("boot.img");
-    msg.options.push(ConfigOption {
-        code: OptionCode::SubnetMask,
-        value: vec![255, 255, 255, 0],
-    });
-
-    let bytes = msg.serialize();
-
-    assert_eq!(bytes.len(), 243);
-    assert_eq!(bytes[0], 1u8);
-    assert_eq!(bytes[1], 1u8);
-    assert_eq!(bytes[2], 6u8);
-    assert_eq!(bytes[3], 0u8);
-    assert_eq!(bytes[7], 42u8);
-    assert_eq!(bytes[8], 4u8);
-    assert_eq!(bytes[16], 192u8);
-    assert_eq!(bytes[17], 168u8);
-    assert_eq!(bytes[18], 1u8);
-    assert_eq!(bytes[19], 1u8);
-    assert_eq!(bytes[44], 'r' as u8);
-    assert_eq!(bytes[60], 'm' as u8);
-    assert_eq!(bytes[61], 0u8);
-    assert_eq!(bytes[108], 'b' as u8);
-    assert_eq!(bytes[115], 'g' as u8);
-    assert_eq!(bytes[116], 0u8);
-    assert_eq!(bytes[bytes.len() - 1], 255u8);
-}
-
-#[test]
-fn test_message_from_buffer_returns_correct_message() {
-    use std::string::ToString;
-
-    let mut buf = Vec::new();
-    buf.push(1u8);
-    buf.push(1u8);
-    buf.push(6u8);
-    buf.push(0u8);
-    buf.extend_from_slice(b"\x00\x00\x00\x2A");
-    buf.extend_from_slice(b"\x04\x00");
-    buf.extend_from_slice(b"\x00\x00");
-    buf.extend_from_slice(b"\x00\x00\x00\x00");
-    buf.extend_from_slice(b"\xC0\xA8\x01\x01");
-    buf.extend_from_slice(b"\x00\x00\x00\x00");
-    buf.extend_from_slice(b"\x00\x00\x00\x00");
-    buf.extend_from_slice(b"\x00\x00\x00\x00\x00\x00");
-    buf.extend_from_slice(b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00");
-    buf.extend_from_slice(b"relay.example.com");
-    let mut old_len = buf.len();
-    let mut unused_bytes = SNAME_LEN - b"relay.example.com".len();
-    buf.resize(old_len + unused_bytes, 0u8);
-    buf.extend_from_slice(b"boot.img");
-    old_len = buf.len();
-    unused_bytes = FILE_LEN - b"boot.img".len();
-    buf.resize(old_len + unused_bytes, 0u8);
-    buf.extend_from_slice(b"\x01\x04\xFF\xFF\xFF\x00");
-    buf.extend_from_slice(b"\x00");
-    buf.extend_from_slice(b"\x00");
-    buf.extend_from_slice(b"\x36\x04\xAA\xBB\xCC\xDD");
-    buf.extend_from_slice(b"\xFF");
-
-    let got = Message::from_buffer(&buf).unwrap();
-
-    let opt_want1 = ConfigOption {
-        code: OptionCode::SubnetMask,
-        value: vec![255, 255, 255, 0],
-    };
-    let opt_want2 = ConfigOption {
-        code: OptionCode::Pad,
-        value: vec![],
-    };
-    let opt_want3 = ConfigOption {
-        code: OptionCode::Pad,
-        value: vec![],
-    };
-    let opt_want4 = ConfigOption {
-        code: OptionCode::ServerId,
-        value: vec![0xAA, 0xBB, 0xCC, 0xDD],
-    };
-    let want = Message {
-        op: OpCode::BOOTREQUEST,
-        xid: 42,
-        secs: 1024,
-        bdcast_flag: false,
-        ciaddr: Ipv4Addr::new(0, 0, 0, 0),
-        yiaddr: Ipv4Addr::new(192, 168, 1, 1),
-        siaddr: Ipv4Addr::new(0, 0, 0, 0),
-        giaddr: Ipv4Addr::new(0, 0, 0, 0),
-        chaddr: [0, 0, 0, 0, 0, 0],
-        sname: "relay.example.com".to_string(),
-        file: "boot.img".to_string(),
-        options: vec![opt_want1, opt_want2, opt_want3, opt_want4],
-    };
-
-    assert_eq!(got, want);
-}
-
-#[test]
-fn test_message_from_too_short_buffer_returns_none() {
-    let buf = vec![0u8, 0u8, 0u8];
-
-    let got = Message::from_buffer(&buf);
-
-    assert_eq!(got, None);
-}
-
-/// A DHCP protocol op-code as defined in RFC 2131.
-///
-/// Note that this type corresponds to the first field of a DHCP message,
-/// opcode, and is distinct from the OptionCode type. In this case, "Op"
-/// is an abbreviation for Operator, not Option.
-///
-/// `OpCode::BOOTREQUEST` should only appear in protocol messages from the
-/// client, and conversely `OpCode::BOOTREPLY` should only appear in messages
-/// from the server.
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum OpCode {
-    BOOTREQUEST = 1,
-    BOOTREPLY = 2,
-}
-
-impl OpCode {
-    /// Instantiates an `OpCode` from its `u8` raw value. Returns None for an
-    /// invalid `OpCode` raw value.
-    pub fn from(val: u8) -> Option<Self> {
-        match val {
-            1 => Some(OpCode::BOOTREQUEST),
-            2 => Some(OpCode::BOOTREPLY),
-            _ => None,
-        }
+fn trunc_string_to_n_and_push(s: &str, n: usize, buffer: &mut Vec<u8>) {
+    if s.len() > n {
+        let truncated = s.split_at(n);
+        buffer.extend(truncated.0.as_bytes());
+        return;
     }
+    buffer.extend(s.as_bytes());
+    let unused_bytes = n - s.len();
+    let old_len = buffer.len();
+    buffer.resize(old_len + unused_bytes, 0);
 }
 
-/// A vendor extension/configuration option for DHCP protocol messages.
-///
-/// `ConfigOption`s can be fixed or variable length per RFC 1533. When
-/// `value` is left empty, the `ConfigOption` will be treated as a fixed
-/// length field.
-#[derive(Clone, Debug, PartialEq)]
-pub struct ConfigOption {
-    pub code: OptionCode,
-    pub value: Vec<u8>,
-}
+#[cfg(test)]
+mod tests {
 
-impl ConfigOption {
-    fn from_buffer(buf: &[u8]) -> Option<ConfigOption> {
-        if buf.len() <= 0 {
-            return None;
-        }
-        let raw_code = buf[0];
-        let code = OptionCode::option_code_from_u8(raw_code)?;
-        let len: usize = match buf.get(1) {
-            Some(l) => *l as usize,
-            None => 0,
+    use super::*;
+    use std::net::Ipv4Addr;
+
+    #[test]
+    fn test_serialize_returns_correct_bytes() {
+        let mut msg = Message::new();
+        msg.xid = 42;
+        msg.secs = 1024;
+        msg.yiaddr = Ipv4Addr::new(192, 168, 1, 1);
+        msg.sname = String::from("relay.example.com");
+        msg.file = String::from("boot.img");
+        msg.options.push(ConfigOption {
+            code: OptionCode::SubnetMask,
+            value: vec![255, 255, 255, 0],
+        });
+
+        let bytes = msg.serialize();
+
+        assert_eq!(bytes.len(), 243);
+        assert_eq!(bytes[0], 1u8);
+        assert_eq!(bytes[1], 1u8);
+        assert_eq!(bytes[2], 6u8);
+        assert_eq!(bytes[3], 0u8);
+        assert_eq!(bytes[7], 42u8);
+        assert_eq!(bytes[8], 4u8);
+        assert_eq!(bytes[16], 192u8);
+        assert_eq!(bytes[17], 168u8);
+        assert_eq!(bytes[18], 1u8);
+        assert_eq!(bytes[19], 1u8);
+        assert_eq!(bytes[44], 'r' as u8);
+        assert_eq!(bytes[60], 'm' as u8);
+        assert_eq!(bytes[61], 0u8);
+        assert_eq!(bytes[108], 'b' as u8);
+        assert_eq!(bytes[115], 'g' as u8);
+        assert_eq!(bytes[116], 0u8);
+        assert_eq!(bytes[bytes.len() - 1], 255u8);
+    }
+
+    #[test]
+    fn test_message_from_buffer_returns_correct_message() {
+        use std::string::ToString;
+
+        let mut buf = Vec::new();
+        buf.push(1u8);
+        buf.push(1u8);
+        buf.push(6u8);
+        buf.push(0u8);
+        buf.extend_from_slice(b"\x00\x00\x00\x2A");
+        buf.extend_from_slice(b"\x04\x00");
+        buf.extend_from_slice(b"\x00\x00");
+        buf.extend_from_slice(b"\x00\x00\x00\x00");
+        buf.extend_from_slice(b"\xC0\xA8\x01\x01");
+        buf.extend_from_slice(b"\x00\x00\x00\x00");
+        buf.extend_from_slice(b"\x00\x00\x00\x00");
+        buf.extend_from_slice(b"\x00\x00\x00\x00\x00\x00");
+        buf.extend_from_slice(b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00");
+        buf.extend_from_slice(b"relay.example.com");
+        let mut old_len = buf.len();
+        let mut unused_bytes = SNAME_LEN - b"relay.example.com".len();
+        buf.resize(old_len + unused_bytes, 0u8);
+        buf.extend_from_slice(b"boot.img");
+        old_len = buf.len();
+        unused_bytes = FILE_LEN - b"boot.img".len();
+        buf.resize(old_len + unused_bytes, 0u8);
+        buf.extend_from_slice(b"\x01\x04\xFF\xFF\xFF\x00");
+        buf.extend_from_slice(b"\x00");
+        buf.extend_from_slice(b"\x00");
+        buf.extend_from_slice(b"\x36\x04\xAA\xBB\xCC\xDD");
+        buf.extend_from_slice(b"\xFF");
+
+        let got = Message::from_buffer(&buf).unwrap();
+
+        let opt_want1 = ConfigOption {
+            code: OptionCode::SubnetMask,
+            value: vec![255, 255, 255, 0],
         };
-        let mut value = Vec::new();
-        let mut i: usize = 2;
-        while i < len + 2 {
-            let v = match buf.get(i) {
-                Some(val) => *val,
-                None => return None,
-            };
-            value.push(v);
-            i += 1;
+        let opt_want2 = ConfigOption {
+            code: OptionCode::Pad,
+            value: vec![],
+        };
+        let opt_want3 = ConfigOption {
+            code: OptionCode::Pad,
+            value: vec![],
+        };
+        let opt_want4 = ConfigOption {
+            code: OptionCode::ServerId,
+            value: vec![0xAA, 0xBB, 0xCC, 0xDD],
+        };
+        let want = Message {
+            op: OpCode::BOOTREQUEST,
+            xid: 42,
+            secs: 1024,
+            bdcast_flag: false,
+            ciaddr: Ipv4Addr::new(0, 0, 0, 0),
+            yiaddr: Ipv4Addr::new(192, 168, 1, 1),
+            siaddr: Ipv4Addr::new(0, 0, 0, 0),
+            giaddr: Ipv4Addr::new(0, 0, 0, 0),
+            chaddr: [0, 0, 0, 0, 0, 0],
+            sname: "relay.example.com".to_string(),
+            file: "boot.img".to_string(),
+            options: vec![opt_want1, opt_want2, opt_want3, opt_want4],
+        };
+
+        assert_eq!(got, want);
+    }
+
+    #[test]
+    fn test_message_from_too_short_buffer_returns_none() {
+        let buf = vec![0u8, 0u8, 0u8];
+
+        let got = Message::from_buffer(&buf);
+
+        assert_eq!(got, None);
+    }
+
+    #[test]
+    fn test_serialize_with_valid_option_returns_correct_bytes() {
+        let opt = ConfigOption {
+            code: OptionCode::SubnetMask,
+            value: vec![255, 255, 255, 0],
+        };
+        let mut bytes = Vec::new();
+        opt.serialize_to(&mut bytes);
+        assert_eq!(bytes.len(), 6);
+        assert_eq!(bytes[0], 1);
+        assert_eq!(bytes[1], 4);
+        assert_eq!(bytes[2], 255);
+        assert_eq!(bytes[3], 255);
+        assert_eq!(bytes[4], 255);
+        assert_eq!(bytes[5], 0);
+    }
+
+    #[test]
+    fn test_serialize_with_fixed_len_option_returns_correct_bytes() {
+        let opt = ConfigOption {
+            code: OptionCode::End,
+            value: vec![],
+        };
+        let mut bytes = Vec::new();
+        opt.serialize_to(&mut bytes);
+        assert_eq!(bytes.len(), 1);
+        assert_eq!(bytes[0], 255);
+    }
+
+    #[test]
+    fn test_option_from_valid_buffer_has_correct_values() {
+        let buf = vec![1, 4, 255, 255, 255, 0];
+        let result = ConfigOption::from_buffer(&buf);
+        match result {
+            Some(opt) => {
+                assert_eq!(opt.code as u8, 1);
+                assert_eq!(opt.value, vec![255, 255, 255, 0]);
+            }
+            None => assert!(false), // test failure
         }
-        if len != value.len() {
-            return None;
+    }
+
+    #[test]
+    fn test_option_from_valid_buffer_with_fixed_length_has_correct_values() {
+        let buf = vec![255];
+        let result = ConfigOption::from_buffer(&buf);
+        match result {
+            Some(opt) => {
+                assert_eq!(opt.code as u8, 255);
+                assert!(opt.value.is_empty());
+            }
+            None => assert!(false), // test failure
         }
-        let opt = ConfigOption { code, value };
-        Some(opt)
     }
 
-    fn serialize_to(&self, output: &mut Vec<u8>) {
-        output.push(self.code as u8);
-        let len = self.value.len() as u8;
-        if len > 0 {
-            output.push(len);
+    #[test]
+    fn test_option_from_buffer_with_invalid_code_returns_none() {
+        let buf = vec![72, 2, 1, 2];
+        let result = ConfigOption::from_buffer(&buf);
+        match result {
+            Some(opt) => assert!(false), // test failure
+            None => assert!(true),       // test success
         }
-        output.extend(&self.value);
     }
-}
 
-#[test]
-fn test_serialize_with_valid_option_returns_correct_bytes() {
-    let opt = ConfigOption {
-        code: OptionCode::SubnetMask,
-        value: vec![255, 255, 255, 0],
-    };
-    let mut bytes = Vec::new();
-    opt.serialize_to(&mut bytes);
-    assert_eq!(bytes.len(), 6);
-    assert_eq!(bytes[0], 1);
-    assert_eq!(bytes[1], 4);
-    assert_eq!(bytes[2], 255);
-    assert_eq!(bytes[3], 255);
-    assert_eq!(bytes[4], 255);
-    assert_eq!(bytes[5], 0);
-}
-
-#[test]
-fn test_serialize_with_fixed_len_option_returns_correct_bytes() {
-    let opt = ConfigOption {
-        code: OptionCode::End,
-        value: vec![],
-    };
-    let mut bytes = Vec::new();
-    opt.serialize_to(&mut bytes);
-    assert_eq!(bytes.len(), 1);
-    assert_eq!(bytes[0], 255);
-}
-
-#[test]
-fn test_option_from_valid_buffer_has_correct_values() {
-    let buf = vec![1, 4, 255, 255, 255, 0];
-    let result = ConfigOption::from_buffer(&buf);
-    match result {
-        Some(opt) => {
-            assert_eq!(opt.code as u8, 1);
-            assert_eq!(opt.value, vec![255, 255, 255, 0]);
-        }
-        None => assert!(false), // test failure
-    }
-}
-
-#[test]
-fn test_option_from_valid_buffer_with_fixed_length_has_correct_values() {
-    let buf = vec![255];
-    let result = ConfigOption::from_buffer(&buf);
-    match result {
-        Some(opt) => {
-            assert_eq!(opt.code as u8, 255);
-            assert!(opt.value.is_empty());
-        }
-        None => assert!(false), // test failure
-    }
-}
-
-#[test]
-fn test_option_from_buffer_with_invalid_code_returns_none() {
-    let buf = vec![72, 2, 1, 2];
-    let result = ConfigOption::from_buffer(&buf);
-    match result {
-        Some(opt) => assert!(false), // test failure
-        None => assert!(true),       // test success
-    }
-}
-
-#[test]
-fn test_option_from_buffer_with_invalid_length_returns_none() {
-    let buf = vec![1, 6, 255, 255, 255, 0];
-    let result = ConfigOption::from_buffer(&buf);
-    match result {
-        Some(opt) => assert!(false), // test failure
-        None => assert!(true),       // test success
-    }
-}
-
-/// A DHCP Message Type.
-///
-/// This enum corresponds to the DHCP Message Type option values
-/// defined in section 9.4 of RFC 1533.
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum MessageType {
-    DHCPDISCOVER = 1,
-    DHCPOFFER = 2,
-    DHCPREQUEST = 3,
-    DHCPDECLINE = 4,
-    DHCPACK = 5,
-    DHCPNAK = 6,
-    DHCPRELEASE = 7,
-}
-
-/// A DHCP option code.
-///
-/// This enum corresponds to the codes for DHCP options as defined in
-/// RFC 1533. Note that not all options defined in the RFC are represented
-/// here; options which are not in this type are not currently supported. Supported
-/// options appear in this type in the order in which they are defined in the RFC.
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum OptionCode {
-    Pad = 0,
-    End = 255,
-    SubnetMask = 1,
-    RequestedIpAddr = 50,
-    IpAddrLeaseTime = 51,
-    DhcpMessageType = 53,
-    ServerId = 54,
-}
-
-impl OptionCode {
-    /// Returns an OptionCode value when given a valid and supported code value, else None.
-    pub fn option_code_from_u8(n: u8) -> Option<OptionCode> {
-        match n {
-            0 => Some(OptionCode::Pad),
-            255 => Some(OptionCode::End),
-            1 => Some(OptionCode::SubnetMask),
-            50 => Some(OptionCode::RequestedIpAddr),
-            51 => Some(OptionCode::IpAddrLeaseTime),
-            53 => Some(OptionCode::DhcpMessageType),
-            54 => Some(OptionCode::ServerId),
-            _ => None,
+    #[test]
+    fn test_option_from_buffer_with_invalid_length_returns_none() {
+        let buf = vec![1, 6, 255, 255, 255, 0];
+        let result = ConfigOption::from_buffer(&buf);
+        match result {
+            Some(opt) => assert!(false), // test failure
+            None => assert!(true),       // test success
         }
     }
 }
