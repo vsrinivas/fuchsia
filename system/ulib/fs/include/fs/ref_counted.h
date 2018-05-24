@@ -20,7 +20,7 @@ namespace fs {
 // after a reference count of zero has been reached.
 template <typename T,
           bool EnableAdoptionValidator = ZX_DEBUG_ASSERT_IMPLEMENTED>
-class VnodeRefCounted : public fbl::internal::RefCountedBase<EnableAdoptionValidator> {
+class VnodeRefCounted {
 public:
     constexpr VnodeRefCounted()
         : ref_count_(1) {}
