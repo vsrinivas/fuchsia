@@ -19,20 +19,20 @@
 namespace component {
 class Realm;
 
-class Namespace : public ApplicationEnvironment,
+class Namespace : public Environment,
                   public ApplicationLauncher,
                   public fxl::RefCountedThreadSafe<Namespace> {
  public:
   ServiceProviderBridge& services() { return services_; }
 
-  void AddBinding(fidl::InterfaceRequest<ApplicationEnvironment> environment);
+  void AddBinding(fidl::InterfaceRequest<Environment> environment);
 
-  // ApplicationEnvironment implementation:
+  // Environment implementation:
 
   void CreateNestedEnvironment(
       zx::channel host_directory,
-      fidl::InterfaceRequest<ApplicationEnvironment> environment,
-      fidl::InterfaceRequest<ApplicationEnvironmentController> controller,
+      fidl::InterfaceRequest<Environment> environment,
+      fidl::InterfaceRequest<EnvironmentController> controller,
       fidl::StringPtr label) override;
 
   void GetApplicationLauncher(
@@ -56,7 +56,7 @@ class Namespace : public ApplicationEnvironment,
   FRIEND_REF_COUNTED_THREAD_SAFE(Namespace);
   ~Namespace() override;
 
-  fidl::BindingSet<ApplicationEnvironment> environment_bindings_;
+  fidl::BindingSet<Environment> environment_bindings_;
   fidl::BindingSet<ApplicationLauncher> launcher_bindings_;
 
   ServiceProviderBridge services_;

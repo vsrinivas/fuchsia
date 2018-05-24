@@ -10,8 +10,7 @@
 
 namespace component {
 
-Namespace::Namespace(fxl::RefPtr<Namespace> parent,
-                     Realm* realm,
+Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
                      ServiceListPtr service_list)
     : parent_(parent), realm_(realm) {
   component::ServiceProviderPtr services_backend;
@@ -20,8 +19,8 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent,
   }
   services_.set_backend(std::move(services_backend));
 
-  services_.AddService<ApplicationEnvironment>(
-      [this](fidl::InterfaceRequest<ApplicationEnvironment> request) {
+  services_.AddService<Environment>(
+      [this](fidl::InterfaceRequest<Environment> request) {
         environment_bindings_.AddBinding(this, std::move(request));
       });
   services_.AddService<ApplicationLauncher>(
@@ -44,15 +43,13 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent,
 
 Namespace::~Namespace() {}
 
-void Namespace::AddBinding(
-    fidl::InterfaceRequest<ApplicationEnvironment> environment) {
+void Namespace::AddBinding(fidl::InterfaceRequest<Environment> environment) {
   environment_bindings_.AddBinding(this, std::move(environment));
 }
 
 void Namespace::CreateNestedEnvironment(
-    zx::channel host_directory,
-    fidl::InterfaceRequest<ApplicationEnvironment> environment,
-    fidl::InterfaceRequest<ApplicationEnvironmentController> controller,
+    zx::channel host_directory, fidl::InterfaceRequest<Environment> environment,
+    fidl::InterfaceRequest<EnvironmentController> controller,
     fidl::StringPtr label) {
   realm_->CreateNestedJob(std::move(host_directory), std::move(environment),
                           std::move(controller), label);

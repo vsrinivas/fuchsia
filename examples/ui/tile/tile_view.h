@@ -50,7 +50,8 @@ class TileView : public mozart::BaseView, public presentation::Presenter {
   void OnChildAttached(uint32_t child_key,
                        views_v1::ViewInfo child_view_info) override;
   void OnChildUnavailable(uint32_t child_key) override;
-  void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
+  void OnSceneInvalidated(
+      fuchsia::images::PresentationInfo presentation_info) override;
 
   // |Presenter|:
   void Present(
@@ -73,8 +74,8 @@ class TileView : public mozart::BaseView, public presentation::Presenter {
   void RemoveChildView(uint32_t child_key);
 
   // Nested environment within which the apps started by TileView will run.
-  component::ApplicationEnvironmentPtr env_;
-  component::ApplicationEnvironmentControllerPtr env_controller_;
+  component::EnvironmentPtr env_;
+  component::EnvironmentControllerPtr env_controller_;
   component::ServiceProviderBridge service_provider_bridge_;
   component::ApplicationLauncherPtr env_launcher_;
 

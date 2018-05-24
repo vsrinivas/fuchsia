@@ -12,7 +12,7 @@
 namespace netconnector {
 
 RespondingServiceHost::RespondingServiceHost(
-    const component::ApplicationEnvironmentPtr& environment) {
+    const component::EnvironmentPtr& environment) {
   FXL_DCHECK(environment);
   environment->GetApplicationLauncher(launcher_.NewRequest());
 }
@@ -20,12 +20,11 @@ RespondingServiceHost::RespondingServiceHost(
 RespondingServiceHost::~RespondingServiceHost() {}
 
 void RespondingServiceHost::RegisterSingleton(
-    const std::string& service_name,
-    component::LaunchInfoPtr launch_info) {
+    const std::string& service_name, component::LaunchInfoPtr launch_info) {
   service_namespace_.AddServiceForName(
-      fxl::MakeCopyable([
-        this, service_name, launch_info = std::move(launch_info)
-      ](zx::channel client_handle) mutable {
+      fxl::MakeCopyable([this, service_name,
+                         launch_info = std::move(launch_info)](
+                            zx::channel client_handle) mutable {
         FXL_VLOG(2) << "Handling request for service " << service_name;
 
         auto iter = service_providers_by_name_.find(service_name);
@@ -49,12 +48,11 @@ void RespondingServiceHost::RegisterSingleton(
           launcher_->CreateApplication(std::move(dup_launch_info),
                                        controller.NewRequest());
 
-          controller.set_error_handler(
-              [this, service_name] {
-                FXL_LOG(INFO)
-                    << "Service " << service_name << " provider disconnected";
-                service_providers_by_name_.erase(service_name);
-              });
+          controller.set_error_handler([this, service_name] {
+            FXL_LOG(INFO) << "Service " << service_name
+                          << " provider disconnected";
+            service_providers_by_name_.erase(service_name);
+          });
 
           std::tie(iter, std::ignore) = service_providers_by_name_.emplace(
               std::make_pair<const std::string&, ServicesHolder>(

@@ -23,7 +23,7 @@ type Connector struct {
 type Context struct {
 	connector *Connector
 
-	Environment     *component.ApplicationEnvironmentInterface
+	Environment     *component.EnvironmentInterface
 	OutgoingService *svcns.Namespace
 	Launcher        *component.ApplicationLauncherInterface
 	appServices     zx.Handle
@@ -60,7 +60,7 @@ func New(serviceRoot, directoryRequest, appServices zx.Handle) *Context {
 
 	c.OutgoingService = svcns.New()
 
-	r, p, err := component.NewApplicationEnvironmentInterfaceRequest()
+	r, p, err := component.NewEnvironmentInterfaceRequest()
 	if err != nil {
 		panic(err.Error())
 	}

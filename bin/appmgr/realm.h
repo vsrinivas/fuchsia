@@ -15,7 +15,7 @@
 
 #include <component/cpp/fidl.h>
 #include "garnet/bin/appmgr/application_controller_impl.h"
-#include "garnet/bin/appmgr/application_environment_controller_impl.h"
+#include "garnet/bin/appmgr/environment_controller_impl.h"
 #include "garnet/bin/appmgr/hub/hub_info.h"
 #include "garnet/bin/appmgr/hub/realm_hub.h"
 #include "garnet/bin/appmgr/namespace.h"
@@ -41,11 +41,10 @@ class Realm {
 
   HubInfo HubInfo();
 
-  void CreateNestedJob(
-      zx::channel host_directory,
-      fidl::InterfaceRequest<ApplicationEnvironment> environment,
-      fidl::InterfaceRequest<ApplicationEnvironmentController> controller,
-      fidl::StringPtr label);
+  void CreateNestedJob(zx::channel host_directory,
+                       fidl::InterfaceRequest<Environment> environment,
+                       fidl::InterfaceRequest<EnvironmentController> controller,
+                       fidl::StringPtr label);
 
   void CreateApplication(
       LaunchInfo launch_info,
@@ -55,8 +54,7 @@ class Realm {
   // reference to the child's controller. The caller of this function typically
   // destroys the controller (and hence the environment) shortly after calling
   // this function.
-  std::unique_ptr<ApplicationEnvironmentControllerImpl> ExtractChild(
-      Realm* child);
+  std::unique_ptr<EnvironmentControllerImpl> ExtractChild(Realm* child);
 
   // Removes the application from this environment and returns the owning
   // reference to the application's controller. The caller of this function
@@ -65,7 +63,7 @@ class Realm {
   std::unique_ptr<ApplicationControllerImpl> ExtractApplication(
       ApplicationControllerImpl* controller);
 
-  void AddBinding(fidl::InterfaceRequest<ApplicationEnvironment> environment);
+  void AddBinding(fidl::InterfaceRequest<Environment> environment);
 
   zx_status_t BindSvc(zx::channel channel);
 
@@ -98,8 +96,7 @@ class Realm {
   RealmHub hub_;
   fs::SynchronousVfs info_vfs_;
 
-  std::unordered_map<Realm*,
-                     std::unique_ptr<ApplicationEnvironmentControllerImpl>>
+  std::unordered_map<Realm*, std::unique_ptr<EnvironmentControllerImpl>>
       children_;
 
   std::unordered_map<ApplicationControllerImpl*,

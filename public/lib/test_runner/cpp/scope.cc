@@ -6,7 +6,7 @@
 
 namespace test_runner {
 
-Scope::Scope(const component::ApplicationEnvironmentPtr& parent_env,
+Scope::Scope(const component::EnvironmentPtr& parent_env,
              const std::string& label) {
   zx::channel h1, h2;
   if (zx::channel::create(0, &h1, &h2) < 0)

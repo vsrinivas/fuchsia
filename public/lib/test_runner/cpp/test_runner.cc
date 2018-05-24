@@ -18,7 +18,7 @@
 // device logs (and possibly if multiple tests are run at the same time).
 //
 // The shell command representing the running test is launched in a new
-// ApplicationEnvironment for easy teardown. This ApplicationEnvironment
+// Environment for easy teardown. This Environment
 // contains a TestRunner service (see test_runner.fidl). The applications
 // launched by the shell command (which may launch more than 1 process) may use
 // the |TestRunner| service to signal completion of the test, and also provides
@@ -39,23 +39,22 @@
 #include <string>
 #include <vector>
 
-#include "lib/fxl/logging.h"
-#include "lib/fxl/type_converter.h"
-#include "lib/fxl/strings/split_string.h"
-#include "lib/fxl/strings/string_view.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/types/type_converters.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/split_string.h"
+#include "lib/fxl/strings/string_view.h"
+#include "lib/fxl/type_converter.h"
 #include "third_party/rapidjson/rapidjson/document.h"
-#include "third_party/rapidjson/rapidjson/writer.h"
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
+#include "third_party/rapidjson/rapidjson/writer.h"
 
 namespace test_runner {
 
 TestRunObserver::~TestRunObserver() = default;
 
-TestRunnerImpl::TestRunnerImpl(
-    fidl::InterfaceRequest<TestRunner> request,
-    TestRunContext* test_run_context)
+TestRunnerImpl::TestRunnerImpl(fidl::InterfaceRequest<TestRunner> request,
+                               TestRunContext* test_run_context)
     : binding_(this, std::move(request)), test_run_context_(test_run_context) {
   binding_.set_error_handler([this] {
     if (waiting_for_termination_) {
@@ -63,7 +62,7 @@ TestRunnerImpl::TestRunnerImpl(
       // Client terminated but that was expected.
       termination_timer_.Stop();
       if (teardown_after_termination_) {
-        Teardown([]{});
+        Teardown([] {});
       } else {
         test_run_context_->StopTrackingClient(this, false);
       }
@@ -125,7 +124,7 @@ void TestRunnerImpl::WillTerminate(const double withinSeconds) {
                              binding_.set_error_handler(nullptr);
                              Fail("Termination timed out.");
                              if (teardown_after_termination_) {
-                               Teardown([]{});
+                               Teardown([] {});
                              }
                              test_run_context_->StopTrackingClient(this, false);
                            },

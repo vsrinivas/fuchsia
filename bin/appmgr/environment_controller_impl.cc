@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/appmgr/application_environment_controller_impl.h"
+#include "garnet/bin/appmgr/environment_controller_impl.h"
 
 #include <utility>
 
@@ -11,8 +11,8 @@
 
 namespace component {
 
-ApplicationEnvironmentControllerImpl::ApplicationEnvironmentControllerImpl(
-    fidl::InterfaceRequest<ApplicationEnvironmentController> request,
+EnvironmentControllerImpl::EnvironmentControllerImpl(
+    fidl::InterfaceRequest<EnvironmentController> request,
     std::unique_ptr<Realm> realm)
     : binding_(this), realm_(std::move(realm)) {
   if (request.is_valid()) {
@@ -25,18 +25,18 @@ ApplicationEnvironmentControllerImpl::ApplicationEnvironmentControllerImpl(
   }
 }
 
-ApplicationEnvironmentControllerImpl::~ApplicationEnvironmentControllerImpl() =
+EnvironmentControllerImpl::~EnvironmentControllerImpl() =
     default;
 
-void ApplicationEnvironmentControllerImpl::Kill(KillCallback callback) {
-  std::unique_ptr<ApplicationEnvironmentControllerImpl> self =
+void EnvironmentControllerImpl::Kill(KillCallback callback) {
+  std::unique_ptr<EnvironmentControllerImpl> self =
       realm_->parent()->ExtractChild(realm_.get());
   realm_ = nullptr;
   callback();
   // The |self| destructor destroys |this| when we unwind this stack frame.
 }
 
-void ApplicationEnvironmentControllerImpl::Detach() {
+void EnvironmentControllerImpl::Detach() {
   binding_.set_error_handler(fxl::Closure());
 }
 

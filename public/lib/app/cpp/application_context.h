@@ -50,7 +50,7 @@ class ApplicationContext {
   // Gets the application's environment.
   //
   // May be null if the application does not have access to its environment.
-  const ApplicationEnvironmentPtr& environment() const { return environment_; }
+  const EnvironmentPtr& environment() const { return environment_; }
 
   // Whether this application was given services by its environment.
   bool has_environment_services() const {
@@ -99,7 +99,7 @@ class ApplicationContext {
   Services incoming_services_;
   Outgoing outgoing_;
 
-  ApplicationEnvironmentPtr environment_;
+  EnvironmentPtr environment_;
   ApplicationLauncherPtr launcher_;
 };
 

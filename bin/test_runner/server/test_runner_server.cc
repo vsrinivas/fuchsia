@@ -18,7 +18,7 @@
 // device logs (and possibly if multiple tests are run at the same time).
 //
 // The shell command representing the running test is launched in a new
-// ApplicationEnvironment for easy teardown. This ApplicationEnvironment
+// Environment for easy teardown. This Environment
 // contains a TestRunner service (see test_runner.fidl). The applications
 // launched by the shell command (which may launch more than 1 process) may use
 // the |TestRunner| service to signal completion of the test, and also provides
@@ -37,9 +37,9 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include <test_runner/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/zx/time.h>
+#include <test_runner/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -62,8 +62,7 @@ namespace test_runner {
 class TestRunnerConnection : public TestRunObserver {
  public:
   TestRunnerConnection(
-      int socket_fd,
-      std::shared_ptr<component::ApplicationContext> app_context)
+      int socket_fd, std::shared_ptr<component::ApplicationContext> app_context)
       : app_context_(app_context), socket_(socket_fd) {}
 
   void Start() {
@@ -71,8 +70,7 @@ class TestRunnerConnection : public TestRunObserver {
     ReadAndRunCommand();
   }
 
-  void SendMessage(const std::string& test_id,
-                   const std::string& operation,
+  void SendMessage(const std::string& test_id, const std::string& operation,
                    const std::string& msg) override {
     std::stringstream stream;
     stream << test_id << " " << operation << " " << msg << "\n";

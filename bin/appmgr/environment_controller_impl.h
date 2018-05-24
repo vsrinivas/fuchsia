@@ -14,27 +14,27 @@
 namespace component {
 class Realm;
 
-class ApplicationEnvironmentControllerImpl
-    : public ApplicationEnvironmentController {
+class EnvironmentControllerImpl
+    : public EnvironmentController {
  public:
-  ApplicationEnvironmentControllerImpl(
-      fidl::InterfaceRequest<ApplicationEnvironmentController> request,
+  EnvironmentControllerImpl(
+      fidl::InterfaceRequest<EnvironmentController> request,
       std::unique_ptr<Realm> realm);
-  ~ApplicationEnvironmentControllerImpl() override;
+  ~EnvironmentControllerImpl() override;
 
   Realm* realm() const { return realm_.get(); }
 
-  // ApplicationEnvironmentController implementation:
+  // EnvironmentController implementation:
 
   void Kill(KillCallback callback) override;
 
   void Detach() override;
 
  private:
-  fidl::Binding<ApplicationEnvironmentController> binding_;
+  fidl::Binding<EnvironmentController> binding_;
   std::unique_ptr<Realm> realm_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(ApplicationEnvironmentControllerImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(EnvironmentControllerImpl);
 };
 
 }  // namespace component

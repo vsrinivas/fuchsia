@@ -16,7 +16,7 @@ GuestEnvironmentImpl::GuestEnvironmentImpl(
       label_(label),
       context_(context),
       host_socket_endpoint_(fuchsia::guest::kHostCid) {
-  CreateApplicationEnvironment(label);
+  CreateEnvironment(label);
   AddBinding(std::move(request));
   FXL_CHECK(socket_server_.AddEndpoint(&host_socket_endpoint_) == ZX_OK);
 }
@@ -105,8 +105,7 @@ void GuestEnvironmentImpl::ConnectToGuest(
   it->second->AddBinding(std::move(request));
 }
 
-void GuestEnvironmentImpl::CreateApplicationEnvironment(
-    const std::string& label) {
+void GuestEnvironmentImpl::CreateEnvironment(const std::string& label) {
   context_->environment()->CreateNestedEnvironment(
       service_provider_bridge_.OpenAsDirectory(), env_.NewRequest(),
       env_controller_.NewRequest(), label);

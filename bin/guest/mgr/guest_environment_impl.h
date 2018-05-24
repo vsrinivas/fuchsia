@@ -56,7 +56,7 @@ class GuestEnvironmentImpl : public fuchsia::guest::GuestEnvironment {
       fidl::InterfaceRequest<fuchsia::guest::ManagedSocketEndpoint> endpoint)
       override;
 
-  void CreateApplicationEnvironment(const std::string& label);
+  void CreateEnvironment(const std::string& label);
 
   const uint32_t id_;
   const std::string label_;
@@ -64,8 +64,8 @@ class GuestEnvironmentImpl : public fuchsia::guest::GuestEnvironment {
   component::ApplicationContext* context_;
   fidl::BindingSet<fuchsia::guest::GuestEnvironment> bindings_;
 
-  component::ApplicationEnvironmentPtr env_;
-  component::ApplicationEnvironmentControllerPtr env_controller_;
+  component::EnvironmentPtr env_;
+  component::EnvironmentControllerPtr env_controller_;
   component::ApplicationLauncherPtr app_launcher_;
   component::ServiceProviderBridge service_provider_bridge_;
 

@@ -11,7 +11,7 @@ struct TestResult {
   string message;
 };
 
-// This service is included in the ApplicationEnvironment of multi-process tests
+// This service is included in the Environment of multi-process tests
 // that are launched by the test runner harness. Test processes can connect to
 // this service to log failures, signal crashes, and signal completion.
 // The empty return acknowledges that the connection to TestRunner was
@@ -58,7 +58,7 @@ interface TestRunner {
   8: PassTestPoint();
 };
 
-// This service is included in the ApplicationEnvironment of the test runner
+// This service is included in the Environment of the test runner
 // harness, along with TestRunner. This service represents a producer-consumer
 // queue that is shared between all of its clients; clients can use it to signal
 // events across different processes. Producers can queue values associated to a

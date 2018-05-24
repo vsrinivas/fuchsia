@@ -2,23 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_NETCONNECTOR_RESPONDING_SERVICE_HOST_H_
+#define GARNET_BIN_NETCONNECTOR_RESPONDING_SERVICE_HOST_H_
 
 #include <unordered_map>
 
-#include "lib/app/cpp/application_context.h"
 #include <component/cpp/fidl.h>
+#include "lib/app/cpp/application_context.h"
 #include "lib/fxl/macros.h"
-#include "lib/svc/cpp/services.h"
 #include "lib/svc/cpp/service_namespace.h"
+#include "lib/svc/cpp/services.h"
 
 namespace netconnector {
 
 // Provides services based on service registrations.
 class RespondingServiceHost {
  public:
-  RespondingServiceHost(
-      const component::ApplicationEnvironmentPtr& environment);
+  RespondingServiceHost(const component::EnvironmentPtr& environment);
 
   ~RespondingServiceHost();
 
@@ -50,6 +50,7 @@ class RespondingServiceHost {
         : service_provider_(std::move(service_provider)),
           is_service_provider_(true) {}
     void ConnectToService(const std::string& service_name, zx::channel c);
+
    private:
     component::Services services_;
     component::ServiceProviderPtr service_provider_;
@@ -64,3 +65,5 @@ class RespondingServiceHost {
 };
 
 }  // namespace netconnector
+
+#endif  // GARNET_BIN_NETCONNECTOR_RESPONDING_SERVICE_HOST_H_

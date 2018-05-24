@@ -54,7 +54,7 @@ struct LaunchInfo {
   FlatNamespace? flat_namespace;
 
   // A list of services to be added to this component's svc namespace. These
-  // services are in addition to those coming from ApplicationEnvironment.
+  // services are in addition to those coming from Environment.
   ServiceList? additional_services;
 };
 
@@ -68,15 +68,15 @@ struct ServiceList {
 
 // An interface for creating application instances.
 //
-// Typically obtained via |ApplicationEnvironment.GetApplicationLauncher|.
+// Typically obtained via |Environment.GetApplicationLauncher|.
 [Discoverable]
 interface ApplicationLauncher {
   // Creates a new instance of the application described by |launch_info|.
   //
-  // The application instance is created in the |ApplicationEnvironment|
+  // The application instance is created in the |Environment|
   // associated with this |ApplicationLauncher|. When creating the application,
   // the environment requests the environment services for this application from
-  // its |ApplicationEnvironmentHost|.
+  // its |EnvironmentHost|.
   //
   // The |controller| can be used to control the lifecycle of the created
   // application instance. If an |ApplicationController|'s interface is

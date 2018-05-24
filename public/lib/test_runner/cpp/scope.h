@@ -8,9 +8,9 @@
 #include <memory>
 #include <string>
 
+#include <component/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/service_provider_impl.h"
-#include <component/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/svc/cpp/service_provider_bridge.h"
@@ -21,8 +21,7 @@ namespace test_runner {
 // environment services are delegated to the parent environment.
 class Scope {
  public:
-  Scope(const component::ApplicationEnvironmentPtr& parent_env,
-        const std::string& label);
+  Scope(const component::EnvironmentPtr& parent_env, const std::string& label);
 
   template <typename Interface>
   void AddService(
@@ -34,13 +33,13 @@ class Scope {
 
   component::ApplicationLauncher* GetLauncher();
 
-  component::ApplicationEnvironmentPtr& environment() { return env_; }
+  component::EnvironmentPtr& environment() { return env_; }
 
  private:
   component::ServiceProviderBridge service_provider_bridge_;
-  component::ApplicationEnvironmentPtr env_;
+  component::EnvironmentPtr env_;
   component::ApplicationLauncherPtr env_launcher_;
-  component::ApplicationEnvironmentControllerPtr env_controller_;
+  component::EnvironmentControllerPtr env_controller_;
 };
 
 }  // namespace test_runner

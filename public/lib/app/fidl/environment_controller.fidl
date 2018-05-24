@@ -11,11 +11,11 @@ library component;
 //
 // If the environment is destroyed, this interface will be closed.
 //
-// Typically obtained via |ApplicationEnvironment.CreateNestedEnvironment|.
-interface ApplicationEnvironmentController {
+// Typically obtained via |Environment.CreateNestedEnvironment|.
+interface EnvironmentController {
   // Terminates the environment.
   //
-  // When an |ApplicationEnvironment| is terminated, all applications launched
+  // When an |Environment| is terminated, all applications launched
   // in the environment (and in all transitively nested environments) are also
   // killed.
   1: Kill() -> ();

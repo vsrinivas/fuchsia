@@ -261,11 +261,10 @@ HubInfo Realm::HubInfo() {
 }
 
 void Realm::CreateNestedJob(
-    zx::channel host_directory,
-    fidl::InterfaceRequest<ApplicationEnvironment> environment,
-    fidl::InterfaceRequest<ApplicationEnvironmentController> controller_request,
+    zx::channel host_directory, fidl::InterfaceRequest<Environment> environment,
+    fidl::InterfaceRequest<EnvironmentController> controller_request,
     fidl::StringPtr label) {
-  auto controller = std::make_unique<ApplicationEnvironmentControllerImpl>(
+  auto controller = std::make_unique<EnvironmentControllerImpl>(
       std::move(controller_request),
       std::make_unique<Realm>(this, std::move(host_directory), label));
   Realm* child = controller->realm();
@@ -338,8 +337,7 @@ void Realm::CreateApplication(
       }));
 }
 
-std::unique_ptr<ApplicationEnvironmentControllerImpl> Realm::ExtractChild(
-    Realm* child) {
+std::unique_ptr<EnvironmentControllerImpl> Realm::ExtractChild(Realm* child) {
   auto it = children_.find(child);
   if (it == children_.end()) {
     return nullptr;
@@ -368,8 +366,7 @@ std::unique_ptr<ApplicationControllerImpl> Realm::ExtractApplication(
   return application;
 }
 
-void Realm::AddBinding(
-    fidl::InterfaceRequest<ApplicationEnvironment> environment) {
+void Realm::AddBinding(fidl::InterfaceRequest<Environment> environment) {
   default_namespace_->AddBinding(std::move(environment));
 }
 

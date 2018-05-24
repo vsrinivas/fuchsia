@@ -9,8 +9,8 @@
 #include <memory>
 #include <vector>
 
-#include <fs/managed-vfs.h>
 #include <component/cpp/fidl.h>
+#include <fs/managed-vfs.h>
 #include "garnet/bin/sysmgr/delegating_loader.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/macros.h"
@@ -48,8 +48,8 @@ class App {
   std::map<std::string, component::Services> services_;
 
   // Nested environment within which the apps started by sysmgr will run.
-  component::ApplicationEnvironmentPtr env_;
-  component::ApplicationEnvironmentControllerPtr env_controller_;
+  component::EnvironmentPtr env_;
+  component::EnvironmentControllerPtr env_controller_;
   component::ApplicationLauncherPtr env_launcher_;
 
   fs::ManagedVfs vfs_;
