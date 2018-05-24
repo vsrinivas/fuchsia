@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/function.h>
-
 #include <iostream>
+
+#include <lib/fit/function.h>
 
 #include "garnet/bin/guest/cli/dump.h"
 #include "garnet/bin/guest/cli/launch.h"
@@ -15,7 +15,7 @@
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/strings/string_printf.h"
 
-using CommandFunc = fbl::Function<void()>;
+using CommandFunc = fit::closure;
 
 static void usage() {
   std::cerr << "Usage: guest <command> <package> <command-args>...\n"

@@ -51,7 +51,7 @@ class LogicalLink;
 // thread where this is used.
 class ChannelManager final {
  public:
-  using LinkErrorCallback = fbl::Closure;
+  using LinkErrorCallback = fit::closure;
 
   ChannelManager(fxl::RefPtr<hci::Transport> hci, async_t* l2cap_dispatcher);
   ~ChannelManager();

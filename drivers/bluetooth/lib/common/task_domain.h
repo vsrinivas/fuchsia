@@ -11,6 +11,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "lib/fxl/memory/ref_ptr.h"
 
@@ -129,7 +130,7 @@ class TaskDomain {
 
   async_t* dispatcher() const { return dispatcher_; }
 
-  void PostMessage(fbl::Closure func) {
+  void PostMessage(fit::closure func) {
     // |objref| is captured here to make sure |obj_| stays alive until |func|
     // has run.
     async::PostTask(dispatcher_, [this, func = std::move(func),

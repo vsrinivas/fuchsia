@@ -33,7 +33,7 @@ class Channel;
 // from any thread.
 class L2CAP : public fbl::RefCounted<L2CAP> {
  public:
-  using ChannelCallback = fbl::Function<void(fbl::RefPtr<Channel>)>;
+  using ChannelCallback = fit::function<void(fbl::RefPtr<Channel>)>;
   using LEConnectionParameterUpdateCallback =
       internal::LESignalingChannel::ConnectionParameterUpdateCallback;
   using LinkErrorCallback = std::function<void()>;  // copyable

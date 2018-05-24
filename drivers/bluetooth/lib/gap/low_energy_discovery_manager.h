@@ -8,8 +8,8 @@
 #include <queue>
 #include <unordered_set>
 
-#include <fbl/function.h>
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
@@ -124,7 +124,7 @@ class LowEnergyDiscoverySession final {
 
   // Sets a callback to get notified when the session becomes inactive due to an
   // internal error.
-  void set_error_callback(fbl::Closure callback) {
+  void set_error_callback(fit::closure callback) {
     error_callback_ = std::move(callback);
   }
 
@@ -158,7 +158,7 @@ class LowEnergyDiscoverySession final {
 
   bool active_;
   fxl::WeakPtr<LowEnergyDiscoveryManager> manager_;
-  fbl::Closure error_callback_;
+  fit::closure error_callback_;
   DeviceFoundCallback device_found_callback_;
   DiscoveryFilter filter_;
   fxl::ThreadChecker thread_checker_;
@@ -183,7 +183,7 @@ class LowEnergyDiscoveryManager final : public hci::LowEnergyScanner::Delegate {
   // TODO(armansito): Implement option to disable duplicate filtering. Would
   // this require software filtering for clients that did not request it?
   using SessionCallback =
-      fbl::Function<void(std::unique_ptr<LowEnergyDiscoverySession>)>;
+      fit::function<void(std::unique_ptr<LowEnergyDiscoverySession>)>;
   void StartDiscovery(SessionCallback callback);
 
   // Sets a new scan period to any future and ongoing discovery procedures.

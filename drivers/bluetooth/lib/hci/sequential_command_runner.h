@@ -59,7 +59,7 @@ class SequentialCommandRunner final {
   //
   // RunCommands() will always send the first queued HCI command to
   // CommandChannel even if it is followed by a call to Cancel().
-  using StatusCallback = fbl::Function<void(Status status)>;
+  using StatusCallback = fit::function<void(Status status)>;
   void RunCommands(StatusCallback status_callback);
 
   // Returns true if commands can be queued and run on this instance. This

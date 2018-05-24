@@ -17,7 +17,7 @@ VirtioVsock::Connection::~Connection() {
 template <VirtioVsock::StreamFunc F>
 VirtioVsock::Stream<F>::Stream(async_t* async, VirtioQueue* queue,
                                VirtioVsock* vsock)
-    : waiter_(async, queue, fbl::BindMember(vsock, F)) {}
+    : waiter_(async, queue, fit::bind_member(vsock, F)) {}
 
 template <VirtioVsock::StreamFunc F>
 zx_status_t VirtioVsock::Stream<F>::WaitOnQueue() {

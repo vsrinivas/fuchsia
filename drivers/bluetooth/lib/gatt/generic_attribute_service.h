@@ -5,7 +5,8 @@
 #pragma once
 
 #include <unordered_set>
-#include <fbl/function.h>
+
+#include <lib/fit/function.h>
 
 #include "garnet/drivers/bluetooth/lib/gatt/local_service_manager.h"
 #include "garnet/drivers/bluetooth/lib/att/att.h"
@@ -17,7 +18,7 @@ namespace gatt {
 // Callback called to signal that an indication payload should be sent. Used to
 // inject the GATT object's notification sending functionality (avoiding this
 // service from carrying a reference to GATT or Server).
-using SendIndicationCallback = fbl::Function<void(
+using SendIndicationCallback = fit::function<void(
     const std::string& peer_id,
     att::Handle handle,
     const common::ByteBuffer& value)>;

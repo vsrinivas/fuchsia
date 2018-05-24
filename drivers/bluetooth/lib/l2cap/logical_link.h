@@ -68,7 +68,7 @@ class LogicalLink final {
 
   // Assigns the link error callback to be invoked when a channel signals a link
   // error.
-  void set_error_callback(fbl::Closure callback, async_t* dispatcher);
+  void set_error_callback(fit::closure callback, async_t* dispatcher);
 
   // Returns the dispatcher that this LogicalLink operates on.
   async_t* dispatcher() const { return dispatcher_; }
@@ -104,7 +104,7 @@ class LogicalLink final {
   hci::Connection::LinkType type_;
   hci::Connection::Role role_;
 
-  fbl::Closure link_error_cb_;
+  fit::closure link_error_cb_;
   async_t* link_error_dispatcher_;
 
   // Owns and manages the L2CAP signaling channel on this logical link.

@@ -6,7 +6,7 @@
 #define LIB_ESCHER_UTIL_IMAGE_UTILS_H_
 
 #ifdef __Fuchsia__
-#include <fbl/function.h>
+#include <lib/fit/function.h>
 #endif
 
 #include <utility>
@@ -24,7 +24,7 @@ namespace image_utils {
 
 #ifdef __Fuchsia__
 using ImageConversionFunction =
-    fbl::Function<void(void*, void*, uint32_t, uint32_t)>;
+    fit::function<void(void*, void*, uint32_t, uint32_t)>;
 #else
 using ImageConversionFunction =
     std::function<void(void*, void*, uint32_t, uint32_t)>;

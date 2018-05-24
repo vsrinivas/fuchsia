@@ -115,7 +115,7 @@ class LowEnergyConnectionManager final {
   //
   // |callback| is posted on the creation thread's dispatcher.
   using ConnectionResultCallback =
-      fbl::Function<void(hci::Status, LowEnergyConnectionRefPtr)>;
+      fit::function<void(hci::Status, LowEnergyConnectionRefPtr)>;
   bool Connect(const std::string& device_identifier,
                ConnectionResultCallback callback);
 

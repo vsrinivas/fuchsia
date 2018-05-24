@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <fbl/function.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <lib/fit/function.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -24,9 +24,9 @@ class RemoteService;
 using RemoteServiceWatcher = std::function<void(fbl::RefPtr<RemoteService>)>;
 
 using ServiceList = std::vector<fbl::RefPtr<RemoteService>>;
-using ServiceListCallback = fbl::Function<void(att::Status, ServiceList)>;
+using ServiceListCallback = fit::function<void(att::Status, ServiceList)>;
 
-using RemoteServiceCallback = fbl::Function<void(fbl::RefPtr<RemoteService>)>;
+using RemoteServiceCallback = fit::function<void(fbl::RefPtr<RemoteService>)>;
 using RemoteCharacteristicList = std::vector<RemoteCharacteristic>;
 
 namespace internal {
@@ -72,7 +72,7 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
   // |callback|. Returns the cached results if characteristics were already
   // discovered.
   using CharacteristicCallback =
-      fbl::Function<void(att::Status, const RemoteCharacteristicList&)>;
+      fit::function<void(att::Status, const RemoteCharacteristicList&)>;
   void DiscoverCharacteristics(CharacteristicCallback callback,
                                async_t* dispatcher = nullptr);
 
@@ -167,7 +167,7 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
   // Runs |task| on the GATT dispatcher. |mtx_| must not be held when calling
   // this method. This guarantees that this object's will live for the duration
   // of |task|.
-  void RunGattTask(fbl::Closure task) __TA_EXCLUDES(mtx_);
+  void RunGattTask(fit::closure task) __TA_EXCLUDES(mtx_);
 
   // Used to complete a characteristic discovery request.
   void ReportCharacteristics(att::Status status,

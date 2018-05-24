@@ -8,9 +8,9 @@
 #include <string>
 
 #include <fbl/auto_lock.h>
-#include <fbl/function.h>
 #include <fbl/mutex.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/fit/function.h>
 #include <lib/zx/event.h>
 #include <virtio/virtio.h>
 #include <zircon/types.h>
@@ -111,7 +111,7 @@ class VirtioQueue {
   const virtio_queue_t* ring() { return &ring_; }
 
   template <typename T>
-  using RingUpdateFunc = fbl::Function<T(virtio_queue_t*)>;
+  using RingUpdateFunc = fit::function<T(virtio_queue_t*)>;
   template <typename T>
   T UpdateRing(RingUpdateFunc<T> func) {
     fbl::AutoLock lock(&mutex_);

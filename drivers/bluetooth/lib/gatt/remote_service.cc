@@ -350,7 +350,7 @@ HostError RemoteService::GetCharacteristic(IdType id, RemoteCharacteristic** out
   return HostError::kNoError;
 }
 
-void RemoteService::RunGattTask(fbl::Closure task) {
+void RemoteService::RunGattTask(fit::closure task) {
   // Capture a reference to this object to guarantee its lifetime.
   RunOrPost(
       [objref = fbl::WrapRefPtr(this), task = std::move(task)] { task(); },

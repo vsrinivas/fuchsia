@@ -10,6 +10,7 @@
 #include <fdio/util.h>
 #include <fuchsia/guest/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/fit/function.h>
 
 #include "lib/app/cpp/environment_services.h"
 #include "lib/fsl/socket/socket_drainer.h"
@@ -34,7 +35,7 @@ class InputReader {
  private:
   void WaitForKeystroke() {
     if (!std::cin.eof()) {
-      fd_waiter_.Wait(fbl::BindMember(this, &InputReader::HandleKeystroke),
+      fd_waiter_.Wait(fit::bind_member(this, &InputReader::HandleKeystroke),
                       STDIN_FILENO, POLLIN);
     }
   }

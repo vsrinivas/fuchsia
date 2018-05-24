@@ -79,7 +79,7 @@ class LowEnergyDiscoveryManagerTest : public TestingBase {
 
   // Sets a callback that will run when the scan state transitions |count|
   // times.
-  void set_scan_state_handler(size_t count, fbl::Closure callback) {
+  void set_scan_state_handler(size_t count, fit::closure callback) {
     scan_state_callbacks_[count] = std::move(callback);
   }
 
@@ -186,7 +186,7 @@ class LowEnergyDiscoveryManagerTest : public TestingBase {
 
   bool scan_enabled_;
   std::vector<bool> scan_states_;
-  std::unordered_map<size_t, fbl::Closure> scan_state_callbacks_;
+  std::unordered_map<size_t, fit::closure> scan_state_callbacks_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LowEnergyDiscoveryManagerTest);
 };

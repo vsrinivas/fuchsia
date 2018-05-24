@@ -5,8 +5,8 @@
 #ifndef GARNET_LIB_MACHINA_VIRTIO_BALLOON_H_
 #define GARNET_LIB_MACHINA_VIRTIO_BALLOON_H_
 
-#include <fbl/function.h>
 #include <fbl/mutex.h>
+#include <lib/fit/function.h>
 #include <virtio/balloon.h>
 #include <virtio/virtio_ids.h>
 #include <zircon/compiler.h>
@@ -40,7 +40,7 @@ class VirtioBalloon
   // The pointers backing |stats| are only guaranteed to live for the
   // duration of this callback.
   using StatsHandler =
-      fbl::Function<void(const virtio_balloon_stat_t* stats, size_t len)>;
+      fit::function<void(const virtio_balloon_stat_t* stats, size_t len)>;
 
   // Request balloon memory statistics from the guest.
   //

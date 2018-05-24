@@ -24,7 +24,7 @@ VirtioNet::Stream::Stream(VirtioNet* device, async_t* async, VirtioQueue* queue,
       queue_(queue),
       trace_flow_id_(trace_flow_id),
       queue_wait_(async, queue,
-                  fbl::BindMember(this, &VirtioNet::Stream::OnQueueReady)) {}
+                  fit::bind_member(this, &VirtioNet::Stream::OnQueueReady)) {}
 
 zx_status_t VirtioNet::Stream::Start(zx_handle_t fifo, size_t fifo_max_entries,
                                      bool rx) {

@@ -4,8 +4,8 @@
 
 #include "signaling_channel.h"
 
-#include <fbl/function.h>
 #include <lib/async/default.h>
+#include <lib/fit/function.h>
 
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 #include "lib/fxl/logging.h"

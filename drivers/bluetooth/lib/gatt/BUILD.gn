@@ -43,6 +43,7 @@ static_library("gatt") {
     ":definitions",
     "//garnet/drivers/bluetooth/lib/att",
     "//garnet/public/lib/fidl/cpp",
+    "//zircon/public/lib/fit",
   ]
 }
 

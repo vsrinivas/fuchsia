@@ -5,7 +5,6 @@
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/logging.h"
 
-#include <fbl/function.h>
 #include <lib/async/default.h>
 #include <zircon/errors.h>
 

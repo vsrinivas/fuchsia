@@ -18,7 +18,7 @@ namespace gfx {
 class HostImage;
 using HostImagePtr = fxl::RefPtr<Image>;
 using ImageConversionFunction =
-    fbl::Function<void(void*, void*, uint32_t, uint32_t)>;
+    fit::function<void(void*, void*, uint32_t, uint32_t)>;
 
 // An Image whose contents come from host-accessible memory.
 class HostImage : public Image {

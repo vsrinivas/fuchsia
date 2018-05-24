@@ -7,7 +7,7 @@
 #include <functional>
 #include <memory>
 
-#include <fbl/function.h>
+#include <lib/fit/function.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
@@ -49,7 +49,7 @@ class LowEnergyAdvertiser {
   // |callback| may be called before this function returns, but will
   // be called before any calls to |connect_callback|.
   using AdvertisingStatusCallback =
-      fbl::Function<void(uint32_t interval_ms, Status status)>;
+      fit::function<void(uint32_t interval_ms, Status status)>;
   using ConnectionCallback = std::function<void(ConnectionPtr link)>;
   virtual void StartAdvertising(const common::DeviceAddress& address,
                                 const common::ByteBuffer& data,

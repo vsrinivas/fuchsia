@@ -31,7 +31,7 @@ class FakeLayer final : public L2CAP {
 
   // Called when a new channel gets opened. Tests can use this to obtain a
   // reference to all channels.
-  using NewChannelCallback = fbl::Function<void(fbl::RefPtr<l2cap::Channel>)>;
+  using NewChannelCallback = fit::function<void(fbl::RefPtr<l2cap::Channel>)>;
   void set_channel_callback(NewChannelCallback callback) {
     chan_cb_ = std::move(callback);
   }

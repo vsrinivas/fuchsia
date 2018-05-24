@@ -56,7 +56,7 @@ RemoteServiceManager::RemoteServiceManager(std::unique_ptr<Client> client,
   FXL_DCHECK(client_);
 
   client_->SetNotificationHandler(
-      fbl::BindMember(this, &RemoteServiceManager::OnNotification));
+      fit::bind_member(this, &RemoteServiceManager::OnNotification));
 }
 
 RemoteServiceManager::~RemoteServiceManager() {

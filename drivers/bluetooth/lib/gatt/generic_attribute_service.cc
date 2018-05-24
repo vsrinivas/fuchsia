@@ -86,7 +86,7 @@ void GenericAttributeService::Register() {
       std::move(ccc_callback));
   FXL_DCHECK(service_id_ != kInvalidId);
   local_service_manager_->set_service_changed_callback(
-      fbl::BindMember(this, &GenericAttributeService::OnServiceChanged));
+      fit::bind_member(this, &GenericAttributeService::OnServiceChanged));
 }
 
 void GenericAttributeService::OnServiceChanged(IdType service_id,

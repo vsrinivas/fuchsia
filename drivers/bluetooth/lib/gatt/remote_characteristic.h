@@ -8,8 +8,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include <fbl/function.h>
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"

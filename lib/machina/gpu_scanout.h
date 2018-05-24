@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_MACHINA_GPU_SCANOUT_H_
 #define GARNET_LIB_MACHINA_GPU_SCANOUT_H_
 
-#include <fbl/function.h>
+#include <lib/fit/function.h>
 #include <virtio/gpu.h>
 #include <zircon/types.h>
 
@@ -44,7 +44,7 @@ class GpuScanout {
   void MoveOrUpdateCursor(GpuResource* cursor,
                           const virtio_gpu_update_cursor* request);
 
-  using OnReadyCallback = fbl::Function<void()>;
+  using OnReadyCallback = fit::closure;
   void WhenReady(OnReadyCallback callback);
 
  protected:

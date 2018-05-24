@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <fbl/function.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
 #include "garnet/drivers/bluetooth/lib/gatt/gatt_defs.h"
@@ -88,7 +88,7 @@ class GATT : public fbl::RefCounted<GATT> {
   // Returns |kInvalidId| on failure. Registration can fail if the attribute
   // database has run out of handles or if the hierarchy contains
   // characteristics or descriptors with repeated IDs.
-  using ServiceIdCallback = fbl::Function<void(IdType)>;
+  using ServiceIdCallback = fit::function<void(IdType)>;
   virtual void RegisterService(ServicePtr service,
                                ServiceIdCallback callback,
                                ReadHandler read_handler,

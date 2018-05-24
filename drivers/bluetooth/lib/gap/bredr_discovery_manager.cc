@@ -58,7 +58,7 @@ BrEdrDiscoveryManager::BrEdrDiscoveryManager(fxl::RefPtr<hci::Transport> hci,
 
   result_handler_id_ = hci_->command_channel()->AddEventHandler(
       hci::kInquiryResultEventCode,
-      fbl::BindMember(this, &BrEdrDiscoveryManager::InquiryResult),
+      fit::bind_member(this, &BrEdrDiscoveryManager::InquiryResult),
       dispatcher_);
   FXL_DCHECK(result_handler_id_);
   // TODO(NET-729): add event handlers for the other inquiry modes

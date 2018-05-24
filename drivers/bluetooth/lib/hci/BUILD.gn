@@ -60,6 +60,7 @@ static_library("hci") {
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fit",
   ]
 }
 

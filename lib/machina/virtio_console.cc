@@ -21,7 +21,7 @@ class Stream {
         socket_(socket),
         queue_(queue),
         queue_wait_(async, queue,
-                    fbl::BindMember(this, &Stream::OnQueueReady)) {}
+                    fit::bind_member(this, &Stream::OnQueueReady)) {}
 
   zx_status_t Start() { return WaitOnQueue(); }
 

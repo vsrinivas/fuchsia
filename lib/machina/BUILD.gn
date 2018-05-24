@@ -100,6 +100,7 @@ source_set("machina") {
     "//garnet/public/lib/guest/fidl",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fit",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-engine",
@@ -156,6 +157,7 @@ executable("machina_unittests") {
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
   ]
 }
 

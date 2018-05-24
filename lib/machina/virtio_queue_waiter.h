@@ -5,8 +5,8 @@
 #ifndef GARNET_LIB_MACHINA_VIRTIO_QUEUE_WAITER_H_
 #define GARNET_LIB_MACHINA_VIRTIO_QUEUE_WAITER_H_
 
-#include <fbl/function.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/fit/function.h>
 #include <zircon/types.h>
 
 #include "garnet/lib/machina/virtio_queue.h"
@@ -16,7 +16,7 @@ namespace machina {
 // Helper for performing async waits against a virtio queue.
 class VirtioQueueWaiter {
  public:
-  using Handler = fbl::Function<void(zx_status_t, uint16_t index)>;
+  using Handler = fit::function<void(zx_status_t, uint16_t index)>;
   VirtioQueueWaiter(async_t* async, VirtioQueue* queue, Handler handler);
   ~VirtioQueueWaiter();
 

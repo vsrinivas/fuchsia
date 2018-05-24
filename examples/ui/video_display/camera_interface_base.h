@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include <fbl/function.h>
+#include <lib/fit/function.h>
 #include <zircon/device/camera.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -14,11 +14,11 @@
 
 namespace video_display {
 
-using SetFormatCallback = fbl::Function<zx_status_t(uint64_t)>;
-using GetFormatCallback = fbl::Function<zx_status_t(
+using SetFormatCallback = fit::function<zx_status_t(uint64_t)>;
+using GetFormatCallback = fit::function<zx_status_t(
     const std::vector<camera_video_format_t>& out_formats)>;
 using FrameNotifyCallback =
-    fbl::Function<zx_status_t(camera_vb_frame_notify_t)>;
+    fit::function<zx_status_t(camera_vb_frame_notify_t)>;
 
 // An abstract class which provides the same interface as the camera driver api.
 // See camera_client.h for a more detailed descritption of how to use this

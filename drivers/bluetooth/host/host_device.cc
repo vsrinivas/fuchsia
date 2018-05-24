@@ -96,7 +96,7 @@ zx_status_t HostDevice::Bind() {
         if (success) {
           FXL_VLOG(1) << "bt-host: Adapter initialized; make device visible";
           host_->gatt_host()->SetRemoteServiceWatcher(
-              fbl::BindMember(this, &HostDevice::OnRemoteGattServiceAdded));
+              fit::bind_member(this, &HostDevice::OnRemoteGattServiceAdded));
           device_make_visible(dev_);
           return;
         }

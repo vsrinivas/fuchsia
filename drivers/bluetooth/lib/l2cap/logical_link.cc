@@ -187,7 +187,7 @@ void LogicalLink::SendBasicFrame(ChannelId id,
   hci_->acl_data_channel()->SendPackets(std::move(fragments), type_);
 }
 
-void LogicalLink::set_error_callback(fbl::Closure callback,
+void LogicalLink::set_error_callback(fit::closure callback,
                                      async_t* dispatcher) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(static_cast<bool>(callback) == static_cast<bool>(dispatcher));

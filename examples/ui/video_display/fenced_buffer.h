@@ -7,7 +7,7 @@
 #include <stdint.h>
 
 #include <lib/async/cpp/wait.h>
-#include <fbl/function.h>
+#include <lib/fit/function.h>
 #include <lib/fsl/tasks/message_loop.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/log_settings_command_line.h>
@@ -21,7 +21,7 @@
 namespace video_display {
 
 class FencedBuffer;
-using BufferCallback = fbl::Function<void(FencedBuffer*)>;
+using BufferCallback = fit::function<void(FencedBuffer*)>;
 
 // FencedBuffer includes acquire and release fences
 // which allow the locked or available status of the buffer to be

@@ -17,6 +17,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <zircon/compiler.h>
 
@@ -186,7 +187,7 @@ class CommandChannel final {
 
     // Starts the transaction timer, which will call timeout_cb if it's not
     // completed in time.
-    void Start(fbl::Closure timeout_cb, zx::duration timeout);
+    void Start(fit::closure timeout_cb, zx::duration timeout);
 
     // Completes the transaction with |event|.
     void Complete(std::unique_ptr<EventPacket> event);

@@ -10,10 +10,10 @@
 #include <mutex>
 #include <queue>
 
-#include <fbl/function.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 #include <zircon/compiler.h>
 
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
@@ -60,7 +60,7 @@ class Channel : public fbl::RefCounted<Channel> {
   // request from the owner of this instance. For example, this can happen when
   // the remote end closes a dynamically configured channel or when the
   // underlying logical link is terminated through other means.
-  using ClosedCallback = fbl::Closure;
+  using ClosedCallback = fit::closure;
 
   // Callback invoked when a new SDU is received on this channel. Any previously
   // buffered SDUs will be sent to |rx_cb| right away, provided that |rx_cb| is

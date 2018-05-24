@@ -72,7 +72,7 @@ CommandChannel::TransactionData::~TransactionData() {
   Complete(std::move(event));
 }
 
-void CommandChannel::TransactionData::Start(fbl::Closure timeout_cb,
+void CommandChannel::TransactionData::Start(fit::closure timeout_cb,
                                             zx::duration timeout) {
   // Transactions should only ever be started once.
   FXL_DCHECK(!timeout_task_.is_pending());

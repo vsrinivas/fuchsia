@@ -39,6 +39,7 @@ static_library("l2cap") {
     ":definitions",
     "//garnet/drivers/bluetooth/lib/hci",
     "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fit",
   ]
 }
 

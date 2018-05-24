@@ -7,8 +7,8 @@
 #include <queue>
 #include <unordered_set>
 
-#include <fbl/function.h>
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -53,14 +53,14 @@ class BrEdrDiscoverySession final {
   // from the controller.  You will get duplicate results when using this
   // method.
   // Prefer RemoteDeviceCache.OnleviceUpdateCallback() instead.
-  using DeviceFoundCallback = fbl::Function<void(const RemoteDevice& device)>;
+  using DeviceFoundCallback = fit::function<void(const RemoteDevice& device)>;
   void set_result_callback(DeviceFoundCallback callback) {
     device_found_callback_ = std::move(callback);
   }
 
   // Set a callback to be notified if the session becomes inactive because
   // of internal errors.
-  void set_error_callback(fbl::Closure callback) {
+  void set_error_callback(fit::closure callback) {
     error_callback_ = std::move(callback);
   }
 
@@ -77,7 +77,7 @@ class BrEdrDiscoverySession final {
   void NotifyError() const;
 
   fxl::WeakPtr<BrEdrDiscoveryManager> manager_;
-  fbl::Closure error_callback_;
+  fit::closure error_callback_;
   DeviceFoundCallback device_found_callback_;
   fxl::ThreadChecker thread_checker_;
 

@@ -4,7 +4,7 @@
 
 #include "server.h"
 
-#include <fbl/function.h>
+#include <lib/fit/function.h>
 
 #include "garnet/drivers/bluetooth/lib/att/database.h"
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
@@ -58,26 +58,26 @@ Server::Server(const std::string& peer_id,
   FXL_DCHECK(att_);
 
   exchange_mtu_id_ = att_->RegisterHandler(
-      att::kExchangeMTURequest, fbl::BindMember(this, &Server::OnExchangeMTU));
+      att::kExchangeMTURequest, fit::bind_member(this, &Server::OnExchangeMTU));
   find_information_id_ =
       att_->RegisterHandler(att::kFindInformationRequest,
-                            fbl::BindMember(this, &Server::OnFindInformation));
+                            fit::bind_member(this, &Server::OnFindInformation));
   read_by_group_type_id_ =
       att_->RegisterHandler(att::kReadByGroupTypeRequest,
-                            fbl::BindMember(this, &Server::OnReadByGroupType));
+                            fit::bind_member(this, &Server::OnReadByGroupType));
   read_by_type_id_ = att_->RegisterHandler(
-      att::kReadByTypeRequest, fbl::BindMember(this, &Server::OnReadByType));
+      att::kReadByTypeRequest, fit::bind_member(this, &Server::OnReadByType));
   read_req_id_ = att_->RegisterHandler(
-      att::kReadRequest, fbl::BindMember(this, &Server::OnReadRequest));
+      att::kReadRequest, fit::bind_member(this, &Server::OnReadRequest));
   write_req_id_ = att_->RegisterHandler(
-      att::kWriteRequest, fbl::BindMember(this, &Server::OnWriteRequest));
+      att::kWriteRequest, fit::bind_member(this, &Server::OnWriteRequest));
   write_cmd_id_ = att_->RegisterHandler(
-      att::kWriteCommand, fbl::BindMember(this, &Server::OnWriteCommand));
+      att::kWriteCommand, fit::bind_member(this, &Server::OnWriteCommand));
   read_blob_req_id_ = att_->RegisterHandler(
-      att::kReadBlobRequest, fbl::BindMember(this, &Server::OnReadBlobRequest));
+      att::kReadBlobRequest, fit::bind_member(this, &Server::OnReadBlobRequest));
   find_by_type_value_ = att_->RegisterHandler(
       att::kFindByTypeValueRequest,
-      fbl::BindMember(this, &Server::OnFindByTypeValueRequest));
+      fit::bind_member(this, &Server::OnFindByTypeValueRequest));
 }
 
 Server::~Server() {

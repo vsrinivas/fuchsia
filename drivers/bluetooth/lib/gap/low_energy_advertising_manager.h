@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <fbl/function.h>
+#include <lib/fit/function.h>
 
 #include "garnet/drivers/bluetooth/lib/gap/advertising_data.h"
 #include "garnet/drivers/bluetooth/lib/gap/gap.h"
@@ -53,7 +53,7 @@ class LowEnergyAdvertisingManager {
       std::function<void(std::string advertisement_id,
                          std::unique_ptr<hci::Connection> link)>;
   using AdvertisingStatusCallback =
-      fbl::Function<void(std::string advertisement_id, hci::Status status)>;
+      fit::function<void(std::string advertisement_id, hci::Status status)>;
   void StartAdvertising(const AdvertisingData& data,
                         const AdvertisingData& scan_rsp,
                         const ConnectionCallback& connect_callback,

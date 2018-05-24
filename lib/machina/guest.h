@@ -5,10 +5,10 @@
 #ifndef GARNET_LIB_MACHINA_GUEST_H_
 #define GARNET_LIB_MACHINA_GUEST_H_
 
-#include <fbl/function.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/unique_ptr.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fit/function.h>
 #include <zircon/types.h>
 
 #include "garnet/lib/machina/phys_mem.h"
@@ -27,7 +27,7 @@ class IoMapping;
 
 class Guest {
  public:
-  using VcpuFactory = fbl::Function<zx_status_t(Guest* guest, uintptr_t entry,
+  using VcpuFactory = fit::function<zx_status_t(Guest* guest, uintptr_t entry,
                                                 uint64_t id, Vcpu* vcpu)>;
 
   ~Guest();

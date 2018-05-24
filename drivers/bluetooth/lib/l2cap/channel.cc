@@ -27,7 +27,7 @@ Channel::Channel(ChannelId id, hci::Connection::LinkType link_type)
 
 namespace internal {
 
-void RunTask(async_t* dispatcher, fbl::Closure task) {
+void RunTask(async_t* dispatcher, fit::closure task) {
   if (dispatcher) {
     async::PostTask(dispatcher, std::move(task));
     return;
@@ -52,7 +52,7 @@ bool ChannelImpl::Activate(RxCallback rx_callback,
   FXL_DCHECK(rx_callback);
   FXL_DCHECK(closed_callback);
 
-  fbl::Closure task;
+  fit::closure task;
   bool run_task = false;
 
   {
@@ -159,7 +159,7 @@ bool ChannelImpl::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
 
 void ChannelImpl::OnLinkClosed() {
   async_t* dispatcher;
-  fbl::Closure task;
+  fit::closure task;
 
   {
     std::lock_guard<std::mutex> lock(mtx_);
@@ -181,7 +181,7 @@ void ChannelImpl::OnLinkClosed() {
 
 void ChannelImpl::HandleRxPdu(PDU&& pdu) {
   async_t* dispatcher;
-  fbl::Closure task;
+  fit::closure task;
 
   {
     // TODO(armansito): This is the point where the channel mode implementation

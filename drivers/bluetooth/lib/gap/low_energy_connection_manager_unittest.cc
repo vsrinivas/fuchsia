@@ -67,7 +67,7 @@ class LowEnergyConnectionManagerTest : public TestingBase {
         gatt::testing::FakeLayer::Create());
 
     test_device()->SetConnectionStateCallback(
-        fbl::BindMember(
+        fit::bind_member(
             this, &LowEnergyConnectionManagerTest::OnConnectionStateChanged),
         dispatcher());
 

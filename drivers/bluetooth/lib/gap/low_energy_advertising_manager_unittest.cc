@@ -12,7 +12,6 @@
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/testing/test_base.h"
 
-#include "fbl/function.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/random/rand.h"
@@ -288,7 +287,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, AdvertiserError) {
 
 //  - It calls the connectable callback correctly when connected to
 TEST_F(GAP_LowEnergyAdvertisingManagerTest, ConnectCallback) {
-  auto incoming_conn_cb = fbl::BindMember(
+  auto incoming_conn_cb = fit::bind_member(
       advertiser(), &FakeLowEnergyAdvertiser::OnIncomingConnection);
   LowEnergyAdvertisingManager am(advertiser());
   AdvertisingData fake_ad = CreateFakeAdvertisingData();
