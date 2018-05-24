@@ -109,6 +109,13 @@ int mem(volatile unsigned int* arg) {
 
 }
 
+int use_after_free(volatile unsigned int* arg) {
+    char *p = malloc(1);
+    free(p);
+    puts(p);
+    return 0;
+}
+
 command_t commands[] = {
     {"write0", blind_write, "write to address 0x0"},
     {"read0", blind_read, "read address 0x0"},
@@ -119,6 +126,7 @@ command_t commands[] = {
     {"nx_run", nx_run, "run in no-execute memory"},
     {"oom", oom, "out of memory c++ death"},
     {"mem", mem, "out of memory"},
+    {"use_after_free", use_after_free, "use memory after freeing it"},
     {NULL, NULL, NULL}};
 
 int main(int argc, char** argv) {
