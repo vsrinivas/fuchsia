@@ -50,13 +50,13 @@ CobaltApp::CobaltApp(async_t* async, std::chrono::seconds schedule_interval,
       EncryptedMessage::HYBRID_ECDH_V1,
       ReadPublicKeyPem(kShufflerPublicKeyPemPath),
       EncryptedMessage::HYBRID_ECDH_V1);
-  auto send_retryer_params = ShippingManager::SendRetryerParams(
-      kInitialRpcDeadline, kDeadlinePerSendAttempt);
   shipping_dispatcher_.Register(
       ObservationMetadata::LEGACY_BACKEND,
       std::make_unique<LegacyShippingManager>(
           size_params, schedule_params, envelope_maker_params,
-          send_retryer_params, &send_retryer_));
+          ShippingManager::SendRetryerParams(kInitialRpcDeadline,
+                                             kDeadlinePerSendAttempt),
+          &send_retryer_));
   shipping_dispatcher_.Start();
 
   // Open the cobalt config file.
