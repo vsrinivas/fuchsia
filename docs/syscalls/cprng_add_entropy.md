@@ -9,7 +9,7 @@ zx_cprng_add_entropy - Add entropy to the kernel CPRNG
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_cprng_add_entropy(const void* buffer, size_t len);
+zx_status_t zx_cprng_add_entropy(const void* buffer, size_t buffer_size);
 ```
 
 ## DESCRIPTION
@@ -24,7 +24,7 @@ bytes of entropy at a time.
 
 ## ERRORS
 
-**ZX_ERR_INVALID_ARGS** *len* is too large, or *buffer* is not a valid
+**ZX_ERR_INVALID_ARGS** *buffer_size* is too large, or *buffer* is not a valid
 userspace pointer.
 
 ## BUGS

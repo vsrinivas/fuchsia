@@ -13,10 +13,10 @@ object_set_property - Set various properties of various kernel objects.
 #include <zircon/syscalls/object.h>
 
 zx_status_t zx_object_get_property(zx_handle_t handle, uint32_t property,
-                                   void* value, size_t size);
+                                   void* value, size_t value_size);
 
 zx_status_t zx_object_set_property(zx_handle_t handle, uint32_t property,
-                                   const void* value, size_t size);
+                                   const void* value, size_t value_size);
 ```
 
 ## DESCRIPTION
@@ -174,7 +174,7 @@ operation
 
 **ZX_ERR_NO_MEMORY**: Temporary out of memory failure
 
-**ZX_ERR_BUFFER_TOO_SMALL**: *size* is too small for *property*
+**ZX_ERR_BUFFER_TOO_SMALL**: *value_size* is too small for *property*
 
 **ZX_ERR_NOT_SUPPORTED**: *property* does not exist
 

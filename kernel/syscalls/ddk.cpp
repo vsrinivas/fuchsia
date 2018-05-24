@@ -202,7 +202,7 @@ zx_status_t sys_set_framebuffer_vmo(zx_handle_t hrsrc, zx_handle_t vmo_handle, u
 }
 
 zx_status_t sys_iommu_create(zx_handle_t rsrc_handle, uint32_t type,
-                             user_in_ptr<const void> desc, uint32_t desc_len,
+                             user_in_ptr<const void> desc, size_t desc_len,
                              user_out_handle* out) {
     // TODO: finer grained validation
     zx_status_t status;

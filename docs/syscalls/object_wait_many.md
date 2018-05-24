@@ -9,7 +9,7 @@ object_wait_many - wait for signals on multiple objects
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_object_wait_many(zx_wait_item_t* items, uint32_t count, zx_time_t deadline);
+zx_status_t zx_object_wait_many(zx_wait_item_t* items, size_t count, zx_time_t deadline);
 
 typedef struct {
     zx_handle_t handle;

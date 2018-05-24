@@ -94,7 +94,7 @@ typedef struct ktrace_state {
 
 static ktrace_state_t KTRACE_STATE;
 
-int ktrace_read_user(void* ptr, uint32_t off, uint32_t len) {
+ssize_t ktrace_read_user(void* ptr, uint32_t off, size_t len) {
     ktrace_state_t* ks = &KTRACE_STATE;
 
     // Buffer size is limited by the marker if set,

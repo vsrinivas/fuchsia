@@ -9,7 +9,7 @@ zx_cprng_draw - Draw from the kernel's CPRNG
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_cprng_draw(void* buffer, size_t len, size_t* actual);
+zx_status_t zx_cprng_draw(void* buffer, size_t buffer_size, size_t* actual);
 ```
 
 ## DESCRIPTION
@@ -25,7 +25,7 @@ drawn into *buffer* (via *actual) on success.
 
 ## ERRORS
 
-**ZX_ERR_INVALID_ARGS** *len* is too large, or *buffer* or *actual* is
+**ZX_ERR_INVALID_ARGS** *buffer_size* is too large, or *buffer* or *actual* is
 not a valid userspace pointer.
 
 ## NOTES

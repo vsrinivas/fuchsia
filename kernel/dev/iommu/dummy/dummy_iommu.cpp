@@ -16,7 +16,7 @@
 DummyIommu::DummyIommu() {
 }
 
-zx_status_t DummyIommu::Create(fbl::unique_ptr<const uint8_t[]> desc, uint32_t desc_len,
+zx_status_t DummyIommu::Create(fbl::unique_ptr<const uint8_t[]> desc, size_t desc_len,
                                fbl::RefPtr<Iommu>* out) {
     if (desc_len != sizeof(zx_iommu_desc_dummy_t)) {
         return ZX_ERR_INVALID_ARGS;

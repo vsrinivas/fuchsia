@@ -259,7 +259,7 @@ zx_status_t Vcpu::Interrupt(uint32_t vector) {
     return ZX_OK;
 }
 
-zx_status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
+zx_status_t Vcpu::ReadState(uint32_t kind, void* buffer, size_t len) const {
     if (!hypervisor::check_pinned_cpu_invariant(vpid_, thread_)) {
         return ZX_ERR_BAD_STATE;
     } else if (kind != ZX_VCPU_STATE || len != sizeof(zx_vcpu_state_t)) {
@@ -273,7 +273,7 @@ zx_status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
     return ZX_OK;
 }
 
-zx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
+zx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, size_t len) {
     if (!hypervisor::check_pinned_cpu_invariant(vpid_, thread_)) {
         return ZX_ERR_BAD_STATE;
     } else if (kind != ZX_VCPU_STATE || len != sizeof(zx_vcpu_state_t)) {

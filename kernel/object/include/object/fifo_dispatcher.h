@@ -18,7 +18,7 @@
 
 class FifoDispatcher final : public PeeredDispatcher<FifoDispatcher> {
 public:
-    static zx_status_t Create(uint32_t elem_count, uint32_t elem_size, uint32_t options,
+    static zx_status_t Create(size_t elem_count, size_t elem_size, uint32_t options,
                               fbl::RefPtr<Dispatcher>* dispatcher0,
                               fbl::RefPtr<Dispatcher>* dispatcher1,
                               zx_rights_t* rights);

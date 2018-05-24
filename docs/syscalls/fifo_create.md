@@ -9,7 +9,7 @@ fifo_create - create a fifo
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_fifo_create(uint32_t elem_count, uint32_t elem_size,
+zx_status_t zx_fifo_create(size_t elem_count, size_t elem_size,
                            uint32_t options,
                            zx_handle_t* out0, zx_handle_t* out1);
 

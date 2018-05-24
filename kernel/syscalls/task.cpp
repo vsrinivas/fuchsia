@@ -125,7 +125,7 @@ zx_status_t validate_thread_state_input(uint32_t in_topic, size_t in_len, size_t
 }  // namespace
 
 zx_status_t sys_thread_create(zx_handle_t process_handle,
-                              user_in_ptr<const char> _name, uint32_t name_len,
+                              user_in_ptr<const char> _name, size_t name_len,
                               uint32_t options, user_out_handle* out) {
     LTRACEF("process handle %x, options %#x\n", process_handle, options);
 
@@ -170,8 +170,8 @@ zx_status_t sys_thread_create(zx_handle_t process_handle,
     return out->make(fbl::move(thread_dispatcher), thread_rights);
 }
 
-zx_status_t sys_thread_start(zx_handle_t thread_handle, uintptr_t entry,
-                             uintptr_t stack, uintptr_t arg1, uintptr_t arg2) {
+zx_status_t sys_thread_start(zx_handle_t thread_handle, zx_vaddr_t entry,
+                             zx_vaddr_t stack, uintptr_t arg1, uintptr_t arg2) {
     LTRACEF("handle %x, entry %#" PRIxPTR ", sp %#" PRIxPTR
             ", arg1 %#" PRIxPTR ", arg2 %#" PRIxPTR "\n",
             thread_handle, entry, stack, arg1, arg2);
@@ -307,7 +307,7 @@ zx_status_t sys_task_suspend_token(zx_handle_t task_handle, user_out_handle* tok
 }
 
 zx_status_t sys_process_create(zx_handle_t job_handle,
-                               user_in_ptr<const char> _name, uint32_t name_len,
+                               user_in_ptr<const char> _name, size_t name_len,
                                uint32_t options,
                                user_out_handle* proc_handle,
                                user_out_handle* vmar_handle) {
@@ -372,7 +372,7 @@ zx_status_t sys_process_create(zx_handle_t job_handle,
 //   thread running
 
 zx_status_t sys_process_start(zx_handle_t process_handle, zx_handle_t thread_handle,
-                              uintptr_t pc, uintptr_t sp,
+                              zx_vaddr_t pc, zx_vaddr_t sp,
                               zx_handle_t arg_handle_value, uintptr_t arg2) {
     LTRACEF("phandle %x, thandle %x, pc %#" PRIxPTR ", sp %#" PRIxPTR
             ", arg_handle %x, arg2 %#" PRIxPTR "\n",
@@ -430,7 +430,7 @@ void sys_process_exit(int64_t retcode) {
     ProcessDispatcher::GetCurrent()->Exit(retcode);
 }
 
-zx_status_t sys_process_read_memory(zx_handle_t proc, uintptr_t vaddr,
+zx_status_t sys_process_read_memory(zx_handle_t proc, zx_vaddr_t vaddr,
                                     user_out_ptr<void> _buffer,
                                     size_t len, user_out_ptr<size_t> _actual) {
     LTRACEF("vaddr 0x%" PRIxPTR ", size %zu\n", vaddr, len);
@@ -499,7 +499,7 @@ zx_status_t sys_process_read_memory(zx_handle_t proc, uintptr_t vaddr,
     return st;
 }
 
-zx_status_t sys_process_write_memory(zx_handle_t proc, uintptr_t vaddr,
+zx_status_t sys_process_write_memory(zx_handle_t proc, zx_vaddr_t vaddr,
                                      user_in_ptr<const void> _buffer,
                                      size_t len, user_out_ptr<size_t> _actual) {
     LTRACEF("vaddr 0x%" PRIxPTR ", size %zu\n", vaddr, len);

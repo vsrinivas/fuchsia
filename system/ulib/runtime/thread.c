@@ -171,7 +171,7 @@ zx_status_t zxr_thread_start(zxr_thread_t* thread, uintptr_t stack_addr, size_t 
     return status;
 }
 
-static void wait_for_done(zxr_internal_thread_t* thread, int old_state) {
+static void wait_for_done(zxr_internal_thread_t* thread, int32_t old_state) {
     do {
         switch (_zx_futex_wait(&thread->state, old_state, ZX_TIME_INFINITE)) {
             case ZX_ERR_BAD_STATE:   // Never blocked because it had changed.

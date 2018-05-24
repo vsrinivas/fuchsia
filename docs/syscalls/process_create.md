@@ -9,10 +9,9 @@ process_create - create a new process
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_process_create(zx_handle_t job,
-                              const char* name, uint32_t name_len,
-                              uint32_t options,
-                              zx_handle_t* proc_handle, zx_handle_t* vmar_handle);
+zx_status_t zx_process_create(zx_handle_t job, const char* name, size_t name_size,
+                              uint32_t options, zx_handle_t* proc_handle,
+                              zx_handle_t* vmar_handle);
 
 ```
 

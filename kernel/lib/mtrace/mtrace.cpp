@@ -20,7 +20,7 @@
 #endif
 
 zx_status_t mtrace_control(uint32_t kind, uint32_t action, uint32_t options,
-                           user_inout_ptr<void> arg, uint32_t size) {
+                           user_inout_ptr<void> arg, size_t size) {
     switch (kind) {
 #ifdef __x86_64__
     case MTRACE_KIND_IPM:

@@ -24,8 +24,8 @@ public:
 
     zx_status_t Resume(zx_port_packet_t* packet);
     zx_status_t Interrupt(uint32_t vector);
-    zx_status_t ReadState(uint32_t kind, void* buffer, uint32_t len) const;
-    zx_status_t WriteState(uint32_t kind, const void* buffer, uint32_t len);
+    zx_status_t ReadState(uint32_t kind, void* buffer, size_t len) const;
+    zx_status_t WriteState(uint32_t kind, const void* buffer, size_t len);
 
 private:
     fbl::Canary<fbl::magic("VCPD")> canary_;

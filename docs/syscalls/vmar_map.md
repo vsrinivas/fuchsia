@@ -9,9 +9,9 @@ vmar_map - add a memory mapping
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_vmar_map(zx_handle_t vmar, size_t vmar_offset,
-                        zx_handle_t vmo, uint64_t vmo_offset, size_t len,
-                        uint32_t map_flags, uintptr_t* mapped_addr)
+zx_status_t zx_vmar_map(zx_handle_t vmar, uint64_t vmar_offset,
+                        zx_handle_t vmo, uint64_t vmo_offset, uint64_t len,
+                        uint32_t map_flags, zx_vaddr_t* mapped_addr)
 ```
 
 ## DESCRIPTION

@@ -25,7 +25,7 @@ zx_status_t completion_wait_deadline(completion_t* completion, zx_time_t deadlin
     atomic_int* futex = &completion->futex.futex;
 
     for (;;) {
-        int current_value = atomic_load(futex);
+        int32_t current_value = atomic_load(futex);
         if (current_value == SIGNALED) {
             return ZX_OK;
         }

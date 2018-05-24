@@ -9,7 +9,7 @@ zx_cache_flush - Flush CPU data and/or instruction caches
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_cache_flush(const void* addr, size_t len, uint32_t flags);
+zx_status_t zx_cache_flush(const void* addr, size_t size, uint32_t flags);
 ```
 
 ## DESCRIPTION

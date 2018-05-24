@@ -48,12 +48,12 @@ zx_status_t VcpuDispatcher::Interrupt(uint32_t vector) {
     return vcpu_->Interrupt(vector);
 }
 
-zx_status_t VcpuDispatcher::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
+zx_status_t VcpuDispatcher::ReadState(uint32_t kind, void* buffer, size_t len) const {
     canary_.Assert();
     return vcpu_->ReadState(kind, buffer, len);
 }
 
-zx_status_t VcpuDispatcher::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
+zx_status_t VcpuDispatcher::WriteState(uint32_t kind, const void* buffer, size_t len) {
     canary_.Assert();
     return vcpu_->WriteState(kind, buffer, len);
 }

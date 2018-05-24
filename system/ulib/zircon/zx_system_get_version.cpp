@@ -6,8 +6,8 @@
 
 #include "private.h"
 
-zx_status_t _zx_system_get_version(char* version, uint32_t version_len) {
-    if (version_len < sizeof(DATA_CONSTANTS.buildid))
+zx_status_t _zx_system_get_version(char* version, size_t len) {
+    if (len < sizeof(DATA_CONSTANTS.buildid))
         return ZX_ERR_BUFFER_TOO_SMALL;
     for (size_t i = 0; i < sizeof(DATA_CONSTANTS.buildid); ++i)
         version[i] = DATA_CONSTANTS.buildid[i];

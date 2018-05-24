@@ -11,7 +11,7 @@ vcpu_write_state - write the state of a VCPU
 #include <zircon/syscalls/hypervisor.h>
 
 zx_status_t zx_vcpu_write_state(zx_handle_t vcpu, uint32_t kind,
-                                const void* buffer, uint32_t len);
+                                const void* buffer, size_t buffer_size);
 ```
 
 ## DESCRIPTION
@@ -36,7 +36,7 @@ returned.
 **ZX_ERR_BAD_STATE** *vcpu* is in a bad state, and state can not be written.
 
 **ZX_ERR_INVALID_ARGS** *kind* does not name a known VCPU state, *buffer* is an
-invalid pointer, or *len* does not match the expected size of *kind*.
+invalid pointer, or *buffer_size* does not match the expected size of *kind*.
 
 **ZX_ERR_WRONG_TYPE** *vcpu* is not a handle to a VCPU.
 

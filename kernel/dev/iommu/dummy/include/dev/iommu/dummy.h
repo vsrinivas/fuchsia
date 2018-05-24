@@ -13,7 +13,7 @@
 
 class DummyIommu final : public Iommu {
 public:
-    static zx_status_t Create(fbl::unique_ptr<const uint8_t[]> desc, uint32_t desc_len,
+    static zx_status_t Create(fbl::unique_ptr<const uint8_t[]> desc, size_t desc_len,
                               fbl::RefPtr<Iommu>* out);
 
     bool IsValidBusTxnId(uint64_t bus_txn_id) const final;

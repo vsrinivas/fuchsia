@@ -18,7 +18,7 @@
 #include <threads.h>
 
 static zx_status_t ktrace_read(void* ctx, void* buf, size_t count, zx_off_t off, size_t* actual) {
-    uint32_t length;
+    size_t length;
     zx_status_t status = zx_ktrace_read(get_root_resource(), buf, off, count, &length);
     if (status == ZX_OK) {
         *actual = length;
@@ -27,7 +27,7 @@ static zx_status_t ktrace_read(void* ctx, void* buf, size_t count, zx_off_t off,
 }
 
 static zx_off_t ktrace_get_size(void* ctx) {
-    uint32_t size;
+    size_t size;
     zx_status_t status = zx_ktrace_read(get_root_resource(), NULL, 0, 0, &size);
     return status != ZX_OK ? (zx_off_t)status : (zx_off_t)size;
 }

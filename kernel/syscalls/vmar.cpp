@@ -26,9 +26,9 @@
 #define LOCAL_TRACE 0
 
 zx_status_t sys_vmar_allocate(zx_handle_t parent_vmar_handle,
-                              size_t offset, size_t size, uint32_t map_flags,
+                              uint64_t offset, uint64_t size, uint32_t map_flags,
                               user_out_handle* child_vmar,
-                              user_out_ptr<uintptr_t> child_addr) {
+                              user_out_ptr<zx_vaddr_t> child_addr) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -87,9 +87,9 @@ zx_status_t sys_vmar_destroy(zx_handle_t vmar_handle) {
     return vmar->Destroy();
 }
 
-zx_status_t sys_vmar_map(zx_handle_t vmar_handle, size_t vmar_offset,
-                         zx_handle_t vmo_handle, uint64_t vmo_offset, size_t len, uint32_t map_flags,
-                         user_out_ptr<uintptr_t> mapped_addr) {
+zx_status_t sys_vmar_map(zx_handle_t vmar_handle, uint64_t vmar_offset,
+                         zx_handle_t vmo_handle, uint64_t vmo_offset, uint64_t len,
+                         uint32_t map_flags, user_out_ptr<zx_vaddr_t> mapped_addr) {
     auto up = ProcessDispatcher::GetCurrent();
 
     // lookup the VMAR dispatcher from handle
@@ -177,7 +177,7 @@ zx_status_t sys_vmar_map(zx_handle_t vmar_handle, size_t vmar_offset,
     return ZX_OK;
 }
 
-zx_status_t sys_vmar_unmap(zx_handle_t vmar_handle, uintptr_t addr, size_t len) {
+zx_status_t sys_vmar_unmap(zx_handle_t vmar_handle, zx_vaddr_t addr, uint64_t len) {
     auto up = ProcessDispatcher::GetCurrent();
 
     // lookup the dispatcher from handle
@@ -189,7 +189,7 @@ zx_status_t sys_vmar_unmap(zx_handle_t vmar_handle, uintptr_t addr, size_t len) 
     return vmar->Unmap(addr, len);
 }
 
-zx_status_t sys_vmar_protect(zx_handle_t vmar_handle, uintptr_t addr, size_t len, uint32_t prot) {
+zx_status_t sys_vmar_protect(zx_handle_t vmar_handle, zx_vaddr_t addr, uint64_t len, uint32_t prot) {
     auto up = ProcessDispatcher::GetCurrent();
 
     zx_rights_t vmar_rights = 0u;

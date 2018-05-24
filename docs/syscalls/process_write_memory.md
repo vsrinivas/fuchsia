@@ -9,9 +9,8 @@ process_write_memory - Write into the given process's address space.
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_process_write_memory(zx_handle_t proc, uintptr_t vaddr,
-                                    const void* buffer, size_t len,
-                                    size_t* actual);
+zx_status_t zx_process_write_memory(zx_handle_t handle, zx_vaddr_t vaddr,
+                                    const void* buffer, size_t buffer_size, size_t* actual);
 
 ```
 

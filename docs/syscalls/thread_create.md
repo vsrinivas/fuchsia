@@ -9,8 +9,8 @@ thread_create - create a thread
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_thread_create(zx_handle_t process, const char* name,
-                             uint32_t name_len, uint32_t options, zx_handle_t* out);
+zx_status_t zx_thread_create(zx_handle_t process, const char* name, size_t name_size,
+                             uint32_t options, zx_handle_t* out);
 
 ```
 

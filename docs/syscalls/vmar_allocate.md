@@ -9,14 +9,14 @@ vmar_allocate - allocate a new subregion
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_vmar_allocate(zx_handle_t parent_vmar_handle,
-                             size_t offset, size_t size, uint32_t map_flags,
-                             zx_handle_t* child_vmar, uintptr_t* child_addr)
+zx_status_t zx_vmar_allocate(zx_handle_t parent_vmar, uint64_t offset,
+                             uint64_t size, uint32_t map_flags,
+                             zx_handle_t* child_vmar, zx_vaddr_t* child_addr)
 ```
 
 ## DESCRIPTION
 
-Creates a new VMAR within the one specified by *parent_vmar_handle*.
+Creates a new VMAR within the one specified by *parent_vmar*.
 
 *map_flags* is a bit vector of the following flags:
 - **ZX_VM_FLAG_COMPACT**  A hint to the kernel that allocations and mappings
@@ -47,11 +47,11 @@ returned.
 
 ## ERRORS
 
-**ZX_ERR_BAD_HANDLE**  *parent_vmar_handle* is not a valid handle.
+**ZX_ERR_BAD_HANDLE**  *parent_vmar* is not a valid handle.
 
-**ZX_ERR_WRONG_TYPE**  *parent_vmar_handle* is not a VMAR handle.
+**ZX_ERR_WRONG_TYPE**  *parent_vmar* is not a VMAR handle.
 
-**ZX_ERR_BAD_STATE**  *parent_vmar_handle* refers to a destroyed VMAR.
+**ZX_ERR_BAD_STATE**  *parent_vmar* refers to a destroyed VMAR.
 
 **ZX_ERR_INVALID_ARGS**  *child_vmar* or *child_addr* are not valid, *offset* is
 non-zero when *ZX_VM_FLAG_SPECIFIC* is not given, *offset* and *size* describe

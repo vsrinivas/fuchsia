@@ -68,7 +68,7 @@ static inline void ktrace_name(uint32_t tag, uint32_t id, uint32_t arg, const ch
     ktrace_name_etc(tag, id, arg, name, false);
 }
 
-int ktrace_read_user(void* ptr, uint32_t off, uint32_t len);
+ssize_t ktrace_read_user(void* ptr, uint32_t off, size_t len);
 zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr);
 #else
 static inline void* ktrace_open(uint32_t tag) { return NULL; }

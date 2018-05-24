@@ -113,7 +113,7 @@ zx_status_t sys_vcpu_interrupt(zx_handle_t vcpu_handle, uint32_t vector) {
 }
 
 zx_status_t sys_vcpu_read_state(zx_handle_t vcpu_handle, uint32_t kind,
-                                user_out_ptr<void> user_buffer, uint32_t len) {
+                                user_out_ptr<void> user_buffer, size_t len) {
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<VcpuDispatcher> vcpu;
@@ -134,7 +134,7 @@ zx_status_t sys_vcpu_read_state(zx_handle_t vcpu_handle, uint32_t kind,
 }
 
 zx_status_t sys_vcpu_write_state(zx_handle_t vcpu_handle, uint32_t kind,
-                                 user_in_ptr<const void> user_buffer, uint32_t len) {
+                                 user_in_ptr<const void> user_buffer, size_t len) {
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<VcpuDispatcher> vcpu;

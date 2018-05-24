@@ -29,6 +29,8 @@
 #
 # The 'returns (<type>)' is expected unless one of the attributes is 'noreturn'.
 #
+# See <https://fuchsia.googlesource.com/docs/+/master/development/api/system.md>
+# for readability guidelines.
 #
 # To help the clang static analyzer identify handle related syscalls, 3
 # attributes are available to describe handle behaviors. Which are
@@ -71,7 +73,7 @@ syscall clock_adjust
     (handle: zx_handle_t, clock_id: uint32_t, offset: int64_t)
     returns (zx_status_t);
 
-# Global system information
+# System information
 
 syscall system_get_dcache_line_size vdsocall const
     ()
@@ -82,7 +84,7 @@ syscall system_get_num_cpus vdsocall const
     returns (uint32_t);
 
 syscall system_get_version vdsocall
-    (version: char[version_len] OUT, version_len: uint32_t)
+    (version: char[version_size] OUT, version_size: size_t)
     returns (zx_status_t);
 
 syscall system_get_physmem vdsocall
@@ -96,7 +98,7 @@ syscall system_get_features vdsocall
 # Abstraction of machine operations
 
 syscall cache_flush vdsocall
-    (addr: any[len] IN, len: size_t, options: uint32_t)
+    (addr: any[size] IN, size: size_t, options: uint32_t)
     returns (zx_status_t);
 
 # Generic handle operations
@@ -116,15 +118,15 @@ syscall handle_replace
 # Generic object operations
 
 syscall object_wait_one blocking
-    (handle: zx_handle_t, waitfor: zx_signals_t, deadline: zx_time_t)
+    (handle: zx_handle_t, signals: zx_signals_t, deadline: zx_time_t)
     returns (zx_status_t, observed: zx_signals_t optional);
 
 syscall object_wait_many blocking
-    (items: zx_wait_item_t[count] INOUT, count: uint32_t, deadline: zx_time_t)
+    (items: zx_wait_item_t[count] INOUT, count: size_t, deadline: zx_time_t)
     returns (zx_status_t);
 
 syscall object_wait_async
-    (handle: zx_handle_t, port_handle: zx_handle_t, key: uint64_t,
+    (handle: zx_handle_t, port: zx_handle_t, key: uint64_t,
         signals: zx_signals_t, options: uint32_t)
     returns (zx_status_t);
 
@@ -137,11 +139,11 @@ syscall object_signal_peer
     returns (zx_status_t);
 
 syscall object_get_property
-    (handle: zx_handle_t, property: uint32_t, value: any[size] OUT, size: size_t)
+    (handle: zx_handle_t, property: uint32_t, value: any[value_size] OUT, value_size: size_t)
     returns (zx_status_t);
 
 syscall object_set_property
-    (handle: zx_handle_t, property: uint32_t, value: any[size] IN, size: size_t)
+    (handle: zx_handle_t, property: uint32_t, value: any[value_size] IN, value_size: size_t)
     returns (zx_status_t);
 
 syscall object_set_cookie
@@ -153,8 +155,7 @@ syscall object_get_cookie
     returns (zx_status_t, cookie: uint64_t);
 
 syscall object_get_info
-    (handle: zx_handle_t, topic: uint32_t,
-        buffer: any[buffer_size] OUT, buffer_size: size_t)
+    (handle: zx_handle_t, topic: uint32_t, buffer: any[buffer_size] OUT, buffer_size: size_t)
     returns (zx_status_t, actual_count: size_t optional, avail_count: size_t optional);
 
 syscall object_get_child
@@ -219,13 +220,11 @@ syscall socket_create
         out1: zx_handle_t handle_acquire);
 
 syscall socket_write
-    (handle: zx_handle_t, options: uint32_t,
-        buffer: any[size] IN, size: size_t)
+    (handle: zx_handle_t, options: uint32_t, buffer: any[buffer_size] IN, buffer_size: size_t)
     returns (zx_status_t, actual: size_t optional);
 
 syscall socket_read
-    (handle: zx_handle_t, options: uint32_t,
-        buffer: any[size] OUT, size: size_t)
+    (handle: zx_handle_t, options: uint32_t, buffer: any[buffer_size] OUT, buffer_size: size_t)
     returns (zx_status_t, actual: size_t optional);
 
 syscall socket_share
@@ -241,22 +240,20 @@ syscall socket_accept
 syscall thread_exit noreturn ();
 
 syscall thread_create
-    (process: zx_handle_t, name: char[name_len] IN, name_len: uint32_t,
-        options: uint32_t)
+    (process: zx_handle_t, name: char[name_size] IN, name_size: size_t, options: uint32_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 syscall thread_start
-    (handle: zx_handle_t, thread_entry: uintptr_t,
-        stack: uintptr_t, arg1: uintptr_t, arg2: uintptr_t)
+    (handle: zx_handle_t, thread_entry: zx_vaddr_t,
+        stack: zx_vaddr_t, arg1: uintptr_t, arg2: uintptr_t)
     returns (zx_status_t);
 
 syscall thread_read_state
-    (handle: zx_handle_t, kind: uint32_t,
-        buffer: any[len] OUT, len: size_t)
+    (handle: zx_handle_t, kind: uint32_t, buffer: any[buffer_size] OUT, buffer_size: size_t)
     returns (zx_status_t);
 
 syscall thread_write_state
-    (handle: zx_handle_t, kind: uint32_t, buffer: any[buffer_len] IN, buffer_len: size_t)
+    (handle: zx_handle_t, kind: uint32_t, buffer: any[buffer_size] IN, buffer_size: size_t)
     returns (zx_status_t);
 
 # NOTE: thread_set_priority is an experimental syscall.
@@ -272,24 +269,21 @@ syscall process_exit noreturn
     (retcode: int64_t);
 
 syscall process_create
-    (job: zx_handle_t, name: char[name_len] IN, name_len: uint32_t, options: uint32_t)
+    (job: zx_handle_t, name: char[name_size] IN, name_size: size_t, options: uint32_t)
     returns (zx_status_t, proc_handle: zx_handle_t handle_acquire,
         vmar_handle: zx_handle_t handle_acquire);
 
 syscall process_start
-    (process_handle: zx_handle_t,
-        thread_handle: zx_handle_t, entry: uintptr_t,
-        stack: uintptr_t, arg_handle: zx_handle_t handle_release, arg2: uintptr_t)
+    (handle: zx_handle_t, thread: zx_handle_t, entry: zx_vaddr_t,
+    stack: zx_vaddr_t, arg1: zx_handle_t handle_release, arg2: uintptr_t)
     returns (zx_status_t);
 
 syscall process_read_memory
-    (proc: zx_handle_t, vaddr: uintptr_t,
-    buffer: any[len] OUT, len: size_t)
+    (proc: zx_handle_t, vaddr: zx_vaddr_t, buffer: any[buffer_size] OUT, buffer_size: size_t)
     returns (zx_status_t, actual: size_t);
 
 syscall process_write_memory
-    (proc: zx_handle_t, vaddr: uintptr_t,
-    buffer: any[len] IN, len: size_t)
+    (proc: zx_handle_t, vaddr: zx_vaddr_t, buffer: any[buffer_size] IN, buffer_size: size_t)
     returns (zx_status_t, actual: size_t);
 
 # Jobs
@@ -302,29 +296,30 @@ syscall job_set_policy
     (job: zx_handle_t, options: uint32_t, topic: uint32_t, policy: any[count] IN, count: uint32_t)
     returns (zx_status_t);
 
-# Shared between process and threads
+# Tasks (shared between threads, processes, and jobs)
+
 syscall task_bind_exception_port
-    (object: zx_handle_t, eport: zx_handle_t, key: uint64_t, options: uint32_t)
+    (handle: zx_handle_t, port: zx_handle_t, key: uint64_t, options: uint32_t)
     returns (zx_status_t);
 
 syscall task_suspend
-    (task_handle: zx_handle_t)
+    (handle: zx_handle_t)
     returns (zx_status_t);
 
 syscall task_resume
-    (task_handle: zx_handle_t, options: uint32_t)
+    (handle: zx_handle_t, options: uint32_t)
     returns (zx_status_t);
 
 syscall task_suspend_token
-    (task_handle: zx_handle_t)
+    (handle: zx_handle_t)
     returns (zx_status_t, token: zx_handle_t handle_acquire);
 
 syscall task_resume_from_exception
-    (task_handle: zx_handle_t, eport: zx_handle_t, options: uint32_t)
+    (handle: zx_handle_t, port: zx_handle_t, options: uint32_t)
     returns (zx_status_t);
 
 syscall task_kill
-    (task_handle: zx_handle_t)
+    (handle: zx_handle_t)
     returns (zx_status_t);
 
 # Synchronization
@@ -339,7 +334,7 @@ syscall eventpair_create
         out0: zx_handle_t handle_acquire, out1: zx_handle_t handle_acquire);
 
 syscall futex_wait blocking
-    (value_ptr: zx_futex_t[1] IN, current_value: int, deadline: zx_time_t)
+    (value_ptr: zx_futex_t[1] IN, current_value: int32_t, deadline: zx_time_t)
     returns (zx_status_t);
 
 syscall futex_wake
@@ -347,7 +342,7 @@ syscall futex_wake
     returns (zx_status_t);
 
 syscall futex_requeue
-    (wake_ptr: zx_futex_t[1] IN, wake_count: uint32_t, current_value: int,
+    (wake_ptr: zx_futex_t[1] IN, wake_count: uint32_t, current_value: int32_t,
         requeue_ptr: zx_futex_t[1] IN, requeue_count: uint32_t)
     returns (zx_status_t);
 
@@ -390,11 +385,11 @@ syscall vmo_create
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 syscall vmo_read
-    (handle: zx_handle_t, data: any[len] OUT, offset: uint64_t, len: size_t)
+    (handle: zx_handle_t, buffer: any[buffer_size] OUT, offset: uint64_t, buffer_size: size_t)
     returns (zx_status_t);
 
 syscall vmo_write
-    (handle: zx_handle_t, data: any[len] IN, offset: uint64_t, len: size_t)
+    (handle: zx_handle_t, buffer: any[buffer_size] IN, offset: uint64_t, buffer_size: size_t)
     returns (zx_status_t);
 
 syscall vmo_get_size
@@ -421,43 +416,42 @@ syscall vmo_set_cache_policy
 # Address space management
 
 syscall vmar_allocate
-    (parent_vmar_handle: zx_handle_t, offset: size_t, size: size_t, map_flags: uint32_t)
+    (parent_vmar: zx_handle_t, offset: uint64_t, size: uint64_t, map_flags: uint32_t)
     returns (zx_status_t,
-        child_vmar: zx_handle_t handle_acquire, child_addr: uintptr_t);
+        child_vmar: zx_handle_t handle_acquire, child_addr: zx_vaddr_t);
 
 syscall vmar_destroy
-    (vmar_handle: zx_handle_t)
+    (handle: zx_handle_t)
     returns (zx_status_t);
 
 syscall vmar_map
-    (vmar_handle: zx_handle_t, vmar_offset: size_t,
-        vmo_handle: zx_handle_t, vmo_offset: uint64_t,
-        len: size_t, map_flags: uint32_t)
-    returns (zx_status_t, mapped_addr: uintptr_t);
+    (handle: zx_handle_t, vmar_offset: uint64_t,
+        vmo: zx_handle_t, vmo_offset: uint64_t,
+        len: uint64_t, map_flags: uint32_t)
+    returns (zx_status_t, mapped_addr: zx_vaddr_t);
 
 syscall vmar_unmap
-    (vmar_handle: zx_handle_t, addr: uintptr_t, len: size_t)
+    (handle: zx_handle_t, addr: zx_vaddr_t, len: uint64_t)
     returns (zx_status_t);
 
 syscall vmar_protect
-    (vmar_handle: zx_handle_t, addr: uintptr_t, len: size_t,
-        prot_flags: uint32_t)
+    (handle: zx_handle_t, addr: zx_vaddr_t, len: uint64_t, prot_flags: uint32_t)
     returns (zx_status_t);
 
 # Random Number generator
 
 syscall cprng_draw
-    (buffer: any[len] OUT, len: size_t)
+    (buffer: any[data_size] OUT, data_size: size_t)
     returns (zx_status_t, actual: size_t);
 
 syscall cprng_add_entropy
     (buffer: any[len] IN, len: size_t)
     returns (zx_status_t);
 
-# Fifo
+# IPC: Fifos
 
 syscall fifo_create
-    (elem_count: uint32_t, elem_size: uint32_t, options: uint32_t)
+    (elem_count: size_t, elem_size: size_t, options: uint32_t)
     returns (zx_status_t,
         out0: zx_handle_t handle_acquire, out1: zx_handle_t handle_acquire);
 
@@ -478,20 +472,12 @@ syscall profile_create
 # Multi-function
 
 syscall vmar_unmap_handle_close_thread_exit vdsocall
-    (vmar_handle: zx_handle_t, addr: uintptr_t, len: size_t,
-        handle: zx_handle_t handle_release)
+    (vmar_handle: zx_handle_t, addr: zx_vaddr_t, size: size_t, handle: zx_handle_t handle_release)
     returns (zx_status_t);
 
 syscall futex_wake_handle_close_thread_exit vdsocall noreturn
-    (value_ptr: zx_futex_t[1] IN, count: uint32_t, new_value: int,
+    (value_ptr: zx_futex_t[1] IN, count: uint32_t, new_value: int32_t,
         handle: zx_handle_t handle_release);
-
-# ---------------------------------------------------------------------------------------
-# Syscalls past this point are non-public
-# Some currently do not require a handle to restrict access.
-# Those will be modified or removed.
-# These syscalls are *not* a stable API/ABI surface.
-# ---------------------------------------------------------------------------------------
 
 # Logging
 
@@ -507,25 +493,23 @@ syscall log_read
     (handle: zx_handle_t, len: uint32_t, buffer: any[len] OUT, options: uint32_t)
     returns (zx_status_t);
 
-
 syscall debuglog_create
     (resource: zx_handle_t, options: uint32_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 syscall debuglog_write
-    (handle: zx_handle_t, options: uint32_t, buffer: any[len] IN, len: size_t)
+    (handle: zx_handle_t, options: uint32_t, buffer: any[buffer_size] IN, buffer_size: size_t)
     returns (zx_status_t);
 
 syscall debuglog_read
-    (handle: zx_handle_t, options: uint32_t, buffer: any[len] OUT, len: size_t)
+    (handle: zx_handle_t, options: uint32_t, buffer: any[buffer_size] OUT, buffer_size: size_t)
     returns (zx_status_t);
 
 # Tracing
 
 syscall ktrace_read
-    (handle: zx_handle_t, data: any[len] OUT, offset: uint32_t,
-        len: uint32_t)
-    returns (zx_status_t, actual: uint32_t);
+    (handle: zx_handle_t, data: any[data_size] OUT, offset: uint32_t, data_size: size_t)
+    returns (zx_status_t, actual: size_t);
 
 syscall ktrace_control
     (handle: zx_handle_t, action: uint32_t, options: uint32_t, ptr: any[action] INOUT)
@@ -538,31 +522,31 @@ syscall ktrace_write
 syscall mtrace_control
     (handle: zx_handle_t,
         kind: uint32_t, action: uint32_t, options: uint32_t,
-        ptr: any[size] INOUT, size: uint32_t)
+        ptr: any[ptr_size] INOUT, ptr_size: size_t)
     returns (zx_status_t);
 
 # Legacy LK debug syscalls
 
 syscall debug_read
-    (handle: zx_handle_t, buffer: char[length] OUT, length: size_t[1] INOUT)
+    (handle: zx_handle_t, buffer: char[buffer_size] OUT, buffer_size: size_t[1] INOUT)
     returns (zx_status_t);
 
 syscall debug_write
-    (buffer: char[length] IN, length: size_t)
+    (buffer: char[buffer_size] IN, buffer_size: size_t)
     returns (zx_status_t);
 
 syscall debug_send_command
-    (resource_handle: zx_handle_t, buffer: char[length] IN, length: size_t)
+    (resource: zx_handle_t, buffer: char[buffer_size] IN, buffer_size: size_t)
     returns (zx_status_t);
 
 # DDK Syscalls: Interrupts
 
 syscall interrupt_create
     (src_obj: zx_handle_t, src_num: uint32_t, options: uint32_t)
-    returns (zx_status_t, out_handle: zx_handle_t);
+    returns (zx_status_t, out: zx_handle_t);
 
 syscall interrupt_bind
-    (inth: zx_handle_t, porth: zx_handle_t, key: uint64_t, options: uint32_t)
+    (handle: zx_handle_t, port: zx_handle_t, key: uint64_t, options: uint32_t)
     returns (zx_status_t);
 
 syscall interrupt_wait blocking
@@ -592,13 +576,13 @@ syscall vmo_create_contiguous
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 syscall vmo_create_physical
-    (rsrc_handle: zx_handle_t, paddr: zx_paddr_t, size: size_t)
+    (resource: zx_handle_t, paddr: zx_paddr_t, size: size_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 # DDK Syscalls: Device Memory Access
 
 syscall iommu_create
-    (rsrc_handle: zx_handle_t, type: uint32_t, desc: any[desc_len] IN, desc_len: uint32_t)
+    (resource: zx_handle_t, type: uint32_t, desc: any[desc_size] IN, desc_size: size_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 syscall bti_create
@@ -606,16 +590,16 @@ syscall bti_create
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 syscall bti_pin
-    (bti: zx_handle_t, options: uint32_t, vmo: zx_handle_t, offset: uint64_t, size: uint64_t,
+    (handle: zx_handle_t, options: uint32_t, vmo: zx_handle_t, offset: uint64_t, size: uint64_t,
         addrs: zx_paddr_t[addrs_count] OUT, addrs_count: size_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 syscall bti_release_quarantine
-    (bti: zx_handle_t)
+    (handle: zx_handle_t)
     returns (zx_status_t);
 
 syscall pmt_unpin
-    (pmt: zx_handle_t handle_release)
+    (handle: zx_handle_t handle_release)
     returns (zx_status_t);
 
 # DDK Syscalls: Misc Info
@@ -694,14 +678,14 @@ syscall pc_firmware_tables
 # DDK Syscalls: SMC Calls
 
 syscall smc_call
-    (rsrc_handle: zx_handle_t, arg0: uint64_t, arg1: uint64_t,
+    (resource: zx_handle_t, arg0: uint64_t, arg1: uint64_t,
         arg2: uint64_t, arg3: uint64_t, out_smc_status: uint64_t[1] OUT)
     returns (zx_status_t);
 
 # Resources
 
 syscall resource_create
-    (parent_handle: zx_handle_t, kind: uint32_t, low: uint64_t, high: uint64_t)
+    (parent_resource: zx_handle_t, kind: uint32_t, low: uint64_t, high: uint64_t)
     returns (zx_status_t, resource_out: zx_handle_t handle_acquire);
 
 # Hypervisor
@@ -711,7 +695,7 @@ syscall guest_create
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 syscall guest_set_trap
-    (guest: zx_handle_t, kind: uint32_t, addr: zx_vaddr_t, len: size_t, port: zx_handle_t,
+    (handle: zx_handle_t, kind: uint32_t, addr: zx_vaddr_t, size: size_t, port: zx_handle_t,
         key: uint64_t)
     returns (zx_status_t);
 
@@ -720,19 +704,19 @@ syscall vcpu_create
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 syscall vcpu_resume
-    (vcpu: zx_handle_t)
+    (handle: zx_handle_t)
     returns (zx_status_t, packet: zx_port_packet_t OUT);
 
 syscall vcpu_interrupt
-    (vcpu: zx_handle_t, vector: uint32_t)
+    (handle: zx_handle_t, vector: uint32_t)
     returns (zx_status_t);
 
 syscall vcpu_read_state
-    (vcpu: zx_handle_t, kind: uint32_t, buffer: any[len] OUT, len: uint32_t)
+    (handle: zx_handle_t, kind: uint32_t, buffer: any[buffer_size] OUT, buffer_size: size_t)
     returns (zx_status_t);
 
 syscall vcpu_write_state
-    (vcpu: zx_handle_t, kind: uint32_t, buffer: any[len] IN, len: uint32_t)
+    (handle: zx_handle_t, kind: uint32_t, buffer: any[buffer_size] IN, buffer_size: size_t)
     returns (zx_status_t);
 
 # System Control
@@ -742,14 +726,13 @@ syscall system_mexec
    returns (zx_status_t);
 
 syscall system_powerctl
-   (root_rsrc: zx_handle_t, cmd: uint32_t, arg: zx_system_powerctl_arg_t[1] IN)
+   (root_resource: zx_handle_t, cmd: uint32_t, arg: zx_system_powerctl_arg_t[1] IN)
    returns (zx_status_t);
 
 # Internal-only task syscalls
 
 syscall job_set_relative_importance
-    (root_resource: zx_handle_t,
-        job: zx_handle_t, less_important_job: zx_handle_t)
+    (root_resource: zx_handle_t, job: zx_handle_t, less_important_job: zx_handle_t)
     returns (zx_status_t);
 
 # Test syscalls (keep at the end)

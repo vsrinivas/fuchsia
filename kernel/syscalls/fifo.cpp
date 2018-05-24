@@ -23,7 +23,7 @@
 
 #define LOCAL_TRACE 0
 
-zx_status_t sys_fifo_create(uint32_t count, uint32_t elemsize, uint32_t options,
+zx_status_t sys_fifo_create(size_t count, size_t elemsize, uint32_t options,
                             user_out_handle* out0, user_out_handle* out1) {
     auto up = ProcessDispatcher::GetCurrent();
     zx_status_t res = up->QueryPolicy(ZX_POL_NEW_FIFO);

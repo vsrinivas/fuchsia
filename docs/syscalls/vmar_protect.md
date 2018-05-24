@@ -9,8 +9,7 @@ vmar_protect - set protection of virtual memory pages
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_vmar_protect(zx_handle_t vmar_handle,
-                            uintptr_t addr, size_t len,
+zx_status_t zx_vmar_protect(zx_handle_t handle, zx_vaddr_t addr, uint64_t len,
                             uint32_t prot_flags);
 ```
 

@@ -9,8 +9,8 @@ process_start - start execution on a process
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_process_start(zx_handle_t process, zx_handle_t thread,
-                            uintptr_t entry, uintptr_t stack,
+zx_status_t zx_process_start(zx_handle_t handle, zx_handle_t thread,
+                            zx_vaddr_t entry, zx_vaddr_t stack,
                             zx_handle_t arg1, uintptr_t arg2);
 ```
 

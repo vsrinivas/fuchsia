@@ -26,7 +26,7 @@
 #define LOCAL_TRACE 0
 
 zx_status_t IommuDispatcher::Create(uint32_t type, fbl::unique_ptr<const uint8_t[]> desc,
-                                    uint32_t desc_len, fbl::RefPtr<Dispatcher>* dispatcher,
+                                    size_t desc_len, fbl::RefPtr<Dispatcher>* dispatcher,
                                     zx_rights_t* rights) {
 
     fbl::RefPtr<Iommu> iommu;

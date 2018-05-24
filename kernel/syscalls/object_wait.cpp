@@ -94,8 +94,8 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value,
     return result;
 }
 
-zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, uint32_t count, zx_time_t deadline) {
-    LTRACEF("count %u\n", count);
+zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, size_t count, zx_time_t deadline) {
+    LTRACEF("count %zu\n", count);
 
     if (!count) {
         zx_status_t result = thread_sleep_etc(deadline, /*interruptable=*/true);

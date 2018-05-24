@@ -9,8 +9,8 @@ iommu_create - create a new IOMMU object in the kernel
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_iommu_create(zx_handle_t root_rsrc, uint32_t type,
-                            const void* desc, uint32_t desc_len, zx_handle_t* out);
+zx_status_t zx_iommu_create(zx_handle_t root_resource, uint32_t type,
+                            const void* desc, size_t desc_size, zx_handle_t* out);
 ```
 
 ## DESCRIPTION
@@ -41,16 +41,16 @@ is returned.
 
 ## ERRORS
 
-**ZX_ERR_BAD_HANDLE**  *root_rsrc* is not a valid handle.
+**ZX_ERR_BAD_HANDLE**  *root_resource* is not a valid handle.
 
-**ZX_ERR_WRONG_TYPE**  *root_rsrc* is not a resource handle.
+**ZX_ERR_WRONG_TYPE**  *root_resource* is not a resource handle.
 
-**ZX_ERR_ACCESS_DENIED**  *root_rsrc* handle does not have sufficient privileges.
+**ZX_ERR_ACCESS_DENIED**  *root_resource* handle does not have sufficient privileges.
 
 **ZX_ERR_NOT_SUPPORTED** *type* is not a defined value or is not
 supported on this system.
 
-**ZX_ERR_INVALID_ARGS**  *desc_len* is larger than *ZX_IOMMU_MAX_DESC_LEN*,
+**ZX_ERR_INVALID_ARGS**  *desc_size* is larger than *ZX_IOMMU_MAX_DESC_LEN*,
 *desc* is an invalid pointer, *out* is an invalid pointer, or the contents of
 *desc* are not valid for the given *type*.
 

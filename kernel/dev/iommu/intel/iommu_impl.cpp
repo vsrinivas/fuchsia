@@ -28,7 +28,7 @@
 namespace intel_iommu {
 
 IommuImpl::IommuImpl(volatile void* register_base,
-                     fbl::unique_ptr<const uint8_t[]> desc, uint32_t desc_len)
+                     fbl::unique_ptr<const uint8_t[]> desc, size_t desc_len)
         : desc_(fbl::move(desc)), desc_len_(desc_len), mmio_(register_base) {
           memset(&irq_block_, 0, sizeof(irq_block_));
     // desc_len_ is currently unused, but we stash it so we can use the length
@@ -36,7 +36,7 @@ IommuImpl::IommuImpl(volatile void* register_base,
     desc_len_ = desc_len;
 }
 
-zx_status_t IommuImpl::Create(fbl::unique_ptr<const uint8_t[]> desc_bytes, uint32_t desc_len,
+zx_status_t IommuImpl::Create(fbl::unique_ptr<const uint8_t[]> desc_bytes, size_t desc_len,
                               fbl::RefPtr<Iommu>* out) {
     zx_status_t status = ValidateIommuDesc(desc_bytes, desc_len);
     if (status != ZX_OK) {
@@ -107,12 +107,12 @@ IommuImpl::~IommuImpl() {
 // the i915 gpu (initial framebuffer) and one for the XHCI controller
 // (scratch space for the BIOS before the OS takes ownership of the controller).
 zx_status_t IommuImpl::ValidateIommuDesc(const fbl::unique_ptr<const uint8_t[]>& desc_bytes,
-                                         uint32_t desc_len) {
+                                         size_t desc_len) {
     auto desc = reinterpret_cast<const zx_iommu_desc_intel_t*>(desc_bytes.get());
 
     // Validate the size
     if (desc_len < sizeof(*desc)) {
-        LTRACEF("desc too short: %u < %zu\n", desc_len, sizeof(*desc));
+        LTRACEF("desc too short: %zu < %zu\n", desc_len, sizeof(*desc));
         return ZX_ERR_INVALID_ARGS;
     }
     static_assert(sizeof(desc->scope_bytes) < sizeof(size_t),
@@ -122,7 +122,7 @@ zx_status_t IommuImpl::ValidateIommuDesc(const fbl::unique_ptr<const uint8_t[]>&
         add_overflow(actual_size, desc->reserved_memory_bytes, &actual_size) ||
         actual_size != desc_len) {
 
-        LTRACEF("desc size mismatch: %u != %zu\n", desc_len, actual_size);
+        LTRACEF("desc size mismatch: %zu != %zu\n", desc_len, actual_size);
         return ZX_ERR_INVALID_ARGS;
     }
 
