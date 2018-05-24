@@ -174,9 +174,9 @@ No values for `target_cpu = "x64"`.
 
 **Default value:** [[]](https://fuchsia.googlesource.com/build/+/master/gn/packages.gni#8)
 
-**Current value for `target_cpu = "arm64"`:** [["garnet/packages/default"]](/arm64/args.gn#2)
+**Current value for `target_cpu = "arm64"`:** [["garnet/packages/buildbot"]](/arm64/args.gn#2)
 
-**Current value for `target_cpu = "x64"`:** [["garnet/packages/default"]](/x64/args.gn#2)
+**Current value for `target_cpu = "x64"`:** [["garnet/packages/buildbot"]](/x64/args.gn#2)
 
 
 ### fvm_image_size
@@ -580,9 +580,7 @@ No values for `target_cpu = "arm64"`.
 ### thinlto_cache_dir
  ThinLTO cache directory path.
 
-**Default value for `target_cpu = "arm64"`:** "host_x64/thinlto-cache"
-
-**Default value for `target_cpu = "x64"`:** "x64-shared/thinlto-cache"
+**Default value:** "host_x64/thinlto-cache"
 
 
 ### thinlto_jobs
