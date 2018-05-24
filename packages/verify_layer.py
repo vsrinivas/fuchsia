@@ -33,7 +33,6 @@ NO_AGGREGATION_DIRECTORIES = [
     # TODO: force experimental content to be built for each layer.
     'experimental',
     'products',
-    'sdk',
 ]
 
 # Non-package files allowed in package directories.
