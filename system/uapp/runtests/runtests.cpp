@@ -18,6 +18,7 @@
 #include <lib/zx/time.h>
 #include <runtests-utils/log-exporter.h>
 #include <runtests-utils/runtests-utils.h>
+#include <runtests-utils/fuchsia-run-test.h>
 #include <unittest/unittest.h>
 
 using runtests::Result;
@@ -303,8 +304,8 @@ int main(int argc, char** argv) {
         }
 
         int num_failed = 0;
-        runtests::RunTestsInDir(test_dir, filter_names, output_dir, kOutputFileName, verbosity,
-                                &num_failed, &results);
+        runtests::RunTestsInDir(&runtests::FuchsiaRunTest, test_dir, filter_names, output_dir,
+                                kOutputFileName, verbosity, &num_failed, &results);
         failed_count += num_failed;
     }
 

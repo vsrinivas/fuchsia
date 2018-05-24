@@ -5,12 +5,12 @@
 #include <runtests-utils/log-exporter.h>
 
 #include <errno.h>
+#include <stdint.h>
 
-#include <fbl/string.h>
+#include <fdio/util.h>
 #include <lib/fidl/cpp/message_buffer.h>
 #include <lib/zx/channel.h>
 #include <logger/c/fidl.h>
-#include <stdint.h>
 #include <zircon/status.h>
 
 namespace runtests {
@@ -245,5 +245,83 @@ void LogExporter::NotifyFileError(const char* error) {
         file_error_handler_(error);
     }
 }
+
+fbl::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_path,
+                                               ExporterLaunchError* error) {
+    *error = NO_ERROR;
+    fbl::String syslog_path_str = fbl::String(syslog_path.data());
+    FILE* syslog_file = fopen(syslog_path_str.c_str(), "w");
+    if (syslog_file == nullptr) {
+        printf("Error: Could not open syslog file: %s.\n", syslog_path_str.c_str());
+        *error = OPEN_FILE;
+        return nullptr;
+    }
+
+    // Try and connect to logger service if available. It would be only
+    // available in garnet and above layer
+    zx::channel logger, logger_request;
+    zx_status_t status;
+
+    status = zx::channel::create(0, &logger, &logger_request);
+    if (status != ZX_OK) {
+        printf("LaunchLogExporter: cannot create channel for logger service: %d (%s).\n",
+               status, zx_status_get_string(status));
+        *error = CREATE_CHANNEL;
+        return nullptr;
+    }
+
+    status = fdio_service_connect("/svc/logger.Log", logger_request.release());
+    if (status != ZX_OK) {
+        printf("LaunchLogExporter: cannot connect to logger service: %d (%s).\n",
+               status, zx_status_get_string(status));
+        *error = CONNECT_TO_LOGGER_SERVICE;
+        return nullptr;
+    }
+
+    // Create a log exporter channel and pass it to logger service.
+    zx::channel listener, listener_request;
+    status = zx::channel::create(0, &listener, &listener_request);
+    if (status != ZX_OK) {
+        printf("LaunchLogExporter: cannot create channel for listener: %d (%s).\n",
+               status, zx_status_get_string(status));
+        *error = CREATE_CHANNEL;
+        return nullptr;
+    }
+    logger_LogListenRequest req = {};
+    req.hdr.ordinal = logger_LogListenOrdinal;
+    req.log_listener = FIDL_HANDLE_PRESENT;
+    zx_handle_t listener_handle = listener.release();
+    status = logger.write(0, &req, sizeof(req), &listener_handle, 1);
+    if (status != ZX_OK) {
+        printf("LaunchLogExporter: cannot pass listener to logger service: %d (%s).\n",
+               status, zx_status_get_string(status));
+        close(listener_handle);
+        *error = FIDL_ERROR;
+        return nullptr;
+    }
+
+    // Connect log exporter channel to object and start message loop on it.
+    auto log_exporter = fbl::make_unique<LogExporter>(fbl::move(listener_request),
+                                                      syslog_file);
+    log_exporter->set_error_handler([](zx_status_t status) {
+        if (status != ZX_ERR_CANCELED) {
+            printf("log exporter: Failed: %d (%s).\n",
+                   status, zx_status_get_string(status));
+        }
+    });
+    log_exporter->set_file_error_handler([](const char* error) {
+        printf("log exporter: Error writing to file: %s.\n", error);
+    });
+    status = log_exporter->StartThread();
+    if (status != ZX_OK) {
+        printf("LaunchLogExporter: Failed to start log exporter: %d (%s).\n",
+               status, zx_status_get_string(status));
+        *error = START_LISTENER;
+        return nullptr;
+    }
+    return log_exporter;
+}
+
+
 
 } // namespace runtests

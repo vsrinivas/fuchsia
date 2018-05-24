@@ -4,6 +4,10 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
+#
+# Userspace library.
+#
+
 MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
@@ -13,6 +17,7 @@ MODULE_GROUP := test
 MODULE_SRCS += \
     $(LOCAL_DIR)/log-exporter.cpp \
     $(LOCAL_DIR)/runtests-utils.cpp \
+    $(LOCAL_DIR)/fuchsia-run-test.cpp \
 
 MODULE_FIDL_LIBS := \
     system/fidl/logger

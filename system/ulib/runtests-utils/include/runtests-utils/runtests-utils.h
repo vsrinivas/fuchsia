@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Code for running other binaries as tests and recording their results.
+// Helper functions for running test binaries and recording their results.
 
-#ifndef ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_RUNTESTS_UTILS_H_
-#define ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_RUNTESTS_UTILS_H_
+#pragma once
 
-#include "log-exporter.h"
+#include <inttypes.h>
 
+#include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
 #include <fbl/vector.h>
@@ -25,21 +25,11 @@ enum LaunchStatus {
     FAILED_NONZERO_RETURN_CODE,
 };
 
-// Error while launching Listener.
-enum ExporterLaunchError {
-    OPEN_FILE,
-    CREATE_CHANNEL,
-    FIDL_ERROR,
-    CONNECT_TO_LOGGER_SERVICE,
-    START_LISTENER,
-    NO_ERROR,
-};
-
 // Represents the result of a single test run.
 struct Result {
     fbl::String name; // argv[0].
     LaunchStatus launch_status;
-    int64_t return_code; // Only valid if launch_stauts == SUCCESS or FAILED_NONZERO_RETURN_CODE.
+    int64_t return_code; // Only valid if launch_status == SUCCESS or FAILED_NONZERO_RETURN_CODE.
     // TODO(ZX-2050): Track duration of test binary.
 
     // Constructor really only needed until we have C++14, which will allow call-sites to use
@@ -48,15 +38,14 @@ struct Result {
         : name(name_arg), launch_status(launch_status_arg), return_code(return_code_arg) {}
 };
 
-// Invokes a test binary and prints results to stdout.
+// Function that invokes a test binary and writes its output to a file.
 //
-// |argv| argument strings passed to the test program. Result.name will be set to argv[0].
+// |argv| is the commandline to use to run the test program.
 // |argc| is the number of strings in argv.
 // |out| is a file stream to which the test binary's output will be written. May be
 //   nullptr, in which output will not be redirected.
 //
-// Returns a Result indicating the result.
-Result RunTest(const char* argv[], int argc, FILE* out);
+using RunTestFn = fbl::Function<Result(const char* argv[], int argc, FILE* out)>;
 
 // Splits |input| by ',' and appends the results onto |output|.
 // Empty strings are not put into output.
@@ -99,6 +88,7 @@ int ResolveGlobs(const char* const* globs, int num_globs, fbl::Vector<fbl::Strin
 
 // Executes all test binaries in a directory (non-recursive).
 //
+// |run_test| is the function used to invoke the test binaries.
 // |dir_path| is the directory to search.
 // |filter_names| is a list of test names to filter on (i.e. tests whose names
 //   don't match are skipped). May be empty, in which case all tests will be run.
@@ -116,21 +106,9 @@ int ResolveGlobs(const char* const* globs, int num_globs, fbl::Vector<fbl::Strin
 // |results| is an output paramater to which run results will be appended.
 //
 // Returns false if any test binary failed, true otherwise.
-bool RunTestsInDir(const fbl::StringPiece dir_path, const fbl::Vector<fbl::String>& filter_names,
-                   const char* output_dir, const char* output_file_basename, signed char verbosity,
+bool RunTestsInDir(const RunTestFn& run_test, const fbl::StringPiece dir_path,
+                   const fbl::Vector<fbl::String>& filter_names, const char* output_dir,
+                   const char* output_file_basename, signed char verbosity,
                    int* num_failed, fbl::Vector<Result>* results);
 
-// Launches Log Exporter.
-//
-// Starts message loop on a seperate thread.
-//
-// |syslog_path| file path where to write logs.
-// |error| error to set in case of failure.
-//
-// Returns nullptr if it is not possible to launch Log Exporter.
-fbl::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_path,
-                                               ExporterLaunchError* error);
-
 } // namespace runtests
-
-#endif // ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_RUNTESTS_UTILS_H_

@@ -21,118 +21,8 @@
 #include <fbl/string_piece.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-#include <fdio/util.h>
-#include <launchpad/launchpad.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/zx/job.h>
-#include <lib/zx/process.h>
-#include <lib/zx/time.h>
-#include <runtests-utils/log-exporter.h>
-#include <zircon/listnode.h>
-#include <zircon/process.h>
-#include <zircon/status.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/object.h>
 
 namespace runtests {
-
-Result RunTest(const char* argv[], int argc, FILE* out) {
-    int fds[2];
-    const char* path = argv[0];
-
-    launchpad_t* lp = nullptr;
-    zx_status_t status = ZX_OK;
-
-    zx::job test_job;
-    status = zx::job::create(zx_job_default(), 0, &test_job);
-    if (status != ZX_OK) {
-        printf("FAILURE: zx::job::create() returned %d\n", status);
-        return Result(path, FAILED_TO_LAUNCH, 0);
-    }
-    auto auto_call_kill_job = fbl::MakeAutoCall([&test_job]() { test_job.kill(); });
-    auto auto_call_launchpad_destroy = fbl::MakeAutoCall([&lp]() {
-        if (lp) {
-            launchpad_destroy(lp);
-        }
-    });
-    status = test_job.set_property(ZX_PROP_NAME, "run-test", sizeof("run-test"));
-    if (status != ZX_OK) {
-        printf("FAILURE: set_property() returned %d\n", status);
-        return Result(path, FAILED_TO_LAUNCH, 0);
-    }
-    status = launchpad_create(test_job.get(), path, &lp);
-    if (status != ZX_OK) {
-        printf("FAILURE: launchpad_create() returned %d\n", status);
-        return Result(path, FAILED_TO_LAUNCH, 0);
-    }
-    status = launchpad_load_from_file(lp, path);
-    if (status != ZX_OK) {
-        printf("FAILURE: launchpad_load_from_file() returned %d\n", status);
-        return Result(path, FAILED_TO_LAUNCH, 0);
-    }
-    status = launchpad_clone(lp, LP_CLONE_FDIO_ALL | LP_CLONE_ENVIRON);
-    if (status != ZX_OK) {
-        printf("FAILURE: launchpad_clone() returned %d\n", status);
-        return Result(path, FAILED_TO_LAUNCH, 0);
-    }
-    if (out != nullptr) {
-        if (pipe(fds)) {
-            printf("FAILURE: Failed to create pipe: %s\n", strerror(errno));
-            return Result(path, FAILED_TO_LAUNCH, 0);
-        }
-        status = launchpad_clone_fd(lp, fds[1], STDOUT_FILENO);
-        if (status != ZX_OK) {
-            printf("FAILURE: launchpad_clone_fd() returned %d\n", status);
-            return Result(path, FAILED_TO_LAUNCH, 0);
-        }
-        status = launchpad_transfer_fd(lp, fds[1], STDERR_FILENO);
-        if (status != ZX_OK) {
-            printf("FAILURE: launchpad_transfer_fd() returned %d\n", status);
-            return Result(path, FAILED_TO_LAUNCH, 0);
-        }
-    }
-    launchpad_set_args(lp, argc, argv);
-    const char* errmsg;
-    zx::process process;
-    status = launchpad_go(lp, process.reset_and_get_address(), &errmsg);
-    lp = nullptr; // launchpad_go destroys lp, null it so we don't try to destroy again.
-    if (status != ZX_OK) {
-        printf("FAILURE: Failed to launch %s: %d: %s\n", path, status, errmsg);
-        return Result(path, FAILED_TO_LAUNCH, 0);
-    }
-    // Tee output.
-    if (out != nullptr) {
-        char buf[1024];
-        ssize_t bytes_read = 0;
-        while ((bytes_read = read(fds[0], buf, sizeof(buf))) > 0) {
-            fwrite(buf, 1, bytes_read, out);
-            fwrite(buf, 1, bytes_read, stdout);
-        }
-    }
-    status = process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
-    if (status != ZX_OK) {
-        printf("FAILURE: Failed to wait for process exiting %s: %d\n", path, status);
-        return Result(path, FAILED_TO_WAIT, 0);
-    }
-
-    // read the return code
-    zx_info_process_t proc_info;
-    status = process.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr);
-
-    if (status != ZX_OK) {
-        printf("FAILURE: Failed to get process return code %s: %d\n", path, status);
-        return Result(path, FAILED_TO_RETURN_CODE, 0);
-    }
-
-    if (proc_info.return_code != 0) {
-        printf("FAILURE: %s exited with nonzero status: %" PRId64 "\n",
-               path, proc_info.return_code);
-        return Result(path, FAILED_NONZERO_RETURN_CODE, proc_info.return_code);
-    }
-
-    printf("PASSED: %s passed\n", path);
-    return Result(path, SUCCESS, 0);
-}
 
 void ParseTestNames(const fbl::StringPiece input, fbl::Vector<fbl::String>* output) {
     // strsep modifies its input, so we have to make a mutable copy.
@@ -241,10 +131,15 @@ int WriteSummaryJSON(const fbl::Vector<Result>& results,
         fprintf(summary_json, "}");
         test_count++;
     }
-    fprintf(summary_json, "\n],\n\"outputs\": {\n");
-    fprintf(summary_json, "\"syslog_file\":\"%.*s\"", static_cast<int>(syslog_path.length()),
-            syslog_path.data());
-    fprintf(summary_json, "\n}}\n");
+    fprintf(summary_json, "\n]");
+    if (!syslog_path.empty()) {
+        fprintf(summary_json, ",\n\"outputs\": {\n");
+        fprintf(summary_json, "\"syslog_file\":\"%.*s\"",
+                static_cast<int>(syslog_path.length()),
+                syslog_path.data());
+        fprintf(summary_json, "\n}");
+    }
+    fprintf(summary_json, "}\n");
     return 0;
 }
 
@@ -268,9 +163,10 @@ int ResolveGlobs(const char* const* globs, const int num_globs,
     return 0;
 }
 
-bool RunTestsInDir(const fbl::StringPiece dir_path, const fbl::Vector<fbl::String>& filter_names,
-                   const char* output_dir, const char* output_file_basename,
-                   const signed char verbosity, int* num_failed, fbl::Vector<Result>* results) {
+bool RunTestsInDir(const RunTestFn& run_test, const fbl::StringPiece dir_path,
+                   const fbl::Vector<fbl::String>& filter_names, const char* output_dir,
+                   const char* output_file_basename, const signed char verbosity,
+                   int* num_failed, fbl::Vector<Result>* results) {
     if ((output_dir != nullptr) && (output_file_basename == nullptr)) {
         printf("Error: output_file_basename is not null, but output_dir is.\n");
         return false;
@@ -336,7 +232,7 @@ bool RunTestsInDir(const fbl::StringPiece dir_path, const fbl::Vector<fbl::Strin
 
         // Execute the test binary.
         const char* argv[] = {test_path.c_str(), verbosity_arg};
-        results->push_back(runtests::RunTest(argv, argc, out));
+        results->push_back(run_test(argv, argc, out));
         if ((*results)[results->size() - 1].launch_status != runtests::SUCCESS) {
             failed_count++;
         }
@@ -352,82 +248,6 @@ bool RunTestsInDir(const fbl::StringPiece dir_path, const fbl::Vector<fbl::Strin
     closedir(dir);
     *num_failed = failed_count;
     return failed_count == 0;
-}
-
-fbl::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_path,
-                                               ExporterLaunchError* error) {
-    *error = NO_ERROR;
-    fbl::String syslog_path_str = fbl::String(syslog_path.data());
-    FILE* syslog_file = fopen(syslog_path_str.c_str(), "w");
-    if (syslog_file == nullptr) {
-        printf("Error: Could not open syslog file: %s.\n", syslog_path_str.c_str());
-        *error = OPEN_FILE;
-        return nullptr;
-    }
-
-    // Try and connect to logger service if available. It would be only
-    // available in garnet and above layer
-    zx::channel logger, logger_request;
-    zx_status_t status;
-
-    status = zx::channel::create(0, &logger, &logger_request);
-    if (status != ZX_OK) {
-        printf("LaunchLogExporter: cannot create channel for logger service: %d (%s).\n",
-               status, zx_status_get_string(status));
-        *error = CREATE_CHANNEL;
-        return nullptr;
-    }
-
-    status = fdio_service_connect("/svc/logger.Log", logger_request.release());
-    if (status != ZX_OK) {
-        printf("LaunchLogExporter: cannot connect to logger service: %d (%s).\n",
-               status, zx_status_get_string(status));
-        *error = CONNECT_TO_LOGGER_SERVICE;
-        return nullptr;
-    }
-
-    // Create a log exporter channel and pass it to logger service.
-    zx::channel listener, listener_request;
-    status = zx::channel::create(0, &listener, &listener_request);
-    if (status != ZX_OK) {
-        printf("LaunchLogExporter: cannot create channel for listener: %d (%s).\n",
-               status, zx_status_get_string(status));
-        *error = CREATE_CHANNEL;
-        return nullptr;
-    }
-    logger_LogListenRequest req = {};
-    req.hdr.ordinal = logger_LogListenOrdinal;
-    req.log_listener = FIDL_HANDLE_PRESENT;
-    zx_handle_t listener_handle = listener.release();
-    status = logger.write(0, &req, sizeof(req), &listener_handle, 1);
-    if (status != ZX_OK) {
-        printf("LaunchLogExporter: cannot pass listener to logger service: %d (%s).\n",
-               status, zx_status_get_string(status));
-        close(listener_handle);
-        *error = FIDL_ERROR;
-        return nullptr;
-    }
-
-    // Connect log exporter channel to object and start message loop on it.
-    auto log_exporter = fbl::make_unique<LogExporter>(fbl::move(listener_request),
-                                                      syslog_file);
-    log_exporter->set_error_handler([](zx_status_t status) {
-        if (status != ZX_ERR_CANCELED) {
-            printf("log exporter: Failed: %d (%s).\n",
-                   status, zx_status_get_string(status));
-        }
-    });
-    log_exporter->set_file_error_handler([](const char* error) {
-        printf("log exporter: Error writing to file: %s.\n", error);
-    });
-    status = log_exporter->StartThread();
-    if (status != ZX_OK) {
-        printf("LaunchLogExporter: Failed to start log exporter: %d (%s).\n",
-               status, zx_status_get_string(status));
-        *error = START_LISTENER;
-        return nullptr;
-    }
-    return log_exporter;
 }
 
 } // namespace runtests

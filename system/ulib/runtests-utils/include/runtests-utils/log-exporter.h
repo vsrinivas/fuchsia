@@ -8,6 +8,7 @@
 #ifndef ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_LOG_EXPORTER_H_
 #define ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_LOG_EXPORTER_H_
 
+#include <fbl/string.h>
 #include <fbl/vector.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
@@ -20,6 +21,16 @@ typedef zx_handle_t logger_LogListener;
 #include <logger/c/fidl.h>
 
 namespace runtests {
+
+// Error while launching Listener.
+enum ExporterLaunchError {
+    OPEN_FILE,
+    CREATE_CHANNEL,
+    FIDL_ERROR,
+    CONNECT_TO_LOGGER_SERVICE,
+    START_LISTENER,
+    NO_ERROR,
+};
 
 // Listens to channel messages, converts them fidl log object and writes them to
 // passed file object.
@@ -111,6 +122,18 @@ private:
     // Vector to keep track of dropped logs per pid
     fbl::Vector<DroppedLogs> dropped_logs_;
 };
+
+// Launches Log Exporter.
+//
+// Starts message loop on a seperate thread.
+//
+// |syslog_path| file path where to write logs.
+// |error| error to set in case of failure.
+//
+// Returns nullptr if it is not possible to launch Log Exporter.
+fbl::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_path,
+                                               ExporterLaunchError* error);
+
 
 } // namespace runtests
 
