@@ -1,0 +1,51 @@
+List of TODOs :
+-------------
+1) The Amlogic controller is capable of irq driven writes and erases,
+however this is not well documented (need to discuss with Cheng on the
+specifics on how to do that). The controller driver uses polling with
+usleep() for write and erase completions. irq driven completions
+should be a measurable win.
+2) Eliminate copy in read/write. Right now, the DMA is done to/from a
+buffer inside the amlogic controller driver, and then the data is
+copied to/from the supplied vmo. DMA'ing directly to the mapped vmo
+address needs to be investigated and done.
+3) Eliminate some wasteful usleep()s in the command/status code in the
+driver.
+4) We really only want to support read/write data+oob in one IO
+support in the NAND protocol (it is not possible to write data and oob
+separately to a page). We should eliminate the other read/write
+variants (and all the code to support that).
+
+Running the NAND unit test :
+--------------------------
+The NAND unit test depends on ability to create files in /tmp. The
+following patch is needed to be able to do this.
+
+diff --git a/system/core/devmgr/devmgr-coordinator.c
+b/system/core/devmgr/devmgr-coordinator.c
+index ec0c1aa12..ece7018fc 100644
+--- a/system/core/devmgr/devmgr-coordinator.c
++++ b/system/core/devmgr/devmgr-coordinator.c
+@@ -585,7 +585,7 @@ static zx_status_t dc_launch_devhost(devhost_t*
+host,
+     // Inherit devmgr's environment (including kernel cmdline)
+          launchpad_clone(lp, LP_CLONE_ENVIRON);
+
+-    const char* nametable[2] = { "/boot", "/svc", };
++    const char* nametable[3] = { "/boot", "/svc", "/tmp"};
+     size_t name_count = 0;
+
+     //TODO: eventually devhosts should not have vfs access
+     @@ -597,6 +597,10 @@ static zx_status_t
+     dc_launch_devhost(devhost_t* host,
+              launchpad_add_handle(lp, h, PA_HND(PA_NS_DIR,
+     name_count++));
+          }
+
++    if ((h = fs_clone("tmp")) != ZX_HANDLE_INVALID) {
++        launchpad_add_handle(lp, h, PA_HND(PA_NS_DIR, name_count++));
++    }
++
+     launchpad_set_nametable(lp, name_count, nametable);
+
+     //TODO: limit root job access to root devhost only
