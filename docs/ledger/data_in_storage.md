@@ -19,9 +19,7 @@ created in LevelDB to store each data type.
 
 [TOC]
 
-## Data representation
-
-### Commit objects
+## Commit objects
 
 - Row key: `commits/{commit_id}`
 - Row value: Contains the creation `timestamp`, `generation` (i.e. length of the
@@ -150,8 +148,8 @@ For more information see also:
  - [Ledger Architecture - Storage](architecture.md#Storage)
 
 
-[commit.fbs]: ../../master/bin/ledger/storage/impl/commit.fbs
-[split.cc]: ../../master/bin/ledger/storage/impl/split.cc
-[split.h]: ../../master/bin/ledger/storage/impl/split.h
+[commit.fbs]: ../../bin/ledger/storage/impl/commit.fbs
+[split.cc]: ../../bin/ledger/storage/impl/split.cc
+[split.h]: ../../bin/ledger/storage/impl/split.h
 [tree_node.fbs]: ../../bin/ledger/storage/impl/btree/tree_node.fbs
 [journals]: life_of_a_put.md#Journals
