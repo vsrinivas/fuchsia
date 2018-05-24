@@ -59,7 +59,7 @@ bool BeaconSender::IsStarted() {
     return bss_ != nullptr;
 }
 
-zx_status_t BeaconSender::HandleProbeRequest(const ImmutableMgmtFrame<ProbeRequest>& frame,
+zx_status_t BeaconSender::HandleProbeRequest(const MgmtFrame<ProbeRequest>& frame,
                                              const wlan_rx_info_t& rxinfo) {
     auto probereq = frame.body();
     size_t elt_len = frame.body_len() - sizeof(ProbeRequest);
@@ -103,16 +103,16 @@ zx_status_t BeaconSender::UpdateBeacon(const PsCfg& ps_cfg) {
     // TODO(hahnr): Length of elements is not known at this time. Allocate enough
     // bytes. This should be updated once there is a better size management.
     size_t body_payload_len = 256;
-    fbl::unique_ptr<Packet> packet = nullptr;
-    auto frame = BuildMgmtFrame<Beacon>(&packet, body_payload_len);
-    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
+    MgmtFrame<Beacon> frame;
+    auto status = BuildMgmtFrame(&frame, body_payload_len);
+    if (status != ZX_OK) { return status; }
 
     auto hdr = frame.hdr();
     const auto& bssid = bss_->bssid();
     hdr->addr1 = common::kBcastMac;
     hdr->addr2 = bssid;
     hdr->addr3 = bssid;
-    FillTxInfo(&packet, *hdr);
+    frame.FillTxInfo();
 
     auto bcn = frame.body();
     bcn->beacon_interval = req_.beacon_period;
@@ -122,7 +122,7 @@ zx_status_t BeaconSender::UpdateBeacon(const PsCfg& ps_cfg) {
 
     // Write elements.
     ElementWriter w(bcn->elements, body_payload_len);
-    auto status = WriteSsid(&w);
+    status = WriteSsid(&w);
     if (status != ZX_OK) { return status; }
 
     status = WriteSupportedRates(&w);
@@ -151,16 +151,15 @@ zx_status_t BeaconSender::UpdateBeacon(const PsCfg& ps_cfg) {
     ZX_DEBUG_ASSERT(bcn->Validate(w.size()));
 
     // Update the length with final values
-    body_payload_len = w.size();
-    size_t actual_len = hdr->len() + sizeof(Beacon) + body_payload_len;
-    status = packet->set_len(actual_len);
+    size_t body_len = sizeof(Beacon) + w.size();
+    status = frame.set_body_len(body_len);
     if (status != ZX_OK) {
-        errorf("[bcn-sender] [%s] could not set packet length to %zu: %d\n",
-               bssid.ToString().c_str(), actual_len, status);
+        errorf("[bcn-sender] [%s] could not set body length to %zu: %d\n", bssid.ToString().c_str(),
+               body_len, status);
         return status;
     }
 
-    status = device_->ConfigureBeacon(fbl::move(packet));
+    status = device_->ConfigureBeacon(frame.take());
     if (status != ZX_OK) {
         errorf("[bcn-sender] [%s] could not send beacon packet: %d\n", bssid.ToString().c_str(),
                status);
@@ -170,7 +169,7 @@ zx_status_t BeaconSender::UpdateBeacon(const PsCfg& ps_cfg) {
     return ZX_OK;
 }
 
-zx_status_t BeaconSender::SendProbeResponse(const ImmutableMgmtFrame<ProbeRequest>& probereq) {
+zx_status_t BeaconSender::SendProbeResponse(const MgmtFrame<ProbeRequest>& probereq) {
     debugfn();
     ZX_DEBUG_ASSERT(IsStarted());
     if (!IsStarted()) { return ZX_ERR_BAD_STATE; }
@@ -178,16 +177,16 @@ zx_status_t BeaconSender::SendProbeResponse(const ImmutableMgmtFrame<ProbeReques
     // TODO(hahnr): Length of elements is not known at this time. Allocate enough
     // bytes. This should be updated once there is a better size management.
     size_t body_payload_len = 256;
-    fbl::unique_ptr<Packet> packet = nullptr;
-    auto frame = BuildMgmtFrame<ProbeResponse>(&packet, body_payload_len);
-    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
+    MgmtFrame<ProbeResponse> frame;
+    auto status = BuildMgmtFrame(&frame, body_payload_len);
+    if (status != ZX_OK) { return status; }
 
     auto hdr = frame.hdr();
     const auto& bssid = bss_->bssid();
     hdr->addr1 = probereq.hdr()->addr2;
     hdr->addr2 = bssid;
     hdr->addr3 = bssid;
-    FillTxInfo(&packet, *hdr);
+    frame.FillTxInfo();
 
     auto resp = frame.body();
     resp->beacon_interval = req_.beacon_period;
@@ -197,7 +196,7 @@ zx_status_t BeaconSender::SendProbeResponse(const ImmutableMgmtFrame<ProbeReques
 
     // Write elements.
     ElementWriter w(resp->elements, body_payload_len);
-    auto status = WriteSsid(&w);
+    status = WriteSsid(&w);
     if (status != ZX_OK) { return status; }
 
     status = WriteSupportedRates(&w);
@@ -223,16 +222,15 @@ zx_status_t BeaconSender::SendProbeResponse(const ImmutableMgmtFrame<ProbeReques
     ZX_DEBUG_ASSERT(resp->Validate(w.size()));
 
     // Update the length with final values
-    body_payload_len = w.size();
-    size_t actual_len = hdr->len() + sizeof(ProbeResponse) + body_payload_len;
-    status = packet->set_len(actual_len);
+    size_t body_len = sizeof(ProbeResponse) + w.size();
+    status = frame.set_body_len(body_len);
     if (status != ZX_OK) {
-        errorf("[bcn-sender] [%s] could not set packet length to %zu: %d\n",
-               bssid.ToString().c_str(), actual_len, status);
+        errorf("[bcn-sender] [%s] could not set body length to %zu: %d\n", bssid.ToString().c_str(),
+               body_len, status);
         return status;
     }
 
-    status = device_->SendWlan(fbl::move(packet));
+    status = device_->SendWlan(frame.take());
     if (status != ZX_OK) {
         errorf("[bcn-sender] [%s] could not send ProbeResponse packet: %d\n",
                bssid.ToString().c_str(), status);

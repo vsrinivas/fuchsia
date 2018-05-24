@@ -163,13 +163,12 @@ zx_status_t InitState::HandleMlmeJoinReq(const wlan_mlme::JoinRequest& req) {
     return status;
 }
 
-zx_status_t InitState::HandleBeacon(const ImmutableMgmtFrame<Beacon>& frame,
-                                    const wlan_rx_info_t& rxinfo) {
+zx_status_t InitState::HandleBeacon(const MgmtFrame<Beacon>& frame, const wlan_rx_info_t& rxinfo) {
     MoveToJoinedState();
     return ZX_OK;
 }
 
-zx_status_t InitState::HandleProbeResponse(const ImmutableMgmtFrame<ProbeResponse>& frame,
+zx_status_t InitState::HandleProbeResponse(const MgmtFrame<ProbeResponse>& frame,
                                            const wlan_rx_info_t& rxinfo) {
     MoveToJoinedState();
     return ZX_OK;

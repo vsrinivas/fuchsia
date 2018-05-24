@@ -132,7 +132,7 @@ zx_status_t InfraBss::HandleDataFrame(const DataFrameHeader& hdr) {
     return ZX_OK;
 }
 
-zx_status_t InfraBss::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame) {
+zx_status_t InfraBss::HandleEthFrame(const EthFrame& frame) {
     // Lookup client associated with incoming unicast frame.
     auto& dest_addr = frame.hdr()->dest;
     if (dest_addr.IsUcast()) {
@@ -155,7 +155,7 @@ zx_status_t InfraBss::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame
     return SendDataFrame(fbl::move(out_frame));
 }
 
-zx_status_t InfraBss::HandleAuthentication(const ImmutableMgmtFrame<Authentication>& frame,
+zx_status_t InfraBss::HandleAuthentication(const MgmtFrame<Authentication>& frame,
                                            const wlan_rx_info_t& rxinfo) {
     // If the client is already known, there is no work to be done here.
     auto& client_addr = frame.hdr()->addr2;
@@ -185,7 +185,7 @@ zx_status_t InfraBss::HandleAuthentication(const ImmutableMgmtFrame<Authenticati
     return ZX_OK;
 }
 
-zx_status_t InfraBss::HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFrame>& frame,
+zx_status_t InfraBss::HandlePsPollFrame(const CtrlFrame<PsPollFrame>& frame,
                                         const wlan_rx_info_t& rxinfo) {
     auto& client_addr = frame.hdr()->ta;
     if (frame.hdr()->bssid != bssid_) { return ZX_ERR_STOP; }
@@ -333,8 +333,7 @@ zx_status_t InfraBss::SendNextBu() {
     return device_->SendWlan(fbl::move(packet));
 }
 
-zx_status_t InfraBss::EthToDataFrame(const ImmutableBaseFrame<EthernetII>& frame,
-                                     fbl::unique_ptr<Packet>* out_packet) {
+zx_status_t InfraBss::EthToDataFrame(const EthFrame& frame, fbl::unique_ptr<Packet>* out_packet) {
     const size_t buf_len = kDataFrameHdrLenMax + sizeof(LlcHeader) + frame.body_len();
     auto buffer = GetBuffer(buf_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }

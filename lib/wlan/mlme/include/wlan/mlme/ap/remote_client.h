@@ -33,30 +33,30 @@ class RemoteClient : public RemoteClientInterface {
     // RemoteClientInterface implementation
     void HandleTimeout() override;
 
-    zx_status_t HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame) override;
+    zx_status_t HandleEthFrame(const EthFrame& frame) override;
     zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
-    zx_status_t HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFrame>& frame,
+    zx_status_t HandlePsPollFrame(const CtrlFrame<PsPollFrame>& frame,
                                   const wlan_rx_info_t& rxinfo) override;
-    zx_status_t HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaRequestFrame>& rx_frame,
+    zx_status_t HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>& rx_frame,
                                         const wlan_rx_info_t& rxinfo) override;
-    zx_status_t HandleAddBaResponseFrame(const ImmutableMgmtFrame<AddBaResponseFrame>& rx_frame,
+    zx_status_t HandleAddBaResponseFrame(const MgmtFrame<AddBaResponseFrame>& rx_frame,
                                          const wlan_rx_info& rxinfo) override;
 
     zx_status_t SendAuthentication(status_code::StatusCode result);
     zx_status_t SendAssociationResponse(aid_t aid, status_code::StatusCode result);
     zx_status_t SendDeauthentication(reason_code::ReasonCode reason_code);
     zx_status_t SendAddBaRequest();
-    zx_status_t SendAddBaResponse(const ImmutableMgmtFrame<AddBaRequestFrame>& rx_frame);
+    zx_status_t SendAddBaResponse(const MgmtFrame<AddBaRequestFrame>& rx_frame);
 
     uint8_t GetTid();
-    uint8_t GetTid(const ImmutableBaseFrame<EthernetII>& frame);
+    uint8_t GetTid(const EthFrame& frame);
 
     // Enqueues an ethernet frame which can be sent at a later point in time.
-    zx_status_t EnqueueEthernetFrame(const ImmutableBaseFrame<EthernetII>& frame);
+    zx_status_t EnqueueEthernetFrame(const EthFrame& frame);
     zx_status_t DequeueEthernetFrame(fbl::unique_ptr<Packet>* out_packet);
     bool HasBufferedFrames() const;
-    zx_status_t ConvertEthernetToDataFrame(const ImmutableBaseFrame<EthernetII>& frame,
+    zx_status_t ConvertEthernetToDataFrame(const EthFrame& frame,
                                            fbl::unique_ptr<Packet>* out_frame);
     void ReportBuChange(size_t bu_count);
     zx_status_t ReportDeauthentication();
@@ -127,7 +127,7 @@ class DeauthenticatedState : public BaseState {
    public:
     DeauthenticatedState(RemoteClient* client);
 
-    zx_status_t HandleAuthentication(const ImmutableMgmtFrame<Authentication>& frame,
+    zx_status_t HandleAuthentication(const MgmtFrame<Authentication>& frame,
                                      const wlan_rx_info_t& rxinfo) override;
 
     inline const char* name() const override { return kName; }
@@ -138,7 +138,7 @@ class DeauthenticatedState : public BaseState {
 
 class AuthenticatingState : public BaseState {
    public:
-    AuthenticatingState(RemoteClient* client, const ImmutableMgmtFrame<Authentication>& frame);
+    AuthenticatingState(RemoteClient* client, const MgmtFrame<Authentication>& frame);
 
     void OnEnter() override;
 
@@ -159,11 +159,11 @@ class AuthenticatedState : public BaseState {
 
     void HandleTimeout() override;
 
-    zx_status_t HandleAuthentication(const ImmutableMgmtFrame<Authentication>& frame,
+    zx_status_t HandleAuthentication(const MgmtFrame<Authentication>& frame,
                                      const wlan_rx_info_t& rxinfo) override;
-    zx_status_t HandleAssociationRequest(const ImmutableMgmtFrame<AssociationRequest>& frame,
+    zx_status_t HandleAssociationRequest(const MgmtFrame<AssociationRequest>& frame,
                                          const wlan_rx_info_t& rxinfo) override;
-    zx_status_t HandleDeauthentication(const ImmutableMgmtFrame<Deauthentication>& frame,
+    zx_status_t HandleDeauthentication(const MgmtFrame<Deauthentication>& frame,
                                        const wlan_rx_info_t& rxinfo) override;
 
     inline const char* name() const override { return kName; }
@@ -179,7 +179,7 @@ class AuthenticatedState : public BaseState {
 
 class AssociatingState : public BaseState {
    public:
-    AssociatingState(RemoteClient* client, const ImmutableMgmtFrame<AssociationRequest>& frame);
+    AssociatingState(RemoteClient* client, const MgmtFrame<AssociationRequest>& frame);
 
     void OnEnter() override;
 
@@ -201,27 +201,27 @@ class AssociatedState : public BaseState {
 
     void HandleTimeout() override;
 
-    zx_status_t HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame) override;
-    zx_status_t HandleAuthentication(const ImmutableMgmtFrame<Authentication>& frame,
+    zx_status_t HandleEthFrame(const EthFrame& frame) override;
+    zx_status_t HandleAuthentication(const MgmtFrame<Authentication>& frame,
                                      const wlan_rx_info_t& rxinfo) override;
-    zx_status_t HandleAssociationRequest(const ImmutableMgmtFrame<AssociationRequest>& frame,
+    zx_status_t HandleAssociationRequest(const MgmtFrame<AssociationRequest>& frame,
                                          const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
     zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
-    zx_status_t HandleDataFrame(const ImmutableDataFrame<LlcHeader>& frame,
+    zx_status_t HandleDataFrame(const DataFrame<LlcHeader>& frame,
                                 const wlan_rx_info_t& rxinfo) override;
-    zx_status_t HandleDeauthentication(const ImmutableMgmtFrame<Deauthentication>& frame,
+    zx_status_t HandleDeauthentication(const MgmtFrame<Deauthentication>& frame,
                                        const wlan_rx_info_t& rxinfo) override;
-    zx_status_t HandleDisassociation(const ImmutableMgmtFrame<Disassociation>& frame,
+    zx_status_t HandleDisassociation(const MgmtFrame<Disassociation>& frame,
                                      const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleCtrlFrame(const FrameControl& fc) override;
-    zx_status_t HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFrame>& frame,
+    zx_status_t HandlePsPollFrame(const CtrlFrame<PsPollFrame>& frame,
                                   const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleMlmeEapolReq(const wlan_mlme::EapolRequest& req) override;
     zx_status_t HandleMlmeSetKeysReq(const wlan_mlme::SetKeysRequest& req) override;
-    zx_status_t HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaRequestFrame>& frame,
+    zx_status_t HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>& frame,
                                         const wlan_rx_info_t& rxinfo) override;
-    zx_status_t HandleAddBaResponseFrame(const ImmutableMgmtFrame<AddBaResponseFrame>& frame,
+    zx_status_t HandleAddBaResponseFrame(const MgmtFrame<AddBaResponseFrame>& frame,
                                          const wlan_rx_info& rxinfo) override;
 
     inline const char* name() const override { return kName; }

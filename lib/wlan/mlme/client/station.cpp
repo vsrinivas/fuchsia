@@ -150,11 +150,11 @@ zx_status_t Station::HandleMlmeAuthReq(const wlan_mlme::AuthenticateRequest& req
 
     debugjoin("authenticating to %s\n", MACSTR(bssid_));
 
-    fbl::unique_ptr<Packet> packet = nullptr;
-    auto frame = BuildMgmtFrame<Authentication>(&packet, 0);
-    if (packet == nullptr) {
+    MgmtFrame<Authentication> frame;
+    auto status = BuildMgmtFrame(&frame);
+    if (status != ZX_OK) {
         errorf("authing: failed to build a frame\n");
-        return ZX_ERR_NO_RESOURCES;
+        return status;
     }
 
     auto hdr = frame.hdr();
@@ -163,7 +163,7 @@ zx_status_t Station::HandleMlmeAuthReq(const wlan_mlme::AuthenticateRequest& req
     hdr->addr2 = mymac;
     hdr->addr3 = bssid_;
     SetSeqNo(hdr, &seq_);
-    FillTxInfo(&packet, *hdr);
+    frame.FillTxInfo();
 
     // TODO(tkilbourn): this assumes Open System authentication
     auto auth = frame.body();
@@ -172,7 +172,7 @@ zx_status_t Station::HandleMlmeAuthReq(const wlan_mlme::AuthenticateRequest& req
     auth->status_code = 0;  // Reserved, so set to 0
 
     finspect("Outbound Mgmt Frame(Auth): %s\n", debug::Describe(*hdr).c_str());
-    zx_status_t status = device_->SendWlan(std::move(packet));
+    status = device_->SendWlan(frame.take());
     if (status != ZX_OK) {
         errorf("could not send auth packet: %d\n", status);
         service::SendAuthConfirm(device_, bssid_, wlan_mlme::AuthenticateResultCodes::REFUSED);
@@ -205,9 +205,9 @@ zx_status_t Station::HandleMlmeDeauthReq(const wlan_mlme::DeauthenticateRequest&
     common::MacAddr peer_sta_addr(req.peer_sta_address.data());
     if (bssid_ != peer_sta_addr) { return ZX_OK; }
 
-    fbl::unique_ptr<Packet> packet = nullptr;
-    auto frame = BuildMgmtFrame<Deauthentication>(&packet, 0);
-    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
+    MgmtFrame<Deauthentication> frame;
+    auto status = BuildMgmtFrame(&frame);
+    if (status != ZX_OK) { return status; }
 
     auto hdr = frame.hdr();
     const common::MacAddr& mymac = device_->GetState()->address();
@@ -215,13 +215,13 @@ zx_status_t Station::HandleMlmeDeauthReq(const wlan_mlme::DeauthenticateRequest&
     hdr->addr2 = mymac;
     hdr->addr3 = bssid_;
     SetSeqNo(hdr, &seq_);
-    FillTxInfo(&packet, *hdr);
+    frame.FillTxInfo();
 
     auto deauth = frame.body();
     deauth->reason_code = static_cast<uint16_t>(req.reason_code);
 
     finspect("Outbound Mgmt Frame(Deauth): %s\n", debug::Describe(*hdr).c_str());
-    zx_status_t status = device_->SendWlan(std::move(packet));
+    status = device_->SendWlan(frame.take());
     if (status != ZX_OK) {
         errorf("could not send deauth packet: %d\n", status);
         // Deauthenticate nevertheless. IEEE isn't clear on what we are supposed to do.
@@ -262,9 +262,9 @@ zx_status_t Station::HandleMlmeAssocReq(const wlan_mlme::AssociateRequest& req) 
     debugjoin("associating to %s\n", MACSTR(bssid_));
 
     size_t body_payload_len = 128;
-    fbl::unique_ptr<Packet> packet = nullptr;
-    auto frame = BuildMgmtFrame<AssociationRequest>(&packet, body_payload_len);
-    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
+    MgmtFrame<AssociationRequest> frame;
+    auto status = BuildMgmtFrame(&frame, body_payload_len);
+    if (status != ZX_OK) { return status; }
 
     // TODO(tkilbourn): a lot of this is hardcoded for now. Use device capabilities to set up the
     // request.
@@ -274,7 +274,7 @@ zx_status_t Station::HandleMlmeAssocReq(const wlan_mlme::AssociateRequest& req) 
     hdr->addr2 = mymac;
     hdr->addr3 = bssid_;
     SetSeqNo(hdr, &seq_);
-    FillTxInfo(&packet, *hdr);
+    frame.FillTxInfo();
 
     auto assoc = frame.body();
     assoc->cap.set_ess(1);
@@ -282,7 +282,7 @@ zx_status_t Station::HandleMlmeAssocReq(const wlan_mlme::AssociateRequest& req) 
     assoc->listen_interval = 0;
 
     ElementWriter w(assoc->elements,
-                    packet->len() - sizeof(MgmtFrameHeader) - sizeof(AssociationRequest));
+                    frame.len() - sizeof(MgmtFrameHeader) - sizeof(AssociationRequest));
     if (!w.write<SsidElement>(bss_->ssid->data())) {
         errorf("could not write ssid \"%s\" to association request\n", bss_->ssid->data());
         service::SendAssocConfirm(device_,
@@ -326,19 +326,17 @@ zx_status_t Station::HandleMlmeAssocReq(const wlan_mlme::AssociateRequest& req) 
     // Validate the request in debug mode
     ZX_DEBUG_ASSERT(assoc->Validate(w.size()));
 
-    body_payload_len = w.size();
-    size_t frame_len = hdr->len() + sizeof(AssociationRequest) + body_payload_len;
-
-    zx_status_t status = packet->set_len(frame_len);
+    size_t body_len = sizeof(AssociationRequest) + w.size();
+    status = frame.set_body_len(body_len);
     if (status != ZX_OK) {
-        errorf("could not set packet length to %zu: %d\n", frame_len, status);
+        errorf("could not set body length to %zu: %d\n", body_len, status);
         service::SendAssocConfirm(device_,
                                   wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         return status;
     }
 
     finspect("Outbound Mgmt Frame (AssocReq): %s\n", debug::Describe(*hdr).c_str());
-    status = device_->SendWlan(std::move(packet));
+    status = device_->SendWlan(frame.take());
     if (status != ZX_OK) {
         errorf("could not send assoc packet: %d\n", status);
         service::SendAssocConfirm(device_,
@@ -372,8 +370,7 @@ zx_status_t Station::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
 }
 
 // TODO(hahnr): Support ProbeResponses.
-zx_status_t Station::HandleBeacon(const ImmutableMgmtFrame<Beacon>& frame,
-                                  const wlan_rx_info_t& rxinfo) {
+zx_status_t Station::HandleBeacon(const MgmtFrame<Beacon>& frame, const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(bss_ != nullptr);
 
@@ -417,7 +414,7 @@ done_iter:
     return ZX_OK;
 }
 
-zx_status_t Station::HandleAuthentication(const ImmutableMgmtFrame<Authentication>& frame,
+zx_status_t Station::HandleAuthentication(const MgmtFrame<Authentication>& frame,
                                           const wlan_rx_info_t& rxinfo) {
     debugfn();
 
@@ -460,7 +457,7 @@ zx_status_t Station::HandleAuthentication(const ImmutableMgmtFrame<Authenticatio
     return ZX_OK;
 }
 
-zx_status_t Station::HandleDeauthentication(const ImmutableMgmtFrame<Deauthentication>& frame,
+zx_status_t Station::HandleDeauthentication(const MgmtFrame<Deauthentication>& frame,
                                             const wlan_rx_info_t& rxinfo) {
     debugfn();
 
@@ -480,7 +477,7 @@ zx_status_t Station::HandleDeauthentication(const ImmutableMgmtFrame<Deauthentic
                                          static_cast<wlan_mlme::ReasonCode>(deauth->reason_code));
 }
 
-zx_status_t Station::HandleAssociationResponse(const ImmutableMgmtFrame<AssociationResponse>& frame,
+zx_status_t Station::HandleAssociationResponse(const MgmtFrame<AssociationResponse>& frame,
                                                const wlan_rx_info_t& rxinfo) {
     debugfn();
 
@@ -533,7 +530,7 @@ zx_status_t Station::HandleAssociationResponse(const ImmutableMgmtFrame<Associat
     return ZX_OK;
 }
 
-zx_status_t Station::HandleDisassociation(const ImmutableMgmtFrame<Disassociation>& frame,
+zx_status_t Station::HandleDisassociation(const MgmtFrame<Disassociation>& frame,
                                           const wlan_rx_info_t& rxinfo) {
     debugfn();
 
@@ -557,7 +554,7 @@ zx_status_t Station::HandleDisassociation(const ImmutableMgmtFrame<Disassociatio
     return service::SendDisassociateIndication(device_, bssid, disassoc->reason_code);
 }
 
-zx_status_t Station::HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaRequestFrame>& rx_frame,
+zx_status_t Station::HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>& rx_frame,
                                              const wlan_rx_info_t& rxinfo) {
     debugfn();
 
@@ -566,9 +563,9 @@ zx_status_t Station::HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaReque
     finspect("  addba req: %s\n", debug::Describe(*addbar).c_str());
 
     // Construct AddBaResponse frame
-    fbl::unique_ptr<Packet> packet = nullptr;
-    auto frame = BuildMgmtFrame<AddBaResponseFrame>(&packet, 0);
-    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
+    MgmtFrame<AddBaResponseFrame> frame;
+    auto status = BuildMgmtFrame(&frame);
+    if (status != ZX_OK) { return status; }
 
     auto hdr = frame.hdr();
     const common::MacAddr& mymac = device_->GetState()->address();
@@ -576,7 +573,7 @@ zx_status_t Station::HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaReque
     hdr->addr2 = mymac;
     hdr->addr3 = bssid_;
     SetSeqNo(hdr, &seq_);
-    FillTxInfo(&packet, *hdr);
+    frame.FillTxInfo();
 
     auto resp = frame.body();
     resp->category = action::Category::kBlockAck;
@@ -601,13 +598,12 @@ zx_status_t Station::HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaReque
     constexpr size_t buffer_size_ralink = 64;
     auto buffer_size = (buffer_size_ap <= buffer_size_ralink) ? buffer_size_ap : buffer_size_ralink;
     resp->params.set_buffer_size(buffer_size);
-
     resp->timeout = addbar->timeout;
 
-    finspect("Outbound ADDBA Resp frame: len %zu\n", packet->len());
+    finspect("Outbound ADDBA Resp frame: len %zu\n", frame.len());
     finspect("Outbound Mgmt Frame(ADDBA Resp): %s\n", debug::Describe(*hdr).c_str());
 
-    zx_status_t status = device_->SendWlan(std::move(packet));
+    status = device_->SendWlan(frame.take());
     if (status != ZX_OK) {
         errorf("could not send AddBaResponse: %d\n", status);
         return status;
@@ -616,8 +612,8 @@ zx_status_t Station::HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaReque
     return ZX_OK;
 }
 
-zx_status_t Station::HandleAddBaResponseFrame(
-    const ImmutableMgmtFrame<AddBaResponseFrame>& rx_frame, const wlan_rx_info& rxinfo) {
+zx_status_t Station::HandleAddBaResponseFrame(const MgmtFrame<AddBaResponseFrame>& rx_frame,
+                                              const wlan_rx_info& rxinfo) {
     debugfn();
 
     auto addba_resp = rx_frame.body();
@@ -637,7 +633,7 @@ zx_status_t Station::HandleDataFrame(const DataFrameHeader& hdr) {
     return ZX_OK;
 }
 
-zx_status_t Station::HandleNullDataFrame(const ImmutableDataFrame<NilHeader>& frame,
+zx_status_t Station::HandleNullDataFrame(const DataFrame<NilHeader>& frame,
                                          const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(bssid() != nullptr);
@@ -653,7 +649,7 @@ zx_status_t Station::HandleNullDataFrame(const ImmutableDataFrame<NilHeader>& fr
     return ZX_OK;
 }
 
-zx_status_t Station::HandleDataFrame(const ImmutableDataFrame<LlcHeader>& frame,
+zx_status_t Station::HandleDataFrame(const DataFrame<LlcHeader>& frame,
                                      const wlan_rx_info_t& rxinfo) {
     debugfn();
     if (kFinspectEnabled) { DumpDataFrame(frame); }
@@ -739,7 +735,7 @@ zx_status_t Station::HandleLlcFrame(const LlcHeader& llc_frame, size_t llc_frame
     return status;
 }
 
-zx_status_t Station::HandleAmsduFrame(const ImmutableDataFrame<LlcHeader>& frame,
+zx_status_t Station::HandleAmsduFrame(const DataFrame<LlcHeader>& frame,
                                       const wlan_rx_info_t& rxinfo) {
     debugfn();
 
@@ -803,7 +799,7 @@ zx_status_t Station::HandleAmsduFrame(const ImmutableDataFrame<LlcHeader>& frame
     return ZX_OK;
 }
 
-zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame) {
+zx_status_t Station::HandleEthFrame(const EthFrame& frame) {
     debugfn();
 
     // Drop Ethernet frames when not associated.
@@ -988,9 +984,9 @@ zx_status_t Station::SendAddBaRequestFrame() {
         return ZX_ERR_BAD_STATE;
     }
 
-    fbl::unique_ptr<Packet> packet = nullptr;
-    auto frame = BuildMgmtFrame<AddBaRequestFrame>(&packet, 0);
-    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
+    MgmtFrame<AddBaRequestFrame> frame;
+    auto status = BuildMgmtFrame(&frame);
+    if (status != ZX_OK) { return status; }
 
     auto hdr = frame.hdr();
     auto req = frame.body();
@@ -999,7 +995,7 @@ zx_status_t Station::SendAddBaRequestFrame() {
     hdr->addr2 = mymac;
     hdr->addr3 = bssid_;
     SetSeqNo(hdr, &seq_);
-    FillTxInfo(&packet, *hdr);
+    frame.FillTxInfo();
 
     req->category = action::Category::kBlockAck;
     req->action = action::BaAction::kAddBaRequest;
@@ -1015,11 +1011,11 @@ zx_status_t Station::SendAddBaRequestFrame() {
     req->seq_ctrl.set_fragment(0);  // TODO(porce): Send this down to the lower MAC
     req->seq_ctrl.set_starting_seq(1);
 
-    finspect("Outbound ADDBA Req frame: len %zu\n", packet->len());
+    finspect("Outbound ADDBA Req frame: len %zu\n", frame.len());
     finspect("  addba req: %s\n", debug::Describe(*req).c_str());
     finspect("Outbound Mgmt Frame(ADDBA Req): %s\n", debug::Describe(*hdr).c_str());
 
-    zx_status_t status = device_->SendWlan(std::move(packet));
+    status = device_->SendWlan(frame.take());
     if (status != ZX_OK) {
         errorf("could not send AddBaRequest: %d\n", status);
         return status;
@@ -1144,7 +1140,7 @@ zx_status_t Station::PostChannelChange() {
     return ZX_OK;
 }
 
-void Station::DumpDataFrame(const ImmutableDataFrame<LlcHeader>& frame) {
+void Station::DumpDataFrame(const DataFrame<LlcHeader>& frame) {
     const common::MacAddr& mymac = device_->GetState()->address();
 
     auto hdr = frame.hdr();
@@ -1371,7 +1367,7 @@ uint8_t Station::GetTid() {
     return 0;
 }
 
-uint8_t Station::GetTid(const ImmutableBaseFrame<EthernetII>& frame) {
+uint8_t Station::GetTid(const EthFrame& frame) {
     return GetTid();
 }
 }  // namespace wlan

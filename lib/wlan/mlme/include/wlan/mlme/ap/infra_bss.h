@@ -49,8 +49,7 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     seq_t NextSeq(const MgmtFrameHeader& hdr, uint8_t aci) override;
     seq_t NextSeq(const DataFrameHeader& hdr) override;
 
-    zx_status_t EthToDataFrame(const ImmutableBaseFrame<EthernetII>& frame,
-                               fbl::unique_ptr<Packet>* out_packet) override;
+    zx_status_t EthToDataFrame(const EthFrame& frame, fbl::unique_ptr<Packet>* out_packet) override;
     void OnPreTbtt() override;
     void OnBcnTxComplete() override;
 
@@ -70,12 +69,12 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     static constexpr size_t kMaxGroupAddressedBu = 128;
 
     // FrameHandler implementation
-    zx_status_t HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame) override;
+    zx_status_t HandleEthFrame(const EthFrame& frame) override;
     zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
-    zx_status_t HandleAuthentication(const ImmutableMgmtFrame<Authentication>& frame,
+    zx_status_t HandleAuthentication(const MgmtFrame<Authentication>& frame,
                                      const wlan_rx_info_t& rxinfo) override;
-    zx_status_t HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFrame>& frame,
+    zx_status_t HandlePsPollFrame(const CtrlFrame<PsPollFrame>& frame,
                                   const wlan_rx_info_t& rxinfo) override;
 
     // RemoteClient::Listener implementation

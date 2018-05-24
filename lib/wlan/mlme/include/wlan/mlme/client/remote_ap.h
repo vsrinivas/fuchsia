@@ -81,9 +81,8 @@ class InitState : public RemoteAp::BaseState {
     const char* name() const override { return kName; }
 
    private:
-    zx_status_t HandleBeacon(const ImmutableMgmtFrame<Beacon>& frame,
-                             const wlan_rx_info_t& rxinfo) override;
-    zx_status_t HandleProbeResponse(const ImmutableMgmtFrame<ProbeResponse>& frame,
+    zx_status_t HandleBeacon(const MgmtFrame<Beacon>& frame, const wlan_rx_info_t& rxinfo) override;
+    zx_status_t HandleProbeResponse(const MgmtFrame<ProbeResponse>& frame,
                                     const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleMlmeJoinReq(const wlan_mlme::JoinRequest& req) override;
 

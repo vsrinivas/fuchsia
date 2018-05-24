@@ -82,7 +82,7 @@ class BssInterface {
     virtual seq_t NextSeq(const MgmtFrameHeader& hdr, uint8_t aci) = 0;
     virtual seq_t NextSeq(const DataFrameHeader& hdr) = 0;
 
-    virtual zx_status_t EthToDataFrame(const ImmutableBaseFrame<EthernetII>& frame,
+    virtual zx_status_t EthToDataFrame(const EthFrame& frame,
                                        fbl::unique_ptr<Packet>* out_packet) = 0;
 
     virtual bool IsRsn() const = 0;

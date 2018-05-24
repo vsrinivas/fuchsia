@@ -84,38 +84,36 @@ class Station : public FrameHandler {
     zx_status_t HandleMlmeSetKeysReq(const wlan_mlme::SetKeysRequest& req) override;
 
     zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
-    zx_status_t HandleBeacon(const ImmutableMgmtFrame<Beacon>& frame,
-                             const wlan_rx_info_t& rxinfo) override;
-    zx_status_t HandleAuthentication(const ImmutableMgmtFrame<Authentication>& frame,
+    zx_status_t HandleBeacon(const MgmtFrame<Beacon>& frame, const wlan_rx_info_t& rxinfo) override;
+    zx_status_t HandleAuthentication(const MgmtFrame<Authentication>& frame,
                                      const wlan_rx_info_t& rxinfo) override;
-    zx_status_t HandleDeauthentication(const ImmutableMgmtFrame<Deauthentication>& frame,
+    zx_status_t HandleDeauthentication(const MgmtFrame<Deauthentication>& frame,
                                        const wlan_rx_info_t& rxinfo) override;
-    zx_status_t HandleAssociationResponse(const ImmutableMgmtFrame<AssociationResponse>& frame,
+    zx_status_t HandleAssociationResponse(const MgmtFrame<AssociationResponse>& frame,
                                           const wlan_rx_info_t& rxinfo) override;
-    zx_status_t HandleDisassociation(const ImmutableMgmtFrame<Disassociation>& frame,
+    zx_status_t HandleDisassociation(const MgmtFrame<Disassociation>& frame,
                                      const wlan_rx_info_t& rxinfo) override;
-    zx_status_t HandleAddBaRequestFrame(const ImmutableMgmtFrame<AddBaRequestFrame>& frame,
+    zx_status_t HandleAddBaRequestFrame(const MgmtFrame<AddBaRequestFrame>& frame,
                                         const wlan_rx_info_t& rxinfo) override;
-    zx_status_t HandleAddBaResponseFrame(const ImmutableMgmtFrame<AddBaResponseFrame>& frame,
+    zx_status_t HandleAddBaResponseFrame(const MgmtFrame<AddBaResponseFrame>& frame,
                                          const wlan_rx_info& rxinfo) override;
 
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
-    zx_status_t HandleNullDataFrame(const ImmutableDataFrame<NilHeader>& frame,
+    zx_status_t HandleNullDataFrame(const DataFrame<NilHeader>& frame,
                                     const wlan_rx_info_t& rxinfo) override;
-    zx_status_t HandleDataFrame(const ImmutableDataFrame<LlcHeader>& frame,
+    zx_status_t HandleDataFrame(const DataFrame<LlcHeader>& frame,
                                 const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleLlcFrame(const LlcHeader& llc_frame, size_t llc_frame_len,
                                const common::MacAddr& dest, const common::MacAddr& src);
-    zx_status_t HandleAmsduFrame(const ImmutableDataFrame<LlcHeader>& frame,
-                                 const wlan_rx_info_t& rxinfo);
+    zx_status_t HandleAmsduFrame(const DataFrame<LlcHeader>& frame, const wlan_rx_info_t& rxinfo);
 
-    zx_status_t HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame) override;
+    zx_status_t HandleEthFrame(const EthFrame& frame) override;
     zx_status_t HandleTimeout();
 
     zx_status_t PreChannelChange(wlan_channel_t chan);
     zx_status_t PostChannelChange();
 
-    void DumpDataFrame(const ImmutableDataFrame<LlcHeader>& frame);
+    void DumpDataFrame(const DataFrame<LlcHeader>& frame);
 
     const Timer& timer() const { return *timer_; }
 
@@ -134,7 +132,7 @@ class Station : public FrameHandler {
     bool IsAmsduRxReady() const;
     HtCapabilities BuildHtCapabilities() const;
     uint8_t GetTid();
-    uint8_t GetTid(const ImmutableBaseFrame<EthernetII>& frame);
+    uint8_t GetTid(const EthFrame& frame);
 
     DeviceInterface* device_;
     fbl::unique_ptr<Timer> timer_;

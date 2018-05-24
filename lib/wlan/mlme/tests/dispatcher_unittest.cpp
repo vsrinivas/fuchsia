@@ -22,7 +22,7 @@ namespace wlan {
 namespace {
 
 template <typename Frame> using FrameCallback = std::function<void(const Frame&)>;
-using EthFrameCallback = FrameCallback<ImmutableBaseFrame<EthernetII>>;
+using EthFrameCallback = FrameCallback<EthFrame>;
 
 struct MockMlme : public Mlme {
     MockMlme() {}
@@ -31,7 +31,7 @@ struct MockMlme : public Mlme {
     zx_status_t PostChannelChange() override final { return ZX_OK; }
     zx_status_t HandleTimeout(const ObjectId id) override final { return ZX_OK; }
 
-    zx_status_t HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame) override final {
+    zx_status_t HandleEthFrame(const EthFrame& frame) override final {
         eth_cb_(frame);
         return ZX_OK;
     }
@@ -85,7 +85,7 @@ static fbl::unique_ptr<Packet> CreateEthPacket() {
 TEST_F(DispatcherTest, HandleEthPacket) {
     auto packet = CreateEthPacket();
 
-    bool handled = HandlePacket<ImmutableBaseFrame<EthernetII>>(fbl::move(packet), [](auto& frame) {
+    bool handled = HandlePacket<EthFrame>(fbl::move(packet), [](auto& frame) {
         EXPECT_EQ(frame.body_len(), sizeof(kPayload));
         EXPECT_EQ(frame.hdr()->ether_type, 0xABCD);
         EXPECT_EQ(frame.hdr()->dest, kMacAddr1);

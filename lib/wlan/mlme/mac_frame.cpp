@@ -11,31 +11,31 @@
 
 namespace wlan {
 
-// TODO(porce): Consider zx_status_t return type
 template <typename Body>
-MgmtFrame<Body> BuildMgmtFrame(fbl::unique_ptr<Packet>* packet, size_t body_payload_len,
-                               bool has_ht_ctrl) {
+zx_status_t BuildMgmtFrame(MgmtFrame<Body>* out_frame, size_t body_payload_len, bool has_ht_ctrl) {
     size_t hdr_len = sizeof(MgmtFrameHeader) + (has_ht_ctrl ? kHtCtrlLen : 0);
     size_t body_len = sizeof(Body) + body_payload_len;
     size_t frame_len = hdr_len + body_len;
 
-    *packet = Packet::CreateWlanPacket(frame_len);
-    if (*packet == nullptr) { return MgmtFrame<Body>(nullptr, nullptr, 0); }
+    auto pkt = Packet::CreateWlanPacket(frame_len);
+    if (pkt == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
     // Zero out the packet buffer by default for the management frame.
-    (*packet)->clear();
+    pkt->clear();
 
-    auto hdr = (*packet)->mut_field<MgmtFrameHeader>(0);
-    hdr->fc.set_subtype(Body::Subtype());
-    if (has_ht_ctrl) { hdr->fc.set_htc_order(1); }
+    MgmtFrame<Body> frame(fbl::move(pkt));
+    if (!frame.HasValidLen()) { return ZX_ERR_BUFFER_TOO_SMALL; }
 
-    auto body = (*packet)->mut_field<Body>(hdr->len());
-    return MgmtFrame<Body>(hdr, body, body_len);
+    frame.hdr()->fc.set_subtype(Body::Subtype());
+    if (has_ht_ctrl) { frame.hdr()->fc.set_htc_order(1); }
+
+    *out_frame = fbl::move(frame);
+    return ZX_OK;
 }
 
-#define DECLARE_BUILD_MGMTFRAME(bodytype)                                        \
-    template MgmtFrame<bodytype> BuildMgmtFrame(fbl::unique_ptr<Packet>* packet, \
-                                                size_t body_payload_len, bool has_ht_ctrl)
+#define DECLARE_BUILD_MGMTFRAME(bodytype)                                                    \
+    template zx_status_t BuildMgmtFrame(MgmtFrame<bodytype>* frame, size_t body_payload_len, \
+                                        bool has_ht_ctrl)
 
 DECLARE_BUILD_MGMTFRAME(ProbeRequest);
 DECLARE_BUILD_MGMTFRAME(ProbeResponse);
@@ -47,32 +47,6 @@ DECLARE_BUILD_MGMTFRAME(AssociationResponse);
 DECLARE_BUILD_MGMTFRAME(Disassociation);
 DECLARE_BUILD_MGMTFRAME(AddBaRequestFrame);
 DECLARE_BUILD_MGMTFRAME(AddBaResponseFrame);
-
-zx_status_t FillTxInfo(fbl::unique_ptr<Packet>* packet, const MgmtFrameHeader& hdr) {
-    // TODO(porce): Evolve the API to use FrameHeader
-    // and support all types of frames.
-    ZX_DEBUG_ASSERT(packet != nullptr && *packet);
-
-    wlan_tx_info_t txinfo = {
-        // Outgoing management frame
-        .tx_flags = 0x0,
-        .valid_fields = WLAN_TX_INFO_VALID_PHY | WLAN_TX_INFO_VALID_CHAN_WIDTH,
-        .phy = WLAN_PHY_OFDM,  // Always
-        .cbw = CBW20,          // Use CBW20 always
-    };
-
-    // TODO(porce): Imeplement rate selection.
-    switch (hdr.fc.subtype()) {
-    default:
-        txinfo.valid_fields |= WLAN_TX_INFO_VALID_MCS;
-        // txinfo.data_rate = 12;  // 6 Mbps, one of the basic rates.
-        txinfo.mcs = 0x3;  // TODO(NET-645): Choose an optimal MCS
-        break;
-    }
-
-    (*packet)->CopyCtrlFrom(txinfo);
-    return ZX_OK;
-}
 
 // IEEE Std 802.11-2016, 10.3.2.11.2 Table 10-3 SNS1
 seq_t NextSeqNo(const MgmtFrameHeader& hdr, Sequence* seq) {

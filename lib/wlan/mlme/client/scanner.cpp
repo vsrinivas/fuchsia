@@ -152,8 +152,7 @@ void Scanner::RemoveStaleBss() {
         [now](fbl::RefPtr<Bss> bss) -> bool { return (bss->ts_refreshed() + kBssExpiry >= now); });
 }
 
-zx_status_t Scanner::HandleBeacon(const ImmutableMgmtFrame<Beacon>& frame,
-                                  const wlan_rx_info_t& rxinfo) {
+zx_status_t Scanner::HandleBeacon(const MgmtFrame<Beacon>& frame, const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(IsRunning());
 
@@ -161,7 +160,7 @@ zx_status_t Scanner::HandleBeacon(const ImmutableMgmtFrame<Beacon>& frame,
     return ProcessBeacon(bssid, *frame.body(), frame.len() - frame.hdr()->len(), rxinfo);
 }
 
-zx_status_t Scanner::HandleProbeResponse(const ImmutableMgmtFrame<ProbeResponse>& frame,
+zx_status_t Scanner::HandleProbeResponse(const MgmtFrame<ProbeResponse>& frame,
                                          const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(IsRunning());
@@ -279,10 +278,9 @@ zx_status_t Scanner::SendProbeRequest() {
     debugfn();
 
     size_t body_payload_len = 128;  // TODO(porce): Revisit this value choice.
-    fbl::unique_ptr<Packet> packet = nullptr;
-    auto frame = BuildMgmtFrame<ProbeRequest>(&packet, body_payload_len);
-
-    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
+    MgmtFrame<ProbeRequest> frame;
+    auto status = BuildMgmtFrame(&frame, body_payload_len);
+    if (status != ZX_OK) { return status; }
 
     auto hdr = frame.hdr();
     const common::MacAddr& mymac = device_->GetState()->address();
@@ -294,7 +292,7 @@ zx_status_t Scanner::SendProbeRequest() {
     // TODO(NET-556): Clarify 'Sequence' ownership of MLME and STA. Don't set sequence number for
     // now.
     hdr->sc.set_seq(0);
-    FillTxInfo(&packet, *hdr);
+    frame.FillTxInfo();
 
     auto body = frame.body();
     ElementWriter w(body->elements, body_payload_len);
@@ -323,17 +321,15 @@ zx_status_t Scanner::SendProbeRequest() {
     ZX_DEBUG_ASSERT(body->Validate(w.size()));
 
     // Update the length with final values
-    body_payload_len = w.size();
     // TODO(porce): implement methods to replace sizeof(ProbeRequest) with body.some_len()
-    frame.set_body_len(sizeof(ProbeRequest) + body_payload_len);
-    size_t frame_len = hdr->len() + frame.body_len();
-    zx_status_t status = packet->set_len(frame_len);
+    size_t body_len = sizeof(ProbeRequest) + w.size();
+    status = frame.set_body_len(body_len);
     if (status != ZX_OK) {
-        errorf("could not set packet length to %zu: %d\n", frame_len, status);
+        errorf("could not set body length to %zu: %d\n", body_len, status);
         return status;
     }
 
-    status = device_->SendWlan(std::move(packet));
+    status = device_->SendWlan(frame.take());
     if (status != ZX_OK) { errorf("could not send probe request packet: %d\n", status); }
 
     return status;
