@@ -97,7 +97,10 @@ void App::ConnectToService(const std::string& service_name,
                            zx::channel channel) {
   fbl::RefPtr<fs::Vnode> child;
   svc_root_->Lookup(&child, service_name);
-  vfs_.ServeDirectory(child, std::move(channel));
+  auto status = child->Serve(&vfs_, std::move(channel), 0);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Could not serve " << service_name << ": " << status;
+  }
 }
 
 // We explicitly launch netstack because netstack registers itself as
