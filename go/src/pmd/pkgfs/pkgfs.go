@@ -85,6 +85,8 @@ func New(indexDir, blobDir string) (*Filesystem, error) {
 	context.CreateFromStartupInfo().ConnectToEnvService(req)
 	f.amberPxy = pxy
 
+	f.index.Notifier = pxy
+
 	return f, nil
 }
 

@@ -8,6 +8,7 @@ package index
 
 import (
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -15,6 +16,11 @@ import (
 
 	"fuchsia.googlesource.com/pm/pkg"
 )
+
+// PackageActivationNotifer is a slice of the Amber interface that notifies Amber of package activations.
+type PackageActivationNotifier interface {
+	PackagesActivated([]string) error
+}
 
 // DynamicIndex provides concurrency safe access to a dynamic index of packages and package metadata
 type DynamicIndex struct {
@@ -34,6 +40,9 @@ type DynamicIndex struct {
 
 	// waiting is a map of package merkleroot -> set[blob merkleroots]
 	waiting map[string]map[string]struct{}
+
+	// Notifier is used to send activation notifications to Amber, if set.
+	Notifier PackageActivationNotifier
 }
 
 // NewDynamic initializes an DynamicIndex with the given root path.
@@ -74,7 +83,11 @@ func (idx *DynamicIndex) Add(p pkg.Package, root string) error {
 	// be updated dynamically in future.
 	idx.static.Set(p, root)
 
-	return ioutil.WriteFile(idx.PackagePath(filepath.Join(p.Name, p.Version)), []byte(root), os.ModePerm)
+	if err := ioutil.WriteFile(idx.PackagePath(filepath.Join(p.Name, p.Version)), []byte(root), os.ModePerm); err != nil {
+		return err
+	}
+	idx.Notify(root)
+	return nil
 }
 
 func (idx *DynamicIndex) PackagePath(name string) string {
@@ -125,6 +138,7 @@ func (idx *DynamicIndex) Fulfill(need string) []string {
 			continue
 		}
 	}
+	idx.Notify(fulfilled...)
 	return fulfilled
 }
 
@@ -146,4 +160,18 @@ func (idx *DynamicIndex) NeedsList() []string {
 	}
 
 	return names
+}
+
+func (idx *DynamicIndex) Notify(roots ...string) {
+	if len(roots) == 0 {
+		return
+	}
+
+	if idx.Notifier != nil {
+		go func() {
+			if err := idx.Notifier.PackagesActivated(roots); err != nil {
+				log.Printf("pkgfs: index: Amber notification error: %s", err)
+			}
+		}()
+	}
 }

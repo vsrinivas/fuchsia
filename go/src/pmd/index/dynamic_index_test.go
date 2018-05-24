@@ -81,6 +81,15 @@ func TestList(t *testing.T) {
 	}
 }
 
+type mockNotifier struct {
+	packages []string
+}
+
+func (m *mockNotifier) PackagesActivated(pkgs []string) error {
+	m.packages = append(m.packages, pkgs...)
+	return nil
+}
+
 func TestAdd(t *testing.T) {
 	d, err := ioutil.TempDir("", t.Name())
 	if err != nil {
@@ -88,6 +97,8 @@ func TestAdd(t *testing.T) {
 	}
 
 	idx := NewDynamic(d, NewStatic())
+	notifier := &mockNotifier{}
+	idx.Notifier = notifier
 
 	err = idx.Add(pkg.Package{Name: "foo", Version: "0"}, "abc")
 	if err != nil {
@@ -121,5 +132,9 @@ func TestAdd(t *testing.T) {
 		if got, want := paths[i], wantPaths[i]; got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}
+	}
+
+	if got, want := len(notifier.packages), 3; got != want {
+		t.Errorf("Got %d notifications, want %d", got, want)
 	}
 }
