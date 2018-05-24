@@ -4,8 +4,12 @@
 # found in the LICENSE file.
 
 ### Performs WLAN smoke tests by reaching out the Internet
-
-set -e
+readonly TEST_WLAN_WAIT_PERIOD=40
+readonly LOG_DIR="/tmp"
+readonly LOG_FILE="wlan-doctor.log"
+readonly SOURCE="garnet/bin/wlan/wlan-smoke.sh"
+readonly SCRIPT="$(basename ${SOURCE})"
+readonly ETH_IFACE_PREFIX="en"
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
@@ -22,8 +26,54 @@ if [[ $# -ne 0 ]]; then
   exit 1
 fi
 
-source="garnet/bin/wlan/wlan-smoke.sh"
-script="$(basename ${source})"
+function setup {
+  "${ZIRCON_TOOLS_DIR}"/netruncmd : ifconfig en2 up
+}
 
-fx-command-run cp "${FUCHSIA_DIR}/${source}" "/tmp/${script}"
-fx-command-run shell "/tmp/${script}" "$@"
+function get_eth_iface_list {
+  local iface_list=$(fx shell ifconfig | grep "^${ETH_IFACE_PREFIX}" | tr '[:blank:]' ' ' | cut -f1 -d ' ')
+  echo "${iface_list}"
+}
+
+function run {
+  fx-command-run cp "${FUCHSIA_DIR}/${SOURCE}" "${LOG_DIR}/${SCRIPT}"
+  "${ZIRCON_TOOLS_DIR}"/netruncmd : "${LOG_DIR}/${SCRIPT}" "${LOG_DIR}/${LOG_FILE}"
+}
+
+function wait_for_result {
+  echo "Wait ${TEST_WLAN_WAIT_PERIOD} seconds for wlan-smoke to complete"
+  for i in $( seq 1 $TEST_WLAN_WAIT_PERIOD ); do
+    printf "."
+    if ! ((i % 10)); then
+      printf " "
+    fi
+    sleep 1
+  done
+  echo ""
+}
+
+function recover_eth {
+  echo "$@" | while read -r eth_iface ; do
+    "${ZIRCON_TOOLS_DIR}"/netruncmd : ifconfig "${eth_iface}" up
+  done
+}
+
+function display_cleanup {
+  fx-command-run cp --to-host "${LOG_DIR}/${LOG_FILE}" "${LOG_DIR}" > /dev/null 2>&1
+  if [ -f "${LOG_DIR}/${LOG_FILE}" ]; then
+    cat "${LOG_DIR}/${LOG_FILE}"
+    if ! grep -qe "wlan smoke: End$" "${LOG_DIR}/${LOG_FILE}"; then
+      echo "WLAN test result incomplete. Please try again."
+    fi
+    rm "${LOG_DIR}/${LOG_FILE}"
+  else
+    echo "WLAN test result not found. Please try agian."
+  fi
+}
+
+setup
+eth_iface_list=$(get_eth_iface_list)
+run
+wait_for_result
+recover_eth "${eth_iface_list[@]}"
+display_cleanup
