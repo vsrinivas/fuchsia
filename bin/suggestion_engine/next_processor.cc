@@ -57,7 +57,6 @@ void NextProcessor::AddProposal(const std::string& component_url,
   // TODO(miguelfrde): Make NextProcessor not depend on InterruptionsProcessor.
   if (interruptions_processor_.MaybeInterrupt(*ranked_suggestion)) {
     debug_->OnInterrupt(prototype);
-    return;
   }
 
   suggestions_.AddSuggestion(std::move(ranked_suggestion));
