@@ -23,7 +23,7 @@ source_set("operations") {
     "operations.h",
   ]
 
-  deps = [
+  public_deps = [
     ":page_client",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",

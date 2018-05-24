@@ -45,6 +45,7 @@ source_set("json_xdr") {
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/lib/rapidjson",
+    "//third_party/rapidjson",
   ]
 }
 
