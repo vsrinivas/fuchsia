@@ -5,14 +5,13 @@
 #include "garnet/bin/zxdb/console/command_utils.h"
 
 #include <inttypes.h>
-#include <limits>
 #include <stdio.h>
+#include <limits>
 
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/frame.h"
-#include "garnet/bin/zxdb/client/location.h"
 #include "garnet/bin/zxdb/client/process.h"
-#include "garnet/bin/zxdb/client/symbol.h"
+#include "garnet/bin/zxdb/client/symbols/location.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/command.h"
@@ -27,12 +26,8 @@ namespace {
 
 // Appends the given string to the output, padding with spaces to the width
 // as necessary.
-void AppendPadded(const std::string& str,
-                  int width,
-                  Align align,
-                  Syntax syntax,
-                  bool is_last_col,
-                  OutputBuffer* out) {
+void AppendPadded(const std::string& str, int width, Align align, Syntax syntax,
+                  bool is_last_col, OutputBuffer* out) {
   std::string text;
 
   int pad = std::max(0, width - static_cast<int>(str.size()));
@@ -54,8 +49,7 @@ void AppendPadded(const std::string& str,
 
 }  // namespace
 
-Err AssertRunningTarget(ConsoleContext* context,
-                        const char* command_name,
+Err AssertRunningTarget(ConsoleContext* context, const char* command_name,
                         Target* target) {
   Target::State state = target->GetState();
   if (state == Target::State::kRunning)
@@ -89,9 +83,7 @@ Err StringToUint64(const std::string& s, uint64_t* out) {
   return Err();
 }
 
-Err ReadUint64Arg(const Command& cmd,
-                  size_t arg_index,
-                  const char* param_desc,
+Err ReadUint64Arg(const Command& cmd, size_t arg_index, const char* param_desc,
                   uint64_t* out) {
   if (cmd.args().size() <= arg_index) {
     return Err(ErrType::kInput,
@@ -107,10 +99,8 @@ Err ReadUint64Arg(const Command& cmd,
   return Err();
 }
 
-Err ParseHostPort(const std::string& in_host,
-                  const std::string& in_port,
-                  std::string* out_host,
-                  uint16_t* out_port) {
+Err ParseHostPort(const std::string& in_host, const std::string& in_port,
+                  std::string* out_host, uint16_t* out_port) {
   if (in_host.empty())
     return Err(ErrType::kInput, "No host component specified.");
   if (in_port.empty())
@@ -134,8 +124,7 @@ Err ParseHostPort(const std::string& in_host,
   return Err();
 }
 
-Err ParseHostPort(const std::string& input,
-                  std::string* out_host,
+Err ParseHostPort(const std::string& input, std::string* out_host,
                   uint16_t* out_port) {
   // Separate based on the last colon.
   size_t colon = input.rfind(':');
@@ -323,30 +312,13 @@ std::string DescribeBreakpoint(const ConsoleContext* context,
 }
 
 std::string DescribeLocation(const Location& loc) {
-  if (loc.symbol().valid())
-    return DescribeSymbol(loc.symbol());
-  return fxl::StringPrintf("0x%" PRIx64, loc.address());
-}
-
-std::string DescribeSymbol(const Symbol& symbol) {
-  if (!symbol.valid())
-    return "No symbol found.";
-
-  // Only print out the leaf file name.
-  std::string file_part;
-  const std::string& filename = symbol.file();
-  size_t last_slash = filename.rfind('/');
-  if (last_slash == std::string::npos)
-    file_part = filename;
-  else
-    file_part = filename.substr(last_slash + 1);
-
-  std::string function;
-  if (!symbol.function().empty())
-    function = symbol.function() + " ";
-
-  return function + "@ " + file_part + ":" +
-         fxl::StringPrintf("%d", symbol.line());
+  if (!loc.is_valid())
+    return "<invalid address>";
+  if (!loc.is_symbolized())
+    return fxl::StringPrintf("0x%" PRIx64, loc.address());
+  return fxl::StringPrintf("0x%" PRIx64 " @ %s:%d", loc.address(),
+                           loc.file_line().GetFileNamePart().c_str(),
+                           loc.file_line().line());
 }
 
 void FormatColumns(const std::vector<ColSpec>& spec,

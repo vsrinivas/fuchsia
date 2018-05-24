@@ -11,7 +11,7 @@
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/symbols.h"
-#include "garnet/bin/zxdb/client/location.h"
+#include "garnet/bin/zxdb/client/symbols/location.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"

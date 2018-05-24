@@ -28,8 +28,20 @@ namespace zxdb {
 // required LLDB classes for writing symbol testing.
 class TestSymbolModule {
  public:
+  // These constants identify locations in the symbol test files.
+  static const char kMyFunctionName[];
+  static const int kMyFunctionLine;
+  static const char kNamespaceFunctionName[];
+  static const char kMyMemberOneName[];
+  static const char kFunctionInTest2Name[];
+  static const char kMyMemberTwoName[];
+
   TestSymbolModule();
   ~TestSymbolModule();
+
+  // Returns the name of the .so file used by this class for doing tests with
+  // it that involve different types of setup.
+  static std::string GetTestFileName();
 
   // Loads the test file. On failure, returns false and sets the given error
   // message to be something helpful.

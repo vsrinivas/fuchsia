@@ -13,9 +13,21 @@
 
 namespace zxdb {
 
-namespace {
+const char TestSymbolModule::kMyFunctionName[] = "MyFunction";
+const int TestSymbolModule::kMyFunctionLine = 72;
+const char TestSymbolModule::kNamespaceFunctionName[] =
+    "my_ns::NamespaceFunction";
+const char TestSymbolModule::kMyMemberOneName[] = "my_ns::MyClass::MyMemberOne";
+const char TestSymbolModule::kFunctionInTest2Name[] =
+    "ClassInTest2::FunctionInTest2";
+const char TestSymbolModule::kMyMemberTwoName[] =
+    "my_ns::MyClass::Inner::MyMemberTwo";
 
-std::string GetTestFileName() {
+TestSymbolModule::TestSymbolModule() = default;
+TestSymbolModule::~TestSymbolModule() = default;
+
+// static
+std::string TestSymbolModule::GetTestFileName() {
   // We assume the "test_data:copy_test_so" build step has generated and
   // copied this shared library compiled for the target to the same directory
   // as the test.
@@ -29,11 +41,6 @@ std::string GetTestFileName() {
   return path + "libzxdb_symbol_test.targetso";
 }
 
-}  // namespace
-
-TestSymbolModule::TestSymbolModule() = default;
-TestSymbolModule::~TestSymbolModule() = default;
-
 bool TestSymbolModule::Load(std::string* err_msg) {
   std::string filename = GetTestFileName();
 
@@ -41,7 +48,8 @@ bool TestSymbolModule::Load(std::string* err_msg) {
       llvm::object::createBinary(filename);
   if (!bin_or_err) {
     auto err_str = llvm::toString(bin_or_err.takeError());
-    *err_msg = "Error loading symbols for \"" + filename + "\", LLVM said: " + err_str;
+    *err_msg =
+        "Error loading symbols for \"" + filename + "\", LLVM said: " + err_str;
     return false;
   }
 

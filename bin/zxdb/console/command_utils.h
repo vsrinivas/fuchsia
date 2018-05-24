@@ -20,7 +20,6 @@ class ConsoleContext;
 class Err;
 class Frame;
 class Location;
-class Symbol;
 class Thread;
 
 // Ensures the target is currently running (it has a current Process associated
@@ -75,7 +74,6 @@ std::string DescribeBreakpoint(const ConsoleContext* context,
                                const Breakpoint* breakpoint);
 
 std::string DescribeLocation(const Location& loc);
-std::string DescribeSymbol(const Symbol& symbol);
 
 enum class Align { kLeft, kRight };
 

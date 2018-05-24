@@ -25,23 +25,23 @@ TEST(ModuleSymbolIndex, FindFunctionExact) {
 #endif
 
   // Standalone function search.
-  auto result = index.FindFunctionExact("MyFunction");
+  auto result = index.FindFunctionExact(TestSymbolModule::kMyFunctionName);
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
   // Standalone function inside a namespace.
-  result = index.FindFunctionExact("my_ns::NamespaceFunction");
+  result = index.FindFunctionExact(TestSymbolModule::kNamespaceFunctionName);
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
   // Namespace + class member function search.
-  result = index.FindFunctionExact("my_ns::MyClass::MyMemberOne");
+  result = index.FindFunctionExact(TestSymbolModule::kMyMemberOneName);
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
   // Same but in the 2nd compilation unit (tests unit-relative addressing).
-  result = index.FindFunctionExact("ClassInTest2::FunctionInTest2");
+  result = index.FindFunctionExact(TestSymbolModule::kFunctionInTest2Name);
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
   // Namespace + class + struct with static member function search.
-  result = index.FindFunctionExact("my_ns::MyClass::Inner::MyMemberTwo");
+  result = index.FindFunctionExact(TestSymbolModule::kMyMemberTwoName);
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 }
 

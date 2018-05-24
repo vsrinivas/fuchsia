@@ -69,7 +69,7 @@ EXPORT int NamespaceFunction() {
 //
 //   (This one has no declaration nor specification attributes because there
 //   wasn't a separate declaration.)
-int MyFunction() {
+int MyFunction() {  // Must be on line # ModulSymbols::kMyFunctionLine.
   // DW_TAG_variable
   //   DW_AT_name = "my_class"
   //   DW_AT_type = <reference to MyClass DIE above>
