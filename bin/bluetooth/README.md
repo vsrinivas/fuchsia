@@ -20,7 +20,7 @@ Examples using Fuchsia's Bluetooth Low Energy APIs for all four LE roles can be
 found in Garnet and Topaz. All of these are currently compiled into Fuchsia by
 default.
 
-- __LE scanner__: see [`eddystone_agent`](https://fuchsia.googlesource.com/topaz/+/master/examples/bluetooth/eddystone_agent/).
+- __LE scanner__: see [`eddystone_agent`](https://fuchsia.googlesource.com/topaz/+/master/examples/eddystone_agent/).
 This is a suggestion agent that proposes URL links that are obtained from
 Eddystone beacons. This is built in topaz by default.
 - __LE broadcaster__: see [`eddystone_advertiser`](https://fuchsia.googlesource.com/topaz/+/master/examples/bluetooth/eddystone_advertiser/).
