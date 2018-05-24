@@ -13,8 +13,8 @@ package("cloud_provider_firestore") {
 
   meta = [
     {
-      path = rebase_path("app/meta/sandbox")
-      dest = "sandbox"
+      path = rebase_path("app/meta/cloud_provider_firestore.cmx")
+      dest = "cloud_provider_firestore.cmx"
     },
   ]
 }

@@ -1,0 +1,9 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "pkgfs": [ "packages" ],
+        "system": [ "data/initial_module_packages" ]
+    }
+}

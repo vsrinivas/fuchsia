@@ -27,8 +27,8 @@ package("module_package_indexer") {
   binary = "module_package_indexer"
   meta = [
     {
-      path = rebase_path("meta/sandbox")
-      dest = "sandbox"
+      path = rebase_path("meta/module_package_indexer.cmx")
+      dest = "module_package_indexer.cmx"
     },
   ]
 }

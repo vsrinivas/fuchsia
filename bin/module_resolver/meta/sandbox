@@ -1,4 +1,0 @@
-{
-    "pkgfs": [ "packages" ],
-    "system": [ "data/initial_module_packages" ]
-}
