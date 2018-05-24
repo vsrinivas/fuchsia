@@ -1,4 +1,0 @@
-{
-    "dev": [ "class/wlanif" ],
-    "system": [ "data/wlanstack" ]
-}

@@ -90,8 +90,8 @@ package("shadertoy_service") {
 
   meta = [
     {
-      path = rebase_path("shadertoy/service/meta/sandbox")
-      dest = "sandbox"
+      path = rebase_path("shadertoy/service/meta/shadertoy_service.cmx")
+      dest = "shadertoy_service.cmx"
     },
   ]
 }
@@ -143,8 +143,8 @@ package("video_display") {
 
   meta = [
     {
-      path = rebase_path("video_display/meta/sandbox")
-      dest = "sandbox"
+      path = rebase_path("video_display/meta/video_display.cmx")
+      dest = "video_display.cmx"
     },
   ]
 }

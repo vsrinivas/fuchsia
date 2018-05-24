@@ -168,8 +168,8 @@ package("wlanstack") {
 
   meta = [
     {
-      path = rebase_path("wlanstack/meta/sandbox")
-      dest = "sandbox"
+      path = rebase_path("wlanstack/meta/wlanstack.cmx")
+      dest = "wlanstack.cmx"
     },
     {
       path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
