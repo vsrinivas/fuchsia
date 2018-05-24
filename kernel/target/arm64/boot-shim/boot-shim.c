@@ -133,7 +133,7 @@ static void append_boot_item(zbi_header_t* container, uint32_t type, uint32_t ex
     dest->type = type;
     dest->length = length;
     dest->extra = extra;
-    dest->flags = 0;
+    dest->flags = ZBI_FLAG_VERSION;
     dest->reserved0 = 0;
     dest->reserved1 = 0;
     dest->magic = ZBI_ITEM_MAGIC;
