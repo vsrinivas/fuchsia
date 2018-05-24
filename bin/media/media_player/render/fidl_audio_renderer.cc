@@ -77,6 +77,7 @@ void FidlAudioRenderer::Dump(std::ostream& os) const {
   FXL_DCHECK(async_get_default() == async());
   Renderer::Dump(os);
 
+  os << indent;
   os << newl << "priming:               " << !!prime_callback_;
   os << newl << "flushed:               " << flushed_;
   os << newl << "presentation time:     "
@@ -95,7 +96,7 @@ void FidlAudioRenderer::Dump(std::ostream& os) const {
     os << newl << "packet departures: " << indent << departures_ << outdent;
   }
 
-  stage()->Dump(os);
+  os << outdent;
 }
 
 void FidlAudioRenderer::FlushInput(bool hold_frame_not_used, size_t input_index,

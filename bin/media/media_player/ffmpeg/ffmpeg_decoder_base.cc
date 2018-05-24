@@ -10,6 +10,7 @@
 #include "garnet/bin/media/media_player/ffmpeg/av_codec_context.h"
 #include "garnet/bin/media/media_player/framework/formatting.h"
 #include "lib/fxl/logging.h"
+#include "lib/media/timeline/timeline.h"
 
 namespace media_player {
 
@@ -136,6 +137,8 @@ void FfmpegDecoderBase::TransformPacket(PacketPtr input) {
     av_packet.flags |= AV_PKT_FLAG_KEY;
   }
 
+  int64_t start_time = media::Timeline::local_now();
+
   int result = avcodec_send_packet(av_codec_context_.get(), &av_packet);
 
   if (result != 0) {
@@ -152,6 +155,10 @@ void FfmpegDecoderBase::TransformPacket(PacketPtr input) {
   while (true) {
     int result =
         avcodec_receive_frame(av_codec_context_.get(), av_frame_ptr_.get());
+
+    if (result != 0) {
+      decode_duration_.AddSample(media::Timeline::local_now() - start_time);
+    }
 
     switch (result) {
       case 0:
@@ -258,8 +265,33 @@ FfmpegDecoderBase::DecoderPacket::~DecoderPacket() {
 
 void FfmpegDecoderBase::Dump(std::ostream& os) const {
   os << label() << indent;
-  os << newl << "output stream type: " << output_stream_type();
   stage()->Dump(os);
+  os << newl << "output stream type:" << output_stream_type();
+  os << newl << "state:             ";
+
+  switch (state_) {
+    case State::kIdle:
+      os << "idle";
+      break;
+    case State::kOutputPacketRequested:
+      os << "output packet requested";
+      break;
+    case State::kEndOfStream:
+      os << "end of stream";
+      break;
+  }
+
+  os << newl << "flushing:          " << flushing_;
+  os << newl << "next pts:          " << AsNs(next_pts_) << "@" << pts_rate_;
+
+  if (decode_duration_.count() != 0) {
+    os << newl << "decodes:           " << decode_duration_.count();
+    os << newl << "decode durations:";
+    os << newl << "    minimum        " << AsNs(decode_duration_.min());
+    os << newl << "    average        " << AsNs(decode_duration_.average());
+    os << newl << "    maximum        " << AsNs(decode_duration_.max());
+  }
+
   os << outdent;
 }
 

@@ -8,8 +8,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include <media/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
+#include <media/cpp/fidl.h>
 
 #include "garnet/bin/media/media_player/framework/graph.h"
 #include "garnet/bin/media/media_player/framework/metadata.h"

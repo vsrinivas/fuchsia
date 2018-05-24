@@ -4,6 +4,9 @@
 
 #include "garnet/bin/media/media_player/player/player.h"
 
+#include <queue>
+#include <unordered_set>
+
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
 
@@ -360,8 +363,36 @@ void Player::ConnectAndPrepareStream(Stream* stream) {
 }
 
 void Player::Dump(std::ostream& os) const {
-  os << newl << "source:             ";
-  source_node().GetGenericNode()->Dump(os);
+  std::queue<NodeRef> backlog;
+  std::unordered_set<GenericNode*> visited;
+
+  backlog.push(source_node());
+  visited.insert(source_node().GetGenericNode());
+
+  while (!backlog.empty()) {
+    NodeRef node = backlog.front();
+    backlog.pop();
+
+    os << newl << newl;
+    node.GetGenericNode()->Dump(os);
+
+    for (size_t output_index = 0; output_index < node.output_count();
+         ++output_index) {
+      OutputRef output = node.output(output_index);
+      if (!output.connected()) {
+        continue;
+      }
+
+      NodeRef downstream = output.mate().node();
+      GenericNode* downstream_generic_node = downstream.GetGenericNode();
+      if (visited.find(downstream_generic_node) != visited.end()) {
+        continue;
+      }
+
+      backlog.push(downstream);
+      visited.insert(downstream_generic_node);
+    }
+  }
 }
 
 }  // namespace media_player

@@ -34,6 +34,7 @@ const char* FidlVideoRenderer::label() const { return "video_renderer"; }
 void FidlVideoRenderer::Dump(std::ostream& os) const {
   Renderer::Dump(os);
 
+  os << indent;
   os << newl << "priming:               " << !!prime_callback_;
   os << newl << "flushed:               " << flushed_;
   os << newl << "presentation time:     " << AsNs(pts_ns_);
@@ -73,7 +74,7 @@ void FidlVideoRenderer::Dump(std::ostream& os) const {
     os << newl << "scenic frame rate: " << indent << frame_rate_ << outdent;
   }
 
-  stage()->Dump(os);
+  os << outdent;
 }
 
 void FidlVideoRenderer::FlushInput(bool hold_frame, size_t input_index,
@@ -212,8 +213,8 @@ void FidlVideoRenderer::AdvanceReferenceTime(int64_t reference_time) {
   DiscardOldPackets();
 }
 
-void FidlVideoRenderer::GetRgbaFrame(uint8_t* rgba_buffer,
-                                     const fuchsia::math::Size& rgba_buffer_size) {
+void FidlVideoRenderer::GetRgbaFrame(
+    uint8_t* rgba_buffer, const fuchsia::math::Size& rgba_buffer_size) {
   if (held_packet_) {
     converter_.ConvertFrame(rgba_buffer, rgba_buffer_size.width,
                             rgba_buffer_size.height, held_packet_->payload(),

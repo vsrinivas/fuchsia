@@ -14,6 +14,7 @@
 #include "garnet/bin/media/media_player/ffmpeg/av_codec_context.h"
 #include "garnet/bin/media/media_player/ffmpeg/av_frame.h"
 #include "garnet/bin/media/media_player/ffmpeg/av_packet.h"
+#include "garnet/bin/media/media_player/metrics/value_tracker.h"
 extern "C" {
 #include "third_party/ffmpeg/libavcodec/avcodec.h"
 }
@@ -147,6 +148,8 @@ class FfmpegDecoderBase : public Decoder {
   // The allocator used by avcodec_send_packet and avcodec_receive_frame to
   // provide context for AllocateBufferForAvFrame.
   std::shared_ptr<PayloadAllocator> allocator_;
+
+  ValueTracker<int64_t> decode_duration_;
 };
 
 }  // namespace media_player

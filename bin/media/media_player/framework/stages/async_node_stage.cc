@@ -91,9 +91,7 @@ void AsyncNodeStageImpl::DumpOutputDetail(std::ostream& os,
   }
 
   if (output.connected()) {
-    os << newl << "connected to:  " << *output.mate() << newl;
-    // TODO(dalesat): Handle fan-in, e.g. muxes.
-    output.mate()->stage()->GetGenericNode()->Dump(os);
+    os << newl << "connected to:  " << *output.mate();
   } else {
     os << newl << "connected to:  <nothing>";
   }
