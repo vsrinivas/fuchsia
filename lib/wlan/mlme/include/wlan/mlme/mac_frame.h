@@ -33,6 +33,13 @@ using UnknownBody = uint8_t;
 // TODO(hahnr): Remove once frame owns Packet.
 template <typename Header, typename Body = UnknownBody> class Frame {
    public:
+    template <typename H, typename B>
+    static Frame FromOffset(size_t offset, fbl::unique_ptr<Packet> pkt) {
+        Frame<H, B> frame(fbl::move(pkt));
+        frame.data_offset_ = offset;
+        return fbl::move(frame);
+    }
+
     explicit Frame(fbl::unique_ptr<Packet> pkt) : pkt_(fbl::move(pkt)) {
         ZX_DEBUG_ASSERT(pkt_ != nullptr);
     }
@@ -43,7 +50,7 @@ template <typename Header, typename Body = UnknownBody> class Frame {
         ZX_DEBUG_ASSERT(!IsTaken());
         if (IsTaken()) { return nullptr; }
 
-        auto hdr = pkt_->field<Header>(0);
+        auto hdr = pkt_->field<Header>(data_offset_);
         ZX_DEBUG_ASSERT(hdr != nullptr);
         return hdr;
     }
@@ -91,14 +98,15 @@ template <typename Header, typename Body = UnknownBody> class Frame {
         ZX_DEBUG_ASSERT(len <= pkt_->len());
 
         // TODO(hahnr): We might need to take padding into account at some point.
-        return pkt_->set_len(hdr()->len() + len);
+        return pkt_->set_len(data_offset_ + hdr()->len() + len);
     }
 
     size_t len() const {
         ZX_DEBUG_ASSERT(!IsTaken());
         if (IsTaken()) { return 0; }
 
-        return pkt_->len();
+        if (pkt_->len() < data_offset_) { return 0; }
+        return pkt_->len() - data_offset_;
     }
 
     bool has_rx_info() const {
@@ -150,8 +158,18 @@ template <typename Header, typename Body = UnknownBody> class Frame {
         ZX_DEBUG_ASSERT(!IsTaken());
         if (IsTaken()) { return false; }
 
-        if (pkt_->field<Header>(0) == nullptr) { return false; }
+        if (pkt_->field<Header>(data_offset_) == nullptr) { return false; }
         return pkt_->field<Body>(body_offset<Header>()) != nullptr;
+    }
+
+    // Consumes the frame and returns its body as a typed frame.
+    // By default, the current frame's Body will be the next frame's Header, and
+    // a `uint8_t[]` will be used for the next frame's body.
+    // The current frame will be considered `taken` after this call.
+    template <typename NextH = Body, typename NextB = UnknownBody>
+    Frame<NextH, NextB> NextFrame() {
+        size_t hdr_len = hdr()->len();
+        return FromOffset(hdr_len, take());
     }
 
     // Returns the Frame's underlying Packet. The Frame will no longer own the Packet and
@@ -182,17 +200,18 @@ template <typename Header, typename Body = UnknownBody> class Frame {
         if (has_rx_info() && rx_info()->rx_flags & WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4) {
             offset = align<4>(offset);
         }
-        return offset;
+        return data_offset_ + offset;
     }
 
     // If the frame cannot carry wlan_rx_info_t there won't be padding specified and the body's
     // offset can easily be computed.
     template <typename H>
     typename std::enable_if<!CanCarryRxInfo<H>(), size_t>::type body_offset() const {
-        return hdr()->len();
+        return data_offset_ + hdr()->len();
     }
 
     fbl::unique_ptr<Packet> pkt_;
+    size_t data_offset_ = 0;
 };
 
 // Frame which contains a known header but unknown payload.
