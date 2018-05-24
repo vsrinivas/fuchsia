@@ -72,7 +72,7 @@ static bool create_test(void) {
 static bool create_missing_rights_test(void) {
     BEGIN_TEST;
 
-    zx_rights_t rights = ZX_DEFAULT_JOB_RIGHTS & ~ZX_RIGHT_WRITE & ~ZX_RIGHT_MANAGE_JOB;
+    zx_rights_t rights = ZX_DEFAULT_JOB_RIGHTS & ~ZX_RIGHT_MANAGE_JOB;
     zx_handle_t job_parent;
     zx_status_t status = zx_handle_duplicate(zx_job_default(), rights, &job_parent);
     ASSERT_EQ(status, ZX_OK, "");

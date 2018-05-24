@@ -41,7 +41,7 @@ is returned.
 
 **ZX_ERR_INVALID_ARGS**  *options* is nonzero, or *out* is an invalid pointer.
 
-**ZX_ERR_ACCESS_DENIED**  *job* does not have the **ZX_RIGHT_WRITE** or **ZX_RIGHT_MANAGE_JOB** right.
+**ZX_ERR_ACCESS_DENIED**  *job* does not have the **ZX_RIGHT_MANAGE_JOB** right.
 
 **ZX_ERR_OUT_OF_RANGE**  The height of *job* is too large to create a child job.
 
