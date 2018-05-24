@@ -50,6 +50,7 @@
 #endif
 
 #include <pdev/pdev.h>
+#include <zbi/zbi-cpp.h>
 #include <zircon/boot/image.h>
 #include <zircon/types.h>
 
@@ -296,10 +297,10 @@ static void process_mem_range(const zbi_mem_range_t* mem_range) {
     }
 }
 
-static void process_boot_item(zbi_header_t* item) {
+static zbi_result_t process_zbi_item(zbi_header_t* item, void* payload, void* cookie) {
     if (ZBI_TYPE_DRV_METADATA(item->type)) {
         save_mexec_zbi(item);
-        return;
+        return ZBI_RESULT_OK;
     }
     switch (item->type) {
     case ZBI_TYPE_KERNEL_DRIVER:
@@ -311,13 +312,13 @@ static void process_boot_item(zbi_header_t* item) {
         if (item->length < 1) {
             break;
         }
-        char* contents = reinterpret_cast<char*>(item) + sizeof(zbi_header_t);
+        char* contents = reinterpret_cast<char*>(payload);
         contents[item->length - 1] = '\0';
         cmdline_append(contents);
         break;
     }
     case ZBI_TYPE_MEM_CONFIG: {
-        zbi_mem_range_t* mem_range = reinterpret_cast<zbi_mem_range_t*>(item + 1);
+        zbi_mem_range_t* mem_range = reinterpret_cast<zbi_mem_range_t*>(payload);
         uint32_t count = item->length / (uint32_t)sizeof(zbi_mem_range_t);
         for (uint32_t i = 0; i < count; i++) {
             process_mem_range(mem_range++);
@@ -326,7 +327,7 @@ static void process_boot_item(zbi_header_t* item) {
         break;
     }
     case ZBI_TYPE_CPU_CONFIG: {
-        zbi_cpu_config_t* cpu_config = reinterpret_cast<zbi_cpu_config_t*>(item + 1);
+        zbi_cpu_config_t* cpu_config = reinterpret_cast<zbi_cpu_config_t*>(payload);
         cpu_cluster_count = cpu_config->cluster_count;
         for (uint32_t i = 0; i < cpu_cluster_count; i++) {
             cpu_cluster_cpus[i] = cpu_config->clusters[i].cpu_count;
@@ -336,42 +337,32 @@ static void process_boot_item(zbi_header_t* item) {
         break;
     }
     case ZBI_TYPE_NVRAM: {
-        zbi_nvram_t* nvram = reinterpret_cast<zbi_nvram_t*>(item + 1);
+        zbi_nvram_t* nvram = reinterpret_cast<zbi_nvram_t*>(payload);
         memcpy(&lastlog_nvram, nvram, sizeof(lastlog_nvram));
         boot_reserve_add_range(nvram->base, nvram->length);
         save_mexec_zbi(item);
         break;
     }
     }
+
+    return ZBI_RESULT_OK;
 }
 
 static void process_zbi(zbi_header_t* root) {
     DEBUG_ASSERT(root);
+    zbi_result_t result;
 
-    if (root->type != ZBI_TYPE_CONTAINER) {
-        printf("bootdata: invalid type = %08x\n", root->type);
+    uint8_t* zbi_base = reinterpret_cast<uint8_t*>(root);
+    zbi::Zbi image(zbi_base);
+
+    // Make sure the image looks valid.
+    result = image.Check(nullptr);
+    if (result != ZBI_RESULT_OK) {
+        // TODO(gkalsi): Print something informative here?
         return;
     }
 
-    if (root->extra != ZBI_CONTAINER_MAGIC) {
-        printf("ZBI: invalid magic = %08x\n", root->extra);
-        return;
-    }
-
-    size_t offset = sizeof(zbi_header_t);
-    const size_t length = (root->length);
-
-    if (!(root->flags & ZBI_FLAG_VERSION)) {
-        printf("ZBI: v1 no longer supported\n");
-    }
-
-    while (offset < length) {
-        uintptr_t ptr = reinterpret_cast<const uintptr_t>(root);
-        zbi_header_t* item = reinterpret_cast<zbi_header_t*>(ptr + offset);
-
-        process_boot_item(item);
-        offset += ZBI_ALIGN(sizeof(zbi_header_t) + item->length);
-    }
+    image.ForEach(process_zbi_item, nullptr);
 }
 
 void platform_early_init(void) {

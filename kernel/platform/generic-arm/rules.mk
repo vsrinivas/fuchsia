@@ -19,6 +19,7 @@ KERNEL_DEFINES += \
 MODULE_DEPS += \
 	kernel/lib/cbuf \
 	kernel/lib/memory_limit \
+	kernel/lib/zbi \
 	kernel/dev/pcie \
 	kernel/dev/pdev \
 	kernel/dev/pdev/power \

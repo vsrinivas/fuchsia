@@ -33,7 +33,11 @@
 // make a complete ZBI.
 
 // All items begin at an 8-byte aligned offset into the image.
+#ifdef __ASSEMBLER__
 #define ZBI_ALIGNMENT           (8)
+#else
+#define ZBI_ALIGNMENT           (8u)
+#endif
 
 // Round n up to the next 8 byte boundary
 #define ZBI_ALIGN(n)            (((n) + ZBI_ALIGNMENT - 1) & -ZBI_ALIGNMENT)
