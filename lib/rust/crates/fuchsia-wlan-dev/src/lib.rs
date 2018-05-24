@@ -7,14 +7,12 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
-extern crate failure;
 #[macro_use]
 extern crate fdio;
 extern crate fidl_wlan_device as wlan;
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
 
-use failure::Error;
 use std::fmt;
 use std::fs::{File, OpenOptions};
 use std::path::{Path, PathBuf};
@@ -29,7 +27,7 @@ pub struct Device {
 
 impl Device {
     /// Opens the given path and creates a `Device` for that device node.
-    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, zx::Status> {
         let dev = OpenOptions::new().read(true).write(true).open(&path)?;
         Ok(Self {
             path: PathBuf::from(fdio::device_get_topo_path(&dev)?),

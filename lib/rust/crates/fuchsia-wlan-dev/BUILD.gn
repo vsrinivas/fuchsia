@@ -13,7 +13,6 @@ rustc_library("fuchsia-wlan-dev") {
     "//garnet/public/rust/crates/fdio",
     "//garnet/public/rust/crates/fuchsia-async",
     "//garnet/public/rust/crates/fuchsia-zircon",
-    "//third_party/rust-crates/rustc_deps:failure",
   ]
 }
 
