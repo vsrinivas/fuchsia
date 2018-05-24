@@ -28,12 +28,12 @@ const uint32_t kGlobalShortcutKeyHidUsage = 45;   // '-' key
 
 }  // namespace
 
-bool DisplaySizeSwitcher::OnEvent(const input::InputEvent& event,
+bool DisplaySizeSwitcher::OnEvent(const fuchsia::ui::input::InputEvent& event,
                                   Presentation* presenter) {
   if (event.is_keyboard()) {
-    const input::KeyboardEvent& kbd = event.keyboard();
-    if ((kbd.modifiers & input::kModifierAlt) &&
-        kbd.phase == input::KeyboardEventPhase::PRESSED &&
+    const fuchsia::ui::input::KeyboardEvent& kbd = event.keyboard();
+    if ((kbd.modifiers & fuchsia::ui::input::kModifierAlt) &&
+        kbd.phase == fuchsia::ui::input::KeyboardEventPhase::PRESSED &&
         kbd.code_point == kGlobalShortcutKeyCodePoint &&
         kbd.hid_usage == kGlobalShortcutKeyHidUsage) {
       // Switch to the next display size we can successfully switch to.

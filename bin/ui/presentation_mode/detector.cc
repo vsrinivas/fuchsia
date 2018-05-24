@@ -20,8 +20,8 @@ Detector::Detector(size_t history_size)
 }
 
 std::pair<bool, presentation::PresentationMode> Detector::Update(
-    const input::SensorDescriptor& sensor, input::InputReport event) {
-  FXL_CHECK(sensor.type == input::SensorType::ACCELEROMETER);
+    const fuchsia::ui::input::SensorDescriptor& sensor, fuchsia::ui::input::InputReport event) {
+  FXL_CHECK(sensor.type == fuchsia::ui::input::SensorType::ACCELEROMETER);
   FXL_CHECK(event.sensor);
   FXL_CHECK(event.sensor->is_vector());
 
@@ -29,10 +29,10 @@ std::pair<bool, presentation::PresentationMode> Detector::Update(
   AccelerometerData data{vector[0], vector[1], vector[2]};
 
   switch (sensor.loc) {
-    case input::SensorLocation::BASE:
+    case fuchsia::ui::input::SensorLocation::BASE:
       base_accelerometer_->Update(data);
       break;
-    case input::SensorLocation::LID:
+    case fuchsia::ui::input::SensorLocation::LID:
       lid_accelerometer_->Update(data);
       break;
   }

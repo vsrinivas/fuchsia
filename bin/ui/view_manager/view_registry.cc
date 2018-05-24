@@ -8,7 +8,7 @@
 #include <cmath>
 #include <utility>
 
-#include <input/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
@@ -698,9 +698,9 @@ void ViewRegistry::ConnectToViewService(ViewState* view_state,
                                         const fidl::StringPtr& service_name,
                                         zx::channel client_handle) {
   FXL_DCHECK(IsViewStateRegisteredDebug(view_state));
-  if (service_name == input::InputConnection::Name_) {
+  if (service_name == fuchsia::ui::input::InputConnection::Name_) {
     CreateInputConnection(view_state->view_token(),
-                          fidl::InterfaceRequest<input::InputConnection>(
+                          fidl::InterfaceRequest<fuchsia::ui::input::InputConnection>(
                               std::move(client_handle)));
   }
 }
@@ -709,9 +709,9 @@ void ViewRegistry::ConnectToViewTreeService(ViewTreeState* tree_state,
                                             const fidl::StringPtr& service_name,
                                             zx::channel client_handle) {
   FXL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
-  if (service_name == input::InputDispatcher::Name_) {
+  if (service_name == fuchsia::ui::input::InputDispatcher::Name_) {
     CreateInputDispatcher(tree_state->view_tree_token(),
-                          fidl::InterfaceRequest<input::InputDispatcher>(
+                          fidl::InterfaceRequest<fuchsia::ui::input::InputDispatcher>(
                               std::move(client_handle)));
   }
 }
@@ -822,12 +822,12 @@ component::ServiceProvider* ViewRegistry::FindViewServiceProvider(
 
 void ViewRegistry::GetSoftKeyboardContainer(
     views_v1_token::ViewToken view_token,
-    fidl::InterfaceRequest<input::SoftKeyboardContainer> container) {
+    fidl::InterfaceRequest<fuchsia::ui::input::SoftKeyboardContainer> container) {
   FXL_DCHECK(container.is_valid());
   FXL_VLOG(1) << "GetSoftKeyboardContainer: view_token=" << view_token;
 
   auto provider = FindViewServiceProvider(view_token.value,
-                                          input::SoftKeyboardContainer::Name_);
+                                          fuchsia::ui::input::SoftKeyboardContainer::Name_);
   if (provider) {
     component::ConnectToService(provider, std::move(container));
   }
@@ -835,12 +835,12 @@ void ViewRegistry::GetSoftKeyboardContainer(
 
 void ViewRegistry::GetImeService(
     views_v1_token::ViewToken view_token,
-    fidl::InterfaceRequest<input::ImeService> ime_service) {
+    fidl::InterfaceRequest<fuchsia::ui::input::ImeService> ime_service) {
   FXL_DCHECK(ime_service.is_valid());
   FXL_VLOG(1) << "GetImeService: view_token=" << view_token;
 
   auto provider =
-      FindViewServiceProvider(view_token.value, input::ImeService::Name_);
+      FindViewServiceProvider(view_token.value, fuchsia::ui::input::ImeService::Name_);
   if (provider) {
     component::ConnectToService(provider, std::move(ime_service));
   } else {
@@ -909,7 +909,7 @@ void ViewRegistry::SendChildUnavailable(ViewContainerState* container_state,
 }
 
 void ViewRegistry::DeliverEvent(views_v1_token::ViewToken view_token,
-                                input::InputEvent event,
+                                fuchsia::ui::input::InputEvent event,
                                 ViewInspector::OnEventDelivered callback) {
   FXL_VLOG(1) << "DeliverEvent: view_token=" << view_token
               << ", event=" << event;
@@ -931,7 +931,7 @@ void ViewRegistry::DeliverEvent(views_v1_token::ViewToken view_token,
 
 void ViewRegistry::CreateInputConnection(
     views_v1_token::ViewToken view_token,
-    fidl::InterfaceRequest<input::InputConnection> request) {
+    fidl::InterfaceRequest<fuchsia::ui::input::InputConnection> request) {
   FXL_DCHECK(request.is_valid());
   FXL_VLOG(1) << "CreateInputConnection: view_token=" << view_token;
 
@@ -955,7 +955,7 @@ void ViewRegistry::OnInputConnectionDied(InputConnectionImpl* connection) {
 
 void ViewRegistry::CreateInputDispatcher(
     views_v1::ViewTreeToken view_tree_token,
-    fidl::InterfaceRequest<input::InputDispatcher> request) {
+    fidl::InterfaceRequest<fuchsia::ui::input::InputDispatcher> request) {
   FXL_DCHECK(request.is_valid());
   FXL_VLOG(1) << "CreateInputDispatcher: view_tree_token=" << view_tree_token;
 

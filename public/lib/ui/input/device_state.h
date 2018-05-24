@@ -13,19 +13,19 @@
 #include <vector>
 
 #include <fuchsia/math/cpp/fidl.h>
-#include <input/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
 namespace mozart {
 
-using OnEventCallback = std::function<void(input::InputEvent event)>;
+using OnEventCallback = std::function<void(fuchsia::ui::input::InputEvent event)>;
 // In contrast to keyboard and mouse devices, which require extra state to
 // correctly interpret their data, sensor devices are simpler, so we just pass
 // through the raw InputReport. We do need a device_id to understand which
 // sensor the report came from.
 using OnSensorEventCallback =
-    std::function<void(uint32_t device_id, input::InputReport event)>;
+    std::function<void(uint32_t device_id, fuchsia::ui::input::InputReport event)>;
 
 class DeviceState;
 
@@ -38,10 +38,10 @@ class State {
 class KeyboardState : public State {
  public:
   KeyboardState(DeviceState* device_state);
-  void Update(input::InputReport report);
+  void Update(fuchsia::ui::input::InputReport report);
 
  private:
-  void SendEvent(input::KeyboardEventPhase phase,
+  void SendEvent(fuchsia::ui::input::KeyboardEventPhase phase,
                  uint32_t key,
                  uint64_t modifiers,
                  uint64_t timestamp);
@@ -62,7 +62,7 @@ class KeyboardState : public State {
 class MouseState : public State {
  public:
   MouseState(DeviceState* device_state) : device_state_(device_state) {}
-  void Update(input::InputReport report, fuchsia::math::Size display_size);
+  void Update(fuchsia::ui::input::InputReport report, fuchsia::math::Size display_size);
   void OnRegistered();
   void OnUnregistered();
 
@@ -70,7 +70,7 @@ class MouseState : public State {
   void SendEvent(float rel_x,
                  float rel_y,
                  int64_t timestamp,
-                 input::PointerEventPhase phase,
+                 fuchsia::ui::input::PointerEventPhase phase,
                  uint32_t buttons);
 
   DeviceState* device_state_;
@@ -81,12 +81,12 @@ class MouseState : public State {
 class StylusState : public State {
  public:
   StylusState(DeviceState* device_state) : device_state_(device_state) {}
-  void Update(input::InputReport report, fuchsia::math::Size display_size);
+  void Update(fuchsia::ui::input::InputReport report, fuchsia::math::Size display_size);
 
  private:
   void SendEvent(int64_t timestamp,
-                 input::PointerEventPhase phase,
-                 input::PointerEventType type,
+                 fuchsia::ui::input::PointerEventPhase phase,
+                 fuchsia::ui::input::PointerEventType type,
                  float x,
                  float y,
                  uint32_t buttons);
@@ -95,23 +95,23 @@ class StylusState : public State {
   bool stylus_down_ = false;
   bool stylus_in_range_ = false;
   bool inverted_stylus_ = false;
-  input::PointerEvent stylus_;
+  fuchsia::ui::input::PointerEvent stylus_;
 };
 
 class TouchscreenState : public State {
  public:
   TouchscreenState(DeviceState* device_state) : device_state_(device_state) {}
-  void Update(input::InputReport report, fuchsia::math::Size display_size);
+  void Update(fuchsia::ui::input::InputReport report, fuchsia::math::Size display_size);
 
  private:
   DeviceState* device_state_;
-  std::vector<input::PointerEvent> pointers_;
+  std::vector<fuchsia::ui::input::PointerEvent> pointers_;
 };
 
 class SensorState : public State {
  public:
   SensorState(DeviceState* device_state) : device_state_(device_state) {}
-  void Update(input::InputReport report);
+  void Update(fuchsia::ui::input::InputReport report);
 
  private:
   DeviceState* device_state_;
@@ -121,41 +121,41 @@ class SensorState : public State {
 class DeviceState {
  public:
   DeviceState(uint32_t device_id,
-              input::DeviceDescriptor* descriptor,
+              fuchsia::ui::input::DeviceDescriptor* descriptor,
               OnEventCallback callback);
   DeviceState(uint32_t device_id,
-              input::DeviceDescriptor* descriptor,
+              fuchsia::ui::input::DeviceDescriptor* descriptor,
               OnSensorEventCallback callback);
   ~DeviceState();
 
   void OnRegistered();
   void OnUnregistered();
 
-  void Update(input::InputReport report, fuchsia::math::Size display_size);
+  void Update(fuchsia::ui::input::InputReport report, fuchsia::math::Size display_size);
 
   uint32_t device_id() { return device_id_; }
   OnEventCallback callback() { return callback_; }
   OnSensorEventCallback sensor_callback() { return sensor_callback_; }
 
-  input::KeyboardDescriptor* keyboard_descriptor() {
+  fuchsia::ui::input::KeyboardDescriptor* keyboard_descriptor() {
     return descriptor_->keyboard.get();
   }
-  input::MouseDescriptor* mouse_descriptor() {
+  fuchsia::ui::input::MouseDescriptor* mouse_descriptor() {
     return descriptor_->mouse.get();
   }
-  input::StylusDescriptor* stylus_descriptor() {
+  fuchsia::ui::input::StylusDescriptor* stylus_descriptor() {
     return descriptor_->stylus.get();
   }
-  input::TouchscreenDescriptor* touchscreen_descriptor() {
+  fuchsia::ui::input::TouchscreenDescriptor* touchscreen_descriptor() {
     return descriptor_->touchscreen.get();
   }
-  input::SensorDescriptor* sensor_descriptor() {
+  fuchsia::ui::input::SensorDescriptor* sensor_descriptor() {
     return descriptor_->sensor.get();
   }
 
  private:
   uint32_t device_id_;
-  input::DeviceDescriptor* descriptor_;
+  fuchsia::ui::input::DeviceDescriptor* descriptor_;
 
   KeyboardState keyboard_;
   MouseState mouse_;

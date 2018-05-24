@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_UI_ROOT_PRESENTER_DISPLAY_ROTATER_H_
 #define GARNET_BIN_UI_ROOT_PRESENTER_DISPLAY_ROTATER_H_
 
-#include <input/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include "lib/fxl/macros.h"
 #include "lib/ui/scenic/client/resources.h"
 
@@ -24,7 +24,7 @@ class DisplayRotater {
   // |Presentation| is the root presenter.
   //
   // Returns true if the scene should be invalidated.
-  bool OnEvent(const input::InputEvent& event, Presentation* presentation);
+  bool OnEvent(const fuchsia::ui::input::InputEvent& event, Presentation* presentation);
 
  private:
   void FlipDisplay(Presentation* presentation);

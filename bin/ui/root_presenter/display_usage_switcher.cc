@@ -40,12 +40,12 @@ std::string GetDisplayUsageAsString(presentation::DisplayUsage usage) {
 
 DisplayUsageSwitcher::DisplayUsageSwitcher() {}
 
-bool DisplayUsageSwitcher::OnEvent(const input::InputEvent& event,
+bool DisplayUsageSwitcher::OnEvent(const fuchsia::ui::input::InputEvent& event,
                                    Presentation* presenter) {
   if (event.is_keyboard()) {
-    const input::KeyboardEvent& kbd = event.keyboard();
-    if ((kbd.modifiers & input::kModifierAlt) &&
-        kbd.phase == input::KeyboardEventPhase::PRESSED &&
+    const fuchsia::ui::input::KeyboardEvent& kbd = event.keyboard();
+    if ((kbd.modifiers & fuchsia::ui::input::kModifierAlt) &&
+        kbd.phase == fuchsia::ui::input::KeyboardEventPhase::PRESSED &&
         kbd.code_point == kGlobalShortcutKeyCodePoint &&
         kbd.hid_usage == kGlobalShortcutKeyHidUsage) {
       // Switch to the next display usage value.

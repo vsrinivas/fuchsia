@@ -38,11 +38,11 @@ void View::OnPropertiesChanged(views_v1::ViewProperties old_properties) {
                   [](fuchsia::images::PresentationInfo info) {});
 }
 
-bool View::OnInputEvent(input::InputEvent event) {
+bool View::OnInputEvent(fuchsia::ui::input::InputEvent event) {
   if (event.is_pointer()) {
     const auto& pointer = event.pointer();
     switch (pointer.phase) {
-      case input::PointerEventPhase::DOWN: {
+      case fuchsia::ui::input::PointerEventPhase::DOWN: {
         auto stroke = fxl::MakeRefCounted<Stroke>(&canvas_);
         pointer_id_to_stroke_map_.insert({pointer.pointer_id, stroke});
         scratch_group_.AddStroke(*stroke);
@@ -51,7 +51,7 @@ bool View::OnInputEvent(input::InputEvent event) {
                         [](fuchsia::images::PresentationInfo info) {});
         return true;
       }
-      case input::PointerEventPhase::MOVE: {
+      case fuchsia::ui::input::PointerEventPhase::MOVE: {
         const auto& stroke =
             pointer_id_to_stroke_map_.find(pointer.pointer_id)->second;
         if (!stroke) {
@@ -64,7 +64,7 @@ bool View::OnInputEvent(input::InputEvent event) {
                         [](fuchsia::images::PresentationInfo info) {});
         return true;
       }
-      case input::PointerEventPhase::UP: {
+      case fuchsia::ui::input::PointerEventPhase::UP: {
         auto it = pointer_id_to_stroke_map_.find(pointer.pointer_id);
         const auto& stroke = it->second;
         if (!stroke) {
@@ -85,7 +85,7 @@ bool View::OnInputEvent(input::InputEvent event) {
 
   if (event.is_keyboard()) {
     const auto& keyboard = event.keyboard();
-    if (keyboard.phase == input::KeyboardEventPhase::PRESSED &&
+    if (keyboard.phase == fuchsia::ui::input::KeyboardEventPhase::PRESSED &&
         keyboard.hid_usage == 6 /* c */) {
       stable_group_.Clear();
       canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),

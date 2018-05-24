@@ -60,7 +60,7 @@ struct CreateAudioDecoder_Params {
   // require_can_stream_bytes_input are true, the CodecFactory channel will
   // close.
   //
-  // If this is false, the client must feed separate AUs on the input.  This
+  // If this is false, the client must feed separate AUs on the fuchsia.ui.input.  This
   // must be false for a video encoder, and if true the CodecFactory channel
   // will close.
   //

@@ -9,7 +9,7 @@
 
 namespace ime {
 
-void DeleteBackward(input::TextInputState& current_state) {
+void DeleteBackward(fuchsia::ui::input::TextInputState& current_state) {
   FXL_VLOG(1) << "Deleting character (state = " << &current_state << "')";
 
   int64_t& base = current_state.selection.base;

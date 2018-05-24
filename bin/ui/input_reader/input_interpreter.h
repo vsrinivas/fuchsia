@@ -16,7 +16,7 @@
 
 #include "garnet/bin/ui/input_reader/hid_decoder.h"
 
-#include <input/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 
 namespace mozart {
 
@@ -39,7 +39,7 @@ class InputInterpreter {
   using OnReportCallback = std::function<void(ReportType type)>;
 
   static std::unique_ptr<InputInterpreter> Open(
-      int dirfd, std::string filename, input::InputDeviceRegistry* registry);
+      int dirfd, std::string filename, fuchsia::ui::input::InputDeviceRegistry* registry);
   ~InputInterpreter();
 
   bool Initialize();
@@ -69,7 +69,7 @@ class InputInterpreter {
   };
 
   InputInterpreter(std::string name, int fd,
-                   input::InputDeviceRegistry* registry);
+                   fuchsia::ui::input::InputDeviceRegistry* registry);
 
   void NotifyRegistry();
 
@@ -86,25 +86,25 @@ class InputInterpreter {
   bool ParseParadiseTouchpadReport(uint8_t* report, size_t len);
   bool ParseParadiseSensorReport(uint8_t* report, size_t len);
 
-  input::InputDeviceRegistry* registry_;
+  fuchsia::ui::input::InputDeviceRegistry* registry_;
 
   zx::event event_;
 
   acer12_touch_t acer12_touch_reports_[2];
 
   bool has_keyboard_ = false;
-  input::KeyboardDescriptorPtr keyboard_descriptor_;
+  fuchsia::ui::input::KeyboardDescriptorPtr keyboard_descriptor_;
   bool has_mouse_ = false;
-  input::MouseDescriptorPtr mouse_descriptor_;
+  fuchsia::ui::input::MouseDescriptorPtr mouse_descriptor_;
   bool has_stylus_ = false;
-  input::StylusDescriptorPtr stylus_descriptor_;
+  fuchsia::ui::input::StylusDescriptorPtr stylus_descriptor_;
   bool has_touchscreen_ = false;
-  input::TouchscreenDescriptorPtr touchscreen_descriptor_;
+  fuchsia::ui::input::TouchscreenDescriptorPtr touchscreen_descriptor_;
   bool has_sensors_ = false;
   // Arrays are indexed by the sensor number that was assigned by Zircon.
   // Keeps track of the physical sensors multiplexed over the file descriptor.
-  std::array<input::SensorDescriptorPtr, kMaxSensorCount> sensor_descriptors_;
-  std::array<input::InputDevicePtr, kMaxSensorCount> sensor_devices_;
+  std::array<fuchsia::ui::input::SensorDescriptorPtr, kMaxSensorCount> sensor_descriptors_;
+  std::array<fuchsia::ui::input::InputDevicePtr, kMaxSensorCount> sensor_devices_;
 
   TouchDeviceType touch_device_type_ = TouchDeviceType::NONE;
   MouseDeviceType mouse_device_type_ = MouseDeviceType::NONE;
@@ -118,13 +118,13 @@ class InputInterpreter {
   // |sensor_descriptors_| and |sensor_devices_|.
   uint8_t sensor_idx_ = kNoSuchSensor;
 
-  input::InputReportPtr keyboard_report_;
-  input::InputReportPtr mouse_report_;
-  input::InputReportPtr touchscreen_report_;
-  input::InputReportPtr stylus_report_;
-  input::InputReportPtr sensor_report_;
+  fuchsia::ui::input::InputReportPtr keyboard_report_;
+  fuchsia::ui::input::InputReportPtr mouse_report_;
+  fuchsia::ui::input::InputReportPtr touchscreen_report_;
+  fuchsia::ui::input::InputReportPtr stylus_report_;
+  fuchsia::ui::input::InputReportPtr sensor_report_;
 
-  input::InputDevicePtr input_device_;
+  fuchsia::ui::input::InputDevicePtr input_device_;
 
   HidDecoder hid_decoder_;
 };

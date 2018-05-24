@@ -27,7 +27,7 @@ class View final : public mozart::BaseView {
 
   // mozart::BaseView.
   void OnPropertiesChanged(views_v1::ViewProperties old_properties) override;
-  bool OnInputEvent(input::InputEvent event) override;
+  bool OnInputEvent(fuchsia::ui::input::InputEvent event) override;
 
  private:
   Canvas canvas_;

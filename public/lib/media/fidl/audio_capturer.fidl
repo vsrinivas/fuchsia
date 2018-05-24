@@ -268,7 +268,7 @@ interface AudioCapturer {
   // the payload buffer has been established.
   2: SetMediaType(MediaType media_type);
 
-  // Set the gain (in dB) applied to the input.  Gain may be adjusted at any
+  // Set the gain (in dB) applied to the fuchsia.ui.input.  Gain may be adjusted at any
   // time, but must be on the range...
   // [kMutedGain, kMaxGain]
   3: SetGain(float32 gain);

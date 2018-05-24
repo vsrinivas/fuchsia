@@ -15,7 +15,7 @@ namespace view_manager {
 InputConnectionImpl::InputConnectionImpl(
     ViewInspector* inspector, InputOwner* owner,
     views_v1_token::ViewToken view_token,
-    fidl::InterfaceRequest<input::InputConnection> request)
+    fidl::InterfaceRequest<fuchsia::ui::input::InputConnection> request)
     : inspector_(inspector),
       owner_(owner),
       view_token_(view_token),
@@ -28,7 +28,7 @@ InputConnectionImpl::InputConnectionImpl(
 
 InputConnectionImpl::~InputConnectionImpl() {}
 
-void InputConnectionImpl::DeliverEvent(input::InputEvent event,
+void InputConnectionImpl::DeliverEvent(fuchsia::ui::input::InputEvent event,
                                        OnEventDelivered callback) {
   if (!event_listener_) {
     FXL_VLOG(1) << "DeliverEvent: " << view_token_
@@ -38,7 +38,7 @@ void InputConnectionImpl::DeliverEvent(input::InputEvent event,
   }
 
   if (event.is_keyboard()) {
-    input::InputEvent event_clone;
+    fuchsia::ui::input::InputEvent event_clone;
     event.Clone(&event_clone);
     InjectInput(std::move(event_clone));
   }
@@ -47,15 +47,15 @@ void InputConnectionImpl::DeliverEvent(input::InputEvent event,
 }
 
 void InputConnectionImpl::SetEventListener(
-    fidl::InterfaceHandle<input::InputListener> listener) {
+    fidl::InterfaceHandle<fuchsia::ui::input::InputListener> listener) {
   event_listener_ = listener.Bind();
 }
 
 void InputConnectionImpl::GetInputMethodEditor(
-    input::KeyboardType keyboard_type, input::InputMethodAction action,
-    input::TextInputState initial_state,
-    fidl::InterfaceHandle<input::InputMethodEditorClient> client,
-    fidl::InterfaceRequest<input::InputMethodEditor> editor_request) {
+    fuchsia::ui::input::KeyboardType keyboard_type, fuchsia::ui::input::InputMethodAction action,
+    fuchsia::ui::input::TextInputState initial_state,
+    fidl::InterfaceHandle<fuchsia::ui::input::InputMethodEditorClient> client,
+    fidl::InterfaceRequest<fuchsia::ui::input::InputMethodEditor> editor_request) {
   FXL_DCHECK(client);
   FXL_DCHECK(editor_request.is_valid());
 
@@ -108,7 +108,7 @@ void InputConnectionImpl::GetInputMethodEditor(
       }));
 }
 
-void InputConnectionImpl::InjectInput(input::InputEvent event) {
+void InputConnectionImpl::InjectInput(fuchsia::ui::input::InputEvent event) {
   if (editor_) {
     FXL_VLOG(1) << "InjectInput: view_token=" << view_token_
                 << ", event=" << event;
@@ -117,8 +117,8 @@ void InputConnectionImpl::InjectInput(input::InputEvent event) {
 }
 
 void InputConnectionImpl::ConnectWithImeService(
-    input::KeyboardType keyboard_type, input::InputMethodAction action,
-    input::TextInputState state) {
+    fuchsia::ui::input::KeyboardType keyboard_type, fuchsia::ui::input::InputMethodAction action,
+    fuchsia::ui::input::TextInputState state) {
   FXL_VLOG(1) << "ConnectWithImeService: view_token=" << view_token_
               << ", keyboard_type=" << keyboard_type << ", action=" << action
               << ", initial_state=" << state;
@@ -130,7 +130,7 @@ void InputConnectionImpl::ConnectWithImeService(
   });
 
   // GetInputMethodEditor from IME service
-  input::InputMethodEditorClientPtr client_ptr;
+  fuchsia::ui::input::InputMethodEditorClientPtr client_ptr;
   client_binding_.Bind(client_ptr.NewRequest());
   client_binding_.set_error_handler([this] { OnClientDied(); });
   ime_service_->GetInputMethodEditor(keyboard_type, action, std::move(state),
@@ -168,7 +168,7 @@ void InputConnectionImpl::Reset() {
     client_binding_.Unbind();
 }
 
-void InputConnectionImpl::SetState(input::TextInputState state) {
+void InputConnectionImpl::SetState(fuchsia::ui::input::TextInputState state) {
   if (editor_) {
     FXL_VLOG(1) << "SetState: view_token=" << view_token_
                 << ", state=" << state;
@@ -179,7 +179,7 @@ void InputConnectionImpl::SetState(input::TextInputState state) {
   }
 }
 
-void InputConnectionImpl::SetKeyboardType(input::KeyboardType keyboard_type) {
+void InputConnectionImpl::SetKeyboardType(fuchsia::ui::input::KeyboardType keyboard_type) {
   if (editor_) {
     FXL_VLOG(1) << "SetKeyboardType: view_token=" << view_token_
                 << ", keyboard_type=" << keyboard_type;
@@ -194,8 +194,8 @@ void InputConnectionImpl::Show() {}
 
 void InputConnectionImpl::Hide() {}
 
-void InputConnectionImpl::DidUpdateState(input::TextInputState state,
-                                         input::InputEventPtr event) {
+void InputConnectionImpl::DidUpdateState(fuchsia::ui::input::TextInputState state,
+                                         fuchsia::ui::input::InputEventPtr event) {
   if (client_) {
     FXL_VLOG(1) << "DidUpdateState: view_token=" << view_token_
                 << ", state=" << state;
@@ -206,7 +206,7 @@ void InputConnectionImpl::DidUpdateState(input::TextInputState state,
   }
 }
 
-void InputConnectionImpl::OnAction(input::InputMethodAction action) {
+void InputConnectionImpl::OnAction(fuchsia::ui::input::InputMethodAction action) {
   if (client_) {
     FXL_VLOG(1) << "OnAction: view_token=" << view_token_
                 << ", action=" << action;

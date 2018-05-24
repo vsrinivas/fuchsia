@@ -9,7 +9,7 @@
 #include <memory>
 #include <vector>
 
-#include <input/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <presentation/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 #include "garnet/bin/ui/input_reader/input_reader.h"
@@ -32,7 +32,7 @@ class Presentation;
 // Any number of view trees can be created, although multi-display support
 // and input routing is not fully supported (TODO).
 class App : public presentation::Presenter,
-            public input::InputDeviceRegistry,
+            public fuchsia::ui::input::InputDeviceRegistry,
             public mozart::InputDeviceImpl::Listener {
  public:
   explicit App(const fxl::CommandLine& command_line);
@@ -41,7 +41,7 @@ class App : public presentation::Presenter,
   // |InputDeviceImpl::Listener|
   void OnDeviceDisconnected(mozart::InputDeviceImpl* input_device) override;
   void OnReport(mozart::InputDeviceImpl* input_device,
-                input::InputReport report) override;
+                fuchsia::ui::input::InputReport report) override;
 
  private:
   // |Presenter|:
@@ -55,8 +55,8 @@ class App : public presentation::Presenter,
 
   // |InputDeviceRegistry|:
   void RegisterDevice(
-      input::DeviceDescriptor descriptor,
-      fidl::InterfaceRequest<input::InputDevice> input_device_request) override;
+      fuchsia::ui::input::DeviceDescriptor descriptor,
+      fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request) override;
 
   void InitializeServices();
   void Reset();
@@ -67,7 +67,7 @@ class App : public presentation::Presenter,
 
   std::unique_ptr<component::ApplicationContext> application_context_;
   fidl::BindingSet<presentation::Presenter> presenter_bindings_;
-  fidl::BindingSet<input::InputDeviceRegistry> input_receiver_bindings_;
+  fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry> input_receiver_bindings_;
   mozart::InputReader input_reader_;
 
   views_v1::ViewManagerPtr view_manager_;

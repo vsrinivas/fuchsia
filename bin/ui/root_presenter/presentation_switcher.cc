@@ -8,12 +8,12 @@
 
 namespace root_presenter {
 
-bool PresentationSwitcher::OnEvent(const input::InputEvent& event,
+bool PresentationSwitcher::OnEvent(const fuchsia::ui::input::InputEvent& event,
                                    Presentation* presentation) {
-  const input::KeyboardEvent& kbd = event.keyboard();
-  if (kbd.modifiers & input::kModifierControl &&
-      kbd.modifiers & input::kModifierAlt &&
-      kbd.phase == input::KeyboardEventPhase::PRESSED) {
+  const fuchsia::ui::input::KeyboardEvent& kbd = event.keyboard();
+  if (kbd.modifiers & fuchsia::ui::input::kModifierControl &&
+      kbd.modifiers & fuchsia::ui::input::kModifierAlt &&
+      kbd.phase == fuchsia::ui::input::KeyboardEventPhase::PRESSED) {
     if (kbd.code_point == 91 /* [ */) {
       presentation->yield_callback_(/* yield_to_next= */ false);
       return true;

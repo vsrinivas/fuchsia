@@ -161,7 +161,7 @@ void BaseView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation
 
 void BaseView::OnSessionEvent(fidl::VectorPtr<fuchsia::ui::scenic::Event> events) {}
 
-bool BaseView::OnInputEvent(input::InputEvent event) {
+bool BaseView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
   return false;
 }
 
@@ -202,7 +202,7 @@ void BaseView::OnChildUnavailable(uint32_t child_key,
   callback();
 }
 
-void BaseView::OnEvent(input::InputEvent event, OnEventCallback callback) {
+void BaseView::OnEvent(fuchsia::ui::input::InputEvent event, OnEventCallback callback) {
   TRACE_DURATION("view", "OnEvent");
   bool handled = OnInputEvent(std::move(event));
   callback(handled);

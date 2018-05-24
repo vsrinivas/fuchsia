@@ -50,7 +50,7 @@ class View : public mozart::BaseView {
   zx_status_t OnSetFormat(uint64_t max_frame_size);
 
   // From mozart::BaseView. Called on a mouse or keyboard event.
-  virtual bool OnInputEvent(input::InputEvent event) override;
+  virtual bool OnInputEvent(fuchsia::ui::input::InputEvent event) override;
 
   // From mozart::BaseView. Called when the scene is "invalidated".
   // Invalidation should happen when the surfaces change, but not

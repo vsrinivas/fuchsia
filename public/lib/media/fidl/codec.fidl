@@ -198,7 +198,7 @@ struct CodecBufferConstraints {
   // support single-buffer mode on output.  Nearly all video decoders will set
   // this to false for their output.
   //
-  // All decoder inputs: Servers must support single-buffer mode on input.  The
+  // All decoder inputs: Servers must support single-buffer mode on fuchsia.ui.input.  The
   // client is responsible for managing the input buffer space such that filling
   // an input packet doesn't over-write any portion of an input packet already
   // in flight to the codec.
@@ -719,7 +719,7 @@ interface CodecEvents {
   // for the life of the Codec.
   //
   // The "max" values for buffer size and count are large enough to support the
-  // most demanding format the server supports on input.  The "recommended"
+  // most demanding format the server supports on fuchsia.ui.input.  The "recommended"
   // values should be workable for use with the input CodecFormatDetails
   // conveyed during Codec creation.  The "recommended" values are not
   // necessarily suitable if the client uses QueueInputFormatDetails() to

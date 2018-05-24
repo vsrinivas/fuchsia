@@ -40,7 +40,7 @@ class MediaPlayerTestView : public mozart::BaseView {
   void OnChildAttached(uint32_t child_key,
                        views_v1::ViewInfo child_view_info) override;
   void OnChildUnavailable(uint32_t child_key) override;
-  bool OnInputEvent(input::InputEvent event) override;
+  bool OnInputEvent(fuchsia::ui::input::InputEvent event) override;
 
   // Updates the player to read from the specified URL.
   void SetUrl(const std::string url_as_string);

@@ -23,7 +23,7 @@ class View : public mozart::BaseView {
   ~View() override;
 
   // mozart::BaseView.
-  virtual bool OnInputEvent(input::InputEvent event) override;
+  virtual bool OnInputEvent(fuchsia::ui::input::InputEvent event) override;
 
  private:
   // |BaseView|.

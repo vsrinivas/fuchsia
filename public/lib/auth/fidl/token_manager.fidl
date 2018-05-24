@@ -163,7 +163,7 @@ interface TokenManager {
   // Authorize() flow.
   //
   // This api invokes firebase auth's VerifyAssertion endpoint that takes an
-  // OAuth IdToken as the input. Audience is the intended recipient of the
+  // OAuth IdToken as the fuchsia.ui.input. Audience is the intended recipient of the
   // firebase id token.
   //
   // Firebase auth token is returned from cache if not expired, otherwise

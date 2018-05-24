@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include <input/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/command_line.h"
@@ -18,24 +18,24 @@ namespace ime {
 
 class ImeImpl;
 
-class App : public input::ImeService {
+class App : public fuchsia::ui::input::ImeService {
  public:
   explicit App(const fxl::CommandLine& command_line);
   ~App();
 
  private:
-  // |input::ImeService|
+  // |fuchsia::ui::input::ImeService|
   void GetInputMethodEditor(
-      input::KeyboardType keyboard_type, input::InputMethodAction action,
-      input::TextInputState initial_state,
-      fidl::InterfaceHandle<input::InputMethodEditorClient> client,
-      fidl::InterfaceRequest<input::InputMethodEditor> editor) override;
+      fuchsia::ui::input::KeyboardType keyboard_type, fuchsia::ui::input::InputMethodAction action,
+      fuchsia::ui::input::TextInputState initial_state,
+      fidl::InterfaceHandle<fuchsia::ui::input::InputMethodEditorClient> client,
+      fidl::InterfaceRequest<fuchsia::ui::input::InputMethodEditor> editor) override;
 
   void OnImeDisconnected(ImeImpl* ime);
 
   std::unique_ptr<component::ApplicationContext> application_context_;
   std::vector<std::unique_ptr<ImeImpl>> ime_;
-  fidl::BindingSet<input::ImeService> ime_bindings_;
+  fidl::BindingSet<fuchsia::ui::input::ImeService> ime_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

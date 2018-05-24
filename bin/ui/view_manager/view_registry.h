@@ -117,14 +117,14 @@ class ViewRegistry : public ViewInspector, public InputOwner {
                 const HasFocusCallback& callback) override;
   void GetSoftKeyboardContainer(
       views_v1_token::ViewToken view_token,
-      fidl::InterfaceRequest<input::SoftKeyboardContainer> container) override;
+      fidl::InterfaceRequest<fuchsia::ui::input::SoftKeyboardContainer> container) override;
   void GetImeService(
       views_v1_token::ViewToken view_token,
-      fidl::InterfaceRequest<input::ImeService> ime_service) override;
+      fidl::InterfaceRequest<fuchsia::ui::input::ImeService> ime_service) override;
 
   // Delivers an event to a view.
   void DeliverEvent(views_v1_token::ViewToken view_token,
-                    input::InputEvent event,
+                    fuchsia::ui::input::InputEvent event,
                     ViewInspector::OnEventDelivered callback) override;
 
   // INPUT CONNECTION CALLBACKS
@@ -189,12 +189,12 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   // INPUT CONNECTION
   void CreateInputConnection(
       views_v1_token::ViewToken view_token,
-      fidl::InterfaceRequest<input::InputConnection> request);
+      fidl::InterfaceRequest<fuchsia::ui::input::InputConnection> request);
 
   // INPUT DISPATCHER
   void CreateInputDispatcher(
       views_v1::ViewTreeToken view_tree_token,
-      fidl::InterfaceRequest<input::InputDispatcher> request);
+      fidl::InterfaceRequest<fuchsia::ui::input::InputDispatcher> request);
 
   // LOOKUP
 

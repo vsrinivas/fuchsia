@@ -9,7 +9,7 @@
 #include <memory>
 
 #include <fuchsia/math/cpp/fidl.h>
-#include <input/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <presentation/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 
@@ -85,7 +85,7 @@ class Presentation : private views_v1::ViewTreeListener,
       fidl::InterfaceRequest<presentation::Presentation> presentation_request,
       YieldCallback yield_callback, ShutdownCallback shutdown_callback);
 
-  void OnReport(uint32_t device_id, input::InputReport report);
+  void OnReport(uint32_t device_id, fuchsia::ui::input::InputReport report);
   void OnDeviceAdded(mozart::InputDeviceImpl* input_device);
   void OnDeviceRemoved(uint32_t device_id);
 
@@ -143,7 +143,7 @@ class Presentation : private views_v1::ViewTreeListener,
 
   // |Presentation|
   void CaptureKeyboardEventHACK(
-      input::KeyboardEvent event_to_capture,
+      fuchsia::ui::input::KeyboardEvent event_to_capture,
       fidl::InterfaceHandle<presentation::KeyboardCaptureListenerHACK> listener)
       override;
 
@@ -166,10 +166,10 @@ class Presentation : private views_v1::ViewTreeListener,
       fuchsia::ui::gfx::DisplayInfo display_info);
 
   // Returns true if the event was consumed and the scene is to be invalidated.
-  bool GlobalHooksHandleEvent(const input::InputEvent& event);
+  bool GlobalHooksHandleEvent(const fuchsia::ui::input::InputEvent& event);
 
-  void OnEvent(input::InputEvent event);
-  void OnSensorEvent(uint32_t device_id, input::InputReport event);
+  void OnEvent(fuchsia::ui::input::InputEvent event);
+  void OnSensorEvent(uint32_t device_id, fuchsia::ui::input::InputReport event);
 
   void PresentScene();
   void Shutdown();
@@ -224,7 +224,7 @@ class Presentation : private views_v1::ViewTreeListener,
   views_v1::ViewTreePtr tree_;
   views_v1::ViewContainerPtr tree_container_;
   views_v1::ViewContainerPtr root_container_;
-  input::InputDispatcherPtr input_dispatcher_;
+  fuchsia::ui::input::InputDispatcherPtr input_dispatcher_;
 
   // Rotates the display 180 degrees in response to events.
   DisplayRotater display_rotater_;
@@ -258,7 +258,7 @@ class Presentation : private views_v1::ViewTreeListener,
   // A registry of listeners who want to be notified when their keyboard
   // event happens.
   struct KeyboardCaptureItem {
-    input::KeyboardEvent event;
+    fuchsia::ui::input::KeyboardEvent event;
     presentation::KeyboardCaptureListenerHACKPtr listener;
   };
   std::vector<KeyboardCaptureItem> captured_keybindings_;

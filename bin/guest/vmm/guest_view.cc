@@ -110,13 +110,13 @@ void GuestView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentatio
 
 zx_status_t FromMozartButton(uint32_t event, machina::Button* button) {
   switch (event) {
-    case input::kMousePrimaryButton:
+    case fuchsia::ui::input::kMousePrimaryButton:
       *button = machina::Button::BTN_MOUSE_PRIMARY;
       return ZX_OK;
-    case input::kMouseSecondaryButton:
+    case fuchsia::ui::input::kMouseSecondaryButton:
       *button = machina::Button::BTN_MOUSE_SECONDARY;
       return ZX_OK;
-    case input::kMouseTertiaryButton:
+    case fuchsia::ui::input::kMouseTertiaryButton:
       *button = machina::Button::BTN_MOUSE_TERTIARY;
       return ZX_OK;
     default:
@@ -124,19 +124,19 @@ zx_status_t FromMozartButton(uint32_t event, machina::Button* button) {
   }
 }
 
-bool GuestView::OnInputEvent(input::InputEvent event) {
+bool GuestView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
   if (event.is_keyboard()) {
-    const input::KeyboardEvent& key_event = event.keyboard();
+    const fuchsia::ui::input::KeyboardEvent& key_event = event.keyboard();
 
     machina::InputEvent event;
     event.type = machina::InputEventType::KEYBOARD;
     event.key.hid_usage = key_event.hid_usage;
     switch (key_event.phase) {
-      case input::KeyboardEventPhase::PRESSED:
+      case fuchsia::ui::input::KeyboardEventPhase::PRESSED:
         event.key.state = machina::KeyState::PRESSED;
         break;
-      case input::KeyboardEventPhase::RELEASED:
-      case input::KeyboardEventPhase::CANCELLED:
+      case fuchsia::ui::input::KeyboardEventPhase::RELEASED:
+      case fuchsia::ui::input::KeyboardEventPhase::CANCELLED:
         event.key.state = machina::KeyState::RELEASED;
         break;
       default:
@@ -146,20 +146,20 @@ bool GuestView::OnInputEvent(input::InputEvent event) {
     input_dispatcher_->Keyboard()->PostEvent(event, true);
     return true;
   } else if (event.is_pointer()) {
-    const input::PointerEvent& pointer_event = event.pointer();
+    const fuchsia::ui::input::PointerEvent& pointer_event = event.pointer();
     if (!view_ready_) {
       // Ignore pointer events that come in before the view is ready.
       return true;
     }
     machina::InputEvent event;
     switch (pointer_event.phase) {
-      case input::PointerEventPhase::MOVE:
+      case fuchsia::ui::input::PointerEventPhase::MOVE:
         event.type = machina::InputEventType::POINTER;
         event.pointer.x = pointer_event.x * pointer_scale_x_;
         event.pointer.y = pointer_event.y * pointer_scale_y_;
         event.pointer.type = machina::PointerType::ABSOLUTE;
         break;
-      case input::PointerEventPhase::DOWN:
+      case fuchsia::ui::input::PointerEventPhase::DOWN:
         event.type = machina::InputEventType::BUTTON;
         event.button.state = machina::KeyState::PRESSED;
         if (FromMozartButton(pointer_event.buttons, &event.button.button) !=
@@ -168,7 +168,7 @@ bool GuestView::OnInputEvent(input::InputEvent event) {
           return true;
         }
         break;
-      case input::PointerEventPhase::UP:
+      case fuchsia::ui::input::PointerEventPhase::UP:
         event.type = machina::InputEventType::BUTTON;
         event.button.state = machina::KeyState::RELEASED;
         if (FromMozartButton(pointer_event.buttons, &event.button.button) !=

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <hid/usages.h>
-#include <input/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 
 #include "gtest/gtest.h"
 #include "lib/gtest/test_with_message_loop.h"
@@ -15,22 +15,22 @@ namespace test {
 
 using InputTest = ::gtest::TestWithMessageLoop;
 
-input::DeviceDescriptor GenerateKeyboardDescriptor() {
-  input::KeyboardDescriptorPtr keyboard = input::KeyboardDescriptor::New();
+fuchsia::ui::input::DeviceDescriptor GenerateKeyboardDescriptor() {
+  fuchsia::ui::input::KeyboardDescriptorPtr keyboard = fuchsia::ui::input::KeyboardDescriptor::New();
   keyboard->keys.resize(HID_USAGE_KEY_RIGHT_GUI - HID_USAGE_KEY_A);
   for (size_t index = HID_USAGE_KEY_A; index < HID_USAGE_KEY_RIGHT_GUI;
        ++index) {
     keyboard->keys->at(index - HID_USAGE_KEY_A) = index;
   }
-  input::DeviceDescriptor descriptor;
+  fuchsia::ui::input::DeviceDescriptor descriptor;
   descriptor.keyboard = std::move(keyboard);
   return descriptor;
 }
 
 TEST_F(InputTest, RegisterKeyboardTest) {
-  input::DeviceDescriptor descriptor = GenerateKeyboardDescriptor();
+  fuchsia::ui::input::DeviceDescriptor descriptor = GenerateKeyboardDescriptor();
 
-  input::InputDevicePtr input_device;
+  fuchsia::ui::input::InputDevicePtr input_device;
   uint32_t on_register_count = 0;
   mozart::test::MockInputDeviceRegistry registry(
       [&on_register_count](mozart::test::MockInputDevice* input_device) {
@@ -45,12 +45,12 @@ TEST_F(InputTest, RegisterKeyboardTest) {
 }
 
 TEST_F(InputTest, InputKeyboardTest) {
-  input::DeviceDescriptor descriptor = GenerateKeyboardDescriptor();
+  fuchsia::ui::input::DeviceDescriptor descriptor = GenerateKeyboardDescriptor();
 
-  input::InputDevicePtr input_device;
+  fuchsia::ui::input::InputDevicePtr input_device;
   uint32_t on_report_count = 0;
   mozart::test::MockInputDeviceRegistry registry(
-      nullptr, [&on_report_count](input::InputReport report) {
+      nullptr, [&on_report_count](fuchsia::ui::input::InputReport report) {
         EXPECT_TRUE(report.keyboard);
         EXPECT_EQ(HID_USAGE_KEY_A, report.keyboard->pressed_keys->at(0));
         on_report_count++;
@@ -59,10 +59,10 @@ TEST_F(InputTest, InputKeyboardTest) {
   registry.RegisterDevice(std::move(descriptor), input_device.NewRequest());
 
   // PRESSED
-  input::KeyboardReportPtr keyboard_report = input::KeyboardReport::New();
+  fuchsia::ui::input::KeyboardReportPtr keyboard_report = fuchsia::ui::input::KeyboardReport::New();
   keyboard_report->pressed_keys.push_back(HID_USAGE_KEY_A);
 
-  input::InputReport report;
+  fuchsia::ui::input::InputReport report;
   report.event_time = fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
   report.keyboard = std::move(keyboard_report);
   input_device->DispatchReport(std::move(report));

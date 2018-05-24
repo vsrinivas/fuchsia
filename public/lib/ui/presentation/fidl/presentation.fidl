@@ -5,18 +5,18 @@
 library presentation;
 
 using fuchsia.ui.gfx;
-using input;
+using fuchsia.ui.input;
 
 // |Presentation.CaptureKeyboardEvent| will consume this listener interface and
 // call |OnEvent| when the registered keyboard event occurs.
 interface KeyboardCaptureListenerHACK {
-  1: OnEvent(input.KeyboardEvent event);
+  1: OnEvent(fuchsia.ui.input.KeyboardEvent event);
 };
 
 // |Presentation.CapturePointerEvent| will consume this listener interface and
 // call |OnEvent| when a pointer event occurs.
 interface PointerCaptureListenerHACK {
-  1: OnPointerEvent(input.PointerEvent event);
+  1: OnPointerEvent(fuchsia.ui.input.PointerEvent event);
 };
 
 // Allows clients of Presenter.Present() to control a presentation.
@@ -47,7 +47,7 @@ interface Presentation {
   // OnEvent.
   // TODO: Figure out the feasibility of this feature and the best place to put
   // it.
-  6: CaptureKeyboardEventHACK(input.KeyboardEvent event_to_capture,
+  6: CaptureKeyboardEventHACK(fuchsia.ui.input.KeyboardEvent event_to_capture,
                               KeyboardCaptureListenerHACK listener);
 
   // This call exists so that device shell can capture pointer events.

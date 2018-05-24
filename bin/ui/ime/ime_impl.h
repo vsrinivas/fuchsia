@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include <input/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -17,29 +17,29 @@
 
 namespace ime {
 
-class ImeImpl : public input::InputMethodEditor {
+class ImeImpl : public fuchsia::ui::input::InputMethodEditor {
  public:
-  ImeImpl(input::KeyboardType keyboard_type, input::InputMethodAction action,
-          input::TextInputState initial_state,
-          fidl::InterfaceHandle<input::InputMethodEditorClient> client,
-          fidl::InterfaceRequest<input::InputMethodEditor> editor_request);
+  ImeImpl(fuchsia::ui::input::KeyboardType keyboard_type, fuchsia::ui::input::InputMethodAction action,
+          fuchsia::ui::input::TextInputState initial_state,
+          fidl::InterfaceHandle<fuchsia::ui::input::InputMethodEditorClient> client,
+          fidl::InterfaceRequest<fuchsia::ui::input::InputMethodEditor> editor_request);
   ~ImeImpl();
 
  private:
-  // |input::InputMethodEditor|
-  void SetKeyboardType(input::KeyboardType keyboard_type) override;
-  void SetState(input::TextInputState state) override;
-  void InjectInput(input::InputEvent event) override;
+  // |fuchsia::ui::input::InputMethodEditor|
+  void SetKeyboardType(fuchsia::ui::input::KeyboardType keyboard_type) override;
+  void SetState(fuchsia::ui::input::TextInputState state) override;
+  void InjectInput(fuchsia::ui::input::InputEvent event) override;
   void Show() override;
   void Hide() override;
 
   void OnEditorDied();
 
-  fidl::Binding<input::InputMethodEditor> editor_binding_;
-  input::InputMethodEditorClientPtr client_;
-  input::KeyboardType keyboard_type_;
-  input::InputMethodAction action_ = input::InputMethodAction::UNSPECIFIED;
-  input::TextInputState state_;
+  fidl::Binding<fuchsia::ui::input::InputMethodEditor> editor_binding_;
+  fuchsia::ui::input::InputMethodEditorClientPtr client_;
+  fuchsia::ui::input::KeyboardType keyboard_type_;
+  fuchsia::ui::input::InputMethodAction action_ = fuchsia::ui::input::InputMethodAction::UNSPECIFIED;
+  fuchsia::ui::input::TextInputState state_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ImeImpl);
 };

@@ -10,7 +10,7 @@ namespace ime {
 namespace test {
 
 TEST(TestInputState, DeleteBackward) {
-  input::TextInputState state;
+  fuchsia::ui::input::TextInputState state;
   auto& revision = state.revision;
   auto& base = state.selection.base;
   auto& extent = state.selection.extent;

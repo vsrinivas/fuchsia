@@ -5,37 +5,37 @@
 #ifndef LIB_UI_INPUT_INPUT_DEVICE_IMPL_H_
 #define LIB_UI_INPUT_INPUT_DEVICE_IMPL_H_
 
-#include <input/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 
 namespace mozart {
 
-class InputDeviceImpl : public input::InputDevice {
+class InputDeviceImpl : public fuchsia::ui::input::InputDevice {
  public:
   class Listener {
    public:
     virtual void OnDeviceDisconnected(InputDeviceImpl* input_device) = 0;
     virtual void OnReport(InputDeviceImpl* input_device,
-                          input::InputReport report) = 0;
+                          fuchsia::ui::input::InputReport report) = 0;
   };
 
   InputDeviceImpl(
       uint32_t id,
-      input::DeviceDescriptor descriptor,
-      fidl::InterfaceRequest<input::InputDevice> input_device_request,
+      fuchsia::ui::input::DeviceDescriptor descriptor,
+      fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request,
       Listener* listener);
   ~InputDeviceImpl();
 
   uint32_t id() { return id_; }
-  input::DeviceDescriptor* descriptor() { return &descriptor_; }
+  fuchsia::ui::input::DeviceDescriptor* descriptor() { return &descriptor_; }
 
  private:
   // |InputDevice|
-  void DispatchReport(input::InputReport report) override;
+  void DispatchReport(fuchsia::ui::input::InputReport report) override;
 
   uint32_t id_;
-  input::DeviceDescriptor descriptor_;
-  fidl::Binding<input::InputDevice> input_device_binding_;
+  fuchsia::ui::input::DeviceDescriptor descriptor_;
+  fidl::Binding<fuchsia::ui::input::InputDevice> input_device_binding_;
   Listener* listener_;
 };
 

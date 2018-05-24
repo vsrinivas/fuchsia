@@ -6,7 +6,7 @@
 
 #include <algorithm>
 
-#include <input/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include "garnet/bin/ui/ime/ime_impl.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fxl/logging.h"
@@ -18,8 +18,8 @@ App::App(const fxl::CommandLine& command_line)
     : application_context_(
           component::ApplicationContext::CreateFromStartupInfo()) {
   FXL_DCHECK(application_context_);
-  application_context_->outgoing().AddPublicService<input::ImeService>(
-      [this](fidl::InterfaceRequest<input::ImeService> request) {
+  application_context_->outgoing().AddPublicService<fuchsia::ui::input::ImeService>(
+      [this](fidl::InterfaceRequest<fuchsia::ui::input::ImeService> request) {
         ime_bindings_.AddBinding(this, std::move(request));
       });
 }
@@ -27,20 +27,20 @@ App::App(const fxl::CommandLine& command_line)
 App::~App() {}
 
 void App::GetInputMethodEditor(
-    input::KeyboardType keyboard_type, input::InputMethodAction action,
-    input::TextInputState initial_state,
-    fidl::InterfaceHandle<input::InputMethodEditorClient> client,
-    fidl::InterfaceRequest<input::InputMethodEditor> editor_request) {
+    fuchsia::ui::input::KeyboardType keyboard_type, fuchsia::ui::input::InputMethodAction action,
+    fuchsia::ui::input::TextInputState initial_state,
+    fidl::InterfaceHandle<fuchsia::ui::input::InputMethodEditorClient> client,
+    fidl::InterfaceRequest<fuchsia::ui::input::InputMethodEditor> editor_request) {
   FXL_DCHECK(client);
   FXL_DCHECK(editor_request.is_valid());
 
   FXL_VLOG(1)
       << "GetInputMethodEditor: "
       << ", keyboard_type="
-      << static_cast<std::underlying_type<input::KeyboardType>::type>(
+      << static_cast<std::underlying_type<fuchsia::ui::input::KeyboardType>::type>(
              keyboard_type)
       << ", action="
-      << static_cast<std::underlying_type<input::InputMethodAction>::type>(
+      << static_cast<std::underlying_type<fuchsia::ui::input::InputMethodAction>::type>(
              action)
       << ", initial_state=" << &initial_state;
 

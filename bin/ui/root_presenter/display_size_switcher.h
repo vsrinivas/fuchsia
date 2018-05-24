@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_UI_ROOT_PRESENTER_DISPLAY_SIZE_SWITCHER_H_
 #define GARNET_BIN_UI_ROOT_PRESENTER_DISPLAY_SIZE_SWITCHER_H_
 
-#include <input/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include "lib/fxl/macros.h"
 #include "lib/ui/scenic/client/resources.h"
 
@@ -29,7 +29,7 @@ class DisplaySizeSwitcher {
   // |presenter| is the root presenter.
   //
   // Returns true if the event was consumed and the scene is to be invalidated.
-  bool OnEvent(const input::InputEvent& event, Presentation* presenter);
+  bool OnEvent(const fuchsia::ui::input::InputEvent& event, Presentation* presenter);
 
  private:
   uint32_t current_display_size_index_ = 0;

@@ -4,7 +4,7 @@
 
 #include "lib/ui/input/device_state.h"
 
-#include <input/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
@@ -34,25 +34,25 @@ KeyboardState::KeyboardState(DeviceState* device_state)
   }
 }
 
-void KeyboardState::SendEvent(input::KeyboardEventPhase phase,
+void KeyboardState::SendEvent(fuchsia::ui::input::KeyboardEventPhase phase,
                               uint32_t key,
                               uint64_t modifiers,
                               uint64_t timestamp) {
-  input::InputEvent ev;
-  input::KeyboardEvent kb;
+  fuchsia::ui::input::InputEvent ev;
+  fuchsia::ui::input::KeyboardEvent kb;
   kb.phase = phase;
   kb.event_time = timestamp;
   kb.device_id = device_state_->device_id();
   kb.hid_usage = key;
   kb.code_point = hid_map_key(
-      key, modifiers & (input::kModifierShift | input::kModifierCapsLock),
+      key, modifiers & (fuchsia::ui::input::kModifierShift | fuchsia::ui::input::kModifierCapsLock),
       keymap_);
   kb.modifiers = modifiers;
   ev.set_keyboard(std::move(kb));
   device_state_->callback()(std::move(ev));
 }
 
-void KeyboardState::Update(input::InputReport input_report) {
+void KeyboardState::Update(fuchsia::ui::input::InputReport input_report) {
   FXL_DCHECK(input_report.keyboard);
 
   uint64_t now = input_report.event_time;
@@ -68,33 +68,33 @@ void KeyboardState::Update(input::InputReport input_report) {
       continue;
     }
 
-    SendEvent(input::KeyboardEventPhase::PRESSED, key, modifiers_, now);
+    SendEvent(fuchsia::ui::input::KeyboardEventPhase::PRESSED, key, modifiers_, now);
 
     uint64_t modifiers = modifiers_;
     switch (key) {
       case HID_USAGE_KEY_LEFT_SHIFT:
-        modifiers_ |= input::kModifierLeftShift;
+        modifiers_ |= fuchsia::ui::input::kModifierLeftShift;
         break;
       case HID_USAGE_KEY_RIGHT_SHIFT:
-        modifiers_ |= input::kModifierRightShift;
+        modifiers_ |= fuchsia::ui::input::kModifierRightShift;
         break;
       case HID_USAGE_KEY_LEFT_CTRL:
-        modifiers_ |= input::kModifierLeftControl;
+        modifiers_ |= fuchsia::ui::input::kModifierLeftControl;
         break;
       case HID_USAGE_KEY_RIGHT_CTRL:
-        modifiers_ |= input::kModifierRightControl;
+        modifiers_ |= fuchsia::ui::input::kModifierRightControl;
         break;
       case HID_USAGE_KEY_LEFT_ALT:
-        modifiers_ |= input::kModifierLeftAlt;
+        modifiers_ |= fuchsia::ui::input::kModifierLeftAlt;
         break;
       case HID_USAGE_KEY_RIGHT_ALT:
-        modifiers_ |= input::kModifierRightAlt;
+        modifiers_ |= fuchsia::ui::input::kModifierRightAlt;
         break;
       case HID_USAGE_KEY_LEFT_GUI:
-        modifiers_ |= input::kModifierLeftSuper;
+        modifiers_ |= fuchsia::ui::input::kModifierLeftSuper;
         break;
       case HID_USAGE_KEY_RIGHT_GUI:
-        modifiers_ |= input::kModifierRightSuper;
+        modifiers_ |= fuchsia::ui::input::kModifierRightSuper;
         break;
       default:
         break;
@@ -112,38 +112,38 @@ void KeyboardState::Update(input::InputReport input_report) {
   }
 
   for (uint32_t key : old_keys) {
-    SendEvent(input::KeyboardEventPhase::RELEASED, key, modifiers_, now);
+    SendEvent(fuchsia::ui::input::KeyboardEventPhase::RELEASED, key, modifiers_, now);
 
     switch (key) {
       case HID_USAGE_KEY_LEFT_SHIFT:
-        modifiers_ &= (~input::kModifierLeftShift);
+        modifiers_ &= (~fuchsia::ui::input::kModifierLeftShift);
         break;
       case HID_USAGE_KEY_RIGHT_SHIFT:
-        modifiers_ &= (~input::kModifierRightShift);
+        modifiers_ &= (~fuchsia::ui::input::kModifierRightShift);
         break;
       case HID_USAGE_KEY_LEFT_CTRL:
-        modifiers_ &= (~input::kModifierLeftControl);
+        modifiers_ &= (~fuchsia::ui::input::kModifierLeftControl);
         break;
       case HID_USAGE_KEY_RIGHT_CTRL:
-        modifiers_ &= (~input::kModifierRightControl);
+        modifiers_ &= (~fuchsia::ui::input::kModifierRightControl);
         break;
       case HID_USAGE_KEY_LEFT_ALT:
-        modifiers_ &= (~input::kModifierLeftAlt);
+        modifiers_ &= (~fuchsia::ui::input::kModifierLeftAlt);
         break;
       case HID_USAGE_KEY_RIGHT_ALT:
-        modifiers_ &= (~input::kModifierRightAlt);
+        modifiers_ &= (~fuchsia::ui::input::kModifierRightAlt);
         break;
       case HID_USAGE_KEY_LEFT_GUI:
-        modifiers_ &= (~input::kModifierLeftSuper);
+        modifiers_ &= (~fuchsia::ui::input::kModifierLeftSuper);
         break;
       case HID_USAGE_KEY_RIGHT_GUI:
-        modifiers_ &= (~input::kModifierRightSuper);
+        modifiers_ &= (~fuchsia::ui::input::kModifierRightSuper);
         break;
       case HID_USAGE_KEY_CAPSLOCK:
-        if (modifiers_ & input::kModifierCapsLock) {
-          modifiers_ &= (~input::kModifierCapsLock);
+        if (modifiers_ & fuchsia::ui::input::kModifierCapsLock) {
+          modifiers_ &= (~fuchsia::ui::input::kModifierCapsLock);
         } else {
-          modifiers_ |= input::kModifierCapsLock;
+          modifiers_ |= fuchsia::ui::input::kModifierCapsLock;
         }
         break;
       default:
@@ -164,7 +164,7 @@ void KeyboardState::Repeat(uint64_t sequence) {
   }
   uint64_t now = InputEventTimestampNow();
   for (uint32_t key : repeat_keys_) {
-    SendEvent(input::KeyboardEventPhase::REPEAT, key, modifiers_, now);
+    SendEvent(fuchsia::ui::input::KeyboardEventPhase::REPEAT, key, modifiers_, now);
   }
   ScheduleRepeat(sequence, kKeyRepeatFast);
 }
@@ -185,23 +185,23 @@ void MouseState::OnUnregistered() {}
 void MouseState::SendEvent(float rel_x,
                            float rel_y,
                            int64_t timestamp,
-                           input::PointerEventPhase phase,
+                           fuchsia::ui::input::PointerEventPhase phase,
                            uint32_t buttons) {
-  input::InputEvent ev;
-  input::PointerEvent pt;
+  fuchsia::ui::input::InputEvent ev;
+  fuchsia::ui::input::PointerEvent pt;
   pt.event_time = timestamp;
   pt.device_id = device_state_->device_id();
   pt.pointer_id = device_state_->device_id();
   pt.phase = phase;
   pt.buttons = buttons;
-  pt.type = input::PointerEventType::MOUSE;
+  pt.type = fuchsia::ui::input::PointerEventType::MOUSE;
   pt.x = rel_x;
   pt.y = rel_y;
   ev.set_pointer(std::move(pt));
   device_state_->callback()(std::move(ev));
 }
 
-void MouseState::Update(input::InputReport input_report,
+void MouseState::Update(fuchsia::ui::input::InputReport input_report,
                         fuchsia::math::Size display_size) {
   FXL_DCHECK(input_report.mouse);
   uint64_t now = input_report.event_time;
@@ -222,27 +222,27 @@ void MouseState::Update(input::InputReport input_report,
                               static_cast<float>(display_size.height)));
 
   if (!pressed && !released) {
-    SendEvent(position_.x, position_.y, now, input::PointerEventPhase::MOVE,
+    SendEvent(position_.x, position_.y, now, fuchsia::ui::input::PointerEventPhase::MOVE,
               buttons_);
   } else {
     if (pressed) {
-      SendEvent(position_.x, position_.y, now, input::PointerEventPhase::DOWN,
+      SendEvent(position_.x, position_.y, now, fuchsia::ui::input::PointerEventPhase::DOWN,
                 pressed);
     }
     if (released) {
-      SendEvent(position_.x, position_.y, now, input::PointerEventPhase::UP,
+      SendEvent(position_.x, position_.y, now, fuchsia::ui::input::PointerEventPhase::UP,
                 released);
     }
   }
 }
 
 void StylusState::SendEvent(int64_t timestamp,
-                            input::PointerEventPhase phase,
-                            input::PointerEventType type,
+                            fuchsia::ui::input::PointerEventPhase phase,
+                            fuchsia::ui::input::PointerEventType type,
                             float x,
                             float y,
                             uint32_t buttons) {
-  input::PointerEvent pt;
+  fuchsia::ui::input::PointerEvent pt;
   pt.event_time = timestamp;
   pt.device_id = device_state_->device_id();
   pt.pointer_id = 1;
@@ -254,16 +254,16 @@ void StylusState::SendEvent(int64_t timestamp,
 
   stylus_ = pt;
 
-  input::InputEvent ev;
+  fuchsia::ui::input::InputEvent ev;
   ev.set_pointer(std::move(pt));
   device_state_->callback()(std::move(ev));
 }
 
-void StylusState::Update(input::InputReport input_report,
+void StylusState::Update(fuchsia::ui::input::InputReport input_report,
                          fuchsia::math::Size display_size) {
   FXL_DCHECK(input_report.stylus);
 
-  input::StylusDescriptor* descriptor = device_state_->stylus_descriptor();
+  fuchsia::ui::input::StylusDescriptor* descriptor = device_state_->stylus_descriptor();
   FXL_DCHECK(descriptor);
 
   const bool previous_stylus_down = stylus_down_;
@@ -271,22 +271,22 @@ void StylusState::Update(input::InputReport input_report,
   stylus_down_ = input_report.stylus->is_in_contact;
   stylus_in_range_ = input_report.stylus->in_range;
 
-  input::PointerEventPhase phase = input::PointerEventPhase::DOWN;
+  fuchsia::ui::input::PointerEventPhase phase = fuchsia::ui::input::PointerEventPhase::DOWN;
   if (stylus_down_) {
     if (previous_stylus_down) {
-      phase = input::PointerEventPhase::MOVE;
+      phase = fuchsia::ui::input::PointerEventPhase::MOVE;
     }
   } else {
     if (previous_stylus_down) {
-      phase = input::PointerEventPhase::UP;
+      phase = fuchsia::ui::input::PointerEventPhase::UP;
     } else {
       if (stylus_in_range_ && !previous_stylus_in_range) {
         inverted_stylus_ = input_report.stylus->is_inverted;
-        phase = input::PointerEventPhase::ADD;
+        phase = fuchsia::ui::input::PointerEventPhase::ADD;
       } else if (!stylus_in_range_ && previous_stylus_in_range) {
-        phase = input::PointerEventPhase::REMOVE;
+        phase = fuchsia::ui::input::PointerEventPhase::REMOVE;
       } else if (stylus_in_range_) {
-        phase = input::PointerEventPhase::HOVER;
+        phase = fuchsia::ui::input::PointerEventPhase::HOVER;
       } else {
         return;
       }
@@ -295,10 +295,10 @@ void StylusState::Update(input::InputReport input_report,
 
   uint64_t now = input_report.event_time;
 
-  if (phase == input::PointerEventPhase::UP) {
+  if (phase == fuchsia::ui::input::PointerEventPhase::UP) {
     SendEvent(now, phase,
-              inverted_stylus_ ? input::PointerEventType::INVERTED_STYLUS
-                               : input::PointerEventType::STYLUS,
+              inverted_stylus_ ? fuchsia::ui::input::PointerEventType::INVERTED_STYLUS
+                               : fuchsia::ui::input::PointerEventType::STYLUS,
               stylus_.x, stylus_.y, stylus_.buttons);
   } else {
     // Quantize the value to [0, 1) based on the resolution.
@@ -323,45 +323,45 @@ void StylusState::Update(input::InputReport input_report,
         y_denominator;
 
     uint32_t buttons = 0;
-    if (input_report.stylus->pressed_buttons & input::kStylusBarrel) {
-      buttons |= input::kStylusPrimaryButton;
+    if (input_report.stylus->pressed_buttons & fuchsia::ui::input::kStylusBarrel) {
+      buttons |= fuchsia::ui::input::kStylusPrimaryButton;
     }
     SendEvent(now, phase,
-              inverted_stylus_ ? input::PointerEventType::INVERTED_STYLUS
-                               : input::PointerEventType::STYLUS,
+              inverted_stylus_ ? fuchsia::ui::input::PointerEventType::INVERTED_STYLUS
+                               : fuchsia::ui::input::PointerEventType::STYLUS,
               x, y, buttons);
   }
 }
 
-void TouchscreenState::Update(input::InputReport input_report,
+void TouchscreenState::Update(fuchsia::ui::input::InputReport input_report,
                               fuchsia::math::Size display_size) {
   FXL_DCHECK(input_report.touchscreen);
-  input::TouchscreenDescriptor* descriptor =
+  fuchsia::ui::input::TouchscreenDescriptor* descriptor =
       device_state_->touchscreen_descriptor();
   FXL_DCHECK(descriptor);
 
-  std::vector<input::PointerEvent> old_pointers = pointers_;
+  std::vector<fuchsia::ui::input::PointerEvent> old_pointers = pointers_;
   pointers_.clear();
 
   uint64_t now = input_report.event_time;
 
   for (auto& touch : *input_report.touchscreen->touches) {
-    input::InputEvent ev;
-    input::PointerEvent pt;
+    fuchsia::ui::input::InputEvent ev;
+    fuchsia::ui::input::PointerEvent pt;
     pt.event_time = now;
     pt.device_id = device_state_->device_id();
-    pt.phase = input::PointerEventPhase::DOWN;
+    pt.phase = fuchsia::ui::input::PointerEventPhase::DOWN;
     for (auto it = old_pointers.begin(); it != old_pointers.end(); ++it) {
       FXL_DCHECK(touch.finger_id >= 0);
       if (it->pointer_id == static_cast<uint32_t>(touch.finger_id)) {
-        pt.phase = input::PointerEventPhase::MOVE;
+        pt.phase = fuchsia::ui::input::PointerEventPhase::MOVE;
         old_pointers.erase(it);
         break;
       }
     }
 
     pt.pointer_id = touch.finger_id;
-    pt.type = input::PointerEventType::TOUCH;
+    pt.type = fuchsia::ui::input::PointerEventType::TOUCH;
 
     // Quantize the value to [0, 1) based on the resolution.
     float x_denominator =
@@ -392,10 +392,10 @@ void TouchscreenState::Update(input::InputReport input_report,
     pointers_.push_back(pt);
 
     // For now when we get DOWN we need to fake trigger ADD first.
-    if (pt.phase == input::PointerEventPhase::DOWN) {
-      input::InputEvent add_ev = fidl::Clone(ev);
-      input::PointerEvent add_pt = fidl::Clone(pt);
-      add_pt.phase = input::PointerEventPhase::ADD;
+    if (pt.phase == fuchsia::ui::input::PointerEventPhase::DOWN) {
+      fuchsia::ui::input::InputEvent add_ev = fidl::Clone(ev);
+      fuchsia::ui::input::PointerEvent add_pt = fidl::Clone(pt);
+      add_pt.phase = fuchsia::ui::input::PointerEventPhase::ADD;
       add_ev.set_pointer(std::move(add_pt));
       device_state_->callback()(std::move(add_ev));
     }
@@ -405,23 +405,23 @@ void TouchscreenState::Update(input::InputReport input_report,
   }
 
   for (const auto& pointer : old_pointers) {
-    input::InputEvent ev;
-    input::PointerEvent pt = fidl::Clone(pointer);
-    pt.phase = input::PointerEventPhase::UP;
+    fuchsia::ui::input::InputEvent ev;
+    fuchsia::ui::input::PointerEvent pt = fidl::Clone(pointer);
+    pt.phase = fuchsia::ui::input::PointerEventPhase::UP;
     pt.event_time = now;
     ev.set_pointer(std::move(pt));
     device_state_->callback()(std::move(ev));
 
-    ev = input::InputEvent();
+    ev = fuchsia::ui::input::InputEvent();
     pt = fidl::Clone(pointer);
-    pt.phase = input::PointerEventPhase::REMOVE;
+    pt.phase = fuchsia::ui::input::PointerEventPhase::REMOVE;
     pt.event_time = now;
     ev.set_pointer(std::move(pt));
     device_state_->callback()(std::move(ev));
   }
 }
 
-void SensorState::Update(input::InputReport input_report) {
+void SensorState::Update(fuchsia::ui::input::InputReport input_report) {
   FXL_DCHECK(input_report.sensor);
   FXL_DCHECK(device_state_->sensor_descriptor());
   // Every sensor report gets routed via unique device_id.
@@ -430,7 +430,7 @@ void SensorState::Update(input::InputReport input_report) {
 }
 
 DeviceState::DeviceState(uint32_t device_id,
-                         input::DeviceDescriptor* descriptor,
+                         fuchsia::ui::input::DeviceDescriptor* descriptor,
                          OnEventCallback callback)
     : device_id_(device_id),
       descriptor_(descriptor),
@@ -443,7 +443,7 @@ DeviceState::DeviceState(uint32_t device_id,
       sensor_callback_(nullptr) {}
 
 DeviceState::DeviceState(uint32_t device_id,
-                         input::DeviceDescriptor* descriptor,
+                         fuchsia::ui::input::DeviceDescriptor* descriptor,
                          OnSensorEventCallback callback)
     : device_id_(device_id),
       descriptor_(descriptor),
@@ -493,7 +493,7 @@ void DeviceState::OnUnregistered() {
   }
 }
 
-void DeviceState::Update(input::InputReport input_report,
+void DeviceState::Update(fuchsia::ui::input::InputReport input_report,
                          fuchsia::math::Size display_size) {
   if (input_report.keyboard && descriptor_->keyboard) {
     keyboard_.Update(std::move(input_report));

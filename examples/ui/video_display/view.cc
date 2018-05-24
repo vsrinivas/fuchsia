@@ -337,10 +337,10 @@ void View::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_inf
 
 // This function is also for debugging.
 // TODO(garratt): This never gets called.
-bool View::OnInputEvent(input::InputEvent event) {
+bool View::OnInputEvent(fuchsia::ui::input::InputEvent event) {
   if (event.is_keyboard()) {
     const auto& keyboard = event.keyboard();
-    if (keyboard.phase == input::KeyboardEventPhase::PRESSED) {
+    if (keyboard.phase == fuchsia::ui::input::KeyboardEventPhase::PRESSED) {
       FXL_LOG(INFO) << "Key Pressed = " << keyboard.hid_usage;
     }
     return true;

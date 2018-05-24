@@ -27,8 +27,8 @@ App::App(const fxl::CommandLine& command_line)
         presenter_bindings_.AddBinding(this, std::move(request));
       });
 
-  application_context_->outgoing().AddPublicService<input::InputDeviceRegistry>(
-      [this](fidl::InterfaceRequest<input::InputDeviceRegistry> request) {
+  application_context_->outgoing().AddPublicService<fuchsia::ui::input::InputDeviceRegistry>(
+      [this](fidl::InterfaceRequest<fuchsia::ui::input::InputDeviceRegistry> request) {
         input_receiver_bindings_.AddBinding(this, std::move(request));
       });
 }
@@ -138,8 +138,8 @@ void App::SwitchToPreviousPresentation() {
 }
 
 void App::RegisterDevice(
-    input::DeviceDescriptor descriptor,
-    fidl::InterfaceRequest<input::InputDevice> input_device_request) {
+    fuchsia::ui::input::DeviceDescriptor descriptor,
+    fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request) {
   uint32_t device_id = ++next_device_token_;
 
   FXL_VLOG(1) << "RegisterDevice " << device_id << " " << descriptor;
@@ -168,7 +168,7 @@ void App::OnDeviceDisconnected(mozart::InputDeviceImpl* input_device) {
 }
 
 void App::OnReport(mozart::InputDeviceImpl* input_device,
-                   input::InputReport report) {
+                   fuchsia::ui::input::InputReport report) {
   FXL_VLOG(2) << "OnReport from " << input_device->id() << " " << report;
   if (devices_by_id_.count(input_device->id()) == 0 ||
       presentations_.size() == 0)

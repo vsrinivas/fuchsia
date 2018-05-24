@@ -162,7 +162,7 @@ void Presentation::CreateViewTree(
   // Get view tree services.
   component::ServiceProviderPtr tree_service_provider;
   tree_->GetServiceProvider(tree_service_provider.NewRequest());
-  input_dispatcher_ = component::ConnectToService<input::InputDispatcher>(
+  input_dispatcher_ = component::ConnectToService<fuchsia::ui::input::InputDispatcher>(
       tree_service_provider.get());
   input_dispatcher_.set_error_handler([this] {
     // This isn't considered a fatal error right now since it is still useful
@@ -394,13 +394,13 @@ void Presentation::OnDeviceAdded(mozart::InputDeviceImpl* input_device) {
   std::unique_ptr<mozart::DeviceState> state;
   if (input_device->descriptor()->sensor) {
     mozart::OnSensorEventCallback callback = [this](uint32_t device_id,
-                                                    input::InputReport event) {
+                                                    fuchsia::ui::input::InputReport event) {
       OnSensorEvent(device_id, std::move(event));
     };
     state = std::make_unique<mozart::DeviceState>(
         input_device->id(), input_device->descriptor(), callback);
   } else {
-    mozart::OnEventCallback callback = [this](input::InputEvent event) {
+    mozart::OnEventCallback callback = [this](fuchsia::ui::input::InputEvent event) {
       OnEvent(std::move(event));
     };
     state = std::make_unique<mozart::DeviceState>(
@@ -428,7 +428,7 @@ void Presentation::OnDeviceRemoved(uint32_t device_id) {
 }
 
 void Presentation::OnReport(uint32_t device_id,
-                            input::InputReport input_report) {
+                            fuchsia::ui::input::InputReport input_report) {
   FXL_VLOG(2) << "OnReport device=" << device_id
               << ", count=" << device_states_by_id_.count(device_id)
               << ", report=" << input_report;
@@ -449,7 +449,7 @@ void Presentation::OnReport(uint32_t device_id,
 }
 
 void Presentation::CaptureKeyboardEventHACK(
-    input::KeyboardEvent event_to_capture,
+    fuchsia::ui::input::KeyboardEvent event_to_capture,
     fidl::InterfaceHandle<presentation::KeyboardCaptureListenerHACK>
         listener_handle) {
   presentation::KeyboardCaptureListenerHACKPtr listener;
@@ -509,7 +509,7 @@ void Presentation::SetPresentationModeListener(
   FXL_LOG(INFO) << "Presentation mode, now listening.";
 }
 
-bool Presentation::GlobalHooksHandleEvent(const input::InputEvent& event) {
+bool Presentation::GlobalHooksHandleEvent(const fuchsia::ui::input::InputEvent& event) {
   return display_rotater_.OnEvent(event, this) ||
          display_usage_switcher_.OnEvent(event, this) ||
          display_size_switcher_.OnEvent(event, this) ||
@@ -517,7 +517,7 @@ bool Presentation::GlobalHooksHandleEvent(const input::InputEvent& event) {
          presentation_switcher_.OnEvent(event, this);
 }
 
-void Presentation::OnEvent(input::InputEvent event) {
+void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
   FXL_VLOG(1) << "OnEvent " << event;
 
   bool invalidate = false;
@@ -531,9 +531,9 @@ void Presentation::OnEvent(input::InputEvent event) {
   // Process the event.
   if (dispatch_event) {
     if (event.is_pointer()) {
-      const input::PointerEvent& pointer = event.pointer();
+      const fuchsia::ui::input::PointerEvent& pointer = event.pointer();
 
-      if (pointer.type == input::PointerEventType::MOUSE) {
+      if (pointer.type == fuchsia::ui::input::PointerEventType::MOUSE) {
         if (cursors_.count(pointer.device_id) == 0) {
           cursors_.emplace(pointer.device_id, CursorState{});
         }
@@ -544,8 +544,8 @@ void Presentation::OnEvent(input::InputEvent event) {
         // TODO(jpoichet) for now don't show cursor when mouse is added until we
         // have a timer to hide it. Acer12 sleeve reports 2 mice but only one
         // will generate events for now.
-        if (pointer.phase != input::PointerEventPhase::ADD &&
-            pointer.phase != input::PointerEventPhase::REMOVE) {
+        if (pointer.phase != fuchsia::ui::input::PointerEventPhase::ADD &&
+            pointer.phase != fuchsia::ui::input::PointerEventPhase::REMOVE) {
           cursors_[pointer.device_id].visible = true;
         }
         invalidate = true;
@@ -559,7 +559,7 @@ void Presentation::OnEvent(input::InputEvent event) {
       }
 
       for (size_t i = 0; i < captured_pointerbindings_.size(); i++) {
-        input::PointerEvent clone;
+        fuchsia::ui::input::PointerEvent clone;
         fidl::Clone(pointer, &clone);
 
         // Adjust pointer origin with simulated screen offset.
@@ -578,13 +578,13 @@ void Presentation::OnEvent(input::InputEvent event) {
       }
 
     } else if (event.is_keyboard()) {
-      const input::KeyboardEvent& kbd = event.keyboard();
+      const fuchsia::ui::input::KeyboardEvent& kbd = event.keyboard();
 
       for (size_t i = 0; i < captured_keybindings_.size(); i++) {
         const auto& event = captured_keybindings_[i].event;
         if ((kbd.modifiers & event.modifiers) && (event.phase == kbd.phase) &&
             (event.code_point == kbd.code_point)) {
-          input::KeyboardEvent clone;
+          fuchsia::ui::input::KeyboardEvent clone;
           fidl::Clone(kbd, &clone);
           captured_keybindings_[i].listener->OnEvent(std::move(clone));
         }
@@ -600,7 +600,7 @@ void Presentation::OnEvent(input::InputEvent event) {
     input_dispatcher_->DispatchEvent(std::move(event));
 }
 
-void Presentation::OnSensorEvent(uint32_t device_id, input::InputReport event) {
+void Presentation::OnSensorEvent(uint32_t device_id, fuchsia::ui::input::InputReport event) {
   FXL_VLOG(2) << "OnSensorEvent(device_id=" << device_id << "): " << event;
 
   FXL_DCHECK(device_states_by_id_.count(device_id) > 0);
@@ -609,7 +609,7 @@ void Presentation::OnSensorEvent(uint32_t device_id, input::InputReport event) {
   FXL_DCHECK(device_states_by_id_[device_id].first->descriptor()->sensor.get());
 
   if (presentation_mode_listener_) {
-    const input::SensorDescriptor* sensor_descriptor =
+    const fuchsia::ui::input::SensorDescriptor* sensor_descriptor =
         device_states_by_id_[device_id].first->descriptor()->sensor.get();
     std::pair<bool, presentation::PresentationMode> update =
         presentation_mode_detector_->Update(*sensor_descriptor,

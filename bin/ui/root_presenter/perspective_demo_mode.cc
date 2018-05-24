@@ -30,12 +30,12 @@ constexpr float kPi = glm::pi<float>();
 
 PerspectiveDemoMode::PerspectiveDemoMode() {}
 
-bool PerspectiveDemoMode::OnEvent(const input::InputEvent& event,
+bool PerspectiveDemoMode::OnEvent(const fuchsia::ui::input::InputEvent& event,
                                   Presentation* presenter) {
   if (event.is_pointer()) {
-    const input::PointerEvent& pointer = event.pointer();
+    const fuchsia::ui::input::PointerEvent& pointer = event.pointer();
     if (animation_state_ == kTrackball) {
-      if (pointer.phase == input::PointerEventPhase::DOWN) {
+      if (pointer.phase == fuchsia::ui::input::PointerEventPhase::DOWN) {
         // If we're not already panning/rotating the camera, then start, but
         // only if the touch-down is in the bottom 10% of the screen.
         if (!trackball_pointer_down_ &&
@@ -45,7 +45,7 @@ bool PerspectiveDemoMode::OnEvent(const input::InputEvent& event,
           trackball_pointer_id_ = pointer.pointer_id;
           trackball_previous_x_ = pointer.x;
         }
-      } else if (pointer.phase == input::PointerEventPhase::MOVE) {
+      } else if (pointer.phase == fuchsia::ui::input::PointerEventPhase::MOVE) {
         // If the moved pointer is the one that is currently panning/rotating
         // the camera, then update the camera position.
         if (trackball_pointer_down_ &&
@@ -62,7 +62,7 @@ bool PerspectiveDemoMode::OnEvent(const input::InputEvent& event,
             camera_pan_ = 1.f;
           }
         }
-      } else if (pointer.phase == input::PointerEventPhase::UP) {
+      } else if (pointer.phase == fuchsia::ui::input::PointerEventPhase::UP) {
         // The pointer was released.
         if (trackball_pointer_down_ &&
             trackball_device_id_ == pointer.device_id &&
@@ -73,9 +73,9 @@ bool PerspectiveDemoMode::OnEvent(const input::InputEvent& event,
     }
   } else if (event.is_keyboard()) {
     // Alt-Backspace cycles through modes.
-    const input::KeyboardEvent& kbd = event.keyboard();
-    if ((kbd.modifiers & input::kModifierAlt) &&
-        kbd.phase == input::KeyboardEventPhase::PRESSED &&
+    const fuchsia::ui::input::KeyboardEvent& kbd = event.keyboard();
+    if ((kbd.modifiers & fuchsia::ui::input::kModifierAlt) &&
+        kbd.phase == fuchsia::ui::input::KeyboardEventPhase::PRESSED &&
         kbd.code_point == 0 && kbd.hid_usage == 42 &&
         !trackball_pointer_down_) {
       HandleAltBackspace(presenter);

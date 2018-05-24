@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
-  name = "input"
+  name = "fuchsia.ui.input"
 
   sdk_category = "partner"
 

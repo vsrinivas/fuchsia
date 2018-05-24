@@ -5,34 +5,34 @@
 #ifndef LIB_UI_TESTS_MOCKS_MOCK_INPUT_DEVICE_H_
 #define LIB_UI_TESTS_MOCKS_MOCK_INPUT_DEVICE_H_
 
-#include <input/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 
 namespace mozart {
 namespace test {
 
-using OnReportCallback = std::function<void(input::InputReport report)>;
+using OnReportCallback = std::function<void(fuchsia::ui::input::InputReport report)>;
 
-class MockInputDevice : public input::InputDevice {
+class MockInputDevice : public fuchsia::ui::input::InputDevice {
  public:
   MockInputDevice(
       uint32_t device_id,
-      input::DeviceDescriptor descriptor,
-      fidl::InterfaceRequest<input::InputDevice> input_device_request,
+      fuchsia::ui::input::DeviceDescriptor descriptor,
+      fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request,
       const OnReportCallback& on_report_callback);
   ~MockInputDevice();
 
   uint32_t id() { return id_; }
-  input::DeviceDescriptor* descriptor() { return &descriptor_; }
+  fuchsia::ui::input::DeviceDescriptor* descriptor() { return &descriptor_; }
 
   // |InputDevice|
-  void DispatchReport(input::InputReport report) override;
+  void DispatchReport(fuchsia::ui::input::InputReport report) override;
 
  private:
   uint32_t id_;
-  input::DeviceDescriptor descriptor_;
-  fidl::Binding<input::InputDevice> input_device_binding_;
+  fuchsia::ui::input::DeviceDescriptor descriptor_;
+  fidl::Binding<fuchsia::ui::input::InputDevice> input_device_binding_;
   OnReportCallback on_report_callback_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MockInputDevice);

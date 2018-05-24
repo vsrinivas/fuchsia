@@ -174,7 +174,7 @@ void View::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_inf
   InvalidateScene();
 }
 
-bool View::OnInputEvent(input::InputEvent event) {
+bool View::OnInputEvent(fuchsia::ui::input::InputEvent event) {
   if (animation_state_ == kChangingToFourCorners ||
       animation_state_ == kChangingToSwirling) {
     // Ignore input until transition is complete.
@@ -182,8 +182,8 @@ bool View::OnInputEvent(input::InputEvent event) {
   }
 
   if (event.is_pointer()) {
-    const input::PointerEvent& pointer = event.pointer();
-    if (pointer.phase == input::PointerEventPhase::DOWN) {
+    const fuchsia::ui::input::PointerEvent& pointer = event.pointer();
+    if (pointer.phase == fuchsia::ui::input::PointerEventPhase::DOWN) {
       switch (animation_state_) {
         case kFourCorners:
           animation_state_ = kChangingToSwirling;

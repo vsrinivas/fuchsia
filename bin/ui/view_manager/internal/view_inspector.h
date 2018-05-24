@@ -9,7 +9,7 @@
 #include <vector>
 
 #include <fuchsia/math/cpp/fidl.h>
-#include <input/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 #include <views_v1_token/cpp/fidl.h>
 
@@ -90,13 +90,13 @@ class ViewInspector {
   // in the associated ViewTree
   virtual void GetSoftKeyboardContainer(
       views_v1_token::ViewToken view_token,
-      fidl::InterfaceRequest<input::SoftKeyboardContainer> container) = 0;
+      fidl::InterfaceRequest<fuchsia::ui::input::SoftKeyboardContainer> container) = 0;
 
   // Retrieve the IME Service that is the closest to the ViewToken
   // in the associated ViewTree
   virtual void GetImeService(
       views_v1_token::ViewToken view_token,
-      fidl::InterfaceRequest<input::ImeService> ime_service) = 0;
+      fidl::InterfaceRequest<fuchsia::ui::input::ImeService> ime_service) = 0;
 };
 
 }  // namespace view_manager

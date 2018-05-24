@@ -8,7 +8,7 @@
 #include <memory>
 #include <unordered_map>
 
-#include <input/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/tests/mocks/mock_input_device.h"
@@ -18,7 +18,7 @@ namespace test {
 
 using OnDeviceCallback = std::function<void(MockInputDevice*)>;
 
-class MockInputDeviceRegistry : public input::InputDeviceRegistry {
+class MockInputDeviceRegistry : public fuchsia::ui::input::InputDeviceRegistry {
  public:
   MockInputDeviceRegistry(OnDeviceCallback on_device_callback,
                           OnReportCallback on_report_callback);
@@ -26,8 +26,8 @@ class MockInputDeviceRegistry : public input::InputDeviceRegistry {
 
   // |InputDeviceRegistry|:
   void RegisterDevice(
-      input::DeviceDescriptor descriptor,
-      fidl::InterfaceRequest<input::InputDevice> input_device_request) override;
+      fuchsia::ui::input::DeviceDescriptor descriptor,
+      fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request) override;
 
  private:
   OnDeviceCallback on_device_callback_;

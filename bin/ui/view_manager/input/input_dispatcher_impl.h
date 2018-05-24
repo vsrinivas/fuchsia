@@ -10,7 +10,7 @@
 #include <utility>
 
 #include <fuchsia/math/cpp/fidl.h>
-#include <input/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 #include "garnet/bin/ui/view_manager/internal/view_inspector.h"
 #include "lib/fidl/cpp/binding.h"
@@ -25,28 +25,28 @@ class InputOwner;
 
 // InputDispatcher implementation.
 // Binds incoming requests to the relevant view token.
-class InputDispatcherImpl : public input::InputDispatcher {
+class InputDispatcherImpl : public fuchsia::ui::input::InputDispatcher {
  public:
   InputDispatcherImpl(ViewInspector* inspector, InputOwner* owner,
                       views_v1::ViewTreeToken view_tree_token,
-                      fidl::InterfaceRequest<input::InputDispatcher> request);
+                      fidl::InterfaceRequest<fuchsia::ui::input::InputDispatcher> request);
   ~InputDispatcherImpl() override;
 
   views_v1::ViewTreeToken view_tree_token() const { return view_tree_token_; }
 
-  // |input::InputDispatcher|
-  void DispatchEvent(input::InputEvent event) override;
+  // |fuchsia::ui::input::InputDispatcher|
+  void DispatchEvent(fuchsia::ui::input::InputEvent event) override;
 
  private:
   void ProcessNextEvent();
   // Used for located events (touch, stylus)
-  void DeliverEvent(input::InputEvent event);
+  void DeliverEvent(fuchsia::ui::input::InputEvent event);
   void DeliverEvent(uint64_t event_path_propagation_id, size_t index,
-                    input::InputEvent event);
+                    fuchsia::ui::input::InputEvent event);
   // Used for key events (keyboard)
   // |propagation_index| is the current index in the |focus_chain|
   void DeliverKeyEvent(std::unique_ptr<FocusChain> focus_chain,
-                       uint64_t propagation_index, input::InputEvent event);
+                       uint64_t propagation_index, fuchsia::ui::input::InputEvent event);
   // Used to post as task and schedule the next call to |DispatchEvent|
   void PopAndScheduleNextEvent();
 
@@ -59,7 +59,7 @@ class InputDispatcherImpl : public input::InputDispatcher {
   views_v1::ViewTreeToken view_tree_token_;
 
   // TODO(jeffbrown): Replace this with a proper pipeline.
-  std::queue<input::InputEvent> pending_events_;
+  std::queue<fuchsia::ui::input::InputEvent> pending_events_;
 
   std::vector<ViewHit> event_path_;
   uint64_t event_path_propagation_id_ = 0;
@@ -70,7 +70,7 @@ class InputDispatcherImpl : public input::InputDispatcher {
   // a target that can receive this gesture.
   std::set<std::pair<uint32_t, uint32_t>> uncaptured_pointers;
 
-  fidl::Binding<input::InputDispatcher> binding_;
+  fidl::Binding<fuchsia::ui::input::InputDispatcher> binding_;
 
   std::unique_ptr<FocusChain> active_focus_chain_;
 

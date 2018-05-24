@@ -23,7 +23,7 @@ struct InputReader::DeviceInfo {
       waiter;
 };
 
-InputReader::InputReader(input::InputDeviceRegistry* registry,
+InputReader::InputReader(fuchsia::ui::input::InputDeviceRegistry* registry,
                          bool ignore_console)
     : registry_(registry), ignore_console_(ignore_console) {
   FXL_CHECK(registry_);

@@ -6,7 +6,7 @@
 #define LIB_UI_VIEW_FRAMEWORK_BASE_VIEW_H_
 
 #include <component/cpp/fidl.h>
-#include <input/cpp/fidl.h>
+#include <fuchsia/ui/input/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 
 #include <memory>
@@ -29,7 +29,7 @@ namespace mozart {
 // This class is merely intended to make the simple apps easier to write.
 class BaseView : private views_v1::ViewListener,
                  private views_v1::ViewContainerListener,
-                 private input::InputListener {
+                 private fuchsia::ui::input::InputListener {
  public:
   BaseView(views_v1::ViewManagerPtr view_manager,
            fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
@@ -96,7 +96,7 @@ class BaseView : private views_v1::ViewListener,
   const fuchsia::ui::gfx::Metrics& metrics() const { return adjusted_metrics_; }
 
   // Gets the input connection.
-  input::InputConnection* input_connection() { return input_connection_.get(); }
+  fuchsia::ui::input::InputConnection* input_connection() { return input_connection_.get(); }
 
   // Sets a callback which is invoked when the view's owner releases the
   // view causing the view manager to unregister it.
@@ -135,7 +135,7 @@ class BaseView : private views_v1::ViewListener,
   // should continue propagating to other views which may handle it themselves.
   //
   // The default implementation returns false.
-  virtual bool OnInputEvent(input::InputEvent event);
+  virtual bool OnInputEvent(fuchsia::ui::input::InputEvent event);
 
   // Called when a child is attached.
   //
@@ -161,7 +161,7 @@ class BaseView : private views_v1::ViewListener,
                           OnChildUnavailableCallback callback) override;
 
   // |InputListener|:
-  void OnEvent(input::InputEvent event, OnEventCallback callback) override;
+  void OnEvent(fuchsia::ui::input::InputEvent event, OnEventCallback callback) override;
 
   void PresentScene(zx_time_t presentation_time);
   void HandleSessionEvents(fidl::VectorPtr<fuchsia::ui::scenic::Event> events);
@@ -171,12 +171,12 @@ class BaseView : private views_v1::ViewListener,
   fidl::Binding<views_v1::ViewListener> view_listener_binding_;
   fidl::Binding<views_v1::ViewContainerListener>
       view_container_listener_binding_;
-  fidl::Binding<input::InputListener> input_listener_binding_;
+  fidl::Binding<fuchsia::ui::input::InputListener> input_listener_binding_;
 
   views_v1::ViewPtr view_;
   component::ServiceProviderPtr view_service_provider_;
   views_v1::ViewContainerPtr view_container_;
-  input::InputConnectionPtr input_connection_;
+  fuchsia::ui::input::InputConnectionPtr input_connection_;
   views_v1::ViewProperties properties_;
   fuchsia::math::SizeF logical_size_;
   fuchsia::math::Size physical_size_;

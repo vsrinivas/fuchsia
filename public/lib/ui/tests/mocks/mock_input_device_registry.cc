@@ -16,8 +16,8 @@ MockInputDeviceRegistry::MockInputDeviceRegistry(
 MockInputDeviceRegistry::~MockInputDeviceRegistry() {}
 
 void MockInputDeviceRegistry::RegisterDevice(
-    input::DeviceDescriptor descriptor,
-    fidl::InterfaceRequest<input::InputDevice> input_device_request) {
+    fuchsia::ui::input::DeviceDescriptor descriptor,
+    fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request) {
   uint32_t device_id = ++next_device_token_;
 
   std::unique_ptr<MockInputDevice> input_device =
