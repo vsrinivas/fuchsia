@@ -9,11 +9,12 @@ interface Control {
   // simple no-op that can be used to test the connection
   1: DoTest(int32 input) -> (string output);
 
-  // Add a source at the provided URL. The rate limit indicates the minimum
-  // interval between requests to the source expressed in seconds. A limit of
-  // zero means there is no limit. The pub key is a hex-encoded ED25519 public key.
-  // This key must match one of the trusted keys known to the system.
-  2: AddSrc(string url, int32 rateLimit, string pubKey) -> (bool res);
+  // Add a source at the provided URL. The rate limit indicates the number of
+  // requests per ratePeriod, expressed in millisconds, that are allowed. A limit
+  // or period of zero means there is no limit. The pub key is a hex-encoded
+  // ED25519 public key. This key must match one of the trusted keys known to the
+  // system.
+  2: AddSrc(string url, int32 rateLimit, int32 ratePeriod, string pubKey) -> (bool res);
 
   // Remove a source previously provided to AddSrc. Sources that were bundled
   // when the system was built can not be removed.

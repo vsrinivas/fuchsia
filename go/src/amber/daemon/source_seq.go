@@ -42,7 +42,7 @@ func (k *SourceKeeper) AvailableUpdates(pkgs []*pkg.Package) (map[pkg.Package]pk
 	slicePt := len(k.hist)
 	interval := k.CheckInterval()
 	for idx, val := range k.hist {
-		if time.Since(val) < interval {
+		if interval == 0 || time.Since(val) < interval {
 			slicePt = idx
 			break
 		}
@@ -55,7 +55,7 @@ func (k *SourceKeeper) AvailableUpdates(pkgs []*pkg.Package) (map[pkg.Package]pk
 		k.hist = nhist
 	}
 
-	if uint64(len(k.hist)+1) > k.CheckLimit() {
+	if k.CheckLimit() > 0 && uint64(len(k.hist)+1) > k.CheckLimit() {
 		log.Println("Query rate exceeded")
 		return nil, ErrRateExceeded
 	}

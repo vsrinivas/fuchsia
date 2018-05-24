@@ -81,8 +81,16 @@ func NeedsInit(s tuf.LocalStore) (bool, error) {
 }
 
 func InitClient(c *tuf.Client, keys []*tuf_data.Key, clock *TickGenerator) error {
+	var err error = nil
 	for {
-		clock.AwaitTick()
+		if !clock.AwaitTick() {
+			if err != nil {
+				return RemoteStoreError{fmt.Errorf(
+					"Timed out trying to initialize, error from last attempt: %s", err)}
+			} else {
+				return RemoteStoreError{fmt.Errorf("Timed out trying to initialize")}
+			}
+		}
 
 		err := c.Init(keys, len(keys))
 		if err == nil {

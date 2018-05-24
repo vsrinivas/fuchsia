@@ -56,9 +56,11 @@ func (t *TickGenerator) Run() {
 			t.GenerateTick()
 			s = t.delay(s)
 			if s < 0 {
+				close(t.tick)
 				return
 			}
 		case <-t.finish:
+			close(t.tick)
 			return
 		}
 	}
@@ -66,8 +68,9 @@ func (t *TickGenerator) Run() {
 
 // AwaitTick returns when something calls GenerateTick or the next iteration
 // of the run loop executes.
-func (t *TickGenerator) AwaitTick() {
-	<-t.tick
+func (t *TickGenerator) AwaitTick() bool {
+	_, ok := <-t.tick
+	return ok
 }
 
 // GenerateTick generates a new tick. If a tick is already pending another tick

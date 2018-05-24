@@ -35,8 +35,8 @@ Commands
 
     add_src   - add a source to the list we can use
         -s: location of the package source
-        -k: root key for the source, either a file or http[s] URL or the key
-            itself
+        -k: root key for the source, either a file, http[s] URL or the hex
+            string of the key itself
         -h: hash of the key, required regardless of how the key is supplied
         -l: minimum allowable time between requests to the source, in seconds
 

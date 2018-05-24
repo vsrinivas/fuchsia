@@ -5,9 +5,12 @@
 package ipcserver
 
 import (
+	"encoding/hex"
 	"fmt"
+	"io/ioutil"
 	"strings"
 	"sync"
+	"time"
 
 	"fidl/bindings"
 
@@ -19,6 +22,8 @@ import (
 	"amber/source"
 
 	"syscall/zx"
+
+	tuf_data "github.com/flynn/go-tuf/data"
 )
 
 type ControlSrvr struct {
@@ -57,7 +62,39 @@ func (c *ControlSrvr) DoTest(in int32) (out string, err error) {
 	return r, nil
 }
 
-func (c *ControlSrvr) AddSrc(url string, rateLimit int32, pubKey string) (bool, error) {
+func (c *ControlSrvr) AddSrc(url string, rateLimit, ratePeriod int32, pubKey string) (bool, error) {
+	keyHex, err := hex.DecodeString(pubKey)
+	if err != nil {
+		return false, err
+	}
+
+	key := tuf_data.Key{Type: "ed25519", Value: tuf_data.KeyValue{tuf_data.HexBytes(keyHex)}}
+	dir, err := ioutil.TempDir("", "amber")
+	if err != nil {
+		return false, err
+	}
+
+	// how long we'll try to connect to the source for
+	limit := time.Now().Add(time.Second * 30)
+	tickGen := source.NewTickGenerator(func(d time.Duration) time.Duration {
+		if time.Now().After(limit) {
+			return -1
+		}
+		return source.InitBackoff(d)
+	})
+	go tickGen.Run()
+
+	client, _, err := source.InitNewTUFClient(url, dir, []*tuf_data.Key{&key}, tickGen)
+	if err != nil {
+		return false, err
+	}
+
+	src := source.TUFSource{
+		Client:   client,
+		Interval: time.Millisecond * time.Duration(ratePeriod),
+		Limit:    uint64(rateLimit),
+	}
+	c.daemon.AddSource(&src)
 	return true, nil
 }
 
