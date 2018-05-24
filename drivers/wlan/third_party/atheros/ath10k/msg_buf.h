@@ -55,8 +55,8 @@ enum ath10k_msg_type {
 #undef MSG
 
 enum ath10k_tx_flags {
-    ATH10K_TX_BUF_PROTECTED = BIT(0),
-    ATH10K_TX_BUF_QOS = BIT(1),
+    ATH10K_TX_BUF_PROTECTED = (1 << 0),
+    ATH10K_TX_BUF_QOS =       (1 << 1),
 };
 
 struct ath10k_msg_buf {

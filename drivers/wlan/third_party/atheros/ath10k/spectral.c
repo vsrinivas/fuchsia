@@ -66,7 +66,7 @@ static inline size_t ath10k_spectral_fix_bin_size(struct ath10k* ar,
      * radar detection purpose. Strip last 'm' bytes to make bin size
      * as a valid one. 'm' can take possible values of 4, 12.
      */
-    if (!is_power_of_2(bin_len)) {
+    if (!IS_POW2(bin_len)) {
         bin_len -= ar->hw_params.spectral_bin_discard;
     }
 
@@ -325,7 +325,7 @@ static ssize_t write_file_spec_scan_ctl(struct file* file,
     ssize_t len;
     int res;
 
-    len = min(count, sizeof(buf) - 1);
+    len = MIN(count, sizeof(buf) - 1);
     if (copy_from_user(buf, user_buf, len)) {
         return -EFAULT;
     }
@@ -405,7 +405,7 @@ static ssize_t write_file_spectral_count(struct file* file,
     char buf[32];
     ssize_t len;
 
-    len = min(count, sizeof(buf) - 1);
+    len = MIN(count, sizeof(buf) - 1);
     if (copy_from_user(buf, user_buf, len)) {
         return -EFAULT;
     }
@@ -462,7 +462,7 @@ static ssize_t write_file_spectral_bins(struct file* file,
     char buf[32];
     ssize_t len;
 
-    len = min(count, sizeof(buf) - 1);
+    len = MIN(count, sizeof(buf) - 1);
     if (copy_from_user(buf, user_buf, len)) {
         return -EFAULT;
     }
@@ -476,12 +476,12 @@ static ssize_t write_file_spectral_bins(struct file* file,
         return -EINVAL;
     }
 
-    if (!is_power_of_2(val)) {
+    if (!IS_POW2(val)) {
         return -EINVAL;
     }
 
     mtx_lock(&ar->conf_mutex);
-    ar->spectral.config.fft_size = ilog2(val);
+    ar->spectral.config.fft_size = LOG2(val);
     ar->spectral.config.fft_size += WMI_SPECTRAL_BIN_SCALE_DEFAULT;
     mtx_unlock(&ar->conf_mutex);
 

@@ -77,7 +77,7 @@ static int ath10k_wow_cleanup(struct ath10k* ar) {
 static int ath10k_vif_wow_set_wakeups(struct ath10k_vif* arvif,
                                       struct cfg80211_wowlan* wowlan) {
     int ret, i;
-    unsigned long wow_mask = 0;
+    BITARR(wow_mask, WOW_EVENT_MAX) = { 0 };
     struct ath10k* ar = arvif->ar;
     const struct cfg80211_pkt_pattern* patterns = wowlan->patterns;
     int pattern_id = 0;
@@ -85,27 +85,27 @@ static int ath10k_vif_wow_set_wakeups(struct ath10k_vif* arvif,
     /* Setup requested WOW features */
     switch (arvif->vdev_type) {
     case WMI_VDEV_TYPE_IBSS:
-        __set_bit(WOW_BEACON_EVENT, &wow_mask);
+        BITARR_SET(&wow_mask, WOW_BEACON_EVENT);
     /* fall through */
     case WMI_VDEV_TYPE_AP:
-        __set_bit(WOW_DEAUTH_RECVD_EVENT, &wow_mask);
-        __set_bit(WOW_DISASSOC_RECVD_EVENT, &wow_mask);
-        __set_bit(WOW_PROBE_REQ_WPS_IE_EVENT, &wow_mask);
-        __set_bit(WOW_AUTH_REQ_EVENT, &wow_mask);
-        __set_bit(WOW_ASSOC_REQ_EVENT, &wow_mask);
-        __set_bit(WOW_HTT_EVENT, &wow_mask);
-        __set_bit(WOW_RA_MATCH_EVENT, &wow_mask);
+        BITARR_SET(&wow_mask, WOW_DEAUTH_RECVD_EVENT);
+        BITARR_SET(&wow_mask, WOW_DISASSOC_RECVD_EVENT);
+        BITARR_SET(&wow_mask, WOW_PROBE_REQ_WPS_IE_EVENT);
+        BITARR_SET(&wow_mask, WOW_AUTH_REQ_EVENT);
+        BITARR_SET(&wow_mask, WOW_ASSOC_REQ_EVENT);
+        BITARR_SET(&wow_mask, WOW_HTT_EVENT);
+        BITARR_SET(&wow_mask, WOW_RA_MATCH_EVENT);
         break;
     case WMI_VDEV_TYPE_STA:
         if (wowlan->disconnect) {
-            __set_bit(WOW_DEAUTH_RECVD_EVENT, &wow_mask);
-            __set_bit(WOW_DISASSOC_RECVD_EVENT, &wow_mask);
-            __set_bit(WOW_BMISS_EVENT, &wow_mask);
-            __set_bit(WOW_CSA_IE_EVENT, &wow_mask);
+            BITARR_SET(&wow_mask, WOW_DEAUTH_RECVD_EVENT);
+            BITARR_SET(&wow_mask, WOW_DISASSOC_RECVD_EVENT);
+            BITARR_SET(&wow_mask, WOW_BMISS_EVENT);
+            BITARR_SET(&wow_mask, WOW_CSA_IE_EVENT);
         }
 
         if (wowlan->magic_pkt) {
-            __set_bit(WOW_MAGIC_PKT_RECVD_EVENT, &wow_mask);
+            BITARR_SET(&wow_mask, WOW_MAGIC_PKT_RECVD_EVENT);
         }
         break;
     default:
@@ -140,11 +140,11 @@ static int ath10k_vif_wow_set_wakeups(struct ath10k_vif* arvif,
         }
 
         pattern_id++;
-        __set_bit(WOW_PATTERN_MATCH_EVENT, &wow_mask);
+        BITARR_SET(&wow_mask, WOW_PATTERN_MATCH_EVENT);
     }
 
     for (i = 0; i < WOW_EVENT_MAX; i++) {
-        if (!test_bit(i, &wow_mask)) {
+        if (!BITARR_TEST(&wow_mask, i)) {
             continue;
         }
         ret = ath10k_wmi_wow_add_wakeup_event(ar, arvif->vdev_id, i, 1);
@@ -227,8 +227,8 @@ int ath10k_wow_op_suspend(struct ieee80211_hw* hw,
 
     mtx_lock(&ar->conf_mutex);
 
-    if (WARN_ON(!test_bit(ATH10K_FW_FEATURE_WOWLAN_SUPPORT,
-                          ar->running_fw->fw_file.fw_features))) {
+    if (COND_WARN(!BITARR_TEST(ar->running_fw->fw_file.fw_features,
+                               ATH10K_FW_FEATURE_WOWLAN_SUPPORT))) {
         ret = 1;
         goto exit;
     }
@@ -278,8 +278,8 @@ int ath10k_wow_op_resume(struct ieee80211_hw* hw) {
 
     mtx_lock(&ar->conf_mutex);
 
-    if (WARN_ON(!test_bit(ATH10K_FW_FEATURE_WOWLAN_SUPPORT,
-                          ar->running_fw->fw_file.fw_features))) {
+    if (COND_WARN(!BITARR_TEST(ar->running_fw->fw_file.fw_features,
+                               ATH10K_FW_FEATURE_WOWLAN_SUPPORT))) {
         ret = 1;
         goto exit;
     }
@@ -319,12 +319,11 @@ exit:
 }
 
 int ath10k_wow_init(struct ath10k* ar) {
-    if (!test_bit(ATH10K_FW_FEATURE_WOWLAN_SUPPORT,
-                  ar->running_fw->fw_file.fw_features)) {
+    if (!BITARR_TEST(ar->running_fw->fw_file.fw_features, ATH10K_FW_FEATURE_WOWLAN_SUPPORT)) {
         return 0;
     }
 
-    if (WARN_ON(!test_bit(WMI_SERVICE_WOW, ar->wmi.svc_map))) {
+    if (COND_WARN(!BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_WOW))) {
         return -EINVAL;
     }
 

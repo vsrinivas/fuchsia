@@ -26,10 +26,10 @@ static inline uint32_t ath10k_frm_hdr_len(const void* buf, size_t len) {
 
     /* In some rare cases (e.g. fcs error) device reports frame buffer
      * shorter than what frame header implies (e.g. len = 0). The buffer
-     * can still be accessed so do a simple min() to guarantee caller
+     * can still be accessed so do a simple MIN() to guarantee caller
      * doesn't get value greater than len.
      */
-    return min_t(uint32_t, len, ieee80211_hdrlen(hdr->frame_control));
+    return MIN_T(uint32_t, len, ieee80211_hdrlen(hdr->frame_control));
 }
 #endif
 
@@ -63,10 +63,10 @@ DECLARE_EVENT_CLASS(ath10k_log_event,
                     TP_fast_assign(
                         __assign_str(device, dev_name(ar->dev));
                         __assign_str(driver, dev_driver_string(ar->dev));
-                        WARN_ON_ONCE(vsnprintf(__get_dynamic_array(msg),
-                                     ATH10K_MSG_MAX,
-                                     vaf->fmt,
-                                     *vaf->va) >= ATH10K_MSG_MAX);
+                        COND_WARN_ONCE(vsnprintf(__get_dynamic_array(msg),
+                                       ATH10K_MSG_MAX,
+                                       vaf->fmt,
+                                       *vaf->va) >= ATH10K_MSG_MAX);
                     ),
                     TP_printk(
                         "%s %s %s",
@@ -104,10 +104,10 @@ TRACE_EVENT(ath10k_log_dbg,
                 __assign_str(device, dev_name(ar->dev));
                 __assign_str(driver, dev_driver_string(ar->dev));
                 __entry->level = level;
-                WARN_ON_ONCE(vsnprintf(__get_dynamic_array(msg),
-                                       ATH10K_MSG_MAX,
-                                       vaf->fmt,
-                                       *vaf->va) >= ATH10K_MSG_MAX);
+                COND_WARN_ONCE(vsnprintf(__get_dynamic_array(msg),
+                                         ATH10K_MSG_MAX,
+                                         vaf->fmt,
+                                         *vaf->va) >= ATH10K_MSG_MAX);
             ),
             TP_printk(
                 "%s %s %s",

@@ -233,7 +233,7 @@ static int ath10k_tm_cmd_utf_start(struct ath10k* ar, struct nlattr* tb[]) {
         goto err;
     }
 
-    if (WARN_ON(ar->testmode.utf_mode_fw.fw_file.firmware != NULL)) {
+    if (COND_WARN(ar->testmode.utf_mode_fw.fw_file.firmware != NULL)) {
         /* utf image is already downloaded, it shouldn't be */
         ret = -EEXIST;
         goto err;

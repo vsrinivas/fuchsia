@@ -403,7 +403,7 @@ static inline char* wmi_service_name(int service_id) {
 #define SVCMAP(x, y, len) \
     do { \
         if (WMI_SERVICE_IS_ENABLED((in), (x), (len))) \
-            __set_bit(y, out); \
+            BITARR_SET(out, y); \
     } while (0)
 
 static inline void wmi_10x_svc_map(const uint32_t* in, unsigned long* out,
@@ -2452,11 +2452,11 @@ struct wmi_resource_config_10x {
 } __PACKED;
 
 enum wmi_10_2_feature_mask {
-    WMI_10_2_RX_BATCH_MODE = BIT(0),
-    WMI_10_2_ATF_CONFIG    = BIT(1),
-    WMI_10_2_COEX_GPIO     = BIT(3),
-    WMI_10_2_BSS_CHAN_INFO = BIT(6),
-    WMI_10_2_PEER_STATS    = BIT(7),
+    WMI_10_2_RX_BATCH_MODE = (1 << 0),
+    WMI_10_2_ATF_CONFIG    = (1 << 1),
+    WMI_10_2_COEX_GPIO     = (1 << 3),
+    WMI_10_2_BSS_CHAN_INFO = (1 << 6),
+    WMI_10_2_PEER_STATS    = (1 << 7),
 };
 
 struct wmi_resource_config_10_2 {
@@ -2470,9 +2470,9 @@ struct wmi_resource_config_10_2 {
     uint32_t feature_mask;
 } __PACKED;
 
-#define NUM_UNITS_IS_NUM_VDEVS         BIT(0)
-#define NUM_UNITS_IS_NUM_PEERS         BIT(1)
-#define NUM_UNITS_IS_NUM_ACTIVE_PEERS  BIT(2)
+#define NUM_UNITS_IS_NUM_VDEVS         (1 << 0)
+#define NUM_UNITS_IS_NUM_PEERS         (1 << 1)
+#define NUM_UNITS_IS_NUM_ACTIVE_PEERS  (1 << 2)
 
 struct wmi_resource_config_10_4 {
     /* Number of virtual devices (VAPs) to support */
@@ -2704,12 +2704,12 @@ struct wmi_resource_config_10_4 {
  * @WMI_10_4_PEER_STATS: Per station stats
  */
 enum wmi_10_4_feature_mask {
-    WMI_10_4_LTEU_SUPPORT           = BIT(0),
-    WMI_10_4_COEX_GPIO_SUPPORT      = BIT(1),
-    WMI_10_4_AUX_RADIO_SPECTRAL_INTF    = BIT(2),
-    WMI_10_4_AUX_RADIO_CHAN_LOAD_INTF   = BIT(3),
-    WMI_10_4_BSS_CHANNEL_INFO_64        = BIT(4),
-    WMI_10_4_PEER_STATS         = BIT(5),
+    WMI_10_4_LTEU_SUPPORT               = (1 << 0),
+    WMI_10_4_COEX_GPIO_SUPPORT          = (1 << 1),
+    WMI_10_4_AUX_RADIO_SPECTRAL_INTF    = (1 << 2),
+    WMI_10_4_AUX_RADIO_CHAN_LOAD_INTF   = (1 << 3),
+    WMI_10_4_BSS_CHANNEL_INFO_64        = (1 << 4),
+    WMI_10_4_PEER_STATS                 = (1 << 5),
 };
 
 struct wmi_ext_resource_config_10_4_cmd {
@@ -3003,17 +3003,17 @@ enum wmi_bss_filter {
 };
 
 enum wmi_scan_event_type {
-    WMI_SCAN_EVENT_STARTED              = BIT(0),
-    WMI_SCAN_EVENT_COMPLETED            = BIT(1),
-    WMI_SCAN_EVENT_BSS_CHANNEL          = BIT(2),
-    WMI_SCAN_EVENT_FOREIGN_CHANNEL      = BIT(3),
-    WMI_SCAN_EVENT_DEQUEUED             = BIT(4),
+    WMI_SCAN_EVENT_STARTED              = (1 << 0),
+    WMI_SCAN_EVENT_COMPLETED            = (1 << 1),
+    WMI_SCAN_EVENT_BSS_CHANNEL          = (1 << 2),
+    WMI_SCAN_EVENT_FOREIGN_CHANNEL      = (1 << 3),
+    WMI_SCAN_EVENT_DEQUEUED             = (1 << 4),
     /* possibly by high-prio scan */
-    WMI_SCAN_EVENT_PREEMPTED            = BIT(5),
-    WMI_SCAN_EVENT_START_FAILED         = BIT(6),
-    WMI_SCAN_EVENT_RESTARTED            = BIT(7),
-    WMI_SCAN_EVENT_FOREIGN_CHANNEL_EXIT = BIT(8),
-    WMI_SCAN_EVENT_MAX                  = BIT(15),
+    WMI_SCAN_EVENT_PREEMPTED            = (1 << 5),
+    WMI_SCAN_EVENT_START_FAILED         = (1 << 6),
+    WMI_SCAN_EVENT_RESTARTED            = (1 << 7),
+    WMI_SCAN_EVENT_FOREIGN_CHANNEL_EXIT = (1 << 8),
+    WMI_SCAN_EVENT_MAX                  = (1 << 15),
 };
 
 enum wmi_scan_completion_reason {
@@ -4127,19 +4127,19 @@ struct wmi_pdev_stats_peer {
 } __PACKED;
 
 enum wmi_stats_id {
-    WMI_STAT_PEER      = BIT(0),
-    WMI_STAT_AP        = BIT(1),
-    WMI_STAT_PDEV      = BIT(2),
-    WMI_STAT_VDEV      = BIT(3),
-    WMI_STAT_BCNFLT    = BIT(4),
-    WMI_STAT_VDEV_RATE = BIT(5),
+    WMI_STAT_PEER      = (1 << 0),
+    WMI_STAT_AP        = (1 << 1),
+    WMI_STAT_PDEV      = (1 << 2),
+    WMI_STAT_VDEV      = (1 << 3),
+    WMI_STAT_BCNFLT    = (1 << 4),
+    WMI_STAT_VDEV_RATE = (1 << 5),
 };
 
 enum wmi_10_4_stats_id {
-    WMI_10_4_STAT_PEER      = BIT(0),
-    WMI_10_4_STAT_AP        = BIT(1),
-    WMI_10_4_STAT_INST      = BIT(2),
-    WMI_10_4_STAT_PEER_EXTD = BIT(3),
+    WMI_10_4_STAT_PEER      = (1 << 0),
+    WMI_10_4_STAT_AP        = (1 << 1),
+    WMI_10_4_STAT_INST      = (1 << 2),
+    WMI_10_4_STAT_PEER_EXTD = (1 << 3),
 };
 
 struct wlan_inst_rssi_args {
@@ -5026,10 +5026,10 @@ enum wmi_10_4_vdev_param {
     WMI_10_4_VDEV_PARAM_TSF_DECREMENT,
 };
 
-#define WMI_VDEV_PARAM_TXBF_SU_TX_BFEE BIT(0)
-#define WMI_VDEV_PARAM_TXBF_MU_TX_BFEE BIT(1)
-#define WMI_VDEV_PARAM_TXBF_SU_TX_BFER BIT(2)
-#define WMI_VDEV_PARAM_TXBF_MU_TX_BFER BIT(3)
+#define WMI_VDEV_PARAM_TXBF_SU_TX_BFEE (1 << 0)
+#define WMI_VDEV_PARAM_TXBF_MU_TX_BFEE (1 << 1)
+#define WMI_VDEV_PARAM_TXBF_SU_TX_BFER (1 << 2)
+#define WMI_VDEV_PARAM_TXBF_MU_TX_BFER (1 << 3)
 
 #define WMI_TXBF_STS_CAP_OFFSET_LSB 4
 #define WMI_TXBF_STS_CAP_OFFSET_MASK    0xf0
@@ -5582,9 +5582,9 @@ struct wmi_tim_info_arg {
 
 /* Maximum number of NOA Descriptors supported */
 #define WMI_P2P_MAX_NOA_DESCRIPTORS 4
-#define WMI_P2P_OPPPS_ENABLE_BIT    BIT(0)
+#define WMI_P2P_OPPPS_ENABLE_BIT    (1 << 0)
 #define WMI_P2P_OPPPS_CTWINDOW_OFFSET   1
-#define WMI_P2P_NOA_CHANGED_BIT BIT(0)
+#define WMI_P2P_NOA_CHANGED_BIT (1 << 0)
 
 struct wmi_p2p_noa_info {
     /* Bit 0 - Flag to indicate an update in NOA schedule
@@ -6077,8 +6077,8 @@ struct wmi_peer_sta_kickout_event {
     struct wmi_mac_addr peer_macaddr;
 } __PACKED;
 
-#define WMI_CHAN_INFO_FLAG_COMPLETE BIT(0)
-#define WMI_CHAN_INFO_FLAG_PRE_COMPLETE BIT(1)
+#define WMI_CHAN_INFO_FLAG_COMPLETE (1 << 0)
+#define WMI_CHAN_INFO_FLAG_PRE_COMPLETE (1 << 1)
 
 /* Beacon filter wmi command info */
 #define BCN_FLT_MAX_SUPPORTED_IES   256

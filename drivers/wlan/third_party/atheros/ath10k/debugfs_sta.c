@@ -103,9 +103,9 @@ static ssize_t ath10k_dbg_sta_read_aggr_mode(struct file* file,
     int len = 0;
 
     mtx_lock(&ar->conf_mutex);
-    len = scnprintf(buf, sizeof(buf) - len, "aggregation mode: %s\n",
-                    (arsta->aggr_mode == ATH10K_DBG_AGGR_MODE_AUTO) ?
-                    "auto" : "manual");
+    len = SNPRINTF_USED(buf, sizeof(buf) - len, "aggregation mode: %s\n",
+                        (arsta->aggr_mode == ATH10K_DBG_AGGR_MODE_AUTO) ?
+                        "auto" : "manual");
     mtx_unlock(&ar->conf_mutex);
 
     return simple_read_from_buffer(user_buf, count, ppos, buf, len);
@@ -321,8 +321,8 @@ static ssize_t ath10k_dbg_sta_read_peer_debug_trigger(struct file* file,
     int len = 0;
 
     mtx_lock(&ar->conf_mutex);
-    len = scnprintf(buf, sizeof(buf) - len,
-                    "Write 1 to once trigger the debug logs\n");
+    len = SNPRINTF_USED(buf, sizeof(buf) - len,
+                        "Write 1 to once trigger the debug logs\n");
     mtx_unlock(&ar->conf_mutex);
 
     return simple_read_from_buffer(user_buf, count, ppos, buf, len);

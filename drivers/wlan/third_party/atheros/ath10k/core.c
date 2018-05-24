@@ -31,7 +31,7 @@
 #include "htt.h"
 #include "testmode.h"
 #include "wmi-ops.h"
-#include "linuxisms.h"
+#include "macros.h"
 
 // MODULE PARAMETERS
 // Debugging mask
@@ -381,11 +381,11 @@ static unsigned int ath10k_core_get_fw_feature_str(char* buf, size_t buf_len,
                  ATH10K_FW_FEATURE_COUNT);
 
     if (feat >= countof(ath10k_core_fw_feature_str) ||
-            WARN_ON(!ath10k_core_fw_feature_str[feat])) {
-        return scnprintf(buf, buf_len, "bit%d", feat);
+            COND_WARN(!ath10k_core_fw_feature_str[feat])) {
+        return SNPRINTF_USED(buf, buf_len, "bit%d", feat);
     }
 
-    return scnprintf(buf, buf_len, "%s", ath10k_core_fw_feature_str[feat]);
+    return SNPRINTF_USED(buf, buf_len, "%s", ath10k_core_fw_feature_str[feat]);
 }
 
 void ath10k_core_get_fw_features_str(struct ath10k* ar,
@@ -395,9 +395,9 @@ void ath10k_core_get_fw_features_str(struct ath10k* ar,
     int i;
 
     for (i = 0; i < ATH10K_FW_FEATURE_COUNT; i++) {
-        if (test_bit(i, ar->normal_mode_fw.fw_file.fw_features)) {
+        if (BITARR_TEST(ar->normal_mode_fw.fw_file.fw_features, i)) {
             if (len > 0) {
-                len += scnprintf(buf + len, buf_len - len, ",");
+                len += SNPRINTF_USED(buf + len, buf_len - len, ",");
             }
 
             len += ath10k_core_get_fw_feature_str(buf + len,
@@ -602,7 +602,7 @@ static zx_status_t ath10k_download_board_data(struct ath10k* ar, const void* dat
     }
 
     ret = ath10k_bmi_write_memory(ar, address, data,
-                                  min_t(uint32_t, board_data_size,
+                                  MIN_T(uint32_t, board_data_size,
                                         data_len));
     if (ret != ZX_OK) {
         ath10k_err("could not write board data (%s)\n", zx_status_get_string(ret));
@@ -851,8 +851,8 @@ static zx_status_t ath10k_download_and_run_otp(struct ath10k* ar) {
 
     ath10k_dbg(ar, ATH10K_DBG_BOOT, "boot otp execute result %d\n", result);
 
-    if (!(skip_otp || test_bit(ATH10K_FW_FEATURE_IGNORE_OTP_RESULT,
-                               ar->running_fw->fw_file.fw_features)) &&
+    if (!(skip_otp || BITARR_TEST(ar->running_fw->fw_file.fw_features,
+                                  ATH10K_FW_FEATURE_IGNORE_OTP_RESULT)) &&
             result != ZX_OK) {
         ath10k_err("otp calibration failed: %s", zx_status_get_string(result));
         return ZX_ERR_INVALID_ARGS;
@@ -923,8 +923,8 @@ static zx_status_t ath10k_fetch_cal_file(struct ath10k* ar) {
     zx_status_t ret;
 
     /* pre-cal-<bus>-<id>.bin */
-    scnprintf(filename, sizeof(filename), "pre-cal-%s-%s.bin",
-              ath10k_bus_str(ar->hif.bus), device_get_name(ar->zxdev));
+    snprintf(filename, sizeof(filename), "pre-cal-%s-%s.bin",
+             ath10k_bus_str(ar->hif.bus), device_get_name(ar->zxdev));
 
     ret = ath10k_fetch_fw_file(ar, ATH10K_FW_DIR, filename, &ar->pre_cal_file);
     if (ret == ZX_OK) {
@@ -932,8 +932,8 @@ static zx_status_t ath10k_fetch_cal_file(struct ath10k* ar) {
     }
 
     /* cal-<bus>-<id>.bin */
-    scnprintf(filename, sizeof(filename), "cal-%s-%s.bin",
-              ath10k_bus_str(ar->hif.bus), device_get_name(ar->zxdev));
+    snprintf(filename, sizeof(filename), "cal-%s-%s.bin",
+             ath10k_bus_str(ar->hif.bus), device_get_name(ar->zxdev));
 
     ret = ath10k_fetch_fw_file(ar, ATH10K_FW_DIR, filename, &ar->cal_file);
     if (ret != ZX_OK) {
@@ -1170,23 +1170,23 @@ static zx_status_t ath10k_core_create_board_name(struct ath10k* ar, char* name,
     char variant[9 + ATH10K_SMBIOS_BDF_EXT_STR_LENGTH] = { 0 };
 
     if (ar->id.bmi_ids_valid) {
-        scnprintf(name, name_len,
-                  "bus=%s,bmi-chip-id=%d,bmi-board-id=%d",
-                  ath10k_bus_str(ar->hif.bus),
-                  ar->id.bmi_chip_id,
-                  ar->id.bmi_board_id);
+        snprintf(name, name_len,
+                 "bus=%s,bmi-chip-id=%d,bmi-board-id=%d",
+                 ath10k_bus_str(ar->hif.bus),
+                 ar->id.bmi_chip_id,
+                 ar->id.bmi_board_id);
         goto out;
     }
 
     if (ar->id.bdf_ext[0] != '\0')
-        scnprintf(variant, sizeof(variant), ",variant=%s",
-                  ar->id.bdf_ext);
+        snprintf(variant, sizeof(variant), ",variant=%s",
+                 ar->id.bdf_ext);
 
-    scnprintf(name, name_len,
-              "bus=%s,vendor=%04x,device=%04x,subsystem-vendor=%04x,subsystem-device=%04x%s",
-              ath10k_bus_str(ar->hif.bus),
-              ar->id.vendor, ar->id.device,
-              ar->id.subsystem_vendor, ar->id.subsystem_device, variant);
+    snprintf(name, name_len,
+             "bus=%s,vendor=%04x,device=%04x,subsystem-vendor=%04x,subsystem-device=%04x%s",
+             ath10k_bus_str(ar->hif.bus),
+             ar->id.vendor, ar->id.device,
+             ar->id.subsystem_vendor, ar->id.subsystem_device, variant);
 out:
     ath10k_dbg(ar, ATH10K_DBG_BOOT, "boot using board name '%s'\n", name);
 
@@ -1320,7 +1320,7 @@ zx_status_t ath10k_core_fetch_firmware_api_n(struct ath10k* ar, const char* name
                     ath10k_dbg(ar, ATH10K_DBG_BOOT,
                                "Enabling feature bit: %i\n",
                                i);
-                    set_bit(i, fw_file->fw_features);
+                    BITARR_SET(fw_file->fw_features, i);
                 }
             }
 
@@ -1408,14 +1408,14 @@ static void ath10k_core_get_fw_name(struct ath10k* ar, char* fw_name,
                                     size_t fw_name_len, int fw_api) {
     switch (ar->hif.bus) {
     case ATH10K_BUS_SDIO:
-        scnprintf(fw_name, fw_name_len, "%s-%s-%d.bin",
-                  ATH10K_FW_FILE_BASE, ath10k_bus_str(ar->hif.bus),
-                  fw_api);
+        snprintf(fw_name, fw_name_len, "%s-%s-%d.bin",
+                 ATH10K_FW_FILE_BASE, ath10k_bus_str(ar->hif.bus),
+                 fw_api);
         break;
     case ATH10K_BUS_PCI:
     case ATH10K_BUS_AHB:
-        scnprintf(fw_name, fw_name_len, "%s-%d.bin",
-                  ATH10K_FW_FILE_BASE, fw_api);
+        snprintf(fw_name, fw_name_len, "%s-%d.bin",
+                 ATH10K_FW_FILE_BASE, fw_api);
         break;
     }
 }
@@ -1641,7 +1641,7 @@ static void ath10k_core_restart(struct work_struct* work) {
     struct ath10k* ar = container_of(work, struct ath10k, restart_work);
     int ret;
 
-    set_bit(ATH10K_FLAG_CRASH_FLUSH, &ar->dev_flags);
+    BITARR_SET(&ar->dev_flags, ATH10K_FLAG_CRASH_FLUSH);
 
     /* Place a barrier to make sure the compiler doesn't reorder
      * CRASH_FLUSH and calling other functions.
@@ -1719,8 +1719,8 @@ static void ath10k_core_set_coverage_class_work(struct work_struct* work) {
 static zx_status_t ath10k_core_init_firmware_features(struct ath10k* ar) {
     struct ath10k_fw_file* fw_file = &ar->normal_mode_fw.fw_file;
 
-    if (test_bit(ATH10K_FW_FEATURE_WMI_10_2, fw_file->fw_features)
-        && !test_bit(ATH10K_FW_FEATURE_WMI_10X, fw_file->fw_features)) {
+    if (BITARR_TEST(fw_file->fw_features, ATH10K_FW_FEATURE_WMI_10_2)
+        && !BITARR_TEST(fw_file->fw_features, ATH10K_FW_FEATURE_WMI_10X)) {
         ath10k_err("feature bits corrupted: 10.2 feature requires 10.x feature to be set as well");
         return ZX_ERR_INVALID_ARGS;
     }
@@ -1734,17 +1734,17 @@ static zx_status_t ath10k_core_init_firmware_features(struct ath10k* ar) {
     ar->wmi.rx_decap_mode = ATH10K_HW_TXRX_NATIVE_WIFI;
     switch (ath10k_cryptmode_param) {
     case ATH10K_CRYPT_MODE_HW:
-        clear_bit(ATH10K_FLAG_RAW_MODE, ar->dev_flags);
-        clear_bit(ATH10K_FLAG_HW_CRYPTO_DISABLED, ar->dev_flags);
+        BITARR_CLEAR(ar->dev_flags, ATH10K_FLAG_RAW_MODE);
+        BITARR_CLEAR(ar->dev_flags, ATH10K_FLAG_HW_CRYPTO_DISABLED);
         break;
     case ATH10K_CRYPT_MODE_SW:
-        if (!test_bit(ATH10K_FW_FEATURE_RAW_MODE_SUPPORT, fw_file->fw_features)) {
+        if (!BITARR_TEST(fw_file->fw_features, ATH10K_FW_FEATURE_RAW_MODE_SUPPORT)) {
             ath10k_err("cryptmode > 0 requires raw mode support from firmware");
             return ZX_ERR_INVALID_ARGS;
         }
 
-        set_bit(ATH10K_FLAG_RAW_MODE, ar->dev_flags);
-        set_bit(ATH10K_FLAG_HW_CRYPTO_DISABLED, ar->dev_flags);
+        BITARR_SET(ar->dev_flags, ATH10K_FLAG_RAW_MODE);
+        BITARR_SET(ar->dev_flags, ATH10K_FLAG_HW_CRYPTO_DISABLED);
         break;
     default:
         ath10k_trace("invalid cryptmode: %d\n", ath10k_cryptmode_param);
@@ -1755,14 +1755,14 @@ static zx_status_t ath10k_core_init_firmware_features(struct ath10k* ar) {
     ar->htt.max_num_ampdu = ATH10K_HTT_MAX_NUM_AMPDU_DEFAULT;
 
     if (rawmode) {
-        if (!test_bit(ATH10K_FW_FEATURE_RAW_MODE_SUPPORT, fw_file->fw_features)) {
+        if (!BITARR_TEST(fw_file->fw_features, ATH10K_FW_FEATURE_RAW_MODE_SUPPORT)) {
             ath10k_err("rawmode = 1 requires support from firmware");
             return ZX_ERR_INVALID_ARGS;
         }
-        set_bit(ATH10K_FLAG_RAW_MODE, ar->dev_flags);
+        BITARR_SET(ar->dev_flags, ATH10K_FLAG_RAW_MODE);
     }
 
-    if (test_bit(ATH10K_FLAG_RAW_MODE, ar->dev_flags)) {
+    if (BITARR_TEST(ar->dev_flags, ATH10K_FLAG_RAW_MODE)) {
         ar->wmi.rx_decap_mode = ATH10K_HW_TXRX_RAW;
 
         /* Workaround:
@@ -1781,8 +1781,8 @@ static zx_status_t ath10k_core_init_firmware_features(struct ath10k* ar) {
      * ATH10K_FW_IE_WMI_OP_VERSION.
      */
     if (fw_file->wmi_op_version == ATH10K_FW_WMI_OP_VERSION_UNSET) {
-        if (test_bit(ATH10K_FW_FEATURE_WMI_10X, fw_file->fw_features)) {
-            if (test_bit(ATH10K_FW_FEATURE_WMI_10_2, fw_file->fw_features)) {
+        if (BITARR_TEST(fw_file->fw_features, ATH10K_FW_FEATURE_WMI_10X)) {
+            if (BITARR_TEST(fw_file->fw_features, ATH10K_FW_FEATURE_WMI_10_2)) {
                 fw_file->wmi_op_version = ATH10K_FW_WMI_OP_VERSION_10_2;
             } else {
                 fw_file->wmi_op_version = ATH10K_FW_WMI_OP_VERSION_10_1;
@@ -1838,7 +1838,7 @@ static zx_status_t ath10k_core_init_firmware_features(struct ath10k* ar) {
                                 WMI_10_4_STAT_PEER_EXTD;
         ar->max_spatial_stream = ar->hw_params.max_spatial_stream;
 
-        if (test_bit(ATH10K_FW_FEATURE_PEER_FLOW_CONTROL, fw_file->fw_features)) {
+        if (BITARR_TEST(fw_file->fw_features, ATH10K_FW_FEATURE_PEER_FLOW_CONTROL)) {
             ar->htt.max_num_pending_tx = TARGET_10_4_NUM_MSDU_DESC_PFC;
         } else {
             ar->htt.max_num_pending_tx = TARGET_10_4_NUM_MSDU_DESC;
@@ -1846,7 +1846,7 @@ static zx_status_t ath10k_core_init_firmware_features(struct ath10k* ar) {
         break;
     case ATH10K_FW_WMI_OP_VERSION_UNSET:
     case ATH10K_FW_WMI_OP_VERSION_MAX:
-        WARN_ON(1);
+        WARN_ONCE();
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -1932,7 +1932,7 @@ zx_status_t ath10k_core_start(struct ath10k* ar, enum ath10k_firmware_mode mode,
 
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
-    clear_bit(ATH10K_FLAG_CRASH_FLUSH, ar->dev_flags);
+    BITARR_CLEAR(ar->dev_flags, ATH10K_FLAG_CRASH_FLUSH);
 
     ar->running_fw = fw;
 
@@ -1954,8 +1954,8 @@ zx_status_t ath10k_core_start(struct ath10k* ar, enum ath10k_firmware_mode mode,
      * fixing the problem. Corresponding firmware change is also needed
      * to set the clock source once the target is initialized.
      */
-    if (test_bit(ATH10K_FW_FEATURE_SUPPORTS_SKIP_CLOCK_INIT,
-                 ar->running_fw->fw_file.fw_features)) {
+    if (BITARR_TEST(ar->running_fw->fw_file.fw_features,
+                    ATH10K_FW_FEATURE_SUPPORTS_SKIP_CLOCK_INIT)) {
         status = ath10k_bmi_write32(ar, hi_skip_clock_init, 1);
         if (status != ZX_OK) {
             ath10k_err("could not write to skip_clock_init: %s\n",
@@ -2061,14 +2061,14 @@ zx_status_t ath10k_core_start(struct ath10k* ar, enum ath10k_firmware_mode mode,
     ath10k_dbg(ar, ATH10K_DBG_BOOT, "firmware %s booted\n",
                ar->running_fw->fw_file.fw_version);
 
-    if (test_bit(WMI_SERVICE_EXT_RES_CFG_SUPPORT, ar->wmi.svc_map) &&
+    if (BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_EXT_RES_CFG_SUPPORT) &&
             mode == ATH10K_FIRMWARE_MODE_NORMAL) {
         val = 0;
         if (ath10k_peer_stats_enabled(ar)) {
             val = WMI_10_4_PEER_STATS;
         }
 
-        if (test_bit(WMI_SERVICE_BSS_CHANNEL_INFO_64, ar->wmi.svc_map)) {
+        if (BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_BSS_CHANNEL_INFO_64)) {
             val |= WMI_10_4_BSS_CHANNEL_INFO_64;
         }
 
@@ -2077,9 +2077,8 @@ zx_status_t ath10k_core_start(struct ath10k* ar, enum ath10k_firmware_mode mode,
          * WMI_COEX_GPIO_SUPPORT of extended resource config should be
          * enabled always.
          */
-        if (test_bit(WMI_SERVICE_COEX_GPIO, ar->wmi.svc_map) &&
-                test_bit(ATH10K_FW_FEATURE_BTCOEX_PARAM,
-                         ar->running_fw->fw_file.fw_features)) {
+        if (BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_COEX_GPIO) &&
+                BITARR_TEST(ar->running_fw->fw_file.fw_features, ATH10K_FW_FEATURE_BTCOEX_PARAM)) {
             val |= WMI_10_4_COEX_GPIO_SUPPORT;
         }
 
@@ -2128,8 +2127,7 @@ zx_status_t ath10k_core_start(struct ath10k* ar, enum ath10k_firmware_mode mode,
     /* If firmware indicates Full Rx Reorder support it must be used in a
      * slightly different manner. Let HTT code know.
      */
-    ar->htt.rx_ring.in_ord_rx = !!(test_bit(WMI_SERVICE_RX_FULL_REORDER,
-                                            ar->wmi.svc_map));
+    ar->htt.rx_ring.in_ord_rx = !!(BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_RX_FULL_REORDER));
 
     status = ath10k_htt_rx_ring_refill(ar);
     if (status != ZX_OK) {
@@ -2337,7 +2335,7 @@ static zx_status_t ath10k_core_register_work(void* thrd_data) {
     zx_status_t status;
 
     /* peer stats are enabled by default */
-    set_bit(ATH10K_FLAG_PEER_STATS, ar->dev_flags);
+    BITARR_SET(ar->dev_flags, ATH10K_FLAG_PEER_STATS);
 
     status = ath10k_core_probe_fw(ar);
     if (status != ZX_OK) {
@@ -2371,7 +2369,7 @@ static zx_status_t ath10k_core_register_work(void* thrd_data) {
         goto err_spectral_destroy;
     }
 
-    set_bit(ATH10K_FLAG_CORE_REGISTERED, ar->dev_flags);
+    BITARR_SET(ar->dev_flags, ATH10K_FLAG_CORE_REGISTERED);
     return ZX_OK;
 
 err_spectral_destroy:
@@ -2403,7 +2401,7 @@ zx_status_t ath10k_core_register(struct ath10k* ar, uint32_t chip_id) {
 void ath10k_core_unregister(struct ath10k* ar) {
     cancel_work_sync(&ar->register_work);
 
-    if (!test_bit(ATH10K_FLAG_CORE_REGISTERED, &ar->dev_flags)) {
+    if (!BITARR_TEST(&ar->dev_flags, ATH10K_FLAG_CORE_REGISTERED)) {
         return;
     }
 

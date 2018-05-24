@@ -17,7 +17,7 @@
 
 #include <string.h>
 
-#include "linuxisms.h"
+#include "macros.h"
 #include "htt.h"
 #include "core.h"
 #include "debug.h"
@@ -204,7 +204,7 @@ zx_status_t ath10k_htt_init(struct ath10k* ar) {
     case ATH10K_FW_HTT_OP_VERSION_MAX:
     case ATH10K_FW_HTT_OP_VERSION_UNSET:
     default:
-        WARN_ON(1);
+        WARN_ONCE();
         return ZX_ERR_OUT_OF_RANGE;
     }
     return ZX_OK;

@@ -100,11 +100,11 @@ struct htt_msdu_ext_desc {
     struct htt_data_tx_desc_frag frags[6];
 };
 
-#define HTT_MSDU_EXT_DESC_FLAG_IPV4_CSUM_ENABLE     BIT(0)
-#define HTT_MSDU_EXT_DESC_FLAG_UDP_IPV4_CSUM_ENABLE BIT(1)
-#define HTT_MSDU_EXT_DESC_FLAG_UDP_IPV6_CSUM_ENABLE BIT(2)
-#define HTT_MSDU_EXT_DESC_FLAG_TCP_IPV4_CSUM_ENABLE BIT(3)
-#define HTT_MSDU_EXT_DESC_FLAG_TCP_IPV6_CSUM_ENABLE BIT(4)
+#define HTT_MSDU_EXT_DESC_FLAG_IPV4_CSUM_ENABLE     (1 << 0)
+#define HTT_MSDU_EXT_DESC_FLAG_UDP_IPV4_CSUM_ENABLE (1 << 1)
+#define HTT_MSDU_EXT_DESC_FLAG_UDP_IPV6_CSUM_ENABLE (1 << 2)
+#define HTT_MSDU_EXT_DESC_FLAG_TCP_IPV4_CSUM_ENABLE (1 << 3)
+#define HTT_MSDU_EXT_DESC_FLAG_TCP_IPV6_CSUM_ENABLE (1 << 4)
 
 #define HTT_MSDU_CHECKSUM_ENABLE (HTT_MSDU_EXT_DESC_FLAG_IPV4_CSUM_ENABLE \
                  | HTT_MSDU_EXT_DESC_FLAG_UDP_IPV4_CSUM_ENABLE \
@@ -634,7 +634,7 @@ struct htt_rx_indication {
     struct fw_rx_desc_base fw_desc;
 
     /*
-     * %mpdu_ranges starts after &%prefix + roundup(%fw_rx_desc_bytes, 4)
+     * %mpdu_ranges starts after &%prefix + ROUNDUP(%fw_rx_desc_bytes, 4)
      * and has %num_mpdu_ranges elements.
      */
     struct htt_rx_indication_mpdu_range mpdu_ranges[0];
@@ -647,7 +647,7 @@ htt_rx_ind_get_mpdu_ranges(struct htt_rx_indication* rx_ind) {
     ptr += sizeof(rx_ind->hdr)
            + sizeof(rx_ind->ppdu)
            + sizeof(rx_ind->prefix)
-           + roundup(rx_ind->prefix.fw_rx_desc_bytes, 4);
+           + ROUNDUP(rx_ind->prefix.fw_rx_desc_bytes, 4);
     return ptr;
 }
 
@@ -1227,7 +1227,7 @@ struct htt_stats_conf_item {
     } __PACKED;
     uint8_t pad;
     uint16_t length;
-    uint8_t payload[0]; /* roundup(length, 4) long */
+    uint8_t payload[0]; /* ROUNDUP(length, 4) long */
 } __PACKED;
 
 struct htt_stats_conf {
@@ -1241,7 +1241,7 @@ struct htt_stats_conf {
 
 static inline struct htt_stats_conf_item* htt_stats_conf_next_item(
     const struct htt_stats_conf_item* item) {
-    return (void*)item + sizeof(*item) + roundup(item->length, 4);
+    return (void*)item + sizeof(*item) + ROUNDUP(item->length, 4);
 }
 
 /*
@@ -1303,11 +1303,11 @@ struct htt_frag_desc_bank_id {
  */
 #define HTT_FRAG_DESC_BANK_MAX 4
 
-#define HTT_FRAG_DESC_BANK_CFG_INFO_PDEV_ID_MASK        0x03
-#define HTT_FRAG_DESC_BANK_CFG_INFO_PDEV_ID_LSB         0
-#define HTT_FRAG_DESC_BANK_CFG_INFO_SWAP            BIT(2)
-#define HTT_FRAG_DESC_BANK_CFG_INFO_Q_STATE_VALID       BIT(3)
-#define HTT_FRAG_DESC_BANK_CFG_INFO_Q_STATE_DEPTH_TYPE_MASK BIT(4)
+#define HTT_FRAG_DESC_BANK_CFG_INFO_PDEV_ID_MASK            0x03
+#define HTT_FRAG_DESC_BANK_CFG_INFO_PDEV_ID_LSB             0
+#define HTT_FRAG_DESC_BANK_CFG_INFO_SWAP                    (1 << 2)
+#define HTT_FRAG_DESC_BANK_CFG_INFO_Q_STATE_VALID           (1 << 3)
+#define HTT_FRAG_DESC_BANK_CFG_INFO_Q_STATE_DEPTH_TYPE_MASK (1 << 4)
 #define HTT_FRAG_DESC_BANK_CFG_INFO_Q_STATE_DEPTH_TYPE_LSB  4
 
 enum htt_q_depth_type {
@@ -1429,19 +1429,19 @@ enum htt_tx_mode_switch_mode {
     HTT_TX_MODE_SWITCH_PUSH_PULL = 1,
 };
 
-#define HTT_TX_MODE_SWITCH_IND_INFO0_ENABLE     BIT(0)
+#define HTT_TX_MODE_SWITCH_IND_INFO0_ENABLE             (1 << 0)
 #define HTT_TX_MODE_SWITCH_IND_INFO0_NUM_RECORDS_MASK   0xfffe
 #define HTT_TX_MODE_SWITCH_IND_INFO0_NUM_RECORDS_LSB    1
 
-#define HTT_TX_MODE_SWITCH_IND_INFO1_MODE_MASK      0x0003
-#define HTT_TX_MODE_SWITCH_IND_INFO1_MODE_LSB       0
-#define HTT_TX_MODE_SWITCH_IND_INFO1_THRESHOLD_MASK 0xfffc
-#define HTT_TX_MODE_SWITCH_IND_INFO1_THRESHOLD_LSB  2
+#define HTT_TX_MODE_SWITCH_IND_INFO1_MODE_MASK          0x0003
+#define HTT_TX_MODE_SWITCH_IND_INFO1_MODE_LSB           0
+#define HTT_TX_MODE_SWITCH_IND_INFO1_THRESHOLD_MASK     0xfffc
+#define HTT_TX_MODE_SWITCH_IND_INFO1_THRESHOLD_LSB      2
 
 #define HTT_TX_MODE_SWITCH_RECORD_INFO0_PEER_ID_MASK    0x0fff
-#define HTT_TX_MODE_SWITCH_RECORD_INFO0_PEER_ID_LSB 0
-#define HTT_TX_MODE_SWITCH_RECORD_INFO0_TID_MASK    0xf000
-#define HTT_TX_MODE_SWITCH_RECORD_INFO0_TID_LSB     12
+#define HTT_TX_MODE_SWITCH_RECORD_INFO0_PEER_ID_LSB     0
+#define HTT_TX_MODE_SWITCH_RECORD_INFO0_TID_MASK        0xf000
+#define HTT_TX_MODE_SWITCH_RECORD_INFO0_TID_LSB         12
 
 struct htt_tx_mode_switch_record {
     uint16_t info0; /* HTT_TX_MODE_SWITCH_RECORD_INFO0_ */

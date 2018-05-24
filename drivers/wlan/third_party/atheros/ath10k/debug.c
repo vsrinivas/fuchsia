@@ -90,7 +90,7 @@ struct ath10k_dump_file_data {
     uint32_t num_rf_chains;
 
     /* firmware version string */
-    char fw_ver[ETHTOOL_FWVERS_LEN];
+    char fw_ver[ATH10K_FW_VER_LEN];
 
     /* Kernel related information */
 
@@ -149,10 +149,10 @@ void ath10k_debug_print_board_info(struct ath10k* ar) {
     char boardinfo[100];
 
     if (ar->id.bmi_ids_valid)
-        scnprintf(boardinfo, sizeof(boardinfo), "%d:%d",
-                  ar->id.bmi_chip_id, ar->id.bmi_board_id);
+        SNPRINTF_USED(boardinfo, sizeof(boardinfo), "%d:%d",
+                      ar->id.bmi_chip_id, ar->id.bmi_board_id);
     else {
-        scnprintf(boardinfo, sizeof(boardinfo), "N/A");
+        SNPRINTF_USED(boardinfo, sizeof(boardinfo), "N/A");
     }
 
     ath10k_trace("board_file api %d bmi_id %s crc32 %08x",
@@ -170,8 +170,8 @@ void ath10k_debug_print_boot_info(struct ath10k* ar) {
                  ar->normal_mode_fw.fw_file.htt_op_version,
                  ath10k_cal_mode_str(ar->cal_mode),
                  ar->max_num_stations,
-                 test_bit(ATH10K_FLAG_RAW_MODE, &ar->dev_flags),
-                 !test_bit(ATH10K_FLAG_HW_CRYPTO_DISABLED, &ar->dev_flags));
+                 BITARR_TEST(&ar->dev_flags, ATH10K_FLAG_RAW_MODE),
+                 !BITARR_TEST(&ar->dev_flags, ATH10K_FLAG_HW_CRYPTO_DISABLED));
 }
 
 void ath10k_print_driver_info(struct ath10k* ar) {
@@ -202,21 +202,21 @@ static ssize_t ath10k_read_wmi_services(struct file* file,
 
     mtx_lock(&ar->data_lock);
     for (i = 0; i < WMI_SERVICE_MAX; i++) {
-        enabled = test_bit(i, ar->wmi.svc_map);
+        enabled = BITARR_TEST(ar->wmi.svc_map, i);
         name = wmi_service_name(i);
 
         if (!name) {
             if (enabled)
-                len += scnprintf(buf + len, buf_len - len,
-                                 "%-40s %s (bit %d)\n",
-                                 "unknown", "enabled", i);
+                len += SNPRINTF_USED(buf + len, buf_len - len,
+                                     "%-40s %s (bit %d)\n",
+                                     "unknown", "enabled", i);
 
             continue;
         }
 
-        len += scnprintf(buf + len, buf_len - len,
-                         "%-40s %s\n",
-                         name, enabled ? "enabled" : "-");
+        len += SNPRINTF_USED(buf + len, buf_len - len,
+                             "%-40s %s\n",
+                             name, enabled ? "enabled" : "-");
     }
     mtx_unlock(&ar->data_lock);
 
@@ -498,14 +498,14 @@ static ssize_t ath10k_debug_fw_reset_stats_read(struct file* file,
 
     mtx_lock(&ar->data_lock);
 
-    len += scnprintf(buf + len, buf_len - len,
-                     "fw_crash_counter\t\t%d\n", ar->stats.fw_crash_counter);
-    len += scnprintf(buf + len, buf_len - len,
-                     "fw_warm_reset_counter\t\t%d\n",
-                     ar->stats.fw_warm_reset_counter);
-    len += scnprintf(buf + len, buf_len - len,
-                     "fw_cold_reset_counter\t\t%d\n",
-                     ar->stats.fw_cold_reset_counter);
+    len += SNPRINTF_USED(buf + len, buf_len - len,
+                         "fw_crash_counter\t\t%d\n", ar->stats.fw_crash_counter);
+    len += SNPRINTF_USED(buf + len, buf_len - len,
+                         "fw_warm_reset_counter\t\t%d\n",
+                         ar->stats.fw_warm_reset_counter);
+    len += SNPRINTF_USED(buf + len, buf_len - len,
+                         "fw_cold_reset_counter\t\t%d\n",
+                         ar->stats.fw_cold_reset_counter);
 
     mtx_unlock(&ar->data_lock);
 
@@ -643,7 +643,7 @@ static ssize_t ath10k_read_chip_id(struct file* file, char __user* user_buf,
     size_t len;
     char buf[50];
 
-    len = scnprintf(buf, sizeof(buf), "0x%08x\n", ar->chip_id);
+    len = SNPRINTF_USED(buf, sizeof(buf), "0x%08x\n", ar->chip_id);
 
     return simple_read_from_buffer(user_buf, count, ppos, buf, len);
 }
@@ -845,7 +845,7 @@ static ssize_t ath10k_reg_addr_read(struct file* file,
     reg_addr = ar->debug.reg_addr;
     mtx_unlock(&ar->conf_mutex);
 
-    len += scnprintf(buf + len, sizeof(buf) - len, "0x%x\n", reg_addr);
+    len += SNPRINTF_USED(buf + len, sizeof(buf) - len, "0x%x\n", reg_addr);
 
     return simple_read_from_buffer(user_buf, count, ppos, buf, len);
 }
@@ -901,7 +901,7 @@ static ssize_t ath10k_reg_value_read(struct file* file,
     reg_addr = ar->debug.reg_addr;
 
     reg_val = ath10k_hif_read32(ar, reg_addr);
-    len = scnprintf(buf, sizeof(buf), "0x%08x:0x%08x\n", reg_addr, reg_val);
+    len = SNPRINTF_USED(buf, sizeof(buf), "0x%08x:0x%08x\n", reg_addr, reg_val);
 
     ret = simple_read_from_buffer(user_buf, count, ppos, buf, len);
 
@@ -1113,7 +1113,7 @@ static ssize_t ath10k_read_htt_stats_mask(struct file* file,
     char buf[32];
     size_t len;
 
-    len = scnprintf(buf, sizeof(buf), "%lu\n", ar->debug.htt_stats_mask);
+    len = SNPRINTF_USED(buf, sizeof(buf), "%lu\n", ar->debug.htt_stats_mask);
 
     return simple_read_from_buffer(user_buf, count, ppos, buf, len);
 }
@@ -1174,7 +1174,7 @@ static ssize_t ath10k_read_htt_max_amsdu_ampdu(struct file* file,
     ampdu = ar->htt.max_num_ampdu;
     mtx_unlock(&ar->conf_mutex);
 
-    len = scnprintf(buf, sizeof(buf), "%u %u\n", amsdu, ampdu);
+    len = SNPRINTF_USED(buf, sizeof(buf), "%u %u\n", amsdu, ampdu);
 
     return simple_read_from_buffer(user_buf, count, ppos, buf, len);
 }
@@ -1229,8 +1229,8 @@ static ssize_t ath10k_read_fw_dbglog(struct file* file,
     size_t len;
     char buf[96];
 
-    len = scnprintf(buf, sizeof(buf), "0x%16llx %u\n",
-                    ar->debug.fw_dbglog_mask, ar->debug.fw_dbglog_level);
+    len = SNPRINTF_USED(buf, sizeof(buf), "0x%16llx %u\n",
+                        ar->debug.fw_dbglog_mask, ar->debug.fw_dbglog_level);
 
     return simple_read_from_buffer(user_buf, count, ppos, buf, len);
 }
@@ -1438,7 +1438,7 @@ void ath10k_debug_get_et_stats(struct ieee80211_hw* hw,
 
     mtx_unlock(&ar->conf_mutex);
 
-    WARN_ON(i != ATH10K_SSTATS_LEN);
+    COND_WARN(i != ATH10K_SSTATS_LEN);
 }
 
 static const struct file_operations fops_fw_dbglog = {
@@ -1456,7 +1456,7 @@ static int ath10k_debug_cal_data_fetch(struct ath10k* ar) {
 
     ASSERT_MTX_HELD(&ar->conf_mutex);
 
-    if (WARN_ON(ar->hw_params.cal_data_len > ATH10K_DEBUG_CAL_DATA_LEN)) {
+    if (COND_WARN(ar->hw_params.cal_data_len > ATH10K_DEBUG_CAL_DATA_LEN)) {
         return -EINVAL;
     }
 
@@ -1551,7 +1551,7 @@ static ssize_t ath10k_read_ani_enable(struct file* file, char __user* user_buf,
     size_t len;
     char buf[32];
 
-    len = scnprintf(buf, sizeof(buf), "%d\n", ar->ani_enabled);
+    len = SNPRINTF_USED(buf, sizeof(buf), "%d\n", ar->ani_enabled);
 
     return simple_read_from_buffer(user_buf, count, ppos, buf, len);
 }
@@ -1578,7 +1578,7 @@ static ssize_t ath10k_read_nf_cal_period(struct file* file,
     size_t len;
     char buf[32];
 
-    len = scnprintf(buf, sizeof(buf), "%d\n", ar->debug.nf_cal_period);
+    len = SNPRINTF_USED(buf, sizeof(buf), "%d\n", ar->debug.nf_cal_period);
 
     return simple_read_from_buffer(user_buf, count, ppos, buf, len);
 }
@@ -1690,26 +1690,26 @@ static void ath10k_tpc_stats_print(struct ath10k_tpc_stats* tpc_stats,
                                        };
 
     buf_len = ATH10K_TPC_CONFIG_BUF_SIZE;
-    *len += scnprintf(buf + *len, buf_len - *len,
-                      "********************************\n");
-    *len += scnprintf(buf + *len, buf_len - *len,
-                      "******************* %s POWER TABLE ****************\n",
-                      table_str[j]);
-    *len += scnprintf(buf + *len, buf_len - *len,
-                      "********************************\n");
-    *len += scnprintf(buf + *len, buf_len - *len,
-                      "No.  Preamble Rate_code tpc_value1 tpc_value2 tpc_value3\n");
+    *len += SNPRINTF_USED(buf + *len, buf_len - *len,
+                          "********************************\n");
+    *len += SNPRINTF_USED(buf + *len, buf_len - *len,
+                          "******************* %s POWER TABLE ****************\n",
+                          table_str[j]);
+    *len += SNPRINTF_USED(buf + *len, buf_len - *len,
+                          "********************************\n");
+    *len += SNPRINTF_USED(buf + *len, buf_len - *len,
+                          "No.  Preamble Rate_code tpc_value1 tpc_value2 tpc_value3\n");
 
     for (i = 0; i < tpc_stats->rate_max; i++) {
-        *len += scnprintf(buf + *len, buf_len - *len,
-                          "%8d %s 0x%2x %s\n", i,
-                          pream_str[tpc_stats->tpc_table[j].pream_idx[i]],
-                          tpc_stats->tpc_table[j].rate_code[i],
-                          tpc_stats->tpc_table[j].tpc_value[i]);
+        *len += SNPRINTF_USED(buf + *len, buf_len - *len,
+                              "%8d %s 0x%2x %s\n", i,
+                              pream_str[tpc_stats->tpc_table[j].pream_idx[i]],
+                              tpc_stats->tpc_table[j].rate_code[i],
+                              tpc_stats->tpc_table[j].tpc_value[i]);
     }
 
-    *len += scnprintf(buf + *len, buf_len - *len,
-                      "***********************************\n");
+    *len += SNPRINTF_USED(buf + *len, buf_len - *len,
+                          "***********************************\n");
 }
 
 static void ath10k_tpc_stats_fill(struct ath10k* ar,
@@ -1728,38 +1728,38 @@ static void ath10k_tpc_stats_fill(struct ath10k* ar,
         goto unlock;
     }
 
-    len += scnprintf(buf + len, buf_len - len, "\n");
-    len += scnprintf(buf + len, buf_len - len,
-                     "*************************************\n");
-    len += scnprintf(buf + len, buf_len - len,
-                     "TPC config for channel %4d mode %d\n",
-                     tpc_stats->chan_freq,
-                     tpc_stats->phy_mode);
-    len += scnprintf(buf + len, buf_len - len,
-                     "*************************************\n");
-    len += scnprintf(buf + len, buf_len - len,
-                     "CTL		=  0x%2x Reg. Domain		= %2d\n",
-                     tpc_stats->ctl,
-                     tpc_stats->reg_domain);
-    len += scnprintf(buf + len, buf_len - len,
-                     "Antenna Gain	= %2d Reg. Max Antenna Gain	=  %2d\n",
-                     tpc_stats->twice_antenna_gain,
-                     tpc_stats->twice_antenna_reduction);
-    len += scnprintf(buf + len, buf_len - len,
-                     "Power Limit	= %2d Reg. Max Power		= %2d\n",
-                     tpc_stats->power_limit,
-                     tpc_stats->twice_max_rd_power / 2);
-    len += scnprintf(buf + len, buf_len - len,
-                     "Num tx chains	= %2d Num supported rates	= %2d\n",
-                     tpc_stats->num_tx_chain,
-                     tpc_stats->rate_max);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "\n");
+    len += SNPRINTF_USED(buf + len, buf_len - len,
+                         "*************************************\n");
+    len += SNPRINTF_USED(buf + len, buf_len - len,
+                         "TPC config for channel %4d mode %d\n",
+                         tpc_stats->chan_freq,
+                         tpc_stats->phy_mode);
+    len += SNPRINTF_USED(buf + len, buf_len - len,
+                         "*************************************\n");
+    len += SNPRINTF_USED(buf + len, buf_len - len,
+                         "CTL		=  0x%2x Reg. Domain		= %2d\n",
+                         tpc_stats->ctl,
+                         tpc_stats->reg_domain);
+    len += SNPRINTF_USED(buf + len, buf_len - len,
+                         "Antenna Gain	= %2d Reg. Max Antenna Gain	=  %2d\n",
+                         tpc_stats->twice_antenna_gain,
+                         tpc_stats->twice_antenna_reduction);
+    len += SNPRINTF_USED(buf + len, buf_len - len,
+                         "Power Limit	= %2d Reg. Max Power		= %2d\n",
+                         tpc_stats->power_limit,
+                         tpc_stats->twice_max_rd_power / 2);
+    len += SNPRINTF_USED(buf + len, buf_len - len,
+                         "Num tx chains	= %2d Num supported rates	= %2d\n",
+                         tpc_stats->num_tx_chain,
+                         tpc_stats->rate_max);
 
     for (j = 0; j < WMI_TPC_FLAG; j++) {
         switch (j) {
         case WMI_TPC_TABLE_TYPE_CDD:
             if (tpc_stats->flag[j] == ATH10K_TPC_TABLE_TYPE_FLAG) {
-                len += scnprintf(buf + len, buf_len - len,
-                                 "CDD not supported\n");
+                len += SNPRINTF_USED(buf + len, buf_len - len,
+                                     "CDD not supported\n");
                 break;
             }
 
@@ -1767,8 +1767,8 @@ static void ath10k_tpc_stats_fill(struct ath10k* ar,
             break;
         case WMI_TPC_TABLE_TYPE_STBC:
             if (tpc_stats->flag[j] == ATH10K_TPC_TABLE_TYPE_FLAG) {
-                len += scnprintf(buf + len, buf_len - len,
-                                 "STBC not supported\n");
+                len += SNPRINTF_USED(buf + len, buf_len - len,
+                                     "STBC not supported\n");
                 break;
             }
 
@@ -1776,16 +1776,16 @@ static void ath10k_tpc_stats_fill(struct ath10k* ar,
             break;
         case WMI_TPC_TABLE_TYPE_TXBF:
             if (tpc_stats->flag[j] == ATH10K_TPC_TABLE_TYPE_FLAG) {
-                len += scnprintf(buf + len, buf_len - len,
-                                 "TXBF not supported\n***************************\n");
+                len += SNPRINTF_USED(buf + len, buf_len - len,
+                                     "TXBF not supported\n***************************\n");
                 break;
             }
 
             ath10k_tpc_stats_print(tpc_stats, j, buf, &len);
             break;
         default:
-            len += scnprintf(buf + len, buf_len - len,
-                             "Invalid Type\n");
+            len += SNPRINTF_USED(buf + len, buf_len - len,
+                                 "Invalid Type\n");
             break;
         }
     }
@@ -1954,12 +1954,10 @@ static const struct file_operations fops_simulate_radar = {
 };
 
 #define ATH10K_DFS_STAT(s, p) (\
-    len += scnprintf(buf + len, size - len, "%-28s : %10u\n", s, \
-             ar->debug.dfs_stats.p))
+    len += SNPRINTF_USED(buf + len, size - len, "%-28s : %10u\n", s, ar->debug.dfs_stats.p))
 
 #define ATH10K_DFS_POOL_STAT(s, p) (\
-    len += scnprintf(buf + len, size - len, "%-28s : %10u\n", s, \
-             ar->debug.dfs_pool_stats.p))
+    len += SNPRINTF_USED(buf + len, size - len, "%-28s : %10u\n", s, ar->debug.dfs_pool_stats.p))
 
 static ssize_t ath10k_read_dfs_stats(struct file* file, char __user* user_buf,
                                      size_t count, loff_t* ppos) {
@@ -1974,14 +1972,14 @@ static ssize_t ath10k_read_dfs_stats(struct file* file, char __user* user_buf,
     }
 
     if (!ar->dfs_detector) {
-        len += scnprintf(buf + len, size - len, "DFS not enabled\n");
+        len += SNPRINTF_USED(buf + len, size - len, "DFS not enabled\n");
         goto exit;
     }
 
     ar->debug.dfs_pool_stats =
         ar->dfs_detector->get_stats(ar->dfs_detector);
 
-    len += scnprintf(buf + len, size - len, "Pulse detector statistics:\n");
+    len += SNPRINTF_USED(buf + len, size - len, "Pulse detector statistics:\n");
 
     ATH10K_DFS_STAT("reported phy errors", phy_errors);
     ATH10K_DFS_STAT("pulse events reported", pulses_total);
@@ -1989,7 +1987,7 @@ static ssize_t ath10k_read_dfs_stats(struct file* file, char __user* user_buf,
     ATH10K_DFS_STAT("DFS pulses discarded", pulses_discarded);
     ATH10K_DFS_STAT("Radars detected", radar_detected);
 
-    len += scnprintf(buf + len, size - len, "Global Pool statistics:\n");
+    len += SNPRINTF_USED(buf + len, size - len, "Global Pool statistics:\n");
     ATH10K_DFS_POOL_STAT("Pool references", pool_reference);
     ATH10K_DFS_POOL_STAT("Pulses allocated", pulse_allocated);
     ATH10K_DFS_POOL_STAT("Pulses alloc error", pulse_alloc_error);
@@ -2070,8 +2068,7 @@ static ssize_t ath10k_read_pktlog_filter(struct file* file, char __user* ubuf,
     int len = 0;
 
     mtx_lock(&ar->conf_mutex);
-    len = scnprintf(buf, sizeof(buf) - len, "%08x\n",
-                    ar->debug.pktlog_filter);
+    len = SNPRINTF_USED(buf, sizeof(buf) - len, "%08x\n", ar->debug.pktlog_filter);
     mtx_unlock(&ar->conf_mutex);
 
     return simple_read_from_buffer(ubuf, count, ppos, buf, len);
@@ -2113,8 +2110,7 @@ static ssize_t ath10k_read_quiet_period(struct file* file, char __user* ubuf,
     int len = 0;
 
     mtx_lock(&ar->conf_mutex);
-    len = scnprintf(buf, sizeof(buf) - len, "%d\n",
-                    ar->thermal.quiet_period);
+    len = SNPRINTF_USED(buf, sizeof(buf) - len, "%d\n", ar->thermal.quiet_period);
     mtx_unlock(&ar->conf_mutex);
 
     return simple_read_from_buffer(ubuf, count, ppos, buf, len);
@@ -2136,7 +2132,7 @@ static ssize_t ath10k_write_btcoex(struct file* file,
     bool val;
     uint32_t pdev_param;
 
-    buf_size = min(count, (sizeof(buf) - 1));
+    buf_size = MIN(count, (sizeof(buf) - 1));
     if (copy_from_user(buf, ubuf, buf_size)) {
         return -EFAULT;
     }
@@ -2155,14 +2151,13 @@ static ssize_t ath10k_write_btcoex(struct file* file,
         goto exit;
     }
 
-    if (!(test_bit(ATH10K_FLAG_BTCOEX, &ar->dev_flags) ^ val)) {
+    if (!(BITARR_TEST(&ar->dev_flags, ATH10K_FLAG_BTCOEX) ^ val)) {
         ret = count;
         goto exit;
     }
 
     pdev_param = ar->wmi.pdev_param->enable_btcoex;
-    if (test_bit(ATH10K_FW_FEATURE_BTCOEX_PARAM,
-                 ar->running_fw->fw_file.fw_features)) {
+    if (BITARR_TEST(ar->running_fw->fw_file.fw_features, ATH10K_FW_FEATURE_BTCOEX_PARAM)) {
         ret = ath10k_wmi_pdev_set_param(ar, pdev_param, val);
         if (ret) {
             ath10k_warn("failed to enable btcoex: %d\n", ret);
@@ -2175,9 +2170,9 @@ static ssize_t ath10k_write_btcoex(struct file* file,
     }
 
     if (val) {
-        set_bit(ATH10K_FLAG_BTCOEX, &ar->dev_flags);
+        BITARR_SET(&ar->dev_flags, ATH10K_FLAG_BTCOEX);
     } else {
-        clear_bit(ATH10K_FLAG_BTCOEX, &ar->dev_flags);
+        BITARR_CLEAR(&ar->dev_flags, ATH10K_FLAG_BTCOEX);
     }
 
     ret = count;
@@ -2195,8 +2190,8 @@ static ssize_t ath10k_read_btcoex(struct file* file, char __user* ubuf,
     int len = 0;
 
     mtx_lock(&ar->conf_mutex);
-    len = scnprintf(buf, sizeof(buf) - len, "%d\n",
-                    test_bit(ATH10K_FLAG_BTCOEX, &ar->dev_flags));
+    len = SNPRINTF_USED(buf, sizeof(buf) - len, "%d\n",
+                        BITARR_TEST(&ar->dev_flags, ATH10K_FLAG_BTCOEX));
     mtx_unlock(&ar->conf_mutex);
 
     return simple_read_from_buffer(ubuf, count, ppos, buf, len);
@@ -2217,7 +2212,7 @@ static ssize_t ath10k_write_peer_stats(struct file* file,
     int ret;
     bool val;
 
-    buf_size = min(count, (sizeof(buf) - 1));
+    buf_size = MIN(count, (sizeof(buf) - 1));
     if (copy_from_user(buf, ubuf, buf_size)) {
         return -EFAULT;
     }
@@ -2236,15 +2231,15 @@ static ssize_t ath10k_write_peer_stats(struct file* file,
         goto exit;
     }
 
-    if (!(test_bit(ATH10K_FLAG_PEER_STATS, &ar->dev_flags) ^ val)) {
+    if (!(BITARR_TEST(&ar->dev_flags, ATH10K_FLAG_PEER_STATS) ^ val)) {
         ret = count;
         goto exit;
     }
 
     if (val) {
-        set_bit(ATH10K_FLAG_PEER_STATS, &ar->dev_flags);
+        BITARR_SET(&ar->dev_flags, ATH10K_FLAG_PEER_STATS);
     } else {
-        clear_bit(ATH10K_FLAG_PEER_STATS, &ar->dev_flags);
+        BITARR_CLEAR(&ar->dev_flags, ATH10K_FLAG_PEER_STATS);
     }
 
     ath10k_trace("restarting firmware due to Peer stats change");
@@ -2266,8 +2261,8 @@ static ssize_t ath10k_read_peer_stats(struct file* file, char __user* ubuf,
     int len = 0;
 
     mtx_lock(&ar->conf_mutex);
-    len = scnprintf(buf, sizeof(buf) - len, "%d\n",
-                    test_bit(ATH10K_FLAG_PEER_STATS, &ar->dev_flags));
+    len = SNPRINTF_USED(buf, sizeof(buf) - len, "%d\n",
+                        BITARR_TEST(&ar->dev_flags, ATH10K_FLAG_PEER_STATS));
     mtx_unlock(&ar->conf_mutex);
 
     return simple_read_from_buffer(ubuf, count, ppos, buf, len);
@@ -2294,30 +2289,30 @@ static ssize_t ath10k_debug_fw_checksums_read(struct file* file,
 
     mtx_lock(&ar->conf_mutex);
 
-    len += scnprintf(buf + len, buf_len - len,
-                     "firmware-N.bin\t\t%08x\n",
-                     crc32_le(0, ar->normal_mode_fw.fw_file.firmware->data,
-                              ar->normal_mode_fw.fw_file.firmware->size));
-    len += scnprintf(buf + len, buf_len - len,
-                     "athwlan\t\t\t%08x\n",
-                     crc32_le(0, ar->normal_mode_fw.fw_file.firmware_data,
-                              ar->normal_mode_fw.fw_file.firmware_len));
-    len += scnprintf(buf + len, buf_len - len,
-                     "otp\t\t\t%08x\n",
-                     crc32_le(0, ar->normal_mode_fw.fw_file.otp_data,
-                              ar->normal_mode_fw.fw_file.otp_len));
-    len += scnprintf(buf + len, buf_len - len,
-                     "codeswap\t\t%08x\n",
-                     crc32_le(0, ar->normal_mode_fw.fw_file.codeswap_data,
-                              ar->normal_mode_fw.fw_file.codeswap_len));
-    len += scnprintf(buf + len, buf_len - len,
-                     "board-N.bin\t\t%08x\n",
-                     crc32_le(0, ar->normal_mode_fw.board->data,
-                              ar->normal_mode_fw.board->size));
-    len += scnprintf(buf + len, buf_len - len,
-                     "board\t\t\t%08x\n",
-                     crc32_le(0, ar->normal_mode_fw.board_data,
-                              ar->normal_mode_fw.board_len));
+    len += SNPRINTF_USED(buf + len, buf_len - len,
+                         "firmware-N.bin\t\t%08x\n",
+                         crc32_le(0, ar->normal_mode_fw.fw_file.firmware->data,
+                                  ar->normal_mode_fw.fw_file.firmware->size));
+    len += SNPRINTF_USED(buf + len, buf_len - len,
+                         "athwlan\t\t\t%08x\n",
+                         crc32_le(0, ar->normal_mode_fw.fw_file.firmware_data,
+                                  ar->normal_mode_fw.fw_file.firmware_len));
+    len += SNPRINTF_USED(buf + len, buf_len - len,
+                         "otp\t\t\t%08x\n",
+                         crc32_le(0, ar->normal_mode_fw.fw_file.otp_data,
+                                  ar->normal_mode_fw.fw_file.otp_len));
+    len += SNPRINTF_USED(buf + len, buf_len - len,
+                         "codeswap\t\t%08x\n",
+                         crc32_le(0, ar->normal_mode_fw.fw_file.codeswap_data,
+                                  ar->normal_mode_fw.fw_file.codeswap_len));
+    len += SNPRINTF_USED(buf + len, buf_len - len,
+                         "board-N.bin\t\t%08x\n",
+                         crc32_le(0, ar->normal_mode_fw.board->data,
+                                  ar->normal_mode_fw.board->size));
+    len += SNPRINTF_USED(buf + len, buf_len - len,
+                         "board\t\t\t%08x\n",
+                         crc32_le(0, ar->normal_mode_fw.board_data,
+                                  ar->normal_mode_fw.board_len));
 
     ret_cnt = simple_read_from_buffer(user_buf, count, ppos, buf, len);
 
@@ -2448,11 +2443,11 @@ int ath10k_debug_register(struct ath10k* ar) {
     debugfs_create_file("tpc_stats", 0400, ar->debug.debugfs_phy, ar,
                         &fops_tpc_stats);
 
-    if (test_bit(WMI_SERVICE_COEX_GPIO, ar->wmi.svc_map))
+    if (BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_COEX_GPIO))
         debugfs_create_file("btcoex", 0644, ar->debug.debugfs_phy, ar,
                             &fops_btcoex);
 
-    if (test_bit(WMI_SERVICE_PEER_STATS, ar->wmi.svc_map))
+    if (BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_PEER_STATS))
         debugfs_create_file("peer_stats", 0644, ar->debug.debugfs_phy, ar,
                             &fops_peer_stats);
 
@@ -2503,11 +2498,11 @@ void ath10k_dbg_dump(struct ath10k* ar,
 
         for (ptr = buf; (ptr - buf) < len; ptr += 16) {
             linebuflen = 0;
-            linebuflen += scnprintf(linebuf + linebuflen,
-                                    sizeof(linebuf) - linebuflen,
-                                    "%s%08x: ",
-                                    (prefix ? prefix : ""),
-                                    (unsigned int)(ptr - buf));
+            linebuflen += SNPRINTF_USED(linebuf + linebuflen,
+                                        sizeof(linebuf) - linebuflen,
+                                        "%s%08x: ",
+                                        (prefix ? prefix : ""),
+                                        (unsigned int)(ptr - buf));
             hex_dump_to_buffer(ptr, len - (ptr - buf), 16, 1,
                                linebuf + linebuflen,
                                sizeof(linebuf) - linebuflen, true);

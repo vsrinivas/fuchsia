@@ -18,6 +18,7 @@
 #include <assert.h>
 #include <string.h>
 
+#include <ddk/driver.h>
 #include <hw/arch_ops.h>
 #include <zircon/misc/fnv1hash.h>
 
@@ -25,7 +26,7 @@
 #include "hif.h"
 #include "htc.h"
 #include "htt.h"
-#include "linuxisms.h"
+#include "macros.h"
 #include "txrx.h"
 #include "debug.h"
 #include "mac.h"
@@ -42,12 +43,12 @@
 static int ath10k_htt_rx_get_csum_state(struct sk_buff* skb);
 #endif // NEEDS PORTING
 
-static_assert(is_power_of_2(HTT_RX_BUF_HTABLE_SZ),
+static_assert(IS_POW2(HTT_RX_BUF_HTABLE_SZ),
               "Invalid hash table size, must be power of 2");
 
 static struct ath10k_msg_buf*
 ath10k_htt_rx_find_msg_buf_paddr(struct ath10k* ar, uint32_t paddr) {
-    uint32_t hash = fnv1a_tiny(paddr, roundup_log2(HTT_RX_BUF_HTABLE_SZ));
+    uint32_t hash = fnv1a_tiny(paddr, ROUNDUP_LOG2(HTT_RX_BUF_HTABLE_SZ));
     ZX_DEBUG_ASSERT(hash < HTT_RX_BUF_HTABLE_SZ);
     list_node_t* candidate_list = &ar->htt.rx_ring.buf_hash[hash];
     struct ath10k_msg_buf* entry;
@@ -121,7 +122,7 @@ static zx_status_t __ath10k_htt_rx_ring_fill_n(struct ath10k_htt* htt, int num) 
         htt->rx_ring.fill_cnt++;
 
         if (htt->rx_ring.in_ord_rx == ATH10K_HTT_IN_ORD_RX_YES) {
-            uint32_t hash = fnv1a_tiny(buf->paddr, roundup_log2(HTT_RX_BUF_HTABLE_SZ));
+            uint32_t hash = fnv1a_tiny(buf->paddr, ROUNDUP_LOG2(HTT_RX_BUF_HTABLE_SZ));
             ZX_DEBUG_ASSERT(hash < HTT_RX_BUF_HTABLE_SZ);
             list_node_t* bucket = &htt->rx_ring.buf_hash[hash];
             list_add_tail(bucket, &buf->listnode);
@@ -283,7 +284,7 @@ static int ath10k_htt_rx_amsdu_pop(struct ath10k_htt* htt,
         }
 
         skb_trim(msdu, 0);
-        skb_put(msdu, min(msdu_len, HTT_RX_MSDU_SIZE));
+        skb_put(msdu, MIN(msdu_len, HTT_RX_MSDU_SIZE));
         msdu_len -= msdu->len;
 
         /* Note: Chained buffers do not contain rx descriptor */
@@ -296,7 +297,7 @@ static int ath10k_htt_rx_amsdu_pop(struct ath10k_htt* htt,
 
             __skb_queue_tail(amsdu, msdu);
             skb_trim(msdu, 0);
-            skb_put(msdu, min(msdu_len, HTT_RX_BUF_SIZE));
+            skb_put(msdu, MIN(msdu_len, HTT_RX_BUF_SIZE));
             msdu_len -= msdu->len;
             msdu_chaining = 1;
         }
@@ -422,7 +423,7 @@ zx_status_t ath10k_htt_rx_alloc(struct ath10k_htt* htt) {
     htt->rx_ring.size_mask = htt->rx_ring.size - 1;
     htt->rx_ring.fill_level = HTT_RX_RING_FILL_LEVEL;
 
-    if (!is_power_of_2(htt->rx_ring.size)) {
+    if (!IS_POW2(htt->rx_ring.size)) {
         ath10k_warn("htt rx ring size (%d) is not power of 2\n", htt->rx_ring.size);
         return ZX_ERR_INVALID_ARGS;
     }
@@ -698,7 +699,7 @@ ath10k_htt_rx_h_peer_channel(struct ath10k* ar, struct htt_rx_desc* rxd) {
     }
 
     arvif = ath10k_get_arvif(ar, peer->vdev_id);
-    if (WARN_ON_ONCE(!arvif)) {
+    if (COND_WARN_ONCE(!arvif)) {
         return NULL;
     }
 
@@ -934,7 +935,7 @@ static int ath10k_htt_rx_nwifi_hdrlen(struct ath10k* ar,
 
     if (!test_bit(ATH10K_FW_FEATURE_NO_NWIFI_DECAP_4ADDR_PADDING,
                   ar->running_fw->fw_file.fw_features)) {
-        len = round_up(len, 4);
+        len = ROUNDUP(len, 4);
     }
 
     return len;
@@ -969,12 +970,12 @@ static void ath10k_htt_rx_h_undecap_raw(struct ath10k* ar,
      */
 
     /* This probably shouldn't happen but warn just in case */
-    if (unlikely(WARN_ON_ONCE(!is_first))) {
+    if (unlikely(COND_WARN_ONCE(!is_first))) {
         return;
     }
 
     /* This probably shouldn't happen but warn just in case */
-    if (unlikely(WARN_ON_ONCE(!(is_first && is_last)))) {
+    if (unlikely(COND_WARN_ONCE(!(is_first && is_last)))) {
         return;
     }
 
@@ -1051,8 +1052,8 @@ static void ath10k_htt_rx_h_undecap_nwifi(struct ath10k* ar,
     hdr = (struct ieee80211_hdr*)(msdu->data + l3_pad_bytes);
 
     hdr_len = ath10k_htt_rx_nwifi_hdrlen(ar, hdr);
-    ether_addr_copy(da, ieee80211_get_DA(hdr));
-    ether_addr_copy(sa, ieee80211_get_SA(hdr));
+    memcpy(da, ieee80211_get_DA(hdr), ETH_ALEN);
+    memcpy(sa, ieee80211_get_SA(hdr), ETH_ALEN);
     skb_pull(msdu, hdr_len);
 
     /* push original 802.11 header */
@@ -1064,8 +1065,8 @@ static void ath10k_htt_rx_h_undecap_nwifi(struct ath10k* ar,
      * case of 4addr it may also have different SA
      */
     hdr = (struct ieee80211_hdr*)msdu->data;
-    ether_addr_copy(ieee80211_get_DA(hdr), da);
-    ether_addr_copy(ieee80211_get_SA(hdr), sa);
+    memcpy(ieee80211_get_DA(hdr), da, ETH_ALEN);
+    memcpy(ieee80211_get_SA(hdr), sa, ETH_ALEN);
 }
 
 static void* ath10k_htt_rx_h_find_rfc1042(struct ath10k* ar,
@@ -1093,8 +1094,8 @@ static void* ath10k_htt_rx_h_find_rfc1042(struct ath10k* ar,
         hdr_len = ieee80211_hdrlen(hdr->frame_control);
         crypto_len = ath10k_htt_rx_crypto_param_len(ar, enctype);
 
-        rfc1042 += round_up(hdr_len, bytes_aligned) +
-                   round_up(crypto_len, bytes_aligned);
+        rfc1042 += ROUNDUP(hdr_len, bytes_aligned) +
+                   ROUNDUP(crypto_len, bytes_aligned);
     }
 
     if (is_amsdu) {
@@ -1124,7 +1125,7 @@ static void ath10k_htt_rx_h_undecap_eth(struct ath10k* ar,
      */
 
     rfc1042 = ath10k_htt_rx_h_find_rfc1042(ar, msdu, enctype);
-    if (WARN_ON_ONCE(!rfc1042)) {
+    if (COND_WARN_ONCE(!rfc1042)) {
         return;
     }
 
@@ -1135,8 +1136,8 @@ static void ath10k_htt_rx_h_undecap_eth(struct ath10k* ar,
 
     /* pull decapped header and copy SA & DA */
     eth = (struct ethhdr*)msdu->data;
-    ether_addr_copy(da, eth->h_dest);
-    ether_addr_copy(sa, eth->h_source);
+    memcpy(da, eth->h_dest, ETH_ALEN);
+    memcpy(sa, eth->h_source, ETH_ALEN);
     skb_pull(msdu, sizeof(struct ethhdr));
 
     /* push rfc1042/llc/snap */
@@ -1152,8 +1153,8 @@ static void ath10k_htt_rx_h_undecap_eth(struct ath10k* ar,
      * case of 4addr it may also have different SA
      */
     hdr = (struct ieee80211_hdr*)msdu->data;
-    ether_addr_copy(ieee80211_get_DA(hdr), da);
-    ether_addr_copy(ieee80211_get_SA(hdr), sa);
+    memcpy(ieee80211_get_DA(hdr), da, ETH_ALEN);
+    memcpy(ieee80211_get_SA(hdr), sa, ETH_ALEN);
 }
 
 static void ath10k_htt_rx_h_undecap_snap(struct ath10k* ar,
@@ -1477,7 +1478,7 @@ static bool ath10k_htt_rx_amsdu_allowed(struct ath10k* ar,
         return false;
     }
 
-    if (test_bit(ATH10K_CAC_RUNNING, &ar->dev_flags)) {
+    if (BITARR_TEST(&ar->dev_flags, ATH10K_CAC_RUNNING)) {
         ath10k_dbg(ar, ATH10K_DBG_HTT, "htt rx cac running\n");
         return false;
     }
@@ -1689,7 +1690,7 @@ static int ath10k_htt_rx_extract_amsdu(struct sk_buff_head* list,
         return -ENOBUFS;
     }
 
-    if (WARN_ON(!skb_queue_empty(amsdu))) {
+    if (COND_WARN(!skb_queue_empty(amsdu))) {
         return -EINVAL;
     }
 

@@ -70,7 +70,7 @@ zx_status_t ath10k_htc_send(struct ath10k_htc* htc,
     }
 
     if (ep->tx_credit_flow_enabled) {
-        credits = DIV_ROUND_UP(msg_buf->used, htc->target_credit_size);
+        credits = DIV_ROUNDUP(msg_buf->used, htc->target_credit_size);
         mtx_lock(&htc->tx_lock);
         if (ep->tx_credits < credits) {
             ath10k_dbg(ar, ATH10K_DBG_HTC,
@@ -434,7 +434,7 @@ static void ath10k_htc_control_rx_complete(struct ath10k* ar, struct ath10k_msg_
 
         size_t msg_len = ath10k_msg_buf_get_payload_len(msg_buf, ATH10K_MSG_TYPE_HTC_MSG);
         htc->control_resp_len =
-            min_t(int, msg_len, ATH10K_HTC_MAX_CTRL_MSG_LEN);
+            MIN_T(int, msg_len, ATH10K_HTC_MAX_CTRL_MSG_LEN);
 
         memcpy(htc->control_resp_buffer, msg, htc->control_resp_len);
 
@@ -578,7 +578,7 @@ zx_status_t ath10k_htc_wait_target(struct ath10k_htc* htc) {
     if ((size_t)htc->control_resp_len >=
             sizeof(msg->hdr) + sizeof(msg->ready_ext)) {
         htc->max_msgs_per_htc_bundle =
-            min_t(uint8_t, msg->ready_ext.max_msgs_per_htc_bundle,
+            MIN_T(uint8_t, msg->ready_ext.max_msgs_per_htc_bundle,
                   HTC_HOST_MAX_MSG_PER_BUNDLE);
         ath10k_dbg(ar, ATH10K_DBG_HTC,
                    "Extended ready message. RX bundle size: %d\n",

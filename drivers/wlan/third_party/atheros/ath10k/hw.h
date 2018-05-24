@@ -630,9 +630,9 @@ ath10k_rx_desc_get_l3_pad_bytes(struct ath10k_hw_params* hw,
 #define TARGET_10X_NUM_OFFLOAD_REORDER_BUFS     0
 #define TARGET_10X_NUM_PEER_KEYS                2
 #define TARGET_10X_NUM_TIDS_MAX                 256
-#define TARGET_10X_NUM_TIDS                     min((TARGET_10X_NUM_TIDS_MAX), \
+#define TARGET_10X_NUM_TIDS                     MIN((TARGET_10X_NUM_TIDS_MAX), \
                                                     (TARGET_10X_NUM_PEERS) * 2)
-#define TARGET_10X_TX_STATS_NUM_TIDS            min((TARGET_10X_NUM_TIDS_MAX), \
+#define TARGET_10X_TX_STATS_NUM_TIDS            MIN((TARGET_10X_NUM_TIDS_MAX), \
                                                     (TARGET_10X_TX_STATS_NUM_PEERS) * 2)
 #define TARGET_10X_TX_CHAIN_MASK                (BIT(0) | BIT(1) | BIT(2))
 #define TARGET_10X_RX_CHAIN_MASK                (BIT(0) | BIT(1) | BIT(2))

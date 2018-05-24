@@ -21,7 +21,7 @@
 
 #define ATH10K_HIF_MBOX_BLOCK_SIZE              256
 
-#define QCA_MANUFACTURER_ID_BASE                GENMASK(11, 8)
+#define QCA_MANUFACTURER_ID_BASE                BITMASK(8, 11)
 #define QCA_MANUFACTURER_ID_AR6005_BASE         0x5
 #define QCA_MANUFACTURER_ID_QCA9377_BASE        0x7
 #define QCA_SDIO_ID_AR6005_BASE                 0x500
@@ -86,8 +86,8 @@
 #define CCCR_SDIO_ASYNC_INT_DELAY_MASK          0xC0
 
 /* mode to enable special 4-bit interrupt assertion without clock */
-#define SDIO_IRQ_MODE_ASYNC_4BIT_IRQ            BIT(0)
-#define SDIO_IRQ_MODE_ASYNC_4BIT_IRQ_SDIO3      BIT(1)
+#define SDIO_IRQ_MODE_ASYNC_4BIT_IRQ            (1 << 0)
+#define SDIO_IRQ_MODE_ASYNC_4BIT_IRQ_SDIO3      (1 << 1)
 
 #define ATH10K_SDIO_TARGET_DEBUG_INTR_MASK      0x01
 

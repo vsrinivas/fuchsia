@@ -15,6 +15,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <ddk/driver.h>
 #include <zircon/status.h>
 
 #include <string.h>
@@ -186,7 +187,7 @@ zx_status_t ath10k_bmi_read_memory(struct ath10k* ar, uint32_t address,
     }
 
     while (length) {
-        rxlen = min_t(uint32_t, length, BMI_MAX_DATA_SIZE);
+        rxlen = MIN_T(uint32_t, length, BMI_MAX_DATA_SIZE);
 
         cmd.id            = BMI_READ_MEMORY;
         cmd.read_mem.addr = address;
@@ -286,11 +287,11 @@ zx_status_t ath10k_bmi_write_memory(struct ath10k* ar, uint32_t address,
     }
 
     while (length) {
-        txlen = min(length, BMI_MAX_DATA_SIZE - hdrlen);
+        txlen = MIN(length, BMI_MAX_DATA_SIZE - hdrlen);
 
         /* copy before roundup to avoid reading beyond buffer*/
         memcpy(cmd.write_mem.payload, buffer, txlen);
-        txlen = roundup(txlen, 4);
+        txlen = ROUNDUP(txlen, 4);
 
         cmd.id             = BMI_WRITE_MEMORY;
         cmd.write_mem.addr = address;
@@ -304,8 +305,8 @@ zx_status_t ath10k_bmi_write_memory(struct ath10k* ar, uint32_t address,
             return ret;
         }
 
-        /* fixup roundup() so `length` zeroes out for last chunk */
-        txlen = min(txlen, length);
+        /* fixup ROUNDUP() so `length` zeroes out for last chunk */
+        txlen = MIN(txlen, length);
 
         address += txlen;
         buffer  += txlen;
@@ -369,9 +370,9 @@ zx_status_t ath10k_bmi_lz_data(struct ath10k* ar, const void* buffer, uint32_t l
     }
 
     while (length) {
-        txlen = min(length, BMI_MAX_DATA_SIZE - hdrlen);
+        txlen = MIN(length, BMI_MAX_DATA_SIZE - hdrlen);
 
-        WARN_ON_ONCE(txlen & 3);
+        COND_WARN_ONCE(txlen & 3);
 
         cmd.id          = BMI_LZ_DATA;
         cmd.lz_data.len = txlen;
@@ -419,7 +420,7 @@ zx_status_t ath10k_bmi_lz_stream_start(struct ath10k* ar, uint32_t address) {
 zx_status_t ath10k_bmi_fast_download(struct ath10k* ar, uint32_t address,
                                      const void* buffer, uint32_t length) {
     uint8_t trailer[4] = {};
-    uint32_t head_len = rounddown(length, 4);
+    uint32_t head_len = ROUNDDOWN(length, 4);
     uint32_t trailer_len = length - head_len;
     zx_status_t ret;
 

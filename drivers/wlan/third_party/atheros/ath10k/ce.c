@@ -19,7 +19,7 @@
 #include "pci.h"
 #include "ce.h"
 #include "debug.h"
-#include "linuxisms.h"
+#include "macros.h"
 
 #include <assert.h>
 #include <limits.h>
@@ -360,11 +360,11 @@ void __ath10k_ce_send_revert(struct ath10k_ce_pipe* pipe) {
      * scatter-gather transfer (before index register is updated)
      * that needs to be cleaned up.
      */
-    if (WARN_ON_ONCE(src_ring->write_index == src_ring->sw_index)) {
+    if (COND_WARN_ONCE(src_ring->write_index == src_ring->sw_index)) {
         return;
     }
 
-    if (WARN_ON_ONCE(src_ring->write_index ==
+    if (COND_WARN_ONCE(src_ring->write_index ==
                      ath10k_ce_src_ring_write_index_get(ar, ctrl_addr))) {
         return;
     }
@@ -848,7 +848,7 @@ static zx_status_t ath10k_ce_init_src_ring(struct ath10k* ar,
     struct ath10k_ce_ring* src_ring = ce_state->src_ring;
     uint32_t nentries, ctrl_addr = ath10k_ce_base_address(ar, ce_id);
 
-    nentries = roundup_pow_of_two(attr->src_nentries);
+    nentries = ROUNDUP_POW2(attr->src_nentries);
 
     memset(src_ring->base_addr_owner_space, 0,
            nentries * sizeof(struct ce_desc));
@@ -884,7 +884,7 @@ static zx_status_t ath10k_ce_init_dest_ring(struct ath10k* ar,
     struct ath10k_ce_ring* dest_ring = ce_state->dest_ring;
     uint32_t nentries, ctrl_addr = ath10k_ce_base_address(ar, ce_id);
 
-    nentries = roundup_pow_of_two(attr->dest_nentries);
+    nentries = ROUNDUP_POW2(attr->dest_nentries);
 
     memset(dest_ring->base_addr_owner_space, 0,
            nentries * sizeof(struct ce_desc));
@@ -915,7 +915,7 @@ ath10k_ce_alloc_src_ring(struct ath10k* ar, unsigned int ce_id,
     *src_ring_ptr = NULL;
     uint32_t nentries = attr->src_nentries;
 
-    nentries = roundup_pow_of_two(nentries);
+    nentries = ROUNDUP_POW2(nentries);
 
     struct ath10k_ce_ring* src_ring =
         calloc(1, sizeof(*src_ring) + (nentries * sizeof(*src_ring->per_transfer_context)));
@@ -953,7 +953,7 @@ ath10k_ce_alloc_dest_ring(struct ath10k* ar, unsigned int ce_id,
     *dest_ring_ptr = NULL;
     uint32_t nentries;
 
-    nentries = roundup_pow_of_two(attr->dest_nentries);
+    nentries = ROUNDUP_POW2(attr->dest_nentries);
 
     struct ath10k_ce_ring* dest_ring =
         calloc(1, sizeof(*dest_ring) + (nentries * sizeof(*dest_ring->per_transfer_context)));

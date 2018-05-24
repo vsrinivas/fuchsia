@@ -138,7 +138,7 @@ struct ath10k_peer* ath10k_peer_find_by_id(struct ath10k* ar, int peer_id) {
     ASSERT_MTX_HELD(&ar->data_lock);
 
     list_for_each_entry(peer, &ar->peers, list)
-    if (test_bit(peer_id, peer->peer_ids)) {
+    if (BITARR_TEST(peer->peer_ids, peer_id)) {
         return peer;
     }
 
@@ -157,7 +157,7 @@ static int ath10k_wait_for_peer_common(struct ath10k* ar, int vdev_id,
         mtx_unlock(&ar->data_lock);
 
         (mapped == expect_mapped ||
-         test_bit(ATH10K_FLAG_CRASH_FLUSH, &ar->dev_flags));
+         BITARR_TEST(&ar->dev_flags, ATH10K_FLAG_CRASH_FLUSH));
     }), 3 * HZ);
 
     if (time_left == 0) {
@@ -195,7 +195,7 @@ void ath10k_peer_map_event(struct ath10k_htt* htt,
         }
 
         peer->vdev_id = ev->vdev_id;
-        ether_addr_copy(peer->addr, ev->addr);
+        memcpy(peer->addr, ev->addr, ETH_ALEN);
         list_add(&peer->list, &ar->peers);
         wake_up(&ar->peer_mapping_wq);
     }
@@ -203,9 +203,9 @@ void ath10k_peer_map_event(struct ath10k_htt* htt,
     ath10k_dbg(ar, ATH10K_DBG_HTT, "htt peer map vdev %d peer %pM id %d\n",
                ev->vdev_id, ev->addr, ev->peer_id);
 
-    WARN_ON(ar->peer_map[ev->peer_id] && (ar->peer_map[ev->peer_id] != peer));
+    COND_WARN(ar->peer_map[ev->peer_id] && (ar->peer_map[ev->peer_id] != peer));
     ar->peer_map[ev->peer_id] = peer;
-    set_bit(ev->peer_id, peer->peer_ids);
+    BITARR_SET(peer->peer_ids, ev->peer_id);
 exit:
     mtx_unlock(&ar->data_lock);
 }
@@ -233,7 +233,7 @@ void ath10k_peer_unmap_event(struct ath10k_htt* htt,
                peer->vdev_id, peer->addr, ev->peer_id);
 
     ar->peer_map[ev->peer_id] = NULL;
-    clear_bit(ev->peer_id, peer->peer_ids);
+    BITARR_CLEAR(peer->peer_ids, ev->peer_id);
 
     if (bitmap_empty(peer->peer_ids, ATH10K_MAX_NUM_PEER_IDS)) {
         list_del(&peer->list);

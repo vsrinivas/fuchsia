@@ -15,6 +15,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <ddk/driver.h>
+
 #include "core.h"
 #include "htc.h"
 #include "debug.h"
@@ -1794,7 +1796,7 @@ zx_status_t ath10k_wmi_cmd_send(struct ath10k* ar, struct ath10k_msg_buf* buf, u
             break;
         }
 
-        if (test_bit(ATH10K_FLAG_CRASH_FLUSH, ar->dev_flags)) {
+        if (BITARR_TEST(ar->dev_flags, ATH10K_FLAG_CRASH_FLUSH)) {
             ret = ZX_ERR_IO_NOT_PRESENT;
             break;
         }
@@ -1838,7 +1840,7 @@ ath10k_wmi_op_gen_mgmt_tx(struct ath10k* ar, struct sk_buff* msdu) {
         vdev_id = 0;
     }
 
-    if (WARN_ON_ONCE(!ieee80211_is_mgmt(hdr->frame_control))) {
+    if (COND_WARN_ONCE(!ieee80211_is_mgmt(hdr->frame_control))) {
         return ERR_PTR(-EINVAL);
     }
 
@@ -1852,7 +1854,7 @@ ath10k_wmi_op_gen_mgmt_tx(struct ath10k* ar, struct sk_buff* msdu) {
         buf_len += IEEE80211_CCMP_MIC_LEN;
     }
 
-    len = round_up(len, 4);
+    len = ROUNDUP(len, 4);
 
     skb = ath10k_wmi_alloc_skb(ar, len);
     if (!skb) {
@@ -1866,7 +1868,7 @@ ath10k_wmi_op_gen_mgmt_tx(struct ath10k* ar, struct sk_buff* msdu) {
     cmd->hdr.tx_power = 0;
     cmd->hdr.buf_len = buf_len;
 
-    ether_addr_copy(cmd->hdr.peer_macaddr.addr, ieee80211_get_DA(hdr));
+    memcpy(cmd->hdr.peer_macaddr.addr, ieee80211_get_DA(hdr), ETH_ALEN);
     memcpy(cmd->buf, msdu->data, msdu->len);
 
     ath10k_dbg(ar, ATH10K_DBG_WMI, "wmi mgmt tx skb %pK len %d ftype %02x stype %02x\n",
@@ -2147,8 +2149,7 @@ static int ath10k_wmi_op_pull_mgmt_rx_ev(struct ath10k* ar, struct sk_buff* skb,
     uint32_t msdu_len;
     uint32_t len;
 
-    if (test_bit(ATH10K_FW_FEATURE_EXT_WMI_MGMT_RX,
-                 ar->running_fw->fw_file.fw_features)) {
+    if (BITARR_TEST(ar->running_fw->fw_file.fw_features, ATH10K_FW_FEATURE_EXT_WMI_MGMT_RX)) {
         ev_v2 = (struct wmi_mgmt_rx_event_v2*)skb->data;
         ev_hdr = &ev_v2->hdr.v1;
         pull_len = sizeof(*ev_v2);
@@ -2291,7 +2292,7 @@ int ath10k_wmi_event_mgmt_rx(struct ath10k* ar, struct sk_buff* skb) {
     ath10k_dbg(ar, ATH10K_DBG_MGMT,
                "event mgmt rx status %08x\n", rx_status);
 
-    if ((test_bit(ATH10K_CAC_RUNNING, &ar->dev_flags)) ||
+    if ((BITARR_TEST(&ar->dev_flags, ATH10K_CAC_RUNNING)) ||
             (rx_status & (WMI_RX_STATUS_ERR_DECRYPT |
                           WMI_RX_STATUS_ERR_KEY_CACHE_MISS | WMI_RX_STATUS_ERR_CRC))) {
         dev_kfree_skb(skb);
@@ -2319,7 +2320,7 @@ int ath10k_wmi_event_mgmt_rx(struct ath10k* ar, struct sk_buff* skb) {
         /* Shouldn't happen unless list of advertised channels to
          * mac80211 has been changed.
          */
-        WARN_ON_ONCE(1);
+        WARN_ONCE();
         dev_kfree_skb(skb);
         return 0;
     }
@@ -2645,7 +2646,7 @@ void ath10k_wmi_pull_pdev_stats_extra(const struct wmi_pdev_stats_extra* src,
 
 void ath10k_wmi_pull_peer_stats(const struct wmi_peer_stats* src,
                                 struct ath10k_fw_stats_peer* dst) {
-    ether_addr_copy(dst->peer_macaddr, src->peer_macaddr.addr);
+    memcpy(dst->peer_macaddr, src->peer_macaddr.addr, ETH_ALEN);
     dst->peer_rssi = src->peer_rssi;
     dst->peer_tx_rate = src->peer_tx_rate;
 }
@@ -2653,7 +2654,7 @@ void ath10k_wmi_pull_peer_stats(const struct wmi_peer_stats* src,
 static void
 ath10k_wmi_10_4_pull_peer_stats(const struct wmi_10_4_peer_stats* src,
                                 struct ath10k_fw_stats_peer* dst) {
-    ether_addr_copy(dst->peer_macaddr, src->peer_macaddr.addr);
+    memcpy(dst->peer_macaddr, src->peer_macaddr.addr, ETH_ALEN);
     dst->peer_rssi = src->peer_rssi;
     dst->peer_tx_rate = src->peer_tx_rate;
     dst->peer_rx_rate = src->peer_rx_rate;
@@ -2929,7 +2930,7 @@ static int ath10k_wmi_10_2_4_op_pull_fw_stats(struct ath10k* ar,
         struct ath10k_fw_stats_peer* dst;
         int stats_len;
 
-        if (test_bit(WMI_SERVICE_PEER_STATS, ar->wmi.svc_map)) {
+        if (BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_PEER_STATS)) {
             stats_len = sizeof(struct wmi_10_2_4_ext_peer_stats);
         } else {
             stats_len = sizeof(struct wmi_10_2_4_peer_stats);
@@ -3076,7 +3077,7 @@ static int ath10k_wmi_10_4_op_pull_fw_stats(struct ath10k* ar,
             continue;
         }
 
-        ether_addr_copy(dst->peer_macaddr, src->peer_macaddr.addr);
+        memcpy(dst->peer_macaddr, src->peer_macaddr.addr, ETH_ALEN);
         dst->rx_duration = src->rx_duration;
         list_add_tail(&dst->list, &stats->peers_extd);
     }
@@ -3119,7 +3120,7 @@ void ath10k_wmi_event_vdev_start_resp(struct ath10k* ar, struct sk_buff* skb) {
         return;
     }
 
-    if (WARN_ON(arg.status)) {
+    if (COND_WARN(arg.status)) {
         return;
     }
 
@@ -3333,14 +3334,14 @@ static int ath10k_wmi_op_pull_swba_ev(struct ath10k* ar, struct sk_buff* skb,
     arg->vdev_map = ev->vdev_map;
 
     for (i = 0, map = ev->vdev_map; map; map >>= 1) {
-        if (!(map & BIT(0))) {
+        if (!(map & 0x1)) {
             continue;
         }
 
         /* If this happens there were some changes in firmware and
          * ath10k should update the max size of tim_info array.
          */
-        if (WARN_ON_ONCE(i == countof(arg->tim_info))) {
+        if (COND_WARN_ONCE(i == countof(arg->tim_info))) {
             break;
         }
 
@@ -3381,14 +3382,14 @@ static int ath10k_wmi_10_2_4_op_pull_swba_ev(struct ath10k* ar,
     arg->vdev_map = ev->vdev_map;
 
     for (i = 0, map = ev->vdev_map; map; map >>= 1) {
-        if (!(map & BIT(0))) {
+        if (!(map & 0x1)) {
             continue;
         }
 
         /* If this happens there were some changes in firmware and
          * ath10k should update the max size of tim_info array.
          */
-        if (WARN_ON_ONCE(i == countof(arg->tim_info))) {
+        if (COND_WARN_ONCE(i == countof(arg->tim_info))) {
             break;
         }
 
@@ -3427,14 +3428,14 @@ static int ath10k_wmi_10_4_op_pull_swba_ev(struct ath10k* ar,
     arg->vdev_map = ev->vdev_map;
 
     for (i = 0, map = ev->vdev_map; map; map >>= 1) {
-        if (!(map & BIT(0))) {
+        if (!(map & 0x1)) {
             continue;
         }
 
         /* If this happens there were some changes in firmware and
          * ath10k should update the max size of tim_info array.
          */
-        if (WARN_ON_ONCE(i == countof(arg->tim_info))) {
+        if (COND_WARN_ONCE(i == countof(arg->tim_info))) {
             break;
         }
 
@@ -4199,7 +4200,7 @@ static uint8_t ath10k_tpc_config_get_rate(struct ath10k* ar,
     preamble = ATH10K_HW_PREAMBLE(rate_code);
     ch = num_chains - 1;
 
-    tpc = min_t(uint8_t, ev->rates_array[rate_idx], ev->max_reg_allow_pow[ch]);
+    tpc = MIN_T(uint8_t, ev->rates_array[rate_idx], ev->max_reg_allow_pow[ch]);
 
     if (ev->num_tx_chain <= 1) {
         goto out;
@@ -4216,15 +4217,15 @@ static uint8_t ath10k_tpc_config_get_rate(struct ath10k* ar,
 
     switch (type) {
     case WMI_TPC_TABLE_TYPE_STBC:
-        tpc = min_t(uint8_t, tpc,
+        tpc = MIN_T(uint8_t, tpc,
                     ev->max_reg_allow_pow_agstbc[ch - 1][stm_idx]);
         break;
     case WMI_TPC_TABLE_TYPE_TXBF:
-        tpc = min_t(uint8_t, tpc,
+        tpc = MIN_T(uint8_t, tpc,
                     ev->max_reg_allow_pow_agtxbf[ch - 1][stm_idx]);
         break;
     case WMI_TPC_TABLE_TYPE_CDD:
-        tpc = min_t(uint8_t, tpc,
+        tpc = MIN_T(uint8_t, tpc,
                     ev->max_reg_allow_pow_agcdd[ch - 1][stm_idx]);
         break;
     default:
@@ -4490,7 +4491,7 @@ static int ath10k_wmi_alloc_chunk(struct ath10k* ar, uint32_t req_id,
     unsigned int idx = ar->wmi.num_mem_chunks;
     ZX_ASSERT(idx < countof(ar->wmi.mem_chunks));
 
-    pool_size = num_units * roundup(unit_len, 4);
+    pool_size = num_units * ROUNDUP(unit_len, 4);
     zx_status_t status = io_buffer_init(&ar->wmi.mem_chunks[idx].handle, pool_size,
                                         IO_BUFFER_RW | IO_BUFFER_CONTIG);
 
@@ -4561,7 +4562,7 @@ ath10k_wmi_is_host_mem_allocated(struct ath10k* ar,
         found = false;
         for (j = 0; j < ar->wmi.num_mem_chunks; j++) {
             if (ar->wmi.mem_chunks[j].req_id == req_id) {
-                pool_size = num_units * round_up(unit_size, 4);
+                pool_size = num_units * ROUNDUP(unit_size, 4);
                 if (ar->wmi.mem_chunks[j].len == pool_size) {
                     found = true;
                     break;
@@ -4604,7 +4605,7 @@ ath10k_wmi_main_op_pull_svc_rdy_ev(struct ath10k* ar, struct sk_buff* skb,
     arg->service_map = ev->wmi_service_bitmap;
     arg->service_map_len = sizeof(ev->wmi_service_bitmap);
 
-    n = min_t(size_t, arg->num_mem_reqs,
+    n = MIN_T(size_t, arg->num_mem_reqs,
               countof(arg->mem_reqs));
     for (i = 0; i < n; i++) {
         arg->mem_reqs[i] = &ev->mem_reqs[i];
@@ -4644,7 +4645,7 @@ ath10k_wmi_10x_op_pull_svc_rdy_ev(struct ath10k* ar, struct sk_buff* skb,
     arg->service_map = ev->wmi_service_bitmap;
     arg->service_map_len = sizeof(ev->wmi_service_bitmap);
 
-    n = min_t(size_t, arg->num_mem_reqs,
+    n = MIN_T(size_t, arg->num_mem_reqs,
               countof(arg->mem_reqs));
     for (i = 0; i < n; i++) {
         arg->mem_reqs[i] = &ev->mem_reqs[i];
@@ -4723,8 +4724,8 @@ static int ath10k_wmi_event_service_ready_work(void* thrd_init_param) {
         return -1;
     }
 
-    if (test_bit(WMI_SERVICE_PEER_CACHING, ar->wmi.svc_map)) {
-        if (test_bit(ATH10K_FW_FEATURE_PEER_FLOW_CONTROL, ar->running_fw->fw_file.fw_features)) {
+    if (BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_PEER_CACHING)) {
+        if (BITARR_TEST(ar->running_fw->fw_file.fw_features, ATH10K_FW_FEATURE_PEER_FLOW_CONTROL)) {
             ar->num_active_peers = TARGET_10_4_QCACHE_ACTIVE_PEERS_PFC +
                                    ar->max_num_vdevs;
         } else {
@@ -4884,7 +4885,7 @@ zx_status_t ath10k_wmi_event_ready(struct ath10k* ar, struct ath10k_msg_buf* msg
                arg.mac_addr,
                arg.status);
 
-    ether_addr_copy(ar->mac_addr, arg.mac_addr);
+    memcpy(ar->mac_addr, arg.mac_addr, ETH_ALEN);
     completion_signal(&ar->wmi.unified_ready);
     return 0;
 }
@@ -4894,7 +4895,7 @@ static int ath10k_wmi_event_temperature(struct ath10k* ar, struct sk_buff* skb) 
     const struct wmi_pdev_temperature_event* ev;
 
     ev = (struct wmi_pdev_temperature_event*)skb->data;
-    if (WARN_ON(skb->len < sizeof(*ev))) {
+    if (COND_WARN(skb->len < sizeof(*ev))) {
         return -EPROTO;
     }
 
@@ -4912,7 +4913,7 @@ static int ath10k_wmi_event_pdev_bss_chan_info(struct ath10k* ar,
     int idx;
 
     ev = (struct wmi_pdev_bss_chan_info_event*)skb->data;
-    if (WARN_ON(skb->len < sizeof(*ev))) {
+    if (COND_WARN(skb->len < sizeof(*ev))) {
         return -EPROTO;
     }
 
@@ -5856,8 +5857,8 @@ static struct sk_buff* ath10k_wmi_10_2_op_gen_init(struct ath10k* ar) {
 
     features = WMI_10_2_RX_BATCH_MODE;
 
-    if (test_bit(ATH10K_FLAG_BTCOEX, &ar->dev_flags) &&
-        test_bit(WMI_SERVICE_COEX_GPIO, ar->wmi.svc_map)) {
+    if (BITARR_TEST(&ar->dev_flags, ATH10K_FLAG_BTCOEX) &&
+        BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_COEX_GPIO)) {
         features |= WMI_10_2_COEX_GPIO;
     }
 
@@ -5865,7 +5866,7 @@ static struct sk_buff* ath10k_wmi_10_2_op_gen_init(struct ath10k* ar) {
         features |= WMI_10_2_PEER_STATS;
     }
 
-    if (test_bit(WMI_SERVICE_BSS_CHANNEL_INFO_64, ar->wmi.svc_map)) {
+    if (BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_BSS_CHANNEL_INFO_64)) {
         features |= WMI_10_2_BSS_CHAN_INFO;
     }
 
@@ -5983,7 +5984,7 @@ ath10k_wmi_start_scan_tlvs_len(const struct wmi_start_scan_arg* arg) {
 
     if (arg->ie_len) {
         len += sizeof(struct wmi_ie_data);
-        len += roundup(arg->ie_len, 4);
+        len += ROUNDUP(arg->ie_len, 4);
     }
 
     if (arg->n_channels) {
@@ -6078,8 +6079,7 @@ ath10k_wmi_put_start_scan_tlvs(struct wmi_start_scan_tlvs* tlvs,
         bssids->num_bssid = arg->n_bssids;
 
         for (i = 0; i < arg->n_bssids; i++)
-            ether_addr_copy(bssids->bssid_list[i].addr,
-                            arg->bssids[i].bssid);
+            memcpy(bssids->bssid_list[i].addr, arg->bssids[i].bssid, ETH_ALEN);
 
         ptr += sizeof(*bssids);
         ptr += sizeof(struct wmi_mac_addr) * arg->n_bssids;
@@ -6092,7 +6092,7 @@ ath10k_wmi_put_start_scan_tlvs(struct wmi_start_scan_tlvs* tlvs,
         memcpy(ie->ie_data, arg->ie, arg->ie_len);
 
         ptr += sizeof(*ie);
-        ptr += roundup(arg->ie_len, 4);
+        ptr += ROUNDUP(arg->ie_len, 4);
     }
 }
 
@@ -6234,7 +6234,7 @@ ath10k_wmi_op_gen_vdev_create(struct ath10k* ar, uint32_t vdev_id,
     cmd->vdev_id      = vdev_id;
     cmd->vdev_type    = type;
     cmd->vdev_subtype = subtype;
-    ether_addr_copy(cmd->vdev_macaddr.addr, macaddr);
+    memcpy(cmd->vdev_macaddr.addr, macaddr, ETH_ALEN);
 
     ath10k_dbg(ar, ATH10K_DBG_WMI,
                "WMI vdev create: id %d type %d subtype %d macaddr %pM\n",
@@ -6269,10 +6269,10 @@ ath10k_wmi_op_gen_vdev_start(struct ath10k* ar,
     const char* cmdname;
     uint32_t flags = 0;
 
-    if (WARN_ON(arg->hidden_ssid && !arg->ssid)) {
+    if (COND_WARN(arg->hidden_ssid && !arg->ssid)) {
         return ERR_PTR(-EINVAL);
     }
-    if (WARN_ON(arg->ssid_len > sizeof(cmd->ssid.ssid))) {
+    if (COND_WARN(arg->ssid_len > sizeof(cmd->ssid.ssid))) {
         return ERR_PTR(-EINVAL);
     }
 
@@ -6350,7 +6350,7 @@ ath10k_wmi_op_gen_vdev_up(struct ath10k* ar, uint32_t vdev_id, uint32_t aid,
     cmd = (struct wmi_vdev_up_cmd*)skb->data;
     cmd->vdev_id       = vdev_id;
     cmd->vdev_assoc_id = aid;
-    ether_addr_copy(cmd->vdev_bssid.addr, bssid);
+    memcpy(cmd->vdev_bssid.addr, bssid, ETH_ALEN);
 
     ath10k_dbg(ar, ATH10K_DBG_WMI,
                "wmi mgmt vdev up id 0x%x assoc id %d bssid %pM\n",
@@ -6433,7 +6433,7 @@ ath10k_wmi_op_gen_vdev_install_key(struct ath10k* ar,
     cmd->key_rxmic_len = arg->key_rxmic_len;
 
     if (arg->macaddr) {
-        ether_addr_copy(cmd->peer_macaddr.addr, arg->macaddr);
+        memcpy(cmd->peer_macaddr.addr, arg->macaddr, ETH_ALEN);
     }
     if (arg->key_data) {
         memcpy(cmd->key_data, arg->key_data, arg->key_len);
@@ -6513,7 +6513,7 @@ ath10k_wmi_op_gen_peer_create(struct ath10k* ar, uint32_t vdev_id,
 
     cmd = (struct wmi_peer_create_cmd*)skb->data;
     cmd->vdev_id = vdev_id;
-    ether_addr_copy(cmd->peer_macaddr.addr, peer_addr);
+    memcpy(cmd->peer_macaddr.addr, peer_addr, ETH_ALEN);
 
     ath10k_dbg(ar, ATH10K_DBG_WMI,
                "wmi peer create vdev_id %d peer_addr %pM\n",
@@ -6534,7 +6534,7 @@ ath10k_wmi_op_gen_peer_delete(struct ath10k* ar, uint32_t vdev_id,
 
     cmd = (struct wmi_peer_delete_cmd*)skb->data;
     cmd->vdev_id = vdev_id;
-    ether_addr_copy(cmd->peer_macaddr.addr, peer_addr);
+    memcpy(cmd->peer_macaddr.addr, peer_addr, ETH_ALEN);
 
     ath10k_dbg(ar, ATH10K_DBG_WMI,
                "wmi peer delete vdev_id %d peer_addr %pM\n",
@@ -6556,7 +6556,7 @@ ath10k_wmi_op_gen_peer_flush(struct ath10k* ar, uint32_t vdev_id,
     cmd = (struct wmi_peer_flush_tids_cmd*)skb->data;
     cmd->vdev_id         = vdev_id;
     cmd->peer_tid_bitmap = tid_bitmap;
-    ether_addr_copy(cmd->peer_macaddr.addr, peer_addr);
+    memcpy(cmd->peer_macaddr.addr, peer_addr, ETH_ALEN);
 
     ath10k_dbg(ar, ATH10K_DBG_WMI,
                "wmi peer flush vdev_id %d peer_addr %pM tids %08x\n",
@@ -6581,7 +6581,7 @@ ath10k_wmi_op_gen_peer_set_param(struct ath10k* ar, uint32_t vdev_id,
     cmd->vdev_id     = vdev_id;
     cmd->param_id    = param_id;
     cmd->param_value = param_value;
-    ether_addr_copy(cmd->peer_macaddr.addr, peer_addr);
+    memcpy(cmd->peer_macaddr.addr, peer_addr, ETH_ALEN);
 
     ath10k_dbg(ar, ATH10K_DBG_WMI,
                "wmi vdev %d peer 0x%pM set param %d value %d\n",
@@ -6652,7 +6652,7 @@ ath10k_wmi_op_gen_set_ap_ps(struct ath10k* ar, uint32_t vdev_id, const uint8_t* 
     cmd->vdev_id = vdev_id;
     cmd->param_id = param_id;
     cmd->param_value = value;
-    ether_addr_copy(cmd->peer_macaddr.addr, mac);
+    memcpy(cmd->peer_macaddr.addr, mac, ETH_ALEN);
 
     ath10k_dbg(ar, ATH10K_DBG_WMI,
                "wmi ap ps param vdev_id 0x%X param %d value %d mac_addr %pM\n",
@@ -6709,7 +6709,7 @@ ath10k_wmi_peer_assoc_fill(struct ath10k* ar, void* buf,
     cmd->peer_vht_caps      = arg->peer_vht_caps;
     cmd->peer_phymode       = arg->peer_phymode;
 
-    ether_addr_copy(cmd->peer_macaddr.addr, arg->addr);
+    memcpy(cmd->peer_macaddr.addr, arg->addr, ETH_ALEN);
 
     cmd->peer_legacy_rates.num_rates =
         arg->peer_legacy_rates.num_rates;
@@ -7188,7 +7188,7 @@ ath10k_wmi_op_gen_addba_clear_resp(struct ath10k* ar, uint32_t vdev_id,
 
     cmd = (struct wmi_addba_clear_resp_cmd*)skb->data;
     cmd->vdev_id = vdev_id;
-    ether_addr_copy(cmd->peer_macaddr.addr, mac);
+    memcpy(cmd->peer_macaddr.addr, mac, ETH_ALEN);
 
     ath10k_dbg(ar, ATH10K_DBG_WMI,
                "wmi addba clear resp vdev_id 0x%X mac_addr %pM\n",
@@ -7213,7 +7213,7 @@ ath10k_wmi_op_gen_addba_send(struct ath10k* ar, uint32_t vdev_id, const uint8_t*
 
     cmd = (struct wmi_addba_send_cmd*)skb->data;
     cmd->vdev_id = vdev_id;
-    ether_addr_copy(cmd->peer_macaddr.addr, mac);
+    memcpy(cmd->peer_macaddr.addr, mac, ETH_ALEN);
     cmd->tid = tid;
     cmd->buffersize = buf_size;
 
@@ -7240,7 +7240,7 @@ ath10k_wmi_op_gen_addba_set_resp(struct ath10k* ar, uint32_t vdev_id, const uint
 
     cmd = (struct wmi_addba_setresponse_cmd*)skb->data;
     cmd->vdev_id = vdev_id;
-    ether_addr_copy(cmd->peer_macaddr.addr, mac);
+    memcpy(cmd->peer_macaddr.addr, mac, ETH_ALEN);
     cmd->tid = tid;
     cmd->statuscode = status;
 
@@ -7267,7 +7267,7 @@ ath10k_wmi_op_gen_delba_send(struct ath10k* ar, uint32_t vdev_id, const uint8_t*
 
     cmd = (struct wmi_delba_send_cmd*)skb->data;
     cmd->vdev_id = vdev_id;
-    ether_addr_copy(cmd->peer_macaddr.addr, mac);
+    memcpy(cmd->peer_macaddr.addr, mac, ETH_ALEN);
     cmd->tid = tid;
     cmd->initiator = initiator;
     cmd->reasoncode = reason;
@@ -7322,26 +7322,26 @@ ath10k_wmi_fw_pdev_base_stats_fill(const struct ath10k_fw_stats_pdev* pdev,
     uint32_t len = *length;
     uint32_t buf_len = ATH10K_FW_STATS_BUF_SIZE;
 
-    len += scnprintf(buf + len, buf_len - len, "\n");
-    len += scnprintf(buf + len, buf_len - len, "%30s\n",
-                     "ath10k PDEV stats");
-    len += scnprintf(buf + len, buf_len - len, "%30s\n\n",
-                     "=================");
+    len += SNPRINTF_USED(buf + len, buf_len - len, "\n");
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s\n",
+                         "ath10k PDEV stats");
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s\n\n",
+                         "=================");
 
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "Channel noise floor", pdev->ch_noise_floor);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10u\n",
-                     "Channel TX power", pdev->chan_tx_power);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10u\n",
-                     "TX frame count", pdev->tx_frame_count);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10u\n",
-                     "RX frame count", pdev->rx_frame_count);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10u\n",
-                     "RX clear count", pdev->rx_clear_count);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10u\n",
-                     "Cycle count", pdev->cycle_count);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10u\n",
-                     "PHY error count", pdev->phy_err_count);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "Channel noise floor", pdev->ch_noise_floor);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10u\n",
+                         "Channel TX power", pdev->chan_tx_power);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10u\n",
+                         "TX frame count", pdev->tx_frame_count);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10u\n",
+                         "RX frame count", pdev->rx_frame_count);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10u\n",
+                         "RX clear count", pdev->rx_clear_count);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10u\n",
+                         "Cycle count", pdev->cycle_count);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10u\n",
+                         "PHY error count", pdev->phy_err_count);
 
     *length = len;
 }
@@ -7352,18 +7352,18 @@ ath10k_wmi_fw_pdev_extra_stats_fill(const struct ath10k_fw_stats_pdev* pdev,
     uint32_t len = *length;
     uint32_t buf_len = ATH10K_FW_STATS_BUF_SIZE;
 
-    len += scnprintf(buf + len, buf_len - len, "%30s %10u\n",
-                     "RTS bad count", pdev->rts_bad);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10u\n",
-                     "RTS good count", pdev->rts_good);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10u\n",
-                     "FCS bad count", pdev->fcs_bad);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10u\n",
-                     "No beacon count", pdev->no_beacons);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10u\n",
-                     "MIB int count", pdev->mib_int_count);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10u\n",
+                         "RTS bad count", pdev->rts_bad);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10u\n",
+                         "RTS good count", pdev->rts_good);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10u\n",
+                         "FCS bad count", pdev->fcs_bad);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10u\n",
+                         "No beacon count", pdev->no_beacons);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10u\n",
+                         "MIB int count", pdev->mib_int_count);
 
-    len += scnprintf(buf + len, buf_len - len, "\n");
+    len += SNPRINTF_USED(buf + len, buf_len - len, "\n");
     *length = len;
 }
 
@@ -7373,57 +7373,57 @@ ath10k_wmi_fw_pdev_tx_stats_fill(const struct ath10k_fw_stats_pdev* pdev,
     uint32_t len = *length;
     uint32_t buf_len = ATH10K_FW_STATS_BUF_SIZE;
 
-    len += scnprintf(buf + len, buf_len - len, "\n%30s\n",
-                     "ath10k PDEV TX stats");
-    len += scnprintf(buf + len, buf_len - len, "%30s\n\n",
-                     "=================");
+    len += SNPRINTF_USED(buf + len, buf_len - len, "\n%30s\n",
+                         "ath10k PDEV TX stats");
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s\n\n",
+                         "=================");
 
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "HTT cookies queued", pdev->comp_queued);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "HTT cookies disp.", pdev->comp_delivered);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "MSDU queued", pdev->msdu_enqued);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "MPDU queued", pdev->mpdu_enqued);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "MSDUs dropped", pdev->wmm_drop);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "Local enqued", pdev->local_enqued);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "Local freed", pdev->local_freed);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "HW queued", pdev->hw_queued);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "PPDUs reaped", pdev->hw_reaped);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "Num underruns", pdev->underrun);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "PPDUs cleaned", pdev->tx_abort);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "MPDUs requed", pdev->mpdus_requed);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "Excessive retries", pdev->tx_ko);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "HW rate", pdev->data_rc);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "Sched self tiggers", pdev->self_triggers);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "Dropped due to SW retries",
-                     pdev->sw_retry_failure);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "Illegal rate phy errors",
-                     pdev->illgl_rate_phy_err);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "Pdev continuous xretry", pdev->pdev_cont_xretry);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "TX timeout", pdev->pdev_tx_timeout);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "PDEV resets", pdev->pdev_resets);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "PHY underrun", pdev->phy_underrun);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "MPDU is more than txop limit", pdev->txop_ovf);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "HTT cookies queued", pdev->comp_queued);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "HTT cookies disp.", pdev->comp_delivered);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "MSDU queued", pdev->msdu_enqued);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "MPDU queued", pdev->mpdu_enqued);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "MSDUs dropped", pdev->wmm_drop);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "Local enqued", pdev->local_enqued);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "Local freed", pdev->local_freed);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "HW queued", pdev->hw_queued);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "PPDUs reaped", pdev->hw_reaped);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "Num underruns", pdev->underrun);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "PPDUs cleaned", pdev->tx_abort);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "MPDUs requed", pdev->mpdus_requed);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "Excessive retries", pdev->tx_ko);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "HW rate", pdev->data_rc);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "Sched self tiggers", pdev->self_triggers);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "Dropped due to SW retries",
+                         pdev->sw_retry_failure);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "Illegal rate phy errors",
+                         pdev->illgl_rate_phy_err);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "Pdev continuous xretry", pdev->pdev_cont_xretry);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "TX timeout", pdev->pdev_tx_timeout);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "PDEV resets", pdev->pdev_resets);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "PHY underrun", pdev->phy_underrun);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "MPDU is more than txop limit", pdev->txop_ovf);
     *length = len;
 }
 
@@ -7433,40 +7433,40 @@ ath10k_wmi_fw_pdev_rx_stats_fill(const struct ath10k_fw_stats_pdev* pdev,
     uint32_t len = *length;
     uint32_t buf_len = ATH10K_FW_STATS_BUF_SIZE;
 
-    len += scnprintf(buf + len, buf_len - len, "\n%30s\n",
-                     "ath10k PDEV RX stats");
-    len += scnprintf(buf + len, buf_len - len, "%30s\n\n",
-                     "=================");
+    len += SNPRINTF_USED(buf + len, buf_len - len, "\n%30s\n",
+                         "ath10k PDEV RX stats");
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s\n\n",
+                         "=================");
 
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "Mid PPDU route change",
-                     pdev->mid_ppdu_route_change);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "Tot. number of statuses", pdev->status_rcvd);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "Extra frags on rings 0", pdev->r0_frags);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "Extra frags on rings 1", pdev->r1_frags);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "Extra frags on rings 2", pdev->r2_frags);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "Extra frags on rings 3", pdev->r3_frags);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "MSDUs delivered to HTT", pdev->htt_msdus);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "MPDUs delivered to HTT", pdev->htt_mpdus);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "MSDUs delivered to stack", pdev->loc_msdus);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "MPDUs delivered to stack", pdev->loc_mpdus);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "Oversized AMSUs", pdev->oversize_amsdu);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "PHY errors", pdev->phy_errs);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "PHY errors drops", pdev->phy_err_drop);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "MPDU errors (FCS, MIC, ENC)", pdev->mpdu_errs);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "Mid PPDU route change",
+                         pdev->mid_ppdu_route_change);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "Tot. number of statuses", pdev->status_rcvd);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "Extra frags on rings 0", pdev->r0_frags);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "Extra frags on rings 1", pdev->r1_frags);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "Extra frags on rings 2", pdev->r2_frags);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "Extra frags on rings 3", pdev->r3_frags);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "MSDUs delivered to HTT", pdev->htt_msdus);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "MPDUs delivered to HTT", pdev->htt_mpdus);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "MSDUs delivered to stack", pdev->loc_msdus);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "MPDUs delivered to stack", pdev->loc_mpdus);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "Oversized AMSUs", pdev->oversize_amsdu);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "PHY errors", pdev->phy_errs);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "PHY errors drops", pdev->phy_err_drop);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "MPDU errors (FCS, MIC, ENC)", pdev->mpdu_errs);
     *length = len;
 }
 
@@ -7477,56 +7477,56 @@ ath10k_wmi_fw_vdev_stats_fill(const struct ath10k_fw_stats_vdev* vdev,
     uint32_t buf_len = ATH10K_FW_STATS_BUF_SIZE;
     int i;
 
-    len += scnprintf(buf + len, buf_len - len, "%30s %u\n",
-                     "vdev id", vdev->vdev_id);
-    len += scnprintf(buf + len, buf_len - len, "%30s %u\n",
-                     "beacon snr", vdev->beacon_snr);
-    len += scnprintf(buf + len, buf_len - len, "%30s %u\n",
-                     "data snr", vdev->data_snr);
-    len += scnprintf(buf + len, buf_len - len, "%30s %u\n",
-                     "num rx frames", vdev->num_rx_frames);
-    len += scnprintf(buf + len, buf_len - len, "%30s %u\n",
-                     "num rts fail", vdev->num_rts_fail);
-    len += scnprintf(buf + len, buf_len - len, "%30s %u\n",
-                     "num rts success", vdev->num_rts_success);
-    len += scnprintf(buf + len, buf_len - len, "%30s %u\n",
-                     "num rx err", vdev->num_rx_err);
-    len += scnprintf(buf + len, buf_len - len, "%30s %u\n",
-                     "num rx discard", vdev->num_rx_discard);
-    len += scnprintf(buf + len, buf_len - len, "%30s %u\n",
-                     "num tx not acked", vdev->num_tx_not_acked);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %u\n",
+                         "vdev id", vdev->vdev_id);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %u\n",
+                         "beacon snr", vdev->beacon_snr);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %u\n",
+                         "data snr", vdev->data_snr);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %u\n",
+                         "num rx frames", vdev->num_rx_frames);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %u\n",
+                         "num rts fail", vdev->num_rts_fail);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %u\n",
+                         "num rts success", vdev->num_rts_success);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %u\n",
+                         "num rx err", vdev->num_rx_err);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %u\n",
+                         "num rx discard", vdev->num_rx_discard);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %u\n",
+                         "num tx not acked", vdev->num_tx_not_acked);
 
     for (i = 0 ; i < countof(vdev->num_tx_frames); i++)
-        len += scnprintf(buf + len, buf_len - len,
-                         "%25s [%02d] %u\n",
-                         "num tx frames", i,
-                         vdev->num_tx_frames[i]);
+        len += SNPRINTF_USED(buf + len, buf_len - len,
+                             "%25s [%02d] %u\n",
+                             "num tx frames", i,
+                             vdev->num_tx_frames[i]);
 
     for (i = 0 ; i < countof(vdev->num_tx_frames_retries); i++)
-        len += scnprintf(buf + len, buf_len - len,
-                         "%25s [%02d] %u\n",
-                         "num tx frames retries", i,
-                         vdev->num_tx_frames_retries[i]);
+        len += SNPRINTF_USED(buf + len, buf_len - len,
+                             "%25s [%02d] %u\n",
+                             "num tx frames retries", i,
+                             vdev->num_tx_frames_retries[i]);
 
     for (i = 0 ; i < countof(vdev->num_tx_frames_failures); i++)
-        len += scnprintf(buf + len, buf_len - len,
-                         "%25s [%02d] %u\n",
-                         "num tx frames failures", i,
-                         vdev->num_tx_frames_failures[i]);
+        len += SNPRINTF_USED(buf + len, buf_len - len,
+                             "%25s [%02d] %u\n",
+                             "num tx frames failures", i,
+                             vdev->num_tx_frames_failures[i]);
 
     for (i = 0 ; i < countof(vdev->tx_rate_history); i++)
-        len += scnprintf(buf + len, buf_len - len,
-                         "%25s [%02d] 0x%08x\n",
-                         "tx rate history", i,
-                         vdev->tx_rate_history[i]);
+        len += SNPRINTF_USED(buf + len, buf_len - len,
+                             "%25s [%02d] 0x%08x\n",
+                             "tx rate history", i,
+                             vdev->tx_rate_history[i]);
 
     for (i = 0 ; i < countof(vdev->beacon_rssi_history); i++)
-        len += scnprintf(buf + len, buf_len - len,
-                         "%25s [%02d] %u\n",
-                         "beacon rssi history", i,
-                         vdev->beacon_rssi_history[i]);
+        len += SNPRINTF_USED(buf + len, buf_len - len,
+                             "%25s [%02d] %u\n",
+                             "beacon rssi history", i,
+                             vdev->beacon_rssi_history[i]);
 
-    len += scnprintf(buf + len, buf_len - len, "\n");
+    len += SNPRINTF_USED(buf + len, buf_len - len, "\n");
     *length = len;
 }
 
@@ -7536,18 +7536,18 @@ ath10k_wmi_fw_peer_stats_fill(const struct ath10k_fw_stats_peer* peer,
     uint32_t len = *length;
     uint32_t buf_len = ATH10K_FW_STATS_BUF_SIZE;
 
-    len += scnprintf(buf + len, buf_len - len, "%30s %pM\n",
-                     "Peer MAC address", peer->peer_macaddr);
-    len += scnprintf(buf + len, buf_len - len, "%30s %u\n",
-                     "Peer RSSI", peer->peer_rssi);
-    len += scnprintf(buf + len, buf_len - len, "%30s %u\n",
-                     "Peer TX rate", peer->peer_tx_rate);
-    len += scnprintf(buf + len, buf_len - len, "%30s %u\n",
-                     "Peer RX rate", peer->peer_rx_rate);
-    len += scnprintf(buf + len, buf_len - len, "%30s %u\n",
-                     "Peer RX duration", peer->rx_duration);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %pM\n",
+                         "Peer MAC address", peer->peer_macaddr);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %u\n",
+                         "Peer RSSI", peer->peer_rssi);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %u\n",
+                         "Peer TX rate", peer->peer_tx_rate);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %u\n",
+                         "Peer RX rate", peer->peer_rx_rate);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %u\n",
+                         "Peer RX duration", peer->rx_duration);
 
-    len += scnprintf(buf + len, buf_len - len, "\n");
+    len += SNPRINTF_USED(buf + len, buf_len - len, "\n");
     *length = len;
 }
 
@@ -7578,21 +7578,21 @@ void ath10k_wmi_main_op_fw_stats_fill(struct ath10k* ar,
     ath10k_wmi_fw_pdev_tx_stats_fill(pdev, buf, &len);
     ath10k_wmi_fw_pdev_rx_stats_fill(pdev, buf, &len);
 
-    len += scnprintf(buf + len, buf_len - len, "\n");
-    len += scnprintf(buf + len, buf_len - len, "%30s (%zu)\n",
-                     "ath10k VDEV stats", num_vdevs);
-    len += scnprintf(buf + len, buf_len - len, "%30s\n\n",
-                     "=================");
+    len += SNPRINTF_USED(buf + len, buf_len - len, "\n");
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s (%zu)\n",
+                         "ath10k VDEV stats", num_vdevs);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s\n\n",
+                         "=================");
 
     list_for_each_entry(vdev, &fw_stats->vdevs, list) {
         ath10k_wmi_fw_vdev_stats_fill(vdev, buf, &len);
     }
 
-    len += scnprintf(buf + len, buf_len - len, "\n");
-    len += scnprintf(buf + len, buf_len - len, "%30s (%zu)\n",
-                     "ath10k PEER stats", num_peers);
-    len += scnprintf(buf + len, buf_len - len, "%30s\n\n",
-                     "=================");
+    len += SNPRINTF_USED(buf + len, buf_len - len, "\n");
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s (%zu)\n",
+                         "ath10k PEER stats", num_peers);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s\n\n",
+                         "=================");
 
     list_for_each_entry(peer, &fw_stats->peers, list) {
         ath10k_wmi_fw_peer_stats_fill(peer, buf, &len);
@@ -7636,21 +7636,21 @@ void ath10k_wmi_10x_op_fw_stats_fill(struct ath10k* ar,
     ath10k_wmi_fw_pdev_tx_stats_fill(pdev, buf, &len);
     ath10k_wmi_fw_pdev_rx_stats_fill(pdev, buf, &len);
 
-    len += scnprintf(buf + len, buf_len - len, "\n");
-    len += scnprintf(buf + len, buf_len - len, "%30s (%zu)\n",
-                     "ath10k VDEV stats", num_vdevs);
-    len += scnprintf(buf + len, buf_len - len, "%30s\n\n",
-                     "=================");
+    len += SNPRINTF_USED(buf + len, buf_len - len, "\n");
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s (%zu)\n",
+                         "ath10k VDEV stats", num_vdevs);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s\n\n",
+                         "=================");
 
     list_for_each_entry(vdev, &fw_stats->vdevs, list) {
         ath10k_wmi_fw_vdev_stats_fill(vdev, buf, &len);
     }
 
-    len += scnprintf(buf + len, buf_len - len, "\n");
-    len += scnprintf(buf + len, buf_len - len, "%30s (%zu)\n",
-                     "ath10k PEER stats", num_peers);
-    len += scnprintf(buf + len, buf_len - len, "%30s\n\n",
-                     "=================");
+    len += SNPRINTF_USED(buf + len, buf_len - len, "\n");
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s (%zu)\n",
+                         "ath10k PEER stats", num_peers);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s\n\n",
+                         "=================");
 
     list_for_each_entry(peer, &fw_stats->peers, list) {
         ath10k_wmi_fw_peer_stats_fill(peer, buf, &len);
@@ -7715,48 +7715,48 @@ void ath10k_wmi_10_4_op_fw_stats_fill(struct ath10k* ar,
     ath10k_wmi_fw_pdev_extra_stats_fill(pdev, buf, &len);
     ath10k_wmi_fw_pdev_tx_stats_fill(pdev, buf, &len);
 
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "HW paused", pdev->hw_paused);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "Seqs posted", pdev->seq_posted);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "Seqs failed queueing", pdev->seq_failed_queueing);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "Seqs completed", pdev->seq_completed);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "Seqs restarted", pdev->seq_restarted);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "MU Seqs posted", pdev->mu_seq_posted);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "MPDUs SW flushed", pdev->mpdus_sw_flush);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "MPDUs HW filtered", pdev->mpdus_hw_filter);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "MPDUs truncated", pdev->mpdus_truncated);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "MPDUs receive no ACK", pdev->mpdus_ack_failed);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "MPDUs expired", pdev->mpdus_expired);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "HW paused", pdev->hw_paused);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "Seqs posted", pdev->seq_posted);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "Seqs failed queueing", pdev->seq_failed_queueing);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "Seqs completed", pdev->seq_completed);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "Seqs restarted", pdev->seq_restarted);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "MU Seqs posted", pdev->mu_seq_posted);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "MPDUs SW flushed", pdev->mpdus_sw_flush);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "MPDUs HW filtered", pdev->mpdus_hw_filter);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "MPDUs truncated", pdev->mpdus_truncated);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "MPDUs receive no ACK", pdev->mpdus_ack_failed);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "MPDUs expired", pdev->mpdus_expired);
 
     ath10k_wmi_fw_pdev_rx_stats_fill(pdev, buf, &len);
-    len += scnprintf(buf + len, buf_len - len, "%30s %10d\n",
-                     "Num Rx Overflow errors", pdev->rx_ovfl_errs);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s %10d\n",
+                         "Num Rx Overflow errors", pdev->rx_ovfl_errs);
 
-    len += scnprintf(buf + len, buf_len - len, "\n");
-    len += scnprintf(buf + len, buf_len - len, "%30s (%zu)\n",
-                     "ath10k VDEV stats", num_vdevs);
-    len += scnprintf(buf + len, buf_len - len, "%30s\n\n",
-                     "=================");
+    len += SNPRINTF_USED(buf + len, buf_len - len, "\n");
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s (%zu)\n",
+                         "ath10k VDEV stats", num_vdevs);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s\n\n",
+                         "=================");
 
     list_for_each_entry(vdev, &fw_stats->vdevs, list) {
         ath10k_wmi_fw_vdev_stats_fill(vdev, buf, &len);
     }
 
-    len += scnprintf(buf + len, buf_len - len, "\n");
-    len += scnprintf(buf + len, buf_len - len, "%30s (%zu)\n",
-                     "ath10k PEER stats", num_peers);
-    len += scnprintf(buf + len, buf_len - len, "%30s\n\n",
-                     "=================");
+    len += SNPRINTF_USED(buf + len, buf_len - len, "\n");
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s (%zu)\n",
+                         "ath10k PEER stats", num_peers);
+    len += SNPRINTF_USED(buf + len, buf_len - len, "%30s\n\n",
+                         "=================");
 
     list_for_each_entry(peer, &fw_stats->peers, list) {
         ath10k_wmi_fw_peer_stats_fill(peer, buf, &len);

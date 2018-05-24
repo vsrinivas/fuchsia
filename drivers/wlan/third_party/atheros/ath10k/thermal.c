@@ -87,7 +87,7 @@ static ssize_t ath10k_thermal_show_temp(struct device* dev,
         goto out;
     }
 
-    if (test_bit(ATH10K_FLAG_CRASH_FLUSH, &ar->dev_flags)) {
+    if (BITARR_TEST(&ar->dev_flags, ATH10K_FLAG_CRASH_FLUSH)) {
         ret = -ESHUTDOWN;
         goto out;
     }

@@ -106,7 +106,7 @@ ath10k_swap_code_seg_alloc(struct ath10k* ar, size_t swap_bin_len) {
     void* virt_addr;
     zx_paddr_t paddr;
 
-    swap_bin_len = roundup(swap_bin_len, 2);
+    swap_bin_len = ROUNDUP(swap_bin_len, 2);
     if (swap_bin_len > ATH10K_SWAP_CODE_SEG_BIN_LEN_MAX) {
         ath10k_err("refusing code swap bin because it is too big %zu > %d\n",
                    swap_bin_len, ATH10K_SWAP_CODE_SEG_BIN_LEN_MAX);
@@ -132,7 +132,7 @@ ath10k_swap_code_seg_alloc(struct ath10k* ar, size_t swap_bin_len) {
     seg_info->seg_hw_info.size = swap_bin_len;
     seg_info->seg_hw_info.swap_size = swap_bin_len;
     seg_info->seg_hw_info.num_segs = ATH10K_SWAP_CODE_SEG_NUM_SUPPORTED;
-    seg_info->seg_hw_info.size_log2 = ilog2(swap_bin_len);
+    seg_info->seg_hw_info.size_log2 = LOG2(swap_bin_len);
     seg_info->virt_address[0] = virt_addr;
     seg_info->paddr[0] = paddr;
 

@@ -20,6 +20,7 @@
 #include <ddk/driver.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+#include "macros.h"
 
 #if 0 // NEEDS PORTING
 #include "core.h"
@@ -426,8 +427,7 @@ static struct service_to_pipe target_service_to_ce_map_wlan[] = {
 
 static bool ath10k_pci_is_awake(struct ath10k* ar) {
     struct ath10k_pci* ar_pci = ath10k_pci_priv(ar);
-    uint32_t val = ioread32(ar_pci->mem + PCIE_LOCAL_BASE_ADDRESS +
-                       RTC_STATE_ADDRESS);
+    uint32_t val = READ32(ar_pci->mem + PCIE_LOCAL_BASE_ADDRESS + RTC_STATE_ADDRESS);
 
     return RTC_STATE_V_GET(val) == RTC_STATE_V_ON;
 }
@@ -440,9 +440,8 @@ static void __ath10k_pci_wake(struct ath10k* ar) {
     ath10k_dbg(ar, ATH10K_DBG_PCI_PS, "pci ps wake reg refcount %lu awake %d\n",
                ar_pci->ps_wake_refcount, ar_pci->ps_awake);
 
-    iowrite32(PCIE_SOC_WAKE_V_MASK,
-              ar_pci->mem + PCIE_LOCAL_BASE_ADDRESS +
-              PCIE_SOC_WAKE_ADDRESS);
+    WRITE32(ar_pci->mem + PCIE_LOCAL_BASE_ADDRESS + PCIE_SOC_WAKE_ADDRESS,
+            PCIE_SOC_WAKE_V_MASK);
 }
 
 static void __ath10k_pci_sleep(struct ath10k* ar) {
@@ -453,9 +452,8 @@ static void __ath10k_pci_sleep(struct ath10k* ar) {
     ath10k_dbg(ar, ATH10K_DBG_PCI_PS, "pci ps sleep reg refcount %lu awake %d\n",
                ar_pci->ps_wake_refcount, ar_pci->ps_awake);
 
-    iowrite32(PCIE_SOC_WAKE_RESET,
-              ar_pci->mem + PCIE_LOCAL_BASE_ADDRESS +
-              PCIE_SOC_WAKE_ADDRESS);
+    WRITE32(ar_pci->mem + PCIE_LOCAL_BASE_ADDRESS + PCIE_SOC_WAKE_ADDRESS,
+            PCIE_SOC_WAKE_RESET);
     ar_pci->ps_awake = false;
 }
 
@@ -493,9 +491,8 @@ static zx_status_t ath10k_pci_force_wake(struct ath10k* ar) {
     mtx_lock(&ar_pci->ps_lock);
 
     if (!ar_pci->ps_awake) {
-        iowrite32(PCIE_SOC_WAKE_V_MASK,
-                  ar_pci->mem + PCIE_LOCAL_BASE_ADDRESS +
-                  PCIE_SOC_WAKE_ADDRESS);
+        WRITE32(ar_pci->mem + PCIE_LOCAL_BASE_ADDRESS + PCIE_SOC_WAKE_ADDRESS,
+                PCIE_SOC_WAKE_V_MASK);
 
         ret = ath10k_pci_wake_wait(ar);
         if (ret == ZX_OK) {
@@ -513,9 +510,8 @@ static void ath10k_pci_force_sleep(struct ath10k* ar) {
 
     mtx_lock(&ar_pci->ps_lock);
 
-    iowrite32(PCIE_SOC_WAKE_RESET,
-              ar_pci->mem + PCIE_LOCAL_BASE_ADDRESS +
-              PCIE_SOC_WAKE_ADDRESS);
+    WRITE32(ar_pci->mem + PCIE_LOCAL_BASE_ADDRESS + PCIE_SOC_WAKE_ADDRESS,
+            PCIE_SOC_WAKE_RESET);
     ar_pci->ps_awake = false;
 
     mtx_unlock(&ar_pci->ps_lock);
@@ -548,7 +544,7 @@ static zx_status_t ath10k_pci_wake(struct ath10k* ar) {
 
     if (ret == ZX_OK) {
         ar_pci->ps_wake_refcount++;
-        WARN_ON(ar_pci->ps_wake_refcount == 0);
+        COND_WARN(ar_pci->ps_wake_refcount == 0);
     }
 
     mtx_unlock(&ar_pci->ps_lock);
@@ -568,7 +564,7 @@ static void ath10k_pci_sleep(struct ath10k* ar) {
     ath10k_dbg(ar, ATH10K_DBG_PCI_PS, "pci ps sleep refcount %lu awake %d\n",
                ar_pci->ps_wake_refcount, ar_pci->ps_awake);
 
-    if (WARN_ON(ar_pci->ps_wake_refcount == 0)) {
+    if (COND_WARN(ar_pci->ps_wake_refcount == 0)) {
         goto skip;
     }
 
@@ -611,7 +607,7 @@ static void ath10k_pci_sleep_sync(struct ath10k* ar) {
     del_timer_sync(&ar_pci->ps_timer);
 
     mtx_lock(&ar_pci->ps_lock);
-    WARN_ON(ar_pci->ps_wake_refcount > 0);
+    COND_WARN(ar_pci->ps_wake_refcount > 0);
     __ath10k_pci_sleep(ar);
     mtx_unlock(&ar_pci->ps_lock);
 }
@@ -633,7 +629,7 @@ static void ath10k_bus_pci_write32(struct ath10k* ar, uint32_t offset, uint32_t 
         return;
     }
 
-    iowrite32(value, ar_pci->mem + offset);
+    WRITE32(ar_pci->mem + offset, value);
     ath10k_pci_sleep(ar);
 }
 
@@ -655,7 +651,7 @@ static uint32_t ath10k_bus_pci_read32(struct ath10k* ar, uint32_t offset) {
         return 0xffffffff;
     }
 
-    val = ioread32(ar_pci->mem + offset);
+    val = READ32(ar_pci->mem + offset);
     ath10k_pci_sleep(ar);
 
     return val;
@@ -854,7 +850,7 @@ static zx_status_t ath10k_pci_targ_cpu_to_ce_addr(struct ath10k* ar, uint32_t ad
                                                   uint32_t* ce_addr) {
     struct ath10k_pci* ar_pci = ath10k_pci_priv(ar);
 
-    if (WARN_ON_ONCE(!ar_pci->targ_cpu_to_ce_addr)) {
+    if (COND_WARN_ONCE(!ar_pci->targ_cpu_to_ce_addr)) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -889,7 +885,7 @@ static zx_status_t ath10k_pci_diag_read_mem(struct ath10k* ar, uint32_t address,
      *   1) 4-byte alignment
      *   2) Buffer in DMA-able space
      */
-    alloc_nbytes = min_t(unsigned int, nbytes, DIAG_TRANSFER_LIMIT);
+    alloc_nbytes = MIN_T(unsigned int, nbytes, DIAG_TRANSFER_LIMIT);
 
     data_buf = (unsigned char*)dma_zalloc_coherent(ar->dev,
                alloc_nbytes,
@@ -904,7 +900,7 @@ static zx_status_t ath10k_pci_diag_read_mem(struct ath10k* ar, uint32_t address,
     remaining_bytes = nbytes;
     ce_data = ce_data_base;
     while (remaining_bytes) {
-        nbytes = min_t(unsigned int, remaining_bytes,
+        nbytes = MIN_T(unsigned int, remaining_bytes,
                        DIAG_TRANSFER_LIMIT);
 
         ret = __ath10k_ce_rx_post_buf(ce_diag, &ce_data, ce_data);
@@ -935,7 +931,7 @@ static zx_status_t ath10k_pci_diag_read_mem(struct ath10k* ar, uint32_t address,
         i = 0;
         while (ath10k_ce_completed_send_next_nolock(ce_diag,
                 NULL) != ZX_OK) {
-            mdelay(1);
+            zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
             if (i++ > DIAG_ACCESS_CE_TIMEOUT_MS) {
                 ret = ZX_ERR_SHOULD_WAIT;
                 goto done;
@@ -947,7 +943,7 @@ static zx_status_t ath10k_pci_diag_read_mem(struct ath10k* ar, uint32_t address,
                 (void**)&buf,
                 &completed_nbytes)
                 != ZX_OK) {
-            mdelay(1);
+            zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
 
             if (i++ > DIAG_ACCESS_CE_TIMEOUT_MS) {
                 ret = ZX_ERR_SHOULD_WAIT;
@@ -1069,7 +1065,7 @@ zx_status_t ath10k_pci_diag_write_mem(struct ath10k* ar, uint32_t address,
     ce_data = ce_data_base;
     while (remaining_bytes) {
         /* FIXME: check cast */
-        nbytes = min_t(int, remaining_bytes, DIAG_TRANSFER_LIMIT);
+        nbytes = MIN_T(int, remaining_bytes, DIAG_TRANSFER_LIMIT);
 
         /* Set up to receive directly into Target(!) address */
         ret = __ath10k_ce_rx_post_buf(ce_diag, &ce_address, ce_address);
@@ -1090,7 +1086,7 @@ zx_status_t ath10k_pci_diag_write_mem(struct ath10k* ar, uint32_t address,
         i = 0;
         while (ath10k_ce_completed_send_next_nolock(ce_diag,
                 NULL) != ZX_OK) {
-            mdelay(1);
+            zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
 
             if (i++ > DIAG_ACCESS_CE_TIMEOUT_MS) {
                 ret = ZX_ERR_SHOULD_WAIT;
@@ -1103,7 +1099,7 @@ zx_status_t ath10k_pci_diag_write_mem(struct ath10k* ar, uint32_t address,
                 (void**)&buf,
                 &completed_nbytes)
                 != 0) {
-            mdelay(1);
+            zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
 
             if (i++ > DIAG_ACCESS_CE_TIMEOUT_MS) {
                 ret = ZX_ERR_SHOULD_WAIT;
@@ -1453,9 +1449,9 @@ static void ath10k_pci_fw_crashed_dump(struct ath10k* ar) {
     crash_data = ath10k_debug_get_new_fw_crash_data(ar);
 
     if (crash_data) {
-        scnprintf(uuid, sizeof(uuid), "%pUl", &crash_data->uuid);
+        snprintf(uuid, sizeof(uuid), "%pUl", &crash_data->uuid);
     } else {
-        scnprintf(uuid, sizeof(uuid), "n/a");
+        snprintf(uuid, sizeof(uuid), "n/a");
     }
 
     ath10k_err("firmware crashed! (uuid %s)\n", uuid);
@@ -1519,18 +1515,18 @@ zx_status_t ath10k_pci_hif_map_service_to_pipe(struct ath10k* ar, uint16_t servi
         case PIPEDIR_NONE:
             break;
         case PIPEDIR_IN:
-            WARN_ON(dl_set);
+            COND_WARN(dl_set);
             *dl_pipe = entry->pipenum;
             dl_set = true;
             break;
         case PIPEDIR_OUT:
-            WARN_ON(ul_set);
+            COND_WARN(ul_set);
             *ul_pipe = entry->pipenum;
             ul_set = true;
             break;
         case PIPEDIR_INOUT:
-            WARN_ON(dl_set);
-            WARN_ON(ul_set);
+            COND_WARN(dl_set);
+            COND_WARN(ul_set);
             *dl_pipe = entry->pipenum;
             *ul_pipe = entry->pipenum;
             dl_set = true;
@@ -1539,7 +1535,7 @@ zx_status_t ath10k_pci_hif_map_service_to_pipe(struct ath10k* ar, uint16_t servi
         }
     }
 
-    if (WARN_ON(!ul_set || !dl_set)) {
+    if (COND_WARN(!ul_set || !dl_set)) {
         return ZX_ERR_NOT_FOUND;
     }
 
@@ -1763,7 +1759,7 @@ static void ath10k_pci_hif_stop(struct ath10k* ar) {
     napi_disable(&ar->napi);
 
     mtx_lock(&ar_pci->ps_lock);
-    WARN_ON(ar_pci->ps_wake_refcount > 0);
+    COND_WARN(ar_pci->ps_wake_refcount > 0);
     mtx_unlock(&ar_pci->ps_lock);
 }
 
@@ -1854,7 +1850,7 @@ err_req:
     dma_unmap_single(ar->dev, req_paddr, req_len, DMA_TO_DEVICE);
 
     if (ret == ZX_OK && resp_len) {
-        *resp_len = min(*resp_len, xfer.resp_len);
+        *resp_len = MIN(*resp_len, xfer.resp_len);
         memcpy(resp, tresp, xfer.resp_len);
     }
 err_dma:
@@ -1884,7 +1880,7 @@ static void ath10k_pci_bmi_recv_data(struct ath10k_ce_pipe* ce_state) {
         return;
     }
 
-    if (WARN_ON_ONCE(!xfer)) {
+    if (COND_WARN_ONCE(!xfer)) {
         return;
     }
 
@@ -2457,7 +2453,7 @@ static zx_status_t ath10k_pci_qca99x0_chip_reset(struct ath10k* ar) {
 static zx_status_t ath10k_pci_chip_reset(struct ath10k* ar) {
     struct ath10k_pci* ar_pci = ath10k_pci_priv(ar);
 
-    if (WARN_ON(!ar_pci->pci_hard_reset)) {
+    if (COND_WARN(!ar_pci->pci_hard_reset)) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -2951,7 +2947,7 @@ zx_status_t ath10k_pci_wait_for_target_init(struct ath10k* ar) {
             ath10k_pci_enable_legacy_irq(ar);
         }
 
-        mdelay(10);
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
     } while (time_before(jiffies, timeout));
 
     ath10k_pci_disable_and_clear_legacy_irq(ar);

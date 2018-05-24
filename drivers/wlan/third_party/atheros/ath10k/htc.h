@@ -23,7 +23,7 @@
 #include <zircon/listnode.h>
 #include <zircon/threads.h>
 
-#include "linuxisms.h"
+#include "macros.h"
 
 struct ath10k;
 struct ath10k_msg_buf;
