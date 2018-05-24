@@ -92,15 +92,6 @@ struct magma_system_connection_request {
     uint32_t capabilities;
 } __attribute__((packed));
 
-struct magma_system_image_descriptor {
-    magma_image_tiling_t tiling;
-} __attribute__((packed));
-
-struct magma_display_size {
-    uint32_t width;
-    uint32_t height;
-};
-
 struct magma_system_inline_command_buffer {
     void* data;
     uint64_t size;

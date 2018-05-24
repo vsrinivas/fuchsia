@@ -49,17 +49,6 @@ public:
     // Returns the device id. 0 is invalid.
     uint32_t GetDeviceId();
 
-    using PresentBufferCallback = std::function<void(
-        std::shared_ptr<MagmaSystemBuffer> buf, magma_system_image_descriptor* image_desc,
-        uint32_t wait_semaphore_count, uint32_t signal_semaphore_count,
-        std::vector<std::shared_ptr<MagmaSystemSemaphore>> semaphores,
-        std::unique_ptr<magma::PlatformSemaphore> buffer_presented_semaphore)>;
-
-    void SetPresentBufferCallback(PresentBufferCallback callback)
-    {
-        present_buffer_callback_ = callback;
-    }
-
     // Takes ownership of handle and either wraps it up in new MagmaSystemBuffer or
     // closes it and returns an existing MagmaSystemBuffer backed by the same memory
     std::shared_ptr<MagmaSystemBuffer> ImportBuffer(uint32_t handle);
@@ -83,7 +72,6 @@ public:
 
 private:
     msd_device_unique_ptr_t msd_dev_;
-    PresentBufferCallback present_buffer_callback_;
 
     std::unordered_map<uint64_t, std::weak_ptr<MagmaSystemBuffer>> buffer_map_;
     std::mutex buffer_map_mutex_;

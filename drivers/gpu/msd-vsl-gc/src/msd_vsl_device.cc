@@ -125,8 +125,3 @@ magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* val
 }
 
 void msd_device_dump_status(msd_device_t* device) {}
-
-magma_status_t msd_device_display_get_size(msd_device_t* dev, magma_display_size* size_out)
-{
-    return MAGMA_STATUS_UNIMPLEMENTED;
-}

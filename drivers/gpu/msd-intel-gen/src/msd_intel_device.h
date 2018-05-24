@@ -47,7 +47,6 @@ public:
     uint32_t revision() { return revision_; }
     uint32_t subslice_total() { return subslice_total_; }
     uint32_t eu_total() { return eu_total_; }
-    magma_display_size display_size() { return display_size_; }
 
     static MsdIntelDevice* cast(msd_device_t* dev)
     {
@@ -76,8 +75,6 @@ public:
     void Dump(DumpState* dump_state);
     void DumpToString(std::string& dump_string);
     void DumpStatusToLog();
-
-    void DisplayGetSize(magma_display_size* size_out);
 
 private:
     MsdIntelDevice();
@@ -169,7 +166,6 @@ private:
     static void InterruptCallback(void* data, uint32_t master_interrupt_control);
 
     void QuerySliceInfo(uint32_t* subslice_total_out, uint32_t* eu_total_out);
-    void ReadDisplaySize();
 
     std::shared_ptr<GlobalContext> global_context() { return global_context_; }
 
@@ -185,7 +181,6 @@ private:
     uint32_t revision_{};
     uint32_t subslice_total_{};
     uint32_t eu_total_{};
-    magma_display_size display_size_{};
 
     std::thread device_thread_;
     std::thread freq_monitor_device_thread_;
