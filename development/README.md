@@ -31,6 +31,10 @@ and debugging Fuchsia and programs running on Fuchsia.
  - [Flutter modules][flutter_module] - how to write a graphical module using
  Flutter
 
+## API
+
+ - [System](api/system.md) - Rubric for designing the Zircon System Interface
+
 ## SDK
 
  - [SDK](sdk/README.md) - information about developing the Fuchsia SDK
