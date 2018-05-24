@@ -14,6 +14,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/arena.h>
 #include <fbl/auto_lock.h>
+#include <lib/counters.h>
 #include <object/excp_port.h>
 #include <object/handle.h>
 #include <zircon/compiler.h>
@@ -34,6 +35,9 @@ static_assert(sizeof(zx_packet_guest_io_t) == sizeof(zx_packet_user_t),
 static_assert(sizeof(zx_packet_guest_vcpu_t) == sizeof(zx_packet_user_t),
               "size of zx_packet_guest_vcpu_t must match zx_packet_user_t");
 
+KCOUNTER(port_arena_count, "kernel.port.arena.count");
+KCOUNTER(port_full_count, "kernel.port.full.count");
+
 class ArenaPortAllocator final : public PortAllocator {
 public:
     zx_status_t Init();
@@ -42,16 +46,15 @@ public:
     virtual PortPacket* Alloc();
     virtual void Free(PortPacket* port_packet);
 
-    size_t DiagnosticCount() const {
-        return arena_.DiagnosticCount();
-    }
-
 private:
     fbl::TypedArena<PortPacket, fbl::Mutex> arena_;
 };
 
 namespace {
 constexpr size_t kMaxPendingPacketCount = 16 * 1024u;
+
+// TODO(maniscalco): Enforce this limit per process via the job policy.
+constexpr size_t kMaxPendingPacketCountPerPort = kMaxPendingPacketCount / 8;
 ArenaPortAllocator port_allocator;
 } // namespace.
 
@@ -65,11 +68,13 @@ PortPacket* ArenaPortAllocator::Alloc() {
         printf("WARNING: Could not allocate new port packet\n");
         return nullptr;
     }
+    kcounter_add(port_arena_count, 1);
     return packet;
 }
 
 void ArenaPortAllocator::Free(PortPacket* port_packet) {
     arena_.Delete(port_packet);
+    kcounter_add(port_arena_count, -1);
 }
 
 PortPacket::PortPacket(const void* handle, PortAllocator* allocator)
@@ -80,11 +85,6 @@ PortPacket::PortPacket(const void* handle, PortAllocator* allocator)
         // which means that PortObserver always uses the kernel heap.
         DEBUG_ASSERT(allocator == nullptr);
     }
-}
-
-// static
-size_t PortPacket::DiagnosticAllocationCount() {
-    return port_allocator.DiagnosticCount();
 }
 
 PortObserver::PortObserver(uint32_t type, const Handle* handle, fbl::RefPtr<PortDispatcher> port,
@@ -146,6 +146,9 @@ StateObserver::Flags PortObserver::MaybeQueue(zx_signals_t new_state, uint64_t c
     if ((trigger_ & new_state) == 0u)
         return 0;
 
+    // TODO(cpu): Queue() can fail and we don't propagate this information
+    // here properly. Now, this failure is self inflicted because we constrain
+    // the packet arena size artificially.  See ZX-2166 for details.
     auto status = port_->Queue(&packet_, new_state, count);
 
     if ((type_ == ZX_PKT_TYPE_SIGNAL_ONE) || (status < 0))
@@ -180,11 +183,12 @@ zx_status_t PortDispatcher::Create(uint32_t options, fbl::RefPtr<Dispatcher>* di
 }
 
 PortDispatcher::PortDispatcher(uint32_t options)
-    : options_(options), zero_handles_(false) {
+    : options_(options), zero_handles_(false), num_packets_(0u) {
 }
 
 PortDispatcher::~PortDispatcher() {
     DEBUG_ASSERT(zero_handles_);
+    DEBUG_ASSERT(num_packets_ == 0u);
 }
 
 void PortDispatcher::on_zero_handles() {
@@ -207,6 +211,7 @@ void PortDispatcher::on_zero_handles() {
         // Free any queued packets.
         while (!packets_.is_empty()) {
             FreePacket(packets_.pop_front());
+            --num_packets_;
         }
     }
 }
@@ -256,6 +261,11 @@ zx_status_t PortDispatcher::Queue(PortPacket* port_packet, zx_signals_t observed
     if (zero_handles_)
         return ZX_ERR_BAD_STATE;
 
+    if (num_packets_ > kMaxPendingPacketCountPerPort) {
+        kcounter_add(port_full_count, 1);
+        return ZX_ERR_SHOULD_WAIT;
+    }
+
     if (observed) {
         if (port_packet->InContainer()) {
             port_packet->packet.signal.observed |= observed;
@@ -265,8 +275,8 @@ zx_status_t PortDispatcher::Queue(PortPacket* port_packet, zx_signals_t observed
         port_packet->packet.signal.observed = observed;
         port_packet->packet.signal.count = count;
     }
-
     packets_.push_back(port_packet);
+    ++num_packets_;
     // This Disable() call must come before Post() to be useful, but doing
     // it earlier would also be OK.
     resched_disable.Disable();
@@ -295,6 +305,7 @@ zx_status_t PortDispatcher::Dequeue(zx_time_t deadline, zx_port_packet_t* out_pa
             AutoLock al(get_lock());
             PortPacket* port_packet = packets_.pop_front();
             if (port_packet != nullptr) {
+                --num_packets_;
                 *out_packet = port_packet->packet;
                 FreePacket(port_packet);
                 return ZX_OK;
@@ -401,6 +412,7 @@ bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {
         if ((it->handle == handle) && (it->key() == key)) {
             auto to_remove = it++;
             delete packets_.erase(to_remove)->observer;
+            --num_packets_;
             packet_removed = true;
         } else {
             ++it;

@@ -77,6 +77,37 @@ static bool queue_and_close_test(void) {
     END_TEST;
 }
 
+static bool queue_too_many(void) {
+    BEGIN_TEST;
+    zx_status_t status;
+
+    zx_handle_t port;
+    status = zx_port_create(0, &port);
+    EXPECT_EQ(status, ZX_OK, "could not create port");
+
+    const zx_port_packet_t in = {
+        2ull,
+        ZX_PKT_TYPE_USER,
+        0,
+        { {} }
+    };
+
+    size_t count;
+    for (count = 0; count < 5000u; ++count) {
+        status = zx_port_queue(port, &in);
+        if (status != ZX_OK)
+            break;
+    }
+
+    EXPECT_EQ(status, ZX_ERR_SHOULD_WAIT);
+    EXPECT_EQ(count, 2049u);
+
+    status = zx_handle_close(port);
+    EXPECT_EQ(status, ZX_OK);
+
+    END_TEST;
+}
+
 static bool async_wait_channel_test(void) {
     BEGIN_TEST;
     zx_status_t status;
@@ -649,6 +680,7 @@ static bool cancel_stress() {
 BEGIN_TEST_CASE(port_tests)
 RUN_TEST(basic_test)
 RUN_TEST(queue_and_close_test)
+RUN_TEST(queue_too_many)
 RUN_TEST(async_wait_channel_test)
 RUN_TEST(async_wait_event_test_single)
 RUN_TEST(async_wait_event_test_repeat)

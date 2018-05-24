@@ -99,10 +99,6 @@ struct PortPacket final : public fbl::DoublyLinkedListable<PortPacket*> {
     uint64_t key() const { return packet.key; }
     bool is_ephemeral() const { return allocator != nullptr; }
     void Free() { allocator->Free(this); }
-
-    // The number of outstanding packets that are allocated by this
-    // class, rather than allocated by some other client mechanism.
-    static size_t DiagnosticAllocationCount();
 };
 
 struct PortInterruptPacket final : public fbl::DoublyLinkedListable<PortInterruptPacket*> {
@@ -140,6 +136,27 @@ private:
 
     fbl::RefPtr<PortDispatcher> const port_;
 };
+
+// The PortDispatcher implements the port kernel object which is the cornerstone
+// for waiting on object changes in Zircon. The PortDispatcher handles 4 usage
+// cases:
+//  1- Exception notification: task_bind_exception_port()
+//  2- Object state change notification: zx_object_wait_async()
+//      a) single-shot mode
+//      b) repeating mode
+//  3- Manual queuing: zx_port_queue()
+//  4- Interrupt change notification: zx_interrupt_bind()
+//
+// This makes the implementation non-trivial. Cases 1, 2 and 3 uses the
+// |packets_| linked list and case 4 uses |interrupt_packets_| linked list.
+//
+// The threads that wish to receive notifications block on Dequeue() (which
+// maps to zx_port_wait()) and will receive packets from any of the four sources
+// depending on what kind of object the port has been 'bound' to.
+//
+// When a packet from any of the sources arrives to the port, one waiting
+// thread unblocks and gets the packet. In all cases |sema_| is used to signal
+// and manage the waiting threads.
 
 class PortDispatcher final : public SoloDispatcher {
 public:
@@ -194,9 +211,12 @@ private:
     const uint32_t options_;
     Semaphore sema_;
     bool zero_handles_ TA_GUARDED(get_lock());
+
+    // Next three members handle the object, manual and exception notifications.
+    size_t num_packets_ TA_GUARDED(get_lock());
     fbl::DoublyLinkedList<PortPacket*> packets_ TA_GUARDED(get_lock());
     fbl::DoublyLinkedList<fbl::RefPtr<ExceptionPort>> eports_ TA_GUARDED(get_lock());
-    // Controls access to Interrupt DoublyLinkedList
+    // Next two members handle the interrupt notifications.
     SpinLock spinlock_;
     fbl::DoublyLinkedList<PortInterruptPacket*> interrupt_packets_ TA_GUARDED(spinlock_);
 };
