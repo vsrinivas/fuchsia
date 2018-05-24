@@ -16,10 +16,10 @@
 #include <component/cpp/fidl.h>
 #include "garnet/bin/appmgr/application_controller_impl.h"
 #include "garnet/bin/appmgr/application_environment_controller_impl.h"
-#include "garnet/bin/appmgr/application_runner_holder.h"
 #include "garnet/bin/appmgr/hub/hub_info.h"
 #include "garnet/bin/appmgr/hub/realm_hub.h"
 #include "garnet/bin/appmgr/namespace.h"
+#include "garnet/bin/appmgr/runner_holder.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -72,7 +72,7 @@ class Realm {
  private:
   static uint32_t next_numbered_label_;
 
-  ApplicationRunnerHolder* GetOrCreateRunner(const std::string& runner);
+  RunnerHolder* GetOrCreateRunner(const std::string& runner);
 
   void CreateApplicationWithProcess(
       PackagePtr package, LaunchInfo launch_info,
@@ -106,8 +106,7 @@ class Realm {
                      std::unique_ptr<ApplicationControllerImpl>>
       applications_;
 
-  std::unordered_map<std::string, std::unique_ptr<ApplicationRunnerHolder>>
-      runners_;
+  std::unordered_map<std::string, std::unique_ptr<RunnerHolder>> runners_;
 
   zx::channel svc_channel_client_;
   zx::channel svc_channel_server_;

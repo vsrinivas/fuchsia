@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_APPMGR_APPLICATION_RUNNER_HOLDER_H_
-#define GARNET_BIN_APPMGR_APPLICATION_RUNNER_HOLDER_H_
+#ifndef GARNET_BIN_APPMGR_RUNNER_HOLDER_H_
+#define GARNET_BIN_APPMGR_RUNNER_HOLDER_H_
 
 #include <lib/zx/vmo.h>
 
@@ -17,31 +17,29 @@
 
 namespace component {
 
-class ApplicationRunnerHolder {
+class RunnerHolder {
  public:
-  ApplicationRunnerHolder(Services services,
-                          ApplicationControllerPtr controller);
-  ~ApplicationRunnerHolder();
+  RunnerHolder(Services services, ApplicationControllerPtr controller);
+  ~RunnerHolder();
 
-  void StartApplication(
-      Package package, StartupInfo startup_info,
-      std::unique_ptr<archive::FileSystem> file_system,
-      fxl::RefPtr<Namespace> ns,
-      fidl::InterfaceRequest<ApplicationController> controller);
+  void StartComponent(Package package, StartupInfo startup_info,
+                      std::unique_ptr<archive::FileSystem> file_system,
+                      fxl::RefPtr<Namespace> ns,
+                      fidl::InterfaceRequest<ApplicationController> controller);
 
  private:
   Services services_;
   ApplicationControllerPtr controller_;
-  ApplicationRunnerPtr runner_;
+  RunnerPtr runner_;
 
   // TODO(abarth): We hold these objects for the lifetime of the runner, but we
   // should actuall drop them once their controller is done.
   std::vector<std::unique_ptr<archive::FileSystem>> file_systems_;
   std::vector<fxl::RefPtr<Namespace>> namespaces_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(ApplicationRunnerHolder);
+  FXL_DISALLOW_COPY_AND_ASSIGN(RunnerHolder);
 };
 
 }  // namespace component
 
-#endif  // GARNET_BIN_APPMGR_APPLICATION_RUNNER_HOLDER_H_
+#endif  // GARNET_BIN_APPMGR_RUNNER_HOLDER_H_

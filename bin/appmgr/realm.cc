@@ -89,8 +89,7 @@ void PushFileDescriptor(component::FileDescriptorPtr fd, int new_fd,
 }
 
 zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data,
-                          const std::string& argv0,
-                          LaunchInfo launch_info,
+                          const std::string& argv0, LaunchInfo launch_info,
                           zx::channel loader_service,
                           fdio_flat_namespace_t* flat) {
   if (!data)
@@ -547,13 +546,13 @@ void Realm::CreateApplicationFromPackage(
                      << launch_info.url;
       return;
     }
-    runner->StartApplication(std::move(inner_package), std::move(startup_info),
-                             std::move(pkg_fs), std::move(ns),
-                             std::move(controller));
+    runner->StartComponent(std::move(inner_package), std::move(startup_info),
+                           std::move(pkg_fs), std::move(ns),
+                           std::move(controller));
   }
 }
 
-ApplicationRunnerHolder* Realm::GetOrCreateRunner(const std::string& runner) {
+RunnerHolder* Realm::GetOrCreateRunner(const std::string& runner) {
   // We create the entry in |runners_| before calling ourselves
   // recursively to detect cycles.
   auto result = runners_.emplace(runner, nullptr);
@@ -569,7 +568,7 @@ ApplicationRunnerHolder* Realm::GetOrCreateRunner(const std::string& runner) {
     runner_controller.set_error_handler(
         [this, runner] { runners_.erase(runner); });
 
-    result.first->second = std::make_unique<ApplicationRunnerHolder>(
+    result.first->second = std::make_unique<RunnerHolder>(
         std::move(runner_services), std::move(runner_controller));
   } else if (!result.first->second) {
     // There was a cycle in the runner graph.

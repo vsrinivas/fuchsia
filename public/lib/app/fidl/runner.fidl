@@ -23,7 +23,7 @@ struct StartupInfo {
 
 // A binary representation of a component.
 //
-// Typically provided to |ApplicationRunner.StartApplication| when starting a
+// Typically provided to |Runner.StartComponent| when starting a
 // component.
 struct Package {
   // A read-only binary representation of the component. For example, if the
@@ -41,23 +41,23 @@ struct Package {
   string resolved_url;
 };
 
-// An interface for running applications.
+// An interface for running components.
 //
-// Typically exposed by applications that provide execution environments for
+// Typically exposed by components that provide execution environments for
 // particular classes of programs. For example, the Dart virtual machine exposes
 // this interface to run Dart programs.
 [Discoverable]
-interface ApplicationRunner {
-  // Execute the given application.
+interface Runner {
+  // Execute the given component.
   //
-  // Upon startup, the application is to be given the information in
-  // |startup_info|, but the mechanism by which the application receives that
-  // information is up to the application runner.
+  // Upon startup, the component is to be given the information in
+  // |startup_info|, but the mechanism by which the component receives that
+  // information is up to the component runner.
   //
   // The |controller| interface request typically originates from the
   // |ApplicationLauncher.CreateApplication| message that caused this
-  // application to be started.
-  1: StartApplication(Package package,
-                     StartupInfo startup_info,
-                     request<ApplicationController>? controller);
+  // component to be started.
+  1: StartComponent(Package package,
+                    StartupInfo startup_info,
+                    request<ApplicationController>? controller);
 };

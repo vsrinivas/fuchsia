@@ -12,8 +12,6 @@ source_set("lib") {
     "application_controller_impl.h",
     "application_environment_controller_impl.cc",
     "application_environment_controller_impl.h",
-    "application_runner_holder.cc",
-    "application_runner_holder.h",
     "cmx_metadata.cc",
     "cmx_metadata.h",
     "dynamic_library_loader.cc",
@@ -34,6 +32,8 @@ source_set("lib") {
     "realm.h",
     "root_loader.cc",
     "root_loader.h",
+    "runner_holder.cc",
+    "runner_holder.h",
     "runtime_metadata.cc",
     "runtime_metadata.h",
     "sandbox_metadata.cc",
@@ -76,8 +76,8 @@ executable("tests") {
   output_name = "appmgr_unittests"
 
   sources = [
-    "hub/hub_holder_unittest.cc",
     "cmx_metadata_unittest.cc",
+    "hub/hub_holder_unittest.cc",
     "namespace_builder_unittest.cc",
     "runtime_metadata_unittest.cc",
     "sandbox_metadata_unittest.cc",

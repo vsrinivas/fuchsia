@@ -14,17 +14,16 @@ namespace guest_runner {
 GuestRunner::GuestRunner()
     : context_(component::ApplicationContext::CreateFromStartupInfo()) {
   context_->environment()->GetApplicationLauncher(launcher_.NewRequest());
-  context_->outgoing().AddPublicService<component::ApplicationRunner>(
-      [this](fidl::InterfaceRequest<component::ApplicationRunner> request) {
+  context_->outgoing().AddPublicService<component::Runner>(
+      [this](fidl::InterfaceRequest<component::Runner> request) {
         bindings_.AddBinding(this, std::move(request));
       });
 }
 
 GuestRunner::~GuestRunner() = default;
 
-void GuestRunner::StartApplication(
-    component::Package application,
-    component::StartupInfo startup_info,
+void GuestRunner::StartComponent(
+    component::Package application, component::StartupInfo startup_info,
     ::fidl::InterfaceRequest<component::ApplicationController> controller) {
   component::LaunchInfo launch_info;
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/appmgr/application_runner_holder.h"
+#include "garnet/bin/appmgr/runner_holder.h"
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -14,23 +14,22 @@
 
 namespace component {
 
-ApplicationRunnerHolder::ApplicationRunnerHolder(
-    Services services,
-    ApplicationControllerPtr controller)
+RunnerHolder::RunnerHolder(Services services,
+                           ApplicationControllerPtr controller)
     : services_(std::move(services)), controller_(std::move(controller)) {
   services_.ConnectToService(runner_.NewRequest());
 }
 
-ApplicationRunnerHolder::~ApplicationRunnerHolder() = default;
+RunnerHolder::~RunnerHolder() = default;
 
-void ApplicationRunnerHolder::StartApplication(
+void RunnerHolder::StartComponent(
     Package package, StartupInfo startup_info,
     std::unique_ptr<archive::FileSystem> file_system, fxl::RefPtr<Namespace> ns,
     fidl::InterfaceRequest<ApplicationController> controller) {
   file_systems_.push_back(std::move(file_system));
   namespaces_.push_back(std::move(ns));
-  runner_->StartApplication(std::move(package), std::move(startup_info),
-                            std::move(controller));
+  runner_->StartComponent(std::move(package), std::move(startup_info),
+                          std::move(controller));
 }
 
 }  // namespace component
