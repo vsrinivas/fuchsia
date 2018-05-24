@@ -181,7 +181,15 @@ SECTIONS
     .data : ALIGN(4096) {
         PROVIDE_HIDDEN(__rodata_end = .);
         PROVIDE_HIDDEN(__data_start = .);
+
+        /* Pull out any aligned data into a separate section to make sure
+         * individual variables do not alias with any unaligned vars.
+         */
+        *(.data.cpu_align_exclusive)
+        . = ALIGN(128);
+
         *(.data .data.* .gnu.linkonce.d.*)
+
         /*
          * Make sure the total file size is aligned to 8 bytes so the image
          * can go into a BOOTDATA container, which requires 8-byte alignment.
