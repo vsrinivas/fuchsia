@@ -17,3 +17,9 @@
 #define DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(_class_name) \
     _class_name(const _class_name&) = delete;            \
     _class_name& operator=(const _class_name&) = delete
+
+// Macro used to simplify the task of deleting the new and new[]
+// operators. (IOW - disallow heap allocations)
+#define DISALLOW_NEW                       \
+    static void* operator new(size_t) = delete;   \
+    static void* operator new[](size_t) = delete
