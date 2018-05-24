@@ -19,3 +19,7 @@
 // Clock Control
 #define AXG_HIU_BASE_PHYS 0xff63c000
 
+// RAW_NAND MMIO and IRQ
+#define GAUSS_RAW_NAND_REG   0xffe07800
+#define GAUSS_RAW_NAND_CLKREG   0xffe07000
+#define GAUSS_RAW_NAND_IRQ   66
