@@ -26,10 +26,20 @@ class DisplayRotater {
   // Returns true if the scene should be invalidated.
   bool OnEvent(const fuchsia::ui::input::InputEvent& event, Presentation* presentation);
 
+  void SetDisplayRotation(Presentation* p, float display_rotation_degrees,
+                          bool animate);
+
+  // Returns true if an animation update happened and the scene is to be
+  // invalidated.
+  bool UpdateAnimation(Presentation* presenter, uint64_t presentation_time);
+
  private:
   void FlipDisplay(Presentation* presentation);
 
-  bool display_flipped_ = false;
+  float rotation_animation_start_value_ = 0.0f;
+  float rotation_animation_end_value_ = 0.0f;
+  // Presentation time at which animation values were last set.
+  uint64_t animation_start_time_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DisplayRotater);
 };

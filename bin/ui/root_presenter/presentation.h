@@ -71,7 +71,8 @@ class Presentation : private views_v1::ViewTreeListener,
   // Callback when the presentation is shut down.
   using ShutdownCallback = std::function<void()>;
 
-  Presentation(views_v1::ViewManager* view_manager, fuchsia::ui::scenic::Scenic* scenic,
+  Presentation(views_v1::ViewManager* view_manager,
+               fuchsia::ui::scenic::Scenic* scenic,
                scenic_lib::Session* session, RendererParams renderer_params);
 
   ~Presentation() override;
@@ -135,6 +136,10 @@ class Presentation : private views_v1::ViewTreeListener,
   // |Presentation|
   void SetDisplaySizeInMm(float width_in_mm, float height_in_mm) override;
 
+  // |Presentation|
+  void SetDisplayRotation(float display_rotation_degrees,
+                          bool animate) override;
+
   // Returns false if the operation failed (e.g. the requested size is bigger
   // than the actual display size).
   bool SetDisplaySizeInMmWithoutApplyingChanges(float width_in_mm,
@@ -195,16 +200,23 @@ class Presentation : private views_v1::ViewTreeListener,
   scenic_lib::RoundedRectangle cursor_shape_;
   scenic_lib::Material cursor_material_;
 
-  DisplayModel display_model_actual_;
-  DisplayModel display_model_simulated_;
-
   bool presentation_clipping_enabled_ = true;
 
   bool display_model_initialized_ = false;
 
-  // |display_metrics_| must be recalculated anytime
-  // |display_model_simulated_| changes using ApplyDisplayModelChanges().
+  DisplayModel display_model_actual_;
+  DisplayModel display_model_simulated_;
+
+  // When |display_model_simulated_| or |display_rotation_desired_| changes:
+  //   * |display_metrics_| must be recalculated.
+  //   * |display_rotation_current_| must be updated.
+  //   * Transforms on the scene must be updated.
+  // This is done by calling ApplyDisplayModelChanges().
   DisplayMetrics display_metrics_;
+
+  // Expressed in degrees.
+  float display_rotation_desired_ = 0.f;
+  float display_rotation_current_ = 0.f;
 
   views_v1::ViewPtr root_view_;
 

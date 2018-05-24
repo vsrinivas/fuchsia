@@ -4,27 +4,9 @@
 
 #include "garnet/bin/ui/root_presenter/display_rotater.h"
 
-#if defined(countof)
-// Workaround for compiler error due to Zircon defining countof() as a macro.
-// Redefines countof() using GLM_COUNTOF(), which currently provides a more
-// sophisticated implementation anyway.
-#undef countof
-#include <glm/glm.hpp>
-#define countof(X) GLM_COUNTOF(X)
-#else
-// No workaround required.
-#include <glm/glm.hpp>
-#endif
-#include <glm/ext.hpp>
-#include <glm/gtc/constants.hpp>
-
 #include "garnet/bin/ui/root_presenter/presentation.h"
 
 namespace root_presenter {
-namespace {
-
-constexpr float kPi = glm::pi<float>();
-}
 
 DisplayRotater::DisplayRotater() {}
 
@@ -33,7 +15,8 @@ bool DisplayRotater::OnEvent(const fuchsia::ui::input::InputEvent& event,
   if (event.is_keyboard()) {
     const fuchsia::ui::input::KeyboardEvent& kbd = event.keyboard();
     const uint32_t kVolumeDownKey = 232;
-    if (kbd.modifiers == 0 && kbd.phase == fuchsia::ui::input::KeyboardEventPhase::PRESSED &&
+    if (kbd.modifiers == 0 &&
+        kbd.phase == fuchsia::ui::input::KeyboardEventPhase::PRESSED &&
         kbd.code_point == 0 && kbd.hid_usage == kVolumeDownKey) {
       FlipDisplay(presentation);
       return true;
@@ -43,29 +26,50 @@ bool DisplayRotater::OnEvent(const fuchsia::ui::input::InputEvent& event,
   return false;
 }
 
-void DisplayRotater::FlipDisplay(Presentation* p) {
-  if (display_flipped_) {
-    p->scene_.SetAnchor(0, 0, 0);
-    p->scene_.SetRotation(0, 0, 0, 0);
-    p->scene_.SetTranslation(0, 0, 0);
+void DisplayRotater::SetDisplayRotation(Presentation* p,
+                                        float display_rotation_degrees,
+                                        bool animate) {
+  rotation_animation_start_value_ = p->display_rotation_desired_;
+  rotation_animation_end_value_ = display_rotation_degrees;
+
+  if (animate) {
+    animation_start_time_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    UpdateAnimation(p, animation_start_time_);
   } else {
-    float anchor_x = p->display_metrics_.width_in_pp() / 2;
-    float anchor_y = p->display_metrics_.height_in_pp() / 2;
-
-    glm::quat display_rotation = glm::quat(glm::vec3(0, 0, kPi));
-
-    p->scene_.SetAnchor(anchor_x, anchor_y, 0);
-    p->scene_.SetRotation(display_rotation.x, display_rotation.y,
-                          display_rotation.z, display_rotation.w);
-    p->scene_.SetTranslation(p->display_metrics_.width_in_px() / 2 - anchor_x,
-                             p->display_metrics_.height_in_px() / 2 - anchor_y,
-                             0);
-    p->light_direction_.x = -p->light_direction_.x;
-    p->light_direction_.y = -p->light_direction_.y;
-    glm::vec3 l = p->light_direction_;
-    p->directional_light_.SetDirection(l.x, l.y, l.z);
+    p->display_rotation_desired_ = rotation_animation_end_value_;
+    if (p->ApplyDisplayModelChanges(false)) {
+      p->PresentScene();
+    }
   }
-  display_flipped_ = !display_flipped_;
+}
+
+void DisplayRotater::FlipDisplay(Presentation* p) {
+  if (rotation_animation_end_value_ == 0.f) {
+    SetDisplayRotation(p, 180.f, true);
+  } else {
+    SetDisplayRotation(p, 0.f, true);
+  }
+}
+
+bool DisplayRotater::UpdateAnimation(Presentation* p,
+                                     uint64_t presentation_time) {
+  if (p->display_rotation_desired_ == rotation_animation_end_value_) {
+    return false;
+  }
+
+  // Adjust duration so velocity of animation (degrees/millisecond) is the same.
+  float animation_duration = std::abs(rotation_animation_end_value_ -
+                                      rotation_animation_start_value_) /
+                             180.f * 250'000'000;
+
+  float t = std::min(
+      1.f, (presentation_time - animation_start_time_) / animation_duration);
+  p->display_rotation_desired_ = (1 - t) * rotation_animation_start_value_ +
+                                 t * rotation_animation_end_value_;
+  if (p->ApplyDisplayModelChanges(false)) {
+    p->PresentScene();
+  }
+  return true;
 }
 
 }  // namespace root_presenter

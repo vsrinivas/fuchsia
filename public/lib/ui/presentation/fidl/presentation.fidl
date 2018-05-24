@@ -36,6 +36,9 @@ interface Presentation {
   // Override the intended usage of the display.
   5: SetDisplayUsage(DisplayUsage usage);
 
+  // Rotates the display.
+  11: SetDisplayRotation(float32 display_rotation_degrees, bool animate);
+
   // Override the dimensions of the display. Values must be less than the actual
   // size of the display. If either of the values are 0, then they are ignored
   // and the actual size of the display is used.

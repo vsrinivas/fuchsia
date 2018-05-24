@@ -261,6 +261,11 @@ void Presentation::SetDisplaySizeInMm(float width_in_mm, float height_in_mm) {
   }
 }
 
+void Presentation::SetDisplayRotation(float display_rotation_degrees,
+                                      bool animate) {
+  display_rotater_.SetDisplayRotation(this, display_rotation_degrees, animate);
+};
+
 bool Presentation::SetDisplaySizeInMmWithoutApplyingChanges(float width_in_mm,
                                                             float height_in_mm,
                                                             bool print_errors) {
@@ -347,10 +352,12 @@ bool Presentation::ApplyDisplayModelChanges(bool print_log) {
     display_configuration::LogDisplayMetrics(metrics);
   }
 
-  if (display_metrics_ == metrics)
+  if (display_metrics_ == metrics &&
+      display_rotation_desired_ == display_rotation_current_)
     return true;
 
   display_metrics_ = metrics;
+  display_rotation_current_ = display_rotation_desired_;
 
   auto root_properties = views_v1::ViewProperties::New();
   root_properties->display_metrics = views_v1::DisplayMetrics::New();
@@ -368,6 +375,17 @@ bool Presentation::ApplyDisplayModelChanges(bool print_log) {
   // Apply device pixel ratio.
   scene_.SetScale(display_metrics_.x_scale_in_px_per_pp(),
                   display_metrics_.y_scale_in_px_per_pp(), 1.f);
+
+  float anchor_x = display_metrics_.width_in_pp() / 2;
+  float anchor_y = display_metrics_.height_in_pp() / 2;
+
+  root_view_host_node_.SetAnchor(anchor_x, anchor_y, 0);
+
+  // float display_rotation_degrees = 180.f;
+  glm::quat display_rotation = glm::quat(
+      glm::vec3(0, 0, glm::radians<float>(display_rotation_current_)));
+  root_view_host_node_.SetRotation(display_rotation.x, display_rotation.y,
+                                   display_rotation.z, display_rotation.w);
 
   // Center everything.
   float left_offset = (display_model_actual_.display_info().width_in_px -
@@ -707,8 +725,25 @@ void Presentation::PresentScene() {
         if (auto self = weak.get()) {
           uint64_t next_presentation_time =
               info.presentation_time + info.presentation_interval;
-          if (self->perspective_demo_mode_.UpdateAnimation(
-                  self, next_presentation_time)) {
+
+          bool scene_dirty = false;
+          scene_dirty |= self->perspective_demo_mode_.UpdateAnimation(
+              self, next_presentation_time);
+          scene_dirty |= self->display_rotater_.UpdateAnimation(
+              self, next_presentation_time);
+          if (scene_dirty) {
+            // TODO(SCN-734): Find out why our predicted times are lagging.
+            uint64_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+            if (now > next_presentation_time) {
+              FXL_LOG(WARNING)
+                  << "Next calculated presentation time is "
+                  << (now - next_presentation_time) / 1000000.f
+                  << "ms in the past. "
+                     "next_presentation_time="
+                  << next_presentation_time << ", current time is " << now;
+              next_presentation_time = now;
+            }
+
             self->PresentScene();
           }
         }
