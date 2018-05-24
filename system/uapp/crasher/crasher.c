@@ -110,7 +110,7 @@ int mem(volatile unsigned int* arg) {
 }
 
 int use_after_free(volatile unsigned int* arg) {
-    char *p = malloc(1);
+    char *p = strdup("Hello, world!");
     free(p);
     puts(p);
     return 0;
