@@ -2501,6 +2501,11 @@ __NO_SAFESTACK __attribute__((__visibility__("hidden"))) void _dl_log_write(
             (ZX_LOG_RECORD_MAX - offsetof(zx_log_record_t, data));
         while (len > 0) {
             size_t chunk = len < kLogWriteMax ? len : kLogWriteMax;
+            // Write only a single line at a time so each line gets tagged.
+            const char* nl = memchr(buffer, '\n', chunk);
+            if (nl != NULL) {
+                chunk = nl + 1 - buffer;
+            }
             zx_status_t status = _zx_log_write(logger, chunk, buffer, 0);
             if (status != ZX_OK) {
                 __builtin_trap();
