@@ -76,7 +76,7 @@ var (
 		DefaultVal: ArgValue{
 			Val: 2,
 		},
-		Comment: "Description of x64 arg that references //source/path.\n",
+		Comment: "Description of x64 arg that references //build/path.py, //sources, and //base.\n",
 		Key:     "target_cpu = x64",
 	}
 
@@ -187,7 +187,7 @@ Description of arm64 arg.
 No values for ` + "`" + `target_cpu = x64` + "`" + `.
 
 ### x64
-Description of x64 arg that references //source/path.
+Description of x64 arg that references [//build/path.py](http://fuchsia.com/build/path.py), //sources, and [//base](http://fuchsia.com/base).
 
 **Default value for ` + "`" + `target_cpu = x64` + "`" + `:** 2
 

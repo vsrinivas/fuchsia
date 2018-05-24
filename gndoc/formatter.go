@@ -7,6 +7,7 @@ package gndoc
 import (
 	"fmt"
 	"io"
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -14,6 +15,10 @@ import (
 const (
 	pageTitle = "GN Build Arguments"
 	nameDepth = 3
+)
+
+var (
+	linkRegexp = regexp.MustCompile("//([/A-Za-z-_]+)([.][/A-Za-z-_]+)?")
 )
 
 // arg holds the name, comment description, default values, and any current overriden values.
@@ -42,8 +47,13 @@ func (a *arg) write(out io.Writer, sources *SourceMap) {
 }
 
 func (a *arg) writeLinkifiedComment(out io.Writer, sources *SourceMap) {
-	// TODO (juliehockett): Linkify //source/path in comment.
-	fmt.Fprintf(out, "%s\n", a.comment)
+	replFunc := func(str string) string {
+		if link := sources.GetSourceLink(str, 0); link != "" {
+			return fmt.Sprintf("[%s](%s)", str, link)
+		}
+		return str
+	}
+	fmt.Fprintf(out, "%s\n", linkRegexp.ReplaceAllStringFunc(a.comment, replFunc))
 }
 
 // addKey adds a given key to the list of keys.

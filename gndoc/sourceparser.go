@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 )
 
@@ -47,14 +48,13 @@ func (s SourceMap) GetSourceLink(file string, line int) string {
 		if _, exists := s[project]; exists {
 			break
 		}
-		if trailing := strings.LastIndex(project, "/"); trailing < 0 {
-			break
-		} else {
-			project = project[:trailing]
+		project = filepath.Dir(project)
+		if project == "." {
+			return ""
 		}
 	}
-	if project == file {
-		return ""
+	if line == 0 {
+		return fmt.Sprintf("%s%s", s[project], file[len(project):])
 	}
 	return fmt.Sprintf("%s%s#%d", s[project], file[len(project):], line)
 }
