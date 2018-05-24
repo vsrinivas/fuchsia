@@ -12,9 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"fidl/bindings"
-
 	"fidl/amber"
+	"fidl/bindings"
 
 	"amber/daemon"
 	"amber/lg"
@@ -62,13 +61,21 @@ func (c *ControlSrvr) DoTest(in int32) (out string, err error) {
 	return r, nil
 }
 
-func (c *ControlSrvr) AddSrc(url string, rateLimit, ratePeriod int32, pubKey string) (bool, error) {
-	keyHex, err := hex.DecodeString(pubKey)
-	if err != nil {
-		return false, err
+func (c *ControlSrvr) AddSrc(cfg amber.SourceConfig) (bool, error) {
+	keys := make([]*tuf_data.Key, len(cfg.RootKeys))
+
+	for i, key := range cfg.RootKeys {
+		keyHex, err := hex.DecodeString(key)
+		if err != nil {
+			return false, err
+		}
+
+		keys[i] = &tuf_data.Key{
+			Type:  "ed25519",
+			Value: tuf_data.KeyValue{tuf_data.HexBytes(keyHex)},
+		}
 	}
 
-	key := tuf_data.Key{Type: "ed25519", Value: tuf_data.KeyValue{tuf_data.HexBytes(keyHex)}}
 	dir, err := ioutil.TempDir("", "amber")
 	if err != nil {
 		return false, err
@@ -84,17 +91,17 @@ func (c *ControlSrvr) AddSrc(url string, rateLimit, ratePeriod int32, pubKey str
 	})
 	go tickGen.Run()
 
-	client, _, err := source.InitNewTUFClient(url, dir, []*tuf_data.Key{&key}, tickGen)
+	client, _, err := source.InitNewTUFClient(cfg.RequestUrl, dir, keys, tickGen)
 	if err != nil {
 		return false, err
 	}
 
-	src := source.TUFSource{
+	c.daemon.AddSource(&source.TUFSource{
 		Client:   client,
-		Interval: time.Millisecond * time.Duration(ratePeriod),
-		Limit:    uint64(rateLimit),
-	}
-	c.daemon.AddSource(&src)
+		Interval: time.Millisecond * time.Duration(cfg.RatePeriod),
+		Limit:    uint64(cfg.RateLimit),
+	})
+
 	return true, nil
 }
 
@@ -106,8 +113,8 @@ func (c *ControlSrvr) Check() (bool, error) {
 	return true, nil
 }
 
-func (c *ControlSrvr) ListSrcs() ([]string, error) {
-	return []string{}, nil
+func (c *ControlSrvr) ListSrcs() ([]amber.SourceConfig, error) {
+	return []amber.SourceConfig{}, nil
 }
 
 func (c *ControlSrvr) getAndWaitForUpdate(name string, version, merkle *string, ch *zx.Channel) {

@@ -4,27 +4,43 @@
 
 library amber;
 
+struct SourceConfig {
+  // The canonical URL for the TUF repository.
+  string repoUrl;
+
+  // Download packages from this TUF repository mirror.
+  string requestUrl;
+
+  // The rate limit indicates the number of requests per rateReriod, expressed
+  // in milliseconds. A limit or period of zero means there is no limit.
+  int32 rateLimit;
+
+  // How frequently to poll the TUF server.
+  int32 ratePeriod;
+
+  // A vector of hex-encoded ED25519 public keys. This key must match one of
+  // the trusted keys known to the system.
+  vector<string> rootKeys;
+};
+
+
 [Discoverable]
 interface Control {
   // simple no-op that can be used to test the connection
   1: DoTest(int32 input) -> (string output);
 
-  // Add a source at the provided URL. The rate limit indicates the number of
-  // requests per ratePeriod, expressed in millisconds, that are allowed. A limit
-  // or period of zero means there is no limit. The pub key is a hex-encoded
-  // ED25519 public key. This key must match one of the trusted keys known to the
-  // system.
-  2: AddSrc(string url, int32 rateLimit, int32 ratePeriod, string pubKey) -> (bool res);
+  // Add a TUF source repository.
+  2: AddSrc(SourceConfig source) -> (bool res);
 
-  // Remove a source previously provided to AddSrc. Sources that were bundled
-  // when the system was built can not be removed.
+  // Remove a source previously provided to AddSrc. SourceConfigs that were
+  // bundled when the system was built can not be removed.
   3: RemoveSrc(string url) -> (bool res);
 
   // Check for updates to any persistently registered packages
   4: Check() -> (bool res);
 
   // Get the list of URLs of the current set of sources
-  5: ListSrcs() -> (vector<string> srcs);
+  5: ListSrcs() -> (vector<SourceConfig> srcs);
 
   // Get an update for the package identified by 'name' which has the provided
   // version. If no version is supplied, the latest available version of that

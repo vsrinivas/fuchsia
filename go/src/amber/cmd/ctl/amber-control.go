@@ -93,7 +93,7 @@ func connect(ctx *context.Context) (*amber.ControlInterface, amber.ControlInterf
 	return pxy, req
 }
 
-func addSource(amber *amber.ControlInterface) error {
+func addSource(a *amber.ControlInterface) error {
 	if len(strings.TrimSpace(*srcUrl)) == 0 {
 		fmt.Println("No repository URL provided")
 		return os.ErrInvalid
@@ -112,7 +112,13 @@ func addSource(amber *amber.ControlInterface) error {
 		return os.ErrInvalid
 	}
 
-	added, err := amber.AddSrc(*srcUrl, int32(*rateLimit), int32(*period), *srcKey)
+	added, err := a.AddSrc(amber.SourceConfig{
+		RepoUrl:    *srcUrl,
+		RequestUrl: *srcUrl,
+		RateLimit:  int32(*rateLimit),
+		RatePeriod: int32(*period),
+		RootKeys:   []string{*srcKey},
+	})
 	if !added {
 		fmt.Println("Call succeeded, but source not added")
 		return fmt.Errorf("Request arguments properly formatted, but possibly otherwise invalid")
