@@ -16,6 +16,7 @@ group("packages") {
 
 group("default") {
   deps = [
+    ":host_tests",
     ":packages",
     "//build/images",
     "//build/images:updates",
@@ -26,6 +27,26 @@ group("default") {
 foreach(pkg, synthesize_packages) {
   package(pkg.name) {
     forward_variables_from(pkg, "*", [ "name" ])
+  }
+}
+
+# Copy host test binaries to $root_build_dir/host_tests.
+if (package_host_tests != []) {
+  copy("host_tests") {
+    deps = []
+    sources = []
+    bindir = get_label_info("//anything($host_toolchain)", "root_out_dir")
+    foreach(label, package_host_tests) {
+      deps += [ "$label($host_toolchain)" ]
+      binary = get_label_info(label, "name")
+      sources += [ "$bindir/$binary" ]
+    }
+    outputs = [
+      "$root_build_dir/host_tests/{{source_file_part}}",
+    ]
+  }
+} else {
+  group("host_tests") {
   }
 }
 

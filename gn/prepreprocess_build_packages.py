@@ -83,6 +83,7 @@ class PackageLabelObserver:
         self.json_result = {
             'targets': [],
             'data_deps': [],
+            'host_tests': [],
         }
 
     def import_resolved(self, config, config_path):
@@ -94,6 +95,7 @@ class PackageLabelObserver:
         assert isinstance(packages, list)
         self.json_result['targets'] += packages
         self.json_result['data_deps'] += config.get('labels', [])
+        self.json_result['host_tests'] += config.get('host_tests', [])
 
 
 def main():

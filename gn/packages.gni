@@ -60,6 +60,13 @@ foreach(pkg, _preprocessed_packages.data_deps) {
   package_data_deps += [ get_label_info(pkg, "label_no_toolchain") ]
 }
 
+# Labels of test() targets to be copied into $root_build_dir/host_tests.
+package_host_tests = []
+foreach(label, _preprocessed_packages.host_tests) {
+  # Expand the label to its full name.
+  package_host_tests += [ get_label_info(label, "label_no_toolchain") ]
+}
+
 # Synthesized packages are instantiated in //build/gn/BUILD.gn,
 # so the package() target is //build/gn:package_name.
 foreach(pkg, synthesize_packages) {
