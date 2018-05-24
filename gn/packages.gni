@@ -40,8 +40,7 @@ _preprocessed_packages = exec_script("prepreprocess_build_packages.py",
                                        # valid JSON too.
                                        "--packages=$fuchsia_packages",
                                      ],
-                                     "json",
-                                     [ "package_imports_resolver.py" ])
+                                     "json")
 
 # Every GN package() target included in the build.  The image-building
 # steps iterate over this to aggregate all the internal targets defined by
