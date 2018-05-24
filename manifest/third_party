@@ -145,7 +145,7 @@
              path="third_party/googletest"
              remote="https://fuchsia.googlesource.com/third_party/googletest"
              gerrithost="https://fuchsia-review.googlesource.com"
-             revision="00b760d1b5be88f2186e1fe37afa0accad9b5e8b"/>
+             revision="f854f1d27488996dc8a6db3c9453f80b02585e12"/>
     <!-- gRPC contact: rudominer. -->
     <project name="third_party/grpc"
              path="third_party/grpc"
