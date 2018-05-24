@@ -2,64 +2,36 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <benchmark/benchmark.h>
-#include <zircon/syscalls.h>
+#include <lib/zx/port.h>
+#include <perftest/perftest.h>
 #include <zircon/syscalls/port.h>
 
-class Port : public benchmark::Fixture {
- private:
-  void SetUp(benchmark::State& state) override {
-    if (zx_port_create(0, &port_) != ZX_OK) {
-      state.SkipWithError("Failed to create channel");
-    }
-  }
+namespace {
 
-  void TearDown(benchmark::State& state) override {
-    zx_handle_close(port_);
-  }
+// Measure the times taken to enqueue and then dequeue a packet from a
+// Zircon port, on a single thread.  This does not involve any cross-thread
+// wakeups.
+bool PortQueueWaitTest(perftest::RepeatState* state) {
+  state->DeclareStep("queue");
+  state->DeclareStep("wait");
 
- protected:
-  zx_handle_t port_ = ZX_HANDLE_INVALID;
-  static constexpr size_t packet_count = 1u;
-};
-
-BENCHMARK_F(Port, Queue)(benchmark::State& state) {
-  zx_port_packet out_packet;
+  zx::port port;
+  ZX_ASSERT(zx::port::create(0, &port) == ZX_OK);
   zx_port_packet in_packet;
+  zx_port_packet out_packet = {};
   out_packet.type = ZX_PKT_TYPE_USER;
 
-  while (state.KeepRunning()) {
-    if (zx_port_queue(port_, &out_packet, packet_count) != ZX_OK) {
-      state.SkipWithError("Failed to queue a packet to a port");
-      return;
-    }
-
-    // Make sure to drain the queue.
-    state.PauseTiming();
-    if(zx_port_wait(port_, ZX_TIME_INFINITE, &in_packet, packet_count) != ZX_OK) {
-      state.SkipWithError("Failed to wait for a packet at a port");
-      return;
-    }
-    state.ResumeTiming();
+  while (state->KeepRunning()) {
+    ZX_ASSERT(port.queue(&out_packet, 1) == ZX_OK);
+    state->NextStep();
+    ZX_ASSERT(port.wait(zx::time::infinite(), &in_packet, 1) == ZX_OK);
   }
+  return true;
 }
 
-BENCHMARK_F(Port, Wait)(benchmark::State& state) {
-  zx_port_packet out_packet;
-  zx_port_packet in_packet;
-  out_packet.type = ZX_PKT_TYPE_USER;
+void RegisterTests() {
+  perftest::RegisterTest("Port/QueueWait", PortQueueWaitTest);
+}
+PERFTEST_CTOR(RegisterTests);
 
-  while (state.KeepRunning()) {
-    state.PauseTiming();
-    if (zx_port_queue(port_, &out_packet, packet_count) != ZX_OK) {
-      state.SkipWithError("Failed to queue a packet to a port");
-      return;
-    }
-    state.ResumeTiming();
-
-    if(zx_port_wait(port_, ZX_TIME_INFINITE, &in_packet, packet_count) != ZX_OK) {
-      state.SkipWithError("Failed to wait for a packet at a port");
-      return;
-    }
-  }
 }
