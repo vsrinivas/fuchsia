@@ -46,6 +46,7 @@
         "garnet/packages/tests/url",
         "garnet/packages/tests/vulkan",
         "garnet/packages/tests/wlan",
-        "garnet/packages/tests/wlan-hw-sim"
+        "garnet/packages/tests/wlan-hw-sim",
+        "garnet/packages/tests/zxdb"
     ]
 }

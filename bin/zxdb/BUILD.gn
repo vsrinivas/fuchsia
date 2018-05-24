@@ -5,33 +5,53 @@
 import("//build/host.gni")
 import("//build/package.gni")
 
-assert(current_toolchain == host_toolchain,
-       "zxdb can currently only be compiled for the host.")
+# ZXDB currently only compiles for the host.
+if (current_toolchain == host_toolchain) {
+  executable("zxdb") {
+    sources = [
+      "main_host.cc",
+    ]
+    deps = [
+      "//garnet/bin/zxdb/client",
+      "//garnet/bin/zxdb/console",
+      "//garnet/lib/debug_ipc:client",
+    ]
+  }
 
-executable("zxdb") {
-  sources = [
-    "main_host.cc",
-  ]
+  executable("zxdb_tests") {
+    testonly = true
+    output_name = "zxdb_tests"
+
+    sources = [
+    ]
+
+    deps = [
+      "//garnet/bin/zxdb/client:tests",
+      "//garnet/bin/zxdb/console:tests",
+      "//garnet/lib/debug_ipc:tests",
+      "//garnet/lib/debug_ipc/helper:tests",
+      "//third_party/googletest:gtest_main",
+      "//third_party/googletest:gtest",
+    ]
+  }
+}
+
+install_host_tools("zxdb_host") {
   deps = [
-    "//garnet/bin/zxdb/client",
-    "//garnet/bin/zxdb/console",
-    "//garnet/lib/debug_ipc:client",
+    ":zxdb",
+  ]
+  outputs = [
+    "zxdb"
   ]
 }
 
-executable("unittests") {
+
+install_host_tools("zxdb_tests_host") {
   testonly = true
-  output_name = "zxdb_tests"
-
-  sources = [
-  ]
-
   deps = [
-    "//garnet/bin/zxdb/client:tests",
-    "//garnet/bin/zxdb/console:tests",
-    "//garnet/lib/debug_ipc:tests",
-    "//garnet/lib/debug_ipc/helper:tests",
-    "//third_party/googletest:gtest_main",
-    "//third_party/googletest:gtest",
+    ":zxdb_tests",
+  ]
+  outputs = [
+    "zxdb_tests",
   ]
 }

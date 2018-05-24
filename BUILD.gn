@@ -16,17 +16,3 @@ package("build_info") {
     },
   ]
 }
-
-# Stuff only compiled for the host so not referenced by the package system.
-group("host_tools") {
-  deps = [
-    "bin/zxdb($host_toolchain)",
-  ]
-}
-
-group("host_tests") {
-  deps = [
-    "bin/zxdb:unittests($host_toolchain)",
-  ]
-  testonly = true
-}
