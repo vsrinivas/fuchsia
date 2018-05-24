@@ -148,8 +148,13 @@ static int aml_start_thread(void* arg) {
     }
 
     if ((status = pbus_device_add(&bus->pbus, &video_dev, 0)) != ZX_OK) {
-      zxlogf(ERROR, "aml_start_thread could not add video_dev: %d\n", status);
-      goto fail;
+        zxlogf(ERROR, "aml_start_thread could not add video_dev: %d\n", status);
+        goto fail;
+    }
+
+    if ((status = aml_raw_nand_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "aml_raw_nand_init failed: %d\n", status);
+        goto fail;
     }
 
     return ZX_OK;

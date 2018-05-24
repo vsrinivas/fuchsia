@@ -50,6 +50,9 @@
 
 #define S905D2_I2C_AO_0_BASE            (S905D2_AOBUS_BASE + 0x5000)
 
+#define S905D2_RAW_NAND_REG_BASE        (S905D2_AOBUS_BASE + 0x607800)
+#define S905D2_RAW_NAND_CLOCK_BASE      (S905D2_AOBUS_BASE + 0x607000)
+
 // Reset register offsets
 #define S905D2_RESET0_REGISTER          0x04
 #define S905D2_RESET1_REGISTER          0x08
@@ -85,6 +88,7 @@
 #define S905D2_DEMUX_IRQ                55
 #define S905D2_USB0_IRQ                 62
 #define S905D2_PARSER_IRQ               64
+#define S905D2_RAW_NAND_IRQ             66
 #define S905D2_DOS_MBOX_0_IRQ           75
 #define S905D2_DOS_MBOX_1_IRQ           76
 #define S905D2_DOS_MBOX_2_IRQ           77
