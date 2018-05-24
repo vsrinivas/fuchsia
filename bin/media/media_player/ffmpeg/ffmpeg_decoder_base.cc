@@ -120,8 +120,7 @@ void FfmpegDecoderBase::TransformPacket(PacketPtr input) {
   if (input->size() == 0 && !input->end_of_stream()) {
     // Throw away empty packets that aren't end-of-stream packets. The
     // underlying decoder interprets an empty packet as end-of-stream.
-    // Returning true here causes the stage to release the input packet and
-    // call again with a new one.
+    stage()->RequestInputPacket();
     return;
   }
 
