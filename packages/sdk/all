@@ -1,0 +1,7 @@
+{
+  "imports": [
+    "garnet/packages/sdk/base",
+    "garnet/packages/sdk/garnet",
+    "garnet/packages/sdk/toolchain"
+  ]
+}
