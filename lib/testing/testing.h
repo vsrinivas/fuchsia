@@ -22,7 +22,7 @@ constexpr char kTestShutdown[] = "test_shutdown";
 // timeout.
 constexpr int kTestTimeoutMilliseconds = 15000;
 
-// Connects to the TestRunner service in the caller's ApplicationEnvironment.
+// Connects to the TestRunner service in the caller's Environment.
 // This function must be invoked first before calling any of the ones below. A
 // test is expected to call either Done() or Teardown() before terminating
 // itself in order for the TestRunner service to know that a test process did
@@ -61,7 +61,7 @@ void Done(const std::function<void()>& ack);
 void Teardown(const std::function<void()>& ack);
 
 // Returns the TestRunnerStore interface from the caller's
-// ApplicationEnvironment. Init() must be called before GetStore().
+// Environment. Init() must be called before GetStore().
 test_runner::TestRunnerStore* GetStore();
 
 // Creates function that invokes the |proceed| callback after being called |limit| times.

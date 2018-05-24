@@ -8,7 +8,7 @@
 
 namespace modular {
 
-Scope::Scope(const component::ApplicationEnvironmentPtr& parent_env,
+Scope::Scope(const component::EnvironmentPtr& parent_env,
              const std::string& label) {
   InitScope(parent_env, label);
 }
@@ -25,7 +25,7 @@ component::ApplicationLauncher* Scope::GetLauncher() {
   return env_launcher_.get();
 }
 
-void Scope::InitScope(const component::ApplicationEnvironmentPtr& parent_env,
+void Scope::InitScope(const component::EnvironmentPtr& parent_env,
                       const std::string& label) {
   zx::channel h1, h2;
   if (zx::channel::create(0, &h1, &h2) < 0)

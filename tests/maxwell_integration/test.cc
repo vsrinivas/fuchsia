@@ -35,7 +35,7 @@ component::Services MaxwellTestBase::StartServices(const std::string& url) {
   return services;
 }
 
-component::ApplicationEnvironment* MaxwellTestBase::root_environment() {
+component::Environment* MaxwellTestBase::root_environment() {
   return startup_context_->environment().get();
 }
 

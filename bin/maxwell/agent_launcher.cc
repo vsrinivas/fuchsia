@@ -17,7 +17,7 @@ component::Services AgentLauncher::StartAgent(
     const std::string& url,
     std::unique_ptr<MaxwellServiceProviderBridge> bridge) {
   bridge_ = std::move(bridge);
-  component::ApplicationEnvironmentPtr agent_env;
+  component::EnvironmentPtr agent_env;
   environment_->CreateNestedEnvironment(bridge_->OpenAsDirectory(),
                                         agent_env.NewRequest(), NULL,
                                         kEnvironmentLabel);

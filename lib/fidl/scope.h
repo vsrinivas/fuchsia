@@ -21,7 +21,7 @@ namespace modular {
 // environment services are delegated to the parent environment.
 class Scope {
  public:
-  Scope(const component::ApplicationEnvironmentPtr& parent_env,
+  Scope(const component::EnvironmentPtr& parent_env,
         const std::string& label);
 
   Scope(const Scope* parent_scope, const std::string& label);
@@ -36,18 +36,18 @@ class Scope {
 
   component::ApplicationLauncher* GetLauncher();
 
-  const component::ApplicationEnvironmentPtr& environment() const {
+  const component::EnvironmentPtr& environment() const {
     return env_;
   }
 
  private:
-  void InitScope(const component::ApplicationEnvironmentPtr& parent_env,
+  void InitScope(const component::EnvironmentPtr& parent_env,
                  const std::string& label);
 
   component::ServiceProviderBridge service_provider_bridge_;
-  component::ApplicationEnvironmentPtr env_;
+  component::EnvironmentPtr env_;
   component::ApplicationLauncherPtr env_launcher_;
-  component::ApplicationEnvironmentControllerPtr env_controller_;
+  component::EnvironmentControllerPtr env_controller_;
 };
 
 }  // namespace modular

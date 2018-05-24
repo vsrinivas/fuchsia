@@ -34,7 +34,7 @@ class MaxwellTestBase : public gtest::TestWithMessageLoop {
     return services.ConnectToService<Interface>();
   }
 
-  component::ApplicationEnvironment* root_environment();
+  component::Environment* root_environment();
 
   modular::EntityResolverFake& entity_resolver() {
     return child_component_context_.entity_resolver_fake();

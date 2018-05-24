@@ -15,14 +15,14 @@ namespace maxwell {
 
 class AgentLauncher {
  public:
-  AgentLauncher(component::ApplicationEnvironment* environment)
+  AgentLauncher(component::Environment* environment)
       : environment_(environment) {}
   component::Services StartAgent(
       const std::string& url,
       std::unique_ptr<MaxwellServiceProviderBridge> bridge);
 
  private:
-  component::ApplicationEnvironment* environment_;
+  component::Environment* environment_;
 
   std::unique_ptr<MaxwellServiceProviderBridge> bridge_;
 };

@@ -227,9 +227,9 @@ class CobaltTest : public gtest::TestWithMessageLoop {
         [this](fidl::InterfaceRequest<CobaltEncoderFactory> request) {
           factory_bindings_.AddBinding(factory_impl_.get(), std::move(request));
         });
-    service_provider.AddService<component::ApplicationEnvironment>(
+    service_provider.AddService<component::Environment>(
         [this](
-            fidl::InterfaceRequest<component::ApplicationEnvironment> request) {
+            fidl::InterfaceRequest<component::Environment> request) {
           app_environment_request_ = std::move(request);
         });
     service_provider.AddService<component::ApplicationLauncher>(
@@ -246,7 +246,7 @@ class CobaltTest : public gtest::TestWithMessageLoop {
   std::unique_ptr<component::ApplicationContext> app_context_;
   fidl::BindingSet<CobaltEncoderFactory> factory_bindings_;
   fidl::InterfaceRequest<component::ApplicationLauncher> app_launcher_request_;
-  fidl::InterfaceRequest<component::ApplicationEnvironment>
+  fidl::InterfaceRequest<component::Environment>
       app_environment_request_;
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltTest);
 };
