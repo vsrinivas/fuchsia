@@ -74,6 +74,7 @@ DDK_PROTOCOL_DEF(CLK,            'pCLK', "clock", 0)
 DDK_PROTOCOL_DEF(INTEL_GPU_CORE, 'pIGC', "intel-gpu-core", 0)
 DDK_PROTOCOL_DEF(IOMMU,          'pIOM', "iommu", 0)
 DDK_PROTOCOL_DEF(NAND,           'pNND', "nand", 0)
+DDK_PROTOCOL_DEF(RAW_NAND,       'pRND', "rawnand", 0)
 DDK_PROTOCOL_DEF(MAILBOX,        'pMHU', "mailbox", 0)
 DDK_PROTOCOL_DEF(SCPI,           'pSCP', "scpi", 0)
 // Protocol definition at garnet/magma/src/magma_util/platform/zircon/zircon_platform_ioctl.h
