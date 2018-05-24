@@ -101,6 +101,11 @@ const std::string kAppName = "hangouts";
 const std::string kAppPartName = "app_name";
 const uint32_t kAppNameEncodingId = 4;
 
+// For testing V1_BACKEND.
+const uint32_t kV1BackendMetricId = 10;
+const uint32_t kV1BackendEncodingId = 4;
+const std::string kV1BackendEvent = "Send-to-V1";
+
 std::string StatusToString(cobalt::Status status) {
   switch (status) {
     case cobalt::Status::OK:
@@ -184,6 +189,8 @@ class CobaltTestApp {
   bool TestModInitialisationTime();
 
   bool TestAppStartupTime();
+
+  bool TestV1Backend();
 
   bool RequestSendSoonTests();
 
@@ -396,6 +403,9 @@ bool CobaltTestApp::RequestSendSoonTests() {
   if (!TestAppStartupTime()) {
     return false;
   }
+  if (!TestV1Backend()) {
+    return false;
+  }
   return true;
 }
 
@@ -535,6 +545,16 @@ bool CobaltTestApp::TestAppStartupTime() {
       kAppTimerPartName, kAppTimerEncodingId, kAppStartTimestamp,
       kAppEndTimestamp, kAppTimerId, kAppTimeout, use_request_send_soon);
   FXL_LOG(INFO) << "TestAppStartupTime : " << (success ? "PASS" : "FAIL");
+  return success;
+}
+
+bool CobaltTestApp::TestV1Backend() {
+  FXL_LOG(INFO) << "========================";
+  FXL_LOG(INFO) << "TestV1Backend";
+  bool use_request_send_soon = true;
+  bool success = EncodeStringAndSend(kV1BackendMetricId, kV1BackendEncodingId,
+                                     kV1BackendEvent, use_request_send_soon);
+  FXL_LOG(INFO) << "TestV1Backend : " << (success ? "PASS" : "FAIL");
   return success;
 }
 

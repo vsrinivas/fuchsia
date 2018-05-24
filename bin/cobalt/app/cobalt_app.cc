@@ -5,14 +5,19 @@
 #include "garnet/bin/cobalt/app/cobalt_app.h"
 
 #include "garnet/bin/cobalt/app/utils.h"
+#include "garnet/bin/cobalt/utils/fuchsia_http_client.h"
+#include "lib/backoff/exponential_backoff.h"
 
 namespace cobalt {
 
+using clearcut::ClearcutUploader;
 using config::ClientConfig;
+using encoder::ClearcutV1ShippingManager;
 using encoder::ClientSecret;
 using encoder::CobaltEncoderFactoryImpl;
 using encoder::LegacyShippingManager;
 using encoder::ShippingManager;
+using utils::FuchsiaHTTPClient;
 
 // Each "send attempt" is actually a cycle of potential retries. These
 // two parameters configure the SendRetryer.
@@ -24,6 +29,7 @@ const size_t kMaxBytesTotal = 1024 * 1024;       // 1 MiB
 const size_t kMinEnvelopeSendSize = 10 * 1024;   // 10 K
 
 constexpr char kCloudShufflerUri[] = "shuffler.cobalt-api.fuchsia.com:443";
+const char kClearcutServerUri[] = "https://jmt17.google.com/log";
 
 constexpr char kConfigBinProtoPath[] = "/pkg/data/cobalt_config.binproto";
 constexpr char kAnalyzerPublicKeyPemPath[] =
@@ -38,6 +44,12 @@ CobaltApp::CobaltApp(async_t* async, std::chrono::seconds schedule_interval,
       context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
       shuffler_client_(kCloudShufflerUri, true),
       send_retryer_(&shuffler_client_),
+      network_wrapper_(
+          async, std::make_unique<backoff::ExponentialBackoff>(),
+          [this] {
+            return context_
+                ->ConnectToEnvironmentService<network::NetworkService>();
+          }),
       timer_manager_(async),
       controller_impl_(new CobaltControllerImpl(async, &shipping_dispatcher_)) {
   auto size_params = ShippingManager::SizeParams(
@@ -57,6 +69,13 @@ CobaltApp::CobaltApp(async_t* async, std::chrono::seconds schedule_interval,
           ShippingManager::SendRetryerParams(kInitialRpcDeadline,
                                              kDeadlinePerSendAttempt),
           &send_retryer_));
+  shipping_dispatcher_.Register(
+      ObservationMetadata::V1_BACKEND,
+      std::make_unique<ClearcutV1ShippingManager>(
+          size_params, schedule_params, envelope_maker_params,
+          std::make_unique<ClearcutUploader>(
+              kClearcutServerUri,
+              std::make_unique<FuchsiaHTTPClient>(&network_wrapper_, async))));
   shipping_dispatcher_.Start();
 
   // Open the cobalt config file.
