@@ -211,7 +211,7 @@ void ThreadPool::InternalShutdown() {
         fbl::AutoLock lock(&pool_lock_);
         for (__UNUSED const auto& thread : active_threads_) {
             __UNUSED zx_status_t res;
-            res = port_.queue(&pkt, 1);
+            res = port_.queue(&pkt);
             ZX_DEBUG_ASSERT(res == ZX_OK);
         }
     }
@@ -294,7 +294,7 @@ int ThreadPool::Thread::Main() {
 
         // Wait for there to be work to dispatch.  We should never encounter an
         // error, but if we do, shut down.
-        res = pool_->port().wait(zx::time::infinite(), &pkt, 1);
+        res = pool_->port().wait(zx::time::infinite(), &pkt);
         ZX_DEBUG_ASSERT(res == ZX_OK);
 
         // Is it time to exit?

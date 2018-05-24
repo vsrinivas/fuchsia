@@ -72,9 +72,9 @@ void threads_test_infinite_wait_fn(void* arg) {
 void threads_test_port_fn(void* arg) {
     zx_handle_t* port = (zx_handle_t*)arg;
     zx_port_packet_t packet = {};
-    zx_port_wait(port[0], ZX_TIME_INFINITE, &packet, 1u);
+    zx_port_wait(port[0], ZX_TIME_INFINITE, &packet);
     packet.key += 5u;
-    zx_port_queue(port[1], &packet, 1u);
+    zx_port_queue(port[1], &packet);
 }
 
 void threads_test_channel_call_fn(void* arg_) {

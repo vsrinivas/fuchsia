@@ -140,7 +140,7 @@ int main(int argc, char** argv) {
 
     for (;;) {
         zx_port_packet_t packet;
-        zx_status_t status = exception_port.wait(zx::time::infinite(), &packet, 1);
+        zx_status_t status = exception_port.wait(zx::time::infinite(), &packet);
         if (status != ZX_OK) {
             fprintf(stderr, "crashsvc: zx_port_wait failed %d\n", status);
             continue;

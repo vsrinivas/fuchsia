@@ -145,7 +145,7 @@ void handle(char* iobuf, eth_fifos_t* fifos) {
     size_t n;
     eth_fifo_entry_t entries[BUFS];
     for (;;) {
-        status = zx_port_wait(port, ZX_TIME_INFINITE, &packet, 1);
+        status = zx_port_wait(port, ZX_TIME_INFINITE, &packet);
         if (status != ZX_OK) {
             fprintf(stderr, "netreflector: error while waiting on port %d\n", status);
             return;

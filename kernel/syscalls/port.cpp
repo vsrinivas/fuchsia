@@ -46,12 +46,8 @@ zx_status_t sys_port_create(uint32_t options, user_out_handle* out) {
     return result;
 }
 
-zx_status_t sys_port_queue(zx_handle_t handle, user_in_ptr<const zx_port_packet_t> packet_in, size_t count) {
+zx_status_t sys_port_queue(zx_handle_t handle, user_in_ptr<const zx_port_packet_t> packet_in) {
     LTRACEF("handle %x\n", handle);
-
-    // TODO(ZX-1291) Disallow 0u here.
-    if (count != 0u && count != 1u)
-        return ZX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -69,12 +65,8 @@ zx_status_t sys_port_queue(zx_handle_t handle, user_in_ptr<const zx_port_packet_
 }
 
 zx_status_t sys_port_wait(zx_handle_t handle, zx_time_t deadline,
-                          user_out_ptr<zx_port_packet_t> packet_out, size_t count) {
+                          user_out_ptr<zx_port_packet_t> packet_out) {
     LTRACEF("handle %x\n", handle);
-
-    // TODO(ZX-1291) Disallow 0u here.
-    if (count != 0u && count != 1u)
-        return ZX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
 

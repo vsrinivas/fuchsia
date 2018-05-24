@@ -62,7 +62,7 @@ zx_status_t Worker::Loop() {
     zx_port_packet_t packet;
 
     // Use the first request as a signal that the device is ready
-    if ((rc = port_.wait(zx::time::infinite(), &packet, 1)) != ZX_OK ||
+    if ((rc = port_.wait(zx::time::infinite(), &packet)) != ZX_OK ||
         packet.status != ZX_ERR_NEXT) {
         xprintf("failed to start worker: %s\n", zx_status_get_string(rc));
         return rc;
@@ -107,7 +107,7 @@ zx_status_t Worker::Loop() {
         default:
             device_->BlockRelease(block, ZX_ERR_NOT_SUPPORTED);
         }
-    } while ((rc = port_.wait(zx::time::infinite(), &packet, 1)) == ZX_OK &&
+    } while ((rc = port_.wait(zx::time::infinite(), &packet)) == ZX_OK &&
              packet.status == ZX_ERR_NEXT);
     return rc;
 }

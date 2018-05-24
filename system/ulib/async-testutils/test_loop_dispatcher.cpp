@@ -149,7 +149,7 @@ bool TestLoopDispatcher::DispatchPendingWaits() {
     zx_port_packet_t user_packet{};
     user_packet.key = wait_id_;
     user_packet.type = ZX_PKT_TYPE_USER;
-    ZX_ASSERT(ZX_OK == port_.queue(&user_packet, 1u));
+    ZX_ASSERT(ZX_OK == port_.queue(&user_packet));
 
     bool did_work = false;
     for (;;) {
@@ -157,7 +157,7 @@ bool TestLoopDispatcher::DispatchPendingWaits() {
 
         zx_port_packet_t packet;
         // Grace of the user packet, |port_| should always have a queued wait.
-        ZX_ASSERT(ZX_OK == port_.wait(zx::time(0), &packet, 1));
+        ZX_ASSERT(ZX_OK == port_.wait(zx::time(0), &packet));
         if (packet.type == ZX_PKT_TYPE_USER) {
           if (packet.key == wait_id_) {
               // The packet is one we queued at the beginning of this call:

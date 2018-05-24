@@ -243,7 +243,7 @@ void Device::DdkUnbind() {
         packet.type = ZX_PKT_TYPE_USER;
         packet.status = ZX_ERR_STOP;
         for (size_t i = 0; i < kNumWorkers; ++i) {
-            port_.queue(&packet, 1);
+            port_.queue(&packet);
         }
         port_.reset();
     }
@@ -333,7 +333,7 @@ void Device::BlockComplete(block_op_t* block, zx_status_t rc) {
     packet.type = ZX_PKT_TYPE_USER;
     packet.status = ZX_ERR_NEXT;
     memcpy(packet.user.c8, &block, sizeof(block));
-    if ((rc = device->port_.queue(&packet, 1)) != ZX_OK) {
+    if ((rc = device->port_.queue(&packet)) != ZX_OK) {
         device->BlockRelease(block, rc);
     }
 }
@@ -484,7 +484,7 @@ void Device::ProcessBlock(block_op_t* block) {
     memcpy(packet.user.c8, &block, sizeof(block));
     if ((block->command & BLOCK_OP_MASK) == BLOCK_OP_READ) {
         BlockForward(block);
-    } else if ((rc = port_.queue(&packet, 1)) != ZX_OK) {
+    } else if ((rc = port_.queue(&packet)) != ZX_OK) {
         BlockRelease(block, rc);
     }
 }

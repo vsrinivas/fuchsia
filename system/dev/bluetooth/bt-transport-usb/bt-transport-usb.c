@@ -513,7 +513,7 @@ static zx_status_t hci_open_snoop_channel(void* ctx, zx_handle_t* out_channel) {
     }
 
     zx_port_packet_t packet;
-    zx_status_t status = zx_port_wait(hci->snoop_watch, 0, &packet, 1);
+    zx_status_t status = zx_port_wait(hci->snoop_watch, 0, &packet);
     if (status == ZX_ERR_TIMED_OUT) {
         printf("bt-transport-usb: timed out: %s\n",
                zx_status_get_string(status));

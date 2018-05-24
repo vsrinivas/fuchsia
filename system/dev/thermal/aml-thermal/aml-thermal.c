@@ -79,7 +79,7 @@ static int aml_thermal_notify_thread(void* ctx) {
         if (signal) {
             // Notify the thermal deamon about which trip point triggered
             thermal_port_packet.key = dev->current_trip_idx + 1;
-            status = zx_port_queue(dev->port, &thermal_port_packet, 1);
+            status = zx_port_queue(dev->port, &thermal_port_packet);
             if (status != ZX_OK) {
                 THERMAL_ERROR("Failed to send packet via port to Thermal Deamon: Thermal disabled");
                 return status;

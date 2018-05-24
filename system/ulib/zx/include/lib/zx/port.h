@@ -29,12 +29,12 @@ public:
 
     static zx_status_t create(uint32_t options, port* result);
 
-    zx_status_t queue(const zx_port_packet_t* packet, size_t count) const {
-        return zx_port_queue(get(), packet, count);
+    zx_status_t queue(const zx_port_packet_t* packet) const {
+        return zx_port_queue(get(), packet);
     }
 
-    zx_status_t wait(zx::time deadline, zx_port_packet_t* packet, size_t count) const {
-        return zx_port_wait(get(), deadline.get(), packet, count);
+    zx_status_t wait(zx::time deadline, zx_port_packet_t* packet) const {
+        return zx_port_wait(get(), deadline.get(), packet);
     }
 
     zx_status_t cancel(zx_handle_t source, uint64_t key) const {

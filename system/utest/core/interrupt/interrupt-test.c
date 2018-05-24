@@ -54,13 +54,13 @@ static bool interrupt_port_bound_test(void) {
     // Test port binding
     ASSERT_EQ(zx_interrupt_bind(virt_interrupt_port_handle, port_handle_bind, key, 0), ZX_OK, "");
     ASSERT_EQ(zx_interrupt_trigger(virt_interrupt_port_handle, 0, signaled_timestamp_1), ZX_OK, "");
-    ASSERT_EQ(zx_port_wait(port_handle_bind, ZX_TIME_INFINITE, &out, 1), ZX_OK, "");
+    ASSERT_EQ(zx_port_wait(port_handle_bind, ZX_TIME_INFINITE, &out), ZX_OK, "");
     ASSERT_EQ(out.interrupt.timestamp, signaled_timestamp_1, "");
 
     // Triggering 2nd time, ACKing it causes port packet to be delivered
     ASSERT_EQ(zx_interrupt_trigger(virt_interrupt_port_handle, 0, signaled_timestamp_1), ZX_OK, "");
     ASSERT_EQ(zx_interrupt_ack(virt_interrupt_port_handle), ZX_OK, "");
-    ASSERT_EQ(zx_port_wait(port_handle_bind, ZX_TIME_INFINITE, &out, 1), ZX_OK, "");
+    ASSERT_EQ(zx_port_wait(port_handle_bind, ZX_TIME_INFINITE, &out), ZX_OK, "");
     ASSERT_EQ(out.interrupt.timestamp, signaled_timestamp_1, "");
     ASSERT_EQ(out.key, key, "");
     ASSERT_EQ(out.type, ZX_PKT_TYPE_INTERRUPT, "");
@@ -71,10 +71,10 @@ static bool interrupt_port_bound_test(void) {
     // the 2nd timestamp is recorded and upon ACK another packet is queued
     ASSERT_EQ(zx_interrupt_trigger(virt_interrupt_port_handle, 0, signaled_timestamp_1), ZX_OK, "");
     ASSERT_EQ(zx_interrupt_trigger(virt_interrupt_port_handle, 0, signaled_timestamp_2), ZX_OK, "");
-    ASSERT_EQ(zx_port_wait(port_handle_bind, ZX_TIME_INFINITE, &out, 1), ZX_OK, "");
+    ASSERT_EQ(zx_port_wait(port_handle_bind, ZX_TIME_INFINITE, &out), ZX_OK, "");
     ASSERT_EQ(out.interrupt.timestamp, signaled_timestamp_1, "");
     ASSERT_EQ(zx_interrupt_ack(virt_interrupt_port_handle), ZX_OK, "");
-    ASSERT_EQ(zx_port_wait(port_handle_bind, ZX_TIME_INFINITE, &out, 1), ZX_OK, "");
+    ASSERT_EQ(zx_port_wait(port_handle_bind, ZX_TIME_INFINITE, &out), ZX_OK, "");
     ASSERT_EQ(out.interrupt.timestamp, signaled_timestamp_2, "");
 
     // Try to destroy now, expecting to return error telling packet

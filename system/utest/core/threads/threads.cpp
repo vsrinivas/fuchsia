@@ -97,7 +97,7 @@ static bool wait_thread_excp_type(zx_handle_t thread, zx_handle_t eport, uint32_
                                   uint32_t ignore_type) {
     zx_port_packet_t packet;
     while (true) {
-        ASSERT_EQ(zx_port_wait(eport, ZX_TIME_INFINITE, &packet, 1), ZX_OK, "");
+        ASSERT_EQ(zx_port_wait(eport, ZX_TIME_INFINITE, &packet), ZX_OK, "");
         ASSERT_EQ(packet.key, kExceptionPortKey, "");
         if (packet.type != ignore_type) {
             ASSERT_EQ(packet.type, excp_type, "");
@@ -581,18 +581,18 @@ static bool test_suspend_port_call() {
     zx_port_packet_t packet1 = { 100ull, ZX_PKT_TYPE_USER, 0u, {} };
     zx_port_packet_t packet2 = { 300ull, ZX_PKT_TYPE_USER, 0u, {} };
 
-    ASSERT_EQ(zx_port_queue(port[0], &packet1, 1u), ZX_OK, "");
-    ASSERT_EQ(zx_port_queue(port[0], &packet2, 1u), ZX_OK, "");
+    ASSERT_EQ(zx_port_queue(port[0], &packet1), ZX_OK, "");
+    ASSERT_EQ(zx_port_queue(port[0], &packet2), ZX_OK, "");
 
     zx_port_packet_t packet;
-    ASSERT_EQ(zx_port_wait(port[1], zx_deadline_after(ZX_MSEC(100)), &packet, 1u), ZX_ERR_TIMED_OUT, "");
+    ASSERT_EQ(zx_port_wait(port[1], zx_deadline_after(ZX_MSEC(100)), &packet), ZX_ERR_TIMED_OUT, "");
 
     ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK, "");
 
-    ASSERT_EQ(zx_port_wait(port[1], ZX_TIME_INFINITE, &packet, 1u), ZX_OK, "");
+    ASSERT_EQ(zx_port_wait(port[1], ZX_TIME_INFINITE, &packet), ZX_OK, "");
     EXPECT_EQ(packet.key, 105ull, "");
 
-    ASSERT_EQ(zx_port_wait(port[0], ZX_TIME_INFINITE, &packet, 1u), ZX_OK, "");
+    ASSERT_EQ(zx_port_wait(port[0], ZX_TIME_INFINITE, &packet), ZX_OK, "");
     EXPECT_EQ(packet.key, 300ull, "");
 
     ASSERT_EQ(zx_object_wait_one(
@@ -779,7 +779,7 @@ static bool port_wait_for_signal_once(zx_handle_t port, zx_handle_t thread,
     ASSERT_EQ(zx_object_wait_async(thread, port, 0u, mask,
                                    ZX_WAIT_ASYNC_ONCE),
               ZX_OK, "");
-    ASSERT_EQ(zx_port_wait(port, deadline, packet, 1), ZX_OK, "");
+    ASSERT_EQ(zx_port_wait(port, deadline, packet), ZX_OK, "");
     ASSERT_EQ(packet->type, ZX_PKT_TYPE_SIGNAL_ONE, "");
     return true;
 }
@@ -787,7 +787,7 @@ static bool port_wait_for_signal_once(zx_handle_t port, zx_handle_t thread,
 static bool port_wait_for_signal_repeating(zx_handle_t port,
                                            zx_time_t deadline,
                                            zx_port_packet_t* packet) {
-    ASSERT_EQ(zx_port_wait(port, deadline, packet, 1), ZX_OK, "");
+    ASSERT_EQ(zx_port_wait(port, deadline, packet), ZX_OK, "");
     ASSERT_EQ(packet->type, ZX_PKT_TYPE_SIGNAL_REP, "");
     return true;
 }
@@ -822,7 +822,7 @@ static bool test_suspend_wait_async_signal_delivery_worker(bool use_repeating) {
 
     // Make sure there are no more packets.
     if (use_repeating) {
-        ASSERT_EQ(zx_port_wait(port, 0u, &packet, 1), ZX_ERR_TIMED_OUT, "");
+        ASSERT_EQ(zx_port_wait(port, 0u, &packet), ZX_ERR_TIMED_OUT, "");
     } else {
         // In the non-repeating case we have to do things differently as one of
         // RUNNING or SUSPENDED is always asserted.
@@ -830,7 +830,7 @@ static bool test_suspend_wait_async_signal_delivery_worker(bool use_repeating) {
                                        ZX_THREAD_SUSPENDED,
                                        ZX_WAIT_ASYNC_ONCE),
                   ZX_OK, "");
-        ASSERT_EQ(zx_port_wait(port, 0u, &packet, 1), ZX_ERR_TIMED_OUT, "");
+        ASSERT_EQ(zx_port_wait(port, 0u, &packet), ZX_ERR_TIMED_OUT, "");
         ASSERT_EQ(zx_port_cancel(port, thread_h, 0u), ZX_OK, "");
     }
 

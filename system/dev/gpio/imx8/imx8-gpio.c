@@ -197,7 +197,7 @@ static int imx8_gpio_irq_handler(void *arg) {
     uint32_t pin;
 
     while(1) {
-        status = zx_port_wait(gpio->porth, ZX_TIME_INFINITE, &packet, 1);
+        status = zx_port_wait(gpio->porth, ZX_TIME_INFINITE, &packet);
         if (status != ZX_OK) {
             zxlogf(ERROR, "%s: zx_port_wait failed %d \n", __FUNCTION__, status);
             goto fail;
