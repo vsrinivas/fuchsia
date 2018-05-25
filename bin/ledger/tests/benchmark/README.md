@@ -70,6 +70,15 @@ page.
     * `delete_entry.tspec`: each entry is deleted separately (outside of a
       transaction)
     * `delete_entry_transaction.tspec`: deletions are grouped in transactions
+* __Disk space__: How much disk space does ledger use to store pages, objects
+  and commits?
+    * `disk_space_empty_ledger.tspec`: empty ledger (with no pages)
+    * `disk_space_empty_pages.tspec`: ledger containing only empty pages
+    * `disk_space_entries.tspec`: ledger with one page containing some entries
+    * `disk_space_updates.tspec`: ledger with one page containing only one
+      entry, but long commit history
+    * `disk_space_one_commit_per_entry.tspec`: ledger with one page containing
+      several entries, each of them added in a separate commit
 
 ### Sync benchmarks
 These benchmarks exercise synchronisation and need an ID of a Firebase instance

@@ -49,6 +49,10 @@ package("ledger_tests") {
     },
 
     {
+      name = "ledger_benchmark_disk_space"
+    },
+
+    {
       name = "ledger_benchmark_convergence"
     },
 
@@ -158,6 +162,36 @@ package("ledger_tests") {
       path = rebase_path(
               "//peridot/bin/ledger/tests/benchmark/backlog/backlog_small_entry_updates.tspec")
       dest = "ledger/benchmark/backlog_small_entry_updates.tspec"
+    },
+
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/tests/benchmark/disk_space/entries.tspec")
+      dest = "ledger/benchmark/disk_space_entries.tspec"
+    },
+
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/tests/benchmark/disk_space/empty_ledger.tspec")
+      dest = "ledger/benchmark/disk_space_empty_ledger.tspec"
+    },
+
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/tests/benchmark/disk_space/empty_pages.tspec")
+      dest = "ledger/benchmark/disk_space_empty_pages.tspec"
+    },
+
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/tests/benchmark/disk_space/one_commit_per_entry.tspec")
+      dest = "ledger/benchmark/disk_space_one_commit_per_entry.tspec"
+    },
+
+    {
+      path = rebase_path(
+              "//peridot/bin/ledger/tests/benchmark/disk_space/updates.tspec")
+      dest = "ledger/benchmark/disk_space_updates.tspec"
     },
 
     {
