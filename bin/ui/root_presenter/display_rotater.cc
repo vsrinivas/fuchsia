@@ -76,4 +76,18 @@ bool DisplayRotater::UpdateAnimation(Presentation* p,
   return true;
 }
 
+glm::vec2 DisplayRotater::RotatePointerCoordinates(Presentation* p, float x,
+                                                   float y) {
+  glm::vec4 pointer_coords(x, y, 0.f, 1.f);
+
+  float width = p->display_model_actual_.display_info().width_in_px;
+  float height = p->display_model_actual_.display_info().height_in_px;
+  glm::vec4 rotated_coords =
+      glm::translate(glm::vec3(width / 2, height / 2, 0)) *
+      glm::rotate(glm::radians<float>(p->display_rotation_current_),
+                  glm::vec3(0, 0, 1)) *
+      glm::translate(glm::vec3(-width / 2, -height / 2, 0)) * pointer_coords;
+  return glm::vec2(rotated_coords.x, rotated_coords.y);
+}
+
 }  // namespace root_presenter

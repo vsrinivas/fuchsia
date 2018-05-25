@@ -580,6 +580,11 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
         fuchsia::ui::input::PointerEvent clone;
         fidl::Clone(pointer, &clone);
 
+        glm::vec2 rotated_point =
+            display_rotater_.RotatePointerCoordinates(this, clone.x, clone.y);
+        clone.x = rotated_point.x;
+        clone.y = rotated_point.y;
+
         // Adjust pointer origin with simulated screen offset.
         clone.x -= (display_model_actual_.display_info().width_in_px -
                     display_metrics_.width_in_px()) /
