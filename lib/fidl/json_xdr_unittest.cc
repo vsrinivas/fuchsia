@@ -85,6 +85,11 @@ void XdrT_v2(XdrContext* const xdr, T* const data) {
 }
 
 TEST(Xdr, StructVersions) {
+  // Filter versioning with version lists: Write with an old version of the
+  // filter, then attempt to read with a newer version only, which fails.
+  // Attempt again with a filter verision list that has both the old and the new
+  // version of filter, which succeeds.
+
   std::string json;
 
   T t0;
@@ -115,6 +120,125 @@ TEST(Xdr, StructVersions) {
   };
 
   EXPECT_TRUE(XdrRead(json, &t1, filter_versions_all));
+}
+
+void XdrT_v3(XdrContext* const xdr, T* const data) {
+  if (!xdr->Version(3)) {
+    return;
+  }
+
+  xdr->Field("i", &data->i);
+  xdr->Field("s", &data->s);
+  xdr->Field("b", &data->b);
+  xdr->Field("vi", &data->vi);
+  xdr->Field("vs", &data->vs);
+  xdr->Field("vb", &data->vb);
+  xdr->Field("mi", &data->mi);
+  xdr->Field("ms", &data->ms);
+  xdr->Field("mb", &data->mb);
+}
+
+TEST(Xdr, StructVersionsExplicitFallback) {
+  // Filter versioning with explicit version numbers: Write with an old version
+  // of the filter without version number, then attempt to read with a filter
+  // that expects a version number, which fails. Attempt again with a filter
+  // version list that has both the old and the new version of filter, which
+  // succeeds.
+
+  std::string json;
+
+  T t0;
+  t0.i = 1;
+  t0.s = "2";
+  t0.b = true;
+  t0.vi.push_back(3);
+  t0.vs.push_back("4");
+  t0.vb.push_back(true);
+  t0.mi[5] = 6;
+  t0.ms["7"] = 8;
+  t0.mb[true] = false;
+  XdrWrite(&json, &t0, XdrT);
+
+  T t1;
+
+  constexpr XdrFilterType<T> filter_versions_v3_only[] = {
+    XdrT_v3,
+    nullptr,
+  };
+
+  EXPECT_FALSE(XdrRead(json, &t1, filter_versions_v3_only));
+
+  constexpr XdrFilterType<T> filter_versions_all[] = {
+    XdrT_v3,
+    XdrT_v1,
+    nullptr,
+  };
+
+  EXPECT_TRUE(XdrRead(json, &t1, filter_versions_all));
+}
+
+void XdrT_v4(XdrContext* const xdr, T* const data) {
+  if (!xdr->Version(4)) {
+    return;
+  }
+
+  xdr->Field("i", &data->i);
+  xdr->Field("s", &data->s);
+  xdr->Field("b", &data->b);
+  xdr->Field("vi", &data->vi);
+  xdr->Field("vs", &data->vs);
+  xdr->Field("vb", &data->vb);
+  xdr->Field("mi", &data->mi);
+  xdr->Field("ms", &data->ms);
+  xdr->Field("mb", &data->mb);
+}
+
+TEST(Xdr, StructVersionsExplicit) {
+  // Filter versioning with explicit version numbers: Write with a version of
+  // the filter with a version number, then attempt to read it back with the
+  // same filter, which succeeds. Attempt to read it with a newer version
+  // filter, which fails.
+
+  std::string json;
+
+  constexpr XdrFilterType<T> filter_versions_v3_only[] = {
+    XdrT_v3,
+    nullptr,
+  };
+
+  T t0;
+  t0.i = 1;
+  t0.s = "2";
+  t0.b = true;
+  t0.vi.push_back(3);
+  t0.vs.push_back("4");
+  t0.vb.push_back(true);
+  t0.mi[5] = 6;
+  t0.ms["7"] = 8;
+  t0.mb[true] = false;
+  XdrWrite(&json, &t0, filter_versions_v3_only);
+
+  T t1;
+  EXPECT_TRUE(XdrRead(json, &t1, filter_versions_v3_only));
+
+  constexpr XdrFilterType<T> filter_versions_v4_only[] = {
+    XdrT_v4,
+    nullptr,
+  };
+
+  T t2;
+  EXPECT_FALSE(XdrRead(json, &t2, filter_versions_v4_only));
+
+  constexpr XdrFilterType<T> filter_versions_all[] = {
+    XdrT_v4,
+    XdrT_v3,
+    XdrT_v2,
+    XdrT_v1,
+    nullptr,
+  };
+
+  T t3;
+  EXPECT_TRUE(XdrRead(json, &t3, filter_versions_all));
 }
 
 void XdrStruct(XdrContext* const xdr, json_xdr_unittest::Struct* const data) {

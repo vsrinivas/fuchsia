@@ -67,6 +67,37 @@ XdrContext::XdrContext(XdrContext* const parent,
 
 XdrContext::~XdrContext() = default;
 
+bool XdrContext::Version(uint32_t version) {
+  constexpr char kVersion[] = "@version";
+  switch (op_) {
+    case XdrOp::TO_JSON:
+      Field(kVersion).Value(&version);
+      return true;
+
+    case XdrOp::FROM_JSON: {
+      if (!value_->IsObject()) {
+        AddError("Version(): must be on an Object.");
+        return false;
+      }
+      auto i = value_->FindMember(kVersion);
+      if (i == value_->MemberEnd()) {
+        AddError("Version(): No @version present.");
+        return false;
+      }
+      uint32_t actual_version{};
+      Field(kVersion).Value(&actual_version);
+      if (actual_version != version) {
+        AddError("Version(): Found version " +
+                 std::to_string(actual_version) +
+                 " but expected version " +
+                 std::to_string(version));
+        return false;
+      }
+      return true;
+    }
+  }
+}
+
 void XdrContext::Value(unsigned char* const data) {
   switch (op_) {
     case XdrOp::TO_JSON:

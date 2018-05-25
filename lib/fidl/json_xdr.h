@@ -170,6 +170,50 @@ class XdrContext {
   // handling standalone values. These methods are called by filter
   // code during a serialization/deserialization operation.
 
+  // The version of a struct. On Write, the version number is written and it
+  // always returns true. On Read, raises an error and returns false if the
+  // version number read doesn't match the version number passed in. Thus it
+  // gives an explicit way to a filter function to force an error.
+  //
+  // The filter should also return early so as to not partially read data.
+  //
+  // This can be applied at any level, but only when it happens as the first
+  // call in the top level filter will it fully prevent partial reads.
+  //
+  // How it should be used:
+  //
+  //   void XdrFoo_v1(XdrContext* const xdr, Foo* const data) { ... }
+  //   void XdrFoo_v2(XdrContext* const xdr, Foo* const data) {
+  //      if (!xdr->Version(2)) {
+  //        return;
+  //      }
+  //      ...
+  //   }
+  //
+  //   constexpr XdrFilterType<Foo> XdrFoo[] = {
+  //     XdrFoo_v2,
+  //     XdrFoo_v1,
+  //     nullptr,
+  //   };
+  //
+  //   Foo foo;
+  //   XdrRead(json, &foo, XdrFoo);
+  //
+  // Notice that _v1 doesn't need to have a Version() call. This is usual when
+  // the first use of the data predates the introduction of the Version()
+  // mechanism.
+  //
+  // This method cannot be used (and returns false and logs an error) in a
+  // context that is not Object.
+  //
+  // It writes the reserved field name "@version" to the current Object context.
+  //
+  // The value passed to the call inside the Xdr filter function should never be
+  // defined as a constant outside of the filter function, because then it
+  // becomes tempting to change it to a new version number without creating a
+  // copy of the filter function for the previous version number.
+  bool Version(uint32_t version);
+
   // A field of a struct. The value type V is assumed to be one of the
   // primitive JSON data types. If anything else is passed here and
   // not to the method below with a custom filter, the rapidjson code
