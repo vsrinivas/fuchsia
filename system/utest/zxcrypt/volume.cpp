@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <crypto/bytes.h>
+#include <crypto/secret.h>
 #include <crypto/cipher.h>
 #include <unittest/unittest.h>
 #include <zircon/errors.h>
@@ -23,7 +23,7 @@ namespace {
 #define EACH_PARAM(OP, Test) OP(Test, Volume, AES256_XTS_SHA256)
 
 // ZX-1948: Dump extra information if encountering an unexpected error during volume creation.
-bool VolumeCreate(const fbl::unique_fd& fd, const crypto::Bytes& key, bool fvm,
+bool VolumeCreate(const fbl::unique_fd& fd, const crypto::Secret& key, bool fvm,
                   zx_status_t expected) {
     BEGIN_HELPER;
 
@@ -58,9 +58,8 @@ bool TestCreate(Volume::Version version, bool fvm) {
     EXPECT_ZX(Volume::Create(fbl::move(bad_fd), device.key()), ZX_ERR_INVALID_ARGS);
 
     // Weak key
-    crypto::Bytes short_key;
-    ASSERT_OK(short_key.Copy(device.key()));
-    ASSERT_OK(short_key.Resize(short_key.len() - 1));
+    crypto::Secret short_key;
+    ASSERT_OK(short_key.Generate(device.key().len() - 1));
     EXPECT_TRUE(VolumeCreate(device.parent(), short_key, fvm, ZX_ERR_INVALID_ARGS));
 
     // Valid
@@ -88,10 +87,9 @@ bool TestUnlock(Volume::Version version, bool fvm) {
     // Bad key
     ASSERT_TRUE(VolumeCreate(device.parent(), device.key(), fvm, ZX_OK));
 
-    crypto::Bytes mod;
-    ASSERT_OK(mod.Copy(device.key()));
-    mod[0] ^= 1;
-    EXPECT_ZX(Volume::Unlock(fbl::move(device.parent()), mod, 0, &volume), ZX_ERR_ACCESS_DENIED);
+    crypto::Secret bad_key;
+    ASSERT_OK(bad_key.Generate(device.key().len()));
+    EXPECT_ZX(Volume::Unlock(fbl::move(device.parent()), bad_key, 0, &volume), ZX_ERR_ACCESS_DENIED);
 
     // Bad slot
     EXPECT_ZX(Volume::Unlock(fbl::move(device.parent()), device.key(), -1, &volume),
@@ -123,7 +121,7 @@ bool TestEnroll(Volume::Version version, bool fvm) {
     ASSERT_OK(Volume::Unlock(fbl::move(device.parent()), device.key(), 0, &volume));
 
     // Bad key
-    crypto::Bytes bad_key;
+    crypto::Secret bad_key;
     EXPECT_ZX(volume->Enroll(bad_key, 1), ZX_ERR_INVALID_ARGS);
 
     // Bad slot

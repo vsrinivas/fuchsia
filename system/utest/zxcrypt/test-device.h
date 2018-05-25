@@ -9,6 +9,7 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <crypto/secret.h>
 #include <block-client/client.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
@@ -72,7 +73,7 @@ public:
     size_t reserved_slices() const { return volume_->reserved_slices(); }
 
     // Returns a reference to the root key generated for this device.
-    const crypto::Bytes& key() const { return key_; }
+    const crypto::Secret& key() const { return key_; }
 
     // API WRAPPERS
 
@@ -194,7 +195,7 @@ private:
     // The cached block size.
     size_t block_size_;
     // The root key for this device.
-    crypto::Bytes key_;
+    crypto::Secret key_;
     // Client for the block I/O protocol to the block server.
     fifo_client_t* client_;
     // Request structure used to send messages via the block I/O protocol.

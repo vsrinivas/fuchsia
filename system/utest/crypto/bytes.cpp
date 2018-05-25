@@ -17,59 +17,18 @@ namespace {
 
 const size_t kSize = 1024;
 
-bool TestInitZero(void) {
-    BEGIN_TEST;
-    Bytes bytes;
 
-    EXPECT_OK(bytes.InitZero(kSize));
-    EXPECT_EQ(bytes.len(), kSize);
-    EXPECT_NONNULL(bytes.get());
-    EXPECT_TRUE(AllEqual(bytes.get(), 0, 0, kSize));
-
-#if !__has_feature(address_sanitizer)
-    // The ASan allocator reports errors for unreasonable allocation sizes.
-    EXPECT_ZX(bytes.InitZero(size_t(-1)), ZX_ERR_NO_MEMORY);
-    EXPECT_EQ(bytes.len(), 0U);
-    EXPECT_NULL(bytes.get());
-#endif
-
-    EXPECT_OK(bytes.InitZero(0));
-    EXPECT_EQ(bytes.len(), 0U);
-    EXPECT_NULL(bytes.get());
-
-    END_TEST;
-}
-
-// This test only checks that the routine basically functions; it does NOT assure anything about the
-// quality of the entropy.  That topic is beyond the scope of a deterministic unit test.
-bool TestInitRandom(void) {
-    BEGIN_TEST;
-    Bytes bytes;
-
-    // Test various sizes, doubling as long as it does not exceed the max draw length.
-    for (size_t n = 16; n <= ZX_CPRNG_DRAW_MAX_LEN; n *= 2) {
-        EXPECT_OK(bytes.InitRandom(n));
-        EXPECT_FALSE(AllEqual(bytes.get(), 0, 0, n));
+bool AllEqual(const void* buf, uint8_t val, zx_off_t off, size_t len) {
+    BEGIN_HELPER;
+    const uint8_t* u8 = static_cast<const uint8_t*>(buf);
+    size_t end;
+    ASSERT_FALSE(add_overflow(off, len, &end));
+    for (size_t i = off; i < end; ++i) {
+        if(u8[i] != val) {
+            return false;
+        }
     }
-
-    EXPECT_OK(bytes.InitRandom(0));
-    EXPECT_EQ(bytes.len(), 0U);
-    EXPECT_NULL(bytes.get());
-
-    END_TEST;
-}
-
-bool TestFill(void) {
-    BEGIN_TEST;
-    Bytes bytes;
-
-    ASSERT_OK(bytes.Resize(kSize));
-    ASSERT_TRUE(AllEqual(bytes.get(), 0, 0, kSize));
-
-    EXPECT_OK(bytes.Fill(0xff));
-    EXPECT_TRUE(AllEqual(bytes.get(), 0xff, 0, kSize));
-
-    END_TEST;
+    END_HELPER;
 }
 
 // This test only checks that the routine basically functions; it does NOT assure anything about the
@@ -81,7 +40,7 @@ bool TestRandomize(void) {
     ASSERT_OK(bytes.Resize(kSize));
     ASSERT_TRUE(AllEqual(bytes.get(), 0, 0, kSize));
 
-    EXPECT_OK(bytes.Randomize());
+    EXPECT_OK(bytes.Randomize(kSize));
     EXPECT_FALSE(AllEqual(bytes.get(), 0, 0, kSize));
 
     END_TEST;
@@ -146,7 +105,7 @@ bool TestCopy(void) {
     EXPECT_TRUE(AllEqual(bytes.get(), 1, kSize / 2, kSize / 2));
     EXPECT_TRUE(AllEqual(bytes.get(), 2, kSize, kSize));
 
-    bytes.Reset();
+    ASSERT_OK(bytes.Resize(0));
     EXPECT_OK(bytes.Copy(buf, kSize));
     EXPECT_EQ(bytes.len(), kSize);
     EXPECT_TRUE(AllEqual(bytes.get(), 1, 0, kSize));
@@ -154,45 +113,9 @@ bool TestCopy(void) {
     EXPECT_OK(copy.Copy(bytes));
     EXPECT_TRUE(AllEqual(copy.get(), 1, 0, kSize));
 
-    copy.Reset();
     EXPECT_OK(copy.Copy(bytes, kSize));
-    EXPECT_TRUE(AllEqual(copy.get(), 0, 0, kSize));
-    EXPECT_TRUE(AllEqual(copy.get(), 1, kSize, kSize));
+    EXPECT_TRUE(AllEqual(copy.get(), 1, 0, kSize * 2));
 
-    END_TEST;
-}
-
-bool TestRelease(void) {
-    BEGIN_TEST;
-    Bytes bytes;
-    size_t len;
-    auto buf = bytes.Release(&len);
-    EXPECT_NULL(buf.get());
-    EXPECT_EQ(len, 0U);
-    EXPECT_EQ(bytes.len(), 0U);
-    EXPECT_NULL(bytes.get());
-
-    ASSERT_OK(bytes.Resize(kSize, 0xff));
-    buf = bytes.Release(&len);
-    EXPECT_NONNULL(buf.get());
-    EXPECT_EQ(len, kSize);
-    EXPECT_TRUE(AllEqual(buf.get(), 0xff, 0, kSize));
-    EXPECT_EQ(bytes.len(), 0U);
-    EXPECT_NULL(bytes.get());
-    END_TEST;
-}
-
-bool TestReset(void) {
-    BEGIN_TEST;
-    Bytes bytes;
-    bytes.Reset();
-    EXPECT_EQ(bytes.len(), 0U);
-    EXPECT_NULL(bytes.get());
-
-    ASSERT_OK(bytes.Resize(kSize, 0xff));
-    bytes.Reset();
-    EXPECT_EQ(bytes.len(), 0U);
-    EXPECT_NULL(bytes.get());
     END_TEST;
 }
 
@@ -211,7 +134,7 @@ bool TestArrayAccess(void) {
 bool TestComparison(void) {
     BEGIN_TEST;
     Bytes bytes1, bytes2;
-    ASSERT_OK(bytes1.InitRandom(kSize));
+    ASSERT_OK(bytes1.Randomize(kSize));
     ASSERT_OK(bytes2.Copy(bytes1.get(), bytes1.len()));
     EXPECT_TRUE(bytes1 == bytes1);
     EXPECT_TRUE(bytes2 == bytes2);
@@ -222,7 +145,7 @@ bool TestComparison(void) {
     EXPECT_FALSE(bytes1 != bytes2);
     EXPECT_FALSE(bytes2 != bytes1);
 
-    ASSERT_OK(bytes2.InitRandom(kSize));
+    ASSERT_OK(bytes2.Randomize(kSize));
     EXPECT_TRUE(bytes1 == bytes1);
     EXPECT_TRUE(bytes2 == bytes2);
     EXPECT_FALSE(bytes1 != bytes1);
@@ -235,14 +158,9 @@ bool TestComparison(void) {
 }
 
 BEGIN_TEST_CASE(BytesTest)
-RUN_TEST(TestInitZero)
-RUN_TEST(TestInitRandom)
-RUN_TEST(TestFill)
 RUN_TEST(TestRandomize)
 RUN_TEST(TestResize)
 RUN_TEST(TestCopy)
-RUN_TEST(TestRelease)
-RUN_TEST(TestReset)
 RUN_TEST(TestArrayAccess)
 RUN_TEST(TestComparison)
 END_TEST_CASE(BytesTest)

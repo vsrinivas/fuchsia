@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include <crypto/bytes.h>
+#include <crypto/secret.h>
 #include <explicit-memory/bytes.h>
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
@@ -25,56 +26,25 @@ namespace crypto {
 // Public methods
 
 Bytes::Bytes() : buf_(nullptr), len_(0) {}
+Bytes::~Bytes() {}
 
-Bytes::~Bytes() {
-    Reset();
-}
-
-void Bytes::Adopt(fbl::unique_ptr<uint8_t[]> buf, size_t len) {
-    Reset();
-    buf_ = fbl::move(buf);
-    len_ = len;
-}
-
-zx_status_t Bytes::InitZero(size_t size) {
-    if (size == len_) {
-        return Fill(0);
-    }
-
-    Reset();
-    return Resize(size);
-}
-
-zx_status_t Bytes::InitRandom(size_t size) {
+zx_status_t Bytes::Randomize(size_t len) {
     zx_status_t rc;
 
-    if (size != len_ && (rc = InitZero(size)) != ZX_OK) {
+    if ((rc = Resize(len)) != ZX_OK) {
         return rc;
     }
-
-    return Randomize();
-}
-
-zx_status_t Bytes::Fill(uint8_t value) {
-    memset(buf_.get(), value, len_);
-    return ZX_OK;
-}
-
-zx_status_t Bytes::Randomize() {
-    zx_status_t rc;
-
-    uint8_t* p = buf_.get();
-    size_t size = len_;
+    uint8_t* ptr = buf_.get();
     size_t actual;
-    while (size != 0) {
-        size_t n = fbl::min(size, static_cast<size_t>(ZX_CPRNG_DRAW_MAX_LEN));
-        if ((rc = zx_cprng_draw(p, n, &actual)) != ZX_OK) {
-            xprintf("zx_cprng_draw(%p, %zu, %p) failed: %s", p, n, &actual,
+    while (len != 0) {
+        size_t n = fbl::min(len, static_cast<size_t>(ZX_CPRNG_DRAW_MAX_LEN));
+        if ((rc = zx_cprng_draw(ptr, n, &actual)) != ZX_OK) {
+            xprintf("zx_cprng_draw(%p, %zu, %p) failed: %s", ptr, n, &actual,
                     zx_status_get_string(rc));
             return rc;
         }
-        p += actual;
-        size -= actual;
+        ptr += actual;
+        len -= actual;
     }
 
     return ZX_OK;
@@ -83,7 +53,9 @@ zx_status_t Bytes::Randomize() {
 zx_status_t Bytes::Resize(size_t size, uint8_t fill) {
     // Early exit if truncating to zero or if size is unchanged
     if (size == 0) {
-        Reset();
+        buf_.reset();
+        len_ = 0;
+        return ZX_OK;
     }
     if (size == len_) {
         return ZX_OK;
@@ -107,7 +79,6 @@ zx_status_t Bytes::Resize(size_t size, uint8_t fill) {
         memcpy(tmp.get(), buf_.get(), size);
     }
 
-    Reset();
     len_ = size;
     buf_ = fbl::move(tmp);
     return ZX_OK;
@@ -135,26 +106,6 @@ zx_status_t Bytes::Copy(const void* buf, size_t len, zx_off_t off) {
     memcpy(buf_.get() + off, buf, len);
 
     return ZX_OK;
-}
-
-zx_status_t Bytes::Copy(const Bytes& other, zx_off_t off) {
-    return Copy(other.get(), other.len(), off);
-}
-
-fbl::unique_ptr<uint8_t[]> Bytes::Release(size_t* len) {
-    if (len) {
-        *len = len_;
-    }
-    len_ = 0;
-    return fbl::move(buf_);
-}
-
-void Bytes::Reset() {
-    if (buf_) {
-        mandatory_memset(buf_.get(), 0, len_);
-    }
-    buf_.reset();
-    len_ = 0;
 }
 
 const uint8_t& Bytes::operator[](zx_off_t off) const {

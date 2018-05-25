@@ -122,8 +122,9 @@ bool TestDevice::Create(size_t device_size, size_t block_size, bool fvm) {
         return rc;
     }
 #else
-    key_.Reset();
-    ASSERT_OK(key_.InitZero(kZx1130KeyLen));
+    uint8_t *buf;
+    ASSERT_OK(key_.Allocate(kZx1130KeyLen, &buf));
+    memset(buf, 0, key_.len());
 #endif
 
     END_HELPER;

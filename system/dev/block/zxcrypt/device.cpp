@@ -101,10 +101,14 @@ zx_status_t Device::Init() {
     // Open the zxcrypt volume.  The volume may adjust the block info, so get it again and determine
     // the multiplicative factor needed to transform this device's blocks into its parent's.
     // TODO(security): ZX-1130 workaround.  Use null key of a fixed length until fixed
-    crypto::Bytes root_key;
+    crypto::Secret root_key;
+    uint8_t *buf;
+    if ((rc = root_key.Allocate(kZx1130KeyLen, &buf)) != ZX_OK) {
+        return rc;
+    }
+    memset(buf, 0, root_key.len());
     fbl::unique_ptr<Volume> volume;
-    if ((rc = root_key.InitZero(kZx1130KeyLen)) != ZX_OK ||
-        (rc = Volume::Unlock(parent(), root_key, 0, &volume)) != ZX_OK) {
+    if ((rc = Volume::Unlock(parent(), root_key, 0, &volume)) != ZX_OK) {
         return rc;
     }
 

@@ -309,10 +309,15 @@ zx_status_t ZxcryptCreate(PartitionInfo* part) {
     }
     // TODO(security): ZX-1130. We need to bind with channel in order to pass a key here.
     // TODO(security): ZX-1864. The created volume must marked as needing key rotation.
+    crypto::Secret key;
+    uint8_t *tmp;
+    if((status = key.Allocate(zxcrypt::kZx1130KeyLen, &tmp)) != ZX_OK) {
+        return status;
+    }
+    memset(tmp, 0, key.len());
+
     fbl::unique_ptr<zxcrypt::Volume> volume;
-    crypto::Bytes key;
-    if ((status = key.InitZero(zxcrypt::kZx1130KeyLen)) != ZX_OK ||
-        (status = zxcrypt::Volume::Create(fbl::move(part->new_part), key, &volume)) != ZX_OK ||
+    if ((status = zxcrypt::Volume::Create(fbl::move(part->new_part), key, &volume)) != ZX_OK ||
         (status = volume->Open(zx::sec(3), &part->new_part)) != ZX_OK) {
         ERROR("Could not create zxcrypt volume\n");
         return status;

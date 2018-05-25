@@ -8,6 +8,7 @@
 
 #include <crypto/aead.h>
 #include <crypto/bytes.h>
+#include <crypto/secret.h>
 #include <unittest/unittest.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -71,7 +72,8 @@ bool TestGetLengths_AES128_GCM_SIV(void) {
 bool TestInitSeal_Uninitialized(void) {
     BEGIN_TEST;
     AEAD sealer;
-    Bytes key, iv;
+    Secret key;
+    Bytes iv;
     EXPECT_ZX(sealer.InitSeal(AEAD::kUninitialized, key, iv), ZX_ERR_INVALID_ARGS);
     END_TEST;
 }
@@ -79,12 +81,13 @@ bool TestInitSeal_Uninitialized(void) {
 bool TestInitSeal(AEAD::Algorithm aead) {
     BEGIN_TEST;
     AEAD sealer;
-    Bytes key, iv;
+    Secret key;
+    Bytes iv;
     ASSERT_OK(GenerateKeyMaterial(aead, &key, &iv));
 
     // Bad key
-    Bytes bad_key;
-    ASSERT_OK(bad_key.Copy(key.get(), key.len() - 1));
+    Secret bad_key;
+    ASSERT_OK(bad_key.Generate(key.len() - 1));
     EXPECT_ZX(sealer.InitSeal(aead, bad_key, iv), ZX_ERR_INVALID_ARGS);
 
     // Bad IV
@@ -102,7 +105,8 @@ DEFINE_EACH(TestInitSeal)
 bool TestInitOpen_Uninitialized(void) {
     BEGIN_TEST;
     AEAD opener;
-    Bytes key, iv;
+    Secret key;
+    Bytes iv;
     EXPECT_ZX(opener.InitOpen(AEAD::kUninitialized, key, iv), ZX_ERR_INVALID_ARGS);
     END_TEST;
 }
@@ -110,12 +114,13 @@ bool TestInitOpen_Uninitialized(void) {
 bool TestInitOpen(AEAD::Algorithm aead) {
     BEGIN_TEST;
     AEAD opener;
-    Bytes key, iv;
+    Secret key;
+    Bytes iv;
     ASSERT_OK(GenerateKeyMaterial(aead, &key, &iv));
 
     // Bad key
-    Bytes bad_key;
-    ASSERT_OK(bad_key.Copy(key.get(), key.len() - 1));
+    Secret bad_key;
+    ASSERT_OK(bad_key.Generate(key.len() - 1));
     EXPECT_ZX(opener.InitOpen(aead, bad_key, iv), ZX_ERR_INVALID_ARGS);
 
     // Bad IV
@@ -133,10 +138,11 @@ DEFINE_EACH(TestInitOpen)
 bool TestSealData(AEAD::Algorithm aead) {
     BEGIN_TEST;
     AEAD sealer;
-    Bytes key, iv, ptext, ctext;
+    Secret key;
+    Bytes iv, ptext, ctext;
     uint64_t nonce;
     ASSERT_OK(GenerateKeyMaterial(aead, &key, &iv));
-    ASSERT_OK(ptext.InitRandom(PAGE_SIZE));
+    ASSERT_OK(ptext.Randomize(PAGE_SIZE));
 
     // Not initialized
     EXPECT_ZX(sealer.Seal(ptext, &nonce, &ctext), ZX_ERR_BAD_STATE);
@@ -151,7 +157,7 @@ bool TestSealData(AEAD::Algorithm aead) {
 
     // Valid
     EXPECT_OK(sealer.Seal(ptext, &nonce, &ctext));
-    ptext.Reset();
+    ASSERT_OK(ptext.Resize(0));
     EXPECT_OK(sealer.Seal(ptext, &nonce, &ctext));
 
     // Reset
@@ -163,10 +169,11 @@ DEFINE_EACH(TestSealData)
 
 bool TestOpenData(AEAD::Algorithm aead) {
     BEGIN_TEST;
-    Bytes key, iv, ptext, ctext, result;
+    Secret key;
+    Bytes iv, ptext, ctext, result;
     uint64_t nonce = 0;
     ASSERT_OK(GenerateKeyMaterial(aead, &key, &iv));
-    ASSERT_OK(ptext.InitRandom(PAGE_SIZE));
+    ASSERT_OK(ptext.Randomize(PAGE_SIZE));
 
     AEAD sealer;
     ASSERT_OK(sealer.InitSeal(aead, key, iv));
@@ -190,7 +197,7 @@ bool TestOpenData(AEAD::Algorithm aead) {
     ASSERT_OK(ctext.Resize(len - 1));
     EXPECT_ZX(opener.Open(nonce, ctext, &result), ZX_ERR_INVALID_ARGS);
 
-    ctext.Reset();
+    ASSERT_OK(ctext.Resize(0));
     ASSERT_OK(sealer.Seal(ptext, &nonce, &ctext));
     len = ctext.len();
     ctext[len - 1] ^= 1;
@@ -226,9 +233,10 @@ DEFINE_EACH(TestOpenData)
 bool TestAes128Gcm_TC(const char* xkey, const char* xiv, const char* xct, const char* xaad,
                       const char* xtag, const char* xpt) {
     BEGIN_TEST;
-    Bytes ptext, aad, key, iv, ctext, tag, result;
+    Secret key;
+    Bytes ptext, aad, iv, ctext, tag, result;
     uint64_t nonce;
-    ASSERT_OK(HexToBytes(xkey, &key));
+    ASSERT_OK(HexToSecret(xkey, &key));
     ASSERT_OK(HexToBytes(xiv, &iv));
     ASSERT_OK(HexToBytes(xct, &ctext));
     ASSERT_OK(HexToBytes(xaad, &aad));
@@ -241,7 +249,7 @@ bool TestAes128Gcm_TC(const char* xkey, const char* xiv, const char* xct, const 
     EXPECT_OK(sealer.Seal(ptext, aad, &nonce, &result));
     EXPECT_TRUE(result == ctext);
 
-    result.Reset();
+    ASSERT_OK(result.Resize(0));
     AEAD opener;
     EXPECT_OK(opener.InitOpen(AEAD::kAES128_GCM, key, iv));
     EXPECT_OK(opener.Open(nonce, ctext, aad, &result));
@@ -466,11 +474,12 @@ bool TestAes128Gcm_TC21(void) {
 bool TestAes128GcmSiv_TC(const char* xpt, const char* xaad, const char* xkey, const char* xnonce,
                          const char* xresult) {
     BEGIN_TEST;
-    Bytes ptext, aad, key, iv, ctext, tag, result;
+    Secret key;
+    Bytes ptext, aad, iv, ctext, tag, result;
     uint64_t nonce;
     ASSERT_OK(HexToBytes(xpt, &ptext));
     ASSERT_OK(HexToBytes(xaad, &aad));
-    ASSERT_OK(HexToBytes(xkey, &key));
+    ASSERT_OK(HexToSecret(xkey, &key));
     ASSERT_OK(HexToBytes(xnonce, &iv));
     ASSERT_OK(HexToBytes(xresult, &result));
 
@@ -479,7 +488,7 @@ bool TestAes128GcmSiv_TC(const char* xpt, const char* xaad, const char* xkey, co
     EXPECT_OK(sealer.Seal(ptext, aad, &nonce, &ctext));
     EXPECT_TRUE(ctext == result);
 
-    result.Reset();
+    ASSERT_OK(result.Resize(0));
     AEAD opener;
     EXPECT_OK(opener.InitOpen(AEAD::kAES128_GCM_SIV, key, iv));
     EXPECT_OK(opener.Open(nonce, ctext, aad, &result));

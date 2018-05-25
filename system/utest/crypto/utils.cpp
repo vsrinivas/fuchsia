@@ -18,52 +18,11 @@
 namespace crypto {
 namespace testing {
 
-bool AllEqual(const void* buf, uint8_t val, zx_off_t off, size_t len) {
-    size_t i;
-    const uint8_t* u8 = static_cast<const uint8_t*>(buf);
-    size_t end = off + len;
-    ZX_ASSERT(end >= off); // overflow
-    for (i = off; i < end && u8[i] == val; ++i) {
-    }
-    return i == end;
-}
-
-fbl::unique_ptr<uint8_t[]> MakeZeroPage() {
-    fbl::unique_ptr<uint8_t[]> block;
-    Bytes bytes;
-    if (bytes.InitZero(PAGE_SIZE) == ZX_OK) {
-        block = fbl::move(bytes.Release());
-    }
-    return block;
-}
-
-fbl::unique_ptr<uint8_t[]> MakeRandPage() {
-    fbl::unique_ptr<uint8_t[]> block;
-    Bytes bytes;
-    if (bytes.InitRandom(PAGE_SIZE) == ZX_OK) {
-        block = fbl::move(bytes.Release());
-    }
-    return block;
-}
-
-zx_status_t HexToBytes(const char* hex, Bytes* out) {
-    zx_status_t rc;
-
-    if (!hex || !out) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    size_t len = strlen(hex);
-    if (len % 2 != 0) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    out->Reset();
-    if ((rc = out->Resize(len / 2)) != ZX_OK) {
-        return rc;
-    }
+zx_status_t HexToBuf(const char* hex, uint8_t* buf, size_t max) {
     size_t i = 0;
     size_t j = 0;
     uint8_t n;
-    while (i < len) {
+    while (j < max) {
         char c = hex[i];
         if ('0' <= c && c <= '9') {
             n = static_cast<uint8_t>(c - '0');
@@ -75,9 +34,9 @@ zx_status_t HexToBytes(const char* hex, Bytes* out) {
             return ZX_ERR_INVALID_ARGS;
         }
         if (i % 2 == 0) {
-            (*out)[j] = static_cast<uint8_t>(n << 4);
+            buf[j] = static_cast<uint8_t>(n << 4);
         } else {
-            (*out)[j] |= n & 0xF;
+            buf[j] |= n & 0xF;
             ++j;
         }
         ++i;
@@ -85,19 +44,48 @@ zx_status_t HexToBytes(const char* hex, Bytes* out) {
     return ZX_OK;
 }
 
-zx_status_t GenerateKeyMaterial(Cipher::Algorithm cipher, Bytes* key, Bytes* iv) {
+zx_status_t HexToBytes(const char* hex, Bytes* out) {
+    ZX_DEBUG_ASSERT(hex);
+    ZX_DEBUG_ASSERT(out);
+    zx_status_t rc;
+
+    size_t len = strlen(hex) / 2;
+    if ((rc = out->Resize(len)) != ZX_OK ||
+        (rc = HexToBuf(hex, out->get(), len)) != ZX_OK) {
+        return rc;
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t HexToSecret(const char* hex, Secret* out) {
+    ZX_DEBUG_ASSERT(hex);
+    ZX_DEBUG_ASSERT(out);
+    zx_status_t rc;
+
+    uint8_t *buf;
+    size_t len = strlen(hex) / 2;
+    if ((rc = out->Allocate(len, &buf)) != ZX_OK ||
+        (rc = HexToBuf(hex, buf, len)) != ZX_OK) {
+        return rc;
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t GenerateKeyMaterial(Cipher::Algorithm cipher, Secret* key, Bytes* iv) {
     zx_status_t rc;
     ZX_DEBUG_ASSERT(key);
 
     size_t key_len;
     if ((rc = Cipher::GetKeyLen(cipher, &key_len)) != ZX_OK ||
-        (rc = key->InitRandom(key_len)) != ZX_OK) {
+        (rc = key->Generate(key_len)) != ZX_OK) {
         return rc;
     }
     if (iv) {
         size_t iv_len;
         if ((rc = Cipher::GetIVLen(cipher, &iv_len)) != ZX_OK ||
-            (rc = iv->InitRandom(iv_len)) != ZX_OK) {
+            (rc = iv->Randomize(iv_len)) != ZX_OK) {
             return rc;
         }
     }
@@ -105,19 +93,19 @@ zx_status_t GenerateKeyMaterial(Cipher::Algorithm cipher, Bytes* key, Bytes* iv)
     return ZX_OK;
 }
 
-zx_status_t GenerateKeyMaterial(AEAD::Algorithm cipher, Bytes* key, Bytes* iv) {
+zx_status_t GenerateKeyMaterial(AEAD::Algorithm cipher, Secret* key, Bytes* iv) {
     zx_status_t rc;
     ZX_DEBUG_ASSERT(key);
 
     size_t key_len;
     if ((rc = AEAD::GetKeyLen(cipher, &key_len)) != ZX_OK ||
-        (rc = key->InitRandom(key_len)) != ZX_OK) {
+        (rc = key->Generate(key_len)) != ZX_OK) {
         return rc;
     }
     if (iv) {
         size_t iv_len;
         if ((rc = AEAD::GetIVLen(cipher, &iv_len)) != ZX_OK ||
-            (rc = iv->InitRandom(iv_len)) != ZX_OK) {
+            (rc = iv->Randomize(iv_len)) != ZX_OK) {
             return rc;
         }
     }

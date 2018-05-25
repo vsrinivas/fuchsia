@@ -5,6 +5,8 @@
 #pragma once
 
 #include <crypto/aead.h>
+#include <crypto/bytes.h>
+#include <crypto/secret.h>
 #include <crypto/cipher.h>
 #include <crypto/hkdf.h>
 #include <zircon/status.h>
@@ -59,26 +61,17 @@
 namespace crypto {
 namespace testing {
 
-// Returns true if and only if the |len| bytes starting at offset |off| in |buf| are all equal to
-// |val|.
-bool AllEqual(const void* buf, uint8_t val, zx_off_t off, size_t len);
-
-// Returns a pointer to a freshly allocated buffer of |kBlockSize| zeros.
-fbl::unique_ptr<uint8_t[]> MakeZeroPage();
-
-// Returns a pointer to a freshly allocated buffer of |kBlockSize| random bytes.
-fbl::unique_ptr<uint8_t[]> MakeRandPage();
-
 // Resizes |out| and sets its contents to match the given |hex| string.
 zx_status_t HexToBytes(const char* hex, Bytes* out);
+zx_status_t HexToSecret(const char* hex, Secret* out);
 
 // Fills the given |key| and |iv| with as much random data as indicated by |Cipher::GetKeyLen| and
 // |Cipher::GetIVLen| for the given |cipher|. |iv| may be null.
-zx_status_t GenerateKeyMaterial(Cipher::Algorithm cipher, Bytes* key, Bytes* iv);
+zx_status_t GenerateKeyMaterial(Cipher::Algorithm cipher, Secret* key, Bytes* iv);
 
 // Fills the given |key|, |iv| with as much random data as indicated by |AEAD::GetKeyLen| and
 //|AEAD::GetIVLen| for the given |aead|. |iv| may be null.
-zx_status_t GenerateKeyMaterial(AEAD::Algorithm aead, Bytes* key, Bytes* iv);
+zx_status_t GenerateKeyMaterial(AEAD::Algorithm aead, Secret* key, Bytes* iv);
 
 } // namespace testing
 } // namespace crypto

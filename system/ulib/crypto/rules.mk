@@ -16,6 +16,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/error.cpp \
     $(LOCAL_DIR)/hkdf.cpp \
     $(LOCAL_DIR)/hmac.cpp \
+    $(LOCAL_DIR)/secret.cpp \
 
 MODULE_LIBS := \
     system/ulib/c \

@@ -23,23 +23,24 @@ bool TestInit(void) {
     size_t md_size;
     ASSERT_OK(digest::GetDigestLen(digest::kSHA256, &md_size));
 
-    Bytes ikm, salt;
-    ASSERT_OK(ikm.InitRandom(md_size));
-    ASSERT_OK(salt.InitRandom(GUID_LEN));
+    Secret ikm;
+    Bytes salt;
+    ASSERT_OK(ikm.Generate(md_size));
+    ASSERT_OK(salt.Randomize(GUID_LEN));
 
     // Bad version
     HKDF hkdf;
     EXPECT_ZX(hkdf.Init(digest::kUninitialized, ikm, salt), ZX_ERR_INVALID_ARGS);
 
     // Bad input key material
-    ASSERT_OK(ikm.Resize(md_size - 1));
+    ASSERT_OK(ikm.Generate(md_size - 1));
     EXPECT_ZX(hkdf.Init(digest::kSHA256, ikm, salt), ZX_ERR_INVALID_ARGS);
-    ASSERT_OK(ikm.InitRandom(md_size));
+    ASSERT_OK(ikm.Generate(md_size));
 
     // Salt is optional
-    salt.Reset();
+    ASSERT_OK(salt.Resize(0));
     EXPECT_OK(hkdf.Init(digest::kSHA256, ikm, salt));
-    ASSERT_OK(salt.InitRandom(GUID_LEN));
+    ASSERT_OK(salt.Randomize(GUID_LEN));
 
     // Invalid flags
     EXPECT_ZX(hkdf.Init(digest::kSHA256, ikm, salt, 0x8000), ZX_ERR_INVALID_ARGS);
@@ -55,34 +56,29 @@ bool TestDerive(void) {
     ASSERT_OK(digest::GetDigestLen(digest::kSHA256, &md_size));
 
     HKDF hkdf;
-    Bytes ikm, salt, key1, key2, key3;
-    ASSERT_OK(ikm.InitRandom(md_size));
-    ASSERT_OK(salt.InitRandom(GUID_LEN));
-    ASSERT_OK(key1.Resize(md_size));
-    ASSERT_OK(key2.Resize(md_size));
-    ASSERT_OK(key3.Resize(md_size));
+    Secret ikm, key1, key2, key3;
+    Bytes salt;
+    ASSERT_OK(ikm.Generate(md_size));
+    ASSERT_OK(salt.Randomize(GUID_LEN));
 
     // Uninitialized
-    EXPECT_ZX(hkdf.Derive("init", &key1), ZX_ERR_INVALID_ARGS);
+    EXPECT_ZX(hkdf.Derive("init", md_size, &key1), ZX_ERR_INVALID_ARGS);
     ASSERT_OK(hkdf.Init(digest::kSHA256, ikm, salt));
 
     // Label is optional
-    EXPECT_OK(hkdf.Derive(nullptr, &key1));
-    EXPECT_OK(hkdf.Derive("", &key1));
-
-    // Bad key
-    key1.Reset();
-    EXPECT_ZX(hkdf.Derive("init", &key1), ZX_ERR_INVALID_ARGS);
-    ASSERT_OK(key1.Resize(md_size));
+    EXPECT_OK(hkdf.Derive(nullptr, md_size, &key1));
+    EXPECT_OK(hkdf.Derive("", md_size, &key1));
 
     // Same label, same key
-    EXPECT_OK(hkdf.Derive("same", &key1));
-    EXPECT_OK(hkdf.Derive("same", &key2));
-    EXPECT_TRUE(key1 == key2);
+    EXPECT_OK(hkdf.Derive("same", md_size, &key1));
+    EXPECT_OK(hkdf.Derive("same", md_size, &key2));
+    EXPECT_EQ(key1.len(), key2.len());
+    EXPECT_EQ(memcmp(key1.get(), key2.get(), key1.len()), 0);
 
     // Different label, different key.
-    EXPECT_OK(hkdf.Derive("diff", &key3));
-    EXPECT_TRUE(key1 != key3);
+    EXPECT_OK(hkdf.Derive("diff", md_size, &key3));
+    EXPECT_EQ(key1.len(), key3.len());
+    EXPECT_NE(memcmp(key1.get(), key3.get(), key1.len()), 0);
     END_TEST;
 }
 
@@ -90,8 +86,11 @@ bool TestDerive(void) {
 bool TestRfc5869_TC1(void) {
     BEGIN_TEST;
     HKDF hkdf;
-    Bytes ikm, salt, okm;
-    ASSERT_OK(ikm.Resize(22, 0x0b));
+    Secret ikm, okm;
+    Bytes salt;
+    uint8_t *buf;
+    ASSERT_OK(ikm.Allocate(22, &buf));
+    memset(buf, 0xb, ikm.len());
     ASSERT_OK(salt.Resize(13));
     for (uint8_t i = 0; i < salt.len(); ++i) {
         salt[i] = i;
@@ -102,10 +101,8 @@ bool TestRfc5869_TC1(void) {
         0x2f, 0x2a, 0x2d, 0x2d, 0x0a, 0x90, 0xcf, 0x1a, 0x5a, 0x4c, 0x5d, 0xb0, 0x2d, 0x56,
         0xec, 0xc4, 0xc5, 0xbf, 0x34, 0x00, 0x72, 0x08, 0xd5, 0xb8, 0x87, 0x18, 0x58, 0x65,
     };
-    ASSERT_OK(okm.Resize(sizeof(expected)));
-
     EXPECT_OK(hkdf.Init(digest::kSHA256, ikm, salt, HKDF::ALLOW_WEAK_KEY));
-    EXPECT_OK(hkdf.Derive(info, &okm));
+    EXPECT_OK(hkdf.Derive(info, sizeof(expected), &okm));
     EXPECT_EQ(memcmp(okm.get(), expected, sizeof(expected)), 0);
     END_TEST;
 }
@@ -114,10 +111,12 @@ bool TestRfc5869_TC1(void) {
 bool TestRfc5869_TC2(void) {
     BEGIN_TEST;
     HKDF hkdf;
-    Bytes ikm, salt, okm;
-    ASSERT_OK(ikm.Resize(80));
+    Secret ikm, okm;
+    Bytes salt;
+    uint8_t *buf;
+    ASSERT_OK(ikm.Allocate(80, &buf));
     for (uint8_t i = 0; i < ikm.len(); ++i) {
-        ikm[i] = i;
+        buf[i] = i;
     }
     ASSERT_OK(salt.Resize(80));
     for (uint8_t i = 0; i < salt.len(); ++i) {
@@ -136,10 +135,8 @@ bool TestRfc5869_TC2(void) {
         0x36, 0x77, 0x93, 0xa9, 0xac, 0xa3, 0xdb, 0x71, 0xcc, 0x30, 0xc5, 0x81, 0x79, 0xec,
         0x3e, 0x87, 0xc1, 0x4c, 0x01, 0xd5, 0xc1, 0xf3, 0x43, 0x4f, 0x1d, 0x87,
     };
-    ASSERT_OK(okm.Resize(sizeof(expected)));
-
     EXPECT_OK(hkdf.Init(digest::kSHA256, ikm, salt));
-    EXPECT_OK(hkdf.Derive(info, &okm));
+    EXPECT_OK(hkdf.Derive(info, sizeof(expected), &okm));
     EXPECT_EQ(memcmp(okm.get(), expected, sizeof(expected)), 0);
     END_TEST;
 }
@@ -148,18 +145,19 @@ bool TestRfc5869_TC2(void) {
 bool TestRfc5869_TC3(void) {
     BEGIN_TEST;
     HKDF hkdf;
-    Bytes ikm, salt, okm;
-    ASSERT_OK(ikm.Resize(22, 0x0b));
+    Secret ikm, okm;
+    Bytes salt;
+    uint8_t *buf;
+    ASSERT_OK(ikm.Allocate(22, &buf));
+    memset(buf, 0xb, ikm.len());
     const char* info = "";
     uint8_t expected[42] = {
         0x8d, 0xa4, 0xe7, 0x75, 0xa5, 0x63, 0xc1, 0x8f, 0x71, 0x5f, 0x80, 0x2a, 0x06, 0x3c,
         0x5a, 0x31, 0xb8, 0xa1, 0x1f, 0x5c, 0x5e, 0xe1, 0x87, 0x9e, 0xc3, 0x45, 0x4e, 0x5f,
         0x3c, 0x73, 0x8d, 0x2d, 0x9d, 0x20, 0x13, 0x95, 0xfa, 0xa4, 0xb6, 0x1a, 0x96, 0xc8,
     };
-    ASSERT_OK(okm.Resize(sizeof(expected)));
-
     EXPECT_OK(hkdf.Init(digest::kSHA256, ikm, salt, HKDF::ALLOW_WEAK_KEY));
-    EXPECT_OK(hkdf.Derive(info, &okm));
+    EXPECT_OK(hkdf.Derive(info, sizeof(expected), &okm));
     EXPECT_EQ(memcmp(okm.get(), expected, sizeof(expected)), 0);
     END_TEST;
 }

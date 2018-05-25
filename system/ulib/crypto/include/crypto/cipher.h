@@ -10,6 +10,7 @@
 #include <crypto/bytes.h>
 #include <fbl/macros.h>
 #include <zircon/types.h>
+#include <crypto/secret.h>
 
 // |crypto::Cipher| is used to encrypt and decrypt data.  Ciphers differ from AEADs in that they
 // require block-aligned lengths and do not check data integrity.  This implementation can be used
@@ -56,24 +57,24 @@ public:
     //   - A stream ciphers, using the first variant that omits the |alignment|.
     //   - As a random access cipher, using the second variant.  All offsets must be
     //   |alignment|-aligned, and |alignment| must be a power of 2.
-    zx_status_t Init(Algorithm algo, Direction direction, const Bytes& key, const Bytes& iv,
+    zx_status_t Init(Algorithm algo, Direction direction, const Secret& key, const Bytes& iv,
                      uint64_t alignment);
 
     // Sets up the cipher to encrypt data using the given |key| and |iv|, either as a stream cipher
     // or a random access cipher, as described above in |Init|.
-    zx_status_t InitEncrypt(Algorithm algo, const Bytes& key, const Bytes& iv) {
+    zx_status_t InitEncrypt(Algorithm algo, const Secret& key, const Bytes& iv) {
         return Init(algo, kEncrypt, key, iv, 0);
     }
-    zx_status_t InitEncrypt(Algorithm algo, const Bytes& key, const Bytes& iv, uint64_t alignment) {
+    zx_status_t InitEncrypt(Algorithm algo, const Secret& key, const Bytes& iv, uint64_t alignment) {
         return Init(algo, kEncrypt, key, iv, alignment);
     }
 
     // Sets up the cipher to decrypt data using the given |key| and |iv|, either as a stream cipher
     // or a random access cipher, as described above in |Init|.
-    zx_status_t InitDecrypt(Algorithm algo, const Bytes& key, const Bytes& iv) {
+    zx_status_t InitDecrypt(Algorithm algo, const Secret& key, const Bytes& iv) {
         return Init(algo, kDecrypt, key, iv, 0);
     }
-    zx_status_t InitDecrypt(Algorithm algo, const Bytes& key, const Bytes& iv, uint64_t alignment) {
+    zx_status_t InitDecrypt(Algorithm algo, const Secret& key, const Bytes& iv, uint64_t alignment) {
         return Init(algo, kDecrypt, key, iv, alignment);
     }
 

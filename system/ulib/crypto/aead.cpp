@@ -113,6 +113,7 @@ AEAD::~AEAD() {}
 
 zx_status_t AEAD::Seal(const Bytes& ptext, const uint8_t* aad, size_t aad_len, uint64_t* out_nonce,
                        Bytes* out_ctext) {
+
     zx_status_t rc;
 
     if (direction_ != Cipher::kEncrypt) {
@@ -201,7 +202,7 @@ void AEAD::Reset() {
 
 // Private methods
 
-zx_status_t AEAD::Init(Algorithm algo, const Bytes& key, const Bytes& iv,
+zx_status_t AEAD::Init(Algorithm algo, const Secret& key, const Bytes& iv,
                        Cipher::Direction direction) {
     zx_status_t rc;
 

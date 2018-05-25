@@ -74,7 +74,8 @@ bool TestGetLengths_AES256_XTS(void) {
 bool TestInitEncrypt_Uninitialized(void) {
     BEGIN_TEST;
     Cipher cipher;
-    Bytes key, iv;
+    Secret key;
+    Bytes iv;
     EXPECT_ZX(cipher.InitEncrypt(Cipher::kUninitialized, key, iv), ZX_ERR_INVALID_ARGS);
     END_TEST;
 }
@@ -82,12 +83,13 @@ bool TestInitEncrypt_Uninitialized(void) {
 bool TestInitEncrypt(Cipher::Algorithm cipher) {
     BEGIN_TEST;
     Cipher encrypt;
-    Bytes key, iv;
+    Secret key;
+    Bytes iv;
     ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
 
     // Bad key
-    Bytes bad_key;
-    ASSERT_OK(bad_key.Copy(key.get(), key.len() - 1));
+    Secret bad_key;
+    ASSERT_OK(bad_key.Generate(key.len() - 1));
     EXPECT_ZX(encrypt.InitEncrypt(cipher, bad_key, iv), ZX_ERR_INVALID_ARGS);
 
     // Bad IV
@@ -109,7 +111,8 @@ DEFINE_EACH(TestInitEncrypt)
 bool TestInitDecrypt_Uninitialized(void) {
     BEGIN_TEST;
     Cipher decrypt;
-    Bytes key, iv;
+    Secret key;
+    Bytes iv;
     EXPECT_ZX(decrypt.InitDecrypt(Cipher::kUninitialized, key, iv), ZX_ERR_INVALID_ARGS);
     END_TEST;
 }
@@ -117,12 +120,13 @@ bool TestInitDecrypt_Uninitialized(void) {
 bool TestInitDecrypt(Cipher::Algorithm cipher) {
     BEGIN_TEST;
     Cipher decrypt;
-    Bytes key, iv;
+    Secret key;
+    Bytes iv;
     ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
 
     // Bad key
-    Bytes bad_key;
-    ASSERT_OK(bad_key.Copy(key.get(), key.len() - 1));
+    Secret bad_key;
+    ASSERT_OK(bad_key.Generate(key.len() - 1));
     EXPECT_ZX(decrypt.InitDecrypt(cipher, bad_key, iv), ZX_ERR_INVALID_ARGS);
 
     // Bad IV
@@ -144,9 +148,10 @@ DEFINE_EACH(TestInitDecrypt)
 bool TestEncryptStream(Cipher::Algorithm cipher) {
     BEGIN_TEST;
     size_t len = PAGE_SIZE;
-    Bytes key, iv, ptext;
+    Secret key;
+    Bytes iv, ptext;
     ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
-    ASSERT_OK(ptext.InitRandom(len));
+    ASSERT_OK(ptext.Randomize(len));
     uint8_t ctext[len];
 
     // Not initialized
@@ -178,9 +183,10 @@ DEFINE_EACH(TestEncryptStream)
 bool TestEncryptRandomAccess(Cipher::Algorithm cipher) {
     BEGIN_TEST;
     size_t len = PAGE_SIZE;
-    Bytes key, iv, ptext;
+    Secret key;
+    Bytes iv, ptext;
     ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
-    ASSERT_OK(ptext.InitRandom(len));
+    ASSERT_OK(ptext.Randomize(len));
     uint8_t ctext[len];
 
     // Not initialized
@@ -215,9 +221,10 @@ DEFINE_EACH(TestEncryptRandomAccess)
 bool TestDecryptStream(Cipher::Algorithm cipher) {
     BEGIN_TEST;
     size_t len = PAGE_SIZE;
-    Bytes key, iv, ptext;
+    Secret key;
+    Bytes iv, ptext;
     ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
-    ASSERT_OK(ptext.InitRandom(len));
+    ASSERT_OK(ptext.Randomize(len));
     uint8_t ctext[len];
     uint8_t result[len];
     Cipher encrypt;
@@ -244,7 +251,8 @@ bool TestDecryptStream(Cipher::Algorithm cipher) {
     EXPECT_EQ(memcmp(ptext.get(), result, len), 0);
 
     // Mismatched key, iv
-    Bytes bad_key, bad_iv;
+    Secret bad_key;
+    Bytes bad_iv;
     ASSERT_OK(GenerateKeyMaterial(cipher, &bad_key, &bad_iv));
 
     ASSERT_OK(decrypt.InitDecrypt(cipher, bad_key, iv));
@@ -278,9 +286,10 @@ DEFINE_EACH(TestDecryptStream)
 bool TestDecryptRandomAccess(Cipher::Algorithm cipher) {
     BEGIN_TEST;
     size_t len = PAGE_SIZE;
-    Bytes key, iv, ptext;
+    Secret key;
+    Bytes iv, ptext;
     ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
-    ASSERT_OK(ptext.InitRandom(len));
+    ASSERT_OK(ptext.Randomize(len));
     uint8_t ctext[len];
     uint8_t result[len];
     Cipher encrypt;
@@ -310,7 +319,8 @@ bool TestDecryptRandomAccess(Cipher::Algorithm cipher) {
     EXPECT_EQ(memcmp(ptext.get(), result, len), 0);
 
     // Mismatched key, iv and offset
-    Bytes bad_key, bad_iv;
+    Secret bad_key;
+    Bytes bad_iv;
     ASSERT_OK(GenerateKeyMaterial(cipher, &bad_key, &bad_iv));
 
     ASSERT_OK(decrypt.InitDecrypt(cipher, bad_key, iv, len / 4));
@@ -344,8 +354,9 @@ DEFINE_EACH(TestDecryptRandomAccess)
 bool TestSP800_TC(Cipher::Algorithm cipher, const char* xkey, const char* xiv, const char* xptext,
                   const char* xctext) {
     BEGIN_TEST;
-    Bytes key, iv, ctext, ptext;
-    ASSERT_OK(HexToBytes(xkey, &key));
+    Secret key;
+    Bytes iv, ctext, ptext;
+    ASSERT_OK(HexToSecret(xkey, &key));
     ASSERT_OK(HexToBytes(xiv, &iv));
     ASSERT_OK(HexToBytes(xptext, &ptext));
     ASSERT_OK(HexToBytes(xctext, &ctext));

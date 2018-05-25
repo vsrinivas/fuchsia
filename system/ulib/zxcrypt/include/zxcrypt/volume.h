@@ -11,6 +11,7 @@
 #include <crypto/bytes.h>
 #include <crypto/cipher.h>
 #include <crypto/digest.h>
+#include <crypto/secret.h>
 #include <ddk/device.h>
 #include <fbl/macros.h>
 #include <fbl/unique_fd.h>
@@ -67,22 +68,22 @@ public:
     // Creates a new zxcrypt volume associated with the given file descriptor, |fd| and returns it
     // via |out|, if provided.  This will format the block device as zxcrypt using the given |key|,
     // which will be associated with key slot 0. This method takes ownership of |fd|.
-    static zx_status_t Create(fbl::unique_fd fd, const crypto::Bytes& key,
+    static zx_status_t Create(fbl::unique_fd fd, const crypto::Secret& key,
                               fbl::unique_ptr<Volume>* out = nullptr);
 
     // Opens a zxcrypt volume on the block device described by |fd| using the |key| corresponding to
     // given key |slot|.  The |fd| parameter means this method can be used from libzxcrypt. This
     // method takes ownership of |fd|.
-    static zx_status_t Unlock(fbl::unique_fd fd, const crypto::Bytes& key, key_slot_t slot,
+    static zx_status_t Unlock(fbl::unique_fd fd, const crypto::Secret& key, key_slot_t slot,
                               fbl::unique_ptr<Volume>* out);
 
     // Opens the zxcrypt volume and returns a file descriptor to it via |out|, or fails if the
     // volume isn't available within |timeout|.
     zx_status_t Open(const zx::duration& timeout, fbl::unique_fd* out);
 
-    // Adds a given |root_key| using the given key |slot|.  This key can then be used to |Open| the
+    // Adds a given |key| to the given key |slot|.  This key can then be used to |Open| the
     // zxcrypt device.  This method can only be called if the volume belongs to libzxcrypt.
-    zx_status_t Enroll(const crypto::Bytes& root_key, key_slot_t slot);
+    zx_status_t Enroll(const crypto::Secret& key, key_slot_t slot);
 
     // Removes the root key in the given key |slot|.  This key can no longer be used to |Open| the
     // zxcrypt device.  This method can only be called if the volume belongs to libzxcrypt.
@@ -97,7 +98,7 @@ public:
 
     // Unlocks a zxcrypt volume on the block device described by |dev| using the |key| corresponding
     // to given key |slot|.  The |dev| parameter means this method can be used from the driver.
-    static zx_status_t Unlock(zx_device_t* dev, const crypto::Bytes& key, key_slot_t slot,
+    static zx_status_t Unlock(zx_device_t* dev, const crypto::Secret& key, key_slot_t slot,
                               fbl::unique_ptr<Volume>* out);
 
     // Uses the data key material to initialize |cipher| for the given |direction|.  This method
@@ -121,7 +122,7 @@ private:
     zx_status_t Configure(Version version);
 
     // Derives intermediate keys for the given key |slot| from the given |key|.
-    zx_status_t DeriveSlotKeys(const crypto::Bytes& key, key_slot_t slot);
+    zx_status_t DeriveSlotKeys(const crypto::Secret& key, key_slot_t slot);
 
     // Resets all fields in this object to initial values
     void Reset();
@@ -144,15 +145,15 @@ private:
     zx_status_t CommitBlock();
 
     // Encrypts the current data key and IV to the given |slot| using the given |key|.
-    zx_status_t SealBlock(const crypto::Bytes& key, key_slot_t slot);
+    zx_status_t SealBlock(const crypto::Secret& key, key_slot_t slot);
 
     // Attempts to unseal the device using the given |key| corresponding to the given |slot| and any
     // superblock from the disk.
-    zx_status_t Unseal(const crypto::Bytes& key, key_slot_t slot);
+    zx_status_t Unseal(const crypto::Secret& key, key_slot_t slot);
 
     // Reads the block and parses and checks various fields before attempting to open it with the
     // given |key| corresponding to the given |slot|.
-    zx_status_t UnsealBlock(const crypto::Bytes& key, key_slot_t slot);
+    zx_status_t UnsealBlock(const crypto::Secret& key, key_slot_t slot);
 
     ////////////////
     // Device methods
@@ -188,12 +189,12 @@ private:
 
     // The algorithm, lengths, and buffers for the key-wrapping AEAD.
     crypto::AEAD::Algorithm aead_;
-    crypto::Bytes wrap_key_;
+    crypto::Secret wrap_key_;
     crypto::Bytes wrap_iv_;
 
     // The algorithm for data processing Cipher and length of wrapped key material.
     crypto::Cipher::Algorithm cipher_;
-    crypto::Bytes data_key_;
+    crypto::Secret data_key_;
     crypto::Bytes data_iv_;
     size_t slot_len_;
     size_t num_key_slots_;

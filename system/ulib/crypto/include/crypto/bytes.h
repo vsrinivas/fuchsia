@@ -28,21 +28,9 @@ public:
     uint8_t* get() { return buf_.get(); }
     size_t len() const { return len_; }
 
-    // Resets self and then takes ownership of the given |buf| of |len| bytes.
-    void Adopt(fbl::unique_ptr<uint8_t[]> buf, size_t len);
-
-    // Discards the current contents and allocates a new buffer of |size| bytes initialized zero.
-    zx_status_t InitZero(size_t size);
-
-    // Discards the current contents and allocates a new buffer of |size| bytes initialized with a
-    // pseudorandom bytes sequence.
-    zx_status_t InitRandom(size_t size);
-
-    // Fills the underlying buffer with the given |value|
-    zx_status_t Fill(uint8_t value);
-
-    // Fills the underlying buffer with random data.
-    zx_status_t Randomize();
+    // Resizes the underlying buffer to |len| bytes and fills it with random data.
+    zx_status_t Randomize() { return Randomize(len_); }
+    zx_status_t Randomize(size_t len);
 
     // Resize the underlying buffer.  If the new length is shorter, the data is truncated.  If it is
     // longer, it is padded with the given |fill| value.
@@ -51,18 +39,9 @@ public:
     // Copies |len| bytes from |src| to |dst_off| in the underlying buffer.  Resizes the buffer as
     // needed, padding with zeros.
     zx_status_t Copy(const void* src, size_t len, zx_off_t dst_off = 0);
-
-    // Copies |src|'s data to |dst_off| in the underlying buffer.  Resizes the buffer as needed,
-    // padding with zeros.
-    zx_status_t Copy(const Bytes& src, zx_off_t dst_off = 0);
-
-    // Yields ownership of the underlying buffer and returns it after saving the length in |len| if
-    // not null.
-    fbl::unique_ptr<uint8_t[]> Release(size_t* len = nullptr);
-
-    // Clears all state from this instance.  This is guaranteed to zeroize and free the underlying
-    // buffer if it is allocated.
-    void Reset();
+    zx_status_t Copy(const Bytes& src, zx_off_t dst_off = 0) {
+        return Copy(src.get(), src.len(), dst_off);
+    }
 
     // Array access operators.  Assert that |off| is not out of bounds.
     const uint8_t& operator[](zx_off_t off) const;
@@ -75,7 +54,7 @@ public:
 private:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Bytes);
 
-    // The underlying buffer.  The destructor is guaranteed to zero this buffer if allocated.
+    // The underlying buffer.
     fbl::unique_ptr<uint8_t[]> buf_;
     // Length in bytes of memory currently allocated to the underlying buffer.
     size_t len_;

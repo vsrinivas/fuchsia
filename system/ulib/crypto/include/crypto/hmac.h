@@ -11,6 +11,7 @@
 #include <crypto/digest.h>
 #include <fbl/macros.h>
 #include <zircon/types.h>
+#include <crypto/secret.h>
 
 // |crypto::hmac| is a block-sized hash-bashed message authentication code.
 namespace crypto {
@@ -28,20 +29,20 @@ public:
     // Convenience method that calls |Init|, |Update|, and |Final| in one shot to create a keyed
     // digest that it saves in |out|. Callers must omit |flags| unless the security implications
     // are clearly understood.
-    static zx_status_t Create(digest::Algorithm digest, const Bytes& key, const void* in,
+    static zx_status_t Create(digest::Algorithm digest, const Secret& key, const void* in,
                               size_t in_len, Bytes* out, uint16_t flags = 0);
 
     // Convenience method that checks if the given |digest| matches the one that |Create| would
     // generate using |digest|, |key|, |in|, and |in_len|.  On failure, it returns
     // |ZX_ERR_IO_DATA_INTEGRITY|. Callers must omit |flags| unless the security implications are
     // clearly understood.
-    static zx_status_t Verify(digest::Algorithm digest, const Bytes& key, const void* in,
+    static zx_status_t Verify(digest::Algorithm digest, const Secret& key, const void* in,
                               size_t in_len, const Bytes& hmac, uint16_t flags = 0);
 
     // Initializes the HMAC algorithm indicated by |digest| with the given |key|.  A call to |Init|
     // must precede any calls to |Update| or |Final|. Callers must omit |flags| unless the security
     // implications are clearly understood.
-    zx_status_t Init(digest::Algorithm digest, const Bytes& key, uint16_t flags = 0);
+    zx_status_t Init(digest::Algorithm digest, const Secret& key, uint16_t flags = 0);
 
     // Updates the HMAC with |in_len| bytes of additional data from |in|. This can only be called
     // between calls to |Init| and |Final|.

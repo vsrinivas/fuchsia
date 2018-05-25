@@ -113,7 +113,7 @@ Cipher::Cipher() : cipher_(kUninitialized), direction_(kUnset), block_size_(0), 
 
 Cipher::~Cipher() {}
 
-zx_status_t Cipher::Init(Algorithm algo, Direction direction, const Bytes& key, const Bytes& iv,
+zx_status_t Cipher::Init(Algorithm algo, Direction direction, const Secret& key, const Bytes& iv,
                          uint64_t alignment) {
     zx_status_t rc;
 

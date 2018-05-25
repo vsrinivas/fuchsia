@@ -9,6 +9,7 @@
 
 #include <crypto/bytes.h>
 #include <crypto/digest.h>
+#include <crypto/secret.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/types.h>
@@ -32,21 +33,25 @@ public:
     // Initializes the HKDF algorithms indicated by |digest| with the input key material in |ikm|
     // and the given |salt|.  Callers must omit |flags| unless the security implications are clearly
     // understood.
-    zx_status_t Init(digest::Algorithm digest, const Bytes& ikm, const Bytes& salt,
+    zx_status_t Init(digest::Algorithm digest, const Secret& ikm, const Bytes& salt,
                      uint16_t flags = 0);
 
-    // Fill |out_key| with output key material.  The key material will depend on the |ikm| and
-    // |salt| given in |Init|, as well as the |label| provided here.  |out_key| will be the same if
-    // and only if all of those parameters are unchanged.
-    zx_status_t Derive(const char* label, Bytes* out_key);
+    // Fill |out| with |len| bytes of output key material.  The key material will depend on the
+    // |ikm| and |salt| given in |Init|, as well as the |label| provided here.  |out_key| will be
+    // the same if and only if all of those parameters are unchanged.
+    zx_status_t Derive(const char* label, size_t len, Bytes* out);
+    zx_status_t Derive(const char* label, size_t len, Secret* out);
 
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(HKDF);
 
+    // Implementation of |Derive| above.
+    zx_status_t Derive(const char* label, uint8_t* out, size_t out_len);
+
     // Digest algorithm used by this HKDF.
     digest::Algorithm digest_;
     // The pseudo-random key used to derive other keys
-    Bytes prk_;
+    Secret prk_;
 };
 
 } // namespace crypto

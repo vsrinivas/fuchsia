@@ -14,6 +14,7 @@
 #include <crypto/bytes.h>
 #include <crypto/cipher.h>
 #include <crypto/hkdf.h>
+#include <crypto/secret.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/block.h>
@@ -153,7 +154,7 @@ Volume::~Volume() {}
 
 // Library methods
 
-zx_status_t Volume::Create(fbl::unique_fd fd, const crypto::Bytes& key,
+zx_status_t Volume::Create(fbl::unique_fd fd, const crypto::Secret& key,
                            fbl::unique_ptr<Volume>* out) {
     zx_status_t rc;
 
@@ -180,7 +181,7 @@ zx_status_t Volume::Create(fbl::unique_fd fd, const crypto::Bytes& key,
     return ZX_OK;
 }
 
-zx_status_t Volume::Unlock(fbl::unique_fd fd, const crypto::Bytes& key, key_slot_t slot,
+zx_status_t Volume::Unlock(fbl::unique_fd fd, const crypto::Secret& key, key_slot_t slot,
                            fbl::unique_ptr<Volume>* out) {
     zx_status_t rc;
 
@@ -245,7 +246,7 @@ zx_status_t Volume::Open(const zx::duration& timeout, fbl::unique_fd* out) {
     return ZX_OK;
 }
 
-zx_status_t Volume::Enroll(const crypto::Bytes& key, key_slot_t slot) {
+zx_status_t Volume::Enroll(const crypto::Secret& key, key_slot_t slot) {
     zx_status_t rc;
     ZX_DEBUG_ASSERT(!dev_); // Cannot enroll from driver
 
@@ -278,7 +279,7 @@ zx_status_t Volume::Revoke(key_slot_t slot) {
     }
     zx_off_t off = kHeaderLen + (slot_len_ * slot);
     crypto::Bytes invalid;
-    if ((rc = invalid.InitRandom(slot_len_)) != ZX_OK ||
+    if ((rc = invalid.Randomize(slot_len_)) != ZX_OK ||
         (rc = block_.Copy(invalid, off)) != ZX_OK || (rc = CommitBlock()) != ZX_OK) {
         return rc;
     }
@@ -309,7 +310,7 @@ zx_status_t Volume::Shred() {
 
 // Driver methods
 
-zx_status_t Volume::Unlock(zx_device_t* dev, const crypto::Bytes& key, key_slot_t slot,
+zx_status_t Volume::Unlock(zx_device_t* dev, const crypto::Secret& key, key_slot_t slot,
                            fbl::unique_ptr<Volume>* out) {
     zx_status_t rc;
 
@@ -454,21 +455,15 @@ zx_status_t Volume::Configure(Volume::Version version) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    size_t wrap_key_len, wrap_iv_len, data_key_len, data_iv_len, tag_len;
-    if ((rc = crypto::AEAD::GetKeyLen(aead_, &wrap_key_len)) != ZX_OK ||
-        (rc = crypto::AEAD::GetIVLen(aead_, &wrap_iv_len)) != ZX_OK ||
+    size_t key_len, iv_len, tag_len;
+    if ((rc = crypto::Cipher::GetKeyLen(cipher_, &key_len)) != ZX_OK ||
+        (rc = crypto::Cipher::GetIVLen(cipher_, &iv_len)) != ZX_OK ||
         (rc = crypto::AEAD::GetTagLen(aead_, &tag_len)) != ZX_OK ||
-        (rc = crypto::Cipher::GetKeyLen(cipher_, &data_key_len)) != ZX_OK ||
-        (rc = crypto::Cipher::GetIVLen(cipher_, &data_iv_len)) != ZX_OK ||
-        (rc = crypto::digest::GetDigestLen(digest_, &digest_len_)) != ZX_OK ||
-        (rc = wrap_key_.Resize(wrap_key_len)) != ZX_OK ||
-        (rc = wrap_iv_.Resize(wrap_iv_len)) != ZX_OK ||
-        (rc = data_key_.Resize(data_key_len)) != ZX_OK ||
-        (rc = data_iv_.Resize(data_iv_len)) != ZX_OK) {
+        (rc = crypto::digest::GetDigestLen(digest_, &digest_len_)) != ZX_OK) {
         return rc;
     }
 
-    slot_len_ = data_key_len + data_iv_len + tag_len;
+    slot_len_ = key_len + iv_len + tag_len;
     num_key_slots_ = (block_.len() - kHeaderLen) / slot_len_;
     if (num_key_slots_ == 0) {
         xprintf("block size is too small; have %zu, need %zu\n", block_.len(),
@@ -479,7 +474,7 @@ zx_status_t Volume::Configure(Volume::Version version) {
     return ZX_OK;
 }
 
-zx_status_t Volume::DeriveSlotKeys(const crypto::Bytes& key, key_slot_t slot) {
+zx_status_t Volume::DeriveSlotKeys(const crypto::Secret& key, key_slot_t slot) {
     zx_status_t rc;
 
     crypto::HKDF hkdf;
@@ -488,11 +483,17 @@ zx_status_t Volume::DeriveSlotKeys(const crypto::Bytes& key, key_slot_t slot) {
         return rc;
     }
     snprintf(label, kMaxLabelLen, kWrapKeyLabel, slot);
-    if ((rc = hkdf.Derive(label, &wrap_key_)) != ZX_OK) {
+    size_t len;
+    if ((rc = crypto::AEAD::GetKeyLen(aead_, &len)) != ZX_OK ||
+        (rc = hkdf.Derive(label, len, &wrap_key_)) != ZX_OK) {
+        xprintf("failed to derive wrap key: %s\n", zx_status_get_string(rc));
         return rc;
     }
     snprintf(label, kMaxLabelLen, kWrapIvLabel, slot);
-    if ((rc = hkdf.Derive(label, &wrap_iv_)) != ZX_OK) {
+    crypto::Secret wrap_iv;
+    if ((rc = crypto::AEAD::GetIVLen(aead_, &len)) != ZX_OK ||
+        (rc = hkdf.Derive(label, len, &wrap_iv_)) != ZX_OK) {
+        xprintf("failed to derive wrap IV: %s\n", zx_status_get_string(rc));
         return rc;
     }
 
@@ -500,15 +501,12 @@ zx_status_t Volume::DeriveSlotKeys(const crypto::Bytes& key, key_slot_t slot) {
 }
 
 void Volume::Reset() {
-    block_.Reset();
+    block_.Resize(0);
     offset_ = UINT64_MAX;
-    guid_.Reset();
     aead_ = crypto::AEAD::kUninitialized;
-    wrap_key_.Reset();
-    wrap_iv_.Reset();
+    wrap_key_.Clear();
     cipher_ = crypto::Cipher::kUninitialized;
-    data_key_.Reset();
-    data_iv_.Reset();
+    data_key_.Clear();
     slot_len_ = 0;
     num_key_slots_ = 0;
     digest_ = crypto::digest::kUninitialized;
@@ -542,7 +540,7 @@ zx_status_t Volume::CreateBlock() {
     out += sizeof(zxcrypt_magic);
 
     // Create a variant 1/version 4 instance GUID according to RFC 4122.
-    if ((rc = guid_.InitRandom(GUID_LEN)) != ZX_OK) {
+    if ((rc = guid_.Randomize(GUID_LEN)) != ZX_OK) {
         return rc;
     }
     guid_[6] = (guid_[6] & 0x0F) | 0x40;
@@ -558,7 +556,12 @@ zx_status_t Volume::CreateBlock() {
     memcpy(out, &version, sizeof(version));
 
     // Generate the data key and IV, and save the AAD.
-    if ((rc = data_key_.Randomize()) != ZX_OK || (rc = data_iv_.Randomize()) != ZX_OK ||
+    size_t key_len, iv_len;
+    if ((rc = crypto::Cipher::GetKeyLen(cipher_, &key_len)) != ZX_OK ||
+        (rc = crypto::Cipher::GetIVLen(cipher_, &iv_len)) != ZX_OK ||
+        (rc = data_key_.Generate(key_len)) != ZX_OK ||
+        (rc = data_iv_.Resize(iv_len)) != ZX_OK ||
+        (rc = data_iv_.Randomize()) != ZX_OK ||
         (rc = header_.Copy(block_.get(), kHeaderLen)) != ZX_OK) {
         return rc;
     }
@@ -587,7 +590,7 @@ zx_status_t Volume::CommitBlock() {
     return ZX_OK;
 }
 
-zx_status_t Volume::SealBlock(const crypto::Bytes& key, key_slot_t slot) {
+zx_status_t Volume::SealBlock(const crypto::Secret& key, key_slot_t slot) {
     zx_status_t rc;
 
     if (slot >= num_key_slots_) {
@@ -602,8 +605,8 @@ zx_status_t Volume::SealBlock(const crypto::Bytes& key, key_slot_t slot) {
     zx_off_t off = kHeaderLen + (slot_len_ * slot);
     zx_off_t data_key_off = 0;
     zx_off_t data_iv_off = data_key_.len();
-    if ((rc = ptext.Copy(data_key_, data_key_off)) != ZX_OK ||
-        (rc = ptext.Copy(data_iv_, data_iv_off)) != ZX_OK ||
+    if ((rc = ptext.Copy(data_key_.get(), data_key_.len(), data_key_off)) != ZX_OK ||
+        (rc = ptext.Copy(data_iv_.get(), data_iv_.len(), data_iv_off)) != ZX_OK ||
         (rc = DeriveSlotKeys(key, slot)) != ZX_OK ||
         (rc = aead.InitSeal(aead_, wrap_key_, wrap_iv_)) != ZX_OK ||
         (rc = aead.Seal(ptext, header_, &nonce, &ctext)) != ZX_OK) {
@@ -619,7 +622,7 @@ zx_status_t Volume::SealBlock(const crypto::Bytes& key, key_slot_t slot) {
     return ZX_OK;
 }
 
-zx_status_t Volume::Unseal(const crypto::Bytes& key, key_slot_t slot) {
+zx_status_t Volume::Unseal(const crypto::Secret& key, key_slot_t slot) {
     zx_status_t rc;
 
     for (rc = Begin(); rc == ZX_ERR_NEXT; rc = Next()) {
@@ -635,7 +638,7 @@ zx_status_t Volume::Unseal(const crypto::Bytes& key, key_slot_t slot) {
     return ZX_ERR_ACCESS_DENIED;
 }
 
-zx_status_t Volume::UnsealBlock(const crypto::Bytes& key, key_slot_t slot) {
+zx_status_t Volume::UnsealBlock(const crypto::Secret& key, key_slot_t slot) {
     zx_status_t rc;
 
     // Check the type GUID matches |kTypeGuid|.
@@ -673,18 +676,27 @@ zx_status_t Volume::UnsealBlock(const crypto::Bytes& key, key_slot_t slot) {
 
     // Read in the data
     crypto::AEAD aead;
-    crypto::Bytes ptext, ctext;
+    crypto::Bytes ptext, ctext, data_key;
     zx_off_t off = kHeaderLen + (slot_len_ * slot);
-    size_t data_key_off = 0;
-    size_t data_iv_off = data_key_.len();
+
+    size_t key_off, key_len, iv_off, iv_len;
+    uint8_t *key_buf;
+    if ((rc = crypto::Cipher::GetKeyLen(cipher_, &key_len)) != ZX_OK ||
+        (rc = crypto::Cipher::GetIVLen(cipher_, &iv_len)) != ZX_OK ||
+        (rc = data_key_.Allocate(key_len, &key_buf)) != ZX_OK) {
+        return rc;
+    }
+
+    key_off = 0;
+    iv_off = data_key_.len();
     if ((rc = ctext.Copy(block_.get() + off, slot_len_)) != ZX_OK ||
         (rc = aead.InitOpen(aead_, wrap_key_, wrap_iv_)) != ZX_OK ||
         (rc = header_.Copy(block_.get(), kHeaderLen)) != ZX_OK ||
         (rc = aead.Open(nonce, ctext, header_, &ptext)) != ZX_OK ||
-        (rc = data_key_.Copy(ptext.get() + data_key_off, data_key_.len())) != ZX_OK ||
-        (rc = data_iv_.Copy(ptext.get() + data_iv_off, data_iv_.len())) != ZX_OK) {
+        (rc = data_iv_.Copy(ptext.get() + iv_off, iv_len)) != ZX_OK) {
         return rc;
     }
+    memcpy(key_buf, ptext.get() + key_off, key_len);
 
     return ZX_OK;
 }

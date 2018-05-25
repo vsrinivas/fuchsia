@@ -8,14 +8,17 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := usertest
 
+MODULE_SRCS := \
+    $(LOCAL_DIR)/main.c \
+    $(LOCAL_DIR)/utils.cpp \
+
 MODULE_SRCS += \
     $(LOCAL_DIR)/aead.cpp \
     $(LOCAL_DIR)/bytes.cpp \
     $(LOCAL_DIR)/cipher.cpp \
     $(LOCAL_DIR)/hkdf.cpp \
     $(LOCAL_DIR)/hmac.cpp \
-    $(LOCAL_DIR)/main.c \
-    $(LOCAL_DIR)/utils.cpp \
+    $(LOCAL_DIR)/secret.cpp \
 
 MODULE_NAME := crypto-test
 

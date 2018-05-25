@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include <crypto/bytes.h>
+#include <crypto/secret.h>
 #include <crypto/cipher.h>
 #include <fbl/macros.h>
 #include <zircon/types.h>
@@ -43,13 +44,13 @@ public:
 
     // Sets up the AEAD to use the algorithm indicated by |aead| to encrypt data using the given
     // |key| and |iv|.
-    zx_status_t InitSeal(Algorithm aead, const Bytes& key, const Bytes& iv) {
+    zx_status_t InitSeal(Algorithm aead, const Secret& key, const Bytes& iv) {
         return Init(aead, key, iv, Cipher::kEncrypt);
     }
 
     // Sets up the AEAD to use the algorithm indicated by |aead| to decrypt data using the given
     // |key| and |iv|.
-    zx_status_t InitOpen(Algorithm aead, const Bytes& key, const Bytes& iv) {
+    zx_status_t InitOpen(Algorithm aead, const Secret& key, const Bytes& iv) {
         return Init(aead, key, iv, Cipher::kDecrypt);
     }
 
@@ -81,7 +82,9 @@ public:
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(AEAD);
 
-    zx_status_t Init(Algorithm aead, const Bytes& key, const Bytes& iv,
+    // Sets up the aead to encrypt or decrypt data using the given |key| based on the
+    // given |direction|.
+    zx_status_t Init(Algorithm aead, const Secret& key, const Bytes& iv,
                      Cipher::Direction direction);
     zx_status_t Seal(const Bytes& ptext, const uint8_t* aad, size_t aad_len, uint64_t* out_nonce,
                      Bytes* out_ctext);
