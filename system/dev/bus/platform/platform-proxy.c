@@ -468,7 +468,8 @@ static clk_protocol_ops_t clk_ops = {
 };
 
 static zx_status_t platform_dev_map_mmio(void* ctx, uint32_t index, uint32_t cache_policy,
-                                         void** vaddr, size_t* size, zx_handle_t* out_handle) {
+                                         void** vaddr, size_t* size, zx_paddr_t* out_paddr,
+                                         zx_handle_t* out_handle) {
     platform_proxy_t* proxy = ctx;
     pdev_req_t req = {
         .op = PDEV_GET_MMIO,
@@ -507,6 +508,9 @@ static zx_status_t platform_dev_map_mmio(void* ctx, uint32_t index, uint32_t cac
 
     *size = resp.mmio.length;
     *out_handle = vmo_handle;
+    if (out_paddr) {
+        *out_paddr = resp.mmio.paddr;
+    }
     *vaddr = (void *)(virt + resp.mmio.offset);
     return ZX_OK;
 

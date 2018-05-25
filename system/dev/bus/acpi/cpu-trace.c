@@ -35,8 +35,8 @@ static zx_status_t cpu_trace_get_device_info(void* ctx, pdev_device_info_t* out_
     return ZX_OK;
 }
 
-static zx_status_t cpu_trace_map_mmio(void* ctx, uint32_t index, uint32_t cache_policy,
-                                      void** out_vaddr, size_t* out_size, zx_handle_t* out_handle) {
+static zx_status_t cpu_trace_map_mmio(void* ctx, uint32_t index, uint32_t cache_policy, void** out_vaddr,
+                                      size_t* out_size, zx_paddr_t* out_paddr, zx_handle_t* out_handle) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

@@ -119,6 +119,7 @@ typedef struct {
         struct {
             zx_off_t offset;
             size_t length;
+            zx_paddr_t paddr;
         } mmio;
         pdev_device_info_t info;
         pdev_mailbox_ctx_t mailbox;

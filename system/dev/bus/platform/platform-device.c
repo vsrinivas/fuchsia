@@ -16,7 +16,8 @@
 #include "platform-proxy.h"
 
 static zx_status_t platform_dev_map_mmio(void* ctx, uint32_t index, uint32_t cache_policy,
-                                         void** vaddr, size_t* size, zx_handle_t* out_handle) {
+                                         void** vaddr, size_t* size, zx_paddr_t* out_paddr,
+                                         zx_handle_t* out_handle) {
     platform_dev_t* dev = ctx;
 
     if (index >= dev->mmio_count) {
@@ -51,6 +52,9 @@ static zx_status_t platform_dev_map_mmio(void* ctx, uint32_t index, uint32_t cac
 
     *size = mmio->length;
     *out_handle = vmo_handle;
+    if (out_paddr) {
+        *out_paddr = vmo_base;
+    }
     *vaddr = (void *)(virt + (mmio->base - vmo_base));
     return ZX_OK;
 
@@ -122,7 +126,7 @@ static platform_device_protocol_ops_t platform_dev_proto_ops = {
 };
 
 static zx_status_t pdev_rpc_get_mmio(platform_dev_t* dev, uint32_t index, zx_off_t* out_offset,
-                                     size_t *out_length, zx_handle_t* out_handle,
+                                     size_t *out_length, zx_paddr_t* out_paddr, zx_handle_t* out_handle,
                                      uint32_t* out_handle_count) {
     if (index >= dev->mmio_count) {
         return ZX_ERR_INVALID_ARGS;
@@ -139,6 +143,7 @@ static zx_status_t pdev_rpc_get_mmio(platform_dev_t* dev, uint32_t index, zx_off
     }
     *out_offset = mmio->base - vmo_base;
     *out_length = mmio->length;
+    *out_paddr = vmo_base;
     *out_handle_count = 1;
     return ZX_OK;
 }
@@ -409,7 +414,7 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
     switch (req->op) {
     case PDEV_GET_MMIO:
         resp.status = pdev_rpc_get_mmio(dev, req->index, &resp.mmio.offset, &resp.mmio.length,
-                                            &handle, &handle_count);
+                                        &resp.mmio.paddr, &handle, &handle_count);
         break;
     case PDEV_GET_INTERRUPT:
         resp.status = pdev_rpc_get_interrupt(dev, req->index, req->flags, &handle, &handle_count);
