@@ -9,7 +9,6 @@
 
 #include <crypto/bytes.h>
 #include <crypto/cipher.h>
-#include <crypto/error.h>
 #include <explicit-memory/bytes.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
@@ -19,6 +18,8 @@
 #include <openssl/cipher.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
+
+#include "error.h"
 
 #define ZXDEBUG 0
 

@@ -6,7 +6,6 @@
 #include <stdint.h>
 
 #include <crypto/digest.h>
-#include <crypto/error.h>
 #include <crypto/hmac.h>
 #include <explicit-memory/bytes.h>
 #include <fbl/alloc_checker.h>
@@ -15,6 +14,8 @@
 #include <openssl/hmac.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
+
+#include "error.h"
 
 #define ZXDEBUG 0
 

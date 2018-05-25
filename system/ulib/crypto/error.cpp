@@ -4,7 +4,6 @@
 
 #include <stddef.h>
 
-#include <crypto/error.h>
 #include <lib/fdio/debug.h>
 #include <openssl/cipher.h>
 #include <openssl/digest.h>
@@ -12,6 +11,8 @@
 #include <openssl/hkdf.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
+
+#include "error.h"
 
 #define ZXDEBUG 0
 

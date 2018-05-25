@@ -7,7 +7,6 @@
 #include <string.h>
 
 #include <crypto/digest.h>
-#include <crypto/error.h>
 #include <crypto/hkdf.h>
 #include <explicit-memory/bytes.h>
 #include <fbl/auto_call.h>
@@ -16,6 +15,8 @@
 #include <openssl/hkdf.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
+
+#include "error.h"
 
 #define ZXDEBUG 0
 

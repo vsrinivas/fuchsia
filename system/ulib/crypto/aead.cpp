@@ -8,7 +8,6 @@
 
 #include <crypto/aead.h>
 #include <crypto/bytes.h>
-#include <crypto/error.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
@@ -16,6 +15,8 @@
 #include <openssl/aead.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
+
+#include "error.h"
 
 #define ZXDEBUG 0
 
@@ -105,7 +106,8 @@ zx_status_t AEAD::GetTagLen(Algorithm algo, size_t* out) {
     return ZX_OK;
 }
 
-AEAD::AEAD() : ctx_(nullptr), direction_(Cipher::kUnset), tag_len_(0) {}
+AEAD::AEAD()
+    : ctx_(nullptr), direction_(Cipher::kUnset), tag_len_(0) {}
 
 AEAD::~AEAD() {}
 
