@@ -12,6 +12,7 @@ MODULE_FIDL_LIB_PATH := $(subst .,/,$(MODULE_FIDL_LIBRARY))
 MODULE_FIDL_H := $(MODULE_GENDIR)/include/$(MODULE_FIDL_LIB_PATH)/c/fidl.h
 MODULE_FIDL_CPP := $(MODULE_GENDIR)/src/tables.cpp
 MODULE_FIDL_OBJ := $(MODULE_GENDIR)/obj/tables.cpp.o
+MODULE_FIDL_DEPS := $(foreach dep,$(MODULE_FIDL_DEPS),--files $(MODULE_FIDL_SRCS_$(dep)))
 
 MODULE_SRCDEPS += $(MODULE_FIDL_H) $(MODULE_FIDL_CPP)
 MODULE_GEN_HDR += $(MODULE_FIDL_H)
@@ -32,9 +33,10 @@ $(MODULE_FIDL_RSP): FIDL_NAME:=$(MODULE_FIDL_LIBRARY)
 $(MODULE_FIDL_RSP): FIDL_H:=$(MODULE_FIDL_H)
 $(MODULE_FIDL_RSP): FIDL_CPP:=$(MODULE_FIDL_CPP)
 $(MODULE_FIDL_RSP): FIDL_SRCS:=$(MODULE_FIDLSRCS)
+$(MODULE_FIDL_RSP): FIDL_DEPS:=$(MODULE_FIDL_DEPS)
 $(MODULE_FIDL_RSP): $(MODULE_FIDLSRCS)
 	@$(MKDIR)
-	$(NOECHO)echo --name $(FIDL_NAME) --c-header $(FIDL_H) --tables $(FIDL_CPP) --files $(FIDL_SRCS) > $@
+	$(NOECHO)echo --name $(FIDL_NAME) --c-header $(FIDL_H) --tables $(FIDL_CPP) $(FIDL_DEPS) --files $(FIDL_SRCS) > $@
 
 # $@ only lists one of the multiple targets, so we use $< (first dep) to
 # compute the (related) destination directories to create

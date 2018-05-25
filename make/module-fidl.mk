@@ -25,6 +25,9 @@ ifeq ($(filter fidl,$(MODULE_EXPORT)),fidl)
 MODULE_PACKAGE += $(sort $(MODULE_PACKAGE) fidl)
 endif
 
+# Export a list of files for dependent libraries to consume.
+MODULE_FIDL_SRCS_$(MODULE) := $(MODULE_SRCS)
+
 ifneq ($(strip $(MODULE_PACKAGE)),)
 
 MODULE_PKG_FILE := $(MODULE_BUILDDIR)/$(MODULE_NAME).pkg
