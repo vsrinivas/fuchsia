@@ -37,11 +37,11 @@ class FrameTimings : public escher::Reffable {
   void OnFramePresented(size_t swapchain_index, zx_time_t time);
 
   uint64_t frame_number() const { return frame_number_; }
-  uint64_t target_presentation_time() const {
+  zx_time_t target_presentation_time() const {
     return target_presentation_time_;
   }
 
-  uint64_t actual_presentation_time() const {
+  zx_time_t actual_presentation_time() const {
     return actual_presentation_time_;
   }
 
