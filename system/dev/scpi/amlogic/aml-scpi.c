@@ -83,6 +83,7 @@ static zx_status_t aml_scpi_execute_cmd(aml_scpi_t* scpi,
 
 static zx_status_t aml_scpi_get_dvfs_info(void* ctx, uint8_t power_domain, scpi_opp_t* opps) {
     aml_scpi_t* scpi = ctx;
+    zx_status_t status;
     struct {
         uint32_t                status;
         uint8_t                 reserved;
@@ -95,18 +96,21 @@ static zx_status_t aml_scpi_get_dvfs_info(void* ctx, uint8_t power_domain, scpi_
         return ZX_ERR_INVALID_ARGS;
     }
 
+    mtx_lock(&scpi->lock);
+
     // dvfs info already populated
     if (scpi_opp[power_domain]) {
         memcpy(opps, scpi_opp[power_domain], sizeof(scpi_opp_t));
+        mtx_unlock(&scpi->lock);
         return ZX_OK;
     }
 
-    zx_status_t status = aml_scpi_execute_cmd(scpi,
+    status = aml_scpi_execute_cmd(scpi,
                                               &aml_dvfs_info, sizeof(aml_dvfs_info),
                                               &power_domain, sizeof(power_domain),
                                               SCPI_CMD_GET_DVFS_INFO, SCPI_CL_DVFS);
     if (status != ZX_OK) {
-        return status;
+        goto fail;
     }
 
     opps->count         = aml_dvfs_info.operating_points;
@@ -114,7 +118,8 @@ static zx_status_t aml_scpi_get_dvfs_info(void* ctx, uint8_t power_domain, scpi_
 
     if (opps->count > MAX_DVFS_OPPS) {
         SCPI_ERROR("Number of operating_points greater than MAX_DVFS_OPPS\n");
-        return ZX_ERR_INVALID_ARGS;
+        status = ZX_ERR_INVALID_ARGS;
+        goto fail;
     }
 
     zxlogf(INFO, "Cluster %u details\n", power_domain);
@@ -131,11 +136,16 @@ static zx_status_t aml_scpi_get_dvfs_info(void* ctx, uint8_t power_domain, scpi_
 
     scpi_opp[power_domain] = calloc(1, sizeof(scpi_opp_t));
     if (!scpi_opp[power_domain]) {
-        return ZX_ERR_NO_MEMORY;
+        status = ZX_ERR_NO_MEMORY;
+        goto fail;
     }
 
     memcpy(scpi_opp[power_domain], opps, sizeof(scpi_opp_t));
-    return ZX_OK;
+    status = ZX_OK;
+
+fail:
+    mtx_unlock(&scpi->lock);
+    return status;
 }
 
 static zx_status_t aml_scpi_get_dvfs_idx(void *ctx, uint8_t power_domain, uint16_t* idx) {
@@ -306,6 +316,7 @@ static zx_status_t aml_scpi_bind(void* ctx, zx_device_t* parent) {
     scpi->scpi.ops = &scpi_ops;
     scpi->scpi.ctx = scpi;
 
+    mtx_init(&scpi->lock, mtx_plain);
     platform_bus_protocol_t pbus;
     if ((status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_BUS, &pbus)) != ZX_OK) {
         SCPI_ERROR("ZX_PROTOCOL_PLATFORM_BUS not available %d \n",status);

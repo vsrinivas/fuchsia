@@ -32,6 +32,7 @@ typedef struct {
     platform_device_protocol_t          pdev;
     mailbox_protocol_t                  mailbox;
     scpi_protocol_t                     scpi;
+    mtx_t                               lock;
 } aml_scpi_t;
 
 enum aml_scpi_client_id {
