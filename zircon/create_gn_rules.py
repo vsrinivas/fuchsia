@@ -71,7 +71,7 @@ def parse_package(lines):
         if not current_section:
             return
         if current_list and current_map:
-            raise Error('Found both map-style and list-style section')
+            raise Exception('Found both map-style and list-style section')
         result[current_section] = (current_map if current_map
                                    else current_list)
     for line in lines:
