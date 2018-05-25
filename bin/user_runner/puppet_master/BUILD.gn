@@ -65,6 +65,7 @@ source_set("dispatch_story_command_executor") {
   public_deps = [
     ":story_command_executor",
     "//peridot/public/lib:fidl",
+    "//peridot/public/lib/async/cpp:future",
     "//peridot/public/lib/async/cpp:operation",
   ]
 }

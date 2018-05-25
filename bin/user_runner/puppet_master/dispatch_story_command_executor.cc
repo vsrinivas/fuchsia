@@ -7,6 +7,7 @@
 #include "peridot/bin/user_runner/puppet_master/dispatch_story_command_executor.h"
 
 #include "lib/async/cpp/operation.h"
+#include "lib/async/cpp/future.h"
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace modular {
@@ -57,8 +58,9 @@ class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
 
     // Keep track of the number of commands we need to run. When they are all
     // done, we complete this operation.
-    // TODO(thatguy): As soon as we have Future<>, change to use that.
-    auto remaining_count = std::make_shared<int>(commands_.size());
+    auto future = Future<ExecuteResult>::Create();
+    std::vector<FuturePtr<ExecuteResult>> did_execute_commands;
+    did_execute_commands.reserve(commands_.size());
 
     for (auto& command : commands_) {
       auto tag_string_it =
@@ -77,22 +79,29 @@ class DispatchStoryCommandExecutor::ExecuteStoryCommandsCall
       // NOTE: it is safe to capture |this| on the lambdas below because if
       // |this| goes out of scope, |queue_| will be deleted, and the callbacks
       // on |queue_| will not run.
+
+      auto did_execute_command = Future<ExecuteResult>::Create();
       queue_.Add(new RunStoryCommandCall(
           tag_string, command_runner, story_id_, std::move(command),
-          [this, remaining_count](ExecuteResult result) {
+          did_execute_command->Completer()));
+      did_execute_command->Then(
+          [this](ExecuteResult result) {
             // Check for error for this command. If there was an error, abort
             // early. All of the remaining operations (if any) in queue_ will
             // not be run.
             if (result.status != ExecuteStatus::OK) {
               Done(std::move(result));
             }
-
-            --(*remaining_count);
-            if (*remaining_count == 0) {
-              Done(std::move(result));
-            }
-          }));
+          });
+      did_execute_commands.emplace_back(did_execute_command);
     }
+
+    Future<ExecuteResult>::Wait(did_execute_commands)->Then([this] {
+      ExecuteResult result;
+      result.status = ExecuteStatus::OK;
+      result.story_id = story_id_;
+      Done(std::move(result));
+    });
   }
 
   DispatchStoryCommandExecutor* const executor_;
