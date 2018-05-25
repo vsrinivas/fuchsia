@@ -169,6 +169,21 @@ bool apply_config() {
 
     if (check_rsp->res.count) {
         printf("Config not valid\n");
+        fuchsia_display_ConfigResult* arr =
+                static_cast<fuchsia_display_ConfigResult*>(check_rsp->res.data);
+        for (unsigned i = 0; i < check_rsp->res.count; i++) {
+            printf("Display %ld\n", arr[i].display_id);
+            if (arr[i].error) {
+                printf("  Display error: %d\n", arr[i].error);
+            }
+
+            uint64_t* layers = static_cast<uint64_t*>(arr[i].layers.data);
+            fuchsia_display_ClientCompositionOp* ops =
+                    static_cast<fuchsia_display_ClientCompositionOp*>(arr[i].client_ops.data);
+            for (unsigned j = 0; j < arr[i].layers.count; j++) {
+                printf("  Layer %ld: %d\n", layers[j], ops[j]);
+            }
+        }
         return false;
     }
 
@@ -256,16 +271,22 @@ int main(int argc, const char* argv[]) {
 
     // Layer which is smaller than the display and bigger than its image
     // and which animates back and forth across all displays and also
-    // its src image.
+    // its src image and also rotates.
     VirtualLayer layer3(displays);
-    layer3.SetImageDimens(displays[0].mode().horizontal_resolution,
-                          displays[0].mode().vertical_resolution / 2);
-    layer3.SetDestFrame(displays[0].mode().horizontal_resolution / 2,
-                        displays[0].mode().vertical_resolution / 2);
-    layer3.SetSrcFrame(displays[0].mode().horizontal_resolution / 2,
-                       displays[0].mode().vertical_resolution / 2);
+    // Width is the larger of disp_width/2, display_height/2, but we also need
+    // to make sure that it's less than the smaller display dimension.
+    uint32_t width = fbl::min(fbl::max(displays[0].mode().vertical_resolution / 2,
+                                       displays[0].mode().horizontal_resolution / 2),
+                              fbl::min(displays[0].mode().vertical_resolution,
+                                       displays[0].mode().horizontal_resolution));
+    uint32_t height = fbl::min(displays[0].mode().vertical_resolution / 2,
+                               displays[0].mode().horizontal_resolution / 2);
+    layer3.SetImageDimens(width * 2, height);
+    layer3.SetDestFrame(width, height);
+    layer3.SetSrcFrame(width, height);
     layer3.SetPanDest(true);
     layer3.SetPanSrc(true);
+    layer3.SetRotates(true);
     layers.push_back(fbl::move(layer3));
 
     printf("Initializing layers\n");

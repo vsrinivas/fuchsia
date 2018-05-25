@@ -57,6 +57,7 @@ public:
     void SetPanSrc(bool pan) { pan_src_ = pan; }
     void SetPanDest(bool pan) { pan_dest_ = pan; }
     void SetLayerToggle(bool toggle) { layer_toggle_ = toggle; }
+    void SetRotates(bool rotates) { rotates_ = rotates; }
 
     // Finish initializing the layer. All Set* methods should be called before this.
     bool Init(zx_handle_t channel);
@@ -105,10 +106,12 @@ private:
     uint32_t image_format_ = 0;
     frame_t src_frame_ = {};
     frame_t dest_frame_ = {};
+    uint8_t rotation_ = fuchsia_display_Transform_IDENTITY;
     bool layer_flipping_ = false;
     bool pan_src_ = false;
     bool pan_dest_ = false;
     bool layer_toggle_ = false;
+    bool rotates_ = false;
 
     bool alt_image_ = false;
     Image* images_[2];

@@ -10,6 +10,7 @@
 
 static constexpr uint32_t kSrcFrameBouncePeriod = 90;
 static constexpr uint32_t kDestFrameBouncePeriod = 60;
+static constexpr uint32_t kRotationPeriod = 24;
 
 static uint32_t colors[] = {
     0xffff0000, 0xff00ff00, 0xff0000ff,
@@ -112,7 +113,11 @@ bool VirtualLayer::Init(zx_handle_t dc_handle) {
         config.image_config.height = image_height_;
         config.image_config.width = image_width_;
         config.image_config.pixel_format = image_format_;
+#if !USE_INTEL_Y_TILING
         config.image_config.type = IMAGE_TYPE_SIMPLE;
+#else
+        config.image_config.type = 2; // IMAGE_TYPE_Y_LEGACY
+#endif
 
         if (zx_channel_write(dc_handle, 0, &config, sizeof(config), nullptr, 0) != ZX_OK) {
             printf("Setting layer config failed\n");
@@ -138,10 +143,25 @@ void VirtualLayer::StepLayout(int32_t frame_num) {
     if (pan_src_) {
         src_frame_.x_pos =
                 interpolate(image_width_ - src_frame_.width, frame_num, kSrcFrameBouncePeriod);
+
     }
     if (pan_dest_) {
         dest_frame_.x_pos =
                 interpolate(width_ - dest_frame_.width, frame_num, kDestFrameBouncePeriod);
+    }
+    if (rotates_) {
+        switch ((frame_num / kRotationPeriod) % 4) {
+            case 0: rotation_ = fuchsia_display_Transform_IDENTITY; break;
+            case 1: rotation_ = fuchsia_display_Transform_ROT_90; break;
+            case 2: rotation_ = fuchsia_display_Transform_ROT_180; break;
+            case 3: rotation_ = fuchsia_display_Transform_ROT_270; break;
+        }
+
+        if (frame_num % kRotationPeriod == 0 && frame_num != 0) {
+            uint32_t tmp = dest_frame_.width;
+            dest_frame_.width = dest_frame_.height;
+            dest_frame_.height = tmp;
+        }
     }
 
     frame_t display = {};
@@ -152,10 +172,20 @@ void VirtualLayer::StepLayout(int32_t frame_num) {
         // Calculate the portion of the dest frame which shows up on this display
         if (compute_intersection(display, dest_frame_, &layers_[i].dest)) {
             // Find the subset of the src region which shows up on this display
-            layers_[i].src.x_pos = src_frame_.x_pos + (layers_[i].dest.x_pos - dest_frame_.x_pos);
-            layers_[i].src.y_pos = src_frame_.y_pos;
-            layers_[i].src.width = layers_[i].dest.width;
-            layers_[i].src.height = layers_[i].dest.height;
+            if (rotation_ == fuchsia_display_Transform_IDENTITY
+                    || rotation_ == fuchsia_display_Transform_ROT_180) {
+                layers_[i].src.x_pos =
+                        src_frame_.x_pos + (layers_[i].dest.x_pos - dest_frame_.x_pos);
+                layers_[i].src.y_pos = src_frame_.y_pos;
+                layers_[i].src.width = layers_[i].dest.width;
+                layers_[i].src.height = layers_[i].dest.height;
+            } else {
+                layers_[i].src.x_pos = src_frame_.x_pos;
+                layers_[i].src.y_pos =
+                        src_frame_.y_pos + (layers_[i].dest.y_pos - dest_frame_.y_pos);
+                layers_[i].src.height = layers_[i].dest.width;
+                layers_[i].src.width = layers_[i].dest.height;
+            }
 
             // Put the dest frame coordinates in the display's coord space
             layers_[i].dest.x_pos -= display.x_pos;
@@ -207,7 +237,7 @@ void VirtualLayer::SetLayerPositions(zx_handle_t dc_handle) {
 
     for (auto& layer : layers_) {
         msg.layer_id = layer.id;
-        msg.transform = fuchsia_display_Transform_IDENTITY;
+        msg.transform = rotation_;
 
         msg.src_frame.width = layer.src.width;
         msg.src_frame.height = layer.src.height;

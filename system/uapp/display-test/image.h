@@ -10,6 +10,22 @@
 #include <zircon/types.h>
 #include <zircon/pixelformat.h>
 
+// Intel only supports 90/270 rotation for Y-tiled images, so add
+// a define to enable using it for testing.
+#if defined(__x86_64__)
+#define USE_INTEL_Y_TILING 1
+
+#define TILE_PIXEL_WIDTH 32u
+#define TILE_PIXEL_HEIGHT 32u
+#define TILE_BYTES_PER_PIXEL 4u
+#define TILE_NUM_BYTES 4096u
+#define TILE_NUM_PIXELS (TILE_NUM_BYTES / TILE_BYTES_PER_PIXEL)
+#define SUBTILE_COLUMN_WIDTH 4u
+
+#else
+#define USE_INTEL_Y_TILING 0
+#endif
+
 // Indicies into event and event_ids
 #define WAIT_EVENT 0
 #define PRESENT_EVENT 1
