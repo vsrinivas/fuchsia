@@ -130,6 +130,7 @@ zx_status_t devmgr_launch(zx_handle_t job, const char* name,
     } else {
         printf("devmgr: launch %s (%s) OK\n", argv[0], name);
     }
+    zx_handle_close(job_copy);
     return status;
 }
 

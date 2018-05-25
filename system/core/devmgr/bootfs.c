@@ -19,23 +19,23 @@ zx_status_t bootfs_create(bootfs_t* bfs, zx_handle_t vmo) {
     zx_status_t r = zx_vmo_read(vmo, &hdr, 0, sizeof(hdr));
     if (r < 0) {
         printf("bootfs_create: couldn't read boot_data - %d\n", r);
+        zx_handle_close(vmo);
         return r;
     }
     if (hdr.magic != BOOTFS_MAGIC) {
         printf("bootfs_create: incorrect bootdata header: %x\n", hdr.magic);
+        zx_handle_close(vmo);
         return ZX_ERR_IO;
     }
-    if ((r = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &bfs->vmo)) < 0) {
-        return r;
-    }
-    uintptr_t addr;
+    zx_vaddr_t addr;
     if ((r = zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0,
                          sizeof(hdr) + hdr.dirsize,
                          ZX_VM_FLAG_PERM_READ, &addr)) < 0) {
         printf("boofts_create: couldn't map directory: %d\n", r);
-        zx_handle_close(bfs->vmo);
+        zx_handle_close(vmo);
         return r;
     }
+    bfs->vmo = vmo;
     bfs->dirsize = hdr.dirsize;
     bfs->dir = (void*)addr + sizeof(hdr);
     return ZX_OK;

@@ -545,6 +545,7 @@ int main(int argc, char** argv) {
     zx_channel_create(0, &appmgr_req_cli, &appmgr_req_srv);
     zx_event_create(0, &fshost_event);
 
+    bootfs_create_from_startup_handle();
     devmgr_vfs_init();
 
     load_cmdline_from_bootfs();
@@ -607,10 +608,10 @@ static loader_service_t* loader_service;
 
 #define MAXHND ZX_CHANNEL_MAX_MSG_HANDLES
 
-void fshost_start(void) {
-    zx_handle_t vmo = zx_get_startup_handle(PA_HND(PA_VMO_BOOTFS, 0));
-    if ((vmo == ZX_HANDLE_INVALID) ||
-        (bootfs_create(&bootfs, vmo) != ZX_OK)) {
+void bootfs_create_from_startup_handle(void) {
+    zx_handle_t bootfs_vmo = zx_get_startup_handle(PA_HND(PA_VMO_BOOTFS, 0));
+    if ((bootfs_vmo == ZX_HANDLE_INVALID) ||
+        (bootfs_create(&bootfs, bootfs_vmo) != ZX_OK)) {
         printf("devmgr: cannot find and open bootfs\n");
         exit(1);
     }
@@ -618,20 +619,23 @@ void fshost_start(void) {
     // create a local loader service backed directly by the primary bootfs
     // to allow us to load the fshost (since we don't have filesystems before
     // the fshost starts up).
-    zx_handle_t svc;
+    zx_handle_t ldsvc;
     if ((loader_service_create(NULL, &loader_ops, &bootfs, &loader_service) != ZX_OK) ||
-        (loader_service_connect(loader_service, &svc) != ZX_OK)) {
+        (loader_service_connect(loader_service, &ldsvc) != ZX_OK)) {
         printf("devmgr: cannot create loader service\n");
         exit(1);
     }
 
     // set the bootfs-loader as the default loader service for now
-    zx_handle_close(dl_set_loader_service(svc));
+    zx_handle_close(dl_set_loader_service(ldsvc));
+}
 
+void fshost_start(void) {
     // assemble handles to pass down to fshost
     zx_handle_t handles[MAXHND];
     uint32_t types[MAXHND];
     size_t n = 0;
+    zx_handle_t ldsvc;
 
     // pass /, /dev, and /svc handles to fsboot
     if (zx_channel_create(0, &fs_root, &handles[0]) == ZX_OK) {
@@ -643,15 +647,16 @@ void fshost_start(void) {
     if ((handles[n] = fs_clone("svc")) != ZX_HANDLE_INVALID) {
         types[n++] = PA_HND(PA_USER0, 2);
     }
-    if (zx_channel_create(0, &svc, &handles[n]) == ZX_OK) {
+    if (zx_channel_create(0, &ldsvc, &handles[n]) == ZX_OK) {
         types[n++] = PA_HND(PA_USER0, 3);
     } else {
-        svc = ZX_HANDLE_INVALID;
+        ldsvc = ZX_HANDLE_INVALID;
     }
 
     // pass primary bootfs to fshost
-    handles[n] = vmo;
-    types[n++] = PA_HND(PA_VMO_BOOTFS, 0);
+    if (zx_handle_duplicate(bootfs.vmo, ZX_RIGHT_SAME_RIGHTS, &handles[n]) == ZX_OK) {
+        types[n++] = PA_HND(PA_VMO_BOOTFS, 0);
+    }
 
     // pass fuchsia start event to fshost
     if (zx_handle_duplicate(fshost_event, ZX_RIGHT_SAME_RIGHTS, &handles[n]) == ZX_OK) {
@@ -670,7 +675,7 @@ void fshost_start(void) {
     }
 
     // pass VDSO VMOS to fsboot
-    vmo = ZX_HANDLE_INVALID;
+    zx_handle_t vmo = ZX_HANDLE_INVALID;
     for (size_t m = 0; n < MAXHND; m++) {
         uint32_t type = PA_HND(PA_VMO_VDSO, m);
         if ((handles[n] = zx_get_startup_handle(type)) != ZX_HANDLE_INVALID) {
@@ -715,7 +720,7 @@ void fshost_start(void) {
                   envp, -1, handles, types, n, NULL, 0);
 
     // switch to system loader service provided by fshost
-    zx_handle_close(dl_set_loader_service(svc));
+    zx_handle_close(dl_set_loader_service(ldsvc));
 }
 
 zx_handle_t devmgr_load_file(const char* path) {
@@ -786,4 +791,3 @@ void devmgr_vfs_init(void) {
         printf("devmgr: cannot install namespace: %d\n", r);
     }
 }
-

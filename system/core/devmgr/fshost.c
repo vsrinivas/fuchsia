@@ -57,7 +57,7 @@ bool secondary_bootfs_ready(void) {
     return has_secondary_bootfs;
 }
 
-static ssize_t setup_bootfs_vmo(uint32_t n, uint32_t type, zx_handle_t vmo) {
+static zx_status_t setup_bootfs_vmo(uint32_t n, uint32_t type, zx_handle_t vmo) {
     uint64_t size;
     zx_status_t status = zx_vmo_get_size(vmo, &size);
     if (status != ZX_OK) {
@@ -65,7 +65,7 @@ static ssize_t setup_bootfs_vmo(uint32_t n, uint32_t type, zx_handle_t vmo) {
         return status;
     }
     if (size == 0) {
-        return 0;
+        return ZX_OK;
     }
 
     // map the vmo so that ps will account for it
@@ -85,17 +85,28 @@ static ssize_t setup_bootfs_vmo(uint32_t n, uint32_t type, zx_handle_t vmo) {
             return status;
         }
     }
+    // We need to duplicate |vmo| because |bootfs_create| takes ownership of the
+    // |vmo| and closes it during |bootfs_destroy|. However, we've stored |vmo|
+    // in |cd|, and |callback| will further store |vmo| in memfs.
+    zx_handle_t bootfs_vmo;
+    status = zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &bootfs_vmo);
+    if (status != ZX_OK) {
+        printf("devmgr: failed to duplicate vmo for /system (%d)\n", status);
+        return status;
+    }
     bootfs_t bfs;
-    if (bootfs_create(&bfs, vmo) == ZX_OK) {
+    if (bootfs_create(&bfs, bootfs_vmo) == ZX_OK) {
         bootfs_parse(&bfs, callback, &cd);
         bootfs_destroy(&bfs);
+    } else {
+        zx_handle_close(bootfs_vmo);
     }
     if (type == BOOTDATA_BOOTFS_SYSTEM) {
         // TODO(abarth): Uncomment this line when we're ready to make /system
         // read only.
         // systemfs_set_readonly(getenv("zircon.system.writable") == NULL);
     }
-    return cd.file_count;
+    return ZX_OK;
 }
 
 static void setup_last_crashlog(zx_handle_t vmo_in, uint64_t off_in, size_t sz) {
@@ -242,14 +253,6 @@ static void setup_bootfs(void) {
 done:
         zx_handle_close(vmo);
     }
-}
-
-ssize_t devmgr_add_systemfs_vmo(zx_handle_t vmo) {
-    ssize_t added = setup_bootfs_vmo(100, BOOTDATA_BOOTFS_SYSTEM, vmo);
-    if (added > 0) {
-        fuchsia_start();
-    }
-    return added;
 }
 
 // Look for VMOs passed as startup handles of PA_HND_TYPE type, and add them to

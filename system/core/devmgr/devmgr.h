@@ -48,16 +48,13 @@ zx_status_t devmgr_launch(zx_handle_t job, const char* name,
                           const char** envp, int stdiofd,
                           zx_handle_t* handles, uint32_t* types, size_t len,
                           zx_handle_t* proc_out, uint32_t flags);
-void devmgr_launch_devhost(zx_handle_t job,
-                           const char* name, int argc, char** argv,
-                           zx_handle_t hdevice, zx_handle_t hrpc);
-ssize_t devmgr_add_systemfs_vmo(zx_handle_t vmo);
 bool secondary_bootfs_ready(void);
 
 #define FSHOST_SIGNAL_READY      ZX_USER_SIGNAL_0  // Signalled by fshost
 #define FSHOST_SIGNAL_EXIT       ZX_USER_SIGNAL_1  // Signalled by devmgr
 #define FSHOST_SIGNAL_EXIT_DONE  ZX_USER_SIGNAL_2  // Signalled by fshost
 
+void bootfs_create_from_startup_handle(void);
 void fshost_start(void);
 zx_status_t copy_vmo(zx_handle_t src, zx_off_t offset, size_t length, zx_handle_t* out_dest);
 
