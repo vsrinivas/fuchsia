@@ -8,12 +8,13 @@
 #include "garnet/bin/ui/sketchy/resources/import_node.h"
 #include "garnet/bin/ui/sketchy/resources/stroke.h"
 #include "lib/escher/util/fuchsia_utils.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace sketchy_service {
 
-CanvasImpl::CanvasImpl(scenic_lib::Session* session, escher::Escher* escher)
-    : session_(session),
+CanvasImpl::CanvasImpl(async::Loop* loop, scenic_lib::Session* session,
+                       escher::Escher* escher)
+    : loop_(loop),
+      session_(session),
       shared_buffer_pool_(session, escher),
       stroke_manager_(escher) {}
 
@@ -37,7 +38,7 @@ void CanvasImpl::Present(uint64_t presentation_time, PresentCallback callback) {
   // presentation time are applied.
   for (auto it = commands_->begin(); it != commands_->end(); ++it) {
     if (!ApplyCommand(std::move(*it))) {
-      fsl::MessageLoop::GetCurrent()->QuitNow();
+      loop_->Quit();
     }
   }
   commands_.reset();

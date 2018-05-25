@@ -7,22 +7,24 @@
 #include <deque>
 #include <list>
 
+#include <lib/app/cpp/application_context.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/fxl/macros.h>
+#include <lib/ui/scenic/client/resources.h>
+#include <lib/ui/view_framework/base_view.h>
 #include <fbl/vector.h>
+
 #include <garnet/examples/ui/video_display/camera_client.h>
 #include <garnet/examples/ui/video_display/fake_camera_source.h>
 #include <garnet/examples/ui/video_display/fenced_buffer.h>
 #include <garnet/examples/ui/video_display/frame_scheduler.h>
-#include <lib/app/cpp/application_context.h>
-#include <lib/fsl/tasks/message_loop.h>
-#include <lib/fxl/macros.h>
-#include <lib/ui/scenic/client/resources.h>
-#include <lib/ui/view_framework/base_view.h>
+
 
 namespace video_display {
 
 class View : public mozart::BaseView {
  public:
-  View(component::ApplicationContext* application_context,
+  View(async::Loop* loop, component::ApplicationContext* application_context,
        views_v1::ViewManagerPtr view_manager,
        fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
        bool use_fake_camera);
@@ -71,7 +73,7 @@ class View : public mozart::BaseView {
   // The currently selected format.
   camera_video_format_t format_;
 
-  fsl::MessageLoop* loop_;
+  async::Loop* const loop_;
   // The number of buffers to allocate while setting up the camera stream.
   // This number has to be at least 2, since scenic will hold onto one buffer
   // at all times.

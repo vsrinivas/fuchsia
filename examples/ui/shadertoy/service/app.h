@@ -5,7 +5,9 @@
 #ifndef GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_APP_H_
 #define GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_APP_H_
 
+#include <lib/async-loop/cpp/loop.h>
 #include <shadertoy/cpp/fidl.h>
+
 #include "garnet/examples/ui/shadertoy/service/shadertoy_impl.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/escher/escher.h"
@@ -23,7 +25,8 @@ class ShadertoyState;
 // ShadertoyFactory.  What is the best-practice pattern to use here?
 class App : public shadertoy::ShadertoyFactory {
  public:
-  App(component::ApplicationContext* app_context, escher::Escher* escher);
+  App(async::Loop* loop, component::ApplicationContext* app_context,
+      escher::Escher* escher);
   ~App();
 
   escher::Escher* escher() const { return escher_; }

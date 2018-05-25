@@ -12,13 +12,13 @@ int main(int argc, char* argv[]) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   bool just_tilts = command_line.HasOption("tilt");
 
-  async::Loop message_loop(&kAsyncLoopConfigMakeDefault);
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  bt_beacon_reader::App app(just_tilts);
+  bt_beacon_reader::App app(&loop, just_tilts);
 
-  async::PostTask(message_loop.async(), [&app] { app.StartScanning(); });
+  async::PostTask(loop.async(), [&app] { app.StartScanning(); });
 
-  message_loop.Run();
+  loop.Run();
 
   return EXIT_SUCCESS;
 }

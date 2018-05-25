@@ -8,14 +8,14 @@
 
 namespace sketchy_lib {
 
-Canvas::Canvas(component::ApplicationContext* context)
-    : Canvas(context->ConnectToEnvironmentService<sketchy::Canvas>()) {}
+Canvas::Canvas(component::ApplicationContext* context, async::Loop* loop)
+    : Canvas(context->ConnectToEnvironmentService<sketchy::Canvas>(), loop) {}
 
-Canvas::Canvas(sketchy::CanvasPtr canvas)
-    : canvas_(std::move(canvas)), next_resource_id_(1) {
+Canvas::Canvas(sketchy::CanvasPtr canvas, async::Loop* loop)
+    : canvas_(std::move(canvas)), loop_(loop), next_resource_id_(1) {
   canvas_.set_error_handler([this] {
     FXL_LOG(INFO) << "sketchy_lib::Canvas: lost connection to sketchy::Canvas.";
-    fsl::MessageLoop::GetCurrent()->QuitNow();
+    loop_->Quit();
   });
 }
 

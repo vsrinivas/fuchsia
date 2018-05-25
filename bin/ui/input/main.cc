@@ -14,13 +14,13 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/log_settings.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
+#include "lib/fxl/time/time_point.h"
 #include "lib/ui/input/cpp/formatting.h"
 
 namespace {
@@ -33,8 +33,9 @@ int64_t InputEventTimestampNow() {
 namespace input {
 class InputApp {
  public:
-  InputApp()
-      : application_context_(
+  InputApp(async::Loop* loop)
+      : loop_(loop),
+        application_context_(
             component::ApplicationContext::CreateFromStartupInfo()) {
     registry_ = application_context_
                     ->ConnectToEnvironmentService<fuchsia::ui::input::InputDeviceRegistry>();
@@ -114,12 +115,12 @@ class InputApp {
         << "\t--height=h specifies the height of the display (default: 1000)."
         << std::endl;
 
-    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+    loop_->Quit();
   }
 
   void Error(std::string message) {
     std::cout << message << std::endl;
-    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+    loop_->Quit();
   }
 
   fuchsia::ui::input::InputDevicePtr RegisterTouchscreen(uint32_t width, uint32_t height) {
@@ -255,7 +256,7 @@ class InputApp {
     zx::duration delta = zx::msec(duration_ms);
     async::PostDelayedTask(
         async_get_default(),
-        fxl::MakeCopyable([device = std::move(input_device)]() mutable {
+        fxl::MakeCopyable([this, device = std::move(input_device)]() mutable {
           // UP
           fuchsia::ui::input::TouchscreenReportPtr touchscreen =
               fuchsia::ui::input::TouchscreenReport::New();
@@ -267,7 +268,7 @@ class InputApp {
 
           FXL_VLOG(1) << "SendTap " << report;
           device->DispatchReport(std::move(report));
-          fsl::MessageLoop::GetCurrent()->PostQuitTask();
+          loop_->Quit();
         }),
         delta);
   }
@@ -287,7 +288,7 @@ class InputApp {
     zx::duration delta = zx::msec(duration_ms);
     async::PostDelayedTask(
         async_get_default(),
-        fxl::MakeCopyable([device = std::move(input_device)]() mutable {
+        fxl::MakeCopyable([this, device = std::move(input_device)]() mutable {
           // RELEASED
           fuchsia::ui::input::KeyboardReportPtr keyboard = fuchsia::ui::input::KeyboardReport::New();
           keyboard->pressed_keys.resize(0);
@@ -297,7 +298,7 @@ class InputApp {
           report.keyboard = std::move(keyboard);
           FXL_VLOG(1) << "SendKeyPress " << report;
           device->DispatchReport(std::move(report));
-          fsl::MessageLoop::GetCurrent()->PostQuitTask();
+          loop_->Quit();
         }),
         delta);
   }
@@ -321,37 +322,39 @@ class InputApp {
     zx::duration delta = zx::msec(duration_ms);
     async::PostDelayedTask(
         async_get_default(),
-        fxl::MakeCopyable([device = std::move(input_device), x1, y1]() mutable {
-          // MOVE
-          fuchsia::ui::input::Touch touch;
-          touch.finger_id = 1;
-          touch.x = x1;
-          touch.y = y1;
-          fuchsia::ui::input::TouchscreenReportPtr touchscreen =
-              fuchsia::ui::input::TouchscreenReport::New();
-          touchscreen->touches.push_back(std::move(touch));
+        fxl::MakeCopyable(
+          [this, device = std::move(input_device), x1, y1]() mutable {
+              // MOVE
+              fuchsia::ui::input::Touch touch;
+              touch.finger_id = 1;
+              touch.x = x1;
+              touch.y = y1;
+              fuchsia::ui::input::TouchscreenReportPtr touchscreen =
+                  fuchsia::ui::input::TouchscreenReport::New();
+              touchscreen->touches.push_back(std::move(touch));
 
-          fuchsia::ui::input::InputReport report;
-          report.event_time = InputEventTimestampNow();
-          report.touchscreen = std::move(touchscreen);
-          FXL_VLOG(1) << "SendSwipe " << report;
-          device->DispatchReport(std::move(report));
+              fuchsia::ui::input::InputReport report;
+              report.event_time = InputEventTimestampNow();
+              report.touchscreen = std::move(touchscreen);
+              FXL_VLOG(1) << "SendSwipe " << report;
+              device->DispatchReport(std::move(report));
 
-          // UP
-          touchscreen = fuchsia::ui::input::TouchscreenReport::New();
-          touchscreen->touches.resize(0);
+              // UP
+              touchscreen = fuchsia::ui::input::TouchscreenReport::New();
+              touchscreen->touches.resize(0);
 
-          report = fuchsia::ui::input::InputReport();
-          report.event_time = InputEventTimestampNow();
-          report.touchscreen = std::move(touchscreen);
-          FXL_VLOG(1) << "SendSwipe " << report;
-          device->DispatchReport(std::move(report));
+              report = fuchsia::ui::input::InputReport();
+              report.event_time = InputEventTimestampNow();
+              report.touchscreen = std::move(touchscreen);
+              FXL_VLOG(1) << "SendSwipe " << report;
+              device->DispatchReport(std::move(report));
 
-          fsl::MessageLoop::GetCurrent()->PostQuitTask();
+              loop_->Quit();
         }),
         delta);
   }
 
+  async::Loop* const loop_;
   std::unique_ptr<component::ApplicationContext> application_context_;
   fidl::InterfacePtr<fuchsia::ui::input::InputDeviceRegistry> registry_;
 };
@@ -363,7 +366,7 @@ int main(int argc, char** argv) {
     return 1;
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  input::InputApp app;
+  input::InputApp app(&loop);
   async::PostTask(loop.async(),
                   [&app, command_line] { app.Run(command_line); });
   loop.Run();

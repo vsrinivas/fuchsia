@@ -9,15 +9,13 @@
 #include <mutex>
 #include <queue>
 #include <thread>
+
+#include <lib/async-loop/cpp/loop.h>
 #include <vulkan/vulkan.hpp>
 
 #include "garnet/examples/ui/shadertoy/service/pipeline.h"
 #include "lib/escher/escher.h"
 #include "lib/escher/impl/model_data.h"
-
-namespace fsl {
-class MessageLoop;
-}
 
 namespace shadertoy {
 
@@ -28,7 +26,8 @@ namespace shadertoy {
 class Compiler final {
  public:
   // |render_pass| is not owned by us; we don't need to destroy it.
-  explicit Compiler(escher::Escher* escher, vk::RenderPass render_pass,
+  explicit Compiler(async::Loop* loop, escher::Escher* escher,
+                    vk::RenderPass render_pass,
                     vk::DescriptorSetLayout descriptor_set_layout);
   ~Compiler();
 
@@ -71,7 +70,7 @@ class Compiler final {
                                 vk::ShaderModule fragment_module,
                                 const escher::MeshSpec& mesh_spec);
 
-  fsl::MessageLoop* const loop_;
+  async::Loop* const loop_;
   escher::Escher* const escher_;
   escher::impl::ModelDataPtr model_data_;
   vk::RenderPass render_pass_;

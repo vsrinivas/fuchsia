@@ -5,6 +5,8 @@
 #ifndef GARNET_EXAMPLES_UI_SKETCHY_VIEW_H_
 #define GARNET_EXAMPLES_UI_SKETCHY_VIEW_H_
 
+#include <lib/async-loop/cpp/loop.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/sketchy/client/canvas.h"
@@ -19,7 +21,7 @@ using namespace sketchy_lib;
 // clear the canvas.
 class View final : public mozart::BaseView {
  public:
-  View(component::ApplicationContext* application_context,
+  View(async::Loop* loop, component::ApplicationContext* application_context,
        views_v1::ViewManagerPtr view_manager,
        fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
 
