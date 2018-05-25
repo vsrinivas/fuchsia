@@ -98,6 +98,8 @@ template("sdk") {
 
   # Copies the manifest to a central location.
   copy(copy_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
     sources = [
       "$target_gen_dir/$generation_target_name.sdk",
     ]
@@ -113,6 +115,8 @@ template("sdk") {
 
   # Verifies that the manifest is valid.
   compiled_action(verification_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
     tool = "//build/tools/json_validator"
 
     stamp_file = "$target_gen_dir/$target_name.verified"
@@ -139,6 +143,8 @@ template("sdk") {
   }
 
   group(main_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
     deps = [
       ":$copy_target_name",
       ":$generation_target_name",
