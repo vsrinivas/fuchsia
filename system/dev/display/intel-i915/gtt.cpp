@@ -12,6 +12,7 @@
 #include "intel-i915.h"
 #include "gtt.h"
 #include "macros.h"
+#include "tiling.h"
 #include "registers.h"
 
 #define PAGE_PRESENT (1 << 0)
@@ -20,9 +21,10 @@ namespace {
 
 constexpr size_t kEntriesPerPinTxn = PAGE_SIZE / sizeof(zx_paddr_t);
 
-inline uint64_t gen_pte_encode(uint64_t bus_addr, bool valid)
+inline uint64_t gen_pte_encode(uint64_t bus_addr)
 {
-    return bus_addr | (valid ? PAGE_PRESENT : 0);
+    // Make every page present so we don't have to deal with padding for framebuffers
+    return bus_addr | PAGE_PRESENT;
 }
 
 inline uint32_t get_pte_offset(uint32_t idx) {
@@ -85,7 +87,7 @@ zx_status_t Gtt::Init(Controller* controller) {
     }
 
     // Populate the gtt with the scratch buffer.
-    uint64_t pte = gen_pte_encode(scratch_buffer_paddr_, false);
+    uint64_t pte = gen_pte_encode(scratch_buffer_paddr_);
     unsigned i;
     for (i = 0; i < gtt_size / sizeof(uint64_t); i++) {
         controller_->mmio_space()->Write<uint64_t>(get_pte_offset(i), pte);
@@ -97,8 +99,8 @@ zx_status_t Gtt::Init(Controller* controller) {
 }
 
 zx_status_t Gtt::AllocRegion(uint32_t length, uint32_t align_pow2,
-                             uint32_t pte_padding, fbl::unique_ptr<GttRegion>* region_out) {
-    uint32_t region_length = ROUNDUP(length, PAGE_SIZE) + (pte_padding * PAGE_SIZE);
+                             fbl::unique_ptr<GttRegion>* region_out) {
+    uint32_t region_length = ROUNDUP(length, PAGE_SIZE);
     fbl::AllocChecker ac;
     auto r = fbl::make_unique_checked<GttRegion>(&ac, this);
     if (!ac.check()) {
@@ -107,26 +109,21 @@ zx_status_t Gtt::AllocRegion(uint32_t length, uint32_t align_pow2,
     if (region_allocator_.GetRegion(region_length, align_pow2, r->region_) != ZX_OK) {
         return ZX_ERR_NO_RESOURCES;
     }
-    r->pte_padding_ = pte_padding;
     *region_out = fbl::move(r);
     return ZX_OK;
 }
 
-void Gtt::SetupForMexec(uintptr_t stolen_fb, uint32_t length, uint32_t pte_padding) {
+void Gtt::SetupForMexec(uintptr_t stolen_fb, uint32_t length) {
     // Just clobber everything to get the bootloader framebuffer to work.
     unsigned pte_idx = 0;
     for (unsigned i = 0; i < ROUNDUP(length, PAGE_SIZE) / PAGE_SIZE; i++, stolen_fb += PAGE_SIZE) {
-        uint64_t pte = gen_pte_encode(stolen_fb, true);
+        uint64_t pte = gen_pte_encode(stolen_fb);
         controller_->mmio_space()->Write<uint64_t>(get_pte_offset(pte_idx++), pte);
-    }
-    uint64_t padding_pte = gen_pte_encode(scratch_buffer_paddr_, true);
-    for (unsigned i = 0; i < pte_padding; i++) {
-        controller_->mmio_space()->Write<uint64_t>(get_pte_offset(pte_idx++), padding_pte);
     }
     controller_->mmio_space()->Read<uint32_t>(get_pte_offset(pte_idx - 1)); // Posting read
 }
 
-GttRegion::GttRegion(Gtt* gtt) : gtt_(gtt) {}
+GttRegion::GttRegion(Gtt* gtt) : gtt_(gtt), is_rotated_(false) {}
 
 GttRegion::~GttRegion() {
     ClearRegion(false);
@@ -134,7 +131,7 @@ GttRegion::~GttRegion() {
 
 zx_status_t GttRegion::PopulateRegion(zx_handle_t vmo, uint64_t page_offset,
                                       uint64_t length, bool writable) {
-    if ((PAGE_SIZE * pte_padding_) + length > region_->size) {
+    if (length > region_->size) {
         return ZX_ERR_INVALID_ARGS;
     }
     if (mapped_end_ != 0) {
@@ -179,14 +176,10 @@ zx_status_t GttRegion::PopulateRegion(zx_handle_t vmo, uint64_t page_offset,
         for (unsigned i = 0; i < actual_entries; i++) {
             for (unsigned j = 0;
                     j < gtt_->min_contiguity_ / PAGE_SIZE && pte_idx < pte_idx_end; j++) {
-                uint64_t pte = gen_pte_encode(paddrs[i] + j * PAGE_SIZE, true);
+                uint64_t pte = gen_pte_encode(paddrs[i] + j * PAGE_SIZE);
                 gtt_->controller_->mmio_space()->Write<uint64_t>(get_pte_offset(pte_idx++), pte);
             }
         }
-    }
-    uint64_t padding_pte = gen_pte_encode(gtt_->scratch_buffer_paddr_, true);
-    for (unsigned i = 0; i < pte_padding_; i++) {
-        gtt_->controller_->mmio_space()->Write<uint64_t>(get_pte_offset(pte_idx++), padding_pte);
     }
 
     gtt_->controller_->mmio_space()->Read<uint32_t>(get_pte_offset(pte_idx - 1)); // Posting read
@@ -199,7 +192,7 @@ void GttRegion::ClearRegion(bool close_vmo) {
     }
 
     uint32_t pte_idx = static_cast<uint32_t>(region_->base / PAGE_SIZE);
-    uint64_t pte = gen_pte_encode(gtt_->scratch_buffer_paddr_, false);
+    uint64_t pte = gen_pte_encode(gtt_->scratch_buffer_paddr_);
     auto mmio_space = gtt_->controller_->mmio_space();
 
     for (unsigned i = 0; i < mapped_end_ / PAGE_SIZE; i++) {
@@ -221,6 +214,49 @@ void GttRegion::ClearRegion(bool close_vmo) {
         zx_handle_close(vmo_);
     }
     vmo_ = ZX_HANDLE_INVALID;
+}
+
+void GttRegion::SetRotation(uint32_t rotation, const image_t& image) {
+    bool rotated = (rotation == FRAME_TRANSFORM_ROT_90 || rotation == FRAME_TRANSFORM_ROT_270);
+    if (rotated == is_rotated_) {
+        return;
+    }
+    is_rotated_ = rotated;
+    // Displaying an image with 90/270 degree rotation requires rearranging the image's
+    // GTT mapping. Since permutations are composed of disjoint cycles and because we can
+    // calculate each page's location in the new mapping, we can remap the image by shifting
+    // the GTT entries around each cycle. We use one of the ignored bits in the global GTT
+    // PTEs to keep track of whether or not entries have been rotated.
+    constexpr uint32_t kRotatedFlag = (1 << 1);
+
+    uint64_t mask = is_rotated_ ? kRotatedFlag : 0;
+    uint32_t width = width_in_tiles(image.type, image.width, image.pixel_format);
+    uint32_t height = height_in_tiles(image.type, image.height, image.pixel_format);
+
+    auto mmio_space = gtt_->controller_->mmio_space();
+    uint32_t pte_offset = static_cast<uint32_t>(base() / PAGE_SIZE);
+    for (uint32_t i = 0; i < size() / PAGE_SIZE; i++) {
+        uint64_t entry = mmio_space->Read<uint64_t>(get_pte_offset(i + pte_offset));
+        uint32_t position = i;
+        // If the entry has already been cycled into the correct place, the
+        // loop check will immediately fail.
+        while ((entry & kRotatedFlag) != mask) {
+            if (mask) {
+                uint32_t x = position % width;
+                uint32_t y = position / width;
+                position = ((x + 1) * height) - y - 1;
+            } else {
+                uint32_t x = position % height;
+                uint32_t y = position / height;
+                position = ((height - x - 1) * width) + y;
+            }
+            uint32_t dest_offset = get_pte_offset(position + pte_offset);
+
+            uint64_t next_entry = mmio_space->Read<uint64_t>(dest_offset);
+            mmio_space->Write<uint64_t>(dest_offset, entry ^ kRotatedFlag);
+            entry = next_entry;
+        }
+    }
 }
 
 } // namespace i915

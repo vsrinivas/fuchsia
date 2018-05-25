@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ddk/protocol/display-controller.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <hwreg/mmio.h>
@@ -21,6 +22,8 @@ public:
     explicit GttRegion(Gtt* gtt);
     ~GttRegion();
 
+    void SetRotation(uint32_t rotation, const image_t& image);
+
     zx_status_t PopulateRegion(zx_handle_t vmo, uint64_t page_offset,
                                uint64_t length, bool writable = false);
     void ClearRegion(bool close_vmo);
@@ -33,11 +36,12 @@ private:
 
     fbl::Vector<zx::pmt> pmts_;
     uint32_t mapped_end_ = 0;
-    uint32_t pte_padding_;
     // The region's current vmo. The region does not own the vmo handle; it
     // is up to the owner of the region to determine when the vmo should be
     // closed.
     zx_handle_t vmo_ = ZX_HANDLE_INVALID;
+
+    bool is_rotated_;
 
     friend class Gtt;
 };
@@ -48,9 +52,8 @@ public:
     ~Gtt();
     zx_status_t Init(Controller* controller);
     zx_status_t AllocRegion(uint32_t length,
-                            uint32_t align_pow2, uint32_t pte_padding,
-                            fbl::unique_ptr<GttRegion>* region_out);
-    void SetupForMexec(uintptr_t stolen_fb, uint32_t length, uint32_t pte_padding);
+                            uint32_t align_pow2, fbl::unique_ptr<GttRegion>* region_out);
+    void SetupForMexec(uintptr_t stolen_fb, uint32_t length);
 
     uint64_t size() const { return gfx_mem_size_; }
 private:

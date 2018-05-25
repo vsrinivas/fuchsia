@@ -10,6 +10,7 @@
 #include "registers.h"
 #include "registers-dpll.h"
 #include "registers-transcoder.h"
+#include "tiling.h"
 
 namespace i915 {
 
@@ -135,10 +136,38 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
             plane_surface.WriteTo(controller_->mmio_space());
             continue;
         }
+        image_t* image = &primary->image;
+
+        const fbl::unique_ptr<GttRegion>& region = controller_->GetGttRegion(image->handle);
+        region->SetRotation(primary->transform_mode, *image);
+
+        uint32_t plane_width;
+        uint32_t plane_height;
+        uint32_t stride;
+        uint32_t x_offset;
+        uint32_t y_offset;
+        if (primary->transform_mode == FRAME_TRANSFORM_IDENTITY
+                || primary->transform_mode == FRAME_TRANSFORM_ROT_180) {
+            plane_width = primary->src_frame.width;
+            plane_height = primary->src_frame.height;
+            stride = width_in_tiles(image->type, image->width, image->pixel_format);
+            x_offset = primary->src_frame.x_pos;
+            y_offset = primary->src_frame.y_pos;
+        } else {
+            uint32_t tile_height = height_in_tiles(image->type, image->height, image->pixel_format);
+            uint32_t tile_px_height = get_tile_px_height(image->type, image->pixel_format);
+            uint32_t total_height = tile_height * tile_px_height;
+
+            plane_width = primary->src_frame.height;
+            plane_height = primary->src_frame.width;
+            stride = tile_height;
+            x_offset = total_height - primary->src_frame.y_pos - primary->src_frame.height;
+            y_offset = primary->src_frame.x_pos;
+        }
 
         auto plane_size = pipe_regs.PlaneSurfaceSize(i).FromValue(0);
-        plane_size.set_width_minus_1(primary->dest_frame.width - 1);
-        plane_size.set_height_minus_1(primary->dest_frame.height - 1);
+        plane_size.set_width_minus_1(plane_width - 1);
+        plane_size.set_height_minus_1(plane_height - 1);
         plane_size.WriteTo(mmio_space());
 
         auto plane_pos = pipe_regs.PlanePosition(i).FromValue(0);
@@ -147,13 +176,12 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
         plane_pos.WriteTo(mmio_space());
 
         auto plane_offset = pipe_regs.PlaneOffset(i).FromValue(0);
-        plane_offset.set_start_x(primary->src_frame.x_pos);
-        plane_offset.set_start_y(primary->src_frame.y_pos);
+        plane_offset.set_start_x(x_offset);
+        plane_offset.set_start_y(y_offset);
         plane_offset.WriteTo(mmio_space());
 
         auto stride_reg = pipe_regs.PlaneSurfaceStride(i).FromValue(0);
-        stride_reg.set_stride(primary->image.type,
-                              primary->image.width, primary->image.pixel_format);
+        stride_reg.set_stride(stride);
         stride_reg.WriteTo(controller_->mmio_space());
 
         auto plane_ctrl = pipe_regs.PlaneControl(i).ReadFrom(controller_->mmio_space());
@@ -169,10 +197,19 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
             ZX_ASSERT(primary->image.type == IMAGE_TYPE_YF_TILED);
             plane_ctrl.set_tiled_surface(plane_ctrl.kTilingYF);
         }
+        if (primary->transform_mode == FRAME_TRANSFORM_IDENTITY) {
+            plane_ctrl.set_plane_rotation(plane_ctrl.kIdentity);
+        } else if (primary->transform_mode == FRAME_TRANSFORM_ROT_90) {
+            plane_ctrl.set_plane_rotation(plane_ctrl.k90deg);
+        } else if (primary->transform_mode == FRAME_TRANSFORM_ROT_180) {
+            plane_ctrl.set_plane_rotation(plane_ctrl.k180deg);
+        } else {
+            ZX_ASSERT(primary->transform_mode == FRAME_TRANSFORM_ROT_270);
+            plane_ctrl.set_plane_rotation(plane_ctrl.k270deg);
+        }
         plane_ctrl.WriteTo(controller_->mmio_space());
 
-        uint32_t base_address =
-                static_cast<uint32_t>(reinterpret_cast<uint64_t>(primary->image.handle));
+        uint32_t base_address = static_cast<uint32_t>(region->base());
 
         auto plane_surface = pipe_regs.PlaneSurface(i).ReadFrom(controller_->mmio_space());
         plane_surface.set_surface_base_addr(base_address >> plane_surface.kRShiftCount);
