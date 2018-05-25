@@ -60,7 +60,7 @@ class TokenManagerImpl : public TokenManager {
 
   auth::AuthenticationContextProviderPtr auth_context_provider_;
 
-  std::map<AuthProviderType, component::ApplicationControllerPtr>
+  std::map<AuthProviderType, component::ComponentControllerPtr>
       auth_provider_controllers_;
 
   std::map<AuthProviderType, auth::AuthProviderPtr> auth_providers_;

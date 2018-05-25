@@ -41,7 +41,7 @@ void TileView::Present(
 void TileView::ConnectViews() {
   for (const auto& url : params_.view_urls) {
     component::Services services;
-    component::ApplicationControllerPtr controller;
+    component::ComponentControllerPtr controller;
 
     component::LaunchInfo launch_info;
     launch_info.url = url;
@@ -96,12 +96,11 @@ void TileView::OnChildUnavailable(uint32_t child_key) {
 
 void TileView::AddChildView(
     fidl::InterfaceHandle<views_v1_token::ViewOwner> child_view_owner,
-    const std::string& url,
-    component::ApplicationControllerPtr app_controller) {
+    const std::string& url, component::ComponentControllerPtr controller) {
   const uint32_t view_key = next_child_view_key_++;
 
-  auto view_data = std::make_unique<ViewData>(
-      url, view_key, std::move(app_controller), session());
+  auto view_data = std::make_unique<ViewData>(url, view_key,
+                                              std::move(controller), session());
 
   zx::eventpair host_import_token;
   view_data->host_node.ExportAsRequest(&host_import_token);
@@ -124,7 +123,8 @@ void TileView::RemoveChildView(uint32_t child_key) {
   InvalidateScene();
 }
 
-void TileView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) {
+void TileView::OnSceneInvalidated(
+    fuchsia::images::PresentationInfo presentation_info) {
   if (!has_logical_size() || views_.empty())
     return;
 
@@ -179,7 +179,7 @@ void TileView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation
 }
 
 TileView::ViewData::ViewData(const std::string& url, uint32_t key,
-                             component::ApplicationControllerPtr controller,
+                             component::ComponentControllerPtr controller,
                              scenic_lib::Session* session)
     : url(url),
       key(key),

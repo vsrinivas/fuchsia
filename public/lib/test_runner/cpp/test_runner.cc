@@ -181,11 +181,10 @@ TestRunContext::TestRunContext(
   component::LaunchInfo info;
   info.url = url;
   info.arguments = fxl::To<fidl::VectorPtr<fidl::StringPtr>>(args);
-  launcher->CreateApplication(std::move(info),
-                              child_app_controller_.NewRequest());
+  launcher->CreateApplication(std::move(info), child_controller_.NewRequest());
 
   // If the child app closes, the test is reported as a failure.
-  child_app_controller_.set_error_handler([this] {
+  child_controller_.set_error_handler([this] {
     FXL_LOG(WARNING) << "Child app connection closed unexpectedly. Remaining "
                         "TestRunner clients = "
                      << test_runner_clients_.size();
@@ -270,7 +269,7 @@ void TestRunContext::Teardown(TestRunnerImpl* teardown_client) {
     // app controller connection closes. If this is not reset, a connection
     // close may call test_runner_connection_->Teardown() again and override the
     // success status set here.
-    child_app_controller_.set_error_handler(nullptr);
+    child_controller_.set_error_handler(nullptr);
     test_runner_connection_->Teardown(test_id_, success_);
   }
 }

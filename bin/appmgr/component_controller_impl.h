@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_APPMGR_APPLICATION_CONTROLLER_IMPL_H_
-#define GARNET_BIN_APPMGR_APPLICATION_CONTROLLER_IMPL_H_
+#ifndef GARNET_BIN_APPMGR_COMPONENT_CONTROLLER_IMPL_H_
+#define GARNET_BIN_APPMGR_COMPONENT_CONTROLLER_IMPL_H_
 
 #include <component/cpp/fidl.h>
 #include <fs/pseudo-dir.h>
@@ -36,15 +36,16 @@ enum class ExportedDirType {
   kPublicDebugCtrlLayout,
 };
 
-class ApplicationControllerImpl : public ApplicationController {
+class ComponentControllerImpl : public ComponentController {
  public:
-  ApplicationControllerImpl(
-      fidl::InterfaceRequest<ApplicationController> request, Realm* realm,
-      std::unique_ptr<archive::FileSystem> fs, zx::process process,
-      std::string url, std::string args, std::string label,
-      fxl::RefPtr<Namespace> ns, ExportedDirType export_dir_type,
-      zx::channel exported_dir, zx::channel client_request);
-  ~ApplicationControllerImpl() override;
+  ComponentControllerImpl(fidl::InterfaceRequest<ComponentController> request,
+                          Realm* realm, std::unique_ptr<archive::FileSystem> fs,
+                          zx::process process, std::string url,
+                          std::string args, std::string label,
+                          fxl::RefPtr<Namespace> ns,
+                          ExportedDirType export_dir_type,
+                          zx::channel exported_dir, zx::channel client_request);
+  ~ComponentControllerImpl() override;
 
   HubInfo HubInfo();
 
@@ -52,7 +53,7 @@ class ApplicationControllerImpl : public ApplicationController {
   const std::string& koid() const { return koid_; }
   const fbl::RefPtr<fs::PseudoDir>& hub_dir() const { return hub_.dir(); }
 
-  // |ApplicationController| implementation:
+  // |ComponentController| implementation:
   void Kill() override;
   void Detach() override;
   void Wait(WaitCallback callback) override;
@@ -63,7 +64,7 @@ class ApplicationControllerImpl : public ApplicationController {
 
   bool SendReturnCodeIfTerminated();
 
-  fidl::Binding<ApplicationController> binding_;
+  fidl::Binding<ComponentController> binding_;
   Realm* realm_;
   std::unique_ptr<archive::FileSystem> fs_;
   zx::process process_;
@@ -76,13 +77,12 @@ class ApplicationControllerImpl : public ApplicationController {
 
   fxl::RefPtr<Namespace> ns_;
 
-  async::WaitMethod<ApplicationControllerImpl,
-                    &ApplicationControllerImpl::Handler>
+  async::WaitMethod<ComponentControllerImpl, &ComponentControllerImpl::Handler>
       wait_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(ApplicationControllerImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ComponentControllerImpl);
 };
 
 }  // namespace component
 
-#endif  // GARNET_BIN_APPMGR_APPLICATION_CONTROLLER_IMPL_H_
+#endif  // GARNET_BIN_APPMGR_COMPONENT_CONTROLLER_IMPL_H_

@@ -92,8 +92,8 @@ class GoogleTokenManagerApp : auth::AuthenticationContextProvider {
       launch_info.arguments.push_back(stream.str());
     }
     application_context_->launcher()->CreateApplication(
-        std::move(launch_info), app_controller_.NewRequest());
-    app_controller_.set_error_handler([] {
+        std::move(launch_info), controller_.NewRequest());
+    controller_.set_error_handler([] {
       FXL_LOG(ERROR) << "Error in connecting to TokenManagerFactory service.";
     });
 
@@ -179,7 +179,7 @@ class GoogleTokenManagerApp : auth::AuthenticationContextProvider {
   const std::string user_profile_id_;
   const std::string refresh_token_;
   std::unique_ptr<component::ApplicationContext> application_context_;
-  component::ApplicationControllerPtr app_controller_;
+  component::ComponentControllerPtr controller_;
 
   fidl::Binding<auth::AuthenticationContextProvider>
       auth_context_provider_binding_;

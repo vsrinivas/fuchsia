@@ -14,7 +14,7 @@
 #include <unordered_map>
 
 #include <component/cpp/fidl.h>
-#include "garnet/bin/appmgr/application_controller_impl.h"
+#include "garnet/bin/appmgr/component_controller_impl.h"
 #include "garnet/bin/appmgr/environment_controller_impl.h"
 #include "garnet/bin/appmgr/hub/hub_info.h"
 #include "garnet/bin/appmgr/hub/realm_hub.h"
@@ -48,7 +48,7 @@ class Realm {
 
   void CreateApplication(
       LaunchInfo launch_info,
-      fidl::InterfaceRequest<ApplicationController> controller);
+      fidl::InterfaceRequest<ComponentController> controller);
 
   // Removes the child realm from this realm and returns the owning
   // reference to the child's controller. The caller of this function typically
@@ -60,8 +60,8 @@ class Realm {
   // reference to the application's controller. The caller of this function
   // typically destroys the controller (and hence the application) shortly after
   // calling this function.
-  std::unique_ptr<ApplicationControllerImpl> ExtractApplication(
-      ApplicationControllerImpl* controller);
+  std::unique_ptr<ComponentControllerImpl> ExtractApplication(
+      ComponentControllerImpl* controller);
 
   void AddBinding(fidl::InterfaceRequest<Environment> environment);
 
@@ -74,11 +74,11 @@ class Realm {
 
   void CreateApplicationWithProcess(
       PackagePtr package, LaunchInfo launch_info,
-      fidl::InterfaceRequest<ApplicationController> controller,
+      fidl::InterfaceRequest<ComponentController> controller,
       fxl::RefPtr<Namespace> ns);
   void CreateApplicationFromPackage(
       PackagePtr package, LaunchInfo launch_info,
-      fidl::InterfaceRequest<ApplicationController> controller,
+      fidl::InterfaceRequest<ComponentController> controller,
       fxl::RefPtr<Namespace> ns);
 
   zx::channel OpenRootInfoDir();
@@ -99,8 +99,8 @@ class Realm {
   std::unordered_map<Realm*, std::unique_ptr<EnvironmentControllerImpl>>
       children_;
 
-  std::unordered_map<ApplicationControllerImpl*,
-                     std::unique_ptr<ApplicationControllerImpl>>
+  std::unordered_map<ComponentControllerImpl*,
+                     std::unique_ptr<ComponentControllerImpl>>
       applications_;
 
   std::unordered_map<std::string, std::unique_ptr<RunnerHolder>> runners_;

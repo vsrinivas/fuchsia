@@ -44,7 +44,7 @@ class RespondingServiceHost {
   class ServicesHolder {
    public:
     ServicesHolder(component::Services services,
-                   component::ApplicationControllerPtr controller)
+                   component::ComponentControllerPtr controller)
         : services_(std::move(services)) {}
     ServicesHolder(component::ServiceProviderPtr service_provider)
         : service_provider_(std::move(service_provider)),

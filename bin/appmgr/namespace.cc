@@ -70,7 +70,7 @@ void Namespace::GetDirectory(zx::channel directory_request) {
 
 void Namespace::CreateApplication(
     LaunchInfo launch_info,
-    fidl::InterfaceRequest<ApplicationController> controller) {
+    fidl::InterfaceRequest<ComponentController> controller) {
   realm_->CreateApplication(std::move(launch_info), std::move(controller));
 }
 

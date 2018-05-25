@@ -22,7 +22,7 @@ class GuestHolder {
   GuestHolder(uint32_t cid, std::string label,
               std::unique_ptr<RemoteVsockEndpoint> socket_endpoint,
               component::Services services,
-              component::ApplicationControllerPtr application_controller);
+              component::ComponentControllerPtr component_controller);
 
   uint32_t cid() const { return cid_; }
   const std::string& label() const { return label_; }
@@ -35,7 +35,7 @@ class GuestHolder {
   const std::string label_;
   std::unique_ptr<RemoteVsockEndpoint> socket_endpoint_;
   component::Services guest_services_;
-  component::ApplicationControllerPtr guest_app_controller_;
+  component::ComponentControllerPtr guest_component_controller_;
   fuchsia::guest::GuestControllerPtr guest_controller_;
 
   fidl::BindingSet<fuchsia::guest::GuestController> bindings_;

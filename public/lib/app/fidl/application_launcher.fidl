@@ -79,8 +79,8 @@ interface ApplicationLauncher {
   // its |EnvironmentHost|.
   //
   // The |controller| can be used to control the lifecycle of the created
-  // application instance. If an |ApplicationController|'s interface is
+  // application instance. If an |ComponentController|'s interface is
   // requested, the application instance is killed when the interface is closed.
   1: CreateApplication(LaunchInfo launch_info,
-                      request<ApplicationController>? controller);
+                      request<ComponentController>? controller);
 };

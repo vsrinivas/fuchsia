@@ -30,7 +30,8 @@ constexpr char kRootLabel[] = "app";
 
 void PublishRootDir(component::Realm* root, fs::SynchronousVfs* vfs) {
   static zx_handle_t request = zx_get_startup_handle(PA_DIRECTORY_REQUEST);
-  if (request == ZX_HANDLE_INVALID) return;
+  if (request == ZX_HANDLE_INVALID)
+    return;
   fbl::RefPtr<fs::PseudoDir> dir(fbl::AdoptRef(new fs::PseudoDir()));
   auto svc = fbl::AdoptRef(new fs::Service([root](zx::channel channel) {
     return root->BindSvc(std::move(channel));
@@ -61,13 +62,15 @@ int main(int argc, char** argv) {
       })));
 
   zx::channel h1, h2;
-  if (zx::channel::create(0, &h1, &h2) < 0) return -1;
-  if (vfs.ServeDirectory(directory, std::move(h2)) != ZX_OK) return -1;
+  if (zx::channel::create(0, &h1, &h2) < 0)
+    return -1;
+  if (vfs.ServeDirectory(directory, std::move(h2)) != ZX_OK)
+    return -1;
   component::Realm root_realm(nullptr, std::move(h1), kRootLabel);
   fs::SynchronousVfs publish_vfs(loop.async());
   PublishRootDir(&root_realm, &publish_vfs);
 
-  component::ApplicationControllerPtr sysmgr;
+  component::ComponentControllerPtr sysmgr;
   auto run_sysmgr = [&root_realm, &sysmgr] {
     component::LaunchInfo launch_info;
     launch_info.url = "sysmgr";

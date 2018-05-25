@@ -19,17 +19,17 @@ namespace component {
 
 class RunnerHolder {
  public:
-  RunnerHolder(Services services, ApplicationControllerPtr controller);
+  RunnerHolder(Services services, ComponentControllerPtr controller);
   ~RunnerHolder();
 
   void StartComponent(Package package, StartupInfo startup_info,
                       std::unique_ptr<archive::FileSystem> file_system,
                       fxl::RefPtr<Namespace> ns,
-                      fidl::InterfaceRequest<ApplicationController> controller);
+                      fidl::InterfaceRequest<ComponentController> controller);
 
  private:
   Services services_;
-  ApplicationControllerPtr controller_;
+  ComponentControllerPtr controller_;
   RunnerPtr runner_;
 
   // TODO(abarth): We hold these objects for the lifetime of the runner, but we

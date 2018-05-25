@@ -56,7 +56,7 @@ class Record : public CommandWithTraceController {
   void LaunchTool();
   void StartTimer();
 
-  component::ApplicationControllerPtr application_controller_;
+  component::ComponentControllerPtr component_controller_;
   std::unique_ptr<ChromiumExporter> exporter_;
   std::unique_ptr<Tracer> tracer_;
   // Aggregate events if there are any measurements to be performed, so that we

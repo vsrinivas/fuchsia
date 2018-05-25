@@ -37,14 +37,14 @@ void GuestEnvironmentImpl::LaunchGuest(
     fidl::InterfaceRequest<fuchsia::guest::GuestController> controller,
     LaunchGuestCallback callback) {
   component::Services guest_services;
-  component::ApplicationControllerPtr guest_app_controller;
+  component::ComponentControllerPtr guest_component_controller;
   component::LaunchInfo guest_launch_info;
   guest_launch_info.url = launch_info.url;
   guest_launch_info.arguments = std::move(launch_info.vmm_args);
   guest_launch_info.directory_request = guest_services.NewRequest();
   guest_launch_info.flat_namespace = std::move(launch_info.flat_namespace);
   app_launcher_->CreateApplication(std::move(guest_launch_info),
-                                   guest_app_controller.NewRequest());
+                                   guest_component_controller.NewRequest());
 
   // Setup Socket Endpoint
   uint32_t cid = next_guest_cid_++;
@@ -60,11 +60,12 @@ void GuestEnvironmentImpl::LaunchGuest(
   guest_services.ConnectToService(remote_endpoint.NewRequest());
   vsock_endpoint->BindSocketEndpoint(std::move(remote_endpoint));
 
-  guest_app_controller.set_error_handler([this, cid] { guests_.erase(cid); });
+  guest_component_controller.set_error_handler(
+      [this, cid] { guests_.erase(cid); });
   auto& label = launch_info.label ? launch_info.label : launch_info.url;
   auto holder = std::make_unique<GuestHolder>(
       cid, label, std::move(vsock_endpoint), std::move(guest_services),
-      std::move(guest_app_controller));
+      std::move(guest_component_controller));
   holder->AddBinding(std::move(controller));
   guests_.insert({cid, std::move(holder)});
 

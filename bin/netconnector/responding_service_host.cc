@@ -44,7 +44,7 @@ void RespondingServiceHost::RegisterSingleton(
           component::Services services;
           dup_launch_info.directory_request = services.NewRequest();
 
-          component::ApplicationControllerPtr controller;
+          component::ComponentControllerPtr controller;
           launcher_->CreateApplication(std::move(dup_launch_info),
                                        controller.NewRequest());
 

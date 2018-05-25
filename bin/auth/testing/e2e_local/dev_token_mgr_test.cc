@@ -68,8 +68,8 @@ class DevTokenManagerAppTest : public gtest::TestWithMessageLoop,
       launch_info.arguments.push_back(stream.str());
     }
     application_context_->launcher()->CreateApplication(
-        std::move(launch_info), app_controller_.NewRequest());
-    app_controller_.set_error_handler([] {
+        std::move(launch_info), controller_.NewRequest());
+    controller_.set_error_handler([] {
       FXL_LOG(ERROR) << "Error in connecting to TokenManagerFactory service.";
     });
 
@@ -103,7 +103,7 @@ class DevTokenManagerAppTest : public gtest::TestWithMessageLoop,
 
  private:
   std::unique_ptr<component::ApplicationContext> application_context_;
-  component::ApplicationControllerPtr app_controller_;
+  component::ComponentControllerPtr controller_;
 
  protected:
   fidl::Binding<auth::AuthenticationContextProvider>

@@ -33,13 +33,13 @@ class TileView : public mozart::BaseView, public presentation::Presenter {
  private:
   struct ViewData {
     explicit ViewData(const std::string& url, uint32_t key,
-                      component::ApplicationControllerPtr controller,
+                      component::ComponentControllerPtr controller,
                       scenic_lib::Session* session);
     ~ViewData();
 
     const std::string url;
     const uint32_t key;
-    component::ApplicationControllerPtr controller;
+    component::ComponentControllerPtr controller;
     scenic_lib::EntityNode host_node;
 
     views_v1::ViewProperties view_properties;
@@ -69,8 +69,7 @@ class TileView : public mozart::BaseView, public presentation::Presenter {
   void ConnectViews();
 
   void AddChildView(fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner,
-                    const std::string& url,
-                    component::ApplicationControllerPtr);
+                    const std::string& url, component::ComponentControllerPtr);
   void RemoveChildView(uint32_t child_key);
 
   // Nested environment within which the apps started by TileView will run.

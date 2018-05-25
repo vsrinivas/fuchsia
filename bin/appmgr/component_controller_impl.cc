@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/appmgr/application_controller_impl.h"
+#include "garnet/bin/appmgr/component_controller_impl.h"
 
 #include <fbl/string_printf.h>
 #include <fdio/util.h>
@@ -21,8 +21,8 @@
 
 namespace component {
 
-ApplicationControllerImpl::ApplicationControllerImpl(
-    fidl::InterfaceRequest<ApplicationController> request, Realm* realm,
+ComponentControllerImpl::ComponentControllerImpl(
+    fidl::InterfaceRequest<ComponentController> request, Realm* realm,
     std::unique_ptr<archive::FileSystem> fs, zx::process process,
     std::string url, std::string args, std::string label,
     fxl::RefPtr<Namespace> ns, ExportedDirType export_dir_type,
@@ -72,7 +72,7 @@ ApplicationControllerImpl::ApplicationControllerImpl(
   }
 }
 
-ApplicationControllerImpl::~ApplicationControllerImpl() {
+ComponentControllerImpl::~ComponentControllerImpl() {
   // Two ways we end up here:
   // 1) OnHandleReady() destroys this object; in which case, process is dead.
   // 2) Our owner destroys this object; in which case, the process may still be
@@ -81,17 +81,17 @@ ApplicationControllerImpl::~ApplicationControllerImpl() {
     process_.kill();
 }
 
-HubInfo ApplicationControllerImpl::HubInfo() {
+HubInfo ComponentControllerImpl::HubInfo() {
   return component::HubInfo(label_, koid_, hub_.dir());
 }
 
-void ApplicationControllerImpl::Kill() { process_.kill(); }
+void ComponentControllerImpl::Kill() { process_.kill(); }
 
-void ApplicationControllerImpl::Detach() {
+void ComponentControllerImpl::Detach() {
   binding_.set_error_handler(fxl::Closure());
 }
 
-bool ApplicationControllerImpl::SendReturnCodeIfTerminated() {
+bool ComponentControllerImpl::SendReturnCodeIfTerminated() {
   // Get process info.
   zx_info_process_t process_info;
   zx_status_t result = process_.get_info(ZX_INFO_PROCESS, &process_info,
@@ -109,15 +109,15 @@ bool ApplicationControllerImpl::SendReturnCodeIfTerminated() {
   return process_info.exited;
 }
 
-void ApplicationControllerImpl::Wait(WaitCallback callback) {
+void ComponentControllerImpl::Wait(WaitCallback callback) {
   wait_callbacks_.push_back(callback);
   SendReturnCodeIfTerminated();
 }
 
 // Called when process terminates, regardless of if Kill() was invoked.
-void ApplicationControllerImpl::Handler(async_t* async, async::WaitBase* wait,
-                                        zx_status_t status,
-                                        const zx_packet_signal* signal) {
+void ComponentControllerImpl::Handler(async_t* async, async::WaitBase* wait,
+                                      zx_status_t status,
+                                      const zx_packet_signal* signal) {
   FXL_DCHECK(status == ZX_OK);
   FXL_DCHECK(signal->observed == ZX_TASK_TERMINATED);
   if (!wait_callbacks_.empty()) {

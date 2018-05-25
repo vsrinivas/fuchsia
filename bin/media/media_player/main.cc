@@ -5,10 +5,10 @@
 #include <string>
 
 #include <fs/pseudo-file.h>
-#include <media/cpp/fidl.h>
-#include <media_player/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
+#include <media/cpp/fidl.h>
+#include <media_player/cpp/fidl.h>
 #include <trace-provider/provider.h>
 
 #include "garnet/bin/media/media_player/media_player_impl.h"
@@ -28,7 +28,7 @@ void ConnectToIsolate(fidl::InterfaceRequest<Interface> request,
   component::Services services;
   launch_info.directory_request = services.NewRequest();
 
-  component::ApplicationControllerPtr controller;
+  component::ComponentControllerPtr controller;
   launcher->CreateApplication(std::move(launch_info), controller.NewRequest());
 
   services.ConnectToService(std::move(request), Interface::Name_);
@@ -68,13 +68,11 @@ int main(int argc, const char** argv) {
     application_context->environment()->GetApplicationLauncher(
         launcher.NewRequest());
 
-    application_context->outgoing()
-        .AddPublicService<media_player::MediaPlayer>(
-            [&launcher](
-                fidl::InterfaceRequest<media_player::MediaPlayer> request) {
-              ConnectToIsolate<media_player::MediaPlayer>(std::move(request),
-                                                          launcher.get());
-            });
+    application_context->outgoing().AddPublicService<media_player::MediaPlayer>(
+        [&launcher](fidl::InterfaceRequest<media_player::MediaPlayer> request) {
+          ConnectToIsolate<media_player::MediaPlayer>(std::move(request),
+                                                      launcher.get());
+        });
 
     loop.Run();
   }

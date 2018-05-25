@@ -46,7 +46,7 @@ class Namespace : public Environment,
 
   void CreateApplication(
       LaunchInfo launch_info,
-      fidl::InterfaceRequest<ApplicationController> controller) override;
+      fidl::InterfaceRequest<ComponentController> controller) override;
 
  private:
   FRIEND_MAKE_REF_COUNTED(Namespace);

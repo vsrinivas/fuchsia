@@ -5,7 +5,7 @@
 #include "garnet/bin/appmgr/hub/component_hub.h"
 #include "garnet/bin/appmgr/hub/hub.h"
 
-#include "garnet/bin/appmgr/application_controller_impl.h"
+#include "garnet/bin/appmgr/component_controller_impl.h"
 #include "garnet/bin/appmgr/realm.h"
 
 #include <fbl/ref_ptr.h>

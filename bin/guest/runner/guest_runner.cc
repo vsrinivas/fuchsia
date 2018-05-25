@@ -24,7 +24,7 @@ GuestRunner::~GuestRunner() = default;
 
 void GuestRunner::StartComponent(
     component::Package application, component::StartupInfo startup_info,
-    ::fidl::InterfaceRequest<component::ApplicationController> controller) {
+    ::fidl::InterfaceRequest<component::ComponentController> controller) {
   component::LaunchInfo launch_info;
 
   // Pass-through our arguments directly to the vmm package.

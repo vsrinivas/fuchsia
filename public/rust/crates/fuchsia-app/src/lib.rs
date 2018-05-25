@@ -19,7 +19,7 @@ extern crate futures;
 extern crate fidl_component;
 
 use fidl_component::{
-    ApplicationControllerProxy,
+    ComponentControllerProxy,
     ApplicationLauncherMarker,
     ApplicationLauncherProxy,
     LaunchInfo,
@@ -71,7 +71,7 @@ pub mod client {
         ) -> Result<App, Error>
         {
 
-            let (app_controller, controller_server_end) = zx::Channel::create()?;
+            let (controller, controller_server_end) = zx::Channel::create()?;
             let (directory_request, directory_server_chan) = zx::Channel::create()?;
 
             let mut launch_info = LaunchInfo {
@@ -89,10 +89,10 @@ pub mod client {
                 .create_application(&mut launch_info, Some(controller_server_end.into()))
                 .context("Failed to start a new Fuchsia application.")?;
 
-            let app_controller = async::Channel::from_channel(app_controller)?;
-            let app_controller = ApplicationControllerProxy::new(app_controller);
+            let controller = async::Channel::from_channel(controller)?;
+            let controller = ComponentControllerProxy::new(controller);
 
-            Ok(App { directory_request, app_controller })
+            Ok(App { directory_request, controller })
         }
     }
 
@@ -103,7 +103,7 @@ pub mod client {
 
         // TODO: use somehow?
         #[allow(dead_code)]
-        app_controller: ApplicationControllerProxy,
+        controller: ComponentControllerProxy,
     }
 
     impl App {

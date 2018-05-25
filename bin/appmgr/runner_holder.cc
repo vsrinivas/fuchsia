@@ -14,8 +14,7 @@
 
 namespace component {
 
-RunnerHolder::RunnerHolder(Services services,
-                           ApplicationControllerPtr controller)
+RunnerHolder::RunnerHolder(Services services, ComponentControllerPtr controller)
     : services_(std::move(services)), controller_(std::move(controller)) {
   services_.ConnectToService(runner_.NewRequest());
 }
@@ -25,7 +24,7 @@ RunnerHolder::~RunnerHolder() = default;
 void RunnerHolder::StartComponent(
     Package package, StartupInfo startup_info,
     std::unique_ptr<archive::FileSystem> file_system, fxl::RefPtr<Namespace> ns,
-    fidl::InterfaceRequest<ApplicationController> controller) {
+    fidl::InterfaceRequest<ComponentController> controller) {
   file_systems_.push_back(std::move(file_system));
   namespaces_.push_back(std::move(ns));
   runner_->StartComponent(std::move(package), std::move(startup_info),

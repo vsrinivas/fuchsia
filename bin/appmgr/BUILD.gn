@@ -8,10 +8,10 @@ source_set("lib") {
   visibility = [ ":*" ]
 
   sources = [
-    "application_controller_impl.cc",
-    "application_controller_impl.h",
     "cmx_metadata.cc",
     "cmx_metadata.h",
+    "component_controller_impl.cc",
+    "component_controller_impl.h",
     "dynamic_library_loader.cc",
     "dynamic_library_loader.h",
     "environment_controller_impl.cc",

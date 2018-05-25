@@ -48,7 +48,7 @@ int main(int argc, const char** argv) {
   for (size_t i = 1; i < positional_args.size(); ++i)
     launch_info.arguments.push_back(positional_args[i]);
   launch_info.directory_request = services.NewRequest();
-  component::ApplicationControllerPtr controller;
+  component::ComponentControllerPtr controller;
   application_context_->launcher()->CreateApplication(std::move(launch_info),
                                                       controller.NewRequest());
   controller.set_error_handler([&loop] {

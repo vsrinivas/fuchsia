@@ -253,7 +253,7 @@ class CobaltTestApp {
   int num_observations_per_batch_;
   int previous_value_of_num_send_attempts_ = 0;
   std::unique_ptr<component::ApplicationContext> context_;
-  component::ApplicationControllerPtr app_controller_;
+  component::ComponentControllerPtr controller_;
   cobalt::CobaltEncoderSyncPtr encoder_;
   cobalt::CobaltControllerSyncPtr cobalt_controller_;
 
@@ -278,7 +278,7 @@ bool CobaltTestApp::RunAllTestingStrategies() {
 
 void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
                             uint32_t min_interval_seconds) {
-  app_controller_.Unbind();
+  controller_.Unbind();
   component::Services services;
   component::LaunchInfo launch_info;
   launch_info.url = "cobalt";
@@ -301,8 +301,8 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
     launch_info.arguments.push_back(stream.str());
   }
   context_->launcher()->CreateApplication(std::move(launch_info),
-                                          app_controller_.NewRequest());
-  app_controller_.set_error_handler([] {
+                                          controller_.NewRequest());
+  controller_.set_error_handler([] {
     FXL_LOG(ERROR) << "Connection error from CobaltTestApp to CobaltClient.";
   });
 

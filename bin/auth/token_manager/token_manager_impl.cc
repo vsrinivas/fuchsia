@@ -63,18 +63,18 @@ TokenManagerImpl::TokenManagerImpl(
     component::Services services;
     launch_info.directory_request = services.NewRequest();
 
-    component::ApplicationControllerPtr controller;
+    component::ComponentControllerPtr controller;
     app_context->launcher()->CreateApplication(std::move(launch_info),
                                                controller.NewRequest());
-    controller.set_error_handler([
-      this, url = config.url, auth_provider_type = config.auth_provider_type
-    ] {
-      FXL_LOG(INFO) << "Auth provider " << url << " disconnected";
-      auth_providers_.erase(auth_provider_type);
-      auth_provider_controllers_.erase(auth_provider_type);
-      // TODO: Try reconnecting to Auth provider using some back-off
-      // mechanism.
-    });
+    controller.set_error_handler(
+        [this, url = config.url,
+         auth_provider_type = config.auth_provider_type] {
+          FXL_LOG(INFO) << "Auth provider " << url << " disconnected";
+          auth_providers_.erase(auth_provider_type);
+          auth_provider_controllers_.erase(auth_provider_type);
+          // TODO: Try reconnecting to Auth provider using some back-off
+          // mechanism.
+        });
     auth_provider_controllers_[config.auth_provider_type] =
         std::move(controller);
 
@@ -89,25 +89,24 @@ TokenManagerImpl::TokenManagerImpl(
                            << static_cast<uint32_t>(status);
           }
         });
-    auth_provider_ptr.set_error_handler([
-      this, url = config.url, auth_provider_type = config.auth_provider_type
-    ] {
-      FXL_LOG(INFO) << "Auth provider " << url << " disconnected";
-      auth_providers_.erase(auth_provider_type);
-      auth_provider_controllers_.erase(auth_provider_type);
-      // TODO: Try reconnecting to Auth provider using some back-off
-      // mechanism.
-    });
+    auth_provider_ptr.set_error_handler(
+        [this, url = config.url,
+         auth_provider_type = config.auth_provider_type] {
+          FXL_LOG(INFO) << "Auth provider " << url << " disconnected";
+          auth_providers_.erase(auth_provider_type);
+          auth_provider_controllers_.erase(auth_provider_type);
+          // TODO: Try reconnecting to Auth provider using some back-off
+          // mechanism.
+        });
     auth_providers_[config.auth_provider_type] = std::move(auth_provider_ptr);
   }
 }
 
 TokenManagerImpl::~TokenManagerImpl() {}
 
-void TokenManagerImpl::Authorize(AppConfig app_config,
-    const fidl::VectorPtr<fidl::StringPtr> app_scopes,
-    fidl::StringPtr user_profile_id,
-    AuthorizeCallback callback) {
+void TokenManagerImpl::Authorize(
+    AppConfig app_config, const fidl::VectorPtr<fidl::StringPtr> app_scopes,
+    fidl::StringPtr user_profile_id, AuthorizeCallback callback) {
   auto it = auth_providers_.find(app_config.auth_provider_type);
   if (it == auth_providers_.end()) {
     callback(Status::AUTH_PROVIDER_SERVICE_UNAVAILABLE, nullptr);

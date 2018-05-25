@@ -38,7 +38,7 @@ class EchoClientApp {
 
   std::unique_ptr<component::ApplicationContext> context_;
   component::Services echo_provider_;
-  component::ApplicationControllerPtr controller_;
+  component::ComponentControllerPtr controller_;
   echo2::EchoPtr echo_;
 };
 

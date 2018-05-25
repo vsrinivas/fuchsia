@@ -33,7 +33,7 @@ class DelegatingLoader : public component::Loader {
   struct LoaderRecord {
     component::LaunchInfoPtr launch_info;
     component::LoaderPtr loader;
-    component::ApplicationControllerPtr controller;
+    component::ComponentControllerPtr controller;
   };
 
   void StartDelegate(LoaderRecord* record);

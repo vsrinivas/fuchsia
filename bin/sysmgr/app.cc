@@ -126,7 +126,7 @@ void App::RegisterSingleton(std::string service_name,
                             component::LaunchInfoPtr launch_info) {
   auto child = fbl::AdoptRef(
       new fs::Service([this, service_name, launch_info = std::move(launch_info),
-                       controller = component::ApplicationControllerPtr()](
+                       controller = component::ComponentControllerPtr()](
                           zx::channel client_handle) mutable {
         FXL_VLOG(2) << "Servicing singleton service request for "
                     << service_name;

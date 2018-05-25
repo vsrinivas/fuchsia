@@ -398,22 +398,22 @@ void Record::LaunchApp() {
       fxl::To<fidl::VectorPtr<fidl::StringPtr>>(options_.args);
 
   out() << "Launching " << launch_info.url << std::endl;
-  context()->launcher()->CreateApplication(
-      std::move(launch_info), application_controller_.NewRequest());
-  application_controller_.set_error_handler([this] {
+  context()->launcher()->CreateApplication(std::move(launch_info),
+                                           component_controller_.NewRequest());
+  component_controller_.set_error_handler([this] {
     out() << "Application terminated" << std::endl;
     if (!options_.decouple)
       // The trace might have been already stopped by the |Wait()| callback. In
       // that case, |StopTrace| below does nothing.
       StopTrace(-1);
   });
-  application_controller_->Wait([this](int32_t return_code) {
+  component_controller_->Wait([this](int32_t return_code) {
     out() << "Application exited with return code " << return_code << std::endl;
     if (!options_.decouple)
       StopTrace(return_code);
   });
   if (options_.detach) {
-    application_controller_->Detach();
+    component_controller_->Detach();
   }
 }
 

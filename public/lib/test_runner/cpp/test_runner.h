@@ -95,7 +95,7 @@ class TestRunContext {
   void Teardown(TestRunnerImpl* teardown_client);
 
  private:
-  component::ApplicationControllerPtr child_app_controller_;
+  component::ComponentControllerPtr child_controller_;
   std::unique_ptr<Scope> child_env_scope_;
 
   TestRunObserver* const test_runner_connection_;
