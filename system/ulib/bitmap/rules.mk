@@ -23,6 +23,7 @@ MODULE_LIBS := \
     system/ulib/zircon \
     system/ulib/c \
 
-MODULE_PACKAGE := shared
+MODULE_EXPORT := so
+MODULE_PACKAGE := src
 
 include make/module.mk
