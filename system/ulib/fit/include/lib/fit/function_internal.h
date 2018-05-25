@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 
+#include <memory>
 #include <new>
 #include <type_traits>
 
@@ -224,6 +225,30 @@ public:
     const Callable* target() const {
         check_target_type<Callable>();
         return static_cast<Callable*>(ops_->get(&bits_));
+    }
+
+    function share() {
+        static_assert(!require_inline, "Inline functions cannot be shared.");
+        // TODO(jeffbrown): Replace shared_ptr with a better ref-count mechanism.
+        // TODO(jeffbrown): This definition breaks the client's ability to use
+        // |target()| because the target's type has changed.  We could fix this
+        // by defining a new target type (and vtable) for shared targets
+        // although it would be nice to avoid memory overhead and code expansion
+        // when sharing is not used.
+        struct ref {
+            std::shared_ptr<function> target;
+            Result operator()(Args... args) {
+                return (*target)(std::forward<Args>(args)...);
+            }
+        };
+        if (ops_ != &target_type<ref>::ops) {
+            if (ops_ == &null_target_type::ops) {
+                return nullptr;
+            }
+            auto target = ref{std::make_shared<function>(std::move(*this))};
+            *this = std::move(target);
+        }
+        return function(*static_cast<ref*>(ops_->get(&bits_)));
     }
 
 private:

@@ -81,6 +81,13 @@ constexpr size_t default_inline_target_size = sizeof(void*) * 2;
 //     Callable* target();
 //     template <typename Callable>
 //     const Callable* target() const;
+//
+//     // Returns a new function object which invokes the same target.
+//     // The target itself is not copied; it is moved to the heap and its
+//     // lifetime is extended until all references have been released.
+//     // Note: This method is not supported on fit::inline_function<>
+//     //       because it may incur heap allocation.
+//     function share();
 // };
 //
 // template <typename T, size_t inline_target_size>

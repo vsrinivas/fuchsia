@@ -42,6 +42,35 @@ struct SlotMachine {
     int value = 0;
 };
 
+// A move-only object which increments a counter when uniquely destroyed.
+class DestructionObserver {
+public:
+    DestructionObserver(int* counter)
+        : counter_(counter) {}
+    DestructionObserver(DestructionObserver&& other)
+        : counter_(other.counter_) {
+        other.counter_ = nullptr;
+    }
+    DestructionObserver(const DestructionObserver& other) = delete;
+
+    ~DestructionObserver() {
+        if (counter_)
+            *counter_ += 1;
+    }
+
+    DestructionObserver& operator=(const DestructionObserver& other) = delete;
+    DestructionObserver& operator=(DestructionObserver&& other) {
+        if (counter_)
+            *counter_ += 1;
+        counter_ = other.counter_;
+        other.counter_ = nullptr;
+        return *this;
+    }
+
+private:
+    int* counter_;
+};
+
 template <typename ClosureFunction>
 bool closure() {
     BEGIN_TEST;
@@ -514,6 +543,93 @@ bool implicit_construction() {
     END_TEST;
 }
 
+bool sharing() {
+    BEGIN_TEST;
+
+    fit::function<Closure> fnull;
+    fit::function<Closure> fnullshare1 = fnull.share();
+    fit::function<Closure> fnullshare2 = fnull.share();
+    fit::function<Closure> fnullshare3 = fnullshare1.share();
+    EXPECT_FALSE(!!fnull);
+    EXPECT_FALSE(!!fnullshare1);
+    EXPECT_FALSE(!!fnullshare2);
+    EXPECT_FALSE(!!fnullshare3);
+
+    int finlinevalue = 1;
+    int finlinedestroy = 0;
+    fit::function<Closure> finline =
+        [&finlinevalue, d = DestructionObserver(&finlinedestroy) ] { finlinevalue++; };
+    fit::function<Closure> finlineshare1 = finline.share();
+    fit::function<Closure> finlineshare2 = finline.share();
+    fit::function<Closure> finlineshare3 = finlineshare1.share();
+    EXPECT_TRUE(!!finline);
+    EXPECT_TRUE(!!finlineshare1);
+    EXPECT_TRUE(!!finlineshare2);
+    EXPECT_TRUE(!!finlineshare3);
+    finline();
+    EXPECT_EQ(2, finlinevalue);
+    finlineshare1();
+    EXPECT_EQ(3, finlinevalue);
+    finlineshare2();
+    EXPECT_EQ(4, finlinevalue);
+    finlineshare3();
+    EXPECT_EQ(5, finlinevalue);
+    finlineshare2();
+    EXPECT_EQ(6, finlinevalue);
+    finline();
+    EXPECT_EQ(7, finlinevalue);
+    EXPECT_EQ(0, finlinedestroy);
+    finline = nullptr;
+    EXPECT_EQ(0, finlinedestroy);
+    finlineshare3 = nullptr;
+    EXPECT_EQ(0, finlinedestroy);
+    finlineshare2 = nullptr;
+    EXPECT_EQ(0, finlinedestroy);
+    finlineshare1 = nullptr;
+    EXPECT_EQ(1, finlinedestroy);
+
+    int fheapvalue = 1;
+    int fheapdestroy = 0;
+    fit::function<Closure> fheap =
+        [&fheapvalue, big = Big(), d = DestructionObserver(&fheapdestroy) ] { fheapvalue++; };
+    fit::function<Closure> fheapshare1 = fheap.share();
+    fit::function<Closure> fheapshare2 = fheap.share();
+    fit::function<Closure> fheapshare3 = fheapshare1.share();
+    EXPECT_TRUE(!!fheap);
+    EXPECT_TRUE(!!fheapshare1);
+    EXPECT_TRUE(!!fheapshare2);
+    EXPECT_TRUE(!!fheapshare3);
+    fheap();
+    EXPECT_EQ(2, fheapvalue);
+    fheapshare1();
+    EXPECT_EQ(3, fheapvalue);
+    fheapshare2();
+    EXPECT_EQ(4, fheapvalue);
+    fheapshare3();
+    EXPECT_EQ(5, fheapvalue);
+    fheapshare2();
+    EXPECT_EQ(6, fheapvalue);
+    fheap();
+    EXPECT_EQ(7, fheapvalue);
+    EXPECT_EQ(0, fheapdestroy);
+    fheap = nullptr;
+    EXPECT_EQ(0, fheapdestroy);
+    fheapshare3 = nullptr;
+    EXPECT_EQ(0, fheapdestroy);
+    fheapshare2 = nullptr;
+    EXPECT_EQ(0, fheapdestroy);
+    fheapshare1 = nullptr;
+    EXPECT_EQ(1, fheapdestroy);
+
+// These statements do not compile because inline functions cannot be shared
+#if 0
+    fit::inline_function<Closure> fbad;
+    fbad.share();
+#endif
+
+    END_TEST;
+}
+
 struct Obj {
     void Call() {
         calls++;
@@ -677,6 +793,7 @@ RUN_TEST(sized_function_size_bounds);
 RUN_TEST(inline_function_size_bounds);
 RUN_TEST(move_only_argument_and_result);
 RUN_TEST(implicit_construction);
+RUN_TEST(sharing)
 RUN_TEST(bind_member);
 RUN_TEST(null_check);
 RUN_TEST(example1::test);
