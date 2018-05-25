@@ -21,6 +21,7 @@ class Err;
 class Process;
 class System;
 class TargetObserver;
+class TargetSymbols;
 
 // A Target represents the abstract idea of a process that can be debugged.
 // This is as opposed to a Process which corresponds to one running process.
@@ -63,6 +64,10 @@ class Target : public ClientObject {
   // Returns the process object if it is currently running (see GetState()).
   // Returns null otherwise.
   virtual Process* GetProcess() const = 0;
+
+  // Returns the process-independent symbol interface. See also
+  // Process:GetSymbols().
+  virtual const TargetSymbols* GetSymbols() const = 0;
 
   // Sets and retrieves the arguments passed to the program. args[0] is the
   // program name, the rest of the array are the command-line.

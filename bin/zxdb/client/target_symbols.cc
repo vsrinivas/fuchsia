@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/client/symbols.h"
+#include "garnet/bin/zxdb/client/target_symbols.h"
 
 namespace zxdb {
 
-Symbols::Symbols(Session* session) : ClientObject(session) {}
-Symbols::~Symbols() = default;
+TargetSymbols::TargetSymbols(Session* sesion) : ClientObject(session()) {}
+TargetSymbols::~TargetSymbols() = default;
 
 }  // namespace zxdb

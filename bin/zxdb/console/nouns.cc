@@ -36,7 +36,7 @@ void ListFrames(ConsoleContext* context, Thread* thread) {
       out.Append(">");
     else
       out.Append(" ");
-    out.Append(DescribeFrame(frames[i].get(), i));
+    out.Append(DescribeFrame(frames[i], i));
     out.Append("\n");
   }
   Console::get()->Output(std::move(out));

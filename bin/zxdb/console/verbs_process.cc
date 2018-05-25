@@ -369,9 +369,12 @@ std::string PrintRegionName(uint64_t depth, const std::string& name) {
                            name.c_str());
 }
 
-const char kAspaceShortHelp[] = "aspace: Show address space for a process.";
+const char kAspaceShortHelp[] =
+    "aspace / as: Show address space for a process.";
 const char kAspaceHelp[] =
     R"(aspace [ <address> ]
+
+  Alias: "as"
 
   Shows the address space map for the given process.
 

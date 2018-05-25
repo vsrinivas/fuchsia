@@ -26,7 +26,7 @@ namespace zxdb {
 
 class Err;
 class MemoryDump;
-class Symbols;
+class ProcessSymbols;
 class Target;
 class Thread;
 
@@ -51,7 +51,7 @@ class Process : public ClientObject {
   virtual const std::string& GetName() const = 0;
 
   // Returns the interface for querying symbols for this process.
-  virtual Symbols* GetSymbols() = 0;
+  virtual ProcessSymbols* GetSymbols() = 0;
 
   // Queries the process for the currently-loaded modules (this always
   // recomputes the list).

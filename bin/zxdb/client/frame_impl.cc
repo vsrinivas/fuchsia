@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/client/frame_impl.h"
 
+#include "garnet/bin/zxdb/client/process_impl.h"
 #include "garnet/bin/zxdb/client/thread_impl.h"
 
 namespace zxdb {
@@ -18,12 +19,15 @@ FrameImpl::FrameImpl(ThreadImpl* thread,
 
 FrameImpl::~FrameImpl() = default;
 
-Thread* FrameImpl::GetThread() const {
-  return thread_;
-}
+Thread* FrameImpl::GetThread() const { return thread_; }
 
-const Location& FrameImpl::GetLocation() const {
-  return location_;
+const Location& FrameImpl::GetLocation() const { return location_; }
+
+void FrameImpl::EnsureSymbolized() {
+  if (location_.is_symbolized())
+    return;
+  location_ = thread_->process()->GetSymbols()->GetLocationForAddress(
+      location_.address());
 }
 
 }  // namespace zxdb

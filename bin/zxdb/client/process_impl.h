@@ -9,13 +9,12 @@
 #include <map>
 #include <memory>
 
-#include "garnet/bin/zxdb/client/symbols_impl.h"
+#include "garnet/bin/zxdb/client/process_symbols_impl.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 
-class SymbolsImpl;
 class TargetImpl;
 class ThreadImpl;
 
@@ -26,11 +25,13 @@ class ProcessImpl : public Process {
 
   ThreadImpl* GetThreadImplFromKoid(uint64_t koid);
 
+  TargetImpl* target() const { return target_; }
+
   // Process implementation:
   Target* GetTarget() const override;
   uint64_t GetKoid() const override;
   const std::string& GetName() const override;
-  Symbols* GetSymbols() override;
+  ProcessSymbols* GetSymbols() override;
   void GetModules(
       std::function<void(const Err&, std::vector<debug_ipc::Module>)>) override;
   void GetAspace(
@@ -51,18 +52,21 @@ class ProcessImpl : public Process {
   void OnThreadStarting(const debug_ipc::ThreadRecord& record);
   void OnThreadExiting(const debug_ipc::ThreadRecord& record);
 
+  // Broadcasts the notification OnSymbolLoadFailure().
+  void NotifyOnSymbolLoadFailure(const Err& err);
+
  private:
   // Syncs the threads_ list to the new list of threads passed in .
   void UpdateThreads(const std::vector<debug_ipc::ThreadRecord>& new_threads);
 
-  Target* const target_;  // The target owns |this|.
+  TargetImpl* const target_;  // The target owns |this|.
   const uint64_t koid_;
   std::string name_;
 
   // Threads indexed by their thread koid.
   std::map<uint64_t, std::unique_ptr<ThreadImpl>> threads_;
 
-  SymbolsImpl symbols_;
+  ProcessSymbolsImpl symbols_;
 
   fxl::WeakPtrFactory<ProcessImpl> weak_factory_;
 

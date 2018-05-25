@@ -23,7 +23,7 @@ Err ModuleSymbols::Load() {
       llvm::object::createBinary(name_);
   if (!bin_or_err) {
     auto err_str = llvm::toString(bin_or_err.takeError());
-    return Err("Error loading symbols for \"" + name_ + "\", LLVM said: " +
+    return Err("Error loading symbols for \"" + name_ + "\": " +
                err_str);
   }
 
@@ -53,7 +53,7 @@ Location ModuleSymbols::LocationForAddress(uint64_t address) const {
   // make this more advanced and extract the information ourselves.
   llvm::DILineInfo line_info = context_->getLineInfoForAddress(address);
   if (!line_info)
-    return Location(address);  // No symbol for this address.
+    return Location(Location::State::kSymbolized, address);  // No symbol.
   return Location(address, FileLine(line_info.FileName, line_info.Line),
                   line_info.Column);
 }

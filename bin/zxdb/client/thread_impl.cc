@@ -56,8 +56,14 @@ void ThreadImpl::StepInstruction() {
       request, [](const Err& err, debug_ipc::ResumeReply) {});
 }
 
-const std::vector<std::unique_ptr<Frame>>& ThreadImpl::GetFrames() const {
-  return frames_;
+std::vector<Frame*> ThreadImpl::GetFrames() const {
+  std::vector<Frame*> frames;
+  frames.reserve(frames_.size());
+  for (const auto& cur : frames_) {
+    cur->EnsureSymbolized();
+    frames.push_back(cur.get());
+  }
+  return frames;
 }
 
 bool ThreadImpl::HasAllFrames() const { return has_all_frames_; }
@@ -130,8 +136,8 @@ void ThreadImpl::HaveFrames(const std::vector<debug_ipc::StackFrame>& frames,
 
   frames_.clear();
   for (size_t i = 0; i < frames.size(); i++) {
-    frames_.push_back(
-        std::make_unique<FrameImpl>(this, frames[i], Location(frames[i].ip)));
+    frames_.push_back(std::make_unique<FrameImpl>(
+        this, frames[i], Location(Location::State::kAddress, frames[i].ip)));
   }
 
   if (callback)

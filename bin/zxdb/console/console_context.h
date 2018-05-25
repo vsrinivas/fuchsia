@@ -101,6 +101,7 @@ class ConsoleContext
   // ProcessObserver implementation:
   void DidCreateThread(Process* process, Thread* thread) override;
   void WillDestroyThread(Process* process, Thread* thread) override;
+  void OnSymbolLoadFailure(Process* process, const Err& err) override;
 
   // ThreadObserver implementation:
   void OnThreadStopped(Thread* thread,

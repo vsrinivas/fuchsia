@@ -74,9 +74,9 @@ int ConsoleContext::IdForFrame(const Frame* frame) const {
   // whether the frames have been synced, since if there is a frame here,
   // we know it's present in the thread's list.
   Thread* thread = frame->GetThread();
-  const std::vector<std::unique_ptr<Frame>>& frames = thread->GetFrames();
+  auto frames = thread->GetFrames();
   for (size_t i = 0; i < frames.size(); i++) {
-    if (frames[i].get() == frame)
+    if (frames[i] == frame)
       return static_cast<int>(i);
   }
   FXL_NOTREACHED();  // Should have found the frame.
@@ -377,6 +377,10 @@ void ConsoleContext::WillDestroyThread(Process* process, Thread* thread) {
   }
 }
 
+void ConsoleContext::OnSymbolLoadFailure(Process* process, const Err& err) {
+  Console::get()->Output(err);
+}
+
 // For comparison, GDB's printout for a breakpoint hit is:
 //
 //   Breakpoint 1, main () at eraseme.c:4
@@ -564,7 +568,7 @@ Err ConsoleContext::FillOutFrame(Command* cmd,
       const auto& frames = thread_record->thread->GetFrames();
       frame_id = thread_record->active_frame_id;
       if (frame_id < static_cast<int>(frames.size())) {
-        cmd->set_frame(frames[frame_id].get());
+        cmd->set_frame(frames[frame_id]);
       } else {
         // If the active frame doesn't point to a valid frame, it should
         // always be 0.
@@ -580,7 +584,7 @@ Err ConsoleContext::FillOutFrame(Command* cmd,
 
   const auto& frames = thread_record->thread->GetFrames();
   if (frame_id < static_cast<int>(frames.size())) {
-    cmd->set_frame(frames[frame_id].get());
+    cmd->set_frame(frames[frame_id]);
     return Err();
   }
 

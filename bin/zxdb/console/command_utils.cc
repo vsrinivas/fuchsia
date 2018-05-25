@@ -314,7 +314,7 @@ std::string DescribeBreakpoint(const ConsoleContext* context,
 std::string DescribeLocation(const Location& loc) {
   if (!loc.is_valid())
     return "<invalid address>";
-  if (!loc.is_symbolized())
+  if (!loc.has_symbols())
     return fxl::StringPrintf("0x%" PRIx64, loc.address());
   return fxl::StringPrintf("0x%" PRIx64 " @ %s:%d", loc.address(),
                            loc.file_line().GetFileNamePart().c_str(),

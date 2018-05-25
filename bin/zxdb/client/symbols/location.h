@@ -22,12 +22,16 @@ class Location {
   enum class State { kInvalid, kAddress, kSymbolized };
 
   Location();
-  explicit Location(uint64_t address);
+  Location(State state, uint64_t address);
   Location(uint64_t address, FileLine&& file_line, int column);
   ~Location();
 
-  bool is_valid() const { return state_ == State::kInvalid; }
+  bool is_valid() const { return state_ != State::kInvalid; }
+
+  // The different between "symbolized" and "has_symbols" is that the former
+  // means we tried to symbolize it, and the latter means we actually succeeded.
   bool is_symbolized() const { return state_ == State::kSymbolized; }
+  bool has_symbols() const { return file_line_.is_valid(); }
 
   uint64_t address() const { return address_; }
   const FileLine& file_line() const { return file_line_; }

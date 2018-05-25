@@ -21,7 +21,7 @@ ProcessImpl::ProcessImpl(TargetImpl* target,
       target_(target),
       koid_(koid),
       name_(name),
-      symbols_(target->session()),
+      symbols_(this),
       weak_factory_(this) {}
 
 ProcessImpl::~ProcessImpl() {
@@ -51,7 +51,7 @@ const std::string& ProcessImpl::GetName() const {
   return name_;
 }
 
-Symbols* ProcessImpl::GetSymbols() {
+ProcessSymbols* ProcessImpl::GetSymbols() {
   return &symbols_;
 }
 
@@ -168,6 +168,11 @@ void ProcessImpl::OnThreadExiting(const debug_ipc::ThreadRecord& record) {
     observer.WillDestroyThread(this, found->second.get());
 
   threads_.erase(found);
+}
+
+void ProcessImpl::NotifyOnSymbolLoadFailure(const Err& err) {
+  for (auto& observer : observers())
+    observer.OnSymbolLoadFailure(this, err);
 }
 
 void ProcessImpl::UpdateThreads(

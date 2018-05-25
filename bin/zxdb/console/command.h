@@ -62,8 +62,8 @@ enum class Verb {
   kQuit,
   kRun,
   kStepi,
-  kSymInfo,
   kSymNear,
+  kSymStat,
   kKill,
 
   // Adding a new one? Add in one of the functions GetVerbs() calls.

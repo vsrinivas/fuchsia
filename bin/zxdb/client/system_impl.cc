@@ -15,6 +15,18 @@ namespace zxdb {
 SystemImpl::SystemImpl(Session* session)
     : System(session), weak_factory_(this) {
   AddNewTarget(std::make_unique<TargetImpl>(this));
+
+  // Load the build ID file but asynchronously notify. This allows the system
+  // to be loaded enough so that the observers are initialized.
+  std::string symbol_msg;
+  bool ids_loaded = symbols_.LoadBuildIDFile(&symbol_msg);
+  debug_ipc::MessageLoop::Current()->PostTask(
+      [ weak_system = weak_factory_.GetWeakPtr(), ids_loaded, symbol_msg ]() {
+        if (weak_system) {
+          for (auto& observer : weak_system->observers())
+            observer.DidTryToLoadSymbolMapping(ids_loaded, symbol_msg);
+        }
+      });
 }
 
 SystemImpl::~SystemImpl() {

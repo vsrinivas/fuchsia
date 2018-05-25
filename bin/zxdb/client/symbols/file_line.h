@@ -24,7 +24,7 @@ class FileLine {
   std::string GetFileNamePart() const;
 
  private:
-  const std::string file_;
+  std::string file_;
   int line_ = 0;
 };
 

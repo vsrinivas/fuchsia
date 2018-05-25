@@ -7,8 +7,8 @@
 namespace zxdb {
 
 Location::Location() = default;
-Location::Location(uint64_t address)
-    : state_(State::kAddress), address_(address) {}
+Location::Location(State state, uint64_t address)
+    : state_(state), address_(address) {}
 Location::Location(uint64_t address, FileLine&& file_line, int column)
     : state_(State::kSymbolized),
       address_(address),

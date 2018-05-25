@@ -68,7 +68,7 @@ class Thread : public ClientObject {
   // when the thread is resumed. The pointers in the vector can be cached if
   // the code listens for ThreadObserver::OnThreadFramesInvalidated() and
   // clears the cache at that point.
-  virtual const std::vector<std::unique_ptr<Frame>>& GetFrames() const = 0;
+  virtual std::vector<Frame*> GetFrames() const = 0;
   virtual bool HasAllFrames() const = 0;
   virtual void SyncFrames(std::function<void()> callback) = 0;
 

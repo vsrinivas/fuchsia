@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "garnet/bin/zxdb/client/system.h"
+#include "garnet/bin/zxdb/client/system_symbols.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/memory/weak_ptr.h"
 
@@ -25,6 +26,8 @@ class SystemImpl : public System {
 
   ProcessImpl* ProcessImplFromKoid(uint64_t koid) const;
 
+  SystemSymbols& symbols() { return symbols_; }
+
   // System implementation:
   std::vector<Target*> GetTargets() const override;
   std::vector<Breakpoint*> GetBreakpoints() const override;
@@ -41,6 +44,8 @@ class SystemImpl : public System {
 
   std::vector<std::unique_ptr<TargetImpl>> targets_;
   std::vector<std::unique_ptr<BreakpointImpl>> breakpoints_;
+
+  SystemSymbols symbols_;
 
   fxl::WeakPtrFactory<SystemImpl> weak_factory_;
 

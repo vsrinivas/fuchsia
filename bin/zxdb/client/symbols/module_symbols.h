@@ -41,6 +41,7 @@ class ModuleSymbols {
   ModuleSymbols(const std::string& name);
   ~ModuleSymbols();
 
+  // Path name to the local symbol file.
   const std::string& name() const { return name_; }
 
   Err Load();

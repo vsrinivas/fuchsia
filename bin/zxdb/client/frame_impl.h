@@ -12,6 +12,7 @@ namespace zxdb {
 
 class ThreadImpl;
 
+// A frame is lazily symbolized.
 class FrameImpl : public Frame {
  public:
   FrameImpl(ThreadImpl* thread,
@@ -22,6 +23,8 @@ class FrameImpl : public Frame {
   // Frame implementation.
   Thread* GetThread() const override;
   const Location& GetLocation() const override;
+
+  void EnsureSymbolized();
 
  private:
   ThreadImpl* thread_;
