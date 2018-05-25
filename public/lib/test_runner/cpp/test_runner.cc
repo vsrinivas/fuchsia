@@ -39,8 +39,7 @@
 #include <string>
 #include <vector>
 
-#include <lib/async/default.h>
-
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/types/type_converters.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/split_string.h"
@@ -58,10 +57,10 @@ TestRunnerImpl::TestRunnerImpl(fidl::InterfaceRequest<TestRunner> request,
                                TestRunContext* test_run_context)
     : binding_(this, std::move(request)), test_run_context_(test_run_context) {
   binding_.set_error_handler([this] {
-    if (termination_task_.is_pending()) {
+    if (waiting_for_termination_) {
       FXL_LOG(INFO) << "Test " << program_name_ << " terminated as expected.";
       // Client terminated but that was expected.
-      termination_task_.Cancel();
+      termination_timer_.Stop();
       if (teardown_after_termination_) {
         Teardown([] {});
       } else {
@@ -78,7 +77,7 @@ const std::string& TestRunnerImpl::program_name() const {
 }
 
 bool TestRunnerImpl::waiting_for_termination() const {
-  return termination_task_.is_pending();
+  return waiting_for_termination_;
 }
 
 void TestRunnerImpl::TeardownAfterTermination() {
@@ -112,23 +111,24 @@ void TestRunnerImpl::Teardown(TeardownCallback callback) {
 }
 
 void TestRunnerImpl::WillTerminate(const double withinSeconds) {
-  if (termination_task_.is_pending()) {
+  if (waiting_for_termination_) {
     Fail(program_name_ + " called WillTerminate more than once.");
     return;
   }
-  termination_task_.set_handler(
-    [this, withinSeconds](async_t*, async::Task*, zx_status_t status) {
-         FXL_LOG(ERROR) << program_name_
-                        << " termination timed out after "
-                        << withinSeconds << "s.";
-         binding_.set_error_handler(nullptr);
-         Fail("Termination timed out.");
-         if (teardown_after_termination_) {
-           Teardown([] {});
-         }
-         test_run_context_->StopTrackingClient(this, false);
-  });
-  termination_task_.PostDelayed(async_get_default(), zx::sec(withinSeconds));
+  waiting_for_termination_ = true;
+  termination_timer_.Start(fsl::MessageLoop::GetCurrent()->task_runner().get(),
+                           [this, withinSeconds] {
+                             FXL_LOG(ERROR) << program_name_
+                                            << " termination timed out after "
+                                            << withinSeconds << "s.";
+                             binding_.set_error_handler(nullptr);
+                             Fail("Termination timed out.");
+                             if (teardown_after_termination_) {
+                               Teardown([] {});
+                             }
+                             test_run_context_->StopTrackingClient(this, false);
+                           },
+                           fxl::TimeDelta::FromSecondsF(withinSeconds));
 }
 
 void TestRunnerImpl::SetTestPointCount(int64_t count) {

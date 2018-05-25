@@ -5,12 +5,10 @@
 #ifndef LIB_TEST_RUNNER_CPP_TEST_RUNNER_H_
 #define LIB_TEST_RUNNER_CPP_TEST_RUNNER_H_
 
-#include <memory>
-
-#include <lib/async/cpp/task.h>
 #include <test_runner/cpp/fidl.h>
-
+#include <memory>
 #include "lib/app/cpp/application_context.h"
+#include "lib/fxl/tasks/one_shot_timer.h"
 #include "lib/test_runner/cpp/scope.h"
 #include "lib/test_runner/cpp/test_runner_store_impl.h"
 
@@ -69,7 +67,8 @@ class TestRunnerImpl : public TestRunner {
   fidl::Binding<TestRunner> binding_;
   TestRunContext* const test_run_context_;
   std::string program_name_ = "UNKNOWN";
-  async::Task termination_task_;
+  bool waiting_for_termination_ = false;
+  fxl::OneShotTimer termination_timer_;
   bool teardown_after_termination_ = false;
   int64_t remaining_test_points_ = -1;
 
