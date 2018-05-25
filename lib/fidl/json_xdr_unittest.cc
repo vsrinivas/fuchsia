@@ -250,8 +250,7 @@ TEST(Xdr, FidlOptional) {
   json_xdr_unittest::OptionalData t2;
   EXPECT_TRUE(XdrRead(json, &t2, XdrOptionalData<json_xdr_unittest::OptionalData>));
 
-  // Always fails, FIDL-129.
-  //EXPECT_EQ(t2, t1) << json;
+  EXPECT_EQ(t2, t1) << json;
 
   // See comment in FidlRequired.
   EXPECT_TRUE(t2.string.is_null());
@@ -343,8 +342,7 @@ TEST(Xdr, FidlRequiredRepeatedOptional) {
   json_xdr_unittest::RequiredRepeatedOptionalData t1;
   EXPECT_TRUE(XdrRead(json, &t1, XdrOptionalData<json_xdr_unittest::RequiredRepeatedOptionalData>));
 
-  // Always fails, FIDL-128.
-  //EXPECT_EQ(t1, t0) << json;
+  EXPECT_EQ(t1, t0) << json;
 
   // See comment in FidlRequired.
   EXPECT_EQ(1u, t1.string->size());
@@ -536,8 +534,7 @@ TEST(Xdr, FidlOptionalRepeatedOptional) {
   json_xdr_unittest::OptionalRepeatedOptionalData t1;
   EXPECT_TRUE(XdrRead(json, &t1, XdrOptionalData<json_xdr_unittest::OptionalRepeatedOptionalData>));
 
-  // Always fails, FIDL-128.
-  //EXPECT_EQ(t1, t0) << json;
+  EXPECT_EQ(t1, t0) << json;
 
   // See comment in FidlRequired.
   EXPECT_FALSE(t1.string.is_null());
