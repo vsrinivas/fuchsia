@@ -549,45 +549,6 @@ class XdrContext {
   }
 
  private:
-  // Returned by ReadErrorHandler() to discard any errors that are accumulated
-  // between the ctor and the dtor and instead call the callback to set a
-  // default value.
-  class XdrCallbackOnReadError {
-   public:
-    XdrCallbackOnReadError(XdrContext* context,
-                           XdrOp op,
-                           std::string* error,
-                           std::function<void()> callback);
-    XdrCallbackOnReadError(XdrCallbackOnReadError&& rhs);
-    ~XdrCallbackOnReadError();
-
-    XdrContext* operator->() { return context_; }
-
-   private:
-    XdrContext* const context_;
-    const XdrOp op_;
-    std::string* const error_;
-    const size_t old_length_;
-    std::function<void()> error_callback_;
-
-    FXL_DISALLOW_COPY_AND_ASSIGN(XdrCallbackOnReadError);
-  };
-
- public:
-  // When adding a new value to a filter, use this function to deal with this
-  // field beign absent in JSON data that was written before the value was
-  // added. For example:
-  //
-  //   xdr->ReadErrorHandler([data] { data->ctime = time(nullptr); })
-  //      ->Field("ctime", &data->ctime);
-  //
-  // In the case that the "ctime" field cannot be read from the JSON input, the
-  // function supplied as argument to ReadErrorHandler() will be invoked
-  // instead. The error handler usually should just set a default value of the
-  // field.
-  XdrCallbackOnReadError ReadErrorHandler(std::function<void()> callback);
-
- private:
   XdrContext(XdrContext* parent,
              const char* name,
              XdrOp op,

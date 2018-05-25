@@ -11,7 +11,7 @@ namespace modular {
 
 namespace {
 
-void XdrParameterConstraint_v1(XdrContext* const xdr,
+void XdrParameterConstraint_v2(XdrContext* const xdr,
                                ParameterConstraint* const data) {
   xdr->Field("name", &data->name);
   xdr->Field("type", &data->type);
@@ -21,18 +21,37 @@ void XdrModuleManifest_v1(modular::XdrContext* const xdr,
                           modular::ModuleManifest* const data) {
   xdr->Field("binary", &data->binary);
   xdr->Field("suggestion_headline", &data->suggestion_headline);
-  xdr->ReadErrorHandler([data] { data->action = ""; })
-      ->Field("action", &data->action);
-  xdr->ReadErrorHandler([data] { data->composition_pattern = ""; })
-      ->Field("composition_pattern", &data->composition_pattern);
-  xdr->ReadErrorHandler([data] { data->parameter_constraints = nullptr; })
-      ->Field("parameters", &data->parameter_constraints,
-              XdrParameterConstraint_v1);
+
+  data->composition_pattern = "";
+  data->action = "";
+  data->parameter_constraints = nullptr;
+}
+
+// Composition Pattern was added in
+// https://fuchsia-review.googlesource.com/c/peridot/+/130421
+//
+// Noun Constraint types were changed to singular in
+// https://fuchsia-review.googlesource.com/c/peridot/+/136720
+//
+// Verb and Noun Constraints were renamed to Action and Parameters in
+// https://fuchsia-review.googlesource.com/c/peridot/+/147214
+//
+// We could have more backwards compatibility versions, but it doesn't seem
+// necessary.
+void XdrModuleManifest_v2(modular::XdrContext* const xdr,
+                          modular::ModuleManifest* const data) {
+  xdr->Field("binary", &data->binary);
+  xdr->Field("suggestion_headline", &data->suggestion_headline);
+  xdr->Field("action", &data->action);
+  xdr->Field("composition_pattern", &data->composition_pattern);
+  xdr->Field("parameters", &data->parameter_constraints,
+              XdrParameterConstraint_v2);
 }
 
 }  // namespace
 
 extern const XdrFilterType<ModuleManifest> XdrModuleManifest[] = {
+  XdrModuleManifest_v2,
   XdrModuleManifest_v1,
   nullptr,
 };
