@@ -49,7 +49,7 @@ where
                     return future::ready(Err(zx::Status::from_raw(status)));
                 }
                 let mut l = LogMessage {
-                    time: LittleEndian::read_u64(&buf[8..16]),
+                    time: LittleEndian::read_i64(&buf[8..16]),
                     pid: LittleEndian::read_u64(&buf[16..24]),
                     tid: LittleEndian::read_u64(&buf[24..32]),
                     severity: fidl_fuchsia_logger::LogLevelFilter::Info as i32,

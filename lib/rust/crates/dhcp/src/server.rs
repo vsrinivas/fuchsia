@@ -99,7 +99,7 @@ impl Server {
             client_addr: client_addr,
             options: client_opts,
             expiration: zx::Time::get(zx::ClockId::UTC)
-                + zx::Duration::from_seconds(self.config.default_lease_time as u64),
+                + zx::Duration::from_seconds(self.config.default_lease_time as i64),
         };
         self.cache.insert(client_mac, config);
         self.pool.allocate_addr(client_addr);

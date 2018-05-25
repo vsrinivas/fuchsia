@@ -34,7 +34,7 @@ use std::marker::Unpin;
 use std::path::PathBuf;
 use std::sync::{Arc, Weak};
 
-pub static HOST_INIT_TIMEOUT: u64 = 5; // Seconds
+pub static HOST_INIT_TIMEOUT: i64 = 5; // Seconds
 
 static BT_HOST_DIR: &'static str = "/dev/class/bt-host";
 static DEFAULT_NAME: &'static str = "fuchsia";

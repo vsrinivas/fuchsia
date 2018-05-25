@@ -8,7 +8,7 @@
 use std::{cmp, fmt};
 
 pub type zx_addr_t = usize;
-pub type zx_duration_t = u64;
+pub type zx_duration_t = i64;
 pub type zx_futex_t = i32;
 pub type zx_handle_t = u32;
 pub type zx_off_t = u64;
@@ -18,7 +18,7 @@ pub type zx_signals_t = u32;
 pub type zx_size_t = usize;
 pub type zx_ssize_t = isize;
 pub type zx_status_t = i32;
-pub type zx_time_t = u64;
+pub type zx_time_t = i64;
 pub type zx_vaddr_t = usize;
 pub type zx_obj_type_t = i32;
 pub type zx_koid_t = u64;
@@ -43,7 +43,7 @@ multiconst!(zx_handle_t, [
 ]);
 
 multiconst!(zx_time_t, [
-    ZX_TIME_INFINITE = ::std::u64::MAX;
+    ZX_TIME_INFINITE = ::std::i64::MAX;
 ]);
 
 multiconst!(zx_rights_t, [

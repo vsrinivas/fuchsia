@@ -33,7 +33,7 @@ const DEFAULT_CONFIG_PATH: &str = "/pkg/data/config.json";
 /// The rate in seconds at which expiration DHCP leases are recycled back into the managed address
 /// pool. The current value of 5 is meant to facilitate manual testing.
 // TODO(atait): Replace with Duration type after it has been updated to const fn.
-const EXPIRATION_INTERVAL_SECS: u64 = 5;
+const EXPIRATION_INTERVAL_SECS: i64 = 5;
 
 fn main() -> Result<(), Error> {
     let mut exec = Executor::new().context("error creating executor")?;

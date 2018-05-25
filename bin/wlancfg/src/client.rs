@@ -18,7 +18,7 @@ use std::boxed::PinBox;
 use std::sync::Arc;
 use zx::prelude::*;
 
-const AUTO_CONNECT_RETRY_SECONDS: u64 = 10;
+const AUTO_CONNECT_RETRY_SECONDS: i64 = 10;
 const AUTO_CONNECT_SCAN_TIMEOUT_SECONDS: u8 = 20;
 
 #[derive(Clone)]

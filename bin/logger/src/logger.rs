@@ -83,7 +83,7 @@ fn convert_to_log_message(bytes: &[u8]) -> Option<(LogMessage, usize)> {
     let mut l = LogMessage {
         pid: LittleEndian::read_u64(&bytes[0..8]),
         tid: LittleEndian::read_u64(&bytes[8..16]),
-        time: LittleEndian::read_u64(&bytes[16..24]),
+        time: LittleEndian::read_i64(&bytes[16..24]),
         severity: LittleEndian::read_i32(&bytes[24..28]),
         dropped_logs: LittleEndian::read_u32(&bytes[28..METADATA_SIZE]),
         tags: Vec::new(),

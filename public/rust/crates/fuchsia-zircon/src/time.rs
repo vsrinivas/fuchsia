@@ -19,16 +19,8 @@ pub struct Time(sys::zx_time_t);
 
 impl From<stdtime::Duration> for Duration {
     fn from(dur: stdtime::Duration) -> Self {
-        Duration::from_seconds(dur.as_secs()) +
-        Duration::from_nanos(dur.subsec_nanos() as u64)
-    }
-}
-
-impl From<Duration> for stdtime::Duration {
-    fn from(dur: Duration) -> Self {
-        let secs = dur.seconds();
-        let nanos = (dur.nanos() - (secs * 1_000_000_000)) as u32;
-        stdtime::Duration::new(secs, nanos)
+        Duration::from_seconds(dur.as_secs() as i64) +
+        Duration::from_nanos(dur.subsec_nanos() as i64)
     }
 }
 
@@ -92,7 +84,7 @@ impl ops::SubAssign<Duration> for Time {
 }
 
 impl<T> ops::Mul<T> for Duration
-    where T: Into<u64>
+    where T: Into<i64>
 {
     type Output = Self;
     fn mul(self, mul: T) -> Self {
@@ -101,7 +93,7 @@ impl<T> ops::Mul<T> for Duration
 }
 
 impl<T> ops::Div<T> for Duration
-    where T: Into<u64>
+    where T: Into<i64>
 {
     type Output = Self;
     fn div(self, div: T) -> Self {
@@ -115,43 +107,43 @@ impl Duration {
         Time::after(self).sleep()
     }
 
-    pub fn nanos(self) -> u64 {
+    pub fn nanos(self) -> i64 {
         self.0
     }
 
-    pub fn millis(self) -> u64 {
+    pub fn millis(self) -> i64 {
         self.0 / 1_000_000
     }
 
-    pub fn seconds(self) -> u64 {
+    pub fn seconds(self) -> i64 {
         self.millis() / 1_000
     }
 
-    pub fn minutes(self) -> u64 {
+    pub fn minutes(self) -> i64 {
         self.seconds() / 60
     }
 
-    pub fn hours(self) -> u64 {
+    pub fn hours(self) -> i64 {
         self.minutes() / 60
     }
 
-    pub fn from_nanos(nanos: u64) -> Self {
+    pub fn from_nanos(nanos: i64) -> Self {
         Duration(nanos)
     }
 
-    pub fn from_millis(millis: u64) -> Self {
+    pub fn from_millis(millis: i64) -> Self {
         Duration(millis * 1_000_000)
     }
 
-    pub fn from_seconds(secs: u64) -> Self {
+    pub fn from_seconds(secs: i64) -> Self {
         Duration::from_millis(secs * 1_000)
     }
 
-    pub fn from_minutes(min: u64) -> Self {
+    pub fn from_minutes(min: i64) -> Self {
         Duration::from_seconds(min * 60)
     }
 
-    pub fn from_hours(hours: u64) -> Self {
+    pub fn from_hours(hours: i64) -> Self {
         Duration::from_minutes(hours * 60)
     }
 
@@ -178,7 +170,7 @@ pub trait DurationNum: Sized {
 
 // Note: this could be implemented for other unsized integer types, but it doesn't seem
 // necessary to support the usual case.
-impl DurationNum for u64 {
+impl DurationNum for i64 {
     fn nanos(self) -> Duration {
         Duration::from_nanos(self)
     }
@@ -230,11 +222,11 @@ impl Time {
         unsafe { sys::zx_nanosleep(self.0); }
     }
 
-    pub fn nanos(self) -> u64 {
+    pub fn nanos(self) -> i64 {
         self.0
     }
 
-    pub fn from_nanos(nanos: u64) -> Self {
+    pub fn from_nanos(nanos: i64) -> Self {
         Time(nanos)
     }
 }
@@ -314,9 +306,11 @@ mod tests {
     }
 
     #[test]
-    fn into_from_std() {
+    fn from_std() {
         let std_dur = stdtime::Duration::new(25, 25);
-        assert_eq!(std_dur, stdtime::Duration::from(Duration::from(std_dur)));
+        let dur = Duration::from(std_dur);
+        let std_dur_nanos = (1_000_000_000 * std_dur.as_secs()) + std_dur.subsec_nanos() as u64;
+        assert_eq!(std_dur_nanos as i64, dur.nanos());
     }
 
     #[test]

@@ -281,7 +281,7 @@ fn start_scan_async(
     bt_facade: Arc<RwLock<BluetoothFacade>>, filter: Option<ScanFilter>, timeout: Option<u64>,
     count: Option<u64>,
 ) -> impl Future<Output = Result<Value, Error>> {
-    let timeout_ms = timeout.unwrap_or(DEFAULT_SCAN_TIMEOUT_MS).millis();
+    let timeout_ms = (timeout.unwrap_or(DEFAULT_SCAN_TIMEOUT_MS) as i64).millis();
     // Create scanning future and listen on central events for scan
     let scan_fut = BluetoothFacade::start_scan(bt_facade.clone(), filter);
 

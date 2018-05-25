@@ -231,7 +231,7 @@ mod tests {
         let ticks2 = ticks_get();
 
         // The number of ticks should have increased by at least 1 ms worth
-        let sleep_ticks = sleep_time.millis() * ticks_per_second() / 1000;
+        let sleep_ticks = (sleep_time.millis() as u64) * ticks_per_second() / 1000;
         assert!(ticks2 >= (ticks1 + sleep_ticks));
     }
 

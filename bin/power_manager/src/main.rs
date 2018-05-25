@@ -42,7 +42,7 @@ use fidl_fuchsia_power::{BatteryStatus, PowerManagerMarker, PowerManagerRequest,
 static POWER_DEVICE: &str = "/dev/class/power";
 
 // Time to sleep between status update in seconds.
-static SLEEP_TIME: u64 = 180;
+static SLEEP_TIME: i64 = 180;
 
 struct BatteryStatusHelper {
     battery_status: BatteryStatus,
