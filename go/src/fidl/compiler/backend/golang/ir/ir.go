@@ -9,6 +9,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"sort"
 
 	"fidl/compiler/backend/common"
 	"fidl/compiler/backend/types"
@@ -24,6 +25,12 @@ const (
 	TagSuffix         = "Tag"
 
 	MessageHeaderSize = 16
+
+	SyscallZxPackage = "syscall/zx"
+	SyscallZxAlias   = "_zx"
+
+	BindingsPackage = "fidl/bindings"
+	BindingsAlias   = "_bindings"
 )
 
 // Type represents a golang type.
@@ -279,30 +286,26 @@ type Root struct {
 
 	// Libraries represents the set of library dependencies for this FIDL library.
 	Libraries []Library
-
-	// NeedsBindings is whether or not the generated code depends on the bindings.
-	NeedsBindings bool
-
-	// NeedsSyscallZx is whether or not the generated code depends on syscall/zx.
-	NeedsSyscallZx bool
 }
 
 // compiler contains the state necessary for recursive compilation.
 type compiler struct {
-	// needsSyscallZx is whether or not we discovered that the generated code
-	// depends on syscall/zx.
-	needsSyscallZx bool
-
 	// decls contains all top-level declarations for the FIDL source.
 	decls types.DeclMap
 
 	// library is the identifier for the current library.
 	library types.LibraryIdentifier
 
-	// library deps is a mapping of compiled library identifiers (go package paths)
+	// libraryDeps is a mapping of compiled library identifiers (go package paths)
 	// to aliases, which is used to resolve references to types outside of the current
 	// FIDL library.
 	libraryDeps map[string]string
+
+	// usedLibraryDeps is identical to libraryDeps except it is built up as references
+	// are made into libraryDeps. Thus, after Compile is run, it contains the subset of
+	// libraryDeps that's actually being used. The purpose is to figure out which
+	// dependencies need to be imported.
+	usedLibraryDeps map[string]string
 }
 
 // Contains the full set of reserved golang keywords, in addition to a set of
@@ -432,7 +435,9 @@ func (c *compiler) compileCompoundIdentifier(eci types.EncodedCompoundIdentifier
 	pkg := compileLibraryIdentifier(ci.Library)
 	strs := []string{}
 	if c.inExternalLibrary(ci) {
-		strs = append(strs, c.libraryDeps[pkg])
+		pkgAlias := c.libraryDeps[pkg]
+		strs = append(strs, pkgAlias)
+		c.usedLibraryDeps[pkg] = pkgAlias
 	}
 	strs = append(strs, changeIfReserved(ci.Name, ext))
 	return strings.Join(strs, ".")
@@ -486,7 +491,8 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag) {
 			r = Type("string")
 		}
 	case types.HandleType:
-		c.needsSyscallZx = true
+		// Note here that we require the SyscallZx package.
+		c.usedLibraryDeps[SyscallZxPackage] = SyscallZxAlias
 		e, ok := handleTypes[val.HandleSubtype]
 		if !ok {
 			// Fall back onto a generic handle if we don't support that particular
@@ -702,7 +708,6 @@ func Compile(fidlData types.Root) Root {
 
 	// Collect all libraries.
 	godeps := make(map[string]string)
-	libs := make([]Library, 0, len(fidlData.Libraries))
 	for _, v := range fidlData.Libraries {
 		// Don't try to import yourself.
 		if v.Name == fidlData.Name {
@@ -717,10 +722,6 @@ func Compile(fidlData types.Root) Root {
 			"",
 		)
 		godeps[path] = alias
-		libs = append(libs, Library{
-			Path:  path,
-			Alias: alias,
-		})
 	}
 
 	// Instantiate a compiler context.
@@ -728,13 +729,13 @@ func Compile(fidlData types.Root) Root {
 		decls:       fidlData.Decls,
 		library:     libraryName,
 		libraryDeps: godeps,
+		usedLibraryDeps: make(map[string]string),
 	}
 
 	// Compile fidlData into r.
 	r := Root{
 		Name:        string(libraryName[len(libraryName)-1]),
 		PackageName: libraryPath,
-		Libraries:   libs,
 	}
 	for _, v := range fidlData.Consts {
 		r.Consts = append(r.Consts, c.compileConst(v))
@@ -749,12 +750,21 @@ func Compile(fidlData types.Root) Root {
 		r.Unions = append(r.Unions, c.compileUnion(v))
 	}
 	if len(fidlData.Interfaces) != 0 {
-		r.NeedsBindings = true
-		r.NeedsSyscallZx = true
+		c.usedLibraryDeps[SyscallZxPackage] = SyscallZxAlias
+		c.usedLibraryDeps[BindingsPackage] = BindingsAlias
 	}
 	for _, v := range fidlData.Interfaces {
 		r.Interfaces = append(r.Interfaces, c.compileInterface(v))
 	}
-	r.NeedsSyscallZx = r.NeedsSyscallZx || c.needsSyscallZx
+	for path, alias := range c.usedLibraryDeps {
+		r.Libraries = append(r.Libraries, Library{
+			Path:  path,
+			Alias: alias,
+		})
+	}
+	// Sort the libraries according to Path.
+	sort.Slice(r.Libraries, func(i, j int) bool {
+		return strings.Compare(r.Libraries[i].Path, r.Libraries[j].Path) == -1
+	})
 	return r
 }

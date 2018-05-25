@@ -15,13 +15,6 @@ const Library = `
 package {{ .Name }}
 
 import (
-{{- if .NeedsBindings }}
-	_bindings "fidl/bindings"
-{{- end }}
-{{- if .NeedsSyscallZx }}
-	_zx "syscall/zx"
-{{- end }}
-
 {{- range .Libraries }}
 	{{ .Alias }} "{{ .Path }}"
 {{- end }}
