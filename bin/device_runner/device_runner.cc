@@ -229,17 +229,6 @@ class DeviceRunnerApp : DeviceShellContext,
         Start();
       });
     }
-
-    // 0c. Expose debug information via outgoing directory.
-    // TODO(alhaad): We want to split this up into multiple files or even
-    // organize it into multiple directories. Pseudo-directories needs to be
-    // changed first to support callbacks.
-    app_context_->outgoing().debug_dir()->AddEntry(
-        "dump-state",
-        fbl::AdoptRef(new fs::BufferedPseudoFile([this](fbl::String* out) {
-          *out = user_provider_impl_->DumpState();
-          return ZX_OK;
-        })));
   }
 
  private:

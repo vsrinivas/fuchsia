@@ -48,8 +48,6 @@ class UserControllerImpl : UserController, modular_private::UserContext {
       fidl::InterfaceRequest<UserController> user_controller_request,
       DoneCallback done);
 
-  std::string DumpState();
-
   // This will effectively tear down the entire instance by calling |done|.
   // |UserController|
   void Logout(LogoutCallback done) override;

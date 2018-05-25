@@ -28,15 +28,3 @@ interface UserContext {
 
   2: GetPresentation(request<presentation.Presentation> presentation);
 };
-
-// For development purposes only.
-// This is implemented by user runner and used to expose some debug information.
-// TODO(alhaad): This should not be a FIDL method but rather exposed directly
-// via the outgoing directory. The reason that we can't do that now is because
-// VFS doesn't currently support asynchronous operations and getting debug data
-// within user runner synchronously is hard.
-[Discoverable]  // Created by user_runner application.
-interface UserRunnerDebug {
-  // TODO(alhaad): We might be limited by FIDL message size. Consider using vmo.
-  1: DumpState() -> (string debug_state);
-};

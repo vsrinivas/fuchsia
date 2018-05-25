@@ -165,15 +165,6 @@ UserRunnerImpl::UserRunnerImpl(
       [this](fidl::InterfaceRequest<UserRunner> request) {
         bindings_.AddBinding(this, std::move(request));
       });
-
-  // TODO(alhaad): Once VFS supports asynchronous operations, expose directly
-  // to filesystem instead of this indirection.
-  application_context_->outgoing()
-      .AddPublicService<modular_private::UserRunnerDebug>(
-          [this](fidl::InterfaceRequest<modular_private::UserRunnerDebug>
-                     request) {
-            user_runner_debug_bindings_.AddBinding(this, std::move(request));
-          });
 }
 
 UserRunnerImpl::~UserRunnerImpl() = default;
@@ -667,24 +658,6 @@ void UserRunnerImpl::Terminate(std::function<void()> done) {
   at_end_done_ = std::move(done);
 
   TerminateRecurse(at_end_.size() - 1);
-}
-
-void UserRunnerImpl::DumpState(DumpStateCallback callback) {
-  std::ostringstream output;
-  output << "=================Begin user info====================" << std::endl;
-
-  output << "=================Begin account info=================" << std::endl;
-  std::string account_json;
-  XdrWrite(&account_json, &account_, XdrAccount);
-  output << account_json << std::endl;
-
-  story_provider_impl_->DumpState(fxl::MakeCopyable(
-      [output = std::move(output), callback](const std::string& debug) mutable {
-        output << debug;
-        callback(output.str());
-      }));
-
-  // TODO(alhaad): Add debug info about agents, device map, etc.
 }
 
 void UserRunnerImpl::GetAccount(GetAccountCallback callback) {

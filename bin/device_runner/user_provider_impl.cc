@@ -116,23 +116,6 @@ void UserProviderImpl::Teardown(const std::function<void()>& callback) {
   }
 }
 
-std::string UserProviderImpl::DumpState() {
-  std::ostringstream output;
-  if (users_storage_) {
-    output << "=================Begin userdb=====================" << std::endl;
-    for (const auto* user : *users_storage_->users()) {
-      auto account = Convert(user);
-      std::string account_json;
-      XdrWrite(&account_json, &account, XdrAccount);
-      output << account_json << std::endl;
-    }
-  }
-  for (const auto& kv : user_controllers_) {
-    output << kv.first->DumpState();
-  }
-  return output.str();
-}
-
 void UserProviderImpl::Login(UserLoginParams params) {
   // If requested, run in incognito mode.
   if (params.account_id.is_null() || params.account_id == "") {

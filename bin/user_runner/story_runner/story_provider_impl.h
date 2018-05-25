@@ -109,8 +109,6 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
       fidl::StringPtr story_id,
       fidl::InterfaceHandle<StoryVisualStateWatcher> watcher);
 
-  void DumpState(const std::function<void(const std::string&)>& callback);
-
  private:
   // |StoryProvider|
   void CreateStory(fidl::StringPtr module_url,
@@ -256,7 +254,6 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   class StopStoryShellCall;
   class GetImportanceCall;
   class GetLinkPeerCall;
-  class DumpStateCall;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryProviderImpl);
 };

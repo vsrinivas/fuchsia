@@ -62,14 +62,6 @@ UserControllerImpl::UserControllerImpl(
       std::move(view_owner_request));
 }
 
-std::string UserControllerImpl::DumpState() {
-  modular_private::UserRunnerDebugSyncPtr debug;
-  user_runner_app_->services().ConnectToService(debug.NewRequest());
-  fidl::StringPtr output;
-  debug->DumpState(&output);
-  return output;
-}
-
 // |UserController|
 void UserControllerImpl::Logout(LogoutCallback done) {
   FXL_LOG(INFO) << "UserController::Logout()";

@@ -48,8 +48,7 @@ class VisibleStoriesHandler;
 
 class UserRunnerImpl : modular_private::UserRunner,
                        UserShellContext,
-                       EntityProviderLauncher,
-                       modular_private::UserRunnerDebug {
+                       EntityProviderLauncher {
  public:
   UserRunnerImpl(component::ApplicationContext* application_context, bool test);
 
@@ -125,9 +124,6 @@ class UserRunnerImpl : modular_private::UserRunner,
       fidl::InterfaceRequest<AgentController> agent_controller_request)
       override;
 
-  // |UserRunnerDebug|
-  void DumpState(DumpStateCallback callback) override;
-
   component::ServiceProviderPtr GetServiceProvider(AppConfig config);
   component::ServiceProviderPtr GetServiceProvider(const std::string& url);
 
@@ -161,8 +157,6 @@ class UserRunnerImpl : modular_private::UserRunner,
   const bool test_;
 
   fidl::BindingSet<modular_private::UserRunner> bindings_;
-  fidl::BindingSet<modular_private::UserRunnerDebug>
-      user_runner_debug_bindings_;
   fidl::Binding<UserShellContext> user_shell_context_binding_;
 
   modular_auth::TokenProviderFactoryPtr token_provider_factory_;

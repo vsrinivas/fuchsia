@@ -506,64 +506,6 @@ class StoryProviderImpl::GetLinkPeerCall : public Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(GetLinkPeerCall);
 };
 
-class StoryProviderImpl::DumpStateCall : public Operation<std::string> {
- public:
-  DumpStateCall(StoryProviderImpl* const story_provider_impl,
-                ResultCall result_call)
-      : Operation("StoryProviderImpl::DumpStateCall", std::move(result_call)),
-        story_provider_impl_(story_provider_impl) {}
-
- private:
-  void Run() override {
-    FlowToken flow{this, &dump_};
-
-    output_ << "=================Begin story provider info=======" << std::endl;
-
-    operation_queue_.Add(
-        new DumpPageSnapshotCall(story_provider_impl_->page(),
-                                 [this, flow](auto dump) { output_ << dump; }));
-    operation_queue_.Add(new ReadAllDataCall<modular_private::StoryData>(
-        story_provider_impl_->page(), kStoryKeyPrefix, XdrStoryData,
-        [this, flow](fidl::VectorPtr<modular_private::StoryData> data) {
-          for (size_t i = 0; i < data->size(); ++i) {
-            DumpStoryPage(std::move(data->at(i)), flow);
-          }
-
-          // This needs to be the last operations on |operation_queue_| since we
-          // need to get all the content from |output_| into |dump_|.
-          operation_queue_.Add(
-              new SyncCall([this, flow] { dump_ = output_.str(); }));
-        }));
-  }
-
-  void DumpStoryPage(modular_private::StoryData story_data, FlowToken flow) {
-    auto story_id = std::move(story_data.story_info.id);
-    auto page_id = std::move(story_data.story_page_id);
-    ledger::PagePtr story_page;
-    story_provider_impl_->ledger_client_->ledger()->GetPage(
-        std::move(page_id), story_page.NewRequest(), [](auto s) {});
-    story_pages_.push_back(std::move(story_page));
-    operation_queue_.Add(new DumpPageSnapshotCall(
-        story_pages_.back().get(), [this, story_id, flow](auto dump) {
-          output_ << "=================Story id: " << story_id
-                  << "===========" << std::endl;
-          output_ << dump;
-        }));
-  }
-
-  StoryProviderImpl* const story_provider_impl_;  // not owned
-
-  std::vector<ledger::PagePtr> story_pages_;
-
-  std::string dump_;
-  std::ostringstream output_;
-
-  // Sub operations run in this queue.
-  OperationQueue operation_queue_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(DumpStateCall);
-};
-
 StoryProviderImpl::StoryProviderImpl(
     Scope* const user_scope, std::string device_id,
     LedgerClient* const ledger_client, LedgerPageId root_page_id,
@@ -703,12 +645,6 @@ void StoryProviderImpl::SetStoryInfoExtra(fidl::StringPtr story_id,
 
   operation_queue_.Add(new MutateStoryDataCall(page(), story_id, mutate, done));
 };
-
-void StoryProviderImpl::DumpState(
-    const std::function<void(const std::string&)>& callback) {
-  operation_queue_.Add(
-      new DumpStateCall(this, [callback](auto dump) { callback(dump); }));
-}
 
 // |StoryProvider|
 void StoryProviderImpl::CreateStory(fidl::StringPtr module_url,

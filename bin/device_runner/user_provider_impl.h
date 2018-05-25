@@ -28,8 +28,6 @@ class UserProviderImpl : UserProvider {
 
   void Teardown(const std::function<void()>& callback);
 
-  std::string DumpState();
-
  private:
   // |UserProvider|
   void Login(UserLoginParams params) override;
