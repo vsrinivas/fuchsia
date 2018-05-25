@@ -43,7 +43,8 @@ static void found_driver(zircon_driver_note_payload_t* note,
 
     if ((note->flags & ZIRCON_DRIVER_NOTE_FLAG_ASAN) && !dc_asan_drivers) {
         if (dc_launched_first_devhost) {
-            log(ERROR, "%s (%s) requires ASan: cannot load after boot\n",
+            log(ERROR, "%s (%s) requires ASan: cannot load after boot;"
+                " consider devmgr.devhost.asan=true\n",
                 libname, note->name);
             return;
         }

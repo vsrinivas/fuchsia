@@ -70,6 +70,14 @@ reboot, or power off did not finish in 10 seconds.
 If this option is set, the system invokes kernel fallback to reboot or poweroff
 the device when the operation did not finish in 10 seconds.
 
+## devmgr\.devhost\.asan
+
+This option must be set if any drivers not included directly in /boot are built
+with `-fsanitize=address`.  If there are `-fsanitize=address` drivers in /boot,
+then all `-fsanitize=address` drivers will be supported regardless of this
+option.  If this option is not set and there are no such drivers in /boot, then
+drivers built with `-fsanitize=address` cannot be loaded and will be rejected.
+
 ## driver.\<name>.disable
 
 Disables the driver with the given name. The driver name comes from the

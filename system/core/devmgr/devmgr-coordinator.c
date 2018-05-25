@@ -2106,6 +2106,8 @@ void coordinator(void) {
     suspend_fallback = getenv_bool("devmgr.suspend-timeout-fallback", false);
     suspend_debug = getenv_bool("devmgr.suspend-timeout-debug", false);
 
+    dc_asan_drivers = getenv_bool("devmgr.devhost.asan", false);
+
     devfs_publish(&root_device, &misc_device);
     devfs_publish(&root_device, &sys_device);
     devfs_publish(&root_device, &test_device);
