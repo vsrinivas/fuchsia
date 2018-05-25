@@ -96,8 +96,8 @@ void QueryProcessor::RegisterQueryHandler(
 }
 
 void QueryProcessor::SetFilters(
-    std::vector<std::unique_ptr<SuggestionFilter>>&& active_filters,
-    std::vector<std::unique_ptr<SuggestionFilter>>&& passive_filters) {
+    std::vector<std::unique_ptr<SuggestionActiveFilter>>&& active_filters,
+    std::vector<std::unique_ptr<SuggestionPassiveFilter>>&& passive_filters) {
   suggestions_.SetActiveFilters(std::move(active_filters));
   suggestions_.SetPassiveFilters(std::move(passive_filters));
 }

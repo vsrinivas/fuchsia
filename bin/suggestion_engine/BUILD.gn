@@ -82,6 +82,7 @@ group("unittests") {
 
   deps = [
     ":decision_policy_unittest",
+    ":filters_unittest",
     ":ranking_unittest",
   ]
 }
@@ -136,6 +137,20 @@ source_set("rankers") {
   ]
 }
 
+source_set("filters") {
+  sources = [
+    "filters/ranked_active_filter.cc",
+    "filters/ranked_active_filter.h",
+    "suggestion_active_filter.cc",
+    "suggestion_active_filter.h",
+  ]
+
+  deps = [
+    ":models",
+    ":ranking",
+  ]
+}
+
 source_set("ranking_features") {
   sources = [
     "ranking_feature.cc",
@@ -152,6 +167,8 @@ source_set("ranking_features") {
     "ranking_features/proposal_hint_ranking_feature.h",
     "ranking_features/query_match_ranking_feature.cc",
     "ranking_features/query_match_ranking_feature.h",
+    "ranking_features/dead_story_ranking_feature.cc",
+    "ranking_features/dead_story_ranking_feature.h",
   ]
 
   public_deps = [
@@ -258,6 +275,21 @@ source_set("decision_policy_unittest") {
   ]
 }
 
+source_set("filters_unittest") {
+  testonly = true
+
+  sources = [
+    "filters/ranked_active_filter_unittest.cc",
+  ]
+
+  deps = [
+    ":filters",
+    ":ranking",
+    "//garnet/public/lib/gtest",
+    "//peridot/public/lib:fidl",
+  ]
+}
+
 source_set("ranking_unittest") {
   testonly = true
 
@@ -269,6 +301,7 @@ source_set("ranking_unittest") {
     "ranking_features/mod_pair_ranking_feature_unittest.cc",
     "ranking_features/proposal_hint_ranking_feature_unittest.cc",
     "ranking_features/query_match_ranking_feature_unittest.cc",
+    "ranking_features/dead_story_ranking_feature_unittest.cc",
   ]
 
   deps = [
@@ -276,16 +309,5 @@ source_set("ranking_unittest") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest",
-  ]
-}
-
-source_set("filters") {
-  sources = [
-    "suggestion_filter.cc",
-    "suggestion_filter.h",
-  ]
-
-  deps = [
-      ":models",
   ]
 }

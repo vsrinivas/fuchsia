@@ -16,14 +16,17 @@
 
 #include "peridot/bin/suggestion_engine/auto_select_first_query_listener.h"
 #include "peridot/bin/suggestion_engine/decision_policies/rank_over_threshold_decision_policy.h"
+#include "peridot/bin/suggestion_engine/filters/ranked_active_filter.h"
 #include "peridot/bin/suggestion_engine/rankers/linear_ranker.h"
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/annoyance_ranking_feature.h"
+#include "peridot/bin/suggestion_engine/ranking_features/dead_story_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/focused_story_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/kronk_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/mod_pair_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/proposal_hint_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/query_match_ranking_feature.h"
+#include "peridot/bin/suggestion_engine/suggestion_active_filter.h"
 #include "peridot/lib/fidl/json_xdr.h"
 
 namespace modular {
@@ -198,6 +201,8 @@ void SuggestionEngineImpl::RegisterRankingFeatures() {
       std::make_shared<FocusedStoryRankingFeature>();
   ranking_features["annoyance_rf"] =
       std::make_shared<AnnoyanceRankingFeature>();
+  ranking_features["dead_story_rf"] =
+      std::make_shared<DeadStoryRankingFeature>();
 
   // Get context updates every time a story is focused to rerank suggestions
   // based on the story that is focused at the moment.
@@ -236,6 +241,12 @@ void SuggestionEngineImpl::RegisterRankingFeatures() {
   auto decision_policy = std::make_unique<RankOverThresholdDecisionPolicy>(
       std::move(interrupt_ranker));
   next_processor_.SetInterruptionDecisionPolicy(std::move(decision_policy));
+
+  // Set up active filters
+  std::vector<std::unique_ptr<SuggestionActiveFilter>> active_filters;
+  active_filters.push_back(std::make_unique<RankedActiveFilter>(
+      ranking_features["dead_story_rf"]));
+  next_processor_.SetActiveFilters(std::move(active_filters));
 }
 
 void SuggestionEngineImpl::PerformActions(

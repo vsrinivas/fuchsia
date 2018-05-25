@@ -32,12 +32,12 @@ RankedSuggestionsList::RankedSuggestionsList() {}
 RankedSuggestionsList::~RankedSuggestionsList() = default;
 
 void RankedSuggestionsList::SetActiveFilters(
-    std::vector<std::unique_ptr<SuggestionFilter>>&& active_filters) {
+    std::vector<std::unique_ptr<SuggestionActiveFilter>>&& active_filters) {
   suggestion_active_filters_ = std::move(active_filters);
 }
 
 void RankedSuggestionsList::SetPassiveFilters(
-    std::vector<std::unique_ptr<SuggestionFilter>>&& passive_filters) {
+    std::vector<std::unique_ptr<SuggestionPassiveFilter>>&& passive_filters) {
   suggestion_passive_filters_ = std::move(passive_filters);
 }
 
@@ -131,14 +131,14 @@ void RankedSuggestionsList::Refresh(const UserInput& query) {
 
   // apply the active filters that modify the entire suggestions list
   for (const auto& active_filter : suggestion_active_filters_) {
-    active_filter->Filter(nullptr, &all_suggestions);
+    active_filter->Filter(&all_suggestions);
   }
 
   // apply the passive filters that hide some of the suggestions
   for (auto& suggestion : all_suggestions) {
     bool should_filter = false;
     for (const auto& passive_filter : suggestion_passive_filters_) {
-      if (passive_filter->Filter(suggestion, nullptr)) {
+      if (passive_filter->Filter(suggestion)) {
         should_filter = true;
         break;
       }

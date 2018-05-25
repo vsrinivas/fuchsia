@@ -83,10 +83,13 @@ void NextProcessor::RemoveProposalFromList(const std::string& component_url,
   }
 }
 
-void NextProcessor::SetFilters(
-    std::vector<std::unique_ptr<SuggestionFilter>>&& active_filters,
-    std::vector<std::unique_ptr<SuggestionFilter>>&& passive_filters) {
+void NextProcessor::SetActiveFilters(
+    std::vector<std::unique_ptr<SuggestionActiveFilter>>&& active_filters) {
   suggestions_.SetActiveFilters(std::move(active_filters));
+}
+
+void NextProcessor::SetPassiveFilters(
+    std::vector<std::unique_ptr<SuggestionPassiveFilter>>&& passive_filters) {
   suggestions_.SetPassiveFilters(std::move(passive_filters));
 }
 

@@ -17,6 +17,8 @@
 #include "peridot/bin/suggestion_engine/ranked_suggestion.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestions_list.h"
 #include "peridot/bin/suggestion_engine/ranker.h"
+#include "peridot/bin/suggestion_engine/suggestion_active_filter.h"
+#include "peridot/bin/suggestion_engine/suggestion_passive_filter.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 
 namespace modular {
@@ -43,9 +45,11 @@ class NextProcessor {
   void RemoveProposal(const std::string& component_url,
                       const std::string& proposal_id);
 
-  void SetFilters(
-      std::vector<std::unique_ptr<SuggestionFilter>>&& active_filters,
-      std::vector<std::unique_ptr<SuggestionFilter>>&& passive_filters);
+  void SetActiveFilters(
+      std::vector<std::unique_ptr<SuggestionActiveFilter>>&& active_filters);
+
+  void SetPassiveFilters(
+      std::vector<std::unique_ptr<SuggestionPassiveFilter>>&& passive_filters);
 
   void SetRanker(std::unique_ptr<Ranker> ranker);
 

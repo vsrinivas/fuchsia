@@ -51,8 +51,8 @@ class QueryProcessor {
                             fidl::InterfaceHandle<QueryHandler> query_handler);
 
   void SetFilters(
-      std::vector<std::unique_ptr<SuggestionFilter>>&& active_filters,
-      std::vector<std::unique_ptr<SuggestionFilter>>&& passive_filters);
+      std::vector<std::unique_ptr<SuggestionActiveFilter>>&& active_filters,
+      std::vector<std::unique_ptr<SuggestionPassiveFilter>>&& passive_filters);
 
   void SetRanker(std::unique_ptr<Ranker> ranker);
 
