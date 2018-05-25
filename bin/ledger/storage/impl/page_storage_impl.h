@@ -62,6 +62,7 @@ class PageStorageImpl : public PageStorage {
                  std::function<void(Status, std::unique_ptr<const Commit>)>
                      callback) override;
   void AddCommitsFromSync(std::vector<CommitIdAndBytes> ids_and_bytes,
+                          ChangeSource source,
                           std::function<void(Status)> callback) override;
   void StartCommit(
       const CommitId& commit_id, JournalType journal_type,
@@ -205,9 +206,9 @@ class PageStorageImpl : public PageStorage {
                                 std::unique_ptr<const Commit> commit,
                                 std::vector<ObjectIdentifier> new_objects);
 
-  FXL_WARN_UNUSED_RESULT Status
-  SynchronousAddCommitsFromSync(coroutine::CoroutineHandler* handler,
-                                std::vector<CommitIdAndBytes> ids_and_bytes);
+  FXL_WARN_UNUSED_RESULT Status SynchronousAddCommitsFromSync(
+      coroutine::CoroutineHandler* handler,
+      std::vector<CommitIdAndBytes> ids_and_bytes, ChangeSource source);
 
   FXL_WARN_UNUSED_RESULT Status SynchronousGetUnsyncedCommits(
       coroutine::CoroutineHandler* handler,

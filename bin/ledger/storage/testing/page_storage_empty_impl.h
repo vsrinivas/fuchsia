@@ -33,6 +33,7 @@ class PageStorageEmptyImpl : public PageStorage {
                      callback) override;
 
   void AddCommitsFromSync(std::vector<CommitIdAndBytes> ids_and_bytes,
+                          ChangeSource source,
                           std::function<void(Status)> callback) override;
 
   void StartCommit(

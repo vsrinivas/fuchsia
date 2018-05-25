@@ -166,16 +166,16 @@ void PageStorageImpl::AddCommitFromLocal(
 }
 
 void PageStorageImpl::AddCommitsFromSync(
-    std::vector<CommitIdAndBytes> ids_and_bytes,
+    std::vector<CommitIdAndBytes> ids_and_bytes, storage::ChangeSource source,
     std::function<void(Status)> callback) {
   coroutine_service_->StartCoroutine(
-      fxl::MakeCopyable([this, ids_and_bytes = std::move(ids_and_bytes),
+      fxl::MakeCopyable([this, ids_and_bytes = std::move(ids_and_bytes), source,
                          final_callback = std::move(callback)](
                             CoroutineHandler* handler) mutable {
         auto callback =
             UpdateActiveHandlersCallback(handler, std::move(final_callback));
-        callback(
-            SynchronousAddCommitsFromSync(handler, std::move(ids_and_bytes)));
+        callback(SynchronousAddCommitsFromSync(
+            handler, std::move(ids_and_bytes), source));
       }));
 }
 
@@ -745,7 +745,8 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
       object_identifier,
       [this, callback = std::move(callback),
        object_identifier = std::move(object_identifier)](
-          Status status, std::unique_ptr<DataSource::DataChunk> chunk) mutable {
+          Status status, ChangeSource source,
+          std::unique_ptr<DataSource::DataChunk> chunk) mutable {
         if (status != Status::OK) {
           callback(status);
           return;
@@ -755,7 +756,7 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
           return;
         }
         coroutine_service_->StartCoroutine(fxl::MakeCopyable(
-            [this, object_identifier = std::move(object_identifier),
+            [this, object_identifier = std::move(object_identifier), source,
              chunk = std::move(chunk), final_callback = std::move(callback)](
                 CoroutineHandler* handler) mutable {
               auto callback = UpdateActiveHandlersCallback(
@@ -774,8 +775,8 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
               }
 
               if (object_digest_type == ObjectDigestType::VALUE_HASH) {
-                AddPiece(std::move(object_identifier), std::move(chunk),
-                         ChangeSource::SYNC, std::move(callback));
+                AddPiece(std::move(object_identifier), std::move(chunk), source,
+                         std::move(callback));
                 return;
               }
 
@@ -803,7 +804,7 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
 
               waiter->Finalize(fxl::MakeCopyable(
                   [this, object_identifier = std::move(object_identifier),
-                   chunk = std::move(chunk),
+                   source, chunk = std::move(chunk),
                    callback = std::move(callback)](Status status) mutable {
                     if (status != Status::OK) {
                       callback(status);
@@ -811,7 +812,7 @@ void PageStorageImpl::DownloadFullObject(ObjectIdentifier object_identifier,
                     }
 
                     AddPiece(std::move(object_identifier), std::move(chunk),
-                             ChangeSource::SYNC, std::move(callback));
+                             source, std::move(callback));
                   }));
             }));
       });
@@ -1053,7 +1054,8 @@ Status PageStorageImpl::SynchronousAddCommitFromLocal(
 }
 
 Status PageStorageImpl::SynchronousAddCommitsFromSync(
-    CoroutineHandler* handler, std::vector<CommitIdAndBytes> ids_and_bytes) {
+    CoroutineHandler* handler, std::vector<CommitIdAndBytes> ids_and_bytes,
+    ChangeSource source) {
   std::vector<std::unique_ptr<const Commit>> commits;
 
   std::map<const CommitId*, const Commit*, StringPointerComparator> leaves;
@@ -1132,7 +1134,7 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
     return waiter_status;
   }
 
-  return SynchronousAddCommits(handler, std::move(commits), ChangeSource::SYNC,
+  return SynchronousAddCommits(handler, std::move(commits), source,
                                std::vector<ObjectIdentifier>());
 }
 
@@ -1216,7 +1218,7 @@ Status PageStorageImpl::SynchronousAddCommits(
       // commit got added in between.
       Status s = ContainsCommit(handler, commit->GetId());
       if (s == Status::OK) {
-        if (source == ChangeSource::SYNC) {
+        if (source == ChangeSource::CLOUD) {
           s = batch->MarkCommitIdSynced(handler, commit->GetId());
           if (s != Status::OK) {
             return s;

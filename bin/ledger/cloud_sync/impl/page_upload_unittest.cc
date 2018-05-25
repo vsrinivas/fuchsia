@@ -210,12 +210,12 @@ TEST_F(PageUploadTest, UploadNewCommits) {
   auto commit2 = storage_.NewCommit("id2", "content2", false);
   storage_.new_commits_to_return["id2"] = commit2->Clone();
   storage_.watcher_->OnNewCommits(commit2->AsList(),
-                                  storage::ChangeSource::SYNC);
+                                  storage::ChangeSource::CLOUD);
 
   auto commit3 = storage_.NewCommit("id3", "content3");
   storage_.new_commits_to_return["id3"] = commit3->Clone();
   storage_.watcher_->OnNewCommits(commit3->AsList(),
-                                  storage::ChangeSource::LOCAL);
+                                  storage::ChangeSource::CLOUD);
 
   RunLoopUntilIdle();
   ASSERT_TRUE(upload_is_idle);

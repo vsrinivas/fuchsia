@@ -73,21 +73,21 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
   // storage::PageSyncDelegate:
   void GetObject(
       storage::ObjectIdentifier object_identifier,
-      std::function<void(storage::Status,
+      std::function<void(storage::Status, storage::ChangeSource,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback) override;
 
   void DecryptObject(
       storage::ObjectIdentifier object_identifier,
       std::unique_ptr<storage::DataSource> content,
-      std::function<void(storage::Status,
+      std::function<void(storage::Status, storage::ChangeSource,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback);
 
   void HandleGetObjectError(
       storage::ObjectIdentifier object_identifier, bool is_permanent,
       const char error_name[],
-      std::function<void(storage::Status,
+      std::function<void(storage::Status, storage::ChangeSource,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback);
 

@@ -235,10 +235,12 @@ TEST_F(PageCommunicatorImplTest, GetObject) {
 
   bool called;
   storage::Status status;
+  storage::ChangeSource source;
   std::unique_ptr<storage::DataSource::DataChunk> data;
   page_communicator.GetObject(
       storage::ObjectIdentifier{0, 0, "foo"},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &data));
+      callback::Capture(callback::SetWhenCalled(&called), &status, &source,
+                        &data));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
 
@@ -336,10 +338,12 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSuccess) {
 
   bool called;
   storage::Status status;
+  storage::ChangeSource source;
   std::unique_ptr<storage::DataSource::DataChunk> data;
   page_communicator.GetObject(
       storage::ObjectIdentifier{0, 0, "foo"},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &data));
+      callback::Capture(callback::SetWhenCalled(&called), &status, &source,
+                        &data));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
 
@@ -375,10 +379,12 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
 
   bool called;
   storage::Status status;
+  storage::ChangeSource source;
   std::unique_ptr<storage::DataSource::DataChunk> data;
   page_communicator.GetObject(
       storage::ObjectIdentifier{0, 0, "foo"},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &data));
+      callback::Capture(callback::SetWhenCalled(&called), &status, &source,
+                        &data));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
 
@@ -415,10 +421,12 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
 
   bool called;
   storage::Status status;
+  storage::ChangeSource source;
   std::unique_ptr<storage::DataSource::DataChunk> data;
   page_communicator.GetObject(
       storage::ObjectIdentifier{0, 0, "foo"},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &data));
+      callback::Capture(callback::SetWhenCalled(&called), &status, &source,
+                        &data));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
   EXPECT_EQ(2u, mesh.messages_.size());
@@ -462,10 +470,12 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
 
   bool called;
   storage::Status status;
+  storage::ChangeSource source;
   std::unique_ptr<storage::DataSource::DataChunk> data;
   page_communicator.GetObject(
       storage::ObjectIdentifier{0, 0, "foo"},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &data));
+      callback::Capture(callback::SetWhenCalled(&called), &status, &source,
+                        &data));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
   EXPECT_EQ(2u, mesh.messages_.size());

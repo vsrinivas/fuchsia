@@ -31,7 +31,7 @@ void PageStorageEmptyImpl::GetCommit(
 }
 
 void PageStorageEmptyImpl::AddCommitsFromSync(
-    std::vector<CommitIdAndBytes> /*ids_and_bytes*/,
+    std::vector<CommitIdAndBytes> /*ids_and_bytes*/, ChangeSource /*source*/,
     std::function<void(Status)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED);

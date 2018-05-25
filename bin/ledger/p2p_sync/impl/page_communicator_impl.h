@@ -52,7 +52,7 @@ class PageCommunicatorImpl : public PageCommunicator,
   // PageSyncDelegate:
   void GetObject(
       storage::ObjectIdentifier object_identifier,
-      std::function<void(storage::Status status,
+      std::function<void(storage::Status, storage::ChangeSource,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback) override;
 

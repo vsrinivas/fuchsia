@@ -46,6 +46,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
 
   void AddCommitsFromSync(
       std::vector<PageStorage::CommitIdAndBytes> ids_and_bytes,
+      storage::ChangeSource source,
       std::function<void(storage::Status status)> callback) override;
 
   void GetUnsyncedPieces(

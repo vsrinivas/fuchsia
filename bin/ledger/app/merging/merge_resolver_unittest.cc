@@ -494,7 +494,7 @@ TEST_F(MergeResolverTest, WaitOnMergeOfMerges) {
   page_storage.SetDropCommitNotifications(false);
 
   storage::CommitWatcher* watcher = &resolver;
-  watcher->OnNewCommits({}, storage::ChangeSource::SYNC);
+  watcher->OnNewCommits({}, storage::ChangeSource::CLOUD);
 
   // Note we can't use "RunLoopUntilIdle()" because the FakePageStorage delays
   // before inserting tasks into the message loop.

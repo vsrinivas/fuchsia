@@ -123,14 +123,15 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
     digest_to_value_[std::move(object_identifier)] = value;
   }
 
-  void GetObject(
-      ObjectIdentifier object_identifier,
-      std::function<void(Status, std::unique_ptr<DataSource::DataChunk>)>
-          callback) override {
+  void GetObject(ObjectIdentifier object_identifier,
+                 std::function<void(Status, ChangeSource,
+                                    std::unique_ptr<DataSource::DataChunk>)>
+                     callback) override {
     std::string& value = digest_to_value_[object_identifier];
     object_requests.insert(std::move(object_identifier));
     on_get_object_([callback = std::move(callback), value] {
-      callback(Status::OK, DataSource::DataChunk::Create(value));
+      callback(Status::OK, ChangeSource::CLOUD,
+               DataSource::DataChunk::Create(value));
     });
   }
 
@@ -283,7 +284,7 @@ class PageStorageTest : public ::test::TestWithCoroutines {
     bool called;
     Status status;
     storage_->AddCommitsFromSync(
-        CommitAndBytesFromCommit(*commit),
+        CommitAndBytesFromCommit(*commit), ChangeSource::CLOUD,
         callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
@@ -658,7 +659,7 @@ TEST_F(PageStorageTest, AddCommitsOutOfOrder) {
   bool called;
   Status status;
   storage_->AddCommitsFromSync(
-      std::move(commits_and_bytes),
+      std::move(commits_and_bytes), ChangeSource::CLOUD,
       callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
@@ -711,7 +712,7 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
     bool called;
     Status status;
     storage_->AddCommitsFromSync(
-        CommitAndBytesFromCommit(*commit),
+        CommitAndBytesFromCommit(*commit), ChangeSource::CLOUD,
         callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
@@ -725,7 +726,7 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
     // Adding the same commit twice should not request any objects from sync.
     sync.object_requests.clear();
     storage_->AddCommitsFromSync(
-        CommitAndBytesFromCommit(*commit),
+        CommitAndBytesFromCommit(*commit), ChangeSource::CLOUD,
         callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
@@ -784,7 +785,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSynced) {
   commits_and_bytes.emplace_back(commit->GetId(),
                                  commit->GetStorageBytes().ToString());
   storage_->AddCommitsFromSync(
-      std::move(commits_and_bytes),
+      std::move(commits_and_bytes), ChangeSource::CLOUD,
       callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
@@ -1153,7 +1154,7 @@ TEST_F(PageStorageTest, AddSyncPiece) {
     bool called;
     Status status;
     PageStorageImplAccessorForTest::AddPiece(
-        storage_, data.object_identifier, data.ToChunk(), ChangeSource::SYNC,
+        storage_, data.object_identifier, data.ToChunk(), ChangeSource::CLOUD,
         callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
@@ -1438,7 +1439,7 @@ TEST_F(PageStorageTest, CommitWatchers) {
   expected = TryCommitFromSync();
   EXPECT_EQ(3, watcher.commit_count);
   EXPECT_EQ(expected->GetId(), watcher.last_commit_id);
-  EXPECT_EQ(ChangeSource::SYNC, watcher.last_source);
+  EXPECT_EQ(ChangeSource::CLOUD, watcher.last_source);
   EXPECT_EQ(1, watcher2.commit_count);
 }
 
@@ -1532,7 +1533,7 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
     bool called;
     Status status;
     storage_->AddCommitsFromSync(
-        std::move(commits_and_bytes),
+        std::move(commits_and_bytes), ChangeSource::CLOUD,
         callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
@@ -1711,7 +1712,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   commits_and_bytes.emplace_back(commit->GetId(),
                                  commit->GetStorageBytes().ToString());
   storage_->AddCommitsFromSync(
-      std::move(commits_and_bytes),
+      std::move(commits_and_bytes), ChangeSource::CLOUD,
       callback::Capture(callback::SetWhenCalled(&commits_from_sync_called),
                         &commits_from_sync_status));
 

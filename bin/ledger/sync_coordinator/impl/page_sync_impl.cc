@@ -24,6 +24,7 @@ class SyncProviderHolderBase : public storage::PageSyncClient,
   void GetObject(
       storage::ObjectIdentifier object_identifier,
       std::function<void(storage::Status status,
+                         storage::ChangeSource change_source,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback) override;
 
@@ -43,6 +44,7 @@ void SyncProviderHolderBase::SetSyncDelegate(
 void SyncProviderHolderBase::GetObject(
     storage::ObjectIdentifier object_identifier,
     std::function<void(storage::Status status,
+                       storage::ChangeSource change_source,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
   page_sync_delegate_->GetObject(std::move(object_identifier),
@@ -177,24 +179,44 @@ void PageSyncImpl::SetSyncWatcher(SyncStateWatcher* watcher) {
 
 void PageSyncImpl::GetObject(
     storage::ObjectIdentifier object_identifier,
-    std::function<void(storage::Status status,
+    std::function<void(storage::Status, storage::ChangeSource,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
   // AnyWaiter returns the first successful value to its Finalize callback. For
   // example, if P2P returns before cloud with a NOT_FOUND status, then we will
   // wait for Cloud to return; if P2P returns with an OK status, we will pass
   // the P2P-returned value immediately.
-  auto waiter =
-      callback::AnyWaiter<storage::Status,
-                          std::unique_ptr<storage::DataSource::DataChunk>>::
-          Create(storage::Status::OK, storage::Status::NOT_FOUND, nullptr);
+  auto waiter = callback::AnyWaiter<
+      storage::Status,
+      std::pair<storage::ChangeSource,
+                std::unique_ptr<storage::DataSource::DataChunk>>>::
+      Create(storage::Status::OK, storage::Status::NOT_FOUND,
+             std::pair<storage::ChangeSource,
+                       std::unique_ptr<storage::DataSource::DataChunk>>());
   if (cloud_sync_) {
-    cloud_sync_->GetObject(object_identifier, waiter->NewCallback());
+    cloud_sync_->GetObject(
+        object_identifier,
+        [callback = waiter->NewCallback()](
+            storage::Status status, storage::ChangeSource source,
+            std::unique_ptr<storage::DataSource::DataChunk> data) {
+          callback(status, std::make_pair(source, std::move(data)));
+        });
   }
   if (p2p_sync_) {
-    p2p_sync_->GetObject(std::move(object_identifier), waiter->NewCallback());
+    p2p_sync_->GetObject(
+        std::move(object_identifier),
+        [callback = waiter->NewCallback()](
+            storage::Status status, storage::ChangeSource source,
+            std::unique_ptr<storage::DataSource::DataChunk> data) {
+          callback(status, std::make_pair(source, std::move(data)));
+        });
   }
-  waiter->Finalize(std::move(callback));
+  waiter->Finalize(
+      [callback = std::move(callback)](
+          storage::Status status,
+          std::pair<storage::ChangeSource,
+                    std::unique_ptr<storage::DataSource::DataChunk>>
+              pair) { callback(status, pair.first, std::move(pair.second)); });
 }
 
 }  // namespace sync_coordinator

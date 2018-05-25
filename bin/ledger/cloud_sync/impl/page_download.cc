@@ -282,7 +282,7 @@ void PageDownload::DownloadBatch(
 
 void PageDownload::GetObject(
     storage::ObjectIdentifier object_identifier,
-    std::function<void(storage::Status,
+    std::function<void(storage::Status, storage::ChangeSource,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
   current_get_object_calls_++;
@@ -324,7 +324,7 @@ void PageDownload::GetObject(
 void PageDownload::DecryptObject(
     storage::ObjectIdentifier object_identifier,
     std::unique_ptr<storage::DataSource> content,
-    std::function<void(storage::Status,
+    std::function<void(storage::Status, storage::ChangeSource,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
   storage::ReadDataSource(
@@ -350,7 +350,7 @@ void PageDownload::DecryptObject(
               }
               backoff_->Reset();
               callback(
-                  storage::Status::OK,
+                  storage::Status::OK, storage::ChangeSource::CLOUD,
                   storage::DataSource::DataChunk::Create(std::move(content)));
               current_get_object_calls_--;
               UpdateDownloadState();
@@ -361,14 +361,14 @@ void PageDownload::DecryptObject(
 void PageDownload::HandleGetObjectError(
     storage::ObjectIdentifier object_identifier, bool is_permanent,
     const char error_name[],
-    std::function<void(storage::Status,
+    std::function<void(storage::Status, storage::ChangeSource,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
   if (is_permanent) {
     backoff_->Reset();
     FXL_LOG(WARNING) << log_prefix_ << "GetObject() failed due to a permanent "
                      << error_name << " error";
-    callback(storage::Status::IO_ERROR, nullptr);
+    callback(storage::Status::IO_ERROR, storage::ChangeSource::CLOUD, nullptr);
     current_get_object_calls_--;
     UpdateDownloadState();
     return;

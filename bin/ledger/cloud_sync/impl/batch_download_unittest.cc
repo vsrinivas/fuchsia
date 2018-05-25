@@ -32,7 +32,9 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
 
   void AddCommitsFromSync(
       std::vector<storage::PageStorage::CommitIdAndBytes> ids_and_bytes,
+      storage::ChangeSource source,
       std::function<void(storage::Status status)> callback) override {
+    ASSERT_EQ(storage::ChangeSource::CLOUD, source);
     if (should_fail_add_commit_from_sync) {
       async::PostTask(async_,
                       [callback]() { callback(storage::Status::IO_ERROR); });

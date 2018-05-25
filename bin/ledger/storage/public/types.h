@@ -73,7 +73,7 @@ bool operator==(const ThreeWayChange& lhs, const ThreeWayChange& rhs);
 bool operator!=(const ThreeWayChange& lhs, const ThreeWayChange& rhs);
 std::ostream& operator<<(std::ostream& os, const ThreeWayChange& e);
 
-enum class ChangeSource { LOCAL, SYNC };
+enum class ChangeSource { LOCAL, P2P, CLOUD };
 
 enum class JournalType { IMPLICIT, EXPLICIT };
 

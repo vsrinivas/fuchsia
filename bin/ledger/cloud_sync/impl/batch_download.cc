@@ -61,7 +61,7 @@ void BatchDownload::Start() {
         }
 
         storage_->AddCommitsFromSync(
-            std::move(commits),
+            std::move(commits), storage::ChangeSource::CLOUD,
             callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
                                  [this](storage::Status status) {
                                    if (status != storage::Status::OK) {

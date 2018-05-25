@@ -25,7 +25,7 @@ storage::ObjectIdentifier ToObjectIdentifier(const ObjectId* fb_object_id) {
 class PageCommunicatorImpl::PendingObjectRequestHolder {
  public:
   explicit PendingObjectRequestHolder(
-      std::function<void(storage::Status status,
+      std::function<void(storage::Status, storage::ChangeSource,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback)
       : callback_(std::move(callback)) {}
@@ -49,7 +49,8 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
         return;
       }
       // All requests have returned and none is valid: return an error.
-      callback_(storage::Status::NOT_FOUND, nullptr);
+      callback_(storage::Status::NOT_FOUND, storage::ChangeSource::P2P,
+                nullptr);
       if (on_empty_) {
         on_empty_();
       }
@@ -59,14 +60,15 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
     std::unique_ptr<storage::DataSource::DataChunk> chunk =
         storage::DataSource::DataChunk::Create(
             convert::ToString(object->data()->bytes()));
-    callback_(storage::Status::OK, std::move(chunk));
+    callback_(storage::Status::OK, storage::ChangeSource::P2P,
+              std::move(chunk));
     if (on_empty_) {
       on_empty_();
     }
   }
 
  private:
-  std::function<void(storage::Status status,
+  std::function<void(storage::Status, storage::ChangeSource,
                      std::unique_ptr<storage::DataSource::DataChunk>)> const
       callback_;
   // Set of devices for which we are waiting an answer.
@@ -234,7 +236,7 @@ void PageCommunicatorImpl::OnNewResponse(fxl::StringView source,
 
 void PageCommunicatorImpl::GetObject(
     storage::ObjectIdentifier object_identifier,
-    std::function<void(storage::Status status,
+    std::function<void(storage::Status, storage::ChangeSource,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
   flatbuffers::FlatBufferBuilder buffer;
