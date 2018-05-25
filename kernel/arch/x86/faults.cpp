@@ -382,12 +382,17 @@ static void handle_exception_types(x86_iframe_t* frame) {
         break;
     }
     case X86_INT_IPI_GENERIC: {
-        x86_ipi_generic_handler();
+        mp_mbx_generic_irq();
         apic_issue_eoi();
         break;
     }
     case X86_INT_IPI_RESCHEDULE: {
-        x86_ipi_reschedule_handler();
+        mp_mbx_reschedule_irq();
+        apic_issue_eoi();
+        break;
+    }
+    case X86_INT_IPI_INTERRUPT: {
+        mp_mbx_interrupt_irq();
         apic_issue_eoi();
         break;
     }

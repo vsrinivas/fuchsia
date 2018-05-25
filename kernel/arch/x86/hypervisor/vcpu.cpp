@@ -788,7 +788,7 @@ zx_status_t Vcpu::Interrupt(uint32_t vector) {
     if (status != ZX_OK) {
         return status;
     } else if (!signaled && running_.load()) {
-        mp_reschedule(cpu_num_to_mask(hypervisor::cpu_of(vpid_)), MP_RESCHEDULE_FLAG_USE_IPI);
+        mp_interrupt(MP_IPI_TARGET_MASK, cpu_num_to_mask(hypervisor::cpu_of(vpid_)));
     }
     return ZX_OK;
 }

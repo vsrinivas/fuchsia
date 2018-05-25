@@ -50,19 +50,17 @@ void mp_prepare_current_cpu_idle_state(bool idle) {
 }
 
 void mp_reschedule(cpu_mask_t mask, uint flags) {
+    // we must be holding the thread lock to access some of the cpu
+    // state bitmaps and some arch_mp_reschedule implementations.
+    DEBUG_ASSERT(thread_lock_held());
+
     const cpu_num_t local_cpu = arch_curr_cpu_num();
 
     LTRACEF("local %u, mask %#x\n", local_cpu, mask);
 
-    if (mask == 0)
-        return;
-
     // mask out cpus that are not active and the local cpu
     mask &= mp.active_cpus;
     mask &= ~cpu_num_to_mask(local_cpu);
-
-    // this is generally a bad state, though this may be too aggressive
-    DEBUG_ASSERT(mask != 0);
 
     // mask out cpus that are currently running realtime code
     if ((flags & MP_RESCHEDULE_FLAG_REALTIME) == 0) {
@@ -71,11 +69,15 @@ void mp_reschedule(cpu_mask_t mask, uint flags) {
 
     LTRACEF("local %u, post mask target now 0x%x\n", local_cpu, mask);
 
-    if ((flags & MP_RESCHEDULE_FLAG_USE_IPI) == 0) {
-        arch_mp_reschedule(mask);
-    } else {
-        arch_mp_send_ipi(MP_IPI_TARGET_MASK, mask, MP_IPI_RESCHEDULE);
-    }
+    // if we have no work to do, return
+    if (mask == 0)
+        return;
+
+    arch_mp_reschedule(mask);
+}
+
+void mp_interrupt(mp_ipi_target_t target, cpu_mask_t mask) {
+    arch_mp_send_ipi(target, mask, MP_IPI_INTERRUPT);
 }
 
 struct mp_sync_context {
@@ -387,7 +389,7 @@ void mp_set_curr_cpu_active(bool active) {
     }
 }
 
-void mp_mbx_generic_irq(void) {
+void mp_mbx_generic_irq() {
     DEBUG_ASSERT(arch_ints_disabled());
     const cpu_num_t local_cpu = arch_curr_cpu_num();
 
@@ -406,7 +408,7 @@ void mp_mbx_generic_irq(void) {
     }
 }
 
-void mp_mbx_reschedule_irq(void) {
+void mp_mbx_reschedule_irq() {
     const cpu_num_t cpu = arch_curr_cpu_num();
 
     LTRACEF("cpu %u\n", cpu);
@@ -415,6 +417,15 @@ void mp_mbx_reschedule_irq(void) {
 
     if (mp.active_cpus & cpu_num_to_mask(cpu))
         thread_preempt_set_pending();
+}
+
+void mp_mbx_interrupt_irq() {
+    const cpu_num_t cpu = arch_curr_cpu_num();
+
+    LTRACEF("cpu %u\n", cpu);
+
+    // do nothing, the entire point of this interrupt is to simply have one
+    // delivered to the cpu.
 }
 
 __WEAK zx_status_t arch_mp_cpu_hotplug(uint cpu_id) {

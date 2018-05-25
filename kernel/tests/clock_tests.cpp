@@ -62,8 +62,6 @@ void clock_tests(void) {
         printf("measuring cpu clock against current_time() on cpu %u\n", cpu);
 
         thread_set_cpu_affinity(get_current_thread(), cpu_num_to_mask(cpu));
-        mp_reschedule(cpu_num_to_mask(cpu), 0);
-        thread_yield();
 
         for (int i = 0; i < 3; i++) {
             uint64_t cycles = arch_cycle_count();
@@ -76,6 +74,4 @@ void clock_tests(void) {
     }
 
     thread_set_cpu_affinity(get_current_thread(), old_affinity);
-    mp_reschedule(CPU_MASK_ALL, 0);
-    thread_yield();
 }

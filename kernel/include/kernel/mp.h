@@ -9,6 +9,7 @@
 
 #include <kernel/cpu.h>
 #include <kernel/mutex.h>
+#include <kernel/thread.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -23,15 +24,12 @@ typedef void (*mp_sync_task_t)(void* context);
 // by default, mp_reschedule does not signal to cpus that are running realtime
 // threads. Override this behavior.
 #define MP_RESCHEDULE_FLAG_REALTIME (0x1)
-// by default, mp_reschedule relies on arch_mp_reschedule, which requires that
-// the thread lock be held. This flag can be used to directly send MP_IPI_RESCHEDULE
-// interrupts without needing the thread lock.
-#define MP_RESCHEDULE_FLAG_USE_IPI  (0x2)
 
 typedef enum {
     MP_IPI_GENERIC,
     MP_IPI_RESCHEDULE,
-    MP_IPI_HALT,
+    MP_IPI_INTERRUPT,
+    MP_IPI_HALT
 } mp_ipi_t;
 
 // When sending inter processor interrupts (IPIs), apis will take a combination of
@@ -45,9 +43,18 @@ typedef enum {
 } mp_ipi_target_t;
 
 void mp_init(void);
-
 void mp_prepare_current_cpu_idle_state(bool idle);
-void mp_reschedule(cpu_mask_t mask, uint flags);
+
+// Trigger a reschedule on another cpu. Used mostly by inner threading
+// and scheduler logic. Must be holding the thread lock.
+void mp_reschedule(cpu_mask_t mask, uint flags)  TA_REQ(thread_lock);
+
+// Trigger an interrupt on another cpu without a corresponding reschedule.
+// Used by the hypervisor to trigger a vmexit.
+void mp_interrupt(mp_ipi_target_t, cpu_mask_t mask);
+
+// Make a cross cpu call to one or more cpus. Waits for all of the calls
+// to complete before returning.
 void mp_sync_exec(mp_ipi_target_t, cpu_mask_t mask, mp_sync_task_t task, void* context);
 
 zx_status_t mp_hotplug_cpu_mask(cpu_mask_t mask);
@@ -63,6 +70,8 @@ static inline zx_status_t mp_unplug_cpu(cpu_num_t cpu) {
 void mp_mbx_reschedule_irq(void);
 // called from arch code during generic task irq
 void mp_mbx_generic_irq(void);
+// called from arch code during interrupt irq
+void mp_mbx_interrupt_irq(void);
 
 // represents a pending task for some number of CPUs to execute
 struct mp_ipi_task {

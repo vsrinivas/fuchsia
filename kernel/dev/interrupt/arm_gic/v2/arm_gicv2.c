@@ -292,18 +292,6 @@ static zx_status_t gic_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
     return ZX_OK;
 }
 
-static void arm_ipi_generic_handler(void* arg) {
-    LTRACEF("cpu %u, arg %p\n", arch_curr_cpu_num(), arg);
-
-    mp_mbx_generic_irq();
-}
-
-static void arm_ipi_reschedule_handler(void* arg) {
-    LTRACEF("cpu %u, arg %p\n", arch_curr_cpu_num(), arg);
-
-    mp_mbx_reschedule_irq();
-}
-
 static void arm_ipi_halt_handler(void* arg) {
     LTRACEF("cpu %u, arg %p\n", arch_curr_cpu_num(), arg);
 
@@ -315,6 +303,7 @@ static void gic_init_percpu(void) {
     mp_set_curr_cpu_online(true);
     unmask_interrupt(MP_IPI_GENERIC + ipi_base);
     unmask_interrupt(MP_IPI_RESCHEDULE + ipi_base);
+    unmask_interrupt(MP_IPI_INTERRUPT + ipi_base);
     unmask_interrupt(MP_IPI_HALT + ipi_base);
 }
 
@@ -375,9 +364,11 @@ static void arm_gic_v2_init(const void* driver_data, uint32_t length) {
     }
     pdev_register_interrupts(&gic_ops);
 
-    zx_status_t status = register_int_handler(MP_IPI_GENERIC + ipi_base, &arm_ipi_generic_handler, 0);
+    zx_status_t status = register_int_handler(MP_IPI_GENERIC + ipi_base, (void*)&mp_mbx_generic_irq, 0);
     DEBUG_ASSERT(status == ZX_OK);
-    status = register_int_handler(MP_IPI_RESCHEDULE + ipi_base, &arm_ipi_reschedule_handler, 0);
+    status = register_int_handler(MP_IPI_RESCHEDULE + ipi_base, (void*)&mp_mbx_reschedule_irq, 0);
+    DEBUG_ASSERT(status == ZX_OK);
+    status = register_int_handler(MP_IPI_INTERRUPT + ipi_base, (void*)&mp_mbx_interrupt_irq, 0);
     DEBUG_ASSERT(status == ZX_OK);
     status = register_int_handler(MP_IPI_HALT + ipi_base, &arm_ipi_halt_handler, 0);
     DEBUG_ASSERT(status == ZX_OK);

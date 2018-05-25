@@ -221,7 +221,7 @@ int x86_apic_id_to_cpu_num(uint32_t apic_id) {
 }
 
 zx_status_t arch_mp_reschedule(cpu_mask_t mask) {
-    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+    DEBUG_ASSERT(thread_lock_held());
 
     cpu_mask_t needs_ipi = 0;
     if (use_monitor) {
@@ -251,7 +251,7 @@ zx_status_t arch_mp_reschedule(cpu_mask_t mask) {
 }
 
 void arch_prepare_current_cpu_idle_state(bool idle) {
-    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+    DEBUG_ASSERT(thread_lock_held());
 
     if (use_monitor) {
         *x86_get_percpu()->monitor = idle;
@@ -288,6 +288,9 @@ zx_status_t arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t i
         break;
     case MP_IPI_RESCHEDULE:
         vector = X86_INT_IPI_RESCHEDULE;
+        break;
+    case MP_IPI_INTERRUPT:
+        vector = X86_INT_IPI_INTERRUPT;
         break;
     case MP_IPI_HALT:
         vector = X86_INT_IPI_HALT;
@@ -331,16 +334,6 @@ zx_status_t arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t i
     }
 
     return ZX_OK;
-}
-
-void x86_ipi_generic_handler(void) {
-    LTRACEF("cpu %u\n", arch_curr_cpu_num());
-    mp_mbx_generic_irq();
-}
-
-void x86_ipi_reschedule_handler(void) {
-    LTRACEF("cpu %u\n", arch_curr_cpu_num());
-    mp_mbx_reschedule_irq();
 }
 
 void x86_ipi_halt_handler(void) {
