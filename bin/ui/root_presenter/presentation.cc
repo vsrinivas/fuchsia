@@ -689,6 +689,16 @@ void Presentation::UsePerspectiveView() {
 }
 
 void Presentation::PresentScene() {
+  if (session_present_state_ == kPresentPendingAndSceneDirty) {
+    return;
+  } else if (session_present_state_ == kPresentPending) {
+    session_present_state_ = kPresentPendingAndSceneDirty;
+    return;
+  }
+
+  // There is no present pending, so we will kick one off.
+  session_present_state_ = kPresentPending;
+
   bool use_clipping =
       presentation_clipping_enabled_ && perspective_demo_mode_.WantsClipping();
   if (renderer_params_override_.clipping_enabled.has_value()) {
@@ -720,34 +730,27 @@ void Presentation::PresentScene() {
     }
   }
 
-  session_->Present(
-      0, [weak = weak_factory_.GetWeakPtr()](fuchsia::images::PresentationInfo info) {
-        if (auto self = weak.get()) {
-          uint64_t next_presentation_time =
-              info.presentation_time + info.presentation_interval;
+  session_->Present(0, [weak = weak_factory_.GetWeakPtr()](
+                           fuchsia::images::PresentationInfo info) {
+    if (auto self = weak.get()) {
+      uint64_t next_presentation_time =
+          info.presentation_time + info.presentation_interval;
 
-          bool scene_dirty = false;
-          scene_dirty |= self->perspective_demo_mode_.UpdateAnimation(
-              self, next_presentation_time);
-          scene_dirty |= self->display_rotater_.UpdateAnimation(
-              self, next_presentation_time);
-          if (scene_dirty) {
-            // TODO(SCN-734): Find out why our predicted times are lagging.
-            uint64_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
-            if (now > next_presentation_time) {
-              FXL_LOG(WARNING)
-                  << "Next calculated presentation time is "
-                  << (now - next_presentation_time) / 1000000.f
-                  << "ms in the past. "
-                     "next_presentation_time="
-                  << next_presentation_time << ", current time is " << now;
-              next_presentation_time = now;
-            }
+      bool scene_dirty =
+          self->session_present_state_ == kPresentPendingAndSceneDirty;
 
-            self->PresentScene();
-          }
-        }
-      });
+      // Clear the present state.
+      self->session_present_state_ = kNoPresentPending;
+
+      scene_dirty |= self->perspective_demo_mode_.UpdateAnimation(
+          self, next_presentation_time);
+      scene_dirty |=
+          self->display_rotater_.UpdateAnimation(self, next_presentation_time);
+      if (scene_dirty) {
+        self->PresentScene();
+      }
+    }
+  });
 }
 
 void Presentation::Shutdown() { shutdown_callback_(); }

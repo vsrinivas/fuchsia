@@ -93,6 +93,11 @@ class Presentation : private views_v1::ViewTreeListener,
   const scenic_lib::Layer& layer() const { return layer_; }
 
  private:
+  enum SessionPresentState {
+    kNoPresentPending,
+    kPresentPending,
+    kPresentPendingAndSceneDirty
+  };
   friend class DisplayRotater;
   friend class DisplayUsageSwitcher;
   friend class PerspectiveDemoMode;
@@ -124,7 +129,8 @@ class Presentation : private views_v1::ViewTreeListener,
   void UsePerspectiveView() override;
 
   // |Presentation|
-  void SetRendererParams(::fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> params) override;
+  void SetRendererParams(
+      ::fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> params) override;
 
   void InitializeDisplayModel(fuchsia::ui::gfx::DisplayInfo display_info);
 
@@ -199,6 +205,8 @@ class Presentation : private views_v1::ViewTreeListener,
   zx::eventpair content_view_host_import_token_;
   scenic_lib::RoundedRectangle cursor_shape_;
   scenic_lib::Material cursor_material_;
+
+  SessionPresentState session_present_state_ = kNoPresentPending;
 
   bool presentation_clipping_enabled_ = true;
 
