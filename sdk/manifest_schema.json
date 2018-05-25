@@ -39,7 +39,8 @@
             "cpp",
             "dart",
             "exe",
-            "fidl"
+            "fidl",
+            "image"
           ]
         },
         "name": {
@@ -111,6 +112,9 @@
             },
             {
               "$ref": "#/definitions/fidlTags"
+            },
+            {
+              "$ref": "#/definitions/imageTags"
             }
           ]
         }
@@ -249,6 +253,23 @@
           "type": "string",
           "enum": [
             "fidl"
+          ]
+        }
+      },
+      "required": [
+        "domain"
+      ],
+      "additionalProperties": false
+    },
+    "imageTags": {
+      "description": "Tag definitions for the 'image' domain",
+      "type": "object",
+      "properties": {
+        "domain": {
+          "description": "Marker for this type of tags",
+          "type": "string",
+          "enum": [
+            "image"
           ]
         }
       },
