@@ -50,7 +50,7 @@ class UpdateEntryBenchmark {
   const int key_size_;
   const int value_size_;
 
-  component::ApplicationControllerPtr application_controller_;
+  component::ComponentControllerPtr component_controller_;
   ledger::PagePtr page_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UpdateEntryBenchmark);

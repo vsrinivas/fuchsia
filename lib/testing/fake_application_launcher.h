@@ -21,13 +21,13 @@ class FakeApplicationLauncher : public component::ApplicationLauncher {
  public:
   using ApplicationConnectorFn = std::function<void(
       component::LaunchInfo,
-      fidl::InterfaceRequest<component::ApplicationController>)>;
+      fidl::InterfaceRequest<component::ComponentController>)>;
 
   // Registers an application located at "url" with a connector. When someone
   // tries to CreateApplication() with this |url|, the supplied |connector| is
   // called with the the LaunchInfo and associated
-  // ApplicationController request. The connector may implement the
-  // |LaunchInfo.services| and |ApplicationController| interfaces to
+  // ComponentController request. The connector may implement the
+  // |LaunchInfo.services| and |ComponentController| interfaces to
   // communicate with its connector and listen for application closing signals
   void RegisterApplication(std::string url, ApplicationConnectorFn connector);
 
@@ -38,7 +38,7 @@ class FakeApplicationLauncher : public component::ApplicationLauncher {
   // |ApplicationLauncher|
   void CreateApplication(
       component::LaunchInfo launch_info,
-      fidl::InterfaceRequest<component::ApplicationController> controller)
+      fidl::InterfaceRequest<component::ComponentController> controller)
       override;
 
   std::map<std::string, ApplicationConnectorFn> connectors_;

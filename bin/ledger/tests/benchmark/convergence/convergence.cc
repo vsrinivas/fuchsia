@@ -43,7 +43,7 @@ namespace benchmark {
 // Instances needed to control the Ledger process associated with a device and
 // interact with it.
 struct ConvergenceBenchmark::DeviceContext {
-  component::ApplicationControllerPtr app_controller;
+  component::ComponentControllerPtr controller;
   ledger::LedgerPtr ledger;
   std::unique_ptr<files::ScopedTempDir> storage_directory;
   ledger::PagePtr page_connection;
@@ -92,7 +92,7 @@ void ConvergenceBenchmark::Run() {
         server_id_, "", cloud_provider.NewRequest());
     ledger::Status status = test::GetLedger(
         [this] { loop_->Quit(); }, application_context_.get(),
-        &device_context.app_controller, std::move(cloud_provider),
+        &device_context.controller, std::move(cloud_provider),
         "convergence", synced_dir_path, &device_context.ledger);
     QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
     device_context.ledger->GetPage(
@@ -158,8 +158,8 @@ void ConvergenceBenchmark::OnChange(ledger::PageChange page_change,
 
 void ConvergenceBenchmark::ShutDown() {
   for (auto& device_context : devices_) {
-    device_context.app_controller->Kill();
-    device_context.app_controller.WaitForResponseUntil(
+    device_context.controller->Kill();
+    device_context.controller.WaitForResponseUntil(
         zx::deadline_after(zx::sec(5)));
   }
   loop_->Quit();

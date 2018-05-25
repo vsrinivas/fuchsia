@@ -78,7 +78,7 @@ class PutBenchmark : public ledger::PageWatcher {
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
   const PageDataGenerator::ReferenceStrategy reference_strategy_;
 
-  component::ApplicationControllerPtr application_controller_;
+  component::ComponentControllerPtr component_controller_;
   ledger::PagePtr page_;
   // Keys that we use to identify a change event. For transaction_size = 1 it
   // contains all the keys, otherwise only the last changed key for each

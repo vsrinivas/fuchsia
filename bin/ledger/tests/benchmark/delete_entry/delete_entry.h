@@ -49,7 +49,7 @@ class DeleteEntryBenchmark {
   const size_t transaction_size_;
   const size_t key_size_;
   const size_t value_size_;
-  component::ApplicationControllerPtr application_controller_;
+  component::ComponentControllerPtr component_controller_;
   ledger::PagePtr page_;
   std::vector<fidl::VectorPtr<uint8_t>> keys_;
 

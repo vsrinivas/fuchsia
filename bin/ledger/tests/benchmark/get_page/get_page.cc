@@ -48,7 +48,7 @@ GetPageBenchmark::GetPageBenchmark(async::Loop* loop, size_t requests_count,
 void GetPageBenchmark::Run() {
   ledger::Status status = test::GetLedger(
       [this] { loop_->Quit(); }, application_context_.get(),
-      &application_controller_, nullptr, "get_page", tmp_dir_.path(), &ledger_);
+      &component_controller_, nullptr, "get_page", tmp_dir_.path(), &ledger_);
   QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
   page_id_ = fidl::MakeOptional(generator_.MakePageId());
   RunSingle(requests_count_);
@@ -76,8 +76,8 @@ void GetPageBenchmark::RunSingle(size_t request_number) {
 }
 
 void GetPageBenchmark::ShutDown() {
-  application_controller_->Kill();
-  application_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
+  component_controller_->Kill();
+  component_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
   loop_->Quit();
 }
 

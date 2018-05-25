@@ -9,7 +9,7 @@ namespace testing {
 
 void FakeApplicationLauncher::CreateApplication(
     component::LaunchInfo launch_info,
-    fidl::InterfaceRequest<component::ApplicationController> controller) {
+    fidl::InterfaceRequest<component::ComponentController> controller) {
   auto it = connectors_.find(launch_info.url);
   if (it != connectors_.end()) {
     it->second(std::move(launch_info), std::move(controller));

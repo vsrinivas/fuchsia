@@ -23,12 +23,12 @@ AppConfig GetTestAppConfig() {
   return app_config;
 }
 
-class TestApplicationController : component::ApplicationController {
+class TestComponentController : component::ComponentController {
  public:
-  TestApplicationController() : binding_(this) {}
+  TestComponentController() : binding_(this) {}
 
   void Connect(
-      fidl::InterfaceRequest<component::ApplicationController> request) {
+      fidl::InterfaceRequest<component::ComponentController> request) {
     binding_.Bind(std::move(request));
     binding_.set_error_handler([this] { Kill(); });
   }
@@ -42,11 +42,11 @@ class TestApplicationController : component::ApplicationController {
 
   void Wait(WaitCallback callback) override {}
 
-  fidl::Binding<component::ApplicationController> binding_;
+  fidl::Binding<component::ComponentController> binding_;
 
   bool killed_{};
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(TestApplicationController);
+  FXL_DISALLOW_COPY_AND_ASSIGN(TestComponentController);
 };
 
 class AppClientTest : public gtest::TestWithMessageLoop {};
@@ -58,7 +58,7 @@ TEST_F(AppClientTest, BaseRun_Success) {
       kTestUrl,
       [&callback_called](
           component::LaunchInfo launch_info,
-          fidl::InterfaceRequest<component::ApplicationController> ctrl) {
+          fidl::InterfaceRequest<component::ComponentController> ctrl) {
         EXPECT_EQ(kTestUrl, launch_info.url);
         callback_called = true;
       });
@@ -69,13 +69,13 @@ TEST_F(AppClientTest, BaseRun_Success) {
 
 TEST_F(AppClientTest, BaseTerminate_Success) {
   FakeApplicationLauncher launcher;
-  TestApplicationController controller;
+  TestComponentController controller;
   bool callback_called = false;
   launcher.RegisterApplication(
       kTestUrl,
       [&callback_called, &controller](
           component::LaunchInfo launch_info,
-          fidl::InterfaceRequest<component::ApplicationController> ctrl) {
+          fidl::InterfaceRequest<component::ComponentController> ctrl) {
         EXPECT_EQ(kTestUrl, launch_info.url);
         callback_called = true;
         controller.Connect(std::move(ctrl));
@@ -105,7 +105,7 @@ TEST_F(AppClientTest, Run_Success) {
       kTestUrl,
       [&callback_called](
           component::LaunchInfo launch_info,
-          fidl::InterfaceRequest<component::ApplicationController> ctrl) {
+          fidl::InterfaceRequest<component::ComponentController> ctrl) {
         EXPECT_EQ(kTestUrl, launch_info.url);
         callback_called = true;
       });
@@ -128,7 +128,7 @@ TEST_F(AppClientTest, RunWithParams_Success) {
       kTestUrl,
       [&callback_called](
           component::LaunchInfo launch_info,
-          fidl::InterfaceRequest<component::ApplicationController> ctrl) {
+          fidl::InterfaceRequest<component::ComponentController> ctrl) {
         EXPECT_EQ(kTestUrl, launch_info.url);
         auto additional_services = std::move(launch_info.additional_services);
         EXPECT_EQ(kServiceName, additional_services->names->at(0));

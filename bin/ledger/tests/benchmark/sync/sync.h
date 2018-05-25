@@ -67,8 +67,8 @@ class SyncBenchmark : public ledger::PageWatcher {
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
   files::ScopedTempDir alpha_tmp_dir_;
   files::ScopedTempDir beta_tmp_dir_;
-  component::ApplicationControllerPtr alpha_controller_;
-  component::ApplicationControllerPtr beta_controller_;
+  component::ComponentControllerPtr alpha_controller_;
+  component::ComponentControllerPtr beta_controller_;
   ledger::PageId page_id_;
   ledger::PagePtr alpha_page_;
   ledger::PagePtr beta_page_;

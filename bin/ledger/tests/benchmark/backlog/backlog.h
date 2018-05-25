@@ -83,8 +83,8 @@ class BacklogBenchmark : public ledger::SyncWatcher {
   const std::string server_id_;
   files::ScopedTempDir writer_tmp_dir_;
   files::ScopedTempDir reader_tmp_dir_;
-  component::ApplicationControllerPtr writer_controller_;
-  component::ApplicationControllerPtr reader_controller_;
+  component::ComponentControllerPtr writer_controller_;
+  component::ComponentControllerPtr reader_controller_;
   ledger::LedgerPtr writer_;
   ledger::LedgerPtr reader_;
   ledger::PageId page_id_;

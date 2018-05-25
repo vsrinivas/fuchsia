@@ -27,7 +27,7 @@ namespace test {
 // sync once we're on C++17.
 ledger::Status GetLedger(fxl::Closure quit_callback,
                          component::ApplicationContext* context,
-                         component::ApplicationControllerPtr* controller,
+                         component::ComponentControllerPtr* controller,
                          cloud_provider::CloudProviderPtr cloud_provider,
                          std::string ledger_name,
                          std::string ledger_repository_path,

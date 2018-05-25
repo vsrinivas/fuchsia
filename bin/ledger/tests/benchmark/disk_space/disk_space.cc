@@ -67,7 +67,7 @@ void DiskSpaceBenchmark::Run() {
   ledger::LedgerPtr ledger;
   ledger::Status status =
       test::GetLedger([this] { loop_->Quit(); }, application_context_.get(),
-                      &application_controller_, nullptr, "disk_space",
+                      &component_controller_, nullptr, "disk_space",
                       tmp_dir_.path(), &ledger);
   QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
 
@@ -114,8 +114,8 @@ void DiskSpaceBenchmark::Populate() {
 }
 
 void DiskSpaceBenchmark::ShutDownAndRecord() {
-  application_controller_->Kill();
-  application_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
+  component_controller_->Kill();
+  component_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
   loop_->Quit();
 
   uint64_t tmp_dir_size = 0;

@@ -129,7 +129,7 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
   }
 
  private:
-  component::ApplicationControllerPtr ledger_controller_;
+  component::ComponentControllerPtr ledger_controller_;
   std::vector<std::function<void()>> ledger_shutdown_callbacks_;
   std::unique_ptr<component::ApplicationContext> application_context_;
 

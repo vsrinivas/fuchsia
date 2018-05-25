@@ -62,7 +62,7 @@ void ModuleControllerImpl::Connect(
   module_controller_bindings_.AddBinding(this, std::move(request));
 }
 
-// If the ApplicationController connection closes, it means the module cannot be
+// If the ComponentController connection closes, it means the module cannot be
 // started. We indicate this by the ERROR state.
 void ModuleControllerImpl::OnAppConnectionError() {
   SetState(ModuleState::ERROR);

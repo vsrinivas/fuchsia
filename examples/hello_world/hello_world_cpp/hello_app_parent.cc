@@ -51,7 +51,7 @@ class HelloAppParent {
     });
   }
 
-  component::ApplicationControllerPtr child_;
+  component::ComponentControllerPtr child_;
   component::Services child_services_;
   hello_world_module::HelloPtr hello_;
 

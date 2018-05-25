@@ -65,7 +65,7 @@ class DiskSpaceBenchmark {
   const size_t commit_count_;
   const size_t key_size_;
   const size_t value_size_;
-  component::ApplicationControllerPtr application_controller_;
+  component::ComponentControllerPtr component_controller_;
   std::vector<ledger::PagePtr> pages_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DiskSpaceBenchmark);

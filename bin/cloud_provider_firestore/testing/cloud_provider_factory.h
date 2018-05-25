@@ -45,7 +45,7 @@ class CloudProviderFactory {
 
   callback::AutoCleanableSet<TokenProviderContainer> token_providers_;
 
-  component::ApplicationControllerPtr cloud_provider_controller_;
+  component::ComponentControllerPtr cloud_provider_controller_;
   FactoryPtr cloud_provider_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CloudProviderFactory);

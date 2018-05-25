@@ -96,15 +96,15 @@ class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
 
 class MyEntityProvider : AgentImpl::Delegate,
                          EntityProvider,
-                         public component::ApplicationController,
+                         public component::ComponentController,
                          public testing::MockBase {
  public:
   MyEntityProvider(
       component::LaunchInfo launch_info,
-      fidl::InterfaceRequest<component::ApplicationController> ctrl)
+      fidl::InterfaceRequest<component::ComponentController> ctrl)
       : vfs_(async_get_default()),
         outgoing_directory_(fbl::AdoptRef(new fs::PseudoDir())),
-        app_controller_(this, std::move(ctrl)),
+        controller_(this, std::move(ctrl)),
         entity_provider_binding_(this),
         launch_info_(std::move(launch_info)) {
     outgoing_directory_->AddEntry(
@@ -135,11 +135,11 @@ class MyEntityProvider : AgentImpl::Delegate,
   AgentContext* agent_context() { return agent_context_.get(); }
 
  private:
-  // |ApplicationController|
+  // |ComponentController|
   void Kill() override { ++counts["Kill"]; }
-  // |ApplicationController|
+  // |ComponentController|
   void Detach() override { ++counts["Detach"]; }
-  // |ApplicationController|
+  // |ComponentController|
   void Wait(WaitCallback callback) override { ++counts["Wait"]; }
 
   // |AgentImpl::Delegate|
@@ -174,7 +174,7 @@ class MyEntityProvider : AgentImpl::Delegate,
   AgentContextPtr agent_context_;
   std::unique_ptr<AgentImpl> agent_impl_;
   EntityResolverPtr entity_resolver_;
-  fidl::Binding<component::ApplicationController> app_controller_;
+  fidl::Binding<component::ComponentController> controller_;
   fidl::Binding<modular::EntityProvider> entity_provider_binding_;
   component::LaunchInfo launch_info_;
 
@@ -188,7 +188,7 @@ TEST_F(EntityProviderRunnerTest, Basic) {
       kMyAgentUrl,
       [&dummy_agent](
           component::LaunchInfo launch_info,
-          fidl::InterfaceRequest<component::ApplicationController> ctrl) {
+          fidl::InterfaceRequest<component::ComponentController> ctrl) {
         dummy_agent = std::make_unique<MyEntityProvider>(std::move(launch_info),
                                                          std::move(ctrl));
       });

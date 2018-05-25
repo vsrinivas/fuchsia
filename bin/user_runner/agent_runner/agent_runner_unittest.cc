@@ -76,14 +76,14 @@ class AgentRunnerTest : public TestWithLedger {
 };
 
 class MyDummyAgent : Agent,
-                     public component::ApplicationController,
+                     public component::ComponentController,
                      public testing::MockBase {
  public:
   MyDummyAgent(zx::channel directory_request,
-               fidl::InterfaceRequest<component::ApplicationController> ctrl)
+               fidl::InterfaceRequest<component::ComponentController> ctrl)
       : vfs_(async_get_default()),
         outgoing_directory_(fbl::AdoptRef(new fs::PseudoDir())),
-        app_controller_(this, std::move(ctrl)),
+        controller_(this, std::move(ctrl)),
         agent_binding_(this) {
     outgoing_directory_->AddEntry(
         Agent::Name_,
@@ -94,16 +94,16 @@ class MyDummyAgent : Agent,
     vfs_.ServeDirectory(outgoing_directory_, std::move(directory_request));
   }
 
-  void KillApplication() { app_controller_.Unbind(); }
+  void KillApplication() { controller_.Unbind(); }
 
   size_t GetCallCount(const std::string func) { return counts.count(func); }
 
  private:
-  // |ApplicationController|
+  // |ComponentController|
   void Kill() override { ++counts["Kill"]; }
-  // |ApplicationController|
+  // |ComponentController|
   void Detach() override { ++counts["Detach"]; }
-  // |ApplicationController|
+  // |ComponentController|
   void Wait(WaitCallback callback) override { ++counts["Wait"]; }
 
   // |Agent|
@@ -122,7 +122,7 @@ class MyDummyAgent : Agent,
  private:
   fs::SynchronousVfs vfs_;
   fbl::RefPtr<fs::PseudoDir> outgoing_directory_;
-  fidl::Binding<component::ApplicationController> app_controller_;
+  fidl::Binding<component::ComponentController> controller_;
   fidl::Binding<modular::Agent> agent_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MyDummyAgent);
@@ -138,7 +138,7 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
       kMyAgentUrl,
       [&dummy_agent, &agent_launch_count](
           component::LaunchInfo launch_info,
-          fidl::InterfaceRequest<component::ApplicationController> ctrl) {
+          fidl::InterfaceRequest<component::ComponentController> ctrl) {
         dummy_agent = std::make_unique<MyDummyAgent>(
             std::move(launch_info.directory_request), std::move(ctrl));
         ++agent_launch_count;
@@ -184,7 +184,7 @@ TEST_F(AgentRunnerTest, AgentController) {
       kMyAgentUrl,
       [&dummy_agent](
           component::LaunchInfo launch_info,
-          fidl::InterfaceRequest<component::ApplicationController> ctrl) {
+          fidl::InterfaceRequest<component::ComponentController> ctrl) {
         dummy_agent = std::make_unique<MyDummyAgent>(
             std::move(launch_info.directory_request), std::move(ctrl));
       });

@@ -64,7 +64,7 @@ class AppClientBase : public AsyncHolderBase {
   virtual void ServiceTerminate(const std::function<void()>& done);
   virtual void ServiceUnbind();
 
-  component::ApplicationControllerPtr app_;
+  component::ComponentControllerPtr app_;
   component::Services services_;
   FXL_DISALLOW_COPY_AND_ASSIGN(AppClientBase);
 };

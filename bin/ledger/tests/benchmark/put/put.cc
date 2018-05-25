@@ -59,7 +59,7 @@ void PutBenchmark::Run() {
   ledger::LedgerPtr ledger;
   ledger::Status status = test::GetLedger(
       [this] { loop_->Quit(); }, application_context_.get(),
-      &application_controller_, nullptr, "put", tmp_dir_.path(), &ledger);
+      &component_controller_, nullptr, "put", tmp_dir_.path(), &ledger);
   QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
 
   ledger::PageId id;
@@ -254,8 +254,8 @@ void PutBenchmark::CommitAndRunNext(
 
 void PutBenchmark::ShutDown() {
   // Shut down the Ledger process first as it relies on |tmp_dir_| storage.
-  application_controller_->Kill();
-  application_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
+  component_controller_->Kill();
+  component_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
   loop_->Quit();
 }
 

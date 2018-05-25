@@ -38,7 +38,7 @@ class GetPageBenchmark {
   std::unique_ptr<component::ApplicationContext> application_context_;
   const size_t requests_count_;
   const bool reuse_;
-  component::ApplicationControllerPtr application_controller_;
+  component::ComponentControllerPtr component_controller_;
   ledger::LedgerPtr ledger_;
   ledger::PageIdPtr page_id_;
   std::vector<ledger::PagePtr> pages_;

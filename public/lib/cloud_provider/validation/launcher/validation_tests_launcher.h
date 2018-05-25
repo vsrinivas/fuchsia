@@ -38,7 +38,7 @@ class ValidationTestsLauncher {
   component::ApplicationContext* const application_context_;
   std::function<void(fidl::InterfaceRequest<CloudProvider>)> factory_;
   component::ServiceProviderImpl service_provider_impl_;
-  component::ApplicationControllerPtr validation_tests_controller_;
+  component::ComponentControllerPtr validation_tests_controller_;
   std::function<void(int32_t)> callback_;
 };
 

@@ -44,7 +44,7 @@ class CloudProviderFirebaseFactory {
                                           firebase_auth::FakeTokenProvider>
       token_provider_;
 
-  component::ApplicationControllerPtr cloud_provider_controller_;
+  component::ComponentControllerPtr cloud_provider_controller_;
   cloud_provider_firebase::FactoryPtr cloud_provider_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CloudProviderFirebaseFactory);

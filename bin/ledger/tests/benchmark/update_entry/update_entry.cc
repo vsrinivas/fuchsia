@@ -61,7 +61,7 @@ void UpdateEntryBenchmark::Run() {
   ledger::LedgerPtr ledger;
   ledger::Status status =
       test::GetLedger([this] { loop_->Quit(); }, application_context_.get(),
-                      &application_controller_, nullptr, "update_entry",
+                      &component_controller_, nullptr, "update_entry",
                       tmp_dir_.path(), &ledger);
   QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
 
@@ -154,8 +154,8 @@ void UpdateEntryBenchmark::CommitAndShutDown() {
 
 void UpdateEntryBenchmark::ShutDown() {
   // Shut down the Ledger process first as it relies on |tmp_dir_| storage.
-  application_controller_->Kill();
-  application_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
+  component_controller_->Kill();
+  component_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
   loop_->Quit();
 }
 
