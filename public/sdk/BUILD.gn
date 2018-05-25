@@ -40,7 +40,12 @@ sdk("zircon_sysroot_for_toolchain") {
 sdk("garnet") {
   category = "partner"
 
+  testonly = true
+
   deps = [
+    "//build/images:bootdata-blob.bin_sdk",
+    "//build/images:fvm.blk_sdk",
+    "//build/images:zircon.bin_sdk",
     "//garnet/bin/far:bin_sdk($host_toolchain)",
     "//garnet/go/src/fidl:fidlgen_sdk($host_toolchain)",
     "//garnet/go/src/pm:pm_bin_sdk($host_toolchain)",
@@ -82,4 +87,11 @@ sdk("garnet") {
     "//zircon/public/tool/netls:netls_sdk($host_toolchain)",
     "//zircon/public/tool/netruncmd:netruncmd_sdk($host_toolchain)",
   ]
+  if (target_cpu != "arm64") {
+    deps += [
+      "//build/images:fvm.sparse.blk_sdk",
+      "//build/images:local.esp.blk_sdk",
+      "//build/images:zircon.vboot_sdk",
+    ]
+  }
 }
