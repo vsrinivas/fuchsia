@@ -17,14 +17,11 @@ MODULE_SRCS += \
 MODULE_NAME := memfs-test
 
 MODULE_STATIC_LIBS := \
-    system/ulib/memfs \
-    system/ulib/fs \
     system/ulib/async.cpp \
     system/ulib/async \
     system/ulib/async-loop.cpp \
     system/ulib/async-loop \
     system/ulib/sync \
-    system/ulib/trace \
     system/ulib/zx \
     system/ulib/zxcpp \
     system/ulib/fbl
@@ -33,6 +30,7 @@ MODULE_LIBS := \
     system/ulib/async.default \
     system/ulib/c \
     system/ulib/fdio \
+    system/ulib/memfs \
     system/ulib/trace-engine \
     system/ulib/unittest \
     system/ulib/zircon \

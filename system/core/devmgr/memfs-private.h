@@ -13,7 +13,7 @@
 
 #ifdef __cplusplus
 
-#include <memfs/vnode.h>
+#include <lib/memfs/cpp/vnode.h>
 
 using VnodeMemfs = memfs::VnodeMemfs;
 using VnodeDir = memfs::VnodeDir;

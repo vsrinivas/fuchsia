@@ -10,7 +10,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <memfs/vnode.h>
+#include <lib/memfs/cpp/vnode.h>
 
 #include "dnode.h"
 

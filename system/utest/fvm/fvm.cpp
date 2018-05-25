@@ -35,7 +35,7 @@
 #include <fvm/fvm.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/vmo.h>
-#include <memfs/memfs.h>
+#include <lib/memfs/memfs.h>
 #include <minfs/format.h>
 #include <zircon/device/block.h>
 #include <zircon/device/device.h>

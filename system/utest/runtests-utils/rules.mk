@@ -24,11 +24,8 @@ MODULE_STATIC_LIBS := \
     system/ulib/async.cpp \
     system/ulib/fbl \
     system/ulib/fidl \
-    system/ulib/fs \
-    system/ulib/memfs \
     system/ulib/runtests-utils \
     system/ulib/sync \
-    system/ulib/trace \
     system/ulib/zx \
     system/ulib/zxcpp \
 
@@ -38,6 +35,7 @@ MODULE_LIBS := \
     system/ulib/async.default \
     system/ulib/c \
     system/ulib/fdio \
+    system/ulib/memfs \
     system/ulib/launchpad \
     system/ulib/trace-engine \
     system/ulib/unittest \

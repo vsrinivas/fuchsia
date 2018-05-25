@@ -17,7 +17,7 @@
 
 #ifdef __Fuchsia__
 #include <lib/async-loop/cpp/loop.h>
-#include <memfs/memfs.h>
+#include <lib/memfs/memfs.h>
 #include <runtests-utils/fuchsia-run-test.h>
 #endif
 

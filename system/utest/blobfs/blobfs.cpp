@@ -27,7 +27,7 @@
 #include <fs-management/ramdisk.h>
 #include <fvm/fvm.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <memfs/memfs.h>
+#include <lib/memfs/memfs.h>
 #include <zircon/device/device.h>
 #include <zircon/device/ramdisk.h>
 #include <zircon/device/vfs.h>

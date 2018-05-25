@@ -16,7 +16,7 @@
 #include <fbl/unique_ptr.h>
 #include <fdio/vfs.h>
 #include <fs/vfs.h>
-#include <memfs/vnode.h>
+#include <lib/memfs/cpp/vnode.h>
 #include <zircon/device/vfs.h>
 
 #include "dnode.h"

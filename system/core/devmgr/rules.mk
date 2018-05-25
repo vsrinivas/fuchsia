@@ -67,6 +67,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/vfs-rpc.cpp
 
 MODULE_STATIC_LIBS := \
+    system/ulib/memfs.cpp \
     system/ulib/memfs \
     system/ulib/fs \
     system/ulib/loader-service \

@@ -9,7 +9,7 @@
 #include <fbl/unique_fd.h>
 #include <fvm/fvm.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <memfs/memfs.h>
+#include <lib/memfs/memfs.h>
 #include <unittest/unittest.h>
 #include <zircon/device/device.h>
 

@@ -26,7 +26,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/fvm \
     system/ulib/fs \
     system/ulib/gpt \
-    system/ulib/memfs \
     system/ulib/minfs \
     system/ulib/sync \
     system/ulib/trace \
@@ -39,6 +38,7 @@ MODULE_LIBS := \
     system/ulib/c \
     system/ulib/fdio \
     system/ulib/fs-management \
+    system/ulib/memfs \
     system/ulib/trace-engine \
     system/ulib/unittest \
     system/ulib/zircon \
