@@ -70,6 +70,12 @@ int main(int argc, char** argv) {
         return 0;
     }
 
+    if (!info.active_cooling && !info.passive_cooling) {
+        fprintf(stderr, "ERROR: No active or passive cooling present on device, "
+                        "terminating thermd...\n");
+        return 0;
+    }
+
     zx_handle_t port = ZX_HANDLE_INVALID;
     rc = ioctl_thermal_get_state_change_port(fd, &port);
     if (rc != sizeof(port)) {
@@ -85,17 +91,45 @@ int main(int argc, char** argv) {
             return st;
         }
 
-        // For now we only use the ports to send messages about
-        // the trip point. In future we could posssibly send more
-        // iformation and incorporate DVFS also here. When we do
-        // that this would be more of a power/thermal management
-        // deamon rather than thermal deamon
+        uint32_t trip_idx = (uint32_t)packet.key;
+        if (trip_idx > info.num_trip_points) {
+            fprintf(stderr, "Invalid trip index: terminating thermd\n");
+            return -1;
+        }
+
+        if (info.passive_cooling) {
+            int32_t big_cluster_opp = info.trip_point_info[trip_idx].big_cluster_dvfs_opp;
+            int32_t little_cluster_opp = info.trip_point_info[trip_idx].little_cluster_dvfs_opp;
+            dvfs_info_t dvfs_info;
+
+            if (big_cluster_opp != -1) {
+                dvfs_info.power_domain   = BIG_CLUSTER_POWER_DOMAIN;
+                dvfs_info.op_idx         = big_cluster_opp;
+                rc = ioctl_thermal_set_dvfs_opp(fd, &dvfs_info);
+                if (rc) {
+                    fprintf(stderr, "ERROR: Failed to set DVFS OPP for big cluster: %zd\n", rc);
+                    return rc;
+                }
+            }
+
+            if (little_cluster_opp != -1) {
+                dvfs_info.power_domain   = LITTLE_CLUSTER_POWER_DOMAIN;
+                dvfs_info.op_idx         = little_cluster_opp;
+                rc = ioctl_thermal_set_dvfs_opp(fd, &dvfs_info);
+                if (rc) {
+                    fprintf(stderr, "ERROR: Failed to set DVFS OPP for little cluster: %zd\n", rc);
+                    return rc;
+                }
+            }
+        }
+
         if (info.active_cooling) {
-            uint32_t fan_level = (uint32_t)packet.key;
-            if (fan_level >= 0 && fan_level < info.num_fan_level) {
+            int32_t fan_level = info.trip_point_info[trip_idx].fan_level;
+            if (fan_level != -1) {
                 rc = ioctl_thermal_set_fan_level(fd, &fan_level);
                 if (rc) {
                     fprintf(stderr, "ERROR: Failed to set fan level: %zd\n", rc);
+                    return rc;
                 }
             }
         }
