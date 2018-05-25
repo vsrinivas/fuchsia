@@ -141,29 +141,6 @@ zx_status_t Bytes::Copy(const Bytes& other, zx_off_t off) {
     return Copy(other.get(), other.len(), off);
 }
 
-zx_status_t Bytes::Append(const Bytes& tail) {
-    return Copy(tail, len_);
-}
-
-zx_status_t Bytes::Split(Bytes* tail) {
-    zx_status_t rc;
-
-    if (!tail) {
-        xprintf("missing tail\n");
-        return ZX_ERR_INVALID_ARGS;
-    }
-    if (len_ < tail->len()) {
-        xprintf("insufficient data; have %zu, need %zu\n", len_, tail->len());
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-    size_t off = len_ - tail->len();
-    if ((rc = tail->Copy(buf_.get() + off, tail->len())) != ZX_OK || (rc = Resize(off)) != ZX_OK) {
-        return rc;
-    }
-
-    return ZX_OK;
-}
-
 zx_status_t Bytes::Increment(uint64_t amount) {
     bool overflow = false;
     size_t i = len_;

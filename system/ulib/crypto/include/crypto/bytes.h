@@ -61,13 +61,6 @@ public:
     // overflow.
     zx_status_t Increment(uint64_t amount = 1);
 
-    // Copies the contents of |tail| to the end of this buffer.
-    zx_status_t Append(const Bytes& tail);
-
-    // Takes the last |tail->len()| bytes of this buffer, copies them into |tail|, and truncates
-    // this buffer.  It is an error for |tail| to be longer than this buffer.
-    zx_status_t Split(Bytes* tail);
-
     // Yields ownership of the underlying buffer and returns it after saving the length in |len| if
     // not null.
     fbl::unique_ptr<uint8_t[]> Release(size_t* len = nullptr);

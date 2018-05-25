@@ -598,7 +598,10 @@ zx_status_t Volume::SealBlock(const crypto::Bytes& key, key_slot_t slot) {
     crypto::AEAD aead;
     crypto::Bytes ptext, ctext;
     zx_off_t off = kHeaderLen + (slot_len_ * slot);
-    if ((rc = ptext.Append(data_key_)) != ZX_OK || (rc = ptext.Append(data_iv_)) != ZX_OK ||
+    zx_off_t data_key_off = 0;
+    zx_off_t data_iv_off = data_key_.len();
+    if ((rc = ptext.Copy(data_key_, data_key_off)) != ZX_OK ||
+        (rc = ptext.Copy(data_iv_, data_iv_off)) != ZX_OK ||
         (rc = DeriveSlotKeys(key, slot)) != ZX_OK ||
         (rc = aead.InitSeal(aead_, wrap_key_, wrap_iv_)) != ZX_OK ||
         (rc = aead.SetAD(header_)) != ZX_OK ||
@@ -662,16 +665,15 @@ zx_status_t Volume::UnsealBlock(const crypto::Bytes& key, key_slot_t slot) {
     crypto::AEAD aead;
     crypto::Bytes ptext, ctext;
     zx_off_t off = kHeaderLen + (slot_len_ * slot);
+    size_t data_key_off = 0;
+    size_t data_iv_off = data_key_.len();
     if ((rc = ctext.Copy(block_.get() + off, slot_len_)) != ZX_OK ||
         (rc = aead.InitOpen(aead_, wrap_key_)) != ZX_OK ||
         (rc = header_.Copy(block_.get(), kHeaderLen)) != ZX_OK ||
         (rc = aead.SetAD(header_)) != ZX_OK || (rc = aead.Open(wrap_iv_, ctext, &ptext)) != ZX_OK ||
-        (rc = ptext.Split(&data_iv_)) != ZX_OK || (rc = ptext.Split(&data_key_)) != ZX_OK) {
+        (rc = data_key_.Copy(ptext.get() + data_key_off, data_key_.len())) != ZX_OK ||
+        (rc = data_iv_.Copy(ptext.get() + data_iv_off, data_iv_.len())) != ZX_OK) {
         return rc;
-    }
-    if (ptext.len() != 0) {
-        xprintf("%zu unused bytes\n", ptext.len());
-        return ZX_ERR_INTERNAL;
     }
 
     return ZX_OK;

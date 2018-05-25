@@ -210,28 +210,6 @@ bool TestIncrement(void) {
     END_TEST;
 }
 
-bool TestAppendAndSplit(void) {
-    BEGIN_TEST;
-    Bytes orig, head, tail;
-
-    ASSERT_OK(orig.InitRandom(kSize));
-    ASSERT_OK(head.Copy(orig));
-
-    EXPECT_ZX(head.Split(nullptr), ZX_ERR_INVALID_ARGS);
-    for (size_t i = 0; i <= kSize; ++i) {
-        ASSERT_OK(tail.Resize(i));
-        EXPECT_OK(head.Split(&tail));
-        EXPECT_EQ(head.len(), kSize - i);
-        EXPECT_EQ(tail.len(), i);
-        EXPECT_OK(head.Append(tail));
-        EXPECT_TRUE(orig == head);
-    }
-    ASSERT_OK(tail.Resize(kSize + 1));
-    EXPECT_ZX(head.Split(&tail), ZX_ERR_OUT_OF_RANGE);
-
-    END_TEST;
-}
-
 bool TestRelease(void) {
     BEGIN_TEST;
     Bytes bytes;
