@@ -139,10 +139,14 @@ source_set("rankers") {
 
 source_set("filters") {
   sources = [
+    "filters/conjugate_ranked_passive_filter.cc",
+    "filters/conjugate_ranked_passive_filter.h",
     "filters/ranked_active_filter.cc",
     "filters/ranked_active_filter.h",
     "suggestion_active_filter.cc",
     "suggestion_active_filter.h",
+    "suggestion_passive_filter.cc",
+    "suggestion_passive_filter.h",
   ]
 
   deps = [
@@ -279,6 +283,7 @@ source_set("filters_unittest") {
   testonly = true
 
   sources = [
+    "filters/conjugate_ranked_passive_filter_unittest.cc",
     "filters/ranked_active_filter_unittest.cc",
   ]
 

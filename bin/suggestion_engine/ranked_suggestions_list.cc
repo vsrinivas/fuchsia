@@ -85,12 +85,12 @@ void RankedSuggestionsList::Rank(const UserInput& query) {
 }
 
 void RankedSuggestionsList::AddSuggestion(SuggestionPrototype* prototype) {
-  suggestions_.push_back(RankedSuggestion::New(prototype));
+  pending_suggestions_.push_back(RankedSuggestion::New(prototype));
 }
 
 void RankedSuggestionsList::AddSuggestion(
     std::unique_ptr<RankedSuggestion> ranked_suggestion) {
-  suggestions_.push_back(std::move(ranked_suggestion));
+  pending_suggestions_.push_back(std::move(ranked_suggestion));
 }
 
 bool RankedSuggestionsList::RemoveProposal(const std::string& component_url,
@@ -116,19 +116,30 @@ void RankedSuggestionsList::RemoveAllSuggestions() {
 }
 
 void RankedSuggestionsList::Refresh(const UserInput& query) {
+  // Ensure we are not in the process of refreshing. If we are, ensure we'll
+  // trigger a refresh afterwards.
+  if (dirty_) {
+    should_refresh_ = true;
+    return;
+  }
+  dirty_ = true;
+
   // Create a union of both hidden and non-hidden suggestions
   std::vector<std::unique_ptr<RankedSuggestion>> all_suggestions;
-  for (std::unique_ptr<RankedSuggestion>& each_suggestion : suggestions_) {
-    all_suggestions.push_back(std::move(each_suggestion));
+  for (auto& suggestion : suggestions_) {
+    all_suggestions.push_back(std::move(suggestion));
   }
-  for (std::unique_ptr<RankedSuggestion>& each_suggestion :
-       hidden_suggestions_) {
-    all_suggestions.push_back(std::move(each_suggestion));
+  for (auto& suggestion : hidden_suggestions_) {
+    all_suggestions.push_back(std::move(suggestion));
+  }
+  for (auto& suggestion : pending_suggestions_) {
+    all_suggestions.push_back(std::move(suggestion));
   }
 
   // Clear both the hidden and non-hidden suggestions vectors
-  suggestions_.clear();
   hidden_suggestions_.clear();
+  pending_suggestions_.clear();
+  suggestions_.clear();
 
   // apply the active filters that modify the entire suggestions list
   for (const auto& active_filter : suggestion_active_filters_) {
@@ -153,6 +164,11 @@ void RankedSuggestionsList::Refresh(const UserInput& query) {
 
   // Rerank and sort the updated suggestions_ list
   Rank(query);
+  dirty_ = false;
+  if (should_refresh_) {
+    should_refresh_ = false;
+    Refresh();
+  }
 }
 
 // Start of private sorting methods.
