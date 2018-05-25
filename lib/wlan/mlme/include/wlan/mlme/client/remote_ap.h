@@ -18,6 +18,8 @@ namespace wlan {
 class Packet;
 class Timer;
 
+namespace remote_ap {
+
 class RemoteAp : public FrameHandler {
    public:
     class BaseState : public FrameHandler {
@@ -46,6 +48,7 @@ class RemoteAp : public FrameHandler {
     const char* bssid_str() { return bssid_.ToString().c_str(); }
     const wlan_mlme::BSSDescription& bss() { return *bss_.get(); }
     const wlan_channel_t& bss_chan() { return bss_chan_; }
+    Sequence* seq() { return &seq_; }
 
     zx_status_t StartTimer(zx::time deadline);
     zx_status_t CancelTimer();
@@ -54,13 +57,21 @@ class RemoteAp : public FrameHandler {
     void HandleTimeout();
     void MoveToState(fbl::unique_ptr<BaseState> to);
 
-   private:
-    zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
-
-    wlan_channel_t SanitizeChannel(wlan_channel_t chan);
     // Stub functions filled with logic in the future.
+    bool IsHTReady() const;
     bool IsCbw40RxReady() const;
     bool IsCbw40TxReady() const;
+    bool IsQosReady() const;
+    bool IsAmsduRxReady() const;
+    // TODO(porce): Find intersection of:
+    // - BSS capabilities
+    // - Client radio capabilities
+    // - Client configuration
+    HtCapabilities BuildHtCapabilities();
+
+   private:
+    zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
+    wlan_channel_t SanitizeChannel(wlan_channel_t chan);
 
     DeviceInterface* device_;
     fbl::unique_ptr<Timer> timer_;
@@ -68,6 +79,7 @@ class RemoteAp : public FrameHandler {
     wlan_mlme::BSSDescriptionPtr bss_;
     wlan_channel_t bss_chan_;
     fbl::unique_ptr<BaseState> state_;
+    Sequence seq_;
 };
 
 class InitState : public RemoteAp::BaseState {
@@ -100,4 +112,45 @@ class JoinedState : public RemoteAp::BaseState {
     const char* name() const override { return kName; }
 };
 
+class AuthenticatedState : public RemoteAp::BaseState {
+   public:
+    static constexpr const char* kName = "Authenticated";
+
+    explicit AuthenticatedState(RemoteAp* ap);
+
+    const char* name() const override { return kName; }
+
+   private:
+    zx_status_t HandleMlmeAssocReq(const wlan_mlme::AssociateRequest& req) override;
+};
+
+class AssociatingState : public RemoteAp::BaseState {
+   public:
+    static constexpr const char* kName = "Associating";
+
+    explicit AssociatingState(RemoteAp* ap);
+
+    const char* name() const override { return kName; }
+
+   private:
+    static constexpr size_t kAssocTimeoutTu = 500;  // ~500ms
+
+    void OnExit() override;
+    void HandleTimeout() override;
+
+    zx_status_t HandleAssociationResponse(const MgmtFrame<AssociationResponse>& frame) override;
+
+    zx::time assoc_deadline_;
+};
+
+class AssociatedState : public RemoteAp::BaseState {
+   public:
+    static constexpr const char* kName = "Associated";
+
+    explicit AssociatedState(RemoteAp* ap, aid_t aid);
+
+    const char* name() const override { return kName; }
+};
+
+}  // namespace remote_ap
 }  // namespace wlan
