@@ -86,7 +86,7 @@ void MessageLoopZircon::Run() {
 
   zx_port_packet_t packet;
   while (!should_quit() &&
-         port_.wait(zx::time::infinite(), &packet, 1) == ZX_OK) {
+         port_.wait(zx::time::infinite(), &packet) == ZX_OK) {
     WatchInfo* watch_info = nullptr;
     {
       std::lock_guard<std::mutex> guard(mutex_);

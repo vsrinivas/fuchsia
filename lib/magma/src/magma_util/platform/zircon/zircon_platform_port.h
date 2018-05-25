@@ -18,7 +18,7 @@ public:
     {
         zx_port_packet_t packet = {};
         packet.type = ZX_PKT_TYPE_USER;
-        zx_status_t status = port_.queue(&packet, 1);
+        zx_status_t status = port_.queue(&packet);
         DASSERT(status == ZX_OK);
     }
 

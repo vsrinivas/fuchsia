@@ -18,7 +18,7 @@ Status ZirconPlatformPort::Wait(uint64_t* key_out, uint64_t timeout_ms)
 
     zx_port_packet_t packet;
     zx_status_t status =
-        port_.wait(timeout_ms == UINT64_MAX ? zx::time::infinite() : zx::deadline_after(zx::msec(timeout_ms)), &packet, 1);
+        port_.wait(timeout_ms == UINT64_MAX ? zx::time::infinite() : zx::deadline_after(zx::msec(timeout_ms)), &packet);
     if (status == ZX_ERR_TIMED_OUT)
         return DRET_MSG(MAGMA_STATUS_TIMED_OUT, "port wait timed out");
 

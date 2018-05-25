@@ -55,7 +55,7 @@
     <project name="third_party/crashpad"
              path="third_party/crashpad"
              remote="https://chromium.googlesource.com/crashpad/crashpad"
-             revision="9839ef5605cf274f98ad6af8390a5077a6437808"
+             revision="3033802ed4ad78c343b85f3b5b1c22762c66e976"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/expat"
              path="third_party/expat"
@@ -282,12 +282,12 @@
              path="third_party/syzkaller"
              remote="https://fuchsia.googlesource.com/third_party/syzkaller"
              gerrithost="https://fuchsia-review.googlesource.com"
-             revision="b88872ba0e2ae9243628945e3ea2a3ae89a92bf7"/>
+             revision="6a93ca61dfee6289292edea763b14e531cbcefd2"/>
     <project name="third_party/openssh-portable"
              path="third_party/openssh-portable"
              remote="https://fuchsia.googlesource.com/third_party/openssh-portable"
              gerrithost="https://fuchsia-review.googlesource.com"
-             revision="ba54349d6011ab7751ded44266b1ae2ce13c5fec"/>
+             revision="83479ea601ed5743622dbf3aaa1d750d39ee8223"/>
     <project name="third_party/vim"
              path="third_party/vim"
              remote="https://fuchsia.googlesource.com/third_party/vim"

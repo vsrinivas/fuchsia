@@ -22,9 +22,9 @@ bool PortQueueWaitTest(perftest::RepeatState* state) {
   out_packet.type = ZX_PKT_TYPE_USER;
 
   while (state->KeepRunning()) {
-    ZX_ASSERT(port.queue(&out_packet, 1) == ZX_OK);
+    ZX_ASSERT(port.queue(&out_packet) == ZX_OK);
     state->NextStep();
-    ZX_ASSERT(port.wait(zx::time::infinite(), &in_packet, 1) == ZX_OK);
+    ZX_ASSERT(port.wait(zx::time::infinite(), &in_packet) == ZX_OK);
   }
   return true;
 }

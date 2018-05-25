@@ -79,8 +79,7 @@ int main(int argc, char** argv) {
 
     for (;;) {
         zx_port_packet_t packet;
-        st = zx_port_wait(port, ZX_TIME_INFINITE,
-                          &packet, 1);
+        st = zx_port_wait(port, ZX_TIME_INFINITE, &packet);
         if (st != ZX_OK) {
             fprintf(stderr, "ERROR: Failed to wait on port: %d\n", st);
             return st;

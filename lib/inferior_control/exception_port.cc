@@ -97,7 +97,7 @@ void ExceptionPort::Quit() {
     zx_port_packet_t packet;
     memset(&packet, 0, sizeof(packet));
     packet.type = ZX_PKT_TYPE_USER;
-    eport_handle_.queue(&packet, 1);
+    eport_handle_.queue(&packet);
   }
 
   io_thread_.join();
@@ -192,7 +192,7 @@ void ExceptionPort::Worker() {
   }
   while (keep_running_) {
     zx_port_packet_t packet;
-    zx_status_t status = zx_port_wait(eport, ZX_TIME_INFINITE, &packet, 1);
+    zx_status_t status = zx_port_wait(eport, ZX_TIME_INFINITE, &packet);
     if (status < 0) {
       FXL_LOG(ERROR) << "zx_port_wait returned error: "
                      << util::ZxErrorString(status);
