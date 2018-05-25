@@ -300,6 +300,132 @@ void InitState::HandleTimeout() {
 
 JoinedState::JoinedState(RemoteAp* ap) : RemoteAp::BaseState(ap) {}
 
+zx_status_t JoinedState::HandleMlmeAuthReq(const wlan_mlme::AuthenticateRequest& req) {
+    debugfn();
+
+    debugjoin("[ap] [%s] received MLME-AUTHENTICATION.request\n", ap_->bssid_str());
+
+    // TODO(tkilbourn): better result codes
+    common::MacAddr peer_sta_addr(req.peer_sta_address.data());
+    if (ap_->bssid() != peer_sta_addr) {
+        errorf("[ap] [%s] received authentication request for other BSS\n", ap_->bssid_str());
+        return service::SendAuthConfirm(ap_->device(), ap_->bssid(),
+                                        wlan_mlme::AuthenticateResultCodes::REFUSED);
+    }
+
+    if (req.auth_type != wlan_mlme::AuthenticationTypes::OPEN_SYSTEM) {
+        // TODO(tkilbourn): support other authentication types
+        // TODO(tkilbourn): set the auth_alg_ when we support other authentication types
+        errorf("[ap] [%s] only OpenSystem authentication is supported\n", ap_->bssid_str());
+        return service::SendAuthConfirm(ap_->device(), ap_->bssid(),
+                                        wlan_mlme::AuthenticateResultCodes::REFUSED);
+    }
+
+    MgmtFrame<Authentication> frame;
+    auto status = BuildMgmtFrame(&frame);
+    if (status != ZX_OK) {
+        errorf("[ap] [%s] authing: failed to build a frame\n", ap_->bssid_str());
+        return service::SendAuthConfirm(ap_->device(), ap_->bssid(),
+                                        wlan_mlme::AuthenticateResultCodes::REFUSED);
+    }
+
+    auto hdr = frame.hdr();
+    const common::MacAddr& client_addr = ap_->device()->GetState()->address();
+    hdr->addr1 = ap_->bssid();
+    hdr->addr2 = client_addr;
+    hdr->addr3 = ap_->bssid();
+    SetSeqNo(hdr, ap_->seq());
+    frame.FillTxInfo();
+
+    // Only Open System authentication is supported so far.
+    auto auth = frame.body();
+    auth->auth_algorithm_number = AuthAlgorithm::kOpenSystem;
+    auth->auth_txn_seq_number = 1;
+    auth->status_code = 0;  // Reserved: set to 0
+
+    finspect("Outbound Mgmt Frame(Auth): %s\n", debug::Describe(*hdr).c_str());
+    status = ap_->device()->SendWlan(frame.take());
+    if (status != ZX_OK) {
+        errorf("[ap] [%s] could not send auth packet: %d\n", ap_->bssid_str(), status);
+        service::SendAuthConfirm(ap_->device(), ap_->bssid(),
+                                 wlan_mlme::AuthenticateResultCodes::REFUSED);
+        return status;
+    }
+
+    MoveToState<AuthenticatingState>(AuthAlgorithm::kOpenSystem, req.auth_failure_timeout);
+    return status;
+}
+
+// AuthenticatingState implementation.
+
+AuthenticatingState::AuthenticatingState(RemoteAp* ap, AuthAlgorithm auth_alg,
+                                         wlan_tu_t auth_timeout_tu)
+    : RemoteAp::BaseState(ap), auth_alg_(auth_alg) {
+    auth_deadline_ = ap_->CreateTimerDeadline(auth_timeout_tu);
+    auto status = ap_->StartTimer(auth_deadline_);
+    if (status != ZX_OK) {
+        errorf("[ap] [%s] could not set auth timer: %d\n", ap_->bssid_str(), status);
+
+        // This is the wrong result code, but we need to define our own codes at some later time.
+        MoveOn<JoinedState>(wlan_mlme::AuthenticateResultCodes::AUTHENTICATION_REJECTED);
+    }
+}
+
+void AuthenticatingState::OnExit() {
+    ap_->CancelTimer();
+}
+
+void AuthenticatingState::HandleTimeout() {
+    if (ap_->IsDeadlineExceeded(auth_deadline_)) {
+        auth_deadline_ = zx::time();
+        ap_->CancelTimer();
+
+        MoveOn<JoinedState>(wlan_mlme::AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
+    }
+}
+
+zx_status_t AuthenticatingState::HandleAuthentication(const MgmtFrame<Authentication>& frame) {
+    debugfn();
+
+    // Received Authentication response; cancel timeout
+    auth_deadline_ = zx::time();
+    ap_->CancelTimer();
+
+    auto auth = frame.body();
+    if (auth->auth_algorithm_number != auth_alg_) {
+        errorf("[ap] [%s] mismatched authentication algorithm (expected %u, got %u)\n",
+               ap_->bssid_str(), auth_alg_, auth->auth_algorithm_number);
+        MoveOn<JoinedState>(wlan_mlme::AuthenticateResultCodes::AUTHENTICATION_REJECTED);
+        return ZX_ERR_BAD_STATE;
+    }
+
+    // TODO(tkilbourn): this only makes sense for Open System.
+    if (auth->auth_txn_seq_number != 2) {
+        errorf("[ap] [%s] unexpected auth txn sequence number (expected 2, got %u)\n",
+               ap_->bssid_str(), auth->auth_txn_seq_number);
+        MoveOn<JoinedState>(wlan_mlme::AuthenticateResultCodes::AUTHENTICATION_REJECTED);
+        return ZX_ERR_BAD_STATE;
+    }
+
+    if (auth->status_code != status_code::kSuccess) {
+        errorf("[ap] [%s] authentication failed (status code=%u)\n", ap_->bssid_str(),
+               auth->status_code);
+        // TODO(tkilbourn): is this the right result code?
+        MoveOn<JoinedState>(wlan_mlme::AuthenticateResultCodes::AUTHENTICATION_REJECTED);
+        return ZX_ERR_BAD_STATE;
+    }
+
+    debugjoin("[ap] [%s] authenticated\n", ap_->bssid_str());
+    MoveOn<AuthenticatedState>(wlan_mlme::AuthenticateResultCodes::SUCCESS);
+    return ZX_OK;
+}
+
+template <typename State>
+void AuthenticatingState::MoveOn(wlan_mlme::AuthenticateResultCodes result_code) {
+    service::SendAuthConfirm(ap_->device(), ap_->bssid(), result_code);
+    MoveToState<State>();
+}
+
 // AuthenticatedState implementation.
 
 AuthenticatedState::AuthenticatedState(RemoteAp* ap) : RemoteAp::BaseState(ap) {}
@@ -321,7 +447,11 @@ zx_status_t AuthenticatedState::HandleMlmeAssocReq(const wlan_mlme::AssociateReq
     size_t body_payload_len = 128;
     MgmtFrame<AssociationRequest> frame;
     auto status = BuildMgmtFrame(&frame, body_payload_len);
-    if (status != ZX_OK) { return status; }
+    if (status != ZX_OK) {
+        service::SendAssocConfirm(ap_->device(),
+                                  wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+        return ZX_ERR_NO_RESOURCES;
+    }
 
     // TODO(tkilbourn): a lot of this is hardcoded for now. Use device capabilities to set up the
     // request.
@@ -404,6 +534,8 @@ zx_status_t AuthenticatedState::HandleMlmeAssocReq(const wlan_mlme::AssociateReq
                                   wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         return status;
     }
+
+    MoveToState<AssociatingState>();
     return status;
 }
 

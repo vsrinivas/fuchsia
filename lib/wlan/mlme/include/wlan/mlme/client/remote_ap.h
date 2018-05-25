@@ -110,6 +110,28 @@ class JoinedState : public RemoteAp::BaseState {
     explicit JoinedState(RemoteAp* ap);
 
     const char* name() const override { return kName; }
+
+   private:
+    zx_status_t HandleMlmeAuthReq(const wlan_mlme::AuthenticateRequest& req) override;
+};
+
+class AuthenticatingState : public RemoteAp::BaseState {
+   public:
+    static constexpr const char* kName = "Authenticating";
+
+    explicit AuthenticatingState(RemoteAp* ap, AuthAlgorithm auth_alg, wlan_tu_t auth_timeout_tu);
+
+    void HandleTimeout() override;
+    const char* name() const override { return kName; }
+
+   private:
+    void OnExit() override;
+
+    zx_status_t HandleAuthentication(const MgmtFrame<Authentication>& frame) override;
+    template <typename State> void MoveOn(wlan_mlme::AuthenticateResultCodes result_code);
+
+    zx::time auth_deadline_;
+    AuthAlgorithm auth_alg_;
 };
 
 class AuthenticatedState : public RemoteAp::BaseState {
