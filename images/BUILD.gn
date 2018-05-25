@@ -771,7 +771,7 @@ action("amber_publish_blobs") {
   script = "manifest.py"
   args = [
     "--copytree",
-    "--output=" + rebase_path(amber_repository_dir),
+    "--output=" + rebase_path(amber_repository_blobs_dir),
     "--stamp=" + rebase_path("$amber_repository_dir.stamp"),
   ]
   foreach(manifest, inputs) {
