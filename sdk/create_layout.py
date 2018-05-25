@@ -14,7 +14,8 @@ from layout_builder import Builder, process_manifest
 class CppBuilder(Builder):
 
     def __init__(self, output, overlay):
-        super(CppBuilder, self).__init__(domains=['cpp', 'exe', 'fidl'])
+        super(CppBuilder, self).__init__(
+            domains=['cpp', 'exe', 'fidl', 'image'])
         self.output = output
         self.is_overlay = overlay
 
@@ -107,6 +108,16 @@ class CppBuilder(Builder):
             return
         for file in atom.files:
             dest = os.path.join(self.output, 'fidl', atom.id.name,
+                                file.destination)
+            self.make_dir(dest)
+            shutil.copy2(file.source, dest)
+
+
+    def install_image_atom(self, atom):
+        '''Installs an atom from the "image" domain.'''
+        for file in atom.files:
+            dest = os.path.join(self.output, 'target',
+                                self.metadata.target_arch,
                                 file.destination)
             self.make_dir(dest)
             shutil.copy2(file.source, dest)
