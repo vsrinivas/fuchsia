@@ -27,3 +27,4 @@ last-update
 /.cipd
 .idea/
 *.iml
+**/Cargo.toml
