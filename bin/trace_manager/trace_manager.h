@@ -18,7 +18,6 @@
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
-#include "lib/fxl/tasks/one_shot_timer.h"
 
 namespace tracing {
 
@@ -47,7 +46,6 @@ class TraceManager : public fuchsia::tracelink::Registry,
 
   uint32_t next_provider_id_ = 1u;
   fxl::RefPtr<TraceSession> session_;
-  fxl::OneShotTimer session_finalize_timeout_;
   std::list<TraceProviderBundle> providers_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TraceManager);
