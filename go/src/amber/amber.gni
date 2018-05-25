@@ -12,6 +12,8 @@ declare_args() {
 
   # Directory containing signing keys used by amber-publish.
   amber_keys_dir = "//garnet/go/src/amber/keys"
+
+  amber_repository_blobs_dir = "$amber_repository_dir/repository/blobs"
 }
 
 template("amber_publish") {
