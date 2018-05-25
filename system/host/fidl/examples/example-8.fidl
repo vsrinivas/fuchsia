@@ -1,4 +1,4 @@
-library example_8;
+library fidl.examples.example8;
 
 struct foo {
     uint8 u8_0;

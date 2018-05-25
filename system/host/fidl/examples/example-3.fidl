@@ -1,4 +1,4 @@
-library example_3;
+library fidl.examples.example3;
 
 struct Point {
     // Abscissa

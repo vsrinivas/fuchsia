@@ -1,4 +1,4 @@
-library types;
+library fidl.examples.types;
 
 struct this_is_a_struct { string s; };
 union this_is_a_union { string s; };

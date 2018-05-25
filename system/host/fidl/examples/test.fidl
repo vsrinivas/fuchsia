@@ -1,4 +1,4 @@
-library test;
+library fidl.examples.test;
 
 struct Point {
     int32 x;

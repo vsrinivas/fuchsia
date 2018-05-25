@@ -1,4 +1,4 @@
-library events;
+library fidl.examples.events;
 
 interface AnimalPlanet {
     1: Dog(string s, bool b);

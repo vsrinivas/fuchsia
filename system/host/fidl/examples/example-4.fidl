@@ -1,4 +1,4 @@
-library example_4;
+library fidl.examples.example4;
 
 struct Point {
     uint64 x;

@@ -1,4 +1,4 @@
-library tables;
+library fidl.examples.tables;
 
 struct A {
     B? foo;

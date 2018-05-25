@@ -1,4 +1,4 @@
-library enums;
+library fidl.examples.enums;
 
 enum int8_enum : int8 {
     kNegativeOne = -1;

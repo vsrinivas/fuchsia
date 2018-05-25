@@ -1,4 +1,4 @@
-library example_2;
+library fidl.examples.example2;
 
 struct Point {
     float32 x; // yo

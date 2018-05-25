@@ -1,4 +1,4 @@
-library example_7;
+library fidl.examples.example7;
 
 using pkg;
 

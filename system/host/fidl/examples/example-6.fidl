@@ -1,4 +1,4 @@
-library example_6;
+library fidl.examples.example6;
 
 using something;
 using my.import.path;

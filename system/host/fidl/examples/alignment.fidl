@@ -1,4 +1,4 @@
-library alignment;
+library fidl.examples.alignment;
 
 struct packing_0 {
     int16 i16_0;

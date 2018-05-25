@@ -1,4 +1,4 @@
-library interface_ordinals;
+library fidl.examples.ordinals;
 
 interface Foo {
     1: SomeMethod();

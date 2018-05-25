@@ -1,4 +1,4 @@
-library view;
+library fidl.examples.libraryB;
 
 using point;
 

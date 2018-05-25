@@ -1,4 +1,4 @@
-library example_9;
+library fidl.examples.example9;
 
 enum EchoMe {
     zero = 0;
