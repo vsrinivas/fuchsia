@@ -18,7 +18,9 @@
 #include <inttypes.h>
 #include <string.h>
 
+#include <ddk/driver.h>
 #include <zircon/assert.h>
+#include <zircon/process.h>
 #include <zircon/status.h>
 
 #include "core.h"
@@ -35,15 +37,15 @@
 
 // MODULE PARAMETERS
 // Debugging mask
-static unsigned int ath10k_debug_mask = 0;
+unsigned int ath10k_debug_mask = 0;
 // Crypto mode: 0-hardware, 1-software
-static unsigned int ath10k_cryptmode_param = 0;
+unsigned int ath10k_cryptmode_param = 0;
 // Uart target debugging
-static bool uart_print = false;
+bool uart_print = false;
 // Skip otp failure for calibration in testmode
-static bool skip_otp = false;
+bool skip_otp = false;
 // Use raw 802.11 frame datapath
-static bool rawmode = false;
+bool rawmode = false;
 
 static const struct ath10k_hw_params ath10k_hw_params_list[] = {
     {
@@ -894,7 +896,7 @@ static zx_status_t ath10k_download_fw(struct ath10k* ar) {
 
 static void ath10k_release_firmware(struct ath10k_firmware* fw) {
     if (fw->vmo != ZX_HANDLE_INVALID) {
-        free(fw->data);
+        zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)fw->data, fw->size);
         fw->data = NULL;
         zx_handle_close(fw->vmo);
         fw->vmo = ZX_HANDLE_INVALID;
@@ -1981,8 +1983,6 @@ zx_status_t ath10k_core_start(struct ath10k* ar, enum ath10k_firmware_mode mode,
     ar->htc.htc_ops.target_send_suspend_complete =
         ath10k_send_suspend_complete;
 
-    status = ath10k_msg_bufs_init(ar);
-
     status = ath10k_htc_init(ar);
     if (status != ZX_OK) {
         ath10k_err("could not init HTC (%s)\n", zx_status_get_string(status));
@@ -2127,7 +2127,8 @@ zx_status_t ath10k_core_start(struct ath10k* ar, enum ath10k_firmware_mode mode,
     /* If firmware indicates Full Rx Reorder support it must be used in a
      * slightly different manner. Let HTT code know.
      */
-    ar->htt.rx_ring.in_ord_rx = !!(BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_RX_FULL_REORDER));
+    ar->htt.rx_ring.in_ord_rx = BITARR_TEST(ar->wmi.svc_map, WMI_SERVICE_RX_FULL_REORDER)
+                                ? ATH10K_HTT_IN_ORD_RX_YES : ATH10K_HTT_IN_ORD_RX_NO;
 
     status = ath10k_htt_rx_ring_refill(ar);
     if (status != ZX_OK) {
@@ -2206,10 +2207,10 @@ void ath10k_core_stop(struct ath10k* ar) {
     ath10k_wmi_detach(ar);
 }
 
-/* mac80211 manages fw/hw initialization through start/stop hooks. However in
- * order to know what hw capabilities should be advertised to mac80211 it is
- * necessary to load the firmware (and tear it down immediately since start
- * hook will try to init it again) before registering
+/* In order to know what hw capabilities should be advertised, we have to load the
+ * firmware. Rather than tear it down immediately and re-load it when wlanmac's
+ * start() is invoked, we just keep it running. Note that this behavior is subject
+ * to change in the future (see NET-919).
  */
 static zx_status_t ath10k_core_probe_fw(struct ath10k* ar) {
     struct bmi_target_info target_info;
@@ -2311,11 +2312,8 @@ static zx_status_t ath10k_core_probe_fw(struct ath10k* ar) {
     ath10k_debug_print_boot_info(ar);
 #endif
 
-    ath10k_core_stop(ar);
-
     mtx_unlock(&ar->conf_mutex);
 
-    ath10k_hif_power_down(ar);
     return ZX_OK;
 
 err_unlock:
@@ -2368,10 +2366,17 @@ static zx_status_t ath10k_core_register_work(void* thrd_data) {
                    zx_status_get_string(status));
         goto err_spectral_destroy;
     }
+#endif // NEEDS PORTING
 
     BITARR_SET(ar->dev_flags, ATH10K_FLAG_CORE_REGISTERED);
+
+    // Now that we have completed initialization, we are ready to handle calls
+    // from wlanmac.
+    device_make_visible(ar->zxdev);
+
     return ZX_OK;
 
+#if 0 // NEEDS PORTING
 err_spectral_destroy:
     ath10k_spectral_destroy(ar);
 err_debug_destroy:
