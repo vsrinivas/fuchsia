@@ -8,7 +8,7 @@
 
 namespace root_presenter {
 
-DisplayRotater::DisplayRotater() {}
+DisplayRotater::DisplayRotater() : spring_(0.f) {}
 
 bool DisplayRotater::OnEvent(const fuchsia::ui::input::InputEvent& event,
                              Presentation* presentation) {
@@ -29,14 +29,20 @@ bool DisplayRotater::OnEvent(const fuchsia::ui::input::InputEvent& event,
 void DisplayRotater::SetDisplayRotation(Presentation* p,
                                         float display_rotation_degrees,
                                         bool animate) {
-  rotation_animation_start_value_ = p->display_rotation_desired_;
-  rotation_animation_end_value_ = display_rotation_degrees;
-
   if (animate) {
-    animation_start_time_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
-    UpdateAnimation(p, animation_start_time_);
+    float animation_start_time;
+
+    if (spring_.is_done()) {
+      animation_start_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    } else {
+      animation_start_time = last_animation_update_time_;
+    }
+    last_animation_update_time_ = animation_start_time;
+
+    spring_.SetTargetValue(display_rotation_degrees);
+    UpdateAnimation(p, animation_start_time);
   } else {
-    p->display_rotation_desired_ = rotation_animation_end_value_;
+    p->display_rotation_desired_ = display_rotation_degrees;
     if (p->ApplyDisplayModelChanges(false)) {
       p->PresentScene();
     }
@@ -44,7 +50,7 @@ void DisplayRotater::SetDisplayRotation(Presentation* p,
 }
 
 void DisplayRotater::FlipDisplay(Presentation* p) {
-  if (rotation_animation_end_value_ == 0.f) {
+  if (spring_.target_value() == 0.f) {
     SetDisplayRotation(p, 180.f, true);
   } else {
     SetDisplayRotation(p, 0.f, true);
@@ -53,19 +59,17 @@ void DisplayRotater::FlipDisplay(Presentation* p) {
 
 bool DisplayRotater::UpdateAnimation(Presentation* p,
                                      uint64_t presentation_time) {
-  if (p->display_rotation_desired_ == rotation_animation_end_value_) {
+  if (spring_.is_done()) {
     return false;
   }
 
-  // Adjust duration so velocity of animation (degrees/millisecond) is the same.
-  float animation_duration = std::abs(rotation_animation_end_value_ -
-                                      rotation_animation_start_value_) /
-                             180.f * 250'000'000;
+  float seconds_since_last_frame =
+      (presentation_time - last_animation_update_time_) / 1'000'000'000.f;
+  last_animation_update_time_ = presentation_time;
 
-  float t = std::min(
-      1.f, (presentation_time - animation_start_time_) / animation_duration);
-  p->display_rotation_desired_ = (1 - t) * rotation_animation_start_value_ +
-                                 t * rotation_animation_end_value_;
+  spring_.ElapseTime(seconds_since_last_frame);
+  p->display_rotation_desired_ = spring_.GetValue();
+
   if (p->ApplyDisplayModelChanges(false)) {
     p->PresentScene();
   }

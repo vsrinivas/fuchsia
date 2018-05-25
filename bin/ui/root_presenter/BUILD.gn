@@ -24,6 +24,8 @@ executable("root_presenter") {
     "presentation.h",
     "presentation_switcher.cc",
     "presentation_switcher.h",
+    "rk4_spring_simulation.cc",
+    "rk4_spring_simulation.h",
   ]
 
   deps = [
