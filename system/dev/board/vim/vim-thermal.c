@@ -22,34 +22,62 @@ static const pbus_gpio_t fanctl_gpios[] = {
 };
 
 static aml_thermal_config_t aml_vim2_config = {
-    .trip_point_count               = 5,
-    .num_fan_levels                 = 4,
+    .trip_point_count               = 8,
     .trip_point_info = {
         {
-            .id                     = 0,
-            .up_temp                = 45,
-            .down_temp              = 43,
+            .fan_level                  = 0,
+            .big_cluster_dvfs_opp       = -1,
+            .little_cluster_dvfs_opp    = -1,
         },
         {
-            .id                     = 1,
-            .up_temp                = 55,
-            .down_temp              = 53,
+            .fan_level                  = 1,
+            .up_temp                    = 45,
+            .down_temp                  = 43,
+            .big_cluster_dvfs_opp       = -1,
+            .little_cluster_dvfs_opp    = -1,
         },
         {
-            .id                     = 2,
-            .up_temp                = 60,
-            .down_temp              = 58,
+            .fan_level                  = 2,
+            .up_temp                    = 55,
+            .down_temp                  = 53,
+            .big_cluster_dvfs_opp       = -1,
+            .little_cluster_dvfs_opp    = -1,
         },
         {
-            .id                     = 3,
-            .up_temp                = 70,
-            .down_temp              = 68,
+            .fan_level                  = 3,
+            .up_temp                    = 60,
+            .down_temp                  = 58,
+            .big_cluster_dvfs_opp       = 6,
+            .little_cluster_dvfs_opp    = 4,
         },
         {
-            .id                     = 4,
-            .up_temp                = 75,
-            .down_temp              = 73,
+            .fan_level                  = -1,
+            .up_temp                    = 70,
+            .down_temp                  = 68,
+            .big_cluster_dvfs_opp       = 5,
+            .little_cluster_dvfs_opp    = 4,
         },
+        {
+            .fan_level                  = -1,
+            .up_temp                    = 74,
+            .down_temp                  = 73,
+            .big_cluster_dvfs_opp       = 4,
+            .little_cluster_dvfs_opp    = 4,
+        },
+        {
+            .fan_level                  = -1,
+            .up_temp                    = 77,
+            .down_temp                  = 75,
+            .big_cluster_dvfs_opp       = 3,
+            .little_cluster_dvfs_opp    = 3,
+        },
+        {
+            .fan_level                  = -1,
+            .up_temp                    = 79,
+            .down_temp                  = 76,
+            .big_cluster_dvfs_opp       = 2,
+            .little_cluster_dvfs_opp    = 2,
+        }
     }
 };
 

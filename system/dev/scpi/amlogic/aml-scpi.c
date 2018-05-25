@@ -177,6 +177,7 @@ static zx_status_t aml_scpi_set_dvfs_idx(void *ctx, uint8_t power_domain, uint16
     aml_dvfs_idx_info.power_domain  = power_domain;
     aml_dvfs_idx_info.idx           = idx;
 
+    SCPI_INFO("OPP index for cluster %d to %d\n", power_domain, idx);
     return aml_scpi_execute_cmd(scpi,
                                 NULL, 0,
                                 &aml_dvfs_idx_info, sizeof(aml_dvfs_idx_info),

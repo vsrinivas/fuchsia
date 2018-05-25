@@ -18,8 +18,6 @@
 #define THERMAL_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define THERMAL_INFO(fmt, ...) zxlogf(INFO, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 
-#define BIG_CLUSTER_POWER_DOMAIN        0
-#define LITTLE_CLUSTER_POWER_DOMAIN     1
 #define MAX_TRIP_POINTS                 9
 
 // GPIO Indexes
@@ -50,7 +48,7 @@ typedef struct {
 
     thrd_t                              notify_thread;
 
-    aml_thermal_config_t                 *device;
+    aml_thermal_config_t                *device;
 
     int                                 current_trip_idx;
 } aml_thermal_t;

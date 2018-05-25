@@ -69,7 +69,7 @@ static int aml_thermal_notify_thread(void* ctx) {
         if (temperature >= dev->device->trip_point_info[idx+1].up_temp) {
             // Triggered next trip point
             dev->current_trip_idx = idx + 1;
-        } else if (idx != -1 && temperature < dev->device->trip_point_info[idx].down_temp) {
+        } else if (idx != 0 && temperature < dev->device->trip_point_info[idx].down_temp) {
             // Triggered prev trip point
             dev->current_trip_idx = idx - 1;
         } else {
@@ -78,7 +78,7 @@ static int aml_thermal_notify_thread(void* ctx) {
 
         if (signal) {
             // Notify the thermal deamon about which trip point triggered
-            thermal_port_packet.key = dev->current_trip_idx + 1;
+            thermal_port_packet.key = dev->current_trip_idx;
             status = zx_port_queue(dev->port, &thermal_port_packet);
             if (status != ZX_OK) {
                 THERMAL_ERROR("Failed to send packet via port to Thermal Deamon: Thermal disabled");
@@ -91,11 +91,15 @@ static int aml_thermal_notify_thread(void* ctx) {
     return ZX_OK;
 }
 
+static zx_status_t aml_thermal_set_dvfs_opp(aml_thermal_t* dev,
+                                     dvfs_info_t* info) {
+    return scpi_set_dvfs_idx(&dev->scpi, info->power_domain, info->op_idx);
+}
+
 static void aml_thermal_get_device_info(aml_thermal_t* dev,
                                         thermal_device_info_t* info) {
     info->active_cooling        = true;
     info->passive_cooling       = true;
-    info->num_fan_level         = dev->device->num_fan_levels;
     info->num_trip_points       = dev->device->trip_point_count;
     memcpy(&info->trip_point_info, &dev->device->trip_point_info,
            sizeof(dev->device->trip_point_info));
@@ -154,6 +158,14 @@ static zx_status_t aml_thermal_ioctl(void* ctx, uint32_t op,
             aml_set_fan_level(dev, *fan_level);
             return ZX_OK;
         }
+
+        case IOCTL_THERMAL_SET_DVFS_OPP: {
+            if (in_len != sizeof(dvfs_info_t)) {
+                return ZX_ERR_INVALID_ARGS;
+            }
+            dvfs_info_t *dvfs_info = (dvfs_info_t*)in_buf;
+            return aml_thermal_set_dvfs_opp(dev, dvfs_info);
+        }
         default:
             return ZX_ERR_NOT_SUPPORTED;
     }
@@ -189,7 +201,7 @@ static zx_status_t aml_thermal_init(aml_thermal_t* thermal) {
         return status;
     }
 
-    thermal->current_trip_idx = -1;
+    thermal->current_trip_idx = 0;
 
     // Populate DVFS info
     status = scpi_get_dvfs_info(&thermal->scpi, BIG_CLUSTER_POWER_DOMAIN,
