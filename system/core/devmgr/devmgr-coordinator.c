@@ -36,6 +36,7 @@ extern zx_handle_t virtcon_open;
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 bool dc_asan_drivers = false;
+bool dc_launched_first_devhost = false;
 
 static zx_handle_t bootdata_vmo;
 
@@ -628,6 +629,8 @@ static zx_status_t dc_launch_devhost(devhost_t* host,
     }
     log(INFO, "devcoord: launch devhost '%s': pid=%zu\n",
         name, host->koid);
+
+    dc_launched_first_devhost = true;
 
     return ZX_OK;
 }

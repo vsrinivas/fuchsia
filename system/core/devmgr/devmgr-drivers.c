@@ -11,6 +11,7 @@
 
 #include "devmgr.h"
 #include "devcoordinator.h"
+#include "log.h"
 
 #include <driver-info/driver-info.h>
 
@@ -40,6 +41,15 @@ static void found_driver(zircon_driver_note_payload_t* note,
     size_t bindlen = note->bindcount * sizeof(zx_bind_inst_t);
     size_t len = sizeof(driver_t) + bindlen + pathlen + namelen;
 
+    if ((note->flags & ZIRCON_DRIVER_NOTE_FLAG_ASAN) && !dc_asan_drivers) {
+        if (dc_launched_first_devhost) {
+            log(ERROR, "%s (%s) requires ASan: cannot load after boot\n",
+                libname, note->name);
+            return;
+        }
+        dc_asan_drivers = true;
+    }
+
     driver_t* drv;
     if ((drv = malloc(len)) == NULL) {
         return;
@@ -66,10 +76,6 @@ static void found_driver(zircon_driver_note_payload_t* note,
         printf("         %03zd: %08x %08x\n", n, bi[n].op, bi[n].arg);
     }
 #endif
-
-    if (note->flags & ZIRCON_DRIVER_NOTE_FLAG_ASAN) {
-        dc_asan_drivers = true;
-    }
 
     dc_driver_added(drv, note->version);
 }

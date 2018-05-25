@@ -238,3 +238,4 @@ zx_status_t dc_msg_rpc(zx_handle_t h, dc_msg_t* msg, size_t msglen,
                        zx_handle_t* outhandle);
 
 extern bool dc_asan_drivers;
+extern bool dc_launched_first_devhost;
