@@ -15,7 +15,6 @@
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
-#include "lib/fxl/tasks/one_shot_timer.h"
 #include "peridot/bin/user_runner/component_context_impl.h"
 #include "peridot/lib/fidl/app_client.h"
 
