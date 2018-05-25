@@ -14,7 +14,8 @@
 // |crypto::Cipher| is used to encrypt and decrypt data.  Ciphers differ from AEADs in that they
 // require block-aligned lengths and do not check data integrity.  This implementation can be used
 // as either a stream cipher, or as a random access cipher if the cipher has a "tweaked codebook
-// mode".  See the variants of |Init| and |Transform| for details.
+// mode".  See the variants of |Init| and |Transform| for details.  A 64 bit nonce is used to seal
+// plain texts, meaning a given key and IV can be used for at most 2^64 - 1 operations.
 namespace crypto {
 
 class Cipher final {
@@ -81,7 +82,7 @@ public:
     //  - Must have been configured with the same |direction|.
     //  - If |alignment| was non-zero, |offset| must be a multiple of it.
     // Finally, |length| must be a multiple of cipher blocks, and |out| must have room for |length|
-    // bytes.
+    // bytes.  This method will fail if called 2^64 or more times with the same key and IV.
     zx_status_t Transform(const uint8_t* in, zx_off_t offset, size_t length, uint8_t* out,
                           Direction Direction);
 
@@ -118,11 +119,11 @@ private:
     Direction direction_;
     // Cipher block size.
     size_t block_size_;
-    // Buffer used to hold the initial vector.
-    Bytes iv_;
-    // Buffer used to hold the tweaked initial vector.
-    Bytes tweaked_iv_;
-    // Indicates how offsets
+    // Buffer holding initial vector.  The IV is expanded to be |zx_off_t|-aligned.
+    fbl::unique_ptr<zx_off_t[]> iv_;
+    // Original value of |iv_[0]|.  |Transform| will fail if |iv_[0]| wraps around to this value.
+    zx_off_t iv0_;
+    // If non-zero, indicates how many bytes to use a nonce for before incrementing.
     uint64_t alignment_;
 };
 } // namespace crypto

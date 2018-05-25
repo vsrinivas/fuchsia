@@ -162,54 +162,6 @@ bool TestCopy(void) {
     END_TEST;
 }
 
-bool TestIncrement(void) {
-    BEGIN_TEST;
-    Bytes bytes;
-    EXPECT_ZX(bytes.Increment(), ZX_ERR_OUT_OF_RANGE);
-
-    ASSERT_OK(bytes.Resize(1));
-    EXPECT_OK(bytes.Increment());
-    EXPECT_EQ(bytes[0], 1U);
-    bytes[0] = 0xFF;
-    EXPECT_ZX(bytes.Increment(), ZX_ERR_OUT_OF_RANGE);
-
-    ASSERT_OK(bytes.Resize(2));
-    EXPECT_OK(bytes.Increment());
-    EXPECT_EQ(bytes[0], 0U);
-    EXPECT_EQ(bytes[1], 1U);
-    EXPECT_OK(bytes.Increment());
-    EXPECT_EQ(bytes[0], 0U);
-    EXPECT_EQ(bytes[1], 2U);
-    bytes[1] = 0xFF;
-    EXPECT_OK(bytes.Increment());
-    EXPECT_EQ(bytes[0], 1U);
-    EXPECT_EQ(bytes[1], 0U);
-    bytes[0] = 0xFF;
-    bytes[1] = 0xFF;
-    EXPECT_ZX(bytes.Increment(), ZX_ERR_OUT_OF_RANGE);
-
-    ASSERT_OK(bytes.Resize(3));
-    bytes[0] = 0;
-    bytes[1] = 0;
-    bytes[2] = 1;
-    EXPECT_OK(bytes.Increment());
-    EXPECT_EQ(bytes[0], 0U);
-    EXPECT_EQ(bytes[1], 0U);
-    EXPECT_EQ(bytes[2], 2U);
-
-    EXPECT_OK(bytes.Increment(0x0000FE)); // 000002 + 0000FE = 000100
-    EXPECT_EQ(bytes[0], 0U);
-    EXPECT_EQ(bytes[1], 1U);
-    EXPECT_EQ(bytes[2], 0U);
-    EXPECT_OK(bytes.Increment(0x010000)); // 000100 + 010000 = 010100
-    EXPECT_EQ(bytes[0], 1U);
-    EXPECT_EQ(bytes[1], 1U);
-    EXPECT_EQ(bytes[2], 0U);
-    EXPECT_ZX(bytes.Increment(0x1000000), ZX_ERR_OUT_OF_RANGE);
-
-    END_TEST;
-}
-
 bool TestRelease(void) {
     BEGIN_TEST;
     Bytes bytes;
@@ -289,7 +241,6 @@ RUN_TEST(TestFill)
 RUN_TEST(TestRandomize)
 RUN_TEST(TestResize)
 RUN_TEST(TestCopy)
-RUN_TEST(TestIncrement)
 RUN_TEST(TestRelease)
 RUN_TEST(TestReset)
 RUN_TEST(TestArrayAccess)

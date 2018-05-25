@@ -130,19 +130,21 @@ zx_status_t Cipher::Init(Algorithm algo, Direction direction, const Bytes& key, 
     cipher_ = algo;
 
     // Set the IV.
-    if ((rc = iv_.Copy(iv)) != ZX_OK || (rc = tweaked_iv_.Copy(iv)) != ZX_OK) {
-        return rc;
+    fbl::AllocChecker ac;
+    size_t n = fbl::round_up(cipher->iv_len, sizeof(zx_off_t)) / sizeof(zx_off_t);
+    iv_.reset(new (&ac) zx_off_t[n]{0});
+    if (!ac.check()) {
+        xprintf("failed to allocate %zu bytes\n", n * sizeof(zx_off_t));
+        return ZX_ERR_NO_MEMORY;
     }
+    memcpy(iv_.get(), iv.get(), iv.len());
+    iv0_ = iv_[0];
 
     // Handle alignment for random access ciphers
     if (alignment != 0) {
         if ((alignment & (alignment - 1)) != 0) {
             xprintf("alignment must be a power of 2: %" PRIu64 "\n", alignment);
             return ZX_ERR_INVALID_ARGS;
-        }
-        // Test to make sure we can fully increment the given IV.
-        if ((rc = tweaked_iv_.Increment(UINT64_MAX / alignment)) != ZX_OK) {
-            return rc;
         }
         // White-list tweaked codebook ciphers
         switch (algo) {
@@ -165,14 +167,14 @@ zx_status_t Cipher::Init(Algorithm algo, Direction direction, const Bytes& key, 
     alignment_ = alignment;
 
     // Initialize cipher context
-    fbl::AllocChecker ac;
     ctx_.reset(new (&ac) Context());
     if (!ac.check()) {
         xprintf("allocation failed: %zu bytes\n", sizeof(Context));
         return ZX_ERR_NO_MEMORY;
     }
-    if (EVP_CipherInit_ex(&ctx_->impl, cipher, nullptr, key.get(), iv_.get(),
-                          direction == kEncrypt) < 0) {
+    uint8_t* iv8 = reinterpret_cast<uint8_t*>(iv_.get());
+    if (EVP_CipherInit_ex(&ctx_->impl, cipher, nullptr, key.get(), iv8, direction == kEncrypt) <
+        0) {
         xprintf_crypto_errors(&rc);
         return rc;
     }
@@ -210,28 +212,19 @@ zx_status_t Cipher::Transform(const uint8_t* in, zx_off_t offset, size_t length,
             xprintf("unaligned offset\n");
             return ZX_ERR_INVALID_ARGS;
         }
-        if ((rc = tweaked_iv_.Copy(iv_)) != ZX_OK ||
-            (rc = tweaked_iv_.Increment(offset / alignment_)) != ZX_OK) {
-            return rc;
-        }
+        iv_[0] = iv0_ + static_cast<uint64_t>(offset / alignment_);
+        uint8_t* iv8 = reinterpret_cast<uint8_t*>(iv_.get());
         while (length > 0) {
-            if (EVP_CipherInit_ex(&ctx_->impl, nullptr, nullptr, nullptr, tweaked_iv_.get(), -1) <
-                0) {
-                xprintf_crypto_errors(&rc);
-                return rc;
-            }
             size_t chunk_len = length < alignment_ ? length : alignment_;
-            int res;
-            if ((res = EVP_Cipher(&ctx_->impl, out, in, chunk_len)) <= 0) {
+            if (EVP_CipherInit_ex(&ctx_->impl, nullptr, nullptr, nullptr, iv8, -1) < 0 ||
+                EVP_Cipher(&ctx_->impl, out, in, chunk_len) <= 0) {
                 xprintf_crypto_errors(&rc);
                 return rc;
             }
             out += chunk_len;
             in += chunk_len;
             length -= chunk_len;
-            if ((rc = tweaked_iv_.Increment()) != ZX_OK) {
-                return rc;
-            }
+            iv_[0] += 1;
         }
     }
 
@@ -243,8 +236,6 @@ void Cipher::Reset() {
     block_size_ = 0;
     cipher_ = kUninitialized;
     direction_ = kUnset;
-    iv_.Reset();
-    tweaked_iv_.Reset();
     alignment_ = 0;
 }
 

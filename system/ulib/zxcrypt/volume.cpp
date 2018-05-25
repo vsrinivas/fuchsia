@@ -467,6 +467,7 @@ zx_status_t Volume::Configure(Volume::Version version) {
         (rc = data_iv_.Resize(data_iv_len)) != ZX_OK) {
         return rc;
     }
+
     slot_len_ = data_key_len + data_iv_len + tag_len;
     num_key_slots_ = (block_.len() - kHeaderLen) / slot_len_;
     if (num_key_slots_ == 0) {
@@ -595,6 +596,7 @@ zx_status_t Volume::SealBlock(const crypto::Bytes& key, key_slot_t slot) {
     }
 
     // Encrypt the data key
+    zx_off_t nonce;
     crypto::AEAD aead;
     crypto::Bytes ptext, ctext;
     zx_off_t off = kHeaderLen + (slot_len_ * slot);
@@ -604,12 +606,16 @@ zx_status_t Volume::SealBlock(const crypto::Bytes& key, key_slot_t slot) {
         (rc = ptext.Copy(data_iv_, data_iv_off)) != ZX_OK ||
         (rc = DeriveSlotKeys(key, slot)) != ZX_OK ||
         (rc = aead.InitSeal(aead_, wrap_key_, wrap_iv_)) != ZX_OK ||
-        (rc = aead.SetAD(header_)) != ZX_OK ||
-        (rc = aead.Seal(ptext, &wrap_iv_, &ctext)) != ZX_OK) {
+        (rc = aead.SetAD(header_)) != ZX_OK || (rc = aead.Seal(ptext, &nonce, &ctext)) != ZX_OK) {
         return rc;
     }
-    memcpy(block_.get() + off, ctext.get(), ctext.len());
+    // Check that we'll be able to unseal.
+    if (memcmp(&nonce, wrap_iv_.get(), sizeof(nonce)) != 0) {
+        xprintf("unexpected nonce: %" PRIu64 "\n", nonce);
+        return ZX_ERR_INTERNAL;
+    }
 
+    memcpy(block_.get() + off, ctext.get(), ctext.len());
     return ZX_OK;
 }
 
@@ -661,6 +667,10 @@ zx_status_t Volume::UnsealBlock(const crypto::Bytes& key, key_slot_t slot) {
         return rc;
     }
 
+    // Extract nonce from IV.
+    zx_off_t nonce;
+    memcpy(&nonce, wrap_iv_.get(), sizeof(nonce));
+
     // Read in the data
     crypto::AEAD aead;
     crypto::Bytes ptext, ctext;
@@ -668,9 +678,9 @@ zx_status_t Volume::UnsealBlock(const crypto::Bytes& key, key_slot_t slot) {
     size_t data_key_off = 0;
     size_t data_iv_off = data_key_.len();
     if ((rc = ctext.Copy(block_.get() + off, slot_len_)) != ZX_OK ||
-        (rc = aead.InitOpen(aead_, wrap_key_)) != ZX_OK ||
+        (rc = aead.InitOpen(aead_, wrap_key_, wrap_iv_)) != ZX_OK ||
         (rc = header_.Copy(block_.get(), kHeaderLen)) != ZX_OK ||
-        (rc = aead.SetAD(header_)) != ZX_OK || (rc = aead.Open(wrap_iv_, ctext, &ptext)) != ZX_OK ||
+        (rc = aead.SetAD(header_)) != ZX_OK || (rc = aead.Open(nonce, ctext, &ptext)) != ZX_OK ||
         (rc = data_key_.Copy(ptext.get() + data_key_off, data_key_.len())) != ZX_OK ||
         (rc = data_iv_.Copy(ptext.get() + data_iv_off, data_iv_.len())) != ZX_OK) {
         return rc;

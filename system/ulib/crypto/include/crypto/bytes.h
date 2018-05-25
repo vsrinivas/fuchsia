@@ -56,11 +56,6 @@ public:
     // padding with zeros.
     zx_status_t Copy(const Bytes& src, zx_off_t dst_off = 0);
 
-    // Treats the contents of this object as a (big-endian) arbitrary precision unsigned integer and
-    // increments it by the given |amount|.  Returns |ZX_ERR_OUT_OF_RANGE| if incrementing would
-    // overflow.
-    zx_status_t Increment(uint64_t amount = 1);
-
     // Yields ownership of the underlying buffer and returns it after saving the length in |len| if
     // not null.
     fbl::unique_ptr<uint8_t[]> Release(size_t* len = nullptr);
