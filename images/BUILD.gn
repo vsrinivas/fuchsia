@@ -8,6 +8,7 @@ import("//build/gn/packages.gni")
 import("//build/images/boot.gni")
 import("//build/images/manifest.gni")
 import("//build/package.gni")
+import("//build/sdk/sdk_atom.gni")
 import("//garnet/go/src/amber/amber.gni")
 
 ###
@@ -796,5 +797,114 @@ group("updates") {
     ":amber_publish_blobs",
     ":amber_publish_index",
     ":ids.txt",
+  ]
+}
+
+# SDK
+
+sdk_atom("fvm.blk_sdk") {
+  domain = "image"
+  name = "fvm.blk"
+  category = "partner"
+  testonly = true
+
+  files = [
+    {
+      source = "$images_dir/fvm.blk"
+      dest = "fvm.blk"
+    }
+  ]
+
+  non_sdk_deps = [
+    ":fvm.blk",
+  ]
+}
+
+sdk_atom("bootdata-blob.bin_sdk") {
+  domain = "image"
+  name = "bootdata-blob.bin"
+  category = "partner"
+  testonly = true
+
+  files = [
+    {
+      source = "$root_out_dir/bootdata-blob.bin"
+      dest = "bootdata-blob.bin"
+    }
+  ]
+
+  non_sdk_deps = [
+    ":bootdata-blob",
+  ]
+}
+
+# TODO(alainv): Add dependency to zircon.bin when such a target exists.
+sdk_atom("zircon.bin_sdk") {
+  domain = "image"
+  name = "zircon.bin"
+  category = "partner"
+  testonly = true
+
+  files = [
+    {
+      source = "${zircon_build_dir}/zircon.bin"
+      dest = "zircon.bin"
+    }
+  ]
+}
+
+sdk_atom("zircon.vboot_sdk") {
+  domain = "image"
+  name = "zircon.vboot"
+  category = "partner"
+  testonly = true
+
+  files = [
+    {
+      source = "$images_dir/zircon.vboot"
+      dest = "zircon.vboot"
+    }
+  ]
+
+  non_sdk_deps = [
+    ":zircon.vboot",
+  ]
+}
+
+if (target_cpu != "arm64") {
+  sdk_atom("local.esp.blk_sdk") {
+    domain = "image"
+    name = "local.esp.blk"
+    category = "partner"
+    testonly = true
+
+    files = [
+      {
+        source = "$images_dir/local.esp.blk"
+        dest = "local.esp.blk"
+      }
+    ]
+
+    non_sdk_deps = [
+      ":local.esp.blk",
+    ]
+  }
+}
+
+sdk_atom("fvm.sparse.blk_sdk") {
+  domain = "image"
+  name = "fvm.sparse.blk"
+  category = "partner"
+  testonly = true
+
+  files = [
+    {
+      source = "$images_dir/fvm.sparse.blk"
+      dest = "fvm.sparse.blk"
+    }
+  ]
+
+  non_sdk_deps = [
+    ":fvm.sparse.blk",
   ]
 }
