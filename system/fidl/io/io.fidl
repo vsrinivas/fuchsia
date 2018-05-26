@@ -212,10 +212,10 @@ interface File : Node {
 
   // Acquire a VMO representing this file, if there is one, with the
   // requested access rights.
-  0x82000009: GetVmo(uint32 flags) -> (status s, handle<vmo> vmo);
+  0x82000009: GetVmo(uint32 flags) -> (status s, handle<vmo>? vmo);
 
   // Acquire a VMO representing this file, limited to a particular range.
-  0x8200000a: GetVmoAt(uint32 flags, uint64 offset, uint64 length) -> (status s, handle<vmo> vmo);
+  0x8200000a: GetVmoAt(uint32 flags, uint64 offset, uint64 length) -> (status s, handle<vmo>? vmo);
 };
 
 // Dirent type information associated with the results of ReadDirents.
@@ -256,7 +256,7 @@ interface Directory : Node {
 
   // Acquire a token to a Directory which can be used to identify
   // access to it at a later point in time.
-  0x83000005: GetToken() -> (status s, handle token);
+  0x83000005: GetToken() -> (status s, handle? token);
 
   // Within the directory, rename an object named src to the name dst, in
   // a directory represented by token.
