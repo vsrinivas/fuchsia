@@ -311,6 +311,8 @@ void BaseEdid::PopulateSimpleEdid(BaseEdid* edid, int32_t width, int32_t height)
     edid->edid_version = 1;
     edid->edid_revision = 3;
 
+    edid->set_digital(true);
+
     edid->preferred_timing.horizontal_addressable_low = static_cast<uint8_t>(width & 0xff);
     edid->preferred_timing.set_horizontal_addressable_high(
             static_cast<uint8_t>(width >> 8));
