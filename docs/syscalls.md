@@ -144,6 +144,5 @@
 + acpi_uefi_rsdp
 + mmap_device_io
 + set_framebuffer
-+ set_framebuffer_vmo
 + vmo_create_contiguous
 + vmo_create_physical

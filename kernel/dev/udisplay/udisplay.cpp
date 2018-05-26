@@ -99,25 +99,6 @@ void dlog_bluescreen_halt(void) {
 
 }
 
-zx_status_t udisplay_set_framebuffer(paddr_t fb_phys, size_t fb_size) {
-    g_udisplay.framebuffer_size = fb_size;
-
-    // map the framebuffer
-    zx_status_t result = VmAspace::kernel_aspace()->AllocPhysical(
-        "udisplay_fb",
-        g_udisplay.framebuffer_size,
-        &g_udisplay.framebuffer_virt,
-        PAGE_SIZE_SHIFT,
-        fb_phys,
-        0 /* vmm flags */,
-        kFramebufferArchMmuFlags);
-
-    if (result)
-        g_udisplay.framebuffer_virt = 0;
-
-    return ZX_OK;
-}
-
 void udisplay_clear_framebuffer_vmo() {
     if (g_udisplay.framebuffer_vmo_mapping) {
         g_udisplay.framebuffer_size = 0;
@@ -127,7 +108,7 @@ void udisplay_clear_framebuffer_vmo() {
     }
 }
 
-zx_status_t udisplay_set_framebuffer_vmo(fbl::RefPtr<VmObject> vmo) {
+zx_status_t udisplay_set_framebuffer(fbl::RefPtr<VmObject> vmo) {
     udisplay_clear_framebuffer_vmo();
 
     const size_t size = vmo->size();

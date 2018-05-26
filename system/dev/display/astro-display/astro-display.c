@@ -243,7 +243,7 @@ static zx_status_t setup_display_if(astro_display_t* display) {
     config_canvas(display);
     init_backlight(display);
 
-    zx_set_framebuffer(get_root_resource(), io_buffer_virt(&display->fbuffer),
+    zx_set_framebuffer(get_root_resource(), display->fbuffer.vmo_handle,
                        display->fbuffer.size, display->disp_info.format,
                        display->disp_info.width, display->disp_info.height,
                        display->disp_info.stride);

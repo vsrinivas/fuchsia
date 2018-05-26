@@ -145,29 +145,7 @@ zx_status_t sys_bootloader_fb_get_info(user_out_ptr<uint32_t> format, user_out_p
 #endif
 }
 
-zx_status_t sys_set_framebuffer(zx_handle_t hrsrc, user_inout_ptr<void> vaddr, uint32_t len, uint32_t format, uint32_t width, uint32_t height, uint32_t stride) {
-    // TODO(ZX-971): finer grained validation
-    zx_status_t status;
-    if ((status = validate_resource(hrsrc, ZX_RSRC_KIND_ROOT)) < 0) {
-        return status;
-    }
-
-    intptr_t paddr = vaddr_to_paddr(vaddr.get());
-    udisplay_set_framebuffer(paddr, len);
-
-    struct display_info di;
-    memset(&di, 0, sizeof(struct display_info));
-    di.format = format;
-    di.width = width;
-    di.height = height;
-    di.stride = stride;
-    di.flags = DISPLAY_FLAG_HW_FRAMEBUFFER;
-    udisplay_set_display_info(&di);
-
-    return ZX_OK;
-}
-
-zx_status_t sys_set_framebuffer_vmo(zx_handle_t hrsrc, zx_handle_t vmo_handle, uint32_t len, uint32_t format, uint32_t width, uint32_t height, uint32_t stride) {
+zx_status_t sys_set_framebuffer(zx_handle_t hrsrc, zx_handle_t vmo_handle, uint32_t len, uint32_t format, uint32_t width, uint32_t height, uint32_t stride) {
     zx_status_t status;
     if ((status = validate_resource(hrsrc, ZX_RSRC_KIND_ROOT)) < 0)
         return status;
@@ -185,7 +163,7 @@ zx_status_t sys_set_framebuffer_vmo(zx_handle_t hrsrc, zx_handle_t vmo_handle, u
     if (status != ZX_OK)
         return status;
 
-    status = udisplay_set_framebuffer_vmo(vmo->vmo());
+    status = udisplay_set_framebuffer(vmo->vmo());
     if (status != ZX_OK)
         return status;
 

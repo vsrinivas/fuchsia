@@ -166,9 +166,6 @@ zx_status_t bind_simple_pci_display(zx_device_t* dev, const char* name, uint32_t
     }
     zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t) framebuffer, framebuffer_size);
 
-    zx_set_framebuffer(get_root_resource(), framebuffer,
-                       static_cast<uint32_t>(framebuffer_size), format, width, height, stride);
-
     fbl::AllocChecker ac;
     fbl::unique_ptr<SimpleDisplay> display(
             new (&ac) SimpleDisplay(dev, framebuffer_handle, width, height, stride, format));
