@@ -8,6 +8,7 @@
 #include <lib/async/default.h>
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/gtest/test_with_loop.h"
+#include "peridot/public/lib/async/cpp/future.h"
 #include "peridot/public/lib/async/cpp/operation.h"
 
 namespace modular {
@@ -53,8 +54,7 @@ class TestOperation : public Operation<Args...> {
  public:
   using ResultCall = std::function<void(Args...)>;
   TestOperation(std::function<void()> task, ResultCall done)
-      : Operation<Args...>("Test Operation", std::move(done)),
-        task_(task) {}
+      : Operation<Args...>("Test Operation", std::move(done)), task_(task) {}
 
   void SayDone(Args... args) { this->Done(args...); }
 
@@ -191,12 +191,11 @@ class TestFlowTokenOperation : public Operation<int> {
 
     // Post the continuation of the operation to an async loop so that we
     // exercise the refcounting of FlowTokens.
-    async::PostTask(
-        async_get_default(),
-        [this, flow, result, call_before_flow_dies] {
-          result_ = result;
-          call_before_flow_dies();
-        });
+    async::PostTask(async_get_default(),
+                    [this, flow, result, call_before_flow_dies] {
+                      result_ = result;
+                      call_before_flow_dies();
+                    });
   }
 
  private:
@@ -214,8 +213,11 @@ TEST_F(OperationTest, Lifecycle_FlowToken) {
 
   bool done_called{false};
   int result{0};
-  auto op = std::make_unique<TestFlowTokenOperation>(
-      [&result, &done_called](int r) { done_called = true; result = r; });
+  auto op =
+      std::make_unique<TestFlowTokenOperation>([&result, &done_called](int r) {
+        done_called = true;
+        result = r;
+      });
 
   container.Add(op.get());
   container.Schedule(op.get());
@@ -333,6 +335,50 @@ TEST_F(OperationTest, OperationCollection) {
   EXPECT_FALSE(op1_done);
   EXPECT_TRUE(op2_ran);
   EXPECT_FALSE(op2_done);
+}
+
+TEST_F(OperationTest, WrapFutureAsOperation_WithResult) {
+  // Show that when we wrap a Future<> as an operation on a queue, it runs.
+  bool op_did_start{};
+  bool op_did_finish{};
+
+  auto on_run = Future<>::Create();
+  auto done = on_run->Map([&]() -> int {
+    EXPECT_FALSE(op_did_finish);
+    op_did_start = true;
+    return 10;
+  });
+
+  OperationCollection container;
+  container.Add(WrapFutureAsOperation(on_run, done,
+                                      std::function<void(int)>([&](int result) {
+                                        EXPECT_EQ(10, result);
+                                        op_did_finish = true;
+                                      })));
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(op_did_start);
+  EXPECT_TRUE(op_did_finish);
+}
+
+TEST_F(OperationTest, WrapFutureAsOperation_WithoutResult) {
+  // Show that when we wrap a Future<> as an operation on a queue, it runs.
+  bool op_did_start{};
+  bool op_did_finish{};
+
+  auto on_run = Future<>::Create();
+  auto done = on_run->Then([&] {
+    EXPECT_FALSE(op_did_finish);
+    op_did_start = true;
+  });
+
+  OperationCollection container;
+  container.Add(WrapFutureAsOperation(
+      on_run, done, std::function<void()>([&] { op_did_finish = true; })));
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(op_did_start);
+  EXPECT_TRUE(op_did_finish);
 }
 
 }  // namespace

@@ -12,6 +12,7 @@
 #include <utility>
 #include <vector>
 
+#include "lib/async/cpp/future.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -411,6 +412,51 @@ class Operation<Args...>::FlowTokenHolder {
 };
 
 // Following is a list of commonly used operations.
+
+// An operation which wraps a Future<>. See WrapFutureAsOperation() below.
+template <typename... Args>
+class FutureOperation : public Operation<Args...> {
+ public:
+  using ResultCall = std::function<void(Args...)>;
+
+  FutureOperation(const char* trace_name, FuturePtr<> on_run,
+                  FuturePtr<Args...> done, ResultCall result_call)
+      : Operation<Args...>(trace_name, std::move(result_call)),
+        on_run_(on_run),
+        done_(done) {}
+
+ private:
+  // |OperationBase|
+  void Run() {
+    done_->Then([this](Args... args) { this->Done(std::move(args)...); });
+    on_run_->Complete();
+  }
+
+  FuturePtr<> on_run_;
+  FuturePtr<Args...> done_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(FutureOperation);
+};
+
+// This is useful to glue a FIDL call that expects its result as a callback
+// with a Future<>, but have the business logic of the Future<> run on an
+// OperationContainer.
+//
+// Usage:
+// void MyFidlCall(args..., MyFidlCallResult) {
+//   auto on_run = Future<>::Create();
+//   auto done = on_run->Map(...)->Then(...);
+//   operation_container.Add(WrapFutureAsOperation(on_run, done, result_call,
+//                                                 "MyFidlCall"));
+// }
+template <typename... ResultArgs, typename... FutureArgs>
+OperationBase* WrapFutureAsOperation(
+    FuturePtr<> on_run, FuturePtr<FutureArgs...> done,
+    std::function<void(ResultArgs...)> result_call = {},
+    const char* const trace_name = "") {
+  return new FutureOperation<ResultArgs...>(
+      trace_name, std::move(on_run), std::move(done), std::move(result_call));
+}
 
 // An operation which immediately calls its result callback. This is useful for
 // making sure that all operations that run before this have completed.

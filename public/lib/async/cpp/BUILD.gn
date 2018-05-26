@@ -31,12 +31,12 @@ source_set("operation") {
   ]
 
   public_deps = [
+    ":future",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/trace",
   ]
 
   deps = [
-    ":future",
     "//garnet/public/lib/fsl",
   ]
 }
