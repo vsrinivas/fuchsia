@@ -27,8 +27,8 @@ package("audio_server") {
 
   meta = [
     {
-      path = rebase_path("audio_server/meta/audio_server.cmx")
-      dest = "audio_server.cmx"
+      path = rebase_path("audio_server/meta/sandbox")
+      dest = "sandbox"
     },
   ]
 }
