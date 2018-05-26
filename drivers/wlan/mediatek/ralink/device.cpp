@@ -51,9 +51,9 @@ zx_status_t sleep_for(zx::duration t) {
 }
 
 constexpr size_t kReadReqCount = 128;
-constexpr size_t kReadBufSize = 2048;
+constexpr size_t kReadBufSize = 4096;  // Reflecting max A-MSDU length for Ralink: 3839 bytes
 constexpr size_t kWriteReqCount = 128;
-constexpr size_t kWriteBufSize = 2048;  // todo: use endpt max size
+constexpr size_t kWriteBufSize = 4096;
 
 constexpr char kFirmwareFile[] = "rt2870.bin";
 
