@@ -18,6 +18,8 @@
 #ifndef _HTT_H_
 #define _HTT_H_
 
+#include <ddk/driver.h>
+
 #include "htc.h"
 #include "hw.h"
 #include "rx_desc.h"
