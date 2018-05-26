@@ -40,16 +40,16 @@ namespace hello_scenic {
 
 static constexpr uint64_t kBillion = 1000000000;
 
-App::App(async::Loop* loop)
+App::App()
     : application_context_(
           component::ApplicationContext::CreateFromStartupInfo()),
-      loop_(loop) {
+      loop_(fsl::MessageLoop::GetCurrent()) {
   // Connect to the SceneManager service.
   scenic_ =
       application_context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([this] {
     FXL_LOG(INFO) << "Lost connection to Scenic service.";
-    loop_->Quit();
+    loop_->QuitNow();
   });
   scenic_->GetDisplayInfo(
       [this](fuchsia::ui::gfx::DisplayInfo display_info) { Init(std::move(display_info)); });
@@ -203,7 +203,7 @@ void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
   session_ = std::make_unique<scenic_lib::Session>(scenic_.get());
   session_->set_error_handler([this] {
     FXL_LOG(INFO) << "Session terminated.";
-    loop_->Quit();
+    loop_->QuitNow();
   });
 
   // Wait kSessionDuration seconds, and close the session.

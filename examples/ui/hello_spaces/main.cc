@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
 
 #include "lib/app/cpp/application_context.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/ui/scenic/client/session.h"
@@ -14,7 +14,7 @@ namespace hello_spaces {
 
 class App {
  public:
-  explicit App(async::Loop* loop);
+  explicit App();
   App(const App&) = delete;
   App& operator=(const App&) = delete;
 
@@ -31,22 +31,22 @@ class App {
   void ReleaseSessionResources();
 
   std::unique_ptr<component::ApplicationContext> application_context_;
-  async::Loop* const loop_;
+  fsl::MessageLoop* loop_;
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
   std::unique_ptr<scenic_lib::Session> session_;
 };
 
-App::App(async::Loop* loop)
+App::App()
     : application_context_(
           component::ApplicationContext::CreateFromStartupInfo()),
-      loop_(loop) {
+      loop_(fsl::MessageLoop::GetCurrent()) {
   // Connect to the SceneManager service.
   scenic_ =
       application_context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([this] {
     FXL_LOG(INFO) << "Lost connection to Scenic service.";
-    loop_->Quit();
+    loop_->QuitNow();
   });
   scenic_->GetDisplayInfo(
       [this](fuchsia::ui::gfx::DisplayInfo display_info) { Init(std::move(display_info)); });
@@ -59,15 +59,14 @@ void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
   session_ = std::make_unique<scenic_lib::Session>(scenic_.get());
   session_->set_error_handler([this] {
     FXL_LOG(INFO) << "Session terminated.";
-    loop_->Quit();
+    loop_->QuitNow();
   });
 
   // Wait kSessionDuration seconds, and close the session.
-  constexpr zx::duration kSessionDuration = zx::sec(40);
-    async::PostDelayedTask(
-      loop_->async(),
+  constexpr int kSessionDuration = 40;
+  loop_->task_runner()->PostDelayedTask(
       [this] { ReleaseSessionResources(); },
-      kSessionDuration);
+      fxl::TimeDelta::FromSeconds(kSessionDuration));
 
   Update(zx_clock_get(ZX_CLOCK_MONOTONIC));
 }
@@ -93,14 +92,14 @@ int main(int argc, const char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  async::Loop loop;
-  hello_spaces::App app(&loop);
-  async::PostDelayedTask(loop.async(),
+  fsl::MessageLoop loop;
+  hello_spaces::App app;
+  loop.task_runner()->PostDelayedTask(
       [&loop] {
         FXL_LOG(INFO) << "Quitting.";
-        loop.Quit();
+        loop.QuitNow();
       },
-      zx::sec(50));
+      fxl::TimeDelta::FromSeconds(50));
   loop.Run();
   return 0;
 }

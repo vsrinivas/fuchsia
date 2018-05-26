@@ -206,15 +206,14 @@ zx_status_t View::FindOrCreateBuffer(uint32_t frame_size,
   return ZX_OK;
 }
 
-View::View(async::Loop* loop,
-           component::ApplicationContext* application_context,
+View::View(component::ApplicationContext* application_context,
            views_v1::ViewManagerPtr view_manager,
            fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
            bool use_fake_camera)
     : BaseView(std::move(view_manager),
                std::move(view_owner_request),
                "Video Display Example"),
-      loop_(loop),
+      loop_(fsl::MessageLoop::GetCurrent()),
       node_(session()) {
   FXL_VLOG(4) << "Creating View";
   // Create an ImagePipe and pass one end to the Session:
@@ -249,14 +248,14 @@ View::View(async::Loop* loop,
   if (open_status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to open the camera. Quitting!";
     // TODO(garratt): This does not actually quit.
-    loop_->Quit();
+    loop_->QuitNow();
     return;
   }
   zx_status_t status = video_source_->GetSupportedFormats(
       fit::bind_member(this, &View::OnGetFormats));
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to get Supported Formats. Quitting!";
-    loop_->Quit();
+    loop_->QuitNow();
     return;
   }
 }

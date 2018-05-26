@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/async-loop/cpp/loop.h>
 #include <network/cpp/fidl.h>
-
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
-#include "lib/fxl/logging.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 
 #include <string>
@@ -16,7 +14,7 @@ namespace examples {
 
 class ResponsePrinter {
  public:
-  void Run(async::Loop* loop, network::URLResponse response) const {
+  void Run(network::URLResponse response) const {
     if (response.error) {
       printf("Got error: %d (%s)\n", response.error->code,
              response.error->description.get().c_str());
@@ -26,7 +24,7 @@ class ResponsePrinter {
       PrintResponseBody(std::move(response.body->stream()));
     }
 
-    loop->Quit();  // All done!
+    fsl::MessageLoop::GetCurrent()->QuitNow();  // All done!
   }
 
   void PrintResponse(const network::URLResponse& response) const {
@@ -71,9 +69,7 @@ class ResponsePrinter {
 
 class WGetApp {
  public:
-  WGetApp(async::Loop* loop)
-    : loop_(loop),
-      context_(component::ApplicationContext::CreateFromStartupInfo()) {
+  WGetApp() : context_(component::ApplicationContext::CreateFromStartupInfo()) {
     network_service_ =
         context_->ConnectToEnvironmentService<network::NetworkService>();
     FXL_DCHECK(network_service_);
@@ -100,13 +96,12 @@ class WGetApp {
     url_loader_->Start(std::move(request),
                        [this](network::URLResponse response) {
                          ResponsePrinter printer;
-                         printer.Run(loop_, std::move(response));
+                         printer.Run(std::move(response));
                        });
     return true;
   }
 
  private:
-  async::Loop* const loop_;
   std::unique_ptr<component::ApplicationContext> context_;
 
   network::NetworkServicePtr network_service_;
@@ -117,9 +112,9 @@ class WGetApp {
 
 int main(int argc, const char** argv) {
   std::vector<std::string> args(argv, argv + argc);
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  fsl::MessageLoop loop;
 
-  examples::WGetApp app(&loop);
+  examples::WGetApp app;
   if (app.Start(args))
     loop.Run();
 

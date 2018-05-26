@@ -7,7 +7,6 @@
 
 #include <unordered_map>
 
-#include <lib/async-loop/cpp/loop.h>
 #include <sketchy/cpp/fidl.h>
 
 #include "garnet/bin/ui/sketchy/buffer/shared_buffer_pool.h"
@@ -23,8 +22,7 @@ namespace sketchy_service {
 
 class CanvasImpl final : public sketchy::Canvas {
  public:
-  CanvasImpl(async::Loop* loop, scenic_lib::Session* session,
-             escher::Escher* escher);
+  CanvasImpl(scenic_lib::Session* session, escher::Escher* escher);
 
   // |sketchy::Canvas|
   void Init(::fidl::InterfaceHandle<sketchy::CanvasListener> listener) override;
@@ -64,7 +62,6 @@ class CanvasImpl final : public sketchy::Canvas {
 
   bool ApplyScenicAddChildCommand(fuchsia::ui::gfx::AddChildCommand add_child);
 
-  async::Loop* const loop_;
   scenic_lib::Session* const session_;
   SharedBufferPool shared_buffer_pool_;
 

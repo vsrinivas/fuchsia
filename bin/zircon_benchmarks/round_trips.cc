@@ -6,7 +6,6 @@
 #include <thread>
 #include <vector>
 
-#include <lib/async-loop/cpp/loop.h>
 #include <launchpad/launchpad.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -14,6 +13,7 @@
 #include <zircon/syscalls/port.h>
 
 #include "lib/fidl/cpp/binding.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
 #include <zircon_benchmarks/cpp/fidl.h>
@@ -552,11 +552,12 @@ class FidlTest {
     FXL_CHECK(handles.size() == 1);
     zx::channel channel(handles[0]);
 
-    async::Loop loop (&kAsyncLoopConfigMakeDefault);
+    fsl::MessageLoop loop;
     RoundTripServiceImpl service_impl;
     fidl::Binding<zircon_benchmarks::RoundTripService> binding(
         &service_impl, std::move(channel));
-    binding.set_error_handler([&loop] { loop.Quit(); });
+    binding.set_error_handler(
+        [] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
     loop.Run();
   }
 

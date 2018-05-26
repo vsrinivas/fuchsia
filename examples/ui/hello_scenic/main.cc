@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/async/cpp/task.h>
-#include <lib/async-loop/cpp/loop.h>
 #include <zx/time.h>
 
 #include "garnet/examples/ui/hello_scenic/app.h"
@@ -15,12 +14,12 @@ int main(int argc, const char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  hello_scenic::App app(&loop);
+  fsl::MessageLoop loop;
+  hello_scenic::App app;
   async::PostDelayedTask(loop.async(),
                          [&loop] {
                            FXL_LOG(INFO) << "Quitting.";
-                           loop.Quit();
+                           loop.QuitNow();
                          },
                          zx::sec(50));
   loop.Run();

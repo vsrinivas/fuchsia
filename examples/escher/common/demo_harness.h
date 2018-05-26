@@ -6,8 +6,6 @@
 #define GARNET_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_H_
 
 #include <cstdint>
-
-#include <lib/async-loop/cpp/loop.h>
 #include <vulkan/vulkan.hpp>
 
 #include "lib/escher/resources/resource_manager.h"
@@ -35,8 +33,7 @@ class DemoHarness {
 
   static std::unique_ptr<DemoHarness> New(
       DemoHarness::WindowParams window_params,
-      InstanceParams instance_params,
-      async::Loop* loop = nullptr);
+      InstanceParams instance_params);
   virtual ~DemoHarness();
 
   const WindowParams& GetWindowParams() const { return window_params_; }

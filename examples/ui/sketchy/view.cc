@@ -6,13 +6,12 @@
 
 namespace sketchy_example {
 
-View::View(async::Loop* loop,
-           component::ApplicationContext* application_context,
+View::View(component::ApplicationContext* application_context,
            views_v1::ViewManagerPtr view_manager,
            fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request)
     : BaseView(std::move(view_manager), std::move(view_owner_request),
                "Sketchy Example"),
-      canvas_(application_context, loop),
+      canvas_(application_context),
       background_node_(session()),
       import_node_holder_(session()),
       import_node_(&canvas_, import_node_holder_),

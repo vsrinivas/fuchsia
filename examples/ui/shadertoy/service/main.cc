@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
 
 #include "garnet/examples/ui/shadertoy/service/app.h"
@@ -11,6 +10,7 @@
 #include "lib/escher/escher_process_init.h"
 #include "lib/escher/vk/vulkan_device_queues.h"
 #include "lib/escher/vk/vulkan_instance.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 // This is the main() function for the service that implements the
 // ShadertoyFactory API.
@@ -32,13 +32,13 @@ int main(int argc, const char** argv) {
 
     escher::Escher escher(vulkan_device);
 
-    async::Loop loop(&kAsyncLoopConfigMakeDefault);
+    fsl::MessageLoop loop;
     trace::TraceProvider trace_provider(loop.async());
 
     std::unique_ptr<component::ApplicationContext> app_context(
         component::ApplicationContext::CreateFromStartupInfo());
 
-    shadertoy::App app(&loop, app_context.get(), &escher);
+    shadertoy::App app(app_context.get(), &escher);
     loop.Run();
   }
   escher::GlslangFinalizeProcess();

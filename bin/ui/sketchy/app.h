@@ -5,22 +5,22 @@
 #ifndef GARNET_BIN_UI_SKETCHY_APP_H_
 #define GARNET_BIN_UI_SKETCHY_APP_H_
 
-#include <lib/async-loop/cpp/loop.h>
 #include <sketchy/cpp/fidl.h>
 
 #include "garnet/bin/ui/sketchy/canvas.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/escher/escher.h"
 #include "lib/fidl/cpp/binding_set.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace sketchy_service {
 
 class App {
  public:
-  App(async::Loop* loop, escher::Escher* escher);
+  App(escher::Escher* escher);
 
  private:
-  async::Loop* const loop_;
+  fsl::MessageLoop* loop_;
   std::unique_ptr<component::ApplicationContext> context_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
   std::unique_ptr<scenic_lib::Session> session_;

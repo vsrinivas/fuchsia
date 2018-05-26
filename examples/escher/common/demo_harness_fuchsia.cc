@@ -13,18 +13,16 @@
 // When running on Fuchsia, New() instantiates a DemoHarnessFuchsia.
 std::unique_ptr<DemoHarness> DemoHarness::New(
     DemoHarness::WindowParams window_params,
-    DemoHarness::InstanceParams instance_params,
-    async::Loop* loop) {
-  auto harness = new DemoHarnessFuchsia(loop, window_params);
+    DemoHarness::InstanceParams instance_params) {
+  auto harness = new DemoHarnessFuchsia(window_params);
   harness->Init(std::move(instance_params));
   return std::unique_ptr<DemoHarness>(harness);
 }
 
-DemoHarnessFuchsia::DemoHarnessFuchsia(
-    async::Loop* loop, WindowParams window_params)
+DemoHarnessFuchsia::DemoHarnessFuchsia(WindowParams window_params)
     : DemoHarness(window_params),
-      loop_(loop),
-      owned_loop_(loop_ ? nullptr : new async::Loop()),
+      loop_(fsl::MessageLoop::GetCurrent()),
+      owned_loop_(loop_ ? nullptr : new fsl::MessageLoop()),
       application_context_(
           component::ApplicationContext::CreateFromStartupInfo()),
       escher_demo_binding_(this) {
@@ -66,7 +64,7 @@ void DemoHarnessFuchsia::Run(Demo* demo) {
 void DemoHarnessFuchsia::RenderFrameOrQuit() {
   FXL_CHECK(demo_);  // Must be running.
   if (ShouldQuit()) {
-    loop_->Quit();
+    loop_->QuitNow();
     device().waitIdle();
   } else {
     demo_->DrawFrame();

@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
 
 #include "garnet/bin/ui/sketchy/app.h"
@@ -35,10 +34,10 @@ int main(int argc, const char** argv) {
 
     escher::Escher escher(vulkan_device);
 
-    async::Loop loop(&kAsyncLoopConfigMakeDefault);
+    fsl::MessageLoop loop;
     trace::TraceProvider trace_provider(loop.async());
 
-    sketchy_service::App app(&loop, &escher);
+    sketchy_service::App app(&escher);
     loop.Run();
   }
   escher::GlslangFinalizeProcess();

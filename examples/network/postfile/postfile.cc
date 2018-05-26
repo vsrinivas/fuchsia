@@ -8,7 +8,6 @@
 
 #include <network/cpp/fidl.h>
 #include <lib/async/default.h>
-#include <lib/async-loop/cpp/loop.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
@@ -23,7 +22,7 @@ namespace examples {
 
 class ResponsePrinter {
  public:
-  void Run(async::Loop* loop, network::URLResponse response) const {
+  void Run(network::URLResponse response) const {
     if (response.error) {
       printf("Got error: %d (%s)\n", response.error->code,
              response.error->description->c_str());
@@ -32,7 +31,7 @@ class ResponsePrinter {
       PrintResponseBody(std::move(response.body->stream()));
     }
 
-    loop->Quit();  // All done!
+    fsl::MessageLoop::GetCurrent()->QuitNow();  // All done!
   }
 
   void PrintResponse(const network::URLResponse& response) const {
@@ -73,9 +72,8 @@ class ResponsePrinter {
 
 class PostFileApp {
  public:
-  PostFileApp(async::Loop* loop)
-      : loop_(loop),
-        context_(component::ApplicationContext::CreateFromStartupInfo()) {
+  PostFileApp()
+      : context_(component::ApplicationContext::CreateFromStartupInfo()) {
     network_service_ =
         context_->ConnectToEnvironmentService<network::NetworkService>();
   }
@@ -120,10 +118,10 @@ class PostFileApp {
 
     async_t* async = async_get_default();
     fsl::CopyFromFileDescriptor(std::move(fd), std::move(producer), async,
-                                [this](bool result, fxl::UniqueFD fd) {
+                                [](bool result, fxl::UniqueFD fd) {
                                   if (!result) {
                                     printf("file read error\n");
-                                    loop_->Quit();
+                                    fsl::MessageLoop::GetCurrent()->QuitNow();
                                   }
                                 });
 
@@ -132,13 +130,12 @@ class PostFileApp {
     url_loader_->Start(std::move(request),
                        [this](network::URLResponse response) {
                          ResponsePrinter printer;
-                         printer.Run(loop_, std::move(response));
+                         printer.Run(std::move(response));
                        });
     return true;
   }
 
  private:
-  async::Loop* const loop_;
   std::unique_ptr<component::ApplicationContext> context_;
   network::NetworkServicePtr network_service_;
   network::URLLoaderPtr url_loader_;
@@ -148,9 +145,9 @@ class PostFileApp {
 
 int main(int argc, const char** argv) {
   std::vector<std::string> args(argv, argv + argc);
-  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  fsl::MessageLoop loop;
 
-  examples::PostFileApp postfile_app(&loop);
+  examples::PostFileApp postfile_app;
   if (postfile_app.Start(args))
     loop.Run();
 

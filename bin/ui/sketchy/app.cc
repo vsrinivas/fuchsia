@@ -6,12 +6,12 @@
 
 namespace sketchy_service {
 
-App::App(async::Loop* loop, escher::Escher* escher)
-    : loop_(loop),
+App::App(escher::Escher* escher)
+    : loop_(fsl::MessageLoop::GetCurrent()),
       context_(component::ApplicationContext::CreateFromStartupInfo()),
       scenic_(context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>()),
       session_(std::make_unique<scenic_lib::Session>(scenic_.get())),
-      canvas_(std::make_unique<CanvasImpl>(loop_, session_.get(), escher)) {
+      canvas_(std::make_unique<CanvasImpl>(session_.get(), escher)) {
   context_->outgoing().AddPublicService<sketchy::Canvas>(
       [this](fidl::InterfaceRequest<sketchy::Canvas> request) {
         FXL_LOG(INFO) << "Sketchy service: accepting connection to Canvas.";
@@ -20,11 +20,11 @@ App::App(async::Loop* loop, escher::Escher* escher)
       });
   session_->set_error_handler([this] {
     FXL_LOG(INFO) << "Sketchy service lost connection to Session.";
-    loop_->Quit();
+    loop_->QuitNow();
   });
   scenic_.set_error_handler([this] {
     FXL_LOG(INFO) << "Sketchy service lost connection to Mozart.";
-    loop_->Quit();
+    loop_->QuitNow();
   });
 }
 
