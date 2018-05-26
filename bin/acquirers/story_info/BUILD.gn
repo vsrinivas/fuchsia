@@ -10,8 +10,6 @@ executable("story_info") {
   sources = [
     "link_watcher_impl.cc",
     "link_watcher_impl.h",
-    "modular.cc",
-    "modular.h",
     "story_info.cc",
     "story_info.h",
     "story_info_main.cc",

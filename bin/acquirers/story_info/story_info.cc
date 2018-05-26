@@ -6,7 +6,6 @@
 
 #include <sstream>
 
-#include "peridot/bin/acquirers/story_info/modular.h"
 #include "peridot/bin/acquirers/story_info/story_watcher_impl.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "rapidjson/document.h"
