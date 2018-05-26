@@ -70,8 +70,9 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent, zx::channel channel,
         // Remote handoff to a remote filesystem node.
         zxrio_msg_t msg;
 #ifdef ZXRIO_FIDL
-        ioDirectoryOpenRequest* request = reinterpret_cast<ioDirectoryOpenRequest*>(&msg);
-        memset(request, 0, sizeof(ioDirectoryOpenRequest));
+        fuchsia_io_DirectoryOpenRequest* request =
+            reinterpret_cast<fuchsia_io_DirectoryOpenRequest*>(&msg);
+        memset(request, 0, sizeof(fuchsia_io_DirectoryOpenRequest));
         request->hdr.ordinal = ZXFIDL_OPEN;
         request->flags = flags;
         request->mode = mode;
@@ -80,7 +81,7 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent, zx::channel channel,
         request->object = FIDL_HANDLE_PRESENT;
         void* secondary =
                 reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(request) +
-                                        FIDL_ALIGN(sizeof(ioDirectoryOpenRequest)));
+                                        FIDL_ALIGN(sizeof(fuchsia_io_DirectoryOpenRequest)));
         memcpy(secondary, path.begin(), path.length());
 #else
         memset(&msg, 0, ZXRIO_HDR_SZ);
@@ -247,7 +248,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
     case ZXRIO_OPEN: {
         TRACE_DURATION("vfs", "ZXRIO_OPEN");
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        auto request = reinterpret_cast<ioDirectoryOpenRequest*>(msg);
+        auto request = reinterpret_cast<fuchsia_io_DirectoryOpenRequest*>(msg);
 
         uint32_t flags;
         uint32_t mode;
@@ -294,7 +295,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
     case ZXRIO_CLONE: {
         TRACE_DURATION("vfs", "ZXRIO_CLONE");
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        auto request = reinterpret_cast<ioObjectCloneRequest*>(msg);
+        auto request = reinterpret_cast<fuchsia_io_ObjectCloneRequest*>(msg);
 
         zx::channel channel;
         uint32_t flags;
@@ -332,11 +333,11 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
             return ZX_ERR_BAD_HANDLE;
         }
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        auto request = reinterpret_cast<ioFileReadRequest*>(msg);
-        auto response = reinterpret_cast<ioFileReadResponse*>(msg);
+        auto request = reinterpret_cast<fuchsia_io_FileReadRequest*>(msg);
+        auto response = reinterpret_cast<fuchsia_io_FileReadResponse*>(msg);
         void* data;
         if (fidl) {
-            data = (void*)((uintptr_t)response + FIDL_ALIGN(sizeof(ioFileReadResponse)));
+            data = (void*)((uintptr_t)response + FIDL_ALIGN(sizeof(fuchsia_io_FileReadResponse)));
             len = static_cast<uint32_t>(request->count);
         } else {
             data = msg->data;
@@ -363,12 +364,12 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
             return ZX_ERR_BAD_HANDLE;
         }
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        auto request = reinterpret_cast<ioFileReadAtRequest*>(msg);
-        auto response = reinterpret_cast<ioFileReadAtResponse*>(msg);
+        auto request = reinterpret_cast<fuchsia_io_FileReadAtRequest*>(msg);
+        auto response = reinterpret_cast<fuchsia_io_FileReadAtResponse*>(msg);
         void* data;
         uint64_t offset;
         if (fidl) {
-            data = (void*)((uintptr_t)response + FIDL_ALIGN(sizeof(ioFileReadAtResponse)));
+            data = (void*)((uintptr_t)response + FIDL_ALIGN(sizeof(fuchsia_io_FileReadAtResponse)));
             len = static_cast<uint32_t>(request->count);
             offset = request->offset;
         } else {
@@ -394,8 +395,8 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
     case ZXRIO_WRITE: {
         TRACE_DURATION("vfs", "ZXRIO_WRITE");
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        ioFileWriteRequest* request = reinterpret_cast<ioFileWriteRequest*>(msg);
-        ioFileWriteResponse* response = reinterpret_cast<ioFileWriteResponse*>(msg);
+        fuchsia_io_FileWriteRequest* request = reinterpret_cast<fuchsia_io_FileWriteRequest*>(msg);
+        fuchsia_io_FileWriteResponse* response = reinterpret_cast<fuchsia_io_FileWriteResponse*>(msg);
         void* data;
         if (fidl) {
             data = request->data.data;
@@ -434,8 +435,10 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
     case ZXRIO_WRITE_AT: {
         TRACE_DURATION("vfs", "ZXRIO_WRITE_AT");
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        ioFileWriteAtRequest* request = reinterpret_cast<ioFileWriteAtRequest*>(msg);
-        ioFileWriteAtResponse* response = reinterpret_cast<ioFileWriteAtResponse*>(msg);
+        fuchsia_io_FileWriteAtRequest* request =
+            reinterpret_cast<fuchsia_io_FileWriteAtRequest*>(msg);
+        fuchsia_io_FileWriteAtResponse* response =
+            reinterpret_cast<fuchsia_io_FileWriteAtResponse*>(msg);
         void* data;
         uint64_t offset;
         if (fidl) {
@@ -463,12 +466,12 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
     case ZXRIO_SEEK: {
         TRACE_DURATION("vfs", "ZXRIO_SEEK");
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        ioFileSeekRequest* request = reinterpret_cast<ioFileSeekRequest*>(msg);
-        ioFileSeekResponse* response = reinterpret_cast<ioFileSeekResponse*>(msg);
+        fuchsia_io_FileSeekRequest* request = reinterpret_cast<fuchsia_io_FileSeekRequest*>(msg);
+        fuchsia_io_FileSeekResponse* response = reinterpret_cast<fuchsia_io_FileSeekResponse*>(msg);
 
-        static_assert(SEEK_SET == SeekOrigin_Start, "");
-        static_assert(SEEK_CUR == SeekOrigin_Current, "");
-        static_assert(SEEK_END == SeekOrigin_End, "");
+        static_assert(SEEK_SET == fuchsia_io_SeekOrigin_Start, "");
+        static_assert(SEEK_CUR == fuchsia_io_SeekOrigin_Current, "");
+        static_assert(SEEK_END == fuchsia_io_SeekOrigin_End, "");
         off_t offset;
         int whence;
         if (fidl) {
@@ -541,7 +544,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
     case ZXRIO_STAT: {
         TRACE_DURATION("vfs", "ZXRIO_STAT");
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        auto response = reinterpret_cast<ioNodeGetAttrResponse*>(msg);
+        auto response = reinterpret_cast<fuchsia_io_NodeGetAttrResponse*>(msg);
 
         // TODO(smklein): Consider using "NodeAttributes" within
         // ulib/fs, rather than vnattr_t.
@@ -570,7 +573,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
     case ZXRIO_SETATTR: {
         TRACE_DURATION("vfs", "ZXRIO_SETATTR");
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        auto request = reinterpret_cast<ioNodeSetAttrRequest*>(msg);
+        auto request = reinterpret_cast<fuchsia_io_NodeSetAttrRequest*>(msg);
 
         // TODO(smklein): Prevent read-only files from setting attributes,
         // but allow attribute-setting on mutable directories.
@@ -592,13 +595,15 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
     }
     case ZXFIDL_GET_FLAGS: {
         TRACE_DURATION("vfs", "ZXFIDL_GET_FLAGS");
-        ioFileGetFlagsResponse* response = reinterpret_cast<ioFileGetFlagsResponse*>(msg);
+        fuchsia_io_FileGetFlagsResponse* response =
+            reinterpret_cast<fuchsia_io_FileGetFlagsResponse*>(msg);
         response->flags = flags_ & (kStatusFlags | ZX_FS_RIGHTS | ZX_FS_FLAG_VNODE_REF_ONLY);
         return ZX_OK;
     }
     case ZXFIDL_SET_FLAGS: {
         TRACE_DURATION("vfs", "ZXFIDL_SET_FLAGS");
-        ioFileSetFlagsRequest* request = reinterpret_cast<ioFileSetFlagsRequest*>(msg);
+        fuchsia_io_FileSetFlagsRequest* request =
+            reinterpret_cast<fuchsia_io_FileSetFlagsRequest*>(msg);
         flags_ = (flags_ & ~kStatusFlags) | (request->flags & kStatusFlags);
         return ZX_OK;
     }
@@ -632,12 +637,13 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         }
 
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        auto request = reinterpret_cast<ioDirectoryReadDirentsRequest*>(msg);
-        auto response = reinterpret_cast<ioDirectoryReadDirentsResponse*>(msg);
+        auto request = reinterpret_cast<fuchsia_io_DirectoryReadDirentsRequest*>(msg);
+        auto response = reinterpret_cast<fuchsia_io_DirectoryReadDirentsResponse*>(msg);
         uint32_t max_out;
         void* data;
         if (fidl) {
-            data = (void*)((uintptr_t)response + FIDL_ALIGN(sizeof(ioDirectoryReadDirentsResponse)));
+            data = (void*)((uintptr_t)response +
+                    FIDL_ALIGN(sizeof(fuchsia_io_DirectoryReadDirentsResponse)));
             max_out = static_cast<uint32_t>(request->max_out);
         } else {
             max_out = arg;
@@ -665,8 +671,8 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
     case ZXFIDL_IOCTL:
     case ZXRIO_IOCTL:
     case ZXRIO_IOCTL_1H: {
-        auto request = reinterpret_cast<ioNodeIoctlRequest*>(msg);
-        auto response = reinterpret_cast<ioNodeIoctlResponse*>(msg);
+        auto request = reinterpret_cast<fuchsia_io_NodeIoctlRequest*>(msg);
+        auto response = reinterpret_cast<fuchsia_io_NodeIoctlResponse*>(msg);
 
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
         uint32_t op;
@@ -676,7 +682,8 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         size_t inlen;
         void* out;
         size_t outlen;
-        void* secondary = (void*)((uintptr_t)(msg) + FIDL_ALIGN(sizeof(ioNodeIoctlResponse)));
+        void* secondary = (void*)((uintptr_t)(msg) +
+                FIDL_ALIGN(sizeof(fuchsia_io_NodeIoctlResponse)));
         if (fidl) {
             op = request->opcode;
             handles = static_cast<zx_handle_t*>(request->handles.data);
@@ -833,7 +840,7 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         }
 
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        auto request = reinterpret_cast<ioFileTruncateRequest*>(msg);
+        auto request = reinterpret_cast<fuchsia_io_FileTruncateRequest*>(msg);
         uint64_t length;
         if (fidl) {
             length = request->length;
@@ -851,15 +858,19 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
                                "ZXRIO_RENAME" : "ZXRIO_LINK"));
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
 
-        // These static assertions must all validate before ioDirectoryRenameRequest
-        // and ioDirectoryLinkRequest can be used interchangeably
-        static_assert(sizeof(ioDirectoryRenameRequest) == sizeof(ioDirectoryLinkRequest), "");
-        static_assert(sizeof(ioDirectoryRenameResponse) == sizeof(ioDirectoryLinkResponse), "");
-        static_assert(offsetof(ioDirectoryRenameRequest, src) == offsetof(ioDirectoryLinkRequest, src), "");
-        static_assert(offsetof(ioDirectoryRenameRequest, dst_parent_token) ==
-                      offsetof(ioDirectoryLinkRequest, dst_parent_token), "");
-        static_assert(offsetof(ioDirectoryRenameRequest, dst) == offsetof(ioDirectoryLinkRequest, dst), "");
-        auto request = reinterpret_cast<ioDirectoryRenameRequest*>(msg);
+        // These static assertions must all validate before fuchsia_io_DirectoryRenameRequest
+        // and fuchsia_io_DirectoryLinkRequest can be used interchangeably
+        static_assert(sizeof(fuchsia_io_DirectoryRenameRequest) ==
+                sizeof(fuchsia_io_DirectoryLinkRequest), "");
+        static_assert(sizeof(fuchsia_io_DirectoryRenameResponse) ==
+                sizeof(fuchsia_io_DirectoryLinkResponse), "");
+        static_assert(offsetof(fuchsia_io_DirectoryRenameRequest, src) ==
+                offsetof(fuchsia_io_DirectoryLinkRequest, src), "");
+        static_assert(offsetof(fuchsia_io_DirectoryRenameRequest, dst_parent_token) ==
+                      offsetof(fuchsia_io_DirectoryLinkRequest, dst_parent_token), "");
+        static_assert(offsetof(fuchsia_io_DirectoryRenameRequest, dst) ==
+                offsetof(fuchsia_io_DirectoryLinkRequest, dst), "");
+        auto request = reinterpret_cast<fuchsia_io_DirectoryRenameRequest*>(msg);
 
         // Regardless of success or failure, we'll close the client-provided
         // vnode token handle.
@@ -916,8 +927,8 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         zx_handle_t* handle;
 
         if (fidl) {
-            auto request = reinterpret_cast<ioFileGetVmoRequest*>(msg);
-            auto response = reinterpret_cast<ioFileGetVmoResponse*>(msg);
+            auto request = reinterpret_cast<fuchsia_io_FileGetVmoRequest*>(msg);
+            auto response = reinterpret_cast<fuchsia_io_FileGetVmoResponse*>(msg);
             flags = request->flags;
             handle = &response->vmo;
         } else {
@@ -971,7 +982,8 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
     case ZXRIO_UNLINK: {
         TRACE_DURATION("vfs", "ZXRIO_UNLINK");
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        ioDirectoryUnlinkRequest* request = reinterpret_cast<ioDirectoryUnlinkRequest*>(msg);
+        fuchsia_io_DirectoryUnlinkRequest* request =
+            reinterpret_cast<fuchsia_io_DirectoryUnlinkRequest*>(msg);
         char* data;
         uint32_t datalen;
         if (fidl) {

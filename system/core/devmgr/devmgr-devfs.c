@@ -549,17 +549,17 @@ fail:
     zxrio_msg_t msg;
     uint32_t msize;
 #ifdef ZXRIO_FIDL
-    ioDirectoryOpenRequest* request = (ioDirectoryOpenRequest*) &msg;
-    memset(request, 0, sizeof(ioDirectoryOpenRequest));
+    fuchsia_io_DirectoryOpenRequest* request = (fuchsia_io_DirectoryOpenRequest*) &msg;
+    memset(request, 0, sizeof(fuchsia_io_DirectoryOpenRequest));
     request->hdr.ordinal = ZXFIDL_OPEN;
     request->path.size = strlen(path);
     request->path.data = (char*) FIDL_ALLOC_PRESENT;
     request->flags = flags;
     request->object = FIDL_HANDLE_PRESENT;
     void* secondary = (void*)((uintptr_t)(request) +
-                              FIDL_ALIGN(sizeof(ioDirectoryOpenRequest)));
+                              FIDL_ALIGN(sizeof(fuchsia_io_DirectoryOpenRequest)));
     memcpy(secondary, path, request->path.size);
-    msize = FIDL_ALIGN(sizeof(ioDirectoryOpenRequest)) + FIDL_ALIGN(request->path.size);
+    msize = FIDL_ALIGN(sizeof(fuchsia_io_DirectoryOpenRequest)) + FIDL_ALIGN(request->path.size);
 #else
     memset(&msg, 0, ZXRIO_HDR_SZ);
     msg.op = ZXRIO_OPEN;
@@ -655,7 +655,7 @@ static zx_status_t devfs_rio_handler(zxrio_msg_t* msg, void* cookie) {
     switch (ZXRIO_OP(msg->op)) {
     case ZXFIDL_CLONE:
     case ZXRIO_CLONE: {
-        ioObjectCloneRequest* request = (ioObjectCloneRequest*) msg;
+        fuchsia_io_ObjectCloneRequest* request = (fuchsia_io_ObjectCloneRequest*) msg;
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
         zx_handle_t h;
         uint32_t flags;
@@ -673,7 +673,7 @@ static zx_status_t devfs_rio_handler(zxrio_msg_t* msg, void* cookie) {
     }
     case ZXFIDL_OPEN:
     case ZXRIO_OPEN: {
-        ioDirectoryOpenRequest* request = (ioDirectoryOpenRequest*) msg;
+        fuchsia_io_DirectoryOpenRequest* request = (fuchsia_io_DirectoryOpenRequest*) msg;
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
         zx_handle_t h;
         char* path;
@@ -699,7 +699,7 @@ static zx_status_t devfs_rio_handler(zxrio_msg_t* msg, void* cookie) {
     case ZXFIDL_STAT:
     case ZXRIO_STAT: {
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        ioNodeGetAttrResponse* response = (ioNodeGetAttrResponse*) msg;
+        fuchsia_io_NodeGetAttrResponse* response = (fuchsia_io_NodeGetAttrResponse*) msg;
 
         uint32_t mode;
         if (devnode_is_dir(dn)) {
@@ -733,13 +733,16 @@ static zx_status_t devfs_rio_handler(zxrio_msg_t* msg, void* cookie) {
     case ZXFIDL_READDIR:
     case ZXRIO_READDIR: {
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        ioDirectoryReadDirentsRequest* request = (ioDirectoryReadDirentsRequest*) msg;
-        ioDirectoryReadDirentsResponse* response = (ioDirectoryReadDirentsResponse*) msg;
+        fuchsia_io_DirectoryReadDirentsRequest* request =
+            (fuchsia_io_DirectoryReadDirentsRequest*) msg;
+        fuchsia_io_DirectoryReadDirentsResponse* response =
+            (fuchsia_io_DirectoryReadDirentsResponse*) msg;
         uint32_t max_out;
         void* data;
 
         if (fidl) {
-            data = (void*)((uintptr_t)(response) + FIDL_ALIGN(sizeof(ioDirectoryReadDirentsResponse)));
+            data = (void*)((uintptr_t)(response) +
+                    FIDL_ALIGN(sizeof(fuchsia_io_DirectoryReadDirentsResponse)));
             max_out = request->max_out;
         } else {
             max_out = arg;
@@ -767,9 +770,10 @@ static zx_status_t devfs_rio_handler(zxrio_msg_t* msg, void* cookie) {
     case ZXRIO_IOCTL:
     case ZXRIO_IOCTL_1H: {
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
-        ioNodeIoctlRequest* request = (ioNodeIoctlRequest*) msg;
-        ioNodeIoctlResponse* response = (ioNodeIoctlResponse*) msg;
-        void* secondary = (void*)((uintptr_t)(msg) + FIDL_ALIGN(sizeof(ioNodeIoctlResponse)));
+        fuchsia_io_NodeIoctlRequest* request = (fuchsia_io_NodeIoctlRequest*) msg;
+        fuchsia_io_NodeIoctlResponse* response = (fuchsia_io_NodeIoctlResponse*) msg;
+        void* secondary = (void*)((uintptr_t)(msg) +
+                FIDL_ALIGN(sizeof(fuchsia_io_NodeIoctlResponse)));
 
         uint32_t op;
         void* in_data;

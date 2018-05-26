@@ -87,7 +87,7 @@ private:
 
 bool send_sync(const zx::channel& client) {
     BEGIN_HELPER;
-    ioNodeSyncRequest request;
+    fuchsia_io_NodeSyncRequest request;
     request.hdr.txid = 5;
     request.hdr.ordinal = ZXFIDL_SYNC;
     ASSERT_EQ(client.write(0, &request, sizeof(request), nullptr, 0), ZX_OK);

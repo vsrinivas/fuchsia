@@ -99,8 +99,8 @@ zx_status_t zxrio_handle_close(zxrio_cb_t cb, void* cookie) {
 
     // remote side was closed;
 #ifdef ZXRIO_FIDL
-    ioObjectCloseRequest* request = (ioObjectCloseRequest*) &msg;
-    memset(request, 0, sizeof(ioObjectCloseRequest));
+    fuchsia_io_ObjectCloseRequest* request = (fuchsia_io_ObjectCloseRequest*) &msg;
+    memset(request, 0, sizeof(fuchsia_io_ObjectCloseRequest));
     request->hdr.ordinal = ZXFIDL_CLOSE;
 #else
     msg.op = ZXRIO_CLOSE;
@@ -126,15 +126,16 @@ zx_status_t zxrio_txn_handoff(zx_handle_t srv, zx_handle_t reply, zxrio_msg_t* m
     uint32_t dsize;
     switch (msg->op) {
     case ZXFIDL_OPEN: {
-        ioDirectoryOpenRequest* request = (ioDirectoryOpenRequest*) msg;
+        fuchsia_io_DirectoryOpenRequest* request = (fuchsia_io_DirectoryOpenRequest*) msg;
         request->object = FIDL_HANDLE_PRESENT;
-        dsize = FIDL_ALIGN(sizeof(ioDirectoryOpenRequest)) + FIDL_ALIGN(request->path.size);
+        dsize = FIDL_ALIGN(sizeof(fuchsia_io_DirectoryOpenRequest)) +
+            FIDL_ALIGN(request->path.size);
         break;
     }
     case ZXFIDL_CLONE: {
-        ioObjectCloneRequest* request = (ioObjectCloneRequest*) msg;
+        fuchsia_io_ObjectCloneRequest* request = (fuchsia_io_ObjectCloneRequest*) msg;
         request->object = FIDL_HANDLE_PRESENT;
-        dsize = sizeof(ioObjectCloneRequest);
+        dsize = sizeof(fuchsia_io_ObjectCloneRequest);
         break;
     }
     default:
@@ -809,25 +810,25 @@ zx_status_t zxrio_process_open_response(zx_handle_t h, zxrio_describe_t* info) {
         return r;
     }
 
-    // Confirm that the objects "zxrio_describe_t" and "ioObjectOnOpenEvent"
+    // Confirm that the objects "zxrio_describe_t" and "fuchsia_io_ObjectOnOpenEvent"
     // are aligned enough to be compatible.
     //
-    // This is somewhat complicated by the fact that the "ioObjectOnOpenEvent"
-    // object has an optional "ObjectInfo" secondary which exists immediately
+    // This is somewhat complicated by the fact that the "fuchsia_io_ObjectOnOpenEvent"
+    // object has an optional "fuchsia_io_ObjectInfo" secondary which exists immediately
     // following the struct.
     static_assert(__builtin_offsetof(zxrio_describe_t, extra) ==
-                  FIDL_ALIGN(sizeof(ioObjectOnOpenEvent)),
+                  FIDL_ALIGN(sizeof(fuchsia_io_ObjectOnOpenEvent)),
                   "RIO Description message doesn't align with FIDL response secondary");
-    static_assert(sizeof(zxrio_object_info_t) == sizeof(ObjectInfo),
+    static_assert(sizeof(zxrio_object_info_t) == sizeof(fuchsia_io_ObjectInfo),
                   "RIO Object Info doesn't align with FIDL object info");
     static_assert(__builtin_offsetof(zxrio_object_info_t, file.e) ==
-                  __builtin_offsetof(ObjectInfo, file.event), "Unaligned File");
+                  __builtin_offsetof(fuchsia_io_ObjectInfo, file.event), "Unaligned File");
     static_assert(__builtin_offsetof(zxrio_object_info_t, pipe.s) ==
-                  __builtin_offsetof(ObjectInfo, pipe.socket), "Unaligned Pipe");
+                  __builtin_offsetof(fuchsia_io_ObjectInfo, pipe.socket), "Unaligned Pipe");
     static_assert(__builtin_offsetof(zxrio_object_info_t, vmofile.v) ==
-                  __builtin_offsetof(ObjectInfo, vmofile.vmo), "Unaligned Vmofile");
+                  __builtin_offsetof(fuchsia_io_ObjectInfo, vmofile.vmo), "Unaligned Vmofile");
     static_assert(__builtin_offsetof(zxrio_object_info_t, device.e) ==
-                  __builtin_offsetof(ObjectInfo, device.event), "Unaligned Device");
+                  __builtin_offsetof(fuchsia_io_ObjectInfo, device.event), "Unaligned Device");
 
     switch (info->extra.tag) {
     // Case: No extra handles expected

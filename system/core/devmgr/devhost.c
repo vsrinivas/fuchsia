@@ -248,13 +248,14 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
             goto fail;
         }
 
-        ioDirectoryOpenRequest* request = (ioDirectoryOpenRequest*) &msg;
+        fuchsia_io_DirectoryOpenRequest* request = (fuchsia_io_DirectoryOpenRequest*) &msg;
         zxrio_msg_t* rmsg = (zxrio_msg_t*) &msg;
 
         if (msg.op == ZXFIDL_OPEN) {
             // Decode open request (FIDL)
-            if ((msize < sizeof(ioDirectoryOpenRequest)) ||
-                (FIDL_ALIGN(sizeof(ioDirectoryOpenRequest)) + FIDL_ALIGN(request->path.size) != msize) ||
+            if ((msize < sizeof(fuchsia_io_DirectoryOpenRequest)) ||
+                (FIDL_ALIGN(sizeof(fuchsia_io_DirectoryOpenRequest)) +
+                 FIDL_ALIGN(request->path.size) != msize) ||
                 (request->object != FIDL_HANDLE_PRESENT) ||
                 (request->path.data != (char*) FIDL_ALLOC_PRESENT)) {
                 log(ERROR, "devhost: Malformed open request (bad message)\n");
@@ -263,7 +264,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
             }
             request->object = hin[0];
             request->path.data = (void*)((uintptr_t)(&msg) +
-                                         FIDL_ALIGN(sizeof(ioDirectoryOpenRequest)));
+                                         FIDL_ALIGN(sizeof(fuchsia_io_DirectoryOpenRequest)));
         } else {
             // Decode open request (RIO)
             rmsg->hcount = 1;
