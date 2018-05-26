@@ -395,6 +395,7 @@ static inline char* wmi_service_name(int service_id) {
 #undef SVCSTR
 }
 
+#if 0 // NEEDS PORTING
 #define WMI_SERVICE_IS_ENABLED(wmi_svc_bmap, svc_id, len) \
     ((svc_id) < (len) && \
      (wmi_svc_bmap)[(svc_id) / (sizeof(uint32_t))] & \
@@ -643,6 +644,7 @@ static inline void wmi_10_4_svc_map(const uint32_t* in, unsigned long* out,
 }
 
 #undef SVCMAP
+#endif // NEEDS PORTING
 
 /* 2 word representation of MAC addr */
 struct wmi_mac_addr {
@@ -3094,17 +3096,17 @@ struct wmi_mgmt_rx_ext_info {
     uint64_t rx_mac_timestamp;
 } __PACKED __ALIGNED(4);
 
-#define WMI_RX_STATUS_OK            0x00
-#define WMI_RX_STATUS_ERR_CRC           0x01
-#define WMI_RX_STATUS_ERR_DECRYPT       0x08
-#define WMI_RX_STATUS_ERR_MIC           0x10
-#define WMI_RX_STATUS_ERR_KEY_CACHE_MISS    0x20
+#define WMI_RX_STATUS_OK                        0x00
+#define WMI_RX_STATUS_ERR_CRC                   0x01
+#define WMI_RX_STATUS_ERR_DECRYPT               0x08
+#define WMI_RX_STATUS_ERR_MIC                   0x10
+#define WMI_RX_STATUS_ERR_KEY_CACHE_MISS        0x20
 /* Extension data at the end of mgmt frame */
-#define WMI_RX_STATUS_EXT_INFO      0x40
+#define WMI_RX_STATUS_EXT_INFO                  0x40
 
-#define PHY_ERROR_GEN_SPECTRAL_SCAN     0x26
-#define PHY_ERROR_GEN_FALSE_RADAR_EXT       0x24
-#define PHY_ERROR_GEN_RADAR         0x05
+#define PHY_ERROR_GEN_SPECTRAL_SCAN             0x26
+#define PHY_ERROR_GEN_FALSE_RADAR_EXT           0x24
+#define PHY_ERROR_GEN_RADAR                     0x05
 
 #define PHY_ERROR_10_4_RADAR_MASK               0x4
 #define PHY_ERROR_10_4_SPECTRAL_SCAN_MASK       0x4000000
@@ -6114,8 +6116,8 @@ enum wmi_sta_keepalive_method {
 
 /* note: ip4 addresses are in network byte order, i.e. big endian */
 struct wmi_sta_keepalive_arp_resp {
-    __be32 src_ip4_addr;
-    __be32 dest_ip4_addr;
+    uint8_t src_ip4_addr[4];  // network byte order
+    uint8_t dest_ip4_addr[4]; // network byte order
     struct wmi_mac_addr dest_mac_addr;
 } __PACKED;
 
@@ -6132,8 +6134,8 @@ struct wmi_sta_keepalive_arg {
     uint32_t enabled;
     uint32_t method;
     uint32_t interval;
-    __be32 src_ip4_addr;
-    __be32 dest_ip4_addr;
+    uint8_t src_ip4_addr[4];  // network byte order
+    uint8_t dest_ip4_addr[4]; // network byte order
     const uint8_t dest_mac_addr[ETH_ALEN];
 };
 
@@ -6596,9 +6598,9 @@ int ath10k_wmi_connect(struct ath10k* ar);
 
 zx_status_t ath10k_wmi_cmd_send(struct ath10k* ar, struct ath10k_msg_buf* buf, uint32_t cmd_id);
 int ath10k_wmi_cmd_send_nowait(struct ath10k* ar, struct ath10k_msg_buf* skb, uint32_t cmd_id);
-#if 0 // NEEDS PORTING
 void ath10k_wmi_start_scan_init(struct ath10k* ar, struct wmi_start_scan_arg* arg);
 
+#if 0 // NEEDS PORTING
 void ath10k_wmi_pull_pdev_stats_base(const struct wmi_pdev_stats_base* src,
                                      struct ath10k_fw_stats_pdev* dst);
 void ath10k_wmi_pull_pdev_stats_tx(const struct wmi_pdev_stats_tx* src,
@@ -6612,7 +6614,6 @@ void ath10k_wmi_pull_peer_stats(const struct wmi_peer_stats* src,
 #endif // NEEDS PORTING
 void ath10k_wmi_put_host_mem_chunks(struct ath10k* ar,
                                     struct wmi_host_mem_chunks* chunks);
-#if 0 // NEEDS PORTING
 void ath10k_wmi_put_start_scan_common(struct wmi_start_scan_common* cmn,
                                       const struct wmi_start_scan_arg* arg);
 void ath10k_wmi_set_wmm_param(struct wmi_wmm_params* params,
@@ -6621,15 +6622,18 @@ void ath10k_wmi_put_wmi_channel(struct wmi_channel* ch,
                                 const struct wmi_channel_arg* arg);
 int ath10k_wmi_start_scan_verify(const struct wmi_start_scan_arg* arg);
 
-int ath10k_wmi_event_scan(struct ath10k* ar, struct sk_buff* skb);
-int ath10k_wmi_event_mgmt_rx(struct ath10k* ar, struct sk_buff* skb);
+int ath10k_wmi_event_scan(struct ath10k* ar, struct ath10k_msg_buf* buf);
+int ath10k_wmi_event_mgmt_rx(struct ath10k* ar, struct ath10k_msg_buf* buf);
+#if 0 // NEEDS PORTING
 void ath10k_wmi_event_chan_info(struct ath10k* ar, struct sk_buff* skb);
 #endif // NEEDS PORTING
 void ath10k_wmi_event_echo(struct ath10k* ar, struct ath10k_msg_buf* buf);
 #if 0 // NEEDS PORTING
 int ath10k_wmi_event_debug_mesg(struct ath10k* ar, struct sk_buff* skb);
 void ath10k_wmi_event_update_stats(struct ath10k* ar, struct sk_buff* skb);
-void ath10k_wmi_event_vdev_start_resp(struct ath10k* ar, struct sk_buff* skb);
+#endif // NEEDS PORTING
+void ath10k_wmi_event_vdev_start_resp(struct ath10k* ar, struct ath10k_msg_buf* buf);
+#if 0 // NEEDS PORTING
 void ath10k_wmi_event_vdev_stopped(struct ath10k* ar, struct sk_buff* skb);
 void ath10k_wmi_event_peer_sta_kickout(struct ath10k* ar, struct sk_buff* skb);
 void ath10k_wmi_event_host_swba(struct ath10k* ar, struct sk_buff* skb);
@@ -6659,8 +6663,9 @@ void ath10k_wmi_event_gtk_offload_status(struct ath10k* ar,
 void ath10k_wmi_event_gtk_rekey_fail(struct ath10k* ar, struct sk_buff* skb);
 void ath10k_wmi_event_delba_complete(struct ath10k* ar, struct sk_buff* skb);
 void ath10k_wmi_event_addba_complete(struct ath10k* ar, struct sk_buff* skb);
-void ath10k_wmi_event_vdev_install_key_complete(struct ath10k* ar,
-        struct sk_buff* skb);
+#endif // NEEDS PORTING
+void ath10k_wmi_event_vdev_install_key_complete(struct ath10k* ar, struct ath10k_msg_buf* msg_buf);
+#if 0 // NEEDS PORTING
 void ath10k_wmi_event_inst_rssi_stats(struct ath10k* ar, struct sk_buff* skb);
 void ath10k_wmi_event_vdev_standby_req(struct ath10k* ar, struct sk_buff* skb);
 void ath10k_wmi_event_vdev_resume_req(struct ath10k* ar, struct sk_buff* skb);

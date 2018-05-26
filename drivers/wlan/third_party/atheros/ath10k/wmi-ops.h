@@ -340,7 +340,7 @@ ath10k_wmi_rx(struct ath10k* ar, struct ath10k_msg_buf* buf) {
 }
 
 static inline zx_status_t
-ath10k_wmi_map_svc(struct ath10k* ar, const uint32_t* in, BITMAP_TYPE* out, size_t len) {
+ath10k_wmi_map_svc(struct ath10k* ar, const uint32_t* in, BITARR_TYPE* out, size_t len) {
     if (!ar->wmi.ops->map_svc) {
         return ZX_ERR_NOT_SUPPORTED;
     }
