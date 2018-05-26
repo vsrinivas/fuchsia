@@ -20,6 +20,7 @@
 // 1) For tests that don't need to reuse any test fixtures across each run,
 // use RegisterSimpleTest():
 //
+//   // Measure the time taken by FooOp() [comment as per coding style below].
 //   bool TestFooOp() {
 //       FooOp();  // The operation that we are timing.
 //       return true;  // Indicate success.
@@ -32,6 +33,7 @@
 // 2) For tests that do need to reuse test fixtures across each run, use
 // the more general RegisterTest():
 //
+//   // Measure the time taken by FooOp() [comment as per coding style below].
 //   bool TestFooObjectOp(perftest::RepeatState* state) {
 //       FooObject obj;  // Fixture that is reused across test runs.
 //       while (state->KeepRunning()) {
@@ -83,6 +85,33 @@
 // state->DeclareStep() once for each step to declare the step names,
 // before its first call to KeepRunning().  Then it should call
 // state->NextStep() between each step.
+//
+//
+// ## Test coding style
+//
+// ### Comments
+//
+// Each test should have a comment with a sentence describing what it
+// measures.  For example, "Measure the time taken for an IPC round trip
+// between processes, using Zircon channels".  An exception is for trivial
+// tests (e.g. one-liners) where the code does not need summarizing.  For a
+// family of very similar tests, only a single comment is necessary.
+//
+// This should make it easier to understand what the code is intended to
+// measure, which in turn should help developers decide how to treat
+// regressions or improvements in the test's performance.  If a test is
+// hard to describe in a sentence, this could be a sign that it is not
+// measuring something interesting.
+//
+// ### Handling failures
+//
+// Although perftest allows a test to fail gracefully by returning false,
+// it is usually preferable to abort on failure, either using ZX_ASSERT()
+// (in the Zircon repo) or FXL_CHECK() (in other Fuchsia repos).
+//
+// This avoids problems associated with trying to clean up or continue
+// execution after a failure.  These macros will print the source location
+// where the failure occurred, making failures easier to debug.
 
 namespace perftest {
 
