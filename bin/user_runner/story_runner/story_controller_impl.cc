@@ -246,7 +246,22 @@ void XdrModuleData_v3(XdrContext* const xdr, ModuleData* const data) {
   xdr->Field("module_manifest", &data->module_manifest, XdrModuleManifest);
 }
 
+void XdrModuleData_v4(XdrContext* const xdr, ModuleData* const data) {
+  if (!xdr->Version(4)) {
+    return;
+  }
+  xdr->Field("url", &data->module_url);
+  xdr->Field("module_path", &data->module_path);
+  xdr->Field("module_source", &data->module_source);
+  xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
+  xdr->Field("module_stopped", &data->module_stopped);
+  xdr->Field("intent", &data->intent, XdrIntent);
+  xdr->Field("chain_data", &data->chain_data, XdrChainData);
+  xdr->Field("module_manifest", &data->module_manifest, XdrModuleManifest);
+}
+
 constexpr XdrFilterType<ModuleData> XdrModuleData[] = {
+  XdrModuleData_v4,
   XdrModuleData_v3,
   XdrModuleData_v2,
   XdrModuleData_v1,
@@ -261,8 +276,20 @@ void XdrPerDeviceStoryInfo_v1(XdrContext* const xdr,
   xdr->Field("state", &data->state);
 }
 
+void XdrPerDeviceStoryInfo_v2(XdrContext* const xdr,
+                              modular_private::PerDeviceStoryInfo* const data) {
+  if (!xdr->Version(2)) {
+    return;
+  }
+  xdr->Field("device", &data->device_id);
+  xdr->Field("id", &data->story_id);
+  xdr->Field("time", &data->timestamp);
+  xdr->Field("state", &data->state);
+}
+
 constexpr XdrFilterType<modular_private::PerDeviceStoryInfo>
 XdrPerDeviceStoryInfo[] = {
+  XdrPerDeviceStoryInfo_v2,
   XdrPerDeviceStoryInfo_v1,
   nullptr,
 };

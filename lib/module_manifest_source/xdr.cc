@@ -48,9 +48,23 @@ void XdrModuleManifest_v2(modular::XdrContext* const xdr,
               XdrParameterConstraint_v2);
 }
 
+void XdrModuleManifest_v3(modular::XdrContext* const xdr,
+                          modular::ModuleManifest* const data) {
+  if (!xdr->Version(3)) {
+    return;
+  }
+  xdr->Field("binary", &data->binary);
+  xdr->Field("suggestion_headline", &data->suggestion_headline);
+  xdr->Field("action", &data->action);
+  xdr->Field("composition_pattern", &data->composition_pattern);
+  xdr->Field("parameters", &data->parameter_constraints,
+              XdrParameterConstraint_v2);
+}
+
 }  // namespace
 
 extern const XdrFilterType<ModuleManifest> XdrModuleManifest[] = {
+  XdrModuleManifest_v3,
   XdrModuleManifest_v2,
   XdrModuleManifest_v1,
   nullptr,

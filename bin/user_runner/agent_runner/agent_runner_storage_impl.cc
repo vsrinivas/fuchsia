@@ -27,7 +27,21 @@ void XdrTriggerInfo_v1(XdrContext* const xdr,
   xdr->Field("queue_token", &data->queue_token);
 }
 
+void XdrTriggerInfo_v2(XdrContext* const xdr,
+                       AgentRunnerStorage::TriggerInfo* const data) {
+  if (!xdr->Version(2)) {
+    return;
+  }
+  xdr->Field("agent_url", &data->agent_url);
+  xdr->Field("task_id", &data->task_id);
+  xdr->Field("task_type", &data->task_type);
+  xdr->Field("alarm_in_seconds", &data->alarm_in_seconds);
+  xdr->Field("queue_name", &data->queue_name);
+  xdr->Field("queue_token", &data->queue_token);
+}
+
 constexpr XdrFilterType<AgentRunnerStorage::TriggerInfo> XdrTriggerInfo[] = {
+  XdrTriggerInfo_v2,
   XdrTriggerInfo_v1,
   nullptr,
 };

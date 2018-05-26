@@ -47,7 +47,18 @@ void XdrMessageQueueInfo_v1(XdrContext* const xdr, MessageQueueInfo* const data)
   xdr->Field("queue_token", &data->queue_token);
 }
 
+void XdrMessageQueueInfo_v2(XdrContext* const xdr, MessageQueueInfo* const data) {
+  if (!xdr->Version(2)) {
+    return;
+  }
+  xdr->Field("component_namespace", &data->component_namespace);
+  xdr->Field("component_instance_id", &data->component_instance_id);
+  xdr->Field("queue_name", &data->queue_name);
+  xdr->Field("queue_token", &data->queue_token);
+}
+
 constexpr XdrFilterType<MessageQueueInfo> XdrMessageQueueInfo[] = {
+  XdrMessageQueueInfo_v2,
   XdrMessageQueueInfo_v1,
   nullptr,
 };

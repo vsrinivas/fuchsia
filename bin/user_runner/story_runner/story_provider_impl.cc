@@ -115,7 +115,19 @@ void XdrStoryData_v2(XdrContext* const xdr,
   xdr->Field("story_page_id", &data->story_page_id, XdrPageId_v2);
 }
 
+void XdrStoryData_v3(XdrContext* const xdr,
+                     modular_private::StoryData* const data) {
+  if (!xdr->Version(3)) {
+    return;
+  }
+  // NOTE(mesch): We reuse subsidiary filters of previous versions as long as we
+  // can. Only when they change too we create new versions of them.
+  xdr->Field("story_info", &data->story_info, XdrStoryInfo_v2);
+  xdr->Field("story_page_id", &data->story_page_id, XdrPageId_v2);
+}
+
 XdrFilterType<modular_private::StoryData> XdrStoryData[] = {
+  XdrStoryData_v3,
   XdrStoryData_v2,
   XdrStoryData_v1,
   nullptr,

@@ -31,7 +31,6 @@ constexpr char kAgentComponentNamespace[] = "agents";
 class AgentContextImpl;
 class EntityProviderRunner;
 class MessageQueueManager;
-class XdrContext;
 
 // This class provides a way for components to connect to agents and
 // manages the life time of a running agent.

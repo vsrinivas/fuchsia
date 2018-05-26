@@ -44,7 +44,19 @@ void XdrDeviceMapEntry_v2(XdrContext* const xdr, DeviceMapEntry* const data) {
   xdr->Field("last_change_timestamp", &data->last_change_timestamp);
 }
 
+void XdrDeviceMapEntry_v3(XdrContext* const xdr, DeviceMapEntry* const data) {
+  if (!xdr->Version(3)) {
+    return;
+  }
+  xdr->Field("name", &data->name);
+  xdr->Field("device_id", &data->device_id);
+  xdr->Field("profile", &data->profile);
+  xdr->Field("hostname", &data->hostname);
+  xdr->Field("last_change_timestamp", &data->last_change_timestamp);
+}
+
 constexpr XdrFilterType<DeviceMapEntry> XdrDeviceMapEntry[] = {
+  XdrDeviceMapEntry_v3,
   XdrDeviceMapEntry_v2,
   XdrDeviceMapEntry_v1,
   nullptr,

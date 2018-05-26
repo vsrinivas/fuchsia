@@ -37,10 +37,22 @@ void XdrLinkChange_v1(XdrContext* const xdr,
   xdr->Field("json", &data->json);
 }
 
+void XdrLinkChange_v2(XdrContext* const xdr,
+                      modular_private::LinkChange* const data) {
+  if (!xdr->Version(2)) {
+    return;
+  }
+  xdr->Field("key", &data->key);
+  xdr->Field("op", &data->op);
+  xdr->Field("path", &data->pointer);
+  xdr->Field("json", &data->json);
+}
+
 }  // namespace
 
 // Not in anonymous namespace; needs extern linkage for use by test.
 extern const XdrFilterType<modular_private::LinkChange> XdrLinkChange[] = {
+  XdrLinkChange_v2,
   XdrLinkChange_v1,
   nullptr,
 };

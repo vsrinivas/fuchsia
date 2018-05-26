@@ -25,7 +25,17 @@ void XdrFocusInfo_v1(XdrContext* const xdr, FocusInfo* const data) {
   xdr->Field("last_focus_timestamp", &data->last_focus_change_timestamp);
 }
 
+void XdrFocusInfo_v2(XdrContext* const xdr, FocusInfo* const data) {
+  if (!xdr->Version(2)) {
+    return;
+  }
+  xdr->Field("device_id", &data->device_id);
+  xdr->Field("focused_story_id", &data->focused_story_id);
+  xdr->Field("last_focus_timestamp", &data->last_focus_change_timestamp);
+}
+
 constexpr XdrFilterType<FocusInfo> XdrFocusInfo[] = {
+  XdrFocusInfo_v2,
   XdrFocusInfo_v1,
   nullptr,
 };

@@ -26,7 +26,6 @@
 namespace modular {
 
 class MessageQueueStorage;
-class XdrContext;
 struct MessageQueueInfo;
 
 // Manages message queues for components. One MessageQueueManager

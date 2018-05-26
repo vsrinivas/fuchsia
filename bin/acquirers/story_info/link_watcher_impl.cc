@@ -36,6 +36,8 @@ struct Source {
 };
 
 void XdrContext_v1(modular::XdrContext* const xdr, Context* const data) {
+  // NOTE(mesch): No xdr->Version() call here, because the JSON output is not
+  // persisted, hence cannot version skew.
   xdr->Field("topic", &data->topic);
 }
 
@@ -45,6 +47,8 @@ constexpr modular::XdrFilterType<Context> XdrContext[] = {
 };
 
 void XdrSource_v1(modular::XdrContext* const xdr, Source* const data) {
+  // NOTE(mesch): No xdr->Version() call here, because the JSON output is not
+  // persisted, hence cannot version skew.
   xdr->Field("story_id", &data->story_id);
   xdr->Field("module_path", &data->module_path);
   xdr->Field("link_name", &data->link_name);
