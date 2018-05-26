@@ -24,10 +24,11 @@
 #include "peridot/bin/user_runner/focus.h"
 #include "peridot/bin/user_runner/message_queue/message_queue_manager.h"
 #include "peridot/bin/user_runner/presentation_provider.h"
+#include "peridot/bin/user_runner/puppet_master/make_production_impl.h"
 #include "peridot/bin/user_runner/puppet_master/puppet_master_impl.h"
 #include "peridot/bin/user_runner/puppet_master/story_command_executor.h"
-#include "peridot/bin/user_runner/puppet_master/make_production_impl.h"
 #include "peridot/bin/user_runner/story_runner/link_impl.h"
+#include "peridot/bin/user_runner/story_runner/session_storage.h"
 #include "peridot/bin/user_runner/story_runner/story_provider_impl.h"
 #include "peridot/lib/common/names.h"
 #include "peridot/lib/common/teardown.h"
@@ -141,8 +142,7 @@ class UserRunnerImpl::PresentationProviderImpl : public PresentationProvider {
 
   void WatchVisualState(
       fidl::StringPtr story_id,
-      fidl::InterfaceHandle<StoryVisualStateWatcher> watcher) override
-  {
+      fidl::InterfaceHandle<StoryVisualStateWatcher> watcher) override {
     if (impl_->user_shell_app_) {
       UserShellPresentationProviderPtr provider;
       impl_->user_shell_app_->services().ConnectToService(
@@ -542,10 +542,13 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
   // all modules to be terminated before agents are terminated. Agents must
   // outlive the stories which contain modules that are connected to those
   // agents.
+  session_storage_.reset(
+      new SessionStorage(ledger_client_.get(), ledger::PageId()));
+  AtEnd(Reset(&session_storage_));
   story_provider_impl_.reset(new StoryProviderImpl(
       user_scope_.get(), device_map_impl_->current_device_id(),
-      ledger_client_.get(), ledger::PageId(), std::move(story_shell),
-      component_context_info, std::move(focus_provider_story_provider),
+      session_storage_.get(), std::move(story_shell), component_context_info,
+      std::move(focus_provider_story_provider),
       user_intelligence_provider_.get(), module_resolver_service_.get(),
       presentation_provider_impl_.get(), test_));
   story_provider_impl_->Connect(std::move(story_provider_request));
@@ -555,7 +558,8 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
 
   // Initialize the PuppetMaster.
   story_command_executor_ = MakeProductionStoryCommandExecutor(nullptr);
-  puppet_master_impl_.reset(new PuppetMasterImpl(story_command_executor_.get()));
+  puppet_master_impl_.reset(
+      new PuppetMasterImpl(story_command_executor_.get()));
 
   AtEnd(Reset(&story_command_executor_));
   AtEnd(Reset(&puppet_master_impl_));

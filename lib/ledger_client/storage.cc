@@ -12,11 +12,6 @@
 
 namespace modular {
 
-std::string MakeStoryKey(const fidl::StringPtr& story_id) {
-  // Not escaped, because only one component after the prefix.
-  return kStoryKeyPrefix + story_id.get();
-}
-
 std::string MakeDeviceKey(const fidl::StringPtr& device_name) {
   // Not escaped, because only one component after the prefix.
   return kDeviceKeyPrefix + device_name.get();
@@ -56,7 +51,8 @@ std::string MakeMessageQueueKey(const std::string& queue_token) {
   return kMessageQueueKeyPrefix + queue_token;
 }
 
-std::string EncodeModulePath(const fidl::VectorPtr<fidl::StringPtr>& module_path) {
+std::string EncodeModulePath(
+    const fidl::VectorPtr<fidl::StringPtr>& module_path) {
   std::vector<std::string> segments;
   segments.reserve(module_path->size());
   for (const auto& module_path_part : *module_path) {

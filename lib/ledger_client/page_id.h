@@ -15,12 +15,8 @@ namespace modular {
 //
 // Caveat: This along with |modular::to_string| should not be used for JSON
 // serialization of arbitrary page IDs as JSON string encoding involves a
-// potentially non-invertible UTF-8 encoding. Instead, use |PageIdFromBase64|
-// and |PageIdToBase64|.
+// potentially non-invertible UTF-8 encoding.
 ledger::PageId MakePageId(const std::string& value);
-
-ledger::PageId PageIdFromBase64(const std::string& base64);
-std::string PageIdToBase64(const ledger::PageId& page_id);
 
 }  // namespace modular
 

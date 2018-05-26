@@ -44,6 +44,7 @@ class MessageQueueManager;
 class PuppetMasterImpl;
 class StoryCommandExecutor;
 class StoryProviderImpl;
+class SessionStorage;
 class VisibleStoriesHandler;
 
 class UserRunnerImpl : modular_private::UserRunner,
@@ -183,6 +184,7 @@ class UserRunnerImpl : modular_private::UserRunner,
   std::unique_ptr<ViewHost> user_shell_view_host_;
 
   std::unique_ptr<EntityProviderRunner> entity_provider_runner_;
+  std::unique_ptr<SessionStorage> session_storage_;
   AsyncHolder<StoryProviderImpl> story_provider_impl_;
   std::unique_ptr<MessageQueueManager> message_queue_manager_;
   std::unique_ptr<AgentRunnerStorage> agent_runner_storage_;

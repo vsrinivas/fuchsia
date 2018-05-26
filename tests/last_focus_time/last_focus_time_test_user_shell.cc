@@ -48,13 +48,15 @@ class StoryProviderWatcherImpl : public modular::StoryProviderWatcherBase {
     //
     // We expect two last_focus_time transitions:
     //
-    //   0 -> X on creation of the story.
+    //   -1 -> 0 on creation of the story.
     //
-    //   X -> Y where Y > X on focusing the story.
+    //   0 -> Y where Y > 0 on focusing the story.
     //
     switch (++change_count_) {
       case 1:
-        last_focus_time_created_.Pass();
+        if (story_info.last_focus_time == 0) {
+          last_focus_time_created_.Pass();
+        }
         break;
       case 2:
         last_focus_time_focused_.Pass();
@@ -69,7 +71,7 @@ class StoryProviderWatcherImpl : public modular::StoryProviderWatcherBase {
   }
 
   int change_count_{};
-  int64_t last_focus_time_{};
+  int64_t last_focus_time_{-1};
 };
 
 class StoryWatcherImpl : modular::StoryWatcher {

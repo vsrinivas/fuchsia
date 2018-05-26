@@ -428,7 +428,14 @@ class FutureOperation : public Operation<Args...> {
  private:
   // |OperationBase|
   void Run() {
-    done_->Then([this](Args... args) { this->Done(std::move(args)...); });
+    // FuturePtr is a shared ptr, so the Then() callback is not necessarily
+    // cancelled by the destructor of this Operation instance. Hence the
+    // callback must be protected against invocation after delete of this.
+    done_->Then([this, weak_this = this->GetWeakPtr()](Args... args) {
+      if (!weak_this)
+        return;
+      this->Done(std::move(args)...);
+    });
     on_run_->Complete();
   }
 
@@ -452,7 +459,7 @@ class FutureOperation : public Operation<Args...> {
 template <typename... ResultArgs, typename... FutureArgs>
 OperationBase* WrapFutureAsOperation(
     FuturePtr<> on_run, FuturePtr<FutureArgs...> done,
-    std::function<void(ResultArgs...)> result_call = {},
+    std::function<void(ResultArgs...)> result_call,
     const char* const trace_name = "") {
   return new FutureOperation<ResultArgs...>(
       trace_name, std::move(on_run), std::move(done), std::move(result_call));

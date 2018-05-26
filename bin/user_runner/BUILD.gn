@@ -58,6 +58,7 @@ executable("user_runner_bin") {
     "//peridot/bin/user_runner/puppet_master:puppet_master_impl",
     "//peridot/bin/user_runner/puppet_master:story_command_executor",
     "//peridot/bin/user_runner/story_runner",
+    "//peridot/bin/user_runner/story_runner:session_storage",
     "//peridot/lib/common:async_holder",
     "//peridot/lib/common:names",
     "//peridot/lib/common:teardown",

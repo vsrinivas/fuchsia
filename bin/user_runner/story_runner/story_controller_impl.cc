@@ -461,8 +461,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
         story_controller_impl_,
         story_controller_impl_->story_scope_.GetLauncher(),
         std::move(module_config), connection.module_data.get(),
-        std::move(service_list),
-        std::move(view_provider_request));
+        std::move(service_list), std::move(view_provider_request));
 
     // Modules started with StoryController.AddModule() don't have a module
     // controller request.
@@ -750,8 +749,8 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
     // shell.
     operation_queue_.Add(new LaunchModuleCall(
         story_controller_impl_, fidl::Clone(module_data_),
-        std::move(module_controller_request_),
-        view_owner_.NewRequest(), [this, flow] { Cont(flow); }));
+        std::move(module_controller_request_), view_owner_.NewRequest(),
+        [this, flow] { Cont(flow); }));
   }
 
   void Cont(FlowToken flow) {
@@ -1571,8 +1570,7 @@ class StoryControllerImpl::StartCall : public Operation<> {
 StoryControllerImpl::StoryControllerImpl(
     fidl::StringPtr story_id, LedgerClient* const ledger_client,
     LedgerPageId story_page_id, StoryProviderImpl* const story_provider_impl)
-    : PageClient(MakeStoryKey(story_id), ledger_client, story_page_id,
-                 kModuleKeyPrefix),
+    : PageClient(story_id, ledger_client, story_page_id, kModuleKeyPrefix),
       story_id_(story_id),
       story_provider_impl_(story_provider_impl),
       ledger_client_(ledger_client),
@@ -1702,9 +1700,9 @@ void StoryControllerImpl::EmbedModule(
     std::function<void(StartModuleStatus)> callback) {
   operation_queue_.Add(new AddIntentCall(
       this, parent_module_path.Clone(), module_name, std::move(intent),
-      std::move(module_controller_request),
-      nullptr /* surface_relation */, std::move(view_owner_request),
-      std::move(module_source), std::move(callback)));
+      std::move(module_controller_request), nullptr /* surface_relation */,
+      std::move(view_owner_request), std::move(module_source),
+      std::move(callback)));
 }
 
 void StoryControllerImpl::StartModule(
@@ -1715,9 +1713,9 @@ void StoryControllerImpl::StartModule(
     std::function<void(StartModuleStatus)> callback) {
   operation_queue_.Add(new AddIntentCall(
       this, parent_module_path.Clone(), module_name, std::move(intent),
-      std::move(module_controller_request),
-      std::move(surface_relation), nullptr /* view_owner_request */,
-      std::move(module_source), std::move(callback)));
+      std::move(module_controller_request), std::move(surface_relation),
+      nullptr /* view_owner_request */, std::move(module_source),
+      std::move(callback)));
 }
 
 void StoryControllerImpl::StartContainerInShell(
@@ -1979,9 +1977,9 @@ void StoryControllerImpl::AddModule(
 
   operation_queue_.Add(new AddIntentCall(
       this, std::move(parent_module_path), module_name, CloneOptional(intent),
-      nullptr /* module_controller_request */,
-      std::move(surface_relation), nullptr /* view_owner_request */,
-      ModuleSource::EXTERNAL, [](StartModuleStatus) {}));
+      nullptr /* module_controller_request */, std::move(surface_relation),
+      nullptr /* view_owner_request */, ModuleSource::EXTERNAL,
+      [](StartModuleStatus) {}));
 }
 
 void StoryControllerImpl::StartStoryShell(

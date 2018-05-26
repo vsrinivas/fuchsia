@@ -8,22 +8,23 @@
 #include <utility>
 #include <vector>
 
-#include <modular/cpp/fidl.h>
-#include <modular_private/cpp/fidl.h>
-#include <views_v1/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/zx/time.h>
+#include <views_v1/cpp/fidl.h>
 
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
 #include "peridot/bin/user_runner/focus.h"
 #include "peridot/bin/user_runner/presentation_provider.h"
 #include "peridot/bin/user_runner/story_runner/link_impl.h"
+#include "peridot/bin/user_runner/story_runner/session_storage.h"
+#include "peridot/bin/user_runner/story_runner/session_storage_xdr.h"
 #include "peridot/bin/user_runner/story_runner/story_controller_impl.h"
 #include "peridot/lib/common/names.h"
 #include "peridot/lib/common/teardown.h"
@@ -38,178 +39,17 @@
 
 namespace modular {
 
-namespace {
-
-using ReadStoryDataCall = ReadDataCall<modular_private::StoryData>;
-using ReadAllStoryDataCall = ReadAllDataCall<modular_private::StoryData>;
-using WriteStoryDataCall = WriteDataCall<modular_private::StoryData>;
-
-// Serialization and deserialization of modular_private::StoryData and StoryInfo
-// to and from JSON. We have different versions for backwards compatibilty.
-//
-// Version 1: During FIDL2 conversion. ExtraInfo fields are stored as "key"
-// and "value", page ids are stored as base64 string.
-void XdrStoryInfoExtraEntry_v1(XdrContext* const xdr,
-                             StoryInfoExtraEntry* const data) {
-  xdr->Field("key", &data->key);
-  xdr->Field("value", &data->value);
-}
-
-void XdrStoryInfo_v1(XdrContext* const xdr, StoryInfo* const data) {
-  xdr->Field("last_focus_time", &data->last_focus_time);
-  xdr->Field("url", &data->url);
-  xdr->Field("id", &data->id);
-  xdr->Field("extra", &data->extra, XdrStoryInfoExtraEntry_v1);
-}
-
-void XdrStoryData_v1(XdrContext* const xdr,
-                     modular_private::StoryData* const data) {
-  static constexpr char kStoryPageId[] = "story_page_id";
-  xdr->Field("story_info", &data->story_info, XdrStoryInfo_v1);
-  switch (xdr->op()) {
-    case XdrOp::FROM_JSON: {
-      std::string page_id;
-      xdr->Field(kStoryPageId, &page_id);
-      if (page_id.empty()) {
-        data->story_page_id = nullptr;
-      } else {
-        data->story_page_id = ledger::PageId::New();
-        *data->story_page_id = PageIdFromBase64(page_id);
-      }
-      break;
-    }
-    case XdrOp::TO_JSON: {
-      std::string page_id;
-      if (data->story_page_id) {
-        page_id = PageIdToBase64(*data->story_page_id);
-      }
-      xdr->Field(kStoryPageId, &page_id);
-      break;
-    }
-  }
-}
-
-// Version 2: Before FIDL2 conversion, and again after FIDL2 conversion was
-// complete. ExtraInfo fields are stored as @k and @v, page ids are stored as
-// array.
-void XdrStoryInfoExtraEntry_v2(XdrContext* const xdr,
-                               StoryInfoExtraEntry* const data) {
-  xdr->Field("@k", &data->key);
-  xdr->Field("@v", &data->value);
-}
-
-void XdrStoryInfo_v2(XdrContext* const xdr, StoryInfo* const data) {
-  xdr->Field("last_focus_time", &data->last_focus_time);
-  xdr->Field("url", &data->url);
-  xdr->Field("id", &data->id);
-  xdr->Field("extra", &data->extra, XdrStoryInfoExtraEntry_v2);
-}
-
-void XdrPageId_v2(XdrContext* const xdr, ledger::PageId* const data) {
-  xdr->Field("id", &data->id);
-}
-
-void XdrStoryData_v2(XdrContext* const xdr,
-                     modular_private::StoryData* const data) {
-  xdr->Field("story_info", &data->story_info, XdrStoryInfo_v2);
-  xdr->Field("story_page_id", &data->story_page_id, XdrPageId_v2);
-}
-
-void XdrStoryData_v3(XdrContext* const xdr,
-                     modular_private::StoryData* const data) {
-  if (!xdr->Version(3)) {
-    return;
-  }
-  // NOTE(mesch): We reuse subsidiary filters of previous versions as long as we
-  // can. Only when they change too we create new versions of them.
-  xdr->Field("story_info", &data->story_info, XdrStoryInfo_v2);
-  xdr->Field("story_page_id", &data->story_page_id, XdrPageId_v2);
-}
-
-XdrFilterType<modular_private::StoryData> XdrStoryData[] = {
-  XdrStoryData_v3,
-  XdrStoryData_v2,
-  XdrStoryData_v1,
-  nullptr,
-};
-
-OperationBase* MakeGetStoryDataCall(
-    ledger::Page* const page, fidl::StringPtr story_id,
-    std::function<void(modular_private::StoryDataPtr)> result_call) {
-  return new ReadStoryDataCall(
-      page, MakeStoryKey(story_id), true /* not_found_is_ok */, XdrStoryData,
-      std::move(result_call));
-};
-
-OperationBase* MakeWriteStoryDataCall(ledger::Page* const page,
-                                      modular_private::StoryDataPtr story_data,
-                                      std::function<void()> result_call) {
-  return new WriteStoryDataCall(
-      page, MakeStoryKey(story_data->story_info.id), XdrStoryData,
-      std::move(story_data), std::move(result_call));
-};
-
-}  // namespace
-
-class StoryProviderImpl::MutateStoryDataCall : public Operation<> {
+// 1. Ask SessionStorage to create an ID and storage for the new story.
+// 2. Optionally add the module in |url| to the story.
+class StoryProviderImpl::CreateStoryCall : public Operation<fidl::StringPtr> {
  public:
-  MutateStoryDataCall(
-      ledger::Page* const page, fidl::StringPtr story_id,
-      std::function<bool(modular_private::StoryData* story_data)> mutate,
-      ResultCall result_call)
-      : Operation("StoryProviderImpl::MutateStoryDataCall",
-                  std::move(result_call)),
-        page_(page),
-        story_id_(story_id),
-        mutate_(std::move(mutate)) {}
-
- private:
-  void Run() override {
-    FlowToken flow{this};
-
-    operation_queue_.Add(MakeGetStoryDataCall(
-        page_, story_id_,
-        [this, flow](modular_private::StoryDataPtr story_data) {
-          if (!story_data) {
-            // If the story doesn't exist, it was deleted and
-            // we must not bring it back.
-            return;
-          }
-          if (!mutate_(story_data.get())) {
-            // If no mutation happened, we're done.
-            return;
-          }
-
-          operation_queue_.Add(
-              MakeWriteStoryDataCall(page_, std::move(story_data), [flow] {}));
-        }));
-  }
-
-  ledger::Page* const page_;  // not owned
-  const fidl::StringPtr story_id_;
-  std::function<bool(modular_private::StoryData* story_data)> mutate_;
-
-  OperationQueue operation_queue_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(MutateStoryDataCall);
-};
-
-// 1. Create a page for the new story.
-// 2. Create a new modular_private::StoryData structure pointing to this new
-// page and save it
-//    to the root page.
-// 3. Write a copy of the current context to the story page.
-// 4. Returns the Story ID of the newly created story.
-class StoryProviderImpl::CreateStoryCall
-    : public LedgerOperation<fidl::StringPtr> {
- public:
-  CreateStoryCall(ledger::Ledger* const ledger, ledger::Page* const root_page,
+  CreateStoryCall(SessionStorage* session_storage,
                   StoryProviderImpl* const story_provider_impl,
                   fidl::StringPtr url,
                   fidl::VectorPtr<StoryInfoExtraEntry> extra_info,
                   fidl::StringPtr root_json, ResultCall result_call)
-      : LedgerOperation("StoryProviderImpl::CreateStoryCall", ledger, root_page,
-                        std::move(result_call)),
+      : Operation("StoryProviderImpl::CreateStoryCall", std::move(result_call)),
+        session_storage_(session_storage),
         story_provider_impl_(story_provider_impl),
         extra_info_(std::move(extra_info)),
         start_time_(zx_clock_get(ZX_CLOCK_UTC)) {
@@ -227,63 +67,46 @@ class StoryProviderImpl::CreateStoryCall
   void Run() override {
     FlowToken flow{this, &story_id_};
 
-    ledger()->GetPage(nullptr, story_page_.NewRequest(),
-                      Protect([this, flow](ledger::Status status) {
-                        if (status != ledger::Status::OK) {
-                          FXL_LOG(ERROR) << trace_name() << " "
-                                         << "Ledger.GetPage() " << status;
-                          return;
-                        }
+    // Steps:
+    // 1) Create the story storage.
+    // 2) Set any extra info.
+    // 3) If we got an initial module, add it.
+    session_storage_->CreateStory()
+        ->AsyncMap([this, weak_this = GetWeakPtr(), flow](
+                       fidl::StringPtr story_id, ledger::PageId page_id) {
+          if (!weak_this)
+            return Future<>::CreateCompleted();
+          story_id_ = story_id;
+          story_page_id_ = page_id;
+          return session_storage_->UpdateStoryInfoExtra(story_id,
+                                                        std::move(extra_info_));
+        })
+        ->Then([this, weak_this = GetWeakPtr(), flow] {
+          if (!weak_this)
+            return;
+          controller_ = std::make_unique<StoryControllerImpl>(
+              story_id_, session_storage_->ledger_client(), story_page_id_,
+              story_provider_impl_);
+          if (intent_.action.handler) {
+            controller_->AddModule({} /* parent_module_path */, kRootModuleName,
+                                   std::move(intent_),
+                                   nullptr /* surface_relation */);
+          }
 
-                        Cont1(flow);
-                      }));
+          // We ensure that everything has been written to the story page before
+          // this operation is done.
+          controller_->Sync([flow] {});
+
+          ReportStoryLaunchTime(zx_clock_get(ZX_CLOCK_UTC) - start_time_);
+        });
   }
 
-  void Cont1(FlowToken flow) {
-    story_page_->GetId([this, flow](ledger::PageId id) {
-      story_page_id_ = std::move(id);
-      Cont2(flow);
-    });
-  }
-
-  void Cont2(FlowToken flow) {
-    // TODO(security), cf. FW-174. This ID is exposed in public services
-    // such as StoryProvider.PreviousStories(), StoryController.GetInfo(),
-    // ModuleContext.GetStoryId(). We need to ensure this doesn't expose
-    // internal information by being a page ID.
-    story_id_ = to_hex_string(story_page_id_.id);
-
-    story_data_ = modular_private::StoryData::New();
-    story_data_->story_page_id = CloneOptional(story_page_id_);
-    story_data_->story_info.id = story_id_;
-    story_data_->story_info.last_focus_time = zx_clock_get(ZX_CLOCK_UTC);
-    story_data_->story_info.extra = std::move(extra_info_);
-
-    operation_queue_.Add(MakeWriteStoryDataCall(page(), std::move(story_data_),
-                                                [this, flow] { Cont3(flow); }));
-  }
-
-  void Cont3(FlowToken flow) {
-    controller_ = std::make_unique<StoryControllerImpl>(
-        story_id_, story_provider_impl_->ledger_client_, story_page_id_,
-        story_provider_impl_);
-    controller_->AddModule({} /* parent_module_path */, kRootModuleName,
-                           std::move(intent_), nullptr /* surface_relation */);
-
-    // We ensure that everything has been written to the story page before this
-    // operation is done.
-    controller_->Sync([flow] {});
-
-    ReportStoryLaunchTime(zx_clock_get(ZX_CLOCK_UTC) - start_time_);
-  }
-
-  StoryProviderImpl* const story_provider_impl_;  // not owned
+  SessionStorage* const session_storage_;         // Not owned
+  StoryProviderImpl* const story_provider_impl_;  // Not owned
   Intent intent_;
   fidl::VectorPtr<StoryInfoExtraEntry> extra_info_;
   const zx_time_t start_time_;
 
-  ledger::PagePtr story_page_;
-  modular_private::StoryDataPtr story_data_;
   std::unique_ptr<StoryControllerImpl> controller_;
 
   ledger::PageId story_page_id_;
@@ -295,18 +118,18 @@ class StoryProviderImpl::CreateStoryCall
   FXL_DISALLOW_COPY_AND_ASSIGN(CreateStoryCall);
 };
 
-class StoryProviderImpl::DeleteStoryCall : public PageOperation<> {
+class StoryProviderImpl::DeleteStoryCall : public Operation<> {
  public:
   using StoryControllerImplMap =
       std::map<std::string, struct StoryControllerImplContainer>;
   using PendingDeletion = std::pair<std::string, DeleteStoryCall*>;
 
-  DeleteStoryCall(ledger::Page* const page, fidl::StringPtr story_id,
+  DeleteStoryCall(SessionStorage* session_storage, fidl::StringPtr story_id,
                   StoryControllerImplMap* const story_controller_impls,
                   MessageQueueManager* const message_queue_manager,
                   const bool already_deleted, ResultCall result_call)
-      : PageOperation("StoryProviderImpl::DeleteStoryCall", page,
-                      std::move(result_call)),
+      : Operation("StoryProviderImpl::DeleteStoryCall", std::move(result_call)),
+        session_storage_(session_storage),
         story_id_(story_id),
         story_controller_impls_(story_controller_impls),
         message_queue_manager_(message_queue_manager),
@@ -318,19 +141,13 @@ class StoryProviderImpl::DeleteStoryCall : public PageOperation<> {
 
     if (already_deleted_) {
       Teardown(flow);
-
     } else {
-      page()->Delete(to_array(MakeStoryKey(story_id_)),
-                     Protect([this, flow](ledger::Status status) {
-                       // Deleting a key that doesn't exist is OK, not
-                       // KEY_NOT_FOUND.
-                       if (status != ledger::Status::OK) {
-                         FXL_LOG(ERROR) << trace_name() << " "
-                                        << " Page.Delete() " << status;
-                       }
-
-                       Teardown(flow);
-                     }));
+      session_storage_->DeleteStory(story_id_)->Then(
+          [this, weak_this = GetWeakPtr(), flow] {
+            if (!weak_this)
+              return;
+            Teardown(flow);
+          });
     }
   }
 
@@ -358,11 +175,12 @@ class StoryProviderImpl::DeleteStoryCall : public PageOperation<> {
       message_queue_manager_->DeleteNamespace(
           EncodeModuleComponentNamespace(story_id_), [flow] {});
 
-      // TODO(mesch): We must delete the story page too.
+      // TODO(mesch): We must delete the story page too. MI4-1002
     });
   }
 
  private:
+  SessionStorage* const session_storage_;  // Not owned.
   const fidl::StringPtr story_id_;
   StoryControllerImplMap* const story_controller_impls_;
   MessageQueueManager* const message_queue_manager_;
@@ -377,10 +195,12 @@ class StoryProviderImpl::DeleteStoryCall : public PageOperation<> {
 class StoryProviderImpl::GetControllerCall : public Operation<> {
  public:
   GetControllerCall(StoryProviderImpl* const story_provider_impl,
+                    SessionStorage* const session_storage,
                     fidl::StringPtr story_id,
                     fidl::InterfaceRequest<StoryController> request)
       : Operation("StoryProviderImpl::GetControllerCall", [] {}),
         story_provider_impl_(story_provider_impl),
+        session_storage_(session_storage),
         story_id_(story_id),
         request_(std::move(request)) {}
 
@@ -397,32 +217,26 @@ class StoryProviderImpl::GetControllerCall : public Operation<> {
       return;
     }
 
-    operation_queue_.Add(MakeGetStoryDataCall(
-        story_provider_impl_->page(), story_id_,
+    session_storage_->GetStoryData(story_id_)->Then(
         [this, flow](modular_private::StoryDataPtr story_data) {
-          if (story_data) {
-            story_data_ = std::move(story_data);
-            Cont1(flow);
+          if (!story_data) {
+            return;
           }
-        }));
-  }
-
-  void Cont1(FlowToken flow) {
-    struct StoryControllerImplContainer container;
-    container.impl = std::make_unique<StoryControllerImpl>(
-        story_id_, story_provider_impl_->ledger_client_,
-        *story_data_->story_page_id, story_provider_impl_);
-    container.impl->Connect(std::move(request_));
-    container.current_info = CloneOptional(story_data_->story_info);
-    story_provider_impl_->story_controller_impls_.emplace(story_id_,
-                                                          std::move(container));
+          struct StoryControllerImplContainer container;
+          container.impl = std::make_unique<StoryControllerImpl>(
+              story_id_, session_storage_->ledger_client(),
+              *story_data->story_page_id, story_provider_impl_);
+          container.impl->Connect(std::move(request_));
+          container.current_info = CloneOptional(story_data->story_info);
+          story_provider_impl_->story_controller_impls_.emplace(
+              story_id_, std::move(container));
+        });
   }
 
   StoryProviderImpl* const story_provider_impl_;  // not owned
+  SessionStorage* const session_storage_;         // not owned
   const fidl::StringPtr story_id_;
   fidl::InterfaceRequest<StoryController> request_;
-
-  modular_private::StoryDataPtr story_data_;
 
   // Sub operations run in this queue.
   OperationQueue operation_queue_;
@@ -443,16 +257,17 @@ class StoryProviderImpl::StopAllStoriesCall : public Operation<> {
     FlowToken flow{this};
 
     for (auto& it : story_provider_impl_->story_controller_impls_) {
-      // Each callback has a copy of |flow| which only goes out-of-scope once
-      // the story corresponding to |it| stops.
+      // Each callback has a copy of |flow| which only goes out-of-scope
+      // once the story corresponding to |it| stops.
       //
       // TODO(mesch): If a DeleteCall is executing in front of
       // StopForTeardown(), then the StopCall in StopForTeardown() never
       // executes because the StoryController instance is deleted after the
-      // DeleteCall finishes. This will then block unless it runs in a timeout.
+      // DeleteCall finishes. This will then block unless it runs in a
+      // timeout.
       it.second.impl->StopForTeardown([this, story_id = it.first, flow] {
-        // It is okay to erase story_id because story provider binding has been
-        // closed and this callback cannot be invoked synchronously.
+        // It is okay to erase story_id because story provider binding has
+        // been closed and this callback cannot be invoked synchronously.
         story_provider_impl_->story_controller_impls_.erase(story_id);
       });
     }
@@ -476,7 +291,8 @@ class StoryProviderImpl::StopStoryShellCall : public Operation<> {
     FlowToken flow{this};
     if (story_provider_impl_->preloaded_story_shell_) {
       // Calling Teardown() below will branch |flow| into normal and timeout
-      // paths. |flow| must go out of scope when either of the paths finishes.
+      // paths. |flow| must go out of scope when either of the paths
+      // finishes.
       FlowTokenHolder branch{flow};
       story_provider_impl_->preloaded_story_shell_->story_shell_app->Teardown(
           kBasicTimeout,
@@ -496,12 +312,15 @@ struct StoryProviderImpl::LinkPeer {
 
 class StoryProviderImpl::GetLinkPeerCall : public Operation<> {
  public:
-  GetLinkPeerCall(StoryProviderImpl* const impl, fidl::StringPtr story_id,
+  GetLinkPeerCall(StoryProviderImpl* const impl,
+                  SessionStorage* const session_storage,
+                  fidl::StringPtr story_id,
                   fidl::VectorPtr<fidl::StringPtr> module_path,
                   fidl::StringPtr link_name,
                   fidl::InterfaceRequest<Link> request)
       : Operation("StoryProviderImpl::GetLinkPeerCall", [] {}),
         impl_(impl),
+        session_storage_(session_storage),
         story_id_(story_id),
         module_path_(std::move(module_path)),
         link_name_(link_name),
@@ -511,44 +330,41 @@ class StoryProviderImpl::GetLinkPeerCall : public Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    operation_queue_.Add(MakeGetStoryDataCall(
-        impl_->page(), story_id_,
+    session_storage_->GetStoryData(story_id_)->Then(
         [this, flow](modular_private::StoryDataPtr story_data) {
-          if (story_data) {
-            story_data_ = std::move(story_data);
-            Cont(flow);
+          if (!story_data) {
+            // The InterfaceRequest<Link> will go out of scope, and the channel
+            // closed with an error.
+            return;
           }
-        }));
+          auto link_peer = std::make_unique<LinkPeer>();
+
+          link_peer->ledger =
+              session_storage_->ledger_client()->GetLedgerClientPeer();
+
+          auto link_path = LinkPath::New();
+          link_path->module_path = module_path_.Clone();
+          link_path->link_name = link_name_;
+
+          link_peer->link = std::make_unique<LinkImpl>(
+              link_peer->ledger.get(), CloneStruct(*story_data->story_page_id),
+              std::move(*link_path), nullptr);
+
+          link_peer->link->Connect(std::move(request_));
+
+          impl_->link_peers_.emplace_back(std::move(link_peer));
+
+          // TODO(mesch): Set an orphaned handler so that link peers get dropped
+          // earlier than at logout.
+        });
   }
 
-  void Cont(FlowToken flow) {
-    auto link_peer = std::make_unique<LinkPeer>();
-
-    link_peer->ledger = impl_->ledger_client_->GetLedgerClientPeer();
-
-    auto link_path = LinkPath::New();
-    link_path->module_path = module_path_.Clone();
-    link_path->link_name = link_name_;
-
-    link_peer->link = std::make_unique<LinkImpl>(
-        link_peer->ledger.get(), CloneStruct(*story_data_->story_page_id),
-        std::move(*link_path), nullptr);
-
-    link_peer->link->Connect(std::move(request_));
-
-    impl_->link_peers_.emplace_back(std::move(link_peer));
-
-    // TODO(mesch): Set an orphaned handler so that link peers get dropped
-    // earlier than at logout.
-  }
-
-  StoryProviderImpl* const impl_;  // not owned
+  StoryProviderImpl* const impl_;          // not owned
+  SessionStorage* const session_storage_;  // not owned
   const fidl::StringPtr story_id_;
   const fidl::VectorPtr<fidl::StringPtr> module_path_;
   const fidl::StringPtr link_name_;
   fidl::InterfaceRequest<Link> request_;
-
-  modular_private::StoryDataPtr story_data_;
 
   // Sub operations run in this queue.
   OperationQueue operation_queue_;
@@ -558,17 +374,15 @@ class StoryProviderImpl::GetLinkPeerCall : public Operation<> {
 
 StoryProviderImpl::StoryProviderImpl(
     Scope* const user_scope, std::string device_id,
-    LedgerClient* const ledger_client, LedgerPageId root_page_id,
-    AppConfig story_shell, const ComponentContextInfo& component_context_info,
+    SessionStorage* const session_storage, AppConfig story_shell,
+    const ComponentContextInfo& component_context_info,
     FocusProviderPtr focus_provider,
     UserIntelligenceProvider* const user_intelligence_provider,
     ModuleResolver* const module_resolver,
     PresentationProvider* const presentation_provider, const bool test)
-    : PageClient("StoryProviderImpl", ledger_client, std::move(root_page_id),
-                 kStoryKeyPrefix),
-      user_scope_(user_scope),
+    : user_scope_(user_scope),
+      session_storage_(session_storage),
       device_id_(std::move(device_id)),
-      ledger_client_(ledger_client),
       story_shell_(std::move(story_shell)),
       test_(test),
       component_context_info_(component_context_info),
@@ -578,6 +392,21 @@ StoryProviderImpl::StoryProviderImpl(
       focus_provider_(std::move(focus_provider)),
       focus_watcher_binding_(this),
       weak_factory_(this) {
+  session_storage_->set_on_story_deleted(
+      [weak_ptr = weak_factory_.GetWeakPtr()](fidl::StringPtr story_id) {
+        if (!weak_ptr)
+          return;
+        weak_ptr->OnStoryStorageDeleted(std::move(story_id));
+      });
+  session_storage_->set_on_story_updated(
+      [weak_ptr = weak_factory_.GetWeakPtr()](
+          fidl::StringPtr story_id, modular_private::StoryData story_data) {
+        if (!weak_ptr)
+          return;
+        weak_ptr->OnStoryStorageUpdated(std::move(story_id),
+                                        std::move(story_data));
+      });
+
   focus_provider_->Watch(focus_watcher_binding_.NewBinding());
   if (!test_) {
     // As an optimization, since app startup time is long, we optimistically
@@ -599,9 +428,9 @@ void StoryProviderImpl::StopAllStories(const std::function<void()>& callback) {
 
 void StoryProviderImpl::Teardown(const std::function<void()>& callback) {
   // Closing all binding to this instance ensures that no new messages come
-  // in, though previous messages need to be processed. The stopping of stories
-  // is done on |operation_queue_| since that must strictly happen after all
-  // pending messgages have been processed.
+  // in, though previous messages need to be processed. The stopping of
+  // stories is done on |operation_queue_| since that must strictly happen
+  // after all pending messgages have been processed.
   bindings_.CloseAll();
   operation_queue_.Add(new StopAllStoriesCall(this, [] {}));
   operation_queue_.Add(new StopStoryShellCall(this, callback));
@@ -635,9 +464,9 @@ std::unique_ptr<AppClient<Lifecycle>> StoryProviderImpl::StartStoryShell(
   proxies_.Connect(std::move(preloaded_story_shell->story_shell_view),
                    std::move(request));
 
-  // Kickoff another StoryShell, to make it faster for next story. We optimize
-  // even further by delaying the loading of the next story shell instance by
-  // waiting a few seconds.
+  // Kickoff another StoryShell, to make it faster for next story. We
+  // optimize even further by delaying the loading of the next story shell
+  // instance by waiting a few seconds.
   if (!test_) {
     MaybeLoadStoryShellDelayed();
   }
@@ -668,7 +497,8 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
   auto story_shell_app = std::make_unique<AppClient<Lifecycle>>(
       user_scope_->GetLauncher(), CloneStruct(story_shell_));
 
-  // CreateView must be called in order to get the Flutter application to run
+  // CreateView must be called in order to get the Flutter application to
+  // run
 
   views_v1::ViewProviderPtr view_provider;
   story_shell_app->services().ConnectToService(view_provider.NewRequest());
@@ -681,28 +511,32 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
           std::move(story_shell_app), std::move(story_shell_view)});
 }
 
-void StoryProviderImpl::SetStoryInfoExtra(fidl::StringPtr story_id,
-                                          fidl::StringPtr name,
-                                          fidl::StringPtr value,
-                                          const std::function<void()>& done) {
-  auto mutate = [name, value](modular_private::StoryData* const story_data) {
-    StoryInfoExtraEntry entry;
-    entry.key = name;
-    entry.value = value;
-    story_data->story_info.extra.push_back(std::move(entry));
-    return true;
-  };
+void StoryProviderImpl::SetStoryInfoExtra(
+    fidl::StringPtr story_id, fidl::StringPtr name, fidl::StringPtr value,
+    const std::function<void()>& callback) {
+  StoryInfoExtraEntry entry;
+  entry.key = name;
+  entry.value = value;
 
-  operation_queue_.Add(new MutateStoryDataCall(page(), story_id, mutate, done));
+  fidl::VectorPtr<StoryInfoExtraEntry> entries;
+  entries.push_back(std::move(entry));
+
+  auto on_run = Future<>::Create();
+  auto done = on_run->Then(fxl::MakeCopyable(
+      [this, story_id, entries = std::move(entries)]() mutable {
+        session_storage_->UpdateStoryInfoExtra(story_id, std::move(entries));
+      }));
+  operation_queue_.Add(WrapFutureAsOperation(
+      on_run, done, callback, "StoryProviderImpl::SetStoryInfoExtra"));
 };
 
 // |StoryProvider|
 void StoryProviderImpl::CreateStory(fidl::StringPtr module_url,
                                     CreateStoryCallback callback) {
   FXL_LOG(INFO) << "CreateStory() " << module_url;
-  operation_queue_.Add(new CreateStoryCall(ledger_client_->ledger(), page(),
-                                           this, module_url, nullptr, nullptr,
-                                           callback));
+  operation_queue_.Add(new CreateStoryCall(session_storage_, this, module_url,
+                                           nullptr /* extra_info */,
+                                           nullptr /* root_json */, callback));
 }
 
 // |StoryProvider|
@@ -710,16 +544,16 @@ void StoryProviderImpl::CreateStoryWithInfo(
     fidl::StringPtr module_url, fidl::VectorPtr<StoryInfoExtraEntry> extra_info,
     fidl::StringPtr root_json, CreateStoryWithInfoCallback callback) {
   FXL_LOG(INFO) << "CreateStoryWithInfo() " << module_url << " " << root_json;
-  operation_queue_.Add(new CreateStoryCall(
-      ledger_client_->ledger(), page(), this, module_url, std::move(extra_info),
-      std::move(root_json), callback));
+  operation_queue_.Add(new CreateStoryCall(session_storage_, this, module_url,
+                                           std::move(extra_info),
+                                           std::move(root_json), callback));
 }
 
 // |StoryProvider|
 void StoryProviderImpl::DeleteStory(fidl::StringPtr story_id,
                                     DeleteStoryCallback callback) {
   operation_queue_.Add(
-      new DeleteStoryCall(page(), story_id, &story_controller_impls_,
+      new DeleteStoryCall(session_storage_, story_id, &story_controller_impls_,
                           component_context_info_.message_queue_manager,
                           false /* already_deleted */, callback));
 }
@@ -727,12 +561,20 @@ void StoryProviderImpl::DeleteStory(fidl::StringPtr story_id,
 // |StoryProvider|
 void StoryProviderImpl::GetStoryInfo(fidl::StringPtr story_id,
                                      GetStoryInfoCallback callback) {
-  operation_queue_.Add(MakeGetStoryDataCall(
-      page(), story_id, [callback](modular_private::StoryDataPtr story_data) {
-        callback(story_data
-                     ? fidl::MakeOptional(std::move(story_data->story_info))
-                     : nullptr);
-      }));
+  auto on_run = Future<>::Create();
+  auto done =
+      on_run
+          ->AsyncMap([this, story_id] {
+            return session_storage_->GetStoryData(story_id);
+          })
+          ->Map([](modular_private::StoryDataPtr story_data) -> StoryInfoPtr {
+            if (!story_data) {
+              return nullptr;
+            }
+            return fidl::MakeOptional(std::move(story_data->story_info));
+          });
+  operation_queue_.Add(WrapFutureAsOperation(
+      on_run, done, callback, "StoryProviderImpl::GetStoryInfo"));
 }
 
 // Called by StoryControllerImpl on behalf of ModuleContextImpl
@@ -758,23 +600,26 @@ void StoryProviderImpl::NotifyStoryStateChange(fidl::StringPtr story_id,
 // |StoryProvider|
 void StoryProviderImpl::GetController(
     fidl::StringPtr story_id, fidl::InterfaceRequest<StoryController> request) {
-  operation_queue_.Add(
-      new GetControllerCall(this, story_id, std::move(request)));
+  operation_queue_.Add(new GetControllerCall(this, session_storage_, story_id,
+                                             std::move(request)));
 }
 
 // |StoryProvider|
 void StoryProviderImpl::PreviousStories(PreviousStoriesCallback callback) {
-  operation_queue_.Add(new ReadAllStoryDataCall(
-      page(), kStoryKeyPrefix, XdrStoryData,
-      [callback](fidl::VectorPtr<modular_private::StoryData> data) {
-        auto result = fidl::VectorPtr<modular::StoryInfo>::New(0);
+  auto on_run = Future<>::Create();
+  auto done =
+      on_run->AsyncMap([this] { return session_storage_->GetAllStoryData(); })
+          ->Map([](fidl::VectorPtr<modular_private::StoryData> all_story_data) {
+            FXL_DCHECK(all_story_data);
+            auto result = fidl::VectorPtr<modular::StoryInfo>::New(0);
 
-        for (auto& story_data : *data) {
-          result.push_back(std::move(story_data.story_info));
-        }
-
-        callback(std::move(result));
-      }));
+            for (auto& story_data : *all_story_data) {
+              result.push_back(std::move(story_data.story_info));
+            }
+            return result;
+          });
+  operation_queue_.Add(WrapFutureAsOperation(
+      on_run, done, callback, "StoryProviderImpl::PreviousStories"));
 }
 
 // |StoryProvider|
@@ -788,41 +633,35 @@ void StoryProviderImpl::RunningStories(RunningStoriesCallback callback) {
   callback(std::move(stories));
 }
 
-// |PageClient|
-void StoryProviderImpl::OnPageChange(const std::string& /*key*/,
-                                     const std::string& value) {
-  auto story_data = modular_private::StoryData::New();
-  if (!XdrRead(value, &story_data, XdrStoryData)) {
-    return;
-  }
-
-  // HACK(jimbe) We don't have the page and it's expensive to get it, so just
-  // mark it as STOPPED. We know it's not running or we'd have a
+void StoryProviderImpl::OnStoryStorageUpdated(
+    fidl::StringPtr story_id, modular_private::StoryData story_data) {
+  // HACK(jimbe) We don't have the page and it's expensive to get it, so
+  // just mark it as STOPPED. We know it's not running or we'd have a
   // StoryController.
   //
   // If we have a StoryControllerImpl for this story id, update our cached
   // StoryInfo.
   StoryState state = StoryState::STOPPED;
-  auto i = story_controller_impls_.find(story_data->story_info.id);
+  auto i = story_controller_impls_.find(story_data.story_info.id);
   if (i != story_controller_impls_.end()) {
     state = i->second.impl->GetStoryState();
-    i->second.current_info = CloneOptional(story_data->story_info);
+    i->second.current_info = CloneOptional(story_data.story_info);
   }
 
-  NotifyStoryWatchers(&story_data->story_info, state);
+  NotifyStoryWatchers(&story_data.story_info, state);
 }
 
-// |PageClient|
-void StoryProviderImpl::OnPageDelete(const std::string& key) {
-  // Extract the story ID from the ledger key. cf. kStoryKeyPrefix.
-  const fidl::StringPtr story_id = key.substr(sizeof(kStoryKeyPrefix) - 1);
-
+void StoryProviderImpl::OnStoryStorageDeleted(fidl::StringPtr story_id) {
   for (const auto& i : watchers_.ptrs()) {
     (*i)->OnDelete(story_id);
   }
 
+  // NOTE: DeleteStoryCall is used here, as well as in DeleteStory(). In this
+  // case, either another device deleted the story, or we did and the Ledger is
+  // now notifying us. In this case, we pass |already_deleted = true| so that we
+  // don't ask to delete the story data again.
   operation_queue_.Add(
-      new DeleteStoryCall(page(), story_id, &story_controller_impls_,
+      new DeleteStoryCall(session_storage_, story_id, &story_controller_impls_,
                           component_context_info_.message_queue_manager,
                           true /* already_deleted */, [] {}));
 }
@@ -844,15 +683,16 @@ void StoryProviderImpl::OnFocusChange(FocusInfoPtr info) {
     return;
   }
 
-  // Last focus time is recorded in the ledger, and story provider watchers are
-  // notified through the page watcher.
-  auto mutate = [time = zx_clock_get(ZX_CLOCK_UTC)](
-                    modular_private::StoryData* const story_data) {
-    story_data->story_info.last_focus_time = time;
-    return true;
-  };
-  operation_queue_.Add(
-      new MutateStoryDataCall(page(), info->focused_story_id, mutate, [] {}));
+  // Last focus time is recorded in the ledger, and story provider watchers
+  // are notified through the page watcher.
+  auto on_run = Future<>::Create();
+  auto done = on_run->Then([this, story_id = info->focused_story_id] {
+    session_storage_->UpdateLastFocusedTimestamp(story_id,
+                                                 zx_clock_get(ZX_CLOCK_UTC));
+  });
+  std::function<void()> callback = [] {};
+  operation_queue_.Add(WrapFutureAsOperation(
+      on_run, done, callback, "StoryProviderImpl::OnFocusChange"));
 }
 
 void StoryProviderImpl::NotifyStoryWatchers(const StoryInfo* const story_info,
@@ -865,8 +705,9 @@ void StoryProviderImpl::NotifyStoryWatchers(const StoryInfo* const story_info,
 void StoryProviderImpl::GetLinkPeer(
     fidl::StringPtr story_id, fidl::VectorPtr<fidl::StringPtr> module_path,
     fidl::StringPtr link_name, fidl::InterfaceRequest<Link> request) {
-  operation_queue_.Add(new GetLinkPeerCall(
-      this, story_id, std::move(module_path), link_name, std::move(request)));
+  operation_queue_.Add(new GetLinkPeerCall(this, session_storage_, story_id,
+                                           std::move(module_path), link_name,
+                                           std::move(request)));
 }
 
 void StoryProviderImpl::GetPresentation(
@@ -877,8 +718,8 @@ void StoryProviderImpl::GetPresentation(
 }
 
 void StoryProviderImpl::WatchVisualState(
-      fidl::StringPtr story_id,
-      fidl::InterfaceHandle<StoryVisualStateWatcher> watcher) {
+    fidl::StringPtr story_id,
+    fidl::InterfaceHandle<StoryVisualStateWatcher> watcher) {
   presentation_provider_->WatchVisualState(std::move(story_id),
                                            std::move(watcher));
 }

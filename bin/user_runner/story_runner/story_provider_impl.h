@@ -11,6 +11,7 @@
 
 #include <ledger/cpp/fidl.h>
 #include <modular/cpp/fidl.h>
+#include <modular_private/cpp/fidl.h>
 #include <presentation/cpp/fidl.h>
 #include <views_v1_token/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
@@ -33,13 +34,13 @@
 namespace modular {
 class PresentationProvider;
 class Resolver;
+class SessionStorage;
 class StoryControllerImpl;
 
-class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
+class StoryProviderImpl : StoryProvider, FocusWatcher {
  public:
   StoryProviderImpl(Scope* user_scope, std::string device_id,
-                    LedgerClient* ledger_client, LedgerPageId page_id,
-                    AppConfig story_shell,
+                    SessionStorage* session_storage, AppConfig story_shell,
                     const ComponentContextInfo& component_context_info,
                     FocusProviderPtr focus_provider,
                     UserIntelligenceProvider* user_intelligence_provider,
@@ -85,8 +86,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
       fidl::InterfaceRequest<views_v1_token::ViewOwner> request);
 
   // Called by StoryControllerImpl.
-  void SetStoryInfoExtra(fidl::StringPtr story_id,
-                         fidl::StringPtr name,
+  void SetStoryInfoExtra(fidl::StringPtr story_id, fidl::StringPtr name,
                          fidl::StringPtr value,
                          const std::function<void()>& done);
 
@@ -105,9 +105,8 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   void GetPresentation(
       fidl::StringPtr story_id,
       fidl::InterfaceRequest<presentation::Presentation> request);
-  void WatchVisualState(
-      fidl::StringPtr story_id,
-      fidl::InterfaceHandle<StoryVisualStateWatcher> watcher);
+  void WatchVisualState(fidl::StringPtr story_id,
+                        fidl::InterfaceHandle<StoryVisualStateWatcher> watcher);
 
  private:
   // |StoryProvider|
@@ -146,14 +145,13 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
                    fidl::StringPtr link_name,
                    fidl::InterfaceRequest<Link> request) override;
 
-  // |PageClient|
-  void OnPageChange(const std::string& key, const std::string& value) override;
-
-  // |PageClient|
-  void OnPageDelete(const std::string& key) override;
-
   // |FocusWatcher|
   void OnFocusChange(FocusInfoPtr info) override;
+
+  // Called by *session_storage_.
+  void OnStoryStorageDeleted(fidl::StringPtr story_id);
+  void OnStoryStorageUpdated(fidl::StringPtr story_id,
+                             modular_private::StoryData story_data);
 
   // Called by ContextHandler.
   void OnContextChange();
@@ -168,12 +166,10 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
 
   Scope* const user_scope_;
 
+  SessionStorage* session_storage_;  // Not owned.
+
   // Unique ID generated for this user/device combination.
   const std::string device_id_;
-
-  // Story provider writes story records to the root page, and creates
-  // new pages for stories.
-  LedgerClient* const ledger_client_;
 
   // The bindings for this instance.
   fidl::BindingSet<StoryProvider> bindings_;
@@ -213,8 +209,8 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   const ComponentContextInfo component_context_info_;
 
   UserIntelligenceProvider* const user_intelligence_provider_;  // Not owned.
-  ModuleResolver* const module_resolver_;  // Not owned.
-  PresentationProvider* const presentation_provider_;  // Not owned.
+  ModuleResolver* const module_resolver_;                       // Not owned.
+  PresentationProvider* const presentation_provider_;           // Not owned.
 
   // When a story gets created, or when it gets focused on this device, we write
   // a record of the current context in the story page. So we need to watch the

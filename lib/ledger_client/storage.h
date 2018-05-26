@@ -64,7 +64,6 @@ constexpr char kPerDeviceKeyPrefix[] = "PerDevice/";
 //    key. The set of ID values under each key is defined by the arguments of
 //    factory functions for the keys:
 //
-std::string MakeStoryKey(const fidl::StringPtr& story_id);
 std::string MakeDeviceKey(const fidl::StringPtr& device_name);
 std::string MakePerDeviceKey(const fidl::StringPtr& device_name);
 std::string MakeFocusKey(const fidl::StringPtr& device_name);
