@@ -35,33 +35,20 @@ pub enum MessageNumber {
 #[derive(Debug)]
 pub struct Config {
     pub role: Role,
-    pub sta_addr: [u8; 6],
-    pub sta_rsne: Rsne,
-    pub peer_addr: [u8; 6],
-    pub peer_rsne: Rsne,
+    pub s_addr: [u8; 6],
+    pub s_rsne: Rsne,
+    pub a_addr: [u8; 6],
+    pub a_rsne: Rsne,
 }
 
 impl Config {
     pub fn new(
-        role: Role, sta_addr: [u8; 6], sta_rsne: Rsne, peer_addr: [u8; 6], peer_rsne: Rsne
+        role: Role, s_addr: [u8; 6], s_rsne: Rsne, a_addr: [u8; 6], a_rsne: Rsne
     ) -> Result<Config, failure::Error> {
         // TODO(hahnr): Validate configuration for:
         // (1) Correct RSNE subset
         // (2) Correct AKM and Cipher Suite configuration
-        Ok(Config {
-            role,
-            sta_addr,
-            sta_rsne,
-            peer_addr,
-            peer_rsne,
-        })
-    }
-
-    pub fn negotiated_rsne(&self) -> &Rsne {
-        match self.role {
-            Role::Authenticator => &self.peer_rsne,
-            Role::Supplicant => &self.sta_rsne,
-        }
+        Ok(Config { role, s_addr, s_rsne, a_addr, a_rsne })
     }
 }
 
@@ -102,7 +89,7 @@ impl Fourway {
         // (2) Decrypt key data.
         let mut plaintext = None;
         if frame.key_info.encrypted_key_data() {
-            let rsne = self.cfg.negotiated_rsne();
+            let rsne = &self.cfg.s_rsne;
             let akm = &rsne.akm_suites[0];
             plaintext = match self.ptk.as_ref() {
                 // Return error if key data is encrypted but the PTK was not yet derived.
@@ -144,7 +131,7 @@ impl Fourway {
         }.map_err(|e| failure::Error::from(e))?;
 
         // IEEE Std 802.11-2016, 12.7.2 b.1)
-        let rsne = self.cfg.negotiated_rsne();
+        let rsne = &self.cfg.s_rsne;
         let expected_version = derive_key_descriptor_version(rsne, key_descriptor);
         if frame.key_info.key_descriptor_version() != expected_version {
             return Err(Error::UnsupportedKeyDescriptorVersion(
@@ -184,7 +171,7 @@ impl Fourway {
         // IEEE Std 802.11-2016, 12.7.2 c)
         match msg_no {
             MessageNumber::Message1 | MessageNumber::Message3 => {
-                let rsne = self.cfg.negotiated_rsne();
+                let rsne = &self.cfg.s_rsne;
                 let pairwise = &rsne.pairwise_cipher_suites[0];
                 let tk_bits = pairwise
                     .tk_bits()
@@ -233,7 +220,7 @@ impl Fourway {
         // Optional in the 3rd message. Must be zero in others.
 
         // IEEE Std 802.11-2016, 12.7.2 h)
-        let rsne = self.cfg.negotiated_rsne();
+        let rsne = &self.cfg.s_rsne;
         let akm = &rsne.akm_suites[0];
         let mic_bytes = akm.mic_bytes()
             .ok_or(Error::UnsupportedAkmSuite)

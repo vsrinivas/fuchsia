@@ -37,6 +37,7 @@ pub const EAP_SUITEB_SHA384: u8 = 12;
 pub const FT_EAP_SHA384: u8 = 13;
 // 14-255 - Reserved.
 
+#[derive(PartialOrd, PartialEq)]
 pub struct Akm {
     pub oui: Bytes,
     pub suite_type: u8,

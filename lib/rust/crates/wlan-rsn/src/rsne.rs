@@ -17,7 +17,7 @@ macro_rules! if_remaining (
 pub const ID: u8 = 48;
 
 // IEEE 802.11-2016, 9.4.2.25.1
-#[derive(Default, Debug)]
+#[derive(Default, Debug, PartialOrd, PartialEq)]
 pub struct Rsne {
     pub element_id: u8,
     pub length: u8,

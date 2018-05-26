@@ -12,6 +12,8 @@ use key::gtk::Gtk;
 use key::ptk::Ptk;
 use rsna::{SecAssocResult, SecAssocUpdate};
 use std::rc::Rc;
+use key_data;
+use rsne::Rsne;
 
 #[derive(Default)]
 struct PtkInitState {}
@@ -23,14 +25,14 @@ impl PtkInitState {
     ) -> Result<(eapol::KeyFrame, Ptk), failure::Error> {
         let anonce = &msg1.key_nonce;
         let snonce = shared.nonce_rdr.next();
-        let rsne = shared.cfg.negotiated_rsne();
+        let rsne = &shared.cfg.s_rsne;
         let akm = &rsne.akm_suites[0];
         let cipher = &rsne.pairwise_cipher_suites[0];
 
         let ptk = Ptk::new(
             &shared.pmk[..],
-            &shared.cfg.peer_addr,
-            &shared.cfg.sta_addr,
+            &shared.cfg.a_addr,
+            &shared.cfg.s_addr,
             &anonce[..],
             &snonce[..],
             akm,
@@ -56,10 +58,35 @@ impl PtkInitState {
 
 impl GtkInitState {
     fn on_message_3(
-        &self, _shared: &mut SharedState, _msg3: &eapol::KeyFrame, _plain_data: &[u8]
+        &self, shared: &mut SharedState, msg3: &eapol::KeyFrame, _plain_data: &[u8]
     ) -> Result<(eapol::KeyFrame, Gtk), failure::Error> {
-        // TODO(hahnr): Implement.
-        unimplemented!()
+        shared.key_replay_counter = msg3.key_replay_counter;
+
+        let mut gtk: Option<key_data::kde::Gtk> = None;
+        let mut rsne: Option<Rsne> = None;
+        let mut _second_rsne: Option<Rsne> = None;
+        let elements = key_data::extract_elements(&msg3.key_data[..])?;
+        for ele in elements {
+            match (ele, rsne.as_ref()) {
+                (key_data::Element::Gtk(_, e), _) => gtk = Some(e),
+                (key_data::Element::Rsne(e), None) => rsne = Some(e),
+                (key_data::Element::Rsne(e), Some(_)) => _second_rsne = Some(e),
+                _ => (),
+            }
+        }
+
+        // Proceed if key data held a GTK and RSNE.
+        match (gtk, rsne) {
+            (Some(gtk), Some(rsne)) => {
+                if &rsne == &shared.cfg.a_rsne {
+                    let msg4 = self.create_message_4(msg3)?;
+                    Ok((msg4, Gtk::from_gtk(gtk.gtk)))
+                } else {
+                    Err(Error::InvalidKeyDataRsne.into())
+                }
+            },
+            _ => Err(Error::InvalidKeyDataContent.into())
+        }
     }
 
     fn create_message_4(&self, _msg3: &eapol::KeyFrame) -> Result<eapol::KeyFrame, failure::Error> {
@@ -159,7 +186,7 @@ pub struct Supplicant {
 
 impl Supplicant {
     pub fn new(cfg: Rc<fourway::Config>, pmk: Vec<u8>) -> Result<Self, failure::Error> {
-        let nonce_rdr = NonceReader::new(cfg.sta_addr)?;
+        let nonce_rdr = NonceReader::new(cfg.s_addr)?;
         Ok(Supplicant {
             state: State::PtkInit(PtkInitState {}),
             shared: SharedState {

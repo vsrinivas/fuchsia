@@ -123,6 +123,8 @@ pub enum Error {
     InvalidRsc,
     #[fail(display = "invalid key data; must not be zero")]
     EmptyKeyData,
+    #[fail(display = "invalid key data")]
+    InvalidKeyDataContent,
     #[fail(display = "invalid key data length; doesn't match with key data")]
     InvalidKeyDataLength,
     #[fail(display = "cannot validate MIC; PTK not yet derived")]
@@ -141,6 +143,8 @@ pub enum Error {
     PmksaNotEstablished,
     #[fail(display = "invalid nonce size; expected 32 bytes, found: {:?}", _0)]
     InvalidNonceSize(usize),
+    #[fail(display = "invalid key data; expected negotiated RSNE")]
+    InvalidKeyDataRsne,
 }
 
 impl From<std::io::Error> for Error {

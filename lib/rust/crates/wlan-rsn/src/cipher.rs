@@ -33,6 +33,7 @@ pub const BIP_GMAC_256: u8 = 12;
 pub const BIP_CMAC_256: u8 = 13;
 // 14-255 - Reserved.
 
+#[derive(PartialOrd, PartialEq)]
 pub struct Cipher {
     pub oui: Bytes,
     pub suite_type: u8,
