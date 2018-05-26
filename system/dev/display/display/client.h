@@ -111,7 +111,7 @@ public:
     ~Client();
     zx_status_t Init(zx::channel* client_handle);
 
-    void OnDisplaysChanged(fbl::unique_ptr<DisplayConfig>* displays_added,
+    void OnDisplaysChanged(uint64_t* displays_added,
                            uint32_t added_count,
                            uint64_t* displays_removed,
                            uint32_t removed_count);
@@ -139,6 +139,8 @@ private:
                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleDestroyLayer(const fuchsia_display_ControllerDestroyLayerRequest* req,
                             fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+    void HandleSetDisplayMode(const fuchsia_display_ControllerSetDisplayModeRequest* req,
+                              fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleSetDisplayLayers(const fuchsia_display_ControllerSetDisplayLayersRequest* req,
                                 fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleSetLayerPrimaryConfig(
@@ -220,7 +222,7 @@ public:
                          void* out_buf, size_t out_len, size_t* actual);
     void DdkRelease();
 
-    zx_status_t OnDisplaysChanged(const DisplayInfo** displays_added, uint32_t added_count,
+    zx_status_t OnDisplaysChanged(const uint64_t* displays_added, uint32_t added_count,
                                   const uint64_t* displays_removed, uint32_t removed_count);
     void SetOwnership(bool is_owner);
     void ReapplyConfig();

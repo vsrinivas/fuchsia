@@ -36,6 +36,7 @@ zx_status_t decode_message(fidl::Message* msg) {
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetDisplayImage);
     SELECT_TABLE_CASE(fuchsia_display_ControllerCreateLayer);
     SELECT_TABLE_CASE(fuchsia_display_ControllerDestroyLayer);
+    SELECT_TABLE_CASE(fuchsia_display_ControllerSetDisplayMode);
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetDisplayLayers);
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerPrimaryConfig);
     SELECT_TABLE_CASE(fuchsia_display_ControllerSetLayerPrimaryPosition);
@@ -70,6 +71,29 @@ bool frame_contains(const frame_t& a, const frame_t& b) {
 static constexpr uint64_t kMaxLayers = 65536;
 
 static constexpr uint32_t kInvalidLayerType = UINT32_MAX;
+
+uint32_t calculate_refresh_rate_e2(const edid::timing_params_t params) {
+    double total_pxls =
+            (params.horizontal_addressable + params.horizontal_blanking) *
+            (params.vertical_addressable + params.vertical_blanking);
+    double pixel_clock_hz = params.pixel_freq_10khz * 1000 * 10;
+    return static_cast<uint32_t>(round(100 * pixel_clock_hz / total_pxls));
+}
+
+void populate_display_mode(const edid::timing_params_t params, display_mode_t* mode) {
+    mode->pixel_clock_10khz = params.pixel_freq_10khz;
+    mode->h_addressable = params.horizontal_addressable;
+    mode->h_front_porch = params.horizontal_front_porch;
+    mode->h_sync_pulse = params.horizontal_sync_pulse;
+    mode->h_blanking = params.horizontal_blanking;
+    mode->v_addressable = params.vertical_addressable;
+    mode->v_front_porch = params.vertical_front_porch;
+    mode->v_sync_pulse = params.vertical_sync_pulse;
+    mode->v_blanking = params.vertical_blanking;
+    mode->pixel_clock_10khz = params.pixel_freq_10khz;
+    mode->mode_flags = (params.vertical_sync_polarity ? MODE_FLAG_VSYNC_POSITIVE : 0)
+            | (params.horizontal_sync_polarity ? MODE_FLAG_HSYNC_POSITIVE : 0);
+}
 
 } // namespace
 
@@ -117,6 +141,7 @@ void Client::HandleControllerApi(async_t* async, async::WaitBase* self,
     HANDLE_REQUEST_CASE(SetDisplayImage);
     HANDLE_REQUEST_CASE(CreateLayer);
     HANDLE_REQUEST_CASE(DestroyLayer);
+    HANDLE_REQUEST_CASE(SetDisplayMode);
     HANDLE_REQUEST_CASE(SetDisplayLayers);
     HANDLE_REQUEST_CASE(SetLayerPrimaryConfig);
     HANDLE_REQUEST_CASE(SetLayerPrimaryPosition);
@@ -329,6 +354,35 @@ void Client::HandleDestroyLayer(const fuchsia_display_ControllerDestroyLayerRequ
     if (destroyed->displayed_image_) {
         destroyed->displayed_image_->StartRetire();
     }
+}
+
+void Client::HandleSetDisplayMode(const fuchsia_display_ControllerSetDisplayModeRequest* req,
+                                  fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto config = configs_.find(req->display_id);
+    if (!config.IsValid()) {
+        return;
+    }
+
+    fbl::AutoLock lock(controller_->mtx());
+    const edid::Edid* edid;
+    const display_params_t* params;
+    controller_->GetPanelConfig(req->display_id, &edid, &params);
+
+    if (edid) {
+        for (auto timings = edid->begin(); timings != edid->end(); ++timings) {
+            if ((*timings).horizontal_addressable == req->mode.horizontal_resolution
+                    && (*timings).vertical_addressable == req->mode.vertical_resolution
+                    && calculate_refresh_rate_e2(*timings) == req->mode.refresh_rate_e2) {
+                populate_display_mode(*timings, &config->current_.mode);
+                return;
+            }
+        }
+        zxlogf(ERROR, "Invalid display mode\n");
+    } else {
+        zxlogf(ERROR, "Failed to find edid when setting display mode\n");
+    }
+
+    TearDown();
 }
 
 void Client::HandleSetDisplayLayers(const fuchsia_display_ControllerSetDisplayLayersRequest* req,
@@ -926,7 +980,7 @@ void Client::SetOwnership(bool is_owner) {
     ApplyConfig();
 }
 
-void Client::OnDisplaysChanged(fbl::unique_ptr<DisplayConfig>* displays_added,
+void Client::OnDisplaysChanged(uint64_t* displays_added,
                                uint32_t added_count,
                                uint64_t* displays_removed, uint32_t removed_count) {
     ZX_DEBUG_ASSERT(controller_->current_thread_is_loop());
@@ -936,15 +990,10 @@ void Client::OnDisplaysChanged(fbl::unique_ptr<DisplayConfig>* displays_added,
     auto req = builder.New<fuchsia_display_ControllerDisplaysChangedEvent>();
     zx_status_t status;
     req->hdr.ordinal = fuchsia_display_ControllerDisplaysChangedOrdinal;
-    req->added.count = added_count;
+    req->added.count = 0;
     req->added.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
     req->removed.count = removed_count;
     req->removed.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
-
-    fuchsia_display_Info* coded_configs = nullptr;
-    if (added_count > 0) {
-        coded_configs = builder.NewArray<fuchsia_display_Info>(added_count);
-    }
 
     for (unsigned i = 0; i < removed_count; i++) {
         auto display = configs_.erase(displays_removed[i]);
@@ -954,31 +1003,101 @@ void Client::OnDisplaysChanged(fbl::unique_ptr<DisplayConfig>* displays_added,
         }
     }
 
-    for (unsigned i = 0; i < added_count; i++) {
-        uint64_t id = displays_added[i]->id;
-        configs_.insert(fbl::move(displays_added[i]));
-        auto config = configs_.find(id);
+    {
+        fbl::AutoLock lock(controller_->mtx());
+        for (unsigned i = 0; i < added_count; i++) {
+            fbl::AllocChecker ac;
+            auto config = fbl::make_unique_checked<DisplayConfig>(&ac);
+            if (!ac.check()) {
+                zxlogf(WARN, "Out of memory when processing hotplug\n");
+                continue;
+            }
 
-        coded_configs[i].id = config->id;
-        coded_configs[i].modes.count = 1;
-        coded_configs[i].modes.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
-        coded_configs[i].pixel_format.count = config->pixel_format_count_;
-        coded_configs[i].pixel_format.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+            config->id = displays_added[i];
 
-        auto mode = builder.NewArray<fuchsia_display_Mode>(1);
-        auto edid_mode = &config->current_.mode;
-        mode->horizontal_resolution = edid_mode->h_addressable;
-        mode->vertical_resolution = edid_mode->v_addressable;
-        uint64_t total_pxls = (edid_mode->h_addressable + edid_mode->h_blanking)
-                * (edid_mode->v_addressable + edid_mode->v_blanking);
-        uint64_t pixel_clock_hz_e2 = edid_mode->pixel_clock_10khz * 1000 * 10;
-        mode->refresh_rate_e2 =
-                static_cast<uint32_t>((pixel_clock_hz_e2 + total_pxls - 1) / total_pxls);
+            const edid::Edid* edid;
+            const display_params_t* params;
+            if (!controller_->GetPanelConfig(config->id, &edid, &params)) {
+                // This can only happen if the display was already disconnected.
+                zxlogf(WARN, "No config when adding display\n");
+                continue;
+            }
+            req->added.count++;
 
-        static_assert(sizeof(zx_pixel_format_t) == sizeof(int32_t), "Bad pixel format size");
-        auto pixel_format = builder.NewArray<int32_t>(config->pixel_format_count_);
-        memcpy(pixel_format, config->pixel_formats_.get(),
-               config->pixel_format_count_ * sizeof(int32_t));
+            config->current_.display_id = config->id;
+            config->current_.layers = nullptr;
+            config->current_.layer_count = 0;
+
+            if (edid) {
+                auto timings = edid->begin();
+                populate_display_mode(*timings, &config->current_.mode);
+            } else {
+                config->current_.mode = {};
+                config->current_.mode.h_addressable = params->width;
+                config->current_.mode.v_addressable = params->height;
+            }
+
+            config->pending_ = config->current_;
+
+            if (!controller_->GetSupportedPixelFormats(config->id,
+                                                       &config->pixel_format_count_,
+                                                       &config->pixel_formats_)) {
+                zxlogf(WARN, "Failed to get pixel formats when processing hotplug\n");
+                continue;
+            }
+            configs_.insert(fbl::move(config));
+        }
+
+        // We need 2 loops, since we need to make sure we allocate the
+        // correct size array in the fidl response.
+        fuchsia_display_Info* coded_configs = nullptr;
+        if (req->added.count > 0) {
+            coded_configs =
+                    builder.NewArray<fuchsia_display_Info>(static_cast<uint32_t>(req->added.count));
+        }
+
+        for (unsigned i = 0; i < added_count; i++) {
+            auto config = configs_.find(displays_added[i]);
+            if (!config.IsValid()) {
+                continue;
+            }
+
+            const edid::Edid* edid;
+            const display_params_t* params;
+            controller_->GetPanelConfig(config->id, &edid, &params);
+
+            coded_configs[i].id = config->id;
+            coded_configs[i].pixel_format.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+            coded_configs[i].modes.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+
+            if (edid) {
+                auto timings = edid->begin();
+
+                coded_configs[i].modes.count = 0;
+                while (timings != edid->end()) {
+                    coded_configs[i].modes.count++;
+                    auto mode = builder.New<fuchsia_display_Mode>();
+
+                    mode->horizontal_resolution = (*timings).horizontal_addressable;
+                    mode->vertical_resolution = (*timings).vertical_addressable;
+                    mode->refresh_rate_e2 = calculate_refresh_rate_e2(*timings);
+
+                    ++timings;
+                }
+            } else {
+                coded_configs[i].modes.count = 1;
+                auto mode = builder.New<fuchsia_display_Mode>();
+                mode->horizontal_resolution = params->width;
+                mode->vertical_resolution = params->height;
+                mode->refresh_rate_e2 = params->refresh_rate_e2;
+            }
+
+            static_assert(sizeof(zx_pixel_format_t) == sizeof(int32_t), "Bad pixel format size");
+            coded_configs[i].pixel_format.count = config->pixel_format_count_;
+            memcpy(builder.NewArray<zx_pixel_format_t>(config->pixel_format_count_),
+                   config->pixel_formats_.get(),
+                   sizeof(zx_pixel_format_t) * config->pixel_format_count_);
+        }
     }
 
     if (removed_count > 0) {
@@ -1139,16 +1258,15 @@ void ClientProxy::SetOwnership(bool is_owner) {
     task->Post(controller_->loop().async());
 }
 
-zx_status_t ClientProxy::OnDisplaysChanged(const DisplayInfo** displays_added,
+zx_status_t ClientProxy::OnDisplaysChanged(const uint64_t* displays_added,
                                            uint32_t added_count, const uint64_t* displays_removed,
                                            uint32_t removed_count) {
-    fbl::unique_ptr<fbl::unique_ptr<DisplayConfig>[]> added;
+    fbl::unique_ptr<uint64_t[]> added;
     fbl::unique_ptr<uint64_t[]> removed;
 
     fbl::AllocChecker ac;
     if (added_count) {
-        added = fbl::unique_ptr<fbl::unique_ptr<DisplayConfig>[]>(
-                new (&ac) fbl::unique_ptr<DisplayConfig>[added_count]);
+        added = fbl::unique_ptr<uint64_t[]>(new (&ac) uint64_t[added_count]);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -1160,65 +1278,16 @@ zx_status_t ClientProxy::OnDisplaysChanged(const DisplayInfo** displays_added,
         }
     }
 
-    memcpy(removed.get(), displays_removed, sizeof(int32_t) * removed_count);
-
-    uint32_t added_idx;
-    for (added_idx = 0; added_idx < added_count; added_idx++) {
-        auto d = displays_added[added_idx];
-        auto config = fbl::make_unique_checked<DisplayConfig>(&ac);
-        if (!ac.check()) {
-            zxlogf(INFO, "Out of memory when processing hotplug\n");
-            break;
-        }
-
-        auto pixel_formats = fbl::unique_ptr<zx_pixel_format_t[]>(
-                new (&ac) zx_pixel_format_t[d->info.pixel_format_count]);
-        if (!ac.check()) {
-            zxlogf(INFO, "Out of memory when processing hotplug\n");
-            break;
-        }
-
-        config->id = d->id;
-        config->pixel_format_count_ = d->info.pixel_format_count;
-        config->pixel_formats_ = fbl::move(pixel_formats);
-        memcpy(config->pixel_formats_.get(), d->info.pixel_formats,
-               sizeof(zx_pixel_format_t) * d->info.pixel_format_count);
-
-        config->current_.display_id = d->id;
-
-        if (d->info.edid_present) {
-            config->current_.mode.pixel_clock_10khz = d->preferred_timing.pixel_freq_10khz;
-            config->current_.mode.h_addressable = d->preferred_timing.horizontal_addressable;
-            config->current_.mode.h_front_porch = d->preferred_timing.horizontal_front_porch;
-            config->current_.mode.h_sync_pulse = d->preferred_timing.horizontal_sync_pulse;
-            config->current_.mode.h_blanking = d->preferred_timing.horizontal_blanking;
-            config->current_.mode.v_addressable = d->preferred_timing.vertical_addressable;
-            config->current_.mode.v_front_porch = d->preferred_timing.vertical_front_porch;
-            config->current_.mode.v_sync_pulse = d->preferred_timing.vertical_sync_pulse;
-            config->current_.mode.v_blanking = d->preferred_timing.vertical_blanking;
-            config->current_.mode.pixel_clock_10khz = d->preferred_timing.pixel_freq_10khz;
-            config->current_.mode.mode_flags =
-                    (d->preferred_timing.vertical_sync_polarity ? MODE_FLAG_VSYNC_POSITIVE : 0)
-                    | (d->preferred_timing.horizontal_sync_polarity ? MODE_FLAG_HSYNC_POSITIVE : 0);
-        } else {
-            config->current_.mode = {};
-            config->current_.mode.h_addressable = d->info.panel.params.width;
-            config->current_.mode.v_addressable = d->info.panel.params.height;
-            config->current_.mode.pixel_clock_10khz = d->info.panel.params.refresh_rate_e2 *
-                    d->info.panel.params.width * d->info.panel.params.height / 1000 / 10;
-        }
-        config->pending_ = config->current_;
-
-        added[added_idx] = fbl::move(config);
-    }
+    memcpy(removed.get(), displays_removed, sizeof(*displays_removed) * removed_count);
+    memcpy(added.get(), displays_added, sizeof(*displays_added) * added_count);
 
     auto task = new async::Task();
     task->set_handler([client_handler = &handler_,
                        added_ptr = added.release(), removed_ptr = removed.release(),
-                       added_idx, removed_count]
+                       added_count, removed_count]
                        (async_t* async, async::Task* task, zx_status_t status) {
             if (status == ZX_OK && client_handler->IsValid()) {
-                client_handler->OnDisplaysChanged(added_ptr, added_idx,
+                client_handler->OnDisplaysChanged(added_ptr, added_count,
                                                   removed_ptr, removed_count);
             }
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "display.h"
+#include <zircon/syscalls.h>
 
 Display::Display(fuchsia_display_Info* info) {
     id_ = info->id;
@@ -33,4 +34,17 @@ void Display::Dump() {
                modes_[i].refresh_rate_e2 / 100, modes_[i].refresh_rate_e2 % 100);
     }
     printf("\n");
+}
+
+void Display::Init(zx_handle_t dc_handle) {
+    if (mode_idx_ == 0) {
+        return;
+    }
+
+    fuchsia_display_ControllerSetDisplayModeRequest set_mode_msg;
+    set_mode_msg.hdr.ordinal = fuchsia_display_ControllerSetDisplayModeOrdinal;
+    set_mode_msg.display_id = id_;
+    set_mode_msg.mode = modes_[mode_idx_];
+    ZX_ASSERT(zx_channel_write(dc_handle, 0,
+                               &set_mode_msg, sizeof(set_mode_msg), nullptr, 0) == ZX_OK);
 }

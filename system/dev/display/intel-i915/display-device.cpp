@@ -50,23 +50,24 @@ bool DisplayDevice::Init() {
         return false;
     }
 
-    edid::timing_params_t preferred_timing;
-    if (!edid_.GetPreferredTiming(&preferred_timing)) {
+
+    auto preferred_timing = edid_.begin();
+    if (!(preferred_timing != edid_.end())) {
         return false;
     }
 
-    info_.pixel_clock_10khz = preferred_timing.pixel_freq_10khz;
-    info_.h_addressable = preferred_timing.horizontal_addressable;
-    info_.h_front_porch = preferred_timing.horizontal_front_porch;
-    info_.h_sync_pulse = preferred_timing.horizontal_sync_pulse;
-    info_.h_blanking = preferred_timing.horizontal_blanking;
-    info_.v_addressable = preferred_timing.vertical_addressable;
-    info_.v_front_porch = preferred_timing.vertical_front_porch;
-    info_.v_sync_pulse = preferred_timing.vertical_sync_pulse;
-    info_.v_blanking = preferred_timing.vertical_blanking;
-    info_.mode_flags = (preferred_timing.vertical_sync_pulse ? MODE_FLAG_VSYNC_POSITIVE : 0)
-            | (preferred_timing.horizontal_sync_pulse ? MODE_FLAG_HSYNC_POSITIVE : 0)
-            | (preferred_timing.interlaced ? MODE_FLAG_INTERLACED : 0);
+    info_.pixel_clock_10khz = (*preferred_timing).pixel_freq_10khz;
+    info_.h_addressable = (*preferred_timing).horizontal_addressable;
+    info_.h_front_porch = (*preferred_timing).horizontal_front_porch;
+    info_.h_sync_pulse = (*preferred_timing).horizontal_sync_pulse;
+    info_.h_blanking = (*preferred_timing).horizontal_blanking;
+    info_.v_addressable = (*preferred_timing).vertical_addressable;
+    info_.v_front_porch = (*preferred_timing).vertical_front_porch;
+    info_.v_sync_pulse = (*preferred_timing).vertical_sync_pulse;
+    info_.v_blanking = (*preferred_timing).vertical_blanking;
+    info_.mode_flags = ((*preferred_timing).vertical_sync_pulse ? MODE_FLAG_VSYNC_POSITIVE : 0)
+            | ((*preferred_timing).horizontal_sync_pulse ? MODE_FLAG_HSYNC_POSITIVE : 0)
+            | ((*preferred_timing).interlaced ? MODE_FLAG_INTERLACED : 0);
 
     ResetPipe();
     if (!ResetTrans() || !ResetDdi()) {

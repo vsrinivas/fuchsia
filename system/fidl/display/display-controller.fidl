@@ -166,6 +166,11 @@ interface Controller {
   // to destroy a layer which is in use or in a pending configuration.
   7: DestroyLayer(uint64 layer_id);
 
+  // Sets the display mode for the given display.
+  //
+  // It is illegal to pass a display mode which was not part of the display's Info.
+  18: SetDisplayMode(uint64 display_id, Mode mode);
+
   // Sets which layers are on a display. The list is in increasing z-order.
   //
   // It is illegal to use a layer on multiple displays concurrently. If a layer
@@ -254,6 +259,9 @@ interface Controller {
   // Allocates a VMO of the requested size which can be used for images.
   // TODO: move this into a seperate video buffer management system.
   17: AllocateVmo(uint64 size) -> (status res, handle<vmo>? vmo);
+
+  // TODO(stevensd): Renumber method ordinals in declaration order
+  // 18: SetDisplayMode
 
   // TODO(stevensd): Delete this when nothing uses it anymore
   100: SetDisplayImage(uint64 display, uint64 image_id, uint64 wait_event_id, uint64 present_event_id, uint64 signal_event_id);

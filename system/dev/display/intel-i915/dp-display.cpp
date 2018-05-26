@@ -987,9 +987,6 @@ bool DpDisplay::ConfigureDdi() {
         }
     }
 
-    edid::timing_params_t timing;
-    edid().GetPreferredTiming(&timing);
-
     registers::TranscoderRegs trans_regs(trans());
 
     uint8_t dpll_link_rate;
@@ -1059,7 +1056,7 @@ bool DpDisplay::ConfigureDdi() {
 
     // Pixel clock rate: The rate at which pixels are sent, in pixels per
     // second (Hz), divided by 10000.
-    uint32_t pixel_clock_rate = timing.pixel_freq_10khz;
+    uint32_t pixel_clock_rate = mode().pixel_clock_10khz;
 
     // This is the rate at which bits are sent on a single DisplayPort
     // lane, in raw bits per second, divided by 10000.
@@ -1148,7 +1145,8 @@ bool DpDisplay::ConfigureDdi() {
     ddi_func.set_ddi_select(ddi());
     ddi_func.set_trans_ddi_mode_select(ddi_func.kModeDisplayPortSst);
     ddi_func.set_bits_per_color(ddi_func.k8bbc); // kPixelFormat
-    ddi_func.set_sync_polarity(timing.vertical_sync_polarity << 1 | timing.horizontal_sync_polarity);
+    ddi_func.set_sync_polarity((!!(mode().mode_flags & MODE_FLAG_VSYNC_POSITIVE)) << 1
+                                | (!!(mode().mode_flags & MODE_FLAG_HSYNC_POSITIVE)));
     ddi_func.set_port_sync_mode_enable(0);
     ddi_func.set_edp_input_select(
             pipe() == registers::PIPE_A ? ddi_func.kPipeA :
@@ -1161,7 +1159,7 @@ bool DpDisplay::ConfigureDdi() {
 
     auto trans_conf = trans_regs.Conf().FromValue(0);
     trans_conf.set_transcoder_enable(1);
-    trans_conf.set_interlaced_mode(timing.interlaced);
+    trans_conf.set_interlaced_mode(!!(mode().mode_flags & MODE_FLAG_INTERLACED));
     trans_conf.WriteTo(mmio_space());
 
     if (controller()->igd_opregion().IsEdp(ddi())) {

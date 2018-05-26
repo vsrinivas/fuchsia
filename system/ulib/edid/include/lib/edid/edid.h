@@ -4,10 +4,12 @@
 
 #pragma once
 
+#include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
 #include <hwreg/bitfields.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 namespace edid {
 
@@ -139,15 +141,14 @@ struct BaseEdid {
 
     uint8_t various[17]; // Fields that we don't need to read yet.
     StandardTimingDescriptor standard_timings[8];
-    DetailedTimingDescriptor preferred_timing;
-    uint8_t rest[kBlockSize - 0x36 - 18 - 2]; // Fields that we don't need to read yet.
+    DetailedTimingDescriptor detailed_timings[4];
     uint8_t num_extensions;
     uint8_t checksum_byte;
 };
 
 static_assert(offsetof(BaseEdid, edid_version) == 0x12, "Layout check");
 static_assert(offsetof(BaseEdid, standard_timings) == 0x26, "Layout check");
-static_assert(offsetof(BaseEdid, preferred_timing) == 0x36, "Layout check");
+static_assert(offsetof(BaseEdid, detailed_timings) == 0x36, "Layout check");
 
 // EDID block type map. Block 1 if there are >1 blocks, and block
 // 128 if there are >128 blocks. See EDID specification for the meaning
@@ -280,6 +281,40 @@ typedef struct timing_params {
 
 class Edid {
 public:
+    class timing_iterator {
+    public:
+        timing_iterator() { }
+
+        timing_iterator& operator++();
+
+        const timing_params& operator*() {
+            return params_;
+        }
+
+        bool operator!=(const timing_iterator& rhs) const {
+            return !(edid_ == rhs.edid_
+                    && block_idx_ == rhs.block_idx_
+                    && timing_idx_ == rhs.timing_idx_);
+        }
+
+    private:
+        friend Edid;
+        explicit timing_iterator(const Edid* edid, uint8_t block_idx, uint32_t timing_idx)
+                : edid_(edid), block_idx_(block_idx), timing_idx_(timing_idx) {
+            ++(*this);
+        }
+        void Advance();
+
+        timing_params params_;
+
+        const Edid* edid_ = nullptr;
+        // The block index in which we're looking for DTDs. If it's num_blocks+1, then
+        // we're looking at standard timings. If it's UINT8_MAX, then we're at the end.
+        uint8_t block_idx_ = UINT8_MAX;
+        uint32_t timing_idx_ = UINT32_MAX;
+    };
+
+
     // Creates an Edid from the EdidDdcSource. Does not retain a reference to the source.
     bool Init(EdidDdcSource* edid_source, const char** err_msg);
     // Creates an Edid from raw bytes. The bytes array must remain valid for the duration
@@ -287,12 +322,15 @@ public:
     bool Init(const uint8_t* bytes, uint16_t len, const char** err_msg);
 
     bool CheckForHdmi(bool* is_hdmi) const;
-    bool GetPreferredTiming(timing_params_t* params) const;
 
     void Print(void (*print_fn)(const char* str)) const;
 
     const uint8_t* edid_bytes() const { return bytes_; }
     uint16_t edid_length() const { return len_; }
+
+    timing_iterator begin() const { return timing_iterator(this, 0, UINT32_MAX); }
+    timing_iterator end() const { return timing_iterator(this, UINT8_MAX, UINT32_MAX); }
+
 private:
     bool CheckBlockMap(uint8_t block_num, bool* is_hdmi) const;
     bool CheckBlockForHdmiVendorData(uint8_t block_num, bool* is_hdmi) const;

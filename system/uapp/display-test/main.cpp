@@ -214,7 +214,7 @@ int main(int argc, const char* argv[]) {
         } else if (strcmp(argv[0], "--mode-set") == 0
                 || strcmp(argv[0], "--format-set") == 0) {
             Display* display = find_display(displays, argv[1]);
-            if (display) {
+            if (!display) {
                 printf("Invalid display \"%s\" for %s\n", argv[1], argv[0]);
                 return -1;
             }
@@ -274,6 +274,10 @@ int main(int argc, const char* argv[]) {
             printf("Layer init failed\n");
             return -1;
         }
+    }
+
+    for (auto& display : displays) {
+        display.Init(dc_handle);
     }
 
     printf("Starting rendering\n");

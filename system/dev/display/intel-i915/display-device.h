@@ -74,7 +74,7 @@ private:
     PowerWellRef pipe_power_;
 
     bool inited_ = false;
-    display_mode_t info_;
+    display_mode_t info_ = {};
     edid::Edid edid_;
 };
 

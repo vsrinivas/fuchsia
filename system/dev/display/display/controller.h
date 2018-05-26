@@ -32,8 +32,7 @@ class DisplayInfo : public IdMappable<fbl::unique_ptr<DisplayInfo>> {
 public:
     display_info_t info;
 
-    // TODO(stevensd): extract a list of all valid timings
-    edid::timing_params_t preferred_timing;
+    edid::Edid edid;
 
     // A list of all images which have been sent to display driver. For multiple
     // images which are displayed at the same time, images with a lower z-order
@@ -73,6 +72,15 @@ public:
                      bool vc_client, uint32_t apply_stamp);
 
     void ReleaseImage(Image* image);
+
+    // Calling GetPanelConfig requires holding |mtx()|, and it must be held
+    // for as long as |edid| and |params| are retained.
+    bool GetPanelConfig(uint64_t display_id, const edid::Edid** edid,
+                        const display_params_t** params) __TA_NO_THREAD_SAFETY_ANALYSIS;
+    // Calling GetSupportedPixelFormats requires holding |mtx()|
+    bool GetSupportedPixelFormats(uint64_t display_id, uint32_t* count_out,
+                                  fbl::unique_ptr<zx_pixel_format_t[]>* fmts_out)
+                                  __TA_NO_THREAD_SAFETY_ANALYSIS;
 
     display_controller_protocol_ops_t* ops() { return ops_.ops; }
     void* ops_ctx() { return ops_.ctx; }

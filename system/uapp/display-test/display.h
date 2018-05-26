@@ -13,6 +13,8 @@ class Display {
 public:
     Display(fuchsia_display_Info* info);
 
+    void Init(zx_handle_t dc_handle);
+
     zx_pixel_format_t format() const { return pixel_formats_[format_idx_]; }
     fuchsia_display_Mode mode() const { return modes_[mode_idx_]; }
     uint64_t id() const { return id_; }

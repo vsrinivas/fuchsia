@@ -34,7 +34,7 @@ namespace display {
 
 void Controller::OnDisplaysChanged(uint64_t* displays_added, uint32_t added_count,
                                    uint64_t* displays_removed, uint32_t removed_count) {
-    const DisplayInfo* added_success[added_count];
+    uint64_t added_success[added_count];
     int32_t added_success_count = 0;
     uint64_t removed_success[removed_count];
     int32_t removed_success_count = 0;
@@ -71,18 +71,21 @@ void Controller::OnDisplaysChanged(uint64_t* displays_added, uint32_t added_coun
             continue;
         }
         if (info->info.edid_present) {
-            edid::Edid edid;
             const char* edid_err = "No preferred timing";
-            if (!edid.Init(info->info.panel.edid.data, info->info.panel.edid.length, &edid_err)
-                    || !edid.GetPreferredTiming(&info->preferred_timing)) {
+            if (!info->edid.Init(info->info.panel.edid.data,
+                                 info->info.panel.edid.length, &edid_err)) {
                 zxlogf(TRACE, "Failed to parse edid \"%s\"\n", edid_err);
                 continue;
             }
+
+            if (zxlog_level_enabled_etc(DDK_LOG_TRACE)) {
+                info->edid.Print([](const char* str) {printf("%s", str);});
+            }
         }
 
-        auto info_ptr = info.get();
+        uint64_t id = info->id;
         if (displays_.insert_or_find(fbl::move(info))) {
-            added_success[added_success_count++] = info_ptr;
+            added_success[added_success_count++] = id;
         } else {
             zxlogf(INFO, "Ignoring duplicate display\n");
         }
@@ -326,6 +329,44 @@ void Controller::OnClientDead(ClientProxy* client) {
     HandleClientOwnershipChanges();
 }
 
+bool Controller::GetPanelConfig(uint64_t display_id, const edid::Edid** edid,
+                                const display_params_t** params) {
+    ZX_DEBUG_ASSERT(mtx_trylock(&mtx_) == thrd_busy);
+    for (auto& display : displays_) {
+        if (display.id == display_id) {
+            if (display.info.edid_present) {
+                *edid = &display.edid;
+                *params = nullptr;
+            } else {
+                *params = &display.info.panel.params;
+                *edid = nullptr;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Controller::GetSupportedPixelFormats(uint64_t display_id, uint32_t* count_out,
+                                          fbl::unique_ptr<zx_pixel_format_t[]>* fmts_out) {
+    ZX_DEBUG_ASSERT(mtx_trylock(&mtx_) == thrd_busy);
+    for (auto& display : displays_) {
+        if (display.id == display_id) {
+            *count_out = display.info.pixel_format_count;
+            fbl::AllocChecker ac;
+            *fmts_out =
+                    fbl::unique_ptr<zx_pixel_format_t[]>(new (&ac) zx_pixel_format_t[*count_out]);
+            if (!ac.check()) {
+                return false;
+            }
+            memcpy(fmts_out->get(), display.info.pixel_formats,
+                   sizeof(zx_pixel_format_t) * display.info.pixel_format_count);
+            return true;
+        }
+    }
+    return false;
+}
+
 zx_status_t Controller::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
     return DdkOpenAt(dev_out, "", flags);
 }
@@ -354,10 +395,10 @@ zx_status_t Controller::DdkOpenAt(zx_device_t** dev_out, const char* path, uint3
 
     // Add all existing displays to the client
     if (displays_.size() > 0) {
-        const DisplayInfo* current_displays[displays_.size()];
+        uint64_t current_displays[displays_.size()];
         int idx = 0;
         for (const DisplayInfo& display : displays_) {
-            current_displays[idx++] = &display;
+            current_displays[idx++] = display.id;
         }
         if ((status = client->OnDisplaysChanged(current_displays, idx, nullptr, 0)) != ZX_OK) {
             zxlogf(TRACE, "Failed to init client %d\n", status);
