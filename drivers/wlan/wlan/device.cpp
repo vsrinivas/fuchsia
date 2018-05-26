@@ -173,10 +173,11 @@ zx_status_t Device::AddEthDevice() {
 }
 
 fbl::unique_ptr<Packet> Device::PreparePacket(const void* data, size_t length, Packet::Peer peer) {
-    if (length > kLargeBufferSize) { return nullptr; }
-
     fbl::unique_ptr<Buffer> buffer = GetBuffer(length);
-    if (buffer == nullptr) { return nullptr; }
+    if (buffer == nullptr) {
+        errorf("could not get buffer for packet of length %zu\n", length);
+        return nullptr;
+    }
 
     auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), length));
     packet->set_peer(peer);
@@ -195,7 +196,7 @@ zx_status_t Device::QueuePacket(fbl::unique_ptr<Packet> packet) {
 
     zx_status_t status = QueueDevicePortPacket(DevicePacket::kPacketQueued);
     if (status != ZX_OK) {
-        warnf("could not send packet queued msg err=%d\n", status);
+        errorf("could not send packet queued msg err=%d\n", status);
         packet_queue_.UndoEnqueue();
         return status;
     }
@@ -290,8 +291,12 @@ void Device::EthmacStop() {
 zx_status_t Device::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
     // no debugfn() because it's too noisy
     auto packet = PreparePacket(netbuf->data, netbuf->len, Packet::Peer::kEthernet);
+    if (packet == nullptr) {
+        warnf("could not prepare Ethernet packet with len %u\n", netbuf->len);
+        return ZX_ERR_NO_RESOURCES;
+    }
     zx_status_t status = QueuePacket(std::move(packet));
-    if (status != ZX_OK) { warnf("could not queue outbound packet err=%d\n", status); }
+    if (status != ZX_OK) { warnf("could not queue Ethernet packet err=%d\n", status); }
     return status;
 }
 
@@ -310,8 +315,15 @@ void Device::WlanmacStatus(uint32_t status) {
 void Device::WlanmacRecv(uint32_t flags, const void* data, size_t length, wlan_rx_info_t* info) {
     // no debugfn() because it's too noisy
     auto packet = PreparePacket(data, length, Packet::Peer::kWlan, *info);
+    if (packet == nullptr) {
+        errorf("could not prepare outbound Ethernet packet with len %zu\n", length);
+        return;
+    }
+
     zx_status_t status = QueuePacket(std::move(packet));
-    if (status != ZX_OK) { warnf("could not queue inbound packet err=%d\n", status); }
+    if (status != ZX_OK) {
+        warnf("could not queue inbound packet with len %zu err=%d\n", length, status);
+    }
 }
 
 void Device::WlanmacCompleteTx(wlan_tx_packet_t* pkt, zx_status_t status) {
