@@ -1,7 +1,7 @@
 library fidl.examples.libraryB;
 
-using point;
+using fidl.examples.libraryA;
 
 interface View {
-    1: MoveTo(point.Point p);
+    1: MoveTo(fidl.examples.libraryA.Point p);
 };
