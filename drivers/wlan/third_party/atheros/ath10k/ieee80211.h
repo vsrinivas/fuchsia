@@ -19,6 +19,8 @@
 
 #include <stdint.h>
 
+#include <zircon/assert.h>
+
 #include "hw.h"
 
 // IEEE Std 802.11-2016, 9.2.3
@@ -130,7 +132,10 @@ enum ieee80211_a_mpdu_params {
 #define IEEE80211_CCMP_MIC_LEN 8
 #define IEEE80211_QOS_CTL_LEN 2
 
-#define IEEE_MSDU_SIZE_MAX 2304
+#define IEEE80211_MSDU_SIZE_MAX 2304
+
+// IEEE Std 802.11-2016, 9.4.2.2
+#define IEEE80211_SSID_LEN_MAX 32
 
 // IEEE Std 802.11-2016, 9.4.2.25.2, Table 9-131
 enum ieee80211_cipher_suite {
