@@ -20,6 +20,7 @@ source_set("socket") {
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-testutils",
     "//zircon/public/lib/zx",
   ]
 }

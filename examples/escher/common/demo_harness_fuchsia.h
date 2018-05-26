@@ -13,7 +13,6 @@
 #include "garnet/examples/escher/common/demo_harness.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 class DemoHarnessFuchsia : public DemoHarness, public escher_demo::EscherDemo {
  public:
@@ -49,7 +48,7 @@ class DemoHarnessFuchsia : public DemoHarness, public escher_demo::EscherDemo {
 
   void RenderFrameOrQuit();
 
-  // DemoHarnessFuchsia can work with a pre-existing MessageLoop, and also
+  // DemoHarnessFuchsia can work with a pre-existing message loop, and also
   // create its own if necessary.
   async::Loop* loop_;
   std::unique_ptr<async::Loop> owned_loop_;

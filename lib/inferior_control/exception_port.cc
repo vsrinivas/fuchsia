@@ -13,7 +13,6 @@
 #include <zircon/syscalls/port.h>
 
 #include "lib/fsl/handles/object_info.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 

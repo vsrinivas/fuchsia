@@ -12,7 +12,6 @@
 #include <trace-engine/fields.h>
 #include <trace-reader/reader.h>
 
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
 namespace tracing {

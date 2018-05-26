@@ -10,13 +10,14 @@
 #include <memory>
 #include <thread>
 
+#include <cobalt/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/zx/resource.h>
 #include <zircon/device/device.h>
 #include <zircon/device/sysinfo.h>
 
-#include <cobalt/cpp/fidl.h>
-#include <lib/zx/resource.h>
 #include "lib/app/cpp/application_context.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/logging.h"
 
 const uint32_t kSystemMetricsProjectId = 102;
 const uint32_t kUptimeMetricId = 1;
@@ -206,7 +207,7 @@ void SystemMetricsApp::ConnectToEnvironmentService() {
 }
 
 int main(int argc, const char** argv) {
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   SystemMetricsApp app(kIntervalMinutes);
   app.Main();
   return 0;

@@ -14,10 +14,11 @@
 #include <string>
 
 #include <cobalt/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
@@ -805,7 +806,7 @@ int main(int argc, const char** argv) {
   auto num_observations_per_batch = std::stoi(
       command_line.GetOptionValueWithDefault(kNumObservationsPerBatch, "7"));
 
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   CobaltTestApp app(use_network, do_environment_test,
                     num_observations_per_batch);
   if (!app.RunAllTestingStrategies()) {

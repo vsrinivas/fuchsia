@@ -16,7 +16,6 @@
 #include "garnet/bin/appmgr/namespace.h"
 #include "garnet/bin/appmgr/realm.h"
 #include "lib/fsl/handles/object_info.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/closure.h"
 
 namespace component {

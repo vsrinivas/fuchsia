@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/cpp/loop.h>
+
 #include "gtest/gtest.h"
 #include "lib/app/cpp/application_context.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/test_runner/cpp/reporting/gtest_listener.h"
 #include "lib/test_runner/cpp/reporting/reporter.h"
 
@@ -17,7 +18,7 @@ int main(int argc, char** argv) {
   testing::UnitTest::GetInstance()->listeners().Release(&listener);
 
   {
-    fsl::MessageLoop message_loop;
+    async::Loop loop(&kAsyncLoopConfigMakeDefault);
     auto context = component::ApplicationContext::CreateFromStartupInfo();
     test_runner::ReportResult(argv[0], context.get(), listener.GetResults());
   }

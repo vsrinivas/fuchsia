@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/channel.h>
 
 #include <presentation/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 #include "garnet/bin/ui/root_presenter/renderer_params.h"
 #include "lib/app/cpp/application_context.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
@@ -44,7 +44,7 @@ int main(int argc, const char** argv) {
     renderer_params.push_back(std::move(param));
   }
 
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   auto application_context_ =
       component::ApplicationContext::CreateFromStartupInfo();
 
@@ -55,7 +55,7 @@ int main(int argc, const char** argv) {
                                     std::move(renderer_params));
 
   // Done!
-  loop.PostQuitTask();
+  async::PostTask(loop.async(), [&loop] { loop.Quit(); });
   loop.Run();
   return 0;
 }

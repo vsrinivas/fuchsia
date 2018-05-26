@@ -8,8 +8,6 @@
 
 #include <lib/async/default.h>
 
-#include "lib/fsl/tasks/message_loop.h"
-
 namespace archive {
 namespace {
 

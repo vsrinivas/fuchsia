@@ -9,8 +9,7 @@
 #include <views_v1/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-
-#include "lib/fsl/tasks/message_loop.h"
+#include <lib/async-loop/cpp/loop.h>
 
 // static
 zx_status_t ScenicScanout::Create(

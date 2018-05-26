@@ -5,13 +5,13 @@
 #include <memory>
 
 #include <auth/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
 
 #include "garnet/bin/auth/token_manager/test/factory_impl.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
@@ -25,7 +25,8 @@ namespace {
 class DevAuthProviderApp {
  public:
   DevAuthProviderApp()
-      : app_context_(component::ApplicationContext::CreateFromStartupInfo()),
+      : loop_(&kAsyncLoopConfigMakeDefault),
+        app_context_(component::ApplicationContext::CreateFromStartupInfo()),
         trace_provider_(loop_.async()) {
     FXL_CHECK(app_context_);
   }
@@ -39,7 +40,7 @@ class DevAuthProviderApp {
   }
 
  private:
-  fsl::MessageLoop loop_;
+  async::Loop loop_;
   std::unique_ptr<component::ApplicationContext> app_context_;
   trace::TraceProvider trace_provider_;
 

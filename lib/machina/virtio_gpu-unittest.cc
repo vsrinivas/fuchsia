@@ -5,12 +5,12 @@
 #include "garnet/lib/machina/virtio_gpu.h"
 
 #include <fbl/unique_ptr.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/lib/machina/gpu_scanout.h"
 #include "garnet/lib/machina/phys_mem_fake.h"
 #include "garnet/lib/machina/virtio_queue_fake.h"
 #include "gtest/gtest.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace machina {
 namespace {
@@ -37,7 +37,8 @@ struct BackingPages
 class VirtioGpuTest {
  public:
   VirtioGpuTest()
-      : gpu_(phys_mem_, loop_.async()), control_queue_(gpu_.control_queue()) {}
+      : loop_(&kAsyncLoopConfigMakeDefault), gpu_(phys_mem_, loop_.async()),
+        control_queue_(gpu_.control_queue()) {}
 
   zx_status_t Init() {
     zx_status_t status = control_queue_.Init(kQueueSize);
@@ -209,7 +210,7 @@ class VirtioGpuTest {
   }
 
  private:
-  fsl::MessageLoop loop_;
+  async::Loop loop_;
   PhysMemFake phys_mem_;
   VirtioGpu gpu_;
   GpuScanout scanout_;

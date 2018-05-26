@@ -16,7 +16,6 @@
 #include "garnet/bin/ui/view_manager/view_tree_impl.h"
 #include "garnet/public/lib/escher/util/type_utils.h"
 #include "lib/app/cpp/connect.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"

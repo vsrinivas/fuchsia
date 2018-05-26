@@ -5,7 +5,6 @@
 #include "lib/callback/operation_serializer.h"
 
 #include "gtest/gtest.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/closure.h"
 
 namespace callback {

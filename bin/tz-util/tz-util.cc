@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/syscalls.h>
 #include <iostream>
+
+#include <zircon/syscalls.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/environment_services.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"

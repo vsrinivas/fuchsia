@@ -14,7 +14,6 @@
 #include "lib/escher/escher.h"
 #include "lib/escher/util/fuchsia_utils.h"
 #include "lib/escher/vk/gpu_mem.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace scenic {
 namespace gfx {

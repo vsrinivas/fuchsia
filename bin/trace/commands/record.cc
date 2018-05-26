@@ -16,7 +16,6 @@
 #include "garnet/bin/trace/commands/record.h"
 #include "garnet/bin/trace/results_export.h"
 #include "garnet/bin/trace/results_output.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/types/type_converters.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"

@@ -8,6 +8,7 @@
 #include <string>
 
 #include <auth/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/bin/auth/store/auth_db.h"
 #include "garnet/bin/auth/store/auth_db_file_impl.h"
@@ -19,7 +20,6 @@
 #include "lib/callback/capture.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
@@ -357,7 +357,7 @@ int main(int argc, char** argv) {
   testing::UnitTest::GetInstance()->listeners().Release(&listener);
 
   {
-    fsl::MessageLoop message_loop;
+    async::Loop loop(&kAsyncLoopConfigMakeDefault);
     auto context =
         component::ApplicationContext::CreateFromStartupInfoNotChecked();
     test_runner::ReportResult(argv[0], context.get(), listener.GetResults());

@@ -12,7 +12,6 @@
 #include <lib/async/default.h>
 #include <zircon/device/vfs.h>
 
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
 namespace fsl {

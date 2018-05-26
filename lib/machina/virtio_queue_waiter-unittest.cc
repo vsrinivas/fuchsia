@@ -4,15 +4,16 @@
 
 #include "garnet/lib/machina/virtio_queue_waiter.h"
 
+#include <lib/async-testutils/test_loop.h>
+
 #include "garnet/lib/machina/virtio_device_fake.h"
 #include "gtest/gtest.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace machina {
 namespace {
 
 TEST(VirtioQueueWaiter, Wait) {
-  fsl::MessageLoop loop;
+  async::TestLoop loop;
 
   bool wait_complete = false;
   VirtioDeviceFake device;

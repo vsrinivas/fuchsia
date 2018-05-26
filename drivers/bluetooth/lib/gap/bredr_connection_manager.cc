@@ -7,7 +7,6 @@
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 #include "garnet/drivers/bluetooth/lib/hci/sequential_command_runner.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace btlib {
 namespace gap {

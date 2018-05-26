@@ -13,10 +13,10 @@
 
 #include <cobalt/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/bin/cobalt/app/cobalt_app.h"
 #include "garnet/bin/cobalt/app/product_hack.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
@@ -81,7 +81,7 @@ int main(int argc, const char** argv) {
                 << " seconds, min_interval=" << min_interval.count()
                 << " seconds.";
 
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   cobalt::CobaltApp app(loop.async(), schedule_interval, min_interval,
                         cobalt::hack::GetLayer());
   loop.Run();

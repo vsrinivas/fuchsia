@@ -115,6 +115,7 @@ source_set("machina") {
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-testutils",
     "//zircon/public/lib/block-client",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",

@@ -39,8 +39,6 @@ executable("escher_unittests") {
       "flib/fence_listener_unittest.cc",
       "flib/fence_set_listener_unittest.cc",
       "flib/release_fence_signaller_unittest.cc",
-      "flib/test_with_message_loop.cc",
-      "flib/test_with_message_loop.h",
       "flib/util.cc",
       "flib/util.h",
     ]
@@ -55,6 +53,13 @@ executable("escher_unittests") {
     "//third_party/shaderc/third_party/glslang:SPIRV",
     "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",
   ]
+
+  if (is_fuchsia) {
+    deps += [
+      "//garnet/public/lib/gtest",
+      "//zircon/public/lib/async-loop-cpp",
+    ]
+  }
 
   libs = [ "pthread" ]
 

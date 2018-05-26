@@ -9,14 +9,16 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <zx/time.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/optional.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/weak_ptr.h"
+#include "lib/fxl/time/time_delta.h"
 
 namespace {
 
@@ -156,7 +158,7 @@ class NetworkLoader : public component::Loader {
 }  // namespace
 
 int main(int argc, const char** argv) {
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   NetworkLoader app;
   loop.Run();
   return 0;

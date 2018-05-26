@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/channel.h>
 
 #include <presentation/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
@@ -37,7 +37,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   auto application_context_ =
       component::ApplicationContext::CreateFromStartupInfo();
 
@@ -53,7 +53,7 @@ int main(int argc, const char** argv) {
                                                       controller.NewRequest());
   controller.set_error_handler([&loop] {
     FXL_LOG(INFO) << "Launched application terminated.";
-    loop.PostQuitTask();
+    loop.Quit();
   });
 
   // Create the view.

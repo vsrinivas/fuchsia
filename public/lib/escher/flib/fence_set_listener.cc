@@ -8,7 +8,6 @@
 #include <lib/async/default.h>
 #include <lib/zx/time.h>
 
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
 namespace escher {

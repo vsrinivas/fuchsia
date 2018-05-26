@@ -10,8 +10,6 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/default.h>
 
-#include "lib/fsl/tasks/message_loop.h"
-
 namespace mozart {
 
 constexpr char kInputDevPath[] = "/dev/class/input";

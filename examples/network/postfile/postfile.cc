@@ -13,7 +13,6 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/socket/files.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/file_descriptor.h"
 #include "lib/fxl/files/path.h"

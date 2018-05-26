@@ -13,9 +13,8 @@
 // When running on Fuchsia, New() instantiates a DemoHarnessFuchsia.
 std::unique_ptr<DemoHarness> DemoHarness::New(
     DemoHarness::WindowParams window_params,
-    DemoHarness::InstanceParams instance_params,
-    async::Loop* loop) {
-  auto harness = new DemoHarnessFuchsia(loop, window_params);
+    DemoHarness::InstanceParams instance_params) {
+  auto harness = new DemoHarnessFuchsia(nullptr, window_params);
   harness->Init(std::move(instance_params));
   return std::unique_ptr<DemoHarness>(harness);
 }

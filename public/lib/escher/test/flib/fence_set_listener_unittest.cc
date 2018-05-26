@@ -7,13 +7,13 @@
 #include "lib/escher/flib/fence.h"
 #include "lib/escher/flib/fence_set_listener.h"
 #include "lib/escher/impl/command_buffer_sequencer.h"
-#include "lib/escher/test/flib/test_with_message_loop.h"
 #include "lib/escher/test/flib/util.h"
+#include "lib/gtest/test_with_loop.h"
 
 namespace escher {
 namespace test {
 
-class FenceSetListenerTest : public ::testing::Test {};
+class FenceSetListenerTest : public gtest::TestWithLoop {};
 
 TEST_F(FenceSetListenerTest, EmptySet) {
   // Create an empty FenceSetListener.
@@ -27,7 +27,8 @@ TEST_F(FenceSetListenerTest, EmptySet) {
 
   // Assert that the set is signalled.
   ASSERT_TRUE(fence_set_listener.ready());
-  RUN_MESSAGE_LOOP_UNTIL(signalled);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(signalled);
 }
 
 TEST_F(FenceSetListenerTest, ReadyStateSignalled) {
@@ -51,7 +52,7 @@ TEST_F(FenceSetListenerTest, ReadyStateSignalled) {
 
   // Expect that the set is not ready initially. Briefly pump the message loop,
   // although we don't expect anything to be handled.
-  RunLoopWithTimeout(kPumpMessageLoopDuration);
+  RunLoopUntilIdle();
   ASSERT_FALSE(fence_set_listener.ready());
   ASSERT_FALSE(signalled);
 
@@ -60,7 +61,7 @@ TEST_F(FenceSetListenerTest, ReadyStateSignalled) {
 
   // Briefly pump the message loop, but we expect that the set is still not
   // ready.
-  ::escher::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
+  RunLoopUntilIdle();
   ASSERT_FALSE(fence_set_listener.ready());
   ASSERT_FALSE(signalled);
 
@@ -69,7 +70,8 @@ TEST_F(FenceSetListenerTest, ReadyStateSignalled) {
   fence3.signal(0u, kFenceSignalled);
 
   // Assert that the set is now signalled.
-  RUN_MESSAGE_LOOP_UNTIL(fence_set_listener.ready());
+  RunLoopUntilIdle();
+  EXPECT_TRUE(fence_set_listener.ready());
   ASSERT_TRUE(signalled);
 }
 
@@ -92,7 +94,7 @@ TEST_F(FenceSetListenerTest, DestroyWhileWaiting) {
 
     // Expect that the set is not ready initially. Briefly pump the message
     // loop, although we don't expect anything to be handled.
-    ::escher::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
+    RunLoopUntilIdle();
     ASSERT_FALSE(fence_set_listener.ready());
     ASSERT_FALSE(signalled);
 
@@ -101,7 +103,7 @@ TEST_F(FenceSetListenerTest, DestroyWhileWaiting) {
 
     // Briefly pump the message loop, but we expect that the set is still not
     // ready.
-    ::escher::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
+    RunLoopUntilIdle();
     ASSERT_FALSE(fence_set_listener.ready());
     ASSERT_FALSE(signalled);
   }

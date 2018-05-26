@@ -5,13 +5,13 @@
 #include <memory>
 
 #include <auth/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
 
 #include "garnet/bin/auth/token_manager/token_manager_factory_impl.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
@@ -49,7 +49,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   trace::TraceProvider trace_provider(loop.async());
   TokenManagerApp app(component::ApplicationContext::CreateFromStartupInfo());
   loop.Run();

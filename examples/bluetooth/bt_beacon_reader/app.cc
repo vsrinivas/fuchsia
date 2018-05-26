@@ -13,7 +13,6 @@
 
 #include <bluetooth_control/cpp/fidl.h>
 #include <bluetooth_low_energy/cpp/fidl.h>
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/split_string.h"

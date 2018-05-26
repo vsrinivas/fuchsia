@@ -5,13 +5,14 @@
 #include "lib/fsl/socket/files.h"
 
 #include <fcntl.h>
+
+#include <lib/async-testutils/test_loop.h>
 #include <lib/zx/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 
@@ -19,10 +20,10 @@ namespace fsl {
 namespace {
 
 TEST(SocketAndFile, CopyToFileDescriptor) {
+  async::TestLoop loop;
   files::ScopedTempDir tmp_dir;
   std::string tmp_file;
   tmp_dir.NewTempFile(&tmp_file);
-  MessageLoop message_loop;
 
   fxl::UniqueFD destination(open(tmp_file.c_str(), O_WRONLY));
   EXPECT_TRUE(destination.is_valid());
@@ -30,12 +31,12 @@ TEST(SocketAndFile, CopyToFileDescriptor) {
   bool success;
   CopyToFileDescriptor(
       fsl::WriteStringToSocket("Hello"), std::move(destination),
-      message_loop.async(),
-      [&message_loop, &success](bool success_value, fxl::UniqueFD fd) {
+      loop.async(),
+      [&loop, &success](bool success_value, fxl::UniqueFD fd) {
         success = success_value;
-        message_loop.PostQuitTask();
+        loop.Quit();
       });
-  message_loop.Run();
+  loop.RunUntilIdle();
 
   EXPECT_TRUE(success);
   std::string content;
@@ -44,10 +45,10 @@ TEST(SocketAndFile, CopyToFileDescriptor) {
 }
 
 TEST(SocketAndFile, CopyFromFileDescriptor) {
+  async::TestLoop loop;
   files::ScopedTempDir tmp_dir;
   std::string tmp_file;
   tmp_dir.NewTempFile(&tmp_file);
-  MessageLoop message_loop;
 
   files::WriteFile(tmp_file, "Hello", 5);
   fxl::UniqueFD source(open(tmp_file.c_str(), O_RDONLY));
@@ -58,12 +59,12 @@ TEST(SocketAndFile, CopyFromFileDescriptor) {
 
   bool success;
   CopyFromFileDescriptor(
-      std::move(source), std::move(socket1), message_loop.async(),
-      [&message_loop, &success](bool success_value, fxl::UniqueFD fd) {
+      std::move(source), std::move(socket1), loop.async(),
+      [&loop, &success](bool success_value, fxl::UniqueFD fd) {
         success = success_value;
-        message_loop.PostQuitTask();
+        loop.Quit();
       });
-  message_loop.Run();
+  loop.RunUntilIdle();
 
   EXPECT_TRUE(success);
   std::string content;

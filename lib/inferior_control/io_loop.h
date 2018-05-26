@@ -27,9 +27,8 @@ namespace debugserver {
 //
 // TODO(armansito): This is a temporary solution until there is a
 // fdio_get_handle (or equivalent) interface to get a zx_handle_t from socket
-// fd to use with fsl::MessageLoop::AddHandler. That way we can avoid blocking
-// reads and writes while also using a single thread. Then again this works fine
-// too.
+// fd. That way we can avoid blocking reads and writes while also using a single
+// thread. Then again this works fine too.
 class IOLoop {
  public:
   // Delegate class for receiving asynchronous events for the result of

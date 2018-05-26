@@ -8,13 +8,13 @@
 #include <string>
 
 #include <auth/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/bin/auth/store/auth_db_file_impl.h"
 #include "gtest/gtest.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"
@@ -211,7 +211,7 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   google_oauth_demo::GoogleTokenManagerApp gtm(std::move(refresh_token),
                                                std::move(user_profile_id_));
   gtm.Run();

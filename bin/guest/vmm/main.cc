@@ -13,6 +13,7 @@
 #include <ios>
 #include <vector>
 
+#include <lib/async-loop/cpp/loop.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
@@ -45,7 +46,6 @@
 #include "garnet/lib/machina/virtio_vsock.h"
 #include "garnet/public/lib/fxl/files/file.h"
 #include "lib/app/cpp/application_context.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 #if __aarch64__
 #include "garnet/lib/machina/arch/arm64/pl031.h"
@@ -191,7 +191,7 @@ static zx_status_t read_guest_cfg(const char* cfg_path, int argc, char** argv,
 }
 
 int main(int argc, char** argv) {
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   trace::TraceProvider trace_provider(loop.async());
   std::unique_ptr<component::ApplicationContext> application_context =
       component::ApplicationContext::CreateFromStartupInfo();
@@ -512,7 +512,7 @@ int main(int argc, char** argv) {
     zx_status_t status = guest.StartVcpu(guest_ip, 0 /* id */);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to start VCPU-0 " << status;
-      loop.PostQuitTask();
+      loop.Quit();
     }
   };
   if (gpu_scanout) {

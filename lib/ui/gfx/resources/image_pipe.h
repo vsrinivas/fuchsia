@@ -17,7 +17,6 @@
 #include "garnet/lib/ui/gfx/resources/image_pipe_handler.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "lib/escher/flib/fence_set_listener.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
 namespace scenic {

@@ -38,11 +38,11 @@
 #include <unistd.h>
 
 #include <lib/async/cpp/task.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/time.h>
 #include <test_runner/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_view.h"
