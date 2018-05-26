@@ -12,6 +12,7 @@ import (
 
 	"app/context"
 
+	"fidl/wlan_mlme"
 	"fidl/wlan_service"
 )
 
@@ -28,6 +29,32 @@ type ToolApp struct {
 	ctx  *context.Context
 	wlan *wlan_service.WlanInterface
 }
+
+// LINT.IfChange
+func CbwToStr(cbw wlan_mlme.Cbw) string {
+	switch cbw {
+	case wlan_mlme.CbwCbw20:
+		return " "
+	case wlan_mlme.CbwCbw40:
+		return "+"
+	case wlan_mlme.CbwCbw40Below:
+		return "-"
+	case wlan_mlme.CbwCbw80:
+		return "V"
+	case wlan_mlme.CbwCbw160:
+		return "W"
+	case wlan_mlme.CbwCbw80P80:
+		return "P"
+	default:
+		return "(unknown CBW)"
+	}
+}
+
+func ChanToStr(ch wlan_mlme.WlanChan) string {
+	return fmt.Sprintf("%3d%s", ch.Primary, CbwToStr(ch.Cbw))
+}
+
+// LINT.ThenChange(//garnet/lib/wlan/common/channel.cpp)
 
 func (a *ToolApp) Scan(seconds uint8) {
 	expiry := 15 * time.Second
@@ -54,8 +81,8 @@ func (a *ToolApp) Scan(seconds uint8) {
 				if ap.IsCompatible {
 					compatStr = ""
 				}
-				fmt.Printf("%12s %x (RSSI: %d) %v %q\n",
-					compatStr, ap.Bssid, ap.RssiDbm, prot, ap.Ssid)
+				fmt.Printf("%12s %x (RSSI: %d) Chan %s %v %q\n",
+					compatStr, ap.Bssid, ap.RssiDbm, ChanToStr(ap.Chan), prot, ap.Ssid)
 			}
 		}
 		rxed <- struct{}{}
@@ -157,8 +184,8 @@ func (a *ToolApp) Status() {
 				compatStr = ""
 			}
 
-			fmt.Printf("%12s %x (RSSI: %d) %v %q\n",
-				compatStr, ap.Bssid, ap.RssiDbm, prot, ap.Ssid)
+			fmt.Printf("%12s %x (RSSI: %d) Chan %s %v %q\n",
+				compatStr, ap.Bssid, ap.RssiDbm, ChanToStr(ap.Chan), prot, ap.Ssid)
 		}
 	}
 }

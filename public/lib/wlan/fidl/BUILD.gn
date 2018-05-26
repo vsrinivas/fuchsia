@@ -17,6 +17,9 @@ fidl("service") {
   sources = [
     "wlan_service.fidl",
   ]
+  deps = [
+    ":mlme",
+  ]
 }
 
 

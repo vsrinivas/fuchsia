@@ -102,7 +102,7 @@ func ConvertWapToAp(ap AP) wlan_service.Ap {
 	// TODO: Check if AP supports other types of security mechanism (e.g. WEP)
 	is_secure := ap.BSSDesc.Rsn != nil
 	is_compatible := ap.IsCompatible
-	return wlan_service.Ap{bssid, ap.SSID, ap.RssiDbm, is_secure, is_compatible}
+	return wlan_service.Ap{bssid, ap.SSID, ap.RssiDbm, is_secure, is_compatible, ap.Chan}
 }
 
 func (c *Client) Status() wlan_service.WlanStatus {

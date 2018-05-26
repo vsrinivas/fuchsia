@@ -18,6 +18,7 @@ type AP struct {
 	BSSDesc      *mlme.BssDescription
 	RssiDbm      int8
 	IsCompatible bool
+	Chan         mlme.WlanChan
 }
 
 // ByRSSI implements sort.Interface for []AP based on the RssiDbm field.
@@ -64,6 +65,7 @@ func CollectScanResults(resp *mlme.ScanConfirm, ssid string, bssid string) []AP 
 			ap := NewAP(&s)
 			ap.RssiDbm = s.RssiDbm
 			ap.IsCompatible = IsBssCompatible(&resp.BssDescriptionSet[idx])
+			ap.Chan = resp.BssDescriptionSet[idx].Chan
 			aps = append(aps, *ap)
 		}
 	}

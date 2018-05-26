@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 library wlan_service;
+using wlan_mlme;
 
 enum ErrCode {
   OK = 0;
@@ -23,6 +24,7 @@ struct AP {
   int8         rssi_dbm;
   bool         is_secure;
   bool         is_compatible; // with respect to Fuchsia
+  wlan_mlme.WlanChan chan;
 };
 
 struct ScanRequest {
