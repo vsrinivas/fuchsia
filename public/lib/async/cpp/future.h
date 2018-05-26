@@ -251,7 +251,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
       trace_name += "[" + future->trace_name() + "]";
 
       future->AddConstCallback(
-          [subfuture = subfuture, pending_futures](const Result&...) {
+          [subfuture, pending_futures](const Result&...) {
             if (--(*pending_futures) == 0) {
               subfuture->Complete();
             }
@@ -366,7 +366,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
     AsyncMapResult subfuture = AsyncMapResult::element_type::Create();
     subfuture->set_trace_name(trace_name_ + "(AsyncMap)");
 
-    SetCallback([trace_name = trace_name_, subfuture = subfuture,
+    SetCallback([trace_name = trace_name_, subfuture,
                  callback = std::move(callback)](Result&&... result) {
       AsyncMapResult future_result = callback(std::forward<Result>(result)...);
 
@@ -387,7 +387,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   FuturePtr<MapResult> Map(Callback callback) {
     FuturePtr<MapResult> subfuture = Future<MapResult>::Create();
     subfuture->set_trace_name(trace_name_ + "(Map)");
-    SetCallback([trace_name = trace_name_, subfuture = subfuture,
+    SetCallback([trace_name = trace_name_, subfuture,
                  callback = std::move(callback)](Result&&... result) {
       MapResult&& callback_result = callback(std::forward<Result>(result)...);
       subfuture->Complete(std::forward<MapResult>(callback_result));
