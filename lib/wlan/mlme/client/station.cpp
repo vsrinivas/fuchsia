@@ -1303,8 +1303,9 @@ HtCapabilities Station::BuildHtCapabilities() const {
     hci.set_tx_stbc(0);  // No plan to support STBC Tx
     hci.set_rx_stbc(1);  // one stream.
     hci.set_delayed_block_ack(0);
-    hci.set_max_amsdu_len(HtCapabilityInfo::OCTETS_7935);  // Aruba
-    // hci.set_max_amsdu_len(HtCapabilityInfo::OCTETS_3839);  // TP-Link
+
+    // TODO(NET-599): Reflect the chipset capability and USB read size in negotiation
+    hci.set_max_amsdu_len(HtCapabilityInfo::OCTETS_3839);
     hci.set_dsss_in_40(0);
     hci.set_intolerant_40(0);
     hci.set_lsig_txop_protect(0);
