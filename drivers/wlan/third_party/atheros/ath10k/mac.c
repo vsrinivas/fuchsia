@@ -4707,11 +4707,6 @@ static int ath10k_conf_tx(struct ath10k* ar, uint16_t ac, struct wmi_wmm_params_
 zx_status_t ath10k_start(struct ath10k* ar, wlanmac_ifc_t* ifc, void* cookie) {
     zx_status_t ret = ZX_OK;
 
-    if (completion_wait(&ar->init_complete, ZX_SEC(5)) == ZX_ERR_TIMED_OUT) {
-        ath10k_err("timed out waiting for initialization to complete\n");
-        return ZX_ERR_BAD_STATE;
-    }
-
     mtx_lock(&ar->conf_mutex);
     if (!BITARR_TEST(ar->dev_flags, ATH10K_FLAG_CORE_REGISTERED)) {
         ret = ZX_ERR_BAD_STATE;
