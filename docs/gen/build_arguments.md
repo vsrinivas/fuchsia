@@ -12,6 +12,13 @@
 **Default value:** "//garnet/go/src/amber/keys"
 
 
+### amber_repository_blobs_dir
+
+**Default value for `target_cpu = "arm64"`:** "//out/arm64/amber-files/repository/blobs"
+
+**Default value for `target_cpu = "x64"`:** "//out/x64/amber-files/repository/blobs"
+
+
 ### amber_repository_dir
  Directory containing files named by their merkleroot content IDs in
  ASCII hex.  The //build/image:amber_publish_blobs target populates
@@ -580,9 +587,9 @@ No values for `target_cpu = "arm64"`.
 ### thinlto_cache_dir
  ThinLTO cache directory path.
 
-**Default value for `target_cpu = "arm64"`:** "host_x64/thinlto-cache"
+**Default value for `target_cpu = "arm64"`:** "arm64-shared/thinlto-cache"
 
-**Default value for `target_cpu = "x64"`:** "x64-shared/thinlto-cache"
+**Default value for `target_cpu = "x64"`:** "host_x64/thinlto-cache"
 
 
 ### thinlto_jobs
