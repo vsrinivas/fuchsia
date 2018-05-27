@@ -34,6 +34,11 @@ MODULE_PKG_FILE := $(MODULE_BUILDDIR)/$(MODULE_NAME).pkg
 MODULE_EXP_FILE := $(BUILDDIR)/export/$(MODULE_NAME).pkg
 
 MODULE_PKG_SRCS := $(MODULE_SRCS)
+MODULE_PKG_DEPS := $(MODULE_FIDL_DEPS)
+
+ifneq ($(strip $(MODULE_PKG_DEPS)),)
+MODULE_PKG_DEPS := $(foreach dep,$(MODULE_FIDL_DEPS),$(patsubst system/fidl/%,%,$(dep))=SOURCE/$(dep))
+endif
 
 ifneq ($(strip $(MODULE_PKG_SRCS)),)
 MODULE_PKG_SRCS := $(foreach src,$(MODULE_PKG_SRCS),$(patsubst $(MODULE_SRCDIR)/%,%,$(src))=SOURCE/$(src))
@@ -43,6 +48,7 @@ endif
 $(MODULE_PKG_FILE): _NAME := $(MODULE_NAME)
 $(MODULE_PKG_FILE): _LIBRARY := $(MODULE_FIDL_LIBRARY)
 $(MODULE_PKG_FILE): _SRCS := $(if $(MODULE_PKG_SRCS),$(MODULE_PKG_TAG) $(sort $(MODULE_PKG_SRCS)))
+$(MODULE_PKG_FILE): _DEPS := $(if $(MODULE_PKG_DEPS),"[fidl-deps]" $(sort $(MODULE_PKG_DEPS)))
 $(MODULE_PKG_FILE): $(MODULE_RULESMK) make/module-fidl.mk
 	@$(call BUILDECHO,creating fidl library package $@ ;)\
 	$(MKDIR) ;\
@@ -52,6 +58,8 @@ $(MODULE_PKG_FILE): $(MODULE_RULESMK) make/module-fidl.mk
 	echo "arch=fidl" >> $@ ;\
 	echo "type=fidl" >> $@ ;\
 	for i in $(_SRCS) ; do echo $$i >> $@ ; done ;\
+	for i in $(_DEPS) ; do echo $$i >> $@ ; done
+
 
 $(MODULE_EXP_FILE): $(MODULE_PKG_FILE)
 	@$(MKDIR) ;\
