@@ -8,7 +8,9 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
 
+ifeq ($(call TOBOOL,$(INTERNAL_ACCESS)),true)
 MODULE_FIRMWARE := intel-adsp-sst/dsp_fw_kbl_v3266.bin
+endif
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/binding.c \

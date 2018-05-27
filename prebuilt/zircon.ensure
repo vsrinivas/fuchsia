@@ -47,7 +47,3 @@ fuchsia/tools/symbolize/${platform} git_revision:fa12438b6e168011e6bd677036778c2
 # QEMU
 @Subdir qemu
 fuchsia/qemu/${platform} git_revision:0f0027d617976b4cbb7b937d5836f8ef0ac25ba1
-
-# ADSP SST Firmware
-@Subdir firmware/intel-adsp-sst
-fuchsia_internal/firmware/intel-adsp-sst git_revision:8fc2d4e55685bf73b6f7752383da9067404a74bb
