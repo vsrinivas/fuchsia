@@ -4,6 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
+import("//garnet/tools/cipd.gni")
 
 driver_module("btintel_driver") {
   output_name = "btintel"
@@ -24,27 +25,29 @@ driver_module("btintel_driver") {
     "//garnet/drivers/bluetooth/lib/gap",
     "//garnet/drivers/bluetooth/lib/hci",
     "//zircon/public/lib/ddk",
-    "//zircon/public/lib/driver",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/driver",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
-copy("btintel-firmware") {
-  sources = [
-    "firmware/ibt-11-5.sfi",
-    "firmware/ibt-12-16.sfi",
-    "firmware/ibt-18-2.sfi",
-    "firmware/ibt-hw-37.8.10-fw-22.50.19.14.f.bseq",
-    "firmware/ibt-hw-37.8.bseq",
-  ]
-  outputs = [
-    "$root_out_dir/firmware/{{source_file_part}}",
-  ]
+if (internal_access) {
+  copy("btintel-firmware") {
+    sources = [
+      "firmware/ibt-11-5.sfi",
+      "firmware/ibt-12-16.sfi",
+      "firmware/ibt-18-2.sfi",
+      "firmware/ibt-hw-37.8.10-fw-22.50.19.14.f.bseq",
+      "firmware/ibt-hw-37.8.bseq",
+    ]
+    outputs = [
+      "$root_out_dir/firmware/{{source_file_part}}",
+    ]
+  }
 }
 
 package("btintel") {
@@ -52,32 +55,38 @@ package("btintel") {
 
   deps = [
     ":btintel_driver",
-
-    # The copy step has to be in the shared-library toolchain to use the
-    # expected output directory, since we treat firmware blobs as if they
-    # were libraries which always use the shared-library toolchain to build.
-    ":btintel-firmware($shlib_toolchain)",
   ]
 
-  drivers = [ {
-        name = "btintel.so"
-      } ]
-
-  libraries = [
+  drivers = [
     {
+      name = "btintel.so"
+    },
+  ]
+
+  if (internal_access) {
+    deps += [
+      # The copy step has to be in the shared-library toolchain to use the
+      # expected output directory, since we treat firmware blobs as if they
+      # were libraries which always use the shared-library toolchain to build.
+      ":btintel-firmware($shlib_toolchain)",
+    ]
+
+    libraries = [
+      {
         name = "firmware/ibt-11-5.sfi"
-    },
-    {
+      },
+      {
         name = "firmware/ibt-12-16.sfi"
-    },
-    {
+      },
+      {
         name = "firmware/ibt-18-2.sfi"
-    },
-    {
+      },
+      {
         name = "firmware/ibt-hw-37.8.10-fw-22.50.19.14.f.bseq"
-    },
-    {
+      },
+      {
         name = "firmware/ibt-hw-37.8.bseq"
-    },
-  ]
+      },
+    ]
+  }
 }

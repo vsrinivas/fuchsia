@@ -25,6 +25,7 @@ go/pkg
 *.orig
 last-update
 /.cipd
+tools/cipd.gni
 .idea/
 *.iml
 **/Cargo.toml
