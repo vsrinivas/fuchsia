@@ -304,6 +304,7 @@ class FidlLibrary(object):
         self.name = name
         self.library = library
         self.sources = []
+        self.fidl_deps = []
 
 
 def generate_fidl_library(package, context):
@@ -315,6 +316,7 @@ def generate_fidl_library(package, context):
     for name, path in package.get('fidl', {}).iteritems():
         (file, _) = extract_file(name, path, context)
         data.sources.append('//%s' % file)
+    data.fidl_deps = filter_deps(package.get('fidl-deps', []))
 
     # Generate the build file.
     build_path = os.path.join(context.out_dir, 'fidl', pkg_name, 'BUILD.gn')

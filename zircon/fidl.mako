@@ -12,4 +12,10 @@ fidl("${data.name}") {
     "${source}",
     % endfor
   ]
+
+  deps = [
+    % for dep in sorted(data.fidl_deps):
+    "../${dep}",
+    % endfor
+  ]
 }
