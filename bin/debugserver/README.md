@@ -176,7 +176,7 @@ On Linux:
 devhost$ out/toolchain/x86_64-linux/gdb/bin/gdb
 (gdb) file out/build-zircon/build-x64/system/utest/debugger/debugger.elf
 (gdb) tar ext 192.168.3.53:7000
-(gdb) set remote exec-file /boot/test/sys/debugger-test
+(gdb) set remote exec-file /system/test/sys/debugger-test
 (gdb) r segfault
 ...
 Program received signal SIGSEGV, Segmentation fault.
