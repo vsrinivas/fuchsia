@@ -40,6 +40,16 @@ constexpr size_t kKeySize = 100;
 namespace test {
 namespace benchmark {
 
+// Instances needed to control the Ledger process associated with a device and
+// interact with it.
+struct ConvergenceBenchmark::DeviceContext {
+  component::ApplicationControllerPtr app_controller;
+  ledger::LedgerPtr ledger;
+  std::unique_ptr<files::ScopedTempDir> storage_directory;
+  ledger::PagePtr page_connection;
+  std::unique_ptr<fidl::Binding<ledger::PageWatcher>> page_watcher;
+};
+
 ConvergenceBenchmark::ConvergenceBenchmark(async::Loop* loop, int entry_count,
                                            int value_size, int device_count,
                                            std::string server_id)
@@ -57,7 +67,7 @@ ConvergenceBenchmark::ConvergenceBenchmark(async::Loop* loop, int entry_count,
   FXL_DCHECK(value_size_ > 0);
   FXL_DCHECK(device_count_ > 1);
   for (auto& device_context : devices_) {
-    device_context.storage_directory = files::ScopedTempDir(kStoragePath);
+    device_context.storage_directory = std::make_unique<files::ScopedTempDir>(kStoragePath);
     device_context.page_watcher =
         std::make_unique<fidl::Binding<ledger::PageWatcher>>(this);
   }
@@ -73,7 +83,7 @@ void ConvergenceBenchmark::Run() {
     // but with the same lowest-level directory name, so they correspond to the
     // same "user".
     std::string synced_dir_path =
-        device_context.storage_directory.path() + "/convergence_user";
+        device_context.storage_directory->path() + "/convergence_user";
     bool ret = files::CreateDirectory(synced_dir_path);
     FXL_DCHECK(ret);
 

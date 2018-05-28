@@ -182,11 +182,11 @@ class PageStorageTest : public ::test::TestWithCoroutines {
       storage_->SetSyncDelegate(nullptr);
       storage_.reset();
     }
-    tmp_dir_ = files::ScopedTempDir();
+    tmp_dir_ = std::make_unique<files::ScopedTempDir>();
     PageId id = RandomString(10);
     storage_ = std::make_unique<PageStorageImpl>(
         message_loop_.async(), &coroutine_service_, &encryption_service_,
-        tmp_dir_.path(), id);
+        tmp_dir_->path(), id);
 
     bool called;
     Status status;
@@ -538,7 +538,7 @@ class PageStorageTest : public ::test::TestWithCoroutines {
   }
 
   coroutine::CoroutineServiceImpl coroutine_service_;
-  files::ScopedTempDir tmp_dir_;
+  std::unique_ptr<files::ScopedTempDir> tmp_dir_;
   encryption::FakeEncryptionService encryption_service_;
   std::unique_ptr<PageStorageImpl> storage_;
 

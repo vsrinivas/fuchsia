@@ -20,14 +20,6 @@
 namespace test {
 namespace benchmark {
 
-struct DeviceContext {
-  component::ApplicationControllerPtr app_controller;
-  ledger::LedgerPtr ledger;
-  files::ScopedTempDir storage_directory;
-  ledger::PagePtr page_connection;
-  std::unique_ptr<fidl::Binding<ledger::PageWatcher>> page_watcher;
-};
-
 // Benchmark that measures the time it takes to sync and reconcile concurrent
 // writes.
 //
@@ -53,6 +45,8 @@ class ConvergenceBenchmark : public ledger::PageWatcher {
                 OnChangeCallback callback) override;
 
  private:
+  struct DeviceContext;
+
   void Start(int step);
 
   void ShutDown();
@@ -65,6 +59,8 @@ class ConvergenceBenchmark : public ledger::PageWatcher {
   const int value_size_;
   const int device_count_;
   std::string server_id_;
+  // Track all Ledger instances running for this test and allow to interact with
+  // it.
   std::vector<DeviceContext> devices_;
   ledger::PageId page_id_;
   std::multiset<std::string> remaining_keys_;
