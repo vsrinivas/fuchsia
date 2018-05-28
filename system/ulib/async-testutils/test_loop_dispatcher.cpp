@@ -1,5 +1,5 @@
-// Copyright 2018 The Fuchsia Authors.All rights reserved.
-// Use of this source code is governed by a BSD - style license that can be
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include <lib/async-testutils/test_loop_dispatcher.h>
@@ -71,9 +71,14 @@ zx_status_t TestLoopDispatcher::BeginWait(async_wait_t* wait) {
 
 zx_status_t TestLoopDispatcher::CancelWait(async_wait_t* wait) {
     ZX_DEBUG_ASSERT(wait);
+
+    list_node_t* node = WaitToNode(wait);
+    if (!list_in_list(node)) {
+        return ZX_ERR_NOT_FOUND;
+    }
     zx_status_t status = port_.cancel(wait->object, reinterpret_cast<uintptr_t>(wait));
     if (status == ZX_OK) {
-        list_delete(WaitToNode(wait));
+        list_delete(node);
     }
     return status;
 }
