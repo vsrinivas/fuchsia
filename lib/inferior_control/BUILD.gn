@@ -69,6 +69,7 @@ executable("tests") {
   output_name = "inferior_control_tests"
 
   sources = [
+    "io_loop_unittest.cc",
     "process_unittest.cc",
     "test_server.cc",
     "test_server.h"
