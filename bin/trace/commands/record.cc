@@ -384,7 +384,7 @@ void Record::DoneTrace() {
 
   out() << "Trace file written to " << options_.output_file_name << std::endl;
 
-  if (measure_duration_ || measure_time_between_) {
+  if (measure_duration_ || measure_time_between_ || measure_argument_value_) {
     ProcessMeasurements();
   } else {
     Done(return_code_);
