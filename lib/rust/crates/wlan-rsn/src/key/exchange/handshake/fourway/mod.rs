@@ -18,6 +18,7 @@ use key::ptk::Ptk;
 use rsna::{Role, SecAssocResult, SecAssocUpdate};
 use rsne::Rsne;
 use std::rc::Rc;
+use bytes::BytesMut;
 
 enum RoleHandler {
     Authenticator(Authenticator),
@@ -234,10 +235,13 @@ impl Fourway {
             match self.ptk.as_ref() {
                 None => Err(Error::UnexpectedMic.into()),
                 Some(ptk) => {
-                    let frame_bytes = frame.to_bytes(true);
+                    let mut buf = BytesMut::with_capacity(frame.len());
+                    frame.as_bytes(true, &mut buf)?;
+                    let written = buf.len();
+                    buf.truncate(written);
                     let valid_mic = akm.integrity_algorithm()
                         .ok_or(Error::UnsupportedAkmSuite)?
-                        .verify(ptk.kck(), &frame_bytes[..], &frame.key_mic[..]);
+                        .verify(ptk.kck(), &buf[..], &frame.key_mic[..]);
                     if !valid_mic {
                         Err(Error::InvalidMic)
                     } else {

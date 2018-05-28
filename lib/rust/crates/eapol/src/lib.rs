@@ -8,6 +8,7 @@
 extern crate bitfield;
 extern crate byteorder;
 extern crate bytes;
+#[macro_use]
 extern crate failure;
 #[macro_use]
 extern crate nom;
@@ -27,7 +28,7 @@ pub trait KeyFrameReceiver {
 
 #[derive(Debug)]
 pub enum Frame {
-    Key(KeyFrame)
+    Key(KeyFrame),
 }
 
 // IEEE Std 802.1X-2010, 11.9, Table 11-5
@@ -116,13 +117,19 @@ pub struct KeyFrame {
 }
 
 impl KeyFrame {
-    pub fn to_bytes(&self, clear_mic: bool) -> BytesMut {
+    pub fn len(&self) -> usize {
         let static_part_len: usize = 35;
         let dynamic_part_len: usize =
             self.key_nonce.len() + self.key_iv.len() + self.key_mic.len() + self.key_data.len();
+        static_part_len + dynamic_part_len
+    }
 
-        let frame_len: usize = static_part_len + dynamic_part_len;
-        let mut buf = BytesMut::with_capacity(frame_len);
+    pub fn as_bytes(&self, clear_mic: bool, buf: &mut BytesMut) -> Result<(), failure::Error> {
+        let frame_len = self.len();
+        if buf.remaining_mut() < frame_len {
+            return Err(ErrorBufferTooSmall(frame_len, buf.remaining_mut()).into());
+        }
+
         buf.put_u8(self.version);
         buf.put_u8(self.packet_type);
         buf.put_u16_be(self.packet_body_len);
@@ -142,11 +149,13 @@ impl KeyFrame {
         }
         buf.put_u16_be(self.key_data_len);
         buf.put_slice(&self.key_data[..]);
-        buf
+        Ok(())
     }
 }
 
-fn to_array<A>(slice: &[u8]) -> A where A: Sized + Default + AsMut<[u8]>
+fn to_array<A>(slice: &[u8]) -> A
+    where
+        A: Sized + Default + AsMut<[u8]>,
 {
     let mut array = Default::default();
     <A as AsMut<[u8]>>::as_mut(&mut array).clone_from_slice(slice);
@@ -189,6 +198,10 @@ named_args!(pub key_frame_from_bytes(mic_size: u16) <KeyFrame>,
     )
 );
 
+#[derive(Debug, Fail)]
+#[fail(display = "buffer too small; required: {}, available: {}", _0, _1)]
+struct ErrorBufferTooSmall(usize, usize);
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -228,7 +241,7 @@ mod tests {
             0x00,
         ];
         let result = key_frame_from_bytes(&frame, 16);
-        assert_eq!(result.is_done(), false);
+        assert!(!result.is_done());
     }
 
     #[test]
@@ -244,7 +257,7 @@ mod tests {
             0x03, 0x01, 0x02, 0x03, 0x04,
         ];
         let result = key_frame_from_bytes(&frame, 16);
-        assert_eq!(result.is_done(), false);
+        assert!(!result.is_done());
     }
 
     #[test]
@@ -260,7 +273,7 @@ mod tests {
             0x03, 0x01,
         ];
         let result = key_frame_from_bytes(&frame, 16);
-        assert_eq!(result.is_done(), false);
+        assert!(!result.is_done());
     }
 
     #[test]
@@ -277,11 +290,11 @@ mod tests {
             0x00, 0x00, 0x03, 0x01, 0x02, 0x03,
         ];
         let result = key_frame_from_bytes(&frame, 32);
-        assert_eq!(result.is_done(), true);
+        assert!(result.is_done());
     }
 
     #[test]
-    fn test_to_bytes() {
+    fn test_as_bytes() {
         let frame: Vec<u8> = vec![
             0x01, 0x03, 0x00, 0x5f, 0x02, 0x00, 0x8a, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x01, 0x39, 0x5c, 0xc7, 0x6e, 0x1a, 0xe9, 0x9f, 0xa0, 0xb1, 0x22, 0x79,
@@ -293,13 +306,40 @@ mod tests {
             0x03, 0x01, 0x02, 0x03,
         ];
         let result = key_frame_from_bytes(&frame, 16);
-        assert_eq!(result.is_done(), true);
+        assert!(result.is_done());
         let keyframe: KeyFrame = result.unwrap().1;
-        assert_eq!(frame, keyframe.to_bytes(false));
+        verify_as_bytes_result(keyframe, false, &frame[..]);
     }
 
     #[test]
-    fn test_to_bytes_dynamic_mic_size() {
+    fn test_as_bytes_too_small() {
+        let frame: Vec<u8> = vec![
+            0x01, 0x03, 0x00, 0x5f, 0x02, 0x00, 0x8a, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x01, 0x39, 0x5c, 0xc7, 0x6e, 0x1a, 0xe9, 0x9f, 0xa0, 0xb1, 0x22, 0x79,
+            0xfe, 0xc3, 0xb9, 0xa9, 0x9e, 0x1d, 0x9a, 0x21, 0xb8, 0x47, 0x51, 0x38, 0x98, 0x25,
+            0xf8, 0xc7, 0xca, 0x55, 0x86, 0xbc, 0xda, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x03, 0x01, 0x02, 0x03,
+        ];
+        let result = key_frame_from_bytes(&frame, 16);
+        assert!(result.is_done());
+        let keyframe: KeyFrame = result.unwrap().1;
+
+        // Buffer is too small to write entire frame to.
+        let mut buf = BytesMut::with_capacity(frame.len() - 1);
+        let result = keyframe.as_bytes(false, &mut buf);
+        assert!(result.is_err());
+
+        // Sufficiently large buffer should work.
+        let mut buf = BytesMut::with_capacity(frame.len());
+        let result = keyframe.as_bytes(false, &mut buf);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_as_bytes_dynamic_mic_size() {
         let frame: Vec<u8> = vec![
             0x01, 0x03, 0x00, 0x6f, 0x02, 0x00, 0x8a, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
@@ -312,13 +352,13 @@ mod tests {
             0x00, 0x00, 0x03, 0x01, 0x02, 0x03,
         ];
         let result = key_frame_from_bytes(&frame, 32);
-        assert_eq!(result.is_done(), true);
+        assert!(result.is_done());
         let keyframe: KeyFrame = result.unwrap().1;
-        assert_eq!(frame, keyframe.to_bytes(false));
+        verify_as_bytes_result(keyframe, false, &frame[..]);
     }
 
     #[test]
-    fn test_to_bytes_clear_mic() {
+    fn test_as_bytes_clear_mic() {
         #[cfg_attr(rustfmt, rustfmt_skip)]
         let frame: Vec<u8> = vec![
             0x01, 0x03, 0x00, 0x5f, 0x02, 0x00, 0x8a, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -333,7 +373,7 @@ mod tests {
             0x00, 0x03, 0x01, 0x02, 0x03,
         ];
         let result = key_frame_from_bytes(&frame, 16);
-        assert_eq!(result.is_done(), true);
+        assert!(result.is_done());
         let keyframe: KeyFrame = result.unwrap().1;
 
         #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -349,7 +389,17 @@ mod tests {
             0x00, 0x00,
             0x00, 0x03, 0x01, 0x02, 0x03,
         ];
-        assert_eq!(expected, keyframe.to_bytes(true));
+        verify_as_bytes_result(keyframe, true, &expected[..]);
+    }
+
+    fn verify_as_bytes_result(keyframe: KeyFrame, clear_mic: bool, expected: &[u8]) {
+        let mut buf = BytesMut::with_capacity(128);
+        let result = keyframe.as_bytes(clear_mic, &mut buf);
+        assert!(result.is_ok());
+        let written = buf.len();
+        let left_over = buf.split_off(written);
+        assert_eq!(&buf[..], expected);
+        assert!(left_over.iter().all(|b| *b == 0));
     }
 
     #[test]
@@ -365,7 +415,7 @@ mod tests {
             0x03, 0x01, 0x02, 0x03,
         ];
         let result = key_frame_from_bytes(&frame, 16);
-        assert_eq!(result.is_done(), true);
+        assert!(result.is_done());
         let keyframe: KeyFrame = result.unwrap().1;
         assert_eq!(keyframe.version, 1);
         assert_eq!(keyframe.packet_type, 3);
@@ -373,7 +423,7 @@ mod tests {
         assert_eq!(keyframe.descriptor_type, 2);
         assert_eq!(keyframe.key_info.value(), 0x008a);
         assert_eq!(keyframe.key_info.key_descriptor_version(), 2);
-        assert_eq!(keyframe.key_info.key_ack(), true);
+        assert!(keyframe.key_info.key_ack());
         assert_eq!(keyframe.key_len, 16);
         assert_eq!(keyframe.key_replay_counter, 1);
         let nonce: Vec<u8> = vec![
