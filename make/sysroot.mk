@@ -39,17 +39,17 @@ $(BUILDSYSROOT)/lib/librt.so: third_party/ulib/musl/lib.ld
 SYSROOT_DEPS += $(BUILDSYSROOT)/lib/libm.so $(BUILDSYSROOT)/lib/libdl.so $(BUILDSYSROOT)/lib/libpthread.so
 
 # GDB specifically looks for ld.so.1, so we create that as a symlink.
-$(BUILDSYSROOT)/debug-info/$(USER_SHARED_INTERP): FORCE
+$(BUILDSYSROOT)/debug/$(USER_SHARED_INTERP): FORCE
 	@$(MKDIR)
 	$(NOECHO)rm -f $@
 	$(NOECHO)ln -s libc.so $@
 
-SYSROOT_DEPS += $(BUILDSYSROOT)/debug-info/$(USER_SHARED_INTERP)
+SYSROOT_DEPS += $(BUILDSYSROOT)/debug/$(USER_SHARED_INTERP)
 
 # Stable (i.e. sorted) list of the actual build inputs in the sysroot.
-# (The debug-info files don't really belong in the sysroot.)
+# (The debug files don't really belong in the sysroot.)
 SYSROOT_LIST := \
-    $(sort $(filter-out debug-info/%,$(SYSROOT_DEPS:$(BUILDSYSROOT)/%=%)))
+    $(sort $(filter-out debug/%,$(SYSROOT_DEPS:$(BUILDSYSROOT)/%=%)))
 
 # Generate a file containing $(SYSROOT_LIST) (but newline-separated), for
 # other scripts and whatnot to consume.  Touch that file only when its
