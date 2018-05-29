@@ -13,6 +13,7 @@
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/ledger_manager.h"
+#include "peridot/bin/ledger/app/page_eviction_manager.h"
 #include "peridot/bin/ledger/app/sync_watcher_set.h"
 #include "peridot/bin/ledger/encryption/impl/encryption_service_factory_impl.h"
 #include "peridot/bin/ledger/environment/environment.h"
@@ -25,9 +26,11 @@ namespace ledger {
 class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
                              public ledger_internal::LedgerRepositoryDebug {
  public:
-  LedgerRepositoryImpl(std::string base_storage_dir, Environment* environment,
-                       std::unique_ptr<SyncWatcherSet> watchers,
-                       std::unique_ptr<sync_coordinator::UserSync> user_sync);
+  LedgerRepositoryImpl(
+      std::string base_storage_dir, Environment* environment,
+      std::unique_ptr<SyncWatcherSet> watchers,
+      std::unique_ptr<sync_coordinator::UserSync> user_sync,
+      std::unique_ptr<PageEvictionManager> page_eviction_manager);
   ~LedgerRepositoryImpl() override;
 
   void set_on_empty(const fxl::Closure& on_empty_callback) {
@@ -55,6 +58,8 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
       fidl::InterfaceRequest<ledger_internal::LedgerRepositoryDebug> request,
       GetLedgerRepositoryDebugCallback callback) override;
 
+  void DiskCleanUp(DiskCleanUpCallback callback) override;
+
   void CheckEmpty();
 
   // LedgerRepositoryDebug:
@@ -74,6 +79,7 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
                              convert::StringViewComparator>
       ledger_managers_;
   fidl::BindingSet<ledger_internal::LedgerRepository> bindings_;
+  std::unique_ptr<PageEvictionManager> page_eviction_manager_;
   fxl::Closure on_empty_callback_;
 
   fidl::BindingSet<ledger_internal::LedgerRepositoryDebug>

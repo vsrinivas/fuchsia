@@ -19,6 +19,7 @@
 #include "lib/fxl/random/rand.h"
 #include "lib/gtest/test_with_loop.h"
 #include "peridot/bin/ledger/app/constants.h"
+#include "peridot/bin/ledger/app/page_eviction_manager_impl.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
@@ -119,10 +120,12 @@ class LedgerManagerTest : public gtest::TestWithLoop {
     storage_ptr = storage.get();
     std::unique_ptr<FakeLedgerSync> sync = std::make_unique<FakeLedgerSync>();
     sync_ptr = sync.get();
+    page_eviction_manager_ = std::make_unique<PageEvictionManagerImpl>();
+    FXL_CHECK(page_eviction_manager_->Init() == Status::OK);
     ledger_manager_ = std::make_unique<LedgerManager>(
-        &environment_,
+        &environment_, "test_ledger",
         std::make_unique<encryption::FakeEncryptionService>(dispatcher()),
-        std::move(storage), std::move(sync));
+        std::move(storage), std::move(sync), page_eviction_manager_.get());
     ledger_manager_->BindLedger(ledger_.NewRequest());
     ledger_manager_->BindLedgerDebug(ledger_debug_.NewRequest());
   }
@@ -131,6 +134,7 @@ class LedgerManagerTest : public gtest::TestWithLoop {
   Environment environment_;
   FakeLedgerStorage* storage_ptr;
   FakeLedgerSync* sync_ptr;
+  std::unique_ptr<PageEvictionManagerImpl> page_eviction_manager_;
   std::unique_ptr<LedgerManager> ledger_manager_;
   LedgerPtr ledger_;
   ledger_internal::LedgerDebugPtr ledger_debug_;

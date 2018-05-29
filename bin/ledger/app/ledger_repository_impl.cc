@@ -17,12 +17,14 @@ namespace ledger {
 LedgerRepositoryImpl::LedgerRepositoryImpl(
     std::string base_storage_dir, Environment* environment,
     std::unique_ptr<SyncWatcherSet> watchers,
-    std::unique_ptr<sync_coordinator::UserSync> user_sync)
+    std::unique_ptr<sync_coordinator::UserSync> user_sync,
+    std::unique_ptr<PageEvictionManager> page_eviction_manager)
     : base_storage_dir_(std::move(base_storage_dir)),
       environment_(environment),
       encryption_service_factory_(environment->async()),
       watchers_(std::move(watchers)),
-      user_sync_(std::move(user_sync)) {
+      user_sync_(std::move(user_sync)),
+      page_eviction_manager_(std::move(page_eviction_manager)) {
   bindings_.set_empty_set_handler([this] { CheckEmpty(); });
   ledger_managers_.set_on_empty([this] { CheckEmpty(); });
   ledger_repository_debug_bindings_.set_empty_set_handler(
@@ -73,11 +75,11 @@ void LedgerRepositoryImpl::GetLedger(
                                                  encryption_service.get());
     }
     auto result = ledger_managers_.emplace(
-        std::piecewise_construct,
-        std::forward_as_tuple(std::move(name_as_string)),
-        std::forward_as_tuple(environment_, std::move(encryption_service),
-                              std::move(ledger_storage),
-                              std::move(ledger_sync)));
+        std::piecewise_construct, std::forward_as_tuple(name_as_string),
+        std::forward_as_tuple(environment_, std::move(name_as_string),
+                              std::move(encryption_service),
+                              std::move(ledger_storage), std::move(ledger_sync),
+                              page_eviction_manager_.get()));
     FXL_DCHECK(result.second);
     it = result.first;
   }
@@ -135,6 +137,10 @@ void LedgerRepositoryImpl::GetLedgerDebug(
     it->second.BindLedgerDebug(std::move(request));
     callback(Status::OK);
   }
+}
+
+void LedgerRepositoryImpl::DiskCleanUp(DiskCleanUpCallback callback) {
+  page_eviction_manager_->TryCleanUp(std::move(callback));
 }
 
 }  // namespace ledger

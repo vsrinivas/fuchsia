@@ -17,6 +17,7 @@
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/app/ledger_impl.h"
 #include "peridot/bin/ledger/app/merging/ledger_merge_manager.h"
+#include "peridot/bin/ledger/app/page_eviction_manager.h"
 #include "peridot/bin/ledger/app/page_manager.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/environment/environment.h"
@@ -36,10 +37,11 @@ class LedgerManager : public LedgerImpl::Delegate,
                       public ledger_internal::LedgerDebug {
  public:
   LedgerManager(
-      Environment* environment,
+      Environment* environment, std::string ledger_name,
       std::unique_ptr<encryption::EncryptionService> encryption_service,
       std::unique_ptr<storage::LedgerStorage> storage,
-      std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync);
+      std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync,
+      PageUsageListener* page_usage_listener);
   ~LedgerManager() override;
 
   // Creates a new proxy for the LedgerImpl managed by this LedgerManager.
@@ -72,6 +74,7 @@ class LedgerManager : public LedgerImpl::Delegate,
   // is automatically deleted from |page_managers_| when the last local client
   // disconnects from the page. Returns the container.
   PageManagerContainer* AddPageManagerContainer(storage::PageIdView page_id);
+
   // Creates a new page manager for the given storage.
   std::unique_ptr<PageManager> NewPageManager(
       std::unique_ptr<storage::PageStorage> page_storage,
@@ -88,6 +91,7 @@ class LedgerManager : public LedgerImpl::Delegate,
       GetPageDebugCallback callback) override;
 
   Environment* const environment_;
+  std::string ledger_name_;
   std::unique_ptr<encryption::EncryptionService> encryption_service_;
   std::unique_ptr<storage::LedgerStorage> storage_;
   std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync_;
@@ -101,6 +105,7 @@ class LedgerManager : public LedgerImpl::Delegate,
   callback::AutoCleanableMap<storage::PageId, PageManagerContainer,
                              convert::StringViewComparator>
       page_managers_;
+  PageUsageListener* page_usage_listener_;
   fxl::Closure on_empty_callback_;
 
   fidl::BindingSet<LedgerDebug> ledger_debug_bindings_;

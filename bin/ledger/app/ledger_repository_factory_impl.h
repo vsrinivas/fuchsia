@@ -44,9 +44,11 @@ class LedgerRepositoryFactoryImpl
           repository_request,
       GetRepositoryCallback callback) override;
 
-  void CreateRepository(LedgerRepositoryContainer* container,
-                        const RepositoryInformation& repository_information,
-                        cloud_sync::UserConfig user_config);
+  void CreateRepository(
+      LedgerRepositoryContainer* container,
+      const RepositoryInformation& repository_information,
+      cloud_sync::UserConfig user_config,
+      std::unique_ptr<PageEvictionManager> page_eviction_manager);
   std::unique_ptr<p2p_sync::UserCommunicator> CreateP2PSync(
       const RepositoryInformation& repository_information);
   void OnVersionMismatch(RepositoryInformation repository_information);

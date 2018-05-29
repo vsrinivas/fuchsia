@@ -17,6 +17,7 @@
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/app/constants.h"
+#include "peridot/bin/ledger/app/page_eviction_manager_impl.h"
 #include "peridot/bin/ledger/cloud_sync/impl/user_sync_impl.h"
 #include "peridot/bin/ledger/p2p_provider/impl/p2p_provider_impl.h"
 #include "peridot/bin/ledger/p2p_provider/impl/user_id_provider_impl.h"
@@ -183,6 +184,13 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     callback(Status::IO_ERROR);
     return;
   }
+  auto page_eviction_manager = std::make_unique<PageEvictionManagerImpl>();
+  Status status = page_eviction_manager->Init();
+  if (status != Status::OK) {
+    callback(status);
+    return;
+  }
+
   auto it = repositories_.find(repository_information.name);
   if (it != repositories_.end()) {
     it->second.BindRepository(std::move(repository_request), callback);
@@ -203,7 +211,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
         std::make_unique<SyncWatcherSet>();
     auto repository = std::make_unique<LedgerRepositoryImpl>(
         repository_information.content_path, environment_, std::move(watchers),
-        nullptr);
+        nullptr, std::move(page_eviction_manager));
     container->SetRepository(Status::OK, std::move(repository));
     return;
   }
@@ -228,13 +236,15 @@ void LedgerRepositoryFactoryImpl::GetRepository(
   cloud_sync::UserConfig user_config;
   user_config.user_directory = repository_information.content_path;
   user_config.cloud_provider = std::move(cloud_provider_ptr);
-  CreateRepository(container, repository_information, std::move(user_config));
+  CreateRepository(container, repository_information, std::move(user_config),
+                   std::move(page_eviction_manager));
 }
 
 void LedgerRepositoryFactoryImpl::CreateRepository(
     LedgerRepositoryContainer* container,
     const RepositoryInformation& repository_information,
-    cloud_sync::UserConfig user_config) {
+    cloud_sync::UserConfig user_config,
+    std::unique_ptr<PageEvictionManager> page_eviction_manager) {
   std::unique_ptr<SyncWatcherSet> watchers = std::make_unique<SyncWatcherSet>();
   fxl::Closure on_version_mismatch = [this, repository_information]() mutable {
     OnVersionMismatch(repository_information);
@@ -251,7 +261,7 @@ void LedgerRepositoryFactoryImpl::CreateRepository(
   user_sync->Start();
   auto repository = std::make_unique<LedgerRepositoryImpl>(
       repository_information.content_path, environment_, std::move(watchers),
-      std::move(user_sync));
+      std::move(user_sync), std::move(page_eviction_manager));
   container->SetRepository(Status::OK, std::move(repository));
 }
 

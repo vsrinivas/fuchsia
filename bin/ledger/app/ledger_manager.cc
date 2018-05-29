@@ -24,7 +24,14 @@ namespace ledger {
 // callbacks and fires them when the PageManager is available.
 class LedgerManager::PageManagerContainer {
  public:
-  PageManagerContainer() {}
+  PageManagerContainer(std::string ledger_name, storage::PageId page_id,
+                       PageUsageListener* page_usage_listener)
+      : ledger_name_(ledger_name),
+        page_id_(page_id),
+        page_usage_listener_(page_usage_listener) {
+    page_usage_listener_->OnPageOpened(ledger_name_, page_id_);
+  }
+
   ~PageManagerContainer() {
     for (const auto& request : requests_) {
       request.second(Status::INTERNAL_ERROR);
@@ -32,6 +39,7 @@ class LedgerManager::PageManagerContainer {
     for (const auto& request : debug_requests_) {
       request.second(Status::INTERNAL_ERROR);
     }
+    page_usage_listener_->OnPageClosed(ledger_name_, page_id_);
   }
 
   void set_on_empty(const fxl::Closure& on_empty_callback) {
@@ -110,7 +118,10 @@ class LedgerManager::PageManagerContainer {
   }
 
  private:
+  const std::string ledger_name_;
+  const storage::PageId page_id_;
   std::unique_ptr<PageManager> page_manager_;
+  PageUsageListener* page_usage_listener_;
   Status status_ = Status::OK;
   std::vector<
       std::pair<fidl::InterfaceRequest<Page>, std::function<void(Status)>>>
@@ -124,16 +135,19 @@ class LedgerManager::PageManagerContainer {
 };
 
 LedgerManager::LedgerManager(
-    Environment* environment,
+    Environment* environment, std::string ledger_name,
     std::unique_ptr<encryption::EncryptionService> encryption_service,
     std::unique_ptr<storage::LedgerStorage> storage,
-    std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync)
+    std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync,
+    PageUsageListener* page_usage_listener)
     : environment_(environment),
+      ledger_name_(ledger_name),
       encryption_service_(std::move(encryption_service)),
       storage_(std::move(storage)),
       ledger_sync_(std::move(ledger_sync)),
       ledger_impl_(this),
-      merge_manager_(environment_) {
+      merge_manager_(environment_),
+      page_usage_listener_(page_usage_listener) {
   bindings_.set_empty_set_handler([this] { CheckEmpty(); });
   page_managers_.set_on_empty([this] { CheckEmpty(); });
   ledger_debug_bindings_.set_empty_set_handler([this] { CheckEmpty(); });
@@ -219,9 +233,10 @@ void LedgerManager::CreatePageStorage(storage::PageId page_id,
 
 LedgerManager::PageManagerContainer* LedgerManager::AddPageManagerContainer(
     storage::PageIdView page_id) {
-  auto ret = page_managers_.emplace(std::piecewise_construct,
-                                    std::forward_as_tuple(page_id.ToString()),
-                                    std::forward_as_tuple());
+  auto ret = page_managers_.emplace(
+      std::piecewise_construct, std::forward_as_tuple(page_id.ToString()),
+      std::forward_as_tuple(ledger_name_, page_id.ToString(),
+                            page_usage_listener_));
   FXL_DCHECK(ret.second);
   return &ret.first->second;
 }
