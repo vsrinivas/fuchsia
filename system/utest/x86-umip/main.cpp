@@ -52,7 +52,7 @@ bool isn_should_crash(Instruction isn) {
     __builtin_trap();
 }
 
-void isn_thread_func(uintptr_t raw_isn, void* unused) {
+void isn_thread_func(uintptr_t raw_isn, uintptr_t unused) {
     Instruction isn = static_cast<Instruction>(raw_isn);
 
     alignas(16) static uint8_t scratch_buf[16];
@@ -96,8 +96,7 @@ bool test_instruction(Instruction isn) {
     ASSERT_EQ(zx::thread::create(zx::process::self(), "isn_probe", 9u, 0u, &thread), ZX_OK);
 
     alignas(16) static uint8_t thread_stack[128];
-    uintptr_t entry = reinterpret_cast<uintptr_t>(&isn_thread_func);
-    uintptr_t stack_top = reinterpret_cast<uintptr_t>(thread_stack + sizeof(thread_stack));
+    void* stack_top = thread_stack + sizeof(thread_stack);
 
     zx::port port;
     ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
@@ -105,7 +104,7 @@ bool test_instruction(Instruction isn) {
     ASSERT_EQ(thread.wait_async(port, 0, ZX_THREAD_TERMINATED, ZX_WAIT_ASYNC_ONCE), ZX_OK);
     ASSERT_EQ(zx_task_bind_exception_port(thread.get(), port.get(), 0, 0), ZX_OK);
 
-    ASSERT_EQ(thread.start(entry, stack_top, static_cast<uintptr_t>(isn), 0), ZX_OK);
+    ASSERT_EQ(thread.start(&isn_thread_func, stack_top, static_cast<uintptr_t>(isn), 0), ZX_OK);
 
     // Wait for crash or thread completion.
     zx_port_packet_t packet;

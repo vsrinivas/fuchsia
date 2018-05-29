@@ -17,11 +17,14 @@ public:
 
     constexpr thread() = default;
 
-    explicit thread(zx_handle_t value) : task(value) {}
+    explicit thread(zx_handle_t value)
+        : task(value) {}
 
-    explicit thread(handle&& h) : task(h.release()) {}
+    explicit thread(handle&& h)
+        : task(h.release()) {}
 
-    thread(thread&& other) : task(other.release()) {}
+    thread(thread&& other)
+        : task(other.release()) {}
 
     thread& operator=(thread&& other) {
         reset(other.release());
@@ -35,9 +38,18 @@ public:
                               uint32_t name_len, uint32_t flags,
                               thread* result);
 
+    // The first variant maps exactly to the syscall and can be used for
+    // launching threads in remote processes. The second variant is for
+    // conveniently launching threads in the current process.
     zx_status_t start(uintptr_t thread_entry, uintptr_t stack, uintptr_t arg1,
                       uintptr_t arg2) const {
         return zx_thread_start(get(), thread_entry, stack, arg1, arg2);
+    }
+    zx_status_t start(void (*thread_entry)(uintptr_t arg1, uintptr_t arg2),
+                      void* stack, uintptr_t arg1, uintptr_t arg2) {
+        return zx_thread_start(get(),
+                               reinterpret_cast<uintptr_t>(thread_entry),
+                               reinterpret_cast<uintptr_t>(stack), arg1, arg2);
     }
 
     zx_status_t read_state(uint32_t kind, void* buffer, size_t len) const {

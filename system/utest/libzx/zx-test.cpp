@@ -358,8 +358,8 @@ static bool thread_suspend_test() {
 
     // Make a little stack and start the thread. Note: stack grows down so pass the high address.
     alignas(16) static uint8_t stack_storage[64];
-    uintptr_t stack = reinterpret_cast<uintptr_t>(stack_storage + sizeof(stack_storage));
-    ASSERT_EQ(thread.start(reinterpret_cast<uintptr_t>(&thread_suspend_test_fn), stack, 0, 0), ZX_OK);
+    uint8_t* stack = stack_storage + sizeof(stack_storage);
+    ASSERT_EQ(thread.start(&thread_suspend_test_fn, stack, 0, 0), ZX_OK);
 
     zx::suspend_token suspend;
     EXPECT_EQ(thread.suspend(&suspend), ZX_OK);
