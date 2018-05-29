@@ -17,6 +17,7 @@ void coordinator(void);
 void devfs_init(zx_handle_t root_job);
 
 void devmgr_io_init(void);
+void devmgr_svc_init(void);
 void devmgr_vfs_init(void);
 void devmgr_set_bootdata(zx_handle_t vmo);
 
@@ -37,7 +38,7 @@ zx_handle_t devmgr_load_file(const char* path);
 
 
 #define FS_FOR_FSPROC  (FS_SVC)
-#define FS_FOR_APPMGR  (FS_ALL & (~FS_SVC) & (~FS_HUB))
+#define FS_FOR_APPMGR  (FS_ALL & (~FS_HUB))
 
 #define FS_DIR_FLAGS \
     (ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_ADMIN |\

@@ -60,6 +60,7 @@ static zx_handle_t root_job_handle;
 static zx_handle_t svcs_job_handle;
 static zx_handle_t fuchsia_job_handle;
 static zx_handle_t exception_channel;
+static zx_handle_t svchost_outgoing;
 
 zx_handle_t virtcon_open;
 
@@ -548,6 +549,7 @@ int main(int argc, char** argv) {
     zx_event_create(0, &fshost_event);
 
     bootfs_create_from_startup_handle();
+    devmgr_svc_init();
     devmgr_vfs_init();
 
     load_cmdline_from_bootfs();
@@ -676,14 +678,18 @@ void fshost_start(void) {
         }
     }
 
-    // pass VDSO VMOS to fsboot
-    zx_handle_t vmo = ZX_HANDLE_INVALID;
+    // pass VDSO VMOS to fshost
     for (size_t m = 0; n < MAXHND; m++) {
         uint32_t type = PA_HND(PA_VMO_VDSO, m);
-        if ((handles[n] = zx_get_startup_handle(type)) != ZX_HANDLE_INVALID) {
-            if (m == 0) {
-                zx_handle_duplicate(handles[n], ZX_RIGHT_SAME_RIGHTS, &vmo);
-            }
+        if (m == 0) {
+            // By this point, launchpad has already moved PA_HND(PA_VMO_VDSO, 0) into a static.
+            handles[n] = ZX_HANDLE_INVALID;
+            launchpad_get_vdso_vmo(&handles[n]);
+        } else {
+            handles[n] = zx_get_startup_handle(type);
+        }
+
+        if (handles[n] != ZX_HANDLE_INVALID) {
             types[n++] = type;
         } else {
             break;
@@ -699,8 +705,6 @@ void fshost_start(void) {
             break;
         }
     }
-
-    launchpad_set_vdso_vmo(vmo);
 
     const char* argv[] = { "/boot/bin/fshost", "--netboot" };
     int argc = (getenv_bool("netsvc.netboot", false) ||
@@ -792,4 +796,80 @@ void devmgr_vfs_init(void) {
     if ((r = fdio_ns_install(ns)) != ZX_OK) {
         printf("devmgr: cannot install namespace: %d\n", r);
     }
+}
+
+zx_status_t svchost_start(void) {
+    zx_handle_t dir_request = ZX_HANDLE_INVALID;
+    zx_handle_t logger = ZX_HANDLE_INVALID;
+    zx_handle_t appmgr_svc_req = ZX_HANDLE_INVALID;
+    zx_handle_t appmgr_svc = ZX_HANDLE_INVALID;
+
+    zx_status_t status = zx_channel_create(0, &dir_request, &svchost_outgoing);
+    if (status != ZX_OK) {
+        goto error;
+    }
+
+    status = zx_log_create(0, &logger);
+    if (status != ZX_OK) {
+        goto error;
+    }
+
+    status = zx_channel_create(0, &appmgr_svc_req, &appmgr_svc);
+    if (status != ZX_OK) {
+        goto error;
+    }
+
+    status = fdio_service_connect_at(appmgr_req_cli, "svc", appmgr_svc_req);
+    if (status != ZX_OK) {
+        goto error;
+    }
+
+    const char* name = "svchost";
+    const char* argv[] = { "/boot/bin/svchost" };
+
+    zx_handle_t svchost_vmo = devmgr_load_file(argv[0]);
+    if (svchost_vmo == ZX_HANDLE_INVALID) {
+        goto error;
+    }
+
+    zx_handle_t job_copy = ZX_HANDLE_INVALID;
+    zx_handle_duplicate(svcs_job_handle, ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_MANAGE_JOB, &job_copy);
+
+    launchpad_t* lp = NULL;
+    launchpad_create(job_copy, name, &lp);
+    launchpad_load_from_vmo(lp, svchost_vmo);
+    launchpad_set_args(lp, 1, argv);
+    launchpad_add_handle(lp, dir_request, PA_DIRECTORY_REQUEST);
+    launchpad_add_handle(lp, logger, PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO));
+
+    // Remove once svchost hosts the tracelink serice itself.
+    launchpad_add_handle(lp, appmgr_svc, PA_HND(PA_USER0, 0));
+
+    zx_handle_t process = ZX_HANDLE_INVALID;
+    const char* errmsg = NULL;
+    if ((status = launchpad_go(lp, &process, &errmsg)) < 0) {
+        printf("devmgr: launchpad %s (%s) failed: %s: %d\n",
+               argv[0], name, errmsg, status);
+    } else {
+        printf("devmgr: launch %s (%s) OK\n", argv[0], name);
+    }
+    zx_handle_close(job_copy);
+    return ZX_OK;
+
+error:
+    if (dir_request != ZX_HANDLE_INVALID)
+        zx_handle_close(dir_request);
+    if (logger != ZX_HANDLE_INVALID)
+        zx_handle_close(logger);
+    // We don't need to clean up appmgr_svc_req because it is always consumed by
+    // fdio_service_connect_at.
+    if (appmgr_svc != ZX_HANDLE_INVALID)
+        zx_handle_close(appmgr_svc);
+    return status;
+}
+
+void devmgr_svc_init(void) {
+    printf("devmgr: svc init\n");
+
+    svchost_start();
 }
