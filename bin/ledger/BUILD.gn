@@ -166,6 +166,12 @@ package("ledger_tests") {
 
     {
       path = rebase_path(
+              "//peridot/bin/ledger/tests/benchmark/delete_entry/disk_space_cleared_page.tspec")
+      dest = "ledger/benchmark/disk_space_cleared_page.tspec"
+    },
+
+    {
+      path = rebase_path(
               "//peridot/bin/ledger/tests/benchmark/disk_space/entries.tspec")
       dest = "ledger/benchmark/disk_space_entries.tspec"
     },

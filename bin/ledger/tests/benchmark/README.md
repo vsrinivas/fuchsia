@@ -70,6 +70,8 @@ page.
     * `delete_entry.tspec`: each entry is deleted separately (outside of a
       transaction)
     * `delete_entry_transaction.tspec`: deletions are grouped in transactions
+    * `disk_space_cleared_page.tspec`: how much space does ledger take after the
+      page was cleared out (all the entries deleted in one transaction)?
 * __Disk space__: How much disk space does ledger use to store pages, objects
   and commits?
     * `disk_space_empty_ledger.tspec`: empty ledger (with no pages)

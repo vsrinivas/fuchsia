@@ -17,6 +17,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
+#include "peridot/bin/ledger/filesystem/get_directory_content_size.h"
 #include "peridot/bin/ledger/testing/get_ledger.h"
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
@@ -109,6 +110,11 @@ void DeleteEntryBenchmark::Populate() {
 void DeleteEntryBenchmark::RunSingle(size_t i) {
   if (i == entry_count_) {
     ShutDown();
+
+    uint64_t tmp_dir_size = 0;
+    FXL_CHECK(ledger::GetDirectoryContentSize(tmp_dir_.path(), &tmp_dir_size));
+    TRACE_COUNTER("benchmark", "ledger_directory_size", 0, "directory_size",
+                  TA_UINT64(tmp_dir_size));
     return;
   }
 
