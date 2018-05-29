@@ -4,9 +4,13 @@
 
 #include "garnet/bin/appmgr/namespace.h"
 
+#include <fdio/util.h>
+#include <fuchsia/process/cpp/fidl.h>
+
 #include <utility>
 
 #include "garnet/bin/appmgr/realm.h"
+#include "lib/app/cpp/environment_services.h"
 
 namespace component {
 
@@ -26,6 +30,10 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
   services_.AddService<ApplicationLauncher>(
       [this](fidl::InterfaceRequest<ApplicationLauncher> request) {
         launcher_bindings_.AddBinding(this, std::move(request));
+      });
+  services_.AddService<fuchsia::process::Launcher>(
+      [this](fidl::InterfaceRequest<fuchsia::process::Launcher> request) {
+        ConnectToEnvironmentService(std::move(request));
       });
 
   if (service_list) {
