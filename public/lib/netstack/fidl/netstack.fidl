@@ -167,6 +167,7 @@ interface Netstack {
 
   11: SetDhcpClientStatus(uint32 nicid, bool enabled) -> (NetErr result);
 
-  // 13: BridgeInterfaces(vector<uint32> nicids) -> (NetInterface bridge, NetErr result);
   12: BridgeInterfaces(vector<uint32> nicids) -> (NetErr result);
+
+  0x1000: -> InterfacesChanged(vector<NetInterface> interfaces);
 };

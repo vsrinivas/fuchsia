@@ -331,7 +331,7 @@ func (ni *netstackImpl) onInterfacesChanged(interfaces []nsfidl.NetInterface) {
 	}
 }
 
-var netstackService *bindings.BindingSet
+var netstackService *nsfidl.NetstackService
 
 // AddNetstackService registers the NetstackService with the application context,
 // allowing it to respond to FIDL queries.
@@ -339,20 +339,23 @@ func AddNetstackService(ctx *context.Context) error {
 	if netstackService != nil {
 		return fmt.Errorf("AddNetworkService must be called only once")
 	}
-	netstackService = &bindings.BindingSet{}
+	netstackService = &nsfidl.NetstackService{}
 	ctx.OutgoingService.AddService(nsfidl.NetstackName, func(c zx.Channel) error {
-		_, err := netstackService.Add(&nsfidl.NetstackStub{
-			Impl: &netstackImpl{},
-		}, c, nil)
+		_, err := netstackService.Add(&netstackImpl{}, c, nil)
 		return err
 	})
+
 	return nil
 }
 
 func OnInterfacesChanged() {
 	if netstackService != nil {
 		interfaces := getInterfaces()
-		for _, client := range netstackService.Bindings {
+		for key, client := range netstackService.Bindings {
+			if p, ok := netstackService.EventProxyFor(key); ok {
+				p.InterfacesChanged(interfaces)
+			}
+			// TODO(stijlist): port mDNS to use FIDL2 events instead of NotificationListener
 			client.Stub.(*nsfidl.NetstackStub).Impl.(*netstackImpl).onInterfacesChanged(interfaces)
 		}
 	}
