@@ -63,6 +63,18 @@ typedef struct {
 } xdc_str_descs_t;
 
 typedef struct {
+    uint32_t stream_id;
+    size_t total_length;
+} xdc_packet_header_t;
+
+typedef struct {
+    xdc_packet_header_t header;
+    // Number of bytes received for this packet so far.
+    // Once this equals header.total_length, the packet has been fully received.
+    size_t bytes_received;
+} xdc_packet_state_t;
+
+typedef struct {
     zx_device_t* zxdev;
 
     // Shared from XHCI.
@@ -104,7 +116,7 @@ typedef struct {
     mtx_t write_lock;
 
     list_node_t free_read_reqs;
-    list_node_t completed_reads;
+    xdc_packet_state_t cur_read_packet;
     mtx_t read_lock;
 
     struct list_node instance_list;
