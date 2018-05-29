@@ -39,7 +39,7 @@ failure, one of the following values is returned.
 ## ERRORS
 
 **ZX_ERR_INVALID_ARGS**  *out0* or *out1* is an invalid pointer or NULL or
-*options* is any value other than 0.
+*options* is any value other than **ZX_SOCKET_STREAM** or **ZX_SOCKET_DATAGRAM**.
 
 **ZX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
