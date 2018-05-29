@@ -64,9 +64,10 @@ class BacklogBenchmark : public ledger::SyncWatcher {
   void WaitForReaderDownload();
 
   void GetReaderSnapshot();
-  void GetEntriesStep(fidl::VectorPtr<uint8_t> token, size_t entries_left);
+  void GetEntriesStep(std::unique_ptr<ledger::Token> token,
+                      size_t entries_left);
   void CheckStatusAndGetMore(ledger::Status status, size_t entries_read,
-                             fidl::VectorPtr<uint8_t> next_token);
+                             std::unique_ptr<ledger::Token> next_token);
 
   void ShutDown();
 

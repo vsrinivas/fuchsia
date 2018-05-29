@@ -111,7 +111,7 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
              << "GetSnapshot failed with status " << status;
     }
     fidl::VectorPtr<ledger::InlinedEntry> entries;
-    fidl::VectorPtr<uint8_t> next_token;
+    std::unique_ptr<ledger::Token> next_token;
     snapshot->GetEntriesInline(
         nullptr, nullptr,
         callback::Capture(MakeQuitTask(), &status, &entries, &next_token));

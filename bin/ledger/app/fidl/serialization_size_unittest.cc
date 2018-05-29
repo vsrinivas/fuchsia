@@ -65,19 +65,19 @@ class FakeSnapshotImpl : public PageSnapshot {
 
   // PageSnapshot:
   void GetEntriesInline(fidl::VectorPtr<uint8_t> /*key_start*/,
-                        fidl::VectorPtr<uint8_t> /*token*/,
+                        std::unique_ptr<Token> /*token*/,
                         GetEntriesInlineCallback callback) override {
     get_entries_inline_callback = std::move(callback);
   }
 
   void GetEntries(fidl::VectorPtr<uint8_t> /*key_start*/,
-                  fidl::VectorPtr<uint8_t> /*token*/,
+                  std::unique_ptr<Token> /*token*/,
                   GetEntriesCallback callback) override {
     get_entries_callback = std::move(callback);
   }
 
   void GetKeys(fidl::VectorPtr<uint8_t> /*key_start*/,
-               fidl::VectorPtr<uint8_t> /*token*/,
+               std::unique_ptr<Token> /*token*/,
                GetKeysCallback /*callback*/) override {}
 
   void Get(fidl::VectorPtr<uint8_t> /*key*/, GetCallback callback) override {
@@ -192,7 +192,7 @@ TEST_F(SerializationSizeTest, GetEntriesInline) {
 
   auto client_callback = [](Status /*status*/,
                             fidl::VectorPtr<InlinedEntry> /*entries*/,
-                            fidl::VectorPtr<uint8_t> /*next_token*/) {};
+                            std::unique_ptr<Token> /*next_token*/) {};
   // FakeSnapshot saves the callback instead of running it.
   snapshot_proxy->GetEntriesInline(nullptr, nullptr,
                                    std::move(client_callback));
@@ -206,7 +206,8 @@ TEST_F(SerializationSizeTest, GetEntriesInline) {
   const size_t key_size = 125;
   const size_t value_size = 125;
   const size_t n_entries = 10;
-  fidl::VectorPtr<uint8_t> token = GetKey(0, key_size);
+  auto token = std::make_unique<Token>();
+  token->opaque_id = GetKey(0, key_size);
   InlinedEntry entry;
   entry.key = GetKey(0, key_size);
   entry.value = convert::ToArray(GetValue(0, value_size));
@@ -222,6 +223,7 @@ TEST_F(SerializationSizeTest, GetEntriesInline) {
       kMessageHeaderSize +                                 // Header.
       kVectorHeaderSize +                                  // VectorPtr.
       n_entries * GetInlinedEntrySize(std::move(entry)) +  // Vector of entries.
+      kPointerSize +                                       // Pointer to next_token.
       GetByteVectorSize(key_size) +                        // next_token.
       kStatusEnumSize                                      // Status.
   );
@@ -242,7 +244,7 @@ TEST_F(SerializationSizeTest, GetEntries) {
 
   auto client_callback = [](Status /*status*/,
                             fidl::VectorPtr<Entry> /*entries*/,
-                            fidl::VectorPtr<uint8_t> /*next_token*/) {};
+                            std::unique_ptr<Token> /*next_token*/) {};
   // FakeSnapshot saves the callback instead of running it.
   snapshot_proxy->GetEntries(nullptr, nullptr, std::move(client_callback));
   RunLoopUntilIdle();
@@ -255,7 +257,8 @@ TEST_F(SerializationSizeTest, GetEntries) {
   const size_t key_size = 125;
   const size_t value_size = 125;
   const size_t n_entries = 10;
-  fidl::VectorPtr<uint8_t> token = GetKey(0, key_size);
+  auto token = std::make_unique<Token>();
+  token->opaque_id = GetKey(0, key_size);
   for (size_t i = 0; i < n_entries; i++) {
     Entry entry;
     std::string object_data = GetValue(0, value_size);
@@ -266,16 +269,16 @@ TEST_F(SerializationSizeTest, GetEntries) {
     entry.priority = Priority::EAGER;
     entries_to_send->push_back(std::move(entry));
   }
-  fidl::VectorPtr<uint8_t> next_token_to_send = convert::ToArray(token);
 
   // Run the callback directly.
   snapshot_impl.get_entries_callback(Status::OK, std::move(entries_to_send),
-                                     std::move(next_token_to_send));
+                                     std::move(token));
 
   const size_t expected_bytes =
       Align(kMessageHeaderSize +                  // Header.
             kVectorHeaderSize +                   // VectorPtr.
             n_entries * GetEntrySize(key_size) +  // Vector of entries.
+            kPointerSize +                        // Pointer to next_token.
             GetByteVectorSize(key_size) +         // next_token.
             kStatusEnumSize                       // Status.
       );

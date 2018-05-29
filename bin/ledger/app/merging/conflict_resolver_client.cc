@@ -157,22 +157,23 @@ void ConflictResolverClient::Finalize(Status status) {
   callback(status);
 }
 
-void ConflictResolverClient::GetFullDiff(fidl::VectorPtr<uint8_t> token,
+void ConflictResolverClient::GetFullDiff(std::unique_ptr<Token> token,
                                          GetFullDiffCallback callback) {
   GetDiff(diff_utils::DiffType::FULL, std::move(token), callback);
 }
 
 void ConflictResolverClient::GetConflictingDiff(
-    fidl::VectorPtr<uint8_t> token, GetConflictingDiffCallback callback) {
+    std::unique_ptr<Token> token, GetConflictingDiffCallback callback) {
   GetDiff(diff_utils::DiffType::CONFLICTING, std::move(token), callback);
 }
 
 void ConflictResolverClient::GetDiff(
-    diff_utils::DiffType type, fidl::VectorPtr<uint8_t> token,
+    diff_utils::DiffType type, std::unique_ptr<Token> token,
     const std::function<void(Status, fidl::VectorPtr<DiffEntry>,
-                             fidl::VectorPtr<uint8_t>)>& callback) {
+                             std::unique_ptr<Token>)>& callback) {
   diff_utils::ComputeThreeWayDiff(
-      storage_, *ancestor_, *left_, *right_, "", convert::ToString(token), type,
+      storage_, *ancestor_, *left_, *right_, "",
+      token ? convert::ToString(token->opaque_id) : "", type,
       callback::MakeScoped(
           weak_factory_.GetWeakPtr(),
           [this, callback](
@@ -193,9 +194,12 @@ void ConflictResolverClient::GetDiff(
 
             const std::string& next_token = page_change.second;
             status = next_token.empty() ? Status::OK : Status::PARTIAL_RESULT;
-            callback(
-                status, std::move(page_change.first),
-                next_token.empty() ? nullptr : convert::ToArray(next_token));
+            std::unique_ptr<Token> token;
+            if (!next_token.empty()) {
+              token = std::make_unique<Token>();
+              token->opaque_id = convert::ToArray(next_token);
+            }
+            callback(status, std::move(page_change.first), std::move(token));
           }));
 }
 

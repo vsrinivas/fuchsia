@@ -26,8 +26,8 @@ class SyncIntegrationTest : public IntegrationTest {
       return ::testing::AssertionFailure() << "Unable to retrieve a snapshot";
     }
     entries->resize(0);
-    fidl::VectorPtr<uint8_t> token = nullptr;
-    fidl::VectorPtr<uint8_t> next_token = nullptr;
+    std::unique_ptr<ledger::Token> token = nullptr;
+    std::unique_ptr<ledger::Token> next_token = nullptr;
     do {
       fidl::VectorPtr<ledger::Entry> new_entries;
       snapshot->GetEntries(nullptr, std::move(token),

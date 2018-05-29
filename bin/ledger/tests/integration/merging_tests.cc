@@ -107,10 +107,10 @@ class ConflictResolverImpl : public ledger::ConflictResolver {
         fidl::VectorPtr<ledger::DiffEntry>* entries, int min_queries = 0) {
       return GetDiff(
           nullptr,
-          [this](fidl::VectorPtr<uint8_t> token,
+          [this](std::unique_ptr<ledger::Token> token,
                  std::function<void(ledger::Status,
                                     fidl::VectorPtr<ledger::DiffEntry>,
-                                    fidl::VectorPtr<uint8_t>)>
+                                    std::unique_ptr<ledger::Token>)>
                      callback) mutable {
             result_provider->GetFullDiff(std::move(token), callback);
           },
@@ -121,10 +121,10 @@ class ConflictResolverImpl : public ledger::ConflictResolver {
         fidl::VectorPtr<ledger::DiffEntry>* entries, int min_queries = 0) {
       return GetDiff(
           nullptr,
-          [this](fidl::VectorPtr<uint8_t> token,
+          [this](std::unique_ptr<ledger::Token> token,
                  std::function<void(ledger::Status,
                                     fidl::VectorPtr<ledger::DiffEntry>,
-                                    fidl::VectorPtr<uint8_t>)>
+                                    std::unique_ptr<ledger::Token>)>
                      callback) mutable {
             result_provider->GetConflictingDiff(std::move(token), callback);
           },
@@ -193,23 +193,23 @@ class ConflictResolverImpl : public ledger::ConflictResolver {
 
    private:
     ::testing::AssertionResult GetDiff(
-        fidl::VectorPtr<uint8_t> token,
+        std::unique_ptr<ledger::Token> token,
         std::function<
-            void(fidl::VectorPtr<uint8_t>,
+            void(std::unique_ptr<ledger::Token>,
                  std::function<void(ledger::Status,
                                     fidl::VectorPtr<ledger::DiffEntry>,
-                                    fidl::VectorPtr<uint8_t>)>)>
+                                    std::unique_ptr<ledger::Token>)>)>
             get_diff,
         fidl::VectorPtr<ledger::DiffEntry>* entries, int num_queries,
         int min_queries) {
       ledger::Status status;
-      fidl::VectorPtr<uint8_t> next_token;
+      std::unique_ptr<ledger::Token> next_token;
       do {
         get_diff(
             std::move(token),
             [&status, entries, &next_token](
                 ledger::Status s, fidl::VectorPtr<ledger::DiffEntry> changes,
-                fidl::VectorPtr<uint8_t> next) {
+                std::unique_ptr<ledger::Token> next) {
               status = s;
               for (size_t i = 0; i < changes->size(); ++i) {
                 entries->push_back(std::move(changes->at(i)));
@@ -226,7 +226,9 @@ class ConflictResolverImpl : public ledger::ConflictResolver {
         }
         if (!next_token != (status == ledger::Status::OK)) {
           return ::testing::AssertionFailure()
-                 << "next_token is " << convert::ToString(next_token)
+                 << "next_token is "
+                 << (next_token ? convert::ToString(next_token->opaque_id)
+                                : "null")
                  << ", but status is:" << status;
         }
         ++num_queries;

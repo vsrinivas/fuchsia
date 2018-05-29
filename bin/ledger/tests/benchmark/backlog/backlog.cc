@@ -205,7 +205,7 @@ void BacklogBenchmark::GetReaderSnapshot() {
 
 void BacklogBenchmark::CheckStatusAndGetMore(
     ledger::Status status, size_t entries_left,
-    fidl::VectorPtr<uint8_t> next_token) {
+    std::unique_ptr<ledger::Token> next_token) {
   if ((status != ledger::Status::OK) &&
       (status != ledger::Status::PARTIAL_RESULT)) {
     QuitOnError([this] { loop_->Quit(); }, status, "PageSnapshot::GetEntries");
@@ -221,7 +221,7 @@ void BacklogBenchmark::CheckStatusAndGetMore(
   GetEntriesStep(std::move(next_token), entries_left);
 }
 
-void BacklogBenchmark::GetEntriesStep(fidl::VectorPtr<uint8_t> token,
+void BacklogBenchmark::GetEntriesStep(std::unique_ptr<ledger::Token> token,
                                       size_t entries_left) {
   FXL_DCHECK(entries_left > 0);
   TRACE_ASYNC_BEGIN("benchmark", "get entries partial", entries_left);

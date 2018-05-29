@@ -13,7 +13,7 @@ namespace modular {
 
 using LedgerPageId = ledger::PageId;
 using LedgerPageKey = fidl::VectorPtr<uint8_t>;
-using LedgerToken = fidl::VectorPtr<uint8_t>;
+using LedgerToken = std::unique_ptr<ledger::Token>;
 
 inline bool PageIdsEqual(const LedgerPageId& a, const LedgerPageId& b) {
   return a.id == b.id;

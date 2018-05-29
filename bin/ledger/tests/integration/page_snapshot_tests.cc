@@ -349,9 +349,9 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   snapshot->GetEntries(
       fidl::VectorPtr<uint8_t>(), nullptr,
       [&entries](ledger::Status status, fidl::VectorPtr<ledger::Entry> e,
-                 fidl::VectorPtr<uint8_t> next_token) {
+                 std::unique_ptr<ledger::Token> next_token) {
         EXPECT_EQ(ledger::Status::OK, status);
-        EXPECT_TRUE(next_token.is_null());
+        EXPECT_FALSE(next_token);
         entries = std::move(e);
       });
   EXPECT_EQ(ZX_OK, snapshot.WaitForResponse());

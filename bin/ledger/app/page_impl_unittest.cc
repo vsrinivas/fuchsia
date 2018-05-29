@@ -594,9 +594,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
   fidl::VectorPtr<Entry> actual_entries;
   auto callback_getentries = [this, &actual_entries](
                                  Status status, fidl::VectorPtr<Entry> entries,
-                                 fidl::VectorPtr<uint8_t> next_token) {
+                                 std::unique_ptr<Token> next_token) {
     EXPECT_EQ(Status::OK, status);
-    EXPECT_TRUE(next_token.is_null());
+    EXPECT_FALSE(next_token);
     actual_entries = std::move(entries);
     message_loop_.PostQuitTask();
   };
@@ -635,14 +635,14 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInline) {
 
   PageSnapshotPtr snapshot = GetSnapshot();
 
-  fidl::VectorPtr<uint8_t> next_token;
+  std::unique_ptr<Token> next_token;
   fidl::VectorPtr<InlinedEntry> actual_entries;
   snapshot->GetEntriesInline(
       nullptr, nullptr,
       callback::Capture(MakeQuitTask(), &status, &actual_entries, &next_token));
   RunLoop();
   EXPECT_EQ(Status::OK, status);
-  EXPECT_TRUE(next_token.is_null());
+  EXPECT_FALSE(next_token);
 
   ASSERT_EQ(2u, actual_entries->size());
   EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0).key));
@@ -671,12 +671,12 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
 
   // Call GetEntries and find a partial result.
   fidl::VectorPtr<Entry> actual_entries;
-  fidl::VectorPtr<uint8_t> actual_next_token;
+  std::unique_ptr<Token> actual_next_token;
   auto callback_getentries = [this, &actual_entries, &actual_next_token](
                                  Status status, fidl::VectorPtr<Entry> entries,
-                                 fidl::VectorPtr<uint8_t> next_token) {
+                                 std::unique_ptr<Token> next_token) {
     EXPECT_EQ(Status::PARTIAL_RESULT, status);
-    EXPECT_FALSE(next_token.is_null());
+    EXPECT_TRUE(next_token);
     actual_entries = std::move(entries);
     actual_next_token = std::move(next_token);
     message_loop_.PostQuitTask();
@@ -687,9 +687,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
   // Call GetEntries with the previous token and receive the remaining results.
   auto callback_getentries2 = [this, &actual_entries, &entry_count](
                                   Status status, fidl::VectorPtr<Entry> entries,
-                                  fidl::VectorPtr<uint8_t> next_token) {
+                                  std::unique_ptr<Token> next_token) {
     EXPECT_EQ(Status::OK, status);
-    EXPECT_TRUE(next_token.is_null());
+    EXPECT_FALSE(next_token);
     for (auto& entry : entries.take()) {
       actual_entries.push_back(std::move(entry));
     }
@@ -719,25 +719,25 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForSize) {
   // Call GetEntries and find a partial result.
   Status status;
   fidl::VectorPtr<InlinedEntry> actual_entries;
-  fidl::VectorPtr<uint8_t> actual_next_token;
+  std::unique_ptr<Token> actual_next_token;
   snapshot->GetEntriesInline(
       nullptr, nullptr,
       callback::Capture(MakeQuitTask(), &status, &actual_entries,
                         &actual_next_token));
   RunLoop();
   EXPECT_EQ(Status::PARTIAL_RESULT, status);
-  EXPECT_FALSE(actual_next_token.is_null());
+  EXPECT_TRUE(actual_next_token);
 
   // Call GetEntries with the previous token and receive the remaining results.
   fidl::VectorPtr<InlinedEntry> actual_entries2;
-  fidl::VectorPtr<uint8_t> actual_next_token2;
+  std::unique_ptr<Token> actual_next_token2;
   snapshot->GetEntriesInline(
       nullptr, std::move(actual_next_token),
       callback::Capture(MakeQuitTask(), &status, &actual_entries2,
                         &actual_next_token2));
   RunLoop();
   EXPECT_EQ(Status::OK, status);
-  EXPECT_TRUE(actual_next_token2.is_null());
+  EXPECT_FALSE(actual_next_token2);
   for (auto& entry : actual_entries2.take()) {
     actual_entries.push_back(std::move(entry));
   }
@@ -772,25 +772,25 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForEntryCount) {
   // Call GetEntries and find a partial result.
   Status status;
   fidl::VectorPtr<InlinedEntry> actual_entries;
-  fidl::VectorPtr<uint8_t> actual_next_token;
+  std::unique_ptr<Token> actual_next_token;
   snapshot->GetEntriesInline(
       nullptr, nullptr,
       callback::Capture(MakeQuitTask(), &status, &actual_entries,
                         &actual_next_token));
   RunLoop();
   EXPECT_EQ(Status::PARTIAL_RESULT, status);
-  EXPECT_FALSE(actual_next_token.is_null());
+  EXPECT_TRUE(actual_next_token);
 
   // Call GetEntries with the previous token and receive the remaining results.
   fidl::VectorPtr<InlinedEntry> actual_entries2;
-  fidl::VectorPtr<uint8_t> actual_next_token2;
+  std::unique_ptr<Token> actual_next_token2;
   snapshot->GetEntriesInline(
       nullptr, std::move(actual_next_token),
       callback::Capture(MakeQuitTask(), &status, &actual_entries2,
                         &actual_next_token2));
   RunLoop();
   EXPECT_EQ(Status::OK, status);
-  EXPECT_TRUE(actual_next_token2.is_null());
+  EXPECT_FALSE(actual_next_token2);
   for (auto& entry : actual_entries2.take()) {
     actual_entries.push_back(std::move(entry));
   }
@@ -812,12 +812,12 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForHandles) {
 
   // Call GetEntries and find a partial result.
   fidl::VectorPtr<Entry> actual_entries;
-  fidl::VectorPtr<uint8_t> actual_next_token;
+  std::unique_ptr<Token> actual_next_token;
   auto callback_getentries = [this, &actual_entries, &actual_next_token](
                                  Status status, fidl::VectorPtr<Entry> entries,
-                                 fidl::VectorPtr<uint8_t> next_token) {
+                                 std::unique_ptr<Token> next_token) {
     EXPECT_EQ(Status::PARTIAL_RESULT, status);
-    EXPECT_FALSE(next_token.is_null());
+    EXPECT_TRUE(next_token);
     actual_entries = std::move(entries);
     actual_next_token = std::move(next_token);
     message_loop_.PostQuitTask();
@@ -828,9 +828,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForHandles) {
   // Call GetEntries with the previous token and receive the remaining results.
   auto callback_getentries2 = [this, &actual_entries](
                                   Status status, fidl::VectorPtr<Entry> entries,
-                                  fidl::VectorPtr<uint8_t> next_token) {
+                                  std::unique_ptr<Token> next_token) {
     EXPECT_EQ(Status::OK, status);
-    EXPECT_TRUE(next_token.is_null());
+    EXPECT_FALSE(next_token);
     for (auto& entry : entries.take()) {
       actual_entries.push_back(std::move(entry));
     }
@@ -878,9 +878,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithFetch) {
   fidl::VectorPtr<Entry> actual_entries;
   auto callback_getentries = [this, &actual_entries](
                                  Status status, fidl::VectorPtr<Entry> entries,
-                                 fidl::VectorPtr<uint8_t> next_token) {
+                                 std::unique_ptr<Token> next_token) {
     EXPECT_EQ(Status::OK, status);
-    EXPECT_TRUE(next_token.is_null());
+    EXPECT_FALSE(next_token);
     actual_entries = std::move(entries);
     message_loop_.PostQuitTask();
   };
@@ -920,9 +920,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithPrefix) {
   fidl::VectorPtr<Entry> actual_entries;
   auto callback_getentries = [this, &actual_entries](
                                  Status status, fidl::VectorPtr<Entry> entries,
-                                 fidl::VectorPtr<uint8_t> next_token) {
+                                 std::unique_ptr<Token> next_token) {
     EXPECT_EQ(Status::OK, status);
-    EXPECT_TRUE(next_token.is_null());
+    EXPECT_FALSE(next_token);
     actual_entries = std::move(entries);
     message_loop_.PostQuitTask();
   };
@@ -964,9 +964,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithStart) {
   fidl::VectorPtr<Entry> actual_entries;
   auto callback_getentries = [this, &actual_entries](
                                  Status status, fidl::VectorPtr<Entry> entries,
-                                 fidl::VectorPtr<uint8_t> next_token) {
+                                 std::unique_ptr<Token> next_token) {
     EXPECT_EQ(Status::OK, status);
-    EXPECT_TRUE(next_token.is_null());
+    EXPECT_FALSE(next_token);
     actual_entries = std::move(entries);
     message_loop_.PostQuitTask();
   };
@@ -1010,9 +1010,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
   auto callback_getkeys = [this, &actual_keys](
                               Status status,
                               fidl::VectorPtr<fidl::VectorPtr<uint8_t>> keys,
-                              fidl::VectorPtr<uint8_t> next_token) {
+                              std::unique_ptr<Token> next_token) {
     EXPECT_EQ(Status::OK, status);
-    EXPECT_TRUE(next_token.is_null());
+    EXPECT_FALSE(next_token);
     actual_keys = std::move(keys);
     message_loop_.PostQuitTask();
   };
@@ -1035,13 +1035,13 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
 
   // Call GetKeys and find a partial result.
   fidl::VectorPtr<fidl::VectorPtr<uint8_t>> actual_keys;
-  fidl::VectorPtr<uint8_t> actual_next_token;
+  std::unique_ptr<Token> actual_next_token;
   auto callback_getkeys = [this, &actual_keys, &actual_next_token](
                               Status status,
                               fidl::VectorPtr<fidl::VectorPtr<uint8_t>> keys,
-                              fidl::VectorPtr<uint8_t> next_token) {
+                              std::unique_ptr<Token> next_token) {
     EXPECT_EQ(Status::PARTIAL_RESULT, status);
-    EXPECT_FALSE(next_token.is_null());
+    EXPECT_TRUE(next_token);
     actual_keys = std::move(keys);
     actual_next_token = std::move(next_token);
     message_loop_.PostQuitTask();
@@ -1053,9 +1053,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
   auto callback_getkeys2 = [this, &actual_keys, &key_count](
                                Status status,
                                fidl::VectorPtr<fidl::VectorPtr<uint8_t>> keys,
-                               fidl::VectorPtr<uint8_t> next_token) {
+                               std::unique_ptr<Token> next_token) {
     EXPECT_EQ(Status::OK, status);
-    EXPECT_TRUE(next_token.is_null());
+    EXPECT_FALSE(next_token);
     for (auto& key : keys.take()) {
       actual_keys.push_back(std::move(key));
     }
@@ -1099,9 +1099,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithPrefix) {
   auto callback_getkeys = [this, &actual_keys](
                               Status status,
                               fidl::VectorPtr<fidl::VectorPtr<uint8_t>> keys,
-                              fidl::VectorPtr<uint8_t> next_token) {
+                              std::unique_ptr<Token> next_token) {
     EXPECT_EQ(Status::OK, status);
-    EXPECT_TRUE(next_token.is_null());
+    EXPECT_FALSE(next_token);
     actual_keys = std::move(keys);
     message_loop_.PostQuitTask();
   };
@@ -1147,9 +1147,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithStart) {
   auto callback_getkeys = [this, &actual_keys](
                               Status status,
                               fidl::VectorPtr<fidl::VectorPtr<uint8_t>> keys,
-                              fidl::VectorPtr<uint8_t> next_token) {
+                              std::unique_ptr<Token> next_token) {
     EXPECT_EQ(Status::OK, status);
-    EXPECT_TRUE(next_token.is_null());
+    EXPECT_FALSE(next_token);
     actual_keys = std::move(keys);
     message_loop_.PostQuitTask();
   };

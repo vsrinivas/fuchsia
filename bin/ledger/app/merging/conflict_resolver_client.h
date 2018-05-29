@@ -44,14 +44,14 @@ class ConflictResolverClient : public MergeResultProvider {
   void Finalize(Status status);
 
   // Performs a diff of the given type on the conflict.
-  void GetDiff(diff_utils::DiffType type, fidl::VectorPtr<uint8_t> token,
+  void GetDiff(diff_utils::DiffType type, std::unique_ptr<Token> token,
                const std::function<void(Status, fidl::VectorPtr<DiffEntry>,
-                                        fidl::VectorPtr<uint8_t>)>& callback);
+                                        std::unique_ptr<Token>)>& callback);
 
   // MergeResultProvider:
-  void GetFullDiff(fidl::VectorPtr<uint8_t> token,
+  void GetFullDiff(std::unique_ptr<Token> token,
                    GetFullDiffCallback callback) override;
-  void GetConflictingDiff(fidl::VectorPtr<uint8_t> token,
+  void GetConflictingDiff(std::unique_ptr<Token> token,
                           GetConflictingDiffCallback callback) override;
   void Merge(fidl::VectorPtr<MergedValue> merged_values,
              MergeCallback callback) override;

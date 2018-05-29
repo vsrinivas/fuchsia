@@ -68,6 +68,11 @@ struct Reference {
   vector<uint8> opaque_id;
 };
 
+// A continuation token for paginated requests.
+struct Token {
+  vector<uint8> opaque_id;
+};
+
 // The result of a wait for conflict resolution. See
 // |Page.WaitForConflictResolution| for details.
 enum ConflictResolutionWaitStatus {
@@ -230,14 +235,14 @@ interface PageSnapshot {
   // Only |EAGER| values are guaranteed to be returned inside |entries|.
   // Missing |LAZY| values can be retrieved over the network using Fetch().
   // The returned |entries| are sorted by |key|.
-  1: GetEntries(vector<uint8>:256? key_start, vector<uint8>? token)
-      -> (Status @status, vector<Entry>? entries, vector<uint8>? next_token);
+  1: GetEntries(vector<uint8>:256? key_start, Token? token)
+      -> (Status @status, vector<Entry>? entries, Token? next_token);
 
   // Same as |GetEntries()|. |VALUE_TOO_LARGE| is returned if a value does not
   // fit in a FIDL message.
-  2: GetEntriesInline(vector<uint8>:256? key_start, vector<uint8>? token)
+  2: GetEntriesInline(vector<uint8>:256? key_start, Token? token)
       -> (Status @status, vector<InlinedEntry>? entries,
-          vector<uint8>? next_token);
+          Token? next_token);
 
   // Returns the keys of all entries in the page starting from the provided
   // key. If |key_start| is NULL, all entries are returned. If the result fits
@@ -248,9 +253,9 @@ interface PageSnapshot {
   // the value of |next_token| returned in the previous call.
   // The returned |keys| are sorted. |status| will be |PARTIAL_RESULT| as long
   // as there are more results and |OK| once finished.
-  3: GetKeys(vector<uint8>:256? key_start, vector<uint8>? token)
+  3: GetKeys(vector<uint8>:256? key_start, Token? token)
       -> (Status @status, vector<vector<uint8>:256>? keys,
-          vector<uint8>? next_token);
+          Token? next_token);
 
   // Returns the value of a given key.
   // Only |EAGER| values are guaranteed to be returned. Calls when the value is
@@ -426,16 +431,16 @@ interface MergeResultProvider {
   // be |PARTIAL_RESULT| and |next_token| will have a non-NULL value, which can
   // be used to retrieve the rest of the results by calling |GetFullDiff()|
   // with that token.
-  1: GetFullDiff(vector<uint8>? token)
-      -> (Status @status, vector<DiffEntry>? changes, vector<uint8>? next_token);
+  1: GetFullDiff(Token? token)
+      -> (Status @status, vector<DiffEntry>? changes, Token? next_token);
 
   // |GetConflictingDiff| returns the set of all key/value pairs that were
   // modified on both sides to different values, or deleted on one side and
   // modified on the other.
   //
   // It behaves like |GetFullDiff| otherwise.
-  2: GetConflictingDiff(vector<uint8>? token)
-      -> (Status @status, vector<DiffEntry>? changes, vector<uint8>? next_token);
+  2: GetConflictingDiff(Token? token)
+      -> (Status @status, vector<DiffEntry>? changes, Token? next_token);
 
   // Once the result of the merge has been computed |Merge()| can be called with
   // all changes that resolve this conflict. If the result does not fit in a

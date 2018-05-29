@@ -435,7 +435,7 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   EXPECT_EQ(Status::OK, status);
 
   fidl::VectorPtr<Entry> expected_entries1;
-  fidl::VectorPtr<uint8_t> next_token;
+  std::unique_ptr<Token> next_token;
   snapshot1->GetEntries(nullptr, nullptr,
                         callback::Capture(MakeQuitTask(), &status,
                                           &expected_entries1, &next_token));

@@ -60,9 +60,8 @@ std::function<void(ledger::Status)> HandleResponse(std::string description) {
 }
 
 void GetEntries(
-    ledger::PageSnapshotPtr snapshot,
-    std::vector<ledger::Entry> entries,
-    fidl::VectorPtr<uint8_t> token,
+    ledger::PageSnapshotPtr snapshot, std::vector<ledger::Entry> entries,
+    std::unique_ptr<ledger::Token> token,
     std::function<void(ledger::Status, std::vector<ledger::Entry>)> callback) {
   ledger::PageSnapshot* snapshot_ptr = snapshot.get();
   snapshot_ptr->GetEntries(

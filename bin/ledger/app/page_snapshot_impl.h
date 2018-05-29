@@ -24,13 +24,12 @@ class PageSnapshotImpl : public PageSnapshot {
  private:
   // PageSnapshot:
   void GetEntries(fidl::VectorPtr<uint8_t> key_start,
-                  fidl::VectorPtr<uint8_t> token,
+                  std::unique_ptr<Token> token,
                   GetEntriesCallback callback) override;
   void GetEntriesInline(fidl::VectorPtr<uint8_t> key_start,
-                        fidl::VectorPtr<uint8_t> token,
+                        std::unique_ptr<Token> token,
                         GetEntriesInlineCallback callback) override;
-  void GetKeys(fidl::VectorPtr<uint8_t> key_start,
-               fidl::VectorPtr<uint8_t> token,
+  void GetKeys(fidl::VectorPtr<uint8_t> key_start, std::unique_ptr<Token> token,
                GetKeysCallback callback) override;
   void Get(fidl::VectorPtr<uint8_t> key, GetCallback callback) override;
   void GetInline(fidl::VectorPtr<uint8_t> key,

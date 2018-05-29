@@ -108,7 +108,7 @@ namespace {
 
 void GetEntriesRecursive(ledger::PageSnapshot* const snapshot,
                          std::vector<ledger::Entry>* const entries,
-                         fidl::VectorPtr<uint8_t> next_token,
+                         std::unique_ptr<ledger::Token> next_token,
                          std::function<void(ledger::Status)> done) {
   snapshot->GetEntries(
       nullptr /* key_start */, std::move(next_token),

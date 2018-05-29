@@ -154,7 +154,7 @@ class NonAssociativeConflictResolverImpl : public ledger::ConflictResolver {
             [merge_result_provider = std::move(merge_result_provider)](
                 ledger::Status status,
                 fidl::VectorPtr<ledger::DiffEntry> changes,
-                fidl::VectorPtr<uint8_t> next_token) mutable {
+                std::unique_ptr<ledger::Token> next_token) mutable {
               ASSERT_EQ(ledger::Status::OK, status);
               ASSERT_EQ(1u, changes->size());
 

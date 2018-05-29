@@ -97,12 +97,12 @@ storage::Status FillSingleEntry(const storage::Object& object,
 // |fill_value| is a callback that fills the entry pointer with the content of
 // the provided object.
 template <typename EntryType>
-void FillEntries(
-    storage::PageStorage* page_storage, const std::string& key_prefix,
-    const storage::Commit* commit, fidl::VectorPtr<uint8_t> key_start,
-    fidl::VectorPtr<uint8_t> token,
-    const std::function<void(Status, fidl::VectorPtr<EntryType>,
-                             fidl::VectorPtr<uint8_t>)>& callback) {
+void FillEntries(storage::PageStorage* page_storage,
+                 const std::string& key_prefix, const storage::Commit* commit,
+                 fidl::VectorPtr<uint8_t> key_start,
+                 std::unique_ptr<Token> token,
+                 const std::function<void(Status, fidl::VectorPtr<EntryType>,
+                                          std::unique_ptr<Token>)>& callback) {
   // |token| represents the first key to be returned in the list of entries.
   // Initially, all entries starting from |token| are requested from storage.
   // Iteration stops if either all entries were found, or if the estimated
@@ -124,7 +124,7 @@ void FillEntries(
     size_t handle_count = 0u;
     // If |entries| array size exceeds kMaxInlineDataSize, |next_token| will
     // have the value of the following entry's key.
-    fidl::VectorPtr<uint8_t> next_token;
+    std::unique_ptr<Token> next_token;
   };
   auto timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_get_entries");
@@ -136,7 +136,7 @@ void FillEntries(
   auto context = std::make_unique<Context>();
   // Use |token| for the first key if present.
   std::string start = token
-                          ? convert::ToString(token)
+                          ? convert::ToString(token->opaque_id)
                           : std::max(key_prefix, convert::ToString(key_start));
   auto on_next = fxl::MakeCopyable([page_storage, &key_prefix,
                                     context = context.get(),
@@ -149,7 +149,8 @@ void FillEntries(
     if ((context->size > fidl_serialization::kMaxInlineDataSize ||
          context->handle_count > fidl_serialization::kMaxMessageHandles) &&
         !context->entries->empty()) {
-      context->next_token = convert::ToArray(entry.key);
+      context->next_token = std::make_unique<Token>();
+      context->next_token->opaque_id = convert::ToArray(entry.key);
       return false;
     }
     context->entries.push_back(CreateEntry<EntryType>(entry));
@@ -234,10 +235,12 @@ void FillEntries(
                 }
                 // We had to bail out early because the result would be too big
                 // otherwise.
-                context->next_token = std::move(context->entries->at(i).key);
+                context->next_token = std::make_unique<Token>();
+                context->next_token->opaque_id =
+                    std::move(context->entries->at(i).key);
                 context->entries.resize(i);
               }
-              if (!context->next_token->empty()) {
+              if (context->next_token) {
                 callback(Status::PARTIAL_RESULT, std::move(context->entries),
                          std::move(context->next_token));
                 return;
@@ -261,21 +264,21 @@ PageSnapshotImpl::PageSnapshotImpl(
 PageSnapshotImpl::~PageSnapshotImpl() {}
 
 void PageSnapshotImpl::GetEntries(fidl::VectorPtr<uint8_t> key_start,
-                                  fidl::VectorPtr<uint8_t> token,
+                                  std::unique_ptr<Token> token,
                                   GetEntriesCallback callback) {
   FillEntries<Entry>(page_storage_, key_prefix_, commit_.get(),
                      std::move(key_start), std::move(token), callback);
 }
 
 void PageSnapshotImpl::GetEntriesInline(fidl::VectorPtr<uint8_t> key_start,
-                                        fidl::VectorPtr<uint8_t> token,
+                                        std::unique_ptr<Token> token,
                                         GetEntriesInlineCallback callback) {
   FillEntries<InlinedEntry>(page_storage_, key_prefix_, commit_.get(),
                             std::move(key_start), std::move(token), callback);
 }
 
 void PageSnapshotImpl::GetKeys(fidl::VectorPtr<uint8_t> key_start,
-                               fidl::VectorPtr<uint8_t> token,
+                               std::unique_ptr<Token> token,
                                GetKeysCallback callback) {
   // Represents the information that needs to be shared between on_next and
   // on_done callbacks.
@@ -287,7 +290,7 @@ void PageSnapshotImpl::GetKeys(fidl::VectorPtr<uint8_t> key_start,
     // If the |keys| array size exceeds the maximum allowed inlined data size,
     // |next_token| will have the value of the next key (not included in array)
     // which can be used as the next token.
-    std::string next_token = "";
+    std::unique_ptr<Token> next_token;
   };
 
   auto timed_callback = TRACE_CALLBACK(callback, "ledger", "snapshot_get_keys");
@@ -301,7 +304,8 @@ void PageSnapshotImpl::GetKeys(fidl::VectorPtr<uint8_t> key_start,
         context->size +=
             fidl_serialization::GetByteVectorSize(entry.key.size());
         if (context->size > fidl_serialization::kMaxInlineDataSize) {
-          context->next_token = entry.key;
+          context->next_token = std::make_unique<Token>();
+          context->next_token->opaque_id = convert::ToArray(entry.key);
           return false;
         }
         context->keys.push_back(convert::ToArray(entry.key));
@@ -310,21 +314,21 @@ void PageSnapshotImpl::GetKeys(fidl::VectorPtr<uint8_t> key_start,
   auto on_done = fxl::MakeCopyable(
       [context = std::move(context),
        callback = std::move(timed_callback)](storage::Status s) {
-        if (context->next_token.empty()) {
-          callback(Status::OK, std::move(context->keys), nullptr);
-        } else {
+        if (context->next_token) {
           callback(Status::PARTIAL_RESULT, std::move(context->keys),
-                   convert::ToArray(context->next_token));
+                   std::move(context->next_token));
+        } else {
+          callback(Status::OK, std::move(context->keys), nullptr);
         }
       });
-  if (token.is_null()) {
+  if (token) {
+    page_storage_->GetCommitContents(*commit_,
+                                     convert::ToString(token->opaque_id),
+                                     std::move(on_next), std::move(on_done));
+  } else {
     page_storage_->GetCommitContents(
         *commit_, std::max(convert::ToString(key_start), key_prefix_),
         std::move(on_next), std::move(on_done));
-
-  } else {
-    page_storage_->GetCommitContents(*commit_, convert::ToString(token),
-                                     std::move(on_next), std::move(on_done));
   }
 }
 

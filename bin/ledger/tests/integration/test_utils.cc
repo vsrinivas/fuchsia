@@ -70,8 +70,8 @@ fidl::VectorPtr<fidl::VectorPtr<uint8_t>> SnapshotGetKeys(
     ledger::PageSnapshotPtr* snapshot, fidl::VectorPtr<uint8_t> start,
     int* num_queries) {
   fidl::VectorPtr<fidl::VectorPtr<uint8_t>> result;
-  fidl::VectorPtr<uint8_t> token = nullptr;
-  fidl::VectorPtr<uint8_t> next_token = nullptr;
+  std::unique_ptr<ledger::Token> token = nullptr;
+  std::unique_ptr<ledger::Token> next_token = nullptr;
   if (num_queries) {
     *num_queries = 0;
   }
@@ -81,7 +81,7 @@ fidl::VectorPtr<fidl::VectorPtr<uint8_t>> SnapshotGetKeys(
         [&result, &next_token, &num_queries](
             ledger::Status status,
             fidl::VectorPtr<fidl::VectorPtr<uint8_t>> keys,
-            fidl::VectorPtr<uint8_t> new_next_token) {
+            std::unique_ptr<ledger::Token> new_next_token) {
           EXPECT_TRUE(status == ledger::Status::OK ||
                       status == ledger::Status::PARTIAL_RESULT);
           if (num_queries) {
@@ -109,8 +109,8 @@ fidl::VectorPtr<ledger::Entry> SnapshotGetEntries(
     ledger::PageSnapshotPtr* snapshot, fidl::VectorPtr<uint8_t> start,
     int* num_queries) {
   fidl::VectorPtr<ledger::Entry> result;
-  fidl::VectorPtr<uint8_t> token = nullptr;
-  fidl::VectorPtr<uint8_t> next_token = nullptr;
+  std::unique_ptr<ledger::Token> token = nullptr;
+  std::unique_ptr<ledger::Token> next_token = nullptr;
   if (num_queries) {
     *num_queries = 0;
   }
@@ -119,7 +119,7 @@ fidl::VectorPtr<ledger::Entry> SnapshotGetEntries(
         start.Clone(), std::move(token),
         [&result, &next_token, &num_queries](
             ledger::Status status, fidl::VectorPtr<ledger::Entry> entries,
-            fidl::VectorPtr<uint8_t> new_next_token) {
+            std::unique_ptr<ledger::Token> new_next_token) {
           EXPECT_TRUE(status == ledger::Status::OK ||
                       status == ledger::Status::PARTIAL_RESULT)
               << "Actual status: " << status;
