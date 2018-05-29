@@ -1,4 +1,0 @@
-{
-    "features": [ "vulkan", "system-temp" ],
-    "dev": [ "class/display-controller" ]
-}
