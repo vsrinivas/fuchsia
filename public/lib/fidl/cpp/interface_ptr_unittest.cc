@@ -15,15 +15,15 @@
 namespace fidl {
 namespace {
 
-TEST(InterfacePtr, Trivial) { frobinator::FrobinatorPtr ptr; }
+TEST(InterfacePtr, Trivial) { fidl::test::frobinator::FrobinatorPtr ptr; }
 
 TEST(InterfacePtr, Control) {
   fidl::test::AsyncLoopForTest loop;
 
   test::FrobinatorImpl impl;
-  Binding<frobinator::Frobinator> binding(&impl);
+  Binding<fidl::test::frobinator::Frobinator> binding(&impl);
 
-  frobinator::FrobinatorPtr ptr;
+  fidl::test::frobinator::FrobinatorPtr ptr;
   EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
 
   ptr->Frob("one");
@@ -47,9 +47,9 @@ TEST(InterfacePtr, Events) {
   fidl::test::AsyncLoopForTest loop;
 
   test::FrobinatorImpl impl;
-  Binding<frobinator::Frobinator> binding(&impl);
+  Binding<fidl::test::frobinator::Frobinator> binding(&impl);
 
-  frobinator::FrobinatorPtr ptr;
+  fidl::test::frobinator::FrobinatorPtr ptr;
   EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
 
   std::vector<std::string> hrobs;
@@ -67,9 +67,9 @@ TEST(InterfacePtr, EventWithoutListener) {
   fidl::test::AsyncLoopForTest loop;
 
   test::FrobinatorImpl impl;
-  Binding<frobinator::Frobinator> binding(&impl);
+  Binding<fidl::test::frobinator::Frobinator> binding(&impl);
 
-  frobinator::FrobinatorPtr ptr;
+  fidl::test::frobinator::FrobinatorPtr ptr;
   EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
 
   binding.events().Hrob("one");
@@ -83,7 +83,7 @@ TEST(InterfacePtr, MoveConstructWithOutstandingTransaction) {
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
 
-  frobinator::FrobinatorPtr ptr;
+  fidl::test::frobinator::FrobinatorPtr ptr;
 
   int error_count = 0;
   ptr.set_error_handler([&error_count]() { ++error_count; });
@@ -101,7 +101,7 @@ TEST(InterfacePtr, MoveConstructWithOutstandingTransaction) {
   loop.RunUntilIdle();
   EXPECT_EQ(0, reply_count);
 
-  frobinator::FrobinatorPtr ptr2(std::move(ptr));
+  fidl::test::frobinator::FrobinatorPtr ptr2(std::move(ptr));
   EXPECT_FALSE(ptr.is_bound());
   EXPECT_TRUE(ptr2.is_bound());
 
@@ -132,7 +132,7 @@ TEST(InterfacePtr, MoveAssignWithOutstandingTransaction) {
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
 
-  frobinator::FrobinatorPtr ptr;
+  fidl::test::frobinator::FrobinatorPtr ptr;
 
   int error_count = 0;
   ptr.set_error_handler([&error_count]() { ++error_count; });
@@ -150,7 +150,7 @@ TEST(InterfacePtr, MoveAssignWithOutstandingTransaction) {
   loop.RunUntilIdle();
   EXPECT_EQ(0, reply_count);
 
-  frobinator::FrobinatorPtr ptr2 = std::move(ptr);
+  fidl::test::frobinator::FrobinatorPtr ptr2 = std::move(ptr);
   EXPECT_FALSE(ptr.is_bound());
   EXPECT_TRUE(ptr2.is_bound());
 
@@ -179,9 +179,9 @@ TEST(InterfacePtr, MoveConstructWithEvents) {
   fidl::test::AsyncLoopForTest loop;
 
   test::FrobinatorImpl impl;
-  Binding<frobinator::Frobinator> binding(&impl);
+  Binding<fidl::test::frobinator::Frobinator> binding(&impl);
 
-  frobinator::FrobinatorPtr ptr;
+  fidl::test::frobinator::FrobinatorPtr ptr;
   EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
 
   std::vector<std::string> hrobs;
@@ -191,7 +191,7 @@ TEST(InterfacePtr, MoveConstructWithEvents) {
   EXPECT_TRUE(hrobs.empty());
 
   // Move |ptr| and show that we still get our events.
-  frobinator::FrobinatorPtr ptr2(std::move(ptr));
+  fidl::test::frobinator::FrobinatorPtr ptr2(std::move(ptr));
   ASSERT_FALSE(ptr);
 
   loop.RunUntilIdle();
@@ -203,9 +203,9 @@ TEST(InterfacePtr, MoveAssignWithEvents) {
   fidl::test::AsyncLoopForTest loop;
 
   test::FrobinatorImpl impl;
-  Binding<frobinator::Frobinator> binding(&impl);
+  Binding<fidl::test::frobinator::Frobinator> binding(&impl);
 
-  frobinator::FrobinatorPtr ptr;
+  fidl::test::frobinator::FrobinatorPtr ptr;
   EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
 
   std::vector<std::string> hrobs;
@@ -214,7 +214,7 @@ TEST(InterfacePtr, MoveAssignWithEvents) {
   binding.events().Hrob("one");
   EXPECT_TRUE(hrobs.empty());
 
-  frobinator::FrobinatorPtr ptr2;
+  fidl::test::frobinator::FrobinatorPtr ptr2;
   ptr2 = std::move(ptr);
   ASSERT_FALSE(ptr);
 
@@ -227,9 +227,9 @@ TEST(InterfacePtr, MoveIntoMethodCapture) {
   fidl::test::AsyncLoopForTest loop;
 
   test::FrobinatorImpl impl;
-  Binding<frobinator::Frobinator> binding(&impl);
+  Binding<fidl::test::frobinator::Frobinator> binding(&impl);
 
-  frobinator::FrobinatorPtr ptr;
+  fidl::test::frobinator::FrobinatorPtr ptr;
   EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
 
   std::vector<std::string> grobs;

@@ -11,15 +11,15 @@
 namespace fidl {
 namespace {
 
-TEST(BindingSet, Trivial) { BindingSet<frobinator::Frobinator> binding_set; }
+TEST(BindingSet, Trivial) { BindingSet<fidl::test::frobinator::Frobinator> binding_set; }
 
 TEST(BindingSet, Control) {
   constexpr size_t kCount = 10;
 
-  frobinator::FrobinatorPtr ptrs[kCount];
+  fidl::test::frobinator::FrobinatorPtr ptrs[kCount];
   test::FrobinatorImpl impls[kCount];
 
-  BindingSet<frobinator::Frobinator> binding_set;
+  BindingSet<fidl::test::frobinator::Frobinator> binding_set;
 
   int empty_count = 0;
   binding_set.set_empty_set_handler([&empty_count]() { ++empty_count; });
@@ -82,10 +82,10 @@ TEST(BindingSet, Control) {
 
 TEST(BindingSet, Iterator) {
   constexpr size_t kCount = 2;
-  frobinator::FrobinatorPtr ptrs[kCount];
+  fidl::test::frobinator::FrobinatorPtr ptrs[kCount];
   test::FrobinatorImpl impls[kCount];
 
-  BindingSet<frobinator::Frobinator> binding_set;
+  BindingSet<fidl::test::frobinator::Frobinator> binding_set;
 
   fidl::test::AsyncLoopForTest loop;
 
@@ -105,10 +105,10 @@ TEST(BindingSet, Iterator) {
 TEST(BindingSet, EmptyHandler) {
   constexpr size_t kCount = 4;
 
-  frobinator::FrobinatorPtr ptrs[kCount];
+  fidl::test::frobinator::FrobinatorPtr ptrs[kCount];
   test::FrobinatorImpl impls[kCount];
 
-  BindingSet<frobinator::Frobinator> binding_set;
+  BindingSet<fidl::test::frobinator::Frobinator> binding_set;
 
   int empty_count = 0;
   binding_set.set_empty_set_handler([&empty_count]() { ++empty_count; });
@@ -143,10 +143,10 @@ TEST(BindingSet, EmptyHandler) {
 }
 
 TEST(BindingSet, EmptyHandlerOnManualClose) {
-  frobinator::FrobinatorPtr ptr;
+  fidl::test::frobinator::FrobinatorPtr ptr;
   test::FrobinatorImpl impl;
 
-  BindingSet<frobinator::Frobinator> binding_set;
+  BindingSet<fidl::test::frobinator::Frobinator> binding_set;
 
   int empty_count = 0;
   binding_set.set_empty_set_handler([&empty_count]() { ++empty_count; });

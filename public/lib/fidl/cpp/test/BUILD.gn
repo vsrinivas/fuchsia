@@ -29,6 +29,8 @@ source_set("test") {
 }
 
 fidl("frobinator") {
+  name = "fidl.test.frobinator"
+
   sources = [
     "frobinator.fidl"
   ]

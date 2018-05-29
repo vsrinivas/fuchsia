@@ -16,23 +16,23 @@ class BoundFrobinatorImpl : public test::FrobinatorImpl {
  public:
   BoundFrobinatorImpl() : binding_(this) {}
 
-  Binding<frobinator::Frobinator>& binding() { return binding_; }
+  Binding<fidl::test::frobinator::Frobinator>& binding() { return binding_; }
 
  private:
-  Binding<frobinator::Frobinator> binding_;
+  Binding<fidl::test::frobinator::Frobinator> binding_;
 };
 
 TEST(InterfacePtrSet, Trivial) {
-  InterfacePtrSet<frobinator::Frobinator> ptr_set;
+  InterfacePtrSet<fidl::test::frobinator::Frobinator> ptr_set;
 }
 
 TEST(InterfacePtrSet, Control) {
   constexpr size_t kCount = 10;
 
-  frobinator::FrobinatorPtr ptrs[kCount];
+  fidl::test::frobinator::FrobinatorPtr ptrs[kCount];
   BoundFrobinatorImpl impls[kCount];
 
-  InterfacePtrSet<frobinator::Frobinator> ptr_set;
+  InterfacePtrSet<fidl::test::frobinator::Frobinator> ptr_set;
 
   fidl::test::AsyncLoopForTest loop;
 

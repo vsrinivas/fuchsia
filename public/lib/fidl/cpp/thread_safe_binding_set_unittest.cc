@@ -12,16 +12,16 @@ namespace fidl {
 namespace {
 
 TEST(ThreadSafeBindingSet, Trivial) {
-  ThreadSafeBindingSet<frobinator::Frobinator> binding_set;
+  ThreadSafeBindingSet<fidl::test::frobinator::Frobinator> binding_set;
 }
 
 TEST(ThreadSafeBindingSet, Control) {
   constexpr size_t kCount = 10;
 
-  frobinator::FrobinatorPtr ptrs[kCount];
+  fidl::test::frobinator::FrobinatorPtr ptrs[kCount];
   test::FrobinatorImpl impls[kCount];
 
-  ThreadSafeBindingSet<frobinator::Frobinator> binding_set;
+  ThreadSafeBindingSet<fidl::test::frobinator::Frobinator> binding_set;
 
   fidl::test::AsyncLoopForTest loop;
 

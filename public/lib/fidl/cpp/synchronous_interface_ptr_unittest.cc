@@ -16,10 +16,10 @@
 namespace fidl {
 namespace {
 
-TEST(SynchronousInterfacePtr, Trivial) { frobinator::FrobinatorSyncPtr ptr; }
+TEST(SynchronousInterfacePtr, Trivial) { fidl::test::frobinator::FrobinatorSyncPtr ptr; }
 
 TEST(SynchronousInterfacePtr, Control) {
-  frobinator::FrobinatorSyncPtr ptr;
+  fidl::test::frobinator::FrobinatorSyncPtr ptr;
   auto request = ptr.NewRequest();
 
   std::thread client([ptr = std::move(ptr)]() mutable {
@@ -35,7 +35,7 @@ TEST(SynchronousInterfacePtr, Control) {
   fidl::test::AsyncLoopForTest loop;
 
   test::FrobinatorImpl impl;
-  Binding<frobinator::Frobinator> binding(&impl);
+  Binding<fidl::test::frobinator::Frobinator> binding(&impl);
 
   EXPECT_EQ(ZX_OK, binding.Bind(std::move(request)));
 

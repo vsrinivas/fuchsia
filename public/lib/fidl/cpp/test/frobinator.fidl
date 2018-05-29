@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library frobinator;
+library fidl.test.frobinator;
 
 interface Frobinator {
   1: Frob(string value);

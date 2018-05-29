@@ -16,15 +16,15 @@
 namespace fidl {
 namespace {
 
-TEST(Binding, Trivial) { Binding<frobinator::Frobinator> binding(nullptr); }
+TEST(Binding, Trivial) { Binding<fidl::test::frobinator::Frobinator> binding(nullptr); }
 
 TEST(Binding, Control) {
   fidl::test::AsyncLoopForTest loop;
 
   test::FrobinatorImpl impl;
-  Binding<frobinator::Frobinator> binding(&impl);
+  Binding<fidl::test::frobinator::Frobinator> binding(&impl);
 
-  frobinator::FrobinatorPtr ptr;
+  fidl::test::frobinator::FrobinatorPtr ptr;
   EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
 
   ptr->Frob("hello");
@@ -63,7 +63,7 @@ TEST(Binding, Bind) {
   fidl::test::AsyncLoopForTest loop;
 
   test::FrobinatorImpl impl;
-  Binding<frobinator::Frobinator> binding(&impl);
+  Binding<fidl::test::frobinator::Frobinator> binding(&impl);
 
   EXPECT_FALSE(binding.is_bound());
   EXPECT_EQ(&impl, binding.impl());
@@ -87,10 +87,10 @@ TEST(Binding, Bind) {
 TEST(Binding, ConstructBound) {
   fidl::test::AsyncLoopForTest loop;
 
-  InterfaceHandle<frobinator::Frobinator> handle;
+  InterfaceHandle<fidl::test::frobinator::Frobinator> handle;
 
   test::FrobinatorImpl impl;
-  Binding<frobinator::Frobinator> binding(&impl, handle.NewRequest());
+  Binding<fidl::test::frobinator::Frobinator> binding(&impl, handle.NewRequest());
   EXPECT_TRUE(handle.is_valid());
   EXPECT_TRUE(binding.is_bound());
   EXPECT_EQ(&impl, binding.impl());
@@ -99,10 +99,10 @@ TEST(Binding, ConstructBound) {
 TEST(Binding, ErrorHandler) {
   fidl::test::AsyncLoopForTest loop;
 
-  InterfaceHandle<frobinator::Frobinator> handle;
+  InterfaceHandle<fidl::test::frobinator::Frobinator> handle;
 
   test::FrobinatorImpl impl;
-  Binding<frobinator::Frobinator> binding(&impl, handle.NewRequest());
+  Binding<fidl::test::frobinator::Frobinator> binding(&impl, handle.NewRequest());
   EXPECT_TRUE(handle.is_valid());
   EXPECT_TRUE(binding.is_bound());
   EXPECT_EQ(&impl, binding.impl());
@@ -124,10 +124,10 @@ TEST(Binding, ErrorHandler) {
 TEST(Binding, DestructDuringErrorHandler) {
   fidl::test::AsyncLoopForTest loop;
 
-  InterfaceHandle<frobinator::Frobinator> handle;
+  InterfaceHandle<fidl::test::frobinator::Frobinator> handle;
 
   test::FrobinatorImpl impl;
-  auto binding = std::make_unique<Binding<frobinator::Frobinator>>(&impl);
+  auto binding = std::make_unique<Binding<fidl::test::frobinator::Frobinator>>(&impl);
   binding->Bind(handle.NewRequest());
   EXPECT_TRUE(handle.is_valid());
   EXPECT_TRUE(binding->is_bound());
@@ -150,9 +150,9 @@ TEST(Binding, DestructDuringErrorHandler) {
 
 TEST(Binding, PeerClosedTriggersErrorHandler) {
   fidl::test::AsyncLoopForTest loop;
-  InterfaceHandle<frobinator::Frobinator> handle;
+  InterfaceHandle<fidl::test::frobinator::Frobinator> handle;
   test::FrobinatorImpl impl;
-  Binding<frobinator::Frobinator> binding(&impl, handle.NewRequest());
+  Binding<fidl::test::frobinator::Frobinator> binding(&impl, handle.NewRequest());
 
   int error_count = 0;
   binding.set_error_handler([&error_count, &binding]() {
@@ -168,9 +168,9 @@ TEST(Binding, PeerClosedTriggersErrorHandler) {
 
 TEST(Binding, UnbindDoesNotTriggerErrorHandler) {
   fidl::test::AsyncLoopForTest loop;
-  InterfaceHandle<frobinator::Frobinator> handle;
+  InterfaceHandle<fidl::test::frobinator::Frobinator> handle;
   test::FrobinatorImpl impl;
-  Binding<frobinator::Frobinator> binding(&impl, handle.NewRequest());
+  Binding<fidl::test::frobinator::Frobinator> binding(&impl, handle.NewRequest());
 
   int error_count = 0;
   binding.set_error_handler([&error_count, &binding]() { ++error_count; });
