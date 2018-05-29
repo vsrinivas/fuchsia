@@ -4,6 +4,14 @@
 
 library amber;
 
+struct KeyConfig {
+  // Supported TUF key types. The only supported algorithm is ed25519.
+  string type;
+
+  // The value of the key encoded in hex.
+  string value;
+};
+
 struct SourceConfig {
   // The canonical URL for the TUF repository.
   string repoUrl;
@@ -18,9 +26,9 @@ struct SourceConfig {
   // How frequently to poll the TUF server.
   int32 ratePeriod;
 
-  // A vector of hex-encoded ED25519 public keys. This key must match one of
-  // the trusted keys known to the system.
-  vector<string> rootKeys;
+  // A vector of public keys. These keys must match one of the trusted keys
+  // known to the system.
+  vector<KeyConfig> rootKeys;
 };
 
 

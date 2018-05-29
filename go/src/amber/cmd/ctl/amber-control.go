@@ -117,7 +117,12 @@ func addSource(a *amber.ControlInterface) error {
 		RequestUrl: *srcUrl,
 		RateLimit:  int32(*rateLimit),
 		RatePeriod: int32(*period),
-		RootKeys:   []string{*srcKey},
+		RootKeys: []amber.KeyConfig{
+			amber.KeyConfig{
+				Type:  "ed25519",
+				Value: *srcKey,
+			},
+		},
 	})
 	if !added {
 		fmt.Println("Call succeeded, but source not added")

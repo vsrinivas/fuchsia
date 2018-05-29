@@ -65,13 +65,17 @@ func (c *ControlSrvr) AddSrc(cfg amber.SourceConfig) (bool, error) {
 	keys := make([]*tuf_data.Key, len(cfg.RootKeys))
 
 	for i, key := range cfg.RootKeys {
-		keyHex, err := hex.DecodeString(key)
+		if key.Type != "ed25519" {
+			return false, fmt.Errorf("Unsupported key type %s", key.Type)
+		}
+
+		keyHex, err := hex.DecodeString(key.Value)
 		if err != nil {
 			return false, err
 		}
 
 		keys[i] = &tuf_data.Key{
-			Type:  "ed25519",
+			Type:  key.Type,
 			Value: tuf_data.KeyValue{tuf_data.HexBytes(keyHex)},
 		}
 	}
