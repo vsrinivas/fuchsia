@@ -29,6 +29,12 @@
 #define S905D2_RESET_BASE               0xffd01000
 #define S905D2_RESET_LENGTH             0x1000
 
+#define S905D2_MIPI_DSI_BASE            0xffd07000
+#define S905D2_MIPI_DSI_LENGTH          0x1000
+
+#define S905D2_DSI_PHY_BASE             0xff644000
+#define S905D2_DSI_PHY_LENGTH           0x1000
+
 #define S905D2_USBPHY20_BASE            0xff636000
 #define S905D2_USBPHY20_LENGTH          0x2000
 

@@ -16,10 +16,27 @@
 
 static const pbus_mmio_t display_mmios[] = {
     {
+        // Canvas
         .base = S905D2_DMC_BASE,
         .length = S905D2_DMC_LENGTH,
     },
     {
+        // DSI Host Controller
+        .base = S905D2_MIPI_DSI_BASE,
+        .length = S905D2_MIPI_DSI_LENGTH,
+    },
+    {
+        // DSI PHY
+        .base = S905D2_DSI_PHY_BASE,
+        .length = S905D2_DSI_PHY_LENGTH,
+    },
+    {
+        // HHI
+        .base = S905D2_HIU_BASE,
+        .length = S905D2_HIU_LENGTH,
+    },
+    {
+        // VBUS/VPU
         .base = S905D2_VPU_BASE,
         .length = S905D2_VPU_LENGTH,
     },
@@ -36,6 +53,27 @@ static const pbus_gpio_t display_gpios[] = {
     {
         // Backlight Enable
         .gpio = S905D2_GPIOA(10),
+    },
+    {
+        // LCD Reset
+        .gpio = S905D2_GPIOH(6),
+    },
+    {
+        // Panel detection
+        .gpio = S905D2_GPIOH(5),
+    },
+    {
+        // HW_ID_0
+        .gpio = S905D2_GPIOZ(7),
+        // .gpio = S905D2_GPIOZ(5),
+    },
+    {
+        // HW_ID_1
+        .gpio = S905D2_GPIOZ(8),
+    },
+    {
+        // HW_ID_2
+        .gpio = S905D2_GPIOZ(3),
     },
 };
 

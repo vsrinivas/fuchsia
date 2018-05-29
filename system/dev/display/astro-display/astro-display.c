@@ -3,45 +3,84 @@
 // found in the LICENSE file.
 
 #include "astro-display.h"
-#include <assert.h>
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/io-buffer.h>
-#include <ddk/protocol/display-controller.h>
-#include <ddk/protocol/platform-defs.h>
-#include <ddk/protocol/platform-device.h>
-#include <hw/reg.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <zircon/assert.h>
-#include <zircon/syscalls.h>
 
-static const zx_pixel_format_t _gsupported_pixel_formats = { ZX_PIXEL_FORMAT_RGB_x888 };
-
-typedef struct image_info {
-    zx_handle_t pmt;
-    uint8_t canvas_idx;
-
-    list_node_t node;
-} image_info_t;
-
-// MMIO indices based on astro_display_mmios
-enum {
-    MMIO_DMC,
-    MMIO_VPU,
+ // Astro Display Configuration. These configuration comes directly from
+ // from LCD vendor and hardware team.
+const display_setting_t g_disp_setting_TV070WSM_FT = {
+    .h_active                   = 600,
+    .v_active                   = 1024,
+    .h_period                   = 700,
+    .v_period                   = 1053,
+    .hsync_width                = 24,
+    .hsync_bp                   = 36,
+    .hsync_pol                  = 0,
+    .vsync_width                = 2,
+    .vsync_bp                   = 8,
+    .vsync_pol                  = 0,
+    .lcd_clock                  = 44250000,
+    .clock_factor               = 8,
+    .lane_num                   = 4,
+    .bit_rate_max               = 360,
+};
+const display_setting_t g_disp_setting_P070ACB_FT = {
+    .h_active                   = 600,
+    .v_active                   = 1024,
+    .h_period                   = 770,
+    .v_period                   = 1070,
+    .hsync_width                = 10,
+    .hsync_bp                   = 80,
+    .hsync_pol                  = 0,
+    .vsync_width                = 6,
+    .vsync_bp                   = 20,
+    .vsync_pol                  = 0,
+    .lcd_clock                  = 49434000,
+    .clock_factor               = 8,
+    .lane_num                   = 4,
+    .bit_rate_max               = 400,
 };
 
+// This global variable will point to either of the display settings based on
+// the detected panel type
+const display_setting_t* g_disp_setting;
+
+// List of supported pixel formats
+static const zx_pixel_format_t _gsupported_pixel_formats = { ZX_PIXEL_FORMAT_RGB_x888 };
+
+// This function copies the display settings into our internal structure
+static void copy_disp_setting(astro_display_t* display) {
+    ZX_DEBUG_ASSERT(display);
+    ZX_DEBUG_ASSERT(g_disp_setting);
+
+    display->disp_setting.h_active = g_disp_setting->h_active;
+    display->disp_setting.v_active = g_disp_setting->v_active;
+    display->disp_setting.h_period = g_disp_setting->h_period;
+    display->disp_setting.v_period = g_disp_setting->v_period;
+    display->disp_setting.hsync_width = g_disp_setting->hsync_width;
+    display->disp_setting.hsync_bp = g_disp_setting->hsync_bp;
+    display->disp_setting.hsync_pol = g_disp_setting->hsync_pol;
+    display->disp_setting.vsync_width = g_disp_setting->vsync_width;
+    display->disp_setting.vsync_bp = g_disp_setting->vsync_bp;
+    display->disp_setting.vsync_pol = g_disp_setting->vsync_pol;
+    display->disp_setting.lcd_clock = g_disp_setting->lcd_clock;
+    display->disp_setting.clock_factor = g_disp_setting->clock_factor;
+    display->disp_setting.lane_num = g_disp_setting->lane_num;
+    display->disp_setting.bit_rate_max = g_disp_setting->bit_rate_max;
+}
+
+typedef struct image_info {
+    zx_handle_t     pmt;
+    uint8_t         canvas_idx;
+    list_node_t     node;
+} image_info_t;
+
+// part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 static uint32_t astro_compute_linear_stride(void* ctx, uint32_t width, zx_pixel_format_t format) {
     // The astro display controller needs buffers with a stride that is an even
     // multiple of 32.
     return ROUNDUP(width, 32 / ZX_PIXEL_FORMAT_BYTES(format));
 }
 
+// part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 static void astro_set_display_controller_cb(void* ctx, void* cb_ctx, display_controller_cb_t* cb) {
     astro_display_t* display = ctx;
     mtx_lock(&display->cb_lock);
@@ -58,6 +97,7 @@ static void astro_set_display_controller_cb(void* ctx, void* cb_ctx, display_con
     mtx_unlock(&display->cb_lock);
 }
 
+// part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 static zx_status_t astro_get_display_info(void* ctx, uint64_t display_id, display_info_t* info) {
     ZX_DEBUG_ASSERT(display_id == PANEL_DISPLAY_ID);
 
@@ -75,7 +115,9 @@ static zx_status_t astro_get_display_info(void* ctx, uint64_t display_id, displa
     return ZX_OK;
 }
 
-static zx_status_t astro_import_vmo_image(void* ctx, image_t* image, zx_handle_t vmo, size_t offset) {
+// part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
+static zx_status_t astro_import_vmo_image(void* ctx, image_t* image, zx_handle_t vmo,
+                                          size_t offset) {
     image_info_t* import_info = calloc(1, sizeof(image_info_t));
     if (import_info == NULL) {
         return ZX_ERR_NO_MEMORY;
@@ -125,6 +167,7 @@ fail:
     return status;
 }
 
+// part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 static void astro_release_image(void* ctx, image_t* image) {
     astro_display_t* display = ctx;
     mtx_lock(&display->image_lock);
@@ -145,6 +188,7 @@ static void astro_release_image(void* ctx, image_t* image) {
     }
 }
 
+// part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 static void astro_check_configuration(void* ctx,
                                       const display_config_t** display_configs,
                                       uint32_t* display_cfg_result,
@@ -186,6 +230,7 @@ static void astro_check_configuration(void* ctx,
     mtx_unlock(&display->display_lock);
 }
 
+// part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 static void astro_apply_configuration(void* ctx,
                                       const display_config_t** display_configs,
                                       uint32_t display_count) {
@@ -209,6 +254,7 @@ static void astro_apply_configuration(void* ctx,
     mtx_unlock(&display->display_lock);
 }
 
+// part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 static zx_status_t allocate_vmo(void* ctx, uint64_t size, zx_handle_t* vmo_out) {
     astro_display_t* display = ctx;
     return zx_vmo_create_contiguous(display->bti, size, 0, vmo_out);
@@ -233,6 +279,9 @@ static void display_release(void* ctx) {
         int res;
         thrd_join(display->vsync_thread, &res);
         io_buffer_release(&display->mmio_dmc);
+        io_buffer_release(&display->mmio_mipi_dsi);
+        io_buffer_release(&display->mmio_dsi_phy);
+        io_buffer_release(&display->mmio_hhi);
         io_buffer_release(&display->mmio_vpu);
         io_buffer_release(&display->fbuffer);
         zx_handle_close(display->bti);
@@ -243,54 +292,91 @@ static void display_release(void* ctx) {
 
 static zx_protocol_device_t main_device_proto = {
     .version = DEVICE_OPS_VERSION,
-    .release =  display_release,
+    .release = display_release,
 };
 
-/* Table from Linux source */
-/* TODO: Need to separate backlight driver from display driver */
-static const uint8_t backlight_init_table[] = {
-    0xa2, 0x20,
-    0xa5, 0x54,
-    0x00, 0xff,
-    0x01, 0x05,
-    0xa2, 0x20,
-    0xa5, 0x54,
-    0xa1, 0xb7,
-    0xa0, 0xff,
-    0x00, 0x80,
-};
+// This function determines the board ID. This information should ideally come from
+// the board driver.
+// TODO: ZX-2452 Add board info API to platform device
+static void populate_board_rev(astro_display_t* display) {
+    uint8_t id0, id1, id2;
 
-static void init_backlight(astro_display_t* display) {
-
-    // power on backlight
-    gpio_config(&display->gpio, 0, GPIO_DIR_OUT);
-    gpio_write(&display->gpio, 0, 1);
-    usleep(1000);
-
-    for (size_t i = 0; i < sizeof(backlight_init_table); i+=2) {
-        if(i2c_transact_sync(&display->i2c, 0, &backlight_init_table[i], 2, NULL, 0) != ZX_OK) {
-            DISP_ERROR("Backlight write failed: reg[0x%x]: 0x%x\n", backlight_init_table[i],
-                                            backlight_init_table[i+1]);
-        }
+    // Vital info. Causing a panic here is better then returning an error.
+    if ((gpio_config(&display->gpio, GPIO_HW_ID0, GPIO_DIR_IN | GPIO_NO_PULL) == ZX_OK) &&
+        (gpio_config(&display->gpio, GPIO_HW_ID1, GPIO_DIR_IN | GPIO_NO_PULL) == ZX_OK) &&
+        (gpio_config(&display->gpio, GPIO_HW_ID2, GPIO_DIR_IN | GPIO_NO_PULL) == ZX_OK) &&
+        (gpio_read(&display->gpio, GPIO_HW_ID0, &id0) == ZX_OK) &&
+        (gpio_read(&display->gpio, GPIO_HW_ID1, &id1) == ZX_OK) &&
+        (gpio_read(&display->gpio, GPIO_HW_ID2, &id2) == ZX_OK)) {
+        display->board_rev = id0 + (id1 << 1) + (id2 << 2);
+        DISP_INFO("Detected Board ID = %d\n", display->board_rev);
+    } else {
+        display->board_rev = BOARD_REV_UNKNOWN;
+        DISP_ERROR("Failed to detect a valid board id\n");
     }
 }
 
-static zx_status_t setup_display_if(astro_display_t* display) {
+// This function detect the panel type based.
+static void populate_panel_type(astro_display_t* display) {
+    uint8_t pt;
+    if ((gpio_config(&display->gpio, GPIO_PANEL_DETECT, GPIO_DIR_IN | GPIO_NO_PULL) == ZX_OK) &&
+        (gpio_read(&display->gpio, GPIO_PANEL_DETECT, &pt) == ZX_OK)) {
+        display->panel_type = pt;
+        DISP_INFO("Detected panel type = %s (%d)\n",
+                  display->panel_type ? "P070ACB_FT" : "TV070WSM_FT", display->panel_type);
+    } else {
+        display->panel_type = PANEL_UNKNOWN;
+        DISP_ERROR("Failed to detect a valid panel\n");
+    }
+}
+
+// This function is the main function called to setup the display interface
+static zx_status_t setup_display_interface(astro_display_t* display) {
     zx_status_t status;
 
     mtx_lock(&display->cb_lock);
     mtx_lock(&display->display_lock);
 
+    display->skip_disp_init = false;
+    display->panel_type = PANEL_UNKNOWN;
+    display->board_rev = BOARD_REV_UNKNOWN;
+
+    // Detect board ID first
+    populate_board_rev(display);
+
+    if ((display->board_rev == BOARD_REV_UNKNOWN) ||
+        (display->board_rev < MIN_BOARD_REV_SUPPORTED)) {
+        DISP_INFO("Unsupported Board REV. Will skip display driver initialization\n");
+        display->skip_disp_init = true;
+    }
+
+    if (!display->skip_disp_init) {
+        // Detect panel type
+        populate_panel_type(display);
+
+        if (display->panel_type == PANEL_TV070WSM_FT) {
+            g_disp_setting = &g_disp_setting_TV070WSM_FT;
+        } else if (display->panel_type == PANEL_P070ACB_FT) {
+            g_disp_setting = &g_disp_setting_P070ACB_FT;
+        } else {
+            DISP_ERROR("Unsupported panel detected!\n");
+            status = ZX_ERR_NOT_SUPPORTED;
+            goto fail;
+        }
+
+        // Populated internal structures based on predefined tables
+        copy_disp_setting(display);
+    }
+
     // allocate frame buffer
     display->format = ZX_PIXEL_FORMAT_RGB_x888;
-    display->width  = 608;
-    display->height = 1024;
+    display->width  = DISPLAY_WIDTH;
+    display->height = DISPLAY_HEIGHT;
     display->stride = astro_compute_linear_stride(
             display, display->width, display->format);
 
     size_t size = display->stride * display->height * ZX_PIXEL_FORMAT_BYTES(display->format);
-    status = allocate_vmo(display, size, &display->fb_vmo);
-    if (status != ZX_OK) {
+    if ((status = allocate_vmo(display, size, &display->fb_vmo)) != ZX_OK) {
         goto fail;
     }
 
@@ -300,6 +386,30 @@ static zx_status_t setup_display_if(astro_display_t* display) {
     if (status != ZX_OK) {
         DISP_ERROR("Unable to duplicate FB VMO handle\n");
         goto fail;
+    }
+
+    if (!display->skip_disp_init) {
+        // Ensure Max Bit Rate / pixel clock ~= 8 (8.xxx). This is because the clock calculation
+        // part of code assumes a clock factor of 1. All the LCD tables from Astro have this
+        // relationship established. We'll have to revisit the calculation if this ratio cannot
+        // be met.
+        if (g_disp_setting->bit_rate_max / (g_disp_setting->lcd_clock/1000/1000) != 8) {
+            DISP_ERROR("Max Bit Rate / pixel clock != 8\n");
+            status = ZX_ERR_INVALID_ARGS;
+            goto fail;
+        }
+
+        // Initialize all display related clocks
+        if ((status = display_clock_init(display)) != ZX_OK) {
+            DISP_ERROR("Display clock init failed! %d\n", status);
+            goto fail;
+        }
+
+        // Program and Enable DSI Host Interface
+        if ((status = aml_dsi_host_on(display)) != ZX_OK) {
+            DISP_ERROR("AML DSI Hosy Init failed %d\n", status);
+            goto fail;
+        }
     }
 
     zx_vaddr_t virt;
@@ -332,6 +442,7 @@ static zx_status_t setup_display_if(astro_display_t* display) {
                              display->width, display->height,
                              display->stride);
 
+    // Initialize and turn on backlight
     init_backlight(display);
 
     mtx_unlock(&display->display_lock);
@@ -353,17 +464,11 @@ fail:
     return status;
 }
 
-static int main_astro_display_thread(void *arg) {
-    astro_display_t* display = arg;
-    setup_display_if(display);
-    return ZX_OK;
-}
-
 static zx_status_t vsync_thread(void *arg) {
     zx_status_t status = ZX_OK;
     astro_display_t* display = arg;
 
-    while(1) {
+    while (1) {
         zx_time_t timestamp;
         status = zx_interrupt_wait(display->vsync_interrupt, &timestamp);
         if (status != ZX_OK) {
@@ -403,14 +508,14 @@ zx_status_t astro_display_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    // Obtain I2C Protocol
+    // Obtain I2C Protocol for backlight
     status = device_get_protocol(parent, ZX_PROTOCOL_I2C, &display->i2c);
     if (status != ZX_OK) {
         DISP_ERROR("Could not obtain I2C protocol\n");
         goto fail;
     }
 
-    // Obtain GPIO Protocol
+    // Obtain GPIO Protocol for Panel reset
     status = device_get_protocol(parent, ZX_PROTOCOL_GPIO, &display->gpio);
     if (status != ZX_OK) {
         DISP_ERROR("Could not obtain GPIO protocol\n");
@@ -430,10 +535,31 @@ zx_status_t astro_display_bind(void* ctx, zx_device_t* parent) {
     }
 
     // Map all the various MMIOs
-    status = pdev_map_mmio_buffer(&display->pdev, MMIO_DMC, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+    status = pdev_map_mmio_buffer(&display->pdev, MMIO_CANVAS, ZX_CACHE_POLICY_UNCACHED_DEVICE,
         &display->mmio_dmc);
     if (status != ZX_OK) {
-        DISP_ERROR("Could not map display MMIO DC\n");
+        DISP_ERROR("Could not map display MMIO DMC\n");
+        goto fail;
+    }
+
+    status = pdev_map_mmio_buffer(&display->pdev, MMIO_MPI_DSI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+        &display->mmio_mipi_dsi);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not map display MMIO MIPI_DSI\n");
+        goto fail;
+    }
+
+    status = pdev_map_mmio_buffer(&display->pdev, MMIO_DSI_PHY, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+        &display->mmio_dsi_phy);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not map display MMIO DSI PHY\n");
+        goto fail;
+    }
+
+    status = pdev_map_mmio_buffer(&display->pdev, MMIO_HHI, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+        &display->mmio_hhi);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not map display MMIO HHI\n");
         goto fail;
     }
 
@@ -441,6 +567,13 @@ zx_status_t astro_display_bind(void* ctx, zx_device_t* parent) {
         &display->mmio_vpu);
     if (status != ZX_OK) {
         DISP_ERROR("Could not map display MMIO VPU\n");
+        goto fail;
+    }
+
+    // Setup Display Interface
+    status = setup_display_interface(display);
+    if (status != ZX_OK) {
+        DISP_ERROR("Astro display setup failed! %d\n", status);
         goto fail;
     }
 
@@ -471,8 +604,6 @@ zx_status_t astro_display_bind(void* ctx, zx_device_t* parent) {
     mtx_init(&display->image_lock, mtx_plain);
     mtx_init(&display->cb_lock, mtx_plain);
 
-    thrd_create_with_name(&display->main_thread, main_astro_display_thread, display,
-                                                    "main_astro_display_thread");
     thrd_create_with_name(&display->vsync_thread, vsync_thread, display, "vsync_thread");
     return ZX_OK;
 

@@ -141,7 +141,8 @@ zx_status_t configure_osd(astro_display_t* display, uint8_t default_idx)
     // scaling and 16bit mode (565) and configures various layers based on that assumption.
     // Since we don't have a full end-to-end driver at this moment, we cannot simply turn off
     // scaling.
-    // For now, we will only configure the OSD layer to use the new Canvas index, and use 32-bit color.
+    // For now, we will only configure the OSD layer to use the new Canvas index,
+    // and use 32-bit color.
     uint32_t ctrl_stat2 = READ32_VPU_REG(VPU_VIU_OSD1_CTRL_STAT2);
     ctrl_stat2 |= VPU_VIU_OSD1_CTRL_STAT2_REPLACED_ALPHA_EN |
                   (0xff << VPU_VIU_OSD1_CTRL_STAT2_REPLACED_ALPHA_SHIFT);
