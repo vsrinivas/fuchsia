@@ -1,8 +1,30 @@
-package deviceid
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Package deviceid generates device IDs.
+
+// DeviceID generates the device ID from a MAC address.
+//
+// This is used for mDNS, and the device ID for the first
+// ethernet device in the system is the default host name
+// of a Fuchsia device.
+pub fn device_id(mac: &Vec<u8>) -> String {
+    // Keep this algorithm in sync with zircon's device_id.c
+    format!("{}-{}-{}-{}",
+            dict((mac[0] as u16)|(((mac[4] as u16)<<8)&0xF00)),
+            dict((mac[1] as u16)|(((mac[5] as u16)<<8)&0xF00)),
+            dict((mac[2] as u16)|(((mac[4] as u16)<<4)&0xF00)),
+            dict((mac[3] as u16)|(((mac[5] as u16)<<4)&0xF00)))
+}
+
+fn dict(x: u16) -> &'static str {
+	return DICTIONARY[x as usize % 1296]
+}
 
 // Dictionary of words to use to build device names.
 // Keep in sync with zircon/system/core/netsvc/eff_short_wordlist_1.h
-var dictionary = [...]string{
+pub const DICTIONARY: [&str; 1296] = [
 	"acid",
 	"acorn",
 	"acre",
@@ -1299,4 +1321,4 @@ var dictionary = [...]string{
 	"zippy",
 	"zone",
 	"zoom",
-}
+];
