@@ -78,4 +78,8 @@ bool SandboxMetadata::HasFeature(const std::string& feature) {
          features_.end();
 }
 
+void SandboxMetadata::AddFeature(std::string feature) {
+  features_.push_back(std::move(feature));
+}
+
 }  // namespace component

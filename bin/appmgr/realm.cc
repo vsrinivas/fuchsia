@@ -281,6 +281,12 @@ void Realm::CreateNestedJob(
   }
   child->default_namespace_->services().ServeDirectory(
       std::move(root_realm->svc_channel_server_));
+
+  if (!parent()) {
+    child->CreateShell("/boot/bin/run-vc");
+    child->CreateShell("/boot/bin/run-vc");
+    child->CreateShell("/boot/bin/run-vc");
+  }
 }
 
 void Realm::CreateApplication(
@@ -335,6 +341,29 @@ void Realm::CreateApplication(
           }
         }
       }));
+}
+
+void Realm::CreateShell(const std::string& path) {
+  zx::channel svc = default_namespace_->services().OpenAsDirectory();
+  if (!svc)
+    return;
+
+  SandboxMetadata sandbox;
+  sandbox.AddFeature("shell");
+
+  NamespaceBuilder builder;
+  builder.AddServices(std::move(svc));
+  builder.AddSandbox(sandbox, [this] { return OpenRootInfoDir(); });
+
+  fsl::SizedVmo executable;
+  if (!fsl::VmoFromFilename(path, &executable))
+    return;
+
+  LaunchInfo launch_info;
+  launch_info.url = path;
+  zx::process process =
+      CreateProcess(job_for_child_, std::move(executable), path,
+                    std::move(launch_info), zx::channel(), builder.Build());
 }
 
 std::unique_ptr<EnvironmentControllerImpl> Realm::ExtractChild(Realm* child) {

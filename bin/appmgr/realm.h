@@ -66,6 +66,7 @@ class Realm {
   void AddBinding(fidl::InterfaceRequest<Environment> environment);
 
   zx_status_t BindSvc(zx::channel channel);
+  void CreateShell(const std::string& path);
 
  private:
   static uint32_t next_numbered_label_;

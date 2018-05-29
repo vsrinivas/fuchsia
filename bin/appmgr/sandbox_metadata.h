@@ -20,6 +20,7 @@ class SandboxMetadata {
   bool Parse(const std::string& data);
   bool Parse(const rapidjson::Value& sandbox_value);
   bool HasFeature(const std::string& feature);
+  void AddFeature(std::string feature);
 
   const std::vector<std::string>& dev() const { return dev_; }
   const std::vector<std::string>& system() const { return system_; }
