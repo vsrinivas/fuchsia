@@ -7,7 +7,8 @@
 #include <lib/async-loop/loop.h>
 #include <loader-service/loader-service.h>
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 namespace DynamicLibraryLoader {
 
 static async_loop_t* ld_loop = nullptr;
@@ -36,4 +37,5 @@ zx_status_t Start(fxl::UniqueFD fd, zx::channel* result) {
 }
 
 }  // namespace DynamicLibraryLoader
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia

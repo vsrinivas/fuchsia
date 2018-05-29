@@ -15,7 +15,7 @@ namespace icu_data {
 
 class App {
  public:
-  App() : context_(component::StartupContext::CreateFromStartupInfo()) {
+  App() : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
     if (!icu_data_.LoadData())
       exit(ZX_ERR_UNAVAILABLE);
     context_->outgoing().AddPublicService<ICUDataProvider>(
@@ -25,7 +25,7 @@ class App {
   }
 
  private:
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
   ICUDataProviderImpl icu_data_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);

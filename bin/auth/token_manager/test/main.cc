@@ -26,7 +26,7 @@ class DevAuthProviderApp {
  public:
   DevAuthProviderApp()
       : loop_(&kAsyncLoopConfigMakeDefault),
-        app_context_(component::StartupContext::CreateFromStartupInfo()),
+        app_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
         trace_provider_(loop_.async()) {
     FXL_CHECK(app_context_);
   }
@@ -41,7 +41,7 @@ class DevAuthProviderApp {
 
  private:
   async::Loop loop_;
-  std::unique_ptr<component::StartupContext> app_context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> app_context_;
   trace::TraceProvider trace_provider_;
 
   auth::dev_auth_provider::FactoryImpl factory_impl_;

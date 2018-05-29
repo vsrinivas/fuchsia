@@ -9,7 +9,7 @@
 #include <memory>
 #include <vector>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fs/managed-vfs.h>
 #include "garnet/bin/sysmgr/delegating_loader.h"
 #include "lib/app/cpp/startup_context.h"
@@ -37,26 +37,26 @@ class App {
   void LaunchWlanstack();
 
   void RegisterSingleton(std::string service_name,
-                         component::LaunchInfoPtr launch_info);
+                         fuchsia::sys::LaunchInfoPtr launch_info);
   void RegisterDefaultServiceConnector();
   void RegisterAppLoaders(Config::ServiceMap app_loaders);
-  void LaunchApplication(component::LaunchInfo launch_info);
+  void LaunchApplication(fuchsia::sys::LaunchInfo launch_info);
 
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
 
   // Keep track of all services, indexed by url.
-  std::map<std::string, component::Services> services_;
+  std::map<std::string, fuchsia::sys::Services> services_;
 
   // Nested environment within which the apps started by sysmgr will run.
-  component::EnvironmentPtr env_;
-  component::EnvironmentControllerPtr env_controller_;
-  component::ApplicationLauncherPtr env_launcher_;
+  fuchsia::sys::EnvironmentPtr env_;
+  fuchsia::sys::EnvironmentControllerPtr env_controller_;
+  fuchsia::sys::ApplicationLauncherPtr env_launcher_;
 
   fs::ManagedVfs vfs_;
   fbl::RefPtr<fs::PseudoDir> svc_root_;
 
   std::unique_ptr<DelegatingLoader> app_loader_;
-  fidl::BindingSet<component::Loader> app_loader_bindings_;
+  fidl::BindingSet<fuchsia::sys::Loader> app_loader_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

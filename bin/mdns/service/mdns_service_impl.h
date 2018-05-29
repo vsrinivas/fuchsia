@@ -18,7 +18,7 @@ namespace mdns {
 
 class MdnsServiceImpl : public MdnsService {
  public:
-  MdnsServiceImpl(component::StartupContext* startup_context);
+  MdnsServiceImpl(fuchsia::sys::StartupContext* startup_context);
 
   ~MdnsServiceImpl() override;
 
@@ -131,7 +131,7 @@ class MdnsServiceImpl : public MdnsService {
   // Starts the service.
   void Start();
 
-  component::StartupContext* startup_context_;
+  fuchsia::sys::StartupContext* startup_context_;
   fidl::BindingSet<MdnsService> bindings_;
   mdns::Mdns mdns_;
   size_t next_subscriber_id_ = 0;

@@ -27,7 +27,7 @@ constexpr int kMaxCacheSize = 10;
 
 class TokenManagerImpl : public TokenManager {
  public:
-  TokenManagerImpl(component::StartupContext* context,
+  TokenManagerImpl(fuchsia::sys::StartupContext* context,
                    std::unique_ptr<store::AuthDb> auth_db,
                    fidl::VectorPtr<AuthProviderConfig> auth_provider_configs,
                    fidl::InterfaceHandle<auth::AuthenticationContextProvider>
@@ -60,7 +60,7 @@ class TokenManagerImpl : public TokenManager {
 
   auth::AuthenticationContextProviderPtr auth_context_provider_;
 
-  std::map<AuthProviderType, component::ComponentControllerPtr>
+  std::map<AuthProviderType, fuchsia::sys::ComponentControllerPtr>
       auth_provider_controllers_;
 
   std::map<AuthProviderType, auth::AuthProviderPtr> auth_providers_;

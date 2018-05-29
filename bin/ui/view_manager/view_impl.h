@@ -19,7 +19,7 @@ class ViewState;
 class ViewImpl : public ::fuchsia::ui::views_v1::View,
                  public ::fuchsia::ui::views_v1::ViewContainer,
                  public ::fuchsia::ui::views_v1_token::ViewOwner,
-                 public component::ServiceProvider {
+                 public fuchsia::sys::ServiceProvider {
  public:
   ViewImpl(ViewRegistry* registry, ViewState* state);
   ~ViewImpl() override;
@@ -27,10 +27,10 @@ class ViewImpl : public ::fuchsia::ui::views_v1::View,
  private:
   // |View|:
   void GetToken(::fuchsia::ui::views_v1::View::GetTokenCallback callback) override;
-  void GetServiceProvider(fidl::InterfaceRequest<component::ServiceProvider>
+  void GetServiceProvider(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
                               service_provider_request) override;
   void OfferServiceProvider(
-      fidl::InterfaceHandle<component::ServiceProvider> service_provider,
+      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> service_provider,
       fidl::VectorPtr<fidl::StringPtr> service_names) override;
   void GetContainer(fidl::InterfaceRequest<::fuchsia::ui::views_v1::ViewContainer>
                         view_container_request) override;
@@ -50,13 +50,13 @@ class ViewImpl : public ::fuchsia::ui::views_v1::View,
       ::fuchsia::ui::views_v1::ViewPropertiesPtr child_view_properties) override;
   void RequestFocus(uint32_t child_key) override;
 
-  // |component::ServiceProvider|:
+  // |fuchsia::sys::ServiceProvider|:
   void ConnectToService(fidl::StringPtr service_name,
                         zx::channel client_handle) override;
 
   ViewRegistry* const registry_;
   ViewState* const state_;
-  fidl::BindingSet<component::ServiceProvider> service_provider_bindings_;
+  fidl::BindingSet<fuchsia::sys::ServiceProvider> service_provider_bindings_;
   fidl::BindingSet<::fuchsia::ui::views_v1::ViewContainer> container_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ViewImpl);

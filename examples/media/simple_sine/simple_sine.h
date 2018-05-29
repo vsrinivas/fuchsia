@@ -18,10 +18,10 @@ class MediaApp {
 
   void set_float(bool enable_float) { use_float_ = enable_float; }
 
-  void Run(component::StartupContext* app_context);
+  void Run(fuchsia::sys::StartupContext* app_context);
 
  private:
-  void AcquireRenderer(component::StartupContext* app_context);
+  void AcquireRenderer(fuchsia::sys::StartupContext* app_context);
   void SetMediaType();
 
   zx_status_t CreateMemoryMapping();

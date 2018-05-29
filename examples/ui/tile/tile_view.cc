@@ -18,7 +18,7 @@ TileView::TileView(
     ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
     fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
         view_owner_request,
-    component::StartupContext* startup_context, const TileParams& params)
+    fuchsia::sys::StartupContext* startup_context, const TileParams& params)
     : BaseView(std::move(view_manager), std::move(view_owner_request), "Tile"),
       startup_context_(startup_context),
       params_(params),
@@ -41,10 +41,10 @@ void TileView::Present(
 
 void TileView::ConnectViews() {
   for (const auto& url : params_.view_urls) {
-    component::Services services;
-    component::ComponentControllerPtr controller;
+    fuchsia::sys::Services services;
+    fuchsia::sys::ComponentControllerPtr controller;
 
-    component::LaunchInfo launch_info;
+    fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = url;
     launch_info.directory_request = services.NewRequest();
 
@@ -100,7 +100,7 @@ void TileView::OnChildUnavailable(uint32_t child_key) {
 void TileView::AddChildView(
     fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner>
         child_view_owner,
-    const std::string& url, component::ComponentControllerPtr controller) {
+    const std::string& url, fuchsia::sys::ComponentControllerPtr controller) {
   const uint32_t view_key = next_child_view_key_++;
 
   auto view_data = std::make_unique<ViewData>(url, view_key,
@@ -183,7 +183,7 @@ void TileView::OnSceneInvalidated(
 }
 
 TileView::ViewData::ViewData(const std::string& url, uint32_t key,
-                             component::ComponentControllerPtr controller,
+                             fuchsia::sys::ComponentControllerPtr controller,
                              scenic_lib::Session* session)
     : url(url),
       key(key),

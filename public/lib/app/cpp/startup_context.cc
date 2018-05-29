@@ -13,7 +13,8 @@
 #include "lib/app/cpp/environment_services.h"
 #include "lib/fxl/logging.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 namespace {
 
@@ -72,4 +73,5 @@ void StartupContext::ConnectToEnvironmentService(
                                               interface_name);
 }
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia

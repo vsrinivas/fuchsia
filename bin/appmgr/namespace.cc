@@ -12,12 +12,13 @@
 #include "garnet/bin/appmgr/realm.h"
 #include "lib/app/cpp/environment_services.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
                      ServiceListPtr service_list)
     : parent_(parent), realm_(realm) {
-  component::ServiceProviderPtr services_backend;
+  fuchsia::sys::ServiceProviderPtr services_backend;
   if (parent_) {
     parent_->services().AddBinding(services_backend.NewRequest());
   }
@@ -82,4 +83,5 @@ void Namespace::CreateApplication(
   realm_->CreateApplication(std::move(launch_info), std::move(controller));
 }
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia

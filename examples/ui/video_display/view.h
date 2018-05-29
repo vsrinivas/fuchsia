@@ -24,7 +24,7 @@ namespace video_display {
 
 class View : public mozart::BaseView {
  public:
-  View(async::Loop* loop, component::StartupContext* startup_context,
+  View(async::Loop* loop, fuchsia::sys::StartupContext* startup_context,
        ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
        fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
            view_owner_request,

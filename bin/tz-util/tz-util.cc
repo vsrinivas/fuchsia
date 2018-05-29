@@ -20,7 +20,7 @@ static constexpr char kGetTimezoneIdCmd[] = "get_timezone_id";
 
 class TzUtil {
  public:
-  TzUtil() { component::ConnectToEnvironmentService(timezone_.NewRequest()); }
+  TzUtil() { fuchsia::sys::ConnectToEnvironmentService(timezone_.NewRequest()); }
 
   void Run(fxl::CommandLine command_line) {
     if (command_line.HasOption("help")) {

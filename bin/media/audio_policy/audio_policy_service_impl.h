@@ -19,7 +19,7 @@ namespace audio_policy {
 class AudioPolicyServiceImpl : public AudioPolicy {
  public:
   AudioPolicyServiceImpl(
-      std::unique_ptr<component::StartupContext> startup_context);
+      std::unique_ptr<fuchsia::sys::StartupContext> startup_context);
   ~AudioPolicyServiceImpl() override;
 
   // AudioPolicy implementation.
@@ -61,7 +61,7 @@ class AudioPolicyServiceImpl : public AudioPolicy {
     return system_audio_muted_ ? media::kMutedGain : system_audio_gain_db_;
   }
 
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   fidl::BindingSet<AudioPolicy> bindings_;
   float system_audio_gain_db_ = kDefaultSystemAudioGainDb;
   bool system_audio_muted_ = kDefaultSystemMuted;

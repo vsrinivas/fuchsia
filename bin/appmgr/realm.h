@@ -13,7 +13,7 @@
 #include <string>
 #include <unordered_map>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include "garnet/bin/appmgr/component_controller_impl.h"
 #include "garnet/bin/appmgr/environment_controller_impl.h"
 #include "garnet/bin/appmgr/hub/hub_info.h"
@@ -26,7 +26,8 @@
 #include "lib/fxl/strings/string_view.h"
 #include "lib/svc/cpp/service_provider_bridge.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 class Realm {
  public:
@@ -112,6 +113,7 @@ class Realm {
   FXL_DISALLOW_COPY_AND_ASSIGN(Realm);
 };
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia
 
 #endif  // GARNET_BIN_APPMGR_REALM_H_

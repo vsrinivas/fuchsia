@@ -7,7 +7,8 @@
 
 #include <string>
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 // Canonicalizes a URL, if possible.  Otherwise, returns an empty string/
 std::string CanonicalizeURL(const std::string& url);
@@ -18,6 +19,7 @@ std::string GetPathFromURL(const std::string& url);
 // Returns a file:// URL for the given path.
 std::string GetURLFromPath(const std::string& path);
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia
 
 #endif  // GARNET_BIN_APPMGR_URL_RESOLVER_H_

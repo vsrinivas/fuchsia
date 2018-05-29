@@ -56,7 +56,7 @@ std::ostream& operator<<(std::ostream& os, const AudioPolicyStatus& value) {
 class VolApp {
  public:
   VolApp(int argc, const char** argv, fxl::Closure quit_callback)
-      : startup_context_(component::StartupContext::CreateFromStartupInfo()),
+      : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
         quit_callback_(quit_callback) {
     FXL_DCHECK(quit_callback);
 
@@ -225,7 +225,7 @@ class VolApp {
     WaitForKeystroke();
   }
 
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   fxl::Closure quit_callback_;
   audio_policy::AudioPolicyPtr audio_policy_service_;
   bool interactive_ = true;

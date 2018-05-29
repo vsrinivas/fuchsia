@@ -9,7 +9,8 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 Outgoing::Outgoing()
     : vfs_(async_get_default()),
@@ -35,4 +36,5 @@ zx_status_t Outgoing::ServeFromStartupInfo() {
   return Serve(zx::channel(dir_request));
 }
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia

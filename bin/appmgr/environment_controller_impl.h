@@ -7,11 +7,12 @@
 
 #include <memory>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 class Realm;
 
 class EnvironmentControllerImpl
@@ -37,6 +38,7 @@ class EnvironmentControllerImpl
   FXL_DISALLOW_COPY_AND_ASSIGN(EnvironmentControllerImpl);
 };
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia
 
 #endif  // GARNET_BIN_APPMGR_APPLICATION_ENVIRONMENT_CONTROLLER_IMPL_H_

@@ -9,7 +9,8 @@
 #include "garnet/bin/appmgr/realm.h"
 #include "lib/fxl/functional/closure.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 EnvironmentControllerImpl::EnvironmentControllerImpl(
     fidl::InterfaceRequest<EnvironmentController> request,
@@ -40,4 +41,5 @@ void EnvironmentControllerImpl::Detach() {
   binding_.set_error_handler(fxl::Closure());
 }
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia

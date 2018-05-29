@@ -71,7 +71,7 @@ int main(int argc, char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto app_context = component::StartupContext::CreateFromStartupInfo();
+  auto app_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   auto test_runner =
       app_context->ConnectToEnvironmentService<test_runner::TestRunner>();
   Reporter reporter(&loop, name, test_runner.get());

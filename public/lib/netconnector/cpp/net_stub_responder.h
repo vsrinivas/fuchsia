@@ -25,7 +25,7 @@ class NetStubResponder {
   // Constructor. |actual| must outlive this.
   NetStubResponder(const fidl::InterfacePtr<TInterface>& actual,
                    const std::string& service_name,
-                   component::StartupContext* startup_context)
+                   fuchsia::sys::StartupContext* startup_context)
       : actual_(actual) {
     FXL_DCHECK(actual_);
     FXL_DCHECK(!service_name.empty());
@@ -42,7 +42,7 @@ class NetStubResponder {
         startup_context
             ->ConnectToEnvironmentService<netconnector::NetConnector>();
 
-    fidl::InterfaceHandle<component::ServiceProvider> handle;
+    fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> handle;
     service_namespace_.AddBinding(handle.NewRequest());
     FXL_DCHECK(handle);
 
@@ -55,7 +55,7 @@ class NetStubResponder {
 
  private:
   const fidl::InterfacePtr<TInterface>& actual_;
-  component::ServiceNamespace service_namespace_;
+  fuchsia::sys::ServiceNamespace service_namespace_;
   std::unordered_set<std::shared_ptr<TStub>> stubs_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(NetStubResponder);

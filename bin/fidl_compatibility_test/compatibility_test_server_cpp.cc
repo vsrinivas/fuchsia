@@ -20,7 +20,7 @@ namespace compatibility {
 class EchoServerApp : public Echo {
  public:
   EchoServerApp()
-      : context_(component::StartupContext::CreateFromStartupInfo()) {
+      : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
     context_->outgoing().AddPublicService<Echo>(
         [this](fidl::InterfaceRequest<Echo> request) {
           bindings_.AddBinding(
@@ -52,7 +52,7 @@ class EchoServerApp : public Echo {
   EchoServerApp(const EchoServerApp&) = delete;
   EchoServerApp& operator=(const EchoServerApp&) = delete;
 
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
   fidl::BindingSet<Echo> bindings_;
 };
 

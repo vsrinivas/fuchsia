@@ -29,7 +29,7 @@ class NetConnectorExampleImpl {
   void HandleReceivedMessage(std::vector<uint8_t> message);
 
   fxl::Closure quit_callback_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   netconnector::MessageRelay message_relay_;
   std::vector<std::string>::const_iterator conversation_iter_;
 

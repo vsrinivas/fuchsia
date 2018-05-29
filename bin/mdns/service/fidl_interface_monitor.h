@@ -18,9 +18,9 @@ class FidlInterfaceMonitor : public netstack::NotificationListener,
                              public InterfaceMonitor {
  public:
   static std::unique_ptr<InterfaceMonitor> Create(
-      component::StartupContext* startup_context);
+      fuchsia::sys::StartupContext* startup_context);
 
-  FidlInterfaceMonitor(component::StartupContext* startup_context);
+  FidlInterfaceMonitor(fuchsia::sys::StartupContext* startup_context);
 
   ~FidlInterfaceMonitor();
 

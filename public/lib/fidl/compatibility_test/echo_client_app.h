@@ -33,9 +33,9 @@ class EchoClientApp {
   EchoClientApp(const EchoClientApp&) = delete;
   EchoClientApp& operator=(const EchoClientApp&) = delete;
 
-  std::unique_ptr<component::StartupContext> context_;
-  component::Services echo_provider_;
-  component::ComponentControllerPtr controller_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
+  fuchsia::sys::Services echo_provider_;
+  fuchsia::sys::ComponentControllerPtr controller_;
   EchoPtr echo_;
 };
 

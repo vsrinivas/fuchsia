@@ -41,7 +41,7 @@ BaseView::BaseView(
                             view_listener_binding_.NewBinding(),
                             std::move(parent_export_token), label);
 
-  component::ConnectToService(GetViewServiceProvider(),
+  fuchsia::sys::ConnectToService(GetViewServiceProvider(),
                               input_connection_.NewRequest());
   input_connection_->SetEventListener(input_listener_binding_.NewBinding());
 
@@ -52,7 +52,7 @@ BaseView::BaseView(
 
 BaseView::~BaseView() = default;
 
-component::ServiceProvider* BaseView::GetViewServiceProvider() {
+fuchsia::sys::ServiceProvider* BaseView::GetViewServiceProvider() {
   if (!view_service_provider_)
     view_->GetServiceProvider(view_service_provider_.NewRequest());
   return view_service_provider_.get();

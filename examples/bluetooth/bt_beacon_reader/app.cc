@@ -32,7 +32,7 @@ namespace bt_beacon_reader {
 
 App::App(async::Loop* loop, bool just_tilts)
     : loop_(loop),
-      context_(component::StartupContext::CreateFromStartupInfo()),
+      context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
       central_delegate_(this),
       just_tilts_(just_tilts) {
   FXL_DCHECK(context_);

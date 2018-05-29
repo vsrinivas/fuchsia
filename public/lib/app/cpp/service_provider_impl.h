@@ -12,11 +12,12 @@
 #include <unordered_map>
 #include <utility>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 // An implementation of |ServiceProvider|, which can be customized appropriately
 // (to select what services it provides).
@@ -129,6 +130,7 @@ class ServiceProviderImpl : public ServiceProvider {
   FXL_DISALLOW_COPY_AND_ASSIGN(ServiceProviderImpl);
 };
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia
 
 #endif  // LIB_APP_CPP_SERVICE_PROVIDER_IMPL_H_

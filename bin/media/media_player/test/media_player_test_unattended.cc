@@ -24,7 +24,7 @@ namespace test {
 
 MediaPlayerTestUnattended::MediaPlayerTestUnattended(
     std::function<void(int)> quit_callback)
-    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
+    : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
       quit_callback_(quit_callback) {
   FXL_DCHECK(quit_callback_);
   std::cerr << "MediaPlayerTest starting\n";

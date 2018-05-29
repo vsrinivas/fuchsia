@@ -49,7 +49,7 @@ class DevTokenManagerAppTest : public gtest::TestWithMessageLoop,
                                auth::AuthenticationContextProvider {
  public:
   DevTokenManagerAppTest()
-      : startup_context_(component::StartupContext::CreateFromStartupInfo()),
+      : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
         auth_context_provider_binding_(this) {}
 
   ~DevTokenManagerAppTest() {}
@@ -57,8 +57,8 @@ class DevTokenManagerAppTest : public gtest::TestWithMessageLoop,
  protected:
   // ::testing::Test:
   void SetUp() override {
-    component::Services services;
-    component::LaunchInfo launch_info;
+    fuchsia::sys::Services services;
+    fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = "token_manager";
     launch_info.directory_request = services.NewRequest();
     {
@@ -101,8 +101,8 @@ class DevTokenManagerAppTest : public gtest::TestWithMessageLoop,
   }
 
  private:
-  std::unique_ptr<component::StartupContext> startup_context_;
-  component::ComponentControllerPtr controller_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
+  fuchsia::sys::ComponentControllerPtr controller_;
 
  protected:
   fidl::Binding<auth::AuthenticationContextProvider>
@@ -357,7 +357,7 @@ int main(int argc, char** argv) {
 
   {
     async::Loop loop(&kAsyncLoopConfigMakeDefault);
-    auto context = component::StartupContext::CreateFromStartupInfoNotChecked();
+    auto context = fuchsia::sys::StartupContext::CreateFromStartupInfoNotChecked();
     test_runner::ReportResult(argv[0], context.get(), listener.GetResults());
   }
 

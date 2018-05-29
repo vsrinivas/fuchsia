@@ -16,7 +16,7 @@ namespace netconnector {
 // static
 std::unique_ptr<DeviceServiceProvider> DeviceServiceProvider::Create(
     const std::string& device_name, const SocketAddress& address,
-    fidl::InterfaceRequest<component::ServiceProvider> request,
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request,
     NetConnectorImpl* owner) {
   return std::unique_ptr<DeviceServiceProvider>(new DeviceServiceProvider(
       device_name, address, std::move(request), owner));
@@ -24,7 +24,7 @@ std::unique_ptr<DeviceServiceProvider> DeviceServiceProvider::Create(
 
 DeviceServiceProvider::DeviceServiceProvider(
     const std::string& device_name, const SocketAddress& address,
-    fidl::InterfaceRequest<component::ServiceProvider> request,
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request,
     NetConnectorImpl* owner)
     : device_name_(device_name),
       address_(address),

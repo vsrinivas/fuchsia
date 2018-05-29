@@ -32,7 +32,7 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params,
   FXL_DCHECK(params.is_valid());
   FXL_DCHECK(quit_callback_);
 
-  auto startup_context = component::StartupContext::CreateFromStartupInfo();
+  auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
 
   media_player_ = startup_context->ConnectToEnvironmentService<MediaPlayer>();
   media_player_.events().StatusChanged = [this](MediaPlayerStatus status) {

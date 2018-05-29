@@ -9,14 +9,15 @@
 #include <string>
 #include <unordered_map>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/strings/string_view.h"
 #include "lib/svc/cpp/service_provider_bridge.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 class Realm;
 
 class Namespace : public Environment,
@@ -69,6 +70,7 @@ class Namespace : public Environment,
   FXL_DISALLOW_COPY_AND_ASSIGN(Namespace);
 };
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia
 
 #endif  // GARNET_BIN_APPMGR_NAMESPACE_H_

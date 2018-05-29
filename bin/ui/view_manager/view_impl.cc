@@ -19,14 +19,14 @@ void ViewImpl::GetToken(::fuchsia::ui::views_v1::View::GetTokenCallback callback
 }
 
 void ViewImpl::GetServiceProvider(
-    fidl::InterfaceRequest<component::ServiceProvider>
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
         service_provider_request) {
   service_provider_bindings_.AddBinding(this,
                                         std::move(service_provider_request));
 }
 
 void ViewImpl::OfferServiceProvider(
-    fidl::InterfaceHandle<component::ServiceProvider> service_provider,
+    fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> service_provider,
     fidl::VectorPtr<fidl::StringPtr> service_names) {
   state_->SetServiceProvider(std::move(service_provider),
                              std::move(service_names));

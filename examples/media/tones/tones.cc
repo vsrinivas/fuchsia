@@ -100,7 +100,7 @@ static const std::map<int, float> notes_by_key_ = {
 Tones::Tones(bool interactive, fxl::Closure quit_callback)
     : interactive_(interactive), quit_callback_(quit_callback) {
   // Connect to the audio service and get a renderer.
-  auto startup_context = component::StartupContext::CreateFromStartupInfo();
+  auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
 
   media::AudioServerPtr audio_server =
       startup_context->ConnectToEnvironmentService<media::AudioServer>();

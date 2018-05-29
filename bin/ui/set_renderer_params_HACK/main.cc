@@ -45,7 +45,7 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto startup_context_ = component::StartupContext::CreateFromStartupInfo();
+  auto startup_context_ = fuchsia::sys::StartupContext::CreateFromStartupInfo();
 
   // Ask the presenter to change renderer params.
   auto presenter =

@@ -5,7 +5,7 @@
 #ifndef LIB_UI_VIEW_FRAMEWORK_BASE_VIEW_H_
 #define LIB_UI_VIEW_FRAMEWORK_BASE_VIEW_H_
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 
@@ -47,7 +47,7 @@ class BaseView : private ::fuchsia::ui::views_v1::ViewListener,
   ::fuchsia::ui::views_v1::View* view() { return view_.get(); }
 
   // Gets the service provider for the view.
-  component::ServiceProvider* GetViewServiceProvider();
+  fuchsia::sys::ServiceProvider* GetViewServiceProvider();
 
   // Gets the underlying view container interface.
   ::fuchsia::ui::views_v1::ViewContainer* GetViewContainer();
@@ -184,7 +184,7 @@ class BaseView : private ::fuchsia::ui::views_v1::ViewListener,
   fidl::Binding<fuchsia::ui::input::InputListener> input_listener_binding_;
 
   ::fuchsia::ui::views_v1::ViewPtr view_;
-  component::ServiceProviderPtr view_service_provider_;
+  fuchsia::sys::ServiceProviderPtr view_service_provider_;
   ::fuchsia::ui::views_v1::ViewContainerPtr view_container_;
   fuchsia::ui::input::InputConnectionPtr input_connection_;
   ::fuchsia::ui::views_v1::ViewProperties properties_;

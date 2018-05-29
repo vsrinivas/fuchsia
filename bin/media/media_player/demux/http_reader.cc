@@ -27,11 +27,11 @@ constexpr uint32_t kStatusNotFound = 404u;
 
 // static
 std::shared_ptr<HttpReader> HttpReader::Create(
-    component::StartupContext* startup_context, const std::string& url) {
+    fuchsia::sys::StartupContext* startup_context, const std::string& url) {
   return std::make_shared<HttpReader>(startup_context, url);
 }
 
-HttpReader::HttpReader(component::StartupContext* startup_context,
+HttpReader::HttpReader(fuchsia::sys::StartupContext* startup_context,
                        const std::string& url)
     : url_(url) {
   network::NetworkServicePtr network_service =

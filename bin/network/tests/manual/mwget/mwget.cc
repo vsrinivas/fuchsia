@@ -59,7 +59,7 @@ class MWGetApp {
   static constexpr int MAX_LOADERS = 100;
 
   MWGetApp(async::Loop* loop)
-      : context_(component::StartupContext::CreateFromStartupInfo()),
+      : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
         loop_(loop) {
     network_service_ =
         context_->ConnectToEnvironmentService<network::NetworkService>();
@@ -108,7 +108,7 @@ class MWGetApp {
   }
 
  private:
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
 
   async::Loop* const loop_;
   network::NetworkServicePtr network_service_;

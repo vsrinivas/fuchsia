@@ -8,7 +8,7 @@
 #include <string>
 
 #include "garnet/bin/netconnector/socket_address.h"
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 
@@ -17,11 +17,11 @@ namespace netconnector {
 class NetConnectorImpl;
 
 // Provides services on a remote device.
-class DeviceServiceProvider : public component::ServiceProvider {
+class DeviceServiceProvider : public fuchsia::sys::ServiceProvider {
  public:
   static std::unique_ptr<DeviceServiceProvider> Create(
       const std::string& device_name, const SocketAddress& address,
-      fidl::InterfaceRequest<component::ServiceProvider> request,
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request,
       NetConnectorImpl* owner);
 
   ~DeviceServiceProvider() override;
@@ -32,12 +32,12 @@ class DeviceServiceProvider : public component::ServiceProvider {
  private:
   DeviceServiceProvider(
       const std::string& device_name, const SocketAddress& address,
-      fidl::InterfaceRequest<component::ServiceProvider> request,
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request,
       NetConnectorImpl* owner);
 
   std::string device_name_;
   SocketAddress address_;
-  fidl::Binding<component::ServiceProvider> binding_;
+  fidl::Binding<fuchsia::sys::ServiceProvider> binding_;
   NetConnectorImpl* owner_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceServiceProvider);

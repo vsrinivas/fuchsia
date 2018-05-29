@@ -11,7 +11,7 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   media_player::NetMediaServiceImpl impl(
-      component::StartupContext::CreateFromStartupInfo());
+      fuchsia::sys::StartupContext::CreateFromStartupInfo());
 
   loop.Run();
   return 0;

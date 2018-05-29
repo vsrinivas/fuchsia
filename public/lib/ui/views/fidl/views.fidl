@@ -29,7 +29,7 @@ library fuchsia.ui.views_v1;
 //
 // GETTING SERVICES
 //
-// The view's |component::ServiceProvider| offers access to many services which
+// The view's |fuchsia::sys::ServiceProvider| offers access to many services which
 // are not directly expressed by the |View| interface itself, such
 // as input, accessiblity, and editing capabilities.
 //
@@ -50,7 +50,7 @@ interface View {
   // shared with anyone else.
   //
   // See |InputConnection|.
-  2: GetServiceProvider(request<component.ServiceProvider> service_provider);
+  2: GetServiceProvider(request<fuchsia.sys.ServiceProvider> service_provider);
 
   // This is a way for an app to offer services that are associated with a
   // particular view. Used to expose services to the compositor
@@ -63,7 +63,7 @@ interface View {
   //
   // The list of services will be used by the compositor to filter service
   // providers when looking for a particular service.
-  3: OfferServiceProvider(component.ServiceProvider service_provider,
+  3: OfferServiceProvider(fuchsia.sys.ServiceProvider service_provider,
                          vector<string> service_names);
 
   // Gets an interface for managing the view's children.

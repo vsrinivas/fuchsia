@@ -10,7 +10,7 @@
 
 namespace shadertoy {
 
-App::App(async::Loop* loop, component::StartupContext* app_context,
+App::App(async::Loop* loop, fuchsia::sys::StartupContext* app_context,
          escher::Escher* escher)
     : escher_(escher),
       renderer_(escher, kDefaultImageFormat),

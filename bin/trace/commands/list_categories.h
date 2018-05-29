@@ -13,7 +13,7 @@ class ListCategories : public CommandWithTraceController {
  public:
   static Info Describe();
 
-  explicit ListCategories(component::StartupContext* context);
+  explicit ListCategories(fuchsia::sys::StartupContext* context);
   void Start(const fxl::CommandLine& command_line) override;
 };
 

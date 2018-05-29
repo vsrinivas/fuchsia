@@ -36,7 +36,7 @@ namespace hello_stereo {
 static constexpr float kEdgeLength = 900;
 
 App::App(async::Loop* loop)
-    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
+    : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
       loop_(loop) {
   // Connect to the SceneManager service.
   scenic_ = startup_context_

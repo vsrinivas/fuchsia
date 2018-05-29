@@ -24,7 +24,7 @@ namespace tracing {
 class TraceManager : public fuchsia::tracelink::Registry,
                      public TraceController {
  public:
-  TraceManager(component::StartupContext* context, const Config& config);
+  TraceManager(fuchsia::sys::StartupContext* context, const Config& config);
   ~TraceManager() override;
 
  private:
@@ -41,7 +41,7 @@ class TraceManager : public fuchsia::tracelink::Registry,
   void FinalizeTracing();
   void LaunchConfiguredProviders();
 
-  component::StartupContext* const context_;
+  fuchsia::sys::StartupContext* const context_;
   const Config& config_;
 
   uint32_t next_provider_id_ = 1u;

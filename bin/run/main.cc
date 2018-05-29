@@ -6,10 +6,10 @@
 #include <fdio/util.h>
 #include <stdio.h>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include "lib/app/cpp/environment_services.h"
 
-static component::FileDescriptorPtr CloneFileDescriptor(int fd) {
+static fuchsia::sys::FileDescriptorPtr CloneFileDescriptor(int fd) {
   zx_handle_t handles[FDIO_MAX_HANDLES] = {0, 0, 0};
   uint32_t types[FDIO_MAX_HANDLES] = {
       ZX_HANDLE_INVALID,
@@ -19,7 +19,7 @@ static component::FileDescriptorPtr CloneFileDescriptor(int fd) {
   zx_status_t status = fdio_clone_fd(fd, 0, handles, types);
   if (status <= 0)
     return nullptr;
-  component::FileDescriptorPtr result = component::FileDescriptor::New();
+  fuchsia::sys::FileDescriptorPtr result = fuchsia::sys::FileDescriptor::New();
   result->type0 = types[0];
   result->handle0 = zx::handle(handles[0]);
   result->type1 = types[1];
@@ -34,7 +34,7 @@ int main(int argc, const char** argv) {
     fprintf(stderr, "Usage: run <program> <args>*\n");
     return 1;
   }
-  component::LaunchInfo launch_info;
+  fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = argv[1];
   for (int i = 0; i < argc - 2; ++i) {
     launch_info.arguments.push_back(argv[2 + i]);
@@ -44,10 +44,10 @@ int main(int argc, const char** argv) {
   launch_info.err = CloneFileDescriptor(STDERR_FILENO);
 
   // Connect to the ApplicationLauncher service through our static environment.
-  component::ApplicationLauncherSyncPtr launcher;
-  component::ConnectToEnvironmentService(launcher.NewRequest());
+  fuchsia::sys::ApplicationLauncherSyncPtr launcher;
+  fuchsia::sys::ConnectToEnvironmentService(launcher.NewRequest());
 
-  component::ComponentControllerSyncPtr controller;
+  fuchsia::sys::ComponentControllerSyncPtr controller;
   launcher->CreateApplication(std::move(launch_info), controller.NewRequest());
 
   int32_t return_code;

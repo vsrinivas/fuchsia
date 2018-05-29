@@ -35,7 +35,7 @@ class InputApp {
  public:
   InputApp(async::Loop* loop)
       : loop_(loop),
-        startup_context_(component::StartupContext::CreateFromStartupInfo()) {
+        startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
     registry_ = startup_context_->ConnectToEnvironmentService<
         fuchsia::ui::input::InputDeviceRegistry>();
   }
@@ -362,7 +362,7 @@ class InputApp {
   }
 
   async::Loop* const loop_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   fidl::InterfacePtr<fuchsia::ui::input::InputDeviceRegistry> registry_;
 };
 }  // namespace input

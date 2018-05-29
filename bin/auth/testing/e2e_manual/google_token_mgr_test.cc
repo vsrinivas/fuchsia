@@ -58,7 +58,7 @@ class GoogleTokenManagerApp : auth::AuthenticationContextProvider {
                         const std::string& refresh_token)
       : user_profile_id_(user_profile_id),
         refresh_token_(refresh_token),
-        startup_context_(component::StartupContext::CreateFromStartupInfo()),
+        startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
         auth_context_provider_binding_(this) {}
 
   ~GoogleTokenManagerApp() {}
@@ -81,8 +81,8 @@ class GoogleTokenManagerApp : auth::AuthenticationContextProvider {
   }
 
   void Initialize() {
-    component::Services services;
-    component::LaunchInfo launch_info;
+    fuchsia::sys::Services services;
+    fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = "token_manager";
     launch_info.directory_request = services.NewRequest();
     {
@@ -177,8 +177,8 @@ class GoogleTokenManagerApp : auth::AuthenticationContextProvider {
 
   const std::string user_profile_id_;
   const std::string refresh_token_;
-  std::unique_ptr<component::StartupContext> startup_context_;
-  component::ComponentControllerPtr controller_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
+  fuchsia::sys::ComponentControllerPtr controller_;
 
   fidl::Binding<auth::AuthenticationContextProvider>
       auth_context_provider_binding_;

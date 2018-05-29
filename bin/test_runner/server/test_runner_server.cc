@@ -61,7 +61,7 @@ namespace test_runner {
 class TestRunnerConnection : public TestRunObserver {
  public:
   TestRunnerConnection(async::Loop* loop, int socket_fd,
-                       std::shared_ptr<component::StartupContext> app_context)
+                       std::shared_ptr<fuchsia::sys::StartupContext> app_context)
       : loop_(loop), app_context_(app_context), socket_(socket_fd) {}
 
   void Start() {
@@ -155,7 +155,7 @@ class TestRunnerConnection : public TestRunObserver {
   }
 
   async::Loop* const loop_;
-  std::shared_ptr<component::StartupContext> app_context_;
+  std::shared_ptr<fuchsia::sys::StartupContext> app_context_;
   std::unique_ptr<TestRunContext> test_context_;
 
   // Posix fd for the TCP connection.
@@ -171,7 +171,7 @@ class TestRunnerTCPServer {
  public:
   TestRunnerTCPServer(async::Loop* loop, uint16_t port)
       : loop_(loop),
-        app_context_(component::StartupContext::CreateFromStartupInfo()) {
+        app_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
     struct sockaddr_in6 addr;
     addr.sin6_family = AF_INET6;
     addr.sin6_port = htons(port);
@@ -215,7 +215,7 @@ class TestRunnerTCPServer {
  private:
   async::Loop* const loop_;
   int listener_;
-  std::shared_ptr<component::StartupContext> app_context_;
+  std::shared_ptr<fuchsia::sys::StartupContext> app_context_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestRunnerTCPServer);
 };

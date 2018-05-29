@@ -12,7 +12,7 @@
 namespace netconnector {
 
 RespondingServiceHost::RespondingServiceHost(
-    const component::EnvironmentPtr& environment) {
+    const fuchsia::sys::EnvironmentPtr& environment) {
   FXL_DCHECK(environment);
   environment->GetApplicationLauncher(launcher_.NewRequest());
 }
@@ -20,7 +20,7 @@ RespondingServiceHost::RespondingServiceHost(
 RespondingServiceHost::~RespondingServiceHost() {}
 
 void RespondingServiceHost::RegisterSingleton(
-    const std::string& service_name, component::LaunchInfoPtr launch_info) {
+    const std::string& service_name, fuchsia::sys::LaunchInfoPtr launch_info) {
   service_namespace_.AddServiceForName(
       fxl::MakeCopyable([this, service_name,
                          launch_info = std::move(launch_info)](
@@ -38,13 +38,13 @@ void RespondingServiceHost::RegisterSingleton(
           // the constructor. Instead, we should be launching it in a new
           // environment that is restricted based on app permissions.
 
-          component::LaunchInfo dup_launch_info;
+          fuchsia::sys::LaunchInfo dup_launch_info;
           dup_launch_info.url = launch_info->url;
           fidl::Clone(launch_info->arguments, &dup_launch_info.arguments);
-          component::Services services;
+          fuchsia::sys::Services services;
           dup_launch_info.directory_request = services.NewRequest();
 
-          component::ComponentControllerPtr controller;
+          fuchsia::sys::ComponentControllerPtr controller;
           launcher_->CreateApplication(std::move(dup_launch_info),
                                        controller.NewRequest());
 
@@ -66,8 +66,8 @@ void RespondingServiceHost::RegisterSingleton(
 
 void RespondingServiceHost::RegisterProvider(
     const std::string& service_name,
-    fidl::InterfaceHandle<component::ServiceProvider> handle) {
-  component::ServiceProviderPtr service_provider = handle.Bind();
+    fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> handle) {
+  fuchsia::sys::ServiceProviderPtr service_provider = handle.Bind();
 
   service_provider.set_error_handler([this, service_name] {
     FXL_LOG(INFO) << "Service " << service_name << " provider disconnected";

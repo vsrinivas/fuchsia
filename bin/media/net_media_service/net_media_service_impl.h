@@ -17,7 +17,7 @@ class NetMediaServiceImpl : public FactoryServiceBase<NetMediaServiceImpl>,
                             public NetMediaService {
  public:
   NetMediaServiceImpl(
-      std::unique_ptr<component::StartupContext> startup_context);
+      std::unique_ptr<fuchsia::sys::StartupContext> startup_context);
   ~NetMediaServiceImpl() override;
 
   // NetMediaService implementation.

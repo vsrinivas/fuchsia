@@ -24,7 +24,7 @@ DemoHarnessFuchsia::DemoHarnessFuchsia(async::Loop* loop,
     : DemoHarness(window_params),
       loop_(loop),
       owned_loop_(loop_ ? nullptr : new async::Loop()),
-      startup_context_(component::StartupContext::CreateFromStartupInfo()),
+      startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
       escher_demo_binding_(this) {
   if (!loop_) {
     loop_ = owned_loop_.get();

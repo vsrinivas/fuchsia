@@ -7,7 +7,7 @@
 
 #include <lib/zx/vmo.h>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include "garnet/bin/appmgr/namespace.h"
 #include "garnet/lib/farfs/file_system.h"
 #include "lib/fxl/files/unique_fd.h"
@@ -15,7 +15,8 @@
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/svc/cpp/services.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 class RunnerHolder {
  public:
@@ -40,6 +41,7 @@ class RunnerHolder {
   FXL_DISALLOW_COPY_AND_ASSIGN(RunnerHolder);
 };
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia
 
 #endif  // GARNET_BIN_APPMGR_RUNNER_HOLDER_H_

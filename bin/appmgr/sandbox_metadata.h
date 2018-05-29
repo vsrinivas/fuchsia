@@ -10,7 +10,8 @@
 
 #include "third_party/rapidjson/rapidjson/document.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 class SandboxMetadata {
  public:
@@ -34,6 +35,7 @@ class SandboxMetadata {
   std::vector<std::string> features_;
 };
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia
 
 #endif  // GARNET_BIN_APPMGR_SANDBOX_METADATA_H_

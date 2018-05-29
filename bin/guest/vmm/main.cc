@@ -155,7 +155,7 @@ static zx_status_t setup_zircon_framebuffer(
 }
 
 static zx_status_t setup_scenic_framebuffer(
-    component::StartupContext* startup_context, machina::VirtioGpu* gpu,
+    fuchsia::sys::StartupContext* startup_context, machina::VirtioGpu* gpu,
     machina::InputDispatcher* input_dispatcher,
     machina::GuestControllerImpl* guest_controller,
     fbl::unique_ptr<machina::GpuScanout>* scanout) {
@@ -193,8 +193,8 @@ static zx_status_t read_guest_cfg(const char* cfg_path, int argc, char** argv,
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   trace::TraceProvider trace_provider(loop.async());
-  std::unique_ptr<component::StartupContext> startup_context =
-      component::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context =
+      fuchsia::sys::StartupContext::CreateFromStartupInfo();
 
   GuestConfig cfg;
   zx_status_t status =

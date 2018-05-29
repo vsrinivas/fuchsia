@@ -18,7 +18,7 @@ namespace test {
 class AudioRenderer2Test : public gtest::TestWithMessageLoop {
  protected:
   void SetUp() override {
-    component::ConnectToEnvironmentService(audio_server_.NewRequest());
+    fuchsia::sys::ConnectToEnvironmentService(audio_server_.NewRequest());
     ASSERT_TRUE(audio_server_);
 
     audio_server_.set_error_handler([this]() {
@@ -95,7 +95,7 @@ TEST_F(AudioRenderer2Test, SetPcmFormat_Double) {
 class AudioRenderer2SyncTest : public gtest::TestWithMessageLoop {
  protected:
   void SetUp() override {
-    component::ConnectToEnvironmentService(audio_server_.NewRequest());
+    fuchsia::sys::ConnectToEnvironmentService(audio_server_.NewRequest());
     ASSERT_TRUE(audio_server_);
 
     ASSERT_TRUE(audio_server_->CreateRendererV2(audio_renderer_.NewRequest()));

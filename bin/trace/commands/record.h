@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include "garnet/bin/trace/command.h"
 #include "garnet/bin/trace/spec.h"
 #include "garnet/bin/trace/tracer.h"
@@ -43,7 +43,7 @@ class Record : public CommandWithTraceController {
 
   static Info Describe();
 
-  explicit Record(component::StartupContext* context);
+  explicit Record(fuchsia::sys::StartupContext* context);
 
  protected:
   void Start(const fxl::CommandLine& command_line) override;
@@ -56,7 +56,7 @@ class Record : public CommandWithTraceController {
   void LaunchTool();
   void StartTimer();
 
-  component::ComponentControllerPtr component_controller_;
+  fuchsia::sys::ComponentControllerPtr component_controller_;
   std::unique_ptr<ChromiumExporter> exporter_;
   std::unique_ptr<Tracer> tracer_;
   // Aggregate events if there are any measurements to be performed, so that we

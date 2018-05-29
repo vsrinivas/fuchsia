@@ -10,7 +10,8 @@
 
 #include "gtest/gtest.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 namespace {
 
 TEST(RealmHub, Simple) {
@@ -45,4 +46,5 @@ TEST(RealmHub, Simple) {
 }
 
 }  // namespace
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia

@@ -8,7 +8,8 @@
 
 #include "third_party/rapidjson/rapidjson/document.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 namespace {
 
 TEST(SandboxMetadata, Parse) {
@@ -47,4 +48,5 @@ TEST(SandboxMetadata, ParseRapidJson) {
 }
 
 }  // namespace
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia

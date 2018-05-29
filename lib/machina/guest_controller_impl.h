@@ -18,7 +18,7 @@ namespace machina {
 // This exposes some guest services over FIDL.
 class GuestControllerImpl : public fuchsia::guest::GuestController {
  public:
-  GuestControllerImpl(component::StartupContext* startup_context,
+  GuestControllerImpl(fuchsia::sys::StartupContext* startup_context,
                       const PhysMem& phys_mem);
 
   void set_view_provider(::fuchsia::ui::views_v1::ViewProvider* view_provider) {

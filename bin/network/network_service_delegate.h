@@ -18,7 +18,7 @@ class NetworkServiceDelegate {
   ~NetworkServiceDelegate();
 
  private:
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
   network::NetworkServiceImpl network_provider_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(NetworkServiceDelegate);

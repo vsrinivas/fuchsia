@@ -19,7 +19,7 @@ void ViewTreeImpl::GetToken(GetTokenCallback callback) {
 }
 
 void ViewTreeImpl::GetServiceProvider(
-    fidl::InterfaceRequest<component::ServiceProvider> service_provider) {
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> service_provider) {
   service_provider_bindings_.AddBinding(this, std::move(service_provider));
 }
 

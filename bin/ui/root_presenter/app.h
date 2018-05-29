@@ -66,7 +66,7 @@ class App : public presentation::Presenter,
   void SwitchToNextPresentation();
   void SwitchToPreviousPresentation();
 
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   fidl::BindingSet<presentation::Presenter> presenter_bindings_;
   fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry>
       input_receiver_bindings_;

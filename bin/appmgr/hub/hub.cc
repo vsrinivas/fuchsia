@@ -9,7 +9,8 @@
 #include <fs/pseudo-file.h>
 #include <fs/vnode.h>
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 Hub::Hub(fbl::RefPtr<fs::PseudoDir> root) : dir_(root) {}
 
@@ -65,4 +66,5 @@ zx_status_t Hub::RemoveComponent(const HubInfo& hub_info) {
   return ZX_ERR_NOT_FOUND;
 }
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia

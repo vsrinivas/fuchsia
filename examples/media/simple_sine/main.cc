@@ -16,7 +16,7 @@ int main(int argc, const char** argv) {
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto startup_context = component::StartupContext::CreateFromStartupInfo();
+  auto startup_context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
 
   examples::MediaApp media_app(
       [&loop]() { async::PostTask(loop.async(), [&loop]() { loop.Quit(); }); });

@@ -8,7 +8,7 @@
 #include <map>
 #include <memory>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <presentation/cpp/fidl.h>
 #include "garnet/examples/ui/tile/tile_params.h"
@@ -26,7 +26,7 @@ class TileView : public mozart::BaseView, public presentation::Presenter {
   TileView(::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
            fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
                view_owner_request,
-           component::StartupContext* startup_context,
+           fuchsia::sys::StartupContext* startup_context,
            const TileParams& tile_params);
 
   ~TileView() override;
@@ -34,13 +34,13 @@ class TileView : public mozart::BaseView, public presentation::Presenter {
  private:
   struct ViewData {
     explicit ViewData(const std::string& url, uint32_t key,
-                      component::ComponentControllerPtr controller,
+                      fuchsia::sys::ComponentControllerPtr controller,
                       scenic_lib::Session* session);
     ~ViewData();
 
     const std::string url;
     const uint32_t key;
-    component::ComponentControllerPtr controller;
+    fuchsia::sys::ComponentControllerPtr controller;
     scenic_lib::EntityNode host_node;
 
     ::fuchsia::ui::views_v1::ViewProperties view_properties;
@@ -74,17 +74,17 @@ class TileView : public mozart::BaseView, public presentation::Presenter {
   void AddChildView(
       fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner>
           view_owner,
-      const std::string& url, component::ComponentControllerPtr);
+      const std::string& url, fuchsia::sys::ComponentControllerPtr);
   void RemoveChildView(uint32_t child_key);
 
   // Nested environment within which the apps started by TileView will run.
-  component::EnvironmentPtr env_;
-  component::EnvironmentControllerPtr env_controller_;
-  component::ServiceProviderBridge service_provider_bridge_;
-  component::ApplicationLauncherPtr env_launcher_;
+  fuchsia::sys::EnvironmentPtr env_;
+  fuchsia::sys::EnvironmentControllerPtr env_controller_;
+  fuchsia::sys::ServiceProviderBridge service_provider_bridge_;
+  fuchsia::sys::ApplicationLauncherPtr env_launcher_;
 
   // Context inherited when TileView is launched.
-  component::StartupContext* startup_context_;
+  fuchsia::sys::StartupContext* startup_context_;
 
   // Parsed command-line parameters for this program.
   TileParams params_;

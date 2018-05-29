@@ -17,7 +17,7 @@ namespace tracing {
 
 class App : public Command {
  public:
-  App(component::StartupContext* context);
+  App(fuchsia::sys::StartupContext* context);
   ~App();
 
  protected:

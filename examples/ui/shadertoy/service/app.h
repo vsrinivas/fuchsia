@@ -25,7 +25,7 @@ class ShadertoyState;
 // ShadertoyFactory.  What is the best-practice pattern to use here?
 class App : public fuchsia::examples::shadertoy::ShadertoyFactory {
  public:
-  App(async::Loop* loop, component::StartupContext* app_context,
+  App(async::Loop* loop, fuchsia::sys::StartupContext* app_context,
       escher::Escher* escher);
   ~App();
 

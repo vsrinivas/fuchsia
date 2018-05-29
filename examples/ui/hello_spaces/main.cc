@@ -30,7 +30,7 @@ class App {
   // Called upon exit to free up the session and everything associated with it.
   void ReleaseSessionResources();
 
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   async::Loop* const loop_;
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
@@ -38,7 +38,7 @@ class App {
 };
 
 App::App(async::Loop* loop)
-    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
+    : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
       loop_(loop) {
   // Connect to the SceneManager service.
   scenic_ = startup_context_

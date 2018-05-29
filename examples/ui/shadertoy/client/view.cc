@@ -27,7 +27,7 @@ constexpr uint32_t kShapeWidth = 384;
 constexpr uint32_t kShapeHeight = 288;
 }  // namespace
 
-View::View(async::Loop* loop, component::StartupContext* startup_context,
+View::View(async::Loop* loop, fuchsia::sys::StartupContext* startup_context,
            ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
            fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
                view_owner_request)

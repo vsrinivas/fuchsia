@@ -4,7 +4,8 @@
 
 #include "garnet/bin/appmgr/url_resolver.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 namespace {
 
 constexpr char kFileUriPrefix[] = "file://";
@@ -28,4 +29,5 @@ std::string GetURLFromPath(const std::string& path) {
   return kFileUriPrefix + path;
 }
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia

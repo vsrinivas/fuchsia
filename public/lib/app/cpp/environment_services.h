@@ -12,7 +12,8 @@
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fidl/cpp/interface_request.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 // These helper functions help connect to environment services through the
 // application's static environment. Multi-tenanted applications should connect
@@ -53,6 +54,7 @@ zx::channel CreateStaticServiceRootHandle();
 
 }  // namespace subtle
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia
 
 #endif  // LIB_APP_CPP_ENVIRONMENT_SERVICES_H_

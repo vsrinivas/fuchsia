@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_GUEST_MGR_GUEST_ENVIRONMENT_IMPL_H_
 #define GARNET_BIN_GUEST_MGR_GUEST_ENVIRONMENT_IMPL_H_
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/guest/cpp/fidl.h>
 #include <unordered_map>
 
@@ -27,7 +27,7 @@ static constexpr uint32_t kFirstGuestCid = 3;
 class GuestEnvironmentImpl : public fuchsia::guest::GuestEnvironment {
  public:
   GuestEnvironmentImpl(
-      uint32_t id, const std::string& label, component::StartupContext* context,
+      uint32_t id, const std::string& label, fuchsia::sys::StartupContext* context,
       fidl::InterfaceRequest<fuchsia::guest::GuestEnvironment> request);
   ~GuestEnvironmentImpl() override;
 
@@ -60,13 +60,13 @@ class GuestEnvironmentImpl : public fuchsia::guest::GuestEnvironment {
   const uint32_t id_;
   const std::string label_;
 
-  component::StartupContext* context_;
+  fuchsia::sys::StartupContext* context_;
   fidl::BindingSet<fuchsia::guest::GuestEnvironment> bindings_;
 
-  component::EnvironmentPtr env_;
-  component::EnvironmentControllerPtr env_controller_;
-  component::ApplicationLauncherPtr app_launcher_;
-  component::ServiceProviderBridge service_provider_bridge_;
+  fuchsia::sys::EnvironmentPtr env_;
+  fuchsia::sys::EnvironmentControllerPtr env_controller_;
+  fuchsia::sys::ApplicationLauncherPtr app_launcher_;
+  fuchsia::sys::ServiceProviderBridge service_provider_bridge_;
 
   VsockServer socket_server_;
   HostVsockEndpoint host_socket_endpoint_;

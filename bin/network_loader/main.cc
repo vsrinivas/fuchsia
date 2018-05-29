@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <network/cpp/fidl.h>
 
 #include <unordered_map>
@@ -25,7 +25,7 @@ namespace {
 class RetryingLoader {
  public:
   RetryingLoader(network::URLLoaderPtr url_loader, const std::string& url,
-                 const component::Loader::LoadComponentCallback& callback)
+                 const fuchsia::sys::Loader::LoadComponentCallback& callback)
       : url_loader_(std::move(url_loader)),
         url_(url),
         callback_(callback),
@@ -61,7 +61,7 @@ class RetryingLoader {
 
   void ProcessResponse(const network::URLResponse& response) {
     if (response.status_code == 200) {
-      auto package = component::Package::New();
+      auto package = fuchsia::sys::Package::New();
       package->data =
           fidl::MakeOptional(std::move(response.body->sized_buffer()));
       package->resolved_url = std::move(response.url);
@@ -104,7 +104,7 @@ class RetryingLoader {
     }
   }
 
-  void SendResponse(component::PackagePtr package) {
+  void SendResponse(fuchsia::sys::PackagePtr package) {
     FXL_DCHECK(!package || package->resolved_url);
     callback_(std::move(package));
     deleter_();
@@ -112,7 +112,7 @@ class RetryingLoader {
 
   const network::URLLoaderPtr url_loader_;
   const std::string url_;
-  const component::Loader::LoadComponentCallback callback_;
+  const fuchsia::sys::Loader::LoadComponentCallback callback_;
   fxl::Closure deleter_;
   // Tries before an error is printed. No errors will be printed afterwards
   // either.
@@ -122,12 +122,12 @@ class RetryingLoader {
   fxl::WeakPtrFactory<RetryingLoader> weak_ptr_factory_;
 };
 
-class NetworkLoader : public component::Loader {
+class NetworkLoader : public fuchsia::sys::Loader {
  public:
   NetworkLoader()
-      : context_(component::StartupContext::CreateFromStartupInfo()) {
-    context_->outgoing().AddPublicService<component::Loader>(
-        [this](fidl::InterfaceRequest<component::Loader> request) {
+      : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
+    context_->outgoing().AddPublicService<fuchsia::sys::Loader>(
+        [this](fidl::InterfaceRequest<fuchsia::sys::Loader> request) {
           bindings_.AddBinding(this, std::move(request));
         });
 
@@ -148,8 +148,8 @@ class NetworkLoader : public component::Loader {
   }
 
  private:
-  std::unique_ptr<component::StartupContext> context_;
-  fidl::BindingSet<component::Loader> bindings_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
+  fidl::BindingSet<fuchsia::sys::Loader> bindings_;
 
   network::NetworkServicePtr net_;
   std::unordered_map<RetryingLoader*, std::unique_ptr<RetryingLoader>> loaders_;

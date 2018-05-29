@@ -6,7 +6,8 @@
 
 #include "gtest/gtest.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 namespace {
 
 TEST(RuntimeMetadata, Parse) {
@@ -22,4 +23,5 @@ TEST(RuntimeMetadata, Parse) {
 }
 
 }  // namespace
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia

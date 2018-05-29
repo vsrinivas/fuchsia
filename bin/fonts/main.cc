@@ -14,7 +14,7 @@ namespace fonts {
 
 class App {
  public:
-  App() : context_(component::StartupContext::CreateFromStartupInfo()) {
+  App() : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
     if (!font_provider_.LoadFonts())
       exit(ZX_ERR_UNAVAILABLE);
     context_->outgoing().AddPublicService<FontProvider>(
@@ -24,7 +24,7 @@ class App {
   }
 
  private:
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
   FontProviderImpl font_provider_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);

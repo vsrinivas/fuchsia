@@ -110,7 +110,7 @@ bool Equals(const ::fuchsia::ui::views_v1::ViewPropertiesPtr& a,
 
 }  // namespace
 
-ViewRegistry::ViewRegistry(component::StartupContext* startup_context)
+ViewRegistry::ViewRegistry(fuchsia::sys::StartupContext* startup_context)
     : startup_context_(startup_context),
       scenic_(startup_context_
                   ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>()),
@@ -808,7 +808,7 @@ void ViewRegistry::HasFocus(::fuchsia::ui::views_v1_token::ViewToken view_token,
   callback(false);
 }
 
-component::ServiceProvider* ViewRegistry::FindViewServiceProvider(
+fuchsia::sys::ServiceProvider* ViewRegistry::FindViewServiceProvider(
     uint32_t view_token, std::string service_name) {
   ViewState* view_state = FindView(view_token);
   if (!view_state) {
@@ -835,7 +835,7 @@ void ViewRegistry::GetSoftKeyboardContainer(
   auto provider = FindViewServiceProvider(
       view_token.value, fuchsia::ui::input::SoftKeyboardContainer::Name_);
   if (provider) {
-    component::ConnectToService(provider, std::move(container));
+    fuchsia::sys::ConnectToService(provider, std::move(container));
   }
 }
 
@@ -848,7 +848,7 @@ void ViewRegistry::GetImeService(
   auto provider = FindViewServiceProvider(
       view_token.value, fuchsia::ui::input::ImeService::Name_);
   if (provider) {
-    component::ConnectToService(provider, std::move(ime_service));
+    fuchsia::sys::ConnectToService(provider, std::move(ime_service));
   } else {
     startup_context_->ConnectToEnvironmentService(std::move(ime_service));
   }

@@ -31,7 +31,7 @@ namespace view_manager {
 // All ViewState objects are owned by the registry.
 class ViewRegistry : public ViewInspector, public InputOwner {
  public:
-  explicit ViewRegistry(component::StartupContext* startup_context);
+  explicit ViewRegistry(fuchsia::sys::StartupContext* startup_context);
   ~ViewRegistry() override;
 
   // VIEW MANAGER REQUESTS
@@ -210,7 +210,7 @@ class ViewRegistry : public ViewInspector, public InputOwner {
 
   // Walk up the view tree starting at |view_token| to find a service
   // provider that offers a service named |service_name|.
-  component::ServiceProvider* FindViewServiceProvider(uint32_t view_token,
+  fuchsia::sys::ServiceProvider* FindViewServiceProvider(uint32_t view_token,
                                                       std::string service_name);
 
   ViewState* FindView(uint32_t view_token_value);
@@ -231,7 +231,7 @@ class ViewRegistry : public ViewInspector, public InputOwner {
             IsViewTreeStateRegisteredDebug(container_state->AsViewTreeState()));
   }
 
-  component::StartupContext* startup_context_;
+  fuchsia::sys::StartupContext* startup_context_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
   scenic_lib::Session session_;
 

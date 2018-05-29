@@ -12,7 +12,7 @@
 namespace mozart {
 
 ViewProviderService::ViewProviderService(
-    component::StartupContext* startup_context, ViewFactory view_factory)
+    fuchsia::sys::StartupContext* startup_context, ViewFactory view_factory)
     : startup_context_(startup_context), view_factory_(view_factory) {
   FXL_DCHECK(startup_context_);
 
@@ -29,7 +29,7 @@ ViewProviderService::~ViewProviderService() {
 void ViewProviderService::CreateView(
     fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
         view_owner_request,
-    fidl::InterfaceRequest<component::ServiceProvider> view_services) {
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> view_services) {
   ViewContext view_context;
   view_context.startup_context = startup_context_;
   view_context.view_manager =

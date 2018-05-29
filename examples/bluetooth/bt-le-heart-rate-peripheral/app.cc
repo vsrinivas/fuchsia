@@ -12,7 +12,7 @@
 namespace bt_le_heart_rate {
 
 App::App(std::unique_ptr<HeartModel> heart_model)
-    : context_(component::StartupContext::CreateFromStartupInfo()),
+    : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
       service_(std::move(heart_model)) {
   gatt_server_ =
       context_->ConnectToEnvironmentService<bluetooth_gatt::Server>();

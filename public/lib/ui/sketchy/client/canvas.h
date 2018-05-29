@@ -18,7 +18,7 @@ namespace sketchy_lib {
 // Convenient C++ wrapper for ::fuchsia::ui::sketchy::Canvas service.
 class Canvas final {
  public:
-  Canvas(component::StartupContext* context, async::Loop* loop);
+  Canvas(fuchsia::sys::StartupContext* context, async::Loop* loop);
   Canvas(::fuchsia::ui::sketchy::CanvasPtr canvas, async::Loop* loop);
   void Present(uint64_t time, scenic_lib::Session::PresentCallback callback);
 

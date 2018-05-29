@@ -146,14 +146,14 @@ class FactoryServiceBase {
     fidl::BindingSet<Interface> bindings_;
   };
 
-  FactoryServiceBase(std::unique_ptr<component::StartupContext> startup_context)
+  FactoryServiceBase(std::unique_ptr<fuchsia::sys::StartupContext> startup_context)
       : startup_context_(std::move(startup_context)),
         async_(async_get_default()) {}
 
   virtual ~FactoryServiceBase() {}
 
   // Gets the application context.
-  component::StartupContext* startup_context() {
+  fuchsia::sys::StartupContext* startup_context() {
     return startup_context_.get();
   }
 
@@ -188,7 +188,7 @@ class FactoryServiceBase {
   virtual void OnLastProductRemoved() {}
 
  private:
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   async_t* async_;
   mutable std::mutex mutex_;
   std::unordered_set<std::shared_ptr<ProductBase>> products_

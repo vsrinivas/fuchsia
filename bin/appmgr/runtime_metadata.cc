@@ -6,7 +6,8 @@
 
 #include "third_party/rapidjson/rapidjson/document.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 constexpr char kRunner[] = "runner";
 
@@ -31,4 +32,5 @@ bool RuntimeMetadata::Parse(const std::string& data) {
   return true;
 }
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia

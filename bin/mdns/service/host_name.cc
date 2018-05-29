@@ -33,13 +33,13 @@ class NetstackClient {
 
  private:
   NetstackClient()
-      : context_(component::StartupContext::CreateFromStartupInfo()) {
+      : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
     FXL_DCHECK(context_);
     netstack_ = context_->ConnectToEnvironmentService<netstack::Netstack>();
     FXL_DCHECK(netstack_);
   }
 
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
   netstack::NetstackPtr netstack_;
 };
 

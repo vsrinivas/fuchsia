@@ -19,7 +19,7 @@ namespace mdns {
 
 class MdnsImpl : public MdnsResponder {
  public:
-  MdnsImpl(component::StartupContext* startup_context, MdnsParams* params,
+  MdnsImpl(fuchsia::sys::StartupContext* startup_context, MdnsParams* params,
            fxl::Closure quit_callback);
 
   ~MdnsImpl() override;

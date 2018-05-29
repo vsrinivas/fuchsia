@@ -18,7 +18,7 @@
 
 namespace mdns {
 
-MdnsServiceImpl::MdnsServiceImpl(component::StartupContext* startup_context)
+MdnsServiceImpl::MdnsServiceImpl(fuchsia::sys::StartupContext* startup_context)
     : startup_context_(startup_context) {
   startup_context_->outgoing().AddPublicService<MdnsService>(
       [this](fidl::InterfaceRequest<MdnsService> request) {

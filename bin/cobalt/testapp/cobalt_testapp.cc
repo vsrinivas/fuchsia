@@ -127,7 +127,7 @@ class CobaltTestApp {
       : use_network_(use_network),
         do_environment_test_(do_environment_test),
         num_observations_per_batch_(num_observations_per_batch),
-        context_(component::StartupContext::CreateFromStartupInfo()) {}
+        context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {}
 
   // We have multiple testing strategies based on the method we use to
   // connect to the FIDL service and the method we use to determine whether
@@ -253,8 +253,8 @@ class CobaltTestApp {
   bool do_environment_test_;
   int num_observations_per_batch_;
   int previous_value_of_num_send_attempts_ = 0;
-  std::unique_ptr<component::StartupContext> context_;
-  component::ComponentControllerPtr controller_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
+  fuchsia::sys::ComponentControllerPtr controller_;
   cobalt::CobaltEncoderSyncPtr encoder_;
   cobalt::CobaltControllerSyncPtr cobalt_controller_;
 
@@ -280,8 +280,8 @@ bool CobaltTestApp::RunAllTestingStrategies() {
 void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
                             uint32_t min_interval_seconds) {
   controller_.Unbind();
-  component::Services services;
-  component::LaunchInfo launch_info;
+  fuchsia::sys::Services services;
+  fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = "cobalt";
   launch_info.directory_request = services.NewRequest();
   {

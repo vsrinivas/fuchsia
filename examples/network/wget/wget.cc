@@ -73,7 +73,7 @@ class WGetApp {
  public:
   WGetApp(async::Loop* loop)
       : loop_(loop),
-        context_(component::StartupContext::CreateFromStartupInfo()) {
+        context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
     network_service_ =
         context_->ConnectToEnvironmentService<network::NetworkService>();
     FXL_DCHECK(network_service_);
@@ -107,7 +107,7 @@ class WGetApp {
 
  private:
   async::Loop* const loop_;
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
 
   network::NetworkServicePtr network_service_;
   network::URLLoaderPtr url_loader_;

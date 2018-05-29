@@ -12,10 +12,12 @@
 #include <fs/pseudo-dir.h>
 #include <zircon/types.h>
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 ComponentHub::ComponentHub(fbl::RefPtr<fs::PseudoDir> root) : Hub(root) {}
 
 ComponentHub::~ComponentHub() = default;
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia

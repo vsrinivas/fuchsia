@@ -5,7 +5,7 @@
 #ifndef LIB_APP_CPP_STARTUP_CONTEXT_H_
 #define LIB_APP_CPP_STARTUP_CONTEXT_H_
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 
 #include <memory>
 
@@ -13,7 +13,8 @@
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/svc/cpp/services.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 // Provides access to the component's environment and allows the component
 // to publish outgoing services back to its creator.
@@ -102,6 +103,7 @@ class StartupContext {
   ApplicationLauncherPtr launcher_;
 };
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia
 
 #endif  // LIB_APP_CPP_STARTUP_CONTEXT_H_

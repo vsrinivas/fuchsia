@@ -15,7 +15,8 @@
 #include "lib/fsl/io/fd.h"
 #include "lib/fxl/files/unique_fd.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 NamespaceBuilder::NamespaceBuilder() = default;
 
@@ -174,4 +175,5 @@ void NamespaceBuilder::Release() {
   handle_pool_.clear();
 }
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia

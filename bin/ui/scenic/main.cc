@@ -24,8 +24,8 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   trace::TraceProvider trace_provider(loop.async());
-  std::unique_ptr<component::StartupContext> app_context(
-      component::StartupContext::CreateFromStartupInfo());
+  std::unique_ptr<fuchsia::sys::StartupContext> app_context(
+      fuchsia::sys::StartupContext::CreateFromStartupInfo());
 
   scenic::App app(app_context.get(), [&loop] { loop.Quit(); });
 

@@ -25,7 +25,7 @@ const std::string kAuthDbPostfix = "token_store.db";
 
 class TokenManagerFactoryImpl : public TokenManagerFactory {
  public:
-  TokenManagerFactoryImpl(component::StartupContext* context);
+  TokenManagerFactoryImpl(fuchsia::sys::StartupContext* context);
 
   ~TokenManagerFactoryImpl() override;
 
@@ -38,7 +38,7 @@ class TokenManagerFactoryImpl : public TokenManagerFactory {
           auth_context_provider,
       fidl::InterfaceRequest<TokenManager> request) override;
 
-  component::StartupContext* const app_context_;
+  fuchsia::sys::StartupContext* const app_context_;
 
   fidl::BindingSet<TokenManager, std::unique_ptr<TokenManager>>
       token_manager_bindings_;

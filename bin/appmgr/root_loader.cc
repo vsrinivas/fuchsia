@@ -16,7 +16,8 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/concatenate.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 RootLoader::RootLoader() = default;
 
@@ -78,4 +79,5 @@ void RootLoader::AddBinding(fidl::InterfaceRequest<Loader> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia

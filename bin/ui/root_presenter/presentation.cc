@@ -160,10 +160,10 @@ void Presentation::CreateViewTree(
   tree_container_->SetListener(std::move(tree_container_listener));
 
   // Get view tree services.
-  component::ServiceProviderPtr tree_service_provider;
+  fuchsia::sys::ServiceProviderPtr tree_service_provider;
   tree_->GetServiceProvider(tree_service_provider.NewRequest());
   input_dispatcher_ =
-      component::ConnectToService<fuchsia::ui::input::InputDispatcher>(
+      fuchsia::sys::ConnectToService<fuchsia::ui::input::InputDispatcher>(
           tree_service_provider.get());
   input_dispatcher_.set_error_handler([this] {
     // This isn't considered a fatal error right now since it is still useful

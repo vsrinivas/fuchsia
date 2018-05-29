@@ -8,7 +8,7 @@
 #include <unordered_map>
 
 #include "garnet/bin/netconnector/ip_address.h"
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
 
@@ -25,7 +25,7 @@ class NetConnectorParams {
   bool show_devices() const { return show_devices_; }
   bool mdns_verbose() const { return mdns_verbose_; }
 
-  std::unordered_map<std::string, component::LaunchInfoPtr>
+  std::unordered_map<std::string, fuchsia::sys::LaunchInfoPtr>
   MoveServices() {
     return std::move(launch_infos_by_service_name_);
   }
@@ -46,13 +46,13 @@ class NetConnectorParams {
   bool ParseConfig(const std::string& string);
 
   void RegisterService(const std::string& selector,
-                       component::LaunchInfoPtr launch_info);
+                       fuchsia::sys::LaunchInfoPtr launch_info);
 
   bool is_valid_;
   bool listen_ = false;
   bool show_devices_ = false;
   bool mdns_verbose_ = false;
-  std::unordered_map<std::string, component::LaunchInfoPtr>
+  std::unordered_map<std::string, fuchsia::sys::LaunchInfoPtr>
       launch_infos_by_service_name_;
   std::unordered_map<std::string, IpAddress> device_addresses_by_name_;
 

@@ -6,7 +6,7 @@
 
 namespace sketchy_lib {
 
-Canvas::Canvas(component::StartupContext* context, async::Loop* loop)
+Canvas::Canvas(fuchsia::sys::StartupContext* context, async::Loop* loop)
     : Canvas(
           context
               ->ConnectToEnvironmentService<::fuchsia::ui::sketchy::Canvas>(),

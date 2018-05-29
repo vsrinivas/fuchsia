@@ -36,7 +36,7 @@ MediaApp::MediaApp(fxl::Closure quit_callback) : quit_callback_(quit_callback) {
 }
 
 // Prepare for playback, submit initial data and start the presentation timeline
-void MediaApp::Run(component::StartupContext* app_context) {
+void MediaApp::Run(fuchsia::sys::StartupContext* app_context) {
   sample_size_ = (use_float_ ? sizeof(float) : sizeof(int16_t));
   payload_size_ = kFramesPerPayload * kNumChannels * sample_size_;
   total_mapping_size_ = payload_size_ * kNumPayloads;
@@ -59,7 +59,7 @@ void MediaApp::Run(component::StartupContext* app_context) {
 
 // Use StartupContext to acquire AudioServerPtr and AudioRenderer2Ptr in
 // turn. Set error handler, in case of channel closure.
-void MediaApp::AcquireRenderer(component::StartupContext* app_context) {
+void MediaApp::AcquireRenderer(fuchsia::sys::StartupContext* app_context) {
   // AudioServer is needed only long enough to create the renderer(s).
   media::AudioServerPtr audio_server =
       app_context->ConnectToEnvironmentService<media::AudioServer>();

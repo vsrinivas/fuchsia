@@ -18,8 +18,8 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  std::unique_ptr<component::StartupContext> startup_context =
-      component::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context =
+      fuchsia::sys::StartupContext::CreateFromStartupInfo();
 
   mdns::MdnsImpl impl(startup_context.get(), &params, [&loop]() {
     async::PostTask(loop.async(), [&loop]() { loop.Quit(); });

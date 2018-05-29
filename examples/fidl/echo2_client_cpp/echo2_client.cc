@@ -17,12 +17,12 @@ namespace echo2 {
 class EchoClientApp {
  public:
   EchoClientApp()
-      : context_(component::StartupContext::CreateFromStartupInfo()) {}
+      : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {}
 
   echo2::EchoPtr& echo() { return echo_; }
 
   void Start(std::string server_url) {
-    component::LaunchInfo launch_info;
+    fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = server_url;
     launch_info.directory_request = echo_provider_.NewRequest();
     context_->launcher()->CreateApplication(std::move(launch_info),
@@ -36,9 +36,9 @@ class EchoClientApp {
   EchoClientApp(const EchoClientApp&) = delete;
   EchoClientApp& operator=(const EchoClientApp&) = delete;
 
-  std::unique_ptr<component::StartupContext> context_;
-  component::Services echo_provider_;
-  component::ComponentControllerPtr controller_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
+  fuchsia::sys::Services echo_provider_;
+  fuchsia::sys::ComponentControllerPtr controller_;
   echo2::EchoPtr echo_;
 };
 

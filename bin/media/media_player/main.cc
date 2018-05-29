@@ -21,14 +21,14 @@ const std::string kIsolateArgument = "--transient";
 // Connects to the requested service in a media_player isolate.
 template <typename Interface>
 void ConnectToIsolate(fidl::InterfaceRequest<Interface> request,
-                      component::ApplicationLauncher* launcher) {
-  component::LaunchInfo launch_info;
+                      fuchsia::sys::ApplicationLauncher* launcher) {
+  fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kIsolateUrl;
   launch_info.arguments.push_back(kIsolateArgument);
-  component::Services services;
+  fuchsia::sys::Services services;
   launch_info.directory_request = services.NewRequest();
 
-  component::ComponentControllerPtr controller;
+  fuchsia::sys::ComponentControllerPtr controller;
   launcher->CreateApplication(std::move(launch_info), controller.NewRequest());
 
   services.ConnectToService(std::move(request), Interface::Name_);
@@ -48,8 +48,8 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
   trace::TraceProvider trace_provider(loop.async());
 
-  std::unique_ptr<component::StartupContext> startup_context =
-      component::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context =
+      fuchsia::sys::StartupContext::CreateFromStartupInfo();
 
   if (transient) {
     std::unique_ptr<media_player::MediaPlayerImpl> player;
@@ -64,7 +64,7 @@ int main(int argc, const char** argv) {
 
     loop.Run();
   } else {
-    component::ApplicationLauncherPtr launcher;
+    fuchsia::sys::ApplicationLauncherPtr launcher;
     startup_context->environment()->GetApplicationLauncher(
         launcher.NewRequest());
 

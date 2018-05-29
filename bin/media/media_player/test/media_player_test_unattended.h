@@ -26,7 +26,7 @@ class MediaPlayerTestUnattended {
   MediaPlayerTestUnattended(std::function<void(int)> quit_callback);
 
  private:
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   std::function<void(int)> quit_callback_;
   FakeWavReader fake_reader_;
   FakeAudioRenderer fake_audio_renderer_;

@@ -8,7 +8,8 @@
 #include <fbl/string.h>
 #include <fs/pseudo-dir.h>
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 class HubInfo {
  public:
@@ -26,6 +27,7 @@ class HubInfo {
   fbl::RefPtr<fs::PseudoDir> hub_dir_;
 };
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia
 
 #endif  // GARNET_BIN_APPMGR_HUB_HUB_INFO_H_

@@ -27,7 +27,7 @@ class TtsClient {
 TtsClient::TtsClient(fxl::Closure quit_callback)
     : quit_callback_(quit_callback) {
   FXL_DCHECK(quit_callback_);
-  auto app_ctx = component::StartupContext::CreateFromStartupInfo();
+  auto app_ctx = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   tts_service_ = app_ctx->ConnectToEnvironmentService<tts::TtsService>();
   tts_service_.set_error_handler([this]() {
     printf("Connection error when trying to talk to the TtsService\n");

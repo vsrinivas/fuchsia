@@ -11,8 +11,10 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "third_party/icu/source/common/unicode/strenum.h"
 
-namespace component {
+namespace funcshia {
+namespace sys {
 class StartupContext;
+}
 }
 
 namespace time_zone {

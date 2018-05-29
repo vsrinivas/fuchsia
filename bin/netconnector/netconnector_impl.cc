@@ -29,7 +29,7 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params,
                                    fxl::Closure quit_callback)
     : params_(params),
       quit_callback_(quit_callback),
-      startup_context_(component::StartupContext::CreateFromStartupInfo()),
+      startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
       // TODO(dalesat): Create a new RespondingServiceHost per user.
       // Requestors should provide user credentials allowing a ServiceAgent
       // to obtain a user environment. A RespondingServiceHost should be
@@ -187,7 +187,7 @@ void NetConnectorImpl::ReleaseServiceAgent(ServiceAgent* service_agent) {
 
 void NetConnectorImpl::GetDeviceServiceProvider(
     fidl::StringPtr device_name,
-    fidl::InterfaceRequest<component::ServiceProvider> request) {
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request) {
   if (device_name == host_name_ || device_name == kLocalDeviceName) {
     responding_service_host_.AddBinding(std::move(request));
     return;
@@ -211,7 +211,7 @@ void NetConnectorImpl::GetKnownDeviceNames(
 
 void NetConnectorImpl::RegisterServiceProvider(
     fidl::StringPtr name,
-    fidl::InterfaceHandle<component::ServiceProvider> handle) {
+    fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> handle) {
   FXL_LOG(INFO) << "Service '" << name << "' provider registered.";
   responding_service_host_.RegisterProvider(name, std::move(handle));
 }

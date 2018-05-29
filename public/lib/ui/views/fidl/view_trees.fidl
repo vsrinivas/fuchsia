@@ -31,7 +31,7 @@ library fuchsia.ui.views_v1;
 //
 // GETTING SERVICES
 //
-// The view tree's |component::ServiceProvider| offers access to many services
+// The view tree's |fuchsia::sys::ServiceProvider| offers access to many services
 // which are not directly expressed by the |ViewTree| interface itself, such
 // as input, accessiblity, and editing capabilities.
 //
@@ -52,7 +52,7 @@ interface ViewTree {
   // not be shared with anyone else.
   //
   // See |InputDispatcher|.
-  2: GetServiceProvider(request<component.ServiceProvider> service_provider);
+  2: GetServiceProvider(request<fuchsia.sys.ServiceProvider> service_provider);
 
   // Gets an interface for managing the view tree's root.
   3: GetContainer(request<ViewContainer> container);

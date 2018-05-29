@@ -11,7 +11,8 @@
 
 #include "third_party/rapidjson/rapidjson/document.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 namespace {}  // namespace
 
 constexpr char kSandbox[] = "sandbox";
@@ -47,4 +48,5 @@ std::string CmxMetadata::GetCmxPath(std::string package_resolved_url) {
   return cmx_path;
 }
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia

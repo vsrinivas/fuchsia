@@ -27,10 +27,10 @@ class MediaPlayerImpl : public MediaPlayer {
  public:
   static std::unique_ptr<MediaPlayerImpl> Create(
       fidl::InterfaceRequest<MediaPlayer> request,
-      component::StartupContext* startup_context, fxl::Closure quit_callback);
+      fuchsia::sys::StartupContext* startup_context, fxl::Closure quit_callback);
 
   MediaPlayerImpl(fidl::InterfaceRequest<MediaPlayer> request,
-                  component::StartupContext* startup_context,
+                  fuchsia::sys::StartupContext* startup_context,
                   fxl::Closure quit_callback);
 
   ~MediaPlayerImpl() override;
@@ -117,7 +117,7 @@ class MediaPlayerImpl : public MediaPlayer {
   void UpdateStatus();
 
   async_t* async_;
-  component::StartupContext* startup_context_;
+  fuchsia::sys::StartupContext* startup_context_;
   fxl::Closure quit_callback_;
   fidl::BindingSet<MediaPlayer> bindings_;
   Player player_;

@@ -12,7 +12,8 @@
 
 #include "lib/fsl/vmo/file.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 RunnerHolder::RunnerHolder(Services services, ComponentControllerPtr controller)
     : services_(std::move(services)), controller_(std::move(controller)) {
@@ -31,4 +32,5 @@ void RunnerHolder::StartComponent(
                           std::move(controller));
 }
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia

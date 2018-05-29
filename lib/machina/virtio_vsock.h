@@ -28,7 +28,7 @@ class VirtioVsock
       public fuchsia::guest::SocketEndpoint,
       public fuchsia::guest::SocketAcceptor {
  public:
-  VirtioVsock(component::StartupContext* context, const PhysMem&,
+  VirtioVsock(fuchsia::sys::StartupContext* context, const PhysMem&,
               async_t* async);
 
   uint32_t guest_cid() const;

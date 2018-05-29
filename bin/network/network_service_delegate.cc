@@ -7,7 +7,7 @@
 namespace network {
 
 NetworkServiceDelegate::NetworkServiceDelegate(async_t* dispatcher)
-    : context_(component::StartupContext::CreateFromStartupInfo()),
+    : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
       network_provider_(dispatcher) {
   FXL_DCHECK(dispatcher),
       context_->outgoing().AddPublicService<NetworkService>(

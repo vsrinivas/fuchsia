@@ -39,7 +39,7 @@ using auth::AuthProviderStatus;
 using auth::Status;
 
 TokenManagerImpl::TokenManagerImpl(
-    component::StartupContext* app_context,
+    fuchsia::sys::StartupContext* app_context,
     std::unique_ptr<store::AuthDb> auth_db,
     fidl::VectorPtr<AuthProviderConfig> auth_provider_configs,
     fidl::InterfaceHandle<auth::AuthenticationContextProvider>
@@ -58,12 +58,12 @@ TokenManagerImpl::TokenManagerImpl(
       continue;
     }
 
-    component::LaunchInfo launch_info;
+    fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = config.url;
-    component::Services services;
+    fuchsia::sys::Services services;
     launch_info.directory_request = services.NewRequest();
 
-    component::ComponentControllerPtr controller;
+    fuchsia::sys::ComponentControllerPtr controller;
     app_context->launcher()->CreateApplication(std::move(launch_info),
                                                controller.NewRequest());
     controller.set_error_handler(

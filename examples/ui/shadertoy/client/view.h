@@ -17,7 +17,7 @@ namespace shadertoy_client {
 
 class View : public mozart::BaseView {
  public:
-  View(async::Loop* loop, component::StartupContext* startup_context,
+  View(async::Loop* loop, fuchsia::sys::StartupContext* startup_context,
        ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
        fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
            view_owner_request);
@@ -32,7 +32,7 @@ class View : public mozart::BaseView {
   void OnSceneInvalidated(
       fuchsia::images::PresentationInfo presentation_info) override;
 
-  component::StartupContext* const startup_context_;
+  fuchsia::sys::StartupContext* const startup_context_;
   async::Loop* const loop_;
 
   fuchsia::examples::shadertoy::ShadertoyFactoryPtr shadertoy_factory_;

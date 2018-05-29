@@ -20,9 +20,9 @@ namespace media_player {
 class HttpReader : public Reader {
  public:
   static std::shared_ptr<HttpReader> Create(
-      component::StartupContext* startup_context, const std::string& url);
+      fuchsia::sys::StartupContext* startup_context, const std::string& url);
 
-  HttpReader(component::StartupContext* startup_context,
+  HttpReader(fuchsia::sys::StartupContext* startup_context,
              const std::string& url);
 
   ~HttpReader() override;

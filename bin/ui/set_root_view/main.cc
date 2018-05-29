@@ -38,16 +38,16 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto startup_context_ = component::StartupContext::CreateFromStartupInfo();
+  auto startup_context_ = fuchsia::sys::StartupContext::CreateFromStartupInfo();
 
   // Launch application.
-  component::Services services;
-  component::LaunchInfo launch_info;
+  fuchsia::sys::Services services;
+  fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = positional_args[0];
   for (size_t i = 1; i < positional_args.size(); ++i)
     launch_info.arguments.push_back(positional_args[i]);
   launch_info.directory_request = services.NewRequest();
-  component::ComponentControllerPtr controller;
+  fuchsia::sys::ComponentControllerPtr controller;
   startup_context_->launcher()->CreateApplication(std::move(launch_info),
                                                   controller.NewRequest());
   controller.set_error_handler([&loop] {

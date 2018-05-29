@@ -26,7 +26,7 @@ static const std::string kStatusFileDir = "/data/app_local/audio_policy";
 }  // namespace
 
 AudioPolicyServiceImpl::AudioPolicyServiceImpl(
-    std::unique_ptr<component::StartupContext> startup_context)
+    std::unique_ptr<fuchsia::sys::StartupContext> startup_context)
     : startup_context_(std::move(startup_context)),
       initialize_attempts_remaining_(kInitializeAttempts) {
   startup_context_->outgoing().AddPublicService<AudioPolicy>(

@@ -32,11 +32,11 @@ class GuestView;
 class ScenicScanout : public machina::GpuScanout,
                       public ::fuchsia::ui::views_v1::ViewProvider {
  public:
-  static zx_status_t Create(component::StartupContext* startup_context,
+  static zx_status_t Create(fuchsia::sys::StartupContext* startup_context,
                             machina::InputDispatcher* input_dispatcher,
                             fbl::unique_ptr<ScenicScanout>* out);
 
-  ScenicScanout(component::StartupContext* startup_context,
+  ScenicScanout(fuchsia::sys::StartupContext* startup_context,
                 machina::InputDispatcher* input_dispatcher);
 
   // |GpuScanout|
@@ -46,12 +46,12 @@ class ScenicScanout : public machina::GpuScanout,
   void CreateView(
       fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
           view_owner_request,
-      fidl::InterfaceRequest<component::ServiceProvider> view_services)
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> view_services)
       override;
 
  private:
   machina::InputDispatcher* input_dispatcher_;
-  component::StartupContext* startup_context_;
+  fuchsia::sys::StartupContext* startup_context_;
   fidl::BindingSet<ViewProvider> bindings_;
   fbl::unique_ptr<GuestView> view_;
 };

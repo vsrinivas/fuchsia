@@ -21,7 +21,7 @@ namespace test {
 class AudioServerTest : public gtest::TestWithMessageLoop {
  protected:
   void SetUp() override {
-    component::ConnectToEnvironmentService(audio_server_.NewRequest());
+    fuchsia::sys::ConnectToEnvironmentService(audio_server_.NewRequest());
     ASSERT_TRUE(audio_server_);
 
     audio_server_.set_error_handler([this]() {
@@ -147,7 +147,7 @@ TEST_F(AudioServerTest, MasterGain) {
 class AudioServerSyncTest : public gtest::TestWithMessageLoop {
  protected:
   void SetUp() override {
-    component::ConnectToEnvironmentService(audio_server_.NewRequest());
+    fuchsia::sys::ConnectToEnvironmentService(audio_server_.NewRequest());
     ASSERT_TRUE(audio_server_);
   }
 

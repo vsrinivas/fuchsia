@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_GUEST_RUNNER_GUEST_RUNNER_H_
 #define GARNET_BIN_GUEST_RUNNER_GUEST_RUNNER_H_
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
@@ -13,21 +13,21 @@
 
 namespace guest_runner {
 
-class GuestRunner : public component::Runner {
+class GuestRunner : public fuchsia::sys::Runner {
  public:
   explicit GuestRunner();
   ~GuestRunner() override;
 
  private:
-  // |component::Runner|
-  void StartComponent(component::Package application,
-                      component::StartupInfo startup_info,
-                      ::fidl::InterfaceRequest<component::ComponentController>
+  // |fuchsia::sys::Runner|
+  void StartComponent(fuchsia::sys::Package application,
+                      fuchsia::sys::StartupInfo startup_info,
+                      ::fidl::InterfaceRequest<fuchsia::sys::ComponentController>
                           controller) override;
 
-  component::ApplicationLauncherSyncPtr launcher_;
-  std::unique_ptr<component::StartupContext> context_;
-  fidl::BindingSet<component::Runner> bindings_;
+  fuchsia::sys::ApplicationLauncherSyncPtr launcher_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
+  fidl::BindingSet<fuchsia::sys::Runner> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GuestRunner);
 };

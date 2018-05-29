@@ -52,7 +52,7 @@ class ScenicTest : public ::gtest::TestWithLoop,
     }
   }
 
-  static std::unique_ptr<component::StartupContext> app_context_;
+  static std::unique_ptr<fuchsia::sys::StartupContext> app_context_;
   std::unique_ptr<Scenic> scenic_;
   std::vector<std::string> reported_errors_;
   std::vector<fuchsia::ui::scenic::Event> events_;

@@ -34,7 +34,7 @@ bool TimezoneImpl::Init() {
   icu_data::ICUDataProviderSyncPtr icu_provider;
   icu_data::ICUDataPtr icu_data_out;
   fsl::SizedVmo icu_vmo;
-  component::ConnectToEnvironmentService(icu_provider.NewRequest());
+  fuchsia::sys::ConnectToEnvironmentService(icu_provider.NewRequest());
   icu_provider->ICUDataWithSha1(icu_data::kDataHash, &icu_data_out);
   if (!icu_data_out) {
     FXL_LOG(ERROR) << "Unable to load ICU data. Timezone data unavailable.";

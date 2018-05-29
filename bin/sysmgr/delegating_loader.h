@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_SYSMGR_DELEGATING_LOADER_H_
 #define GARNET_BIN_SYSMGR_DELEGATING_LOADER_H_
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include "garnet/bin/sysmgr/config.h"
 #include "lib/fxl/macros.h"
 
@@ -18,11 +18,11 @@ namespace sysmgr {
 // This loader executes in the sysmgr environment, reads a config file, and
 // can delegate mapped URI schemes to app loaders capable of handling them,
 // falling back on the root app loader for unmapped schemes.
-class DelegatingLoader : public component::Loader {
+class DelegatingLoader : public fuchsia::sys::Loader {
  public:
   explicit DelegatingLoader(Config::ServiceMap delegates,
-                            component::ApplicationLauncher* delegate_launcher,
-                            component::LoaderPtr fallback);
+                            fuchsia::sys::ApplicationLauncher* delegate_launcher,
+                            fuchsia::sys::LoaderPtr fallback);
   ~DelegatingLoader() override;
 
   // |Loader|:
@@ -31,9 +31,9 @@ class DelegatingLoader : public component::Loader {
 
  private:
   struct LoaderRecord {
-    component::LaunchInfoPtr launch_info;
-    component::LoaderPtr loader;
-    component::ComponentControllerPtr controller;
+    fuchsia::sys::LaunchInfoPtr launch_info;
+    fuchsia::sys::LoaderPtr loader;
+    fuchsia::sys::ComponentControllerPtr controller;
   };
 
   void StartDelegate(LoaderRecord* record);
@@ -42,8 +42,8 @@ class DelegatingLoader : public component::Loader {
   // sysmgr app implementation.
   std::unordered_map<std::string, LoaderRecord> delegate_instances_;
 
-  component::ApplicationLauncher* delegate_launcher_;
-  component::LoaderPtr fallback_;
+  fuchsia::sys::ApplicationLauncher* delegate_launcher_;
+  fuchsia::sys::LoaderPtr fallback_;
 
   // indexed by scheme. LoaderRecord instances are owned by
   // delegate_instances_.

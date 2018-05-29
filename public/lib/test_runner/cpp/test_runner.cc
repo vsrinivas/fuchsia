@@ -153,7 +153,7 @@ void TestRunnerImpl::PassTestPoint() {
 }
 
 TestRunContext::TestRunContext(
-    std::shared_ptr<component::StartupContext> app_context,
+    std::shared_ptr<fuchsia::sys::StartupContext> app_context,
     TestRunObserver* connection, const std::string& test_id,
     const std::string& url, const std::vector<std::string>& args)
     : test_runner_connection_(connection), test_id_(test_id), success_(true) {
@@ -173,11 +173,11 @@ TestRunContext::TestRunContext(
       });
 
   // 2. Launch the test command.
-  component::ApplicationLauncherPtr launcher;
+  fuchsia::sys::ApplicationLauncherPtr launcher;
   child_env_scope_->environment()->GetApplicationLauncher(
       launcher.NewRequest());
 
-  component::LaunchInfo info;
+  fuchsia::sys::LaunchInfo info;
   info.url = url;
   info.arguments = fxl::To<fidl::VectorPtr<fidl::StringPtr>>(args);
   launcher->CreateApplication(std::move(info), child_controller_.NewRequest());

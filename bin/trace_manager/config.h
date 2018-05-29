@@ -8,7 +8,7 @@
 #include <map>
 #include <string>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include "lib/fxl/macros.h"
 
 namespace tracing {
@@ -29,14 +29,14 @@ class Config {
   }
 
   // Well-known providers to start automatically.
-  const std::map<std::string, component::LaunchInfoPtr>& providers()
+  const std::map<std::string, fuchsia::sys::LaunchInfoPtr>& providers()
       const {
     return providers_;
   }
 
  private:
   std::map<std::string, std::string> known_categories_;
-  std::map<std::string, component::LaunchInfoPtr> providers_;
+  std::map<std::string, fuchsia::sys::LaunchInfoPtr> providers_;
 };
 
 }  // namespace tracing

@@ -207,7 +207,7 @@ zx_status_t View::FindOrCreateBuffer(uint32_t frame_size, uint64_t vmo_offset,
   return ZX_OK;
 }
 
-View::View(async::Loop* loop, component::StartupContext* startup_context,
+View::View(async::Loop* loop, fuchsia::sys::StartupContext* startup_context,
            ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
            fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
                view_owner_request,

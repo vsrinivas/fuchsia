@@ -21,5 +21,5 @@ interface ViewProvider {
   // The caller may request services from the created view via the |services|
   // service provider.
   1: CreateView(request<fuchsia.ui.views_v1_token.ViewOwner> view_owner,
-               request<component.ServiceProvider>? services);
+               request<fuchsia.sys.ServiceProvider>? services);
 };

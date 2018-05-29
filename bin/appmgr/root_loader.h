@@ -12,11 +12,12 @@
 
 #include <lib/zx/vmo.h>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 class RootLoader : public Loader {
  public:
@@ -34,6 +35,7 @@ class RootLoader : public Loader {
   FXL_DISALLOW_COPY_AND_ASSIGN(RootLoader);
 };
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia
 
 #endif  // GARNET_BIN_APPMGR_ROOT_LOADER_H_

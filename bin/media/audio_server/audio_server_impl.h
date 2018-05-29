@@ -68,7 +68,7 @@ class AudioServerImpl : public AudioServer {
   void Shutdown();
   void DoPacketCleanup();
 
-  component::Outgoing outgoing_;
+  fuchsia::sys::Outgoing outgoing_;
   fidl::BindingSet<AudioServer> bindings_;
 
   // A reference to our thread's async object.  Allows us to post events to

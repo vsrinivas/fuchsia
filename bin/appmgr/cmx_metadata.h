@@ -10,7 +10,8 @@
 
 #include "third_party/rapidjson/rapidjson/document.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 class CmxMetadata {
  public:
@@ -26,6 +27,7 @@ class CmxMetadata {
   static std::string GetCmxPath(std::string resolved_url);
 };
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia
 
 #endif  // GARNET_BIN_APPMGR_CMX_METADATA_H_

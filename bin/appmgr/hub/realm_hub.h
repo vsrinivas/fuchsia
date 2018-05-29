@@ -14,7 +14,8 @@
 #include <fs/pseudo-dir.h>
 #include <zircon/types.h>
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 class Realm;
 class HubInfo;
@@ -35,6 +36,7 @@ class RealmHub : public Hub {
   FXL_DISALLOW_COPY_AND_ASSIGN(RealmHub);
 };
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia
 
 #endif  // GARNET_BIN_APPMGR_HUB_REALM_HUB_H_

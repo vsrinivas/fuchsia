@@ -18,7 +18,7 @@ class TtsSpeaker;
 
 class TtsServiceImpl {
  public:
-  TtsServiceImpl(std::unique_ptr<component::StartupContext> startup_context);
+  TtsServiceImpl(std::unique_ptr<fuchsia::sys::StartupContext> startup_context);
   ~TtsServiceImpl();
 
   zx_status_t Init();
@@ -45,7 +45,7 @@ class TtsServiceImpl {
 
   friend class Client;
 
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   std::set<Client*> clients_;
   async_t* async_;
   FXL_DISALLOW_COPY_AND_ASSIGN(TtsServiceImpl);

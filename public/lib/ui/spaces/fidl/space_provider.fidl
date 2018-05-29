@@ -35,6 +35,6 @@ interface SpaceProvider {
   // Modules can use these mechanisms to establish a distributed,
   // inter-process scene graph.
   1: CreateSpace(handle<eventpair> token,
-                 request<component.ServiceProvider>? incoming_services,
-                 component.ServiceProvider outgoing_services);
+                 request<fuchsia.sys.ServiceProvider>? incoming_services,
+                 fuchsia.sys.ServiceProvider outgoing_services);
 };

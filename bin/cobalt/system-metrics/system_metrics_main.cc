@@ -71,7 +71,7 @@ class SystemMetricsApp {
   // tick_interval_minutes is the number of minutes to sleep in between calls to
   // the GatherMetrics method.
   SystemMetricsApp(unsigned int tick_interval_minutes)
-      : context_(component::StartupContext::CreateFromStartupInfo()),
+      : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
         start_time_(std::chrono::steady_clock::now()),
         tick_interval_(tick_interval_minutes) {}
 
@@ -93,7 +93,7 @@ class SystemMetricsApp {
   cobalt::Status LogMemoryUsage(std::chrono::minutes uptime_minutes);
 
  private:
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
   cobalt::CobaltEncoderSyncPtr encoder_;
   std::chrono::steady_clock::time_point start_time_;
   std::chrono::minutes tick_interval_;

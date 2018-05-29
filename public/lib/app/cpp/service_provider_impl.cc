@@ -8,7 +8,8 @@
 
 #include "lib/fxl/functional/make_copyable.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 ServiceProviderImpl::ServiceProviderImpl() {}
 
@@ -66,4 +67,5 @@ void ServiceProviderImpl::SetDefaultServiceProvider(
       });
 }
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia

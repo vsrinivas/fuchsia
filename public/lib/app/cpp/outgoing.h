@@ -12,7 +12,8 @@
 
 #include "lib/svc/cpp/service_namespace.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 // The services and data published by this component.
 class Outgoing {
@@ -112,6 +113,7 @@ class Outgoing {
   mutable ServiceNamespace deprecated_outgoing_services_;
 };
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia
 
 #endif  // LIB_APP_CPP_OUTGOING_H_

@@ -11,7 +11,7 @@
 
 void handle_list() {
   fuchsia::guest::GuestManagerSyncPtr guestmgr;
-  component::ConnectToEnvironmentService(guestmgr.NewRequest());
+  fuchsia::sys::ConnectToEnvironmentService(guestmgr.NewRequest());
   fidl::VectorPtr<fuchsia::guest::GuestEnvironmentInfo> env_infos;
   guestmgr->ListEnvironments(&env_infos);
 

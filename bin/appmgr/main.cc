@@ -28,7 +28,7 @@ namespace {
 
 constexpr char kRootLabel[] = "app";
 
-void PublishRootDir(component::Realm* root, fs::SynchronousVfs* vfs) {
+void PublishRootDir(fuchsia::sys::Realm* root, fs::SynchronousVfs* vfs) {
   static zx_handle_t request = zx_get_startup_handle(PA_DIRECTORY_REQUEST);
   if (request == ZX_HANDLE_INVALID)
     return;
@@ -51,13 +51,13 @@ int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   fs::SynchronousVfs vfs(loop.async());
-  component::RootLoader root_loader;
+  fuchsia::sys::RootLoader root_loader;
   fbl::RefPtr<fs::PseudoDir> directory(fbl::AdoptRef(new fs::PseudoDir()));
   directory->AddEntry(
-      component::Loader::Name_,
+      fuchsia::sys::Loader::Name_,
       fbl::AdoptRef(new fs::Service([&root_loader](zx::channel channel) {
         root_loader.AddBinding(
-            fidl::InterfaceRequest<component::Loader>(std::move(channel)));
+            fidl::InterfaceRequest<fuchsia::sys::Loader>(std::move(channel)));
         return ZX_OK;
       })));
 
@@ -66,13 +66,13 @@ int main(int argc, char** argv) {
     return -1;
   if (vfs.ServeDirectory(directory, std::move(h2)) != ZX_OK)
     return -1;
-  component::Realm root_realm(nullptr, std::move(h1), kRootLabel);
+  fuchsia::sys::Realm root_realm(nullptr, std::move(h1), kRootLabel);
   fs::SynchronousVfs publish_vfs(loop.async());
   PublishRootDir(&root_realm, &publish_vfs);
 
-  component::ComponentControllerPtr sysmgr;
+  fuchsia::sys::ComponentControllerPtr sysmgr;
   auto run_sysmgr = [&root_realm, &sysmgr] {
-    component::LaunchInfo launch_info;
+    fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = "sysmgr";
     root_realm.CreateApplication(std::move(launch_info), sysmgr.NewRequest());
   };

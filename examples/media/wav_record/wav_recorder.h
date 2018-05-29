@@ -24,7 +24,7 @@ class WavRecorder {
   }
 
   ~WavRecorder();
-  void Run(component::StartupContext* app_context);
+  void Run(fuchsia::sys::StartupContext* app_context);
 
  private:
   void Usage();

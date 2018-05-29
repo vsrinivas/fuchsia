@@ -65,7 +65,7 @@ const std::string& ViewState::FormattedLabel() const {
   }
   return formatted_label_cache_;
 }
-component::ServiceProvider* ViewState::GetServiceProviderIfSupports(
+fuchsia::sys::ServiceProvider* ViewState::GetServiceProviderIfSupports(
     std::string service_name) {
   if (service_names_) {
     auto& v = *service_names_;
@@ -77,7 +77,7 @@ component::ServiceProvider* ViewState::GetServiceProviderIfSupports(
 }
 
 void ViewState::SetServiceProvider(
-    fidl::InterfaceHandle<component::ServiceProvider> service_provider,
+    fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> service_provider,
     fidl::VectorPtr<fidl::StringPtr> service_names) {
   if (service_provider) {
     service_provider_ = service_provider.Bind();

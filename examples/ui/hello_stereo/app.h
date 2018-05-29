@@ -30,7 +30,7 @@ class App {
 
   void ReleaseSessionResources();
 
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   async::Loop* const loop_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
 

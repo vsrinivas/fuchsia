@@ -9,7 +9,7 @@
 namespace guestmgr {
 
 GuestEnvironmentImpl::GuestEnvironmentImpl(
-    uint32_t id, const std::string& label, component::StartupContext* context,
+    uint32_t id, const std::string& label, fuchsia::sys::StartupContext* context,
     fidl::InterfaceRequest<fuchsia::guest::GuestEnvironment> request)
     : id_(id),
       label_(label),
@@ -35,9 +35,9 @@ void GuestEnvironmentImpl::LaunchGuest(
     fuchsia::guest::GuestLaunchInfo launch_info,
     fidl::InterfaceRequest<fuchsia::guest::GuestController> controller,
     LaunchGuestCallback callback) {
-  component::Services guest_services;
-  component::ComponentControllerPtr guest_component_controller;
-  component::LaunchInfo guest_launch_info;
+  fuchsia::sys::Services guest_services;
+  fuchsia::sys::ComponentControllerPtr guest_component_controller;
+  fuchsia::sys::LaunchInfo guest_launch_info;
   guest_launch_info.url = launch_info.url;
   guest_launch_info.arguments = std::move(launch_info.vmm_args);
   guest_launch_info.directory_request = guest_services.NewRequest();

@@ -12,7 +12,8 @@
 
 #include <utility>
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 ServiceProviderBridge::ServiceProviderBridge()
     : vfs_(async_get_default()), weak_factory_(this) {
@@ -23,7 +24,7 @@ ServiceProviderBridge::ServiceProviderBridge()
 ServiceProviderBridge::~ServiceProviderBridge() = default;
 
 void ServiceProviderBridge::AddBinding(
-    fidl::InterfaceRequest<component::ServiceProvider> request) {
+    fidl::InterfaceRequest<ServiceProvider> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
@@ -97,4 +98,5 @@ zx_status_t ServiceProviderBridge::ServiceProviderDir::Getattr(vnattr_t* attr) {
   return ZX_OK;
 }
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia

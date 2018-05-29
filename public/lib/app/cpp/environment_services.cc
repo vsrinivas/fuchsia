@@ -6,7 +6,8 @@
 
 #include <fdio/util.h>
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 // static
 void ConnectToEnvironmentService(const std::string& interface_name,
@@ -33,4 +34,5 @@ zx::channel CreateStaticServiceRootHandle() {
 
 }  // namespace subtle
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia

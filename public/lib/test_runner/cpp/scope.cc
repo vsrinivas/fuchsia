@@ -6,7 +6,7 @@
 
 namespace test_runner {
 
-Scope::Scope(const component::EnvironmentPtr& parent_env,
+Scope::Scope(const fuchsia::sys::EnvironmentPtr& parent_env,
              const std::string& label) {
   zx::channel h1, h2;
   if (zx::channel::create(0, &h1, &h2) < 0)
@@ -18,7 +18,7 @@ Scope::Scope(const component::EnvironmentPtr& parent_env,
       env_controller_.NewRequest(), label);
 }
 
-component::ApplicationLauncher* Scope::GetLauncher() {
+fuchsia::sys::ApplicationLauncher* Scope::GetLauncher() {
   if (!env_launcher_) {
     env_->GetApplicationLauncher(env_launcher_.NewRequest());
   }

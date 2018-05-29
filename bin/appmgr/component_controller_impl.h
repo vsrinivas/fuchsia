@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_APPMGR_COMPONENT_CONTROLLER_IMPL_H_
 #define GARNET_BIN_APPMGR_COMPONENT_CONTROLLER_IMPL_H_
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fs/pseudo-dir.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/process.h>
@@ -19,7 +19,8 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 class Realm;
 
 enum class ExportedDirType {
@@ -83,6 +84,7 @@ class ComponentControllerImpl : public ComponentController {
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentControllerImpl);
 };
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia
 
 #endif  // GARNET_BIN_APPMGR_COMPONENT_CONTROLLER_IMPL_H_

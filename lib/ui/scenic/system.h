@@ -14,9 +14,11 @@
 // TODO(MZ-453): Don't support GetDisplayInfo in scenic fidl API.
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 class StartupContext;
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia
 
 namespace scenic {
 
@@ -27,17 +29,17 @@ class Session;
 // exposing the system's host (typically a Scenic, except for testing).
 class SystemContext final {
  public:
-  explicit SystemContext(component::StartupContext* app_context,
+  explicit SystemContext(fuchsia::sys::StartupContext* app_context,
                          fit::closure quit_callback);
   SystemContext(SystemContext&& context);
 
-  component::StartupContext* app_context() const { return app_context_; }
+  fuchsia::sys::StartupContext* app_context() const { return app_context_; }
 
   // Calls quit on the associated message loop.
   void Quit() { quit_callback_(); }
 
  private:
-  component::StartupContext* const app_context_;
+  fuchsia::sys::StartupContext* const app_context_;
   fit::closure quit_callback_;
 };
 

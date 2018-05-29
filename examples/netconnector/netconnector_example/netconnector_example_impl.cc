@@ -23,7 +23,7 @@ static const std::vector<std::string> kConversation = {
 NetConnectorExampleImpl::NetConnectorExampleImpl(
     NetConnectorExampleParams* params, fxl::Closure quit_callback)
     : quit_callback_(quit_callback),
-      startup_context_(component::StartupContext::CreateFromStartupInfo()) {
+      startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
   // The MessageRelay makes using the channel easier. Hook up its callbacks.
   message_relay_.SetMessageReceivedCallback(
       [this](std::vector<uint8_t> message) { HandleReceivedMessage(message); });
@@ -62,7 +62,7 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
           startup_context_
               ->ConnectToEnvironmentService<netconnector::NetConnector>();
 
-      fidl::InterfaceHandle<component::ServiceProvider> handle;
+      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> handle;
       startup_context_->outgoing_services()->AddBinding(handle.NewRequest());
 
       FXL_DCHECK(handle);
@@ -89,7 +89,7 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
     message_relay_.SetChannel(std::move(local));
 
     // Pass the remote end to NetConnector.
-    component::ServiceProviderPtr device_service_provider;
+    fuchsia::sys::ServiceProviderPtr device_service_provider;
     connector->GetDeviceServiceProvider(params->request_device_name(),
                                         device_service_provider.NewRequest());
 

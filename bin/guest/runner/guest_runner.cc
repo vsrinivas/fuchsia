@@ -12,10 +12,10 @@
 namespace guest_runner {
 
 GuestRunner::GuestRunner()
-    : context_(component::StartupContext::CreateFromStartupInfo()) {
+    : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
   context_->environment()->GetApplicationLauncher(launcher_.NewRequest());
-  context_->outgoing().AddPublicService<component::Runner>(
-      [this](fidl::InterfaceRequest<component::Runner> request) {
+  context_->outgoing().AddPublicService<fuchsia::sys::Runner>(
+      [this](fidl::InterfaceRequest<fuchsia::sys::Runner> request) {
         bindings_.AddBinding(this, std::move(request));
       });
 }
@@ -23,16 +23,16 @@ GuestRunner::GuestRunner()
 GuestRunner::~GuestRunner() = default;
 
 void GuestRunner::StartComponent(
-    component::Package application, component::StartupInfo startup_info,
-    ::fidl::InterfaceRequest<component::ComponentController> controller) {
-  component::LaunchInfo launch_info;
+    fuchsia::sys::Package application, fuchsia::sys::StartupInfo startup_info,
+    ::fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
+  fuchsia::sys::LaunchInfo launch_info;
 
   // Pass-through our arguments directly to the vmm package.
   launch_info.url = "vmm";
   launch_info.arguments = std::move(startup_info.launch_info.arguments);
 
   // Expose the specific guest package under the /guest namespace.
-  launch_info.flat_namespace = component::FlatNamespace::New();
+  launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
   for (size_t i = 0; i < startup_info.flat_namespace.paths->size(); ++i) {
     const auto& path = (*startup_info.flat_namespace.paths)[i];
     if (path == "/pkg") {

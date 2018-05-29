@@ -20,7 +20,7 @@ struct GuestLaunchInfo {
 
   // A flat namespace to be appended to the default namespace for the vmm
   // process.
-  component.FlatNamespace? flat_namespace;
+  fuchsia.sys.FlatNamespace? flat_namespace;
 };
 
 interface GuestEnvironment {

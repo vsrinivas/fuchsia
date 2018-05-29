@@ -37,7 +37,7 @@ class App final : public bluetooth_low_energy::PeripheralDelegate {
   void OnCentralDisconnected(fidl::StringPtr device_id) override;
 
   // Application
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
 
   // GATT
   Service service_;

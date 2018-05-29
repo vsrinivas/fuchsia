@@ -35,7 +35,8 @@
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/svc/cpp/services.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 namespace {
 
 constexpr zx_rights_t kChildJobRights = ZX_RIGHTS_BASIC | ZX_RIGHTS_IO;
@@ -69,7 +70,7 @@ std::string GetLabelFromURL(const std::string& url) {
   return url.substr(last_slash + 1);
 }
 
-void PushFileDescriptor(component::FileDescriptorPtr fd, int new_fd,
+void PushFileDescriptor(fuchsia::sys::FileDescriptorPtr fd, int new_fd,
                         std::vector<uint32_t>* ids,
                         std::vector<zx_handle_t>* handles) {
   if (!fd)
@@ -224,7 +225,7 @@ Realm::Realm(Realm* parent, zx::channel host_directory, fidl::StringPtr label)
   if (label->size() == 0)
     label_ = fxl::StringPrintf(kNumberedLabelFormat, next_numbered_label_++);
   else
-    label_ = label.get().substr(0, component::kLabelMaxLength);
+    label_ = label.get().substr(0, fuchsia::sys::kLabelMaxLength);
 
   fsl::SetObjectName(job_.get(), label_);
   hub_.SetName(label_);
@@ -257,7 +258,7 @@ zx::channel Realm::OpenRootInfoDir() {
 }
 
 HubInfo Realm::HubInfo() {
-  return component::HubInfo(label_, koid_, hub_.dir());
+  return fuchsia::sys::HubInfo(label_, koid_, hub_.dir());
 }
 
 void Realm::CreateNestedJob(
@@ -615,4 +616,5 @@ zx_status_t Realm::BindSvc(zx::channel channel) {
                                channel.release());
 }
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia

@@ -31,7 +31,7 @@ class GuestManagerImpl : public fuchsia::guest::GuestManager {
       uint32_t id,
       fidl::InterfaceRequest<fuchsia::guest::GuestEnvironment> env) override;
 
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
   fidl::BindingSet<fuchsia::guest::GuestManager> bindings_;
   std::unordered_map<uint32_t, std::unique_ptr<GuestEnvironmentImpl>>
       environments_;

@@ -11,7 +11,8 @@
 
 #include "gtest/gtest.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 namespace {
 
 TEST(NamespaceBuilder, Control) {
@@ -97,4 +98,5 @@ TEST(NamespaceBuilder, Shell) {
 }
 
 }  // namespace
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia

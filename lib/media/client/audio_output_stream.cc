@@ -59,7 +59,7 @@ bool AudioOutputStream::Initialize(fuchsia_audio_parameters* params,
 
 bool AudioOutputStream::AcquireRenderer() {
   media::AudioServerSyncPtr audio_server;
-  component::ConnectToEnvironmentService(audio_server.NewRequest());
+  fuchsia::sys::ConnectToEnvironmentService(audio_server.NewRequest());
 
   if (!audio_server->CreateRenderer(audio_renderer_.NewRequest(),
                                     media_renderer_.NewRequest())) {

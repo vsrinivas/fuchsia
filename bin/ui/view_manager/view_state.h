@@ -106,11 +106,11 @@ class ViewState : public ViewContainerState {
     return focus_chain_.get();
   }
 
-  component::ServiceProvider* GetServiceProviderIfSupports(
+  fuchsia::sys::ServiceProvider* GetServiceProviderIfSupports(
       std::string service_name);
 
   void SetServiceProvider(
-      fidl::InterfaceHandle<component::ServiceProvider> service_provider,
+      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> service_provider,
       fidl::VectorPtr<fidl::StringPtr> service_names);
 
  private:
@@ -134,7 +134,7 @@ class ViewState : public ViewContainerState {
   uint32_t invalidation_flags_ = 0u;
 
   std::unique_ptr<FocusChain> focus_chain_;
-  component::ServiceProviderPtr service_provider_;
+  fuchsia::sys::ServiceProviderPtr service_provider_;
   fidl::VectorPtr<fidl::StringPtr> service_names_;
 
   fxl::WeakPtrFactory<ViewState> weak_factory_;  // must be last

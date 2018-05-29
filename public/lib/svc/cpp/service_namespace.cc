@@ -14,13 +14,14 @@
 
 #include "lib/fxl/files/unique_fd.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 ServiceNamespace::ServiceNamespace()
     : directory_(fbl::AdoptRef(new fs::PseudoDir())) {}
 
 ServiceNamespace::ServiceNamespace(
-    fidl::InterfaceRequest<component::ServiceProvider> request)
+    fidl::InterfaceRequest<ServiceProvider> request)
     : ServiceNamespace() {
   AddBinding(std::move(request));
 }
@@ -31,7 +32,7 @@ ServiceNamespace::ServiceNamespace(fbl::RefPtr<fs::PseudoDir> directory)
 ServiceNamespace::~ServiceNamespace() = default;
 
 void ServiceNamespace::AddBinding(
-    fidl::InterfaceRequest<component::ServiceProvider> request) {
+    fidl::InterfaceRequest<ServiceProvider> request) {
   if (request)
     bindings_.AddBinding(this, std::move(request));
 }
@@ -74,4 +75,5 @@ void ServiceNamespace::ConnectCommon(const std::string& service_name,
     it->second(std::move(channel));
 }
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia

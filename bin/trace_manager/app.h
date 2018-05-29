@@ -23,7 +23,7 @@ class TraceManagerApp {
   ~TraceManagerApp();
 
  private:
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
   TraceManager trace_manager_;
   fidl::BindingSet<fuchsia::tracelink::Registry> trace_registry_bindings_;
   fidl::BindingSet<TraceController> trace_controller_bindings_;

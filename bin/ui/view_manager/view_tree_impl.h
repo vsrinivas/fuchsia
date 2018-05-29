@@ -18,7 +18,7 @@ class ViewTreeState;
 // This object is owned by its associated ViewTreeState.
 class ViewTreeImpl : public ::fuchsia::ui::views_v1::ViewTree,
                      public ::fuchsia::ui::views_v1::ViewContainer,
-                     public component::ServiceProvider {
+                     public fuchsia::sys::ServiceProvider {
  public:
   ViewTreeImpl(ViewRegistry* registry, ViewTreeState* state);
   ~ViewTreeImpl() override;
@@ -26,7 +26,7 @@ class ViewTreeImpl : public ::fuchsia::ui::views_v1::ViewTree,
  private:
   // |ViewTree|:
   void GetToken(GetTokenCallback callback) override;
-  void GetServiceProvider(fidl::InterfaceRequest<component::ServiceProvider>
+  void GetServiceProvider(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
                               service_provider) override;
   void GetContainer(fidl::InterfaceRequest<::fuchsia::ui::views_v1::ViewContainer>
                         view_container_request) override;
@@ -46,13 +46,13 @@ class ViewTreeImpl : public ::fuchsia::ui::views_v1::ViewTree,
       ::fuchsia::ui::views_v1::ViewPropertiesPtr child_view_properties) override;
   void RequestFocus(uint32_t child_key) override;
 
-  // |component::ServiceProvider|:
+  // |fuchsia::sys::ServiceProvider|:
   void ConnectToService(fidl::StringPtr service_name,
                         zx::channel client_handle) override;
 
   ViewRegistry* const registry_;
   ViewTreeState* const state_;
-  fidl::BindingSet<component::ServiceProvider> service_provider_bindings_;
+  fidl::BindingSet<fuchsia::sys::ServiceProvider> service_provider_bindings_;
   fidl::BindingSet<::fuchsia::ui::views_v1::ViewContainer> container_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ViewTreeImpl);

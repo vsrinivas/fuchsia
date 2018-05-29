@@ -15,7 +15,7 @@
 #include "lib/ui/tests/mocks/mock_view_tree_listener.h"
 #include "lib/ui/tests/test_with_message_loop.h"
 
-extern std::unique_ptr<component::StartupContext> g_startup_context;
+extern std::unique_ptr<fuchsia::sys::StartupContext> g_startup_context;
 
 namespace view_manager {
 namespace test {

@@ -11,18 +11,18 @@ import (
 	"app/context"
 	"svc/services"
 
-	"fidl/component"
 	"fidl/echo2"
+	"fidl/fuchsia/sys"
 )
 
 type echoClientApp struct {
 	ctx          *context.Context
 	echoProvider *services.Provider
-	controller   *component.ComponentControllerInterface
+	controller   *sys.ComponentControllerInterface
 	echo         *echo2.EchoInterface
 }
 
-func (a *echoClientApp) startApplication(serverURL string) (li *component.ComponentControllerInterface, err error) {
+func (a *echoClientApp) startApplication(serverURL string) (li *sys.ComponentControllerInterface, err error) {
 	pr, err := a.echoProvider.NewRequest()
 	if err != nil {
 		return nil, fmt.Errorf("NewRequest failed: %v", err)
@@ -33,12 +33,12 @@ func (a *echoClientApp) startApplication(serverURL string) (li *component.Compon
 		}
 	}()
 
-	launchInfo := component.LaunchInfo{
+	launchInfo := sys.LaunchInfo{
 		Url:              serverURL,
 		DirectoryRequest: pr,
 	}
 
-	cr, cp, err := component.NewComponentControllerInterfaceRequest()
+	cr, cp, err := sys.NewComponentControllerInterfaceRequest()
 	if err != nil {
 		return nil, fmt.Errorf("NewComponentControllerInterfaceRequest failed: %v", err)
 	}

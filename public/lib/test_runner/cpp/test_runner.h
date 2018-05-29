@@ -84,7 +84,7 @@ class TestRunnerImpl : public TestRunner {
 // reporting anything, we declare the test a failure.
 class TestRunContext {
  public:
-  TestRunContext(std::shared_ptr<component::StartupContext> app_context,
+  TestRunContext(std::shared_ptr<fuchsia::sys::StartupContext> app_context,
                  TestRunObserver* connection, const std::string& test_id,
                  const std::string& url, const std::vector<std::string>& args);
 
@@ -95,7 +95,7 @@ class TestRunContext {
   void Teardown(TestRunnerImpl* teardown_client);
 
  private:
-  component::ComponentControllerPtr child_controller_;
+  fuchsia::sys::ComponentControllerPtr child_controller_;
   std::unique_ptr<Scope> child_env_scope_;
 
   TestRunObserver* const test_runner_connection_;

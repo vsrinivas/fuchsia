@@ -18,11 +18,11 @@ namespace mozart {
 
 // Parameters for creating a view.
 struct ViewContext {
-  component::StartupContext* startup_context;
+  fuchsia::sys::StartupContext* startup_context;
   ::fuchsia::ui::views_v1::ViewManagerPtr view_manager;
   fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
       view_owner_request;
-  fidl::InterfaceRequest<component::ServiceProvider> outgoing_services;
+  fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> outgoing_services;
 };
 
 // A callback to create a view in response to a call to
@@ -37,7 +37,7 @@ using ViewFactory =
 // This is only intended to be used for simple example programs.
 class ViewProviderService : public ::fuchsia::ui::views_v1::ViewProvider {
  public:
-  explicit ViewProviderService(component::StartupContext* startup_context,
+  explicit ViewProviderService(fuchsia::sys::StartupContext* startup_context,
                                ViewFactory factory);
   ~ViewProviderService();
 
@@ -45,11 +45,11 @@ class ViewProviderService : public ::fuchsia::ui::views_v1::ViewProvider {
   void CreateView(
       fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
           view_owner_request,
-      fidl::InterfaceRequest<component::ServiceProvider> view_services)
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> view_services)
       override;
 
  private:
-  component::StartupContext* startup_context_;
+  fuchsia::sys::StartupContext* startup_context_;
   ViewFactory view_factory_;
 
   fidl::BindingSet<ViewProvider> bindings_;

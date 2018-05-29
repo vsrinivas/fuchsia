@@ -14,12 +14,13 @@
 #include <unordered_map>
 #include <utility>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 // ServiceProviderBridge is a bridge between a service provider and a service
 // directory.
@@ -27,7 +28,7 @@ namespace component {
 // The bridge takes a service provider to use as a backend and exposes both the
 // service provider interface and the directory interface, which will make it
 // easier to migrate clients to the directory interface.
-class ServiceProviderBridge : public component::ServiceProvider {
+class ServiceProviderBridge : public ServiceProvider {
  public:
   ServiceProviderBridge();
   ~ServiceProviderBridge() override;
@@ -51,7 +52,7 @@ class ServiceProviderBridge : public component::ServiceProvider {
         service_name);
   }
 
-  void set_backend(component::ServiceProviderPtr backend) {
+  void set_backend(ServiceProviderPtr backend) {
     backend_ = std::move(backend);
   }
 
@@ -59,7 +60,7 @@ class ServiceProviderBridge : public component::ServiceProvider {
     backing_dir_ = std::move(backing_dir);
   }
 
-  void AddBinding(fidl::InterfaceRequest<component::ServiceProvider> request);
+  void AddBinding(fidl::InterfaceRequest<ServiceProvider> request);
   bool ServeDirectory(zx::channel channel);
 
   zx::channel OpenAsDirectory();
@@ -83,16 +84,16 @@ class ServiceProviderBridge : public component::ServiceProvider {
     fxl::WeakPtr<ServiceProviderBridge> const bridge_;
   };
 
-  // Overridden from |component::ServiceProvider|:
+  // Overridden from |ServiceProvider|:
   void ConnectToService(fidl::StringPtr service_name,
                         zx::channel channel) override;
 
   fs::SynchronousVfs vfs_;
-  fidl::BindingSet<component::ServiceProvider> bindings_;
+  fidl::BindingSet<ServiceProvider> bindings_;
   fbl::RefPtr<ServiceProviderDir> directory_;
 
   std::map<std::string, ServiceConnector> name_to_service_connector_;
-  component::ServiceProviderPtr backend_;
+  ServiceProviderPtr backend_;
   zx::channel backing_dir_;
 
   fxl::WeakPtrFactory<ServiceProviderBridge> weak_factory_;
@@ -100,6 +101,7 @@ class ServiceProviderBridge : public component::ServiceProvider {
   FXL_DISALLOW_COPY_AND_ASSIGN(ServiceProviderBridge);
 };
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia
 
 #endif  // LIB_SVC_CPP_SERVICE_PROVIDER_BRIDGE_H_

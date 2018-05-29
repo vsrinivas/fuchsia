@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
 
   {
     async::Loop loop(&kAsyncLoopConfigMakeDefault);
-    auto context = component::StartupContext::CreateFromStartupInfo();
+    auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
     test_runner::ReportResult(argv[0], context.get(), listener.GetResults());
   }
 

@@ -16,9 +16,9 @@ extern crate fidl;
 extern crate futures;
 
 // Generated FIDL bindings
-extern crate fidl_component;
+extern crate fidl_fuchsia_sys;
 
-use fidl_component::{
+use fidl_fuchsia_sys::{
     ComponentControllerProxy,
     ApplicationLauncherMarker,
     ApplicationLauncherProxy,

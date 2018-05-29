@@ -11,7 +11,7 @@
 
 namespace test_runner {
 
-void ReportResult(std::string identity, component::StartupContext* context,
+void ReportResult(std::string identity, fuchsia::sys::StartupContext* context,
                   std::vector<TestResultPtr> results) {
   if (!context->has_environment_services()) {
     return;

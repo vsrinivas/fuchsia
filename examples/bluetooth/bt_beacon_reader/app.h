@@ -26,7 +26,7 @@ class App final : public bluetooth_low_energy::CentralDelegate {
   void OnPeripheralDisconnected(::fidl::StringPtr identifier);
 
   async::Loop* const loop_;
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
   bluetooth_low_energy::CentralPtr central_;
 
   // Local CentralDelegate binding.

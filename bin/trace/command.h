@@ -27,7 +27,7 @@ class Command {
   using OnDoneCallback = std::function<void(int32_t)>;
   struct Info {
     using CommandFactory =
-        std::function<std::unique_ptr<Command>(component::StartupContext*)>;
+        std::function<std::unique_ptr<Command>(fuchsia::sys::StartupContext*)>;
 
     CommandFactory factory;
     std::string name;
@@ -42,10 +42,10 @@ class Command {
  protected:
   static std::ostream& out();
 
-  explicit Command(component::StartupContext* context);
+  explicit Command(fuchsia::sys::StartupContext* context);
 
-  component::StartupContext* context();
-  component::StartupContext* context() const;
+  fuchsia::sys::StartupContext* context();
+  fuchsia::sys::StartupContext* context() const;
 
   // Starts running the command.
   // The command must invoke Done() when finished.
@@ -53,7 +53,7 @@ class Command {
   void Done(int32_t return_code);
 
  private:
-  component::StartupContext* context_;
+  fuchsia::sys::StartupContext* context_;
   OnDoneCallback on_done_;
   int32_t return_code_ = -1;
 
@@ -62,13 +62,13 @@ class Command {
 
 class CommandWithTraceController : public Command {
  protected:
-  explicit CommandWithTraceController(component::StartupContext* context);
+  explicit CommandWithTraceController(fuchsia::sys::StartupContext* context);
 
   TraceControllerPtr& trace_controller();
   const TraceControllerPtr& trace_controller() const;
 
  private:
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
   TraceControllerPtr trace_controller_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CommandWithTraceController);

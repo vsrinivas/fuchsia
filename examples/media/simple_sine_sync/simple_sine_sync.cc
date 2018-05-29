@@ -128,7 +128,7 @@ int MediaApp::Run() {
 // Connect to the AudioServer and get an AudioRenderer.
 bool MediaApp::AcquireRenderer() {
   media::AudioServerSyncPtr audio_server;
-  component::ConnectToEnvironmentService(audio_server.NewRequest());
+  fuchsia::sys::ConnectToEnvironmentService(audio_server.NewRequest());
   return audio_server->CreateRendererV2(audio_renderer_.NewRequest());
 }
 

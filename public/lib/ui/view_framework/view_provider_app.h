@@ -22,7 +22,7 @@ class ViewProviderApp {
   ~ViewProviderApp();
 
  private:
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   ViewProviderService service_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ViewProviderApp);

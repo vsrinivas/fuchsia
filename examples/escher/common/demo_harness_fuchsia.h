@@ -28,7 +28,7 @@ class DemoHarnessFuchsia : public DemoHarness, public escher_demo::EscherDemo {
                            double ypos) override;
   void HandleTouchEnd(uint64_t touch_id, double xpos, double ypos) override;
 
-  component::StartupContext* startup_context() {
+  fuchsia::sys::StartupContext* startup_context() {
     return startup_context_.get();
   }
 
@@ -52,9 +52,9 @@ class DemoHarnessFuchsia : public DemoHarness, public escher_demo::EscherDemo {
   async::Loop* loop_;
   std::unique_ptr<async::Loop> owned_loop_;
 
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   fidl::Binding<escher_demo::EscherDemo> escher_demo_binding_;
-  std::unique_ptr<component::ServiceProviderImpl> outgoing_services_;
+  std::unique_ptr<fuchsia::sys::ServiceProviderImpl> outgoing_services_;
 };
 
 #endif  // GARNET_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_FUCHSIA_H_

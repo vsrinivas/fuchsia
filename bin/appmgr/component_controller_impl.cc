@@ -18,7 +18,8 @@
 #include "lib/fsl/handles/object_info.h"
 #include "lib/fxl/functional/closure.h"
 
-namespace component {
+namespace fuchsia {
+namespace sys {
 
 ComponentControllerImpl::ComponentControllerImpl(
     fidl::InterfaceRequest<ComponentController> request, Realm* realm,
@@ -76,12 +77,11 @@ ComponentControllerImpl::~ComponentControllerImpl() {
   // 1) OnHandleReady() destroys this object; in which case, process is dead.
   // 2) Our owner destroys this object; in which case, the process may still be
   //    alive.
-  if (process_)
-    process_.kill();
+  if (process_) process_.kill();
 }
 
 HubInfo ComponentControllerImpl::HubInfo() {
-  return component::HubInfo(label_, koid_, hub_.dir());
+  return fuchsia::sys::HubInfo(label_, koid_, hub_.dir());
 }
 
 void ComponentControllerImpl::Kill() { process_.kill(); }
@@ -131,4 +131,5 @@ void ComponentControllerImpl::Handler(async_t* async, async::WaitBase* wait,
   // |this| at the end of the previous statement.
 }
 
-}  // namespace component
+}  // namespace sys
+}  // namespace fuchsia

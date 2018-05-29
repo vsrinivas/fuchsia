@@ -45,7 +45,7 @@ static constexpr float kEdgeLength = 900;
 static constexpr uint64_t kBillion = 1000000000;
 
 App::App(async::Loop* loop)
-    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
+    : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
       loop_(loop) {
   // Connect to the Mozart service.
   scenic_ = startup_context_

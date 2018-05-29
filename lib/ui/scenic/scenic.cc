@@ -9,7 +9,7 @@
 
 namespace scenic {
 
-Scenic::Scenic(component::StartupContext* app_context,
+Scenic::Scenic(fuchsia::sys::StartupContext* app_context,
                fit::closure quit_callback)
     : app_context_(app_context), quit_callback_(std::move(quit_callback)) {
   FXL_DCHECK(app_context_);

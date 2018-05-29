@@ -7,7 +7,7 @@
 
 #include <unordered_map>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/svc/cpp/service_namespace.h"
@@ -18,48 +18,48 @@ namespace netconnector {
 // Provides services based on service registrations.
 class RespondingServiceHost {
  public:
-  RespondingServiceHost(const component::EnvironmentPtr& environment);
+  RespondingServiceHost(const fuchsia::sys::EnvironmentPtr& environment);
 
   ~RespondingServiceHost();
 
   // Registers a singleton service.
   void RegisterSingleton(const std::string& service_name,
-                         component::LaunchInfoPtr launch_info);
+                         fuchsia::sys::LaunchInfoPtr launch_info);
 
   // Registers a provider for a singleton service.
   void RegisterProvider(
       const std::string& service_name,
-      fidl::InterfaceHandle<component::ServiceProvider> handle);
+      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> handle);
 
-  component::ServiceProvider* services() {
-    return static_cast<component::ServiceProvider*>(&service_namespace_);
+  fuchsia::sys::ServiceProvider* services() {
+    return static_cast<fuchsia::sys::ServiceProvider*>(&service_namespace_);
   }
 
   // Adds a binding to the service provider.
-  void AddBinding(fidl::InterfaceRequest<component::ServiceProvider> request) {
+  void AddBinding(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request) {
     service_namespace_.AddBinding(std::move(request));
   }
 
  private:
   class ServicesHolder {
    public:
-    ServicesHolder(component::Services services,
-                   component::ComponentControllerPtr controller)
+    ServicesHolder(fuchsia::sys::Services services,
+                   fuchsia::sys::ComponentControllerPtr controller)
         : services_(std::move(services)) {}
-    ServicesHolder(component::ServiceProviderPtr service_provider)
+    ServicesHolder(fuchsia::sys::ServiceProviderPtr service_provider)
         : service_provider_(std::move(service_provider)),
           is_service_provider_(true) {}
     void ConnectToService(const std::string& service_name, zx::channel c);
 
    private:
-    component::Services services_;
-    component::ServiceProviderPtr service_provider_;
+    fuchsia::sys::Services services_;
+    fuchsia::sys::ServiceProviderPtr service_provider_;
     const bool is_service_provider_{};
   };
   std::unordered_map<std::string, ServicesHolder> service_providers_by_name_;
 
-  component::ServiceNamespace service_namespace_;
-  component::ApplicationLauncherPtr launcher_;
+  fuchsia::sys::ServiceNamespace service_namespace_;
+  fuchsia::sys::ApplicationLauncherPtr launcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RespondingServiceHost);
 };
