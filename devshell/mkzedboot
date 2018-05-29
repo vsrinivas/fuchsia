@@ -134,10 +134,10 @@ echo "done"
 
 echo "Writing zedboot for EFI"
 unmountcmd
-dd if="${FUCHSIA_BUILD_DIR}/images/zedboot-${board}.esp.blk" of="${USB_DEVICE}" seek=${esp_offset}
+dd if="${FUCHSIA_BUILD_DIR}/images/zedboot.esp.blk" of="${USB_DEVICE}" seek=${esp_offset}
 echo "Writing zedboot for Cros"
 unmountcmd
-dd if="${FUCHSIA_BUILD_DIR}/images/zedboot-${board}.vboot" of="${USB_DEVICE}" seek=${vboot_offset}
+dd if="${FUCHSIA_BUILD_DIR}/images/zedboot.vboot" of="${USB_DEVICE}" seek=${vboot_offset}
 if $include_install; then
   echo "Writing install partition"
   unmountcmd
