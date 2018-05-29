@@ -13,9 +13,9 @@
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
+#include "peridot/bin/suggestion_engine/auto_select_first_query_listener.h"
 #include "peridot/bin/suggestion_engine/debug.h"
 #include "peridot/bin/suggestion_engine/interruptions_processor.h"
-#include "peridot/bin/suggestion_engine/auto_select_first_query_listener.h"
 #include "peridot/bin/suggestion_engine/next_processor.h"
 #include "peridot/bin/suggestion_engine/proposal_publisher_impl.h"
 #include "peridot/bin/suggestion_engine/query_processor.h"
@@ -95,8 +95,7 @@ class SuggestionEngineImpl : public ContextListener,
                        int count) override;
 
   // |SuggestionProvider|
-  void Query(fidl::InterfaceHandle<QueryListener> listener,
-             UserInput input,
+  void Query(fidl::InterfaceHandle<QueryListener> listener, UserInput input,
              int count) override;
 
   // |SuggestionProvider|
@@ -185,9 +184,7 @@ class SuggestionEngineImpl : public ContextListener,
 
   void PerformQueryAction(const Action& action);
 
-  void PerformCustomAction(Action* action,
-                           SuggestionDisplay suggestion_display,
-                           const std::string& story_id);
+  void PerformCustomAction(Action* action);
 
   void RegisterRankingFeatures();
 

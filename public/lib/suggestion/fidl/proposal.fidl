@@ -117,11 +117,8 @@ struct SetLinkValueAction {
 };
 
 // An action that calls back to the proposal publisher to be performed.
-// The callback can optionally resolve to a sequence of actions to perform.
-// This can be used to defer expensive RPCs until the suggestion has been
-// selected.
 interface CustomAction {
-  1: Execute() -> (vector<Action?>? actions);
+  1: Execute();
 };
 
 // Performs a query with the given text. Once the proposals from the query are

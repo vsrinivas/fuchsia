@@ -303,10 +303,7 @@ void SuggestionEngineImpl::ExecuteActions(
         break;
       }
       case Action::Tag::kCustomAction: {
-        SuggestionDisplay cloned_display;
-        suggestion_display.Clone(&cloned_display);
-        PerformCustomAction(&action, std::move(cloned_display),
-                            override_story_id);
+        PerformCustomAction(&action);
         break;
       }
       default:
@@ -425,14 +422,8 @@ void SuggestionEngineImpl::PerformAddModuleAction(
                               fidl::MakeOptional(add_module.surface_relation));
 }
 
-void SuggestionEngineImpl::PerformCustomAction(
-    Action* action, SuggestionDisplay suggestion_display,
-    const std::string& override_story_id) {
-  auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
-  auto custom_action = action->custom_action().Bind();
-  // TODO(rosswang): either fix this or remove it
-  // MI4-1005
-  custom_action->Execute([](fidl::VectorPtr<ActionPtr> actions) {});
+void SuggestionEngineImpl::PerformCustomAction(Action* action) {
+  action->custom_action().Bind()->Execute();
 }
 
 void SuggestionEngineImpl::PerformSetLinkValueAction(
