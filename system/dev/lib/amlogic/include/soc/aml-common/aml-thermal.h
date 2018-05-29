@@ -34,7 +34,7 @@ typedef struct {
     uint32_t                            trip_point_count;
     thermal_temperature_info_t          trip_point_info[MAX_TRIP_POINTS];
 
-    uint32_t                            num_fan_levels;
+    uint32_t                            critical_temp;
 } aml_thermal_config_t;
 
 typedef struct {
@@ -50,5 +50,5 @@ typedef struct {
 
     aml_thermal_config_t                *device;
 
-    int                                 current_trip_idx;
+    uint32_t                            current_trip_idx;
 } aml_thermal_t;

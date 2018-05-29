@@ -23,6 +23,7 @@ static const pbus_gpio_t fanctl_gpios[] = {
 
 static aml_thermal_config_t aml_vim2_config = {
     .trip_point_count               = 8,
+    .critical_temp                  = 81,
     .trip_point_info = {
         {
             .fan_level                  = 0,

@@ -52,6 +52,7 @@ static int aml_thermal_notify_thread(void* ctx) {
     aml_thermal_t* dev = ctx;
     uint32_t temperature;
     zx_port_packet_t thermal_port_packet;
+    bool critical_temp_measure_taken = false;
 
     thermal_port_packet.type = ZX_PKT_TYPE_USER;
 
@@ -64,14 +65,40 @@ static int aml_thermal_notify_thread(void* ctx) {
             return status;
         }
 
-        int idx = dev->current_trip_idx;
+        uint32_t idx = dev->current_trip_idx;
         bool signal = true;
-        if (temperature >= dev->device->trip_point_info[idx+1].up_temp) {
+
+        if ((idx != dev->device->trip_point_count-1) &&
+            (temperature >= dev->device->trip_point_info[idx+1].up_temp)) {
             // Triggered next trip point
             dev->current_trip_idx = idx + 1;
         } else if (idx != 0 && temperature < dev->device->trip_point_info[idx].down_temp) {
             // Triggered prev trip point
             dev->current_trip_idx = idx - 1;
+            if (idx == dev->device->trip_point_count-1) {
+                // A prev trip point triggered, so the temperature
+                // is falling down below the critical temperature
+                // make a note of that
+                critical_temp_measure_taken = false;
+            }
+        } else if ((idx == dev->device->trip_point_count-1) &&
+                   (temperature >= dev->device->critical_temp) &&
+                   critical_temp_measure_taken != true) {
+            // The device temperature is crossing the critical
+            // temperature, set the CPU freq to the lowest possible
+            // setting to ensure the temperature doesn't rise any further
+            signal = false;
+            critical_temp_measure_taken = true;
+            status = scpi_set_dvfs_idx(&dev->scpi, BIG_CLUSTER_POWER_DOMAIN, 0);
+            if (status != ZX_OK) {
+                THERMAL_ERROR("Unable to set DVFS OPP for Big cluster\n");
+                return status;
+            }
+            status = scpi_set_dvfs_idx(&dev->scpi, LITTLE_CLUSTER_POWER_DOMAIN, 0);
+            if (status != ZX_OK) {
+                THERMAL_ERROR("Unable to set DVFS OPP for Little cluster\n");
+                return status;
+            }
         } else {
             signal = false;
         }
