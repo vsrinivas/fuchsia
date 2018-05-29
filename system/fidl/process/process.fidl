@@ -59,6 +59,7 @@ struct LaunchResult {
     handle<vmar>? root_vmar;
 };
 
+[Discoverable]
 interface Launcher {
     // Creates and starts the process described by |info|.
     //
