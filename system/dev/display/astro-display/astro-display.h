@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zircon/device/display.h>
+#include <ddk/protocol/display-controller.h>
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/platform-device.h>
@@ -62,10 +62,29 @@ typedef struct {
     gpio_protocol_t                     gpio;
     i2c_protocol_t                      i2c;
     thrd_t                              main_thread;
+    // Lock for general display state, in particular display_id.
+    mtx_t                               display_lock;
+    // Lock for imported images.
+    mtx_t                               image_lock;
+    // Lock for the display callback, for enforcing an ordering on
+    // hotplug callbacks. Should be acquired before display_lock.
+    mtx_t                               cb_lock;
+    // TODO(stevensd): This can race if this is changed right after
+    // vsync but before the interrupt is handled.
+    uint8_t                             current_image;
 
     io_buffer_t                         mmio_dmc;
     io_buffer_t                         fbuffer;
     zx_display_info_t                   disp_info;
+    uint8_t                             fb_canvas_idx;
+    zx_handle_t                         vsync_interrupt;
+
+    // The current display id (if display_attached), or the next display id
+    uint64_t                            display_id;
+    uint32_t                            width;
+    uint32_t                            height;
+    uint32_t                            stride;
+    zx_pixel_format_t                   format;
 
     uint8_t                             input_color_format;
     uint8_t                             output_color_format;
@@ -74,6 +93,11 @@ typedef struct {
     bool                                console_visible;
     zx_display_cb_t                     ownership_change_callback;
     void*                               ownership_change_cookie;
+
+    display_controller_cb_t*            dc_cb;
+    void*                               dc_cb_ctx;
+    list_node_t                         imported_images;
+
 } astro_display_t;
 
 
