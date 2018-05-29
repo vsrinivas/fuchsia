@@ -4,19 +4,20 @@
 
 #include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 #include <trace/event.h>
 #include <zircon/syscalls.h>
 
 #include "garnet/lib/ui/gfx/displays/display.h"
 #include "garnet/lib/ui/gfx/engine/frame_timings.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
 namespace scenic {
 namespace gfx {
 
 FrameScheduler::FrameScheduler(Display* display)
-    : task_runner_(fsl::MessageLoop::GetCurrent()->task_runner().get()),
+    : dispatcher_(async_get_default()),
       display_(display),
       weak_factory_(this) {
   outstanding_frames_.reserve(kMaxOutstandingFrames);
@@ -141,13 +142,13 @@ void FrameScheduler::ScheduleFrame() {
   zx_time_t presentation_time = times.first;
   zx_time_t wakeup_time = times.second;
 
-  task_runner_->PostTaskForTime(
+  async::PostTaskForTime(
+      dispatcher_,
       [weak = weak_factory_.GetWeakPtr(), presentation_time, wakeup_time] {
         if (weak)
           weak->MaybeRenderFrame(presentation_time, wakeup_time);
       },
-      fxl::TimePoint::FromEpochDelta(
-          fxl::TimeDelta::FromNanoseconds(wakeup_time)));
+      zx::time(0) + zx::nsec(wakeup_time));
 }
 
 void FrameScheduler::MaybeRenderFrame(zx_time_t presentation_time,

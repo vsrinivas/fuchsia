@@ -4,6 +4,7 @@
 
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
 
+#include <lib/async/default.h>
 #include <zircon/device/display-controller.h>
 #include <zircon/pixelformat.h>
 #include <zircon/syscalls.h>
@@ -11,8 +12,6 @@
 
 #include "garnet/lib/ui/gfx/displays/display_watcher.h"
 #include "garnet/lib/ui/gfx/resources/renderers/renderer.h"
-
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace scenic {
 namespace gfx {
@@ -57,7 +56,7 @@ void DisplayManager::WaitForDefaultDisplay(fxl::Closure callback) {
 
         wait_.set_object(dc_channel_);
         wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-        wait_.Begin(fsl::MessageLoop::GetCurrent()->async());
+        wait_.Begin(async_get_default());
 #endif
       });
 }
@@ -80,7 +79,7 @@ void DisplayManager::OnAsync(async_t* async, async::WaitBase* self,
     return;
   }
   // Re-arm the wait.
-  wait_.Begin(fsl::MessageLoop::GetCurrent()->async());
+  wait_.Begin(async_get_default());
 
   // TODO(FIDL-183): Resolve this hack when synchronous interfaces
   // support events.

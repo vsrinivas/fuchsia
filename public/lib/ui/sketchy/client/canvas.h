@@ -5,6 +5,7 @@
 #ifndef LIB_UI_SKETCHY_CLIENT_CANVAS_H_
 #define LIB_UI_SKETCHY_CLIENT_CANVAS_H_
 
+#include <lib/async-loop/cpp/loop.h>
 #include <sketchy/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
@@ -17,8 +18,8 @@ namespace sketchy_lib {
 // Convenient C++ wrapper for sketchy::Canvas service.
 class Canvas final {
  public:
-  Canvas(component::ApplicationContext* context);
-  Canvas(sketchy::CanvasPtr canvas);
+  Canvas(component::ApplicationContext* context, async::Loop* loop);
+  Canvas(sketchy::CanvasPtr canvas, async::Loop* loop);
   void Present(uint64_t time, scenic_lib::Session::PresentCallback callback);
 
  private:
@@ -26,6 +27,7 @@ class Canvas final {
   ResourceId AllocateResourceId();
 
   sketchy::CanvasPtr canvas_;
+  async::Loop* const loop_;
   fidl::VectorPtr<sketchy::Command> commands_;
   ResourceId next_resource_id_;
 };

@@ -2,21 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <launchpad/launchpad.h>
 #include <unistd.h>
+
+#include <iostream>
+#include <sstream>
+
+#include <lib/async-loop/cpp/loop.h>
+#include <launchpad/launchpad.h>
+#include <test_runner/cpp/fidl.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls/object.h>
-#include <iostream>
 
-#include <test_runner/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/time/stopwatch.h"
 
 class Reporter {
  public:
-  Reporter(const std::string& name, test_runner::TestRunner* test_runner)
-      : name_(name), test_runner_(test_runner) {}
+  Reporter(async::Loop* loop,
+           const std::string& name, test_runner::TestRunner* test_runner)
+      : loop_(loop), name_(name), test_runner_(test_runner) {}
 
   ~Reporter() {}
 
@@ -33,12 +37,12 @@ class Reporter {
     result.message = message;
 
     test_runner_->ReportResult(std::move(result));
-    test_runner_->Teardown(
-        [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
-    fsl::MessageLoop::GetCurrent()->Run();
+    test_runner_->Teardown([this] { loop_->Quit(); });
+    loop_->Run();
   }
 
  private:
+  async::Loop* const loop_;
   std::string name_;
   test_runner::TestRunner* test_runner_;
   fxl::Stopwatch stopwatch_;
@@ -66,11 +70,11 @@ int main(int argc, char** argv) {
     name = "report_result";
   }
 
-  fsl::MessageLoop message_loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   auto test_runner =
       app_context->ConnectToEnvironmentService<test_runner::TestRunner>();
-  Reporter reporter(name, test_runner.get());
+  Reporter reporter(&loop, name, test_runner.get());
 
   if (!command_provided) {
     reporter.Start();

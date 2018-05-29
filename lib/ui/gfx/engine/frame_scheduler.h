@@ -5,16 +5,14 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_FRAME_SCHEDULER_H_
 #define GARNET_LIB_UI_GFX_ENGINE_FRAME_SCHEDULER_H_
 
-#include <lib/zx/time.h>
 #include <queue>
+
+#include <lib/async/dispatcher.h>
+#include <lib/zx/time.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"
-
-namespace fxl {
-class TaskRunner;
-}  // namespace fxl
 
 namespace scenic {
 namespace gfx {
@@ -105,7 +103,7 @@ class FrameScheduler {
   friend class FrameTimings;
   void OnFramePresented(FrameTimings* timings);
 
-  fxl::TaskRunner* const task_runner_;
+  async_t* const dispatcher_;
   FrameSchedulerDelegate* delegate_;
   Display* const display_;
 

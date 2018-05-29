@@ -8,6 +8,8 @@
 #include <memory>
 
 #include <escher_demo/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+
 #include "garnet/examples/escher/common/demo_harness.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -15,7 +17,7 @@
 
 class DemoHarnessFuchsia : public DemoHarness, public escher_demo::EscherDemo {
  public:
-  DemoHarnessFuchsia(WindowParams window_params);
+  DemoHarnessFuchsia(async::Loop* loop, WindowParams window_params);
 
   // |DemoHarness|
   void Run(Demo* demo) override;
@@ -49,8 +51,8 @@ class DemoHarnessFuchsia : public DemoHarness, public escher_demo::EscherDemo {
 
   // DemoHarnessFuchsia can work with a pre-existing MessageLoop, and also
   // create its own if necessary.
-  fsl::MessageLoop* loop_;
-  std::unique_ptr<fsl::MessageLoop> owned_loop_;
+  async::Loop* loop_;
+  std::unique_ptr<async::Loop> owned_loop_;
 
   std::unique_ptr<component::ApplicationContext> application_context_;
   fidl::Binding<escher_demo::EscherDemo> escher_demo_binding_;

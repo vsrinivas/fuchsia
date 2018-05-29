@@ -31,8 +31,9 @@ char* date_string() {
 
 namespace bt_beacon_reader {
 
-App::App(bool just_tilts)
-    : context_(component::ApplicationContext::CreateFromStartupInfo()),
+App::App(async::Loop* loop, bool just_tilts)
+    : loop_(loop),
+      context_(component::ApplicationContext::CreateFromStartupInfo()),
       central_delegate_(this),
       just_tilts_(just_tilts) {
   FXL_DCHECK(context_);
@@ -41,9 +42,9 @@ App::App(bool just_tilts)
       context_->ConnectToEnvironmentService<bluetooth_low_energy::Central>();
   FXL_DCHECK(central_);
 
-  central_.set_error_handler([] {
+  central_.set_error_handler([this] {
     printf("Central disconnected\n");
-    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+    loop_->Quit();
   });
 
   // Register with the Control as its delegate.

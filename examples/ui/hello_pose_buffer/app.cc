@@ -21,6 +21,7 @@
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "lib/app/cpp/connect.h"
 #include "lib/escher/util/image_utils.h"
@@ -43,16 +44,16 @@ static constexpr float kEdgeLength = 900;
 
 static constexpr uint64_t kBillion = 1000000000;
 
-App::App()
+App::App(async::Loop* loop)
     : application_context_(
           component::ApplicationContext::CreateFromStartupInfo()),
-      loop_(fsl::MessageLoop::GetCurrent()) {
+      loop_(loop) {
   // Connect to the Mozart service.
   scenic_ =
       application_context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([this] {
     FXL_LOG(INFO) << "Lost connection to Mozart service.";
-    loop_->QuitNow();
+    loop_->Quit();
   });
   scenic_->GetDisplayInfo(
       [this](fuchsia::ui::gfx::DisplayInfo display_info) { Init(std::move(display_info)); });
@@ -157,7 +158,7 @@ void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
   session_ = std::make_unique<scenic_lib::Session>(scenic_.get());
   session_->set_error_handler([this] {
     FXL_LOG(INFO) << "Session terminated.";
-    loop_->QuitNow();
+    loop_->Quit();
   });
 
   // Wait kSessionDuration seconds, and close the session.

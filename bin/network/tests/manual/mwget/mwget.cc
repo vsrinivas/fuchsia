@@ -4,12 +4,14 @@
 
 #include <stdlib.h>
 
+#include <lib/async-loop/cpp/loop.h>
+#include <network/cpp/fidl.h>
+#include <network/cpp/fidl.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include <network/cpp/fidl.h>
-#include <network/cpp/fidl.h>
 
 namespace examples {
 
@@ -57,10 +59,12 @@ class MWGetApp {
  public:
   static constexpr int MAX_LOADERS = 100;
 
-  MWGetApp()
-      : context_(component::ApplicationContext::CreateFromStartupInfo()) {
+  MWGetApp(async::Loop* loop)
+      : context_(component::ApplicationContext::CreateFromStartupInfo()),
+        loop_(loop) {
     network_service_ =
         context_->ConnectToEnvironmentService<network::NetworkService>();
+    FXL_DCHECK(loop);
     FXL_DCHECK(network_service_);
   }
 
@@ -97,7 +101,7 @@ class MWGetApp {
                               printf("[%d] #%d done\n", num_done_, i);
                               if (num_done_ == num_loaders_) {
                                 printf("All done!\n");
-                                fsl::MessageLoop::GetCurrent()->QuitNow();
+                                loop_->Quit();
                               }
                             });
     }
@@ -107,6 +111,7 @@ class MWGetApp {
  private:
   std::unique_ptr<component::ApplicationContext> context_;
 
+  async::Loop* const loop_;
   network::NetworkServicePtr network_service_;
   network::URLLoaderPtr url_loader_[MAX_LOADERS];
   int num_loaders_;
@@ -117,9 +122,9 @@ class MWGetApp {
 
 int main(int argc, const char** argv) {
   std::vector<std::string> args(argv, argv + argc);
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  examples::MWGetApp app;
+  examples::MWGetApp app(&loop);
   if (app.Start(args))
     loop.Run();
 
