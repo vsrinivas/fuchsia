@@ -5,9 +5,13 @@
 source_set("decode") {
   sources = [
     "decoder.h",
+    "software_decoder.cc",
+    "software_decoder.h",
   ]
 
   deps = [
     "//garnet/bin/media/media_player/framework",
+    "//garnet/bin/media/media_player/metrics",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }

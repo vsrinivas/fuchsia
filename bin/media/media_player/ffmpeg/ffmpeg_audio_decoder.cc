@@ -50,17 +50,17 @@ void FfmpegAudioDecoder::OnNewInputPacket(const PacketPtr& packet) {
   }
 }
 
-int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
-                                     AVFrame* av_frame,
-                                     PayloadAllocator* allocator) {
+int FfmpegAudioDecoder::BuildAVFrame(
+    const AVCodecContext& av_codec_context, AVFrame* av_frame,
+    const std::shared_ptr<PayloadAllocator>& allocator) {
   FXL_DCHECK(av_frame);
   FXL_DCHECK(allocator);
 
   // Use the provided allocator unless we intend to interleave later, in which
   // case use the default allocator. We'll interleave into a buffer from the
   // provided allocator in CreateOutputPacket.
-  PayloadAllocator* allocator_to_use =
-      (lpcm_util_ == nullptr) ? allocator : default_allocator_.get();
+  const std::shared_ptr<PayloadAllocator>& allocator_to_use =
+      (lpcm_util_ == nullptr) ? allocator : default_allocator_;
   FXL_DCHECK(allocator_to_use);
 
   AVSampleFormat av_sample_format =

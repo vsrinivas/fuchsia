@@ -35,7 +35,6 @@ source_set("ffmpeg") {
     "//garnet/bin/media/media_player/decode",
     "//garnet/bin/media/media_player/demux",
     "//garnet/bin/media/media_player/framework",
-    "//garnet/bin/media/media_player/metrics",
     "//garnet/bin/media/media_player/util",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",

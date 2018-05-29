@@ -53,9 +53,9 @@ void FfmpegVideoDecoder::OnNewInputPacket(const PacketPtr& packet) {
   context()->reordered_opaque = packet->pts();
 }
 
-int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
-                                     AVFrame* av_frame,
-                                     PayloadAllocator* allocator) {
+int FfmpegVideoDecoder::BuildAVFrame(
+    const AVCodecContext& av_codec_context, AVFrame* av_frame,
+    const std::shared_ptr<PayloadAllocator>& allocator) {
   FXL_DCHECK(av_frame);
   FXL_DCHECK(allocator);
 

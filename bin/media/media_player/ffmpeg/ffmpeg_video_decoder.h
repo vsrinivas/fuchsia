@@ -25,7 +25,7 @@ class FfmpegVideoDecoder : public FfmpegDecoderBase {
   void OnNewInputPacket(const PacketPtr& packet) override;
 
   int BuildAVFrame(const AVCodecContext& av_codec_context, AVFrame* av_frame,
-                   PayloadAllocator* allocator) override;
+                   const std::shared_ptr<PayloadAllocator>& allocator) override;
 
   PacketPtr CreateOutputPacket(
       const AVFrame& av_frame,

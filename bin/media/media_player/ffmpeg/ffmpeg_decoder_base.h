@@ -5,16 +5,14 @@
 #ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_FFMPEG_FFMPEG_DECODER_BASE_H_
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_FFMPEG_FFMPEG_DECODER_BASE_H_
 
-#include <atomic>
 #include <limits>
 
 #include <lib/async-loop/cpp/loop.h>
 
-#include "garnet/bin/media/media_player/decode/decoder.h"
+#include "garnet/bin/media/media_player/decode/software_decoder.h"
 #include "garnet/bin/media/media_player/ffmpeg/av_codec_context.h"
 #include "garnet/bin/media/media_player/ffmpeg/av_frame.h"
 #include "garnet/bin/media/media_player/ffmpeg/av_packet.h"
-#include "garnet/bin/media/media_player/metrics/value_tracker.h"
 extern "C" {
 #include "third_party/ffmpeg/libavcodec/avcodec.h"
 }
@@ -22,7 +20,7 @@ extern "C" {
 namespace media_player {
 
 // Abstract base class for ffmpeg-based decoders.
-class FfmpegDecoderBase : public Decoder {
+class FfmpegDecoderBase : public SoftwareDecoder {
  public:
   FfmpegDecoderBase(AvCodecContextPtr av_codec_context);
 
@@ -33,25 +31,6 @@ class FfmpegDecoderBase : public Decoder {
 
   // AsyncNode implementation.
   void Dump(std::ostream& os) const override;
-
-  void GetConfiguration(size_t* input_count, size_t* output_count) override;
-
-  void FlushInput(bool hold_frame, size_t input_index,
-                  fit::closure callback) override;
-
-  void FlushOutput(size_t output_index, fit::closure callback) override;
-
-  std::shared_ptr<PayloadAllocator> allocator_for_input(
-      size_t input_index) override;
-
-  void PutInputPacket(PacketPtr packet, size_t input_index) override;
-
-  bool can_accept_allocator_for_output(size_t output_index) const override;
-
-  void SetAllocatorForOutput(std::shared_ptr<PayloadAllocator> allocator,
-                             size_t output_index) override;
-
-  void RequestOutputPacket() override;
 
  protected:
   class DecoderPacket : public Packet {
@@ -79,6 +58,12 @@ class FfmpegDecoderBase : public Decoder {
     FfmpegDecoderBase* owner_;
   };
 
+  // SoftwareDecoder overrides.
+  void Flush() override;
+
+  bool TransformPacket(const PacketPtr& input, bool new_input,
+                       PacketPtr* output) override;
+
   // Called when a new input packet is about to be processed. The default
   // implementation does nothing.
   virtual void OnNewInputPacket(const PacketPtr& packet);
@@ -86,8 +71,9 @@ class FfmpegDecoderBase : public Decoder {
   // Fills in |av_frame|, probably using an |AVBuffer| allocated via
   // CreateAVBuffer. |av_codec_context| may be distinct from context() and
   // should be used when a codec context is required.
-  virtual int BuildAVFrame(const AVCodecContext& av_codec_context,
-                           AVFrame* av_frame, PayloadAllocator* allocator) = 0;
+  virtual int BuildAVFrame(
+      const AVCodecContext& av_codec_context, AVFrame* av_frame,
+      const std::shared_ptr<PayloadAllocator>& allocator) = 0;
 
   // Creates a Packet from av_frame.
   virtual PacketPtr CreateOutputPacket(
@@ -111,19 +97,17 @@ class FfmpegDecoderBase : public Decoder {
   void set_pts_rate(media::TimelineRate value) { pts_rate_ = value; }
 
   // Creates an AVBuffer.
-  AVBufferRef* CreateAVBuffer(uint8_t* payload_buffer,
-                              size_t payload_buffer_size,
-                              PayloadAllocator* allocator) {
+  AVBufferRef* CreateAVBuffer(
+      uint8_t* payload_buffer, size_t payload_buffer_size,
+      const std::shared_ptr<PayloadAllocator>& allocator) {
     FXL_DCHECK(payload_buffer_size <=
                static_cast<size_t>(std::numeric_limits<int>::max()));
-    return av_buffer_create(payload_buffer,
-                            static_cast<int>(payload_buffer_size),
-                            ReleaseBufferForAvFrame, allocator, /* flags */ 0);
+    return av_buffer_create(
+        payload_buffer, static_cast<int>(payload_buffer_size),
+        ReleaseBufferForAvFrame, allocator.get(), /* flags */ 0);
   }
 
  private:
-  enum class State { kIdle, kOutputPacketRequested, kEndOfStream };
-
   // Callback used by the ffmpeg decoder to acquire a buffer.
   static int AllocateBufferForAvFrame(AVCodecContext* av_codec_context,
                                       AVFrame* av_frame, int flags);
@@ -131,25 +115,17 @@ class FfmpegDecoderBase : public Decoder {
   // Callback used by the ffmpeg decoder to release a buffer.
   static void ReleaseBufferForAvFrame(void* opaque, uint8_t* buffer);
 
-  // Transforms an input packet. Called on the worker thread.
-  void TransformPacket(PacketPtr packet);
+  // Sends |input| to the ffmpeg decoder and returns the result of
+  // |avcodec_send_packet|. A return value of 0 indicates success.
+  int SendPacket(const PacketPtr& input);
 
   // Creates an end-of-stream packet.
   PacketPtr CreateEndOfStreamPacket();
 
   AvCodecContextPtr av_codec_context_;
-  async::Loop worker_loop_;
   ffmpeg::AvFramePtr av_frame_ptr_;
   int64_t next_pts_ = Packet::kUnknownPts;
   media::TimelineRate pts_rate_;
-  std::atomic<State> state_;
-  bool flushing_ = false;
-
-  // The allocator used by avcodec_send_packet and avcodec_receive_frame to
-  // provide context for AllocateBufferForAvFrame.
-  std::shared_ptr<PayloadAllocator> allocator_;
-
-  ValueTracker<int64_t> decode_duration_;
 };
 
 }  // namespace media_player

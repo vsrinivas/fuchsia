@@ -10,7 +10,6 @@
 #include "garnet/bin/media/media_player/ffmpeg/av_codec_context.h"
 #include "garnet/bin/media/media_player/framework/formatting.h"
 #include "lib/fxl/logging.h"
-#include "lib/media/timeline/timeline.h"
 
 namespace media_player {
 
@@ -19,13 +18,9 @@ FfmpegDecoderBase::FfmpegDecoderBase(AvCodecContextPtr av_codec_context)
       av_frame_ptr_(ffmpeg::AvFrame::Create()) {
   FXL_DCHECK(av_codec_context_);
 
-  state_ = State::kIdle;
-
   av_codec_context_->opaque = this;
   av_codec_context_->get_buffer2 = AllocateBufferForAvFrame;
   av_codec_context_->refcounted_frames = 1;
-
-  worker_loop_.StartThread();
 }
 
 FfmpegDecoderBase::~FfmpegDecoderBase() {}
@@ -34,190 +29,131 @@ std::unique_ptr<StreamType> FfmpegDecoderBase::output_stream_type() const {
   return AvCodecContext::GetStreamType(*av_codec_context_);
 }
 
-void FfmpegDecoderBase::GetConfiguration(size_t* input_count,
-                                         size_t* output_count) {
-  FXL_DCHECK(input_count);
-  FXL_DCHECK(output_count);
-  *input_count = 1;
-  *output_count = 1;
+void FfmpegDecoderBase::Flush() {
+  FXL_DCHECK(is_worker_thread());
+  avcodec_flush_buffers(av_codec_context_.get());
+  next_pts_ = Packet::kUnknownPts;
 }
 
-void FfmpegDecoderBase::FlushInput(bool hold_frame, size_t input_index,
-                                   fit::closure callback) {
-  FXL_DCHECK(input_index == 0);
-  FXL_DCHECK(callback);
-
-  flushing_ = true;
-
-  callback();
-}
-
-void FfmpegDecoderBase::FlushOutput(size_t output_index,
-                                    fit::closure callback) {
-  FXL_DCHECK(output_index == 0);
-  FXL_DCHECK(callback);
-
-  flushing_ = true;
-
-  async::PostTask(worker_loop_.async(), [this, callback = std::move(callback)] {
-    FXL_DCHECK(av_codec_context_);
-    avcodec_flush_buffers(av_codec_context_.get());
-    next_pts_ = Packet::kUnknownPts;
-    state_ = State::kIdle;
-    callback();
-  });
-}
-
-std::shared_ptr<PayloadAllocator> FfmpegDecoderBase::allocator_for_input(
-    size_t input_index) {
-  FXL_DCHECK(input_index == 0);
-  return nullptr;
-}
-
-void FfmpegDecoderBase::PutInputPacket(PacketPtr packet, size_t input_index) {
-  FXL_DCHECK(input_index == 0);
-  async::PostTask(worker_loop_.async(),
-                  [this, packet] { TransformPacket(packet); });
-}
-
-bool FfmpegDecoderBase::can_accept_allocator_for_output(
-    size_t output_index) const {
-  FXL_DCHECK(output_index == 0);
-  return true;
-}
-
-void FfmpegDecoderBase::SetAllocatorForOutput(
-    std::shared_ptr<PayloadAllocator> allocator, size_t output_index) {
-  FXL_DCHECK(output_index == 0);
-  allocator_ = allocator;
-}
-
-void FfmpegDecoderBase::RequestOutputPacket() {
-  flushing_ = false;
-
-  State expected = State::kIdle;
-  if (state_.compare_exchange_strong(expected, State::kOutputPacketRequested)) {
-    stage()->RequestInputPacket();
-  }
-}
-
-void FfmpegDecoderBase::TransformPacket(PacketPtr input) {
-  if (flushing_) {
-    // We got a flush request. Throw away the packet.
-    return;
-  }
-
-  if (input->end_of_stream()) {
-    state_ = State::kEndOfStream;
-  }
-
-  TRACE_DURATION("motown", (av_codec_context_->codec_type == AVMEDIA_TYPE_VIDEO
-                                ? "DecodeVideoPacket"
-                                : "DecodeAudioPacket"));
+bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input, bool new_input,
+                                        PacketPtr* output) {
+  FXL_DCHECK(is_worker_thread());
   FXL_DCHECK(input);
-  FXL_DCHECK(allocator_);
+  FXL_DCHECK(output);
 
-  if (input->size() == 0 && !input->end_of_stream()) {
-    // Throw away empty packets that aren't end-of-stream packets. The
-    // underlying decoder interprets an empty packet as end-of-stream.
-    stage()->RequestInputPacket();
-    return;
+  TRACE_DURATION(
+      "motown", "DecodePacket", "type",
+      (av_codec_context_->codec_type == AVMEDIA_TYPE_VIDEO ? "video"
+                                                           : "audio"));
+
+  *output = nullptr;
+
+  if (new_input) {
+    if (input->size() == 0 && !input->end_of_stream()) {
+      // This packet isn't end-of-stream, but it has size zero. The underlying
+      // decoder interprets an empty input packet as end-of-stream, so we
+      // we refrain from decoding this packet and return true to indicate we're
+      // done with it..
+      //
+      // The underlying decoder gets its end-of-stream indication in one of
+      // two ways:
+      // 1) If the end-of-stream packet is empty, it will get past this check
+      //    and be submitted to the decoder, indicating end-of-stream.
+      // 2) If the end-of-stream packet is not empty, we let it through and
+      //    follow it with an empty end-of-stream packet that we create for
+      //    that purpose.
+      return true;
+    }
+
+    OnNewInputPacket(input);
+
+    // Send the packet to the ffmpeg decoder. If it fails, return true to
+    // indicate we're done with the packet.
+    if (SendPacket(input) != 0) {
+      if (input->end_of_stream()) {
+        // The input packet was end-of-stream. We won't get called again before
+        // a flush, so make sure the output gets an end-of-stream packet.
+        *output = CreateEndOfStreamPacket();
+      }
+
+      return true;
+    }
   }
 
-  OnNewInputPacket(input);
+  int result =
+      avcodec_receive_frame(av_codec_context_.get(), av_frame_ptr_.get());
+
+  switch (result) {
+    case 0:
+      // Succeeded, frame produced. We're not done with the input packet.
+      *output = CreateOutputPacket(*av_frame_ptr_, allocator());
+      av_frame_unref(av_frame_ptr_.get());
+      return false;
+
+    case AVERROR(EAGAIN):
+      // Succeeded, no frame produced.
+      if (input->end_of_stream() && input->size() != 0) {
+        // The input packet is an end-of-stream packet, and it has payload. The
+        // underlying decoder interprets an empty packet as end-of-stream, so
+        // we need to send it an empty packet.
+        if (SendPacket(CreateEndOfStreamPacket()) == 0) {
+          // |SendPacket| succeeded. We return false to indicate we're not done
+          // with the original end-of-stream packet. We'll get called again with
+          // the same end-of-stream packet and |new_input| set to false. That
+          // will continue until we've extracted all the output packets the
+          // decoder has to give us. Note that we won't end up here again,
+          // because |avcodec_receive_frame| will return either 0 or
+          // |AVERROR_EOF|, not |AVERROR(EAGAIN)|.
+          return false;
+        }
+
+        // |SendPacket| failed. We return true to indicate we're done with the
+        // input packet. We also output an end-of-stream packet to terminate
+        // the output stream.
+        *output = CreateEndOfStreamPacket();
+      }
+
+      // Indicate we're done with the input packet.
+      return true;
+
+    case AVERROR_EOF:
+      // Succeeded, no frame produced, end-of-stream sequence complete.
+      // Produce an end-of-stream packet.
+      FXL_DCHECK(input->end_of_stream());
+      *output = CreateEndOfStreamPacket();
+      return true;
+
+    default:
+      FXL_DLOG(ERROR) << "avcodec_receive_frame failed " << result;
+      if (input->end_of_stream()) {
+        // The input packet was end-of-stream. We won't get called again before
+        // a flush, so make sure the output gets an end-of-stream packet.
+        *output = CreateEndOfStreamPacket();
+      }
+
+      return true;
+  }
+}
+
+int FfmpegDecoderBase::SendPacket(const PacketPtr& input) {
+  FXL_DCHECK(input);
 
   AVPacket av_packet;
   av_init_packet(&av_packet);
   av_packet.data = reinterpret_cast<uint8_t*>(input->payload());
   av_packet.size = input->size();
   av_packet.pts = input->pts();
-
   if (input->keyframe()) {
     av_packet.flags |= AV_PKT_FLAG_KEY;
   }
-
-  int64_t start_time = media::Timeline::local_now();
 
   int result = avcodec_send_packet(av_codec_context_.get(), &av_packet);
 
   if (result != 0) {
     FXL_DLOG(ERROR) << "avcodec_send_packet failed " << result;
-    if (input->end_of_stream()) {
-      // The input packet was end-of-stream. We won't get called again before
-      // a flush, so make sure the output gets an end-of-stream packet.
-      stage()->PutOutputPacket(CreateEndOfStreamPacket());
-    }
-
-    return;
   }
 
-  while (true) {
-    int result =
-        avcodec_receive_frame(av_codec_context_.get(), av_frame_ptr_.get());
-
-    if (result != 0) {
-      decode_duration_.AddSample(media::Timeline::local_now() - start_time);
-    }
-
-    switch (result) {
-      case 0:
-        // Succeeded, frame produced.
-        {
-          PacketPtr packet = CreateOutputPacket(*av_frame_ptr_, allocator_);
-          av_frame_unref(av_frame_ptr_.get());
-
-          // If the state is still |kOutputPacketRequested|, set it to |kIdle|.
-          // It could be |kIdle| already if a flush occurred or |kEndOfStream|
-          // if we got an end-of-stream packet. In either of those cases, we
-          // want to leave the state unchanged.
-          State expected = State::kOutputPacketRequested;
-          state_.compare_exchange_strong(expected, State::kIdle);
-
-          stage()->PutOutputPacket(packet);
-        }
-
-        // Loop around to call avcodec_receive_frame again.
-        break;
-
-      case AVERROR(EAGAIN):
-        // Succeeded, no frame produced, need another input packet.
-        FXL_DCHECK(input->size() != 0);
-
-        if (!input->end_of_stream()) {
-          if (state_ == State::kOutputPacketRequested) {
-            stage()->RequestInputPacket();
-          }
-
-          return;
-        }
-
-        // The input packet is an end-of-stream packet, but it has payload. The
-        // underlying decoder interprets an empty packet as end-of-stream, so
-        // we need to send it an empty packet. We do this by reentering
-        // |TransformPacket|. This is safe, because we get |AVERROR_EOF|, not
-        // |AVERROR(EAGAIN)| when the decoder is drained following an empty
-        // input packet.
-        TransformPacket(CreateEndOfStreamPacket());
-        return;
-
-      case AVERROR_EOF:
-        // Succeeded, no frame produced, end-of-stream sequence complete.
-        FXL_DCHECK(input->end_of_stream());
-        stage()->PutOutputPacket(CreateEndOfStreamPacket());
-        return;
-
-      default:
-        FXL_DLOG(ERROR) << "avcodec_receive_frame failed " << result;
-        if (input->end_of_stream()) {
-          // The input packet was end-of-stream. We won't get called again
-          // before a flush, so make sure the output gets an end-of-stream
-          // packet.
-          stage()->PutOutputPacket(CreateEndOfStreamPacket());
-        }
-
-        return;
-    }
-  }
+  return result;
 }
 
 void FfmpegDecoderBase::OnNewInputPacket(const PacketPtr& packet) {}
@@ -236,10 +172,8 @@ int FfmpegDecoderBase::AllocateBufferForAvFrame(
   FfmpegDecoderBase* self =
       reinterpret_cast<FfmpegDecoderBase*>(av_codec_context->opaque);
   FXL_DCHECK(self);
-  FXL_DCHECK(self->allocator_);
 
-  return self->BuildAVFrame(*av_codec_context, av_frame,
-                            self->allocator_.get());
+  return self->BuildAVFrame(*av_codec_context, av_frame, self->allocator());
 }
 
 // static
@@ -256,41 +190,16 @@ PacketPtr FfmpegDecoderBase::CreateEndOfStreamPacket() {
 
 FfmpegDecoderBase::DecoderPacket::~DecoderPacket() {
   FXL_DCHECK(owner_);
-  async::PostTask(owner_->worker_loop_.async(),
-                  [av_buffer_ref = av_buffer_ref_]() mutable {
-                    av_buffer_unref(&av_buffer_ref);
-                  });
+  owner_->PostTaskToWorkerThread([av_buffer_ref = av_buffer_ref_]() mutable {
+    av_buffer_unref(&av_buffer_ref);
+  });
 }
 
 void FfmpegDecoderBase::Dump(std::ostream& os) const {
-  os << label() << indent;
-  stage()->Dump(os);
-  os << newl << "output stream type:" << output_stream_type();
-  os << newl << "state:             ";
+  SoftwareDecoder::Dump(os);
 
-  switch (state_) {
-    case State::kIdle:
-      os << "idle";
-      break;
-    case State::kOutputPacketRequested:
-      os << "output packet requested";
-      break;
-    case State::kEndOfStream:
-      os << "end of stream";
-      break;
-  }
-
-  os << newl << "flushing:          " << flushing_;
+  os << indent;
   os << newl << "next pts:          " << AsNs(next_pts_) << "@" << pts_rate_;
-
-  if (decode_duration_.count() != 0) {
-    os << newl << "decodes:           " << decode_duration_.count();
-    os << newl << "decode durations:";
-    os << newl << "    minimum        " << AsNs(decode_duration_.min());
-    os << newl << "    average        " << AsNs(decode_duration_.average());
-    os << newl << "    maximum        " << AsNs(decode_duration_.max());
-  }
-
   os << outdent;
 }
 
