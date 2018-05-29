@@ -387,10 +387,12 @@ int service_starter(void* arg) {
         }
         envp[envc] = NULL;
 
+        const char* num_shells = require_system && !netboot ? "0" : "3";
+
         uint32_t type = PA_HND(PA_USER0, 0);
         zx_handle_t h = ZX_HANDLE_INVALID;
         zx_channel_create(0, &h, &virtcon_open);
-        const char* args[] = { "/boot/bin/virtual-console", "--run", vcmd };
+        const char* args[] = { "/boot/bin/virtual-console", "--shells", num_shells, "--run", vcmd };
         devmgr_launch(svcs_job_handle, "virtual-console",
                       vruncmd ? 3 : 1, args, envp, -1,
                       &h, &type, (h == ZX_HANDLE_INVALID) ? 0 : 1, NULL, FS_ALL);

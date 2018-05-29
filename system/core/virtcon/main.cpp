@@ -345,13 +345,22 @@ int main(int argc, char** argv) {
     }
 
     const char* cmd = NULL;
+    int shells = 0;
     while (argc > 1) {
         if (!strcmp(argv[1], "--run")) {
             if (argc > 2) {
                 argc--;
                 argv++;
                 cmd = argv[1];
+                if (shells < 1)
+                    shells = 1;
                 printf("CMD: %s\n", cmd);
+            }
+        } else if (!strcmp(argv[1], "--shells")) {
+            if (argc > 2) {
+                argc--;
+                argv++;
+                shells = atoi(argv[1]);
             }
         }
         argc--;
@@ -399,9 +408,12 @@ int main(int argc, char** argv) {
 
     setenv("TERM", "xterm", 1);
 
-    start_shell(keep_log ? false : true, cmd);
-    start_shell(false, NULL);
-    start_shell(false, NULL);
+    for (int i = 0; i < shells; ++i) {
+        if (i == 0)
+            start_shell(!keep_log, cmd);
+        else
+            start_shell(false, NULL);
+    }
 
     zx_status_t r = port_dispatch(&port, ZX_TIME_INFINITE, false);
     printf("vc: port failure: %d\n", r);
