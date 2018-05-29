@@ -58,13 +58,12 @@ func main() {
 
 	srvUrl, err := url.Parse(*addr)
 	if err != nil {
-		log.Fatal("amber: bad address for update server %s\n", err)
+		log.Fatalf("bad address for update server %s", err)
 	}
 
 	keys, err := source.LoadKeys(*keys)
 	if err != nil {
-		log.Printf("loading root keys failed %s\n", err)
-		return
+		log.Fatalf("loading root keys failed %s", err)
 	}
 
 	ticker := source.NewTickGenerator(source.InitBackoff)
@@ -107,7 +106,7 @@ func startupDaemon(srvURL *url.URL, store string, keys []*tuf_data.Key,
 	blobURL.Path = filepath.Join(blobURL.Path, "blobs")
 	checker.AddBlobRepo(daemon.BlobRepo{Address: blobURL.String(), Interval: time.Second * 5})
 
-	log.Println("amber: monitoring for updates")
+	log.Println("monitoring for updates")
 
 	go func() {
 		client, _, err := source.InitNewTUFClient(srvURL.String(), store, keys, ticker)
@@ -151,13 +150,13 @@ func newPackageSet(files []string) *pkg.PackageSet {
 func digest(name string, hash hash.Hash) ([]byte, error) {
 	f, e := os.Open(name)
 	if e != nil {
-		fmt.Printf("amber: couldn't open file to fingerprint %s\n", e)
+		fmt.Printf("couldn't open file to fingerprint %s\n", e)
 		return nil, e
 	}
 	defer f.Close()
 
 	if _, err := io.Copy(hash, f); err != nil {
-		fmt.Printf("amber: file digest failed %s\n", err)
+		fmt.Printf("file digest failed %s\n", err)
 		return nil, e
 	}
 	return hash.Sum(nil), nil
