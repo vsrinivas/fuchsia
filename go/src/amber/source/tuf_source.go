@@ -5,12 +5,16 @@
 package source
 
 import (
+	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -191,7 +195,6 @@ func oauth2deviceConfig(c *amber.OAuth2Config) *oauth2device.Config {
 			CodeURL: c.DeviceCodeUrl,
 		},
 	}
-
 }
 
 // Initialize (or reinitialize) the TUFClient. This is especially useful when
@@ -201,20 +204,95 @@ func oauth2deviceConfig(c *amber.OAuth2Config) *oauth2device.Config {
 // NOTE: It's the responsibility of the caller to hold the mutex before calling
 // this function.
 func (f *TUFSource) updateTUFClientLocked() error {
-	if c := oauth2deviceConfig(f.cfg.Config.Oauth2Config); c == nil {
-		f.httpClient = http.DefaultClient
-	} else {
-		f.httpClient = c.Client(nil, f.cfg.Oauth2Token)
+	httpClient, err := newHTTPClient(f.cfg.Config.TransportConfig)
+	if err != nil {
+		return err
 	}
 
-	remoteStore, err := tuf.HTTPRemoteStore(f.cfg.Config.RepoUrl, nil, f.httpClient)
+	// If we have oauth2 configured, we need to wrap the client in order to
+	// inject the authentication header.
+	if c := oauth2deviceConfig(f.cfg.Config.Oauth2Config); c != nil {
+		// Store the client in the context so oauth2 can use it.
+		ctx := context.WithValue(context.Background(), oauth2.HTTPClient, httpClient)
+
+		httpClient = c.Client(ctx, f.cfg.Oauth2Token)
+	}
+
+	// Create a new tuf client that uses the new http client.
+	remoteStore, err := tuf.HTTPRemoteStore(f.cfg.Config.RepoUrl, nil, httpClient)
 	if err != nil {
 		return RemoteStoreError{fmt.Errorf("server address not understood: %s", err)}
 	}
+	tufClient := tuf.NewClient(f.localStore, remoteStore)
 
-	f.tufClient = tuf.NewClient(f.localStore, remoteStore)
+	// We got our tuf client ready to go. Before we store the client in our
+	// source, make sure to close the old client's transport's idle
+	// connections so we don't leave a bunch of sockets open.
+	if f.httpClient != nil {
+		if transport, ok := f.httpClient.Transport.(*http.Transport); ok {
+			transport.CloseIdleConnections()
+		}
+	}
+
+	// We're done! Save the clients for the next time we update our source.
+	f.httpClient = httpClient
+	f.tufClient = tufClient
 
 	return nil
+}
+
+func newHTTPClient(cfg *amber.TransportConfig) (*http.Client, error) {
+	if cfg == nil {
+		return http.DefaultClient, nil
+	}
+
+	tlsClientConfig, err := newTLSClientConfig(cfg.TlsClientConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	t := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   time.Duration(cfg.ConnectTimeout) * time.Millisecond,
+			KeepAlive: time.Duration(cfg.KeepAlive) * time.Millisecond,
+		}).DialContext,
+		MaxIdleConns:          int(cfg.MaxIdleConns),
+		MaxIdleConnsPerHost:   int(cfg.MaxIdleConnsPerHost),
+		IdleConnTimeout:       time.Duration(cfg.IdleConnTimeout) * time.Millisecond,
+		ResponseHeaderTimeout: time.Duration(cfg.ResponseHeaderTimeout) * time.Millisecond,
+		ExpectContinueTimeout: time.Duration(cfg.ExpectContinueTimeout) * time.Millisecond,
+		TLSClientConfig:       tlsClientConfig,
+	}
+
+	c := &http.Client{
+		Transport: t,
+		Timeout:   time.Duration(cfg.RequestTimeout) * time.Millisecond,
+	}
+
+	return c, nil
+}
+
+func newTLSClientConfig(cfg *amber.TlsClientConfig) (*tls.Config, error) {
+	if cfg == nil {
+		return nil, nil
+	}
+
+	t := &tls.Config{
+		InsecureSkipVerify: cfg.InsecureSkipVerify,
+	}
+
+	if len(cfg.RootCAs) != 0 {
+		t.RootCAs = x509.NewCertPool()
+		for _, ca := range cfg.RootCAs {
+			if !t.RootCAs.AppendCertsFromPEM([]byte(ca)) {
+				log.Printf("failed to add cert")
+				return nil, fmt.Errorf("failed to add certificate")
+			}
+		}
+	}
+
+	return t, nil
 }
 
 // Note, the mutex should be held when this is called.
