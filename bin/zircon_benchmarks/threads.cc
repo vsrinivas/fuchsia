@@ -19,9 +19,10 @@ bool ThreadCreateAndJoinTest() {
   zx_handle_t stack_vmo;
   FXL_CHECK(zx_vmo_create(stack_size, 0, &stack_vmo) == ZX_OK);
 
+  zx_handle_t vmar = zx_vmar_root_self();
   zx_vaddr_t stack_base;
   uint32_t perm = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE;
-  FXL_CHECK(zx_vmar_map(zx_vmar_root_self(), 0, stack_vmo, 0, stack_size, perm, &stack_base)
+  FXL_CHECK(zx_vmar_map(vmar, 0, stack_vmo, 0, stack_size, perm, &stack_base)
             == ZX_OK);
 
   uintptr_t entry = reinterpret_cast<uintptr_t>(&zx_thread_exit);
@@ -30,6 +31,8 @@ bool ThreadCreateAndJoinTest() {
 
   zx_signals_t observed;
   FXL_CHECK(zx_object_wait_one(thread, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, &observed) == ZX_OK);
+
+  FXL_CHECK(zx_vmar_unmap(vmar, stack_base, stack_size) == ZX_OK);
 
   zx_handle_close(thread);
   zx_handle_close(stack_vmo);
