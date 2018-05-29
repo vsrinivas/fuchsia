@@ -89,6 +89,7 @@ use core::ptr;
 /// other process might have.
 #[derive(Clone)]
 pub struct SharedBuffer<'a> {
+    // invariant: '(buf as usize) + len' doesn't overflow usize
     buf: *mut u8,
     len: usize,
     _marker: PhantomData<&'a ()>,
@@ -137,15 +138,26 @@ impl<'a> SharedBuffer<'a> {
     /// returning how many bytes were read. The only thing that can cause fewer
     /// bytes to be read than requested is if there are fewer than `dst.len()`
     /// bytes available starting at `offset` within the buffer.
+    ///
+    /// # Panics
+    ///
+    /// `read_at` panics if `offset` is greater than the length of the buffer.
     #[inline]
     pub fn read_at(&self, offset: usize, dst: &mut [u8]) -> usize {
-        let to_copy = overlap(offset, dst.len(), self.len);
-        if to_copy != 0 {
+        if let Some(to_copy) = overlap(offset, dst.len(), self.len) {
+            // Since overlap returned Some, we're guaranteed that 'offset +
+            // to_copy <= self.len'. That in turn means that, so long as the
+            // invariant holds that '(self.buf as usize) + self.len' doesn't
+            // overflow usize, then this call to offset_from won't overflow, and
+            // neither will the call to copy_nonoverlapping.
             let base = offset_from(self.buf, offset);
             unsafe { ptr::copy_nonoverlapping(base, dst.as_mut_ptr(), to_copy) };
             to_copy
         } else {
-            0
+            panic!(
+                "byte offset {} out of range for SharedBuffer of length {}",
+                offset, self.len
+            );
         }
     }
 
@@ -165,15 +177,26 @@ impl<'a> SharedBuffer<'a> {
     /// returning how many bytes were written. The only thing that can cause
     /// fewer bytes to be written than requested is if there are fewer than
     /// `src.len()` bytes available starting at `offset` within the buffer.
+    ///
+    /// # Panics
+    ///
+    /// `write_at` panics if `offset` is greater than the length of the buffer.
     #[inline]
     pub fn write_at(&self, offset: usize, src: &[u8]) -> usize {
-        let to_copy = overlap(offset, src.len(), self.len);
-        if to_copy != 0 {
+        if let Some(to_copy) = overlap(offset, src.len(), self.len) {
+            // Since overlap returned Some, we're guaranteed that 'offset +
+            // to_copy <= self.len'. That in turn means that, so long as the
+            // invariant holds that '(self.buf as usize) + self.len' doesn't
+            // overflow usize, then this call to offset_from won't overflow, and
+            // neither will the call to copy_nonoverlapping.
             let base = offset_from(self.buf, offset);
             unsafe { ptr::copy_nonoverlapping(src.as_ptr(), base, to_copy) };
             to_copy
         } else {
-            0
+            panic!(
+                "byte offset {} out of range for SharedBuffer of length {}",
+                offset, self.len
+            );
         }
     }
 
@@ -216,13 +239,25 @@ impl<'a> SharedBuffer<'a> {
     }
 }
 
-fn overlap(offset: usize, copy_len: usize, range_len: usize) -> usize {
-    if offset >= range_len {
-        0
-    } else if offset + copy_len <= range_len {
-        copy_len
+// Verifies that 'offset' is in range of range_len (that 'offset <= range_len'),
+// and returns the amount of overlap between a copy of length 'copy_len'
+// starting at 'offset' and a buffer of length 'range_len'. The number it
+// returns is guaranteed to be less than or equal to 'range_len'.
+//
+// overlap is guaranteed to be correct for any three usize values.
+fn overlap(offset: usize, copy_len: usize, range_len: usize) -> Option<usize> {
+    if offset > range_len {
+        None
+    } else if offset
+        .checked_add(copy_len)
+        .map(|sum| sum <= range_len)
+        .unwrap_or(false)
+    {
+        // if 'offset + copy_len' overflows usize, then 'offset + copy_len >
+        // range_len', so we unwrap_or(false)
+        Some(copy_len)
     } else {
-        range_len - offset
+        Some(range_len - offset)
     }
 }
 
@@ -230,8 +265,13 @@ fn overlap(offset: usize, copy_len: usize, range_len: usize) -> usize {
 // the 'offset' and 'add' methods on primitive pointers have the limitation that
 // the offset cannot overflow an isize or else it will cause UB. offset_from
 // function has no such restriction.
+//
+// The caller must guarantee that '(ptr as usize) + offset' doesn't overflow
+// usize.
 fn offset_from(ptr: *mut u8, offset: usize) -> *mut u8 {
-    (ptr as usize + offset) as *mut u8
+    // just in case our logic is wrong, better to catch it at runtime than
+    // invoke UB
+    (ptr as usize).checked_add(offset).unwrap() as *mut u8
 }
 
 #[cfg(test)]
@@ -309,18 +349,35 @@ mod tests {
     fn test_overlap() {
         // overlap(offset, copy_len, range_len)
 
-        // first branch: offset >= range_len
-        assert_eq!(overlap(8, 4, 8), 0);
-        assert_eq!(overlap(10, 4, 8), 0);
+        // first branch: offset > range_len
+        assert_eq!(overlap(10, 4, 8), None);
 
         // middle branch: offset + copy_len <= range_len
-        assert_eq!(overlap(0, 4, 8), 4);
-        assert_eq!(overlap(4, 4, 8), 4);
+        assert_eq!(overlap(0, 4, 8), Some(4));
+        assert_eq!(overlap(4, 4, 8), Some(4));
+
+        // middle branch: 'offset + copy_len' overflows usize
+        assert_eq!(overlap(4, ::core::usize::MAX, 8), Some(4));
 
         // last branch: else
-        assert_eq!(overlap(6, 4, 8), 2);
-        assert_eq!(overlap(8, 4, 8), 0);
-        assert_eq!(overlap(10, 4, 8), 0);
+        assert_eq!(overlap(6, 4, 8), Some(2));
+        assert_eq!(overlap(8, 4, 8), Some(0));
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_panic_read_at() {
+        let buf = unsafe { SharedBuffer::new(ptr::null_mut(), 10) };
+        // "byte offset 11 out of range for SharedBuffer of length 10"
+        buf.read_at(11, &mut [][..]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_panic_write_at() {
+        let buf = unsafe { SharedBuffer::new(ptr::null_mut(), 10) };
+        // "byte offset 11 out of range for SharedBuffer of length 10"
+        buf.write_at(11, &[][..]);
     }
 
     #[test]
