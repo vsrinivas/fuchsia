@@ -312,7 +312,8 @@ static bool test_bad_state_nonstarted_thread() {
 
     ASSERT_EQ(zx_thread_create(zx_process_self(), "thread", 5, 0, &thread), ZX_OK, "");
     ASSERT_EQ(zx_task_resume(thread, 0), ZX_ERR_BAD_STATE, "");
-    ASSERT_EQ(zx_task_suspend(thread), ZX_ERR_BAD_STATE, "");
+    zx_handle_t suspend_token = ZX_HANDLE_INVALID;
+    ASSERT_EQ(zx_task_suspend_token(thread, &suspend_token), ZX_ERR_BAD_STATE, "");
     ASSERT_EQ(zx_handle_close(thread), ZX_OK, "");
 
     ASSERT_EQ(zx_thread_create(zx_process_self(), "thread", 5, 0, &thread), ZX_OK, "");
@@ -327,7 +328,7 @@ static bool test_bad_state_nonstarted_thread() {
 
     ASSERT_EQ(zx_thread_create(zx_process_self(), "thread", 5, 0, &thread), ZX_OK, "");
     ASSERT_EQ(zx_task_kill(thread), ZX_OK, "");
-    ASSERT_EQ(zx_task_suspend(thread), ZX_ERR_BAD_STATE, "");
+    ASSERT_EQ(zx_task_suspend_token(thread, &suspend_token), ZX_ERR_BAD_STATE, "");
     ASSERT_EQ(zx_handle_close(thread), ZX_OK, "");
 
     END_TEST;

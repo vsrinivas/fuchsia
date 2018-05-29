@@ -146,14 +146,15 @@ static bool bad_channel_call_contract_violation(void) {
     ASSERT_EQ(zx_channel_read(chan, 0, msg, NULL, sizeof(msg), 0, &act_bytes, &act_handles),
               ZX_OK, "");
 
-    ASSERT_EQ(zx_task_suspend(thread), ZX_OK, "");
+    zx_handle_t suspend_token = ZX_HANDLE_INVALID;
+    ASSERT_EQ(zx_task_suspend_token(thread, &suspend_token), ZX_OK, "");
 
     // Wait for the thread to suspend
     zx_signals_t observed = 0u;
     ASSERT_EQ(zx_object_wait_one(thread, ZX_THREAD_SUSPENDED, ZX_TIME_INFINITE, &observed), ZX_OK, "");
 
     // Resume the thread
-    ASSERT_EQ(zx_task_resume(thread, 0), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK, "");
 
     // Wait for signal 0 or 1, meaning either it's going to try its second call,
     // or something unexpected happened.

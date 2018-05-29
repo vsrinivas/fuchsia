@@ -57,17 +57,9 @@ zx_koid_t get_koid(zx_handle_t handle) {
     return info.koid;
 }
 
-constexpr uint64_t kSelfExceptionKey = 0x646a65u;
-
 // How much memory to dump, in bytes.
 // Space for this is allocated on the stack, so this can't be too large.
 constexpr size_t kMemoryDumpSize = 256;
-
-// Handle of the thread we're dumping.
-// This is used by both the main thread and the self-dumper thread.
-// However there is no need to lock it as the self-dumper thread only runs
-// when the main thread has crashed.
-zx_handle_t suspended_thread = ZX_HANDLE_INVALID;
 
 void dump_memory(zx_handle_t proc, uintptr_t start, size_t len) {
     // Make sure we're not allocating an excessive amount of stack.
@@ -79,26 +71,6 @@ void dump_memory(zx_handle_t proc, uintptr_t start, size_t len) {
         printf("failed reading %p memory; error : %d\n", (void*)start, res);
     } else if (len != 0) {
         hexdump_ex(buf, len, start);
-    }
-}
-
-void resume_thread(zx_handle_t thread) {
-    uint32_t options = 0;
-    auto status = zx_task_resume(thread, options);
-    if (status != ZX_OK) {
-        print_zx_error(status, "unable to resume thread");
-        // This couldn happen if someone killed the thread already.
-    }
-}
-
-void resume_thread_from_exception(zx_handle_t thread) {
-    uint32_t options = ZX_RESUME_EXCEPTION | ZX_RESUME_TRY_NEXT;
-    auto status = zx_task_resume(thread, options);
-    if (status != ZX_OK) {
-        print_zx_error(status, "unable to resume thread");
-        // This could happen if someone killed the thread already.
-        // We crashed, but we can't resume exception processing, so just exit.
-        exit (1);
     }
 }
 
@@ -197,16 +169,13 @@ void dump_all_threads(uint64_t pid, zx_handle_t process) {
             continue;
         }
 
-        status = zx_task_suspend(thread);
+        zx_handle_t suspend_token = ZX_HANDLE_INVALID;
+        status = zx_task_suspend_token(thread, &suspend_token);
         if (status != ZX_OK) {
             print_zx_error(status, "unable to suspend thread, skipping");
             zx_handle_close(thread);
             continue;
         }
-
-        // Record the thread so that if we crash then self_dump_func
-        // can "resume" the thread so that it's not left hanging.
-        suspended_thread = thread;
 
         zx_signals_t observed = 0u;
         // Try to be robust and don't wait forever. The timeout is a little
@@ -231,46 +200,11 @@ void dump_all_threads(uint64_t pid, zx_handle_t process) {
                            pid, tid);
         }
 
-        resume_thread(thread);
-        suspended_thread = ZX_HANDLE_INVALID;
+        zx_handle_close(suspend_token);
         zx_handle_close(thread);
     }
 
     inspector_dso_free_list(dso_list);
-}
-
-// To pass data from main to self_dump_func.
-struct SelfDumpData {
-    zx_handle_t main_thread;
-    zx_handle_t excp_port;
-};
-
-int self_dump_func(void* arg) {
-    auto data = reinterpret_cast<SelfDumpData*>(arg);
-
-    while (true) {
-        zx_port_packet_t packet;
-        zx_port_wait(data->excp_port, ZX_TIME_INFINITE, &packet);
-        if (packet.key != kSelfExceptionKey) {
-            print_error("invalid crash key");
-            return 1;
-        }
-
-        fprintf(stderr, "FATAL: threads crashed!\n");
-
-        // The main thread got an exception.
-        // Resume any thread we were working on and resume the main thread,
-        // letting crashlogger dump it.
-        if (suspended_thread != ZX_HANDLE_INVALID) {
-            resume_thread(suspended_thread);
-            suspended_thread = ZX_HANDLE_INVALID;
-        }
-
-        resume_thread_from_exception(data->main_thread);
-
-        // The kernel will kill us after crashlogger is done, but we don't
-        // want to exit here to give crashlogger time to print the report.
-    }
 }
 
 void usage(FILE* f) {
@@ -321,36 +255,6 @@ int main(int argc, char** argv) {
     zx_handle_t thread_self = thrd_get_zx_handle(thrd_current());
     if (thread_self == ZX_HANDLE_INVALID) {
         print_error("unable to get thread self");
-        return 1;
-    }
-
-    zx_handle_t self_dump_port;
-    if ((status = zx_port_create(0, &self_dump_port)) < 0) {
-        print_zx_error(status, "zx_port_create failed");
-        return 1;
-    }
-
-    // A thread to wait for and process internal exceptions.
-    // This is done so that we can recognize when we ourselves have
-    // crashed: We need to resume the process we're dumping.
-    thrd_t self_dump_thread;
-    SelfDumpData self_dump_data;
-    self_dump_data.main_thread = thread_self;
-    self_dump_data.excp_port = self_dump_port;
-    auto self_dump_arg = reinterpret_cast<void*>(&self_dump_data);
-    int ret = thrd_create_with_name(&self_dump_thread, self_dump_func,
-                                    self_dump_arg, "self-dump-thread");
-    if (ret != thrd_success) {
-        print_error("thrd_create_with_name failed");
-        return 1;
-    }
-
-    // Bind this exception handler to the main thread instead of the process
-    // so that our crash dumper doesn't get its own exceptions.
-    status = zx_task_bind_exception_port(thread_self, self_dump_port,
-                                         kSelfExceptionKey, 0);
-    if (status < 0) {
-        print_zx_error(status, "unable to set self exception port");
         return 1;
     }
 

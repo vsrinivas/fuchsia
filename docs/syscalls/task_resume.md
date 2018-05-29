@@ -1,5 +1,9 @@
 # zx_task_resume
 
+This function is deprecated. When you suspend a thread with
+[task_suspend_token](task_suspend_token.md) closing the suspend token will
+automatically resume the thread.
+
 ## NAME
 
 task_resume - resume the given task

@@ -407,12 +407,14 @@ static bool test_futex_thread_suspended() {
     volatile int32_t futex_value = 1;
     TestThread thread(&futex_value);
 
-    ASSERT_EQ(zx_task_suspend(thread.get_thread_handle()), ZX_OK);
+    zx_handle_t suspend_token = ZX_HANDLE_INVALID;
+    ASSERT_EQ(zx_task_suspend_token(thread.get_thread_handle(),
+                                    &suspend_token), ZX_OK);
     // Wait some time for the thread suspension to take effect.
     struct timespec wait_time = {0, 10 * 1000000 /* nanoseconds */};
     ASSERT_EQ(nanosleep(&wait_time, NULL), 0, "Error during sleep");
 
-    ASSERT_EQ(zx_task_resume(thread.get_thread_handle(), 0), ZX_OK);
+    ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
     // Wait some time for the thread to resume and execute.
     ASSERT_EQ(nanosleep(&wait_time, NULL), 0, "Error during sleep");
 

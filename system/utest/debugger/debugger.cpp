@@ -28,7 +28,7 @@
 
 namespace {
 
-typedef bool(wait_inferior_exception_handler_t)(zx_handle_t inferior,
+typedef bool(wait_inferior_exception_handler_t)(zx_handle_t inferior, zx_handle_t port,
                                                 const zx_port_packet_t* packet, void* handler_arg);
 
 constexpr size_t kTestMemorySize = 8;
@@ -146,7 +146,7 @@ bool wait_inferior_thread_worker(inferior_data_t* inferior_data,
             return true;
         }
 
-        if (!handler(inferior, &packet, handler_arg))
+        if (!handler(inferior, eport, &packet, handler_arg))
             return false;
     }
 }
@@ -244,7 +244,9 @@ bool handle_thread_exiting(zx_handle_t inferior, const zx_port_packet_t* packet)
 // This returns a bool as it's a unittest "helper" routine.
 // N.B. This runs on the wait-inferior thread.
 
-bool handle_expected_page_fault(zx_handle_t inferior, const zx_port_packet_t* packet,
+bool handle_expected_page_fault(zx_handle_t inferior,
+                                zx_handle_t port,
+                                const zx_port_packet_t* packet,
                                 fbl::atomic<int>* segv_count) {
     BEGIN_HELPER;
 
@@ -271,7 +273,7 @@ bool handle_expected_page_fault(zx_handle_t inferior, const zx_port_packet_t* pa
     // before we can increment it.
     atomic_fetch_add(segv_count, 1);
 
-    zx_status_t status = zx_task_resume(thread, ZX_RESUME_EXCEPTION);
+    zx_status_t status = zx_task_resume_from_exception(thread, port, 0);
     tu_handle_close(thread);
     ASSERT_EQ(status, ZX_OK);
 
@@ -280,7 +282,8 @@ bool handle_expected_page_fault(zx_handle_t inferior, const zx_port_packet_t* pa
 
 // N.B. This runs on the wait-inferior thread.
 
-bool debugger_test_exception_handler(zx_handle_t inferior, const zx_port_packet_t* packet,
+bool debugger_test_exception_handler(zx_handle_t inferior, zx_handle_t port,
+                                     const zx_port_packet_t* packet,
                                      void* handler_arg) {
     BEGIN_HELPER;
 
@@ -314,7 +317,7 @@ bool debugger_test_exception_handler(zx_handle_t inferior, const zx_port_packet_
 
         case ZX_EXCP_FATAL_PAGE_FAULT:
             ASSERT_NONNULL(segv_count);
-            ASSERT_TRUE(handle_expected_page_fault(inferior, packet, segv_count));
+            ASSERT_TRUE(handle_expected_page_fault(inferior, port, packet, segv_count));
             break;
 
         default: {
@@ -641,15 +644,22 @@ bool suspended_reg_access_test() {
     // Keep looping until we know the thread is stopped in the assembler.
     // This is the only place we can guarantee particular registers have
     // particular values.
+    zx_handle_t suspend_token = ZX_HANDLE_INVALID;
     zx_thread_state_general_regs_t regs;
     uint64_t test_reg = 0;
-    while (test_reg != reg_access_initial_value) {
+    while (true) {
         zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
-        ASSERT_EQ(zx_task_suspend(thread), ZX_OK);
+        ASSERT_EQ(zx_task_suspend_token(thread, &suspend_token), ZX_OK);
         ASSERT_TRUE(wait_thread_suspended(self_proc, thread, eport));
 
         read_inferior_gregs(thread, &regs);
         test_reg = regs.REG_ACCESS_TEST_REG;
+
+        if (test_reg == reg_access_initial_value)
+            break;  // Keep thread suspended.
+
+        // Resume and try again.
+        zx_handle_close(suspend_token);
     }
 
     uint64_t pc_value = extract_pc_reg(&regs);
@@ -657,7 +667,7 @@ bool suspended_reg_access_test() {
     regs.REG_ACCESS_TEST_REG = reg_access_write_test_value;
     write_inferior_gregs(thread, &regs);
 
-    ASSERT_EQ(zx_task_resume(thread, 0), ZX_OK);
+    ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
     thrd_join(thread_c11, NULL);
     tu_handle_close(thread);
 
@@ -878,8 +888,8 @@ struct suspend_in_exception_data {
 
 // N.B. This runs on the wait-inferior thread.
 
-bool suspended_in_exception_handler(zx_handle_t inferior, const zx_port_packet_t* packet,
-                                    void* handler_arg) {
+bool suspended_in_exception_handler(zx_handle_t inferior, zx_handle_t port,
+                                    const zx_port_packet_t* packet, void* handler_arg) {
     BEGIN_HELPER;
 
     suspend_in_exception_data* data = static_cast<suspend_in_exception_data*>(handler_arg);

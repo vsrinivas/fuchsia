@@ -1,5 +1,10 @@
 # zx_task_suspend
 
+This function is deprecated. Please use
+[zx_task_suspend_token](task_suspend_token.md). When all callers have been
+updated, this variant will be deleted and **task_suspend_token** will be
+renamed to **task_suspend**.
+
 ## NAME
 
 task_suspend - suspend the given task

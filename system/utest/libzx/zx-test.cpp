@@ -17,6 +17,7 @@
 #include <lib/zx/port.h>
 #include <lib/zx/process.h>
 #include <lib/zx/socket.h>
+#include <lib/zx/suspend_token.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
@@ -344,6 +345,32 @@ static bool thread_self_test() {
     END_TEST;
 }
 
+static void thread_suspend_test_fn(uintptr_t, uintptr_t) {
+    zx_nanosleep(zx_deadline_after(ZX_SEC(1000)));
+    zx_thread_exit();
+}
+
+static bool thread_suspend_test() {
+    BEGIN_TEST;
+
+    zx::thread thread;
+    ASSERT_EQ(zx::thread::create(zx::process::self(), "test", 4, 0, &thread), ZX_OK);
+
+    // Make a little stack and start the thread. Note: stack grows down so pass the high address.
+    alignas(16) static uint8_t stack_storage[64];
+    uintptr_t stack = reinterpret_cast<uintptr_t>(stack_storage + sizeof(stack_storage));
+    ASSERT_EQ(thread.start(reinterpret_cast<uintptr_t>(&thread_suspend_test_fn), stack, 0, 0), ZX_OK);
+
+    zx::suspend_token suspend;
+    EXPECT_EQ(thread.suspend(&suspend), ZX_OK);
+    EXPECT_TRUE(suspend);
+
+    suspend.reset();
+    EXPECT_EQ(thread.kill(), ZX_OK);
+
+    END_TEST;
+}
+
 static bool process_self_test() {
     BEGIN_TEST;
 
@@ -420,6 +447,7 @@ RUN_TEST(port_test)
 RUN_TEST(time_test)
 RUN_TEST(ticks_test)
 RUN_TEST(thread_self_test)
+RUN_TEST(thread_suspend_test)
 RUN_TEST(process_self_test)
 RUN_TEST(vmar_root_self_test)
 RUN_TEST(job_default_test)

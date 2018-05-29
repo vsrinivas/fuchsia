@@ -6,10 +6,12 @@
 
 #include <lib/zx/handle.h>
 #include <lib/zx/object.h>
+#include <lib/zx/suspend_token.h>
 
 namespace zx {
 
 class port;
+class suspend_token;
 
 template <typename T = void> class task : public object<T> {
 public:
@@ -32,7 +34,19 @@ public:
 
     zx_status_t kill() const { return zx_task_kill(object<T>::get()); }
 
+    // Deprecated: Use the variant that takes a suspend_token.
     zx_status_t suspend() const { return zx_task_suspend(object<T>::get()); }
+
+    zx_status_t suspend(suspend_token* result) {
+        zx_handle_t h;
+        zx_status_t status = zx_task_suspend_token(object<T>::get(), &h);
+        if (status < 0) {
+            result->reset(ZX_HANDLE_INVALID);
+        } else {
+            result->reset(h);
+        }
+        return status;
+    }
 };
 
 } // namespace zx
