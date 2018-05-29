@@ -69,6 +69,16 @@ Ensure `goma` is installed on your machine for faster builds.
 Follow [the instructions to get the Fuchsia source](/development/source_code/README.md)
 and then return to this document.
 
+### [Googlers only] CIPD auth-login
+
+Run
+```
+./buildtools/cipd auth-login
+jiri run-hooks  # Re-run hooks now that you're logged in.
+```
+
+You should only need to do this once per host.
+
 ### Build
 
 If you added `.jiri_root/bin` to your path as part of getting the source code,
