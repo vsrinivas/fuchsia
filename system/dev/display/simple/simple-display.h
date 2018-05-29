@@ -13,7 +13,6 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/display-controller.h>
 #include <fbl/unique_ptr.h>
-#include <lib/edid/edid.h>
 #include <lib/zx/vmo.h>
 
 class SimpleDisplay;
@@ -48,7 +47,6 @@ private:
     uint32_t height_;
     uint32_t stride_;
     zx_pixel_format_t format_;
-    edid::BaseEdid edid_;
 };
 
 #endif // __cplusplus

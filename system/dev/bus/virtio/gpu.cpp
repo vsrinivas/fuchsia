@@ -61,8 +61,10 @@ zx_status_t GpuDevice::virtio_gpu_get_display_info(void* ctx, uint64_t id, displ
     }
     GpuDevice* gd = static_cast<GpuDevice*>(ctx);
 
-    info->edid = reinterpret_cast<uint8_t*>(&gd->edid_);
-    info->edid_length = edid::kBlockSize;
+    info->edid_present = false;
+    info->panel.params.width = gd->pmode_.r.width;
+    info->panel.params.height = gd->pmode_.r.height;
+    info->panel.params.refresh_rate_e2 = kRefreshRateHz * 100;
 
     info->pixel_formats = &gd->supported_formats_;
     info->pixel_format_count = 1;
@@ -430,8 +432,6 @@ zx_status_t GpuDevice::virtio_gpu_start() {
     printf("virtio-gpu: found display x %u y %u w %u h %u flags 0x%x\n",
            pmode_.r.x, pmode_.r.y, pmode_.r.width, pmode_.r.height,
            pmode_.flags);
-
-    edid::BaseEdid::PopulateSimpleEdid(&edid_, pmode_.r.width, pmode_.r.height);
 
     // Run a worker thread to shove in flush events
     auto virtio_gpu_flusher_entry = [](void* arg) {

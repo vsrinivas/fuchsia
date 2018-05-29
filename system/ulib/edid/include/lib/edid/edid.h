@@ -143,8 +143,6 @@ struct BaseEdid {
     uint8_t rest[kBlockSize - 0x36 - 18 - 2]; // Fields that we don't need to read yet.
     uint8_t num_extensions;
     uint8_t checksum_byte;
-
-    static void PopulateSimpleEdid(BaseEdid* edid, int32_t width, int32_t height);
 };
 
 static_assert(offsetof(BaseEdid, edid_version) == 0x12, "Layout check");

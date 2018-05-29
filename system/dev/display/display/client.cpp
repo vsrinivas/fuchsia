@@ -691,19 +691,28 @@ zx_status_t ClientProxy::OnDisplaysChanged(const DisplayInfo** displays_added,
                sizeof(zx_pixel_format_t) * d->info.pixel_format_count);
 
         config->current.display_id = d->id;
-        config->current.mode.pixel_clock_10khz = d->preferred_timing.pixel_freq_10khz;
-        config->current.mode.h_addressable = d->preferred_timing.horizontal_addressable;
-        config->current.mode.h_front_porch = d->preferred_timing.horizontal_front_porch;
-        config->current.mode.h_sync_pulse = d->preferred_timing.horizontal_sync_pulse;
-        config->current.mode.h_blanking = d->preferred_timing.horizontal_blanking;
-        config->current.mode.v_addressable = d->preferred_timing.vertical_addressable;
-        config->current.mode.v_front_porch = d->preferred_timing.vertical_front_porch;
-        config->current.mode.v_sync_pulse = d->preferred_timing.vertical_sync_pulse;
-        config->current.mode.v_blanking = d->preferred_timing.vertical_blanking;
-        config->current.mode.pixel_clock_10khz = d->preferred_timing.pixel_freq_10khz;
-        config->current.mode.mode_flags =
-                (d->preferred_timing.vertical_sync_polarity ? MODE_FLAG_VSYNC_POSITIVE : 0)
-                | (d->preferred_timing.horizontal_sync_polarity ? MODE_FLAG_HSYNC_POSITIVE : 0);
+
+        if (d->info.edid_present) {
+            config->current.mode.pixel_clock_10khz = d->preferred_timing.pixel_freq_10khz;
+            config->current.mode.h_addressable = d->preferred_timing.horizontal_addressable;
+            config->current.mode.h_front_porch = d->preferred_timing.horizontal_front_porch;
+            config->current.mode.h_sync_pulse = d->preferred_timing.horizontal_sync_pulse;
+            config->current.mode.h_blanking = d->preferred_timing.horizontal_blanking;
+            config->current.mode.v_addressable = d->preferred_timing.vertical_addressable;
+            config->current.mode.v_front_porch = d->preferred_timing.vertical_front_porch;
+            config->current.mode.v_sync_pulse = d->preferred_timing.vertical_sync_pulse;
+            config->current.mode.v_blanking = d->preferred_timing.vertical_blanking;
+            config->current.mode.pixel_clock_10khz = d->preferred_timing.pixel_freq_10khz;
+            config->current.mode.mode_flags =
+                    (d->preferred_timing.vertical_sync_polarity ? MODE_FLAG_VSYNC_POSITIVE : 0)
+                    | (d->preferred_timing.horizontal_sync_polarity ? MODE_FLAG_HSYNC_POSITIVE : 0);
+        } else {
+            config->current.mode = {};
+            config->current.mode.h_addressable = d->info.panel.params.width;
+            config->current.mode.v_addressable = d->info.panel.params.height;
+            config->current.mode.pixel_clock_10khz = d->info.panel.params.refresh_rate_e2 *
+                    d->info.panel.params.width * d->info.panel.params.height / 1000 / 10;
+        }
         config->pending = config->current;
 
         added[added_idx] = fbl::move(config);

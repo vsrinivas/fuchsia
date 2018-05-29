@@ -16,11 +16,28 @@ __BEGIN_CDECLS;
 
 #define INVALID_DISPLAY_ID 0
 
+// a fallback structure to convey display information without an edid
+typedef struct display_params {
+    uint32_t width;
+    uint32_t height;
+    uint32_t refresh_rate_e2;
+} display_params_t;
+
 // a structure containing information a connected display
 typedef struct display_info {
-    // the display's edid
-    const uint8_t* edid;
-    uint16_t edid_length;
+    // A flag indicating whether or not the display has a valid edid. If no edid is
+    // present, then the meaning of display_config's mode structure is undefined, and
+    // drivers should ignore it.
+    bool edid_present;
+    union {
+        // the display's edid
+        struct {
+            const uint8_t* data;
+            uint16_t length;
+        } edid;
+        // the display's parameters if an edid is not present
+        display_params_t params;
+    } panel;
 
     // A list of pixel formats supported by the display. The first entry is the
     // preferred pixel format.

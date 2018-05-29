@@ -608,8 +608,9 @@ zx_status_t Controller::GetDisplayInfo(uint64_t display_id, display_info_t* info
     if ((device = FindDevice(display_id)) == nullptr) {
         return ZX_ERR_INVALID_ARGS;
     }
-    info->edid = device->edid().edid_bytes();
-    info->edid_length = device->edid().edid_length();
+    info->edid_present = true;
+    info->panel.edid.data = device->edid().edid_bytes();
+    info->panel.edid.length = device->edid().edid_length();
     info->pixel_formats = supported_formats;
     info->pixel_format_count = static_cast<uint32_t>(fbl::count_of(supported_formats));
     return ZX_OK;

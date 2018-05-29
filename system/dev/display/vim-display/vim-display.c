@@ -73,8 +73,9 @@ static zx_status_t vim_get_display_info(void* ctx, uint64_t display_id, display_
         return ZX_ERR_NOT_FOUND;
     }
 
-    info->edid = display->edid_buf;
-    info->edid_length = EDID_BUF_SIZE;
+    info->edid_present = true;
+    info->panel.edid.data = display->edid_buf;
+    info->panel.edid.length = EDID_BUF_SIZE;
     info->pixel_formats = &_gsupported_pixel_formats;
     info->pixel_format_count = sizeof(_gsupported_pixel_formats) / sizeof(zx_pixel_format_t);
 

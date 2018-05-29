@@ -10,7 +10,6 @@
 #include <ddk/protocol/display-controller.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/compiler.h>
-#include <lib/edid/edid.h>
 
 #include "device.h"
 #include "ring.h"
@@ -99,7 +98,6 @@ private:
     struct imported_image* current_fb_;
     struct imported_image* displayed_fb_;
 
-    edid::BaseEdid edid_;
     zx_pixel_format_t supported_formats_ = ZX_PIXEL_FORMAT_RGB_x888;
 };
 

@@ -32,8 +32,10 @@ zx_status_t SimpleDisplay::GetDisplayInfo(uint64_t display_id, display_info_t* i
         return ZX_ERR_INVALID_ARGS;
     }
 
-    info->edid = reinterpret_cast<uint8_t*>(&edid_);
-    info->edid_length = edid::kBlockSize;
+    info->edid_present = false;
+    info->panel.params.height = height_;
+    info->panel.params.width = width_;
+    info->panel.params.refresh_rate_e2 = 3000; // Just guess that it's 30fps
     info->pixel_formats = &format_;
     info->pixel_format_count = 1;
 
@@ -111,8 +113,6 @@ zx_status_t SimpleDisplay::Bind(const char* name, fbl::unique_ptr<SimpleDisplay>
         return status;
     }
     framebuffer_koid_ = framebuffer_info.koid;
-
-    edid::BaseEdid::PopulateSimpleEdid(&edid_, width_, height_);
 
     status = DdkAdd(name);
     if (status != ZX_OK) {

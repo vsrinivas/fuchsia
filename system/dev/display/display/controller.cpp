@@ -68,12 +68,14 @@ void Controller::OnDisplaysChanged(uint64_t* displays_added, uint32_t added_coun
             zxlogf(TRACE, "Error getting display info for %ld\n", info->id);
             continue;
         }
-        edid::Edid edid;
-        const char* edid_err = "No preferred timing";
-        if (!edid.Init(info->info.edid, info->info.edid_length, &edid_err)
-                || !edid.GetPreferredTiming(&info->preferred_timing)) {
-            zxlogf(TRACE, "Failed to parse edid \"%s\"\n", edid_err);
-            continue;
+        if (info->info.edid_present) {
+            edid::Edid edid;
+            const char* edid_err = "No preferred timing";
+            if (!edid.Init(info->info.panel.edid.data, info->info.panel.edid.length, &edid_err)
+                    || !edid.GetPreferredTiming(&info->preferred_timing)) {
+                zxlogf(TRACE, "Failed to parse edid \"%s\"\n", edid_err);
+                continue;
+            }
         }
 
         auto info_ptr = info.get();

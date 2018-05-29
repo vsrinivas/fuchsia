@@ -9,7 +9,6 @@ LOCAL_SRCS := $(LOCAL_DIR)/simple-display.cpp \
 LOCAL_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/ddktl \
-    system/ulib/edid \
     system/ulib/fbl \
     system/ulib/hwreg \
     system/ulib/zx \
