@@ -43,8 +43,9 @@ namespace {
 class AsyncExpectations {
  public:
   void Signal() { ++count_; }
+  void Reset() { count_ = 0; }
 
-  void Verify(int expected_count) { EXPECT_EQ(count_, expected_count); }
+  int count() const { return count_; }
 
  private:
   int count_ = 0;
@@ -54,7 +55,7 @@ TEST(AsyncExpectationTest, TestLessThanExpectedCountFails) {
   AsyncExpectations async_expectations;
 
   async_expectations.Signal();
-  EXPECT_NONFATAL_FAILURE({ async_expectations.Verify(2); },
+  EXPECT_NONFATAL_FAILURE({ EXPECT_EQ(2, async_expectations.count()); },
                           "Expected equality");
 }
 
@@ -62,7 +63,7 @@ TEST(AsyncExpectationTest, TestExpectedCountSucceeds) {
   AsyncExpectations async_expectations;
 
   async_expectations.Signal();
-  async_expectations.Verify(1);
+  EXPECT_EQ(1, async_expectations.count());
 }
 
 TEST(AsyncExpectationTest, TestMoreThanExpectedCountFails) {
@@ -70,7 +71,8 @@ TEST(AsyncExpectationTest, TestMoreThanExpectedCountFails) {
 
   async_expectations.Signal();
   async_expectations.Signal();
-  EXPECT_NONFATAL_FAILURE({ async_expectations.Verify(1); }, "Expected equality");
+  EXPECT_NONFATAL_FAILURE({ EXPECT_EQ(1, async_expectations.count()); },
+                          "Expected equality");
 }
 
 }  // namespace
@@ -111,7 +113,7 @@ TEST_F(FutureTest, ThenWith0Argument) {
   f->Complete();
   ASSERT_EQ(get(f), std::tuple<>());
 
-  async_expectations.Verify(1);
+  EXPECT_EQ(1, async_expectations.count());
 }
 
 TEST_F(FutureTest, ThenWith1Argument) {
@@ -126,7 +128,7 @@ TEST_F(FutureTest, ThenWith1Argument) {
 
   f->Complete(10);
 
-  async_expectations.Verify(1);
+  EXPECT_EQ(1, async_expectations.count());
 }
 
 TEST_F(FutureTest, ThenWith2Argument) {
@@ -142,7 +144,7 @@ TEST_F(FutureTest, ThenWith2Argument) {
 
   f->Complete(10, 3.14f);
 
-  async_expectations.Verify(1);
+  EXPECT_EQ(1, async_expectations.count());
 }
 
 TEST_F(FutureTest, CompleteBeforeThen) {
@@ -157,7 +159,7 @@ TEST_F(FutureTest, CompleteBeforeThen) {
     async_expectations.Signal();
   });
 
-  async_expectations.Verify(1);
+  EXPECT_EQ(1, async_expectations.count());
 }
 
 TEST_F(FutureTest, ThenCorrectlyMoves) {
@@ -176,7 +178,7 @@ TEST_F(FutureTest, ThenCorrectlyMoves) {
 
   f->Complete(std::move(p));
 
-  async_expectations.Verify(1);
+  EXPECT_EQ(1, async_expectations.count());
 }
 
 TEST_F(FutureTest, ConstThen) {
@@ -203,7 +205,31 @@ TEST_F(FutureTest, ConstThen) {
 
   f->Complete(std::move(p));
 
-  async_expectations.Verify(2);
+  EXPECT_EQ(2, async_expectations.count());
+}
+
+TEST_F(FutureTest, ConstThenAfterComplete) {
+  auto f = Future<int>::Create();
+
+  AsyncExpectations async_expectations;
+
+  bool first_const_then{};
+  f->ConstThen([&](const int& i) {
+    EXPECT_FALSE(first_const_then);
+    first_const_then = true;
+    async_expectations.Signal();
+  });
+
+  f->Complete(10);
+
+  bool second_const_then{};
+  f->ConstThen([&](const int& i) {
+    EXPECT_FALSE(second_const_then);
+    second_const_then = true;
+    async_expectations.Signal();
+  });
+
+  EXPECT_EQ(2, async_expectations.count());
 }
 
 TEST_F(FutureTest, ConstThenAfterThen) {
@@ -238,7 +264,141 @@ TEST_F(FutureTest, ConstThenAfterThen) {
 
   f->Complete(std::move(p));
 
-  async_expectations.Verify(3);
+  EXPECT_EQ(3, async_expectations.count());
+}
+
+TEST_F(FutureTest, WeakThen) {
+  // WeakThen() will break an execution chain if its weakptr is invalidated.
+  int data = 0;
+  fxl::WeakPtrFactory<int> factory(&data);
+  AsyncExpectations async_expectations;
+
+  // This time we expect all three to run because we haven't invalidated any
+  // WeakPtrs.
+  auto f = Future<>::Create();
+  f->Then([&] { async_expectations.Signal(); })
+      ->WeakThen(factory.GetWeakPtr(), [&] { async_expectations.Signal(); })
+      ->Then([&] { async_expectations.Signal(); });
+
+  f->Complete();
+  EXPECT_EQ(3, async_expectations.count());
+
+  // But this time we'll invalidate WeakPtrs in the first Then(). Only the first
+  // Then() will run.
+  async_expectations.Reset();
+  f = Future<>::Create();
+  f->Then([&] {
+     async_expectations.Signal();
+     factory.InvalidateWeakPtrs();
+   })
+      ->WeakThen(factory.GetWeakPtr(), [&] { async_expectations.Signal(); })
+      ->Then([&] { async_expectations.Signal(); });
+
+  f->Complete();
+  EXPECT_EQ(1, async_expectations.count());
+}
+
+TEST_F(FutureTest, WeakConstThen) {
+  // WeakConstThen() will not run if its weakptr is invalidated.
+  int data = 0;
+  fxl::WeakPtrFactory<int> factory(&data);
+  AsyncExpectations async_expectations;
+
+  auto f = Future<>::Create();
+  f->WeakConstThen(factory.GetWeakPtr(), [&] { async_expectations.Signal(); });
+  f->Complete();
+  EXPECT_EQ(1, async_expectations.count());
+
+  async_expectations.Reset();
+  f = Future<>::Create();
+  f->WeakConstThen(factory.GetWeakPtr(), [&] { async_expectations.Signal(); });
+  factory.InvalidateWeakPtrs();
+  f->Complete();
+  EXPECT_EQ(0, async_expectations.count());
+}
+
+TEST_F(FutureTest, WeakMap) {
+  // Similar to WeakThen(), but using Map calls instead.
+  int data = 0;
+  fxl::WeakPtrFactory<int> factory(&data);
+
+  auto f = Future<int>::Create();
+
+  // First let everything run.
+  AsyncExpectations async_expectations;
+  f->Map([&](int i) {
+     async_expectations.Signal();
+     return 42;
+   })
+      ->WeakMap(factory.GetWeakPtr(),
+                [&](int i) {
+                  async_expectations.Signal();
+                  return 10;
+                })
+      ->Then([&](int i) { async_expectations.Signal(); });
+
+  f->Complete(10);
+  EXPECT_EQ(3, async_expectations.count());
+
+  // Now invalidate it.
+  f = Future<int>::Create();
+  async_expectations.Reset();
+  f->Map([&](int i) {
+     async_expectations.Signal();
+     factory.InvalidateWeakPtrs();
+     return 42;
+   })
+      ->WeakMap(factory.GetWeakPtr(),
+                [&](int i) {
+                  async_expectations.Signal();
+                  return 10;
+                })
+      ->Then([&](int i) { async_expectations.Signal(); });
+
+  f->Complete(10);
+  EXPECT_EQ(1, async_expectations.count());
+}
+
+TEST_F(FutureTest, WeakAsyncMap) {
+  // Similar to WeakThen(), but using Map calls instead.
+  int data = 0;
+  fxl::WeakPtrFactory<int> factory(&data);
+
+  auto f = Future<int>::Create();
+
+  // First let everything run.
+  AsyncExpectations async_expectations;
+  f->Map([&](int i) {
+     async_expectations.Signal();
+     return 42;
+   })
+      ->WeakAsyncMap(factory.GetWeakPtr(),
+                     [&](int i) {
+                       async_expectations.Signal();
+                       return Future<int>::CreateCompleted(10);
+                     })
+      ->Then([&](int i) { async_expectations.Signal(); });
+
+  f->Complete(10);
+  EXPECT_EQ(3, async_expectations.count());
+
+  // Now invalidate it.
+  f = Future<int>::Create();
+  async_expectations.Reset();
+  f->Map([&](int i) {
+     async_expectations.Signal();
+     factory.InvalidateWeakPtrs();
+     return 42;
+   })
+      ->WeakAsyncMap(factory.GetWeakPtr(),
+                     [&](int i) {
+                       async_expectations.Signal();
+                       return Future<int>::CreateCompleted(10);
+                     })
+      ->Then([&](int i) { async_expectations.Signal(); });
+
+  f->Complete(10);
+  EXPECT_EQ(1, async_expectations.count());
 }
 
 TEST_F(FutureTest, CreateCompleted) {
@@ -250,7 +410,7 @@ TEST_F(FutureTest, CreateCompleted) {
 
   ASSERT_EQ(get(f), std::tuple<>());
 
-  async_expectations.Verify(1);
+  EXPECT_EQ(1, async_expectations.count());
 }
 
 TEST_F(FutureTest, Wait) {
@@ -269,12 +429,12 @@ TEST_F(FutureTest, Wait) {
   });
 
   f1->Complete(10);
-  async_expectations.Verify(0);
+  EXPECT_EQ(0, async_expectations.count());
   f2->Complete(20);
-  async_expectations.Verify(0);
+  EXPECT_EQ(0, async_expectations.count());
   f3->Complete(30);
 
-  async_expectations.Verify(1);
+  EXPECT_EQ(1, async_expectations.count());
 }
 
 TEST_F(FutureTest, WaitOnZeroFutures) {
@@ -284,7 +444,7 @@ TEST_F(FutureTest, WaitOnZeroFutures) {
 
   f->Then([&] { async_expectations.Signal(); });
 
-  async_expectations.Verify(1);
+  EXPECT_EQ(1, async_expectations.count());
 }
 
 TEST_F(FutureTest, Completer) {
@@ -300,7 +460,7 @@ TEST_F(FutureTest, Completer) {
     async_expectations.Signal();
   });
 
-  async_expectations.Verify(1);
+  EXPECT_EQ(1, async_expectations.count());
 }
 
 TEST_F(FutureTest, AsyncMap) {
@@ -332,7 +492,7 @@ TEST_F(FutureTest, AsyncMap) {
 
   future->Complete(10);
 
-  async_expectations.Verify(3);
+  EXPECT_EQ(3, async_expectations.count());
 }
 
 TEST_F(FutureTest, Map) {
@@ -359,7 +519,7 @@ TEST_F(FutureTest, Map) {
 
   f->Complete(10);
 
-  async_expectations.Verify(3);
+  EXPECT_EQ(3, async_expectations.count());
 }
 
 TEST_F(FutureTest, trace_name) {

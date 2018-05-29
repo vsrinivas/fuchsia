@@ -15,6 +15,7 @@
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/memory/ref_counted.h"
 #include "garnet/public/lib/fxl/memory/ref_ptr.h"
+#include "garnet/public/lib/fxl/memory/weak_ptr.h"
 
 namespace modular {
 
@@ -92,6 +93,25 @@ namespace modular {
 //   // executing.
 //   ShowProgressSpinner(false);
 // });
+//
+// ## Use Weak*() variants to cancel callback chains
+//
+// "Weak" variants exist for all chain/sequence methods (WeakThen(),
+// WeakConstThen(), WeakMap() and WeakAsyncMap()). These are almost identical
+// to their non-weak counterparts but take an fxl::WeakPtr<T> as a first
+// argument. If, at callback invocation time, the WeakPtr is invalid, execution
+// will halt and no future further down the chain will be executed.
+//
+// Example:
+//
+// FuturePtr<> f = MakeFuture();
+// f->WeakThen(weak_ptr_factory.GetWeakPtr(), [] {
+//   FXL_LOG(INFO) << "This won't execute";
+// })->Then([] {
+//   FXL_LOG(INFO) << "Neither will this";
+// });
+// weak_ptr_factory.InvalidateWeakPtrs();
+// f->Complete();
 //
 // ## Use Wait() to synchronize on multiple futures
 //
@@ -196,7 +216,7 @@ using FuturePtr = fxl::RefPtr<Future<Result...>>;
 namespace {
 
 // Useful type_traits function, ported from C++17.
-template <class From, class To>
+template <typename From, typename To>
 constexpr bool is_convertible_v = std::is_convertible<From, To>::value;
 
 }  // namespace
@@ -250,12 +270,11 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
     for (auto future : futures) {
       trace_name += "[" + future->trace_name() + "]";
 
-      future->AddConstCallback(
-          [subfuture, pending_futures](const Result&...) {
-            if (--(*pending_futures) == 0) {
-              subfuture->Complete();
-            }
-          });
+      future->AddConstCallback([subfuture, pending_futures](const Result&...) {
+        if (--(*pending_futures) == 0) {
+          subfuture->Complete();
+        }
+      });
     }
     subfuture->set_trace_name("(Wait" + trace_name + ")");
 
@@ -302,7 +321,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   // void return type; see
   // <https://stackoverflow.com/questions/25385876/should-stdfunction-assignment-ignore-return-type>
   // for more info.
-  template <class Callback,
+  template <typename Callback,
             typename = typename std::enable_if_t<
                 is_convertible_v<std::result_of_t<Callback(Result...)>, void>>>
   FuturePtr<> Then(Callback callback) {
@@ -310,6 +329,26 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
     subfuture->set_trace_name(trace_name_ + "(Then)");
     SetCallback([trace_name = trace_name_, subfuture,
                  callback = std::move(callback)](Result&&... result) {
+      callback(std::forward<Result>(result)...);
+      subfuture->Complete();
+    });
+    return subfuture;
+  }
+
+  // Equivalent to Then(), but guards execution of |callback| with a WeakPtr.
+  // If, at the time |callback| is to be executed, |weak_ptr| has been
+  // invalidated, |callback| is not run, nor is the next Future in the chain
+  // completed.
+  template <typename Callback, typename T,
+            typename = typename std::enable_if_t<
+                is_convertible_v<std::result_of_t<Callback(Result...)>, void>>>
+  FuturePtr<> WeakThen(fxl::WeakPtr<T> weak_ptr, Callback callback) {
+    FuturePtr<> subfuture = Future<>::Create();
+    subfuture->set_trace_name(trace_name_ + "(WeakThen)");
+    SetCallback([weak_ptr, trace_name = trace_name_, subfuture,
+                 callback = std::move(callback)](Result&&... result) {
+      if (!weak_ptr)
+        return;
       callback(std::forward<Result>(result)...);
       subfuture->Complete();
     });
@@ -327,6 +366,24 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
     AddConstCallback(
         [trace_name = trace_name_, subfuture,
          const_callback = std::move(const_callback)](const Result&... result) {
+          const_callback(result...);
+          subfuture->Complete();
+        });
+    return subfuture;
+  }
+
+  // See WeakThen().
+  template <typename T>
+  FuturePtr<> WeakConstThen(
+      fxl::WeakPtr<T> weak_ptr,
+      std::function<void(const Result&...)> const_callback) {
+    FuturePtr<> subfuture = Future<>::Create();
+    subfuture->set_trace_name(trace_name_ + "(WeakConstThen)");
+    AddConstCallback(
+        [weak_ptr, trace_name = trace_name_, subfuture,
+         const_callback = std::move(const_callback)](const Result&... result) {
+          if (!weak_ptr)
+            return;
           const_callback(result...);
           subfuture->Complete();
         });
@@ -379,6 +436,31 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
     return subfuture;
   }
 
+  template <typename Callback, typename T,
+            typename AsyncMapResult = std::result_of_t<Callback(Result...)>,
+            typename MapResult =
+                typename AsyncMapResult::element_type::result_tuple_type,
+            typename = typename std::enable_if_t<
+                is_convertible_v<FuturePtr<MapResult>, AsyncMapResult>>>
+  AsyncMapResult WeakAsyncMap(fxl::WeakPtr<T> weak_ptr, Callback callback) {
+    AsyncMapResult subfuture = AsyncMapResult::element_type::Create();
+    subfuture->set_trace_name(trace_name_ + "(WeakAsyncMap)");
+
+    SetCallback([weak_ptr, trace_name = trace_name_, subfuture,
+                 callback = std::move(callback)](Result&&... result) {
+      if (!weak_ptr)
+        return;
+      AsyncMapResult future_result = callback(std::forward<Result>(result)...);
+
+      future_result->SetCallbackWithTuple(
+          [subfuture](MapResult&& transformed_result) {
+            subfuture->CompleteWithTuple(
+                std::forward<MapResult>(transformed_result));
+          });
+    });
+    return subfuture;
+  }
+
   // Attaches a |callback| that is invoked when this future is completed with
   // Complete(). The returned future is completed with |callback|'s return
   // value, when |callback| finishes executing.
@@ -389,6 +471,21 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
     subfuture->set_trace_name(trace_name_ + "(Map)");
     SetCallback([trace_name = trace_name_, subfuture,
                  callback = std::move(callback)](Result&&... result) {
+      MapResult&& callback_result = callback(std::forward<Result>(result)...);
+      subfuture->Complete(std::forward<MapResult>(callback_result));
+    });
+    return subfuture;
+  }
+
+  template <typename Callback, typename T,
+            typename MapResult = std::result_of_t<Callback(Result...)>>
+  FuturePtr<MapResult> WeakMap(fxl::WeakPtr<T> weak_ptr, Callback callback) {
+    FuturePtr<MapResult> subfuture = Future<MapResult>::Create();
+    subfuture->set_trace_name(trace_name_ + "(WeakMap)");
+    SetCallback([weak_ptr, trace_name = trace_name_, subfuture,
+                 callback = std::move(callback)](Result&&... result) {
+      if (!weak_ptr)
+        return;
       MapResult&& callback_result = callback(std::forward<Result>(result)...);
       subfuture->Complete(std::forward<MapResult>(callback_result));
     });
@@ -449,6 +546,17 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
       return;
     }
 
+    // It's impossible to add a const callback after a future is completed
+    // *and* it has a callback: the completed value will be moved into the
+    // callback and won't be available for a ConstThen().
+    if (has_result_ && callback_) {
+      FXL_LOG(FATAL)
+          << "Future@" << static_cast<void*>(this)
+          << (trace_name_.length() ? "(" + trace_name_ + ")" : "")
+          << ": Cannot add a const callback after completed result is "
+             "already moved into Then() callback.";
+    }
+
     const_callbacks_.emplace_back(std::move(callback));
 
     MaybeInvokeCallbacks();
@@ -472,7 +580,13 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
     }
 
     if (const_callbacks_.size()) {
-      for (auto& const_callback : const_callbacks_) {
+      // Move |const_callbacks_| to a local variable. MaybeInvokeCallbacks()
+      // can be called multiple times if the client only uses ConstThen() or
+      // WeakConstThen() to fetch the completed values. This prevents calling
+      // these callbacks multiple times by moving them out of the members
+      // scope.
+      auto local_const_callbacks = std::move(const_callbacks_);
+      for (auto& const_callback : local_const_callbacks) {
         fxl::Apply(const_callback, result_);
       }
     }
