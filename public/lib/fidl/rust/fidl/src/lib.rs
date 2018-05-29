@@ -23,6 +23,45 @@ pub mod endpoints2;
 
 pub use error::{Error, Result};
 
+use futures::task::{self, AtomicWaker};
+use std::sync::atomic::{self, AtomicBool};
+
+/// A type used from the innards of server implementations
+pub struct ServeInner {
+    waker: AtomicWaker,
+    shutdown: AtomicBool,
+    channel: async::Channel,
+}
+
+impl ServeInner {
+    /// Create a new set of server innards.
+    pub fn new(channel: async::Channel) -> Self {
+        let waker = AtomicWaker::new();
+        let shutdown = AtomicBool::new(false);
+        ServeInner { waker, shutdown, channel }
+    }
+
+    /// Get a reference to the inner channel.
+    pub fn channel(&self) -> &async::Channel {
+        &self.channel
+    }
+
+    /// Set the server to shutdown.
+    pub fn shutdown(&self) {
+        self.shutdown.store(true, atomic::Ordering::Relaxed);
+        self.waker.wake();
+    }
+
+    /// Check if the server has been set to shutdown.
+    pub fn poll_shutdown(&self, cx: &mut task::Context) -> bool {
+        if self.shutdown.load(atomic::Ordering::Relaxed) {
+            return true;
+        }
+        self.waker.register(cx.waker());
+        self.shutdown.load(atomic::Ordering::Relaxed)
+    }
+}
+
 /// A specialized `Box<Future<...>>` type for FIDL.
 /// This is a convenience to avoid writing
 /// `Future<Item = I, Error = Error> + Send`.

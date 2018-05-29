@@ -210,7 +210,7 @@ pub enum {{ $interface.Name }}Event {
 
 pub trait {{ $interface.Name }} {
 	type OnOpenFut: Future<Item = (), Error = Never> + Send;
-	fn on_open(&mut self, controller: {{ $interface.Name }}ControlHandle) -> Self::OnOpenFut;
+	fn on_open(&mut self, control_handle: {{ $interface.Name }}ControlHandle) -> Self::OnOpenFut;
 
 	{{- range $method := $interface.Methods }}
 	{{- if $method.HasRequest }}
@@ -222,7 +222,7 @@ pub trait {{ $interface.Name }} {
 		{{- if $method.HasResponse }}
 		response_chan: {{ $interface.Name }}{{ $method.CamelName }}Responder,
 		{{- else }}
-		controller: {{ $interface.Name }}ControlHandle
+		control_handle: {{ $interface.Name }}ControlHandle
 		{{- end }}
 	) -> Self::{{ $method.CamelName }}Fut;
 	{{ end -}}
@@ -232,15 +232,15 @@ pub trait {{ $interface.Name }} {
 		-> {{ $interface.Name }}Server<Self>
 	where Self: Sized
 	{
-		let channel = ::std::sync::Arc::new(channel);
+		let inner = ::std::sync::Arc::new(fidl::ServeInner::new(channel));
 		let on_open_fut = self.on_open(
 			{{ $interface.Name }}ControlHandle {
-				channel: channel.clone(),
+				inner: inner.clone(),
 			}
 		);
 		{{ $interface.Name }}Server {
 			server: self,
-			channel,
+			inner: inner.clone(),
 			msg_buf: zx::MessageBuf::new(),
 			on_open_fut: Some(on_open_fut),
 			{{- range $method := $interface.Methods }}
@@ -254,7 +254,7 @@ pub trait {{ $interface.Name }} {
 
 pub struct {{ $interface.Name }}Server<T: {{ $interface.Name }}> {
 	server: T,
-	channel: ::std::sync::Arc<async::Channel>,
+	inner: ::std::sync::Arc<fidl::ServeInner>,
 	msg_buf: zx::MessageBuf,
 	on_open_fut: Option<T::OnOpenFut>,
 	{{- range $method := $interface.Methods }}
@@ -267,7 +267,7 @@ pub struct {{ $interface.Name }}Server<T: {{ $interface.Name }}> {
 impl<T: {{ $interface.Name }}> {{ $interface.Name }}Server<T> {
 	pub fn control_handle(&self) -> {{ $interface.Name }}ControlHandle {
 		{{ $interface.Name }}ControlHandle {
-			channel: self.channel.clone(),
+			inner: self.inner.clone(),
 		}
 	}
 }
@@ -278,6 +278,10 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
 
 	fn poll(&mut self, cx: &mut futures::task::Context) -> futures::Poll<Self::Item, Self::Error> { loop {
 		let mut made_progress_this_loop_iter = false;
+
+		if self.inner.poll_shutdown(cx) {
+			return Ok(futures::Async::Ready(()));
+		}
 
 		let completed_on_open = if let Some(on_open_fut) = &mut self.on_open_fut {
 			match on_open_fut.poll(cx) {
@@ -303,7 +307,7 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
 		{{- end -}}
 		{{- end }}
 
-		match self.channel.recv_from(&mut self.msg_buf, cx) {
+		match self.inner.channel().recv_from(&mut self.msg_buf, cx) {
 			Ok(futures::Async::Ready(())) => {},
 			Ok(futures::Async::Pending) => {
 				if !made_progress_this_loop_iter {
@@ -335,8 +339,8 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
 						{{- end -}}
 					) = fidl::encoding2::Decodable::new_empty();
 					fidl::encoding2::Decoder::decode_into(body_bytes, handles, &mut req)?;
-					let controller = {{ $interface.Name }}ControlHandle {
-						channel: self.channel.clone(),
+					let control_handle = {{ $interface.Name }}ControlHandle {
+						inner: self.inner.clone(),
 					};
 					self.{{ $method.Name }}_futures.push(
 						self.server.{{ $method.Name }}(
@@ -349,11 +353,11 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
 							{{- end -}}
 							{{- if $method.HasResponse -}}
 							{{- $interface.Name -}}{{- $method.CamelName -}}Responder {
-								controller,
+								control_handle,
 								tx_id: header.tx_id,
 							}
 							{{- else -}}
-							controller
+							control_handle
 							{{- end -}}
 						)
 					);
@@ -427,11 +431,14 @@ impl<
 
 #[derive(Clone)]
 pub struct {{ $interface.Name }}ControlHandle {
-	// TODO(cramertj): add Arc<fidl::server2::ServerPool> for reusable message buffers
-	channel: ::std::sync::Arc<async::Channel>,
+	inner: ::std::sync::Arc<fidl::ServeInner>,
 }
 
 impl {{ $interface.Name }}ControlHandle {
+	pub fn shutdown(&self) {
+		self.inner.shutdown()
+	}
+
 	{{- range $method := $interface.Methods }}
 	{{- if not $method.HasRequest }}
 	pub fn send_{{ $method.Name }}(&self
@@ -460,7 +467,7 @@ impl {{ $interface.Name }}ControlHandle {
 
 		let (bytes, handles) = (&mut vec![], &mut vec![]);
 		fidl::encoding2::Encoder::encode(bytes, handles, &mut msg)?;
-		self.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+		self.inner.channel().write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
 		Ok(())
 	}
 	{{ end -}}
@@ -471,13 +478,13 @@ impl {{ $interface.Name }}ControlHandle {
 {{- range $method := $interface.Methods }}
 {{- if and $method.HasRequest $method.HasResponse }}
 pub struct {{ $interface.Name }}{{ $method.CamelName }}Responder {
-	controller: {{ $interface.Name }}ControlHandle,
+	control_handle: {{ $interface.Name }}ControlHandle,
 	tx_id: u32,
 }
 
 impl {{ $interface.Name }}{{ $method.CamelName }}Responder {
-	pub fn controller(&self) -> &{{ $interface.Name }}ControlHandle {
-		&self.controller
+	pub fn control_handle(&self) -> &{{ $interface.Name }}ControlHandle {
+		&self.control_handle
 	}
 
 	pub fn send(&self,
@@ -506,7 +513,7 @@ impl {{ $interface.Name }}{{ $method.CamelName }}Responder {
 
 		let (bytes, handles) = (&mut vec![], &mut vec![]);
 		fidl::encoding2::Encoder::encode(bytes, handles, &mut msg)?;
-		self.controller.channel.write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
+		self.control_handle.inner.channel().write(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)?;
 		Ok(())
 	}
 }
