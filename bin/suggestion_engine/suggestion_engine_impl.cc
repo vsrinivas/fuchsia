@@ -28,8 +28,8 @@
 
 namespace modular {
 
-std::string StoryNameKey(
-    const std::string& source_url, const std::string& story_name) {
+std::string StoryNameKey(const std::string& source_url,
+                         const std::string& story_name) {
   return source_url + story_name;
 }
 
@@ -83,8 +83,7 @@ void SuggestionEngineImpl::Connect(
 
 // |SuggestionProvider|
 void SuggestionEngineImpl::Query(fidl::InterfaceHandle<QueryListener> listener,
-                                 UserInput input,
-                                 int count) {
+                                 UserInput input, int count) {
   query_processor_.ExecuteQuery(std::move(input), count, std::move(listener));
 }
 
@@ -96,8 +95,7 @@ void SuggestionEngineImpl::SubscribeToInterruptions(
 
 // |SuggestionProvider|
 void SuggestionEngineImpl::SubscribeToNext(
-    fidl::InterfaceHandle<NextListener> listener,
-    int count) {
+    fidl::InterfaceHandle<NextListener> listener, int count) {
   next_processor_.RegisterListener(std::move(listener), count);
 }
 
@@ -137,8 +135,7 @@ void SuggestionEngineImpl::NotifyInteraction(fidl::StringPtr suggestion_uuid,
     if (interaction.type == InteractionType::SELECTED) {
       PerformActions(std::move(proposal.on_selected),
                      std::move(proposal.listener), proposal.id,
-                     proposal.story_name,
-                     suggestion->prototype->source_url,
+                     proposal.story_name, suggestion->prototype->source_url,
                      std::move(proposal.display));
     }
 
@@ -155,8 +152,7 @@ void SuggestionEngineImpl::NotifyInteraction(fidl::StringPtr suggestion_uuid,
 
 // |SuggestionEngine|
 void SuggestionEngineImpl::RegisterProposalPublisher(
-    fidl::StringPtr url,
-    fidl::InterfaceRequest<ProposalPublisher> publisher) {
+    fidl::StringPtr url, fidl::InterfaceRequest<ProposalPublisher> publisher) {
   // Check to see if a ProposalPublisher has already been created for the
   // component with this url. If not, create one.
   std::unique_ptr<ProposalPublisherImpl>& source = proposal_publishers_[url];
@@ -245,10 +241,8 @@ void SuggestionEngineImpl::RegisterRankingFeatures() {
 void SuggestionEngineImpl::PerformActions(
     fidl::VectorPtr<Action> actions,
     fidl::InterfaceHandle<ProposalListener> listener,
-    const std::string& proposal_id,
-    const std::string& story_name,
-    const std::string& source_url,
-    SuggestionDisplay suggestion_display) {
+    const std::string& proposal_id, const std::string& story_name,
+    const std::string& source_url, SuggestionDisplay suggestion_display) {
   if (story_name.empty()) {
     ExecuteActions(std::move(actions), std::move(listener), proposal_id,
                    std::move(suggestion_display), "" /* override_story_id */);
@@ -270,7 +264,7 @@ void SuggestionEngineImpl::PerformActions(
               ExecuteActions(std::move(actions), std::move(listener),
                              proposal_id, std::move(suggestion_display),
                              story_id);
-             }));
+            }));
   } else {
     ExecuteActions(std::move(actions), std::move(listener), proposal_id,
                    std::move(suggestion_display), it->second);
@@ -280,8 +274,7 @@ void SuggestionEngineImpl::PerformActions(
 void SuggestionEngineImpl::ExecuteActions(
     fidl::VectorPtr<Action> actions,
     fidl::InterfaceHandle<ProposalListener> listener,
-    const std::string& proposal_id,
-    SuggestionDisplay suggestion_display,
+    const std::string& proposal_id, SuggestionDisplay suggestion_display,
     const std::string& override_story_id) {
   for (auto& action : *actions) {
     switch (action.Which()) {
@@ -427,36 +420,19 @@ void SuggestionEngineImpl::PerformAddModuleAction(
   story_provider_->GetController(story_id, story_controller.NewRequest());
   modular::Intent intent;
   fidl::Clone(add_module.intent, &intent);
-  story_controller->AddModule(
-      add_module.surface_parent_module_path.Clone(), module_name,
-      std::move(intent), fidl::MakeOptional(add_module.surface_relation));
+  story_controller->AddModule(add_module.surface_parent_module_path.Clone(),
+                              module_name, std::move(intent),
+                              fidl::MakeOptional(add_module.surface_relation));
 }
 
 void SuggestionEngineImpl::PerformCustomAction(
-      Action* action,
-      SuggestionDisplay suggestion_display,
-      const std::string& override_story_id) {
+    Action* action, SuggestionDisplay suggestion_display,
+    const std::string& override_story_id) {
   auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
   auto custom_action = action->custom_action().Bind();
-  custom_action->Execute(fxl::MakeCopyable(
-      [this, activity, custom_action = std::move(custom_action),
-       suggestion_display = std::move(suggestion_display),
-       override_story_id](fidl::VectorPtr<ActionPtr> actions) {
-         if (actions) {
-           fidl::VectorPtr<Action> non_null_actions;
-           for (auto& action : *actions) {
-             if (action) {
-               non_null_actions.push_back(std::move(*action));
-             }
-           }
-           // Since there is no listener provided to PerformActions, it is fine
-           // to use an empty proposal id here.
-           SuggestionDisplay display_clone;
-           suggestion_display.Clone(&display_clone);
-           ExecuteActions(std::move(non_null_actions), nullptr /* listener */,
-                          "", std::move(display_clone), override_story_id);
-         }
-      }));
+  // TODO(rosswang): either fix this or remove it
+  // MI4-1005
+  custom_action->Execute([](fidl::VectorPtr<ActionPtr> actions) {});
 }
 
 void SuggestionEngineImpl::PerformSetLinkValueAction(
@@ -496,11 +472,11 @@ void SuggestionEngineImpl::OnContextUpdate(ContextUpdate update) {
 }
 
 std::string SuggestionEngineImpl::StoryIdFromName(
-        const std::string& source_url, const std::string& story_name) {
+    const std::string& source_url, const std::string& story_name) {
   auto it = story_name_mapping_.find(StoryNameKey(source_url, story_name));
   if (it != story_name_mapping_.end()) {
-      return it->second;
-    }
+    return it->second;
+  }
   return "";
 }
 
