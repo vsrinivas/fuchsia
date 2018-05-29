@@ -424,6 +424,8 @@ void InfraBss::OnBcnTxComplete() {
             return;
         }
     }
+
+    ps_cfg_.GetTim()->SetTrafficIndication(kGroupAdressedAid, false);
 }
 
 const common::MacAddr& InfraBss::bssid() const {
