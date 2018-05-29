@@ -20,121 +20,84 @@ namespace {
 
 uint32_t next_breakpoint_id = 1;
 
+Err ValidateSettings(const BreakpointSettings& settings) {
+  // Validate scope.
+  switch (settings.scope) {
+    case BreakpointSettings::Scope::kSystem:
+      // TODO(brettw) implement this.
+      return Err(
+          "System scopes aren't supported since only address breakpoints"
+          " are supported now.");
+    case BreakpointSettings::Scope::kTarget:
+      if (!settings.scope_target)
+        return Err(ErrType::kClientApi, "Target scopes require a target.");
+      if (settings.scope_thread)
+        return Err(ErrType::kClientApi, "Target scopes can't take a thread.");
+      break;
+    case BreakpointSettings::Scope::kThread:
+      if (!settings.scope_target || !settings.scope_thread) {
+        return Err(ErrType::kClientApi,
+                   "Thread scopes require a target and a thread.");
+      }
+  }
+  return Err();
+}
+
+debug_ipc::Stop SettingsStopToIpcStop(BreakpointSettings::StopMode mode) {
+  switch (mode) {
+    case BreakpointSettings::StopMode::kNone:
+      return debug_ipc::Stop::kNone;
+    case BreakpointSettings::StopMode::kThread:
+      return debug_ipc::Stop::kThread;
+    case BreakpointSettings::StopMode::kProcess:
+      return debug_ipc::Stop::kProcess;
+    case BreakpointSettings::StopMode::kAll:
+      return debug_ipc::Stop::kAll;
+  }
+}
+
 }  // namespace
 
 BreakpointImpl::BreakpointImpl(Session* session)
     : Breakpoint(session), weak_factory_(this) {}
 
 BreakpointImpl::~BreakpointImpl() {
-  if (backend_id_ && target_scope_ && target_scope_->GetProcess()) {
+  if (backend_id_ && settings_.enabled && settings_.scope_target &&
+      settings_.scope_target->GetProcess()) {
     // Breakpoint was installed and the process still exists.
-    enabled_ = false;
-    SendBreakpointRemove(target_scope_->GetProcess(),
+    settings_.enabled = false;
+    SendBreakpointRemove(settings_.scope_target->GetProcess(),
                          std::function<void(const Err&)>());
   }
 
   StopObserving();
 }
 
-void BreakpointImpl::CommitChanges(std::function<void(const Err&)> callback) {
-  // TODO(brettw) this assumes there's only one backend breakpoint!
-  if (!target_scope_) {
-    fprintf(stderr, "TODO(brettw) need to support non-target breakpoints.\n");
+BreakpointSettings BreakpointImpl::GetSettings() const {
+  return settings_;
+}
+
+void BreakpointImpl::SetSettings(const BreakpointSettings& settings,
+                                 std::function<void(const Err&)> callback) {
+  Err err = ValidateSettings(settings);
+  if (err.has_error()) {
+    debug_ipc::MessageLoop::Current()->PostTask(
+        [callback, err]() { callback(err); });
     return;
-  }
-  Process* process = target_scope_->GetProcess();
-  if (!process)
-    return;  // Process not running, don't try to set any breakpoints.
-
-  if (!backend_id_) {
-    if (!enabled_) {
-      // The breakpoint isn't enabled and there's no backend breakpoint to
-      // clear, don't need to do anything.
-      debug_ipc::MessageLoop::Current()->PostTask(
-          [callback]() { callback(Err()); });
-      return;
-    }
-
-    // Assign a new ID.
-    backend_id_ = next_breakpoint_id;
-    next_breakpoint_id++;
-  } else {
-    // Backend breakpoint exists.
-    if (!enabled_) {
-      // Disable the backend breakpoint.
-      SendBreakpointRemove(process, std::move(callback));
-      return;
-    }
-  }
-
-  // New or changed breakpoint.
-  SendAddOrChange(process, callback);
-}
-
-bool BreakpointImpl::IsEnabled() const {
-  return enabled_;
-}
-
-void BreakpointImpl::SetEnabled(bool enabled) {
-  enabled_ = enabled;
-}
-
-Err BreakpointImpl::SetScope(Scope scope, Target* target, Thread* thread) {
-  // Validate input.
-  switch (scope) {
-    case Scope::kSystem:
-      // TODO(brettw) implement this.
-      return Err(
-          "System scopes aren't supported since only address breakpoints"
-          " are supported now.");
-    case Scope::kTarget:
-      if (!target)
-        return Err(ErrType::kClientApi, "Target scopes require a target.");
-      if (thread)
-        return Err(ErrType::kClientApi, "Target scopes can't take a thread.");
-      break;
-    case Scope::kThread:
-      if (!target || !thread) {
-        return Err(ErrType::kClientApi,
-                   "Thread scopes require a target and a thread.");
-      }
   }
 
   // It's cleaner to always unregister for existing notifications and
   // re-register for the new ones.
   StopObserving();
-
-  // Don't return early between here and StartObserving() or we may miss
-  // a notification.
-  scope_ = scope;
-  target_scope_ = target;
-  thread_scope_ = thread;
-
+  settings_ = settings;
   StartObserving();
-  return Err();
-}
 
-Breakpoint::Scope BreakpointImpl::GetScope(Target** target,
-                                           Thread** thread) const {
-  *target = target_scope_;
-  *thread = thread_scope_;
-  return scope_;
-}
-
-void BreakpointImpl::SetStopMode(debug_ipc::Stop stop) {
-  stop_mode_ = stop;
-}
-
-debug_ipc::Stop BreakpointImpl::GetStopMode() const {
-  return stop_mode_;
-}
-
-void BreakpointImpl::SetAddressLocation(uint64_t address) {
-  address_ = address;
-}
-
-uint64_t BreakpointImpl::GetAddressLocation() const {
-  return address_;
+  // SendBackendUpdate() will issue the callback in the future.
+  err = SendBackendUpdate(callback);
+  if (err.has_error()) {
+    debug_ipc::MessageLoop::Current()->PostTask(
+        [callback, err]() { callback(err); });
+  }
 }
 
 int BreakpointImpl::GetHitCount() const {
@@ -142,17 +105,17 @@ int BreakpointImpl::GetHitCount() const {
 }
 
 void BreakpointImpl::WillDestroyThread(Process* process, Thread* thread) {
-  if (thread_scope_ == thread) {
+  if (settings_.scope_thread == thread) {
     // When the thread is destroyed that the breakpoint is associated with,
     // disable the breakpoint and convert to a target-scoped breakpoint. This
     // will preserve its state without us having to maintain some "defunct
     // thread" association. The user can associate it with a new thread and
     // re-enable as desired.
     StopObserving();
-    scope_ = Scope::kTarget;
-    target_scope_ = process->GetTarget();
-    thread_scope_ = nullptr;
-    enabled_ = false;
+    settings_.scope = BreakpointSettings::Scope::kTarget;
+    settings_.scope_target = process->GetTarget();
+    settings_.scope_thread = nullptr;
+    settings_.enabled = false;
     StartObserving();
   }
 }
@@ -168,22 +131,57 @@ void BreakpointImpl::DidDestroyProcess(Target* target, DestroyReason reason,
   // the addresses will normally change when a process is loaded.
   // TODO(brettw) when we have symbolic breakpoints, exclude them from this
   // behavior.
-  if (address_)
-    enabled_ = false;
+  if (settings_.location_address)
+    settings_.enabled = false;
   backend_id_ = 0;
 }
 
 void BreakpointImpl::WillDestroyTarget(Target* target) {
-  if (target == target_scope_) {
+  if (target == settings_.scope_target) {
     // As with threads going away, when the target goes away for a
     // target-scoped breakpoint, convert to a disabled system-wide breakpoint.
     StopObserving();
-    scope_ = Scope::kSystem;
-    target_scope_ = nullptr;
-    thread_scope_ = nullptr;
-    enabled_ = false;
+    settings_.scope = BreakpointSettings::Scope::kSystem;
+    settings_.scope_target = nullptr;
+    settings_.scope_thread = nullptr;
+    settings_.enabled = false;
     StartObserving();
   }
+}
+
+Err BreakpointImpl::SendBackendUpdate(
+    std::function<void(const Err&)> callback) {
+  if (!settings_.scope_target)
+    return Err("TODO(brettw) need to support non-target breakpoints.");
+  Process* process = settings_.scope_target->GetProcess();
+  // TODO(brettw) does this need to be deleted???
+  if (!process)
+    return Err();  // Process not running, don't try to set any breakpoints.
+
+  if (!backend_id_) {
+    if (!settings_.enabled) {
+      // The breakpoint isn't enabled and there's no backend breakpoint to
+      // clear, don't need to do anything.
+      debug_ipc::MessageLoop::Current()->PostTask(
+          [callback]() { callback(Err()); });
+      return Err();
+    }
+
+    // Assign a new ID.
+    backend_id_ = next_breakpoint_id;
+    next_breakpoint_id++;
+  } else {
+    // Backend breakpoint exists.
+    if (!settings_.enabled) {
+      // Disable the backend breakpoint.
+      SendBreakpointRemove(process, std::move(callback));
+      return Err();
+    }
+  }
+
+  // New or changed breakpoint.
+  SendAddOrChange(process, callback);
+  return Err();
 }
 
 void BreakpointImpl::StopObserving() {
@@ -192,12 +190,12 @@ void BreakpointImpl::StopObserving() {
     is_system_observer_ = false;
   }
   if (is_target_observer_) {
-    target_scope_->RemoveObserver(this);
+    settings_.scope_target->RemoveObserver(this);
     is_target_observer_ = false;
   }
   if (is_process_observer_) {
     // We should be unregistered when the process is going away.
-    target_scope_->GetProcess()->RemoveObserver(this);
+    settings_.scope_target->GetProcess()->RemoveObserver(this);
     is_process_observer_ = false;
   }
 }
@@ -211,12 +209,13 @@ void BreakpointImpl::StartObserving() {
   session()->system().AddObserver(this);
   is_system_observer_ = true;
 
-  if (scope_ == Scope::kTarget || scope_ == Scope::kThread) {
-    target_scope_->AddObserver(this);
+  if (settings_.scope == BreakpointSettings::Scope::kTarget ||
+      settings_.scope == BreakpointSettings::Scope::kThread) {
+    settings_.scope_target->AddObserver(this);
     is_target_observer_ = true;
   }
-  if (scope_ == Scope::kThread) {
-    thread_scope_->GetProcess()->AddObserver(this);
+  if (settings_.scope == BreakpointSettings::Scope::kThread) {
+    settings_.scope_thread->GetProcess()->AddObserver(this);
     is_process_observer_ = true;
   }
 }
@@ -224,17 +223,17 @@ void BreakpointImpl::StartObserving() {
 void BreakpointImpl::SendAddOrChange(Process* process,
                                      std::function<void(const Err&)> callback) {
   FXL_DCHECK(backend_id_); // ID should have been assigned by the caller.
-  FXL_DCHECK(enabled_);  // Shouldn't add or change disabled ones.
+  FXL_DCHECK(settings_.enabled);  // Shouldn't add or change disabled ones.
 
   debug_ipc::AddOrChangeBreakpointRequest request;
   request.breakpoint.breakpoint_id = backend_id_;
-  request.breakpoint.stop = stop_mode_;
+  request.breakpoint.stop = SettingsStopToIpcStop(settings_.stop_mode);
 
   request.breakpoint.locations.resize(1);
   request.breakpoint.locations[0].process_koid = process->GetKoid();
   request.breakpoint.locations[0].thread_koid =
-      thread_scope_ ? thread_scope_->GetKoid() : 0;
-  request.breakpoint.locations[0].address = address_;
+      settings_.scope_thread ? settings_.scope_thread->GetKoid() : 0;
+  request.breakpoint.locations[0].address = settings_.location_address;
 
   session()->Send<debug_ipc::AddOrChangeBreakpointRequest,
                   debug_ipc::AddOrChangeBreakpointReply>(
@@ -248,7 +247,7 @@ void BreakpointImpl::SendAddOrChange(Process* process,
         // disconnected and the agent no longer exists, so mark the breakpoint
         // disabled.
         if (breakpoint)
-          breakpoint->enabled_ = false;
+          breakpoint->settings_.enabled = false;
         if (callback)
           callback(err);
       } else if (reply.status != 0) {
@@ -257,7 +256,7 @@ void BreakpointImpl::SendAddOrChange(Process* process,
         // So mark the breakpoint disabled but keep the settings to the user
         // can fix the problem from the current state if desired.
         if (breakpoint)
-          breakpoint->enabled_ = false;
+          breakpoint->settings_.enabled = false;
         if (callback)
           callback(Err(ErrType::kGeneral, "Breakpoint set error."));
       } else {
@@ -271,7 +270,7 @@ void BreakpointImpl::SendAddOrChange(Process* process,
 void BreakpointImpl::SendBreakpointRemove(
     Process* process,
     std::function<void(const Err&)> callback) {
-  FXL_DCHECK(!enabled_);  // Caller should have disabled already.
+  FXL_DCHECK(!settings_.enabled);  // Caller should have disabled already.
   FXL_DCHECK(backend_id_);
 
   debug_ipc::RemoveBreakpointRequest request;

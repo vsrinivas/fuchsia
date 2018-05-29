@@ -64,7 +64,8 @@ struct MemoryBlock {
 enum class Stop : uint32_t {
   kAll,      // Stop all threads of all processes attached to the debugger.
   kProcess,  // Stop all threads of the process that hit the breakpoint.
-  kThread    // Stop only the thread that hit the breakpoint.
+  kThread,   // Stop only the thread that hit the breakpoint.
+  kNone      // Don't stop anything but accumulate hit counts.
 };
 
 struct ProcessBreakpointSettings {

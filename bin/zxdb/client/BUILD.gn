@@ -9,6 +9,7 @@ static_library("client") {
     "arch_info.h",
     "breakpoint.h",
     "breakpoint_observer.h",
+    "breakpoint_settings.h",
     "client_object.h",
     "disassembler.h",
     "err.h",

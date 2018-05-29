@@ -4,6 +4,8 @@
 
 #include "garnet/bin/zxdb/console/verbs.h"
 
+#include "garnet/bin/zxdb/client/breakpoint.h"
+#include "garnet/bin/zxdb/client/breakpoint_settings.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
@@ -24,33 +26,35 @@ constexpr int kEnableSwitch = 2;
 Err CreateOrEditBreakpoint(ConsoleContext* context,
                            const Command& cmd,
                            Breakpoint* breakpoint) {
-  // Before doing any changes, validate all inputs.
+  // Get existing settings (or defaults for new one).
+  BreakpointSettings settings;
+  if (breakpoint)
+    settings = breakpoint->GetSettings();
 
-  // Validate enabled flag (default to true for new breakpoints).
-  bool enabled = breakpoint ? breakpoint->IsEnabled() : true;
+  // Enable flag.
   if (cmd.HasSwitch(kEnableSwitch)) {
     std::string enable_str = cmd.GetSwitchValue(kEnableSwitch);
     if (enable_str == "true") {
-      enabled = true;
+      settings.enabled = true;
     } else if (enable_str == "false") {
-      enabled = false;
+      settings.enabled = false;
     } else {
       return Err(
           "--enabled switch requires either \"true\" or \"false\" values.");
     }
   }
 
-  // Stop flag (default to all for new breakpoints).
-  debug_ipc::Stop stop =
-      breakpoint ? breakpoint->GetStopMode() : debug_ipc::Stop::kAll;
+  // Stop mode.
   if (cmd.HasSwitch(kStopSwitch)) {
     std::string stop_str = cmd.GetSwitchValue(kStopSwitch);
     if (stop_str == "all") {
-      stop = debug_ipc::Stop::kAll;
+      settings.stop_mode = BreakpointSettings::StopMode::kAll;
     } else if (stop_str == "process") {
-      stop = debug_ipc::Stop::kProcess;
+      settings.stop_mode = BreakpointSettings::StopMode::kProcess;
     } else if (stop_str == "thread") {
-      stop = debug_ipc::Stop::kThread;
+      settings.stop_mode = BreakpointSettings::StopMode::kThread;
+    } else if (stop_str == "none") {
+      settings.stop_mode = BreakpointSettings::StopMode::kNone;
     } else {
       return Err(
           "--stop switch requires \"all\", \"process\", \"thread\", "
@@ -59,50 +63,40 @@ Err CreateOrEditBreakpoint(ConsoleContext* context,
   }
 
   // Location.
-  uint64_t address = 0;
   if (cmd.args().empty()) {
     if (!breakpoint)
       return Err(ErrType::kInput, "New breakpoints must specify a location.");
   } else if (cmd.args().size() == 1u) {
-    Err err = StringToUint64(cmd.args()[0], &address);
+    Err err = StringToUint64(cmd.args()[0], &settings.location_address);
     if (err.has_error())
       return err;
+    settings.location_type = BreakpointSettings::LocationType::kAddress;
   } else {
     return Err(ErrType::kInput, "Expecting only one arg for the location.");
   }
 
-  // Everything validated, commit the changes.
-  if (!breakpoint) {
-    // New breakpoint.
-    breakpoint = context->session()->system().CreateNewBreakpoint();
-    context->SetActiveBreakpoint(breakpoint);
-  }
-
   // Scope.
-  Err err;
   if (cmd.HasNoun(Noun::kThread)) {
-    err = breakpoint->SetScope(Breakpoint::Scope::kThread, cmd.target(),
-                               cmd.thread());
+    settings.scope = BreakpointSettings::Scope::kThread;
+    settings.scope_thread = cmd.thread();
+    settings.scope_target = cmd.target();
   } else if (cmd.HasNoun(Noun::kProcess)) {
-    err =
-        breakpoint->SetScope(Breakpoint::Scope::kTarget, cmd.target(), nullptr);
-  }
-  if (err.has_error()) {
-    FXL_NOTREACHED();  // Should have been validated enough above.
-    return err;
+    settings.scope = BreakpointSettings::Scope::kTarget;
+    settings.scope_thread = nullptr;
+    settings.scope_target = cmd.target();
   }
   // TODO(brettw) We don't have a "system" noun so there's no way to express
   // converting a process- or thread-specific breakpoint to a global one.
   // A system noun should be added and, if specified, this code should
   // convert to a global breakpoint.
 
-  breakpoint->SetStopMode(stop);
-  if (address)
-    breakpoint->SetAddressLocation(address);
-
-  breakpoint->SetEnabled(enabled);
-
-  breakpoint->CommitChanges([](const Err& err) {
+  // Commit the changes.
+  if (!breakpoint) {
+    // New breakpoint.
+    breakpoint = context->session()->system().CreateNewBreakpoint();
+    context->SetActiveBreakpoint(breakpoint);
+  }
+  breakpoint->SetSettings(settings, [](const Err& err) {
     if (err.has_error()) {
       OutputBuffer out;
       out.Append("Error setting breakpoint: ");
@@ -112,7 +106,7 @@ Err CreateOrEditBreakpoint(ConsoleContext* context,
   });
 
   Console::get()->Output(DescribeBreakpoint(context, breakpoint));
-  return err;
+  return Err();
 }
 
 // break -----------------------------------------------------------------------
@@ -139,14 +133,17 @@ Options
       breakpoint is never hit and hit counts are not incremented, but its
       settings are preserved. Defaults to enabled (true).
 
-  --stop=[ all | process | thread ]
-  -s [ all | process | thread ]
+  --stop=[ all | process | thread | none ]
+  -s [ all | process | thread | none ]
 
       Controls what execution is stopped when the breakpoint is hit. By
       default all threads of all debugged process will be stopped ("all") when
       a breakpoint is hit. But it's possible to only stop the threads of the
       current process ("process") or the thread that hit the breakpoint
       ("thread").
+
+      If "none" is specified, any threads hitting the breakpoint will
+      immediately resume, but the hit count will continue to accumulate.
 
 Scoping to processes and threads
 

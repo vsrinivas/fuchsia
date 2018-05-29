@@ -8,6 +8,7 @@
 #include <inttypes.h>
 #include <utility>
 
+#include "garnet/bin/zxdb/client/breakpoint.h"
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/session.h"
@@ -246,7 +247,6 @@ void ListBreakpoints(ConsoleContext* context) {
   for (const auto& pair : id_bp) {
     rows.emplace_back();
     std::vector<std::string>& row = rows.back();
-    const Breakpoint* bp = pair.second;
 
     // "Current breakpoint" marker.
     if (pair.first == active_breakpoint_id)
@@ -254,11 +254,12 @@ void ListBreakpoints(ConsoleContext* context) {
     else
       row.emplace_back();
 
+    BreakpointSettings settings = pair.second->GetSettings();
     row.push_back(fxl::StringPrintf("%d", pair.first));
-    row.push_back(BreakpointScopeToString(context, bp));
-    row.push_back(BreakpointStopToString(bp->GetStopMode()));
-    row.push_back(BreakpointEnabledToString(bp->IsEnabled()));
-    row.push_back(fxl::StringPrintf("0x%" PRIx64, bp->GetAddressLocation()));
+    row.push_back(BreakpointScopeToString(context, settings));
+    row.push_back(BreakpointStopToString(settings.stop_mode));
+    row.push_back(BreakpointEnabledToString(settings.enabled));
+    row.push_back(fxl::StringPrintf("0x%" PRIx64, settings.location_address));
   }
 
   OutputBuffer out;

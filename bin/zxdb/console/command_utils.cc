@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <limits>
 
+#include "garnet/bin/zxdb/client/breakpoint.h"
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/process.h"
@@ -189,38 +190,33 @@ std::string ThreadStateToString(debug_ipc::ThreadRecord::State state) {
 }
 
 std::string BreakpointScopeToString(const ConsoleContext* context,
-                                    const Breakpoint* breakpoint) {
-  Target* target_scope = nullptr;
-  Thread* thread_scope = nullptr;
-  Breakpoint::Scope scope = breakpoint->GetScope(&target_scope, &thread_scope);
-  switch (scope) {
-    case Breakpoint::Scope::kSystem:
+                                    const BreakpointSettings& settings) {
+  switch (settings.scope) {
+    case BreakpointSettings::Scope::kSystem:
       return "Global";
-    case Breakpoint::Scope::kTarget:
-      return fxl::StringPrintf("pr %d", context->IdForTarget(target_scope));
-    case Breakpoint::Scope::kThread:
+    case BreakpointSettings::Scope::kTarget:
+      return fxl::StringPrintf("pr %d",
+          context->IdForTarget(settings.scope_target));
+    case BreakpointSettings::Scope::kThread:
       return fxl::StringPrintf(
           "pr %d t %d",
-          context->IdForTarget(thread_scope->GetProcess()->GetTarget()),
-          context->IdForThread(thread_scope));
-    default:
-      FXL_NOTREACHED();
-      return std::string();
+          context->IdForTarget(settings.scope_thread->GetProcess()->GetTarget()),
+          context->IdForThread(settings.scope_thread));
   }
+  FXL_NOTREACHED();
+  return std::string();
 }
 
-std::string BreakpointStopToString(debug_ipc::Stop stop) {
-  struct Mapping {
-    debug_ipc::Stop stop;
-    const char* string;
-  };
-  static const Mapping mappings[] = {{debug_ipc::Stop::kAll, "All"},
-                                     {debug_ipc::Stop::kProcess, "Process"},
-                                     {debug_ipc::Stop::kThread, "Thread"}};
-
-  for (const Mapping& mapping : mappings) {
-    if (mapping.stop == stop)
-      return mapping.string;
+std::string BreakpointStopToString(BreakpointSettings::StopMode mode) {
+  switch (mode) {
+    case BreakpointSettings::StopMode::kNone:
+      return "None";
+    case BreakpointSettings::StopMode::kThread:
+      return "Thread";
+    case BreakpointSettings::StopMode::kProcess:
+      return "Process";
+    case BreakpointSettings::StopMode::kAll:
+      return "All";
   }
   FXL_NOTREACHED();
   return std::string();
@@ -299,11 +295,13 @@ std::string DescribeFrame(const Frame* frame, int id) {
 
 std::string DescribeBreakpoint(const ConsoleContext* context,
                                const Breakpoint* breakpoint) {
-  std::string scope = BreakpointScopeToString(context, breakpoint);
-  std::string stop = BreakpointStopToString(breakpoint->GetStopMode());
-  const char* enabled = BreakpointEnabledToString(breakpoint->IsEnabled());
+  BreakpointSettings settings = breakpoint->GetSettings();
+
+  std::string scope = BreakpointScopeToString(context, settings);
+  std::string stop = BreakpointStopToString(settings.stop_mode);
+  const char* enabled = BreakpointEnabledToString(settings.enabled);
   std::string location =
-      fxl::StringPrintf("0x%" PRIx64, breakpoint->GetAddressLocation());
+      fxl::StringPrintf("0x%" PRIx64, settings.location_address);
 
   return fxl::StringPrintf("Breakpoint %d on %s, %s, stop=%s, hit=%d, @ %s",
                            context->IdForBreakpoint(breakpoint), scope.c_str(),

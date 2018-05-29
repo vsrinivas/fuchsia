@@ -7,7 +7,7 @@
 #include <initializer_list>
 #include <string>
 
-#include "garnet/bin/zxdb/client/breakpoint.h"
+#include "garnet/bin/zxdb/client/breakpoint_settings.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/lib/debug_ipc/protocol.h"
@@ -15,6 +15,7 @@
 
 namespace zxdb {
 
+class Breakpoint;
 class Command;
 class ConsoleContext;
 class Err;
@@ -55,8 +56,8 @@ std::string TargetStateToString(Target::State state);
 std::string ThreadStateToString(debug_ipc::ThreadRecord::State state);
 
 std::string BreakpointScopeToString(const ConsoleContext* context,
-                                    const Breakpoint* breakpoint);
-std::string BreakpointStopToString(debug_ipc::Stop stop);
+                                    const BreakpointSettings& settings);
+std::string BreakpointStopToString(BreakpointSettings::StopMode mode);
 const char* BreakpointEnabledToString(bool enabled);
 
 std::string ExceptionTypeToString(debug_ipc::NotifyException::Type type);
