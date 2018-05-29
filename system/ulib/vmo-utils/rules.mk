@@ -11,6 +11,7 @@ MODULE_TYPE := userlib
 MODULE_SRCS += \
     $(LOCAL_DIR)/vmar_manager.cpp \
     $(LOCAL_DIR)/vmo_mapper.cpp \
+    $(LOCAL_DIR)/vmo_pool.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/zx \

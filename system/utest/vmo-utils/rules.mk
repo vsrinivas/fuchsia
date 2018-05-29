@@ -9,7 +9,10 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/vmo_vmar_tests.cpp \
+    $(LOCAL_DIR)/vmo_pool_tests.cpp \
+    $(LOCAL_DIR)/vmo_probe.cpp \
 
 MODULE_NAME := vmo-utils-test
 

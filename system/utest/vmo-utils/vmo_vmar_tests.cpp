@@ -7,46 +7,18 @@
 #include <unittest/unittest.h>
 #include <zircon/rights.h>
 
+#include "vmo_probe.h"
+
 namespace {
 
 static constexpr size_t kSubVmarTestSize = 16 << 20;    // 16MB
 static constexpr size_t kVmoTestSize = 512 << 10;       // 512KB
 
-static volatile uint32_t g_access_check_var;
 template <typename T>
 using RefPtr = fbl::RefPtr<T>;
 using VmarManager = vmo_utils::VmarManager;
 using VmoMapper = vmo_utils::VmoMapper;
-
-enum class AccessType { Rd, Wr };
-
-bool probe_access(void* addr, AccessType access_type, bool expect_can_access) {
-    BEGIN_TEST;
-
-    switch (access_type) {
-    case AccessType::Rd: {
-        auto rd_fn = [](void* addr) { g_access_check_var = reinterpret_cast<uint32_t*>(addr)[0]; };
-        if (expect_can_access) {
-            ASSERT_NO_DEATH(rd_fn, addr, "Read probe failed when it should have succeeded.");
-        } else {
-            ASSERT_DEATH(rd_fn, addr, "Read probe succeeded when it should have failed.");
-        }
-    }
-    break;
-
-    case AccessType::Wr: {
-        auto wr_fn = [](void* addr) { reinterpret_cast<uint32_t*>(addr)[0] = g_access_check_var; };
-        if (expect_can_access) {
-            ASSERT_NO_DEATH(wr_fn, addr, "Write probe failed when it should have succeeded.");
-        } else {
-            ASSERT_DEATH(wr_fn, addr, "Write probe succeeded when it should have failed.");
-        }
-    }
-    break;
-    }
-
-    END_TEST;
-}
+using AccessType = vmo_probe::AccessType;
 
 template <typename T, typename U>
 bool contained_in(const T& contained, const U& container) {
@@ -58,24 +30,6 @@ bool contained_in(const T& contained, const U& container) {
     return (contained_start <= contained_end) &&
            (contained_start >= container_start) &&
            (contained_end <= container_end);
-}
-
-bool probe_verify_region(void* start, size_t size, uint32_t access) {
-    BEGIN_TEST;
-
-    auto uint_base = reinterpret_cast<uintptr_t>(start);
-    void* probe_points[] = {
-        reinterpret_cast<void*>(uint_base),
-        reinterpret_cast<void*>(uint_base + (size / 2)),
-        reinterpret_cast<void*>(uint_base + size - sizeof(uint32_t)),
-    };
-
-    for (void* probe_point : probe_points) {
-        ASSERT_TRUE(probe_access(probe_point, AccessType::Rd, access & ZX_VM_FLAG_PERM_READ));
-        ASSERT_TRUE(probe_access(probe_point, AccessType::Wr, access & ZX_VM_FLAG_PERM_WRITE));
-    }
-
-    END_TEST;
 }
 
 bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
@@ -208,8 +162,8 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
                             vmar_end += target_vmar->size();
                             if (vmo_end < vmar_end) {
                                 void* probe_tgt = reinterpret_cast<void*>(vmo_end);
-                                ASSERT_TRUE(probe_access(probe_tgt, AccessType::Rd, false));
-                                ASSERT_TRUE(probe_access(probe_tgt, AccessType::Wr, false));
+                                ASSERT_TRUE(vmo_probe::probe_access(probe_tgt, AccessType::Rd, false));
+                                ASSERT_TRUE(vmo_probe::probe_access(probe_tgt, AccessType::Wr, false));
                             }
                         }
                     }
@@ -249,7 +203,7 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
             // everything checks out by probing and looking for seg-faults
             // if/when we violate permissions.
             for (const auto& t : kVmoTests) {
-                ASSERT_TRUE(probe_verify_region(t.start, t.test_size, t.access_flags));
+                ASSERT_TRUE(vmo_probe::probe_verify_region(t.start, t.test_size, t.access_flags));
             }
 
             // Release all of our VMO handles, then verify again.  Releasing
@@ -259,7 +213,7 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
             }
 
             for (const auto& t : kVmoTests) {
-                ASSERT_TRUE(probe_verify_region(t.start, t.test_size, t.access_flags));
+                ASSERT_TRUE(vmo_probe::probe_verify_region(t.start, t.test_size, t.access_flags));
             }
 
             // If this is the first pass, manually unmap all of the VmoMappers
@@ -271,7 +225,7 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
                 }
 
                 for (const auto& t : kVmoTests) {
-                    ASSERT_TRUE(probe_verify_region(t.start, t.test_size, 0));
+                    ASSERT_TRUE(vmo_probe::probe_verify_region(t.start, t.test_size, 0));
                 }
             }
         }
@@ -281,7 +235,7 @@ bool vmar_vmo_core_test(uint32_t vmar_levels, bool test_create) {
         // auto-unmapped as it should.
         if (pass) {
             for (const auto& t : kVmoTests) {
-                ASSERT_TRUE(probe_verify_region(t.start, t.test_size, 0));
+                ASSERT_TRUE(vmo_probe::probe_verify_region(t.start, t.test_size, 0));
             }
         }
     }
@@ -340,8 +294,3 @@ RUN_NAMED_TEST("vmo_map_root", vmo_map_root_test)
 RUN_NAMED_TEST("vmo_map_sub_vmar", vmo_map_sub_vmar_test)
 RUN_NAMED_TEST("vmo_map_sub_sub_vmar", vmo_map_sub_sub_vmar_test)
 END_TEST_CASE(vmo_mapper_vmar_manager_tests)
-
-int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
-}
-
