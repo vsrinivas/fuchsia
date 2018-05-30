@@ -21,9 +21,7 @@ interface StoryProvider {
   1: CreateStory(string? module_url) -> (string story_id);
 
   // Like CreateStory(), but with extra info and with values for the root link
-  // atomically set. Otherwise, if SetInfoExtra() is called separately on the
-  // story controller, separate StoryProviderWatcher notifications are
-  // generated, which is inconvenient.
+  // atomically set.
   //
   // Providing |module_url| is deprecated. It is preferred to GetController()
   // and call StoryController.AddModule().
