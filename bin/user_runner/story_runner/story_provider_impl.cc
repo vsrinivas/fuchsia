@@ -72,18 +72,15 @@ class StoryProviderImpl::CreateStoryCall : public Operation<fidl::StringPtr> {
     // 2) Set any extra info.
     // 3) If we got an initial module, add it.
     session_storage_->CreateStory()
-        ->AsyncMap([this, weak_this = GetWeakPtr(), flow](
-                       fidl::StringPtr story_id, ledger::PageId page_id) {
-          if (!weak_this)
-            return Future<>::CreateCompleted();
-          story_id_ = story_id;
-          story_page_id_ = page_id;
-          return session_storage_->UpdateStoryInfoExtra(story_id,
-                                                        std::move(extra_info_));
-        })
-        ->Then([this, weak_this = GetWeakPtr(), flow] {
-          if (!weak_this)
-            return;
+        ->WeakAsyncMap(
+            GetWeakPtr(),
+            [this, flow](fidl::StringPtr story_id, ledger::PageId page_id) {
+              story_id_ = story_id;
+              story_page_id_ = page_id;
+              return session_storage_->UpdateStoryInfoExtra(
+                  story_id, std::move(extra_info_));
+            })
+        ->WeakThen(GetWeakPtr(), [this, flow] {
           controller_ = std::make_unique<StoryControllerImpl>(
               story_id_, session_storage_->ledger_client(), story_page_id_,
               story_provider_impl_);
@@ -142,12 +139,8 @@ class StoryProviderImpl::DeleteStoryCall : public Operation<> {
     if (already_deleted_) {
       Teardown(flow);
     } else {
-      session_storage_->DeleteStory(story_id_)->Then(
-          [this, weak_this = GetWeakPtr(), flow] {
-            if (!weak_this)
-              return;
-            Teardown(flow);
-          });
+      session_storage_->DeleteStory(story_id_)->WeakThen(
+          GetWeakPtr(), [this, flow] { Teardown(flow); });
     }
   }
 
