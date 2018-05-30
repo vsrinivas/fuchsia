@@ -10,6 +10,10 @@ import os
 import subprocess
 import sys
 
+ROOT_PATH = os.path.abspath(__file__ + "/../../..")
+sys.path += [os.path.join(ROOT_PATH, "third_party", "pytoml")]
+import pytoml
+
 CARGO_TOML_CONTENTS = '''\
 # Copyright %(year)s The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -22,15 +26,10 @@ authors = ["rust-fuchsia@fuchsia.com"]
 description = "Rust crate for Fuchsia OS"
 repository = "https://fuchsia.googlesource.com"
 
-[dependencies]
-%(deps)s
-
 %(bin_or_lib)s
 name = "%(crate_name)s"%(lib_crate_type)s
 path = "%(source_root)s"
 '''
-
-DEP_TEMPLATE = '%(crate_name)s = { version = "%(version)s", path = "%(path)s" }\n'
 
 def cur_year():
     return datetime.datetime.now().year
@@ -65,23 +64,18 @@ def main():
     args = parser.parse_args()
     cargo_toml_path = os.path.join(args.out_dir, "Cargo.toml")
 
-    deps = ""
     third_party_json = json.load(open(args.third_party_deps_data))
 
+    deps = {}
     if args.dep_data:
         for data_path in args.dep_data:
             dep_data = json.load(open(data_path))
             if dep_data["third_party"]:
-                crate = dep_data["crate_name"]
+                crate = dep_data["package_name"]
                 crate_data = third_party_json["crates"][crate]
-                deps += DEP_TEMPLATE % {
-                    "crate_name": crate,
-                    "path": crate_data["cargo_toml_dir"],
-                    "version": crate_data["version"],
-                }
+                deps[crate] = crate_data["cargo_dependency_toml"]
             else:
-                deps += DEP_TEMPLATE % {
-                    "crate_name": dep_data["crate_name"],
+                deps[dep_data["crate_name"]] = {
                     "path": dep_data["cargo_toml_dir"],
                     "version": dep_data["version"],
                 }
@@ -98,6 +92,11 @@ def main():
             ),
             "source_root": args.source_root,
         })
+        dependencies = { "dependencies": deps }
+        file.write(pytoml.dumps({
+            "dependencies": deps,
+            "patch": { "crates-io": third_party_json["patches"] },
+        }))
 
 if __name__ == '__main__':
     sys.exit(main())

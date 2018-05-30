@@ -13,9 +13,13 @@ ROOT_PATH = os.path.abspath(__file__ + "/../../..")
 sys.path += [os.path.join(ROOT_PATH, "third_party", "pytoml")]
 import pytoml
 
+# "foo" from "foo 0.1.0 (//path/to/crate)"
+def package_name_from_crate_id(crate_id):
+    return crate_id.split(" ")[0]
+
 # Removes the (//path/to/crate) from the crate id "foo 0.1.0 (//path/to/crate)"
 # This is necessary in order to support locally-patched (mirrored) crates
-def truncate_crate_id(crate_id):
+def pathless_crate_id(crate_id):
     split_id = crate_id.split(" ")
     return split_id[0] + " " + split_id[1]
 
@@ -36,7 +40,7 @@ def run_command(args, env, cwd):
     return (job.returncode, stdout, stderr)
 
 def main():
-    parser = argparse.ArgumentParser("Compiles a Rust crate")
+    parser = argparse.ArgumentParser("Compiles all third-party Rust crates")
     parser.add_argument("--rustc",
                         help="Path to rustc",
                         required=True)
@@ -127,30 +131,27 @@ def main():
         print(stdout + stderr)
         return retcode
 
+    cargo_toml_path = os.path.join(args.crate_root, "Cargo.toml")
+    with open(cargo_toml_path, "r") as file:
+        cargo_toml = pytoml.load(file)
+
     crate_id_to_info = {}
     deps_folders = set()
     for line in stdout.splitlines():
         data = json.loads(line)
         if "filenames" not in data:
             continue
-        crate_id = truncate_crate_id(data["package_id"])
+        crate_id = pathless_crate_id(data["package_id"])
         assert len(data["filenames"]) == 1
         lib_path = data["filenames"][0]
         crate_name = data["target"]["name"]
         if crate_name != "fuchsia-third-party":
             # go from e.g. target/debug/deps/libfoo.rlib to target/debug/deps
             deps_folders.add(os.path.dirname(lib_path))
-        src_path = data["target"]["src_path"]
-        # go from foo/bar/src/main.rs to foo/bar (where hopefully there is a Cargo.toml)
-        cargo_toml_dir = os.path.abspath(os.path.join(os.path.dirname(src_path), os.pardir))
-        # parse "1.0.1" out of "foo 1.0.1"
-        crate_id_parts = crate_id.split(" ")
-        version = crate_id_parts[1]
+
         crate_id_to_info[crate_id] = {
             "crate_name": crate_name,
             "lib_path": lib_path,
-            "cargo_toml_dir": cargo_toml_dir,
-            "version": version,
         }
 
     cargo_lock_path = os.path.join(args.crate_root, "Cargo.lock")
@@ -162,16 +163,31 @@ def main():
     for package in cargo_lock_toml["package"]:
         if package["name"] == "fuchsia-third-party":
             for crate_id in package["dependencies"]:
-                crate_id = truncate_crate_id(crate_id)
+                crate_id = pathless_crate_id(crate_id)
                 crate_info = crate_id_to_info[crate_id]
                 crate_name = crate_info["crate_name"]
-                crates[crate_name] = crate_info
+                package_name = package_name_from_crate_id(crate_id)
+
+                if not package_name in cargo_toml["dependencies"]:
+                    print (package_name + " not found in Cargo.toml dependencies section")
+                    return 1
+                crate_info["cargo_dependency_toml"] = cargo_toml["dependencies"][package_name]
+
+                crates[package_name] = crate_info
+
+    # normalize paths for patches
+    patches = cargo_toml["patch"]["crates-io"]
+    for patch in patches:
+        path = patches[patch]["path"]
+        path = os.path.join(args.crate_root, path)
+        patches[patch] = { "path": path }
 
     create_base_directory(args.out_deps_data)
     with open(args.out_deps_data, "w") as file:
         file.write(json.dumps({
             "crates": crates,
             "deps_folders": list(deps_folders),
+            "patches": patches,
         }, sort_keys=True, indent=4, separators=(",", ": "))) # for humans
 
 if __name__ == '__main__':
