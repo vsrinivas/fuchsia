@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
+#include <fdio/spawn.h>
 #include <fnmatch.h>
-#include <launchpad/launchpad.h>
-#include <launchpad/vmo.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
@@ -26,22 +25,14 @@ const char* VBOOT_PAVER = "install-kernc";
 const char* FILE_FLAG = "--file";
 
 bool pave(const char* paver, const char* file) {
-  launchpad_t* lp = NULL;
-  launchpad_create(zx_job_default(), PAVER, &lp);
-
-  launchpad_load_from_file(lp, PAVER);
-
   char file_abs[PATH_MAX];
   sprintf(&file_abs[0], "%s/%s", INSTALL_PATH, file);
-  const char* argv[4] = {PAVER, paver, FILE_FLAG, &file_abs[0]};
-  launchpad_set_args(lp, 4, argv);
+  const char* argv[] = {PAVER, paver, FILE_FLAG, &file_abs[0], NULL};
 
-  const char* errmsg = NULL;
   zx_handle_t process = ZX_HANDLE_INVALID;
+  zx_status_t status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
+                                  PAVER, argv, &process);
 
-  launchpad_clone(lp, LP_CLONE_FDIO_ALL);
-
-  zx_status_t status = launchpad_go(lp, &process, &errmsg);
   if (status != ZX_OK) {
     printf("Failed to launch paver: status: %d\n", status);
     return false;

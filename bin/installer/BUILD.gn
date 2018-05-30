@@ -6,7 +6,6 @@ executable("install-fuchsia-c") {
   sources = [ "install-fuchsia.c" ]
   deps = [
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/launchpad",
     "//zircon/public/lib/zx",
   ]
 }
