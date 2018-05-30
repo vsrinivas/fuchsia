@@ -12,6 +12,6 @@ MODULE_PACKAGE := fidl
 
 MODULE_SRCS := $(LOCAL_DIR)/display-controller.fidl
 
-MODULE_FIDL_LIBRARY := display
+MODULE_FIDL_LIBRARY := fuchsia.display
 
 include make/module.mk

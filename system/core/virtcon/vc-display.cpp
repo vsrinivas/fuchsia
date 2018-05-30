@@ -12,7 +12,7 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
-#include "display/c/fidl.h"
+#include "fuchsia/display/c/fidl.h"
 #include "vc.h"
 
 static port_handler_t dc_ph;
@@ -42,8 +42,8 @@ void vc_toggle_framebuffer() {
     if (cur_display == nullptr) {
         return;
     }
-    display_ControllerSetOwnershipRequest request;
-    request.hdr.ordinal = display_ControllerSetOwnershipOrdinal;
+    fuchsia_display_ControllerSetOwnershipRequest request;
+    request.hdr.ordinal = fuchsia_display_ControllerSetOwnershipOrdinal;
     request.active = !g_vc_owns_display;
 
     zx_status_t status = zx_channel_write(dc_ph.handle, 0, &request, sizeof(request), nullptr, 0);
@@ -62,10 +62,10 @@ static zx_status_t decode_message(void* bytes, uint32_t num_bytes) {
     zx_status_t res;
 
     const fidl_type_t* table = nullptr;
-    if (header->ordinal == display_ControllerDisplaysChangedOrdinal) {
-        table = &display_ControllerDisplaysChangedEventTable;
-    } else if (header->ordinal == display_ControllerClientOwnershipChangeOrdinal) {
-        table = &display_ControllerClientOwnershipChangeEventTable;
+    if (header->ordinal == fuchsia_display_ControllerDisplaysChangedOrdinal) {
+        table = &fuchsia_display_ControllerDisplaysChangedEventTable;
+    } else if (header->ordinal == fuchsia_display_ControllerClientOwnershipChangeOrdinal) {
+        table = &fuchsia_display_ControllerClientOwnershipChangeEventTable;
     }
     if (table != nullptr) {
         const char* err;
@@ -79,7 +79,7 @@ static zx_status_t decode_message(void* bytes, uint32_t num_bytes) {
     return res;
 }
 
-static void handle_ownership_change(display_ControllerClientOwnershipChangeEvent* evt) {
+static void handle_ownership_change(fuchsia_display_ControllerClientOwnershipChangeEvent* evt) {
     g_vc_owns_display = evt->has_ownership;
 
     // If we've gained it, repaint
@@ -88,14 +88,14 @@ static void handle_ownership_change(display_ControllerClientOwnershipChangeEvent
     }
 }
 
-static zx_status_t handle_display_added(display_Info* info, display_Mode* mode,
+static zx_status_t handle_display_added(fuchsia_display_Info* info, fuchsia_display_Mode* mode,
                                         int32_t pixel_format) {
-    display_ControllerComputeLinearImageStrideRequest stride_msg;
-    stride_msg.hdr.ordinal = display_ControllerComputeLinearImageStrideOrdinal;
+    fuchsia_display_ControllerComputeLinearImageStrideRequest stride_msg;
+    stride_msg.hdr.ordinal = fuchsia_display_ControllerComputeLinearImageStrideOrdinal;
     stride_msg.width = mode->horizontal_resolution;
     stride_msg.pixel_format = pixel_format;
 
-    display_ControllerComputeLinearImageStrideResponse stride_rsp;
+    fuchsia_display_ControllerComputeLinearImageStrideResponse stride_rsp;
     zx_channel_call_args_t stride_call = {};
     stride_call.wr_bytes = &stride_msg;
     stride_call.rd_bytes = &stride_rsp;
@@ -152,8 +152,8 @@ static void handle_display_removed(uint64_t id) {
 
         cur_display = nullptr;
 
-        display_ControllerReleaseImageRequest release_msg;
-        release_msg.hdr.ordinal = display_ControllerReleaseImageOrdinal;
+        fuchsia_display_ControllerReleaseImageRequest release_msg;
+        release_msg.hdr.ordinal = fuchsia_display_ControllerReleaseImageOrdinal;
         release_msg.image_id = to_remove->image_id;
 
         zx_status_t status = zx_channel_write(dc_ph.handle, 0, &release_msg,
@@ -168,11 +168,11 @@ static void handle_display_removed(uint64_t id) {
 }
 
 static zx_status_t allocate_vmo(uint32_t size, zx_handle_t* vmo_out) {
-    display_ControllerAllocateVmoRequest alloc_msg;
-    alloc_msg.hdr.ordinal = display_ControllerAllocateVmoOrdinal;
+    fuchsia_display_ControllerAllocateVmoRequest alloc_msg;
+    alloc_msg.hdr.ordinal = fuchsia_display_ControllerAllocateVmoOrdinal;
     alloc_msg.size = size;
 
-    display_ControllerAllocateVmoResponse alloc_rsp;
+    fuchsia_display_ControllerAllocateVmoResponse alloc_rsp;
     zx_channel_call_args_t call_args = {};
     call_args.wr_bytes = &alloc_msg;
     call_args.rd_bytes = &alloc_rsp;
@@ -202,8 +202,8 @@ static zx_status_t import_vmo(display_info* display, zx_handle_t vmo, uint64_t* 
         return status;
     }
 
-    display_ControllerImportVmoImageRequest import_msg;
-    import_msg.hdr.ordinal = display_ControllerImportVmoImageOrdinal;
+    fuchsia_display_ControllerImportVmoImageRequest import_msg;
+    import_msg.hdr.ordinal = fuchsia_display_ControllerImportVmoImageOrdinal;
     import_msg.image_config.height = display->height;
     import_msg.image_config.width = display->width;
     import_msg.image_config.pixel_format = display->format;
@@ -211,7 +211,7 @@ static zx_status_t import_vmo(display_info* display, zx_handle_t vmo, uint64_t* 
     import_msg.vmo = FIDL_HANDLE_PRESENT;
     import_msg.offset = 0;
 
-    display_ControllerImportVmoImageResponse import_rsp;
+    fuchsia_display_ControllerImportVmoImageResponse import_rsp;
     zx_channel_call_args_t call_args = {};
     call_args.wr_bytes = &import_msg;
     call_args.wr_handles = &vmo_dup;
@@ -243,8 +243,8 @@ static zx_status_t set_active_image(uint64_t display_id, uint64_t image_id) {
     zx_status_t status;
 
     // Set our framebuffer as the active framebuffer
-    display_ControllerSetDisplayImageRequest set_msg;
-    set_msg.hdr.ordinal = display_ControllerSetDisplayImageOrdinal;
+    fuchsia_display_ControllerSetDisplayImageRequest set_msg;
+    set_msg.hdr.ordinal = fuchsia_display_ControllerSetDisplayImageOrdinal;
     set_msg.display = display_id;
     set_msg.image_id = image_id;
     if ((status = zx_channel_write(dc_ph.handle, 0,
@@ -254,10 +254,10 @@ static zx_status_t set_active_image(uint64_t display_id, uint64_t image_id) {
     }
 
     // Validate and then apply the new configuration
-    display_ControllerCheckConfigRequest check_msg;
-    display_ControllerCheckConfigResponse check_rsp;
+    fuchsia_display_ControllerCheckConfigRequest check_msg;
+    fuchsia_display_ControllerCheckConfigResponse check_rsp;
     check_msg.discard = false;
-    check_msg.hdr.ordinal = display_ControllerCheckConfigOrdinal;
+    check_msg.hdr.ordinal = fuchsia_display_ControllerCheckConfigOrdinal;
     zx_channel_call_args_t call_args = {};
     call_args.wr_bytes = &check_msg;
     call_args.rd_bytes = &check_rsp;
@@ -276,8 +276,8 @@ static zx_status_t set_active_image(uint64_t display_id, uint64_t image_id) {
         return ZX_ERR_INTERNAL;
     }
 
-    display_ControllerApplyConfigRequest apply_msg;
-    apply_msg.hdr.ordinal = display_ControllerApplyConfigOrdinal;
+    fuchsia_display_ControllerApplyConfigRequest apply_msg;
+    apply_msg.hdr.ordinal = fuchsia_display_ControllerApplyConfigOrdinal;
     if ((status = zx_channel_write(dc_ph.handle, 0,
                                    &apply_msg, sizeof(apply_msg), nullptr, 0)) != ZX_OK) {
         printf("vc: Applying config failed %d\n", status);
@@ -338,8 +338,8 @@ static zx_status_t rebind_display() {
 
 fail:
     if (image_id != INVALID_ID) {
-        display_ControllerReleaseImageRequest release_msg;
-        release_msg.hdr.ordinal = display_ControllerReleaseImageOrdinal;
+        fuchsia_display_ControllerReleaseImageRequest release_msg;
+        release_msg.hdr.ordinal = fuchsia_display_ControllerReleaseImageOrdinal;
         release_msg.image_id = image_id;
 
         if ((status = zx_channel_write(dc_ph.handle, 0, &release_msg,
@@ -356,10 +356,10 @@ fail:
     return rebind_display();
 }
 
-static zx_status_t handle_display_changed(display_ControllerDisplaysChangedEvent* evt) {
+static zx_status_t handle_display_changed(fuchsia_display_ControllerDisplaysChangedEvent* evt) {
     for (unsigned i = 0; i < evt->added.count; i++) {
-        display_Info* info = reinterpret_cast<display_Info*>(evt->added.data) + i;
-        display_Mode* mode = reinterpret_cast<display_Mode*>(info->modes.data);
+        fuchsia_display_Info* info = reinterpret_cast<fuchsia_display_Info*>(evt->added.data) + i;
+        fuchsia_display_Mode* mode = reinterpret_cast<fuchsia_display_Mode*>(info->modes.data);
         int32_t pixel_format = reinterpret_cast<int32_t*>(info->pixel_format.data)[0];
         zx_status_t status = handle_display_added(info, mode, pixel_format);
         if (status != ZX_OK) {
@@ -402,13 +402,13 @@ static zx_status_t dc_callback_handler(port_handler_t* ph, zx_signals_t signals,
 
     fidl_message_header_t* header = (fidl_message_header_t*) fidl_buffer;
     switch (header->ordinal) {
-    case display_ControllerDisplaysChangedOrdinal: {
+    case fuchsia_display_ControllerDisplaysChangedOrdinal: {
         handle_display_changed(
-                reinterpret_cast<display_ControllerDisplaysChangedEvent*>(fidl_buffer));
+                reinterpret_cast<fuchsia_display_ControllerDisplaysChangedEvent*>(fidl_buffer));
         break;
     }
-    case display_ControllerClientOwnershipChangeOrdinal: {
-        auto evt = reinterpret_cast<display_ControllerClientOwnershipChangeEvent*>(
+    case fuchsia_display_ControllerClientOwnershipChangeOrdinal: {
+        auto evt = reinterpret_cast<fuchsia_display_ControllerClientOwnershipChangeEvent*>(
                 fidl_buffer);
         handle_ownership_change(evt);
         break;

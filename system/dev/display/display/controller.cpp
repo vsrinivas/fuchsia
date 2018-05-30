@@ -9,7 +9,7 @@
 
 #include "controller.h"
 #include "client.h"
-#include "display/c/fidl.h"
+#include "fuchsia/display/c/fidl.h"
 
 namespace {
 

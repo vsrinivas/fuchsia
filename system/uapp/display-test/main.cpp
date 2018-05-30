@@ -21,7 +21,7 @@
 #include <zircon/pixelformat.h>
 #include <zircon/syscalls.h>
 
-#include "display/c/fidl.h"
+#include "fuchsia/display/c/fidl.h"
 
 #ifdef DEBUG
 #define dprintf(...) printf(__VA_ARGS__)
@@ -84,24 +84,24 @@ static bool bind_display() {
     }
 
     const char* err_msg;
-    if (msg.Decode(&display_ControllerDisplaysChangedEventTable, &err_msg) != ZX_OK) {
+    if (msg.Decode(&fuchsia_display_ControllerDisplaysChangedEventTable, &err_msg) != ZX_OK) {
         printf("Fidl decode error %s\n", err_msg);
         return false;
     }
 
-    auto changes = reinterpret_cast<display_ControllerDisplaysChangedEvent*>(
+    auto changes = reinterpret_cast<fuchsia_display_ControllerDisplaysChangedEvent*>(
             msg.bytes().data());
-    auto display = reinterpret_cast<display_Info*>(changes->added.data);
-    auto mode = reinterpret_cast<display_Mode*>(display->modes.data);
+    auto display = reinterpret_cast<fuchsia_display_Info*>(changes->added.data);
+    auto mode = reinterpret_cast<fuchsia_display_Mode*>(display->modes.data);
     auto pixel_format = reinterpret_cast<int32_t*>(display->pixel_format.data)[0];
 
     printf("Getting stride\n");
-    display_ControllerComputeLinearImageStrideRequest stride_msg;
-    stride_msg.hdr.ordinal = display_ControllerComputeLinearImageStrideOrdinal;
+    fuchsia_display_ControllerComputeLinearImageStrideRequest stride_msg;
+    stride_msg.hdr.ordinal = fuchsia_display_ControllerComputeLinearImageStrideOrdinal;
     stride_msg.width = mode->horizontal_resolution;
     stride_msg.pixel_format = pixel_format;
 
-    display_ControllerComputeLinearImageStrideResponse stride_rsp;
+    fuchsia_display_ControllerComputeLinearImageStrideResponse stride_rsp;
     zx_channel_call_args_t stride_call = {};
     stride_call.wr_bytes = &stride_msg;
     stride_call.rd_bytes = &stride_rsp;
@@ -142,8 +142,8 @@ static bool create_image(image_t* img) {
             return false;
         }
 
-        display_ControllerImportEventRequest import_evt_msg;
-        import_evt_msg.hdr.ordinal = display_ControllerImportEventOrdinal;
+        fuchsia_display_ControllerImportEventRequest import_evt_msg;
+        import_evt_msg.hdr.ordinal = fuchsia_display_ControllerImportEventOrdinal;
         import_evt_msg.id = info.koid;
         import_evt_msg.event = FIDL_HANDLE_PRESENT;
 
@@ -159,11 +159,11 @@ static bool create_image(image_t* img) {
 
     printf("Creating and mapping vmo\n");
     zx_handle_t vmo;
-    display_ControllerAllocateVmoRequest alloc_msg;
-    alloc_msg.hdr.ordinal = display_ControllerAllocateVmoOrdinal;
+    fuchsia_display_ControllerAllocateVmoRequest alloc_msg;
+    alloc_msg.hdr.ordinal = fuchsia_display_ControllerAllocateVmoOrdinal;
     alloc_msg.size = stride * height * ZX_PIXEL_FORMAT_BYTES(format);
 
-    display_ControllerAllocateVmoResponse alloc_rsp;
+    fuchsia_display_ControllerAllocateVmoResponse alloc_rsp;
     zx_channel_call_args_t call_args = {};
     call_args.wr_bytes = &alloc_msg;
     call_args.rd_bytes = &alloc_rsp;
@@ -193,8 +193,8 @@ static bool create_image(image_t* img) {
     }
 
     printf("Importing image\n");
-    display_ControllerImportVmoImageRequest import_msg;
-    import_msg.hdr.ordinal = display_ControllerImportVmoImageOrdinal;
+    fuchsia_display_ControllerImportVmoImageRequest import_msg;
+    import_msg.hdr.ordinal = fuchsia_display_ControllerImportVmoImageOrdinal;
     import_msg.image_config.height = height;
     import_msg.image_config.width = width;
     import_msg.image_config.pixel_format = format;
@@ -207,7 +207,7 @@ static bool create_image(image_t* img) {
         return false;
     }
 
-    display_ControllerImportVmoImageResponse import_rsp;
+    fuchsia_display_ControllerImportVmoImageResponse import_rsp;
     zx_channel_call_args_t import_call = {};
     import_call.wr_bytes = &import_msg;
     import_call.wr_handles = &vmo_dup;
@@ -266,8 +266,8 @@ int main(int argc, char* argv[]) {
         zx_object_signal(img->events[SIGNAL_EVENT], ZX_EVENT_SIGNALED, 0);
         zx_object_signal(img->events[PRESENT_EVENT], ZX_EVENT_SIGNALED, 0);
 
-        display_ControllerSetDisplayImageRequest set_msg;
-        set_msg.hdr.ordinal = display_ControllerSetDisplayImageOrdinal;
+        fuchsia_display_ControllerSetDisplayImageRequest set_msg;
+        set_msg.hdr.ordinal = fuchsia_display_ControllerSetDisplayImageOrdinal;
         set_msg.display = display_id;
         set_msg.image_id = img->id;
         set_msg.wait_event_id = img->event_ids[WAIT_EVENT];
@@ -278,10 +278,10 @@ int main(int argc, char* argv[]) {
             return -1;
         }
 
-        display_ControllerCheckConfigRequest check_msg;
-        display_ControllerCheckConfigResponse check_rsp;
+        fuchsia_display_ControllerCheckConfigRequest check_msg;
+        fuchsia_display_ControllerCheckConfigResponse check_rsp;
         check_msg.discard = false;
-        check_msg.hdr.ordinal = display_ControllerCheckConfigOrdinal;
+        check_msg.hdr.ordinal = fuchsia_display_ControllerCheckConfigOrdinal;
         zx_channel_call_args_t check_call = {};
         check_call.wr_bytes = &check_msg;
         check_call.rd_bytes = &check_rsp;
@@ -300,8 +300,8 @@ int main(int argc, char* argv[]) {
             return -1;
         }
 
-        display_ControllerApplyConfigRequest apply_msg;
-        apply_msg.hdr.ordinal = display_ControllerApplyConfigOrdinal;
+        fuchsia_display_ControllerApplyConfigRequest apply_msg;
+        apply_msg.hdr.ordinal = fuchsia_display_ControllerApplyConfigOrdinal;
         if (zx_channel_write(dc_handle, 0, &apply_msg, sizeof(apply_msg), nullptr, 0) != ZX_OK) {
             dprintf("Apply failed\n");
             return -1;

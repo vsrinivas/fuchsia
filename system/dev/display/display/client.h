@@ -20,8 +20,8 @@
 #include <lib/zx/event.h>
 
 #include "controller.h"
-#include "display/c/fidl.h"
 #include "fence.h"
+#include "fuchsia/display/c/fidl.h"
 #include "id-map.h"
 #include "image.h"
 
@@ -71,26 +71,26 @@ public:
 
     bool IsValid() { return server_handle_.get() != ZX_HANDLE_INVALID; }
 private:
-    void HandleImportVmoImage(const display_ControllerImportVmoImageRequest* req,
+    void HandleImportVmoImage(const fuchsia_display_ControllerImportVmoImageRequest* req,
                               fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-    void HandleReleaseImage(const display_ControllerReleaseImageRequest* req,
+    void HandleReleaseImage(const fuchsia_display_ControllerReleaseImageRequest* req,
                             fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-    void HandleImportEvent(const display_ControllerImportEventRequest* req,
+    void HandleImportEvent(const fuchsia_display_ControllerImportEventRequest* req,
                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-    void HandleReleaseEvent(const display_ControllerReleaseEventRequest* req,
+    void HandleReleaseEvent(const fuchsia_display_ControllerReleaseEventRequest* req,
                             fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-    void HandleSetDisplayImage(const display_ControllerSetDisplayImageRequest* req,
+    void HandleSetDisplayImage(const fuchsia_display_ControllerSetDisplayImageRequest* req,
                                fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-    void HandleCheckConfig(const display_ControllerCheckConfigRequest* req,
+    void HandleCheckConfig(const fuchsia_display_ControllerCheckConfigRequest* req,
                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-    void HandleApplyConfig(const display_ControllerApplyConfigRequest* req,
+    void HandleApplyConfig(const fuchsia_display_ControllerApplyConfigRequest* req,
                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-    void HandleSetOwnership(const display_ControllerSetOwnershipRequest* req,
+    void HandleSetOwnership(const fuchsia_display_ControllerSetOwnershipRequest* req,
                             fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleComputeLinearImageStride(
-            const display_ControllerComputeLinearImageStrideRequest* req,
+            const fuchsia_display_ControllerComputeLinearImageStrideRequest* req,
             fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-    void HandleAllocateVmo(const display_ControllerAllocateVmoRequest* req,
+    void HandleAllocateVmo(const fuchsia_display_ControllerAllocateVmoRequest* req,
                            fidl::Builder* resp_builder,
                            zx_handle_t* handle_out, bool* has_handle_out,
                            const fidl_type_t** resp_table);

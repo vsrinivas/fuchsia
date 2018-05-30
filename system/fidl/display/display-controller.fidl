@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library display;
+library fuchsia.display;
 
 // Invalid id for displays, images, and events.
 const uint64 invalidId = 0;

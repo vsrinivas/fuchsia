@@ -10,7 +10,7 @@
 #include <fbl/ref_ptr.h>
 #include <lib/zx/vmo.h>
 
-#include "display/c/fidl.h"
+#include "fuchsia/display/c/fidl.h"
 #include "fence.h"
 #include "id-map.h"
 

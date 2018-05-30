@@ -17,7 +17,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include "display/c/fidl.h"
+#include "fuchsia/display/c/fidl.h"
 #include "lib/framebuffer/framebuffer.h"
 
 static int32_t dc_fd = -1;
@@ -84,26 +84,26 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
         goto err;
     }
 
-    if ((status = fidl_decode(&display_ControllerDisplaysChangedEventTable,
+    if ((status = fidl_decode(&fuchsia_display_ControllerDisplaysChangedEventTable,
                               bytes, actual_bytes, NULL, 0, err_msg_out)) != ZX_OK) {
         goto err;
     }
 
     // We're guaranteed that added contains at least one display, since we haven't
     // been notified of any displays to remove.
-    display_ControllerDisplaysChangedEvent* changes =
-            (display_ControllerDisplaysChangedEvent*) bytes;
-    display_Info* display = (display_Info*) changes->added.data;
-    display_Mode* mode = (display_Mode*) display->modes.data;
+    fuchsia_display_ControllerDisplaysChangedEvent* changes =
+            (fuchsia_display_ControllerDisplaysChangedEvent*) bytes;
+    fuchsia_display_Info* display = (fuchsia_display_Info*) changes->added.data;
+    fuchsia_display_Mode* mode = (fuchsia_display_Mode*) display->modes.data;
     zx_pixel_format_t pixel_format = ((int32_t*)(display->pixel_format.data))[0];
 
-    display_ControllerComputeLinearImageStrideRequest stride_msg;
-    stride_msg.hdr.ordinal = display_ControllerComputeLinearImageStrideOrdinal;
+    fuchsia_display_ControllerComputeLinearImageStrideRequest stride_msg;
+    stride_msg.hdr.ordinal = fuchsia_display_ControllerComputeLinearImageStrideOrdinal;
     stride_msg.hdr.txid = txid++;
     stride_msg.width = mode->horizontal_resolution;
     stride_msg.pixel_format = pixel_format;
 
-    display_ControllerComputeLinearImageStrideResponse stride_rsp;
+    fuchsia_display_ControllerComputeLinearImageStrideResponse stride_rsp;
     zx_channel_call_args_t stride_call = {};
     stride_call.wr_bytes = &stride_msg;
     stride_call.rd_bytes = &stride_rsp;
@@ -127,12 +127,12 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
 
     if (single_buffer) {
         uint32_t size = stride * height * ZX_PIXEL_FORMAT_BYTES(format);
-        display_ControllerAllocateVmoRequest alloc_msg;
-        alloc_msg.hdr.ordinal = display_ControllerAllocateVmoOrdinal;
+        fuchsia_display_ControllerAllocateVmoRequest alloc_msg;
+        alloc_msg.hdr.ordinal = fuchsia_display_ControllerAllocateVmoOrdinal;
         alloc_msg.hdr.txid = txid++;
         alloc_msg.size = size;
 
-        display_ControllerAllocateVmoResponse alloc_rsp;
+        fuchsia_display_ControllerAllocateVmoResponse alloc_rsp;
         zx_channel_call_args_t call_args = {};
         call_args.wr_bytes = &alloc_msg;
         call_args.rd_bytes = &alloc_rsp;
@@ -236,8 +236,8 @@ zx_status_t fb_import_image(zx_handle_t handle, uint32_t type, uint64_t *id_out)
     ZX_ASSERT(inited && !in_single_buffer_mode);
     zx_status_t status;
 
-    display_ControllerImportVmoImageRequest import_msg;
-    import_msg.hdr.ordinal = display_ControllerImportVmoImageOrdinal;
+    fuchsia_display_ControllerImportVmoImageRequest import_msg;
+    import_msg.hdr.ordinal = fuchsia_display_ControllerImportVmoImageOrdinal;
     import_msg.hdr.txid = txid++;
     import_msg.image_config.height = height;
     import_msg.image_config.width = width;
@@ -246,7 +246,7 @@ zx_status_t fb_import_image(zx_handle_t handle, uint32_t type, uint64_t *id_out)
     import_msg.vmo = FIDL_HANDLE_PRESENT;
     import_msg.offset = 0;
 
-    display_ControllerImportVmoImageResponse import_rsp;
+    fuchsia_display_ControllerImportVmoImageResponse import_rsp;
     zx_channel_call_args_t import_call = {};
     import_call.wr_bytes = &import_msg;
     import_call.wr_handles = &handle;
@@ -277,8 +277,8 @@ zx_status_t fb_import_image(zx_handle_t handle, uint32_t type, uint64_t *id_out)
 void fb_release_image(uint64_t image_id) {
     ZX_ASSERT(inited && !in_single_buffer_mode);
 
-    display_ControllerReleaseEventRequest release_img_msg;
-    release_img_msg.hdr.ordinal = display_ControllerReleaseEventOrdinal;
+    fuchsia_display_ControllerReleaseEventRequest release_img_msg;
+    release_img_msg.hdr.ordinal = fuchsia_display_ControllerReleaseEventOrdinal;
     release_img_msg.hdr.txid = txid++;
     release_img_msg.id = image_id;
 
@@ -290,8 +290,8 @@ zx_status_t fb_import_event(zx_handle_t handle, uint64_t id) {
     ZX_ASSERT(inited && !in_single_buffer_mode);
     zx_status_t status;
 
-    display_ControllerImportEventRequest import_evt_msg;
-    import_evt_msg.hdr.ordinal = display_ControllerImportEventOrdinal;
+    fuchsia_display_ControllerImportEventRequest import_evt_msg;
+    import_evt_msg.hdr.ordinal = fuchsia_display_ControllerImportEventOrdinal;
     import_evt_msg.hdr.txid = txid++;
     import_evt_msg.id = id;
     import_evt_msg.event = FIDL_HANDLE_PRESENT;
@@ -308,8 +308,8 @@ zx_status_t fb_import_event(zx_handle_t handle, uint64_t id) {
 void fb_release_event(uint64_t id) {
     ZX_ASSERT(inited && !in_single_buffer_mode);
 
-    display_ControllerReleaseEventRequest release_evt_msg;
-    release_evt_msg.hdr.ordinal = display_ControllerReleaseEventOrdinal;
+    fuchsia_display_ControllerReleaseEventRequest release_evt_msg;
+    release_evt_msg.hdr.ordinal = fuchsia_display_ControllerReleaseEventOrdinal;
     release_evt_msg.hdr.txid = txid++;
     release_evt_msg.id = id;
 
@@ -322,8 +322,8 @@ zx_status_t fb_present_image(uint64_t image_id, uint64_t wait_event_id,
     ZX_ASSERT(inited && !in_single_buffer_mode);
     zx_status_t status;
 
-    display_ControllerSetDisplayImageRequest set_msg;
-    set_msg.hdr.ordinal = display_ControllerSetDisplayImageOrdinal;
+    fuchsia_display_ControllerSetDisplayImageRequest set_msg;
+    set_msg.hdr.ordinal = fuchsia_display_ControllerSetDisplayImageOrdinal;
     set_msg.hdr.txid = txid++;
     set_msg.display = display_id;
     set_msg.image_id = image_id;
@@ -336,20 +336,20 @@ zx_status_t fb_present_image(uint64_t image_id, uint64_t wait_event_id,
 
     // It's not necessary to validate the configuration, since we're guaranteed that a single
     // fullscreen framebuffer on a single monitor will work.
-    display_ControllerApplyConfigRequest apply_msg;
+    fuchsia_display_ControllerApplyConfigRequest apply_msg;
     apply_msg.hdr.txid = txid++;
-    apply_msg.hdr.ordinal = display_ControllerApplyConfigOrdinal;
+    apply_msg.hdr.ordinal = fuchsia_display_ControllerApplyConfigOrdinal;
     return zx_channel_write(dc_handle, 0, &apply_msg, sizeof(apply_msg), NULL, 0);
 }
 
 zx_status_t fb_alloc_image_buffer(zx_handle_t* vmo_out) {
     uint32_t size = stride * height * ZX_PIXEL_FORMAT_BYTES(format);
-    display_ControllerAllocateVmoRequest alloc_msg;
-    alloc_msg.hdr.ordinal = display_ControllerAllocateVmoOrdinal;
+    fuchsia_display_ControllerAllocateVmoRequest alloc_msg;
+    alloc_msg.hdr.ordinal = fuchsia_display_ControllerAllocateVmoOrdinal;
     alloc_msg.hdr.txid = txid++;
     alloc_msg.size = size;
 
-    display_ControllerAllocateVmoResponse alloc_rsp;
+    fuchsia_display_ControllerAllocateVmoResponse alloc_rsp;
     zx_channel_call_args_t call_args = {};
     call_args.wr_bytes = &alloc_msg;
     call_args.rd_bytes = &alloc_rsp;

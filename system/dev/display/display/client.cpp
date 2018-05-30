@@ -16,8 +16,8 @@
 #define DC_IMPL_CALL(fn, ...) controller_->ops()->fn(controller_->ops_ctx(), __VA_ARGS__)
 #define SELECT_TABLE_CASE(NAME) case NAME ## Ordinal: table = &NAME ## RequestTable; break
 #define HANDLE_REQUEST_CASE(NAME) \
-    case display_Controller ## NAME ## Ordinal: { \
-        auto req = reinterpret_cast<const display_Controller ## NAME ## Request*>(msg.bytes().data()); \
+    case fuchsia_display_Controller ## NAME ## Ordinal: { \
+        auto req = reinterpret_cast<const fuchsia_display_Controller ## NAME ## Request*>(msg.bytes().data()); \
         Handle ## NAME (req, &builder, &out_type); \
         break; \
     }
@@ -28,16 +28,16 @@ zx_status_t decode_message(fidl::Message* msg) {
     zx_status_t res;
     const fidl_type_t* table = nullptr;
     switch (msg->ordinal()) {
-    SELECT_TABLE_CASE(display_ControllerImportVmoImage);
-    SELECT_TABLE_CASE(display_ControllerReleaseImage);
-    SELECT_TABLE_CASE(display_ControllerImportEvent);
-    SELECT_TABLE_CASE(display_ControllerReleaseEvent);
-    SELECT_TABLE_CASE(display_ControllerSetDisplayImage);
-    SELECT_TABLE_CASE(display_ControllerCheckConfig);
-    SELECT_TABLE_CASE(display_ControllerApplyConfig);
-    SELECT_TABLE_CASE(display_ControllerSetOwnership);
-    SELECT_TABLE_CASE(display_ControllerComputeLinearImageStride);
-    SELECT_TABLE_CASE(display_ControllerAllocateVmo);
+    SELECT_TABLE_CASE(fuchsia_display_ControllerImportVmoImage);
+    SELECT_TABLE_CASE(fuchsia_display_ControllerReleaseImage);
+    SELECT_TABLE_CASE(fuchsia_display_ControllerImportEvent);
+    SELECT_TABLE_CASE(fuchsia_display_ControllerReleaseEvent);
+    SELECT_TABLE_CASE(fuchsia_display_ControllerSetDisplayImage);
+    SELECT_TABLE_CASE(fuchsia_display_ControllerCheckConfig);
+    SELECT_TABLE_CASE(fuchsia_display_ControllerApplyConfig);
+    SELECT_TABLE_CASE(fuchsia_display_ControllerSetOwnership);
+    SELECT_TABLE_CASE(fuchsia_display_ControllerComputeLinearImageStride);
+    SELECT_TABLE_CASE(fuchsia_display_ControllerAllocateVmo);
     }
     if (table != nullptr) {
         const char* err;
@@ -99,8 +99,8 @@ void Client::HandleControllerApi(async_t* async, async::WaitBase* self,
     HANDLE_REQUEST_CASE(ApplyConfig);
     HANDLE_REQUEST_CASE(SetOwnership);
     HANDLE_REQUEST_CASE(ComputeLinearImageStride);
-    case display_ControllerAllocateVmoOrdinal: {
-        auto r = reinterpret_cast<const display_ControllerAllocateVmoRequest*>(msg.bytes().data());
+    case fuchsia_display_ControllerAllocateVmoOrdinal: {
+        auto r = reinterpret_cast<const fuchsia_display_ControllerAllocateVmoRequest*>(msg.bytes().data());
         HandleAllocateVmo(r, &builder, &out_handle, &has_out_handle, &out_type);
         break;
     }
@@ -125,10 +125,10 @@ void Client::HandleControllerApi(async_t* async, async::WaitBase* self,
     }
 }
 
-void Client::HandleImportVmoImage(const display_ControllerImportVmoImageRequest* req,
+void Client::HandleImportVmoImage(const fuchsia_display_ControllerImportVmoImageRequest* req,
                                   fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
-    auto resp = resp_builder->New<display_ControllerImportVmoImageResponse>();
-    *resp_table = &display_ControllerImportVmoImageResponseTable;
+    auto resp = resp_builder->New<fuchsia_display_ControllerImportVmoImageResponse>();
+    *resp_table = &fuchsia_display_ControllerImportVmoImageResponseTable;
 
     zx::vmo vmo(req->vmo);
 
@@ -155,7 +155,7 @@ void Client::HandleImportVmoImage(const display_ControllerImportVmoImageRequest*
     }
 }
 
-void Client::HandleReleaseImage(const display_ControllerReleaseImageRequest* req,
+void Client::HandleReleaseImage(const fuchsia_display_ControllerReleaseImageRequest* req,
                                 fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     auto image = images_.erase(req->image_id);
     if (!image) {
@@ -193,7 +193,7 @@ void Client::HandleReleaseImage(const display_ControllerReleaseImageRequest* req
     }
 }
 
-void Client::HandleImportEvent(const display_ControllerImportEventRequest* req,
+void Client::HandleImportEvent(const fuchsia_display_ControllerImportEventRequest* req,
                                fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     zx::event event(req->event);
     zx_status_t status = ZX_ERR_INVALID_ARGS;
@@ -223,7 +223,7 @@ void Client::HandleImportEvent(const display_ControllerImportEventRequest* req,
     }
 }
 
-void Client::HandleReleaseEvent(const display_ControllerReleaseEventRequest* req,
+void Client::HandleReleaseEvent(const fuchsia_display_ControllerReleaseEventRequest* req,
                                 fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     // Hold a ref to prevent double locking if this destroys the fence.
     auto fence_ref = GetFence(req->id);
@@ -233,7 +233,7 @@ void Client::HandleReleaseEvent(const display_ControllerReleaseEventRequest* req
     }
 }
 
-void Client::HandleSetDisplayImage(const display_ControllerSetDisplayImageRequest* req,
+void Client::HandleSetDisplayImage(const fuchsia_display_ControllerSetDisplayImageRequest* req,
                                    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     auto config = configs_.find(req->display);
     if (!config.IsValid()) {
@@ -261,10 +261,10 @@ void Client::HandleSetDisplayImage(const display_ControllerSetDisplayImageReques
     }
 }
 
-void Client::HandleCheckConfig(const display_ControllerCheckConfigRequest* req,
+void Client::HandleCheckConfig(const fuchsia_display_ControllerCheckConfigRequest* req,
                                fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
-    auto resp = resp_builder->New<display_ControllerCheckConfigResponse>();
-    *resp_table = &display_ControllerCheckConfigResponseTable;
+    auto resp = resp_builder->New<fuchsia_display_ControllerCheckConfigResponse>();
+    *resp_table = &fuchsia_display_ControllerCheckConfigResponseTable;
 
     pending_config_valid_ = CheckConfig();
 
@@ -280,7 +280,7 @@ void Client::HandleCheckConfig(const display_ControllerCheckConfigRequest* req,
     }
 }
 
-void Client::HandleApplyConfig(const display_ControllerApplyConfigRequest* req,
+void Client::HandleApplyConfig(const fuchsia_display_ControllerApplyConfigRequest* req,
                                fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     if (!pending_config_valid_) {
         pending_config_valid_ = CheckConfig();
@@ -318,7 +318,7 @@ void Client::HandleApplyConfig(const display_ControllerApplyConfigRequest* req,
     ApplyConfig();
 }
 
-void Client::HandleSetOwnership(const display_ControllerSetOwnershipRequest* req,
+void Client::HandleSetOwnership(const fuchsia_display_ControllerSetOwnershipRequest* req,
                                 fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
     // Only the virtcon can control ownership
     if (!is_vc_) {
@@ -329,19 +329,19 @@ void Client::HandleSetOwnership(const display_ControllerSetOwnershipRequest* req
 }
 
 void Client::HandleComputeLinearImageStride(
-        const display_ControllerComputeLinearImageStrideRequest* req,
+        const fuchsia_display_ControllerComputeLinearImageStrideRequest* req,
         fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
-    auto resp = resp_builder->New<display_ControllerComputeLinearImageStrideResponse>();
-    *resp_table = &display_ControllerComputeLinearImageStrideResponseTable;
+    auto resp = resp_builder->New<fuchsia_display_ControllerComputeLinearImageStrideResponse>();
+    *resp_table = &fuchsia_display_ControllerComputeLinearImageStrideResponseTable;
     resp->stride = DC_IMPL_CALL(compute_linear_stride, req->width, req->pixel_format);
 }
 
-void Client::HandleAllocateVmo(const display_ControllerAllocateVmoRequest* req,
+void Client::HandleAllocateVmo(const fuchsia_display_ControllerAllocateVmoRequest* req,
                                fidl::Builder* resp_builder,
                                zx_handle_t* handle_out, bool* has_handle_out,
                                const fidl_type_t** resp_table) {
-    auto resp = resp_builder->New<display_ControllerAllocateVmoResponse>();
-    *resp_table = &display_ControllerAllocateVmoResponseTable;
+    auto resp = resp_builder->New<fuchsia_display_ControllerAllocateVmoResponse>();
+    *resp_table = &fuchsia_display_ControllerAllocateVmoResponseTable;
 
     resp->res = DC_IMPL_CALL(allocate_vmo, req->size, handle_out);
     *has_handle_out = resp->res == ZX_OK;
@@ -447,8 +447,8 @@ void Client::SetOwnership(bool is_owner) {
     is_owner_ = is_owner;
     config_applied_ = false;
 
-    display_ControllerClientOwnershipChangeEvent msg;
-    msg.hdr.ordinal = display_ControllerClientOwnershipChangeOrdinal;
+    fuchsia_display_ControllerClientOwnershipChangeEvent msg;
+    msg.hdr.ordinal = fuchsia_display_ControllerClientOwnershipChangeOrdinal;
     msg.has_ownership = is_owner;
 
     zx_status_t status = server_handle_.write(0, &msg, sizeof(msg), nullptr, 0);
@@ -466,17 +466,17 @@ void Client::OnDisplaysChanged(fbl::unique_ptr<DisplayConfig>* displays_added,
 
     uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
     fidl::Builder builder(bytes, ZX_CHANNEL_MAX_MSG_BYTES);
-    auto req = builder.New<display_ControllerDisplaysChangedEvent>();
+    auto req = builder.New<fuchsia_display_ControllerDisplaysChangedEvent>();
     zx_status_t status;
-    req->hdr.ordinal = display_ControllerDisplaysChangedOrdinal;
+    req->hdr.ordinal = fuchsia_display_ControllerDisplaysChangedOrdinal;
     req->added.count = added_count;
     req->added.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
     req->removed.count = removed_count;
     req->removed.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
 
-    display_Info* coded_configs = nullptr;
+    fuchsia_display_Info* coded_configs = nullptr;
     if (added_count > 0) {
-        coded_configs = builder.NewArray<display_Info>(added_count);
+        coded_configs = builder.NewArray<fuchsia_display_Info>(added_count);
     }
 
     for (unsigned i = 0; i < removed_count; i++) {
@@ -494,7 +494,7 @@ void Client::OnDisplaysChanged(fbl::unique_ptr<DisplayConfig>* displays_added,
         coded_configs[i].pixel_format.count = config->pixel_format_count;
         coded_configs[i].pixel_format.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
 
-        auto mode = builder.NewArray<display_Mode>(1);
+        auto mode = builder.NewArray<fuchsia_display_Mode>(1);
         auto edid_mode = &config->current.mode;
         mode->horizontal_resolution = edid_mode->h_addressable;
         mode->vertical_resolution = edid_mode->v_addressable;
@@ -518,7 +518,7 @@ void Client::OnDisplaysChanged(fbl::unique_ptr<DisplayConfig>* displays_added,
     fidl::Message msg(builder.Finalize(), fidl::HandlePart());
     const char* err;
     ZX_DEBUG_ASSERT_MSG(
-            msg.Validate(&display_ControllerDisplaysChangedEventTable, &err) == ZX_OK,
+            msg.Validate(&fuchsia_display_ControllerDisplaysChangedEventTable, &err) == ZX_OK,
             "Failed to validate \"%s\"", err);
 
     if ((status = msg.Write(server_handle_.get(), 0)) != ZX_OK) {
