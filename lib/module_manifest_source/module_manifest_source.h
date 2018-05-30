@@ -9,9 +9,10 @@
 #include <string>
 #include <vector>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 
+namespace fuchsia {
 namespace modular {
 
 // Abstract base class for all Module Manifest Source implementations.
@@ -43,5 +44,6 @@ class ModuleManifestSource {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_MODULE_MANIFEST_SOURCE_MODULE_MANIFEST_SOURCE_H_

@@ -7,11 +7,12 @@
 
 #include <vector>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 
+namespace fuchsia {
 namespace modular {
 
 class ChainImpl {
@@ -32,5 +33,6 @@ class ChainImpl {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_CHAIN_IMPL_H_

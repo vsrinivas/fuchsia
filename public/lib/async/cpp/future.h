@@ -17,6 +17,7 @@
 #include "garnet/public/lib/fxl/memory/ref_ptr.h"
 #include "garnet/public/lib/fxl/memory/weak_ptr.h"
 
+namespace fuchsia {
 namespace modular {
 
 // # Futures
@@ -167,7 +168,7 @@ namespace modular {
 //   }
 // });
 //
-// ## modular::Future vs other Futures/Promises
+// ## fuchsia::modular::Future vs other Futures/Promises
 //
 // If you are familiar with Futures & Promises in other languages, this Future
 // class is intentionally different from others, to better integrate with
@@ -176,7 +177,8 @@ namespace modular {
 // * NOT THREADSAFE. This will change in the future when thread safety is
 //   required, but there are no use cases yet. (YAGNI!)
 // * Support for multiple result values via variadic template parameters. This
-//   is required for smooth integration with the modular::Operation class.
+//   is required for smooth integration with the fuchsia::modular::Operation
+//   class.
 // * Only a single callback can be set via Then(), since move semantics are used
 //   so heavily in Fuchsia code. (If multiple callbacks were supported and the
 //   result is moved, how does one move the result from one callback to
@@ -603,5 +605,6 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // LIB_ASYNC_CPP_FUTURE_H_

@@ -12,18 +12,19 @@
 #include "peridot/bin/module_resolver/type_inference.h"
 #include "peridot/public/lib/entity/cpp/json.h"
 
+namespace fuchsia {
 namespace modular {
 
 ParameterTypeInferenceHelper::ParameterTypeInferenceHelper(
-    modular::EntityResolverPtr entity_resolver)
+    fuchsia::modular::EntityResolverPtr entity_resolver)
     : entity_resolver_(std::move(entity_resolver)) {}
 
 ParameterTypeInferenceHelper::~ParameterTypeInferenceHelper() = default;
 
 class ParameterTypeInferenceHelper::GetParameterTypesCall
-    : public modular::Operation<std::vector<std::string>> {
+    : public fuchsia::modular::Operation<std::vector<std::string>> {
  public:
-  GetParameterTypesCall(modular::EntityResolver* entity_resolver,
+  GetParameterTypesCall(fuchsia::modular::EntityResolver* entity_resolver,
                         const fidl::StringPtr& entity_reference,
                         ResultCall result)
       : Operation("ParameterTypeInferenceHelper::GetParameterTypesCall",
@@ -39,15 +40,15 @@ class ParameterTypeInferenceHelper::GetParameterTypesCall
   }
 
  private:
-  modular::EntityResolver* const entity_resolver_;
+  fuchsia::modular::EntityResolver* const entity_resolver_;
   fidl::StringPtr const entity_reference_;
-  modular::EntityPtr entity_;
+  fuchsia::modular::EntityPtr entity_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GetParameterTypesCall);
 };
 
 void ParameterTypeInferenceHelper::GetParameterTypes(
-    const modular::ResolverParameterConstraint& parameter_constraint,
+    const fuchsia::modular::ResolverParameterConstraint& parameter_constraint,
     const std::function<void(std::vector<std::string>)>& result_callback) {
   if (parameter_constraint.is_entity_type()) {
     result_callback(
@@ -55,8 +56,8 @@ void ParameterTypeInferenceHelper::GetParameterTypes(
                                  parameter_constraint.entity_type()->end()));
   } else if (parameter_constraint.is_json()) {
     std::vector<std::string> types;
-    if (!modular::ExtractEntityTypesFromJson(parameter_constraint.json(),
-                                             &types)) {
+    if (!fuchsia::modular::ExtractEntityTypesFromJson(
+            parameter_constraint.json(), &types)) {
       FXL_LOG(WARNING) << "Mal-formed JSON in parameter: "
                        << parameter_constraint.json();
       result_callback({});
@@ -83,7 +84,7 @@ void ParameterTypeInferenceHelper::GetParameterTypes(
       // Consider doing this when we move type extraction to the Framework and
       // simplify the Resolver.
       std::string entity_reference;
-      if (modular::EntityReferenceFromJson(
+      if (fuchsia::modular::EntityReferenceFromJson(
               parameter_constraint.link_info().content_snapshot,
               &entity_reference)) {
         operation_collection_.Add(new GetParameterTypesCall(
@@ -96,3 +97,4 @@ void ParameterTypeInferenceHelper::GetParameterTypes(
 }
 
 }  // namespace modular
+}  // namespace fuchsia

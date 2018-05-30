@@ -8,13 +8,14 @@
 #include <memory>
 
 #include <component/cpp/fidl.h>
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
 #include "lib/svc/cpp/service_namespace.h"
 
+namespace fuchsia {
 namespace modular {
 
 // Use this class to talk to the modular framework as an Agent.
@@ -50,5 +51,6 @@ class AgentImpl : public Agent {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // LIB_AGENT_CPP_AGENT_IMPL_H_

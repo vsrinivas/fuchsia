@@ -16,6 +16,7 @@
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/fidl/json_xdr.h"
 
+namespace fuchsia {
 namespace modular {
 
 namespace {
@@ -170,12 +171,12 @@ void UserProviderImpl::AddUser(modular_auth::IdentityProvider identity_provider,
         }
 
         flatbuffers::FlatBufferBuilder builder;
-        std::vector<flatbuffers::Offset<modular::UserStorage>> users;
+        std::vector<flatbuffers::Offset<fuchsia::modular::UserStorage>> users;
 
         // Reserialize existing users.
         if (users_storage_) {
           for (const auto* user : *(users_storage_->users())) {
-            users.push_back(modular::CreateUserStorage(
+            users.push_back(fuchsia::modular::CreateUserStorage(
                 builder, builder.CreateString(user->id()),
                 user->identity_provider(),
                 builder.CreateString(user->display_name()),
@@ -184,28 +185,28 @@ void UserProviderImpl::AddUser(modular_auth::IdentityProvider identity_provider,
           }
         }
 
-        modular::IdentityProvider flatbuffer_identity_provider;
+        fuchsia::modular::IdentityProvider flatbuffer_identity_provider;
         switch (account->identity_provider) {
           case modular_auth::IdentityProvider::DEV:
             flatbuffer_identity_provider =
-                modular::IdentityProvider::IdentityProvider_DEV;
+                fuchsia::modular::IdentityProvider::IdentityProvider_DEV;
             break;
           case modular_auth::IdentityProvider::GOOGLE:
             flatbuffer_identity_provider =
-                modular::IdentityProvider::IdentityProvider_GOOGLE;
+                fuchsia::modular::IdentityProvider::IdentityProvider_GOOGLE;
             break;
           default:
             FXL_DCHECK(false) << "Unrecongized IDP.";
         }
-        users.push_back(modular::CreateUserStorage(
+        users.push_back(fuchsia::modular::CreateUserStorage(
             builder, builder.CreateString(account->id),
             flatbuffer_identity_provider,
             builder.CreateString(account->display_name),
             builder.CreateString(account->url),
             builder.CreateString(account->image_url)));
 
-        builder.Finish(
-            modular::CreateUsersStorage(builder, builder.CreateVector(users)));
+        builder.Finish(fuchsia::modular::CreateUsersStorage(
+            builder, builder.CreateVector(users)));
         std::string new_serialized_users = std::string(
             reinterpret_cast<const char*>(builder.GetCurrentBufferPointer()),
             builder.GetSize());
@@ -248,7 +249,7 @@ void UserProviderImpl::RemoveUser(fidl::StringPtr account_id,
 
         // update user storage after deleting user credentials.
         flatbuffers::FlatBufferBuilder builder;
-        std::vector<flatbuffers::Offset<modular::UserStorage>> users;
+        std::vector<flatbuffers::Offset<fuchsia::modular::UserStorage>> users;
         for (const auto* user : *(users_storage_->users())) {
           if (user->id()->str() == account_id) {
             // TODO(alhaad): We need to delete the local ledger data for a user
@@ -257,7 +258,7 @@ void UserProviderImpl::RemoveUser(fidl::StringPtr account_id,
             continue;
           }
 
-          users.push_back(modular::CreateUserStorage(
+          users.push_back(fuchsia::modular::CreateUserStorage(
               builder, builder.CreateString(user->id()),
               user->identity_provider(),
               builder.CreateString(user->display_name()),
@@ -265,8 +266,8 @@ void UserProviderImpl::RemoveUser(fidl::StringPtr account_id,
               builder.CreateString(user->image_url())));
         }
 
-        builder.Finish(
-            modular::CreateUsersStorage(builder, builder.CreateVector(users)));
+        builder.Finish(fuchsia::modular::CreateUsersStorage(
+            builder, builder.CreateVector(users)));
         std::string new_serialized_users = std::string(
             reinterpret_cast<const char*>(builder.GetCurrentBufferPointer()),
             builder.GetSize());
@@ -308,12 +309,12 @@ bool UserProviderImpl::Parse(const std::string& serialized_users) {
   flatbuffers::Verifier verifier(
       reinterpret_cast<const unsigned char*>(serialized_users.data()),
       serialized_users.size());
-  if (!modular::VerifyUsersStorageBuffer(verifier)) {
+  if (!fuchsia::modular::VerifyUsersStorageBuffer(verifier)) {
     FXL_LOG(ERROR) << "Unable to verify storage buffer.";
     return false;
   }
   serialized_users_ = serialized_users;
-  users_storage_ = modular::GetUsersStorage(serialized_users_.data());
+  users_storage_ = fuchsia::modular::GetUsersStorage(serialized_users_.data());
   return true;
 }
 
@@ -339,3 +340,4 @@ void UserProviderImpl::LoginInternal(modular_auth::AccountPtr account,
 }
 
 }  // namespace modular
+}  // namespace fuchsia

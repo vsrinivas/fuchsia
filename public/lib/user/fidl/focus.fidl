@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library modular;
+library fuchsia.modular;
 
 // This file has interfaces for 2 pieces of information: (1) The story
 // that is currently in focus and (2) stories that are visible to the

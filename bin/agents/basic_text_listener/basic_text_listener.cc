@@ -5,7 +5,7 @@
 #include <regex>
 #include <vector>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/context/cpp/context_helper.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -16,6 +16,7 @@
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
 
+namespace fuchsia {
 namespace modular {
 
 const std::string kEmailRegex = "[^\\s]+@[^\\s]+";
@@ -65,7 +66,7 @@ class BasicTextListener : ContextListener {
       entities_json.PushBack(d, d.GetAllocator());
     }
 
-    return modular::JsonValueToString(entities_json);
+    return fuchsia::modular::JsonValueToString(entities_json);
   }
 
   // |ContextListener|
@@ -97,10 +98,11 @@ class BasicTextListener : ContextListener {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
-  modular::BasicTextListener app;
+  fuchsia::modular::BasicTextListener app;
   loop.Run();
   return 0;
 }

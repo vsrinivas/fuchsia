@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <views_v1_token/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
@@ -21,12 +21,13 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/embed_shell/defs.h"
 
-using modular::testing::TestPoint;
+using fuchsia::modular::testing::TestPoint;
 
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
+class TestApp : public fuchsia::modular::testing::ComponentBase<
+                    fuchsia::modular::StoryShell> {
  public:
   TestApp(component::ApplicationContext* const application_context)
       : ComponentBase(application_context) {
@@ -37,22 +38,23 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
 
  private:
   // |StoryShell|
-  void Initialize(
-      fidl::InterfaceHandle<modular::StoryContext> story_context) override {
+  void Initialize(fidl::InterfaceHandle<fuchsia::modular::StoryContext>
+                      story_context) override {
     story_context_.Bind(std::move(story_context));
   }
 
   TestPoint connect_view_{"ConnectView root:child:child root"};
 
   // |StoryShell|
-  void ConnectView(fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner,
-                   fidl::StringPtr view_id,
-                   fidl::StringPtr anchor_id,
-                   modular::SurfaceRelationPtr /*surface_relation*/,
-                   modular::ModuleManifestPtr /*module_manifest*/) override {
+  void ConnectView(
+      fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner,
+      fidl::StringPtr view_id, fidl::StringPtr anchor_id,
+      fuchsia::modular::SurfaceRelationPtr /*surface_relation*/,
+      fuchsia::modular::ModuleManifestPtr /*module_manifest*/) override {
     if (view_id == "root:child:child" && anchor_id == "root") {
       connect_view_.Pass();
-      modular::testing::GetStore()->Put("story_shell_done", "1", [] {});
+      fuchsia::modular::testing::GetStore()->Put("story_shell_done", "1",
+                                                 [] {});
     } else {
       FXL_LOG(WARNING) << "ConnectView " << view_id << " anchor " << anchor_id;
     }
@@ -70,14 +72,14 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
 
   // |StoryShell|
   void AddContainer(
-      fidl::StringPtr /*container_name*/,
-      fidl::StringPtr /*parent_id*/,
-      modular::SurfaceRelation /*relation*/,
-      fidl::VectorPtr<modular::ContainerLayout> /*layout*/,
-      fidl::VectorPtr<modular::ContainerRelationEntry> /* relationships */,
-      fidl::VectorPtr<modular::ContainerView> /* views */) override {}
+      fidl::StringPtr /*container_name*/, fidl::StringPtr /*parent_id*/,
+      fuchsia::modular::SurfaceRelation /*relation*/,
+      fidl::VectorPtr<fuchsia::modular::ContainerLayout> /*layout*/,
+      fidl::VectorPtr<
+          fuchsia::modular::ContainerRelationEntry> /* relationships */,
+      fidl::VectorPtr<fuchsia::modular::ContainerView> /* views */) override {}
 
-  modular::StoryContextPtr story_context_;
+  fuchsia::modular::StoryContextPtr story_context_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
@@ -86,6 +88,6 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
 
 int main(int /* argc */, const char** /* argv */) {
   FXL_LOG(INFO) << "Embed Story Shell main";
-  modular::testing::ComponentMain<TestApp>();
+  fuchsia::modular::testing::ComponentMain<TestApp>();
   return 0;
 }

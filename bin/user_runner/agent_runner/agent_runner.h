@@ -11,9 +11,9 @@
 #include <string>
 
 #include <component/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
 #include <ledger_internal/cpp/fidl.h>
-#include <modular/cpp/fidl.h>
 #include <modular_auth/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding.h"
@@ -22,6 +22,7 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/user_runner/agent_runner/agent_runner_storage.h"
 
+namespace fuchsia {
 namespace modular {
 
 // This is the component namespace we give to all agents; used for namespacing
@@ -222,5 +223,6 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_AGENT_RUNNER_AGENT_RUNNER_H_

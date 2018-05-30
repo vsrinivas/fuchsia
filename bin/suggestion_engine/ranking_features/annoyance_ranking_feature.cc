@@ -4,6 +4,7 @@
 
 #include "peridot/bin/suggestion_engine/ranking_features/annoyance_ranking_feature.h"
 
+namespace fuchsia {
 namespace modular {
 
 AnnoyanceRankingFeature::AnnoyanceRankingFeature() = default;
@@ -19,3 +20,4 @@ double AnnoyanceRankingFeature::ComputeFeatureInternal(
 }
 
 }  // namespace modular
+}  // namespace fuchsia

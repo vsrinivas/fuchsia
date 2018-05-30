@@ -4,13 +4,14 @@
 
 #include <memory>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
+namespace fuchsia {
 namespace modular {
 
 class DeviceRunnerMonitorApp : DeviceRunnerMonitor {
@@ -37,10 +38,11 @@ class DeviceRunnerMonitorApp : DeviceRunnerMonitor {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  modular::DeviceRunnerMonitorApp app;
+  fuchsia::modular::DeviceRunnerMonitorApp app;
   loop.Run();
   return 0;
 }

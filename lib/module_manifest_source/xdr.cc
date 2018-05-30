@@ -4,9 +4,10 @@
 
 #include "peridot/lib/module_manifest_source/xdr.h"
 
+#include <fuchsia/modular/cpp/fidl.h>
 #include "peridot/lib/fidl/json_xdr.h"
-#include <modular/cpp/fidl.h>
 
+namespace fuchsia {
 namespace modular {
 
 namespace {
@@ -17,8 +18,8 @@ void XdrParameterConstraint_v2(XdrContext* const xdr,
   xdr->Field("type", &data->type);
 }
 
-void XdrModuleManifest_v1(modular::XdrContext* const xdr,
-                          modular::ModuleManifest* const data) {
+void XdrModuleManifest_v1(fuchsia::modular::XdrContext* const xdr,
+                          fuchsia::modular::ModuleManifest* const data) {
   xdr->Field("binary", &data->binary);
   xdr->Field("suggestion_headline", &data->suggestion_headline);
 
@@ -38,8 +39,8 @@ void XdrModuleManifest_v1(modular::XdrContext* const xdr,
 //
 // We could have more backwards compatibility versions, but it doesn't seem
 // necessary.
-void XdrModuleManifest_v2(modular::XdrContext* const xdr,
-                          modular::ModuleManifest* const data) {
+void XdrModuleManifest_v2(fuchsia::modular::XdrContext* const xdr,
+                          fuchsia::modular::ModuleManifest* const data) {
   xdr->Field("binary", &data->binary);
   xdr->Field("suggestion_headline", &data->suggestion_headline);
   xdr->Field("action", &data->action);
@@ -48,8 +49,8 @@ void XdrModuleManifest_v2(modular::XdrContext* const xdr,
               XdrParameterConstraint_v2);
 }
 
-void XdrModuleManifest_v3(modular::XdrContext* const xdr,
-                          modular::ModuleManifest* const data) {
+void XdrModuleManifest_v3(fuchsia::modular::XdrContext* const xdr,
+                          fuchsia::modular::ModuleManifest* const data) {
   if (!xdr->Version(3)) {
     return;
   }
@@ -71,3 +72,4 @@ extern const XdrFilterType<ModuleManifest> XdrModuleManifest[] = {
 };
 
 }  // namespace modular
+}  // namespace fuchsia

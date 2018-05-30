@@ -8,6 +8,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/ui/view_framework/base_view.h"
 
+namespace fuchsia {
 namespace modular {
 
 struct ViewHost::ViewData {
@@ -107,3 +108,4 @@ void ViewHost::UpdateScene() {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

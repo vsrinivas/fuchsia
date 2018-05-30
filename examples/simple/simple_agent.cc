@@ -9,7 +9,7 @@ namespace simple {
 
 class SimpleAgent {
  public:
-  SimpleAgent(modular::AgentHost* const agent_host)
+  SimpleAgent(fuchsia::modular::AgentHost* const agent_host)
       : simple_impl_(new SimpleImpl()) {
     services_.AddService<Simple>(
         [this](fidl::InterfaceRequest<Simple> request) {
@@ -45,8 +45,8 @@ class SimpleAgent {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::AgentDriver<simple::SimpleAgent> driver(app_context.get(),
-                                                   [&loop] { loop.QuitNow(); });
+  fuchsia::modular::AgentDriver<simple::SimpleAgent> driver(
+      app_context.get(), [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

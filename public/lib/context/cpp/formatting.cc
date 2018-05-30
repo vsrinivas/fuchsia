@@ -4,10 +4,11 @@
 
 #include "lib/context/cpp/formatting.h"
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/fidl/cpp/vector.h"
 
+namespace fuchsia {
 namespace modular {
 
 template <typename T>
@@ -19,31 +20,36 @@ std::ostream& operator<<(std::ostream& os, const fidl::VectorPtr<T>& value) {
   return os << "]";
 }
 
-std::ostream& operator<<(std::ostream& os, const modular::FocusedState& state) {
-  return os << (state.state == modular::FocusedStateState::FOCUSED ? "yes" : "no");
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::modular::FocusedState& state) {
+  return os << (state.state == fuchsia::modular::FocusedStateState::FOCUSED
+                    ? "yes"
+                    : "no");
 }
 
-std::ostream& operator<<(std::ostream& os, const modular::StoryMetadata& meta) {
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::modular::StoryMetadata& meta) {
   return os << "{ id: " << meta.id << ", focused: " << *meta.focused << " }";
 }
 
 std::ostream& operator<<(std::ostream& os,
-                         const modular::ModuleMetadata& meta) {
+                         const fuchsia::modular::ModuleMetadata& meta) {
   return os << "{ url: " << meta.url << ", path: " << meta.path << " }";
 }
 
 std::ostream& operator<<(std::ostream& os,
-                         const modular::EntityMetadata& meta) {
+                         const fuchsia::modular::EntityMetadata& meta) {
   return os << "{ topic: " << meta.topic << ", type: " << meta.type << " }";
 }
 
-std::ostream& operator<<(std::ostream& os, const modular::LinkMetadata& meta) {
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::modular::LinkMetadata& meta) {
   return os << "{ module_path: " << meta.module_path << ", name: " << meta.name
             << " }";
 }
 
 std::ostream& operator<<(std::ostream& os,
-                         const modular::ContextMetadata& meta) {
+                         const fuchsia::modular::ContextMetadata& meta) {
   os << "{" << std::endl;
   os << "  story: " << meta.story << std::endl;
   os << "  link: " << meta.link << std::endl;
@@ -52,19 +58,20 @@ std::ostream& operator<<(std::ostream& os,
   return os << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const modular::ContextValue& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::modular::ContextValue& value) {
   return os << "{ type: " << value.type << ", content: " << value.content
             << ", meta: " << value.meta << " }";
 }
 
 std::ostream& operator<<(std::ostream& os,
-                         const modular::ContextSelector& selector) {
+                         const fuchsia::modular::ContextSelector& selector) {
   return os << "{ type: " << selector.type << ", meta: " << *selector.meta
             << " }";
 }
 
 std::ostream& operator<<(std::ostream& os,
-                         const modular::ContextUpdate& update) {
+                         const fuchsia::modular::ContextUpdate& update) {
   os << "{" << std::endl;
   for (auto it = update.values->begin(); it != update.values->end(); ++it) {
     os << "  " << (*it).key << ":" << std::endl;
@@ -77,7 +84,8 @@ std::ostream& operator<<(std::ostream& os,
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const modular::ContextQuery& query) {
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::modular::ContextQuery& query) {
   os << "{" << std::endl;
   for (auto it = query.selector->begin(); it != query.selector->end(); ++it) {
     os << "  " << (*it).key << ": " << (*it).value;
@@ -87,3 +95,4 @@ std::ostream& operator<<(std::ostream& os, const modular::ContextQuery& query) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

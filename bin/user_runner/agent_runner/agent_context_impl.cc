@@ -6,12 +6,13 @@
 
 #include <memory>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/user_runner/agent_runner/agent_runner.h"
 #include "peridot/lib/common/teardown.h"
 
+namespace fuchsia {
 namespace modular {
 
 constexpr char kAppStoragePath[] = "/data/APP_DATA";
@@ -295,3 +296,4 @@ void AgentContextImpl::StopForTeardown() {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

@@ -6,6 +6,7 @@
 
 #include "lib/fxl/logging.h"
 
+namespace fuchsia {
 namespace modular {
 
 ProxySet::ProxySet() = default;
@@ -29,3 +30,4 @@ void ProxyBase::Drop() {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

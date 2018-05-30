@@ -10,6 +10,7 @@
 #include "lib/fxl/strings/join_strings.h"
 #include "peridot/lib/util/string_escape.h"
 
+namespace fuchsia {
 namespace modular {
 
 std::string MakeDeviceKey(const fidl::StringPtr& device_name) {
@@ -106,3 +107,4 @@ std::string MakeModuleKey(const fidl::VectorPtr<fidl::StringPtr>& module_path) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

@@ -8,13 +8,14 @@
 #include <list>
 #include <vector>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestions_list.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 #include "peridot/lib/util/idle_waiter.h"
 
+namespace fuchsia {
 namespace modular {
 
 // Provides a debug interface that is accessible through the MI dashboard.
@@ -58,5 +59,6 @@ class SuggestionDebugImpl : public SuggestionDebug {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_DEBUG_H_

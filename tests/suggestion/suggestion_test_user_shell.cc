@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/binding.h"
@@ -15,15 +15,16 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/suggestion/defs.h"
 
-using modular::testing::Await;
-using modular::testing::Signal;
-using modular::testing::TestPoint;
+using fuchsia::modular::testing::Await;
+using fuchsia::modular::testing::Signal;
+using fuchsia::modular::testing::TestPoint;
 
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp : modular::NextListener,
-                public modular::testing::ComponentBase<modular::UserShell> {
+class TestApp : fuchsia::modular::NextListener,
+                public fuchsia::modular::testing::ComponentBase<
+                    fuchsia::modular::UserShell> {
  public:
   TestApp(component::ApplicationContext* const application_context)
       : ComponentBase(application_context) {
@@ -36,7 +37,7 @@ class TestApp : modular::NextListener,
   TestPoint initialized_{"SuggestionTestUserShell initialized"};
 
   // |UserShell|
-  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
                       user_shell_context) override {
     user_shell_context_.Bind(std::move(user_shell_context));
 
@@ -57,7 +58,7 @@ class TestApp : modular::NextListener,
     Await(kSuggestionTestModuleDone, [this] {
         story_controller_->Stop([this] {
             story_controller_.Unbind();
-            Signal(modular::testing::kTestShutdown);
+            Signal(fuchsia::modular::testing::kTestShutdown);
           });
       });
   }
@@ -76,16 +77,16 @@ class TestApp : modular::NextListener,
 
   // |NextListener|
   void OnNextResults(
-      fidl::VectorPtr<modular::Suggestion> suggestions) override {
+      fidl::VectorPtr<fuchsia::modular::Suggestion> suggestions) override {
     for (auto& suggestion : *suggestions) {
       auto& display = suggestion.display;
       if (display.headline == "foo" && display.subheadline == "bar" &&
           display.details == "baz") {
-        modular::testing::GetStore()->Put("suggestion_proposal_received", "",
-                                          [] {});
+        fuchsia::modular::testing::GetStore()->Put(
+            "suggestion_proposal_received", "", [] {});
         received_suggestion_.Pass();
-        modular::Interaction interaction;
-        interaction.type = modular::InteractionType::SELECTED;
+        fuchsia::modular::Interaction interaction;
+        interaction.type = fuchsia::modular::InteractionType::SELECTED;
         suggestion_provider_->NotifyInteraction(suggestion.uuid, interaction);
         break;
       }
@@ -96,11 +97,12 @@ class TestApp : modular::NextListener,
   void OnProcessingChange(bool processing) override {}
 
   views_v1_token::ViewOwnerPtr view_owner_;
-  modular::UserShellContextPtr user_shell_context_;
-  modular::StoryProviderPtr story_provider_;
-  modular::StoryControllerPtr story_controller_;
-  modular::SuggestionProviderPtr suggestion_provider_;
-  fidl::BindingSet<modular::NextListener> suggestion_listener_bindings_;
+  fuchsia::modular::UserShellContextPtr user_shell_context_;
+  fuchsia::modular::StoryProviderPtr story_provider_;
+  fuchsia::modular::StoryControllerPtr story_controller_;
+  fuchsia::modular::SuggestionProviderPtr suggestion_provider_;
+  fidl::BindingSet<fuchsia::modular::NextListener>
+      suggestion_listener_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
@@ -108,6 +110,6 @@ class TestApp : modular::NextListener,
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  modular::testing::ComponentMain<TestApp>();
+  fuchsia::modular::testing::ComponentMain<TestApp>();
   return 0;
 }

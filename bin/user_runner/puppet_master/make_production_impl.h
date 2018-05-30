@@ -8,6 +8,7 @@
 
 #include "peridot/bin/user_runner/puppet_master/dispatch_story_command_executor.h"
 
+namespace fuchsia {
 namespace modular {
 
 class StoryCommandExecutor;
@@ -17,3 +18,4 @@ std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
     DispatchStoryCommandExecutor::OperationContainerAccessor factory);
 
 }  // namespace modular
+}  // namespace fuchsia

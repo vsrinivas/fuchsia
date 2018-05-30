@@ -5,10 +5,11 @@
 #ifndef PERIDOT_BIN_USER_RUNNER_PUPPET_MASTER_STORY_COMMAND_EXECUTOR_H_
 #define PERIDOT_BIN_USER_RUNNER_PUPPET_MASTER_STORY_COMMAND_EXECUTOR_H_
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <functional>
 #include <vector>
 
+namespace fuchsia {
 namespace modular {
 
 class StoryCommandExecutor {
@@ -32,5 +33,6 @@ class StoryCommandExecutor {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_PUPPET_MASTER_STORY_COMMAND_EXECUTOR_H_

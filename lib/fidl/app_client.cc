@@ -14,6 +14,7 @@
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/unique_fd.h"
 
+namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -113,3 +114,4 @@ void AppClient<Lifecycle>::ServiceTerminate(const std::function<void()>& done) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

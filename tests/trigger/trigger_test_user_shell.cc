@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <views_v1_token/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
@@ -18,12 +18,13 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/trigger/defs.h"
 
-using modular::testing::Await;
-using modular::testing::TestPoint;
+using fuchsia::modular::testing::Await;
+using fuchsia::modular::testing::TestPoint;
 
 namespace {
 
-class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
+class TestApp : public fuchsia::modular::testing::ComponentBase<
+                    fuchsia::modular::UserShell> {
  public:
   TestApp(component::ApplicationContext* const application_context)
       : ComponentBase(application_context),
@@ -34,13 +35,13 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   ~TestApp() override = default;
 
  private:
-  using TestPoint = modular::testing::TestPoint;
+  using TestPoint = fuchsia::modular::testing::TestPoint;
 
   TestPoint initialize_{"Initialize()"};
   TestPoint story_create_{"Created story."};
 
   // |UserShell|
-  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
                       user_shell_context) override {
     initialize_.Pass();
 
@@ -73,7 +74,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
     // Retrieve the message queue token for the messsage queue that the module
     // created.
-    modular::testing::GetStore()->Get(
+    fuchsia::modular::testing::GetStore()->Get(
         "trigger_test_module_queue_token",
         [this, story_id](fidl::StringPtr value) {
           got_queue_token_.Pass();
@@ -98,9 +99,9 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
         });
   }
 
-  modular::UserShellContextPtr user_shell_context_;
-  modular::StoryProviderPtr story_provider_;
-  modular::StoryControllerPtr story_controller_;
+  fuchsia::modular::UserShellContextPtr user_shell_context_;
+  fuchsia::modular::StoryProviderPtr story_provider_;
+  fuchsia::modular::StoryControllerPtr story_controller_;
 
   fidl::InterfaceHandle<views_v1_token::ViewOwner> story_view_;
 
@@ -112,6 +113,6 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  modular::testing::ComponentMain<TestApp>();
+  fuchsia::modular::testing::ComponentMain<TestApp>();
   return 0;
 }

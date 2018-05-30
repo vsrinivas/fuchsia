@@ -8,19 +8,20 @@
 #include <string>
 #include <vector>
 
+#include <fuchsia/modular/cpp/fidl.h>
+#include <ledger/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/string.h"
-#include <ledger/cpp/fidl.h>
-#include <modular/cpp/fidl.h>
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
 
 // See services/user/focus.fidl for details.
 
+namespace fuchsia {
 namespace modular {
 
 class FocusHandler : FocusProvider, FocusController, PageClient {
@@ -95,5 +96,6 @@ class VisibleStoriesHandler : VisibleStoriesProvider, VisibleStoriesController {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_FOCUS_H_

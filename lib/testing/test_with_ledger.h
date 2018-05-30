@@ -10,6 +10,7 @@
 #include "lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/testing/ledger_repository_for_testing.h"
 
+namespace fuchsia {
 namespace modular {
 class LedgerClient;
 
@@ -54,11 +55,13 @@ class TestWithLedger : public gtest::TestWithMessageLoop {
       fxl::TimeDelta timeout = fxl::TimeDelta::FromSeconds(10));
 
  private:
-  std::unique_ptr<modular::testing::LedgerRepositoryForTesting> ledger_app_;
+  std::unique_ptr<fuchsia::modular::testing::LedgerRepositoryForTesting>
+      ledger_app_;
   std::unique_ptr<LedgerClient> ledger_client_;
 };
 
 }  // namespace testing
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_TESTING_TEST_WITH_LEDGER_H_

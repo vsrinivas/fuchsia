@@ -4,17 +4,21 @@
 
 #include "lib/suggestion/cpp/formatting.h"
 
+namespace fuchsia {
 namespace modular {
 
-std::ostream& operator<<(std::ostream& os, const modular::SuggestionDisplay& o) {
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::modular::SuggestionDisplay& o) {
   return os << "{ headline: " << o.headline
             << ", subheadline: " << o.subheadline << ", details: " << o.details
             << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const modular::Suggestion& o) {
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::modular::Suggestion& o) {
   return os << "{ uuid: " << o.uuid << ", confidence: " << o.confidence
             << ", display: " << o.display << "}";
 }
 
-}  // namespace maxwell
+}  // namespace modular
+}  // namespace fuchsia

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/user_runner/story_runner/link_impl.h"
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/array.h"
@@ -18,14 +18,14 @@
 #include "peridot/lib/testing/test_with_ledger.h"
 #include "peridot/public/lib/entity/cpp/json.h"
 
-namespace modular_private {
-class LinkChange;
-}  // namespace modular_auth
-
+namespace fuchsia {
 namespace modular {
+namespace internal {
+class LinkChange;
+}  // namespace internal
 
 // Defined in incremental_link.cc.
-extern const XdrFilterType<modular_private::LinkChange> XdrLinkChange[];
+extern const XdrFilterType<internal::LinkChange> XdrLinkChange[];
 
 namespace {
 const char kInitialLinkValue[] = "{}";
@@ -56,7 +56,7 @@ bool HasPrefix(const std::string& value, const std::string& prefix) {
   return true;
 }
 
-class PageClientPeer : modular::PageClient {
+class PageClientPeer : fuchsia::modular::PageClient {
  public:
   PageClientPeer(LedgerClient* const ledger_client,
                  LedgerPageId page_id,
@@ -75,13 +75,14 @@ class PageClientPeer : modular::PageClient {
   };
 
   std::vector<std::pair<std::string, std::string>> changes;
-  modular_private::LinkChangePtr last_change;
+  modular::internal ::LinkChangePtr last_change;
 
  private:
   std::string expected_prefix_;
 };
 
-class LinkImplTestBase : public testing::TestWithLedger, modular::LinkWatcher {
+class LinkImplTestBase : public testing::TestWithLedger,
+                         fuchsia::modular::LinkWatcher {
  public:
   LinkImplTestBase() : watcher_binding_(this) {}
 
@@ -129,7 +130,7 @@ class LinkImplTestBase : public testing::TestWithLedger, modular::LinkWatcher {
 
   int ledger_change_count() const { return page_client_peer_->changes.size(); }
 
-  modular_private::LinkChangePtr& last_change() {
+  modular::internal ::LinkChangePtr& last_change() {
     return page_client_peer_->last_change;
   }
 
@@ -175,7 +176,7 @@ class LinkImplTestBase : public testing::TestWithLedger, modular::LinkWatcher {
   std::unique_ptr<LedgerClient> ledger_client_peer_;
   std::unique_ptr<PageClientPeer> page_client_peer_;
 
-  fidl::Binding<modular::LinkWatcher> watcher_binding_;
+  fidl::Binding<fuchsia::modular::LinkWatcher> watcher_binding_;
   int step_{};
   std::string last_json_notify_;
   std::function<void()> continue_;
@@ -384,3 +385,4 @@ TEST_F(LinkImplNullInitTest, Set) {
 
 }  // namespace
 }  // namespace modular
+}  // namespace fuchsia

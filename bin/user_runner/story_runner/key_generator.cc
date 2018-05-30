@@ -18,6 +18,7 @@ constexpr char kEncodingDictionary[] =
 
 }  // namespace
 
+namespace fuchsia {
 namespace modular {
 
 uint64_t WallClockTimeOfDay::GetTimeOfDayMs() {
@@ -72,3 +73,4 @@ std::string KeyGenerator::Create() {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

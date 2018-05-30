@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library modular;
+library fuchsia.modular;
 
 // This interface is exposed to all agents. It allows to schedule tasks to be
 // scheduled in response to triggers. Triggers are conditions such as a message

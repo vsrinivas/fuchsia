@@ -10,6 +10,7 @@
 #include "lib/fxl/logging.h"
 #include "peridot/bin/context_engine/index.h"
 
+namespace fuchsia {
 namespace modular {
 
 ContextIndex::ContextIndex() = default;
@@ -150,3 +151,4 @@ void ContextIndex::Query(ContextValueType type,
 }
 
 }  // namespace modular
+}  // namespace fuchsia

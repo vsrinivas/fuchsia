@@ -7,10 +7,11 @@
 
 #include <string>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
 
+namespace fuchsia {
 namespace modular {
 
 // An interface for launching EntityProviders. This interface helps break the
@@ -27,5 +28,6 @@ class EntityProviderLauncher {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_ENTITY_PROVIDER_RUNNER_ENTITY_PROVIDER_LAUNCHER_H_

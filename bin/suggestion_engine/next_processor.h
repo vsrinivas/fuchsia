@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 
 #include "peridot/bin/suggestion_engine/debug.h"
@@ -21,6 +21,7 @@
 #include "peridot/bin/suggestion_engine/suggestion_passive_filter.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 
+namespace fuchsia {
 namespace modular {
 
 class ProposalPublisherImpl;
@@ -87,5 +88,6 @@ class NextProcessor {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_NEXT_PROCESSOR_H_

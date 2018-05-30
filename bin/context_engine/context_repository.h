@@ -9,13 +9,14 @@
 #include <set>
 #include <string>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/context_engine/index.h"
 
+namespace fuchsia {
 namespace modular {
 
 class ContextDebug;
@@ -163,5 +164,6 @@ struct ContextRepository::InProgressUpdate {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_REPOSITORY_H_

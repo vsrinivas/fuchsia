@@ -7,6 +7,7 @@
 
 #include "peridot/bin/suggestion_engine/ranked_suggestion.h"
 
+namespace fuchsia {
 namespace modular {
 
 // Base class for performing a decision on some ranked suggestion.
@@ -20,5 +21,6 @@ class DecisionPolicy {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_DECISION_POLICY_H_

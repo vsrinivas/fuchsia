@@ -8,7 +8,7 @@
 #include <fs/synchronous-vfs.h>
 
 #include <component/cpp/fidl.h>
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <modular_auth/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "lib/agent/cpp/agent_impl.h"
@@ -29,6 +29,7 @@
 #include "peridot/lib/testing/mock_base.h"
 #include "peridot/lib/testing/test_with_ledger.h"
 
+namespace fuchsia {
 namespace modular {
 namespace testing {
 namespace {
@@ -175,7 +176,7 @@ class MyEntityProvider : AgentImpl::Delegate,
   std::unique_ptr<AgentImpl> agent_impl_;
   EntityResolverPtr entity_resolver_;
   fidl::Binding<component::ComponentController> controller_;
-  fidl::Binding<modular::EntityProvider> entity_provider_binding_;
+  fidl::Binding<fuchsia::modular::EntityProvider> entity_provider_binding_;
   component::LaunchInfo launch_info_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MyEntityProvider);
@@ -272,3 +273,4 @@ TEST_F(EntityProviderRunnerTest, DataEntity) {
 }  // namespace
 }  // namespace testing
 }  // namespace modular
+}  // namespace fuchsia

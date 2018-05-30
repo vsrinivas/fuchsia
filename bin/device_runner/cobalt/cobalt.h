@@ -12,6 +12,7 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/ref_ptr.h"
 
+namespace fuchsia {
 namespace modular {
 
 // Metric IDs that Cobalt requires to identify the data we are logging.
@@ -50,6 +51,7 @@ void ReportModuleLaunchTime(std::string module_url, zx_time_t time);
 // Report a story launch time duration to Cobalt.
 void ReportStoryLaunchTime(zx_time_t time);
 
-};  // namespace modular
+}  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_DEVICE_RUNNER_COBALT_COBALT_H_

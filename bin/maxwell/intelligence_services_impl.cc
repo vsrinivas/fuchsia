@@ -4,38 +4,38 @@
 
 #include "peridot/bin/maxwell/intelligence_services_impl.h"
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 namespace maxwell {
 
 IntelligenceServicesImpl::IntelligenceServicesImpl(
-    modular::ComponentScope scope,
-    modular::ContextEngine* context_engine,
-    modular::SuggestionEngine* suggestion_engine,
-    modular::UserActionLog* user_action_log)
+    fuchsia::modular::ComponentScope scope,
+    fuchsia::modular::ContextEngine* context_engine,
+    fuchsia::modular::SuggestionEngine* suggestion_engine,
+    fuchsia::modular::UserActionLog* user_action_log)
     : scope_(std::move(scope)),
       context_engine_(context_engine),
       suggestion_engine_(suggestion_engine),
       user_action_log_(user_action_log) {}
 
-modular::ComponentScope IntelligenceServicesImpl::CloneScope() {
-  modular::ComponentScope scope;
+fuchsia::modular::ComponentScope IntelligenceServicesImpl::CloneScope() {
+  fuchsia::modular::ComponentScope scope;
   fidl::Clone(scope_, &scope);
   return scope;
 }
 
 void IntelligenceServicesImpl::GetContextReader(
-    fidl::InterfaceRequest<modular::ContextReader> request) {
+    fidl::InterfaceRequest<fuchsia::modular::ContextReader> request) {
   context_engine_->GetReader(CloneScope(), std::move(request));
 }
 
 void IntelligenceServicesImpl::GetContextWriter(
-    fidl::InterfaceRequest<modular::ContextWriter> request) {
+    fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request) {
   context_engine_->GetWriter(CloneScope(), std::move(request));
 }
 
 void IntelligenceServicesImpl::GetProposalPublisher(
-    fidl::InterfaceRequest<modular::ProposalPublisher> request) {
+    fidl::InterfaceRequest<fuchsia::modular::ProposalPublisher> request) {
   fidl::StringPtr component_id;
   if (scope_.is_agent_scope()) {
     component_id = scope_.agent_scope().url;
@@ -52,12 +52,12 @@ void IntelligenceServicesImpl::GetProposalPublisher(
 }
 
 void IntelligenceServicesImpl::GetActionLog(
-    fidl::InterfaceRequest<modular::ComponentActionLog> request) {
+    fidl::InterfaceRequest<fuchsia::modular::ComponentActionLog> request) {
   user_action_log_->GetComponentActionLog(CloneScope(), std::move(request));
 }
 
 void IntelligenceServicesImpl::RegisterQueryHandler(
-    fidl::InterfaceHandle<modular::QueryHandler> query_handler) {
+    fidl::InterfaceHandle<fuchsia::modular::QueryHandler> query_handler) {
   fidl::StringPtr component_id;
   if (scope_.is_agent_scope()) {
     component_id = scope_.agent_scope().url;

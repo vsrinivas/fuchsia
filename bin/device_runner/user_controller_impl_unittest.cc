@@ -10,6 +10,7 @@
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/testing/fake_application_launcher.h"
 
+namespace fuchsia {
 namespace modular {
 namespace testing {
 namespace {
@@ -47,3 +48,4 @@ TEST_F(UserControllerImplTest, StartUserRunner) {
 }  // namespace
 }  // namespace testing
 }  // namespace modular
+}  // namespace fuchsia

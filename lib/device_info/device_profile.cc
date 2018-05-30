@@ -6,6 +6,7 @@
 
 #include "peridot/lib/rapidjson/rapidjson.h"
 
+namespace fuchsia {
 namespace modular {
 
 // TODO(zbowling): this is a hack. we need to later decide how we want to
@@ -16,7 +17,7 @@ constexpr char kPresentationServer[] = "remote_presentor";
 DeviceProfile::DeviceProfile() {}
 
 bool DeviceProfile::Parse(const std::string& jsonProfile) {
-  modular::JsonDoc document;
+  fuchsia::modular::JsonDoc document;
   document.Parse(jsonProfile);
   if (!document.IsObject()) {
     return false;
@@ -35,3 +36,4 @@ bool DeviceProfile::ParseDefaultProfile() {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

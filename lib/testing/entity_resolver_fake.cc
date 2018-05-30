@@ -4,6 +4,7 @@
 
 #include "peridot/lib/testing/entity_resolver_fake.h"
 
+namespace fuchsia {
 namespace modular {
 
 class EntityResolverFake::EntityImpl : Entity {
@@ -72,3 +73,4 @@ void EntityResolverFake::ResolveEntity(
 }
 
 }  // namespace modular
+}  // namespace fuchsia

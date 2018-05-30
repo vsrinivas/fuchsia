@@ -71,7 +71,7 @@ source_set("story_runner") {
     "//peridot/lib/util",
     "//peridot/lib/util:debug",
     "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl_private",
+    "//peridot/public/lib:fidl_internal",
     "//peridot/public/lib/async/cpp:future",
     "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/context/cpp:context_helper",
@@ -97,7 +97,7 @@ source_set("session_storage_xdr") {
     "//peridot/lib/base64url",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl_private",
+    "//peridot/public/lib:fidl_internal",
   ]
 }
 
@@ -114,7 +114,7 @@ source_set("session_storage") {
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/ledger_client:storage",
     "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl_private",
+    "//peridot/public/lib:fidl_internal",
     "//peridot/public/lib/async/cpp:future",
     "//peridot/public/lib/ledger/fidl",
   ]

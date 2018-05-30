@@ -6,7 +6,7 @@
 #include <sstream>
 #include <string>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <views_v1_token/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
@@ -22,14 +22,15 @@
 #include "peridot/tests/chain/defs.h"
 #include "peridot/tests/common/defs.h"
 
-using modular::testing::Await;
-using modular::testing::Put;
-using modular::testing::TestPoint;
+using fuchsia::modular::testing::Await;
+using fuchsia::modular::testing::Put;
+using fuchsia::modular::testing::TestPoint;
 
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
+class TestApp : public fuchsia::modular::testing::ComponentBase<
+                    fuchsia::modular::UserShell> {
  public:
   TestApp(component::ApplicationContext* const application_context)
       : ComponentBase(application_context) {
@@ -42,8 +43,8 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint initialize_{"Initialize()"};
 
   // |UserShell|
-  void Initialize(
-      fidl::InterfaceHandle<modular::UserShellContext> user_shell_context) override {
+  void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
+                      user_shell_context) override {
     initialize_.Pass();
     user_shell_context_.Bind(std::move(user_shell_context));
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
@@ -66,12 +67,12 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   }
 
   void AddRootModule() {
-    modular::Intent intent;
+    fuchsia::modular::Intent intent;
     intent.action.handler = kModuleUrl;
 
-    modular::IntentParameterData data;
+    fuchsia::modular::IntentParameterData data;
     data.set_json(R"("initial data for the story")");
-    modular::IntentParameter intent_parameter;
+    fuchsia::modular::IntentParameter intent_parameter;
     intent_parameter.name = "rootModuleNoun1";
     intent_parameter.data = std::move(data);
     intent.parameters.push_back(std::move(intent_parameter));
@@ -90,17 +91,17 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     story_controller_->Start(story_view_binding.NewRequest());
   }
 
-  modular::UserShellContextPtr user_shell_context_;
-  modular::StoryProviderPtr story_provider_;
+  fuchsia::modular::UserShellContextPtr user_shell_context_;
+  fuchsia::modular::StoryProviderPtr story_provider_;
   fidl::StringPtr story_id_;
-  modular::StoryControllerPtr story_controller_;
-  modular::ModuleControllerPtr child_module_;
+  fuchsia::modular::StoryControllerPtr story_controller_;
+  fuchsia::modular::ModuleControllerPtr child_module_;
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  modular::testing::ComponentMain<TestApp>();
+  fuchsia::modular::testing::ComponentMain<TestApp>();
   return 0;
 }

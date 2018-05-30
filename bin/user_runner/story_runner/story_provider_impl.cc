@@ -8,6 +8,8 @@
 #include <utility>
 #include <vector>
 
+#include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/modular/internal/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/zx/time.h>
@@ -37,6 +39,7 @@
 #include "peridot/lib/ledger_client/storage.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 
+namespace fuchsia {
 namespace modular {
 
 // 1. Ask SessionStorage to create an ID and storage for the new story.
@@ -56,7 +59,7 @@ class StoryProviderImpl::CreateStoryCall : public Operation<fidl::StringPtr> {
     intent_.action.handler = std::move(url);
 
     if (!root_json.is_null()) {
-      modular::IntentParameter param;
+      fuchsia::modular::IntentParameter param;
       param.name = nullptr;
       param.data.set_json(std::move(root_json));
       intent_.parameters.push_back(std::move(param));
@@ -206,7 +209,7 @@ class StoryProviderImpl::GetControllerCall : public Operation<> {
     }
 
     session_storage_->GetStoryData(story_id_)->Then(
-        [this, flow](modular_private::StoryDataPtr story_data) {
+        [this, flow](modular::internal ::StoryDataPtr story_data) {
           if (!story_data) {
             return;
           }
@@ -319,7 +322,7 @@ class StoryProviderImpl::GetLinkPeerCall : public Operation<> {
     FlowToken flow{this};
 
     session_storage_->GetStoryData(story_id_)->Then(
-        [this, flow](modular_private::StoryDataPtr story_data) {
+        [this, flow](modular::internal ::StoryDataPtr story_data) {
           if (!story_data) {
             // The InterfaceRequest<Link> will go out of scope, and the channel
             // closed with an error.
@@ -388,7 +391,7 @@ StoryProviderImpl::StoryProviderImpl(
       });
   session_storage_->set_on_story_updated(
       [weak_ptr = weak_factory_.GetWeakPtr()](
-          fidl::StringPtr story_id, modular_private::StoryData story_data) {
+          fidl::StringPtr story_id, modular::internal ::StoryData story_data) {
         if (!weak_ptr)
           return;
         weak_ptr->OnStoryStorageUpdated(std::move(story_id),
@@ -536,12 +539,13 @@ void StoryProviderImpl::GetStoryInfo(fidl::StringPtr story_id,
           ->AsyncMap([this, story_id] {
             return session_storage_->GetStoryData(story_id);
           })
-          ->Map([](modular_private::StoryDataPtr story_data) -> StoryInfoPtr {
-            if (!story_data) {
-              return nullptr;
-            }
-            return fidl::MakeOptional(std::move(story_data->story_info));
-          });
+          ->Map(
+              [](modular::internal ::StoryDataPtr story_data) -> StoryInfoPtr {
+                if (!story_data) {
+                  return nullptr;
+                }
+                return fidl::MakeOptional(std::move(story_data->story_info));
+              });
   operation_queue_.Add(WrapFutureAsOperation(
       on_run, done, callback, "StoryProviderImpl::GetStoryInfo"));
 }
@@ -578,9 +582,10 @@ void StoryProviderImpl::PreviousStories(PreviousStoriesCallback callback) {
   auto on_run = Future<>::Create();
   auto done =
       on_run->AsyncMap([this] { return session_storage_->GetAllStoryData(); })
-          ->Map([](fidl::VectorPtr<modular_private::StoryData> all_story_data) {
+          ->Map([](fidl::VectorPtr<modular::internal ::StoryData>
+                       all_story_data) {
             FXL_DCHECK(all_story_data);
-            auto result = fidl::VectorPtr<modular::StoryInfo>::New(0);
+            auto result = fidl::VectorPtr<fuchsia::modular::StoryInfo>::New(0);
 
             for (auto& story_data : *all_story_data) {
               result.push_back(std::move(story_data.story_info));
@@ -603,7 +608,7 @@ void StoryProviderImpl::RunningStories(RunningStoriesCallback callback) {
 }
 
 void StoryProviderImpl::OnStoryStorageUpdated(
-    fidl::StringPtr story_id, modular_private::StoryData story_data) {
+    fidl::StringPtr story_id, modular::internal ::StoryData story_data) {
   // HACK(jimbe) We don't have the page and it's expensive to get it, so
   // just mark it as STOPPED. We know it's not running or we'd have a
   // StoryController.
@@ -694,3 +699,4 @@ void StoryProviderImpl::WatchVisualState(
 }
 
 }  // namespace modular
+}  // namespace fuchsia

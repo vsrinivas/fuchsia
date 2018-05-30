@@ -11,7 +11,7 @@ int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
 
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::AppDriver<modular_example::ModuleApp> driver(
+  fuchsia::modular::AppDriver<modular_example::ModuleApp> driver(
       app_context->outgoing().deprecated_services(),
       std::make_unique<modular_example::ModuleApp>(
           app_context.get(),

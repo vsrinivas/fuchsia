@@ -9,6 +9,7 @@
 
 #include "peridot/bin/suggestion_engine/ranked_suggestion.h"
 
+namespace fuchsia {
 namespace modular {
 
 class SuggestionActiveFilter {
@@ -23,5 +24,6 @@ class SuggestionActiveFilter {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_SUGGESTION_ACTIVE_FILTER_H_

@@ -7,6 +7,7 @@
 #include "lib/fxl/logging.h"
 #include "peridot/bin/suggestion_engine/timeline_stories_watcher.h"
 
+namespace fuchsia {
 namespace modular {
 
 TimelineStoriesFilter::TimelineStoriesFilter(
@@ -34,3 +35,4 @@ bool TimelineStoriesFilter::operator()(const Proposal& proposal) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

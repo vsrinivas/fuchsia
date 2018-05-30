@@ -5,12 +5,13 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_RANKERS_LINEAR_RANKER_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_RANKERS_LINEAR_RANKER_H_
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "peridot/bin/suggestion_engine/ranked_suggestion.h"
 #include "peridot/bin/suggestion_engine/ranker.h"
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 
+namespace fuchsia {
 namespace modular {
 
 // Ranks based on a linear combination using the set ranking features and its
@@ -45,5 +46,6 @@ class LinearRanker : public Ranker {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKERS_LINEAR_RANKER_H_

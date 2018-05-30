@@ -8,16 +8,17 @@
 #include <map>
 #include <set>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 
+namespace fuchsia {
 namespace modular {
 
-// Watches a modular::StoryProvider for changes in the list of a user's
+// Watches a fuchsia::modular::StoryProvider for changes in the list of a user's
 // Stories and makes the URLs of the Stories available to clients.
-class TimelineStoriesWatcher : public modular::StoryProviderWatcher {
+class TimelineStoriesWatcher : public fuchsia::modular::StoryProviderWatcher {
  public:
-  TimelineStoriesWatcher(modular::StoryProviderPtr* story_provider);
+  TimelineStoriesWatcher(fuchsia::modular::StoryProviderPtr* story_provider);
 
   ~TimelineStoriesWatcher() override;
 
@@ -26,8 +27,8 @@ class TimelineStoriesWatcher : public modular::StoryProviderWatcher {
   void SetWatcher(std::function<void()> watcher) { watcher_ = watcher; }
 
  private:
-  void OnChange(modular::StoryInfo story_info,
-                modular::StoryState state) override;
+  void OnChange(fuchsia::modular::StoryInfo story_info,
+                fuchsia::modular::StoryState state) override;
   void OnDelete(fidl::StringPtr story_id) override;
 
   fidl::Binding<StoryProviderWatcher> binding_;
@@ -39,5 +40,6 @@ class TimelineStoriesWatcher : public modular::StoryProviderWatcher {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_TIMELINE_STORIES_WATCHER_H_

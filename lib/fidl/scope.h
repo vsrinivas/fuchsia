@@ -15,6 +15,7 @@
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/svc/cpp/service_provider_bridge.h"
 
+namespace fuchsia {
 namespace modular {
 
 // Provides fate separation of sets of applications run by one application. The
@@ -51,5 +52,6 @@ class Scope {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_FIDL_SCOPE_H_

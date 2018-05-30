@@ -9,12 +9,13 @@
 #include <string>
 #include <vector>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/action_log/action_log_data.h"
 
+namespace fuchsia {
 namespace modular {
 
 class UserActionLogImpl : public UserActionLog {
@@ -62,5 +63,6 @@ class ComponentActionLogImpl : public ComponentActionLog {
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentActionLogImpl);
 };
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_ACTION_LOG_ACTION_LOG_IMPL_H_

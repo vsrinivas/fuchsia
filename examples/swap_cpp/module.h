@@ -5,7 +5,7 @@
 #ifndef PERIDOT_EXAMPLES_SWAP_CPP_MODULE_H_
 #define PERIDOT_EXAMPLES_SWAP_CPP_MODULE_H_
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/ui/view_framework/base_view.h"
 #include "peridot/lib/fidl/single_service_app.h"
 
@@ -27,7 +27,7 @@ class ModuleView : public mozart::BaseView {
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleView);
 };
 
-class ModuleApp : public modular::ViewApp {
+class ModuleApp : public fuchsia::modular::ViewApp {
  public:
   using CreateViewCallback = std::function<mozart::BaseView*(
       views_v1::ViewManagerPtr,

@@ -12,6 +12,7 @@
 #include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/testing/test_with_ledger.h"
 
+namespace fuchsia {
 namespace modular {
 namespace testing {
 namespace {
@@ -334,3 +335,4 @@ TEST_F(PageClientTest, ConcurrentConflictWrite) {
 }  // namespace
 }  // namespace testing
 }  // namespace modular
+}  // namespace fuchsia

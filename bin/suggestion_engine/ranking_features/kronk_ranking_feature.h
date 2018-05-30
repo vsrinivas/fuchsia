@@ -5,10 +5,11 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_KRONK_RANKING_FEATURE_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_KRONK_RANKING_FEATURE_H_
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 
+namespace fuchsia {
 namespace modular {
 
 class KronkRankingFeature : public RankingFeature {
@@ -22,5 +23,6 @@ class KronkRankingFeature : public RankingFeature {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_KRONK_RANKING_FEATURE_H_

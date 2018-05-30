@@ -10,6 +10,7 @@
 #include "peridot/bin/user_runner/agent_runner/agent_runner.h"
 #include "peridot/lib/fidl/array_to_string.h"
 
+namespace fuchsia {
 namespace modular {
 
 ComponentContextImpl::ComponentContextImpl(const ComponentContextInfo& info,
@@ -97,3 +98,4 @@ void ComponentContextImpl::GetPackageName(GetPackageNameCallback result) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

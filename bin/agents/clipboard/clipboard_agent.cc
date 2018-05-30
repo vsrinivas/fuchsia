@@ -7,6 +7,7 @@
 #include "peridot/bin/agents/clipboard/clipboard_storage.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 
+namespace fuchsia {
 namespace modular {
 
 // An agent responsible for providing the Clipboard service.
@@ -61,11 +62,12 @@ class ClipboardAgent {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::AgentDriver<modular::ClipboardAgent> driver(
+  fuchsia::modular::AgentDriver<fuchsia::modular::ClipboardAgent> driver(
       app_context.get(), [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;

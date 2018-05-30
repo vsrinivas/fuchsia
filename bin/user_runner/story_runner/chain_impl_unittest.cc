@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/types/type_converters.h"
@@ -13,6 +13,7 @@
 #include "peridot/bin/user_runner/story_runner/chain_impl.h"
 #include "peridot/lib/testing/story_controller_mock.h"
 
+namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -71,3 +72,4 @@ TEST_F(ChainImplTest, GetLinkPath) {
 
 }  // namespace
 }  // namespace modular
+}  // namespace fuchsia

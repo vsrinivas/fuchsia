@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "peridot/bin/suggestion_engine/ranking_features/dead_story_ranking_feature.h"
 
+namespace fuchsia {
 namespace modular {
 
 DeadStoryRankingFeature::DeadStoryRankingFeature() {}
@@ -38,3 +39,4 @@ DeadStoryRankingFeature::CreateContextSelectorInternal() {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

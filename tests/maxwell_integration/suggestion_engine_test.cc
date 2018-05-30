@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "gtest/gtest.h"
 #include "lib/context/cpp/context_helper.h"
@@ -22,7 +22,7 @@
 
 constexpr char maxwell::agents::IdeasAgent::kIdeaId[];
 
-using modular::StoryProviderMock;
+using fuchsia::modular::StoryProviderMock;
 
 namespace maxwell {
 namespace {
@@ -30,26 +30,26 @@ namespace {
 // context agent that publishes an int n
 class NWriter {
  public:
-  NWriter(modular::ContextEngine* context_engine) {
-    modular::ComponentScope scope;
-    scope.set_global_scope(modular::GlobalScope());
+  NWriter(fuchsia::modular::ContextEngine* context_engine) {
+    fuchsia::modular::ComponentScope scope;
+    scope.set_global_scope(fuchsia::modular::GlobalScope());
     context_engine->GetWriter(std::move(scope), pub_.NewRequest());
   }
 
   void Publish(int n) { pub_->WriteEntityTopic("n", std::to_string(n)); }
 
  private:
-  modular::ContextWriterPtr pub_;
+  fuchsia::modular::ContextWriterPtr pub_;
 };
 
-modular::Proposal CreateProposal(const std::string& id,
-                                 const std::string& headline,
-                                 fidl::VectorPtr<modular::Action> actions,
-                                 modular::AnnoyanceType annoyance) {
-  modular::Proposal p;
+fuchsia::modular::Proposal CreateProposal(
+    const std::string& id, const std::string& headline,
+    fidl::VectorPtr<fuchsia::modular::Action> actions,
+    fuchsia::modular::AnnoyanceType annoyance) {
+  fuchsia::modular::Proposal p;
   p.id = id;
   p.on_selected = std::move(actions);
-  modular::SuggestionDisplay d;
+  fuchsia::modular::SuggestionDisplay d;
 
   d.headline = headline;
   d.color = 0x00aa00aa;  // argb purple
@@ -61,7 +61,7 @@ modular::Proposal CreateProposal(const std::string& id,
 
 class Proposinator {
  public:
-  Proposinator(modular::SuggestionEngine* suggestion_engine,
+  Proposinator(fuchsia::modular::SuggestionEngine* suggestion_engine,
                fidl::StringPtr url = "Proposinator") {
     suggestion_engine->RegisterProposalPublisher("Proposinator",
                                                  out_.NewRequest());
@@ -70,20 +70,20 @@ class Proposinator {
   virtual ~Proposinator() = default;
 
   void Propose(const std::string& id,
-               fidl::VectorPtr<modular::Action> actions =
-                   fidl::VectorPtr<modular::Action>::New(0)) {
-    Propose(id, id, modular::AnnoyanceType::NONE, std::move(actions));
+               fidl::VectorPtr<fuchsia::modular::Action> actions =
+                   fidl::VectorPtr<fuchsia::modular::Action>::New(0)) {
+    Propose(id, id, fuchsia::modular::AnnoyanceType::NONE, std::move(actions));
   }
 
-  void Propose(const std::string& id,
-               const std::string& headline,
-               modular::AnnoyanceType annoyance = modular::AnnoyanceType::NONE,
-               fidl::VectorPtr<modular::Action> actions =
-                   fidl::VectorPtr<modular::Action>::New(0)) {
+  void Propose(const std::string& id, const std::string& headline,
+               fuchsia::modular::AnnoyanceType annoyance =
+                   fuchsia::modular::AnnoyanceType::NONE,
+               fidl::VectorPtr<fuchsia::modular::Action> actions =
+                   fidl::VectorPtr<fuchsia::modular::Action>::New(0)) {
     Propose(CreateProposal(id, headline, std::move(actions), annoyance));
   }
 
-  void Propose(modular::Proposal proposal) {
+  void Propose(fuchsia::modular::Proposal proposal) {
     out_->Propose(std::move(proposal));
   }
 
@@ -92,12 +92,13 @@ class Proposinator {
   void KillPublisher() { out_.Unbind(); }
 
  protected:
-  modular::ProposalPublisherPtr out_;
+  fuchsia::modular::ProposalPublisherPtr out_;
 };
 
-class AskProposinator : public Proposinator, public modular::QueryHandler {
+class AskProposinator : public Proposinator,
+                        public fuchsia::modular::QueryHandler {
  public:
-  AskProposinator(modular::SuggestionEngine* suggestion_engine,
+  AskProposinator(fuchsia::modular::SuggestionEngine* suggestion_engine,
                   fidl::StringPtr url = "AskProposinator")
       : Proposinator(suggestion_engine, url), ask_binding_(this) {
     fidl::InterfaceHandle<QueryHandler> query_handle;
@@ -105,7 +106,8 @@ class AskProposinator : public Proposinator, public modular::QueryHandler {
     suggestion_engine->RegisterQueryHandler(url, std::move(query_handle));
   }
 
-  void OnQuery(modular::UserInput query, OnQueryCallback callback) override {
+  void OnQuery(fuchsia::modular::UserInput query,
+               OnQueryCallback callback) override {
     query_ = fidl::MakeOptional(query);
     query_callback_ = callback;
     query_proposals_.resize(0);
@@ -122,7 +124,7 @@ class AskProposinator : public Proposinator, public modular::QueryHandler {
   }
 
   void Commit() {
-    modular::QueryResponse response;
+    fuchsia::modular::QueryResponse response;
     response.proposals = std::move(query_proposals_);
     query_callback_(std::move(response));
   }
@@ -130,49 +132,50 @@ class AskProposinator : public Proposinator, public modular::QueryHandler {
   fidl::StringPtr query() const { return query_ ? query_->text : nullptr; }
 
   void ProposeForAsk(const std::string& id) {
-    auto actions = fidl::VectorPtr<modular::Action>::New(0);
-    ProposeForAsk(id, id, modular::AnnoyanceType::NONE, std::move(actions));
+    auto actions = fidl::VectorPtr<fuchsia::modular::Action>::New(0);
+    ProposeForAsk(id, id, fuchsia::modular::AnnoyanceType::NONE,
+                  std::move(actions));
   }
 
-  void ProposeForAsk(
-      const std::string& id,
-      const std::string& headline,
-      modular::AnnoyanceType annoyance = modular::AnnoyanceType::NONE,
-      fidl::VectorPtr<modular::Action> actions =
-          fidl::VectorPtr<modular::Action>::New(0)) {
+  void ProposeForAsk(const std::string& id, const std::string& headline,
+                     fuchsia::modular::AnnoyanceType annoyance =
+                         fuchsia::modular::AnnoyanceType::NONE,
+                     fidl::VectorPtr<fuchsia::modular::Action> actions =
+                         fidl::VectorPtr<fuchsia::modular::Action>::New(0)) {
     query_proposals_.push_back(
         CreateProposal(id, headline, std::move(actions), annoyance));
   }
 
  private:
   fidl::Binding<QueryHandler> ask_binding_;
-  modular::UserInputPtr query_;
-  fidl::VectorPtr<modular::Proposal> query_proposals_;
+  fuchsia::modular::UserInputPtr query_;
+  fidl::VectorPtr<fuchsia::modular::Proposal> query_proposals_;
   OnQueryCallback query_callback_;
   bool waiting_for_query_ = false;
 };
 
 // maintains the number of proposals specified by the context field "n"
-class NProposals : public Proposinator, public modular::ContextListener {
+class NProposals : public Proposinator,
+                   public fuchsia::modular::ContextListener {
  public:
-  NProposals(modular::ContextEngine* context_engine,
-             modular::SuggestionEngine* suggestion_engine)
+  NProposals(fuchsia::modular::ContextEngine* context_engine,
+             fuchsia::modular::SuggestionEngine* suggestion_engine)
       : Proposinator(suggestion_engine, "NProposals"), listener_binding_(this) {
-    modular::ComponentScope scope;
-    scope.set_global_scope(modular::GlobalScope());
+    fuchsia::modular::ComponentScope scope;
+    scope.set_global_scope(fuchsia::modular::GlobalScope());
     context_engine->GetReader(std::move(scope), reader_.NewRequest());
 
-    modular::ContextSelector selector;
-    selector.type = modular::ContextValueType::ENTITY;
-    selector.meta = modular::ContextMetadata::New();
-    selector.meta->entity = modular::EntityMetadata::New();
+    fuchsia::modular::ContextSelector selector;
+    selector.type = fuchsia::modular::ContextValueType::ENTITY;
+    selector.meta = fuchsia::modular::ContextMetadata::New();
+    selector.meta->entity = fuchsia::modular::EntityMetadata::New();
     selector.meta->entity->topic = "n";
-    modular::ContextQuery query;
+    fuchsia::modular::ContextQuery query;
     AddToContextQuery(&query, "n", std::move(selector));
     reader_->Subscribe(std::move(query), listener_binding_.NewBinding());
   }
 
-  void OnContextUpdate(modular::ContextUpdate update) override {
+  void OnContextUpdate(fuchsia::modular::ContextUpdate update) override {
     auto r = TakeContextValue(&update, "n");
     ASSERT_TRUE(r.first) << "Expect an update key for every query key.";
     if (r.second->empty())
@@ -188,14 +191,14 @@ class NProposals : public Proposinator, public modular::ContextListener {
   }
 
  private:
-  modular::ContextReaderPtr reader_;
+  fuchsia::modular::ContextReaderPtr reader_;
   fidl::Binding<ContextListener> listener_binding_;
 
   int n_ = 0;
 };
 
 class SuggestionEngineTest : public ContextEngineTestBase,
-                             modular::ProposalListener {
+                             fuchsia::modular::ProposalListener {
  public:
   SuggestionEngineTest() : story_provider_binding_(&story_provider_) {}
 
@@ -205,25 +208,32 @@ class SuggestionEngineTest : public ContextEngineTestBase,
     component::Services suggestion_services =
         StartServices("suggestion_engine");
     suggestion_engine_ =
-        suggestion_services.ConnectToService<modular::SuggestionEngine>();
+        suggestion_services
+            .ConnectToService<fuchsia::modular::SuggestionEngine>();
     suggestion_provider_ =
-        suggestion_services.ConnectToService<modular::SuggestionProvider>();
+        suggestion_services
+            .ConnectToService<fuchsia::modular::SuggestionProvider>();
     suggestion_debug_ =
-        suggestion_services.ConnectToService<modular::SuggestionDebug>();
+        suggestion_services
+            .ConnectToService<fuchsia::modular::SuggestionDebug>();
 
     // Initialize the SuggestionEngine.
-    fidl::InterfaceHandle<modular::StoryProvider> story_provider_handle;
+    fidl::InterfaceHandle<fuchsia::modular::StoryProvider>
+        story_provider_handle;
     story_provider_binding_.Bind(story_provider_handle.NewRequest());
 
     // Hack to get an unbound FocusController for Initialize().
-    fidl::InterfaceHandle<modular::FocusProvider> focus_provider_handle;
+    fidl::InterfaceHandle<fuchsia::modular::FocusProvider>
+        focus_provider_handle;
     focus_provider_handle.NewRequest();
 
-    fidl::InterfaceHandle<modular::ContextWriter> context_writer_handle;
-    fidl::InterfaceHandle<modular::ContextReader> context_reader_handle;
-    modular::ComponentScope scope;
-    scope.set_global_scope(modular::GlobalScope());
-    modular::ComponentScope scope_clone;
+    fidl::InterfaceHandle<fuchsia::modular::ContextWriter>
+        context_writer_handle;
+    fidl::InterfaceHandle<fuchsia::modular::ContextReader>
+        context_reader_handle;
+    fuchsia::modular::ComponentScope scope;
+    scope.set_global_scope(fuchsia::modular::GlobalScope());
+    fuchsia::modular::ComponentScope scope_clone;
     fidl::Clone(scope, &scope_clone);
     context_engine()->GetWriter(std::move(scope_clone),
                                 context_writer_handle.NewRequest());
@@ -236,15 +246,15 @@ class SuggestionEngineTest : public ContextEngineTestBase,
   }
 
  protected:
-  modular::SuggestionEngine* suggestion_engine() {
+  fuchsia::modular::SuggestionEngine* suggestion_engine() {
     return suggestion_engine_.get();
   }
 
-  modular::SuggestionProvider* suggestion_provider() {
+  fuchsia::modular::SuggestionProvider* suggestion_provider() {
     return suggestion_provider_.get();
   }
 
-  modular::SuggestionDebug* suggestion_debug() {
+  fuchsia::modular::SuggestionDebug* suggestion_debug() {
     return suggestion_debug_.get();
   }
 
@@ -253,17 +263,18 @@ class SuggestionEngineTest : public ContextEngineTestBase,
   void StartSuggestionAgent(const std::string& url) {
     auto agent_bridge =
         std::make_unique<MaxwellServiceProviderBridge>(root_environment());
-    agent_bridge->AddService<modular::ContextReader>(
-        [this, url](fidl::InterfaceRequest<modular::ContextReader> request) {
-          modular::ComponentScope scope;
-          modular::AgentScope agent_scope;
+    agent_bridge->AddService<fuchsia::modular::ContextReader>(
+        [this,
+         url](fidl::InterfaceRequest<fuchsia::modular::ContextReader> request) {
+          fuchsia::modular::ComponentScope scope;
+          fuchsia::modular::AgentScope agent_scope;
           agent_scope.url = url;
           scope.set_agent_scope(std::move(agent_scope));
           context_engine()->GetReader(std::move(scope), std::move(request));
         });
-    agent_bridge->AddService<modular::ProposalPublisher>(
-        [this,
-         url](fidl::InterfaceRequest<modular::ProposalPublisher> request) {
+    agent_bridge->AddService<fuchsia::modular::ProposalPublisher>(
+        [this, url](fidl::InterfaceRequest<fuchsia::modular::ProposalPublisher>
+                        request) {
           suggestion_engine_->RegisterProposalPublisher(url,
                                                         std::move(request));
         });
@@ -271,11 +282,11 @@ class SuggestionEngineTest : public ContextEngineTestBase,
   }
 
   void AcceptSuggestion(const std::string& suggestion_id) {
-    Interact(suggestion_id, modular::InteractionType::SELECTED);
+    Interact(suggestion_id, fuchsia::modular::InteractionType::SELECTED);
   }
 
   void DismissSuggestion(const std::string& suggestion_id) {
-    Interact(suggestion_id, modular::InteractionType::DISMISSED);
+    Interact(suggestion_id, fuchsia::modular::InteractionType::DISMISSED);
   }
 
   void WaitUntilIdle() {
@@ -284,7 +295,7 @@ class SuggestionEngineTest : public ContextEngineTestBase,
   }
 
   void AddProposalListenerBinding(
-      fidl::InterfaceRequest<modular::ProposalListener> request) {
+      fidl::InterfaceRequest<fuchsia::modular::ProposalListener> request) {
     proposal_listener_bindings_.AddBinding(this, std::move(request));
   }
 
@@ -300,8 +311,8 @@ class SuggestionEngineTest : public ContextEngineTestBase,
 
  private:
   void Interact(const std::string& suggestion_id,
-                modular::InteractionType interaction_type) {
-    modular::Interaction interaction;
+                fuchsia::modular::InteractionType interaction_type) {
+    fuchsia::modular::Interaction interaction;
     interaction.type = interaction_type;
     suggestion_provider_->NotifyInteraction(suggestion_id,
                                             std::move(interaction));
@@ -317,13 +328,14 @@ class SuggestionEngineTest : public ContextEngineTestBase,
     accepted_proposal_count_++;
   }
 
-  modular::SuggestionEnginePtr suggestion_engine_;
-  modular::SuggestionDebugPtr suggestion_debug_;
-  modular::SuggestionProviderPtr suggestion_provider_;
+  fuchsia::modular::SuggestionEnginePtr suggestion_engine_;
+  fuchsia::modular::SuggestionDebugPtr suggestion_debug_;
+  fuchsia::modular::SuggestionProviderPtr suggestion_provider_;
 
   StoryProviderMock story_provider_;
-  fidl::Binding<modular::StoryProvider> story_provider_binding_;
-  fidl::BindingSet<modular::ProposalListener> proposal_listener_bindings_;
+  fidl::Binding<fuchsia::modular::StoryProvider> story_provider_binding_;
+  fidl::BindingSet<fuchsia::modular::ProposalListener>
+      proposal_listener_bindings_;
 };
 
 class AskTest : public virtual SuggestionEngineTest {
@@ -347,8 +359,8 @@ class AskTest : public virtual SuggestionEngineTest {
 
   void Query(const std::string& query, int count = 10) {
     CloseAndResetListener();
-    modular::UserInput input;
-    input.type = modular::InputType::TEXT;
+    fuchsia::modular::UserInput input;
+    input.type = fuchsia::modular::InputType::TEXT;
     input.text = query;
     suggestion_provider()->Query(listener_binding_.NewBinding(),
                                  std::move(input), count);
@@ -356,7 +368,7 @@ class AskTest : public virtual SuggestionEngineTest {
 
   int suggestion_count() const { return listener_.suggestion_count(); }
 
-  modular::TestSuggestionListener* listener() { return &listener_; }
+  fuchsia::modular::TestSuggestionListener* listener() { return &listener_; }
 
  protected:
   void EnsureDebugMatches() {
@@ -373,10 +385,10 @@ class AskTest : public virtual SuggestionEngineTest {
   }
 
  private:
-  modular::TestSuggestionListener listener_;
-  modular::TestDebugAskListener debug_listener_;
-  fidl::Binding<modular::QueryListener> listener_binding_;
-  fidl::Binding<modular::AskProposalListener> debug_listener_binding_;
+  fuchsia::modular::TestSuggestionListener listener_;
+  fuchsia::modular::TestDebugAskListener debug_listener_;
+  fidl::Binding<fuchsia::modular::QueryListener> listener_binding_;
+  fidl::Binding<fuchsia::modular::AskProposalListener> debug_listener_binding_;
 };
 
 class InterruptionTest : public virtual SuggestionEngineTest {
@@ -397,10 +409,10 @@ class InterruptionTest : public virtual SuggestionEngineTest {
     WaitUntilIdle();
   }
 
-  modular::TestDebugInterruptionListener* debugListener() {
+  fuchsia::modular::TestDebugInterruptionListener* debugListener() {
     return &debug_listener_;
   }
-  modular::TestSuggestionListener* listener() { return &listener_; }
+  fuchsia::modular::TestSuggestionListener* listener() { return &listener_; }
 
  protected:
   int suggestion_count() const { return listener_.suggestion_count(); }
@@ -417,11 +429,12 @@ class InterruptionTest : public virtual SuggestionEngineTest {
   }
 
  private:
-  modular::TestSuggestionListener listener_;
-  modular::TestDebugInterruptionListener debug_listener_;
+  fuchsia::modular::TestSuggestionListener listener_;
+  fuchsia::modular::TestDebugInterruptionListener debug_listener_;
 
-  fidl::Binding<modular::InterruptionListener> listener_binding_;
-  fidl::Binding<modular::InterruptionProposalListener> debug_listener_binding_;
+  fidl::Binding<fuchsia::modular::InterruptionListener> listener_binding_;
+  fidl::Binding<fuchsia::modular::InterruptionProposalListener>
+      debug_listener_binding_;
 };
 
 class NextTest : public virtual SuggestionEngineTest {
@@ -437,8 +450,10 @@ class NextTest : public virtual SuggestionEngineTest {
         debug_listener_binding_.NewBinding());
   }
 
-  modular::TestDebugNextListener* debugListener() { return &debug_listener_; }
-  modular::TestSuggestionListener* listener() { return &listener_; }
+  fuchsia::modular::TestDebugNextListener* debugListener() {
+    return &debug_listener_;
+  }
+  fuchsia::modular::TestSuggestionListener* listener() { return &listener_; }
 
  protected:
   void StartListening(int count) {
@@ -459,7 +474,7 @@ class NextTest : public virtual SuggestionEngineTest {
 
   int suggestion_count() const { return listener_.suggestion_count(); }
 
-  const modular::Suggestion* GetOnlySuggestion() const {
+  const fuchsia::modular::Suggestion* GetOnlySuggestion() const {
     return listener_.GetOnlySuggestion();
   }
 
@@ -477,11 +492,11 @@ class NextTest : public virtual SuggestionEngineTest {
   }
 
  private:
-  modular::TestSuggestionListener listener_;
-  modular::TestDebugNextListener debug_listener_;
+  fuchsia::modular::TestSuggestionListener listener_;
+  fuchsia::modular::TestDebugNextListener debug_listener_;
 
-  fidl::Binding<modular::NextListener> listener_binding_;
-  fidl::Binding<modular::NextProposalListener> debug_listener_binding_;
+  fidl::Binding<fuchsia::modular::NextListener> listener_binding_;
+  fidl::Binding<fuchsia::modular::NextProposalListener> debug_listener_binding_;
 };
 
 class ResultCountTest : public NextTest {
@@ -706,15 +721,15 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion) {
   Proposinator p(suggestion_engine());
   StartListening(10);
 
-  modular::CreateStory create_story;
-  modular::Intent intent;
+  fuchsia::modular::CreateStory create_story;
+  fuchsia::modular::Intent intent;
   intent.action.handler = "foo://bar";
   create_story.intent = std::move(intent);
 
-  modular::Action action;
+  fuchsia::modular::Action action;
   action.set_create_story(std::move(create_story));
 
-  fidl::VectorPtr<modular::Action> actions;
+  fidl::VectorPtr<fuchsia::modular::Action> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   WaitUntilIdle();
@@ -731,17 +746,17 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestionCallback) {
   Proposinator p(suggestion_engine());
   StartListening(10);
 
-  modular::CreateStory create_story;
-  modular::Intent intent;
+  fuchsia::modular::CreateStory create_story;
+  fuchsia::modular::Intent intent;
   intent.action.handler = "foo://bar";
   create_story.intent = std::move(intent);
 
-  modular::Action action;
+  fuchsia::modular::Action action;
   action.set_create_story(std::move(create_story));
-  fidl::VectorPtr<modular::Action> actions;
+  fidl::VectorPtr<fuchsia::modular::Action> actions;
   actions.push_back(std::move(action));
   auto proposal = CreateProposal("1", "1", std::move(actions),
-                                 modular::AnnoyanceType::NONE);
+                                 fuchsia::modular::AnnoyanceType::NONE);
   AddProposalListenerBinding(proposal.listener.NewRequest());
   p.Propose(std::move(proposal));
   WaitUntilIdle();
@@ -758,18 +773,18 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestionToCreateStory) {
   Proposinator p(suggestion_engine());
   StartListening(10);
 
-  modular::CreateStory create_story;
-  modular::Intent intent;
+  fuchsia::modular::CreateStory create_story;
+  fuchsia::modular::Intent intent;
   intent.action.handler = "foo://bar";
   create_story.intent = std::move(intent);
 
-  modular::Action action;
+  fuchsia::modular::Action action;
   action.set_create_story(std::move(create_story));
 
-  fidl::VectorPtr<modular::Action> actions;
+  fidl::VectorPtr<fuchsia::modular::Action> actions;
   actions.push_back(std::move(action));
   auto proposal = CreateProposal("1", "1", std::move(actions),
-                                 modular::AnnoyanceType::NONE);
+                                 fuchsia::modular::AnnoyanceType::NONE);
   AddProposalListenerBinding(proposal.listener.NewRequest());
   p.Propose(std::move(proposal));
   WaitUntilIdle();
@@ -787,21 +802,21 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestionToCreateMultipleStories) {
   Proposinator p(suggestion_engine());
   StartListening(10);
 
-  modular::CreateStory create_story;
-  modular::Intent intent;
+  fuchsia::modular::CreateStory create_story;
+  fuchsia::modular::Intent intent;
   intent.action.handler = "foo://bar";
   create_story.intent = std::move(intent);
 
-  modular::Action action;
+  fuchsia::modular::Action action;
   action.set_create_story(std::move(create_story));
-  modular::Action action2;
+  fuchsia::modular::Action action2;
   action2.set_create_story(std::move(create_story));
 
-  fidl::VectorPtr<modular::Action> actions;
+  fidl::VectorPtr<fuchsia::modular::Action> actions;
   actions.push_back(std::move(action));
   actions.push_back(std::move(action2));
   auto proposal = CreateProposal("1", "1", std::move(actions),
-                                 modular::AnnoyanceType::NONE);
+                                 fuchsia::modular::AnnoyanceType::NONE);
   AddProposalListenerBinding(proposal.listener.NewRequest());
   p.Propose(std::move(proposal));
   WaitUntilIdle();
@@ -817,14 +832,14 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_CreateStoryIntent) {
   Proposinator p(suggestion_engine());
   StartListening(10);
 
-  modular::Intent intent;
+  fuchsia::modular::Intent intent;
   intent.action.handler = "foo://bar";
-  modular::CreateStory create_story;
+  fuchsia::modular::CreateStory create_story;
   create_story.intent = std::move(intent);
 
-  modular::Action action;
+  fuchsia::modular::Action action;
   action.set_create_story(std::move(create_story));
-  fidl::VectorPtr<modular::Action> actions;
+  fidl::VectorPtr<fuchsia::modular::Action> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   WaitUntilIdle();
@@ -842,17 +857,17 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_AddModule) {
 
   auto module_id = "foo://bar1";
 
-  modular::AddModule add_module;
+  fuchsia::modular::AddModule add_module;
   add_module.story_id = "foo://bar";
   add_module.module_name = module_id;
   add_module.intent.action.handler = module_id;
   add_module.surface_parent_module_path =
       fidl::VectorPtr<fidl::StringPtr>::New(0);
-  add_module.surface_relation = modular::SurfaceRelation();
+  add_module.surface_relation = fuchsia::modular::SurfaceRelation();
 
-  modular::Action action;
+  fuchsia::modular::Action action;
   action.set_add_module(std::move(add_module));
-  fidl::VectorPtr<modular::Action> actions;
+  fidl::VectorPtr<fuchsia::modular::Action> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   WaitUntilIdle();
@@ -870,13 +885,13 @@ TEST_F(SuggestionInteractionTest, AcceptSugestion_QueryAction) {
   AskProposinator p(suggestion_engine());
   StartListening(10);
 
-  modular::UserInput user_input;
+  fuchsia::modular::UserInput user_input;
   user_input.text = "test query";
-  modular::QueryAction query_action;
+  fuchsia::modular::QueryAction query_action;
   query_action.input = std::move(user_input);
-  modular::Action action;
+  fuchsia::modular::Action action;
   action.set_query_action(std::move(query_action));
-  fidl::VectorPtr<modular::Action> actions;
+  fidl::VectorPtr<fuchsia::modular::Action> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
 
@@ -892,16 +907,16 @@ TEST_F(SuggestionInteractionTest, AcceptSugestion_QueryAction) {
   EXPECT_EQ(p.query(), "test query");
 
   // Response from QueryHandler.
-  modular::CreateStory create_story;
-  modular::Intent intent;
+  fuchsia::modular::CreateStory create_story;
+  fuchsia::modular::Intent intent;
   intent.action.handler = "foo://bar";
   create_story.intent = std::move(intent);
 
-  modular::Action action2;
+  fuchsia::modular::Action action2;
   action2.set_create_story(std::move(create_story));
-  fidl::VectorPtr<modular::Action> suggested_actions;
+  fidl::VectorPtr<fuchsia::modular::Action> suggested_actions;
   suggested_actions.push_back(std::move(action2));
-  p.ProposeForAsk("2", "suggestion", modular::AnnoyanceType::NONE,
+  p.ProposeForAsk("2", "suggestion", fuchsia::modular::AnnoyanceType::NONE,
                   std::move(suggested_actions));
   p.Commit();
 
@@ -1086,14 +1101,14 @@ TEST_F(SuggestionFilteringTest, Baseline) {
   Proposinator p(suggestion_engine());
   StartListening(10);
 
-  modular::CreateStory create_story;
-  modular::Intent intent;
+  fuchsia::modular::CreateStory create_story;
+  fuchsia::modular::Intent intent;
   intent.action.handler = "foo://bar";
   create_story.intent = std::move(intent);
 
-  modular::Action action;
+  fuchsia::modular::Action action;
   action.set_create_story(std::move(create_story));
-  fidl::VectorPtr<modular::Action> actions;
+  fidl::VectorPtr<fuchsia::modular::Action> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   WaitUntilIdle();
@@ -1108,20 +1123,20 @@ TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
 
   // First notify watchers of the StoryProvider that a story
   // already exists.
-  modular::StoryInfo story_info;
+  fuchsia::modular::StoryInfo story_info;
   story_info.url = "foo://bazzle_dazzle";
   story_info.id = "";
   story_provider()->NotifyStoryChanged(std::move(story_info),
-                                       modular::StoryState::STOPPED);
+                                       fuchsia::modular::StoryState::STOPPED);
 
-  modular::CreateStory create_story;
-  modular::Intent intent;
+  fuchsia::modular::CreateStory create_story;
+  fuchsia::modular::Intent intent;
   intent.action.handler = "foo://bar";
   create_story.intent = std::move(intent);
 
-  modular::Action action;
+  fuchsia::modular::Action action;
   action.set_create_story(std::move(create_story));
-  fidl::VectorPtr<modular::Action> actions;
+  fidl::VectorPtr<fuchsia::modular::Action> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   WaitUntilIdle();
@@ -1139,12 +1154,12 @@ TEST_F(SuggestionFilteringTest, FilterOnPropose) {
 
   // First notify watchers of the StoryProvider that this story
   // already exists.
-  auto story_info = modular::StoryInfo::New();
+  auto story_info = fuchsia::modular::StoryInfo::New();
   story_info->url = "foo://bar";
   story_info->id = "";
   story_info->extra.mark_non_null();
   story_provider()->NotifyStoryChanged(std::move(story_info),
-                                       modular::StoryState::INITIAL);
+                                       fuchsia::modular::StoryState::INITIAL);
 
   auto create_story = CreateStory::New();
   create_story->module_id = "foo://bar";
@@ -1162,12 +1177,12 @@ TEST_F(SuggestionFilteringTest, ChangeFiltered) {
   Proposinator p(suggestion_engine());
   StartListening(10);
 
-  auto story_info = modular::StoryInfo::New();
+  auto story_info = fuchsia::modular::StoryInfo::New();
   story_info->url = "foo://bar";
   story_info->id = "";
   story_info->extra.mark_non_null();
   story_provider()->NotifyStoryChanged(std::move(story_info),
-                                       modular::StoryState::INITIAL);
+                                       fuchsia::modular::StoryState::INITIAL);
 
   for (int i = 0; i < 2; i++) {
     auto create_story = CreateStory::New();
@@ -1191,7 +1206,7 @@ TEST_F(SuggestionFilteringTest, ChangeFiltered) {
 TEST_F(InterruptionTest, SingleInterruption) {
   Proposinator p(suggestion_engine());
 
-  p.Propose("1", "2", modular::AnnoyanceType::INTERRUPT);
+  p.Propose("1", "2", fuchsia::modular::AnnoyanceType::INTERRUPT);
 
   WaitUntilIdle();
   EXPECT_EQ(1, suggestion_count());
@@ -1201,7 +1216,7 @@ TEST_F(InterruptionTest, SingleInterruption) {
 TEST_F(InterruptionTest, RemovedInterruption) {
   Proposinator p(suggestion_engine());
 
-  p.Propose("1", "2", modular::AnnoyanceType::INTERRUPT);
+  p.Propose("1", "2", fuchsia::modular::AnnoyanceType::INTERRUPT);
 
   WaitUntilIdle();
   EXPECT_EQ(1, suggestion_count());

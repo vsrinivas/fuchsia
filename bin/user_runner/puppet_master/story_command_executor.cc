@@ -4,8 +4,10 @@
 
 #include "peridot/bin/user_runner/puppet_master/story_command_executor.h"
 
+namespace fuchsia {
 namespace modular {
 
 StoryCommandExecutor::~StoryCommandExecutor() = default;
 
 }  // namespace modular
+}  // namespace fuchsia

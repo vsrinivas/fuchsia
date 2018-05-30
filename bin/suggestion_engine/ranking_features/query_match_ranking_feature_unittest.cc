@@ -5,6 +5,7 @@
 #include "peridot/bin/suggestion_engine/ranking_features/query_match_ranking_feature.h"
 #include "gtest/gtest.h"
 
+namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -49,3 +50,4 @@ TEST_F(QueryMatchRankingFeatureTest, TestComputeFeatureUnrelated)  {
 
 }  // namespace
 }  // namespace modular
+}  // namespace fuchsia

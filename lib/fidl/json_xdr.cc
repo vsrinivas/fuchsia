@@ -10,6 +10,7 @@
 #include "lib/fxl/macros.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 
+namespace fuchsia {
 namespace modular {
 
 namespace {
@@ -288,3 +289,4 @@ std::string* XdrContext::GetError() {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

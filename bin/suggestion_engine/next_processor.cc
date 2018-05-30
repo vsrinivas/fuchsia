@@ -6,6 +6,7 @@
 
 #include "peridot/bin/suggestion_engine/suggestion_engine_helper.h"
 
+namespace fuchsia {
 namespace modular {
 
 NextProcessor::NextProcessor(std::shared_ptr<SuggestionDebugImpl> debug)
@@ -149,3 +150,4 @@ void NextProcessor::NotifyOfResults(const NextListenerPtr& listener,
 }
 
 }  // namespace modular
+}  // namespace fuchsia

@@ -16,6 +16,7 @@
 #include "lib/fxl/strings/trim.h"
 #include "peridot/lib/util/filesystem.h"
 
+namespace fuchsia {
 namespace modular {
 
 constexpr char kDeviceInfoDirectory[] = "/data/device";
@@ -111,3 +112,4 @@ std::string LoadDeviceName(const std::string& user) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

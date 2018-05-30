@@ -12,6 +12,7 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/user_runner/agent_runner/agent_runner_storage.h"
 
+namespace fuchsia {
 namespace modular {
 namespace testing {
 
@@ -44,5 +45,6 @@ class FakeAgentRunnerStorage : public AgentRunnerStorage {
 
 }  // namespace testing
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_TESTING_FAKE_AGENT_RUNNER_STORAGE_H_

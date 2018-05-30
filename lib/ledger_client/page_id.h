@@ -9,15 +9,18 @@
 
 #include <ledger/cpp/fidl.h>
 
+namespace fuchsia {
 namespace modular {
 
 // Creates a page ID from an equivalent |std::string|.
 //
-// Caveat: This along with |modular::to_string| should not be used for JSON
-// serialization of arbitrary page IDs as JSON string encoding involves a
-// potentially non-invertible UTF-8 encoding.
+// Caveat: This along with |fuchsia::modular::to_string| should not be used for
+// JSON serialization of arbitrary page IDs as JSON string encoding involves a
+// potentially non-invertible UTF-8 encoding. Instead, use |PageIdFromBase64|
+// and |PageIdToBase64|.
 ledger::PageId MakePageId(const std::string& value);
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_LEDGER_CLIENT_PAGE_ID_H_

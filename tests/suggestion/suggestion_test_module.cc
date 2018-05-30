@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
@@ -15,27 +15,28 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/suggestion/defs.h"
 
-using modular::testing::Await;
-using modular::testing::Signal;
-using modular::testing::TestPoint;
+using fuchsia::modular::testing::Await;
+using fuchsia::modular::testing::Signal;
+using fuchsia::modular::testing::TestPoint;
 
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp : modular::ProposalListener {
+class TestApp : fuchsia::modular::ProposalListener {
  public:
   TestPoint initialized_{"Root module initialized"};
   TestPoint received_story_id_{"Root module received story id"};
   TestPoint proposal_was_accepted_{"Proposal was accepted"};
 
   TestApp(
-      modular::ModuleHost* module_host,
+      fuchsia::modular::ModuleHost* module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host) {
-    modular::testing::Init(module_host_->application_context(), __FILE__);
+    fuchsia::modular::testing::Init(module_host_->application_context(),
+                                    __FILE__);
     initialized_.Pass();
 
-    modular::IntelligenceServicesPtr intelligence_services;
+    fuchsia::modular::IntelligenceServicesPtr intelligence_services;
     module_host_->module_context()->GetIntelligenceServices(
         intelligence_services.NewRequest());
     intelligence_services->GetProposalPublisher(
@@ -45,20 +46,20 @@ class TestApp : modular::ProposalListener {
         [this](const fidl::StringPtr& story_id) {
           received_story_id_.Pass();
 
-          modular::FocusStory focus_story;
+          fuchsia::modular::FocusStory focus_story;
           focus_story.story_id = story_id;
 
-          modular::Action action;
+          fuchsia::modular::Action action;
           action.set_focus_story(std::move(focus_story));
 
           // Craft a minimal suggestion proposal.
-          modular::SuggestionDisplay suggestion_display;
+          fuchsia::modular::SuggestionDisplay suggestion_display;
           suggestion_display.headline = "foo";
           suggestion_display.subheadline = "bar";
           suggestion_display.details = "baz";
           suggestion_display.color = 0xffff0000;
 
-          modular::Proposal proposal;
+          fuchsia::modular::Proposal proposal;
           proposal.id = kProposalId;
           proposal.display = std::move(suggestion_display);
           proposal.on_selected.push_back(std::move(action));
@@ -81,7 +82,7 @@ class TestApp : modular::ProposalListener {
   // Called by ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
-    modular::testing::Done(done);
+    fuchsia::modular::testing::Done(done);
   }
 
   // |ProposalListener|
@@ -91,10 +92,11 @@ class TestApp : modular::ProposalListener {
   }
 
  private:
-  modular::ModuleHost* const module_host_;
-  modular::ModuleContextPtr module_context_;
-  modular::ProposalPublisherPtr proposal_publisher_;
-  fidl::BindingSet<modular::ProposalListener> proposal_listener_bindings_;
+  fuchsia::modular::ModuleHost* const module_host_;
+  fuchsia::modular::ModuleContextPtr module_context_;
+  fuchsia::modular::ProposalPublisherPtr proposal_publisher_;
+  fidl::BindingSet<fuchsia::modular::ProposalListener>
+      proposal_listener_bindings_;
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
@@ -103,8 +105,8 @@ class TestApp : modular::ProposalListener {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::ModuleDriver<TestApp> driver(app_context.get(),
-                                        [&loop] { loop.QuitNow(); });
+  fuchsia::modular::ModuleDriver<TestApp> driver(app_context.get(),
+                                                 [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

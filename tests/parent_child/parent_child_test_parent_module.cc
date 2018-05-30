@@ -4,10 +4,10 @@
 
 #include <iostream>
 
-#include <modular/cpp/fidl.h>
-#include <views_v1/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <views_v1/cpp/fidl.h>
 
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/callback/scoped_callback.h"
@@ -18,9 +18,9 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/parent_child/defs.h"
 
-using modular::testing::Await;
-using modular::testing::Signal;
-using modular::testing::TestPoint;
+using fuchsia::modular::testing::Await;
+using fuchsia::modular::testing::Signal;
+using fuchsia::modular::testing::TestPoint;
 
 namespace {
 
@@ -30,10 +30,11 @@ class TestApp {
   TestPoint initialized_{"Parent module initialized"};
 
   TestApp(
-      modular::ModuleHost* module_host,
+      fuchsia::modular::ModuleHost* module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host) {
-    modular::testing::Init(module_host->application_context(), __FILE__);
+    fuchsia::modular::testing::Init(module_host->application_context(),
+                                    __FILE__);
     initialized_.Pass();
 
     StartChildModuleTwice();
@@ -44,22 +45,21 @@ class TestApp {
   // Called by ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
-    modular::testing::Done(done);
+    fuchsia::modular::testing::Done(done);
   }
 
  private:
   void StartChildModuleTwice() {
-    modular::Intent intent;
+    fuchsia::modular::Intent intent;
     intent.action.handler = kChildModuleUrl;
-    modular::IntentParameter intent_parameter;
+    fuchsia::modular::IntentParameter intent_parameter;
     intent_parameter.name = "link";
-    intent_parameter.data = modular::IntentParameterData();
+    intent_parameter.data = fuchsia::modular::IntentParameterData();
     intent_parameter.data.set_link_name("module1link");
     intent.parameters.push_back(std::move(intent_parameter));
     module_host_->module_context()->StartModule(
-        kChildModuleName, std::move(intent),
-        child_module_.NewRequest(), nullptr,
-        [](const modular::StartModuleStatus) {});
+        kChildModuleName, std::move(intent), child_module_.NewRequest(),
+        nullptr, [](const fuchsia::modular::StartModuleStatus) {});
 
     // Once the module starts, start the same module again, but with a different
     // link mapping. This stops the previous module instance and starts a new
@@ -67,17 +67,16 @@ class TestApp {
     Await("child_module_init", [this] {
         child_module_.set_error_handler([this] { OnChildModuleStopped(); });
 
-        modular::Intent intent;
+        fuchsia::modular::Intent intent;
         intent.action.handler = kChildModuleUrl;
-        modular::IntentParameter intent_parameter;
+        fuchsia::modular::IntentParameter intent_parameter;
         intent_parameter.name = "link";
-        intent_parameter.data = modular::IntentParameterData();
+        intent_parameter.data = fuchsia::modular::IntentParameterData();
         intent_parameter.data.set_link_name("module2link");
         intent.parameters.push_back(std::move(intent_parameter));
         module_host_->module_context()->StartModule(
-            kChildModuleName, std::move(intent),
-            child_module2_.NewRequest(), nullptr,
-            [](const modular::StartModuleStatus) {});
+            kChildModuleName, std::move(intent), child_module2_.NewRequest(),
+            nullptr, [](const fuchsia::modular::StartModuleStatus) {});
       });
   }
 
@@ -97,12 +96,12 @@ class TestApp {
 
   void OnChildModule2Stopped() {
     child_module_stopped_.Pass();
-    Signal(modular::testing::kTestShutdown);
+    Signal(fuchsia::modular::testing::kTestShutdown);
   }
 
-  modular::ModuleHost* module_host_;
-  modular::ModuleControllerPtr child_module_;
-  modular::ModuleControllerPtr child_module2_;
+  fuchsia::modular::ModuleHost* module_host_;
+  fuchsia::modular::ModuleControllerPtr child_module_;
+  fuchsia::modular::ModuleControllerPtr child_module2_;
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
 
@@ -111,8 +110,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::ModuleDriver<TestApp> driver(app_context.get(),
-                                        [&loop] { loop.QuitNow(); });
+  fuchsia::modular::ModuleDriver<TestApp> driver(app_context.get(),
+                                                 [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

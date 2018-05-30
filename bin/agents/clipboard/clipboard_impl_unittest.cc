@@ -8,6 +8,7 @@
 #include "peridot/bin/agents/clipboard/clipboard_impl.h"
 #include "peridot/lib/testing/test_with_ledger.h"
 
+namespace fuchsia {
 namespace modular {
 
 class ClipboardImplTest : public testing::TestWithLedger {
@@ -78,3 +79,4 @@ TEST_F(ClipboardImplTest, PushAndPeekTwice) {
 
 }  // namespace
 }  // namespace modular
+}  // namespace fuchsia

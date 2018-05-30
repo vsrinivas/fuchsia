@@ -8,7 +8,7 @@
 #include <deque>
 #include <utility>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -19,6 +19,7 @@
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/storage.h"
 
+namespace fuchsia {
 namespace modular {
 
 struct MessageQueueInfo {
@@ -885,3 +886,4 @@ void MessageQueueManager::DropDeletionWatcher(
 }
 
 }  // namespace modular
+}  // namespace fuchsia

@@ -8,31 +8,34 @@
 #include <string>
 #include <vector>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
 
+namespace fuchsia {
 namespace modular {
 
 class ParameterTypeInferenceHelper {
  public:
-  ParameterTypeInferenceHelper(modular::EntityResolverPtr entity_resolver);
+  ParameterTypeInferenceHelper(
+      fuchsia::modular::EntityResolverPtr entity_resolver);
   ~ParameterTypeInferenceHelper();
 
   // Returns a list of types represented in |parameter_constraint|. Chooses the
   // correct process for type extraction based on the type of Parameter.
   void GetParameterTypes(
-      const modular::ResolverParameterConstraint& parameter_constraint,
+      const fuchsia::modular::ResolverParameterConstraint& parameter_constraint,
       const std::function<void(std::vector<std::string>)>& result_callback);
 
  private:
   class GetParameterTypesCall;
 
-  modular::EntityResolverPtr entity_resolver_;
-  modular::OperationCollection operation_collection_;
+  fuchsia::modular::EntityResolverPtr entity_resolver_;
+  fuchsia::modular::OperationCollection operation_collection_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ParameterTypeInferenceHelper);
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_MODULE_RESOLVER_TYPE_INFERENCE_H_

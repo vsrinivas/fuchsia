@@ -8,6 +8,7 @@
 #include "peridot/public/lib/entity/cpp/json.h"
 #include "rapidjson/document.h"
 
+namespace fuchsia {
 namespace modular {
 
 TEST(EntityJsonTest, EntityReferenceToJson) {
@@ -69,3 +70,4 @@ TEST(EntityJsonTest, ExtractEntityTypesFromJson) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

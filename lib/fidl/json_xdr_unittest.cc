@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 #include "peridot/lib/fidl/json_xdr.h"
 
+namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -863,3 +864,4 @@ TEST(Xdr, FidlArray) {
 
 }  // namespace
 }  // namespace modular
+}  // namespace fuchsia

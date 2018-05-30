@@ -6,6 +6,7 @@
 
 #include "peridot/bin/suggestion_engine/filters/ranked_active_filter.h"
 
+namespace fuchsia {
 namespace modular {
 
 RankedActiveFilter::RankedActiveFilter(
@@ -27,3 +28,4 @@ void RankedActiveFilter::Filter(
 }
 
 }  // namespace modular
+}  // namespace fuchsia

@@ -4,6 +4,7 @@
 
 #include "lib/lifecycle/cpp/lifecycle_impl.h"
 
+namespace fuchsia {
 namespace modular {
 
 LifecycleImpl::LifecycleImpl(component::ServiceNamespace* service_namespace,
@@ -22,3 +23,4 @@ void LifecycleImpl::Terminate() {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

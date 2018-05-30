@@ -10,8 +10,9 @@
 #include <string>
 #include <vector>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
+namespace fuchsia {
 namespace modular {
 
 struct ActionData {
@@ -43,5 +44,6 @@ class ActionLogData {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_ACTION_LOG_ACTION_LOG_DATA_H_

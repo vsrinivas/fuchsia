@@ -7,12 +7,12 @@
 
 #include <string>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 namespace maxwell {
 
-modular::ContextSelectorPtr ComponentScopeToContextSelector(
-    const modular::ComponentScopePtr& scope);
+fuchsia::modular::ContextSelectorPtr ComponentScopeToContextSelector(
+    const fuchsia::modular::ComponentScopePtr& scope);
 
 }  // namespace maxwell
 

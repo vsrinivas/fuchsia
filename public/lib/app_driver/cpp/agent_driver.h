@@ -8,7 +8,7 @@
 #include <memory>
 
 #include <component/cpp/fidl.h>
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
@@ -20,6 +20,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/lifecycle/cpp/lifecycle_impl.h"
 
+namespace fuchsia {
 namespace modular {
 
 // This interface is passed to the Impl object that AgentDriver initializes.
@@ -50,7 +51,7 @@ class AgentHost {
 // int main(int argc, const char** argv) {
 //   fsl::MessageLoop loop;
 //   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-//   modular::AgentDriver<HelloAgent> driver(app_context.get(),
+//   fuchsia::modular::AgentDriver<HelloAgent> driver(app_context.get(),
 //                                               [&loop] { loop.QuitNow(); });
 //   loop.Run();
 //   return 0;
@@ -121,5 +122,6 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // LIB_APP_DRIVER_CPP_AGENT_DRIVER_H_

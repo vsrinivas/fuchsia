@@ -4,7 +4,7 @@
 
 #include "peridot/bin/user_runner/story_runner/session_storage.h"
 
-#include <modular_private/cpp/fidl.h>
+#include <fuchsia/modular/internal/cpp/fidl.h>
 
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -13,6 +13,7 @@
 #include "peridot/lib/ledger_client/operations.h"
 #include "peridot/lib/ledger_client/storage.h"
 
+namespace fuchsia {
 namespace modular {
 
 SessionStorage::SessionStorage(LedgerClient* ledger_client,
@@ -35,16 +36,16 @@ fidl::StringPtr StoryIdFromLedgerKey(fidl::StringPtr key) {
 
 OperationBase* MakeGetStoryDataCall(
     ledger::Page* const page, fidl::StringPtr story_id,
-    std::function<void(modular_private::StoryDataPtr)> result_call) {
-  return new ReadDataCall<modular_private::StoryData>(
+    std::function<void(modular::internal ::StoryDataPtr)> result_call) {
+  return new ReadDataCall<modular::internal ::StoryData>(
       page, StoryIdToLedgerKey(story_id), true /* not_found_is_ok */,
       XdrStoryData, std::move(result_call));
 };
 
-OperationBase* MakeWriteStoryDataCall(ledger::Page* const page,
-                                      modular_private::StoryDataPtr story_data,
-                                      std::function<void()> result_call) {
-  return new WriteDataCall<modular_private::StoryData>(
+OperationBase* MakeWriteStoryDataCall(
+    ledger::Page* const page, modular::internal ::StoryDataPtr story_data,
+    std::function<void()> result_call) {
+  return new WriteDataCall<modular::internal ::StoryData>(
       page, StoryIdToLedgerKey(story_data->story_info.id), XdrStoryData,
       std::move(story_data), std::move(result_call));
 };
@@ -90,7 +91,7 @@ class CreateStoryCall
     // TODO(thatguy): Generate a GUID instead.
     story_id_ = to_hex_string(story_page_id_.id);
 
-    story_data_ = modular_private::StoryData::New();
+    story_data_ = modular::internal ::StoryData::New();
     story_data_->story_page_id = CloneOptional(story_page_id_);
     story_data_->story_info.id = story_id_;
     story_data_->story_info.last_focus_time = 0;
@@ -103,7 +104,7 @@ class CreateStoryCall
   fidl::VectorPtr<StoryInfoExtraEntry> extra_info_;
 
   ledger::PagePtr story_page_;
-  modular_private::StoryDataPtr story_data_;
+  modular::internal ::StoryDataPtr story_data_;
 
   ledger::PageId story_page_id_;
   fidl::StringPtr story_id_;  // This is the result of the Operation.
@@ -153,7 +154,7 @@ class MutateStoryDataCall : public Operation<> {
  public:
   MutateStoryDataCall(
       ledger::Page* const page, fidl::StringPtr story_id,
-      std::function<bool(modular_private::StoryData* story_data)> mutate,
+      std::function<bool(modular::internal ::StoryData* story_data)> mutate,
       ResultCall result_call)
       : Operation("SessionStorage::MutateStoryDataCall",
                   std::move(result_call)),
@@ -167,7 +168,7 @@ class MutateStoryDataCall : public Operation<> {
 
     operation_queue_.Add(MakeGetStoryDataCall(
         page_, story_id_,
-        [this, flow](modular_private::StoryDataPtr story_data) {
+        [this, flow](modular::internal ::StoryDataPtr story_data) {
           if (!story_data) {
             // If the story doesn't exist, it was deleted.
             return;
@@ -184,7 +185,7 @@ class MutateStoryDataCall : public Operation<> {
 
   ledger::Page* const page_;  // not owned
   const fidl::StringPtr story_id_;
-  std::function<bool(modular_private::StoryData* story_data)> mutate_;
+  std::function<bool(modular::internal ::StoryData* story_data)> mutate_;
 
   OperationQueue operation_queue_;
 
@@ -195,7 +196,7 @@ class MutateStoryDataCall : public Operation<> {
 
 FuturePtr<> SessionStorage::UpdateLastFocusedTimestamp(fidl::StringPtr story_id,
                                                        const int64_t ts) {
-  auto mutate = [ts](modular_private::StoryData* const story_data) {
+  auto mutate = [ts](modular::internal ::StoryData* const story_data) {
     if (story_data->story_info.last_focus_time == ts) {
       return false;
     }
@@ -209,26 +210,26 @@ FuturePtr<> SessionStorage::UpdateLastFocusedTimestamp(fidl::StringPtr story_id,
   return ret;
 }
 
-FuturePtr<modular_private::StoryDataPtr> SessionStorage::GetStoryData(
+FuturePtr<modular::internal ::StoryDataPtr> SessionStorage::GetStoryData(
     fidl::StringPtr story_id) {
-  auto ret = Future<modular_private::StoryDataPtr>::Create();
+  auto ret = Future<modular::internal ::StoryDataPtr>::Create();
   operation_queue_.Add(
       MakeGetStoryDataCall(page(), story_id, ret->Completer()));
   return ret;
 }
 
 // Returns a Future vector of StoryData for all stories in this session.
-FuturePtr<fidl::VectorPtr<modular_private::StoryData>>
+FuturePtr<fidl::VectorPtr<modular::internal ::StoryData>>
 SessionStorage::GetAllStoryData() {
-  auto ret = Future<fidl::VectorPtr<modular_private::StoryData>>::Create();
-  operation_queue_.Add(new ReadAllDataCall<modular_private::StoryData>(
+  auto ret = Future<fidl::VectorPtr<modular::internal ::StoryData>>::Create();
+  operation_queue_.Add(new ReadAllDataCall<modular::internal ::StoryData>(
       page(), kStoryKeyPrefix, XdrStoryData, ret->Completer()));
   return ret;
 }
 
 void SessionStorage::OnPageChange(const std::string& key,
                                   const std::string& value) {
-  auto story_data = modular_private::StoryData::New();
+  auto story_data = modular::internal ::StoryData::New();
   if (!XdrRead(value, &story_data, XdrStoryData)) {
     FXL_LOG(ERROR) << "SessionStorage::OnPageChange : could not decode ledger "
                       "value for key "
@@ -254,3 +255,4 @@ void SessionStorage::OnPageDelete(const std::string& key) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

@@ -22,6 +22,7 @@
 #include "peridot/lib/module_manifest_source/xdr.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
+namespace fuchsia {
 namespace modular {
 
 class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
@@ -122,8 +123,8 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
       return;
     }
 
-    modular::ModuleManifest entry;
-    if (!modular::XdrRead(&doc, &entry, XdrModuleManifest)) {
+    fuchsia::modular::ModuleManifest entry;
+    if (!fuchsia::modular::XdrRead(&doc, &entry, XdrModuleManifest)) {
       FXL_LOG(WARNING) << "Could not parse Module manifest from: " << name;
       return;
     }
@@ -180,3 +181,4 @@ void FirebaseModuleManifestSource::StartWatching(Watcher* watcher) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

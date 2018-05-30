@@ -10,6 +10,7 @@
 
 #include "rapidjson/document.h"
 
+namespace fuchsia {
 namespace modular {
 
 // Returns a JSON string that can be used with EntityReferenceFromJson().
@@ -31,5 +32,6 @@ bool ExtractEntityTypesFromJson(const rapidjson::Value& value,
                                 std::vector<std::string>* types);
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // LIB_ENTITY_CPP_JSON_H_

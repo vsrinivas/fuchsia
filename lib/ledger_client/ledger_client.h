@@ -18,6 +18,7 @@
 #include "lib/fxl/macros.h"
 #include "peridot/lib/ledger_client/types.h"
 
+namespace fuchsia {
 namespace modular {
 
 class PageClient;
@@ -139,5 +140,6 @@ class LedgerClient::ConflictResolverImpl : ledger::ConflictResolver {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_LEDGER_CLIENT_LEDGER_CLIENT_H_

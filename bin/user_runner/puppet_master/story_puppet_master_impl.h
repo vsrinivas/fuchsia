@@ -7,11 +7,12 @@
 
 #include <memory>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
+namespace fuchsia {
 namespace modular {
 
 class StoryCommandExecutor;
@@ -42,5 +43,6 @@ class StoryPuppetMasterImpl : public StoryPuppetMaster {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_PUPPET_MASTER_STORY_PUPPET_MASTER_IMPL_H_

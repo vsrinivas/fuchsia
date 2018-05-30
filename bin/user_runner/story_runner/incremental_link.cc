@@ -5,7 +5,7 @@
 // This file contains functions and Operation classes from LinkImpl that exist
 // solely to implement the history of change operations for Links.
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "peridot/bin/user_runner/story_runner/link_impl.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/clone.h"
@@ -15,6 +15,7 @@
 #include "peridot/lib/ledger_client/storage.h"
 #include "peridot/lib/util/debug.h"
 
+namespace fuchsia {
 namespace modular {
 
 namespace {
@@ -30,7 +31,7 @@ std::string MakeSequencedLinkKeyPrefix(const LinkPath& link_path) {
 }
 
 void XdrLinkChange_v1(XdrContext* const xdr,
-                      modular_private::LinkChange* const data) {
+                      modular::internal ::LinkChange* const data) {
   xdr->Field("key", &data->key);
   xdr->Field("op", &data->op);
   xdr->Field("path", &data->pointer);
@@ -38,7 +39,7 @@ void XdrLinkChange_v1(XdrContext* const xdr,
 }
 
 void XdrLinkChange_v2(XdrContext* const xdr,
-                      modular_private::LinkChange* const data) {
+                      modular::internal ::LinkChange* const data) {
   if (!xdr->Version(2)) {
     return;
   }
@@ -51,10 +52,11 @@ void XdrLinkChange_v2(XdrContext* const xdr,
 }  // namespace
 
 // Not in anonymous namespace; needs extern linkage for use by test.
-extern const XdrFilterType<modular_private::LinkChange> XdrLinkChange[] = {
-  XdrLinkChange_v2,
-  XdrLinkChange_v1,
-  nullptr,
+extern const XdrFilterType<fuchsia::modular::internal::LinkChange>
+    XdrLinkChange[] = {
+        XdrLinkChange_v2,
+        XdrLinkChange_v1,
+        nullptr,
 };
 
 // Reload needs to run if:
@@ -77,7 +79,7 @@ class LinkImpl::ReloadCall : public Operation<> {
 class LinkImpl::IncrementalWriteCall : public Operation<> {
  public:
   IncrementalWriteCall(LinkImpl* const impl,
-                       modular_private::LinkChangePtr data,
+                       modular::internal ::LinkChangePtr data,
                        ResultCall result_call)
       : Operation("LinkImpl::IncrementalWriteCall", std::move(result_call)),
         impl_(impl),
@@ -90,13 +92,14 @@ class LinkImpl::IncrementalWriteCall : public Operation<> {
  private:
   void Run() {
     FlowToken flow{this};
-    operation_queue_.Add(new WriteDataCall<modular_private::LinkChange>(
-        impl_->page(), MakeSequencedLinkKey(impl_->link_path_, data_->key),
-        XdrLinkChange, std::move(data_), [this, flow] {}));
+    operation_queue_.Add(
+        new WriteDataCall<fuchsia::modular::internal::LinkChange>(
+            impl_->page(), MakeSequencedLinkKey(impl_->link_path_, data_->key),
+            XdrLinkChange, std::move(data_), [this, flow] {}));
   }
 
   LinkImpl* const impl_;  // not owned
-  modular_private::LinkChangePtr data_;
+  modular::internal ::LinkChangePtr data_;
   OperationQueue operation_queue_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(IncrementalWriteCall);
@@ -105,7 +108,7 @@ class LinkImpl::IncrementalWriteCall : public Operation<> {
 class LinkImpl::IncrementalChangeCall : public Operation<> {
  public:
   IncrementalChangeCall(LinkImpl* const impl,
-                        modular_private::LinkChangePtr data, uint32_t src,
+                        modular::internal ::LinkChangePtr data, uint32_t src,
                         ResultCall result_call)
       : Operation("LinkImpl::IncrementalChangeCall", std::move(result_call)),
         impl_(impl),
@@ -173,7 +176,7 @@ class LinkImpl::IncrementalChangeCall : public Operation<> {
   }
 
   LinkImpl* const impl_;  // not owned
-  modular_private::LinkChangePtr data_;
+  modular::internal ::LinkChangePtr data_;
   std::string old_json_;
   uint32_t src_;
 
@@ -192,10 +195,11 @@ class LinkImpl::IncrementalChangeCall : public Operation<> {
 // (3) the |Replay()| path will be taken in any recursive call
 void LinkImpl::ReloadCall::Run() {
   FlowToken flow{this};
-  operation_queue_.Add(new ReadAllDataCall<modular_private::LinkChange>(
+  operation_queue_.Add(new ReadAllDataCall<internal::LinkChange>(
       impl_->page(), MakeSequencedLinkKeyPrefix(impl_->link_path_),
       XdrLinkChange,
-      [this, flow](fidl::VectorPtr<modular_private::LinkChange> changes) {
+      [this,
+       flow](fidl::VectorPtr<fuchsia::modular::internal::LinkChange> changes) {
         // NOTE(mesch): Initial link data must be applied only at the time the
         // Intent is originally issued, not when the story is resumed and
         // modules are restarted from the Intent stored in the story record.
@@ -210,10 +214,10 @@ void LinkImpl::ReloadCall::Run() {
           if (impl_->create_link_info_ &&
               !impl_->create_link_info_->initial_data.is_null() &&
               !impl_->create_link_info_->initial_data->empty()) {
-            modular_private::LinkChangePtr data =
-                modular_private::LinkChange::New();
+            modular::internal ::LinkChangePtr data =
+                modular::internal ::LinkChange::New();
             // Leave data->key null to signify a new entry
-            data->op = modular_private::LinkChangeOp::SET;
+            data->op = modular::internal ::LinkChangeOp::SET;
             data->pointer = fidl::VectorPtr<fidl::StringPtr>::New(0);
             data->json = std::move(impl_->create_link_info_->initial_data);
             operation_queue_.Add(new IncrementalChangeCall(
@@ -225,12 +229,13 @@ void LinkImpl::ReloadCall::Run() {
       }));
 }
 
-void LinkImpl::Replay(fidl::VectorPtr<modular_private::LinkChange> changes) {
+void LinkImpl::Replay(
+    fidl::VectorPtr<fuchsia::modular::internal::LinkChange> changes) {
   doc_ = CrtJsonDoc();
   auto it1 = changes->begin();
   auto it2 = pending_ops_.begin();
 
-  modular_private::LinkChange* change{};
+  modular::internal ::LinkChange* change{};
   for (;;) {
     bool it1_done = it1 == changes->end();
     bool it2_done = it2 == pending_ops_.end();
@@ -278,15 +283,15 @@ void LinkImpl::Replay(fidl::VectorPtr<modular_private::LinkChange> changes) {
   }
 }
 
-bool LinkImpl::ApplyChange(modular_private::LinkChange* const change) {
+bool LinkImpl::ApplyChange(modular::internal ::LinkChange* const change) {
   CrtJsonPointer ptr = CreatePointer(doc_, *change->pointer);
 
   switch (change->op) {
-    case modular_private::LinkChangeOp::SET:
+    case modular::internal ::LinkChangeOp::SET:
       return ApplySetOp(ptr, change->json);
-    case modular_private::LinkChangeOp::UPDATE:
+    case modular::internal ::LinkChangeOp::UPDATE:
       return ApplyUpdateOp(ptr, change->json);
-    case modular_private::LinkChangeOp::ERASE:
+    case modular::internal ::LinkChangeOp::ERASE:
       return ApplyEraseOp(ptr);
     default:
       FXL_DCHECK(false);
@@ -298,20 +303,20 @@ void LinkImpl::MakeReloadCall(std::function<void()> done) {
   operation_queue_.Add(new ReloadCall(this, std::move(done)));
 }
 
-void LinkImpl::MakeIncrementalWriteCall(modular_private::LinkChangePtr data,
+void LinkImpl::MakeIncrementalWriteCall(modular::internal ::LinkChangePtr data,
                                         std::function<void()> done) {
   operation_queue_.Add(
       new IncrementalWriteCall(this, std::move(data), std::move(done)));
 }
 
-void LinkImpl::MakeIncrementalChangeCall(modular_private::LinkChangePtr data,
+void LinkImpl::MakeIncrementalChangeCall(modular::internal ::LinkChangePtr data,
                                          uint32_t src) {
   operation_queue_.Add(
       new IncrementalChangeCall(this, std::move(data), src, [] {}));
 }
 
 void LinkImpl::OnPageChange(const std::string& key, const std::string& value) {
-  modular_private::LinkChangePtr data;
+  modular::internal ::LinkChangePtr data;
   if (!XdrRead(value, &data, XdrLinkChange)) {
     FXL_LOG(ERROR) << EncodeLinkPath(link_path_)
                    << "LinkImpl::OnChange() XdrRead failed: " << key << " "
@@ -323,3 +328,4 @@ void LinkImpl::OnPageChange(const std::string& key, const std::string& value) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

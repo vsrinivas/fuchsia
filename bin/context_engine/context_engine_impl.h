@@ -5,11 +5,12 @@
 #ifndef PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_ENGINE_IMPL_H_
 #define PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_ENGINE_IMPL_H_
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "peridot/bin/context_engine/context_repository.h"
 #include "peridot/bin/context_engine/debug.h"
 
+namespace fuchsia {
 namespace modular {
 
 class EntityResolver;
@@ -52,5 +53,6 @@ class ContextEngineImpl : ContextEngine {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_ENGINE_IMPL_H_

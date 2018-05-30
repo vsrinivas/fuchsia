@@ -7,11 +7,12 @@
 
 #include <string>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 
+namespace fuchsia {
 namespace modular {
 
 class StoryControllerMock : public StoryController {
@@ -32,7 +33,7 @@ class StoryControllerMock : public StoryController {
     StoryInfo info;
     info.id = "wow";
     info.url = "wow";
-    callback(std::move(info), modular::StoryState::STOPPED);
+    callback(std::move(info), fuchsia::modular::StoryState::STOPPED);
   }
 
   // |StoryController|
@@ -93,5 +94,6 @@ class StoryControllerMock : public StoryController {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_TESTING_STORY_CONTROLLER_MOCK_H_

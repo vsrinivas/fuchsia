@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library modular;
+library fuchsia.modular;
 
 // UserRunner passes a connection to this service to the UserShell so it can
 // operate on stories for the user. It is also passed to other services that

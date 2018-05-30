@@ -7,6 +7,7 @@
 #include "lib/fidl/cpp/optional.h"
 #include "peridot/bin/suggestion_engine/debug.h"
 
+namespace fuchsia {
 namespace modular {
 
 SuggestionDebugImpl::SuggestionDebugImpl() : weak_ptr_factory_(this){};
@@ -103,3 +104,4 @@ void SuggestionDebugImpl::WaitUntilIdle(WaitUntilIdleCallback callback) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

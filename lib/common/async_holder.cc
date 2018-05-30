@@ -10,6 +10,7 @@
 
 #include "lib/fxl/logging.h"
 
+namespace fuchsia {
 namespace modular {
 
 AsyncHolderBase::AsyncHolderBase(std::string name)
@@ -54,3 +55,4 @@ void AsyncHolderBase::Teardown(fxl::TimeDelta timeout,
 }
 
 }  // namespace modular
+}  // namespace fuchsia

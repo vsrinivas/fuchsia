@@ -5,11 +5,12 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_INTERRUPTIONS_PROCESSOR_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_INTERRUPTIONS_PROCESSOR_H_
 
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/fidl/cpp/interface_ptr_set.h"
-#include <modular/cpp/fidl.h>
 #include "peridot/bin/suggestion_engine/decision_policy.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestion.h"
 
+namespace fuchsia {
 namespace modular {
 
 // The InterruptionProcessor determines whether a proposal should interrupt
@@ -44,5 +45,6 @@ class InterruptionsProcessor {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_INTERRUPTIONS_PROCESSOR_H_

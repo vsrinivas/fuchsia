@@ -6,7 +6,7 @@
 
 #include "peridot/bin/module_resolver/local_module_resolver.h"
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
@@ -15,6 +15,7 @@
 #include "lib/fxl/strings/split_string.h"
 #include "peridot/public/lib/entity/cpp/json.h"
 
+namespace fuchsia {
 namespace modular {
 
 namespace {
@@ -28,7 +29,7 @@ std::ostream& operator<<(std::ostream& o,
 }  // namespace
 
 LocalModuleResolver::LocalModuleResolver(
-    modular::EntityResolverPtr entity_resolver)
+    fuchsia::modular::EntityResolverPtr entity_resolver)
     : query_handler_binding_(this),
       already_checking_if_sources_are_ready_(false),
       type_helper_(std::move(entity_resolver)),
@@ -37,23 +38,25 @@ LocalModuleResolver::LocalModuleResolver(
 LocalModuleResolver::~LocalModuleResolver() = default;
 
 void LocalModuleResolver::AddSource(
-    std::string name, std::unique_ptr<modular::ModuleManifestSource> repo) {
+    std::string name,
+    std::unique_ptr<fuchsia::modular::ModuleManifestSource> repo) {
   FXL_CHECK(bindings_.size() == 0);
 
   auto ptr = repo.get();
   sources_.emplace(name, std::move(repo));
 
-  ptr->Watch(async_get_default(), [this, name]() { OnSourceIdle(name); },
-             [this, name](std::string id, modular::ModuleManifest entry) {
-               OnNewManifestEntry(name, std::move(id), std::move(entry));
-             },
-             [this, name](std::string id) {
-               OnRemoveManifestEntry(name, std::move(id));
-             });
+  ptr->Watch(
+      async_get_default(), [this, name]() { OnSourceIdle(name); },
+      [this, name](std::string id, fuchsia::modular::ModuleManifest entry) {
+        OnNewManifestEntry(name, std::move(id), std::move(entry));
+      },
+      [this, name](std::string id) {
+        OnRemoveManifestEntry(name, std::move(id));
+      });
 }
 
 void LocalModuleResolver::Connect(
-    fidl::InterfaceRequest<modular::ModuleResolver> request) {
+    fidl::InterfaceRequest<fuchsia::modular::ModuleResolver> request) {
   if (!AllSourcesAreReady()) {
     PeriodicCheckIfSourcesAreReady();
     pending_bindings_.push_back(std::move(request));
@@ -68,11 +71,11 @@ void LocalModuleResolver::BindQueryHandler(
 }
 
 class LocalModuleResolver::FindModulesCall
-    : public modular::Operation<modular::FindModulesResult> {
+    : public fuchsia::modular::Operation<fuchsia::modular::FindModulesResult> {
  public:
   FindModulesCall(LocalModuleResolver* local_module_resolver,
-                  modular::ResolverQuery query,
-                  modular::ResolverScoringInfoPtr scoring_info,
+                  fuchsia::modular::ResolverQuery query,
+                  fuchsia::modular::ResolverScoringInfoPtr scoring_info,
                   ResultCall result_call)
       : Operation("LocalModuleResolver::FindModulesCall",
                   std::move(result_call)),
@@ -234,9 +237,9 @@ class LocalModuleResolver::FindModulesCall
         }
 
       } else {
-        modular::ModuleResolverResult result;
+        fuchsia::modular::ModuleResolverResult result;
         result.module_id = entry.binary;
-        result.manifest = modular::ModuleManifest::New();
+        result.manifest = fuchsia::modular::ModuleManifest::New();
         fidl::Clone(entry, result.manifest.get());
         CopyParametersToModuleResolverResult(query_, &result);
 
@@ -250,10 +253,10 @@ class LocalModuleResolver::FindModulesCall
   //
   // In order for a query to match an entry, it must contain enough parameters
   // to populate each of the entry parameters.
-  fidl::VectorPtr<modular::ModuleResolverResult>
+  fidl::VectorPtr<fuchsia::modular::ModuleResolverResult>
   MatchQueryParametersToEntryParametersByType(
-      const modular::ModuleManifest& entry) {
-    fidl::VectorPtr<modular::ModuleResolverResult> modules;
+      const fuchsia::modular::ModuleManifest& entry) {
+    fidl::VectorPtr<fuchsia::modular::ModuleResolverResult> modules;
     modules.resize(0);
     // TODO(MI4-866): Handle entries with optional parameters.
     if (query_.parameter_constraints->size() <
@@ -275,9 +278,9 @@ class LocalModuleResolver::FindModulesCall
 
     // For each of the possible mappings, create a resolver result.
     for (const auto& parameter_mapping : parameter_mappings) {
-      modular::ModuleResolverResult result;
+      fuchsia::modular::ModuleResolverResult result;
       result.module_id = entry.binary;
-      result.manifest = modular::ModuleManifest::New();
+      result.manifest = fuchsia::modular::ModuleManifest::New();
       fidl::Clone(entry, result.manifest.get());
       CopyParametersToModuleResolverResult(query_, &result, parameter_mapping);
       modules.push_back(std::move(result));
@@ -291,7 +294,7 @@ class LocalModuleResolver::FindModulesCall
   // parameter.
   std::map<std::string, std::vector<std::string>>
   MapEntryParametersToCompatibleQueryParameters(
-      const modular::ModuleManifest& entry) {
+      const fuchsia::modular::ModuleManifest& entry) {
     std::map<std::string, std::vector<std::string>>
         entry_parameter_to_query_parameters;
     for (const auto& entry_parameter : *entry.parameter_constraints) {
@@ -400,8 +403,8 @@ class LocalModuleResolver::FindModulesCall
   // entry parameter that should be populated. If no such mapping exists, the
   // query parameter name will be used.
   void CopyParametersToModuleResolverResult(
-      const modular::ResolverQuery& query,
-      modular::ModuleResolverResult* result,
+      const fuchsia::modular::ResolverQuery& query,
+      fuchsia::modular::ModuleResolverResult* result,
       std::map<std::string, std::string> parameter_mapping = {}) {
     auto& create_chain_info = result->create_chain_info;  // For convenience.
     for (const auto& query_parameter : *query.parameter_constraints) {
@@ -413,34 +416,34 @@ class LocalModuleResolver::FindModulesCall
       }
 
       if (parameter.is_entity_reference()) {
-        modular::CreateLinkInfo create_link;
-        create_link.initial_data =
-            modular::EntityReferenceToJson(parameter.entity_reference());
+        fuchsia::modular::CreateLinkInfo create_link;
+        create_link.initial_data = fuchsia::modular::EntityReferenceToJson(
+            parameter.entity_reference());
         // TODO(thatguy): set |create_link->allowed_types|.
         // TODO(thatguy): set |create_link->permissions|.
-        modular::CreateChainPropertyInfo property_info;
+        fuchsia::modular::CreateChainPropertyInfo property_info;
         property_info.set_create_link(std::move(create_link));
-        modular::ChainEntry chain_entry;
+        fuchsia::modular::ChainEntry chain_entry;
         chain_entry.key = name;
         chain_entry.value = std::move(property_info);
         create_chain_info.property_info.push_back(std::move(chain_entry));
       } else if (parameter.is_link_info()) {
-        modular::CreateChainPropertyInfo property_info;
-        modular::LinkPath link_path;
+        fuchsia::modular::CreateChainPropertyInfo property_info;
+        fuchsia::modular::LinkPath link_path;
         parameter.link_info().path.Clone(&link_path);
         property_info.set_link_path(std::move(link_path));
-        modular::ChainEntry chain_entry;
+        fuchsia::modular::ChainEntry chain_entry;
         chain_entry.key = name;
         chain_entry.value = std::move(property_info);
         create_chain_info.property_info.push_back(std::move(chain_entry));
       } else if (parameter.is_json()) {
-        modular::CreateLinkInfo create_link;
+        fuchsia::modular::CreateLinkInfo create_link;
         create_link.initial_data = parameter.json();
         // TODO(thatguy): set |create_link->allowed_types|.
         // TODO(thatguy): set |create_link->permissions|.
-        modular::CreateChainPropertyInfo property_info;
+        fuchsia::modular::CreateChainPropertyInfo property_info;
         property_info.set_create_link(std::move(create_link));
-        modular::ChainEntry chain_entry;
+        fuchsia::modular::ChainEntry chain_entry;
         chain_entry.key = name;
         chain_entry.value = std::move(property_info);
         create_chain_info.property_info.push_back(std::move(chain_entry));
@@ -450,35 +453,35 @@ class LocalModuleResolver::FindModulesCall
     }
   }
 
-  modular::FindModulesResult HandleUrlQuery(
-      const modular::ResolverQuery& query) {
-    modular::ModuleResolverResult mod_result;
+  fuchsia::modular::FindModulesResult HandleUrlQuery(
+      const fuchsia::modular::ResolverQuery& query) {
+    fuchsia::modular::ModuleResolverResult mod_result;
     mod_result.module_id = query.handler;
     for (const auto& iter : local_module_resolver_->entries_) {
       if (iter.second.binary == query.handler) {
-        mod_result.manifest = modular::ModuleManifest::New();
+        mod_result.manifest = fuchsia::modular::ModuleManifest::New();
         fidl::Clone(iter.second, mod_result.manifest.get());
       }
     }
 
     CopyParametersToModuleResolverResult(query, &mod_result);
 
-    modular::FindModulesResult result;
+    fuchsia::modular::FindModulesResult result;
     result.modules.push_back(std::move(mod_result));
     return result;
   }
 
-  modular::FindModulesResult CreateEmptyResult() {
-    modular::FindModulesResult result;
+  fuchsia::modular::FindModulesResult CreateEmptyResult() {
+    fuchsia::modular::FindModulesResult result;
     result.modules.resize(0);
     return result;
   }
 
-  modular::FindModulesResult result_;
+  fuchsia::modular::FindModulesResult result_;
 
   LocalModuleResolver* const local_module_resolver_;
-  modular::ResolverQuery query_;
-  modular::ResolverScoringInfoPtr scoring_info_;
+  fuchsia::modular::ResolverQuery query_;
+  fuchsia::modular::ResolverScoringInfoPtr scoring_info_;
 
   // A cache of the Entity types for each parameter in |query_|.
   std::map<std::string, std::vector<std::string>> parameter_types_cache_;
@@ -489,13 +492,14 @@ class LocalModuleResolver::FindModulesCall
   FXL_DISALLOW_COPY_AND_ASSIGN(FindModulesCall);
 };
 
-void LocalModuleResolver::FindModules(modular::ResolverQuery query,
+void LocalModuleResolver::FindModules(fuchsia::modular::ResolverQuery query,
                                       FindModulesCallback done) {
   operations_.Add(new FindModulesCall(this, std::move(query), nullptr, done));
 }
 
 void LocalModuleResolver::FindModules(
-    modular::ResolverQuery query, modular::ResolverScoringInfoPtr scoring_info,
+    fuchsia::modular::ResolverQuery query,
+    fuchsia::modular::ResolverScoringInfoPtr scoring_info,
     FindModulesCallback done) {
   operations_.Add(new FindModulesCall(this, std::move(query),
                                       std::move(scoring_info), done));
@@ -586,7 +590,7 @@ void LocalModuleResolver::OnSourceIdle(const std::string& source_name) {
 
 void LocalModuleResolver::OnNewManifestEntry(
     const std::string& source_name, std::string id_in,
-    modular::ModuleManifest new_entry) {
+    fuchsia::modular::ModuleManifest new_entry) {
   FXL_LOG(INFO) << "New Module manifest " << id_in
                 << ": action = " << new_entry.action
                 << ", binary = " << new_entry.binary;
@@ -656,3 +660,4 @@ void LocalModuleResolver::PeriodicCheckIfSourcesAreReady() {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

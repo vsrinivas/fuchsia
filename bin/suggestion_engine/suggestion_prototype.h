@@ -7,9 +7,10 @@
 
 #include <strstream>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/fxl/time/time_point.h"
 
+namespace fuchsia {
 namespace modular {
 
 struct SuggestionPrototype {
@@ -30,5 +31,6 @@ std::string short_proposal_str(const SuggestionPrototype& prototype);
 Suggestion CreateSuggestion(const SuggestionPrototype& prototype);
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_SUGGESTION_PROTOTYPE_H_

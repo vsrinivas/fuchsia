@@ -7,11 +7,11 @@
 
 #include <iterator>
 
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fxl/macros.h"
-#include <modular/cpp/fidl.h>
 #include "peridot/lib/rapidjson/rapidjson.h"
 
 namespace modular_example {
@@ -48,13 +48,13 @@ class Counter {
   int counter = -1;
 };
 
-class Store : modular::LinkWatcher {
+class Store : fuchsia::modular::LinkWatcher {
  public:
   using Callback = std::function<void()>;
 
   explicit Store(std::string module_name);
 
-  void Initialize(fidl::InterfaceHandle<modular::Link> link);
+  void Initialize(fidl::InterfaceHandle<fuchsia::modular::Link> link);
 
   void AddCallback(Callback c);
 
@@ -90,7 +90,7 @@ class Store : modular::LinkWatcher {
 
   fidl::Binding<LinkWatcher> watcher_binding_;
 
-  fidl::InterfacePtr<modular::Link> link_;
+  fidl::InterfacePtr<fuchsia::modular::Link> link_;
 
   // True if there is data pending to send to the link, otherwise false.
   bool dirty_{};

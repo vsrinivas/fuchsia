@@ -59,7 +59,7 @@ executable("device_runner_bin") {
     "//peridot/lib/ledger_client:constants",
     "//peridot/lib/util:filesystem",
     "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl_private",
+    "//peridot/public/lib:fidl_internal",
     "//peridot/public/lib/auth/fidl",
     "//zircon/public/lib/trace-provider",
   ]
@@ -92,7 +92,7 @@ source_set("lib") {
     "//peridot/lib/fidl:scope",
     "//peridot/lib/util:filesystem",
     "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl_private",
+    "//peridot/public/lib:fidl_internal",
     "//peridot/public/lib/auth/fidl",
     "//zircon/public/lib/trace",
   ]

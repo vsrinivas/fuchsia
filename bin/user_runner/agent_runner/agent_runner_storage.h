@@ -10,6 +10,7 @@
 
 #include "lib/fxl/macros.h"
 
+namespace fuchsia {
 namespace modular {
 
 // This abstract class is used by AgentRunner to persist data related to
@@ -86,5 +87,6 @@ class AgentRunnerStorage {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_AGENT_RUNNER_AGENT_RUNNER_STORAGE_H_

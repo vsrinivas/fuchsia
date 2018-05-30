@@ -44,7 +44,7 @@ class HelloAppChild : public hello_world_module::Hello {
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::AppDriver<HelloAppChild> driver(
+  fuchsia::modular::AppDriver<HelloAppChild> driver(
       app_context->outgoing().deprecated_services(),
       std::make_unique<HelloAppChild>(app_context.get()),
       [&loop] { loop.QuitNow(); });

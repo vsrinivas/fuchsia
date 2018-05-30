@@ -6,6 +6,7 @@
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 #include "gtest/gtest.h"
 
+namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -56,3 +57,4 @@ TEST_F(LinearRankerTest, RankZeroIfNegative) {
 
 }  // namespace
 }  // namespace modular
+}  // namespace fuchsia

@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_SUGGESTION_ENGINE_IMPL_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_SUGGESTION_ENGINE_IMPL_H_
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <map>
 #include <string>
 #include <vector>
@@ -24,6 +24,7 @@
 #include "peridot/bin/suggestion_engine/timeline_stories_watcher.h"
 #include "peridot/lib/bound_set/bound_set.h"
 
+namespace fuchsia {
 namespace modular {
 
 class ProposalPublisherImpl;
@@ -131,10 +132,11 @@ class SuggestionEngineImpl : public ContextListener,
       fidl::InterfaceHandle<QueryHandler> query_handler) override;
 
   // |SuggestionEngine|
-  void Initialize(fidl::InterfaceHandle<modular::StoryProvider> story_provider,
-                  fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
-                  fidl::InterfaceHandle<ContextWriter> context_writer,
-                  fidl::InterfaceHandle<ContextReader> context_reader) override;
+  void Initialize(
+      fidl::InterfaceHandle<fuchsia::modular::StoryProvider> story_provider,
+      fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider,
+      fidl::InterfaceHandle<ContextWriter> context_writer,
+      fidl::InterfaceHandle<ContextReader> context_reader) override;
 
   void Terminate(std::function<void()> done) { done(); }
 
@@ -207,8 +209,8 @@ class SuggestionEngineImpl : public ContextListener,
   //
   // These are required to create new Stories and interact with the current
   // Story.
-  modular::StoryProviderPtr story_provider_;
-  fidl::InterfacePtr<modular::FocusProvider> focus_provider_ptr_;
+  fuchsia::modular::StoryProviderPtr story_provider_;
+  fidl::InterfacePtr<fuchsia::modular::FocusProvider> focus_provider_ptr_;
 
   // Watches for changes in StoryInfo from the StoryProvider, acts as a filter
   // for Proposals on all channels, and notifies when there are changes so that
@@ -249,5 +251,6 @@ class SuggestionEngineImpl : public ContextListener,
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_SUGGESTION_ENGINE_IMPL_H_

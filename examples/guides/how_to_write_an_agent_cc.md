@@ -131,7 +131,7 @@ interface(s) it provides.
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::AgentDriver<simple::SimpleAgent> driver(
+  fuchsia::modular::AgentDriver<simple_agent::SimpleAgent> driver(
       app_context.get(), [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
@@ -166,7 +166,7 @@ To connect to the `SimpleAgent` from a different component:
 
 ```c++
 // The agent is guaranteed to stay alive as long as |agent_controller| stays in scope.
-modular::AgentControllerPtr agent_controller;
+fuchsia::modular::AgentControllerPtr agent_controller;
 component::ServiceProviderPtr agent_services;
 SimpleServicePtr agent_service;
 component_context->ConnectToAgent(agent_url,

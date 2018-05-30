@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "gtest/gtest.h"
 #include "lib/gtest/test_with_loop.h"
 #include "peridot/bin/user_runner/puppet_master/puppet_master_impl.h"
 #include "peridot/bin/user_runner/puppet_master/story_command_executor.h"
 
+namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -196,3 +197,4 @@ TEST_F(PuppetMasterTest, ExistingStoriesAreKeptSeparate) {
 
 }  // namespace
 }  // namespace modular
+}  // namespace fuchsia

@@ -5,10 +5,11 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_DEAD_STORY_RANKING_FEATURE_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_DEAD_STORY_RANKING_FEATURE_H_
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 
+namespace fuchsia {
 namespace modular {
 
 class DeadStoryRankingFeature : public RankingFeature {
@@ -24,5 +25,6 @@ class DeadStoryRankingFeature : public RankingFeature {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_DEAD_STORY_RANKING_FEATURE_H_

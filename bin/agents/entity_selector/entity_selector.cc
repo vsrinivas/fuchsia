@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/context/cpp/context_helper.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -13,6 +13,7 @@
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
 
+namespace fuchsia {
 namespace modular {
 
 // Subscribe to entities and selection in the Context Engine, and Publish any
@@ -78,7 +79,7 @@ class SelectedEntityFinder : ContextListener {
         entities_json.PushBack(d, d.GetAllocator());
       }
     }
-    return modular::JsonValueToString(entities_json);
+    return fuchsia::modular::JsonValueToString(entities_json);
   }
 
   // |ContextListener|
@@ -105,10 +106,11 @@ class SelectedEntityFinder : ContextListener {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
-  modular::SelectedEntityFinder app;
+  fuchsia::modular::SelectedEntityFinder app;
   loop.Run();
   return 0;
 }

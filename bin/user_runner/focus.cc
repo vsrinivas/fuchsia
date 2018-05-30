@@ -14,6 +14,7 @@
 #include "peridot/lib/ledger_client/storage.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 
+namespace fuchsia {
 namespace modular {
 
 namespace {
@@ -159,3 +160,4 @@ void VisibleStoriesHandler::Set(fidl::VectorPtr<fidl::StringPtr> story_ids) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

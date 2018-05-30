@@ -6,10 +6,11 @@
 
 #include <utility>
 
+namespace fuchsia {
 namespace modular {
 
 MessageReceiverClient::MessageReceiverClient(
-    modular::MessageQueue* const mq,
+    fuchsia::modular::MessageQueue* const mq,
     MessageReceiverClientCallback callback)
     : callback_(std::move(callback)), receiver_(this) {
   mq->RegisterReceiver(receiver_.NewBinding());
@@ -23,3 +24,4 @@ void MessageReceiverClient::OnReceive(fidl::StringPtr message,
 }
 
 }  // namespace modular
+}  // namespace fuchsia

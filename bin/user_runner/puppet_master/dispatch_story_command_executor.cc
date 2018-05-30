@@ -10,6 +10,7 @@
 #include "lib/async/cpp/future.h"
 #include "lib/fxl/functional/make_copyable.h"
 
+namespace fuchsia {
 namespace modular {
 
 namespace {
@@ -143,3 +144,4 @@ void DispatchStoryCommandExecutor::ExecuteCommands(
 DispatchStoryCommandExecutor::CommandRunner::~CommandRunner() = default;
 
 }  // namespace modular
+}  // namespace fuchsia

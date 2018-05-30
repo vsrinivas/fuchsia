@@ -8,7 +8,7 @@
 #include <string>
 
 #include <component/cpp/fidl.h>
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <modular_auth/cpp/fidl.h>
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/async/cpp/operation.h"
@@ -18,6 +18,7 @@
 #include "peridot/bin/user_runner/component_context_impl.h"
 #include "peridot/lib/fidl/app_client.h"
 
+namespace fuchsia {
 namespace modular {
 
 class AgentRunner;
@@ -127,5 +128,6 @@ class AgentContextImpl : AgentContext, AgentController {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_AGENT_RUNNER_AGENT_CONTEXT_IMPL_H_

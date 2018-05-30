@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -11,21 +11,22 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/link_passing/defs.h"
 
-using modular::testing::TestPoint;
+using fuchsia::modular::testing::TestPoint;
 
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp : modular::LinkWatcher {
+class TestApp : fuchsia::modular::LinkWatcher {
  public:
   TestApp(
-      modular::ModuleHost* const module_host,
+      fuchsia::modular::ModuleHost* const module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host),
         link1_watcher_binding_(this),
         link2_watcher_binding_(this) {
-    modular::testing::Init(module_host->application_context(), __FILE__);
-    modular::testing::GetStore()->Put("module3_init", "", [] {});
+    fuchsia::modular::testing::Init(module_host->application_context(),
+                                    __FILE__);
+    fuchsia::modular::testing::GetStore()->Put("module3_init", "", [] {});
 
     Start();
   }
@@ -43,8 +44,8 @@ class TestApp : modular::LinkWatcher {
 
   // Called from ModuleDriver.
   void Terminate(const std::function<void()>& done) {
-    modular::testing::GetStore()->Put("module3_stop", "", [] {});
-    modular::testing::Done(done);
+    fuchsia::modular::testing::GetStore()->Put("module3_stop", "", [] {});
+    fuchsia::modular::testing::Done(done);
   }
 
  private:
@@ -53,11 +54,11 @@ class TestApp : modular::LinkWatcher {
     FXL_LOG(INFO) << "module3 link: " << json;
   }
 
-  modular::ModuleHost* const module_host_;
-  modular::LinkPtr link1_;
-  fidl::Binding<modular::LinkWatcher> link1_watcher_binding_;
-  modular::LinkPtr link2_;
-  fidl::Binding<modular::LinkWatcher> link2_watcher_binding_;
+  fuchsia::modular::ModuleHost* const module_host_;
+  fuchsia::modular::LinkPtr link1_;
+  fidl::Binding<fuchsia::modular::LinkWatcher> link1_watcher_binding_;
+  fuchsia::modular::LinkPtr link2_;
+  fidl::Binding<fuchsia::modular::LinkWatcher> link2_watcher_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
@@ -67,8 +68,8 @@ class TestApp : modular::LinkWatcher {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::ModuleDriver<TestApp> driver(app_context.get(),
-                                         [&loop] { loop.QuitNow(); });
+  fuchsia::modular::ModuleDriver<TestApp> driver(app_context.get(),
+                                                 [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

@@ -26,7 +26,7 @@ group("unittests") {
 }
 
 fidl("fidl") {
-  name = "modular"
+  name = "fuchsia.modular"
 
   sdk_category = "partner"
 
@@ -106,8 +106,8 @@ fidl("fidl") {
   ]
 }
 
-fidl("fidl_private") {
-  name = "modular_private"
+fidl("fidl_internal") {
+  name = "fuchsia.modular.internal"
 
   sources = [
     "story/fidl/link_change.fidl",

@@ -7,22 +7,25 @@
 
 #include <utility>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/fidl/cpp/vector.h"
 
+namespace fuchsia {
 namespace modular {
 
-std::pair<bool, fidl::VectorPtr<modular::ContextValue>> TakeContextValue(
-    modular::ContextUpdate* update,
-    const std::string& key);
+std::pair<bool, fidl::VectorPtr<fuchsia::modular::ContextValue>>
+TakeContextValue(fuchsia::modular::ContextUpdate* update,
+                 const std::string& key);
 
-void AddToContextQuery(modular::ContextQuery* query,
+void AddToContextQuery(fuchsia::modular::ContextQuery* query,
                        const std::string& key,
-                       modular::ContextSelector selector);
+                       fuchsia::modular::ContextSelector selector);
 
-bool HasSelectorKey(modular::ContextQuery* const query, const std::string& key);
+bool HasSelectorKey(fuchsia::modular::ContextQuery* const query,
+                    const std::string& key);
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // LIB_CONTEXT_CPP_CONTEXT_HELPER_H_

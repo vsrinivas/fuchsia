@@ -7,7 +7,7 @@
 #include <trace/observer.h>
 #include <string>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fidl/cpp/binding.h"
@@ -18,10 +18,10 @@ namespace {
 
 // This Module updates its root link 100 times and then just sits there until
 // it's terminated.
-class NullModule : modular::LinkWatcher {
+class NullModule : fuchsia::modular::LinkWatcher {
  public:
   NullModule(
-      modular::ModuleHost* const module_host,
+      fuchsia::modular::ModuleHost* const module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host), link_watcher_binding_(this) {
     module_host_->module_context()->GetLink(nullptr, link_.NewRequest());
@@ -58,10 +58,10 @@ class NullModule : modular::LinkWatcher {
     }
   }
 
-  modular::ModuleHost* const module_host_;
-  modular::TracingWaiter tracing_waiter_;
-  modular::LinkPtr link_;
-  fidl::Binding<modular::LinkWatcher> link_watcher_binding_;
+  fuchsia::modular::ModuleHost* const module_host_;
+  fuchsia::modular::TracingWaiter tracing_waiter_;
+  fuchsia::modular::LinkPtr link_;
+  fidl::Binding<fuchsia::modular::LinkWatcher> link_watcher_binding_;
 
   int count_{-1};
 };
@@ -71,8 +71,8 @@ class NullModule : modular::LinkWatcher {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::ModuleDriver<NullModule> driver(app_context.get(),
-                                           [&loop] { loop.QuitNow(); });
+  fuchsia::modular::ModuleDriver<NullModule> driver(
+      app_context.get(), [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

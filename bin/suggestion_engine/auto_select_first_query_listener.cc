@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <modular/cpp/fidl.h>
 #include "peridot/bin/suggestion_engine/auto_select_first_query_listener.h"
+#include <fuchsia/modular/cpp/fidl.h>
 #include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
 
+namespace fuchsia {
 namespace modular {
 
 AutoSelectFirstQueryListener::AutoSelectFirstQueryListener(
@@ -29,3 +30,4 @@ void AutoSelectFirstQueryListener::OnQueryComplete() {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

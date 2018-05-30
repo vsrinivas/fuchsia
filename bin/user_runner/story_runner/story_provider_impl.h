@@ -9,9 +9,9 @@
 #include <memory>
 #include <set>
 
+#include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/modular/internal/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
-#include <modular/cpp/fidl.h>
-#include <modular_private/cpp/fidl.h>
 #include <presentation/cpp/fidl.h>
 #include <views_v1_token/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
@@ -31,6 +31,7 @@
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
 
+namespace fuchsia {
 namespace modular {
 class PresentationProvider;
 class Resolver;
@@ -146,7 +147,7 @@ class StoryProviderImpl : StoryProvider, FocusWatcher {
   // Called by *session_storage_.
   void OnStoryStorageDeleted(fidl::StringPtr story_id);
   void OnStoryStorageUpdated(fidl::StringPtr story_id,
-                             modular_private::StoryData story_data);
+                             modular::internal ::StoryData story_data);
 
   // Called by ContextHandler.
   void OnContextChange();
@@ -250,5 +251,6 @@ class StoryProviderImpl : StoryProvider, FocusWatcher {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_STORY_PROVIDER_IMPL_H_

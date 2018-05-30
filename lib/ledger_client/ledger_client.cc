@@ -14,6 +14,7 @@
 #include "peridot/lib/ledger_client/status.h"
 #include "peridot/lib/ledger_client/types.h"
 
+namespace fuchsia {
 namespace modular {
 
 struct LedgerClient::PageEntry {
@@ -484,3 +485,4 @@ void LedgerClient::ConflictResolverImpl::NotifyWatchers() const {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

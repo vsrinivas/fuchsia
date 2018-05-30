@@ -9,6 +9,8 @@
 #include <memory>
 #include <utility>
 
+#include <fuchsia/modular/cpp/fidl.h>
+#include <views_v1_token/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/callback/scoped_callback.h"
@@ -20,8 +22,6 @@
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include <modular/cpp/fidl.h>
-#include <views_v1_token/cpp/fidl.h>
 
 namespace {
 
@@ -43,8 +43,9 @@ class Settings {
   bool test{};
 };
 
-class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
-                          modular::UserWatcher {
+class DevDeviceShellApp
+    : fuchsia::modular::SingleServiceApp<fuchsia::modular::DeviceShell>,
+      fuchsia::modular::UserWatcher {
  public:
   explicit DevDeviceShellApp(
       component::ApplicationContext* const application_context,
@@ -54,21 +55,20 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
         user_watcher_binding_(this),
         weak_ptr_factory_(this) {
     if (settings_.test) {
-      modular::testing::Init(this->application_context(), __FILE__);
-      modular::testing::Await(modular::testing::kTestShutdown, [this] {
-          device_shell_context_->Shutdown();
-        });
+      fuchsia::modular::testing::Init(this->application_context(), __FILE__);
+      fuchsia::modular::testing::Await(
+          fuchsia::modular::testing::kTestShutdown,
+          [this] { device_shell_context_->Shutdown(); });
 
       // Start a timer to quit in case a test component misbehaves and hangs.
       async::PostDelayedTask(
           async_get_default(),
-          callback::MakeScoped(
-              weak_ptr_factory_.GetWeakPtr(),
-              [this] {
-                FXL_LOG(WARNING) << "DevDeviceShell timed out";
-                device_shell_context_->Shutdown();
-              }),
-          zx::msec(modular::testing::kTestTimeoutMilliseconds));
+          callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
+                               [this] {
+                                 FXL_LOG(WARNING) << "DevDeviceShell timed out";
+                                 device_shell_context_->Shutdown();
+                               }),
+          zx::msec(fuchsia::modular::testing::kTestTimeoutMilliseconds));
     }
   }
 
@@ -77,7 +77,7 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
   // |SingleServiceApp|
   void Terminate(std::function<void()> done) override {
     if (settings_.test) {
-      modular::testing::Teardown(done);
+      fuchsia::modular::testing::Teardown(done);
     } else {
       done();
     }
@@ -95,8 +95,9 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
 
   // |DeviceShell|
   void Initialize(
-      fidl::InterfaceHandle<modular::DeviceShellContext> device_shell_context,
-      modular::DeviceShellParams device_shell_params) override {
+      fidl::InterfaceHandle<fuchsia::modular::DeviceShellContext>
+          device_shell_context,
+      fuchsia::modular::DeviceShellParams device_shell_params) override {
     device_shell_context_.Bind(std::move(device_shell_context));
     device_shell_context_->GetUserProvider(user_provider_.NewRequest());
 
@@ -119,7 +120,7 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
   }
 
   void Login(const std::string& account_id) {
-    modular::UserLoginParams params;
+    fuchsia::modular::UserLoginParams params;
     params.account_id = account_id;
     params.view_owner = std::move(view_owner_request_);
     params.user_controller = user_controller_.NewRequest();
@@ -166,11 +167,11 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
   }
 
   const Settings settings_;
-  fidl::Binding<modular::UserWatcher> user_watcher_binding_;
+  fidl::Binding<fuchsia::modular::UserWatcher> user_watcher_binding_;
   fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request_;
-  modular::DeviceShellContextPtr device_shell_context_;
-  modular::UserControllerPtr user_controller_;
-  modular::UserProviderPtr user_provider_;
+  fuchsia::modular::DeviceShellContextPtr device_shell_context_;
+  fuchsia::modular::UserControllerPtr user_controller_;
+  fuchsia::modular::UserProviderPtr user_provider_;
   fxl::WeakPtrFactory<DevDeviceShellApp> weak_ptr_factory_;
   FXL_DISALLOW_COPY_AND_ASSIGN(DevDeviceShellApp);
 };
@@ -184,7 +185,7 @@ int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
 
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::AppDriver<DevDeviceShellApp> driver(
+  fuchsia::modular::AppDriver<DevDeviceShellApp> driver(
       app_context->outgoing().deprecated_services(),
       std::make_unique<DevDeviceShellApp>(app_context.get(), settings),
       [&loop] { loop.QuitNow(); });

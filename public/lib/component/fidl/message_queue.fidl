@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library modular;
+library fuchsia.modular;
 
 // A message queue is a named, locally persistent FIFO data structure. Message
 // queues are created, read from, and deleted by component instances through

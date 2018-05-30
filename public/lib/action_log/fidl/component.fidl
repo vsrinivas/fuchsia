@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library modular;
+library fuchsia.modular;
 
 // ComponentActionLog allows a component to log actions it implements as they
 // performed by the user.

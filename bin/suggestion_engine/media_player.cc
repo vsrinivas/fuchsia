@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <string>
 
 #include "lib/fidl/cpp/optional.h"
@@ -10,6 +10,7 @@
 #include "lib/media/timeline/timeline_rate.h"
 #include "peridot/bin/suggestion_engine/media_player.h"
 
+namespace fuchsia {
 namespace modular {
 
 MediaPlayer::MediaPlayer(media::AudioServerPtr audio_server,
@@ -101,3 +102,4 @@ void MediaPlayer::HandleMediaUpdates(
 }
 
 }  // namespace modular
+}  // namespace fuchsia

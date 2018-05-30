@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <modular/cpp/fidl.h>
-#include <queue_persistence_test_service/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <queue_persistence_test_service/cpp/fidl.h>
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/module_driver.h"
@@ -17,9 +17,9 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/queue_persistence/defs.h"
 
-using modular::testing::Await;
-using modular::testing::Signal;
-using modular::testing::TestPoint;
+using fuchsia::modular::testing::Await;
+using fuchsia::modular::testing::Signal;
+using fuchsia::modular::testing::TestPoint;
 
 namespace {
 
@@ -29,10 +29,11 @@ class TestApp {
   TestPoint initialized_{"Root module initialized"};
 
   TestApp(
-      modular::ModuleHost* module_host,
+      fuchsia::modular::ModuleHost* module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host), weak_ptr_factory_(this) {
-    modular::testing::Init(module_host->application_context(), __FILE__);
+    fuchsia::modular::testing::Init(module_host->application_context(),
+                                    __FILE__);
     initialized_.Pass();
 
     module_host_->module_context()->GetComponentContext(
@@ -52,7 +53,7 @@ class TestApp {
   // Called by ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
-    modular::testing::Done(done);
+    fuchsia::modular::testing::Done(done);
   }
 
  private:
@@ -85,7 +86,7 @@ class TestApp {
 
     // Send a message to the stopped agent which should be persisted to local
     // storage. No triggers are set so the agent won't be automatically started.
-    modular::MessageSenderPtr message_sender;
+    fuchsia::modular::MessageSenderPtr message_sender;
     component_context_->GetMessageSender(queue_token_,
                                          message_sender.NewRequest());
     message_sender->Send("Queued message...");
@@ -117,14 +118,14 @@ class TestApp {
     agent_controller_.Unbind();
     agent_service_.Unbind();
     Await("queue_persistence_test_agent_stopped",
-          [this] { Signal(modular::testing::kTestShutdown); });
+          [this] { Signal(fuchsia::modular::testing::kTestShutdown); });
   }
 
-  modular::ModuleHost* module_host_;
-  modular::AgentControllerPtr agent_controller_;
+  fuchsia::modular::ModuleHost* module_host_;
+  fuchsia::modular::AgentControllerPtr agent_controller_;
   queue_persistence_test_service::QueuePersistenceTestServicePtr agent_service_;
-  modular::ComponentContextPtr component_context_;
-  modular::MessageQueuePtr msg_queue_;
+  fuchsia::modular::ComponentContextPtr component_context_;
+  fuchsia::modular::MessageQueuePtr msg_queue_;
 
   std::string queue_token_;
 
@@ -138,8 +139,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::ModuleDriver<TestApp> driver(app_context.get(),
-                                        [&loop] { loop.QuitNow(); });
+  fuchsia::modular::ModuleDriver<TestApp> driver(app_context.get(),
+                                                 [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

@@ -9,11 +9,12 @@
 
 #include <string>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/string.h"
 
+namespace fuchsia {
 namespace modular {
 
 // If this value is changed, the version in kLinkKeyPrefix must be changed too.
@@ -105,5 +106,6 @@ std::string EncodeModuleComponentNamespace(const std::string& story_id);
 //   Xdr*() functions to be found in the page access code.
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_LEDGER_CLIENT_STORAGE_H_

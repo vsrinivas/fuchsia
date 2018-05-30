@@ -6,6 +6,7 @@
 
 #include "lib/fxl/random/uuid.h"
 
+namespace fuchsia {
 namespace modular {
 
 SuggestionPrototype* CreateSuggestionPrototype(
@@ -31,3 +32,4 @@ SuggestionPrototype* CreateSuggestionPrototype(
 }
 
 }  // namespace modular
+}  // namespace fuchsia

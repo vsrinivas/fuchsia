@@ -4,7 +4,7 @@
 
 // This file contains the definition of module container layouts.
 
-library modular;
+library fuchsia.modular;
 
 // Specification of the layout of multiple surfaces in a module container. The
 // surfaces are referenced by name in ContainerRelationEntry.

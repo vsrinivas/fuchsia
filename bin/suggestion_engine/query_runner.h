@@ -5,11 +5,12 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_QUERY_RUNNER_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_QUERY_RUNNER_H_
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <set>
 
 #include "lib/fxl/memory/weak_ptr.h"
 
+namespace fuchsia {
 namespace modular {
 
 struct QueryHandlerRecord;
@@ -71,5 +72,6 @@ struct QueryHandlerRecord {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_QUERY_RUNNER_H_

@@ -7,13 +7,15 @@
 
 #include "peridot/lib/module_manifest_source/module_manifest_source.h"
 
+namespace fuchsia {
 namespace modular {
 
 bool ModuleManifestEntryFromJson(const std::string& json,
-                                 modular::ModuleManifest* entry);
-void ModuleManifestEntryToJson(const modular::ModuleManifest& entry,
+                                 fuchsia::modular::ModuleManifest* entry);
+void ModuleManifestEntryToJson(const fuchsia::modular::ModuleManifest& entry,
                                std::string* json);
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_MODULE_MANIFEST_SOURCE_JSON_H_

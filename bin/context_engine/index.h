@@ -13,8 +13,9 @@
 #include <set>
 #include <string>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
+namespace fuchsia {
 namespace modular {
 
 namespace internal {
@@ -50,5 +51,6 @@ class ContextIndex {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_CONTEXT_ENGINE_INDEX_H_

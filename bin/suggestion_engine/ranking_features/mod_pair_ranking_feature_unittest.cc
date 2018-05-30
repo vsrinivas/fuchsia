@@ -8,6 +8,7 @@
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 
+namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -160,3 +161,4 @@ TEST_F(ModPairRankingFeatureTest, CreateContextSelector) {
 
 }  // namespace
 }  // namespace modular
+}  // namespace fuchsia

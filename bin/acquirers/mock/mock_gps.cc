@@ -6,16 +6,16 @@
 
 #include <sstream>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 namespace maxwell {
 namespace acquirers {
 
 constexpr char GpsAcquirer::kLabel[];
 
-MockGps::MockGps(modular::ContextEngine* context_engine) {
-  modular::ComponentScope scope;
-  modular::AgentScope agent_scope;
+MockGps::MockGps(fuchsia::modular::ContextEngine* context_engine) {
+  fuchsia::modular::ComponentScope scope;
+  fuchsia::modular::AgentScope agent_scope;
   agent_scope.url = "MockGps";
   scope.set_agent_scope(std::move(agent_scope));
   context_engine->GetWriter(std::move(scope), writer_.NewRequest());

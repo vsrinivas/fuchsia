@@ -8,12 +8,13 @@
 #include <map>
 #include <string>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/async/cpp/future.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/context_engine/context_repository.h"
 #include "peridot/lib/bound_set/bound_set.h"
 
+namespace fuchsia {
 namespace modular {
 
 class ContextRepository;
@@ -24,7 +25,7 @@ class ContextWriterImpl : ContextWriter {
  public:
   ContextWriterImpl(const ComponentScope& client_info,
                     ContextRepository* repository,
-                    modular::EntityResolver* entity_resolver,
+                    fuchsia::modular::EntityResolver* entity_resolver,
                     fidl::InterfaceRequest<ContextWriter> request);
   ~ContextWriterImpl() override;
 
@@ -57,7 +58,7 @@ class ContextWriterImpl : ContextWriter {
 
   ContextSelector parent_value_selector_;
   ContextRepository* const repository_;
-  modular::EntityResolver* const entity_resolver_;
+  fuchsia::modular::EntityResolver* const entity_resolver_;
 
   // Supports WriteEntityTopic.
   std::map<fidl::StringPtr, ContextRepository::Id> topic_value_ids_;
@@ -69,7 +70,7 @@ class ContextWriterImpl : ContextWriter {
   //
   // TODO(rosswang): consider adding removal capability to |InterfacePtrSet|
   // instead.
-  BoundPtrSet<modular::Entity> entities_;
+  BoundPtrSet<fuchsia::modular::Entity> entities_;
 
   fxl::WeakPtrFactory<ContextWriterImpl> weak_factory_;
 
@@ -114,5 +115,6 @@ class ContextValueWriterImpl : ContextValueWriter {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_WRITER_IMPL_H_

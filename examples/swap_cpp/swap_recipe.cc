@@ -5,7 +5,7 @@
 #include <array>
 #include <memory>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
@@ -66,7 +66,7 @@ class RecipeView : public mozart::BaseView {
   std::unique_ptr<scenic_lib::EntityNode> host_node_;
 };
 
-class RecipeApp : public modular::ViewApp {
+class RecipeApp : public fuchsia::modular::ViewApp {
  public:
   RecipeApp(component::ApplicationContext* const application_context)
       : ViewApp(application_context) {
@@ -108,11 +108,12 @@ class RecipeApp : public modular::ViewApp {
     }
 
     // This module is named after its URL.
-    modular::Intent intent;
+    fuchsia::modular::Intent intent;
     intent.action.handler = module_query;
     module_context_->EmbedModule(
         module_query, std::move(intent), module_.NewRequest(),
-        module_view_.NewRequest(), [](const modular::StartModuleStatus&) {});
+        module_view_.NewRequest(),
+        [](const fuchsia::modular::StartModuleStatus&) {});
     SetChild();
   }
 
@@ -122,8 +123,8 @@ class RecipeApp : public modular::ViewApp {
     }
   }
 
-  modular::ModuleContextPtr module_context_;
-  modular::ModuleControllerPtr module_;
+  fuchsia::modular::ModuleContextPtr module_context_;
+  fuchsia::modular::ModuleControllerPtr module_;
   views_v1_token::ViewOwnerPtr module_view_;
   std::unique_ptr<RecipeView> view_;
 
@@ -136,7 +137,7 @@ int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
 
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::AppDriver<RecipeApp> driver(
+  fuchsia::modular::AppDriver<RecipeApp> driver(
       app_context->outgoing().deprecated_services(),
       std::make_unique<RecipeApp>(app_context.get()),
       [&loop] { loop.QuitNow(); });

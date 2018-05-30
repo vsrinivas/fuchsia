@@ -9,13 +9,14 @@
 #include <memory>
 #include <string>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fxl/macros.h"
 
+namespace fuchsia {
 namespace modular {
 
 class EntityResolverFake : public EntityResolver {
@@ -41,5 +42,6 @@ class EntityResolverFake : public EntityResolver {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_TESTING_ENTITY_RESOLVER_FAKE_H_

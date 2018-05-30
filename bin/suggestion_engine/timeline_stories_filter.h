@@ -5,8 +5,9 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_TIMELINE_STORIES_FILTER_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_TIMELINE_STORIES_FILTER_H_
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
+namespace fuchsia {
 namespace modular {
 
 class TimelineStoriesWatcher;
@@ -30,5 +31,6 @@ class TimelineStoriesFilter {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_TIMELINE_STORIES_FILTER_H_

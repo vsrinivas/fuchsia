@@ -9,6 +9,7 @@
 
 #include "lib/fxl/macros.h"
 
+namespace fuchsia {
 namespace modular {
 
 class TimeOfDay {
@@ -62,5 +63,6 @@ class KeyGenerator {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_KEY_GENERATOR_H_

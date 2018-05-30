@@ -10,6 +10,7 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/logging.h"
 
+namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -117,3 +118,4 @@ TEST(KeyGeneratorTest, TickOrdering_Success) {
 
 }  // namespace
 }  // namespace modular
+}  // namespace fuchsia

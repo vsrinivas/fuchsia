@@ -6,6 +6,7 @@
 
 #include <modular_auth/cpp/fidl.h>
 
+namespace fuchsia {
 namespace modular {
 
 void XdrAccount_v1(XdrContext* const xdr, modular_auth::Account* const data) {
@@ -34,3 +35,4 @@ extern const XdrFilterType<modular_auth::Account> XdrAccount[] = {
 };
 
 }  // namespace modular
+}  // namespace fuchsia

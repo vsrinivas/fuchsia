@@ -6,6 +6,7 @@
 
 #include "lib/fxl/logging.h"
 
+namespace fuchsia {
 namespace modular {
 
 Scope::Scope(const component::EnvironmentPtr& parent_env,
@@ -38,3 +39,4 @@ void Scope::InitScope(const component::EnvironmentPtr& parent_env,
 }
 
 }  // namespace modular
+}  // namespace fuchsia

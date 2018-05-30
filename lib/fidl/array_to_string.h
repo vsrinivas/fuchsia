@@ -11,6 +11,7 @@
 #include "lib/fidl/cpp/string.h"
 #include "lib/fidl/cpp/vector.h"
 
+namespace fuchsia {
 namespace modular {
 
 inline std::string to_string(const fidl::Array<uint8_t, 16>& data) {
@@ -70,5 +71,6 @@ inline fidl::VectorPtr<fidl::StringPtr> to_array(
 }
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_FIDL_ARRAY_TO_STRING_H_

@@ -5,6 +5,7 @@
 #include "peridot/bin/suggestion_engine/ranking_features/kronk_ranking_feature.h"
 #include "gtest/gtest.h"
 
+namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -34,3 +35,4 @@ TEST_F(KronkRankingFeatureTest, TestComputeFeatureNonKronk)  {
 
 }  // namespace
 }  // namespace modular
+}  // namespace fuchsia

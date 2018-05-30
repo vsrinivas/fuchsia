@@ -10,6 +10,7 @@
 #include "lib/context/cpp/context_helper.h"
 #include "lib/fxl/logging.h"
 
+namespace fuchsia {
 namespace modular {
 
 MatchPredicate GetSuggestionMatcher(const std::string& component_url,
@@ -167,3 +168,4 @@ void RankedSuggestionsList::DoStableSort() {
 // End of private sorting methods.
 
 }  // namespace modular
+}  // namespace fuchsia

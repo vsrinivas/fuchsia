@@ -11,6 +11,7 @@
 #include "peridot/bin/suggestion_engine/suggestion_engine_helper.h"
 #include "peridot/lib/fidl/json_xdr.h"
 
+namespace fuchsia {
 namespace modular {
 
 namespace {
@@ -57,12 +58,12 @@ void QueryProcessor::ExecuteQuery(
     // Update context engine
     std::string formattedQuery;
 
-    modular::XdrFilterType<std::string> filter_list[] = {
-      modular::XdrFilter<std::string>,
-      nullptr,
+    fuchsia::modular::XdrFilterType<std::string> filter_list[] = {
+        fuchsia::modular::XdrFilter<std::string>,
+        nullptr,
     };
 
-    modular::XdrWrite(&formattedQuery, &query, filter_list);
+    fuchsia::modular::XdrWrite(&formattedQuery, &query, filter_list);
     context_writer_->WriteEntityTopic(kQueryContextKey, formattedQuery);
 
     // Update suggestion engine debug interface
@@ -195,3 +196,4 @@ void QueryProcessor::NotifyOfResults() {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

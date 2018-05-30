@@ -6,6 +6,7 @@
 
 #include <string>
 
+namespace fuchsia {
 namespace modular {
 
 namespace {
@@ -531,3 +532,4 @@ TEST_F(FutureTest, trace_name) {
 
 }  // namespace
 }  // namespace modular
+}  // namespace fuchsia

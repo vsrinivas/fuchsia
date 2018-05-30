@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -12,8 +12,8 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/link_data/defs.h"
 
-using modular::testing::Put;
-using modular::testing::Signal;
+using fuchsia::modular::testing::Put;
+using fuchsia::modular::testing::Signal;
 
 namespace {
 
@@ -21,10 +21,11 @@ namespace {
 class TestApp {
  public:
   TestApp(
-      modular::ModuleHost* const module_host,
+      fuchsia::modular::ModuleHost* const module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host) {
-    modular::testing::Init(module_host->application_context(), __FILE__);
+    fuchsia::modular::testing::Init(module_host->application_context(),
+                                    __FILE__);
     Signal("module1_init");
 
     path_.push_back(kCount);
@@ -49,20 +50,20 @@ class TestApp {
         } else {
           doc.SetInt(0);
         }
-        link_->Set(path_.Clone(), modular::JsonValueToString(doc));
+        link_->Set(path_.Clone(), fuchsia::modular::JsonValueToString(doc));
         link_->Sync([this] { Loop(); });
       });
   }
 
   // Called from ModuleDriver.
   void Terminate(const std::function<void()>& done) {
-    modular::testing::GetStore()->Put("module1_stop", "", [] {});
-    modular::testing::Done(done);
+    fuchsia::modular::testing::GetStore()->Put("module1_stop", "", [] {});
+    fuchsia::modular::testing::Done(done);
   }
 
  private:
-  modular::ModuleHost* const module_host_;
-  modular::LinkPtr link_;
+  fuchsia::modular::ModuleHost* const module_host_;
+  fuchsia::modular::LinkPtr link_;
 
   fidl::VectorPtr<fidl::StringPtr> path_;
 
@@ -74,8 +75,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::ModuleDriver<TestApp> driver(app_context.get(),
-                                         [&loop] { loop.QuitNow(); });
+  fuchsia::modular::ModuleDriver<TestApp> driver(app_context.get(),
+                                                 [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

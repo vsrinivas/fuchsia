@@ -4,7 +4,7 @@
 
 // This file contains the definition of SurfaceRelation and its properties.
 
-library modular;
+library fuchsia.modular;
 
 // Describes the relationship between two Surfaces.
 // Provides information to the StoryShell for layout optimization.

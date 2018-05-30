@@ -7,6 +7,7 @@
 
 #include "peridot/lib/fidl/json_xdr.h"
 
+namespace fuchsia {
 namespace modular {
 
 class ModuleManifest;
@@ -14,5 +15,6 @@ class ModuleManifest;
 extern const XdrFilterType<ModuleManifest> XdrModuleManifest[];
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_MODULE_MANIFEST_SOURCE_XDR_H_

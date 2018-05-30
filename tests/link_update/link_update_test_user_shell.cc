@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include <modular_private/cpp/fidl.h>
+#include <fuchsia/modular/internal/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
@@ -19,20 +19,20 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/link_update/defs.h"
 
-using modular::testing::TestPoint;
+using fuchsia::modular::testing::TestPoint;
 
 namespace {
 
 // A simple link watcher implementation allows to specify the actual
 // notification callback as a lambda and update it dynamically.
-class LinkWatcherImpl : modular::LinkWatcher {
+class LinkWatcherImpl : fuchsia::modular::LinkWatcher {
  public:
   LinkWatcherImpl() : binding_(this) {}
   ~LinkWatcherImpl() override = default;
 
   // Registers itself as watcher on the given link. Only one link at a time can
   // be watched.
-  void Watch(modular::LinkPtr* const link) {
+  void Watch(fuchsia::modular::LinkPtr* const link) {
     (*link)->WatchAll(binding_.NewBinding());
   }
 
@@ -47,13 +47,14 @@ class LinkWatcherImpl : modular::LinkWatcher {
   }
 
   std::function<void(const fidl::StringPtr&)> continue_;
-  fidl::Binding<modular::LinkWatcher> binding_;
+  fidl::Binding<fuchsia::modular::LinkWatcher> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LinkWatcherImpl);
 };
 
 // Cf. README.md for what this test does and how.
-class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
+class TestApp : public fuchsia::modular::testing::ComponentBase<
+                    fuchsia::modular::UserShell> {
  public:
   TestApp(component::ApplicationContext* const application_context)
       : ComponentBase(application_context) {
@@ -67,7 +68,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint story_create_{"Story Create"};
 
   // |UserShell|
-  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
                       user_shell_context) override {
     initialize_.Pass();
 
@@ -181,12 +182,12 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   LinkWatcherImpl link_watcher_;
 
-  modular::UserShellContextPtr user_shell_context_;
-  modular::StoryProviderPtr story_provider_;
-  modular::StoryControllerPtr story_controller_;
-  modular::LinkPtr root_link_;
-  modular::LinkPtr root_peer_;
-  modular::StoryInfoPtr story_info_;
+  fuchsia::modular::UserShellContextPtr user_shell_context_;
+  fuchsia::modular::StoryProviderPtr story_provider_;
+  fuchsia::modular::StoryControllerPtr story_controller_;
+  fuchsia::modular::LinkPtr root_link_;
+  fuchsia::modular::LinkPtr root_peer_;
+  fuchsia::modular::StoryInfoPtr story_info_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
@@ -194,6 +195,6 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  modular::testing::ComponentMain<TestApp>();
+  fuchsia::modular::testing::ComponentMain<TestApp>();
   return 0;
 }

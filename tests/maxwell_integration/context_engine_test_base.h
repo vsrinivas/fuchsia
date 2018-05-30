@@ -5,7 +5,7 @@
 #ifndef PERIDOT_TESTS_MAXWELL_INTEGRATION_CONTEXT_ENGINE_TEST_BASE_H_
 #define PERIDOT_TESTS_MAXWELL_INTEGRATION_CONTEXT_ENGINE_TEST_BASE_H_
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "peridot/tests/maxwell_integration/test.h"
 
@@ -20,11 +20,13 @@ class ContextEngineTestBase : public MaxwellTestBase {
   void StartContextAgent(const std::string& url);
   void WaitUntilIdle();
 
-  modular::ContextEngine* context_engine() { return context_engine_.get(); }
+  fuchsia::modular::ContextEngine* context_engine() {
+    return context_engine_.get();
+  }
 
  private:
-  modular::ContextEnginePtr context_engine_;
-  modular::ContextDebugPtr debug_;
+  fuchsia::modular::ContextEnginePtr context_engine_;
+  fuchsia::modular::ContextDebugPtr debug_;
 };
 
 }  // namespace maxwell

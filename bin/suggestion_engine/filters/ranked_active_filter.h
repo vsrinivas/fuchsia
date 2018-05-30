@@ -5,11 +5,12 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_RANKERS_RANKED_ACTIVE_FILTER_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_RANKERS_RANKED_ACTIVE_FILTER_H_
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 #include "peridot/bin/suggestion_engine/suggestion_active_filter.h"
 
+namespace fuchsia {
 namespace modular {
 
 class RankedActiveFilter : public SuggestionActiveFilter {
@@ -25,5 +26,6 @@ class RankedActiveFilter : public SuggestionActiveFilter {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKERS_RANKED_ACTIVE_FILTER_H_

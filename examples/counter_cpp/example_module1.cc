@@ -4,12 +4,12 @@
 
 #include <memory>
 
-#include <modular/cpp/fidl.h>
 #include <fuchsia/images/cpp/fidl.h>
-#include <views_v1/cpp/fidl.h>
-#include <views_v1_token/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <views_v1/cpp/fidl.h>
+#include <views_v1_token/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
@@ -97,7 +97,7 @@ class Module1View : public mozart::BaseView {
 };
 
 // Module implementation that acts as a leaf module. It implements Module.
-class Module1App : modular::ViewApp {
+class Module1App : fuchsia::modular::ViewApp {
  public:
   explicit Module1App(component::ApplicationContext* const application_context)
       : ViewApp(application_context),
@@ -116,7 +116,7 @@ class Module1App : modular::ViewApp {
     store_.AddCallback([this] { IncrementCounterAction(); });
 
     application_context->ConnectToEnvironmentService(module_context_.NewRequest());
-    modular::LinkPtr link;
+    fuchsia::modular::LinkPtr link;
     module_context_->GetLink("theOneLink", link.NewRequest());
     store_.Initialize(std::move(link));
   }
@@ -167,7 +167,7 @@ class Module1App : modular::ViewApp {
   }
 
   std::unique_ptr<Module1View> view_;
-  modular::ModuleContextPtr module_context_;
+  fuchsia::modular::ModuleContextPtr module_context_;
   modular_example::Store store_;
 
   // Note: This should remain the last member so it'll be destroyed and
@@ -183,7 +183,7 @@ int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
 
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::AppDriver<Module1App> driver(
+  fuchsia::modular::AppDriver<Module1App> driver(
       app_context->outgoing().deprecated_services(),
       std::make_unique<Module1App>(app_context.get()),
       [&loop] { loop.QuitNow(); });

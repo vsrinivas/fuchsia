@@ -5,40 +5,43 @@
 #ifndef PERIDOT_BIN_MAXWELL_INTELLIGENCE_SERVICES_IMPL_H_
 #define PERIDOT_BIN_MAXWELL_INTELLIGENCE_SERVICES_IMPL_H_
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 namespace maxwell {
 
-class IntelligenceServicesImpl : public modular::IntelligenceServices {
+class IntelligenceServicesImpl : public fuchsia::modular::IntelligenceServices {
  public:
   // |context_engine| and |suggestion_engine| are not owned and must outlive
   // this instance.
-  IntelligenceServicesImpl(modular::ComponentScope scope,
-                           modular::ContextEngine* context_engine,
-                           modular::SuggestionEngine* suggestion_engine,
-                           modular::UserActionLog* user_action_log);
+  IntelligenceServicesImpl(
+      fuchsia::modular::ComponentScope scope,
+      fuchsia::modular::ContextEngine* context_engine,
+      fuchsia::modular::SuggestionEngine* suggestion_engine,
+      fuchsia::modular::UserActionLog* user_action_log);
 
   void GetContextReader(
-      fidl::InterfaceRequest<modular::ContextReader> request) override;
+      fidl::InterfaceRequest<fuchsia::modular::ContextReader> request) override;
   void GetContextWriter(
-      fidl::InterfaceRequest<modular::ContextWriter> request) override;
+      fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request) override;
 
   void GetProposalPublisher(
-      fidl::InterfaceRequest<modular::ProposalPublisher> request) override;
+      fidl::InterfaceRequest<fuchsia::modular::ProposalPublisher> request)
+      override;
 
-  void GetActionLog(
-      fidl::InterfaceRequest<modular::ComponentActionLog> request) override;
+  void GetActionLog(fidl::InterfaceRequest<fuchsia::modular::ComponentActionLog>
+                        request) override;
 
   void RegisterQueryHandler(
-      fidl::InterfaceHandle<modular::QueryHandler> query_handler) override;
+      fidl::InterfaceHandle<fuchsia::modular::QueryHandler> query_handler)
+      override;
 
  private:
-  modular::ComponentScope CloneScope();
+  fuchsia::modular::ComponentScope CloneScope();
 
-  modular::ComponentScope scope_;
-  modular::ContextEngine* const context_engine_;        // Not owned.
-  modular::SuggestionEngine* const suggestion_engine_;  // Not owned.
-  modular::UserActionLog* const user_action_log_;       // Not owned.
+  fuchsia::modular::ComponentScope scope_;
+  fuchsia::modular::ContextEngine* const context_engine_;        // Not owned.
+  fuchsia::modular::SuggestionEngine* const suggestion_engine_;  // Not owned.
+  fuchsia::modular::UserActionLog* const user_action_log_;       // Not owned.
 };
 
 }  // namespace maxwell

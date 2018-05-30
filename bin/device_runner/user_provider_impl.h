@@ -5,13 +5,14 @@
 #ifndef PERIDOT_BIN_DEVICE_RUNNER_USER_PROVIDER_IMPL_H_
 #define PERIDOT_BIN_DEVICE_RUNNER_USER_PROVIDER_IMPL_H_
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <modular_auth/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "peridot/bin/device_runner/user_controller_impl.h"
 
+namespace fuchsia {
 namespace modular {
 
 struct UsersStorage;
@@ -57,7 +58,7 @@ class UserProviderImpl : UserProvider {
   modular_auth::AccountProvider* const account_provider_;
 
   std::string serialized_users_;
-  const modular::UsersStorage* users_storage_ = nullptr;
+  const fuchsia::modular::UsersStorage* users_storage_ = nullptr;
 
   std::map<UserControllerImpl*, std::unique_ptr<UserControllerImpl>>
       user_controllers_;
@@ -66,5 +67,6 @@ class UserProviderImpl : UserProvider {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_DEVICE_RUNNER_USER_PROVIDER_IMPL_H_

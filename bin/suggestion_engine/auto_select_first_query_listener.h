@@ -5,8 +5,9 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_AUTO_SELECT_FIRST_QUERY_LISTENER_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_AUTO_SELECT_FIRST_QUERY_LISTENER_H_
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
+namespace fuchsia {
 namespace modular {
 
 class SuggestionEngineImpl;
@@ -30,5 +31,6 @@ class AutoSelectFirstQueryListener : public QueryListener {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_AUTO_SELECT_FIRST_QUERY_LISTENER_H_

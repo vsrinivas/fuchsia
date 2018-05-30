@@ -10,6 +10,7 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/strings/string_view.h"
 
+namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -35,3 +36,4 @@ TEST(Storage, EncodeLinkPath) {
 
 }  // namespace
 }  // namespace modular
+}  // namespace fuchsia

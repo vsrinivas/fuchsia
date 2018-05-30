@@ -5,14 +5,15 @@
 #ifndef LIB_CONTEXT_CPP_CONTEXT_METADATA_BUILDER_H_
 #define LIB_CONTEXT_CPP_CONTEXT_METADATA_BUILDER_H_
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 namespace maxwell {
 
 class ContextMetadataBuilder {
  public:
   ContextMetadataBuilder();
-  explicit ContextMetadataBuilder(modular::ContextMetadata initial_value);
+  explicit ContextMetadataBuilder(
+      fuchsia::modular::ContextMetadata initial_value);
 
   ContextMetadataBuilder& SetStoryId(const fidl::StringPtr& story_id);
   ContextMetadataBuilder& SetStoryFocused(bool focused);
@@ -31,16 +32,16 @@ class ContextMetadataBuilder {
       const fidl::StringPtr& name);
 
   // Build() or BuildPtr() can be called only once, as they move |m_|.
-  modular::ContextMetadata Build();
-  modular::ContextMetadataPtr BuildPtr();
+  fuchsia::modular::ContextMetadata Build();
+  fuchsia::modular::ContextMetadataPtr BuildPtr();
 
  private:
-  modular::StoryMetadataPtr& StoryMetadata();
-  modular::ModuleMetadataPtr& ModuleMetadata();
-  modular::EntityMetadataPtr& EntityMetadata();
-  modular::LinkMetadataPtr& LinkMetadata();
+  fuchsia::modular::StoryMetadataPtr& StoryMetadata();
+  fuchsia::modular::ModuleMetadataPtr& ModuleMetadata();
+  fuchsia::modular::EntityMetadataPtr& EntityMetadata();
+  fuchsia::modular::LinkMetadataPtr& LinkMetadata();
 
-  modular::ContextMetadata m_;
+  fuchsia::modular::ContextMetadata m_;
 };
 
 }  // namespace maxwell

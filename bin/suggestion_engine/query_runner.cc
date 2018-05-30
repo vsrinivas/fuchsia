@@ -8,6 +8,7 @@
 #include <lib/async/default.h>
 #include <lib/zx/time.h>
 
+namespace fuchsia {
 namespace modular {
 
 namespace {
@@ -106,3 +107,4 @@ void QueryRunner::TimeOut() {
 
 
 }  // namespace modular
+}  // namespace fuchsia

@@ -7,9 +7,9 @@
 #include <memory>
 
 #include <component/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/modular/internal/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
-#include <modular/cpp/fidl.h>
-#include <modular_private/cpp/fidl.h>
 #include <presentation/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
@@ -41,6 +41,7 @@
 #include "peridot/lib/ledger_client/operations.h"
 #include "peridot/lib/ledger_client/storage.h"
 
+namespace fuchsia {
 namespace modular {
 
 constexpr char kStoryScopeLabelPrefix[] = "story-";
@@ -268,16 +269,16 @@ constexpr XdrFilterType<ModuleData> XdrModuleData[] = {
   nullptr,
 };
 
-void XdrPerDeviceStoryInfo_v1(XdrContext* const xdr,
-                              modular_private::PerDeviceStoryInfo* const data) {
+void XdrPerDeviceStoryInfo_v1(
+    XdrContext* const xdr, modular::internal::PerDeviceStoryInfo* const data) {
   xdr->Field("device", &data->device_id);
   xdr->Field("id", &data->story_id);
   xdr->Field("time", &data->timestamp);
   xdr->Field("state", &data->state);
 }
 
-void XdrPerDeviceStoryInfo_v2(XdrContext* const xdr,
-                              modular_private::PerDeviceStoryInfo* const data) {
+void XdrPerDeviceStoryInfo_v2(
+    XdrContext* const xdr, modular::internal::PerDeviceStoryInfo* const data) {
   if (!xdr->Version(2)) {
     return;
   }
@@ -287,11 +288,11 @@ void XdrPerDeviceStoryInfo_v2(XdrContext* const xdr,
   xdr->Field("state", &data->state);
 }
 
-constexpr XdrFilterType<modular_private::PerDeviceStoryInfo>
-XdrPerDeviceStoryInfo[] = {
-  XdrPerDeviceStoryInfo_v2,
-  XdrPerDeviceStoryInfo_v1,
-  nullptr,
+constexpr XdrFilterType<fuchsia::modular::internal::PerDeviceStoryInfo>
+    XdrPerDeviceStoryInfo[] = {
+        XdrPerDeviceStoryInfo_v2,
+        XdrPerDeviceStoryInfo_v1,
+        nullptr,
 };
 
 }  // namespace
@@ -1482,7 +1483,8 @@ class StoryControllerImpl::StartContainerInShellCall : public Operation<> {
       if (!story_controller_impl_->story_shell_) {
         return;
       }
-      auto views = fidl::VectorPtr<modular::ContainerView>::New(nodes_->size());
+      auto views =
+          fidl::VectorPtr<fuchsia::modular::ContainerView>::New(nodes_->size());
       for (size_t i = 0; i < nodes_->size(); i++) {
         ContainerView view;
         view.node_name = nodes_->at(i)->node_name;
@@ -1829,7 +1831,7 @@ void StoryControllerImpl::GetInfo(GetInfoCallback callback) {
         // after the operation following GetInfo()), and (2) |this| may have
         // been deleted when GetStoryInfo returned if there was a Delete
         // operation in the queue before GetStoryInfo().
-        [state = state_, callback](modular::StoryInfoPtr story_info) {
+        [state = state_, callback](fuchsia::modular::StoryInfoPtr story_info) {
           callback(std::move(*story_info), state);
         });
   }));
@@ -2003,16 +2005,16 @@ void StoryControllerImpl::SetState(const StoryState new_state) {
   //
   // TODO(mesch): We should execute this inside the containing Operation.
 
-  modular_private::PerDeviceStoryInfoPtr data =
-      modular_private::PerDeviceStoryInfo::New();
+  modular::internal::PerDeviceStoryInfoPtr data =
+      modular::internal::PerDeviceStoryInfo::New();
   data->device_id = story_provider_impl_->device_id();
   data->story_id = story_id_;
   data->timestamp = time(nullptr);
   data->state = state_;
 
   operation_queue_.Add(
-      new WriteDataCall<modular_private::PerDeviceStoryInfo,
-                        modular_private::PerDeviceStoryInfoPtr>(
+      new WriteDataCall<fuchsia::modular::internal::PerDeviceStoryInfo,
+                        modular::internal::PerDeviceStoryInfoPtr>(
           page(), MakePerDeviceKey(data->device_id), XdrPerDeviceStoryInfo,
           std::move(data), [] {}));
 }
@@ -2075,3 +2077,4 @@ void StoryControllerImpl::WatchVisualState(
 }
 
 }  // namespace modular
+}  // namespace fuchsia

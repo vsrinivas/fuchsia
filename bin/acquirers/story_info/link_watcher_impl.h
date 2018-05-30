@@ -9,7 +9,7 @@
 #include <memory>
 #include <string>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 
@@ -17,13 +17,13 @@ namespace maxwell {
 
 class StoryWatcherImpl;
 
-class LinkWatcherImpl : modular::LinkWatcher {
+class LinkWatcherImpl : fuchsia::modular::LinkWatcher {
  public:
   LinkWatcherImpl(StoryWatcherImpl* const owner,
-                  modular::StoryController* const story_controller,
+                  fuchsia::modular::StoryController* const story_controller,
                   const std::string& story_id,
-                  modular::ContextValueWriter* story_value,
-                  modular::LinkPath link_path);
+                  fuchsia::modular::ContextValueWriter* story_value,
+                  fuchsia::modular::LinkPath link_path);
 
   ~LinkWatcherImpl() override;
 
@@ -35,29 +35,31 @@ class LinkWatcherImpl : modular::LinkWatcher {
   void MaybeProcessContextLink(const fidl::StringPtr& value);
 
   StoryWatcherImpl* const owner_;
-  modular::StoryController* const story_controller_;
+  fuchsia::modular::StoryController* const story_controller_;
 
   const std::string story_id_;
-  const modular::LinkPath link_path_;
+  const fuchsia::modular::LinkPath link_path_;
 
   // Allows us to write the initial Link node in the Context engine, and then
   // create child nodes for each Entity we see in the Link.
-  modular::ContextValueWriterPtr link_node_writer_;
+  fuchsia::modular::ContextValueWriterPtr link_node_writer_;
 
   // When applicable: Per top-level JSON member key in the Link value, a value
   // writer that allows us to store the contained Entity.
   //
   // See the documentation in ProcessNewValue() for more details.
-  std::map<std::string, modular::ContextValueWriterPtr> entity_node_writers_;
+  std::map<std::string, fuchsia::modular::ContextValueWriterPtr>
+      entity_node_writers_;
   // TODO(thatguy): When Bundles come online, remove |entity_values_| in favor
   // of this. Rename to |entity_value_|.
-  modular::ContextValueWriterPtr single_entity_node_writer_;
+  fuchsia::modular::ContextValueWriterPtr single_entity_node_writer_;
 
   // Per context link topic, the context value.
   // TODO(thatguy): Deprecate this usage in favor of Links.
-  std::map<fidl::StringPtr, modular::ContextValueWriterPtr> topic_node_writers_;
+  std::map<fidl::StringPtr, fuchsia::modular::ContextValueWriterPtr>
+      topic_node_writers_;
 
-  fidl::Binding<modular::LinkWatcher> link_watcher_binding_;
+  fidl::Binding<fuchsia::modular::LinkWatcher> link_watcher_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LinkWatcherImpl);
 };

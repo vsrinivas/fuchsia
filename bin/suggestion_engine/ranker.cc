@@ -4,6 +4,7 @@
 
 #include "peridot/bin/suggestion_engine/ranker.h"
 
+namespace fuchsia {
 namespace modular {
 
 Ranker::Ranker() = default;
@@ -15,3 +16,4 @@ double Ranker::Rank(const RankedSuggestion& suggestion) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

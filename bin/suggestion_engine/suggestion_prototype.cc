@@ -8,6 +8,7 @@
 
 #include "lib/fidl/cpp/clone.h"
 
+namespace fuchsia {
 namespace modular {
 
 std::string short_proposal_str(const SuggestionPrototype& prototype) {
@@ -38,3 +39,4 @@ Suggestion CreateSuggestion(const SuggestionPrototype& prototype) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

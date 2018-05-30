@@ -14,6 +14,7 @@
 
 #include "lib/fxl/macros.h"
 
+namespace fuchsia {
 namespace modular {
 
 // An instance of this class can be used to wait for the tracing system to be
@@ -35,5 +36,6 @@ class TracingWaiter {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_TESTS_BENCHMARK_STORY_TRACING_WAITER_H_

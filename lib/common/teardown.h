@@ -7,6 +7,7 @@
 
 #include "lib/fxl/time/time_delta.h"
 
+namespace fuchsia {
 namespace modular {
 
 // Standard timeout for async teardown.
@@ -32,5 +33,6 @@ constexpr auto kUserRunnerTimeout =
 constexpr auto kUserProviderTimeout = kBasicTimeout + kUserRunnerTimeout;
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_COMMON_TEARDOWN_H_

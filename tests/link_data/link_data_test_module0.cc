@@ -5,7 +5,7 @@
 // A Module that serves as the recipe in the example story, i.e. that
 // creates other Modules in the story.
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -15,15 +15,16 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/link_data/defs.h"
 
-using modular::testing::Signal;
+using fuchsia::modular::testing::Signal;
 
 namespace {
 
 // Implementation of the LinkWatcher service that forwards the value of one Link
 // instance to a second Link instance whenever it changes.
-class LinkForwarder : modular::LinkWatcher {
+class LinkForwarder : fuchsia::modular::LinkWatcher {
  public:
-  LinkForwarder(modular::Link* const src, modular::Link* const dst)
+  LinkForwarder(fuchsia::modular::Link* const src,
+                fuchsia::modular::Link* const dst)
       : src_binding_(this), src_(src), dst_(dst) {
     src_->Watch(src_binding_.NewBinding());
   }
@@ -34,9 +35,9 @@ class LinkForwarder : modular::LinkWatcher {
   }
 
  private:
-  fidl::Binding<modular::LinkWatcher> src_binding_;
-  modular::Link* const src_;
-  modular::Link* const dst_;
+  fidl::Binding<fuchsia::modular::LinkWatcher> src_binding_;
+  fuchsia::modular::Link* const src_;
+  fuchsia::modular::Link* const dst_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LinkForwarder);
 };
@@ -45,11 +46,12 @@ class LinkForwarder : modular::LinkWatcher {
 class TestApp {
  public:
   TestApp(
-      modular::ModuleHost* const module_host,
+      fuchsia::modular::ModuleHost* const module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host),
         module_context_(module_host_->module_context()) {
-    modular::testing::Init(module_host->application_context(), __FILE__);
+    fuchsia::modular::testing::Init(module_host->application_context(),
+                                    __FILE__);
     Signal("module0_init");
 
     Start();
@@ -74,35 +76,35 @@ class TestApp {
     module_context_->GetLink(kModule1Link, module1_link_.NewRequest());
     module_context_->GetLink(kModule2Link, module2_link_.NewRequest());
 
-    modular::IntentParameterData parameter_data;
+    fuchsia::modular::IntentParameterData parameter_data;
     parameter_data.set_link_name(kModule1Link);
 
-    modular::IntentParameter parameter;
+    fuchsia::modular::IntentParameter parameter;
     parameter.name = kLink;
     parameter.data = std::move(parameter_data);
 
-    modular::Intent intent;
+    fuchsia::modular::Intent intent;
     intent.action.handler = kModule1Url;
     intent.parameters.push_back(std::move(parameter));
 
     module_context_->StartModule("module1", std::move(intent),
                                  module1_.NewRequest(), nullptr,
-                                 [](modular::StartModuleStatus) {});
+                                 [](fuchsia::modular::StartModuleStatus) {});
 
-    parameter_data = modular::IntentParameterData();
+    parameter_data = fuchsia::modular::IntentParameterData();
     parameter_data.set_link_name(kModule2Link);
 
-    parameter = modular::IntentParameter();
+    parameter = fuchsia::modular::IntentParameter();
     parameter.name = kLink;
     parameter.data = std::move(parameter_data);
 
-    intent = modular::Intent();
+    intent = fuchsia::modular::Intent();
     intent.action.handler = kModule2Url;
     intent.parameters.push_back(std::move(parameter));
 
     module_context_->StartModule("module2", std::move(intent),
                                  module2_.NewRequest(), nullptr,
-                                 [](modular::StartModuleStatus) {});
+                                 [](fuchsia::modular::StartModuleStatus) {});
 
     connections_.emplace_back(
         new LinkForwarder(module1_link_.get(), module2_link_.get()));
@@ -111,20 +113,20 @@ class TestApp {
   // Called from ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     Signal("module1_stop");
-    modular::testing::Done(done);
+    fuchsia::modular::testing::Done(done);
   }
 
  private:
-  modular::ModuleHost* const module_host_;
-  modular::ModuleContext* const module_context_;
+  fuchsia::modular::ModuleHost* const module_host_;
+  fuchsia::modular::ModuleContext* const module_context_;
 
-  modular::LinkPtr link_;
+  fuchsia::modular::LinkPtr link_;
 
-  modular::ModuleControllerPtr module1_;
-  modular::LinkPtr module1_link_;
+  fuchsia::modular::ModuleControllerPtr module1_;
+  fuchsia::modular::LinkPtr module1_link_;
 
-  modular::ModuleControllerPtr module2_;
-  modular::LinkPtr module2_link_;
+  fuchsia::modular::ModuleControllerPtr module2_;
+  fuchsia::modular::LinkPtr module2_link_;
 
   std::vector<std::unique_ptr<LinkForwarder>> connections_;
 
@@ -136,8 +138,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::ModuleDriver<TestApp> driver(app_context.get(),
-                                         [&loop] { loop.QuitNow(); });
+  fuchsia::modular::ModuleDriver<TestApp> driver(app_context.get(),
+                                                 [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

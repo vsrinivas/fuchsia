@@ -5,7 +5,7 @@
 #include <memory>
 #include <string>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <views_v1_token/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
@@ -17,14 +17,15 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/last_focus_time/defs.h"
 
-using modular::testing::TestPoint;
+using fuchsia::modular::testing::TestPoint;
 
 namespace {
 
 // A simple story provider watcher implementation. It confirms that it sees an
 // increase in the last_focus_time in the StoryInfo it receives, and pushes the
 // test through to the next step.
-class StoryProviderWatcherImpl : public modular::StoryProviderWatcherBase {
+class StoryProviderWatcherImpl
+    : public fuchsia::modular::StoryProviderWatcherBase {
  public:
   StoryProviderWatcherImpl() = default;
   ~StoryProviderWatcherImpl() override = default;
@@ -36,8 +37,8 @@ class StoryProviderWatcherImpl : public modular::StoryProviderWatcherBase {
       "StoryInfo::last_focus_time increased after focus"};
 
   // |StoryProviderWatcher|
-  void OnChange(modular::StoryInfo story_info,
-                modular::StoryState story_state) override {
+  void OnChange(fuchsia::modular::StoryInfo story_info,
+                fuchsia::modular::StoryState story_state) override {
     FXL_CHECK(story_info.last_focus_time >= last_focus_time_);
     if (story_info.last_focus_time <= last_focus_time_) {
       return;
@@ -74,14 +75,14 @@ class StoryProviderWatcherImpl : public modular::StoryProviderWatcherBase {
   int64_t last_focus_time_{-1};
 };
 
-class StoryWatcherImpl : modular::StoryWatcher {
+class StoryWatcherImpl : fuchsia::modular::StoryWatcher {
  public:
   StoryWatcherImpl() : binding_(this) {}
   ~StoryWatcherImpl() override = default;
 
   // Registers itself as a watcher on the given story. Only one story at a time
   // can be watched.
-  void Watch(modular::StoryController* const story_controller) {
+  void Watch(fuchsia::modular::StoryController* const story_controller) {
     story_controller->Watch(binding_.NewBinding());
   }
 
@@ -94,9 +95,9 @@ class StoryWatcherImpl : modular::StoryWatcher {
 
  private:
   // |StoryWatcher|
-  void OnStateChange(modular::StoryState state) override {
+  void OnStateChange(fuchsia::modular::StoryState state) override {
     FXL_LOG(INFO) << "OnStateChange() " << state;
-    if (state != modular::StoryState::RUNNING) {
+    if (state != fuchsia::modular::StoryState::RUNNING) {
       return;
     }
 
@@ -104,22 +105,22 @@ class StoryWatcherImpl : modular::StoryWatcher {
   }
 
   // |StoryWatcher|
-  void OnModuleAdded(modular::ModuleData /*module_data*/) override {}
+  void OnModuleAdded(fuchsia::modular::ModuleData /*module_data*/) override {}
 
-  fidl::Binding<modular::StoryWatcher> binding_;
+  fidl::Binding<fuchsia::modular::StoryWatcher> binding_;
   std::function<void()> continue_;
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryWatcherImpl);
 };
 
 // A simple focus watcher implementation that invokes a "continue" callback when
 // it sees the next focus change.
-class FocusWatcherImpl : modular::FocusWatcher {
+class FocusWatcherImpl : fuchsia::modular::FocusWatcher {
  public:
   FocusWatcherImpl() : binding_(this) {}
   ~FocusWatcherImpl() override = default;
 
   // Registers itself as a watcher on the focus provider.
-  void Watch(modular::FocusProvider* const focus_provider) {
+  void Watch(fuchsia::modular::FocusProvider* const focus_provider) {
     focus_provider->Watch(binding_.NewBinding());
   }
 
@@ -128,17 +129,18 @@ class FocusWatcherImpl : modular::FocusWatcher {
 
  private:
   // |FocusWatcher|
-  void OnFocusChange(modular::FocusInfoPtr info) override {
+  void OnFocusChange(fuchsia::modular::FocusInfoPtr info) override {
     FXL_LOG(INFO) << "OnFocusChange() " << info->focused_story_id;
   }
 
-  fidl::Binding<modular::FocusWatcher> binding_;
+  fidl::Binding<fuchsia::modular::FocusWatcher> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FocusWatcherImpl);
 };
 
 // Cf. README.md for what this test does and how.
-class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
+class TestApp : public fuchsia::modular::testing::ComponentBase<
+                    fuchsia::modular::UserShell> {
  public:
   TestApp(component::ApplicationContext* const application_context)
       : ComponentBase(application_context) {
@@ -151,8 +153,8 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint initialize_{"Initialize()"};
 
   // |UserShell|
-  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
-                  user_shell_context) override {
+  void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
+                      user_shell_context) override {
     initialize_.Pass();
 
     user_shell_context_.Bind(std::move(user_shell_context));
@@ -210,17 +212,17 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     user_shell_context_->Logout();
   }
 
-  modular::UserShellContextPtr user_shell_context_;
+  fuchsia::modular::UserShellContextPtr user_shell_context_;
 
-  modular::StoryProviderPtr story_provider_;
+  fuchsia::modular::StoryProviderPtr story_provider_;
   StoryProviderWatcherImpl story_provider_watcher_;
 
   fidl::StringPtr story_id_;
-  modular::StoryControllerPtr story_controller_;
+  fuchsia::modular::StoryControllerPtr story_controller_;
   StoryWatcherImpl story_watcher_;
 
-  modular::FocusControllerPtr focus_controller_;
-  modular::FocusProviderPtr focus_provider_;
+  fuchsia::modular::FocusControllerPtr focus_controller_;
+  fuchsia::modular::FocusProviderPtr focus_provider_;
   FocusWatcherImpl focus_watcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
@@ -229,6 +231,6 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  modular::testing::ComponentMain<TestApp>();
+  fuchsia::modular::testing::ComponentMain<TestApp>();
   return 0;
 }

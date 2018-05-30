@@ -17,6 +17,7 @@
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/clone.h"
 
+namespace fuchsia {
 namespace modular {
 
 constexpr char kAppStoragePath[] = "/data/APP_DATA";
@@ -135,3 +136,4 @@ void ModuleControllerImpl::Stop(StopCallback done) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

@@ -14,6 +14,7 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 
+namespace fuchsia {
 namespace modular {
 namespace testing {
 
@@ -46,5 +47,6 @@ class FakeApplicationLauncher : public component::ApplicationLauncher {
 
 }  // namespace testing
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_TESTING_FAKE_APPLICATION_LAUNCHER_H_

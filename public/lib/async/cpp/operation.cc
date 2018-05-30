@@ -13,6 +13,7 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
+namespace fuchsia {
 namespace modular {
 
 constexpr const char kModularTraceCategory[] = "modular";
@@ -188,3 +189,4 @@ OperationBase::FlowTokenBase::~FlowTokenBase() {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

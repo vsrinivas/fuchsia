@@ -5,26 +5,35 @@
 #ifndef LIB_CONTEXT_CPP_FORMATTING_H_
 #define LIB_CONTEXT_CPP_FORMATTING_H_
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
+namespace fuchsia {
 namespace modular {
 
-std::ostream& operator<<(std::ostream& os, const modular::FocusedState& state);
-std::ostream& operator<<(std::ostream& os, const modular::StoryMetadata& meta);
-std::ostream& operator<<(std::ostream& os, const modular::ModuleMetadata& meta);
-std::ostream& operator<<(std::ostream& os, const modular::EntityMetadata& meta);
-std::ostream& operator<<(std::ostream& os, const modular::LinkMetadata& meta);
 std::ostream& operator<<(std::ostream& os,
-                         const modular::ContextMetadata& meta);
+                         const fuchsia::modular::FocusedState& state);
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::modular::StoryMetadata& meta);
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::modular::ModuleMetadata& meta);
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::modular::EntityMetadata& meta);
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::modular::LinkMetadata& meta);
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::modular::ContextMetadata& meta);
 
-std::ostream& operator<<(std::ostream& os, const modular::ContextValue& value);
 std::ostream& operator<<(std::ostream& os,
-                         const modular::ContextSelector& selector);
+                         const fuchsia::modular::ContextValue& value);
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::modular::ContextSelector& selector);
 
 std::ostream& operator<<(std::ostream& os,
-                         const modular::ContextUpdate& update);
-std::ostream& operator<<(std::ostream& os, const modular::ContextQuery& query);
+                         const fuchsia::modular::ContextUpdate& update);
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::modular::ContextQuery& query);
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // LIB_CONTEXT_CPP_FORMATTING_H_

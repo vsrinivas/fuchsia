@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/context/cpp/formatting.h"
 #include "lib/entity/cpp/json.h"
@@ -15,6 +15,7 @@
 #include "peridot/bin/context_engine/debug.h"
 #include "rapidjson/document.h"
 
+namespace fuchsia {
 namespace modular {
 
 ContextWriterImpl::ContextWriterImpl(
@@ -307,3 +308,4 @@ void ContextValueWriterImpl::Set(fidl::StringPtr content,
 }
 
 }  // namespace modular
+}  // namespace fuchsia

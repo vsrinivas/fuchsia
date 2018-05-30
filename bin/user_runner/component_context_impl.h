@@ -7,14 +7,15 @@
 
 #include <string>
 
+#include <fuchsia/modular/cpp/fidl.h>
 #include <ledger_internal/cpp/fidl.h>
-#include <modular/cpp/fidl.h>
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/user_runner/entity_provider_runner/entity_provider_runner.h"
 #include "peridot/bin/user_runner/message_queue/message_queue_manager.h"
 
+namespace fuchsia {
 namespace modular {
 
 class AgentRunner;
@@ -103,5 +104,6 @@ class ComponentContextImpl : public ComponentContext {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_COMPONENT_CONTEXT_IMPL_H_

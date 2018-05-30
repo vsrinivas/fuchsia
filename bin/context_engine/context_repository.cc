@@ -15,6 +15,7 @@
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "rapidjson/document.h"
 
+namespace fuchsia {
 namespace modular {
 
 ContextGraph::ContextGraph() = default;
@@ -389,3 +390,4 @@ std::set<ContextRepository::Id> ContextRepository::Select(
 }
 
 }  // namespace modular
+}  // namespace fuchsia

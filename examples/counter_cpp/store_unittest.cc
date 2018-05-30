@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "gtest/gtest.h"
 #include "lib/fxl/strings/string_view.h"
@@ -14,6 +14,7 @@
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/mock_base.h"
 
+namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -80,7 +81,7 @@ class LinkMock : public LinkMockBase {
     LinkMockBase::UpdateObject(std::move(path), json);
   }
 
-  fidl::InterfacePtr<modular::LinkWatcher> watcher;
+  fidl::InterfacePtr<fuchsia::modular::LinkWatcher> watcher;
 
  private:
   fidl::Binding<Link> binding_;
@@ -110,7 +111,7 @@ class StoreTest : public gtest::TestWithLoop {};
 
 TEST_F(StoreTest, Store_ModelChanged) {
   LinkMock link_mock;
-  modular::LinkPtr link;
+  fuchsia::modular::LinkPtr link;
   link_mock.Bind(link.NewRequest());
 
   modular_example::Store store{module_name};
@@ -134,3 +135,4 @@ TEST_F(StoreTest, Store_ModelChanged) {
 
 }  // namespace
 }  // namespace modular
+}  // namespace fuchsia

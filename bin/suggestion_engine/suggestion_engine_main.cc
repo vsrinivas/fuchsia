@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
@@ -10,6 +10,7 @@
 #include "peridot/bin/suggestion_engine/debug.h"
 #include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
 
+namespace fuchsia {
 namespace modular {
 
 class SuggestionEngineApp {
@@ -20,7 +21,7 @@ class SuggestionEngineApp {
     media::AudioServerPtr audio_server;
     context->ConnectToEnvironmentService(audio_server.NewRequest());
 
-    engine_impl_ = std::make_unique<modular::SuggestionEngineImpl>(
+    engine_impl_ = std::make_unique<fuchsia::modular::SuggestionEngineImpl>(
         std::move(audio_server));
 
     context->outgoing().AddPublicService<SuggestionEngine>(
@@ -52,19 +53,20 @@ class SuggestionEngineApp {
 
 
 }  // namespace modular
+}  // namespace fuchsia
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
   auto context = component::ApplicationContext::CreateFromStartupInfo();
-  auto suggestion_engine = std::make_unique<modular::SuggestionEngineApp>(
-      context.get());
+  auto suggestion_engine =
+      std::make_unique<fuchsia::modular::SuggestionEngineApp>(context.get());
 
-  fxl::WeakPtr<modular::SuggestionDebugImpl> debug = suggestion_engine->debug();
+  fxl::WeakPtr<fuchsia::modular::SuggestionDebugImpl> debug =
+      suggestion_engine->debug();
   debug->GetIdleWaiter()->SetMessageLoop(&loop);
 
-  modular::AppDriver<modular::SuggestionEngineApp> driver(
-      context->outgoing().deprecated_services(),
-      std::move(suggestion_engine),
+  fuchsia::modular::AppDriver<fuchsia::modular::SuggestionEngineApp> driver(
+      context->outgoing().deprecated_services(), std::move(suggestion_engine),
       [&loop] { loop.QuitNow(); });
 
   // The |WaitUntilIdle| debug functionality escapes the main message loop to

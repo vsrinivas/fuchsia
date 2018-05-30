@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <media/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
@@ -15,7 +15,7 @@
 #include "peridot/bin/suggestion_engine/debug.h"
 #include "peridot/lib/util/idle_waiter.h"
 
-
+namespace fuchsia {
 namespace modular {
 
 using SpeechStatusCallback = std::function<void(SpeechStatus)>;
@@ -53,5 +53,6 @@ class MediaPlayer {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_MEDIA_PLAYER_H_

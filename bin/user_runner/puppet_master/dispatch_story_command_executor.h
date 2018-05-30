@@ -7,6 +7,7 @@
 #include "lib/fidl/cpp/string.h"
 #include "peridot/bin/user_runner/puppet_master/story_command_executor.h"
 
+namespace fuchsia {
 namespace modular {
 
 class OperationContainer;
@@ -55,3 +56,4 @@ class DispatchStoryCommandExecutor::CommandRunner {
 };
 
 }  // namespace modular
+}  // namespace fuchsia

@@ -7,12 +7,13 @@
 
 #include <map>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fxl/macros.h"
 
+namespace fuchsia {
 namespace modular {
 
 class EntityProviderLauncher;
@@ -53,5 +54,6 @@ class EntityProviderController {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_ENTITY_PROVIDER_RUNNER_ENTITY_PROVIDER_CONTROLLER_H_

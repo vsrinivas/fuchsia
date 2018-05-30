@@ -6,7 +6,7 @@
 
 #include <rapidjson/document.h>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/context/cpp/context_helper.h"
@@ -27,24 +27,26 @@ namespace {
 const char kLocationTopic[] = "location/region";
 
 class IdeasAgentApp : public agents::IdeasAgent,
-                      public modular::ContextListener {
+                      public fuchsia::modular::ContextListener {
  public:
   IdeasAgentApp()
       : app_context_(component::ApplicationContext::CreateFromStartupInfo()),
-        reader_(app_context_->ConnectToEnvironmentService<modular::ContextReader>()),
+        reader_(app_context_->ConnectToEnvironmentService<
+                fuchsia::modular::ContextReader>()),
         binding_(this),
-        out_(app_context_->ConnectToEnvironmentService<modular::ProposalPublisher>()) {
-    modular::ContextQuery query;
-    modular::ContextSelector selector;
-    selector.type = modular::ContextValueType::ENTITY;
-    selector.meta = modular::ContextMetadata::New();
-    selector.meta->entity = modular::EntityMetadata::New();
+        out_(app_context_->ConnectToEnvironmentService<
+             fuchsia::modular::ProposalPublisher>()) {
+    fuchsia::modular::ContextQuery query;
+    fuchsia::modular::ContextSelector selector;
+    selector.type = fuchsia::modular::ContextValueType::ENTITY;
+    selector.meta = fuchsia::modular::ContextMetadata::New();
+    selector.meta->entity = fuchsia::modular::EntityMetadata::New();
     selector.meta->entity->topic = kLocationTopic;
     AddToContextQuery(&query, kLocationTopic, std::move(selector));
     reader_->Subscribe(std::move(query), binding_.NewBinding());
   }
 
-  void OnContextUpdate(modular::ContextUpdate update) override {
+  void OnContextUpdate(fuchsia::modular::ContextUpdate update) override {
     auto r = TakeContextValue(&update, kLocationTopic);
     if (!r.first)
       return;
@@ -66,10 +68,10 @@ class IdeasAgentApp : public agents::IdeasAgent,
       if (idea.empty()) {
         out_->Remove(kIdeaId);
       } else {
-        modular::Proposal p;
+        fuchsia::modular::Proposal p;
         p.id = kIdeaId;
-        p.on_selected = fidl::VectorPtr<modular::Action>::New(0);
-        modular::SuggestionDisplay d;
+        p.on_selected = fidl::VectorPtr<fuchsia::modular::Action>::New(0);
+        fuchsia::modular::SuggestionDisplay d;
 
         d.headline = idea;
         d.color = 0x00aaaa00;  // argb yellow
@@ -84,9 +86,9 @@ class IdeasAgentApp : public agents::IdeasAgent,
  private:
   std::unique_ptr<component::ApplicationContext> app_context_;
 
-  modular::ContextReaderPtr reader_;
-  fidl::Binding<modular::ContextListener> binding_;
-  modular::ProposalPublisherPtr out_;
+  fuchsia::modular::ContextReaderPtr reader_;
+  fidl::Binding<fuchsia::modular::ContextListener> binding_;
+  fuchsia::modular::ProposalPublisherPtr out_;
 };
 
 }  // namespace

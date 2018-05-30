@@ -6,12 +6,12 @@
 
 #include <utility>
 
-#include <modular/cpp/fidl.h>
-#include "peridot/lib/common/teardown.h"
+#include <fuchsia/modular/cpp/fidl.h>
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/ledger_client/constants.h"
 
+namespace fuchsia {
 namespace modular {
 
 namespace testing {
@@ -62,3 +62,4 @@ void LedgerRepositoryForTesting::Terminate(std::function<void()> done) {
 
 }  // namespace testing
 }  // namespace modular
+}  // namespace fuchsia

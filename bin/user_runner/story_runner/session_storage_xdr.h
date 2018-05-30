@@ -5,13 +5,15 @@
 #ifndef PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_SESSION_STORAGE_XDR_H_
 #define PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_SESSION_STORAGE_XDR_H_
 
-#include <modular_private/cpp/fidl.h>
+#include <fuchsia/modular/internal/cpp/fidl.h>
 #include "peridot/lib/fidl/json_xdr.h"
 
+namespace fuchsia {
 namespace modular {
 
-extern XdrFilterType<modular_private::StoryData> XdrStoryData[];
+extern XdrFilterType<modular::internal::StoryData> XdrStoryData[];
 
-}
+}  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_SESSION_STORAGE_XDR_H_

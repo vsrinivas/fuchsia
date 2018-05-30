@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library modular;
+library fuchsia.modular;
 
 // StoryCommands are POD structures that describe the set of operations that
 // can be performed on a story by components outside the modular framework. All commands are:

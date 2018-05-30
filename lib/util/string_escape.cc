@@ -6,6 +6,7 @@
 
 using fxl::StringView;
 
+namespace fuchsia {
 namespace modular {
 
 std::string StringEscape(StringView input,
@@ -68,3 +69,4 @@ std::vector<StringView> SplitEscapedString(StringView input,
 }
 
 }  // namespace modular
+}  // namespace fuchsia

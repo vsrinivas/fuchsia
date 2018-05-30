@@ -4,6 +4,7 @@
 
 #include "peridot/bin/suggestion_engine/ranking_features/proposal_hint_ranking_feature.h"
 
+namespace fuchsia {
 namespace modular {
 
 ProposalHintRankingFeature::ProposalHintRankingFeature() = default;
@@ -16,3 +17,4 @@ double ProposalHintRankingFeature::ComputeFeatureInternal(
 }
 
 }  // namespace modular
+}  // namespace fuchsia

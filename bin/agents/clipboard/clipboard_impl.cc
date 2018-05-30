@@ -9,6 +9,7 @@
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger_client/page_id.h"
 
+namespace fuchsia {
 namespace modular {
 namespace {
 constexpr char kClipboardImplPageId[] = "ClipboardPage___";  // 16 chars
@@ -32,3 +33,4 @@ void ClipboardImpl::Connect(fidl::InterfaceRequest<Clipboard> request) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

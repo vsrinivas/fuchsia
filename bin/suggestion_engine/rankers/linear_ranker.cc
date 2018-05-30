@@ -6,6 +6,7 @@
 
 #include "lib/fxl/logging.h"
 
+namespace fuchsia {
 namespace modular {
 
 LinearRanker::LinearRanker() : normalization_factor_(0.0) {}
@@ -38,3 +39,4 @@ double LinearRanker::Rank(
 }
 
 }  // namespace modular
+}  // namespace fuchsia

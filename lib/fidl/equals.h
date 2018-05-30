@@ -5,8 +5,9 @@
 #ifndef PERIDOT_LIB_FIDL_EQUALS_H_
 #define PERIDOT_LIB_FIDL_EQUALS_H_
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
+namespace fuchsia {
 namespace modular {
 
 bool ChainDataEqual(const ChainData& a, const ChainData& b) {
@@ -127,5 +128,6 @@ bool ModuleDataEqual(const ModuleDataPtr& a, const ModuleDataPtr& b) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_FIDL_EQUALS_H_

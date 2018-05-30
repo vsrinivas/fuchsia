@@ -7,7 +7,7 @@
 #include <iterator>
 #include <utility>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/fxl/logging.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
@@ -15,8 +15,8 @@
 using fidl::InterfaceHandle;
 using fidl::StringPtr;
 
-using modular::Link;
-using modular::LinkWatcher;
+using fuchsia::modular::Link;
+using fuchsia::modular::LinkWatcher;
 
 namespace modular_example {
 
@@ -164,7 +164,7 @@ void Store::SendIfDirty() {
     std::vector<fidl::StringPtr> segments{modular_example::kJsonSegment,
                                           modular_example::kDocId};
     link_->UpdateObject(fidl::VectorPtr<fidl::StringPtr>(segments),
-                        modular::JsonValueToString(doc));
+                        fuchsia::modular::JsonValueToString(doc));
     dirty_ = false;
   }
 }

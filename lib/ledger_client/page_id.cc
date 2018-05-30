@@ -4,6 +4,7 @@
 
 #include "peridot/lib/ledger_client/page_id.h"
 
+namespace fuchsia {
 namespace modular {
 
 ledger::PageId MakePageId(const std::string& value) {
@@ -15,3 +16,4 @@ ledger::PageId MakePageId(const std::string& value) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

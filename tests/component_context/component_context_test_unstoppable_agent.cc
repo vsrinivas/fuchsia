@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/app_driver/cpp/agent_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -12,7 +12,7 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/component_context/defs.h"
 
-using modular::testing::TestPoint;
+using fuchsia::modular::testing::TestPoint;
 
 namespace {
 
@@ -21,8 +21,9 @@ class TestApp {
  public:
   TestPoint initialized_{"Unstoppable agent initialized"};
 
-  TestApp(modular::AgentHost* agent_host) {
-    modular::testing::Init(agent_host->application_context(), __FILE__);
+  TestApp(fuchsia::modular::AgentHost* agent_host) {
+    fuchsia::modular::testing::Init(agent_host->application_context(),
+                                    __FILE__);
     agent_host->agent_context()->GetComponentContext(
         component_context_.NewRequest());
     initialized_.Pass();
@@ -41,12 +42,12 @@ class TestApp {
   // Called by AgentDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
-    modular::testing::Done(done);
+    fuchsia::modular::testing::Done(done);
   }
 
  private:
-  modular::AgentContextPtr agent_context_;
-  modular::ComponentContextPtr component_context_;
+  fuchsia::modular::AgentContextPtr agent_context_;
+  fuchsia::modular::ComponentContextPtr component_context_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
@@ -56,8 +57,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::AgentDriver<TestApp> driver(app_context.get(),
-                                       [&loop] { loop.QuitNow(); });
+  fuchsia::modular::AgentDriver<TestApp> driver(app_context.get(),
+                                                [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

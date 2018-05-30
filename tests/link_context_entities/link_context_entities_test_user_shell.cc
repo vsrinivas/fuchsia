@@ -6,7 +6,7 @@
 #include <sstream>
 #include <string>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <views_v1_token/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/context/cpp/context_helper.h"
@@ -22,27 +22,27 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/link_context_entities/defs.h"
 
-using modular::testing::TestPoint;
+using fuchsia::modular::testing::TestPoint;
 
 namespace {
 
 // A context reader watcher implementation.
-class ContextListenerImpl : modular::ContextListener {
+class ContextListenerImpl : fuchsia::modular::ContextListener {
  public:
   ContextListenerImpl() : binding_(this) {
-    handler_ = [](const modular::ContextValue&) {};
+    handler_ = [](const fuchsia::modular::ContextValue&) {};
   }
 
   ~ContextListenerImpl() override = default;
 
   // Registers itself a watcher on the given story provider. Only one story
   // provider can be watched at a time.
-  void Listen(modular::ContextReader* const context_reader) {
+  void Listen(fuchsia::modular::ContextReader* const context_reader) {
     // Subscribe to all entity values.
-    modular::ContextSelector selector;
-    selector.type = modular::ContextValueType::ENTITY;
+    fuchsia::modular::ContextSelector selector;
+    selector.type = fuchsia::modular::ContextValueType::ENTITY;
 
-    modular::ContextQuery query;
+    fuchsia::modular::ContextQuery query;
     AddToContextQuery(&query, "all", std::move(selector));
 
     context_reader->Subscribe(std::move(query), binding_.NewBinding());
@@ -51,7 +51,7 @@ class ContextListenerImpl : modular::ContextListener {
     });
   }
 
-  using Handler = std::function<void(const modular::ContextValue&)>;
+  using Handler = std::function<void(const fuchsia::modular::ContextValue&)>;
 
   void Handle(const Handler& handler) { handler_ = handler; }
 
@@ -60,7 +60,7 @@ class ContextListenerImpl : modular::ContextListener {
 
  private:
   // |ContextListener|
-  void OnContextUpdate(modular::ContextUpdate update) override {
+  void OnContextUpdate(fuchsia::modular::ContextUpdate update) override {
     FXL_LOG(INFO) << "ContextListenerImpl::OnUpdate()";
     const auto& values = TakeContextValue(&update, "all");
     for (const auto& value : *values.second) {
@@ -69,14 +69,15 @@ class ContextListenerImpl : modular::ContextListener {
     }
   }
 
-  fidl::Binding<modular::ContextListener> binding_;
+  fidl::Binding<fuchsia::modular::ContextListener> binding_;
   Handler handler_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ContextListenerImpl);
 };
 
 // Cf. README.md for what this test does and how.
-class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
+class TestApp : public fuchsia::modular::testing::ComponentBase<
+                    fuchsia::modular::UserShell> {
  public:
   TestApp(component::ApplicationContext* const application_context)
       : ComponentBase(application_context) {
@@ -89,7 +90,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint initialize_{"Initialize()"};
 
   // |UserShell|
-  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
                       user_shell_context) override {
     initialize_.Pass();
 
@@ -97,7 +98,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
-    modular::IntelligenceServicesPtr intelligence_services;
+    fuchsia::modular::IntelligenceServicesPtr intelligence_services;
     user_shell_context_->GetIntelligenceServices(
         intelligence_services.NewRequest());
     intelligence_services->GetContextReader(context_reader_.NewRequest());
@@ -124,9 +125,10 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   void StartStory() {
     start_story_enter_.Pass();
 
-    context_listener_.Handle([this](const modular::ContextValue& value) {
-      ProcessContextValue(value);
-    });
+    context_listener_.Handle(
+        [this](const fuchsia::modular::ContextValue& value) {
+          ProcessContextValue(value);
+        });
 
     story_provider_->GetController(story_id_, story_controller_.NewRequest());
 
@@ -142,7 +144,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint get_context_topic_2_{"GetContextTopic() value=2"};
   int get_context_topic_2_called_{};
 
-  void ProcessContextValue(const modular::ContextValue& value) {
+  void ProcessContextValue(const fuchsia::modular::ContextValue& value) {
     // The context value has metadata that is derived from the story id in
     // which it was published.
     if (!value.meta.story || !value.meta.link || !value.meta.entity) {
@@ -157,7 +159,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
       return;
     }
 
-    modular::JsonDoc doc;
+    fuchsia::modular::JsonDoc doc;
     doc.Parse(value.content);
 
     if (doc.HasParseError()) {
@@ -201,20 +203,21 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
     if (get_context_topic_1_called_ > 0 && get_context_topic_2_called_ > 0) {
       context_listener_.Reset();
-      context_listener_.Handle([this](const modular::ContextValue&) {});
+      context_listener_.Handle(
+          [this](const fuchsia::modular::ContextValue&) {});
       Logout();
     }
   }
 
   void Logout() { user_shell_context_->Logout(); }
 
-  modular::UserShellContextPtr user_shell_context_;
-  modular::StoryProviderPtr story_provider_;
+  fuchsia::modular::UserShellContextPtr user_shell_context_;
+  fuchsia::modular::StoryProviderPtr story_provider_;
 
   fidl::StringPtr story_id_;
-  modular::StoryControllerPtr story_controller_;
+  fuchsia::modular::StoryControllerPtr story_controller_;
 
-  modular::ContextReaderPtr context_reader_;
+  fuchsia::modular::ContextReaderPtr context_reader_;
   ContextListenerImpl context_listener_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
@@ -223,6 +226,6 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  modular::testing::ComponentMain<TestApp>();
+  fuchsia::modular::testing::ComponentMain<TestApp>();
   return 0;
 }

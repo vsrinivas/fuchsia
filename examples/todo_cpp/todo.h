@@ -7,10 +7,9 @@
 
 #include <random>
 
-#include <lib/async-loop/cpp/loop.h>
-#include <modular/cpp/fidl.h>
-
+#include <fuchsia/modular/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/command_line.h"
@@ -21,8 +20,7 @@ namespace todo {
 
 using Key = fidl::VectorPtr<uint8_t>;
 
-class TodoApp : public ledger::PageWatcher,
-                modular::Lifecycle {
+class TodoApp : public ledger::PageWatcher, fuchsia::modular::Lifecycle {
  public:
   TodoApp(async::Loop* loop);
 
@@ -51,8 +49,8 @@ class TodoApp : public ledger::PageWatcher,
   std::uniform_int_distribution<> delay_distribution_;
   Generator generator_;
   std::unique_ptr<component::ApplicationContext> context_;
-  fidl::InterfacePtr<modular::ModuleContext> module_context_;
-  modular::ComponentContextPtr component_context_;
+  fidl::InterfacePtr<fuchsia::modular::ModuleContext> module_context_;
+  fuchsia::modular::ComponentContextPtr component_context_;
   ledger::LedgerPtr ledger_;
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
   ledger::PagePtr page_;

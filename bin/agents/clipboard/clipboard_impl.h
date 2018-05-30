@@ -7,11 +7,12 @@
 
 #include <string>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/agents/clipboard/clipboard_storage.h"
 
+namespace fuchsia {
 namespace modular {
 
 // An agent responsible for providing the Clipboard service.
@@ -41,5 +42,6 @@ class ClipboardImpl : Clipboard {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_AGENTS_CLIPBOARD_CLIPBOARD_IMPL_H_

@@ -5,12 +5,13 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_PROPOSAL_PUBLISHER_IMPL_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_PROPOSAL_PUBLISHER_IMPL_H_
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/bound_set/bound_set.h"
 
+namespace fuchsia {
 namespace modular {
 
 class SuggestionEngineImpl;
@@ -38,7 +39,7 @@ class ProposalPublisherImpl : public ProposalPublisher {
   const std::string component_url() { return component_url_; }
 
  private:
-  class BindingSet : public modular::BindingSet<ProposalPublisher> {
+  class BindingSet : public fuchsia::modular::BindingSet<ProposalPublisher> {
    public:
     BindingSet(ProposalPublisherImpl* impl);
     ~BindingSet() override;
@@ -61,5 +62,6 @@ class ProposalPublisherImpl : public ProposalPublisher {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_PROPOSAL_PUBLISHER_IMPL_H_

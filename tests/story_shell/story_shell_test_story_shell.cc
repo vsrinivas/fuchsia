@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <presentation/cpp/fidl.h>
 #include <views_v1_token/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
@@ -22,12 +22,13 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/story_shell/defs.h"
 
-using modular::testing::Signal;
+using fuchsia::modular::testing::Signal;
 
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
+class TestApp : public fuchsia::modular::testing::ComponentBase<
+                    fuchsia::modular::StoryShell> {
  public:
   TestApp(component::ApplicationContext* const application_context)
       : ComponentBase(application_context) {
@@ -38,8 +39,8 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
 
  private:
   // |StoryShell|
-  void Initialize(
-      fidl::InterfaceHandle<modular::StoryContext> story_context) override {
+  void Initialize(fidl::InterfaceHandle<fuchsia::modular::StoryContext>
+                      story_context) override {
     story_context_.Bind(std::move(story_context));
     story_context_->GetPresentation(presentation_.NewRequest());
   }
@@ -48,11 +49,11 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
   bool seen_root_one_{};
 
   // |StoryShell|
-  void ConnectView(fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner,
-                   fidl::StringPtr view_id,
-                   fidl::StringPtr anchor_id,
-                   modular::SurfaceRelationPtr /*surface_relation*/,
-                   modular::ModuleManifestPtr module_manifest) override {
+  void ConnectView(
+      fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner,
+      fidl::StringPtr view_id, fidl::StringPtr anchor_id,
+      fuchsia::modular::SurfaceRelationPtr /*surface_relation*/,
+      fuchsia::modular::ModuleManifestPtr module_manifest) override {
     FXL_LOG(INFO) << "ConnectView " << view_id << " " << anchor_id
                   << " "
                   << (module_manifest ? module_manifest->composition_pattern : " NO MANIFEST");
@@ -94,14 +95,14 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
 
   // |StoryShell|
   void AddContainer(
-      fidl::StringPtr /*container_name*/,
-      fidl::StringPtr /*parent_id*/,
-      modular::SurfaceRelation /*relation*/,
-      fidl::VectorPtr<modular::ContainerLayout> /*layout*/,
-      fidl::VectorPtr<modular::ContainerRelationEntry> /* relationships */,
-      fidl::VectorPtr<modular::ContainerView> /* views */) override {}
+      fidl::StringPtr /*container_name*/, fidl::StringPtr /*parent_id*/,
+      fuchsia::modular::SurfaceRelation /*relation*/,
+      fidl::VectorPtr<fuchsia::modular::ContainerLayout> /*layout*/,
+      fidl::VectorPtr<
+          fuchsia::modular::ContainerRelationEntry> /* relationships */,
+      fidl::VectorPtr<fuchsia::modular::ContainerView> /* views */) override {}
 
-  modular::StoryContextPtr story_context_;
+  fuchsia::modular::StoryContextPtr story_context_;
   presentation::PresentationPtr presentation_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
@@ -111,6 +112,6 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
 
 int main(int /* argc */, const char** /* argv */) {
   FXL_LOG(INFO) << "Story Shell main";
-  modular::testing::ComponentMain<TestApp>();
+  fuchsia::modular::testing::ComponentMain<TestApp>();
   return 0;
 }

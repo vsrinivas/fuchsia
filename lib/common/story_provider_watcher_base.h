@@ -5,16 +5,17 @@
 #ifndef PERIDOT_LIB_COMMON_STORY_PROVIDER_WATCHER_BASE_H_
 #define PERIDOT_LIB_COMMON_STORY_PROVIDER_WATCHER_BASE_H_
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 
+namespace fuchsia {
 namespace modular {
 
 // A simple story provider watcher implementation that calls the Continue()
 // callback whenever OnChange() is received. This default implementation ignores
 // OnDelete(), but you can override this class to handle OnDelete().
-class StoryProviderWatcherBase : modular::StoryProviderWatcher {
+class StoryProviderWatcherBase : fuchsia::modular::StoryProviderWatcher {
  public:
   StoryProviderWatcherBase();
   ~StoryProviderWatcherBase() override;
@@ -26,7 +27,7 @@ class StoryProviderWatcherBase : modular::StoryProviderWatcher {
 
   // Registers itself a watcher on the given story provider. Only one story
   // provider can be watched at a time.
-  void Watch(modular::StoryProviderPtr* story_provider);
+  void Watch(fuchsia::modular::StoryProviderPtr* story_provider);
 
   // Deregisters itself from the watched story provider.
   void Reset();
@@ -39,13 +40,14 @@ class StoryProviderWatcherBase : modular::StoryProviderWatcher {
   void OnDelete(::fidl::StringPtr story_id) override;
 
   // |StoryProviderWatcher|
-  void OnChange(modular::StoryInfo story_info,
-                modular::StoryState story_state) override;
+  void OnChange(fuchsia::modular::StoryInfo story_info,
+                fuchsia::modular::StoryState story_state) override;
 
-  fidl::Binding<modular::StoryProviderWatcher> binding_;
+  fidl::Binding<fuchsia::modular::StoryProviderWatcher> binding_;
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryProviderWatcherBase);
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_COMMON_STORY_PROVIDER_WATCHER_BASE_H_

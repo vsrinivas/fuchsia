@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <map>
 #include <memory>
 
@@ -14,6 +14,7 @@
 #include "peridot/bin/user_runner/puppet_master/dispatch_story_command_executor.h"
 #include "peridot/public/lib/async/cpp/operation.h"
 
+namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -200,3 +201,4 @@ TEST_F(DispatchStoryCommandExecutorTest, ErrorsAbortEarly) {
 
 }  // namespace
 }  // namespace modular
+}  // namespace fuchsia

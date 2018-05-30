@@ -13,6 +13,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/ui/view_framework/base_view.h"
 
+namespace fuchsia {
 namespace modular {
 
 // A class that allows modules to display the UI of their child
@@ -51,5 +52,6 @@ class ViewHost : public mozart::BaseView {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_FIDL_VIEW_HOST_H_

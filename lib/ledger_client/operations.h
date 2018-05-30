@@ -17,6 +17,7 @@
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/page_client.h"
 
+namespace fuchsia {
 namespace modular {
 
 // Common base class for all Operation classes that operate on a ledger Page.
@@ -350,5 +351,6 @@ class DumpPageSnapshotCall : public PageOperation<std::string> {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_LEDGER_CLIENT_OPERATIONS_H_

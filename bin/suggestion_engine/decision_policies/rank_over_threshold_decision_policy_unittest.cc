@@ -6,6 +6,7 @@
 #include "peridot/bin/suggestion_engine/ranker.h"
 #include "gtest/gtest.h"
 
+namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -43,3 +44,4 @@ TEST_F(RankOverThresholdDecisionPolicyTest, NotAccept)  {
 
 }  // namespace
 }  // namespace modular
+}  // namespace fuchsia

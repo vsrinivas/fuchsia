@@ -8,6 +8,7 @@
 #include <map>
 #include <string>
 
+namespace fuchsia {
 namespace modular {
 namespace testing {
 
@@ -35,5 +36,6 @@ class MockBase {
 
 }  // namespace testing
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_TESTING_MOCK_BASE_H_

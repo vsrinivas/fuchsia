@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_ACQUIRERS_MOCK_MOCK_GPS_H_
 #define PERIDOT_BIN_ACQUIRERS_MOCK_MOCK_GPS_H_
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "peridot/bin/acquirers/gps.h"
@@ -15,11 +15,11 @@ namespace acquirers {
 
 class MockGps : public GpsAcquirer {
  public:
-  MockGps(modular::ContextEngine* context_engine);
+  MockGps(fuchsia::modular::ContextEngine* context_engine);
   void Publish(float latitude, float longitude);
 
  private:
-  modular::ContextWriterPtr writer_;
+  fuchsia::modular::ContextWriterPtr writer_;
 };
 
 }  // namespace acquirers

@@ -5,6 +5,7 @@
 #include "peridot/bin/suggestion_engine/ranking_features/annoyance_ranking_feature.h"
 #include "gtest/gtest.h"
 
+namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -39,3 +40,4 @@ TEST_F(AnnoyanceRankingFeatureTest, ComputeFeatureNonAnnoyance)  {
 
 }  // namespace
 }  // namespace modular
+}  // namespace fuchsia

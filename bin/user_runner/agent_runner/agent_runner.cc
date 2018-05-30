@@ -20,6 +20,7 @@
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/storage.h"
 
+namespace fuchsia {
 namespace modular {
 
 constexpr zx::duration kTeardownTimeout = zx::sec(3);
@@ -505,3 +506,4 @@ void AgentRunner::Watch(fidl::InterfaceHandle<AgentProviderWatcher> watcher) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

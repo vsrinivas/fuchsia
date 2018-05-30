@@ -8,12 +8,13 @@
 #include <functional>
 #include <memory>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "lib/svc/cpp/service_namespace.h"
 
+namespace fuchsia {
 namespace modular {
 
 class LifecycleImpl : Lifecycle {
@@ -40,5 +41,6 @@ class LifecycleImpl : Lifecycle {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // LIB_LIFECYCLE_CPP_LIFECYCLE_IMPL_H_

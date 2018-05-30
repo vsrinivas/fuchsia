@@ -11,10 +11,10 @@
 
 #include <cloud_provider/cpp/fidl.h>
 #include <cloud_provider_firebase/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/modular/internal/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
-#include <modular/cpp/fidl.h>
 #include <modular_auth/cpp/fidl.h>
-#include <modular_private/cpp/fidl.h>
 #include <presentation/cpp/fidl.h>
 #include <speech/cpp/fidl.h>
 #include <views_v1_token/cpp/fidl.h>
@@ -32,6 +32,7 @@
 #include "peridot/lib/fidl/view_host.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 
+namespace fuchsia {
 namespace modular {
 
 class AgentRunner;
@@ -47,7 +48,7 @@ class StoryProviderImpl;
 class SessionStorage;
 class VisibleStoriesHandler;
 
-class UserRunnerImpl : modular_private::UserRunner,
+class UserRunnerImpl : modular::internal::UserRunner,
                        UserShellContext,
                        EntityProviderLauncher {
  public:
@@ -60,14 +61,14 @@ class UserRunnerImpl : modular_private::UserRunner,
 
  private:
   // |UserRunner|
-  void Initialize(
-      modular_auth::AccountPtr account, AppConfig user_shell,
-      AppConfig story_shell,
-      fidl::InterfaceHandle<modular_auth::TokenProviderFactory>
-          token_provider_factory,
-      fidl::InterfaceHandle<modular_private::UserContext> user_context,
-      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request)
-      override;
+  void Initialize(modular_auth::AccountPtr account, AppConfig user_shell,
+                  AppConfig story_shell,
+                  fidl::InterfaceHandle<modular_auth::TokenProviderFactory>
+                      token_provider_factory,
+                  fidl::InterfaceHandle<fuchsia::modular::internal::UserContext>
+                      user_context,
+                  fidl::InterfaceRequest<views_v1_token::ViewOwner>
+                      view_owner_request) override;
 
   // |UserRunner|
   void SwapUserShell(AppConfig user_shell,
@@ -78,7 +79,8 @@ class UserRunnerImpl : modular_private::UserRunner,
       modular_auth::AccountPtr account,
       fidl::InterfaceHandle<modular_auth::TokenProviderFactory>
           token_provider_factory,
-      fidl::InterfaceHandle<modular_private::UserContext> user_context);
+      fidl::InterfaceHandle<fuchsia::modular::internal::UserContext>
+          user_context);
   void InitializeLedger();
   void InitializeLedgerDashboard();
   void InitializeDeviceMap();
@@ -105,7 +107,8 @@ class UserRunnerImpl : modular_private::UserRunner,
       fidl::InterfaceRequest<FocusController> request) override;
   void GetFocusProvider(fidl::InterfaceRequest<FocusProvider> request) override;
   void GetIntelligenceServices(
-      fidl::InterfaceRequest<modular::IntelligenceServices> request) override;
+      fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request)
+      override;
   void GetLink(fidl::InterfaceRequest<Link> request) override;
   void GetPresentation(
       fidl::InterfaceRequest<presentation::Presentation> request) override;
@@ -113,7 +116,8 @@ class UserRunnerImpl : modular_private::UserRunner,
       fidl::InterfaceRequest<speech::SpeechToText> request) override;
   void GetStoryProvider(fidl::InterfaceRequest<StoryProvider> request) override;
   void GetSuggestionProvider(
-      fidl::InterfaceRequest<modular::SuggestionProvider> request) override;
+      fidl::InterfaceRequest<fuchsia::modular::SuggestionProvider> request)
+      override;
   void GetVisibleStoriesController(
       fidl::InterfaceRequest<VisibleStoriesController> request) override;
   void Logout() override;
@@ -157,11 +161,11 @@ class UserRunnerImpl : modular_private::UserRunner,
   component::ApplicationContext* const application_context_;
   const bool test_;
 
-  fidl::BindingSet<modular_private::UserRunner> bindings_;
+  fidl::BindingSet<fuchsia::modular::internal::UserRunner> bindings_;
   fidl::Binding<UserShellContext> user_shell_context_binding_;
 
   modular_auth::TokenProviderFactoryPtr token_provider_factory_;
-  modular_private::UserContextPtr user_context_;
+  modular::internal::UserContextPtr user_context_;
   std::unique_ptr<AppClient<Lifecycle>> cloud_provider_app_;
   cloud_provider_firebase::FactoryPtr cloud_provider_factory_;
   std::unique_ptr<AppClient<ledger_internal::LedgerController>> ledger_app_;
@@ -175,7 +179,7 @@ class UserRunnerImpl : modular_private::UserRunner,
 
   modular_auth::AccountPtr account_;
 
-  std::unique_ptr<AppClient<modular::UserIntelligenceProviderFactory>>
+  std::unique_ptr<AppClient<fuchsia::modular::UserIntelligenceProviderFactory>>
       maxwell_app_;
   std::unique_ptr<AppClient<Lifecycle>> context_engine_app_;
   std::unique_ptr<AppClient<Lifecycle>> module_resolver_app_;
@@ -209,9 +213,10 @@ class UserRunnerImpl : modular_private::UserRunner,
 
   // Service provider interfaces for maxwell services. They are created with
   // the component context above as parameters.
-  fidl::InterfacePtr<modular::UserIntelligenceProvider>
+  fidl::InterfacePtr<fuchsia::modular::UserIntelligenceProvider>
       user_intelligence_provider_;
-  fidl::InterfacePtr<modular::IntelligenceServices> intelligence_services_;
+  fidl::InterfacePtr<fuchsia::modular::IntelligenceServices>
+      intelligence_services_;
 
   // Services we provide to the module resolver's namespace.
   component::ServiceProviderImpl module_resolver_ns_services_;
@@ -259,5 +264,6 @@ class UserRunnerImpl : modular_private::UserRunner,
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_USER_RUNNER_IMPL_H_

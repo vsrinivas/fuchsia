@@ -7,6 +7,7 @@
 
 #include <string>
 
+namespace fuchsia {
 namespace modular {
 
 // The EntitySpan type field for email entities.
@@ -25,5 +26,6 @@ const std::string kFocalEntitiesTopic = "inferred/focal_entities";
 const std::string kSelectedEntitiesTopic = "inferred/selected_entities";
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_AGENTS_ENTITY_UTILS_ENTITY_UTILS_H_

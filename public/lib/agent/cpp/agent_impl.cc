@@ -6,6 +6,7 @@
 
 #include <fs/service.h>
 
+namespace fuchsia {
 namespace modular {
 
 AgentImpl::AgentImpl(component::ServiceNamespace* const service_namespace,
@@ -42,3 +43,4 @@ void AgentImpl::RunTask(fidl::StringPtr task_id,
 }
 
 }  // namespace modular
+}  // namespace fuchsia

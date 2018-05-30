@@ -4,7 +4,7 @@
 
 #include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <string>
 
 #include "lib/context/cpp/context_helper.h"
@@ -29,6 +29,7 @@
 #include "peridot/bin/suggestion_engine/suggestion_active_filter.h"
 #include "peridot/lib/fidl/json_xdr.h"
 
+namespace fuchsia {
 namespace modular {
 
 std::string StoryNameKey(const std::string& source_url,
@@ -175,8 +176,8 @@ void SuggestionEngineImpl::RegisterQueryHandler(
 
 // |SuggestionEngine|
 void SuggestionEngineImpl::Initialize(
-    fidl::InterfaceHandle<modular::StoryProvider> story_provider,
-    fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
+    fidl::InterfaceHandle<fuchsia::modular::StoryProvider> story_provider,
+    fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider,
     fidl::InterfaceHandle<ContextWriter> context_writer,
     fidl::InterfaceHandle<ContextReader> context_reader) {
   story_provider_.Bind(std::move(story_provider));
@@ -371,7 +372,7 @@ void SuggestionEngineImpl::PerformCreateStoryAction(
       fxl::MakeCopyable([this, listener = std::move(listener), proposal_id,
                          intent = std::move(intent),
                          activity](const fidl::StringPtr& story_id) mutable {
-        modular::StoryControllerPtr story_controller;
+        fuchsia::modular::StoryControllerPtr story_controller;
         story_provider_->GetController(story_id, story_controller.NewRequest());
         // TODO(thatguy): We give the first module the name "root". We'd like to
         // move away from module names being assigned by the framework or other
@@ -424,9 +425,9 @@ void SuggestionEngineImpl::PerformAddModuleAction(
                        << override_story_id << ".";
     }
   }
-  modular::StoryControllerPtr story_controller;
+  fuchsia::modular::StoryControllerPtr story_controller;
   story_provider_->GetController(story_id, story_controller.NewRequest());
-  modular::Intent intent;
+  fuchsia::modular::Intent intent;
   fidl::Clone(add_module.intent, &intent);
   story_controller->AddModule(add_module.surface_parent_module_path.Clone(),
                               module_name, std::move(intent),
@@ -444,7 +445,7 @@ void SuggestionEngineImpl::PerformSetLinkValueAction(
     return;
   }
 
-  modular::StoryControllerPtr story_controller;
+  fuchsia::modular::StoryControllerPtr story_controller;
   story_provider_->GetController(story_id, story_controller.NewRequest());
 
   const auto& set_link_value = action.set_link_value_action();
@@ -483,3 +484,4 @@ std::string SuggestionEngineImpl::StoryIdFromName(
 }
 
 }  // namespace modular
+}  // namespace fuchsia

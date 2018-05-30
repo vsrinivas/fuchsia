@@ -14,6 +14,7 @@
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/storage.h"
 
+namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -225,3 +226,4 @@ void AgentRunnerStorageImpl::OnPageDelete(const std::string& key) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

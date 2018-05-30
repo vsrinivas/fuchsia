@@ -19,6 +19,7 @@
 #include "lib/fxl/time/time_delta.h"
 #include "lib/fxl/time/time_point.h"
 
+namespace fuchsia {
 namespace modular {
 
 // For polling minfs.
@@ -51,3 +52,4 @@ void WaitForMinfs() {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

@@ -13,6 +13,7 @@
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/array_to_string.h"
 
+namespace fuchsia {
 namespace modular {
 
 UserControllerImpl::UserControllerImpl(
@@ -116,3 +117,4 @@ void UserControllerImpl::Logout() {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

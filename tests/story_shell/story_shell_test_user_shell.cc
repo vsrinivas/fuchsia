@@ -7,11 +7,11 @@
 #include <utility>
 
 #include <component/cpp/fidl.h>
-#include <modular/cpp/fidl.h>
-#include <presentation/cpp/fidl.h>
-#include <views_v1_token/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <presentation/cpp/fidl.h>
+#include <views_v1_token/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
@@ -29,25 +29,26 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/story_shell/defs.h"
 
-using modular::testing::TestPoint;
-using modular::testing::Get;
-using modular::testing::Put;
+using fuchsia::modular::testing::Get;
+using fuchsia::modular::testing::Put;
+using fuchsia::modular::testing::TestPoint;
 
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp : public modular::testing::ComponentBase<modular::UserShell>,
-                modular::UserShellPresentationProvider {
+class TestApp : public fuchsia::modular::testing::ComponentBase<
+                    fuchsia::modular::UserShell>,
+                fuchsia::modular::UserShellPresentationProvider {
  public:
   explicit TestApp(component::ApplicationContext* const application_context)
       : ComponentBase(application_context) {
     TestInit(__FILE__);
 
     application_context->outgoing()
-        .AddPublicService<modular::UserShellPresentationProvider>(
-            [this](
-                fidl::InterfaceRequest<modular::UserShellPresentationProvider>
-                    request) {
+        .AddPublicService<fuchsia::modular::UserShellPresentationProvider>(
+            [this](fidl::InterfaceRequest<
+                   fuchsia::modular::UserShellPresentationProvider>
+                       request) {
               presentation_provider_bindings_.AddBinding(this,
                                                          std::move(request));
             });
@@ -84,9 +85,8 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell>,
   // |UserShellPresentationProvider|
   void WatchVisualState(
       fidl::StringPtr story_id,
-      fidl::InterfaceHandle<modular::StoryVisualStateWatcher> watcher) override
-  {
-  }
+      fidl::InterfaceHandle<fuchsia::modular::StoryVisualStateWatcher> watcher)
+      override {}
 
   TestPoint create_view_{"CreateView()"};
 
@@ -99,7 +99,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell>,
   }
 
   // |UserShell|
-  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
                       user_shell_context) override {
     user_shell_context_.Bind(std::move(user_shell_context));
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
@@ -121,10 +121,11 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell>,
   TestPoint story1_run1_{"Story1 Run1"};
 
   void Story1_Run1() {
-    auto proceed_after_5 = modular::testing::NewBarrierClosure(5, [this] {
-        story1_run1_.Pass();
-        Story1_Stop1();
-      });
+    auto proceed_after_5 =
+        fuchsia::modular::testing::NewBarrierClosure(5, [this] {
+          story1_run1_.Pass();
+          Story1_Stop1();
+        });
 
     Get("root:one", proceed_after_5);
     Get("root:one manifest", proceed_after_5);
@@ -144,7 +145,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell>,
     // the story.
     fidl::VectorPtr<fidl::StringPtr> parent_one;
     parent_one.push_back("root");
-    modular::Intent intent_one;
+    fuchsia::modular::Intent intent_one;
     intent_one.action.name = kCommonNullAction;
     story_controller_->AddModule(std::move(parent_one), "one",
                                  std::move(intent_one),
@@ -153,7 +154,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell>,
     fidl::VectorPtr<fidl::StringPtr> parent_two;
     parent_two.push_back("root");
     parent_two.push_back("one");
-    modular::Intent intent_two;
+    fuchsia::modular::Intent intent_two;
     intent_two.action.name = kCommonNullAction;
     story_controller_->AddModule(std::move(parent_two), "two",
                                  std::move(intent_two),
@@ -169,10 +170,11 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell>,
   TestPoint story1_run2_{"Story1 Run2"};
 
   void Story1_Run2() {
-    auto proceed_after_5 = modular::testing::NewBarrierClosure(5, [this] {
-        story1_run2_.Pass();
-        Story1_Stop2();
-      });
+    auto proceed_after_5 =
+        fuchsia::modular::testing::NewBarrierClosure(5, [this] {
+          story1_run2_.Pass();
+          Story1_Stop2();
+        });
 
     Get("root:one", proceed_after_5);
     Get("root:one manifest", proceed_after_5);
@@ -207,10 +209,11 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell>,
   TestPoint story2_run1_{"Story2 Run1"};
 
   void Story2_Run1() {
-    auto proceed_after_5 = modular::testing::NewBarrierClosure(5, [this] {
-        story2_run1_.Pass();
-        Story2_Stop1();
-      });
+    auto proceed_after_5 =
+        fuchsia::modular::testing::NewBarrierClosure(5, [this] {
+          story2_run1_.Pass();
+          Story2_Stop1();
+        });
 
     Get("root:one", proceed_after_5);
     Get("root:one manifest", proceed_after_5);
@@ -225,7 +228,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell>,
 
     fidl::VectorPtr<fidl::StringPtr> parent_one;
     parent_one.push_back("root");
-    modular::Intent intent_one;
+    fuchsia::modular::Intent intent_one;
     intent_one.action.handler = kCommonNullModule;
     story_controller_->AddModule(std::move(parent_one), "one",
                                  std::move(intent_one),
@@ -234,7 +237,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell>,
     fidl::VectorPtr<fidl::StringPtr> parent_two;
     parent_two.push_back("root");
     parent_two.push_back("one");
-    modular::Intent intent_two;
+    fuchsia::modular::Intent intent_two;
     intent_two.action.handler = kCommonNullModule;
     story_controller_->AddModule(std::move(parent_two), "two",
                                  std::move(intent_two),
@@ -250,10 +253,11 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell>,
   TestPoint story2_run2_{"Story2 Run2"};
 
   void Story2_Run2() {
-    auto proceed_after_5 = modular::testing::NewBarrierClosure(5, [this] {
-        story2_run2_.Pass();
-        Story2_Stop2();
-      });
+    auto proceed_after_5 =
+        fuchsia::modular::testing::NewBarrierClosure(5, [this] {
+          story2_run2_.Pass();
+          Story2_Stop2();
+        });
 
     Get("root:one", proceed_after_5);
     Get("root:one manifest", proceed_after_5);
@@ -281,10 +285,10 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell>,
     }
   }
 
-  modular::UserShellContextPtr user_shell_context_;
-  modular::StoryProviderPtr story_provider_;
-  modular::StoryControllerPtr story_controller_;
-  fidl::BindingSet<modular::UserShellPresentationProvider>
+  fuchsia::modular::UserShellContextPtr user_shell_context_;
+  fuchsia::modular::StoryProviderPtr story_provider_;
+  fuchsia::modular::StoryControllerPtr story_controller_;
+  fidl::BindingSet<fuchsia::modular::UserShellPresentationProvider>
       presentation_provider_bindings_;
 
   fidl::StringPtr story1_id_;
@@ -296,6 +300,6 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell>,
 }  // namespace
 
 int main(int /* argc */, const char** /* argv */) {
-  modular::testing::ComponentMain<TestApp>();
+  fuchsia::modular::testing::ComponentMain<TestApp>();
   return 0;
 }

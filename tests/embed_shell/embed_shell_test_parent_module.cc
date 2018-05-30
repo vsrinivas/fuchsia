@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 #include <views_v1_token/cpp/fidl.h>
 #include "lib/app_driver/cpp/module_driver.h"
@@ -16,9 +16,9 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/embed_shell/defs.h"
 
-using modular::testing::Await;
-using modular::testing::Signal;
-using modular::testing::TestPoint;
+using fuchsia::modular::testing::Await;
+using fuchsia::modular::testing::Signal;
+using fuchsia::modular::testing::TestPoint;
 
 namespace {
 
@@ -26,16 +26,17 @@ namespace {
 class TestApp {
  public:
   TestApp(
-      modular::ModuleHost* const module_host,
+      fuchsia::modular::ModuleHost* const module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host) {
-    modular::testing::Init(module_host->application_context(), __FILE__);
+    fuchsia::modular::testing::Init(module_host->application_context(),
+                                    __FILE__);
     ScheduleDone();
     StartChildModule();
   }
 
   void Terminate(const std::function<void()>& done) {
-    modular::testing::Done(done);
+    fuchsia::modular::testing::Done(done);
   }
 
  private:
@@ -43,7 +44,7 @@ class TestApp {
     auto check = [this, done = std::make_shared<int>(0)] {
       ++*done;
       if (*done == 2) {
-        Signal(modular::testing::kTestShutdown);
+        Signal(fuchsia::modular::testing::kTestShutdown);
       }
     };
 
@@ -52,16 +53,16 @@ class TestApp {
   }
 
   void StartChildModule() {
-    modular::Intent intent;
+    fuchsia::modular::Intent intent;
     intent.action.handler = kChildModuleUrl;
     module_host_->module_context()->EmbedModule(
-        kChildModuleName, std::move(intent),
-        child_module_.NewRequest(), child_view_.NewRequest(),
-        [](const modular::StartModuleStatus) {});
+        kChildModuleName, std::move(intent), child_module_.NewRequest(),
+        child_view_.NewRequest(),
+        [](const fuchsia::modular::StartModuleStatus) {});
   }
 
-  modular::ModuleHost* const module_host_;
-  modular::ModuleControllerPtr child_module_;
+  fuchsia::modular::ModuleHost* const module_host_;
+  fuchsia::modular::ModuleControllerPtr child_module_;
   views_v1_token::ViewOwnerPtr child_view_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
@@ -72,8 +73,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::ModuleDriver<TestApp> driver(app_context.get(),
-                                        [&loop] { loop.QuitNow(); });
+  fuchsia::modular::ModuleDriver<TestApp> driver(app_context.get(),
+                                                 [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

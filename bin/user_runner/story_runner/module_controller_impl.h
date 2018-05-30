@@ -8,7 +8,7 @@
 #include <vector>
 
 #include <component/cpp/fidl.h>
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_handle.h"
@@ -18,6 +18,7 @@
 #include "lib/fxl/macros.h"
 #include "peridot/lib/fidl/app_client.h"
 
+namespace fuchsia {
 namespace modular {
 
 class StoryControllerImpl;
@@ -92,5 +93,6 @@ class ModuleControllerImpl : ModuleController {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_MODULE_CONTROLLER_IMPL_H_

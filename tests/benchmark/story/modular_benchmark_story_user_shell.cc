@@ -9,10 +9,10 @@
 #include <utility>
 
 #include <component/cpp/fidl.h>
-#include <modular/cpp/fidl.h>
-#include <views_v1_token/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <views_v1_token/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
@@ -50,14 +50,14 @@ class Settings {
 // A simple story watcher implementation that invokes a "continue" callback when
 // it sees the watched story transition to the given state. Used to push the
 // test sequence forward when the test story reaches the next state.
-class StoryWatcherImpl : modular::StoryWatcher {
+class StoryWatcherImpl : fuchsia::modular::StoryWatcher {
  public:
   StoryWatcherImpl() : binding_(this) {}
   ~StoryWatcherImpl() override = default;
 
   // Registers itself as a watcher on the given story. Only one story at a time
   // can be watched.
-  void Watch(modular::StoryControllerPtr* const story_controller) {
+  void Watch(fuchsia::modular::StoryControllerPtr* const story_controller) {
     (*story_controller)->Watch(binding_.NewBinding());
   }
 
@@ -65,14 +65,14 @@ class StoryWatcherImpl : modular::StoryWatcher {
   void Reset() { binding_.Unbind(); }
 
   // Sets the function where to continue when the story is observed to be done.
-  void Continue(modular::StoryState state, std::function<void()> at) {
+  void Continue(fuchsia::modular::StoryState state, std::function<void()> at) {
     continue_state_ = state;
     continue_ = at;
   }
 
  private:
   // |StoryWatcher|
-  void OnStateChange(modular::StoryState state) override {
+  void OnStateChange(fuchsia::modular::StoryState state) override {
     if (state != continue_state_) {
       return;
     }
@@ -81,11 +81,12 @@ class StoryWatcherImpl : modular::StoryWatcher {
   }
 
   // |StoryWatcher|
-  void OnModuleAdded(modular::ModuleData module_data) override {}
+  void OnModuleAdded(fuchsia::modular::ModuleData module_data) override {}
 
-  fidl::Binding<modular::StoryWatcher> binding_;
+  fidl::Binding<fuchsia::modular::StoryWatcher> binding_;
 
-  modular::StoryState continue_state_{modular::StoryState::STOPPED};
+  fuchsia::modular::StoryState continue_state_{
+      fuchsia::modular::StoryState::STOPPED};
   std::function<void()> continue_{[] {}};
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryWatcherImpl);
@@ -93,14 +94,14 @@ class StoryWatcherImpl : modular::StoryWatcher {
 
 // A simple link watcher implementation that invokes a "continue" callback when
 // it sees the watched link change.
-class LinkWatcherImpl : modular::LinkWatcher {
+class LinkWatcherImpl : fuchsia::modular::LinkWatcher {
  public:
   LinkWatcherImpl() : binding_(this) {}
   ~LinkWatcherImpl() override = default;
 
   // Registers itself as a watcher on the given link. Only one story at a time
   // can be watched.
-  void Watch(modular::LinkPtr* const link) {
+  void Watch(fuchsia::modular::LinkPtr* const link) {
     (*link)->WatchAll(binding_.NewBinding());
   }
 
@@ -114,7 +115,7 @@ class LinkWatcherImpl : modular::LinkWatcher {
   // |LinkWatcher|
   void Notify(fidl::StringPtr json) override { continue_(json); }
 
-  fidl::Binding<modular::LinkWatcher> binding_;
+  fidl::Binding<fuchsia::modular::LinkWatcher> binding_;
 
   std::function<void(fidl::StringPtr)> continue_{[](fidl::StringPtr) {}};
 
@@ -125,9 +126,10 @@ class LinkWatcherImpl : modular::LinkWatcher {
 // is invoked as a user shell from device runner and executes a predefined
 // sequence of steps, rather than to expose a UI to be driven by user
 // interaction, as a user shell normally would.
-class TestApp : public modular::SingleServiceApp<modular::UserShell> {
+class TestApp
+    : public fuchsia::modular::SingleServiceApp<fuchsia::modular::UserShell> {
  public:
-  using Base = modular::SingleServiceApp<modular::UserShell>;
+  using Base = fuchsia::modular::SingleServiceApp<fuchsia::modular::UserShell>;
   TestApp(component::ApplicationContext* const application_context,
           Settings settings)
       : Base(application_context), settings_(std::move(settings)) {}
@@ -145,7 +147,7 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
 
  private:
   // |UserShell|
-  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
                       user_shell_context) override {
     user_shell_context_.Bind(std::move(user_shell_context));
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
@@ -177,11 +179,11 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
 
     TRACE_ASYNC_BEGIN("benchmark", "story/info", 0);
-    story_controller_->GetInfo(
-        [this](modular::StoryInfo story_info, modular::StoryState state) {
-          TRACE_ASYNC_END("benchmark", "story/info", 0);
-          Link();
-        });
+    story_controller_->GetInfo([this](fuchsia::modular::StoryInfo story_info,
+                                      fuchsia::modular::StoryState state) {
+      TRACE_ASYNC_END("benchmark", "story/info", 0);
+      Link();
+    });
   }
 
   void Link() {
@@ -207,7 +209,7 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
 
   void StoryStart() {
     TRACE_ASYNC_BEGIN("benchmark", "story/start", 0);
-    story_watcher_.Continue(modular::StoryState::RUNNING, [this] {
+    story_watcher_.Continue(fuchsia::modular::StoryState::RUNNING, [this] {
       TRACE_ASYNC_END("benchmark", "story/start", 0);
     });
 
@@ -233,7 +235,7 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
     Loop();
   }
 
-  modular::TracingWaiter tracing_waiter_;
+  fuchsia::modular::TracingWaiter tracing_waiter_;
 
   const Settings settings_;
 
@@ -242,10 +244,10 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
   StoryWatcherImpl story_watcher_;
   LinkWatcherImpl link_watcher_;
 
-  modular::UserShellContextPtr user_shell_context_;
-  modular::StoryProviderPtr story_provider_;
-  modular::StoryControllerPtr story_controller_;
-  modular::LinkPtr link_;
+  fuchsia::modular::UserShellContextPtr user_shell_context_;
+  fuchsia::modular::StoryProviderPtr story_provider_;
+  fuchsia::modular::StoryControllerPtr story_controller_;
+  fuchsia::modular::LinkPtr link_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
@@ -255,6 +257,7 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   Settings settings(command_line);
-  modular::testing::ComponentMain<TestApp, Settings>(std::move(settings));
+  fuchsia::modular::testing::ComponentMain<TestApp, Settings>(
+      std::move(settings));
   return 0;
 }

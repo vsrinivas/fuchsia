@@ -4,7 +4,7 @@
 
 #include "peridot/bin/action_log/action_log_impl.h"
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
@@ -15,6 +15,7 @@
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
 
+namespace fuchsia {
 namespace modular {
 
 UserActionLogImpl::UserActionLogImpl(ProposalPublisherPtr proposal_publisher)
@@ -115,11 +116,11 @@ void UserActionLogImpl::MaybeProposeSharingVideo(
     // We start compose module in a copresent, dependent configuration that
     takes
     // 30% emphasis.
-    add_module->surface_relation = modular::SurfaceRelation::New();
+    add_module->surface_relation = fuchsia::modular::SurfaceRelation::New();
     add_module->surface_relation->arrangement =
-        modular::SurfaceArrangement::COPRESENT;
+        fuchsia::modular::SurfaceArrangement::COPRESENT;
     add_module->surface_relation->dependency =
-        modular::SurfaceDependency::DEPENDENT;
+        fuchsia::modular::SurfaceDependency::DEPENDENT;
     add_module->surface_relation->emphasis = 0.5;
 
     ActionPtr action(Action::New());
@@ -218,3 +219,4 @@ void ComponentActionLogImpl::LogAction(fidl::StringPtr method,
 }
 
 }  // namespace modular
+}  // namespace fuchsia

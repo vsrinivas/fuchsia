@@ -8,7 +8,7 @@
 #include <functional>
 #include <vector>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "peridot/bin/suggestion_engine/ranker.h"
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
@@ -16,6 +16,7 @@
 #include "peridot/bin/suggestion_engine/suggestion_passive_filter.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 
+namespace fuchsia {
 namespace modular {
 using MatchPredicate =
     std::function<bool(const std::unique_ptr<RankedSuggestion>& suggestion)>;
@@ -84,5 +85,6 @@ class RankedSuggestionsList {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKED_SUGGESTIONS_LIST_H_

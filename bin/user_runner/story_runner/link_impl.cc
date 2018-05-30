@@ -6,7 +6,7 @@
 
 #include <functional>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/optional.h"
@@ -18,6 +18,7 @@
 #include "peridot/lib/util/debug.h"
 #include "peridot/public/lib/entity/cpp/json.h"
 
+namespace fuchsia {
 namespace modular {
 
 class LinkImpl::ReadLinkDataCall : public PageOperation<fidl::StringPtr> {
@@ -471,9 +472,10 @@ void LinkImpl::Set(fidl::VectorPtr<fidl::StringPtr> path, fidl::StringPtr json,
   // have no way to know they sent bogus data.
 
   if (kEnableIncrementalLinks) {
-    modular_private::LinkChangePtr data = modular_private::LinkChange::New();
+    modular::internal ::LinkChangePtr data =
+        modular::internal ::LinkChange::New();
     // Leave data->key null to signify a new entry
-    data->op = modular_private::LinkChangeOp::SET;
+    data->op = modular::internal ::LinkChangeOp::SET;
     data->pointer = std::move(path);
     data->json = json;
     MakeIncrementalChangeCall(std::move(data), src);
@@ -488,9 +490,10 @@ void LinkImpl::UpdateObject(fidl::VectorPtr<fidl::StringPtr> path,
   // otherwise clients have no way to know they sent bogus data.
 
   if (kEnableIncrementalLinks) {
-    modular_private::LinkChangePtr data = modular_private::LinkChange::New();
+    modular::internal ::LinkChangePtr data =
+        modular::internal ::LinkChange::New();
     // Leave data->key empty to signify a new entry
-    data->op = modular_private::LinkChangeOp::UPDATE;
+    data->op = modular::internal ::LinkChangeOp::UPDATE;
     data->pointer = std::move(path);
     data->json = json;
     MakeIncrementalChangeCall(std::move(data), src);
@@ -503,9 +506,10 @@ void LinkImpl::UpdateObject(fidl::VectorPtr<fidl::StringPtr> path,
 void LinkImpl::Erase(fidl::VectorPtr<fidl::StringPtr> path,
                      const uint32_t src) {
   if (kEnableIncrementalLinks) {
-    modular_private::LinkChangePtr data = modular_private::LinkChange::New();
+    modular::internal ::LinkChangePtr data =
+        modular::internal ::LinkChange::New();
     // Leave data->key empty to signify a new entry
-    data->op = modular_private::LinkChangeOp::ERASE;
+    data->op = modular::internal ::LinkChangeOp::ERASE;
     data->pointer = std::move(path);
     // Leave data->json null for ERASE.
 
@@ -726,3 +730,4 @@ void LinkWatcherConnection::Notify(fidl::StringPtr value, const uint32_t src) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

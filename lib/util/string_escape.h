@@ -9,6 +9,7 @@
 
 #include "lib/fxl/strings/string_view.h"
 
+namespace fuchsia {
 namespace modular {
 
 constexpr char kDefaultEscapeChar = '\\';
@@ -38,5 +39,6 @@ std::vector<fxl::StringView> SplitEscapedString(
     char escape_char = kDefaultEscapeChar);
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_UTIL_STRING_ESCAPE_H_

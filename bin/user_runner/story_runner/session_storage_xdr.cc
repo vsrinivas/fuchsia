@@ -6,10 +6,11 @@
 
 #include "peridot/lib/base64url/base64url.h"
 
+namespace fuchsia {
 namespace modular {
 
-// Serialization and deserialization of modular_private::StoryData and StoryInfo
-// to and from JSON.
+// Serialization and deserialization of modular::internal::StoryData and
+// StoryInfo to and from JSON.
 
 namespace {
 
@@ -48,8 +49,9 @@ std::string PageIdToBase64(const ledger::PageId& page_id) {
       {reinterpret_cast<const char*>(page_id.id.data()), page_id.id.count()});
 }
 
-// Serialization and deserialization of modular_private::StoryData and StoryInfo
-// to and from JSON. We have different versions for backwards compatibilty.
+// Serialization and deserialization of modular::internal::StoryData and
+// StoryInfo to and from JSON. We have different versions for backwards
+// compatibilty.
 //
 // Version 1: During FIDL2 conversion. ExtraInfo fields are stored as "key"
 // and "value", page ids are stored as base64 string.
@@ -67,7 +69,7 @@ void XdrStoryInfo_v1(XdrContext* const xdr, StoryInfo* const data) {
 }
 
 void XdrStoryData_v1(XdrContext* const xdr,
-                     modular_private::StoryData* const data) {
+                     modular::internal::StoryData* const data) {
   static constexpr char kStoryPageId[] = "story_page_id";
   xdr->Field("story_info", &data->story_info, XdrStoryInfo_v1);
   switch (xdr->op()) {
@@ -114,13 +116,13 @@ void XdrPageId_v2(XdrContext* const xdr, ledger::PageId* const data) {
 }
 
 void XdrStoryData_v2(XdrContext* const xdr,
-                     modular_private::StoryData* const data) {
+                     modular::internal::StoryData* const data) {
   xdr->Field("story_info", &data->story_info, XdrStoryInfo_v2);
   xdr->Field("story_page_id", &data->story_page_id, XdrPageId_v2);
 }
 
 void XdrStoryData_v3(XdrContext* const xdr,
-                     modular_private::StoryData* const data) {
+                     modular::internal::StoryData* const data) {
   if (!xdr->Version(3)) {
     return;
   }
@@ -132,11 +134,12 @@ void XdrStoryData_v3(XdrContext* const xdr,
 
 }  // namespace
 
-XdrFilterType<modular_private::StoryData> XdrStoryData[] = {
-  XdrStoryData_v3,
-  XdrStoryData_v2,
-  XdrStoryData_v1,
-  nullptr,
+XdrFilterType<modular::internal::StoryData> XdrStoryData[] = {
+    XdrStoryData_v3,
+    XdrStoryData_v2,
+    XdrStoryData_v1,
+    nullptr,
 };
 
 }  // namespace modular
+}  // namespace fuchsia

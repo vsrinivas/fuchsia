@@ -8,10 +8,10 @@
 #include <memory>
 
 #include <component/cpp/fidl.h>
-#include <modular/cpp/fidl.h>
-#include <views_v1/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <views_v1/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
@@ -20,6 +20,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/lifecycle/cpp/lifecycle_impl.h"
 
+namespace fuchsia {
 namespace modular {
 
 // This interface is passed to the |Impl| object that ModuleDriver initializes.
@@ -38,8 +39,9 @@ class ModuleHost {
 //
 //      // A constructor with the following signature:
 //      Constructor(
-//           modular::ModuleHost* module_host,
-//           fidl::InterfaceRequest<views_v1::ViewProvider> view_provider_request);
+//           fuchsia::modular::ModuleHost* module_host,
+//           fidl::InterfaceRequest<views_v1::ViewProvider>
+//           view_provider_request);
 //
 //       // Called by ModuleDriver. Call |done| once shutdown sequence is
 //       // complete, at which point |this| will be deleted.
@@ -50,7 +52,7 @@ class ModuleHost {
 // class HelloWorldModule {
 //  public:
 //   HelloWorldModule(
-//      modular::ModuleHost* module_host,
+//      fuchsia::modular::ModuleHost* module_host,
 //      fidl::InterfaceRequest<views_v1::ViewProvider> view_provider_request) {}
 //
 //   // Called by ModuleDriver.
@@ -60,7 +62,7 @@ class ModuleHost {
 // int main(int argc, const char** argv) {
 //   fsl::MessageLoop loop;
 //   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-//   modular::ModuleDriver<HelloWorldApp> driver(app_context.get(),
+//   fuchsia::modular::ModuleDriver<HelloWorldApp> driver(app_context.get(),
 //                                               [&loop] { loop.QuitNow(); });
 //   loop.Run();
 //   return 0;
@@ -135,5 +137,6 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleHost {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // LIB_APP_DRIVER_CPP_MODULE_DRIVER_H_

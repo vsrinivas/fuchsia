@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 #include <views_v1_token/cpp/fidl.h>
 
@@ -15,7 +15,7 @@
 #include "peridot/tests/chain/defs.h"
 #include "peridot/tests/common/defs.h"
 
-using modular::testing::TestPoint;
+using fuchsia::modular::testing::TestPoint;
 
 namespace {
 
@@ -25,19 +25,21 @@ class TestApp {
   TestPoint initialized_{"Parent module initialized"};
 
   TestApp(
-      modular::ModuleHost* module_host,
+      fuchsia::modular::ModuleHost* module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/)
       : module_context_(module_host->module_context()) {
     module_context_->GetComponentContext(component_context_.NewRequest());
-    modular::testing::Init(module_host->application_context(), __FILE__);
+    fuchsia::modular::testing::Init(module_host->application_context(),
+                                    __FILE__);
     initialized_.Pass();
 
     // We'll use an Entity stored on one of our Links, which will be used in
     // the resolution process to choose a compatible Module.
     // TODO(thatguy): We should be specifying type constraints when we create
     // the Link.
-    auto entity_data = fidl::VectorPtr<modular::TypeToDataEntry>::New(1);
-    entity_data->at(0) = modular::TypeToDataEntry();
+    auto entity_data =
+        fidl::VectorPtr<fuchsia::modular::TypeToDataEntry>::New(1);
+    entity_data->at(0) = fuchsia::modular::TypeToDataEntry();
     entity_data->at(0).type = "myType";
     entity_data->at(0).data = "1337";
 
@@ -53,7 +55,7 @@ class TestApp {
   // Called from ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
-    modular::testing::Done(done);
+    fuchsia::modular::testing::Done(done);
   }
 
  private:
@@ -75,31 +77,31 @@ class TestApp {
     // by the Framework. We don't get access to that Link.
     module_context_->GetLink("foo", link_one_.NewRequest());
     link_one_->SetEntity(entity_one_reference_);
-    modular::IntentParameterData parameter_data;
+    fuchsia::modular::IntentParameterData parameter_data;
     parameter_data.set_link_name("foo");
-    intent_.parameters->at(0) = modular::IntentParameter();
+    intent_.parameters->at(0) = fuchsia::modular::IntentParameter();
     intent_.parameters->at(0).name = "one";
     intent_.parameters->at(0).data = std::move(parameter_data);
 
     module_context_->GetLink("bar", link_two_.NewRequest());
     link_two_->Set(nullptr, "12345");
-    parameter_data = modular::IntentParameterData();
+    parameter_data = fuchsia::modular::IntentParameterData();
     parameter_data.set_link_name("bar");
-    intent_.parameters->at(1) = modular::IntentParameter();
+    intent_.parameters->at(1) = fuchsia::modular::IntentParameter();
     intent_.parameters->at(1).name = "two";
     intent_.parameters->at(1).data = std::move(parameter_data);
 
-    parameter_data = modular::IntentParameterData();
+    parameter_data = fuchsia::modular::IntentParameterData();
     parameter_data.set_json("67890");
-    intent_.parameters->at(2) = modular::IntentParameter();
+    intent_.parameters->at(2) = fuchsia::modular::IntentParameter();
     intent_.parameters->at(2).name = "three";
     intent_.parameters->at(2).data = std::move(parameter_data);
 
     // This noun doesn't have a name, and will appear as the root or default
     // link for the child mod. This is for backwards compatibility.
-    parameter_data = modular::IntentParameterData();
+    parameter_data = fuchsia::modular::IntentParameterData();
     parameter_data.set_json("1337");
-    intent_.parameters->at(3) = modular::IntentParameter();
+    intent_.parameters->at(3) = fuchsia::modular::IntentParameter();
     intent_.parameters->at(3).data = std::move(parameter_data);
 
     // Sync to avoid race conditions between writing
@@ -107,25 +109,26 @@ class TestApp {
       link_two_->Sync([this] {
         module_context_->EmbedModule(
             "my child", std::move(intent_), child_module_.NewRequest(),
-            child_view_.NewRequest(), [this](modular::StartModuleStatus status) {
-              if (status == modular::StartModuleStatus::SUCCESS) {
+            child_view_.NewRequest(),
+            [this](fuchsia::modular::StartModuleStatus status) {
+              if (status == fuchsia::modular::StartModuleStatus::SUCCESS) {
                 start_intent_.Pass();
               }
             });
-        });
+      });
     });
   }
 
-  modular::ComponentContextPtr component_context_;
-  modular::ModuleContext* module_context_;
-  modular::ModuleControllerPtr child_module_;
+  fuchsia::modular::ComponentContextPtr component_context_;
+  fuchsia::modular::ModuleContext* module_context_;
+  fuchsia::modular::ModuleControllerPtr child_module_;
   views_v1_token::ViewOwnerPtr child_view_;
 
   fidl::StringPtr entity_one_reference_;
-  modular::Intent intent_;
+  fuchsia::modular::Intent intent_;
 
-  modular::LinkPtr link_one_;
-  modular::LinkPtr link_two_;
+  fuchsia::modular::LinkPtr link_one_;
+  fuchsia::modular::LinkPtr link_two_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
@@ -135,8 +138,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::ModuleDriver<TestApp> driver(app_context.get(),
-                                        [&loop] { loop.QuitNow(); });
+  fuchsia::modular::ModuleDriver<TestApp> driver(app_context.get(),
+                                                 [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

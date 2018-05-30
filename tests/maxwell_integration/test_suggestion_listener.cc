@@ -6,11 +6,12 @@
 
 #include "lib/suggestion/cpp/formatting.h"
 
-bool suggestion_less(const modular::Suggestion* a,
-                     const modular::Suggestion* b) {
+bool suggestion_less(const fuchsia::modular::Suggestion* a,
+                     const fuchsia::modular::Suggestion* b) {
   return a->confidence > b->confidence;
 }
 
+namespace fuchsia {
 namespace modular {
 
 template <typename T>
@@ -22,7 +23,8 @@ std::ostream& operator<<(std::ostream& os, const fidl::VectorPtr<T>& value) {
   return os << "]";
 }
 
-void TestSuggestionListener::OnInterrupt(modular::Suggestion suggestion) {
+void TestSuggestionListener::OnInterrupt(
+    fuchsia::modular::Suggestion suggestion) {
   FXL_LOG(INFO) << "OnInterrupt(" << suggestion.uuid << ")";
 
   ClearSuggestions();
@@ -30,7 +32,7 @@ void TestSuggestionListener::OnInterrupt(modular::Suggestion suggestion) {
   auto insert_head = ordered_suggestions_.begin();
   insert_head = std::upper_bound(insert_head, ordered_suggestions_.end(),
                                  &suggestion, suggestion_less);
-  suggestions_by_id_[suggestion.uuid] = modular::Suggestion();
+  suggestions_by_id_[suggestion.uuid] = fuchsia::modular::Suggestion();
   fidl::Clone(suggestion, &suggestions_by_id_[suggestion.uuid]);
   insert_head =
       ordered_suggestions_.insert(insert_head, &suggestions_by_id_[suggestion.uuid]) + 1;
@@ -40,28 +42,28 @@ void TestSuggestionListener::OnInterrupt(modular::Suggestion suggestion) {
 }
 
 void TestSuggestionListener::OnNextResults(
-    fidl::VectorPtr<modular::Suggestion> suggestions) {
+    fidl::VectorPtr<fuchsia::modular::Suggestion> suggestions) {
   FXL_LOG(INFO) << "OnNextResults(" << suggestions << ")";
 
   OnAnyResults(suggestions);
 }
 
 void TestSuggestionListener::OnQueryResults(
-    fidl::VectorPtr<modular::Suggestion> suggestions) {
+    fidl::VectorPtr<fuchsia::modular::Suggestion> suggestions) {
   FXL_LOG(INFO) << "OnQueryResults(" << suggestions << ")";
 
   OnAnyResults(suggestions);
 }
 
 void TestSuggestionListener::OnAnyResults(
-    fidl::VectorPtr<modular::Suggestion>& suggestions) {
+    fidl::VectorPtr<fuchsia::modular::Suggestion>& suggestions) {
   ClearSuggestions();
 
   auto insert_head = ordered_suggestions_.begin();
   for (auto& suggestion : *suggestions) {
     insert_head = std::upper_bound(insert_head, ordered_suggestions_.end(),
                                    &suggestion, suggestion_less);
-    suggestions_by_id_[suggestion.uuid] = modular::Suggestion();
+    suggestions_by_id_[suggestion.uuid] = fuchsia::modular::Suggestion();
     fidl::Clone(suggestion, &suggestions_by_id_[suggestion.uuid]);
     insert_head =
         ordered_suggestions_.insert(insert_head, &suggestions_by_id_[suggestion.uuid]) + 1;
@@ -86,3 +88,4 @@ void TestSuggestionListener::OnQueryComplete() {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

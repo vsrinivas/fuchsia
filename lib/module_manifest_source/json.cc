@@ -9,10 +9,11 @@
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
+namespace fuchsia {
 namespace modular {
 
 bool ModuleManifestEntryFromJson(const std::string& json,
-                                 modular::ModuleManifest* entry) {
+                                 fuchsia::modular::ModuleManifest* entry) {
   rapidjson::Document doc;
   // Schema validation of the JSON is happening at publish time. By the time we
   // get here, we assume it's valid manifest JSON.
@@ -27,20 +28,21 @@ bool ModuleManifestEntryFromJson(const std::string& json,
   // Our tooling validates |doc|'s JSON schema so that we don't have to here.
   // It may be good to do this, though.
   // TODO(thatguy): Do this if it becomes a problem.
-  if (!modular::XdrRead(&doc, entry, XdrModuleManifest)) {
+  if (!fuchsia::modular::XdrRead(&doc, entry, XdrModuleManifest)) {
     return false;
   }
   return true;
 }
 
-void ModuleManifestEntryToJson(const modular::ModuleManifest& entry,
+void ModuleManifestEntryToJson(const fuchsia::modular::ModuleManifest& entry,
                                std::string* json) {
   rapidjson::Document doc;
-  modular::ModuleManifest local_entry;
+  fuchsia::modular::ModuleManifest local_entry;
   fidl::Clone(entry, &local_entry);
-  modular::XdrWrite(&doc, &local_entry, XdrModuleManifest);
+  fuchsia::modular::XdrWrite(&doc, &local_entry, XdrModuleManifest);
 
   *json = JsonValueToPrettyString(doc);
 }
 
 }  // namespace modular
+}  // namespace fuchsia

@@ -8,8 +8,8 @@
 #include <set>
 #include <vector>
 
-#include <modular/cpp/fidl.h>
-#include <modular_private/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/modular/internal/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/clone.h"
@@ -24,6 +24,7 @@
 #include "peridot/lib/ledger_client/types.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 
+namespace fuchsia {
 namespace modular {
 
 // Use the CrtAllocator and not the pool allocator so that merging doesn't
@@ -123,16 +124,16 @@ class LinkImpl : PageClient {
   // Applies the given |changes| to the current document. The current list of
   // pending operations is merged into the change stream. Implemented in
   // incremental_link.cc.
-  void Replay(fidl::VectorPtr<modular_private::LinkChange> changes);
+  void Replay(fidl::VectorPtr<fuchsia::modular::internal::LinkChange> changes);
 
   // Applies a single LinkChange. Implemented in incremental_link.cc.
-  bool ApplyChange(modular_private::LinkChange* change);
+  bool ApplyChange(modular::internal ::LinkChange* change);
 
   // Implemented in incremental_link.cc.
   void MakeReloadCall(std::function<void()> done);
-  void MakeIncrementalWriteCall(modular_private::LinkChangePtr data,
+  void MakeIncrementalWriteCall(modular::internal ::LinkChangePtr data,
                                 std::function<void()> done);
-  void MakeIncrementalChangeCall(modular_private::LinkChangePtr data,
+  void MakeIncrementalChangeCall(modular::internal ::LinkChangePtr data,
                                  uint32_t src);
 
   bool ApplySetOp(const CrtJsonPointer& ptr, fidl::StringPtr json);
@@ -193,7 +194,7 @@ class LinkImpl : PageClient {
   KeyGenerator key_generator_;
 
   // Track changes that have been saved to the Ledger but not confirmed
-  std::vector<modular_private::LinkChange> pending_ops_;
+  std::vector<fuchsia::modular::internal::LinkChange> pending_ops_;
 
   // The latest key that's been applied to this Link. If we receive an earlier
   // key in OnChange, then replay the history.
@@ -295,5 +296,6 @@ class LinkWatcherConnection {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_LINK_IMPL_H_

@@ -14,6 +14,7 @@
 #include "lib/fxl/macros.h"
 #include "peridot/lib/ledger_client/types.h"
 
+namespace fuchsia {
 namespace modular {
 
 class LedgerClient;
@@ -164,5 +165,6 @@ void GetEntries(ledger::PageSnapshot* snapshot,
                 std::function<void(ledger::Status)> callback);
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_LEDGER_CLIENT_PAGE_CLIENT_H_

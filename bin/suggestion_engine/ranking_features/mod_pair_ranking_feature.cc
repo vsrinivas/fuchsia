@@ -9,6 +9,7 @@
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/schema.h"
 
+namespace fuchsia {
 namespace modular {
 
 namespace {
@@ -94,3 +95,4 @@ ContextSelectorPtr ModPairRankingFeature::CreateContextSelectorInternal() {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

@@ -8,8 +8,9 @@
 #include <string>
 #include <vector>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
+namespace fuchsia {
 namespace modular {
 
 // An entity and its location in the Context Engine, under topic: "raw/text".
@@ -61,5 +62,6 @@ class EntitySpan {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_AGENTS_ENTITY_UTILS_ENTITY_SPAN_H_

@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <views_v1_token/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
@@ -18,43 +18,44 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/story_update/defs.h"
 
-using modular::testing::TestPoint;
+using fuchsia::modular::testing::TestPoint;
 
 namespace {
 
 // A simple module watcher implementation allows to specify the actual
 // notification callback as a lambda and update it dynamically.
-class ModuleWatcherImpl : modular::ModuleWatcher {
+class ModuleWatcherImpl : fuchsia::modular::ModuleWatcher {
  public:
   ModuleWatcherImpl() : binding_(this) {}
   ~ModuleWatcherImpl() override = default;
 
   // Registers itself as watcher on the given link. Only one link at a time can
   // be watched.
-  void Watch(modular::ModuleControllerPtr* const module) {
+  void Watch(fuchsia::modular::ModuleControllerPtr* const module) {
     (*module)->Watch(binding_.NewBinding());
   }
 
   // Sets the function that's called for a notification.
-  void Continue(std::function<void(modular::ModuleState)> at) {
+  void Continue(std::function<void(fuchsia::modular::ModuleState)> at) {
     continue_ = at;
   }
 
  private:
   // |ModuleWatcher|
-  void OnStateChange(modular::ModuleState module_state) override {
+  void OnStateChange(fuchsia::modular::ModuleState module_state) override {
     FXL_LOG(INFO) << "ModuleWatcher: " << module_state;
     continue_(std::move(module_state));
   }
 
-  std::function<void(modular::ModuleState)> continue_;
-  fidl::Binding<modular::ModuleWatcher> binding_;
+  std::function<void(fuchsia::modular::ModuleState)> continue_;
+  fidl::Binding<fuchsia::modular::ModuleWatcher> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleWatcherImpl);
 };
 
 // Tests how modules are updated in a story.
-class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
+class TestApp : public fuchsia::modular::testing::ComponentBase<
+                    fuchsia::modular::UserShell> {
  public:
   TestApp(component::ApplicationContext* const application_context)
       : ComponentBase(application_context) {
@@ -68,7 +69,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint story_create_{"Story Create"};
 
   // |UserShell|
-  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
                       user_shell_context) override {
     initialize_.Pass();
 
@@ -95,12 +96,13 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
                                            module0_controller_.NewRequest());
 
     module0_watcher_.Watch(&module0_controller_);
-    module0_watcher_.Continue([this](modular::ModuleState module_state) {
-      if (module_state == modular::ModuleState::RUNNING) {
-        root_running_.Pass();
-        PipelinedAddGetStop();
-      }
-    });
+    module0_watcher_.Continue(
+        [this](fuchsia::modular::ModuleState module_state) {
+          if (module_state == fuchsia::modular::ModuleState::RUNNING) {
+            root_running_.Pass();
+            PipelinedAddGetStop();
+          }
+        });
   }
 
   TestPoint module1_stopped_{"Module1 STOPPED"};
@@ -124,7 +126,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     // observability of the state transitions.
     //
     // The observability of the STOPPED state, however, is guaranteed.
-    modular::Intent intent;
+    fuchsia::modular::Intent intent;
     intent.action.handler = kCommonNullModule;
     story_controller_->AddModule(nullptr /* parent_module_path */, "module1",
                                  std::move(intent),
@@ -136,18 +138,19 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
                                            module1_controller_.NewRequest());
 
     module1_watcher_.Watch(&module1_controller_);
-    module1_watcher_.Continue([this](modular::ModuleState module_state) {
-      if (module_state == modular::ModuleState::STOPPED) {
-        module1_stopped_.Pass();
-      }
-    });
+    module1_watcher_.Continue(
+        [this](fuchsia::modular::ModuleState module_state) {
+          if (module_state == fuchsia::modular::ModuleState::STOPPED) {
+            module1_stopped_.Pass();
+          }
+        });
 
     module1_controller_->Stop([this] { GetActiveModules1(); });
   }
 
   void GetActiveModules1() {
     story_controller_->GetActiveModules(
-        nullptr, [this](fidl::VectorPtr<modular::ModuleData> modules) {
+        nullptr, [this](fidl::VectorPtr<fuchsia::modular::ModuleData> modules) {
           if (modules->size() == 1) {
             module1_gone_.Pass();
           }
@@ -183,7 +186,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     // the story runner handling the Done() request from the module. Instead,
     // the controller connection is just closed, and flow of control would need
     // to resume from the connection error handler of the module controller.
-    modular::Intent intent;
+    fuchsia::modular::Intent intent;
     intent.action.handler = kCommonNullModule;
     story_controller_->AddModule(nullptr /* parent_module_path */, "module2",
                                  std::move(intent),
@@ -195,20 +198,21 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
                                            module2_controller_.NewRequest());
 
     module2_watcher_.Watch(&module2_controller_);
-    module2_watcher_.Continue([this](modular::ModuleState module_state) {
-      if (module_state == modular::ModuleState::RUNNING) {
-        module2_running_.Pass();
-        module2_controller_->Stop([this] { GetActiveModules2(); });
+    module2_watcher_.Continue(
+        [this](fuchsia::modular::ModuleState module_state) {
+          if (module_state == fuchsia::modular::ModuleState::RUNNING) {
+            module2_running_.Pass();
+            module2_controller_->Stop([this] { GetActiveModules2(); });
 
-      } else if (module_state == modular::ModuleState::STOPPED) {
-        module2_stopped_.Pass();
-      }
-    });
+          } else if (module_state == fuchsia::modular::ModuleState::STOPPED) {
+            module2_stopped_.Pass();
+          }
+        });
   }
 
   void GetActiveModules2() {
     story_controller_->GetActiveModules(
-        nullptr, [this](fidl::VectorPtr<modular::ModuleData> modules) {
+        nullptr, [this](fidl::VectorPtr<fuchsia::modular::ModuleData> modules) {
           if (modules->size() == 1) {
             module2_gone_.Pass();
           }
@@ -219,16 +223,16 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void Logout() { user_shell_context_->Logout(); }
 
-  modular::UserShellContextPtr user_shell_context_;
-  modular::StoryProviderPtr story_provider_;
-  modular::StoryControllerPtr story_controller_;
-  modular::StoryInfoPtr story_info_;
+  fuchsia::modular::UserShellContextPtr user_shell_context_;
+  fuchsia::modular::StoryProviderPtr story_provider_;
+  fuchsia::modular::StoryControllerPtr story_controller_;
+  fuchsia::modular::StoryInfoPtr story_info_;
 
-  modular::ModuleControllerPtr module0_controller_;
+  fuchsia::modular::ModuleControllerPtr module0_controller_;
   ModuleWatcherImpl module0_watcher_;
-  modular::ModuleControllerPtr module1_controller_;
+  fuchsia::modular::ModuleControllerPtr module1_controller_;
   ModuleWatcherImpl module1_watcher_;
-  modular::ModuleControllerPtr module2_controller_;
+  fuchsia::modular::ModuleControllerPtr module2_controller_;
   ModuleWatcherImpl module2_watcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
@@ -237,6 +241,6 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  modular::testing::ComponentMain<TestApp>();
+  fuchsia::modular::testing::ComponentMain<TestApp>();
   return 0;
 }

@@ -8,6 +8,7 @@
 #include "lib/fxl/logging.h"
 #include "peridot/bin/user_runner/puppet_master/story_command_executor.h"
 
+namespace fuchsia {
 namespace modular {
 
 StoryPuppetMasterImpl::StoryPuppetMasterImpl(
@@ -47,3 +48,4 @@ void StoryPuppetMasterImpl::Execute(ExecuteCallback done) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

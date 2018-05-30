@@ -11,7 +11,7 @@
 #include <trace-provider/provider.h>
 
 #include <component/cpp/fidl.h>
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <modular_auth/cpp/fidl.h>
 #include <presentation/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
@@ -35,6 +35,7 @@
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/util/filesystem.h"
 
+namespace fuchsia {
 namespace modular {
 
 namespace {
@@ -370,15 +371,16 @@ fxl::AutoCall<fxl::Closure> SetupCobalt(
 
 }  // namespace
 }  // namespace modular
+}  // namespace fuchsia
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (command_line.HasOption("help")) {
-    std::cout << modular::Settings::GetUsage() << std::endl;
+    std::cout << fuchsia::modular::Settings::GetUsage() << std::endl;
     return 0;
   }
 
-  modular::Settings settings(command_line);
+  fuchsia::modular::Settings settings(command_line);
   fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
   auto app_context = std::shared_ptr<component::ApplicationContext>(
@@ -386,10 +388,11 @@ int main(int argc, const char** argv) {
   fxl::AutoCall<fxl::Closure> cobalt_cleanup =
       SetupCobalt(settings, std::move(loop.async()), app_context.get());
 
-  modular::DeviceRunnerApp app(settings, app_context, [&loop, &cobalt_cleanup] {
-    cobalt_cleanup.call();
-    loop.QuitNow();
-  });
+  fuchsia::modular::DeviceRunnerApp app(settings, app_context,
+                                        [&loop, &cobalt_cleanup] {
+                                          cobalt_cleanup.call();
+                                          loop.QuitNow();
+                                        });
   loop.Run();
 
   return 0;

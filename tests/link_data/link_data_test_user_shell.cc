@@ -5,10 +5,10 @@
 #include <memory>
 #include <utility>
 
-#include <modular_private/cpp/fidl.h>
-#include <views_v1_token/cpp/fidl.h>
+#include <fuchsia/modular/internal/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <views_v1_token/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/command_line.h"
@@ -22,14 +22,15 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/link_data/defs.h"
 
-using modular::testing::Await;
-using modular::testing::Get;
-using modular::testing::TestPoint;
+using fuchsia::modular::testing::Await;
+using fuchsia::modular::testing::Get;
+using fuchsia::modular::testing::TestPoint;
 
 namespace {
 
 // Cf. README.md for what this test does and how.
-class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
+class TestApp : public fuchsia::modular::testing::ComponentBase<
+                    fuchsia::modular::UserShell> {
  public:
   explicit TestApp(component::ApplicationContext* const application_context)
       : ComponentBase(application_context) {
@@ -42,7 +43,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint initialize_{"Initialize()"};
 
   // |UserShell|
-  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
                       user_shell_context) override {
     initialize_.Pass();
 
@@ -69,19 +70,19 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void TestStory1_GetController(const fidl::StringPtr& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
-    story_controller_->GetInfo(
-        [this](modular::StoryInfo story_info, modular::StoryState state) {
-          story1_get_controller_.Pass();
-          story_info_ = std::move(story_info);
-          TestStory1_GetModule0Link();
-        });
+    story_controller_->GetInfo([this](fuchsia::modular::StoryInfo story_info,
+                                      fuchsia::modular::StoryState state) {
+      story1_get_controller_.Pass();
+      story_info_ = std::move(story_info);
+      TestStory1_GetModule0Link();
+    });
   }
 
   TestPoint story1_get_module0_link_{"Story1 Get Module0 link"};
 
   void TestStory1_GetModule0Link() {
     fidl::VectorPtr<fidl::StringPtr> module_path;
-    module_path.push_back(modular::kRootModuleName);
+    module_path.push_back(fuchsia::modular::kRootModuleName);
     story_controller_->GetLink(std::move(module_path), nullptr, root_link_.NewRequest());
     root_link_->Get(nullptr, [this](fidl::StringPtr value) {
         if (value == kRootJson0) {
@@ -147,7 +148,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void TestStory1_GetActiveModules() {
     story_controller_->GetActiveModules(
-        nullptr, [this](fidl::VectorPtr<modular::ModuleData> modules) {
+        nullptr, [this](fidl::VectorPtr<fuchsia::modular::ModuleData> modules) {
           if (modules->size() == 0) {
             story1_get_active_modules_.Pass();
           } else {
@@ -162,7 +163,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void TestStory1_GetActiveLinks() {
     story_controller_->GetActiveLinks(
-        nullptr, [this](fidl::VectorPtr<modular::LinkPath> links) {
+        nullptr, [this](fidl::VectorPtr<fuchsia::modular::LinkPath> links) {
           if (links->size() == 0) {
             story1_get_active_links_.Pass();
           } else {
@@ -207,11 +208,11 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
       });
   }
 
-  modular::UserShellContextPtr user_shell_context_;
-  modular::StoryProviderPtr story_provider_;
-  modular::StoryControllerPtr story_controller_;
-  modular::LinkPtr root_link_;
-  modular::StoryInfo story_info_;
+  fuchsia::modular::UserShellContextPtr user_shell_context_;
+  fuchsia::modular::StoryProviderPtr story_provider_;
+  fuchsia::modular::StoryControllerPtr story_controller_;
+  fuchsia::modular::LinkPtr root_link_;
+  fuchsia::modular::StoryInfo story_info_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
@@ -219,6 +220,6 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 }  // namespace
 
 int main(int argc, const char** argv) {
-  modular::testing::ComponentMain<TestApp>();
+  fuchsia::modular::testing::ComponentMain<TestApp>();
   return 0;
 }

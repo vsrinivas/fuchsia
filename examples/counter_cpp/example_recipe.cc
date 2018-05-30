@@ -5,12 +5,12 @@
 // A Module that serves as the recipe in the example story, i.e. that
 // creates other Modules in the story.
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/app_driver.h"
-#include <modular/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -24,7 +24,7 @@
 
 namespace {
 
-using modular::to_array;
+using fuchsia::modular::to_array;
 
 // JSON data
 constexpr char kInitialJson[] =
@@ -38,9 +38,10 @@ constexpr char kLedgerCounterKey[] = "counter_key";
 
 // Implementation of the LinkWatcher service that forwards each document
 // changed in one Link instance to a second Link instance.
-class LinkForwarder : modular::LinkWatcher {
+class LinkForwarder : fuchsia::modular::LinkWatcher {
  public:
-  LinkForwarder(modular::Link* const src, modular::Link* const dst)
+  LinkForwarder(fuchsia::modular::Link* const src,
+                fuchsia::modular::Link* const dst)
       : src_binding_(this), src_(src), dst_(dst) {
     src_->Watch(src_binding_.NewBinding());
   }
@@ -58,39 +59,39 @@ class LinkForwarder : modular::LinkWatcher {
   }
 
  private:
-  fidl::Binding<modular::LinkWatcher> src_binding_;
-  modular::Link* const src_;
-  modular::Link* const dst_;
+  fidl::Binding<fuchsia::modular::LinkWatcher> src_binding_;
+  fuchsia::modular::Link* const src_;
+  fuchsia::modular::Link* const dst_;
   bool initial_update_ = true;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LinkForwarder);
 };
 
-class ModuleMonitor : modular::ModuleWatcher {
+class ModuleMonitor : fuchsia::modular::ModuleWatcher {
  public:
-  ModuleMonitor(modular::ModuleController* const module_client)
+  ModuleMonitor(fuchsia::modular::ModuleController* const module_client)
       : binding_(this) {
     module_client->Watch(binding_.NewBinding());
   }
 
-  void OnStateChange(modular::ModuleState new_state) override {
+  void OnStateChange(fuchsia::modular::ModuleState new_state) override {
     FXL_LOG(INFO) << "RecipeImpl " << new_state;
   }
 
  private:
-  fidl::Binding<modular::ModuleWatcher> binding_;
+  fidl::Binding<fuchsia::modular::ModuleWatcher> binding_;
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleMonitor);
 };
 
-class DeviceMapMonitor : modular::DeviceMapWatcher {
+class DeviceMapMonitor : fuchsia::modular::DeviceMapWatcher {
  public:
-  DeviceMapMonitor(modular::DeviceMap* const device_map,
-                   std::vector<modular::DeviceMapEntry> devices)
+  DeviceMapMonitor(fuchsia::modular::DeviceMap* const device_map,
+                   std::vector<fuchsia::modular::DeviceMapEntry> devices)
       : binding_(this), devices_(std::move(devices)) {
     device_map->WatchDeviceMap(binding_.NewBinding());
   }
 
-  void OnDeviceMapChange(modular::DeviceMapEntry entry) override {
+  void OnDeviceMapChange(fuchsia::modular::DeviceMapEntry entry) override {
     FXL_LOG(INFO) << "OnDeviceMapChange() " << entry.name << " "
                   << entry.profile;
     for (const auto& device : devices_) {
@@ -102,14 +103,14 @@ class DeviceMapMonitor : modular::DeviceMapWatcher {
 
  private:
   fidl::Binding<DeviceMapWatcher> binding_;
-  std::vector<modular::DeviceMapEntry> devices_;
+  std::vector<fuchsia::modular::DeviceMapEntry> devices_;
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceMapMonitor);
 };
 
 // Module implementation that acts as a recipe. There is one instance
 // per application; the story runner creates new application instances
 // to run more module instances.
-class RecipeApp : public modular::ViewApp {
+class RecipeApp : public fuchsia::modular::ViewApp {
  public:
   RecipeApp(component::ApplicationContext* const application_context)
       : ViewApp(application_context) {
@@ -125,7 +126,7 @@ class RecipeApp : public modular::ViewApp {
         FXL_LOG(ERROR) << "Recipe Module Link has invalid JSON: " << json;
       } else {
         FXL_LOG(INFO) << "Recipe Module Link: "
-                      << modular::JsonValueToPrettyString(doc);
+                      << fuchsia::modular::JsonValueToPrettyString(doc);
       }
     });
 
@@ -134,30 +135,30 @@ class RecipeApp : public modular::ViewApp {
     module_context_->GetLink(kModule1Link, module1_link_.NewRequest());
     module_context_->GetLink(kModule2Link, module2_link_.NewRequest());
 
-    modular::Intent intent;
+    fuchsia::modular::Intent intent;
     intent.action.handler = "example_module1";
-    modular::IntentParameterData parameter_data;
+    fuchsia::modular::IntentParameterData parameter_data;
     parameter_data.set_link_name(kModule1Link);
-    modular::IntentParameter parameter;
+    fuchsia::modular::IntentParameter parameter;
     parameter.name = "theOneLink";
     parameter.data = std::move(parameter_data);
     intent.parameters.push_back(std::move(parameter));
-    module_context_->StartModule("module1", std::move(intent),
-                                 module1_.NewRequest(), nullptr,
-                                 [](const modular::StartModuleStatus&) {});
+    module_context_->StartModule(
+        "module1", std::move(intent), module1_.NewRequest(), nullptr,
+        [](const fuchsia::modular::StartModuleStatus&) {});
 
-    intent = modular::Intent();
+    intent = fuchsia::modular::Intent();
     intent.action.handler = "example_module2";
-    parameter_data = modular::IntentParameterData();
+    parameter_data = fuchsia::modular::IntentParameterData();
     parameter_data.set_link_name(kModule2Link);
-    parameter = modular::IntentParameter();
+    parameter = fuchsia::modular::IntentParameter();
     parameter.name = "theOneLink";
     parameter.data = std::move(parameter_data);
     intent.parameters.push_back(std::move(parameter));
     component::ServiceProviderPtr services_from_module2;
-    module_context_->StartModule("module2", std::move(intent),
-                                 module2_.NewRequest(), nullptr,
-                                 [](const modular::StartModuleStatus&) {});
+    module_context_->StartModule(
+        "module2", std::move(intent), module2_.NewRequest(), nullptr,
+        [](const fuchsia::modular::StartModuleStatus&) {});
 
     connections_.emplace_back(
         new LinkForwarder(module1_link_.get(), module2_link_.get()));
@@ -253,43 +254,44 @@ class RecipeApp : public modular::ViewApp {
         });
 
     application_context->ConnectToEnvironmentService(device_map_.NewRequest());
-    device_map_->Query([this](fidl::VectorPtr<modular::DeviceMapEntry> devices) {
-      FXL_LOG(INFO) << "Devices from device_map_->Query():";
-      for (modular::DeviceMapEntry device : devices.take()) {
-        FXL_LOG(INFO) << " - " << device.name;
-        device_map_entries_.emplace_back(std::move(device));
-      }
+    device_map_->Query(
+        [this](fidl::VectorPtr<fuchsia::modular::DeviceMapEntry> devices) {
+          FXL_LOG(INFO) << "Devices from device_map_->Query():";
+          for (fuchsia::modular::DeviceMapEntry device : devices.take()) {
+            FXL_LOG(INFO) << " - " << device.name;
+            device_map_entries_.emplace_back(std::move(device));
+          }
 
-      device_map_monitor_.reset(new DeviceMapMonitor(
-          device_map_.get(), std::move(device_map_entries_)));
-      device_map_->SetCurrentDeviceProfile("5");
-    });
+          device_map_monitor_.reset(new DeviceMapMonitor(
+              device_map_.get(), std::move(device_map_entries_)));
+          device_map_->SetCurrentDeviceProfile("5");
+        });
   }
 
   ~RecipeApp() override = default;
 
  private:
-  modular::LinkPtr link_;
-  modular::ModuleContextPtr module_context_;
+  fuchsia::modular::LinkPtr link_;
+  fuchsia::modular::ModuleContextPtr module_context_;
 
   // The following ledger interfaces are stored here to make life-time
   // management easier when chaining together lambda callbacks.
-  modular::ComponentContextPtr component_context_;
+  fuchsia::modular::ComponentContextPtr component_context_;
   ledger::LedgerPtr module_ledger_;
   ledger::PagePtr module_root_page_;
   ledger::PageSnapshotPtr page_snapshot_;
 
-  modular::ModuleControllerPtr module1_;
-  modular::LinkPtr module1_link_;
+  fuchsia::modular::ModuleControllerPtr module1_;
+  fuchsia::modular::LinkPtr module1_link_;
 
-  modular::ModuleControllerPtr module2_;
-  modular::LinkPtr module2_link_;
+  fuchsia::modular::ModuleControllerPtr module2_;
+  fuchsia::modular::LinkPtr module2_link_;
 
   std::vector<std::unique_ptr<LinkForwarder>> connections_;
   std::vector<std::unique_ptr<ModuleMonitor>> module_monitors_;
 
-  modular::DeviceMapPtr device_map_;
-  std::vector<modular::DeviceMapEntry> device_map_entries_;
+  fuchsia::modular::DeviceMapPtr device_map_;
+  std::vector<fuchsia::modular::DeviceMapEntry> device_map_entries_;
   std::unique_ptr<DeviceMapMonitor> device_map_monitor_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RecipeApp);
@@ -301,7 +303,7 @@ int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
 
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::AppDriver<RecipeApp> driver(
+  fuchsia::modular::AppDriver<RecipeApp> driver(
       app_context->outgoing().deprecated_services(),
       std::make_unique<RecipeApp>(app_context.get()),
       [&loop] { loop.QuitNow(); });

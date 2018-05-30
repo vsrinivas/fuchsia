@@ -7,6 +7,7 @@
 #include <cobalt/cpp/fidl.h>
 #include "peridot/lib/cobalt/cobalt.h"
 
+namespace fuchsia {
 namespace modular {
 namespace {
 constexpr int32_t kCobaltProjectId = 101;
@@ -60,3 +61,4 @@ void ReportStoryLaunchTime(zx_time_t time_nanos) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

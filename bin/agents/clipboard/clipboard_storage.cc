@@ -6,6 +6,7 @@
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 
+namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -111,3 +112,4 @@ void ClipboardStorage::Peek(
 }
 
 }  // namespace modular
+}  // namespace fuchsia

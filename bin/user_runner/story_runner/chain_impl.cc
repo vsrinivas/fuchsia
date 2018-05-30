@@ -6,6 +6,7 @@
 
 #include "peridot/lib/fidl/clone.h"
 
+namespace fuchsia {
 namespace modular {
 
 ChainImpl::ChainImpl(const fidl::VectorPtr<fidl::StringPtr>& path,
@@ -30,3 +31,4 @@ LinkPathPtr ChainImpl::GetLinkPathForKey(const fidl::StringPtr& key) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

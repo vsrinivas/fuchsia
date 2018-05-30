@@ -11,6 +11,7 @@
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fxl/logging.h"
 
+namespace fuchsia {
 namespace modular {
 
 // "Specialization" (overload) covering unique_ptr.
@@ -131,5 +132,6 @@ template <typename Interface,
 using BindingSet = BoundNonMovableSet<fidl::Binding<Interface>, T, GetFidlType>;
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_BOUND_SET_BOUND_SET_H_

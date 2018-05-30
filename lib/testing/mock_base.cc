@@ -6,6 +6,7 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/logging.h"
 
+namespace fuchsia {
 namespace modular {
 namespace testing {
 
@@ -34,3 +35,4 @@ void MockBase::ExpectNoOtherCalls() {
 
 }  // namespace testing
 }  // namespace modular
+}  // namespace fuchsia

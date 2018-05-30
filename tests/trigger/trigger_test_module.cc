@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <modular/cpp/fidl.h>
-#include <modular_test_trigger/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <modular_test_trigger/cpp/fidl.h>
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/module_driver.h"
@@ -14,9 +14,9 @@
 #include "peridot/lib/testing/testing.h"
 #include "peridot/tests/trigger/defs.h"
 
-using modular::testing::Await;
-using modular::testing::Signal;
-using modular::testing::TestPoint;
+using fuchsia::modular::testing::Await;
+using fuchsia::modular::testing::Signal;
+using fuchsia::modular::testing::TestPoint;
 
 namespace {
 
@@ -25,10 +25,11 @@ class TestApp {
  public:
   TestPoint initialized_{"Root module initialized"};
 
-  TestApp(
-      modular::ModuleHost* const module_host,
-      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/) {
-    modular::testing::Init(module_host->application_context(), __FILE__);
+  TestApp(fuchsia::modular::ModuleHost* const module_host,
+          fidl::InterfaceRequest<
+              views_v1::ViewProvider> /*view_provider_request*/) {
+    fuchsia::modular::testing::Init(module_host->application_context(),
+                                    __FILE__);
     initialized_.Pass();
 
     // Exercise ComponentContext.ConnectToAgent()
@@ -50,8 +51,8 @@ class TestApp {
     component_context_->ObtainMessageQueue("implicit_test",
                                            implicit_msg_queue_.NewRequest());
     implicit_msg_queue_->GetToken([this](fidl::StringPtr token) {
-      modular::testing::GetStore()->Put("trigger_test_module_queue_token",
-                                        token, [] {});
+      fuchsia::modular::testing::GetStore()->Put(
+          "trigger_test_module_queue_token", token, [] {});
       agent_service_->ObserveMessageQueueDeletion(token);
       explicit_msg_queue_->GetToken([this](fidl::StringPtr token) {
         explicit_queue_token_ = token;
@@ -123,20 +124,20 @@ class TestApp {
   // Called by ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
-    modular::testing::Done(done);
+    fuchsia::modular::testing::Done(done);
   }
 
  private:
-  modular::AgentControllerPtr agent_controller_;
+  fuchsia::modular::AgentControllerPtr agent_controller_;
   modular_test_trigger::TriggerTestServicePtr agent_service_;
-  modular::ComponentContextPtr component_context_;
+  fuchsia::modular::ComponentContextPtr component_context_;
   // The queue used for observing explicit queue deletion.
-  modular::MessageQueuePtr explicit_msg_queue_;
+  fuchsia::modular::MessageQueuePtr explicit_msg_queue_;
   std::string explicit_queue_token_;
   // The queue used for observing queue deletion when module's namespace is torn
   // down.
-  modular::MessageQueuePtr implicit_msg_queue_;
-  modular::MessageSenderPtr message_sender_;
+  fuchsia::modular::MessageQueuePtr implicit_msg_queue_;
+  fuchsia::modular::MessageSenderPtr message_sender_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
@@ -146,8 +147,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::ModuleDriver<TestApp> driver(app_context.get(),
-                                        [&loop] { loop.QuitNow(); });
+  fuchsia::modular::ModuleDriver<TestApp> driver(app_context.get(),
+                                                 [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

@@ -15,6 +15,7 @@
 #include "peridot/lib/ledger_client/operations.h"
 #include "peridot/lib/ledger_client/storage.h"
 
+namespace fuchsia {
 namespace modular {
 
 namespace {
@@ -164,3 +165,4 @@ void DeviceMapImpl::OnPageDelete(const std::string& key) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

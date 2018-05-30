@@ -21,7 +21,7 @@ constexpr char kUsageLogUrl[] = "usage_log";
 
 namespace {
 
-constexpr modular::RateLimitedRetry::Threshold kKronkRetryLimit = {
+constexpr fuchsia::modular::RateLimitedRetry::Threshold kKronkRetryLimit = {
     3, fxl::TimeDelta::FromSeconds(45)};
 
 // Calls Duplicate() on an InterfacePtr<> and returns the newly bound
@@ -33,14 +33,14 @@ fidl::InterfaceHandle<T> Duplicate(const fidl::InterfacePtr<T>& ptr) {
   return handle;
 }
 
-modular::AgentControllerPtr StartStoryInfoAgent(
-    modular::ComponentContext* component_context,
-    fidl::InterfaceHandle<modular::StoryProvider> story_provider,
-    fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
-    fidl::InterfaceHandle<modular::VisibleStoriesProvider>
+fuchsia::modular::AgentControllerPtr StartStoryInfoAgent(
+    fuchsia::modular::ComponentContext* component_context,
+    fidl::InterfaceHandle<fuchsia::modular::StoryProvider> story_provider,
+    fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider,
+    fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
         visible_stories_provider) {
   component::ServiceProviderPtr agent_services;
-  modular::AgentControllerPtr controller;
+  fuchsia::modular::AgentControllerPtr controller;
   component_context->ConnectToAgent("acquirers/story_info_main",
                                     agent_services.NewRequest(),
                                     controller.NewRequest());
@@ -53,8 +53,9 @@ modular::AgentControllerPtr StartStoryInfoAgent(
   return controller;
 }
 
-modular::ComponentScope CloneScope(const modular::ComponentScope& scope) {
-  modular::ComponentScope result;
+fuchsia::modular::ComponentScope CloneScope(
+    const fuchsia::modular::ComponentScope& scope) {
+  fuchsia::modular::ComponentScope result;
   fidl::Clone(scope, &result);
   return result;
 }
@@ -62,12 +63,14 @@ modular::ComponentScope CloneScope(const modular::ComponentScope& scope) {
 }  // namespace
 
 UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
-    component::ApplicationContext* app_context,
-    const Config& config,
-    fidl::InterfaceHandle<modular::ContextEngine> context_engine_handle,
-    fidl::InterfaceHandle<modular::StoryProvider> story_provider_handle,
-    fidl::InterfaceHandle<modular::FocusProvider> focus_provider_handle,
-    fidl::InterfaceHandle<modular::VisibleStoriesProvider>
+    component::ApplicationContext* app_context, const Config& config,
+    fidl::InterfaceHandle<fuchsia::modular::ContextEngine>
+        context_engine_handle,
+    fidl::InterfaceHandle<fuchsia::modular::StoryProvider>
+        story_provider_handle,
+    fidl::InterfaceHandle<fuchsia::modular::FocusProvider>
+        focus_provider_handle,
+    fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
         visible_stories_provider_handle)
     : app_context_(app_context),
       config_(config),
@@ -81,14 +84,15 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   // these processes.
   suggestion_services_ = StartTrustedApp("suggestion_engine");
   suggestion_engine_ =
-      suggestion_services_.ConnectToService<modular::SuggestionEngine>();
+      suggestion_services_
+          .ConnectToService<fuchsia::modular::SuggestionEngine>();
 
   // Generate a ContextWriter and ContextReader to pass to the SuggestionEngine.
-  fidl::InterfaceHandle<modular::ContextReader> context_reader;
-  fidl::InterfaceHandle<modular::ContextWriter> context_writer;
-  modular::ComponentScope scope1;
-  scope1.set_global_scope(modular::GlobalScope());
-  modular::ComponentScope scope2;
+  fidl::InterfaceHandle<fuchsia::modular::ContextReader> context_reader;
+  fidl::InterfaceHandle<fuchsia::modular::ContextWriter> context_writer;
+  fuchsia::modular::ComponentScope scope1;
+  scope1.set_global_scope(fuchsia::modular::GlobalScope());
+  fuchsia::modular::ComponentScope scope2;
   fidl::Clone(scope1, &scope2);
   context_engine_->GetWriter(std::move(scope1), context_writer.NewRequest());
   context_engine_->GetReader(std::move(scope2), context_reader.NewRequest());
@@ -101,8 +105,8 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
 }
 
 void UserIntelligenceProviderImpl::GetComponentIntelligenceServices(
-    modular::ComponentScope scope,
-    fidl::InterfaceRequest<modular::IntelligenceServices> request) {
+    fuchsia::modular::ComponentScope scope,
+    fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request) {
   intelligence_services_bindings_.AddBinding(
       std::make_unique<IntelligenceServicesImpl>(
           std::move(scope), context_engine_.get(), suggestion_engine_.get(),
@@ -111,7 +115,7 @@ void UserIntelligenceProviderImpl::GetComponentIntelligenceServices(
 }
 
 void UserIntelligenceProviderImpl::GetSuggestionProvider(
-    fidl::InterfaceRequest<modular::SuggestionProvider> request) {
+    fidl::InterfaceRequest<fuchsia::modular::SuggestionProvider> request) {
   suggestion_services_.ConnectToService(std::move(request));
 }
 
@@ -125,7 +129,8 @@ void UserIntelligenceProviderImpl::GetSpeechToText(
 }
 
 void UserIntelligenceProviderImpl::StartAgents(
-    fidl::InterfaceHandle<modular::ComponentContext> component_context_handle) {
+    fidl::InterfaceHandle<fuchsia::modular::ComponentContext>
+        component_context_handle) {
   component_context_.Bind(std::move(component_context_handle));
 
   if (!config_.kronk.empty()) {
@@ -169,7 +174,7 @@ component::Services UserIntelligenceProviderImpl::StartTrustedApp(
 }
 
 void UserIntelligenceProviderImpl::StartAgent(const std::string& url) {
-  modular::AgentControllerPtr controller;
+  fuchsia::modular::AgentControllerPtr controller;
   component::ServiceProviderPtr services;
   component_context_->ConnectToAgent(url, services.NewRequest(),
                                      controller.NewRequest());
@@ -177,12 +182,13 @@ void UserIntelligenceProviderImpl::StartAgent(const std::string& url) {
 }
 
 void UserIntelligenceProviderImpl::StartActionLog(
-    modular::SuggestionEngine* suggestion_engine) {
+    fuchsia::modular::SuggestionEngine* suggestion_engine) {
   std::string url = "action_log";
   component::Services action_log_services = StartTrustedApp(url);
-  modular::UserActionLogFactoryPtr action_log_factory =
-      action_log_services.ConnectToService<modular::UserActionLogFactory>();
-  modular::ProposalPublisherPtr proposal_publisher;
+  fuchsia::modular::UserActionLogFactoryPtr action_log_factory =
+      action_log_services
+          .ConnectToService<fuchsia::modular::UserActionLogFactory>();
+  fuchsia::modular::ProposalPublisherPtr proposal_publisher;
   suggestion_engine->RegisterProposalPublisher(url,
                                                proposal_publisher.NewRequest());
   action_log_factory->GetUserActionLog(std::move(proposal_publisher),
@@ -223,62 +229,68 @@ fidl::VectorPtr<fidl::StringPtr>
 UserIntelligenceProviderImpl::AddStandardServices(
     const std::string& url,
     component::ServiceNamespace* agent_host) {
-  modular::ComponentScope agent_info;
-  modular::AgentScope agent_scope;
+  fuchsia::modular::ComponentScope agent_info;
+  fuchsia::modular::AgentScope agent_scope;
   agent_scope.url = url;
   agent_info.set_agent_scope(std::move(agent_scope));
   fidl::VectorPtr<fidl::StringPtr> service_names;
 
-  service_names.push_back(modular::ContextWriter::Name_);
-  agent_host->AddService<modular::ContextWriter>(fxl::MakeCopyable(
+  service_names.push_back(fuchsia::modular::ContextWriter::Name_);
+  agent_host->AddService<fuchsia::modular::ContextWriter>(fxl::MakeCopyable(
       [this, client_info = CloneScope(agent_info),
-       url](fidl::InterfaceRequest<modular::ContextWriter> request) {
+       url](fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request) {
         context_engine_->GetWriter(CloneScope(client_info), std::move(request));
       }));
 
-  service_names.push_back(modular::ContextReader::Name_);
-  agent_host->AddService<modular::ContextReader>(fxl::MakeCopyable(
+  service_names.push_back(fuchsia::modular::ContextReader::Name_);
+  agent_host->AddService<fuchsia::modular::ContextReader>(fxl::MakeCopyable(
       [this, client_info = CloneScope(agent_info),
-       url](fidl::InterfaceRequest<modular::ContextReader> request) {
+       url](fidl::InterfaceRequest<fuchsia::modular::ContextReader> request) {
         context_engine_->GetReader(CloneScope(client_info), std::move(request));
       }));
 
-  service_names.push_back(modular::IntelligenceServices::Name_);
-  agent_host->AddService<modular::IntelligenceServices>(fxl::MakeCopyable(
-      [this, client_info = CloneScope(agent_info),
-       url](fidl::InterfaceRequest<modular::IntelligenceServices> request) {
-        this->GetComponentIntelligenceServices(CloneScope(client_info),
-                                               std::move(request));
-      }));
+  service_names.push_back(fuchsia::modular::IntelligenceServices::Name_);
+  agent_host->AddService<fuchsia::modular::IntelligenceServices>(
+      fxl::MakeCopyable(
+          [this, client_info = CloneScope(agent_info),
+           url](fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices>
+                    request) {
+            this->GetComponentIntelligenceServices(CloneScope(client_info),
+                                                   std::move(request));
+          }));
 
-  service_names.push_back(modular::ProposalPublisher::Name_);
-  agent_host->AddService<modular::ProposalPublisher>(
-      [this, url](fidl::InterfaceRequest<modular::ProposalPublisher> request) {
+  service_names.push_back(fuchsia::modular::ProposalPublisher::Name_);
+  agent_host->AddService<fuchsia::modular::ProposalPublisher>(
+      [this, url](
+          fidl::InterfaceRequest<fuchsia::modular::ProposalPublisher> request) {
         suggestion_engine_->RegisterProposalPublisher(url, std::move(request));
       });
 
-  service_names.push_back(modular::VisibleStoriesProvider::Name_);
-  agent_host->AddService<modular::VisibleStoriesProvider>(
-      [this](fidl::InterfaceRequest<modular::VisibleStoriesProvider> request) {
+  service_names.push_back(fuchsia::modular::VisibleStoriesProvider::Name_);
+  agent_host->AddService<fuchsia::modular::VisibleStoriesProvider>(
+      [this](fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesProvider>
+                 request) {
         visible_stories_provider_->Duplicate(std::move(request));
       });
 
   if (url == kMIDashboardUrl || url == kUsageLogUrl) {
-    service_names.push_back(modular::ContextDebug::Name_);
-    agent_host->AddService<modular::ContextDebug>(
-        [this](fidl::InterfaceRequest<modular::ContextDebug> request) {
+    service_names.push_back(fuchsia::modular::ContextDebug::Name_);
+    agent_host->AddService<fuchsia::modular::ContextDebug>(
+        [this](fidl::InterfaceRequest<fuchsia::modular::ContextDebug> request) {
           context_engine_->GetContextDebug(std::move(request));
         });
 
-    service_names.push_back(modular::SuggestionDebug::Name_);
-    agent_host->AddService<modular::SuggestionDebug>(
-        [this](fidl::InterfaceRequest<modular::SuggestionDebug> request) {
+    service_names.push_back(fuchsia::modular::SuggestionDebug::Name_);
+    agent_host->AddService<fuchsia::modular::SuggestionDebug>(
+        [this](
+            fidl::InterfaceRequest<fuchsia::modular::SuggestionDebug> request) {
           suggestion_services_.ConnectToService(std::move(request));
         });
 
-    service_names.push_back(modular::UserActionLog::Name_);
-    agent_host->AddService<modular::UserActionLog>(
-        [this](fidl::InterfaceRequest<modular::UserActionLog> request) {
+    service_names.push_back(fuchsia::modular::UserActionLog::Name_);
+    agent_host->AddService<fuchsia::modular::UserActionLog>(
+        [this](
+            fidl::InterfaceRequest<fuchsia::modular::UserActionLog> request) {
           user_action_log_->Duplicate(std::move(request));
         });
   }
@@ -294,12 +306,12 @@ UserIntelligenceProviderFactoryImpl::UserIntelligenceProviderFactoryImpl(
     : app_context_(app_context), config_(config) {}
 
 void UserIntelligenceProviderFactoryImpl::GetUserIntelligenceProvider(
-    fidl::InterfaceHandle<modular::ContextEngine> context_engine,
-    fidl::InterfaceHandle<modular::StoryProvider> story_provider,
-    fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
-    fidl::InterfaceHandle<modular::VisibleStoriesProvider>
+    fidl::InterfaceHandle<fuchsia::modular::ContextEngine> context_engine,
+    fidl::InterfaceHandle<fuchsia::modular::StoryProvider> story_provider,
+    fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider,
+    fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
         visible_stories_provider,
-    fidl::InterfaceRequest<modular::UserIntelligenceProvider>
+    fidl::InterfaceRequest<fuchsia::modular::UserIntelligenceProvider>
         user_intelligence_provider_request) {
   // Fail if someone has already used this Factory to create an instance of
   // UserIntelligenceProvider.
@@ -308,8 +320,8 @@ void UserIntelligenceProviderFactoryImpl::GetUserIntelligenceProvider(
       app_context_, config_, std::move(context_engine),
       std::move(story_provider), std::move(focus_provider),
       std::move(visible_stories_provider)));
-  binding_.reset(
-      new fidl::Binding<modular::UserIntelligenceProvider>(impl_.get()));
+  binding_.reset(new fidl::Binding<fuchsia::modular::UserIntelligenceProvider>(
+      impl_.get()));
   binding_->Bind(std::move(user_intelligence_provider_request));
 }
 

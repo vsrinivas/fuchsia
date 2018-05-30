@@ -12,6 +12,7 @@
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
 
+namespace fuchsia {
 namespace modular {
 
 class ProxyBase;
@@ -94,5 +95,6 @@ template <typename I>
 Proxy<I>::~Proxy() = default;
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_FIDL_PROXY_H_

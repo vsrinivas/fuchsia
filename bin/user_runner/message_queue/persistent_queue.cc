@@ -10,6 +10,7 @@
 #include "lib/fxl/logging.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 
+namespace fuchsia {
 namespace modular {
 
 PersistentQueue::PersistentQueue(std::string file_name)
@@ -48,3 +49,4 @@ void PersistentQueue::Save() {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

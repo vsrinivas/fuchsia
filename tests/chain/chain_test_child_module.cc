@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 #include <views_v1_token/cpp/fidl.h>
 
@@ -15,8 +15,8 @@
 #include "peridot/tests/chain/defs.h"
 #include "peridot/tests/common/defs.h"
 
-using modular::testing::Signal;
-using modular::testing::TestPoint;
+using fuchsia::modular::testing::Signal;
+using fuchsia::modular::testing::TestPoint;
 
 namespace {
 
@@ -26,12 +26,13 @@ class TestApp {
   TestPoint initialized_{"Child module initialized"};
 
   TestApp(
-      modular::ModuleHost* module_host,
+      fuchsia::modular::ModuleHost* module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/)
       : module_context_(module_host->module_context()) {
     module_context_->GetComponentContext(component_context_.NewRequest());
     component_context_->GetEntityResolver(entity_resolver_.NewRequest());
-    modular::testing::Init(module_host->application_context(), __FILE__);
+    fuchsia::modular::testing::Init(module_host->application_context(),
+                                    __FILE__);
 
     initialized_.Pass();
 
@@ -45,7 +46,7 @@ class TestApp {
   // Called from ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
-    modular::testing::Done(done);
+    fuchsia::modular::testing::Done(done);
   }
 
  private:
@@ -105,22 +106,22 @@ class TestApp {
         default_link_correct_.Pass();
       }
 
-      Signal(modular::testing::kTestShutdown);
+      Signal(fuchsia::modular::testing::kTestShutdown);
     });
   }
 
-  modular::ComponentContextPtr component_context_;
-  modular::EntityResolverPtr entity_resolver_;
-  modular::ModuleContext* module_context_;
-  modular::ModuleControllerPtr child_module_;
+  fuchsia::modular::ComponentContextPtr component_context_;
+  fuchsia::modular::EntityResolverPtr entity_resolver_;
+  fuchsia::modular::ModuleContext* module_context_;
+  fuchsia::modular::ModuleControllerPtr child_module_;
   views_v1_token::ViewOwnerPtr child_view_;
 
-  modular::LinkPtr link_one_;
-  modular::LinkPtr link_two_;
-  modular::LinkPtr link_three_;
-  modular::LinkPtr default_link_;
+  fuchsia::modular::LinkPtr link_one_;
+  fuchsia::modular::LinkPtr link_two_;
+  fuchsia::modular::LinkPtr link_three_;
+  fuchsia::modular::LinkPtr default_link_;
 
-  modular::EntityPtr entity_;
+  fuchsia::modular::EntityPtr entity_;
 
   fidl::StringPtr entity_one_reference_;
 
@@ -132,8 +133,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::ModuleDriver<TestApp> driver(app_context.get(),
-                                        [&loop] { loop.QuitNow(); });
+  fuchsia::modular::ModuleDriver<TestApp> driver(app_context.get(),
+                                                 [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

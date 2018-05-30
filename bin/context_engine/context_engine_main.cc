@@ -4,13 +4,14 @@
 
 #include <memory>
 
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
-#include <modular/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/bin/context_engine/context_engine_impl.h"
 
+namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -43,18 +44,20 @@ class ContextEngineApp {
 
 }  // namespace
 }  // namespace modular
+}  // namespace fuchsia
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   auto context_engine_app =
-      std::make_unique<modular::ContextEngineApp>(app_context.get());
-  fxl::WeakPtr<modular::ContextDebugImpl> debug = context_engine_app->debug();
+      std::make_unique<fuchsia::modular::ContextEngineApp>(app_context.get());
+  fxl::WeakPtr<fuchsia::modular::ContextDebugImpl> debug =
+      context_engine_app->debug();
   debug->GetIdleWaiter()->SetMessageLoop(&loop);
 
-  modular::AppDriver<modular::ContextEngineApp> driver(
-      app_context->outgoing().deprecated_services(), std::move(context_engine_app),
-      [&loop] { loop.QuitNow(); });
+  fuchsia::modular::AppDriver<fuchsia::modular::ContextEngineApp> driver(
+      app_context->outgoing().deprecated_services(),
+      std::move(context_engine_app), [&loop] { loop.QuitNow(); });
 
   // The |WaitUntilIdle| debug functionality escapes the main message loop to
   // perform its test.

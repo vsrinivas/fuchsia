@@ -16,6 +16,7 @@
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/util/string_escape.h"
 
+namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -253,3 +254,4 @@ void EntityProviderRunner::ResolveEntity(
 }
 
 }  // namespace modular
+}  // namespace fuchsia

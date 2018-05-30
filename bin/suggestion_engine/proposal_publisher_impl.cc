@@ -6,6 +6,7 @@
 
 #include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
 
+namespace fuchsia {
 namespace modular {
 
 ProposalPublisherImpl::ProposalPublisherImpl(SuggestionEngineImpl* engine,
@@ -38,7 +39,7 @@ ProposalPublisherImpl::BindingSet::~BindingSet() = default;
 
 void ProposalPublisherImpl::BindingSet::OnConnectionError(
     fidl::Binding<ProposalPublisher>* binding) {
-  modular::BindingSet<ProposalPublisher>::OnConnectionError(binding);
+  fuchsia::modular::BindingSet<ProposalPublisher>::OnConnectionError(binding);
 
   if (impl_->ShouldEraseSelf())
     impl_->EraseSelf();
@@ -53,3 +54,4 @@ void ProposalPublisherImpl::EraseSelf() {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

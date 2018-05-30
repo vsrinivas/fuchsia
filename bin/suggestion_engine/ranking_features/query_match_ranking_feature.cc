@@ -4,6 +4,7 @@
 
 #include "peridot/bin/suggestion_engine/ranking_features/query_match_ranking_feature.h"
 
+namespace fuchsia {
 namespace modular {
 
 QueryMatchRankingFeature::QueryMatchRankingFeature() = default;
@@ -29,3 +30,4 @@ double QueryMatchRankingFeature::ComputeFeatureInternal(
 }
 
 }  // namespace modular
+}  // namespace fuchsia

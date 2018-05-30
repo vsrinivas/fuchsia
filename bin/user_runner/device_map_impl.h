@@ -7,8 +7,8 @@
 
 #include <map>
 
+#include <fuchsia/modular/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
-#include <modular/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -18,6 +18,7 @@
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
 
+namespace fuchsia {
 namespace modular {
 
 // See services/user/device_map.fidl for details.
@@ -72,11 +73,12 @@ class DeviceMapImpl : DeviceMap, PageClient {
 
   OperationQueue operation_queue_;
 
-  fidl::InterfacePtrSet<modular::DeviceMapWatcher> change_watchers_;
+  fidl::InterfacePtrSet<fuchsia::modular::DeviceMapWatcher> change_watchers_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceMapImpl);
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_DEVICE_MAP_IMPL_H_

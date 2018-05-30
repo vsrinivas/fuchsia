@@ -6,6 +6,7 @@
 
 #include "lib/fxl/logging.h"
 
+namespace fuchsia {
 namespace modular {
 
 ComponentContextFake::ComponentContextFake() {}
@@ -63,3 +64,4 @@ void ComponentContextFake::GetPackageName(GetPackageNameCallback result) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

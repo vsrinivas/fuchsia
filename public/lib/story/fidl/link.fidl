@@ -5,7 +5,7 @@
 // This file contains the definition of Link as well as the structure
 // of the data it holds.
 
-library modular;
+library fuchsia.modular;
 
 // This interface is implemented by the story runner. The ModuleContext service
 // acts as a factory for it.

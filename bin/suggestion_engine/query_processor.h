@@ -7,8 +7,8 @@
 
 #include <set>
 
+#include <fuchsia/modular/cpp/fidl.h>
 #include <media/cpp/fidl.h>
-#include <modular/cpp/fidl.h>
 
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/suggestion_engine/media_player.h"
@@ -17,6 +17,7 @@
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 #include "peridot/lib/util/idle_waiter.h"
 
+namespace fuchsia {
 namespace modular {
 
 class SuggestionEngineImpl;
@@ -110,5 +111,6 @@ class QueryProcessor {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_QUERY_PROCESSOR_H_

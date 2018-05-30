@@ -8,6 +8,7 @@
 #include "lib/context/cpp/formatting.h"
 #include "peridot/bin/context_engine/context_repository.h"
 
+namespace fuchsia {
 namespace modular {
 
 ContextReaderImpl::ContextReaderImpl(
@@ -37,3 +38,4 @@ void ContextReaderImpl::Get(
 }
 
 }  // namespace modular
+}  // namespace fuchsia

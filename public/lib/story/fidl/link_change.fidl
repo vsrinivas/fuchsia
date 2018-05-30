@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library modular_private;
+library fuchsia.modular.internal;
 
 // The types of operations that can be saved in a Link's history.
 enum LinkChangeOp {

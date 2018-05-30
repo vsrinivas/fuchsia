@@ -7,28 +7,29 @@
 
 #include <string>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "peridot/lib/testing/story_controller_mock.h"
 
+namespace fuchsia {
 namespace modular {
 
 class StoryProviderMock : public StoryProvider {
  public:
   // Allows notification of watchers.
-  void NotifyStoryChanged(modular::StoryInfo story_info,
-                          modular::StoryState story_state) {
+  void NotifyStoryChanged(fuchsia::modular::StoryInfo story_info,
+                          fuchsia::modular::StoryState story_state) {
     for (const auto& watcher : watchers_.ptrs()) {
-      modular::StoryInfo story_info_clone;
+      fuchsia::modular::StoryInfo story_info_clone;
       fidl::Clone(story_info, &story_info_clone);
       (*watcher)->OnChange(std::move(story_info_clone), story_state);
     }
   }
 
-  const modular::StoryControllerMock& story_controller() const {
+  const fuchsia::modular::StoryControllerMock& story_controller() const {
     return controller_mock_;
   }
 
@@ -49,8 +50,8 @@ class StoryProviderMock : public StoryProvider {
   }
 
   // |StoryProvider|
-  void Watch(
-      fidl::InterfaceHandle<modular::StoryProviderWatcher> watcher) override {
+  void Watch(fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher>
+                 watcher) override {
     watchers_.AddInterfacePtr(watcher.Bind());
   }
 
@@ -67,15 +68,15 @@ class StoryProviderMock : public StoryProvider {
   }
 
   // |StoryProvider|
-  void GetController(
-      fidl::StringPtr story_id,
-      fidl::InterfaceRequest<modular::StoryController> story) override {
+  void GetController(fidl::StringPtr story_id,
+                     fidl::InterfaceRequest<fuchsia::modular::StoryController>
+                         story) override {
     binding_set_.AddBinding(&controller_mock_, std::move(story));
   }
 
   // |StoryProvider|
   void PreviousStories(PreviousStoriesCallback callback) override {
-    callback(fidl::VectorPtr<modular::StoryInfo>::New(0));
+    callback(fidl::VectorPtr<fuchsia::modular::StoryInfo>::New(0));
   }
 
   // |StoryProvider|
@@ -97,11 +98,12 @@ class StoryProviderMock : public StoryProvider {
   }
 
   std::string last_created_story_;
-  modular::StoryControllerMock controller_mock_;
-  fidl::BindingSet<modular::StoryController> binding_set_;
-  fidl::InterfacePtrSet<modular::StoryProviderWatcher> watchers_;
+  fuchsia::modular::StoryControllerMock controller_mock_;
+  fidl::BindingSet<fuchsia::modular::StoryController> binding_set_;
+  fidl::InterfacePtrSet<fuchsia::modular::StoryProviderWatcher> watchers_;
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_TESTING_STORY_PROVIDER_MOCK_H_

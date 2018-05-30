@@ -15,11 +15,12 @@
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
 
+namespace fuchsia {
 namespace modular {
 
-using JsonDoc = rapidjson::Document;
+using JsonDoc = ::rapidjson::Document;
 using JsonValue = JsonDoc::ValueType;
-using JsonPointer = rapidjson::GenericPointer<JsonValue>;
+using JsonPointer = ::rapidjson::GenericPointer<JsonValue>;
 
 // Helper function to convert the given JsonValue to a string. Note that a
 // JsonDoc is also a JsonValue.
@@ -76,5 +77,6 @@ inline rapidjson::GenericPointer<typename Doc::ValueType> CreatePointer(
 }
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_RAPIDJSON_RAPIDJSON_H_

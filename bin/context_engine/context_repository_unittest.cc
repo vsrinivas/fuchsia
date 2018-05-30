@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "gtest/gtest.h"
 #include "lib/context/cpp/context_helper.h"
@@ -14,6 +14,7 @@
 
 using maxwell::ContextMetadataBuilder;
 
+namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -348,3 +349,4 @@ TEST_F(ContextRepositoryTest, ListenersGetUpdates_WhenParentsUpdated) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

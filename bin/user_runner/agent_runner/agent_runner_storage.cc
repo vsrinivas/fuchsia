@@ -4,9 +4,11 @@
 
 #include "peridot/bin/user_runner/agent_runner/agent_runner_storage.h"
 
+namespace fuchsia {
 namespace modular {
 
 AgentRunnerStorage::AgentRunnerStorage() = default;
 AgentRunnerStorage::~AgentRunnerStorage() = default;
 
 }  // namespace modular
+}  // namespace fuchsia

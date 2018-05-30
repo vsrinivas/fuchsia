@@ -10,6 +10,7 @@
 #include "lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/testing/fake_application_launcher.h"
 
+namespace fuchsia {
 namespace modular {
 namespace testing {
 namespace {
@@ -144,3 +145,4 @@ TEST_F(AppClientTest, RunWithParams_Success) {
 }  // namespace
 }  // namespace testing
 }  // namespace modular
+}  // namespace fuchsia

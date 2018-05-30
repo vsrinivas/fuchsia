@@ -10,6 +10,7 @@
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 
+namespace fuchsia {
 namespace modular {
 
 constexpr char kEntityTypeProperty[] = "@type";
@@ -99,3 +100,4 @@ bool ExtractEntityTypesFromJson(const rapidjson::Value& value,
 }
 
 }  // namespace modular
+}  // namespace fuchsia

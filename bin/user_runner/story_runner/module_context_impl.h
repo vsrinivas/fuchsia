@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <views_v1_token/cpp/fidl.h>
 
 #include "lib/app/cpp/service_provider_impl.h"
@@ -18,6 +18,7 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/user_runner/component_context_impl.h"
 
+namespace fuchsia {
 namespace modular {
 
 class StoryControllerImpl;
@@ -26,7 +27,7 @@ class StoryControllerImpl;
 struct ModuleContextInfo {
   const ComponentContextInfo component_context_info;
   StoryControllerImpl* const story_controller_impl;
-  modular::UserIntelligenceProvider* const user_intelligence_provider;
+  fuchsia::modular::UserIntelligenceProvider* const user_intelligence_provider;
   ModuleResolver* const module_resolver;
 };
 
@@ -77,7 +78,8 @@ class ModuleContextImpl : ModuleContext {
       fidl::InterfaceRequest<ComponentContext> context_request) override;
   // |ModuleContext|
   void GetIntelligenceServices(
-      fidl::InterfaceRequest<modular::IntelligenceServices> request) override;
+      fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request)
+      override;
   // |ModuleContext|
   void GetStoryId(GetStoryIdCallback callback) override;
   // |ModuleContext|
@@ -93,7 +95,7 @@ class ModuleContextImpl : ModuleContext {
 
   ComponentContextImpl component_context_impl_;
 
-  modular::UserIntelligenceProvider* const
+  fuchsia::modular::UserIntelligenceProvider* const
       user_intelligence_provider_;  // Not owned
 
   fidl::BindingSet<ModuleContext> bindings_;
@@ -106,5 +108,6 @@ class ModuleContextImpl : ModuleContext {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_MODULE_CONTEXT_IMPL_H_

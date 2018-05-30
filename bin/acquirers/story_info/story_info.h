@@ -8,8 +8,8 @@
 #include <map>
 #include <set>
 
+#include <fuchsia/modular/cpp/fidl.h>
 #include <maxwell/cpp/fidl.h>
-#include <modular/cpp/fidl.h>
 #include "lib/app_driver/cpp/agent_driver.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
@@ -29,12 +29,12 @@ class StoryWatcherImpl;
 // TODO(thatguy): Add Link value types to the Context engine and use them here.
 // Then update the resulting published value to remove its added JSON
 // structure, since it will all be represented in the metadata of the value.
-class StoryInfoAcquirer : public modular::VisibleStoriesWatcher,
-                          public modular::StoryProviderWatcher,
-                          public modular::FocusWatcher,
+class StoryInfoAcquirer : public fuchsia::modular::VisibleStoriesWatcher,
+                          public fuchsia::modular::StoryProviderWatcher,
+                          public fuchsia::modular::FocusWatcher,
                           public StoryInfoInitializer {
  public:
-  StoryInfoAcquirer(modular::AgentHost* agent_host);
+  StoryInfoAcquirer(fuchsia::modular::AgentHost* agent_host);
   ~StoryInfoAcquirer() override;
 
   // Called by AgentDriver.
@@ -42,7 +42,7 @@ class StoryInfoAcquirer : public modular::VisibleStoriesWatcher,
 
   // Called by AgentDriver.
   void RunTask(const fidl::StringPtr& task_id,
-               const modular::Agent::RunTaskCallback& callback);
+               const fuchsia::modular::Agent::RunTaskCallback& callback);
 
   // Called by AgentDriver.
   void Terminate(const std::function<void()>& done);
@@ -52,31 +52,34 @@ class StoryInfoAcquirer : public modular::VisibleStoriesWatcher,
 
  private:
   // |StoryInfoInitializer|
-  void Initialize(fidl::InterfaceHandle<modular::StoryProvider> story_provider,
-                  fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
-                  fidl::InterfaceHandle<modular::VisibleStoriesProvider>
-                      visible_stories_provider) override;
+  void Initialize(
+      fidl::InterfaceHandle<fuchsia::modular::StoryProvider> story_provider,
+      fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider,
+      fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
+          visible_stories_provider) override;
 
   // |FocusWatcher|
-  void OnFocusChange(modular::FocusInfoPtr info) override;
+  void OnFocusChange(fuchsia::modular::FocusInfoPtr info) override;
 
   // |VisibleStoriesWatcher|
   void OnVisibleStoriesChange(fidl::VectorPtr<fidl::StringPtr> ids) override;
 
   // |StoryProviderWatcher|
-  void OnChange(modular::StoryInfo info, modular::StoryState state) override;
+  void OnChange(fuchsia::modular::StoryInfo info,
+                fuchsia::modular::StoryState state) override;
   void OnDelete(fidl::StringPtr story_id) override;
 
-  modular::ContextWriterPtr context_writer_;
-  modular::ContextReaderPtr context_reader_;
-  modular::StoryProviderPtr story_provider_;
-  modular::FocusProviderPtr focus_provider_;
+  fuchsia::modular::ContextWriterPtr context_writer_;
+  fuchsia::modular::ContextReaderPtr context_reader_;
+  fuchsia::modular::StoryProviderPtr story_provider_;
+  fuchsia::modular::FocusProviderPtr focus_provider_;
 
   fidl::Binding<StoryInfoInitializer> initializer_binding_;
-  fidl::Binding<modular::VisibleStoriesWatcher>
+  fidl::Binding<fuchsia::modular::VisibleStoriesWatcher>
       visible_stories_watcher_binding_;
-  fidl::Binding<modular::StoryProviderWatcher> story_provider_watcher_binding_;
-  fidl::Binding<modular::FocusWatcher> focus_watcher_binding_;
+  fidl::Binding<fuchsia::modular::StoryProviderWatcher>
+      story_provider_watcher_binding_;
+  fidl::Binding<fuchsia::modular::FocusWatcher> focus_watcher_binding_;
 
   // Local state.
   // story id -> context value id

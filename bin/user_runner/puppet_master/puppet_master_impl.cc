@@ -7,6 +7,7 @@
 #include "lib/fxl/logging.h"
 #include "peridot/bin/user_runner/puppet_master/story_puppet_master_impl.h"
 
+namespace fuchsia {
 namespace modular {
 
 PuppetMasterImpl::PuppetMasterImpl(StoryCommandExecutor* const executor)
@@ -36,3 +37,4 @@ void PuppetMasterImpl::WatchSession(
 }
 
 }  // namespace modular
+}  // namespace fuchsia

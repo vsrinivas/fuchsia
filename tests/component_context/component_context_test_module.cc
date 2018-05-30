@@ -5,7 +5,7 @@
 #include <utility>
 
 #include <component_context_test/cpp/fidl.h>
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
@@ -20,9 +20,9 @@
 #include "peridot/tests/common/defs.h"
 #include "peridot/tests/component_context/defs.h"
 
-using modular::testing::Await;
-using modular::testing::Signal;
-using modular::testing::TestPoint;
+using fuchsia::modular::testing::Await;
+using fuchsia::modular::testing::Signal;
+using fuchsia::modular::testing::TestPoint;
 
 namespace {
 
@@ -70,12 +70,15 @@ class TestApp {
   TestPoint one_agent_connected_{"One agent accepted connection"};
 
   TestApp(
-      modular::ModuleHost* module_host,
+      fuchsia::modular::ModuleHost* module_host,
       fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/)
       : steps_(kTotalSimultaneousTests,
-               [this, module_host] { Signal(modular::testing::kTestShutdown); }),
+               [this, module_host] {
+                 Signal(fuchsia::modular::testing::kTestShutdown);
+               }),
         weak_ptr_factory_(this) {
-    modular::testing::Init(module_host->application_context(), __FILE__);
+    fuchsia::modular::testing::Init(module_host->application_context(),
+                                    __FILE__);
 
     initialized_.Pass();
 
@@ -107,7 +110,7 @@ class TestApp {
   // Called by ModuleDriver.
   void Terminate(const std::function<void()>& done) {
     stopped_.Pass();
-    modular::testing::Done(done);
+    fuchsia::modular::testing::Done(done);
   }
 
  private:
@@ -122,7 +125,7 @@ class TestApp {
                                            msg_queue_.NewRequest());
 
     // MessageQueueManager shouldn't send us anything just yet.
-    msg_receiver_ = std::make_unique<modular::MessageReceiverClient>(
+    msg_receiver_ = std::make_unique<fuchsia::modular::MessageReceiverClient>(
         msg_queue_.get(),
         [this, done_cb, kTestMessage](const fidl::StringPtr& msg,
                                       std::function<void()> ack) {
@@ -177,14 +180,14 @@ class TestApp {
 
   CounterTrigger steps_;
 
-  modular::AgentControllerPtr one_agent_controller;
+  fuchsia::modular::AgentControllerPtr one_agent_controller;
   component_context_test::ComponentContextTestServicePtr one_agent_interface_;
-  modular::ComponentContextPtr component_context_;
-  modular::MessageQueuePtr msg_queue_;
+  fuchsia::modular::ComponentContextPtr component_context_;
+  fuchsia::modular::MessageQueuePtr msg_queue_;
 
-  modular::AgentControllerPtr unstoppable_agent_controller_;
+  fuchsia::modular::AgentControllerPtr unstoppable_agent_controller_;
 
-  std::unique_ptr<modular::MessageReceiverClient> msg_receiver_;
+  std::unique_ptr<fuchsia::modular::MessageReceiverClient> msg_receiver_;
 
   fxl::WeakPtrFactory<TestApp> weak_ptr_factory_;
 
@@ -196,8 +199,8 @@ class TestApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::ModuleDriver<TestApp> driver(app_context.get(),
-                                        [&loop] { loop.QuitNow(); });
+  fuchsia::modular::ModuleDriver<TestApp> driver(app_context.get(),
+                                                 [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

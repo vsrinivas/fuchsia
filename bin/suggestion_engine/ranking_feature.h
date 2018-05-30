@@ -5,10 +5,11 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURE_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURE_H_
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "peridot/bin/suggestion_engine/ranked_suggestion.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
+namespace fuchsia {
 namespace modular {
 
 constexpr double kMaxConfidence = 1.0;
@@ -55,5 +56,6 @@ class RankingFeature {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURE_H_

@@ -6,9 +6,9 @@
 #define PERIDOT_BIN_DEVICE_RUNNER_USER_CONTROLLER_IMPL_H_
 
 #include <component/cpp/fidl.h>
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/modular/internal/cpp/fidl.h>
 #include <modular_auth/cpp/fidl.h>
-#include <modular_private/cpp/fidl.h>
 #include <presentation/cpp/fidl.h>
 #include <views_v1_token/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
@@ -21,13 +21,14 @@
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/scope.h"
 
+namespace fuchsia {
 namespace modular {
 
 // |UserControllerImpl| starts and manages a UserRunner. The life time of a
 // UserRunner is bound to this class.  |UserControllerImpl| is not self-owned,
 // but still drives its own deletion: On logout, it signals its
 // owner (DeviceRunnerApp) to delete it.
-class UserControllerImpl : UserController, modular_private::UserContext {
+class UserControllerImpl : UserController, modular::internal ::UserContext {
  public:
   // After perfoming logout, to signal our completion (and deletion of our
   // instance) to our owner, we do it using a callback supplied to us in our
@@ -69,12 +70,12 @@ class UserControllerImpl : UserController, modular_private::UserContext {
 
   std::unique_ptr<Scope> user_runner_scope_;
   std::unique_ptr<AppClient<Lifecycle>> user_runner_app_;
-  modular_private::UserRunnerPtr user_runner_;
+  modular::internal ::UserRunnerPtr user_runner_;
 
   fidl::Binding<UserContext> user_context_binding_;
   fidl::Binding<UserController> user_controller_binding_;
 
-  fidl::InterfacePtrSet<modular::UserWatcher> user_watchers_;
+  fidl::InterfacePtrSet<fuchsia::modular::UserWatcher> user_watchers_;
 
   std::vector<LogoutCallback> logout_response_callbacks_;
 
@@ -86,5 +87,6 @@ class UserControllerImpl : UserController, modular_private::UserContext {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_DEVICE_RUNNER_USER_CONTROLLER_IMPL_H_

@@ -5,6 +5,7 @@
 #ifndef PERIDOT_LIB_COMMON_NAMES_H_
 #define PERIDOT_LIB_COMMON_NAMES_H_
 
+namespace fuchsia {
 namespace modular {
 
 // A framework-assigned name for the first module of a story (aka root mod)
@@ -19,5 +20,6 @@ constexpr char kRootModuleName[] = "root";
 constexpr char kPresentationService[] = "mozart.Presentation";
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_COMMON_NAMES_H_

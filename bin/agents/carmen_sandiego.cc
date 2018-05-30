@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/context/cpp/context_helper.h"
@@ -15,26 +15,28 @@ constexpr char maxwell::acquirers::GpsAcquirer::kLabel[];
 namespace maxwell {
 namespace {
 
-class CarmenSandiegoApp : public modular::ContextListener {
+class CarmenSandiegoApp : public fuchsia::modular::ContextListener {
  public:
   CarmenSandiegoApp()
       : app_context_(component::ApplicationContext::CreateFromStartupInfo()),
-        writer_(app_context_->ConnectToEnvironmentService<modular::ContextWriter>()),
-        reader_(app_context_->ConnectToEnvironmentService<modular::ContextReader>()),
+        writer_(app_context_->ConnectToEnvironmentService<
+                fuchsia::modular::ContextWriter>()),
+        reader_(app_context_->ConnectToEnvironmentService<
+                fuchsia::modular::ContextReader>()),
         binding_(this) {
-    modular::ContextSelector selector;
-    selector.type = modular::ContextValueType::ENTITY;
-    selector.meta = modular::ContextMetadata::New();
-    selector.meta->entity = modular::EntityMetadata::New();
+    fuchsia::modular::ContextSelector selector;
+    selector.type = fuchsia::modular::ContextValueType::ENTITY;
+    selector.meta = fuchsia::modular::ContextMetadata::New();
+    selector.meta->entity = fuchsia::modular::EntityMetadata::New();
     selector.meta->entity->topic = acquirers::GpsAcquirer::kLabel;
-    modular::ContextQuery query;
+    fuchsia::modular::ContextQuery query;
     AddToContextQuery(&query, "gps", std::move(selector));
     reader_->Subscribe(std::move(query), binding_.NewBinding());
   }
 
  private:
   // |ContextListener|
-  void OnContextUpdate(modular::ContextUpdate update) override {
+  void OnContextUpdate(fuchsia::modular::ContextUpdate update) override {
     auto p = TakeContextValue(&update, "gps");
     if (!p.first)
       return;
@@ -66,9 +68,9 @@ class CarmenSandiegoApp : public modular::ContextListener {
 
   std::unique_ptr<component::ApplicationContext> app_context_;
 
-  modular::ContextWriterPtr writer_;
-  modular::ContextReaderPtr reader_;
-  fidl::Binding<modular::ContextListener> binding_;
+  fuchsia::modular::ContextWriterPtr writer_;
+  fuchsia::modular::ContextReaderPtr reader_;
+  fidl::Binding<fuchsia::modular::ContextListener> binding_;
 };
 
 }  // namespace

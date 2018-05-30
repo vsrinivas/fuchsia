@@ -22,6 +22,7 @@ namespace network_wrapper {
 class NetworkWrapper;
 }
 
+namespace fuchsia {
 namespace modular {
 
 // Watches a Manifest repository stored in Firebase.
@@ -64,5 +65,6 @@ class FirebaseModuleManifestSource : public ModuleManifestSource {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_MODULE_MANIFEST_SOURCE_FIREBASE_SOURCE_H_

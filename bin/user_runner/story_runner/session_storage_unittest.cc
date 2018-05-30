@@ -10,6 +10,7 @@
 #include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/testing/test_with_ledger.h"
 
+namespace fuchsia {
 namespace modular {
 namespace {
 
@@ -65,8 +66,8 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
   // Get the StoryData for this story.
   auto future_data = storage->GetStoryData(story_id);
   done = false;
-  modular_private::StoryData cached_data;
-  future_data->Then([&](modular_private::StoryDataPtr data) {
+  modular::internal ::StoryData cached_data;
+  future_data->Then([&](modular::internal ::StoryDataPtr data) {
     ASSERT_TRUE(data);
 
     EXPECT_EQ(story_id, data->story_info.id);
@@ -86,11 +87,12 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
   RunLoopUntil([&] { return done; });
 
   // Verify that GetAllStoryData() also returns the same information.
-  fidl::VectorPtr<modular_private::StoryData> all_data;
+  fidl::VectorPtr<modular::internal ::StoryData> all_data;
   auto future_all_data = storage->GetAllStoryData();
-  future_all_data->Then([&](fidl::VectorPtr<modular_private::StoryData> data) {
-    all_data = std::move(data);
-  });
+  future_all_data->Then(
+      [&](fidl::VectorPtr<modular::internal ::StoryData> data) {
+        all_data = std::move(data);
+      });
   RunLoopUntil([&] { return !!all_data; });
 
   EXPECT_EQ(1u, all_data->size());
@@ -113,8 +115,8 @@ TEST_F(SessionStorageTest, CreateGetAllDelete) {
   });
 
   auto future_data = storage->GetAllStoryData();
-  fidl::VectorPtr<modular_private::StoryData> all_data;
-  future_data->Then([&](fidl::VectorPtr<modular_private::StoryData> data) {
+  fidl::VectorPtr<modular::internal ::StoryData> all_data;
+  future_data->Then([&](fidl::VectorPtr<modular::internal ::StoryData> data) {
     all_data = std::move(data);
   });
 
@@ -126,7 +128,7 @@ TEST_F(SessionStorageTest, CreateGetAllDelete) {
   // But if we get all data again, we should see no stories.
   future_data = storage->GetAllStoryData();
   all_data.reset();
-  future_data->Then([&](fidl::VectorPtr<modular_private::StoryData> data) {
+  future_data->Then([&](fidl::VectorPtr<modular::internal ::StoryData> data) {
     all_data = std::move(data);
   });
   RunLoopUntil([&] { return !!all_data; });
@@ -171,8 +173,8 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
   EXPECT_NE(story1_pageid, story2_pageid);
 
   auto future_data = storage->GetAllStoryData();
-  fidl::VectorPtr<modular_private::StoryData> all_data;
-  future_data->Then([&](fidl::VectorPtr<modular_private::StoryData> data) {
+  fidl::VectorPtr<modular::internal ::StoryData> all_data;
+  future_data->Then([&](fidl::VectorPtr<modular::internal ::StoryData> data) {
     all_data = std::move(data);
   });
   RunLoopUntil([&] { return !!all_data; });
@@ -186,7 +188,7 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
 
   future_data = storage->GetAllStoryData();
   all_data.reset();
-  future_data->Then([&](fidl::VectorPtr<modular_private::StoryData> data) {
+  future_data->Then([&](fidl::VectorPtr<modular::internal ::StoryData> data) {
     all_data = std::move(data);
   });
   RunLoopUntil([&] { return !!all_data; });
@@ -205,7 +207,7 @@ TEST_F(SessionStorageTest, UpdateLastFocusedTimestamp) {
   storage->UpdateLastFocusedTimestamp(story_id, 10);
   auto future_data = storage->GetStoryData(story_id);
   bool done{};
-  future_data->Then([&](modular_private::StoryDataPtr data) {
+  future_data->Then([&](modular::internal ::StoryDataPtr data) {
     EXPECT_EQ(10, data->story_info.last_focus_time);
     done = true;
   });
@@ -217,9 +219,9 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete_Local) {
 
   bool updated{};
   fidl::StringPtr updated_story_id;
-  modular_private::StoryData updated_story_data;
+  modular::internal ::StoryData updated_story_data;
   storage->set_on_story_updated(
-      [&](fidl::StringPtr story_id, modular_private::StoryData story_data) {
+      [&](fidl::StringPtr story_id, modular::internal ::StoryData story_data) {
         updated_story_id = std::move(story_id);
         updated_story_data = std::move(story_data);
         updated = true;
@@ -259,9 +261,9 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete_Remote) {
 
   bool updated{};
   fidl::StringPtr updated_story_id;
-  modular_private::StoryData updated_story_data;
+  modular::internal ::StoryData updated_story_data;
   storage->set_on_story_updated(
-      [&](fidl::StringPtr story_id, modular_private::StoryData story_data) {
+      [&](fidl::StringPtr story_id, modular::internal ::StoryData story_data) {
         updated_story_id = std::move(story_id);
         updated_story_data = std::move(story_data);
         updated = true;
@@ -294,3 +296,4 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete_Remote) {
 
 }  // namespace
 }  // namespace modular
+}  // namespace fuchsia

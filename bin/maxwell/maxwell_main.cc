@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
@@ -24,16 +24,19 @@ class App {
  public:
   App(component::ApplicationContext* app_context, const Config& config)
       : factory_impl_(app_context, config) {
-    app_context->outgoing().AddPublicService<modular::UserIntelligenceProviderFactory>(
-        [this](fidl::InterfaceRequest<modular::UserIntelligenceProviderFactory>
-                   request) {
-          factory_bindings_.AddBinding(&factory_impl_, std::move(request));
-        });
+    app_context->outgoing()
+        .AddPublicService<fuchsia::modular::UserIntelligenceProviderFactory>(
+            [this](fidl::InterfaceRequest<
+                   fuchsia::modular::UserIntelligenceProviderFactory>
+                       request) {
+              factory_bindings_.AddBinding(&factory_impl_, std::move(request));
+            });
   }
 
  private:
   UserIntelligenceProviderFactoryImpl factory_impl_;
-  fidl::BindingSet<modular::UserIntelligenceProviderFactory> factory_bindings_;
+  fidl::BindingSet<fuchsia::modular::UserIntelligenceProviderFactory>
+      factory_bindings_;
 };
 
 const char kConfigSchema[] = R"SCHEMA(

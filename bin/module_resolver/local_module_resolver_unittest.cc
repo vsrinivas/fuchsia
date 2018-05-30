@@ -11,32 +11,34 @@
 #include "lib/module_resolver/cpp/formatting.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"
 
+namespace fuchsia {
 namespace modular {
 namespace {
 
 // Returns pair<true, ..> if key found, else <false, nullptr>.
-std::pair<bool, const modular::CreateChainPropertyInfo*> GetProperty(
-    const modular::CreateChainInfo& chain_info,
+std::pair<bool, const fuchsia::modular::CreateChainPropertyInfo*> GetProperty(
+    const fuchsia::modular::CreateChainInfo& chain_info,
     const std::string& key) {
   for (auto& it : *chain_info.property_info) {
     if (it.key == key) {
-      return std::make_pair<bool, const modular::CreateChainPropertyInfo*>(
+      return std::make_pair<bool,
+                            const fuchsia::modular::CreateChainPropertyInfo*>(
           true, &it.value);
     }
   }
 
-  return std::make_pair<bool, modular::CreateChainPropertyInfo*>(false,
-                                                                 nullptr);
+  return std::make_pair<bool, fuchsia::modular::CreateChainPropertyInfo*>(
+      false, nullptr);
 }
 
 class QueryBuilder {
  public:
-  QueryBuilder() : query(modular::ResolverQuery()) {}
-  QueryBuilder(std::string action) : query(modular::ResolverQuery()) {
+  QueryBuilder() : query(fuchsia::modular::ResolverQuery()) {}
+  QueryBuilder(std::string action) : query(fuchsia::modular::ResolverQuery()) {
     SetAction(action);
   }
 
-  modular::ResolverQuery build() { return std::move(query); }
+  fuchsia::modular::ResolverQuery build() { return std::move(query); }
 
   QueryBuilder& SetHandler(std::string handler) {
     query.handler = handler;
@@ -51,14 +53,14 @@ class QueryBuilder {
   // Creates a parameter that's just Entity types.
   QueryBuilder& AddParameterTypes(std::string name,
                                   std::vector<std::string> types) {
-    modular::ResolverParameterConstraint parameter;
+    fuchsia::modular::ResolverParameterConstraint parameter;
     fidl::VectorPtr<fidl::StringPtr> types_array;
     types_array->reserve(types.size());
     for (auto& type : types) {
       types_array->emplace_back(std::move(type));
     }
     parameter.set_entity_type(std::move(types_array));
-    modular::ResolverParameterConstraintEntry
+    fuchsia::modular::ResolverParameterConstraintEntry
         resolver_parameter_constraint_entry;
     resolver_parameter_constraint_entry.key = name;
     resolver_parameter_constraint_entry.constraint = std::move(parameter);
@@ -69,9 +71,9 @@ class QueryBuilder {
 
   QueryBuilder& AddEntityParameter(std::string name,
                                    std::string entity_reference) {
-    modular::ResolverParameterConstraint parameter;
+    fuchsia::modular::ResolverParameterConstraint parameter;
     parameter.set_entity_reference(entity_reference);
-    modular::ResolverParameterConstraintEntry
+    fuchsia::modular::ResolverParameterConstraintEntry
         resolver_parameter_constraint_entry;
     resolver_parameter_constraint_entry.key = name;
     resolver_parameter_constraint_entry.constraint = std::move(parameter);
@@ -82,9 +84,9 @@ class QueryBuilder {
 
   // Creates a parameter that's made of JSON content.
   QueryBuilder& AddJsonParameter(std::string name, std::string json) {
-    modular::ResolverParameterConstraint parameter;
+    fuchsia::modular::ResolverParameterConstraint parameter;
     parameter.set_json(json);
-    modular::ResolverParameterConstraintEntry
+    fuchsia::modular::ResolverParameterConstraintEntry
         resolver_parameter_constraint_entry;
     resolver_parameter_constraint_entry.key = name;
     resolver_parameter_constraint_entry.constraint = std::move(parameter);
@@ -98,21 +100,21 @@ class QueryBuilder {
       std::string name,
       std::pair<std::vector<std::string>, std::string> path_parts,
       std::string entity_reference) {
-    modular::LinkPath link_path;
+    fuchsia::modular::LinkPath link_path;
     link_path.module_path->reserve(path_parts.first.size());
     for (auto& part : path_parts.first) {
       link_path.module_path->emplace_back(std::move(part));
     }
     link_path.link_name = path_parts.second;
 
-    modular::ResolverLinkInfo link_info;
+    fuchsia::modular::ResolverLinkInfo link_info;
     link_info.path = std::move(link_path);
     link_info.content_snapshot =
-        modular::EntityReferenceToJson(entity_reference);
+        fuchsia::modular::EntityReferenceToJson(entity_reference);
 
-    modular::ResolverParameterConstraint parameter;
+    fuchsia::modular::ResolverParameterConstraint parameter;
     parameter.set_link_info(std::move(link_info));
-    modular::ResolverParameterConstraintEntry
+    fuchsia::modular::ResolverParameterConstraintEntry
         resolver_parameter_constraint_entry;
     resolver_parameter_constraint_entry.key = name;
     resolver_parameter_constraint_entry.constraint = std::move(parameter);
@@ -126,16 +128,16 @@ class QueryBuilder {
       std::string name,
       std::pair<std::vector<std::string>, std::string> path_parts,
       std::vector<std::string> allowed_types) {
-    modular::LinkPath link_path;
+    fuchsia::modular::LinkPath link_path;
     link_path.module_path->reserve(path_parts.first.size());
     for (auto& part : path_parts.first) {
       link_path.module_path->emplace_back(std::move(part));
     }
     link_path.link_name = path_parts.second;
 
-    modular::ResolverLinkInfo link_info;
+    fuchsia::modular::ResolverLinkInfo link_info;
     link_info.path = std::move(link_path);
-    link_info.allowed_types = modular::LinkAllowedTypes::New();
+    link_info.allowed_types = fuchsia::modular::LinkAllowedTypes::New();
     link_info.allowed_types->allowed_entity_types->reserve(
         allowed_types.size());
     for (auto& type : allowed_types) {
@@ -143,9 +145,9 @@ class QueryBuilder {
           std::move(type));
     }
 
-    modular::ResolverParameterConstraint parameter;
+    fuchsia::modular::ResolverParameterConstraint parameter;
     parameter.set_link_info(std::move(link_info));
-    modular::ResolverParameterConstraintEntry
+    fuchsia::modular::ResolverParameterConstraintEntry
         resolver_parameter_constraint_entry;
     resolver_parameter_constraint_entry.key = name;
     resolver_parameter_constraint_entry.constraint = std::move(parameter);
@@ -155,10 +157,10 @@ class QueryBuilder {
   }
 
  private:
-  modular::ResolverQuery query;
+  fuchsia::modular::ResolverQuery query;
 };
 
-class TestManifestSource : public modular::ModuleManifestSource {
+class TestManifestSource : public fuchsia::modular::ModuleManifestSource {
  public:
   IdleFn idle;
   NewEntryFn add;
@@ -178,16 +180,16 @@ class TestManifestSource : public modular::ModuleManifestSource {
 class LocalModuleResolverTest : public gtest::TestWithMessageLoop {
  protected:
   void ResetResolver() {
-    modular::EntityResolverPtr entity_resolver_ptr;
-    entity_resolver_.reset(new modular::EntityResolverFake());
+    fuchsia::modular::EntityResolverPtr entity_resolver_ptr;
+    entity_resolver_.reset(new fuchsia::modular::EntityResolverFake());
     entity_resolver_->Connect(entity_resolver_ptr.NewRequest());
     // TODO: |impl_| will fail to resolve any queries whose parameters are
     // entity references.
     impl_.reset(new LocalModuleResolver(std::move(entity_resolver_ptr)));
     for (auto entry : test_sources_) {
-      impl_->AddSource(
-          entry.first,
-          std::unique_ptr<modular::ModuleManifestSource>(entry.second));
+      impl_->AddSource(entry.first,
+                       std::unique_ptr<fuchsia::modular::ModuleManifestSource>(
+                           entry.second));
     }
     test_sources_.clear();
     impl_->Connect(resolver_.NewRequest());
@@ -204,13 +206,14 @@ class LocalModuleResolverTest : public gtest::TestWithMessageLoop {
     return entity_resolver_->AddEntity(std::move(entity_data));
   }
 
-  void FindModules(modular::ResolverQuery query) {
-    auto scoring_info = modular::ResolverScoringInfo::New();
+  void FindModules(fuchsia::modular::ResolverQuery query) {
+    auto scoring_info = fuchsia::modular::ResolverScoringInfo::New();
 
     bool got_response = false;
     resolver_->FindModules(
         std::move(query), nullptr /* scoring_info */,
-        [this, &got_response](const modular::FindModulesResult& result) {
+        [this,
+         &got_response](const fuchsia::modular::FindModulesResult& result) {
           got_response = true;
           result.Clone(&result_);
         });
@@ -218,24 +221,25 @@ class LocalModuleResolverTest : public gtest::TestWithMessageLoop {
         RunLoopUntilWithTimeout([&got_response] { return got_response; }));
   }
 
-  const fidl::VectorPtr<modular::ModuleResolverResult>& results() const {
+  const fidl::VectorPtr<fuchsia::modular::ModuleResolverResult>& results()
+      const {
     return result_.modules;
   }
 
   std::unique_ptr<LocalModuleResolver> impl_;
-  std::unique_ptr<modular::EntityResolverFake> entity_resolver_;
+  std::unique_ptr<fuchsia::modular::EntityResolverFake> entity_resolver_;
 
-  std::map<std::string, modular::ModuleManifestSource*> test_sources_;
-  modular::ModuleResolverPtr resolver_;
+  std::map<std::string, fuchsia::modular::ModuleManifestSource*> test_sources_;
+  fuchsia::modular::ModuleResolverPtr resolver_;
 
-  modular::FindModulesResult result_;
+  fuchsia::modular::FindModulesResult result_;
 };
 
 TEST_F(LocalModuleResolverTest, Null) {
   auto source = AddSource("test");
   ResetResolver();
 
-  modular::ModuleManifest entry;
+  fuchsia::modular::ModuleManifest entry;
   entry.binary = "id1";
   entry.action = "verb wont match";
   source->add("1", std::move(entry));
@@ -253,7 +257,7 @@ TEST_F(LocalModuleResolverTest, ExplicitUrl) {
   auto source = AddSource("test");
   ResetResolver();
 
-  modular::ModuleManifest entry;
+  fuchsia::modular::ModuleManifest entry;
   entry.binary = "no see this";
   entry.action = "verb";
   source->add("1", std::move(entry));
@@ -277,19 +281,19 @@ TEST_F(LocalModuleResolverTest, Simpleaction) {
   ResetResolver();
 
   {
-    modular::ModuleManifest entry;
+    fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
     entry.action = "com.google.fuchsia.navigate.v1";
     source1->add("1", std::move(entry));
   }
   {
-    modular::ModuleManifest entry;
+    fuchsia::modular::ModuleManifest entry;
     entry.binary = "module2";
     entry.action = "com.google.fuchsia.navigate.v1";
     source2->add("1", std::move(entry));
   }
   {
-    modular::ModuleManifest entry;
+    fuchsia::modular::ModuleManifest entry;
     entry.binary = "module3";
     entry.action = "com.google.fuchsia.exist.vinfinity";
     source1->add("2", std::move(entry));
@@ -301,11 +305,11 @@ TEST_F(LocalModuleResolverTest, Simpleaction) {
   // This is mostly the contents of the FindModules() convenience function
   // above.  It's copied here so that we can call source2->idle() before
   // RunLoopUntilWithTimeout() for this case only.
-  auto scoring_info = modular::ResolverScoringInfo::New();
+  auto scoring_info = fuchsia::modular::ResolverScoringInfo::New();
   bool got_response = false;
   resolver_->FindModules(
       std::move(query), nullptr /* scoring_info */,
-      [this, &got_response](const modular::FindModulesResult& result) {
+      [this, &got_response](const fuchsia::modular::FindModulesResult& result) {
         got_response = true;
         result.Clone(&result_);
       });
@@ -335,13 +339,13 @@ TEST_F(LocalModuleResolverTest, SimpleParameterTypes) {
   ResetResolver();
 
   {
-    modular::ModuleManifest entry;
+    fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
     entry.action = "com.google.fuchsia.navigate.v1";
-    modular::ParameterConstraint parameter1;
+    fuchsia::modular::ParameterConstraint parameter1;
     parameter1.name = "start";
     parameter1.type = "foo";
-    modular::ParameterConstraint parameter2;
+    fuchsia::modular::ParameterConstraint parameter2;
     parameter2.name = "destination";
     parameter2.type = "baz";
     entry.parameter_constraints.push_back(std::move(parameter1));
@@ -349,13 +353,13 @@ TEST_F(LocalModuleResolverTest, SimpleParameterTypes) {
     source->add("1", std::move(entry));
   }
   {
-    modular::ModuleManifest entry;
+    fuchsia::modular::ModuleManifest entry;
     entry.binary = "module2";
     entry.action = "com.google.fuchsia.navigate.v1";
-    modular::ParameterConstraint parameter1;
+    fuchsia::modular::ParameterConstraint parameter1;
     parameter1.name = "start";
     parameter1.type = "frob";
-    modular::ParameterConstraint parameter2;
+    fuchsia::modular::ParameterConstraint parameter2;
     parameter2.name = "destination";
     parameter2.type = "froozle";
     entry.parameter_constraints.push_back(std::move(parameter1));
@@ -363,10 +367,10 @@ TEST_F(LocalModuleResolverTest, SimpleParameterTypes) {
     source->add("2", std::move(entry));
   }
   {
-    modular::ModuleManifest entry;
+    fuchsia::modular::ModuleManifest entry;
     entry.binary = "module3";
     entry.action = "com.google.fuchsia.exist.vinfinity";
-    modular::ParameterConstraint parameter;
+    fuchsia::modular::ParameterConstraint parameter;
     parameter.name = "with";
     parameter.type = "compantionCube";
     entry.parameter_constraints.push_back(std::move(parameter));
@@ -410,7 +414,7 @@ TEST_F(LocalModuleResolverTest, SimpleParameterTypes) {
   ASSERT_TRUE(GetProperty(res.create_chain_info, "start").first);
   auto start = GetProperty(res.create_chain_info, "start").second;
   ASSERT_TRUE(start->is_create_link());
-  EXPECT_EQ(modular::EntityReferenceToJson(location_entity),
+  EXPECT_EQ(fuchsia::modular::EntityReferenceToJson(location_entity),
             start->create_link().initial_data);
   // TODO(thatguy): Populate |allowed_types| correctly.
   EXPECT_FALSE(start->create_link().allowed_types);
@@ -421,13 +425,13 @@ TEST_F(LocalModuleResolverTest, SimpleJsonParameters) {
   ResetResolver();
 
   {
-    modular::ModuleManifest entry;
+    fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
     entry.action = "com.google.fuchsia.navigate.v1";
-    modular::ParameterConstraint parameter1;
+    fuchsia::modular::ParameterConstraint parameter1;
     parameter1.name = "start";
     parameter1.type = "foo";
-    modular::ParameterConstraint parameter2;
+    fuchsia::modular::ParameterConstraint parameter2;
     parameter2.name = "destination";
     parameter2.type = "baz";
     entry.parameter_constraints.push_back(std::move(parameter1));
@@ -435,13 +439,13 @@ TEST_F(LocalModuleResolverTest, SimpleJsonParameters) {
     source->add("1", std::move(entry));
   }
   {
-    modular::ModuleManifest entry;
+    fuchsia::modular::ModuleManifest entry;
     entry.binary = "module2";
     entry.action = "com.google.fuchsia.navigate.v1";
-    modular::ParameterConstraint parameter1;
+    fuchsia::modular::ParameterConstraint parameter1;
     parameter1.name = "start";
     parameter1.type = "frob";
-    modular::ParameterConstraint parameter2;
+    fuchsia::modular::ParameterConstraint parameter2;
     parameter2.name = "destination";
     parameter2.type = "froozle";
     entry.parameter_constraints.push_back(std::move(parameter1));
@@ -449,10 +453,10 @@ TEST_F(LocalModuleResolverTest, SimpleJsonParameters) {
     source->add("2", std::move(entry));
   }
   {
-    modular::ModuleManifest entry;
+    fuchsia::modular::ModuleManifest entry;
     entry.binary = "module3";
     entry.action = "com.google.fuchsia.exist.vinfinity";
-    modular::ParameterConstraint parameter;
+    fuchsia::modular::ParameterConstraint parameter;
     parameter.name = "with";
     parameter.type = "compantionCube";
     entry.parameter_constraints.push_back(std::move(parameter));
@@ -501,13 +505,13 @@ TEST_F(LocalModuleResolverTest, LinkInfoParameterType) {
   ResetResolver();
 
   {
-    modular::ModuleManifest entry;
+    fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
     entry.action = "com.google.fuchsia.navigate.v1";
-    modular::ParameterConstraint parameter1;
+    fuchsia::modular::ParameterConstraint parameter1;
     parameter1.name = "start";
     parameter1.type = "foo";
-    modular::ParameterConstraint parameter2;
+    fuchsia::modular::ParameterConstraint parameter2;
     parameter2.name = "destination";
     parameter2.type = "baz";
     entry.parameter_constraints.push_back(std::move(parameter1));
@@ -554,11 +558,11 @@ TEST_F(LocalModuleResolverTest, ReAddExistingEntries) {
   auto source = AddSource("test1");
   ResetResolver();
 
-  modular::ModuleManifest entry;
+  fuchsia::modular::ModuleManifest entry;
   entry.binary = "id1";
   entry.action = "action1";
 
-  modular::ModuleManifest entry1;
+  fuchsia::modular::ModuleManifest entry1;
   entry.Clone(&entry1);
   source->add("1", std::move(entry1));
   source->idle();
@@ -566,7 +570,7 @@ TEST_F(LocalModuleResolverTest, ReAddExistingEntries) {
   ASSERT_EQ(1lu, results()->size());
   EXPECT_EQ("id1", results()->at(0).module_id);
 
-  modular::ModuleManifest entry2;
+  fuchsia::modular::ModuleManifest entry2;
   entry.Clone(&entry2);
   source->add("1", std::move(entry2));
   FindModules(QueryBuilder("action1").build());
@@ -581,10 +585,10 @@ TEST_F(LocalModuleResolverTest, MatchingParameterWithNoactionOrUrl) {
   ResetResolver();
 
   {
-    modular::ModuleManifest entry;
+    fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
     entry.action = "com.google.fuchsia.navigate.v1";
-    modular::ParameterConstraint parameter;
+    fuchsia::modular::ParameterConstraint parameter;
     parameter.name = "start";
     parameter.type = "foo";
     entry.parameter_constraints.push_back(std::move(parameter));
@@ -609,10 +613,10 @@ TEST_F(LocalModuleResolverTest, CorrectParameterTypeWithNoactionOrUrl) {
   ResetResolver();
 
   {
-    modular::ModuleManifest entry;
+    fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
     entry.action = "com.google.fuchsia.navigate.v1";
-    modular::ParameterConstraint parameter;
+    fuchsia::modular::ParameterConstraint parameter;
     parameter.name = "end";
     parameter.type = "foo";
     entry.parameter_constraints.push_back(std::move(parameter));
@@ -638,20 +642,20 @@ TEST_F(LocalModuleResolverTest,
   ResetResolver();
 
   {
-    modular::ModuleManifest entry;
+    fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
     entry.action = "com.google.fuchsia.navigate.v1";
-    modular::ParameterConstraint parameter;
+    fuchsia::modular::ParameterConstraint parameter;
     parameter.name = "end";
     parameter.type = "foo";
     entry.parameter_constraints.push_back(std::move(parameter));
     source->add("1", std::move(entry));
   }
   {
-    modular::ModuleManifest entry;
+    fuchsia::modular::ModuleManifest entry;
     entry.binary = "module2";
     entry.action = "com.google.fuchsia.navigate.v2";
-    modular::ParameterConstraint parameter;
+    fuchsia::modular::ParameterConstraint parameter;
     parameter.name = "end";
     parameter.type = "foo";
     entry.parameter_constraints.push_back(std::move(parameter));
@@ -677,10 +681,10 @@ TEST_F(LocalModuleResolverTest, IncorrectParameterTypeWithNoactionOrUrl) {
   ResetResolver();
 
   {
-    modular::ModuleManifest entry;
+    fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
     entry.action = "com.google.fuchsia.navigate.v1";
-    modular::ParameterConstraint parameter;
+    fuchsia::modular::ParameterConstraint parameter;
     parameter.name = "start";
     parameter.type = "not";
     entry.parameter_constraints.push_back(std::move(parameter));
@@ -704,10 +708,10 @@ TEST_F(LocalModuleResolverTest, QueryWithMoreParametersThanEntry) {
   ResetResolver();
 
   {
-    modular::ModuleManifest entry;
+    fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
     entry.action = "com.google.fuchsia.navigate.v1";
-    modular::ParameterConstraint parameter;
+    fuchsia::modular::ParameterConstraint parameter;
     parameter.name = "start";
     parameter.type = "gps";
     entry.parameter_constraints.push_back(std::move(parameter));
@@ -733,14 +737,14 @@ TEST_F(LocalModuleResolverTest, QueryWithoutActionAndMultipleParameters) {
   ResetResolver();
 
   {
-    modular::ModuleManifest entry;
+    fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
     entry.action = "com.google.fuchsia.navigate.v1";
-    modular::ParameterConstraint parameter1;
+    fuchsia::modular::ParameterConstraint parameter1;
     parameter1.name = "start";
     parameter1.type = "gps";
     entry.parameter_constraints.push_back(std::move(parameter1));
-    modular::ParameterConstraint parameter2;
+    fuchsia::modular::ParameterConstraint parameter2;
     parameter2.name = "end";
     parameter2.type = "not_gps";
     entry.parameter_constraints.push_back(std::move(parameter2));
@@ -768,11 +772,11 @@ TEST_F(LocalModuleResolverTest, QueryWithoutActionAndMultipleParameters) {
   EXPECT_EQ(GetProperty(result.create_chain_info, "start")
                 .second->create_link()
                 .initial_data,
-            modular::EntityReferenceToJson(start_entity));
+            fuchsia::modular::EntityReferenceToJson(start_entity));
   EXPECT_EQ(GetProperty(result.create_chain_info, "end")
                 .second->create_link()
                 .initial_data,
-            modular::EntityReferenceToJson(end_entity));
+            fuchsia::modular::EntityReferenceToJson(end_entity));
 }
 
 // Tests that when there are multiple valid mappings of query parameter types to
@@ -782,14 +786,14 @@ TEST_F(LocalModuleResolverTest, QueryWithoutActionAndTwoParametersOfSameType) {
   ResetResolver();
 
   {
-    modular::ModuleManifest entry;
+    fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
     entry.action = "com.google.fuchsia.navigate.v1";
-    modular::ParameterConstraint parameter1;
+    fuchsia::modular::ParameterConstraint parameter1;
     parameter1.name = "start";
     parameter1.type = "gps";
     entry.parameter_constraints.push_back(std::move(parameter1));
-    modular::ParameterConstraint parameter2;
+    fuchsia::modular::ParameterConstraint parameter2;
     parameter2.name = "end";
     parameter2.type = "gps";
     entry.parameter_constraints.push_back(std::move(parameter2));
@@ -820,19 +824,23 @@ TEST_F(LocalModuleResolverTest, QueryWithoutActionAndTwoParametersOfSameType) {
     bool start_mapped_to_start =
         GetProperty(result.create_chain_info, "start")
             .second->create_link()
-            .initial_data == modular::EntityReferenceToJson(start_entity);
+            .initial_data ==
+        fuchsia::modular::EntityReferenceToJson(start_entity);
     bool start_mapped_to_end =
         GetProperty(result.create_chain_info, "start")
             .second->create_link()
-            .initial_data == modular::EntityReferenceToJson(end_entity);
+            .initial_data ==
+        fuchsia::modular::EntityReferenceToJson(end_entity);
     bool end_mapped_to_end =
         GetProperty(result.create_chain_info, "end")
             .second->create_link()
-            .initial_data == modular::EntityReferenceToJson(end_entity);
+            .initial_data ==
+        fuchsia::modular::EntityReferenceToJson(end_entity);
     bool end_mapped_to_start =
         GetProperty(result.create_chain_info, "end")
             .second->create_link()
-            .initial_data == modular::EntityReferenceToJson(start_entity);
+            .initial_data ==
+        fuchsia::modular::EntityReferenceToJson(start_entity);
     found_first_mapping |= start_mapped_to_start && end_mapped_to_end;
     found_second_mapping |= start_mapped_to_end && end_mapped_to_start;
   }
@@ -849,18 +857,18 @@ TEST_F(LocalModuleResolverTest,
   ResetResolver();
 
   {
-    modular::ModuleManifest entry;
+    fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
     entry.action = "com.google.fuchsia.navigate.v1";
-    modular::ParameterConstraint parameter1;
+    fuchsia::modular::ParameterConstraint parameter1;
     parameter1.name = "start";
     parameter1.type = "gps";
     entry.parameter_constraints.push_back(std::move(parameter1));
-    modular::ParameterConstraint parameter2;
+    fuchsia::modular::ParameterConstraint parameter2;
     parameter2.name = "end";
     parameter2.type = "gps";
     entry.parameter_constraints.push_back(std::move(parameter2));
-    modular::ParameterConstraint parameter3;
+    fuchsia::modular::ParameterConstraint parameter3;
     parameter3.name = "middle";
     parameter3.type = "gps";
     entry.parameter_constraints.push_back(std::move(parameter3));
@@ -897,14 +905,14 @@ TEST_F(LocalModuleResolverTest,
   ResetResolver();
 
   {
-    modular::ModuleManifest entry;
+    fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
     entry.action = "com.google.fuchsia.navigate.v1";
-    modular::ParameterConstraint parameter1;
+    fuchsia::modular::ParameterConstraint parameter1;
     parameter1.name = "start";
     parameter1.type = "gps";
     entry.parameter_constraints.push_back(std::move(parameter1));
-    modular::ParameterConstraint parameter2;
+    fuchsia::modular::ParameterConstraint parameter2;
     parameter2.name = "end";
     parameter2.type = "gps";
     entry.parameter_constraints.push_back(std::move(parameter2));
@@ -941,14 +949,14 @@ TEST_F(LocalModuleResolverTest,
   ResetResolver();
 
   {
-    modular::ModuleManifest entry;
+    fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
     entry.action = "com.google.fuchsia.navigate.v1";
-    modular::ParameterConstraint parameter1;
+    fuchsia::modular::ParameterConstraint parameter1;
     parameter1.name = "start";
     parameter1.type = "gps";
     entry.parameter_constraints.push_back(std::move(parameter1));
-    modular::ParameterConstraint parameter2;
+    fuchsia::modular::ParameterConstraint parameter2;
     parameter2.name = "end";
     parameter2.type = "gps";
     entry.parameter_constraints.push_back(std::move(parameter2));
@@ -977,10 +985,10 @@ TEST_F(LocalModuleResolverTest, QueryWithoutActionIncompatibleParameterTypes) {
   ResetResolver();
 
   {
-    modular::ModuleManifest entry;
+    fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
     entry.action = "com.google.fuchsia.navigate.v1";
-    modular::ParameterConstraint parameter;
+    fuchsia::modular::ParameterConstraint parameter;
     parameter.name = "start";
     parameter.type = "gps";
     entry.parameter_constraints.push_back(std::move(parameter));
@@ -1011,10 +1019,10 @@ TEST_F(LocalModuleResolverTest,
   ResetResolver();
 
   {
-    modular::ModuleManifest entry;
+    fuchsia::modular::ModuleManifest entry;
     entry.binary = "module1";
     entry.action = "com.google.fuchsia.navigate.v1";
-    modular::ParameterConstraint parameter;
+    fuchsia::modular::ParameterConstraint parameter;
     parameter.name = "end";
     parameter.type = "foo";
     entry.parameter_constraints.push_back(std::move(parameter));
@@ -1034,3 +1042,4 @@ TEST_F(LocalModuleResolverTest,
 
 }  // namespace
 }  // namespace modular
+}  // namespace fuchsia

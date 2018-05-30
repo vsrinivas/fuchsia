@@ -13,6 +13,7 @@
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/ledger_client/storage.h"
 
+namespace fuchsia {
 namespace modular {
 
 ModuleContextImpl::ModuleContextImpl(
@@ -115,3 +116,4 @@ void ModuleContextImpl::RequestFocus() {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

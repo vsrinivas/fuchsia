@@ -4,6 +4,7 @@
 
 #include "peridot/bin/suggestion_engine/ranking_features/focused_story_ranking_feature.h"
 
+namespace fuchsia {
 namespace modular {
 
 FocusedStoryRankingFeature::FocusedStoryRankingFeature() {}
@@ -37,3 +38,4 @@ ContextSelectorPtr FocusedStoryRankingFeature::CreateContextSelectorInternal() {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

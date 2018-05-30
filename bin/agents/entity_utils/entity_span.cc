@@ -10,6 +10,7 @@
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
 
+namespace fuchsia {
 namespace modular {
 
 EntitySpan::EntitySpan(const std::string& content,
@@ -59,7 +60,8 @@ std::vector<EntitySpan> EntitiesFromJson(const std::string& json_string) {
 
   std::vector<EntitySpan> entities;
   for (const rapidjson::Value& e : entities_doc.GetArray()) {
-    entities.push_back(EntitySpan::FromJson(modular::JsonValueToString(e)));
+    entities.push_back(
+        EntitySpan::FromJson(fuchsia::modular::JsonValueToString(e)));
   }
   return entities;
 }
@@ -86,7 +88,8 @@ void EntitySpan::Init(const std::string& content,
   entity.AddMember("type", type, allocator);
   entity.AddMember("start", start, allocator);
   entity.AddMember("end", end, allocator);
-  json_string_ = modular::JsonValueToString(entity);
+  json_string_ = fuchsia::modular::JsonValueToString(entity);
 }
 
 }  // namespace modular
+}  // namespace fuchsia

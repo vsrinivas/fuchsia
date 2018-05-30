@@ -7,10 +7,11 @@
 
 #include <unordered_map>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 
+namespace fuchsia {
 namespace modular {
 
 class ModPairRankingFeature : public RankingFeature {
@@ -31,5 +32,6 @@ class ModPairRankingFeature : public RankingFeature {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_MOD_PAIR_RANKING_FEATURE_H_

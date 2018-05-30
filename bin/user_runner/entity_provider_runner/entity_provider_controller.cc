@@ -8,6 +8,7 @@
 #include "peridot/bin/user_runner/entity_provider_runner/entity_provider_launcher.h"
 #include "peridot/bin/user_runner/entity_provider_runner/entity_provider_runner.h"
 
+namespace fuchsia {
 namespace modular {
 
 class EntityProviderController::EntityImpl : Entity {
@@ -92,3 +93,4 @@ void EntityProviderController::OnEmptyEntityImpls(const std::string cookie) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

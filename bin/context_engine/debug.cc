@@ -8,6 +8,7 @@
 #include "lib/fidl/cpp/optional.h"
 #include "peridot/bin/context_engine/context_repository.h"
 
+namespace fuchsia {
 namespace modular {
 
 ContextDebugImpl::ContextDebugImpl(const ContextRepository* const repository)
@@ -124,3 +125,4 @@ void ContextDebugImpl::DispatchSubscriptions(
 }
 
 }  // namespace modular
+}  // namespace fuchsia

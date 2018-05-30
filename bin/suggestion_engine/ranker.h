@@ -5,10 +5,11 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_RANKER_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_RANKER_H_
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "peridot/bin/suggestion_engine/ranked_suggestion.h"
 
+namespace fuchsia {
 namespace modular {
 
 // Base class for performing ranking on a suggestion.
@@ -27,5 +28,6 @@ class Ranker {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKER_H_

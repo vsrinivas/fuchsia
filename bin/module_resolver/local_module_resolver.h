@@ -10,31 +10,34 @@
 #include <set>
 #include <vector>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/module_resolver/type_inference.h"
 #include "peridot/lib/module_manifest_source/module_manifest_source.h"
 
+namespace fuchsia {
 namespace modular {
 
-class LocalModuleResolver : modular::ModuleResolver, QueryHandler {
+class LocalModuleResolver : fuchsia::modular::ModuleResolver, QueryHandler {
  public:
-  LocalModuleResolver(modular::EntityResolverPtr entity_resolver);
+  LocalModuleResolver(fuchsia::modular::EntityResolverPtr entity_resolver);
   ~LocalModuleResolver() override;
 
   // Adds a source of Module manifests to index. It is not allowed to call
   // AddSource() after Connect(). |name| must be unique.
   void AddSource(std::string name,
-                 std::unique_ptr<modular::ModuleManifestSource> repo);
+                 std::unique_ptr<fuchsia::modular::ModuleManifestSource> repo);
 
-  void Connect(fidl::InterfaceRequest<modular::ModuleResolver> request);
+  void Connect(
+      fidl::InterfaceRequest<fuchsia::modular::ModuleResolver> request);
 
   void BindQueryHandler(fidl::InterfaceRequest<QueryHandler> request);
 
   // Finds modules matching |query|.
-  void FindModules(modular::ResolverQuery query, FindModulesCallback done);
+  void FindModules(fuchsia::modular::ResolverQuery query,
+                   FindModulesCallback done);
 
  private:
   class FindModulesCall;
@@ -46,14 +49,13 @@ class LocalModuleResolver : modular::ModuleResolver, QueryHandler {
   void OnQuery(UserInput query, OnQueryCallback done) override;
 
   // |ModuleResolver|
-  void FindModules(modular::ResolverQuery query,
-                   modular::ResolverScoringInfoPtr scoring_info,
+  void FindModules(fuchsia::modular::ResolverQuery query,
+                   fuchsia::modular::ResolverScoringInfoPtr scoring_info,
                    FindModulesCallback done) override;
 
   void OnSourceIdle(const std::string& source_name);
-  void OnNewManifestEntry(const std::string& source_name,
-                          std::string id,
-                          modular::ModuleManifest entry);
+  void OnNewManifestEntry(const std::string& source_name, std::string id,
+                          fuchsia::modular::ModuleManifest entry);
   void OnRemoveManifestEntry(const std::string& source_name, std::string id);
 
   void PeriodicCheckIfSourcesAreReady();
@@ -65,13 +67,13 @@ class LocalModuleResolver : modular::ModuleResolver, QueryHandler {
   // TODO(thatguy): At some point, factor the index functions out of
   // LocalModuleResolver so that they can be re-used by the general all-modules
   // Ask handler.
-  std::map<std::string, std::unique_ptr<modular::ModuleManifestSource>>
+  std::map<std::string, std::unique_ptr<fuchsia::modular::ModuleManifestSource>>
       sources_;
   // Set of sources that have told us they are idle, meaning they have
   // sent us all entries they knew about at construction time.
   std::set<std::string> ready_sources_;
   // Map of (repo name, module manifest ID) -> entry.
-  std::map<EntryId, modular::ModuleManifest> entries_;
+  std::map<EntryId, fuchsia::modular::ModuleManifest> entries_;
 
   // action -> key in |entries_|
   std::map<std::string, std::set<EntryId>> action_to_entries_;
@@ -81,7 +83,7 @@ class LocalModuleResolver : modular::ModuleResolver, QueryHandler {
   //  (type) -> key in |entries_|.
   std::map<std::string, std::set<EntryId>> parameter_type_to_entries_;
 
-  fidl::BindingSet<modular::ModuleResolver> bindings_;
+  fidl::BindingSet<fuchsia::modular::ModuleResolver> bindings_;
   fidl::Binding<QueryHandler> query_handler_binding_;
   // These are buffered until AllSourcesAreReady() == true.
   std::vector<fidl::InterfaceRequest<ModuleResolver>> pending_bindings_;
@@ -89,7 +91,7 @@ class LocalModuleResolver : modular::ModuleResolver, QueryHandler {
   bool already_checking_if_sources_are_ready_;
   ParameterTypeInferenceHelper type_helper_;
 
-  modular::OperationCollection operations_;
+  fuchsia::modular::OperationCollection operations_;
 
   fxl::WeakPtrFactory<LocalModuleResolver> weak_factory_;
 
@@ -97,5 +99,6 @@ class LocalModuleResolver : modular::ModuleResolver, QueryHandler {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_MODULE_RESOLVER_LOCAL_MODULE_RESOLVER_H_

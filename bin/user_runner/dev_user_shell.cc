@@ -11,7 +11,7 @@
 #include <memory>
 
 #include <component/cpp/fidl.h>
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 #include <views_v1_token/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
@@ -42,10 +42,11 @@ class Settings {
   std::string story_id;
 };
 
-class DevUserShellApp : modular::StoryWatcher,
-                        modular::InterruptionListener,
-                        modular::NextListener,
-                        public modular::SingleServiceApp<modular::UserShell> {
+class DevUserShellApp
+    : fuchsia::modular::StoryWatcher,
+      fuchsia::modular::InterruptionListener,
+      fuchsia::modular::NextListener,
+      public fuchsia::modular::SingleServiceApp<fuchsia::modular::UserShell> {
  public:
   explicit DevUserShellApp(
       component::ApplicationContext* const application_context,
@@ -67,7 +68,7 @@ class DevUserShellApp : modular::StoryWatcher,
   }
 
   // |UserShell|
-  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(fidl::InterfaceHandle<fuchsia::modular::UserShellContext>
                       user_shell_context) override {
     user_shell_context_.Bind(std::move(user_shell_context));
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
@@ -95,7 +96,7 @@ class DevUserShellApp : modular::StoryWatcher,
     FXL_LOG(INFO) << "DevUserShell START " << settings_.root_module << " "
                   << settings_.root_link;
 
-    view_ = std::make_unique<modular::ViewHost>(
+    view_ = std::make_unique<fuchsia::modular::ViewHost>(
         application_context()
             ->ConnectToEnvironmentService<views_v1::ViewManager>(),
         std::move(view_owner_request_));
@@ -129,23 +130,23 @@ class DevUserShellApp : modular::StoryWatcher,
     visible_stories_controller_->Set(std::move(visible_stories));
 
     if (!settings_.root_link.empty()) {
-      modular::LinkPtr root;
+      fuchsia::modular::LinkPtr root;
       story_controller_->GetLink(nullptr, "root", root.NewRequest());
       root->UpdateObject(nullptr, settings_.root_link);
     }
   }
 
   // |StoryWatcher|
-  void OnStateChange(modular::StoryState state) override {
+  void OnStateChange(fuchsia::modular::StoryState state) override {
     FXL_LOG(INFO) << "DevUserShell State " << state;
   }
 
   // |StoryWatcher|
-  void OnModuleAdded(modular::ModuleData /*module_data*/) override {}
+  void OnModuleAdded(fuchsia::modular::ModuleData /*module_data*/) override {}
 
   // |NextListener|
   void OnNextResults(
-      fidl::VectorPtr<modular::Suggestion> suggestions) override {
+      fidl::VectorPtr<fuchsia::modular::Suggestion> suggestions) override {
     FXL_VLOG(4) << "DevUserShell/NextListener::OnNextResults()";
     for (auto& suggestion : *suggestions) {
       FXL_LOG(INFO) << "  " << suggestion.uuid << " "
@@ -154,7 +155,7 @@ class DevUserShellApp : modular::StoryWatcher,
   }
 
   // |InterruptionListener|
-  void OnInterrupt(modular::Suggestion suggestion) override {
+  void OnInterrupt(fuchsia::modular::Suggestion suggestion) override {
     FXL_VLOG(4) << "DevUserShell/InterruptionListener::OnInterrupt() "
                 << suggestion.uuid;
   }
@@ -168,20 +169,20 @@ class DevUserShellApp : modular::StoryWatcher,
   const Settings settings_;
 
   fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request_;
-  std::unique_ptr<modular::ViewHost> view_;
+  std::unique_ptr<fuchsia::modular::ViewHost> view_;
 
-  modular::UserShellContextPtr user_shell_context_;
-  modular::StoryProviderPtr story_provider_;
-  modular::StoryControllerPtr story_controller_;
-  modular::FocusControllerPtr focus_controller_;
-  modular::VisibleStoriesControllerPtr visible_stories_controller_;
+  fuchsia::modular::UserShellContextPtr user_shell_context_;
+  fuchsia::modular::StoryProviderPtr story_provider_;
+  fuchsia::modular::StoryControllerPtr story_controller_;
+  fuchsia::modular::FocusControllerPtr focus_controller_;
+  fuchsia::modular::VisibleStoriesControllerPtr visible_stories_controller_;
 
-  fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
+  fidl::Binding<fuchsia::modular::StoryWatcher> story_watcher_binding_;
 
-  modular::SuggestionProviderPtr suggestion_provider_;
-  fidl::BindingSet<modular::InterruptionListener>
+  fuchsia::modular::SuggestionProviderPtr suggestion_provider_;
+  fidl::BindingSet<fuchsia::modular::InterruptionListener>
       interruption_listener_bindings_;
-  fidl::BindingSet<modular::NextListener> next_listener_bindings_;
+  fidl::BindingSet<fuchsia::modular::NextListener> next_listener_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DevUserShellApp);
 };
@@ -195,7 +196,7 @@ int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
 
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::AppDriver<DevUserShellApp> driver(
+  fuchsia::modular::AppDriver<DevUserShellApp> driver(
       app_context->outgoing().deprecated_services(),
       std::make_unique<DevUserShellApp>(app_context.get(), std::move(settings)),
       [&loop] { loop.QuitNow(); });

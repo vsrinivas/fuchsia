@@ -8,9 +8,9 @@
 #include <string>
 
 #include <cloud_provider_firebase/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
 #include <ledger_internal/cpp/fidl.h>
-#include <modular/cpp/fidl.h>
 #include <network/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 #include "lib/app/cpp/connect.h"
@@ -43,6 +43,7 @@
 #include "peridot/lib/ledger_client/status.h"
 #include "peridot/lib/ledger_client/storage.h"
 
+namespace fuchsia {
 namespace modular {
 
 // Maxwell doesn't yet implement lifecycle or has a lifecycle method, so we just
@@ -50,8 +51,8 @@ namespace modular {
 // connection is closed once the ServiceTerminate() call invokes its done
 // callback.)
 template <>
-void AppClient<modular::UserIntelligenceProviderFactory>::ServiceTerminate(
-    const std::function<void()>& done) {
+void AppClient<fuchsia::modular::UserIntelligenceProviderFactory>::
+    ServiceTerminate(const std::function<void()>& done) {
   done();
 }
 
@@ -174,7 +175,7 @@ void UserRunnerImpl::Initialize(
     AppConfig story_shell,
     fidl::InterfaceHandle<modular_auth::TokenProviderFactory>
         token_provider_factory,
-    fidl::InterfaceHandle<modular_private::UserContext> user_context,
+    fidl::InterfaceHandle<fuchsia::modular::internal::UserContext> user_context,
     fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) {
   InitializeUser(std::move(account), std::move(token_provider_factory),
                  std::move(user_context));
@@ -193,7 +194,8 @@ void UserRunnerImpl::InitializeUser(
     modular_auth::AccountPtr account,
     fidl::InterfaceHandle<modular_auth::TokenProviderFactory>
         token_provider_factory,
-    fidl::InterfaceHandle<modular_private::UserContext> user_context) {
+    fidl::InterfaceHandle<fuchsia::modular::internal::UserContext>
+        user_context) {
   token_provider_factory_ = token_provider_factory.Bind();
   AtEnd(Reset(&token_provider_factory_));
 
@@ -389,7 +391,7 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
   auto intelligence_provider_request = user_intelligence_provider_.NewRequest();
   AtEnd(Reset(&user_intelligence_provider_));
 
-  fidl::InterfaceHandle<modular::ContextEngine> context_engine;
+  fidl::InterfaceHandle<fuchsia::modular::ContextEngine> context_engine;
   auto context_engine_request = context_engine.NewRequest();
 
   fidl::InterfaceHandle<StoryProvider> story_provider;
@@ -409,9 +411,9 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
         "--config=/system/data/maxwell/test_config.json");
   }
 
-  maxwell_app_ =
-      std::make_unique<AppClient<modular::UserIntelligenceProviderFactory>>(
-          user_scope_->GetLauncher(), std::move(maxwell_config));
+  maxwell_app_ = std::make_unique<
+      AppClient<fuchsia::modular::UserIntelligenceProviderFactory>>(
+      user_scope_->GetLauncher(), std::move(maxwell_config));
   maxwell_app_->primary_service()->GetUserIntelligenceProvider(
       std::move(context_engine), std::move(story_provider),
       std::move(focus_provider_maxwell), std::move(visible_stories_provider),
@@ -478,20 +480,24 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
 
   // Setup for kModuleResolverUrl
   {
-    module_resolver_ns_services_.AddService<modular::IntelligenceServices>(
-        [this](fidl::InterfaceRequest<modular::IntelligenceServices> request) {
-          modular::ComponentScope component_scope;
-          component_scope.set_global_scope(modular::GlobalScope());
-          fidl::InterfaceHandle<modular::IntelligenceServices>
-              intelligence_services;
-          if (user_intelligence_provider_) {
-            user_intelligence_provider_->GetComponentIntelligenceServices(
-                std::move(component_scope), std::move(request));
-          }
-        });
-    module_resolver_ns_services_.AddService<modular::ComponentContext>(
+    module_resolver_ns_services_
+        .AddService<fuchsia::modular::IntelligenceServices>(
+            [this](
+                fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices>
+                    request) {
+              fuchsia::modular::ComponentScope component_scope;
+              component_scope.set_global_scope(fuchsia::modular::GlobalScope());
+              fidl::InterfaceHandle<fuchsia::modular::IntelligenceServices>
+                  intelligence_services;
+              if (user_intelligence_provider_) {
+                user_intelligence_provider_->GetComponentIntelligenceServices(
+                    std::move(component_scope), std::move(request));
+              }
+            });
+    module_resolver_ns_services_.AddService<fuchsia::modular::ComponentContext>(
         [this, component_context_info](
-            fidl::InterfaceRequest<modular::ComponentContext> request) {
+            fidl::InterfaceRequest<fuchsia::modular::ComponentContext>
+                request) {
           maxwell_component_context_bindings_->AddBinding(
               std::make_unique<ComponentContextImpl>(
                   component_context_info, kMaxwellComponentNamespace,
@@ -499,8 +505,9 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
               std::move(request));
         });
     auto service_list = component::ServiceList::New();
-    service_list->names.push_back(modular::IntelligenceServices::Name_);
-    service_list->names.push_back(modular::ComponentContext::Name_);
+    service_list->names.push_back(
+        fuchsia::modular::IntelligenceServices::Name_);
+    service_list->names.push_back(fuchsia::modular::ComponentContext::Name_);
     module_resolver_ns_services_.AddBinding(
         service_list->provider.NewRequest());
 
@@ -693,9 +700,9 @@ void UserRunnerImpl::GetFocusProvider(
 }
 
 void UserRunnerImpl::GetIntelligenceServices(
-    fidl::InterfaceRequest<modular::IntelligenceServices> request) {
-  modular::ComponentScope component_scope;
-  component_scope.set_global_scope(modular::GlobalScope());
+    fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request) {
+  fuchsia::modular::ComponentScope component_scope;
+  component_scope.set_global_scope(fuchsia::modular::GlobalScope());
   user_intelligence_provider_->GetComponentIntelligenceServices(
       std::move(component_scope), std::move(request));
 }
@@ -730,7 +737,7 @@ void UserRunnerImpl::GetStoryProvider(
 }
 
 void UserRunnerImpl::GetSuggestionProvider(
-    fidl::InterfaceRequest<modular::SuggestionProvider> request) {
+    fidl::InterfaceRequest<fuchsia::modular::SuggestionProvider> request) {
   user_intelligence_provider_->GetSuggestionProvider(std::move(request));
 }
 
@@ -783,3 +790,4 @@ void UserRunnerImpl::TerminateRecurse(const int i) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

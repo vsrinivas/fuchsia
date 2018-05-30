@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
@@ -15,7 +15,7 @@
 
 namespace {
 
-using namespace modular;
+using namespace fuchsia::modular;
 
 class UserActionLogFactoryImpl : public UserActionLogFactory {
  public:

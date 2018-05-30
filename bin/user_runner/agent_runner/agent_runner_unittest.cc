@@ -8,7 +8,7 @@
 #include <fs/synchronous-vfs.h>
 
 #include <component/cpp/fidl.h>
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <modular_auth/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "lib/app/cpp/service_provider_impl.h"
@@ -26,6 +26,7 @@
 #include "peridot/lib/testing/mock_base.h"
 #include "peridot/lib/testing/test_with_ledger.h"
 
+namespace fuchsia {
 namespace modular {
 namespace testing {
 namespace {
@@ -123,7 +124,7 @@ class MyDummyAgent : Agent,
   fs::SynchronousVfs vfs_;
   fbl::RefPtr<fs::PseudoDir> outgoing_directory_;
   fidl::Binding<component::ComponentController> controller_;
-  fidl::Binding<modular::Agent> agent_binding_;
+  fidl::Binding<fuchsia::modular::Agent> agent_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MyDummyAgent);
 };
@@ -209,3 +210,4 @@ TEST_F(AgentRunnerTest, AgentController) {
 }  // namespace
 }  // namespace testing
 }  // namespace modular
+}  // namespace fuchsia

@@ -6,10 +6,11 @@
 
 #include <list>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 #include "peridot/bin/context_engine/context_repository.h"
 
+namespace fuchsia {
 namespace modular {
 
 class ContextReaderImpl : ContextReader {
@@ -38,5 +39,6 @@ class ContextReaderImpl : ContextReader {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_READER_IMPL_H_

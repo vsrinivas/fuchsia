@@ -7,7 +7,7 @@
 
 #include <deque>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/svc/cpp/services.h"
 #include "peridot/bin/maxwell/agent_launcher.h"
@@ -16,30 +16,32 @@
 
 namespace maxwell {
 
-class UserIntelligenceProviderImpl : public modular::UserIntelligenceProvider {
+class UserIntelligenceProviderImpl
+    : public fuchsia::modular::UserIntelligenceProvider {
  public:
   // |app_context| is not owned and must outlive this instance.
   UserIntelligenceProviderImpl(
-      component::ApplicationContext* app_context,
-      const Config& config,
-      fidl::InterfaceHandle<modular::ContextEngine> context_engine,
-      fidl::InterfaceHandle<modular::StoryProvider> story_provider,
-      fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
-      fidl::InterfaceHandle<modular::VisibleStoriesProvider>
+      component::ApplicationContext* app_context, const Config& config,
+      fidl::InterfaceHandle<fuchsia::modular::ContextEngine> context_engine,
+      fidl::InterfaceHandle<fuchsia::modular::StoryProvider> story_provider,
+      fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider,
+      fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
           visible_stories_provider);
   ~UserIntelligenceProviderImpl() override = default;
 
   void GetComponentIntelligenceServices(
-      modular::ComponentScope scope,
-      fidl::InterfaceRequest<modular::IntelligenceServices> request) override;
+      fuchsia::modular::ComponentScope scope,
+      fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request)
+      override;
 
   void GetSuggestionProvider(
-      fidl::InterfaceRequest<modular::SuggestionProvider> request) override;
+      fidl::InterfaceRequest<fuchsia::modular::SuggestionProvider> request)
+      override;
 
   void GetSpeechToText(
       fidl::InterfaceRequest<speech::SpeechToText> request) override;
 
-  void StartAgents(fidl::InterfaceHandle<modular::ComponentContext>
+  void StartAgents(fidl::InterfaceHandle<fuchsia::modular::ComponentContext>
                        component_context) override;
 
   void GetServicesForAgent(fidl::StringPtr url,
@@ -62,34 +64,35 @@ class UserIntelligenceProviderImpl : public modular::UserIntelligenceProvider {
 
   void StartAgent(const std::string& url);
 
-  void StartActionLog(modular::SuggestionEngine* suggestion_engine);
+  void StartActionLog(fuchsia::modular::SuggestionEngine* suggestion_engine);
   void StartKronk();
 
   component::ApplicationContext* app_context_;  // Not owned.
   const Config config_;
 
-  modular::ContextEnginePtr context_engine_;
+  fuchsia::modular::ContextEnginePtr context_engine_;
   component::Services suggestion_services_;
-  modular::SuggestionEnginePtr suggestion_engine_;
-  modular::UserActionLogPtr user_action_log_;
+  fuchsia::modular::SuggestionEnginePtr suggestion_engine_;
+  fuchsia::modular::UserActionLogPtr user_action_log_;
 
   std::string kronk_url_;
-  modular::RateLimitedRetry kronk_restart_;
+  fuchsia::modular::RateLimitedRetry kronk_restart_;
   component::ServiceProviderPtr kronk_services_;
-  modular::AgentControllerPtr kronk_controller_;
+  fuchsia::modular::AgentControllerPtr kronk_controller_;
 
-  fidl::BindingSet<modular::IntelligenceServices,
-                   std::unique_ptr<modular::IntelligenceServices>>
+  fidl::BindingSet<fuchsia::modular::IntelligenceServices,
+                   std::unique_ptr<fuchsia::modular::IntelligenceServices>>
       intelligence_services_bindings_;
 
-  fidl::InterfacePtr<modular::ComponentContext> component_context_;
-  fidl::InterfacePtr<modular::StoryProvider> story_provider_;
-  fidl::InterfacePtr<modular::FocusProvider> focus_provider_;
-  fidl::InterfacePtr<modular::VisibleStoriesProvider> visible_stories_provider_;
+  fidl::InterfacePtr<fuchsia::modular::ComponentContext> component_context_;
+  fidl::InterfacePtr<fuchsia::modular::StoryProvider> story_provider_;
+  fidl::InterfacePtr<fuchsia::modular::FocusProvider> focus_provider_;
+  fidl::InterfacePtr<fuchsia::modular::VisibleStoriesProvider>
+      visible_stories_provider_;
 
   // Framework Agent controllers. Hanging onto these tells the Framework we
   // want the Agents to keep running.
-  std::vector<modular::AgentControllerPtr> agent_controllers_;
+  std::vector<fuchsia::modular::AgentControllerPtr> agent_controllers_;
 
   // ServiceNamespace(s) backing the services provided to these agents via its
   // namespace.
@@ -97,7 +100,7 @@ class UserIntelligenceProviderImpl : public modular::UserIntelligenceProvider {
 };
 
 class UserIntelligenceProviderFactoryImpl
-    : public modular::UserIntelligenceProviderFactory {
+    : public fuchsia::modular::UserIntelligenceProviderFactory {
  public:
   // |app_context| is not owned and must outlive this instance.
   UserIntelligenceProviderFactoryImpl(
@@ -106,12 +109,12 @@ class UserIntelligenceProviderFactoryImpl
   ~UserIntelligenceProviderFactoryImpl() override = default;
 
   void GetUserIntelligenceProvider(
-      fidl::InterfaceHandle<modular::ContextEngine> context_engine,
-      fidl::InterfaceHandle<modular::StoryProvider> story_provider,
-      fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
-      fidl::InterfaceHandle<modular::VisibleStoriesProvider>
+      fidl::InterfaceHandle<fuchsia::modular::ContextEngine> context_engine,
+      fidl::InterfaceHandle<fuchsia::modular::StoryProvider> story_provider,
+      fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider,
+      fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
           visible_stories_provider,
-      fidl::InterfaceRequest<modular::UserIntelligenceProvider>
+      fidl::InterfaceRequest<fuchsia::modular::UserIntelligenceProvider>
           user_intelligence_provider_request) override;
 
  private:
@@ -121,7 +124,8 @@ class UserIntelligenceProviderFactoryImpl
   // We expect a 1:1 relationship between instances of this Factory and
   // instances of UserIntelligenceProvider.
   std::unique_ptr<UserIntelligenceProviderImpl> impl_;
-  std::unique_ptr<fidl::Binding<modular::UserIntelligenceProvider>> binding_;
+  std::unique_ptr<fidl::Binding<fuchsia::modular::UserIntelligenceProvider>>
+      binding_;
 };
 
 }  // namespace maxwell

@@ -9,7 +9,7 @@
 #include <string>
 
 #include <component/cpp/fidl.h>
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -18,6 +18,7 @@
 #include "lib/svc/cpp/services.h"
 #include "peridot/lib/common/async_holder.h"
 
+namespace fuchsia {
 namespace modular {
 
 // A class that holds a connection to a single service instance in an
@@ -107,5 +108,6 @@ template <>
 void AppClient<Lifecycle>::ServiceTerminate(const std::function<void()>& done);
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_FIDL_APP_CLIENT_H_

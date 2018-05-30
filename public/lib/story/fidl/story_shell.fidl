@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library modular;
+library fuchsia.modular;
 
 // This interface is implemented by a story shell. Dependencies are passed to it
 // in Initialize() on startup. The story shell is also expected to implement

@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
@@ -15,6 +15,7 @@
 #include "lib/fxl/macros.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"
 
+namespace fuchsia {
 namespace modular {
 
 // A fake implementation of ComponentContext for tests. ComponentContext gives
@@ -73,11 +74,12 @@ class ComponentContextFake : public ComponentContext {
 
   EntityResolverFake entity_resolver_;
 
-  fidl::BindingSet<modular::ComponentContext> bindings_;
+  fidl::BindingSet<fuchsia::modular::ComponentContext> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentContextFake);
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_TESTING_COMPONENT_CONTEXT_FAKE_H_

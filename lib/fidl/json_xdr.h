@@ -17,6 +17,7 @@
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "rapidjson/document.h"
 
+namespace fuchsia {
 namespace modular {
 
 // This file provides a tool to serialize arbitrary data structures
@@ -699,5 +700,6 @@ std::string XdrWrite(D* const data,
 }
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_FIDL_JSON_XDR_H_

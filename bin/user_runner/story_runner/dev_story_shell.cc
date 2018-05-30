@@ -8,7 +8,7 @@
 
 #include <memory>
 
-#include <modular/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 #include <views_v1_token/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
@@ -22,7 +22,8 @@
 
 namespace {
 
-class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
+class DevStoryShellApp
+    : public fuchsia::modular::SingleServiceApp<fuchsia::modular::StoryShell> {
  public:
   DevStoryShellApp(component::ApplicationContext* const application_context)
       : SingleServiceApp(application_context) {}
@@ -40,18 +41,18 @@ class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
   }
 
   // |StoryShell|
-  void Initialize(
-      fidl::InterfaceHandle<modular::StoryContext> story_context) override {
+  void Initialize(fidl::InterfaceHandle<fuchsia::modular::StoryContext>
+                      story_context) override {
     story_context_.Bind(std::move(story_context));
     Connect();
   }
 
   // |StoryShell|
-  void ConnectView(fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner,
-                   fidl::StringPtr /*view_id*/,
-                   fidl::StringPtr /*parent_id*/,
-                   modular::SurfaceRelationPtr /*surface_relation*/,
-                   modular::ModuleManifestPtr /*module_manifest*/) override {
+  void ConnectView(
+      fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner,
+      fidl::StringPtr /*view_id*/, fidl::StringPtr /*parent_id*/,
+      fuchsia::modular::SurfaceRelationPtr /*surface_relation*/,
+      fuchsia::modular::ModuleManifestPtr /*module_manifest*/) override {
     if (view_) {
       view_->ConnectView(std::move(view_owner));
     } else {
@@ -71,16 +72,16 @@ class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
 
   // |StoryShell|
   void AddContainer(
-      fidl::StringPtr /*container_name*/,
-      fidl::StringPtr /*parent_id*/,
-      modular::SurfaceRelation /* relation */,
-      fidl::VectorPtr<modular::ContainerLayout> /*layout*/,
-      fidl::VectorPtr<modular::ContainerRelationEntry> /* relationships */,
-      fidl::VectorPtr<modular::ContainerView> /* views */) override {}
+      fidl::StringPtr /*container_name*/, fidl::StringPtr /*parent_id*/,
+      fuchsia::modular::SurfaceRelation /* relation */,
+      fidl::VectorPtr<fuchsia::modular::ContainerLayout> /*layout*/,
+      fidl::VectorPtr<
+          fuchsia::modular::ContainerRelationEntry> /* relationships */,
+      fidl::VectorPtr<fuchsia::modular::ContainerView> /* views */) override {}
 
   void Connect() {
     if (story_context_.is_bound() && view_owner_request_) {
-      view_ = std::make_unique<modular::ViewHost>(
+      view_ = std::make_unique<fuchsia::modular::ViewHost>(
           application_context()
               ->ConnectToEnvironmentService<views_v1::ViewManager>(),
           std::move(view_owner_request_));
@@ -93,11 +94,11 @@ class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
     }
   }
 
-  std::unique_ptr<modular::ViewHost> view_;
+  std::unique_ptr<fuchsia::modular::ViewHost> view_;
   std::vector<fidl::InterfaceHandle<views_v1_token::ViewOwner>> child_views_;
 
   fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request_;
-  modular::StoryContextPtr story_context_;
+  fuchsia::modular::StoryContextPtr story_context_;
   FXL_DISALLOW_COPY_AND_ASSIGN(DevStoryShellApp);
 };
 
@@ -107,7 +108,7 @@ int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
 
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::AppDriver<DevStoryShellApp> driver(
+  fuchsia::modular::AppDriver<DevStoryShellApp> driver(
       app_context->outgoing().deprecated_services(),
       std::make_unique<DevStoryShellApp>(app_context.get()),
       [&loop] { loop.QuitNow(); });

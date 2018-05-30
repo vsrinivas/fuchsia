@@ -12,8 +12,8 @@
 #include <string>
 #include <utility>
 
+#include <fuchsia/modular/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
-#include <modular/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
@@ -23,6 +23,7 @@
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
 
+namespace fuchsia {
 namespace modular {
 
 class MessageQueueStorage;
@@ -193,5 +194,6 @@ class MessageQueueManager : PageClient {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_MESSAGE_QUEUE_MESSAGE_QUEUE_MANAGER_H_

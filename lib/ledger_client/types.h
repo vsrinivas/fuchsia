@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/array.h>
 #include <lib/fidl/cpp/vector.h>
 
+namespace fuchsia {
 namespace modular {
 
 using LedgerPageId = ledger::PageId;
@@ -20,5 +21,6 @@ inline bool PageIdsEqual(const LedgerPageId& a, const LedgerPageId& b) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_LEDGER_CLIENT_TYPES_H_

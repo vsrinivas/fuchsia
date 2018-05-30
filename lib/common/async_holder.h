@@ -12,6 +12,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"
 
+namespace fuchsia {
 namespace modular {
 
 // A smart pointer that holds on to an implementation class and is able to
@@ -84,5 +85,6 @@ class AsyncHolder : public AsyncHolderBase {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_COMMON_ASYNC_HOLDER_H_

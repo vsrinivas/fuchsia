@@ -5,13 +5,14 @@
 #ifndef PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_SESSION_STORAGE_H_
 #define PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_SESSION_STORAGE_H_
 
-#include <modular/cpp/fidl.h>
-#include <modular_private/cpp/fidl.h>
+#include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/modular/internal/cpp/fidl.h>
 #include "lib/async/cpp/future.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/page_id.h"
 
+namespace fuchsia {
 namespace modular {
 
 // This class has the following responsibilities:
@@ -51,7 +52,7 @@ class SessionStorage : public PageClient {
   // Update*()) or a modification on another device.
   void set_on_story_updated(
       std::function<void(fidl::StringPtr story_id,
-                         modular_private::StoryData story_data)>
+                         modular::internal ::StoryData story_data)>
           callback) {
     on_story_updated_ = std::move(callback);
   }
@@ -84,14 +85,14 @@ class SessionStorage : public PageClient {
 
   // Returns a Future StoryDataPtr for |story_id|. If |story_id| is not a valid
   // story, the returned StoryDataPtr will be null.
-  FuturePtr<modular_private::StoryDataPtr> GetStoryData(
+  FuturePtr<modular::internal ::StoryDataPtr> GetStoryData(
       fidl::StringPtr story_id);
 
   // Returns a Future vector of StoryData for all stories in this session.
   //
   // TODO(thatguy): If the return value grows large, an async stream would be
   // a more appropriate return value.
-  FuturePtr<fidl::VectorPtr<modular_private::StoryData>> GetAllStoryData();
+  FuturePtr<fidl::VectorPtr<modular::internal ::StoryData>> GetAllStoryData();
 
   // TODO(thatguy): Eliminate all users of this, and remove it. We want all
   // interfaces with the Ledger to be contained within *Storage classes.
@@ -109,12 +110,13 @@ class SessionStorage : public PageClient {
 
   std::function<void(fidl::StringPtr story_id)> on_story_deleted_;
   std::function<void(fidl::StringPtr story_id,
-                     modular_private::StoryData story_data)>
+                     modular::internal ::StoryData story_data)>
       on_story_updated_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SessionStorage);
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_STORY_RUNNER_SESSION_STORAGE_H_

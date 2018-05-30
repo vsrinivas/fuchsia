@@ -13,6 +13,7 @@
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
 
+namespace fuchsia {
 namespace modular {
 
 // An implementation of |AgentRunnerStorage| that persists data in the ledger.
@@ -56,5 +57,6 @@ class AgentRunnerStorageImpl : public AgentRunnerStorage, PageClient {
 };
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_BIN_USER_RUNNER_AGENT_RUNNER_AGENT_RUNNER_STORAGE_IMPL_H_

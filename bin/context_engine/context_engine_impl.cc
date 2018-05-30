@@ -9,10 +9,11 @@
 #include "peridot/bin/context_engine/context_repository.h"
 #include "peridot/bin/context_engine/context_writer_impl.h"
 
+namespace fuchsia {
 namespace modular {
 
 ContextEngineImpl::ContextEngineImpl(
-    modular::EntityResolver* const entity_resolver)
+    fuchsia::modular::EntityResolver* const entity_resolver)
     : entity_resolver_(entity_resolver) {}
 ContextEngineImpl::~ContextEngineImpl() = default;
 
@@ -46,3 +47,4 @@ void ContextEngineImpl::GetContextDebug(
 }
 
 }  // namespace modular
+}  // namespace fuchsia

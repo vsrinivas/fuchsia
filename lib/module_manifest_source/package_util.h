@@ -8,11 +8,13 @@
 #include <string>
 #include "lib/fxl/strings/string_view.h"
 
+namespace fuchsia {
 namespace modular {
 
 std::string GetModuleManifestPathFromPackage(fxl::StringView package_name,
                                              fxl::StringView package_version);
 
 }  // namespace modular
+}  // namespace fuchsia
 
 #endif  // PERIDOT_LIB_MODULE_MANIFEST_SOURCE_PACKAGE_UTIL_H_

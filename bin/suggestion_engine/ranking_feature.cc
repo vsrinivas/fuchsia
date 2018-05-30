@@ -13,6 +13,7 @@
 #include "rapidjson/stringbuffer.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
+namespace fuchsia {
 namespace modular {
 
 int RankingFeature::instances_ = 0;
@@ -73,3 +74,4 @@ std::pair<bool, rapidjson::Document> RankingFeature::FetchJsonObject(
 }
 
 }  // namespace modular
+}  // namespace fuchsia

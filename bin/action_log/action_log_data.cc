@@ -10,6 +10,7 @@
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
 
+namespace fuchsia {
 namespace modular {
 
 ActionLogData::ActionLogData(ActionListener listener) : listener_(listener) {}
@@ -45,3 +46,4 @@ void ActionLogData::Append(const ActionData& action_data) {
 }
 
 }  // namespace modular
+}  // namespace fuchsia

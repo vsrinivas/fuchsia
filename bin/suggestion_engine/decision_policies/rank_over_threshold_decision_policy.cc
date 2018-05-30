@@ -4,6 +4,7 @@
 
 #include "peridot/bin/suggestion_engine/decision_policies/rank_over_threshold_decision_policy.h"
 
+namespace fuchsia {
 namespace modular {
 
 RankOverThresholdDecisionPolicy::RankOverThresholdDecisionPolicy(
@@ -19,3 +20,4 @@ bool RankOverThresholdDecisionPolicy::Accept(
 };
 
 }  // namespace modular
+}  // namespace fuchsia

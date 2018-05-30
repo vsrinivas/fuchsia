@@ -4,6 +4,7 @@
 
 #include "lib/module_resolver/cpp/formatting.h"
 
+namespace fuchsia {
 namespace modular {
 
 std::ostream& operator<<(std::ostream& os, const Intent& intent) {
@@ -31,3 +32,4 @@ std::ostream& operator<<(std::ostream& os,
 }
 
 }  // namespace modular
+}  // namespace fuchsia

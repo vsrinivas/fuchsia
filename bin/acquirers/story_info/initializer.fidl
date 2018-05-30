@@ -10,7 +10,7 @@ library maxwell;
 [Discoverable]
 interface StoryInfoInitializer {
   1: Initialize(
-      modular.StoryProvider story_provider,
-      modular.FocusProvider focus_provider,
-      modular.VisibleStoriesProvider visible_stories_provider);
+      fuchsia.modular.StoryProvider story_provider,
+      fuchsia.modular.FocusProvider focus_provider,
+      fuchsia.modular.VisibleStoriesProvider visible_stories_provider);
 };

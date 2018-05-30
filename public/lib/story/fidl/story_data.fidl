@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library modular_private;
+library fuchsia.modular.internal;
 
 struct StoryData {
   // Metadata available to the UserShell.
-  modular.StoryInfo story_info;
+  fuchsia.modular.StoryInfo story_info;
 
   // Page id on the user's ledger which stores story information. It
   // might be NULL until the story is being started.

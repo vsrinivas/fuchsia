@@ -14,13 +14,14 @@
 
 namespace maxwell {
 
-StoryInfoAcquirer::StoryInfoAcquirer(modular::AgentHost* const agent_host)
+StoryInfoAcquirer::StoryInfoAcquirer(
+    fuchsia::modular::AgentHost* const agent_host)
     : initializer_binding_(this),
       visible_stories_watcher_binding_(this),
       story_provider_watcher_binding_(this),
       focus_watcher_binding_(this) {
   // Initialize IntelligenceServices.
-  modular::IntelligenceServicesPtr intelligence_services;
+  fuchsia::modular::IntelligenceServicesPtr intelligence_services;
   agent_host->agent_context()->GetIntelligenceServices(
       intelligence_services.NewRequest());
   intelligence_services->GetContextWriter(context_writer_.NewRequest());
@@ -47,7 +48,7 @@ void StoryInfoAcquirer::Connect(
 
 void StoryInfoAcquirer::RunTask(
     const fidl::StringPtr& task_id,
-    const modular::Agent::RunTaskCallback& callback) {
+    const fuchsia::modular::Agent::RunTaskCallback& callback) {
   FXL_LOG(FATAL) << "Not implemented.";
 }
 
@@ -56,9 +57,9 @@ void StoryInfoAcquirer::Terminate(const std::function<void()>& done) {
 }
 
 void StoryInfoAcquirer::Initialize(
-    fidl::InterfaceHandle<modular::StoryProvider> story_provider,
-    fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
-    fidl::InterfaceHandle<modular::VisibleStoriesProvider>
+    fidl::InterfaceHandle<fuchsia::modular::StoryProvider> story_provider,
+    fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider,
+    fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
         visible_stories_provider) {
   story_provider_.Bind(std::move(story_provider));
   focus_provider_.Bind(std::move(focus_provider));
@@ -78,7 +79,7 @@ void StoryInfoAcquirer::Initialize(
   OnVisibleStoriesChange({});
 }
 
-void StoryInfoAcquirer::OnFocusChange(modular::FocusInfoPtr info) {
+void StoryInfoAcquirer::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
   // Set all stories to *not* focused, then set the one that's focused to
   // "focused".
   for (const auto& e : stories_) {
@@ -104,8 +105,8 @@ void StoryInfoAcquirer::OnVisibleStoriesChange(
   // TODO(thatguy)
 }
 
-void StoryInfoAcquirer::OnChange(modular::StoryInfo info,
-                                 modular::StoryState state) {
+void StoryInfoAcquirer::OnChange(fuchsia::modular::StoryInfo info,
+                                 fuchsia::modular::StoryState state) {
   // Here we only check if a story is new, and if so create a StoryWatcherImpl.
   // We proxy all future change events to it.
   auto it = stories_.find(info.id);
