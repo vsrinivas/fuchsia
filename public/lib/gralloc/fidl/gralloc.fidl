@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library gralloc;
+library fuchsia.gralloc;
 
 // Returns a new VMO of the requested size, unless it fails.
 [Discoverable]

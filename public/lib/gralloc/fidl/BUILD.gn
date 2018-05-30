@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
-  name = "gralloc"
+  name = "fuchsia.gralloc"
 
   sources = [
     "gralloc.fidl",
