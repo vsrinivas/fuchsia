@@ -40,9 +40,9 @@ macro_rules! bt_fidl_status {
 
 /// Clone Adapter Info
 /// Only here until Rust bindings can derive `Clone`
-pub fn clone_adapter_info(a: &AdapterInfo) -> AdapterInfo {
+pub fn clone_host_info(a: &AdapterInfo) -> AdapterInfo {
     let state = match a.state {
-        Some(ref s) => Some(Box::new(clone_adapter_state(&**s))),
+        Some(ref s) => Some(Box::new(clone_host_state(&**s))),
         None => None,
     };
     AdapterInfo {
@@ -61,7 +61,7 @@ pub fn clone_bt_fidl_bool(a: &fidl_bluetooth::Bool) -> fidl_bluetooth::Bool {
 
 /// Clone Adapter State
 /// Only here until Rust bindings can derive `Clone`
-pub fn clone_adapter_state(a: &AdapterState) -> AdapterState {
+pub fn clone_host_state(a: &AdapterState) -> AdapterState {
     let discoverable = match a.discoverable {
         Some(ref disc) => Some(Box::new(clone_bt_fidl_bool(disc))),
         None => None,

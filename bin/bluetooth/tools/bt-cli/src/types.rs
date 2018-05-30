@@ -1,5 +1,5 @@
 use bluetooth::types::Bool;
-use bluetooth::util::clone_adapter_state;
+use bluetooth::util::clone_host_state;
 use bluetooth::util::clone_bt_fidl_bool;
 use fidl_bluetooth_control;
 use std::fmt;
@@ -24,7 +24,7 @@ impl fmt::Display for AdapterInfo {
         let _ = writeln!(fmt, "\tAddress:\t{}", self.0.address);
         let _ = writeln!(fmt, "\tTechnology:\t{:?}", self.0.technology);
         if let Some(ref state) = self.0.state {
-            for line in AdapterState::from(clone_adapter_state(state))
+            for line in AdapterState::from(clone_host_state(state))
                 .to_string()
                 .lines()
             {

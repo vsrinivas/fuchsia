@@ -4,14 +4,24 @@
 
 library bluetooth_host;
 
-// Interface for interacting with a local Bluetooth adapter.
-// TODO(NET-666): Merge this into Host
-interface Adapter {
-  // Returns information about this adapter, including its state.
-  1: GetInfo() -> (bluetooth_control.AdapterInfo @info);
+// Interface for interacting with a Bluetooth host device (bt-host)
+interface Host {
+  // The following methods fulfill a given interface request. bt-host device
+  // will start processing FIDL messages. If the request cannot be fulfilled,
+  // the bt-host device will close its end of the given channel.
+  1: RequestLowEnergyCentral(request<bluetooth_low_energy.Central> central);
+  2: RequestLowEnergyPeripheral(request<bluetooth_low_energy.Peripheral> peripheral);
+  3: RequestGattServer(request<bluetooth_gatt.Server> server);
+
+  // Closes all FIDL interface handles that are associated with this bt-host
+  // device (excluding any Host interface handles).
+  4: Close();
+
+  // Returns information about the Bluetooth adapter managed by this host.
+  5: GetInfo() -> (bluetooth_control.AdapterInfo @info);
 
   // Sets the local name for this adapter.
-  2: SetLocalName(string local_name) -> (bluetooth.Status @status);
+  6: SetLocalName(string local_name) -> (bluetooth.Status @status);
 
   // Initiates a general discovery procedure for BR/EDR and LE devices. On success, discovered
   // devices will be reported via AdapterDelegate.OnDeviceDiscovered().
@@ -20,7 +30,7 @@ interface Adapter {
   //
   // Discovery will continue until it is terminated via StopDiscovery() or if the proxy to the
   // Adapter gets disconnected.
-  3: StartDiscovery() -> (bluetooth.Status @status);
+  7: StartDiscovery() -> (bluetooth.Status @status);
 
   // Terminates discovery if one was started via StartDiscovery(). The AdapterDelegate will stop
   // receiving device discovery notifications.
@@ -28,33 +38,15 @@ interface Adapter {
   // NOTE: If another client is performing discovery (e.g. via its own Adapter interface handle),
   // then the system will continue performing device discovery even if this method results in
   // success.
-  6: StopDiscovery() -> (bluetooth.Status @status);
+  8: StopDiscovery() -> (bluetooth.Status @status);
 
   // Sets whether this host should be connectable.
-  7: SetConnectable(bool enabled) -> (bluetooth.Status @status);
+  9: SetConnectable(bool enabled) -> (bluetooth.Status @status);
 
   // Sets whether this host should be discoverable.
-  8: SetDiscoverable(bool enabled) -> (bluetooth.Status @status);
+  10: SetDiscoverable(bool enabled) -> (bluetooth.Status @status);
 
   // Events
-  1000: -> OnAdapterStateChanged(bluetooth_control.AdapterState state);
-  1001: -> OnDeviceDiscovered(bluetooth_control.RemoteDevice device);
-};
-
-// Management interface implemented by bt-host devices.
-interface Host {
-  // Returns information about the Bluetooth adapter managed by this host.
-  1: GetInfo() -> (bluetooth_control.AdapterInfo @info);
-
-  // The following methods fulfill a given interface request. bt-host device
-  // will start processing FIDL messages. If the request cannot be fulfilled,
-  // the bt-host device will close its end of the given channel.
-  2: RequestAdapter(request<Adapter> adapter);
-  3: RequestLowEnergyCentral(request<bluetooth_low_energy.Central> central);
-  4: RequestLowEnergyPeripheral(request<bluetooth_low_energy.Peripheral> peripheral);
-  5: RequestGattServer(request<bluetooth_gatt.Server> server);
-
-  // Closes all FIDL interface handles that are associated with this bt-host
-  // device (exluding any Host interface handles).
-  6: Close();
+  101: -> OnHostStateChanged(bluetooth_control.AdapterState state);
+  102: -> OnDeviceDiscovered(bluetooth_control.RemoteDevice device);
 };

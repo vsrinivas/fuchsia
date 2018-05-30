@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use adapter::{self, HostDevice};
 use async;
 use bt;
-use bt::util::clone_adapter_info;
+use bt::util::clone_host_info;
 use failure::Error;
 use fidl;
-use fidl::endpoints2;
 use fidl_bluetooth;
 use fidl_bluetooth_control::{ControlControlHandle, PairingDelegateProxy};
 use fidl_bluetooth_control::AdapterInfo;
@@ -18,6 +16,7 @@ use futures::IntoFuture;
 use futures::StreamExt;
 use futures::future::Either::{Left, Right};
 use futures::future::ok as fok;
+use host_device::{self, HostDevice};
 use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::fs::File;
@@ -214,7 +213,7 @@ impl HostDispatcher {
             Some(ref id) => {
                 // Id must always be valid
                 let adap = self.host_devices.get(id).unwrap().read();
-                Some(util::clone_adapter_info(adap.get_info()))
+                Some(util::clone_host_info(adap.get_info()))
             }
             None => None,
         }
@@ -250,7 +249,7 @@ impl Future for OnAdaptersFound {
         let mut host_devices = vec![];
         for adapter in self.0.read().host_devices.values() {
             let adapter = adapter.read();
-            host_devices.push(util::clone_adapter_info(adapter.get_info()));
+            host_devices.push(util::clone_host_info(adapter.get_info()));
         }
         Ok(Async::Ready(host_devices))
     }
@@ -274,37 +273,31 @@ fn add_adapter(
                 .map(|info| (host, info))
         })
         .and_then(move |(host, adapter_info)| {
-            // Setup the delegates for proxying calls through the bt-host
-            let (host_adapter, host_req) = endpoints2::create_endpoints().unwrap();
-            let _ = host.request_adapter(host_req);
-
             // Set the adapter as connectable
-            host_adapter
-                .set_connectable(true)
+            host.set_connectable(true)
                 .map_err(|e| {
                     error!("Failed to set host adapter as connectable");
                     e.into()
                 })
-                .map(|_| (host_adapter, host, adapter_info))
+                .map(|_| (host, adapter_info))
         })
-        .and_then(move |(host_adapter, host, adapter_info)| {
+        .and_then(move |(host, adapter_info)| {
             // Add to the adapters
             let id = adapter_info.identifier.clone();
-            let adapter = Arc::new(RwLock::new(HostDevice::new(
+            let host_device = Arc::new(RwLock::new(HostDevice::new(
                 host,
-                host_adapter,
                 adapter_info,
             )));
-            hd.write().host_devices.insert(id, adapter.clone());
-            fok((hd.clone(), adapter))
+            hd.write().host_devices.insert(id, host_device.clone());
+            fok((hd.clone(), host_device))
         })
-        .and_then(|(hd, adapter)| {
+        .and_then(|(hd, host_device)| {
             if let Some(ref events) = hd.read().events {
                 let _res = events
-                    .send_on_adapter_updated(&mut clone_adapter_info(adapter.read().get_info()));
+                    .send_on_adapter_updated(&mut clone_host_info(host_device.read().get_info()));
             }
-            info!("Host added: {:?}", adapter.read().get_info().identifier);
-            adapter::run_host_device(hd.clone(), adapter.clone())
+            info!("Host added: {:?}", host_device.read().get_info().identifier);
+            host_device::run(hd.clone(), host_device.clone())
                 .err_into()
                 .map(|_| ())
         })

@@ -37,8 +37,8 @@ use futures::FutureExt;
 use parking_lot::RwLock;
 use std::sync::Arc;
 
-mod adapter;
 mod control_service;
+mod host_device;
 mod host_dispatcher;
 mod logger;
 
