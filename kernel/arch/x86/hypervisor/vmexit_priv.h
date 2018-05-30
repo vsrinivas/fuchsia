@@ -157,7 +157,7 @@ enum class InterruptionType : uint8_t {
 };
 
 // X2APIC MSR addresses from Volume 3, Section 10.12.1.2.
-enum class X2ApicMsr : uint64_t {
+enum class X2ApicMsr : uint32_t {
     ID                  = 0x802,
     VERSION             = 0x803,
     EOI                 = 0x80b,

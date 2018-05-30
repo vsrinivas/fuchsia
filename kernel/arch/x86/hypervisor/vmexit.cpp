@@ -511,7 +511,7 @@ static zx_status_t handle_apic_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
 static zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
                                 GuestState* guest_state, LocalApicState* local_apic_state) {
     // On execution of rdmsr, rcx specifies the MSR and the value is loaded into edx:eax.
-    switch (guest_state->rcx) {
+    switch (static_cast<uint32_t>(guest_state->rcx)) {
     case X86_MSR_IA32_APIC_BASE:
         next_rip(exit_info, vmcs);
         guest_state->rax = kLocalApicPhysBase;
@@ -708,7 +708,7 @@ static zx_status_t handle_kvm_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     zx_paddr_t guest_paddr = BITS(guest_state->rax, 31, 0) | (BITS(guest_state->rdx, 31, 0) << 32);
 
     next_rip(exit_info, vmcs);
-    switch (guest_state->rcx) {
+    switch (static_cast<uint32_t>(guest_state->rcx)) {
     case kKvmSystemTimeMsrOld:
     case kKvmSystemTimeMsr:
         if ((guest_paddr & 1) != 0)
@@ -730,7 +730,7 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
                                 hypervisor::GuestPhysicalAddressSpace* gpas,
                                 zx_port_packet* packet) {
     // On execution of wrmsr, rcx specifies the MSR and edx:eax contains the value to be written.
-    switch (guest_state->rcx) {
+    switch (static_cast<uint32_t>(guest_state->rcx)) {
     case X86_MSR_IA32_APIC_BASE:
         if (guest_state->rdx != 0)
             return ZX_ERR_INVALID_ARGS;
