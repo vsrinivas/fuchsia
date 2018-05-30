@@ -14,6 +14,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/malloc-test.cpp \
     $(LOCAL_DIR)/mutex-test.cpp \
     $(LOCAL_DIR)/null-test.cpp \
+    $(LOCAL_DIR)/process-test.cpp \
     $(LOCAL_DIR)/results-test.cpp \
     $(LOCAL_DIR)/runner-test.cpp \
     $(LOCAL_DIR)/sleep-test.cpp \
@@ -37,6 +38,7 @@ MODULE_LIBS := \
     system/ulib/async.default \
     system/ulib/c \
     system/ulib/fdio \
+    system/ulib/launchpad \
     system/ulib/trace-engine \
     system/ulib/unittest \
     system/ulib/zircon \
