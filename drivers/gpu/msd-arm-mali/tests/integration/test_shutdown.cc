@@ -52,46 +52,6 @@ public:
         return DRET(result);
     }
 
-    bool InitBatchBuffer(magma_buffer_t buffer, uint64_t size)
-    {
-        void* vaddr;
-        if (magma_map(connection_, buffer, &vaddr) != 0)
-            return DRETF(false, "couldn't map batch buffer");
-
-        memset(vaddr, 0, size);
-
-        uint64_t* atom_count = static_cast<uint64_t*>(vaddr);
-        *atom_count = 0;
-
-        EXPECT_EQ(magma_unmap(connection_, buffer), 0);
-
-        return true;
-    }
-
-    bool InitCommandBuffer(magma_buffer_t buffer, magma_buffer_t batch_buffer,
-                           uint64_t batch_buffer_length)
-    {
-        void* vaddr;
-        if (magma_map(connection_, buffer, &vaddr) != 0)
-            return DRETF(false, "couldn't map command buffer");
-
-        auto command_buffer = reinterpret_cast<struct magma_system_command_buffer*>(vaddr);
-        command_buffer->batch_buffer_resource_index = 0;
-        command_buffer->batch_start_offset = 0;
-        command_buffer->num_resources = 1;
-
-        auto exec_resource =
-            reinterpret_cast<struct magma_system_exec_resource*>(command_buffer + 1);
-        exec_resource->buffer_id = magma_get_buffer_id(batch_buffer);
-        exec_resource->num_relocations = 0;
-        exec_resource->offset = 0;
-        exec_resource->length = batch_buffer_length;
-
-        EXPECT_EQ(magma_unmap(connection_, buffer), 0);
-
-        return true;
-    }
-
 private:
     magma_connection_t* connection_;
 };
