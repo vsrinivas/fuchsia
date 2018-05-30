@@ -423,7 +423,10 @@ class FutureOperation : public Operation<Args...> {
                   FuturePtr<Args...> done, ResultCall result_call)
       : Operation<Args...>(trace_name, std::move(result_call)),
         on_run_(on_run),
-        done_(done) {}
+        done_(done) {
+    on_run->set_trace_name(std::string(trace_name) + "(on_run)");
+    done->set_trace_name(std::string(trace_name) + "(done)");
+  }
 
  private:
   // |OperationBase|
