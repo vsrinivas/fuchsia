@@ -170,8 +170,6 @@ private:
                 }
                 relocation->target_resource_index = i;
                 relocation->target_offset = kBufferSize / 2; // just relocate right to the middle
-                relocation->read_domains_bitfield = MAGMA_DOMAIN_CPU;
-                relocation->write_domains_bitfield = MAGMA_DOMAIN_CPU;
             }
         }
 

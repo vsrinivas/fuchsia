@@ -140,15 +140,11 @@ public:
         reloc->offset = 1 * 4;
         reloc->target_resource_index = 0;
         reloc->target_offset = batch_buffer_length - 4;
-        reloc->read_domains_bitfield = 0;
-        reloc->write_domains_bitfield = 0;
 
         reloc++;
         reloc->offset = 6 * 4;
         reloc->target_resource_index = 0;
         reloc->target_offset = batch_buffer_length - 4;
-        reloc->read_domains_bitfield = 0;
-        reloc->write_domains_bitfield = 0;
 
         EXPECT_EQ(magma_unmap(connection_, buffer), 0);
 
