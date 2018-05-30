@@ -395,7 +395,7 @@ int service_starter(void* arg) {
         zx_channel_create(0, &h, &virtcon_open);
         const char* args[] = { "/boot/bin/virtual-console", "--shells", num_shells, "--run", vcmd };
         devmgr_launch(svcs_job_handle, "virtual-console",
-                      vruncmd ? 3 : 1, args, envp, -1,
+                      vruncmd ? 5 : 3, args, envp, -1,
                       &h, &type, (h == ZX_HANDLE_INVALID) ? 0 : 1, NULL, FS_ALL);
     }
 

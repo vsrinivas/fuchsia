@@ -58,7 +58,6 @@ static struct {
 };
 
 void devmgr_disable_appmgr_services(void) {
-    FSTAB[0].flags = 0;
     FSTAB[1].flags = 0;
 }
 
