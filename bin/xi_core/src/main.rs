@@ -12,7 +12,7 @@ extern crate xi_rpc;
 extern crate fuchsia_zircon as zx;
 extern crate mxruntime;
 extern crate fidl;
-extern crate fidl_xi;
+extern crate fidl_fuchsia_xi;
 extern crate byteorder;
 extern crate failure;
 extern crate futures;
@@ -27,7 +27,7 @@ use std::thread;
 use failure::{Error, ResultExt};
 use futures::{FutureExt, future};
 
-use fidl_xi::{Json, JsonImpl, JsonMarker};
+use fidl_fuchsia_xi::{Json, JsonImpl, JsonMarker};
 
 use component::server::ServicesServer;
 
