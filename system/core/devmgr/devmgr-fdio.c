@@ -37,7 +37,7 @@ void devmgr_io_init(void) {
 
 #define USER_MAX_HANDLES 4
 #define MAX_ENVP 16
-#define CHILD_JOB_RIGHTS (ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_MANAGE_JOB)
+#define CHILD_JOB_RIGHTS (ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE)
 
 static struct {
     const char* mount;
