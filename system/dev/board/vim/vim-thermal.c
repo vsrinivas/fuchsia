@@ -26,9 +26,12 @@ static aml_thermal_config_t aml_vim2_config = {
     .critical_temp                  = 81,
     .trip_point_info = {
         {
+            // This is the initial thermal setup of the device
+            // Fan set to OFF
+            // CPU freq set to a known stable MAX
             .fan_level                  = 0,
-            .big_cluster_dvfs_opp       = -1,
-            .little_cluster_dvfs_opp    = -1,
+            .big_cluster_dvfs_opp       = 6,
+            .little_cluster_dvfs_opp    = 4,
         },
         {
             .fan_level                  = 1,
@@ -48,8 +51,8 @@ static aml_thermal_config_t aml_vim2_config = {
             .fan_level                  = 3,
             .up_temp                    = 60,
             .down_temp                  = 58,
-            .big_cluster_dvfs_opp       = 6,
-            .little_cluster_dvfs_opp    = 4,
+            .big_cluster_dvfs_opp       = -1,
+            .little_cluster_dvfs_opp    = -1,
         },
         {
             .fan_level                  = -1,

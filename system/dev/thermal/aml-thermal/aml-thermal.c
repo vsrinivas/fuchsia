@@ -48,18 +48,29 @@ static void aml_set_fan_level(aml_thermal_t *dev, uint32_t level) {
     }
 }
 
+static zx_status_t aml_notify_thermal_deamon(zx_handle_t port, uint32_t trip_id) {
+    zx_port_packet_t thermal_port_packet;
+    thermal_port_packet.key = trip_id;
+    thermal_port_packet.type = ZX_PKT_TYPE_USER;
+    return zx_port_queue(port, &thermal_port_packet);
+}
+
 static int aml_thermal_notify_thread(void* ctx) {
     aml_thermal_t* dev = ctx;
     uint32_t temperature;
-    zx_port_packet_t thermal_port_packet;
     bool critical_temp_measure_taken = false;
 
-    thermal_port_packet.type = ZX_PKT_TYPE_USER;
+    // Notify the thermal deamon about the default settings
+    zx_status_t status = aml_notify_thermal_deamon(dev->port, dev->current_trip_idx);
+    if (status != ZX_OK) {
+        THERMAL_ERROR("Failed to send packet via port to Thermal Deamon: Thermal disabled");
+        return status;
+    }
 
     while(true) {
-        zx_status_t status = scpi_get_sensor_value(&dev->scpi,
-                                                   dev->device->temp_sensor_id,
-                                                   &temperature);
+        status = scpi_get_sensor_value(&dev->scpi,
+                                       dev->device->temp_sensor_id,
+                                       &temperature);
         if (status != ZX_OK) {
             THERMAL_ERROR("Unable to get thermal sensor value: Thermal disabled\n");
             return status;
@@ -105,8 +116,7 @@ static int aml_thermal_notify_thread(void* ctx) {
 
         if (signal) {
             // Notify the thermal deamon about which trip point triggered
-            thermal_port_packet.key = dev->current_trip_idx;
-            status = zx_port_queue(dev->port, &thermal_port_packet);
+            status = aml_notify_thermal_deamon(dev->port, dev->current_trip_idx);
             if (status != ZX_OK) {
                 THERMAL_ERROR("Failed to send packet via port to Thermal Deamon: Thermal disabled");
                 return status;
