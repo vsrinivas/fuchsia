@@ -88,6 +88,6 @@ There are tests for the debugger that run on the host. These are relavant
 if you're working on the debugger client.
 
 ```sh
-ninja -C out/x64 host_tests
-out/x64/host_x64/zxdb_tests
+ninja -C out/x64 host_x64/zxdb_unittests
+out/x64/host_x64/zxdb_unittests
 ```

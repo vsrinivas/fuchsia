@@ -11,10 +11,3 @@ group("examples") {
     "//garnet/examples/escher/waterfall($host_toolchain)",
   ]
 }
-
-group("tests") {
-  testonly = true
-  deps = [
-    "//garnet/public/lib/escher/test:escher_unittests($host_toolchain)",
-  ]
-}
