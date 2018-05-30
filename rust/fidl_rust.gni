@@ -29,8 +29,17 @@ template("fidl_rust") {
     library_name = invoker.name
   }
 
+  underscore_name = exec_script(
+        "//build/rust/fidl_crate_from_library.py",
+        [
+          "--name",
+          library_name,
+        ],
+        "trim string"
+  )
+
   fidl_target_gen_dir = get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
-  file_stem = "$fidl_target_gen_dir/$library_name.fidl"
+  file_stem = "$fidl_target_gen_dir/$underscore_name"
   json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
 
   compiled_action(generation_target_name) {
