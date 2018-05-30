@@ -9,7 +9,7 @@
 #include <string>
 
 #include <modular/cpp/fidl.h>
-#include "lib/async/cpp/future_value.h"
+#include "lib/async/cpp/future.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/context_engine/context_repository.h"
 #include "peridot/lib/bound_set/bound_set.h"
@@ -105,7 +105,8 @@ class ContextValueWriterImpl : ContextValueWriter {
   ContextWriterImpl* const writer_;
   const ContextRepository::Id parent_id_;
   ContextValueType type_;
-  FutureValue<ContextRepository::Id> value_id_;
+  FuturePtr<ContextRepository::Id> value_id_;
+  bool have_value_id_{};
 
   fxl::WeakPtrFactory<ContextValueWriterImpl> weak_factory_;
 

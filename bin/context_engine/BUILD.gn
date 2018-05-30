@@ -131,7 +131,7 @@ source_set("context_writer_impl") {
     "//garnet/public/lib/fxl",
     "//peridot/lib/bound_set",
     "//peridot/public/lib:fidl",
-    "//peridot/public/lib/async/cpp:future_value",
+    "//peridot/public/lib/async/cpp:future",
     "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/entity/cpp",
     "//peridot/public/lib/entity/cpp:json",

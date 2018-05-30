@@ -18,8 +18,7 @@
 namespace modular {
 
 ContextWriterImpl::ContextWriterImpl(
-    const ComponentScope& client_info,
-    ContextRepository* const repository,
+    const ComponentScope& client_info, ContextRepository* const repository,
     EntityResolver* const entity_resolver,
     fidl::InterfaceRequest<ContextWriter> request)
     : binding_(this, std::move(request)),
@@ -33,7 +32,8 @@ ContextWriterImpl::ContextWriterImpl(
     parent_value_selector_.type = ContextValueType::MODULE;
     parent_value_selector_.meta = ContextMetadata::New();
     parent_value_selector_.meta->story = StoryMetadata::New();
-    parent_value_selector_.meta->story->id = client_info.module_scope().story_id;
+    parent_value_selector_.meta->story->id =
+        client_info.module_scope().story_id;
     parent_value_selector_.meta->mod = ModuleMetadata::New();
     fidl::Clone(client_info.module_scope().module_path,
                 &parent_value_selector_.meta->mod->path);
@@ -57,7 +57,7 @@ fidl::VectorPtr<fidl::StringPtr> Deprecated_GetTypesFromJsonEntity(
     return {};
 
   auto result = fidl::VectorPtr<fidl::StringPtr>();
-  for (const auto& it: types) {
+  for (const auto& it : types) {
     result.push_back(it);
   }
   return result;
@@ -99,8 +99,7 @@ bool MaybeFindParentValueId(ContextRepository* repository,
 }  // namespace
 
 void ContextWriterImpl::CreateValue(
-    fidl::InterfaceRequest<ContextValueWriter> request,
-    ContextValueType type) {
+    fidl::InterfaceRequest<ContextValueWriter> request, ContextValueType type) {
   ContextRepository::Id parent_id;
   // We ignore the return value - if it returns false |parent_id| will stay
   // default-initialized.
@@ -194,32 +193,41 @@ void ContextWriterImpl::GetEntityTypesFromEntityReference(
 }
 
 ContextValueWriterImpl::ContextValueWriterImpl(
-    ContextWriterImpl* writer,
-    const ContextRepository::Id& parent_id,
-    ContextValueType type,
-    fidl::InterfaceRequest<ContextValueWriter> request)
+    ContextWriterImpl* writer, const ContextRepository::Id& parent_id,
+    ContextValueType type, fidl::InterfaceRequest<ContextValueWriter> request)
     : binding_(this, std::move(request)),
       writer_(writer),
       parent_id_(parent_id),
       type_(type),
+      value_id_(Future<ContextRepository::Id>::Create()),
       weak_factory_(this) {
   binding_.set_error_handler(
       [this] { writer_->DestroyContextValueWriter(this); });
+
+  // When |value_id_| completes, we want to remember it so that we know what
+  // branch to execute in Set().
+  value_id_->WeakConstThen(
+      weak_factory_.GetWeakPtr(),
+      [this](const ContextRepository::Id& id) { have_value_id_ = true; });
 }
 
 ContextValueWriterImpl::~ContextValueWriterImpl() {
   // It's possible we haven't actually created a value in |repository_| yet.
-  if (value_id_) {
-    // Remove the value.
-    writer_->repository()->Remove(value_id_.get());
-  }
+  // Either we have, and |value_id_| is complete and this callback will be
+  // called synchronously, or we haven't and |value_id_| will go out of scope
+  // with *this goes out of scope.
+  value_id_->WeakConstThen(weak_factory_.GetWeakPtr(),
+                           [this](const ContextRepository::Id& id) {
+                             // Remove the value.
+                             writer_->repository()->Remove(id);
+                           });
 }
 
 void ContextValueWriterImpl::CreateChildValue(
-    fidl::InterfaceRequest<ContextValueWriter> request,
-    ContextValueType type) {
+    fidl::InterfaceRequest<ContextValueWriter> request, ContextValueType type) {
   // We can't create a child value until this value has an ID.
-  value_id_.OnValue(
+  value_id_->WeakConstThen(
+      weak_factory_.GetWeakPtr(),
       fxl::MakeCopyable([this, request = std::move(request),
                          type](const ContextRepository::Id& value_id) mutable {
         auto ptr = new ContextValueWriterImpl(writer_, value_id, type,
@@ -230,8 +238,10 @@ void ContextValueWriterImpl::CreateChildValue(
 
 void ContextValueWriterImpl::Set(fidl::StringPtr content,
                                  ContextMetadataPtr metadata) {
-  auto activity =
-    writer_->repository()->debug()->GetIdleWaiter()->RegisterOngoingActivity();
+  auto activity = writer_->repository()
+                      ->debug()
+                      ->GetIdleWaiter()
+                      ->RegisterOngoingActivity();
 
   auto done_getting_types =
       [weak_this = weak_factory_.GetWeakPtr(), activity, content,
@@ -240,48 +250,55 @@ void ContextValueWriterImpl::Set(fidl::StringPtr content,
         if (!weak_this)
           return;
 
-        if (!weak_this->value_id_) {
+        if (!weak_this->have_value_id_) {
           // We're creating this value for the first time.
           ContextValue value;
           value.type = weak_this->type_;
           value.content = content;
           if (metadata) {
-              fidl::Clone(*metadata, &value.meta);
+            fidl::Clone(*metadata, &value.meta);
           }
           MaybeFillEntityTypeMetadata(entity_types, value);
 
           if (weak_this->parent_id_.empty()) {
-            weak_this->value_id_ =
-                weak_this->writer_->repository()->Add(std::move(value));
+            weak_this->value_id_->Complete(
+                weak_this->writer_->repository()->Add(std::move(value)));
           } else {
-            weak_this->value_id_ = weak_this->writer_->repository()->Add(
-                weak_this->parent_id_, std::move(value));
+            weak_this->value_id_->Complete(
+                weak_this->writer_->repository()->Add(weak_this->parent_id_,
+                                                      std::move(value)));
           }
         } else {
-          if (!weak_this->writer_->repository()->Contains(
-                  weak_this->value_id_.get())) {
-            FXL_LOG(FATAL) << "Trying to update non-existent context value ("
-                           << weak_this->value_id_.get()
-                           << "). New content: " << content
-                           << ", new metadata: " << metadata;
-          }
+          // We can safely capture everything by reference because we know
+          // |weak_this->value_id_| has been completed, which means this
+          // callback will be executed immediately.
+          weak_this->value_id_->ConstThen(
+              [weak_this, &content, &metadata,
+               &entity_types](const ContextRepository::Id& value_id) {
+                if (!weak_this->writer_->repository()->Contains(value_id)) {
+                  FXL_LOG(FATAL)
+                      << "Trying to update non-existent context value ("
+                      << value_id << "). New content: " << content
+                      << ", new metadata: " << metadata;
+                }
 
-          auto value =
-              weak_this->writer_->repository()->Get(weak_this->value_id_.get());
-          if (content) {
-            value->content = content;
-          }
-          if (metadata) {
-            fidl::Clone(*metadata, &value->meta);
-          }
-          MaybeFillEntityTypeMetadata(entity_types, *value);
-          weak_this->writer_->repository()->Update(weak_this->value_id_.get(),
-                                                   std::move(*value));
+                auto value = weak_this->writer_->repository()->Get(value_id);
+                if (content) {
+                  value->content = content;
+                }
+                if (metadata) {
+                  fidl::Clone(*metadata, &value->meta);
+                }
+                MaybeFillEntityTypeMetadata(entity_types, *value);
+                weak_this->writer_->repository()->Update(value_id,
+                                                         std::move(*value));
+              });
         }
       };
 
   if (type_ != ContextValueType::ENTITY || !content) {
-    // Avoid an extra round-trip to EntityResolver that won't get us anything.
+    // Avoid an extra round-trip to EntityResolver that won't get us
+    // anything.
     done_getting_types({});
   } else {
     writer_->GetEntityTypesFromEntityReference(
