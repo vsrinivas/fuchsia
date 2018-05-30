@@ -11,7 +11,7 @@ readonly GARNET_ROOT="${FUCHSIA_ROOT}/garnet"
 readonly BUILDTOOLS_DIR="${FUCHSIA_ROOT}/buildtools"
 
 INTERNAL_ACCESS=false
-if [[ "$(cipd ls fuchsia_internal)" != "No matching packages." ]]; then
+if [[ "$(${BUILDTOOLS_DIR}/cipd ls fuchsia_internal)" != "No matching packages." ]]; then
   ${BUILDTOOLS_DIR}/cipd ensure -ensure-file "${SCRIPT_ROOT}/cipd.ensure" -root ${GARNET_ROOT} -log-level warning
   INTERNAL_ACCESS=true
 fi
