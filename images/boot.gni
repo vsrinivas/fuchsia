@@ -6,16 +6,7 @@ import("//build/compiled_action.gni")
 import("//build/config/clang/clang.gni")
 import("//build/config/fuchsia/zircon.gni")
 
-# Keep the following in sync with the values in
-#   //scripts/devshell/lib/image_build_vars.sh
 images_dir = "$root_out_dir/images"
-
-# Used by //scripts/devshell/run.
-fvm_image_path = "$images_dir/fvm.blk"
-
-# Used by //scripts/devshell/boot.
-fvm_sparse_image_path = "$images_dir/fvm.sparse.blk"
-fvm_data_sparse_image_path = "$images_dir/fvm.data.sparse.blk"
 
 # Build a "kernel partition" target for ChromeOS targets.
 #
@@ -85,14 +76,14 @@ template("vboot") {
 #
 # Parameters
 #
-#   deps (optional)
-#     [list of labels] Must be bootdata labels defined earlier in the file.
+#   bootdata_bin (optional)
+#     [path] Must be a ramdisk that compliments zircon_bin.
 #
 #   zircon_bin (optional)
 #     [path] A zircon kernel.
 #
-#   zedboot (optional)
-#     [label] A Zedboot bootdata label defined earlier in the file.
+#   zedboot_bin (optional)
+#     [label] A Zedboot zbi bin.
 #
 #   cmdline (optional)
 #     [path] A bootloader (Gigaboot) cmdline file to include in the EFI root.
@@ -102,6 +93,7 @@ template("esp") {
   compiled_action(output_name) {
     forward_variables_from(invoker,
                            [
+                             "deps",
                              "testonly",
                              "visibility",
                            ])
@@ -130,34 +122,23 @@ template("esp") {
         "--zircon",
         rebase_path(invoker.zircon_bin),
       ]
+      inputs += [ invoker.zircon_bin ]
     }
 
-    deps = []
-    if (defined(invoker.deps)) {
-      bootdata_bins = []
-      foreach(bootdata_label, invoker.deps) {
-        bootdata_bins += get_target_outputs(bootdata_label)
-      }
-      deps += invoker.deps
-
-      bootdata_bin = bootdata_bins[0]
-      assert([ bootdata_bin ] == bootdata_bins)
-
+    if (defined(invoker.bootdata_bin)) {
       args += [
         "--bootdata",
-        rebase_path(bootdata_bin),
+        rebase_path(invoker.bootdata_bin),
       ]
+      inputs += [ invoker.bootdata_bin ]
     }
 
-    if (defined(invoker.zedboot)) {
-      zedboot_label = invoker.zedboot
-      zedboot_name = get_label_info(zedboot_label, "name")
-      zedboot_bin = "$images_dir/${zedboot_name}.bin"
+    if (defined(invoker.zedboot_bin)) {
       args += [
         "--zedboot",
-        rebase_path(zedboot_bin),
+        rebase_path(invoker.zedboot_bin),
       ]
-      deps += [ zedboot_label ]
+      inputs += [ invoker.zedboot_bin ]
     }
 
     if (defined(invoker.cmdline)) {

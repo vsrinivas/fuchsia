@@ -46,6 +46,16 @@ declare_args() {
   }
 }
 
+# image_paths aggregates a list of environment variable style strings of the form:
+# IMAGE_{NAME}_{TYPE}=path
+# path is relative to $root_build_dir.
+# This will be written out at generation time and is later consumed by
+# //scripts and various tools to find the relevant images.
+# TYPE can be: SPARSE (sparse FVM), RAW (block image for any FS), ZBI (bootable
+# zircon image), RAM (ramdisk without kernel), VBOOT (bootable zircon image
+# with a vboot signature).
+image_paths = []
+
 if (zircon_boot_groups == "all") {
   assert(zircon_system_groups == "",
          "zircon_boot_groups already has everything")
@@ -295,7 +305,7 @@ zircon_tool_action("blob.blk") {
   deps = [
     ":blob.manifest",
   ]
-  blob_image_path = "$target_out_dir/$target_name"
+  blob_image_path = "$images_dir/$target_name"
   outputs = [
     blob_image_path,
   ]
@@ -310,6 +320,8 @@ zircon_tool_action("blob.blk") {
     rebase_path(blob_manifest, root_build_dir),
   ]
 }
+blob_raw_image_path = get_target_outputs(":blob.blk")
+image_paths += [ "IMAGE_BLOB_RAW=" + rebase_path(blob_raw_image_path[0], root_build_dir) ]
 
 # Calculate the merkleroots that go into the kernel command line switches.
 zircon_tool_action("system_image_merkleroots") {
@@ -440,7 +452,7 @@ fvm_sparse_args = [
 # by the qemu run, via `fx run-fvm`.
 generate_fvm("fvm.blk") {
   testonly = true
-  output_name = fvm_image_path
+  output_name = "$images_dir/fvm.blk"
   deps = [
     ":blob.blk",
   ]
@@ -453,18 +465,22 @@ generate_fvm("fvm.blk") {
   }
   args += [ "--blob" ]
 }
+fvm_raw_image_path = get_target_outputs(":fvm.blk")
+image_paths += [ "IMAGE_FVM_RAW=" + rebase_path(fvm_raw_image_path[0], root_build_dir) ]
 
 # fvm.sparse.blk creates a sparse FVM partition image containing the blob
 # partition produced by blob.blk.  fvm.sparse.blk is primarily invoked and
 # used by the paver boot, via `fx boot-paver`.
 generate_fvm("fvm.sparse.blk") {
   testonly = true
-  output_name = fvm_sparse_image_path
+  output_name = "$images_dir/fvm.sparse.blk"
   deps = [
     ":blob.blk",
   ]
   args = fvm_sparse_args + [ "--blob" ]
 }
+fvm_sparse_image_path = get_target_outputs(":fvm.sparse.blk")
+image_paths += [ "IMAGE_FVM_SPARSE=" + rebase_path(fvm_sparse_image_path[0], root_build_dir) ]
 
 # data.blk creates an empty but initialized minfs data partition.
 # The partition is included in fvm.data.sparse.blk.
@@ -479,16 +495,20 @@ zircon_tool_action("data.blk") {
     "create",
   ]
 }
+data_raw_image_path = get_target_outputs(":data.blk")
+image_paths += [ "IMAGE_DATA_RAW=" + rebase_path(data_raw_image_path[0], root_build_dir) ]
 
 # fmv.data.sparse.blk is an FVM image containing only data.blk. It is
 # used to pave new data partitions to a device.
 generate_fvm("fvm.data.sparse.blk") {
-  output_name = fvm_data_sparse_image_path
+  output_name = "$images_dir/fvm.data.sparse.blk"
   deps = [
     ":data.blk",
   ]
   args = fvm_sparse_args + [ "--data" ]
 }
+data_fvm_raw_image_path = get_target_outputs(":fvm.data.sparse.blk")
+image_paths += [ "IMAGE_DATA_FVM_RAW=" + rebase_path(data_fvm_raw_image_path[0], root_build_dir) ]
 
 # This packs up Zircon with the command line to enable /system.
 bootdata("bootdata-blob") {
@@ -503,6 +523,8 @@ bootdata("bootdata-blob") {
     inputs += get_target_outputs(label)
   }
 }
+bootdata_image_path = get_target_outputs(":bootdata-blob")
+image_paths += [ "IMAGE_BOOT_RAM=" + rebase_path(bootdata_image_path[0], root_build_dir) ]
 
 # This packs up the kernel itself with bootdata-blob (above).  This can be
 # booted directly from a partition by a Zircon-compatible boot loader and
@@ -517,6 +539,8 @@ bootdata("zircon-boot-blob") {
     ":bootdata-blob",
   ]
 }
+zircon_bin_image_path = get_target_outputs(":zircon-boot-blob")
+image_paths += [ "IMAGE_ZIRCON_ZBI=" + rebase_path(zircon_bin_image_path[0], root_build_dir) ]
 
 # This packs (compressed) fvm.blk into BOOTDATA_RAMDISK format,
 # used by the netboot-* targets below.
@@ -548,6 +572,8 @@ bootdata("netboot") {
     inputs += get_target_outputs(label)
   }
 }
+netboot_ram_image_path = get_target_outputs(":netboot")
+image_paths += [ "IMAGE_NETBOOT_RAM=" + rebase_path(netboot_ram_image_path[0], root_build_dir) ]
 
 # This packs the kernel itself with netboot (above).  This can be booted
 # directly from a partition by a Zircon-compatible boot loader and will
@@ -562,6 +588,8 @@ bootdata("zircon-netboot") {
     ":netboot",
   ]
 }
+netboot_zbi_image_path = get_target_outputs(":zircon-netboot")
+image_paths += [ "IMAGE_NETBOOT_ZBI=" + rebase_path(netboot_zbi_image_path[0], root_build_dir) ]
 
 # ChromeOS vboot images.
 vboot("zircon") {
@@ -570,6 +598,8 @@ vboot("zircon") {
     ":bootdata-blob",
   ]
 }
+zircon_vboot_image_path = get_target_outputs(":zircon.vboot")
+image_paths += [ "IMAGE_ZIRCON_VBOOT=" + rebase_path(zircon_vboot_image_path[0], root_build_dir) ]
 
 if (target_cpu != "arm64") {
   # EFI ESP images.
@@ -582,12 +612,16 @@ if (target_cpu != "arm64") {
     }
     zircon_bin = "${zircon_build_dir}/zircon.bin"
 
-    zedboot = "zedboot:zedboot.bin"
+    # XXX(raggi): this path is shared with //build/images/BUILD.gn.
+    zedboot_bin = "$root_out_dir/zedboot.bin"
 
     deps = [
       ":bootdata-blob",
+      "zedboot:zedboot.bin",
     ]
   }
+  esp_image_path = get_target_outputs(":local.esp.blk")
+  image_paths += [ "IMAGE_ESP_RAW=" + rebase_path(esp_image_path[0], root_build_dir) ]
 }
 
 # The installer needs all images except for fvm.blk (it has fvm.sparse.blk):
@@ -650,6 +684,8 @@ zircon_tool_action("installer") {
   ]
   args += rebase_path(get_target_outputs(":installer.manifest"), root_build_dir)
 }
+installer_image_path = get_target_outputs(":installer")
+image_paths += [ "IMAGE_INSTALLER_RAW=" + rebase_path(installer_image_path[0], root_build_dir) ]
 
 # TODO(mcgrathr): Temporary until scripts and recipes get updated.
 board = "qemu"
@@ -724,6 +760,10 @@ group("images") {
     deps += [ ":local.esp.blk" ]
   }
 }
+
+# See definition of images_paths for purpose.
+write_file("$root_build_dir/image_paths.sh", image_paths)
+
 
 ###
 ### Amber updates.

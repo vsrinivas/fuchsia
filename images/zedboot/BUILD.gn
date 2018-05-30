@@ -12,6 +12,13 @@ declare_args() {
   zedboot_cmdline_file = ""
 }
 
+# zedboot_image_paths aggregates a list of environment variable style strings of the form:
+# IMAGE_{NAME}_{TYPE}=path
+# path is relative to $root_build_dir
+# This will be written out at generation time and is later consumed by
+# //scripts and various tools to find the relevant images.
+zedboot_image_paths = []
+
 bootdata_cmdline("zedboot_cmdline") {
   visibility = [ ":*" ]
   inputs = [
@@ -101,7 +108,8 @@ bootdata("zedboot-data") {
 # images/zedboot.bin combines the kernel image itself with
 # the BOOTDATA bits.  This single file can be booted by Gigaboot.
 bootdata("zedboot.bin") {
-  output_name = "images/zedboot.bin"
+  # XXX(raggi): this path is shared with //build/images/BUILD.gn.
+  output_name = "zedboot"
   deps = [
     ":zedboot-data",
   ]
@@ -112,18 +120,27 @@ bootdata("zedboot.bin") {
     inputs += get_target_outputs(label)
   }
 }
+zedboot_zbi_image_path = get_target_outputs(":zedboot.bin")
+zedboot_image_paths += [ "IMAGE_ZEDBOOT_ZBI=" + rebase_path(zedboot_zbi_image_path[0], root_build_dir) ]
 
 vboot("zedboot") {
   deps = [
     ":zedboot.bin",
   ]
 }
+zedboot_vboot_image_path = get_target_outputs(":zedboot.vboot")
+zedboot_image_paths += [ "IMAGE_ZEDBOOT_VBOOT=" + rebase_path(zedboot_vboot_image_path[0], root_build_dir) ]
 
 if (target_cpu != "arm64") {
   esp("zedboot") {
     cmdline = "efi_cmdline.txt"
-    zedboot = ":zedboot.bin"
+
+    zedboot_outputs = get_target_outputs(":zedboot.bin")
+    zedboot_bin = zedboot_outputs[0]
+    deps = [ ":zedboot.bin" ]
   }
+  zedboot_esp_image_path = get_target_outputs(":zedboot.esp.blk")
+  zedboot_image_paths += [ "IMAGE_ZEDBOOT_ESP=" + rebase_path(zedboot_esp_image_path[0], root_build_dir) ]
 }
 
 group("zedboot") {
@@ -135,3 +152,6 @@ group("zedboot") {
     deps += [ ":zedboot.esp.blk" ]
   }
 }
+
+# See definition of zedboot_image_paths for purpose.
+write_file("$root_build_dir/zedboot_image_paths.sh", zedboot_image_paths)
