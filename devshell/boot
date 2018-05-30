@@ -5,29 +5,20 @@
 
 ### run bootserver in zedboot disk paver mode
 
-## usage: fx boot [--netboot|--bootfs] [--no-data]
-##                [--artifacts <dir>] [--zircon-dir <dir>] [--fuchsia-dir <dir>]
+## usage: fx boot [--netboot] [--no-data]
+##                [--artifacts <dir>]
 ##                [<type>] [bootserver arguments]
 ##   <type>        see "--help" for list (default: x64 for x64 / none for arm64)
 ##   --netboot     Boot from ramdisk containing FVM
-##   --bootfs      (deprecated) boot user.bootfs (old ramdisk)
 ##   --no-data     Use FVM images without a /data partition (preserve existing
 ##                 data)
 ##   --artifacts   a directory to load files to send to the target where the
 ##                 root of the directory base zircon.bin and its bootdata file
 ##                 and an images sub-directory has all the images to pave
-##   --zircon-dir  directory containing zircon
-##   --fuchsia-dir directory containing partitions images and bootdata to send
-##                 to the device
 ##
 ## If <type> is omitted, a guess is made based on $FUCHSIA_ARCH. For x64, all
 ## x64 images will be supplied (resulting in an FVM pave). For arm64 the default
 ## <type> is netboot.
-##
-## If supplying --artifacts, --zircon-dir, or --fuchsia-dir some rules apply.
-## Either supply only --artifacts OR both --zircon-dir and --fuchsia-dir. If
-## none of these arguments is supplied the location of these directories is
-## assumed based on the build directory.
 
 set -e
 
@@ -36,6 +27,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/image_build_vars.sh
 declare -a disks=()
 fuchsia_dir="${FUCHSIA_BUILD_DIR}"
 zircon_dir="${ZIRCON_BUILD_DIR}"
+zircon_tools="${ZIRCON_TOOLS_DIR}"
 add_fvm=true
 
 usage() {
@@ -47,13 +39,8 @@ usage() {
 }
 
 netboot=false
-bootfs=false
 add_data=true
 ip_targ=()
-had_artifacts=false
-had_imgdir=false
-had_zirdir=false
-zircon_tools="${ZIRCON_TOOLS_DIR}"
 while [[ "$1" =~ ^- ]]; do
   case "$1" in
   -h|--help)
@@ -65,9 +52,6 @@ while [[ "$1" =~ ^- ]]; do
     ;;
   --netboot)
     netboot=true
-    ;;
-  --bootfs)
-    bootfs=true
     ;;
   --no-data)
     echo "##"
@@ -82,18 +66,29 @@ while [[ "$1" =~ ^- ]]; do
     fuchsia_dir="${1}"
     zircon_dir="${1}"
     zircon_tools="${zircon_dir}/tools"
-    had_artifacts=true
-    ;;
-  --images-dir)
-    shift
-    fuchsia_dir="${1}"
-    had_imgdir=true
-    ;;
-  --zircon-dir)
-    shift
-    zircon_dir="${1}"
-    zircon_tools="${zircon_dir}/tools"
-    had_zirdir=true
+
+    # TODO(INTK-377): Remove this check and the fallback definitions once the
+    # CI system is including the image_paths manifests.
+    if [[ -f "${fuchsia_dir}"/{,zedboot_}image_paths.sh ]]; then
+      # Source the image paths from the artifacts directory, so we can find them.
+      source "${fuchsia_dir}"/{,zedboot_}image_paths.sh
+    else
+      IMAGE_BLOB_RAW=images/blob.blk
+      IMAGE_FVM_RAW=images/fvm.blk
+      IMAGE_FVM_SPARSE=images/fvm.sparse.blk
+      IMAGE_DATA_RAW=obj/build/images/data.blk
+      IMAGE_DATA_FVM_RAW=images/fvm.data.sparse.blk
+      IMAGE_BOOT_RAM=bootdata-blob.bin
+      IMAGE_ZIRCON_ZBI=zircon-boot-blob.bin
+      IMAGE_NETBOOT_RAM=netboot.bin
+      IMAGE_NETBOOT_ZBI=zircon-netboot.bin
+      IMAGE_ZIRCON_VBOOT=images/zircon.vboot
+      IMAGE_ESP_RAW=images/local.esp.blk
+      IMAGE_INSTALLER_RAW=images/installer.blk
+      IMAGE_ZEDBOOT_ZBI=zedboot.bin
+      IMAGE_ZEDBOOT_VBOOT=images/zedboot.vboot
+      IMAGE_ZEDBOOT_ESP=images/zedboot.esp.blk
+    fi
     ;;
   *)
     break
@@ -101,14 +96,7 @@ while [[ "$1" =~ ^- ]]; do
   shift
 done
 
-if $had_artifacts && ( $had_zirdir || $had_imgdir ) ||
-    ( ! $had_artifacts && ( $had_zirdir || $had_imgdir ) &&
-        ( ! $had_zirdir || ! $had_imgdir ) ); then
-  echo >&2 "Invalid flags, either supply --artifacts or both --fuchsia-dir and --zircon-dir or none of these options to use defaults"
-  exit 1
-fi
-
-ramdisk="${fuchsia_dir}/${ramdisk_bin}"
+ramdisk="${fuchsia_dir}/${IMAGE_BOOT_RAM}"
 
 if [[ "$1" =~ ^- ]]; then
   machine_type=""
@@ -121,9 +109,6 @@ else
 fi
 
 if [[ -z "$machine_type" ]]; then
-  if $bootfs; then
-    machine_type="bootfs"
-  fi
   if $netboot; then
     machine_type="netboot"
   fi
@@ -134,36 +119,27 @@ case "${machine_type}" in
     usage
   ;;
   zedboot)
-    ramdisk="${fuchsia_dir}/images/zedboot.bin"
+    ramdisk="${fuchsia_dir}/${IMAGE_ZEDBOOT_ZBI}"
     disks=()
     add_fvm=false
   ;;
   ram|netboot|--netboot)
-    ramdisk="${fuchsia_dir}/netboot.bin"
-    disks=()
-    add_fvm=false
-  ;;
-  bootfs|--bootfs)
-    echo
-    echo "bootfs is deprecated, please try to use \"ram\" instead"
-    echo
-    sleep 5
-    ramdisk="${fuchsia_dir}/user.bootfs"
+    ramdisk="${fuchsia_dir}/${IMAGE_NETBOOT_RAM}"
     disks=()
     add_fvm=false
   ;;
   cros|pixel|vboot|efi|acer|nuc)
-    disks=("${disks[@]}" --efi "${fuchsia_dir}/${efi_block}")
-    disks=("${disks[@]}" --kernc "${fuchsia_dir}/${kernc_vboot}")
+    disks=("${disks[@]}" --efi "${fuchsia_dir}/${IMAGE_ESP_RAW}")
+    disks=("${disks[@]}" --kernc "${fuchsia_dir}/${IMAGE_ZIRCON_VBOOT}")
   ;;
   *)
     if [[ "$FUCHSIA_ARCH" == "x64" ]]; then
       machine_type="x64"
-      disks=("${disks[@]}" --efi "${fuchsia_dir}/${efi_block}" \
-        --kernc "${fuchsia_dir}/${kernc_vboot}")
+      disks=("${disks[@]}" --efi "${fuchsia_dir}/${IMAGE_ESP_RAW}" \
+        --kernc "${fuchsia_dir}/${IMAGE_ZIRCON_VBOOT}")
     else
       # For now ARM64 imples netboot.
-      ramdisk="${fuchsia_dir}/netboot.bin"
+      ramdisk="${fuchsia_dir}/${IMAGE_NETBOOT_RAM}"
       disks=()
       add_fvm=false
     fi
@@ -175,7 +151,7 @@ bootserver_args=()
 if ! $add_fvm; then
   bootserver_args=("$@")
 else
-  disks=("${disks[@]}" --fvm "${fuchsia_dir}/${fvm_sparse_block}")
+  disks=("${disks[@]}" --fvm "${fuchsia_dir}/${IMAGE_FVM_SPARSE}")
 
   while [[ $# -gt 0 ]]; do
       bootserver_args=("${bootserver_args[@]}" "$1")
@@ -183,13 +159,13 @@ else
   done
 
   if $add_data; then
-    disks=("${disks[@]}" --fvm "${fuchsia_dir}/${fvm_data_sparse_block}")
+    disks=("${disks[@]}" --fvm "${fuchsia_dir}/${IMAGE_DATA_FVM_RAW}")
   fi
 fi
 
 exec "${zircon_tools}/bootserver" \
   "${ip_targ[@]}" \
   "${disks[@]}" \
-  "${zircon_dir}/${zircon_bin}" \
+  "${zircon_dir}/zircon.bin" \
   "${ramdisk}" \
   "${bootserver_args[@]}"

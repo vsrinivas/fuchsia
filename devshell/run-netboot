@@ -14,5 +14,5 @@ qemu_dir="${BUILDTOOLS_QEMU_DIR}/bin"
   -o "${ZIRCON_BUILD_DIR}" \
   -a "${FUCHSIA_ARCH}" \
   -q "${qemu_dir}" \
-  -x "${FUCHSIA_BUILD_DIR}/netboot-${board}.bin" \
+  -x "${FUCHSIA_BUILD_DIR}/${IMAGE_NETBOOT_RAM}" \
   "$@"

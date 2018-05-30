@@ -22,7 +22,7 @@ fi
 qimg="${qcowdir}/fuchsia.qcow2"
 trap 'rm "${qimg}" && rmdir "${qcowdir}"' EXIT
 
-"${qemu_dir}/qemu-img" create -f qcow2 -b "${FUCHSIA_BUILD_DIR}/${fvm_block}" \
+"${qemu_dir}/qemu-img" create -f qcow2 -b "${FUCHSIA_BUILD_DIR}/${IMAGE_FVM_RAW}" \
   "${qimg}"
 
 "${FUCHSIA_DIR}/zircon/scripts/run-zircon" \
@@ -30,7 +30,7 @@ trap 'rm "${qimg}" && rmdir "${qcowdir}"' EXIT
   -a "${FUCHSIA_ARCH}" \
   -q "${qemu_dir}" \
   -G 3 \
-  -x "${FUCHSIA_BUILD_DIR}/${ramdisk_bin}" \
+  -x "${FUCHSIA_BUILD_DIR}/${IMAGE_BOOT_RAM}" \
   -d \
   -D "${qimg}" \
   --diskfmt="qcow2" \
