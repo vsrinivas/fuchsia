@@ -15,9 +15,6 @@ using gpu_addr_t = uint64_t;
 
 constexpr gpu_addr_t kInvalidGpuAddr = ~0;
 
-using present_buffer_callback_t =
-    std::function<void(magma_status_t status, uint64_t vblank_time_ns)>;
-
 enum CachingType {
     CACHING_NONE,
     CACHING_LLC,
@@ -31,10 +28,6 @@ enum AddressSpaceType {
 
 enum EngineCommandStreamerId {
     RENDER_COMMAND_STREAMER,
-};
-
-enum MemoryDomain {
-    MEMORY_DOMAIN_CPU,
 };
 
 #endif // TYPES_H
