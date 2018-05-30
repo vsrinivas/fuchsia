@@ -10,7 +10,7 @@ namespace audio {
 namespace test {
 
 // Convenience abbreviation within this source file to shorten names
-using Resampler = media::audio::Mixer::Resampler;
+using Resampler = ::media::audio::Mixer::Resampler;
 
 //
 // Timing (Resampling) tests

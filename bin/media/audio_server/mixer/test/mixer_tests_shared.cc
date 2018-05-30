@@ -9,7 +9,7 @@ namespace audio {
 namespace test {
 
 // Convenience abbreviations within this source file to shorten names
-using Resampler = media::audio::Mixer::Resampler;
+using Resampler = ::media::audio::Mixer::Resampler;
 
 //
 // Subtest utility functions -- used by test functions; can ASSERT on their own.

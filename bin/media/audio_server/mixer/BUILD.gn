@@ -19,14 +19,14 @@ test("tests") {
     "test/frequency_set.cc",
     "test/frequency_set.h",
     "test/main.cc",
-    "test/mixer_dynamic_range_tests.cc",
-    "test/mixer_frequency_tests.cc",
+    "test/mixer_bitwise_tests.cc",
     "test/mixer_gain_tests.cc",
-    "test/mixer_resampler_tests.cc",
+    "test/mixer_interpolation_tests.cc",
+    "test/mixer_range_tests.cc",
+    "test/mixer_response_tests.cc",
     "test/mixer_tests_recap.cc",
     "test/mixer_tests_shared.cc",
     "test/mixer_tests_shared.h",
-    "test/mixer_transparency_tests.cc",
   ]
 
   deps = [

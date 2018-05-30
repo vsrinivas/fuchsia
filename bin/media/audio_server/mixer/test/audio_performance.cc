@@ -10,41 +10,49 @@ namespace media {
 namespace audio {
 namespace test {
 
-constexpr uint32_t kNumProfilerRuns = 100;
-
 // Convenience abbreviation within this source file to shorten names
-using Resampler = media::audio::Mixer::Resampler;
-
-void AudioPerformance::DisplayColumnHeader() {
-  printf("Configuration\t    Mean\t   First\t    Best\t   Worst\n");
-}
-
-void AudioPerformance::DisplayConfigLegend() {
-  printf("\n   Elapsed time in microsec for Mix() to produce %u frames\n",
-         kFreqTestBufSize);
-  printf(
-      "\n   For mixer configuration Rf.IOGAnnnnn, where:\n"
-      "\t    R: Resampler type [Linear, Point],\n"
-      "\t    f: source Format [uint8, int16, float],\n"
-      "\t    I: Input channels [#],\n"
-      "\t    O: Output channels [#],\n"
-      "\t    G: Gain factor [Unity, Scaled, Mute],\n"
-      "\t    A: Accumulate [yes(+), no(-)],\n"
-      "\tnnnnn: source sample rate [#]\n\n");
-}
+using Resampler = ::media::audio::Mixer::Resampler;
 
 // For the given resampler, measure elapsed time over a number of mix jobs.
 void AudioPerformance::Profile() {
   printf("\n\n Performance Profiling");
 
-  AudioPerformance::DisplayConfigLegend();
-  AudioPerformance::DisplayColumnHeader();
+  AudioPerformance::ProfileMixers();
+  AudioPerformance::ProfileOutputFormatters();
+}
 
-  AudioPerformance::ProfileSampler(Resampler::SampleAndHold);
-  AudioPerformance::ProfileSampler(Resampler::LinearInterpolation);
+void AudioPerformance::ProfileMixers() {
+  zx_time_t start_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
 
-  AudioPerformance::DisplayColumnHeader();
-  AudioPerformance::DisplayConfigLegend();
+  DisplayMixerConfigLegend();
+  DisplayMixerColumnHeader();
+
+  ProfileSampler(Resampler::SampleAndHold);
+  ProfileSampler(Resampler::LinearInterpolation);
+
+  DisplayMixerColumnHeader();
+  DisplayMixerConfigLegend();
+
+  printf("   Total time to profile Mixers: %lu ms\n   --------\n\n",
+         (zx_clock_get(ZX_CLOCK_MONOTONIC) - start_time) / 1000000);
+}
+
+void AudioPerformance::DisplayMixerColumnHeader() {
+  printf("Configuration\t    Mean\t   First\t    Best\t   Worst\n");
+}
+
+void AudioPerformance::DisplayMixerConfigLegend() {
+  printf("\n   Elapsed time in microsec for Mix() to produce %u frames\n",
+         kFreqTestBufSize);
+  printf(
+      "\n   For mixer configuration Rf.IOGAnnnnn, where:\n"
+      "\t    R: Resampler type - [P]oint, [L]inear\n"
+      "\t    f: source Format - [u]int8, [i]nt16, [f]loat,\n"
+      "\t    I: Input channels (one-digit number),\n"
+      "\t    O: Output channels (one-digit number),\n"
+      "\t    G: Gain factor - [M]ute, [U]nity, [S]caled,\n"
+      "\t    A: Accumulate - [-] no or [+] yes,\n"
+      "\tnnnnn: source sample rate (five-digit number)\n\n");
 }
 
 void AudioPerformance::ProfileSampler(Resampler sampler_type) {
@@ -144,24 +152,26 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans,
   uint32_t modulo =
       (source_rate * Mixer::FRAC_ONE) - (frac_step_size * dest_rate);
 
-  std::vector<SampleType> source(source_frames * num_input_chans);
-  std::vector<int32_t> accum(kFreqTestBufSize * num_output_chans);
+  std::unique_ptr<SampleType[]> source =
+      std::make_unique<SampleType[]>(source_frames * num_input_chans);
+  std::unique_ptr<int32_t[]> accum =
+      std::make_unique<int32_t[]>(kFreqTestBufSize * num_output_chans);
   uint32_t frac_src_frames = source_frames * Mixer::FRAC_ONE;
   int32_t frac_src_offset;
   uint32_t dst_offset;
 
-  OverwriteCosine(source.data(), source_buffer_size * num_input_chans,
+  OverwriteCosine(source.get(), source_buffer_size * num_input_chans,
                   FrequencySet::kReferenceFreqs[FrequencySet::kRefFreqIdx],
                   amplitude);
 
   zx_duration_t first, worst, best, total_elapsed = 0;
-  for (uint32_t i = 0; i < kNumProfilerRuns; ++i) {
+  for (uint32_t i = 0; i < kNumMixerProfilerRuns; ++i) {
     zx_duration_t elapsed;
     zx_time_t start_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
 
     dst_offset = 0;
     frac_src_offset = 0;
-    mixer->Mix(accum.data(), kFreqTestBufSize, &dst_offset, source.data(),
+    mixer->Mix(accum.get(), kFreqTestBufSize, &dst_offset, source.get(),
                frac_src_frames, &frac_src_offset, frac_step_size, gain_scale,
                accumulate, modulo, dest_rate);
 
@@ -178,15 +188,160 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans,
     total_elapsed += elapsed;
   }
 
-  double mean = total_elapsed / kNumProfilerRuns;
+  double mean = total_elapsed / kNumMixerProfilerRuns;
   printf("%c%c.%u%u%c%c%u:",
-         (sampler_type == Resampler::LinearInterpolation ? 'L' : 'P'), format,
+         (sampler_type == Resampler::SampleAndHold ? 'P' : 'L'), format,
          num_input_chans, num_output_chans,
          (gain_scale ? (gain_scale == Gain::kUnityScale ? 'U' : 'S') : 'M'),
          (accumulate ? '+' : '-'), source_rate);
 
   printf("\t%9.3lf\t%9.3lf\t%9.3lf\t%9.3lf\n", mean / 1000.0, first / 1000.0,
          best / 1000.0, worst / 1000.0);
+}
+
+void AudioPerformance::DisplayOutputColumnHeader() {
+  printf("Config\t    Mean\t   First\t    Best\t   Worst\n");
+}
+
+void AudioPerformance::DisplayOutputConfigLegend() {
+  printf("\n   Elapsed time in microsec to ProduceOutput() %u frames\n",
+         kFreqTestBufSize);
+  printf(
+      "\n   For output configuration FRn, where:\n"
+      "\t    F: Format of source data - [U]int8, [I]nt16, [F]loat,\n"
+      "\t    R: Range of source data - [S]ilence, [O]ut-of-range, [N]ormal,\n"
+      "\t    n: Number of output channels (one-digit number)\n\n");
+}
+
+void AudioPerformance::ProfileOutputFormatters() {
+  zx_time_t start_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
+
+  DisplayOutputConfigLegend();
+  DisplayOutputColumnHeader();
+
+  ProfileOutputChans(1);
+  ProfileOutputChans(2);
+  ProfileOutputChans(4);
+  ProfileOutputChans(6);
+  ProfileOutputChans(8);
+
+  DisplayOutputColumnHeader();
+  DisplayOutputConfigLegend();
+
+  printf("   Total time to profile OutputFormatters: %lu ms\n   --------\n\n",
+         (zx_clock_get(ZX_CLOCK_MONOTONIC) - start_time) / 1000000);
+}
+
+void AudioPerformance::ProfileOutputChans(uint32_t num_chans) {
+  ProfileOutputRange(num_chans, OutputDataRange::Silence);
+  ProfileOutputRange(num_chans, OutputDataRange::OutOfRange);
+  ProfileOutputRange(num_chans, OutputDataRange::Normal);
+}
+
+void AudioPerformance::ProfileOutputRange(uint32_t num_chans,
+                                          OutputDataRange data_range) {
+  ProfileOutputType<uint8_t>(num_chans, data_range);
+  ProfileOutputType<int16_t>(num_chans, data_range);
+  ProfileOutputType<float>(num_chans, data_range);
+}
+
+template <typename SampleType>
+void AudioPerformance::ProfileOutputType(uint32_t num_chans,
+                                         OutputDataRange data_range) {
+  fuchsia::media::AudioSampleFormat sample_format;
+  char format, range;
+
+  if (std::is_same<SampleType, uint8_t>::value) {
+    sample_format = fuchsia::media::AudioSampleFormat::UNSIGNED_8;
+    format = 'U';
+  } else if (std::is_same<SampleType, int16_t>::value) {
+    sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
+    format = 'I';
+  } else if (std::is_same<SampleType, float>::value) {
+    sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
+    format = 'F';
+  } else {
+    ASSERT_TRUE(false) << "Unknown output sample format for testing";
+    return;
+  }
+
+  audio::OutputFormatterPtr output_formatter =
+      SelectOutputFormatter(sample_format, num_chans);
+
+  uint32_t num_samples = kFreqTestBufSize * num_chans;
+
+  std::unique_ptr<int32_t[]> accum = std::make_unique<int32_t[]>(num_samples);
+  std::unique_ptr<SampleType[]> dest =
+      std::make_unique<SampleType[]>(num_samples);
+
+  switch (data_range) {
+    case OutputDataRange::Silence:
+      range = 'S';
+      break;
+    case OutputDataRange::OutOfRange:
+      range = 'O';
+      for (size_t idx = 0; idx < num_samples; ++idx) {
+        // For int32 accumulator bitwidths < 32, these are ALWAYS out-of-range.
+        // (I.e. at bitwidth 31, accumulator range is [-0x40000000,0x40000000].
+        accum[idx] = (idx % 2 ? -0x70000000 : 0x70000000);
+      }
+      break;
+    case OutputDataRange::Normal:
+      range = 'N';
+      // For int32 accumulator bitwidths >=16, these are ALWAYS in-range.
+      OverwriteCosine(accum.get(), num_samples,
+                      FrequencySet::kReferenceFreqs[FrequencySet::kRefFreqIdx],
+                      std::numeric_limits<int16_t>::max());
+      break;
+    default:
+      ASSERT_TRUE(false) << "Unknown output sample format for testing";
+      return;
+  }
+
+  zx_duration_t first, worst, best, total_elapsed = 0;
+
+  if (data_range == OutputDataRange::Silence) {
+    for (uint32_t i = 0; i < kNumOutputProfilerRuns; ++i) {
+      zx_duration_t elapsed;
+      zx_time_t start_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
+
+      output_formatter->FillWithSilence(dest.get(), kFreqTestBufSize);
+      elapsed = zx_clock_get(ZX_CLOCK_MONOTONIC) - start_time;
+
+      if (i > 0) {
+        worst = std::max(worst, elapsed);
+        best = std::min(best, elapsed);
+      } else {
+        first = elapsed;
+        worst = elapsed;
+        best = elapsed;
+      }
+      total_elapsed += elapsed;
+    }
+  } else {
+    for (uint32_t i = 0; i < kNumOutputProfilerRuns; ++i) {
+      zx_duration_t elapsed;
+      zx_time_t start_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
+
+      output_formatter->ProduceOutput(accum.get(), dest.get(),
+                                      kFreqTestBufSize);
+      elapsed = zx_clock_get(ZX_CLOCK_MONOTONIC) - start_time;
+
+      if (i > 0) {
+        worst = std::max(worst, elapsed);
+        best = std::min(best, elapsed);
+      } else {
+        first = elapsed;
+        worst = elapsed;
+        best = elapsed;
+      }
+      total_elapsed += elapsed;
+    }
+  }
+
+  double mean = total_elapsed / kNumOutputProfilerRuns;
+  printf("%c%c%u:\t%9.3lf\t%9.3lf\t%9.3lf\t%9.3lf\n", format, range, num_chans,
+         mean / 1000.0, first / 1000.0, best / 1000.0, worst / 1000.0);
 }
 
 }  // namespace test
