@@ -764,7 +764,8 @@ zx_handle_t fs_clone(const char* path) {
         fs = appmgr_req_cli;
     } else if (!strcmp(path, "svc")) {
         flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
-        fs = appmgr_req_cli;
+        fs = svchost_outgoing;
+        path = "public";
     }
     if (fdio_open_at(fs, path, flags, h1) != ZX_OK) {
         zx_handle_close(h0);
