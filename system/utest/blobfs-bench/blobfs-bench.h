@@ -26,7 +26,8 @@ enum class TestName : int {
     kRead,     // read data from blob
     kClose,    // close blob fd
     kUnlink,   // unlink blob
-    kCount,    // number of name options
+    kNegativeLookup, // look up non existing blob
+    kCount,          // number of name options
 };
 
 // An in-memory representation of a blob.

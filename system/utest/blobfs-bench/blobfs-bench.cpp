@@ -115,6 +115,14 @@ bool RunBasicBlobBenchmark() {
     END_TEST;
 }
 
+// Returns a path to a kMountPath/0.......0.
+static void GetNegativeLookupPath(char* path) {
+    sprintf(path, "%s/", kMountPath);
+    memset(path + strlen(path), '0', 2 * Digest::kLength);
+    path[strlen(path)] = '\0';
+    return;
+}
+
 // Sets start_time to current time reported by rtc
 // Returns 0 on success, -1 otherwise
 int GetStartTime() {
@@ -317,6 +325,9 @@ void TestData::GetNameStr(TestName name, char* name_str) {
     case TestName::kUnlink:
         strcpy(name_str, "unlink");
         break;
+    case TestName::kNegativeLookup:
+        strcpy(name_str, "negative-lookup");
+        break;
     default:
         strcpy(name_str, "unknown");
         break;
@@ -477,6 +488,8 @@ bool TestData::CreateBlobs() {
 }
 
 bool TestData::ReadBlobs() {
+    char negative_lookup_path[PATH_MAX];
+    GetNegativeLookupPath(negative_lookup_path);
     for (size_t i = 0; i < GetMaxCount(); i++) {
         size_t index = indices_[i];
         const char* path = paths_[index];
@@ -502,12 +515,18 @@ bool TestData::ReadBlobs() {
         ASSERT_EQ(close(fd), 0, "Failed to close blob");
         SampleEnd(start, TestName::kClose, i);
 
+        // negative_lookup
+        start = zx_ticks_get();
+        ASSERT_LT(open(negative_lookup_path, O_RDONLY), 0, "Did not expect entry to exist.");
+        SampleEnd(start, TestName::kNegativeLookup, i);
+
         ASSERT_EQ(success, 0, "Failed to read data");
     }
 
     ASSERT_TRUE(ReportTest(TestName::kOpen));
     ASSERT_TRUE(ReportTest(TestName::kRead));
     ASSERT_TRUE(ReportTest(TestName::kClose));
+    ASSERT_TRUE(ReportTest(TestName::kNegativeLookup));
     return true;
 }
 
