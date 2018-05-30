@@ -82,6 +82,8 @@ source_set("test_support") {
 }
 
 fidl("fidl_test") {
+  name = "fidl.test.misc"
+
   testonly = true
 
   sources = [

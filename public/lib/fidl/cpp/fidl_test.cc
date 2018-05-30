@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl_test/cpp/fidl.h>
+#include <fidl/test/misc/cpp/fidl.h>
 
 #include <list>
 
@@ -11,7 +11,9 @@
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
 
-namespace fidl_test {
+namespace fidl {
+namespace test {
+namespace misc {
 namespace {
 
 // Takes a collection of distincts elements, and checks that the comparison
@@ -193,4 +195,6 @@ TEST(FidlTest, ArrayOfOptionalStructComparison) {
 }
 
 }  // namespace
-}  // namespace fidl_test
+}  // namespace misc
+}  // namespace test
+}  // namespace fidl
