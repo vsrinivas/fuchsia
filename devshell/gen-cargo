@@ -63,7 +63,15 @@ def main():
     else:
         output = os.path.join(ROOT_PATH, target_parts[0], "Cargo.toml")
 
-    os.symlink(path, output)
+    if os.path.exists(path):
+        try:
+            os.remove(output)
+        except OSError:
+            pass
+        print "Creating '{}' pointing to '{}'".format(output, path)
+        os.symlink(path, output)
+    else:
+        print "Internal error: path '{}' does not point to a Cargo.toml file".format(path)
 
 if __name__ == '__main__':
     sys.exit(main())
