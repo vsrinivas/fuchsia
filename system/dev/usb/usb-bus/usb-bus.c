@@ -19,12 +19,9 @@ static zx_status_t bus_add_device(void* ctx, uint32_t device_id, uint32_t hub_id
 
     if (device_id >= bus->max_device_count) return ZX_ERR_INVALID_ARGS;
 
-    usb_device_t* usb_device;
-    zx_status_t result = usb_device_add(bus, device_id, hub_id, speed, &usb_device);
-    if (result == ZX_OK) {
-        bus->devices[device_id] = usb_device;
-    }
-    return result;
+    // bus->devices[device_id] must be set before usb_device_add() creates the interface devices
+    // so we pass pointer to it here rather than setting it after usb_device_add() returns.
+    return usb_device_add(bus, device_id, hub_id, speed, &bus->devices[device_id]);
 }
 
 static void bus_remove_device(void* ctx, uint32_t device_id) {
@@ -95,6 +92,10 @@ static zx_status_t bus_set_hub_interface(void* ctx, zx_device_t* usb_device, usb
         return ZX_ERR_INTERNAL;
     }
     usb_device_t* usb_dev = bus->devices[usb_device_id];
+    if (!usb_dev) {
+        zxlogf(ERROR, "bus_set_hub_interface: no device for usb_device_id %u\n", usb_device_id);
+        return ZX_ERR_INTERNAL;
+    }
     usb_device_set_hub_interface(usb_dev, hub);
     return ZX_OK;
 }
