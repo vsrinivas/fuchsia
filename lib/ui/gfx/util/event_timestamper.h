@@ -5,11 +5,10 @@
 #ifndef GARNET_LIB_UI_GFX_UTIL_EVENT_TIMESTAMPER_H_
 #define GARNET_LIB_UI_GFX_UTIL_EVENT_TIMESTAMPER_H_
 
-#include <functional>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/fit/function.h>
 #include <lib/zx/event.h>
 
 #include "lib/fxl/logging.h"
@@ -29,7 +28,7 @@ class EventTimestamper {
   class Waiter;
 
  public:
-  using Callback = std::function<void(zx_time_t timestamp)>;
+  using Callback = fit::function<void(zx_time_t timestamp)>;
 
   EventTimestamper();
   ~EventTimestamper();

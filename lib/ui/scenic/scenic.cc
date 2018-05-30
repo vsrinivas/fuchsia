@@ -5,7 +5,6 @@
 #include "garnet/lib/ui/scenic/scenic.h"
 
 #include "lib/app/cpp/startup_context.h"
-#include "lib/fxl/functional/make_copyable.h"
 
 namespace scenic {
 
@@ -53,11 +52,11 @@ void Scenic::CreateSession(
     CreateSessionImmediately(std::move(session_request), std::move(listener));
   } else {
     run_after_all_systems_initialized_.push_back(
-        fxl::MakeCopyable([this, session_request = std::move(session_request),
+        [this, session_request = std::move(session_request),
                            listener = std::move(listener)]() mutable {
           CreateSessionImmediately(std::move(session_request),
                                    std::move(listener));
-        }));
+        });
   }
 }
 

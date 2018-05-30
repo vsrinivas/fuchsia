@@ -5,6 +5,8 @@
 #ifndef GARNET_LIB_UI_GFX_TESTS_SESSION_TEST_H_
 #define GARNET_LIB_UI_GFX_TESTS_SESSION_TEST_H_
 
+#include <lib/fit/function.h>
+
 #include "garnet/lib/ui/gfx/engine/engine.h"
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/tests/mocks.h"

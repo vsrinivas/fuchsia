@@ -19,6 +19,7 @@ source_set("view_framework") {
     "//garnet/public/lib/ui/scenic:client",
     "//garnet/public/lib/ui/scenic:fidl_helpers",
     "//garnet/public/lib/ui/views/fidl:v1",
+    "//zircon/public/lib/fit",
   ]
 
   deps = [

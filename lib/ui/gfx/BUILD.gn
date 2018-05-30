@@ -156,6 +156,7 @@ source_set("gfx") {
     "//garnet/public/lib/ui/geometry/fidl",
     "//garnet/public/lib/ui/gfx/fidl",
     "//garnet/public/lib/vulkan",
+    "//zircon/public/lib/fit",
   ]
 
   deps = [

@@ -7,6 +7,7 @@
 
 #include <fs/pseudo-dir.h>
 #include <fs/service.h>
+#include <lib/fit/function.h>
 
 #include <memory>
 
@@ -69,7 +70,7 @@ class Outgoing {
   // by the interface).
   template <typename Interface>
   using InterfaceRequestHandler =
-      std::function<void(fidl::InterfaceRequest<Interface> interface_request)>;
+      fit::function<void(fidl::InterfaceRequest<Interface> interface_request)>;
 
   // Adds the specified interface to the set of public interfaces.
   //
@@ -90,7 +91,7 @@ class Outgoing {
       const std::string& service_name = Interface::Name_) const {
     return public_dir()->AddEntry(
         service_name.c_str(),
-        fbl::AdoptRef(new fs::Service([handler](zx::channel channel) {
+        fbl::AdoptRef(new fs::Service([handler = std::move(handler)](zx::channel channel) {
           handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
           return ZX_OK;
         })));

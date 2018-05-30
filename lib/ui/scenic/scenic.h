@@ -13,7 +13,6 @@
 #include "garnet/lib/ui/scenic/session.h"
 #include "garnet/lib/ui/scenic/system.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 
 namespace scenic {
@@ -64,7 +63,7 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   std::set<System*> uninitialized_systems_;
 
   // Closures that will be run when all systems are initialized.
-  std::vector<fxl::Closure> run_after_all_systems_initialized_;
+  std::vector<fit::closure> run_after_all_systems_initialized_;
 
   void CreateSessionImmediately(
       ::fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,

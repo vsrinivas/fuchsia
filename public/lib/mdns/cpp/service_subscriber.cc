@@ -15,9 +15,9 @@ ServiceSubscriber::~ServiceSubscriber() {
 }
 
 void ServiceSubscriber::Init(MdnsServiceSubscriptionPtr subscription,
-                             const UpdateCallback& callback) {
+                             UpdateCallback callback) {
   subscription_ = std::move(subscription);
-  callback_ = callback;
+  callback_ = std::move(callback);
   HandleInstanceUpdates();
 }
 

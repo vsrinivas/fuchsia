@@ -5,7 +5,6 @@
 #include "garnet/lib/ui/gfx/engine/session_handler.h"
 
 #include "garnet/lib/ui/scenic/session.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/ui/scenic/fidl_helpers.h"
 
 namespace scenic {

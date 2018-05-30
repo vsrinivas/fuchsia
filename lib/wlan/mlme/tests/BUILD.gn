@@ -84,6 +84,7 @@ executable("dispatcher_tests") {
     ":test_main",
     "//garnet/lib/wlan/mlme",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/fit",
   ]
 
   configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]

@@ -5,9 +5,9 @@
 #ifndef LIB_APP_CPP_SERVICE_PROVIDER_IMPL_H_
 #define LIB_APP_CPP_SERVICE_PROVIDER_IMPL_H_
 
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 
-#include <functional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -26,13 +26,13 @@ class ServiceProviderImpl : public ServiceProvider {
   // |ServiceConnector| is the generic, type-unsafe interface for objects used
   // by |ServiceProviderImpl| to connect generic "interface requests" (i.e.,
   // just channels) specified by service name to service implementations.
-  using ServiceConnector = std::function<void(zx::channel)>;
+  using ServiceConnector = fit::function<void(zx::channel)>;
 
   // |DefaultServiceConnector| is the default last resort service connector
   // which is called when the service provider does not recognize a particular
   // service name.  This may be used to implement service provider delegation
   // or more complex name-based service resolution strategies.
-  using DefaultServiceConnector = std::function<void(std::string, zx::channel)>;
+  using DefaultServiceConnector = fit::function<void(std::string, zx::channel)>;
 
   // A |InterfaceRequestHandler<Interface>| is simply a function that
   // handles an interface request for |Interface|. If it determines that the
@@ -41,7 +41,7 @@ class ServiceProviderImpl : public ServiceProvider {
   // by the interface).
   template <typename Interface>
   using InterfaceRequestHandler =
-      std::function<void(fidl::InterfaceRequest<Interface> interface_request)>;
+      fit::function<void(fidl::InterfaceRequest<Interface> interface_request)>;
 
   // Constructs this service provider implementation in an unbound state.
   ServiceProviderImpl();

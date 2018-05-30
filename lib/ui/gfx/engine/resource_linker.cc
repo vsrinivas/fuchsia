@@ -239,12 +239,12 @@ size_t ResourceLinker::NumUnresolvedImports() const {
 }
 
 void ResourceLinker::SetOnExpiredCallback(OnExpiredCallback callback) {
-  expiration_callback_ = callback;
+  expiration_callback_ = std::move(callback);
 }
 
 void ResourceLinker::SetOnImportResolvedCallback(
     OnImportResolvedCallback callback) {
-  import_resolved_callback_ = callback;
+  import_resolved_callback_ = std::move(callback);
 }
 
 size_t ResourceLinker::NumExportsForSession(Session* session) {

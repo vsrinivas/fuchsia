@@ -68,9 +68,9 @@ class App : public fuchsia::ui::input::InputDeviceRegistry,
     std::unique_ptr<mozart::DeviceState> state =
         std::make_unique<mozart::DeviceState>(
             input_device->id(), input_device->descriptor(),
-            [this](fuchsia::ui::input::InputEvent event) {
+            mozart::OnEventCallback([this](fuchsia::ui::input::InputEvent event) {
               OnEvent(std::move(event));
-            });
+            }));
     mozart::DeviceState* state_ptr = state.get();
     auto device_pair =
         std::make_pair(std::move(input_device), std::move(state));

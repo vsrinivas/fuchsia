@@ -7,6 +7,8 @@
 
 #include <random>
 
+#include <lib/fit/function.h>
+
 #include "lib/backoff/backoff.h"
 #include "lib/fxl/random/rand.h"
 
@@ -19,10 +21,10 @@ namespace backoff {
 class ExponentialBackoff : public Backoff {
  public:
   explicit ExponentialBackoff(
-      std::function<uint64_t()> seed_generator = fxl::RandUint64);
+      fit::function<uint64_t()> seed_generator = fxl::RandUint64);
   ExponentialBackoff(
       zx::duration initial_delay, uint32_t retry_factor, zx::duration max_delay,
-      std::function<uint64_t()> seed_generator = fxl::RandUint64);
+      fit::function<uint64_t()> seed_generator = fxl::RandUint64);
   ~ExponentialBackoff() override;
 
   zx::duration GetNext() override;

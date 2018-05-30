@@ -8,8 +8,9 @@ source_set("cpp") {
     "service_subscriber.h",
   ]
 
-  deps = [
+  public_deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/mdns/fidl",
+    "//zircon/public/lib/fit",
   ]
 }

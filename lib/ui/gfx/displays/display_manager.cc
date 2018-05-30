@@ -24,7 +24,7 @@ DisplayManager::~DisplayManager() {
   }
 }
 
-void DisplayManager::WaitForDefaultDisplay(fxl::Closure callback) {
+void DisplayManager::WaitForDefaultDisplay(fit::closure callback) {
   FXL_DCHECK(!default_display_);
 
   display_available_cb_ = std::move(callback);

@@ -4,6 +4,7 @@
 
 #include "lib/media/transport/media_packet_producer_base.h"
 
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
 namespace media {
@@ -94,7 +95,7 @@ void MediaPacketProducerBase::ProducePacket(
     bool keyframe,
     bool end_of_stream,
     MediaTypePtr revised_media_type,
-    const ProducePacketCallback& callback) {
+    ProducePacketCallback callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FXL_DCHECK(size == 0 || payload != nullptr);
 
@@ -135,7 +136,8 @@ void MediaPacketProducerBase::ProducePacket(
   }
 
   consumer_->SupplyPacket(
-      std::move(media_packet), [this, callback](MediaPacketDemandPtr demand) {
+      std::move(media_packet),
+      fxl::MakeCopyable([this, callback = std::move(callback)](MediaPacketDemandPtr demand) {
         FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
         {
@@ -148,7 +150,7 @@ void MediaPacketProducerBase::ProducePacket(
         }
 
         callback();
-      });
+      }));
 }
 
 bool MediaPacketProducerBase::ShouldProducePacket(

@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <functional>
+#include <lib/fit/function.h>
+#include <mdns/cpp/fidl.h>
 
 #include "lib/fxl/macros.h"
-#include <mdns/cpp/fidl.h>
 
 namespace mdns {
 
@@ -20,7 +20,7 @@ class ServiceSubscriber {
   // with a null |to| value and |from| value describing the lost service. When
   // a service changes, |from| is the old description, and |to| is the new one.
   using UpdateCallback =
-      std::function<void(const MdnsServiceInstance* from, const MdnsServiceInstance* to)>;
+      fit::function<void(const MdnsServiceInstance* from, const MdnsServiceInstance* to)>;
 
   ServiceSubscriber();
 
@@ -29,7 +29,7 @@ class ServiceSubscriber {
   // Initializes the subscriber with the specified subscription. The callback
   // is optional.
   void Init(MdnsServiceSubscriptionPtr subscription,
-            const UpdateCallback& callback);
+            UpdateCallback callback);
 
   // Returns this subscriber to its initial state, releasing the callback and
   // returning the unique subscription. The subscription can be ignored, in

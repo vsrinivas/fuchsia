@@ -5,9 +5,9 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_IMPORT_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_IMPORT_H_
 
-#include <lib/zx/eventpair.h>
-
 #include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <lib/fit/function.h>
+#include <lib/zx/eventpair.h>
 
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "lib/fxl/macros.h"
@@ -28,7 +28,7 @@ enum class ImportResolutionResult {
                                 // occur.
 };
 using OnImportResolvedCallback =
-    std::function<void(Resource*, ImportResolutionResult)>;
+    fit::function<void(Resource*, ImportResolutionResult)>;
 
 /// Acts as a placeholder for resources imported from other sessions. Once a
 /// binding between the import and the resource has been established, the

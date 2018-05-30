@@ -9,14 +9,11 @@
 VkCubeView::VkCubeView(
     ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
     fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
-    std::function<
-        void(float width, float height,
-             fidl::InterfaceHandle<fuchsia::images::ImagePipe> interface_request)>
-        resize_callback)
+    ResizeCallback resize_callback)
     : BaseView(std::move(view_manager), std::move(view_owner_request),
                "vkcube"),
       pane_node_(session()),
-      resize_callback_(resize_callback) {}
+      resize_callback_(std::move(resize_callback)) {}
 
 VkCubeView::~VkCubeView() {}
 

@@ -24,7 +24,6 @@
 #include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/renderer/paper_renderer.h"
 #include "lib/escher/renderer/shadow_map_renderer.h"
-#include "lib/fxl/functional/make_copyable.h"
 
 namespace scenic {
 namespace gfx {

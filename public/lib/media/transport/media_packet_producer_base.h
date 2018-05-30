@@ -8,9 +8,11 @@
 #include <limits>
 #include <mutex>
 
+#include <lib/fit/function.h>
+#include <media/cpp/fidl.h>
+
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/synchronization/thread_checker.h"
-#include <media/cpp/fidl.h>
 #include "lib/media/timeline/timeline_rate.h"
 #include "lib/media/transport/shared_buffer_set_allocator.h"
 
@@ -19,7 +21,7 @@ namespace media {
 // Base class for clients of MediaPacketConsumer.
 class MediaPacketProducerBase {
  public:
-  using ProducePacketCallback = std::function<void()>;
+  using ProducePacketCallback = fit::closure;
 
   MediaPacketProducerBase();
 
@@ -60,7 +62,7 @@ class MediaPacketProducerBase {
                      bool keyframe,
                      bool end_of_stream,
                      MediaTypePtr revised_media_type,
-                     const ProducePacketCallback& callback);
+                     ProducePacketCallback callback);
 
   // Gets the current demand.
   const MediaPacketDemand& demand() const { return demand_; }

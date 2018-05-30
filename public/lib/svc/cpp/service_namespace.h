@@ -8,9 +8,9 @@
 #include <fbl/ref_ptr.h>
 #include <fs/synchronous-vfs.h>
 #include <fs/pseudo-dir.h>
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 
-#include <functional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -32,7 +32,7 @@ class ServiceNamespace : public ServiceProvider {
   // |ServiceConnector| is the generic, type-unsafe interface for objects used
   // by |ServiceNamespace| to connect generic "interface requests" (i.e.,
   // just channels) specified by service name to service implementations.
-  using ServiceConnector = std::function<void(zx::channel)>;
+  using ServiceConnector = fit::function<void(zx::channel)>;
 
   // A |InterfaceRequestHandler<Interface>| is simply a function that
   // handles an interface request for |Interface|. If it determines that the
@@ -41,7 +41,7 @@ class ServiceNamespace : public ServiceProvider {
   // by the interface).
   template <typename Interface>
   using InterfaceRequestHandler =
-      std::function<void(fidl::InterfaceRequest<Interface> interface_request)>;
+      fit::function<void(fidl::InterfaceRequest<Interface> interface_request)>;
 
   // Constructs this service namespace implementation in an unbound state.
   ServiceNamespace();

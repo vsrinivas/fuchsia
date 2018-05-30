@@ -45,4 +45,8 @@ source_set("vkcube_common") {
     "//garnet/public/lib/ui/scenic",
     "//garnet/public/lib/ui/scenic:client",
   ]
+
+  public_deps = [
+    "//zircon/public/lib/fit",
+  ]
 }

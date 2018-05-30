@@ -10,10 +10,11 @@ source_set("input") {
     "input_device_impl.h",
   ]
 
-  deps = [
+  public_deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/input/fidl",
     "//zircon/public/lib/hid",
+    "//zircon/public/lib/fit",
   ]
 }

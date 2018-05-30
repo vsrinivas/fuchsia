@@ -418,14 +418,14 @@ void Presentation::OnDeviceAdded(mozart::InputDeviceImpl* input_device) {
           OnSensorEvent(device_id, std::move(event));
         };
     state = std::make_unique<mozart::DeviceState>(
-        input_device->id(), input_device->descriptor(), callback);
+        input_device->id(), input_device->descriptor(), std::move(callback));
   } else {
     mozart::OnEventCallback callback =
         [this](fuchsia::ui::input::InputEvent event) {
           OnEvent(std::move(event));
         };
     state = std::make_unique<mozart::DeviceState>(
-        input_device->id(), input_device->descriptor(), callback);
+        input_device->id(), input_device->descriptor(), std::move(callback));
   }
 
   mozart::DeviceState* state_ptr = state.get();

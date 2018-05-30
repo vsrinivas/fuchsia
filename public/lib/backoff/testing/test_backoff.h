@@ -5,8 +5,9 @@
 #ifndef LIB_BACKOFF_TESTING_TEST_BACKOFF_H_
 #define LIB_BACKOFF_TESTING_TEST_BACKOFF_H_
 
+#include <lib/fit/function.h>
+
 #include "lib/backoff/backoff.h"
-#include "lib/fxl/functional/closure.h"
 
 namespace backoff {
 
@@ -19,7 +20,7 @@ class TestBackoff : public Backoff {
   zx::duration GetNext() override;
   void Reset() override;
 
-  void SetOnGetNext(fxl::Closure on_get_next);
+  void SetOnGetNext(fit::closure on_get_next);
 
   zx::duration backoff_to_return = zx::sec(0);
 
@@ -27,7 +28,7 @@ class TestBackoff : public Backoff {
   int reset_count = 0;
 
  private:
-  fxl::Closure on_get_next_;
+  fit::closure on_get_next_;
   FXL_DISALLOW_COPY_AND_ASSIGN(TestBackoff);
 };
 

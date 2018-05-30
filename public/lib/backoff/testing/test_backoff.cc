@@ -20,8 +20,8 @@ zx::duration TestBackoff::GetNext() {
 
 void TestBackoff::Reset() { reset_count++; }
 
-void TestBackoff::SetOnGetNext(fxl::Closure on_get_next) {
-  on_get_next_ = on_get_next;
+void TestBackoff::SetOnGetNext(fit::closure on_get_next) {
+  on_get_next_ = std::move(on_get_next);
 }
 
 }  // namespace backoff

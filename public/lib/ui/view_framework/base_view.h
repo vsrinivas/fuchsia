@@ -8,6 +8,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include <memory>
 #include <string>
@@ -110,7 +111,7 @@ class BaseView : private ::fuchsia::ui::views_v1::ViewListener,
   //
   // This should be used to implement cleanup policies to release resources
   // associated with the view (including the object itself).
-  void SetReleaseHandler(fxl::Closure callback);
+  void SetReleaseHandler(fit::closure callback);
 
   // Invalidates the scene, causing |OnSceneInvalidated()| to be invoked
   // during the next frame.

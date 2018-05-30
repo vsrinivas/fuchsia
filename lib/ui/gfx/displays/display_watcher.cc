@@ -30,8 +30,9 @@ void DisplayWatcher::WaitForDisplay(DisplayReadyCallback callback) {
 #else
   device_watcher_ = fsl::DeviceWatcher::Create(
       kDisplayDir,
-      std::bind(&DisplayWatcher::HandleDevice, this, std::move(callback),
-                std::placeholders::_1, std::placeholders::_2));
+      [this, callback = std::move(callback)](int dir_fd, std::string filename) mutable {
+        HandleDevice(std::move(callback), dir_fd, filename);
+      });
 #endif
 }
 

@@ -9,6 +9,8 @@
 #include <unordered_set>
 
 #include <lib/async/cpp/wait.h>
+#include <lib/fit/function.h>
+
 #include "lib/fsl/handles/object_info.h"
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
@@ -70,10 +72,10 @@ class ResourceLinker {
     kExportTokenClosed,
     kResourceDestroyed,
   };
-  using OnExpiredCallback = std::function<void(Resource*, ExpirationCause)>;
+  using OnExpiredCallback = fit::function<void(Resource*, ExpirationCause)>;
   void SetOnExpiredCallback(OnExpiredCallback callback);
   using OnImportResolvedCallback =
-      std::function<void(Import*, Resource*, ImportResolutionResult)>;
+      fit::function<void(Import*, Resource*, ImportResolutionResult)>;
   void SetOnImportResolvedCallback(OnImportResolvedCallback callback);
 
   size_t NumExportsForSession(Session* session);

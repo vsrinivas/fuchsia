@@ -7,9 +7,9 @@
 
 #include <fbl/ref_ptr.h>
 #include <fs/synchronous-vfs.h>
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 
-#include <functional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -33,11 +33,11 @@ class ServiceProviderBridge : public ServiceProvider {
   ServiceProviderBridge();
   ~ServiceProviderBridge() override;
 
-  using ServiceConnector = std::function<void(zx::channel)>;
+  using ServiceConnector = fit::function<void(zx::channel)>;
 
   template <typename Interface>
   using InterfaceRequestHandler =
-      std::function<void(fidl::InterfaceRequest<Interface> interface_request)>;
+      fit::function<void(fidl::InterfaceRequest<Interface> interface_request)>;
 
   void AddServiceForName(ServiceConnector connector,
                          const std::string& service_name);
@@ -46,7 +46,7 @@ class ServiceProviderBridge : public ServiceProvider {
   void AddService(InterfaceRequestHandler<Interface> handler,
                   const std::string& service_name = Interface::Name_) {
     AddServiceForName(
-        [handler](zx::channel channel) {
+        [handler = std::move(handler)](zx::channel channel) {
           handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
         },
         service_name);

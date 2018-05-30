@@ -6,11 +6,12 @@
 #define GARNET_LIB_UI_SCENIC_SESSION_H_
 
 #include <array>
-#include <functional>
 #include <memory>
 #include <string>
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <lib/fit/function.h>
+
 #include "garnet/lib/ui/scenic/event_reporter.h"
 #include "garnet/lib/ui/scenic/forward_declarations.h"
 #include "garnet/lib/ui/scenic/scenic.h"
@@ -74,14 +75,13 @@ class Session final : public fuchsia::ui::scenic::Session,
   ErrorReporter* error_reporter() { return this; }
 
   // For tests.  See FlushEvents() below.
-  void set_event_callback(
-      std::function<void(fuchsia::ui::scenic::Event)> callback) {
-    event_callback_ = callback;
+  void set_event_callback(fit::function<void(fuchsia::ui::scenic::Event)> callback) {
+    event_callback_ = std::move(callback);
   }
 
   // For tests.  Called by ReportError().
-  void set_error_callback(std::function<void(std::string)> callback) {
-    error_callback_ = callback;
+  void set_error_callback(fit::function<void(std::string)> callback) {
+    error_callback_ = std::move(callback);
   }
 
  private:
@@ -101,8 +101,8 @@ class Session final : public fuchsia::ui::scenic::Session,
   fidl::VectorPtr<fuchsia::ui::scenic::Event> buffered_events_;
 
   // Callbacks for testing.
-  std::function<void(fuchsia::ui::scenic::Event)> event_callback_;
-  std::function<void(std::string)> error_callback_;
+  fit::function<void(fuchsia::ui::scenic::Event)> event_callback_;
+  fit::function<void(std::string)> error_callback_;
 
   fxl::WeakPtrFactory<Session> weak_factory_;
 

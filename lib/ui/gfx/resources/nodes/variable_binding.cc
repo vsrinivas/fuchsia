@@ -4,15 +4,17 @@
 
 #include "garnet/lib/ui/gfx/resources/nodes/variable_binding.h"
 
+#include <lib/fit/function.h>
+
 namespace scenic {
 namespace gfx {
 
 template <::fuchsia::ui::gfx::Value::Tag VT, typename T>
 TypedVariableBinding<VT, T>::TypedVariableBinding(
     fxl::RefPtr<TypedVariable<VT, T>> variable,
-    std::function<void(T value)> on_value_changed_callback)
+    fit::function<void(T value)> on_value_changed_callback)
     : variable_(variable),
-      on_value_changed_callback_(on_value_changed_callback) {
+      on_value_changed_callback_(std::move(on_value_changed_callback)) {
   on_value_changed_callback_(variable_->value());
   variable_->AddListener(this);
 }

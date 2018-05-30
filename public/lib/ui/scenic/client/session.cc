@@ -4,6 +4,7 @@
 
 #include "lib/ui/scenic/client/session.h"
 
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/ui/scenic/fidl_helpers.h"
 
@@ -83,7 +84,7 @@ void Session::Present(uint64_t presentation_time, PresentCallback callback) {
   if (release_fences_.is_null())
     release_fences_.resize(0u);
   session_->Present(presentation_time, std::move(acquire_fences_),
-                    std::move(release_fences_), std::move(callback));
+                    std::move(release_fences_), fxl::MakeCopyable(std::move(callback)));
 }
 
 void Session::HitTest(uint32_t node_id, const float ray_origin[3],
@@ -99,7 +100,7 @@ void Session::HitTest(uint32_t node_id, const float ray_origin[3],
   ray_direction_vec.z = ray_direction[2];
 
   session_->HitTest(node_id, std::move(ray_origin_vec),
-                    std::move(ray_direction_vec), std::move(callback));
+                    std::move(ray_direction_vec), fxl::MakeCopyable(std::move(callback)));
 }
 
 void Session::HitTestDeviceRay(
@@ -116,7 +117,7 @@ void Session::HitTestDeviceRay(
   ray_direction_vec.z = ray_direction[2];
 
   session_->HitTestDeviceRay(std::move(ray_origin_vec),
-                             std::move(ray_direction_vec), callback);
+                             std::move(ray_direction_vec), fxl::MakeCopyable(callback));
 }
 
 void Session::OnError(fidl::StringPtr error) {

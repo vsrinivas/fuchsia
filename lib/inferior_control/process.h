@@ -157,7 +157,7 @@ class Process final {
   // Iterates through all cached threads and invokes |callback| for each of
   // them. |callback| is guaranteed to get called only before ForEachThread()
   // returns, so it is safe to bind local variables to |callback|.
-  using ThreadCallback = std::function<void(Thread*)>;
+  using ThreadCallback = fit::function<void(Thread*)>;
   void ForEachThread(const ThreadCallback& callback);
   // Same as ForEachThread except ignores State::Gone threads.
   void ForEachLiveThread(const ThreadCallback& callback);

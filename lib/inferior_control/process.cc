@@ -9,6 +9,7 @@
 
 #include <fdio/io.h>
 #include <launchpad/vmo.h>
+#include <lib/fit/function.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 
@@ -367,8 +368,7 @@ void Process::CloseDebugHandle() {
 
 bool Process::BindExceptionPort() {
   ExceptionPort::Key key = server_->exception_port().Bind(
-      handle_, std::bind(&Process::OnExceptionOrSignal, this,
-                         std::placeholders::_1, std::placeholders::_2));
+      handle_, fit::bind_member(this, &Process::OnExceptionOrSignal));
   if (!key) return false;
   eport_key_ = key;
   return true;

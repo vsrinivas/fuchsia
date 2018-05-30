@@ -29,7 +29,7 @@ class Scope {
       fuchsia::sys::ServiceProviderImpl::InterfaceRequestHandler<Interface>
           handler,
       const std::string& service_name = Interface::Name_) {
-    service_provider_bridge_.AddService(handler, service_name);
+    service_provider_bridge_.AddService(std::move(handler), service_name);
   }
 
   fuchsia::sys::Launcher* GetLauncher();

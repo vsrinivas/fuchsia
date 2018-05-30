@@ -39,6 +39,7 @@ source_set("client") {
 
   public_deps = [
     ":fidl_helpers",
+    "//zircon/public/lib/fit",
   ]
 
   deps = [

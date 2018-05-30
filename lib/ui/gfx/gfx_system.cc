@@ -12,7 +12,6 @@
 #include "garnet/public/lib/escher/util/check_vulkan_support.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/escher/escher_process_init.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "public/lib/syslog/cpp/logger.h"
 
 namespace scenic {

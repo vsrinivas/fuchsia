@@ -443,7 +443,7 @@ DeviceState::DeviceState(uint32_t device_id,
       mouse_(this),
       stylus_(this),
       touchscreen_(this),
-      callback_(callback),
+      callback_(std::move(callback)),
       sensor_(this),
       sensor_callback_(nullptr) {}
 
@@ -458,7 +458,7 @@ DeviceState::DeviceState(uint32_t device_id,
       touchscreen_(this),
       callback_(nullptr),
       sensor_(this),
-      sensor_callback_(callback) {}
+      sensor_callback_(std::move(callback)) {}
 
 DeviceState::~DeviceState() {}
 

@@ -12,11 +12,12 @@ source_set("client") {
     "types.h",
   ]
 
-  deps = [
+  public_deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/scenic:client",
     "//garnet/public/lib/ui/sketchy/fidl",
+    "//zircon/public/lib/fit",
   ]
 
   include_dirs = [ "//third_party/glm" ]

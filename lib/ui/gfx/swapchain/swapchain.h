@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_GFX_SWAPCHAIN_SWAPCHAIN_H_
 #define GARNET_LIB_UI_GFX_SWAPCHAIN_SWAPCHAIN_H_
 
-#include <functional>
+#include <lib/fit/function.h>
 
 #include "lib/fxl/memory/ref_ptr.h"
 
@@ -31,7 +31,7 @@ class Swapchain {
   // - the semaphore to wait upon before rendering into the framebuffer
   // - the semaphore to signal when rendering is complete.
   using DrawCallback =
-      std::function<void(const escher::ImagePtr&, const escher::SemaphorePtr&,
+      fit::function<void(const escher::ImagePtr&, const escher::SemaphorePtr&,
                          const escher::SemaphorePtr&)>;
 
   // Returns false if the frame could not be drawn.  Otherwise,

@@ -7,6 +7,8 @@
 
 #include <memory>
 
+#include <lib/fit/function.h>
+
 #include "lib/fsl/io/device_watcher.h"
 #include "lib/fxl/macros.h"
 #include "lib/zx/event.h"
@@ -21,7 +23,7 @@ class DisplayWatcher {
   // Callback that accepts display metrics.
   // |metrics| may be null if the display was not successfully acquired.
   using DisplayReadyCallback =
-      std::function<void(fxl::UniqueFD fd, zx::channel dc_handle)>;
+      fit::function<void(fxl::UniqueFD fd, zx::channel dc_handle)>;
 
   DisplayWatcher();
   ~DisplayWatcher();

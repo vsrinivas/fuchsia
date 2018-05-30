@@ -6,9 +6,9 @@
 #define LIB_FSL_IO_DEVICE_WATCHER_H_
 
 #include <lib/async/cpp/wait.h>
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 
-#include <functional>
 #include <memory>
 #include <string>
 
@@ -28,7 +28,7 @@ class FXL_EXPORT DeviceWatcher {
   // Callback function which is invoked whenever a device is found.
   // |dir_fd| is the file descriptor of the directory (use for openat()).
   // |filename| is the name of the file relative to the directory.
-  using Callback = std::function<void(int dir_fd, std::string filename)>;
+  using Callback = fit::function<void(int dir_fd, std::string filename)>;
 
   ~DeviceWatcher() = default;
 

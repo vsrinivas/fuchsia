@@ -66,8 +66,8 @@ fuchsia::sys::ServiceProvider* BaseView::GetViewServiceProvider() {
   return view_container_.get();
 }
 
-void BaseView::SetReleaseHandler(fxl::Closure callback) {
-  view_listener_binding_.set_error_handler(callback);
+void BaseView::SetReleaseHandler(fit::closure callback) {
+  view_listener_binding_.set_error_handler(std::move(callback));
 }
 
 void BaseView::InvalidateScene() {

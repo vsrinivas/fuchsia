@@ -9,6 +9,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fit/function.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
@@ -74,7 +75,7 @@ bool ExceptionPort::Run() {
   FXL_DCHECK(eport_handle_);
 
   keep_running_ = true;
-  io_thread_ = std::thread(std::bind(&ExceptionPort::Worker, this));
+  io_thread_ = std::thread(fit::bind_member(this, &ExceptionPort::Worker));
 
   return true;
 }
@@ -105,7 +106,7 @@ void ExceptionPort::Quit() {
 }
 
 ExceptionPort::Key ExceptionPort::Bind(zx_handle_t process_handle,
-                                       const Callback& callback) {
+                                       Callback callback) {
   FXL_DCHECK(process_handle != ZX_HANDLE_INVALID);
   FXL_DCHECK(callback);
   FXL_DCHECK(eport_handle_);
@@ -151,7 +152,7 @@ ExceptionPort::Key ExceptionPort::Bind(zx_handle_t process_handle,
   // |next_key| should not have been used before.
   FXL_DCHECK(callbacks_.find(next_key) == callbacks_.end());
 
-  callbacks_[next_key] = BindData(process_handle, process_koid, callback);
+  callbacks_[next_key] = BindData(process_handle, process_koid, std::move(callback));
   ++g_key_counter;
 
   FXL_VLOG(1) << "Exception port bound to process handle " << process_handle

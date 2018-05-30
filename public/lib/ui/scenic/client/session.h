@@ -5,8 +5,7 @@
 #ifndef LIB_UI_SCENIC_CLIENT_SESSION_H_
 #define LIB_UI_SCENIC_CLIENT_SESSION_H_
 
-#include <functional>
-
+#include <lib/fit/function.h>
 #include <lib/zx/event.h>
 
 #include <fuchsia/images/cpp/fidl.h>
@@ -14,7 +13,6 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 
 namespace scenic_lib {
@@ -27,15 +25,15 @@ class Session : private fuchsia::ui::scenic::SessionListener {
   // Provides timing information about a presentation request which has
   // been applied by the scene manager.
   using PresentCallback =
-      std::function<void(fuchsia::images::PresentationInfo info)>;
+      fit::function<void(fuchsia::images::PresentationInfo info)>;
 
   // Provide information about hits.
   using HitTestCallback =
-      std::function<void(fidl::VectorPtr<fuchsia::ui::gfx::Hit> hits)>;
+      fit::function<void(fidl::VectorPtr<fuchsia::ui::gfx::Hit> hits)>;
 
   // Called when session events are received.
   using EventHandler =
-      std::function<void(fidl::VectorPtr<fuchsia::ui::scenic::Event>)>;
+      fit::function<void(fidl::VectorPtr<fuchsia::ui::scenic::Event>)>;
 
   // Wraps the provided session and session listener.
   // The listener is optional.
@@ -53,7 +51,7 @@ class Session : private fuchsia::ui::scenic::SessionListener {
   ~Session();
 
   // Sets a callback which is invoked if the session dies.
-  void set_error_handler(fxl::Closure closure) {
+  void set_error_handler(fit::closure closure) {
     session_.set_error_handler(std::move(closure));
   }
 

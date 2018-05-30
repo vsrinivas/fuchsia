@@ -14,14 +14,14 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <gtest/gtest.h>
-#include <functional>
+#include <lib/fit/function.h>
 
 #include <wlan_mlme/cpp/fidl.h>
 
 namespace wlan {
 namespace {
 
-template <typename Frame> using FrameCallback = std::function<void(const Frame&)>;
+template <typename Frame> using FrameCallback = fit::function<void(const Frame&)>;
 using EthFrameCallback = FrameCallback<EthFrame>;
 
 struct MockMlme : public Mlme {
@@ -36,7 +36,7 @@ struct MockMlme : public Mlme {
         return ZX_OK;
     }
 
-    void SetFrameCallback(EthFrameCallback eth_cb) { eth_cb_ = eth_cb; }
+    void SetFrameCallback(EthFrameCallback eth_cb) { eth_cb_ = std::move(eth_cb); }
 
    private:
     EthFrameCallback eth_cb_;
@@ -48,7 +48,7 @@ class DispatcherTest : public ::testing::Test {
     bool HandlePacket(fbl::unique_ptr<Packet> packet, FrameCallback<Frame> cb) {
         bool handled = false;
         auto mock_mlme = fbl::make_unique<MockMlme>();
-        mock_mlme->SetFrameCallback([&handled, cb](const Frame& frame) mutable {
+        mock_mlme->SetFrameCallback([&handled, cb = std::move(cb)](const Frame& frame) mutable {
             handled = true;
             cb(frame);
         });

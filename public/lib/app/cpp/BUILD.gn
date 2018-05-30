@@ -20,5 +20,6 @@ source_set("cpp") {
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
+    "//zircon/public/lib/fit",
   ]
 }

@@ -6,12 +6,12 @@
 
 #include <atomic>
 #include <cstdio>
-#include <functional>
 #include <mutex>
 #include <thread>
 #include <unordered_map>
 
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 #include <lib/zx/port.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
@@ -35,7 +35,7 @@ class ExceptionPort final {
   // Handler callback invoked when the kernel reports an exception. For more
   // information about the possible values and fields of the |type| and
   // |context| parameters, see <zircon/syscalls/exception.h>.
-  using Callback = std::function<void(const zx_port_packet_t& packet,
+  using Callback = fit::function<void(const zx_port_packet_t& packet,
                                       const zx_exception_context_t& context)>;
 
   explicit ExceptionPort(async_t* async);
@@ -59,7 +59,7 @@ class ExceptionPort final {
   // created.
   //
   // This must be called AFTER a successful call to Run().
-  Key Bind(const zx_handle_t process_handle, const Callback& callback);
+  Key Bind(const zx_handle_t process_handle, Callback callback);
 
   // Unbinds a previously bound exception port and returns true on success.
   // This must be called AFTER a successful call to Run().
@@ -69,10 +69,10 @@ class ExceptionPort final {
   struct BindData {
     BindData() = default;
     BindData(zx_handle_t process_handle, zx_koid_t process_koid,
-             const Callback& callback)
+             Callback callback)
         : process_handle(process_handle),
           process_koid(process_koid),
-          callback(callback) {}
+          callback(std::move(callback)) {}
 
     zx_handle_t process_handle;
     zx_koid_t process_koid;

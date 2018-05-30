@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 
 #include "garnet/lib/debugger_utils/util.h"
 #include "lib/fsl/handles/object_info.h"
@@ -41,7 +42,7 @@ void IOLoop::Run() {
   // Posts an asynchronous task on to listen for an incoming packet. This
   // initiates a loop that always reads for incoming packets. Called from
   // Run().
-  async::PostTask(read_loop_.async(), std::bind(&IOLoop::OnReadTask, this));
+  async::PostTask(read_loop_.async(), fit::bind_member(this, &IOLoop::OnReadTask));
 }
 
 void IOLoop::Quit() {

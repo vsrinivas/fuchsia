@@ -7,6 +7,8 @@
 
 #include "garnet/lib/ui/gfx/resources/variable.h"
 
+#include <lib/fit/function.h>
+
 namespace scenic {
 namespace gfx {
 
@@ -25,14 +27,14 @@ class TypedVariableBinding : public VariableBinding,
                              public OnVariableValueChangedListener<VT, T> {
  public:
   TypedVariableBinding(fxl::RefPtr<TypedVariable<VT, T>> variable,
-                       std::function<void(T value)> on_value_changed_callback);
+                       fit::function<void(T value)> on_value_changed_callback);
   virtual ~TypedVariableBinding();
 
  private:
   void OnVariableValueChanged(TypedVariable<VT, T>* v) override;
 
   fxl::RefPtr<TypedVariable<VT, T>> variable_;
-  std::function<void(T value)> on_value_changed_callback_;
+  fit::function<void(T value)> on_value_changed_callback_;
 };
 
 using Vector3VariableBinding =

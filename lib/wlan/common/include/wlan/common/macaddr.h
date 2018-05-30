@@ -9,7 +9,6 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <functional>
 #include <string>
 
 namespace wlan {

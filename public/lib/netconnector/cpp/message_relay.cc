@@ -153,12 +153,12 @@ MessageRelay::MessageRelay() {}
 MessageRelay::~MessageRelay() {}
 
 void MessageRelay::SetMessageReceivedCallback(
-    std::function<void(std::vector<uint8_t>)> callback) {
-  message_received_callback_ = callback;
+    fit::function<void(std::vector<uint8_t>)> callback) {
+  message_received_callback_ = std::move(callback);
 }
 
-void MessageRelay::SetChannelClosedCallback(std::function<void()> callback) {
-  channel_closed_callback_ = callback;
+void MessageRelay::SetChannelClosedCallback(fit::closure callback) {
+  channel_closed_callback_ = std::move(callback);
 }
 
 void MessageRelay::OnMessageReceived(std::vector<uint8_t> message) {

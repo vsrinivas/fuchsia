@@ -59,6 +59,7 @@ static_library("inferior_control") {
 
   public_deps = [
     "//zircon/public/lib/launchpad",
+    "//zircon/public/lib/fit"
   ]
 
   include_dirs = [ ".." ]

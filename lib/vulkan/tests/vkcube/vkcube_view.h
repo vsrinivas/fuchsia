@@ -8,6 +8,7 @@
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/ui/scenic/client/resources.h"
@@ -15,13 +16,14 @@
 
 class VkCubeView : public mozart::BaseView {
  public:
+  using ResizeCallback = fit::function<void(
+        float width, float height,
+        fidl::InterfaceHandle<fuchsia::images::ImagePipe> interface_request)>;
+
   VkCubeView(
       ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
       fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
-      std::function<
-          void(float width, float height,
-               fidl::InterfaceHandle<fuchsia::images::ImagePipe> interface_request)>
-          resize_callback);
+      ResizeCallback resize_callback);
   ~VkCubeView() override;
 
  private:
@@ -31,10 +33,7 @@ class VkCubeView : public mozart::BaseView {
   fuchsia::math::SizeF size_;
   fuchsia::math::Size physical_size_;
   scenic_lib::ShapeNode pane_node_;
-  std::function<void(
-      float width, float height,
-      fidl::InterfaceHandle<fuchsia::images::ImagePipe> interface_request)>
-      resize_callback_;
+  ResizeCallback resize_callback_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(VkCubeView);
 };
