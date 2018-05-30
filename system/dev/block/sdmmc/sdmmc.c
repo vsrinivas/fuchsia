@@ -62,10 +62,6 @@ static void block_complete(block_op_t* bop, zx_status_t status) {
     }
 }
 
-static bool sdmmc_use_dma(sdmmc_device_t* dev) {
-    return (dev->host_info.caps & (SDMMC_HOST_CAP_ADMA2 | SDMMC_HOST_CAP_64BIT));
-}
-
 static zx_off_t sdmmc_get_size(void* ctx) {
     sdmmc_device_t* dev = ctx;
     return dev->block_info.block_count * dev->block_info.block_size;
@@ -326,7 +322,6 @@ static void sdmmc_do_txn(sdmmc_device_t* dev, sdmmc_txn_t* txn) {
         req->use_dma = true;
         req->virt = NULL;
         req->pmt = ZX_HANDLE_INVALID;
-
     } else {
         req->use_dma = false;
         st = zx_vmar_map(zx_vmar_root_self(), 0, txn->bop.rw.vmo,
@@ -342,19 +337,23 @@ static void sdmmc_do_txn(sdmmc_device_t* dev, sdmmc_txn_t* txn) {
     st = sdmmc_request(&dev->host, req);
     if (st != ZX_OK) {
         zxlogf(TRACE, "sdmmc: do_txn error %d\n", st);
-        block_complete(&txn->bop, st);
+        goto exit;
     } else {
         if ((req->blockcount > 1) && !(dev->host_info.caps & SDMMC_HOST_CAP_AUTO_CMD12)) {
             st = sdmmc_stop_transmission(dev);
             if (st != ZX_OK) {
                 zxlogf(TRACE, "sdmmc: do_txn stop transmission error %d\n", st);
-                block_complete(&txn->bop, st);
-                return;
+                goto exit;
             }
         }
-        block_complete(&txn->bop, ZX_OK);
-        zxlogf(TRACE, "sdmmc: do_txn complete\n");
+        goto exit;
     }
+exit:
+    if (!req->use_dma) {
+        zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)req->virt, txn->bop.rw.length);
+    }
+    block_complete(&txn->bop, st);
+    zxlogf(TRACE, "sdmmc: do_txn complete\n");
 }
 
 static int sdmmc_worker_thread(void* arg) {

@@ -72,6 +72,10 @@ typedef struct sdmmc_device {
     block_info_t block_info;
 } sdmmc_device_t;
 
+static inline bool sdmmc_use_dma(sdmmc_device_t* dev) {
+    return (dev->host_info.caps & (SDMMC_HOST_CAP_ADMA2 | SDMMC_HOST_CAP_64BIT));
+}
+
 // SD/MMC shared ops
 
 zx_status_t sdmmc_go_idle(sdmmc_device_t* dev);
