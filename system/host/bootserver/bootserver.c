@@ -243,6 +243,34 @@ int send_boot_command(struct sockaddr_in6* ra) {
     return -1;
 }
 
+int send_reboot_command(struct sockaddr_in6* ra) {
+    // Construct message
+    nbmsg msg;
+    static int cookie = 0;
+    msg.magic = NB_MAGIC;
+    msg.cookie = cookie++;
+    msg.cmd = NB_REBOOT;
+    msg.arg = 0;
+
+    // Send to NB_SERVER_PORT
+    struct sockaddr_in6 target_addr;
+    memcpy(&target_addr, ra, sizeof(struct sockaddr_in6));
+    target_addr.sin6_port = htons(NB_SERVER_PORT);
+    int s = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+    if (s < 0) {
+        log("cannot create socket %d", s);
+        return -1;
+    }
+    ssize_t send_result = sendto(s, &msg, sizeof(msg), 0, (struct sockaddr*)&target_addr,
+                                 sizeof(target_addr));
+    if (send_result == sizeof(msg)) {
+        log("Issued reboot command to %s\n\n", sockaddr_str(ra));
+        return 0;
+    }
+    log("failure sending reboot command to %s", sockaddr_str(ra));
+    return -1;
+}
+
 int main(int argc, char** argv) {
     struct in6_addr allowed_addr;
     struct sockaddr_in6 addr;
@@ -280,7 +308,7 @@ int main(int argc, char** argv) {
         } else if (!strcmp(argv[1], "--fvm")) {
             argc--;
             argv++;
-            if (argc <= 2) {
+            if (argc <= 1) {
                 fprintf(stderr, "'--fvm' option requires an argument (FVM image)\n");
                 return -1;
             }
@@ -292,7 +320,7 @@ int main(int argc, char** argv) {
         } else if (!strcmp(argv[1], "--efi")) {
             argc--;
             argv++;
-            if (argc <= 2) {
+            if (argc <= 1) {
                 fprintf(stderr, "'--efi' option requires an argument (EFI image)\n");
                 return -1;
             }
@@ -300,7 +328,7 @@ int main(int argc, char** argv) {
         } else if (!strcmp(argv[1], "--kernc")) {
             argc--;
             argv++;
-            if (argc <= 2) {
+            if (argc <= 1) {
                 fprintf(stderr, "'--kernc' option requires an argument (KERN-C image)\n");
                 return -1;
             }
@@ -308,7 +336,7 @@ int main(int argc, char** argv) {
         } else if (!strcmp(argv[1], "-1")) {
             once = 1;
         } else if (!strcmp(argv[1], "-b")) {
-            if (argc <= 2) {
+            if (argc <= 1) {
                 fprintf(stderr, "'-b' option requires an argument (tftp block size)\n");
                 return -1;
             }
@@ -323,7 +351,7 @@ int main(int argc, char** argv) {
             argc--;
             argv++;
         } else if (!strcmp(argv[1], "-w")) {
-            if (argc <= 2) {
+            if (argc <= 1) {
                 fprintf(stderr, "'-w' option requires an argument (tftp window size)\n");
                 return -1;
             }
@@ -338,7 +366,7 @@ int main(int argc, char** argv) {
             argc--;
             argv++;
         } else if (!strcmp(argv[1], "-i")) {
-            if (argc <= 2) {
+            if (argc <= 1) {
                 fprintf(stderr, "'-i' option requires an argument (micros between packets)\n");
                 return -1;
             }
@@ -352,7 +380,7 @@ int main(int argc, char** argv) {
             argc--;
             argv++;
         } else if (!strcmp(argv[1], "-a")) {
-            if (argc <= 2) {
+            if (argc <= 1) {
                 fprintf(stderr, "'-a' option requires a valid ipv6 address\n");
                 return -1;
             }
@@ -363,7 +391,7 @@ int main(int argc, char** argv) {
             argc--;
             argv++;
         } else if (!strcmp(argv[1], "-n")) {
-            if (argc <= 2) {
+            if (argc <= 1) {
                 fprintf(stderr, "'-n' option requires a valid nodename\n");
                 return -1;
             }
@@ -406,25 +434,6 @@ int main(int argc, char** argv) {
     }
     if (nodename) {
         fprintf(stderr, "[%s] Will only boot nodename '%s'\n", appname, nodename);
-    }
-
-    // compute the default ramdisk fn to use if
-    // ramdisk is not specified and such a ramdisk
-    // file actually exists
-    char* auto_ramdisk_fn = NULL;
-    if (ramdisk_fn == NULL) {
-        char* bootdata_fn = "bootdata.bin";
-        char* end = strrchr(kernel_fn, '/');
-        if (end == NULL) {
-            auto_ramdisk_fn = bootdata_fn;
-        } else {
-            size_t prefix_len = (end - kernel_fn) + 1;
-            size_t len = prefix_len + strlen(bootdata_fn) + 1;
-            if ((auto_ramdisk_fn = malloc(len)) != NULL) {
-                memcpy(auto_ramdisk_fn, kernel_fn, prefix_len);
-                memcpy(auto_ramdisk_fn + prefix_len, bootdata_fn, strlen(bootdata_fn) + 1);
-            }
-        }
     }
 
     memset(&addr, 0, sizeof(addr));
@@ -528,12 +537,8 @@ int main(int argc, char** argv) {
             status = 0;
         }
         if (status == 0) {
-            struct stat s;
             if (ramdisk_fn) {
                 status = xfer(&ra, ramdisk_fn,
-                              use_filename_prefix ? NB_RAMDISK_FILENAME : "ramdisk.bin");
-            } else if (auto_ramdisk_fn && (stat(auto_ramdisk_fn, &s) == 0)) {
-                status = xfer(&ra, auto_ramdisk_fn,
                               use_filename_prefix ? NB_RAMDISK_FILENAME : "ramdisk.bin");
             }
         }
@@ -553,8 +558,12 @@ int main(int argc, char** argv) {
         }
         if (status == 0 && kernel_fn) {
             status = xfer(&ra, kernel_fn, use_filename_prefix ? NB_KERNEL_FILENAME : "kernel.bin");
-            if (status == 0) {
+        }
+        if (status == 0) {
+            if (kernel_fn) {
                 send_boot_command(&ra);
+            } else {
+                send_reboot_command(&ra);
             }
         }
         if (once) {

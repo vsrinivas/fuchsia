@@ -286,6 +286,7 @@ static void bootloader_recv(void* data, size_t len,
 
     bool do_transmit = true;
     bool do_boot = false;
+    bool do_reboot = false;
 
     if (dport != NB_SERVER_PORT)
         return;
@@ -374,6 +375,14 @@ static void bootloader_recv(void* data, size_t len,
         }
         printf("netboot: Boot Kernel...\n");
         break;
+    case NB_REBOOT:
+        do_reboot = true;
+        // Wait for the paver to complete
+        while (atomic_load(&paving_in_progress)) {
+            thrd_yield();
+        }
+        printf("netboot: Reboot ...\n");
+        break;
     default:
         // We don't have a handler for this command, let netsvc handle it.
         do_transmit = false;
@@ -399,6 +408,16 @@ transmit:
             // has a limit of 3 handles, and we're already using
             // all 3 to pass boot parameters.
             printf("netboot: Boot failed\n");
+        }
+    }
+
+    if (do_reboot) {
+        int fd  = open("/dev/misc/dmctl", O_WRONLY);
+        if (fd < 0) {
+            printf("netboot: Reboot failed: %s\n", strerror(errno));
+        } else {
+            dprintf(fd, "reboot");
+            close(fd);
         }
     }
 }

@@ -9,7 +9,7 @@
 
 // clang-format off
 
-#define BOOTLOADER_VERSION "0.7.3"
+#define BOOTLOADER_VERSION "0.7.4"
 
 #define NB_MAGIC              0xAA774217
 #define NB_DEBUGLOG_MAGIC     0xAEAE1123
@@ -33,6 +33,7 @@
 #define NB_WRITE             9   // arg=blocknum, data=data
 #define NB_CLOSE             10  // arg=0
 #define NB_LAST_DATA         11  // arg=offset, data=data
+#define NB_REBOOT            12  // arg=0
 
 #define NB_ACK                0 // arg=0 or -err, NB_READ: data=data
 #define NB_FILE_RECEIVED      0x70000001 // arg=size
