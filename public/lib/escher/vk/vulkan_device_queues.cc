@@ -26,8 +26,7 @@ VulkanDeviceQueues::Caps::Caps(vk::PhysicalDeviceProperties props)
       max_image_height(props.limits.maxImageDimension2D) {}
 
 VulkanDeviceQueues::ProcAddrs::ProcAddrs(
-    vk::Device device,
-    const std::set<std::string>& extension_names) {
+    vk::Device device, const std::set<std::string>& extension_names) {
   if (extension_names.find(VK_KHR_SWAPCHAIN_EXTENSION_NAME) !=
       extension_names.end()) {
     GET_DEVICE_PROC_ADDR(CreateSwapchainKHR);
@@ -99,8 +98,29 @@ FindSuitablePhysicalDeviceAndQueueFamilies(
     // Find the main queue family.  If none is found, continue on to the next
     // physical device.
     auto queues = physical_device.getQueueFamilyProperties();
+    const bool filter_queues_for_present =
+        params.surface &&
+        !(params.flags &
+          VulkanDeviceQueues::Params::kDisableQueueFilteringForPresent);
     for (size_t i = 0; i < queues.size(); ++i) {
       if (kMainQueueFlags == (queues[i].queueFlags & kMainQueueFlags)) {
+        if (filter_queues_for_present) {
+          // TODO: it is possible that there is no queue family that supports
+          // both graphics/compute and present.  In this case, we would need a
+          // separate present queue.  For now, just look for a single queue that
+          // meets all of our needs.
+          VkBool32 supports_present;
+          auto result =
+              instance->proc_addrs().GetPhysicalDeviceSurfaceSupportKHR(
+                  physical_device, i, params.surface, &supports_present);
+          FXL_CHECK(result == VK_SUCCESS);
+          if (supports_present != VK_TRUE) {
+            FXL_LOG(INFO)
+                << "Queue supports graphics/compute, but not presentation";
+            continue;
+          }
+        }
+
         // At this point, we have already succeeded.  Now, try to find the
         // optimal transfer queue family.
         SuitablePhysicalDeviceAndQueueFamilies result;
@@ -126,8 +146,7 @@ FindSuitablePhysicalDeviceAndQueueFamilies(
 }  // namespace
 
 fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(
-    VulkanInstancePtr instance,
-    Params params) {
+    VulkanInstancePtr instance, Params params) {
   if (params.surface) {
     // If the params contain a surface, then ensure that the swapchain extension
     // is supported so that we can render to that surface.
@@ -211,14 +230,10 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(
       transfer_queue_family, std::move(instance), std::move(params)));
 }
 
-VulkanDeviceQueues::VulkanDeviceQueues(vk::Device device,
-                                       vk::PhysicalDevice physical_device,
-                                       vk::Queue main_queue,
-                                       uint32_t main_queue_family,
-                                       vk::Queue transfer_queue,
-                                       uint32_t transfer_queue_family,
-                                       VulkanInstancePtr instance,
-                                       Params params)
+VulkanDeviceQueues::VulkanDeviceQueues(
+    vk::Device device, vk::PhysicalDevice physical_device, vk::Queue main_queue,
+    uint32_t main_queue_family, vk::Queue transfer_queue,
+    uint32_t transfer_queue_family, VulkanInstancePtr instance, Params params)
     : device_(device),
       physical_device_(physical_device),
       main_queue_(main_queue),
@@ -230,9 +245,7 @@ VulkanDeviceQueues::VulkanDeviceQueues(vk::Device device,
       caps_(physical_device.getProperties()),
       proc_addrs_(device_, params_.extension_names) {}
 
-VulkanDeviceQueues::~VulkanDeviceQueues() {
-  device_.destroy();
-}
+VulkanDeviceQueues::~VulkanDeviceQueues() { device_.destroy(); }
 
 bool VulkanDeviceQueues::ValidateExtensions(
     vk::PhysicalDevice device,

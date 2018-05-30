@@ -27,6 +27,14 @@ class VulkanDeviceQueues
   struct Params {
     std::set<std::string> extension_names;
     vk::SurfaceKHR surface;
+
+    enum FlagBits {
+      // When picking a queue, don't filter out those that do not support
+      // presentation.
+      kDisableQueueFilteringForPresent = 1 << 0,
+    };
+    using Flags = uint32_t;
+    Flags flags = 0;
   };
 
   // Device capabilities.
@@ -93,14 +101,10 @@ class VulkanDeviceQueues
   VulkanContext GetVulkanContext() const;
 
  private:
-  VulkanDeviceQueues(vk::Device device,
-                     vk::PhysicalDevice physical_device,
-                     vk::Queue main_queue,
-                     uint32_t main_queue_family,
-                     vk::Queue transfer_queue,
-                     uint32_t transfer_queue_family,
-                     VulkanInstancePtr instance,
-                     Params params);
+  VulkanDeviceQueues(vk::Device device, vk::PhysicalDevice physical_device,
+                     vk::Queue main_queue, uint32_t main_queue_family,
+                     vk::Queue transfer_queue, uint32_t transfer_queue_family,
+                     VulkanInstancePtr instance, Params params);
 
   vk::Device device_;
   vk::PhysicalDevice physical_device_;

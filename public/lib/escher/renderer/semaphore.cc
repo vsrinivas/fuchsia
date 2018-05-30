@@ -12,12 +12,16 @@ Semaphore::Semaphore(vk::Device device) : Semaphore(device, false) {}
 
 Semaphore::Semaphore(vk::Device device, bool exportable) : device_(device) {
   vk::SemaphoreCreateInfo info;
+#ifdef __Fuchsia__
   vk::ExternalSemaphoreHandleTypeFlagsKHR flags(
-      VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FUCHSIA_FENCE_BIT_KHR);
+      vk::ExternalSemaphoreHandleTypeFlagBitsKHR::eFuchsiaFence);
   vk::ExportSemaphoreCreateInfoKHR export_info(flags);
   if (exportable) {
     info.pNext = &export_info;
   }
+#else
+  FXL_DCHECK(!exportable) << "semaphore export not supported on this platform";
+#endif
   value_ = ESCHER_CHECKED_VK_RESULT(device_.createSemaphore(info));
 }
 
