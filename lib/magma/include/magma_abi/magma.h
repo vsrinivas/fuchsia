@@ -25,7 +25,7 @@ magma_status_t magma_get_error(struct magma_connection_t* connection);
 // Performs a query.
 // |id| is one of MAGMA_QUERY_DEVICE_ID, or a vendor-specific id starting from
 // MAGMA_QUERY_FIRST_VENDOR_ID.
-magma_status_t magma_query(int fd, uint64_t id, uint64_t* value_out);
+magma_status_t magma_query(int32_t fd, uint64_t id, uint64_t* value_out);
 
 void magma_create_context(struct magma_connection_t* connection, uint32_t* context_id_out);
 void magma_release_context(struct magma_connection_t* connection, uint32_t context_id);
@@ -39,7 +39,7 @@ uint64_t magma_get_buffer_size(magma_buffer_t buffer);
 
 // Creates a new fd representing the notification channel for the connection.
 // The fd can be polled.
-int magma_get_notification_channel_fd(struct magma_connection_t* connection);
+int32_t magma_get_notification_channel_fd(struct magma_connection_t* connection);
 
 // Read a notification from the channel into |buffer|. Sets |*buffer_size_out| to 0 if there are no
 // messages pending.
