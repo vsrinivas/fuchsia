@@ -109,42 +109,8 @@ AEAD::AEAD() : ctx_(nullptr), direction_(Cipher::kUnset), tag_len_(0) {}
 
 AEAD::~AEAD() {}
 
-zx_status_t AEAD::SetAD(const Bytes& ad) {
-    zx_status_t rc;
-
-    if (direction_ == Cipher::kUnset) {
-        xprintf("not configured\n");
-        return ZX_ERR_BAD_STATE;
-    }
-
-    ad_.Reset();
-    if ((rc = ad_.Copy(ad)) != ZX_OK) {
-        return rc;
-    }
-
-    return ZX_OK;
-}
-
-zx_status_t AEAD::AllocAD(size_t ad_len, uintptr_t* out_ad) {
-    zx_status_t rc;
-
-    if (direction_ == Cipher::kUnset) {
-        xprintf("not configured\n");
-        return ZX_ERR_BAD_STATE;
-    }
-
-    ad_.Reset();
-    if ((rc = ad_.Resize(ad_len)) != ZX_OK) {
-        return rc;
-    }
-
-    if (out_ad) {
-        *out_ad = reinterpret_cast<uintptr_t>(ad_.get());
-    }
-    return ZX_OK;
-}
-
-zx_status_t AEAD::Seal(const Bytes& ptext, uint64_t* out_nonce, Bytes* ctext) {
+zx_status_t AEAD::Seal(const Bytes& ptext, const uint8_t* aad, size_t aad_len, uint64_t* out_nonce,
+                       Bytes* out_ctext) {
     zx_status_t rc;
 
     if (direction_ != Cipher::kEncrypt) {
@@ -153,21 +119,21 @@ zx_status_t AEAD::Seal(const Bytes& ptext, uint64_t* out_nonce, Bytes* ctext) {
     }
 
     size_t ptext_len = ptext.len();
-    if (!out_nonce || !ctext) {
-        xprintf("bad parameter(s): out_nonce=%p, ctext=%p\n", out_nonce, ctext);
+    if (!out_nonce || !out_ctext) {
+        xprintf("bad parameter(s): out_nonce=%p, ctext=%p\n", out_nonce, out_ctext);
         return ZX_ERR_INVALID_ARGS;
     }
 
     // If the caller recycles the |Bytes| used for|ctext|, this becomes a no-op.
     size_t ctext_len = ptext_len + tag_len_;
-    if ((rc = ctext->Resize(ctext_len)) != ZX_OK) {
+    if ((rc = out_ctext->Resize(ctext_len)) != ZX_OK) {
         return rc;
     }
 
     uint8_t* iv8 = reinterpret_cast<uint8_t*>(iv_.get());
     size_t out_len;
-    if (EVP_AEAD_CTX_seal(&ctx_->impl, ctext->get(), &out_len, ctext_len, iv8, iv_len_, ptext.get(),
-                          ptext_len, ad_.get(), ad_.len()) != 1) {
+    if (EVP_AEAD_CTX_seal(&ctx_->impl, out_ctext->get(), &out_len, ctext_len, iv8, iv_len_,
+                          ptext.get(), ptext_len, aad, aad_len) != 1) {
         xprintf_crypto_errors(&rc);
         return rc;
     }
@@ -188,7 +154,7 @@ zx_status_t AEAD::Seal(const Bytes& ptext, uint64_t* out_nonce, Bytes* ctext) {
     return ZX_OK;
 }
 
-zx_status_t AEAD::Open(uint64_t nonce, const Bytes& ctext, Bytes* ptext) {
+zx_status_t AEAD::Open(uint64_t nonce, const Bytes& ctext, const uint8_t* aad, size_t aad_len, Bytes* out_ptext) {
     zx_status_t rc;
 
     if (direction_ != Cipher::kDecrypt) {
@@ -197,13 +163,13 @@ zx_status_t AEAD::Open(uint64_t nonce, const Bytes& ctext, Bytes* ptext) {
     }
 
     size_t ctext_len = ctext.len();
-    if (ctext_len < tag_len_ || !ptext) {
-        xprintf("bad parameter(s): ctext.len=%zu, ptext=%p\n", ctext_len, ptext);
+    if (ctext_len < tag_len_ || !out_ptext) {
+        xprintf("bad parameter(s): ctext.len=%zu, ptext=%p\n", ctext_len, out_ptext);
         return ZX_ERR_INVALID_ARGS;
     }
 
     size_t ptext_len = ctext_len - tag_len_;
-    if ((rc = ptext->Resize(ptext_len)) != ZX_OK) {
+    if ((rc = out_ptext->Resize(ptext_len)) != ZX_OK) {
         return rc;
     }
 
@@ -211,8 +177,8 @@ zx_status_t AEAD::Open(uint64_t nonce, const Bytes& ctext, Bytes* ptext) {
     iv_[0] = nonce;
     uint8_t* iv8 = reinterpret_cast<uint8_t*>(iv_.get());
     size_t out_len;
-    if (EVP_AEAD_CTX_open(&ctx_->impl, ptext->get(), &out_len, ptext_len, iv8, iv_len_, ctext.get(),
-                          ctext_len, ad_.get(), ad_.len()) != 1) {
+    if (EVP_AEAD_CTX_open(&ctx_->impl, out_ptext->get(), &out_len, ptext_len, iv8, iv_len_,
+                          ctext.get(), ctext_len, aad, aad_len) != 1) {
         xprintf_crypto_errors(&rc);
         return rc;
     }
@@ -228,7 +194,6 @@ void AEAD::Reset() {
     ctx_.reset();
     direction_ = Cipher::kUnset;
     iv_len_ = 0;
-    ad_.Reset();
     tag_len_ = 0;
 }
 

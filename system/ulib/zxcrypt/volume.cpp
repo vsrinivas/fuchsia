@@ -606,7 +606,7 @@ zx_status_t Volume::SealBlock(const crypto::Bytes& key, key_slot_t slot) {
         (rc = ptext.Copy(data_iv_, data_iv_off)) != ZX_OK ||
         (rc = DeriveSlotKeys(key, slot)) != ZX_OK ||
         (rc = aead.InitSeal(aead_, wrap_key_, wrap_iv_)) != ZX_OK ||
-        (rc = aead.SetAD(header_)) != ZX_OK || (rc = aead.Seal(ptext, &nonce, &ctext)) != ZX_OK) {
+        (rc = aead.Seal(ptext, header_, &nonce, &ctext)) != ZX_OK) {
         return rc;
     }
     // Check that we'll be able to unseal.
@@ -680,7 +680,7 @@ zx_status_t Volume::UnsealBlock(const crypto::Bytes& key, key_slot_t slot) {
     if ((rc = ctext.Copy(block_.get() + off, slot_len_)) != ZX_OK ||
         (rc = aead.InitOpen(aead_, wrap_key_, wrap_iv_)) != ZX_OK ||
         (rc = header_.Copy(block_.get(), kHeaderLen)) != ZX_OK ||
-        (rc = aead.SetAD(header_)) != ZX_OK || (rc = aead.Open(nonce, ctext, &ptext)) != ZX_OK ||
+        (rc = aead.Open(nonce, ctext, header_, &ptext)) != ZX_OK ||
         (rc = data_key_.Copy(ptext.get() + data_key_off, data_key_.len())) != ZX_OK ||
         (rc = data_iv_.Copy(ptext.get() + data_iv_off, data_iv_.len())) != ZX_OK) {
         return rc;
