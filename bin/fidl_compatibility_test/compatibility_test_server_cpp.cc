@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <compatibility_test_service/cpp/fidl.h>
+#include <fidl/test/compatibility/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <zx/channel.h>
 #include <cstdlib>
@@ -13,7 +13,9 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 
-namespace compatibility_test_service {
+namespace fidl {
+namespace test {
+namespace compatibility {
 
 class EchoServerApp : public Echo {
  public:
@@ -54,13 +56,15 @@ class EchoServerApp : public Echo {
   fidl::BindingSet<Echo> bindings_;
 };
 
-}  // namespace compatibility_test_service
+}  // namespace compatibility
+}  // namespace test
+}  // namespace fidl
 
 int main(int argc, const char** argv) {
   // The FIDL support lib requires async_get_default() to return non-null.
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  compatibility_test_service::EchoServerApp app;
+  fidl::test::compatibility::EchoServerApp app;
   loop.Run();
   return EXIT_SUCCESS;
 }

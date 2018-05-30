@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 #include "garnet/public/lib/fidl/compatibility_test/echo_client_app.h"
-#include <compatibility_test_service/cpp/fidl.h>
+#include <fidl/test/compatibility/cpp/fidl.h>
 
-namespace compatibility_test_service {
+namespace fidl {
+namespace test {
+namespace compatibility {
 
 EchoClientApp::EchoClientApp()
     : context_(component::ApplicationContext::CreateFromStartupInfo()) {}
@@ -22,4 +24,6 @@ void EchoClientApp::Start(std::string server_url) {
   echo_provider_.ConnectToService(echo_.NewRequest().TakeChannel(),
                                   Echo::Name_);
 }
-}  // namespace compatibility_test_service
+}  // namespace compatibility
+}  // namespace test
+}  // namespace fidl

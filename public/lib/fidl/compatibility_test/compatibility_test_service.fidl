@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library compatibility_test_service;
+library fidl.test.compatibility;
 
 struct this_is_a_struct { string s; };
 

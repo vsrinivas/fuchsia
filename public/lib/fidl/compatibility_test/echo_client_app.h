@@ -9,7 +9,7 @@
 #ifndef LIB_FIDL_COMPATIBILITY_TEST_ECHO_CLIENT_APP_H_
 #define LIB_FIDL_COMPATIBILITY_TEST_ECHO_CLIENT_APP_H_
 
-#include <compatibility_test_service/cpp/fidl.h>
+#include <fidl/test/compatibility/cpp/fidl.h>
 #include <zx/process.h>
 #include <memory>
 #include <string>
@@ -17,7 +17,9 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/svc/cpp/services.h"
 
-namespace compatibility_test_service {
+namespace fidl {
+namespace test {
+namespace compatibility {
 
 class EchoClientApp {
  public:
@@ -37,6 +39,8 @@ class EchoClientApp {
   EchoPtr echo_;
 };
 
-}  // namespace compatibility_test_service
+}  // namespace compatibility
+}  // namespace test
+}  // namespace fidl
 
 #endif  // LIB_FIDL_COMPATIBILITY_TEST_ECHO_CLIENT_APP_H_
