@@ -540,7 +540,7 @@ zx_status_t PcieDevice::AllocateBarLocked(pcie_bar_info_t& info) {
      * it, if possible. */
     if (info.bus_addr != 0) {
         RegionAllocator* alloc = nullptr;
-        if (info.is_prefetchable) {
+        if (upstream->type() == PcieUpstreamNode::Type::BRIDGE && info.is_prefetchable) {
             alloc = &upstream->pf_mmio_regions();
         } else if (info.is_mmio) {
             /* We currently do not support preserving an MMIO region which spans
