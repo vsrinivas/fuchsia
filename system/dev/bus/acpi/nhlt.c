@@ -91,10 +91,10 @@ zx_status_t nhlt_publish_metadata(zx_device_t* dev, int bbn, uint64_t adr, ACPI_
 
     // Read the blob
     zx_handle_t vmo;
-    status = zx_vmo_create_physical(get_root_resource(),
-                                    ROUNDDOWN(paddr, PAGE_SIZE),
-                                    ROUNDUP(size, PAGE_SIZE),
-                                    &vmo);
+    zx_paddr_t page_start = ROUNDDOWN(paddr, PAGE_SIZE);
+    size_t page_offset = (paddr & (PAGE_SIZE-1));
+    size_t page_size = ROUNDUP(page_offset + size, PAGE_SIZE);
+    status = zx_vmo_create_physical(get_root_resource(), page_start, page_size, &vmo);
     if (status != ZX_OK) {
         zxlogf(ERROR, "acpi: failed to create NHLT VMO (res %d)\n", status);
         goto out;
@@ -102,13 +102,12 @@ zx_status_t nhlt_publish_metadata(zx_device_t* dev, int bbn, uint64_t adr, ACPI_
 
     // We cannot read physical VMOs directly and must map it
     zx_vaddr_t vaddr = 0;
-    status = zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, ROUNDUP(size, PAGE_SIZE),
-                     ZX_VM_FLAG_PERM_READ, &vaddr);
+    status = zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, page_size, ZX_VM_FLAG_PERM_READ, &vaddr);
     if (status != ZX_OK) {
         zxlogf(ERROR, "acpi: failed to map NHLT blob (res %d)\n", status);
         goto out;
     }
-    void* nhlt = (void*)(vaddr + (paddr & (PAGE_SIZE-1)));
+    void* nhlt = (void*)(vaddr + page_offset);
 
     // Publish the NHLT as metadata on the future PCI device node...
     // The canonical path to the PCI device is /dev/sys/pci/<b:d.f>

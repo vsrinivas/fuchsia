@@ -690,8 +690,9 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
     // TODO: This is a temporary workaround for ACPI device enumeration.
     } else if (!memcmp(&info->Name, "HDAS", 4)) {
         // We must have already seen at least one PCI root due to traversal order.
-        ZX_DEBUG_ASSERT(ctx->last_pci != -1);
-        if (!(info->Valid & ACPI_VALID_ADR)) {
+        if (ctx->last_pci == -1) {
+            zxlogf(ERROR, "acpi: Found HDAS node, but no prior PCI root was discovered!\n");
+        } else if (!(info->Valid & ACPI_VALID_ADR)) {
             zxlogf(ERROR, "acpi: no valid ADR found for HDA device\n");
         } else {
             zx_status_t status = nhlt_publish_metadata(parent,
