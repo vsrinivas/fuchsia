@@ -193,7 +193,7 @@ bool DisplaySwapchain::InitializeFramebuffers(
     buffer.vmo = zx::vmo(export_result.value);
     buffer.fb_id = display_manager_->ImportImage(
         buffer.vmo, width_in_px, height_in_px, ZX_PIXEL_FORMAT_ARGB_8888);
-    if (buffer.fb_id == display::invalidId) {
+    if (buffer.fb_id == fuchsia::display::invalidId) {
       FXL_DLOG(ERROR) << "Importing image failed.";
       return false;
     }
@@ -231,8 +231,8 @@ std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
       display_manager_->ImportEvent(frame_presented_event);
 
   if (!render_finished_escher_semaphore ||
-      render_finished_event_id == display::invalidId ||
-      frame_presented_event_id == display::invalidId) {
+      render_finished_event_id == fuchsia::display::invalidId ||
+      frame_presented_event_id == fuchsia::display::invalidId) {
     FXL_LOG(ERROR)
         << "DisplaySwapchain::NewFrameRecord() failed to create semaphores";
     return std::unique_ptr<FrameRecord>();
@@ -294,7 +294,7 @@ bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
   display_manager_->Flip(display_, buffer.fb_id,
                          frame_record->render_finished_event_id,
                          frame_record->frame_presented_event_id,
-                         display::invalidId /* frame_signal_event_id */);
+                         fuchsia::display::invalidId /* frame_signal_event_id */);
 
   display_manager_->ReleaseEvent(frame_record->render_finished_event_id);
   display_manager_->ReleaseEvent(frame_record->frame_presented_event_id);

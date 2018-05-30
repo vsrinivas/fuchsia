@@ -7,7 +7,7 @@
 
 #include <cstdint>
 
-#include "display/cpp/fidl.h"
+#include "fuchsia/display/cpp/fidl.h"
 #include "garnet/lib/ui/gfx/displays/display.h"
 #include "garnet/lib/ui/gfx/displays/display_watcher.h"
 #include "lib/async/cpp/wait.h"
@@ -47,7 +47,7 @@ class DisplayManager {
   // when the buffer is presented. Will signal |frame_signal_event_id| when the
   // image is retired.
   //
-  // display::invalidId can be passed for any of the event_ids if
+  // fuchsia::display::invalidId can be passed for any of the event_ids if
   // there is no corresponding event to signal.
   void Flip(Display* display, uint64_t buffer,
             uint64_t render_finished_event_id,
@@ -67,16 +67,16 @@ class DisplayManager {
                const zx_packet_signal_t* signal);
   async::WaitMethod<DisplayManager, &DisplayManager::OnAsync> wait_{this};
 
-  void DisplaysChanged(::fidl::VectorPtr<display::Info> added,
+  void DisplaysChanged(::fidl::VectorPtr<fuchsia::display::Info> added,
                        ::fidl::VectorPtr<uint64_t> removed);
   void ClientOwnershipChange(bool has_ownership);
 
   fxl::UniqueFD dc_fd_;
-  fidl::SynchronousInterfacePtr<display::Controller> display_controller_;
-  fidl::InterfacePtr<display::Controller> event_dispatcher_;
+  fidl::SynchronousInterfacePtr<fuchsia::display::Controller> display_controller_;
+  fidl::InterfacePtr<fuchsia::display::Controller> event_dispatcher_;
   zx_handle_t dc_channel_;  // display_controller_ owns the zx::channel
 
-  uint64_t next_event_id_ = display::invalidId + 1;
+  uint64_t next_event_id_ = fuchsia::display::invalidId + 1;
 
   DisplayWatcher display_watcher_;
   fxl::Closure display_available_cb_;
