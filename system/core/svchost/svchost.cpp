@@ -98,44 +98,22 @@ zx_status_t publish_tracelink(const fbl::RefPtr<fs::PseudoDir>& dir) {
 // environment. Instead, we should make the test environment hermetic and
 // remove the dependencies on these services.
 static constexpr const char* deprecated_services[] = {
-    "audio_policy.AudioPolicy",
-    "bluetooth_control.Control",
-    "bluetooth_gatt.Server",
-    "bluetooth_low_energy.Central",
-    "bluetooth_low_energy.Peripheral",
     "cobalt.CobaltEncoderFactory",
     "component.ApplicationLauncher",
     "component.Environment",
     "device_settings.DeviceSettingsManager",
-    "fonts.FontProvider",
-    "fuchsia.guest.GuestManager",
-    "fuchsia.ui.input.ImeService",
-    "fuchsia.ui.input.InputDeviceRegistry",
-    "fuchsia.ui.scenic.Scenic",
-    "gralloc.Gralloc",
-    "icu_data.ICUDataProvider",
     "logger.Log",
     "logger.LogSink",
-    "mdns.MdnsService",
-    "media_player.MediaPlayer",
-    "media_player.NetMediaService",
     "media.AudioServer",
-    "modular.DeviceRunnerMonitor",
+    "media_player.MediaPlayer",
     "net.Netstack",
-    "netconnector.NetConnector",
     "netstack.Netstack",
-    "network.NetworkService",
     "power_manager.PowerManager",
-    "presentation.Presenter",
-    "shadertoy.ShadertoyFactory",
-    "sketchy.Canvas",
-    "time_zone.Timezone",
-    "tracing.TraceController",
-    "tts.TtsService",
-    "views_v1.ViewManager",
-    "wlan_device_service.DeviceService",
     "wlan_service.Wlan",
     nullptr,
+    // DO NOT ADD MORE ENTRIES TO THIS LIST.
+    // Tests should not be accessing services from the environment. Instead,
+    // they should run in containers that have their own service instances.
 };
 
 void publish_deprecated_services(const fbl::RefPtr<fs::PseudoDir>& dir) {
