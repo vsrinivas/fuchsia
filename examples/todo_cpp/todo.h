@@ -7,8 +7,10 @@
 
 #include <random>
 
-#include <ledger/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <modular/cpp/fidl.h>
+
+#include <ledger/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/command_line.h"
@@ -22,7 +24,7 @@ using Key = fidl::VectorPtr<uint8_t>;
 class TodoApp : public ledger::PageWatcher,
                 modular::Lifecycle {
  public:
-  TodoApp();
+  TodoApp(async::Loop* loop);
 
   // ledger::PageWatcher:
   void OnChange(ledger::PageChange page_change,
@@ -43,6 +45,7 @@ class TodoApp : public ledger::PageWatcher,
 
   void Act();
 
+  async::Loop* const loop_;
   std::default_random_engine rng_;
   std::normal_distribution<> size_distribution_;
   std::uniform_int_distribution<> delay_distribution_;

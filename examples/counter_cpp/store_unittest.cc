@@ -7,10 +7,10 @@
 #include <string>
 
 #include <modular/cpp/fidl.h>
+
 #include "gtest/gtest.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/test_with_loop.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/mock_base.h"
 
@@ -78,7 +78,6 @@ class LinkMock : public LinkMockBase {
   void UpdateObject(fidl::VectorPtr<fidl::StringPtr> path,
                     fidl::StringPtr json) override {
     LinkMockBase::UpdateObject(std::move(path), json);
-    fsl::MessageLoop::GetCurrent()->QuitNow();
   }
 
   fidl::InterfacePtr<modular::LinkWatcher> watcher;
@@ -107,7 +106,7 @@ TEST(Counter, ToDocument_Success) {
       json);
 }
 
-class StoreTest : public gtest::TestWithMessageLoop {};
+class StoreTest : public gtest::TestWithLoop {};
 
 TEST_F(StoreTest, Store_ModelChanged) {
   LinkMock link_mock;
@@ -124,7 +123,7 @@ TEST_F(StoreTest, Store_ModelChanged) {
   store.MarkDirty();
   store.ModelChanged();
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoopUntilIdle();
 
   // Initialize() calls Watch()
   // and ModelChanged calls UpdateObject()

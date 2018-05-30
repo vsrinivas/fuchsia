@@ -13,6 +13,7 @@ executable("todo_cpp") {
     "//peridot/bin/ledger/fidl",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/ledger/fidl",
+    "//zircon/public/lib/fit",
   ]
 
   sources = [

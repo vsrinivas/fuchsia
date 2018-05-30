@@ -11,12 +11,11 @@
 #include <algorithm>
 #include <iostream>
 
+#include <lib/fit/function.h>
 #include <lib/async/cpp/task.h>
-#include <lib/async/default.h>
 
 #include <ledger_internal/cpp/fidl.h>
 #include "lib/app/cpp/connect.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
@@ -50,11 +49,12 @@ Key MakeKey() {
   return ToArray(fxl::StringPrintf("%120ld-%u", time(nullptr), rand()));
 }
 
-std::function<void(ledger::Status)> HandleResponse(std::string description) {
-  return [description](ledger::Status status) {
+std::function<void(ledger::Status)> HandleResponse(fit::closure quit_callback,
+                                                   std::string description) {
+  return [description, &quit_callback](ledger::Status status) {
     if (status != ledger::Status::OK) {
       FXL_LOG(ERROR) << description << " failed";
-      fsl::MessageLoop::GetCurrent()->PostQuitTask();
+      quit_callback();
     }
   };
 }
@@ -94,8 +94,9 @@ void GetEntries(
 
 }  // namespace
 
-TodoApp::TodoApp()
-    : rng_(time(nullptr)),
+TodoApp::TodoApp(async::Loop* loop)
+    : loop_(loop),
+      rng_(time(nullptr)),
       size_distribution_(kMeanListSize, kListSizeStdDev),
       delay_distribution_(kMinDelaySeconds, kMaxDelaySeconds),
       generator_(&rng_),
@@ -103,21 +104,24 @@ TodoApp::TodoApp()
       page_watcher_binding_(this) {
   context_->ConnectToEnvironmentService(module_context_.NewRequest());
   module_context_->GetComponentContext(component_context_.NewRequest());
-  component_context_->GetLedger(ledger_.NewRequest(),
-                                HandleResponse("GetLedger"));
-  ledger_->GetRootPage(page_.NewRequest(), HandleResponse("GetRootPage"));
+  component_context_->GetLedger(
+      ledger_.NewRequest(),
+      HandleResponse([this] { loop_->Quit(); }, "GetLedger"));
+  ledger_->GetRootPage(
+      page_.NewRequest(),
+      HandleResponse([this] { loop_->Quit(); }, "GetRootPage"));
 
   ledger::PageSnapshotPtr snapshot;
   page_->GetSnapshot(snapshot.NewRequest(), nullptr,
                      page_watcher_binding_.NewBinding(),
-                     HandleResponse("Watch"));
+                     HandleResponse([this] { loop_->Quit(); }, "Watch"));
   List(std::move(snapshot));
 
-  async::PostTask(async_get_default(), [this] { Act(); });
+  async::PostTask(loop_->async(), [this] { Act(); });
 }
 
 void TodoApp::Terminate() {
-  fsl::MessageLoop::GetCurrent()->QuitNow();
+  loop_->Quit();
 }
 
 void TodoApp::OnChange(ledger::PageChange /*page_change*/,
@@ -136,10 +140,10 @@ void TodoApp::OnChange(ledger::PageChange /*page_change*/,
 }
 
 void TodoApp::List(ledger::PageSnapshotPtr snapshot) {
-  GetEntries(std::move(snapshot), [](ledger::Status status, auto entries) {
+  GetEntries(std::move(snapshot), [this](ledger::Status status, auto entries) {
     if (status != ledger::Status::OK) {
       FXL_LOG(ERROR) << "GetEntries failed";
-      fsl::MessageLoop::GetCurrent()->PostQuitTask();
+      loop_->Quit();
       return;
     }
 
@@ -155,7 +159,7 @@ void TodoApp::List(ledger::PageSnapshotPtr snapshot) {
 void TodoApp::GetKeys(std::function<void(fidl::VectorPtr<Key>)> callback) {
   ledger::PageSnapshotPtr snapshot;
   page_->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr,
-                     HandleResponse("GetSnapshot"));
+                     HandleResponse([this] { loop_->Quit(); }, "GetSnapshot"));
 
   ledger::PageSnapshot* snapshot_ptr = snapshot.get();
   snapshot_ptr->GetKeys(nullptr, nullptr, fxl::MakeCopyable([
@@ -166,14 +170,15 @@ void TodoApp::GetKeys(std::function<void(fidl::VectorPtr<Key>)> callback) {
 }
 
 void TodoApp::AddNew() {
-  page_->Put(MakeKey(), ToArray(generator_.Generate()), HandleResponse("Put"));
+  page_->Put(MakeKey(), ToArray(generator_.Generate()),
+             HandleResponse([this] { loop_->Quit(); }, "Put"));
 }
 
 void TodoApp::DeleteOne(fidl::VectorPtr<Key> keys) {
   FXL_DCHECK(keys->size());
   std::uniform_int_distribution<> distribution(0, keys->size() - 1);
   page_->Delete(std::move(keys->at(distribution(rng_))),
-                HandleResponse("Delete"));
+                HandleResponse([this] { loop_->Quit(); }, "Delete"));
 }
 
 void TodoApp::Act() {
@@ -186,14 +191,14 @@ void TodoApp::Act() {
     }
   });
   zx::duration delay = zx::sec(delay_distribution_(rng_));
-  async::PostDelayedTask(async_get_default(), [this] { Act(); }, delay);
+  async::PostDelayedTask(loop_->async(), [this] { Act(); }, delay);
 }
 
 }  // namespace todo
 
 int main(int /*argc*/, const char** /*argv*/) {
-  fsl::MessageLoop loop;
-  todo::TodoApp app;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  todo::TodoApp app(&loop);
   loop.Run();
   return 0;
 }

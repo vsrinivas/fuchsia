@@ -4,6 +4,8 @@
 
 #include "peridot/lib/util/idle_waiter.h"
 
+#include <lib/async/default.h>
+
 namespace util {
 
 IdleWaiter::Activity::Activity(fxl::WeakPtr<IdleWaiter> tracker)
@@ -28,7 +30,7 @@ void IdleWaiter::SetMessageLoop(fsl::MessageLoop* message_loop) {
 }
 
 IdleWaiter::ActivityToken IdleWaiter::RegisterOngoingActivity() {
-  FXL_DCHECK(message_loop_ == fsl::MessageLoop::GetCurrent());
+  FXL_DCHECK(message_loop_->async() == async_get_default());
 
   if (activity_) {
     return ActivityToken(activity_);
@@ -46,7 +48,7 @@ void IdleWaiter::WaitUntilIdle(fxl::Closure callback) {
 
 void IdleWaiter::PostIdleCheck() {
   if (!(callbacks_.empty() || activity_ || idle_check_pending_)) {
-    FXL_DCHECK(message_loop_ == fsl::MessageLoop::GetCurrent());
+    FXL_DCHECK(message_loop_->async() == async_get_default());
     message_loop_->PostQuitTask();
     idle_check_pending_ = true;
   }
@@ -54,7 +56,7 @@ void IdleWaiter::PostIdleCheck() {
 
 bool IdleWaiter::FinishIdleCheck() {
   if (idle_check_pending_) {
-    FXL_DCHECK(message_loop_ == fsl::MessageLoop::GetCurrent());
+    FXL_DCHECK(message_loop_->async() == async_get_default());
     message_loop_->RunUntilIdle();
     if (!activity_) {
       for (const auto& callback : callbacks_) {

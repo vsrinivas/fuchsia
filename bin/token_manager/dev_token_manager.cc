@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
 
 #include <modular_auth/cpp/fidl.h>
@@ -9,7 +10,6 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/string.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
@@ -19,7 +19,7 @@ namespace modular_auth {
 
 class AccountProviderImpl : AccountProvider {
  public:
-  AccountProviderImpl();
+  AccountProviderImpl(async::Loop* loop);
 
  private:
   // |AccountProvider| implementation:
@@ -38,6 +38,7 @@ class AccountProviderImpl : AccountProvider {
 
   std::string GenerateAccountId();
 
+  async::Loop* const loop_;
   std::shared_ptr<component::ApplicationContext> application_context_;
   modular_auth::AccountProviderContextPtr account_provider_context_;
   fidl::Binding<AccountProvider> binding_;
@@ -45,10 +46,12 @@ class AccountProviderImpl : AccountProvider {
   FXL_DISALLOW_COPY_AND_ASSIGN(AccountProviderImpl);
 };
 
-AccountProviderImpl::AccountProviderImpl()
-    : application_context_(
+AccountProviderImpl::AccountProviderImpl(async::Loop* loop)
+    : loop_(loop),
+      application_context_(
           component::ApplicationContext::CreateFromStartupInfo()),
       binding_(this) {
+  FXL_DCHECK(loop);
   application_context_->outgoing().AddPublicService<AccountProvider>(
       [this](fidl::InterfaceRequest<AccountProvider> request) {
         binding_.Bind(std::move(request));
@@ -61,7 +64,7 @@ void AccountProviderImpl::Initialize(
 }
 
 void AccountProviderImpl::Terminate() {
-  fsl::MessageLoop::GetCurrent()->QuitNow();
+  loop_->Quit();
 }
 
 std::string AccountProviderImpl::GenerateAccountId() {
@@ -109,10 +112,10 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   trace::TraceProvider trace_provider(loop.async());
 
-  modular_auth::AccountProviderImpl app;
+  modular_auth::AccountProviderImpl app(&loop);
   loop.Run();
   return 0;
 }

@@ -96,8 +96,8 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherDisconnectClient) {
   ledger::Status status;
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
-  auto watcher = std::make_unique<Watcher>(watcher_ptr.NewRequest(), [] {
-    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+  auto watcher = std::make_unique<Watcher>(watcher_ptr.NewRequest(), [this] {
+    message_loop_.PostQuitTask();
   });
 
   ledger::PageSnapshotPtr snapshot;
@@ -429,7 +429,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherParallel) {
   page1->Commit(
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_EQ(ZX_OK, page1.WaitForResponse());
-  fsl::MessageLoop::GetCurrent()->Run();
+  RunLoop();
   EXPECT_EQ(1u, watcher1.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher1.last_result_state_);
   ledger::PageChange change = std::move(watcher1.last_page_change_);
@@ -440,7 +440,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherParallel) {
   page2->Commit(
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_EQ(ZX_OK, page2.WaitForResponse());
-  fsl::MessageLoop::GetCurrent()->Run();
+  RunLoop();
 
   EXPECT_EQ(1u, watcher2.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher2.last_result_state_);
@@ -451,11 +451,12 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherParallel) {
 
   async::PostDelayedTask(async_get_default(),
                          [this] { message_loop_.QuitNow(); }, zx::sec(1));
-  fsl::MessageLoop::GetCurrent()->Run();
+  RunLoop();
   // A merge happens now. Only the first watcher should see a change.
   EXPECT_EQ(2u, watcher1.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher2.last_result_state_);
   EXPECT_EQ(1u, watcher2.changes_seen);
+
 
   change = std::move(watcher1.last_page_change_);
   ASSERT_EQ(1u, change.changed_entries->size());
@@ -574,8 +575,8 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherConcurrentTransaction) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
-  WaitingWatcher watcher(watcher_ptr.NewRequest(), []() {
-    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+  WaitingWatcher watcher(watcher_ptr.NewRequest(), [this]() {
+    message_loop_.PostQuitTask();
   });
 
   ledger::PageSnapshotPtr snapshot;
@@ -599,11 +600,11 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherConcurrentTransaction) {
 
   bool start_transaction_callback_called = false;
   ledger::Status start_transaction_status;
-  page->StartTransaction([&start_transaction_callback_called,
+  page->StartTransaction([this, &start_transaction_callback_called,
                           &start_transaction_status](ledger::Status status) {
     start_transaction_callback_called = true;
     start_transaction_status = status;
-    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+    message_loop_.PostQuitTask();
   });
 
   EXPECT_TRUE(RunLoopWithTimeout());
@@ -691,9 +692,9 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherPrefixNoChange) {
             callback_statusok);
   EXPECT_EQ(ZX_OK, page.WaitForResponse());
 
-  page->StartTransaction([](ledger::Status status) {
+  page->StartTransaction([this](ledger::Status status) {
     EXPECT_EQ(ledger::Status::OK, status);
-    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+    message_loop_.PostQuitTask();
   });
   RunLoop();
 
