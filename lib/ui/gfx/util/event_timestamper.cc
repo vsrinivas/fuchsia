@@ -4,15 +4,15 @@
 
 #include "garnet/lib/ui/gfx/util/event_timestamper.h"
 
-#include "lib/fsl/tasks/message_loop.h"
+#include <lib/async/default.h>
 
 namespace scenic {
 namespace gfx {
 
 EventTimestamper::EventTimestamper()
-    : main_loop_(fsl::MessageLoop::GetCurrent()),
+    : main_dispatcher_(async_get_default()),
       task_([] { zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */); }) {
-  FXL_DCHECK(main_loop_);
+  FXL_DCHECK(main_dispatcher_);
   background_loop_.StartThread();
 
   IncreaseBackgroundThreadPriority();
@@ -33,7 +33,7 @@ EventTimestamper::Watch::Watch() : waiter_(nullptr), timestamper_(nullptr) {}
 
 EventTimestamper::Watch::Watch(EventTimestamper* ts, zx::event event,
                                zx_status_t trigger, Callback callback)
-    : waiter_(new EventTimestamper::Waiter(ts->main_loop_->task_runner(),
+    : waiter_(new EventTimestamper::Waiter(ts->main_dispatcher_,
                                            std::move(event), trigger,
                                            std::move(callback))),
       timestamper_(ts) {
@@ -102,9 +102,9 @@ const zx::event& EventTimestamper::Watch::event() const {
 }
 
 EventTimestamper::Waiter::Waiter(
-    const fxl::RefPtr<fxl::TaskRunner>& task_runner, zx::event event,
+    async_t* dispatcher, zx::event event,
     zx_status_t trigger, Callback callback)
-    : task_runner_(task_runner),
+    : dispatcher_(dispatcher),
       event_(std::move(event)),
       callback_(std::move(callback)),
       wait_(this, event_.get(), trigger) {}
@@ -117,7 +117,7 @@ void EventTimestamper::Waiter::Handle(async_t* async, async::WaitBase* wait,
                                       zx_status_t status,
                                       const zx_packet_signal_t* signal) {
   zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
-  task_runner_->PostTask([now, this] {
+  async::PostTask(dispatcher_, [now, this] {
     if (state_ == State::ABANDONED) {
       // The EventTimestamper::Watch that owned us was destroyed; we must
       // immediately destroy ourself or our memory will be leaked.

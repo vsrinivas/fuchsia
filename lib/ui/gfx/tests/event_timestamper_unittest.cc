@@ -9,13 +9,13 @@
 #include "garnet/lib/ui/gfx/tests/util.h"
 #include "garnet/lib/ui/gfx/util/event_timestamper.h"
 #include "gtest/gtest.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/test_with_loop.h"
 
 namespace scenic {
 namespace gfx {
 namespace test {
 
-using EventTimestamperTest = ::gtest::TestWithMessageLoop;
+using EventTimestamperTest = ::gtest::TestWithLoop;
 
 TEST_F(EventTimestamperTest, DISABLED_SmokeTest) {
   constexpr size_t kEventCount = 3;
@@ -47,10 +47,9 @@ TEST_F(EventTimestamperTest, DISABLED_SmokeTest) {
     watches[i].Start();
   }
 
+  RunLoopUntilIdle();
   for (size_t i = 0; i < kEventCount; ++i) {
-    ASSERT_TRUE(RunLoopUntilWithTimeout([&target_callback_times, &i]() -> bool {
-      return target_callback_times[i] == 0u;
-    }));
+    EXPECT_EQ(0u, target_callback_times[i]);
   }
 
   // Watches must not outlive the timestamper.

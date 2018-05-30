@@ -1,18 +1,14 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
-// Use of source code is governed by a BSD-style license that can be
+// Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async/cpp/task.h>
 #include <lib/zx/eventpair.h>
 
 #include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"
 #include "garnet/lib/ui/gfx/tests/session_test.h"
 #include "garnet/lib/ui/gfx/tests/util.h"
-
-#include "gtest/gtest.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/threading/thread.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "lib/fxl/synchronization/waitable_event.h"
 #include "lib/ui/scenic/fidl_helpers.h"
 
 namespace scenic {
@@ -20,7 +16,6 @@ namespace gfx {
 namespace test {
 
 using ImportTest = SessionTest;
-using ImportThreadedTest = SessionThreadedTest;
 
 TEST_F(ImportTest, ExportsResourceViaCommand) {
   // Create the event pair.
@@ -192,8 +187,7 @@ TEST_F(ImportTest, DestroyingExportedResourceSendsEvent) {
   EXPECT_TRUE(Apply(scenic_lib::NewReleaseResourceCommand(node_id)));
 
   // Run the message loop until we get an event.
-  ASSERT_TRUE(
-      RunLoopUntilWithTimeout([this]() -> bool { return events_.size() > 0; }));
+  RunLoopUntilIdle();
 
   // Verify that we got an ImportUnboundEvent.
   EXPECT_EQ(1u, events_.size());
@@ -223,8 +217,7 @@ TEST_F(ImportTest, ImportingNodeAfterDestroyingExportedResourceSendsEvent) {
       import_node, ::fuchsia::ui::gfx::ImportSpec::NODE, std::move(destination))));
 
   // Run the message loop until we get an event.
-  ASSERT_TRUE(
-      RunLoopUntilWithTimeout([this]() -> bool { return events_.size() > 0; }));
+  RunLoopUntilIdle();
 
   // Verify that we got an ImportUnboundEvent.
   EXPECT_EQ(1u, events_.size());
@@ -234,19 +227,17 @@ TEST_F(ImportTest, ImportingNodeAfterDestroyingExportedResourceSendsEvent) {
   ASSERT_EQ(import_node, event.gfx().import_unbound().resource_id);
 }
 
-TEST_F(ImportThreadedTest, KillingImportedResourceEvictsFromResourceLinker) {
-  // Setup a latch on the resource expiring in the linker.
-  fxl::AutoResetWaitableEvent import_expired_latch;
+TEST_F(ImportTest, KillingImportedResourceEvictsFromResourceLinker) {
+  bool called = false;
   engine_->resource_linker()->SetOnExpiredCallback(
-      [this, &import_expired_latch](Resource*,
-                                    ResourceLinker::ExpirationCause cause) {
+      [this, &called](Resource*, ResourceLinker::ExpirationCause cause) {
         ASSERT_EQ(ResourceLinker::ExpirationCause::kResourceDestroyed, cause);
-        import_expired_latch.Signal();
+        called = true;
       });
 
   zx::eventpair source;
 
-  PostTaskSync([this, &source]() {
+  async::PostTask(dispatcher(), [this, &source]() {
     // Create the event pair.
     zx::eventpair destination;
     ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
@@ -282,7 +273,8 @@ TEST_F(ImportThreadedTest, KillingImportedResourceEvictsFromResourceLinker) {
   });
 
   // Make sure the expiry handle tells us that the resource has expired.
-  import_expired_latch.Wait();
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
 
   // Assert that the resource linker has removed the unresolved import
   // registration. We have already asserted that the unresolved import was
@@ -293,15 +285,13 @@ TEST_F(ImportThreadedTest, KillingImportedResourceEvictsFromResourceLinker) {
 // For a given resource, export it and bind a node to it. Additionally, keep
 // an import handle open. Then, verify that the resource is not unexported until
 // both the import node and the import handle are released.
-TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie1) {
+TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie1) {
   scenic::ResourceId exported_node_id = 1;
   scenic::ResourceId import_node_id = 2;
 
   bool destination_handle_released = false;
   bool import_node_released = false;
-
-  // Setup a latch on the resource becoming unexported in the linker.
-  fxl::AutoResetWaitableEvent export_expired_latch;
+  bool called = false;
   engine_->resource_linker()->SetOnExpiredCallback(
       [&](Resource*, ResourceLinker::ExpirationCause cause) {
         ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);
@@ -318,18 +308,14 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie1) {
         auto exported_node = FindResource<EntityNode>(exported_node_id);
         ASSERT_TRUE(exported_node);
         ASSERT_EQ(false, exported_node->is_exported());
-
-        export_expired_latch.Signal();
+        called = true;
       });
 
   // Create the event pair.
   zx::eventpair source, destination;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
-  fsl::Thread thread;
-  thread.Run();
-
-  thread.TaskRunner()->PostTask([&]() {
+  async::PostTask(dispatcher(), [&]() {
     // Create the resource being exported.
     Apply(scenic_lib::NewCreateEntityNodeCommand(exported_node_id));
     auto exported_node = FindResource<EntityNode>(exported_node_id);
@@ -358,16 +344,12 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie1) {
     ASSERT_EQ(1u, exported_node->imports().size());
     ASSERT_EQ(1u, engine_->resource_linker()->NumExports());
 
-    // Post two tasks in the future. We assume the export will be released
-    // after the second one. Post tasks with a slight delay so we can identify
-    // the stage accurately.
-    thread.TaskRunner()->PostTask([&]() {
+    async::PostTask(dispatcher(), [&]() {
       // Release the only import bound to the exported node.
       import_node_released = true;
       EXPECT_TRUE(Apply(scenic_lib::NewReleaseResourceCommand(import_node_id)));
 
-      thread.TaskRunner()->PostDelayedTask(
-          [&]() {
+      async::PostTask(dispatcher(), [&]() {
             // Exported node should still be marked as exported.
             auto exported_node = FindResource<EntityNode>(exported_node_id);
             ASSERT_TRUE(exported_node);
@@ -378,18 +360,12 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie1) {
             // Reset the only import handle.
             destination_handle_released = true;
             destination.reset();
-          },
-          kPumpMessageLoopDuration);
+          });
     });
   });
 
-  // Make sure the expiry handle tells us that the resource has expired.
-  export_expired_latch.Wait();
-
-  thread.TaskRunner()->PostTask(
-      []() { fsl::MessageLoop::GetCurrent()->QuitNow(); });
-
-  thread.Join();
+  EXPECT_TRUE(RunLoopUntilIdle());
+  ASSERT_TRUE(called);
 }
 
 // For a given resource, export it and bind a node to it. Additionally, keep
@@ -397,15 +373,13 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie1) {
 // both the import node and the import handle are released.
 // This test is identical to the previous one except the order in which the
 // import node and import handle are released is switched.
-TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie2) {
+TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie2) {
   scenic::ResourceId exported_node_id = 1;
   scenic::ResourceId import_node_id = 2;
 
   bool destination_handle_released = false;
   bool import_node_released = false;
-
-  // Setup a latch on the resource becoming unexported in the linker.
-  fxl::AutoResetWaitableEvent export_expired_latch;
+  bool called = false;
   engine_->resource_linker()->SetOnExpiredCallback(
       [&](Resource*, ResourceLinker::ExpirationCause cause) {
         ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);
@@ -423,18 +397,14 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie2) {
         ASSERT_TRUE(exported_node);
         ASSERT_EQ(false, exported_node->is_exported());
         ASSERT_EQ(0u, exported_node->imports().size());
-
-        export_expired_latch.Signal();
+        called = true;
       });
 
   // Create the event pair.
   zx::eventpair source, destination;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
-  fsl::Thread thread;
-  thread.Run();
-
-  thread.TaskRunner()->PostTask([&]() {
+  async::PostTask(dispatcher(), [&]() {
     // Create the resource being exported.
     Apply(scenic_lib::NewCreateEntityNodeCommand(exported_node_id));
     auto exported_node = FindResource<EntityNode>(exported_node_id);
@@ -463,15 +433,11 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie2) {
     ASSERT_EQ(1u, exported_node->imports().size());
     ASSERT_EQ(1u, engine_->resource_linker()->NumExports());
 
-    // Post two tasks in the future. We assume the export will be released
-    // after the second one. Post tasks with a slight delay so we can identify
-    // the stage accurately.
-    thread.TaskRunner()->PostTask([&]() {
+    async::PostTask(dispatcher(), [&]() {
       // Reset the only import handle.
       destination_handle_released = true;
       destination.reset();
-      thread.TaskRunner()->PostDelayedTask(
-          [&]() {
+      async::PostTask(dispatcher(), [&]() {
             // Exported node should still be marked as exported.
             auto exported_node = FindResource<EntityNode>(exported_node_id);
             ASSERT_TRUE(exported_node);
@@ -482,18 +448,12 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie2) {
             import_node_released = true;
             EXPECT_TRUE(
                 Apply(scenic_lib::NewReleaseResourceCommand(import_node_id)));
-          },
-          kPumpMessageLoopDuration);
+          });
     });
   });
 
-  // Make sure the expiry handle tells us that the resource has expired.
-  export_expired_latch.Wait();
-
-  thread.TaskRunner()->PostTask(
-      []() { fsl::MessageLoop::GetCurrent()->QuitNow(); });
-
-  thread.Join();
+  EXPECT_TRUE(RunLoopUntilIdle());
+  ASSERT_TRUE(called);
 }
 
 // For a given resource, export it and bind a node to it. Additionally, keep
@@ -501,16 +461,15 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie2) {
 // until both the import node and all the import handles are released. This test
 // is identical to the previous one except there is an additional import handle
 // that must be destroyed.
-TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie3) {
+TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie3) {
   scenic::ResourceId exported_node_id = 1;
   scenic::ResourceId import_node_id = 2;
 
   bool destination_handle1_released = false;
   bool destination_handle2_released = false;
   bool import_node_released = false;
+  bool called = false;
 
-  // Setup a latch on the resource becoming unexported in the linker.
-  fxl::AutoResetWaitableEvent export_expired_latch;
   engine_->resource_linker()->SetOnExpiredCallback(
       [&](Resource*, ResourceLinker::ExpirationCause cause) {
         ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);
@@ -529,8 +488,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie3) {
         ASSERT_TRUE(exported_node);
         ASSERT_EQ(false, exported_node->is_exported());
         ASSERT_EQ(0u, exported_node->imports().size());
-
-        export_expired_latch.Signal();
+        called = true;
       });
 
   // Create the event pair.
@@ -538,10 +496,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie3) {
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination1));
   zx::eventpair destination2 = CopyEventPair(destination1);
 
-  fsl::Thread thread;
-  thread.Run();
-
-  thread.TaskRunner()->PostTask([&]() {
+  async::PostTask(dispatcher(), [&]() {
     // Create the resource being exported.
     Apply(scenic_lib::NewCreateEntityNodeCommand(exported_node_id));
     auto exported_node = FindResource<EntityNode>(exported_node_id);
@@ -573,12 +528,12 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie3) {
     // Post three tasks in the future. We assume the export will be released
     // after the second one. Post tasks with a slight delay so we can identify
     // the stage accurately.
-    thread.TaskRunner()->PostTask([&]() {
+    async::PostTask(dispatcher(), [&]() {
       // Reset the first import handle.
       destination_handle1_released = true;
       destination1.reset();
 
-      thread.TaskRunner()->PostDelayedTask(
+      async::PostTask(dispatcher(),
           [&]() {
             // Exported node should still be marked as exported.
             auto exported_node = FindResource<EntityNode>(exported_node_id);
@@ -590,7 +545,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie3) {
             EXPECT_TRUE(
                 Apply(scenic_lib::NewReleaseResourceCommand(import_node_id)));
 
-            thread.TaskRunner()->PostDelayedTask(
+            async::PostTask(dispatcher(),
                 [&]() {
                   // Exported node should still be marked as exported.
                   auto exported_node =
@@ -603,20 +558,13 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie3) {
                   // Reset the second import handle.
                   destination_handle2_released = true;
                   destination2.reset();
-                },
-                kPumpMessageLoopDuration);
-          },
-          kPumpMessageLoopDuration);
+                });
+          });
     });
   });
 
-  // Make sure the expiry handle tells us that the resource has expired.
-  export_expired_latch.Wait();
-
-  thread.TaskRunner()->PostTask(
-      []() { fsl::MessageLoop::GetCurrent()->QuitNow(); });
-
-  thread.Join();
+  EXPECT_TRUE(RunLoopUntilIdle());
+  ASSERT_TRUE(called);
 }
 
 // For a given resource, export it and bind two nodes to it. Additionally, keep
@@ -624,7 +572,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie3) {
 // until both the import nodes and all the import handles are released. This
 // test is identical to the previous one except there is an additional import
 // node that must be released.
-TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
+TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
   scenic::ResourceId exported_node_id = 1;
   scenic::ResourceId import_node_id1 = 2;
   scenic::ResourceId import_node_id2 = 3;
@@ -633,9 +581,8 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
   bool destination_handle2_released = false;
   bool import_node1_released = false;
   bool import_node2_released = false;
+  bool called = false;
 
-  // Setup a latch on the resource becoming unexported in the linker.
-  fxl::AutoResetWaitableEvent export_expired_latch;
   engine_->resource_linker()->SetOnExpiredCallback(
       [&](Resource*, ResourceLinker::ExpirationCause cause) {
         ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);
@@ -655,8 +602,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
         ASSERT_TRUE(exported_node);
         ASSERT_EQ(false, exported_node->is_exported());
         ASSERT_EQ(0u, exported_node->imports().size());
-
-        export_expired_latch.Signal();
+        called = true;
       });
 
   // Create the event pair.
@@ -664,10 +610,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination1));
   zx::eventpair destination2 = CopyEventPair(destination1);
 
-  fsl::Thread thread;
-  thread.Run();
-
-  thread.TaskRunner()->PostTask([&]() {
+  async::PostTask(dispatcher(), [&]() {
     // Create the resource being exported.
     Apply(scenic_lib::NewCreateEntityNodeCommand(exported_node_id));
     auto exported_node = FindResource<EntityNode>(exported_node_id);
@@ -706,13 +649,12 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
     // Post three tasks in the future. We assume the export will be released
     // after the second one. Post tasks with a slight delay so we can identify
     // the stage accurately.
-    thread.TaskRunner()->PostTask([&]() {
+    async::PostTask(dispatcher(), [&]() {
       // Reset the first import handle.
       destination_handle1_released = true;
       destination1.reset();
 
-      thread.TaskRunner()->PostDelayedTask(
-          [&]() {
+      async::PostTask(dispatcher(), [&]() {
             // Exported node should still be marked as exported.
             auto exported_node = FindResource<EntityNode>(exported_node_id);
             ASSERT_TRUE(exported_node);
@@ -723,8 +665,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
             EXPECT_TRUE(
                 Apply(scenic_lib::NewReleaseResourceCommand(import_node_id1)));
 
-            thread.TaskRunner()->PostDelayedTask(
-                [&]() {
+            async::PostTask(dispatcher(), [&]() {
                   // Exported node should still be marked as exported.
                   auto exported_node =
                       FindResource<EntityNode>(exported_node_id);
@@ -738,8 +679,7 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
                   destination_handle2_released = true;
                   destination2.reset();
 
-                  thread.TaskRunner()->PostDelayedTask(
-                      [&]() {
+                  async::PostTask(dispatcher(), [&]() {
                         // Exported node should still be marked as exported.
                         auto exported_node =
                             FindResource<EntityNode>(exported_node_id);
@@ -749,22 +689,14 @@ TEST_F(ImportThreadedTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
                         import_node2_released = true;
                         EXPECT_TRUE(Apply(scenic_lib::NewReleaseResourceCommand(
                             import_node_id2)));
-                      },
-                      kPumpMessageLoopDuration);
-                },
-                kPumpMessageLoopDuration);
-          },
-          kPumpMessageLoopDuration);
+                      });
+                });
+          });
     });
   });
 
-  // Make sure the expiry handle tells us that the resource has expired.
-  export_expired_latch.Wait();
-
-  thread.TaskRunner()->PostTask(
-      []() { fsl::MessageLoop::GetCurrent()->QuitNow(); });
-
-  thread.Join();
+  EXPECT_TRUE(RunLoopUntilIdle());
+  ASSERT_TRUE(called);
 }
 
 TEST_F(ImportTest,

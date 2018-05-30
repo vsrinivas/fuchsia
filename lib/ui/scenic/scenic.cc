@@ -9,8 +9,9 @@
 
 namespace scenic {
 
-Scenic::Scenic(component::ApplicationContext* app_context)
-    : app_context_(app_context) {
+Scenic::Scenic(component::ApplicationContext* app_context,
+               fit::closure quit_callback)
+    : app_context_(app_context), quit_callback_(std::move(quit_callback)) {
   FXL_DCHECK(app_context_);
 
   app_context->outgoing().AddPublicService<fuchsia::ui::scenic::Scenic>(

@@ -4,8 +4,6 @@
 
 #include "garnet/bin/ui/scenic/app.h"
 
-#include "lib/fsl/tasks/message_loop.h"
-
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
 #include "garnet/lib/ui/gfx/gfx_system.h"
 #endif
@@ -20,8 +18,9 @@
 
 namespace scenic {
 
-App::App(component::ApplicationContext* app_context)
-    : scenic_(std::make_unique<Scenic>(app_context)) {
+App::App(component::ApplicationContext* app_context,
+         fit::closure quit_callback)
+    : scenic_(std::make_unique<Scenic>(app_context, std::move(quit_callback))) {
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
   auto scenic = scenic_->RegisterSystem<scenic::gfx::GfxSystem>();
   FXL_DCHECK(scenic);

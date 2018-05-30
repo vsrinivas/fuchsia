@@ -6,8 +6,6 @@
 
 #include <lib/zx/vmo.h>
 
-#include "lib/fxl/synchronization/waitable_event.h"
-
 namespace scenic {
 namespace gfx {
 namespace test {

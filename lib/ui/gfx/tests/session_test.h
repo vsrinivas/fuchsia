@@ -8,16 +8,13 @@
 #include "garnet/lib/ui/gfx/engine/engine.h"
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/tests/mocks.h"
-#include "gtest/gtest.h"
-#include "lib/fsl/threading/thread.h"
-#include "lib/fxl/synchronization/waitable_event.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/test_with_loop.h"
 
 namespace scenic {
 namespace gfx {
 namespace test {
 
-class SessionTest : public ::gtest::TestWithMessageLoop,
+class SessionTest : public ::gtest::TestWithLoop,
                     public ErrorReporter,
                     public EventReporter {
  public:
@@ -63,25 +60,6 @@ class SessionTest : public ::gtest::TestWithMessageLoop,
   fxl::RefPtr<SessionForTest> session_;
   std::vector<std::string> reported_errors_;
   std::vector<fuchsia::ui::scenic::Event> events_;
-};
-
-class SessionThreadedTest : public SessionTest {
- public:
-  // ::testing::Test virtual method.
-  void SetUp() override;
-
-  // ::testing::Test virtual method.
-  void TearDown() override;
-
- protected:
-  fxl::RefPtr<fxl::TaskRunner> TaskRunner() const;
-
-  void PostTaskSync(fxl::Closure callback);
-
-  void PostTask(fxl::AutoResetWaitableEvent& latch, fxl::Closure callback);
-
- private:
-  fsl::Thread thread_;
 };
 
 }  // namespace test

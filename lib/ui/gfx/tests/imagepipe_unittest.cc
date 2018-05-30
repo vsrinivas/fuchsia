@@ -1,5 +1,5 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
-// Use of source code is governed by a BSD-style license that can be
+// Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include "garnet/lib/ui/gfx/resources/host_image.h"
@@ -198,18 +198,14 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
 
   // Current presented image should be null, since we haven't signalled
   // acquire fence yet.
-  RunLoopWithTimeout(kPumpMessageLoopDuration);
+  RunLoopUntilIdle();
   ASSERT_FALSE(image_pipe->GetEscherImage());
 
   // Signal on the acquire fence.
   acquire_fence1.signal(0u, escher::kFenceSignalled);
 
   // Run until image1 is presented.
-  for (int i = 0; !image_pipe->GetEscherImage() && i < 400; i++) {
-    image_pipe->Update(0u, 0u);
-    RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(10));
-  }
-
+  RunLoopUntilIdle();
   ASSERT_TRUE(image_pipe->GetEscherImage());
   escher::ImagePtr image1 = image_pipe->GetEscherImage();
 
@@ -230,7 +226,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   }
 
   // The first image should not have been released.
-  RunLoopWithTimeout(kPumpMessageLoopDuration);
+  RunLoopUntilIdle();
   ASSERT_FALSE(IsEventSignalled(release_fence1, escher::kFenceSignalled));
 
   // Make gradient the currently displayed image.
@@ -242,16 +238,14 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
 
   // Verify that the currently display image hasn't changed yet, since we
   // haven't signalled the acquire fence.
-  RunLoopWithTimeout(kPumpMessageLoopDuration);
+  RunLoopUntilIdle();
   ASSERT_EQ(image_pipe->GetEscherImage(), image1);
 
   // Signal on the acquire fence.
   acquire_fence2.signal(0u, escher::kFenceSignalled);
 
   // There should be a new image presented.
-  ASSERT_TRUE(RunLoopUntilWithTimeout([&image1, &image_pipe]() -> bool {
-    return image1 != image_pipe->GetEscherImage();
-  }));
+  RunLoopUntilIdle();
   escher::ImagePtr image2 = image_pipe->GetEscherImage();
   ASSERT_TRUE(image2);
   ASSERT_NE(image1, image2);

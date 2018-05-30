@@ -7,13 +7,16 @@
 
 #include <memory>
 
+#include <lib/fit/function.h>
+
 #include "garnet/lib/ui/scenic/scenic.h"
 
 namespace scenic {
 
 class App {
  public:
-  explicit App(component::ApplicationContext* app_context);
+  explicit App(component::ApplicationContext* app_context,
+               fit::closure quit_callback);
 
  private:
   std::unique_ptr<Scenic> scenic_;

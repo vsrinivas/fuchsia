@@ -15,7 +15,7 @@ void ScenicTest::SetUp() {
   if (app_context_ == nullptr) {
     app_context_ = component::ApplicationContext::CreateFromStartupInfo();
   }
-  scenic_ = std::make_unique<Scenic>(app_context_.get());
+  scenic_ = std::make_unique<Scenic>(app_context_.get(), [this] {QuitLoop(); });
   InitializeScenic(scenic_.get());
 }
 

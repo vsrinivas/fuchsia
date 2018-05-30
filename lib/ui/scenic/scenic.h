@@ -8,6 +8,8 @@
 #include <set>
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <lib/fit/function.h>
+
 #include "garnet/lib/ui/scenic/session.h"
 #include "garnet/lib/ui/scenic/system.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -23,7 +25,8 @@ class Clock;
 //   - provide a host environment for Services
 class Scenic : public fuchsia::ui::scenic::Scenic {
  public:
-  explicit Scenic(component::ApplicationContext* app_context);
+  explicit Scenic(component::ApplicationContext* app_context,
+                  fit::closure quit_callback);
   ~Scenic();
 
   // Create and register a new system of the specified type.  At most one System
@@ -45,6 +48,7 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
 
  private:
   component::ApplicationContext* const app_context_;
+  fit::closure quit_callback_;
 
   fidl::BindingSet<fuchsia::ui::scenic::Session, std::unique_ptr<Session>> session_bindings_;
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> scenic_bindings_;
@@ -85,7 +89,8 @@ SystemT* Scenic::RegisterSystem(Args... args) {
   FXL_DCHECK(systems_[SystemT::kTypeId] == nullptr)
       << "System of type: " << SystemT::kTypeId << "was already registered.";
 
-  SystemT* system = new SystemT(SystemContext(app_context_), args...);
+  SystemT* system = new SystemT(
+    SystemContext(app_context_, quit_callback_.share()), args...);
   systems_[SystemT::kTypeId] = std::unique_ptr<System>(system);
 
   // Listen for System to be initialized if it isn't already.

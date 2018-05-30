@@ -12,14 +12,14 @@
 #include "gtest/gtest.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/test_with_loop.h"
 
 namespace scenic {
 namespace test {
 
 // Base class that can be specialized to configure a Scenic with the systems
 // required for a set of tests.
-class ScenicTest : public ::gtest::TestWithMessageLoop,
+class ScenicTest : public ::gtest::TestWithLoop,
                    public ErrorReporter,
                    public EventReporter {
  protected:

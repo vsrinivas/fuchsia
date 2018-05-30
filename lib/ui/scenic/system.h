@@ -7,6 +7,8 @@
 
 #include "garnet/lib/ui/scenic/command_dispatcher.h"
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
 // TODO(MZ-453): Don't support GetDisplayInfo in scenic fidl API.
@@ -15,10 +17,6 @@
 namespace component {
 class ApplicationContext;
 }  // namespace component
-
-namespace fxl {
-class TaskRunner;
-}  // namespace fxl
 
 namespace scenic {
 
@@ -29,13 +27,18 @@ class Session;
 // exposing the system's host (typically a Scenic, except for testing).
 class SystemContext final {
  public:
-  explicit SystemContext(component::ApplicationContext* app_context);
+  explicit SystemContext(component::ApplicationContext* app_context,
+                         fit::closure quit_callback);
   SystemContext(SystemContext&& context);
 
   component::ApplicationContext* app_context() const { return app_context_; }
 
+  // Calls quit on the associated message loop.
+  void Quit() { quit_callback_(); }
+
  private:
   component::ApplicationContext* const app_context_;
+  fit::closure quit_callback_;
 };
 
 // Systems are a composable way to add functionality to Scenic. A System creates

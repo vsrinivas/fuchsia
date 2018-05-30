@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <hid/usages.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
+#include <hid/usages.h>
 
 #include "gtest/gtest.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/fxl/time/time_point.h"
+#include "lib/gtest/test_with_loop.h"
 #include "lib/ui/tests/mocks/mock_input_device.h"
 #include "lib/ui/tests/mocks/mock_input_device_registry.h"
 
 namespace input {
 namespace test {
 
-using InputTest = ::gtest::TestWithMessageLoop;
+using InputTest = ::gtest::TestWithLoop;
 
 fuchsia::ui::input::DeviceDescriptor GenerateKeyboardDescriptor() {
   fuchsia::ui::input::KeyboardDescriptorPtr keyboard = fuchsia::ui::input::KeyboardDescriptor::New();
@@ -40,8 +41,8 @@ TEST_F(InputTest, RegisterKeyboardTest) {
 
   registry.RegisterDevice(std::move(descriptor), input_device.NewRequest());
 
-  EXPECT_TRUE(RunLoopUntilWithTimeout(
-      [&on_register_count]() -> bool { return on_register_count == 1u; }));
+  RunLoopUntilIdle();
+  EXPECT_EQ(1u, on_register_count);
 }
 
 TEST_F(InputTest, InputKeyboardTest) {
@@ -67,8 +68,8 @@ TEST_F(InputTest, InputKeyboardTest) {
   report.keyboard = std::move(keyboard_report);
   input_device->DispatchReport(std::move(report));
 
-  EXPECT_TRUE(RunLoopUntilWithTimeout(
-      [&on_report_count]() -> bool { return on_report_count == 1u; }));
+  RunLoopUntilIdle();
+  EXPECT_EQ(1u, on_report_count);
 }
 
 }  // namespace test

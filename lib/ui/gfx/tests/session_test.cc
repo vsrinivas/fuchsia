@@ -4,9 +4,6 @@
 
 #include "garnet/lib/ui/gfx/tests/session_test.h"
 
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fxl/synchronization/waitable_event.h"
-
 #include "garnet/lib/ui/gfx/tests/mocks.h"
 
 namespace scenic {
@@ -55,43 +52,6 @@ void SessionTest::ReportError(fxl::LogSeverity severity,
 
 void SessionTest::EnqueueEvent(fuchsia::ui::scenic::Event event) {
   events_.push_back(std::move(event));
-}
-
-fxl::RefPtr<fxl::TaskRunner> SessionThreadedTest::TaskRunner() const {
-  return thread_.TaskRunner();
-}
-
-void SessionThreadedTest::SetUp() {
-  thread_.Run();
-  fxl::AutoResetWaitableEvent setup_latch;
-  TaskRunner()->PostTask([this, &setup_latch]() {
-    SessionTest::SetUp();
-    setup_latch.Signal();
-  });
-  setup_latch.Wait();
-}
-
-void SessionThreadedTest::TearDown() {
-  TaskRunner()->PostTask([this]() {
-    SessionTest::TearDown();
-    fsl::MessageLoop::GetCurrent()->QuitNow();
-  });
-  thread_.Join();
-}
-
-void SessionThreadedTest::PostTaskSync(fxl::Closure callback) {
-  fxl::AutoResetWaitableEvent latch;
-  PostTask(latch, callback);
-  latch.Wait();
-}
-
-void SessionThreadedTest::PostTask(fxl::AutoResetWaitableEvent& latch,
-                                   fxl::Closure callback) {
-  FXL_DCHECK(callback);
-  TaskRunner()->PostTask([&latch, callback]() {
-    callback();
-    latch.Signal();
-  });
 }
 
 }  // namespace test

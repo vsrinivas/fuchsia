@@ -23,6 +23,7 @@ source_set("scenic") {
   public_deps = [
     "//garnet/public/lib/ui/gfx/fidl",
     "//garnet/public/lib/ui/scenic/fidl",
+    "//zircon/public/lib/fit",
   ]
 
   deps = [

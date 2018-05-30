@@ -103,13 +103,13 @@ void GfxSystem::Initialize() {
   Display* display = display_manager_.default_display();
   if (!display) {
     FXL_LOG(ERROR) << "No default display, Graphics system exiting";
-    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+    context()->Quit();
     return;
   }
 
   if (!escher::VulkanIsSupported()) {
     FXL_LOG(ERROR) << "No Vulkan on device, Graphics system exiting.";
-    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+    context()->Quit();
     return;
   }
 

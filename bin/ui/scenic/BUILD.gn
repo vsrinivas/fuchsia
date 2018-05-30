@@ -50,5 +50,6 @@ source_set("base_deps") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/fit",
   ]
 }
