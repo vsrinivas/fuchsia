@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library go_fidl_bindings_test;
+library fidl.test.gobindings;
 
 struct TestSimple {
     int64 x;

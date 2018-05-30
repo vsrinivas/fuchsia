@@ -10,7 +10,7 @@ import (
 	"time"
 
 	. "fidl/bindings"
-	. "fidl/go_fidl_bindings_test"
+	. "fidl/fidl/test/gobindings"
 )
 
 type Test1Impl struct{}

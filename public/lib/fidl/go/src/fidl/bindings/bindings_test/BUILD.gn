@@ -7,7 +7,7 @@ import("//build/package.gni")
 import("//build/fidl/fidl.gni")
 
 fidl("test_fidl") {
-  name = "go_fidl_bindings_test"
+  name = "fidl.test.gobindings"
   sources = [
     "test.fidl",
   ]
