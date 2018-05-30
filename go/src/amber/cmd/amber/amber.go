@@ -66,10 +66,7 @@ func main() {
 		log.Fatalf("loading root keys failed %s", err)
 	}
 
-	ticker := source.NewTickGenerator(source.InitBackoff)
-	go ticker.Run()
-
-	d := startupDaemon(srvUrl, *store, keys, ticker)
+	d := startupDaemon(srvUrl, *store, keys)
 	if *autoUpdate {
 		go func() {
 			supMon := daemon.NewSystemUpdateMonitor(d)
@@ -78,7 +75,7 @@ func main() {
 		}()
 	}
 
-	startFIDLSvr(d, ticker)
+	startFIDLSvr(d)
 
 	defer d.CancelAll()
 
@@ -86,44 +83,28 @@ func main() {
 	select {}
 }
 
-func startFIDLSvr(d *daemon.Daemon, t *source.TickGenerator) {
+func startFIDLSvr(d *daemon.Daemon) {
 	cxt := context.CreateFromStartupInfo()
-	apiSrvr := ipcserver.NewControlSrvr(d, t)
+	apiSrvr := ipcserver.NewControlSrvr(d)
 	cxt.OutgoingService.AddService(amber_fidl.ControlName, func(c zx.Channel) error {
 		return apiSrvr.Bind(c)
 	})
 	cxt.Serve()
 }
 
-func startupDaemon(srvURL *url.URL, store string, keys []*tuf_data.Key,
-	ticker *source.TickGenerator) *daemon.Daemon {
+func startupDaemon(srvURL *url.URL, store string, keys []*tuf_data.Key) *daemon.Daemon {
 
 	reqSet := newPackageSet([]string{"/pkg/bin/app"})
 
-	checker := daemon.NewDaemon(reqSet, daemon.ProcessPackage, []source.Source{})
+	tufSrc := source.NewTUFSource(srvURL.String(), store, keys, 0, 0)
+
+	checker := daemon.NewDaemon(reqSet, daemon.ProcessPackage, []source.Source{tufSrc})
 
 	blobURL := *srvURL
 	blobURL.Path = filepath.Join(blobURL.Path, "blobs")
 	checker.AddBlobRepo(daemon.BlobRepo{Address: blobURL.String(), Interval: time.Second * 5})
 
 	log.Println("monitoring for updates")
-
-	go func() {
-		client, _, err := source.InitNewTUFClient(srvURL.String(), store, keys, ticker)
-		if err != nil {
-			log.Printf("client initialization failed: %s", err)
-			return
-		}
-
-		// create source with an average 10qps over 5 seconds and a possible burst
-		// of up to 50 queries
-		fetcher := &source.TUFSource{
-			Client:   client,
-			Interval: 0,
-			Limit:    0,
-		}
-		checker.AddSource(fetcher)
-	}()
 	return checker
 }
 
