@@ -36,13 +36,6 @@ class StoryControllerMock : public StoryController {
   }
 
   // |StoryController|
-  void SetInfoExtra(fidl::StringPtr name,
-                    fidl::StringPtr value,
-                    SetInfoExtraCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-
-  // |StoryController|
   void Start(fidl::InterfaceRequest<views_v1_token::ViewOwner> request) override {
     FXL_NOTIMPLEMENTED();
   }

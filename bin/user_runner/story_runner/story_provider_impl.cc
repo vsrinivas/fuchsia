@@ -504,25 +504,6 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
           std::move(story_shell_app), std::move(story_shell_view)});
 }
 
-void StoryProviderImpl::SetStoryInfoExtra(
-    fidl::StringPtr story_id, fidl::StringPtr name, fidl::StringPtr value,
-    const std::function<void()>& callback) {
-  StoryInfoExtraEntry entry;
-  entry.key = name;
-  entry.value = value;
-
-  fidl::VectorPtr<StoryInfoExtraEntry> entries;
-  entries.push_back(std::move(entry));
-
-  auto on_run = Future<>::Create();
-  auto done = on_run->Then(fxl::MakeCopyable(
-      [this, story_id, entries = std::move(entries)]() mutable {
-        session_storage_->UpdateStoryInfoExtra(story_id, std::move(entries));
-      }));
-  operation_queue_.Add(WrapFutureAsOperation(
-      on_run, done, callback, "StoryProviderImpl::SetStoryInfoExtra"));
-};
-
 // |StoryProvider|
 void StoryProviderImpl::CreateStory(fidl::StringPtr module_url,
                                     CreateStoryCallback callback) {

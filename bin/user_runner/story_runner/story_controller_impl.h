@@ -152,9 +152,6 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
 
   // |StoryController|
   void GetInfo(GetInfoCallback callback) override;
-  void SetInfoExtra(fidl::StringPtr name,
-                    fidl::StringPtr value,
-                    SetInfoExtraCallback callback) override;
   void Start(
       fidl::InterfaceRequest<views_v1_token::ViewOwner> request) override;
   void Stop(StopCallback done) override;

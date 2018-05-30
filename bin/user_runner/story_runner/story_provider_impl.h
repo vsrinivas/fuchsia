@@ -85,11 +85,6 @@ class StoryProviderImpl : StoryProvider, FocusWatcher {
   std::unique_ptr<AppClient<Lifecycle>> StartStoryShell(
       fidl::InterfaceRequest<views_v1_token::ViewOwner> request);
 
-  // Called by StoryControllerImpl.
-  void SetStoryInfoExtra(fidl::StringPtr story_id, fidl::StringPtr name,
-                         fidl::StringPtr value,
-                         const std::function<void()>& done);
-
   // |StoryProvider|, also used by StoryControllerImpl.
   void GetStoryInfo(fidl::StringPtr story_id,
                     GetStoryInfoCallback callback) override;

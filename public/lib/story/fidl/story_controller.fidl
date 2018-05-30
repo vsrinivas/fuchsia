@@ -13,10 +13,6 @@ interface StoryController {
   // Gets information associated with the story.
   1: GetInfo() -> (StoryInfo info, StoryState state);
 
-  // Stores extra information associated with the story, like title, color, etc.
-  // Available in the |extra| field in StoryInfo.
-  2: SetInfoExtra(string name, string value) -> ();
-
   // Runs the story controlled by this |StoryController| instance if not yet
   // running or requested to start, else does nothing. |view_owner| is an
   // interface request for the view of the story shell of this story. If the

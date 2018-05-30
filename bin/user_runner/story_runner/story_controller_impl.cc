@@ -1836,13 +1836,6 @@ void StoryControllerImpl::GetInfo(GetInfoCallback callback) {
 }
 
 // |StoryController|
-void StoryControllerImpl::SetInfoExtra(fidl::StringPtr name,
-                                       fidl::StringPtr value,
-                                       SetInfoExtraCallback callback) {
-  story_provider_impl_->SetStoryInfoExtra(story_id_, name, value, callback);
-}
-
-// |StoryController|
 void StoryControllerImpl::Start(
     fidl::InterfaceRequest<views_v1_token::ViewOwner> request) {
   operation_queue_.Add(new StartCall(this, std::move(request)));
