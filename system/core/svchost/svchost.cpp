@@ -80,22 +80,82 @@ static zx_status_t provider_load(zx_service_provider_instance_t* instance,
     return ZX_OK;
 }
 
+static zx_handle_t appmgr_svc;
+
 // We should host the tracelink service ourselves instead of routing the request
 // to appmgr.
-zx_status_t publish_tracelink(async_t* async, const fbl::RefPtr<fs::PseudoDir>& dir) {
-    zx_handle_t appmgr_svc = zx_get_startup_handle(PA_HND(PA_USER0, 0));
+zx_status_t publish_tracelink(const fbl::RefPtr<fs::PseudoDir>& dir) {
     const char* service_name = "fuchsia.tracelink.Registry";
     return dir->AddEntry(
         service_name,
-        fbl::MakeRefCounted<fs::Service>([appmgr_svc, service_name](zx::channel request) {
+        fbl::MakeRefCounted<fs::Service>([service_name](zx::channel request) {
             return fdio_service_connect_at(appmgr_svc, service_name, request.release());
         }));
+}
+
+// We shouldn't need to access these non-Zircon services from svchost, but
+// currently some tests assume they can reach these services from the test
+// environment. Instead, we should make the test environment hermetic and
+// remove the dependencies on these services.
+static constexpr const char* deprecated_services[] = {
+    "audio_policy.AudioPolicy",
+    "bluetooth_control.Control",
+    "bluetooth_gatt.Server",
+    "bluetooth_low_energy.Central",
+    "bluetooth_low_energy.Peripheral",
+    "cobalt.CobaltEncoderFactory",
+    "component.ApplicationLauncher",
+    "component.Environment",
+    "device_settings.DeviceSettingsManager",
+    "fonts.FontProvider",
+    "fuchsia.guest.GuestManager",
+    "fuchsia.ui.input.ImeService",
+    "fuchsia.ui.input.InputDeviceRegistry",
+    "fuchsia.ui.scenic.Scenic",
+    "gralloc.Gralloc",
+    "icu_data.ICUDataProvider",
+    "logger.Log",
+    "logger.LogSink",
+    "mdns.MdnsService",
+    "media_player.MediaPlayer",
+    "media_player.NetMediaService",
+    "media.AudioServer",
+    "modular.DeviceRunnerMonitor",
+    "net.Netstack",
+    "netconnector.NetConnector",
+    "netstack.Netstack",
+    "network.NetworkService",
+    "power_manager.PowerManager",
+    "presentation.Presenter",
+    "shadertoy.ShadertoyFactory",
+    "sketchy.Canvas",
+    "time_zone.Timezone",
+    "tracing.TraceController",
+    "tts.TtsService",
+    "views_v1.ViewManager",
+    "wlan_device_service.DeviceService",
+    "wlan_service.Wlan",
+    nullptr,
+};
+
+void publish_deprecated_services(const fbl::RefPtr<fs::PseudoDir>& dir) {
+    for (size_t i = 0; deprecated_services[i]; ++i) {
+        const char* service_name = deprecated_services[i];
+        dir->AddEntry(
+            service_name,
+            fbl::MakeRefCounted<fs::Service>([service_name](zx::channel request) {
+                fprintf(stderr, "svchost: warning: Using deprecated path to %s.\n", service_name);
+                return fdio_service_connect_at(appmgr_svc, service_name, request.release());
+            }));
+    }
 }
 
 int main(int argc, char** argv) {
     async::Loop loop;
     async_t* async = loop.async();
     svc::Outgoing outgoing(async);
+
+    appmgr_svc = zx_get_startup_handle(PA_HND(PA_USER0, 0));
 
     zx_status_t status = outgoing.ServeFromStartupInfo();
     if (status != ZX_OK) {
@@ -116,12 +176,14 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    status = publish_tracelink(async, outgoing.public_dir());
+    status = publish_tracelink(outgoing.public_dir());
     if (status != ZX_OK) {
         fprintf(stderr, "svchost: error: Failed to publish tracelink: %d (%s).\n",
                 status, zx_status_get_string(status));
         return 1;
     }
+
+    publish_deprecated_services(outgoing.public_dir());
 
     status = loop.Run();
     provider_release(&launcher);
