@@ -375,7 +375,7 @@ struct Record {
 *   Declaration is not intended to be modified once deployed; use interface
     extension instead.
 *   Reference may be nullable.
-*   Structs contain one or members. A struct with no members is
+*   Structs contain one or more members. A struct with no members is
     difficult to represent in C and C++ as a zero-sized type. Fidl
     therefore chooses to require all structs to have nonzero size.
 
@@ -416,7 +416,7 @@ struct Circle {
 *   Declaration is not intended to be modified once deployed; use interface
     extension instead.
 *   Reference may be nullable.
-*   Unions contain one or members. A union with no members would have
+*   Unions contain one or more members. A union with no members would have
     no inhabitants and make little sense in a wire format.
 
 ##### Declaration
