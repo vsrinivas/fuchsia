@@ -35,8 +35,7 @@ KeyboardState::KeyboardState(DeviceState* device_state)
 }
 
 void KeyboardState::SendEvent(fuchsia::ui::input::KeyboardEventPhase phase,
-                              uint32_t key,
-                              uint64_t modifiers,
+                              uint32_t key, uint64_t modifiers,
                               uint64_t timestamp) {
   fuchsia::ui::input::InputEvent ev;
   fuchsia::ui::input::KeyboardEvent kb;
@@ -44,9 +43,11 @@ void KeyboardState::SendEvent(fuchsia::ui::input::KeyboardEventPhase phase,
   kb.event_time = timestamp;
   kb.device_id = device_state_->device_id();
   kb.hid_usage = key;
-  kb.code_point = hid_map_key(
-      key, modifiers & (fuchsia::ui::input::kModifierShift | fuchsia::ui::input::kModifierCapsLock),
-      keymap_);
+  kb.code_point =
+      hid_map_key(key,
+                  modifiers & (fuchsia::ui::input::kModifierShift |
+                               fuchsia::ui::input::kModifierCapsLock),
+                  keymap_);
   kb.modifiers = modifiers;
   ev.set_keyboard(std::move(kb));
   device_state_->callback()(std::move(ev));
@@ -68,7 +69,8 @@ void KeyboardState::Update(fuchsia::ui::input::InputReport input_report) {
       continue;
     }
 
-    SendEvent(fuchsia::ui::input::KeyboardEventPhase::PRESSED, key, modifiers_, now);
+    SendEvent(fuchsia::ui::input::KeyboardEventPhase::PRESSED, key, modifiers_,
+              now);
 
     uint64_t modifiers = modifiers_;
     switch (key) {
@@ -112,7 +114,8 @@ void KeyboardState::Update(fuchsia::ui::input::InputReport input_report) {
   }
 
   for (uint32_t key : old_keys) {
-    SendEvent(fuchsia::ui::input::KeyboardEventPhase::RELEASED, key, modifiers_, now);
+    SendEvent(fuchsia::ui::input::KeyboardEventPhase::RELEASED, key, modifiers_,
+              now);
 
     switch (key) {
       case HID_USAGE_KEY_LEFT_SHIFT:
@@ -164,7 +167,8 @@ void KeyboardState::Repeat(uint64_t sequence) {
   }
   uint64_t now = InputEventTimestampNow();
   for (uint32_t key : repeat_keys_) {
-    SendEvent(fuchsia::ui::input::KeyboardEventPhase::REPEAT, key, modifiers_, now);
+    SendEvent(fuchsia::ui::input::KeyboardEventPhase::REPEAT, key, modifiers_,
+              now);
   }
   ScheduleRepeat(sequence, kKeyRepeatFast);
 }
@@ -182,9 +186,7 @@ void MouseState::OnRegistered() {}
 
 void MouseState::OnUnregistered() {}
 
-void MouseState::SendEvent(float rel_x,
-                           float rel_y,
-                           int64_t timestamp,
+void MouseState::SendEvent(float rel_x, float rel_y, int64_t timestamp,
                            fuchsia::ui::input::PointerEventPhase phase,
                            uint32_t buttons) {
   fuchsia::ui::input::InputEvent ev;
@@ -222,26 +224,24 @@ void MouseState::Update(fuchsia::ui::input::InputReport input_report,
                               static_cast<float>(display_size.height)));
 
   if (!pressed && !released) {
-    SendEvent(position_.x, position_.y, now, fuchsia::ui::input::PointerEventPhase::MOVE,
-              buttons_);
+    SendEvent(position_.x, position_.y, now,
+              fuchsia::ui::input::PointerEventPhase::MOVE, buttons_);
   } else {
     if (pressed) {
-      SendEvent(position_.x, position_.y, now, fuchsia::ui::input::PointerEventPhase::DOWN,
-                pressed);
+      SendEvent(position_.x, position_.y, now,
+                fuchsia::ui::input::PointerEventPhase::DOWN, pressed);
     }
     if (released) {
-      SendEvent(position_.x, position_.y, now, fuchsia::ui::input::PointerEventPhase::UP,
-                released);
+      SendEvent(position_.x, position_.y, now,
+                fuchsia::ui::input::PointerEventPhase::UP, released);
     }
   }
 }
 
 void StylusState::SendEvent(int64_t timestamp,
                             fuchsia::ui::input::PointerEventPhase phase,
-                            fuchsia::ui::input::PointerEventType type,
-                            float x,
-                            float y,
-                            uint32_t buttons) {
+                            fuchsia::ui::input::PointerEventType type, float x,
+                            float y, uint32_t buttons) {
   fuchsia::ui::input::PointerEvent pt;
   pt.event_time = timestamp;
   pt.device_id = device_state_->device_id();
@@ -263,7 +263,8 @@ void StylusState::Update(fuchsia::ui::input::InputReport input_report,
                          fuchsia::math::Size display_size) {
   FXL_DCHECK(input_report.stylus);
 
-  fuchsia::ui::input::StylusDescriptor* descriptor = device_state_->stylus_descriptor();
+  fuchsia::ui::input::StylusDescriptor* descriptor =
+      device_state_->stylus_descriptor();
   FXL_DCHECK(descriptor);
 
   const bool previous_stylus_down = stylus_down_;
@@ -271,7 +272,8 @@ void StylusState::Update(fuchsia::ui::input::InputReport input_report,
   stylus_down_ = input_report.stylus->is_in_contact;
   stylus_in_range_ = input_report.stylus->in_range;
 
-  fuchsia::ui::input::PointerEventPhase phase = fuchsia::ui::input::PointerEventPhase::DOWN;
+  fuchsia::ui::input::PointerEventPhase phase =
+      fuchsia::ui::input::PointerEventPhase::DOWN;
   if (stylus_down_) {
     if (previous_stylus_down) {
       phase = fuchsia::ui::input::PointerEventPhase::MOVE;
@@ -297,8 +299,9 @@ void StylusState::Update(fuchsia::ui::input::InputReport input_report,
 
   if (phase == fuchsia::ui::input::PointerEventPhase::UP) {
     SendEvent(now, phase,
-              inverted_stylus_ ? fuchsia::ui::input::PointerEventType::INVERTED_STYLUS
-                               : fuchsia::ui::input::PointerEventType::STYLUS,
+              inverted_stylus_
+                  ? fuchsia::ui::input::PointerEventType::INVERTED_STYLUS
+                  : fuchsia::ui::input::PointerEventType::STYLUS,
               stylus_.x, stylus_.y, stylus_.buttons);
   } else {
     // Quantize the value to [0, 1) based on the resolution.
@@ -323,12 +326,14 @@ void StylusState::Update(fuchsia::ui::input::InputReport input_report,
         y_denominator;
 
     uint32_t buttons = 0;
-    if (input_report.stylus->pressed_buttons & fuchsia::ui::input::kStylusBarrel) {
+    if (input_report.stylus->pressed_buttons &
+        fuchsia::ui::input::kStylusBarrel) {
       buttons |= fuchsia::ui::input::kStylusPrimaryButton;
     }
     SendEvent(now, phase,
-              inverted_stylus_ ? fuchsia::ui::input::PointerEventType::INVERTED_STYLUS
-                               : fuchsia::ui::input::PointerEventType::STYLUS,
+              inverted_stylus_
+                  ? fuchsia::ui::input::PointerEventType::INVERTED_STYLUS
+                  : fuchsia::ui::input::PointerEventType::STYLUS,
               x, y, buttons);
   }
 }

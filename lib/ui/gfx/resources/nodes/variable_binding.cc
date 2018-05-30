@@ -28,7 +28,8 @@ void TypedVariableBinding<VT, T>::OnVariableValueChanged(
   on_value_changed_callback_(v->value());
 }
 
-template class TypedVariableBinding<::fuchsia::ui::gfx::Value::Tag::kVector3, escher::vec3>;
+template class TypedVariableBinding<::fuchsia::ui::gfx::Value::Tag::kVector3,
+                                    escher::vec3>;
 template class TypedVariableBinding<::fuchsia::ui::gfx::Value::Tag::kQuaternion,
                                     escher::quat>;
 

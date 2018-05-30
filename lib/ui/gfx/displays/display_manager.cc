@@ -45,8 +45,8 @@ void DisplayManager::WaitForDefaultDisplay(fxl::Closure callback) {
 
         // TODO(FIDL-183): Resolve this hack when synchronous interfaces
         // support events.
-        auto dispatcher =
-            static_cast<fuchsia::display::Controller::Proxy_*>(event_dispatcher_.get());
+        auto dispatcher = static_cast<fuchsia::display::Controller::Proxy_*>(
+            event_dispatcher_.get());
         dispatcher->DisplaysChanged = [this](auto added, auto removed) {
           DisplaysChanged(std::move(added), std::move(removed));
         };
@@ -87,8 +87,9 @@ void DisplayManager::OnAsync(async_t* async, async::WaitBase* self,
       ->Dispatch_(std::move(msg));
 }
 
-void DisplayManager::DisplaysChanged(::fidl::VectorPtr<fuchsia::display::Info> added,
-                                     ::fidl::VectorPtr<uint64_t> removed) {
+void DisplayManager::DisplaysChanged(
+    ::fidl::VectorPtr<fuchsia::display::Info> added,
+    ::fidl::VectorPtr<uint64_t> removed) {
   if (!default_display_) {
     FXL_DCHECK(added.get().size());
 

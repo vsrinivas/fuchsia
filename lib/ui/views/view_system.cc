@@ -26,6 +26,7 @@ ViewCommandDispatcher::ViewCommandDispatcher(
 
 ViewCommandDispatcher::~ViewCommandDispatcher() = default;
 
-void ViewCommandDispatcher::DispatchCommand(fuchsia::ui::scenic::Command command) {}
+void ViewCommandDispatcher::DispatchCommand(
+    fuchsia::ui::scenic::Command command) {}
 
 }  // namespace scenic

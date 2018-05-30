@@ -27,9 +27,10 @@ class InputOwner;
 // Binds incoming requests to the relevant view token.
 class InputDispatcherImpl : public fuchsia::ui::input::InputDispatcher {
  public:
-  InputDispatcherImpl(ViewInspector* inspector, InputOwner* owner,
-                      views_v1::ViewTreeToken view_tree_token,
-                      fidl::InterfaceRequest<fuchsia::ui::input::InputDispatcher> request);
+  InputDispatcherImpl(
+      ViewInspector* inspector, InputOwner* owner,
+      views_v1::ViewTreeToken view_tree_token,
+      fidl::InterfaceRequest<fuchsia::ui::input::InputDispatcher> request);
   ~InputDispatcherImpl() override;
 
   views_v1::ViewTreeToken view_tree_token() const { return view_tree_token_; }
@@ -46,7 +47,8 @@ class InputDispatcherImpl : public fuchsia::ui::input::InputDispatcher {
   // Used for key events (keyboard)
   // |propagation_index| is the current index in the |focus_chain|
   void DeliverKeyEvent(std::unique_ptr<FocusChain> focus_chain,
-                       uint64_t propagation_index, fuchsia::ui::input::InputEvent event);
+                       uint64_t propagation_index,
+                       fuchsia::ui::input::InputEvent event);
   // Used to post as task and schedule the next call to |DispatchEvent|
   void PopAndScheduleNextEvent();
 

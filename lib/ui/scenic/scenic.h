@@ -40,7 +40,8 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   // |fuchsia::ui::scenic::Scenic|
   void CreateSession(
       ::fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
-      ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) override;
+      ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener)
+      override;
 
   component::ApplicationContext* app_context() const { return app_context_; }
 
@@ -50,7 +51,8 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   component::ApplicationContext* const app_context_;
   fit::closure quit_callback_;
 
-  fidl::BindingSet<fuchsia::ui::scenic::Session, std::unique_ptr<Session>> session_bindings_;
+  fidl::BindingSet<fuchsia::ui::scenic::Session, std::unique_ptr<Session>>
+      session_bindings_;
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> scenic_bindings_;
 
   // Registered systems, indexed by their TypeId. These slots could be null,
@@ -72,9 +74,11 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   // it is ready.
   void OnSystemInitialized(System* system);
 
-  void GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) override;
-  void TakeScreenshot(fidl::StringPtr filename,
-                      fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) override;
+  void GetDisplayInfo(
+      fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) override;
+  void TakeScreenshot(
+      fidl::StringPtr filename,
+      fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) override;
 
   void GetOwnershipEvent(
       fuchsia::ui::scenic::Scenic::GetOwnershipEventCallback callback) override;
@@ -89,8 +93,8 @@ SystemT* Scenic::RegisterSystem(Args... args) {
   FXL_DCHECK(systems_[SystemT::kTypeId] == nullptr)
       << "System of type: " << SystemT::kTypeId << "was already registered.";
 
-  SystemT* system = new SystemT(
-    SystemContext(app_context_, quit_callback_.share()), args...);
+  SystemT* system =
+      new SystemT(SystemContext(app_context_, quit_callback_.share()), args...);
   systems_[SystemT::kTypeId] = std::unique_ptr<System>(system);
 
   // Listen for System to be initialized if it isn't already.

@@ -26,13 +26,12 @@ bool MeshShape::GetIntersection(const escher::ray4& ray,
   return false;
 }
 
-bool MeshShape::BindBuffers(BufferPtr index_buffer,
-                            ::fuchsia::ui::gfx::MeshIndexFormat index_format,
-                            uint64_t index_offset, uint32_t index_count,
-                            BufferPtr vertex_buffer,
-                            const ::fuchsia::ui::gfx::MeshVertexFormat& vertex_format,
-                            uint64_t vertex_offset, uint32_t vertex_count,
-                            escher::BoundingBox bounding_box) {
+bool MeshShape::BindBuffers(
+    BufferPtr index_buffer, ::fuchsia::ui::gfx::MeshIndexFormat index_format,
+    uint64_t index_offset, uint32_t index_count, BufferPtr vertex_buffer,
+    const ::fuchsia::ui::gfx::MeshVertexFormat& vertex_format,
+    uint64_t vertex_offset, uint32_t vertex_count,
+    escher::BoundingBox bounding_box) {
   if (index_format != ::fuchsia::ui::gfx::MeshIndexFormat::kUint32) {
     // TODO(MZ-275): only 32-bit indices are supported.
     session()->error_reporter()->ERROR() << "BindBuffers::BindBuffers(): "

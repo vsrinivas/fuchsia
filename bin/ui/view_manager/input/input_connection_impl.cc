@@ -52,10 +52,12 @@ void InputConnectionImpl::SetEventListener(
 }
 
 void InputConnectionImpl::GetInputMethodEditor(
-    fuchsia::ui::input::KeyboardType keyboard_type, fuchsia::ui::input::InputMethodAction action,
+    fuchsia::ui::input::KeyboardType keyboard_type,
+    fuchsia::ui::input::InputMethodAction action,
     fuchsia::ui::input::TextInputState initial_state,
     fidl::InterfaceHandle<fuchsia::ui::input::InputMethodEditorClient> client,
-    fidl::InterfaceRequest<fuchsia::ui::input::InputMethodEditor> editor_request) {
+    fidl::InterfaceRequest<fuchsia::ui::input::InputMethodEditor>
+        editor_request) {
   FXL_DCHECK(client);
   FXL_DCHECK(editor_request.is_valid());
 
@@ -117,7 +119,8 @@ void InputConnectionImpl::InjectInput(fuchsia::ui::input::InputEvent event) {
 }
 
 void InputConnectionImpl::ConnectWithImeService(
-    fuchsia::ui::input::KeyboardType keyboard_type, fuchsia::ui::input::InputMethodAction action,
+    fuchsia::ui::input::KeyboardType keyboard_type,
+    fuchsia::ui::input::InputMethodAction action,
     fuchsia::ui::input::TextInputState state) {
   FXL_VLOG(1) << "ConnectWithImeService: view_token=" << view_token_
               << ", keyboard_type=" << keyboard_type << ", action=" << action
@@ -179,7 +182,8 @@ void InputConnectionImpl::SetState(fuchsia::ui::input::TextInputState state) {
   }
 }
 
-void InputConnectionImpl::SetKeyboardType(fuchsia::ui::input::KeyboardType keyboard_type) {
+void InputConnectionImpl::SetKeyboardType(
+    fuchsia::ui::input::KeyboardType keyboard_type) {
   if (editor_) {
     FXL_VLOG(1) << "SetKeyboardType: view_token=" << view_token_
                 << ", keyboard_type=" << keyboard_type;
@@ -194,8 +198,9 @@ void InputConnectionImpl::Show() {}
 
 void InputConnectionImpl::Hide() {}
 
-void InputConnectionImpl::DidUpdateState(fuchsia::ui::input::TextInputState state,
-                                         fuchsia::ui::input::InputEventPtr event) {
+void InputConnectionImpl::DidUpdateState(
+    fuchsia::ui::input::TextInputState state,
+    fuchsia::ui::input::InputEventPtr event) {
   if (client_) {
     FXL_VLOG(1) << "DidUpdateState: view_token=" << view_token_
                 << ", state=" << state;
@@ -206,7 +211,8 @@ void InputConnectionImpl::DidUpdateState(fuchsia::ui::input::TextInputState stat
   }
 }
 
-void InputConnectionImpl::OnAction(fuchsia::ui::input::InputMethodAction action) {
+void InputConnectionImpl::OnAction(
+    fuchsia::ui::input::InputMethodAction action) {
   if (client_) {
     FXL_VLOG(1) << "OnAction: view_token=" << view_token_
                 << ", action=" << action;

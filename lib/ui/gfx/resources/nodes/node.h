@@ -59,7 +59,9 @@ class Node : public Resource {
   }
 
   // The node's metrics as reported to the session listener.
-  ::fuchsia::ui::gfx::Metrics reported_metrics() const { return reported_metrics_; }
+  ::fuchsia::ui::gfx::Metrics reported_metrics() const {
+    return reported_metrics_;
+  }
   void set_reported_metrics(::fuchsia::ui::gfx::Metrics metrics) {
     reported_metrics_ = metrics;
   }
@@ -120,7 +122,8 @@ class Node : public Resource {
   mutable escher::mat4 global_transform_;
   mutable bool global_transform_dirty_ = true;
   bool clip_to_self_ = false;
-  ::fuchsia::ui::gfx::HitTestBehavior hit_test_behavior_ = ::fuchsia::ui::gfx::HitTestBehavior::kDefault;
+  ::fuchsia::ui::gfx::HitTestBehavior hit_test_behavior_ =
+      ::fuchsia::ui::gfx::HitTestBehavior::kDefault;
   ::fuchsia::ui::gfx::Metrics reported_metrics_;
 };
 

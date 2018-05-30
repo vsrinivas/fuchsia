@@ -12,15 +12,16 @@
 namespace mozart {
 namespace test {
 
-using OnReportCallback = std::function<void(fuchsia::ui::input::InputReport report)>;
+using OnReportCallback =
+    std::function<void(fuchsia::ui::input::InputReport report)>;
 
 class MockInputDevice : public fuchsia::ui::input::InputDevice {
  public:
-  MockInputDevice(
-      uint32_t device_id,
-      fuchsia::ui::input::DeviceDescriptor descriptor,
-      fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request,
-      const OnReportCallback& on_report_callback);
+  MockInputDevice(uint32_t device_id,
+                  fuchsia::ui::input::DeviceDescriptor descriptor,
+                  fidl::InterfaceRequest<fuchsia::ui::input::InputDevice>
+                      input_device_request,
+                  const OnReportCallback& on_report_callback);
   ~MockInputDevice();
 
   uint32_t id() { return id_; }

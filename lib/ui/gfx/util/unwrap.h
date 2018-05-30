@@ -13,7 +13,9 @@
 namespace scenic {
 namespace gfx {
 
-inline escher::vec2 Unwrap(::fuchsia::ui::gfx::vec2 args) { return {args.x, args.y}; }
+inline escher::vec2 Unwrap(::fuchsia::ui::gfx::vec2 args) {
+  return {args.x, args.y};
+}
 
 inline escher::vec3 Unwrap(::fuchsia::ui::gfx::vec3 args) {
   return {args.x, args.y, args.z};
@@ -132,7 +134,8 @@ inline escher::vec4 UnwrapVector4(const ::fuchsia::ui::gfx::Vector4Value& val) {
   return Unwrap(val.value);
 }
 
-inline escher::quat UnwrapQuaternion(const ::fuchsia::ui::gfx::QuaternionValue& val) {
+inline escher::quat UnwrapQuaternion(
+    const ::fuchsia::ui::gfx::QuaternionValue& val) {
   FXL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
   return Unwrap(val.value);
 }
@@ -185,7 +188,8 @@ inline bool Unwrap(const ::fuchsia::ui::gfx::Value& value, escher::mat4* out) {
   return false;
 }
 
-inline bool Unwrap(const ::fuchsia::ui::gfx::Value& value, escher::Transform* out) {
+inline bool Unwrap(const ::fuchsia::ui::gfx::Value& value,
+                   escher::Transform* out) {
   if (!IsVariable(value) && IsTransform(value)) {
     (*out) = Unwrap(value.transform());
     return true;

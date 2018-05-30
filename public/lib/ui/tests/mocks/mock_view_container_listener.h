@@ -23,8 +23,7 @@ class MockViewContainerListener : public views_v1::ViewContainerListener {
   ~MockViewContainerListener();
 
  private:
-  void OnChildAttached(uint32_t child_key,
-                       views_v1::ViewInfo child_view_info,
+  void OnChildAttached(uint32_t child_key, views_v1::ViewInfo child_view_info,
                        OnChildAttachedCallback callback) override;
   void OnChildUnavailable(uint32_t child_key,
                           OnChildUnavailableCallback callback) override;

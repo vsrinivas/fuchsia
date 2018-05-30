@@ -16,12 +16,14 @@ namespace test {
 
 TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
   fuchsia::ui::scenic::Session::PresentCallback callback = [](auto) {};
-  EXPECT_TRUE(session_->ScheduleUpdate(
-      1, std::vector<::fuchsia::ui::gfx::Command>(), ::fidl::VectorPtr<zx::event>(),
-      ::fidl::VectorPtr<zx::event>(), callback));
-  EXPECT_FALSE(session_->ScheduleUpdate(
-      0, std::vector<::fuchsia::ui::gfx::Command>(), ::fidl::VectorPtr<zx::event>(),
-      ::fidl::VectorPtr<zx::event>(), callback));
+  EXPECT_TRUE(
+      session_->ScheduleUpdate(1, std::vector<::fuchsia::ui::gfx::Command>(),
+                               ::fidl::VectorPtr<zx::event>(),
+                               ::fidl::VectorPtr<zx::event>(), callback));
+  EXPECT_FALSE(
+      session_->ScheduleUpdate(0, std::vector<::fuchsia::ui::gfx::Command>(),
+                               ::fidl::VectorPtr<zx::event>(),
+                               ::fidl::VectorPtr<zx::event>(), callback));
   ExpectLastReportedError(
       "scenic::gfx::Session: Present called with out-of-order presentation "
       "time. requested presentation time=0, last scheduled presentation "
@@ -30,12 +32,14 @@ TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
 
 TEST_F(SessionTest, ScheduleUpdateInOrder) {
   fuchsia::ui::scenic::Session::PresentCallback callback = [](auto) {};
-  EXPECT_TRUE(session_->ScheduleUpdate(
-      1, std::vector<::fuchsia::ui::gfx::Command>(), ::fidl::VectorPtr<zx::event>(),
-      ::fidl::VectorPtr<zx::event>(), callback));
-  EXPECT_TRUE(session_->ScheduleUpdate(
-      1, std::vector<::fuchsia::ui::gfx::Command>(), ::fidl::VectorPtr<zx::event>(),
-      ::fidl::VectorPtr<zx::event>(), callback));
+  EXPECT_TRUE(
+      session_->ScheduleUpdate(1, std::vector<::fuchsia::ui::gfx::Command>(),
+                               ::fidl::VectorPtr<zx::event>(),
+                               ::fidl::VectorPtr<zx::event>(), callback));
+  EXPECT_TRUE(
+      session_->ScheduleUpdate(1, std::vector<::fuchsia::ui::gfx::Command>(),
+                               ::fidl::VectorPtr<zx::event>(),
+                               ::fidl::VectorPtr<zx::event>(), callback));
   ExpectLastReportedError(nullptr);
 }
 
@@ -76,7 +80,8 @@ TEST_F(SessionTest, AddAndRemoveResource) {
 TEST_F(SessionTest, Labeling) {
   const scenic::ResourceId kNodeId = 1;
   const std::string kShortLabel = "test!";
-  const std::string kLongLabel = std::string(::fuchsia::ui::gfx::kLabelMaxLength, 'x');
+  const std::string kLongLabel =
+      std::string(::fuchsia::ui::gfx::kLabelMaxLength, 'x');
   const std::string kTooLongLabel =
       std::string(::fuchsia::ui::gfx::kLabelMaxLength + 1, '?');
 

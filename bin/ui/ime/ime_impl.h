@@ -19,10 +19,13 @@ namespace ime {
 
 class ImeImpl : public fuchsia::ui::input::InputMethodEditor {
  public:
-  ImeImpl(fuchsia::ui::input::KeyboardType keyboard_type, fuchsia::ui::input::InputMethodAction action,
-          fuchsia::ui::input::TextInputState initial_state,
-          fidl::InterfaceHandle<fuchsia::ui::input::InputMethodEditorClient> client,
-          fidl::InterfaceRequest<fuchsia::ui::input::InputMethodEditor> editor_request);
+  ImeImpl(
+      fuchsia::ui::input::KeyboardType keyboard_type,
+      fuchsia::ui::input::InputMethodAction action,
+      fuchsia::ui::input::TextInputState initial_state,
+      fidl::InterfaceHandle<fuchsia::ui::input::InputMethodEditorClient> client,
+      fidl::InterfaceRequest<fuchsia::ui::input::InputMethodEditor>
+          editor_request);
   ~ImeImpl();
 
  private:
@@ -38,7 +41,8 @@ class ImeImpl : public fuchsia::ui::input::InputMethodEditor {
   fidl::Binding<fuchsia::ui::input::InputMethodEditor> editor_binding_;
   fuchsia::ui::input::InputMethodEditorClientPtr client_;
   fuchsia::ui::input::KeyboardType keyboard_type_;
-  fuchsia::ui::input::InputMethodAction action_ = fuchsia::ui::input::InputMethodAction::UNSPECIFIED;
+  fuchsia::ui::input::InputMethodAction action_ =
+      fuchsia::ui::input::InputMethodAction::UNSPECIFIED;
   fuchsia::ui::input::TextInputState state_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ImeImpl);

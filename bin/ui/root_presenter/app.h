@@ -54,9 +54,9 @@ class App : public presentation::Presenter,
       ::fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> params) override;
 
   // |InputDeviceRegistry|:
-  void RegisterDevice(
-      fuchsia::ui::input::DeviceDescriptor descriptor,
-      fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request) override;
+  void RegisterDevice(fuchsia::ui::input::DeviceDescriptor descriptor,
+                      fidl::InterfaceRequest<fuchsia::ui::input::InputDevice>
+                          input_device_request) override;
 
   void InitializeServices();
   void Reset();
@@ -67,7 +67,8 @@ class App : public presentation::Presenter,
 
   std::unique_ptr<component::ApplicationContext> application_context_;
   fidl::BindingSet<presentation::Presenter> presenter_bindings_;
-  fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry> input_receiver_bindings_;
+  fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry>
+      input_receiver_bindings_;
   mozart::InputReader input_reader_;
 
   views_v1::ViewManagerPtr view_manager_;

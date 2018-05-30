@@ -127,10 +127,11 @@ class HitTestTest : public SessionTest {
     wrapped_ray_direction.z = ray_direction.z;
 
     fidl::VectorPtr<::fuchsia::ui::gfx::Hit> actual_hits;
-    session_->HitTest(node_id, wrapped_ray_origin, wrapped_ray_direction,
-                      [&actual_hits](fidl::VectorPtr<::fuchsia::ui::gfx::Hit> hits) {
-                        actual_hits = std::move(hits);
-                      });
+    session_->HitTest(
+        node_id, wrapped_ray_origin, wrapped_ray_direction,
+        [&actual_hits](fidl::VectorPtr<::fuchsia::ui::gfx::Hit> hits) {
+          actual_hits = std::move(hits);
+        });
 
     EXPECT_EQ(expected_null, actual_hits.is_null());
     EXPECT_EQ(expected_hits.size(), actual_hits->size());

@@ -19,7 +19,8 @@ class ViewManagerImpl : public views_v1::ViewManager {
 
  private:
   // |ViewManager|:
-  void GetScenic(fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> scenic_request) override;
+  void GetScenic(fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic>
+                     scenic_request) override;
   void CreateView(
       fidl::InterfaceRequest<views_v1::View> view_request,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,

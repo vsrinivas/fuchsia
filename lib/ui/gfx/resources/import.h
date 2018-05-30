@@ -40,7 +40,8 @@ class Import final : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Import(Session* session, scenic::ResourceId id, ::fuchsia::ui::gfx::ImportSpec spec);
+  Import(Session* session, scenic::ResourceId id,
+         ::fuchsia::ui::gfx::ImportSpec spec);
 
   ~Import() override;
 

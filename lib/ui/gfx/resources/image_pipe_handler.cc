@@ -14,8 +14,10 @@ ImagePipeHandler::ImagePipeHandler(
   binding_.set_error_handler([image_pipe] { image_pipe->OnConnectionError(); });
 }
 
-void ImagePipeHandler::AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
-                                zx::vmo memory, fuchsia::images::MemoryType memory_type,
+void ImagePipeHandler::AddImage(uint32_t image_id,
+                                fuchsia::images::ImageInfo image_info,
+                                zx::vmo memory,
+                                fuchsia::images::MemoryType memory_type,
                                 uint64_t memory_offset) {
   image_pipe_->AddImage(image_id, std::move(image_info), std::move(memory),
                         memory_type, memory_offset);

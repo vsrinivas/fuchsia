@@ -214,12 +214,14 @@ void Engine::UpdateAndDeliverMetrics(uint64_t presentation_time) {
 }
 
 // TODO(mikejurka): move this to appropriate util file
-bool MetricsEquals(const ::fuchsia::ui::gfx::Metrics& a, const ::fuchsia::ui::gfx::Metrics& b) {
+bool MetricsEquals(const ::fuchsia::ui::gfx::Metrics& a,
+                   const ::fuchsia::ui::gfx::Metrics& b) {
   return a.scale_x == b.scale_x && a.scale_y == b.scale_y &&
          a.scale_z == b.scale_z;
 }
 
-void Engine::UpdateMetrics(Node* node, const ::fuchsia::ui::gfx::Metrics& parent_metrics,
+void Engine::UpdateMetrics(Node* node,
+                           const ::fuchsia::ui::gfx::Metrics& parent_metrics,
                            std::vector<Node*>* updated_nodes) {
   ::fuchsia::ui::gfx::Metrics local_metrics;
   local_metrics.scale_x = parent_metrics.scale_x * node->scale().x;

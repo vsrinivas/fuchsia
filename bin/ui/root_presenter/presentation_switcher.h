@@ -16,7 +16,8 @@ class PresentationSwitcher final {
  public:
   // Switch the active presentation to the previous one on Ctrl+Alt+[, and to
   // the next one on Ctrl+Alt+].
-  bool OnEvent(const fuchsia::ui::input::InputEvent& event, Presentation* presentation);
+  bool OnEvent(const fuchsia::ui::input::InputEvent& event,
+               Presentation* presentation);
 };
 
 }  // namespace root_presenter

@@ -72,7 +72,8 @@ class DisplayManager {
   void ClientOwnershipChange(bool has_ownership);
 
   fxl::UniqueFD dc_fd_;
-  fidl::SynchronousInterfacePtr<fuchsia::display::Controller> display_controller_;
+  fidl::SynchronousInterfacePtr<fuchsia::display::Controller>
+      display_controller_;
   fidl::InterfacePtr<fuchsia::display::Controller> event_dispatcher_;
   zx_handle_t dc_channel_;  // display_controller_ owns the zx::channel
 

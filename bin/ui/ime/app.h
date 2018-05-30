@@ -26,10 +26,12 @@ class App : public fuchsia::ui::input::ImeService {
  private:
   // |fuchsia::ui::input::ImeService|
   void GetInputMethodEditor(
-      fuchsia::ui::input::KeyboardType keyboard_type, fuchsia::ui::input::InputMethodAction action,
+      fuchsia::ui::input::KeyboardType keyboard_type,
+      fuchsia::ui::input::InputMethodAction action,
       fuchsia::ui::input::TextInputState initial_state,
       fidl::InterfaceHandle<fuchsia::ui::input::InputMethodEditorClient> client,
-      fidl::InterfaceRequest<fuchsia::ui::input::InputMethodEditor> editor) override;
+      fidl::InterfaceRequest<fuchsia::ui::input::InputMethodEditor> editor)
+      override;
 
   void OnImeDisconnected(ImeImpl* ime);
 

@@ -24,8 +24,8 @@ Image::Image(Session* session, scenic::ResourceId id,
 }
 
 ImagePtr Image::New(Session* session, scenic::ResourceId id, MemoryPtr memory,
-                    const fuchsia::images::ImageInfo& image_info, uint64_t memory_offset,
-                    ErrorReporter* error_reporter) {
+                    const fuchsia::images::ImageInfo& image_info,
+                    uint64_t memory_offset, ErrorReporter* error_reporter) {
   // Create from host memory.
   if (memory->IsKindOf<HostMemory>()) {
     return HostImage::New(session, id, memory->As<HostMemory>(), image_info,

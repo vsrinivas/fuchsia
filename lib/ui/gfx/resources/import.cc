@@ -23,7 +23,8 @@ ResourcePtr CreateDelegate(Session* session, scenic::ResourceId id,
 constexpr ResourceTypeInfo Import::kTypeInfo = {ResourceType::kImport,
                                                 "Import"};
 
-Import::Import(Session* session, scenic::ResourceId id, ::fuchsia::ui::gfx::ImportSpec spec)
+Import::Import(Session* session, scenic::ResourceId id,
+               ::fuchsia::ui::gfx::ImportSpec spec)
     : Resource(session, id, Import::kTypeInfo),
       import_spec_(spec),
       delegate_(CreateDelegate(session, id, spec)) {

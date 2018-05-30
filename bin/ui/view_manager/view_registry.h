@@ -36,7 +36,8 @@ class ViewRegistry : public ViewInspector, public InputOwner {
 
   // VIEW MANAGER REQUESTS
 
-  void GetScenic(fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> scenic_request);
+  void GetScenic(
+      fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> scenic_request);
   void CreateView(
       fidl::InterfaceRequest<views_v1::View> view_request,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
@@ -117,10 +118,11 @@ class ViewRegistry : public ViewInspector, public InputOwner {
                 const HasFocusCallback& callback) override;
   void GetSoftKeyboardContainer(
       views_v1_token::ViewToken view_token,
-      fidl::InterfaceRequest<fuchsia::ui::input::SoftKeyboardContainer> container) override;
-  void GetImeService(
-      views_v1_token::ViewToken view_token,
-      fidl::InterfaceRequest<fuchsia::ui::input::ImeService> ime_service) override;
+      fidl::InterfaceRequest<fuchsia::ui::input::SoftKeyboardContainer>
+          container) override;
+  void GetImeService(views_v1_token::ViewToken view_token,
+                     fidl::InterfaceRequest<fuchsia::ui::input::ImeService>
+                         ime_service) override;
 
   // Delivers an event to a view.
   void DeliverEvent(views_v1_token::ViewToken view_token,

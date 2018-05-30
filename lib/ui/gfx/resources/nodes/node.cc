@@ -299,7 +299,8 @@ bool Node::SetClipToSelf(bool clip_to_self) {
   return true;
 }
 
-bool Node::SetHitTestBehavior(::fuchsia::ui::gfx::HitTestBehavior hit_test_behavior) {
+bool Node::SetHitTestBehavior(
+    ::fuchsia::ui::gfx::HitTestBehavior hit_test_behavior) {
   hit_test_behavior_ = hit_test_behavior;
   return true;
 }

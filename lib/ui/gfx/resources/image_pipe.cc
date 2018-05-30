@@ -22,15 +22,17 @@ ImagePipe::ImagePipe(Session* session, scenic::ResourceId id)
       weak_ptr_factory_(this),
       images_(session->error_reporter()) {}
 
-ImagePipe::ImagePipe(Session* session, scenic::ResourceId id,
-                     ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request)
+ImagePipe::ImagePipe(
+    Session* session, scenic::ResourceId id,
+    ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request)
     : ImageBase(session, id, ImagePipe::kTypeInfo),
       weak_ptr_factory_(this),
       handler_(std::make_unique<ImagePipeHandler>(std::move(request), this)),
       images_(session->error_reporter()) {}
 
-void ImagePipe::AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
-                         zx::vmo vmo, fuchsia::images::MemoryType memory_type,
+void ImagePipe::AddImage(uint32_t image_id,
+                         fuchsia::images::ImageInfo image_info, zx::vmo vmo,
+                         fuchsia::images::MemoryType memory_type,
                          uint64_t memory_offset) {
   if (image_id == 0) {
     session()->error_reporter()->ERROR()
@@ -97,10 +99,11 @@ void ImagePipe::RemoveImage(uint32_t image_id) {
   }
 };
 
-void ImagePipe::PresentImage(uint32_t image_id, uint64_t presentation_time,
-                             ::fidl::VectorPtr<zx::event> acquire_fences,
-                             ::fidl::VectorPtr<zx::event> release_fences,
-                             fuchsia::images::ImagePipe::PresentImageCallback callback) {
+void ImagePipe::PresentImage(
+    uint32_t image_id, uint64_t presentation_time,
+    ::fidl::VectorPtr<zx::event> acquire_fences,
+    ::fidl::VectorPtr<zx::event> release_fences,
+    fuchsia::images::ImagePipe::PresentImageCallback callback) {
   if (!frames_.empty() &&
       presentation_time < frames_.back().presentation_time) {
     session()->error_reporter()->ERROR()

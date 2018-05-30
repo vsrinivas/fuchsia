@@ -37,8 +37,7 @@ using ViewFactory =
 class ViewProviderService : public views_v1::ViewProvider {
  public:
   explicit ViewProviderService(
-      component::ApplicationContext* application_context,
-      ViewFactory factory);
+      component::ApplicationContext* application_context, ViewFactory factory);
   ~ViewProviderService();
 
   // |ViewProvider|

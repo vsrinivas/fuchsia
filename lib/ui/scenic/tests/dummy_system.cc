@@ -22,7 +22,8 @@ DummyCommandDispatcher::DummyCommandDispatcher(CommandDispatcherContext context)
     : CommandDispatcher(std::move(context)) {}
 DummyCommandDispatcher::~DummyCommandDispatcher() = default;
 
-void DummyCommandDispatcher::DispatchCommand(fuchsia::ui::scenic::Command command) {}
+void DummyCommandDispatcher::DispatchCommand(
+    fuchsia::ui::scenic::Command command) {}
 
 }  // namespace test
 }  // namespace scenic

@@ -25,9 +25,9 @@ class MockInputDeviceRegistry : public fuchsia::ui::input::InputDeviceRegistry {
   ~MockInputDeviceRegistry();
 
   // |InputDeviceRegistry|:
-  void RegisterDevice(
-      fuchsia::ui::input::DeviceDescriptor descriptor,
-      fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request) override;
+  void RegisterDevice(fuchsia::ui::input::DeviceDescriptor descriptor,
+                      fidl::InterfaceRequest<fuchsia::ui::input::InputDevice>
+                          input_device_request) override;
 
  private:
   OnDeviceCallback on_device_callback_;

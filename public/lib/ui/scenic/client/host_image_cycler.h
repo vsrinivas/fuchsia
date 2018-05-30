@@ -19,12 +19,12 @@ class HostImageCycler : public scenic_lib::EntityNode {
   // Acquires an image for rendering.
   // At most one image can be acquired at a time.
   // The client is responsible for clearing the image.
-  const HostImage* AcquireImage(
-      uint32_t width,
-      uint32_t height,
-      uint32_t stride,
-      fuchsia::images::PixelFormat pixel_format = fuchsia::images::PixelFormat::BGRA_8,
-      fuchsia::images::ColorSpace color_space = fuchsia::images::ColorSpace::SRGB);
+  const HostImage* AcquireImage(uint32_t width, uint32_t height,
+                                uint32_t stride,
+                                fuchsia::images::PixelFormat pixel_format =
+                                    fuchsia::images::PixelFormat::BGRA_8,
+                                fuchsia::images::ColorSpace color_space =
+                                    fuchsia::images::ColorSpace::SRGB);
 
   // Releases the image most recently acquired using |AcquireImage()|.
   // Sets the content node's texture to be backed by the image.

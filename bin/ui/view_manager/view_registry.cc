@@ -698,9 +698,10 @@ void ViewRegistry::ConnectToViewService(ViewState* view_state,
                                         zx::channel client_handle) {
   FXL_DCHECK(IsViewStateRegisteredDebug(view_state));
   if (service_name == fuchsia::ui::input::InputConnection::Name_) {
-    CreateInputConnection(view_state->view_token(),
-                          fidl::InterfaceRequest<fuchsia::ui::input::InputConnection>(
-                              std::move(client_handle)));
+    CreateInputConnection(
+        view_state->view_token(),
+        fidl::InterfaceRequest<fuchsia::ui::input::InputConnection>(
+            std::move(client_handle)));
   }
 }
 
@@ -709,9 +710,10 @@ void ViewRegistry::ConnectToViewTreeService(ViewTreeState* tree_state,
                                             zx::channel client_handle) {
   FXL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
   if (service_name == fuchsia::ui::input::InputDispatcher::Name_) {
-    CreateInputDispatcher(tree_state->view_tree_token(),
-                          fidl::InterfaceRequest<fuchsia::ui::input::InputDispatcher>(
-                              std::move(client_handle)));
+    CreateInputDispatcher(
+        tree_state->view_tree_token(),
+        fidl::InterfaceRequest<fuchsia::ui::input::InputDispatcher>(
+            std::move(client_handle)));
   }
 }
 
@@ -821,12 +823,13 @@ component::ServiceProvider* ViewRegistry::FindViewServiceProvider(
 
 void ViewRegistry::GetSoftKeyboardContainer(
     views_v1_token::ViewToken view_token,
-    fidl::InterfaceRequest<fuchsia::ui::input::SoftKeyboardContainer> container) {
+    fidl::InterfaceRequest<fuchsia::ui::input::SoftKeyboardContainer>
+        container) {
   FXL_DCHECK(container.is_valid());
   FXL_VLOG(1) << "GetSoftKeyboardContainer: view_token=" << view_token;
 
-  auto provider = FindViewServiceProvider(view_token.value,
-                                          fuchsia::ui::input::SoftKeyboardContainer::Name_);
+  auto provider = FindViewServiceProvider(
+      view_token.value, fuchsia::ui::input::SoftKeyboardContainer::Name_);
   if (provider) {
     component::ConnectToService(provider, std::move(container));
   }
@@ -838,8 +841,8 @@ void ViewRegistry::GetImeService(
   FXL_DCHECK(ime_service.is_valid());
   FXL_VLOG(1) << "GetImeService: view_token=" << view_token;
 
-  auto provider =
-      FindViewServiceProvider(view_token.value, fuchsia::ui::input::ImeService::Name_);
+  auto provider = FindViewServiceProvider(
+      view_token.value, fuchsia::ui::input::ImeService::Name_);
   if (provider) {
     component::ConnectToService(provider, std::move(ime_service));
   } else {

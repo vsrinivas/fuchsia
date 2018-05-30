@@ -291,10 +291,10 @@ bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
   // When the image is completely rendered, present it.
   TRACE_DURATION("gfx", "DisplaySwapchain::DrawAndPresent() present");
 
-  display_manager_->Flip(display_, buffer.fb_id,
-                         frame_record->render_finished_event_id,
-                         frame_record->frame_presented_event_id,
-                         fuchsia::display::invalidId /* frame_signal_event_id */);
+  display_manager_->Flip(
+      display_, buffer.fb_id, frame_record->render_finished_event_id,
+      frame_record->frame_presented_event_id,
+      fuchsia::display::invalidId /* frame_signal_event_id */);
 
   display_manager_->ReleaseEvent(frame_record->render_finished_event_id);
   display_manager_->ReleaseEvent(frame_record->frame_presented_event_id);

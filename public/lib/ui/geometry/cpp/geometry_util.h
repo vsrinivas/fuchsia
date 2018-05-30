@@ -11,38 +11,29 @@ namespace fuchsia {
 namespace math {
 
 void SetIdentityTransform(fuchsia::math::Transform* transform);
-void SetTranslationTransform(fuchsia::math::Transform* transform,
-                             float x,
-                             float y,
-                             float z = 0.0f);
-void SetScaleTransform(fuchsia::math::Transform* transform,
-                       float x,
-                       float y,
+void SetTranslationTransform(fuchsia::math::Transform* transform, float x,
+                             float y, float z = 0.0f);
+void SetScaleTransform(fuchsia::math::Transform* transform, float x, float y,
                        float z = 1.0f);
 
-void Translate(fuchsia::math::Transform* transform,
-               float x,
-               float y,
+void Translate(fuchsia::math::Transform* transform, float x, float y,
                float z = 0.0f);
-void Scale(fuchsia::math::Transform* transform, float x, float y, float z = 1.0f);
+void Scale(fuchsia::math::Transform* transform, float x, float y,
+           float z = 1.0f);
 
 fuchsia::math::TransformPtr CreateIdentityTransform();
-fuchsia::math::TransformPtr CreateTranslationTransform(float x,
-                                                  float y,
-                                                  float z = 0.0f);
-fuchsia::math::TransformPtr CreateScaleTransform(float x, float y, float z = 1.0f);
+fuchsia::math::TransformPtr CreateTranslationTransform(float x, float y,
+                                                       float z = 0.0f);
+fuchsia::math::TransformPtr CreateScaleTransform(float x, float y,
+                                                 float z = 1.0f);
 
 fuchsia::math::TransformPtr Translate(fuchsia::math::TransformPtr transform,
-                                 float x,
-                                 float y,
-                                 float z = 0.0f);
+                                      float x, float y, float z = 0.0f);
 fuchsia::math::TransformPtr Scale(fuchsia::math::TransformPtr transform,
-                             float x,
-                             float y,
-                             float z = 1.0f);
+                                  float x, float y, float z = 1.0f);
 
 fuchsia::math::PointF TransformPoint(const fuchsia::math::Transform& transform,
-                                const fuchsia::math::PointF& point);
+                                     const fuchsia::math::PointF& point);
 
 }  // namespace math
 }  // namespace fuchsia

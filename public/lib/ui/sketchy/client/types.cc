@@ -6,9 +6,7 @@
 
 namespace sketchy_lib {
 
-CubicBezier2::CubicBezier2(glm::vec2 pt0,
-                           glm::vec2 pt1,
-                           glm::vec2 pt2,
+CubicBezier2::CubicBezier2(glm::vec2 pt0, glm::vec2 pt1, glm::vec2 pt2,
                            glm::vec2 pt3)
     : pt0_(pt0), pt1_(pt1), pt2_(pt2), pt3_(pt3) {}
 

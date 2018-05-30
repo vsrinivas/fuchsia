@@ -48,18 +48,20 @@ class TempSessionDelegate : public CommandDispatcher {
  public:
   explicit TempSessionDelegate(CommandDispatcherContext context);
 
-  virtual void Present(uint64_t presentation_time,
-                       ::fidl::VectorPtr<zx::event> acquire_fences,
-                       ::fidl::VectorPtr<zx::event> release_fences,
-                       fuchsia::ui::scenic::Session::PresentCallback callback) = 0;
+  virtual void Present(
+      uint64_t presentation_time, ::fidl::VectorPtr<zx::event> acquire_fences,
+      ::fidl::VectorPtr<zx::event> release_fences,
+      fuchsia::ui::scenic::Session::PresentCallback callback) = 0;
 
-  virtual void HitTest(uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
-                       ::fuchsia::ui::gfx::vec3 ray_direction,
-                       fuchsia::ui::scenic::Session::HitTestCallback callback) = 0;
+  virtual void HitTest(
+      uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
+      ::fuchsia::ui::gfx::vec3 ray_direction,
+      fuchsia::ui::scenic::Session::HitTestCallback callback) = 0;
 
-  virtual void HitTestDeviceRay(::fuchsia::ui::gfx::vec3 ray_origin,
-                                ::fuchsia::ui::gfx::vec3 ray_direction,
-                                fuchsia::ui::scenic::Session::HitTestCallback callback) = 0;
+  virtual void HitTestDeviceRay(
+      ::fuchsia::ui::gfx::vec3 ray_origin,
+      ::fuchsia::ui::gfx::vec3 ray_direction,
+      fuchsia::ui::scenic::Session::HitTestCallback callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(TempSessionDelegate);

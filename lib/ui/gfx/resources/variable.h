@@ -70,7 +70,8 @@ class TypedVariable : public Variable {
   std::set<OnVariableValueChangedListener<VT, T>*> listeners_;
 };
 
-using FloatVariable = TypedVariable<::fuchsia::ui::gfx::Value::Tag::kVector1, float>;
+using FloatVariable =
+    TypedVariable<::fuchsia::ui::gfx::Value::Tag::kVector1, float>;
 using Vector2Variable =
     TypedVariable<::fuchsia::ui::gfx::Value::Tag::kVector2, escher::vec2>;
 using Vector3Variable =
@@ -82,7 +83,8 @@ using Matrix4x4Variable =
 using QuaternionVariable =
     TypedVariable<::fuchsia::ui::gfx::Value::Tag::kQuaternion, escher::quat>;
 // using TransformVariable =
-//    TypedVariable<::fuchsia::ui::gfx::Value::Tag::kTransform, escher::Transform>;
+//    TypedVariable<::fuchsia::ui::gfx::Value::Tag::kTransform,
+//    escher::Transform>;
 
 using FloatVariablePtr = fxl::RefPtr<FloatVariable>;
 using Vector2VariablePtr = fxl::RefPtr<Vector2Variable>;

@@ -24,24 +24,28 @@ class InputConnectionImpl : public fuchsia::ui::input::InputConnection,
                             fuchsia::ui::input::InputMethodEditor,
                             fuchsia::ui::input::InputMethodEditorClient {
  public:
-  InputConnectionImpl(ViewInspector* inspector, InputOwner* owner,
-                      views_v1_token::ViewToken view_token,
-                      fidl::InterfaceRequest<fuchsia::ui::input::InputConnection> request);
+  InputConnectionImpl(
+      ViewInspector* inspector, InputOwner* owner,
+      views_v1_token::ViewToken view_token,
+      fidl::InterfaceRequest<fuchsia::ui::input::InputConnection> request);
   ~InputConnectionImpl() override;
 
   views_v1_token::ViewToken view_token() const { return view_token_; }
 
   // Delivers an event to a view.
-  void DeliverEvent(fuchsia::ui::input::InputEvent event, OnEventDelivered callback);
+  void DeliverEvent(fuchsia::ui::input::InputEvent event,
+                    OnEventDelivered callback);
 
   // |fuchsia::ui::input::InputConnection|
-  void SetEventListener(
-      fidl::InterfaceHandle<fuchsia::ui::input::InputListener> listener) override;
+  void SetEventListener(fidl::InterfaceHandle<fuchsia::ui::input::InputListener>
+                            listener) override;
   void GetInputMethodEditor(
-      fuchsia::ui::input::KeyboardType keyboard_type, fuchsia::ui::input::InputMethodAction action,
+      fuchsia::ui::input::KeyboardType keyboard_type,
+      fuchsia::ui::input::InputMethodAction action,
       fuchsia::ui::input::TextInputState initial_state,
       fidl::InterfaceHandle<fuchsia::ui::input::InputMethodEditorClient> client,
-      fidl::InterfaceRequest<fuchsia::ui::input::InputMethodEditor> editor) override;
+      fidl::InterfaceRequest<fuchsia::ui::input::InputMethodEditor> editor)
+      override;
 
   // |fuchsia::ui::input::InputMethodEditor|
   void SetState(fuchsia::ui::input::TextInputState state) override;

@@ -27,10 +27,12 @@ App::App(const fxl::CommandLine& command_line)
         presenter_bindings_.AddBinding(this, std::move(request));
       });
 
-  application_context_->outgoing().AddPublicService<fuchsia::ui::input::InputDeviceRegistry>(
-      [this](fidl::InterfaceRequest<fuchsia::ui::input::InputDeviceRegistry> request) {
-        input_receiver_bindings_.AddBinding(this, std::move(request));
-      });
+  application_context_->outgoing()
+      .AddPublicService<fuchsia::ui::input::InputDeviceRegistry>(
+          [this](fidl::InterfaceRequest<fuchsia::ui::input::InputDeviceRegistry>
+                     request) {
+            input_receiver_bindings_.AddBinding(this, std::move(request));
+          });
 }
 
 App::~App() {}
@@ -91,8 +93,9 @@ void App::Present(
   SwitchToPresentation(presentations_.size() - 1);
 }
 
-void App::HACK_SetRendererParams(bool enable_clipping,
-                                 ::fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> params) {
+void App::HACK_SetRendererParams(
+    bool enable_clipping,
+    ::fidl::VectorPtr<fuchsia::ui::gfx::RendererParam> params) {
   renderer_params_.clipping_enabled.set_value(enable_clipping);
   FXL_LOG(INFO)
       << "Presenter::HACK_SetRendererParams: Setting clipping enabled to "
@@ -137,9 +140,9 @@ void App::SwitchToPreviousPresentation() {
                        presentations_.size());
 }
 
-void App::RegisterDevice(
-    fuchsia::ui::input::DeviceDescriptor descriptor,
-    fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request) {
+void App::RegisterDevice(fuchsia::ui::input::DeviceDescriptor descriptor,
+                         fidl::InterfaceRequest<fuchsia::ui::input::InputDevice>
+                             input_device_request) {
   uint32_t device_id = ++next_device_token_;
 
   FXL_VLOG(1) << "RegisterDevice " << device_id << " " << descriptor;

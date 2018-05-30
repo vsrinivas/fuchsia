@@ -22,7 +22,8 @@ class GpuImage : public Image {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  // Create Image given a MemoryPtr, fuchsia::images::ImageInfoPtr, and memory_offset.
+  // Create Image given a MemoryPtr, fuchsia::images::ImageInfoPtr, and
+  // memory_offset.
   //
   // |session| is the Session that this image can be referenced from.
   // |id| is the ID of the resource.

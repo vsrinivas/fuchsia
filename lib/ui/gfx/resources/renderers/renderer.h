@@ -51,7 +51,9 @@ class Renderer : public Resource {
 
   Camera* camera() const { return camera_.get(); }
 
-  ::fuchsia::ui::gfx::ShadowTechnique shadow_technique() const { return shadow_technique_; }
+  ::fuchsia::ui::gfx::ShadowTechnique shadow_technique() const {
+    return shadow_technique_;
+  }
 
  private:
   class Visitor : public ResourceVisitor {

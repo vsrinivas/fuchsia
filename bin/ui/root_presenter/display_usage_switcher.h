@@ -30,7 +30,8 @@ class DisplayUsageSwitcher {
   // |presenter| is the root presenter.
   //
   // Returns true if the scene should be invalidated.
-  bool OnEvent(const fuchsia::ui::input::InputEvent& event, Presentation* presenter);
+  bool OnEvent(const fuchsia::ui::input::InputEvent& event,
+               Presentation* presenter);
 
  private:
   uint32_t current_display_usage_index_ = 0;

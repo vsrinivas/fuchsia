@@ -19,11 +19,10 @@ class InputDeviceImpl : public fuchsia::ui::input::InputDevice {
                           fuchsia::ui::input::InputReport report) = 0;
   };
 
-  InputDeviceImpl(
-      uint32_t id,
-      fuchsia::ui::input::DeviceDescriptor descriptor,
-      fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request,
-      Listener* listener);
+  InputDeviceImpl(uint32_t id, fuchsia::ui::input::DeviceDescriptor descriptor,
+                  fidl::InterfaceRequest<fuchsia::ui::input::InputDevice>
+                      input_device_request,
+                  Listener* listener);
   ~InputDeviceImpl();
 
   uint32_t id() { return id_; }

@@ -110,7 +110,8 @@ class TempSystemDelegate : public System {
 
 // Return the system type that knows how to handle the specified command.
 // Used by Session to choose a CommandDispatcher.
-inline System::TypeId SystemTypeForCommand(const fuchsia::ui::scenic::Command& command) {
+inline System::TypeId SystemTypeForCommand(
+    const fuchsia::ui::scenic::Command& command) {
   switch (command.Which()) {
     case fuchsia::ui::scenic::Command::Tag::kGfx:
       return System::TypeId::kGfx;

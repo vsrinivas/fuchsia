@@ -34,8 +34,9 @@ class ImagePipe : public ImageBase {
             ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request);
 
   // Called by |ImagePipeHandler|, part of |ImagePipe| interface.
-  void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info, zx::vmo memory,
-                fuchsia::images::MemoryType memory_type, uint64_t memory_offset);
+  void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
+                zx::vmo memory, fuchsia::images::MemoryType memory_type,
+                uint64_t memory_offset);
   void RemoveImage(uint32_t image_id);
 
   void PresentImage(uint32_t image_id, uint64_t presentation_time,

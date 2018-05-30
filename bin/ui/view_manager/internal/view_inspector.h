@@ -90,7 +90,8 @@ class ViewInspector {
   // in the associated ViewTree
   virtual void GetSoftKeyboardContainer(
       views_v1_token::ViewToken view_token,
-      fidl::InterfaceRequest<fuchsia::ui::input::SoftKeyboardContainer> container) = 0;
+      fidl::InterfaceRequest<fuchsia::ui::input::SoftKeyboardContainer>
+          container) = 0;
 
   // Retrieve the IME Service that is the closest to the ViewToken
   // in the associated ViewTree

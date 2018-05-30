@@ -17,7 +17,8 @@ namespace test {
 using InputTest = ::gtest::TestWithLoop;
 
 fuchsia::ui::input::DeviceDescriptor GenerateKeyboardDescriptor() {
-  fuchsia::ui::input::KeyboardDescriptorPtr keyboard = fuchsia::ui::input::KeyboardDescriptor::New();
+  fuchsia::ui::input::KeyboardDescriptorPtr keyboard =
+      fuchsia::ui::input::KeyboardDescriptor::New();
   keyboard->keys.resize(HID_USAGE_KEY_RIGHT_GUI - HID_USAGE_KEY_A);
   for (size_t index = HID_USAGE_KEY_A; index < HID_USAGE_KEY_RIGHT_GUI;
        ++index) {
@@ -29,7 +30,8 @@ fuchsia::ui::input::DeviceDescriptor GenerateKeyboardDescriptor() {
 }
 
 TEST_F(InputTest, RegisterKeyboardTest) {
-  fuchsia::ui::input::DeviceDescriptor descriptor = GenerateKeyboardDescriptor();
+  fuchsia::ui::input::DeviceDescriptor descriptor =
+      GenerateKeyboardDescriptor();
 
   fuchsia::ui::input::InputDevicePtr input_device;
   uint32_t on_register_count = 0;
@@ -46,7 +48,8 @@ TEST_F(InputTest, RegisterKeyboardTest) {
 }
 
 TEST_F(InputTest, InputKeyboardTest) {
-  fuchsia::ui::input::DeviceDescriptor descriptor = GenerateKeyboardDescriptor();
+  fuchsia::ui::input::DeviceDescriptor descriptor =
+      GenerateKeyboardDescriptor();
 
   fuchsia::ui::input::InputDevicePtr input_device;
   uint32_t on_report_count = 0;
@@ -60,7 +63,8 @@ TEST_F(InputTest, InputKeyboardTest) {
   registry.RegisterDevice(std::move(descriptor), input_device.NewRequest());
 
   // PRESSED
-  fuchsia::ui::input::KeyboardReportPtr keyboard_report = fuchsia::ui::input::KeyboardReport::New();
+  fuchsia::ui::input::KeyboardReportPtr keyboard_report =
+      fuchsia::ui::input::KeyboardReport::New();
   keyboard_report->pressed_keys.push_back(HID_USAGE_KEY_A);
 
   fuchsia::ui::input::InputReport report;

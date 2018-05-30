@@ -13,7 +13,8 @@ using fuchsia::ui::gfx::ResourceArgs;
 using fuchsia::ui::gfx::ShadowTechnique;
 using fuchsia::ui::gfx::Value;
 
-std::ostream& operator<<(std::ostream& stream, const fuchsia::ui::gfx::Command& command) {
+std::ostream& operator<<(std::ostream& stream,
+                         const fuchsia::ui::gfx::Command& command) {
   switch (command.Which()) {
     case Command::Tag::kCreateResource:
       return stream << command.create_resource();
@@ -102,8 +103,9 @@ std::ostream& operator<<(std::ostream& stream, const fuchsia::ui::gfx::Command& 
   }
 }
 
-std::ostream& operator<<(std::ostream& stream,
-                         const fuchsia::ui::gfx::CreateResourceCommand& command) {
+std::ostream& operator<<(
+    std::ostream& stream,
+    const fuchsia::ui::gfx::CreateResourceCommand& command) {
   stream << "CreateResourceCommand(id:" << command.id << " ";
   switch (command.resource.Which()) {
     case ResourceArgs::Tag::kMemory:
@@ -188,8 +190,9 @@ std::ostream& operator<<(std::ostream& stream,
   return stream << ")";
 }
 
-std::ostream& operator<<(std::ostream& stream,
-                         const fuchsia::ui::gfx::SetRendererParamCommand& command) {
+std::ostream& operator<<(
+    std::ostream& stream,
+    const fuchsia::ui::gfx::SetRendererParamCommand& command) {
   stream << "SetRendererParamCommand(id=" << command.renderer_id << " ";
   switch (command.param.Which()) {
     case RendererParam::Tag::kShadowTechnique:
@@ -239,7 +242,8 @@ std::ostream& operator<<(std::ostream& stream,
   return stream << ")";
 }
 
-std::ostream& operator<<(std::ostream& stream, const fuchsia::ui::gfx::Value::Tag& tag) {
+std::ostream& operator<<(std::ostream& stream,
+                         const fuchsia::ui::gfx::Value::Tag& tag) {
   switch (tag) {
     case Value::Tag::kVector1:
       return stream << "vec1";

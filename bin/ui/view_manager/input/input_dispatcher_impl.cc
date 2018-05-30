@@ -185,7 +185,8 @@ void InputDispatcherImpl::ProcessNextEvent() {
 }
 
 void InputDispatcherImpl::DeliverEvent(uint64_t event_path_propagation_id,
-                                       size_t index, fuchsia::ui::input::InputEvent event) {
+                                       size_t index,
+                                       fuchsia::ui::input::InputEvent event) {
   // TODO(MZ-164) when the chain is changed, we might need to cancel events
   // that have not progagated fully through the chain.
   if (index >= event_path_.size() ||
@@ -317,8 +318,10 @@ void InputDispatcherImpl::OnHitTestResult(const fuchsia::math::PointF& point,
 
           if (new_chain) {
             FXL_VLOG(1) << "Input focus gained by " << new_chain->chain.front();
-            fuchsia::ui::input::InputEvent event = fuchsia::ui::input::InputEvent();
-            fuchsia::ui::input::FocusEvent focus = fuchsia::ui::input::FocusEvent();
+            fuchsia::ui::input::InputEvent event =
+                fuchsia::ui::input::InputEvent();
+            fuchsia::ui::input::FocusEvent focus =
+                fuchsia::ui::input::FocusEvent();
             focus.event_time = InputEventTimestampNow();
             focus.focused = true;
             event.set_focus(std::move(focus));

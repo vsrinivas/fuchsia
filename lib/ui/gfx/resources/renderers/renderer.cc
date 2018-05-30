@@ -54,7 +54,8 @@ std::vector<escher::Object> Renderer::CreateDisplayList(
 
 void Renderer::SetCamera(CameraPtr camera) { camera_ = std::move(camera); }
 
-bool Renderer::SetShadowTechnique(::fuchsia::ui::gfx::ShadowTechnique technique) {
+bool Renderer::SetShadowTechnique(
+    ::fuchsia::ui::gfx::ShadowTechnique technique) {
   shadow_technique_ = technique;
   return true;
 }

@@ -65,9 +65,7 @@ Rectangle::Rectangle(Rectangle&& moved) : Shape(std::move(moved)) {}
 
 Rectangle::~Rectangle() = default;
 
-RoundedRectangle::RoundedRectangle(Session* session,
-                                   float width,
-                                   float height,
+RoundedRectangle::RoundedRectangle(Session* session, float width, float height,
                                    float top_left_radius,
                                    float top_right_radius,
                                    float bottom_right_radius,
@@ -83,12 +81,11 @@ RoundedRectangle::RoundedRectangle(RoundedRectangle&& moved)
 
 RoundedRectangle::~RoundedRectangle() = default;
 
-Image::Image(const Memory& memory, off_t memory_offset, fuchsia::images::ImageInfo info)
+Image::Image(const Memory& memory, off_t memory_offset,
+             fuchsia::images::ImageInfo info)
     : Image(memory.session(), memory.id(), memory_offset, std::move(info)) {}
 
-Image::Image(Session* session,
-             uint32_t memory_id,
-             off_t memory_offset,
+Image::Image(Session* session, uint32_t memory_id, off_t memory_offset,
              fuchsia::images::ImageInfo info)
     : Resource(session), memory_offset_(memory_offset), info_(info) {
   session->Enqueue(
@@ -118,9 +115,7 @@ size_t Image::ComputeSize(const fuchsia::images::ImageInfo& image_info) {
 Buffer::Buffer(const Memory& memory, off_t memory_offset, size_t num_bytes)
     : Buffer(memory.session(), memory.id(), memory_offset, num_bytes) {}
 
-Buffer::Buffer(Session* session,
-               uint32_t memory_id,
-               off_t memory_offset,
+Buffer::Buffer(Session* session, uint32_t memory_id, off_t memory_offset,
                size_t num_bytes)
     : Resource(session) {
   session->Enqueue(
@@ -131,7 +126,8 @@ Buffer::Buffer(Buffer&& moved) : Resource(std::move(moved)) {}
 
 Buffer::~Buffer() = default;
 
-Memory::Memory(Session* session, zx::vmo vmo, fuchsia::images::MemoryType memory_type)
+Memory::Memory(Session* session, zx::vmo vmo,
+               fuchsia::images::MemoryType memory_type)
     : Resource(session), memory_type_(memory_type) {
   session->Enqueue(NewCreateMemoryCommand(id(), std::move(vmo), memory_type));
 }
@@ -151,12 +147,10 @@ Mesh::~Mesh() = default;
 
 void Mesh::BindBuffers(const Buffer& index_buffer,
                        fuchsia::ui::gfx::MeshIndexFormat index_format,
-                       uint64_t index_offset,
-                       uint32_t index_count,
+                       uint64_t index_offset, uint32_t index_count,
                        const Buffer& vertex_buffer,
                        fuchsia::ui::gfx::MeshVertexFormat vertex_format,
-                       uint64_t vertex_offset,
-                       uint32_t vertex_count,
+                       uint64_t vertex_offset, uint32_t vertex_count,
                        const float bounding_box_min[3],
                        const float bounding_box_max[3]) {
   FXL_DCHECK(session() == index_buffer.session() &&
@@ -179,9 +173,7 @@ void Material::SetTexture(uint32_t image_id) {
   session()->Enqueue(NewSetTextureCommand(id(), image_id));
 }
 
-void Material::SetColor(uint8_t red,
-                        uint8_t green,
-                        uint8_t blue,
+void Material::SetColor(uint8_t red, uint8_t green, uint8_t blue,
                         uint8_t alpha) {
   session()->Enqueue(NewSetColorCommand(id(), red, green, blue, alpha));
 }
@@ -228,13 +220,12 @@ void Node::SetTag(uint32_t tag_value) {
   session()->Enqueue(NewSetTagCommand(id(), tag_value));
 }
 
-void Node::SetHitTestBehavior(fuchsia::ui::gfx::HitTestBehavior hit_test_behavior) {
+void Node::SetHitTestBehavior(
+    fuchsia::ui::gfx::HitTestBehavior hit_test_behavior) {
   session()->Enqueue(NewSetHitTestBehaviorCommand(id(), hit_test_behavior));
 }
 
-void Node::Detach() {
-  session()->Enqueue(NewDetachCommand(id()));
-}
+void Node::Detach() { session()->Enqueue(NewDetachCommand(id())); }
 
 ShapeNode::ShapeNode(Session* session) : Node(session) {
   session->Enqueue(NewCreateShapeNodeCommand(id()));
@@ -290,8 +281,8 @@ ImportNode::~ImportNode() {
 
 void ImportNode::Bind(zx::eventpair import_token) {
   FXL_DCHECK(!is_bound_);
-  session()->Enqueue(NewImportResourceCommand(id(), fuchsia::ui::gfx::ImportSpec::NODE,
-                                              std::move(import_token)));
+  session()->Enqueue(NewImportResourceCommand(
+      id(), fuchsia::ui::gfx::ImportSpec::NODE, std::move(import_token)));
   is_bound_ = true;
 }
 
@@ -351,9 +342,7 @@ void Scene::AddLight(uint32_t light_id) {
   session()->Enqueue(NewAddLightCommand(id(), light_id));
 }
 
-void Scene::DetachLights() {
-  session()->Enqueue(NewDetachLightsCommand(id()));
-}
+void Scene::DetachLights() { session()->Enqueue(NewDetachLightsCommand(id())); }
 
 void CameraBase::SetTransform(const float eye_position[3],
                               const float eye_look_at[3],
@@ -490,9 +479,7 @@ void Light::SetColor(uint32_t variable_id) {
   session()->Enqueue(NewSetLightColorCommand(id(), variable_id));
 }
 
-void Light::Detach() {
-  session()->Enqueue(NewDetachLightCommand(id()));
-}
+void Light::Detach() { session()->Enqueue(NewDetachLightCommand(id())); }
 
 AmbientLight::AmbientLight(Session* session) : Light(session) {
   session->Enqueue(NewCreateAmbientLightCommand(id()));

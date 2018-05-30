@@ -14,7 +14,8 @@ RendererParams RendererParams::FromCommandLine(
       {"unshadowed", fuchsia::ui::gfx::ShadowTechnique::UNSHADOWED},
       {"screen_space_shadows", fuchsia::ui::gfx::ShadowTechnique::SCREEN_SPACE},
       {"shadow_map", fuchsia::ui::gfx::ShadowTechnique::SHADOW_MAP},
-      {"moment_shadow_map", fuchsia::ui::gfx::ShadowTechnique::MOMENT_SHADOW_MAP}};
+      {"moment_shadow_map",
+       fuchsia::ui::gfx::ShadowTechnique::MOMENT_SHADOW_MAP}};
   for (auto& arg : shadow_args) {
     if (command_line.HasOption(arg.first)) {
       FXL_CHECK(!params.shadow_technique.has_value())
@@ -30,11 +31,13 @@ RendererParams RendererParams::FromCommandLine(
     params.clipping_enabled.set_value(false);
   }
   if (command_line.HasOption("render_continuously")) {
-    params.render_frequency.set_value(fuchsia::ui::gfx::RenderFrequency::CONTINUOUSLY);
+    params.render_frequency.set_value(
+        fuchsia::ui::gfx::RenderFrequency::CONTINUOUSLY);
   } else if (command_line.HasOption("render_when_requested")) {
     FXL_CHECK(!params.render_frequency.has_value())
         << "Cannot use both -render_continuously and -render_when_requested.";
-    params.render_frequency.set_value(fuchsia::ui::gfx::RenderFrequency::WHEN_REQUESTED);
+    params.render_frequency.set_value(
+        fuchsia::ui::gfx::RenderFrequency::WHEN_REQUESTED);
   }
   return params;
 }

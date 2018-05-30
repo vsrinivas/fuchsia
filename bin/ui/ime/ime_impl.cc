@@ -16,19 +16,23 @@
 namespace ime {
 
 ImeImpl::ImeImpl(
-    fuchsia::ui::input::KeyboardType keyboard_type, fuchsia::ui::input::InputMethodAction action,
+    fuchsia::ui::input::KeyboardType keyboard_type,
+    fuchsia::ui::input::InputMethodAction action,
     fuchsia::ui::input::TextInputState initial_state,
     fidl::InterfaceHandle<fuchsia::ui::input::InputMethodEditorClient> client,
-    fidl::InterfaceRequest<fuchsia::ui::input::InputMethodEditor> editor_request)
+    fidl::InterfaceRequest<fuchsia::ui::input::InputMethodEditor>
+        editor_request)
     : editor_binding_(this, std::move(editor_request)),
       keyboard_type_(keyboard_type),
       action_(action),
       state_(std::move(initial_state)) {
-  FXL_VLOG(1) << "ImeImpl: "
-              << ", keyboard_type="
-              << static_cast<std::underlying_type<fuchsia::ui::input::KeyboardType>::type>(
-                     keyboard_type)
-              << ", initial_state=" << &state_;
+  FXL_VLOG(1)
+      << "ImeImpl: "
+      << ", keyboard_type="
+      << static_cast<
+             std::underlying_type<fuchsia::ui::input::KeyboardType>::type>(
+             keyboard_type)
+      << ", initial_state=" << &state_;
 
   editor_binding_.set_error_handler([this] { OnEditorDied(); });
   client_ = client.Bind();
@@ -42,9 +46,11 @@ void ImeImpl::OnEditorDied() {
 }
 
 void ImeImpl::SetKeyboardType(fuchsia::ui::input::KeyboardType keyboard_type) {
-  FXL_VLOG(1) << "SetKeyboardType: keyboard_type="
-              << static_cast<std::underlying_type<fuchsia::ui::input::KeyboardType>::type>(
-                     keyboard_type);
+  FXL_VLOG(1)
+      << "SetKeyboardType: keyboard_type="
+      << static_cast<
+             std::underlying_type<fuchsia::ui::input::KeyboardType>::type>(
+             keyboard_type);
   keyboard_type_ = keyboard_type;
 }
 

@@ -19,8 +19,9 @@ class Screenshotter {
  public:
   explicit Screenshotter(Engine* engine) : engine_(engine) {}
 
-  void TakeScreenshot(const std::string& filename,
-                      fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback);
+  void TakeScreenshot(
+      const std::string& filename,
+      fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback);
 
  private:
   static void OnCommandBufferDone(

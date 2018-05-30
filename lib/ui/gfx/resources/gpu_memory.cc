@@ -22,7 +22,8 @@ GpuMemory::GpuMemory(Session* session, scenic::ResourceId id, vk::Device device,
           escher::GpuMem::New(device, mem, size, memory_type_index)) {}
 
 GpuMemoryPtr GpuMemory::New(Session* session, scenic::ResourceId id,
-                            vk::Device device, ::fuchsia::ui::gfx::MemoryArgs args,
+                            vk::Device device,
+                            ::fuchsia::ui::gfx::MemoryArgs args,
                             ErrorReporter* error_reporter) {
   if (args.memory_type != fuchsia::images::MemoryType::VK_DEVICE_MEMORY) {
     error_reporter->ERROR() << "scenic::gfx::GpuMemory::New(): "

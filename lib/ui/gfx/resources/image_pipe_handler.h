@@ -19,8 +19,8 @@ class ImagePipeHandler : public fuchsia::images::ImagePipe {
                    scenic::gfx::ImagePipe* image_pipe);
 
  private:
-  void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info, zx::vmo memory,
-                fuchsia::images::MemoryType memory_type,
+  void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
+                zx::vmo memory, fuchsia::images::MemoryType memory_type,
                 uint64_t memory_offset) override;
   void RemoveImage(uint32_t image_id) override;
 

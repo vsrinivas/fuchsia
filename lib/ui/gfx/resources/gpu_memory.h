@@ -27,9 +27,9 @@ class GpuMemory : public Memory {
             vk::DeviceMemory mem, vk::DeviceSize size,
             uint32_t memory_type_index);
 
-  // Helper method for creating GpuMemory object from a ::fuchsia::ui::gfx::Memory.
-  // Create a GpuMemory resource object from a VMO that represents a
-  // VkDeviceMemory. Releases the VMO.
+  // Helper method for creating GpuMemory object from a
+  // ::fuchsia::ui::gfx::Memory. Create a GpuMemory resource object from a VMO
+  // that represents a VkDeviceMemory. Releases the VMO.
   //
   // Returns the created GpuMemory object or nullptr if there was an error.
   static GpuMemoryPtr New(Session* session, scenic::ResourceId id,
@@ -39,7 +39,8 @@ class GpuMemory : public Memory {
   // Helper method that calls the above method with the VMO from |args|. Also
   // checks the memory type in debug mode.
   static GpuMemoryPtr New(Session* session, scenic::ResourceId id,
-                          vk::Device device, ::fuchsia::ui::gfx::MemoryArgs args,
+                          vk::Device device,
+                          ::fuchsia::ui::gfx::MemoryArgs args,
                           ErrorReporter* error_reporter);
 
   void Accept(class ResourceVisitor* visitor) override;

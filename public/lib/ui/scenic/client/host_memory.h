@@ -21,9 +21,7 @@ namespace scenic_lib {
 class HostData : public fxl::RefCountedThreadSafe<HostData> {
  public:
   // Maps a range of an existing VMO into memory.
-  HostData(const zx::vmo& vmo,
-           off_t offset,
-           size_t size,
+  HostData(const zx::vmo& vmo, off_t offset, size_t size,
            uint32_t flags = ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE |
                             ZX_VM_FLAG_MAP_RANGE);
 
@@ -80,14 +78,10 @@ class HostMemory final : public Memory {
 // constructor.
 class HostImage final : public Image {
  public:
-  HostImage(const HostMemory& memory,
-            off_t memory_offset,
+  HostImage(const HostMemory& memory, off_t memory_offset,
             fuchsia::images::ImageInfo info);
-  HostImage(Session* session,
-            uint32_t memory_id,
-            off_t memory_offset,
-            fxl::RefPtr<HostData> data,
-            fuchsia::images::ImageInfo info);
+  HostImage(Session* session, uint32_t memory_id, off_t memory_offset,
+            fxl::RefPtr<HostData> data, fuchsia::images::ImageInfo info);
   HostImage(HostImage&& moved);
   ~HostImage();
 

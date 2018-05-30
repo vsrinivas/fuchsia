@@ -20,7 +20,8 @@ Detector::Detector(size_t history_size)
 }
 
 std::pair<bool, presentation::PresentationMode> Detector::Update(
-    const fuchsia::ui::input::SensorDescriptor& sensor, fuchsia::ui::input::InputReport event) {
+    const fuchsia::ui::input::SensorDescriptor& sensor,
+    fuchsia::ui::input::InputReport event) {
   FXL_CHECK(sensor.type == fuchsia::ui::input::SensorType::ACCELEROMETER);
   FXL_CHECK(event.sensor);
   FXL_CHECK(event.sensor->is_vector());

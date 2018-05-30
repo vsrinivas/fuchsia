@@ -26,10 +26,10 @@ SessionHandler::SessionHandler(CommandDispatcherContext dispatcher_context,
 
 SessionHandler::~SessionHandler() { TearDown(); }
 
-void SessionHandler::Present(uint64_t presentation_time,
-                             ::fidl::VectorPtr<zx::event> acquire_fences,
-                             ::fidl::VectorPtr<zx::event> release_fences,
-                             fuchsia::ui::scenic::Session::PresentCallback callback) {
+void SessionHandler::Present(
+    uint64_t presentation_time, ::fidl::VectorPtr<zx::event> acquire_fences,
+    ::fidl::VectorPtr<zx::event> release_fences,
+    fuchsia::ui::scenic::Session::PresentCallback callback) {
   if (!session_->ScheduleUpdate(
           presentation_time, std::move(buffered_commands_),
           std::move(acquire_fences), std::move(release_fences), callback)) {
@@ -38,9 +38,10 @@ void SessionHandler::Present(uint64_t presentation_time,
   buffered_commands_.clear();
 }
 
-void SessionHandler::HitTest(uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
-                             ::fuchsia::ui::gfx::vec3 ray_direction,
-                             fuchsia::ui::scenic::Session::HitTestCallback callback) {
+void SessionHandler::HitTest(
+    uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
+    ::fuchsia::ui::gfx::vec3 ray_direction,
+    fuchsia::ui::scenic::Session::HitTestCallback callback) {
   session_->HitTest(node_id, std::move(ray_origin), std::move(ray_direction),
                     callback);
 }

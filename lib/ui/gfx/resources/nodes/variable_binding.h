@@ -36,9 +36,11 @@ class TypedVariableBinding : public VariableBinding,
 };
 
 using Vector3VariableBinding =
-    TypedVariableBinding<::fuchsia::ui::gfx::Value::Tag::kVector3, escher::vec3>;
+    TypedVariableBinding<::fuchsia::ui::gfx::Value::Tag::kVector3,
+                         escher::vec3>;
 using QuaternionVariableBinding =
-    TypedVariableBinding<::fuchsia::ui::gfx::Value::Tag::kQuaternion, escher::quat>;
+    TypedVariableBinding<::fuchsia::ui::gfx::Value::Tag::kQuaternion,
+                         escher::quat>;
 
 }  // namespace gfx
 }  // namespace scenic

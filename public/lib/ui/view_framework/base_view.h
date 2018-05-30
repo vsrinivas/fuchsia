@@ -96,7 +96,9 @@ class BaseView : private views_v1::ViewListener,
   const fuchsia::ui::gfx::Metrics& metrics() const { return adjusted_metrics_; }
 
   // Gets the input connection.
-  fuchsia::ui::input::InputConnection* input_connection() { return input_connection_.get(); }
+  fuchsia::ui::input::InputConnection* input_connection() {
+    return input_connection_.get();
+  }
 
   // Sets a callback which is invoked when the view's owner releases the
   // view causing the view manager to unregister it.
@@ -122,7 +124,8 @@ class BaseView : private views_v1::ViewListener,
   // invalidation.  The new contents are presented once this function returns.
   //
   // The default implementation does nothing.
-  virtual void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info);
+  virtual void OnSceneInvalidated(
+      fuchsia::images::PresentationInfo presentation_info);
 
   // Called when session events are received.
   //
@@ -154,14 +157,14 @@ class BaseView : private views_v1::ViewListener,
                            OnPropertiesChangedCallback callback) override;
 
   // |ViewContainerListener|:
-  void OnChildAttached(uint32_t child_key,
-                       views_v1::ViewInfo child_view_info,
+  void OnChildAttached(uint32_t child_key, views_v1::ViewInfo child_view_info,
                        OnChildAttachedCallback callback) override;
   void OnChildUnavailable(uint32_t child_key,
                           OnChildUnavailableCallback callback) override;
 
   // |InputListener|:
-  void OnEvent(fuchsia::ui::input::InputEvent event, OnEventCallback callback) override;
+  void OnEvent(fuchsia::ui::input::InputEvent event,
+               OnEventCallback callback) override;
 
   void PresentScene(zx_time_t presentation_time);
   void HandleSessionEvents(fidl::VectorPtr<fuchsia::ui::scenic::Event> events);

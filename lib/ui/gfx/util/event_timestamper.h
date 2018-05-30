@@ -74,8 +74,8 @@ class EventTimestamper {
    public:
     enum class State { STARTED, STOPPED, ABANDONED };
 
-    Waiter(async_t* dispatcher, zx::event event,
-           zx_status_t trigger, Callback callback);
+    Waiter(async_t* dispatcher, zx::event event, zx_status_t trigger,
+           Callback callback);
     ~Waiter();
 
     void set_state(State state) { state_ = state; }

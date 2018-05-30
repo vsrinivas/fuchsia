@@ -5,8 +5,8 @@
 #ifndef LIB_UI_SKETCHY_CLIENT_RESOURCES_H_
 #define LIB_UI_SKETCHY_CLIENT_RESOURCES_H_
 
-#include <sketchy/cpp/fidl.h>
 #include <garnet/public/lib/fxl/memory/ref_counted.h>
+#include <sketchy/cpp/fidl.h>
 
 #include "lib/ui/scenic/client/session.h"
 #include "lib/ui/sketchy/client/types.h"
@@ -48,8 +48,7 @@ class Resource {
   // |token| Token that is exported by the local resource, with which the remote
   //     canvas can import.
   // |spec| Type of the resource.
-  void EnqueueImportResourceCommand(ResourceId resource_id,
-                                    zx::eventpair token,
+  void EnqueueImportResourceCommand(ResourceId resource_id, zx::eventpair token,
                                     fuchsia::ui::gfx::ImportSpec spec) const;
 
   // Enqueue an op in canvas.

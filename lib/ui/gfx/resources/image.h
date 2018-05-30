@@ -22,7 +22,8 @@ class Image : public ImageBase {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  // Create Image given a MemoryPtr, fuchsia::images::ImageInfoPtr, and memory_offset.
+  // Create Image given a MemoryPtr, fuchsia::images::ImageInfoPtr, and
+  // memory_offset.
   //
   // |session| is the Session that this image can be referenced from.
   // |memory| is the memory that is associated with this image.

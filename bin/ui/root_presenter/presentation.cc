@@ -162,8 +162,9 @@ void Presentation::CreateViewTree(
   // Get view tree services.
   component::ServiceProviderPtr tree_service_provider;
   tree_->GetServiceProvider(tree_service_provider.NewRequest());
-  input_dispatcher_ = component::ConnectToService<fuchsia::ui::input::InputDispatcher>(
-      tree_service_provider.get());
+  input_dispatcher_ =
+      component::ConnectToService<fuchsia::ui::input::InputDispatcher>(
+          tree_service_provider.get());
   input_dispatcher_.set_error_handler([this] {
     // This isn't considered a fatal error right now since it is still useful
     // to be able to test a view system that has graphics but no input.
@@ -202,7 +203,8 @@ void Presentation::CreateViewTree(
   PresentScene();
 }
 
-void Presentation::InitializeDisplayModel(fuchsia::ui::gfx::DisplayInfo display_info) {
+void Presentation::InitializeDisplayModel(
+    fuchsia::ui::gfx::DisplayInfo display_info) {
   FXL_DCHECK(!display_model_initialized_);
 
   // Save previous display values. These could have been overriden by earlier
@@ -411,16 +413,17 @@ void Presentation::OnDeviceAdded(mozart::InputDeviceImpl* input_device) {
 
   std::unique_ptr<mozart::DeviceState> state;
   if (input_device->descriptor()->sensor) {
-    mozart::OnSensorEventCallback callback = [this](uint32_t device_id,
-                                                    fuchsia::ui::input::InputReport event) {
-      OnSensorEvent(device_id, std::move(event));
-    };
+    mozart::OnSensorEventCallback callback =
+        [this](uint32_t device_id, fuchsia::ui::input::InputReport event) {
+          OnSensorEvent(device_id, std::move(event));
+        };
     state = std::make_unique<mozart::DeviceState>(
         input_device->id(), input_device->descriptor(), callback);
   } else {
-    mozart::OnEventCallback callback = [this](fuchsia::ui::input::InputEvent event) {
-      OnEvent(std::move(event));
-    };
+    mozart::OnEventCallback callback =
+        [this](fuchsia::ui::input::InputEvent event) {
+          OnEvent(std::move(event));
+        };
     state = std::make_unique<mozart::DeviceState>(
         input_device->id(), input_device->descriptor(), callback);
   }
@@ -527,7 +530,8 @@ void Presentation::SetPresentationModeListener(
   FXL_LOG(INFO) << "Presentation mode, now listening.";
 }
 
-bool Presentation::GlobalHooksHandleEvent(const fuchsia::ui::input::InputEvent& event) {
+bool Presentation::GlobalHooksHandleEvent(
+    const fuchsia::ui::input::InputEvent& event) {
   return display_rotater_.OnEvent(event, this) ||
          display_usage_switcher_.OnEvent(event, this) ||
          display_size_switcher_.OnEvent(event, this) ||
@@ -623,7 +627,8 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
     input_dispatcher_->DispatchEvent(std::move(event));
 }
 
-void Presentation::OnSensorEvent(uint32_t device_id, fuchsia::ui::input::InputReport event) {
+void Presentation::OnSensorEvent(uint32_t device_id,
+                                 fuchsia::ui::input::InputReport event) {
   FXL_VLOG(2) << "OnSensorEvent(device_id=" << device_id << "): " << event;
 
   FXL_DCHECK(device_states_by_id_.count(device_id) > 0);

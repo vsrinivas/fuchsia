@@ -101,9 +101,8 @@ const zx::event& EventTimestamper::Watch::event() const {
   return waiter_ ? waiter_->event() : null_handle;
 }
 
-EventTimestamper::Waiter::Waiter(
-    async_t* dispatcher, zx::event event,
-    zx_status_t trigger, Callback callback)
+EventTimestamper::Waiter::Waiter(async_t* dispatcher, zx::event event,
+                                 zx_status_t trigger, Callback callback)
     : dispatcher_(dispatcher),
       event_(std::move(event)),
       callback_(std::move(callback)),

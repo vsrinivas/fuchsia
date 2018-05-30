@@ -51,9 +51,9 @@ class App : public fuchsia::ui::input::InputDeviceRegistry,
   }
 
  private:
-  void RegisterDevice(
-      fuchsia::ui::input::DeviceDescriptor descriptor,
-      fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request) {
+  void RegisterDevice(fuchsia::ui::input::DeviceDescriptor descriptor,
+                      fidl::InterfaceRequest<fuchsia::ui::input::InputDevice>
+                          input_device_request) {
     uint32_t device_id = next_device_token_++;
 
     FXL_VLOG(1) << "RegisterDevice " << descriptor << " -> " << device_id;
@@ -68,7 +68,9 @@ class App : public fuchsia::ui::input::InputDeviceRegistry,
     std::unique_ptr<mozart::DeviceState> state =
         std::make_unique<mozart::DeviceState>(
             input_device->id(), input_device->descriptor(),
-            [this](fuchsia::ui::input::InputEvent event) { OnEvent(std::move(event)); });
+            [this](fuchsia::ui::input::InputEvent event) {
+              OnEvent(std::move(event));
+            });
     mozart::DeviceState* state_ptr = state.get();
     auto device_pair =
         std::make_pair(std::move(input_device), std::move(state));

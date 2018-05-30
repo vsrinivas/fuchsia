@@ -30,8 +30,9 @@ class Session final : public fuchsia::ui::scenic::Session,
                       public EventReporter,
                       public ErrorReporter {
  public:
-  Session(Scenic* owner, SessionId id,
-          ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener);
+  Session(
+      Scenic* owner, SessionId id,
+      ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener);
   ~Session() override;
 
   void SetCommandDispatchers(std::array<std::unique_ptr<CommandDispatcher>,
@@ -50,11 +51,13 @@ class Session final : public fuchsia::ui::scenic::Session,
   // |fuchsia::ui::scenic::Session|
   // TODO(MZ-422): Remove this after it's removed from session.fidl.
   void HitTest(uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
-               ::fuchsia::ui::gfx::vec3 ray_direction, HitTestCallback callback) override;
+               ::fuchsia::ui::gfx::vec3 ray_direction,
+               HitTestCallback callback) override;
 
   // |fuchsia::ui::scenic::Session|
   // TODO(MZ-422): Remove this after it's removed from session.fidl.
-  void HitTestDeviceRay(::fuchsia::ui::gfx::vec3 ray_origin, ::fuchsia::ui::gfx::vec3 ray_direction,
+  void HitTestDeviceRay(::fuchsia::ui::gfx::vec3 ray_origin,
+                        ::fuchsia::ui::gfx::vec3 ray_direction,
                         HitTestCallback callback) override;
 
   // |EventReporter|
@@ -71,7 +74,8 @@ class Session final : public fuchsia::ui::scenic::Session,
   ErrorReporter* error_reporter() { return this; }
 
   // For tests.  See FlushEvents() below.
-  void set_event_callback(std::function<void(fuchsia::ui::scenic::Event)> callback) {
+  void set_event_callback(
+      std::function<void(fuchsia::ui::scenic::Event)> callback) {
     event_callback_ = callback;
   }
 

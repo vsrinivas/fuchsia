@@ -26,19 +26,22 @@ class Session : private fuchsia::ui::scenic::SessionListener {
  public:
   // Provides timing information about a presentation request which has
   // been applied by the scene manager.
-  using PresentCallback = std::function<void(fuchsia::images::PresentationInfo info)>;
+  using PresentCallback =
+      std::function<void(fuchsia::images::PresentationInfo info)>;
 
   // Provide information about hits.
-  using HitTestCallback = std::function<void(fidl::VectorPtr<fuchsia::ui::gfx::Hit> hits)>;
+  using HitTestCallback =
+      std::function<void(fidl::VectorPtr<fuchsia::ui::gfx::Hit> hits)>;
 
   // Called when session events are received.
-  using EventHandler = std::function<void(fidl::VectorPtr<fuchsia::ui::scenic::Event>)>;
+  using EventHandler =
+      std::function<void(fidl::VectorPtr<fuchsia::ui::scenic::Event>)>;
 
   // Wraps the provided session and session listener.
   // The listener is optional.
-  explicit Session(
-      fuchsia::ui::scenic::SessionPtr session,
-      fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener> session_listener = nullptr);
+  explicit Session(fuchsia::ui::scenic::SessionPtr session,
+                   fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener>
+                       session_listener = nullptr);
 
   // Creates a new session using the provided scene manager and binds the
   // session listener to this object.
@@ -90,16 +93,14 @@ class Session : private fuchsia::ui::scenic::SessionListener {
   void Present(uint64_t presentation_time, PresentCallback callback);
 
   // Performs a hit test along the specified ray.
-  void HitTest(uint32_t node_id,
-               const float ray_origin[3],
-               const float ray_direction[3],
-               HitTestCallback callback);
+  void HitTest(uint32_t node_id, const float ray_origin[3],
+               const float ray_direction[3], HitTestCallback callback);
 
   // Performs a hit test along the specified ray into the engine's first
   // compositor.
-  void HitTestDeviceRay(const float ray_origin[3],
-                        const float ray_direction[3],
-                        const fuchsia::ui::scenic::Session::HitTestDeviceRayCallback& callback);
+  void HitTestDeviceRay(
+      const float ray_origin[3], const float ray_direction[3],
+      const fuchsia::ui::scenic::Session::HitTestDeviceRayCallback& callback);
 
  private:
   // |fuchsia::ui::scenic::SessionListener|

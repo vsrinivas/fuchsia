@@ -17,9 +17,7 @@ Canvas::Canvas(sketchy::CanvasPtr canvas, async::Loop* loop)
   });
 }
 
-ResourceId Canvas::AllocateResourceId() {
-  return next_resource_id_++;
-}
+ResourceId Canvas::AllocateResourceId() { return next_resource_id_++; }
 
 void Canvas::Present(uint64_t time,
                      scenic_lib::Session::PresentCallback callback) {

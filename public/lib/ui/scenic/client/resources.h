@@ -60,7 +60,8 @@ class Resource {
 // TODO(MZ-268): Make this class final, and add public move constructor.
 class Memory : public Resource {
  public:
-  Memory(Session* session, zx::vmo vmo, fuchsia::images::MemoryType memory_type);
+  Memory(Session* session, zx::vmo vmo,
+         fuchsia::images::MemoryType memory_type);
   ~Memory();
 
   // Gets the underlying VMO's memory type, indicating whether it represents
@@ -113,13 +114,9 @@ class Rectangle final : public Shape {
 // Represents a rounded rectangle shape resource in a session.
 class RoundedRectangle final : public Shape {
  public:
-  RoundedRectangle(Session* session,
-                   float width,
-                   float height,
-                   float top_left_radius,
-                   float top_right_radius,
-                   float bottom_right_radius,
-                   float bottom_left_radius);
+  RoundedRectangle(Session* session, float width, float height,
+                   float top_left_radius, float top_right_radius,
+                   float bottom_right_radius, float bottom_left_radius);
   RoundedRectangle(RoundedRectangle&& moved);
   ~RoundedRectangle();
 
@@ -132,10 +129,9 @@ class RoundedRectangle final : public Shape {
 class Image : public Resource {
  public:
   // Creates an image resource bound to a session.
-  Image(const Memory& memory, off_t memory_offset, fuchsia::images::ImageInfo info);
-  Image(Session* session,
-        uint32_t memory_id,
-        off_t memory_offset,
+  Image(const Memory& memory, off_t memory_offset,
+        fuchsia::images::ImageInfo info);
+  Image(Session* session, uint32_t memory_id, off_t memory_offset,
         fuchsia::images::ImageInfo info);
   ~Image();
 
@@ -162,9 +158,7 @@ class Image : public Resource {
 class Buffer final : public Resource {
  public:
   Buffer(const Memory& memory, off_t memory_offset, size_t buffer_size);
-  Buffer(Session* session,
-         uint32_t memory_id,
-         off_t memory_offset,
+  Buffer(Session* session, uint32_t memory_id, off_t memory_offset,
          size_t buffer_size);
   Buffer(Buffer&& moved);
   ~Buffer();
@@ -185,12 +179,10 @@ class Mesh final : public Shape {
   // BindMeshBuffersCommand.
   void BindBuffers(const Buffer& index_buffer,
                    fuchsia::ui::gfx::MeshIndexFormat index_format,
-                   uint64_t index_offset,
-                   uint32_t index_count,
+                   uint64_t index_offset, uint32_t index_count,
                    const Buffer& vertex_buffer,
                    fuchsia::ui::gfx::MeshVertexFormat vertex_format,
-                   uint64_t vertex_offset,
-                   uint32_t vertex_count,
+                   uint64_t vertex_offset, uint32_t vertex_count,
                    const float bounding_box_min[3],
                    const float bounding_box_max[3]);
 
@@ -470,14 +462,11 @@ class CameraBase : public Resource {
   CameraBase(CameraBase&& moved) : Resource(std::move(moved)) {}
   ~CameraBase() {}
   // Sets the camera's view parameters.
-  void SetTransform(const float eye_position[3],
-                    const float eye_look_at[3],
+  void SetTransform(const float eye_position[3], const float eye_look_at[3],
                     const float eye_up[3]);
   // Sets the camera pose buffer
-  void SetPoseBuffer(const Buffer& buffer,
-                     uint32_t num_entries,
-                     uint64_t base_time,
-                     uint64_t time_interval);
+  void SetPoseBuffer(const Buffer& buffer, uint32_t num_entries,
+                     uint64_t base_time, uint64_t time_interval);
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(CameraBase);

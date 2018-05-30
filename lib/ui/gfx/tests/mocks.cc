@@ -27,7 +27,8 @@ SessionHandlerForTest::SessionHandlerForTest(CommandDispatcherContext context,
       command_count_(0),
       present_count_(0) {}
 
-void SessionHandlerForTest::DispatchCommand(fuchsia::ui::scenic::Command command) {
+void SessionHandlerForTest::DispatchCommand(
+    fuchsia::ui::scenic::Command command) {
   SessionHandler::DispatchCommand(std::move(command));
   ++command_count_;
 }

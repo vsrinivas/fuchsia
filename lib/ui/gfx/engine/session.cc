@@ -55,11 +55,13 @@ namespace {
 // TODO: There should also be a convenient way of type-checking a variable;
 // this will necessarily involve looking up the value in the ResourceMap.
 constexpr std::array<::fuchsia::ui::gfx::Value::Tag, 2> kFloatValueTypes{
-    {::fuchsia::ui::gfx::Value::Tag::kVector1, ::fuchsia::ui::gfx::Value::Tag::kVariableId}};
+    {::fuchsia::ui::gfx::Value::Tag::kVector1,
+     ::fuchsia::ui::gfx::Value::Tag::kVariableId}};
 
 // Converts the provided vector of scene_manager hits into a fidl array of
 // HitPtrs.
-fidl::VectorPtr<::fuchsia::ui::gfx::Hit> WrapHits(const std::vector<Hit>& hits) {
+fidl::VectorPtr<::fuchsia::ui::gfx::Hit> WrapHits(
+    const std::vector<Hit>& hits) {
   fidl::VectorPtr<::fuchsia::ui::gfx::Hit> wrapped_hits;
   wrapped_hits.resize(hits.size());
   for (size_t i = 0; i < hits.size(); ++i) {
@@ -193,7 +195,8 @@ bool Session::ApplyCommand(::fuchsia::ui::gfx::Command command) {
   }
 }
 
-bool Session::ApplyCreateResourceCommand(::fuchsia::ui::gfx::CreateResourceCommand command) {
+bool Session::ApplyCreateResourceCommand(
+    ::fuchsia::ui::gfx::CreateResourceCommand command) {
   const scenic::ResourceId id = command.id;
   if (id == 0) {
     error_reporter_->ERROR()
@@ -274,7 +277,8 @@ bool Session::ApplyReleaseResourceCommand(
   return resources_.RemoveResource(command.id);
 }
 
-bool Session::ApplyExportResourceCommand(::fuchsia::ui::gfx::ExportResourceCommand command) {
+bool Session::ApplyExportResourceCommand(
+    ::fuchsia::ui::gfx::ExportResourceCommand command) {
   if (!command.token) {
     error_reporter_->ERROR()
         << "scenic::gfx::Session::ApplyExportResourceCommand(): "
@@ -288,7 +292,8 @@ bool Session::ApplyExportResourceCommand(::fuchsia::ui::gfx::ExportResourceComma
   return false;
 }
 
-bool Session::ApplyImportResourceCommand(::fuchsia::ui::gfx::ImportResourceCommand command) {
+bool Session::ApplyImportResourceCommand(
+    ::fuchsia::ui::gfx::ImportResourceCommand command) {
   if (!command.token) {
     error_reporter_->ERROR()
         << "scenic::gfx::Session::ApplyImportResourceCommand(): "
@@ -302,7 +307,8 @@ bool Session::ApplyImportResourceCommand(::fuchsia::ui::gfx::ImportResourceComma
          resources_.AddResource(command.id, std::move(import));
 }
 
-bool Session::ApplyAddChildCommand(::fuchsia::ui::gfx::AddChildCommand command) {
+bool Session::ApplyAddChildCommand(
+    ::fuchsia::ui::gfx::AddChildCommand command) {
   // Find the parent and child nodes.
   if (auto parent_node = resources_.FindResource<Node>(command.node_id)) {
     if (auto child_node = resources_.FindResource<Node>(command.child_id)) {
@@ -329,7 +335,8 @@ bool Session::ApplyDetachCommand(::fuchsia::ui::gfx::DetachCommand command) {
   return false;
 }
 
-bool Session::ApplyDetachChildrenCommand(::fuchsia::ui::gfx::DetachChildrenCommand command) {
+bool Session::ApplyDetachChildrenCommand(
+    ::fuchsia::ui::gfx::DetachChildrenCommand command) {
   if (auto node = resources_.FindResource<Node>(command.node_id)) {
     return node->DetachChildren();
   }
@@ -343,7 +350,8 @@ bool Session::ApplySetTagCommand(::fuchsia::ui::gfx::SetTagCommand command) {
   return false;
 }
 
-bool Session::ApplySetTranslationCommand(::fuchsia::ui::gfx::SetTranslationCommand command) {
+bool Session::ApplySetTranslationCommand(
+    ::fuchsia::ui::gfx::SetTranslationCommand command) {
   if (auto node = resources_.FindResource<Node>(command.id)) {
     if (IsVariable(command.value)) {
       if (auto variable = resources_.FindVariableResource<Vector3Variable>(
@@ -357,7 +365,8 @@ bool Session::ApplySetTranslationCommand(::fuchsia::ui::gfx::SetTranslationComma
   return false;
 }
 
-bool Session::ApplySetScaleCommand(::fuchsia::ui::gfx::SetScaleCommand command) {
+bool Session::ApplySetScaleCommand(
+    ::fuchsia::ui::gfx::SetScaleCommand command) {
   if (auto node = resources_.FindResource<Node>(command.id)) {
     if (IsVariable(command.value)) {
       if (auto variable = resources_.FindVariableResource<Vector3Variable>(
@@ -371,7 +380,8 @@ bool Session::ApplySetScaleCommand(::fuchsia::ui::gfx::SetScaleCommand command) 
   return false;
 }
 
-bool Session::ApplySetRotationCommand(::fuchsia::ui::gfx::SetRotationCommand command) {
+bool Session::ApplySetRotationCommand(
+    ::fuchsia::ui::gfx::SetRotationCommand command) {
   if (auto node = resources_.FindResource<Node>(command.id)) {
     if (IsVariable(command.value)) {
       if (auto variable = resources_.FindVariableResource<QuaternionVariable>(
@@ -385,7 +395,8 @@ bool Session::ApplySetRotationCommand(::fuchsia::ui::gfx::SetRotationCommand com
   return false;
 }
 
-bool Session::ApplySetAnchorCommand(::fuchsia::ui::gfx::SetAnchorCommand command) {
+bool Session::ApplySetAnchorCommand(
+    ::fuchsia::ui::gfx::SetAnchorCommand command) {
   if (auto node = resources_.FindResource<Node>(command.id)) {
     if (IsVariable(command.value)) {
       if (auto variable = resources_.FindVariableResource<Vector3Variable>(
@@ -411,7 +422,8 @@ bool Session::ApplySetSizeCommand(::fuchsia::ui::gfx::SetSizeCommand command) {
   return false;
 }
 
-bool Session::ApplySetShapeCommand(::fuchsia::ui::gfx::SetShapeCommand command) {
+bool Session::ApplySetShapeCommand(
+    ::fuchsia::ui::gfx::SetShapeCommand command) {
   if (auto node = resources_.FindResource<ShapeNode>(command.node_id)) {
     if (auto shape = resources_.FindResource<Shape>(command.shape_id)) {
       node->SetShape(std::move(shape));
@@ -421,7 +433,8 @@ bool Session::ApplySetShapeCommand(::fuchsia::ui::gfx::SetShapeCommand command) 
   return false;
 }
 
-bool Session::ApplySetMaterialCommand(::fuchsia::ui::gfx::SetMaterialCommand command) {
+bool Session::ApplySetMaterialCommand(
+    ::fuchsia::ui::gfx::SetMaterialCommand command) {
   if (auto node = resources_.FindResource<ShapeNode>(command.node_id)) {
     if (auto material =
             resources_.FindResource<Material>(command.material_id)) {
@@ -463,7 +476,8 @@ bool Session::ApplySetSpacePropertiesCommand(
   return false;
 }
 
-bool Session::ApplySetCameraCommand(::fuchsia::ui::gfx::SetCameraCommand command) {
+bool Session::ApplySetCameraCommand(
+    ::fuchsia::ui::gfx::SetCameraCommand command) {
   if (auto renderer = resources_.FindResource<Renderer>(command.renderer_id)) {
     if (command.camera_id == 0) {
       renderer->SetCamera(nullptr);
@@ -477,7 +491,8 @@ bool Session::ApplySetCameraCommand(::fuchsia::ui::gfx::SetCameraCommand command
   return false;
 }
 
-bool Session::ApplySetTextureCommand(::fuchsia::ui::gfx::SetTextureCommand command) {
+bool Session::ApplySetTextureCommand(
+    ::fuchsia::ui::gfx::SetTextureCommand command) {
   if (auto material = resources_.FindResource<Material>(command.material_id)) {
     if (command.texture_id == 0) {
       material->SetTexture(nullptr);
@@ -491,7 +506,8 @@ bool Session::ApplySetTextureCommand(::fuchsia::ui::gfx::SetTextureCommand comma
   return false;
 }
 
-bool Session::ApplySetColorCommand(::fuchsia::ui::gfx::SetColorCommand command) {
+bool Session::ApplySetColorCommand(
+    ::fuchsia::ui::gfx::SetColorCommand command) {
   if (auto material = resources_.FindResource<Material>(command.material_id)) {
     if (IsVariable(command.color)) {
       error_reporter_->ERROR()
@@ -527,7 +543,8 @@ bool Session::ApplyBindMeshBuffersCommand(
   return false;
 }
 
-bool Session::ApplyAddLayerCommand(::fuchsia::ui::gfx::AddLayerCommand command) {
+bool Session::ApplyAddLayerCommand(
+    ::fuchsia::ui::gfx::AddLayerCommand command) {
   auto layer_stack =
       resources_.FindResource<LayerStack>(command.layer_stack_id);
   auto layer = resources_.FindResource<Layer>(command.layer_id);
@@ -537,7 +554,8 @@ bool Session::ApplyAddLayerCommand(::fuchsia::ui::gfx::AddLayerCommand command) 
   return false;
 }
 
-bool Session::ApplyRemoveLayerCommand(::fuchsia::ui::gfx::RemoveLayerCommand command) {
+bool Session::ApplyRemoveLayerCommand(
+    ::fuchsia::ui::gfx::RemoveLayerCommand command) {
   auto layer_stack =
       resources_.FindResource<LayerStack>(command.layer_stack_id);
   auto layer = resources_.FindResource<Layer>(command.layer_id);
@@ -557,7 +575,8 @@ bool Session::ApplyRemoveAllLayersCommand(
   return false;
 }
 
-bool Session::ApplySetLayerStackCommand(::fuchsia::ui::gfx::SetLayerStackCommand command) {
+bool Session::ApplySetLayerStackCommand(
+    ::fuchsia::ui::gfx::SetLayerStackCommand command) {
   auto compositor = resources_.FindResource<Compositor>(command.compositor_id);
   auto layer_stack =
       resources_.FindResource<LayerStack>(command.layer_stack_id);
@@ -567,7 +586,8 @@ bool Session::ApplySetLayerStackCommand(::fuchsia::ui::gfx::SetLayerStackCommand
   return false;
 }
 
-bool Session::ApplySetRendererCommand(::fuchsia::ui::gfx::SetRendererCommand command) {
+bool Session::ApplySetRendererCommand(
+    ::fuchsia::ui::gfx::SetRendererCommand command) {
   auto layer = resources_.FindResource<Layer>(command.layer_id);
   auto renderer = resources_.FindResource<Renderer>(command.renderer_id);
 
@@ -585,8 +605,9 @@ bool Session::ApplySetRendererParamCommand(
       case ::fuchsia::ui::gfx::RendererParam::Tag::kShadowTechnique:
         return renderer->SetShadowTechnique(command.param.shadow_technique());
       case ::fuchsia::ui::gfx::RendererParam::Tag::kRenderFrequency:
-        renderer->SetRenderContinuously(command.param.render_frequency() ==
-                                        ::fuchsia::ui::gfx::RenderFrequency::CONTINUOUSLY);
+        renderer->SetRenderContinuously(
+            command.param.render_frequency() ==
+            ::fuchsia::ui::gfx::RenderFrequency::CONTINUOUSLY);
         return true;
       case ::fuchsia::ui::gfx::RendererParam::Tag::Invalid:
         error_reporter_->ERROR()
@@ -597,7 +618,8 @@ bool Session::ApplySetRendererParamCommand(
   return false;
 }
 
-bool Session::ApplySetEventMaskCommand(::fuchsia::ui::gfx::SetEventMaskCommand command) {
+bool Session::ApplySetEventMaskCommand(
+    ::fuchsia::ui::gfx::SetEventMaskCommand command) {
   if (auto r = resources_.FindResource<Resource>(command.id)) {
     return r->SetEventMask(command.event_mask);
   }
@@ -699,7 +721,8 @@ bool Session::ApplySetCameraPoseBufferCommand(
   return true;
 }
 
-bool Session::ApplySetLightColorCommand(::fuchsia::ui::gfx::SetLightColorCommand command) {
+bool Session::ApplySetLightColorCommand(
+    ::fuchsia::ui::gfx::SetLightColorCommand command) {
   // TODO(MZ-123): support variables.
   if (command.color.variable_id) {
     error_reporter_->ERROR()
@@ -727,7 +750,8 @@ bool Session::ApplySetLightDirectionCommand(
   return false;
 }
 
-bool Session::ApplyAddLightCommand(::fuchsia::ui::gfx::AddLightCommand command) {
+bool Session::ApplyAddLightCommand(
+    ::fuchsia::ui::gfx::AddLightCommand command) {
   if (auto scene = resources_.FindResource<Scene>(command.scene_id)) {
     if (auto light = resources_.FindResource<Light>(command.light_id)) {
       return scene->AddLight(std::move(light));
@@ -739,19 +763,22 @@ bool Session::ApplyAddLightCommand(::fuchsia::ui::gfx::AddLightCommand command) 
   return false;
 }
 
-bool Session::ApplyDetachLightCommand(::fuchsia::ui::gfx::DetachLightCommand command) {
+bool Session::ApplyDetachLightCommand(
+    ::fuchsia::ui::gfx::DetachLightCommand command) {
   error_reporter_->ERROR()
       << "scenic::gfx::Session::ApplyDetachLightCommand(): unimplemented.";
   return false;
 }
 
-bool Session::ApplyDetachLightsCommand(::fuchsia::ui::gfx::DetachLightsCommand command) {
+bool Session::ApplyDetachLightsCommand(
+    ::fuchsia::ui::gfx::DetachLightsCommand command) {
   error_reporter_->ERROR()
       << "scenic::gfx::Session::ApplyDetachLightsCommand(): unimplemented.";
   return false;
 }
 
-bool Session::ApplySetLabelCommand(::fuchsia::ui::gfx::SetLabelCommand command) {
+bool Session::ApplySetLabelCommand(
+    ::fuchsia::ui::gfx::SetLabelCommand command) {
   if (auto r = resources_.FindResource<Resource>(command.id)) {
     return r->SetLabel(command.label.get());
   }
@@ -767,12 +794,14 @@ bool Session::ApplySetDisableClippingCommand(
   return false;
 }
 
-bool Session::ApplyCreateMemory(scenic::ResourceId id, ::fuchsia::ui::gfx::MemoryArgs args) {
+bool Session::ApplyCreateMemory(scenic::ResourceId id,
+                                ::fuchsia::ui::gfx::MemoryArgs args) {
   auto memory = CreateMemory(id, std::move(args));
   return memory ? resources_.AddResource(id, std::move(memory)) : false;
 }
 
-bool Session::ApplyCreateImage(scenic::ResourceId id, ::fuchsia::ui::gfx::ImageArgs args) {
+bool Session::ApplyCreateImage(scenic::ResourceId id,
+                               ::fuchsia::ui::gfx::ImageArgs args) {
   if (auto memory = resources_.FindResource<Memory>(args.memory_id)) {
     if (auto image = CreateImage(id, std::move(memory), args)) {
       return resources_.AddResource(id, std::move(image));
@@ -789,7 +818,8 @@ bool Session::ApplyCreateImagePipe(scenic::ResourceId id,
   return resources_.AddResource(id, image_pipe);
 }
 
-bool Session::ApplyCreateBuffer(scenic::ResourceId id, ::fuchsia::ui::gfx::BufferArgs args) {
+bool Session::ApplyCreateBuffer(scenic::ResourceId id,
+                                ::fuchsia::ui::gfx::BufferArgs args) {
   if (auto memory = resources_.FindResource<Memory>(args.memory_id)) {
     if (auto buffer = CreateBuffer(id, std::move(memory), args.memory_offset,
                                    args.num_bytes)) {
@@ -799,18 +829,20 @@ bool Session::ApplyCreateBuffer(scenic::ResourceId id, ::fuchsia::ui::gfx::Buffe
   return false;
 }
 
-bool Session::ApplyCreateScene(scenic::ResourceId id, ::fuchsia::ui::gfx::SceneArgs args) {
+bool Session::ApplyCreateScene(scenic::ResourceId id,
+                               ::fuchsia::ui::gfx::SceneArgs args) {
   auto scene = CreateScene(id, std::move(args));
   return scene ? resources_.AddResource(id, std::move(scene)) : false;
 }
 
-bool Session::ApplyCreateCamera(scenic::ResourceId id, ::fuchsia::ui::gfx::CameraArgs args) {
+bool Session::ApplyCreateCamera(scenic::ResourceId id,
+                                ::fuchsia::ui::gfx::CameraArgs args) {
   auto camera = CreateCamera(id, std::move(args));
   return camera ? resources_.AddResource(id, std::move(camera)) : false;
 }
 
-bool Session::ApplyCreateStereoCamera(scenic::ResourceId id,
-                                      ::fuchsia::ui::gfx::StereoCameraArgs args) {
+bool Session::ApplyCreateStereoCamera(
+    scenic::ResourceId id, ::fuchsia::ui::gfx::StereoCameraArgs args) {
   auto camera = CreateStereoCamera(id, args);
   return camera ? resources_.AddResource(id, std::move(camera)) : false;
 }
@@ -821,14 +853,14 @@ bool Session::ApplyCreateRenderer(scenic::ResourceId id,
   return renderer ? resources_.AddResource(id, std::move(renderer)) : false;
 }
 
-bool Session::ApplyCreateAmbientLight(scenic::ResourceId id,
-                                      ::fuchsia::ui::gfx::AmbientLightArgs args) {
+bool Session::ApplyCreateAmbientLight(
+    scenic::ResourceId id, ::fuchsia::ui::gfx::AmbientLightArgs args) {
   auto light = CreateAmbientLight(id);
   return light ? resources_.AddResource(id, std::move(light)) : false;
 }
 
-bool Session::ApplyCreateDirectionalLight(scenic::ResourceId id,
-                                          ::fuchsia::ui::gfx::DirectionalLightArgs args) {
+bool Session::ApplyCreateDirectionalLight(
+    scenic::ResourceId id, ::fuchsia::ui::gfx::DirectionalLightArgs args) {
   auto light = CreateDirectionalLight(id);
   return light ? resources_.AddResource(id, std::move(light)) : false;
 }
@@ -852,8 +884,8 @@ bool Session::ApplyCreateRectangle(scenic::ResourceId id,
   return rectangle ? resources_.AddResource(id, std::move(rectangle)) : false;
 }
 
-bool Session::ApplyCreateRoundedRectangle(scenic::ResourceId id,
-                                          ::fuchsia::ui::gfx::RoundedRectangleArgs args) {
+bool Session::ApplyCreateRoundedRectangle(
+    scenic::ResourceId id, ::fuchsia::ui::gfx::RoundedRectangleArgs args) {
   if (!AssertValueIsOfType(args.width, kFloatValueTypes) ||
       !AssertValueIsOfType(args.height, kFloatValueTypes) ||
       !AssertValueIsOfType(args.top_left_radius, kFloatValueTypes) ||
@@ -887,7 +919,8 @@ bool Session::ApplyCreateRoundedRectangle(scenic::ResourceId id,
   return rectangle ? resources_.AddResource(id, std::move(rectangle)) : false;
 }
 
-bool Session::ApplyCreateCircle(scenic::ResourceId id, ::fuchsia::ui::gfx::CircleArgs args) {
+bool Session::ApplyCreateCircle(scenic::ResourceId id,
+                                ::fuchsia::ui::gfx::CircleArgs args) {
   if (!AssertValueIsOfType(args.radius, kFloatValueTypes)) {
     return false;
   }
@@ -903,7 +936,8 @@ bool Session::ApplyCreateCircle(scenic::ResourceId id, ::fuchsia::ui::gfx::Circl
   return circle ? resources_.AddResource(id, std::move(circle)) : false;
 }
 
-bool Session::ApplyCreateMesh(scenic::ResourceId id, ::fuchsia::ui::gfx::MeshArgs args) {
+bool Session::ApplyCreateMesh(scenic::ResourceId id,
+                              ::fuchsia::ui::gfx::MeshArgs args) {
   auto mesh = CreateMesh(id);
   return mesh ? resources_.AddResource(id, std::move(mesh)) : false;
 }
@@ -932,7 +966,8 @@ bool Session::ApplyCreateShapeNode(scenic::ResourceId id,
   return node ? resources_.AddResource(id, std::move(node)) : false;
 }
 
-bool Session::ApplyCreateSpace(scenic::ResourceId id, ::fuchsia::ui::gfx::SpaceArgs args) {
+bool Session::ApplyCreateSpace(scenic::ResourceId id,
+                               ::fuchsia::ui::gfx::SpaceArgs args) {
   error_reporter()->ERROR()
       << "scenic::gfx::Session::ApplyCreateSpace(): unimplemented";
   return false;
@@ -945,8 +980,8 @@ bool Session::ApplyCreateSpaceHolder(scenic::ResourceId id,
   return false;
 }
 
-bool Session::ApplyCreateDisplayCompositor(scenic::ResourceId id,
-                                           ::fuchsia::ui::gfx::DisplayCompositorArgs args) {
+bool Session::ApplyCreateDisplayCompositor(
+    scenic::ResourceId id, ::fuchsia::ui::gfx::DisplayCompositorArgs args) {
   auto compositor = CreateDisplayCompositor(id, std::move(args));
   return compositor ? resources_.AddResource(id, std::move(compositor)) : false;
 }
@@ -964,7 +999,8 @@ bool Session::ApplyCreateLayerStack(scenic::ResourceId id,
                      : false;
 }
 
-bool Session::ApplyCreateLayer(scenic::ResourceId id, ::fuchsia::ui::gfx::LayerArgs args) {
+bool Session::ApplyCreateLayer(scenic::ResourceId id,
+                               ::fuchsia::ui::gfx::LayerArgs args) {
   auto layer = CreateLayer(id, std::move(args));
   return layer ? resources_.AddResource(id, std::move(layer)) : false;
 }
@@ -1017,7 +1053,8 @@ ResourcePtr Session::CreateBuffer(scenic::ResourceId id, MemoryPtr memory,
                                      memory_offset);
 }
 
-ResourcePtr Session::CreateScene(scenic::ResourceId id, ::fuchsia::ui::gfx::SceneArgs args) {
+ResourcePtr Session::CreateScene(scenic::ResourceId id,
+                                 ::fuchsia::ui::gfx::SceneArgs args) {
   return fxl::MakeRefCounted<Scene>(this, id);
 }
 
@@ -1029,8 +1066,8 @@ ResourcePtr Session::CreateCamera(scenic::ResourceId id,
   return ResourcePtr();
 }
 
-ResourcePtr Session::CreateStereoCamera(scenic::ResourceId id,
-                                        const ::fuchsia::ui::gfx::StereoCameraArgs args) {
+ResourcePtr Session::CreateStereoCamera(
+    scenic::ResourceId id, const ::fuchsia::ui::gfx::StereoCameraArgs args) {
   if (auto scene = resources_.FindResource<Scene>(args.scene_id)) {
     return fxl::MakeRefCounted<StereoCamera>(this, id, std::move(scene));
   }
@@ -1141,7 +1178,8 @@ ResourcePtr Session::CreateVariable(scenic::ResourceId id,
   return nullptr;
 }
 
-ResourcePtr Session::CreateLayer(scenic::ResourceId id, ::fuchsia::ui::gfx::LayerArgs args) {
+ResourcePtr Session::CreateLayer(scenic::ResourceId id,
+                                 ::fuchsia::ui::gfx::LayerArgs args) {
   return fxl::MakeRefCounted<Layer>(this, id);
 }
 
@@ -1212,11 +1250,12 @@ void Session::TearDown() {
   resources_.Clear();
   scheduled_image_pipe_updates_ = {};
 
-  // We assume the channel for the associated ::fuchsia::ui::gfx::Session is closed because
-  // SessionHandler closes it before calling this method.
-  // The channel *must* be closed before we clear |scheduled_updates_|, since it
-  // contains pending callbacks to ::fuchsia::ui::gfx::Session::Present(); if it were not
-  // closed, we would have to invoke those callbacks before destroying them.
+  // We assume the channel for the associated ::fuchsia::ui::gfx::Session is
+  // closed because SessionHandler closes it before calling this method. The
+  // channel *must* be closed before we clear |scheduled_updates_|, since it
+  // contains pending callbacks to ::fuchsia::ui::gfx::Session::Present(); if it
+  // were not closed, we would have to invoke those callbacks before destroying
+  // them.
   scheduled_updates_ = {};
   fences_to_release_on_next_update_.reset();
 
@@ -1260,11 +1299,12 @@ bool Session::AssertValueIsOfType(const ::fuchsia::ui::gfx::Value& value,
   return false;
 }
 
-bool Session::ScheduleUpdate(uint64_t requested_presentation_time,
-                             std::vector<::fuchsia::ui::gfx::Command> commands,
-                             ::fidl::VectorPtr<zx::event> acquire_fences,
-                             ::fidl::VectorPtr<zx::event> release_events,
-                             fuchsia::ui::scenic::Session::PresentCallback callback) {
+bool Session::ScheduleUpdate(
+    uint64_t requested_presentation_time,
+    std::vector<::fuchsia::ui::gfx::Command> commands,
+    ::fidl::VectorPtr<zx::event> acquire_fences,
+    ::fidl::VectorPtr<zx::event> release_events,
+    fuchsia::ui::scenic::Session::PresentCallback callback) {
   if (is_valid()) {
     uint64_t last_scheduled_presentation_time =
         last_applied_update_presentation_time_;
@@ -1460,9 +1500,9 @@ void Session::HitTest(uint32_t node_id, ::fuchsia::ui::gfx::vec3 ray_origin,
   }
 }
 
-void Session::HitTestDeviceRay(::fuchsia::ui::gfx::vec3 ray_origin,
-                               ::fuchsia::ui::gfx::vec3 ray_direction,
-                               fuchsia::ui::scenic::Session::HitTestCallback callback) {
+void Session::HitTestDeviceRay(
+    ::fuchsia::ui::gfx::vec3 ray_origin, ::fuchsia::ui::gfx::vec3 ray_direction,
+    fuchsia::ui::scenic::Session::HitTestCallback callback) {
   escher::ray4 ray =
       escher::ray4{{Unwrap(ray_origin), 1.f}, {Unwrap(ray_direction), 0.f}};
 

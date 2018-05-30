@@ -24,17 +24,13 @@ void SetIdentityTransform(fuchsia::math::Transform* transform) {
          sizeof(kIdentityMatrix));
 }
 
-void SetTranslationTransform(fuchsia::math::Transform* transform,
-                             float x,
-                             float y,
-                             float z) {
+void SetTranslationTransform(fuchsia::math::Transform* transform, float x,
+                             float y, float z) {
   SetIdentityTransform(transform);
   Translate(transform, x, y, z);
 }
 
-void SetScaleTransform(fuchsia::math::Transform* transform,
-                       float x,
-                       float y,
+void SetScaleTransform(fuchsia::math::Transform* transform, float x, float y,
                        float z) {
   SetIdentityTransform(transform);
   Scale(transform, x, y, z);
@@ -59,7 +55,8 @@ fuchsia::math::TransformPtr CreateIdentityTransform() {
   return result;
 }
 
-fuchsia::math::TransformPtr CreateTranslationTransform(float x, float y, float z) {
+fuchsia::math::TransformPtr CreateTranslationTransform(float x, float y,
+                                                       float z) {
   return Translate(CreateIdentityTransform(), x, y, z);
 }
 
@@ -68,23 +65,19 @@ fuchsia::math::TransformPtr CreateScaleTransform(float x, float y, float z) {
 }
 
 fuchsia::math::TransformPtr Translate(fuchsia::math::TransformPtr transform,
-                                 float x,
-                                 float y,
-                                 float z) {
+                                      float x, float y, float z) {
   Translate(transform.get(), x, y, z);
   return transform;
 }
 
 fuchsia::math::TransformPtr Scale(fuchsia::math::TransformPtr transform,
-                             float x,
-                             float y,
-                             float z) {
+                                  float x, float y, float z) {
   Scale(transform.get(), x, y, z);
   return transform;
 }
 
 fuchsia::math::PointF TransformPoint(const fuchsia::math::Transform& transform,
-                                const fuchsia::math::PointF& point) {
+                                     const fuchsia::math::PointF& point) {
   fuchsia::math::PointF result;
   const auto& m = transform.matrix;
   float w = m[12] * point.x + m[13] * point.y + m[15];

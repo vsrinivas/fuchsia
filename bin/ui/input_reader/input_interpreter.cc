@@ -35,7 +35,8 @@ int64_t InputEventTimestampNow() {
   return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
 }
 
-fuchsia::ui::input::InputReport CloneReport(const fuchsia::ui::input::InputReportPtr& report) {
+fuchsia::ui::input::InputReport CloneReport(
+    const fuchsia::ui::input::InputReportPtr& report) {
   fuchsia::ui::input::InputReport result;
   fidl::Clone(*report, &result);
   return result;
@@ -49,7 +50,8 @@ const size_t kParadiseAccBase = 1;
 namespace mozart {
 
 std::unique_ptr<InputInterpreter> InputInterpreter::Open(
-    int dirfd, std::string filename, fuchsia::ui::input::InputDeviceRegistry* registry) {
+    int dirfd, std::string filename,
+    fuchsia::ui::input::InputDeviceRegistry* registry) {
   int fd = openat(dirfd, filename.c_str(), O_RDONLY);
   if (fd < 0) {
     FXL_LOG(ERROR) << "Failed to open device " << filename;
@@ -65,8 +67,8 @@ std::unique_ptr<InputInterpreter> InputInterpreter::Open(
   return device;
 }
 
-InputInterpreter::InputInterpreter(std::string name, int fd,
-                                   fuchsia::ui::input::InputDeviceRegistry* registry)
+InputInterpreter::InputInterpreter(
+    std::string name, int fd, fuchsia::ui::input::InputDeviceRegistry* registry)
     : registry_(registry), hid_decoder_(std::move(name), fd) {
   memset(acer12_touch_reports_, 0, 2 * sizeof(acer12_touch_t));
 }
@@ -151,7 +153,8 @@ bool InputInterpreter::Initialize() {
     touchscreen_descriptor_->max_finger_id = 255;
 
     touchscreen_report_ = fuchsia::ui::input::InputReport::New();
-    touchscreen_report_->touchscreen = fuchsia::ui::input::TouchscreenReport::New();
+    touchscreen_report_->touchscreen =
+        fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::ACER12;
   } else if (protocol == HidDecoder::Protocol::SamsungTouch) {
@@ -171,7 +174,8 @@ bool InputInterpreter::Initialize() {
     touchscreen_descriptor_->max_finger_id = 255;
 
     touchscreen_report_ = fuchsia::ui::input::InputReport::New();
-    touchscreen_report_->touchscreen = fuchsia::ui::input::TouchscreenReport::New();
+    touchscreen_report_->touchscreen =
+        fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::SAMSUNG;
   } else if (protocol == HidDecoder::Protocol::ParadiseV1Touch) {
@@ -192,7 +196,8 @@ bool InputInterpreter::Initialize() {
     touchscreen_descriptor_->max_finger_id = 255;
 
     touchscreen_report_ = fuchsia::ui::input::InputReport::New();
-    touchscreen_report_->touchscreen = fuchsia::ui::input::TouchscreenReport::New();
+    touchscreen_report_->touchscreen =
+        fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::PARADISEv1;
   } else if (protocol == HidDecoder::Protocol::ParadiseV2Touch) {
@@ -212,7 +217,8 @@ bool InputInterpreter::Initialize() {
     touchscreen_descriptor_->max_finger_id = 255;
 
     touchscreen_report_ = fuchsia::ui::input::InputReport::New();
-    touchscreen_report_->touchscreen = fuchsia::ui::input::TouchscreenReport::New();
+    touchscreen_report_->touchscreen =
+        fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::PARADISEv2;
   } else if (protocol == HidDecoder::Protocol::ParadiseV1TouchPad) {
@@ -269,7 +275,8 @@ bool InputInterpreter::Initialize() {
     touchscreen_descriptor_->max_finger_id = 1;
 
     touchscreen_report_ = fuchsia::ui::input::InputReport::New();
-    touchscreen_report_->touchscreen = fuchsia::ui::input::TouchscreenReport::New();
+    touchscreen_report_->touchscreen =
+        fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::EGALAX;
   } else if (protocol == HidDecoder::Protocol::ParadiseSensor) {
@@ -277,12 +284,14 @@ bool InputInterpreter::Initialize() {
     sensor_device_type_ = SensorDeviceType::PARADISE;
     has_sensors_ = true;
 
-    fuchsia::ui::input::SensorDescriptorPtr acc_base = fuchsia::ui::input::SensorDescriptor::New();
+    fuchsia::ui::input::SensorDescriptorPtr acc_base =
+        fuchsia::ui::input::SensorDescriptor::New();
     acc_base->type = fuchsia::ui::input::SensorType::ACCELEROMETER;
     acc_base->loc = fuchsia::ui::input::SensorLocation::BASE;
     sensor_descriptors_[kParadiseAccBase] = std::move(acc_base);
 
-    fuchsia::ui::input::SensorDescriptorPtr acc_lid = fuchsia::ui::input::SensorDescriptor::New();
+    fuchsia::ui::input::SensorDescriptorPtr acc_lid =
+        fuchsia::ui::input::SensorDescriptor::New();
     acc_lid->type = fuchsia::ui::input::SensorType::ACCELEROMETER;
     acc_lid->loc = fuchsia::ui::input::SensorLocation::LID;
     sensor_descriptors_[kParadiseAccLid] = std::move(acc_lid);
@@ -542,7 +551,8 @@ bool InputInterpreter::ParseAcer12StylusReport(uint8_t* r, size_t len) {
   }
 
   if (acer12_stylus_status_barrel(report->status)) {
-    stylus_report_->stylus->pressed_buttons |= fuchsia::ui::input::kStylusBarrel;
+    stylus_report_->stylus->pressed_buttons |=
+        fuchsia::ui::input::kStylusBarrel;
   }
   FXL_VLOG(2) << name() << " parsed: " << *stylus_report_;
 

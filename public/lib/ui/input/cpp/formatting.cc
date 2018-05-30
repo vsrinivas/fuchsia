@@ -14,7 +14,8 @@ namespace fuchsia {
 namespace ui {
 namespace input {
 
-std::ostream& operator<<(std::ostream& os, const fuchsia::ui::input::InputEvent& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::ui::input::InputEvent& value) {
   if (value.is_pointer()) {
     return os << value.pointer();
   } else if (value.is_keyboard()) {
@@ -24,7 +25,8 @@ std::ostream& operator<<(std::ostream& os, const fuchsia::ui::input::InputEvent&
   }
 }
 
-std::ostream& operator<<(std::ostream& os, const fuchsia::ui::input::PointerEvent& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::ui::input::PointerEvent& value) {
   os << "{PointerEvent:";
 
   switch (value.phase) {
@@ -77,7 +79,8 @@ std::ostream& operator<<(std::ostream& os, const fuchsia::ui::input::PointerEven
   return os << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const fuchsia::ui::input::KeyboardEvent& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::ui::input::KeyboardEvent& value) {
   os << "{KeyboardEvent:";
 
   switch (value.phase) {
@@ -125,11 +128,13 @@ std::ostream& operator<<(std::ostream& os, const fuchsia::ui::input::KeyboardEve
   return os << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const fuchsia::ui::input::Range& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::ui::input::Range& value) {
   return os << "{Range[" << value.min << "," << value.max << "]}";
 }
 
-std::ostream& operator<<(std::ostream& os, const fuchsia::ui::input::Axis& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::ui::input::Axis& value) {
   return os << "{Axis: range=" << value.range
             << ", resolution=" << value.resolution << "}";
 }
@@ -192,8 +197,8 @@ std::ostream& operator<<(std::ostream& os,
   return os << "]}";
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const fuchsia::ui::input::TouchscreenDescriptor& value) {
+std::ostream& operator<<(
+    std::ostream& os, const fuchsia::ui::input::TouchscreenDescriptor& value) {
   os << "{Touchscreen:";
   os << "x=" << value.x;
   os << ", y=" << value.y;
@@ -248,7 +253,8 @@ std::ostream& operator<<(std::ostream& os,
   return os << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const fuchsia::ui::input::KeyboardReport& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::ui::input::KeyboardReport& value) {
   os << "{KeyboardReport: pressed_keys=[";
   bool first = true;
   for (size_t index = 0; index < value.pressed_keys->size(); ++index) {
@@ -262,7 +268,8 @@ std::ostream& operator<<(std::ostream& os, const fuchsia::ui::input::KeyboardRep
   return os << "]}";
 }
 
-std::ostream& operator<<(std::ostream& os, const fuchsia::ui::input::MouseReport& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::ui::input::MouseReport& value) {
   os << "{MouseReport:";
   os << "rel_x=" << value.rel_x;
   os << ", rel_y=" << value.rel_y;
@@ -271,7 +278,8 @@ std::ostream& operator<<(std::ostream& os, const fuchsia::ui::input::MouseReport
   return os << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const fuchsia::ui::input::StylusReport& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::ui::input::StylusReport& value) {
   os << "{StylusReport:";
   os << "x=" << value.x;
   os << ", y=" << value.y;
@@ -287,7 +295,8 @@ std::ostream& operator<<(std::ostream& os, const fuchsia::ui::input::StylusRepor
   return os << "]}";
 }
 
-std::ostream& operator<<(std::ostream& os, const fuchsia::ui::input::Touch& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::ui::input::Touch& value) {
   os << "{Touch:";
   os << "finger_id= " << value.finger_id;
   os << ", x=" << value.x;
@@ -313,7 +322,8 @@ std::ostream& operator<<(std::ostream& os,
   return os << "]}";
 }
 
-std::ostream& operator<<(std::ostream& os, const fuchsia::ui::input::SensorReport& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::ui::input::SensorReport& value) {
   std::ios::fmtflags settings = os.flags();
   os << "{SensorReport: [" << std::hex << std::setfill('0');
   if (value.is_vector()) {
@@ -330,7 +340,8 @@ std::ostream& operator<<(std::ostream& os, const fuchsia::ui::input::SensorRepor
   return os << "]}";
 }
 
-std::ostream& operator<<(std::ostream& os, const fuchsia::ui::input::InputReport& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::ui::input::InputReport& value) {
   os << "{InputReport: event_time=" << value.event_time << ",";
 
   if (value.keyboard) {
@@ -349,7 +360,8 @@ std::ostream& operator<<(std::ostream& os, const fuchsia::ui::input::InputReport
   return os << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const fuchsia::ui::input::TextSelection& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::ui::input::TextSelection& value) {
   os << "{TextSelection: base=" << value.base << ", extent=" << value.extent
      << ", affinity=";
   switch (value.affinity) {
@@ -365,12 +377,14 @@ std::ostream& operator<<(std::ostream& os, const fuchsia::ui::input::TextSelecti
   return os << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const fuchsia::ui::input::TextRange& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::ui::input::TextRange& value) {
   return os << "{TextRange: start=" << value.start << ", end=" << value.end
             << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const fuchsia::ui::input::TextInputState& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::ui::input::TextInputState& value) {
   os << "{TextInputState: revision=" << value.revision;
   os << ", text='" << value.text << "'";
   os << ", selection=" << value.selection;

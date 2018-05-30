@@ -39,7 +39,8 @@ class InputInterpreter {
   using OnReportCallback = std::function<void(ReportType type)>;
 
   static std::unique_ptr<InputInterpreter> Open(
-      int dirfd, std::string filename, fuchsia::ui::input::InputDeviceRegistry* registry);
+      int dirfd, std::string filename,
+      fuchsia::ui::input::InputDeviceRegistry* registry);
   ~InputInterpreter();
 
   bool Initialize();
@@ -103,8 +104,10 @@ class InputInterpreter {
   bool has_sensors_ = false;
   // Arrays are indexed by the sensor number that was assigned by Zircon.
   // Keeps track of the physical sensors multiplexed over the file descriptor.
-  std::array<fuchsia::ui::input::SensorDescriptorPtr, kMaxSensorCount> sensor_descriptors_;
-  std::array<fuchsia::ui::input::InputDevicePtr, kMaxSensorCount> sensor_devices_;
+  std::array<fuchsia::ui::input::SensorDescriptorPtr, kMaxSensorCount>
+      sensor_descriptors_;
+  std::array<fuchsia::ui::input::InputDevicePtr, kMaxSensorCount>
+      sensor_devices_;
 
   TouchDeviceType touch_device_type_ = TouchDeviceType::NONE;
   MouseDeviceType mouse_device_type_ = MouseDeviceType::NONE;

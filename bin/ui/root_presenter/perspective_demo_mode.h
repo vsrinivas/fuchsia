@@ -29,7 +29,8 @@ class PerspectiveDemoMode {
   // dispatched.
   //
   // Returns true if the event was consumed and the scene is to be invalidated.
-  bool OnEvent(const fuchsia::ui::input::InputEvent& event, Presentation* presenter);
+  bool OnEvent(const fuchsia::ui::input::InputEvent& event,
+               Presentation* presenter);
 
   // Returns true if an animation update happened and the scene is to be
   // invalidated.

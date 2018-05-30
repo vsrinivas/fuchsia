@@ -239,7 +239,8 @@ bool CanvasImpl::ScenicImportNode(ResourceId id, zx::eventpair token) {
   return true;
 }
 
-bool CanvasImpl::ApplyScenicAddChildCommand(fuchsia::ui::gfx::AddChildCommand add_child) {
+bool CanvasImpl::ApplyScenicAddChildCommand(
+    fuchsia::ui::gfx::AddChildCommand add_child) {
   auto import_node = resource_map_.FindResource<ImportNode>(add_child.node_id);
   auto stroke_group =
       resource_map_.FindResource<StrokeGroup>(add_child.child_id);

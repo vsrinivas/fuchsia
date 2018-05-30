@@ -29,7 +29,8 @@ class DisplaySizeSwitcher {
   // |presenter| is the root presenter.
   //
   // Returns true if the event was consumed and the scene is to be invalidated.
-  bool OnEvent(const fuchsia::ui::input::InputEvent& event, Presentation* presenter);
+  bool OnEvent(const fuchsia::ui::input::InputEvent& event,
+               Presentation* presenter);
 
  private:
   uint32_t current_display_size_index_ = 0;
