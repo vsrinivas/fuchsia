@@ -9,7 +9,7 @@
 namespace fuchsia {
 namespace modular {
 
-AgentImpl::AgentImpl(component::ServiceNamespace* const service_namespace,
+AgentImpl::AgentImpl(fuchsia::sys::ServiceNamespace* const service_namespace,
                      Delegate* const delegate)
     : delegate_(delegate), binding_(this) {
   service_namespace->AddService<Agent>(
@@ -32,7 +32,7 @@ AgentImpl::AgentImpl(fbl::RefPtr<fs::PseudoDir> directory,
 // |Agent|
 void AgentImpl::Connect(
     fidl::StringPtr requestor_url,
-    fidl::InterfaceRequest<component::ServiceProvider> services_request) {
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services_request) {
   delegate_->Connect(std::move(services_request));
 }
 

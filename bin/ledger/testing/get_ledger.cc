@@ -22,15 +22,15 @@ constexpr zx::duration kTimeout = zx::sec(10);
 }  // namespace
 
 ledger::Status GetLedger(fxl::Closure quit_callback,
-                         component::StartupContext* context,
-                         component::ComponentControllerPtr* controller,
+                         fuchsia::sys::StartupContext* context,
+                         fuchsia::sys::ComponentControllerPtr* controller,
                          cloud_provider::CloudProviderPtr cloud_provider,
                          std::string ledger_name,
                          std::string ledger_repository_path,
                          ledger::LedgerPtr* ledger_ptr) {
   ledger_internal::LedgerRepositoryFactoryPtr repository_factory;
-  component::Services child_services;
-  component::LaunchInfo launch_info;
+  fuchsia::sys::Services child_services;
+  fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = "ledger";
   launch_info.directory_request = child_services.NewRequest();
   launch_info.arguments.push_back("--no_minfs_wait");

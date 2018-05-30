@@ -19,7 +19,7 @@ namespace modular {
 ModuleContextImpl::ModuleContextImpl(
     const ModuleContextInfo& info,
     const ModuleData* const module_data,
-    fidl::InterfaceRequest<component::ServiceProvider> service_provider_request)
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> service_provider_request)
     : module_data_(module_data),
       story_controller_impl_(info.story_controller_impl),
       component_context_impl_(info.component_context_info,

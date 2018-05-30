@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <modular_auth/cpp/fidl.h>
 #include "lib/app/cpp/service_provider_impl.h"
@@ -26,7 +26,7 @@ class AgentRunner;
 // The parameters of agent context that do not vary by instance.
 struct AgentContextInfo {
   const ComponentContextInfo component_context_info;
-  component::ApplicationLauncher* const app_launcher;
+  fuchsia::sys::ApplicationLauncher* const app_launcher;
   modular_auth::TokenProviderFactory* const token_provider_factory;
   UserIntelligenceProvider* const user_intelligence_provider;
 };
@@ -51,7 +51,7 @@ class AgentContextImpl : AgentContext, AgentController {
   // point all connections will be forwarded to the agent.
   void NewAgentConnection(
       const std::string& requestor_url,
-      fidl::InterfaceRequest<component::ServiceProvider>
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
           incoming_services_request,
       fidl::InterfaceRequest<AgentController> agent_controller_request);
 
@@ -105,7 +105,7 @@ class AgentContextImpl : AgentContext, AgentController {
 
   // A service provider that represents the services to be added into an
   // application's namespace.
-  component::ServiceProviderImpl service_provider_impl_;
+  fuchsia::sys::ServiceProviderImpl service_provider_impl_;
 
   modular_auth::TokenProviderFactory* const
       token_provider_factory_;                                  // Not owned.

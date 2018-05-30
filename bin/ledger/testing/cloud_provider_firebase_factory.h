@@ -25,7 +25,7 @@ namespace test {
 class CloudProviderFirebaseFactory {
  public:
   explicit CloudProviderFirebaseFactory(
-      component::StartupContext* startup_context);
+      fuchsia::sys::StartupContext* startup_context);
   ~CloudProviderFirebaseFactory();
 
   void Init();
@@ -35,7 +35,7 @@ class CloudProviderFirebaseFactory {
       fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
 
  private:
-  component::StartupContext* startup_context_;
+  fuchsia::sys::StartupContext* startup_context_;
 
   // Thread used to run the fake token manager on.
   async::Loop loop_;
@@ -44,7 +44,7 @@ class CloudProviderFirebaseFactory {
                                           firebase_auth::FakeTokenProvider>
       token_provider_;
 
-  component::ComponentControllerPtr cloud_provider_controller_;
+  fuchsia::sys::ComponentControllerPtr cloud_provider_controller_;
   cloud_provider_firebase::FactoryPtr cloud_provider_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CloudProviderFirebaseFactory);

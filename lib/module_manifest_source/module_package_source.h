@@ -25,7 +25,7 @@ namespace modular {
 class ModulePackageSource : public ModuleManifestSource,
                             module_manifest_source::ModulePackageIndexer {
  public:
-  ModulePackageSource(component::StartupContext* context);
+  ModulePackageSource(fuchsia::sys::StartupContext* context);
   ~ModulePackageSource() override;
 
   // |ModuleManifestSource|

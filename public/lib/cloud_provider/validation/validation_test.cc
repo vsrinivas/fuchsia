@@ -8,7 +8,7 @@ namespace cloud_provider {
 
 ValidationTest::ValidationTest()
     : startup_context_(
-          component::StartupContext::CreateFromStartupInfoNotChecked()) {}
+          fuchsia::sys::StartupContext::CreateFromStartupInfoNotChecked()) {}
 ValidationTest::~ValidationTest() {}
 
 void ValidationTest::SetUp() {

@@ -25,7 +25,7 @@ namespace modular {
 
 // AppDriver is a wrapper that simplifies participating in lifecycle management
 // by the application's parent. It does this by exposing the Lifecycle service
-// in component::StartupContext::outgoing().deprecated_services() and
+// in fuchsia::sys::StartupContext::outgoing().deprecated_services() and
 // proxies the Terminate() call of fuchsia::modular::Lifecycle to the
 // Terminate() method on your application's class instance.
 //
@@ -41,7 +41,7 @@ namespace modular {
 //
 // class HelloWorldApp {
 //  public:
-//   HelloWorldApp(component::StartupContext* context) {
+//   HelloWorldApp(fuchsia::sys::StartupContext* context) {
 //     context->outgoing().AddPublicService<..>(...);
 //   }
 //
@@ -52,7 +52,7 @@ namespace modular {
 //
 // int main(int argc, const char** argv) {
 //   fsl::MessageLoop loop;
-//   auto context = component::StartupContext::CreateFromStartupInfo();
+//   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
 //   fuchsia::modular::AppDriver<HelloWorldApp> driver(
 //       context->outgoing().deprecated_services(),
 //       std::make_unique<HelloWorldApp>(context.get()),
@@ -63,7 +63,7 @@ namespace modular {
 template <typename Impl>
 class AppDriver : LifecycleImpl::Delegate {
  public:
-  AppDriver(component::ServiceNamespace* const outgoing_services,
+  AppDriver(fuchsia::sys::ServiceNamespace* const outgoing_services,
             std::unique_ptr<Impl> impl, std::function<void()> on_terminated)
       : lifecycle_impl_(outgoing_services, this),
         impl_(std::move(impl)),

@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
@@ -22,30 +22,30 @@ namespace modular {
 // environment services are delegated to the parent environment.
 class Scope {
  public:
-  Scope(const component::EnvironmentPtr& parent_env, const std::string& label);
+  Scope(const fuchsia::sys::EnvironmentPtr& parent_env, const std::string& label);
 
   Scope(const Scope* parent_scope, const std::string& label);
 
   template <typename Interface>
   void AddService(
-      component::ServiceProviderImpl::InterfaceRequestHandler<Interface>
+      fuchsia::sys::ServiceProviderImpl::InterfaceRequestHandler<Interface>
           handler,
       const std::string& service_name = Interface::Name_) {
     service_provider_bridge_.AddService(handler, service_name);
   }
 
-  component::ApplicationLauncher* GetLauncher();
+  fuchsia::sys::ApplicationLauncher* GetLauncher();
 
-  const component::EnvironmentPtr& environment() const { return env_; }
+  const fuchsia::sys::EnvironmentPtr& environment() const { return env_; }
 
  private:
-  void InitScope(const component::EnvironmentPtr& parent_env,
+  void InitScope(const fuchsia::sys::EnvironmentPtr& parent_env,
                  const std::string& label);
 
-  component::ServiceProviderBridge service_provider_bridge_;
-  component::EnvironmentPtr env_;
-  component::ApplicationLauncherPtr env_launcher_;
-  component::EnvironmentControllerPtr env_controller_;
+  fuchsia::sys::ServiceProviderBridge service_provider_bridge_;
+  fuchsia::sys::EnvironmentPtr env_;
+  fuchsia::sys::ApplicationLauncherPtr env_launcher_;
+  fuchsia::sys::EnvironmentControllerPtr env_controller_;
 };
 
 }  // namespace modular

@@ -99,7 +99,7 @@ class Module1View : public mozart::BaseView {
 // Module implementation that acts as a leaf module. It implements Module.
 class Module1App : fuchsia::modular::ViewApp {
  public:
-  explicit Module1App(component::StartupContext* const startup_context)
+  explicit Module1App(fuchsia::sys::StartupContext* const startup_context)
       : ViewApp(startup_context), store_(kModuleName), weak_ptr_factory_(this) {
     // TODO(mesch): The callbacks seem to have a sequential relationship.
     // It seems to me there should be a single callback that does all three
@@ -132,7 +132,7 @@ class Module1App : fuchsia::modular::ViewApp {
   void CreateView(
       fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
           view_owner_request,
-      fidl::InterfaceRequest<component::ServiceProvider> /*services*/)
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
       override {
     view_ = std::make_unique<Module1View>(
         &store_,
@@ -181,7 +181,7 @@ class Module1App : fuchsia::modular::ViewApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
 
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AppDriver<Module1App> driver(
       context->outgoing().deprecated_services(),
       std::make_unique<Module1App>(context.get()), [&loop] { loop.QuitNow(); });

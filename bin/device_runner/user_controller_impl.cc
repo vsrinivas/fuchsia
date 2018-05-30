@@ -17,7 +17,7 @@ namespace fuchsia {
 namespace modular {
 
 UserControllerImpl::UserControllerImpl(
-    component::ApplicationLauncher* const application_launcher,
+    fuchsia::sys::ApplicationLauncher* const application_launcher,
     AppConfig user_runner,
     AppConfig user_shell,
     AppConfig story_shell,
@@ -25,7 +25,7 @@ UserControllerImpl::UserControllerImpl(
         token_provider_factory,
     modular_auth::AccountPtr account,
     fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
-    fidl::InterfaceHandle<component::ServiceProvider> device_shell_services,
+    fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> device_shell_services,
     fidl::InterfaceRequest<UserController> user_controller_request,
     DoneCallback done)
     : user_context_binding_(this),

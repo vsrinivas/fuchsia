@@ -18,7 +18,7 @@ namespace {
 class App : public fuchsia::modular::Lifecycle {
  public:
   App()
-      : startup_context_(component::StartupContext::CreateFromStartupInfo()),
+      : startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
         trace_provider_(loop_.async()),
         factory_impl_(loop_.async()) {
     FXL_DCHECK(startup_context_);
@@ -42,7 +42,7 @@ class App : public fuchsia::modular::Lifecycle {
 
  private:
   fsl::MessageLoop loop_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   trace::TraceProvider trace_provider_;
 
   FactoryImpl factory_impl_;

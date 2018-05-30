@@ -7,7 +7,7 @@
 #include <set>
 
 #include <cobalt/cpp/fidl.h>
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
@@ -178,7 +178,7 @@ CobaltObservation& CobaltObservation::operator=(CobaltObservation&& rhs) {
   return *this;
 }
 
-CobaltContext::CobaltContext(async_t* async, component::StartupContext* context,
+CobaltContext::CobaltContext(async_t* async, fuchsia::sys::StartupContext* context,
                              int32_t project_id)
     : async_(async), context_(context), project_id_(project_id) {
   ConnectToCobaltApplication();
@@ -303,7 +303,7 @@ void CobaltContext::AddObservationCallback(CobaltObservation observation,
 }
 
 fxl::AutoCall<fxl::Closure> InitializeCobalt(
-    async_t* async, component::StartupContext* startup_context,
+    async_t* async, fuchsia::sys::StartupContext* startup_context,
     int32_t project_id, CobaltContext** cobalt_context) {
   FXL_DCHECK(!*cobalt_context);
   auto context =

@@ -25,7 +25,7 @@ class TestApp {
 
   // Called by AgentDriver.
   void Connect(
-      fidl::InterfaceRequest<component::ServiceProvider> /*services*/) {
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/) {
     fuchsia::modular::testing::GetStore()->Put("two_agent_connected", "",
                                                [] {});
   }
@@ -49,7 +49,7 @@ class TestApp {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AgentDriver<TestApp> driver(context.get(),
                                                 [&loop] { loop.QuitNow(); });
   loop.Run();

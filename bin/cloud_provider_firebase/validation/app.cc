@@ -35,8 +35,8 @@ int main(int argc, char** argv) {
   }
 
   fsl::MessageLoop message_loop;
-  std::unique_ptr<component::StartupContext> startup_context =
-      component::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context =
+      fuchsia::sys::StartupContext::CreateFromStartupInfo();
   test::CloudProviderFirebaseFactory factory(startup_context.get());
 
   cloud_provider::ValidationTestsLauncher launcher(

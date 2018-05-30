@@ -112,7 +112,7 @@ class DeviceMapMonitor : fuchsia::modular::DeviceMapWatcher {
 // to run more module instances.
 class RecipeApp : public fuchsia::modular::ViewApp {
  public:
-  RecipeApp(component::StartupContext* const startup_context)
+  RecipeApp(fuchsia::sys::StartupContext* const startup_context)
       : ViewApp(startup_context) {
     startup_context->ConnectToEnvironmentService(module_context_.NewRequest());
     module_context_->GetLink(nullptr, link_.NewRequest());
@@ -155,7 +155,7 @@ class RecipeApp : public fuchsia::modular::ViewApp {
     parameter.name = "theOneLink";
     parameter.data = std::move(parameter_data);
     intent.parameters.push_back(std::move(parameter));
-    component::ServiceProviderPtr services_from_module2;
+    fuchsia::sys::ServiceProviderPtr services_from_module2;
     module_context_->StartModule(
         "module2", std::move(intent), module2_.NewRequest(), nullptr,
         [](const fuchsia::modular::StartModuleStatus&) {});
@@ -302,7 +302,7 @@ class RecipeApp : public fuchsia::modular::ViewApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
 
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AppDriver<RecipeApp> driver(
       context->outgoing().deprecated_services(),
       std::make_unique<RecipeApp>(context.get()), [&loop] { loop.QuitNow(); });

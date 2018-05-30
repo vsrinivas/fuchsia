@@ -35,10 +35,10 @@ class GetPageBenchmark {
   async::Loop* const loop_;
   files::ScopedTempDir tmp_dir_;
   test::DataGenerator generator_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   const size_t requests_count_;
   const bool reuse_;
-  component::ComponentControllerPtr component_controller_;
+  fuchsia::sys::ComponentControllerPtr component_controller_;
   ledger::LedgerPtr ledger_;
   ledger::PageIdPtr page_id_;
   std::vector<ledger::PagePtr> pages_;

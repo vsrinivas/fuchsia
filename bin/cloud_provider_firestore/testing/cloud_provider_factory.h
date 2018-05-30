@@ -24,7 +24,7 @@ namespace cloud_provider_firestore {
 // the cloud provider.
 class CloudProviderFactory {
  public:
-  CloudProviderFactory(component::StartupContext* startup_context,
+  CloudProviderFactory(fuchsia::sys::StartupContext* startup_context,
                        std::string credentials_path);
   ~CloudProviderFactory();
 
@@ -36,7 +36,7 @@ class CloudProviderFactory {
 
  private:
   class TokenProviderContainer;
-  component::StartupContext* const startup_context_;
+  fuchsia::sys::StartupContext* const startup_context_;
   const std::string credentials_path_;
 
   // Loop on which the token manager runs.
@@ -44,7 +44,7 @@ class CloudProviderFactory {
 
   callback::AutoCleanableSet<TokenProviderContainer> token_providers_;
 
-  component::ComponentControllerPtr cloud_provider_controller_;
+  fuchsia::sys::ComponentControllerPtr cloud_provider_controller_;
   FactoryPtr cloud_provider_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CloudProviderFactory);

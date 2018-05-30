@@ -155,7 +155,7 @@ class UserRunnerImpl::PresentationProviderImpl : public PresentationProvider {
   UserRunnerImpl* const impl_;
 };
 
-UserRunnerImpl::UserRunnerImpl(component::StartupContext* const startup_context,
+UserRunnerImpl::UserRunnerImpl(fuchsia::sys::StartupContext* const startup_context,
                                const bool test)
     : startup_context_(startup_context),
       test_(test),
@@ -217,9 +217,9 @@ void UserRunnerImpl::InitializeLedger() {
   ledger_config.url = kLedgerAppUrl;
   ledger_config.args.push_back(kLedgerNoMinfsWaitFlag);
 
-  component::ServiceListPtr service_list = nullptr;
+  fuchsia::sys::ServiceListPtr service_list = nullptr;
   if (account_) {
-    service_list = component::ServiceList::New();
+    service_list = fuchsia::sys::ServiceList::New();
     service_list->names.push_back(modular_auth::TokenProvider::Name_);
     ledger_service_provider_.AddService<modular_auth::TokenProvider>(
         [this](fidl::InterfaceRequest<modular_auth::TokenProvider> request) {
@@ -455,7 +455,7 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
                   kContextEngineUrl, kContextEngineUrl),
               std::move(request));
         });
-    auto service_list = component::ServiceList::New();
+    auto service_list = fuchsia::sys::ServiceList::New();
     service_list->names.push_back(ComponentContext::Name_);
     context_engine_ns_services_.AddBinding(service_list->provider.NewRequest());
 
@@ -505,7 +505,7 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
                   kModuleResolverUrl, kModuleResolverUrl),
               std::move(request));
         });
-    auto service_list = component::ServiceList::New();
+    auto service_list = fuchsia::sys::ServiceList::New();
     service_list->names.push_back(
         fuchsia::modular::IntelligenceServices::Name_);
     service_list->names.push_back(fuchsia::modular::ComponentContext::Name_);

@@ -21,7 +21,7 @@ class UserIntelligenceProviderImpl
  public:
   // |context| is not owned and must outlive this instance.
   UserIntelligenceProviderImpl(
-      component::StartupContext* context, const Config& config,
+      fuchsia::sys::StartupContext* context, const Config& config,
       fidl::InterfaceHandle<fuchsia::modular::ContextEngine> context_engine,
       fidl::InterfaceHandle<fuchsia::modular::StoryProvider> story_provider,
       fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider,
@@ -49,33 +49,33 @@ class UserIntelligenceProviderImpl
 
  private:
   using ServiceProviderInitializer = std::function<void(
-      const std::string& url, component::ServiceNamespace* agent_host)>;
+      const std::string& url, fuchsia::sys::ServiceNamespace* agent_host)>;
   // A ServiceProviderInitializer that adds standard agent services, including
   // attributed context and suggestion service entry points. Returns the names
   // of the services added.
   fidl::VectorPtr<fidl::StringPtr> AddStandardServices(
-      const std::string& url, component::ServiceNamespace* agent_host);
+      const std::string& url, fuchsia::sys::ServiceNamespace* agent_host);
 
   // Starts an app in the parent environment, with full access to environment
   // services.
-  component::Services StartTrustedApp(const std::string& url);
+  fuchsia::sys::Services StartTrustedApp(const std::string& url);
 
   void StartAgent(const std::string& url);
 
   void StartActionLog(fuchsia::modular::SuggestionEngine* suggestion_engine);
   void StartKronk();
 
-  component::StartupContext* context_;  // Not owned.
+  fuchsia::sys::StartupContext* context_;  // Not owned.
   const Config config_;
 
   fuchsia::modular::ContextEnginePtr context_engine_;
-  component::Services suggestion_services_;
+  fuchsia::sys::Services suggestion_services_;
   fuchsia::modular::SuggestionEnginePtr suggestion_engine_;
   fuchsia::modular::UserActionLogPtr user_action_log_;
 
   std::string kronk_url_;
   fuchsia::modular::RateLimitedRetry kronk_restart_;
-  component::ServiceProviderPtr kronk_services_;
+  fuchsia::sys::ServiceProviderPtr kronk_services_;
   fuchsia::modular::AgentControllerPtr kronk_controller_;
 
   fidl::BindingSet<fuchsia::modular::IntelligenceServices,
@@ -94,14 +94,14 @@ class UserIntelligenceProviderImpl
 
   // ServiceNamespace(s) backing the services provided to these agents via its
   // namespace.
-  std::deque<component::ServiceNamespace> agent_namespaces_;
+  std::deque<fuchsia::sys::ServiceNamespace> agent_namespaces_;
 };
 
 class UserIntelligenceProviderFactoryImpl
     : public fuchsia::modular::UserIntelligenceProviderFactory {
  public:
   // |context| is not owned and must outlive this instance.
-  UserIntelligenceProviderFactoryImpl(component::StartupContext* context,
+  UserIntelligenceProviderFactoryImpl(fuchsia::sys::StartupContext* context,
                                       const Config& config);
   ~UserIntelligenceProviderFactoryImpl() override = default;
 
@@ -115,7 +115,7 @@ class UserIntelligenceProviderFactoryImpl
           user_intelligence_provider_request) override;
 
  private:
-  component::StartupContext* context_;  // Not owned.
+  fuchsia::sys::StartupContext* context_;  // Not owned.
   const Config config_;
 
   // We expect a 1:1 relationship between instances of this Factory and

@@ -79,13 +79,13 @@ it needs to provide it in its `outgoing_services`.
   }
 
   void Connect(
-      fidl::InterfaceRequest<component::ServiceProvider> outgoing_services) {
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> outgoing_services) {
     services_.AddBinding(std::move(outgoing_services));
   }
 
  private:
   // The services namespace that the `Simple` service is added to.
-  component::ServiceNamespace services_;
+  fuchsia::sys::ServiceNamespace services_;
 
   // The implementation of the Simple service.
   std::unique_ptr<SimpleImpl> simple_impl_;
@@ -167,7 +167,7 @@ To connect to the `SimpleAgent` from a different component:
 ```c++
 // The agent is guaranteed to stay alive as long as |agent_controller| stays in scope.
 fuchsia::modular::AgentControllerPtr agent_controller;
-component::ServiceProviderPtr agent_services;
+fuchsia::sys::ServiceProviderPtr agent_services;
 SimpleServicePtr agent_service;
 component_context->ConnectToAgent(agent_url,
                                   agent_services.NewRequest(),

@@ -30,7 +30,7 @@ class IdeasAgentApp : public agents::IdeasAgent,
                       public fuchsia::modular::ContextListener {
  public:
   IdeasAgentApp()
-      : context_(component::StartupContext::CreateFromStartupInfo()),
+      : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
         reader_(context_->ConnectToEnvironmentService<
                 fuchsia::modular::ContextReader>()),
         binding_(this),
@@ -84,7 +84,7 @@ class IdeasAgentApp : public agents::IdeasAgent,
   }
 
  private:
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
 
   fuchsia::modular::ContextReaderPtr reader_;
   fidl::Binding<fuchsia::modular::ContextListener> binding_;

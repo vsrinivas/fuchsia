@@ -46,7 +46,7 @@ class TestApp : modular_test_trigger::TriggerTestService {
   }
 
   // Called by AgentDriver.
-  void Connect(fidl::InterfaceRequest<component::ServiceProvider> services) {
+  void Connect(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services) {
     agent_services_.AddBinding(std::move(services));
     fuchsia::modular::testing::GetStore()->Put("trigger_test_agent_connected",
                                                "", [] {});
@@ -82,7 +82,7 @@ class TestApp : modular_test_trigger::TriggerTestService {
         "trigger_test_agent_token_received", "", [] {});
   }
 
-  component::ServiceNamespace agent_services_;
+  fuchsia::sys::ServiceNamespace agent_services_;
 
   fuchsia::modular::ComponentContextPtr component_context_;
   fuchsia::modular::AgentContext* const agent_context_;
@@ -97,7 +97,7 @@ class TestApp : modular_test_trigger::TriggerTestService {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AgentDriver<TestApp> driver(context.get(),
                                                 [&loop] { loop.QuitNow(); });
   loop.Run();

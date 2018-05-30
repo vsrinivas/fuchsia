@@ -10,7 +10,7 @@
 #include <memory>
 #include <string>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
 #include <ledger_internal/cpp/fidl.h>
@@ -37,7 +37,7 @@ class MessageQueueManager;
 // manages the life time of a running agent.
 class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
  public:
-  AgentRunner(component::ApplicationLauncher* application_launcher,
+  AgentRunner(fuchsia::sys::ApplicationLauncher* application_launcher,
               MessageQueueManager* message_queue_manager,
               ledger_internal::LedgerRepository* ledger_repository,
               AgentRunnerStorage* agent_runner_storage,
@@ -57,7 +57,7 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   void ConnectToAgent(
       const std::string& requestor_url,
       const std::string& agent_url,
-      fidl::InterfaceRequest<component::ServiceProvider>
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
           incoming_services_request,
       fidl::InterfaceRequest<AgentController> agent_controller_request);
 
@@ -158,7 +158,7 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   // agent is in a terminating state.
   struct PendingAgentConnectionEntry {
     const std::string requestor_url;
-    fidl::InterfaceRequest<component::ServiceProvider>
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
         incoming_services_request;
     fidl::InterfaceRequest<AgentController> agent_controller_request;
   };
@@ -194,7 +194,7 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   std::map<std::string, std::pair<std::string, std::string>>
       task_by_ledger_key_;
 
-  component::ApplicationLauncher* const application_launcher_;
+  fuchsia::sys::ApplicationLauncher* const application_launcher_;
   MessageQueueManager* const message_queue_manager_;
   ledger_internal::LedgerRepository* const ledger_repository_;
   // |agent_runner_storage_| must outlive this class.

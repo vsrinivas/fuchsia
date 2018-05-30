@@ -85,7 +85,7 @@ class TestApp {
     module_host->module_context()->GetComponentContext(
         component_context_.NewRequest());
 
-    component::ServiceProviderPtr one_agent_services;
+    fuchsia::sys::ServiceProviderPtr one_agent_services;
     component_context_->ConnectToAgent(kOneAgentUrl,
                                        one_agent_services.NewRequest(),
                                        one_agent_controller.NewRequest());
@@ -158,7 +158,7 @@ class TestApp {
 
   // Start an agent that will not stop of its own accord.
   void TestUnstoppableAgent(std::function<void()> done_cb) {
-    component::ServiceProviderPtr unstoppable_agent_services;
+    fuchsia::sys::ServiceProviderPtr unstoppable_agent_services;
     component_context_->ConnectToAgent(
         kUnstoppableAgent, unstoppable_agent_services.NewRequest(),
         unstoppable_agent_controller_.NewRequest());
@@ -197,7 +197,7 @@ class TestApp {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::ModuleDriver<TestApp> driver(context.get(),
                                                  [&loop] { loop.QuitNow(); });
   loop.Run();

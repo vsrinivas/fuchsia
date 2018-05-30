@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
@@ -26,7 +26,7 @@ namespace modular {
 // This interface is passed to the Impl object that AgentDriver initializes.
 class AgentHost {
  public:
-  virtual component::StartupContext* startup_context() = 0;
+  virtual fuchsia::sys::StartupContext* startup_context() = 0;
   virtual AgentContext* agent_context() = 0;
 };
 
@@ -50,7 +50,7 @@ class AgentHost {
 //
 // int main(int argc, const char** argv) {
 //   fsl::MessageLoop loop;
-//   auto context = component::StartupContext::CreateFromStartupInfo();
+//   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
 //   fuchsia::modular::AgentDriver<HelloAgent> driver(context.get(),
 //                                               [&loop] { loop.QuitNow(); });
 //   loop.Run();
@@ -59,7 +59,7 @@ class AgentHost {
 template <typename Impl>
 class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
  public:
-  AgentDriver(component::StartupContext* const context,
+  AgentDriver(fuchsia::sys::StartupContext* const context,
               std::function<void()> on_terminated)
       : context_(context),
         lifecycle_impl_(context->outgoing().deprecated_services(), this),
@@ -72,7 +72,7 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
 
  private:
   // |AgentHost|
-  component::StartupContext* startup_context() override { return context_; }
+  fuchsia::sys::StartupContext* startup_context() override { return context_; }
 
   // |AgentHost|
   AgentContext* agent_context() override {
@@ -81,7 +81,7 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
   }
 
   // |AgentImpl::Delegate|
-  void Connect(fidl::InterfaceRequest<component::ServiceProvider>
+  void Connect(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
                    outgoing_services_request) override {
     impl_->Connect(std::move(outgoing_services_request));
   };
@@ -107,7 +107,7 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
     }
   }
 
-  component::StartupContext* const context_;
+  fuchsia::sys::StartupContext* const context_;
   LifecycleImpl lifecycle_impl_;
   std::unique_ptr<AgentImpl> agent_impl_;
   std::function<void()> on_terminated_;

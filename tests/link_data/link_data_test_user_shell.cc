@@ -32,7 +32,7 @@ namespace {
 class TestApp : public fuchsia::modular::testing::ComponentBase<
                     fuchsia::modular::UserShell> {
  public:
-  explicit TestApp(component::StartupContext* const startup_context)
+  explicit TestApp(fuchsia::sys::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
     TestInit(__FILE__);
   }

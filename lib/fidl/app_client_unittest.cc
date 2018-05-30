@@ -4,7 +4,7 @@
 
 #include "peridot/lib/fidl/app_client.h"
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <modular_test/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "lib/gtest/test_with_message_loop.h"
@@ -24,12 +24,12 @@ AppConfig GetTestAppConfig() {
   return app_config;
 }
 
-class TestComponentController : component::ComponentController {
+class TestComponentController : fuchsia::sys::ComponentController {
  public:
   TestComponentController() : binding_(this) {}
 
   void Connect(
-      fidl::InterfaceRequest<component::ComponentController> request) {
+      fidl::InterfaceRequest<fuchsia::sys::ComponentController> request) {
     binding_.Bind(std::move(request));
     binding_.set_error_handler([this] { Kill(); });
   }
@@ -43,7 +43,7 @@ class TestComponentController : component::ComponentController {
 
   void Wait(WaitCallback callback) override {}
 
-  fidl::Binding<component::ComponentController> binding_;
+  fidl::Binding<fuchsia::sys::ComponentController> binding_;
 
   bool killed_{};
 
@@ -58,8 +58,8 @@ TEST_F(AppClientTest, BaseRun_Success) {
   launcher.RegisterApplication(
       kTestUrl,
       [&callback_called](
-          component::LaunchInfo launch_info,
-          fidl::InterfaceRequest<component::ComponentController> ctrl) {
+          fuchsia::sys::LaunchInfo launch_info,
+          fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
         EXPECT_EQ(kTestUrl, launch_info.url);
         callback_called = true;
       });
@@ -75,8 +75,8 @@ TEST_F(AppClientTest, BaseTerminate_Success) {
   launcher.RegisterApplication(
       kTestUrl,
       [&callback_called, &controller](
-          component::LaunchInfo launch_info,
-          fidl::InterfaceRequest<component::ComponentController> ctrl) {
+          fuchsia::sys::LaunchInfo launch_info,
+          fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
         EXPECT_EQ(kTestUrl, launch_info.url);
         callback_called = true;
         controller.Connect(std::move(ctrl));
@@ -105,8 +105,8 @@ TEST_F(AppClientTest, Run_Success) {
   launcher.RegisterApplication(
       kTestUrl,
       [&callback_called](
-          component::LaunchInfo launch_info,
-          fidl::InterfaceRequest<component::ComponentController> ctrl) {
+          fuchsia::sys::LaunchInfo launch_info,
+          fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
         EXPECT_EQ(kTestUrl, launch_info.url);
         callback_called = true;
       });
@@ -118,7 +118,7 @@ TEST_F(AppClientTest, Run_Success) {
 }
 
 TEST_F(AppClientTest, RunWithParams_Success) {
-  component::ServiceListPtr additional_services = component::ServiceList::New();
+  fuchsia::sys::ServiceListPtr additional_services = fuchsia::sys::ServiceList::New();
   additional_services->names.push_back(kServiceName);
   // We just need |provider_request| to stay around till the end of this test.
   auto provider_request = additional_services->provider.NewRequest();
@@ -128,8 +128,8 @@ TEST_F(AppClientTest, RunWithParams_Success) {
   launcher.RegisterApplication(
       kTestUrl,
       [&callback_called](
-          component::LaunchInfo launch_info,
-          fidl::InterfaceRequest<component::ComponentController> ctrl) {
+          fuchsia::sys::LaunchInfo launch_info,
+          fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
         EXPECT_EQ(kTestUrl, launch_info.url);
         auto additional_services = std::move(launch_info.additional_services);
         EXPECT_EQ(kServiceName, additional_services->names->at(0));

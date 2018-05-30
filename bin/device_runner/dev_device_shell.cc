@@ -47,7 +47,7 @@ class DevDeviceShellApp
     : fuchsia::modular::SingleServiceApp<fuchsia::modular::DeviceShell>,
       fuchsia::modular::UserWatcher {
  public:
-  explicit DevDeviceShellApp(component::StartupContext* const startup_context,
+  explicit DevDeviceShellApp(fuchsia::sys::StartupContext* const startup_context,
                              Settings settings)
       : SingleServiceApp(startup_context),
         settings_(std::move(settings)),
@@ -87,7 +87,7 @@ class DevDeviceShellApp
   void CreateView(
       fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
           view_owner_request,
-      fidl::InterfaceRequest<component::ServiceProvider> /*services*/)
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
       override {
     view_owner_request_ = std::move(view_owner_request);
     Connect();
@@ -185,7 +185,7 @@ int main(int argc, const char** argv) {
 
   fsl::MessageLoop loop;
 
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AppDriver<DevDeviceShellApp> driver(
       context->outgoing().deprecated_services(),
       std::make_unique<DevDeviceShellApp>(context.get(), settings),

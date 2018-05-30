@@ -22,7 +22,7 @@ int TestMain(int argc, char** argv) {
 
   {
     fsl::MessageLoop message_loop;
-    auto context = component::StartupContext::CreateFromStartupInfoNotChecked();
+    auto context = fuchsia::sys::StartupContext::CreateFromStartupInfoNotChecked();
     test_runner::ReportResult(argv[0], context.get(), listener.GetResults());
   }
 

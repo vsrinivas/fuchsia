@@ -48,7 +48,7 @@ class TodoApp : public ledger::PageWatcher, fuchsia::modular::Lifecycle {
   std::normal_distribution<> size_distribution_;
   std::uniform_int_distribution<> delay_distribution_;
   Generator generator_;
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
   fidl::InterfacePtr<fuchsia::modular::ModuleContext> module_context_;
   fuchsia::modular::ComponentContextPtr component_context_;
   ledger::LedgerPtr ledger_;

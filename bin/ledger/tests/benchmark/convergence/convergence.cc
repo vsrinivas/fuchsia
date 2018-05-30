@@ -43,7 +43,7 @@ namespace benchmark {
 // Instances needed to control the Ledger process associated with a device and
 // interact with it.
 struct ConvergenceBenchmark::DeviceContext {
-  component::ComponentControllerPtr controller;
+  fuchsia::sys::ComponentControllerPtr controller;
   ledger::LedgerPtr ledger;
   std::unique_ptr<files::ScopedTempDir> storage_directory;
   ledger::PagePtr page_connection;
@@ -54,7 +54,7 @@ ConvergenceBenchmark::ConvergenceBenchmark(async::Loop* loop, int entry_count,
                                            int value_size, int device_count,
                                            std::string server_id)
     : loop_(loop),
-      startup_context_(component::StartupContext::CreateFromStartupInfo()),
+      startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
       cloud_provider_firebase_factory_(startup_context_.get()),
       entry_count_(entry_count),
       value_size_(value_size),

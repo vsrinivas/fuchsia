@@ -8,7 +8,7 @@
 #include <memory>
 #include <utility>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -130,7 +130,7 @@ class TestApp
     : public fuchsia::modular::SingleServiceApp<fuchsia::modular::UserShell> {
  public:
   using Base = fuchsia::modular::SingleServiceApp<fuchsia::modular::UserShell>;
-  TestApp(component::StartupContext* const startup_context, Settings settings)
+  TestApp(fuchsia::sys::StartupContext* const startup_context, Settings settings)
       : Base(startup_context), settings_(std::move(settings)) {}
 
   ~TestApp() override = default;

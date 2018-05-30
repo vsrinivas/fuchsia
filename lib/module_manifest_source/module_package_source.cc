@@ -30,7 +30,7 @@ constexpr char kInitialModulePackagesIndexDir[] =
 }  // namespace
 
 ModulePackageSource::ModulePackageSource(
-    component::StartupContext* const context)
+    fuchsia::sys::StartupContext* const context)
     : weak_factory_(this) {
   context->outgoing().debug_dir()->AddEntry(
       ModulePackageIndexer::Name_,

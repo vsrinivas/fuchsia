@@ -21,7 +21,7 @@ namespace modular {
 class SelectedEntityFinder : ContextListener {
  public:
   SelectedEntityFinder()
-      : context_(component::StartupContext::CreateFromStartupInfo()),
+      : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
         reader_(context_->ConnectToEnvironmentService<ContextReader>()),
         writer_(context_->ConnectToEnvironmentService<ContextWriter>()),
         binding_(this) {
@@ -99,7 +99,7 @@ class SelectedEntityFinder : ContextListener {
                                                   start_and_end.second));
   }
 
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
   ContextReaderPtr reader_;
   ContextWriterPtr writer_;
   fidl::Binding<ContextListener> binding_;

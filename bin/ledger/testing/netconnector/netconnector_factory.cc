@@ -109,7 +109,7 @@ void NetConnectorFactory::GetDevicesNames(
 
 void NetConnectorFactory::ConnectToServiceProvider(
     std::string device_name,
-    fidl::InterfaceRequest<component::ServiceProvider> request) {
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request) {
   auto it = net_connectors_.find(device_name);
   if (it == net_connectors_.end()) {
     return;

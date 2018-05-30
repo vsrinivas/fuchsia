@@ -7,7 +7,7 @@
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <modular_auth/cpp/fidl.h>
 #include "gtest/gtest.h"
@@ -77,11 +77,11 @@ class AgentRunnerTest : public TestWithLedger {
 };
 
 class MyDummyAgent : Agent,
-                     public component::ComponentController,
+                     public fuchsia::sys::ComponentController,
                      public testing::MockBase {
  public:
   MyDummyAgent(zx::channel directory_request,
-               fidl::InterfaceRequest<component::ComponentController> ctrl)
+               fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl)
       : vfs_(async_get_default()),
         outgoing_directory_(fbl::AdoptRef(new fs::PseudoDir())),
         controller_(this, std::move(ctrl)),
@@ -109,7 +109,7 @@ class MyDummyAgent : Agent,
 
   // |Agent|
   void Connect(fidl::StringPtr /*requestor_url*/,
-               fidl::InterfaceRequest<component::ServiceProvider> /*services*/)
+               fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
       override {
     ++counts["Connect"];
   }
@@ -123,7 +123,7 @@ class MyDummyAgent : Agent,
  private:
   fs::SynchronousVfs vfs_;
   fbl::RefPtr<fs::PseudoDir> outgoing_directory_;
-  fidl::Binding<component::ComponentController> controller_;
+  fidl::Binding<fuchsia::sys::ComponentController> controller_;
   fidl::Binding<fuchsia::modular::Agent> agent_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MyDummyAgent);
@@ -138,14 +138,14 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
   launcher()->RegisterApplication(
       kMyAgentUrl,
       [&dummy_agent, &agent_launch_count](
-          component::LaunchInfo launch_info,
-          fidl::InterfaceRequest<component::ComponentController> ctrl) {
+          fuchsia::sys::LaunchInfo launch_info,
+          fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
         dummy_agent = std::make_unique<MyDummyAgent>(
             std::move(launch_info.directory_request), std::move(ctrl));
         ++agent_launch_count;
       });
 
-  component::ServiceProviderPtr incoming_services;
+  fuchsia::sys::ServiceProviderPtr incoming_services;
   AgentControllerPtr agent_controller;
   agent_runner()->ConnectToAgent("requestor_url", kMyAgentUrl,
                                  incoming_services.NewRequest(),
@@ -163,7 +163,7 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
   // but should call |Connect()|.
 
   AgentControllerPtr agent_controller2;
-  component::ServiceProviderPtr incoming_services2;
+  fuchsia::sys::ServiceProviderPtr incoming_services2;
   agent_runner()->ConnectToAgent("requestor_url2", kMyAgentUrl,
                                  incoming_services2.NewRequest(),
                                  agent_controller2.NewRequest());
@@ -184,13 +184,13 @@ TEST_F(AgentRunnerTest, AgentController) {
   launcher()->RegisterApplication(
       kMyAgentUrl,
       [&dummy_agent](
-          component::LaunchInfo launch_info,
-          fidl::InterfaceRequest<component::ComponentController> ctrl) {
+          fuchsia::sys::LaunchInfo launch_info,
+          fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
         dummy_agent = std::make_unique<MyDummyAgent>(
             std::move(launch_info.directory_request), std::move(ctrl));
       });
 
-  component::ServiceProviderPtr incoming_services;
+  fuchsia::sys::ServiceProviderPtr incoming_services;
   AgentControllerPtr agent_controller;
   agent_runner()->ConnectToAgent("requestor_url", kMyAgentUrl,
                                  incoming_services.NewRequest(),

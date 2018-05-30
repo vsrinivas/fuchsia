@@ -96,7 +96,7 @@ class Module2View : public mozart::BaseView {
 // Module implementation that acts as a leaf module. It implements Module.
 class Module2App : public fuchsia::modular::ViewApp {
  public:
-  explicit Module2App(component::StartupContext* const startup_context)
+  explicit Module2App(fuchsia::sys::StartupContext* const startup_context)
       : ViewApp(startup_context), store_(kModuleName), weak_ptr_factory_(this) {
     store_.AddCallback([this] {
       if (view_) {
@@ -124,7 +124,7 @@ class Module2App : public fuchsia::modular::ViewApp {
   void CreateView(
       fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
           view_owner_request,
-      fidl::InterfaceRequest<component::ServiceProvider> /*services*/)
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
       override {
     view_ = std::make_unique<Module2View>(
         &store_,
@@ -173,7 +173,7 @@ class Module2App : public fuchsia::modular::ViewApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
 
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AppDriver<Module2App> driver(
       context->outgoing().deprecated_services(),
       std::make_unique<Module2App>(context.get()), [&loop] { loop.QuitNow(); });

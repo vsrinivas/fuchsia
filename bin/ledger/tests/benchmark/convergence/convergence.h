@@ -53,7 +53,7 @@ class ConvergenceBenchmark : public ledger::PageWatcher {
 
   async::Loop* const loop_;
   test::DataGenerator generator_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   test::CloudProviderFirebaseFactory cloud_provider_firebase_factory_;
   const int entry_count_;
   const int value_size_;

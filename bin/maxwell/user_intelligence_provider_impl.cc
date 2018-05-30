@@ -6,7 +6,7 @@
 
 #include <bluetooth_low_energy/cpp/fidl.h>
 #include <cobalt/cpp/fidl.h>
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <maxwell/cpp/fidl.h>
 #include <network/cpp/fidl.h>
 #include "lib/app/cpp/connect.h"
@@ -39,13 +39,13 @@ fuchsia::modular::AgentControllerPtr StartStoryInfoAgent(
     fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider,
     fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
         visible_stories_provider) {
-  component::ServiceProviderPtr agent_services;
+  fuchsia::sys::ServiceProviderPtr agent_services;
   fuchsia::modular::AgentControllerPtr controller;
   component_context->ConnectToAgent("acquirers/story_info_main",
                                     agent_services.NewRequest(),
                                     controller.NewRequest());
 
-  auto initializer = component::ConnectToService<maxwell::StoryInfoInitializer>(
+  auto initializer = fuchsia::sys::ConnectToService<maxwell::StoryInfoInitializer>(
       agent_services.get());
   initializer->Initialize(std::move(story_provider), std::move(focus_provider),
                           std::move(visible_stories_provider));
@@ -63,7 +63,7 @@ fuchsia::modular::ComponentScope CloneScope(
 }  // namespace
 
 UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
-    component::StartupContext* context, const Config& config,
+    fuchsia::sys::StartupContext* context, const Config& config,
     fidl::InterfaceHandle<fuchsia::modular::ContextEngine>
         context_engine_handle,
     fidl::InterfaceHandle<fuchsia::modular::StoryProvider>
@@ -120,7 +120,7 @@ void UserIntelligenceProviderImpl::GetSuggestionProvider(
 void UserIntelligenceProviderImpl::GetSpeechToText(
     fidl::InterfaceRequest<speech::SpeechToText> request) {
   if (kronk_services_) {
-    component::ConnectToService(kronk_services_.get(), std::move(request));
+    fuchsia::sys::ConnectToService(kronk_services_.get(), std::move(request));
   } else {
     FXL_LOG(WARNING) << "No speech-to-text agent loaded";
   }
@@ -154,16 +154,16 @@ void UserIntelligenceProviderImpl::StartAgents(
 
 void UserIntelligenceProviderImpl::GetServicesForAgent(
     fidl::StringPtr url, GetServicesForAgentCallback callback) {
-  component::ServiceList service_list;
+  fuchsia::sys::ServiceList service_list;
   agent_namespaces_.emplace_back(service_list.provider.NewRequest());
   service_list.names = AddStandardServices(url, &agent_namespaces_.back());
   callback(std::move(service_list));
 }
 
-component::Services UserIntelligenceProviderImpl::StartTrustedApp(
+fuchsia::sys::Services UserIntelligenceProviderImpl::StartTrustedApp(
     const std::string& url) {
-  component::Services services;
-  component::LaunchInfo launch_info;
+  fuchsia::sys::Services services;
+  fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = url;
   launch_info.directory_request = services.NewRequest();
   context_->launcher()->CreateApplication(std::move(launch_info), NULL);
@@ -172,7 +172,7 @@ component::Services UserIntelligenceProviderImpl::StartTrustedApp(
 
 void UserIntelligenceProviderImpl::StartAgent(const std::string& url) {
   fuchsia::modular::AgentControllerPtr controller;
-  component::ServiceProviderPtr services;
+  fuchsia::sys::ServiceProviderPtr services;
   component_context_->ConnectToAgent(url, services.NewRequest(),
                                      controller.NewRequest());
   agent_controllers_.push_back(std::move(controller));
@@ -181,7 +181,7 @@ void UserIntelligenceProviderImpl::StartAgent(const std::string& url) {
 void UserIntelligenceProviderImpl::StartActionLog(
     fuchsia::modular::SuggestionEngine* suggestion_engine) {
   std::string url = "action_log";
-  component::Services action_log_services = StartTrustedApp(url);
+  fuchsia::sys::Services action_log_services = StartTrustedApp(url);
   fuchsia::modular::UserActionLogFactoryPtr action_log_factory =
       action_log_services
           .ConnectToService<fuchsia::modular::UserActionLogFactory>();
@@ -224,7 +224,7 @@ void UserIntelligenceProviderImpl::StartKronk() {
 
 fidl::VectorPtr<fidl::StringPtr>
 UserIntelligenceProviderImpl::AddStandardServices(
-    const std::string& url, component::ServiceNamespace* agent_host) {
+    const std::string& url, fuchsia::sys::ServiceNamespace* agent_host) {
   fuchsia::modular::ComponentScope agent_info;
   fuchsia::modular::AgentScope agent_scope;
   agent_scope.url = url;
@@ -297,7 +297,7 @@ UserIntelligenceProviderImpl::AddStandardServices(
 //////////////////////////////////////////////////////////////////////////////
 
 UserIntelligenceProviderFactoryImpl::UserIntelligenceProviderFactoryImpl(
-    component::StartupContext* context, const Config& config)
+    fuchsia::sys::StartupContext* context, const Config& config)
     : context_(context), config_(config) {}
 
 void UserIntelligenceProviderFactoryImpl::GetUserIntelligenceProvider(

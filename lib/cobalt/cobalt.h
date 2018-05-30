@@ -46,7 +46,7 @@ class CobaltObservation {
 
 class CobaltContext {
  public:
-  CobaltContext(async_t* async, component::StartupContext* context,
+  CobaltContext(async_t* async, fuchsia::sys::StartupContext* context,
                 int32_t project_id);
   ~CobaltContext();
 
@@ -61,7 +61,7 @@ class CobaltContext {
 
   backoff::ExponentialBackoff backoff_;
   async_t* const async_;
-  component::StartupContext* context_;
+  fuchsia::sys::StartupContext* context_;
   CobaltEncoderPtr encoder_;
   const int32_t project_id_;
 
@@ -74,7 +74,7 @@ class CobaltContext {
 // Cobalt initialization. When cobalt is not need, the returned object must be
 // deleted. This method must not be called again until then.
 fxl::AutoCall<fxl::Closure> InitializeCobalt(async_t* async,
-                                             component::StartupContext* context,
+                                             fuchsia::sys::StartupContext* context,
                                              int32_t project_id,
                                              CobaltContext** cobalt_context);
 

@@ -29,7 +29,7 @@ constexpr char kContextListenerEntitiesKey[] = "entities";
 
 class ModuleResolverApp : ContextListener {
  public:
-  ModuleResolverApp(component::StartupContext* const context, bool is_test)
+  ModuleResolverApp(fuchsia::sys::StartupContext* const context, bool is_test)
       : context_(context), context_listener_binding_(this) {
     fuchsia::modular::ComponentContextPtr component_context;
     context_->ConnectToEnvironmentService<fuchsia::modular::ComponentContext>(
@@ -286,7 +286,7 @@ class ModuleResolverApp : ContextListener {
 
   IntelligenceServicesPtr intelligence_services_;
 
-  component::StartupContext* const context_;
+  fuchsia::sys::StartupContext* const context_;
 
   ContextReaderPtr context_reader_;
   fidl::Binding<ContextListener> context_listener_binding_;
@@ -308,7 +308,7 @@ int main(int argc, const char** argv) {
     return 0;
   }
   auto is_test = command_line.HasOption("test");
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AppDriver<fuchsia::modular::ModuleResolverApp> driver(
       context->outgoing().deprecated_services(),
       std::make_unique<fuchsia::modular::ModuleResolverApp>(context.get(),

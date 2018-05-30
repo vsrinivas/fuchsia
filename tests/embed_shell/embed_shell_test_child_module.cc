@@ -62,7 +62,7 @@ class TestApp : fuchsia::modular::ModuleWatcher {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::ModuleDriver<TestApp> driver(context.get(),
                                                  [&loop] { loop.QuitNow(); });
   loop.Run();

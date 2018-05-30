@@ -62,7 +62,7 @@ module_host->module_context()->GetComponentContext(
 
 // Connect to the agent to retrieve it's outgoing services.
 modular::AgentControllerPtr agent_controller;
-component::ServiceProviderPtr agent_services;
+fuchsia::sys::ServiceProviderPtr agent_services;
 component_context->ConnectToAgent("system/bin/simple_agent",
                                   agent_services.NewRequest(),
                                   agent_controller.NewRequest());

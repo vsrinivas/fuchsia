@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_MAXWELL_AGENT_LAUNCHER_H_
 #define PERIDOT_BIN_MAXWELL_AGENT_LAUNCHER_H_
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/svc/cpp/services.h"
@@ -15,14 +15,14 @@ namespace maxwell {
 
 class AgentLauncher {
  public:
-  AgentLauncher(component::Environment* environment)
+  AgentLauncher(fuchsia::sys::Environment* environment)
       : environment_(environment) {}
-  component::Services StartAgent(
+  fuchsia::sys::Services StartAgent(
       const std::string& url,
       std::unique_ptr<MaxwellServiceProviderBridge> bridge);
 
  private:
-  component::Environment* environment_;
+  fuchsia::sys::Environment* environment_;
 
   std::unique_ptr<MaxwellServiceProviderBridge> bridge_;
 };

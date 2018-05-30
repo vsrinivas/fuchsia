@@ -41,7 +41,7 @@ class UserActionLogFactoryImpl : public UserActionLogFactory {
 class UserActionLogFactoryApp {
  public:
   UserActionLogFactoryApp()
-      : context_(component::StartupContext::CreateFromStartupInfo()) {
+      : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()) {
     std::unique_ptr<UserActionLogFactoryImpl> factory_impl(
         new UserActionLogFactoryImpl());
     factory_impl_.swap(factory_impl);
@@ -54,7 +54,7 @@ class UserActionLogFactoryApp {
   }
 
  private:
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
   std::unique_ptr<UserActionLogFactoryImpl> factory_impl_;
   fidl::BindingSet<UserActionLogFactory> factory_bindings_;
 

@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"

@@ -15,7 +15,7 @@ constexpr char kValidationTestsUrl[] =
 }  // namespace
 
 ValidationTestsLauncher::ValidationTestsLauncher(
-    component::StartupContext* startup_context,
+    fuchsia::sys::StartupContext* startup_context,
     std::function<void(fidl::InterfaceRequest<CloudProvider>)> factory)
     : startup_context_(startup_context), factory_(std::move(factory)) {
   service_provider_impl_.AddService<cloud_provider::CloudProvider>(
@@ -27,9 +27,9 @@ ValidationTestsLauncher::ValidationTestsLauncher(
 void ValidationTestsLauncher::Run(const std::vector<std::string>& arguments,
                                   std::function<void(int32_t)> callback) {
   callback_ = std::move(callback);
-  component::LaunchInfo launch_info;
+  fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kValidationTestsUrl;
-  component::ServiceList service_list;
+  fuchsia::sys::ServiceList service_list;
   service_list.names.push_back(cloud_provider::CloudProvider::Name_);
   service_provider_impl_.AddBinding(service_list.provider.NewRequest());
   launch_info.additional_services = fidl::MakeOptional(std::move(service_list));

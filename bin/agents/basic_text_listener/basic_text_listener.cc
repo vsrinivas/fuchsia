@@ -26,7 +26,7 @@ const std::string kEmailRegex = "[^\\s]+@[^\\s]+";
 class BasicTextListener : ContextListener {
  public:
   BasicTextListener()
-      : context_(component::StartupContext::CreateFromStartupInfo()),
+      : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
         reader_(context_->ConnectToEnvironmentService<ContextReader>()),
         writer_(context_->ConnectToEnvironmentService<ContextWriter>()),
         binding_(this) {
@@ -91,7 +91,7 @@ class BasicTextListener : ContextListener {
                               GetEntitiesFromText(raw_text));
   }
 
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
   ContextReaderPtr reader_;
   ContextWriterPtr writer_;
   fidl::Binding<ContextListener> binding_;

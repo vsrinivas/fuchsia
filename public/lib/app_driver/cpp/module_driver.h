@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -26,7 +26,7 @@ namespace modular {
 // This interface is passed to the |Impl| object that ModuleDriver initializes.
 class ModuleHost {
  public:
-  virtual component::StartupContext* startup_context() = 0;
+  virtual fuchsia::sys::StartupContext* startup_context() = 0;
   virtual ModuleContext* module_context() = 0;
 };
 
@@ -62,7 +62,7 @@ class ModuleHost {
 //
 // int main(int argc, const char** argv) {
 //   fsl::MessageLoop loop;
-//   auto context = component::StartupContext::CreateFromStartupInfo();
+//   auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
 //   fuchsia::modular::ModuleDriver<HelloWorldApp> driver(context.get(),
 //                                               [&loop] { loop.QuitNow(); });
 //   loop.Run();
@@ -71,7 +71,7 @@ class ModuleHost {
 template <typename Impl>
 class ModuleDriver : LifecycleImpl::Delegate, ModuleHost {
  public:
-  ModuleDriver(component::StartupContext* const context,
+  ModuleDriver(fuchsia::sys::StartupContext* const context,
                std::function<void()> on_terminated)
       : context_(context),
         lifecycle_impl_(context->outgoing().deprecated_services(), this),
@@ -91,7 +91,7 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleHost {
 
  private:
   // |ModuleHost|
-  component::StartupContext* startup_context() override { return context_; }
+  fuchsia::sys::StartupContext* startup_context() override { return context_; }
 
   // |ModuleHost|
   ModuleContext* module_context() override {
@@ -123,7 +123,7 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleHost {
                                    std::move(view_provider_request_));
   }
 
-  component::StartupContext* const context_;
+  fuchsia::sys::StartupContext* const context_;
   LifecycleImpl lifecycle_impl_;
   std::function<void()> on_terminated_;
   ModuleContextPtr module_context_;

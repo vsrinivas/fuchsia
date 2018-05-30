@@ -16,7 +16,7 @@ namespace p2p_sync {
 class UserCommunicatorFactoryImpl : public UserCommunicatorFactory {
  public:
   UserCommunicatorFactoryImpl(ledger::Environment* environment,
-                              component::StartupContext* startup_context);
+                              fuchsia::sys::StartupContext* startup_context);
   ~UserCommunicatorFactoryImpl() override;
 
   std::unique_ptr<UserCommunicator> GetUserCommunicator(
@@ -24,7 +24,7 @@ class UserCommunicatorFactoryImpl : public UserCommunicatorFactory {
 
  private:
   ledger::Environment* const environment_;
-  component::StartupContext* const startup_context_;
+  fuchsia::sys::StartupContext* const startup_context_;
 };
 
 }  // namespace p2p_sync

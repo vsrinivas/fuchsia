@@ -19,9 +19,9 @@ namespace {
 
 class HelloAppParent {
  public:
-  explicit HelloAppParent(component::StartupContext* context,
+  explicit HelloAppParent(fuchsia::sys::StartupContext* context,
                           fxl::CommandLine command_line) {
-    component::LaunchInfo launch_info;
+    fuchsia::sys::LaunchInfo launch_info;
     const std::vector<std::string>& args = command_line.positional_args();
     if (args.empty()) {
       launch_info.url = "hello_app_child";
@@ -51,8 +51,8 @@ class HelloAppParent {
     });
   }
 
-  component::ComponentControllerPtr child_;
-  component::Services child_services_;
+  fuchsia::sys::ComponentControllerPtr child_;
+  fuchsia::sys::Services child_services_;
   hello_world_module::HelloPtr hello_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(HelloAppParent);
@@ -62,7 +62,7 @@ class HelloAppParent {
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AppDriver<HelloAppParent> driver(
       context->outgoing().deprecated_services(),
       std::make_unique<HelloAppParent>(

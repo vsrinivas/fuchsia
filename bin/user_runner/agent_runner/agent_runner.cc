@@ -26,7 +26,7 @@ namespace modular {
 constexpr zx::duration kTeardownTimeout = zx::sec(3);
 
 AgentRunner::AgentRunner(
-    component::ApplicationLauncher* const application_launcher,
+    fuchsia::sys::ApplicationLauncher* const application_launcher,
     MessageQueueManager* const message_queue_manager,
     ledger_internal::LedgerRepository* const ledger_repository,
     AgentRunnerStorage* const agent_runner_storage,
@@ -142,7 +142,7 @@ void AgentRunner::RunAgent(const std::string& agent_url) {
 void AgentRunner::ConnectToAgent(
     const std::string& requestor_url,
     const std::string& agent_url,
-    fidl::InterfaceRequest<component::ServiceProvider>
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
         incoming_services_request,
     fidl::InterfaceRequest<AgentController> agent_controller_request) {
   // Drop all new requests if AgentRunner is terminating.

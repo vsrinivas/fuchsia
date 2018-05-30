@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 
@@ -25,7 +25,7 @@ template <class Service>
 class SingleServiceApp : protected Service,
                          private fuchsia::ui::views_v1::ViewProvider {
  public:
-  SingleServiceApp(component::StartupContext* const startup_context)
+  SingleServiceApp(fuchsia::sys::StartupContext* const startup_context)
       : startup_context_(startup_context),
         service_binding_(new fidl::Binding<Service>(this)),
         view_provider_binding_(this) {
@@ -48,7 +48,7 @@ class SingleServiceApp : protected Service,
   virtual void Terminate(std::function<void()> done) { done(); }
 
  protected:
-  component::StartupContext* startup_context() const {
+  fuchsia::sys::StartupContext* startup_context() const {
     return startup_context_;
   }
 
@@ -57,10 +57,10 @@ class SingleServiceApp : protected Service,
   void CreateView(
       fidl::InterfaceRequest<
           fuchsia::ui::views_v1_token::ViewOwner> /*view_owner_request*/,
-      fidl::InterfaceRequest<component::ServiceProvider> /*services*/)
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
       override {}
 
-  component::StartupContext* const startup_context_;
+  fuchsia::sys::StartupContext* const startup_context_;
   std::unique_ptr<fidl::Binding<Service>> service_binding_;
   fidl::Binding<fuchsia::ui::views_v1::ViewProvider> view_provider_binding_;
 
@@ -72,7 +72,7 @@ class SingleServiceApp : protected Service,
 // used as an Impl class of AppDriver.
 class ViewApp : private fuchsia::ui::views_v1::ViewProvider {
  public:
-  ViewApp(component::StartupContext* const startup_context)
+  ViewApp(fuchsia::sys::StartupContext* const startup_context)
       : startup_context_(startup_context), view_provider_binding_(this) {
     startup_context_->outgoing()
         .AddPublicService<fuchsia::ui::views_v1::ViewProvider>(
@@ -88,7 +88,7 @@ class ViewApp : private fuchsia::ui::views_v1::ViewProvider {
   virtual void Terminate(std::function<void()> done) { done(); }
 
  protected:
-  component::StartupContext* startup_context() const {
+  fuchsia::sys::StartupContext* startup_context() const {
     return startup_context_;
   }
 
@@ -97,10 +97,10 @@ class ViewApp : private fuchsia::ui::views_v1::ViewProvider {
   void CreateView(
       fidl::InterfaceRequest<
           fuchsia::ui::views_v1_token::ViewOwner> /*view_owner_request*/,
-      fidl::InterfaceRequest<component::ServiceProvider> /*services*/)
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
       override {}
 
-  component::StartupContext* const startup_context_;
+  fuchsia::sys::StartupContext* const startup_context_;
   fidl::Binding<fuchsia::ui::views_v1::ViewProvider> view_provider_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ViewApp);

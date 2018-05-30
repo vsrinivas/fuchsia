@@ -26,7 +26,7 @@ class MaxwellTestBase : public gtest::TestWithMessageLoop {
     agent_launcher_->StartAgent(url, std::move(bridge));
   }
 
-  component::Services StartServices(const std::string& url);
+  fuchsia::sys::Services StartServices(const std::string& url);
 
   template <typename Interface>
   fidl::InterfacePtr<Interface> ConnectToService(const std::string& url) {
@@ -34,17 +34,17 @@ class MaxwellTestBase : public gtest::TestWithMessageLoop {
     return services.ConnectToService<Interface>();
   }
 
-  component::Environment* root_environment();
+  fuchsia::sys::Environment* root_environment();
 
   fuchsia::modular::EntityResolverFake& entity_resolver() {
     return child_component_context_.entity_resolver_fake();
   }
 
  private:
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   std::unique_ptr<AgentLauncher> agent_launcher_;
 
-  component::ServiceProviderImpl child_app_services_;
+  fuchsia::sys::ServiceProviderImpl child_app_services_;
   fuchsia::modular::ComponentContextFake child_component_context_;
 };
 

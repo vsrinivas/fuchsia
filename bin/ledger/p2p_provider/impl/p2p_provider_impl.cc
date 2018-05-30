@@ -77,7 +77,7 @@ bool P2PProviderImpl::SendMessage(fxl::StringView destination,
 }
 
 void P2PProviderImpl::StartService() {
-  fidl::InterfaceHandle<component::ServiceProvider> handle;
+  fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> handle;
   // When the service provider is reset and its connection cut, NetConnector
   // stops responding for its services.
   network_service_provider_.AddBinding(handle.NewRequest());
@@ -195,7 +195,7 @@ void P2PProviderImpl::ListenForNewDevices(uint64_t version) {
           FXL_CHECK(status == ZX_OK)
               << "zx::channel::create failed, status " << status;
 
-          component::ServiceProviderPtr device_service_provider;
+          fuchsia::sys::ServiceProviderPtr device_service_provider;
           net_connector_->GetDeviceServiceProvider(
               remote_name, device_service_provider.NewRequest());
 

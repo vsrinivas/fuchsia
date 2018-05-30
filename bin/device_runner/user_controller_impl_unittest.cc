@@ -4,7 +4,7 @@
 
 #include "peridot/bin/device_runner/user_controller_impl.h"
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include "gtest/gtest.h"
 #include "lib/gtest/test_with_message_loop.h"
 #include "peridot/lib/fidl/clone.h"
@@ -29,8 +29,8 @@ TEST_F(UserControllerImplTest, StartUserRunner) {
   bool callback_called = false;
   launcher.RegisterApplication(
       url, [&callback_called](
-               component::LaunchInfo launch_info,
-               fidl::InterfaceRequest<component::ComponentController> ctrl) {
+               fuchsia::sys::LaunchInfo launch_info,
+               fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
         callback_called = true;
       });
 

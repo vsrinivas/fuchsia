@@ -44,7 +44,7 @@ class NetConnectorFactory : public FakeNetConnector::Delegate {
       override;
   void ConnectToServiceProvider(
       std::string device_name,
-      fidl::InterfaceRequest<component::ServiceProvider> request) override;
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request) override;
 
   // Counter incremented each time a NetConnector is added or removed; denotes
   // the version of the current device list.

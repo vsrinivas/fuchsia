@@ -26,8 +26,8 @@ namespace test {
 // TODO(ppi): take the server_id as std::optional<std::string> and drop bool
 // sync once we're on C++17.
 ledger::Status GetLedger(fxl::Closure quit_callback,
-                         component::StartupContext* context,
-                         component::ComponentControllerPtr* controller,
+                         fuchsia::sys::StartupContext* context,
+                         fuchsia::sys::ComponentControllerPtr* controller,
                          cloud_provider::CloudProviderPtr cloud_provider,
                          std::string ledger_name,
                          std::string ledger_repository_path,

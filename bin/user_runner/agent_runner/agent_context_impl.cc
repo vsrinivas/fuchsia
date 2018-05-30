@@ -36,7 +36,7 @@ std::string HashAgentUrl(const std::string& agent_url) {
 class AgentContextImpl::InitializeCall : public Operation<> {
  public:
   InitializeCall(AgentContextImpl* const agent_context_impl,
-                 component::ApplicationLauncher* const app_launcher,
+                 fuchsia::sys::ApplicationLauncher* const app_launcher,
                  AppConfig agent_config)
       : Operation("AgentContextImpl::InitializeCall", [] {},
                   agent_context_impl->url_),
@@ -53,15 +53,15 @@ class AgentContextImpl::InitializeCall : public Operation<> {
     // No user intelligence provider is available during testing. We want to
     // keep going without it.
     if (!agent_context_impl_->user_intelligence_provider_) {
-      auto service_list = component::ServiceList::New();
+      auto service_list = fuchsia::sys::ServiceList::New();
       Continue(std::move(service_list), flow);
       return;
     }
 
     agent_context_impl_->user_intelligence_provider_->GetServicesForAgent(
         agent_context_impl_->url_,
-        [this, flow](component::ServiceList maxwell_service_list) {
-          auto service_list = component::ServiceList::New();
+        [this, flow](fuchsia::sys::ServiceList maxwell_service_list) {
+          auto service_list = fuchsia::sys::ServiceList::New();
           service_list->names = std::move(maxwell_service_list.names);
           agent_context_impl_->service_provider_impl_.SetDefaultServiceProvider(
               maxwell_service_list.provider.Bind());
@@ -69,7 +69,7 @@ class AgentContextImpl::InitializeCall : public Operation<> {
         });
   }
 
-  void Continue(component::ServiceListPtr service_list, FlowToken flow) {
+  void Continue(fuchsia::sys::ServiceListPtr service_list, FlowToken flow) {
     service_list->names.push_back(AgentContext::Name_);
     agent_context_impl_->service_provider_impl_.AddBinding(
         service_list->provider.NewRequest());
@@ -106,7 +106,7 @@ class AgentContextImpl::InitializeCall : public Operation<> {
   }
 
   AgentContextImpl* const agent_context_impl_;
-  component::ApplicationLauncher* const app_launcher_;
+  fuchsia::sys::ApplicationLauncher* const app_launcher_;
   AppConfig agent_config_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(InitializeCall);
@@ -191,7 +191,7 @@ AgentContextImpl::~AgentContextImpl() = default;
 
 void AgentContextImpl::NewAgentConnection(
     const std::string& requestor_url,
-    fidl::InterfaceRequest<component::ServiceProvider>
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
         incoming_services_request,
     fidl::InterfaceRequest<AgentController> agent_controller_request) {
   // Queue adding the connection

@@ -33,14 +33,14 @@ class TestApp : component_context_test::ComponentContextTestService {
             });
 
     // Connecting to the agent should start it up.
-    component::ServiceProviderPtr agent_services;
+    fuchsia::sys::ServiceProviderPtr agent_services;
     component_context_->ConnectToAgent(kTwoAgentUrl,
                                        agent_services.NewRequest(),
                                        two_agent_controller_.NewRequest());
   }
 
   // Called by AgentDriver.
-  void Connect(fidl::InterfaceRequest<component::ServiceProvider> request) {
+  void Connect(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request) {
     agent_services_.AddBinding(std::move(request));
     fuchsia::modular::testing::GetStore()->Put("one_agent_connected", "",
                                                [] {});
@@ -80,7 +80,7 @@ class TestApp : component_context_test::ComponentContextTestService {
   fuchsia::modular::ComponentContextPtr component_context_;
   fuchsia::modular::AgentControllerPtr two_agent_controller_;
 
-  component::ServiceNamespace agent_services_;
+  fuchsia::sys::ServiceNamespace agent_services_;
   fidl::BindingSet<component_context_test::ComponentContextTestService>
       agent_interface_;
 
@@ -91,7 +91,7 @@ class TestApp : component_context_test::ComponentContextTestService {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AgentDriver<TestApp> driver(context.get(),
                                                 [&loop] { loop.QuitNow(); });
   loop.Run();

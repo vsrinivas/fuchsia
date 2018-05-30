@@ -8,7 +8,7 @@
 #include <map>
 #include <string>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -18,11 +18,11 @@ namespace fuchsia {
 namespace modular {
 namespace testing {
 
-class FakeApplicationLauncher : public component::ApplicationLauncher {
+class FakeApplicationLauncher : public fuchsia::sys::ApplicationLauncher {
  public:
   using ApplicationConnectorFn = std::function<void(
-      component::LaunchInfo,
-      fidl::InterfaceRequest<component::ComponentController>)>;
+      fuchsia::sys::LaunchInfo,
+      fidl::InterfaceRequest<fuchsia::sys::ComponentController>)>;
 
   // Registers an application located at "url" with a connector. When someone
   // tries to CreateApplication() with this |url|, the supplied |connector| is
@@ -38,8 +38,8 @@ class FakeApplicationLauncher : public component::ApplicationLauncher {
   // this call is dropped.
   // |ApplicationLauncher|
   void CreateApplication(
-      component::LaunchInfo launch_info,
-      fidl::InterfaceRequest<component::ComponentController> controller)
+      fuchsia::sys::LaunchInfo launch_info,
+      fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller)
       override;
 
   std::map<std::string, ApplicationConnectorFn> connectors_;

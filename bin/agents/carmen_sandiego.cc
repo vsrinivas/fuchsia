@@ -18,7 +18,7 @@ namespace {
 class CarmenSandiegoApp : public fuchsia::modular::ContextListener {
  public:
   CarmenSandiegoApp()
-      : context_(component::StartupContext::CreateFromStartupInfo()),
+      : context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
         writer_(context_->ConnectToEnvironmentService<
                 fuchsia::modular::ContextWriter>()),
         reader_(context_->ConnectToEnvironmentService<
@@ -66,7 +66,7 @@ class CarmenSandiegoApp : public fuchsia::modular::ContextListener {
     writer_->WriteEntityTopic("/location/region", json.str());
   }
 
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
 
   fuchsia::modular::ContextWriterPtr writer_;
   fuchsia::modular::ContextReaderPtr reader_;

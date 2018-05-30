@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 
 #include "lib/fidl/cpp/binding.h"
@@ -25,20 +25,20 @@ class AgentImpl : public Agent {
   // framework.
   class Delegate {
    public:
-    virtual void Connect(fidl::InterfaceRequest<component::ServiceProvider>
+    virtual void Connect(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
                              outgoing_services) = 0;
     virtual void RunTask(const fidl::StringPtr& task_id,
                          const std::function<void()>& done) = 0;
   };
 
-  AgentImpl(component::ServiceNamespace* service_namespace, Delegate* delegate);
+  AgentImpl(fuchsia::sys::ServiceNamespace* service_namespace, Delegate* delegate);
 
   AgentImpl(fbl::RefPtr<fs::PseudoDir> directory, Delegate* delegate);
 
  private:
   // |Agent|
   void Connect(fidl::StringPtr requestor_url,
-               fidl::InterfaceRequest<component::ServiceProvider>
+               fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
                    services_request) override;
   // |Agent|
   void RunTask(fidl::StringPtr task_id,

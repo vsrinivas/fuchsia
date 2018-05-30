@@ -38,7 +38,7 @@ class TestApp {
     module_host_->module_context()->GetComponentContext(
         component_context_.NewRequest());
 
-    component::ServiceProviderPtr agent_services;
+    fuchsia::sys::ServiceProviderPtr agent_services;
     component_context_->ConnectToAgent(kTestAgent, agent_services.NewRequest(),
                                        agent_controller_.NewRequest());
     ConnectToService(agent_services.get(), agent_service_.NewRequest());
@@ -90,7 +90,7 @@ class TestApp {
     message_sender->Send("Queued message...");
 
     // Start the agent again.
-    component::ServiceProviderPtr agent_services;
+    fuchsia::sys::ServiceProviderPtr agent_services;
     component_context_->ConnectToAgent(kTestAgent, agent_services.NewRequest(),
                                        agent_controller_.NewRequest());
     ConnectToService(agent_services.get(), agent_service_.NewRequest());
@@ -136,7 +136,7 @@ class TestApp {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::ModuleDriver<TestApp> driver(context.get(),
                                                  [&loop] { loop.QuitNow(); });
   loop.Run();

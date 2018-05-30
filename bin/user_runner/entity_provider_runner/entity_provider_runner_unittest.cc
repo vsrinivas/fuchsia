@@ -7,7 +7,7 @@
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <modular_auth/cpp/fidl.h>
 #include "gtest/gtest.h"
@@ -97,12 +97,12 @@ class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
 
 class MyEntityProvider : AgentImpl::Delegate,
                          EntityProvider,
-                         public component::ComponentController,
+                         public fuchsia::sys::ComponentController,
                          public testing::MockBase {
  public:
   MyEntityProvider(
-      component::LaunchInfo launch_info,
-      fidl::InterfaceRequest<component::ComponentController> ctrl)
+      fuchsia::sys::LaunchInfo launch_info,
+      fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl)
       : vfs_(async_get_default()),
         outgoing_directory_(fbl::AdoptRef(new fs::PseudoDir())),
         controller_(this, std::move(ctrl)),
@@ -124,7 +124,7 @@ class MyEntityProvider : AgentImpl::Delegate,
     FXL_CHECK(launch_info_.additional_services->provider.is_valid());
     auto additional_services =
         launch_info_.additional_services->provider.Bind();
-    component::ConnectToService(additional_services.get(),
+    fuchsia::sys::ConnectToService(additional_services.get(),
                                 agent_context_.NewRequest());
     ComponentContextPtr component_context;
     agent_context_->GetComponentContext(component_context.NewRequest());
@@ -144,7 +144,7 @@ class MyEntityProvider : AgentImpl::Delegate,
   void Wait(WaitCallback callback) override { ++counts["Wait"]; }
 
   // |AgentImpl::Delegate|
-  void Connect(fidl::InterfaceRequest<component::ServiceProvider>
+  void Connect(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
                    outgoing_services) override {
     ++counts["Connect"];
   }
@@ -175,9 +175,9 @@ class MyEntityProvider : AgentImpl::Delegate,
   AgentContextPtr agent_context_;
   std::unique_ptr<AgentImpl> agent_impl_;
   EntityResolverPtr entity_resolver_;
-  fidl::Binding<component::ComponentController> controller_;
+  fidl::Binding<fuchsia::sys::ComponentController> controller_;
   fidl::Binding<fuchsia::modular::EntityProvider> entity_provider_binding_;
-  component::LaunchInfo launch_info_;
+  fuchsia::sys::LaunchInfo launch_info_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MyEntityProvider);
 };
@@ -188,14 +188,14 @@ TEST_F(EntityProviderRunnerTest, Basic) {
   launcher()->RegisterApplication(
       kMyAgentUrl,
       [&dummy_agent](
-          component::LaunchInfo launch_info,
-          fidl::InterfaceRequest<component::ComponentController> ctrl) {
+          fuchsia::sys::LaunchInfo launch_info,
+          fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
         dummy_agent = std::make_unique<MyEntityProvider>(std::move(launch_info),
                                                          std::move(ctrl));
       });
 
   // 1. Start up the entity provider agent.
-  component::ServiceProviderPtr incoming_services;
+  fuchsia::sys::ServiceProviderPtr incoming_services;
   AgentControllerPtr agent_controller;
   agent_runner()->ConnectToAgent("dummy_requestor_url", kMyAgentUrl,
                                  incoming_services.NewRequest(),

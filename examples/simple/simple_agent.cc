@@ -19,7 +19,7 @@ class SimpleAgent {
 
   // Called by |AgentDriver| to expose the agent's outgoing services.
   void Connect(
-      fidl::InterfaceRequest<component::ServiceProvider> outgoing_services) {
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> outgoing_services) {
     services_.AddBinding(std::move(outgoing_services));
   }
 
@@ -34,7 +34,7 @@ class SimpleAgent {
 
  private:
   // The services namespace that the `Simple` service is added to.
-  component::ServiceNamespace services_;
+  fuchsia::sys::ServiceNamespace services_;
 
   // The implementation of the Simple service.
   std::unique_ptr<SimpleImpl> simple_impl_;
@@ -44,7 +44,7 @@ class SimpleAgent {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AgentDriver<simple::SimpleAgent> driver(
       context.get(), [&loop] { loop.QuitNow(); });
   loop.Run();

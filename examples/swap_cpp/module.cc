@@ -34,14 +34,14 @@ void ModuleView::OnPropertiesChanged(fuchsia::ui::views_v1::ViewProperties) {
   InvalidateScene();
 }
 
-ModuleApp::ModuleApp(component::StartupContext* const startup_context,
+ModuleApp::ModuleApp(fuchsia::sys::StartupContext* const startup_context,
                      CreateViewCallback create)
     : ViewApp(startup_context), create_(std::move(create)) {}
 
 void ModuleApp::CreateView(
     fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
         view_owner_request,
-    fidl::InterfaceRequest<component::ServiceProvider> /*services*/) {
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/) {
   view_.reset(create_(
       startup_context()
           ->ConnectToEnvironmentService<fuchsia::ui::views_v1::ViewManager>(),

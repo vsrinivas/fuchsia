@@ -9,14 +9,14 @@ namespace ledger {
 FakeNetConnector::FakeNetConnector(Delegate* delegate) : delegate_(delegate) {}
 
 void FakeNetConnector::ConnectToServiceProvider(
-    fidl::InterfaceRequest<component::ServiceProvider> request) {
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request) {
   service_provider_impl_.AddBinding(std::move(request));
 }
 
 void FakeNetConnector::RegisterServiceProvider(
     fidl::StringPtr name,
-    fidl::InterfaceHandle<component::ServiceProvider> service_provider) {
-  component::ServiceProviderPtr service_provider_ptr = service_provider.Bind();
+    fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> service_provider) {
+  fuchsia::sys::ServiceProviderPtr service_provider_ptr = service_provider.Bind();
   service_provider_impl_.AddServiceForName(
       fxl::MakeCopyable([name, service_provider_ptr = std::move(
                                    service_provider_ptr)](zx::channel channel) {
@@ -27,7 +27,7 @@ void FakeNetConnector::RegisterServiceProvider(
 
 void FakeNetConnector::GetDeviceServiceProvider(
     fidl::StringPtr device_name,
-    fidl::InterfaceRequest<component::ServiceProvider> service_provider) {
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> service_provider) {
   delegate_->ConnectToServiceProvider(device_name, std::move(service_provider));
 }
 

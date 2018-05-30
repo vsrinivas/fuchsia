@@ -17,7 +17,7 @@ namespace modular {
 class DeviceRunnerMonitorApp : DeviceRunnerMonitor {
  public:
   DeviceRunnerMonitorApp()
-      : context_(component::StartupContext::CreateFromStartupInfoNotChecked()) {
+      : context_(fuchsia::sys::StartupContext::CreateFromStartupInfoNotChecked()) {
     context_->outgoing().AddPublicService<DeviceRunnerMonitor>(
         [this](fidl::InterfaceRequest<DeviceRunnerMonitor> request) {
           bindings_.AddBinding(this, std::move(request));
@@ -30,7 +30,7 @@ class DeviceRunnerMonitorApp : DeviceRunnerMonitor {
     callback(bindings_.size());
   }
 
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
   fidl::BindingSet<DeviceRunnerMonitor> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerMonitorApp);

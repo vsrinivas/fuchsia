@@ -52,7 +52,7 @@ void ComponentContextImpl::GetLedger(
 
 void ComponentContextImpl::ConnectToAgent(
     fidl::StringPtr url,
-    fidl::InterfaceRequest<component::ServiceProvider>
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
         incoming_services_request,
     fidl::InterfaceRequest<AgentController> agent_controller_request) {
   agent_runner_->ConnectToAgent(component_instance_id_, url,

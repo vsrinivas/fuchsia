@@ -10,7 +10,7 @@
 
 #include <memory>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
@@ -48,7 +48,7 @@ class DevUserShellApp
       fuchsia::modular::NextListener,
       public fuchsia::modular::SingleServiceApp<fuchsia::modular::UserShell> {
  public:
-  explicit DevUserShellApp(component::StartupContext* const startup_context,
+  explicit DevUserShellApp(fuchsia::sys::StartupContext* const startup_context,
                            Settings settings)
       : SingleServiceApp(startup_context),
         settings_(std::move(settings)),
@@ -61,7 +61,7 @@ class DevUserShellApp
   void CreateView(
       fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
           view_owner_request,
-      fidl::InterfaceRequest<component::ServiceProvider> /*services*/)
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
       override {
     view_owner_request_ = std::move(view_owner_request);
     Connect();
@@ -197,7 +197,7 @@ int main(int argc, const char** argv) {
 
   fsl::MessageLoop loop;
 
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AppDriver<DevUserShellApp> driver(
       context->outgoing().deprecated_services(),
       std::make_unique<DevUserShellApp>(context.get(), std::move(settings)),

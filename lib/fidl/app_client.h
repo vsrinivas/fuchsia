@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
@@ -39,16 +39,16 @@ namespace modular {
 // be inline. It can be used on its own too.
 class AppClientBase : public AsyncHolderBase {
  public:
-  AppClientBase(component::ApplicationLauncher* launcher,
+  AppClientBase(fuchsia::sys::ApplicationLauncher* launcher,
                 AppConfig config,
                 std::string data_origin = "",
-                component::ServiceListPtr additional_services = nullptr);
+                fuchsia::sys::ServiceListPtr additional_services = nullptr);
   virtual ~AppClientBase();
 
   // Gives access to the services of the started application. Services
   // obtained from it are not involved in life cycle management provided by
   // AppClient, however. This is used for example to obtain the ViewProvider.
-  component::Services& services() { return services_; }
+  fuchsia::sys::Services& services() { return services_; }
 
   // Registers a handler to receive a notification when this application
   // connection encounters an error. This typically happens when this
@@ -65,8 +65,8 @@ class AppClientBase : public AsyncHolderBase {
   virtual void ServiceTerminate(const std::function<void()>& done);
   virtual void ServiceUnbind();
 
-  component::ComponentControllerPtr app_;
-  component::Services services_;
+  fuchsia::sys::ComponentControllerPtr app_;
+  fuchsia::sys::Services services_;
   FXL_DISALLOW_COPY_AND_ASSIGN(AppClientBase);
 };
 
@@ -75,10 +75,10 @@ class AppClientBase : public AsyncHolderBase {
 template <class Service>
 class AppClient : public AppClientBase {
  public:
-  AppClient(component::ApplicationLauncher* const launcher,
+  AppClient(fuchsia::sys::ApplicationLauncher* const launcher,
             AppConfig config,
             std::string data_origin = "",
-            component::ServiceListPtr additional_services = nullptr)
+            fuchsia::sys::ServiceListPtr additional_services = nullptr)
       : AppClientBase(launcher,
                       std::move(config),
                       std::move(data_origin),

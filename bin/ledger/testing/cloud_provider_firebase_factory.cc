@@ -17,7 +17,7 @@ constexpr char kCloudProviderFirebaseAppUrl[] = "cloud_provider_firebase";
 }  // namespace
 
 CloudProviderFirebaseFactory::CloudProviderFirebaseFactory(
-    component::StartupContext* startup_context)
+    fuchsia::sys::StartupContext* startup_context)
     : startup_context_(startup_context) {}
 
 CloudProviderFirebaseFactory::~CloudProviderFirebaseFactory() {
@@ -26,8 +26,8 @@ CloudProviderFirebaseFactory::~CloudProviderFirebaseFactory() {
 
 void CloudProviderFirebaseFactory::Init() {
   loop_.StartThread();
-  component::Services child_services;
-  component::LaunchInfo launch_info;
+  fuchsia::sys::Services child_services;
+  fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kCloudProviderFirebaseAppUrl;
   launch_info.directory_request = child_services.NewRequest();
   startup_context_->launcher()->CreateApplication(

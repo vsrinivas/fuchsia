@@ -10,7 +10,7 @@
 
 #include <fcntl.h>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/unique_fd.h"
 
@@ -44,12 +44,12 @@ zx::channel CloneChannel(int fd) {
 
 }  // namespace
 
-AppClientBase::AppClientBase(component::ApplicationLauncher* const launcher,
+AppClientBase::AppClientBase(fuchsia::sys::ApplicationLauncher* const launcher,
                              AppConfig config,
                              std::string data_origin,
-                             component::ServiceListPtr additional_services)
+                             fuchsia::sys::ServiceListPtr additional_services)
     : AsyncHolderBase(config.url) {
-  component::LaunchInfo launch_info;
+  fuchsia::sys::LaunchInfo launch_info;
   launch_info.directory_request = services_.NewRequest();
   launch_info.url = config.url;
   fidl::VectorPtr<fidl::StringPtr> args;
@@ -63,7 +63,7 @@ AppClientBase::AppClientBase(component::ApplicationLauncher* const launcher,
       FXL_LOG(ERROR) << "Unable to create directory at " << data_origin;
       return;
     }
-    launch_info.flat_namespace = component::FlatNamespace::New();
+    launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
     launch_info.flat_namespace->paths.push_back("/data");
 
     fxl::UniqueFD dir(open(data_origin.c_str(), O_DIRECTORY | O_RDONLY));

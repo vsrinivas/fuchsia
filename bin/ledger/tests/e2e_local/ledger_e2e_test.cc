@@ -4,7 +4,7 @@
 
 #include <string.h>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
 #include <ledger_internal/cpp/fidl.h>
 #include "gtest/gtest.h"
@@ -44,13 +44,13 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
  public:
   LedgerEndToEndTest()
       : startup_context_(
-            component::StartupContext::CreateFromStartupInfoNotChecked()) {}
+            fuchsia::sys::StartupContext::CreateFromStartupInfoNotChecked()) {}
   ~LedgerEndToEndTest() override {}
 
  protected:
   void Init(std::vector<std::string> additional_args) {
-    component::Services child_services;
-    component::LaunchInfo launch_info;
+    fuchsia::sys::Services child_services;
+    fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = "ledger";
     launch_info.directory_request = child_services.NewRequest();
     launch_info.arguments.push_back("--no_minfs_wait");
@@ -124,14 +124,14 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
     return ::testing::AssertionSuccess();
   }
 
-  component::StartupContext* startup_context() {
+  fuchsia::sys::StartupContext* startup_context() {
     return startup_context_.get();
   }
 
  private:
-  component::ComponentControllerPtr ledger_controller_;
+  fuchsia::sys::ComponentControllerPtr ledger_controller_;
   std::vector<std::function<void()>> ledger_shutdown_callbacks_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
 
  protected:
   ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory_;

@@ -28,7 +28,7 @@ class LedgerAppInstanceImpl final
     : public LedgerAppInstanceFactory::LedgerAppInstance {
  public:
   LedgerAppInstanceImpl(
-      component::ComponentControllerPtr controller,
+      fuchsia::sys::ComponentControllerPtr controller,
       ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory,
       CloudProviderFirebaseFactory* cloud_provider_firebase_factory,
       std::string server_id);
@@ -36,13 +36,13 @@ class LedgerAppInstanceImpl final
  private:
   cloud_provider::CloudProviderPtr MakeCloudProvider() override;
 
-  component::ComponentControllerPtr controller_;
+  fuchsia::sys::ComponentControllerPtr controller_;
   CloudProviderFirebaseFactory* const cloud_provider_firebase_factory_;
   const std::string server_id_;
 };
 
 LedgerAppInstanceImpl::LedgerAppInstanceImpl(
-    component::ComponentControllerPtr controller,
+    fuchsia::sys::ComponentControllerPtr controller,
     ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory,
     CloudProviderFirebaseFactory* cloud_provider_firebase_factory,
     std::string server_id)
@@ -63,7 +63,7 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
  public:
   LedgerAppInstanceFactoryImpl()
       : startup_context_(
-            component::StartupContext::CreateFromStartupInfoNotChecked()),
+            fuchsia::sys::StartupContext::CreateFromStartupInfoNotChecked()),
         cloud_provider_firebase_factory_(startup_context_.get()) {}
   ~LedgerAppInstanceFactoryImpl() override;
   void Init();
@@ -73,7 +73,7 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
   std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance() override;
 
  private:
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   CloudProviderFirebaseFactory cloud_provider_firebase_factory_;
 
   std::string server_id_;
@@ -91,10 +91,10 @@ void LedgerAppInstanceFactoryImpl::SetServerId(std::string server_id) {
 
 std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>
 LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
-  component::ComponentControllerPtr controller;
+  fuchsia::sys::ComponentControllerPtr controller;
   ledger_internal::LedgerRepositoryFactoryPtr repository_factory;
-  component::Services child_services;
-  component::LaunchInfo launch_info;
+  fuchsia::sys::Services child_services;
+  fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = "ledger";
   launch_info.directory_request = child_services.NewRequest();
   launch_info.arguments.push_back("--no_minfs_wait");

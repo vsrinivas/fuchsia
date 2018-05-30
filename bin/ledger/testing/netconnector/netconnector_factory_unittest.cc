@@ -243,8 +243,8 @@ TEST_F(NetConnectorFactoryTest, ServiceProvider) {
   netconnector::NetConnectorPtr netconnector1;
   factory_.AddBinding("host1", netconnector1.NewRequest());
 
-  fidl::InterfaceHandle<component::ServiceProvider> handle;
-  component::ServiceProviderImpl service_provider1;
+  fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> handle;
+  fuchsia::sys::ServiceProviderImpl service_provider1;
   std::vector<std::unique_ptr<netconnector::MessageRelay>> relays_host1;
   service_provider1.AddBinding(handle.NewRequest());
   service_provider1.AddServiceForName(
@@ -267,7 +267,7 @@ TEST_F(NetConnectorFactoryTest, ServiceProvider) {
 
   FXL_CHECK(status == ZX_OK) << "zx::channel::create failed, status " << status;
 
-  component::ServiceProviderPtr service_provider_ptr;
+  fuchsia::sys::ServiceProviderPtr service_provider_ptr;
   netconnector2->GetDeviceServiceProvider("host1",
                                           service_provider_ptr.NewRequest());
 

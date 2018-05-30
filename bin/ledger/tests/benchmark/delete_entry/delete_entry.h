@@ -44,12 +44,12 @@ class DeleteEntryBenchmark {
   files::ScopedTempDir tmp_dir_;
   test::DataGenerator generator_;
   PageDataGenerator page_data_generator_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   const size_t entry_count_;
   const size_t transaction_size_;
   const size_t key_size_;
   const size_t value_size_;
-  component::ComponentControllerPtr component_controller_;
+  fuchsia::sys::ComponentControllerPtr component_controller_;
   ledger::PagePtr page_;
   std::vector<fidl::VectorPtr<uint8_t>> keys_;
 

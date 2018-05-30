@@ -15,7 +15,7 @@ namespace modular {
 
 class SuggestionEngineApp {
  public:
-  SuggestionEngineApp(component::StartupContext* const context) {
+  SuggestionEngineApp(fuchsia::sys::StartupContext* const context) {
     context->ConnectToEnvironmentService(intelligence_services_.NewRequest());
 
     media::AudioServerPtr audio_server;
@@ -54,7 +54,7 @@ class SuggestionEngineApp {
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   auto suggestion_engine =
       std::make_unique<fuchsia::modular::SuggestionEngineApp>(context.get());
 

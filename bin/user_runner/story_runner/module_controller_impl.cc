@@ -40,10 +40,10 @@ std::string HashModuleUrl(const std::string& module_url) {
 
 ModuleControllerImpl::ModuleControllerImpl(
     StoryControllerImpl* const story_controller_impl,
-    component::ApplicationLauncher* const application_launcher,
+    fuchsia::sys::ApplicationLauncher* const application_launcher,
     AppConfig module_config,
     const ModuleData* const module_data,
-    component::ServiceListPtr service_list,
+    fuchsia::sys::ServiceListPtr service_list,
     fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider> view_provider_request)
     : story_controller_impl_(story_controller_impl),
       app_client_(

@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_DEVICE_RUNNER_USER_CONTROLLER_IMPL_H_
 #define PERIDOT_BIN_DEVICE_RUNNER_USER_CONTROLLER_IMPL_H_
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
@@ -37,14 +37,14 @@ class UserControllerImpl : UserController, modular::internal ::UserContext {
   using DoneCallback = std::function<void(UserControllerImpl*)>;
 
   UserControllerImpl(
-      component::ApplicationLauncher* application_launcher,
+      fuchsia::sys::ApplicationLauncher* application_launcher,
       AppConfig user_runner, AppConfig user_shell, AppConfig story_shell,
       fidl::InterfaceHandle<modular_auth::TokenProviderFactory>
           token_provider_factory,
       modular_auth::AccountPtr account,
       fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
           view_owner_request,
-      fidl::InterfaceHandle<component::ServiceProvider> device_shell_services,
+      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> device_shell_services,
       fidl::InterfaceRequest<UserController> user_controller_request,
       DoneCallback done);
 
@@ -78,7 +78,7 @@ class UserControllerImpl : UserController, modular::internal ::UserContext {
 
   std::vector<LogoutCallback> logout_response_callbacks_;
 
-  component::ServiceProviderPtr device_shell_services_;
+  fuchsia::sys::ServiceProviderPtr device_shell_services_;
 
   DoneCallback done_;
 

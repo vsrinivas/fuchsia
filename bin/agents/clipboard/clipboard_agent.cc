@@ -39,7 +39,7 @@ class ClipboardAgent {
   }
 
   void Connect(
-      fidl::InterfaceRequest<component::ServiceProvider> outgoing_services) {
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> outgoing_services) {
     services_.AddBinding(std::move(outgoing_services));
   }
 
@@ -57,7 +57,7 @@ class ClipboardAgent {
   std::unique_ptr<ClipboardImpl> clipboard_;
 
   // The service namespace that the Clipboard is added to.
-  component::ServiceNamespace services_;
+  fuchsia::sys::ServiceNamespace services_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ClipboardAgent);
 };
@@ -67,7 +67,7 @@ class ClipboardAgent {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AgentDriver<fuchsia::modular::ClipboardAgent> driver(
       context.get(), [&loop] { loop.QuitNow(); });
   loop.Run();

@@ -201,38 +201,38 @@ class CobaltTest : public gtest::TestWithMessageLoop {
   CobaltTest() : context_(InitStartupContext()) {}
   ~CobaltTest() override {}
 
-  component::StartupContext* context() { return context_.get(); }
+  fuchsia::sys::StartupContext* context() { return context_.get(); }
 
   FakeCobaltEncoderImpl* cobalt_encoder() {
     return factory_impl_->cobalt_encoder();
   }
 
  private:
-  std::unique_ptr<component::StartupContext> InitStartupContext() {
+  std::unique_ptr<fuchsia::sys::StartupContext> InitStartupContext() {
     factory_impl_.reset(new FakeCobaltEncoderFactoryImpl());
     service_provider.AddService<CobaltEncoderFactory>(
         [this](fidl::InterfaceRequest<CobaltEncoderFactory> request) {
           factory_bindings_.AddBinding(factory_impl_.get(), std::move(request));
         });
-    service_provider.AddService<component::Environment>(
-        [this](fidl::InterfaceRequest<component::Environment> request) {
+    service_provider.AddService<fuchsia::sys::Environment>(
+        [this](fidl::InterfaceRequest<fuchsia::sys::Environment> request) {
           app_environment_request_ = std::move(request);
         });
-    service_provider.AddService<component::ApplicationLauncher>(
-        [this](fidl::InterfaceRequest<component::ApplicationLauncher> request) {
+    service_provider.AddService<fuchsia::sys::ApplicationLauncher>(
+        [this](fidl::InterfaceRequest<fuchsia::sys::ApplicationLauncher> request) {
           app_launcher_request_ = std::move(request);
         });
-    return std::make_unique<component::StartupContext>(
+    return std::make_unique<fuchsia::sys::StartupContext>(
         service_provider.OpenAsDirectory(), zx::channel());
   }
 
-  component::ServiceProviderBridge service_provider;
+  fuchsia::sys::ServiceProviderBridge service_provider;
   std::unique_ptr<FakeCobaltEncoderFactoryImpl> factory_impl_;
   std::unique_ptr<FakeCobaltEncoderImpl> cobalt_encoder_;
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> context_;
   fidl::BindingSet<CobaltEncoderFactory> factory_bindings_;
-  fidl::InterfaceRequest<component::ApplicationLauncher> app_launcher_request_;
-  fidl::InterfaceRequest<component::Environment> app_environment_request_;
+  fidl::InterfaceRequest<fuchsia::sys::ApplicationLauncher> app_launcher_request_;
+  fidl::InterfaceRequest<fuchsia::sys::Environment> app_environment_request_;
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltTest);
 };
 

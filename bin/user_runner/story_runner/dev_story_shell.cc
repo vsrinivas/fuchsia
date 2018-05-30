@@ -25,7 +25,7 @@ namespace {
 class DevStoryShellApp
     : public fuchsia::modular::SingleServiceApp<fuchsia::modular::StoryShell> {
  public:
-  DevStoryShellApp(component::StartupContext* const startup_context)
+  DevStoryShellApp(fuchsia::sys::StartupContext* const startup_context)
       : SingleServiceApp(startup_context) {}
 
   ~DevStoryShellApp() override = default;
@@ -35,7 +35,7 @@ class DevStoryShellApp
   void CreateView(
       fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
           view_owner_request,
-      fidl::InterfaceRequest<component::ServiceProvider> /*services_request*/)
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services_request*/)
       override {
     view_owner_request_ = std::move(view_owner_request);
     Connect();
@@ -111,7 +111,7 @@ class DevStoryShellApp
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
 
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AppDriver<DevStoryShellApp> driver(
       context->outgoing().deprecated_services(),
       std::make_unique<DevStoryShellApp>(context.get()),

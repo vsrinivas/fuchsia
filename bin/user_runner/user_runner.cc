@@ -15,7 +15,7 @@
 
 fxl::AutoCall<fxl::Closure> SetupCobalt(
     const bool disable_statistics, async_t* async,
-    component::StartupContext* const startup_context) {
+    fuchsia::sys::StartupContext* const startup_context) {
   if (disable_statistics) {
     return fxl::MakeAutoCall<fxl::Closure>([] {});
   }
@@ -28,8 +28,8 @@ int main(int argc, const char** argv) {
 
   fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
-  std::unique_ptr<component::StartupContext> context =
-      component::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<fuchsia::sys::StartupContext> context =
+      fuchsia::sys::StartupContext::CreateFromStartupInfo();
 
   fxl::AutoCall<fxl::Closure> cobalt_cleanup =
       SetupCobalt(test, std::move(loop.async()), context.get());

@@ -38,7 +38,7 @@ class StoryInfoAcquirer : public fuchsia::modular::VisibleStoriesWatcher,
   ~StoryInfoAcquirer() override;
 
   // Called by AgentDriver.
-  void Connect(fidl::InterfaceRequest<component::ServiceProvider> services);
+  void Connect(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services);
 
   // Called by AgentDriver.
   void RunTask(const fidl::StringPtr& task_id,
@@ -91,7 +91,7 @@ class StoryInfoAcquirer : public fuchsia::modular::VisibleStoriesWatcher,
   // the StoryWatcher instances.
   std::map<std::string, std::unique_ptr<StoryWatcherImpl>> stories_;
 
-  component::ServiceNamespace agent_services_;
+  fuchsia::sys::ServiceNamespace agent_services_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryInfoAcquirer);
 };

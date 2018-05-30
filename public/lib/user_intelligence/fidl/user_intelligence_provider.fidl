@@ -41,5 +41,5 @@ interface UserIntelligenceProvider {
   5: StartAgents(ComponentContext user_intelligence_context);
 
   // A standard set of services provided to all agents at startup.
-  6: GetServicesForAgent(string url) -> (component.ServiceList service_list);
+  6: GetServicesForAgent(string url) -> (fuchsia.sys.ServiceList service_list);
 };

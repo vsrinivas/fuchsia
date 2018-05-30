@@ -38,7 +38,7 @@ class AccountProviderImpl : AccountProvider {
   std::string GenerateAccountId();
 
   async::Loop* const loop_;
-  std::shared_ptr<component::StartupContext> startup_context_;
+  std::shared_ptr<fuchsia::sys::StartupContext> startup_context_;
   modular_auth::AccountProviderContextPtr account_provider_context_;
   fidl::Binding<AccountProvider> binding_;
 
@@ -47,7 +47,7 @@ class AccountProviderImpl : AccountProvider {
 
 AccountProviderImpl::AccountProviderImpl(async::Loop* loop)
     : loop_(loop),
-      startup_context_(component::StartupContext::CreateFromStartupInfo()),
+      startup_context_(fuchsia::sys::StartupContext::CreateFromStartupInfo()),
       binding_(this) {
   FXL_DCHECK(loop);
   startup_context_->outgoing().AddPublicService<AccountProvider>(

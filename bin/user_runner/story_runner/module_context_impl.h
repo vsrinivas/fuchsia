@@ -42,7 +42,7 @@ class ModuleContextImpl : ModuleContext {
   // (message queues, Links).
   ModuleContextImpl(const ModuleContextInfo& info,
                     const ModuleData* module_data,
-                    fidl::InterfaceRequest<component::ServiceProvider>
+                    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
                         service_provider_request);
 
   ~ModuleContextImpl() override;
@@ -97,7 +97,7 @@ class ModuleContextImpl : ModuleContext {
 
   // A service provider that represents the services to be added into an
   // application's namespace.
-  component::ServiceProviderImpl service_provider_impl_;
+  fuchsia::sys::ServiceProviderImpl service_provider_impl_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleContextImpl);
 };

@@ -35,7 +35,7 @@ class ModuleApp : public fuchsia::modular::ViewApp {
       fuchsia::ui::views_v1::ViewManagerPtr,
       fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>)>;
 
-  explicit ModuleApp(component::StartupContext* const startup_context,
+  explicit ModuleApp(fuchsia::sys::StartupContext* const startup_context,
                      CreateViewCallback create);
 
  private:
@@ -43,7 +43,7 @@ class ModuleApp : public fuchsia::modular::ViewApp {
   void CreateView(
       fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
           view_owner_request,
-      fidl::InterfaceRequest<component::ServiceProvider> services) override;
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services) override;
 
   CreateViewCallback create_;
   std::unique_ptr<mozart::BaseView> view_;

@@ -22,7 +22,7 @@ namespace {
 
 class App {
  public:
-  App(component::StartupContext* context, const Config& config)
+  App(fuchsia::sys::StartupContext* context, const Config& config)
       : factory_impl_(context, config) {
     context->outgoing()
         .AddPublicService<fuchsia::modular::UserIntelligenceProviderFactory>(
@@ -164,7 +164,7 @@ int main(int argc, const char** argv) {
   FXL_LOG(INFO) << "Starting Maxwell with config: \n" << config;
 
   fsl::MessageLoop loop;
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   maxwell::App app(context.get(), config);
   loop.Run();
   return 0;

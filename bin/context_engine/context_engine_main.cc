@@ -17,7 +17,7 @@ namespace {
 
 class ContextEngineApp {
  public:
-  ContextEngineApp(component::StartupContext* context) {
+  ContextEngineApp(fuchsia::sys::StartupContext* context) {
     auto component_context =
         context->ConnectToEnvironmentService<ComponentContext>();
     component_context->GetEntityResolver(entity_resolver_.NewRequest());
@@ -48,7 +48,7 @@ class ContextEngineApp {
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   auto context_engine_app =
       std::make_unique<fuchsia::modular::ContextEngineApp>(context.get());
   fxl::WeakPtr<fuchsia::modular::ContextDebugImpl> debug =

@@ -26,7 +26,7 @@ class ValidationTest : public ::testing::Test {
 
  private:
   fsl::MessageLoop message_loop_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ValidationTest);
 };

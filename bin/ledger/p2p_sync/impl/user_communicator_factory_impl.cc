@@ -14,7 +14,7 @@
 namespace p2p_sync {
 UserCommunicatorFactoryImpl::UserCommunicatorFactoryImpl(
     ledger::Environment* environment,
-    component::StartupContext* startup_context)
+    fuchsia::sys::StartupContext* startup_context)
     : environment_(environment), startup_context_(startup_context) {}
 
 UserCommunicatorFactoryImpl::~UserCommunicatorFactoryImpl() {}

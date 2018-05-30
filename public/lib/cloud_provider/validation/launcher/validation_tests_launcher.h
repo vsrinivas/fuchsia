@@ -9,7 +9,7 @@
 #include <string>
 
 #include <cloud_provider/cpp/fidl.h>
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/app/cpp/startup_context.h"
@@ -23,7 +23,7 @@ class ValidationTestsLauncher {
   //
   // |factory| is called to produce instances of the cloud provider under test.
   ValidationTestsLauncher(
-      component::StartupContext* startup_context,
+      fuchsia::sys::StartupContext* startup_context,
       std::function<void(fidl::InterfaceRequest<CloudProvider>)> factory);
 
   // Starts the tests.
@@ -35,10 +35,10 @@ class ValidationTestsLauncher {
            std::function<void(int32_t)> callback);
 
  private:
-  component::StartupContext* const startup_context_;
+  fuchsia::sys::StartupContext* const startup_context_;
   std::function<void(fidl::InterfaceRequest<CloudProvider>)> factory_;
-  component::ServiceProviderImpl service_provider_impl_;
-  component::ComponentControllerPtr validation_tests_controller_;
+  fuchsia::sys::ServiceProviderImpl service_provider_impl_;
+  fuchsia::sys::ComponentControllerPtr validation_tests_controller_;
   std::function<void(int32_t)> callback_;
 };
 

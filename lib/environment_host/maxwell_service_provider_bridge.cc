@@ -4,7 +4,7 @@
 
 #include "peridot/lib/environment_host/maxwell_service_provider_bridge.h"
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include "lib/app/cpp/connect.h"
 
 namespace maxwell {
@@ -17,17 +17,17 @@ constexpr char kNetstack[] = "net.Netstack";
 }  // namespace
 
 MaxwellServiceProviderBridge::MaxwellServiceProviderBridge(
-    component::Environment* parent_env) {
-  AddService<component::Loader>(
+    fuchsia::sys::Environment* parent_env) {
+  AddService<fuchsia::sys::Loader>(
       [parent_env](
-          fidl::InterfaceRequest<component::Loader> request) {
-        component::ServiceProviderPtr services;
+          fidl::InterfaceRequest<fuchsia::sys::Loader> request) {
+        fuchsia::sys::ServiceProviderPtr services;
         parent_env->GetServices(services.NewRequest());
-        component::ConnectToService(services.get(), std::move(request));
+        fuchsia::sys::ConnectToService(services.get(), std::move(request));
       });
   AddServiceForName(
       [parent_env](zx::channel request) {
-        component::ServiceProviderPtr services;
+        fuchsia::sys::ServiceProviderPtr services;
         parent_env->GetServices(services.NewRequest());
         services->ConnectToService(kNetstack, std::move(request));
       },

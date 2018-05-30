@@ -61,7 +61,7 @@ std::string GetRandomId() {
 }  // namespace
 
 UserProviderImpl::UserProviderImpl(
-    std::shared_ptr<component::StartupContext> context,
+    std::shared_ptr<fuchsia::sys::StartupContext> context,
     const AppConfig& user_runner, const AppConfig& default_user_shell,
     const AppConfig& story_shell,
     modular_auth::AccountProvider* const account_provider)

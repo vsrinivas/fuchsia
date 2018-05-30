@@ -16,7 +16,7 @@ namespace {
 
 class HelloAppChild : public hello_world_module::Hello {
  public:
-  HelloAppChild(component::StartupContext* context) {
+  HelloAppChild(fuchsia::sys::StartupContext* context) {
     context->outgoing().AddPublicService<hello_world_module::Hello>(
         [this](fidl::InterfaceRequest<hello_world_module::Hello> request) {
           hello_binding_.AddBinding(this, std::move(request));
@@ -43,7 +43,7 @@ class HelloAppChild : public hello_world_module::Hello {
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AppDriver<HelloAppChild> driver(
       context->outgoing().deprecated_services(),
       std::make_unique<HelloAppChild>(context.get()),

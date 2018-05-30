@@ -41,7 +41,7 @@ class ComponentBase : protected SingleServiceApp<Component> {
   // name. Cf. http://en.cppreference.com/w/cpp/language/dependent_name.
   using Base = fuchsia::modular::SingleServiceApp<Component>;
 
-  ComponentBase(component::StartupContext* const startup_context)
+  ComponentBase(fuchsia::sys::StartupContext* const startup_context)
       : Base(startup_context), weak_factory_(this) {}
 
   ~ComponentBase() override = default;
@@ -101,7 +101,7 @@ template <typename Impl, typename... Args>
 void ComponentMain(Args... args) {
   fsl::MessageLoop loop;
 
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AppDriver<Impl> driver(
       context->outgoing().deprecated_services(),
       std::make_unique<Impl>(context.get(), std::move(args)...),

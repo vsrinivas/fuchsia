@@ -52,7 +52,7 @@ class UserRunnerImpl : modular::internal::UserRunner,
                        UserShellContext,
                        EntityProviderLauncher {
  public:
-  UserRunnerImpl(component::StartupContext* startup_context, bool test);
+  UserRunnerImpl(fuchsia::sys::StartupContext* startup_context, bool test);
 
   ~UserRunnerImpl() override;
 
@@ -130,8 +130,8 @@ class UserRunnerImpl : modular::internal::UserRunner,
       fidl::InterfaceRequest<AgentController> agent_controller_request)
       override;
 
-  component::ServiceProviderPtr GetServiceProvider(AppConfig config);
-  component::ServiceProviderPtr GetServiceProvider(const std::string& url);
+  fuchsia::sys::ServiceProviderPtr GetServiceProvider(AppConfig config);
+  fuchsia::sys::ServiceProviderPtr GetServiceProvider(const std::string& url);
 
   cloud_provider::CloudProviderPtr GetCloudProvider();
 
@@ -159,7 +159,7 @@ class UserRunnerImpl : modular::internal::UserRunner,
   // execution steps are stored in at_end_.
   void TerminateRecurse(int i);
 
-  component::StartupContext* const startup_context_;
+  fuchsia::sys::StartupContext* const startup_context_;
   const bool test_;
 
   fidl::BindingSet<fuchsia::modular::internal::UserRunner> bindings_;
@@ -174,7 +174,7 @@ class UserRunnerImpl : modular::internal::UserRunner,
   ledger_internal::LedgerRepositoryPtr ledger_repository_;
   std::unique_ptr<LedgerClient> ledger_client_;
   // Provides services to the Ledger
-  component::ServiceProviderImpl ledger_service_provider_;
+  fuchsia::sys::ServiceProviderImpl ledger_service_provider_;
 
   std::unique_ptr<Scope> user_scope_;
 
@@ -201,7 +201,7 @@ class UserRunnerImpl : modular::internal::UserRunner,
   std::unique_ptr<PuppetMasterImpl> puppet_master_impl_;
 
   // Services we provide to |context_engine_app_|.
-  component::ServiceProviderImpl context_engine_ns_services_;
+  fuchsia::sys::ServiceProviderImpl context_engine_ns_services_;
 
   // These component contexts are supplied to:
   // - the user intelligence provider (from |maxwell_app_|) so it can run agents
@@ -220,7 +220,7 @@ class UserRunnerImpl : modular::internal::UserRunner,
       intelligence_services_;
 
   // Services we provide to the module resolver's namespace.
-  component::ServiceProviderImpl module_resolver_ns_services_;
+  fuchsia::sys::ServiceProviderImpl module_resolver_ns_services_;
   ModuleResolverPtr module_resolver_service_;
 
   class PresentationProviderImpl;
@@ -252,7 +252,7 @@ class UserRunnerImpl : modular::internal::UserRunner,
 
   // The service provider used to connect to services advertised by the
   // clipboard agent.
-  component::ServiceProviderPtr services_from_clipboard_agent_;
+  fuchsia::sys::ServiceProviderPtr services_from_clipboard_agent_;
 
   // The agent controller used to control the clipboard agent.
   AgentControllerPtr clipboard_agent_controller_;

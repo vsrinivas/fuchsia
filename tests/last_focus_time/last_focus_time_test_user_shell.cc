@@ -142,7 +142,7 @@ class FocusWatcherImpl : fuchsia::modular::FocusWatcher {
 class TestApp : public fuchsia::modular::testing::ComponentBase<
                     fuchsia::modular::UserShell> {
  public:
-  TestApp(component::StartupContext* const startup_context)
+  TestApp(fuchsia::sys::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
     TestInit(__FILE__);
   }

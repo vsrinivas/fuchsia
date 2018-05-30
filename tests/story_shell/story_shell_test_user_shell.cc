@@ -6,7 +6,7 @@
 #include <set>
 #include <utility>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -40,7 +40,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
                     fuchsia::modular::UserShell>,
                 fuchsia::modular::UserShellPresentationProvider {
  public:
-  explicit TestApp(component::StartupContext* const startup_context)
+  explicit TestApp(fuchsia::sys::StartupContext* const startup_context)
       : ComponentBase(startup_context) {
     TestInit(__FILE__);
 
@@ -94,7 +94,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
   void CreateView(
       fidl::InterfaceRequest<
           fuchsia::ui::views_v1_token::ViewOwner> /*view_owner_request*/,
-      fidl::InterfaceRequest<component::ServiceProvider> /*services*/)
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*services*/)
       override {
     create_view_.Pass();
   }

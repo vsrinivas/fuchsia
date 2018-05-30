@@ -68,7 +68,7 @@ class PutBenchmark : public ledger::PageWatcher {
   PageDataGenerator page_data_generator_;
 
   files::ScopedTempDir tmp_dir_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   const int entry_count_;
   const int transaction_size_;
   const int key_size_;
@@ -78,7 +78,7 @@ class PutBenchmark : public ledger::PageWatcher {
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
   const PageDataGenerator::ReferenceStrategy reference_strategy_;
 
-  component::ComponentControllerPtr component_controller_;
+  fuchsia::sys::ComponentControllerPtr component_controller_;
   ledger::PagePtr page_;
   // Keys that we use to identify a change event. For transaction_size = 1 it
   // contains all the keys, otherwise only the last changed key for each

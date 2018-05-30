@@ -23,7 +23,7 @@ constexpr char kAppUrl[] = "cloud_provider_firestore";
 class CloudProviderFactory::TokenProviderContainer {
  public:
   TokenProviderContainer(
-      component::StartupContext* startup_context, async_t* async,
+      fuchsia::sys::StartupContext* startup_context, async_t* async,
       std::string credentials_path,
       fidl::InterfaceRequest<modular_auth::TokenProvider> request)
       : startup_context_(startup_context),
@@ -46,7 +46,7 @@ class CloudProviderFactory::TokenProviderContainer {
   }
 
  private:
-  component::StartupContext* const startup_context_;
+  fuchsia::sys::StartupContext* const startup_context_;
   network_wrapper::NetworkWrapperImpl network_wrapper_;
   service_account::ServiceAccountTokenProvider token_provider_;
   fidl::Binding<modular_auth::TokenProvider> binding_;
@@ -55,7 +55,7 @@ class CloudProviderFactory::TokenProviderContainer {
 };
 
 CloudProviderFactory::CloudProviderFactory(
-    component::StartupContext* startup_context, std::string credentials_path)
+    fuchsia::sys::StartupContext* startup_context, std::string credentials_path)
     : startup_context_(startup_context),
       credentials_path_(std::move(credentials_path)) {}
 
@@ -63,8 +63,8 @@ CloudProviderFactory::~CloudProviderFactory() { services_loop_.Shutdown(); }
 
 void CloudProviderFactory::Init() {
   services_loop_.StartThread();
-  component::Services child_services;
-  component::LaunchInfo launch_info;
+  fuchsia::sys::Services child_services;
+  fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kAppUrl;
   launch_info.directory_request = child_services.NewRequest();
   startup_context_->launcher()->CreateApplication(

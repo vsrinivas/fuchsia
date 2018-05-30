@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include "lib/fidl/cpp/binding_set.h"
@@ -31,9 +31,9 @@ class ModuleControllerImpl : ModuleController {
  public:
   ModuleControllerImpl(
       StoryControllerImpl* story_controller_impl,
-      component::ApplicationLauncher* application_launcher,
+      fuchsia::sys::ApplicationLauncher* application_launcher,
       AppConfig module_config, const ModuleData* module_data,
-      component::ServiceListPtr service_list,
+      fuchsia::sys::ServiceListPtr service_list,
       fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
           view_provider_request);
 

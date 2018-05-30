@@ -61,7 +61,7 @@ class ComponentContextImpl : public ComponentContext {
 
   // |ComponentContext|
   void ConnectToAgent(fidl::StringPtr url,
-                      fidl::InterfaceRequest<component::ServiceProvider>
+                      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
                           incoming_services_request,
                       fidl::InterfaceRequest<AgentController>
                           agent_controller_request) override;

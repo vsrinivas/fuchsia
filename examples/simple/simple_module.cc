@@ -29,14 +29,14 @@ class SimpleModule : fuchsia::ui::views_v1::ViewProvider {
 
     // Connect to the agent to retrieve it's outgoing services.
     fuchsia::modular::AgentControllerPtr agent_controller;
-    component::ServiceProviderPtr agent_services;
+    fuchsia::sys::ServiceProviderPtr agent_services;
     component_context->ConnectToAgent("system/bin/simple_agent",
                                       agent_services.NewRequest(),
                                       agent_controller.NewRequest());
 
     // Connect to the SimpleService in the agent's services.
     SimplePtr agent_service;
-    component::ConnectToService(agent_services.get(),
+    fuchsia::sys::ConnectToService(agent_services.get(),
                                 agent_service.NewRequest());
 
     // Request a new message queue from the component context.
@@ -69,7 +69,7 @@ class SimpleModule : fuchsia::ui::views_v1::ViewProvider {
   // |fuchsia::ui::views_v1::ViewProvider|
   void CreateView(
       fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner,
-      fidl::InterfaceRequest<component::ServiceProvider> services) override {}
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services) override {}
 
   fidl::Binding<fuchsia::ui::views_v1::ViewProvider> view_provider_binding_;
 
@@ -80,7 +80,7 @@ class SimpleModule : fuchsia::ui::views_v1::ViewProvider {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::ModuleDriver<simple::SimpleModule> driver(
       context.get(), [&loop] { loop.Quit(); });
   loop.Run();

@@ -55,7 +55,7 @@ class UserCommunicatorImpl : public UserCommunicator,
 
   bool started_ = false;
   std::string user_token_;
-  std::unique_ptr<component::ServiceProviderImpl> network_service_provider_;
+  std::unique_ptr<fuchsia::sys::ServiceProviderImpl> network_service_provider_;
 
   std::unique_ptr<p2p_provider::P2PProvider> p2p_provider_;
 };

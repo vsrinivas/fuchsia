@@ -42,7 +42,7 @@ void StoryInfoAcquirer::DropStoryWatcher(const std::string& story_id) {
 }
 
 void StoryInfoAcquirer::Connect(
-    fidl::InterfaceRequest<component::ServiceProvider> services) {
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services) {
   agent_services_.AddBinding(std::move(services));
 }
 

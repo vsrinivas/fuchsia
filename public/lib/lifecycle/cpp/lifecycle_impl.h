@@ -27,7 +27,7 @@ class LifecycleImpl : Lifecycle {
 
   // |Delegate.Terminate()| is called when a Lifecycle.Terminate message is
   // received.
-  LifecycleImpl(component::ServiceNamespace* service_namespace,
+  LifecycleImpl(fuchsia::sys::ServiceNamespace* service_namespace,
                 Delegate* delegate);
 
  private:

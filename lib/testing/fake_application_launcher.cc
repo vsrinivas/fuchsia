@@ -9,8 +9,8 @@ namespace modular {
 namespace testing {
 
 void FakeApplicationLauncher::CreateApplication(
-    component::LaunchInfo launch_info,
-    fidl::InterfaceRequest<component::ComponentController> controller) {
+    fuchsia::sys::LaunchInfo launch_info,
+    fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
   auto it = connectors_.find(launch_info.url);
   if (it != connectors_.end()) {
     it->second(std::move(launch_info), std::move(controller));

@@ -205,7 +205,7 @@ class SuggestionEngineTest : public ContextEngineTestBase,
   void SetUp() override {
     ContextEngineTestBase::SetUp();
 
-    component::Services suggestion_services =
+    fuchsia::sys::Services suggestion_services =
         StartServices("suggestion_engine");
     suggestion_engine_ =
         suggestion_services

@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
@@ -209,9 +209,9 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
         view_provider_request = view_provider.NewRequest();
     view_provider->CreateView(std::move(view_owner_request_), nullptr);
 
-    component::ServiceProviderPtr module_context_provider;
+    fuchsia::sys::ServiceProviderPtr module_context_provider;
     auto module_context_provider_request = module_context_provider.NewRequest();
-    auto service_list = component::ServiceList::New();
+    auto service_list = fuchsia::sys::ServiceList::New();
     service_list->names.push_back(ModuleContext::Name_);
     service_list->provider = std::move(module_context_provider);
 

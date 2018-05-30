@@ -23,7 +23,7 @@ interface Agent {
   // is the identifier for the component which called
   // |ComponentContext.ConnectToAgent()|. The |services| are provided to that
   // component.
-  1: Connect(string requestor_url, request<component.ServiceProvider> services);
+  1: Connect(string requestor_url, request<fuchsia.sys.ServiceProvider> services);
 
   // Called when some task identified by |task_id| is scheduled to run. The task
   // was first posted by this Agent using |AgentContext.ScheduleTask()|. The

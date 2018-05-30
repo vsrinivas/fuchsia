@@ -10,7 +10,7 @@
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
 
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AppDriver<modular_example::ModuleApp> driver(
       context->outgoing().deprecated_services(),
       std::make_unique<modular_example::ModuleApp>(

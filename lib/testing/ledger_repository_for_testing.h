@@ -32,7 +32,7 @@ class LedgerRepositoryForTesting {
   void Terminate(std::function<void()> done);
 
  private:
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   files::ScopedTempDir tmp_dir_;
   std::unique_ptr<AppClient<ledger_internal::LedgerController>>
       ledger_app_client_;

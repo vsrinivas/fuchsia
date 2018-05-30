@@ -49,7 +49,7 @@ class TestApp : queue_persistence_test_service::QueuePersistenceTestService {
   }
 
   // Called by AgentDriver.
-  void Connect(fidl::InterfaceRequest<component::ServiceProvider> services) {
+  void Connect(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services) {
     services_.AddBinding(std::move(services));
     fuchsia::modular::testing::GetStore()->Put(
         "queue_persistence_test_agent_connected", "", [] {});
@@ -84,7 +84,7 @@ class TestApp : queue_persistence_test_service::QueuePersistenceTestService {
 
   std::unique_ptr<fuchsia::modular::MessageReceiverClient> msg_receiver_;
 
-  component::ServiceNamespace services_;
+  fuchsia::sys::ServiceNamespace services_;
   fidl::BindingSet<queue_persistence_test_service::QueuePersistenceTestService>
       services_bindings_;
 
@@ -95,7 +95,7 @@ class TestApp : queue_persistence_test_service::QueuePersistenceTestService {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = fuchsia::sys::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AgentDriver<TestApp> driver(context.get(),
                                                 [&loop] { loop.QuitNow(); });
   loop.Run();

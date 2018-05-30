@@ -5,15 +5,15 @@
 #ifndef PERIDOT_LIB_ENVIRONMENT_HOST_MAXWELL_SERVICE_PROVIDER_BRIDGE_H_
 #define PERIDOT_LIB_ENVIRONMENT_HOST_MAXWELL_SERVICE_PROVIDER_BRIDGE_H_
 
-#include <component/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include "lib/svc/cpp/service_provider_bridge.h"
 
 namespace maxwell {
 
 // Environment surfacing only explicitly given environment services.
-class MaxwellServiceProviderBridge : public component::ServiceProviderBridge {
+class MaxwellServiceProviderBridge : public fuchsia::sys::ServiceProviderBridge {
  public:
-  MaxwellServiceProviderBridge(component::Environment* parent_env);
+  MaxwellServiceProviderBridge(fuchsia::sys::Environment* parent_env);
 };
 
 }  // namespace maxwell

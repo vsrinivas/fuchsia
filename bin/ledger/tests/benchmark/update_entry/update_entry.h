@@ -44,13 +44,13 @@ class UpdateEntryBenchmark {
   test::DataGenerator generator_;
 
   files::ScopedTempDir tmp_dir_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
   const int entry_count_;
   const int transaction_size_;
   const int key_size_;
   const int value_size_;
 
-  component::ComponentControllerPtr component_controller_;
+  fuchsia::sys::ComponentControllerPtr component_controller_;
   ledger::PagePtr page_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UpdateEntryBenchmark);
