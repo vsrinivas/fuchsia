@@ -5,8 +5,8 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fdio/io.h>
+#include <fdio/spawn.h>
 #include <fdio/util.h>
-#include <launchpad/launchpad.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
@@ -38,8 +38,7 @@ constexpr zx_rights_t kChildJobRights =
 
 class Service {
  public:
-  Service(int port, int argc, const char** argv)
-      : port_(port), argc_(argc), argv_(argv) {
+  Service(int port, const char** argv) : port_(port), argv_(argv) {
     sock_ = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
     if (sock_ < 0) {
       FXL_LOG(ERROR) << "Failed to create socket: " << strerror(errno);
@@ -119,30 +118,32 @@ class Service {
                                      peer_name.size()) == ZX_OK);
     FXL_CHECK(child_job.replace(kChildJobRights, &child_job) == ZX_OK);
 
-    launchpad_t* lp;
-    launchpad_create(child_job.get(), argv_[0], &lp);
-    launchpad_load_from_file(lp, argv_[0]);
-    launchpad_set_args(lp, argc_, argv_);
-    // TODO: configurable cwd
-    // TODO: filesystem sandboxing
-    launchpad_clone(lp, LP_CLONE_FDIO_NAMESPACE);
-    // TODO: set up environment
-
-    // Transfer the socket as stdin and stdout
-    launchpad_clone_fd(lp, conn, STDIN_FILENO);
-    launchpad_transfer_fd(lp, conn, STDOUT_FILENO);
-    // Clone this process' stderr.
-    launchpad_clone_fd(lp, STDERR_FILENO, STDERR_FILENO);
+    constexpr size_t kActionCount = 3;
+    fdio_spawn_action_t actions[kActionCount] = {
+        // Transfer the socket as stdin and stdout
+        {.action = FDIO_SPAWN_ACTION_CLONE_FD,
+         .fd = {.local_fd = conn, .target_fd = STDIN_FILENO}},
+        {.action = FDIO_SPAWN_ACTION_TRANSFER_FD,
+         .fd = {.local_fd = conn, .target_fd = STDOUT_FILENO}},
+        // Clone this process' stderr.
+        {.action = FDIO_SPAWN_ACTION_CLONE_FD,
+         .fd = {.local_fd = STDERR_FILENO, .target_fd = STDERR_FILENO}},
+    };
 
     zx::process process;
-    const char* errmsg;
+    char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
 
     zx_status_t status =
-        launchpad_go(lp, process.reset_and_get_address(), &errmsg);
+        fdio_spawn_etc(job_.get(),
+                       FDIO_SPAWN_SHARE_JOB | FDIO_SPAWN_CLONE_LDSVC |
+                           FDIO_SPAWN_CLONE_NAMESPACE,
+                       argv_[0], argv_, nullptr, kActionCount, actions,
+                       process.reset_and_get_address(), err_msg);
+
     if (status < 0) {
       shutdown(conn, SHUT_RDWR);
       close(conn);
-      FXL_LOG(ERROR) << "error from launchpad_go: " << errmsg;
+      FXL_LOG(ERROR) << "error from fdio_spawn_etc: " << err_msg;
       return;
     }
 
@@ -175,7 +176,6 @@ class Service {
   }
 
   int port_;
-  int argc_;
   const char** argv_;
   int sock_;
   fsl::FDWaiter waiter_;
@@ -211,12 +211,7 @@ int main(int argc, const char** argv) {
     usage(argv[0]);
   }
 
-  std::vector<std::string> command_line;
-  for (int i = 2; i < argc; i++) {
-    command_line.push_back(std::string(argv[i]));
-  }
-
-  Service service(port, argc - 2, argv + 2);
+  Service service(port, argv + 2);
 
   loop.Run();
   async_set_default(NULL);
