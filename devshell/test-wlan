@@ -4,7 +4,7 @@
 # found in the LICENSE file.
 
 ### Performs WLAN smoke tests by reaching out the Internet
-readonly TEST_WLAN_WAIT_PERIOD=40
+TEST_WLAN_WAIT_PERIOD=60
 readonly LOG_DIR="/tmp"
 readonly LOG_FILE="wlan-doctor.log"
 readonly SOURCE="garnet/bin/wlan/wlan-smoke.sh"
@@ -16,14 +16,24 @@ fx-config-read
 
 function usage {
   cat <<END
-usage: fx test-wlan
-Copies the test script to target and runs from it.
+usage: fx test-wlan [timeout]
+Copies the test script to target and runs from it. Examine results after {timeout} seconds.
 END
 }
 
-if [[ $# -ne 0 ]]; then
+if [[ $# -gt 1 ]]; then
   usage
   exit 1
+fi
+
+if [[ $# -eq 1 ]]; then
+  re='^[0-9]+$'
+  if [[ $1 =~ $re ]]; then
+    TEST_WLAN_WAIT_PERIOD="$1"
+  else
+    usage
+    exit 1
+  fi
 fi
 
 function setup {
