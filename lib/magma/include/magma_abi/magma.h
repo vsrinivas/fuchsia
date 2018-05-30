@@ -133,13 +133,6 @@ void magma_reset_semaphore(magma_semaphore_t semaphore);
 magma_status_t magma_wait_semaphores(const magma_semaphore_t* semaphores, uint32_t count,
                                      uint64_t timeout_ms, bool wait_all);
 
-// DEPRECATED: use magma_wait_semaphores instead.
-magma_status_t magma_wait_semaphore(magma_semaphore_t semaphore, uint64_t timeout);
-
-// DEPRECATED: use magma_wait_semaphores instead.
-magma_status_t magma_wait_semaphore_no_reset(magma_semaphore_t semaphore, uint32_t flags,
-                                             uint64_t timeout);
-
 // Exports |semaphore| to it can be imported into another connection via |semaphore_handle_out|
 magma_status_t magma_export_semaphore(struct magma_connection_t* connection,
                                       magma_semaphore_t semaphore, uint32_t* semaphore_handle_out);
