@@ -23,12 +23,11 @@ namespace modular {
 
 class StoryControllerImpl;
 
-// The parameters of module context that do not vary by instance.
+// The dependencies of ModuleContextImpl common to all instances.
 struct ModuleContextInfo {
   const ComponentContextInfo component_context_info;
   StoryControllerImpl* const story_controller_impl;
-  fuchsia::modular::UserIntelligenceProvider* const user_intelligence_provider;
-  ModuleResolver* const module_resolver;
+  modular::UserIntelligenceProvider* const user_intelligence_provider;
 };
 
 // ModuleContextImpl keeps a single connection from a module instance in

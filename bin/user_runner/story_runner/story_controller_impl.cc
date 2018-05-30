@@ -475,8 +475,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
         story_controller_impl_->story_provider_impl_->component_context_info(),
         story_controller_impl_,
         story_controller_impl_->story_provider_impl_
-            ->user_intelligence_provider(),
-        story_controller_impl_->story_provider_impl_->module_resolver()};
+            ->user_intelligence_provider()};
 
     connection.module_context_impl = std::make_unique<ModuleContextImpl>(
         module_context_info, connection.module_data.get(),
