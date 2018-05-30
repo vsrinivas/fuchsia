@@ -435,10 +435,8 @@ class FutureOperation : public Operation<Args...> {
     // FuturePtr is a shared ptr, so the Then() callback is not necessarily
     // cancelled by the destructor of this Operation instance. Hence the
     // callback must be protected against invocation after delete of this.
-    done_->Then([this, weak_this = this->GetWeakPtr()](Args... args) {
-      if (!weak_this)
-        return;
-      this->Done(std::move(args)...);
+    done_->WeakThen(this->GetWeakPtr(), [this](Args... args) {
+      this->Done(std::forward<Args>(args)...);
     });
     on_run_->Complete();
   }

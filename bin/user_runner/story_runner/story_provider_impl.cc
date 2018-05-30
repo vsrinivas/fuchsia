@@ -658,12 +658,15 @@ void StoryProviderImpl::OnFocusChange(FocusInfoPtr info) {
   }
 
   // Last focus time is recorded in the ledger, and story provider watchers
-  // are notified through the page watcher.
+  // are notified through watching SessionStorage.
   auto on_run = Future<>::Create();
-  auto done = on_run->Then([this, story_id = info->focused_story_id] {
-    session_storage_->UpdateLastFocusedTimestamp(story_id,
-                                                 zx_clock_get(ZX_CLOCK_UTC));
-  });
+  // TODO(thatguy): WeakThen() here is an attempt to fix a non-determinstic
+  // crash that appeared to be happening in the Then() lambda.
+  auto done = on_run->WeakThen(weak_factory_.GetWeakPtr(),
+                               [this, story_id = info->focused_story_id] {
+                                 session_storage_->UpdateLastFocusedTimestamp(
+                                     story_id, zx_clock_get(ZX_CLOCK_UTC));
+                               });
   std::function<void()> callback = [] {};
   operation_queue_.Add(WrapFutureAsOperation(
       on_run, done, callback, "StoryProviderImpl::OnFocusChange"));
