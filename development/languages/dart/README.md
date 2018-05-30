@@ -48,6 +48,7 @@ my_package/
 ## Going further
 
 - [Running analysis](analysis.md)
+- [Style](style.md)
 - [Testing](testing.md)
 - [Logging](logging.md)
 - [Using FIDL](fidl.md)
