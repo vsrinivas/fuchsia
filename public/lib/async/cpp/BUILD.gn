@@ -13,17 +13,6 @@ source_set("future") {
   ]
 }
 
-source_set("future_value") {
-  sources = [
-    "future_value.h",
-  ]
-
-  public_deps = [
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
-  ]
-}
-
 source_set("operation") {
   sources = [
     "operation.cc",
@@ -46,7 +35,6 @@ group("unittests") {
 
   deps = [
     ":future_unittest",
-    ":future_value_unittest",
     ":operation_unittest",
   ]
 }
@@ -60,20 +48,6 @@ source_set("future_unittest") {
 
   deps = [
     ":future",
-    "//third_party/googletest:gtest",
-  ]
-}
-
-source_set("future_value_unittest") {
-  testonly = true
-
-  sources = [
-    "future_value_unittest.cc",
-  ]
-
-  deps = [
-    ":future_value",
-    "//garnet/public/lib/gtest:gtest",
     "//third_party/googletest:gtest",
   ]
 }
