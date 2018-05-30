@@ -69,7 +69,9 @@ static int gpio_test_thread(void *arg) {
     }
 
     while (!gpio_test->done) {
-         for (unsigned i = 0; i < gpio_count; i++) {
+        // Assuming here that the last GPIO is the input button
+        // so we don't toggle that one
+        for (unsigned i = 0; i < gpio_count-1; i++) {
             gpio_write(gpio, i, 1);
             sleep(1);
             gpio_write(gpio, i, 0);
