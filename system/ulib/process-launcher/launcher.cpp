@@ -130,7 +130,11 @@ zx_status_t LauncherImpl::Launch(fidl::MessageBuffer* buffer, fidl::Message mess
     environs.push_back(nullptr);
 
     launchpad_t* lp;
-    launchpad_create(job.get(), name.c_str(), &lp);
+    launchpad_create_with_jobs(job.get(), ZX_HANDLE_INVALID, name.c_str(), &lp);
+
+    if (!ldsvc_) {
+        launchpad_abort(lp, ZX_ERR_INVALID_ARGS, "need ldsvc to load PT_INTERP");
+    }
 
     // There's a subtle issue at this point. The problem is that launchpad will
     // make a synchronous call into the loader service to read the PT_INTERP,
