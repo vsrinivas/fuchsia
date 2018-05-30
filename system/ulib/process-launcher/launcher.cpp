@@ -11,7 +11,6 @@
 #include <lib/fidl/cpp/message_buffer.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
-#include <lib/zx/vmar.h>
 #include <stdint.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
@@ -154,18 +153,10 @@ zx_status_t LauncherImpl::Launch(fidl::MessageBuffer* buffer, fidl::Message mess
     header->ordinal = ordinal;
     fuchsia_process_LaunchResult* result = builder.New<fuchsia_process_LaunchResult>();
 
-    zx::vmar root_vmar;
-    status = zx_handle_duplicate(launchpad_get_root_vmar_handle(lp), ZX_RIGHT_SAME_RIGHTS,
-                                 root_vmar.reset_and_get_address());
-    if (status != ZX_OK)
-        launchpad_abort(lp, status, "failed to get root vmar");
-
     status = launchpad_go(lp, &result->process, &error_msg);
 
     result->status = status;
-    if (status == ZX_OK) {
-        result->root_vmar = root_vmar.release();
-    } else if (error_msg) {
+    if (status != ZX_OK && error_msg) {
         uint32_t len = static_cast<uint32_t>(strlen(error_msg));
         result->error_message.size = len;
         result->error_message.data = builder.NewArray<char>(len);

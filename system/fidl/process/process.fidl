@@ -38,7 +38,7 @@ struct LaunchInfo {
 };
 
 struct LaunchResult {
-    // A status code describing the failure.
+    // A status code describing the result of the launch.
     status @status;
 
     // A string describing the failure.
@@ -50,13 +50,56 @@ struct LaunchResult {
     //
     // Present when |status| is ZX_OK.
     handle<process>? process;
+};
+
+struct ProcessStartData {
+    // The process that was created.
+    handle<process> process;
 
     // The vmar object that was created when the process was created.
     //
     // See <https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/process_create.md>.
+    handle<vmar> root_vmar;
+
+    // The initial thread for the process.
     //
-    // Present when |status| is ZX_OK.
-    handle<vmar>? root_vmar;
+    // Should be passed to |zx_process_start| when starting the process.
+    handle<thread> thread;
+
+    // The address of the initial entry point in the process.
+    //
+    // Should be passed to |zx_process_start| when starting the process.
+    uint64 entry;
+
+    // The stack pointer value for the initial thread of the process.
+    //
+    // Should be passed to |zx_process_start| when starting the process.
+    uint64 sp;
+
+    // The bootstrap channel to pass to the process on startup.
+    //
+    // Should be passed to |zx_process_start| when starting the process.
+    handle<channel> bootstrap;
+
+    // The base address of the vDSO to pass to the process on startup.
+    //
+    // Should be passed to |zx_process_start| when starting the process.
+    uint64 vdso_base;
+};
+
+struct CreateWithoutStartingResult {
+    // A status code describing the result of the launch.
+    status @status;
+
+    // A string describing the failure.
+    //
+    // Non-null when |status| is an error.
+    string? error_message;
+
+    // Data describing the process that was created.
+    //
+    // Non-null when |status| is ZX_OK.
+    ProcessStartData? data;
 };
 
 [Discoverable]
@@ -67,18 +110,35 @@ interface Launcher {
     // state and is ready to launch another process.
     1: Launch(LaunchInfo info) -> (LaunchResult result);
 
-    // The arguments to pass to the process.
-    2: AddArgs(vector<string> args);
+    // Creates the process described by |info| but does not start it.
+    //
+    // After processing this message, the |Launcher| is reset to its initial
+    // state and is ready to launch another process.
+    //
+    // The caller is responsible for calling |zx_process_start| using the data
+    // in |ProcessStartData| to actually start the process.
+    2: CreateWithoutStarting(LaunchInfo info) -> (CreateWithoutStartingResult result);
 
-    // The environment variables to use for the process.
-    3: AddEnvirons(vector<string> environ);
+    // Adds the given arguments to the command-line for the process.
+    //
+    // Calling this method multiple times concatentates the arguments.
+    10: AddArgs(vector<string> args);
 
-    // The namespace to install in the process.
+    // Adds the given variables to the enviornment variables for the process.
+    //
+    // Calling this method multiple times concatentates the variables.
+    11: AddEnvirons(vector<string> environ);
+
+    // Adds the given names to the namespace for the process.
     //
     // The paths in the namespace must be non-overlapping. See
     // <https://fuchsia.googlesource.com/docs/+/master/the-book/namespaces.md> for details.
-    4: AddNames(vector<NameInfo> names);
+    //
+    // Calling this method multiple times concatentates the names.
+    12: AddNames(vector<NameInfo> names);
 
-    // Additional startup handles to pass to the process.
-    5: AddHandles(vector<HandleInfo> handles);
+    // Adds the given handles to the startup handles for the process.
+    //
+    // Calling this method multiple times concatentates the handles.
+    13: AddHandles(vector<HandleInfo> handles);
 };
