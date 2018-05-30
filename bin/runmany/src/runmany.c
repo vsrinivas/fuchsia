@@ -4,7 +4,7 @@
 
 #include <fdio/io.h>
 #include <fdio/private.h>
-#include <launchpad/launchpad.h>
+#include <fdio/spawn.h>
 #include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,20 +18,23 @@
 zx_handle_t run_process(zx_handle_t job, int argc, const char* const* argv) {
   zx_handle_t process = ZX_HANDLE_INVALID;
 
-  launchpad_t* lp;
-  launchpad_create(job, argv[0], &lp);
-  launchpad_load_from_file(lp, argv[0]);
-  launchpad_set_args(lp, argc, argv);
-  launchpad_clone(lp, LP_CLONE_FDIO_NAMESPACE | LP_CLONE_ENVIRON);
+  fdio_spawn_action_t actions[] = {
+      // stdin needed to control jobs
+      {.action = FDIO_SPAWN_ACTION_CLONE_FD,
+       .fd = {.local_fd = STDOUT_FILENO, .target_fd = STDOUT_FILENO}},
+      {.action = FDIO_SPAWN_ACTION_CLONE_FD,
+       .fd = {.local_fd = STDERR_FILENO, .target_fd = STDERR_FILENO}},
+  };
+  size_t actions_count = sizeof(actions) / sizeof(actions[0]);
 
-  // stdin needed to control jobs
-  launchpad_clone_fd(lp, STDOUT_FILENO, STDOUT_FILENO);
-  launchpad_clone_fd(lp, STDERR_FILENO, STDERR_FILENO);
-
-  const char* errmsg;
-  zx_status_t status = launchpad_go(lp, &process, &errmsg);
-  if (status < 0) {
-    fprintf(stderr, "launchpad failed: %s: %d\n", errmsg, status);
+  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+  zx_status_t status = fdio_spawn_etc(
+      job,
+      FDIO_SPAWN_SHARE_JOB | FDIO_SPAWN_CLONE_LDSVC |
+          FDIO_SPAWN_CLONE_NAMESPACE | FDIO_SPAWN_CLONE_ENVIRON,
+      argv[0], argv, NULL, actions_count, actions, &process, err_msg);
+  if (status != ZX_OK) {
+    fprintf(stderr, "spawn failed: %s: %d\n", err_msg, status);
     return ZX_HANDLE_INVALID;
   }
   return process;
@@ -45,7 +48,6 @@ void kill_job(zx_handle_t job) {
 }
 
 int main(int argc, const char* const* argv) {
-
   char inbuf[INBUFLEN];
   bool readmore = true;
   zx_status_t status;
@@ -77,7 +79,7 @@ int main(int argc, const char* const* argv) {
 
   while (readmore) {
     if (fgets(inbuf, INBUFLEN, stdin)) {
-      if (feof(stdin) ||  strcmp("q\n", inbuf) == 0) {
+      if (feof(stdin) || strcmp("q\n", inbuf) == 0) {
         readmore = false;
       }
     }

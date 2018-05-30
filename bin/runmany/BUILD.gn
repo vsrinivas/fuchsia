@@ -25,7 +25,6 @@ executable("runn") {
   ]
   deps = [
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/launchpad",
     "//zircon/public/lib/zx",
   ]
 }
