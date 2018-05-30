@@ -23,7 +23,7 @@ class SessionStorageTest : public testing::TestWithLedger {
   // Convenience method to create a story for the test cases where
   // we're not testing CreateStory().
   fidl::StringPtr CreateStory(SessionStorage* storage) {
-    auto future_story = storage->CreateStory();
+    auto future_story = storage->CreateStory(nullptr /* extra */);
     bool done{};
     fidl::StringPtr story_id;
     future_story->Then([&](fidl::StringPtr id, ledger::PageId) {
@@ -41,7 +41,17 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
   // correct.
   auto storage = CreateStorage("page");
 
-  auto future_story = storage->CreateStory();
+  fidl::VectorPtr<StoryInfoExtraEntry> extra_entries;
+  StoryInfoExtraEntry entry;
+  entry.key = "key1";
+  entry.value = "value1";
+  extra_entries->push_back(std::move(entry));
+
+  entry.key = "key2";
+  entry.value = "value2";
+  extra_entries->push_back(std::move(entry));
+
+  auto future_story = storage->CreateStory(std::move(extra_entries));
   bool done{};
   fidl::StringPtr story_id;
   ledger::PageId page_id;
@@ -62,7 +72,12 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
     EXPECT_EQ(story_id, data->story_info.id);
     ASSERT_TRUE(data->story_page_id);
     EXPECT_EQ(page_id, *data->story_page_id);
-    EXPECT_FALSE(data->story_info.extra);
+    EXPECT_TRUE(data->story_info.extra);
+    EXPECT_EQ(2u, data->story_info.extra->size());
+    EXPECT_EQ("key1", data->story_info.extra->at(0).key);
+    EXPECT_EQ("value1", data->story_info.extra->at(0).value);
+    EXPECT_EQ("key2", data->story_info.extra->at(1).key);
+    EXPECT_EQ("value2", data->story_info.extra->at(1).value);
 
     done = true;
 
@@ -89,7 +104,7 @@ TEST_F(SessionStorageTest, CreateGetAllDelete) {
   // Pipeline all the calls such to show that we data consistency based on call
   // order.
   auto storage = CreateStorage("page");
-  auto future_story = storage->CreateStory();
+  auto future_story = storage->CreateStory(nullptr);
 
   // Immediately after creation is complete, delete it.
   FuturePtr<> delete_done;
@@ -126,8 +141,8 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
   // * If we GetAllStoryData() we should see both of them.
   auto storage = CreateStorage("page");
 
-  auto future_story1 = storage->CreateStory();
-  auto future_story2 = storage->CreateStory();
+  auto future_story1 = storage->CreateStory(nullptr);
+  auto future_story2 = storage->CreateStory(nullptr);
 
   auto wait = Future<fidl::StringPtr, ledger::PageId>::Wait(
       {future_story1, future_story2});
@@ -192,58 +207,6 @@ TEST_F(SessionStorageTest, UpdateLastFocusedTimestamp) {
   bool done{};
   future_data->Then([&](modular_private::StoryDataPtr data) {
     EXPECT_EQ(10, data->story_info.last_focus_time);
-    done = true;
-  });
-  RunLoopUntil([&] { return done; });
-}
-
-TEST_F(SessionStorageTest, UpdateStoryInfoExtra) {
-  auto storage = CreateStorage("page");
-  auto story_id = CreateStory(storage.get());
-
-  fidl::VectorPtr<StoryInfoExtraEntry> entries;
-  StoryInfoExtraEntry entry;
-  entry.key = "key1";
-  entry.value = "value1";
-  entries->push_back(std::move(entry));
-
-  entry.key = "key2";
-  entry.value = "value2";
-  entries->push_back(std::move(entry));
-
-  storage->UpdateStoryInfoExtra(story_id, std::move(entries));
-  auto future_data = storage->GetStoryData(story_id);
-  bool done{};
-  future_data->Then([&](modular_private::StoryDataPtr data) {
-    EXPECT_EQ(2u, data->story_info.extra->size());
-    EXPECT_EQ("key1", data->story_info.extra->at(0).key);
-    EXPECT_EQ("value1", data->story_info.extra->at(0).value);
-    EXPECT_EQ("key2", data->story_info.extra->at(1).key);
-    EXPECT_EQ("value2", data->story_info.extra->at(1).value);
-    done = true;
-  });
-  RunLoopUntil([&] { return done; });
-
-  // Set key2 to something else and key3 to a new value.
-  entry.key = "key2";
-  entry.value = "foo";
-  entries->push_back(std::move(entry));
-
-  entry.key = "key3";
-  entry.value = "value3";
-  entries->push_back(std::move(entry));
-
-  storage->UpdateStoryInfoExtra(story_id, std::move(entries));
-  future_data = storage->GetStoryData(story_id);
-  done = false;
-  future_data->Then([&](modular_private::StoryDataPtr data) {
-    EXPECT_EQ(3u, data->story_info.extra->size());
-    EXPECT_EQ("key1", data->story_info.extra->at(0).key);
-    EXPECT_EQ("value1", data->story_info.extra->at(0).value);
-    EXPECT_EQ("key2", data->story_info.extra->at(1).key);
-    EXPECT_EQ("foo", data->story_info.extra->at(1).value);
-    EXPECT_EQ("key3", data->story_info.extra->at(2).key);
-    EXPECT_EQ("value3", data->story_info.extra->at(2).value);
     done = true;
   });
   RunLoopUntil([&] { return done; });

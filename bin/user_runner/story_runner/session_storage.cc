@@ -53,9 +53,11 @@ class CreateStoryCall
     : public LedgerOperation<fidl::StringPtr, ledger::PageId> {
  public:
   CreateStoryCall(ledger::Ledger* const ledger, ledger::Page* const root_page,
+                  fidl::VectorPtr<StoryInfoExtraEntry> extra_info,
                   ResultCall result_call)
       : LedgerOperation("SessionStorage::CreateStoryCall", ledger, root_page,
-                        std::move(result_call)) {}
+                        std::move(result_call)),
+        extra_info_(std::move(extra_info)) {}
 
  private:
   void Run() override {
@@ -92,10 +94,13 @@ class CreateStoryCall
     story_data_->story_page_id = CloneOptional(story_page_id_);
     story_data_->story_info.id = story_id_;
     story_data_->story_info.last_focus_time = 0;
+    story_data_->story_info.extra = std::move(extra_info_);
 
     operation_queue_.Add(MakeWriteStoryDataCall(page(), std::move(story_data_),
                                                 [this, flow] {}));
   }
+
+  fidl::VectorPtr<StoryInfoExtraEntry> extra_info_;
 
   ledger::PagePtr story_page_;
   modular_private::StoryDataPtr story_data_;
@@ -111,10 +116,11 @@ class CreateStoryCall
 
 }  // namespace
 
-FuturePtr<fidl::StringPtr, ledger::PageId> SessionStorage::CreateStory() {
+FuturePtr<fidl::StringPtr, ledger::PageId> SessionStorage::CreateStory(
+    fidl::VectorPtr<StoryInfoExtraEntry> extra_info) {
   auto ret = Future<fidl::StringPtr, ledger::PageId>::Create();
-  operation_queue_.Add(
-      new CreateStoryCall(ledger_client_->ledger(), page(), ret->Completer()));
+  operation_queue_.Add(new CreateStoryCall(ledger_client_->ledger(), page(),
+                                           std::move(extra_info), ret->Completer()));
   return ret;
 }
 
@@ -122,20 +128,22 @@ FuturePtr<> SessionStorage::DeleteStory(fidl::StringPtr story_id) {
   auto on_run = Future<>::Create();
   auto done = on_run->AsyncMap([this, story_id] {
     auto deleted = Future<>::Create();
-    page()->Delete(
-        to_array(StoryIdToLedgerKey(story_id)), [this, deleted](ledger::Status status) {
-          // Deleting a key that doesn't exist is OK, not KEY_NOT_FOUND.
-          if (status != ledger::Status::OK) {
-            FXL_LOG(ERROR) << "SessionStorage: Page.Delete() " << status;
-          }
-          deleted->Complete();
-        });
+    page()->Delete(to_array(StoryIdToLedgerKey(story_id)),
+                   [this, deleted](ledger::Status status) {
+                     // Deleting a key that doesn't exist is OK, not
+                     // KEY_NOT_FOUND.
+                     if (status != ledger::Status::OK) {
+                       FXL_LOG(ERROR)
+                           << "SessionStorage: Page.Delete() " << status;
+                     }
+                     deleted->Complete();
+                   });
 
     return deleted;
   });
   auto ret = Future<>::Create();
-  operation_queue_.Add(WrapFutureAsOperation(
-      on_run, done, ret->Completer(), "SessionStorage::DeleteStory"));
+  operation_queue_.Add(WrapFutureAsOperation(on_run, done, ret->Completer(),
+                                             "SessionStorage::DeleteStory"));
   return ret;
 }
 
@@ -198,43 +206,6 @@ FuturePtr<> SessionStorage::UpdateLastFocusedTimestamp(fidl::StringPtr story_id,
   auto ret = Future<>::Create();
   operation_queue_.Add(
       new MutateStoryDataCall(page(), story_id, mutate, ret->Completer()));
-  return ret;
-}
-
-FuturePtr<> SessionStorage::UpdateStoryInfoExtra(
-    fidl::StringPtr story_id, fidl::VectorPtr<StoryInfoExtraEntry> new_extra) {
-  if (!new_extra || new_extra->empty()) {
-    return Future<>::CreateCompleted();
-  }
-
-  auto mutate = fxl::MakeCopyable(
-      [new_extra = std::move(new_extra)](
-          modular_private::StoryData* const story_data) mutable {
-        auto& extra = story_data->story_info.extra;
-        bool mutated{};
-        for (auto& entry : *new_extra) {
-          // See if we can find an existing entry to replace.
-          auto it = std::find_if(
-              extra->begin(), extra->end(),
-              [key = entry.key](const StoryInfoExtraEntry& other_entry) {
-                return other_entry.key == key;
-              });
-          if (it != extra->end()) {
-            if (it->value != entry.value) {
-              it->value = entry.value;
-              mutated = true;
-            }
-          } else {
-            extra.push_back(std::move(entry));
-            mutated = true;
-          }
-        }
-        return mutated;
-      });
-
-  auto ret = Future<>::Create();
-  operation_queue_.Add(new MutateStoryDataCall(
-      page(), story_id, std::move(mutate), ret->Completer()));
   return ret;
 }
 

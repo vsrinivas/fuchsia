@@ -57,8 +57,10 @@ class SessionStorage : public PageClient {
   }
 
   // Creates a new story and returns a tuple of (story id, story ledger page
-  // id) on completion.
-  FuturePtr<fidl::StringPtr, ledger::PageId> CreateStory();
+  // id) on completion. |extra_info| may be null. If set, populates
+  // StoryData.story_info.extra with the entries given.
+  FuturePtr<fidl::StringPtr, ledger::PageId> CreateStory(
+      fidl::VectorPtr<StoryInfoExtraEntry> extra_info);
 
   // Deletes the |story_id| from the list of known stories and completes the
   // returned Future when done.
@@ -79,12 +81,6 @@ class SessionStorage : public PageClient {
   // Sets the last focused timestamp for |story_id| to |ts|. Completes the
   // returned Future when done.
   FuturePtr<> UpdateLastFocusedTimestamp(fidl::StringPtr story_id, int64_t ts);
-
-  // Sets extra info for each entry in |extra| on the StoryInfo for |story_id|.
-  // Existing keys are replaced while new keys are added. Completes the
-  // returned Future when done.
-  FuturePtr<> UpdateStoryInfoExtra(fidl::StringPtr story_id,
-                                   fidl::VectorPtr<StoryInfoExtraEntry> extra);
 
   // Returns a Future StoryDataPtr for |story_id|. If |story_id| is not a valid
   // story, the returned StoryDataPtr will be null.

@@ -71,16 +71,11 @@ class StoryProviderImpl::CreateStoryCall : public Operation<fidl::StringPtr> {
     // 1) Create the story storage.
     // 2) Set any extra info.
     // 3) If we got an initial module, add it.
-    session_storage_->CreateStory()
-        ->WeakAsyncMap(
-            GetWeakPtr(),
-            [this, flow](fidl::StringPtr story_id, ledger::PageId page_id) {
-              story_id_ = story_id;
-              story_page_id_ = page_id;
-              return session_storage_->UpdateStoryInfoExtra(
-                  story_id, std::move(extra_info_));
-            })
-        ->WeakThen(GetWeakPtr(), [this, flow] {
+    session_storage_->CreateStory(std::move(extra_info_))
+        ->WeakThen(GetWeakPtr(), [this, flow](fidl::StringPtr story_id,
+                                              ledger::PageId page_id) {
+          story_id_ = story_id;
+          story_page_id_ = page_id;
           controller_ = std::make_unique<StoryControllerImpl>(
               story_id_, session_storage_->ledger_client(), story_page_id_,
               story_provider_impl_);
