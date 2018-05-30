@@ -77,7 +77,6 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   void GetDisplayInfo(
       fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) override;
   void TakeScreenshot(
-      fidl::StringPtr filename,
       fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) override;
 
   void GetOwnershipEvent(

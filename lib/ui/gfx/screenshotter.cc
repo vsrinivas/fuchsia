@@ -1,8 +1,12 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 #include "garnet/lib/ui/gfx/screenshotter.h"
 
-#include <fstream>
 #include <functional>
 #include <utility>
+#include <vector>
 
 #include <lib/zx/time.h>
 
@@ -12,63 +16,65 @@
 #include "lib/escher/impl/command_buffer.h"
 #include "lib/escher/impl/command_buffer_pool.h"
 #include "lib/escher/impl/image_cache.h"
+#include "lib/fsl/vmo/sized_vmo.h"
+#include "lib/fsl/vmo/vector.h"
 
 namespace scenic {
 namespace gfx {
 
 // static
 void Screenshotter::OnCommandBufferDone(
-    const std::string& filename, const escher::ImagePtr& image, uint32_t width,
-    uint32_t height, vk::Device device,
+    const escher::ImagePtr& image, uint32_t width, uint32_t height,
+    vk::Device device,
     fuchsia::ui::scenic::Scenic::TakeScreenshotCallback done_callback) {
   // Map the final image so CPU can read it.
   const vk::ImageSubresource sr(vk::ImageAspectFlagBits::eColor, 0, 0);
   vk::SubresourceLayout sr_layout;
   device.getImageSubresourceLayout(image->vk(), &sr, &sr_layout);
-  // Write the data to a PPM file.
-  std::ofstream file(filename, std::ios::binary);
-  if (!file.is_open()) {
-    FXL_LOG(ERROR) << "Could not open screenshot file: " << filename;
-    done_callback(false);
-    return;
-  }
 
-  file << "P6\n";
-  file << width << "\n";
-  file << height << "\n";
-  file << 255 << "\n";
+  constexpr uint32_t kBytesPerPixel = 4u;
+  std::vector<uint8_t> imgvec;
+  imgvec.resize(kBytesPerPixel * width * height);
+  uint8_t* imgvec_ptr = &imgvec[0];
 
-  // Image has 4 channels, but we don't write the alpha channel.
   const uint8_t* row = image->memory()->mapped_ptr();
   FXL_CHECK(row != nullptr);
   row += sr_layout.offset;
-  uint32_t pixel;
-  for (uint32_t y = 0; y < height; y++) {
-    const uint8_t* pchannel = row;
-    for (uint32_t x = 0; x < width; x++) {
-      // Image format is BGRA, PPM expects RGBA. So swap the channels.
-      uint8_t* channel = (uint8_t*)&pixel;
-      channel[0] = pchannel[2];
-      channel[1] = pchannel[1];
-      channel[2] = pchannel[0];
-      file.write((const char*)&pixel, 3);
-      pchannel += 4;
+  if (width == sr_layout.rowPitch) {
+    uint32_t num_bytes = width * kBytesPerPixel;
+    FXL_DCHECK(num_bytes <= imgvec.size());
+    memcpy(imgvec_ptr, row, width * height * kBytesPerPixel);
+  } else {
+    for (uint32_t y = 0; y < height; y++) {
+      uint32_t num_bytes = width * kBytesPerPixel;
+      FXL_DCHECK(num_bytes <= &imgvec.back() - imgvec_ptr);
+      memcpy(imgvec_ptr, row, num_bytes);
+      row += sr_layout.rowPitch;
+      imgvec_ptr += width * kBytesPerPixel;
     }
-    row += sr_layout.rowPitch;
   }
-  file.close();
-  done_callback(true);
+
+  fsl::SizedVmo sized_vmo;
+  if (!fsl::VmoFromVector(imgvec, &sized_vmo)) {
+    done_callback(fuchsia::ui::scenic::ScreenshotData{}, false);
+  }
+
+  fuchsia::ui::scenic::ScreenshotData data;
+  data.data = std::move(sized_vmo).ToTransport();
+  data.info.width = width;
+  data.info.height = height;
+  data.info.stride = width * kBytesPerPixel;
+  done_callback(std::move(data), true);
 }
 
 void Screenshotter::TakeScreenshot(
-    const std::string& filename,
     fuchsia::ui::scenic::Scenic::TakeScreenshotCallback done_callback) {
   auto* escher = engine_->escher();
   Compositor* compositor = engine_->GetFirstCompositor();
 
   if (compositor->GetNumDrawableLayers() == 0) {
     FXL_LOG(ERROR) << "No drawable layers.";
-    done_callback(false);
+    done_callback(fuchsia::ui::scenic::ScreenshotData{}, false);
     return;
   }
   uint32_t width;
@@ -91,8 +97,8 @@ void Screenshotter::TakeScreenshot(
   vk::Queue queue = escher->command_buffer_pool()->queue();
   auto* command_buffer = escher->command_buffer_pool()->GetCommandBuffer();
 
-  auto submit_callback = std::bind(&OnCommandBufferDone, filename, image, width,
-                                   height, escher->vk_device(), done_callback);
+  auto submit_callback = std::bind(&OnCommandBufferDone, image, width, height,
+                                   escher->vk_device(), done_callback);
   command_buffer->Submit(queue, std::move(submit_callback));
   // Force the command buffer to retire so that the submitted commands will run.
   // TODO(SCN-211): Make this a proper wait instead of spinning.

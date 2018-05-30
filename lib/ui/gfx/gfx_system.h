@@ -27,7 +27,6 @@ class GfxSystem : public TempSystemDelegate {
   void GetDisplayInfo(
       fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) override;
   void TakeScreenshot(
-      fidl::StringPtr filename,
       fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) override;
   void GetOwnershipEvent(
       fuchsia::ui::scenic::Scenic::GetOwnershipEventCallback callback) override;

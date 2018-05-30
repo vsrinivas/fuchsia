@@ -164,11 +164,10 @@ void GfxSystem::GetDisplayInfo(
 };
 
 void GfxSystem::TakeScreenshot(
-    fidl::StringPtr filename,
     fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) {
   FXL_CHECK(initialized_);
   Screenshotter screenshotter(engine_.get());
-  screenshotter.TakeScreenshot(filename.get(), callback);
+  screenshotter.TakeScreenshot(callback);
 }
 
 void GfxSystem::GetOwnershipEventImmediately(

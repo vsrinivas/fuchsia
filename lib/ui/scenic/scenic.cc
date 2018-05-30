@@ -91,12 +91,11 @@ void Scenic::GetDisplayInfo(
 }
 
 void Scenic::TakeScreenshot(
-    fidl::StringPtr filename,
     fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) {
   FXL_DCHECK(systems_[System::kGfx]);
   TempSystemDelegate* delegate =
       reinterpret_cast<TempSystemDelegate*>(systems_[System::kGfx].get());
-  delegate->TakeScreenshot(filename, callback);
+  delegate->TakeScreenshot(callback);
 }
 
 void Scenic::GetOwnershipEvent(

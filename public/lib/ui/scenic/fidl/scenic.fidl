@@ -4,6 +4,15 @@
 
 library fuchsia.ui.scenic;
 
+using fuchsia.images;
+using fuchsia.mem;
+
+// Scenic.TakeScreenshot() returns a raw BGRA formatted image in this struct.
+struct ScreenshotData {
+  fuchsia.images.ImageInfo info;
+  fuchsia.mem.Buffer data;
+};
+
 [Discoverable]
 interface Scenic {
   // Create a new Session, which is the primary way to interact with Mozart.
@@ -17,12 +26,11 @@ interface Scenic {
   // when display ownership changes.
   3: GetOwnershipEvent() -> (handle<event> ownership_event);
 
-  // Take a screenshot and store it in "filename".
-  // TODO(SCN-211): Have this return a virtual memory object instead of writing
-  // to a file.
+  // Take a screenshot and return the data in |img_data|. |img_data| will
+  // not contain BGRA data if |success| is false.
   // TODO(SCN-678): The permissions here are too wide (anyone can take a
   // screenshot), we should narrow them.
-  4: TakeScreenshot(string filename) -> (bool s);
+  4: TakeScreenshot() -> (ScreenshotData img_data, bool success);
 };
 
 const uint32 displayOwnedSignal = 0x02000000;

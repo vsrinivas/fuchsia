@@ -102,7 +102,6 @@ class TempSystemDelegate : public System {
   virtual void GetDisplayInfo(
       fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) = 0;
   virtual void TakeScreenshot(
-      fidl::StringPtr filename,
       fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) = 0;
   virtual void GetOwnershipEvent(
       fuchsia::ui::scenic::Scenic::GetOwnershipEventCallback callback) = 0;
