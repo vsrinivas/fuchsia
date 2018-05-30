@@ -128,6 +128,11 @@ static void gpu_release(void* ctx) {
 
 static zx_protocol_device_t i915_gpu_core_device_proto = {};
 
+static int finish_init(void* arg) {
+    static_cast<i915::Controller*>(arg)->FinishInit();
+    return 0;
+}
+
 } // namespace
 
 namespace i915 {
@@ -927,6 +932,38 @@ zx_status_t Controller::DdkResume(uint32_t hint) {
     return ZX_OK;
 }
 
+// TODO(stevensd): Move this back into ::Bind once long-running binds don't
+// break devmgr's suspend/mexec.
+void Controller::FinishInit() {
+    zxlogf(TRACE, "i915: initializing displays\n");
+    InitDisplays();
+
+    acquire_dc_cb_lock();
+    uint64_t displays[registers::kDdiCount];
+    uint32_t size = 0;
+    {
+        fbl::AutoLock lock(&display_lock_);
+        if (display_devices_.size()) {
+            size = static_cast<uint32_t>(display_devices_.size());
+            for (unsigned i = 0; i < size; i++) {
+                displays[i] = display_devices_[i]->id();
+            }
+        }
+    }
+
+    if (dc_cb() && size) {
+        dc_cb()->on_displays_changed(dc_cb_ctx_, displays, size, NULL, 0);
+    }
+    release_dc_cb_lock();
+
+    interrupts_.FinishInit();
+
+    // TODO remove when the gfxconsole moves to user space
+    EnableBacklight(true);
+
+    zxlogf(TRACE, "i915: initialization done\n");
+}
+
 zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) {
     zxlogf(TRACE, "i915: binding to display controller\n");
 
@@ -993,8 +1030,13 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
         }
     }
 
-    zxlogf(TRACE, "i915: initializing displays\n");
-    InitDisplays();
+    thrd_t init_thread;
+    status = thrd_create_with_name(&init_thread, finish_init, this, "i915-init-thread");
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "i915: Failed to create init thread\n");
+        return status;
+    }
+    init_thrd_started_ = true;
 
     status = DdkAdd("intel_i915");
     if (status != ZX_OK) {
@@ -1024,12 +1066,7 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
         return status;
     }
 
-    interrupts_.FinishInit();
-
-    // TODO remove when the gfxconsole moves to user space
-    EnableBacklight(true);
-
-    zxlogf(TRACE, "i915: initialization done\n");
+    zxlogf(TRACE, "i915: bind done\n");
 
     return ZX_OK;
 }
@@ -1043,6 +1080,10 @@ Controller::Controller(zx_device_t* parent)
 }
 
 Controller::~Controller() {
+    if (init_thrd_started_) {
+        thrd_join(init_thread_, nullptr);
+    }
+
     interrupts_.Destroy();
     if (mmio_space_) {
         EnableBacklight(false);

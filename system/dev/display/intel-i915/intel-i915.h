@@ -42,6 +42,8 @@ public:
     zx_status_t DdkResume(uint32_t reason);
     zx_status_t Bind(fbl::unique_ptr<i915::Controller>* controller_ptr);
 
+    void FinishInit();
+
     void SetDisplayControllerCb(void* cb_ctx, display_controller_cb_t* cb);
     zx_status_t GetDisplayInfo(uint64_t display_id, display_info_t* info);
     zx_status_t ImportVmoImage(image_t* image, const zx::vmo& vmo, size_t offset);
@@ -159,6 +161,9 @@ private:
     uint32_t schicken1_val_;
     bool ddi_a_lane_capability_control_;
     bool sblc_polarity_;
+
+    bool init_thrd_started_ = false;
+    thrd_t init_thread_;
 };
 
 } // namespace i915
