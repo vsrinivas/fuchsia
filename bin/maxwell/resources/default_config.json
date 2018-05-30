@@ -1,9 +1,5 @@
 {
   "startup_agents": [
-    "module_suggester",
-    "eddystone_agent",
-    "agents/maxwell_btl",
-    "agents/maxwell_entity_selector",
     "usage_log"
   ],
   "kronk": "kronk",
