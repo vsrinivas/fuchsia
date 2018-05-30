@@ -93,11 +93,11 @@ interface Page {
   // the resulting snapshot includes only the entries with matching keys.
   //
   // If |watcher| is provided, it will receive notifications for changes of the
-  // page state on this page connection newer than the resulting snapshot. If
-  // |key_prefix| is provided too, the change notifications will only contain
-  // the entries with matching keys.
+  // page state on this page connection newer than the resulting snapshot.
+  // Change notifications will only contain the entries matching |key_prefix|.
+  // To receive all changes, use an empty |key_prefix|.
   2: GetSnapshot(request<PageSnapshot> snapshot_request,
-      vector<uint8>:256? key_prefix, PageWatcher? watcher) -> (Status @status);
+      vector<uint8>:256 key_prefix, PageWatcher? watcher) -> (Status @status);
 
   // Mutation operations.
   // Mutations are bundled together into atomic commits. If a transaction is in
@@ -224,7 +224,7 @@ struct InlinedEntry {
 // Page.GetSnapshot() call.
 interface PageSnapshot {
   // Returns the entries in the page with keys starting from the provided key.
-  // If |key_start| is NULL, all entries are returned. If the result fits in a
+  // If |key_start| is empty, all entries are returned. If the result fits in a
   // single fidl message, |status| will be |OK| and |next_token| equal to NULL.
   // Otherwise, |status| will be |PARTIAL_RESULT| and |next_token| will have a
   // non-NULL value. To retrieve the remaining results, another call to
@@ -235,17 +235,17 @@ interface PageSnapshot {
   // Only |EAGER| values are guaranteed to be returned inside |entries|.
   // Missing |LAZY| values can be retrieved over the network using Fetch().
   // The returned |entries| are sorted by |key|.
-  1: GetEntries(vector<uint8>:256? key_start, Token? token)
+  1: GetEntries(vector<uint8>:256 key_start, Token? token)
       -> (Status @status, vector<Entry>? entries, Token? next_token);
 
   // Same as |GetEntries()|. |VALUE_TOO_LARGE| is returned if a value does not
   // fit in a FIDL message.
-  2: GetEntriesInline(vector<uint8>:256? key_start, Token? token)
+  2: GetEntriesInline(vector<uint8>:256 key_start, Token? token)
       -> (Status @status, vector<InlinedEntry>? entries,
           Token? next_token);
 
   // Returns the keys of all entries in the page starting from the provided
-  // key. If |key_start| is NULL, all entries are returned. If the result fits
+  // key. If |key_start| is empty, all entries are returned. If the result fits
   // in a single FIDL message, |status| will be |OK| and |next_token| equal to
   // NULL. Otherwise, |status| will be |PARTIAL_RESULT| and |next_token| will
   // have a non-NULL value. To retrieve the remaining results, another call to
@@ -253,7 +253,7 @@ interface PageSnapshot {
   // the value of |next_token| returned in the previous call.
   // The returned |keys| are sorted. |status| will be |PARTIAL_RESULT| as long
   // as there are more results and |OK| once finished.
-  3: GetKeys(vector<uint8>:256? key_start, Token? token)
+  3: GetKeys(vector<uint8>:256 key_start, Token? token)
       -> (Status @status, vector<vector<uint8>:256>? keys,
           Token? next_token);
 

@@ -112,8 +112,8 @@ void SyncBenchmark::Run() {
 
   ledger::PageSnapshotPtr snapshot;
   beta_page_->GetSnapshot(
-      snapshot.NewRequest(), nullptr, page_watcher_binding_.NewBinding(),
-      [this](ledger::Status status) {
+      snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+      page_watcher_binding_.NewBinding(), [this](ledger::Status status) {
         if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,
                                    "GetSnapshot")) {
           return;

@@ -195,8 +195,8 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
   PageWatcherPtr watcher;
   fidl::InterfaceRequest<PageWatcher> watcher_request = watcher.NewRequest();
   PageSnapshotPtr snapshot;
-  page1->GetSnapshot(snapshot.NewRequest(), nullptr, std::move(watcher),
-                     [this](Status status) {
+  page1->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                     std::move(watcher), [this](Status status) {
                        EXPECT_EQ(Status::OK, status);
                        message_loop_.PostQuitTask();
                      });
@@ -436,7 +436,7 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
 
   fidl::VectorPtr<Entry> expected_entries1;
   std::unique_ptr<Token> next_token;
-  snapshot1->GetEntries(nullptr, nullptr,
+  snapshot1->GetEntries(fidl::VectorPtr<uint8_t>::New(0), nullptr,
                         callback::Capture(MakeQuitTask(), &status,
                                           &expected_entries1, &next_token));
   RunLoop();
@@ -446,7 +446,7 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   EXPECT_EQ(value1, ToString(expected_entries1->at(0).value));
 
   fidl::VectorPtr<Entry> expected_entries2;
-  snapshot2->GetEntries(nullptr, nullptr,
+  snapshot2->GetEntries(fidl::VectorPtr<uint8_t>::New(0), nullptr,
                         callback::Capture(MakeQuitTask(), &status,
                                           &expected_entries2, &next_token));
   RunLoop();

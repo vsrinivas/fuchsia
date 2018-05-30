@@ -132,7 +132,7 @@ class ReadDataCall : public PageOperation<DataPtr> {
     FlowToken flow{this, &result_};
 
     this->page()->GetSnapshot(
-        page_snapshot_.NewRequest(), nullptr, nullptr,
+        page_snapshot_.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr,
         this->Protect([this, flow](::ledger::Status status) {
           if (status != ::ledger::Status::OK) {
             FXL_LOG(ERROR) << this->trace_name() << " " << key_ << " "
@@ -303,7 +303,8 @@ class DumpPageSnapshotCall : public PageOperation<std::string> {
   void Run() override {
     FlowToken flow{this, &dump_};
 
-    page()->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
+    page()->GetSnapshot(page_snapshot_.NewRequest(),
+                        fidl::VectorPtr<uint8_t>::New(0), nullptr,
                         Protect([this, flow](::ledger::Status status) {
                           if (status != ::ledger::Status::OK) {
                             FXL_LOG(ERROR) << this->trace_name() << " "

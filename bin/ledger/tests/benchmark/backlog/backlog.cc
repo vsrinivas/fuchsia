@@ -194,7 +194,7 @@ void BacklogBenchmark::WaitForReaderDownload() {
 
 void BacklogBenchmark::GetReaderSnapshot() {
   reader_page_->GetSnapshot(
-      reader_snapshot_.NewRequest(), nullptr, nullptr,
+      reader_snapshot_.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr,
       benchmark::QuitOnErrorCallback([this] { loop_->Quit(); }, "GetSnapshot"));
   TRACE_ASYNC_BEGIN("benchmark", "get all entries", 0);
   GetEntriesStep(nullptr, unique_key_count_);
@@ -227,7 +227,7 @@ void BacklogBenchmark::GetEntriesStep(std::unique_ptr<ledger::Token> token,
   TRACE_ASYNC_BEGIN("benchmark", "get entries partial", entries_left);
   if (reference_strategy_ == PageDataGenerator::ReferenceStrategy::INLINE) {
     reader_snapshot_->GetEntriesInline(
-        nullptr, std::move(token),
+        fidl::VectorPtr<uint8_t>::New(0), std::move(token),
         fxl::MakeCopyable([this, entries_left](ledger::Status status,
                                                auto entries,
                                                auto next_token) mutable {
@@ -237,7 +237,7 @@ void BacklogBenchmark::GetEntriesStep(std::unique_ptr<ledger::Token> token,
         }));
   } else {
     reader_snapshot_->GetEntries(
-        nullptr, std::move(token),
+        fidl::VectorPtr<uint8_t>::New(0), std::move(token),
         fxl::MakeCopyable([this, entries_left](ledger::Status status,
                                                auto entries,
                                                auto next_token) mutable {

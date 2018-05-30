@@ -210,7 +210,8 @@ class RecipeApp : public fuchsia::modular::ViewApp {
                 FXL_CHECK(status == ledger::Status::OK);
                 // 3. Get a snapshot of the root page.
                 module_root_page_->GetSnapshot(
-                    page_snapshot_.NewRequest(), nullptr, nullptr,
+                    page_snapshot_.NewRequest(),
+                    fidl::VectorPtr<uint8_t>::New(0), nullptr,
                     [this](ledger::Status status) {
                       FXL_CHECK(status == ledger::Status::OK);
                       // 4. Read the counter from the root page.

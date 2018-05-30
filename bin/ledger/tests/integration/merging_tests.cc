@@ -435,18 +435,20 @@ TEST_P(MergingIntegrationTest, Merging) {
   Watcher watcher1(watcher1_ptr.NewRequest(),
                    [this] { message_loop_.QuitNow(); });
   ledger::PageSnapshotPtr snapshot1;
-  page1->GetSnapshot(
-      snapshot1.NewRequest(), nullptr, std::move(watcher1_ptr),
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
+  page1->GetSnapshot(snapshot1.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                     std::move(watcher1_ptr), [](ledger::Status status) {
+                       EXPECT_EQ(ledger::Status::OK, status);
+                     });
   EXPECT_EQ(ZX_OK, page1.WaitForResponse());
 
   ledger::PageWatcherPtr watcher2_ptr;
   Watcher watcher2(watcher2_ptr.NewRequest(),
                    [this] { message_loop_.QuitNow(); });
   ledger::PageSnapshotPtr snapshot2;
-  page2->GetSnapshot(
-      snapshot2.NewRequest(), nullptr, std::move(watcher2_ptr),
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
+  page2->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                     std::move(watcher2_ptr), [](ledger::Status status) {
+                       EXPECT_EQ(ledger::Status::OK, status);
+                     });
   EXPECT_EQ(ZX_OK, page2.WaitForResponse());
 
   page1->StartTransaction(
@@ -544,18 +546,20 @@ TEST_P(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   Watcher watcher1(watcher1_ptr.NewRequest(),
                    [this] { message_loop_.QuitNow(); });
   ledger::PageSnapshotPtr snapshot1;
-  page1->GetSnapshot(
-      snapshot1.NewRequest(), nullptr, std::move(watcher1_ptr),
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
+  page1->GetSnapshot(snapshot1.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                     std::move(watcher1_ptr), [](ledger::Status status) {
+                       EXPECT_EQ(ledger::Status::OK, status);
+                     });
   EXPECT_EQ(ZX_OK, page1.WaitForResponse());
 
   ledger::PageWatcherPtr watcher2_ptr;
   Watcher watcher2(watcher2_ptr.NewRequest(),
                    [this] { message_loop_.QuitNow(); });
   ledger::PageSnapshotPtr snapshot2;
-  page2->GetSnapshot(
-      snapshot2.NewRequest(), nullptr, std::move(watcher2_ptr),
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
+  page2->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                     std::move(watcher2_ptr), [](ledger::Status status) {
+                       EXPECT_EQ(ledger::Status::OK, status);
+                     });
   EXPECT_EQ(ZX_OK, page2.WaitForResponse());
 
   page1->StartTransaction(
@@ -727,7 +731,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   ledger::PageSnapshotPtr snapshot =
       resolver_impl->requests[0].common_version.Bind();
   fidl::VectorPtr<ledger::Entry> entries =
-      SnapshotGetEntries(&snapshot, fidl::VectorPtr<uint8_t>());
+      SnapshotGetEntries(&snapshot, fidl::VectorPtr<uint8_t>::New(0));
   EXPECT_EQ(0u, entries->size());
 
   // Prepare the merged values
@@ -759,9 +763,10 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   Watcher watcher(watcher_ptr.NewRequest(),
                   [this] { message_loop_.QuitNow(); });
   ledger::PageSnapshotPtr snapshot2;
-  page1->GetSnapshot(
-      snapshot2.NewRequest(), nullptr, std::move(watcher_ptr),
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
+  page1->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                     std::move(watcher_ptr), [](ledger::Status status) {
+                       EXPECT_EQ(ledger::Status::OK, status);
+                     });
   EXPECT_EQ(ZX_OK, page1.WaitForResponse());
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
@@ -769,9 +774,9 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   // Wait for the watcher to be called.
   RunLoop();
 
-  auto final_entries =
-      SnapshotGetEntries(&watcher.last_snapshot_, fidl::VectorPtr<uint8_t>())
-          .take();
+  auto final_entries = SnapshotGetEntries(&watcher.last_snapshot_,
+                                          fidl::VectorPtr<uint8_t>::New(0))
+                           .take();
   ASSERT_EQ(3u, final_entries.size());
   EXPECT_EQ("name", convert::ExtendedStringView(final_entries[0].key));
   EXPECT_EQ("pager", convert::ExtendedStringView(final_entries[1].key));
@@ -1214,9 +1219,10 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
   Watcher watcher(watcher_ptr.NewRequest(),
                   [this] { message_loop_.QuitNow(); });
   ledger::PageSnapshotPtr snapshot;
-  page1->GetSnapshot(
-      snapshot.NewRequest(), nullptr, std::move(watcher_ptr),
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
+  page1->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                     std::move(watcher_ptr), [](ledger::Status status) {
+                       EXPECT_EQ(ledger::Status::OK, status);
+                     });
   EXPECT_EQ(ZX_OK, page1.WaitForResponse());
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values),
@@ -1225,9 +1231,9 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
   // Wait for the watcher to be called.
   RunLoop();
 
-  auto final_entries =
-      SnapshotGetEntries(&watcher.last_snapshot_, fidl::VectorPtr<uint8_t>())
-          .take();
+  auto final_entries = SnapshotGetEntries(&watcher.last_snapshot_,
+                                          fidl::VectorPtr<uint8_t>::New(0))
+                           .take();
   ASSERT_EQ(2u, final_entries.size());
   EXPECT_EQ("name", convert::ExtendedStringView(final_entries[0].key));
   EXPECT_EQ("pager", convert::ExtendedStringView(final_entries[1].key));
@@ -1258,9 +1264,10 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
   Watcher watcher(watcher_ptr.NewRequest(),
                   []() { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
   ledger::PageSnapshotPtr snapshot2;
-  page1->GetSnapshot(
-      snapshot2.NewRequest(), nullptr, std::move(watcher_ptr),
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
+  page1->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                     std::move(watcher_ptr), [](ledger::Status status) {
+                       EXPECT_EQ(ledger::Status::OK, status);
+                     });
   EXPECT_EQ(ZX_OK, page1.WaitForResponse());
 
   page1->StartTransaction(
@@ -1314,9 +1321,9 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
 
   EXPECT_EQ(2u, watcher.changes_seen);
 
-  auto final_entries =
-      SnapshotGetEntries(&watcher.last_snapshot_, fidl::VectorPtr<uint8_t>())
-          .take();
+  auto final_entries = SnapshotGetEntries(&watcher.last_snapshot_,
+                                          fidl::VectorPtr<uint8_t>::New(0))
+                           .take();
   ASSERT_EQ(4u, final_entries.size());
   EXPECT_EQ("city", convert::ExtendedStringView(final_entries[0].key));
   EXPECT_EQ("email", convert::ExtendedStringView(final_entries[1].key));
@@ -1399,7 +1406,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   ledger::PageSnapshotPtr snapshot =
       resolver_impl->requests[0].common_version.Bind();
   fidl::VectorPtr<ledger::Entry> entries =
-      SnapshotGetEntries(&snapshot, fidl::VectorPtr<uint8_t>());
+      SnapshotGetEntries(&snapshot, fidl::VectorPtr<uint8_t>::New(0));
   EXPECT_EQ(0u, entries->size());
 
   // Prepare the merged values
@@ -1417,9 +1424,10 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   Watcher watcher(watcher_ptr.NewRequest(),
                   []() { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
   ledger::PageSnapshotPtr snapshot2;
-  page1->GetSnapshot(
-      snapshot2.NewRequest(), nullptr, std::move(watcher_ptr),
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
+  page1->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                     std::move(watcher_ptr), [](ledger::Status status) {
+                       EXPECT_EQ(ledger::Status::OK, status);
+                     });
   EXPECT_EQ(ZX_OK, page1.WaitForResponse());
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
@@ -1427,9 +1435,9 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   // Wait for the watcher to be called.
   RunLoop();
 
-  auto final_entries =
-      SnapshotGetEntries(&watcher.last_snapshot_, fidl::VectorPtr<uint8_t>())
-          .take();
+  auto final_entries = SnapshotGetEntries(&watcher.last_snapshot_,
+                                          fidl::VectorPtr<uint8_t>::New(0))
+                           .take();
   ASSERT_EQ(2u, final_entries.size());
   EXPECT_EQ("city", convert::ExtendedStringView(final_entries[0].key));
   EXPECT_EQ("name", convert::ExtendedStringView(final_entries[1].key));
@@ -1517,9 +1525,10 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
   Watcher watcher(watcher_ptr.NewRequest(),
                   []() { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
   ledger::PageSnapshotPtr snapshot;
-  page1->GetSnapshot(
-      snapshot.NewRequest(), nullptr, std::move(watcher_ptr),
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
+  page1->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                     std::move(watcher_ptr), [](ledger::Status status) {
+                       EXPECT_EQ(ledger::Status::OK, status);
+                     });
   EXPECT_EQ(ZX_OK, page1.WaitForResponse());
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values),
@@ -1528,9 +1537,9 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
   // Wait for the watcher to be called.
   RunLoop();
 
-  auto final_entries =
-      SnapshotGetEntries(&watcher.last_snapshot_, fidl::VectorPtr<uint8_t>())
-          .take();
+  auto final_entries = SnapshotGetEntries(&watcher.last_snapshot_,
+                                          fidl::VectorPtr<uint8_t>::New(0))
+                           .take();
   ASSERT_EQ(3u, final_entries.size());
   EXPECT_EQ("city", convert::ExtendedStringView(final_entries[0].key));
   EXPECT_EQ("name", convert::ExtendedStringView(final_entries[1].key));
@@ -1565,7 +1574,8 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
   ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(), MakeQuitTask());
   ledger::PageSnapshotPtr snapshot1;
-  page1->GetSnapshot(snapshot1.NewRequest(), nullptr, std::move(watcher_ptr),
+  page1->GetSnapshot(snapshot1.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                     std::move(watcher_ptr),
                      callback::Capture(MakeQuitTask(), &status));
   RunLoop();
   EXPECT_EQ(ledger::Status::OK, status);
@@ -1633,9 +1643,9 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
 
   EXPECT_EQ(3u, watcher.changes_seen);
 
-  auto final_entries =
-      SnapshotGetEntries(&watcher.last_snapshot_, fidl::VectorPtr<uint8_t>())
-          .take();
+  auto final_entries = SnapshotGetEntries(&watcher.last_snapshot_,
+                                          fidl::VectorPtr<uint8_t>::New(0))
+                           .take();
   ASSERT_EQ(1u, final_entries.size());
   EXPECT_EQ("email", convert::ExtendedStringView(final_entries[0].key));
 }
@@ -1878,9 +1888,10 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
   Watcher watcher(watcher_ptr.NewRequest(),
                   [this] { message_loop_.QuitNow(); });
   ledger::PageSnapshotPtr snapshot2;
-  page1->GetSnapshot(
-      snapshot2.NewRequest(), nullptr, std::move(watcher_ptr),
-      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
+  page1->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                     std::move(watcher_ptr), [](ledger::Status status) {
+                       EXPECT_EQ(ledger::Status::OK, status);
+                     });
   EXPECT_EQ(ZX_OK, page1.WaitForResponse());
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
@@ -1888,9 +1899,9 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
   // Wait for the watcher to be called.
   RunLoop();
 
-  auto final_entries =
-      SnapshotGetEntries(&watcher.last_snapshot_, fidl::VectorPtr<uint8_t>())
-          .take();
+  auto final_entries = SnapshotGetEntries(&watcher.last_snapshot_,
+                                          fidl::VectorPtr<uint8_t>::New(0))
+                           .take();
   ASSERT_EQ(3u, final_entries.size());
   EXPECT_EQ("city", convert::ExtendedStringView(final_entries[0].key));
   EXPECT_EQ("Paris", ToString(final_entries[0].value));

@@ -33,7 +33,8 @@ class LinkImpl::ReadLinkDataCall : public PageOperation<fidl::StringPtr> {
   void Run() override {
     FlowToken flow{this, &result_};
 
-    page()->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
+    page()->GetSnapshot(page_snapshot_.NewRequest(),
+                        fidl::VectorPtr<uint8_t>::New(0), nullptr,
                         Protect([this, flow](::ledger::Status status) {
                           if (status != ::ledger::Status::OK) {
                             FXL_LOG(ERROR)

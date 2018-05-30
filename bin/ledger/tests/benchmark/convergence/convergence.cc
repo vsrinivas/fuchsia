@@ -102,7 +102,7 @@ void ConvergenceBenchmark::Run() {
     ledger::PageSnapshotPtr snapshot;
     // Register a watcher; we don't really need the snapshot.
     device_context.page_connection->GetSnapshot(
-        snapshot.NewRequest(), nullptr,
+        snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
         device_context.page_watcher->NewBinding(), waiter->NewCallback());
   }
   waiter->Finalize([this](ledger::Status status) {

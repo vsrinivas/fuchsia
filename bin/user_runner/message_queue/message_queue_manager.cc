@@ -237,7 +237,8 @@ class MessageQueueManager::GetQueueTokenCall
   void Run() override {
     FlowToken flow{this, &result_};
 
-    page()->GetSnapshot(snapshot_.NewRequest(), nullptr, nullptr,
+    page()->GetSnapshot(snapshot_.NewRequest(),
+                        fidl::VectorPtr<uint8_t>::New(0), nullptr,
                         Protect([this, flow](::ledger::Status status) {
                           if (status != ::ledger::Status::OK) {
                             FXL_LOG(ERROR) << trace_name() << " "

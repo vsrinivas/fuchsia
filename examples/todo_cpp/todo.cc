@@ -65,7 +65,7 @@ void GetEntries(
     std::function<void(ledger::Status, std::vector<ledger::Entry>)> callback) {
   ledger::PageSnapshot* snapshot_ptr = snapshot.get();
   snapshot_ptr->GetEntries(
-      nullptr, std::move(token),
+      fidl::VectorPtr<uint8_t>::New(0), std::move(token),
       fxl::MakeCopyable(
           [snapshot = std::move(snapshot), entries = std::move(entries),
            callback = std::move(callback)](ledger::Status status,
@@ -114,7 +114,7 @@ TodoApp::TodoApp(async::Loop* loop)
       HandleResponse([this] { loop_->Quit(); }, "GetRootPage"));
 
   ledger::PageSnapshotPtr snapshot;
-  page_->GetSnapshot(snapshot.NewRequest(), nullptr,
+  page_->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                      page_watcher_binding_.NewBinding(),
                      HandleResponse([this] { loop_->Quit(); }, "Watch"));
   List(std::move(snapshot));
@@ -163,7 +163,7 @@ void TodoApp::GetKeys(std::function<void(fidl::VectorPtr<Key>)> callback) {
 
   ledger::PageSnapshot* snapshot_ptr = snapshot.get();
   snapshot_ptr->GetKeys(
-      nullptr, nullptr,
+      fidl::VectorPtr<uint8_t>::New(0), nullptr,
       fxl::MakeCopyable([snapshot = std::move(snapshot), callback](
                             ledger::Status status, auto keys, auto next_token) {
         callback(std::move(keys));

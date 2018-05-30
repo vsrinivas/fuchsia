@@ -112,7 +112,7 @@ void GetEntriesRecursive(::ledger::PageSnapshot* const snapshot,
                          std::unique_ptr<::ledger::Token> next_token,
                          std::function<void(::ledger::Status)> done) {
   snapshot->GetEntries(
-      nullptr /* key_start */, std::move(next_token),
+      fidl::VectorPtr<uint8_t>::New(0) /* key_start */, std::move(next_token),
       fxl::MakeCopyable([snapshot, entries, done = std::move(done)](
                             ::ledger::Status status, auto new_entries,
                             auto next_token) mutable {

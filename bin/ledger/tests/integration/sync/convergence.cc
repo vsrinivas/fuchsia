@@ -263,9 +263,9 @@ class ConvergenceTest
         std::make_unique<PageWatcherImpl>(page_watcher.NewRequest(),
                                           std::move(page_snapshot));
     ledger::Status status = ledger::Status::UNKNOWN_ERROR;
-    (*page)->GetSnapshot(std::move(page_snapshot_request), nullptr,
-                         std::move(page_watcher),
-                         callback::Capture(MakeQuitTask(), &status));
+    (*page)->GetSnapshot(
+        std::move(page_snapshot_request), fidl::VectorPtr<uint8_t>::New(0),
+        std::move(page_watcher), callback::Capture(MakeQuitTask(), &status));
     RunLoop();
     EXPECT_EQ(ledger::Status::OK, status);
     return watcher;

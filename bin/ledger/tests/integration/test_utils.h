@@ -22,7 +22,8 @@ fidl::VectorPtr<uint8_t> RandomArray(int size);
 ledger::PageId PageGetId(ledger::PagePtr* page);
 
 ledger::PageSnapshotPtr PageGetSnapshot(
-    ledger::PagePtr* page, fidl::VectorPtr<uint8_t> prefix = nullptr);
+    ledger::PagePtr* page,
+    fidl::VectorPtr<uint8_t> prefix = fidl::VectorPtr<uint8_t>::New(0));
 
 fidl::VectorPtr<fidl::VectorPtr<uint8_t>> SnapshotGetKeys(
     ledger::PageSnapshotPtr* snapshot, fidl::VectorPtr<uint8_t> start);

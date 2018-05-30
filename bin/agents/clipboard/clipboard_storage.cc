@@ -75,7 +75,8 @@ class ClipboardStorage::PeekCall : public Operation<fidl::StringPtr> {
   void Run() override {
     FlowToken flow{this, &text_};
     impl_->page()->GetSnapshot(
-        snapshot_.NewRequest(), nullptr, nullptr, [](::ledger::Status status) {
+        snapshot_.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr,
+        [](::ledger::Status status) {
           if (status != ::ledger::Status::OK) {
             FXL_LOG(ERROR) << "Failed to get page snapshot";
           }

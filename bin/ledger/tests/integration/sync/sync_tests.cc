@@ -19,8 +19,8 @@ class SyncIntegrationTest : public IntegrationTest {
       ledger::Page* page, fidl::VectorPtr<ledger::Entry>* entries) {
     ledger::PageSnapshotPtr snapshot;
     ledger::Status status;
-    page->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr,
-                      callback::Capture(MakeQuitTask(), &status));
+    page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                      nullptr, callback::Capture(MakeQuitTask(), &status));
     RunLoop();
     if (status != ledger::Status::OK) {
       return ::testing::AssertionFailure() << "Unable to retrieve a snapshot";
@@ -30,7 +30,7 @@ class SyncIntegrationTest : public IntegrationTest {
     std::unique_ptr<ledger::Token> next_token = nullptr;
     do {
       fidl::VectorPtr<ledger::Entry> new_entries;
-      snapshot->GetEntries(nullptr, std::move(token),
+      snapshot->GetEntries(fidl::VectorPtr<uint8_t>::New(0), std::move(token),
                            callback::Capture(MakeQuitTask(), &status,
                                              &new_entries, &next_token));
       RunLoop();
@@ -69,8 +69,8 @@ TEST_P(SyncIntegrationTest, SerialConnection) {
   }));
 
   ledger::PageSnapshotPtr snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr,
-                    callback::Capture(MakeQuitTask(), &status));
+  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                    nullptr, callback::Capture(MakeQuitTask(), &status));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
   fidl::VectorPtr<uint8_t> value;
@@ -107,7 +107,7 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   }));
 
   ledger::PageSnapshotPtr snapshot;
-  page2->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr,
+  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr,
                      callback::Capture(MakeQuitTask(), &status));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);

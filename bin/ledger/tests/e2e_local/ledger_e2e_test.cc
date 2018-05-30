@@ -103,7 +103,8 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
                                                size_t* entry_count) {
     ledger::Status status;
     ledger::PageSnapshotPtr snapshot;
-    (*page)->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr,
+    (*page)->GetSnapshot(snapshot.NewRequest(),
+                         fidl::VectorPtr<uint8_t>::New(0), nullptr,
                          callback::Capture(MakeQuitTask(), &status));
     RunLoop();
     if (status != ledger::Status::OK) {
@@ -113,7 +114,7 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
     fidl::VectorPtr<ledger::InlinedEntry> entries;
     std::unique_ptr<ledger::Token> next_token;
     snapshot->GetEntriesInline(
-        nullptr, nullptr,
+        fidl::VectorPtr<uint8_t>::New(0), nullptr,
         callback::Capture(MakeQuitTask(), &status, &entries, &next_token));
     RunLoop();
     if (status != ledger::Status::OK) {
@@ -160,7 +161,8 @@ TEST_F(LedgerEndToEndTest, PutAndGet) {
   page->Put(TestArray(), TestArray(), &status);
   EXPECT_EQ(ledger::Status::OK, status);
   fidl::SynchronousInterfacePtr<ledger::PageSnapshot> snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr, &status);
+  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                    nullptr, &status);
   EXPECT_EQ(ledger::Status::OK, status);
   fuchsia::mem::BufferPtr value;
   snapshot->Get(TestArray(), &status, &value);

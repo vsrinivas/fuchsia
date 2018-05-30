@@ -137,7 +137,8 @@ void PutBenchmark::InitializeKeys(
 void PutBenchmark::BindWatcher(std::vector<fidl::VectorPtr<uint8_t>> keys) {
   ledger::PageSnapshotPtr snapshot;
   page_->GetSnapshot(
-      snapshot.NewRequest(), nullptr, page_watcher_binding_.NewBinding(),
+      snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+      page_watcher_binding_.NewBinding(),
       fxl::MakeCopyable(
           [this, keys = std::move(keys)](ledger::Status status) mutable {
             if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,

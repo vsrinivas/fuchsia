@@ -139,7 +139,8 @@ class PageImplTest : public gtest::TestWithMessageLoop {
     RunLoop();
   }
 
-  PageSnapshotPtr GetSnapshot(fidl::VectorPtr<uint8_t> prefix = nullptr) {
+  PageSnapshotPtr GetSnapshot(
+      fidl::VectorPtr<uint8_t> prefix = fidl::VectorPtr<uint8_t>::New(0)) {
     auto callback_getsnapshot = [this](Status status) {
       EXPECT_EQ(Status::OK, status);
       message_loop_.PostQuitTask();
@@ -600,7 +601,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
     actual_entries = std::move(entries);
     message_loop_.PostQuitTask();
   };
-  snapshot->GetEntries(nullptr, nullptr, callback_getentries);
+  snapshot->GetEntries(fidl::VectorPtr<uint8_t>::New(0), nullptr,
+                       callback_getentries);
   RunLoop();
 
   ASSERT_EQ(2u, actual_entries->size());
@@ -638,7 +640,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInline) {
   std::unique_ptr<Token> next_token;
   fidl::VectorPtr<InlinedEntry> actual_entries;
   snapshot->GetEntriesInline(
-      nullptr, nullptr,
+      fidl::VectorPtr<uint8_t>::New(0), nullptr,
       callback::Capture(MakeQuitTask(), &status, &actual_entries, &next_token));
   RunLoop();
   EXPECT_EQ(Status::OK, status);
@@ -681,7 +683,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
     actual_next_token = std::move(next_token);
     message_loop_.PostQuitTask();
   };
-  snapshot->GetEntries(nullptr, nullptr, callback_getentries);
+  snapshot->GetEntries(fidl::VectorPtr<uint8_t>::New(0), nullptr,
+                       callback_getentries);
   RunLoop();
 
   // Call GetEntries with the previous token and receive the remaining results.
@@ -696,8 +699,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
     EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries->size());
     message_loop_.PostQuitTask();
   };
-  snapshot->GetEntries(nullptr, std::move(actual_next_token),
-                       callback_getentries2);
+  snapshot->GetEntries(fidl::VectorPtr<uint8_t>::New(0),
+                       std::move(actual_next_token), callback_getentries2);
   RunLoop();
 
   // Check that the correct values of the keys are all present in the result and
@@ -721,7 +724,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForSize) {
   fidl::VectorPtr<InlinedEntry> actual_entries;
   std::unique_ptr<Token> actual_next_token;
   snapshot->GetEntriesInline(
-      nullptr, nullptr,
+      fidl::VectorPtr<uint8_t>::New(0), nullptr,
       callback::Capture(MakeQuitTask(), &status, &actual_entries,
                         &actual_next_token));
   RunLoop();
@@ -732,7 +735,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForSize) {
   fidl::VectorPtr<InlinedEntry> actual_entries2;
   std::unique_ptr<Token> actual_next_token2;
   snapshot->GetEntriesInline(
-      nullptr, std::move(actual_next_token),
+      fidl::VectorPtr<uint8_t>::New(0), std::move(actual_next_token),
       callback::Capture(MakeQuitTask(), &status, &actual_entries2,
                         &actual_next_token2));
   RunLoop();
@@ -774,7 +777,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForEntryCount) {
   fidl::VectorPtr<InlinedEntry> actual_entries;
   std::unique_ptr<Token> actual_next_token;
   snapshot->GetEntriesInline(
-      nullptr, nullptr,
+      fidl::VectorPtr<uint8_t>::New(0), nullptr,
       callback::Capture(MakeQuitTask(), &status, &actual_entries,
                         &actual_next_token));
   RunLoop();
@@ -785,7 +788,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForEntryCount) {
   fidl::VectorPtr<InlinedEntry> actual_entries2;
   std::unique_ptr<Token> actual_next_token2;
   snapshot->GetEntriesInline(
-      nullptr, std::move(actual_next_token),
+      fidl::VectorPtr<uint8_t>::New(0), std::move(actual_next_token),
       callback::Capture(MakeQuitTask(), &status, &actual_entries2,
                         &actual_next_token2));
   RunLoop();
@@ -822,7 +825,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForHandles) {
     actual_next_token = std::move(next_token);
     message_loop_.PostQuitTask();
   };
-  snapshot->GetEntries(nullptr, nullptr, callback_getentries);
+  snapshot->GetEntries(fidl::VectorPtr<uint8_t>::New(0), nullptr,
+                       callback_getentries);
   RunLoop();
 
   // Call GetEntries with the previous token and receive the remaining results.
@@ -837,8 +841,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForHandles) {
     EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries->size());
     message_loop_.PostQuitTask();
   };
-  snapshot->GetEntries(nullptr, std::move(actual_next_token),
-                       callback_getentries2);
+  snapshot->GetEntries(fidl::VectorPtr<uint8_t>::New(0),
+                       std::move(actual_next_token), callback_getentries2);
   RunLoop();
 
   // Check that the correct values of the keys are all present in the result and
@@ -884,7 +888,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithFetch) {
     actual_entries = std::move(entries);
     message_loop_.PostQuitTask();
   };
-  snapshot->GetEntries(nullptr, nullptr, callback_getentries);
+  snapshot->GetEntries(fidl::VectorPtr<uint8_t>::New(0), nullptr,
+                       callback_getentries);
   RunLoop();
 
   ASSERT_EQ(2u, actual_entries->size());
@@ -926,14 +931,16 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithPrefix) {
     actual_entries = std::move(entries);
     message_loop_.PostQuitTask();
   };
-  snapshot->GetEntries(nullptr, nullptr, callback_getentries);
+  snapshot->GetEntries(fidl::VectorPtr<uint8_t>::New(0), nullptr,
+                       callback_getentries);
   RunLoop();
 
   ASSERT_EQ(1u, actual_entries->size());
   EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0).key));
 
   snapshot = GetSnapshot(convert::ToArray("00"));
-  snapshot->GetEntries(nullptr, nullptr, callback_getentries);
+  snapshot->GetEntries(fidl::VectorPtr<uint8_t>::New(0), nullptr,
+                       callback_getentries);
   RunLoop();
 
   ASSERT_EQ(2u, actual_entries->size());
@@ -1016,7 +1023,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
     actual_keys = std::move(keys);
     message_loop_.PostQuitTask();
   };
-  snapshot->GetKeys(nullptr, nullptr, callback_getkeys);
+  snapshot->GetKeys(fidl::VectorPtr<uint8_t>::New(0), nullptr,
+                    callback_getkeys);
   RunLoop();
 
   EXPECT_EQ(2u, actual_keys->size());
@@ -1046,7 +1054,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
     actual_next_token = std::move(next_token);
     message_loop_.PostQuitTask();
   };
-  snapshot->GetKeys(nullptr, nullptr, callback_getkeys);
+  snapshot->GetKeys(fidl::VectorPtr<uint8_t>::New(0), nullptr,
+                    callback_getkeys);
   RunLoop();
 
   // Call GetKeys with the previous token and receive the remaining results.
@@ -1062,7 +1071,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
     EXPECT_EQ(static_cast<size_t>(key_count), actual_keys->size());
     message_loop_.PostQuitTask();
   };
-  snapshot->GetKeys(nullptr, std::move(actual_next_token), callback_getkeys2);
+  snapshot->GetKeys(fidl::VectorPtr<uint8_t>::New(0),
+                    std::move(actual_next_token), callback_getkeys2);
   RunLoop();
 
   // Check that the correct values of the keys are all present in the result and
@@ -1105,14 +1115,16 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithPrefix) {
     actual_keys = std::move(keys);
     message_loop_.PostQuitTask();
   };
-  snapshot->GetKeys(nullptr, nullptr, callback_getkeys);
+  snapshot->GetKeys(fidl::VectorPtr<uint8_t>::New(0), nullptr,
+                    callback_getkeys);
   RunLoop();
 
   EXPECT_EQ(1u, actual_keys->size());
   EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys->at(0)));
 
   snapshot = GetSnapshot(convert::ToArray("00"));
-  snapshot->GetKeys(nullptr, nullptr, callback_getkeys);
+  snapshot->GetKeys(fidl::VectorPtr<uint8_t>::New(0), nullptr,
+                    callback_getkeys);
   RunLoop();
 
   EXPECT_EQ(2u, actual_keys->size());
@@ -1351,10 +1363,12 @@ TEST_F(PageImplTest, ParallelPut) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
   };
-  page_ptr_->GetSnapshot(snapshot1.NewRequest(), nullptr, nullptr,
+  page_ptr_->GetSnapshot(snapshot1.NewRequest(),
+                         fidl::VectorPtr<uint8_t>::New(0), nullptr,
                          callback_getsnapshot);
   RunLoop();
-  page_ptr2->GetSnapshot(snapshot2.NewRequest(), nullptr, nullptr,
+  page_ptr2->GetSnapshot(snapshot2.NewRequest(),
+                         fidl::VectorPtr<uint8_t>::New(0), nullptr,
                          callback_getsnapshot);
   RunLoop();
 

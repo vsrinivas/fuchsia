@@ -53,7 +53,7 @@ inline std::string to_hex_string(const std::vector<uint8_t>& data) {
 }
 
 inline fidl::VectorPtr<uint8_t> to_array(const std::string& val) {
-  fidl::VectorPtr<uint8_t> ret;
+  fidl::VectorPtr<uint8_t> ret = fidl::VectorPtr<uint8_t>::New(0);
   for (char c : val) {
     ret.push_back(c);
   }
@@ -62,8 +62,8 @@ inline fidl::VectorPtr<uint8_t> to_array(const std::string& val) {
 
 inline fidl::VectorPtr<fidl::StringPtr> to_array(
     const std::vector<std::string>& val) {
-  fidl::VectorPtr<fidl::StringPtr> ret;
-  ret.resize(0);  // mark as not null
+  fidl::VectorPtr<fidl::StringPtr> ret =
+      fidl::VectorPtr<fidl::StringPtr>::New(0);
   for (const std::string& s : val) {
     ret.push_back(s);
   }

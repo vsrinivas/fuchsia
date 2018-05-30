@@ -163,7 +163,8 @@ void FetchBenchmark::WaitForReaderDownload() {
         previous_state_ != ledger::SyncState::IDLE) {
       on_sync_state_changed_ = nullptr;
       ledger::PageSnapshotPtr snapshot;
-      reader_page_->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr,
+      reader_page_->GetSnapshot(snapshot.NewRequest(),
+                                fidl::VectorPtr<uint8_t>::New(0), nullptr,
                                 benchmark::QuitOnErrorCallback(
                                     [this] { loop_->Quit(); }, "GetSnapshot"));
       FetchValues(std::move(snapshot), 0);
