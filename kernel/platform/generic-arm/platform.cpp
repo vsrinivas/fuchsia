@@ -660,3 +660,7 @@ void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops,
 bool platform_serial_enabled(void) {
     return !uart_disabled && uart_present();
 }
+
+bool platform_early_console_enabled() {
+    return false;
+}

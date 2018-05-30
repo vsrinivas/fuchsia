@@ -360,7 +360,7 @@ static void dlog_init_hook(uint level) {
         thread_resume(rthread);
     }
 
-    if (platform_serial_enabled()) {
+    if (platform_serial_enabled() || platform_early_console_enabled()) {
         if ((rthread = thread_create("debuglog-dumper", debuglog_dumper, NULL,
                                      HIGH_PRIORITY - 2, DEFAULT_STACK_SIZE)) != NULL) {
             thread_resume(rthread);

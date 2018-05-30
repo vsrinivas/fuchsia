@@ -136,4 +136,7 @@ void platform_resume(void);
 // Returns true if this system has a debug serial port that is enabled
 bool platform_serial_enabled(void);
 
+// Returns true if the early graphics console is enabled
+bool platform_early_console_enabled(void);
+
 __END_CDECLS

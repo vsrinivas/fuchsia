@@ -282,6 +282,10 @@ zx_status_t display_get_info(struct display_info* info) {
     return gfxconsole_display_get_info(info);
 }
 
+bool platform_early_console_enabled() {
+    return !early_console_disabled;
+}
+
 static void platform_early_display_init(void) {
     struct display_info info;
     void* bits;
