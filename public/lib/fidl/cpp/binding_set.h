@@ -10,6 +10,8 @@
 #include <utility>
 #include <vector>
 
+#include <lib/fit/function.h>
+
 #include "lib/fidl/cpp/binding.h"
 
 namespace fidl {
@@ -104,7 +106,7 @@ class BindingSet {
   // Called when the last binding has been removed from this |BindingSet|.
   //
   // This function is not called by |CloseAll| or by |~BindingSet|.
-  void set_empty_set_handler(std::function<void()> empty_set_handler) {
+  void set_empty_set_handler(fit::closure empty_set_handler) {
     empty_set_handler_ = std::move(empty_set_handler);
   }
 
@@ -127,7 +129,7 @@ class BindingSet {
   }
 
   StorageType bindings_;
-  std::function<void()> empty_set_handler_;
+  fit::closure empty_set_handler_;
 };
 
 }  // namespace fidl

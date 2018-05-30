@@ -98,7 +98,7 @@ TEST(FidlTest, UnionComparison) {
 // generator generates values ordered by the given index.
 template <typename A>
 std::vector<fidl::VectorPtr<A>> BuildSortedVector(
-    size_t size, const std::function<A(int32_t)>& generator) {
+    size_t size, const fit::function<A(int32_t)>& generator) {
   constexpr int32_t kNbBaseElement = 3;
 
   std::vector<fidl::VectorPtr<A>> result;
@@ -157,7 +157,7 @@ TEST(FidlTest, VectorOfOptionalStructComparison) {
 // Build a vector of arrays containing distincts values.
 template <typename A>
 std::vector<fidl::Array<A, 3>> BuildArray(
-    const std::function<A(int32_t)>& generator) {
+    const fit::function<A(int32_t)>& generator) {
   std::vector<fidl::Array<A, 3>> arrays;
   for (int32_t i = 0; i < 3; ++i) {
     for (int32_t j = 0; j < 3; ++j) {

@@ -120,7 +120,7 @@ zx::channel MessageReader::Unbind() {
 
 void MessageReader::Reset() {
   Unbind();
-  error_handler_ = std::function<void()>();
+  error_handler_ = nullptr;
 }
 
 zx_status_t MessageReader::TakeChannelAndErrorHandlerFrom(

@@ -63,6 +63,7 @@ sdk_source_set("cpp") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
 

@@ -20,7 +20,7 @@ namespace {
 
 class CallbackStub : public Stub {
  public:
-  std::function<zx_status_t(Message, PendingResponse)> callback;
+  fit::function<zx_status_t(Message, PendingResponse)> callback;
 
   zx_status_t Dispatch_(Message message, PendingResponse response) override {
     return callback(std::move(message), std::move(response));
@@ -29,7 +29,7 @@ class CallbackStub : public Stub {
 
 class CallbackMessageHandler : public MessageHandler {
  public:
-  std::function<zx_status_t(Message)> callback;
+  fit::function<zx_status_t(Message)> callback;
 
   zx_status_t OnMessage(Message message) override {
     return callback(std::move(message));

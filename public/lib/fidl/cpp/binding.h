@@ -6,6 +6,7 @@
 #define LIB_FIDL_CPP_BINDING_H_
 
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <zircon/assert.h>
 
@@ -184,7 +185,7 @@ class Binding {
   // For example, the error handler will be called if the remote side of the
   // channel sends an invalid message. When the error handler is called, the
   // |Binding| will no longer be bound to the channel.
-  void set_error_handler(std::function<void()> error_handler) {
+  void set_error_handler(fit::closure error_handler) {
     controller_.reader().set_error_handler(std::move(error_handler));
   }
 
