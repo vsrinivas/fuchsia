@@ -1300,12 +1300,12 @@ bool Session::ScheduleUpdate(uint64_t requested_presentation_time,
       if (requested_presentation_time != 0 &&
           target_presentation_time - vsync_interval >
               requested_presentation_time) {
-        error_reporter_->WARN()
-            << "scenic::gfx::Session: Present called with too early "
-               "of a presentation time. session_id = "
-            << id()
-            << ", requested presentation time=" << requested_presentation_time
-            << ", target presentation time=" << target_presentation_time << ".";
+        // Present called with too early of a presentation time.
+        TRACE_INSTANT("gfx", "Session requested too early presentation time",
+                      TRACE_SCOPE_PROCESS, "session_id", id(),
+                      "requested presentation time",
+                      requested_presentation_time, "target presentation time",
+                      target_presentation_time);
       }
     }
     auto acquire_fence_set =
