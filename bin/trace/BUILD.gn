@@ -43,7 +43,7 @@ source_set("trace_app") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/tracing/fidl",
-    "//zircon/public/lib/launchpad",
+    "//zircon/public/lib/fdio",
     "//zircon/public/lib/trace-reader",
   ]
 

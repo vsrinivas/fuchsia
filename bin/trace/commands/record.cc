@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <launchpad/launchpad.h>
+#include <fdio/spawn.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+#include <zx/time.h>
 
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <unordered_set>
-
-#include <lib/async/cpp/task.h>
-#include <lib/async/default.h>
-#include <zx/time.h>
 
 #include "garnet/bin/trace/commands/record.h"
 #include "garnet/bin/trace/results_export.h"
@@ -48,17 +47,13 @@ zx_handle_t Launch(const std::vector<std::string>& args) {
   for (const auto& item : args) {
     raw_args.push_back(item.c_str());
   }
+  raw_args.push_back(nullptr);
 
-  launchpad_t* launchpad;
-  launchpad_create(ZX_HANDLE_INVALID, raw_args[0], &launchpad);
-  launchpad_load_from_file(launchpad, args[0].c_str());
-  launchpad_set_args(launchpad, args.size(), raw_args.data());
+  zx_status_t status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
+                                  raw_args[0], raw_args.data(), &subprocess);
 
-  launchpad_clone(launchpad, LP_CLONE_ALL);
-
-  const char* error;
-  if (launchpad_go(launchpad, &subprocess, &error) != ZX_OK) {
-    FXL_LOG(ERROR) << "Subprocess launch failed: \"" << error
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Subprocess launch failed: \"" << status
                    << "\" Did you provide the full path to the tool?";
   }
 
