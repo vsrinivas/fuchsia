@@ -74,7 +74,7 @@ else ifeq ($(MODULE_TYPE),driver)
 MODULE_GROUP := {core}
 else ifeq ($(MODULE_TYPE),userlib)
 MODULE_GROUP := {libs}
-else ifneq (,$(filter usertest drivertest,$(MODULE_TYPE)))
+else ifneq (,$(filter usertest drivertest fuzztest,$(MODULE_TYPE)))
 MODULE_GROUP := {test}
 endif
 

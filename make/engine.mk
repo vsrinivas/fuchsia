@@ -518,6 +518,25 @@ else
 NO_SANCOV :=
 endif
 
+# To use LibFuzzer, we need to provide it and its dependency to the linker
+# since we're not using Clang and its '-fsanitize=fuzzer' flag as a driver to
+# lld.  Additionally, we need to make sure the shared objects are available on
+# the device.
+ifeq ($(call TOBOOL,$(USE_ASAN)),true)
+FUZZ_ANAME := libclang_rt.fuzzer-$(CLANG_ARCH).a
+FUZZ_ALIB := $(shell $(CLANG_TOOLCHAIN_PREFIX)clang \
+				 $(GLOBAL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS)\
+				 -print-file-name=$(FUZZ_ANAME))
+
+FUZZ_RUNTIME_SONAMES := libc++.so.2 libc++abi.so.1
+FUZZ_RUNTIME_SOLIBS := $(foreach soname,$(FUZZ_RUNTIME_SONAMES),\
+				 $(word 2,$(subst =, ,$(call find-clang-asan-solib,$(soname)))))
+
+FUZZ_EXTRA_OBJS := $(FUZZ_ALIB) $(FUZZ_RUNTIME_SOLIBS)
+else
+FUZZ_EXTRA_OBJS :=
+endif
+
 # Save these for the first module.mk iteration to see.
 SAVED_EXTRA_BUILDDEPS := $(EXTRA_BUILDDEPS)
 SAVED_GENERATED := $(GENERATED)
