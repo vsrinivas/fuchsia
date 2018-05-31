@@ -147,10 +147,13 @@ interfaces to be used from different languages. Below are the implementation
 files created for C++, assuming that your build flavor is `x64`.
 
 ```
-./out/x64/fidling/gen/garnet/examples/fidl2/services/echo2.fidl.cc
-./out/x64/fidling/gen/garnet/examples/fidl2/services/echo2.fidl.cc.h
-./out/x64/fidling/gen/garnet/examples/fidl2/services/echo2.fidl.rs
+./out/x64/fidling/gen/echo2/cpp/fidl.cc
+./out/x64/fidling/gen/echo2/cpp/fidl.h
 ```
+
+Generated files for C++ will follow the same pattern.
+For other languages, the tools may employ strategies that are more suitable for
+these languages.
 
 ## `Echo` server in C++
 
