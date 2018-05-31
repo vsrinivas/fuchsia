@@ -18,6 +18,7 @@ struct Module;
 
 namespace zxdb {
 
+class LoadedModuleSymbols;
 class LoadedModuleSymbolsImpl;
 class TargetSymbolsImpl;
 
@@ -25,20 +26,26 @@ class TargetSymbolsImpl;
 // TargetSymbols.
 class ProcessSymbolsImpl : public ProcessSymbols {
  public:
-  // The TargetSymbols must outlive this class.
-  explicit ProcessSymbolsImpl(TargetSymbolsImpl* target_symbols);
+  // A simple observer interface. This allows ProcessImpl to expose these
+  // in the ProcessObserver observer API. If the API here gets too much more
+  // complicated, it could be we want a separate public ProcessSymbolsObserver
+  // class that consumers need to register for explicitly.
+  //
+  // See the corresponding functions in ProcessObserver for docs.
+  class Notifications {
+   public:
+    virtual void DidLoadModuleSymbols(LoadedModuleSymbols* module) = 0;
+    virtual void WillUnloadModuleSymbols(LoadedModuleSymbols* module) = 0;
+    virtual void OnSymbolLoadFailure(const Err& err) = 0;
+  };
+
+  // The passed-in pointers must outlive this class.
+  ProcessSymbolsImpl(Notifications* notifications,
+                     TargetSymbolsImpl* target_symbols);
   ~ProcessSymbolsImpl();
 
   TargetSymbolsImpl* target_symbols() {
     return target_symbols_;
-  }
-
-  // This function, if set, is called for symbol load failures. This class
-  // is simple emough so that we don't have a real observer API for it. If
-  // we need to add more callbacks, this should be factored into an observer
-  // API, the ProcessObserver::OnSymbolLoadFailure moved to the new API.
-  void set_symbol_load_failure_callback(std::function<void(Err)> callback) {
-    symbol_load_failure_callback_ = std::move(callback);
   }
 
   // Adds the given module to the process. The callback will be executed with
@@ -67,17 +74,21 @@ class ProcessSymbolsImpl : public ProcessSymbols {
     std::unique_ptr<LoadedModuleSymbolsImpl> symbols;
   };
 
+  // Equality comparison for the two types of modules. This compares load
+  // address and build id.
+  static bool RefersToSameModule(const debug_ipc::Module& a,
+                                 const ModuleInfo& b);
+
   // Looks up the given address and returns the module it's part of. Returns
   // null if the address is out-of-range.
   const ModuleInfo* InfoForAddress(uint64_t address) const;
 
+  Notifications* const notifications_;       // Non-owning.
   TargetSymbolsImpl* const target_symbols_;  // Non-owning.
 
-  // When nonempty, call when symbols can't be loaded for a module.
-  std::function<void(const Err&)> symbol_load_failure_callback_;
-
   // Maps load address to the module symbol information.
-  std::map<uint64_t, ModuleInfo> modules_;
+  using ModuleMap = std::map<uint64_t, ModuleInfo>;
+  ModuleMap modules_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ProcessSymbolsImpl);
 };

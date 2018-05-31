@@ -102,6 +102,10 @@ bool SystemSymbols::LoadBuildIDFile(std::string* msg) {
   return true;
 }
 
+void SystemSymbols::AddBuildIDToFileMapping(const std::string& build_id,
+                                            const std::string& file) {
+  build_id_to_file_[build_id] = file;
+}
 
 Err SystemSymbols::GetModule(const std::string& name_for_msg,
                              const std::string& build_id,

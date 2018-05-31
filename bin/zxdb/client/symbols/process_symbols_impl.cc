@@ -22,8 +22,10 @@ bool ExpectSymbolsForName(const std::string& name) {
 
 }  // namespace
 
-ProcessSymbolsImpl::ProcessSymbolsImpl(TargetSymbolsImpl* target_symbols)
-    : target_symbols_(target_symbols) {}
+ProcessSymbolsImpl::ProcessSymbolsImpl(Notifications* notifications,
+                                       TargetSymbolsImpl* target_symbols)
+    : notifications_(notifications),
+      target_symbols_(target_symbols) {}
 
 ProcessSymbolsImpl::~ProcessSymbolsImpl() = default;
 
@@ -35,13 +37,44 @@ void ProcessSymbolsImpl::AddModule(
 
 void ProcessSymbolsImpl::SetModules(
     const std::vector<debug_ipc::Module>& modules) {
-  // This function must be careful not to delete any references to old modules
-  // that might be re-used in the new set. This variable keeps them in scope
-  // while we generate the new map.
-  auto old_modules = std::move(modules_);
+  // Map from load address to index into |modules| argument.
+  std::map<uint64_t, size_t> new_module_address_to_index;
 
+  // Find new modules. These are indices into |modules| of the added ones.
+  std::vector<size_t> new_module_indices;
+  for (size_t i = 0; i < modules.size(); i++) {
+    new_module_address_to_index[modules[i].base] = i;
+
+    auto found_addr = modules_.find(modules[i].base);
+    // Even if address is a match, the library could have been swapped.
+    if (found_addr == modules_.end() ||
+        !RefersToSameModule(modules[i], found_addr->second))
+      new_module_indices.push_back(i);
+  }
+
+  // Find deleted modules and remove them.
+  std::vector<ModuleMap::iterator> deleted_modules;
+  for (auto iter = modules_.begin(); iter != modules_.end(); ++iter) {
+    auto found_index = new_module_address_to_index.find(iter->second.base);
+    if (found_index == new_module_address_to_index.end() ||
+        !RefersToSameModule(modules[found_index->second], iter->second))
+      deleted_modules.push_back(iter);
+  }
+
+  // First update for deleted modules since the addresses may overlap the
+  // added ones.
+  for (auto& deleted : deleted_modules) {
+    notifications_->WillUnloadModuleSymbols(deleted->second.symbols.get());
+    modules_.erase(deleted);
+  }
+  deleted_modules.clear();
+
+  // Process the added ones.
+  std::vector<LoadedModuleSymbols*> added_modules;
   SystemSymbols* system_symbols = target_symbols_->system_symbols();
-  for (const debug_ipc::Module& module : modules) {
+  for (const auto& added_index : new_module_indices) {
+    const debug_ipc::Module& module = modules[added_index];
+
     ModuleInfo info;
     info.name = module.name;
     info.build_id = module.build_id;
@@ -54,22 +87,25 @@ void ProcessSymbolsImpl::SetModules(
       // Success, make the LoadedModuleSymbolsImpl.
       info.symbols = std::make_unique<LoadedModuleSymbolsImpl>(
           std::move(module_symbols), module.base);
-    } else if (symbol_load_failure_callback_ &&
-               ExpectSymbolsForName(module.name)) {
-      symbol_load_failure_callback_(err);
+      added_modules.push_back(info.symbols.get());
+    } else if (ExpectSymbolsForName(module.name)) {
+      notifications_->OnSymbolLoadFailure(err);
     }
     modules_.emplace(std::piecewise_construct,
                      std::forward_as_tuple(module.base),
                      std::forward_as_tuple(std::move(info)));
   }
 
-  // Update the TargetSymbols last. It may have been keeping an old
-  // ModuleSymbols object alive that was needed above.
+  // Update the TargetSymbols.
   target_symbols_->RemoveAllModules();
   for (auto& pair : modules_) {
     if (pair.second.symbols)
       target_symbols_->AddModule(pair.second.symbols->module());
   }
+
+  // Send add notifications last so everything is in a consistent state.
+  for (auto& added_module : added_modules)
+    notifications_->DidLoadModuleSymbols(added_module);
 }
 
 TargetSymbols* ProcessSymbolsImpl::GetTargetSymbols() {
@@ -112,6 +148,12 @@ std::vector<uint64_t> ProcessSymbolsImpl::GetAddressesForFunction(
   }
 
   return result;
+}
+
+// static
+bool ProcessSymbolsImpl::RefersToSameModule(const debug_ipc::Module& a,
+                                            const ModuleInfo& b) {
+  return a.base == b.base && a.build_id == b.build_id;
 }
 
 const ProcessSymbolsImpl::ModuleInfo* ProcessSymbolsImpl::InfoForAddress(

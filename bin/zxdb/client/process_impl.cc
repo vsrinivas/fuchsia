@@ -21,13 +21,8 @@ ProcessImpl::ProcessImpl(TargetImpl* target,
       target_(target),
       koid_(koid),
       name_(name),
-      symbols_(target->symbols()),
-      weak_factory_(this) {
-  symbols_.set_symbol_load_failure_callback([this](const Err& err) {
-    for (auto& observer : observers())
-      observer.OnSymbolLoadFailure(this, err);
-  });
-}
+      symbols_(this, target->symbols()),
+      weak_factory_(this) {}
 
 ProcessImpl::~ProcessImpl() {
   // Send notifications for all destroyed threads.
@@ -203,6 +198,21 @@ void ProcessImpl::UpdateThreads(
       OnThreadExiting(record);
     }
   }
+}
+
+void ProcessImpl::DidLoadModuleSymbols(LoadedModuleSymbols* module) {
+  for (auto& observer : observers())
+    observer.DidLoadModuleSymbols(this, module);
+}
+
+void ProcessImpl::WillUnloadModuleSymbols(LoadedModuleSymbols* module) {
+  for (auto& observer : observers())
+    observer.WillUnloadModuleSymbols(this, module);
+}
+
+void ProcessImpl::OnSymbolLoadFailure(const Err& err) {
+  for (auto& observer : observers())
+    observer.OnSymbolLoadFailure(this, err);
 }
 
 }  // namespace zxdb

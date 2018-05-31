@@ -18,7 +18,7 @@ namespace zxdb {
 class TargetImpl;
 class ThreadImpl;
 
-class ProcessImpl : public Process {
+class ProcessImpl : public Process, public ProcessSymbolsImpl::Notifications {
  public:
   ProcessImpl(TargetImpl* target, uint64_t koid, const std::string& name);
   ~ProcessImpl() override;
@@ -55,6 +55,11 @@ class ProcessImpl : public Process {
  private:
   // Syncs the threads_ list to the new list of threads passed in .
   void UpdateThreads(const std::vector<debug_ipc::ThreadRecord>& new_threads);
+
+  // ProcessSymbolsImpl::Notifications implementation:
+  void DidLoadModuleSymbols(LoadedModuleSymbols* module) override;
+  void WillUnloadModuleSymbols(LoadedModuleSymbols* module) override;
+  void OnSymbolLoadFailure(const Err& err) override;
 
   TargetImpl* const target_;  // The target owns |this|.
   const uint64_t koid_;

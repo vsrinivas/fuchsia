@@ -55,8 +55,12 @@ class SystemSymbols {
 
   // Loads the build ID file, clearing existing state. Returns true if the
   // load succeeded. In both success and failure case, *msg will be filled with
-  // an informational message.
+  // an informational message. See also AddBuildIDToFileMapping().
   bool LoadBuildIDFile(std::string* msg);
+
+  // Explicitly inserts an ID mapping. Used for unit tests.
+  void AddBuildIDToFileMapping(const std::string& build_id,
+                               const std::string& file);
 
   // Retrieves the symbols for the module with the given build ID. If the
   // module's symbols have already been loaded, just puts an owning reference
