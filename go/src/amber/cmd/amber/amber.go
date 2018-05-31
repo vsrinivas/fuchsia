@@ -72,23 +72,21 @@ func main() {
 	}
 	defer d.CancelAll()
 
-	if *autoUpdate {
-		go func() {
-			supMon := daemon.NewSystemUpdateMonitor(d)
-			supMon.Start()
-			log.Println("system update monitor exited")
-		}()
-	}
+	supMon := daemon.NewSystemUpdateMonitor(d, *autoUpdate)
+	go func(s *daemon.SystemUpdateMonitor) {
+		s.Start()
+		log.Println("system update monitor exited")
+	}(supMon)
 
-	startFIDLSvr(d)
+	startFIDLSvr(d, supMon)
 
 	//block forever
 	select {}
 }
 
-func startFIDLSvr(d *daemon.Daemon) {
+func startFIDLSvr(d *daemon.Daemon, s *daemon.SystemUpdateMonitor) {
 	cxt := context.CreateFromStartupInfo()
-	apiSrvr := ipcserver.NewControlSrvr(d)
+	apiSrvr := ipcserver.NewControlSrvr(d, s)
 	cxt.OutgoingService.AddService(amber_fidl.ControlName, func(c zx.Channel) error {
 		return apiSrvr.Bind(c)
 	})

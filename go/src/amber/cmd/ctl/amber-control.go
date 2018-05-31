@@ -199,6 +199,8 @@ func main() {
 		fmt.Printf("%q not yet supported\n", os.Args[1])
 	case "test":
 		doTest(proxy)
+	case "system_update":
+		proxy.CheckForSystemUpdate()
 	default:
 		fmt.Printf("Error, %q is not a recognized command\n%s",
 			os.Args[1], usage)

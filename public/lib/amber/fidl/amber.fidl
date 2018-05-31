@@ -66,4 +66,6 @@ interface Control {
   8: PackagesActivated(vector<string> merkle);
 
   9: GetUpdateComplete(string name, string? version, string? merkle) -> (handle<channel> rplyChan);
+
+  10: CheckForSystemUpdate() -> (bool res);
 };

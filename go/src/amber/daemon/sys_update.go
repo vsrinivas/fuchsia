@@ -24,8 +24,12 @@ const updaterDir = "/pkgfs/packages/system_updater"
 const updaterBin = "bin/app"
 
 type SystemUpdateMonitor struct {
-	halt   uint32
-	daemon *Daemon
+	halt     uint32
+	daemon   *Daemon
+	checkNow chan struct{}
+	// if auto is allowed to be reset after instantiation, changes must be made
+	// in the run loop to avoid a panic
+	auto bool
 }
 
 type ErrNoUpdater string
@@ -38,12 +42,19 @@ func NewErrNoUpdater() ErrNoUpdater {
 	return ""
 }
 
-func NewSystemUpdateMonitor(d *Daemon) *SystemUpdateMonitor {
-	return &SystemUpdateMonitor{daemon: d, halt: 0}
+func NewSystemUpdateMonitor(d *Daemon, a bool) *SystemUpdateMonitor {
+	return &SystemUpdateMonitor{daemon: d, halt: 0, checkNow: make(chan struct{}), auto: a}
 }
 
 func (upMon *SystemUpdateMonitor) Stop() {
 	atomic.StoreUint32(&upMon.halt, 1)
+}
+
+func (upMon *SystemUpdateMonitor) Check() {
+	if atomic.LoadUint32(&upMon.halt) == 1 {
+		return
+	}
+	upMon.checkNow <- struct{}{}
 }
 
 func (upMon *SystemUpdateMonitor) Start() {
@@ -72,11 +83,23 @@ func (upMon *SystemUpdateMonitor) Start() {
 	}
 
 	timerDur := 3 * time.Hour
-	// do the first check almost immediately
-	timer := time.NewTimer(time.Second)
+	var timer *time.Timer
+	if upMon.auto {
+		// do the first check almost immediately
+		timer = time.NewTimer(time.Second)
+	}
+
 	for {
-		<-timer.C
-		timer.Reset(timerDur)
+		if upMon.auto {
+			select {
+			case <-timer.C:
+				timer.Reset(timerDur)
+			case <-upMon.checkNow:
+			}
+		} else {
+			<-upMon.checkNow
+		}
+
 		if atomic.LoadUint32(&upMon.halt) == 1 {
 			return
 		}
@@ -106,6 +129,8 @@ func (upMon *SystemUpdateMonitor) Start() {
 			// TODO(jmatt) find a way to invoke the new updater directly
 			c := exec.Command("run", "system_updater")
 			c.Start()
+		} else {
+			log.Println("sys_upd_mon: no newer system version available")
 		}
 		merkle = newMerkle
 	}

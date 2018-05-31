@@ -27,11 +27,12 @@ type ControlSrvr struct {
 	activations chan<- string
 	compReqs    chan<- *completeUpdateRequest
 	writeReqs   chan<- *startUpdateRequest
+	sysUpdate   *daemon.SystemUpdateMonitor
 }
 
 const ZXSIO_DAEMON_ERROR = zx.SignalUser0
 
-func NewControlSrvr(d *daemon.Daemon) *ControlSrvr {
+func NewControlSrvr(d *daemon.Daemon, s *daemon.SystemUpdateMonitor) *ControlSrvr {
 	go bindings.Serve()
 	a := make(chan string, 5)
 	c := make(chan *completeUpdateRequest, 1)
@@ -45,6 +46,7 @@ func NewControlSrvr(d *daemon.Daemon) *ControlSrvr {
 		activations: a,
 		compReqs:    c,
 		writeReqs:   w,
+		sysUpdate:   s,
 	}
 }
 
@@ -59,6 +61,14 @@ func (c *ControlSrvr) AddSrc(cfg amber.SourceConfig) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func (c *ControlSrvr) CheckForSystemUpdate() (bool, error) {
+	if c.sysUpdate != nil {
+		c.sysUpdate.Check()
+		return true, nil
+	}
+	return false, nil
 }
 
 func (c *ControlSrvr) RemoveSrc(url string) (bool, error) {
