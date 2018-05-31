@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
-  name = "cloud_provider"
+  name = "fuchsia.ledger.cloud"
 
   sources = [
     "cloud_provider.fidl",

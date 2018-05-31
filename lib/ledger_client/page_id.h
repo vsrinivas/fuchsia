@@ -18,7 +18,7 @@ namespace modular {
 // JSON serialization of arbitrary page IDs as JSON string encoding involves a
 // potentially non-invertible UTF-8 encoding. Instead, use |PageIdFromBase64|
 // and |PageIdToBase64|.
-ledger::PageId MakePageId(const std::string& value);
+::ledger::PageId MakePageId(const std::string& value);
 
 }  // namespace modular
 }  // namespace fuchsia

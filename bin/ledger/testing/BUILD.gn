@@ -34,6 +34,7 @@ source_set("lib") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
     "//peridot/bin/cloud_provider_firebase/fidl",
+    "//peridot/bin/ledger/fidl/include",
     "//peridot/bin/ledger/fidl_helpers",
     "//peridot/bin/ledger/filesystem",
     "//peridot/public/lib/auth/fidl",
@@ -69,6 +70,7 @@ source_set("ledger_instance_factory") {
     ":lib",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/fidl",
+    "//peridot/bin/ledger/fidl/include",
     "//peridot/bin/ledger/fidl_helpers",
     "//peridot/public/lib/ledger/fidl",
   ]

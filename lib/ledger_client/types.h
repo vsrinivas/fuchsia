@@ -5,16 +5,17 @@
 #ifndef PERIDOT_LIB_LEDGER_CLIENT_TYPES_H_
 #define PERIDOT_LIB_LEDGER_CLIENT_TYPES_H_
 
-#include <algorithm>
+#include <ledger/cpp/fidl.h>
 #include <lib/fidl/cpp/array.h>
 #include <lib/fidl/cpp/vector.h>
+#include <algorithm>
 
 namespace fuchsia {
 namespace modular {
 
-using LedgerPageId = ledger::PageId;
+using LedgerPageId = ::ledger::PageId;
 using LedgerPageKey = fidl::VectorPtr<uint8_t>;
-using LedgerToken = std::unique_ptr<ledger::Token>;
+using LedgerToken = std::unique_ptr<::ledger::Token>;
 
 inline bool PageIdsEqual(const LedgerPageId& a, const LedgerPageId& b) {
   return a.id == b.id;

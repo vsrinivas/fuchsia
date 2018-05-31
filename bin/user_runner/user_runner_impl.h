@@ -9,8 +9,8 @@
 #include <string>
 #include <vector>
 
-#include <cloud_provider/cpp/fidl.h>
-#include <cloud_provider_firebase/cpp/fidl.h>
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
@@ -133,7 +133,7 @@ class UserRunnerImpl : modular::internal::UserRunner,
   fuchsia::sys::ServiceProviderPtr GetServiceProvider(AppConfig config);
   fuchsia::sys::ServiceProviderPtr GetServiceProvider(const std::string& url);
 
-  cloud_provider::CloudProviderPtr GetCloudProvider();
+  fuchsia::ledger::cloud::CloudProviderPtr GetCloudProvider();
 
   // Called during initialization. Schedules the given action to be executed
   // during termination. This allows to create something like an asynchronous
@@ -168,7 +168,7 @@ class UserRunnerImpl : modular::internal::UserRunner,
   modular_auth::TokenProviderFactoryPtr token_provider_factory_;
   modular::internal::UserContextPtr user_context_;
   std::unique_ptr<AppClient<Lifecycle>> cloud_provider_app_;
-  cloud_provider_firebase::FactoryPtr cloud_provider_factory_;
+  fuchsia::ledger::cloud::firebase::FactoryPtr cloud_provider_factory_;
   std::unique_ptr<AppClient<ledger_internal::LedgerController>> ledger_app_;
   ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory_;
   ledger_internal::LedgerRepositoryPtr ledger_repository_;

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library cloud_provider_firebase;
+library fuchsia.ledger.cloud.firebase;
 
 // Configuration to use when connecting to the Firebase server.
 struct Config {
@@ -23,6 +23,6 @@ interface Factory {
   //     associated with user for whom the cloud provider is running.
   1: GetCloudProvider(Config config,
                       modular_auth.TokenProvider token_provider,
-                      request<cloud_provider.CloudProvider> cloud_provider)
-      -> (cloud_provider.Status @status);
+                      request<fuchsia.ledger.cloud.CloudProvider> cloud_provider)
+      -> (fuchsia.ledger.cloud.Status @status);
 };

@@ -4,7 +4,8 @@
 
 #include "peridot/bin/cloud_provider_firestore/app/factory_impl.h"
 
-#include <cloud_provider_firestore/cpp/fidl.h>
+#include <fuchsia/ledger/cloud/firestore/cpp/fidl.h>
+
 #include "lib/callback/capture.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/gtest/test_with_message_loop.h"

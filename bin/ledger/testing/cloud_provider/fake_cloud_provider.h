@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_TESTING_CLOUD_PROVIDER_FAKE_CLOUD_PROVIDER_H_
 #define PERIDOT_BIN_LEDGER_TESTING_CLOUD_PROVIDER_FAKE_CLOUD_PROVIDER_H_
 
-#include <cloud_provider/cpp/fidl.h>
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include "lib/callback/auto_cleanable.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"

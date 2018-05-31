@@ -8,7 +8,9 @@
 #include <memory>
 #include <string>
 
-#include <cloud_provider/cpp/fidl.h>
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
+
+#include "peridot/bin/ledger/fidl/include/types.h"
 
 #include "peridot/bin/ledger/filesystem/detached_path.h"
 

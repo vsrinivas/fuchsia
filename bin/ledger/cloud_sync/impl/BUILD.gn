@@ -31,6 +31,7 @@ source_set("impl") {
     "//peridot/bin/ledger/encryption/impl",
     "//peridot/bin/ledger/encryption/public",
     "//peridot/bin/ledger/environment",
+    "//peridot/bin/ledger/fidl/include",
     "//peridot/bin/ledger/storage/public",
     "//peridot/public/lib/cloud_provider/fidl",
   ]

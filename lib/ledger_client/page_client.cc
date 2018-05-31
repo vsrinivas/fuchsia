@@ -24,8 +24,8 @@ PageClient::PageClient(std::string context, LedgerClient* ledger_client,
       page_(ledger_client_->GetPage(this, context_, page_id_)),
       prefix_(std::move(prefix)) {
   page_->GetSnapshot(NewRequest(), to_array(prefix_), binding_.NewBinding(),
-                     [this](ledger::Status status) {
-                       if (status != ledger::Status::OK) {
+                     [this](::ledger::Status status) {
+                       if (status != ::ledger::Status::OK) {
                          FXL_LOG(ERROR)
                              << context_ << " Page.GetSnapshot() " << status;
                        }
@@ -37,8 +37,8 @@ PageClient::~PageClient() {
   ledger_client_->DropPageClient(this);
 }
 
-fidl::InterfaceRequest<ledger::PageSnapshot> PageClient::NewRequest() {
-  page_snapshot_ = std::make_shared<ledger::PageSnapshotPtr>();
+fidl::InterfaceRequest<::ledger::PageSnapshot> PageClient::NewRequest() {
+  page_snapshot_ = std::make_shared<::ledger::PageSnapshotPtr>();
   auto ret = (*page_snapshot_).NewRequest();
   (*page_snapshot_).set_error_handler([this] {
     FXL_LOG(ERROR) << context_ << ": "
@@ -47,22 +47,22 @@ fidl::InterfaceRequest<ledger::PageSnapshot> PageClient::NewRequest() {
   return ret;
 }
 
-fidl::InterfaceRequest<ledger::PageSnapshot> PageClient::MaybeUpdateSnapshot(
-    const ledger::ResultState result_state) {
+fidl::InterfaceRequest<::ledger::PageSnapshot> PageClient::MaybeUpdateSnapshot(
+    const ::ledger::ResultState result_state) {
   switch (result_state) {
-    case ledger::ResultState::PARTIAL_CONTINUED:
-    case ledger::ResultState::PARTIAL_STARTED:
+    case ::ledger::ResultState::PARTIAL_CONTINUED:
+    case ::ledger::ResultState::PARTIAL_STARTED:
       return nullptr;
 
-    case ledger::ResultState::COMPLETED:
-    case ledger::ResultState::PARTIAL_COMPLETED:
+    case ::ledger::ResultState::COMPLETED:
+    case ::ledger::ResultState::PARTIAL_COMPLETED:
       return NewRequest();
   }
 }
 
 // |PageWatcher|
-void PageClient::OnChange(ledger::PageChange page,
-                          ledger::ResultState result_state,
+void PageClient::OnChange(::ledger::PageChange page,
+                          ::ledger::ResultState result_state,
                           OnChangeCallback callback) {
   // According to their fidl spec, neither page nor page->changed_entries
   // should be null.
@@ -107,17 +107,17 @@ void PageClient::OnPageConflict(Conflict* const conflict) {
 
 namespace {
 
-void GetEntriesRecursive(ledger::PageSnapshot* const snapshot,
-                         std::vector<ledger::Entry>* const entries,
-                         std::unique_ptr<ledger::Token> next_token,
-                         std::function<void(ledger::Status)> done) {
+void GetEntriesRecursive(::ledger::PageSnapshot* const snapshot,
+                         std::vector<::ledger::Entry>* const entries,
+                         std::unique_ptr<::ledger::Token> next_token,
+                         std::function<void(::ledger::Status)> done) {
   snapshot->GetEntries(
       nullptr /* key_start */, std::move(next_token),
       fxl::MakeCopyable([snapshot, entries, done = std::move(done)](
-                            ledger::Status status, auto new_entries,
+                            ::ledger::Status status, auto new_entries,
                             auto next_token) mutable {
-        if (status != ledger::Status::OK &&
-            status != ledger::Status::PARTIAL_RESULT) {
+        if (status != ::ledger::Status::OK &&
+            status != ::ledger::Status::PARTIAL_RESULT) {
           done(status);
           return;
         }
@@ -126,8 +126,8 @@ void GetEntriesRecursive(ledger::PageSnapshot* const snapshot,
           entries->push_back(std::move(new_entries->at(i)));
         }
 
-        if (status == ledger::Status::OK) {
-          done(ledger::Status::OK);
+        if (status == ::ledger::Status::OK) {
+          done(::ledger::Status::OK);
           return;
         }
 
@@ -138,9 +138,9 @@ void GetEntriesRecursive(ledger::PageSnapshot* const snapshot,
 
 }  // namespace
 
-void GetEntries(ledger::PageSnapshot* const snapshot,
-                std::vector<ledger::Entry>* const entries,
-                std::function<void(ledger::Status)> done) {
+void GetEntries(::ledger::PageSnapshot* const snapshot,
+                std::vector<::ledger::Entry>* const entries,
+                std::function<void(::ledger::Status)> done) {
   GetEntriesRecursive(snapshot, entries, nullptr /* next_token */,
                       std::move(done));
 }

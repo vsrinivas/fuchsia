@@ -27,7 +27,7 @@ class SessionStorageTest : public testing::TestWithLedger {
     auto future_story = storage->CreateStory(nullptr /* extra */);
     bool done{};
     fidl::StringPtr story_id;
-    future_story->Then([&](fidl::StringPtr id, ledger::PageId) {
+    future_story->Then([&](fidl::StringPtr id, ::ledger::PageId) {
       done = true;
       story_id = std::move(id);
     });
@@ -55,8 +55,8 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
   auto future_story = storage->CreateStory(std::move(extra_entries));
   bool done{};
   fidl::StringPtr story_id;
-  ledger::PageId page_id;
-  future_story->Then([&](fidl::StringPtr id, ledger::PageId page) {
+  ::ledger::PageId page_id;
+  future_story->Then([&](fidl::StringPtr id, ::ledger::PageId page) {
     done = true;
     story_id = std::move(id);
     page_id = std::move(page);
@@ -110,7 +110,7 @@ TEST_F(SessionStorageTest, CreateGetAllDelete) {
 
   // Immediately after creation is complete, delete it.
   FuturePtr<> delete_done;
-  future_story->Then([&](fidl::StringPtr id, ledger::PageId page_id) {
+  future_story->Then([&](fidl::StringPtr id, ::ledger::PageId page_id) {
     delete_done = storage->DeleteStory(id);
   });
 
@@ -146,7 +146,7 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
   auto future_story1 = storage->CreateStory(nullptr);
   auto future_story2 = storage->CreateStory(nullptr);
 
-  auto wait = Future<fidl::StringPtr, ledger::PageId>::Wait(
+  auto wait = Future<fidl::StringPtr, ::ledger::PageId>::Wait(
       {future_story1, future_story2});
 
   bool done{};
@@ -156,15 +156,15 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
   // |future_story1| and |future_story2| are complete, so we can get their
   // contents synchronously.
   fidl::StringPtr story1_id;
-  ledger::PageId story1_pageid;
-  future_story1->Then([&](fidl::StringPtr id, ledger::PageId page_id) {
+  ::ledger::PageId story1_pageid;
+  future_story1->Then([&](fidl::StringPtr id, ::ledger::PageId page_id) {
     story1_id = std::move(id);
     story1_pageid = std::move(page_id);
   });
 
   fidl::StringPtr story2_id;
-  ledger::PageId story2_pageid;
-  future_story2->Then([&](fidl::StringPtr id, ledger::PageId page_id) {
+  ::ledger::PageId story2_pageid;
+  future_story2->Then([&](fidl::StringPtr id, ::ledger::PageId page_id) {
     story2_id = std::move(id);
     story2_pageid = std::move(page_id);
   });

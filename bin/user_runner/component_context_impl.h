@@ -56,7 +56,7 @@ class ComponentContextImpl : public ComponentContext {
 
  private:
   // |ComponentContext|
-  void GetLedger(fidl::InterfaceRequest<ledger::Ledger> request,
+  void GetLedger(fidl::InterfaceRequest<::ledger::Ledger> request,
                  GetLedgerCallback result) override;
 
   // |ComponentContext|

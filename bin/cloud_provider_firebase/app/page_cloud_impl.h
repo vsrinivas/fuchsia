@@ -8,12 +8,13 @@
 #include <memory>
 #include <utility>
 
-#include <cloud_provider/cpp/fidl.h>
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include "lib/callback/cancellable.h"
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage.h"
+#include "peridot/bin/cloud_provider_firebase/include/types.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/commit_watcher.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/page_cloud_handler.h"
 #include "peridot/lib/firebase/firebase.h"

@@ -9,11 +9,12 @@
 #include <memory>
 #include <vector>
 
-#include <cloud_provider/cpp/fidl.h>
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
+#include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 

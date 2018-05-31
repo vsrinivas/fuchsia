@@ -4,7 +4,7 @@
 
 #include "peridot/bin/cloud_provider_firestore/app/cloud_provider_impl.h"
 
-#include <cloud_provider/cpp/fidl.h>
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "lib/gtest/test_with_message_loop.h"

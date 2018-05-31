@@ -5,8 +5,8 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_APP_CLOUD_PROVIDER_IMPL_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIRESTORE_APP_CLOUD_PROVIDER_IMPL_H_
 
-#include <cloud_provider/cpp/fidl.h>
-#include <cloud_provider_firestore/cpp/fidl.h>
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <fuchsia/ledger/cloud/firestore/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"

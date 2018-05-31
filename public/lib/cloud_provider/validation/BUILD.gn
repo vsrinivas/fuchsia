@@ -12,6 +12,7 @@ executable("validation") {
     "convert.h",
     "device_set_test.cc",
     "page_cloud_test.cc",
+    "types.h",
     "validation_test.cc",
     "validation_test.h",
   ]

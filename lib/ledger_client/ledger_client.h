@@ -26,15 +26,15 @@ class PageClient;
 // The primary purpose of the ledger client is to act as conflict resolver
 // factory which is able to dispatch conflicts to the page clients based on
 // their page and key prefix.
-class LedgerClient : ledger::ConflictResolverFactory {
+class LedgerClient : ::ledger::ConflictResolverFactory {
  public:
   LedgerClient(ledger_internal::LedgerRepository* ledger_repository,
                const std::string& name,
                std::function<void()> error);
-  LedgerClient(ledger::LedgerPtr ledger);
+  LedgerClient(::ledger::LedgerPtr ledger);
   ~LedgerClient() override;
 
-  ledger::Ledger* ledger() const { return ledger_.get(); }
+  ::ledger::Ledger* ledger() const { return ledger_.get(); }
 
   // A callback that is invoked every time one conflict resolution completes.
   // Used only for testing so far.
@@ -66,9 +66,8 @@ class LedgerClient : ledger::ConflictResolverFactory {
 
   // Used by PageClient to access a new page on creation. Two page clients of
   // the same page share the same ledger::Page connection.
-  ledger::Page* GetPage(PageClient* page_client,
-                        const std::string& context,
-                        const ledger::PageId& page_id);
+  ::ledger::Page* GetPage(PageClient* page_client, const std::string& context,
+                          const ::ledger::PageId& page_id);
 
   // PageClient deregisters itself on destrution.
   void DropPageClient(PageClient* page_client);
@@ -80,7 +79,7 @@ class LedgerClient : ledger::ConflictResolverFactory {
   // |ConflictResolverFactory|
   void NewConflictResolver(
       LedgerPageId page_id,
-      fidl::InterfaceRequest<ledger::ConflictResolver> request) override;
+      fidl::InterfaceRequest<::ledger::ConflictResolver> request) override;
 
   void ClearConflictResolver(const LedgerPageId& page_id);
 
@@ -89,9 +88,9 @@ class LedgerClient : ledger::ConflictResolverFactory {
   const std::string ledger_name_;
 
   // The ledger this is a client of.
-  ledger::LedgerPtr ledger_;
+  ::ledger::LedgerPtr ledger_;
 
-  fidl::BindingSet<ledger::ConflictResolverFactory> bindings_;
+  fidl::BindingSet<::ledger::ConflictResolverFactory> bindings_;
   std::vector<std::unique_ptr<ConflictResolverImpl>> resolvers_;
 
   // ledger::Page connections are owned by LedgerClient, and only handed to
@@ -107,21 +106,21 @@ class LedgerClient : ledger::ConflictResolverFactory {
 
 // A conflict resolver for one page that delegates the diff for a key to the
 // appropriate page client that handles that key.
-class LedgerClient::ConflictResolverImpl : ledger::ConflictResolver {
+class LedgerClient::ConflictResolverImpl : ::ledger::ConflictResolver {
  public:
   ConflictResolverImpl(LedgerClient* ledger_client, const LedgerPageId& page_id);
   ~ConflictResolverImpl() override;
 
-  void Connect(fidl::InterfaceRequest<ledger::ConflictResolver> request);
+  void Connect(fidl::InterfaceRequest<::ledger::ConflictResolver> request);
 
   const LedgerPageId& page_id() const { return page_id_; }
 
  private:
   // |ConflictResolver|
-  void Resolve(fidl::InterfaceHandle<ledger::PageSnapshot> left_version,
-               fidl::InterfaceHandle<ledger::PageSnapshot> right_version,
-               fidl::InterfaceHandle<ledger::PageSnapshot> common_version,
-               fidl::InterfaceHandle<ledger::MergeResultProvider>
+  void Resolve(fidl::InterfaceHandle<::ledger::PageSnapshot> left_version,
+               fidl::InterfaceHandle<::ledger::PageSnapshot> right_version,
+               fidl::InterfaceHandle<::ledger::PageSnapshot> common_version,
+               fidl::InterfaceHandle<::ledger::MergeResultProvider>
                    result_provider) override;
 
   void GetPageClients(std::vector<PageClient*>* page_clients);
@@ -131,7 +130,7 @@ class LedgerClient::ConflictResolverImpl : ledger::ConflictResolver {
   LedgerClient* const ledger_client_;
   LedgerPageId page_id_;
 
-  fidl::BindingSet<ledger::ConflictResolver> bindings_;
+  fidl::BindingSet<::ledger::ConflictResolver> bindings_;
 
   OperationQueue operation_queue_;
   class ResolveCall;

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cloud_provider/cpp/fidl.h>
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
 
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
@@ -10,6 +10,7 @@
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/random/uuid.h"
 #include "peridot/public/lib/cloud_provider/validation/convert.h"
+#include "peridot/public/lib/cloud_provider/validation/types.h"
 #include "peridot/public/lib/cloud_provider/validation/validation_test.h"
 
 namespace cloud_provider {

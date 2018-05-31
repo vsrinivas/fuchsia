@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 
-#include <cloud_provider/cpp/fidl.h>
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <ledger_internal/cpp/fidl.h>
 #include <modular_auth/cpp/fidl.h>
 #include <netconnector/cpp/fidl.h>
@@ -19,6 +19,7 @@
 #include "peridot/bin/ledger/app/ledger_repository_impl.h"
 #include "peridot/bin/ledger/cloud_sync/public/user_config.h"
 #include "peridot/bin/ledger/environment/environment.h"
+#include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/p2p_sync/public/user_communicator_factory.h"
 
 namespace ledger {

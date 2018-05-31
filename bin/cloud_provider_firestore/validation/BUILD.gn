@@ -14,6 +14,7 @@ executable("validation") {
 
   deps = [
     "//garnet/public/lib/fxl",
+    "//peridot/bin/cloud_provider_firestore/include",
     "//peridot/bin/cloud_provider_firestore/testing",
     "//peridot/public/lib/cloud_provider/validation/launcher",
   ]

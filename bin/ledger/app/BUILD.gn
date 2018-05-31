@@ -94,6 +94,7 @@ source_set("lib") {
     "//peridot/bin/ledger/encryption/primitives",
     "//peridot/bin/ledger/environment",
     "//peridot/bin/ledger/fidl",
+    "//peridot/bin/ledger/fidl/include",
     "//peridot/bin/ledger/fidl_helpers",
     "//peridot/bin/ledger/filesystem",
     "//peridot/bin/ledger/p2p_provider/impl",

@@ -41,6 +41,7 @@ source_set("lib") {
     "//garnet/public/lib/fxl",
     "//peridot/bin/cloud_provider_firebase/device_set",
     "//peridot/bin/cloud_provider_firebase/fidl",
+    "//peridot/bin/cloud_provider_firebase/include",
     "//peridot/bin/cloud_provider_firebase/page_handler",
     "//peridot/lib/firebase_auth",
     "//peridot/public/lib/auth/fidl",

@@ -12,7 +12,7 @@
 namespace fuchsia {
 namespace modular {
 
-std::string LedgerStatusToString(ledger::Status status);
+std::string LedgerStatusToString(::ledger::Status status);
 
 }  // namespace modular
 }  // namespace fuchsia

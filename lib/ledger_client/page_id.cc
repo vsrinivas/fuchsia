@@ -7,8 +7,8 @@
 namespace fuchsia {
 namespace modular {
 
-ledger::PageId MakePageId(const std::string& value) {
-  ledger::PageId page_id;
+::ledger::PageId MakePageId(const std::string& value) {
+  ::ledger::PageId page_id;
   memset(page_id.id.mutable_data(), 0, page_id.id.count());
   size_t size = std::min(value.length(), page_id.id.count());
   memcpy(page_id.id.mutable_data(), value.data(), size);

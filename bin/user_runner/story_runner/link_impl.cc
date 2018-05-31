@@ -23,7 +23,7 @@ namespace modular {
 
 class LinkImpl::ReadLinkDataCall : public PageOperation<fidl::StringPtr> {
  public:
-  ReadLinkDataCall(ledger::Page* const page, const LinkPath& link_path,
+  ReadLinkDataCall(::ledger::Page* const page, const LinkPath& link_path,
                    ResultCall result_call)
       : PageOperation("LinkImpl::ReadLinkDataCall", page,
                       std::move(result_call)),
@@ -34,8 +34,8 @@ class LinkImpl::ReadLinkDataCall : public PageOperation<fidl::StringPtr> {
     FlowToken flow{this, &result_};
 
     page()->GetSnapshot(page_snapshot_.NewRequest(), nullptr, nullptr,
-                        Protect([this, flow](ledger::Status status) {
-                          if (status != ledger::Status::OK) {
+                        Protect([this, flow](::ledger::Status status) {
+                          if (status != ::ledger::Status::OK) {
                             FXL_LOG(ERROR)
                                 << trace_name() << " " << link_key_ << " "
                                 << " Page.GetSnapshot() " << status;
@@ -49,9 +49,9 @@ class LinkImpl::ReadLinkDataCall : public PageOperation<fidl::StringPtr> {
   void Cont(FlowToken flow) {
     page_snapshot_->Get(
         to_array(link_key_),
-        [this, flow](ledger::Status status, fuchsia::mem::BufferPtr value) {
-          if (status != ledger::Status::OK) {
-            if (status != ledger::Status::KEY_NOT_FOUND) {
+        [this, flow](::ledger::Status status, fuchsia::mem::BufferPtr value) {
+          if (status != ::ledger::Status::OK) {
+            if (status != ::ledger::Status::KEY_NOT_FOUND) {
               // It's expected that the key is not found when the link is
               // accessed for the first time. Don't log an error then.
               FXL_LOG(ERROR) << trace_name() << " " << link_key_ << " "
@@ -73,7 +73,7 @@ class LinkImpl::ReadLinkDataCall : public PageOperation<fidl::StringPtr> {
         });
   }
 
-  ledger::PageSnapshotPtr page_snapshot_;
+  ::ledger::PageSnapshotPtr page_snapshot_;
   const std::string link_key_;
   fidl::StringPtr result_;
 
@@ -82,7 +82,7 @@ class LinkImpl::ReadLinkDataCall : public PageOperation<fidl::StringPtr> {
 
 class LinkImpl::WriteLinkDataCall : public PageOperation<> {
  public:
-  WriteLinkDataCall(ledger::Page* const page, const LinkPathPtr& link_path,
+  WriteLinkDataCall(::ledger::Page* const page, const LinkPathPtr& link_path,
                     fidl::StringPtr data, ResultCall result_call)
       : PageOperation("LinkImpl::WriteLinkDataCall", page,
                       std::move(result_call)),
@@ -94,8 +94,8 @@ class LinkImpl::WriteLinkDataCall : public PageOperation<> {
     FlowToken flow{this};
 
     page()->Put(to_array(link_key_), to_array(data_),
-                Protect([this, flow](ledger::Status status) {
-                  if (status != ledger::Status::OK) {
+                Protect([this, flow](::ledger::Status status) {
+                  if (status != ::ledger::Status::OK) {
                     FXL_LOG(ERROR) << trace_name() << " " << link_key_ << " "
                                    << " Page.Put() " << status;
                   }
@@ -110,7 +110,7 @@ class LinkImpl::WriteLinkDataCall : public PageOperation<> {
 
 class LinkImpl::FlushWatchersCall : public PageOperation<> {
  public:
-  FlushWatchersCall(ledger::Page* const page, ResultCall result_call)
+  FlushWatchersCall(::ledger::Page* const page, ResultCall result_call)
       : PageOperation("LinkImpl::FlushWatchersCall", page,
                       std::move(result_call)) {}
 
@@ -124,8 +124,8 @@ class LinkImpl::FlushWatchersCall : public PageOperation<> {
     // call, then all link watcher notifications are guaranteed to have been
     // received when this Operation is Done().
 
-    page()->StartTransaction(Protect([this, flow](ledger::Status status) {
-      if (status != ledger::Status::OK) {
+    page()->StartTransaction(Protect([this, flow](::ledger::Status status) {
+      if (status != ::ledger::Status::OK) {
         FXL_LOG(ERROR) << trace_name() << " "
                        << " Page.StartTransaction() " << status;
         return;
@@ -135,8 +135,8 @@ class LinkImpl::FlushWatchersCall : public PageOperation<> {
   }
 
   void Cont(FlowToken flow) {
-    page()->Commit(Protect([this, flow](ledger::Status status) {
-      if (status != ledger::Status::OK) {
+    page()->Commit(Protect([this, flow](::ledger::Status status) {
+      if (status != ::ledger::Status::OK) {
         FXL_LOG(ERROR) << trace_name() << " "
                        << " Page.Commit() " << status;
         return;

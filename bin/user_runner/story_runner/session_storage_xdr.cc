@@ -14,7 +14,7 @@ namespace modular {
 
 namespace {
 
-ledger::PageId PageIdFromBase64(const std::string& base64) {
+::ledger::PageId PageIdFromBase64(const std::string& base64) {
   // Both base64 libraries available to us require that we allocate an output
   // buffer large enough to decode any base64 string of the input length, which
   // for us it does not know contains padding since our target size is 16, so we
@@ -22,7 +22,7 @@ ledger::PageId PageIdFromBase64(const std::string& base64) {
   // results in a slightly larger transport size.
 
   std::string decoded;
-  ledger::PageId page_id;
+  ::ledger::PageId page_id;
 
   if (base64url::Base64UrlDecode(base64, &decoded)) {
     size_t size;
@@ -44,7 +44,7 @@ ledger::PageId PageIdFromBase64(const std::string& base64) {
   return page_id;
 }
 
-std::string PageIdToBase64(const ledger::PageId& page_id) {
+std::string PageIdToBase64(const ::ledger::PageId& page_id) {
   return base64url::Base64UrlEncode(
       {reinterpret_cast<const char*>(page_id.id.data()), page_id.id.count()});
 }
@@ -79,7 +79,7 @@ void XdrStoryData_v1(XdrContext* const xdr,
       if (page_id.empty()) {
         data->story_page_id = nullptr;
       } else {
-        data->story_page_id = ledger::PageId::New();
+        data->story_page_id = ::ledger::PageId::New();
         *data->story_page_id = PageIdFromBase64(page_id);
       }
       break;
@@ -111,7 +111,7 @@ void XdrStoryInfo_v2(XdrContext* const xdr, StoryInfo* const data) {
   xdr->Field("extra", &data->extra, XdrStoryInfoExtraEntry_v2);
 }
 
-void XdrPageId_v2(XdrContext* const xdr, ledger::PageId* const data) {
+void XdrPageId_v2(XdrContext* const xdr, ::ledger::PageId* const data) {
   xdr->Field("id", &data->id);
 }
 

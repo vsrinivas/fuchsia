@@ -7,7 +7,7 @@
 #include <memory>
 #include <string>
 
-#include <cloud_provider_firebase/cpp/fidl.h>
+#include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
@@ -71,8 +71,8 @@ constexpr char kLedgerDashboardUrl[] = "ledger_dashboard";
 constexpr char kLedgerDashboardEnvLabel[] = "ledger-dashboard";
 constexpr char kClipboardAgentUrl[] = "clipboard_agent";
 
-cloud_provider_firebase::Config GetLedgerFirebaseConfig() {
-  cloud_provider_firebase::Config firebase_config;
+fuchsia::ledger::cloud::firebase::Config GetLedgerFirebaseConfig() {
+  fuchsia::ledger::cloud::firebase::Config firebase_config;
   firebase_config.server_id = kFirebaseServerId;
   firebase_config.api_key = kFirebaseApiKey;
   return firebase_config;
@@ -238,7 +238,7 @@ void UserRunnerImpl::InitializeLedger() {
   });
   AtEnd(Teardown(kBasicTimeout, "Ledger", ledger_app_.get()));
 
-  cloud_provider::CloudProviderPtr cloud_provider;
+  fuchsia::ledger::cloud::CloudProviderPtr cloud_provider;
   if (account_) {
     // If not running in Guest mode, spin up a cloud provider for Ledger to use
     // for syncing.
@@ -263,8 +263,8 @@ void UserRunnerImpl::InitializeLedger() {
   // client is configured to.
   ledger_repository_factory_->GetRepository(
       "/data", std::move(cloud_provider), ledger_repository_.NewRequest(),
-      [this](ledger::Status status) {
-        if (status != ledger::Status::OK) {
+      [this](::ledger::Status status) {
+        if (status != ::ledger::Status::OK) {
           FXL_LOG(ERROR)
               << "LedgerRepositoryFactory.GetRepository() failed: "
               << LedgerStatusToString(status) << std::endl
@@ -298,8 +298,8 @@ void UserRunnerImpl::InitializeLedgerDashboard() {
                  request) {
         if (ledger_repository_) {
           ledger_repository_->GetLedgerRepositoryDebug(
-              std::move(request), [](ledger::Status status) {
-                if (status != ledger::Status::OK) {
+              std::move(request), [](::ledger::Status status) {
+                if (status != ::ledger::Status::OK) {
                   FXL_LOG(ERROR)
                       << "LedgerRepository.GetLedgerRepositoryDebug() failed: "
                       << LedgerStatusToString(status);
@@ -330,7 +330,7 @@ void UserRunnerImpl::InitializeDeviceMap() {
 
   device_map_impl_ =
       std::make_unique<DeviceMapImpl>(device_name_, device_id, device_profile,
-                                      ledger_client_.get(), ledger::PageId());
+                                      ledger_client_.get(), ::ledger::PageId());
   user_scope_->AddService<DeviceMap>(
       [this](fidl::InterfaceRequest<DeviceMap> request) {
         // device_map_impl_ may be reset before user_scope_.
@@ -550,7 +550,7 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
   // outlive the stories which contain modules that are connected to those
   // agents.
   session_storage_.reset(
-      new SessionStorage(ledger_client_.get(), ledger::PageId()));
+      new SessionStorage(ledger_client_.get(), ::ledger::PageId()));
   AtEnd(Reset(&session_storage_));
   story_provider_impl_.reset(new StoryProviderImpl(
       user_scope_.get(), device_map_impl_->current_device_id(),
@@ -573,7 +573,7 @@ void UserRunnerImpl::InitializeMaxwellAndModular(
 
   focus_handler_ =
       std::make_unique<FocusHandler>(device_map_impl_->current_device_id(),
-                                     ledger_client_.get(), ledger::PageId());
+                                     ledger_client_.get(), ::ledger::PageId());
   focus_handler_->AddProviderBinding(std::move(focus_provider_request_maxwell));
   focus_handler_->AddProviderBinding(
       std::move(focus_provider_request_story_provider));
@@ -718,7 +718,7 @@ void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
   link_path.module_path.resize(0);
   link_path.link_name = kUserShellLinkName;
   user_shell_link_ = std::make_unique<LinkImpl>(
-      ledger_client_.get(), ledger::PageId(), std::move(link_path), nullptr);
+      ledger_client_.get(), ::ledger::PageId(), std::move(link_path), nullptr);
   user_shell_link_->Connect(std::move(request));
 }
 
@@ -760,8 +760,8 @@ void UserRunnerImpl::ConnectToEntityProvider(
                                          std::move(agent_controller_request));
 }
 
-cloud_provider::CloudProviderPtr UserRunnerImpl::GetCloudProvider() {
-  cloud_provider::CloudProviderPtr cloud_provider;
+fuchsia::ledger::cloud::CloudProviderPtr UserRunnerImpl::GetCloudProvider() {
+  fuchsia::ledger::cloud::CloudProviderPtr cloud_provider;
   fidl::InterfaceHandle<modular_auth::TokenProvider> ledger_token_provider;
   token_provider_factory_->GetTokenProvider(kLedgerAppUrl,
                                             ledger_token_provider.NewRequest());
@@ -769,8 +769,8 @@ cloud_provider::CloudProviderPtr UserRunnerImpl::GetCloudProvider() {
 
   cloud_provider_factory_->GetCloudProvider(
       std::move(firebase_config), std::move(ledger_token_provider),
-      cloud_provider.NewRequest(), [](cloud_provider::Status status) {
-        if (status != cloud_provider::Status::OK) {
+      cloud_provider.NewRequest(), [](fuchsia::ledger::cloud::Status status) {
+        if (status != fuchsia::ledger::cloud::Status::OK) {
           FXL_LOG(ERROR) << "Failed to create a cloud provider: " << status;
         }
       });

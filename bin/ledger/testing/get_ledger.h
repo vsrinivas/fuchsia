@@ -8,7 +8,7 @@
 #include <functional>
 #include <string>
 
-#include <cloud_provider/cpp/fidl.h>
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <modular_auth/cpp/fidl.h>
@@ -17,6 +17,7 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_view.h"
+#include "peridot/bin/ledger/fidl/include/types.h"
 
 namespace test {
 

@@ -224,7 +224,7 @@ std::string GenerateQueueToken() {
 class MessageQueueManager::GetQueueTokenCall
     : public PageOperation<fidl::StringPtr> {
  public:
-  GetQueueTokenCall(ledger::Page* const page, std::string component_namespace,
+  GetQueueTokenCall(::ledger::Page* const page, std::string component_namespace,
                     std::string component_instance_id,
                     const std::string& queue_name, ResultCall result_call)
       : PageOperation("MessageQueueManager::GetQueueTokenCall", page,
@@ -238,8 +238,8 @@ class MessageQueueManager::GetQueueTokenCall
     FlowToken flow{this, &result_};
 
     page()->GetSnapshot(snapshot_.NewRequest(), nullptr, nullptr,
-                        Protect([this, flow](ledger::Status status) {
-                          if (status != ledger::Status::OK) {
+                        Protect([this, flow](::ledger::Status status) {
+                          if (status != ::ledger::Status::OK) {
                             FXL_LOG(ERROR) << trace_name() << " "
                                            << "Page.GetSnapshot() " << status;
                             return;
@@ -256,13 +256,14 @@ class MessageQueueManager::GetQueueTokenCall
     key_ = MakeMessageQueueTokenKey(component_namespace_,
                                     component_instance_id_, queue_name_);
     snapshot_->Get(to_array(key_),
-                   [this, flow](ledger::Status status, fuchsia::mem::BufferPtr value) {
-                     if (status == ledger::Status::KEY_NOT_FOUND) {
+                   [this, flow](::ledger::Status status,
+                                fuchsia::mem::BufferPtr value) {
+                     if (status == ::ledger::Status::KEY_NOT_FOUND) {
                        // Key wasn't found, that's not an error.
                        return;
                      }
 
-                     if (status != ledger::Status::OK) {
+                     if (status != ::ledger::Status::OK) {
                        FXL_LOG(ERROR) << trace_name() << " " << key_ << " "
                                       << "PageSnapshot.Get() " << status;
                        return;
@@ -287,7 +288,7 @@ class MessageQueueManager::GetQueueTokenCall
   const std::string component_namespace_;
   const std::string component_instance_id_;
   const std::string queue_name_;
-  ledger::PageSnapshotPtr snapshot_;
+  ::ledger::PageSnapshotPtr snapshot_;
   std::string key_;
 
   fidl::StringPtr result_;
@@ -298,7 +299,7 @@ class MessageQueueManager::GetQueueTokenCall
 class MessageQueueManager::GetMessageSenderCall : public PageOperation<> {
  public:
   GetMessageSenderCall(MessageQueueManager* const message_queue_manager,
-                       ledger::Page* const page, std::string token,
+                       ::ledger::Page* const page, std::string token,
                        fidl::InterfaceRequest<MessageSender> request)
       : PageOperation("MessageQueueManager::GetMessageSenderCall", page, [] {}),
         message_queue_manager_(message_queue_manager),
@@ -310,8 +311,8 @@ class MessageQueueManager::GetMessageSenderCall : public PageOperation<> {
     FlowToken flow{this};
 
     page()->GetSnapshot(snapshot_.NewRequest(), nullptr, nullptr,
-                        Protect([this, flow](ledger::Status status) {
-                          if (status != ledger::Status::OK) {
+                        Protect([this, flow](::ledger::Status status) {
+                          if (status != ::ledger::Status::OK) {
                             FXL_LOG(ERROR) << trace_name() << " "
                                            << "Page.GetSnapshot() " << status;
                             return;
@@ -323,10 +324,10 @@ class MessageQueueManager::GetMessageSenderCall : public PageOperation<> {
 
   void Cont(FlowToken flow) {
     std::string key = MakeMessageQueueKey(token_);
-    snapshot_->Get(to_array(key), [this, flow](ledger::Status status,
+    snapshot_->Get(to_array(key), [this, flow](::ledger::Status status,
                                                fuchsia::mem::BufferPtr value) {
-      if (status != ledger::Status::OK) {
-        if (status != ledger::Status::KEY_NOT_FOUND) {
+      if (status != ::ledger::Status::OK) {
+        if (status != ::ledger::Status::KEY_NOT_FOUND) {
           // It's expected that the key is not found when the link
           // is accessed for the first time. Don't log an error
           // then.
@@ -364,7 +365,7 @@ class MessageQueueManager::GetMessageSenderCall : public PageOperation<> {
   const std::string token_;
   fidl::InterfaceRequest<MessageSender> request_;
 
-  ledger::PageSnapshotPtr snapshot_;
+  ::ledger::PageSnapshotPtr snapshot_;
   std::string key_;
 
   MessageQueueInfo result_;
@@ -375,7 +376,7 @@ class MessageQueueManager::GetMessageSenderCall : public PageOperation<> {
 class MessageQueueManager::ObtainMessageQueueCall : public PageOperation<> {
  public:
   ObtainMessageQueueCall(MessageQueueManager* const message_queue_manager,
-                         ledger::Page* const page,
+                         ::ledger::Page* const page,
                          const std::string& component_namespace,
                          const std::string& component_instance_id,
                          const std::string& queue_name,
@@ -413,8 +414,8 @@ class MessageQueueManager::ObtainMessageQueueCall : public PageOperation<> {
     // queue.
     message_queue_info_.queue_token = GenerateQueueToken();
 
-    page()->StartTransaction(Protect([this](ledger::Status status) {
-      if (status != ledger::Status::OK) {
+    page()->StartTransaction(Protect([this](::ledger::Status status) {
+      if (status != ::ledger::Status::OK) {
         FXL_LOG(ERROR) << trace_name() << " "
                        << "Page.StartTransaction() " << status;
       }
@@ -428,8 +429,8 @@ class MessageQueueManager::ObtainMessageQueueCall : public PageOperation<> {
     page()->Put(
         to_array(message_queue_token_key),
         to_array(message_queue_info_.queue_token),
-        Protect([this, key = message_queue_token_key](ledger::Status status) {
-          if (status != ledger::Status::OK) {
+        Protect([this, key = message_queue_token_key](::ledger::Status status) {
+          if (status != ::ledger::Status::OK) {
             FXL_LOG(ERROR) << trace_name() << " " << key << " "
                            << "Page.Put() " << status;
           }
@@ -441,16 +442,17 @@ class MessageQueueManager::ObtainMessageQueueCall : public PageOperation<> {
     std::string json;
     XdrWrite(&json, &message_queue_info_, XdrMessageQueueInfo);
 
-    page()->Put(to_array(message_queue_key), to_array(json),
-                Protect([this, key = message_queue_key](ledger::Status status) {
-                  if (status != ledger::Status::OK) {
-                    FXL_LOG(ERROR) << trace_name() << " " << key << " "
-                                   << "Page.Put() " << status;
-                  }
-                }));
+    page()->Put(
+        to_array(message_queue_key), to_array(json),
+        Protect([this, key = message_queue_key](::ledger::Status status) {
+          if (status != ::ledger::Status::OK) {
+            FXL_LOG(ERROR) << trace_name() << " " << key << " "
+                           << "Page.Put() " << status;
+          }
+        }));
 
-    page()->Commit(Protect([this, flow](ledger::Status status) {
-      if (status != ledger::Status::OK) {
+    page()->Commit(Protect([this, flow](::ledger::Status status) {
+      if (status != ::ledger::Status::OK) {
         FXL_LOG(ERROR) << trace_name() << " "
                        << "Page.Commit() " << status;
         return;
@@ -473,7 +475,7 @@ class MessageQueueManager::ObtainMessageQueueCall : public PageOperation<> {
   fidl::InterfaceRequest<MessageQueue> request_;
 
   MessageQueueInfo message_queue_info_;
-  ledger::PageSnapshotPtr snapshot_;
+  ::ledger::PageSnapshotPtr snapshot_;
 
   OperationCollection operation_collection_;
 
@@ -483,7 +485,7 @@ class MessageQueueManager::ObtainMessageQueueCall : public PageOperation<> {
 class MessageQueueManager::DeleteMessageQueueCall : public PageOperation<> {
  public:
   DeleteMessageQueueCall(MessageQueueManager* const message_queue_manager,
-                         ledger::Page* const page,
+                         ::ledger::Page* const page,
                          const std::string& component_namespace,
                          const std::string& component_instance_id,
                          const std::string& queue_name)
@@ -523,8 +525,8 @@ class MessageQueueManager::DeleteMessageQueueCall : public PageOperation<> {
               message_queue_info_.queue_name);
 
           // Delete the ledger entries.
-          page()->StartTransaction(Protect([this](ledger::Status status) {
-            if (status != ledger::Status::OK) {
+          page()->StartTransaction(Protect([this](::ledger::Status status) {
+            if (status != ::ledger::Status::OK) {
               FXL_LOG(ERROR) << trace_name() << " "
                              << "Page.StartTransaction() " << status;
             }
@@ -532,8 +534,8 @@ class MessageQueueManager::DeleteMessageQueueCall : public PageOperation<> {
 
           page()->Delete(
               to_array(message_queue_key),
-              Protect([this, key = message_queue_key](ledger::Status status) {
-                if (status != ledger::Status::OK) {
+              Protect([this, key = message_queue_key](::ledger::Status status) {
+                if (status != ::ledger::Status::OK) {
                   FXL_LOG(ERROR) << trace_name() << " " << key << " "
                                  << "Page.Delete() " << status;
                 }
@@ -541,8 +543,8 @@ class MessageQueueManager::DeleteMessageQueueCall : public PageOperation<> {
 
           page()->Delete(to_array(message_queue_token_key),
                          Protect([this, key = message_queue_token_key](
-                                     ledger::Status status) {
-                           if (status != ledger::Status::OK) {
+                                     ::ledger::Status status) {
+                           if (status != ::ledger::Status::OK) {
                              FXL_LOG(ERROR) << trace_name() << " " << key << " "
                                             << "Page.Delete() " << status;
                            }
@@ -550,8 +552,8 @@ class MessageQueueManager::DeleteMessageQueueCall : public PageOperation<> {
 
           message_queue_manager_->ClearMessageQueueStorage(message_queue_info_);
 
-          page()->Commit(Protect([this, flow](ledger::Status status) {
-            if (status != ledger::Status::OK) {
+          page()->Commit(Protect([this, flow](::ledger::Status status) {
+            if (status != ::ledger::Status::OK) {
               FXL_LOG(ERROR) << trace_name() << " "
                              << "Page.Commit() " << status;
               return;
@@ -567,7 +569,7 @@ class MessageQueueManager::DeleteMessageQueueCall : public PageOperation<> {
 
   MessageQueueManager* const message_queue_manager_;  // not owned
   MessageQueueInfo message_queue_info_;
-  ledger::PageSnapshotPtr snapshot_;
+  ::ledger::PageSnapshotPtr snapshot_;
 
   OperationCollection operation_collection_;
 
@@ -577,7 +579,7 @@ class MessageQueueManager::DeleteMessageQueueCall : public PageOperation<> {
 class MessageQueueManager::DeleteNamespaceCall : public PageOperation<> {
  public:
   DeleteNamespaceCall(MessageQueueManager* const message_queue_manager,
-                      ledger::Page* const page,
+                      ::ledger::Page* const page,
                       const std::string& component_namespace,
                       std::function<void()> done)
       : PageOperation("MessageQueueManager::DeleteNamespaceCall", page,
@@ -592,8 +594,8 @@ class MessageQueueManager::DeleteNamespaceCall : public PageOperation<> {
     FlowToken flow{this};
     page()->GetSnapshot(snapshot_.NewRequest(),
                         to_array(message_queues_key_prefix_), nullptr,
-                        Protect([this, flow](ledger::Status status) {
-                          if (status != ledger::Status::OK) {
+                        Protect([this, flow](::ledger::Status status) {
+                          if (status != ::ledger::Status::OK) {
                             FXL_LOG(ERROR) << trace_name() << " "
                                            << "Page.GetSnapshot() " << status;
                             return;
@@ -604,8 +606,8 @@ class MessageQueueManager::DeleteNamespaceCall : public PageOperation<> {
 
   void GetKeysToDelete(FlowToken flow) {
     GetEntries(snapshot_.get(), &component_entries_,
-               [this, flow](ledger::Status status) {
-                 if (status != ledger::Status::OK) {
+               [this, flow](::ledger::Status status) {
+                 if (status != ::ledger::Status::OK) {
                    FXL_LOG(ERROR) << trace_name() << " "
                                   << "GetEntries() " << status;
                    return;
@@ -634,8 +636,8 @@ class MessageQueueManager::DeleteNamespaceCall : public PageOperation<> {
 
     for (auto& i : keys_to_delete) {
       page()->Delete(
-          to_array(i), Protect([this, i, flow](ledger::Status status) {
-            if (status != ledger::Status::OK) {
+          to_array(i), Protect([this, i, flow](::ledger::Status status) {
+            if (status != ::ledger::Status::OK) {
               FXL_LOG(ERROR)
                   << trace_name() << " " << i << "Page.Delete() " << status;
             }
@@ -646,16 +648,16 @@ class MessageQueueManager::DeleteNamespaceCall : public PageOperation<> {
   }
 
   MessageQueueManager* const message_queue_manager_;  // not owned
-  ledger::PageSnapshotPtr snapshot_;
+  ::ledger::PageSnapshotPtr snapshot_;
   const std::string component_namespace_;
   const std::string message_queues_key_prefix_;
-  std::vector<ledger::Entry> component_entries_;
+  std::vector<::ledger::Entry> component_entries_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DeleteNamespaceCall);
 };
 
 MessageQueueManager::MessageQueueManager(LedgerClient* const ledger_client,
-                                         ledger::PageId page_id,
+                                         ::ledger::PageId page_id,
                                          std::string local_path)
     : PageClient("MessageQueueManager", ledger_client, std::move(page_id)),
       local_path_(std::move(local_path)) {}

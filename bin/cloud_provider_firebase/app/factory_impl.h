@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_APP_FACTORY_IMPL_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_APP_FACTORY_IMPL_H_
 
-#include <cloud_provider/cpp/fidl.h>
-#include <cloud_provider_firebase/cpp/fidl.h>
-#include <modular_auth/cpp/fidl.h>
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
+#include <modular_auth/cpp/fidl.h>
 
 #include "lib/callback/auto_cleanable.h"
 #include "lib/callback/cancellable.h"

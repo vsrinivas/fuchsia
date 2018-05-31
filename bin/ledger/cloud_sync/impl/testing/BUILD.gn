@@ -23,6 +23,7 @@ source_set("testing") {
   public_deps = [
     "//peridot/bin/ledger/cloud_sync/public",
     "//peridot/bin/ledger/encryption/fake",
+    "//peridot/bin/ledger/fidl/include",
     "//peridot/bin/ledger/storage/public",
     "//peridot/bin/ledger/storage/testing",
     "//peridot/public/lib/cloud_provider/fidl",

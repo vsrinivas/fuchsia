@@ -42,6 +42,7 @@ source_set("lib") {
   public_deps = [
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
+    "//peridot/bin/cloud_provider_firestore/include",
     "//peridot/bin/cloud_provider_firestore/fidl",
     "//peridot/bin/cloud_provider_firestore/firestore",
     "//peridot/lib/firebase_auth",

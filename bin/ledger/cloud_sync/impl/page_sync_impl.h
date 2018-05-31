@@ -8,7 +8,7 @@
 #include <functional>
 #include <queue>
 
-#include <cloud_provider/cpp/fidl.h>
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 
 #include "lib/backoff/backoff.h"

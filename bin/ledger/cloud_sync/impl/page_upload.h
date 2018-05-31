@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include <cloud_provider/cpp/fidl.h>
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include "lib/backoff/backoff.h"
 #include "lib/callback/scoped_task_runner.h"
 #include "lib/fxl/memory/weak_ptr.h"

@@ -5,12 +5,13 @@
 #ifndef LIB_CLOUD_PROVIDER_VALIDATION_VALIDATION_TEST_H_
 #define LIB_CLOUD_PROVIDER_VALIDATION_VALIDATION_TEST_H_
 
-#include <cloud_provider/cpp/fidl.h>
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
 
 #include "gtest/gtest.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
+#include "peridot/public/lib/cloud_provider/validation/types.h"
 
 namespace cloud_provider {
 

@@ -36,8 +36,7 @@ struct MessageQueueInfo;
 // queues it has created, otherwise they are persisted.
 class MessageQueueManager : PageClient {
  public:
-  MessageQueueManager(LedgerClient* ledger_client,
-                      ledger::PageId page_id,
+  MessageQueueManager(LedgerClient* ledger_client, ::ledger::PageId page_id,
                       std::string local_path);
   ~MessageQueueManager();
 

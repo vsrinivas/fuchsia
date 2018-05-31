@@ -6,7 +6,7 @@
 
 #include <utility>
 
-#include <cloud_provider_firebase/cpp/fidl.h>
+#include <fuchsia/ledger/cloud/firebase/cpp/fidl.h>
 #include <ledger_internal/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 

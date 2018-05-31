@@ -45,7 +45,7 @@ void CloudProviderFirebaseFactory::MakeCloudProvider(
                         token_provider_.AddBinding(std::move(request));
                       }));
 
-  cloud_provider_firebase::Config firebase_config;
+  fuchsia::ledger::cloud::firebase::Config firebase_config;
   firebase_config.server_id = server_id;
   firebase_config.api_key = api_key;
 

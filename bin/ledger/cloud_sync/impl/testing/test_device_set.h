@@ -5,9 +5,11 @@
 #ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TESTING_TEST_DEVICE_SET_H_
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TESTING_TEST_DEVICE_SET_H_
 
-#include <cloud_provider/cpp/fidl.h>
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
+
 #include "lib/fidl/cpp/array.h"
 #include "lib/fxl/macros.h"
+#include "peridot/bin/ledger/fidl/include/types.h"
 
 namespace cloud_sync {
 

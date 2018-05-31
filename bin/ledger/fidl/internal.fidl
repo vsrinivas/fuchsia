@@ -22,7 +22,7 @@ interface LedgerRepositoryFactory {
   //     cloud. If |cloud_provider| is disconnected, Ledger shuts down the
   //     repository and disconnects all clients.
   1: GetRepository(string repository_path,
-                   cloud_provider.CloudProvider? cloud_provider,
+                   fuchsia.ledger.cloud.CloudProvider? cloud_provider,
                    request<LedgerRepository> repository) -> (ledger.Status @status);
 };
 
