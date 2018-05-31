@@ -98,6 +98,8 @@ zx_status_t publish_tracelink(const fbl::RefPtr<fs::PseudoDir>& dir) {
 // environment. Instead, we should make the test environment hermetic and
 // remove the dependencies on these services.
 static constexpr const char* deprecated_services[] = {
+    // remove amber.Control when CP-50 is resolved
+    "amber.Control",
     "cobalt.CobaltEncoderFactory",
     "component.ApplicationLauncher",
     "component.Environment",
