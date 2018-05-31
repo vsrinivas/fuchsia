@@ -25,8 +25,8 @@ namespace video_display {
 class View : public mozart::BaseView {
  public:
   View(async::Loop* loop, component::ApplicationContext* application_context,
-       views_v1::ViewManagerPtr view_manager,
-       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+       ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
+       fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
        bool use_fake_camera);
 
   ~View() override;

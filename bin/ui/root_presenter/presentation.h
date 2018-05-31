@@ -11,7 +11,7 @@
 #include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <presentation/cpp/fidl.h>
-#include <views_v1/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
 
 #include "garnet/bin/ui/presentation_mode/detector.h"
 #include "garnet/bin/ui/root_presenter/display_rotater.h"
@@ -61,9 +61,9 @@ namespace root_presenter {
 //           + link: Content view's actual content
 //   + child: cursor 1
 //   + child: cursor N
-class Presentation : private views_v1::ViewTreeListener,
-                     private views_v1::ViewListener,
-                     private views_v1::ViewContainerListener,
+class Presentation : private ::fuchsia::ui::views_v1::ViewTreeListener,
+                     private ::fuchsia::ui::views_v1::ViewListener,
+                     private ::fuchsia::ui::views_v1::ViewContainerListener,
                      private presentation::Presentation {
  public:
   // Callback when the presentation yields to the next/previous one.
@@ -71,7 +71,7 @@ class Presentation : private views_v1::ViewTreeListener,
   // Callback when the presentation is shut down.
   using ShutdownCallback = std::function<void()>;
 
-  Presentation(views_v1::ViewManager* view_manager,
+  Presentation(::fuchsia::ui::views_v1::ViewManager* view_manager,
                fuchsia::ui::scenic::Scenic* scenic,
                scenic_lib::Session* session, RendererParams renderer_params);
 
@@ -82,7 +82,7 @@ class Presentation : private views_v1::ViewTreeListener,
   // This method must be called at most once for the lifetime of the
   // presentation.
   void Present(
-      views_v1_token::ViewOwnerPtr view_owner,
+      ::fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner,
       fidl::InterfaceRequest<presentation::Presentation> presentation_request,
       YieldCallback yield_callback, ShutdownCallback shutdown_callback);
 
@@ -110,13 +110,13 @@ class Presentation : private views_v1::ViewTreeListener,
   bool ApplyDisplayModelChanges(bool print_log);
 
   // |ViewContainerListener|:
-  void OnChildAttached(uint32_t child_key, views_v1::ViewInfo child_view_info,
+  void OnChildAttached(uint32_t child_key, ::fuchsia::ui::views_v1::ViewInfo child_view_info,
                        OnChildAttachedCallback callback) override;
   void OnChildUnavailable(uint32_t child_key,
                           OnChildUnavailableCallback callback) override;
 
   // |ViewListener|:
-  void OnPropertiesChanged(views_v1::ViewProperties properties,
+  void OnPropertiesChanged(::fuchsia::ui::views_v1::ViewProperties properties,
                            OnPropertiesChangedCallback callback) override;
 
   // |Presentation|
@@ -172,7 +172,7 @@ class Presentation : private views_v1::ViewTreeListener,
       override;
 
   void CreateViewTree(
-      views_v1_token::ViewOwnerPtr view_owner,
+      ::fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner,
       fidl::InterfaceRequest<presentation::Presentation> presentation_request,
       fuchsia::ui::gfx::DisplayInfo display_info);
 
@@ -185,7 +185,7 @@ class Presentation : private views_v1::ViewTreeListener,
   void PresentScene();
   void Shutdown();
 
-  views_v1::ViewManager* const view_manager_;
+  ::fuchsia::ui::views_v1::ViewManager* const view_manager_;
   fuchsia::ui::scenic::Scenic* const scenic_;
   scenic_lib::Session* const session_;
 
@@ -226,7 +226,7 @@ class Presentation : private views_v1::ViewTreeListener,
   float display_rotation_desired_ = 0.f;
   float display_rotation_current_ = 0.f;
 
-  views_v1::ViewPtr root_view_;
+  ::fuchsia::ui::views_v1::ViewPtr root_view_;
 
   YieldCallback yield_callback_;
   ShutdownCallback shutdown_callback_;
@@ -234,16 +234,16 @@ class Presentation : private views_v1::ViewTreeListener,
   fuchsia::math::PointF mouse_coordinates_;
 
   fidl::Binding<presentation::Presentation> presentation_binding_;
-  fidl::Binding<views_v1::ViewTreeListener> tree_listener_binding_;
-  fidl::Binding<views_v1::ViewContainerListener>
+  fidl::Binding<::fuchsia::ui::views_v1::ViewTreeListener> tree_listener_binding_;
+  fidl::Binding<::fuchsia::ui::views_v1::ViewContainerListener>
       tree_container_listener_binding_;
-  fidl::Binding<views_v1::ViewContainerListener>
+  fidl::Binding<::fuchsia::ui::views_v1::ViewContainerListener>
       view_container_listener_binding_;
-  fidl::Binding<views_v1::ViewListener> view_listener_binding_;
+  fidl::Binding<::fuchsia::ui::views_v1::ViewListener> view_listener_binding_;
 
-  views_v1::ViewTreePtr tree_;
-  views_v1::ViewContainerPtr tree_container_;
-  views_v1::ViewContainerPtr root_container_;
+  ::fuchsia::ui::views_v1::ViewTreePtr tree_;
+  ::fuchsia::ui::views_v1::ViewContainerPtr tree_container_;
+  ::fuchsia::ui::views_v1::ViewContainerPtr root_container_;
   fuchsia::ui::input::InputDispatcherPtr input_dispatcher_;
 
   // Rotates the display 180 degrees in response to events.

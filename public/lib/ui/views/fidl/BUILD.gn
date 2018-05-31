@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("v1") {
-  name = "views_v1"
+  name = "fuchsia.ui.views_v1"
 
   sdk_category = "partner"
 
@@ -32,7 +32,7 @@ fidl("v1") {
 # Separate target created due to conflicts with ":fidl".  This should replace
 # ":fidl" after ViewManager is re-implemented in Mozart.
 fidl("v2") {
-  name = "views"
+  name = "fuchsia.ui.views"
 
   sdk_category = "partner"
 
@@ -50,7 +50,7 @@ fidl("v2") {
 }
 
 fidl("view_token") {
-  name = "views_v1_token"
+  name = "fuchsia.ui.views_v1_token"
 
   sdk_category = "partner"
 

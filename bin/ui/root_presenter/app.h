@@ -11,7 +11,7 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <presentation/cpp/fidl.h>
-#include <views_v1/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include "garnet/bin/ui/input_reader/input_reader.h"
 #include "garnet/bin/ui/root_presenter/presentation.h"
 #include "lib/app/cpp/application_context.h"
@@ -45,7 +45,7 @@ class App : public presentation::Presenter,
 
  private:
   // |Presenter|:
-  void Present(fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner,
+  void Present(fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner> view_owner,
                fidl::InterfaceRequest<presentation::Presentation>
                    presentation_request) override;
 
@@ -71,7 +71,7 @@ class App : public presentation::Presenter,
       input_receiver_bindings_;
   mozart::InputReader input_reader_;
 
-  views_v1::ViewManagerPtr view_manager_;
+  ::fuchsia::ui::views_v1::ViewManagerPtr view_manager_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
 
   std::unique_ptr<scenic_lib::Session> session_;

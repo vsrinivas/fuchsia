@@ -6,5 +6,5 @@ library fuchsia.ui.scenic;
 
 union Command {
   fuchsia.ui.gfx.Command gfx;
-  views.Command views;
+  fuchsia.ui.views.Command views;
 };

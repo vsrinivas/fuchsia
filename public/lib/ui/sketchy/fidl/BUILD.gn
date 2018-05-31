@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
-  name = "sketchy"
+  name = "fuchsia.ui.sketchy"
 
   sources = [
     "canvas.fidl",

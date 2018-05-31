@@ -6,8 +6,8 @@
 #define GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_SHADERTOY_STATE_H_
 
 #include <fuchsia/images/cpp/fidl.h>
-#include <shadertoy/cpp/fidl.h>
-#include <views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/shadertoy/cpp/fidl.h>
+#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include "garnet/examples/ui/shadertoy/service/glm_hack.h"
 #include "lib/escher/escher.h"
 #include "lib/escher/resources/resource.h"
@@ -34,15 +34,17 @@ class ShadertoyState : public escher::Resource {
   // Factory constructor.
   static fxl::RefPtr<ShadertoyState> NewForView(
       App* app,
-      ::fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+      ::fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+          view_owner_request,
       bool handle_input_events);
 
   virtual ~ShadertoyState();
 
   void SetPaused(bool paused);
 
-  void SetShaderCode(fidl::StringPtr glsl,
-                     shadertoy::Shadertoy::SetShaderCodeCallback callback);
+  void SetShaderCode(
+      fidl::StringPtr glsl,
+      ::fuchsia::ui::shadertoy::Shadertoy::SetShaderCodeCallback callback);
 
   void SetResolution(uint32_t width, uint32_t height);
 

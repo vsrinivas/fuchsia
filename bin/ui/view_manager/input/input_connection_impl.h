@@ -6,7 +6,7 @@
 #define GARNET_BIN_UI_VIEW_MANAGER_INPUT_INPUT_CONNECTION_IMPL_H_
 
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include <views_v1/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
@@ -26,11 +26,13 @@ class InputConnectionImpl : public fuchsia::ui::input::InputConnection,
  public:
   InputConnectionImpl(
       ViewInspector* inspector, InputOwner* owner,
-      views_v1_token::ViewToken view_token,
+      ::fuchsia::ui::views_v1_token::ViewToken view_token,
       fidl::InterfaceRequest<fuchsia::ui::input::InputConnection> request);
   ~InputConnectionImpl() override;
 
-  views_v1_token::ViewToken view_token() const { return view_token_; }
+  ::fuchsia::ui::views_v1_token::ViewToken view_token() const {
+    return view_token_;
+  }
 
   // Delivers an event to a view.
   void DeliverEvent(fuchsia::ui::input::InputEvent event,
@@ -72,7 +74,7 @@ class InputConnectionImpl : public fuchsia::ui::input::InputConnection,
 
   ViewInspector* const inspector_;
   InputOwner* const owner_;
-  views_v1_token::ViewToken view_token_;
+  ::fuchsia::ui::views_v1_token::ViewToken view_token_;
   fuchsia::ui::input::InputListenerPtr event_listener_;
 
   fidl::Binding<fuchsia::ui::input::InputConnection> binding_;

@@ -12,7 +12,7 @@ bool ResourceMap::AddResource(ResourceId id, ResourcePtr resource) {
   FXL_DCHECK(resource);
   auto result = resources_.insert(std::make_pair(id, std::move(resource)));
   if (!result.second) {
-    FXL_LOG(ERROR) << "sketchy::service::ResourceMap::AddResource(): "
+    FXL_LOG(ERROR) << "::fuchsia::ui::sketchy::service::ResourceMap::AddResource(): "
                    << "resource with ID " << id << " already exists.";
     return false;
   }
@@ -22,7 +22,7 @@ bool ResourceMap::AddResource(ResourceId id, ResourcePtr resource) {
 bool ResourceMap::RemoveResource(ResourceId id) {
   size_t erased_count = resources_.erase(id);
   if (erased_count == 0) {
-    FXL_LOG(ERROR) << "sketchy::service::ResourceMap::RemoveResource(): "
+    FXL_LOG(ERROR) << "::fuchsia::ui::sketchy::service::ResourceMap::RemoveResource(): "
                    << "no resource with ID " << id;
     return false;
   }

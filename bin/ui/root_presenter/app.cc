@@ -6,7 +6,7 @@
 
 #include <algorithm>
 
-#include <views_v1/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
@@ -38,7 +38,7 @@ App::App(const fxl::CommandLine& command_line)
 App::~App() {}
 
 void App::Present(
-    fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner_handle,
+    fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_handle,
     fidl::InterfaceRequest<presentation::Presentation> presentation_request) {
   InitializeServices();
 

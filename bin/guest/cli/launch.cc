@@ -7,7 +7,7 @@
 #include <component/cpp/fidl.h>
 #include <fuchsia/guest/cpp/fidl.h>
 #include <presentation/cpp/fidl.h>
-#include <views_v1/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
 
 #include "garnet/bin/guest/cli/serial.h"
 #include "lib/app/cpp/environment_services.h"
@@ -35,9 +35,9 @@ void handle_launch(int argc, const char* argv[]) {
   guest_controller.set_error_handler([&loop] { loop.Shutdown(); });
 
   // Create the framebuffer view.
-  views_v1::ViewProviderSyncPtr view_provider;
+  ::fuchsia::ui::views_v1::ViewProviderSyncPtr view_provider;
   guest_controller->GetViewProvider(view_provider.NewRequest());
-  fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner;
+  fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner> view_owner;
   view_provider->CreateView(view_owner.NewRequest(), nullptr);
 
   // Ask the presenter to display it.

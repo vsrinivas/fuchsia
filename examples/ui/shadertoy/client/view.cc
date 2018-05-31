@@ -29,17 +29,17 @@ constexpr uint32_t kShapeHeight = 288;
 
 View::View(async::Loop* loop,
            component::ApplicationContext* application_context,
-           views_v1::ViewManagerPtr view_manager,
-           fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request)
+           ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
+           fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+               view_owner_request)
     : BaseView(std::move(view_manager), std::move(view_owner_request),
                "Shadertoy Example"),
       application_context_(application_context),
       loop_(loop),
       // TODO: we don't need to keep this around once we have used it to
       // create a Shadertoy.  What is the best way to achieve this?
-      shadertoy_factory_(
-          application_context_
-              ->ConnectToEnvironmentService<shadertoy::ShadertoyFactory>()),
+      shadertoy_factory_(application_context_->ConnectToEnvironmentService<
+                         ::fuchsia::ui::shadertoy::ShadertoyFactory>()),
       start_time_(zx_clock_get(ZX_CLOCK_MONOTONIC)) {
   shadertoy_factory_.set_error_handler([this] {
     FXL_LOG(INFO) << "Lost connection to ShadertoyFactory.";
@@ -121,7 +121,8 @@ float View::UpdateTransition(zx_time_t presentation_time) {
   return glm::smoothstep(0.f, 1.f, transition_param);
 }
 
-void View::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) {
+void View::OnSceneInvalidated(
+    fuchsia::images::PresentationInfo presentation_info) {
   if (!has_logical_size())
     return;
 

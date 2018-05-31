@@ -46,7 +46,7 @@ constexpr float kCursorElevation = 800;
 
 }  // namespace
 
-Presentation::Presentation(views_v1::ViewManager* view_manager,
+Presentation::Presentation(::fuchsia::ui::views_v1::ViewManager* view_manager,
                            fuchsia::ui::scenic::Scenic* scenic,
                            scenic_lib::Session* session,
                            RendererParams renderer_params)
@@ -111,7 +111,7 @@ Presentation::Presentation(views_v1::ViewManager* view_manager,
 Presentation::~Presentation() {}
 
 void Presentation::Present(
-    views_v1_token::ViewOwnerPtr view_owner,
+    ::fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner,
     fidl::InterfaceRequest<presentation::Presentation> presentation_request,
     YieldCallback yield_callback, ShutdownCallback shutdown_callback) {
   FXL_DCHECK(view_owner);
@@ -132,7 +132,7 @@ void Presentation::Present(
 }
 
 void Presentation::CreateViewTree(
-    views_v1_token::ViewOwnerPtr view_owner,
+    ::fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner,
     fidl::InterfaceRequest<presentation::Presentation> presentation_request,
     fuchsia::ui::gfx::DisplayInfo display_info) {
   if (presentation_request) {
@@ -140,7 +140,7 @@ void Presentation::CreateViewTree(
   }
 
   // Register the view tree.
-  views_v1::ViewTreeListenerPtr tree_listener;
+  ::fuchsia::ui::views_v1::ViewTreeListenerPtr tree_listener;
   tree_listener_binding_.Bind(tree_listener.NewRequest());
   view_manager_->CreateViewTree(tree_.NewRequest(), std::move(tree_listener),
                                 "Presentation");
@@ -155,7 +155,7 @@ void Presentation::CreateViewTree(
     FXL_LOG(ERROR) << "Root presenter: Tree view container connection error.";
     Shutdown();
   });
-  views_v1::ViewContainerListenerPtr tree_container_listener;
+  ::fuchsia::ui::views_v1::ViewContainerListenerPtr tree_container_listener;
   tree_container_listener_binding_.Bind(tree_container_listener.NewRequest());
   tree_container_->SetListener(std::move(tree_container_listener));
 
@@ -174,9 +174,9 @@ void Presentation::CreateViewTree(
   });
 
   // Create root view.
-  fidl::InterfaceHandle<views_v1_token::ViewOwner> root_view_owner;
+  fidl::InterfaceHandle<::fuchsia::ui::views_v1_token::ViewOwner> root_view_owner;
   auto root_view_owner_request = root_view_owner.NewRequest();
-  views_v1::ViewListenerPtr root_view_listener;
+  ::fuchsia::ui::views_v1::ViewListenerPtr root_view_listener;
   view_listener_binding_.Bind(root_view_listener.NewRequest());
   view_manager_->CreateView(
       root_view_.NewRequest(), std::move(root_view_owner_request),
@@ -192,13 +192,13 @@ void Presentation::CreateViewTree(
   InitializeDisplayModel(std::move(display_info));
 
   // Add content view to root view.
-  views_v1::ViewContainerListenerPtr view_container_listener;
+  ::fuchsia::ui::views_v1::ViewContainerListenerPtr view_container_listener;
   view_container_listener_binding_.Bind(view_container_listener.NewRequest());
   root_container_->SetListener(std::move(view_container_listener));
   root_container_->AddChild(kContentViewKey, std::move(view_owner),
                             std::move(content_view_host_import_token_));
   root_container_->SetChildProperties(kContentViewKey,
-                                      views_v1::ViewProperties::New());
+                                      ::fuchsia::ui::views_v1::ViewProperties::New());
 
   PresentScene();
 }
@@ -361,15 +361,15 @@ bool Presentation::ApplyDisplayModelChanges(bool print_log) {
   display_metrics_ = metrics;
   display_rotation_current_ = display_rotation_desired_;
 
-  auto root_properties = views_v1::ViewProperties::New();
-  root_properties->display_metrics = views_v1::DisplayMetrics::New();
+  auto root_properties = ::fuchsia::ui::views_v1::ViewProperties::New();
+  root_properties->display_metrics = ::fuchsia::ui::views_v1::DisplayMetrics::New();
 
   // TODO(MZ-411): Handle densities that differ in x and y.
   FXL_DCHECK(display_metrics_.x_scale_in_px_per_pp() ==
              display_metrics_.y_scale_in_px_per_pp());
   root_properties->display_metrics->device_pixel_ratio =
       display_metrics_.x_scale_in_px_per_pp();
-  root_properties->view_layout = views_v1::ViewLayout::New();
+  root_properties->view_layout = ::fuchsia::ui::views_v1::ViewLayout::New();
   root_properties->view_layout->size.width = display_metrics_.width_in_pp();
   root_properties->view_layout->size.height = display_metrics_.height_in_pp();
   tree_container_->SetChildProperties(kRootViewKey, std::move(root_properties));
@@ -650,7 +650,7 @@ void Presentation::OnSensorEvent(uint32_t device_id,
 }
 
 void Presentation::OnChildAttached(uint32_t child_key,
-                                   views_v1::ViewInfo child_view_info,
+                                   ::fuchsia::ui::views_v1::ViewInfo child_view_info,
                                    OnChildAttachedCallback callback) {
   if (kContentViewKey == child_key) {
     FXL_VLOG(1) << "OnChildAttached(content): child_view_info="
@@ -671,7 +671,7 @@ void Presentation::OnChildUnavailable(uint32_t child_key,
   callback();
 }
 
-void Presentation::OnPropertiesChanged(views_v1::ViewProperties properties,
+void Presentation::OnPropertiesChanged(::fuchsia::ui::views_v1::ViewProperties properties,
                                        OnPropertiesChangedCallback callback) {
   // Nothing to do right now.
   callback();

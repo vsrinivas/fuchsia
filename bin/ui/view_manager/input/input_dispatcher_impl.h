@@ -11,7 +11,7 @@
 
 #include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include <views_v1/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include "garnet/bin/ui/view_manager/internal/view_inspector.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
@@ -29,11 +29,13 @@ class InputDispatcherImpl : public fuchsia::ui::input::InputDispatcher {
  public:
   InputDispatcherImpl(
       ViewInspector* inspector, InputOwner* owner,
-      views_v1::ViewTreeToken view_tree_token,
+      ::fuchsia::ui::views_v1::ViewTreeToken view_tree_token,
       fidl::InterfaceRequest<fuchsia::ui::input::InputDispatcher> request);
   ~InputDispatcherImpl() override;
 
-  views_v1::ViewTreeToken view_tree_token() const { return view_tree_token_; }
+  ::fuchsia::ui::views_v1::ViewTreeToken view_tree_token() const {
+    return view_tree_token_;
+  }
 
   // |fuchsia::ui::input::InputDispatcher|
   void DispatchEvent(fuchsia::ui::input::InputEvent event) override;
@@ -58,7 +60,7 @@ class InputDispatcherImpl : public fuchsia::ui::input::InputDispatcher {
 
   ViewInspector* const inspector_;
   InputOwner* const owner_;
-  views_v1::ViewTreeToken view_tree_token_;
+  ::fuchsia::ui::views_v1::ViewTreeToken view_tree_token_;
 
   // TODO(jeffbrown): Replace this with a proper pipeline.
   std::queue<fuchsia::ui::input::InputEvent> pending_events_;

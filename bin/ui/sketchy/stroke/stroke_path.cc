@@ -6,7 +6,7 @@
 
 namespace sketchy_service {
 
-StrokePath::StrokePath(sketchy::StrokePath path) {
+StrokePath::StrokePath(::fuchsia::ui::sketchy::StrokePath path) {
   Reset(path.segments->size());
   for (const auto& seg : *path.segments) {
     ExtendWithCurve(CubicBezier2f{{{seg.pt0.x, seg.pt0.y},

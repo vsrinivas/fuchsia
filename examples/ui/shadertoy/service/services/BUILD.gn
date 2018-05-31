@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("services") {
-  name = "shadertoy"
+  name = "fuchsia.ui.shadertoy"
 
   sources = [
     "shadertoy.fidl",

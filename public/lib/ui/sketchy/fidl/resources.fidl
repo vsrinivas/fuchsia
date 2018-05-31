@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library sketchy;
+library fuchsia.ui.sketchy;
 
 // Specifies the type of a resource created via CreateResourceCommand, along with
 // any other required data.

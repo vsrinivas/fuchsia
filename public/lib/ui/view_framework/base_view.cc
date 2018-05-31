@@ -14,7 +14,7 @@
 namespace mozart {
 namespace {
 
-fuchsia::ui::scenic::ScenicPtr GetScenic(views_v1::ViewManager* view_manager) {
+fuchsia::ui::scenic::ScenicPtr GetScenic(::fuchsia::ui::views_v1::ViewManager* view_manager) {
   fuchsia::ui::scenic::ScenicPtr scenic;
   view_manager->GetScenic(scenic.NewRequest());
   return scenic;
@@ -23,8 +23,8 @@ fuchsia::ui::scenic::ScenicPtr GetScenic(views_v1::ViewManager* view_manager) {
 }  // namespace
 
 BaseView::BaseView(
-    views_v1::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+    ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
+    fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
     const std::string& label)
     : view_manager_(std::move(view_manager)),
       view_listener_binding_(this),
@@ -58,7 +58,7 @@ component::ServiceProvider* BaseView::GetViewServiceProvider() {
   return view_service_provider_.get();
 }
 
-views_v1::ViewContainer* BaseView::GetViewContainer() {
+::fuchsia::ui::views_v1::ViewContainer* BaseView::GetViewContainer() {
   if (!view_container_) {
     view_->GetContainer(view_container_.NewRequest());
     view_container_->SetListener(view_container_listener_binding_.NewBinding());
@@ -157,7 +157,7 @@ void BaseView::AdjustMetricsAndPhysicalSize() {
   InvalidateScene();
 }
 
-void BaseView::OnPropertiesChanged(views_v1::ViewProperties old_properties) {}
+void BaseView::OnPropertiesChanged(::fuchsia::ui::views_v1::ViewProperties old_properties) {}
 
 void BaseView::OnSceneInvalidated(
     fuchsia::images::PresentationInfo presentation_info) {}
@@ -170,15 +170,15 @@ bool BaseView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
 }
 
 void BaseView::OnChildAttached(uint32_t child_key,
-                               views_v1::ViewInfo child_view_info) {}
+                               ::fuchsia::ui::views_v1::ViewInfo child_view_info) {}
 
 void BaseView::OnChildUnavailable(uint32_t child_key) {}
 
-void BaseView::OnPropertiesChanged(views_v1::ViewProperties properties,
+void BaseView::OnPropertiesChanged(::fuchsia::ui::views_v1::ViewProperties properties,
                                    OnPropertiesChangedCallback callback) {
   TRACE_DURATION("view", "OnPropertiesChanged");
 
-  views_v1::ViewProperties old_properties = std::move(properties_);
+  ::fuchsia::ui::views_v1::ViewProperties old_properties = std::move(properties_);
   properties_ = std::move(properties);
 
   if (logical_size_ != properties_.view_layout->size) {
@@ -192,7 +192,7 @@ void BaseView::OnPropertiesChanged(views_v1::ViewProperties properties,
 }
 
 void BaseView::OnChildAttached(uint32_t child_key,
-                               views_v1::ViewInfo child_view_info,
+                               ::fuchsia::ui::views_v1::ViewInfo child_view_info,
                                OnChildUnavailableCallback callback) {
   TRACE_DURATION("view", "OnChildAttached", "child_key", child_key);
   OnChildAttached(child_key, std::move(child_view_info));

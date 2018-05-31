@@ -8,8 +8,8 @@ namespace sketchy_example {
 
 View::View(async::Loop* loop,
            component::ApplicationContext* application_context,
-           views_v1::ViewManagerPtr view_manager,
-           fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request)
+           ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
+           fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request)
     : BaseView(std::move(view_manager), std::move(view_owner_request),
                "Sketchy Example"),
       canvas_(application_context, loop),
@@ -29,7 +29,7 @@ View::View(async::Loop* loop,
   import_node_.AddChild(stable_group_);
 }
 
-void View::OnPropertiesChanged(views_v1::ViewProperties old_properties) {
+void View::OnPropertiesChanged(::fuchsia::ui::views_v1::ViewProperties old_properties) {
   float width = properties().view_layout->size.width;
   float height = properties().view_layout->size.height;
   scenic_lib::Rectangle background_shape(session(), width, height);

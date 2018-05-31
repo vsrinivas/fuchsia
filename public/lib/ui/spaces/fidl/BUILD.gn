@@ -7,7 +7,7 @@ import("//build/fidl/fidl.gni")
 # TODO(SCN-697): Move this something better when the FIDL directories are
 # reorganized.
 fidl("fidl") {
-  name = "spaces"
+  name = "fuchsia.ui.spaces"
 
   sdk_category = "partner"
 

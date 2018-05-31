@@ -89,7 +89,7 @@ int64_t InputEventTimestampNow() {
 
 InputDispatcherImpl::InputDispatcherImpl(
     ViewInspector* inspector, InputOwner* owner,
-    views_v1::ViewTreeToken view_tree_token,
+    ::fuchsia::ui::views_v1::ViewTreeToken view_tree_token,
     fidl::InterfaceRequest<fuchsia::ui::input::InputDispatcher> request)
     : inspector_(inspector),
       owner_(owner),

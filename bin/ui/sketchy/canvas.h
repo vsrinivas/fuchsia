@@ -7,8 +7,8 @@
 
 #include <unordered_map>
 
+#include <fuchsia/ui/sketchy/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <sketchy/cpp/fidl.h>
 
 #include "garnet/bin/ui/sketchy/buffer/shared_buffer_pool.h"
 #include "garnet/bin/ui/sketchy/resources/resource_map.h"
@@ -21,34 +21,45 @@
 
 namespace sketchy_service {
 
-class CanvasImpl final : public sketchy::Canvas {
+class CanvasImpl final : public ::fuchsia::ui::sketchy::Canvas {
  public:
   CanvasImpl(async::Loop* loop, scenic_lib::Session* session,
              escher::Escher* escher);
 
-  // |sketchy::Canvas|
-  void Init(::fidl::InterfaceHandle<sketchy::CanvasListener> listener) override;
-  void Enqueue(::fidl::VectorPtr<sketchy::Command> commands) override;
+  // |::fuchsia::ui::sketchy::Canvas|
+  void Init(::fidl::InterfaceHandle<::fuchsia::ui::sketchy::CanvasListener>
+                listener) override;
+  void Enqueue(
+      ::fidl::VectorPtr<::fuchsia::ui::sketchy::Command> commands) override;
   void Present(uint64_t presentation_time, PresentCallback callback) override;
 
  private:
-  bool ApplyCommand(sketchy::Command command);
+  bool ApplyCommand(::fuchsia::ui::sketchy::Command command);
   void RequestScenicPresent(uint64_t presentation_time);
 
-  bool ApplyCreateResourceCommand(sketchy::CreateResourceCommand command);
-  bool ApplyReleaseResourceCommand(sketchy::ReleaseResourceCommand command);
-  bool CreateStroke(ResourceId id, sketchy::Stroke stroke);
-  bool CreateStrokeGroup(ResourceId id, sketchy::StrokeGroup stroke_group);
+  bool ApplyCreateResourceCommand(
+      ::fuchsia::ui::sketchy::CreateResourceCommand command);
+  bool ApplyReleaseResourceCommand(
+      ::fuchsia::ui::sketchy::ReleaseResourceCommand command);
+  bool CreateStroke(ResourceId id, ::fuchsia::ui::sketchy::Stroke stroke);
+  bool CreateStrokeGroup(ResourceId id,
+                         ::fuchsia::ui::sketchy::StrokeGroup stroke_group);
 
-  bool ApplySetPathCommand(sketchy::SetStrokePathCommand command);
-  bool ApplyAddStrokeCommand(sketchy::AddStrokeCommand command);
-  bool ApplyRemoveStrokeCommand(sketchy::RemoveStrokeCommand command);
+  bool ApplySetPathCommand(
+      ::fuchsia::ui::sketchy::SetStrokePathCommand command);
+  bool ApplyAddStrokeCommand(::fuchsia::ui::sketchy::AddStrokeCommand command);
+  bool ApplyRemoveStrokeCommand(
+      ::fuchsia::ui::sketchy::RemoveStrokeCommand command);
 
-  bool ApplyBeginStrokeCommand(sketchy::BeginStrokeCommand command);
-  bool ApplyExtendStrokeCommand(sketchy::ExtendStrokeCommand command);
-  bool ApplyFinishStrokeCommand(sketchy::FinishStrokeCommand command);
+  bool ApplyBeginStrokeCommand(
+      ::fuchsia::ui::sketchy::BeginStrokeCommand command);
+  bool ApplyExtendStrokeCommand(
+      ::fuchsia::ui::sketchy::ExtendStrokeCommand command);
+  bool ApplyFinishStrokeCommand(
+      ::fuchsia::ui::sketchy::FinishStrokeCommand command);
 
-  bool ApplyClearGroupCommand(sketchy::ClearGroupCommand command);
+  bool ApplyClearGroupCommand(
+      ::fuchsia::ui::sketchy::ClearGroupCommand command);
 
   bool ApplyScenicImportResourceCommand(
       fuchsia::ui::gfx::ImportResourceCommand import_resource);
@@ -68,7 +79,7 @@ class CanvasImpl final : public sketchy::Canvas {
   scenic_lib::Session* const session_;
   SharedBufferPool shared_buffer_pool_;
 
-  ::fidl::VectorPtr<sketchy::Command> commands_;
+  ::fidl::VectorPtr<::fuchsia::ui::sketchy::Command> commands_;
   ResourceMap resource_map_;
   bool is_scenic_present_requested_ = false;
   std::vector<scenic_lib::Session::PresentCallback> callbacks_;

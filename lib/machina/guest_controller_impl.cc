@@ -43,7 +43,7 @@ void GuestControllerImpl::GetSerial(GetSerialCallback callback) {
 }
 
 void GuestControllerImpl::GetViewProvider(
-    fidl::InterfaceRequest<views_v1::ViewProvider> request) {
+    fidl::InterfaceRequest<::fuchsia::ui::views_v1::ViewProvider> request) {
   if (view_provider_ != nullptr) {
     view_provider_bindings_.AddBinding(view_provider_, std::move(request));
   }

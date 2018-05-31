@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 
-#include <views/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include "garnet/bin/ui/view_manager/internal/view_inspector.h"
 #include "garnet/bin/ui/view_manager/view_container_state.h"
 #include "lib/fidl/cpp/binding.h"
@@ -32,9 +32,9 @@ class ViewTreeState : public ViewContainerState {
     INVALIDATION_VIEWS_INVALIDATED = 1u << 0,
   };
 
-  ViewTreeState(ViewRegistry* registry, views_v1::ViewTreeToken view_tree_token,
-                fidl::InterfaceRequest<views_v1::ViewTree> view_tree_request,
-                views_v1::ViewTreeListenerPtr view_tree_listener,
+  ViewTreeState(ViewRegistry* registry, ::fuchsia::ui::views_v1::ViewTreeToken view_tree_token,
+                fidl::InterfaceRequest<::fuchsia::ui::views_v1::ViewTree> view_tree_request,
+                ::fuchsia::ui::views_v1::ViewTreeListenerPtr view_tree_listener,
                 const std::string& label);
   ~ViewTreeState() override;
 
@@ -43,11 +43,11 @@ class ViewTreeState : public ViewContainerState {
   }
 
   // Gets the token used to refer to this view tree globally.
-  views_v1::ViewTreeToken view_tree_token() const { return view_tree_token_; }
+  ::fuchsia::ui::views_v1::ViewTreeToken view_tree_token() const { return view_tree_token_; }
 
   // Gets the view tree listener interface, never null.
   // Caller does not obtain ownership of the view tree listener.
-  const views_v1::ViewTreeListenerPtr& view_tree_listener() const {
+  const ::fuchsia::ui::views_v1::ViewTreeListenerPtr& view_tree_listener() const {
     return view_tree_listener_;
   }
 
@@ -67,14 +67,14 @@ class ViewTreeState : public ViewContainerState {
   const FocusChain* focus_chain();
 
  private:
-  views_v1::ViewTreeToken view_tree_token_;
-  views_v1::ViewTreeListenerPtr view_tree_listener_;
+  ::fuchsia::ui::views_v1::ViewTreeToken view_tree_token_;
+  ::fuchsia::ui::views_v1::ViewTreeListenerPtr view_tree_listener_;
 
   const std::string label_;
   mutable std::string formatted_label_cache_;
 
   std::unique_ptr<ViewTreeImpl> impl_;
-  fidl::Binding<views_v1::ViewTree> view_tree_binding_;
+  fidl::Binding<::fuchsia::ui::views_v1::ViewTree> view_tree_binding_;
 
   uint32_t invalidation_flags_ = 0u;
 

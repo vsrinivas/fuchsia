@@ -7,7 +7,7 @@
 
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
-#include <views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/ui/scenic/client/resources.h"
@@ -16,8 +16,8 @@
 class VkCubeView : public mozart::BaseView {
  public:
   VkCubeView(
-      views_v1::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+      ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
+      fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
       std::function<
           void(float width, float height,
                fidl::InterfaceHandle<fuchsia::images::ImagePipe> interface_request)>

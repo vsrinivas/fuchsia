@@ -22,13 +22,13 @@ using namespace sketchy_lib;
 class View final : public mozart::BaseView {
  public:
   View(async::Loop* loop, component::ApplicationContext* application_context,
-       views_v1::ViewManagerPtr view_manager,
-       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
+       ::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
+       fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request);
 
   ~View() override = default;
 
   // mozart::BaseView.
-  void OnPropertiesChanged(views_v1::ViewProperties old_properties) override;
+  void OnPropertiesChanged(::fuchsia::ui::views_v1::ViewProperties old_properties) override;
   bool OnInputEvent(fuchsia::ui::input::InputEvent event) override;
 
  private:

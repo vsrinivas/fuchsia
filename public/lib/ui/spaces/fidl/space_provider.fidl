@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library spaces;
+library fuchsia.ui.spaces;
 
 // SpaceProvider is the standard mechanism for two modules to each obtain half
 // of a shared eventpair token.  The shared token is a capability allowing the
@@ -13,7 +13,7 @@ library spaces;
 // eventpair token, and use this to create the linked SpaceHolder/Space.
 // SpaceProvider is given for the convienience of clients that don't require
 // a more complex implementation.
-[ServiceName = "spaces::SpaceProvider"]
+[Discoverable]
 interface SpaceProvider {
   // Creates a new Space under the control of the SpaceProvider.
   //

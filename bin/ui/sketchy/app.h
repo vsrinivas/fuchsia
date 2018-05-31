@@ -6,7 +6,7 @@
 #define GARNET_BIN_UI_SKETCHY_APP_H_
 
 #include <lib/async-loop/cpp/loop.h>
-#include <sketchy/cpp/fidl.h>
+#include <fuchsia/ui/sketchy/cpp/fidl.h>
 
 #include "garnet/bin/ui/sketchy/canvas.h"
 #include "lib/app/cpp/application_context.h"
@@ -24,7 +24,7 @@ class App {
   std::unique_ptr<component::ApplicationContext> context_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
   std::unique_ptr<scenic_lib::Session> session_;
-  fidl::BindingSet<sketchy::Canvas> bindings_;
+  fidl::BindingSet<::fuchsia::ui::sketchy::Canvas> bindings_;
   std::unique_ptr<CanvasImpl> canvas_;
 };
 

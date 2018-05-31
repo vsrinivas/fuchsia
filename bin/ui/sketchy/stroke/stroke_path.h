@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include <sketchy/cpp/fidl.h>
+#include <fuchsia/ui/sketchy/cpp/fidl.h>
 
 #include "garnet/bin/ui/sketchy/stroke/cubic_bezier.h"
 #include "garnet/public/lib/escher/geometry/bounding_box.h"
@@ -18,7 +18,7 @@ namespace sketchy_service {
 class StrokePath final {
  public:
   StrokePath() = default;
-  explicit StrokePath(sketchy::StrokePath path);
+  explicit StrokePath(::fuchsia::ui::sketchy::StrokePath path);
 
   void ExtendWithCurve(const CubicBezier2f& curve);
   void ExtendWithPath(const StrokePath& path);

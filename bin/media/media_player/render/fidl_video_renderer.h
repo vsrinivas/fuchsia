@@ -60,8 +60,8 @@ class FidlVideoRenderer
 
   // Creates a view.
   void CreateView(
-      fidl::InterfacePtr<views_v1::ViewManager> view_manager,
-      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
+      fidl::InterfacePtr<::fuchsia::ui::views_v1::ViewManager> view_manager,
+      fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request);
 
  protected:
   void OnProgressStarted() override;
@@ -71,8 +71,8 @@ class FidlVideoRenderer
 
   class View : public mozart::BaseView {
    public:
-    View(views_v1::ViewManagerPtr view_manager,
-         fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+    View(::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
+         fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
          std::shared_ptr<FidlVideoRenderer> renderer);
 
     ~View() override;

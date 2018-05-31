@@ -6,7 +6,7 @@
 #define GARNET_LIB_MACHINA_GUEST_CONTROLLER_IMPL_H_
 
 #include <fuchsia/guest/cpp/fidl.h>
-#include <views_v1/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
 
 #include "garnet/lib/machina/phys_mem.h"
 #include "lib/app/cpp/application_context.h"
@@ -21,7 +21,7 @@ class GuestControllerImpl : public fuchsia::guest::GuestController {
   GuestControllerImpl(component::ApplicationContext* application_context,
                       const PhysMem& phys_mem);
 
-  void set_view_provider(views_v1::ViewProvider* view_provider) {
+  void set_view_provider(::fuchsia::ui::views_v1::ViewProvider* view_provider) {
     view_provider_ = view_provider;
   }
 
@@ -34,16 +34,16 @@ class GuestControllerImpl : public fuchsia::guest::GuestController {
   void GetPhysicalMemory(GetPhysicalMemoryCallback callback) override;
   void GetSerial(GetSerialCallback callback) override;
   void GetViewProvider(
-      fidl::InterfaceRequest<views_v1::ViewProvider> view_provider) override;
+      fidl::InterfaceRequest<::fuchsia::ui::views_v1::ViewProvider> view_provider) override;
 
  private:
   fidl::BindingSet<fuchsia::guest::GuestController> bindings_;
-  fidl::BindingSet<views_v1::ViewProvider> view_provider_bindings_;
+  fidl::BindingSet<::fuchsia::ui::views_v1::ViewProvider> view_provider_bindings_;
 
   const zx::vmo vmo_;
   zx::socket server_socket_;
   zx::socket client_socket_;
-  views_v1::ViewProvider* view_provider_;
+  ::fuchsia::ui::views_v1::ViewProvider* view_provider_;
 };
 
 }  // namespace machina

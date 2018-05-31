@@ -10,8 +10,8 @@ CubicBezier2::CubicBezier2(glm::vec2 pt0, glm::vec2 pt1, glm::vec2 pt2,
                            glm::vec2 pt3)
     : pt0_(pt0), pt1_(pt1), pt2_(pt2), pt3_(pt3) {}
 
-sketchy::CubicBezier2 CubicBezier2::NewSketchyCubicBezier2() const {
-  sketchy::CubicBezier2 sketchy_cubic_bezier2;
+::fuchsia::ui::sketchy::CubicBezier2 CubicBezier2::NewSketchyCubicBezier2() const {
+  ::fuchsia::ui::sketchy::CubicBezier2 sketchy_cubic_bezier2;
   sketchy_cubic_bezier2.pt0.x = pt0_.x;
   sketchy_cubic_bezier2.pt0.y = pt0_.y;
   sketchy_cubic_bezier2.pt1.x = pt1_.x;
@@ -26,12 +26,12 @@ sketchy::CubicBezier2 CubicBezier2::NewSketchyCubicBezier2() const {
 StrokePath::StrokePath(std::vector<CubicBezier2> segments)
     : segments_(segments) {}
 
-sketchy::StrokePath StrokePath::NewSketchyStrokePath() const {
-  fidl::VectorPtr<sketchy::CubicBezier2> sketchy_segments;
+::fuchsia::ui::sketchy::StrokePath StrokePath::NewSketchyStrokePath() const {
+  fidl::VectorPtr<::fuchsia::ui::sketchy::CubicBezier2> sketchy_segments;
   for (auto& segment : segments_) {
     sketchy_segments.push_back(segment.NewSketchyCubicBezier2());
   }
-  sketchy::StrokePath sketchy_stroke_path;
+  ::fuchsia::ui::sketchy::StrokePath sketchy_stroke_path;
   sketchy_stroke_path.segments = std::move(sketchy_segments);
   return sketchy_stroke_path;
 }

@@ -7,29 +7,39 @@
 
 #include <iosfwd>
 
-#include <views_v1/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include "lib/ui/geometry/cpp/formatting.h"
 
+namespace fuchsia {
+namespace ui {
 namespace views_v1 {
 
 std::ostream& operator<<(std::ostream& os,
-                         const views_v1::ViewTreeToken& value);
-
-std::ostream& operator<<(std::ostream& os, const views_v1::ViewInfo& value);
+                         const ::fuchsia::ui::views_v1::ViewTreeToken& value);
 
 std::ostream& operator<<(std::ostream& os,
-                         const views_v1::ViewProperties& value);
+                         const ::fuchsia::ui::views_v1::ViewInfo& value);
+
 std::ostream& operator<<(std::ostream& os,
-                         const views_v1::DisplayMetrics& value);
-std::ostream& operator<<(std::ostream& os, const views_v1::ViewLayout& value);
+                         const ::fuchsia::ui::views_v1::ViewProperties& value);
+std::ostream& operator<<(std::ostream& os,
+                         const ::fuchsia::ui::views_v1::DisplayMetrics& value);
+std::ostream& operator<<(std::ostream& os,
+                         const ::fuchsia::ui::views_v1::ViewLayout& value);
 
 }  // namespace views_v1
+}  // namespace ui
+}  // namespace fuchsia
 
+namespace fuchsia {
+namespace ui {
 namespace views_v1_token {
 
 std::ostream& operator<<(std::ostream& os,
-                         const views_v1_token::ViewToken& value);
+                         const ::fuchsia::ui::views_v1_token::ViewToken& value);
 
 }  // namespace views_v1_token
+}  // namespace ui
+}  // namespace fuchsia
 
 #endif  // LIB_UI_VIEWS_CPP_FORMATTING_H_

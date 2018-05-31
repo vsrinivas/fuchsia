@@ -7,7 +7,7 @@
 
 #include <component/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include <views_v1/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
 
 #include <memory>
 #include <string>
@@ -27,27 +27,30 @@ namespace mozart {
 //
 // It is not necessary to use this class to implement all Views.
 // This class is merely intended to make the simple apps easier to write.
-class BaseView : private views_v1::ViewListener,
-                 private views_v1::ViewContainerListener,
+class BaseView : private ::fuchsia::ui::views_v1::ViewListener,
+                 private ::fuchsia::ui::views_v1::ViewContainerListener,
                  private fuchsia::ui::input::InputListener {
  public:
-  BaseView(views_v1::ViewManagerPtr view_manager,
-           fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+  BaseView(::fuchsia::ui::views_v1::ViewManagerPtr view_manager,
+           fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
+               view_owner_request,
            const std::string& label);
 
   ~BaseView() override;
 
   // Gets the view manager.
-  views_v1::ViewManager* view_manager() { return view_manager_.get(); }
+  ::fuchsia::ui::views_v1::ViewManager* view_manager() {
+    return view_manager_.get();
+  }
 
   // Gets the underlying view interface.
-  views_v1::View* view() { return view_.get(); }
+  ::fuchsia::ui::views_v1::View* view() { return view_.get(); }
 
   // Gets the service provider for the view.
   component::ServiceProvider* GetViewServiceProvider();
 
   // Gets the underlying view container interface.
-  views_v1::ViewContainer* GetViewContainer();
+  ::fuchsia::ui::views_v1::ViewContainer* GetViewContainer();
 
   // Gets a wrapper for the view's session.
   scenic_lib::Session* session() { return &session_; }
@@ -58,7 +61,9 @@ class BaseView : private views_v1::ViewListener,
 
   // Gets the current view properties.
   // Returns nullptr if unknown.
-  const views_v1::ViewProperties& properties() const { return properties_; }
+  const ::fuchsia::ui::views_v1::ViewProperties& properties() const {
+    return properties_;
+  }
 
   // Returns true if the view has a non-empty size in logical pixels.
   bool has_logical_size() const {
@@ -118,7 +123,8 @@ class BaseView : private views_v1::ViewListener,
   // the view then update accordingly.
   //
   // The default implementation does nothing.
-  virtual void OnPropertiesChanged(views_v1::ViewProperties old_properties);
+  virtual void OnPropertiesChanged(
+      ::fuchsia::ui::views_v1::ViewProperties old_properties);
 
   // Called when it's time for the view to update its scene contents due to
   // invalidation.  The new contents are presented once this function returns.
@@ -143,8 +149,8 @@ class BaseView : private views_v1::ViewListener,
   // Called when a child is attached.
   //
   // The default implementation does nothing.
-  virtual void OnChildAttached(uint32_t child_key,
-                               views_v1::ViewInfo child_view_info);
+  virtual void OnChildAttached(
+      uint32_t child_key, ::fuchsia::ui::views_v1::ViewInfo child_view_info);
 
   // Called when a child becomes unavailable.
   //
@@ -153,11 +159,12 @@ class BaseView : private views_v1::ViewListener,
 
  private:
   // |ViewListener|:
-  void OnPropertiesChanged(views_v1::ViewProperties properties,
+  void OnPropertiesChanged(::fuchsia::ui::views_v1::ViewProperties properties,
                            OnPropertiesChangedCallback callback) override;
 
   // |ViewContainerListener|:
-  void OnChildAttached(uint32_t child_key, views_v1::ViewInfo child_view_info,
+  void OnChildAttached(uint32_t child_key,
+                       ::fuchsia::ui::views_v1::ViewInfo child_view_info,
                        OnChildAttachedCallback callback) override;
   void OnChildUnavailable(uint32_t child_key,
                           OnChildUnavailableCallback callback) override;
@@ -170,17 +177,17 @@ class BaseView : private views_v1::ViewListener,
   void HandleSessionEvents(fidl::VectorPtr<fuchsia::ui::scenic::Event> events);
   void AdjustMetricsAndPhysicalSize();
 
-  views_v1::ViewManagerPtr view_manager_;
-  fidl::Binding<views_v1::ViewListener> view_listener_binding_;
-  fidl::Binding<views_v1::ViewContainerListener>
+  ::fuchsia::ui::views_v1::ViewManagerPtr view_manager_;
+  fidl::Binding<::fuchsia::ui::views_v1::ViewListener> view_listener_binding_;
+  fidl::Binding<::fuchsia::ui::views_v1::ViewContainerListener>
       view_container_listener_binding_;
   fidl::Binding<fuchsia::ui::input::InputListener> input_listener_binding_;
 
-  views_v1::ViewPtr view_;
+  ::fuchsia::ui::views_v1::ViewPtr view_;
   component::ServiceProviderPtr view_service_provider_;
-  views_v1::ViewContainerPtr view_container_;
+  ::fuchsia::ui::views_v1::ViewContainerPtr view_container_;
   fuchsia::ui::input::InputConnectionPtr input_connection_;
-  views_v1::ViewProperties properties_;
+  ::fuchsia::ui::views_v1::ViewProperties properties_;
   fuchsia::math::SizeF logical_size_;
   fuchsia::math::Size physical_size_;
   bool need_square_metrics_ = false;

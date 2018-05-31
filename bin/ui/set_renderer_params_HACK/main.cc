@@ -6,7 +6,7 @@
 #include <lib/zx/channel.h>
 
 #include <presentation/cpp/fidl.h>
-#include <views_v1/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include "garnet/bin/ui/root_presenter/renderer_params.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/command_line.h"
