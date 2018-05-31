@@ -57,7 +57,7 @@ enum ModuleSource {
   INTERNAL = 0;
 
   // Module that was started from outside the story by Maxwell / UserShell via
-  // StoryController.AddModule() or StoryController.CreateStory() as first
+  // StoryController.AddModule() or StoryProvider.CreateStory() as first
   // module.
   EXTERNAL = 1;
 };

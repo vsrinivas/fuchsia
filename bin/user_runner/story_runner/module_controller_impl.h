@@ -45,10 +45,12 @@ class ModuleControllerImpl : ModuleController {
   // remembers the state to initialize future added watchers.
   void SetState(ModuleState new_state);
 
-  // Calls Stop() on the module, closes the module handle, notifies
-  // watchers, then DisposeModule()s the connection and finally calls
-  // done(). Thus, done must not reference anything in
-  // ModuleController or the related ModuleContextImpl.
+  // Calls Teardown() on the AppClient of the module component instance,
+  // notifies watchers, then ReleaseModule()s the connection and finally calls
+  // |done|.
+  //
+  // Multiple calls to Teardown() are allowed, and all |done| callbacks are run
+  // in order when teardown is complete.
   void Teardown(std::function<void()> done);
 
  private:
@@ -85,9 +87,9 @@ class ModuleControllerImpl : ModuleController {
   // registered in the future to the current state.
   ModuleState state_{ModuleState::RUNNING};
 
-  // Callbacks of Teardown() invocations. If there is one Stop() request
+  // Callbacks passed to Teardown() calls. If there is one Stop() request
   // pending, a second one is only queued, no second call to Stop() is made.
-  std::vector<std::function<void()>> teardown_;
+  std::vector<std::function<void()>> teardown_done_callbacks_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleControllerImpl);
 };

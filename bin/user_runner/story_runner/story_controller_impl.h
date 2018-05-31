@@ -90,8 +90,9 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
 
   // Called by ModuleControllerImpl.
   //
-  // Releases ownership of |controller|, which deletes itself after return.
-  void ReleaseModule(ModuleControllerImpl* module_controller_impl);
+  // Releases ownership of |controller| and cleans up any related internal
+  // storage. It is the caller's responsibility to delete |controller|.
+  void ReleaseModule(ModuleControllerImpl* controller);
 
   // Called by ModuleContextImpl.
   fidl::StringPtr GetStoryId() const;

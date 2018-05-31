@@ -155,7 +155,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
       fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
           view_owner_request,
       ResultCall result_call)
-      : Operation("StoryControllerImpl::GetLedgerNotificationCall",
+      : Operation("StoryControllerImpl::LaunchModuleCall",
                   std::move(result_call)),
         story_controller_impl_(story_controller_impl),
         module_data_(std::move(module_data)),
@@ -169,31 +169,31 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    Connection* const i =
+    Connection* const connection =
         story_controller_impl_->FindConnection(module_data_->module_path);
 
     // We launch the new module if it doesn't run yet.
-    if (!i) {
+    if (!connection) {
       Launch(flow);
       return;
     }
 
-    // If the new module is already running, but with a different URL or on a
-    // different link, or if a service exchange is requested, or if transitive
-    // embedding is requested, we tear it down then launch a new module.
-    if (i->module_data->intent != module_data_->intent) {
-      i->module_controller_impl->Teardown([this, flow] {
-        // NOTE(mesch): i is invalid at this point.
+    // If the new module is already running, but with a different Intent, we
+    // tear it down then launch a new instance.
+    if (connection->module_data->intent != module_data_->intent) {
+      connection->module_controller_impl->Teardown([this, flow] {
+        // NOTE(mesch): |connection| is invalid at this point.
         Launch(flow);
       });
       return;
     }
 
-    // If the module is already running on the same URL and link, we just
-    // connect the module controller request, if there is one. Modules started
-    // with StoryController.AddModule() don't have a module controller request.
+    // Otherwise, the module is already running. Connect
+    // |module_controller_request_| to the existing instance of
+    // ModuleController.
     if (module_controller_request_.is_valid()) {
-      i->module_controller_impl->Connect(std::move(module_controller_request_));
+      connection->module_controller_impl->Connect(
+          std::move(module_controller_request_));
     }
   }
 
@@ -317,10 +317,10 @@ class StoryControllerImpl::KillModuleCall : public Operation<> {
       // The first Stop() will cause the ModuleController to be closed, and
       // so subsequent Stop() attempts will not find a controller and will
       // return.
-      auto* const i =
+      auto* const connection =
           story_controller_impl_->FindConnection(module_data_->module_path);
 
-      if (!i) {
+      if (!connection) {
         FXL_LOG(INFO) << "No ModuleController for Module"
                       << " " << PathString(module_data_->module_path) << ". "
                       << "Was ModuleContext.Stop() called twice?";
@@ -331,7 +331,7 @@ class StoryControllerImpl::KillModuleCall : public Operation<> {
       // done_() must be called BEFORE the Teardown() done callback returns. See
       // comment in StopModuleCall::Kill() before making changes here. Be aware
       // that done_ is NOT the Done() callback of the Operation.
-      i->module_controller_impl->Teardown([this, flow] {
+      connection->module_controller_impl->Teardown([this, flow] {
         for (auto& i : story_controller_impl_->modules_watchers_.ptrs()) {
           ModuleData module_data;
           module_data_->Clone(&module_data);
@@ -707,7 +707,7 @@ class StoryControllerImpl::StopModuleCall : public Operation<> {
         ->AsyncMap([this](ModuleDataPtr data) {
           module_data_ = std::move(data);
 
-          // If the module is already marked as stopped, thers's no need to
+          // If the module is already marked as stopped, there's no need to
           // update the module's data.
           if (module_data_->module_stopped) {
             return Future<>::CreateCompleted();
@@ -819,19 +819,19 @@ class StoryControllerImpl::LedgerNotificationCall : public Operation<> {
     }
 
     // Check for existing module at the given path.
-    auto* const i =
+    auto* const connection =
         story_controller_impl_->FindConnection(module_data_->module_path);
-    if (i && module_data_->module_stopped) {
-      operation_queue_.Add(new KillModuleCall(
-          story_controller_impl_, std::move(module_data_), [flow] {}));
-      return;
-    } else if (module_data_->module_stopped) {
-      // There is no module running, and the ledger change is for a stopped
-      // module so do nothing.
+    if (module_data_->module_stopped) {
+      // If the module is running, kill it.
+      if (connection) {
+        operation_queue_.Add(new KillModuleCall(
+            story_controller_impl_, std::move(module_data_), [flow] {}));
+      }
       return;
     }
 
-    // We reach this point only if we want to start an external module.
+    // We reach this point only if we want to start or update an existing
+    // external module.
     operation_queue_.Add(new LaunchModuleInShellCall(
         story_controller_impl_, std::move(module_data_),
         nullptr /* module_controller_request */, [flow] {}));
@@ -1568,7 +1568,7 @@ void StoryControllerImpl::OnPageChange(const std::string& key,
   // TODO(mesch,thatguy): We should not have to wait for anything to be written
   // to the ledger. Instead, story graph mutations should be idempotent, and any
   // ledger notification should just trigger the operation it represents, doing
-  // nothing if it was done alrady.
+  // nothing if it was done already.
 
   // Check if we already have a blocked operation for this update.
   auto i = std::find_if(blocked_operations_.begin(), blocked_operations_.end(),

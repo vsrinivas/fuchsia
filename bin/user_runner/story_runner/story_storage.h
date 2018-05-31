@@ -19,8 +19,7 @@ namespace modular {
 // * Manage the persistence of metadata about what mods are part of a single
 //   story.
 // * Manage the persistence of link values in a single story.
-// * Observe the metadata and call clients back when changes initiated by
-// other
+// * Observe the metadata and call clients back when changes initiated by other
 //   Ledger clients appear.
 //
 // All calls operate directly on the Ledger itself: no local caching is

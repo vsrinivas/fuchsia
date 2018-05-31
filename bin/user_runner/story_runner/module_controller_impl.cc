@@ -81,9 +81,9 @@ void ModuleControllerImpl::SetState(const ModuleState new_state) {
 }
 
 void ModuleControllerImpl::Teardown(std::function<void()> done) {
-  teardown_.push_back(done);
+  teardown_done_callbacks_.push_back(done);
 
-  if (teardown_.size() != 1) {
+  if (teardown_done_callbacks_.size() != 1) {
     // Not the first request, Stop() in progress.
     return;
   }
@@ -96,7 +96,7 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
     // module controller was disposed.
     story_controller_impl_->ReleaseModule(this);
 
-    for (auto& done : teardown_) {
+    for (auto& done : teardown_done_callbacks_) {
       done();
     }
 
