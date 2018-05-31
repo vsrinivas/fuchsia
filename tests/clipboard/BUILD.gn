@@ -2,15 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("clipboard") {
-  testonly = true
+import("//peridot/build/executable_package.gni")
 
-  public_deps = [
-    ":clipboard_test_module",
-  ]
-}
-
-executable("clipboard_test_module") {
+executable_package("clipboard_test_module") {
   testonly = true
 
   sources = [

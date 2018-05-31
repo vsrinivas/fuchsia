@@ -7,15 +7,10 @@
 
 namespace {
 
-// URLs of the modules used here.
-constexpr char kOneAgentUrl[] =
-    "file:///system/test/modular_tests/component_context_test_one_agent";
-
-constexpr char kUnstoppableAgent[] =
-    "file:///system/test/modular_tests/component_context_test_unstoppable_agent";
-
-constexpr char kTwoAgentUrl[] =
-    "file:///system/test/modular_tests/component_context_test_two_agent";
+// Package URLs of the test components used here.
+constexpr char kOneAgentUrl[] = "component_context_test_one_agent";
+constexpr char kUnstoppableAgent[] = "component_context_test_unstoppable_agent";
+constexpr char kTwoAgentUrl[] = "component_context_test_two_agent";
 
 constexpr int kTotalSimultaneousTests = 2;
 

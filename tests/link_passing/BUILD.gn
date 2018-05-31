@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//peridot/build/executable_package.gni")
+
 source_set("defs") {
   testonly = true
 
@@ -10,22 +12,13 @@ source_set("defs") {
   ]
 }
 
-group("link_passing") {
-  testonly = true
-
-  public_deps = [
-    ":link_passing_test_module1",
-    ":link_passing_test_module2",
-    ":link_passing_test_module3",
-  ]
-}
-
-executable("link_passing_test_module1") {
+executable_package("link_passing_test_module1") {
   testonly = true
 
   sources = [
     "link_passing_test_module1.cc",
   ]
+
   deps = [
     ":defs",
     "//garnet/public/lib/fsl",
@@ -37,12 +30,13 @@ executable("link_passing_test_module1") {
   ]
 }
 
-executable("link_passing_test_module2") {
+executable_package("link_passing_test_module2") {
   testonly = true
 
   sources = [
     "link_passing_test_module2.cc",
   ]
+
   deps = [
     ":defs",
     "//garnet/public/lib/fsl",
@@ -54,12 +48,13 @@ executable("link_passing_test_module2") {
   ]
 }
 
-executable("link_passing_test_module3") {
+executable_package("link_passing_test_module3") {
   testonly = true
 
   sources = [
     "link_passing_test_module3.cc",
   ]
+
   deps = [
     ":defs",
     "//garnet/public/lib/fsl",

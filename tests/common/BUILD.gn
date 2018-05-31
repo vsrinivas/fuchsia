@@ -49,7 +49,7 @@ package("common_null_module") {
 
   meta = [
     {
-       path = rebase_path("common_null_module_manifest.json")
+       path = "common_null_module_manifest.json"
        dest = "module.json"
     },
   ]

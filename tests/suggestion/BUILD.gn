@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//peridot/build/executable_package.gni")
+
 source_set("defs") {
   testonly = true
 
@@ -10,21 +12,13 @@ source_set("defs") {
   ]
 }
 
-group("suggestion") {
-  testonly = true
-
-  public_deps = [
-    ":suggestion_test_module",
-    ":suggestion_test_user_shell",
-  ]
-}
-
-executable("suggestion_test_module") {
+executable_package("suggestion_test_module") {
   testonly = true
 
   sources = [
     "suggestion_test_module.cc",
   ]
+
   deps = [
     ":defs",
     "//garnet/public/lib/callback",
@@ -37,12 +31,13 @@ executable("suggestion_test_module") {
   ]
 }
 
-executable("suggestion_test_user_shell") {
+executable_package("suggestion_test_user_shell") {
   testonly = true
 
   sources = [
     "suggestion_test_user_shell.cc",
   ]
+
   deps = [
     ":defs",
     "//garnet/public/lib/fsl",

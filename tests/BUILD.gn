@@ -2,23 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# We follow these conventions for the organization of the package here:
+# We follow these conventions for the organization of the sources, build rules,
+# and packages here:
 #
 # 1. All the binaries used in tests are run through a device_runner invocation
 #    configured in modular_tests.json. It usually does not ever make sense to
-#    run a test binary directly, especially not as a test. Therefore, all
-#    binaries are deployed in the subdirectory tests/modular_tests instead of
-#    under tests/ directly, so that they are not run automatically by roller
-#    scripts. Instead, only the run_modular_tests.sh script is present in
-#    tests/, which then invokes the test runner, which in turn invokes all the
-#    test binaries in the right configuration.
+#    run a test component binary directly, especially not as a test. Therefore,
+#    all binaries are deployed in their own packages, so that they are not run
+#    automatically by roller scripts. Instead, only the run_modular_tests.sh
+#    script is present in /system/test/, which then invokes the test runner,
+#    which in turn invokes all the test component binaries in the right
+#    configuration.
 #
-# 2. The component is named with a prefix that tells the test it belongs to,
-#    followed by "_test", optionally followed by a name component indicating its
-#    function if there are multiple components of the same type in a single
-#    test, followed a suffix indicating the component type. This way, all
-#    components belonging to the same test are lexicographically sorted
-#    together.
+# 2. The component binary as well as its package is named with a prefix that
+#    tells the test it belongs to, followed by "_test", optionally followed by a
+#    name component indicating its function if there are multiple components of
+#    the same type in a single test, followed a suffix indicating the component
+#    type. This way, all components belonging to the same test are
+#    lexicographically sorted together.
 #
 # 3. Common components shared between tests are named after their function
 #    followed by a suffix indicating the component type.
@@ -34,6 +35,17 @@
 #    - _service -- FIDL interfaces
 #
 # 5. The main sources of the components are named like the binaries they create.
+#
+#
+# HOW TO ADD A NEW INTEGRATION TEST
+#
+# 1. Add a new subdirectory with rules for the test components (user shells,
+#    modules, agents). Define all test components as executable_package()s.
+#
+# 2. Add the newly defined packages for all test components to
+#    //peridot/packages/tests/modular.
+#
+# 3. Add an entry for the test to modular_tests.json.
 
 import("//build/package.gni")
 
@@ -41,203 +53,14 @@ package("modular_tests") {
   testonly = true
   deprecated_system_image = true
 
-  deps = [
-    ":modular_tests.json",
-    ":run_modular_tests.sh",
-    "chain",
-    "clipboard",
-    "component_context",
-    "context_link",
-    "embed_shell",
-    "last_focus_time",
-    "link_context_entities",
-    "link_data",
-    "link_passing",
-    "link_update",
-    "parent_child",
-    "queue_persistence",
-    "story_shell",
-    "story_update",
-    "suggestion",
-    "trigger",
-    "user_shell",
-  ]
-
   tests = [
     {
-      name = "run_modular_tests.sh"
-    },
-    {
-      name = "chain_test_module"
-      dest = "modular_tests/chain_test_module"
-    },
-    {
-      name = "chain_test_child_module"
-      dest = "modular_tests/chain_test_child_module"
-    },
-    {
-      name = "chain_test_user_shell"
-      dest = "modular_tests/chain_test_user_shell"
-    },
-    {
-      name = "clipboard_test_module"
-      dest = "modular_tests/clipboard_test_module"
-    },
-    {
-      name = "component_context_test_module"
-      dest = "modular_tests/component_context_test_module"
-    },
-    {
-      name = "component_context_test_one_agent"
-      dest = "modular_tests/component_context_test_one_agent"
-    },
-    {
-      name = "component_context_test_two_agent"
-      dest = "modular_tests/component_context_test_two_agent"
-    },
-    {
-      name = "component_context_test_unstoppable_agent"
-      dest = "modular_tests/component_context_test_unstoppable_agent"
-    },
-    {
-      name = "context_link_test_module"
-      dest = "modular_tests/context_link_test_module"
-    },
-    {
-      name = "context_link_test_user_shell"
-      dest = "modular_tests/context_link_test_user_shell"
-    },
-    {
-      name = "embed_shell_test_child_module"
-      dest = "modular_tests/embed_shell_test_child_module"
-    },
-    {
-      name = "embed_shell_test_parent_module"
-      dest = "modular_tests/embed_shell_test_parent_module"
-    },
-    {
-      name = "embed_shell_test_story_shell"
-      dest = "modular_tests/embed_shell_test_story_shell"
-    },
-    {
-      name = "last_focus_time_test_user_shell"
-      dest = "modular_tests/last_focus_time_test_user_shell"
-    },
-    {
-      name = "link_context_entities_test_module"
-      dest = "modular_tests/link_context_entities_test_module"
-    },
-    {
-      name = "link_context_entities_test_user_shell"
-      dest = "modular_tests/link_context_entities_test_user_shell"
-    },
-    {
-      name = "link_data_test_user_shell"
-      dest = "modular_tests/link_data_test_user_shell"
-    },
-    {
-      name = "link_data_test_module0"
-      dest = "modular_tests/link_data_test_module0"
-    },
-    {
-      name = "link_data_test_module1"
-      dest = "modular_tests/link_data_test_module1"
-    },
-    {
-      name = "link_data_test_module2"
-      dest = "modular_tests/link_data_test_module2"
-    },
-    {
-      name = "link_passing_test_module1"
-      dest = "modular_tests/link_passing_test_module1"
-    },
-    {
-      name = "link_passing_test_module2"
-      dest = "modular_tests/link_passing_test_module2"
-    },
-    {
-      name = "link_passing_test_module3"
-      dest = "modular_tests/link_passing_test_module3"
-    },
-    {
-      name = "link_update_test_user_shell"
-      dest = "modular_tests/link_update_test_user_shell"
-    },
-    {
-      name = "modular_tests.json"
+      name = rebase_path("modular_tests.json")
       dest = "modular_tests/modular_tests.json"
     },
     {
-      name = "parent_child_test_child_module"
-      dest = "modular_tests/parent_child_test_child_module"
+      name = rebase_path("run_modular_tests.sh")
+      dest = "run_modular_tests.sh"
     },
-    {
-      name = "parent_child_test_parent_module"
-      dest = "modular_tests/parent_child_test_parent_module"
-    },
-    {
-      name = "queue_persistence_test_agent"
-      dest = "modular_tests/queue_persistence_test_agent"
-    },
-    {
-      name = "queue_persistence_test_module"
-      dest = "modular_tests/queue_persistence_test_module"
-    },
-    {
-      name = "story_shell_test_story_shell"
-      dest = "modular_tests/story_shell_test_story_shell"
-    },
-    {
-      name = "story_shell_test_user_shell"
-      dest = "modular_tests/story_shell_test_user_shell"
-    },
-    {
-      name = "story_update_test_user_shell"
-      dest = "modular_tests/story_update_test_user_shell"
-    },
-    {
-      name = "suggestion_test_module"
-      dest = "modular_tests/suggestion_test_module"
-    },
-    {
-      name = "suggestion_test_user_shell"
-      dest = "modular_tests/suggestion_test_user_shell"
-    },
-    {
-      name = "trigger_test_agent"
-      dest = "modular_tests/trigger_test_agent"
-    },
-    {
-      name = "trigger_test_module"
-      dest = "modular_tests/trigger_test_module"
-    },
-    {
-      name = "trigger_test_user_shell"
-      dest = "modular_tests/trigger_test_user_shell"
-    },
-    {
-      name = "user_shell_test_user_shell"
-      dest = "modular_tests/user_shell_test_user_shell"
-    },
-  ]
-}
-
-copy("modular_tests.json") {
-  visibility = [ ":*" ]
-  sources = [
-    "modular_tests.json",
-  ]
-  outputs = [
-    "$root_out_dir/modular_tests.json",
-  ]
-}
-
-copy("run_modular_tests.sh") {
-  visibility = [ ":*" ]
-  sources = [
-    "run_modular_tests.sh",
-  ]
-  outputs = [
-    "$root_out_dir/run_modular_tests.sh",
   ]
 }

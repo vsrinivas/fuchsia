@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//peridot/build/executable_package.gni")
+
 source_set("defs") {
   testonly = true
 
@@ -10,22 +12,13 @@ source_set("defs") {
   ]
 }
 
-group("embed_shell") {
-  testonly = true
-
-  public_deps = [
-    ":embed_shell_test_child_module",
-    ":embed_shell_test_parent_module",
-    ":embed_shell_test_story_shell",
-  ]
-}
-
-executable("embed_shell_test_child_module") {
+executable_package("embed_shell_test_child_module") {
   testonly = true
 
   sources = [
     "embed_shell_test_child_module.cc",
   ]
+
   deps = [
     ":defs",
     "//garnet/public/lib/fsl",
@@ -37,12 +30,13 @@ executable("embed_shell_test_child_module") {
   ]
 }
 
-executable("embed_shell_test_parent_module") {
+executable_package("embed_shell_test_parent_module") {
   testonly = true
 
   sources = [
     "embed_shell_test_parent_module.cc",
   ]
+
   deps = [
     ":defs",
     "//garnet/public/lib/callback",
@@ -55,12 +49,13 @@ executable("embed_shell_test_parent_module") {
   ]
 }
 
-executable("embed_shell_test_story_shell") {
+executable_package("embed_shell_test_story_shell") {
   testonly = true
 
   sources = [
     "embed_shell_test_story_shell.cc",
   ]
+
   deps = [
     ":defs",
     "//garnet/public/lib/fidl/cpp",

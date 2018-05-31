@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//peridot/build/executable_package.gni")
+
 source_set("defs") {
   testonly = true
 
@@ -10,21 +12,13 @@ source_set("defs") {
   ]
 }
 
-group("parent_child") {
-  testonly = true
-
-  public_deps = [
-    ":parent_child_test_child_module",
-    ":parent_child_test_parent_module",
-  ]
-}
-
-executable("parent_child_test_child_module") {
+executable_package("parent_child_test_child_module") {
   testonly = true
 
   sources = [
     "parent_child_test_child_module.cc",
   ]
+
   deps = [
     ":defs",
     "//garnet/public/lib/fsl",
@@ -36,12 +30,13 @@ executable("parent_child_test_child_module") {
   ]
 }
 
-executable("parent_child_test_parent_module") {
+executable_package("parent_child_test_parent_module") {
   testonly = true
 
   sources = [
     "parent_child_test_parent_module.cc",
   ]
+
   deps = [
     ":defs",
     "//garnet/public/lib/callback",

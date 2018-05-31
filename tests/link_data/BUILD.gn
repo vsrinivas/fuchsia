@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//peridot/build/executable_package.gni")
+
 source_set("defs") {
   testonly = true
 
@@ -10,23 +12,13 @@ source_set("defs") {
   ]
 }
 
-group("link_data") {
-  testonly = true
-
-  public_deps = [
-    ":link_data_test_user_shell",
-    ":link_data_test_module0",
-    ":link_data_test_module1",
-    ":link_data_test_module2",
-  ]
-}
-
-executable("link_data_test_user_shell") {
+executable_package("link_data_test_user_shell") {
   testonly = true
 
   sources = [
     "link_data_test_user_shell.cc",
   ]
+
   deps = [
     ":defs",
     "//garnet/public/lib/fidl/cpp",
@@ -44,7 +36,7 @@ executable("link_data_test_user_shell") {
   ]
 }
 
-executable("link_data_test_module0") {
+executable_package("link_data_test_module0") {
   testonly = true
 
   sources = [
@@ -63,7 +55,7 @@ executable("link_data_test_module0") {
   ]
 }
 
-executable("link_data_test_module1") {
+executable_package("link_data_test_module1") {
   testonly = true
 
   sources = [
@@ -82,7 +74,7 @@ executable("link_data_test_module1") {
   ]
 }
 
-executable("link_data_test_module2") {
+executable_package("link_data_test_module2") {
   testonly = true
 
   sources = [

@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//peridot/build/executable_package.gni")
+
 source_set("defs") {
   testonly = true
 
@@ -10,21 +12,13 @@ source_set("defs") {
   ]
 }
 
-group("link_context_entities") {
-  testonly = true
-
-  public_deps = [
-    ":link_context_entities_test_module",
-    ":link_context_entities_test_user_shell",
-  ]
-}
-
-executable("link_context_entities_test_user_shell") {
+executable_package("link_context_entities_test_user_shell") {
   testonly = true
 
   sources = [
     "link_context_entities_test_user_shell.cc",
   ]
+
   deps = [
     ":defs",
     "//garnet/public/lib/fidl/cpp",
@@ -44,12 +38,13 @@ executable("link_context_entities_test_user_shell") {
   ]
 }
 
-executable("link_context_entities_test_module") {
+executable_package("link_context_entities_test_module") {
   testonly = true
 
   sources = [
     "link_context_entities_test_module.cc",
   ]
+
   deps = [
     ":defs",
     "//garnet/public/lib/fsl",

@@ -10,10 +10,10 @@ namespace {
 // This is how long we wait for the test to finish before we timeout and tear
 // down our test.
 constexpr int kTimeoutMilliseconds = 10000;
-constexpr char kTestAgent[] =
-    "file:///system/test/modular_tests/trigger_test_agent";
-const char kModuleUrl[] =
-    "file:///system/test/modular_tests/trigger_test_module";
+
+// Package URLs of the test components used here.
+constexpr char kTestAgent[] = "trigger_test_agent";
+const char kModuleUrl[] = "trigger_test_module";
 
 }  // namespace
 

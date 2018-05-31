@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//peridot/build/executable_package.gni")
+
 source_set("defs") {
   testonly = true
 
@@ -10,16 +12,7 @@ source_set("defs") {
   ]
 }
 
-group("story_shell") {
-  testonly = true
-
-  public_deps = [
-    ":story_shell_test_story_shell",
-    ":story_shell_test_user_shell",
-  ]
-}
-
-executable("story_shell_test_story_shell") {
+executable_package("story_shell_test_story_shell") {
   testonly = true
 
   sources = [
@@ -47,7 +40,7 @@ executable("story_shell_test_story_shell") {
   ]
 }
 
-executable("story_shell_test_user_shell") {
+executable_package("story_shell_test_user_shell") {
   testonly = true
 
   sources = [

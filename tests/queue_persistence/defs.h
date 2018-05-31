@@ -11,8 +11,8 @@ namespace {
 // down our test.
 constexpr int kTimeoutMilliseconds = 10000;
 
-constexpr char kTestAgent[] =
-    "file:///system/test/modular_tests/queue_persistence_test_agent";
+// Package URLs of the test components used here.
+constexpr char kTestAgent[] = "queue_persistence_test_agent";
 
 }  // namespace
 

@@ -7,10 +7,10 @@
 
 namespace {
 
-// URLs of the modules used here.
 constexpr char kChildModuleName[] = "child";
-constexpr char kChildModuleUrl[] =
-    "file:///system/test/modular_tests/parent_child_test_child_module";
+
+// Package URLs of the test components used here.
+constexpr char kChildModuleUrl[] = "parent_child_test_child_module";
 
 constexpr int kTimeoutMilliseconds = 5000;
 

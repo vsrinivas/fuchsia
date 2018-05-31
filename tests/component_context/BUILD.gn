@@ -3,24 +3,15 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
+import("//peridot/build/executable_package.gni")
 
-group("component_context") {
-  testonly = true
-
-  public_deps = [
-    ":component_context_test_module",
-    ":component_context_test_one_agent",
-    ":component_context_test_two_agent",
-    ":component_context_test_unstoppable_agent",
-  ]
-}
-
-executable("component_context_test_module") {
+executable_package("component_context_test_module") {
   testonly = true
 
   sources = [
     "component_context_test_module.cc",
   ]
+
   deps = [
     ":component_context_test_service",
     ":defs",
@@ -34,12 +25,13 @@ executable("component_context_test_module") {
   ]
 }
 
-executable("component_context_test_one_agent") {
+executable_package("component_context_test_one_agent") {
   testonly = true
 
   sources = [
     "component_context_test_one_agent.cc",
   ]
+
   deps = [
     ":component_context_test_service",
     ":defs",
@@ -51,12 +43,13 @@ executable("component_context_test_one_agent") {
   ]
 }
 
-executable("component_context_test_two_agent") {
+executable_package("component_context_test_two_agent") {
   testonly = true
 
   sources = [
     "component_context_test_two_agent.cc",
   ]
+
   deps = [
     ":defs",
     "//garnet/public/lib/fsl",
@@ -67,12 +60,13 @@ executable("component_context_test_two_agent") {
   ]
 }
 
-executable("component_context_test_unstoppable_agent") {
+executable_package("component_context_test_unstoppable_agent") {
   testonly = true
 
   sources = [
     "component_context_test_unstoppable_agent.cc",
   ]
+
   deps = [
     ":defs",
     "//garnet/public/lib/fsl",

@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//peridot/build/executable_package.gni")
+
 source_set("defs") {
   testonly = true
 
@@ -10,20 +12,13 @@ source_set("defs") {
   ]
 }
 
-group("last_focus_time") {
-  testonly = true
-
-  public_deps = [
-    ":last_focus_time_test_user_shell",
-  ]
-}
-
-executable("last_focus_time_test_user_shell") {
+executable_package("last_focus_time_test_user_shell") {
   testonly = true
 
   sources = [
     "last_focus_time_test_user_shell.cc",
   ]
+
   deps = [
     ":defs",
     "//garnet/public/lib/fidl/cpp",

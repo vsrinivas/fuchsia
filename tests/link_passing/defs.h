@@ -7,12 +7,9 @@
 
 namespace {
 
-// URLs of the modules used here.
-constexpr char kModule2Url[] =
-    "file:///system/test/modular_tests/link_passing_test_module2";
-
-constexpr char kModule3Url[] =
-    "file:///system/test/modular_tests/link_passing_test_module3";
+// Package URLs of the test components used here.
+constexpr char kModule2Url[] = "link_passing_test_module2";
+constexpr char kModule3Url[] = "link_passing_test_module3";
 
 
 }  // namespace

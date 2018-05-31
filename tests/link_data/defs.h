@@ -7,13 +7,10 @@
 
 namespace {
 
-// URLs of the modules used here.
-constexpr char kModule0Url[] =
-  "file:///system/test/modular_tests/link_data_test_module0";
-constexpr char kModule1Url[] =
-  "file:///system/test/modular_tests/link_data_test_module1";
-constexpr char kModule2Url[] =
-  "file:///system/test/modular_tests/link_data_test_module2";
+// Package URLs of the test components used here.
+constexpr char kModule0Url[] = "link_data_test_module0";
+constexpr char kModule1Url[] = "link_data_test_module1";
+constexpr char kModule2Url[] = "link_data_test_module2";
 
 // Names for links of Module0.
 constexpr char kLink[] = "link";

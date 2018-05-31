@@ -7,9 +7,8 @@
 
 namespace {
 
-// URLs of the modules used here.
-constexpr char kModuleUrl[] =
-    "file:///system/test/modular_tests/link_context_entities_test_module";
+// Package URLs of the test components used here.
+constexpr char kModuleUrl[] = "link_context_entities_test_module";
 
 }  // namespace
 

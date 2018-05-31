@@ -68,15 +68,12 @@ package("maxwell_tests") {
   tests = [
     {
       name = "maxwell_unittests"
-      dest = "modular_tests/maxwell_unittests"
     },
     {
       name = "context_engine_test"
-      dest = "maxwell/context_engine_test"
     },
     {
       name = "suggestion_engine_test"
-      dest = "maxwell/suggestion_engine_test"
     },
   ]
 }

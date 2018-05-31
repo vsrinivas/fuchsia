@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
+import("//peridot/build/executable_package.gni")
 
 source_set("defs") {
   testonly = true
@@ -12,21 +13,13 @@ source_set("defs") {
   ]
 }
 
-group("queue_persistence") {
-  testonly = true
-
-  public_deps = [
-    ":queue_persistence_test_agent",
-    ":queue_persistence_test_module",
-  ]
-}
-
-executable("queue_persistence_test_module") {
+executable_package("queue_persistence_test_module") {
   testonly = true
 
   sources = [
     "queue_persistence_test_module.cc",
   ]
+
   deps = [
     ":defs",
     ":queue_persistence_test_service",
@@ -39,12 +32,13 @@ executable("queue_persistence_test_module") {
   ]
 }
 
-executable("queue_persistence_test_agent") {
+executable_package("queue_persistence_test_agent") {
   testonly = true
 
   sources = [
     "queue_persistence_test_agent.cc",
   ]
+
   deps = [
     ":defs",
     ":queue_persistence_test_service",

@@ -7,8 +7,9 @@
 
 namespace {
 
-constexpr char kModuleUrl[] =
-    "file:///system/test/modular_tests/context_link_test_module";
+// Package URLs of the test components used here.
+constexpr char kModuleUrl[] = "context_link_test_module";
+
 constexpr char kTopic[] = "link/context_link_test";
 constexpr char kLink[] = "context_link";
 

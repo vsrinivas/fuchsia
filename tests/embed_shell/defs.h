@@ -9,8 +9,8 @@ namespace {
 
 constexpr char kChildModuleName[] = "child";
 
-constexpr char kChildModuleUrl[] =
-    "/system/test/modular_tests/embed_shell_test_child_module";
+// Package URLs of the test components used here.
+constexpr char kChildModuleUrl[] = "embed_shell_test_child_module";
 
 }  // namespace
 
