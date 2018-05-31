@@ -21,6 +21,7 @@ source_set("test_main") {
   sources = [
     "mock_device.h",
     "test_main.cpp",
+    "test_data.h",
   ]
 
   deps = [
@@ -79,12 +80,14 @@ executable("dispatcher_tests") {
 
   sources = [
     "dispatcher_unittest.cpp",
+    "frame_dispatcher_unittest.cpp",
   ]
 
   deps = [
     ":test_main",
     "//garnet/lib/wlan/mlme",
     "//third_party/googletest:gtest",
+    "//third_party/googletest:gmock",
     "//zircon/public/lib/fit",
   ]
 

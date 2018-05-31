@@ -38,16 +38,10 @@ class Dispatcher {
     common::WlanStats<common::DispatcherStats, ::fuchsia::wlan::stats::DispatcherStats> stats_;
 
    private:
-    // MAC frame handlers
-    zx_status_t HandleCtrlPacket(fbl::unique_ptr<Packet> packet);
-    zx_status_t HandleDataPacket(fbl::unique_ptr<Packet> packet);
-    zx_status_t HandleMgmtPacket(fbl::unique_ptr<Packet> packet);
-    zx_status_t HandleEthPacket(fbl::unique_ptr<Packet> packet);
     zx_status_t HandleSvcPacket(fbl::unique_ptr<Packet> packet);
     template <typename Message>
     zx_status_t HandleMlmeMessage(fbl::unique_ptr<Packet> packet, uint32_t ordinal);
     zx_status_t HandleDeviceQueryRequest();
-    zx_status_t HandleActionPacket(MgmtFrame<ActionFrame> action, const wlan_rx_info_t* rxinfo);
     zx_status_t HandleMlmeStats(uint32_t ordinal) const;
     template <typename T>
     zx_status_t SendServiceMessage(uint32_t ordinal, T* msg) const;
