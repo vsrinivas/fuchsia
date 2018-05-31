@@ -58,7 +58,6 @@ executable("maxwell_unittests") {
 
 package("maxwell_tests") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     ":maxwell_unittests",

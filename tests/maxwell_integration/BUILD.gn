@@ -18,12 +18,9 @@ executable("context_engine_test") {
     "context_engine_test.cc",
   ]
 
-  public_deps = [
-    "//garnet/public/lib/app/cpp",
-  ]
-
   deps = [
     ":context_common",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/bin/context_engine:scope_utils",
     "//peridot/lib/testing:entity_resolver_fake",
@@ -41,13 +38,10 @@ executable("suggestion_engine_test") {
     "suggestion_engine_test.cc",
   ]
 
-  public_deps = [
-    "//garnet/public/lib/app/cpp",
-  ]
-
   deps = [
     ":context_common",
     ":test_suggestion_listener",
+    "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/bin/acquirers/mock:gps",
     "//peridot/bin/agents:carmen_sandiego",
