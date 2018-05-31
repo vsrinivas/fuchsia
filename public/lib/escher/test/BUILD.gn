@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test.gni")
+executable("escher_unittests") {
+  testonly = true
 
-test("escher_unittests") {
   sources = [
     "fs/hack_filesystem_unittest.cc",
     "geometry/bounding_box_unittest.cc",
