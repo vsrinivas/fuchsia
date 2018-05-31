@@ -160,7 +160,7 @@ impl Message {
 
     /// Returns a reference to the `Message`'s `ConfigOption` with `code`, or `None`
     /// if `Message` does not have the specified `ConfigOption`.
-    pub fn get_config_option_with(&self, code: OptionCode) -> Option<&ConfigOption> {
+    pub fn get_config_option(&self, code: OptionCode) -> Option<&ConfigOption> {
         // There should generally be few (~0 - 10) options attached to a message
         // so the linear search should not be unreasonably costly.
         for opt in &self.options {
