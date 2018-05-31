@@ -79,6 +79,20 @@ A: The output is directed to your terminal.
 There does exist a way to write test output into files (including a summary JSON
 file), which is how CQ bots collect the test output for automated runs.
 
+## Q: How to disable a test? How to find and run disabled tests?
+
+A: To temporary prevent a particular test to being run as part of a test suite,
+you can mark it as disabled. Disabled tests are defined by having their name
+prefixed with `DISABLED_`. One way to find them is therefore simply `git grep
+DISABLED_`.
+
+If running the test outputs `YOU HAVE 1 DISABLED TEST`, you can also pass the
+following flags to find out which test is disabled:
+`/system/test/scenic_unittests --gtest_list_tests --gtest_filter=*DISABLED_*`.
+
+To force-run disabled tests:
+`/system/test/scenic_unittests --gtest_also_run_disabled_tests`.
+
 ## Q: How do I run a bunch of tests automatically? How do I ensure all dependencies are tested?
 
 A: Upload your patch to Gerrit and do a CQ dry run.
