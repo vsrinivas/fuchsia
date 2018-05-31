@@ -4,14 +4,12 @@
 
 library fuchsia.modular;
 
-// Addresses a Link within a story. Every Link is first created by or for some
-// Module instance under some name, and subsequently shared with other Module
-// instances. The LinkPath records this Module instance and name.
+// Addresses a Link within a story. A LinkPath struct should be treated as an
+// opaque unique identifier of a link instance.  The |module_path| and
+// |link_name| components are leftovers from legacy code and have no external
+// meaning.
+// TODO(thatguy,lindkvist): Replace this structure with a vector<>. MI4-1021
 struct LinkPath {
-  // The module_path of the Module instance this link was created under.
   vector<string> module_path;
-
-  // Name of the link itself. It may be null, since null is a valid name of a
-  // Link.
   string? link_name;
 };
