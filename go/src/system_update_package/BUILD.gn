@@ -62,8 +62,8 @@ package("system_updater") {
   ]
   meta = [
     {
-      path = rebase_path("cmd/updater/meta/sandbox")
-      dest = "sandbox"
+      path = rebase_path("cmd/updater/meta/system_updater.cmx")
+      dest = "system_updater.cmx"
     }
   ]
 }
