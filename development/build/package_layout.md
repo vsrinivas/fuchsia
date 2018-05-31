@@ -14,8 +14,8 @@ in Fuchsia.
 ```
 //<layer>/packages
     <layer>          # all production pkg up to this layer
-    dev              # pkg declared at this layer; for daily development
-    default          # alias for dev
+    buildbot         # all pkg declared at this layer; used by CQ/CI
+    default          # for daily development at this layer
     kitchen_sink     # all pkg up to this layer
     all              # grab bag of every pkg in this layer
     prod/            # pkg that can be picked up in production
@@ -25,7 +25,7 @@ in Fuchsia.
     examples/        # pkg demonstrating features offered by this layer
   * experimental/    # pkg not quite ready for prod
   * config/          # config files for the system (e.g. what to boot into)
-  * sdk/             # SDK definitions
+    sdk/             # SDK definitions
   * products/        # definitions for specific products
     ...              # each layer will also define additional packages
 ```
@@ -35,8 +35,8 @@ in Fuchsia.
 - `<layer>(N)` depends on `<layer>(N-1)` and adds all the production artifacts
   of (N)
   - this defines a pure production build
-- `dev(N)` depends on `<layer>(N-1)` and adds all artifacts of (N)
-  - this defines a build suitable for developing (N) itself
+- `buildbot(N)` depends on `<layer>(N-1)` and adds all artifacts of (N)
+  - this defines a build suitable for verifying the integrity of (N)
 - `kitchen_sink(N)` depends on `kitchen_sink(N-1)` and adds all artifacts of (N)
   - this defines a build suitable for developing (N) as well as its dependencies
 
@@ -48,8 +48,6 @@ the root `all` package, thereby creating a convenient shortcut to build "all
 packages in the layer".
 Note that the directories that do not require aggregation are marked with `*` in
 the diagram above.
-
-`default` is currently an alias for `dev`.
 
 ## Disabling packages
 
