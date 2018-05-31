@@ -33,9 +33,7 @@ class GuestControllerImpl : public fuchsia::guest::GuestController {
   // |fuchsia::guest::GuestController|
   void GetPhysicalMemory(GetPhysicalMemoryCallback callback) override;
   void GetSerial(GetSerialCallback callback) override;
-  void GetViewProvider(
-      fidl::InterfaceRequest<::fuchsia::ui::views_v1::ViewProvider>
-          view_provider) override;
+  void GetViewProvider(GetViewProviderCallback callback) override;
 
  private:
   fidl::BindingSet<fuchsia::guest::GuestController> bindings_;

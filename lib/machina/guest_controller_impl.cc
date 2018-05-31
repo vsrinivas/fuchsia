@@ -40,11 +40,14 @@ void GuestControllerImpl::GetSerial(GetSerialCallback callback) {
   callback(duplicate(client_socket_, ZX_RIGHT_SAME_RIGHTS));
 }
 
-void GuestControllerImpl::GetViewProvider(
-    fidl::InterfaceRequest<::fuchsia::ui::views_v1::ViewProvider> request) {
-  if (view_provider_ != nullptr) {
-    view_provider_bindings_.AddBinding(view_provider_, std::move(request));
+void GuestControllerImpl::GetViewProvider(GetViewProviderCallback callback) {
+  if (view_provider_ == nullptr) {
+    // AddBinding gives a "valid" handle to a null ImplPtr, so we explicitly
+    // pass a nullptr to the callback here.
+    callback(nullptr);
+    return;
   }
+  callback(view_provider_bindings_.AddBinding(view_provider_));
 }
 
 }  // namespace machina
