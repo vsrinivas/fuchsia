@@ -170,6 +170,7 @@ var reservedWords = map[string]bool{
 	"Future":  true,
 	"Stream":  true,
 	"Never":   true,
+	"Send":    true,
 	"fidl":    true,
 	"futures": true,
 	"zx":      true,
