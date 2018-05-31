@@ -20,6 +20,7 @@
 #include <stdnoreturn.h>
 #include <string.h>
 #include <sys/param.h>
+#include <zircon/syscalls/system.h>
 
 #pragma GCC visibility pop
 
@@ -28,7 +29,7 @@
 
 static noreturn void do_shutdown(zx_handle_t log, zx_handle_t rroot) {
     printl(log, "Process exited.  Executing \"" SHUTDOWN_COMMAND "\".");
-    zx_debug_send_command(rroot, SHUTDOWN_COMMAND, strlen(SHUTDOWN_COMMAND));
+    zx_system_powerctl(rroot, ZX_SYSTEM_POWERCTL_SHUTDOWN, NULL);
     printl(log, "still here after shutdown!");
     while (true)
         __builtin_trap();

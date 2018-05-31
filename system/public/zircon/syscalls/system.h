@@ -13,6 +13,10 @@ __BEGIN_CDECLS
 #define ZX_SYSTEM_POWERCTL_DISABLE_ALL_CPUS_BUT_PRIMARY 2u
 #define ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE      3u
 #define ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1              4u
+#define ZX_SYSTEM_POWERCTL_REBOOT                       5u
+#define ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER            6u
+#define ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY              7u
+#define ZX_SYSTEM_POWERCTL_SHUTDOWN                     8u
 
 typedef struct zx_system_powerctl_arg {
     union {

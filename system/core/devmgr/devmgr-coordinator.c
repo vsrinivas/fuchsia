@@ -19,6 +19,7 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/policy.h>
+#include <zircon/syscalls/system.h>
 #include <zircon/device/dmctl.h>
 #include <zircon/boot/bootdata.h>
 #include <fdio/io.h>
@@ -1687,13 +1688,13 @@ static void dc_handle_new_device(device_t* dev) {
 static void dc_suspend_fallback(uint32_t flags) {
     log(INFO, "devcoord: suspend fallback with flags 0x%08x\n", flags);
     if (flags == DEVICE_SUSPEND_FLAG_REBOOT) {
-        zx_debug_send_command(get_root_resource(), "reboot", sizeof("reboot"));
+        zx_system_powerctl(get_root_resource(), ZX_SYSTEM_POWERCTL_REBOOT, NULL);
     } else if (flags == DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER) {
-        zx_debug_send_command(get_root_resource(), "reboot-bootloader", sizeof("reboot-bootloader"));
+        zx_system_powerctl(get_root_resource(), ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER, NULL);
     } else if (flags == DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY) {
-        zx_debug_send_command(get_root_resource(), "reboot-recovery", sizeof("reboot-recovery"));
+        zx_system_powerctl(get_root_resource(), ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY, NULL);
     } else if (flags == DEVICE_SUSPEND_FLAG_POWEROFF) {
-        zx_debug_send_command(get_root_resource(), "poweroff", sizeof("poweroff"));
+        zx_system_powerctl(get_root_resource(), ZX_SYSTEM_POWERCTL_SHUTDOWN, NULL);
     }
 }
 
