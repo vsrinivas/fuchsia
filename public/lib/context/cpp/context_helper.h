@@ -14,6 +14,8 @@
 namespace fuchsia {
 namespace modular {
 
+// Takes a single value specified by |key| from |update|, and sets
+// |update.values| to null."
 std::pair<bool, fidl::VectorPtr<fuchsia::modular::ContextValue>>
 TakeContextValue(fuchsia::modular::ContextUpdate* update,
                  const std::string& key);

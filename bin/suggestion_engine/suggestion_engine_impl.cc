@@ -465,10 +465,11 @@ void SuggestionEngineImpl::PerformQueryAction(const Action& action) {
 }
 
 void SuggestionEngineImpl::OnContextUpdate(ContextUpdate update) {
-  for (auto const& it : ranking_features) {
-    auto result = TakeContextValue(&update, it.first);
-    if (result.first) {
-      it.second->UpdateContext(result.second);
+  for (auto& entry: update.values.take()) {
+    for (const auto& rf_it : ranking_features) {
+      if (entry.key == rf_it.first) {  // Update key == rf key
+        rf_it.second->UpdateContext(entry.value);
+      }
     }
   }
   next_processor_.UpdateRanking();
