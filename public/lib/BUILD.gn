@@ -111,7 +111,6 @@ fidl("fidl_internal") {
 
   sources = [
     "story/fidl/link_change.fidl",
-    "story/fidl/per_device_story_info.fidl",
     "story/fidl/story_data.fidl",
     "user/fidl/user_runner.fidl",
   ]

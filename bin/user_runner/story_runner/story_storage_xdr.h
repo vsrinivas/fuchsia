@@ -12,8 +12,6 @@ namespace fuchsia {
 namespace modular {
 
 extern XdrFilterType<ModuleData> XdrModuleData[];
-extern XdrFilterType<internal::PerDeviceStoryInfo>
-    XdrPerDeviceStoryInfo[];
 
 }  // namespace modular
 }  // namespace fuchsia

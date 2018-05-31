@@ -1775,27 +1775,6 @@ void StoryControllerImpl::SetState(const StoryState new_state) {
   }
 
   story_provider_impl_->NotifyStoryStateChange(story_id_, state_);
-
-  // NOTE(mesch): This gets scheduled on the StoryControllerImpl Operation
-  // queue. If the current StoryControllerImpl Operation is part of a
-  // DeleteStory Operation of the StoryProviderImpl, then the SetStoryState
-  // Operation gets scheduled after the delete of the story is completed, and it
-  // will not execute because its queue is deleted beforehand.
-  //
-  // TODO(mesch): We should execute this inside the containing Operation.
-
-  modular::internal::PerDeviceStoryInfoPtr data =
-      modular::internal::PerDeviceStoryInfo::New();
-  data->device_id = story_provider_impl_->device_id();
-  data->story_id = story_id_;
-  data->timestamp = time(nullptr);
-  data->state = state_;
-
-  operation_queue_.Add(
-      new WriteDataCall<fuchsia::modular::internal::PerDeviceStoryInfo,
-                        modular::internal::PerDeviceStoryInfoPtr>(
-          page(), MakePerDeviceKey(data->device_id), XdrPerDeviceStoryInfo,
-          std::move(data), [] {}));
 }
 
 void StoryControllerImpl::DisposeLink(LinkImpl* const link) {

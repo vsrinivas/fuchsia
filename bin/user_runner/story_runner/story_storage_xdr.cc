@@ -207,30 +207,5 @@ XdrFilterType<ModuleData> XdrModuleData[] = {
     XdrModuleData_v1, nullptr,
 };
 
-void XdrPerDeviceStoryInfo_v1(XdrContext* const xdr,
-                              internal::PerDeviceStoryInfo* const data) {
-  xdr->Field("device", &data->device_id);
-  xdr->Field("id", &data->story_id);
-  xdr->Field("time", &data->timestamp);
-  xdr->Field("state", &data->state);
-}
-
-void XdrPerDeviceStoryInfo_v2(XdrContext* const xdr,
-                              internal::PerDeviceStoryInfo* const data) {
-  if (!xdr->Version(2)) {
-    return;
-  }
-  xdr->Field("device", &data->device_id);
-  xdr->Field("id", &data->story_id);
-  xdr->Field("time", &data->timestamp);
-  xdr->Field("state", &data->state);
-}
-
-XdrFilterType<internal::PerDeviceStoryInfo> XdrPerDeviceStoryInfo[] = {
-    XdrPerDeviceStoryInfo_v2,
-    XdrPerDeviceStoryInfo_v1,
-    nullptr,
-};
-
 }  // namespace modular
 }  // namespace fuchsia
