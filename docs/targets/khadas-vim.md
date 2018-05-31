@@ -13,7 +13,6 @@ Before you start, you need a heat sink. A passive chip heat sink will allow you
 to run 2 cores out of 8 at full speed before reaching 80C, the critical
 temperature at which cores have to be throttled down.
 
-
 ## Serial Console
 
 The debug UART for the serial console is exposed on the 40 pin header at the back of the board.
@@ -24,29 +23,26 @@ On the front row of the header:
 - 3rd from right: RX (Orange wire)
 - 4th from right: Ground (Black wire)
 
-For FTDI serial cables with black, white red and green wires, use this:
+For FTDI serial cables with black, white, red and green wires, use this:
 
 - 2nd from right: TX (White wire)
 - 3rd from right: RX (Green wire)
 - 4th from right: Ground (Black wire)
 
-In [this diagram](http://docs.khadas.com/basics/VimGPIOPinout/) of the 40 pin header,
+In [this diagram](http://docs.khadas.com/vim1/GPIOPinout.html) of the 40 pin header,
 these correspond to pins 17 through 19.
 
 ## Buttons
 
-The VIM2 has 3 buttons on the left side of the board.
-On the board schematic, SW1 (also labelled 'R') is the switch closest to the USB
-plug. This is the reset switch. The other two switches are general purpose,
-SW3 (farthest away from the USB plug, labelled P on the schematic) can
-be used for entering flashing mode.  If SW3 is held down while the
-board is reset or power cycled, the bootloader will enter flashing mode
-instead of booting the kernel normally.
+The VIM2 has 3 buttons on the left side of the board. On the board schematic, SW1 (switch closest to the USB plug) is the reset switch. SW3 (farthest away from the USB plug on the schematic) can be used for entering flashing mode. If SW3 is held down while the board is reset or power cycled , the bootloader will enter flashing mode instead of booting the kernel normally.
 
 ## VIM2 Bootloader
 
 Booting Zircon on the VIM2 requires a custom bootloader.
-Within Google, this can be found at [go/vim2-bootloader](http://go/vim2-bootloader).
+
+### [Googlers only] 
+Within Google, this can be found at [go/vim2-bootloader](http://go/vim2-bootloader). Download the .bin file and follow the instructions in the document.
+
 If you are not at Google, hang on until we make this publicly available.
 
 To find out what version of the bootloader you have, grep for "fuchsia-bootloader"
@@ -58,22 +54,30 @@ in the kernel boot log. You should see something like: "cmdline: fuchsia-bootloa
 make -j32 arm64
 ```
 
+Be sure you've already set up your network before proceeding to the next step.
+
 ## Flashing Zircon
 
-First enter fastboot mode by resetting the board with SW3 depressed. If you want
-to flash zedboot instead of zircon, please add '-m' on the command line.
-Then:
+First enter fastboot mode by holding dwon SW3 (leftmost button), pressing SW1 (rightmost button) quickly and keeping pressing SW3 for a few seconds. Then cd to the zircon directory and run: 
 
 ```
-scripts/flash-vim2 [-m]
+scripts/flash-vim2 -m
 ```
+This allows you to enable zedboot.
 
 ### netbooting
 
+To netboot zircon, reset your VIM2 by pressing SW1(rightmost button) and run the following under the zircon directory:
 ```
-zircon: ./build-x86/tools/bootserver ./build-arm64/zircon.bin ./build-arm64/vim2-bootdata.bin
-garnet: fx set arm64 --netboot; fx build; fx boot
+./build-arm64/tools/bootserver ./build-arm64/zircon.bin
 ```
+You should be able to see "Issued boot command to ..." message printed out if this step is successful.
+
+To netboot garnet, run the following under the fuchsia directory:
+```
+fx set arm64 --netboot; fx build; fx boot
+```
+
 
 ### Fuchsia logo
 
