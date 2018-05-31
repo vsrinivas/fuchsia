@@ -33,7 +33,7 @@ pub use timer::{Interval, Timer, TimeoutExt, OnTimeout};
 mod executor;
 pub use executor::{Executor, EHandle, spawn};
 mod fifo;
-pub use fifo::{Fifo, FifoEntry};
+pub use fifo::{Fifo, FifoEntry, FifoReadable, FifoWritable, ReadEntry, WriteEntry};
 pub mod net;
 
 #[macro_export]
