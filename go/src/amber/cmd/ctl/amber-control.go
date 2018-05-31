@@ -56,7 +56,7 @@ var (
 	pkgName    = fs.String("n", "", "Name of a package")
 	pkgVersion = fs.String("v", "", "Version of a package")
 	srcUrl     = fs.String("s", "", "The location of a package source")
-	rateLimit  = fs.Uint("l", 0, "Maximum number of requests allowable in a time period.")
+	rateLimit  = fs.Uint64("l", 0, "Maximum number of requests allowable in a time period.")
 	srcKey     = fs.String("k", "", "Root key for the source, this can be either the key itself or a http[s]:// or file:// URL to the key")
 	blobID     = fs.String("i", "", "Content ID of the blob")
 	noWait     = fs.Bool("nowait", false, "Return once installation has started, package will not yet be available.")
@@ -114,7 +114,7 @@ func addSource(a *amber.ControlInterface) error {
 
 	added, err := a.AddSrc(amber.SourceConfig{
 		RepoUrl:    *srcUrl,
-		RateLimit:  int32(*rateLimit),
+		RateLimit:  *rateLimit,
 		RatePeriod: int32(*period),
 		RootKeys: []amber.KeyConfig{
 			amber.KeyConfig{

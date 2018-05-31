@@ -19,7 +19,7 @@ struct SourceConfig {
 
   // The rate limit indicates the number of requests per rateReriod, expressed
   // in milliseconds. A limit or period of zero means there is no limit.
-  int32 rateLimit;
+  uint64 rateLimit;
 
   // How frequently to poll the TUF server.
   int32 ratePeriod;
