@@ -13,6 +13,11 @@ set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/image_build_vars.sh
 
+if [[ "${FUCHSIA_ARCH}" != "x64" ]]; then
+  echo >&2 mkzedboot is not supported for ${FUCHSIA_ARCH}
+  exit 1
+fi
+
 force=false
 if [[ "$1" == "-f" ]]; then
   shift
