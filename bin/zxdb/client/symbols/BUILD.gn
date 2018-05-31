@@ -12,6 +12,7 @@ static_library("symbols") {
 
   public = [
     "file_line.h",
+    "loaded_module_symbols.h",
     "location.h",
     "module_symbols.h",
     "process_symbols.h",
@@ -22,12 +23,17 @@ static_library("symbols") {
     "dwarf_die_decoder.cc",
     "dwarf_die_decoder.h",
     "file_line.cc",
+    "loaded_module_symbols.cc",
+    "loaded_module_symbols_impl.cc",
+    "loaded_module_symbols_impl.h",
     "location.cc",
     "module_symbol_index.cc",
     "module_symbol_index.h",
     "module_symbol_index_node.cc",
     "module_symbol_index_node.h",
     "module_symbols.cc",
+    "module_symbols_impl.cc",
+    "module_symbols_impl.h",
     "process_symbols.cc",
     "process_symbols_impl.cc",
     "process_symbols_impl.h",
@@ -57,7 +63,7 @@ source_set("tests") {
   sources = [
     "module_symbol_index_unittest.cc",
     "module_symbol_index_node_unittest.cc",
-    "module_symbols_unittest.cc",
+    "module_symbols_impl_unittest.cc",
     "system_symbols_unittest.cc",
     "test_symbol_module.cc",
   ]

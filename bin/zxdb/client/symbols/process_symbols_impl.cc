@@ -4,7 +4,8 @@
 
 #include "garnet/bin/zxdb/client/symbols/process_symbols_impl.h"
 
-#include "garnet/bin/zxdb/client/symbols/module_symbols.h"
+#include "garnet/bin/zxdb/client/symbols/loaded_module_symbols_impl.h"
+#include "garnet/bin/zxdb/client/symbols/module_symbols_impl.h"
 #include "garnet/bin/zxdb/client/symbols/system_symbols.h"
 #include "garnet/bin/zxdb/client/symbols/target_symbols_impl.h"
 #include "garnet/lib/debug_ipc/records.h"
@@ -46,10 +47,15 @@ void ProcessSymbolsImpl::SetModules(
     info.build_id = module.build_id;
     info.base = module.base;
 
+    fxl::RefPtr<SystemSymbols::ModuleRef> module_symbols;
     Err err = system_symbols->GetModule(
-        module.name, module.build_id, &info.symbols);
-    if (err.has_error() && symbol_load_failure_callback_ &&
-        ExpectSymbolsForName(module.name)) {
+        module.name, module.build_id, &module_symbols);
+    if (!err.has_error()) {
+      // Success, make the LoadedModuleSymbolsImpl.
+      info.symbols = std::make_unique<LoadedModuleSymbolsImpl>(
+          std::move(module_symbols), module.base);
+    } else if (symbol_load_failure_callback_ &&
+               ExpectSymbolsForName(module.name)) {
       symbol_load_failure_callback_(err);
     }
     modules_.emplace(std::piecewise_construct,
@@ -62,7 +68,7 @@ void ProcessSymbolsImpl::SetModules(
   target_symbols_->RemoveAllModules();
   for (auto& pair : modules_) {
     if (pair.second.symbols)
-      target_symbols_->AddModule(pair.second.symbols);
+      target_symbols_->AddModule(pair.second.symbols->module());
   }
 }
 
@@ -78,8 +84,10 @@ std::vector<ProcessSymbols::ModuleStatus> ProcessSymbolsImpl::GetStatus() const 
     status.build_id = pair.second.build_id;
     status.base = pair.second.base;
     status.symbols_loaded = pair.second.symbols.get();
-    if (pair.second.symbols)
-      status.symbol_file = pair.second.symbols->module_symbols()->name();
+    if (pair.second.symbols) {
+      status.symbol_file =
+          pair.second.symbols->GetModuleSymbols()->GetLocalFileName();
+    }
     result.push_back(std::move(status));
   }
   return result;
@@ -89,12 +97,7 @@ Location ProcessSymbolsImpl::GetLocationForAddress(uint64_t address) const {
   const ModuleInfo* info = InfoForAddress(address);
   if (!info || !info->symbols)
     return Location(Location::State::kSymbolized, address);  // Can't symbolize.
-
-  // ModuleSymbols handles addresses relative to its base.
-  Location result = info->symbols->module_symbols()->LocationForAddress(
-      address - info->base);
-  result.AddAddressOffset(info->base);
-  return result;
+  return info->symbols->LocationForAddress(address);
 }
 
 std::vector<uint64_t> ProcessSymbolsImpl::GetAddressesForFunction(
@@ -102,10 +105,9 @@ std::vector<uint64_t> ProcessSymbolsImpl::GetAddressesForFunction(
   std::vector<uint64_t> result;
 
   for (const auto& pair : modules_) {
-    for (auto local_addr :
-         pair.second.symbols->module_symbols()->AddressesForFunction(name)) {
-      // Offset address for module load address.
-      result.push_back(pair.first + local_addr);
+    if (pair.second.symbols) {
+      for (auto local_addr : pair.second.symbols->AddressesForFunction(name))
+        result.push_back(local_addr);
     }
   }
 

@@ -6,7 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "garnet/bin/zxdb/client/symbols/module_symbols.h"
+#include "garnet/bin/zxdb/client/symbols/module_symbols_impl.h"
 #include "garnet/bin/zxdb/client/symbols/test_symbol_module.h"
 #include "gtest/gtest.h"
 
@@ -27,7 +27,7 @@ class ScopedUnlink {
 
 // Trying to load a nonexistand file should error.
 TEST(ModuleSymbols, NonExistantFile) {
-  ModuleSymbols module(TestSymbolModule::GetTestFileName() + "_NONEXISTANT");
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName() + "_NONEXISTANT");
   Err err = module.Load();
   EXPECT_TRUE(err.has_error());
 }
@@ -43,23 +43,23 @@ TEST(ModuleSymbols, BadFileType) {
   EXPECT_LT(0, write(fd, temp_name, strlen(temp_name)));
   close(fd);
 
-  ModuleSymbols module(TestSymbolModule::GetTestFileName() + "_NONEXISTANT");
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName() + "_NONEXISTANT");
   Err err = module.Load();
   EXPECT_TRUE(err.has_error());
 }
 
 TEST(ModuleSymbols, Basic) {
-  ModuleSymbols module(TestSymbolModule::GetTestFileName());
+  ModuleSymbolsImpl module(TestSymbolModule::GetTestFileName());
   Err err = module.Load();
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // MyFunction() should have one implementation.
   std::vector<uint64_t> addrs =
-      module.AddressesForFunction(TestSymbolModule::kMyFunctionName);
+      module.RelativeAddressesForFunction(TestSymbolModule::kMyFunctionName);
   ASSERT_EQ(1u, addrs.size());
 
   // That address should resolve back to the function name.
-  Location loc = module.LocationForAddress(addrs[0]);
+  Location loc = module.RelativeLocationForRelativeAddress(addrs[0]);
   EXPECT_TRUE(loc.is_symbolized());
   EXPECT_EQ("zxdb_symbol_test.cc", loc.file_line().GetFileNamePart());
   EXPECT_EQ(TestSymbolModule::kMyFunctionLine, loc.file_line().line());

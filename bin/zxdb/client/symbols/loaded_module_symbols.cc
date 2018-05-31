@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/client/symbols/module_symbols.h"
+#include "garnet/bin/zxdb/client/symbols/loaded_module_symbols.h"
 
 namespace zxdb {
 
-ModuleSymbols::ModuleSymbols() = default;
-ModuleSymbols::~ModuleSymbols() = default;
+LoadedModuleSymbols::LoadedModuleSymbols() = default;
+LoadedModuleSymbols::~LoadedModuleSymbols() = default;
 
 }  // namespace zxdb

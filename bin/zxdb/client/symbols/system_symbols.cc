@@ -5,7 +5,7 @@
 #include "garnet/bin/zxdb/client/symbols/system_symbols.h"
 
 #include "garnet/bin/zxdb/client/host_utils.h"
-#include "garnet/bin/zxdb/client/symbols/module_symbols.h"
+#include "garnet/bin/zxdb/client/symbols/module_symbols_impl.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 #include "garnet/public/lib/fxl/strings/string_view.h"
 #include "garnet/public/lib/fxl/strings/trim.h"
@@ -45,7 +45,7 @@ std::string GetIdFilePath() {
 
 SystemSymbols::ModuleRef::ModuleRef(
     SystemSymbols* system_symbols,
-    std::unique_ptr<ModuleSymbols> module_symbols)
+    std::unique_ptr<ModuleSymbolsImpl> module_symbols)
     : system_symbols_(system_symbols),
       module_symbols_(std::move(module_symbols)) {}
 
@@ -120,7 +120,7 @@ Err SystemSymbols::GetModule(const std::string& name_for_msg,
         name_for_msg.c_str(), build_id.c_str()));
   }
 
-  auto module_symbols = std::make_unique<ModuleSymbols>(found_id->second);
+  auto module_symbols = std::make_unique<ModuleSymbolsImpl>(found_id->second);
   Err err = module_symbols->Load();
   if (err.has_error())
     return err;

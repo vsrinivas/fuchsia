@@ -6,6 +6,7 @@
 
 #include <functional>
 #include <map>
+#include <memory>
 
 #include "garnet/bin/zxdb/client/symbols/process_symbols.h"
 #include "garnet/bin/zxdb/client/symbols/system_symbols.h"
@@ -17,6 +18,7 @@ struct Module;
 
 namespace zxdb {
 
+class LoadedModuleSymbolsImpl;
 class TargetSymbolsImpl;
 
 // Main client interface for querying process symbol information. See also
@@ -62,7 +64,7 @@ class ProcessSymbolsImpl : public ProcessSymbols {
     uint64_t base = 0;
 
     // MAY BE NULL if the symbols could not be loaded.
-    fxl::RefPtr<SystemSymbols::ModuleRef> symbols;
+    std::unique_ptr<LoadedModuleSymbolsImpl> symbols;
   };
 
   // Looks up the given address and returns the module it's part of. Returns

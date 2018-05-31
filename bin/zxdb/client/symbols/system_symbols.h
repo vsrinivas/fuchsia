@@ -13,11 +13,14 @@
 
 namespace zxdb {
 
-class ModuleSymbols;
+class ModuleSymbolsImpl;
 
 // Tracks a global view of all ModuleSymbols objects. Since each object is
 // independent of load address, we can share these between processes that
 // load the same binary.
+//
+// This is an internal object but since there is no public API, there is no
+// "Impl" split.
 class SystemSymbols {
  public:
   // A reference-counted holder for the ModuleSymbols object. This object
@@ -26,10 +29,10 @@ class SystemSymbols {
   class ModuleRef : public fxl::RefCountedThreadSafe<ModuleRef> {
    public:
     ModuleRef(SystemSymbols* system_symbols,
-              std::unique_ptr<ModuleSymbols> module_symbols);
+              std::unique_ptr<ModuleSymbolsImpl> module_symbols);
 
-    ModuleSymbols* module_symbols() { return module_symbols_.get(); }
-    const ModuleSymbols* module_symbols() const {
+    ModuleSymbolsImpl* module_symbols() { return module_symbols_.get(); }
+    const ModuleSymbolsImpl* module_symbols() const {
       return module_symbols_.get();
     }
 
@@ -44,7 +47,7 @@ class SystemSymbols {
     // May be null to indicate teh SystemSymbols object is deleted.
     SystemSymbols* system_symbols_;
 
-    std::unique_ptr<ModuleSymbols> module_symbols_;
+    std::unique_ptr<ModuleSymbolsImpl> module_symbols_;
   };
 
   SystemSymbols();
