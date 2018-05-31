@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "garnet/bin/zxdb/client/client_object.h"
 #include "garnet/public/lib/fxl/macros.h"
 
 namespace zxdb {
@@ -16,10 +15,10 @@ namespace zxdb {
 // We can know about symbols associated with a target even when the process
 // isn't loaded. For example, when setting a breakpoint on a symbol we can
 // validate that it's a real symbol.
-class TargetSymbols : public ClientObject {
+class TargetSymbols {
  public:
-  explicit TargetSymbols(Session* sesion);
-  ~TargetSymbols() override;
+  TargetSymbols();
+  virtual ~TargetSymbols();
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(TargetSymbols);

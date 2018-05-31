@@ -8,13 +8,14 @@
 #include <string>
 #include <functional>
 
-#include "garnet/bin/zxdb/client/client_object.h"
 #include "garnet/bin/zxdb/client/symbols/location.h"
 #include "garnet/public/lib/fxl/macros.h"
 
 namespace zxdb {
 
-class ProcessSymbols : public ClientObject {
+class TargetSymbols;
+
+class ProcessSymbols {
  public:
   struct ModuleStatus {
     // Name of the executable or shared library.
@@ -33,8 +34,10 @@ class ProcessSymbols : public ClientObject {
     std::string symbol_file;
   };
 
-  explicit ProcessSymbols(Session* session);
-  ~ProcessSymbols() override;
+  ProcessSymbols();
+  virtual ~ProcessSymbols();
+
+  virtual TargetSymbols* GetTargetSymbols() = 0;
 
   // Returns statistics on the currently-loaded modules.
   virtual std::vector<ModuleStatus> GetStatus() const = 0;

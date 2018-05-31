@@ -2,14 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/client/process_symbols_impl.h"
+#include "garnet/bin/zxdb/client/symbols/process_symbols_impl.h"
 
-#include "garnet/bin/zxdb/client/process_impl.h"
 #include "garnet/bin/zxdb/client/symbols/module_symbols.h"
-#include "garnet/bin/zxdb/client/system_impl.h"
-#include "garnet/bin/zxdb/client/system_symbols.h"
-#include "garnet/bin/zxdb/client/target_impl.h"
-#include "garnet/bin/zxdb/client/target_symbols_impl.h"
+#include "garnet/bin/zxdb/client/symbols/system_symbols.h"
+#include "garnet/bin/zxdb/client/symbols/target_symbols_impl.h"
 #include "garnet/lib/debug_ipc/records.h"
 
 namespace zxdb {
@@ -24,10 +21,10 @@ bool ExpectSymbolsForName(const std::string& name) {
 
 }  // namespace
 
-ProcessSymbolsImpl::ProcessSymbolsImpl(ProcessImpl* process)
-    : ProcessSymbols(process->session()), process_(process) {}
+ProcessSymbolsImpl::ProcessSymbolsImpl(TargetSymbolsImpl* target_symbols)
+    : target_symbols_(target_symbols) {}
 
-ProcessSymbolsImpl::~ProcessSymbolsImpl() {}
+ProcessSymbolsImpl::~ProcessSymbolsImpl() = default;
 
 void ProcessSymbolsImpl::AddModule(
     const debug_ipc::Module& module,
@@ -37,25 +34,23 @@ void ProcessSymbolsImpl::AddModule(
 
 void ProcessSymbolsImpl::SetModules(
     const std::vector<debug_ipc::Module>& modules) {
-  TargetImpl* target = process_->target();
-
   // This function must be careful not to delete any references to old modules
   // that might be re-used in the new set. This variable keeps them in scope
   // while we generate the new map.
   auto old_modules = std::move(modules_);
 
-  SystemImpl* system = target->system();
+  SystemSymbols* system_symbols = target_symbols_->system_symbols();
   for (const debug_ipc::Module& module : modules) {
     ModuleInfo info;
     info.name = module.name;
     info.build_id = module.build_id;
     info.base = module.base;
 
-    Err err = system->symbols().GetModule(
+    Err err = system_symbols->GetModule(
         module.name, module.build_id, &info.symbols);
-    if (err.has_error()) {
-      if (!ExpectSymbolsForName(module.name))
-        process_->NotifyOnSymbolLoadFailure(err);
+    if (err.has_error() && symbol_load_failure_callback_ &&
+        ExpectSymbolsForName(module.name)) {
+      symbol_load_failure_callback_(err);
     }
     modules_.emplace(std::piecewise_construct,
                      std::forward_as_tuple(module.base),
@@ -64,11 +59,15 @@ void ProcessSymbolsImpl::SetModules(
 
   // Update the TargetSymbols last. It may have been keeping an old
   // ModuleSymbols object alive that was needed above.
-  target->symbols()->RemoveAllModules();
+  target_symbols_->RemoveAllModules();
   for (auto& pair : modules_) {
     if (pair.second.symbols)
-      target->symbols()->AddModule(pair.second.symbols);
+      target_symbols_->AddModule(pair.second.symbols);
   }
+}
+
+TargetSymbols* ProcessSymbolsImpl::GetTargetSymbols() {
+  return target_symbols_;
 }
 
 std::vector<ProcessSymbols::ModuleStatus> ProcessSymbolsImpl::GetStatus() const {

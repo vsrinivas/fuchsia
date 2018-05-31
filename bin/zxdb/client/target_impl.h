@@ -5,7 +5,7 @@
 #pragma once
 
 #include "garnet/bin/zxdb/client/target.h"
-#include "garnet/bin/zxdb/client/target_symbols_impl.h"
+#include "garnet/bin/zxdb/client/symbols/target_symbols_impl.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/memory/weak_ptr.h"
 

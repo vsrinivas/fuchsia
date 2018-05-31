@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/client/system_symbols.h"
+#include "garnet/bin/zxdb/client/symbols/system_symbols.h"
 
 #include "garnet/bin/zxdb/client/host_utils.h"
 #include "garnet/bin/zxdb/client/symbols/module_symbols.h"

@@ -21,8 +21,13 @@ ProcessImpl::ProcessImpl(TargetImpl* target,
       target_(target),
       koid_(koid),
       name_(name),
-      symbols_(this),
-      weak_factory_(this) {}
+      symbols_(target->symbols()),
+      weak_factory_(this) {
+  symbols_.set_symbol_load_failure_callback([this](const Err& err) {
+    for (auto& observer : observers())
+      observer.OnSymbolLoadFailure(this, err);
+  });
+}
 
 ProcessImpl::~ProcessImpl() {
   // Send notifications for all destroyed threads.
@@ -168,11 +173,6 @@ void ProcessImpl::OnThreadExiting(const debug_ipc::ThreadRecord& record) {
     observer.WillDestroyThread(this, found->second.get());
 
   threads_.erase(found);
-}
-
-void ProcessImpl::NotifyOnSymbolLoadFailure(const Err& err) {
-  for (auto& observer : observers())
-    observer.OnSymbolLoadFailure(this, err);
 }
 
 void ProcessImpl::UpdateThreads(

@@ -19,7 +19,7 @@ namespace zxdb {
 TargetImpl::TargetImpl(SystemImpl* system)
     : Target(system->session()),
       system_(system),
-      symbols_(system->session()),
+      symbols_(&system->symbols()),
       impl_weak_factory_(this) {}
 TargetImpl::~TargetImpl() = default;
 

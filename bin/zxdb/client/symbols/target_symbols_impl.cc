@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/client/target_symbols_impl.h"
+#include "garnet/bin/zxdb/client/symbols/target_symbols_impl.h"
 
 namespace zxdb {
 
@@ -13,10 +13,10 @@ bool TargetSymbolsImpl::ModuleRefComparePtr::operator()(
   return a.get() < b.get();
 }
 
-TargetSymbolsImpl::TargetSymbolsImpl(Session* session)
-    : TargetSymbols(session) {}
+TargetSymbolsImpl::TargetSymbolsImpl(SystemSymbols* system_symbols)
+    : system_symbols_(system_symbols) {}
 TargetSymbolsImpl::TargetSymbolsImpl(const TargetSymbolsImpl& other)
-    : TargetSymbols(other.session()),
+    : system_symbols_(other.system_symbols_),
       modules_(other.modules_) {}
 TargetSymbolsImpl::~TargetSymbolsImpl() {}
 

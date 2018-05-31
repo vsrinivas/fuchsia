@@ -6,10 +6,12 @@
 
 #include <set>
 
-#include "garnet/bin/zxdb/client/system_symbols.h"
-#include "garnet/bin/zxdb/client/target_symbols.h"
+#include "garnet/bin/zxdb/client/symbols/system_symbols.h"
+#include "garnet/bin/zxdb/client/symbols/target_symbols.h"
 
 namespace zxdb {
+
+class SessionSymbolsImpl;
 
 // The current implementation is that all modifications to the list of
 // symbol modules is done by the ProcessSymbolsImpl which knows the actual
@@ -25,11 +27,16 @@ namespace zxdb {
 class TargetSymbolsImpl : public TargetSymbols {
  public:
   // This class is copyable and assignable (to support cloning Targets).
-  explicit TargetSymbolsImpl(Session* session);
+  // The SessionSymbolsImpl object must outlive this class.
+  explicit TargetSymbolsImpl(SystemSymbols* system_symbols);
   TargetSymbolsImpl(const TargetSymbolsImpl& other);
   ~TargetSymbolsImpl() override;
 
   TargetSymbolsImpl& operator=(const TargetSymbolsImpl& other);
+
+  SystemSymbols* system_symbols() {
+    return system_symbols_;
+  }
 
   // Notifications from ProcessSymbols to keep things in sync. Multiple add
   // notifications are allowed for the same module (this happens when
@@ -45,6 +52,8 @@ class TargetSymbolsImpl : public TargetSymbols {
     bool operator()(const fxl::RefPtr<SystemSymbols::ModuleRef>& a,
                     const fxl::RefPtr<SystemSymbols::ModuleRef>& b) const;
   };
+
+  SystemSymbols* const system_symbols_;  // Non-owning.
 
   // Since there are no addresses, there is no real ordering of these modules.
   // Track them by pointer identity to make keeping in sync with the

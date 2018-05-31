@@ -9,7 +9,7 @@
 #include <map>
 #include <memory>
 
-#include "garnet/bin/zxdb/client/process_symbols_impl.h"
+#include "garnet/bin/zxdb/client/symbols/process_symbols_impl.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/memory/weak_ptr.h"
 
@@ -51,9 +51,6 @@ class ProcessImpl : public Process {
   // Notifications from the agent that a thread has started or exited.
   void OnThreadStarting(const debug_ipc::ThreadRecord& record);
   void OnThreadExiting(const debug_ipc::ThreadRecord& record);
-
-  // Broadcasts the notification OnSymbolLoadFailure().
-  void NotifyOnSymbolLoadFailure(const Err& err);
 
  private:
   // Syncs the threads_ list to the new list of threads passed in .

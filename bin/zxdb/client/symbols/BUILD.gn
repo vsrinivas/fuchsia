@@ -1,0 +1,74 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+static_library("symbols") {
+  # The public API for this target refers to the API for the zxdb/client
+  # module, of which this is a submodule. The client library one directory up
+  # instantiates the "Impl" classes using the non-public headers.
+  friend = [
+    "../*",
+  ]
+
+  public = [
+    "file_line.h",
+    "location.h",
+    "module_symbols.h",
+    "process_symbols.h",
+    "target_symbols.h",
+  ]
+
+  sources = [
+    "dwarf_die_decoder.cc",
+    "dwarf_die_decoder.h",
+    "file_line.cc",
+    "location.cc",
+    "module_symbol_index.cc",
+    "module_symbol_index.h",
+    "module_symbol_index_node.cc",
+    "module_symbol_index_node.h",
+    "module_symbols.cc",
+    "process_symbols.cc",
+    "process_symbols_impl.cc",
+    "process_symbols_impl.h",
+    "system_symbols.cc",
+    "system_symbols.h",
+    "target_symbols.cc",
+    "target_symbols_impl.cc",
+    "target_symbols_impl.h",
+  ]
+
+  # This library can not use any part of the debugger other than the "common"
+  # base helpers.
+  public_deps = [
+    "..:common",
+    "//garnet/lib/debug_ipc:client",
+    "//garnet/public/lib/fxl",
+  ]
+
+  deps = [
+    "//third_party/llvm/lib/DebugInfo",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+
+  sources = [
+    "module_symbol_index_unittest.cc",
+    "module_symbol_index_node_unittest.cc",
+    "module_symbols_unittest.cc",
+    "system_symbols_unittest.cc",
+    "test_symbol_module.cc",
+  ]
+
+  deps = [
+    ":symbols",
+    "//third_party/googletest:gtest",
+    "//third_party/llvm/lib/DebugInfo",
+  ]
+
+  data_deps = [
+    "//garnet/bin/zxdb/client/test_data:copy_test_so(${default_toolchain}-shared)",
+  ]
+}
