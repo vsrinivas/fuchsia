@@ -123,7 +123,6 @@ executable("closetest") {
 
   deps = [
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/launchpad",
   ]
 
   libs = [
@@ -160,7 +159,6 @@ executable("passfdtest") {
 
   deps = [
     "//zircon/public/lib/fdio",
-    "//zircon/public/lib/launchpad",
   ]
 }
 

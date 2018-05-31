@@ -5,7 +5,7 @@
 #include <arpa/inet.h>
 #include <ctype.h>
 #include <errno.h>
-#include <launchpad/launchpad.h>
+#include <fdio/spawn.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <stdio.h>
@@ -72,27 +72,32 @@ static int server(const char* service) {
   printf("connected from %s\n",
          sa_to_str((struct sockaddr*)&addr, str, sizeof(str)));
 
-  launchpad_t* lp;
-  launchpad_create(zx_job_default(), kProgram, &lp);
-  const char* argv[2] = {kProgram, "ECHO"};
-  launchpad_load_from_file(lp, kProgram);
-  launchpad_set_args(lp, 2, argv);
-  launchpad_clone(lp, LP_CLONE_FDIO_NAMESPACE);
+  const char* argv[] = {kProgram, "ECHO", NULL};
+  fdio_spawn_action_t actions[] = {
 #ifdef CAN_CLONE_SOCKETS
-  launchpad_clone_fd(lp, conn, STDIN_FILENO);
-  launchpad_transfer_fd(lp, conn, STDOUT_FILENO);
+    {.action = FDIO_SPAWN_ACTION_CLONE_FD,
+      .fd = {.local_fd = conn, .target_fd = STDIN_FILENO}},
+    {.action = FDIO_SPAWN_ACTION_TRANSFER_FD,
+      .fd = {.local_fd = conn, .target_fd = STDOUT_FILENO}},
 #else
-  launchpad_transfer_fd(lp, conn, STDIN_FILENO);
-  launchpad_clone_fd(lp, STDOUT_FILENO, STDOUT_FILENO);
+    {.action = FDIO_SPAWN_ACTION_TRANSFER_FD,
+      .fd = {.local_fd = conn, .target_fd = STDIN_FILENO}},
+    {.action = FDIO_SPAWN_ACTION_CLONE_FD,
+      .fd = {.local_fd = STDOUT_FILENO, .target_fd = STDOUT_FILENO}},
 #endif
-  launchpad_clone_fd(lp, STDERR_FILENO, STDERR_FILENO);
+    {.action = FDIO_SPAWN_ACTION_CLONE_FD,
+      .fd = {.local_fd = STDERR_FILENO, .target_fd = STDERR_FILENO}},
+  };
+  size_t actions_count = sizeof(actions) / sizeof(actions[0]);
 
-  zx_handle_t proc = 0;
-  const char* errmsg;
+  zx_handle_t proc = ZX_HANDLE_INVALID;
+  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+  zx_status_t status = fdio_spawn_etc(ZX_HANDLE_INVALID,
+      FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO, kProgram, argv, NULL,
+      actions_count, actions, &proc, err_msg);
 
-  zx_status_t status = launchpad_go(lp, &proc, &errmsg);
   if (status < 0) {
-    fprintf(stderr, "error from launchpad_go: %s\n", errmsg);
+    fprintf(stderr, "error from fdio_spawn_etc: %s\n", err_msg);
     return -1;
   }
 
