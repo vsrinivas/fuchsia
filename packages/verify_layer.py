@@ -17,13 +17,14 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_CANONICAL_PACKAGES = [
     'buildbot',
     'default',
-    'dev',
     'kitchen_sink',
 ]
 
 # Standard names for packages in a layer.
 CANONICAL_PACKAGES = [
     'all',
+    # TODO(pylaligand): remove me.
+    'dev',
 ]
 
 # Directories which do not require aggregation.
