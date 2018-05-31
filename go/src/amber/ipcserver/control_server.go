@@ -83,7 +83,7 @@ func (c *ControlSrvr) AddSrc(cfg amber.SourceConfig) (bool, error) {
 		return false, err
 	}
 
-	tufSource := source.NewTUFSource(cfg.RequestUrl, dir, keys,
+	tufSource := source.NewTUFSource(cfg.RepoUrl, dir, keys,
 		time.Millisecond*time.Duration(cfg.RatePeriod), uint64(cfg.RateLimit))
 	c.daemon.AddSource(tufSource)
 

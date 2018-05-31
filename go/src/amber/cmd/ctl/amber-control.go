@@ -114,7 +114,6 @@ func addSource(a *amber.ControlInterface) error {
 
 	added, err := a.AddSrc(amber.SourceConfig{
 		RepoUrl:    *srcUrl,
-		RequestUrl: *srcUrl,
 		RateLimit:  int32(*rateLimit),
 		RatePeriod: int32(*period),
 		RootKeys: []amber.KeyConfig{
