@@ -589,7 +589,7 @@ No values for `target_cpu = "arm64"`.
 
 **Default value for `target_cpu = "arm64"`:** "host_x64/thinlto-cache"
 
-**Default value for `target_cpu = "x64"`:** "x64-shared/thinlto-cache"
+**Default value for `target_cpu = "x64"`:** "thinlto-cache"
 
 
 ### thinlto_jobs
