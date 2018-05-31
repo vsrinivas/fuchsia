@@ -68,7 +68,11 @@ template("dart_test") {
   flutter_shell_out_dir = get_label_info(flutter_shell_label, "root_out_dir")
   flutter_shell_bin = "$flutter_shell_out_dir/flutter_tester"
 
-  invocation_file = "$target_gen_dir/$target_name.sh"
+  if (current_toolchain == host_toolchain) {
+    invocation_file = "$root_out_dir/$target_name"
+  } else {
+    invocation_file = "$target_gen_dir/$target_name"
+  }
 
   action(main_target_name) {
     script = "//build/dart/gen_test_invocation.py"
