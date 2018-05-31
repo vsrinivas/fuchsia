@@ -8,11 +8,11 @@
 #include <functional>
 #include <string>
 
-#include <component/cpp/fidl.h>
 #include <cloud_provider/cpp/fidl.h>
+#include <component/cpp/fidl.h>
 
-#include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/service_provider_impl.h"
+#include "lib/app/cpp/startup_context.h"
 
 namespace cloud_provider {
 
@@ -23,7 +23,7 @@ class ValidationTestsLauncher {
   //
   // |factory| is called to produce instances of the cloud provider under test.
   ValidationTestsLauncher(
-      component::ApplicationContext* application_context,
+      component::StartupContext* startup_context,
       std::function<void(fidl::InterfaceRequest<CloudProvider>)> factory);
 
   // Starts the tests.
@@ -35,7 +35,7 @@ class ValidationTestsLauncher {
            std::function<void(int32_t)> callback);
 
  private:
-  component::ApplicationContext* const application_context_;
+  component::StartupContext* const startup_context_;
   std::function<void(fidl::InterfaceRequest<CloudProvider>)> factory_;
   component::ServiceProviderImpl service_provider_impl_;
   component::ComponentControllerPtr validation_tests_controller_;

@@ -50,7 +50,7 @@ implementation. Roughly, the main function of a flutter module should look like
 the following.
 
 ```dart
-final ApplicationContext _context = new ApplicationContext.fromStartupInfo();
+final StartupContext _context = new StartupContext.fromStartupInfo();
 
 // Keep this module reference as a global variable to keep it for the lifetime
 // of this module.
@@ -107,7 +107,7 @@ flutter_app("example_flutter_hello_world") {
     "//peridot/public/lib/module/fidl:fidl_dart",          # module fidl dart bindings
     "//peridot/public/lib/story/fidl:fidl_dart",           # story fidl dart bindings
     "//third_party/dart-pkg/git/flutter/packages/flutter", # flutter package
-    "//topaz/public/lib/app/dart",                         # needed for ApplicationContext
+    "//topaz/public/lib/app/dart",                         # needed for StartupContext
     "//topaz/public/lib/fidl/dart",                        # fidl dart libraries
   ]
 }

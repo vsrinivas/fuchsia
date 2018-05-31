@@ -68,30 +68,27 @@ int main(int argc, char** argv) {
   }
 
   fsl::MessageLoop message_loop;
-  std::unique_ptr<component::ApplicationContext> application_context =
-      component::ApplicationContext::CreateFromStartupInfo();
-  cloud_provider_firestore::CloudProviderFactory factory(
-      application_context.get(), credentials_path);
+  std::unique_ptr<component::StartupContext> startup_context =
+      component::StartupContext::CreateFromStartupInfo();
+  cloud_provider_firestore::CloudProviderFactory factory(startup_context.get(),
+                                                         credentials_path);
 
   cloud_provider::ValidationTestsLauncher launcher(
-      application_context.get(), [&factory, api_key, server_id](auto request) {
+      startup_context.get(), [&factory, api_key, server_id](auto request) {
         factory.MakeCloudProvider(server_id, api_key, std::move(request));
       });
 
   int32_t return_code = -1;
   async::PostTask(
-      message_loop.async(),
-      [&factory, &launcher, &return_code,
-      &message_loop,
-      arguments = std::move(arguments)] {
-          factory.Init();
+      message_loop.async(), [&factory, &launcher, &return_code, &message_loop,
+                             arguments = std::move(arguments)] {
+        factory.Init();
 
-          launcher.Run(arguments, [&return_code, &message_loop](int32_t result)
-          {
-            return_code = result;
-            message_loop.PostQuitTask();
-          });
-  });
+        launcher.Run(arguments, [&return_code, &message_loop](int32_t result) {
+          return_code = result;
+          message_loop.PostQuitTask();
+        });
+      });
   message_loop.Run();
   return return_code;
 }

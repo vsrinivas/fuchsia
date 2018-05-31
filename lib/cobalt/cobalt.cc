@@ -32,8 +32,7 @@ fidl::VectorPtr<cobalt::ObservationValue> CloneObservationValues(
 }
 }  // namespace
 
-CobaltObservation::CobaltObservation(uint32_t metric_id,
-                                     uint32_t encoding_id,
+CobaltObservation::CobaltObservation(uint32_t metric_id, uint32_t encoding_id,
                                      Value value)
     : metric_id_(metric_id) {
   FXL_DCHECK(value.is_string_value() || value.is_int_value() ||
@@ -47,8 +46,7 @@ CobaltObservation::CobaltObservation(uint32_t metric_id,
 CobaltObservation::~CobaltObservation() = default;
 
 CobaltObservation::CobaltObservation(
-    uint32_t metric_id,
-    fidl::VectorPtr<cobalt::ObservationValue> parts)
+    uint32_t metric_id, fidl::VectorPtr<cobalt::ObservationValue> parts)
     : metric_id_(metric_id), parts_(std::move(parts)) {}
 
 CobaltObservation::CobaltObservation(const CobaltObservation& rhs)
@@ -180,10 +178,9 @@ CobaltObservation& CobaltObservation::operator=(CobaltObservation&& rhs) {
   return *this;
 }
 
-CobaltContext::CobaltContext(async_t* async,
-                             component::ApplicationContext* app_context,
+CobaltContext::CobaltContext(async_t* async, component::StartupContext* context,
                              int32_t project_id)
-    : async_(async), app_context_(app_context), project_id_(project_id) {
+    : async_(async), context_(context), project_id_(project_id) {
   ConnectToCobaltApplication();
 }
 
@@ -208,7 +205,7 @@ void CobaltContext::ReportObservation(CobaltObservation observation) {
 
 void CobaltContext::ConnectToCobaltApplication() {
   auto encoder_factory =
-      app_context_->ConnectToEnvironmentService<CobaltEncoderFactory>();
+      context_->ConnectToEnvironmentService<CobaltEncoderFactory>();
   encoder_factory->GetEncoder(project_id_, encoder_.NewRequest());
   encoder_.set_error_handler([this] { OnConnectionError(); });
 
@@ -306,13 +303,11 @@ void CobaltContext::AddObservationCallback(CobaltObservation observation,
 }
 
 fxl::AutoCall<fxl::Closure> InitializeCobalt(
-    async_t* async,
-    component::ApplicationContext* app_context,
-    int32_t project_id,
-    CobaltContext** cobalt_context) {
+    async_t* async, component::StartupContext* startup_context,
+    int32_t project_id, CobaltContext** cobalt_context) {
   FXL_DCHECK(!*cobalt_context);
   auto context =
-      std::make_unique<CobaltContext>(async, app_context, project_id);
+      std::make_unique<CobaltContext>(async, startup_context, project_id);
   *cobalt_context = context.get();
   return fxl::MakeAutoCall<fxl::Closure>(fxl::MakeCopyable(
       [context = std::move(context), cobalt_context]() mutable {

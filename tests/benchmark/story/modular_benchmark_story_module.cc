@@ -70,9 +70,9 @@ class NullModule : fuchsia::modular::LinkWatcher {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::ModuleDriver<NullModule> driver(
-      app_context.get(), [&loop] { loop.QuitNow(); });
+      context.get(), [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

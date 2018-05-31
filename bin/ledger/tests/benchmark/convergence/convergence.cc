@@ -54,9 +54,8 @@ ConvergenceBenchmark::ConvergenceBenchmark(async::Loop* loop, int entry_count,
                                            int value_size, int device_count,
                                            std::string server_id)
     : loop_(loop),
-      application_context_(
-          component::ApplicationContext::CreateFromStartupInfo()),
-      cloud_provider_firebase_factory_(application_context_.get()),
+      startup_context_(component::StartupContext::CreateFromStartupInfo()),
+      cloud_provider_firebase_factory_(startup_context_.get()),
       entry_count_(entry_count),
       value_size_(value_size),
       device_count_(device_count),
@@ -67,7 +66,8 @@ ConvergenceBenchmark::ConvergenceBenchmark(async::Loop* loop, int entry_count,
   FXL_DCHECK(value_size_ > 0);
   FXL_DCHECK(device_count_ > 1);
   for (auto& device_context : devices_) {
-    device_context.storage_directory = std::make_unique<files::ScopedTempDir>(kStoragePath);
+    device_context.storage_directory =
+        std::make_unique<files::ScopedTempDir>(kStoragePath);
     device_context.page_watcher =
         std::make_unique<fidl::Binding<ledger::PageWatcher>>(this);
   }
@@ -90,10 +90,10 @@ void ConvergenceBenchmark::Run() {
     cloud_provider::CloudProviderPtr cloud_provider;
     cloud_provider_firebase_factory_.MakeCloudProvider(
         server_id_, "", cloud_provider.NewRequest());
-    ledger::Status status = test::GetLedger(
-        [this] { loop_->Quit(); }, application_context_.get(),
-        &device_context.controller, std::move(cloud_provider),
-        "convergence", synced_dir_path, &device_context.ledger);
+    ledger::Status status =
+        test::GetLedger([this] { loop_->Quit(); }, startup_context_.get(),
+                        &device_context.controller, std::move(cloud_provider),
+                        "convergence", synced_dir_path, &device_context.ledger);
     QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
     device_context.ledger->GetPage(
         fidl::MakeOptional(page_id_),

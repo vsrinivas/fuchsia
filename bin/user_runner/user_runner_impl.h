@@ -52,7 +52,7 @@ class UserRunnerImpl : modular::internal::UserRunner,
                        UserShellContext,
                        EntityProviderLauncher {
  public:
-  UserRunnerImpl(component::ApplicationContext* application_context, bool test);
+  UserRunnerImpl(component::StartupContext* startup_context, bool test);
 
   ~UserRunnerImpl() override;
 
@@ -159,7 +159,7 @@ class UserRunnerImpl : modular::internal::UserRunner,
   // execution steps are stored in at_end_.
   void TerminateRecurse(int i);
 
-  component::ApplicationContext* const application_context_;
+  component::StartupContext* const startup_context_;
   const bool test_;
 
   fidl::BindingSet<fuchsia::modular::internal::UserRunner> bindings_;

@@ -30,8 +30,7 @@ PutBenchmark::PutBenchmark(
     : loop_(loop),
       generator_(seed),
       tmp_dir_(kStoragePath),
-      application_context_(
-          component::ApplicationContext::CreateFromStartupInfo()),
+      startup_context_(component::StartupContext::CreateFromStartupInfo()),
       entry_count_(entry_count),
       transaction_size_(transaction_size),
       key_size_(key_size),
@@ -58,8 +57,8 @@ void PutBenchmark::Run() {
                 << (update_ ? " --update" : "");
   ledger::LedgerPtr ledger;
   ledger::Status status = test::GetLedger(
-      [this] { loop_->Quit(); }, application_context_.get(),
-      &component_controller_, nullptr, "put", tmp_dir_.path(), &ledger);
+      [this] { loop_->Quit(); }, startup_context_.get(), &component_controller_,
+      nullptr, "put", tmp_dir_.path(), &ledger);
   QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
 
   ledger::PageId id;

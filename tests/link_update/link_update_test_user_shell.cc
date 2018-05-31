@@ -8,7 +8,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
@@ -37,7 +37,9 @@ class LinkWatcherImpl : fuchsia::modular::LinkWatcher {
   }
 
   // Sets the function that's called for a notification.
-  void Continue(std::function<void(const fidl::StringPtr&)> at) { continue_ = at; }
+  void Continue(std::function<void(const fidl::StringPtr&)> at) {
+    continue_ = at;
+  }
 
  private:
   // |LinkWatcher|
@@ -56,8 +58,8 @@ class LinkWatcherImpl : fuchsia::modular::LinkWatcher {
 class TestApp : public fuchsia::modular::testing::ComponentBase<
                     fuchsia::modular::UserShell> {
  public:
-  TestApp(component::ApplicationContext* const application_context)
-      : ComponentBase(application_context) {
+  TestApp(component::StartupContext* const startup_context)
+      : ComponentBase(startup_context) {
     TestInit(__FILE__);
   }
 
@@ -162,16 +164,15 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
     root_peer_->Set(nullptr, "5");
     root_link_->Set(nullptr, "6");
 
-    async::PostDelayedTask(
-        async_get_default(),
-        [this, called] {
-          if (!*called) {
-            FXL_LOG(WARNING) << "Shutdown timed out";
-            Logout();
-            *called = true;
-          }
-        },
-        zx::sec(5));
+    async::PostDelayedTask(async_get_default(),
+                           [this, called] {
+                             if (!*called) {
+                               FXL_LOG(WARNING) << "Shutdown timed out";
+                               Logout();
+                               *called = true;
+                             }
+                           },
+                           zx::sec(5));
 
     // The code below does not work because it does not wait for the Ledger
     // to deliver all of its messages.

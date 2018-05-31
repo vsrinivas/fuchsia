@@ -8,7 +8,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/context/cpp/context_helper.h"
 #include "lib/fsl/tasks/message_loop.h"
 
@@ -20,7 +20,7 @@ namespace agents {
 
 IdeasAgent::~IdeasAgent() = default;
 
-}  // agents
+}  // namespace agents
 
 namespace {
 
@@ -30,11 +30,11 @@ class IdeasAgentApp : public agents::IdeasAgent,
                       public fuchsia::modular::ContextListener {
  public:
   IdeasAgentApp()
-      : app_context_(component::ApplicationContext::CreateFromStartupInfo()),
-        reader_(app_context_->ConnectToEnvironmentService<
+      : context_(component::StartupContext::CreateFromStartupInfo()),
+        reader_(context_->ConnectToEnvironmentService<
                 fuchsia::modular::ContextReader>()),
         binding_(this),
-        out_(app_context_->ConnectToEnvironmentService<
+        out_(context_->ConnectToEnvironmentService<
              fuchsia::modular::ProposalPublisher>()) {
     fuchsia::modular::ContextQuery query;
     fuchsia::modular::ContextSelector selector;
@@ -84,7 +84,7 @@ class IdeasAgentApp : public agents::IdeasAgent,
   }
 
  private:
-  std::unique_ptr<component::ApplicationContext> app_context_;
+  std::unique_ptr<component::StartupContext> context_;
 
   fuchsia::modular::ContextReaderPtr reader_;
   fidl::Binding<fuchsia::modular::ContextListener> binding_;

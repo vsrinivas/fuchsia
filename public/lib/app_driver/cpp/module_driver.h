@@ -13,7 +13,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -26,7 +26,7 @@ namespace modular {
 // This interface is passed to the |Impl| object that ModuleDriver initializes.
 class ModuleHost {
  public:
-  virtual component::ApplicationContext* application_context() = 0;
+  virtual component::StartupContext* startup_context() = 0;
   virtual ModuleContext* module_context() = 0;
 };
 
@@ -62,8 +62,8 @@ class ModuleHost {
 //
 // int main(int argc, const char** argv) {
 //   fsl::MessageLoop loop;
-//   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-//   fuchsia::modular::ModuleDriver<HelloWorldApp> driver(app_context.get(),
+//   auto context = component::StartupContext::CreateFromStartupInfo();
+//   fuchsia::modular::ModuleDriver<HelloWorldApp> driver(context.get(),
 //                                               [&loop] { loop.QuitNow(); });
 //   loop.Run();
 //   return 0;
@@ -71,30 +71,27 @@ class ModuleHost {
 template <typename Impl>
 class ModuleDriver : LifecycleImpl::Delegate, ModuleHost {
  public:
-  ModuleDriver(component::ApplicationContext* const app_context,
+  ModuleDriver(component::StartupContext* const context,
                std::function<void()> on_terminated)
-      : app_context_(app_context),
-        lifecycle_impl_(app_context->outgoing().deprecated_services(), this),
+      : context_(context),
+        lifecycle_impl_(context->outgoing().deprecated_services(), this),
         on_terminated_(std::move(on_terminated)) {
-    app_context_->ConnectToEnvironmentService(module_context_.NewRequest());
+    context_->ConnectToEnvironmentService(module_context_.NewRequest());
 
     // There is no guarantee that |ViewProvider| will be requested from us
     // before ModuleHost.set_view_provider_handler() is called from |Impl|, so
     // we buffer both events until they are both satisfied.
-    app_context_->outgoing()
-        .AddPublicService<fuchsia::ui::views_v1::ViewProvider>(
-            [this](fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
-                       request) {
-              view_provider_request_ = std::move(request);
-              InstantiateImpl();
-            });
+    context_->outgoing().AddPublicService<fuchsia::ui::views_v1::ViewProvider>(
+        [this](fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
+                   request) {
+          view_provider_request_ = std::move(request);
+          InstantiateImpl();
+        });
   }
 
  private:
   // |ModuleHost|
-  component::ApplicationContext* application_context() override {
-    return app_context_;
-  }
+  component::StartupContext* startup_context() override { return context_; }
 
   // |ModuleHost|
   ModuleContext* module_context() override {
@@ -126,7 +123,7 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleHost {
                                    std::move(view_provider_request_));
   }
 
-  component::ApplicationContext* const app_context_;
+  component::StartupContext* const context_;
   LifecycleImpl lifecycle_impl_;
   std::function<void()> on_terminated_;
   ModuleContextPtr module_context_;

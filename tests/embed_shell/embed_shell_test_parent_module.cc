@@ -29,8 +29,7 @@ class TestApp {
           fidl::InterfaceRequest<
               fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host) {
-    fuchsia::modular::testing::Init(module_host->application_context(),
-                                    __FILE__);
+    fuchsia::modular::testing::Init(module_host->startup_context(), __FILE__);
     ScheduleDone();
     StartChildModule();
   }
@@ -72,8 +71,8 @@ class TestApp {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  fuchsia::modular::ModuleDriver<TestApp> driver(app_context.get(),
+  auto context = component::StartupContext::CreateFromStartupInfo();
+  fuchsia::modular::ModuleDriver<TestApp> driver(context.get(),
                                                  [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;

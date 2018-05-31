@@ -10,7 +10,7 @@
 #include <ledger/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "peridot/bin/ledger/testing/page_data_generator.h"
 
@@ -59,7 +59,7 @@ class DiskSpaceBenchmark {
   files::ScopedTempDir tmp_dir_;
   test::DataGenerator generator_;
   PageDataGenerator page_data_generator_;
-  std::unique_ptr<component::ApplicationContext> application_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   const size_t page_count_;
   const size_t unique_key_count_;
   const size_t commit_count_;

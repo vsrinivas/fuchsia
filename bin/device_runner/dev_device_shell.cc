@@ -11,7 +11,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/callback/scoped_callback.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -47,15 +47,14 @@ class DevDeviceShellApp
     : fuchsia::modular::SingleServiceApp<fuchsia::modular::DeviceShell>,
       fuchsia::modular::UserWatcher {
  public:
-  explicit DevDeviceShellApp(
-      component::ApplicationContext* const application_context,
-      Settings settings)
-      : SingleServiceApp(application_context),
+  explicit DevDeviceShellApp(component::StartupContext* const startup_context,
+                             Settings settings)
+      : SingleServiceApp(startup_context),
         settings_(std::move(settings)),
         user_watcher_binding_(this),
         weak_ptr_factory_(this) {
     if (settings_.test) {
-      fuchsia::modular::testing::Init(this->application_context(), __FILE__);
+      fuchsia::modular::testing::Init(this->startup_context(), __FILE__);
       fuchsia::modular::testing::Await(
           fuchsia::modular::testing::kTestShutdown,
           [this] { device_shell_context_->Shutdown(); });
@@ -186,10 +185,10 @@ int main(int argc, const char** argv) {
 
   fsl::MessageLoop loop;
 
-  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AppDriver<DevDeviceShellApp> driver(
-      app_context->outgoing().deprecated_services(),
-      std::make_unique<DevDeviceShellApp>(app_context.get(), settings),
+      context->outgoing().deprecated_services(),
+      std::make_unique<DevDeviceShellApp>(context.get(), settings),
       [&loop] { loop.QuitNow(); });
 
   loop.Run();

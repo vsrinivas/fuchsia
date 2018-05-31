@@ -5,7 +5,7 @@
 #include <trace-provider/provider.h>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/backoff/exponential_backoff.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -20,28 +20,24 @@ namespace {
 class App : public fuchsia::modular::Lifecycle {
  public:
   App()
-      : application_context_(
-            component::ApplicationContext::CreateFromStartupInfo()),
+      : startup_context_(component::StartupContext::CreateFromStartupInfo()),
         trace_provider_(loop_.async()),
         network_wrapper_(
-            loop_.async(),
-            std::make_unique<backoff::ExponentialBackoff>(),
+            loop_.async(), std::make_unique<backoff::ExponentialBackoff>(),
             [this] {
-              return application_context_
+              return startup_context_
                   ->ConnectToEnvironmentService<network::NetworkService>();
             }),
         factory_impl_(loop_.async(), &network_wrapper_) {
-    FXL_DCHECK(application_context_);
+    FXL_DCHECK(startup_context_);
   }
 
   void Run() {
-    application_context_->outgoing()
-        .AddPublicService<fuchsia::modular::Lifecycle>(
-            [this](
-                fidl::InterfaceRequest<fuchsia::modular::Lifecycle> request) {
-              lifecycle_bindings_.AddBinding(this, std::move(request));
-            });
-    application_context_->outgoing().AddPublicService<Factory>(
+    startup_context_->outgoing().AddPublicService<fuchsia::modular::Lifecycle>(
+        [this](fidl::InterfaceRequest<fuchsia::modular::Lifecycle> request) {
+          lifecycle_bindings_.AddBinding(this, std::move(request));
+        });
+    startup_context_->outgoing().AddPublicService<Factory>(
         [this](fidl::InterfaceRequest<Factory> request) {
           factory_bindings_.AddBinding(&factory_impl_, std::move(request));
         });
@@ -52,7 +48,7 @@ class App : public fuchsia::modular::Lifecycle {
 
  private:
   fsl::MessageLoop loop_;
-  std::unique_ptr<component::ApplicationContext> application_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   trace::TraceProvider trace_provider_;
 
   network_wrapper::NetworkWrapperImpl network_wrapper_;

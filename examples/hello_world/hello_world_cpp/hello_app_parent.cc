@@ -8,7 +8,7 @@
 #include <string>
 
 #include <hello_world_module/cpp/fidl.h>
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
@@ -19,7 +19,7 @@ namespace {
 
 class HelloAppParent {
  public:
-  explicit HelloAppParent(component::ApplicationContext* app_context,
+  explicit HelloAppParent(component::StartupContext* context,
                           fxl::CommandLine command_line) {
     component::LaunchInfo launch_info;
     const std::vector<std::string>& args = command_line.positional_args();
@@ -32,8 +32,8 @@ class HelloAppParent {
       }
     }
     launch_info.directory_request = child_services_.NewRequest();
-    app_context->launcher()->CreateApplication(std::move(launch_info),
-                                               child_.NewRequest());
+    context->launcher()->CreateApplication(std::move(launch_info),
+                                           child_.NewRequest());
 
     child_services_.ConnectToService(hello_.NewRequest());
 
@@ -62,11 +62,11 @@ class HelloAppParent {
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
-  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AppDriver<HelloAppParent> driver(
-      app_context->outgoing().deprecated_services(),
+      context->outgoing().deprecated_services(),
       std::make_unique<HelloAppParent>(
-          app_context.get(), fxl::CommandLineFromArgcArgv(argc, argv)),
+          context.get(), fxl::CommandLineFromArgcArgv(argc, argv)),
       [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;

@@ -6,8 +6,8 @@
 #include <trace-provider/provider.h>
 
 #include <modular_auth/cpp/fidl.h>
-#include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fsl/vmo/strings.h"
@@ -28,8 +28,7 @@ class AccountProviderImpl : AccountProvider {
   void Terminate() override;
   void AddAccount(modular_auth::IdentityProvider identity_provider,
                   AddAccountCallback callback) override;
-  void RemoveAccount(modular_auth::Account account,
-                     bool revoke_all,
+  void RemoveAccount(modular_auth::Account account, bool revoke_all,
                      RemoveAccountCallback callback) override;
   void GetTokenProviderFactory(
       fidl::StringPtr account_id,
@@ -39,7 +38,7 @@ class AccountProviderImpl : AccountProvider {
   std::string GenerateAccountId();
 
   async::Loop* const loop_;
-  std::shared_ptr<component::ApplicationContext> application_context_;
+  std::shared_ptr<component::StartupContext> startup_context_;
   modular_auth::AccountProviderContextPtr account_provider_context_;
   fidl::Binding<AccountProvider> binding_;
 
@@ -48,11 +47,10 @@ class AccountProviderImpl : AccountProvider {
 
 AccountProviderImpl::AccountProviderImpl(async::Loop* loop)
     : loop_(loop),
-      application_context_(
-          component::ApplicationContext::CreateFromStartupInfo()),
+      startup_context_(component::StartupContext::CreateFromStartupInfo()),
       binding_(this) {
   FXL_DCHECK(loop);
-  application_context_->outgoing().AddPublicService<AccountProvider>(
+  startup_context_->outgoing().AddPublicService<AccountProvider>(
       [this](fidl::InterfaceRequest<AccountProvider> request) {
         binding_.Bind(std::move(request));
       });
@@ -63,9 +61,7 @@ void AccountProviderImpl::Initialize(
   account_provider_context_.Bind(std::move(provider));
 }
 
-void AccountProviderImpl::Terminate() {
-  loop_->Quit();
-}
+void AccountProviderImpl::Terminate() { loop_->Quit(); }
 
 std::string AccountProviderImpl::GenerateAccountId() {
   uint32_t random_number;

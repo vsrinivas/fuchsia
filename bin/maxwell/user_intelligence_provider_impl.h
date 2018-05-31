@@ -8,7 +8,7 @@
 #include <deque>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/svc/cpp/services.h"
 #include "peridot/bin/maxwell/agent_launcher.h"
 #include "peridot/bin/maxwell/config.h"
@@ -19,9 +19,9 @@ namespace maxwell {
 class UserIntelligenceProviderImpl
     : public fuchsia::modular::UserIntelligenceProvider {
  public:
-  // |app_context| is not owned and must outlive this instance.
+  // |context| is not owned and must outlive this instance.
   UserIntelligenceProviderImpl(
-      component::ApplicationContext* app_context, const Config& config,
+      component::StartupContext* context, const Config& config,
       fidl::InterfaceHandle<fuchsia::modular::ContextEngine> context_engine,
       fidl::InterfaceHandle<fuchsia::modular::StoryProvider> story_provider,
       fidl::InterfaceHandle<fuchsia::modular::FocusProvider> focus_provider,
@@ -48,15 +48,13 @@ class UserIntelligenceProviderImpl
                            GetServicesForAgentCallback callback) override;
 
  private:
-  using ServiceProviderInitializer =
-      std::function<void(const std::string& url,
-                         component::ServiceNamespace* agent_host)>;
+  using ServiceProviderInitializer = std::function<void(
+      const std::string& url, component::ServiceNamespace* agent_host)>;
   // A ServiceProviderInitializer that adds standard agent services, including
   // attributed context and suggestion service entry points. Returns the names
   // of the services added.
   fidl::VectorPtr<fidl::StringPtr> AddStandardServices(
-      const std::string& url,
-      component::ServiceNamespace* agent_host);
+      const std::string& url, component::ServiceNamespace* agent_host);
 
   // Starts an app in the parent environment, with full access to environment
   // services.
@@ -67,7 +65,7 @@ class UserIntelligenceProviderImpl
   void StartActionLog(fuchsia::modular::SuggestionEngine* suggestion_engine);
   void StartKronk();
 
-  component::ApplicationContext* app_context_;  // Not owned.
+  component::StartupContext* context_;  // Not owned.
   const Config config_;
 
   fuchsia::modular::ContextEnginePtr context_engine_;
@@ -102,10 +100,9 @@ class UserIntelligenceProviderImpl
 class UserIntelligenceProviderFactoryImpl
     : public fuchsia::modular::UserIntelligenceProviderFactory {
  public:
-  // |app_context| is not owned and must outlive this instance.
-  UserIntelligenceProviderFactoryImpl(
-      component::ApplicationContext* app_context,
-      const Config& config);
+  // |context| is not owned and must outlive this instance.
+  UserIntelligenceProviderFactoryImpl(component::StartupContext* context,
+                                      const Config& config);
   ~UserIntelligenceProviderFactoryImpl() override = default;
 
   void GetUserIntelligenceProvider(
@@ -118,7 +115,7 @@ class UserIntelligenceProviderFactoryImpl
           user_intelligence_provider_request) override;
 
  private:
-  component::ApplicationContext* app_context_;  // Not owned.
+  component::StartupContext* context_;  // Not owned.
   const Config config_;
 
   // We expect a 1:1 relationship between instances of this Factory and

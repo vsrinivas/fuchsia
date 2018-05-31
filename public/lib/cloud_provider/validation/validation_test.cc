@@ -7,13 +7,13 @@
 namespace cloud_provider {
 
 ValidationTest::ValidationTest()
-    : application_context_(
-          component::ApplicationContext::CreateFromStartupInfoNotChecked()) {}
+    : startup_context_(
+          component::StartupContext::CreateFromStartupInfoNotChecked()) {}
 ValidationTest::~ValidationTest() {}
 
 void ValidationTest::SetUp() {
   fidl::InterfacePtr<CloudProvider> cloud_provider =
-      application_context_->ConnectToEnvironmentService<CloudProvider>();
+      startup_context_->ConnectToEnvironmentService<CloudProvider>();
   cloud_provider_ = std::move(cloud_provider);
 }
 

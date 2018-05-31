@@ -17,13 +17,12 @@ namespace modular {
 namespace testing {
 
 LedgerRepositoryForTesting::LedgerRepositoryForTesting()
-    : application_context_(
-          component::ApplicationContext::CreateFromStartupInfo()) {
+    : startup_context_(component::StartupContext::CreateFromStartupInfo()) {
   AppConfig ledger_config;
   ledger_config.url = kLedgerAppUrl;
   ledger_config.args.push_back(kLedgerNoMinfsWaitFlag);
 
-  auto& app_launcher = application_context_->launcher();
+  auto& app_launcher = startup_context_->launcher();
   ledger_app_client_ =
       std::make_unique<AppClient<ledger_internal::LedgerController>>(
           app_launcher.get(), std::move(ledger_config));

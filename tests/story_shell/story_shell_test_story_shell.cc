@@ -10,7 +10,7 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include <presentation/cpp/fidl.h>
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
@@ -30,8 +30,8 @@ namespace {
 class TestApp : public fuchsia::modular::testing::ComponentBase<
                     fuchsia::modular::StoryShell> {
  public:
-  TestApp(component::ApplicationContext* const application_context)
-      : ComponentBase(application_context) {
+  TestApp(component::StartupContext* const startup_context)
+      : ComponentBase(startup_context) {
     TestInit(__FILE__);
   }
 

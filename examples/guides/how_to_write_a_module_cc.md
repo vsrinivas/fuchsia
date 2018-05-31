@@ -20,7 +20,7 @@ The first step to writing a `Module` is implementing the initializer.
 ```c++
 #include <ui/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/app_driver/cpp/module_driver.h"
 
 namespace simple {
@@ -43,7 +43,7 @@ class SimpleModule : fuchsia::ui::views_v1::ViewProvider {
 }  // namespace simple
 ```
 
-The `ModuleHost` provides `SimpleModule` with its `ApplicationContext` and
+The `ModuleHost` provides `SimpleModule` with its `StartupContext` and
 `ModuleContext`.
 
 The `ViewProvider` request allows the system to connect to `SimpleModule`'s view.
@@ -108,8 +108,8 @@ message_receiver_ = std::make_unique<modular::MessageReceiverClient>(
 ```c++
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::ModuleDriver<simple::SimpleModule> driver(app_context.get(),
+  auto context = component::StartupContext::CreateFromStartupInfo();
+  modular::ModuleDriver<simple::SimpleModule> driver(context.get(),
                                                      [&loop] { loop.Quit(); });
   loop.Run();
   return 0;
@@ -117,7 +117,7 @@ int main(int argc, const char** argv) {
 ```
 
 `ModuleDriver` is a helper class that manages the `Module`'s lifecyle. Here it is
-given a newly created `ApplicationContext` and a callback that will be executed
+given a newly created `StartupContext` and a callback that will be executed
 when the `Module` exits. `ModuleDriver` requires `SimpleModule` to implement the
 constructor shown above, as well as a `Terminate`:
 

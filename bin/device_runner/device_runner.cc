@@ -12,11 +12,11 @@
 
 #include <component/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
-#include <modular_auth/cpp/fidl.h>
-#include <presentation/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
-#include "lib/app/cpp/application_context.h"
+#include <modular_auth/cpp/fidl.h>
+#include <presentation/cpp/fidl.h>
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_handle.h"
@@ -192,16 +192,16 @@ class DeviceRunnerApp : DeviceShellContext,
  public:
   explicit DeviceRunnerApp(
       const Settings& settings,
-      std::shared_ptr<component::ApplicationContext> const app_context,
+      std::shared_ptr<component::StartupContext> const context,
       std::function<void()> on_shutdown)
       : settings_(settings),
         user_provider_impl_("UserProviderImpl"),
-        app_context_(std::move(app_context)),
+        context_(std::move(context)),
         on_shutdown_(std::move(on_shutdown)),
         device_shell_context_binding_(this),
         account_provider_context_binding_(this) {
     // 0a. Check if environment handle / services have been initialized.
-    if (!app_context_->has_environment_services()) {
+    if (!context_->has_environment_services()) {
       FXL_LOG(ERROR) << "Failed to receive services from the environment.";
       exit(1);
     }
@@ -213,7 +213,7 @@ class DeviceRunnerApp : DeviceShellContext,
       Start();
 
     } else {
-      app_context_->ConnectToEnvironmentService(monitor_.NewRequest());
+      context_->ConnectToEnvironmentService(monitor_.NewRequest());
 
       monitor_.set_error_handler([] {
         FXL_LOG(ERROR) << "No device runner monitor found.";
@@ -249,7 +249,7 @@ class DeviceRunnerApp : DeviceShellContext,
     // to the device shell. This is done first so that we can show some UI until
     // other things come up.
     device_shell_app_ = std::make_unique<AppClient<Lifecycle>>(
-        app_context_->launcher().get(), CloneStruct(settings_.device_shell));
+        context_->launcher().get(), CloneStruct(settings_.device_shell));
     device_shell_app_->services().ConnectToService(device_shell_.NewRequest());
 
     fuchsia::ui::views_v1::ViewProviderPtr device_shell_view_provider;
@@ -263,8 +263,8 @@ class DeviceRunnerApp : DeviceShellContext,
     presentation::PresentationPtr presentation;
     device_shell_view_provider->CreateView(root_view.NewRequest(), nullptr);
     if (!settings_.test) {
-      app_context_->ConnectToEnvironmentService<presentation::Presenter>()
-          ->Present(std::move(root_view), presentation.NewRequest());
+      context_->ConnectToEnvironmentService<presentation::Presenter>()->Present(
+          std::move(root_view), presentation.NewRequest());
     }
 
     // Populate parameters and initialize the device shell.
@@ -282,7 +282,7 @@ class DeviceRunnerApp : DeviceShellContext,
     AppConfig token_manager_config;
     token_manager_config.url = settings_.account_provider.url;
     token_manager_ = std::make_unique<AppClient<modular_auth::AccountProvider>>(
-        app_context_->launcher().get(), std::move(token_manager_config),
+        context_->launcher().get(), std::move(token_manager_config),
         "/data/modular/ACCOUNT_MANAGER");
     token_manager_->SetAppErrorHandler([] {
       FXL_CHECK(false) << "Token manager crashed. Stopping device runner.";
@@ -292,7 +292,7 @@ class DeviceRunnerApp : DeviceShellContext,
 
     // 4. Setup user provider.
     user_provider_impl_.reset(new UserProviderImpl(
-        app_context_, settings_.user_runner, settings_.user_shell,
+        context_, settings_.user_runner, settings_.user_shell,
         settings_.story_shell, token_manager_->primary_service().get()));
 
     ReportEvent(ModularEvent::BOOTED_TO_DEVICE_RUNNER);
@@ -344,7 +344,7 @@ class DeviceRunnerApp : DeviceShellContext,
   const Settings& settings_;  // Not owned nor copied.
   AsyncHolder<UserProviderImpl> user_provider_impl_;
 
-  std::shared_ptr<component::ApplicationContext> const app_context_;
+  std::shared_ptr<component::StartupContext> const context_;
   DeviceRunnerMonitorPtr monitor_;
   std::function<void()> on_shutdown_;
 
@@ -359,14 +359,12 @@ class DeviceRunnerApp : DeviceShellContext,
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerApp);
 };
 
-fxl::AutoCall<fxl::Closure> SetupCobalt(
-    Settings& settings,
-    async_t* async,
-    component::ApplicationContext* app_context) {
+fxl::AutoCall<fxl::Closure> SetupCobalt(Settings& settings, async_t* async,
+                                        component::StartupContext* context) {
   if (settings.disable_statistics) {
     return fxl::MakeAutoCall<fxl::Closure>([] {});
   }
-  return InitializeCobalt(async, app_context);
+  return InitializeCobalt(async, context);
 };
 
 }  // namespace
@@ -383,12 +381,12 @@ int main(int argc, const char** argv) {
   fuchsia::modular::Settings settings(command_line);
   fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
-  auto app_context = std::shared_ptr<component::ApplicationContext>(
-      component::ApplicationContext::CreateFromStartupInfo());
+  auto context = std::shared_ptr<component::StartupContext>(
+      component::StartupContext::CreateFromStartupInfo());
   fxl::AutoCall<fxl::Closure> cobalt_cleanup =
-      SetupCobalt(settings, std::move(loop.async()), app_context.get());
+      SetupCobalt(settings, std::move(loop.async()), context.get());
 
-  fuchsia::modular::DeviceRunnerApp app(settings, app_context,
+  fuchsia::modular::DeviceRunnerApp app(settings, context,
                                         [&loop, &cobalt_cleanup] {
                                           cobalt_cleanup.call();
                                           loop.QuitNow();

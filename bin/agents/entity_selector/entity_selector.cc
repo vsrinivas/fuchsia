@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/context/cpp/context_helper.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/bin/agents/entity_utils/entity_span.h"
@@ -21,9 +21,9 @@ namespace modular {
 class SelectedEntityFinder : ContextListener {
  public:
   SelectedEntityFinder()
-      : app_context_(component::ApplicationContext::CreateFromStartupInfo()),
-        reader_(app_context_->ConnectToEnvironmentService<ContextReader>()),
-        writer_(app_context_->ConnectToEnvironmentService<ContextWriter>()),
+      : context_(component::StartupContext::CreateFromStartupInfo()),
+        reader_(context_->ConnectToEnvironmentService<ContextReader>()),
+        writer_(context_->ConnectToEnvironmentService<ContextWriter>()),
         binding_(this) {
     ContextQuery query;
     for (const std::string& topic :
@@ -99,7 +99,7 @@ class SelectedEntityFinder : ContextListener {
                                                   start_and_end.second));
   }
 
-  std::unique_ptr<component::ApplicationContext> app_context_;
+  std::unique_ptr<component::StartupContext> context_;
   ContextReaderPtr reader_;
   ContextWriterPtr writer_;
   fidl::Binding<ContextListener> binding_;

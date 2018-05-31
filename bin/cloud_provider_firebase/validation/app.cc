@@ -35,19 +35,18 @@ int main(int argc, char** argv) {
   }
 
   fsl::MessageLoop message_loop;
-  std::unique_ptr<component::ApplicationContext> application_context =
-      component::ApplicationContext::CreateFromStartupInfo();
-  test::CloudProviderFirebaseFactory factory(application_context.get());
+  std::unique_ptr<component::StartupContext> startup_context =
+      component::StartupContext::CreateFromStartupInfo();
+  test::CloudProviderFirebaseFactory factory(startup_context.get());
 
   cloud_provider::ValidationTestsLauncher launcher(
-      application_context.get(), [&factory, server_id](auto request) {
+      startup_context.get(), [&factory, server_id](auto request) {
         factory.MakeCloudProvider(server_id, "", std::move(request));
       });
 
   int32_t return_code = -1;
   async::PostTask(
-      message_loop.async(),
-      [&factory, &launcher, &return_code, &message_loop] {
+      message_loop.async(), [&factory, &launcher, &return_code, &message_loop] {
         factory.Init();
         launcher.Run({}, [&return_code, &message_loop](int32_t result) {
           return_code = result;

@@ -4,7 +4,7 @@
 
 #include "peridot/bin/context_engine/context_engine_impl.h"
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "peridot/bin/context_engine/context_reader_impl.h"
 #include "peridot/bin/context_engine/context_repository.h"
 #include "peridot/bin/context_engine/context_writer_impl.h"
@@ -27,16 +27,14 @@ void ContextEngineImpl::AddBinding(
 }
 
 void ContextEngineImpl::GetWriter(
-    ComponentScope client_info,
-    fidl::InterfaceRequest<ContextWriter> request) {
+    ComponentScope client_info, fidl::InterfaceRequest<ContextWriter> request) {
   writers_.emplace_back(std::make_unique<ContextWriterImpl>(
       std::move(client_info), &repository_, entity_resolver_,
       std::move(request)));
 }
 
 void ContextEngineImpl::GetReader(
-    ComponentScope client_info,
-    fidl::InterfaceRequest<ContextReader> request) {
+    ComponentScope client_info, fidl::InterfaceRequest<ContextReader> request) {
   readers_.emplace_back(std::make_unique<ContextReaderImpl>(
       std::move(client_info), &repository_, std::move(request)));
 }

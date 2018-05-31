@@ -43,7 +43,8 @@ class ClipboardAgent {
     services_.AddBinding(std::move(outgoing_services));
   }
 
-  void RunTask(const fidl::StringPtr& task_id, const std::function<void()>& done) {
+  void RunTask(const fidl::StringPtr& task_id,
+               const std::function<void()>& done) {
     done();
   }
 
@@ -66,9 +67,9 @@ class ClipboardAgent {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AgentDriver<fuchsia::modular::ClipboardAgent> driver(
-      app_context.get(), [&loop] { loop.QuitNow(); });
+      context.get(), [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

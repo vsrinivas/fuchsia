@@ -15,12 +15,14 @@ class ModuleView : public mozart::BaseView {
  public:
   explicit ModuleView(
       fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+          view_owner_request,
       uint32_t color);
 
  private:
   // |BaseView|:
-  void OnPropertiesChanged(fuchsia::ui::views_v1::ViewProperties old_properties) override;
+  void OnPropertiesChanged(
+      fuchsia::ui::views_v1::ViewProperties old_properties) override;
 
   scenic_lib::ShapeNode background_node_;
 
@@ -33,13 +35,14 @@ class ModuleApp : public fuchsia::modular::ViewApp {
       fuchsia::ui::views_v1::ViewManagerPtr,
       fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>)>;
 
-  explicit ModuleApp(component::ApplicationContext* const application_context,
+  explicit ModuleApp(component::StartupContext* const startup_context,
                      CreateViewCallback create);
 
  private:
   // |SingleServiceApp|
   void CreateView(
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+          view_owner_request,
       fidl::InterfaceRequest<component::ServiceProvider> services) override;
 
   CreateViewCallback create_;

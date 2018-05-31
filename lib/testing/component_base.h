@@ -41,8 +41,8 @@ class ComponentBase : protected SingleServiceApp<Component> {
   // name. Cf. http://en.cppreference.com/w/cpp/language/dependent_name.
   using Base = fuchsia::modular::SingleServiceApp<Component>;
 
-  ComponentBase(component::ApplicationContext* const application_context)
-      : Base(application_context), weak_factory_(this) {}
+  ComponentBase(component::StartupContext* const startup_context)
+      : Base(startup_context), weak_factory_(this) {}
 
   ~ComponentBase() override = default;
 
@@ -50,7 +50,7 @@ class ComponentBase : protected SingleServiceApp<Component> {
   // constructor, because that's before the test points are initialized. It's
   // fine to call this from the derived class constructor.
   void TestInit(const char* const file) {
-    fuchsia::modular::testing::Init(Base::application_context(), file);
+    fuchsia::modular::testing::Init(Base::startup_context(), file);
   }
 
   // Wraps the callback function into a layer that protects executing the
@@ -101,10 +101,10 @@ template <typename Impl, typename... Args>
 void ComponentMain(Args... args) {
   fsl::MessageLoop loop;
 
-  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AppDriver<Impl> driver(
-      app_context->outgoing().deprecated_services(),
-      std::make_unique<Impl>(app_context.get(), std::move(args)...),
+      context->outgoing().deprecated_services(),
+      std::make_unique<Impl>(context.get(), std::move(args)...),
       [&loop] { loop.QuitNow(); });
 
   loop.Run();

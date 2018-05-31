@@ -8,9 +8,9 @@
 #include <memory>
 #include <string>
 
-#include "lib/app/cpp/application_context.h"
-#include "lib/app/cpp/service_provider_impl.h"
 #include <component/cpp/fidl.h>
+#include "lib/app/cpp/service_provider_impl.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/svc/cpp/service_provider_bridge.h"
@@ -22,8 +22,7 @@ namespace modular {
 // environment services are delegated to the parent environment.
 class Scope {
  public:
-  Scope(const component::EnvironmentPtr& parent_env,
-        const std::string& label);
+  Scope(const component::EnvironmentPtr& parent_env, const std::string& label);
 
   Scope(const Scope* parent_scope, const std::string& label);
 
@@ -37,9 +36,7 @@ class Scope {
 
   component::ApplicationLauncher* GetLauncher();
 
-  const component::EnvironmentPtr& environment() const {
-    return env_;
-  }
+  const component::EnvironmentPtr& environment() const { return env_; }
 
  private:
   void InitScope(const component::EnvironmentPtr& parent_env,

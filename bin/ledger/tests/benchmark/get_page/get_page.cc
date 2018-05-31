@@ -37,8 +37,7 @@ GetPageBenchmark::GetPageBenchmark(async::Loop* loop, size_t requests_count,
                                    bool reuse)
     : loop_(loop),
       tmp_dir_(kStoragePath),
-      application_context_(
-          component::ApplicationContext::CreateFromStartupInfo()),
+      startup_context_(component::StartupContext::CreateFromStartupInfo()),
       requests_count_(requests_count),
       reuse_(reuse) {
   FXL_DCHECK(loop_);
@@ -47,8 +46,8 @@ GetPageBenchmark::GetPageBenchmark(async::Loop* loop, size_t requests_count,
 
 void GetPageBenchmark::Run() {
   ledger::Status status = test::GetLedger(
-      [this] { loop_->Quit(); }, application_context_.get(),
-      &component_controller_, nullptr, "get_page", tmp_dir_.path(), &ledger_);
+      [this] { loop_->Quit(); }, startup_context_.get(), &component_controller_,
+      nullptr, "get_page", tmp_dir_.path(), &ledger_);
   QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
   page_id_ = fidl::MakeOptional(generator_.MakePageId());
   RunSingle(requests_count_);

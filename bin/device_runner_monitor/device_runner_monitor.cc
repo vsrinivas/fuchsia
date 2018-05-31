@@ -5,7 +5,7 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
@@ -17,9 +17,8 @@ namespace modular {
 class DeviceRunnerMonitorApp : DeviceRunnerMonitor {
  public:
   DeviceRunnerMonitorApp()
-      : app_context_(
-            component::ApplicationContext::CreateFromStartupInfoNotChecked()) {
-    app_context_->outgoing().AddPublicService<DeviceRunnerMonitor>(
+      : context_(component::StartupContext::CreateFromStartupInfoNotChecked()) {
+    context_->outgoing().AddPublicService<DeviceRunnerMonitor>(
         [this](fidl::InterfaceRequest<DeviceRunnerMonitor> request) {
           bindings_.AddBinding(this, std::move(request));
         });
@@ -31,7 +30,7 @@ class DeviceRunnerMonitorApp : DeviceRunnerMonitor {
     callback(bindings_.size());
   }
 
-  std::unique_ptr<component::ApplicationContext> app_context_;
+  std::unique_ptr<component::StartupContext> context_;
   fidl::BindingSet<DeviceRunnerMonitor> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerMonitorApp);

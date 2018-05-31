@@ -11,8 +11,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -99,10 +99,8 @@ class Module1View : public mozart::BaseView {
 // Module implementation that acts as a leaf module. It implements Module.
 class Module1App : fuchsia::modular::ViewApp {
  public:
-  explicit Module1App(component::ApplicationContext* const application_context)
-      : ViewApp(application_context),
-        store_(kModuleName),
-        weak_ptr_factory_(this) {
+  explicit Module1App(component::StartupContext* const startup_context)
+      : ViewApp(startup_context), store_(kModuleName), weak_ptr_factory_(this) {
     // TODO(mesch): The callbacks seem to have a sequential relationship.
     // It seems to me there should be a single callback that does all three
     // things in a sequence. Since the result InvalidateScene() happens only
@@ -115,8 +113,7 @@ class Module1App : fuchsia::modular::ViewApp {
     });
     store_.AddCallback([this] { IncrementCounterAction(); });
 
-    application_context->ConnectToEnvironmentService(
-        module_context_.NewRequest());
+    startup_context->ConnectToEnvironmentService(module_context_.NewRequest());
     fuchsia::modular::LinkPtr link;
     module_context_->GetLink("theOneLink", link.NewRequest());
     store_.Initialize(std::move(link));
@@ -139,7 +136,7 @@ class Module1App : fuchsia::modular::ViewApp {
       override {
     view_ = std::make_unique<Module1View>(
         &store_,
-        application_context()
+        startup_context()
             ->ConnectToEnvironmentService<fuchsia::ui::views_v1::ViewManager>(),
         std::move(view_owner_request));
   }
@@ -184,11 +181,10 @@ class Module1App : fuchsia::modular::ViewApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
 
-  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AppDriver<Module1App> driver(
-      app_context->outgoing().deprecated_services(),
-      std::make_unique<Module1App>(app_context.get()),
-      [&loop] { loop.QuitNow(); });
+      context->outgoing().deprecated_services(),
+      std::make_unique<Module1App>(context.get()), [&loop] { loop.QuitNow(); });
 
   loop.Run();
   return 0;

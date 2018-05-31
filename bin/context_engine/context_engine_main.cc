@@ -5,7 +5,7 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -17,13 +17,13 @@ namespace {
 
 class ContextEngineApp {
  public:
-  ContextEngineApp(component::ApplicationContext* app_context) {
+  ContextEngineApp(component::StartupContext* context) {
     auto component_context =
-        app_context->ConnectToEnvironmentService<ComponentContext>();
+        context->ConnectToEnvironmentService<ComponentContext>();
     component_context->GetEntityResolver(entity_resolver_.NewRequest());
     context_engine_impl_.reset(new ContextEngineImpl(entity_resolver_.get()));
 
-    app_context->outgoing().AddPublicService<ContextEngine>(
+    context->outgoing().AddPublicService<ContextEngine>(
         [this](fidl::InterfaceRequest<ContextEngine> request) {
           context_engine_impl_->AddBinding(std::move(request));
         });
@@ -48,16 +48,16 @@ class ContextEngineApp {
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
-  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   auto context_engine_app =
-      std::make_unique<fuchsia::modular::ContextEngineApp>(app_context.get());
+      std::make_unique<fuchsia::modular::ContextEngineApp>(context.get());
   fxl::WeakPtr<fuchsia::modular::ContextDebugImpl> debug =
       context_engine_app->debug();
   debug->GetIdleWaiter()->SetMessageLoop(&loop);
 
   fuchsia::modular::AppDriver<fuchsia::modular::ContextEngineApp> driver(
-      app_context->outgoing().deprecated_services(),
-      std::move(context_engine_app), [&loop] { loop.QuitNow(); });
+      context->outgoing().deprecated_services(), std::move(context_engine_app),
+      [&loop] { loop.QuitNow(); });
 
   // The |WaitUntilIdle| debug functionality escapes the main message loop to
   // perform its test.

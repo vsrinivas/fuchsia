@@ -8,7 +8,7 @@
 #include <ledger/cpp/fidl.h>
 #include <ledger_internal/cpp/fidl.h>
 #include "gtest/gtest.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/callback/capture.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
@@ -43,8 +43,8 @@ fidl::VectorPtr<uint8_t> TestArray() {
 class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
  public:
   LedgerEndToEndTest()
-      : application_context_(
-            component::ApplicationContext::CreateFromStartupInfoNotChecked()) {}
+      : startup_context_(
+            component::StartupContext::CreateFromStartupInfoNotChecked()) {}
   ~LedgerEndToEndTest() override {}
 
  protected:
@@ -58,7 +58,7 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
     for (auto& additional_arg : additional_args) {
       launch_info.arguments.push_back(additional_arg);
     }
-    application_context()->launcher()->CreateApplication(
+    startup_context()->launcher()->CreateApplication(
         std::move(launch_info), ledger_controller_.NewRequest());
 
     ledger_controller_.set_error_handler([this] {
@@ -124,14 +124,14 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
     return ::testing::AssertionSuccess();
   }
 
-  component::ApplicationContext* application_context() {
-    return application_context_.get();
+  component::StartupContext* startup_context() {
+    return startup_context_.get();
   }
 
  private:
   component::ComponentControllerPtr ledger_controller_;
   std::vector<std::function<void()>> ledger_shutdown_callbacks_;
-  std::unique_ptr<component::ApplicationContext> application_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
 
  protected:
   ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory_;

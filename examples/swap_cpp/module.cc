@@ -12,10 +12,10 @@ namespace modular_example {
 
 ModuleView::ModuleView(
     fuchsia::ui::views_v1::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
+    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+        view_owner_request,
     uint32_t color)
-    : BaseView(std::move(view_manager),
-               std::move(view_owner_request),
+    : BaseView(std::move(view_manager), std::move(view_owner_request),
                "ModuleView"),
       background_node_(session()) {
   scenic_lib::Material background_material(session());
@@ -34,17 +34,18 @@ void ModuleView::OnPropertiesChanged(fuchsia::ui::views_v1::ViewProperties) {
   InvalidateScene();
 }
 
-ModuleApp::ModuleApp(component::ApplicationContext* const application_context,
+ModuleApp::ModuleApp(component::StartupContext* const startup_context,
                      CreateViewCallback create)
-    : ViewApp(application_context), create_(std::move(create)) {}
+    : ViewApp(startup_context), create_(std::move(create)) {}
 
 void ModuleApp::CreateView(
-    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
+    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+        view_owner_request,
     fidl::InterfaceRequest<component::ServiceProvider> /*services*/) {
-  view_.reset(
-      create_(application_context()
-                  ->ConnectToEnvironmentService<fuchsia::ui::views_v1::ViewManager>(),
-              std::move(view_owner_request)));
+  view_.reset(create_(
+      startup_context()
+          ->ConnectToEnvironmentService<fuchsia::ui::views_v1::ViewManager>(),
+      std::move(view_owner_request)));
 }
 
 }  // namespace modular_example

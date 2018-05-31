@@ -18,9 +18,8 @@ cobalt::CobaltContext* g_cobalt_context = nullptr;
 }  // namespace
 
 fxl::AutoCall<fxl::Closure> InitializeCobalt(
-    async_t* async,
-    component::ApplicationContext* app_context) {
-  return cobalt::InitializeCobalt(async, app_context, kCobaltProjectId,
+    async_t* async, component::StartupContext* context) {
+  return cobalt::InitializeCobalt(async, context, kCobaltProjectId,
                                   &g_cobalt_context);
 }
 
@@ -34,20 +33,21 @@ void ReportEvent(ModularEvent event) {
 }
 
 void ReportModuleLaunchTime(std::string module_url, zx_time_t time_nanos) {
- auto parts = fidl::VectorPtr<cobalt::ObservationValue>::New(2);
- const int64_t time_micros = static_cast<int64_t>(time_nanos / ZX_USEC(1));
+  auto parts = fidl::VectorPtr<cobalt::ObservationValue>::New(2);
+  const int64_t time_micros = static_cast<int64_t>(time_nanos / ZX_USEC(1));
 
- parts->at(0).name = "module_url";
- parts->at(0).encoding_id = kCobaltNoOpEncodingId;
- parts->at(0).value.set_string_value(module_url);
+  parts->at(0).name = "module_url";
+  parts->at(0).encoding_id = kCobaltNoOpEncodingId;
+  parts->at(0).value.set_string_value(module_url);
 
- parts->at(1).name = "launch_time_micros";
- parts->at(1).encoding_id = kCobaltNoOpEncodingId;
- parts->at(1).value.set_int_value(time_micros);
+  parts->at(1).name = "launch_time_micros";
+  parts->at(1).encoding_id = kCobaltNoOpEncodingId;
+  parts->at(1).value.set_int_value(time_micros);
 
- cobalt::CobaltObservation observation(
-     static_cast<uint32_t>(CobaltMetric::MODULE_LAUNCH_LATENCY), std::move(parts));
- cobalt::ReportObservation(observation, g_cobalt_context);
+  cobalt::CobaltObservation observation(
+      static_cast<uint32_t>(CobaltMetric::MODULE_LAUNCH_LATENCY),
+      std::move(parts));
+  cobalt::ReportObservation(observation, g_cobalt_context);
 }
 
 void ReportStoryLaunchTime(zx_time_t time_nanos) {

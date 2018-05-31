@@ -9,7 +9,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/ui/view_framework/base_view.h"
@@ -68,10 +68,9 @@ class RecipeView : public mozart::BaseView {
 
 class RecipeApp : public fuchsia::modular::ViewApp {
  public:
-  RecipeApp(component::ApplicationContext* const application_context)
-      : ViewApp(application_context) {
-    application_context->ConnectToEnvironmentService(
-        module_context_.NewRequest());
+  RecipeApp(component::StartupContext* const startup_context)
+      : ViewApp(startup_context) {
+    startup_context->ConnectToEnvironmentService(module_context_.NewRequest());
     SwapModule();
   }
 
@@ -85,7 +84,7 @@ class RecipeApp : public fuchsia::modular::ViewApp {
       fidl::InterfaceRequest<component::ServiceProvider> /*services*/)
       override {
     view_ = std::make_unique<RecipeView>(
-        application_context()
+        startup_context()
             ->ConnectToEnvironmentService<fuchsia::ui::views_v1::ViewManager>(),
         std::move(view_owner_request));
     SetChild();
@@ -137,11 +136,10 @@ class RecipeApp : public fuchsia::modular::ViewApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
 
-  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AppDriver<RecipeApp> driver(
-      app_context->outgoing().deprecated_services(),
-      std::make_unique<RecipeApp>(app_context.get()),
-      [&loop] { loop.QuitNow(); });
+      context->outgoing().deprecated_services(),
+      std::make_unique<RecipeApp>(context.get()), [&loop] { loop.QuitNow(); });
 
   loop.Run();
   return 0;

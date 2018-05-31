@@ -8,10 +8,10 @@
 #include <component/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
+#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include <modular_auth/cpp/fidl.h>
 #include <presentation/cpp/fidl.h>
-#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_handle.h"
@@ -38,13 +38,12 @@ class UserControllerImpl : UserController, modular::internal ::UserContext {
 
   UserControllerImpl(
       component::ApplicationLauncher* application_launcher,
-      AppConfig user_runner,
-      AppConfig user_shell,
-      AppConfig story_shell,
+      AppConfig user_runner, AppConfig user_shell, AppConfig story_shell,
       fidl::InterfaceHandle<modular_auth::TokenProviderFactory>
           token_provider_factory,
       modular_auth::AccountPtr account,
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+          view_owner_request,
       fidl::InterfaceHandle<component::ServiceProvider> device_shell_services,
       fidl::InterfaceRequest<UserController> user_controller_request,
       DoneCallback done);

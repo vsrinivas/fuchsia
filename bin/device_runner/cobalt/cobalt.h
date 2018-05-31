@@ -7,7 +7,7 @@
 
 #include <lib/async/dispatcher.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -35,12 +35,10 @@ enum class ModularEvent : uint32_t {
   BOOTED_TO_USER_RUNNER = 1,
 };
 
-
 // Cobalt initialization. When cobalt is not needed, the returned object must be
 // deleted. This method must not be called again until then.
 fxl::AutoCall<fxl::Closure> InitializeCobalt(
-    async_t* async,
-    component::ApplicationContext* app_context);
+    async_t* async, component::StartupContext* context);
 
 // Report a modular event to Cobalt.
 void ReportEvent(ModularEvent event);

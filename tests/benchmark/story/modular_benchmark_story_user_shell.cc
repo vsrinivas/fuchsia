@@ -14,7 +14,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
@@ -130,9 +130,8 @@ class TestApp
     : public fuchsia::modular::SingleServiceApp<fuchsia::modular::UserShell> {
  public:
   using Base = fuchsia::modular::SingleServiceApp<fuchsia::modular::UserShell>;
-  TestApp(component::ApplicationContext* const application_context,
-          Settings settings)
-      : Base(application_context), settings_(std::move(settings)) {}
+  TestApp(component::StartupContext* const startup_context, Settings settings)
+      : Base(startup_context), settings_(std::move(settings)) {}
 
   ~TestApp() override = default;
 

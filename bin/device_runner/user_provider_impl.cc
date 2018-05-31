@@ -61,12 +61,11 @@ std::string GetRandomId() {
 }  // namespace
 
 UserProviderImpl::UserProviderImpl(
-    std::shared_ptr<component::ApplicationContext> app_context,
-    const AppConfig& user_runner,
-    const AppConfig& default_user_shell,
+    std::shared_ptr<component::StartupContext> context,
+    const AppConfig& user_runner, const AppConfig& default_user_shell,
     const AppConfig& story_shell,
     modular_auth::AccountProvider* const account_provider)
-    : app_context_(std::move(app_context)),
+    : context_(std::move(context)),
       user_runner_(user_runner),
       default_user_shell_(default_user_shell),
       story_shell_(story_shell),
@@ -100,7 +99,7 @@ void UserProviderImpl::Teardown(const std::function<void()>& callback) {
   }
 
   for (auto& it : user_controllers_) {
-    auto cont = [ this, ptr = it.first, callback ] {
+    auto cont = [this, ptr = it.first, callback] {
       // This is okay because during teardown, |cont| is never invoked
       // asynchronously.
       user_controllers_.erase(ptr);
@@ -240,8 +239,8 @@ void UserProviderImpl::RemoveUser(fidl::StringPtr account_id,
   FXL_DCHECK(account_provider_);
   account_provider_->RemoveAccount(
       std::move(*account), false /* disable single logout*/,
-      [ this, account_id = account_id,
-        callback ](modular_auth::AuthErr auth_err) {
+      [this, account_id = account_id,
+       callback](modular_auth::AuthErr auth_err) {
         if (auth_err.status != modular_auth::Status::OK) {
           callback(auth_err.message);
           return;
@@ -330,7 +329,7 @@ void UserProviderImpl::LoginInternal(modular_auth::AccountPtr account,
                         ? std::move(*params.user_shell_config)
                         : CloneStruct(default_user_shell_);
   auto controller = std::make_unique<UserControllerImpl>(
-      app_context_->launcher().get(), CloneStruct(user_runner_),
+      context_->launcher().get(), CloneStruct(user_runner_),
       std::move(user_shell), CloneStruct(story_shell_),
       std::move(token_provider_factory), std::move(account),
       std::move(params.view_owner), std::move(params.services),

@@ -9,7 +9,7 @@
 
 #include <test_runner/cpp/fidl.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 
 namespace fuchsia {
 namespace modular {
@@ -28,8 +28,7 @@ constexpr int kTestTimeoutMilliseconds = 15000;
 // test is expected to call either Done() or Teardown() before terminating
 // itself in order for the TestRunner service to know that a test process did
 // not crash, or that the test has completed and should be torn down.
-void Init(component::ApplicationContext* app_context,
-          const std::string& identity);
+void Init(component::StartupContext* context, const std::string& identity);
 
 // Marks the test a failure with the given |log_msg| message, but does not tear
 // it down; the test may continue running. Once the test signals teardown by
@@ -65,16 +64,18 @@ void Teardown(const std::function<void()>& ack);
 // Environment. Init() must be called before GetStore().
 test_runner::TestRunnerStore* GetStore();
 
-// Creates function that invokes the |proceed| callback after being called |limit| times.
-std::function<void(fidl::StringPtr)> NewBarrierClosure(const int limit,
-                                                       std::function<void()> proceed);
+// Creates function that invokes the |proceed| callback after being called
+// |limit| times.
+std::function<void(fidl::StringPtr)> NewBarrierClosure(
+    const int limit, std::function<void()> proceed);
 
 // Defined for convenience of using GetStore().
 void Put(const fidl::StringPtr& key, const fidl::StringPtr& value);
 
 // Defined for convenience of using GetStore(). Listens for the |key|; the value
 // is passed to the |callback| function.
-void Get(const fidl::StringPtr& key, std::function<void(fidl::StringPtr)> callback);
+void Get(const fidl::StringPtr& key,
+         std::function<void(fidl::StringPtr)> callback);
 
 // Defined for convenience of using GetStore(). The |condition| is used as both
 // the key and the value. When listening for the key using Get(), the value is

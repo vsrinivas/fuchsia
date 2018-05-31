@@ -44,8 +44,7 @@ UpdateEntryBenchmark::UpdateEntryBenchmark(async::Loop* loop, int entry_count,
                                            int transaction_size)
     : loop_(loop),
       tmp_dir_(kStoragePath),
-      application_context_(
-          component::ApplicationContext::CreateFromStartupInfo()),
+      startup_context_(component::StartupContext::CreateFromStartupInfo()),
       entry_count_(entry_count),
       transaction_size_(transaction_size),
       key_size_(kKeySize),
@@ -59,10 +58,9 @@ void UpdateEntryBenchmark::Run() {
   FXL_LOG(INFO) << "--entry-count=" << entry_count_
                 << " --transaction-size=" << transaction_size_;
   ledger::LedgerPtr ledger;
-  ledger::Status status =
-      test::GetLedger([this] { loop_->Quit(); }, application_context_.get(),
-                      &component_controller_, nullptr, "update_entry",
-                      tmp_dir_.path(), &ledger);
+  ledger::Status status = test::GetLedger(
+      [this] { loop_->Quit(); }, startup_context_.get(), &component_controller_,
+      nullptr, "update_entry", tmp_dir_.path(), &ledger);
   QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
 
   fidl::VectorPtr<uint8_t> key = generator_.MakeKey(0, key_size_);

@@ -63,7 +63,7 @@ fuchsia::modular::ComponentScope CloneScope(
 }  // namespace
 
 UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
-    component::ApplicationContext* app_context, const Config& config,
+    component::StartupContext* context, const Config& config,
     fidl::InterfaceHandle<fuchsia::modular::ContextEngine>
         context_engine_handle,
     fidl::InterfaceHandle<fuchsia::modular::StoryProvider>
@@ -72,9 +72,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
         focus_provider_handle,
     fidl::InterfaceHandle<fuchsia::modular::VisibleStoriesProvider>
         visible_stories_provider_handle)
-    : app_context_(app_context),
-      config_(config),
-      kronk_restart_(kKronkRetryLimit) {
+    : context_(context), config_(config), kronk_restart_(kKronkRetryLimit) {
   context_engine_.Bind(std::move(context_engine_handle));
   story_provider_.Bind(std::move(story_provider_handle));
   focus_provider_.Bind(std::move(focus_provider_handle));
@@ -155,8 +153,7 @@ void UserIntelligenceProviderImpl::StartAgents(
 }
 
 void UserIntelligenceProviderImpl::GetServicesForAgent(
-    fidl::StringPtr url,
-    GetServicesForAgentCallback callback) {
+    fidl::StringPtr url, GetServicesForAgentCallback callback) {
   component::ServiceList service_list;
   agent_namespaces_.emplace_back(service_list.provider.NewRequest());
   service_list.names = AddStandardServices(url, &agent_namespaces_.back());
@@ -169,7 +166,7 @@ component::Services UserIntelligenceProviderImpl::StartTrustedApp(
   component::LaunchInfo launch_info;
   launch_info.url = url;
   launch_info.directory_request = services.NewRequest();
-  app_context_->launcher()->CreateApplication(std::move(launch_info), NULL);
+  context_->launcher()->CreateApplication(std::move(launch_info), NULL);
   return services;
 }
 
@@ -227,8 +224,7 @@ void UserIntelligenceProviderImpl::StartKronk() {
 
 fidl::VectorPtr<fidl::StringPtr>
 UserIntelligenceProviderImpl::AddStandardServices(
-    const std::string& url,
-    component::ServiceNamespace* agent_host) {
+    const std::string& url, component::ServiceNamespace* agent_host) {
   fuchsia::modular::ComponentScope agent_info;
   fuchsia::modular::AgentScope agent_scope;
   agent_scope.url = url;
@@ -301,9 +297,8 @@ UserIntelligenceProviderImpl::AddStandardServices(
 //////////////////////////////////////////////////////////////////////////////
 
 UserIntelligenceProviderFactoryImpl::UserIntelligenceProviderFactoryImpl(
-    component::ApplicationContext* app_context,
-    const Config& config)
-    : app_context_(app_context), config_(config) {}
+    component::StartupContext* context, const Config& config)
+    : context_(context), config_(config) {}
 
 void UserIntelligenceProviderFactoryImpl::GetUserIntelligenceProvider(
     fidl::InterfaceHandle<fuchsia::modular::ContextEngine> context_engine,
@@ -317,9 +312,8 @@ void UserIntelligenceProviderFactoryImpl::GetUserIntelligenceProvider(
   // UserIntelligenceProvider.
   FXL_CHECK(!impl_);
   impl_.reset(new UserIntelligenceProviderImpl(
-      app_context_, config_, std::move(context_engine),
-      std::move(story_provider), std::move(focus_provider),
-      std::move(visible_stories_provider)));
+      context_, config_, std::move(context_engine), std::move(story_provider),
+      std::move(focus_provider), std::move(visible_stories_provider)));
   binding_.reset(new fidl::Binding<fuchsia::modular::UserIntelligenceProvider>(
       impl_.get()));
   binding_->Bind(std::move(user_intelligence_provider_request));

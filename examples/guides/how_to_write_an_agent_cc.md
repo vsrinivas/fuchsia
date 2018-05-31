@@ -45,12 +45,12 @@ class SimpleAgent {
 };
 ```
 
-The `AgentHost` parameter provides the `Agent` with an `ApplicationContext`
+The `AgentHost` parameter provides the `Agent` with an `StartupContext`
 and an `AgentContext`.
 
-#### `ApplicationContext`
+#### `StartupContext`
 
-`ApplicationContext` gives the `Agent` access to services provided to it by
+`StartupContext` gives the `Agent` access to services provided to it by
 other system components via `incoming_services`. It also allows the `Agent`
 to provide services to other components via `outgoing_services`.
 
@@ -130,16 +130,16 @@ interface(s) it provides.
 ```c++
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AgentDriver<simple_agent::SimpleAgent> driver(
-      app_context.get(), [&loop] { loop.QuitNow(); });
+      context.get(), [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }
 ```
 
 `AgentDriver` is a helper class that helps manage the `Agent` lifecycle. Here
-it is given a newly created `ApplicationContext` and a callback that will be
+it is given a newly created `StartupContext` and a callback that will be
 executed when the `Agent` exits. `AgentDriver` requires `SimpleAgent` to
 implement three methods, one of which is `Connect` which was shown above.
 

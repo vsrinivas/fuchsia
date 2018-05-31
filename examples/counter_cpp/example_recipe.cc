@@ -8,8 +8,8 @@
 #include <fuchsia/modular/cpp/fidl.h>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
@@ -112,9 +112,9 @@ class DeviceMapMonitor : fuchsia::modular::DeviceMapWatcher {
 // to run more module instances.
 class RecipeApp : public fuchsia::modular::ViewApp {
  public:
-  RecipeApp(component::ApplicationContext* const application_context)
-      : ViewApp(application_context) {
-    application_context->ConnectToEnvironmentService(module_context_.NewRequest());
+  RecipeApp(component::StartupContext* const startup_context)
+      : ViewApp(startup_context) {
+    startup_context->ConnectToEnvironmentService(module_context_.NewRequest());
     module_context_->GetLink(nullptr, link_.NewRequest());
 
     // Read initial Link data. We expect the shell to tell us what it
@@ -253,7 +253,7 @@ class RecipeApp : public fuchsia::modular::ViewApp {
               });
         });
 
-    application_context->ConnectToEnvironmentService(device_map_.NewRequest());
+    startup_context->ConnectToEnvironmentService(device_map_.NewRequest());
     device_map_->Query(
         [this](fidl::VectorPtr<fuchsia::modular::DeviceMapEntry> devices) {
           FXL_LOG(INFO) << "Devices from device_map_->Query():";
@@ -302,11 +302,10 @@ class RecipeApp : public fuchsia::modular::ViewApp {
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
 
-  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AppDriver<RecipeApp> driver(
-      app_context->outgoing().deprecated_services(),
-      std::make_unique<RecipeApp>(app_context.get()),
-      [&loop] { loop.QuitNow(); });
+      context->outgoing().deprecated_services(),
+      std::make_unique<RecipeApp>(context.get()), [&loop] { loop.QuitNow(); });
 
   loop.Run();
   return 0;

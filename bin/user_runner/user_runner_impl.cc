@@ -155,14 +155,14 @@ class UserRunnerImpl::PresentationProviderImpl : public PresentationProvider {
   UserRunnerImpl* const impl_;
 };
 
-UserRunnerImpl::UserRunnerImpl(
-    component::ApplicationContext* const application_context, const bool test)
-    : application_context_(application_context),
+UserRunnerImpl::UserRunnerImpl(component::StartupContext* const startup_context,
+                               const bool test)
+    : startup_context_(startup_context),
       test_(test),
       user_shell_context_binding_(this),
       story_provider_impl_("StoryProviderImpl"),
       agent_runner_("AgentRunner") {
-  application_context_->outgoing().AddPublicService<UserRunner>(
+  startup_context_->outgoing().AddPublicService<UserRunner>(
       [this](fidl::InterfaceRequest<UserRunner> request) {
         bindings_.AddBinding(this, std::move(request));
       });
@@ -207,7 +207,7 @@ void UserRunnerImpl::InitializeUser(
   AtEnd(Reset(&account_));
 
   user_scope_ = std::make_unique<Scope>(
-      application_context_->environment(),
+      startup_context_->environment(),
       std::string(kUserScopeLabelPrefix) + GetAccountId(account_));
   AtEnd(Reset(&user_scope_));
 }
@@ -593,7 +593,7 @@ void UserRunnerImpl::InitializeUserShell(
         view_owner_request) {
   // We setup our own view and make the UserShell a child of it.
   user_shell_view_host_ = std::make_unique<ViewHost>(
-      application_context_
+      startup_context_
           ->ConnectToEnvironmentService<fuchsia::ui::views_v1::ViewManager>(),
       std::move(view_owner_request));
   RunUserShell(std::move(user_shell));

@@ -48,9 +48,8 @@ FetchBenchmark::FetchBenchmark(async::Loop* loop, size_t entry_count,
                                size_t value_size, size_t part_size,
                                std::string server_id)
     : loop_(loop),
-      application_context_(
-          component::ApplicationContext::CreateFromStartupInfo()),
-      cloud_provider_firebase_factory_(application_context_.get()),
+      startup_context_(component::StartupContext::CreateFromStartupInfo()),
+      cloud_provider_firebase_factory_(startup_context_.get()),
       sync_watcher_binding_(this),
       entry_count_(entry_count),
       value_size_(value_size),
@@ -83,10 +82,9 @@ void FetchBenchmark::Run() {
   cloud_provider::CloudProviderPtr cloud_provider_writer;
   cloud_provider_firebase_factory_.MakeCloudProvider(
       server_id_, "", cloud_provider_writer.NewRequest());
-  ledger::Status status =
-      test::GetLedger([this] { loop_->Quit(); }, application_context_.get(),
-                      &writer_controller_, std::move(cloud_provider_writer),
-                      "fetch", writer_path, &writer_);
+  ledger::Status status = test::GetLedger(
+      [this] { loop_->Quit(); }, startup_context_.get(), &writer_controller_,
+      std::move(cloud_provider_writer), "fetch", writer_path, &writer_);
   QuitOnError([this] { loop_->Quit(); }, status, "Get writer ledger");
 
   status = test::GetPageEnsureInitialized([this] { loop_->Quit(); }, &writer_,
@@ -142,10 +140,9 @@ void FetchBenchmark::ConnectReader() {
   cloud_provider::CloudProviderPtr cloud_provider_reader;
   cloud_provider_firebase_factory_.MakeCloudProvider(
       server_id_, "", cloud_provider_reader.NewRequest());
-  ledger::Status status =
-      test::GetLedger([this] { loop_->Quit(); }, application_context_.get(),
-                      &reader_controller_, std::move(cloud_provider_reader),
-                      "fetch", reader_path, &reader_);
+  ledger::Status status = test::GetLedger(
+      [this] { loop_->Quit(); }, startup_context_.get(), &reader_controller_,
+      std::move(cloud_provider_reader), "fetch", reader_path, &reader_);
   QuitOnError([this] { loop_->Quit(); }, status, "ConnectReader");
 
   reader_->GetPage(fidl::MakeOptional(std::move(page_id_)),

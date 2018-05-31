@@ -21,15 +21,16 @@ namespace {
 class TestApp : component_context_test::ComponentContextTestService {
  public:
   TestApp(fuchsia::modular::AgentHost* const agent_host) {
-    fuchsia::modular::testing::Init(agent_host->application_context(),
-                                    __FILE__);
+    fuchsia::modular::testing::Init(agent_host->startup_context(), __FILE__);
     agent_host->agent_context()->GetComponentContext(
         component_context_.NewRequest());
-    agent_services_.AddService<component_context_test::ComponentContextTestService>(
-        [this](fidl::InterfaceRequest<component_context_test::ComponentContextTestService>
-                   request) {
-          agent_interface_.AddBinding(this, std::move(request));
-        });
+    agent_services_
+        .AddService<component_context_test::ComponentContextTestService>(
+            [this](fidl::InterfaceRequest<
+                   component_context_test::ComponentContextTestService>
+                       request) {
+              agent_interface_.AddBinding(this, std::move(request));
+            });
 
     // Connecting to the agent should start it up.
     component::ServiceProviderPtr agent_services;
@@ -80,7 +81,8 @@ class TestApp : component_context_test::ComponentContextTestService {
   fuchsia::modular::AgentControllerPtr two_agent_controller_;
 
   component::ServiceNamespace agent_services_;
-  fidl::BindingSet<component_context_test::ComponentContextTestService> agent_interface_;
+  fidl::BindingSet<component_context_test::ComponentContextTestService>
+      agent_interface_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
@@ -89,8 +91,8 @@ class TestApp : component_context_test::ComponentContextTestService {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  fuchsia::modular::AgentDriver<TestApp> driver(app_context.get(),
+  auto context = component::StartupContext::CreateFromStartupInfo();
+  fuchsia::modular::AgentDriver<TestApp> driver(context.get(),
                                                 [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;

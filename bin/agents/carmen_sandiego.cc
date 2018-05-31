@@ -4,7 +4,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/context/cpp/context_helper.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/bin/acquirers/gps.h"
@@ -18,10 +18,10 @@ namespace {
 class CarmenSandiegoApp : public fuchsia::modular::ContextListener {
  public:
   CarmenSandiegoApp()
-      : app_context_(component::ApplicationContext::CreateFromStartupInfo()),
-        writer_(app_context_->ConnectToEnvironmentService<
+      : context_(component::StartupContext::CreateFromStartupInfo()),
+        writer_(context_->ConnectToEnvironmentService<
                 fuchsia::modular::ContextWriter>()),
-        reader_(app_context_->ConnectToEnvironmentService<
+        reader_(context_->ConnectToEnvironmentService<
                 fuchsia::modular::ContextReader>()),
         binding_(this) {
     fuchsia::modular::ContextSelector selector;
@@ -66,7 +66,7 @@ class CarmenSandiegoApp : public fuchsia::modular::ContextListener {
     writer_->WriteEntityTopic("/location/region", json.str());
   }
 
-  std::unique_ptr<component::ApplicationContext> app_context_;
+  std::unique_ptr<component::StartupContext> context_;
 
   fuchsia::modular::ContextWriterPtr writer_;
   fuchsia::modular::ContextReaderPtr reader_;

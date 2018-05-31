@@ -14,8 +14,8 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
-#include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -48,10 +48,9 @@ class DevUserShellApp
       fuchsia::modular::NextListener,
       public fuchsia::modular::SingleServiceApp<fuchsia::modular::UserShell> {
  public:
-  explicit DevUserShellApp(
-      component::ApplicationContext* const application_context,
-      Settings settings)
-      : SingleServiceApp(application_context),
+  explicit DevUserShellApp(component::StartupContext* const startup_context,
+                           Settings settings)
+      : SingleServiceApp(startup_context),
         settings_(std::move(settings)),
         story_watcher_binding_(this) {}
 
@@ -98,7 +97,7 @@ class DevUserShellApp
                   << settings_.root_link;
 
     view_ = std::make_unique<fuchsia::modular::ViewHost>(
-        application_context()
+        startup_context()
             ->ConnectToEnvironmentService<fuchsia::ui::views_v1::ViewManager>(),
         std::move(view_owner_request_));
 
@@ -198,10 +197,10 @@ int main(int argc, const char** argv) {
 
   fsl::MessageLoop loop;
 
-  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AppDriver<DevUserShellApp> driver(
-      app_context->outgoing().deprecated_services(),
-      std::make_unique<DevUserShellApp>(app_context.get(), std::move(settings)),
+      context->outgoing().deprecated_services(),
+      std::make_unique<DevUserShellApp>(context.get(), std::move(settings)),
       [&loop] { loop.QuitNow(); });
 
   loop.Run();

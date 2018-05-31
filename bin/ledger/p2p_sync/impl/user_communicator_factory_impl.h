@@ -6,7 +6,7 @@
 #define PERIDOT_BIN_LEDGER_P2P_SYNC_IMPL_USER_COMMUNICATOR_FACTORY_IMPL_H_
 
 #include <memory>
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/p2p_sync/public/user_communicator.h"
 #include "peridot/bin/ledger/p2p_sync/public/user_communicator_factory.h"
@@ -15,9 +15,8 @@ namespace p2p_sync {
 // Factory for creating UserCommunicators with default configuration.
 class UserCommunicatorFactoryImpl : public UserCommunicatorFactory {
  public:
-  UserCommunicatorFactoryImpl(
-      ledger::Environment* environment,
-      component::ApplicationContext* application_context);
+  UserCommunicatorFactoryImpl(ledger::Environment* environment,
+                              component::StartupContext* startup_context);
   ~UserCommunicatorFactoryImpl() override;
 
   std::unique_ptr<UserCommunicator> GetUserCommunicator(
@@ -25,7 +24,7 @@ class UserCommunicatorFactoryImpl : public UserCommunicatorFactory {
 
  private:
   ledger::Environment* const environment_;
-  component::ApplicationContext* const application_context_;
+  component::StartupContext* const startup_context_;
 };
 
 }  // namespace p2p_sync

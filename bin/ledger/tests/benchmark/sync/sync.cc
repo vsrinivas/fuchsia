@@ -55,9 +55,8 @@ SyncBenchmark::SyncBenchmark(
     PageDataGenerator::ReferenceStrategy reference_strategy,
     std::string server_id)
     : loop_(loop),
-      application_context_(
-          component::ApplicationContext::CreateFromStartupInfo()),
-      cloud_provider_firebase_factory_(application_context_.get()),
+      startup_context_(component::StartupContext::CreateFromStartupInfo()),
+      cloud_provider_firebase_factory_(startup_context_.get()),
       change_count_(change_count),
       value_size_(value_size),
       entries_per_change_(entries_per_change),
@@ -89,7 +88,7 @@ void SyncBenchmark::Run() {
       server_id_, "", cloud_provider_alpha.NewRequest());
   ledger::LedgerPtr alpha;
   ledger::Status status = test::GetLedger(
-      [this] { loop_->Quit(); }, application_context_.get(), &alpha_controller_,
+      [this] { loop_->Quit(); }, startup_context_.get(), &alpha_controller_,
       std::move(cloud_provider_alpha), "sync", alpha_path, &alpha);
   QuitOnError([this] { loop_->Quit(); }, status, "alpha ledger");
 
@@ -97,9 +96,9 @@ void SyncBenchmark::Run() {
   cloud_provider_firebase_factory_.MakeCloudProvider(
       server_id_, "", cloud_provider_beta.NewRequest());
   ledger::LedgerPtr beta;
-  status = test::GetLedger(
-      [this] { loop_->Quit(); }, application_context_.get(), &beta_controller_,
-      std::move(cloud_provider_beta), "sync", beta_path, &beta);
+  status = test::GetLedger([this] { loop_->Quit(); }, startup_context_.get(),
+                           &beta_controller_, std::move(cloud_provider_beta),
+                           "sync", beta_path, &beta);
   QuitOnError([this] { loop_->Quit(); }, status, "beta ledger");
 
   ledger::PageId id;

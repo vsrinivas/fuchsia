@@ -7,7 +7,7 @@
 namespace maxwell {
 
 MaxwellTestBase::MaxwellTestBase() {
-  startup_context_ = component::ApplicationContext::CreateFromStartupInfo();
+  startup_context_ = component::StartupContext::CreateFromStartupInfo();
   auto root_environment = startup_context_->environment().get();
   FXL_CHECK(root_environment != nullptr);
 

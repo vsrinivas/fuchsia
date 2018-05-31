@@ -56,9 +56,8 @@ BacklogBenchmark::BacklogBenchmark(
     PageDataGenerator::ReferenceStrategy reference_strategy,
     std::string server_id)
     : loop_(loop),
-      application_context_(
-          component::ApplicationContext::CreateFromStartupInfo()),
-      cloud_provider_firebase_factory_(application_context_.get()),
+      startup_context_(component::StartupContext::CreateFromStartupInfo()),
+      cloud_provider_firebase_factory_(startup_context_.get()),
       sync_watcher_binding_(this),
       unique_key_count_(unique_key_count),
       value_size_(value_size),
@@ -93,10 +92,9 @@ void BacklogBenchmark::Run() {
   cloud_provider::CloudProviderPtr cloud_provider_writer;
   cloud_provider_firebase_factory_.MakeCloudProvider(
       server_id_, "backlog", cloud_provider_writer.NewRequest());
-  ledger::Status status =
-      test::GetLedger([this] { loop_->Quit(); }, application_context_.get(),
-                      &writer_controller_, std::move(cloud_provider_writer),
-                      "backlog", writer_path, &writer_);
+  ledger::Status status = test::GetLedger(
+      [this] { loop_->Quit(); }, startup_context_.get(), &writer_controller_,
+      std::move(cloud_provider_writer), "backlog", writer_path, &writer_);
   QuitOnError([this] { loop_->Quit(); }, status, "Get writer ledger");
 
   status = test::GetPageEnsureInitialized([this] { loop_->Quit(); }, &writer_,
@@ -155,10 +153,9 @@ void BacklogBenchmark::ConnectReader() {
   cloud_provider::CloudProviderPtr cloud_provider_reader;
   cloud_provider_firebase_factory_.MakeCloudProvider(
       server_id_, "backlog", cloud_provider_reader.NewRequest());
-  ledger::Status status =
-      test::GetLedger([this] { loop_->Quit(); }, application_context_.get(),
-                      &reader_controller_, std::move(cloud_provider_reader),
-                      "backlog", reader_path, &reader_);
+  ledger::Status status = test::GetLedger(
+      [this] { loop_->Quit(); }, startup_context_.get(), &reader_controller_,
+      std::move(cloud_provider_reader), "backlog", reader_path, &reader_);
   QuitOnError([this] { loop_->Quit(); }, status, "ConnectReader");
 
   TRACE_ASYNC_BEGIN("benchmark", "download", 0);

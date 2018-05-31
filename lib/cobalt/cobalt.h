@@ -9,7 +9,7 @@
 
 #include <cobalt/cpp/fidl.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/backoff/exponential_backoff.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/closure.h"
@@ -46,8 +46,7 @@ class CobaltObservation {
 
 class CobaltContext {
  public:
-  CobaltContext(async_t* async,
-                component::ApplicationContext* app_context,
+  CobaltContext(async_t* async, component::StartupContext* context,
                 int32_t project_id);
   ~CobaltContext();
 
@@ -62,7 +61,7 @@ class CobaltContext {
 
   backoff::ExponentialBackoff backoff_;
   async_t* const async_;
-  component::ApplicationContext* app_context_;
+  component::StartupContext* context_;
   CobaltEncoderPtr encoder_;
   const int32_t project_id_;
 
@@ -74,11 +73,10 @@ class CobaltContext {
 
 // Cobalt initialization. When cobalt is not need, the returned object must be
 // deleted. This method must not be called again until then.
-fxl::AutoCall<fxl::Closure> InitializeCobalt(
-    async_t* async,
-    component::ApplicationContext* app_context,
-    int32_t project_id,
-    CobaltContext** cobalt_context);
+fxl::AutoCall<fxl::Closure> InitializeCobalt(async_t* async,
+                                             component::StartupContext* context,
+                                             int32_t project_id,
+                                             CobaltContext** cobalt_context);
 
 // Report an observation to Cobalt.
 void ReportObservation(CobaltObservation observation,

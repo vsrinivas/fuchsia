@@ -12,7 +12,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -25,7 +25,7 @@ namespace modular {
 
 // AppDriver is a wrapper that simplifies participating in lifecycle management
 // by the application's parent. It does this by exposing the Lifecycle service
-// in component::ApplicationContext::outgoing().deprecated_services() and
+// in component::StartupContext::outgoing().deprecated_services() and
 // proxies the Terminate() call of fuchsia::modular::Lifecycle to the
 // Terminate() method on your application's class instance.
 //
@@ -41,8 +41,8 @@ namespace modular {
 //
 // class HelloWorldApp {
 //  public:
-//   HelloWorldApp(component::ApplicationContext* app_context) {
-//     app_context->outgoing().AddPublicService<..>(...);
+//   HelloWorldApp(component::StartupContext* context) {
+//     context->outgoing().AddPublicService<..>(...);
 //   }
 //
 //   void Terminate(const std::function<void()>& done) {
@@ -52,10 +52,10 @@ namespace modular {
 //
 // int main(int argc, const char** argv) {
 //   fsl::MessageLoop loop;
-//   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
+//   auto context = component::StartupContext::CreateFromStartupInfo();
 //   fuchsia::modular::AppDriver<HelloWorldApp> driver(
-//       app_context->outgoing().deprecated_services(),
-//       std::make_unique<HelloWorldApp>(app_context.get()),
+//       context->outgoing().deprecated_services(),
+//       std::make_unique<HelloWorldApp>(context.get()),
 //       [&loop] { loop.QuitNow(); });
 //   loop.Run();
 //   return 0;

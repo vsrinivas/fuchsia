@@ -10,7 +10,7 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
@@ -48,7 +48,7 @@ class TodoApp : public ledger::PageWatcher, fuchsia::modular::Lifecycle {
   std::normal_distribution<> size_distribution_;
   std::uniform_int_distribution<> delay_distribution_;
   Generator generator_;
-  std::unique_ptr<component::ApplicationContext> context_;
+  std::unique_ptr<component::StartupContext> context_;
   fidl::InterfacePtr<fuchsia::modular::ModuleContext> module_context_;
   fuchsia::modular::ComponentContextPtr component_context_;
   ledger::LedgerPtr ledger_;

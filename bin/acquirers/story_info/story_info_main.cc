@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/app_driver/cpp/agent_driver.h"
 #include "peridot/bin/acquirers/story_info/story_info.h"
 
@@ -10,9 +10,9 @@
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
-  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AgentDriver<maxwell::StoryInfoAcquirer> driver(
-      app_context.get(), [&loop] { loop.QuitNow(); });
+      context.get(), [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

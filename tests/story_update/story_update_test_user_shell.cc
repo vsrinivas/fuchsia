@@ -6,8 +6,8 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
-#include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
@@ -57,8 +57,8 @@ class ModuleWatcherImpl : fuchsia::modular::ModuleWatcher {
 class TestApp : public fuchsia::modular::testing::ComponentBase<
                     fuchsia::modular::UserShell> {
  public:
-  TestApp(component::ApplicationContext* const application_context)
-      : ComponentBase(application_context) {
+  TestApp(component::StartupContext* const startup_context)
+      : ComponentBase(startup_context) {
     TestInit(__FILE__);
   }
 

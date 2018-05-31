@@ -5,7 +5,7 @@
 #include "peridot/bin/ledger/testing/e2e/e2e_test.h"
 
 #include "gtest/gtest.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/test_runner/cpp/reporting/gtest_listener.h"
 #include "lib/test_runner/cpp/reporting/reporter.h"
@@ -22,8 +22,7 @@ int TestMain(int argc, char** argv) {
 
   {
     fsl::MessageLoop message_loop;
-    auto context =
-        component::ApplicationContext::CreateFromStartupInfoNotChecked();
+    auto context = component::StartupContext::CreateFromStartupInfoNotChecked();
     test_runner::ReportResult(argv[0], context.get(), listener.GetResults());
   }
 

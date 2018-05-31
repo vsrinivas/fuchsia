@@ -10,7 +10,7 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <media/cpp/fidl.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "peridot/bin/suggestion_engine/debug.h"
 #include "peridot/lib/util/idle_waiter.h"
@@ -38,8 +38,8 @@ class MediaPlayer {
   void PlayMediaResponse(MediaResponsePtr media_response);
 
  private:
-  void HandleMediaUpdates(
-      uint64_t version, media::MediaTimelineControlPointStatusPtr status);
+  void HandleMediaUpdates(uint64_t version,
+                          media::MediaTimelineControlPointStatusPtr status);
 
   void OnMediaPacketProducerConnected(util::IdleWaiter::ActivityToken activity);
 

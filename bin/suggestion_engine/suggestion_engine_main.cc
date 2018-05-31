@@ -4,7 +4,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/suggestion_engine/debug.h"
@@ -15,7 +15,7 @@ namespace modular {
 
 class SuggestionEngineApp {
  public:
-  SuggestionEngineApp(component::ApplicationContext* const context) {
+  SuggestionEngineApp(component::StartupContext* const context) {
     context->ConnectToEnvironmentService(intelligence_services_.NewRequest());
 
     media::AudioServerPtr audio_server;
@@ -40,9 +40,7 @@ class SuggestionEngineApp {
 
   void Terminate(const std::function<void()>& done) { done(); }
 
-  fxl::WeakPtr<SuggestionDebugImpl> debug() {
-    return engine_impl_->debug();
-  }
+  fxl::WeakPtr<SuggestionDebugImpl> debug() { return engine_impl_->debug(); }
 
  private:
   std::unique_ptr<SuggestionEngineImpl> engine_impl_;
@@ -51,13 +49,12 @@ class SuggestionEngineApp {
   FXL_DISALLOW_COPY_AND_ASSIGN(SuggestionEngineApp);
 };
 
-
 }  // namespace modular
 }  // namespace fuchsia
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
-  auto context = component::ApplicationContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   auto suggestion_engine =
       std::make_unique<fuchsia::modular::SuggestionEngineApp>(context.get());
 

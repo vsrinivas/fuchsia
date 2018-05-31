@@ -21,14 +21,13 @@ std::set<std::string> g_test_points;
 bool g_connected;
 }  // namespace
 
-void Init(component::ApplicationContext* app_context,
-          const std::string& identity) {
-  FXL_CHECK(app_context);
+void Init(component::StartupContext* context, const std::string& identity) {
+  FXL_CHECK(context);
   FXL_CHECK(!g_test_runner.is_bound());
   FXL_CHECK(!g_test_runner_store.is_bound());
 
   g_test_runner =
-      app_context->ConnectToEnvironmentService<test_runner::TestRunner>();
+      context->ConnectToEnvironmentService<test_runner::TestRunner>();
   g_test_runner.set_error_handler([] {
     if (g_connected) {
       FXL_LOG(ERROR) << "Lost connection to TestRunner. This indicates that "
@@ -42,7 +41,7 @@ void Init(component::ApplicationContext* app_context,
   g_test_runner->Identify(identity, [] { g_connected = true; });
   g_test_runner->SetTestPointCount(g_test_points.size());
   g_test_runner_store =
-      app_context->ConnectToEnvironmentService<test_runner::TestRunnerStore>();
+      context->ConnectToEnvironmentService<test_runner::TestRunnerStore>();
 }
 
 void Fail(const std::string& log_msg) {
@@ -86,8 +85,8 @@ test_runner::TestRunnerStore* GetStore() {
   return g_test_runner_store.get();
 }
 
-std::function<void(fidl::StringPtr)> NewBarrierClosure(const int limit,
-                                                       std::function<void()> proceed) {
+std::function<void(fidl::StringPtr)> NewBarrierClosure(
+    const int limit, std::function<void()> proceed) {
   return [limit, count = std::make_shared<int>(0),
           proceed = std::move(proceed)](fidl::StringPtr value) {
     ++*count;
@@ -101,7 +100,8 @@ void Put(const fidl::StringPtr& key, const fidl::StringPtr& value) {
   fuchsia::modular::testing::GetStore()->Put(key, value, [] {});
 }
 
-void Get(const fidl::StringPtr& key, std::function<void(fidl::StringPtr)> callback) {
+void Get(const fidl::StringPtr& key,
+         std::function<void(fidl::StringPtr)> callback) {
   fuchsia::modular::testing::GetStore()->Get(key, std::move(callback));
 }
 

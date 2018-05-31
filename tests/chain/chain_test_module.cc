@@ -29,8 +29,7 @@ class TestApp {
               fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
       : module_context_(module_host->module_context()) {
     module_context_->GetComponentContext(component_context_.NewRequest());
-    fuchsia::modular::testing::Init(module_host->application_context(),
-                                    __FILE__);
+    fuchsia::modular::testing::Init(module_host->startup_context(), __FILE__);
     initialized_.Pass();
 
     // We'll use an Entity stored on one of our Links, which will be used in
@@ -137,8 +136,8 @@ class TestApp {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  fuchsia::modular::ModuleDriver<TestApp> driver(app_context.get(),
+  auto context = component::StartupContext::CreateFromStartupInfo();
+  fuchsia::modular::ModuleDriver<TestApp> driver(context.get(),
                                                  [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;

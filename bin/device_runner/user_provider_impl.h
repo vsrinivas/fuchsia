@@ -7,7 +7,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <modular_auth/cpp/fidl.h>
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "peridot/bin/device_runner/user_controller_impl.h"
@@ -19,7 +19,7 @@ struct UsersStorage;
 
 class UserProviderImpl : UserProvider {
  public:
-  UserProviderImpl(std::shared_ptr<component::ApplicationContext> app_context,
+  UserProviderImpl(std::shared_ptr<component::StartupContext> context,
                    const AppConfig& user_runner,
                    const AppConfig& default_user_shell,
                    const AppConfig& story_shell,
@@ -51,7 +51,7 @@ class UserProviderImpl : UserProvider {
 
   fidl::BindingSet<UserProvider> bindings_;
 
-  std::shared_ptr<component::ApplicationContext> app_context_;
+  std::shared_ptr<component::StartupContext> context_;
   const AppConfig& user_runner_;         // Neither owned nor copied.
   const AppConfig& default_user_shell_;  // Neither owned nor copied.
   const AppConfig& story_shell_;         // Neither owned nor copied.

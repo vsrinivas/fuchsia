@@ -15,9 +15,9 @@ constexpr char kValidationTestsUrl[] =
 }  // namespace
 
 ValidationTestsLauncher::ValidationTestsLauncher(
-    component::ApplicationContext* application_context,
+    component::StartupContext* startup_context,
     std::function<void(fidl::InterfaceRequest<CloudProvider>)> factory)
-    : application_context_(application_context), factory_(std::move(factory)) {
+    : startup_context_(startup_context), factory_(std::move(factory)) {
   service_provider_impl_.AddService<cloud_provider::CloudProvider>(
       [this](fidl::InterfaceRequest<cloud_provider::CloudProvider> request) {
         factory_(std::move(request));
@@ -37,7 +37,7 @@ void ValidationTestsLauncher::Run(const std::vector<std::string>& arguments,
     launch_info.arguments.push_back(argument);
   }
 
-  application_context_->launcher()->CreateApplication(
+  startup_context_->launcher()->CreateApplication(
       std::move(launch_info), validation_tests_controller_.NewRequest());
 
   validation_tests_controller_->Wait(

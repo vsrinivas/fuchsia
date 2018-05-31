@@ -9,7 +9,7 @@
 #include <lib/async-loop/cpp/loop.h>
 
 #include <vector>
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
 
@@ -35,7 +35,7 @@ class GetPageBenchmark {
   async::Loop* const loop_;
   files::ScopedTempDir tmp_dir_;
   test::DataGenerator generator_;
-  std::unique_ptr<component::ApplicationContext> application_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   const size_t requests_count_;
   const bool reuse_;
   component::ComponentControllerPtr component_controller_;

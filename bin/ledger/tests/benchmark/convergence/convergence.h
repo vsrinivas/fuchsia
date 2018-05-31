@@ -12,7 +12,7 @@
 #include <ledger/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "peridot/bin/ledger/testing/cloud_provider_firebase_factory.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
@@ -53,7 +53,7 @@ class ConvergenceBenchmark : public ledger::PageWatcher {
 
   async::Loop* const loop_;
   test::DataGenerator generator_;
-  std::unique_ptr<component::ApplicationContext> application_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   test::CloudProviderFirebaseFactory cloud_provider_firebase_factory_;
   const int entry_count_;
   const int value_size_;

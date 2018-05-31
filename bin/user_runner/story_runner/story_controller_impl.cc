@@ -9,11 +9,11 @@
 #include <component/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
 #include <presentation/cpp/fidl.h>
-#include <fuchsia/ui/views_v1/cpp/fidl.h>
-#include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/async/cpp/future.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/interface_handle.h"
@@ -235,7 +235,6 @@ void XdrModuleData_v2(XdrContext* const xdr, ModuleData* const data) {
   data->module_manifest.reset();
 }
 
-
 void XdrModuleData_v3(XdrContext* const xdr, ModuleData* const data) {
   xdr->Field("url", &data->module_url);
   xdr->Field("module_path", &data->module_path);
@@ -262,11 +261,8 @@ void XdrModuleData_v4(XdrContext* const xdr, ModuleData* const data) {
 }
 
 constexpr XdrFilterType<ModuleData> XdrModuleData[] = {
-  XdrModuleData_v4,
-  XdrModuleData_v3,
-  XdrModuleData_v2,
-  XdrModuleData_v1,
-  nullptr,
+    XdrModuleData_v4, XdrModuleData_v3, XdrModuleData_v2,
+    XdrModuleData_v1, nullptr,
 };
 
 void XdrPerDeviceStoryInfo_v1(
@@ -379,7 +375,8 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
       StoryControllerImpl* const story_controller_impl,
       ModuleDataPtr module_data,
       fidl::InterfaceRequest<ModuleController> module_controller_request,
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+          view_owner_request,
       ResultCall result_call)
       : Operation("StoryControllerImpl::GetLedgerNotificationCall",
                   std::move(result_call)),
@@ -431,8 +428,8 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     module_config.url = module_data_->module_url;
 
     fuchsia::ui::views_v1::ViewProviderPtr view_provider;
-    fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider> view_provider_request =
-        view_provider.NewRequest();
+    fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
+        view_provider_request = view_provider.NewRequest();
     view_provider->CreateView(std::move(view_owner_request_), nullptr);
 
     component::ServiceProviderPtr module_context_provider;
@@ -502,7 +499,8 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
   StoryControllerImpl* const story_controller_impl_;  // not owned
   ModuleDataPtr module_data_;
   fidl::InterfaceRequest<ModuleController> module_controller_request_;
-  fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner_request_;
+  fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+      view_owner_request_;
   const zx_time_t start_time_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LaunchModuleCall);
@@ -1309,7 +1307,8 @@ class StoryControllerImpl::AddIntentCall : public Operation<StartModuleStatus> {
       const std::string& module_name, IntentPtr intent,
       fidl::InterfaceRequest<ModuleController> module_controller_request,
       SurfaceRelationPtr surface_relation,
-      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+          view_owner_request,
       const ModuleSource module_source, ResultCall result_call)
       : Operation("StoryControllerImpl::AddIntentCall", std::move(result_call)),
         story_controller_impl_(story_controller_impl),
@@ -1411,7 +1410,8 @@ class StoryControllerImpl::AddIntentCall : public Operation<StartModuleStatus> {
   IntentPtr intent_;
   fidl::InterfaceRequest<ModuleController> module_controller_request_;
   SurfaceRelationPtr surface_relation_;
-  fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner_request_;
+  fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+      view_owner_request_;
   const ModuleSource module_source_;
 
   // Returned to us from the resolver, and cached here so that InitializeChain()
@@ -1509,15 +1509,17 @@ class StoryControllerImpl::StartContainerInShellCall : public Operation<> {
   std::map<std::string, ContainerRelationEntryPtr> relation_map_;
 
   // map of node_name to view_owners
-  std::map<fidl::StringPtr, fuchsia::ui::views_v1_token::ViewOwnerPtr> node_views_;
+  std::map<fidl::StringPtr, fuchsia::ui::views_v1_token::ViewOwnerPtr>
+      node_views_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StartContainerInShellCall);
 };
 
 class StoryControllerImpl::StartCall : public Operation<> {
  public:
-  StartCall(StoryControllerImpl* const story_controller_impl,
-            fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> request)
+  StartCall(
+      StoryControllerImpl* const story_controller_impl,
+      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> request)
       : Operation("StoryControllerImpl::StartCall", [] {}),
         story_controller_impl_(story_controller_impl),
         request_(std::move(request)) {}
@@ -1696,7 +1698,8 @@ void StoryControllerImpl::EmbedModule(
     const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
     fidl::StringPtr module_name, IntentPtr intent,
     fidl::InterfaceRequest<ModuleController> module_controller_request,
-    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
+    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+        view_owner_request,
     ModuleSource module_source,
     std::function<void(StartModuleStatus)> callback) {
   operation_queue_.Add(new AddIntentCall(

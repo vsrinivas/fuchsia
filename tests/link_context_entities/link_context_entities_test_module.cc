@@ -24,8 +24,7 @@ class TestApp {
   TestApp(fuchsia::modular::ModuleHost* module_host,
           fidl::InterfaceRequest<
               fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/) {
-    fuchsia::modular::testing::Init(module_host->application_context(),
-                                    __FILE__);
+    fuchsia::modular::testing::Init(module_host->startup_context(), __FILE__);
     initialized_.Pass();
     module_host->module_context()->GetLink("link1", link1_.NewRequest());
     module_host->module_context()->GetLink("link2", link2_.NewRequest());
@@ -59,8 +58,8 @@ class TestApp {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-  fuchsia::modular::ModuleDriver<TestApp> driver(app_context.get(),
+  auto context = component::StartupContext::CreateFromStartupInfo();
+  fuchsia::modular::ModuleDriver<TestApp> driver(context.get(),
                                                  [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;

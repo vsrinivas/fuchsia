@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/examples/swap_cpp/module.h"
@@ -10,11 +10,11 @@
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
 
-  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AppDriver<modular_example::ModuleApp> driver(
-      app_context->outgoing().deprecated_services(),
+      context->outgoing().deprecated_services(),
       std::make_unique<modular_example::ModuleApp>(
-          app_context.get(),
+          context.get(),
           [](auto view_manager, auto view_owner_request) {
             return new modular_example::ModuleView(
                 std::move(view_manager), std::move(view_owner_request),

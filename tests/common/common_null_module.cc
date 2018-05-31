@@ -23,8 +23,7 @@ class NullModule {
              fidl::InterfaceRequest<
                  fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host) {
-    fuchsia::modular::testing::Init(module_host_->application_context(),
-                                    __FILE__);
+    fuchsia::modular::testing::Init(module_host_->startup_context(), __FILE__);
     initialized_.Pass();
     Signal(kCommonNullModuleStarted);
   }
@@ -46,9 +45,9 @@ class NullModule {
 
 int main(int /*argc*/, const char** /*argv*/) {
   fsl::MessageLoop loop;
-  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::ModuleDriver<NullModule> driver(
-      app_context.get(), [&loop] { loop.QuitNow(); });
+      context.get(), [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;
 }

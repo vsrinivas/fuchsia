@@ -22,7 +22,7 @@ constexpr zx::duration kTimeout = zx::sec(10);
 }  // namespace
 
 ledger::Status GetLedger(fxl::Closure quit_callback,
-                         component::ApplicationContext* context,
+                         component::StartupContext* context,
                          component::ComponentControllerPtr* controller,
                          cloud_provider::CloudProviderPtr cloud_provider,
                          std::string ledger_name,

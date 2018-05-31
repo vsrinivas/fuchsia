@@ -11,7 +11,7 @@
 #include <ledger/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "peridot/bin/ledger/testing/cloud_provider_firebase_factory.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
@@ -54,7 +54,7 @@ class FetchBenchmark : public ledger::SyncWatcher {
   async::Loop* const loop_;
   test::DataGenerator generator_;
   test::benchmark::PageDataGenerator page_data_generator_;
-  std::unique_ptr<component::ApplicationContext> application_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   test::CloudProviderFirebaseFactory cloud_provider_firebase_factory_;
   fidl::Binding<ledger::SyncWatcher> sync_watcher_binding_;
   const size_t entry_count_;

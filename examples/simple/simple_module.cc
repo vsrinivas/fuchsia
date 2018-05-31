@@ -6,8 +6,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <simple/cpp/fidl.h>
 
-#include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/lib/fidl/message_receiver_client.h"
@@ -80,9 +80,9 @@ class SimpleModule : fuchsia::ui::views_v1::ViewProvider {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::ModuleDriver<simple::SimpleModule> driver(
-      app_context.get(), [&loop] { loop.Quit(); });
+      context.get(), [&loop] { loop.Quit(); });
   loop.Run();
   return 0;
 }

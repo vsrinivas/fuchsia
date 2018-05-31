@@ -9,7 +9,7 @@
 #include <cloud_provider_firebase/cpp/fidl.h>
 
 #include "gtest/gtest.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
@@ -62,9 +62,9 @@ cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
 class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
  public:
   LedgerAppInstanceFactoryImpl()
-      : application_context_(
-            component::ApplicationContext::CreateFromStartupInfoNotChecked()),
-        cloud_provider_firebase_factory_(application_context_.get()) {}
+      : startup_context_(
+            component::StartupContext::CreateFromStartupInfoNotChecked()),
+        cloud_provider_firebase_factory_(startup_context_.get()) {}
   ~LedgerAppInstanceFactoryImpl() override;
   void Init();
 
@@ -73,7 +73,7 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
   std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance() override;
 
  private:
-  std::unique_ptr<component::ApplicationContext> application_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   CloudProviderFirebaseFactory cloud_provider_firebase_factory_;
 
   std::string server_id_;
@@ -100,8 +100,8 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   launch_info.arguments.push_back("--no_minfs_wait");
   launch_info.arguments.push_back("--no_statistics_reporting_for_testing");
 
-  application_context_->launcher()->CreateApplication(std::move(launch_info),
-                                                      controller.NewRequest());
+  startup_context_->launcher()->CreateApplication(std::move(launch_info),
+                                                  controller.NewRequest());
   child_services.ConnectToService(repository_factory.NewRequest());
 
   auto result = std::make_unique<LedgerAppInstanceImpl>(

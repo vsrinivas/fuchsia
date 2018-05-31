@@ -11,7 +11,7 @@
 #include <vector>
 
 #include <module_manifest_source/cpp/fidl.h>
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/module_manifest_source/module_manifest_source.h"
 
@@ -25,13 +25,11 @@ namespace modular {
 class ModulePackageSource : public ModuleManifestSource,
                             module_manifest_source::ModulePackageIndexer {
  public:
-  ModulePackageSource(component::ApplicationContext* context);
+  ModulePackageSource(component::StartupContext* context);
   ~ModulePackageSource() override;
 
   // |ModuleManifestSource|
-  void Watch(async_t* async,
-             IdleFn idle_fn,
-             NewEntryFn new_fn,
+  void Watch(async_t* async, IdleFn idle_fn, NewEntryFn new_fn,
              RemovedEntryFn removed_fn) override;
 
  private:

@@ -8,7 +8,7 @@
 #include <cloud_provider/cpp/fidl.h>
 
 #include "gtest/gtest.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 
@@ -26,7 +26,7 @@ class ValidationTest : public ::testing::Test {
 
  private:
   fsl::MessageLoop message_loop_;
-  std::unique_ptr<component::ApplicationContext> application_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ValidationTest);
 };

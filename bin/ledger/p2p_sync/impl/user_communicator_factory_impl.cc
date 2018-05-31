@@ -14,8 +14,8 @@
 namespace p2p_sync {
 UserCommunicatorFactoryImpl::UserCommunicatorFactoryImpl(
     ledger::Environment* environment,
-    component::ApplicationContext* application_context)
-    : environment_(environment), application_context_(application_context) {}
+    component::StartupContext* startup_context)
+    : environment_(environment), startup_context_(startup_context) {}
 
 UserCommunicatorFactoryImpl::~UserCommunicatorFactoryImpl() {}
 
@@ -29,10 +29,10 @@ UserCommunicatorFactoryImpl::GetUserCommunicator(std::string user_directory) {
   }
 
   modular_auth::TokenProviderPtr token_provider =
-      application_context_
+      startup_context_
           ->ConnectToEnvironmentService<modular_auth::TokenProvider>();
   netconnector::NetConnectorPtr net_connector =
-      application_context_
+      startup_context_
           ->ConnectToEnvironmentService<netconnector::NetConnector>();
   std::unique_ptr<p2p_provider::UserIdProviderImpl> user_id_provider =
       std::make_unique<p2p_provider::UserIdProviderImpl>(

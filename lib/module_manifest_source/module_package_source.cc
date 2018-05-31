@@ -30,7 +30,7 @@ constexpr char kInitialModulePackagesIndexDir[] =
 }  // namespace
 
 ModulePackageSource::ModulePackageSource(
-    component::ApplicationContext* const context)
+    component::StartupContext* const context)
     : weak_factory_(this) {
   context->outgoing().debug_dir()->AddEntry(
       ModulePackageIndexer::Name_,
@@ -93,10 +93,8 @@ void IterateDirectory(fxl::StringView dirname,
   closedir(fd);
 }
 
-void ModulePackageSource::Watch(async_t* async,
-                                IdleFn idle_fn,
-                                NewEntryFn new_fn,
-                                RemovedEntryFn removed_fn) {
+void ModulePackageSource::Watch(async_t* async, IdleFn idle_fn,
+                                NewEntryFn new_fn, RemovedEntryFn removed_fn) {
   async_ = async;
   new_entry_fn_ = new_fn;
 

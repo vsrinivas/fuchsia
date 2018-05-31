@@ -13,7 +13,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <modular_auth/cpp/fidl.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_view.h"
@@ -26,7 +26,7 @@ namespace test {
 // TODO(ppi): take the server_id as std::optional<std::string> and drop bool
 // sync once we're on C++17.
 ledger::Status GetLedger(fxl::Closure quit_callback,
-                         component::ApplicationContext* context,
+                         component::StartupContext* context,
                          component::ComponentControllerPtr* controller,
                          cloud_provider::CloudProviderPtr cloud_provider,
                          std::string ledger_name,

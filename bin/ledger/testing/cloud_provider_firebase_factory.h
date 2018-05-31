@@ -11,7 +11,7 @@
 #include <cloud_provider_firebase/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
@@ -25,7 +25,7 @@ namespace test {
 class CloudProviderFirebaseFactory {
  public:
   explicit CloudProviderFirebaseFactory(
-      component::ApplicationContext* application_context);
+      component::StartupContext* startup_context);
   ~CloudProviderFirebaseFactory();
 
   void Init();
@@ -35,7 +35,7 @@ class CloudProviderFirebaseFactory {
       fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
 
  private:
-  component::ApplicationContext* application_context_;
+  component::StartupContext* startup_context_;
 
   // Thread used to run the fake token manager on.
   async::Loop loop_;

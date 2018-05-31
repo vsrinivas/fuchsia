@@ -5,7 +5,7 @@
 #include <trace-provider/provider.h>
 #include <memory>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
@@ -15,11 +15,11 @@
 
 fxl::AutoCall<fxl::Closure> SetupCobalt(
     const bool disable_statistics, async_t* async,
-    component::ApplicationContext* const application_context) {
+    component::StartupContext* const startup_context) {
   if (disable_statistics) {
     return fxl::MakeAutoCall<fxl::Closure>([] {});
   }
-  return fuchsia::modular::InitializeCobalt(async, application_context);
+  return fuchsia::modular::InitializeCobalt(async, startup_context);
 }
 
 int main(int argc, const char** argv) {
@@ -28,16 +28,15 @@ int main(int argc, const char** argv) {
 
   fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
-  std::unique_ptr<component::ApplicationContext> app_context =
-      component::ApplicationContext::CreateFromStartupInfo();
+  std::unique_ptr<component::StartupContext> context =
+      component::StartupContext::CreateFromStartupInfo();
 
-  fxl::AutoCall<fxl::Closure> cobalt_cleanup = SetupCobalt(
-      test, std::move(loop.async()), app_context.get());
+  fxl::AutoCall<fxl::Closure> cobalt_cleanup =
+      SetupCobalt(test, std::move(loop.async()), context.get());
 
   fuchsia::modular::AppDriver<fuchsia::modular::UserRunnerImpl> driver(
-      app_context->outgoing().deprecated_services(),
-      std::make_unique<fuchsia::modular::UserRunnerImpl>(app_context.get(),
-                                                         test),
+      context->outgoing().deprecated_services(),
+      std::make_unique<fuchsia::modular::UserRunnerImpl>(context.get(), test),
       [&loop, &cobalt_cleanup] {
         cobalt_cleanup.call();
         loop.QuitNow();

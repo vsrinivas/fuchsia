@@ -6,8 +6,8 @@
 
 #include <utility>
 
-#include <network/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <network/cpp/fidl.h>
 
 #include "lib/backoff/exponential_backoff.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -23,16 +23,14 @@ constexpr char kAppUrl[] = "cloud_provider_firestore";
 class CloudProviderFactory::TokenProviderContainer {
  public:
   TokenProviderContainer(
-      component::ApplicationContext* application_context,
-      async_t* async,
+      component::StartupContext* startup_context, async_t* async,
       std::string credentials_path,
       fidl::InterfaceRequest<modular_auth::TokenProvider> request)
-      : application_context_(application_context),
+      : startup_context_(startup_context),
         network_wrapper_(
-            async,
-            std::make_unique<backoff::ExponentialBackoff>(),
+            async, std::make_unique<backoff::ExponentialBackoff>(),
             [this] {
-              return application_context_
+              return startup_context_
                   ->ConnectToEnvironmentService<network::NetworkService>();
             }),
         token_provider_(&network_wrapper_, fxl::GenerateUUID()),
@@ -48,7 +46,7 @@ class CloudProviderFactory::TokenProviderContainer {
   }
 
  private:
-  component::ApplicationContext* const application_context_;
+  component::StartupContext* const startup_context_;
   network_wrapper::NetworkWrapperImpl network_wrapper_;
   service_account::ServiceAccountTokenProvider token_provider_;
   fidl::Binding<modular_auth::TokenProvider> binding_;
@@ -57,14 +55,11 @@ class CloudProviderFactory::TokenProviderContainer {
 };
 
 CloudProviderFactory::CloudProviderFactory(
-    component::ApplicationContext* application_context,
-    std::string credentials_path)
-    : application_context_(application_context),
+    component::StartupContext* startup_context, std::string credentials_path)
+    : startup_context_(startup_context),
       credentials_path_(std::move(credentials_path)) {}
 
-CloudProviderFactory::~CloudProviderFactory() {
-  services_loop_.Shutdown();
-}
+CloudProviderFactory::~CloudProviderFactory() { services_loop_.Shutdown(); }
 
 void CloudProviderFactory::Init() {
   services_loop_.StartThread();
@@ -72,14 +67,13 @@ void CloudProviderFactory::Init() {
   component::LaunchInfo launch_info;
   launch_info.url = kAppUrl;
   launch_info.directory_request = child_services.NewRequest();
-  application_context_->launcher()->CreateApplication(
+  startup_context_->launcher()->CreateApplication(
       std::move(launch_info), cloud_provider_controller_.NewRequest());
   child_services.ConnectToService(cloud_provider_factory_.NewRequest());
 }
 
 void CloudProviderFactory::MakeCloudProvider(
-    std::string server_id,
-    std::string api_key,
+    std::string server_id, std::string api_key,
     fidl::InterfaceRequest<cloud_provider::CloudProvider> request) {
   if (api_key.empty()) {
     FXL_LOG(WARNING) << "Empty Firebase API key - this can possibly work "
@@ -90,7 +84,7 @@ void CloudProviderFactory::MakeCloudProvider(
                   fxl::MakeCopyable(
                       [this, request = token_provider.NewRequest()]() mutable {
                         token_providers_.emplace(
-                            application_context_, services_loop_.async(),
+                            startup_context_, services_loop_.async(),
                             credentials_path_, std::move(request));
                       }));
 

@@ -13,7 +13,7 @@
 #include <trace-provider/provider.h>
 #include <zircon/device/vfs.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/backoff/exponential_backoff.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/command_line.h"
@@ -43,11 +43,11 @@ struct AppParams {
 
 fxl::AutoCall<fxl::Closure> SetupCobalt(
     bool disable_statistics, async_t* async,
-    component::ApplicationContext* application_context) {
+    component::StartupContext* startup_context) {
   if (disable_statistics) {
     return fxl::MakeAutoCall<fxl::Closure>([] {});
   }
-  return InitializeCobalt(async, application_context);
+  return InitializeCobalt(async, startup_context);
 };
 
 // App is the main entry point of the Ledger application.
@@ -62,12 +62,10 @@ class App : public ledger_internal::LedgerController {
       : app_params_(app_params),
         loop_(&kAsyncLoopConfigMakeDefault),
         trace_provider_(loop_.async()),
-        application_context_(
-            component::ApplicationContext::CreateFromStartupInfo()),
+        startup_context_(component::StartupContext::CreateFromStartupInfo()),
         cobalt_cleaner_(SetupCobalt(app_params_.disable_statistics,
-                                    loop_.async(),
-                                    application_context_.get())) {
-    FXL_DCHECK(application_context_);
+                                    loop_.async(), startup_context_.get())) {
+    FXL_DCHECK(startup_context_);
 
     ReportEvent(CobaltEvent::LEDGER_STARTED);
   }
@@ -78,12 +76,12 @@ class App : public ledger_internal::LedgerController {
         EnvironmentBuilder().SetAsync(loop_.async()).Build());
     auto user_communicator_factory =
         std::make_unique<p2p_sync::UserCommunicatorFactoryImpl>(
-            environment_.get(), application_context_.get());
+            environment_.get(), startup_context_.get());
 
     factory_impl_ = std::make_unique<LedgerRepositoryFactoryImpl>(
         environment_.get(), std::move(user_communicator_factory));
 
-    application_context_->outgoing()
+    startup_context_->outgoing()
         .AddPublicService<ledger_internal::LedgerRepositoryFactory>(
             [this](
                 fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
@@ -91,7 +89,7 @@ class App : public ledger_internal::LedgerController {
               factory_bindings_.AddBinding(factory_impl_.get(),
                                            std::move(request));
             });
-    application_context_->outgoing().AddPublicService<LedgerController>(
+    startup_context_->outgoing().AddPublicService<LedgerController>(
         [this](fidl::InterfaceRequest<LedgerController> request) {
           controller_bindings_.AddBinding(this, std::move(request));
         });
@@ -108,7 +106,7 @@ class App : public ledger_internal::LedgerController {
   const AppParams app_params_;
   async::Loop loop_;
   trace::TraceProvider trace_provider_;
-  std::unique_ptr<component::ApplicationContext> application_context_;
+  std::unique_ptr<component::StartupContext> startup_context_;
   fxl::AutoCall<fxl::Closure> cobalt_cleaner_;
   std::unique_ptr<Environment> environment_;
   std::unique_ptr<LedgerRepositoryFactoryImpl> factory_impl_;

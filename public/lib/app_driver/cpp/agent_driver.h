@@ -13,7 +13,7 @@
 #include <lib/async/default.h>
 
 #include "lib/agent/cpp/agent_impl.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -26,7 +26,7 @@ namespace modular {
 // This interface is passed to the Impl object that AgentDriver initializes.
 class AgentHost {
  public:
-  virtual component::ApplicationContext* application_context() = 0;
+  virtual component::StartupContext* startup_context() = 0;
   virtual AgentContext* agent_context() = 0;
 };
 
@@ -50,8 +50,8 @@ class AgentHost {
 //
 // int main(int argc, const char** argv) {
 //   fsl::MessageLoop loop;
-//   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
-//   fuchsia::modular::AgentDriver<HelloAgent> driver(app_context.get(),
+//   auto context = component::StartupContext::CreateFromStartupInfo();
+//   fuchsia::modular::AgentDriver<HelloAgent> driver(context.get(),
 //                                               [&loop] { loop.QuitNow(); });
 //   loop.Run();
 //   return 0;
@@ -59,23 +59,20 @@ class AgentHost {
 template <typename Impl>
 class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
  public:
-  AgentDriver(component::ApplicationContext* const app_context,
+  AgentDriver(component::StartupContext* const context,
               std::function<void()> on_terminated)
-      : app_context_(app_context),
-        lifecycle_impl_(app_context->outgoing().deprecated_services(), this),
+      : context_(context),
+        lifecycle_impl_(context->outgoing().deprecated_services(), this),
         agent_impl_(std::make_unique<AgentImpl>(
-            app_context->outgoing().deprecated_services(),
+            context->outgoing().deprecated_services(),
             static_cast<AgentImpl::Delegate*>(this))),
         on_terminated_(std::move(on_terminated)),
-        agent_context_(
-            app_context_->ConnectToEnvironmentService<AgentContext>()),
+        agent_context_(context_->ConnectToEnvironmentService<AgentContext>()),
         impl_(std::make_unique<Impl>(static_cast<AgentHost*>(this))) {}
 
  private:
   // |AgentHost|
-  component::ApplicationContext* application_context() override {
-    return app_context_;
-  }
+  component::StartupContext* startup_context() override { return context_; }
 
   // |AgentHost|
   AgentContext* agent_context() override {
@@ -100,10 +97,9 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
     if (impl_) {
       impl_->Terminate([this] {
         // Cf. AppDriver::Terminate().
-        async::PostTask(
-            async_get_default(), [this] {
-            impl_.reset();
-            on_terminated_();
+        async::PostTask(async_get_default(), [this] {
+          impl_.reset();
+          on_terminated_();
         });
       });
     } else {
@@ -111,7 +107,7 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
     }
   }
 
-  component::ApplicationContext* const app_context_;
+  component::StartupContext* const context_;
   LifecycleImpl lifecycle_impl_;
   std::unique_ptr<AgentImpl> agent_impl_;
   std::function<void()> on_terminated_;

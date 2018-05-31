@@ -6,7 +6,7 @@
 #include <utility>
 
 #include <hello_world_module/cpp/fidl.h>
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -16,8 +16,8 @@ namespace {
 
 class HelloAppChild : public hello_world_module::Hello {
  public:
-  HelloAppChild(component::ApplicationContext* app_context) {
-    app_context->outgoing().AddPublicService<hello_world_module::Hello>(
+  HelloAppChild(component::StartupContext* context) {
+    context->outgoing().AddPublicService<hello_world_module::Hello>(
         [this](fidl::InterfaceRequest<hello_world_module::Hello> request) {
           hello_binding_.AddBinding(this, std::move(request));
         });
@@ -43,10 +43,10 @@ class HelloAppChild : public hello_world_module::Hello {
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
-  auto app_context = component::ApplicationContext::CreateFromStartupInfo();
+  auto context = component::StartupContext::CreateFromStartupInfo();
   fuchsia::modular::AppDriver<HelloAppChild> driver(
-      app_context->outgoing().deprecated_services(),
-      std::make_unique<HelloAppChild>(app_context.get()),
+      context->outgoing().deprecated_services(),
+      std::make_unique<HelloAppChild>(context.get()),
       [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;

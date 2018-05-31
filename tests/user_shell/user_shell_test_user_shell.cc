@@ -12,7 +12,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
@@ -182,8 +182,8 @@ class StoryProviderStateWatcherImpl : fuchsia::modular::StoryProviderWatcher {
 class TestApp : public fuchsia::modular::testing::ComponentBase<
                     fuchsia::modular::UserShell> {
  public:
-  explicit TestApp(component::ApplicationContext* const application_context)
-      : ComponentBase(application_context) {
+  explicit TestApp(component::StartupContext* const startup_context)
+      : ComponentBase(startup_context) {
     TestInit(__FILE__);
   }
 

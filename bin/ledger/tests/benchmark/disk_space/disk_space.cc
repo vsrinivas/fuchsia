@@ -48,8 +48,7 @@ DiskSpaceBenchmark::DiskSpaceBenchmark(async::Loop* loop, size_t page_count,
                                        size_t value_size)
     : loop_(loop),
       tmp_dir_(kStoragePath),
-      application_context_(
-          component::ApplicationContext::CreateFromStartupInfo()),
+      startup_context_(component::StartupContext::CreateFromStartupInfo()),
       page_count_(page_count),
       unique_key_count_(unique_key_count),
       commit_count_(commit_count),
@@ -65,10 +64,9 @@ DiskSpaceBenchmark::DiskSpaceBenchmark(async::Loop* loop, size_t page_count,
 
 void DiskSpaceBenchmark::Run() {
   ledger::LedgerPtr ledger;
-  ledger::Status status =
-      test::GetLedger([this] { loop_->Quit(); }, application_context_.get(),
-                      &component_controller_, nullptr, "disk_space",
-                      tmp_dir_.path(), &ledger);
+  ledger::Status status = test::GetLedger(
+      [this] { loop_->Quit(); }, startup_context_.get(), &component_controller_,
+      nullptr, "disk_space", tmp_dir_.path(), &ledger);
   QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
 
   for (size_t page_number = 0; page_number < page_count_; page_number++) {
