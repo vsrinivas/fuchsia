@@ -1,6 +1,6 @@
 {
     "imports": [
-        "garnet/packages/dev"
+        "garnet/packages/kitchen_sink"
     ],
     "packages": {
         "syzkaller": "//garnet/testing/syzkaller"
