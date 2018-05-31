@@ -37,7 +37,7 @@ TEST_F(DeadStoryRankingFeatureTest, RunningStoryAndAffinity) {
   SetRunningStoryContextUpdate(context_update);
   focused_story_feature.UpdateContext(context_update);
   double value = focused_story_feature.ComputeFeature(query, suggestion);
-  EXPECT_EQ(value, 1.0);
+  EXPECT_EQ(value, 0.0);
 }
 
 TEST_F(DeadStoryRankingFeatureTest, RunningButNoAffinity) {
@@ -83,7 +83,7 @@ TEST_F(DeadStoryRankingFeatureTest, NotRunningStoryAndAffinity) {
   SetRunningStoryContextUpdate(context_update);
   focused_story_feature.UpdateContext(context_update);
   double value = focused_story_feature.ComputeFeature(query, suggestion);
-  EXPECT_EQ(value, 0.0);
+  EXPECT_EQ(value, 1.0);
 }
 
 }  // namespace

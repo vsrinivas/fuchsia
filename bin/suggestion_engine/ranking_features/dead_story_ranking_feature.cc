@@ -16,18 +16,21 @@ DeadStoryRankingFeature::~DeadStoryRankingFeature() = default;
 double DeadStoryRankingFeature::ComputeFeatureInternal(
     const UserInput& query, const RankedSuggestion& ranked_suggestion) {
   bool story_affinity = ranked_suggestion.prototype->proposal.story_affinity;
-  if (!story_affinity) {
+  const auto& story_id = ranked_suggestion.prototype->story_id;
+
+  // Proposal not tied to any story.
+  if (!story_affinity || story_id.empty()) {
     return kMinConfidence;
   }
+
   // TODO(miguelfrde): cache ids of stories in context in an unordered_set for
   // average O(1) lookup.
-  const auto& story_id = ranked_suggestion.prototype->story_id;
   for (auto& context_value : *ContextValues()) {
     if (story_id == context_value.meta.story->id) {
-      return kMaxConfidence;
+      return kMinConfidence;
     }
   }
-  return kMinConfidence;
+  return kMaxConfidence;
 }
 
 ContextSelectorPtr
