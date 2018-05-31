@@ -334,7 +334,7 @@ func formatLibrary(library types.LibraryIdentifier, sep string) string {
 }
 
 func formatNamespace(library types.LibraryIdentifier) string {
-	return formatLibrary(library, "::")
+	return "::" + formatLibrary(library, "::")
 }
 
 func formatLibraryPrefix(library types.LibraryIdentifier) string {
