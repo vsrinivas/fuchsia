@@ -17,6 +17,7 @@ extern "C" const uint8_t boot_mouse_r_desc[50];
 extern "C" const uint8_t trinket_r_desc[173];
 extern "C" const uint8_t ps3_ds_r_desc[148];
 extern "C" const uint8_t acer12_touch_r_desc[660];
+extern "C" const uint8_t eve_tablet_r_desc[28];
 
 namespace {
 struct Stats {
@@ -65,6 +66,22 @@ static bool itemize_acer12_rpt1() {
     END_TEST;
 }
 
+static bool itemize_eve_tablet_rpt() {
+    BEGIN_TEST;
+
+    Stats stats = {};
+    auto len = sizeof(eve_tablet_r_desc);
+    auto consumed = ItemizeHIDReportDesc(eve_tablet_r_desc, len, &stats);
+
+    ASSERT_EQ(consumed, len);
+    ASSERT_EQ(stats.input_count, 2);
+    ASSERT_EQ(stats.collection[0], 1);
+    ASSERT_EQ(stats.collection[1], 1);
+
+    END_TEST;
+}
+
+
 static bool parse_boot_mouse() {
     BEGIN_TEST;
 
@@ -93,7 +110,7 @@ static bool parse_boot_mouse() {
 
     for (uint8_t ix = 0; ix != 3; ++ix) {
         EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kButton);
-        EXPECT_EQ(fields[ix].attr.usage.usage, ix + 1);
+        EXPECT_EQ(fields[ix].attr.usage.usage, uint32_t(ix + 1));
         EXPECT_EQ(fields[ix].attr.bit_sz, 1);
         EXPECT_EQ(fields[ix].attr.logc_mm.min, 0);
         EXPECT_EQ(fields[ix].attr.logc_mm.max, 1);
@@ -188,7 +205,7 @@ static bool parse_adaf_trinket() {
 
     for (uint8_t ix = 0; ix != 3; ++ix) {
         EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kButton);
-        EXPECT_EQ(fields[ix].attr.usage.usage, ix + 1);
+        EXPECT_EQ(fields[ix].attr.usage.usage, uint32_t(ix + 1));
         EXPECT_EQ(fields[ix].attr.bit_sz, 1);
         EXPECT_EQ(fields[ix].attr.logc_mm.min, 0);
         EXPECT_EQ(fields[ix].attr.logc_mm.max, 1);
@@ -248,7 +265,7 @@ static bool parse_adaf_trinket() {
     for (uint8_t ix = 0; ix != 8; ++ix) {
         EXPECT_EQ(fields[ix].type, hid::kInput);
         EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kKeyboardKeypad);
-        EXPECT_EQ(fields[ix].attr.usage.usage, ix + 0xe0);
+        EXPECT_EQ(fields[ix].attr.usage.usage, uint32_t(ix + 0xe0));
         EXPECT_EQ(fields[ix].attr.bit_sz, 1);
         EXPECT_EQ(fields[ix].attr.logc_mm.min, 0);
         EXPECT_EQ(fields[ix].attr.logc_mm.max, 1);
@@ -592,12 +609,54 @@ static bool parse_acer12_touch() {
     END_TEST;
 }
 
+static bool parse_eve_tablet() {
+    BEGIN_TEST;
+
+    hid::DeviceDescriptor* dev = nullptr;
+    auto res = hid::ParseReportDescriptor(
+        eve_tablet_r_desc, sizeof(eve_tablet_r_desc), &dev);
+
+    EXPECT_EQ(res, hid::ParseResult::kParseOk);
+
+    // A single report, no id.
+    ASSERT_EQ(dev->rep_count, 1u);
+    EXPECT_EQ(dev->report[0].report_id, 0);
+
+    // Report has two fields.
+    ASSERT_EQ(dev->report[0].count, 2u);
+
+    const hid::ReportField* fields = dev->report[0].first_field;
+
+    // First field is 1 bit, (tablet / no-tablet)
+    auto expected_flags = hid::kData | hid::kAbsolute | hid::kScalar;
+
+    EXPECT_EQ(fields[0].type, hid::kInput);
+    EXPECT_EQ(fields[0].attr.usage.page, hid::usage::Page::kGenericDesktop);
+    EXPECT_EQ(fields[0].attr.usage.usage, 0xff000001);
+    EXPECT_EQ(fields[0].attr.bit_sz, 1);
+    EXPECT_EQ(expected_flags & fields[0].flags, expected_flags);
+
+    // Second field is padding, 7 bits.
+    expected_flags = hid::kConstant | hid::kAbsolute | hid::kScalar;
+
+    EXPECT_EQ(fields[1].type, hid::kInput);
+    EXPECT_EQ(fields[1].attr.usage.page, hid::usage::Page::kGenericDesktop);
+    EXPECT_EQ(fields[1].attr.usage.usage, 0);
+    EXPECT_EQ(fields[1].attr.bit_sz, 7);
+    EXPECT_EQ(expected_flags & fields[1].flags, expected_flags);
+
+    hid::FreeDeviceDescriptor(dev);
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(hidparser_tests)
 RUN_TEST(itemize_acer12_rpt1)
+RUN_TEST(itemize_eve_tablet_rpt)
 RUN_TEST(parse_boot_mouse)
 RUN_TEST(parse_adaf_trinket)
 RUN_TEST(parse_ps3_controller)
 RUN_TEST(parse_acer12_touch)
+RUN_TEST(parse_eve_tablet)
 END_TEST_CASE(hidparser_tests)
 
 int main(int argc, char** argv) {

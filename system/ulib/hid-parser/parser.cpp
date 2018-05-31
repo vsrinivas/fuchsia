@@ -221,7 +221,7 @@ public:
                 return kParseUnexpectedCol;
         }
 
-        uint16_t usage = usages_.is_empty() ? 0 : usages_[0];
+        uint32_t usage = usages_.is_empty() ? 0 : usages_[0];
 
         Collection col {
             static_cast<CollectionType>(data),
@@ -289,12 +289,7 @@ public:
     }
 
     ParseResult add_usage(uint32_t data) {                      // Local
-        // TODO(cpu): support extended usages. Here
-        // and on set_usage_min() and set_usage_max().
-        if (data > UINT16_MAX)
-            return kParseUnsuported;
-
-        usages_.push_back(static_cast<uint16_t>(data));
+        usages_.push_back(data);
         return kParseOk;
     }
 
@@ -307,6 +302,9 @@ public:
     }
 
     ParseResult set_usage_max(uint32_t data) {                  // Local
+        // In add_usage() we don't restrict the value while
+        // here we do. This is because a very large range can
+        // effectively DoS the code in the usage iterator.
         if (data > UINT16_MAX)
             return kParseUnsuported;
 
@@ -446,10 +444,10 @@ private:
             }
         }
 
-        bool next_usage(uint16_t* usage) {
+        bool next_usage(uint32_t* usage) {
             if (usages_ == nullptr) {
-                *usage = static_cast<uint16_t>(usage_range_.min + index_);
-                if (*usage > usage_range_.max)
+                *usage = static_cast<uint32_t>(usage_range_.min + index_);
+                if (*usage > static_cast<uint32_t>(usage_range_.max))
                     return false;
             } else {
                 *usage = (index_ < usages_->size()) ? (*usages_)[index_] : last_usage_;
@@ -461,10 +459,10 @@ private:
         }
 
     private:
-        const fbl::Vector<uint16_t>* usages_;
+        const fbl::Vector<uint32_t>* usages_;
         MinMax usage_range_;
         uint32_t index_;
-        uint16_t last_usage_;
+        uint32_t last_usage_;
         bool is_array_;
     };
 
@@ -480,7 +478,7 @@ private:
     MinMax usage_range_;
     StateTable table_;
     fbl::Vector<StateTable> stack_;
-    fbl::Vector<uint16_t> usages_;
+    fbl::Vector<uint32_t> usages_;
     // Temporary output model:
     Collection* parent_coll_;
     size_t report_id_count_;

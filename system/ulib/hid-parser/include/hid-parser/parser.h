@@ -126,7 +126,7 @@ struct Unit {
 // document from usb.org.
 struct Usage {
     uint16_t page;
-    uint16_t usage;
+    uint32_t usage;
 };
 
 enum class CollectionType : uint32_t {

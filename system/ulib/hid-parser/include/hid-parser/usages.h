@@ -50,7 +50,7 @@ enum class Page : uint16_t {
     kVendorDefinedEnd           = 0xffff
 };
 
-enum class GenericDesktop : uint16_t {
+enum class GenericDesktop : uint32_t {
     kUndefined                  = 0x00,
     kPointer                    = 0x01,
     kMouse                      = 0x02,
@@ -104,7 +104,7 @@ enum class GenericDesktop : uint16_t {
     kDpadLeft                   = 0x9c
 };
 
-enum class LEDs : uint16_t {
+enum class LEDs : uint32_t {
     kUndefined                  = 0x00,
     kNumLock                    = 0x01,
     kCapsLock                   = 0x02,
@@ -185,7 +185,7 @@ enum class LEDs : uint16_t {
     kExternalPowerConnected     = 0x4d
 };
 
-enum class Consumer : uint16_t {
+enum class Consumer : uint32_t {
     kUnassigned                 = 0x00,
     kConsumerControl            = 0x01,
     kNumericKeyPad              = 0x02,
@@ -338,14 +338,14 @@ inline bool operator==(uint16_t e, hid::usage::Page up) {
     return (static_cast<uint16_t>(up) == e);
 }
 
-inline bool operator==(uint16_t e, hid::usage::GenericDesktop gd) {
-    return (static_cast<uint16_t>(gd) == e);
+inline bool operator==(uint32_t e, hid::usage::GenericDesktop gd) {
+    return (static_cast<uint32_t>(gd) == e);
 }
 
-inline bool operator==(uint16_t e, hid::usage::LEDs gd) {
-    return (static_cast<uint16_t>(gd) == e);
+inline bool operator==(uint32_t e, hid::usage::LEDs gd) {
+    return (static_cast<uint32_t>(gd) == e);
 }
 
-inline bool operator==(uint16_t e, hid::usage::Consumer gd) {
-    return (static_cast<uint16_t>(gd) == e);
+inline bool operator==(uint32_t e, hid::usage::Consumer gd) {
+    return (static_cast<uint32_t>(gd) == e);
 }

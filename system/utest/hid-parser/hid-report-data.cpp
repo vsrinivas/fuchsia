@@ -544,3 +544,20 @@ extern "C" const uint8_t acer12_touch_r_desc[660] = {
     0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,No Null Position)
     0xC0,              // End Collection
 };
+
+// Syntetic descriptor for ACPI sensor device.
+extern "C" const uint8_t eve_tablet_r_desc[28] = {
+    0x05, 0x01,        // Usage Page (Generic Desktop Ctrls)
+    0x09, 0x80,        // Usage (Sys Control)
+    0xA1, 0x01,        // Collection (Application)
+    0x0B, 0x01, 0x00, 0x00, 0xFF,  //   Usage (0x0-FFFFFF) [Vendor Defined]
+    0x15, 0x00,        //   Logical Minimum (0)
+    0x25, 0x01,        //   Logical Maximum (1)
+    0x75, 0x01,        //   Report Size (1)
+    0x95, 0x01,        //   Report Count (1)
+    0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    0x75, 0x07,        //   Report Size (7)
+    0x95, 0x01,        //   Report Count (1)
+    0x81, 0x03,        //   Input (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    0xC0,              // End Collection
+};
