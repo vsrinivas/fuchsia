@@ -114,8 +114,8 @@ vk::DescriptorSet Renderer::GetUpdatedDescriptorSet(
     const escher::FramePtr& frame, escher::Texture* channel0,
     escher::Texture* channel1, escher::Texture* channel2,
     escher::Texture* channel3) {
-  TRACE_DURATION("gfx",
-                 "::fuchsia::ui::shadertoy::Renderer::GetUpdatedDescriptorSet");
+  TRACE_DURATION(
+      "gfx", "fuchsia::examples::shadertoy::Renderer::GetUpdatedDescriptorSet");
 
   constexpr uint32_t kChannelCount = 4;
   vk::DescriptorImageInfo channel_image_info[kChannelCount];
@@ -151,7 +151,7 @@ void Renderer::DrawFrame(const escher::FramebufferPtr& framebuffer,
                          escher::Texture* channel2, escher::Texture* channel3,
                          escher::SemaphorePtr framebuffer_ready,
                          escher::SemaphorePtr frame_done) {
-  TRACE_DURATION("gfx", "::fuchsia::ui::shadertoy::Renderer::DrawFrame");
+  TRACE_DURATION("gfx", "fuchsia::examples::shadertoy::Renderer::DrawFrame");
 
   auto frame = escher()->NewFrame("Shadertoy Renderer");
   auto command_buffer = frame->command_buffer();

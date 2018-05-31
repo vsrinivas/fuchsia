@@ -39,7 +39,7 @@ View::View(async::Loop* loop,
       // TODO: we don't need to keep this around once we have used it to
       // create a Shadertoy.  What is the best way to achieve this?
       shadertoy_factory_(application_context_->ConnectToEnvironmentService<
-                         ::fuchsia::ui::shadertoy::ShadertoyFactory>()),
+                         fuchsia::examples::shadertoy::ShadertoyFactory>()),
       start_time_(zx_clock_get(ZX_CLOCK_MONOTONIC)) {
   shadertoy_factory_.set_error_handler([this] {
     FXL_LOG(INFO) << "Lost connection to ShadertoyFactory.";

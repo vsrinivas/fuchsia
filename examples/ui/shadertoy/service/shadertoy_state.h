@@ -5,8 +5,8 @@
 #ifndef GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_SHADERTOY_STATE_H_
 #define GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_SHADERTOY_STATE_H_
 
+#include <fuchsia/examples/shadertoy/cpp/fidl.h>
 #include <fuchsia/images/cpp/fidl.h>
-#include <fuchsia/ui/shadertoy/cpp/fidl.h>
 #include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include "garnet/examples/ui/shadertoy/service/glm_hack.h"
 #include "lib/escher/escher.h"
@@ -44,7 +44,7 @@ class ShadertoyState : public escher::Resource {
 
   void SetShaderCode(
       fidl::StringPtr glsl,
-      ::fuchsia::ui::shadertoy::Shadertoy::SetShaderCodeCallback callback);
+      fuchsia::examples::shadertoy::Shadertoy::SetShaderCodeCallback callback);
 
   void SetResolution(uint32_t width, uint32_t height);
 

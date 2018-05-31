@@ -5,7 +5,7 @@
 #ifndef GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_APP_H_
 #define GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_APP_H_
 
-#include <fuchsia/ui/shadertoy/cpp/fidl.h>
+#include <fuchsia/examples/shadertoy/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/examples/ui/shadertoy/service/shadertoy_impl.h"
@@ -23,7 +23,7 @@ class ShadertoyState;
 // A thin wrapper that manages connections to a ShadertoyFactoryImpl singleton.
 // TODO: clean up when there are no remaining bindings to Shadertoy nor
 // ShadertoyFactory.  What is the best-practice pattern to use here?
-class App : public ::fuchsia::ui::shadertoy::ShadertoyFactory {
+class App : public fuchsia::examples::shadertoy::ShadertoyFactory {
  public:
   App(async::Loop* loop, component::ApplicationContext* app_context,
       escher::Escher* escher);
@@ -43,19 +43,21 @@ class App : public ::fuchsia::ui::shadertoy::ShadertoyFactory {
 
   // |ShadertoyFactory|
   void NewImagePipeShadertoy(
-      ::fidl::InterfaceRequest<::fuchsia::ui::shadertoy::Shadertoy> toy_request,
+      ::fidl::InterfaceRequest<fuchsia::examples::shadertoy::Shadertoy>
+          toy_request,
       ::fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe) override;
 
   // |ShadertoyFactory|
   void NewViewShadertoy(
-      ::fidl::InterfaceRequest<::fuchsia::ui::shadertoy::Shadertoy> toy_request,
+      ::fidl::InterfaceRequest<fuchsia::examples::shadertoy::Shadertoy>
+          toy_request,
       ::fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner>
           view_owner_request,
       bool handle_input_events) override;
 
-  fidl::BindingSet<::fuchsia::ui::shadertoy::ShadertoyFactory>
+  fidl::BindingSet<fuchsia::examples::shadertoy::ShadertoyFactory>
       factory_bindings_;
-  fidl::BindingSet<::fuchsia::ui::shadertoy::Shadertoy,
+  fidl::BindingSet<fuchsia::examples::shadertoy::Shadertoy,
                    std::unique_ptr<ShadertoyImpl>>
       shadertoy_bindings_;
 

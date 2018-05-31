@@ -5,14 +5,14 @@
 #ifndef GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_SHADERTOY_IMPL_H_
 #define GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_SHADERTOY_IMPL_H_
 
-#include <fuchsia/ui/shadertoy/cpp/fidl.h>
+#include <fuchsia/examples/shadertoy/cpp/fidl.h>
 #include "garnet/examples/ui/shadertoy/service/shadertoy_state.h"
 
 namespace shadertoy {
 
 // Thin wrapper that delegates Shadertoy API calls to a (subclass of)
 // ShadertoyState.
-class ShadertoyImpl : public ::fuchsia::ui::shadertoy::Shadertoy {
+class ShadertoyImpl : public fuchsia::examples::shadertoy::Shadertoy {
  public:
   explicit ShadertoyImpl(fxl::RefPtr<ShadertoyState> state);
   ~ShadertoyImpl() override;
@@ -25,7 +25,7 @@ class ShadertoyImpl : public ::fuchsia::ui::shadertoy::Shadertoy {
 
   // |Shadertoy|
   void SetShaderCode(::fidl::StringPtr glsl,
-                     ::fuchsia::ui::shadertoy::Shadertoy::SetShaderCodeCallback callback) override;
+                     fuchsia::examples::shadertoy::Shadertoy::SetShaderCodeCallback callback) override;
 
   // |Shadertoy|
   void SetResolution(uint32_t width, uint32_t height) override;

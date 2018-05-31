@@ -16,8 +16,8 @@ App::App(async::Loop* loop, component::ApplicationContext* app_context,
       renderer_(escher, kDefaultImageFormat),
       compiler_(loop, escher, renderer_.render_pass(),
                 renderer_.descriptor_set_layout()) {
-  app_context->outgoing().AddPublicService<::fuchsia::ui::shadertoy::ShadertoyFactory>(
-      [this](fidl::InterfaceRequest<::fuchsia::ui::shadertoy::ShadertoyFactory> request) {
+  app_context->outgoing().AddPublicService<fuchsia::examples::shadertoy::ShadertoyFactory>(
+      [this](fidl::InterfaceRequest<fuchsia::examples::shadertoy::ShadertoyFactory> request) {
         FXL_LOG(INFO) << "Accepting connection to ShadertoyFactory";
         factory_bindings_.AddBinding(this, std::move(request));
       });
@@ -26,7 +26,7 @@ App::App(async::Loop* loop, component::ApplicationContext* app_context,
 App::~App() = default;
 
 void App::NewImagePipeShadertoy(
-    ::fidl::InterfaceRequest<::fuchsia::ui::shadertoy::Shadertoy> toy_request,
+    ::fidl::InterfaceRequest<fuchsia::examples::shadertoy::Shadertoy> toy_request,
     ::fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe) {
   shadertoy_bindings_.AddBinding(
       std::make_unique<ShadertoyImpl>(
@@ -35,7 +35,7 @@ void App::NewImagePipeShadertoy(
 }
 
 void App::NewViewShadertoy(
-    ::fidl::InterfaceRequest<::fuchsia::ui::shadertoy::Shadertoy> toy_request,
+    ::fidl::InterfaceRequest<fuchsia::examples::shadertoy::Shadertoy> toy_request,
     ::fidl::InterfaceRequest<::fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
     bool handle_input_events) {
   shadertoy_bindings_.AddBinding(

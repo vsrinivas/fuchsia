@@ -6,7 +6,7 @@
 #define GARNET_EXAMPLES_UI_SHADERTOY_CLIENT_VIEW_H_
 
 #include <lib/async-loop/cpp/loop.h>
-#include <fuchsia/ui/shadertoy/cpp/fidl.h>
+#include <fuchsia/examples/shadertoy/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/macros.h"
@@ -33,8 +33,8 @@ class View : public mozart::BaseView {
   component::ApplicationContext* const application_context_;
   async::Loop* const loop_;
 
-  ::fuchsia::ui::shadertoy::ShadertoyFactoryPtr shadertoy_factory_;
-  ::fuchsia::ui::shadertoy::ShadertoyPtr shadertoy_;
+  fuchsia::examples::shadertoy::ShadertoyFactoryPtr shadertoy_factory_;
+  fuchsia::examples::shadertoy::ShadertoyPtr shadertoy_;
 
   std::vector<scenic_lib::ShapeNode> nodes_;
 
