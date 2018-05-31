@@ -8,9 +8,9 @@
 
 #include <component/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <views_v1_token/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
@@ -80,12 +80,13 @@ class StoryLinksWatcherImpl : fuchsia::modular::StoryLinksWatcher {
   // can be watched.
   void Watch(fuchsia::modular::StoryControllerPtr* const story_controller) {
     (*story_controller)
-        ->GetActiveLinks(binding_.NewBinding(),
-                         [this](
-                             fidl::VectorPtr<fuchsia::modular::LinkPath> data) {
-                           FXL_LOG(INFO) << "StoryLinksWatcherImpl GetLinks(): "
-                                         << data->size() << " links";
-                         });
+        ->GetActiveLinks(
+            binding_.NewBinding(),
+            [this](fidl::VectorPtr<fuchsia::modular::LinkPath> data) {
+              FXL_LOG(INFO)
+                  << "StoryLinksWatcherImpl GetLinks(): " << data->size()
+                  << " links";
+            });
   }
 
   // Deregisters itself from the watched story.
@@ -193,7 +194,8 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
 
   // |SingleServiceApp|
   void CreateView(
-      fidl::InterfaceRequest<views_v1_token::ViewOwner> /*view_owner_request*/,
+      fidl::InterfaceRequest<
+          fuchsia::ui::views_v1_token::ViewOwner> /*view_owner_request*/,
       fidl::InterfaceRequest<component::ServiceProvider> /*services*/)
       override {
     create_view_.Pass();
@@ -262,8 +264,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
   void TestStory1() {
     const std::string initial_json = R"({"created-with-info": true})";
     story_provider_->CreateStoryWithInfo(kCommonNullModule,
-                                         nullptr /* extra_info */,
-                                         initial_json,
+                                         nullptr /* extra_info */, initial_json,
                                          [this](fidl::StringPtr story_id) {
                                            story1_create_.Pass();
                                            TestStory1_GetController(story_id);
@@ -285,14 +286,13 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
   TestPoint story1_run_{"Story1 Run"};
 
   void TestStory1_Run() {
-    Await(kCommonNullModuleStarted,
-          [this] { TestStory1_Stop(); });
+    Await(kCommonNullModuleStarted, [this] { TestStory1_Stop(); });
 
     story_modules_watcher_.Watch(&story_controller_);
     story_links_watcher_.Watch(&story_controller_);
 
     // Start and show the new story.
-    fidl::InterfaceHandle<views_v1_token::ViewOwner> story_view;
+    fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
     story1_run_.Pass();
   }
@@ -301,23 +301,22 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
 
   void TestStory1_Stop() {
     story_controller_->Stop([this] {
-        TeardownStoryController();
-        story1_stop_.Pass();
+      TeardownStoryController();
+      story1_stop_.Pass();
 
-        // When the story is done, we start the next one.
-        TestStory2();
-      });
+      // When the story is done, we start the next one.
+      TestStory2();
+    });
   }
 
   TestPoint story2_create_{"Story2 Create"};
 
   void TestStory2() {
     const std::string url = kCommonNullModule;
-    story_provider_->CreateStory(url,
-                                 [this](fidl::StringPtr story_id) {
-                                   story2_create_.Pass();
-                                   TestStory2_GetController(story_id);
-                                 });
+    story_provider_->CreateStory(url, [this](fidl::StringPtr story_id) {
+      story2_create_.Pass();
+      TestStory2_GetController(story_id);
+    });
   }
 
   TestPoint story2_get_controller_{"Story2 Get Controller"};
@@ -358,7 +357,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
 
     // Start and show the new story *while* the GetInfo() call above is in
     // flight.
-    fidl::InterfaceHandle<views_v1_token::ViewOwner> story_view;
+    fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
     story_controller_->GetInfo([this](fuchsia::modular::StoryInfo info,

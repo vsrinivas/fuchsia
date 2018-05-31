@@ -13,11 +13,11 @@
 #include <cloud_provider_firebase/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
+#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
 #include <modular_auth/cpp/fidl.h>
 #include <presentation/cpp/fidl.h>
 #include <speech/cpp/fidl.h>
-#include <views_v1_token/cpp/fidl.h>
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_ptr.h"
@@ -67,7 +67,7 @@ class UserRunnerImpl : modular::internal::UserRunner,
                       token_provider_factory,
                   fidl::InterfaceHandle<fuchsia::modular::internal::UserContext>
                       user_context,
-                  fidl::InterfaceRequest<views_v1_token::ViewOwner>
+                  fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
                       view_owner_request) override;
 
   // |UserRunner|
@@ -90,7 +90,8 @@ class UserRunnerImpl : modular::internal::UserRunner,
                                    AppConfig story_shell);
   void InitializeUserShell(
       AppConfig user_shell,
-      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
+      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+          view_owner_request);
 
   void RunUserShell(AppConfig user_shell);
   // This is a termination sequence that may be used with |AtEnd()|, but also

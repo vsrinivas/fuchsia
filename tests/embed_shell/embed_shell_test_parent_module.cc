@@ -5,8 +5,8 @@
 #include <iostream>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <views_v1/cpp/fidl.h>
-#include <views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/callback/scoped_callback.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -25,9 +25,9 @@ namespace {
 // Cf. README.md for what this test does and how.
 class TestApp {
  public:
-  TestApp(
-      fuchsia::modular::ModuleHost* const module_host,
-      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/)
+  TestApp(fuchsia::modular::ModuleHost* const module_host,
+          fidl::InterfaceRequest<
+              fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host) {
     fuchsia::modular::testing::Init(module_host->application_context(),
                                     __FILE__);
@@ -63,7 +63,7 @@ class TestApp {
 
   fuchsia::modular::ModuleHost* const module_host_;
   fuchsia::modular::ModuleControllerPtr child_module_;
-  views_v1_token::ViewOwnerPtr child_view_;
+  fuchsia::ui::views_v1_token::ViewOwnerPtr child_view_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };

@@ -28,9 +28,9 @@ class TestApp {
  public:
   TestPoint initialized_{"Root module initialized"};
 
-  TestApp(
-      fuchsia::modular::ModuleHost* module_host,
-      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/)
+  TestApp(fuchsia::modular::ModuleHost* module_host,
+          fidl::InterfaceRequest<
+              fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host), weak_ptr_factory_(this) {
     fuchsia::modular::testing::Init(module_host->application_context(),
                                     __FILE__);
@@ -75,8 +75,7 @@ class TestApp {
     // Stop the agent.
     agent_controller_.Unbind();
     agent_service_.Unbind();
-    Await("queue_persistence_test_agent_stopped",
-          [this] { AgentStopped(); });
+    Await("queue_persistence_test_agent_stopped", [this] { AgentStopped(); });
   }
 
   TestPoint agent_stopped_{"Agent stopped"};

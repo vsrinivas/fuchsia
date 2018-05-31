@@ -9,8 +9,8 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <views_v1/cpp/fidl.h>
-#include <views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -33,7 +33,8 @@ class DevStoryShellApp
  private:
   // |SingleServiceApp|
   void CreateView(
-      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+          view_owner_request,
       fidl::InterfaceRequest<component::ServiceProvider> /*services_request*/)
       override {
     view_owner_request_ = std::move(view_owner_request);
@@ -49,7 +50,7 @@ class DevStoryShellApp
 
   // |StoryShell|
   void ConnectView(
-      fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner,
+      fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> view_owner,
       fidl::StringPtr /*view_id*/, fidl::StringPtr /*parent_id*/,
       fuchsia::modular::SurfaceRelationPtr /*surface_relation*/,
       fuchsia::modular::ModuleManifestPtr /*module_manifest*/) override {
@@ -83,7 +84,8 @@ class DevStoryShellApp
     if (story_context_.is_bound() && view_owner_request_) {
       view_ = std::make_unique<fuchsia::modular::ViewHost>(
           application_context()
-              ->ConnectToEnvironmentService<views_v1::ViewManager>(),
+              ->ConnectToEnvironmentService<
+                  fuchsia::ui::views_v1::ViewManager>(),
           std::move(view_owner_request_));
 
       for (auto& view_owner : child_views_) {
@@ -95,9 +97,11 @@ class DevStoryShellApp
   }
 
   std::unique_ptr<fuchsia::modular::ViewHost> view_;
-  std::vector<fidl::InterfaceHandle<views_v1_token::ViewOwner>> child_views_;
+  std::vector<fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner>>
+      child_views_;
 
-  fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request_;
+  fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+      view_owner_request_;
   fuchsia::modular::StoryContextPtr story_context_;
   FXL_DISALLOW_COPY_AND_ASSIGN(DevStoryShellApp);
 };

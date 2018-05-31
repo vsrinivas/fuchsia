@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <views_v1/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
 
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/module_driver.h"
@@ -23,9 +23,9 @@ class TestApp {
   TestPoint initialized_{"Clipboard module initialized"};
   TestPoint successful_peek_{"Clipboard pushed and peeked value"};
 
-  TestApp(
-      fuchsia::modular::ModuleHost* const module_host,
-      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/)
+  TestApp(fuchsia::modular::ModuleHost* const module_host,
+          fidl::InterfaceRequest<
+              fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host) {
     fuchsia::modular::testing::Init(module_host->application_context(),
                                     __FILE__);

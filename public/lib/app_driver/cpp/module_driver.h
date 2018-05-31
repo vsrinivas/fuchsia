@@ -9,9 +9,9 @@
 
 #include <component/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <views_v1/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
@@ -40,7 +40,7 @@ class ModuleHost {
 //      // A constructor with the following signature:
 //      Constructor(
 //           fuchsia::modular::ModuleHost* module_host,
-//           fidl::InterfaceRequest<views_v1::ViewProvider>
+//           fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
 //           view_provider_request);
 //
 //       // Called by ModuleDriver. Call |done| once shutdown sequence is
@@ -53,7 +53,8 @@ class ModuleHost {
 //  public:
 //   HelloWorldModule(
 //      fuchsia::modular::ModuleHost* module_host,
-//      fidl::InterfaceRequest<views_v1::ViewProvider> view_provider_request) {}
+//      fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
+//      view_provider_request) {}
 //
 //   // Called by ModuleDriver.
 //   void Terminate(const std::function<void()>& done) { done(); }
@@ -80,11 +81,13 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleHost {
     // There is no guarantee that |ViewProvider| will be requested from us
     // before ModuleHost.set_view_provider_handler() is called from |Impl|, so
     // we buffer both events until they are both satisfied.
-    app_context_->outgoing().AddPublicService<views_v1::ViewProvider>(
-        [this](fidl::InterfaceRequest<views_v1::ViewProvider> request) {
-          view_provider_request_ = std::move(request);
-          InstantiateImpl();
-        });
+    app_context_->outgoing()
+        .AddPublicService<fuchsia::ui::views_v1::ViewProvider>(
+            [this](fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
+                       request) {
+              view_provider_request_ = std::move(request);
+              InstantiateImpl();
+            });
   }
 
  private:
@@ -109,8 +112,8 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleHost {
       impl_->Terminate([this] {
         // Cf. AppDriver::Terminate().
         async::PostTask(async_get_default(), [this] {
-            impl_.reset();
-            on_terminated_();
+          impl_.reset();
+          on_terminated_();
         });
       });
     } else {
@@ -129,7 +132,8 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleHost {
   ModuleContextPtr module_context_;
 
   // Only valid until |impl_| is instantiated.
-  fidl::InterfaceRequest<views_v1::ViewProvider> view_provider_request_;
+  fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
+      view_provider_request_;
 
   std::unique_ptr<Impl> impl_;
 

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <views_v1/cpp/fidl.h>
-#include <views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -24,9 +24,9 @@ class TestApp {
  public:
   TestPoint initialized_{"Parent module initialized"};
 
-  TestApp(
-      fuchsia::modular::ModuleHost* module_host,
-      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/)
+  TestApp(fuchsia::modular::ModuleHost* module_host,
+          fidl::InterfaceRequest<
+              fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
       : module_context_(module_host->module_context()) {
     module_context_->GetComponentContext(component_context_.NewRequest());
     fuchsia::modular::testing::Init(module_host->application_context(),
@@ -122,7 +122,7 @@ class TestApp {
   fuchsia::modular::ComponentContextPtr component_context_;
   fuchsia::modular::ModuleContext* module_context_;
   fuchsia::modular::ModuleControllerPtr child_module_;
-  views_v1_token::ViewOwnerPtr child_view_;
+  fuchsia::ui::views_v1_token::ViewOwnerPtr child_view_;
 
   fidl::StringPtr entity_one_reference_;
   fuchsia::modular::Intent intent_;

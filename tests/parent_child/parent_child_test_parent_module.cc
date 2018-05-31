@@ -5,9 +5,9 @@
 #include <iostream>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <views_v1/cpp/fidl.h>
 
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/callback/scoped_callback.h"
@@ -29,9 +29,9 @@ class TestApp {
  public:
   TestPoint initialized_{"Parent module initialized"};
 
-  TestApp(
-      fuchsia::modular::ModuleHost* module_host,
-      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/)
+  TestApp(fuchsia::modular::ModuleHost* module_host,
+          fidl::InterfaceRequest<
+              fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host) {
     fuchsia::modular::testing::Init(module_host->application_context(),
                                     __FILE__);
@@ -65,19 +65,19 @@ class TestApp {
     // link mapping. This stops the previous module instance and starts a new
     // one.
     Await("child_module_init", [this] {
-        child_module_.set_error_handler([this] { OnChildModuleStopped(); });
+      child_module_.set_error_handler([this] { OnChildModuleStopped(); });
 
-        fuchsia::modular::Intent intent;
-        intent.action.handler = kChildModuleUrl;
-        fuchsia::modular::IntentParameter intent_parameter;
-        intent_parameter.name = "link";
-        intent_parameter.data = fuchsia::modular::IntentParameterData();
-        intent_parameter.data.set_link_name("module2link");
-        intent.parameters.push_back(std::move(intent_parameter));
-        module_host_->module_context()->StartModule(
-            kChildModuleName, std::move(intent), child_module2_.NewRequest(),
-            nullptr, [](const fuchsia::modular::StartModuleStatus) {});
-      });
+      fuchsia::modular::Intent intent;
+      intent.action.handler = kChildModuleUrl;
+      fuchsia::modular::IntentParameter intent_parameter;
+      intent_parameter.name = "link";
+      intent_parameter.data = fuchsia::modular::IntentParameterData();
+      intent_parameter.data.set_link_name("module2link");
+      intent.parameters.push_back(std::move(intent_parameter));
+      module_host_->module_context()->StartModule(
+          kChildModuleName, std::move(intent), child_module2_.NewRequest(),
+          nullptr, [](const fuchsia::modular::StartModuleStatus) {});
+    });
   }
 
   TestPoint child_module_down_{"Child module killed for restart"};
@@ -88,8 +88,8 @@ class TestApp {
     // Confirm that the first module instance stopped, and then stop the second
     // module instance.
     Await("child_module_stop", [this] {
-        child_module2_->Stop([this] { OnChildModule2Stopped(); });
-      });
+      child_module2_->Stop([this] { OnChildModule2Stopped(); });
+    });
   }
 
   TestPoint child_module_stopped_{"Child module stopped"};

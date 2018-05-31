@@ -6,7 +6,7 @@
 // creates other Modules in the story.
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <views_v1/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
@@ -30,9 +30,7 @@ class LinkForwarder : fuchsia::modular::LinkWatcher {
   }
 
   // |LinkWatcher|
-  void Notify(fidl::StringPtr json) override {
-    dst_->Set(nullptr, json);
-  }
+  void Notify(fidl::StringPtr json) override { dst_->Set(nullptr, json); }
 
  private:
   fidl::Binding<fuchsia::modular::LinkWatcher> src_binding_;
@@ -45,9 +43,9 @@ class LinkForwarder : fuchsia::modular::LinkWatcher {
 // Cf. README.md for what this test does and how.
 class TestApp {
  public:
-  TestApp(
-      fuchsia::modular::ModuleHost* const module_host,
-      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/)
+  TestApp(fuchsia::modular::ModuleHost* const module_host,
+          fidl::InterfaceRequest<
+              fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host),
         module_context_(module_host_->module_context()) {
     fuchsia::modular::testing::Init(module_host->application_context(),
@@ -64,12 +62,12 @@ class TestApp {
     // TestPoint.
     module_context_->GetLink(nullptr, link_.NewRequest());
     link_->Get(nullptr, [this](fidl::StringPtr value) {
-        if (value == kRootJson1) {
-          Signal(std::string("module0_link") + ":" + kRootJson1);
-        }
+      if (value == kRootJson1) {
+        Signal(std::string("module0_link") + ":" + kRootJson1);
+      }
 
-        StartModules();
-      });
+      StartModules();
+    });
   }
 
   void StartModules() {

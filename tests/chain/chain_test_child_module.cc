@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <views_v1/cpp/fidl.h>
-#include <views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -25,9 +25,9 @@ class TestApp {
  public:
   TestPoint initialized_{"Child module initialized"};
 
-  TestApp(
-      fuchsia::modular::ModuleHost* module_host,
-      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/)
+  TestApp(fuchsia::modular::ModuleHost* module_host,
+          fidl::InterfaceRequest<
+              fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
       : module_context_(module_host->module_context()) {
     module_context_->GetComponentContext(component_context_.NewRequest());
     component_context_->GetEntityResolver(entity_resolver_.NewRequest());
@@ -61,13 +61,13 @@ class TestApp {
       }
       entity_resolver_->ResolveEntity(entity_reference, entity_.NewRequest());
       entity_->GetData("myType", [this](fidl::StringPtr content) {
-          if (content == "1337") {
-            link_one_correct_.Pass();
-          }
+        if (content == "1337") {
+          link_one_correct_.Pass();
+        }
 
-          VerifyLinkTwo();
-        });
+        VerifyLinkTwo();
       });
+    });
   }
 
   TestPoint link_two_correct_{"Link two value is correct."};
@@ -114,7 +114,7 @@ class TestApp {
   fuchsia::modular::EntityResolverPtr entity_resolver_;
   fuchsia::modular::ModuleContext* module_context_;
   fuchsia::modular::ModuleControllerPtr child_module_;
-  views_v1_token::ViewOwnerPtr child_view_;
+  fuchsia::ui::views_v1_token::ViewOwnerPtr child_view_;
 
   fuchsia::modular::LinkPtr link_one_;
   fuchsia::modular::LinkPtr link_two_;

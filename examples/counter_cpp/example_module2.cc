@@ -6,10 +6,10 @@
 
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
+#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <views_v1/cpp/fidl.h>
-#include <views_v1_token/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
@@ -34,10 +34,10 @@ class Module2View : public mozart::BaseView {
  public:
   explicit Module2View(
       modular_example::Store* const store,
-      views_v1::ViewManagerPtr view_manager,
-      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request)
-      : BaseView(std::move(view_manager),
-                 std::move(view_owner_request),
+      fuchsia::ui::views_v1::ViewManagerPtr view_manager,
+      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+          view_owner_request)
+      : BaseView(std::move(view_manager), std::move(view_owner_request),
                  "Module2Impl"),
         store_(store),
         background_node_(session()),
@@ -107,7 +107,8 @@ class Module2App : public fuchsia::modular::ViewApp {
     });
     store_.AddCallback([this] { IncrementCounterAction(); });
 
-    application_context->ConnectToEnvironmentService(module_context_.NewRequest());
+    application_context->ConnectToEnvironmentService(
+        module_context_.NewRequest());
     fuchsia::modular::LinkPtr link;
     module_context_->GetLink("theOneLink", link.NewRequest());
     store_.Initialize(std::move(link));
@@ -124,13 +125,14 @@ class Module2App : public fuchsia::modular::ViewApp {
  private:
   // |SingleServiceApp|
   void CreateView(
-      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+          view_owner_request,
       fidl::InterfaceRequest<component::ServiceProvider> /*services*/)
       override {
     view_ = std::make_unique<Module2View>(
         &store_,
         application_context()
-            ->ConnectToEnvironmentService<views_v1::ViewManager>(),
+            ->ConnectToEnvironmentService<fuchsia::ui::views_v1::ViewManager>(),
         std::move(view_owner_request));
   }
 
@@ -140,22 +142,22 @@ class Module2App : public fuchsia::modular::ViewApp {
     }
 
     fxl::WeakPtr<Module2App> module_ptr = weak_ptr_factory_.GetWeakPtr();
-    async::PostDelayedTask(
-        async_get_default(),
-        [this, module_ptr] {
-          if (!module_ptr.get() || store_.terminating()) {
-            return;
-          }
+    async::PostDelayedTask(async_get_default(),
+                           [this, module_ptr] {
+                             if (!module_ptr.get() || store_.terminating()) {
+                               return;
+                             }
 
-          store_.counter.sender = kModuleName;
-          store_.counter.counter += 1;
+                             store_.counter.sender = kModuleName;
+                             store_.counter.counter += 1;
 
-          FXL_LOG(INFO) << "Module2Impl COUNT " << store_.counter.counter;
+                             FXL_LOG(INFO) << "Module2Impl COUNT "
+                                           << store_.counter.counter;
 
-          store_.MarkDirty();
-          store_.ModelChanged();
-        },
-        zx::msec(kAnimationDelayInMs));
+                             store_.MarkDirty();
+                             store_.ModelChanged();
+                           },
+                           zx::msec(kAnimationDelayInMs));
   }
 
   std::unique_ptr<Module2View> view_;

@@ -18,8 +18,7 @@
 
 #include <component/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
-#include <ledger/cpp/fidl.h>
-#include <views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -48,8 +47,7 @@ class StoryProviderImpl;
 // clients control over the story.
 class StoryControllerImpl : PageClient, StoryController, StoryContext {
  public:
-  StoryControllerImpl(fidl::StringPtr story_id,
-                      LedgerClient* ledger_client,
+  StoryControllerImpl(fidl::StringPtr story_id, LedgerClient* ledger_client,
                       LedgerPageId story_page_id,
                       StoryProviderImpl* story_provider_impl);
   ~StoryControllerImpl() override;
@@ -107,42 +105,37 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
 
   // Called by ModuleContextImpl.
   LinkPathPtr GetLinkPathForChainKey(
-      const fidl::VectorPtr<fidl::StringPtr>& module_path,
-      fidl::StringPtr key);
+      const fidl::VectorPtr<fidl::StringPtr>& module_path, fidl::StringPtr key);
 
   // Called by ModuleContextImpl.
   void EmbedModule(
       const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
-      fidl::StringPtr module_name,
-      IntentPtr intent,
+      fidl::StringPtr module_name, IntentPtr intent,
       fidl::InterfaceRequest<ModuleController> module_controller_request,
-      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+          view_owner_request,
       ModuleSource module_source,
       std::function<void(StartModuleStatus)> callback);
 
   // Called by ModuleContextImpl.
   void StartModule(
       const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
-      fidl::StringPtr module_name,
-      IntentPtr intent,
+      fidl::StringPtr module_name, IntentPtr intent,
       fidl::InterfaceRequest<ModuleController> module_controller_request,
-      SurfaceRelationPtr surface_relation,
-      ModuleSource module_source,
+      SurfaceRelationPtr surface_relation, ModuleSource module_source,
       std::function<void(StartModuleStatus)> callback);
 
   // Called by ModuleContextImpl.
   void StartContainerInShell(
       const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
-      fidl::StringPtr name,
-      SurfaceRelationPtr parent_relation,
+      fidl::StringPtr name, SurfaceRelationPtr parent_relation,
       fidl::VectorPtr<ContainerLayout> layout,
       fidl::VectorPtr<ContainerRelationEntry> relationships,
       fidl::VectorPtr<ContainerNodePtr> nodes);
 
   // |StoryController| - public so that StoryProvider can call it
   void AddModule(fidl::VectorPtr<fidl::StringPtr> module_path,
-                 fidl::StringPtr module_name,
-                 Intent intent,
+                 fidl::StringPtr module_name, Intent intent,
                  SurfaceRelationPtr surface_relation) override;
 
  private:
@@ -153,8 +146,8 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
 
   // |StoryController|
   void GetInfo(GetInfoCallback callback) override;
-  void Start(
-      fidl::InterfaceRequest<views_v1_token::ViewOwner> request) override;
+  void Start(fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner>
+                 request) override;
   void Stop(StopCallback done) override;
   void Watch(fidl::InterfaceHandle<StoryWatcher> watcher) override;
   void GetActiveModules(fidl::InterfaceHandle<StoryModulesWatcher> watcher,
@@ -177,7 +170,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
 
   // Phases of Start() broken out into separate methods.
   void StartStoryShell(
-      fidl::InterfaceRequest<views_v1_token::ViewOwner> request);
+      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> request);
 
   // Misc internal helpers.
   void SetState(StoryState new_state);
@@ -231,7 +224,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
     fidl::VectorPtr<fidl::StringPtr> module_path;
     ModuleManifestPtr module_manifest;
     SurfaceRelationPtr surface_relation;
-    views_v1_token::ViewOwnerPtr view_owner;
+    fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner;
   };
   std::map<fidl::StringPtr, PendingView> pending_views_;
 

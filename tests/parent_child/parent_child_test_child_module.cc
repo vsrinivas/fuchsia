@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <views_v1/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/lib/testing/reporting.h"
@@ -21,7 +21,7 @@ class TestApp {
  public:
   TestApp(fuchsia::modular::ModuleHost* module_host,
           fidl::InterfaceRequest<
-              views_v1::ViewProvider> /*view_provider_request*/) {
+              fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/) {
     fuchsia::modular::testing::Init(module_host->application_context(),
                                     __FILE__);
     Signal("child_module_init");

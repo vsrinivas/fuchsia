@@ -6,9 +6,9 @@
 #include <utility>
 
 #include <fuchsia/modular/internal/cpp/fidl.h>
+#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <views_v1_token/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/command_line.h"
@@ -57,9 +57,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
 
   void TestStory1() {
     story_provider_->CreateStoryWithInfo(
-        kModule0Url,
-        nullptr /* extra_info */,
-        kRootJson0 /* root_json */,
+        kModule0Url, nullptr /* extra_info */, kRootJson0 /* root_json */,
         [this](const fidl::StringPtr& story_id) {
           story1_create_.Pass();
           TestStory1_GetController(story_id);
@@ -83,15 +81,16 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
   void TestStory1_GetModule0Link() {
     fidl::VectorPtr<fidl::StringPtr> module_path;
     module_path.push_back(fuchsia::modular::kRootModuleName);
-    story_controller_->GetLink(std::move(module_path), nullptr, root_link_.NewRequest());
+    story_controller_->GetLink(std::move(module_path), nullptr,
+                               root_link_.NewRequest());
     root_link_->Get(nullptr, [this](fidl::StringPtr value) {
-        if (value == kRootJson0) {
-          story1_get_module0_link_.Pass();
-        } else {
-          FXL_LOG(ERROR) << "GOT LINK " << value << " EXPECTED " << kRootJson0;
-        }
-        TestStory1_SetModule0Link();
-      });
+      if (value == kRootJson0) {
+        story1_get_module0_link_.Pass();
+      } else {
+        FXL_LOG(ERROR) << "GOT LINK " << value << " EXPECTED " << kRootJson0;
+      }
+      TestStory1_SetModule0Link();
+    });
   }
 
   TestPoint story1_set_module0_link_{"Story1 Set Module0 link"};
@@ -99,49 +98,49 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
   void TestStory1_SetModule0Link() {
     root_link_->Set(nullptr, kRootJson1);
     root_link_->Get(nullptr, [this](fidl::StringPtr value) {
-        if (value == kRootJson1) {
-          story1_set_module0_link_.Pass();
-        } else {
-          FXL_LOG(ERROR) << "GOT LINK " << value << " EXPECTED " << kRootJson1;
-        }
-        TestStory1_Run();
-      });
+      if (value == kRootJson1) {
+        story1_set_module0_link_.Pass();
+      } else {
+        FXL_LOG(ERROR) << "GOT LINK " << value << " EXPECTED " << kRootJson1;
+      }
+      TestStory1_Run();
+    });
   }
 
   TestPoint story1_run_module0_link_{"Story1 Run: Module0 link"};
 
   void TestStory1_Run() {
-    views_v1_token::ViewOwnerPtr story_view;
+    fuchsia::ui::views_v1_token::ViewOwnerPtr story_view;
     story_controller_->Start(story_view.NewRequest());
 
     Await(std::string("module0_link") + ":" + kRootJson1, [this] {
-        story1_run_module0_link_.Pass();
-        TestStory1_Wait();
-      });
+      story1_run_module0_link_.Pass();
+      TestStory1_Wait();
+    });
   }
 
   void TestStory1_Wait() {
     Get("module2_link", [this](fidl::StringPtr value) {
-        FXL_LOG(INFO) << "GET module2_link " << value;
-        rapidjson::Document doc;
-        doc.Parse(value);
-        if (!doc.IsObject() || !doc.HasMember(kCount) ||
-            !doc[kCount].IsInt() || doc[kCount].GetInt() < 100) {
-          TestStory1_Wait();
-          return;
-        }
+      FXL_LOG(INFO) << "GET module2_link " << value;
+      rapidjson::Document doc;
+      doc.Parse(value);
+      if (!doc.IsObject() || !doc.HasMember(kCount) || !doc[kCount].IsInt() ||
+          doc[kCount].GetInt() < 100) {
+        TestStory1_Wait();
+        return;
+      }
 
-        TestStory1_Stop();
-      });
+      TestStory1_Stop();
+    });
   }
 
   TestPoint story1_stop_{"Story1 Stop"};
 
   void TestStory1_Stop() {
     story_controller_->Stop([this] {
-        story1_stop_.Pass();
-        TestStory1_GetActiveModules();
-      });
+      story1_stop_.Pass();
+      TestStory1_GetActiveModules();
+    });
   }
 
   TestPoint story1_get_active_modules_{"Story1 GetActiveModules()"};
@@ -167,8 +166,8 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
           if (links->size() == 0) {
             story1_get_active_links_.Pass();
           } else {
-            FXL_LOG(ERROR) << "ACTIVE LINKS " << links->size()
-                           << " EXPECTED " << 0;
+            FXL_LOG(ERROR) << "ACTIVE LINKS " << links->size() << " EXPECTED "
+                           << 0;
           }
           TestStory2_Run();
         });
@@ -179,7 +178,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
   void TestStory2_Run() {
     story2_run_.Pass();
 
-    views_v1_token::ViewOwnerPtr story_view;
+    fuchsia::ui::views_v1_token::ViewOwnerPtr story_view;
     story_controller_->Start(story_view.NewRequest());
 
     TestStory2_Wait();
@@ -187,25 +186,25 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
 
   void TestStory2_Wait() {
     Get("module2_link", [this](fidl::StringPtr value) {
-        rapidjson::Document doc;
-        doc.Parse(value);
-        if (!doc.IsObject() || !doc.HasMember(kCount) ||
-            !doc[kCount].IsInt() || doc[kCount].GetInt() < 200) {
-          TestStory2_Wait();
-          return;
-        }
+      rapidjson::Document doc;
+      doc.Parse(value);
+      if (!doc.IsObject() || !doc.HasMember(kCount) || !doc[kCount].IsInt() ||
+          doc[kCount].GetInt() < 200) {
+        TestStory2_Wait();
+        return;
+      }
 
-        TestStory2_Delete();
-      });
+      TestStory2_Delete();
+    });
   }
 
   TestPoint story2_stop_{"Story2 Stop"};
 
   void TestStory2_Delete() {
     story_provider_->DeleteStory(story_info_.id, [this] {
-        story2_stop_.Pass();
-        user_shell_context_->Logout();
-      });
+      story2_stop_.Pass();
+      user_shell_context_->Logout();
+    });
   }
 
   fuchsia::modular::UserShellContextPtr user_shell_context_;

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <views_v1/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/lib/testing/reporting.h"
@@ -19,9 +19,9 @@ class NullModule {
  public:
   TestPoint initialized_{"Null module initialized"};
 
-  NullModule(
-      fuchsia::modular::ModuleHost* const module_host,
-      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/)
+  NullModule(fuchsia::modular::ModuleHost* const module_host,
+             fidl::InterfaceRequest<
+                 fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host) {
     fuchsia::modular::testing::Init(module_host_->application_context(),
                                     __FILE__);

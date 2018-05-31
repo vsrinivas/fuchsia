@@ -5,7 +5,7 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/callback/scoped_callback.h"
@@ -27,8 +27,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
                     fuchsia::modular::UserShell> {
  public:
   TestApp(component::ApplicationContext* const application_context)
-      : ComponentBase(application_context),
-        weak_ptr_factory_(this) {
+      : ComponentBase(application_context), weak_ptr_factory_(this) {
     TestInit(__FILE__);
   }
 
@@ -80,22 +79,21 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
           got_queue_token_.Pass();
           // Wait for the module to finish its test cases for communicating
           // with the agent.
-          Await("trigger_test_module_done",
-                [this, story_id, value] {
-                  module_finished_.Pass();
-                  // Delete the story to trigger the deletion of the message
-                  // queue that the module created.
-                  story_provider_->DeleteStory(story_id, [this, value]() {
-                    story_was_deleted_.Pass();
-                    // Verify that the agent task was triggered, by checking
-                    // that the agent wrote the message queue token to the
-                    // test store.
-                    Await(value, [this] {
-                      agent_executed_delete_task_.Pass();
-                      user_shell_context_->Logout();
-                    });
-                  });
-                });
+          Await("trigger_test_module_done", [this, story_id, value] {
+            module_finished_.Pass();
+            // Delete the story to trigger the deletion of the message
+            // queue that the module created.
+            story_provider_->DeleteStory(story_id, [this, value]() {
+              story_was_deleted_.Pass();
+              // Verify that the agent task was triggered, by checking
+              // that the agent wrote the message queue token to the
+              // test store.
+              Await(value, [this] {
+                agent_executed_delete_task_.Pass();
+                user_shell_context_->Logout();
+              });
+            });
+          });
         });
   }
 
@@ -103,7 +101,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
   fuchsia::modular::StoryProviderPtr story_provider_;
   fuchsia::modular::StoryControllerPtr story_controller_;
 
-  fidl::InterfaceHandle<views_v1_token::ViewOwner> story_view_;
+  fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> story_view_;
 
   fxl::WeakPtrFactory<TestApp> weak_ptr_factory_;
 

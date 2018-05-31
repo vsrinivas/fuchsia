@@ -18,8 +18,8 @@ struct ViewHost::ViewData {
 };
 
 ViewHost::ViewHost(
-    views_v1::ViewManagerPtr view_manager,
-    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request)
+    fuchsia::ui::views_v1::ViewManagerPtr view_manager,
+    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner_request)
     : BaseView(std::move(view_manager),
                std::move(view_owner_request),
                "ViewHost"),
@@ -30,7 +30,7 @@ ViewHost::ViewHost(
 ViewHost::~ViewHost() = default;
 
 void ViewHost::ConnectView(
-    fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner) {
+    fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> view_owner) {
   const uint32_t child_key = next_child_key_++;
 
   auto view_data = std::make_unique<ViewData>(session());
@@ -46,7 +46,7 @@ void ViewHost::ConnectView(
 }
 
 void ViewHost::OnPropertiesChanged(
-    views_v1::ViewProperties /*old_properties*/) {
+    fuchsia::ui::views_v1::ViewProperties /*old_properties*/) {
   UpdateScene();
 }
 
@@ -92,8 +92,8 @@ void ViewHost::UpdateScene() {
     layout_bounds.height = logical_size().height;
     offset += extent;
 
-    auto view_properties = views_v1::ViewProperties::New();
-    view_properties->view_layout = views_v1::ViewLayout::New();
+    auto view_properties = fuchsia::ui::views_v1::ViewProperties::New();
+    view_properties->view_layout = fuchsia::ui::views_v1::ViewLayout::New();
     view_properties->view_layout->size = fuchsia::math::SizeF();
     view_properties->view_layout->size.width = layout_bounds.width;
     view_properties->view_layout->size.height = layout_bounds.height;

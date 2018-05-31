@@ -56,11 +56,11 @@ class TestApp : fuchsia::modular::NextListener,
     initialized_.Pass();
 
     Await(kSuggestionTestModuleDone, [this] {
-        story_controller_->Stop([this] {
-            story_controller_.Unbind();
-            Signal(fuchsia::modular::testing::kTestShutdown);
-          });
+      story_controller_->Stop([this] {
+        story_controller_.Unbind();
+        Signal(fuchsia::modular::testing::kTestShutdown);
       });
+    });
   }
 
   void StartStoryById(const fidl::StringPtr& story_id) {
@@ -96,7 +96,7 @@ class TestApp : fuchsia::modular::NextListener,
   // |NextListener|
   void OnProcessingChange(bool processing) override {}
 
-  views_v1_token::ViewOwnerPtr view_owner_;
+  fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner_;
   fuchsia::modular::UserShellContextPtr user_shell_context_;
   fuchsia::modular::StoryProviderPtr story_provider_;
   fuchsia::modular::StoryControllerPtr story_controller_;

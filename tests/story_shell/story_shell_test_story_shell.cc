@@ -8,8 +8,8 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include <presentation/cpp/fidl.h>
-#include <views_v1_token/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -50,13 +50,13 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
 
   // |StoryShell|
   void ConnectView(
-      fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner,
+      fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> view_owner,
       fidl::StringPtr view_id, fidl::StringPtr anchor_id,
       fuchsia::modular::SurfaceRelationPtr /*surface_relation*/,
       fuchsia::modular::ModuleManifestPtr module_manifest) override {
-    FXL_LOG(INFO) << "ConnectView " << view_id << " " << anchor_id
-                  << " "
-                  << (module_manifest ? module_manifest->composition_pattern : " NO MANIFEST");
+    FXL_LOG(INFO) << "ConnectView " << view_id << " " << anchor_id << " "
+                  << (module_manifest ? module_manifest->composition_pattern
+                                      : " NO MANIFEST");
 
     if (view_id == "root:one" && anchor_id == "root") {
       Signal("root:one");

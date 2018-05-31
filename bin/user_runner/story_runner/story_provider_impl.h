@@ -13,7 +13,7 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
 #include <presentation/cpp/fidl.h>
-#include <views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_ptr.h"
@@ -84,7 +84,7 @@ class StoryProviderImpl : StoryProvider, FocusWatcher {
   // Returns an AppClient rather than taking an interface request
   // as an argument because the application is preloaded.
   std::unique_ptr<AppClient<Lifecycle>> StartStoryShell(
-      fidl::InterfaceRequest<views_v1_token::ViewOwner> request);
+      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> request);
 
   // |StoryProvider|, also used by StoryControllerImpl.
   void GetStoryInfo(fidl::StringPtr story_id,
@@ -174,7 +174,7 @@ class StoryProviderImpl : StoryProvider, FocusWatcher {
   AppConfig story_shell_;
   struct StoryShellConnection {
     std::unique_ptr<AppClient<Lifecycle>> story_shell_app;
-    views_v1_token::ViewOwnerPtr story_shell_view;
+    fuchsia::ui::views_v1_token::ViewOwnerPtr story_shell_view;
   };
   std::unique_ptr<StoryShellConnection> preloaded_story_shell_;
 

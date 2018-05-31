@@ -5,7 +5,7 @@
 #include <memory>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/binding.h"
@@ -76,10 +76,11 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
     user_shell_context_.Bind(std::move(user_shell_context));
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
-    story_provider_->CreateStory(kCommonNullModule, [this](fidl::StringPtr story_id) {
-      story_create_.Pass();
-      GetController(story_id);
-    });
+    story_provider_->CreateStory(kCommonNullModule,
+                                 [this](fidl::StringPtr story_id) {
+                                   story_create_.Pass();
+                                   GetController(story_id);
+                                 });
   }
 
   TestPoint root_running_{"Root Module RUNNING"};
@@ -87,7 +88,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
   void GetController(fidl::StringPtr story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
 
-    fidl::InterfaceHandle<views_v1_token::ViewOwner> story_view;
+    fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
     fidl::VectorPtr<fidl::StringPtr> module_path;

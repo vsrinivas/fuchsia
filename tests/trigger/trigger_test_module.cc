@@ -27,7 +27,7 @@ class TestApp {
 
   TestApp(fuchsia::modular::ModuleHost* const module_host,
           fidl::InterfaceRequest<
-              views_v1::ViewProvider> /*view_provider_request*/) {
+              fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/) {
     fuchsia::modular::testing::Init(module_host->application_context(),
                                     __FILE__);
     initialized_.Pass();
@@ -87,9 +87,8 @@ class TestApp {
 
           Await("message_queue_message", [this] {
             task_triggered_.Pass();
-            Await("trigger_test_agent_stopped", [this] {
-              TestMessageQueueDeletionTrigger();
-            });
+            Await("trigger_test_agent_stopped",
+                  [this] { TestMessageQueueDeletionTrigger(); });
           });
         });
       });

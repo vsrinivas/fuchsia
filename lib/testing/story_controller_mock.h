@@ -37,7 +37,7 @@ class StoryControllerMock : public StoryController {
   }
 
   // |StoryController|
-  void Start(fidl::InterfaceRequest<views_v1_token::ViewOwner> request) override {
+  void Start(fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> request) override {
     FXL_NOTIMPLEMENTED();
   }
 

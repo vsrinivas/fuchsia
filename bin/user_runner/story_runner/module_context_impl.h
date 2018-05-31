@@ -8,7 +8,7 @@
 #include <string>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/fidl/cpp/binding.h"
@@ -54,22 +54,18 @@ class ModuleContextImpl : ModuleContext {
                fidl::InterfaceRequest<Link> request) override;
   // |ModuleContext|
   void EmbedModule(
-      fidl::StringPtr name,
-      Intent intent,
+      fidl::StringPtr name, Intent intent,
       fidl::InterfaceRequest<ModuleController> module_controller,
-      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner,
+      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner,
       EmbedModuleCallback callback) override;
   // |ModuleContext|
-  void StartModule(
-      fidl::StringPtr name,
-      Intent intent,
-      fidl::InterfaceRequest<ModuleController> module_controller,
-      SurfaceRelationPtr surface_relation,
-      StartModuleCallback callback) override;
+  void StartModule(fidl::StringPtr name, Intent intent,
+                   fidl::InterfaceRequest<ModuleController> module_controller,
+                   SurfaceRelationPtr surface_relation,
+                   StartModuleCallback callback) override;
   // |ModuleContext|
   void StartContainerInShell(
-      fidl::StringPtr name,
-      SurfaceRelation parent_relation,
+      fidl::StringPtr name, SurfaceRelation parent_relation,
       fidl::VectorPtr<ContainerLayout> layout,
       fidl::VectorPtr<ContainerRelationEntry> relationships,
       fidl::VectorPtr<ContainerNode> nodes) override;

@@ -11,7 +11,7 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <ledger/cpp/fidl.h>
 #include <presentation/cpp/fidl.h>
-#include <views_v1/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/async/cpp/future.h"
@@ -379,7 +379,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
       StoryControllerImpl* const story_controller_impl,
       ModuleDataPtr module_data,
       fidl::InterfaceRequest<ModuleController> module_controller_request,
-      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
       ResultCall result_call)
       : Operation("StoryControllerImpl::GetLedgerNotificationCall",
                   std::move(result_call)),
@@ -430,8 +430,8 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     AppConfig module_config;
     module_config.url = module_data_->module_url;
 
-    views_v1::ViewProviderPtr view_provider;
-    fidl::InterfaceRequest<views_v1::ViewProvider> view_provider_request =
+    fuchsia::ui::views_v1::ViewProviderPtr view_provider;
+    fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider> view_provider_request =
         view_provider.NewRequest();
     view_provider->CreateView(std::move(view_owner_request_), nullptr);
 
@@ -503,7 +503,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
   StoryControllerImpl* const story_controller_impl_;  // not owned
   ModuleDataPtr module_data_;
   fidl::InterfaceRequest<ModuleController> module_controller_request_;
-  fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request_;
+  fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner_request_;
   const zx_time_t start_time_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LaunchModuleCall);
@@ -811,7 +811,7 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
   fidl::InterfaceRequest<ModuleController> module_controller_request_;
 
   ModuleControllerPtr module_controller_;
-  views_v1_token::ViewOwnerPtr view_owner_;
+  fuchsia::ui::views_v1_token::ViewOwnerPtr view_owner_;
 
   OperationQueue operation_queue_;
 
@@ -1310,7 +1310,7 @@ class StoryControllerImpl::AddIntentCall : public Operation<StartModuleStatus> {
       const std::string& module_name, IntentPtr intent,
       fidl::InterfaceRequest<ModuleController> module_controller_request,
       SurfaceRelationPtr surface_relation,
-      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
       const ModuleSource module_source, ResultCall result_call)
       : Operation("StoryControllerImpl::AddIntentCall", std::move(result_call)),
         story_controller_impl_(story_controller_impl),
@@ -1412,7 +1412,7 @@ class StoryControllerImpl::AddIntentCall : public Operation<StartModuleStatus> {
   IntentPtr intent_;
   fidl::InterfaceRequest<ModuleController> module_controller_request_;
   SurfaceRelationPtr surface_relation_;
-  fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request_;
+  fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner_request_;
   const ModuleSource module_source_;
 
   // Returned to us from the resolver, and cached here so that InitializeChain()
@@ -1510,7 +1510,7 @@ class StoryControllerImpl::StartContainerInShellCall : public Operation<> {
   std::map<std::string, ContainerRelationEntryPtr> relation_map_;
 
   // map of node_name to view_owners
-  std::map<fidl::StringPtr, views_v1_token::ViewOwnerPtr> node_views_;
+  std::map<fidl::StringPtr, fuchsia::ui::views_v1_token::ViewOwnerPtr> node_views_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StartContainerInShellCall);
 };
@@ -1518,7 +1518,7 @@ class StoryControllerImpl::StartContainerInShellCall : public Operation<> {
 class StoryControllerImpl::StartCall : public Operation<> {
  public:
   StartCall(StoryControllerImpl* const story_controller_impl,
-            fidl::InterfaceRequest<views_v1_token::ViewOwner> request)
+            fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> request)
       : Operation("StoryControllerImpl::StartCall", [] {}),
         story_controller_impl_(story_controller_impl),
         request_(std::move(request)) {}
@@ -1562,7 +1562,7 @@ class StoryControllerImpl::StartCall : public Operation<> {
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
-  fidl::InterfaceRequest<views_v1_token::ViewOwner> request_;
+  fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> request_;
 
   OperationQueue operation_queue_;
 
@@ -1697,7 +1697,7 @@ void StoryControllerImpl::EmbedModule(
     const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
     fidl::StringPtr module_name, IntentPtr intent,
     fidl::InterfaceRequest<ModuleController> module_controller_request,
-    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner_request,
     ModuleSource module_source,
     std::function<void(StartModuleStatus)> callback) {
   operation_queue_.Add(new AddIntentCall(
@@ -1839,7 +1839,7 @@ void StoryControllerImpl::GetInfo(GetInfoCallback callback) {
 
 // |StoryController|
 void StoryControllerImpl::Start(
-    fidl::InterfaceRequest<views_v1_token::ViewOwner> request) {
+    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> request) {
   operation_queue_.Add(new StartCall(this, std::move(request)));
 }
 
@@ -1978,7 +1978,7 @@ void StoryControllerImpl::AddModule(
 }
 
 void StoryControllerImpl::StartStoryShell(
-    fidl::InterfaceRequest<views_v1_token::ViewOwner> request) {
+    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> request) {
   story_shell_app_ = story_provider_impl_->StartStoryShell(std::move(request));
   story_shell_app_->services().ConnectToService(story_shell_.NewRequest());
   story_shell_->Initialize(story_context_binding_.NewBinding());

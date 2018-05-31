@@ -69,9 +69,9 @@ class TestApp {
   TestPoint initialized_{"Root module initialized"};
   TestPoint one_agent_connected_{"One agent accepted connection"};
 
-  TestApp(
-      fuchsia::modular::ModuleHost* module_host,
-      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/)
+  TestApp(fuchsia::modular::ModuleHost* module_host,
+          fidl::InterfaceRequest<
+              fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
       : steps_(kTotalSimultaneousTests,
                [this, module_host] {
                  Signal(fuchsia::modular::testing::kTestShutdown);
@@ -94,12 +94,12 @@ class TestApp {
                      one_agent_interface_.NewRequest());
 
     Await("one_agent_connected", [this] {
-        one_agent_connected_.Pass();
-        TestMessageQueue([this] {
-            TestAgentController(callback::MakeScoped(
-                weak_ptr_factory_.GetWeakPtr(), [this] { steps_.Step(); }));
-          });
+      one_agent_connected_.Pass();
+      TestMessageQueue([this] {
+        TestAgentController(callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
+                                                 [this] { steps_.Step(); }));
       });
+    });
 
     TestUnstoppableAgent(callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
                                               [this] { steps_.Step(); }));
@@ -152,9 +152,9 @@ class TestApp {
     one_agent_controller.Unbind();
 
     Await("one_agent_stopped", [this, done_cb] {
-        one_agent_stopped_.Pass();
-        done_cb();
-      });
+      one_agent_stopped_.Pass();
+      done_cb();
+    });
   }
 
   // Start an agent that will not stop of its own accord.

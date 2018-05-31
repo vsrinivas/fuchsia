@@ -28,9 +28,9 @@ class TestApp : fuchsia::modular::ProposalListener {
   TestPoint received_story_id_{"Root module received story id"};
   TestPoint proposal_was_accepted_{"Proposal was accepted"};
 
-  TestApp(
-      fuchsia::modular::ModuleHost* module_host,
-      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/)
+  TestApp(fuchsia::modular::ModuleHost* module_host,
+          fidl::InterfaceRequest<
+              fuchsia::ui::views_v1::ViewProvider> /*view_provider_request*/)
       : module_host_(module_host) {
     fuchsia::modular::testing::Init(module_host_->application_context(),
                                     __FILE__);
@@ -69,11 +69,11 @@ class TestApp : fuchsia::modular::ProposalListener {
           proposal_publisher_->Propose(std::move(proposal));
 
           Await("suggestion_proposal_received", [this] {
-              Await("proposal_was_accepted", [this] {
-                  proposal_was_accepted_.Pass();
-                  Signal(kSuggestionTestModuleDone);
-                });
+            Await("proposal_was_accepted", [this] {
+              proposal_was_accepted_.Pass();
+              Signal(kSuggestionTestModuleDone);
             });
+          });
         });
   }
 

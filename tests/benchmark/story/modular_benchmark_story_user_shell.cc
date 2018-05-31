@@ -10,9 +10,9 @@
 
 #include <component/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <views_v1_token/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
@@ -215,7 +215,7 @@ class TestApp
 
     story_watcher_.Watch(&story_controller_);
 
-    fidl::InterfaceHandle<views_v1_token::ViewOwner> story_view;
+    fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
   }
 

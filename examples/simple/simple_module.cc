@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <simple/cpp/fidl.h>
-#include <fuchsia/ui/scenic/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
@@ -14,11 +14,11 @@
 
 namespace simple {
 
-class SimpleModule : views_v1::ViewProvider {
+class SimpleModule : fuchsia::ui::views_v1::ViewProvider {
  public:
-  SimpleModule(
-      fuchsia::modular::ModuleHost* module_host,
-      fidl::InterfaceRequest<views_v1::ViewProvider> view_provider_request)
+  SimpleModule(fuchsia::modular::ModuleHost* module_host,
+               fidl::InterfaceRequest<fuchsia::ui::views_v1::ViewProvider>
+                   view_provider_request)
       : view_provider_binding_(this) {
     view_provider_binding_.Bind(std::move(view_provider_request));
 
@@ -66,13 +66,12 @@ class SimpleModule : views_v1::ViewProvider {
   void Terminate(const std::function<void()>& done) { done(); }
 
  private:
-  // |views_v1::ViewProvider|
+  // |fuchsia::ui::views_v1::ViewProvider|
   void CreateView(
-      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner,
-      fidl::InterfaceRequest<component::ServiceProvider> services) override {
-  }
+      fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> view_owner,
+      fidl::InterfaceRequest<component::ServiceProvider> services) override {}
 
-  fidl::Binding<views_v1::ViewProvider> view_provider_binding_;
+  fidl::Binding<fuchsia::ui::views_v1::ViewProvider> view_provider_binding_;
 
   std::unique_ptr<fuchsia::modular::MessageReceiverClient> message_receiver_;
 };

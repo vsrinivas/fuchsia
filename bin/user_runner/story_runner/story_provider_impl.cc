@@ -13,7 +13,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/zx/time.h>
-#include <views_v1/cpp/fidl.h>
+#include <fuchsia/ui/views_v1/cpp/fidl.h>
 
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/interface_handle.h"
@@ -446,7 +446,7 @@ void StoryProviderImpl::Duplicate(
 }
 
 std::unique_ptr<AppClient<Lifecycle>> StoryProviderImpl::StartStoryShell(
-    fidl::InterfaceRequest<views_v1_token::ViewOwner> request) {
+    fidl::InterfaceRequest<fuchsia::ui::views_v1_token::ViewOwner> request) {
   MaybeLoadStoryShell();
 
   auto preloaded_story_shell = std::move(preloaded_story_shell_);
@@ -491,10 +491,10 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
   // CreateView must be called in order to get the Flutter application to
   // run
 
-  views_v1::ViewProviderPtr view_provider;
+  fuchsia::ui::views_v1::ViewProviderPtr view_provider;
   story_shell_app->services().ConnectToService(view_provider.NewRequest());
 
-  views_v1_token::ViewOwnerPtr story_shell_view;
+  fuchsia::ui::views_v1_token::ViewOwnerPtr story_shell_view;
   view_provider->CreateView(story_shell_view.NewRequest(), nullptr);
 
   preloaded_story_shell_ =

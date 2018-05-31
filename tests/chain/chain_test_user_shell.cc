@@ -7,7 +7,7 @@
 #include <string>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <views_v1_token/cpp/fidl.h>
+#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/context/cpp/formatting.h"
@@ -87,7 +87,8 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
 
   void StartStory() {
     // Start and show the new story.
-    fidl::InterfacePtr<views_v1_token::ViewOwner> story_view_binding;
+    fidl::InterfacePtr<fuchsia::ui::views_v1_token::ViewOwner>
+        story_view_binding;
     story_controller_->Start(story_view_binding.NewRequest());
   }
 

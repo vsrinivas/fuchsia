@@ -8,10 +8,10 @@
 
 #include <component/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/ui/views_v1_token/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <presentation/cpp/fidl.h>
-#include <views_v1_token/cpp/fidl.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
@@ -92,7 +92,8 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
 
   // |SingleServiceApp|
   void CreateView(
-      fidl::InterfaceRequest<views_v1_token::ViewOwner> /*view_owner_request*/,
+      fidl::InterfaceRequest<
+          fuchsia::ui::views_v1_token::ViewOwner> /*view_owner_request*/,
       fidl::InterfaceRequest<component::ServiceProvider> /*services*/)
       override {
     create_view_.Pass();
@@ -135,7 +136,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
 
     story_provider_->GetController(story1_id_, story_controller_.NewRequest());
 
-    fidl::InterfaceHandle<views_v1_token::ViewOwner> story_view;
+    fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
     // TODO(mesch): StoryController.AddModule() with a null parent module loses
@@ -162,9 +163,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
   }
 
   void Story1_Stop1() {
-    story_controller_->Stop([this] {
-        Story1_Run2();
-      });
+    story_controller_->Stop([this] { Story1_Run2(); });
   }
 
   TestPoint story1_run2_{"Story1 Run2"};
@@ -182,14 +181,12 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
     Get("root:one:two manifest", proceed_after_5);
     Get("root:one:two ordering", proceed_after_5);
 
-    fidl::InterfaceHandle<views_v1_token::ViewOwner> story_view;
+    fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
   }
 
   void Story1_Stop2() {
-    story_controller_->Stop([this] {
-        Story2_Create();
-      });
+    story_controller_->Stop([this] { Story2_Create(); });
   }
 
   // We do the same sequence with Story2 that we did for Story1, except that the
@@ -223,7 +220,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
 
     story_provider_->GetController(story2_id_, story_controller_.NewRequest());
 
-    fidl::InterfaceHandle<views_v1_token::ViewOwner> story_view;
+    fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
     fidl::VectorPtr<fidl::StringPtr> parent_one;
@@ -245,9 +242,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
   }
 
   void Story2_Stop1() {
-    story_controller_->Stop([this] {
-        Story2_Run2();
-      });
+    story_controller_->Stop([this] { Story2_Run2(); });
   }
 
   TestPoint story2_run2_{"Story2 Run2"};
@@ -265,7 +260,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
     Get("root:one:two manifest", proceed_after_5);
     Get("root:one:two ordering", proceed_after_5);
 
-    fidl::InterfaceHandle<views_v1_token::ViewOwner> story_view;
+    fidl::InterfaceHandle<fuchsia::ui::views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
   }
 
