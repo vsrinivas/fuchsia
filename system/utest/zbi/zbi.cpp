@@ -5,28 +5,39 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
+
+#include <fbl/auto_call.h>
 #include <zircon/boot/image.h>
 #include <zircon/compiler.h>
-#include <zbi/zbi-cpp.h>
-#include <unittest/unittest.h>
-#include <fbl/auto_call.h>
 
-const char* kTestCmdline = "0123";
-const char* kTestRD = "0123456789";
-const char* kTestBootfs = "abcdefghijklmnopqrs";
+#include <unittest/unittest.h>
+
+#include <zbi/zbi-cpp.h>
+
+const char kTestCmdline[] = "0123";
+constexpr size_t kCmdlinePayloadLen = ZBI_ALIGN(sizeof(kTestCmdline));
+
+const char kTestRD[] = "0123456789";
+constexpr size_t kRdPayloadLen = ZBI_ALIGN(sizeof(kTestRD));
+
+const char kTestBootfs[] = "abcdefghijklmnopqrs";
+constexpr size_t kBootfsPayloadLen = ZBI_ALIGN(sizeof(kTestBootfs));
+
+const char kAppendRD[] = "ABCDEFG";
 
 typedef struct test_zbi {
     // Bootdata header.
     zbi_header_t header;
 
     zbi_header_t cmdline_hdr;
-    char cmdline_payload[ZBI_ALIGNMENT];
+    char cmdline_payload[kCmdlinePayloadLen];
 
     zbi_header_t ramdisk_hdr;
-    char ramdisk_payload[ZBI_ALIGNMENT * 2];
+    char ramdisk_payload[kRdPayloadLen];
 
     zbi_header_t bootfs_hdr;
-    char bootfs_payload[ZBI_ALIGNMENT * 3];
+    char bootfs_payload[kBootfsPayloadLen];
 } __PACKED test_zbi_t;
 
 static void init_zbi_header(zbi_header_t* hdr) {
@@ -38,10 +49,17 @@ static void init_zbi_header(zbi_header_t* hdr) {
     hdr->extra = 0;
 }
 
-static uint8_t* get_test_zbi() {
-    test_zbi_t* result = reinterpret_cast<test_zbi_t*>(malloc(sizeof(*result)));
+static uint8_t* get_test_zbi_extra(const size_t extra_bytes) {
+    const size_t kAllocSize = sizeof(test_zbi_t) + extra_bytes;
+    test_zbi_t* result = reinterpret_cast<test_zbi_t*>(malloc(kAllocSize));
 
     if (!result) return nullptr;
+
+    // Extra bytes are filled with non-zero bytes to test zero padding.
+    if (extra_bytes > 0) {
+        memset(result, 0xab, kAllocSize);
+    }
+    memset(result, 0, sizeof(*result));
 
     init_zbi_header(&result->header);
     result->header.type = ZBI_TYPE_CONTAINER;
@@ -50,20 +68,17 @@ static uint8_t* get_test_zbi() {
     init_zbi_header(&result->cmdline_hdr);
     result->cmdline_hdr.type = ZBI_TYPE_CMDLINE;
     strcpy(result->cmdline_payload, kTestCmdline);
-    result->cmdline_hdr.length =
-        static_cast<uint32_t>(strlen(result->cmdline_payload));
+    result->cmdline_hdr.length = static_cast<uint32_t>(sizeof(kTestCmdline));
 
     init_zbi_header(&result->ramdisk_hdr);
     result->ramdisk_hdr.type = ZBI_TYPE_STORAGE_RAMDISK;
     strcpy(result->ramdisk_payload, kTestRD);
-    result->ramdisk_hdr.length =
-        static_cast<uint32_t>(strlen(result->ramdisk_payload));
+    result->ramdisk_hdr.length = static_cast<uint32_t>(sizeof(kTestRD));
 
     init_zbi_header(&result->bootfs_hdr);
     result->bootfs_hdr.type = ZBI_TYPE_STORAGE_BOOTFS;
     strcpy(result->bootfs_payload, kTestBootfs);
-    result->bootfs_hdr.length =
-        static_cast<uint32_t>(strlen(result->bootfs_payload));
+    result->bootfs_hdr.length = static_cast<uint32_t>(sizeof(kTestBootfs));
 
     // We have to be a little bit careful about setting the length of the
     // container itself since its length should not contain the padding of the
@@ -73,9 +88,13 @@ static uint8_t* get_test_zbi() {
         sizeof(*result)
         - sizeof(result->header)          // Don't count container header.
         - sizeof(result->bootfs_payload)  // Subtract the last entry...
-        + strlen(result->bootfs_payload)  // ... and add back non-padding bytes.
+        + sizeof(kTestBootfs)             // ... and add back non-padding bytes.
     );
     return reinterpret_cast<uint8_t*>(result);
+}
+
+static uint8_t* get_test_zbi() {
+    return get_test_zbi_extra(0);
 }
 
 static zbi_result_t check_contents(zbi_header_t* hdr, void* payload,
@@ -198,11 +217,117 @@ static bool zbi_test_truncated(void) {
     END_TEST;
 }
 
+static bool zbi_test_append(void) {
+    BEGIN_TEST;
+    // Allocate an additional kExtraBytes at the end of the ZBI to test
+    // appending.
+    const size_t kExtraBytes = sizeof(zbi_header_t) + sizeof(kAppendRD);
+    uint8_t* test_zbi = get_test_zbi_extra(kExtraBytes);
+    uint8_t* reference_zbi = get_test_zbi();
+
+    test_zbi_t* test_image = reinterpret_cast<test_zbi_t*>(test_zbi);
+    test_zbi_t* reference_image = reinterpret_cast<test_zbi_t*>(reference_zbi);
+
+    auto cleanup = fbl::MakeAutoCall([test_zbi, reference_zbi]() {
+        free(test_zbi);
+        free(reference_zbi);
+    });
+
+    ASSERT_NONNULL(test_zbi, "failed to alloc test image");
+
+    const size_t kBufferSize = sizeof(test_zbi_t) + kExtraBytes;
+    zbi::Zbi image(test_zbi, kBufferSize);
+
+    zbi_result_t result = image.AppendSection(
+        static_cast<uint32_t>(sizeof(kAppendRD)),  // Length
+        ZBI_TYPE_STORAGE_RAMDISK,                  // Type
+        0,                                         // Extra
+        0,                                         // Flags
+        reinterpret_cast<const void*>(kAppendRD)   // Payload.
+    );
+
+    ASSERT_EQ(result, ZBI_RESULT_OK, "Append failed");
+
+    // Make sure the image is valid.
+    ASSERT_EQ(image.Check(nullptr), ZBI_RESULT_OK,
+              "append produced invalid images");
+
+    // Verify the integrity of the data.
+    reference_image->header.length = test_image->header.length;
+    ASSERT_EQ(memcmp(test_zbi, reference_zbi, sizeof(test_zbi_t)), 0,
+              "Append corrupted image");
+
+    END_TEST;
+}
+
+// Make sure we never overflow the ZBI's buffer by appending.
+static bool zbi_test_append_full(void) {
+    BEGIN_TEST;
+
+    // Enough space for a small payload
+    const size_t kMaxAppendPayloadSize = 5;
+    const size_t kExtraBytes = sizeof(zbi_header_t) + kMaxAppendPayloadSize;
+    const size_t kZbiSize = sizeof(test_zbi_t) + kExtraBytes;
+    const size_t kExtraSentinelLength = 64;
+
+    uint8_t* test_zbi = get_test_zbi_extra(kExtraBytes + kExtraSentinelLength);
+
+    ASSERT_NONNULL(test_zbi, "failed to alloc test image");
+
+    auto cleanup = fbl::MakeAutoCall([test_zbi]{
+        free(test_zbi);
+    });
+
+    // Fill the space after the buffer with sentinel bytes and make sure those
+    // bytes are never touched by the append operation.
+    const uint8_t kSentinelByte = 0xa5;    // 0b1010 1010 0101 0101
+    memset(test_zbi + kZbiSize, kSentinelByte, kExtraSentinelLength);
+
+    zbi::Zbi image(test_zbi, kZbiSize);
+
+    const uint8_t kDataByte = 0xc3;
+    uint8_t dataBuffer[kMaxAppendPayloadSize + 1];
+    memset(dataBuffer, kDataByte, kMaxAppendPayloadSize);
+
+    // Try to append a buffer that's one byte too big and make sure we reject
+    // it.
+    zbi_result_t res = image.AppendSection(
+        kMaxAppendPayloadSize + 1,      // One more than the max length!
+        ZBI_TYPE_STORAGE_RAMDISK,
+        0,
+        0,
+        reinterpret_cast<const void*>(dataBuffer)
+    );
+
+    ASSERT_NE(res, ZBI_RESULT_OK, "zbi appended a section that was too big");
+
+    // Now try again with a section that is exactly the right size. Make sure
+    // we don't stomp on the sentinel.
+    res = image.AppendSection(
+        kMaxAppendPayloadSize,
+        ZBI_TYPE_STORAGE_RAMDISK,
+        0,
+        0,
+        reinterpret_cast<const void*>(dataBuffer)
+    );
+
+    ASSERT_EQ(res, ZBI_RESULT_OK, "zbi_append rejected a section that should "
+                                  "have fit.");
+
+    for (size_t i = 0; i < kExtraSentinelLength; i++) {
+        ASSERT_EQ(test_zbi[kZbiSize + i], kSentinelByte,
+                  "corrupt sentinel bytes, append section overflowed.");
+    }
+
+    END_TEST;
+}
 
 BEGIN_TEST_CASE(zbi_tests)
 RUN_TEST(zbi_test_basic)
 RUN_TEST(zbi_test_bad_container)
 RUN_TEST(zbi_test_truncated)
+RUN_TEST(zbi_test_append)
+RUN_TEST(zbi_test_append_full)
 END_TEST_CASE(zbi_tests)
 
 int main(int argc, char** argv) {

@@ -17,7 +17,14 @@ namespace zbi {
 
 class Zbi {
   public:
-    explicit Zbi(uint8_t* base) : base_(base) {}
+    explicit Zbi(uint8_t* base) : base_(base) {
+        zbi_header_t* hdr = reinterpret_cast<zbi_header_t*>(base);
+        capacity_ = hdr->length + sizeof(*hdr);
+    }
+
+    Zbi(uint8_t* base, const size_t capacity)
+        : base_(base)
+        , capacity_(capacity) {}
 
     zbi_result_t Check(zbi_header_t** err) {
         return zbi_check(base_, err);
@@ -27,8 +34,16 @@ class Zbi {
         return zbi_for_each(base_, cb, cookie);
     }
 
+    zbi_result_t AppendSection(const uint32_t length, const uint32_t type,
+                               const uint32_t extra, const uint32_t flags,
+                               const void* payload) {
+        return zbi_append_section(base_, capacity_, length, type, extra, flags,
+                                  payload);
+    }
+
   private:
     uint8_t* base_;
+    size_t capacity_;
 };
 
 } // namespace zbi

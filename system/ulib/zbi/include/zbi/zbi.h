@@ -36,6 +36,8 @@ typedef uint32_t zbi_result_t;
 #define ZBI_RESULT_BAD_CRC        ((zbi_result_t)5)
 #define ZBI_RESULT_ERR_TRUNCATED  ((zbi_result_t)6)
 
+#define ZBI_RESULT_TOO_BIG        ((zbi_result_t)7)
+
 typedef zbi_result_t (*zbi_foreach_cb_t)(zbi_header_t* hdr,
                                          void* payload,
                                          void* cookie);
@@ -58,4 +60,20 @@ zbi_result_t zbi_check(void* base, zbi_header_t** err);
 // client to pass data back from each of the callbacks.
 zbi_result_t zbi_for_each(void* base, const zbi_foreach_cb_t cb, void* cookie);
 
+// Creates a new ZBI section and appends it to the end of the ZBI pointed to by
+// `base`. Assumes that the buffer at `base` has a length of `capacity` which
+// is likely longer than the size of the ZBI at `base`.
+//
+// The new section will be aligned to the ZBI alignment boundary. Any padding
+// added to achieve this alignment will be zero-filled.
+//
+// The caller need not set the ZBI_FLAG_VERSION field of the flags field as it
+// will be set unconditionally for the new section.
+//
+// CRC computation is not currently supported and setting the ZBI_FLAG_CRC32
+// flag will yield an error.
+zbi_result_t zbi_append_section(void* base, const size_t capacity,
+                                const uint32_t section_length,
+                                const uint32_t type, const uint32_t extra,
+                                const uint32_t flags, const void* payload);
 __END_CDECLS
