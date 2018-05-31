@@ -59,14 +59,12 @@ constexpr char kTriggerKeyPrefix[] = "Trigger/";
 constexpr char kLinkKeyPrefix[] =
     "Link|2/";  // version 2: kEnableIncrementalLinks
 constexpr char kModuleKeyPrefix[] = "Module/";
-constexpr char kPerDeviceKeyPrefix[] = "PerDevice/";
 
 // 2. ID values, separated by slashes, to identify the data item under this
 //    key. The set of ID values under each key is defined by the arguments of
 //    factory functions for the keys:
 //
 std::string MakeDeviceKey(const fidl::StringPtr& device_name);
-std::string MakePerDeviceKey(const fidl::StringPtr& device_name);
 std::string MakeFocusKey(const fidl::StringPtr& device_name);
 std::string MakeMessageQueuesPrefix(const std::string& component_namespace);
 std::string MakeMessageQueueTokenKey(const std::string& component_namespace,

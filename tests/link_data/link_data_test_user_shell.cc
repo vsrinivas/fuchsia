@@ -186,6 +186,7 @@ class TestApp : public fuchsia::modular::testing::ComponentBase<
 
   void TestStory2_Wait() {
     Get("module2_link", [this](fidl::StringPtr value) {
+      FXL_LOG(INFO) << "GET module2_link " << value;
       rapidjson::Document doc;
       doc.Parse(value);
       if (!doc.IsObject() || !doc.HasMember(kCount) || !doc[kCount].IsInt() ||

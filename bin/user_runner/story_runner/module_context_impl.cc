@@ -40,8 +40,8 @@ ModuleContextImpl::~ModuleContextImpl() {}
 void ModuleContextImpl::GetLink(fidl::StringPtr name,
                                 fidl::InterfaceRequest<Link> request) {
   LinkPathPtr link_path;
-  // See if there's a chain mapping for this module, link.
-  link_path = story_controller_impl_->GetLinkPathForChainKey(
+  // See if there's a parameter mapping for this link.
+  link_path = story_controller_impl_->GetLinkPathForParameterName(
       module_data_->module_path, name);
   story_controller_impl_->ConnectLinkPath(std::move(link_path),
                                           std::move(request));

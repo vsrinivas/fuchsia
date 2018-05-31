@@ -105,7 +105,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
                        fidl::InterfaceRequest<Link> request);
 
   // Called by ModuleContextImpl.
-  LinkPathPtr GetLinkPathForChainKey(
+  LinkPathPtr GetLinkPathForParameterName(
       const fidl::VectorPtr<fidl::StringPtr>& module_path, fidl::StringPtr key);
 
   // Called by ModuleContextImpl.
@@ -254,6 +254,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   Connection* FindAnchor(Connection* connection);
 
   // The magic ingredient of a story: Chains. They group Links.
+  // TODO(thatguy): Remove ChainImpl, and rename this to mod_parameter_maps_.
   std::vector<std::unique_ptr<ChainImpl>> chains_;
 
   // The second ingredient of a story: Links. They connect Modules.

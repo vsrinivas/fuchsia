@@ -37,7 +37,6 @@
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/clone.h"
-#include "peridot/lib/fidl/equals.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/operations.h"
 #include "peridot/lib/ledger_client/storage.h"
@@ -106,7 +105,7 @@ class StoryControllerImpl::BlockingModuleDataWriteCall : public Operation<> {
     operation_queue_.Add(new ReadDataCall<ModuleData>(
         story_controller_impl_->page(), key_, true /* not_found_is_ok */,
         XdrModuleData, [this, flow](ModuleDataPtr data) {
-          if (!ModuleDataEqual(data, module_data_)) {
+          if (!data || *data != *module_data_) {
             WriteModuleData(flow);
           }
         }));
@@ -227,8 +226,8 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
                        return ptr->chain_path() == module_data_->module_path;
                      });
     if (i == story_controller_impl_->chains_.end()) {
-      story_controller_impl_->chains_.emplace_back(
-          new ChainImpl(module_data_->module_path, module_data_->chain_data));
+      story_controller_impl_->chains_.emplace_back(new ChainImpl(
+          module_data_->module_path, module_data_->parameter_map));
     }
 
     // ModuleControllerImpl's constructor launches the child application.
@@ -422,11 +421,11 @@ class StoryControllerImpl::ConnectLinkCall : public Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(ConnectLinkCall);
 };
 
-// Populates a ChainData struct from a CreateChainInfo struct. May create new
-// Links for any CreateChainInfo.property_info if
+// Populates a ModuleParameterMap struct from a CreateChainInfo struct. May
+// create new Links for any CreateChainInfo.property_info if
 // property_info[i].is_create_link_info().
 class StoryControllerImpl::InitializeChainCall
-    : public Operation<ChainDataPtr> {
+    : public Operation<ModuleParameterMapPtr> {
  public:
   InitializeChainCall(StoryControllerImpl* const story_controller_impl,
                       fidl::VectorPtr<fidl::StringPtr> module_path,
@@ -441,8 +440,8 @@ class StoryControllerImpl::InitializeChainCall
   void Run() override {
     FlowToken flow{this, &result_};
 
-    result_ = ChainData::New();
-    result_->key_to_link_map.resize(0);
+    result_ = ModuleParameterMap::New();
+    result_->entries.resize(0);
 
     if (!create_chain_info_) {
       return;
@@ -456,8 +455,8 @@ class StoryControllerImpl::InitializeChainCall
       const auto& key = entry.key;
       const auto& info = entry.value;
 
-      auto mapping = ChainKeyToLinkData::New();
-      mapping->key = key;
+      auto mapping = ModuleParameterMapEntry::New();
+      mapping->name = key;
       if (info.is_link_path()) {
         info.link_path().Clone(&mapping->link_path);
       } else {  // info->is_create_link()
@@ -483,7 +482,7 @@ class StoryControllerImpl::InitializeChainCall
             nullptr /* interface request */, [flow] {}));
       }
 
-      result_->key_to_link_map.push_back(std::move(*mapping));
+      result_->entries.push_back(std::move(*mapping));
     }
   }
 
@@ -493,7 +492,7 @@ class StoryControllerImpl::InitializeChainCall
 
   OperationQueue operation_queue_;
 
-  ChainDataPtr result_;
+  ModuleParameterMapPtr result_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(InitializeChainCall);
 };
@@ -1008,7 +1007,7 @@ class StoryControllerImpl::ResolveModulesCall
         if (data.is_link_path()) {
           link_path = CloneOptional(data.link_path());
         } else {
-          link_path = story_controller_impl_->GetLinkPathForChainKey(
+          link_path = story_controller_impl_->GetLinkPathForParameterName(
               requesting_module_path_, data.link_name());
         }
 
@@ -1130,17 +1129,18 @@ class StoryControllerImpl::AddIntentCall : public Operation<StartModuleStatus> {
     module_data_->intent = std::move(intent_);
     fidl::Clone(module_result.manifest, &module_data_->module_manifest);
 
-    // Initialize the chain, which we need to do to get ChainData, which
-    // belongs in |module_data_|.
+    // Initialize the chain, which we need to do to get ModuleParameterMap,
+    // which belongs in |module_data_|.
     operation_queue_.Add(new InitializeChainCall(
         story_controller_impl_, fidl::Clone(module_data_->module_path),
-        std::move(create_chain_info_), [this, flow](ChainDataPtr chain_data) {
-          WriteModuleData(flow, std::move(chain_data));
+        std::move(create_chain_info_),
+        [this, flow](ModuleParameterMapPtr parameter_map) {
+          WriteModuleData(flow, std::move(parameter_map));
         }));
   }
 
-  void WriteModuleData(FlowToken flow, ChainDataPtr chain_data) {
-    fidl::Clone(*chain_data, &module_data_->chain_data);
+  void WriteModuleData(FlowToken flow, ModuleParameterMapPtr parameter_map) {
+    fidl::Clone(*parameter_map, &module_data_->parameter_map);
     // Write the module's data.
     operation_queue_.Add(new BlockingModuleDataWriteCall(
         story_controller_impl_, MakeModuleKey(module_data_->module_path),
@@ -1444,7 +1444,7 @@ void StoryControllerImpl::ConnectLinkPath(
       true /* notify_watchers */, std::move(request), [] {}));
 }
 
-LinkPathPtr StoryControllerImpl::GetLinkPathForChainKey(
+LinkPathPtr StoryControllerImpl::GetLinkPathForParameterName(
     const fidl::VectorPtr<fidl::StringPtr>& module_path, fidl::StringPtr key) {
   auto i = std::find_if(chains_.begin(), chains_.end(),
                         [&module_path](const std::unique_ptr<ChainImpl>& ptr) {
@@ -1453,7 +1453,7 @@ LinkPathPtr StoryControllerImpl::GetLinkPathForChainKey(
 
   LinkPathPtr link_path = nullptr;
   if (i != chains_.end()) {
-    link_path = (*i)->GetLinkPathForKey(key);
+    link_path = (*i)->GetLinkPathForParameterName(key);
   } else {
     // TODO(MI4-993): It should be an error that is returned to the client for
     // that client to be able to make a request that results in this code path.
@@ -1571,10 +1571,9 @@ void StoryControllerImpl::OnPageChange(const std::string& key,
   // nothing if it was done already.
 
   // Check if we already have a blocked operation for this update.
-  auto i = std::find_if(blocked_operations_.begin(), blocked_operations_.end(),
-                        [&module_data](const auto& p) {
-                          return ModuleDataEqual(p.first, *module_data);
-                        });
+  auto i = std::find_if(
+      blocked_operations_.begin(), blocked_operations_.end(),
+      [&module_data](const auto& p) { return p.first == *module_data; });
   if (i != blocked_operations_.end()) {
     // For an already blocked operation, we simply continue the operation.
     auto op = i->second;

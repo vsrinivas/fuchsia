@@ -10,21 +10,21 @@ namespace fuchsia {
 namespace modular {
 
 ChainImpl::ChainImpl(const fidl::VectorPtr<fidl::StringPtr>& path,
-                     const ChainData& chain_data) {
+                     const ModuleParameterMap& parameter_map) {
   for (const auto& i : *path) {
     path_->push_back(i);
   }
-  chain_data.Clone(&chain_data_);
+  parameter_map.Clone(&parameter_map_);
 }
 
 ChainImpl::~ChainImpl() = default;
 
-LinkPathPtr ChainImpl::GetLinkPathForKey(const fidl::StringPtr& key) {
+LinkPathPtr ChainImpl::GetLinkPathForParameterName(const fidl::StringPtr& name) {
   auto it = std::find_if(
-      chain_data_.key_to_link_map->begin(), chain_data_.key_to_link_map->end(),
-      [&key](const ChainKeyToLinkData& data) { return data.key == key; });
+      parameter_map_.entries->begin(), parameter_map_.entries->end(),
+      [&name](const ModuleParameterMapEntry& data) { return data.name == name; });
 
-  if (it == chain_data_.key_to_link_map->end()) {
+  if (it == parameter_map_.entries->end()) {
     return nullptr;
   }
   return CloneOptional(it->link_path);

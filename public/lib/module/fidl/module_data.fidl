@@ -14,13 +14,12 @@ struct ModuleData {
   // instance calling StartModule().
   vector<string> module_path;
 
-  // Contains the information which Links of this Module instance are mapped
-  // from Links under other Module instances.
-  ChainData chain_data;
+  // Contains the mapping of Mod parameter name to Link instances for this mod.
+  ModuleParameterMap parameter_map;
 
   // The way in which this Module instance was first started in the story,
-  // either by request from another Module instance, by request from outside the
-  // story (i.e. by suggestion from an agent).
+  // either by request from another Module instance (INTERNAL) or by request
+  // from outside the story (i.e. by suggestion from an agent - EXTERNAL).
   ModuleSource module_source;
 
   // The |surface_relation| that was used to start this Module instance with.
@@ -40,7 +39,7 @@ struct ModuleData {
   // the initial module of a story. For those the field may be null.
   //
   // TODO(thatguy,mesch): This field should now always be set, so make it
-  // requird it once the framework is cleaned up enough to guarantee this
+  // required once the framework is cleaned up enough to guarantee this
   // statement.
   Intent? intent;
 
@@ -62,15 +61,14 @@ enum ModuleSource {
   EXTERNAL = 1;
 };
 
-struct ChainData {
-  // For each key in the Chain, what Link does it point to?
-  vector<ChainKeyToLinkData> key_to_link_map;
+struct ModuleParameterMap {
+  vector<ModuleParameterMapEntry> entries;
 };
 
-struct ChainKeyToLinkData {
-  // A null key is allowed for backwards compatibility with default links.
+struct ModuleParameterMapEntry {
+  // A null |name| is allowed for backwards compatibility with default links.
   // TODO(thatguy); When no modules use null link names any more, make this
   // required.
-  string? key;
+  string? name;
   LinkPath link_path;
 };

@@ -18,16 +18,16 @@ namespace modular {
 class ChainImpl {
  public:
   ChainImpl(const fidl::VectorPtr<fidl::StringPtr>& path,
-            const ChainData& chain_data);
+            const ModuleParameterMap& parameter_map);
   ~ChainImpl();
 
   const fidl::VectorPtr<fidl::StringPtr>& chain_path() const { return path_; }
 
-  LinkPathPtr GetLinkPathForKey(const fidl::StringPtr& key);
+  LinkPathPtr GetLinkPathForParameterName(const fidl::StringPtr& name);
 
  private:
   fidl::VectorPtr<fidl::StringPtr> path_;
-  ChainData chain_data_;
+  ModuleParameterMap parameter_map_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ChainImpl);
 };

@@ -14,14 +14,18 @@ void XdrLinkPath(XdrContext* const xdr, LinkPath* const data) {
   xdr->Field("link_name", &data->link_name);
 }
 
-void XdrChainKeyToLinkData(XdrContext* const xdr,
-                           ChainKeyToLinkData* const data) {
-  xdr->Field("key", &data->key);
+void XdrModuleParameterMapEntry(XdrContext* const xdr,
+                                 ModuleParameterMapEntry* const data) {
+  // NOTE: the JSON field naming doesn't match the FIDL struct naming because
+  // the field names in FIDL were changed.
+  xdr->Field("key", &data->name);
   xdr->Field("link_path", &data->link_path, XdrLinkPath);
 }
 
-void XdrChainData(XdrContext* const xdr, ChainData* const data) {
-  xdr->Field("key_to_link_map", &data->key_to_link_map, XdrChainKeyToLinkData);
+void XdrModuleParameterMap(XdrContext* const xdr, ModuleParameterMap* const data) {
+  // NOTE: the JSON field naming doesn't match the FIDL struct naming because
+  // the field names in FIDL were changed.
+  xdr->Field("key_to_link_map", &data->entries, XdrModuleParameterMapEntry);
 }
 
 void XdrSurfaceRelation(XdrContext* const xdr, SurfaceRelation* const data) {
@@ -160,7 +164,7 @@ void XdrModuleData_v1(XdrContext* const xdr, ModuleData* const data) {
   xdr->Field("intent", &data->intent, XdrIntent);
 
   // In previous versions we did not have these fields.
-  data->chain_data.key_to_link_map.resize(0);
+  data->parameter_map.entries.resize(0);
   data->module_manifest.reset();
 }
 
@@ -171,7 +175,9 @@ void XdrModuleData_v2(XdrContext* const xdr, ModuleData* const data) {
   xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
   xdr->Field("module_stopped", &data->module_stopped);
   xdr->Field("intent", &data->intent, XdrIntent);
-  xdr->Field("chain_data", &data->chain_data, XdrChainData);
+  // NOTE: the JSON field naming doesn't match the FIDL struct naming because
+  // the field name in FIDL was changed.
+  xdr->Field("chain_data", &data->parameter_map, XdrModuleParameterMap);
 
   // In previous versions we did not have these fields.
   data->module_manifest.reset();
@@ -184,7 +190,9 @@ void XdrModuleData_v3(XdrContext* const xdr, ModuleData* const data) {
   xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
   xdr->Field("module_stopped", &data->module_stopped);
   xdr->Field("intent", &data->intent, XdrIntent);
-  xdr->Field("chain_data", &data->chain_data, XdrChainData);
+  // NOTE: the JSON field naming doesn't match the FIDL struct naming because
+  // the field name in FIDL was changed.
+  xdr->Field("chain_data", &data->parameter_map, XdrModuleParameterMap);
   xdr->Field("module_manifest", &data->module_manifest, XdrModuleManifest);
 }
 
@@ -198,7 +206,9 @@ void XdrModuleData_v4(XdrContext* const xdr, ModuleData* const data) {
   xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
   xdr->Field("module_stopped", &data->module_stopped);
   xdr->Field("intent", &data->intent, XdrIntent);
-  xdr->Field("chain_data", &data->chain_data, XdrChainData);
+  // NOTE: the JSON field naming doesn't match the FIDL struct naming because
+  // the field name in FIDL was changed.
+  xdr->Field("chain_data", &data->parameter_map, XdrModuleParameterMap);
   xdr->Field("module_manifest", &data->module_manifest, XdrModuleManifest);
 }
 

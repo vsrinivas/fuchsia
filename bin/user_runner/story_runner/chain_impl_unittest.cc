@@ -21,18 +21,18 @@ class ChainImplTest : public gtest::TestWithMessageLoop {
  public:
   void Reset(std::vector<fidl::StringPtr> path,
              std::map<std::string, std::vector<std::string>> link_map) {
-    ChainData chain_data;
+    ModuleParameterMap map;
     for (const auto& entry : link_map) {
       LinkPath link_path;
       link_path.module_path =
           fxl::To<fidl::VectorPtr<fidl::StringPtr>>(entry.second);
-      ChainKeyToLinkData key_link_data;
-      key_link_data.key = entry.first;
-      key_link_data.link_path = std::move(link_path);
-      chain_data.key_to_link_map.push_back(std::move(key_link_data));
+      ModuleParameterMapEntry map_entry;
+      map_entry.name = entry.first;
+      map_entry.link_path = std::move(link_path);
+      map.entries.push_back(std::move(map_entry));
     }
     fidl::VectorPtr<fidl::StringPtr> tmp_path(std::move(path));
-    impl_.reset(new ChainImpl(std::move(tmp_path), std::move(chain_data)));
+    impl_.reset(new ChainImpl(std::move(tmp_path), std::move(map)));
   }
 
  protected:
@@ -47,7 +47,7 @@ TEST_F(ChainImplTest, Empty) {
   EXPECT_EQ("one", path->at(0));
   EXPECT_EQ("two", path->at(1));
 
-  EXPECT_FALSE(impl_->GetLinkPathForKey("foo"));
+  EXPECT_FALSE(impl_->GetLinkPathForParameterName("foo"));
 }
 
 TEST_F(ChainImplTest, GetLinkPath) {
@@ -56,15 +56,15 @@ TEST_F(ChainImplTest, GetLinkPath) {
   Reset({"one", "two"},
         {{"key1", {"link", "path1"}}, {"key2", {"link", "path2"}}});
 
-  EXPECT_FALSE(impl_->GetLinkPathForKey("foo"));
+  EXPECT_FALSE(impl_->GetLinkPathForParameterName("foo"));
 
-  auto path = impl_->GetLinkPathForKey("key1");
+  auto path = impl_->GetLinkPathForParameterName("key1");
   ASSERT_TRUE(path);
   fidl::VectorPtr<fidl::StringPtr> expected;
   expected.reset({"link", "path1"});
   EXPECT_EQ(expected, path->module_path);
 
-  path = impl_->GetLinkPathForKey("key2");
+  path = impl_->GetLinkPathForParameterName("key2");
   ASSERT_TRUE(path);
   expected.reset({"link", "path2"});
   EXPECT_EQ(expected, path->module_path);
