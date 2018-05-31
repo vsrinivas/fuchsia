@@ -80,6 +80,34 @@ type env struct {
 	input     *inputTable
 }
 
+func VerifyExtractKeyDataInfo(keydata string, t *testing.T) {
+	keydata_bytes, _ := hex.DecodeString(keydata)
+	gtkKDE, rsne, err := ExtractInfoFromMessage3(keydata_bytes)
+	if err != nil {
+		t.Fatal("Error: parsing key data failed")
+	}
+	if rsne == nil {
+		t.Fatal("Error: did not resolve RSNE")
+	}
+	if gtkKDE == nil {
+		t.Fatal("Error: did not resolve GTK KDE")
+	}
+}
+
+func TestSupplicant_ExtractKeyDataInfoMessage3(t *testing.T) {
+	// RSNE, Vendor specific KDE, GTK KDE, Padding
+	VerifyExtractKeyDataInfo("30180100000fac020200000fac04000fac020100000fac020000dd1a0050f20101000050f20202000050f2040050f20201000050f202dd26000fac0101008faaff597079da4cd073d9e222bbf12ea2a06ce841cf2474f604f6e6a646597fdd00", t)
+
+	// RSNE, GTK KDE, Vendor specific KDE, Padding
+	VerifyExtractKeyDataInfo("30180100000fac020200000fac04000fac020100000fac020000dd26000fac0101008faaff597079da4cd073d9e222bbf12ea2a06ce841cf2474f604f6e6a646597fdd1a0050f20101000050f20202000050f2040050f20201000050f202dd00", t)
+
+	// Vendor specific KDE, RSNE, GTK KDE, Padding
+	VerifyExtractKeyDataInfo("dd1a0050f20101000050f20202000050f2040050f20201000050f20230180100000fac020200000fac04000fac020100000fac020000dd26000fac0101008faaff597079da4cd073d9e222bbf12ea2a06ce841cf2474f604f6e6a646597fdd00", t)
+
+	// GTK KDE, Vendor specific KDE, RSNE
+	VerifyExtractKeyDataInfo("dd26000fac0101008faaff597079da4cd073d9e222bbf12ea2a06ce841cf2474f604f6e6a646597fdd1a0050f20101000050f20202000050f2040050f20201000050f20230180100000fac020200000fac04000fac020100000fac020000", t)
+}
+
 // Send valid message 1 to the Supplicant and verify the response is IEEE compliant.
 func TestSupplicant_ResponseToValidMessage1(t *testing.T) {
 	for _, table := range inputTables {

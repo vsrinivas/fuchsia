@@ -222,7 +222,7 @@ func (s *fourWayStateWaitingGTK) handleMessage3(hs *FourWay, msg3 *eapol.KeyFram
 	hs.keyReplayCounter = msg3.ReplayCounter
 
 	// Extract GTK and RSNE from message's data.
-	gtkKDE, rsne, err := extractInfoFromMessage3(msg3.Data)
+	gtkKDE, rsne, err := ExtractInfoFromMessage3(msg3.Data)
 	if err != nil {
 		return err
 	}
@@ -487,7 +487,7 @@ func (hs *FourWay) isStateCompliant(f *eapol.KeyFrame) (bool, error) {
 
 // Extracts GTK KDE and first RSNE from a given key data. Either can be nil if it was not specified.
 // Note: A second, optional RSNE is ignored so far.
-func extractInfoFromMessage3(keyData []byte) (*eapol.GTKKDE, *eapol.RSNElement, error) {
+func ExtractInfoFromMessage3(keyData []byte) (*eapol.GTKKDE, *eapol.RSNElement, error) {
 	var gtkKDE *eapol.GTKKDE
 	var rsne *eapol.RSNElement
 

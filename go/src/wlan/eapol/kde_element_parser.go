@@ -120,7 +120,7 @@ func (reader *KeyDataReader) ReadKDE(kde byteDeserializer) error {
 		return fmt.Errorf("byte stream does not represent a KDE")
 	}
 	// Ensure the reader makes progress.
-	dataLen := getKDEDataLength(reader.data)
+	dataLen := getKDEDataLength(reader.data[reader.offset:])
 	defer func() { reader.offset += uint32(kdeHdrLenBytes + dataLen) }()
 
 	if kde != nil {
