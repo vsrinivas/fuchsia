@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/console/verbs.h"
+#include "garnet/bin/zxdb/console/verbs_breakpoint.h"
 
 #include "garnet/bin/zxdb/client/breakpoint.h"
 #include "garnet/bin/zxdb/client/breakpoint_settings.h"
@@ -12,6 +12,7 @@
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/console_context.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "garnet/bin/zxdb/console/verbs.h"
 
 namespace zxdb {
 
@@ -67,12 +68,13 @@ Err CreateOrEditBreakpoint(ConsoleContext* context,
     if (!breakpoint)
       return Err(ErrType::kInput, "New breakpoints must specify a location.");
   } else if (cmd.args().size() == 1u) {
-    Err err = StringToUint64(cmd.args()[0], &settings.location_address);
+    Err err = ParseBreakpointLocation(cmd.args()[0], &settings);
     if (err.has_error())
       return err;
     settings.location_type = BreakpointSettings::LocationType::kAddress;
   } else {
-    return Err(ErrType::kInput, "Expecting only one arg for the location.");
+    return Err(ErrType::kInput, "Expecting only one arg for the location.\n"
+        "Formats: <function>, <file>:<line#>, <line#>, or *<address>");
   }
 
   // Scope.
@@ -113,7 +115,7 @@ Err CreateOrEditBreakpoint(ConsoleContext* context,
 
 const char kBreakShortHelp[] = "break / br: Create a breakpoint.";
 const char kBreakHelp[] =
-    R"("break [ <address> ]
+    R"("break <location>
 
   Alias: "b"
 
@@ -123,6 +125,21 @@ const char kBreakHelp[] =
 
   The new breakpoint will become the active breakpoint so future breakpoint
   commands will apply to it by default.
+
+Location arguments
+
+  break <function name>
+    break main
+    break Foo::Bar
+
+  break <file name>:<line number>
+    break foo.cc:123
+
+  break <line number>
+    break 123
+
+  break *<code address>
+    break *0x7d12362f0
 
 Options
 
@@ -151,26 +168,18 @@ Scoping to processes and threads
   or a single thread. To do this, provide that process or thread as context
   before the break command:
 
-    t 1 b 0x614a19837
-    thread 1 break 0x614a19837
+    t 1 b *0x614a19837
+    thread 1 break *0x614a19837
         Breaks on only this thread in the current process.
 
-    pr 2 b 0x614a19837
-    process 2 break 0x614a19837
+    pr 2 b *0x614a19837
+    process 2 break *0x614a19837
         Breaks on all threads in the given process.
 
   When the thread of a thread-scoped breakpoint is destroyed, the breakpoint
   will be converted to a disabled process-scoped breakpoint. When the process
   context of a process-scoped breakpoint is destroyed, the breakpoint will be
   converted to a disabled global breakpoint.
-
-Address breakpoints
-
-  Currently only process-specific breakpoints on absolute addresses are
-  supported. These are breakpoints at an explicit code address. Since
-  addresses don't translate between processes, address breakpoints can only
-  be set on running processes and will be automatically disabled when that
-  process exits.
 
 See also
 
@@ -179,9 +188,9 @@ See also
 
 Examples
 
-  break 0x123c9df
-  process 3 break 0x6123fd2937
-  thread 1 break 0x67a82346
+  break *0x123c9df
+  process 3 break MyClass::MyFunc
+  thread 1 break foo.cpp:34
 )";
 Err DoBreak(ConsoleContext* context, const Command& cmd) {
   Err err =
@@ -311,6 +320,53 @@ Err DoEdit(ConsoleContext* context, const Command& cmd) {
 }
 
 }  // namespace
+
+Err ParseBreakpointLocation(const std::string& input,
+                            BreakpointSettings* settings) {
+  if (input.empty())
+    return Err("Passed empty breakpoint location.");
+
+  // Check for one colon. Two colons is a C++ member function.
+  size_t colon = input.find(':');
+  if (colon != std::string::npos &&
+      colon < input.size() - 1 && input[colon + 1] != ':') {
+    // <file>:<line> format.
+    std::string file = input.substr(0, colon);
+
+    uint64_t line = 0;
+    Err err = StringToUint64(input.substr(colon + 1), &line);
+    if (err.has_error())
+      return err;
+
+    settings->location_type = BreakpointSettings::LocationType::kLine;
+    settings->location_line = FileLine(std::move(file), static_cast<int>(line));
+    return Err();
+  }
+
+  if (input[0] == '*') {
+    // *<address> format
+    std::string addr_str = input.substr(1);
+    Err err = StringToUint64(addr_str, &settings->location_address);
+    if (err.has_error())
+      return err;
+
+    settings->location_type = BreakpointSettings::LocationType::kAddress;
+    return Err();
+  }
+
+  uint64_t line = 0;
+  Err err = StringToUint64(input, &line);
+  if (err.has_error()) {
+    // Not a number, assume symbol.
+    settings->location_type = BreakpointSettings::LocationType::kSymbol;
+    settings->location_symbol = input;
+    return Err();
+  }
+
+  // Number, assume line number in current file.
+  return Err("TODO(brettw): Need to get the current source file to interpret "
+      "this line number inside of.");
+}
 
 void AppendBreakpointVerbs(std::map<Verb, VerbRecord>* verbs) {
   SwitchRecord enable_switch(kEnableSwitch, true, "enable", 'e');

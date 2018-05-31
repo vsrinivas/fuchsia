@@ -50,6 +50,7 @@ static_library("console") {
 source_set("tests") {
   testonly = true
   sources = [
+    "verbs_breakpoint_unittest.cc",
     "command_parser_unittest.cc",
     "command_utils_unittest.cc",
     "line_input_unittest.cc",
