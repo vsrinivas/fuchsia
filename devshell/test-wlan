@@ -46,8 +46,8 @@ function get_eth_iface_list {
 }
 
 function run {
-  fx-command-run cp "${FUCHSIA_DIR}/${SOURCE}" "${LOG_DIR}/${SCRIPT}"
-  "${ZIRCON_TOOLS_DIR}"/netruncmd : "${LOG_DIR}/${SCRIPT}" "${LOG_DIR}/${LOG_FILE}"
+  fx-command-run cp "${FUCHSIA_DIR}/${SOURCE}" "${LOG_DIR}/${SCRIPT}" >& /dev/null
+  fx shell "${LOG_DIR}/${SCRIPT}" "${LOG_DIR}/${LOG_FILE}" & >& /dev/null
 }
 
 function wait_for_result {
@@ -56,6 +56,9 @@ function wait_for_result {
     printf "."
     if ! ((i % 10)); then
       printf " "
+    fi
+    if ! ((i % 60)); then
+      echo ""
     fi
     sleep 1
   done
