@@ -23,6 +23,9 @@
 
 #include "server.h"
 
+#define max(a, b) ((a) < (b) ? (b) : (a))
+#define min(a, b) ((a) < (b) ? (a) : (b))
+
 typedef struct blkdev {
     zx_device_t* zxdev;
     zx_device_t* parent;
@@ -273,49 +276,68 @@ static void block_completion_cb(block_op_t* bop, zx_status_t status) {
 // than before, but now localized to the block middle layer.
 // TODO(swetland) plumbing in devhosts to do deferred replies
 
-// This matches RIO's max payload
-#define MAX_XFER 8192
+// Define the maximum I/O possible for the midlayer; this is arbitrarily
+// set to the size of RIO's max payload.
+//
+// If a smaller value of "max_transfer_size" is defined, that will
+// be used instead.
+#define MAX_MIDLAYER_IO 8192
 
 static zx_status_t blkdev_io(blkdev_t* bdev, void* buf, size_t count,
                              zx_off_t off, bool write) {
-    size_t bsz = bdev->info.block_size;
+    const size_t bsz = bdev->info.block_size;
+    const size_t max_xfer = min(bdev->info.max_transfer_size, MAX_MIDLAYER_IO);
 
     if (count == 0) {
         return ZX_OK;
     }
-    if ((count % bsz) || (off % bsz) || (count > MAX_XFER)) {
+    if ((count % bsz) || (off % bsz)) {
         return ZX_ERR_INVALID_ARGS;
     }
     if (bdev->iovmo == ZX_HANDLE_INVALID) {
-        if (zx_vmo_create(MAX_XFER, 0, &bdev->iovmo) != ZX_OK) {
+        if (zx_vmo_create(max(max_xfer, PAGE_SIZE), 0, &bdev->iovmo) != ZX_OK) {
             return ZX_ERR_INTERNAL;
         }
     }
 
-    if (write) {
-        if (zx_vmo_write(bdev->iovmo, buf, 0, count) != ZX_OK) {
-            return ZX_ERR_INTERNAL;
+    // TODO(smklein): These requests can be queued simultaneously without
+    // blocking. However, as the comment above mentions, this code probably
+    // shouldn't be blocking at all.
+    uint64_t sub_txn_offset = 0;
+    while (sub_txn_offset < count) {
+        void* sub_buf = buf + sub_txn_offset;
+        size_t sub_txn_length = min(count - sub_txn_offset, max_xfer);
+
+        if (write) {
+            if (zx_vmo_write(bdev->iovmo, sub_buf, 0, sub_txn_length) != ZX_OK) {
+                return ZX_ERR_INTERNAL;
+            }
         }
-    }
 
-    block_op_t* bop = bdev->iobop;
-    bop->command = write ? BLOCK_OP_WRITE : BLOCK_OP_READ;
-    bop->rw.length = count / bsz;
-    bop->rw.vmo = bdev->iovmo;
-    bop->rw.offset_dev = off / bsz;
-    bop->rw.offset_vmo = 0;
-    bop->rw.pages = NULL;
-    bop->completion_cb = block_completion_cb;
-    bop->cookie = bdev;
+        block_op_t* bop = bdev->iobop;
+        bop->command = write ? BLOCK_OP_WRITE : BLOCK_OP_READ;
+        bop->rw.length = sub_txn_length / bsz;
+        bop->rw.vmo = bdev->iovmo;
+        bop->rw.offset_dev = (off + sub_txn_offset) / bsz;
+        bop->rw.offset_vmo = 0;
+        bop->rw.pages = NULL;
+        bop->completion_cb = block_completion_cb;
+        bop->cookie = bdev;
 
-    completion_reset(&bdev->iosignal);
-    bdev->bp.ops->queue(bdev->bp.ctx, bop);
-    completion_wait(&bdev->iosignal, ZX_TIME_INFINITE);
+        completion_reset(&bdev->iosignal);
+        bdev->bp.ops->queue(bdev->bp.ctx, bop);
+        completion_wait(&bdev->iosignal, ZX_TIME_INFINITE);
 
-    if (!write && (bdev->iostatus == ZX_OK)) {
-        if (zx_vmo_read(bdev->iovmo, buf, 0, count) != ZX_OK) {
-            return ZX_ERR_INTERNAL;
+        if (bdev->iostatus != ZX_OK) {
+            return bdev->iostatus;
         }
+
+        if (!write) {
+            if (zx_vmo_read(bdev->iovmo, buf + sub_txn_offset, 0, sub_txn_length) != ZX_OK) {
+                return ZX_ERR_INTERNAL;
+            }
+        }
+        sub_txn_offset += sub_txn_length;
     }
 
     return bdev->iostatus;
@@ -413,7 +435,15 @@ static zx_status_t block_driver_bind(void* ctx, zx_device_t* dev) {
         free(bdev);
         return ZX_ERR_NOT_SUPPORTED;
     }
+
     bdev->bp.ops->query(bdev->bp.ctx, &bdev->info, &bdev->block_op_size);
+
+    if (bdev->info.max_transfer_size < bdev->info.block_size) {
+        printf("ERROR: block device '%s': has smaller max transfer size than block size\n",
+               device_get_name(dev));
+        free(bdev);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 
     zx_status_t status;
     if ((bdev->iobop = malloc(bdev->block_op_size)) == NULL) {
